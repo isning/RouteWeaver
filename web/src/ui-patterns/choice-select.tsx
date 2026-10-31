@@ -135,12 +135,15 @@ export function ChoiceSelect<V extends Value = string>({
           aria-expanded={open}
           disabled={disabled}
           ref={ref}
-          className={cn("w-full justify-between font-normal", className)}
+          className={cn(
+            "h-auto min-h-11 w-full justify-between whitespace-normal font-normal",
+            className,
+          )}
           {...aria}
         >
           <span
             className={cn(
-              "min-w-0 truncate text-left",
+              "min-w-0 whitespace-normal text-left wrap-anywhere",
               !selected && "text-muted-foreground",
             )}
           >
@@ -206,7 +209,7 @@ export function ChoiceSelect<V extends Value = string>({
                         )}
                         aria-hidden="true"
                       />
-                      <span className="min-w-0">
+                      <span className="min-w-0 wrap-anywhere">
                         <span>{option.label}</span>
                         {option.description && (
                           <span className="block text-xs text-muted-foreground">
@@ -282,13 +285,16 @@ export function MultiChoice<V extends Value = string>({
             aria-expanded={open}
             disabled={disabled}
             ref={ref}
-            className="w-full justify-between font-normal"
+            className="h-auto min-h-11 w-full justify-between whitespace-normal font-normal"
             {...aria}
           >
-            <span className="truncate text-muted-foreground">
+            <span className="min-w-0 whitespace-normal text-left wrap-anywhere text-muted-foreground">
               {value.length ? `已选择 ${value.length} 项` : placeholder}
             </span>
-            <ChevronsUpDown className="size-4 opacity-50" aria-hidden="true" />
+            <ChevronsUpDown
+              className="size-4 shrink-0 opacity-50"
+              aria-hidden="true"
+            />
           </Button>
         </PopoverTrigger>
         <PopoverContent
@@ -329,7 +335,14 @@ export function MultiChoice<V extends Value = string>({
                           )}
                           aria-hidden="true"
                         />
-                        {option.label}
+                        <span className="min-w-0 wrap-anywhere">
+                          <span>{option.label}</span>
+                          {option.description && (
+                            <span className="block text-xs text-muted-foreground">
+                              {option.description}
+                            </span>
+                          )}
+                        </span>
                       </CommandItem>
                     ),
                   )}
@@ -369,9 +382,9 @@ export function MultiChoice<V extends Value = string>({
             <Badge
               variant="secondary"
               key={String(v)}
-              className="max-w-full gap-1"
+              className="h-auto min-h-6 max-w-full gap-1 whitespace-normal"
             >
-              <span className="truncate">
+              <span className="min-w-0 whitespace-normal wrap-anywhere">
                 {choices.find((o) => o.value === v)?.label ?? String(v)}
               </span>
               {!disabled && (

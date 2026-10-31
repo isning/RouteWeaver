@@ -9,6 +9,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { compile } from "tailwindcss";
 import { UIProviders } from "./ui-patterns/providers";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
@@ -654,4 +655,37 @@ it("binds the newly published subscription to the open editor instead of creatin
   const creation = writes.filter((write) => write.url.endsWith("/outputs"));
   expect(creation).toHaveLength(1);
   expect(writes[writes.length - 1]?.body.outputId).toBe(creation[0].body.id);
+});
+
+it("allows profile inputs and wrapped tab rows to grow with enlarged text", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(
+      async () =>
+        new Response("[]", { headers: { "Content-Type": "application/json" } }),
+    ),
+  );
+  mount(<ProfileEditor initial={emptyProfile()} isNew onClose={() => {}} />);
+  const name = screen.getByRole("textbox", { name: "配置名称" });
+  const tabs = screen.getByRole("tablist");
+  const style = document.createElement("style");
+  style.textContent = (
+    await compile("@theme { --spacing: 0.25rem; } @tailwind utilities;")
+  ).build(
+    [...document.body.querySelectorAll<HTMLElement>("[class]")].flatMap(
+      (node) => [...node.classList],
+    ),
+  );
+  document.head.append(style);
+  try {
+    expect(getComputedStyle(name).height).toBe("auto");
+    expect(getComputedStyle(name).minHeight).toBe("calc(var(--spacing) * 11)");
+    expect(getComputedStyle(tabs).height).toBe("auto");
+    for (const tab of screen.getAllByRole("tab")) {
+      expect(getComputedStyle(tab).height).toBe("auto");
+      expect(getComputedStyle(tab).minHeight).toBe("calc(var(--spacing) * 11)");
+    }
+  } finally {
+    style.remove();
+  }
 });

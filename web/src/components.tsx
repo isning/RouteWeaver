@@ -7,6 +7,7 @@ import {
   type Ref,
 } from "react";
 import { Button } from "@/components/ui/button";
+import { ActionButton } from "@/ui-patterns/actions";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -43,7 +44,7 @@ export function PageHeader({
     <header className="page-heading flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
       <div className="min-w-0 space-y-1.5">
         {back && (
-          <Button
+          <ActionButton
             type="button"
             variant="ghost"
             size="sm"
@@ -52,7 +53,7 @@ export function PageHeader({
           >
             <ArrowLeft aria-hidden="true" />
             返回
-          </Button>
+          </ActionButton>
         )}
         <h1 className="text-xl font-semibold tracking-tight [overflow-wrap:anywhere] sm:text-2xl">{title}</h1>
         {description && (

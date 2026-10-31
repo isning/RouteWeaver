@@ -226,6 +226,12 @@ test("Output owned Back Forward restores exact trigger and position; direct link
   expect((await proof(page)).state).toEqual(detailProof.state);
   await page.goBack();
   await expect(detail).not.toBeVisible();
+  await expect(trigger).toBeFocused();
+  await expect(search(page)).toHaveValue(f.prefix);
+  expect((await proof(page)).state).toEqual(list.state);
+  await expect
+    .poll(async () => Math.abs((await scrollY(page)) - before))
+    .toBeLessThan(3);
   await page.goto(
     origin + "/#subscriptions?profile=" + encodeURIComponent(f.profile.id),
   );
@@ -241,13 +247,37 @@ test("Output owned Back Forward restores exact trigger and position; direct link
       encodeURIComponent(f.output.id),
   );
   await expect(detail).toBeVisible();
-  await expect(search(page)).toHaveValue("no-match-in-memory");
   await expect(
-    page.getByRole("article", {
-      name: "分流配置 " + f.profile.name,
+    detail.getByText("分流配置：" + f.profile.name, { exact: true }),
+  ).toBeVisible();
+  // The modal correctly excludes the background from the accessibility tree.
+  // Verify remembered list state only after its real Close action restores it.
+  await expect(search(page)).toHaveCount(0);
+  const rememberedDetail = await proof(page);
+  await detail.getByRole("button", { name: "关闭", exact: true }).click();
+  await expect(detail).not.toBeVisible();
+  expect((await proof(page)).length).toBe(rememberedDetail.length);
+  expect(page.url()).toContain(
+    "#subscriptions?profile=" + encodeURIComponent(f.profile.id),
+  );
+  expect(page.url()).not.toContain("output=");
+  await expect(search(page)).toBeVisible();
+  await expect(search(page)).toHaveValue("no-match-in-memory");
+  const scopedProfile = page.getByRole("article", {
+    name: "分流配置 " + f.profile.name,
+    exact: true,
+  });
+  await expect(scopedProfile).toBeVisible();
+  await expect(
+    scopedProfile.getByText("没有匹配的客户端订阅。", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    scopedProfile.getByRole("button", {
+      name: "查看订阅 " + f.output.name,
       exact: true,
     }),
-  ).toBeAttached();
+  ).toHaveCount(0);
+  await privacy(page, "no-match-in-memory");
   const direct = await context.newPage();
   await direct.goto(
     origin +
@@ -268,6 +298,22 @@ test("Output owned Back Forward restores exact trigger and position; direct link
   expect(direct.url()).toContain("#subscriptions?profile=");
   expect(direct.url()).not.toContain("output=");
   await expect(heading(direct, "我的订阅")).toBeVisible();
+  await expect(search(direct)).toHaveValue("");
+  await expect(
+    direct.getByRole("article", {
+      name: "分流配置 " + f.profile.name,
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(
+    direct.getByRole("button", {
+      name: "查看订阅 " + f.output.name,
+      exact: true,
+    }),
+  ).toBeVisible();
+  await direct.screenshot({
+    path: info.outputPath("direct-output-close-scoped-list.png"),
+  });
   await direct.close();
   await privacy(page, "no-match-in-memory");
   await info.attach("safe-result", {
@@ -279,6 +325,9 @@ test("Output owned Back Forward restores exact trigger and position; direct link
       ownedPositionIncrement: 1,
       forwardSameID: true,
       directCloseReplaced: true,
+      rememberedSearchAfterClose: true,
+      explicitProfileRetainedDespiteNoMatch: true,
+      newTabHasIndependentListMemory: true,
     }),
     contentType: "application/json",
   });

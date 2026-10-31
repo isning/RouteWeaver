@@ -166,7 +166,9 @@ test("native Enter submits the associated pinned footer once and retains the dra
   await dialog
     .getByLabel("端点名称", { exact: true })
     .fill("native-submit-fixture");
-  await dialog.getByLabel("连接地址", { exact: true }).fill("endpoint.test");
+  await dialog
+    .getByRole("textbox", { name: "连接地址", exact: true })
+    .fill("endpoint.test");
   const submit = dialog.getByRole("button", { name: "保存", exact: true });
   await expect
     .poll(() =>
@@ -175,7 +177,9 @@ test("native Enter submits the associated pinned footer once and retains the dra
       ),
     )
     .toBe(true);
-  await dialog.getByLabel("连接地址", { exact: true }).press("Enter");
+  await dialog
+    .getByRole("textbox", { name: "连接地址", exact: true })
+    .press("Enter");
   await expect.poll(() => count).toBe(1);
   await expect(submit).toHaveAttribute("aria-busy", "true");
   await expect(submit).toBeFocused();

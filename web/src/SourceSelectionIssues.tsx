@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/button";
+import { ActionButton } from "@/ui-patterns/actions";
 import type { ReactNode } from "react";
 import type { Source } from "./types";
 
@@ -46,7 +46,7 @@ export function SourceSelectionIssues({
               {source.name} · {sourceSelectionIssue(source)}
             </span>
             <div className="flex shrink-0 flex-wrap items-center gap-2">
-              <Button
+              <ActionButton
                 size="sm"
                 variant="outline"
                 aria-label={`${source.enabled && source.candidate ? "检查导入" : "编辑来源"} ${source.name}`}
@@ -60,16 +60,16 @@ export function SourceSelectionIssues({
                 onClick={(event) => onRepair(source, event.currentTarget)}
               >
                 {source.enabled && source.candidate ? "检查导入" : "编辑来源"}
-              </Button>
+              </ActionButton>
               {onRemove && (
-                <Button
+                <ActionButton
                   size="sm"
                   variant="outline"
                   aria-label={`移除来源 ${source.name}`}
                   onClick={() => onRemove(source)}
                 >
                   移除
-                </Button>
+                </ActionButton>
               )}
             </div>
           </li>

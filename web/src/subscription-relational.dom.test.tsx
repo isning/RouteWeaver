@@ -9,6 +9,7 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { compile } from "tailwindcss";
 import { UIProviders } from "./ui-patterns/providers";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SubscriptionsPage } from "./Subscriptions";
@@ -591,4 +592,30 @@ it("does not reopen an old Output check when fresh metadata arrives after scope 
   expect(screen.queryByRole("dialog")).toBeNull();
   expect(writes).toEqual([]);
   expect(location.hash).toBe("#subscriptions?profile=other");
+});
+
+it("lets long client names wrap inside the owned-link row instead of clipping the action", async () => {
+  const name = "Matrix configuration personal phone with a long display name";
+  inventory([profile], [output("phone", name)]);
+  mount();
+  const control = await screen.findByRole("button", {
+    name: `查看订阅 ${name}`,
+  });
+  const style = document.createElement("style");
+  style.textContent = (
+    await compile("@theme { --spacing: 0.25rem; } @tailwind utilities;")
+  ).build(
+    [...document.body.querySelectorAll<HTMLElement>("[class]")].flatMap(
+      (node) => [...node.classList],
+    ),
+  );
+  document.head.append(style);
+  try {
+    expect(getComputedStyle(control).whiteSpace).toBe("normal");
+    expect(getComputedStyle(control).overflowWrap).toBe("anywhere");
+    expect(getComputedStyle(control).maxWidth).toBe("100%");
+    expect(control.textContent).toBe(name);
+  } finally {
+    style.remove();
+  }
 });

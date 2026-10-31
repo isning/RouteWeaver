@@ -1,3 +1,4 @@
+import { auditTextGeometry } from "./text-geometry";
 import { openWorkspace, navigateWorkspace } from "./ui-session";
 import { createHash } from "node:crypto";
 import {
@@ -260,9 +261,17 @@ async function verifyMobilePublicationReview(
   await expect(technical).toHaveAttribute("aria-expanded", "true");
   // ARIA expands before the collapse height animation completes. Wait for that
   // real layout boundary before scrolling, without disabling UI motion or sleeping.
-  await expect(
-    dialog.locator("[data-slot='accordion-content']"),
-  ).toHaveAttribute("data-state", "open");
+  const technicalContent = dialog.locator("[data-slot='accordion-content']");
+  await expect(technicalContent).toHaveAttribute("data-state", "open");
+  await technicalContent.evaluate(async (element) => {
+    await Promise.all(
+      element.getAnimations({ subtree: true }).map((animation) =>
+        animation.finished.catch(() => {
+          // A canceled/replaced animation also stops changing this layout.
+        }),
+      ),
+    );
+  });
   // Scroll the outer review body as a reader would, not the nested code area.
   // scrollIntoView can leave a fractional border clipped at this narrow width.
   await dialog
@@ -292,114 +301,7 @@ async function auditReflowAndTextScale(
   inspectLayout?: () => Promise<void>,
 ) {
   const originalViewport = page.viewportSize()!;
-  const geometry = async () =>
-    scope.evaluate((root) => {
-      const issues: Array<{
-        control: string;
-        issue: string;
-        paintedHeight?: number;
-        availableHeight?: number;
-      }> = [];
-      const candidates = Array.from(
-        root.querySelectorAll<HTMLElement>(
-          "button,input,textarea,label,h1,h2,[data-slot='dialog-title']",
-        ),
-      );
-      for (const element of candidates) {
-        const box = element.getBoundingClientRect();
-        const css = getComputedStyle(element);
-        if (
-          !box.width ||
-          !box.height ||
-          css.visibility === "hidden" ||
-          element.closest('[aria-hidden="true"]')
-        )
-          continue;
-        const control =
-          element.getAttribute("aria-label") ||
-          element.textContent?.trim().slice(0, 70) ||
-          element.tagName;
-        const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
-        let node: Node | null;
-        while ((node = walker.nextNode())) {
-          if (!node.textContent?.trim()) continue;
-          const parent = node.parentElement;
-          if (!parent || parent.closest('[aria-hidden="true"]')) continue;
-          if (
-            parent.closest("button,label,h1,h2,[data-slot='dialog-title']") !==
-            element
-          )
-            continue;
-          const range = document.createRange();
-          range.selectNodeContents(node);
-          for (const painted of Array.from(range.getClientRects())) {
-            if (!painted.width || !painted.height) continue;
-            // One CSS pixel tolerates sub-pixel font rounding, not a clipped line.
-            if (painted.top < box.top - 1 || painted.bottom > box.bottom + 1) {
-              issues.push({
-                control,
-                issue: "text extends vertically beyond its control/label",
-                paintedHeight: painted.height,
-                availableHeight: box.height,
-              });
-            }
-            for (
-              let ancestor = parent;
-              ancestor && root.contains(ancestor);
-              ancestor = ancestor.parentElement!
-            ) {
-              const clip = getComputedStyle(ancestor).overflowY;
-              if (clip !== "hidden" && clip !== "clip") continue;
-              const bounds = ancestor.getBoundingClientRect();
-              if (
-                painted.top < bounds.top - 1 ||
-                painted.bottom > bounds.bottom + 1
-              ) {
-                issues.push({
-                  control,
-                  issue:
-                    "text vertically clipped by an overflow-hidden ancestor",
-                  paintedHeight: painted.height,
-                  availableHeight: bounds.height,
-                });
-                break;
-              }
-            }
-          }
-        }
-        if (
-          (element instanceof HTMLTextAreaElement ||
-            (element instanceof HTMLInputElement &&
-              [
-                "text",
-                "search",
-                "email",
-                "url",
-                "tel",
-                "password",
-                "number",
-              ].includes(element.type))) &&
-          element.value &&
-          box.width > 4
-        ) {
-          const canvas = document.createElement("canvas");
-          const drawing = canvas.getContext("2d")!;
-          drawing.font = css.font;
-          const metrics = drawing.measureText("选Ag");
-          const paintedHeight =
-            metrics.actualBoundingBoxAscent + metrics.actualBoundingBoxDescent;
-          const availableHeight = element.clientHeight;
-          if (paintedHeight > availableHeight + 1)
-            issues.push({
-              control,
-              issue: "input glyphs taller than its inner control",
-              paintedHeight,
-              availableHeight,
-            });
-        }
-      }
-      return { checkedControlsAndLabels: candidates.length, issues };
-    });
+  const geometry = async () => scope.evaluate(auditTextGeometry);
   await page.setViewportSize({ width: 320, height: 844 });
   if (readingTarget) {
     await readingTarget.scrollIntoViewIfNeeded();
@@ -567,7 +469,9 @@ test("controlled empty inventories name the task and server registration does no
   ).toBeVisible();
   const login = page.getByRole("region", { name: "恢复登录", exact: true });
   await expect(login.getByRole("heading")).toHaveCount(1);
-  await expect(login.locator("p")).toHaveCount(0);
+  await expect(login.locator("p")).toHaveText(
+    "邀请制工作空间 · 你的来源仅由你管理",
+  );
   await expect(page.getByLabel("账号", { exact: true })).toHaveValue("");
   await expect(page.getByLabel("密码", { exact: true })).toHaveValue("");
   await page.screenshot({
@@ -2318,9 +2222,10 @@ test("same rule counts are not represented as identical routing when rule conten
     name: "比较结论与范围",
     exact: true,
   });
-  await expect(scope).toHaveText(
-    "仅比较分流规则和默认去向；未比较规则文件内容、策略组内容和节点设置。",
-  );
+  await expect(scope).toHaveText("未比较规则文件内容和客户端运行设置。");
+  await expect(
+    review.getByText("策略组和连接未变化。", { exact: true }),
+  ).toBeVisible();
   await expect(changes).not.toContainText("完全一致");
   await expect(changes).not.toContainText("已展示的分流规则和默认去向相同。");
   const ruleList = changes.getByRole("list", {

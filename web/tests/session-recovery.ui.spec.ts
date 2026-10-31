@@ -3,32 +3,54 @@ import { expect, type Page, type TestInfo } from "@playwright/test";
 import { randomBytes } from "node:crypto";
 async function windowRoundTrip(page: Page) {
   const cdp = await page.context().newCDPSession(page);
-  const { windowId } = await cdp.send("Browser.getWindowForTarget");
-  await cdp.send("Browser.setWindowBounds", {
-    windowId,
-    bounds: { windowState: "minimized" },
-  });
-  await expect
-    .poll(() => page.evaluate(() => document.visibilityState))
-    .toBe("hidden");
-  const read = page.waitForResponse(me);
-  await cdp.send("Browser.setWindowBounds", {
-    windowId,
-    bounds: { windowState: "normal" },
-  });
-  await read;
-  await expect
-    .poll(() => page.evaluate(() => document.visibilityState))
-    .toBe("visible");
-  const events = await page.evaluate(() => (window as any).__focusEvents);
-  expect(events.some((e: any) => e.type === "focus" && e.trusted)).toBe(true);
-  expect(
-    events.some(
-      (e: any) =>
-        e.type === "visibilitychange" && e.trusted && e.visible === "visible",
-    ),
-  ).toBe(true);
-  await cdp.detach();
+  const eventStart = await page.evaluate(
+    () => (window as any).__focusEvents.length,
+  );
+  try {
+    const { windowId } = await cdp.send("Browser.getWindowForTarget");
+    await cdp.send("Browser.setWindowBounds", {
+      windowId,
+      bounds: { windowState: "minimized" },
+    });
+    await expect
+      .poll(() => page.evaluate(() => document.visibilityState))
+      .toBe("hidden");
+    const read = page.waitForResponse(me);
+    await Promise.all([
+      read.then((response) => expect(response.status()).toBe(200)),
+      (async () => {
+        await cdp.send("Browser.setWindowBounds", {
+          windowId,
+          bounds: { windowState: "normal" },
+        });
+        // Restoring a shared window restores its selected tab, which these
+        // journeys changed to about:blank. Activate the app tab too; synthetic
+        // DOM focus/visibility events cannot substitute for this native action.
+        await page.bringToFront();
+        await expect
+          .poll(() =>
+            page.evaluate(() => ({
+              visible: document.visibilityState,
+              focus: document.hasFocus(),
+            })),
+          )
+          .toEqual({ visible: "visible", focus: true });
+      })(),
+    ]);
+    const events = await page.evaluate(
+      (start) => (window as any).__focusEvents.slice(start),
+      eventStart,
+    );
+    expect(events.some((e: any) => e.type === "focus" && e.trusted)).toBe(true);
+    expect(
+      events.some(
+        (e: any) =>
+          e.type === "visibilitychange" && e.trusted && e.visible === "visible",
+      ),
+    ).toBe(true);
+  } finally {
+    await cdp.detach();
+  }
 }
 async function realCollections(page: Page) {
   const result = await page.evaluate(async () => {
@@ -284,7 +306,7 @@ test("real invite signup switches identity without inheriting old account draft 
   await expect(account(other)).toBeVisible();
   const newName = await account(other).innerText();
   expect(newName === oldName).toBe(false);
-  await expect(account(page)).toHaveText(newName);
+  await expect(account(page)).toHaveText(newName, { useInnerText: true });
   await expect(page.getByLabel("集合名称", { exact: true })).toHaveCount(0);
   expect(writes).toBe(0);
   const list = await realCollections(other);

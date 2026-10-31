@@ -380,7 +380,11 @@ function Announcements() {
               rowKey="id"
               rows={query.data}
               columns={[
-                { title: "标题", accessor: "title" },
+                {
+                  title: "标题",
+                  accessor: "title",
+                  className: "max-w-xs whitespace-normal wrap-anywhere",
+                },
                 {
                   title: "受众",
                   render: (_, a) =>

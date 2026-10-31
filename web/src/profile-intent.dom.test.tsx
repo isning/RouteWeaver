@@ -9,6 +9,7 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { compile } from "tailwindcss";
 import { UIProviders } from "./ui-patterns/providers";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ProfileEditor } from "./Profiles";
@@ -1463,3 +1464,78 @@ it("adds beside a projected negative scalar without stripping its negation", asy
     },
   ]);
 });
+
+it("removes empty traffic-outcome chrome while retaining the same polite live region", async () => {
+  const profile = fixture();
+  profile.ir.groups = [
+    {
+      id: "travel-choice",
+      name: "Travel choice",
+      kind: "manual",
+      members: [{ kind: "endpoint", ref: "tokyo" }],
+    },
+  ];
+  mount(profile);
+  const message = await screen.findByText("已导入的连接尚未用于分流。");
+  const live = message.parentElement!;
+  expect(live.getAttribute("aria-live")).toBe("polite");
+  const style = document.createElement("style");
+  style.textContent = (
+    await compile("@theme { --spacing: 0.25rem; } @tailwind utilities;")
+  ).build([...live.classList]);
+  document.head.append(style);
+  try {
+    expect(getComputedStyle(live).position).not.toBe("absolute");
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("combobox", { name: "默认流量行为" }));
+    await user.click(
+      await screen.findByRole("option", { name: "策略组 · Travel choice" }),
+    );
+    expect(live.isConnected).toBe(true);
+    expect(live.textContent).toBe("");
+    expect(getComputedStyle(live).position).toBe("absolute");
+    expect(getComputedStyle(live).height).toBe("1px");
+    expect(getComputedStyle(live).padding).toBe("0px");
+    expect(getComputedStyle(live).display).not.toBe("none");
+    expect(live.hasAttribute("aria-hidden")).toBe(false);
+    await user.click(screen.getByRole("combobox", { name: "默认流量行为" }));
+    await user.click(await screen.findByRole("option", { name: "直连" }));
+    expect(
+      await screen.findByText("已导入的连接尚未用于分流。"),
+    ).toHaveProperty("parentElement", live);
+    expect(getComputedStyle(live).position).not.toBe("absolute");
+    expect(getComputedStyle(live).height).not.toBe("1px");
+  } finally {
+    style.remove();
+  }
+});
+
+it.each(["native", "nodes-only"] as const)(
+  "retains meaningful %s traffic consequences",
+  async (kind) => {
+    const profile = fixture();
+    if (kind === "native") {
+      profile.ir.nativeOverride = {
+        schemaVersion: "1",
+        namespace: "routeweaver/native-client",
+        target: profile.target,
+        format: "json",
+        ruleMode: "replace",
+        content: "{}",
+      };
+    } else {
+      profile.mode = "nodes-only";
+      profile.ir.defaultAction = { kind: "reject" };
+    }
+    mount(profile);
+    const copy =
+      kind === "native"
+        ? "上方保留结构化默认行为；原生规则或设置可能改变最终行为，请按具体客户端检查。"
+        : "纯节点订阅不包含分流；上方行为仍保存在共享配置中，仅完整配置使用。";
+    const message = await screen.findByText(copy);
+    const live = message.parentElement!;
+    expect(live.getAttribute("aria-live")).toBe("polite");
+    expect(live.textContent).toContain(copy);
+    expect(live.matches(":empty")).toBe(false);
+  },
+);

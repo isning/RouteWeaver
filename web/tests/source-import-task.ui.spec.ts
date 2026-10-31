@@ -538,9 +538,30 @@ test("a rich Profile keeps its routing and ordered inputs through immediate real
     await expect(page.getByLabel("策略组名称", { exact: true })).toHaveValue(
       "Unsaved chosen group",
     );
-    await expect(
-      page.getByRole("combobox", { name: "使用的订阅来源", exact: true }),
-    ).toContainText(/Profile South.*Profile North.*Full Mihomo source/s);
+    const selectedSourceControl = page.getByRole("combobox", {
+      name: "使用的订阅来源",
+      exact: true,
+    });
+    await expect(selectedSourceControl).toContainText("已选择 3 项");
+    const selectedSources = selectedSourceControl
+      .locator("xpath=ancestor::label")
+      .getByLabel("已选项目", { exact: true });
+    const selectedNames = [
+      "Profile South",
+      "Profile North",
+      "Full Mihomo source",
+    ];
+    for (const name of selectedNames)
+      await expect(
+        selectedSources.getByText(name, { exact: true }),
+      ).toBeVisible();
+    expect(
+      await selectedSources
+        .getByRole("button")
+        .evaluateAll((buttons) =>
+          buttons.map((button) => button.getAttribute("aria-label")),
+        ),
+    ).toEqual(selectedNames.map((name) => `移除 ${name}`));
     await expect(
       page.getByRole("button", { name: "添加来源", exact: true }),
     ).toBeFocused();

@@ -253,6 +253,56 @@ it("keeps an explicit Profile visible even when its remembered link filter has n
   ).toBeNull();
 });
 
+it("restores remembered search and its explicit Profile after closing a same-document Output deep link", async () => {
+  history.replaceState(null, "", "#subscriptions?profile=shared");
+  inventory([profile], [output("phone", "Phone")]);
+  mount();
+  await userEvent.type(
+    await screen.findByRole("textbox", { name: "搜索配置或客户端订阅" }),
+    "no-match-private-input",
+  );
+  await userEvent.click(screen.getByRole("button", { name: "订阅素材" }));
+  await userEvent.click(screen.getByRole("button", { name: "订阅来源" }));
+  await screen.findByRole("heading", { name: "订阅来源", level: 1 });
+  await act(async () => {
+    location.hash = "#subscriptions?profile=shared&output=phone";
+  });
+  const dialog = await screen.findByRole("dialog", {
+    name: "订阅详情 · Phone",
+  });
+  expect(
+    within(dialog).getByText("分流配置：Travel configuration"),
+  ).toBeTruthy();
+  expect(
+    screen.queryByRole("textbox", { name: "搜索配置或客户端订阅" }),
+  ).toBeNull();
+  const length = history.length;
+  await userEvent.click(within(dialog).getByRole("button", { name: "关闭" }));
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  expect(location.hash).toBe("#subscriptions?profile=shared");
+  expect(history.length).toBe(length);
+  expect(
+    (
+      screen.getByRole("textbox", {
+        name: "搜索配置或客户端订阅",
+      }) as HTMLInputElement
+    ).value,
+  ).toBe("no-match-private-input");
+  const card = screen.getByRole("article", {
+    name: "分流配置 Travel configuration",
+  });
+  expect(within(card).getByText("没有匹配的客户端订阅。")).toBeTruthy();
+  expect(
+    within(card).queryByRole("button", { name: "查看订阅 Phone" }),
+  ).toBeNull();
+  expect(
+    location.href +
+      JSON.stringify(history.state) +
+      JSON.stringify(localStorage) +
+      JSON.stringify(sessionStorage),
+  ).not.toContain("no-match-private-input");
+});
+
 it("clears private memory context for another account and never serializes the search", async () => {
   inventory([profile], []);
   const { rerender, client } = mount(

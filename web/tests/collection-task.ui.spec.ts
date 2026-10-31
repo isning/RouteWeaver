@@ -7,6 +7,7 @@ import {
 } from "@playwright/test";
 import { openWorkspace } from "./ui-session";
 import { surfaceMotionState } from "./ui-surface-stability";
+import type { Source } from "../src/types";
 
 // Explicit captures contain only synthetic, pre-publication business state.
 // Candidate/diagnostic and save-failure injections are named below; happy paths
@@ -603,8 +604,10 @@ test("source acquisition preserves ordered source and merged steps until explici
   expect(await read(page, "profiles")).toEqual(before.profiles);
   expect(await read(page, "outputs")).toEqual(before.outputs);
   await page
-    .getByRole("button")
-    .filter({ has: page.getByRole("heading", { name, exact: true }) })
+    .getByRole("button", {
+      name: `${name} ${saved.sources.length} 个来源 · ${saved.steps.length} 个聚合步骤 编辑集合`,
+      exact: true,
+    })
     .click();
   const reopened = page.getByRole("dialog", { name, exact: true });
   await stableSurface(reopened);
@@ -747,52 +750,71 @@ for (const abnormal of ["candidate", "failed"] as const) {
     info.annotations.push({
       type: "synthetic-http-state",
       description:
-        "Real Source POST persists an accepted snapshot; only its browser response injects candidate or failed-import state. No parser/decision claim.",
+        "Real Source POST persists an accepted snapshot; only this exact source's browser POST and subsequent summary/reveal/list reads inject a consistent candidate or failed-import state. APIRequestContext reads retain actual server truth. No parser/decision claim.",
     });
-    // Actual create persists a synthetic Source. The candidate must satisfy the
-    // public review schema; diagnostic text alone is not evidence of failure.
-    await page.route("**/api/me/sources", async (route) => {
-      if (route.request().method() !== "POST") return route.continue();
-      const response = await route.fetch();
-      expect(response.ok()).toBe(true);
-      const source = await response.json();
-      await route.fulfill({
-        response,
-        json: {
-          ...source,
-          ...(abnormal === "candidate"
-            ? {
-                candidate: {
-                  id: "synthetic-candidate",
-                  createdAt: "2026-10-23T00:00:00Z",
-                  diff: {
-                    added: [],
-                    removed: source.snapshot.endpoints.map(
-                      (endpoint: { id: string; name: string }) => ({
-                        id: endpoint.id,
-                        name: endpoint.name,
-                      }),
-                    ),
-                    connectionChanged: [],
-                    renamed: [],
-                    beforeCount: source.snapshot.endpoints.length,
-                    afterCount: 0,
-                  },
-                  affected: [],
-                },
-                refreshStatus: "review-required",
-              }
-            : {
-                refreshStatus: "failed",
-                lastError: diagnostic,
-                lastErrorCode: "source_import_incomplete",
-                diagnostics: [
-                  { line: 2, message: "合成诊断：第二行连接尚需检查。" },
-                ],
-              }),
-        },
-      });
+    let injectedSourceID: string | undefined;
+    const injectState = (source: Source) => ({
+      ...source,
+      ...(abnormal === "candidate"
+        ? {
+            candidate: {
+              id: "synthetic-candidate",
+              createdAt: "2026-10-23T00:00:00Z",
+              diff: {
+                added: [],
+                removed: (source.snapshot?.endpoints || []).map((endpoint) => ({
+                  id: endpoint.id,
+                  name: endpoint.name,
+                })),
+                connectionChanged: [],
+                renamed: [],
+                beforeCount: source.snapshot?.endpoints.length || 0,
+                afterCount: 0,
+              },
+              affected: [],
+            },
+            refreshStatus: "review-required",
+          }
+        : {
+            refreshStatus: "failed",
+            lastError: diagnostic,
+            lastErrorCode: "source_import_incomplete",
+            diagnostics: [
+              { line: 2, message: "合成诊断：第二行连接尚需检查。" },
+            ],
+          }),
     });
+    // The owning recovery task rereads both summary and private input. Keep this
+    // declared synthetic state consistent through those reads instead of having
+    // an accepted GET silently replace the POST-only failure fixture.
+    await page.route(
+      /\/api\/me\/sources(?:\/[^/?]+(?:\/reveal)?)?$/,
+      async (route) => {
+        const request = route.request();
+        const path = new URL(request.url()).pathname;
+        const create =
+          request.method() === "POST" && path === "/api/me/sources";
+        const readInjected =
+          request.method() === "GET" &&
+          injectedSourceID &&
+          (path === "/api/me/sources" ||
+            path === `/api/me/sources/${injectedSourceID}` ||
+            path === `/api/me/sources/${injectedSourceID}/reveal`);
+        if (!create && !readInjected) return route.continue();
+        const response = await route.fetch();
+        expect(response.ok()).toBe(true);
+        const data = await response.json();
+        if (create) injectedSourceID = data.id;
+        await route.fulfill({
+          response,
+          json: Array.isArray(data)
+            ? data.map((source: Source) =>
+                source.id === injectedSourceID ? injectState(source) : source,
+              )
+            : injectState(data),
+        });
+      },
+    );
     const observed = writes(page);
     const dialog = await sourceTask(drawer, page);
     await fillSource(dialog, sourceName);
@@ -897,6 +919,8 @@ for (const abnormal of ["candidate", "failed"] as const) {
       merged.getByText("去除重复连接", { exact: true }),
     ).toBeVisible();
     await expect(notice).toContainText(savedMessage);
+    if (abnormal === "failed")
+      await expect(notice).toContainText(recoveryMessage);
     await expect(
       drawer.getByRole("button", {
         name: /^\d+\. .+ 来源处理(?: · 已配置 \d+ 步)?$/,

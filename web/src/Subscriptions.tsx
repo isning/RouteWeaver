@@ -1127,9 +1127,9 @@ export function SubscriptionsPage({
                     role="group"
                     aria-label={`客户端订阅 ${output.name}`}
                   >
-                    <div className="subscription-info text-sm text-muted-foreground">
+                    <div className="subscription-info min-w-0 max-w-full text-sm text-muted-foreground">
                       <ActionButton
-                        className="subscription-name-button h-auto justify-start p-0 text-left text-sm font-medium text-foreground underline-offset-4 hover:underline focus-visible:outline-ring"
+                        className="subscription-name-button h-auto max-w-full justify-start whitespace-normal wrap-anywhere p-0 text-left text-sm font-medium text-foreground underline-offset-4 hover:underline focus-visible:outline-ring"
                         data-return-focus={`output:${output.id}`}
                         aria-label={`查看订阅 ${output.name}`}
                         onClick={() => updateScope("output", output.id)}

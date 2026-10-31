@@ -2,6 +2,8 @@ import { test, expect } from "@playwright/test";
 import { readFile, writeFile } from "node:fs/promises";
 import { surfaceMotionState } from "./ui-surface-stability";
 import { openWorkspace } from "./ui-session";
+// Preserve actual mobile tap coverage under the aggregate browser config too.
+test.use({ hasTouch: true });
 // Actual loopback demo HTTP persistence; no agent starts, native apply or traffic.
 for (const width of [1440, 390])
   test(`real accepted publication with dropped response recovers after reload at ${width}`, async ({
@@ -113,10 +115,14 @@ for (const width of [1440, 390])
         ),
       ),
     );
+    const detail = page.getByRole("dialog", { name: draft.name, exact: true });
     await page.goto(`/#routes?deployment=${draft.id}`);
     try {
+      // A deployment deep link opens its modal: the underlying page heading is
+      // deliberately outside the accessibility tree until that modal closes.
+      await expect(detail).toBeVisible();
       await expect(
-        page.getByRole("heading", { name: "转发路径", exact: true, level: 1 }),
+        detail.getByRole("heading", { name: draft.name, exact: true }),
       ).toBeVisible();
       for (const response of await inventoryLoaded)
         expect(response.status()).toBe(200);
@@ -129,7 +135,6 @@ for (const width of [1440, 390])
         }),
       );
     }
-    const detail = page.getByRole("dialog", { name: draft.name, exact: true });
     await expect(detail).toBeVisible();
     await detail
       .getByRole("button", { name: "查看修改并应用", exact: true })

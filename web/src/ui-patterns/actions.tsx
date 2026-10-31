@@ -37,7 +37,7 @@ export function ActionButton({
     return (
       <Button
         {...props}
-        className={cn("min-h-11 min-w-11", className)}
+        className={cn("h-auto min-h-11 min-w-11", className)}
         asChild
         disabled={disabled || pending}
         aria-disabled={
@@ -73,7 +73,7 @@ export function ActionButton({
     <Button
       type="button"
       {...props}
-      className={cn("min-h-11 min-w-11", className)}
+      className={cn("h-auto min-h-11 min-w-11", className)}
       disabled={disabled || (pending && !keepFocusableWhilePending)}
       aria-disabled={disabled || pending || props["aria-disabled"] || undefined}
       aria-busy={pending || undefined}

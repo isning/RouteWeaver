@@ -888,6 +888,16 @@ it("keeps an unavailable default state readable and puts its stable identity in 
   expect(within(details).getByText(profile.ir.defaultAction.ref!)).toBeTruthy();
   await user.click(screen.getByRole("button", { name: "调整默认流量去向" }));
   await waitFor(() => expect(document.activeElement).toBe(control));
+  await user.click(control);
+  const retainedOption = await screen.findByRole("option", {
+    name: `连接不可用，引用 ${profile.ir.defaultAction.ref}`,
+  });
+  expect(
+    within(retainedOption).getByText(profile.ir.defaultAction.ref!, {
+      exact: true,
+    }),
+  ).toBeTruthy();
+  await user.keyboard("{Escape}");
   expect(writes).toHaveLength(0);
   await user.click(screen.getByRole("button", { name: "保存草稿" }));
   await waitFor(() => expect(writes).toHaveLength(1));
@@ -960,8 +970,12 @@ it("distinguishes multiple unknown members and rule destinations while repairing
   await user.click(members);
   // Reach this virtualized option by its identity, as a keyboard user can.
   await user.type(screen.getByPlaceholderText("搜索选项…"), second);
+  const retainedOption = await screen.findByRole("option", {
+    name: `连接不可用 2，引用 ${second}`,
+  });
+  // Identity is visible in the expanded option, not only its accessible name.
   expect(
-    await screen.findByRole("option", { name: `连接不可用 2，引用 ${second}` }),
+    within(retainedOption).getByText(second, { exact: true }),
   ).toBeTruthy();
   await user.keyboard("{Escape}");
   await user.click(
@@ -980,6 +994,12 @@ it("distinguishes multiple unknown members and rule destinations while repairing
   expect(within(ruleDetails).getByText(second)).toBeTruthy();
   expect(writes).toHaveLength(0);
   await user.click(rule);
+  const retainedRuleOption = await screen.findByRole("option", {
+    name: `连接不可用 2，引用 ${second}`,
+  });
+  expect(
+    within(retainedRuleOption).getByText(second, { exact: true }),
+  ).toBeTruthy();
   await user.click(await screen.findByRole("option", { name: "直连" }));
   await user.click(screen.getByRole("button", { name: "保存草稿" }));
   await waitFor(() => expect(writes).toHaveLength(1));

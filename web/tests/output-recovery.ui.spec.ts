@@ -496,7 +496,7 @@ test("update-check copy and neutral detail remain readable at desktop and 390px 
         exact: true,
       });
       await expect(detail.getByText("已发布", { exact: true })).toHaveClass(
-        "subscription-publication-state",
+        /(?:^|\s)subscription-publication-state(?:\s|$)/,
       );
       await expect(
         detail.getByText("与已保存草稿一致", { exact: true }),

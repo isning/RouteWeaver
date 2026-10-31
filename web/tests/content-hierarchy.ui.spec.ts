@@ -595,28 +595,74 @@ for (const gesture of ["double click", "held Enter"] as const) {
       // Send only this gesture's native second down/up pair at the unchanged
       // pointer position, and observe its actual click detail without dispatching.
       await fresh.evaluate((el) => {
-        (
-          window as unknown as { confirmationClickDetails: number[] }
-        ).confirmationClickDetails = [];
-        el.addEventListener(
-          "click",
-          (event) => {
-            (
-              window as unknown as { confirmationClickDetails: number[] }
-            ).confirmationClickDetails.push((event as MouseEvent).detail);
-          },
-          { once: true },
+        type NativeEvent = {
+          type: string;
+          detail: number;
+          action: string | null;
+          x: number;
+          y: number;
+        };
+        const state = window as unknown as {
+          confirmationClickDetails: number[];
+          confirmationNativeEvents: NativeEvent[];
+          stopConfirmationCapture?: () => void;
+        };
+        state.confirmationClickDetails = [];
+        state.confirmationNativeEvents = [];
+        const expected = el.getAttribute("aria-label");
+        const capture = (event: Event) => {
+          const mouse = event as MouseEvent;
+          const action =
+            event.target instanceof Element
+              ? (event.target.closest("button")?.getAttribute("aria-label") ??
+                null)
+              : null;
+          state.confirmationNativeEvents.push({
+            type: event.type,
+            detail: mouse.detail,
+            action,
+            x: mouse.clientX,
+            y: mouse.clientY,
+          });
+          if (event.type === "click" && action === expected)
+            state.confirmationClickDetails.push(mouse.detail);
+        };
+        const events = ["mousedown", "mouseup", "click"];
+        events.forEach((type) =>
+          document.addEventListener(type, capture, true),
         );
+        state.stopConfirmationCapture = () =>
+          events.forEach((type) =>
+            document.removeEventListener(type, capture, true),
+          );
       });
+      // Refresh native hit targeting after the keyed Check button was replaced;
+      // do not move to a new point or dispatch a synthetic DOM click.
+      await page.mouse.move(point.x, point.y);
       await page.mouse.down({ clickCount: 2 });
       await page.mouse.up({ clickCount: 2 });
-      expect(
-        await page.evaluate(
-          () =>
-            (window as unknown as { confirmationClickDetails: number[] })
-              .confirmationClickDetails,
-        ),
-      ).toEqual([2]);
+      const nativeGesture = await page.evaluate(() => {
+        const state = window as unknown as {
+          confirmationClickDetails: number[];
+          confirmationNativeEvents: unknown[];
+          stopConfirmationCapture?: () => void;
+        };
+        state.stopConfirmationCapture?.();
+        return {
+          details: state.confirmationClickDetails,
+          events: state.confirmationNativeEvents,
+        };
+      });
+      await info.attach("confirmation-native-second-click", {
+        body: JSON.stringify({
+          point,
+          expectedAction: `创建并发布「${changedName}」`,
+          hitsFreshConfirmation,
+          ...nativeGesture,
+        }),
+        contentType: "application/json",
+      });
+      expect(nativeGesture.details).toEqual([2]);
     } else {
       await check.click();
       await expect(status).toBeFocused();

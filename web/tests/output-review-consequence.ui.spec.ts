@@ -166,10 +166,14 @@ for (const scenario of ["unchanged", "changed-long-name"] as const) {
         name: "比较结论与范围",
         exact: true,
       });
-      const coverage = scope.getByText(
-        "仅比较分流规则和默认去向；未比较规则文件内容、策略组内容和节点设置。",
-        { exact: true },
-      );
+      const coverage = scope.getByText("未比较规则文件内容和客户端运行设置。", {
+        exact: true,
+      });
+      // This selected-output review also compares frozen groups/connections;
+      // retain its actual exclusion boundary rather than the generic old copy.
+      await expect(
+        review.getByText("策略组和连接未变化。", { exact: true }),
+      ).toBeVisible();
       if (scenario === "changed-long-name") {
         const changes = review.getByRole("list", { name: "分流规则变更" });
         await expect(changes).toBeVisible();
@@ -201,10 +205,9 @@ for (const scenario of ["unchanged", "changed-long-name"] as const) {
         await scope.scrollIntoViewIfNeeded();
         await expect(coverage).toBeInViewport({ ratio: 1 });
         if (scenario === "unchanged") {
-          const conclusion = scope.getByText(
-            "已展示的分流规则和默认去向相同。",
-            { exact: true },
-          );
+          const conclusion = scope.locator("summary").filter({
+            hasText: "分流规则和默认去向未变化",
+          });
           const before = await conclusion.boundingBox();
           const after = await coverage.boundingBox();
           expect(
@@ -222,7 +225,9 @@ for (const scenario of ["unchanged", "changed-long-name"] as const) {
         await page.keyboard.press("Tab");
         const overview = review.locator("summary").filter({
           hasText:
-            scenario === "unchanged" ? "配置数量与说明" : "查看待发布规则明细",
+            scenario === "unchanged"
+              ? "分流规则和默认去向未变化"
+              : "查看待发布规则明细",
         });
         await expect(overview).toBeFocused();
         await expect(overview).toBeInViewport({ ratio: 1 });

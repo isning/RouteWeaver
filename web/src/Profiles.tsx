@@ -1004,8 +1004,7 @@ export function ProfileEditor({
                     searchable
                     options={actions.map((option) => ({
                       ...option,
-                      description:
-                        "detail" in option ? option.detail : undefined,
+                      description: option.referenceID || option.detail,
                     }))}
                     onValueChange={(value) => {
                       if (value === undefined) return;
@@ -1373,7 +1372,7 @@ export function ProfileEditor({
   ];
   return (
     <div
-      className="profile-intent-editor space-y-6 [&_input]:scroll-mt-32 [&_textarea]:scroll-mt-32 [&_[role=combobox]]:scroll-mt-32"
+      className="profile-intent-editor space-y-6 [&_[data-slot=input]]:h-auto [&_[data-slot=input]]:min-h-11 [&_input]:scroll-mt-32 [&_textarea]:scroll-mt-32 [&_[role=combobox]]:scroll-mt-32"
       inert={!!sourceTask}
     >
       <div className="profile-editor-heading flex flex-wrap items-end justify-between gap-4">
@@ -1779,8 +1778,7 @@ export function ProfileEditor({
                     searchable
                     options={actions.map((option) => ({
                       ...option,
-                      description:
-                        "detail" in option ? option.detail : undefined,
+                      description: option.referenceID || option.detail,
                     }))}
                     onValueChange={(value) => {
                       if (value === undefined) return;
@@ -1811,8 +1809,9 @@ export function ProfileEditor({
                 >
                   使用多个候选连接…
                 </ActionButton>
+                {/* Keep the announcer mounted; an empty consequence has no visual card. */}
                 <div
-                  className="profile-traffic-outcome space-y-2 rounded-lg bg-muted p-4 text-sm"
+                  className="profile-traffic-outcome space-y-2 rounded-lg bg-muted p-4 text-sm empty:sr-only"
                   aria-live="polite"
                 >
                   {!nativeOverride &&
@@ -2074,9 +2073,10 @@ export function ProfileEditor({
               }}
             >
               {
-                <TabsList className="h-auto max-w-full flex-wrap justify-start">
+                <TabsList className="max-w-full flex-wrap justify-start group-data-horizontal/tabs:h-auto">
                   {editorTabs.map((section) => (
                     <TabsTrigger
+                      className="h-auto min-h-11 whitespace-normal"
                       key={section.key}
                       value={String(section.key)}
                       disabled={"disabled" in section && !!section.disabled}
@@ -2452,7 +2452,7 @@ function GroupEditor({
             .filter((a) => a.value !== `group:${value.id}`)
             .map((option) => ({
               ...option,
-              description: "detail" in option ? option.detail : undefined,
+              description: option.referenceID || option.detail,
             }))}
         />
       </label>

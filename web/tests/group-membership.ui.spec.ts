@@ -275,8 +275,13 @@ test("automatic members are an explicit additive choice over current source, col
       });
     }
     await page.setViewportSize({ width: 1440, height: 900 });
-    await sourceControl.hover();
-    await group.getByRole("button", { name: "Clear", exact: true }).click();
+    await sourceControl.click();
+    await page
+      .getByRole("listbox")
+      .getByRole("option", { name: "清除选择", exact: true })
+      .click();
+    await expect(sourceControl).toHaveAttribute("aria-expanded", "false");
+    await expect(sourceControl).toContainText("不限来源");
     await expect(toggle).toBeChecked();
     await saveAndInspect(
       "last-source-cleared",

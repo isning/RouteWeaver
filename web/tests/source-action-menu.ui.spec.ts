@@ -258,7 +258,15 @@ for (const width of [1280, 390]) {
         sourceMenu,
         "Closed source menu is removed, not merely hidden",
       ).toHaveCount(0);
-      await expect(trigger).toHaveAttribute("aria-expanded", "false");
+      // The alert dialog correctly conceals background controls. Inspect the
+      // closed internal state by exact identity, then verify public focus after cancel.
+      await expect(
+        page.getByRole("button", {
+          name: `更多操作 ${firstName}`,
+          exact: true,
+          includeHidden: true,
+        }),
+      ).toHaveAttribute("aria-expanded", "false");
       expect(
         deletionRequests,
         "Selecting delete only opens review, never deletes before consent",
