@@ -53,7 +53,7 @@ window, then durably deduplicate event IDs before applying an effect.
 
 ## Network and secret protection
 
-Secrets are stored in the encrypted private repository snapshot and accepted
+Secrets are stored in encrypted private repository records and accepted
 only as write-only settings input. They are absent from ordinary state, audit,
 settings responses and outbox summaries. No external credentials are configured
 by default, and tests use synthetic secrets only.
@@ -83,3 +83,10 @@ contracts, not real-provider compatibility or real email deliverability.
 The HTTP inbox returns the newest 200 visible items; the administrative outbox
 returns the newest 500 summaries. Durable deduplication history is retained; no
 retention/deletion policy silently discards delivery evidence.
+
+## Durable storage
+
+The SQLite adapter uses per-fact encrypted records with transactional outbox,
+recipient and history indexes. Hot service operations use scoped reads rather
+than the compatibility whole-state snapshot. Migration/backup and operational
+bounds are documented in `docs/verification/2026-10-31-notification-durability.md`.

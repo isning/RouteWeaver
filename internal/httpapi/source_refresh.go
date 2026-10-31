@@ -515,6 +515,11 @@ func (h *server) sourceCandidate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if strings.HasSuffix(r.URL.Path, "/reveal") {
+		w.Header().Set("Cache-Control", "no-store")
+		if err := h.s.Audit(current(r).Account.ID, "source-candidate.secret-revealed", source.ID+"/"+source.Candidate.ID); err != nil {
+			fail(w, 503, "required audit unavailable")
+			return
+		}
 		writeJSON(w, 200, map[string]any{"candidateId": source.Candidate.ID, "sourceRevision": source.Revision, "snapshot": source.Candidate.Snapshot})
 		return
 	}

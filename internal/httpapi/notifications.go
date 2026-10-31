@@ -2,7 +2,6 @@ package httpapi
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/go-chi/chi/v5"
@@ -30,43 +29,9 @@ func notificationError(w http.ResponseWriter, e error) {
 // notificationInputs uses the same authoritative usage/cycle computation as the
 // user's overview. Provider allowance is not inferred from these traffic meters.
 func (h *server) notificationInputs(now time.Time) ([]notifications.Recipient, []notifications.UserSnapshot, error) {
-	state, e := h.s.State()
-	if e != nil {
-		return nil, nil, e
-	}
-	raw, e := h.s.List("accounts")
-	if e != nil {
-		return nil, nil, e
-	}
-	accounts := map[string]store.Account{}
-	for _, b := range raw {
-		var a store.Account
-		if e = json.Unmarshal(b, &a); e != nil {
-			return nil, nil, e
-		}
-		accounts[a.ID] = a
-	}
-	recipients := []notifications.Recipient{{ID: "operator", Role: "admin", Enabled: true}}
-	users := []notifications.UserSnapshot{}
-	for _, u := range state.Users {
-		role := "user"
-		enabled := u.Enabled
-		if a, ok := accounts[u.ID]; ok {
-			role = a.Role
-			enabled = enabled && !a.Disabled
-		}
-		recipients = append(recipients, notifications.Recipient{ID: u.ID, Role: role, Enabled: enabled})
-		if !enabled {
-			continue
-		}
-		o, e := h.overview(u.ID, now)
-		if e != nil {
-			return nil, nil, e
-		}
-		users = append(users, notifications.UserSnapshot{UserID: u.ID, Enabled: enabled, QuotaBytes: o.QuotaBytes, UsedBytes: o.Usage.WeightedBytes, CycleID: o.Cycle.Start.UTC().Format(time.RFC3339Nano), ExpiresAt: o.Entitlement.ExpiresAt})
-	}
-	return recipients, users, nil
+	return h.s.NotificationInputs(now)
 }
+
 func (h *server) refreshInApp(ctx context.Context, now time.Time) error {
 	recipients, users, e := h.notificationInputs(now)
 	if e != nil {

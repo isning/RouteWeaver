@@ -7,22 +7,24 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"routeweaver/internal/controlprotocol"
 	"strings"
 	"time"
 )
 
 type journal struct {
-	PolicyIssuedHighWater time.Time    `json:"policyIssuedHighWater,omitempty"`
-	LatestPolicy          *PolicyLease `json:"latestPolicy,omitempty"`
-	Schema                int          `json:"schema"`
-	Scope                 Scope        `json:"scope"`
-	State                 State        `json:"state"`
-	Payload               *Desired     `json:"payload,omitempty"`
-	LastValid             *Desired     `json:"lastValid,omitempty"`
-	RequestDigest         string       `json:"requestDigest,omitempty"`
-	Stage                 string       `json:"stage,omitempty"`
-	PreviousStage         string       `json:"previousStage,omitempty"`
-	LastWallTime          time.Time    `json:"lastWallTime"`
+	PolicyRefresh         *controlprotocol.PolicyRefresh `json:"policyRefresh,omitempty"`
+	PolicyIssuedHighWater time.Time                      `json:"policyIssuedHighWater,omitempty"`
+	LatestPolicy          *PolicyLease                   `json:"latestPolicy,omitempty"`
+	Schema                int                            `json:"schema"`
+	Scope                 Scope                          `json:"scope"`
+	State                 State                          `json:"state"`
+	Payload               *Desired                       `json:"payload,omitempty"`
+	LastValid             *Desired                       `json:"lastValid,omitempty"`
+	RequestDigest         string                         `json:"requestDigest,omitempty"`
+	Stage                 string                         `json:"stage,omitempty"`
+	PreviousStage         string                         `json:"previousStage,omitempty"`
+	LastWallTime          time.Time                      `json:"lastWallTime"`
 }
 
 // atomicWrite fsyncs file contents before rename and the directory after rename.

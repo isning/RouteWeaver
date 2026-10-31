@@ -10,19 +10,23 @@ import (
 )
 
 func (s *Store) migrate() error {
-	tx, e := s.db.Begin()
+	ctx := context.Background()
+	conn, e := s.db.Conn(ctx)
 	if e != nil {
 		return e
 	}
-	defer tx.Rollback()
-	// Open has already created records. Reserve SQLite's writer before the
-	// no-op schema reads below: a deferred read-to-write upgrade can otherwise
-	// fail with SQLITE_BUSY_SNAPSHOT when independent processes open together.
-	// No row or trigger is changed, and counters need not exist yet.
-	if _, e = tx.Exec(`UPDATE records SET data=data WHERE 0`); e != nil {
+	defer conn.Close()
+	// No application table needs to exist yet. Acquire the writer before schema
+	// reads without touching an unknown database's rows or triggers.
+	if _, e = conn.ExecContext(ctx, `BEGIN IMMEDIATE`); e != nil {
 		return e
 	}
-	_, e = tx.Exec(`CREATE TABLE IF NOT EXISTS schema_migrations(version INTEGER PRIMARY KEY,applied_at TEXT NOT NULL);
+	defer conn.ExecContext(ctx, `ROLLBACK`)
+	if e = validateExistingSchema(ctx, conn); e != nil {
+		return unsupportedSchema(e)
+	}
+	_, e = conn.ExecContext(ctx, `CREATE TABLE IF NOT EXISTS records(kind TEXT NOT NULL,id TEXT NOT NULL,data BLOB NOT NULL,PRIMARY KEY(kind,id));
+ CREATE TABLE IF NOT EXISTS schema_migrations(version INTEGER PRIMARY KEY,applied_at TEXT NOT NULL);
  CREATE TABLE IF NOT EXISTS counters(kind TEXT NOT NULL,id TEXT NOT NULL,value INTEGER NOT NULL,PRIMARY KEY(kind,id));
  CREATE TABLE IF NOT EXISTS identities(username TEXT PRIMARY KEY,account_id TEXT NOT NULL UNIQUE);
  CREATE TABLE IF NOT EXISTS token_index(kind TEXT NOT NULL,digest TEXT NOT NULL,record_id TEXT NOT NULL,PRIMARY KEY(kind,digest));
@@ -31,7 +35,8 @@ func (s *Store) migrate() error {
 	if e != nil {
 		return e
 	}
-	return tx.Commit()
+	_, e = conn.ExecContext(ctx, `COMMIT`)
+	return e
 }
 func (s *Store) verifyEncryption() error {
 	rows, e := s.db.Query(`SELECT kind,id,data FROM records`)
@@ -58,7 +63,20 @@ func (s *Store) verifyEncryption() error {
 	}
 	return s.put("metadata", "key-check", map[string]int{"version": 1})
 }
-func (s *Store) Ready(ctx context.Context) error { return s.db.PingContext(ctx) }
+func (s *Store) Ready(ctx context.Context) error {
+	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if err = validateBackupSchema(ctx, tx); err != nil {
+		return unsupportedSchema(err)
+	}
+	if err = validateMigrationVersions(ctx, tx); err != nil {
+		return unsupportedSchema(err)
+	}
+	return nil
+}
 func (s *Store) get(kind, id string, out any) error {
 	var b []byte
 	e := s.db.QueryRow(`SELECT data FROM records WHERE kind=? AND id=?`, kind, id).Scan(&b)

@@ -2,11 +2,10 @@ package store
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 )
 
-func validateBackupSchema(ctx context.Context, tx *sql.Tx) error {
+func validateBackupSchema(ctx context.Context, tx schemaQuerier) error {
 	// Refuse an unrecognized physical schema instead of silently omitting a new
 	// table introduced by another binary or migration.
 	schemaRows, err := tx.QueryContext(ctx, `SELECT name FROM sqlite_schema WHERE type='table' AND name NOT LIKE 'sqlite_%'`)
@@ -63,19 +62,19 @@ func validateBackupSchema(ctx context.Context, tx *sql.Tx) error {
 		}
 	}
 	for table, want := range columns {
-		fields, err := tx.QueryContext(ctx, `SELECT name,pk FROM pragma_table_info(?) ORDER BY cid`, table)
+		fields, err := tx.QueryContext(ctx, `SELECT name,pk,hidden FROM pragma_table_xinfo(?) ORDER BY cid`, table)
 		if err != nil {
 			return err
 		}
 		index := 0
 		for fields.Next() {
 			var name string
-			var primaryKey int
-			if err = fields.Scan(&name, &primaryKey); err != nil {
+			var primaryKey, hidden int
+			if err = fields.Scan(&name, &primaryKey, &hidden); err != nil {
 				fields.Close()
 				return err
 			}
-			if index >= len(want) || name != want[index] || primaryKey != primaryKeys[table][index] {
+			if index >= len(want) || name != want[index] || primaryKey != primaryKeys[table][index] || hidden != 0 {
 				fields.Close()
 				return errors.New("unsupported database columns in backup")
 			}

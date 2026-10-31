@@ -14,12 +14,14 @@ import { Notice } from "@/ui-patterns/notice";
 import { PageNavigation } from "@/ui-patterns/page-navigation";
 import { TaskDialog, TaskSheet } from "@/ui-patterns/task-overlays";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ConnectionFields, normalizeConnection } from "./ConnectionFields";
 import { list, post, request } from "./api";
 import { EmptyState, ErrorNotice, QueryState } from "./components";
 import { newID } from "./model";
+import { useUnsavedChanges } from "./navigation";
+import { useDiscardConfirmation } from "./useDiscardConfirmation";
 import { invalidateOutputInputs } from "./output-comparison";
 import type {
   Connection,
@@ -123,6 +125,24 @@ function UserEntryTask({
   const [page, setPage] = useState(1);
   const [editing, setEditing] = useState<Grant | null>(null);
   const [form] = useForm();
+  const owner = useRef<object | null>(null);
+  const revealController = useRef<AbortController | null>(null);
+  const revealTrigger = useRef<HTMLElement | null>(null);
+  const submitting = useRef<object | null>(null);
+  const [revealing, setRevealing] = useState<Grant | null>(null);
+  const [dirty, setDirty] = useState(false);
+  const { confirm: confirmDiscard, confirming } = useDiscardConfirmation(
+    `${user.id}:${editing?.id || ""}:${open}`,
+  );
+  const invalidate = () => {
+    owner.current = null;
+    revealController.current?.abort();
+    revealController.current = null;
+  };
+  useLayoutEffect(() => {
+    if (!open) invalidate();
+    return invalidate;
+  }, [open, user.id]);
   const [error, setError] = useState<Error | null>(null);
   const query = useQuery({
     queryKey: ["user-entries", user?.id],
@@ -149,19 +169,23 @@ function UserEntryTask({
   ]);
   const save = useMutation({
     onMutate: () => invalidateOutputInputs(client),
-    onSettled: () => invalidateOutputInputs(client),
-    mutationFn: (value: Grant) =>
-      post(`/users/${user!.id}/entries`, {
-        id: editing!.id,
+    onSettled: (_data, _error, { task }) => {
+      invalidateOutputInputs(client);
+      if (submitting.current === task) submitting.current = null;
+    },
+    mutationFn: ({ value, id }: { value: Grant; id: string; task: object }) =>
+      post(`/users/${user.id}/entries`, {
+        id,
         name: value.name,
         routeId: value.routeId,
-        credentialVersion:
-          value.credentialVersion || form.getFieldValue("credentialVersion"),
+        credentialVersion: value.credentialVersion,
         connection: normalizeConnection(value.connection!),
       }),
-    onSuccess: () => {
+    onSuccess: (_data, { task }) => {
       client.invalidateQueries({ queryKey: ["user-entries", user?.id] });
-      if (!active.current) return;
+      if (!active.current || owner.current !== task) return;
+      invalidate();
+      setDirty(false);
       setEditing(null);
       form.resetFields();
       message.success("平台入口已保存");
@@ -199,36 +223,95 @@ function UserEntryTask({
     },
   });
   const pending = save.isPending || rotate.isPending || revoke.isPending;
-  const edit = async (value?: Grant) => {
-    if (!active.current) return;
+  useUnsavedChanges(open && (dirty || save.isPending));
+  const clearEditor = () => {
+    invalidate();
+    setRevealing(null);
+    setEditing(null);
+    setDirty(false);
+    form.resetFields();
+    save.reset();
+  };
+  const discardThen = (next: () => void) => {
+    if (!active.current || save.isPending || submitting.current || confirming)
+      return;
+    if (!dirty) return next();
+    confirmDiscard(
+      {
+        title: "放弃未保存的入口修改？",
+        description: "当前入口修改尚未保存。",
+        confirmLabel: "放弃修改",
+        cancelLabel: "继续编辑",
+      },
+      () => {
+        if (active.current) next();
+      },
+    );
+  };
+  const closeEditor = () => discardThen(clearEditor);
+  const closeSheet = () =>
+    discardThen(() => {
+      clearEditor();
+      onClose();
+    });
+  const beginEdit = async (value?: Grant) => {
+    invalidate();
+    const task = {};
+    owner.current = task;
+    const controller = new AbortController();
+    revealController.current = controller;
     setError(null);
+    setEditing(null);
+    form.resetFields();
+    save.reset();
+    setDirty(false);
+    setRevealing(value && !value.revoked ? value : null);
+    revealTrigger.current =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
     try {
-      const full = value
-        ? await request<Grant>(`/users/${user!.id}/entries/${value.id}/reveal`)
-        : {
-            id: newID("entry"),
-            name: "",
-            routeId: "",
-            credentialVersion: newID("credential"),
-            status: "",
-            connection: { protocol: "socks", host: "", port: 1080 },
-          };
-      if (!active.current) return;
-      if (full.revoked) full.credentialVersion = newID("credential");
+      const full =
+        value && !value.revoked
+          ? await request<Grant>(
+              `/users/${user.id}/entries/${value.id}/reveal`,
+              { signal: controller.signal },
+            )
+          : {
+              id: value?.id || newID("entry"),
+              name: value?.name || "",
+              routeId: value?.routeId || "",
+              credentialVersion: newID("credential"),
+              status: "",
+              revoked: value?.revoked,
+              connection: { protocol: "socks", host: "", port: 1080 },
+            };
+      if (!active.current || owner.current !== task) return;
       form.resetFields();
       form.setFieldsValue(full);
       setEditing(full);
       save.reset();
     } catch (e) {
-      if (active.current) setError(e as Error);
+      if (active.current && owner.current === task) setError(e as Error);
+    } finally {
+      if (owner.current === task) {
+        setRevealing(null);
+        revealController.current = null;
+      }
     }
+  };
+  const edit = (value?: Grant) => {
+    if (pending) return;
+    discardThen(() => {
+      void beginEdit(value);
+    });
   };
   return (
     <TaskSheet
       title={`${user?.name || ""} · 平台入口`}
       open={open}
       onOpenChange={(next) => {
-        if (!next) onClose();
+        if (!next) closeSheet();
       }}
       onReady={() =>
         ((visible) => {
@@ -252,7 +335,12 @@ function UserEntryTask({
                 event.preventDefault();
                 return;
               }
-              onClose?.();
+              event.preventDefault();
+              discardThen(() => {
+                clearEditor();
+                onClose();
+                window.location.assign(allocationHref);
+              });
             }}
           >
             从公开线路分配
@@ -262,6 +350,20 @@ function UserEntryTask({
     >
       <div inert={!open}>
         <ErrorNotice error={error} />
+        {revealing && (
+          <Notice tone="info" title={`正在读取「${revealing.name}」的入口凭据`}>
+            <ActionButton
+              variant="outline"
+              onClick={() => {
+                const trigger = revealTrigger.current;
+                clearEditor();
+                if (trigger?.isConnected && active.current) trigger.focus();
+              }}
+            >
+              取消读取
+            </ActionButton>
+          </Notice>
+        )}
         <QueryState
           loading={query.isLoading || entitlement.isLoading}
           error={query.error || entitlement.error}
@@ -325,7 +427,13 @@ function UserEntryTask({
                                     event.preventDefault();
                                     return;
                                   }
-                                  onClose?.();
+                                  event.preventDefault();
+                                  const href = event.currentTarget.href;
+                                  discardThen(() => {
+                                    clearEditor();
+                                    onClose();
+                                    window.location.assign(href);
+                                  });
                                 }}
                               >
                                 检查并应用路径
@@ -425,52 +533,70 @@ function UserEntryTask({
         </QueryState>
       </div>
       <TaskDialog
-        title={editing?.name ? `编辑 ${editing.name}` : "分配平台入口"}
+        title={
+          editing?.revoked
+            ? `重新分配 ${editing.name}`
+            : editing?.name
+              ? `编辑 ${editing.name}`
+              : "分配平台入口"
+        }
         open={open && !!editing}
-        footer={<div className="w-full space-y-3">
-          <Notice tone="info" title="登记公开连接不会自动配置节点">
-            {
-              "\u8BF7\u4F7F\u7528\u5DF2\u4E3A\u8BE5\u7528\u6237\u51C6\u5907\u7684\u5165\u53E3\u51ED\u636E\u3002\u8FD0\u884C\u72B6\u6001\u9700\u5728\u5BF9\u5E94\u5B9E\u4F8B\u5355\u72EC\u6838\u5B9E\u3002"
-            }
-          </Notice>
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            <ActionButton
-              onClick={() => {
-                setEditing(null);
-                form.resetFields();
-              }}
-              variant="outline"
-            >
-              取消
-            </ActionButton>
-            <ActionButton
-              type="submit"
-              form={formId}
-              pending={save.isPending}
-              variant="default"
-            >
-              保存入口
-            </ActionButton>
+        footer={
+          <div className="w-full space-y-3">
+            <Notice tone="info" title="登记公开连接不会自动配置节点">
+              {
+                "\u8BF7\u4F7F\u7528\u5DF2\u4E3A\u8BE5\u7528\u6237\u51C6\u5907\u7684\u5165\u53E3\u51ED\u636E\u3002\u8FD0\u884C\u72B6\u6001\u9700\u5728\u5BF9\u5E94\u5B9E\u4F8B\u5355\u72EC\u6838\u5B9E\u3002"
+              }
+            </Notice>
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <ActionButton onClick={closeEditor} variant="outline">
+                取消
+              </ActionButton>
+              <ActionButton
+                type="submit"
+                form={formId}
+                pending={save.isPending}
+                variant="default"
+              >
+                保存入口
+              </ActionButton>
+            </div>
           </div>
-        </div>}
+        }
         onOpenChange={(next) => {
-          if (!next)
-            (() => {
-              setEditing(null);
-              form.resetFields();
-            })();
+          if (!next) closeEditor();
         }}
         size="md"
+        pending={save.isPending || confirming}
       >
         <AppForm
           id={formId}
           form={form}
           disabled={save.isPending}
+          onValuesChange={() => setDirty(true)}
           onFinish={(v) => {
-            if (active.current) save.mutate(v);
+            const task = owner.current;
+            if (!active.current || !editing || !task || submitting.current)
+              return;
+            submitting.current = task;
+            save.mutate({
+              value: {
+                ...v,
+                credentialVersion:
+                  v.credentialVersion ||
+                  form.getFieldValue("credentialVersion"),
+              },
+              id: editing.id,
+              task,
+            });
           }}
         >
           <ErrorNotice error={save.error} />
+          {editing?.revoked && (
+            <Notice tone="info" title="填写新连接凭据">
+              已撤销的凭据不会重新读取。请填写为此用户新准备的连接；保存将使用新凭据版本，旧版本仍不可用于订阅交付。
+            </Notice>
+          )}
           <AppField name="name" label="入口名称" rules={[{ required: true }]}>
             <Input placeholder="例如：伦敦入口" />
           </AppField>
@@ -506,12 +632,13 @@ function UserEntryTask({
                       更换连接凭据时必须使用新版本。撤销过的版本不能恢复旧订阅。
                     </p>
                     <ActionButton
-                      onClick={() =>
+                      onClick={() => {
                         form.setFieldValue(
                           "credentialVersion",
                           newID("credential"),
-                        )
-                      }
+                        );
+                        setDirty(true);
+                      }}
                       variant="outline"
                     >
                       生成新版本标识
@@ -528,7 +655,6 @@ function UserEntryTask({
               </AccordionItem>
             ))}
           </Accordion>
-
         </AppForm>
       </TaskDialog>
     </TaskSheet>

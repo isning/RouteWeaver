@@ -36,7 +36,15 @@ func (h *server) fleetStageCurrent(record fleetRecord, stage int, p *preparedFle
 		if fleet.Outcome(record.Batch.Action, attempt, &state, time.Now().UTC()).Status != "succeeded" {
 			return fmt.Errorf("previous stage is no longer observed successful; reconcile its agent before continuing")
 		}
-		if record.Batch.Action != "stop" && record.Batch.Action != "install" && !time.Now().Before(desired.Lease.ExpiresAt) {
+		expires := desired.Lease.ExpiresAt
+		var service serviceIntent
+		if e := h.fleetRead(p, "agent-service-intents", target.InstanceID, &service, true); e != nil {
+			return e
+		}
+		if service.Running && service.Current == desired.Identity() && service.Lease.AccessAllowed && service.Lease.QuotaCertain && service.Lease.ExpiresAt.After(expires) {
+			expires = service.Lease.ExpiresAt
+		}
+		if record.Batch.Action != "stop" && record.Batch.Action != "install" && !time.Now().Before(expires) {
 			return fmt.Errorf("previous stage policy lease expired; review a new batch before continuing")
 		}
 	}

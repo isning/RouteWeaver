@@ -76,7 +76,10 @@ func (h *server) registerSecretInventoryRead(r chi.Router, kind string) {
 			return
 		}
 		w.Header().Set("Cache-Control", "no-store")
-		h.s.Audit(current(r).Account.ID, "inventory.secret-revealed", kind+"/"+id)
+		if e := h.s.Audit(current(r).Account.ID, "inventory.secret-revealed", kind+"/"+id); e != nil {
+			fail(w, 503, "required audit unavailable")
+			return
+		}
 		writeJSON(w, 200, h.revisionView(kind, id, record, true))
 	})
 }

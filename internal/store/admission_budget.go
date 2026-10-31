@@ -213,7 +213,17 @@ func (s *Store) grantAdmissionBudget(tx *sql.Tx, binding EntryAdmissionBinding, 
 	return &ceiling, "", nil
 }
 func (s *Store) unresolvedBudgetHold(user string, now time.Time) (bool, error) {
-	raw, e := s.List("admission-budgets")
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	tx, e := s.db.Begin()
+	if e != nil {
+		return false, e
+	}
+	defer tx.Rollback()
+	return s.unresolvedBudgetHoldTx(tx, user, now)
+}
+func (s *Store) unresolvedBudgetHoldTx(tx *sql.Tx, user string, now time.Time) (bool, error) {
+	raw, e := s.listTx(tx, "admission-budgets")
 	if e != nil {
 		return false, e
 	}

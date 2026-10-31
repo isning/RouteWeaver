@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/x509"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
@@ -155,5 +156,80 @@ func TestBoundedDriverIntegratesTLSDesiredObservationAndMeterReceipt(t *testing.
 	}
 	if st.Phase != "stopped" || !observed.Load() || !receivedMeter.Load() || len(meter.Pending()) != 0 {
 		t.Fatalf("incomplete TLS driver integration: %+v", st)
+	}
+}
+
+func TestDriverContinuousModeIsExplicitAndExclusive(t *testing.T) {
+	for _, options := range []DriverOptions{
+		{PollInterval: time.Millisecond, LeaseInterval: time.Millisecond},
+		{PollInterval: time.Millisecond, LeaseInterval: time.Millisecond, Continuous: true, MaxRuntime: time.Second},
+		{PollInterval: time.Millisecond, LeaseInterval: time.Millisecond, MaxRuntime: 25 * time.Hour},
+	} {
+		r := openTest(t, t.TempDir(), LocalFixture{})
+		if _, err := RunDriver(context.Background(), r, &driverTransport{}, nil, options); err == nil {
+			t.Fatal("ambiguous or unbounded default accepted")
+		}
+	}
+	r := openTest(t, t.TempDir(), LocalFixture{})
+	d := testDesired(t, 1)
+	if _, err := r.Submit(context.Background(), d); err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() {
+		st, err := RunDriver(ctx, r, &driverTransport{}, nil, DriverOptions{Continuous: true, PollInterval: time.Millisecond, LeaseInterval: time.Millisecond})
+		if err == nil && (st.Phase != "stopped" || st.Observed != nil) {
+			err = fmt.Errorf("owned session not stopped: %+v", st)
+		}
+		done <- err
+	}()
+	select {
+	case err := <-done:
+		t.Fatalf("service exited without cancellation: %v", err)
+	case <-time.After(20 * time.Millisecond):
+	}
+	cancel()
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatal(err)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("service failed to stop")
+	}
+}
+
+func TestDriverRestartRetainsGenerationFenceUntilNewDesired(t *testing.T) {
+	root := t.TempDir()
+	d := testDesired(t, 1)
+	options := DriverOptions{PollInterval: time.Millisecond, LeaseInterval: time.Millisecond, MaxRuntime: 30 * time.Millisecond}
+	r := openTest(t, root, LocalFixture{})
+	if _, err := RunDriver(context.Background(), r, &driverTransport{desired: &d}, nil, options); err != nil {
+		t.Fatal(err)
+	}
+	r.Close()
+	r = openTest(t, root, LocalFixture{})
+	old := &driverTransport{desired: &d}
+	if _, err := RunDriver(context.Background(), r, old, nil, options); err != nil {
+		t.Fatal(err)
+	}
+	for _, report := range old.reports {
+		if report.Phase == ObservedConformant {
+			t.Fatal("restart replayed stopped generation")
+		}
+	}
+	d.Generation = 2
+	d.OperationID = "restart-authorized-operation"
+	newer := &driverTransport{desired: &d}
+	if _, err := RunDriver(context.Background(), r, newer, nil, options); err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, report := range newer.reports {
+		found = found || (report.Phase == ObservedConformant && report.Observed != nil && report.Observed.Generation == 2)
+	}
+	if !found {
+		t.Fatal("new desired generation did not authorize restart")
 	}
 }

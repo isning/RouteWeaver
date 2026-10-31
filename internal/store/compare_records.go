@@ -30,6 +30,10 @@ func (s *Store) CompareAndPutRecords(compares []RecordCompare, writes []RecordWr
 }
 
 func (s *Store) CompareSetsAndPutRecords(compares []RecordCompare, sets []RecordSetCompare, writes []RecordWrite) error {
+	return s.compareSetsAndPutRecords(compares, sets, writes, nil)
+}
+
+func (s *Store) compareSetsAndPutRecords(compares []RecordCompare, sets []RecordSetCompare, writes []RecordWrite, fence *ServicePolicyFence) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	tx, e := s.beginWriteTx()
@@ -40,8 +44,18 @@ func (s *Store) CompareSetsAndPutRecords(compares []RecordCompare, sets []Record
 	if e = s.compareRecordsTx(tx, compares, sets); e != nil {
 		return e
 	}
+	if fence != nil {
+		if e = s.checkServicePolicyFenceTx(tx, *fence); e != nil {
+			return e
+		}
+	}
 	for _, w := range writes {
 		if e = s.putTx(tx, w.Kind, w.ID, w.Value); e != nil {
+			return e
+		}
+	}
+	if fence != nil {
+		if e = s.checkServicePolicyFenceTx(tx, *fence); e != nil {
 			return e
 		}
 	}

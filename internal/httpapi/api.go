@@ -11,8 +11,8 @@ import (
 	"github.com/danielgtaylor/huma/v2/adapters/humachi"
 	"github.com/go-chi/chi/v5"
 	"io"
-	"net"
 	"net/http"
+	"net/netip"
 	"os"
 	"path/filepath"
 	"routeweaver/internal/backup"
@@ -39,15 +39,17 @@ type MessageOutput struct {
 	}
 }
 type Options struct {
-	PublicOrigin     string
-	BackupLimits     backup.Limits
-	BackupRestoreDir string
-	BackupRestoreKey []byte
-	AdminToken       string
-	UIDir            string
-	SecureCookies    bool
+	TrustedProxyCIDRs []string
+	PublicOrigin      string
+	BackupLimits      backup.Limits
+	BackupRestoreDir  string
+	BackupRestoreKey  []byte
+	AdminToken        string
+	UIDir             string
+	SecureCookies     bool
 }
 type server struct {
+	trustedProxies           []netip.Prefix
 	s                        *store.Store
 	registry                 *render.Registry
 	opts                     Options
@@ -86,12 +88,16 @@ func newWithOptions(s *store.Store, registry *render.Registry, opts Options, ver
 			fail(w, 500, "invalid server public origin configuration")
 		})
 	}
+	trusted, err := parseTrustedProxies(opts.TrustedProxyCIDRs)
+	if err != nil {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { fail(w, 500, "invalid trusted proxy configuration") })
+	}
 	opts.PublicOrigin = origin
 	opts.SecureCookies = opts.SecureCookies || origin != ""
 	if verification == nil {
 		verification = newSubscriptionVerification()
 	}
-	h := &server{s: s, registry: registry, opts: opts, attempts: map[string]attempt{}, subscriptionVerification: verification}
+	h := &server{trustedProxies: trusted, s: s, registry: registry, opts: opts, attempts: map[string]attempt{}, subscriptionVerification: verification}
 	root := chi.NewRouter()
 	root.Use(h.headers)
 	root.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
@@ -113,6 +119,7 @@ func newWithOptions(s *store.Store, registry *render.Registry, opts Options, ver
 		r.Post("/auth/accept-invite", h.acceptInvite)
 		r.Group(func(r chi.Router) {
 			r.Use(h.authenticate)
+			h.registerAccountSecurity(r)
 			r.Get("/auth/me", h.me)
 			r.Post("/auth/logout", h.logout)
 			r.Post("/auth/mfa/setup", h.setupMFA)
@@ -212,6 +219,10 @@ func (h *server) authenticate(next http.Handler) http.Handler {
 				fail(w, 401, "session invalid or expired")
 				return
 			}
+			if a.PasswordChangeRequired && !passwordResetRoute(r.URL.Path) {
+				fail(w, 403, "password change required before continuing")
+				return
+			}
 			p.Account = a
 			p.Session = s
 			if r.Method != "GET" && r.Method != "HEAD" && subtle.ConstantTimeCompare([]byte(r.Header.Get("X-CSRF-Token")), []byte(s.CSRFToken)) != 1 {
@@ -262,26 +273,7 @@ func storeError(w http.ResponseWriter, e error) {
 		fail(w, 400, e.Error())
 	}
 }
-func (h *server) allowLogin(r *http.Request) bool {
-	host, _, _ := net.SplitHostPort(r.RemoteAddr)
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	now := time.Now()
-	if len(h.attempts) > 10000 {
-		for k, v := range h.attempts {
-			if now.After(v.Until) {
-				delete(h.attempts, k)
-			}
-		}
-		if len(h.attempts) > 10000 {
-			return false
-		}
-	}
-	v := h.attempts[host]
-	if now.After(v.Until) {
-		v = attempt{Until: now.Add(5 * time.Minute)}
-	}
-	v.Count++
-	h.attempts[host] = v
-	return v.Count <= 20
+
+func passwordResetRoute(path string) bool {
+	return path == "/api/auth/me" || path == "/api/auth/password" || path == "/api/auth/logout" || path == "/api/auth/sessions" || strings.HasPrefix(path, "/api/auth/sessions/")
 }

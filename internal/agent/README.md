@@ -13,7 +13,7 @@ This package is the local runtime/application seam, separate from `internal/rend
 - `PolicyLease` checks access permission, quota certainty, explicit validity duration and observed clock rollback. Accepted denials supersede old allowed leases. Unknown first activation is still restricted on expiry. The stock process restrictor stops its whole owned instance; it is not per-account native session revocation. The separately identified managed Xray adapter adds the per-account enforcement path described below; stock adapters do not inherit it.
 - A bounded durable meter outbox with explicit source/counter epoch, subject/route/policy/cycle attribution, decimal-string counters/sequences, digest-bound ordered ACK, restart replay and duplicate-last-ACK idempotency. It reports raw cumulative evidence, not quota debits. Limits: 128 pending batches, 1,000 samples/batch, 1 MiB/batch, 8 MiB total serialized outbox. Full queues reject collection rather than silently drop evidence.
 - Concrete outbound HTTP transport: operator-supplied scoped bearer, node/epoch headers, verified TLS, redirects disabled, no ambient proxy, strict response decoding, 12 MiB body bound, finite context-aware backoff, idempotency keys for POSTs and meter receipt integrity checks. Literal loopback HTTP requires explicit test opt-in. No insecure-TLS mode exists.
-- `RunDriver`: desired poll → reconcile → report; durable meter drain → exact ACK; independent lease timer unaffected by slow control-plane requests; bounded session and cleanup on cancellation. No network request happens merely by importing the package or starting the default fixture CLI.
+- `RunDriver`: desired poll → reconcile → report; durable meter drain → exact ACK; independent lease timer unaffected by slow control-plane requests; bounded session by default or explicit continuous foreground mode, and cleanup on cancellation. Serialized bounded re-observation occurs before each outbound report and on the lease timer, including previously conformant runtimes. No network request happens merely by importing the package or starting the default fixture CLI.
 
 ## Exact native envelope
 
@@ -24,7 +24,7 @@ The checker paths are source-verified and executable versions are checked on eve
 
 `NativeChecker` is validation-only. `ProcessSupervisor` is a separate explicit local opt-in: Xray `run -format json -config FILE`, sing-box `run -c FILE`. [sing-box run source](https://github.com/SagerNet/sing-box/blob/7054cac5124465ffdb145870d7c01885566711b1/cmd/sing-box/cmd_run.go).
 
-The supervisor starts direct child processes from explicit trusted executables and staged files. It observes Linux boot ID, PID, start ticks, resolved executable and process-group identity. Stop opens a **pidfd before final identity verification**, then signals only that stable leader, not a reusable PID/group. Unknown descendants block reconciliation. No service manager, host route, TUN, firewall or cgroup is modified by the supervisor. The supplied native configuration must itself be trusted and appropriate for the execution environment; this is not an OS sandbox for arbitrary native files.
+The supervisor starts direct child processes from explicit trusted executables and staged files. It observes Linux boot ID, PID, start ticks, resolved executable and process-group identity. Stop opens a **pidfd before final identity verification**, then signals only that stable leader, not a reusable PID/group. Unknown descendants block reconciliation, including leader exit/cancellation during startup grace; a direct child exit does not establish group absence. No service manager, host route, TUN, firewall or cgroup is modified by the supervisor. The supplied native configuration must itself be trusted and appropriate for the execution environment; this is not an OS sandbox for arbitrary native files.
 
 `Descriptor.NativeValidation` describes native checking separately from observation evidence:
 
@@ -213,3 +213,17 @@ version and a reviewed target release. No existing binary is relabeled as a new
 version. Real VPS installation, a production managed-runtime release and the
 previously documented sing-box process-start restriction remain outside this
 local evidence.
+
+
+## Production lifecycle remediation (2026-10-31)
+
+R01–R03 add explicit continuous foreground operation without weakening bounded
+local test sessions, fresh observations of owned-process loss, and conservative
+startup descendant handling. See the [operator lifecycle/runbook](../../cmd/node-agent/README.md#continuous-service-operation-and-recovery).
+Clean restart preserves generation fences: a stopped runtime needs a newer
+control-plane Desired generation, not automatic replay. Manual deployments require
+reviewed operator action; explicit Fleet continuous-service intents permit bounded,
+revalidated CP recovery and identity-bound lease refresh. `--service` alone does
+not grant ongoing authority. See the paired [CP acceptance](../../docs/verification/CONTINUOUS-SERVICE-CP-2026-10-31.md). Early launch identity
+failure retains pending ownership and requires investigation. Local signal and
+benign-process tests are not production deployment or sustained-soak evidence.

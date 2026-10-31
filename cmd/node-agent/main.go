@@ -36,6 +36,7 @@ func run(ctx context.Context, args []string, out, errOut io.Writer) int {
 	coreStore := flags.String("core-store", "", "private immutable official-release store; required by catalog mode")
 	maxLease := flags.Duration("max-policy-lease", 0, "explicit maximum policy lease, e.g. 15m (required)")
 	allowProcess := flags.Bool("allow-local-process", false, "allow a locally owned core process; does not install a service")
+	service := flags.Bool("service", false, "explicit foreground outbound service until SIGINT/SIGTERM; mutually exclusive with run-for")
 	runFor := flags.Duration("run-for", 0, "supervised session duration, at most 1h; stops owned process on exit")
 	demo := flags.Bool("demo", false, "generate synthetic local-fixture Desired state; no proxy process")
 	controlPlane := flags.String("control-plane", "", "explicit HTTPS control-plane origin; no default remote connection")
@@ -56,14 +57,24 @@ func run(ctx context.Context, args []string, out, errOut io.Writer) int {
 		fmt.Fprintln(errOut, "state-dir and positive max-policy-lease are required")
 		return 2
 	}
+	runForSet := false
+	flags.Visit(func(f *flag.Flag) {
+		if f.Name == "run-for" {
+			runForSet = true
+		}
+	})
+	if *service && (*controlPlane == "" || runForSet) {
+		fmt.Fprintln(errOut, "service requires outbound control-plane mode and no run-for")
+		return 2
+	}
 	if *observeNode && *controlPlane == "" {
 		fmt.Fprintln(errOut, "observe-node requires explicitly enrolled outbound control-plane mode")
 		return 2
 	}
 	var d agent.Desired
 	if *controlPlane != "" {
-		if *demo || *desiredFile != "" || *tokenFile == "" || *runFor <= 0 || *runFor > time.Hour || *mode == "check" || *operation != "reconcile" {
-			fmt.Fprintln(errOut, "outbound mode requires token-file and bounded run-for, no demo/desired/check/status")
+		if *demo || *desiredFile != "" || *tokenFile == "" || (!*service && (*runFor <= 0 || *runFor > time.Hour)) || *mode == "check" || *operation != "reconcile" {
+			fmt.Fprintln(errOut, "outbound mode requires token-file and either service or bounded run-for, no demo/desired/check/status")
 			return 2
 		}
 		d.Scope = agent.Scope{NodeID: *nodeID, InstanceID: *instanceID, EnrollmentEpoch: *epoch}
@@ -133,8 +144,8 @@ func run(ctx context.Context, args []string, out, errOut io.Writer) int {
 		}
 		adapter = checker
 		if *mode == "supervise" {
-			if !*allowProcess || *runFor <= 0 || *runFor > time.Hour {
-				fmt.Fprintln(errOut, "supervise requires allow-local-process and run-for in (0,1h]")
+			if !*allowProcess || (!*service && (*runFor <= 0 || *runFor > time.Hour)) {
+				fmt.Fprintln(errOut, "supervise requires allow-local-process and service or run-for in (0,1h]")
 				return 2
 			}
 			supervisor, err := agent.NewProcessSupervisor(checker, agent.SupervisorOptions{AllowLocalProcess: true, StartupGrace: 200 * time.Millisecond, StopTimeout: 2 * time.Second})
@@ -219,7 +230,7 @@ func run(ctx context.Context, args []string, out, errOut io.Writer) int {
 			}
 			defer diagnosticWorker.Close()
 		}
-		final, driverErr := agent.RunDriver(ctx, r, transport, spool, agent.DriverOptions{Diagnostics: diagnosticWorker, NodeObserver: observer, PollInterval: time.Second, LeaseInterval: 250 * time.Millisecond, MaxRuntime: *runFor, OnTransportError: func(e error) { fmt.Fprintln(errOut, e) }})
+		final, driverErr := agent.RunDriver(ctx, r, transport, spool, agent.DriverOptions{Diagnostics: diagnosticWorker, NodeObserver: observer, PollInterval: time.Second, LeaseInterval: 250 * time.Millisecond, MaxRuntime: *runFor, Continuous: *service, OnTransportError: func(e error) { fmt.Fprintln(errOut, e) }})
 		if encode(final) != nil {
 			return 1
 		}

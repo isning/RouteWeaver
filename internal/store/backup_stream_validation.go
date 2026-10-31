@@ -53,6 +53,16 @@ func (s *Store) validateBackupDatabase(ctx context.Context, tx *sql.Tx, l Backup
 		switch {
 		case f.Record != nil:
 			r := f.Record
+			if err := validateNotificationBackupRecord(*r, func(kind, id string) (json.RawMessage, error) {
+				var raw json.RawMessage
+				err := s.backupGet(ctx, tx, kind, id, &raw)
+				if err == sql.ErrNoRows {
+					err = ErrNotFound
+				}
+				return raw, err
+			}); err != nil {
+				return err
+			}
 			if r.Kind == "accounts" {
 				var a Account
 				if err := json.Unmarshal(r.Data, &a); err != nil {

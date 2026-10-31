@@ -11,18 +11,21 @@ import (
 )
 
 type Account struct {
-	ID                 string    `json:"id"`
-	Name               string    `json:"name"`
-	Username           string    `json:"username"`
-	Role               string    `json:"role"`
-	PasswordHash       []byte    `json:"passwordHash"`
-	Disabled           bool      `json:"disabled"`
-	TOTPSecret         string    `json:"totpSecret,omitempty"`
-	PendingTOTPSecret  string    `json:"pendingTotpSecret,omitempty"`
-	PendingTOTPExpires time.Time `json:"pendingTotpExpires,omitempty"`
-	LastTOTPStep       int64     `json:"lastTotpStep"`
+	Retired                bool      `json:"retired,omitempty"`
+	PasswordChangeRequired bool      `json:"passwordChangeRequired,omitempty"`
+	ID                     string    `json:"id"`
+	Name                   string    `json:"name"`
+	Username               string    `json:"username"`
+	Role                   string    `json:"role"`
+	PasswordHash           []byte    `json:"passwordHash"`
+	Disabled               bool      `json:"disabled"`
+	TOTPSecret             string    `json:"totpSecret,omitempty"`
+	PendingTOTPSecret      string    `json:"pendingTotpSecret,omitempty"`
+	PendingTOTPExpires     time.Time `json:"pendingTotpExpires,omitempty"`
+	LastTOTPStep           int64     `json:"lastTotpStep"`
 }
 type Session struct {
+	ID        string    `json:"id,omitempty"`
 	Digest    string    `json:"digest"`
 	AccountID string    `json:"accountId"`
 	CSRFToken string    `json:"csrfToken"`
@@ -159,7 +162,8 @@ func (s *Store) authenticate(username, password, totp string, now time.Time) (ac
 	if e == nil {
 		e = s.get("accounts", id, &a)
 	}
-	if e != nil || a.Disabled || !auth.CheckPassword(a.PasswordHash, password) {
+	passwordOK := auth.CheckPassword(a.PasswordHash, password)
+	if e != nil || a.Disabled || a.Retired || !passwordOK {
 		return Account{}, Account{}, fmt.Errorf("invalid credentials")
 	}
 	expected = a
@@ -193,20 +197,12 @@ func (s *Store) Login(username, password, code string, now time.Time) (Account, 
 	return a, session, token, e
 }
 func (s *Store) NewSession(a Account, now time.Time) (Session, string, error) {
-	token, e := auth.Token()
-	if e != nil {
-		return Session{}, "", e
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if a.Disabled || a.Retired {
+		return Session{}, "", ErrCredentials
 	}
-	csrf, e := auth.Token()
-	if e != nil {
-		return Session{}, "", e
-	}
-	v := Session{Digest: auth.Digest(token), AccountID: a.ID, CSRFToken: csrf, ExpiresAt: now.Add(12 * time.Hour)}
-	if a.Disabled {
-		return Session{}, "", fmt.Errorf("invalid credentials")
-	}
-	e = s.CompareAndPutRecords([]RecordCompare{{Kind: "accounts", ID: a.ID, Expected: a}}, []RecordWrite{{Kind: "sessions", ID: v.Digest, Value: v}})
-	return v, token, e
+	return s.commitSession(a, a, now, false)
 }
 
 // updateAuthenticatedAccount fences password/MFA verification against a
@@ -231,7 +227,7 @@ func (s *Store) ResolveSession(token string, now time.Time) (Account, Session, e
 	if e := s.Get("sessions", auth.Digest(token), &v); e != nil || !now.Before(v.ExpiresAt) {
 		return a, v, ErrNotFound
 	}
-	if e := s.Get("accounts", v.AccountID, &a); e != nil || a.Disabled {
+	if e := s.Get("accounts", v.AccountID, &a); e != nil || a.Disabled || a.Retired {
 		return a, v, ErrNotFound
 	}
 	return a, v, nil

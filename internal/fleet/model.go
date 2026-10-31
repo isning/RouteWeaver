@@ -14,12 +14,13 @@ import (
 )
 
 type Input struct {
-	Action          string     `json:"action"`
-	DeploymentID    string     `json:"deploymentId"`
-	TargetIDs       []string   `json:"targetIds"`
-	Stages          [][]string `json:"stages,omitempty"`
-	SourceBatchID   string     `json:"sourceBatchId,omitempty"`
-	TargetReleaseID string     `json:"targetReleaseId,omitempty"`
+	ContinuousService bool       `json:"continuousService,omitempty"`
+	Action            string     `json:"action"`
+	DeploymentID      string     `json:"deploymentId"`
+	TargetIDs         []string   `json:"targetIds"`
+	Stages            [][]string `json:"stages,omitempty"`
+	SourceBatchID     string     `json:"sourceBatchId,omitempty"`
+	TargetReleaseID   string     `json:"targetReleaseId,omitempty"`
 }
 type Plan struct {
 	Input
@@ -77,6 +78,9 @@ type Batch struct {
 func Stages(in Input) (map[string]int, error) {
 	if !domain.ValidID(in.DeploymentID) || len(in.TargetIDs) == 0 || len(in.TargetIDs) > 100 {
 		return nil, fmt.Errorf("deployment and 1–100 explicit targets required")
+	}
+	if in.ContinuousService && in.Action != "start" && in.Action != "configure" {
+		return nil, fmt.Errorf("continuous service requires reviewed start or configure action")
 	}
 	switch in.Action {
 	case "configure", "start", "stop", "rollback", "install", "upgrade":

@@ -3,6 +3,7 @@
 package store
 
 import (
+	"context"
 	"crypto/cipher"
 	"crypto/rand"
 	"database/sql"
@@ -37,6 +38,11 @@ type Store struct {
 }
 
 func Open(path string, key []byte) (*Store, error) {
+	canonicalPath, pathErr := CanonicalDatabasePath(path)
+	if pathErr != nil {
+		return nil, pathErr
+	}
+	path = canonicalPath
 	if len(key) != 32 {
 		return nil, fmt.Errorf("master key must contain 32 bytes")
 	}
@@ -61,7 +67,18 @@ func Open(path string, key []byte) (*Store, error) {
 		db.Close()
 		return nil, e
 	}
-	if _, e = db.Exec(`PRAGMA busy_timeout=5000; PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS records(kind TEXT NOT NULL,id TEXT NOT NULL,data BLOB NOT NULL,PRIMARY KEY(kind,id));`); e != nil {
+	if _, e = db.Exec(`PRAGMA busy_timeout=5000`); e != nil {
+		db.Close()
+		return nil, e
+	}
+	// Refuse unknown versions before changing journal mode or creating tables.
+	// migrate repeats this check under an immediate writer reservation, so a
+	// competing initializer cannot invalidate the preflight before schema writes.
+	if e = validateExistingSchema(context.Background(), db); e != nil {
+		db.Close()
+		return nil, unsupportedSchema(e)
+	}
+	if _, e = db.Exec(`PRAGMA journal_mode=WAL`); e != nil {
 		db.Close()
 		return nil, e
 	}
@@ -82,6 +99,10 @@ func Open(path string, key []byte) (*Store, error) {
 		return nil, e
 	}
 	if e = s.initializeAdmissionLiveState(); e != nil {
+		db.Close()
+		return nil, e
+	}
+	if e = s.initializeNotifications(); e != nil {
 		db.Close()
 		return nil, e
 	}

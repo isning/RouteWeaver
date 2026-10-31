@@ -61,7 +61,14 @@ import {
   WorkspaceHistoryContext,
 } from "./SubscriptionContext";
 import { hasUnsavedChanges } from "./navigation";
-import { Suspense, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import {
+  Suspense,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { lazyPage, PageBoundary } from "./PageBoundary";
 import { SessionBoundary, useSessionAccess } from "./SessionBoundary";
 import { APIError, loginWithToken, post, setToken } from "./api";
@@ -69,6 +76,12 @@ import type { Session } from "./types";
 import type { SourceAcceptanceReceipt } from "./SourceUpdateContinuation";
 import { ErrorNotice } from "./components";
 import { SubscriptionsPage } from "./Subscriptions";
+const AccountMFA = lazyPage(() =>
+  import("./Security").then((m) => ({ default: m.SecuritySettings })),
+);
+const AccountSecurityPage = lazyPage(() =>
+  import("./AccountSecurity").then((m) => ({ default: m.AccountSecurityPage })),
+);
 const SourcesPage = lazyPage(() =>
   import("./Sources").then((m) => ({ default: m.SourcesPage })),
 );
@@ -105,6 +118,7 @@ const FleetPage = lazyPage(() =>
   import("./Fleet").then((m) => ({ default: m.FleetPage })),
 );
 export type Page =
+  | "account-security"
   | "fleet"
   | "published-routes"
   | "notifications"
@@ -125,6 +139,11 @@ export type Page =
   | "servers"
   | "legacy-routes";
 const personal = [
+  {
+    id: "account-security",
+    label: "账号安全",
+    icon: <SettingOutlined aria-hidden="true" />,
+  },
   {
     id: "subscriptions",
     label: "我的订阅",
@@ -246,7 +265,11 @@ export function SidebarNavigationGroup({
   defaultOpen,
   label,
   children,
-}: { defaultOpen: boolean; label: string; children: ReactNode }) {
+}: {
+  defaultOpen: boolean;
+  label: string;
+  children: ReactNode;
+}) {
   const [open, setOpen] = useState(defaultOpen);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
@@ -264,7 +287,10 @@ export function SidebarNavigationGroup({
     >
       <CollapsibleTrigger asChild>
         <SidebarGroupLabel asChild>
-          <button ref={triggerRef} className="w-full cursor-pointer text-xs font-medium">
+          <button
+            ref={triggerRef}
+            className="w-full cursor-pointer text-xs font-medium"
+          >
             {label}
             <ChevronDown
               className="ml-auto size-4 transition-transform group-data-[state=closed]/collapsible:-rotate-90 motion-reduce:transition-none"
@@ -320,7 +346,9 @@ function Workspace() {
       },
     }));
   };
-  const [page, setPage] = useState<Page>(initialPage);
+  const [requestedPage, setPage] = useState<Page>(initialPage);
+  const passwordRequired = !!session.user.passwordChangeRequired;
+  const page = passwordRequired ? "account-security" : requestedPage;
   const sourceProfileRequest = useRef<{
     entry: SourceProfileEntry;
     scope: string | null;
@@ -596,11 +624,15 @@ function Workspace() {
       } else lifecycle.changed();
     }
   };
-  const menu = isAdmin ? [...personal, ...admin] : personal;
+  const menu = passwordRequired
+    ? personal.filter((item) => item.id === "account-security")
+    : isAdmin
+      ? [...personal, ...admin]
+      : personal;
   const navigationPage = subscriptionPage(page) ? "subscriptions" : page;
   const current = menu.find((item) => item.id === navigationPage);
   const groups = navigationGroups.filter(
-    (group) => !group.adminOnly || isAdmin,
+    (group) => !passwordRequired && (!group.adminOnly || isAdmin),
   );
   const currentGroup = groups.find((group) =>
     group.pages.includes(navigationPage),
@@ -649,7 +681,9 @@ function Workspace() {
           {groups.map((group) => (
             <SidebarGroup key={group.label} className="py-1">
               <SidebarNavigationGroup
-                defaultOpen={Boolean(group.discoverable || group.pages.includes(navigationPage))}
+                defaultOpen={Boolean(
+                  group.discoverable || group.pages.includes(navigationPage),
+                )}
                 key={`${group.label}:${group.pages.includes(navigationPage)}`}
                 label={group.label}
               >
@@ -658,7 +692,10 @@ function Workspace() {
             </SidebarGroup>
           ))}
           <SidebarGroup>
-            <SidebarMenu>{navButton("inbox")}</SidebarMenu>
+            <SidebarMenu>
+              {navButton("inbox")}
+              {navButton("account-security")}
+            </SidebarMenu>
           </SidebarGroup>
         </nav>
       </SidebarContent>
@@ -683,6 +720,9 @@ function Workspace() {
             </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent side="top" align="end" className="w-56">
+            <DropdownMenuItem onSelect={() => navigate("account-security")}>
+              账号安全
+            </DropdownMenuItem>
             <DropdownMenuItem onSelect={() => void logout()}>
               <LogoutOutlined aria-hidden="true" />
               退出登录
@@ -769,7 +809,10 @@ function Workspace() {
         </aside>
       )}
       <div className="main-shell flex min-w-0 flex-1 flex-col">
-        <header aria-label="工作空间" className="topbar flex h-14 shrink-0 items-center border-b px-4 sm:px-6">
+        <header
+          aria-label="工作空间"
+          className="topbar flex h-14 shrink-0 items-center border-b px-4 sm:px-6"
+        >
           <div className={"flex flex-wrap items-center gap-2"}>
             <ActionButton
               ref={mobileMenuTrigger}
@@ -787,7 +830,9 @@ function Workspace() {
               variant="ghost"
             />
             {narrow ? (
-              <span className="text-sm font-semibold tracking-tight">RouteWeaver</span>
+              <span className="text-sm font-semibold tracking-tight">
+                RouteWeaver
+              </span>
             ) : (
               <span className="breadcrumb flex items-center gap-2 text-sm">
                 <span className="breadcrumb-root hidden items-center gap-2 text-muted-foreground sm:inline-flex">
@@ -799,11 +844,11 @@ function Workspace() {
                     {currentGroup.label}
                     <span aria-hidden="true">/</span>
                   </span>
-              )}
-              <strong className="font-medium">
-                {current?.label || (adminMode ? "受限页面" : "我的订阅")}
-              </strong>
-            </span>
+                )}
+                <strong className="font-medium">
+                  {current?.label || (adminMode ? "受限页面" : "我的订阅")}
+                </strong>
+              </span>
             )}
           </div>
         </header>
@@ -828,7 +873,21 @@ function Workspace() {
                     </div>
                   }
                 >
-                  {adminMode ? (
+                  {page === "account-security" ? (
+                    <>
+                      <AccountSecurityPage
+                        session={session}
+                        onSessionChanged={(next) => {
+                          lifecycle.accept(next);
+                          lifecycle.changed();
+                        }}
+                        onSignedOut={() => {
+                          lifecycle.forget();
+                        }}
+                      />
+                      {isAdmin && !passwordRequired && <AccountMFA />}
+                    </>
+                  ) : adminMode ? (
                     isAdmin ? (
                       page === "notifications" ? (
                         <NotificationsAdminPage />
@@ -981,10 +1040,7 @@ function Login({
                 description="令牌仅保存在当前页面内存中。"
                 rules={[{ required: true, message: "请输入管理员令牌" }]}
               >
-                <PasswordInput
-                  revealLabel="管理员令牌"
-                  autoComplete="off"
-                />
+                <PasswordInput revealLabel="管理员令牌" autoComplete="off" />
               </AppField>
             ) : (
               <>

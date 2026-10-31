@@ -1060,7 +1060,14 @@ export function InstanceObservation({ instanceId }: { instanceId: string }) {
         "applied_unobserved",
         "unknown",
         "pending-new-generation",
-      ].includes(q.state.data?.phase || "")
+      ].includes(q.state.data?.phase || "") ||
+      (q.state.data?.serviceIntent?.running &&
+        [
+          "awaiting_observation",
+          "running",
+          "recovery_backoff",
+          "recovery_queued",
+        ].includes(q.state.data.serviceIntent.status))
         ? 5000
         : false,
   });
@@ -1084,6 +1091,47 @@ export function InstanceObservation({ instanceId }: { instanceId: string }) {
               size="sm"
             />
           </div>
+          {data.serviceIntent ? (
+            <div
+              className="space-y-2 rounded-lg border p-3"
+              aria-label="持续服务授权"
+            >
+              <p className="text-sm font-medium">
+                {(
+                  {
+                    awaiting_observation: "持续服务等待节点确认",
+                    running: "持续服务已授权",
+                    recovery_backoff: "自动恢复等待重试",
+                    recovery_queued: "自动恢复已提交",
+                    crash_loop_blocked: "自动恢复已暂停",
+                    review_required: "持续服务需要重新检查",
+                    disabled: "持续服务授权已关闭",
+                    superseded: "持续服务授权已被后续操作替代",
+                  } as Record<string, string>
+                )[data.serviceIntent.status] || "持续服务状态待确认"}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                已用自动恢复次数：{data.serviceIntent.automaticAttempts} / 3
+              </p>
+              {data.serviceIntent.nextAttemptAt && (
+                <p className="text-sm text-muted-foreground">
+                  下次尝试：{dateLabel(data.serviceIntent.nextAttemptAt)}
+                </p>
+              )}
+              {["crash_loop_blocked", "review_required"].includes(
+                data.serviceIntent.status,
+              ) && (
+                <p className="text-sm">
+                  请核对当前配置、权限与节点状态，再重新检查并明确创建新的持续运行计划。结果未确认时不会自动重放。
+                </p>
+              )}
+              <p className="text-xs text-muted-foreground">
+                授权状态不等于核心正在运行；运行结果以上方节点确认状态为准。
+              </p>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">未设置持续服务授权</p>
+          )}
           {data.state?.observed && (
             <p className="muted text-sm text-muted-foreground">
               最近确认 {dateLabel(data.state.observed.observedAt)}

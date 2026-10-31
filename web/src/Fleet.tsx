@@ -44,6 +44,15 @@ import { useUnsavedChanges } from "./navigation";
 import type { Infrastructure } from "./types";
 import { useDiscardConfirmation } from "./useDiscardConfirmation";
 const base = "/admin/fleet-batches";
+function serviceConsequence(
+  input: Pick<FleetInput, "action" | "continuousService">,
+): string {
+  if (input.continuousService)
+    return "授权与配置有效时继续续期；确认核心退出后，最多自动恢复 3 次，依次等待 5、10、20 秒。达到上限、结果未确认或权限变化时暂停，必须重新检查；不会自动恢复已撤销的权限。停止核心或提交未勾选持续运行的替代操作，会关闭原持续授权。仅退出 Agent 进程不等于关闭授权。";
+  return input.action === "stop"
+    ? "执行停止时会关闭所选实例的持续授权，不会再自动恢复。"
+    : "本次不授予持续运行权限；执行时会关闭原有持续授权。现有核心仅保留当前有时限的运行授权，到期后停止。";
+}
 // Only this typed pre-creation rejection establishes that no batch was created.
 // Unknown responses retain the transport's existing fallback and uncertainty.
 function fleetCreateFeedback(error: Error | null): Error | null {
@@ -220,6 +229,9 @@ export function FleetPlanForm({
   const [targetIds, setTargets] = useState<string[]>(initialTargetIds),
     [assignments, setAssignments] = useState<Record<string, number>>({});
   const [strategy, setStrategy] = useState<FleetStrategy>("together");
+  // A new review never inherits an earlier batch's continuing authorization.
+  const [continuousService, setContinuousService] = useState(false);
+  const canContinue = action === "start" || action === "configure";
   const strategyIssue = fleetStrategyIssue(strategy, targetIds.length);
   const effectiveAssignments =
     strategy === "custom"
@@ -295,6 +307,7 @@ export function FleetPlanForm({
     deploymentId,
     targetIds,
     stages: stagesFor(targetIds, effectiveAssignments),
+    ...(canContinue ? { continuousService } : {}),
     ...(action === "rollback" ? { sourceBatchId } : {}),
     ...(lifecycle ? { targetReleaseId } : {}),
   });
@@ -316,12 +329,13 @@ export function FleetPlanForm({
         throw new Error("请选择目录中的目标核心版本。");
       if (action === "rollback" && !sourceBatchId)
         throw new Error("请选择要回退到的历史配置。");
-      return {
-        version,
-        input: body,
-        leaseSeconds,
-        plan: await post<FleetPlan>(`${base}/preview`, body),
-      };
+      const plan = await post<FleetPlan>(`${base}/preview`, body);
+      if (
+        (plan.continuousService === true) !==
+        (body.continuousService === true)
+      )
+        throw new Error("服务未确认所选的持续运行模式，请刷新后重新预览。");
+      return { version, input: body, leaseSeconds, plan };
     },
     onSuccess: (value) => {
       if (value.version === revision.current && !blocksConfigure(value.input))
@@ -441,6 +455,7 @@ export function FleetPlanForm({
                 )}
                 onValueChange={(value) => {
                   touch();
+                  setContinuousService(false);
                   if (value) setAction(value as FleetAction);
                 }}
               />
@@ -465,6 +480,7 @@ export function FleetPlanForm({
                 }))}
                 onValueChange={(value) => {
                   touch();
+                  setContinuousService(false);
                   setDeployment(value ?? "");
                   setTargets([]);
                   setAssignments({});
@@ -578,10 +594,27 @@ export function FleetPlanForm({
             </p>
           </>
         )}
+        {canContinue && (
+          <div className="space-y-2 rounded-lg border p-4">
+            <label className="flex items-start gap-2 text-sm font-medium">
+              <Checkbox
+                checked={continuousService}
+                onCheckedChange={(checked) => {
+                  touch();
+                  setContinuousService(checked === true);
+                }}
+              />
+              持续运行并有限自动恢复
+            </label>
+            <p className="text-sm text-muted-foreground">
+              仅在授权与配置仍有效时继续续期；确认核心退出后可有限重启。未勾选则只执行本次有时限的操作。
+            </p>
+          </div>
+        )}
         {action === "stop" && (
           <Notice tone="warning" title="停止会中断经过这些实例的连接">
             {
-              "\u7EBF\u8DEF\u5728\u660E\u786E\u6267\u884C\u542F\u52A8\u5E76\u786E\u8BA4\u5B8C\u6210\u524D\u4E0D\u53EF\u7528\u3002"
+              "停止操作会关闭这些实例的持续运行授权；线路在重新检查、执行启动并确认完成前不可用。"
             }
           </Notice>
         )}
@@ -832,6 +865,15 @@ export function FleetPlanForm({
                   ? "所选核心将停止，经过它们的线路暂时不可用。"
                   : "所选核心将重启，现有连接可能中断；后续阶段等待前序成功。"}
             </p>
+            {review.input.continuousService ? (
+              <Notice tone="info" title="持续运行授权">
+                {serviceConsequence(review.input)}
+              </Notice>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                {serviceConsequence(review.input)}
+              </p>
+            )}
             {review.plan.diagnostics?.map((d, i) => (
               <Notice key={i} tone="warning" title={d} />
             ))}
@@ -1072,6 +1114,7 @@ export function FleetBatchDetail({
     onSuccess: (value) => {
       client.setQueryData(["fleet-batch", id], value);
       client.invalidateQueries({ queryKey: ["fleet-batches"] });
+      client.invalidateQueries({ queryKey: ["instance-state"] });
       setSelected([]);
       setOperation(null);
     },
@@ -1095,11 +1138,12 @@ export function FleetBatchDetail({
         ? `重试 ${targetIds.length} 个失败实例？`
         : `执行第 ${stage! + 1} 阶段？`,
       description:
-        batch?.action === "install"
+        (batch?.action === "install"
           ? "只准备目标版本文件，不启动或替换当前核心。"
           : batch?.action === "stop"
             ? "所选实例将停止，相关连接会中断。"
-            : "所选实例将重启并应用已检查的配置，当前连接可能中断。成功实例不会重复执行。",
+            : "所选实例将重启并应用已检查的配置，当前连接可能中断。成功实例不会重复执行。") +
+        (batch ? serviceConsequence(batch) : ""),
       confirmLabel: retry ? "确认重试" : "确认执行",
       cancelLabel: "取消",
       onConfirm: () => {
@@ -1141,6 +1185,11 @@ export function FleetBatchDetail({
               </div>
               <Badge variant="secondary">{fleetStatus(batch.status)}</Badge>
             </div>
+            <p className="mb-4 text-sm text-muted-foreground">
+              {batch.continuousService
+                ? "本批次包含持续运行授权。当前授权与恢复状态可在实例详情查看。"
+                : "本批次不授予持续运行权限。"}
+            </p>
             <FleetTargets
               targets={batch.targets}
               selected={selected}

@@ -45,6 +45,7 @@ func (h *server) registerAgent(r chi.Router) {
 	h.registerDiagnosticAgent(r)
 	h.registerNodeObservationAgent(r)
 	h.registerAdmissionAgent(r)
+	h.registerServiceHeartbeat(r)
 	r.Get("/agent/instances/{instanceId}/desired", func(w http.ResponseWriter, r *http.Request) {
 		enrollment, ok := h.agentIdentity(w, r)
 		if !ok {
@@ -258,6 +259,12 @@ func (h *server) registerAgentAdmin(r chi.Router) {
 			} else {
 				out["phase"] = "pending-new-generation"
 			}
+		}
+		if view, e := h.serviceIntentView(id, desired.Identity()); e == nil && view != nil {
+			out["serviceIntent"] = view
+		} else if e != nil {
+			storeError(w, e)
+			return
 		}
 		writeJSON(w, 200, out)
 	})

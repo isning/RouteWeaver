@@ -14,7 +14,7 @@ func (s *Store) BeginMFA(id, password string, now time.Time) (string, string, er
 	if e := s.get("accounts", id, &a); e != nil {
 		return "", "", e
 	}
-	if a.Role != "admin" || a.Disabled || !auth.CheckPassword(a.PasswordHash, password) {
+	if a.Role != "admin" || a.Disabled || a.Retired || !auth.CheckPassword(a.PasswordHash, password) {
 		return "", "", fmt.Errorf("invalid credentials")
 	}
 	if a.TOTPSecret != "" {
@@ -37,7 +37,7 @@ func (s *Store) EnableMFA(id, code string, now time.Time) (Account, Session, str
 		return a, Session{}, "", e
 	}
 	step, valid := auth.MatchTOTPStep(a.PendingTOTPSecret, code, now)
-	if a.Disabled || a.Role != "admin" || a.TOTPSecret != "" || a.PendingTOTPSecret == "" || !now.Before(a.PendingTOTPExpires) || !valid {
+	if a.Disabled || a.Retired || a.Role != "admin" || a.TOTPSecret != "" || a.PendingTOTPSecret == "" || !now.Before(a.PendingTOTPExpires) || !valid {
 		return a, Session{}, "", fmt.Errorf("MFA enrollment expired, already completed, or invalid code")
 	}
 	expected := a
@@ -52,15 +52,10 @@ func (s *Store) EnableMFA(id, code string, now time.Time) (Account, Session, str
 // commitSession atomically persists accepted MFA step and the new session. When
 // enrolling MFA, all older sessions are revoked in the same transaction.
 func (s *Store) commitSession(expected, a Account, now time.Time, revoke bool) (Session, string, error) {
-	token, e := auth.Token()
+	session, token, e := newSecuritySession(a, now)
 	if e != nil {
 		return Session{}, "", e
 	}
-	csrf, e := auth.Token()
-	if e != nil {
-		return Session{}, "", e
-	}
-	session := Session{Digest: auth.Digest(token), AccountID: a.ID, CSRFToken: csrf, ExpiresAt: now.Add(12 * time.Hour)}
 	tx, e := s.beginWriteTx()
 	if e != nil {
 		return Session{}, "", e
@@ -68,6 +63,11 @@ func (s *Store) commitSession(expected, a Account, now time.Time, revoke bool) (
 	defer tx.Rollback()
 	if e = s.compareRecordsTx(tx, []RecordCompare{{Kind: "accounts", ID: a.ID, Expected: expected}}, nil); e != nil {
 		return Session{}, "", e
+	}
+	if !revoke {
+		if e = s.pruneSessionsTx(tx, a.ID, "", now, 31); e != nil {
+			return Session{}, "", e
+		}
 	}
 	toDelete := []string{}
 	if revoke {

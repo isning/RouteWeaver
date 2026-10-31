@@ -28,6 +28,10 @@ type fleetFixture struct {
 func newFleetFixture(t *testing.T) fleetFixture {
 	t.Helper()
 	s, srv := makeServer(t)
+	return fleetFixtureAt(t, s, srv)
+}
+func fleetFixtureAt(t *testing.T, s *store.Store, srv *httptest.Server) fleetFixture {
+	t.Helper()
 	f := fleetFixture{s: s, srv: srv, in: fleet.Input{Action: "configure", DeploymentID: "fleet-deployment", TargetIDs: []string{"fleet-a", "fleet-b"}, Stages: [][]string{{"fleet-a"}, {"fleet-b"}}}, transports: map[string]*agent.HTTPTransport{}}
 	deployment := httpapi.ServerDeployment{ID: f.in.DeploymentID, Name: "Fleet", IR: domain.ServerDeploymentIR{ID: f.in.DeploymentID, SchemaVersion: "1.0", TopologyRevision: "topology1"}}
 	for i, id := range f.in.TargetIDs {

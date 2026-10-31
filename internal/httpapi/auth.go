@@ -7,7 +7,7 @@ import (
 )
 
 func publicAccount(a store.Account) map[string]any {
-	return map[string]any{"id": a.ID, "name": a.Name, "username": a.Username, "role": a.Role, "mfaEnabled": a.TOTPSecret != ""}
+	return map[string]any{"id": a.ID, "name": a.Name, "username": a.Username, "role": a.Role, "mfaEnabled": a.TOTPSecret != "", "disabled": a.Disabled, "retired": a.Retired, "passwordChangeRequired": a.PasswordChangeRequired}
 }
 func (h *server) establish(w http.ResponseWriter, a store.Account) {
 	s, token, e := h.s.NewSession(a, time.Now())
@@ -22,16 +22,16 @@ func (h *server) sessionResponse(w http.ResponseWriter, a store.Account, s store
 	writeJSON(w, 200, map[string]any{"user": publicAccount(a), "csrfToken": s.CSRFToken})
 }
 func (h *server) login(w http.ResponseWriter, r *http.Request) {
-	if !h.allowLogin(r) {
-		fail(w, 429, "too many login attempts; retry later")
-		return
-	}
 	var in struct {
 		Username string `json:"username"`
 		Password string `json:"password"`
 		TOTP     string `json:"totp"`
 	}
 	if !decode(w, r, &in) {
+		return
+	}
+	if !h.allowAuth(r, "login", in.Username) {
+		fail(w, 429, "too many login attempts; retry later")
 		return
 	}
 	a, session, token, e := h.s.Login(in.Username, in.Password, in.TOTP, time.Now())

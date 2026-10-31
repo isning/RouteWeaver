@@ -102,6 +102,12 @@ func Open(root string, scope Scope, registry *Registry, options Options) (*Recon
 			if r.disk.LastValid != nil && r.disk.LastValid.Lease.IssuedAt.After(r.disk.PolicyIssuedHighWater) {
 				r.disk.PolicyIssuedHighWater = r.disk.LastValid.Lease.IssuedAt
 			}
+			if update := r.disk.PolicyRefresh; update != nil {
+				if update.Identity.Scope != scope || update.Identity.Generation == 0 || update.Identity.Generation > d.Generation || !domain.ValidID(update.IntentID) || update.Sequence == 0 || update.Lease.Revision == "" || !update.Lease.AccessAllowed || !update.Lease.QuotaCertain || update.Lease.IssuedAt.IsZero() || !update.Lease.ExpiresAt.After(update.Lease.IssuedAt) || update.Lease.ExpiresAt.Sub(update.Lease.IssuedAt) > options.MaxLease || update.Lease.IssuedAt.After(r.disk.PolicyIssuedHighWater) {
+					r.Close()
+					return nil, errors.New("policy refresh journal identity mismatch")
+				}
+			}
 			r.disk.State.RecoveryRequired = true
 		} else if r.disk.State.HighestAccepted != 0 {
 			r.Close()
@@ -227,7 +233,7 @@ func (r *Reconciler) Submit(ctx context.Context, d Desired) (State, error) {
 			if d.Action == "install" && r.disk.State.Phase == "installed" {
 				return r.out(nil)
 			}
-			if err = r.gate(d); err != nil {
+			if err = r.gate(r.effectivePolicy()); err != nil {
 				return r.restrictLocked(ctx)
 			}
 			if err = r.persist(); err != nil {
@@ -425,7 +431,7 @@ func (r *Reconciler) recoverLocked(ctx context.Context) (State, error) {
 		r.disk.State.Phase = ObservedConformant
 		r.disk.State.Code = ""
 		r.disk.State.RecoveryRequired = false
-		if err = r.gate(d); err != nil {
+		if err = r.gate(r.effectivePolicy()); err != nil {
 			return r.restrictLocked(ctx)
 		}
 		return r.out(r.persist())
@@ -525,15 +531,15 @@ func (r *Reconciler) effectivePolicy() Desired {
 		return d
 	}
 	if r.disk.Payload != nil && r.disk.Payload.Action == "install" && r.disk.LastValid != nil {
-		return *r.disk.LastValid
+		return r.refreshedPolicy(*r.disk.LastValid)
 	}
-	if r.disk.Payload != nil && leaseDecision(r.disk.Payload.Lease, r.options.Now(), r.disk.LastWallTime, r.options.MaxLease) != "allowed" {
-		return *r.disk.Payload
+	if r.disk.Payload != nil && leaseDecision(r.refreshedPolicy(*r.disk.Payload).Lease, r.options.Now(), r.disk.LastWallTime, r.options.MaxLease) != "allowed" {
+		return r.refreshedPolicy(*r.disk.Payload)
 	}
 	if r.disk.LastValid != nil {
-		return *r.disk.LastValid
+		return r.refreshedPolicy(*r.disk.LastValid)
 	}
-	return *r.disk.Payload
+	return r.refreshedPolicy(*r.disk.Payload)
 }
 func (r *Reconciler) restrictLocked(ctx context.Context) (State, error) {
 	if r.disk.LastValid == nil && r.disk.Payload == nil {

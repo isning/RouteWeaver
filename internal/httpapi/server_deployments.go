@@ -340,6 +340,7 @@ func (h *server) publishServer(w http.ResponseWriter, r *http.Request) {
 	proof.Compares = append(proof.Compares, store.RecordCompare{Kind: "publication-receipts", ID: a.receiptID})
 	ids := []string{}
 	desireds := map[string]controlprotocol.Desired{}
+	serviceIntents := map[string]serviceIntent{}
 	manifests := map[string]domain.PublishedManifest{}
 	ownershipProofs := map[string]instanceOwnership{}
 	for _, p := range v.IR.Programs {
@@ -395,6 +396,12 @@ func (h *server) publishServer(w http.ResponseWriter, r *http.Request) {
 			}
 			return
 		}
+		var previousService serviceIntent
+		if e = h.fleetRead(&proof, "agent-service-intents", p.Instance.ID, &previousService, true); e != nil {
+			writePublicationOperationalError(w, e)
+			return
+		}
+		serviceIntents[p.Instance.ID] = previousService
 		ids = append(ids, p.Instance.ID)
 		desireds[p.Instance.ID] = desired
 		manifests[p.Instance.ID] = manifest
@@ -410,6 +417,13 @@ func (h *server) publishServer(w http.ResponseWriter, r *http.Request) {
 			writes = append(writes, ownership...)
 			desired := desireds[id]
 			desired.Generation = generations[id]
+			if previousService := serviceIntents[id]; previousService.ID != "" {
+				previousService.Running = false
+				previousService.Status = "disabled"
+				previousService.Current = desired.Identity()
+				previousService.PendingRefresh = nil
+				writes = append(writes, store.RecordWrite{Kind: "agent-service-intents", ID: id, Value: previousService})
+			}
 			manifest := manifests[id]
 			manifest.Identity.Generation = generations[id]
 			result.Instances = append(result.Instances, publicationInstance{InstanceID: id, Generation: fmt.Sprintf("%d", generations[id]), OperationID: desired.OperationID, RevisionID: desired.RevisionID})

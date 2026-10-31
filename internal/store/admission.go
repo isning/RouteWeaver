@@ -9,7 +9,6 @@ import (
 	"net/netip"
 	"routeweaver/internal/domain"
 	"routeweaver/internal/entrypolicy"
-	"routeweaver/internal/service"
 	"strings"
 	"time"
 )
@@ -176,7 +175,6 @@ func (s *Store) admissionEligibility(tx *sql.Tx, binding EntryAdmissionBinding, 
 	if entitlement.ExpiresAt != nil {
 		expires = earlier(expires, *entitlement.ExpiresAt)
 	}
-	quota := policy.QuotaBytes
 	ipLimit = policy.OnlineIPLimit
 	connectionLimit = policy.ConnectionLimit
 	rateBPS = policy.EntryRateBPS
@@ -184,49 +182,7 @@ func (s *Store) admissionEligibility(tx *sql.Tx, binding EntryAdmissionBinding, 
 		reason = "route-not-entitled"
 		return
 	}
-	var holds []json.RawMessage
-	if holds, err = s.listTx(tx, "accounting-holds"); err != nil {
-		return
-	}
-	for _, raw := range holds {
-		var hold AccountingHold
-		if err = json.Unmarshal(raw, &hold); err != nil {
-			return
-		}
-		if hold.UserID == user.ID {
-			reason = "accounting-pending"
-			return
-		}
-	}
-	var window service.CycleWindow
-	if window, err = entitlement.Cycle.Window(now); err != nil {
-		return
-	}
-	var resets []json.RawMessage
-	if resets, err = s.listTx(tx, "resets"); err != nil {
-		return
-	}
-	for _, raw := range resets {
-		var reset Reset
-		if err = json.Unmarshal(raw, &reset); err != nil {
-			return
-		}
-		if reset.UserID == user.ID && reset.At.After(window.Start) && !reset.At.After(now) {
-			window.Start = reset.At
-		}
-	}
-	var usage service.UsageTotals
-	end := time.Time{}
-	if window.NextReset != nil {
-		end = *window.NextReset
-	}
-	if usage, err = s.currentUsageTx(tx, user.ID, window.Start, end); err != nil {
-		return
-	}
-	if quota > 0 && usage.WeightedBytes >= quota {
-		reason = "exhausted"
-		return
-	}
+	reason, err = s.policyUsageEligibilityTx(tx, policy, now)
 
 	return
 }

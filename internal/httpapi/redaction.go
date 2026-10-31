@@ -66,6 +66,10 @@ func redactEndpoint(e domain.ClientEndpoint) domain.ClientEndpoint {
 	out.Connection.UUID = ""
 	if out.Connection.Transport != nil {
 		out.Connection.Transport.Headers = nil
+		out.Connection.Transport.Path = redactURL(out.Connection.Transport.Path)
+		out.Connection.Transport.ServiceName = redactURL(out.Connection.Transport.ServiceName)
+		out.Connection.Transport.Authority = redactURL(out.Connection.Transport.Authority)
+		out.Connection.Transport.Host = redactURL(out.Connection.Transport.Host)
 	}
 	if out.Connection.TLS != nil && out.Connection.TLS.Reality != nil {
 		out.Connection.TLS.Reality.ShortID = ""
@@ -110,12 +114,12 @@ func redactTenantRecord(kind string, raw json.RawMessage) json.RawMessage {
 // Native DNS/health-check URLs can carry credentials outside named secret keys.
 // This edits only preview copies, never the renderer artifact or stored intent.
 func redactURL(text string) string {
-	if !strings.Contains(text, "://") && !strings.HasPrefix(text, "/") {
+	if !strings.Contains(text, "://") && !strings.HasPrefix(text, "/") && !strings.ContainsAny(text, "?#") {
 		return text
 	}
 	u, err := url.Parse(text)
 	if err != nil {
-		return text
+		return "[REDACTED]"
 	}
 	if u.User == nil && u.RawQuery == "" && u.Fragment == "" {
 		return text

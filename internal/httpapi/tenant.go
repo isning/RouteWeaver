@@ -12,6 +12,7 @@ import (
 	"routeweaver/internal/importer"
 	"routeweaver/internal/render"
 	"routeweaver/internal/resources"
+	"routeweaver/internal/store"
 	"strings"
 	"time"
 )
@@ -103,6 +104,11 @@ func (h *server) registerTenant(r chi.Router) {
 				var v json.RawMessage
 				if e := h.s.TenantGet(current(r).Account.ID, kind, chi.URLParam(r, "id"), &v); e != nil {
 					storeError(w, e)
+					return
+				}
+				w.Header().Set("Cache-Control", "no-store")
+				if e := h.s.Audit(current(r).Account.ID, "tenant.secret-revealed", kind+"/"+chi.URLParam(r, "id")); e != nil {
+					fail(w, http.StatusServiceUnavailable, "required audit unavailable")
 					return
 				}
 				if kind == "sources" {
@@ -242,11 +248,16 @@ func (h *server) saveCollection(w http.ResponseWriter, r *http.Request) {
 		fail(w, 400, "id mismatch")
 		return
 	}
-	if _, e := h.resolveCollection(current(r).Account.ID, v); e != nil {
+	inputs := newTemplateInputs(h.s)
+	if e := inputs.expectRecord(v.OwnerID, "collections", v.ID); e != nil {
 		storeError(w, e)
 		return
 	}
-	if e := h.s.TenantPut(v.OwnerID, "collections", v.ID, v); e != nil {
+	if _, e := h.resolveCollectionWithReader(current(r).Account.ID, v, inputs); e != nil {
+		storeError(w, e)
+		return
+	}
+	if e := h.s.CompareAndPutRecords(inputs.compares(), []store.RecordWrite{{Kind: store.TenantKind(v.OwnerID, "collections"), ID: v.ID, Value: v}}); e != nil {
 		storeError(w, e)
 		return
 	}
@@ -373,7 +384,16 @@ func (h *server) saveProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	owner := current(r).Account.ID
-	if e := h.materializeProfile(owner, &p); e != nil {
+	if e := ensureID(&p.ID); e != nil {
+		storeError(w, e)
+		return
+	}
+	inputs := newTemplateInputs(h.s)
+	if e := inputs.expectRecord(owner, "profiles", p.ID); e != nil {
+		storeError(w, e)
+		return
+	}
+	if e := h.materializeProfileWithReader(owner, &p, inputs); e != nil {
 		storeError(w, e)
 		return
 	}
@@ -387,7 +407,7 @@ func (h *server) saveProfile(w http.ResponseWriter, r *http.Request) {
 		p.Diagnostics = append(p.Diagnostics, e.Error())
 	}
 	p.UpdatedAt = time.Now().UTC()
-	if e := h.s.TenantPut(owner, "profiles", p.ID, p); e != nil {
+	if e := h.s.CompareAndPutRecords(inputs.compares(), []store.RecordWrite{{Kind: store.TenantKind(owner, "profiles"), ID: p.ID, Value: p}}); e != nil {
 		storeError(w, e)
 		return
 	}
@@ -495,18 +515,21 @@ func (h *server) saveResource(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, 200, v)
 }
 func (h *server) deleteTenant(owner, kind, id string) error {
+	inputs := newTemplateInputs(h.s)
 	var old json.RawMessage
-	if e := h.s.TenantGet(owner, kind, id, &old); e != nil {
+	if e := inputs.TenantGet(owner, kind, id, &old); e != nil {
 		return e
 	}
 	if kind == "sources" {
-		all, e := h.s.TenantList(owner, "collections")
+		all, e := inputs.TenantList(owner, "collections")
 		if e != nil {
 			return e
 		}
 		for _, b := range all {
 			var v domain.Collection
-			json.Unmarshal(b, &v)
+			if e := json.Unmarshal(b, &v); e != nil {
+				return e
+			}
 			for _, s := range v.Sources {
 				if s.SourceID == id {
 					return fmt.Errorf("source is referenced by collection %s", v.Name)
@@ -515,13 +538,15 @@ func (h *server) deleteTenant(owner, kind, id string) error {
 		}
 	}
 	if kind == "sources" || kind == "collections" || kind == "resources" {
-		all, e := h.s.TenantList(owner, "profiles")
+		all, e := inputs.TenantList(owner, "profiles")
 		if e != nil {
 			return e
 		}
 		for _, b := range all {
 			var p Profile
-			json.Unmarshal(b, &p)
+			if e := json.Unmarshal(b, &p); e != nil {
+				return e
+			}
 			if kind == "collections" && p.CollectionID == id {
 				return fmt.Errorf("collection is referenced by profile %s", p.Name)
 			}
@@ -538,17 +563,19 @@ func (h *server) deleteTenant(owner, kind, id string) error {
 		}
 	}
 	if kind == "profiles" {
-		all, e := h.s.TenantList(owner, "outputs")
+		all, e := inputs.TenantList(owner, "outputs")
 		if e != nil {
 			return e
 		}
 		for _, b := range all {
 			var o Output
-			json.Unmarshal(b, &o)
+			if e := json.Unmarshal(b, &o); e != nil {
+				return e
+			}
 			if o.ProfileID == id && o.Status != "revoked" {
 				return fmt.Errorf("profile has an active subscription; revoke it before deleting")
 			}
 		}
 	}
-	return h.s.TenantRemove(owner, kind, id)
+	return h.s.CompareSetsAndRemoveRecord(store.TenantKind(owner, kind), id, inputs.compares(), inputs.sets)
 }

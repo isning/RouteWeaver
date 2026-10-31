@@ -75,7 +75,7 @@ func (h *server) registerFleetAdmin(r chi.Router) {
 			storeError(w, e)
 			return
 		}
-		record := fleetRecord{Transitions: p.Transitions, Batch: fleet.Batch{ID: "batch_" + token, Plan: p.Plan, ActorID: current(r).Account.ID, CreatedAt: time.Now().UTC(), LeaseSeconds: in.LeaseSeconds, Status: "planned"}, Deployment: p.Deployment, Baselines: map[string]*controlprotocol.Identity{}, Enrollments: p.Enrollments, AuthorizationHash: p.AuthorizationHash, Requests: map[string]string{}}
+		record := fleetRecord{Transitions: p.Transitions, Batch: fleet.Batch{ID: "batch_" + token, Plan: p.Plan, ActorID: current(r).Account.ID, CreatedAt: time.Now().UTC(), LeaseSeconds: in.LeaseSeconds, Status: "planned"}, Deployment: p.Deployment, Baselines: map[string]*controlprotocol.Identity{}, Enrollments: p.Enrollments, AuthorizationHash: p.AuthorizationHash, ContinuousAuthorityHash: p.ContinuousAuthorityHash, Requests: map[string]string{}}
 		for id, d := range p.Baselines {
 			identity := d.Identity()
 			record.Baselines[id] = &identity

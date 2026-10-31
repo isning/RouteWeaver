@@ -383,7 +383,7 @@ function Announcements() {
                 {
                   title: "标题",
                   accessor: "title",
-                  className: "max-w-xs whitespace-normal wrap-anywhere",
+                  className: "min-w-48 max-w-xs whitespace-normal wrap-anywhere",
                 },
                 {
                   title: "受众",
@@ -634,8 +634,8 @@ function SettingsForm({ initial }: { initial: Settings }) {
       setBaseline(saved);
       setDirty(false);
       form.setFieldsValue({
-        smtpPassword: undefined,
-        webhookSecret: undefined,
+        smtpPassword: "",
+        webhookSecret: "",
         clearSMTP: false,
         clearWebhook: false,
       });
@@ -907,7 +907,7 @@ function SettingsForm({ initial }: { initial: Settings }) {
               }
             >
               <AccordionTrigger>{section.label}</AccordionTrigger>
-              <AccordionContent className="space-y-5">{section.children}</AccordionContent>
+              <AccordionContent forceMount className="space-y-5">{section.children}</AccordionContent>
             </AccordionItem>
           ))}
         </Accordion>

@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"github.com/pquerna/otp"
 	"github.com/pquerna/otp/totp"
@@ -28,8 +29,30 @@ func HashPassword(password string) ([]byte, error) {
 	}
 	return bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 }
+
+// This valid cost-10 dummy hash is not an account credential. Invalid or missing
+// hashes still incur exactly one product-cost bcrypt comparison. Password
+// creation always uses DefaultCost; untrusted imported cost values cannot cause
+// unbounded CPU work or bypass the product's password length policy.
+const dummyPasswordHash = "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy"
+
 func CheckPassword(hash []byte, password string) bool {
-	return bcrypt.CompareHashAndPassword(hash, []byte(password)) == nil
+	cost, err := bcrypt.Cost(hash)
+	valid := err == nil && cost == bcrypt.DefaultCost && len(password) <= 72
+	if err != nil || cost != bcrypt.DefaultCost {
+		hash = []byte(dummyPasswordHash)
+	}
+	if len(password) > 72 {
+		password = "invalid-overlong-password"
+	}
+	comparisonErr := bcrypt.CompareHashAndPassword(hash, []byte(password))
+	if comparisonErr != nil && !errors.Is(comparisonErr, bcrypt.ErrMismatchedHashAndPassword) {
+		// Cost validates only the header. Malformed salts/encodings can fail
+		// before bcrypt work; do one bounded dummy comparison before rejecting.
+		_ = bcrypt.CompareHashAndPassword([]byte(dummyPasswordHash), []byte(password))
+		return false
+	}
+	return valid && comparisonErr == nil
 }
 func ValidateTOTP(secret, code string, now time.Time) bool {
 	ok, err := totp.ValidateCustom(code, secret, now, totp.ValidateOpts{Period: 30, Skew: 1, Digits: otp.DigitsSix, Algorithm: otp.AlgorithmSHA1})

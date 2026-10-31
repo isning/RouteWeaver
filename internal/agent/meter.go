@@ -22,11 +22,12 @@ type meterDisk struct {
 	ManagedSources map[string]managedMeterCursor `json:"managedSources,omitempty"`
 }
 type MeterSpool struct {
-	mu     sync.Mutex
-	root   string
-	disk   meterDisk
-	lock   *os.File
-	closed bool
+	collectMu sync.Mutex
+	mu        sync.Mutex
+	root      string
+	disk      meterDisk
+	lock      *os.File
+	closed    bool
 }
 
 // OpenMeterSpool takes its own root lock. The epoch is an explicit scope, not a

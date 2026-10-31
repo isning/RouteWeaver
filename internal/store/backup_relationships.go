@@ -19,7 +19,21 @@ func validateBackupRelationships(v Snapshot) error {
 	for _, counter := range v.Counters {
 		counters[counter.Kind+"\x00"+counter.ID] = counter.Value
 	}
+	records := map[string]json.RawMessage{}
 	for _, record := range v.Records {
+		records[record.Kind+"\x00"+record.ID] = record.Data
+	}
+	getNotification := func(kind, id string) (json.RawMessage, error) {
+		raw, ok := records[kind+"\x00"+id]
+		if !ok {
+			return nil, ErrNotFound
+		}
+		return raw, nil
+	}
+	for _, record := range v.Records {
+		if err := validateNotificationBackupRecord(record, getNotification); err != nil {
+			return err
+		}
 		if err := validateBackupRelationship(record, func(kind, digest string) string { return tokens[kind+"\x00"+digest] }, func(kind, id string) (int64, bool) { v, ok := counters[kind+"\x00"+id]; return v, ok }); err != nil {
 			return err
 		}

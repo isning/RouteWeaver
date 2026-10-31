@@ -12,32 +12,36 @@ import (
 	"routeweaver/internal/domain"
 	"routeweaver/internal/fleet"
 	"routeweaver/internal/render"
+	"routeweaver/internal/service"
 	"routeweaver/internal/store"
 )
 
 type fleetRecord struct {
-	Transitions       map[string]controlprotocol.CoreTransition `json:"transitions,omitempty"`
-	Batch             fleet.Batch                               `json:"batch"`
-	Deployment        ServerDeployment                          `json:"deployment"`
-	Baselines         map[string]*controlprotocol.Identity      `json:"baselines"`
-	Enrollments       map[string]Enrollment                     `json:"enrollments"`
-	AuthorizationHash string                                    `json:"authorizationHash"`
-	Requests          map[string]string                         `json:"requests"`
+	Transitions             map[string]controlprotocol.CoreTransition `json:"transitions,omitempty"`
+	Batch                   fleet.Batch                               `json:"batch"`
+	Deployment              ServerDeployment                          `json:"deployment"`
+	Baselines               map[string]*controlprotocol.Identity      `json:"baselines"`
+	Enrollments             map[string]Enrollment                     `json:"enrollments"`
+	ContinuousAuthorityHash string                                    `json:"continuousAuthorityHash,omitempty"`
+	AuthorizationHash       string                                    `json:"authorizationHash"`
+	Requests                map[string]string                         `json:"requests"`
 }
 type preparedFleet struct {
-	OwnershipWrites   map[string]instanceOwnership
-	LiveDeployment    ServerDeployment
-	Transitions       map[string]controlprotocol.CoreTransition
-	Release           *controlprotocol.CoreRelease
-	Plan              fleet.Plan
-	Deployment        ServerDeployment
-	Baselines         map[string]*controlprotocol.Desired
-	Enrollments       map[string]Enrollment
-	Artifacts         map[string][]domain.Artifact
-	Routes            []domain.PublishedRoute
-	Compares          []store.RecordCompare
-	Sets              []store.RecordSetCompare
-	AuthorizationHash string
+	Policies                map[string]service.EffectivePolicy
+	OwnershipWrites         map[string]instanceOwnership
+	LiveDeployment          ServerDeployment
+	Transitions             map[string]controlprotocol.CoreTransition
+	Release                 *controlprotocol.CoreRelease
+	Plan                    fleet.Plan
+	Deployment              ServerDeployment
+	Baselines               map[string]*controlprotocol.Desired
+	Enrollments             map[string]Enrollment
+	Artifacts               map[string][]domain.Artifact
+	Routes                  []domain.PublishedRoute
+	Compares                []store.RecordCompare
+	Sets                    []store.RecordSetCompare
+	ContinuousAuthorityHash string
+	AuthorizationHash       string
 }
 
 func (h *server) fleetRead(p *preparedFleet, kind, id string, out any, optional bool) error {
@@ -76,7 +80,7 @@ func (h *server) fleetList(p *preparedFleet, kind string) ([]json.RawMessage, er
 	return all, nil
 }
 func (h *server) prepareFleet(in fleet.Input) (preparedFleet, error) {
-	p := preparedFleet{OwnershipWrites: map[string]instanceOwnership{}, Plan: fleet.Plan{Input: in, Targets: []fleet.Target{}, Supported: true, Diagnostics: []string{}}, Baselines: map[string]*controlprotocol.Desired{}, Enrollments: map[string]Enrollment{}, Artifacts: map[string][]domain.Artifact{}}
+	p := preparedFleet{Policies: map[string]service.EffectivePolicy{}, OwnershipWrites: map[string]instanceOwnership{}, Plan: fleet.Plan{Input: in, Targets: []fleet.Target{}, Supported: true, Diagnostics: []string{}}, Baselines: map[string]*controlprotocol.Desired{}, Enrollments: map[string]Enrollment{}, Artifacts: map[string][]domain.Artifact{}}
 	stages, e := fleet.Stages(in)
 	if e != nil {
 		return p, e
@@ -167,6 +171,10 @@ func (h *server) prepareFleet(in fleet.Input) (preparedFleet, error) {
 		}
 	}
 	p.AuthorizationHash = fleet.Fingerprint(p.Compares[authStart:])
+	p.ContinuousAuthorityHash, e = continuousAuthorityFingerprint(p.Compares[authStart:], p.Policies)
+	if e != nil {
+		return p, e
+	}
 	allArtifacts := []domain.Artifact{}
 	if in.Action != "stop" {
 		allArtifacts, e = render.DefaultServers().Render(p.Deployment.IR)
@@ -431,6 +439,7 @@ func (h *server) refreshFleetPrincipals(p *preparedFleet) error {
 			if connectionDigest(connection) != connectionDigest(grant.Connection) {
 				return fmt.Errorf("principal credential no longer matches current grant")
 			}
+			p.Policies[principal.AccountID] = overview.EffectivePolicy
 			accepted = append(accepted, principal)
 		}
 		program.Principals = accepted

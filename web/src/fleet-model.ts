@@ -2,6 +2,7 @@ export type FleetAction =
   "configure" | "start" | "stop" | "rollback" | "install" | "upgrade";
 export interface FleetInput {
   action: FleetAction;
+  continuousService?: boolean;
   deploymentId: string;
   targetIds: string[];
   stages: string[][];

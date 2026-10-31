@@ -68,7 +68,13 @@ export interface Validation {
   nativeChecked?: boolean;
 }
 export interface Session {
-  user: { id: string; name: string; role: string; mfaEnabled?: boolean };
+  user: {
+    id: string;
+    name: string;
+    role: string;
+    mfaEnabled?: boolean;
+    passwordChangeRequired?: boolean;
+  };
   csrfToken: string;
 }
 export interface ResetPolicy {
@@ -643,6 +649,14 @@ export interface ServerDeployment {
 }
 export interface AgentState {
   instanceId: string;
+  serviceIntent?: {
+    id: string;
+    running: boolean;
+    status: string;
+    automaticAttempts: number;
+    nextAttemptAt?: string;
+    leaseExpiresAt: string;
+  };
   phase: string;
   desired?: {
     generation: string;

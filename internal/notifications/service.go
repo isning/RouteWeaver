@@ -10,7 +10,7 @@ import (
 )
 
 func (s *Service) Settings() (SettingsView, error) {
-	st, e := s.repo.ReadNotifications()
+	st, e := s.read(Scope{})
 	if e != nil {
 		return SettingsView{}, e
 	}
@@ -21,7 +21,7 @@ func settingsView(st State) SettingsView {
 }
 func (s *Service) SaveSettings(in SettingsInput) (SettingsView, error) {
 	var out SettingsView
-	err := s.repo.UpdateNotifications(func(st *State) error {
+	err := s.update(Scope{}, func(st *State) error {
 		if in.Revision != st.Settings.Revision {
 			return ErrConflict
 		}
@@ -47,10 +47,10 @@ func (s *Service) SaveAnnouncement(a Announcement) error {
 	if e := validateAnnouncement(a); e != nil {
 		return e
 	}
-	return s.repo.UpdateNotifications(func(st *State) error { st.Announcements[a.ID] = a; return nil })
+	return s.update(Scope{}, func(st *State) error { st.Announcements[a.ID] = a; return nil })
 }
 func (s *Service) Announcements() ([]Announcement, error) {
-	st, e := s.repo.ReadNotifications()
+	st, e := s.read(Scope{Announcements: true})
 	if e != nil {
 		return nil, e
 	}
@@ -102,7 +102,7 @@ func reminderChannels(st *State, operator bool) []string {
 // Evaluate uses server-derived snapshots. A stable cycle ID prevents a repeated
 // evaluation or process restart from duplicating a threshold notification.
 func (s *Service) Evaluate(recipients []Recipient, users []UserSnapshot, now time.Time) error {
-	return s.repo.UpdateNotifications(func(st *State) error {
+	change := func(st *State) error {
 		for _, a := range st.Announcements {
 			for _, r := range recipients {
 				if eligible(a, r, now) {
@@ -142,7 +142,8 @@ func (s *Service) Evaluate(recipients []Recipient, users []UserSnapshot, now tim
 			}
 		}
 		return nil
-	})
+	}
+	return s.update(Scope{Announcements: true, SelectEventIDs: selectNotificationEvents(change)}, change)
 }
 
 // EvaluateProvider only accepts fresh, explicit inventory observations. It is
@@ -161,7 +162,7 @@ func (s *Service) EvaluateProvider(p ProviderSnapshot, now time.Time) error {
 	default:
 		return fmt.Errorf("unknown provider allowance source")
 	}
-	return s.repo.UpdateNotifications(func(st *State) error {
+	change := func(st *State) error {
 		channels := reminderChannels(st, true)
 		if len(channels) == 0 {
 			return nil
@@ -180,7 +181,8 @@ func (s *Service) EvaluateProvider(p ProviderSnapshot, now time.Time) error {
 			}
 		}
 		return nil
-	})
+	}
+	return s.update(Scope{Announcements: false, SelectEventIDs: selectNotificationEvents(change)}, change)
 }
 func visible(st State, e Event, r Recipient, now time.Time) bool {
 	if !r.Enabled || e.AdminOnly && r.Role != "admin" || !e.AdminOnly && e.RecipientID != r.ID {
@@ -193,7 +195,7 @@ func visible(st State, e Event, r Recipient, now time.Time) bool {
 	return e.ExpiresAt == nil || now.Before(*e.ExpiresAt)
 }
 func (s *Service) Inbox(r Recipient, now time.Time) ([]InboxItem, error) {
-	st, e := s.repo.ReadNotifications()
+	st, e := s.read(Scope{Inbox: &r, InboxAt: now})
 	if e != nil {
 		return nil, e
 	}
@@ -223,7 +225,7 @@ func (s *Service) Inbox(r Recipient, now time.Time) ([]InboxItem, error) {
 	return out, nil
 }
 func (s *Service) MarkRead(r Recipient, eventID string, now time.Time) error {
-	return s.repo.UpdateNotifications(func(st *State) error {
+	return s.update(Scope{EventIDs: []string{eventID}, ReceiptOwner: r.ID}, func(st *State) error {
 		event, ok := st.Events[eventID]
 		d := st.Deliveries[deliveryKey(eventID, "in-app")]
 		if !ok || d.Status != "available" || !visible(*st, event, r, now) {
@@ -237,7 +239,7 @@ func (s *Service) MarkRead(r Recipient, eventID string, now time.Time) error {
 	})
 }
 func (s *Service) Outbox() ([]OutboxItem, error) {
-	st, e := s.repo.ReadNotifications()
+	st, e := s.read(Scope{History: true})
 	if e != nil {
 		return nil, e
 	}
@@ -269,7 +271,7 @@ func (s *Service) Test(channel string, r Recipient, now time.Time) (string, erro
 		return "", e
 	}
 	id := hex.EncodeToString(idBytes)
-	err := s.repo.UpdateNotifications(func(st *State) error {
+	err := s.update(Scope{EventIDs: []string{id}}, func(st *State) error {
 		if channel != "in-app" && channel != "email" && channel != "webhook" {
 			return fmt.Errorf("unsupported channel")
 		}
@@ -313,7 +315,9 @@ func (s *Service) dispatchWithClock(ctx context.Context, recipients []Recipient,
 		var config Settings
 		var secrets Secrets
 		claimed := false
-		err := s.repo.UpdateNotifications(func(st *State) error {
+		progressed := false
+		claimAt := clock()
+		err := s.update(Scope{PendingAt: &claimAt, PendingEventID: eventID, OnlyChannel: onlyChannel}, func(st *State) error {
 			keys := make([]string, 0, len(st.Deliveries))
 			for k := range st.Deliveries {
 				keys = append(keys, k)
@@ -346,6 +350,7 @@ func (s *Service) dispatchWithClock(ctx context.Context, recipients []Recipient,
 					d.Status = "cancelled"
 					d.LastError = "recipient or validity is no longer eligible"
 					st.Deliveries[k] = d
+					progressed = true
 					continue
 				}
 				if d.Channel != "in-app" {
@@ -354,6 +359,7 @@ func (s *Service) dispatchWithClock(ctx context.Context, recipients []Recipient,
 						d.Status = "cancelled"
 						d.LastError = "channel settings or authorization changed; create a new explicit test"
 						st.Deliveries[k] = d
+						progressed = true
 						continue
 					}
 				}
@@ -361,6 +367,7 @@ func (s *Service) dispatchWithClock(ctx context.Context, recipients []Recipient,
 					d.Status = "failed"
 					d.LastError = "delivery attempts exhausted; receiver acceptance may be unknown"
 					st.Deliveries[k] = d
+					progressed = true
 					continue
 				}
 				nonce := make([]byte, 16)
@@ -385,6 +392,9 @@ func (s *Service) dispatchWithClock(ctx context.Context, recipients []Recipient,
 			return err
 		}
 		if !claimed {
+			if progressed {
+				continue
+			}
 			return nil
 		}
 		var sendErr error
@@ -393,7 +403,7 @@ func (s *Service) dispatchWithClock(ctx context.Context, recipients []Recipient,
 			sendErr = s.transport.Send(sendCtx, delivery.Channel, event, config, secrets)
 			cancel()
 		}
-		err = s.repo.UpdateNotifications(func(st *State) error {
+		err = s.update(Scope{EventIDs: []string{delivery.EventID}}, func(st *State) error {
 			k := deliveryKey(delivery.EventID, delivery.Channel)
 			d, ok := st.Deliveries[k]
 			if !ok || d.LeaseToken != delivery.LeaseToken {

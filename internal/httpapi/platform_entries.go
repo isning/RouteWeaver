@@ -68,6 +68,11 @@ func (h *server) registerEntryAdmin(r chi.Router) {
 			}
 			v.Connection = connection
 		}
+		w.Header().Set("Cache-Control", "no-store")
+		if e := h.s.Audit(current(r).Account.ID, "entry.secret-revealed", v.UserID+"/"+v.ID); e != nil {
+			fail(w, 503, "required audit unavailable")
+			return
+		}
 		writeJSON(w, 200, v)
 	})
 	r.Delete("/users/{id}/entries/{entryId}", func(w http.ResponseWriter, r *http.Request) {

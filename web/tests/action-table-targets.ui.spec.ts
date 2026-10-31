@@ -120,6 +120,31 @@ for (const width of [320, 390, 1440])
           .filter({ has: page.getByText(name, { exact: true }) }),
       );
       await expect(rows[1]).toBeVisible();
+      if (route === "notifications") {
+        // Readability is independent of overflow and reachable edit actions.
+        for (const [index, row] of rows.entries()) {
+          const cell = row.getByRole("cell").first();
+          const geometry = await cell.evaluate((element) => {
+            const style = getComputedStyle(element);
+            return {
+              width: element.getBoundingClientRect().width,
+              height: element.getBoundingClientRect().height,
+              lineHeight: parseFloat(style.lineHeight),
+              verticalPadding:
+                parseFloat(style.paddingTop) + parseFloat(style.paddingBottom),
+            };
+          });
+          expect(geometry.width).toBeGreaterThanOrEqual(192);
+          expect(
+            geometry.height - geometry.verticalPadding,
+          ).toBeLessThanOrEqual(
+            geometry.lineHeight * (index === 0 ? 2 : 5) + 1,
+          );
+        }
+        await page.screenshot({
+          path: info.outputPath(`announcements-${width}-readable-titles.png`),
+        });
+      }
       const overflowing = await viewport.evaluate(
         (el) => el.scrollWidth > el.clientWidth + 1,
       );
@@ -176,3 +201,58 @@ for (const width of [320, 390, 1440])
       expect(unexpected).toEqual([]);
     });
   }
+
+for (const viewportSize of [
+  { width: 320, height: 360 },
+  { width: 640, height: 400 },
+]) {
+  test(`announcement keyboard editing in short/reflow viewport ${viewportSize.width}x${viewportSize.height}`, async ({
+    page,
+  }, info) => {
+    // 640x400 is the CSS layout viewport of 1280x800 at 200% browser zoom.
+    // This proves reflow/keyboard geometry, not OS/browser zoom controls.
+    await page.setViewportSize(viewportSize);
+    const unexpected = await setup(page);
+    await page.goto("/#notifications");
+    const row = page
+      .getByRole("row")
+      .filter({ has: page.getByText(announcements[1].title, { exact: true }) });
+    const group = row.getByRole("group", {
+      name: `${announcements[1].title} 的操作`,
+      exact: true,
+    });
+    const edit = group.getByRole("button", { name: "编辑", exact: true });
+    await expect(edit).toBeVisible();
+    await edit.focus();
+    await page.keyboard.press("Shift+Tab");
+    await page.keyboard.press("Tab");
+    await expect(edit).toBeFocused();
+    await contained(
+      group.getByText(announcements[1].title, { exact: true }),
+      page.locator('[data-slot="table-container"]').first(),
+    );
+    await page.keyboard.press("Enter");
+    const dialog = page.getByRole("dialog", { name: "编辑公告", exact: true });
+    await expect(dialog).toBeVisible();
+    await expect(
+      dialog.getByRole("textbox", { name: "公告标题", exact: true }),
+    ).toHaveValue(announcements[1].title);
+    const cancel = dialog.getByRole("button", { name: "取消", exact: true });
+    await cancel.focus();
+    await expect(cancel).toBeInViewport();
+    await page.screenshot({
+      path: info.outputPath(
+        `announcement-short-reflow-${viewportSize.width}.png`,
+      ),
+    });
+    await page.keyboard.press("Enter");
+    await expect(dialog).toBeHidden();
+    await expect(edit).toBeFocused();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth + 1,
+      ),
+    ).toBe(true);
+    expect(unexpected).toEqual([]);
+  });
+}

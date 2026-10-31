@@ -134,6 +134,9 @@ func (h *server) executeFleet(retry bool) http.HandlerFunc {
 	}
 }
 func (h *server) queueFleetTarget(batchID, targetID, requestID, actor string) error {
+	return h.queueFleetServiceTarget(batchID, targetID, requestID, actor, nil)
+}
+func (h *server) queueFleetServiceTarget(batchID, targetID, requestID, actor string, recovery *serviceRecovery) error {
 	var record fleetRecord
 	if e := h.s.Get("fleet-batches", batchID, &record); e != nil {
 		return e
@@ -143,9 +146,32 @@ func (h *server) queueFleetTarget(batchID, targetID, requestID, actor string) er
 		return e
 	}
 	for _, attempt := range target.Attempts {
-		if attempt.RequestID == requestID {
+		if attempt.RequestID == requestID && (recovery == nil || attempt.Identity != nil) {
 			return nil
 		}
+	}
+	// Recovery failures must not consume the request ID without a queued
+	// generation. Terminal gates visibly block the exact intent; transient stage
+	// observations can be retried using the same bounded attempt number.
+	fail := func(code string) error {
+		if recovery == nil {
+			return h.failFleetTarget(record, targetID, requestID, code, actor)
+		}
+		var desired controlprotocol.Desired
+		if err := h.s.Get("agent-desired", targetID, &desired); err != nil {
+			return err
+		}
+		if desired.Identity() != recovery.Intent.Current {
+			return store.ErrConflict
+		}
+		next := recovery.Intent
+		next.Status = "review_required"
+		return h.s.CompareAndPutRecords([]store.RecordCompare{
+			{Kind: "agent-service-intents", ID: targetID, Expected: recovery.Intent},
+			{Kind: "agent-desired", ID: targetID, Expected: desired},
+			{Kind: "fleet-batches", ID: batchID, Expected: record},
+			{Kind: "agent-service-receipts", ID: targetID, Expected: recovery.Receipt},
+		}, []store.RecordWrite{{Kind: "agent-service-intents", ID: targetID, Value: next}})
 	}
 	// Refresh all current authority and render again. The saved plan remains the
 	// reviewed input; credentials, enrollments, leases and usage are not revived.
@@ -155,16 +181,48 @@ func (h *server) queueFleetTarget(batchID, targetID, requestID, actor string) er
 		if errors.As(e, &conflict) {
 			return e
 		}
-		return h.failFleetTarget(record, targetID, requestID, "review_required", actor)
+		return fail("review_required")
 	}
 	if e = h.fleetStageCurrent(record, target.Stage, &prepared); e != nil {
+		if recovery != nil {
+			return e
+		}
 		return h.failFleetTarget(record, targetID, requestID, "previous_stage_no_longer_current", actor)
 	}
-	if serverFingerprint(prepared.Deployment.IR) != serverFingerprint(record.Deployment.IR) || prepared.AuthorizationHash != record.AuthorizationHash {
-		return h.failFleetTarget(record, targetID, requestID, "authorization_or_configuration_changed", actor)
+	authorityChanged := prepared.AuthorizationHash != record.AuthorizationHash
+	if recovery != nil {
+		authorityChanged = record.ContinuousAuthorityHash == "" || prepared.ContinuousAuthorityHash != record.ContinuousAuthorityHash
+	}
+	if serverFingerprint(prepared.Deployment.IR) != serverFingerprint(record.Deployment.IR) || authorityChanged {
+		return fail("authorization_or_configuration_changed")
 	}
 	if prepared.Enrollments[targetID] != record.Enrollments[targetID] || !time.Now().Before(prepared.Enrollments[targetID].ExpiresAt) || prepared.Enrollments[targetID].Revoked {
-		return h.failFleetTarget(record, targetID, requestID, "enrollment_changed", actor)
+		return fail("enrollment_changed")
+	}
+	if record.Batch.ContinuousService {
+		authority := serviceIntent{ActorID: actor}
+		if actor == "operator" {
+			authority.AuthorityDigest = auth.Digest(h.opts.AdminToken)
+		}
+		if e = h.checkServiceAuthority(&prepared, authority); e != nil {
+			return e
+		}
+	}
+	var previousService serviceIntent
+	if e = h.fleetRead(&prepared, "agent-service-intents", targetID, &previousService, true); e != nil {
+		return e
+	}
+	if recovery != nil {
+		if time.Since(recovery.Receipt.ReceivedAt) > 15*time.Second {
+			return fmt.Errorf("service observation expired")
+		}
+		if previousService.ID != recovery.Intent.ID || fleet.Fingerprint(previousService) != fleet.Fingerprint(recovery.Intent) {
+			return fmt.Errorf("service intent changed")
+		}
+		prepared.Compares = append(prepared.Compares, store.RecordCompare{Kind: "agent-enrollments", ID: prepared.Enrollments[targetID].TokenDigest, Expected: prepared.Enrollments[targetID]}, store.RecordCompare{Kind: "agent-service-receipts", ID: targetID, Expected: recovery.Receipt})
+		if e = h.checkServiceAuthority(&prepared, previousService); e != nil {
+			return e
+		}
 	}
 	var currentIdentity *controlprotocol.Identity
 	if desired := prepared.Baselines[targetID]; desired != nil {
@@ -179,11 +237,11 @@ func (h *server) queueFleetTarget(batchID, targetID, requestID, actor string) er
 		}
 	}
 	if fleet.Fingerprint(currentIdentity) != fleet.Fingerprint(expectedIdentity) {
-		return h.failFleetTarget(record, targetID, requestID, "desired_superseded_review_required", actor)
+		return fail("desired_superseded_review_required")
 	}
 	for _, t := range prepared.Plan.Targets {
 		if t.InstanceID == targetID && !t.Supported {
-			return h.failFleetTarget(record, targetID, requestID, "target_unsupported", actor)
+			return fail("target_unsupported")
 		}
 	}
 	revision, e := auth.Token()
@@ -206,13 +264,22 @@ func (h *server) queueFleetTarget(batchID, targetID, requestID, actor string) er
 		}
 	}
 	now := time.Now().UTC()
+	if recovery != nil && (now.Before(previousService.Lease.IssuedAt) || (previousService.PendingRefresh != nil && now.Before(previousService.PendingRefresh.Lease.IssuedAt))) {
+		return fmt.Errorf("control-plane clock precedes prior authority")
+	}
 	expires := now.Add(time.Duration(record.Batch.LeaseSeconds) * time.Second)
+	if record.Batch.ContinuousService {
+		expires = serviceLeaseExpiry(prepared, targetID, expires, now)
+	}
 	if prepared.Enrollments[targetID].ExpiresAt.Before(expires) {
 		expires = prepared.Enrollments[targetID].ExpiresAt
 	}
 	revisionID, operationID := "rev_"+revision, "op_"+operation
 	prepared.Compares = append(prepared.Compares, store.RecordCompare{Kind: "fleet-batches", ID: batchID, Expected: record}, store.RecordCompare{Kind: "published-manifests", ID: revisionID})
-	_, e = h.s.CompareSetsAndGenerateRecord("agent-desired", targetID, prepared.Compares, prepared.Sets, func(g uint64) (any, []store.RecordWrite, error) {
+	if recovery != nil && time.Since(recovery.Receipt.ReceivedAt) > 15*time.Second {
+		return fmt.Errorf("service observation expired during validation")
+	}
+	build := func(g uint64) (any, []store.RecordWrite, error) {
 		desired := controlprotocol.Desired{Action: record.Batch.Action, CoreReleaseID: record.Batch.TargetReleaseID, Scope: prepared.Enrollments[targetID].Scope, AdapterID: program.Instance.AdapterID, CoreVersion: program.Instance.Version, Generation: g, RevisionID: revisionID, OperationID: operationID, Digest: digest, EntryFile: "config.json", Artifacts: parts, Lease: controlprotocol.PolicyLease{Revision: record.Deployment.IR.TopologyRevision, IssuedAt: now, ExpiresAt: expires, AccessAllowed: record.Batch.Action != "stop", QuotaCertain: true}}
 		if record.Batch.Action == "stop" {
 			if old := prepared.Baselines[targetID]; old != nil {
@@ -249,8 +316,47 @@ func (h *server) queueFleetTarget(batchID, targetID, requestID, actor string) er
 			live.UpdatedAt = now
 			writes = append(writes, store.RecordWrite{Kind: "core-instances", ID: targetID, Value: program.Instance}, store.RecordWrite{Kind: "server-deployments", ID: live.ID, Value: live})
 		}
+		if recovery != nil {
+			next := previousService
+			next.Current = identity
+			next.Lease = desired.Lease
+			next.PendingRefresh = nil
+			next.AutomaticAttempts++
+			next.NextAttemptAt = time.Time{}
+			next.Status = "recovery_queued"
+			writes = append(writes, store.RecordWrite{Kind: "audit", ID: operationID + "-service", Value: store.AuditEvent{ID: operationID + "-service", ActorID: actor, Action: "service.recovery.queued", TargetID: targetID + "/" + next.ID, At: now}})
+			next.FailedGeneration = 0
+			writes = append(writes, store.RecordWrite{Kind: "agent-service-intents", ID: targetID, Value: next})
+		} else if record.Batch.ContinuousService {
+			next := serviceIntent{ID: "service_" + operation, BatchID: batchID, ActorID: actor, Current: identity, Running: true, Status: "awaiting_observation", Lease: desired.Lease}
+			if actor == "operator" {
+				next.AuthorityDigest = auth.Digest(h.opts.AdminToken)
+			}
+			writes = append(writes, store.RecordWrite{Kind: "agent-service-intents", ID: targetID, Value: next})
+		} else if previousService.ID != "" {
+			previousService.Running = false
+			previousService.Status = "disabled"
+			previousService.PendingRefresh = nil
+			previousService.Current = identity
+			writes = append(writes, store.RecordWrite{Kind: "agent-service-intents", ID: targetID, Value: previousService})
+		}
 		return desired, writes, nil
-	})
+	}
+	if record.Batch.ContinuousService {
+		deadline := now.Add(15 * time.Second)
+		if recovery != nil {
+			deadline = recovery.Receipt.ReceivedAt.Add(15 * time.Second)
+		}
+		if expires.Before(deadline) {
+			deadline = expires
+		}
+		if enrollmentExpiry := prepared.Enrollments[targetID].ExpiresAt; enrollmentExpiry.Before(deadline) {
+			deadline = enrollmentExpiry
+		}
+		_, e = h.s.CompareServicePolicyAndGenerateRecord(servicePolicyFence(prepared, targetID, deadline), "agent-desired", targetID, prepared.Compares, prepared.Sets, build)
+	} else {
+		_, e = h.s.CompareSetsAndGenerateRecord("agent-desired", targetID, prepared.Compares, prepared.Sets, build)
+	}
 	return e
 }
 func (h *server) failFleetTarget(record fleetRecord, targetID, requestID, code, actor string) error {

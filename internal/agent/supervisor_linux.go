@@ -300,10 +300,11 @@ func (s *ProcessSupervisor) Activate(ctx context.Context, st Staged) error {
 	p.StartTicks, p.Executable, alive, err = processIdentity(p.PID)
 	if err != nil || !alive {
 		cleanup()
-		p.Pending = false
-		p.Absent = true
+		// A child may have spawned descendants before its identity was read.
+		// Keep the pending ownership fence; never infer group absence from
+		// the direct child exit alone.
 		_ = writeJSON(processFile(st.Root), p)
-		return errors.New("owned process exited during launch")
+		return ErrUnknownRuntime
 	}
 	p.BootID, err = bootID()
 	if err != nil {
@@ -320,12 +321,14 @@ func (s *ProcessSupervisor) Activate(ctx context.Context, st Staged) error {
 	select {
 	case <-ctx.Done():
 		cleanup()
-		p.Absent = true
-		_ = writeJSON(processFile(st.Root), p)
+		if err := s.recordStartupAbsence(st.Root, p); err != nil {
+			return err
+		}
 		return ctx.Err()
 	case <-done:
-		p.Absent = true
-		_ = writeJSON(processFile(st.Root), p)
+		if err := s.recordStartupAbsence(st.Root, p); err != nil {
+			return err
+		}
 		return errors.New("owned process exited during startup")
 	case <-timer.C:
 	}
@@ -334,4 +337,16 @@ func (s *ProcessSupervisor) Activate(ctx context.Context, st Staged) error {
 		return ErrUnknownRuntime
 	}
 	return nil
+}
+
+// A reaped leader does not prove an empty process group. Retain the complete
+// ownership record when descendants/identity are unknown; Observe can retry
+// later, without permission to signal an unverified process or replay launch.
+func (s *ProcessSupervisor) recordStartupAbsence(root string, p processRecord) error {
+	alive, err := s.matches(p)
+	if err != nil || alive {
+		return ErrUnknownRuntime
+	}
+	p.Absent = true
+	return writeJSON(processFile(root), p)
 }

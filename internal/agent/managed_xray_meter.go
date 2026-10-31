@@ -70,6 +70,11 @@ func CollectManagedCounters(ctx context.Context, root string, spool *MeterSpool,
 	if spool == nil {
 		return errors.New("managed runtime requires durable meter spool")
 	}
+	spool.collectMu.Lock()
+	defer spool.collectMu.Unlock()
+	if err := spool.compactManagedJournal(ctx, root); err != nil {
+		return err
+	}
 	snapshots, err := ReadManagedJournal(root)
 	if errors.Is(err, os.ErrNotExist) {
 		return nil
@@ -79,6 +84,9 @@ func CollectManagedCounters(ctx context.Context, root string, spool *MeterSpool,
 	}
 	sort.SliceStable(snapshots, func(i, j int) bool { return snapshots[i].ObservedAt.Before(snapshots[j].ObservedAt) })
 	for _, s := range snapshots {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		if err = spool.EnqueueManagedSnapshot(s); err != nil {
 			return err
 		}
@@ -89,6 +97,20 @@ func CollectManagedCounters(ctx context.Context, root string, spool *MeterSpool,
 	s, err := ReadManagedSnapshot(ctx, root)
 	if err != nil {
 		return err
+	}
+	// A finalized process can briefly still answer IPC before its channels
+	// close. Never recreate an already-retired zero cursor from that response.
+	dir, err := os.OpenRoot(ManagedJournalDirectory(root))
+	if err != nil {
+		return err
+	}
+	epoch, err := runningEpoch(dir)
+	dir.Close()
+	if err != nil {
+		return err
+	}
+	if epoch == "" || epoch != s.CounterEpoch {
+		return errors.New("live managed snapshot has no matching running epoch")
 	}
 	return spool.EnqueueManagedSnapshot(s)
 }

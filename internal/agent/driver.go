@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"errors"
+	"routeweaver/internal/controlprotocol"
 	"routeweaver/internal/entrypolicy"
 	"time"
 )
@@ -13,10 +14,19 @@ type DriverOptions struct {
 	NodeObserver  *NodeObserver
 	PollInterval  time.Duration
 	LeaseInterval time.Duration
-	// A session is bounded explicitly. A service installer/supervisor is outside
-	// this local harness; no accidental indefinitely running background agent.
+	// Continuous explicitly opts into a foreground service until parent cancellation.
+	// Otherwise MaxRuntime must bound the session. These modes are exclusive.
+	Continuous       bool
 	MaxRuntime       time.Duration
 	OnTransportError func(error)
+}
+type heartbeatDelivery struct {
+	heartbeat controlprotocol.ServiceHeartbeat
+	err       error
+}
+type policyDelivery struct {
+	update controlprotocol.PolicyRefresh
+	done   chan error
 }
 type desiredDelivery struct {
 	desired Desired
@@ -30,10 +40,14 @@ type desiredDelivery struct {
 // A native operation can still occupy the mutation lane for its bounded timeout;
 // Submit rechecks the lease before activation and immediately after observation.
 func RunDriver(parent context.Context, r *Reconciler, tr ControlPlaneTransport, meter *MeterSpool, o DriverOptions) (State, error) {
-	if r == nil || tr == nil || o.PollInterval <= 0 || o.PollInterval > time.Minute || o.LeaseInterval <= 0 || o.LeaseInterval > time.Minute || o.MaxRuntime <= 0 || o.MaxRuntime > 24*time.Hour {
-		return State{}, errors.New("bounded driver configuration required")
+	if r == nil || tr == nil || o.PollInterval <= 0 || o.PollInterval > time.Minute || o.LeaseInterval <= 0 || o.LeaseInterval > time.Minute || (o.Continuous && o.MaxRuntime != 0) || (!o.Continuous && (o.MaxRuntime <= 0 || o.MaxRuntime > 24*time.Hour)) {
+		return State{}, errors.New("explicit continuous or bounded driver configuration required")
 	}
-	ctx, cancel := context.WithTimeout(parent, o.MaxRuntime)
+	ctx, cancel := context.WithCancel(parent)
+	if !o.Continuous {
+		cancel()
+		ctx, cancel = context.WithTimeout(parent, o.MaxRuntime)
+	}
 	defer cancel()
 	scope := r.scope()
 	managed := false
@@ -54,8 +68,18 @@ func RunDriver(parent context.Context, r *Reconciler, tr ControlPlaneTransport, 
 	meterErrors := make(chan error, 1)
 	// Recovery is observational. Unknown native completion stays blocked; the
 	// running loop can retry observation, never replay the uncertain mutation.
-	_, _ = r.Recover(ctx)
 	deliveries := make(chan desiredDelivery)
+	observations := make(chan chan State)
+	heartbeatRequests := make(chan chan heartbeatDelivery)
+	policyRefreshes := make(chan policyDelivery)
+	// Observation shares the mutation lane and never replays a Desired.
+	observe := func() State {
+		observeCtx, stop := context.WithTimeout(ctx, time.Second)
+		defer stop()
+		state, _ := r.Recover(observeCtx)
+		return state
+	}
+	_ = observe()
 	workerDone := make(chan struct{})
 	reportError := func(err error) {
 		if err != nil && ctx.Err() == nil && o.OnTransportError != nil {
@@ -78,6 +102,7 @@ func RunDriver(parent context.Context, r *Reconciler, tr ControlPlaneTransport, 
 	}
 	go func() {
 		defer close(workerDone)
+		var nextHeartbeat time.Time
 		tick := time.NewTicker(o.PollInterval)
 		defer tick.Stop()
 		for {
@@ -117,7 +142,53 @@ func RunDriver(parent context.Context, r *Reconciler, tr ControlPlaneTransport, 
 					reportError(errors.New("transport does not support node observations"))
 				}
 			}
-			reportError(tr.ReportObservation(ctx, scope, r.State()))
+			reply := make(chan State, 1)
+			select {
+			case observations <- reply:
+			case <-ctx.Done():
+				return
+			}
+			select {
+			case state := <-reply:
+				reportError(tr.ReportObservation(ctx, scope, state))
+			case <-ctx.Done():
+				return
+			}
+			if service, ok := tr.(ServiceHeartbeatTransport); ok && o.Continuous && !time.Now().Before(nextHeartbeat) {
+				nextHeartbeat = time.Now().Add(5 * time.Second)
+				reply := make(chan heartbeatDelivery, 1)
+				select {
+				case heartbeatRequests <- reply:
+				case <-ctx.Done():
+					return
+				}
+				var fact heartbeatDelivery
+				select {
+				case fact = <-reply:
+				case <-ctx.Done():
+					return
+				}
+				if fact.err == nil {
+					result, err := service.SendServiceHeartbeat(ctx, fact.heartbeat)
+					reportError(err)
+					if err == nil && result.PolicyRefresh != nil {
+						delivery := policyDelivery{update: *result.PolicyRefresh, done: make(chan error, 1)}
+						select {
+						case policyRefreshes <- delivery:
+						case <-ctx.Done():
+							return
+						}
+						select {
+						case err := <-delivery.done:
+							reportError(err)
+						case <-ctx.Done():
+							return
+						}
+					}
+				} else {
+					reportError(fact.err)
+				}
+			}
 			if meter != nil {
 				for _, batch := range meter.Pending() {
 					receipt, err := tr.SendMeterBatch(ctx, batch)
@@ -151,11 +222,20 @@ loop:
 		case delivery := <-deliveries:
 			st, _ := r.Submit(ctx, delivery.desired)
 			delivery.done <- st
+		case reply := <-observations:
+			reply <- observe()
+		case reply := <-heartbeatRequests:
+			factCtx, stop := context.WithTimeout(ctx, time.Second)
+			fact, err := r.ServiceHeartbeat(factCtx)
+			stop()
+			reply <- heartbeatDelivery{heartbeat: fact, err: err}
+		case delivery := <-policyRefreshes:
+			refreshCtx, stop := context.WithTimeout(ctx, time.Second)
+			_, err := r.ApplyPolicyRefresh(refreshCtx, delivery.update)
+			stop()
+			delivery.done <- err
 		case <-leaseTick.C:
-			state := r.State()
-			if state.RecoveryRequired {
-				_, _ = r.Recover(ctx)
-			}
+			state := observe()
 			if state.Desired != nil {
 				_, _ = r.EnforcePolicy(ctx)
 			}
