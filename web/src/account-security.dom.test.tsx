@@ -39,6 +39,10 @@ beforeEach(() => {
   );
 });
 afterEach(() => {
+  Object.defineProperty(window, "innerHeight", {
+    configurable: true,
+    value: 768,
+  });
   cleanup();
   client.clear();
   vi.unstubAllGlobals();
@@ -417,6 +421,16 @@ it.each(["reset-password", "reset-mfa", "retire", "enable"] as const)(
       user: { ...person.user, id: "admin", role: "admin" },
     });
     fireEvent.click(await screen.findByRole("button", { name: "管理 Target" }));
+    Object.defineProperty(window, "innerHeight", {
+      configurable: true,
+      value: 200,
+    });
+    fireEvent(window, new Event("resize"));
+    await waitFor(() =>
+      expect(screen.getByRole("dialog").getAttribute("data-task-scroll")).toBe(
+        "task",
+      ),
+    );
     const labels = {
       "reset-password": "重置账号密码",
       "reset-mfa": "重置二次验证",

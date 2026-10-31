@@ -111,6 +111,9 @@ func (h *server) processServiceHeartbeat(enrollment Enrollment, fact controlprot
 	if e := h.s.Get("agent-desired", enrollment.Scope.InstanceID, &desired); e != nil {
 		return result, e
 	}
+	if controlprotocol.CoreActivationWithdrawn(desired.AdapterID, desired.CoreVersion) {
+		return result, controlprotocol.ErrCoreReleaseRetired
+	}
 	if desired.Identity() != fact.Desired {
 		return result, fmt.Errorf("superseded desired")
 	}

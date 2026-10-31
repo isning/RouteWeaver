@@ -19,7 +19,7 @@ const (
 	ServerAdapterXray    = "routeweaver/xray"
 	ServerAdapterSingBox = "routeweaver/sing-box"
 	// Current stock release defaults do not change client or managed identities.
-	StockXrayVersion    = "26.10.29"
+	StockXrayVersion    = "26.10.31"
 	StockSingBoxVersion = "1.14.4"
 	// Historical identities remain supported for saved configurations and recovery.
 	HistoricalStockXrayVersion    = "26.3.27"
@@ -251,16 +251,16 @@ func validateRealityPair(client *domain.TLSOptions, server *domain.ServerReality
 
 // The reviewed stock runtime applies its default resolved-IP guard only to these
 // inbound protocols. Do not advertise exceptions for SOCKS or historical cores.
-// https://github.com/XTLS/Xray-core/blob/v26.10.29/proxy/freedom/freedom.go
+// https://github.com/XTLS/Xray-core/blob/v26.10.31/proxy/freedom/freedom.go
 func supportsStockXrayDestinationPolicy(p domain.ServerProgram) bool {
-	return p.Instance.AdapterID == ServerAdapterXray && p.Instance.Version == StockXrayVersion &&
+	return p.Instance.AdapterID == ServerAdapterXray && (p.Instance.Version == StockXrayVersion || p.Instance.Version == "26.10.29") &&
 		has([]string{"vless", "vmess", "trojan", "shadowsocks"}, p.Listener.Connection.Protocol)
 }
 
 type XrayServer struct{}
 
 func (XrayServer) ServerCapability() ServerCapability {
-	return ServerCapability{AdapterID: ServerAdapterXray, Versions: []string{StockXrayVersion, HistoricalStockXrayVersion}, Protocols: []string{"socks", "shadowsocks", "vless", "trojan", "vmess"}, MultiPrincipalProtocols: []string{"vless"}}
+	return ServerCapability{AdapterID: ServerAdapterXray, Versions: []string{StockXrayVersion, "26.10.29", HistoricalStockXrayVersion}, Protocols: []string{"socks", "shadowsocks", "vless", "trojan", "vmess"}, MultiPrincipalProtocols: []string{"vless"}}
 }
 func (XrayServer) RenderServer(p domain.ServerProgram) (any, error) {
 	if err := validateXraySecurity(p.Listener.Connection); err != nil {

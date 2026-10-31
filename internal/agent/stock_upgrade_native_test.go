@@ -29,7 +29,7 @@ func TestNativeStockXrayUpgradeKeepsExactRuntimeAndLease(t *testing.T) {
 		t.Run(fmt.Sprintf("failed-new=%t", failNew), func(t *testing.T) {
 			ctx := context.Background()
 			old, _ := controlprotocol.FindCoreRelease("xray-26.3.27-linux-amd64")
-			current, _ := controlprotocol.FindInstallableCoreRelease("xray-26.10.29-linux-amd64")
+			current, _ := controlprotocol.FindInstallableCoreRelease("xray-26.10.31-linux-amd64")
 			downloads := 0
 			installer, err := NewCoreInstaller(filepath.Join(t.TempDir(), "cores"), CoreInstallerOptions{OpenArchive: func(_ context.Context, r controlprotocol.CoreRelease) (io.ReadCloser, error) {
 				downloads++

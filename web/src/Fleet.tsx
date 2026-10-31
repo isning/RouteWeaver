@@ -517,7 +517,7 @@ export function FleetPlanForm({
                 : "升级到不同的明确版本，当前连接可能中断。预览会检查实例当前版本与兼容性。"}
             </p>
             {selectedRelease?.adapterId === "routeweaver/xray" &&
-              selectedRelease.version === "26.10.29" && (
+              selectedRelease.version === "26.10.31" && (
                 <Notice tone="warning" role="note">
                   此版本默认阻止 VLESS、VMess、Trojan、Shadowsocks
                   访问内网目标。

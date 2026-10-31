@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"routeweaver/internal/agent"
 	"routeweaver/internal/domain"
+	"routeweaver/internal/httpapi"
 	"routeweaver/internal/observability"
 	"testing"
 	"testing/fstest"
@@ -97,6 +98,9 @@ func TestNodeResourcesAndProviderAllowanceHaveAuthenticatedEndToEndDataPath(t *t
 		t.Fatalf("real selected IN+OUT data missing %s", body)
 	}
 	// Quota notification is driven by the node source, not a tenant meter.
+	if _, err := httpapi.RunNotificationBatch(context.Background(), s, "", now); err != nil {
+		t.Fatal(err)
+	}
 	code, _, body = req(t, admin, "GET", srv.URL+"/api/me/notifications", "", nil)
 	if code != 200 {
 		t.Fatalf("provider notification %d %s", code, body)

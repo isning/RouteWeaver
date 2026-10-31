@@ -39,6 +39,9 @@ func (s *Store) migrate() error {
 	return e
 }
 func (s *Store) verifyEncryption() error {
+	if err := s.checkLegacyNotificationSize(s.db); err != nil {
+		return err
+	}
 	rows, e := s.db.Query(`SELECT kind,id,data FROM records`)
 	if e != nil {
 		return e

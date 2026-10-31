@@ -121,7 +121,7 @@ func TestNativeXrayTwoHopLoopbackRoundtrip(t *testing.T) {
 	configB := `{"log":{"loglevel":"none"},"inbounds":[` + inbound(portB) + `],"outbounds":[{"protocol":"freedom","tag":"direct"}]}`
 	configA := fmt.Sprintf(`{"log":{"loglevel":"none"},"inbounds":[%s],"outbounds":[{"protocol":"socks","tag":"through-b","settings":{"servers":[{"address":"127.0.0.1","port":%d,"users":[{"user":"fixture","pass":"local-only"}]}]}}]}`, inbound(portA), portB)
 	activate := func(instance, config string) (*Reconciler, *ProcessSupervisor) {
-		checker, e := NewNativeChecker("routeweaver/xray", "26.10.29", filepath.Join(dir, "xray-26.10.29-linux-amd64"), 5*time.Second)
+		checker, e := NewNativeChecker("routeweaver/xray", "26.10.31", filepath.Join(dir, "xray-26.10.31-linux-amd64"), 5*time.Second)
 		if e != nil {
 			t.Fatal(e)
 		}
@@ -129,7 +129,7 @@ func TestNativeXrayTwoHopLoopbackRoundtrip(t *testing.T) {
 		if e != nil {
 			t.Fatal(e)
 		}
-		d := nativeDesired(t, "routeweaver/xray", "26.10.29")
+		d := nativeDesired(t, "routeweaver/xray", "26.10.31")
 		d.InstanceID = instance
 		d.Artifacts[0].Content = config
 		d.Digest, _ = ArtifactDigest(d.Artifacts)

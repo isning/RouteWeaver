@@ -48,7 +48,7 @@ afterEach(() => {
 
 async function openDestinationEditor(
   adapterId = "routeweaver/xray",
-  version = "26.10.29",
+  version = "26.10.31",
   protocol = "vless",
   destinationPolicy?: ServerProgram["destinationPolicy"],
 ) {
@@ -98,7 +98,7 @@ async function openDestinationEditor(
         result = [
           {
             ...instance,
-            version: adapterId === "routeweaver/xray" ? "26.10.29" : version,
+            version: adapterId === "routeweaver/xray" ? "26.10.31" : version,
           },
         ];
       else if (path.endsWith("/managed-endpoints")) result = [listener];
@@ -144,7 +144,7 @@ it.each(["vless", "vmess", "trojan", "shadowsocks"])(
   async (protocol) => {
     const { user, drawer, save } = await openDestinationEditor(
       "routeweaver/xray",
-      "26.10.29",
+      "26.10.31",
       protocol,
     );
     await user.click(
@@ -160,13 +160,13 @@ it.each(["vless", "vmess", "trojan", "shadowsocks"])(
     await user.keyboard("{Escape}");
     const program = await save();
     expect(program.destinationPolicy).toEqual({ allowCidrs: ["127.0.0.1/32"] });
-    expect(program.instance.version).toBe("26.10.29");
+    expect(program.instance.version).toBe("26.10.31");
   },
 );
 
 it.each([
   ["routeweaver/xray", "26.3.27", "vless"],
-  ["routeweaver/xray", "26.10.29", "socks"],
+  ["routeweaver/xray", "26.10.31", "socks"],
   ["routeweaver/sing-box", "1.14.4", "vless"],
 ])(
   "does not expose stock policy for unsupported saved target %s %s %s",
@@ -182,7 +182,7 @@ it.each([
 );
 
 it.each([
-  ["routeweaver/xray", "26.10.29"],
+  ["routeweaver/xray", "26.10.31"],
   ["routeweaver/managed-xray", "26.3.27-rw1"],
 ])(
   "removes the last explicit exception without a global allow for %s",

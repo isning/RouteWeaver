@@ -73,7 +73,7 @@ func TestCoreTransitionRequiresExactCatalogIdentity(t *testing.T) {
 	scope := Scope{NodeID: "node", InstanceID: "core", EnrollmentEpoch: "epoch"}
 	artifacts := []domain.Artifact{{Path: "config.json", Content: "{}"}}
 	digest, _ := ArtifactDigest(artifacts)
-	release, _ := FindCoreRelease("xray-26.10.29-linux-amd64")
+	release, _ := FindCoreRelease("xray-26.10.31-linux-amd64")
 	from := Identity{Scope: scope, AdapterID: "routeweaver/xray", CoreVersion: "26.2.6", Generation: 1, RevisionID: "old", OperationID: "old-op", Digest: digest}
 	d := Desired{Scope: scope, AdapterID: release.AdapterID, CoreVersion: release.Version, Generation: 2, RevisionID: "next", OperationID: "next-op", Digest: digest, EntryFile: "config.json", Artifacts: artifacts, Action: "upgrade", CoreReleaseID: release.ID, Transition: &CoreTransition{From: from, ReleaseID: release.ID, ExecutableSHA256: release.ExecutableSHA256}}
 	if err := ValidateDesired(d, scope); err != nil {

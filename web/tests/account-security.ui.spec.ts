@@ -92,7 +92,17 @@ for (const size of [
     await expect(dialog.getByText("登录名：synthetic-target")).toBeVisible();
     const password = dialog.getByLabel("管理员当前密码", { exact: true });
     await password.focus();
-    await expect(password).toBeInViewport();
+    await expect(password).toBeInViewport({ ratio: 1 });
+    await expect(
+      dialog.getByText("管理员当前密码", { exact: true }),
+    ).toBeInViewport({ ratio: 1 });
+    if (size.height <= 400)
+      await expect(dialog).toHaveAttribute("data-task-scroll", "task");
+    await page.screenshot({
+      path: info.outputPath(
+        `account-security-${size.width}x${size.height}-password.png`,
+      ),
+    });
     const cancel = dialog.getByRole("button", { name: "取消", exact: true });
     await cancel.focus();
     await expect(cancel).toBeInViewport();

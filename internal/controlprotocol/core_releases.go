@@ -25,6 +25,7 @@ var officialCoreReleases = []CoreRelease{
 	{ID: "xray-26.3.27-linux-amd64", AdapterID: "routeweaver/xray", Version: "26.3.27", Platform: "linux-amd64", URL: "https://github.com/XTLS/Xray-core/releases/download/v26.3.27/Xray-linux-64.zip", ArchiveFormat: "zip", ExecutablePath: "xray", ArchiveSHA256: "23cd9af937744d97776ee35ecad4972cf4b2109d1e0fe6be9930467608f7c8ae", ExecutableSHA256: "8255dd939c34cf966cc91517b6324dd3c8d0bcf49ffac8beca049a38c46845ed", UpstreamChecksumVerified: true},
 	{ID: "sing-box-1.14.3-linux-amd64", AdapterID: "routeweaver/sing-box", Version: "1.14.3", Platform: "linux-amd64", URL: "https://github.com/SagerNet/sing-box/releases/download/v1.14.3/sing-box-1.14.3-linux-amd64.tar.gz", ArchiveFormat: "tar.gz", ExecutablePath: "sing-box-1.14.3-linux-amd64/sing-box", ArchiveSHA256: "e2bdf179c15a3652955dc44867e33ca0965c9c9b91b34267dcc5a5d639a5feee", ExecutableSHA256: "768d31fa7f68debc067bb4626539498a1e8751d36a7b99e1a54bee6a23815f93"},
 	{ID: "xray-26.10.29-linux-amd64", AdapterID: "routeweaver/xray", Version: "26.10.29", Platform: "linux-amd64", URL: "https://github.com/XTLS/Xray-core/releases/download/v26.10.29/Xray-linux-64.zip", ArchiveFormat: "zip", ExecutablePath: "xray", ArchiveSHA256: "8a5f3e6a1057e4bd0f8a7c57c9d91204b4be0b74222a6e210d070603101163c2", ExecutableSHA256: "e783b9d2b46ed1ab3617c59b04dfbce38c999322d018c6e060f18d88bf6158aa", UpstreamChecksumVerified: true},
+	{ID: "xray-26.10.31-linux-amd64", AdapterID: "routeweaver/xray", Version: "26.10.31", Platform: "linux-amd64", URL: "https://github.com/XTLS/Xray-core/releases/download/v26.10.31/Xray-linux-64.zip", ArchiveFormat: "zip", ExecutablePath: "xray", ArchiveSHA256: "e4bd9119f50ae7c41658b1abd0679ae06f98bd864a2907ff33f2f2cf7081b214", ExecutableSHA256: "cc4b84d3069569f297a61f04b914f2bb37e9d202fd7b84cb50def1fc30fd40e1", UpstreamChecksumVerified: true},
 	{ID: "sing-box-1.14.4-linux-amd64", AdapterID: "routeweaver/sing-box", Version: "1.14.4", Platform: "linux-amd64", URL: "https://github.com/SagerNet/sing-box/releases/download/v1.14.4/sing-box-1.14.4-linux-amd64.tar.gz", ArchiveFormat: "tar.gz", ExecutablePath: "sing-box-1.14.4-linux-amd64/sing-box", ArchiveSHA256: "699a1b510aa4396b2176d32d1181920399ebf1e267835da6f3b598d0f7c24968", ExecutableSHA256: "1264361b5f8868c8768f7555d3e77e20118bf503c41ac08bb290a0d99056aa3a", UpstreamChecksumVerified: true},
 }
 
@@ -51,7 +52,7 @@ func InstallableCoreReleases() []CoreRelease {
 }
 func installableCoreReleaseID(id string) bool {
 	switch id {
-	case "xray-26.10.29-linux-amd64", "sing-box-1.14.4-linux-amd64":
+	case "xray-26.10.31-linux-amd64", "sing-box-1.14.4-linux-amd64":
 		return true
 	}
 	return false
@@ -112,4 +113,10 @@ func validateCoreLifecycle(d Desired, scope Scope) error {
 		}
 	}
 	return nil
+}
+
+// CoreActivationWithdrawn is current authorization policy, not receipt validation.
+// Keep immutable metadata and adapters available for observation and safe stop.
+func CoreActivationWithdrawn(adapterID, version string) bool {
+	return adapterID == "routeweaver/xray" && version == "26.10.29"
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"os/exec"
+	"strings"
 	"sync"
 	"time"
 )
@@ -36,7 +37,7 @@ func runBounded(ctx context.Context, binary string, args []string, dir string, t
 	defer cancel()
 	cmd := exec.CommandContext(ctx, binary, args...)
 	cmd.Dir = dir
-	cmd.Env = append([]string{"PATH=/usr/bin:/bin", "HOME=" + dir, "LANG=C", "LC_ALL=C"}, environment...)
+	cmd.Env = nativeProcessEnvironment(dir, environment)
 	cmd.Stdin = nil
 	cmd.WaitDelay = 250 * time.Millisecond
 	configureCommand(cmd)
@@ -54,4 +55,27 @@ func runBounded(ctx context.Context, binary string, args []string, dir string, t
 		return "", errors.New("bounded command output exceeded limit")
 	}
 	return string(output.data), nil
+}
+
+// nativeProcessEnvironment never inherits ambient credentials or Go settings.
+// Go 1.24+ enables MPTCP listeners by default; it is not a supported RouteWeaver
+// transport. Enforce the process default even if a trusted adapter accidentally
+// supplies a conflicting setting. Explicit native enabling options are rejected
+// before validation, because they override this Go default.
+func nativeProcessEnvironment(dir string, adapter []string) []string {
+	env := []string{"PATH=/usr/bin:/bin", "HOME=" + dir, "LANG=C", "LC_ALL=C"}
+	debug := []string{}
+	for _, value := range adapter {
+		if strings.HasPrefix(value, "GODEBUG=") {
+			for _, setting := range strings.Split(strings.TrimPrefix(value, "GODEBUG="), ",") {
+				if setting != "" && !strings.HasPrefix(setting, "multipathtcp=") {
+					debug = append(debug, setting)
+				}
+			}
+		} else {
+			env = append(env, value)
+		}
+	}
+	debug = append(debug, "multipathtcp=0")
+	return append(env, "GODEBUG="+strings.Join(debug, ","))
 }

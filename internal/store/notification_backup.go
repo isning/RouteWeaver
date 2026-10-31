@@ -13,6 +13,11 @@ import (
 // directions while leaving unrelated/future opaque domain record kinds intact.
 func validateNotificationBackupRecord(r BackupRecord, get func(string, string) (json.RawMessage, error)) error {
 	if r.Kind == "notification-private" && r.ID == "state" {
+		// A logical restore must remain reopenable under normal startup
+		// limits. Larger old SQLite rows use fresh-copy offline maintenance.
+		if len(r.Data) > MaxLegacyNotificationBytes {
+			return ErrLegacyNotificationLimit
+		}
 		if _, err := get(notificationConfigKind, "settings"); err == nil {
 			return fmt.Errorf("mixed legacy and current notification backup")
 		} else if err != ErrNotFound {

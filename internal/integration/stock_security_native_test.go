@@ -15,7 +15,7 @@ import (
 // Trust only this generated fixture CA in the owned test client's TLS settings.
 // Xray now uses bundled roots by default, so SSL_CERT_FILE alone is not a fixture
 // trust contract. This does not alter system trust or disable chain/name checks.
-// Official schema: XTLS/Xray-core v26.10.29 infra/conf/transport_security.go.
+// Official schema: XTLS/Xray-core v26.10.31 infra/conf/transport_security.go.
 func stockFixtureCATrust(t *testing.T, artifacts []domain.Artifact, caPath string) []domain.Artifact {
 	t.Helper()
 	ca, err := os.ReadFile(caPath)

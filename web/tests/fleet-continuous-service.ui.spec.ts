@@ -116,6 +116,12 @@ for (const width of [320, 390, 1440]) {
       .getByRole("button", { name: "预览影响与差异", exact: true })
       .click();
     await expect(dialog.getByText(/最多自动恢复 3 次/)).toBeVisible();
+    const consequence = dialog.getByText(/最多自动恢复 3 次/);
+    await consequence.scrollIntoViewIfNeeded();
+    await expect(consequence).toBeInViewport({ ratio: 1 });
+    await page.screenshot({
+      path: info.outputPath(`continuous-service-consequence-${width}.png`),
+    });
     const reviewed = dialog.getByRole("checkbox", {
       name: "我已核对实例、阶段与影响范围",
       exact: true,

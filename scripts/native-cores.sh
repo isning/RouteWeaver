@@ -37,7 +37,14 @@ for core in json.loads(Path('scripts/core-lock.json').read_text())['cores']:
         raise SystemExit(f"Agent native executable missing or differs from pin: {agent_path}")
     print(f"Pinned native executable: {core['id']} {core['version']}")
 stock=Path(os.environ['ROUTEWEAVER_STOCK_CORE_BIN_DIR'])
-for release in json.loads(Path('scripts/stock-core-lock.json').read_text())['releases']:
+stock_lock=json.loads(Path('scripts/stock-core-lock.json').read_text())
+unavailable=set(stock_lock.get('unavailableFixtureReleaseIDs', []))
+if unavailable-{release['id'] for release in stock_lock['releases']}:
+    raise SystemExit('Unavailable fixture policy references unknown release')
+for release in stock_lock['releases']:
+    if release['id'] in unavailable:
+        print(f"Withdrawn fixture excluded from download/activation evidence: {release['id']}")
+        continue
     path=stock/release['id']
     if path.is_symlink() or not path.is_file() or not os.access(path,os.X_OK):
         raise SystemExit(f"Required stock executable is missing or unsafe: {path}. Run python3 scripts/bootstrap-cores.py --kind stock; no native tests were passed.")

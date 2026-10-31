@@ -39,6 +39,10 @@ beforeEach(() => {
   );
 });
 afterEach(() => {
+  Object.defineProperty(window, "innerHeight", {
+    configurable: true,
+    value: 768,
+  });
   cleanup();
   client.clear();
   vi.unstubAllGlobals();
@@ -201,4 +205,22 @@ it("retains explicit secret removal after collapsing both channels", async () =>
   await waitFor(() => expect(sent).toHaveLength(1));
   expect(sent[0].smtpPassword).toBe("");
   expect(sent[0].webhookSecret).toBe("");
+});
+
+it("keeps announcement fields in the sequential task scroll when viewport capacity is insufficient", async () => {
+  await mount();
+  tab("公告");
+  fireEvent.click(
+    await screen.findByRole("button", { name: "创建公告" }),
+  );
+  Object.defineProperty(window, "innerHeight", {
+    configurable: true,
+    value: 200,
+  });
+  fireEvent(window, new Event("resize"));
+  await waitFor(() =>
+    expect(screen.getByRole("dialog").getAttribute("data-task-scroll")).toBe(
+      "task",
+    ),
+  );
 });

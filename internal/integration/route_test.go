@@ -53,7 +53,7 @@ func TestRenderedTwoHopRouteHasNoDirectFallback(t *testing.T) {
 		return domain.Connection{Protocol: "socks", Host: "127.0.0.1", Port: port, Username: "fixture", Password: "local-only"}
 	}
 	program := func(id string, port int, egress []domain.Connection) domain.ServerProgram {
-		return domain.ServerProgram{Instance: domain.CoreInstance{ID: id, HostID: "local-host", AdapterID: "routeweaver/xray", Version: "26.10.29"}, Listener: domain.ManagedEndpoint{ID: id + "-entry", InstanceID: id, Name: id, Connection: connection(port)}, Egress: egress}
+		return domain.ServerProgram{Instance: domain.CoreInstance{ID: id, HostID: "local-host", AdapterID: "routeweaver/xray", Version: "26.10.31"}, Listener: domain.ManagedEndpoint{ID: id + "-entry", InstanceID: id, Name: id, Connection: connection(port)}, Egress: egress}
 	}
 	ir := domain.ServerDeploymentIR{SchemaVersion: "1.0", ID: "local-route", TopologyRevision: "1", Programs: []domain.ServerProgram{program("b", bPort, nil), program("a", aPort, []domain.Connection{connection(bPort)})}}
 	artifacts, err := render.DefaultServers().Render(ir)
@@ -64,7 +64,7 @@ func TestRenderedTwoHopRouteHasNoDirectFallback(t *testing.T) {
 	roots := map[string]string{}
 	for _, artifact := range artifacts {
 		instance := strings.Split(artifact.Path, "/")[0]
-		checker, e := agent.NewNativeChecker("routeweaver/xray", "26.10.29", filepath.Join(dir, "xray-26.10.29-linux-amd64"), 5*time.Second)
+		checker, e := agent.NewNativeChecker("routeweaver/xray", "26.10.31", filepath.Join(dir, "xray-26.10.31-linux-amd64"), 5*time.Second)
 		if e != nil {
 			t.Fatal(e)
 		}
@@ -89,7 +89,7 @@ func TestRenderedTwoHopRouteHasNoDirectFallback(t *testing.T) {
 		now := time.Now()
 		material := []domain.Artifact{{Path: "config.json", Content: artifact.Content}}
 		digest, _ := agent.ArtifactDigest(material)
-		desired := agent.Desired{Scope: scope, AdapterID: "routeweaver/xray", CoreVersion: "26.10.29", Generation: 1, RevisionID: "revision-one", OperationID: "apply-one", Digest: digest, EntryFile: "config.json", Artifacts: material, Lease: agent.PolicyLease{Revision: "policy-one", IssuedAt: now.Add(-time.Second), ExpiresAt: now.Add(10 * time.Minute), AccessAllowed: true, QuotaCertain: true}}
+		desired := agent.Desired{Scope: scope, AdapterID: "routeweaver/xray", CoreVersion: "26.10.31", Generation: 1, RevisionID: "revision-one", OperationID: "apply-one", Digest: digest, EntryFile: "config.json", Artifacts: material, Lease: agent.PolicyLease{Revision: "policy-one", IssuedAt: now.Add(-time.Second), ExpiresAt: now.Add(10 * time.Minute), AccessAllowed: true, QuotaCertain: true}}
 		state, e := reconciler.Submit(context.Background(), desired)
 		if e != nil || state.Phase != agent.ObservedConformant {
 			t.Fatalf("generated deployment failed: %s %v", state.Phase, e)

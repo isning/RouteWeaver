@@ -1,18 +1,23 @@
 package notifications
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
 // Scope describes the facts needed by a service operation. Implementations may
 // retain all history while reading only a bounded inbox/outbox page or exact IDs.
 // SelectEventIDs runs against the settings/announcement snapshot in the SAME
 // writer transaction as change; it must be pure and must not call the repository.
 type Scope struct {
+	Context        context.Context
 	All            bool
 	Announcements  bool
 	EventIDs       []string
 	SelectEventIDs func(State) []string
 	ReceiptOwner   string
 	PendingAt      *time.Time
+	PendingLimit   int
 	PendingEventID string
 	OnlyChannel    string
 	Inbox          *Recipient

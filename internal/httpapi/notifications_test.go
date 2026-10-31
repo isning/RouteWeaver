@@ -2,9 +2,11 @@ package httpapi_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
+	"routeweaver/internal/httpapi"
 	"routeweaver/internal/notifications"
 	"strings"
 	"testing"
@@ -41,6 +43,9 @@ func TestNotificationHTTPAudienceReadAndSettingsIsolation(t *testing.T) {
 	code, raw := adminNotificationRequest(t, srv.URL+"/api/admin/announcements", "POST", announcement)
 	if code != 200 {
 		t.Fatalf("publish: %d %s", code, raw)
+	}
+	if _, err := httpapi.RunNotificationBatch(context.Background(), s, "", now); err != nil {
+		t.Fatal(err)
 	}
 	code, _, text := req(t, alice.c, "GET", srv.URL+"/api/me/notifications", "", nil)
 	var inbox []notifications.InboxItem

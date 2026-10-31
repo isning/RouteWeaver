@@ -144,7 +144,7 @@ afterEach(() => {
 describe("infrastructure creation user tasks", () => {
   it.each([
     { adapterId: "routeweaver/sing-box", label: "sing-box", version: "1.14.4" },
-    { adapterId: "routeweaver/xray", label: "Xray", version: "26.10.29" },
+    { adapterId: "routeweaver/xray", label: "Xray", version: "26.10.31" },
     {
       adapterId: "routeweaver/managed-xray",
       label: "受管 Xray · 平台服务入口",

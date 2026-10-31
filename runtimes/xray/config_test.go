@@ -43,6 +43,8 @@ func TestRejectVisionAndUntestedEntryTransport(t *testing.T) {
 		strings.Replace(string(config(22001)), `"security":"none"`, `"security":"reality"`, 1),
 		strings.Replace(string(config(22001)), `"decryption":"none"`, `"decryption":"none","fallbacks":[{"dest":80}]`, 1),
 		strings.Replace(string(config(22001)), `"streamSettings":{`, `"streamSettings":{"sockopt":{"acceptProxyProtocol":true},`, 1),
+		strings.Replace(string(config(22001)), `"streamSettings":{`, `"streamSettings":{"sockopt":{"tcpMptcp":true},`, 1),
+		strings.Replace(string(config(22001)), `"streamSettings":{`, `"streamSettings":{"tlsSettings":{"echSockopt":{"tcpMptcp":true}},`, 1),
 	} {
 		if managed.Validate([]byte(bad), descriptor()) == nil {
 			t.Fatal("untested or bypass config accepted")
@@ -52,8 +54,10 @@ func TestRejectVisionAndUntestedEntryTransport(t *testing.T) {
 
 func TestManagedRejectsUntestedOutboundBypassAndTransportMasks(t *testing.T) {
 	for name, outbound := range map[string]map[string]any{
-		"outbound Vision": {"protocol": "vless", "settings": map[string]any{"vnext": []any{map[string]any{"address": "127.0.0.1", "port": 12345, "users": []any{map[string]any{"id": "00112233-4455-6677-8899-aabbccddeeff", "encryption": "none", "flow": "xtls-rprx-vision"}}}}}},
-		"transport mask":  {"protocol": "freedom", "streamSettings": map[string]any{"finalmask": map[string]any{}}},
+		"outbound Vision":  {"protocol": "vless", "settings": map[string]any{"vnext": []any{map[string]any{"address": "127.0.0.1", "port": 12345, "users": []any{map[string]any{"id": "00112233-4455-6677-8899-aabbccddeeff", "encryption": "none", "flow": "xtls-rprx-vision"}}}}}},
+		"ECH socket MPTCP": {"protocol": "freedom", "streamSettings": map[string]any{"security": "tls", "tlsSettings": map[string]any{"echSockopt": map[string]any{"tcpMptcp": true}}}},
+		"explicit MPTCP":   {"protocol": "freedom", "streamSettings": map[string]any{"sockopt": map[string]any{"tcpMptcp": true}}},
+		"transport mask":   {"protocol": "freedom", "streamSettings": map[string]any{"finalmask": map[string]any{}}},
 	} {
 		t.Run(name, func(t *testing.T) {
 			var native map[string]any

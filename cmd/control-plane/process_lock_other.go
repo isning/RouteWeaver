@@ -2,8 +2,8 @@
 
 package main
 
-import "fmt"
+import "routeweaver/internal/store"
 
 func acquireProcessLock(database string) (func(), error) {
-	return nil, fmt.Errorf("control-plane process locking is supported only on Linux and macOS; refusing unsafe unlocked operation")
+	return store.AcquireDatabaseProcessLock(database)
 }

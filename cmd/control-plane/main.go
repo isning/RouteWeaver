@@ -66,6 +66,10 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("backup limits: %w", err)
 	}
+	notificationBudget, err := notificationColdBudget(os.Getenv)
+	if err != nil {
+		return err
+	}
 	host, _, e := net.SplitHostPort(*listen)
 	if e != nil {
 		return fmt.Errorf("invalid listen address")
@@ -161,7 +165,7 @@ func run() error {
 	}
 	app := httpapi.NewWithOptions(s, render.Default(), httpapi.Options{TrustedProxyCIDRs: proxyCIDRs, PublicOrigin: publicOrigin, AdminToken: adminToken, UIDir: *uiDir, SecureCookies: tlsEnabled, BackupRestoreDir: restoreDir, BackupRestoreKey: key, BackupLimits: backupLimits})
 	srv := &http.Server{Addr: *listen, Handler: app, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 30 * time.Second, WriteTimeout: 30 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 1 << 20}
-	listener, e := net.Listen("tcp", *listen)
+	listener, e := listenControlPlane(context.Background(), *listen)
 	if e != nil {
 		return e
 	}
@@ -180,8 +184,9 @@ func run() error {
 	notificationsDone := make(chan struct{})
 	go func() {
 		defer close(notificationsDone)
-		httpapi.RunNotifications(notificationCtx, s, time.Minute, func(error) {
-			log.Print("Background notification evaluation or delivery failed; the durable outbox will retry")
+		httpapi.RunNotificationsWithBudget(notificationCtx, s, time.Minute, notificationBudget, func(err error) {
+			// RunNotifications supplies only sanitized operational classes.
+			log.Printf("Background notifications: %v", err)
 		})
 	}()
 	defer func() { cancelNotifications(); <-notificationsDone }()

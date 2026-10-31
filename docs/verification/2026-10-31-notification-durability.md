@@ -38,7 +38,8 @@ planning. This change does not claim unbounded storage or backup capacity.
 - Settings load no event history. Receipts and delivery completion load exact
   event IDs; candidate evaluation loads exact dedupe IDs in the same writer
   transaction as enqueue.
-- Claims stream active pending rows and materialize at most 128 due candidates.
+- Claims stream active pending rows and materialize at most 16 due candidates
+  (explicit diagnostic scopes retain a 128-candidate default).
   Only their referenced announcements are loaded. Future/leased entries are
   skipped; a page of cancelled work does not hide the next eligible page.
 - Inbox uses recipient indexes and 128-row keyset pages until 200 currently
@@ -47,18 +48,26 @@ planning. This change does not claim unbounded storage or backup capacity.
   definitions do not accumulate in the returned snapshot.
 - Outbox reads the newest 500 indexed deliveries. Terminal history and read
   receipts are retained, not rewritten or erased by dispatch.
-- Global input evaluation reads policy in one snapshot and streams resets and
-  the usage ledger once, rather than invoking a full overview/ledger reduction
-  once per user. Fractional usage is summed exactly before one ceiling division;
-  cycle/reset boundaries and disabled-account behavior are preserved.
+- Personal inbox GET is read-only and never triggers global evaluation or ledger
+  reads. Modern scoped reads use a read snapshot; only an observed legacy row
+  upgrades to an atomic migration writer.
+- Background evaluation rotates keyset pages of at most 100 current users and
+  shares admission's committed cycle-window usage projection. Warm pages do not
+  query historical ledger rows. Missing windows share one bounded streaming
+  rebuild per page, with cancellation and explicit cold-history budgets.
 
 These are bounded snapshot allocations, not constant-time guarantees. A claim
-can scan active delayed work; an inbox can scan many ineligible entries; global
-evaluation still scans ledger/resets and evaluates policy per user. Announcement
-management/evaluation and the explicit compatibility `ReadNotifications` API can
-read complete relevant sets. The production service uses the scoped repository.
-Dispatch remains bounded to 100 rounds per call and at-least-once external
-transport; receivers still need event-ID idempotency.
+can scan active delayed work; an inbox can scan many ineligible entries. Reset
+history, current announcement definitions and provider evaluation still require
+scans. Dispatch enumerates current recipients once (O(current users)), rather
+than incorrectly cancelling users outside the current evaluation page. Explicit
+compatibility APIs can read complete relevant sets.
+
+Ordinary Dispatch remains limited to 100 rounds. The background worker has a
+15-second overall context budget and up to 1,000 rounds, split fairly between
+in-app, email and webhook. External delivery is at least once; receivers still
+need event-ID idempotency. See [D4 bounded-worker evidence](2026-10-31-notification-worker.md)
+for precise budgets, asynchronous visibility and measured fixture limits.
 
 ## Required audit contract
 

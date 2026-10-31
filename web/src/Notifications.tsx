@@ -427,6 +427,7 @@ function Announcements() {
         </QueryState>
       </Section>
       <TaskDialog
+        scrollMode="auto"
         title={isNew ? "创建公告" : "编辑公告"}
         open={!!editing}
         footer={<div className="w-full space-y-3">

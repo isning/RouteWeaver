@@ -2,6 +2,7 @@ package store
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -40,6 +41,9 @@ func (s *Store) initializeNotifications() error {
 	return tx.Commit()
 }
 func (s *Store) migrateNotificationsTx(tx *sql.Tx) error {
+	if err := s.checkLegacyNotificationSize(tx); err != nil {
+		return err
+	}
 	var old notifications.State
 	var legacy json.RawMessage
 	err := s.getTx(tx, "notification-private", "state", &legacy)
@@ -85,16 +89,54 @@ func (s *Store) UpdateNotifications(change func(*notifications.State) error) err
 	return s.UpdateNotificationsScope(notifications.Scope{All: true}, change)
 }
 func (s *Store) ReadNotificationsScope(scope notifications.Scope) (notifications.State, error) {
-	s.mu.Lock()
+	if err := s.lockNotificationContext(scope.Context); err != nil {
+		return notifications.State{}, err
+	}
 	defer s.mu.Unlock()
-	tx, err := s.beginWriteTx()
+	// The normal path is a read snapshot, not a writer reservation. Discovering
+	// an imported legacy row is the only reason to close it and migrate.
+	ctx := scope.Context
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
 	if err != nil {
 		return notifications.State{}, err
 	}
-	defer tx.Rollback()
-	if err = s.migrateNotificationsTx(tx); err != nil {
+	var legacy int
+	err = tx.QueryRow(`SELECT count(*) FROM records WHERE kind='notification-private' AND id='state'`).Scan(&legacy)
+	if err != nil {
+		tx.Rollback()
 		return notifications.State{}, err
 	}
+	if legacy != 0 {
+		tx.Rollback()
+		migration, e := s.beginNotificationWriteTx(ctx)
+		if e != nil {
+			return notifications.State{}, e
+		}
+		if e = s.migrateNotificationsTx(migration); e != nil {
+			migration.Rollback()
+			return notifications.State{}, e
+		}
+		if e = migration.Commit(); e != nil {
+			return notifications.State{}, e
+		}
+		tx, err = s.db.BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
+		if err != nil {
+			return notifications.State{}, err
+		}
+		// Another handle may restore a legacy backup after migration commits.
+		// Refuse that replaced snapshot rather than presenting an empty inbox.
+		if err = tx.QueryRow(`SELECT count(*) FROM records WHERE kind='notification-private' AND id='state'`).Scan(&legacy); err != nil || legacy != 0 {
+			tx.Rollback()
+			if err != nil {
+				return notifications.State{}, err
+			}
+			return notifications.State{}, ErrConflict
+		}
+	}
+	defer tx.Rollback()
 	state, err := s.readNotificationsTx(tx, scope)
 	if err != nil {
 		return notifications.State{}, err
@@ -102,9 +144,11 @@ func (s *Store) ReadNotificationsScope(scope notifications.Scope) (notifications
 	return state, tx.Commit()
 }
 func (s *Store) UpdateNotificationsScope(scope notifications.Scope, change func(*notifications.State) error) error {
-	s.mu.Lock()
+	if err := s.lockNotificationContext(scope.Context); err != nil {
+		return err
+	}
 	defer s.mu.Unlock()
-	tx, err := s.beginWriteTx()
+	tx, err := s.beginNotificationWriteTx(scope.Context)
 	if err != nil {
 		return err
 	}
@@ -146,18 +190,18 @@ func (s *Store) readNotificationsTx(tx *sql.Tx, scope notifications.Scope) (noti
 		return state, err
 	}
 	if scope.All || scope.Announcements {
-		if err := readNotificationMap(s, tx, notificationAnnouncementKind, state.Announcements); err != nil {
+		if err := readNotificationMap(s, tx, notificationAnnouncementKind, state.Announcements, scope.Context); err != nil {
 			return state, err
 		}
 	}
 	if scope.All {
-		if err := readNotificationMap(s, tx, notificationEventKind, state.Events); err != nil {
+		if err := readNotificationMap(s, tx, notificationEventKind, state.Events, scope.Context); err != nil {
 			return state, err
 		}
-		if err := readNotificationMap(s, tx, notificationDeliveryKind, state.Deliveries); err != nil {
+		if err := readNotificationMap(s, tx, notificationDeliveryKind, state.Deliveries, scope.Context); err != nil {
 			return state, err
 		}
-		if err := readNotificationMap(s, tx, notificationReadKind, state.Reads); err != nil {
+		if err := readNotificationMap(s, tx, notificationReadKind, state.Reads, scope.Context); err != nil {
 			return state, err
 		}
 		return state, nil
@@ -167,19 +211,36 @@ func (s *Store) readNotificationsTx(tx *sql.Tx, scope notifications.Scope) (noti
 		ids = append(ids, scope.SelectEventIDs(state)...)
 	}
 	for _, id := range ids {
+		if scope.Context != nil {
+			if err := scope.Context.Err(); err != nil {
+				return state, err
+			}
+		}
 		if err := s.loadNotificationEventTx(tx, &state, id, scope.ReceiptOwner); err != nil {
 			return state, err
 		}
 	}
 	if scope.PendingAt != nil {
+		pendingLimit := scope.PendingLimit
+		if pendingLimit == 0 {
+			pendingLimit = 128
+		}
+		if pendingLimit < 1 || pendingLimit > 128 {
+			return state, fmt.Errorf("notification pending limit must be 1–128")
+		}
 		// Walk only active work. Delayed/leased items do not hide later due work;
 		// memory is bounded to 128 due deliveries, irrespective of terminal history.
-		rows, err := tx.Query(`SELECT id,data FROM records WHERE kind=? ORDER BY id`, notificationPendingKind)
+		rows, err := tx.QueryContext(notificationScopeContext(scope), `SELECT id,data FROM records WHERE kind=? ORDER BY id`, notificationPendingKind)
 		if err != nil {
 			return state, err
 		}
 		due := []notifications.Delivery{}
 		for rows.Next() {
+			if scope.Context != nil {
+				if err = scope.Context.Err(); err != nil {
+					break
+				}
+			}
 			var id string
 			var b []byte
 			if err = rows.Scan(&id, &b); err != nil {
@@ -200,7 +261,7 @@ func (s *Store) readNotificationsTx(tx *sql.Tx, scope notifications.Scope) (noti
 				continue
 			}
 			due = append(due, d)
-			if len(due) == 128 {
+			if len(due) == pendingLimit {
 				break
 			}
 		}
@@ -229,7 +290,7 @@ func (s *Store) readNotificationsTx(tx *sql.Tx, scope notifications.Scope) (noti
 			kinds = append(kinds, notificationInboxPrefix+"@admins")
 		}
 		for _, kind := range kinds {
-			if err := s.readNotificationInboxTx(tx, &state, kind, *scope.Inbox, scope.InboxAt); err != nil {
+			if err := s.readNotificationInboxTx(scope.Context, tx, &state, kind, *scope.Inbox, scope.InboxAt); err != nil {
 				return state, err
 			}
 		}
@@ -255,13 +316,19 @@ func (s *Store) readNotificationsTx(tx *sql.Tx, scope notifications.Scope) (noti
 	}
 	return state, nil
 }
-func readNotificationMap[T any](s *Store, tx *sql.Tx, kind string, out map[string]T) error {
-	rows, err := tx.Query(`SELECT id,data FROM records WHERE kind=? ORDER BY id`, kind)
+func readNotificationMap[T any](s *Store, tx *sql.Tx, kind string, out map[string]T, ctx context.Context) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	rows, err := tx.QueryContext(ctx, `SELECT id,data FROM records WHERE kind=? ORDER BY id`, kind)
 	if err != nil {
 		return err
 	}
 	defer rows.Close()
 	for rows.Next() {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		var id string
 		var b []byte
 		if err = rows.Scan(&id, &b); err != nil {
@@ -353,13 +420,19 @@ func (s *Store) notificationIndexRefsTx(tx *sql.Tx, kind string, limit int) ([]s
 	}
 	return out, rows.Err()
 }
-func (s *Store) readNotificationInboxTx(tx *sql.Tx, state *notifications.State, kind string, r notifications.Recipient, now time.Time) error {
+func (s *Store) readNotificationInboxTx(ctx context.Context, tx *sql.Tx, state *notifications.State, kind string, r notifications.Recipient, now time.Time) error {
 	// Keyset pages avoid buffering the recipient's retained history. Ineligible
 	// old items are skipped without truncating eligible items behind them.
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	cursor := ""
 	accepted := 0
 	for accepted < 200 {
-		rows, err := tx.Query(`SELECT id,data FROM records WHERE kind=? AND id>? ORDER BY id LIMIT 128`, kind, cursor)
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		rows, err := tx.QueryContext(ctx, `SELECT id,data FROM records WHERE kind=? AND id>? ORDER BY id LIMIT 128`, kind, cursor)
 		if err != nil {
 			return err
 		}
@@ -509,4 +582,11 @@ func writeNotificationMap[T any](s *Store, tx *sql.Tx, kind string, before, afte
 		}
 	}
 	return nil
+}
+
+func notificationScopeContext(scope notifications.Scope) context.Context {
+	if scope.Context != nil {
+		return scope.Context
+	}
+	return context.Background()
 }

@@ -150,7 +150,7 @@ func TestNativeFleetConfigureStopStartAndRollback(t *testing.T) {
 		return id
 	}
 	f.in.Action = "install"
-	f.in.TargetReleaseID = "xray-26.10.29-linux-amd64"
+	f.in.TargetReleaseID = "xray-26.10.31-linux-amd64"
 	execute()
 	traffic(false)
 	f.in.Action = "configure"

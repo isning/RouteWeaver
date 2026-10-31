@@ -175,3 +175,12 @@ loopback target, and its destination policy must separately allow that literal.
 Production CLI has no such diagnostic target bypass. This is core→configured
 transit/exit→target evidence, not public-entry TLS or tenant-admission evidence;
 provider/NIC bytes still accrue even though tenant quota is not debited.
+
+## Ordinary TCP process policy
+
+The managed command disables Go's default MPTCP before constructing the unchanged
+upstream runtime, even when an inherited `GODEBUG` requests it. The agent also
+forces ordinary TCP for supervised native processes. MPTCP socket options remain
+unsupported; this does not patch the host kernel or alter existing sockets.
+Direct library embedders must establish the same process policy before runtime
+construction. See [verification and rollout limits](../../docs/verification/TCP-PROCESS-DEFAULTS-2026-10-31.md).

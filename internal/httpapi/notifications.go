@@ -26,34 +26,10 @@ func notificationError(w http.ResponseWriter, e error) {
 	}
 }
 
-// notificationInputs uses the same authoritative usage/cycle computation as the
-// user's overview. Provider allowance is not inferred from these traffic meters.
-func (h *server) notificationInputs(now time.Time) ([]notifications.Recipient, []notifications.UserSnapshot, error) {
-	return h.s.NotificationInputs(now)
-}
-
-func (h *server) refreshInApp(ctx context.Context, now time.Time) error {
-	recipients, users, e := h.notificationInputs(now)
-	if e != nil {
-		return e
-	}
-	n := h.notificationService()
-	if e = n.Evaluate(recipients, users, now); e != nil {
-		return e
-	}
-	if e = h.evaluateProviderAllowances(now); e != nil {
-		return e
-	}
-	return n.DeliverInApp(ctx, recipients, time.Now().UTC())
-}
 func (h *server) registerNotifications(r chi.Router) {
 	r.Get("/me/notifications", func(w http.ResponseWriter, r *http.Request) {
 		now := time.Now().UTC()
-		if e := h.refreshInApp(r.Context(), now); e != nil {
-			fail(w, 500, "cannot refresh notification inbox")
-			return
-		}
-		v, e := h.notificationService().Inbox(notificationRecipient(r), now)
+		v, e := h.notificationService().InboxContext(r.Context(), notificationRecipient(r), now)
 		if e != nil {
 			fail(w, 500, "cannot read notification inbox")
 			return
@@ -185,34 +161,109 @@ func (h *server) registerNotificationAdmin(r chi.Router) {
 	})
 }
 
-// RunNotifications is a blocking same-process worker. Its caller owns the
-// goroutine and context. Cancellation stops future work, interrupted sends keep
-// their durable state. A transient storage failure is reported, then retried on
-// the next bounded tick. It never creates an external channel automatically.
+// RunNotificationBatch advances one keyset page. Evaluation failure does not
+// suppress already-durable delivery, and dispatch uses the COMPLETE current
+// audience rather than accidentally cancelling recipients outside this page.
+func RunNotificationBatch(ctx context.Context, s *store.Store, after string, now time.Time) (string, error) {
+	return runNotificationBatchWithBudget(ctx, s, after, now, 5*time.Second, store.DefaultNotificationColdBudget())
+}
+
+func runNotificationBatch(ctx context.Context, s *store.Store, after string, now time.Time, evaluationBudget time.Duration) (string, error) {
+	return runNotificationBatchWithBudget(ctx, s, after, now, evaluationBudget, store.DefaultNotificationColdBudget())
+}
+func runNotificationBatchWithBudget(ctx context.Context, s *store.Store, after string, now time.Time, evaluationBudget time.Duration, budget store.NotificationColdBudget) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+	evaluationCtx, finishEvaluation := context.WithTimeout(ctx, evaluationBudget)
+	defer finishEvaluation()
+	started := time.Now()
+	inputCtx, finishInput := context.WithTimeout(evaluationCtx, 2*time.Second)
+	page, inputErr := s.NotificationInputPageWithBudget(inputCtx, after, store.NotificationPageSize, now, budget)
+	inputErr = errors.Join(inputErr, inputCtx.Err())
+	finishInput()
+	if errors.Is(inputErr, context.DeadlineExceeded) && evaluationCtx.Err() == nil {
+		// A slow host can make the maximum page impossible to commit. Retry a
+		// smaller atomic input page inside the same evaluation budget; successful
+		// keyset advancement reflects only that committed page, never skipped IDs.
+		page, inputErr = s.NotificationInputPageWithBudget(evaluationCtx, after, 10, now, budget)
+	}
+	h := &server{s: s}
+	n := h.notificationService()
+	// Usage-bearing snapshots require a committed projection transaction. A cold
+	// refusal can also return explicitly usage-unknown policy/expiry snapshots.
+	users := page.Users
+	next, evaluateErr := evaluateNotificationRecipients(evaluationCtx, page.Recipients, users, after, page.Next, now, n.EvaluateContext)
+
+	var providerErr error
+	if after == "" && evaluationCtx.Err() == nil {
+		providerErr = h.evaluateProviderAllowancesContext(evaluationCtx, now)
+	}
+	evaluateErr = errors.Join(evaluateErr, evaluationCtx.Err())
+	finishEvaluation()
+	recipients, recipientErr := s.NotificationRecipients(ctx)
+	var dispatchErr error
+	if recipientErr == nil {
+		dispatchErr = n.DispatchBounded(ctx, recipients, now.Add(time.Since(started)), 1000)
+	}
+	return next, errors.Join(inputErr, evaluateErr, providerErr, recipientErr, dispatchErr)
+}
+
+// Partial enqueue must resume after the last committed user, not after the
+// entire input page: otherwise a repeatedly expensive prefix can starve its tail.
+func evaluateNotificationRecipients(ctx context.Context, recipients []notifications.Recipient, users []notifications.UserSnapshot, after, pageNext string, now time.Time, evaluate func(context.Context, []notifications.Recipient, []notifications.UserSnapshot, time.Time) error) (string, error) {
+	completed := after
+	for offset := 0; offset < len(recipients); offset += 10 {
+		end := offset + 10
+		if end > len(recipients) {
+			end = len(recipients)
+		}
+		chunk := recipients[offset:end]
+		if err := evaluate(ctx, chunk, users, now); err != nil {
+			return completed, err
+		}
+		for _, recipient := range chunk {
+			if !(recipient.ID == "operator" && recipient.Role == "admin") {
+				completed = recipient.ID
+			}
+		}
+	}
+	return pageNext, nil
+}
+
+// RunNotifications is the same-process bounded worker. One current-user page
+// per tick gives a finite full-sweep delay; restarting at page zero is safe
+// because event identities and dedupe facts are durable. No network broker.
 func RunNotifications(ctx context.Context, s *store.Store, interval time.Duration, report func(error)) {
+	RunNotificationsWithBudget(ctx, s, interval, store.DefaultNotificationColdBudget(), report)
+}
+func RunNotificationsWithBudget(ctx context.Context, s *store.Store, interval time.Duration, budget store.NotificationColdBudget, report func(error)) {
+	if err := budget.Validate(); err != nil {
+		if report != nil {
+			report(err)
+		}
+		return
+	}
 	if ctx.Err() != nil {
 		return
 	}
 	if interval < time.Second {
 		interval = time.Minute
 	}
-	h := &server{s: s}
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
+	after := ""
 	run := func() {
-		now := time.Now().UTC()
-		recipients, users, e := h.notificationInputs(now)
-		if e == nil {
-			e = h.notificationService().Evaluate(recipients, users, now)
-		}
-		if e == nil {
-			e = h.evaluateProviderAllowances(now)
-		}
-		if e == nil {
-			e = h.notificationService().Dispatch(ctx, recipients, time.Now().UTC())
-		}
-		if e != nil && ctx.Err() == nil && report != nil {
-			report(errors.New("notification evaluation or dispatch failed"))
+		next, err := runNotificationBatchWithBudget(ctx, s, after, time.Now().UTC(), 5*time.Second, budget)
+		after = next
+		if err != nil && ctx.Err() == nil && report != nil {
+			switch {
+			case errors.Is(err, store.ErrNotificationColdBudget):
+				report(errors.New("notification quota cold rebuild exceeds the background budget; retained outbox processing continues; review notification maintenance guidance"))
+			case errors.Is(err, context.DeadlineExceeded):
+				report(errors.New("notification batch reached its time budget; durable partial progress is retained for later ticks"))
+			default:
+				report(errors.New("notification evaluation or dispatch failed; retained facts were not discarded"))
+			}
 		}
 	}
 	run()

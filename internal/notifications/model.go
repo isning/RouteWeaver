@@ -84,12 +84,14 @@ type Recipient struct {
 	Enabled bool
 }
 type UserSnapshot struct {
-	UserID     string
-	Enabled    bool
-	QuotaBytes int64
-	UsedBytes  int64
-	CycleID    string
-	ExpiresAt  *time.Time
+	// UsageUnknown permits expiry evaluation but MUST NOT evaluate quota thresholds.
+	UsageUnknown bool
+	UserID       string
+	Enabled      bool
+	QuotaBytes   int64
+	UsedBytes    int64
+	CycleID      string
+	ExpiresAt    *time.Time
 }
 
 // ProviderSnapshot is observed operator-managed inventory, not inferred from a

@@ -248,7 +248,7 @@ func (s *ProcessSupervisor) Activate(ctx context.Context, st Staged) error {
 	args := s.checker.commands.RunArgs(st)
 	cmd := exec.Command(s.checker.binary, args...)
 	cmd.Dir = st.Directory
-	cmd.Env = append([]string{"PATH=/usr/bin:/bin", "HOME=" + st.Directory, "LANG=C", "LC_ALL=C"}, s.checker.stagedEnvironment(st)...)
+	cmd.Env = nativeProcessEnvironment(st.Directory, s.checker.stagedEnvironment(st))
 	cmd.Stdout = io.Discard
 	cmd.Stderr = io.Discard
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true, Pdeathsig: syscall.SIGKILL}

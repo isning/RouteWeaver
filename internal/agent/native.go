@@ -57,6 +57,8 @@ func init() {
 	xray := nativeRegistrations["routeweaver/xray@26.3.27"]
 	xray.source = "https://github.com/XTLS/Xray-core/blob/v26.10.29/main/run.go"
 	nativeRegistrations["routeweaver/xray@26.10.29"] = xray
+	xray.source = "https://github.com/XTLS/Xray-core/blob/v26.10.31/main/run.go"
+	nativeRegistrations["routeweaver/xray@26.10.31"] = xray
 	singbox := nativeRegistrations["routeweaver/sing-box@1.14.3"]
 	singbox.source = "https://github.com/SagerNet/sing-box/blob/v1.14.4/cmd/sing-box/cmd_check.go"
 	nativeRegistrations["routeweaver/sing-box@1.14.4"] = singbox
@@ -94,6 +96,9 @@ func NewCommandChecker(d Descriptor, binary string, timeout time.Duration, c Nat
 }
 func (n *NativeChecker) Descriptor() Descriptor { return n.descriptor }
 func (n *NativeChecker) Validate(ctx context.Context, s Staged) error {
+	if err := rejectNativeMPTCP(s.Desired); err != nil {
+		return err
+	}
 	var receiptPath, receiptDigest string
 	if s.nativeReceipt != nil {
 		var err error

@@ -1,3 +1,4 @@
+import { measureTitleText } from "./title-text-geometry";
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import type { Service, State } from "../src/types";
 
@@ -124,20 +125,21 @@ for (const width of [320, 390, 1440])
         // Readability is independent of overflow and reachable edit actions.
         for (const [index, row] of rows.entries()) {
           const cell = row.getByRole("cell").first();
-          const geometry = await cell.evaluate((element) => {
-            const style = getComputedStyle(element);
-            return {
-              width: element.getBoundingClientRect().width,
-              height: element.getBoundingClientRect().height,
-              lineHeight: parseFloat(style.lineHeight),
-              verticalPadding:
-                parseFloat(style.paddingTop) + parseFloat(style.paddingBottom),
-            };
+          const geometry = await cell.evaluate(measureTitleText);
+          await info.attach(`title-${width}-${index}-geometry`, {
+            body: JSON.stringify(geometry),
+            contentType: "application/json",
           });
+          await page.screenshot({
+            path: info.outputPath(
+              `announcement-${width}-${index}-measurement.png`,
+            ),
+          });
+          await expect(cell).toHaveText(names[index]);
           expect(geometry.width).toBeGreaterThanOrEqual(192);
-          expect(
-            geometry.height - geometry.verticalPadding,
-          ).toBeLessThanOrEqual(
+          expect(geometry.lineCount).toBeGreaterThan(0);
+          expect(geometry.lineCount).toBeLessThanOrEqual(index === 0 ? 2 : 5);
+          expect(geometry.textHeight).toBeLessThanOrEqual(
             geometry.lineHeight * (index === 0 ? 2 : 5) + 1,
           );
         }
@@ -237,6 +239,21 @@ for (const viewportSize of [
     await expect(
       dialog.getByRole("textbox", { name: "公告标题", exact: true }),
     ).toHaveValue(announcements[1].title);
+    const titleInput = dialog.getByRole("textbox", {
+      name: "公告标题",
+      exact: true,
+    });
+    await titleInput.focus();
+    await expect(titleInput).toBeInViewport({ ratio: 1 });
+    await expect(dialog.getByText("公告标题", { exact: true })).toBeInViewport({
+      ratio: 1,
+    });
+    await expect(dialog).toHaveAttribute("data-task-scroll", "task");
+    await page.screenshot({
+      path: info.outputPath(
+        `announcement-short-reflow-${viewportSize.width}-field.png`,
+      ),
+    });
     const cancel = dialog.getByRole("button", { name: "取消", exact: true });
     await cancel.focus();
     await expect(cancel).toBeInViewport();

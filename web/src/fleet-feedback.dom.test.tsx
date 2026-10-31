@@ -365,11 +365,11 @@ it("shows stock security migration consequences only for the selected Xray relea
       if (String(url).endsWith("/core-releases"))
         return json([
           {
-            id: "xray-26.10.29-linux-amd64",
+            id: "xray-26.10.31-linux-amd64",
             adapterId: "routeweaver/xray",
-            version: "26.10.29",
+            version: "26.10.31",
             platform: "linux-amd64",
-            url: "https://github.com/XTLS/Xray-core/releases/download/v26.10.29/Xray-linux-64.zip",
+            url: "https://github.com/XTLS/Xray-core/releases/download/v26.10.31/Xray-linux-64.zip",
             archiveSHA256: "a".repeat(64),
             executableSHA256: "b".repeat(64),
           },
@@ -404,7 +404,7 @@ it("shows stock security migration consequences only for the selected Xray relea
     dialog.findByRole("combobox", { name: "目标核心版本" }),
   );
   await scenario.click(() =>
-    screen.findByRole("option", { name: "xray 26.10.29 · linux-amd64" }),
+    screen.findByRole("option", { name: "xray 26.10.31 · linux-amd64" }),
   );
   await dialog.findByText(/不能直接沿用自定义系统 CA/);
   expect(dialog.getByText(/旧版本不能直接保存网段例外/)).toBeTruthy();

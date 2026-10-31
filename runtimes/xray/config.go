@@ -31,10 +31,13 @@ type managedStreamProfile struct {
 	TCP       json.RawMessage `json:"tcpSettings"`
 	Raw       json.RawMessage `json:"rawSettings"`
 	FinalMask json.RawMessage `json:"finalmask"`
+	TLS       struct {
+		ECHSockopt json.RawMessage `json:"echSockopt"`
+	} `json:"tlsSettings"`
 }
 
 func (s managedStreamProfile) supported() bool {
-	return (s.Network == "" || s.Network == "tcp" || s.Network == "raw") && (s.Security == "" || s.Security == "none" || s.Security == "tls") && len(s.Sockopt) == 0 && len(s.TCP) == 0 && len(s.Raw) == 0 && len(s.FinalMask) == 0
+	return (s.Network == "" || s.Network == "tcp" || s.Network == "raw") && (s.Security == "" || s.Security == "none" || s.Security == "tls") && len(s.Sockopt) == 0 && len(s.TCP) == 0 && len(s.Raw) == 0 && len(s.FinalMask) == 0 && len(s.TLS.ECHSockopt) == 0
 }
 
 func DecodeDescriptor(r io.Reader) (entrypolicy.Descriptor, error) {
@@ -171,7 +174,7 @@ func build(native []byte, d entrypolicy.Descriptor) (*core.Config, error) {
 		}
 		// PROXY headers and transport wrappers would replace the physical peer. They
 		// need a separate trusted-ingress model and independent wire evidence.
-		if len(in.Stream.Sockopt) > 0 || len(in.Stream.TCP) > 0 || len(in.Stream.Raw) > 0 || len(in.Stream.FinalMask) > 0 || in.Sniffing.Enabled {
+		if len(in.Stream.Sockopt) > 0 || len(in.Stream.TCP) > 0 || len(in.Stream.Raw) > 0 || len(in.Stream.FinalMask) > 0 || len(in.Stream.TLS.ECHSockopt) > 0 || in.Sniffing.Enabled {
 			return nil, errors.New("untested entry socket, TCP wrapper or sniffing options")
 		}
 		if in.Settings.Decryption != "none" || len(in.Settings.Fallbacks) > 0 || len(in.Settings.Clients) == 0 {

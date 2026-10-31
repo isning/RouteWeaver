@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"routeweaver/internal/entrypolicy"
@@ -21,6 +22,20 @@ func main() {
 	}
 }
 func run(args []string) error {
+	// Set the supported Go process default before the unchanged upstream runtime
+	// can create listeners. Native sockopt overrides are rejected by managed config.
+	// Preserve unrelated local Go tuning, but never an inherited MPTCP enable.
+	debug := make([]string, 0)
+	for _, setting := range strings.Split(os.Getenv("GODEBUG"), ",") {
+		if setting != "" && !strings.HasPrefix(setting, "multipathtcp=") {
+			debug = append(debug, setting)
+		}
+	}
+	debug = append(debug, "multipathtcp=0")
+	if err := os.Setenv("GODEBUG", strings.Join(debug, ",")); err != nil {
+		return errors.New("cannot disable unsupported MPTCP")
+	}
+
 	if len(args) == 1 && args[0] == "version" {
 		fmt.Println("RouteWeaver managed-xray", managed.Version, "Xray", managed.CoreVersion)
 		return nil

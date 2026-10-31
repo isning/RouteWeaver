@@ -83,7 +83,7 @@ export const loadInfrastructure = async (): Promise<Infrastructure> => {
 // targets and the managed embedded core have independent version contracts.
 const coreVersions: Record<string, string> = {
   "routeweaver/sing-box": "1.14.4",
-  "routeweaver/xray": "26.10.29",
+  "routeweaver/xray": "26.10.31",
   "routeweaver/managed-xray": "26.3.27-rw1",
 };
 // Creation recipe for the verified platform-entry target, not a registry of all

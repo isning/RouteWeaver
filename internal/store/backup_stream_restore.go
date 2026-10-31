@@ -20,10 +20,26 @@ func RestoreBackupFresh(ctx context.Context, target string, key []byte, source *
 	if !filepath.IsAbs(target) || len(key) != 32 {
 		return errors.New("absolute restore target and 32-byte master key required")
 	}
-	if _, err := os.Lstat(target); err == nil {
-		return errors.New("restore target already exists")
-	} else if !os.IsNotExist(err) {
+	canonical, err := freshDatabaseTarget(target)
+	if err != nil {
 		return err
+	}
+	target = canonical
+	if source == nil {
+		return errors.New("restore source required")
+	}
+	var sourcePath string
+	if err = source.db.QueryRowContext(ctx, `SELECT file FROM pragma_database_list WHERE name='main'`).Scan(&sourcePath); err != nil {
+		return err
+	}
+	if sourcePath != "" {
+		sourcePath, err = CanonicalDatabasePath(sourcePath)
+		if err != nil {
+			return err
+		}
+		if err = rejectSourceSQLitePathFamily(sourcePath, target); err != nil {
+			return err
+		}
 	}
 	dir, err := os.MkdirTemp(filepath.Dir(target), ".restore-")
 	if err != nil {
@@ -143,6 +159,17 @@ func publishFreshBackupWithOps(ctx context.Context, path, target string, ops bac
 	if closeErr != nil {
 		return closeErr
 	}
+	if err = ctx.Err(); err != nil {
+		return err
+	}
+	// Recheck after copy, verification and fsync: a sidecar may have appeared
+	// since admission. Do not remove it, or report uncertain publication when
+	// no link has yet been attempted.
+	canonical, err := freshDatabaseTarget(target)
+	if err != nil {
+		return err
+	}
+	target = canonical
 	if err = ctx.Err(); err != nil {
 		return err
 	}

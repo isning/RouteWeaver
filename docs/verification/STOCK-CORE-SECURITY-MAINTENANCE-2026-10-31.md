@@ -1,5 +1,9 @@
 # Stock-core security maintenance — 2026-10-31
 
+Superseded current Xray target: upstream withdrew 26.10.29 later on this date.
+See [withdrawal/replacement acceptance](STOCK-XRAY-WITHDRAWAL-2026-10-31.md);
+the observations below remain historical, not a recommendation to install 29.
+
 This later correction follows [the Go compiler rebuild](GO-CERTIFICATE-MAINTENANCE-2026-10-31.md). Rebuilding RouteWeaver does not rebuild separately downloaded official stock cores. The old releases were production-installable, not irrelevant test fixtures. No live node is upgraded by this change.
 
 ## Verified upstream bytes

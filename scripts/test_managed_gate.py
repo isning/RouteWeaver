@@ -1,0 +1,68 @@
+"""Offline shell-gate contract; synthetic events are not native runtime evidence."""
+import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import tempfile
+import unittest
+
+ROOT = Path(__file__).resolve().parents[1]
+REQUIRED = {
+    "agent": "TestManagedNativeBrokerEOFStopsActivePayloadAndPersistsFinalJournal",
+    "integration": "TestManagedSharedVLESSIngressKeepsPrincipalPathsSeparate",
+    "httpapi": "TestNativePublishedManagedPrincipalEndToEnd",
+}
+CONTINUOUS = "TestNativeContinuousManagedServicePreservesPayloadAndRevocation"
+
+
+class ManagedGateTests(unittest.TestCase):
+    def run_gate(self, action="pass", omit=False, fail_go=False):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            (root / "scripts").mkdir()
+            shutil.copyfile(ROOT / "scripts/managed-runtime.sh", root / "scripts/managed-runtime.sh")
+            events = [{"Package": "routeweaver/internal/" + pkg, "Test": name, "Action": "pass"}
+                      for pkg, name in REQUIRED.items()]
+            if not omit:
+                events.append({"Package": "routeweaver/internal/httpapi", "Test": CONTINUOUS, "Action": action})
+            (root / "events").write_text("\n".join(map(json.dumps, events)) + "\n")
+            go = root / "scripts/go.sh"
+            go.write_text('''#!/usr/bin/env python3
+import json, os, sys
+from pathlib import Path
+args=sys.argv[1:]
+with open("calls", "a") as out:
+    out.write(json.dumps({"args": args, "targets": os.environ["ROUTEWEAVER_NATIVE_PROCESS_TESTS"], "managed": os.environ["ROUTEWEAVER_MANAGED_XRAY_BIN"]}) + "\\n")
+if "test" in args:
+    print(Path("events").read_text(), end="")
+    sys.exit(int(os.environ.get("FAKE_GO_FAILURE", "0")))
+''')
+            go.chmod(0o755)
+            env = dict(os.environ, ROUTEWEAVER_NATIVE_PROCESS_TESTS="xray,sing-box", FAKE_GO_FAILURE="1" if fail_go else "0")
+            result = subprocess.run(["bash", "scripts/managed-runtime.sh"], cwd=root, env=env,
+                                    capture_output=True, text=True, timeout=5)
+            calls = [json.loads(line) for line in (root / "calls").read_text().splitlines()]
+            self.assertEqual(len(calls), 2)
+            self.assertIn("build", calls[0]["args"])
+            args = calls[1]["args"]
+            self.assertIn("-race", args)
+            self.assertIn(CONTINUOUS, args[args.index("-run") + 1])
+            self.assertIn("./internal/httpapi", args)
+            self.assertEqual(calls[1]["targets"], "xray")
+            self.assertEqual(calls[1]["managed"], str(root / "bin/routeweaver-xray"))
+            return result
+
+    def test_all_required_positive_results_pass(self):
+        result = self.run_gate()
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_continuous_missing_skipped_or_failed_never_passes(self):
+        for action, omit in (("pass", True), ("skip", False), ("fail", False)):
+            with self.subTest(action=action, omit=omit):
+                result = self.run_gate(action, omit)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("Managed native gate incomplete", result.stderr)
+
+    def test_go_failure_not_hidden_by_tee_or_positive_events(self):
+        self.assertNotEqual(self.run_gate(fail_go=True).returncode, 0)

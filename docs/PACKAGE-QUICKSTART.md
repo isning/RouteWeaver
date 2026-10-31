@@ -1,8 +1,11 @@
 # RouteWeaver application package
 
-This package contains the control-plane executable, node-agent executable, managed Xray executable and web
+This package contains the control-plane executable, node-agent executable, managed Xray executable, offline notification maintenance executable and web
 UI. Run it from the extracted directory so `web/dist` is found. Administration is
-performed in the web UI; the shell is only used to start the application.
+performed in the web UI; the shell starts the application or runs explicit offline
+maintenance. No Go compiler is required on the host. For the stopped-service,
+fresh-copy-only maintenance procedure, see
+[offline notification migration](docs/operations/OFFLINE-NOTIFICATION-MIGRATION.md).
 
 ## Local evaluation
 

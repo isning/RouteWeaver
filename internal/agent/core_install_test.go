@@ -28,7 +28,7 @@ func TestCoreInstallerRejectsUnpinnedReleaseAndCorruptArchive(t *testing.T) {
 	if calls != 0 {
 		t.Fatal("unknown release triggered download")
 	}
-	if _, err = installer.Prepare(context.Background(), "xray-26.10.29-linux-amd64"); err == nil {
+	if _, err = installer.Prepare(context.Background(), "xray-26.10.31-linux-amd64"); err == nil {
 		t.Fatal("corrupted official archive was installed")
 	}
 	if calls != 1 {
@@ -117,8 +117,8 @@ func TestNativeInstallDesiredPreservesActiveRuntimeAndLease(t *testing.T) {
 	install := testDesired(t, 2)
 	install.Action = "install"
 	install.AdapterID = "routeweaver/xray"
-	install.CoreVersion = "26.10.29"
-	install.CoreReleaseID = "xray-26.10.29-linux-amd64"
+	install.CoreVersion = "26.10.31"
+	install.CoreReleaseID = "xray-26.10.31-linux-amd64"
 	install.Lease.AccessAllowed = false
 	install.Artifacts[0].Content = `{"inbounds":[],"outbounds":[{"protocol":"freedom","tag":"direct"}]}`
 	install.Digest, _ = ArtifactDigest(install.Artifacts)
@@ -172,8 +172,8 @@ func TestNativeInstallDoesNotEraseAcceptedRevocation(t *testing.T) {
 	install := testDesired(t, 3)
 	install.Action = "install"
 	install.AdapterID = "routeweaver/xray"
-	install.CoreVersion = "26.10.29"
-	install.CoreReleaseID = "xray-26.10.29-linux-amd64"
+	install.CoreVersion = "26.10.31"
+	install.CoreReleaseID = "xray-26.10.31-linux-amd64"
 	install.Artifacts[0].Content = `{"inbounds":[],"outbounds":[{"protocol":"freedom","tag":"direct"}]}`
 	install.Digest, _ = ArtifactDigest(install.Artifacts)
 	if state, err := r.Submit(context.Background(), install); err != nil || state.Phase != "installed" || state.Observed != nil {
@@ -203,7 +203,7 @@ func TestCoreInstallerRejectsRootReplacementBeforeFetching(t *testing.T) {
 	if err = os.Symlink(t.TempDir(), root); err != nil {
 		t.Fatal(err)
 	}
-	if _, err = installer.Prepare(context.Background(), "xray-26.10.29-linux-amd64"); err == nil || calls != 0 {
+	if _, err = installer.Prepare(context.Background(), "xray-26.10.31-linux-amd64"); err == nil || calls != 0 {
 		t.Fatal("replaced core root was followed or fetched")
 	}
 }
@@ -243,8 +243,8 @@ func TestNativeInstallDownloadCannotDelayActiveLeaseExpiry(t *testing.T) {
 	install := testDesired(t, 2)
 	install.Action = "install"
 	install.AdapterID = "routeweaver/xray"
-	install.CoreVersion = "26.10.29"
-	install.CoreReleaseID = "xray-26.10.29-linux-amd64"
+	install.CoreVersion = "26.10.31"
+	install.CoreReleaseID = "xray-26.10.31-linux-amd64"
 	install.Artifacts[0].Content = `{"inbounds":[],"outbounds":[{"protocol":"freedom","tag":"direct"}]}`
 	install.Digest, _ = ArtifactDigest(install.Artifacts)
 	done := make(chan error, 1)
@@ -291,8 +291,8 @@ func TestNativeInstallDoesNotMutateAnotherInstancesRegistry(t *testing.T) {
 	install := testDesired(t, 1)
 	install.Action = "install"
 	install.AdapterID = "routeweaver/xray"
-	install.CoreVersion = "26.10.29"
-	install.CoreReleaseID = "xray-26.10.29-linux-amd64"
+	install.CoreVersion = "26.10.31"
+	install.CoreReleaseID = "xray-26.10.31-linux-amd64"
 	install.Artifacts[0].Content = `{"inbounds":[],"outbounds":[{"protocol":"freedom","tag":"direct"}]}`
 	install.Digest, _ = ArtifactDigest(install.Artifacts)
 	if _, err = r.Submit(context.Background(), install); err != nil {
@@ -306,7 +306,7 @@ func TestNativeInstallDoesNotMutateAnotherInstancesRegistry(t *testing.T) {
 // A historical pin remains useful to verify existing receipts, not to authorize
 // a new installation after its security retirement.
 func TestCoreInstallerRejectsRetiredReleaseBeforeOpeningArchive(t *testing.T) {
-	for _, id := range []string{"xray-26.3.27-linux-amd64", "sing-box-1.14.3-linux-amd64"} {
+	for _, id := range []string{"xray-26.3.27-linux-amd64", "sing-box-1.14.3-linux-amd64", "xray-26.10.29-linux-amd64"} {
 		t.Run(id, func(t *testing.T) {
 			calls := 0
 			installer, err := NewCoreInstaller(filepath.Join(t.TempDir(), "cores"), CoreInstallerOptions{OpenArchive: func(context.Context, controlprotocol.CoreRelease) (io.ReadCloser, error) {
@@ -329,7 +329,7 @@ func TestCoreInstallerRejectsRetiredReleaseBeforeOpeningArchive(t *testing.T) {
 // Simulate an authentic pre-retirement journal, rather than weakening the new
 // admission guard to manufacture history through Submit.
 func TestRetiredPendingInstallAndUpgradeRecoverWithoutReplaying(t *testing.T) {
-	for _, id := range []string{"xray-26.3.27-linux-amd64", "sing-box-1.14.3-linux-amd64"} {
+	for _, id := range []string{"xray-26.3.27-linux-amd64", "sing-box-1.14.3-linux-amd64", "xray-26.10.29-linux-amd64"} {
 		for _, action := range []string{"install", "upgrade"} {
 			t.Run(id+"/"+action, func(t *testing.T) {
 				calls := 0
@@ -409,7 +409,7 @@ func TestRetiredPendingInstallAndUpgradeRecoverWithoutReplaying(t *testing.T) {
 				if openErr != nil {
 					t.Fatal(openErr)
 				}
-				current, _ := controlprotocol.FindInstallableCoreRelease("xray-26.10.29-linux-amd64")
+				current, _ := controlprotocol.FindInstallableCoreRelease("xray-26.10.31-linux-amd64")
 				replacement := testDesired(t, 3)
 				replacement.Action = "install"
 				replacement.AdapterID = current.AdapterID

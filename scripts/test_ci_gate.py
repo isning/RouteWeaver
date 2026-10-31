@@ -5,6 +5,8 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+import tempfile
+import textwrap
 import unittest
 
 spec = importlib.util.spec_from_file_location("ci_gate", Path(__file__).with_name("ci_gate.py"))
@@ -86,9 +88,28 @@ class CIGateTests(unittest.TestCase):
         native = workflow.split("\n  native:\n", 1)[1].split("\n  package:\n", 1)[0]
         self.assertIn("ROUTEWEAVER_CORE_BIN_DIR: ${{ github.workspace }}/bin/cores", native)
         self.assertIn("ROUTEWEAVER_STOCK_CORE_BIN_DIR: ${{ github.workspace }}/bin/stock-cores", native)
-        self.assertIn("- run: python3 scripts/bootstrap-cores.py\n", native)
+        self.assertIn("python3 scripts/bootstrap-cores.py 2>&1 | tee bin/verification/native-bootstrap.log", native)
+        self.assertIn("set -o pipefail", native)
         self.assertIn("- run: scripts/verify.sh native", native)
         self.assertIn("- run: scripts/verify.sh runtime", native)
+
+    def test_native_bootstrap_diagnostics_preserve_real_exit_status(self):
+        root = Path(__file__).resolve().parents[1]
+        workflow = (root / ".github/workflows/ci.yml").read_text()
+        native = workflow.split("\n  native:\n", 1)[1].split("\n  package:\n", 1)[0]
+        body = re.search(r"      - name: Verify pinned native assets and retain bootstrap diagnostics\n        run: \|\n((?:          .*\n)+)", native)
+        self.assertIsNotNone(body, "native bootstrap must execute and retain diagnostics")
+        command = textwrap.dedent(body.group(1))
+        for status in (0, 7):
+            with self.subTest(status=status), tempfile.TemporaryDirectory() as tmp:
+                work = Path(tmp)
+                (work / "scripts").mkdir()
+                (work / "scripts/bootstrap-cores.py").write_text(
+                    f'import sys; print("bootstrap fixture evidence"); sys.exit({status})\n')
+                result = subprocess.run(["bash", "-e", "-c", command], cwd=work,
+                                        capture_output=True, text=True, timeout=5)
+                self.assertEqual(result.returncode, status, result.stderr)
+                self.assertIn("bootstrap fixture evidence", (work / "bin/verification/native-bootstrap.log").read_text())
 
 
 if __name__ == "__main__":

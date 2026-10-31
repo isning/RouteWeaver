@@ -193,7 +193,11 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           go: "true"
-      - run: python3 scripts/bootstrap-cores.py
+      - name: Verify pinned native assets and retain bootstrap diagnostics
+        run: |
+          set -o pipefail
+          mkdir -p bin/verification
+          python3 scripts/bootstrap-cores.py 2>&1 | tee bin/verification/native-bootstrap.log
       - run: scripts/verify.sh native
       - run: scripts/verify.sh runtime
       - run: scripts/verify.sh managed

@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"sort"
 	"time"
@@ -102,9 +103,15 @@ func reminderChannels(st *State, operator bool) []string {
 // Evaluate uses server-derived snapshots. A stable cycle ID prevents a repeated
 // evaluation or process restart from duplicating a threshold notification.
 func (s *Service) Evaluate(recipients []Recipient, users []UserSnapshot, now time.Time) error {
+	return s.EvaluateContext(context.Background(), recipients, users, now)
+}
+func (s *Service) EvaluateContext(ctx context.Context, recipients []Recipient, users []UserSnapshot, now time.Time) error {
 	change := func(st *State) error {
 		for _, a := range st.Announcements {
 			for _, r := range recipients {
+				if err := ctx.Err(); err != nil {
+					return err
+				}
 				if eligible(a, r, now) {
 					expiry := a.ExpiresAt
 					enqueue(st, Event{EventID: key("announcement", a.ID, r.ID), Kind: "announcement", RecipientID: r.ID, Title: a.Title, Body: a.Body, CreatedAt: a.StartsAt, ExpiresAt: &expiry, AnnouncementID: a.ID}, []string{"in-app"}, false)
@@ -113,9 +120,15 @@ func (s *Service) Evaluate(recipients []Recipient, users []UserSnapshot, now tim
 		}
 		enabled := map[string]bool{}
 		for _, r := range recipients {
+			if err := ctx.Err(); err != nil {
+				return err
+			}
 			enabled[r.ID] = r.Enabled
 		}
 		for _, u := range users {
+			if err := ctx.Err(); err != nil {
+				return err
+			}
 			if !u.Enabled || !enabled[u.UserID] || u.CycleID == "" || u.UsedBytes < 0 || u.QuotaBytes < 0 {
 				continue
 			}
@@ -123,7 +136,7 @@ func (s *Service) Evaluate(recipients []Recipient, users []UserSnapshot, now tim
 			if len(channels) == 0 {
 				continue
 			}
-			if u.QuotaBytes > 0 {
+			if !u.UsageUnknown && u.QuotaBytes > 0 {
 				for _, threshold := range st.Settings.QuotaPercent {
 					// Split arithmetic preserves exact byte boundaries without overflow.
 					if u.UsedBytes >= percentCeiling(u.QuotaBytes, threshold) {
@@ -143,12 +156,18 @@ func (s *Service) Evaluate(recipients []Recipient, users []UserSnapshot, now tim
 		}
 		return nil
 	}
-	return s.update(Scope{Announcements: true, SelectEventIDs: selectNotificationEvents(change)}, change)
+	return s.update(Scope{Context: ctx, Announcements: true, SelectEventIDs: selectNotificationEvents(change)}, change)
 }
 
 // EvaluateProvider only accepts fresh, explicit inventory observations. It is
 // not wired to tenant traffic meters, which are not a provider billing source.
 func (s *Service) EvaluateProvider(p ProviderSnapshot, now time.Time) error {
+	return s.EvaluateProviderContext(context.Background(), p, now)
+}
+func (s *Service) EvaluateProviderContext(ctx context.Context, p ProviderSnapshot, now time.Time) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	if p.ID == "" || p.CycleID == "" || p.ObservedAt.IsZero() || p.ObservedAt.After(now.Add(time.Minute)) || now.Sub(p.ObservedAt) > 15*time.Minute || p.TotalBytes <= 0 || p.RemainingBytes < 0 || p.RemainingBytes > p.TotalBytes {
 		return fmt.Errorf("fresh provider allowance observation required")
 	}
@@ -182,7 +201,7 @@ func (s *Service) EvaluateProvider(p ProviderSnapshot, now time.Time) error {
 		}
 		return nil
 	}
-	return s.update(Scope{Announcements: false, SelectEventIDs: selectNotificationEvents(change)}, change)
+	return s.update(Scope{Context: ctx, Announcements: false, SelectEventIDs: selectNotificationEvents(change)}, change)
 }
 func visible(st State, e Event, r Recipient, now time.Time) bool {
 	if !r.Enabled || e.AdminOnly && r.Role != "admin" || !e.AdminOnly && e.RecipientID != r.ID {
@@ -195,7 +214,10 @@ func visible(st State, e Event, r Recipient, now time.Time) bool {
 	return e.ExpiresAt == nil || now.Before(*e.ExpiresAt)
 }
 func (s *Service) Inbox(r Recipient, now time.Time) ([]InboxItem, error) {
-	st, e := s.read(Scope{Inbox: &r, InboxAt: now})
+	return s.InboxContext(context.Background(), r, now)
+}
+func (s *Service) InboxContext(ctx context.Context, r Recipient, now time.Time) ([]InboxItem, error) {
+	st, e := s.read(Scope{Context: ctx, Inbox: &r, InboxAt: now})
 	if e != nil {
 		return nil, e
 	}
@@ -290,6 +312,46 @@ func (s *Service) Test(channel string, r Recipient, now time.Time) (string, erro
 func (s *Service) Dispatch(ctx context.Context, recipients []Recipient, now time.Time) error {
 	return s.dispatch(ctx, recipients, now, "", "")
 }
+
+// DispatchBounded is the worker's larger, time-bounded drain budget. Channel
+// authorization and per-message leases remain identical to ordinary dispatch.
+func (s *Service) DispatchBounded(ctx context.Context, recipients []Recipient, now time.Time, maxRounds int) error {
+	if maxRounds < 3 || maxRounds > 1000 {
+		return fmt.Errorf("dispatch round budget must be 3–1000")
+	}
+	ctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+	started := time.Now()
+	deadline, _ := ctx.Deadline()
+	perChannel := time.Until(deadline) / 3
+	if perChannel <= 0 {
+		return context.DeadlineExceeded
+	}
+	external := maxRounds / 10
+	if external < 1 {
+		external = 1
+	}
+	channels := []struct {
+		name   string
+		rounds int
+	}{{"in-app", maxRounds - 2*external}, {"email", external}, {"webhook", external}}
+	var failures []error
+	for _, channel := range channels {
+		if err := ctx.Err(); err != nil {
+			return errors.Join(append(failures, err)...)
+		}
+		// A hung provider consumes only its slice. In-app runs first; the other
+		// external channel receives a fresh slice rather than the failed context.
+		channelCtx, stop := context.WithTimeout(ctx, perChannel)
+		err := s.dispatchWithClockBudget(channelCtx, recipients, func() time.Time { return now.Add(time.Since(started)) }, "", channel.name, channel.rounds)
+		err = errors.Join(err, channelCtx.Err())
+		stop()
+		if err != nil {
+			failures = append(failures, err)
+		}
+	}
+	return errors.Join(failures...)
+}
 func (s *Service) DispatchEvent(ctx context.Context, recipients []Recipient, now time.Time, eventID string) error {
 	return s.dispatch(ctx, recipients, now, eventID, "")
 }
@@ -306,7 +368,10 @@ func (s *Service) dispatch(ctx context.Context, recipients []Recipient, now time
 // dispatchWithClock keeps time as an internal system seam. Callers supply the
 // initial logical time; production advances it monotonically during transport I/O.
 func (s *Service) dispatchWithClock(ctx context.Context, recipients []Recipient, clock func() time.Time, eventID, onlyChannel string) error {
-	for n := 0; n < 100; n++ {
+	return s.dispatchWithClockBudget(ctx, recipients, clock, eventID, onlyChannel, 100)
+}
+func (s *Service) dispatchWithClockBudget(ctx context.Context, recipients []Recipient, clock func() time.Time, eventID, onlyChannel string, maxRounds int) error {
+	for n := 0; n < maxRounds; n++ {
 		if err := ctx.Err(); err != nil {
 			return err
 		}
@@ -317,7 +382,7 @@ func (s *Service) dispatchWithClock(ctx context.Context, recipients []Recipient,
 		claimed := false
 		progressed := false
 		claimAt := clock()
-		err := s.update(Scope{PendingAt: &claimAt, PendingEventID: eventID, OnlyChannel: onlyChannel}, func(st *State) error {
+		err := s.update(Scope{Context: ctx, PendingAt: &claimAt, PendingLimit: 16, PendingEventID: eventID, OnlyChannel: onlyChannel}, func(st *State) error {
 			keys := make([]string, 0, len(st.Deliveries))
 			for k := range st.Deliveries {
 				keys = append(keys, k)
@@ -403,7 +468,7 @@ func (s *Service) dispatchWithClock(ctx context.Context, recipients []Recipient,
 			sendErr = s.transport.Send(sendCtx, delivery.Channel, event, config, secrets)
 			cancel()
 		}
-		err = s.update(Scope{EventIDs: []string{delivery.EventID}}, func(st *State) error {
+		err = s.update(Scope{Context: ctx, EventIDs: []string{delivery.EventID}}, func(st *State) error {
 			k := deliveryKey(delivery.EventID, delivery.Channel)
 			d, ok := st.Deliveries[k]
 			if !ok || d.LeaseToken != delivery.LeaseToken {

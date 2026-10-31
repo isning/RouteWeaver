@@ -136,7 +136,7 @@ func endpointProtocolLoopback(t *testing.T, dir, protocol, transport string, opt
 	var exitSupervisor *agent.ProcessSupervisor
 	var exitRoot string
 	for _, id := range []string{"exit", "entry"} {
-		binary := filepath.Join(dir, "xray-26.10.29-linux-amd64")
+		binary := filepath.Join(dir, "xray-26.10.31-linux-amd64")
 		checker, err := agent.NewNativeChecker(render.ServerAdapterXray, render.StockXrayVersion, binary, 5*time.Second)
 
 		if err != nil {

@@ -310,6 +310,14 @@ func (h *server) publishServer(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+	if in.AccessAllowed {
+		for _, program := range v.IR.Programs {
+			if controlprotocol.CoreActivationWithdrawn(program.Instance.AdapterID, program.Instance.Version) {
+				h.rejectPublication(w, a, "CORE_RELEASE_WITHDRAWN", "This core release was withdrawn; review an upgrade before granting access.")
+				return
+			}
+		}
+	}
 	artifacts, e := render.DefaultServers().Render(v.IR)
 	if e != nil {
 		h.rejectPublication(w, a, "PUBLICATION_REJECTED", "The deployment cannot be rendered; correct its configuration and review again.")

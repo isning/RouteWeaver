@@ -199,6 +199,9 @@ func (r *Reconciler) Submit(ctx context.Context, d Desired) (State, error) {
 	if err := validateDesired(d, r.disk.Scope); err != nil {
 		return r.out(err)
 	}
+	if d.Lease.AccessAllowed && d.Action != "stop" && controlprotocol.CoreActivationWithdrawn(d.AdapterID, d.CoreVersion) {
+		return r.out(controlprotocol.ErrCoreReleaseRetired)
+	}
 	var a Adapter
 	var err error
 	if d.CoreReleaseID == "" {

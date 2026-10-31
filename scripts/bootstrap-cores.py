@@ -112,7 +112,14 @@ def main():
         lock = json.loads((ROOT / "scripts/stock-core-lock.json").read_text())
         if any(core["platform"] != "linux-amd64" for core in lock["releases"]):
             raise SystemExit("Stock lock has an unverified platform")
-        groups.append((Path(os.environ.get("ROUTEWEAVER_STOCK_CORE_BIN_DIR", ROOT / "bin/stock-cores")).resolve(), lock["releases"]))
+        unavailable = set(lock.get("unavailableFixtureReleaseIDs", []))
+        if unavailable - {core["id"] for core in lock["releases"]}:
+            raise SystemExit("Unavailable fixture policy references unknown release")
+        for core in lock["releases"]:
+            if core["id"] in unavailable:
+                print(f"Withdrawn upstream fixture is not downloaded: {core['id']} (receipt metadata retained)")
+        groups.append((Path(os.environ.get("ROUTEWEAVER_STOCK_CORE_BIN_DIR", ROOT / "bin/stock-cores")).resolve(),
+                       [core for core in lock["releases"] if core["id"] not in unavailable]))
     for destination, cores in groups:
         destination.mkdir(parents=True, exist_ok=True)
         if len({core["id"] for core in cores}) != len(cores):

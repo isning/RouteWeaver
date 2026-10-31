@@ -507,6 +507,7 @@ function AccountRecoveryTask({
   ];
   return (
     <TaskDialog
+      scrollMode="auto"
       open
       title={`管理账号 · ${target.name}`}
       description={`登录名：${target.username}`}

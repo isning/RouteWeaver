@@ -38,6 +38,9 @@ func (r *Reconciler) ApplyPolicyRefresh(ctx context.Context, update controlproto
 	if r.disk.Payload == nil || r.disk.LastValid == nil || update.Identity != r.disk.Payload.Identity() || update.Identity != r.disk.LastValid.Identity() || !domain.ValidID(update.IntentID) || update.Sequence == 0 {
 		return r.out(errors.New("policy refresh identity mismatch"))
 	}
+	if controlprotocol.CoreActivationWithdrawn(update.Identity.AdapterID, update.Identity.CoreVersion) {
+		return r.out(controlprotocol.ErrCoreReleaseRetired)
+	}
 	if _, err := r.recoverLocked(ctx); err != nil {
 		return r.out(err)
 	}

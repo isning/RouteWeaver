@@ -94,7 +94,7 @@ import { useWorkspaceViewEntry } from "./useWorkspaceViewEntry";
 const supportsDestinationExceptions = (program: ServerProgram) =>
   program.instance.adapterId === "routeweaver/managed-xray" ||
   (program.instance.adapterId === "routeweaver/xray" &&
-    program.instance.version === "26.10.29" &&
+    program.instance.version === "26.10.31" &&
     ["vless", "vmess", "trojan", "shadowsocks"].includes(
       program.listener.connection.protocol,
     ));

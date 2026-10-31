@@ -29,7 +29,7 @@ func TestNotificationInputsMatchAuthoritativeUsageWindows(t *testing.T) {
 		r := store.MeterRecord{MeterBatch: store.MeterBatch{UserID: owner, RawBytes: 1, ProviderBytes: 2, ObservedAt: now.Add(-time.Hour)}, RateMicros: 333333}
 		records = append(records, store.RecordWrite{Kind: "ledger", ID: string(rune('a' + i)), Value: r})
 	}
-	// Future observations must not enter the current notification's usage.
+	// Already committed observations within this cycle count just as in admission.
 	records = append(records, store.RecordWrite{Kind: "ledger", ID: "future", Value: store.MeterRecord{MeterBatch: store.MeterBatch{UserID: "alice", RawBytes: 999, ObservedAt: now.Add(time.Hour)}, RateMicros: 1000000}})
 	if err = s.UpdateRecords("unused", "unused", func(_ json.RawMessage) ([]store.RecordWrite, error) { return records, nil }); err != nil {
 		t.Fatal(err)
@@ -54,7 +54,11 @@ func TestNotificationInputsMatchAuthoritativeUsageWindows(t *testing.T) {
 		if e != nil {
 			t.Fatal(e)
 		}
-		usage, e := s.Usage(user.UserID, start, now.Add(time.Nanosecond))
+		end := time.Time{}
+		if window.NextReset != nil {
+			end = *window.NextReset
+		}
+		usage, e := s.Usage(user.UserID, start, end)
 		if e != nil {
 			t.Fatal(e)
 		}

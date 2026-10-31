@@ -14,6 +14,7 @@ import re
 import secrets
 import shutil
 import socket
+import sqlite3
 import subprocess
 import tarfile
 import tempfile
@@ -144,6 +145,13 @@ def smoke(archive_path):
         manifest = json.loads((executable.parent / "SOURCE-MANIFEST.json").read_text())
         if hashlib.sha256(canonical(manifest["files"])).hexdigest() != provenance["source"]["sha256"]:
             raise RuntimeError("Embedded source manifest differs from package provenance")
+        maintenance = executable.parent / "routeweaver-notification-migrate"
+        if not maintenance.is_file() or not os.access(maintenance, os.X_OK):
+            raise RuntimeError("Package is missing the executable offline notification maintenance tool")
+        build_info = (executable.parent / "BUILD-INFO.txt").read_text()
+        for name in ("control-plane", "node-agent", "xray", "notification-migrate"):
+            if f"bin/routeweaver-{name}:" not in build_info:
+                raise RuntimeError(f"Package build information is missing {name}")
         environment = clean_environment(workspace)
         with server(executable, workspace, ["--demo"], environment) as client:
             page, _ = client.request("/")
@@ -177,6 +185,11 @@ def smoke(archive_path):
             feed_path, original = create_subscription(client)
         if not database.is_file():
             raise RuntimeError("Persistent package did not create a database")
+        # Keep a read snapshot open so the next process commits into WAL rather
+        # than checkpointing on close. This is synthetic local state, not a CP.
+        wal_reader = sqlite3.connect(database)
+        wal_reader.execute("BEGIN")
+        wal_reader.execute("SELECT count(*) FROM records").fetchone()
         # Same key/database, no bootstrap credentials: real restart, not a demo reset.
         with server(executable, workspace, ["--db", str(database)], persistent) as client:
             anonymous = Client(client.origin)
@@ -190,12 +203,40 @@ def smoke(archive_path):
             if rotated == feed_path or anonymous.request(rotated)[0] != original:
                 raise RuntimeError("Rotated subscription did not retain its published content")
             anonymous.request(feed_path, expected=404)
+        try:
+            wal = Path(str(database) + "-wal")
+            if not wal.is_file() or wal.stat().st_size == 0:
+                raise RuntimeError("Maintenance smoke did not establish committed WAL state")
+            before = {path: hashlib.sha256(path.read_bytes()).hexdigest() for path in (database, wal)}
+            migrated = workspace / "migrated.db"
+            command = [str(maintenance), "--source", str(database), "--output", str(migrated),
+                       "--max-record-bytes", "1048576", "--memory-budget-bytes", "536870912", "--timeout", "1m"]
+            result = subprocess.run(command, env=persistent, capture_output=True, timeout=90)
+            if result.returncode or not migrated.is_file():
+                raise RuntimeError("Packaged maintenance tool failed fresh-copy migration")
+            output_digest = hashlib.sha256(migrated.read_bytes()).hexdigest()
+            refused = subprocess.run(command, env=persistent, capture_output=True, timeout=90)
+            if refused.returncode == 0 or hashlib.sha256(migrated.read_bytes()).hexdigest() != output_digest:
+                raise RuntimeError("Packaged maintenance tool did not preserve occupied output")
+            if any(hashlib.sha256(path.read_bytes()).hexdigest() != digest for path, digest in before.items()):
+                raise RuntimeError("Packaged maintenance tool changed source DB/WAL application bytes")
+        finally:
+            wal_reader.close()
+        # Activation here is solely a disposable fixture: migration itself never
+        # starts a service. The WAL-only token rotation must survive in the copy.
+        with server(executable, workspace, ["--db", str(migrated)], persistent) as client:
+            client.login(username, password)
+            if Client(client.origin).request(rotated)[0] != original:
+                raise RuntimeError("Fresh migrated database lost committed WAL subscription state")
+            Client(client.origin).request(feed_path, expected=404)
         if list(workspace.glob("routeweaver-demo-*")):
             raise RuntimeError("Demo did not remove its disposable state on shutdown")
     receipt = {"schemaVersion": 1, "result": "passed", "archive": provenance["archive"], "source": provenance["source"],
                "checks": ["demo-static-ui-and-auth", "missing-key-startup-rejected", "fresh-non-demo-inventories-empty",
                           "non-demo-source-profile-publication",
-                          "anonymous-subscription", "persistent-restart-without-bootstrap", "rotation-and-old-link-denial", "clean-shutdown"],
+                          "anonymous-subscription", "persistent-restart-without-bootstrap", "rotation-and-old-link-denial", "clean-shutdown",
+                          "offline-maintenance-wal-fresh-copy", "offline-maintenance-no-overwrite",
+                          "offline-maintenance-source-db-wal-unchanged", "offline-maintenance-copy-reopen"],
                "limitations": "No Chromium, real client, native process, node deployment, TLS proxy, or production acceptance."}
     Path(str(archive_path) + ".smoke.json").write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n")
     print("PASS: extracted package static/auth, fresh non-demo empty inventories, persistence, anonymous subscription, rotation and old-link denial. Not browser or deployment acceptance.")

@@ -27,17 +27,28 @@ type State struct {
 	Revisions []domain.Revision `json:"revisions"`
 }
 type Store struct {
-	db             *sql.DB
-	aead           cipher.AEAD
-	usageAEAD      cipher.AEAD
-	usageLookupKey []byte
-	reviewKey      []byte
-	liveAEAD       map[admissionLiveDomain]cipher.AEAD
-	liveLookupKey  map[admissionLiveDomain][]byte
-	mu             sync.Mutex
+	notificationMigrationLimit int64
+	db                         *sql.DB
+	aead                       cipher.AEAD
+	usageAEAD                  cipher.AEAD
+	usageLookupKey             []byte
+	reviewKey                  []byte
+	liveAEAD                   map[admissionLiveDomain]cipher.AEAD
+	liveLookupKey              map[admissionLiveDomain][]byte
+	mu                         sync.Mutex
 }
 
 func Open(path string, key []byte) (*Store, error) {
+	return openStoreWithNotificationLimit(path, key, MaxLegacyNotificationBytes)
+}
+
+// Only fresh-copy maintenance supplies a larger reviewed legacy-row budget.
+// Normal Open always retains the fixed automatic-startup limit.
+func openStoreWithNotificationLimit(path string, key []byte, limit int64) (*Store, error) {
+	if limit < 1 || limit > MaxOfflineLegacyNotificationBytes {
+		return nil, fmt.Errorf("notification migration record budget must be 1–256 MiB")
+	}
+
 	canonicalPath, pathErr := CanonicalDatabasePath(path)
 	if pathErr != nil {
 		return nil, pathErr
@@ -67,6 +78,7 @@ func Open(path string, key []byte) (*Store, error) {
 		db.Close()
 		return nil, e
 	}
+	s.notificationMigrationLimit = limit
 	if _, e = db.Exec(`PRAGMA busy_timeout=5000`); e != nil {
 		db.Close()
 		return nil, e
@@ -77,6 +89,10 @@ func Open(path string, key []byte) (*Store, error) {
 	if e = validateExistingSchema(context.Background(), db); e != nil {
 		db.Close()
 		return nil, unsupportedSchema(e)
+	}
+	if e = s.checkLegacyNotificationSize(db); e != nil {
+		db.Close()
+		return nil, e
 	}
 	if _, e = db.Exec(`PRAGMA journal_mode=WAL`); e != nil {
 		db.Close()

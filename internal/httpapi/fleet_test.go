@@ -185,7 +185,7 @@ func TestFleetStalePreviewConcurrentExecutionAndAuthorization(t *testing.T) {
 		t.Fatal("anonymous fleet history", code)
 	}
 	f.in.Action = "upgrade"
-	f.in.TargetReleaseID = "xray-26.10.29-linux-amd64"
+	f.in.TargetReleaseID = "xray-26.10.31-linux-amd64"
 	unsupported := f.post(t, "admin/fleet-batches/preview", f.in, 200)
 	if unsupported["supported"] != false {
 		t.Fatal("upgrade was falsely supported")
@@ -317,7 +317,7 @@ func TestFleetInstallRequiresCatalogAndExactInstalledEvidenceNotRunning(t *testi
 	f.in.TargetIDs = []string{"fleet-a"}
 	f.in.Stages = nil
 	f.in.Action = "install"
-	f.in.TargetReleaseID = "xray-26.10.29-linux-amd64"
+	f.in.TargetReleaseID = "xray-26.10.31-linux-amd64"
 	id := f.create(t)
 	f.post(t, "admin/fleet-batches/"+id+"/execute", map[string]any{"stage": 0, "requestId": "install"}, 200)
 	var enrollment httpapi.Enrollment
@@ -379,14 +379,14 @@ func TestFleetUpgradeNamesExactOldNewIdentityAndRejectsUnknownRuntime(t *testing
 	state := controlprotocol.State{Desired: &old, Phase: controlprotocol.ObservedConformant, NativeChecked: true, Observed: &controlprotocol.Observation{Identity: old, Known: true, Quiescent: true, ObservedAt: time.Now()}}
 	f.s.Put("agent-observations", "fleet-a", state)
 	f.in.Action = "upgrade"
-	f.in.TargetReleaseID = "xray-26.10.29-linux-amd64"
+	f.in.TargetReleaseID = "xray-26.10.31-linux-amd64"
 	plan := f.post(t, "admin/fleet-batches/preview", f.in, 200)
 	if plan["supported"] != true {
 		t.Fatalf("reviewed upgrade rejected: %+v", plan)
 	}
 	targets := plan["targets"].([]any)
 	first := targets[0].(map[string]any)
-	if first["currentVersion"] != "26.2.6" || first["coreVersion"] != "26.10.29" {
+	if first["currentVersion"] != "26.2.6" || first["coreVersion"] != "26.10.31" {
 		t.Fatal("upgrade versions not explicit", first)
 	}
 	id := f.create(t)
@@ -444,7 +444,7 @@ func TestFleetStopUsesAcceptedPackageWhenDraftIsInvalid(t *testing.T) {
 func TestFleetCatalogOmitsRetiredReleasesAndRejectsStaleInstallPlans(t *testing.T) {
 	f := newFleetFixture(t)
 	code, _, raw := req(t, operatorClient(), "GET", f.srv.URL+"/api/admin/core-releases", "", nil)
-	if code != 200 || !strings.Contains(raw, "xray-26.10.29-linux-amd64") || !strings.Contains(raw, "sing-box-1.14.4-linux-amd64") || strings.Contains(raw, "xray-26.3.27-linux-amd64") || strings.Contains(raw, "sing-box-1.14.3-linux-amd64") {
+	if code != 200 || !strings.Contains(raw, "xray-26.10.31-linux-amd64") || !strings.Contains(raw, "sing-box-1.14.4-linux-amd64") || strings.Contains(raw, "xray-26.3.27-linux-amd64") || strings.Contains(raw, "sing-box-1.14.3-linux-amd64") {
 		t.Fatal("incorrect active release choices", code, raw)
 	}
 	for _, action := range []string{"install", "upgrade"} {

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -20,17 +21,9 @@ type driverTransport struct {
 	desired *Desired
 	reports []State
 	batches []MeterBatch
-	slow    bool
 }
 
 func (t *driverTransport) ReceiveDesired(ctx context.Context, s Scope, after uint64) (*Desired, error) {
-	if t.slow {
-		select {
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		case <-time.After(150 * time.Millisecond):
-		}
-	}
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	if t.desired != nil && t.desired.Generation > after {
@@ -72,26 +65,107 @@ func TestBoundedDriverReconcilesReportsAndStopsOwnedSession(t *testing.T) {
 		t.Fatal("no observed status report")
 	}
 }
+
+// blockedLeaseTransport never completes a poll until the driver is cancelled.
+// Unlike a sleep, this proves restriction occurs before the network returns.
+type blockedLeaseTransport struct {
+	driverTransport
+	entered           chan struct{}
+	restricted        <-chan struct{}
+	restrictedAtEntry bool
+}
+
+func (t *blockedLeaseTransport) ReceiveDesired(ctx context.Context, _ Scope, _ uint64) (*Desired, error) {
+	select {
+	case <-t.restricted:
+		t.restrictedAtEntry = true
+	default:
+	}
+	close(t.entered)
+	<-ctx.Done()
+	return nil, ctx.Err()
+}
+
+type signalledLeaseFixture struct {
+	LocalFixture
+	restricted chan struct{}
+	once       sync.Once
+}
+
+func (f *signalledLeaseFixture) Restrict(ctx context.Context, root string) error {
+	if err := f.LocalFixture.Restrict(ctx, root); err != nil {
+		return err
+	}
+	f.once.Do(func() { close(f.restricted) })
+	return nil
+}
+
 func TestSlowControlPlaneCannotDelayLeaseRestriction(t *testing.T) {
-	r := openTest(t, t.TempDir(), LocalFixture{})
+	for _, expiredAtStartup := range []bool{false, true} {
+		t.Run(fmt.Sprintf("expired_at_startup=%t", expiredAtStartup), func(t *testing.T) {
+			testBlockedPollLeaseRestriction(t, expiredAtStartup)
+		})
+	}
+}
+
+func testBlockedPollLeaseRestriction(t *testing.T, expiredAtStartup bool) {
+	t.Helper()
 	d := testDesired(t, 1)
-	d.Lease.ExpiresAt = time.Now().Add(30 * time.Millisecond)
+	var clock atomic.Int64
+	clock.Store(time.Now().UnixNano())
+	d.Lease.ExpiresAt = time.Unix(0, clock.Load()).Add(30 * time.Millisecond)
+	fixture := &signalledLeaseFixture{restricted: make(chan struct{})}
+	root := filepath.Join(t.TempDir(), "agent")
+	if err := os.Mkdir(root, 0700); err != nil {
+		t.Fatal(err)
+	}
+	r, err := Open(root, d.Scope, NewRegistry(fixture), Options{
+		MaxLease: 2 * time.Hour,
+		Now:      func() time.Time { return time.Unix(0, clock.Load()) },
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer r.Close()
 	if _, err := r.Submit(context.Background(), d); err != nil {
 		t.Fatal(err)
 	}
-	tr := &driverTransport{slow: true}
+	if expiredAtStartup {
+		clock.Store(d.Lease.ExpiresAt.UnixNano())
+	}
+	tr := &blockedLeaseTransport{entered: make(chan struct{}), restricted: fixture.restricted}
+	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
 	go func() {
-		_, err := RunDriver(context.Background(), r, tr, nil, DriverOptions{PollInterval: 10 * time.Millisecond, LeaseInterval: 5 * time.Millisecond, MaxRuntime: 200 * time.Millisecond})
+		_, err := RunDriver(ctx, r, tr, nil, DriverOptions{PollInterval: 10 * time.Millisecond, LeaseInterval: 5 * time.Millisecond, Continuous: true})
 		done <- err
 	}()
-	time.Sleep(70 * time.Millisecond)
+	// Always join before closing the reconciler, including assertion failures.
+	defer func() {
+		cancel()
+		if err := <-done; err != nil {
+			t.Error(err)
+		}
+	}()
+	select {
+	case <-tr.entered:
+	case <-time.After(time.Second):
+		t.Fatal("driver never entered the blocked control-plane poll")
+	}
+	if expiredAtStartup && !tr.restrictedAtEntry {
+		t.Fatal("startup recovery entered network polling before restricting the expired runtime")
+	}
+	// Expire the same 30 ms policy only after startup and the network barrier.
+	// This clock controls policy time, not the driver's real lease ticker.
+	clock.Store(d.Lease.ExpiresAt.UnixNano())
+	select {
+	case <-fixture.restricted:
+	case <-time.After(time.Second):
+		t.Fatal("lease restriction waited for the blocked control-plane poll")
+	}
 	st := r.State()
 	if st.Observed != nil || st.AccessDecision != "lease_expired" {
-		t.Fatalf("slow poll blocked expiry enforcement: %+v", st)
-	}
-	if err := <-done; err != nil {
-		t.Fatal(err)
+		t.Fatalf("blocked poll prevented expiry enforcement: %+v", st)
 	}
 }
 

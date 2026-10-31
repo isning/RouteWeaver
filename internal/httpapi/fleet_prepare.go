@@ -151,6 +151,15 @@ func (h *server) prepareFleet(in fleet.Input) (preparedFleet, error) {
 			}
 		}
 	}
+	if in.Action != "stop" {
+		for _, program := range p.Deployment.IR.Programs {
+			for _, id := range in.TargetIDs {
+				if program.Instance.ID == id && controlprotocol.CoreActivationWithdrawn(program.Instance.AdapterID, program.Instance.Version) {
+					return p, controlprotocol.ErrCoreReleaseRetired
+				}
+			}
+		}
+	}
 	allRoutes, e := h.fleetList(&p, "published-routes")
 	if e != nil {
 		return p, e

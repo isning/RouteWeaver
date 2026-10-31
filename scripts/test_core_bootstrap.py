@@ -199,6 +199,18 @@ class CoreBootstrapTests(unittest.TestCase):
         self.assertEqual(before, {p: (p.read_bytes(), p.stat().st_ino, p.stat().st_mtime_ns) for p in all_paths})
         self.assertNotIn("unexpected download", first.stderr + second.stderr)
 
+    def test_withdrawn_fixture_metadata_never_downloaded(self):
+        current = {**self.release, "id": "xray-26.10.31-linux-amd64", "version": "26.10.31"}
+        self.cached_archive(current)
+        (self.root / "scripts/stock-core-lock.json").write_text(json.dumps({
+            "releases": [self.release, current], "unavailableFixtureReleaseIDs": [self.release["id"]]}))
+        result = self.bootstrap()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("Withdrawn upstream fixture", result.stdout)
+        self.assertFalse((self.stock / self.release["id"]).exists())
+        self.assertTrue((self.stock / current["id"]).exists())
+        self.assertNotIn("unexpected download", result.stderr)
+
     def test_verified_versions_have_distinct_cache_identities_and_reuse_bytes(self):
         older = {**self.release, "id": "xray-26.3.27-linux-amd64", "version": "26.3.27"}
         self.write_stock([older, self.release])

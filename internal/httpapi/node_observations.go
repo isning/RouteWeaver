@@ -1,11 +1,10 @@
 package httpapi
 
 import (
-	"encoding/json"
+	"context"
 	"errors"
 	"github.com/go-chi/chi/v5"
 	"net/http"
-	"routeweaver/internal/domain"
 	"routeweaver/internal/notifications"
 	"routeweaver/internal/observability"
 	"routeweaver/internal/store"
@@ -107,26 +106,28 @@ func (h *server) registerNodeObservationAdmin(r chi.Router) {
 // Only an explicit, complete and fresh configured provider source reaches the
 // notification evaluator. User/route accounting and multipliers are never read.
 func (h *server) evaluateProviderAllowances(now time.Time) error {
-	raw, e := h.s.List("hosts")
+	return h.evaluateProviderAllowancesContext(context.Background(), now)
+}
+func (h *server) evaluateProviderAllowancesContext(ctx context.Context, now time.Time) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	inputs, e := h.s.NotificationProviderInputs(ctx)
 	if e != nil {
 		return e
 	}
-	for _, b := range raw {
-		var host domain.Host
-		if e = json.Unmarshal(b, &host); e != nil {
-			return e
+	for _, input := range inputs {
+		if err := ctx.Err(); err != nil {
+			return err
 		}
-		state, e := h.s.NodeObservations(host.ID)
-		if e != nil {
-			return e
-		}
+		host, state := input.Host, input.State
 		view := observability.ViewOf(host.ID, state, now)
 		if !view.Provider.NotificationEligible {
 			continue
 		}
 		c, p := state.Config.Provider, view.Provider
 		snapshot := notifications.ProviderSnapshot{Source: p.Source, ID: host.ID, Name: c.Name, CycleID: c.CycleID, RemainingBytes: *p.RemainingBytes, TotalBytes: *p.TotalBytes, ExpiresAt: c.ExpiresAt, ObservedAt: *p.ObservedAt}
-		if e = h.notificationService().EvaluateProvider(snapshot, now); e != nil {
+		if e = h.notificationService().EvaluateProviderContext(ctx, snapshot, now); e != nil {
 			return e
 		}
 	}

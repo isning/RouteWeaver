@@ -20,11 +20,14 @@ python3 scripts/package_artifacts.py manifest "$STAGE/$NAME/SOURCE-MANIFEST.json
 scripts/build.sh
 cp bin/routeweaver-control-plane "$STAGE/$NAME/"
 cp bin/routeweaver-node-agent "$STAGE/$NAME/"
+cp bin/routeweaver-notification-migrate "$STAGE/$NAME/"
 cp bin/routeweaver-xray "$STAGE/$NAME/"
 cp runtimes/xray/README.md "$STAGE/$NAME/MANAGED-XRAY.md"
 cp runtimes/xray/THIRD_PARTY_NOTICES.md "$STAGE/$NAME/THIRD_PARTY_NOTICES.md"
 cp -R runtimes/xray/licenses "$STAGE/$NAME/licenses"
-python3 scripts/collect-notices.py "$STAGE/$NAME/licenses/root-and-web"
+python3 scripts/collect-notices.py "$STAGE/$NAME/licenses/root-and-web" \
+  --binary bin/routeweaver-control-plane --binary bin/routeweaver-node-agent \
+  --binary bin/routeweaver-notification-migrate
 cp -R internal/render/schemas "$STAGE/$NAME/client-schemas"
 cp -R web/dist "$STAGE/$NAME/web/"
 sed 's|](verification/|](docs/verification/|g' docs/PACKAGE-QUICKSTART.md > "$STAGE/$NAME/README.md"
@@ -43,7 +46,7 @@ scripts/go.sh version > "$STAGE/$NAME/BUILD-INFO.txt"
 node --version >> "$STAGE/$NAME/BUILD-INFO.txt"
 npm --version >> "$STAGE/$NAME/BUILD-INFO.txt"
 printf 'Exact source content and Git status: SOURCE-MANIFEST.json\n' >> "$STAGE/$NAME/BUILD-INFO.txt"
-scripts/go.sh version -m bin/routeweaver-control-plane bin/routeweaver-node-agent bin/routeweaver-xray >> "$STAGE/$NAME/BUILD-INFO.txt"
+scripts/go.sh version -m bin/routeweaver-control-plane bin/routeweaver-node-agent bin/routeweaver-xray bin/routeweaver-notification-migrate >> "$STAGE/$NAME/BUILD-INFO.txt"
 mkdir -p bin/packages
 python3 scripts/package_artifacts.py check-source "$STAGE/$NAME/SOURCE-MANIFEST.json"
 python3 scripts/package_artifacts.py archive "$STAGE/$NAME" "bin/packages/$NAME.tar.gz" --target "$TARGET_OS/$TARGET_ARCH"

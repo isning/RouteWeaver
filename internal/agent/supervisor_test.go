@@ -19,7 +19,7 @@ func TestNativeSupervisorLifecycleAndRestart(t *testing.T) {
 	if dir == "" {
 		t.Skip("explicit native binaries required")
 	}
-	for _, tc := range []struct{ id, version, binary, config string }{{"routeweaver/xray", "26.10.29", "xray", `{"inbounds":[],"outbounds":[{"protocol":"freedom","tag":"direct"}]}`}, {"routeweaver/sing-box", "1.14.4", "sing-box", `{"inbounds":[],"outbounds":[{"type":"direct","tag":"direct"}]}`}} {
+	for _, tc := range []struct{ id, version, binary, config string }{{"routeweaver/xray", "26.10.31", "xray", `{"inbounds":[],"outbounds":[{"protocol":"freedom","tag":"direct"}]}`}, {"routeweaver/sing-box", "1.14.4", "sing-box", `{"inbounds":[],"outbounds":[{"type":"direct","tag":"direct"}]}`}} {
 		t.Run(tc.binary, func(t *testing.T) {
 			if !strings.Contains(","+os.Getenv("ROUTEWEAVER_NATIVE_PROCESS_TESTS")+",", ","+tc.binary+",") {
 				t.Skip("native process family not explicitly enabled")

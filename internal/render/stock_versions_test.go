@@ -14,7 +14,7 @@ func TestStockSecurityVersionsPreserveHistoricalAndIndependentTargets(t *testing
 		adapter  render.ServerRenderer
 		versions []string
 	}{
-		{render.XrayServer{}, []string{"26.10.29", "26.3.27"}},
+		{render.XrayServer{}, []string{"26.10.31", "26.10.29", "26.3.27"}},
 		{render.SingBoxServer{}, []string{"1.14.4", "1.14.3"}},
 	} {
 		capability := tc.adapter.ServerCapability()
