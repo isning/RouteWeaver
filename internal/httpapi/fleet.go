@@ -17,7 +17,7 @@ import (
 
 func (h *server) registerFleetAdmin(r chi.Router) {
 	r.Get("/admin/core-releases", func(w http.ResponseWriter, r *http.Request) {
-		writeJSON(w, 200, controlprotocol.OfficialCoreReleases())
+		writeJSON(w, 200, controlprotocol.InstallableCoreReleases())
 	})
 	r.Post("/admin/fleet-batches/preview", func(w http.ResponseWriter, r *http.Request) {
 		var in fleet.Input

@@ -142,6 +142,99 @@ afterEach(() => {
 });
 
 describe("infrastructure creation user tasks", () => {
+  it.each([
+    { adapterId: "routeweaver/sing-box", label: "sing-box", version: "1.14.4" },
+    { adapterId: "routeweaver/xray", label: "Xray", version: "26.10.29" },
+    {
+      adapterId: "routeweaver/managed-xray",
+      label: "受管 Xray · 平台服务入口",
+      version: "26.3.27-rw1",
+    },
+  ])(
+    "creates $adapterId with its current independent version",
+    async ({ adapterId, label, version }) => {
+      const writes = inventoryAPI();
+      mount();
+      const user = userEvent.setup();
+      await user.click(await screen.findByRole("button", { name: "Tokyo" }));
+      await user.click(
+        within(screen.getByRole("dialog", { name: "Tokyo" })).getByRole(
+          "button",
+          { name: "添加核心" },
+        ),
+      );
+      const editor = within(
+        await screen.findByRole("dialog", { name: "添加核心实例" }),
+      );
+      if (adapterId !== "routeweaver/sing-box") {
+        await user.click(editor.getByLabelText("核心家族"));
+        await user.click(
+          await screen.findByText(label, { selector: "[cmdk-item] span" }),
+        );
+      }
+      expect(editor.getByLabelText("核心版本").textContent).toContain(version);
+      await user.click(editor.getByRole("button", { name: /保\s*存/ }));
+      await waitFor(() => expect(writes).toHaveLength(1));
+      expect(writes[0].value).toMatchObject({
+        adapterId,
+        version,
+        hostId: "host-tyo",
+      });
+    },
+  );
+
+  it.each(
+    [
+      {
+        name: "FRA primary",
+        version: "1.14.3",
+        adapterId: "routeweaver/sing-box",
+      },
+      {
+        name: "Tokyo primary",
+        version: "26.3.27",
+        adapterId: "routeweaver/xray",
+      },
+    ].flatMap((core) => [
+      { ...core, reselectFamily: false, interaction: "editing its name" },
+      { ...core, reselectFamily: true, interaction: "reselecting its family" },
+    ]),
+  )(
+    "preserves $name's saved version when $interaction",
+    async ({ name, version, adapterId, reselectFamily }) => {
+      const writes = inventoryAPI();
+      mount();
+      const user = userEvent.setup();
+      await user.click(await screen.findByRole("tab", { name: "核心实例 3" }));
+      await user.click(
+        await screen.findByRole("button", { name: `编辑 ${name}` }),
+      );
+      const editor = within(
+        await screen.findByRole("dialog", { name: "编辑核心实例" }),
+      );
+      expect(editor.getByLabelText("核心版本").textContent).toContain(version);
+      if (reselectFamily) {
+        await user.click(editor.getByLabelText("核心家族"));
+        const label = adapterId === "routeweaver/xray" ? "Xray" : "sing-box";
+        await user.click(
+          await screen.findByText(label, { selector: "[cmdk-item] span" }),
+        );
+        expect(editor.getByLabelText("核心版本").textContent).toContain(
+          version,
+        );
+      }
+      await user.clear(editor.getByLabelText("实例名称"));
+      await user.type(editor.getByLabelText("实例名称"), `${name} renamed`);
+      await user.click(editor.getByRole("button", { name: /保\s*存/ }));
+      await waitFor(() => expect(writes).toHaveLength(1));
+      expect(writes[0].value).toMatchObject({
+        adapterId,
+        version,
+        name: `${name} renamed`,
+      });
+    },
+  );
+
   it("does not warn after restoring an existing server name to its saved value", async () => {
     inventoryAPI();
     mount();

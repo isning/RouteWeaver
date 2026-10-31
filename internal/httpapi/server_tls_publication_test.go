@@ -180,7 +180,7 @@ func TestFleetPublicationRechecksTLSForAllActivatingActions(t *testing.T) {
 			in.SourceBatchID = baseline
 		}
 		if action == "upgrade" || action == "install" {
-			in.TargetReleaseID = "xray-26.3.27-linux-amd64"
+			in.TargetReleaseID = "xray-26.10.29-linux-amd64"
 		}
 		code, _, raw := req(t, operatorClient(), "POST", f.srv.URL+"/api/admin/fleet-batches/preview", "", in)
 		if code != 422 || !strings.Contains(raw, "expired") {

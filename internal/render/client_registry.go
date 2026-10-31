@@ -8,10 +8,10 @@ import (
 	"strings"
 )
 
+// Compatibility targets are independent from installable stock server releases.
 const (
 	MihomoVersion  = "1.19.32"
 	SingBoxVersion = "1.14.3"
-	XrayVersion    = "26.3.27"
 )
 
 type OutputMode string

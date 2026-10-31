@@ -162,22 +162,10 @@ func TestNativeVLESSClientFixtures(t *testing.T) {
 }
 
 func TestNativeServerFixtures(t *testing.T) {
-	for _, target := range []render.Target{{AdapterID: render.ServerAdapterXray, Version: render.XrayVersion}, {AdapterID: render.ServerAdapterSingBox, Version: render.SingBoxVersion}} {
+	for _, target := range nativeStockServerTargets() {
 		for _, protocol := range []string{"socks", "shadowsocks", "vless"} {
-			t.Run(target.AdapterID+"/"+protocol, func(t *testing.T) {
-				env := "ROUTEWEAVER_XRAY_BIN"
-				versionArgs := []string{"version"}
-				if target.AdapterID == render.ServerAdapterSingBox {
-					env = "ROUTEWEAVER_SINGBOX_BIN"
-				}
-				binary := os.Getenv(env)
-				if binary == "" {
-					t.Skip("native validator not requested: " + env)
-				}
-				output, err := exec.Command(binary, versionArgs...).CombinedOutput()
-				if err != nil || !strings.Contains(string(output), target.Version) {
-					t.Fatalf("native version mismatch: %v %s", err, output)
-				}
+			t.Run(target.AdapterID+"/"+target.Version+"/"+protocol, func(t *testing.T) {
+				binary := target.binary(t)
 				ir := serverIR(target.AdapterID, target.Version)
 				listener := &ir.Programs[0].Listener.Connection
 				switch protocol {
@@ -224,11 +212,15 @@ func TestNativeServerFixtures(t *testing.T) {
 				}
 				cmd := exec.Command(binary, args...)
 				cmd.Dir = dir
-				if output, err = cmd.CombinedOutput(); err != nil {
+				if output, err := cmd.CombinedOutput(); err != nil {
 					t.Fatalf("native server check failed: %v\n%s\n%s", err, output, artifacts[0].Content)
 				}
 				if os.Getenv("ROUTEWEAVER_UPDATE_FIXTURES") == "1" {
-					dir := filepath.Join("testdata", "server-"+strings.TrimPrefix(target.AdapterID, "routeweaver/"))
+					fixtureName := "server-" + strings.TrimPrefix(target.AdapterID, "routeweaver/")
+					if target.releaseID != "" {
+						fixtureName += "-" + target.Version
+					}
+					dir := filepath.Join("testdata", fixtureName)
 					if err = os.MkdirAll(dir, 0755); err != nil {
 						t.Fatal(err)
 					}

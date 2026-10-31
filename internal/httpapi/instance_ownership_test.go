@@ -161,7 +161,7 @@ func TestNonactivatingInstallDoesNotClaimOrReleaseOwner(t *testing.T) {
 			f.in.Action = "install"
 			f.in.TargetIDs = []string{"fleet-a"}
 			f.in.Stages = nil
-			f.in.TargetReleaseID = "xray-26.3.27-linux-amd64"
+			f.in.TargetReleaseID = "xray-26.10.29-linux-amd64"
 			batch := f.create(t)
 			f.post(t, "admin/fleet-batches/"+batch+"/execute", map[string]any{"stage": 0, "requestId": "install"}, 200)
 			want := 200
@@ -238,7 +238,7 @@ func TestLegacyUnownedInstallFailsClosedButStopRemainsUsable(t *testing.T) {
 	f.in.Action = "install"
 	f.in.TargetIDs = []string{"fleet-a"}
 	f.in.Stages = nil
-	f.in.TargetReleaseID = "xray-26.3.27-linux-amd64"
+	f.in.TargetReleaseID = "xray-26.10.29-linux-amd64"
 	batch := f.create(t)
 	f.post(t, "admin/fleet-batches/"+batch+"/execute", map[string]any{"stage": 0, "requestId": "install"}, 200)
 	f.s.Remove("instance-owners", "fleet-a") // Simulate a pre-migration, unproven install.
@@ -274,7 +274,7 @@ func TestFleetUpgradeAndHistoricalRollbackRespectOwner(t *testing.T) {
 	copyOwned(t, f, "other-deployment")
 	f.in.DeploymentID = "other-deployment"
 	f.in.Action = "upgrade"
-	f.in.TargetReleaseID = "xray-26.3.27-linux-amd64"
+	f.in.TargetReleaseID = "xray-26.10.29-linux-amd64"
 	f.post(t, "admin/fleet-batches/preview", f.in, 409)
 	// Simulate an explicit future transfer; a historic source cannot override it.
 	f.s.Put("instance-owners", "fleet-a", map[string]any{"deploymentId": "other-deployment"})
@@ -310,7 +310,7 @@ func TestInstallCannotLaunderMissingOwnershipHistory(t *testing.T) {
 	f.in.Action = "install"
 	f.in.TargetIDs = []string{"fleet-a"}
 	f.in.Stages = nil
-	f.in.TargetReleaseID = "xray-26.3.27-linux-amd64"
+	f.in.TargetReleaseID = "xray-26.10.29-linux-amd64"
 	batch := f.create(t)
 	f.post(t, "admin/fleet-batches/"+batch+"/execute", map[string]any{"stage": 0, "requestId": "install"}, 200)
 	var owner map[string]any

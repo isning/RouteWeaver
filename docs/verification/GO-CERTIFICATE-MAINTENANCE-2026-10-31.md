@@ -57,3 +57,11 @@ This record is bounded compiler maintenance and regression evidence, not a clean
 all-platform certification, complete repository/CI gate, or deployed acceptance.
 Package reproducibility, browser/native gates and exact-commit CI require their own
 results. No live node, system trust store, external credential or deployment changed.
+
+## Subsequent stock-core correction
+
+The statements above describe the scope and evidence of this compiler-only
+checkpoint. A later [stock-core security maintenance](STOCK-CORE-SECURITY-MAINTENANCE-2026-10-31.md)
+inspected the exact vendor binaries, retired the vulnerable new-install defaults,
+and separated current stock installation pins from historical receipts and client
+compatibility pins. That later change does not retroactively alter these results.

@@ -82,7 +82,7 @@ func Open(root string, scope Scope, registry *Registry, options Options) (*Recon
 					r.disk.PolicyIssuedHighWater = lease.IssuedAt
 				}
 			}
-			if validateDesired(*d, scope) != nil || d.Generation != r.disk.State.HighestAccepted || requestDigest(*d) != r.disk.RequestDigest {
+			if controlprotocol.ValidateRetainedDesired(*d, scope) != nil || d.Generation != r.disk.State.HighestAccepted || requestDigest(*d) != r.disk.RequestDigest {
 				r.Close()
 				return nil, errors.New("agent journal identity mismatch")
 			}
@@ -90,7 +90,7 @@ func Open(root string, scope Scope, registry *Registry, options Options) (*Recon
 				r.Close()
 				return nil, errors.New("journal desired identity mismatch")
 			}
-			if r.disk.LastValid != nil && (validateDesired(*r.disk.LastValid, scope) != nil || r.disk.LastValid.Generation > d.Generation) {
+			if r.disk.LastValid != nil && (controlprotocol.ValidateRetainedDesired(*r.disk.LastValid, scope) != nil || r.disk.LastValid.Generation > d.Generation) {
 				r.Close()
 				return nil, errors.New("journal last-valid identity mismatch")
 			}
@@ -216,7 +216,7 @@ func (r *Reconciler) Submit(ctx context.Context, d Desired) (State, error) {
 		return r.out(ErrGenerationConflict)
 	}
 	if r.disk.State.RecoveryRequired {
-		if _, err = r.recoverLocked(ctx); err != nil && !(errors.Is(err, ErrLeaseBlocked) && !r.disk.State.RecoveryRequired && !same) {
+		if _, err = r.recoverLocked(ctx); err != nil && !((errors.Is(err, ErrLeaseBlocked) || errors.Is(err, controlprotocol.ErrCoreReleaseRetired)) && !r.disk.State.RecoveryRequired && !same) {
 			return r.out(err)
 		}
 	}
@@ -401,6 +401,11 @@ func (r *Reconciler) recoverLocked(ctx context.Context) (State, error) {
 	if !a.Descriptor().CanActivate {
 		// Validation-only adapters have never been allowed to mutate a runtime.
 		r.disk.State.RecoveryRequired = false
+		if d.Action == "upgrade" && r.disk.State.Phase != ObservedConformant {
+			if _, err := controlprotocol.FindInstallableCoreRelease(d.CoreReleaseID); err != nil {
+				return r.fail(Blocked, "core_release_retired", err)
+			}
+		}
 		return r.out(r.persist())
 	}
 	_, obs, err := r.observeRuntimeLocked(ctx, d)
@@ -447,6 +452,11 @@ func (r *Reconciler) recoverLocked(ctx context.Context) (State, error) {
 		r.disk.State.RecoveryRequired = false
 		if err = r.gate(r.effectivePolicy()); err != nil {
 			return r.restrictLocked(ctx)
+		}
+		if d.Action == "upgrade" {
+			if _, err := controlprotocol.FindInstallableCoreRelease(d.CoreReleaseID); err != nil {
+				return r.fail(Blocked, "core_release_retired", err)
+			}
 		}
 		return r.out(r.persist())
 	}

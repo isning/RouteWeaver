@@ -221,6 +221,64 @@ async function verifyLowerEditorCompletion(page: Page, field: Locator) {
   ).toBe(true);
 }
 
+async function waitForTechnicalLayout(dialog: Locator) {
+  // ARIA expands before the collapse height animation completes. Wait for that
+  // real layout boundary before scrolling, without disabling UI motion or sleeping.
+  const technicalContent = dialog.locator("[data-slot='accordion-content']");
+  await expect(technicalContent).toHaveAttribute("data-state", "open");
+  await technicalContent.evaluate(async (element) => {
+    await Promise.all(
+      element.getAnimations({ subtree: true }).map((animation) =>
+        animation.finished.catch(() => {
+          // A canceled/replaced animation also stops changing this layout.
+        }),
+      ),
+    );
+  });
+}
+
+/** Numeric geometry only: technical configurations can contain private material. */
+async function recordTechnicalScrollGeometry(dialog: Locator) {
+  await test.info().attach("technical-preview-scroll-geometry", {
+    body: JSON.stringify(
+      await dialog.evaluate((root) => {
+        const body = root.querySelector<HTMLElement>(
+          "[data-task-overlay-body]",
+        );
+        const panel = root.querySelector<HTMLElement>(
+          "[data-slot='accordion-content']",
+        );
+        const preview = root.querySelector("pre");
+        return {
+          mode: root.getAttribute("data-task-scroll"),
+          viewport: {
+            width: innerWidth,
+            height: innerHeight,
+            scrollX,
+            scrollY,
+          },
+          dialog: root.getBoundingClientRect().toJSON(),
+          body: body && {
+            box: body.getBoundingClientRect().toJSON(),
+            scrollTop: body.scrollTop,
+            scrollHeight: body.scrollHeight,
+            clientHeight: body.clientHeight,
+          },
+          panel: panel && {
+            box: panel.getBoundingClientRect().toJSON(),
+            state: panel.dataset.state,
+            animationStates: panel
+              .getAnimations({ subtree: true })
+              .map((animation) => animation.playState),
+          },
+          preview: preview?.getBoundingClientRect().toJSON(),
+        };
+      }),
+    ),
+    contentType: "application/json",
+  });
+}
+
 async function verifyMobilePublicationReview(
   page: Page,
   dialog: Locator,
@@ -259,19 +317,7 @@ async function verifyMobilePublicationReview(
   await expect(page.locator("body")).toHaveJSProperty("scrollWidth", 390);
   await technical.click();
   await expect(technical).toHaveAttribute("aria-expanded", "true");
-  // ARIA expands before the collapse height animation completes. Wait for that
-  // real layout boundary before scrolling, without disabling UI motion or sleeping.
-  const technicalContent = dialog.locator("[data-slot='accordion-content']");
-  await expect(technicalContent).toHaveAttribute("data-state", "open");
-  await technicalContent.evaluate(async (element) => {
-    await Promise.all(
-      element.getAnimations({ subtree: true }).map((animation) =>
-        animation.finished.catch(() => {
-          // A canceled/replaced animation also stops changing this layout.
-        }),
-      ),
-    );
-  });
+  await waitForTechnicalLayout(dialog);
   // Scroll the outer review body as a reader would, not the nested code area.
   // scrollIntoView can leave a fractional border clipped at this narrow width.
   await dialog
@@ -1403,7 +1449,9 @@ for (const entry of ["workspace", "legacy-profile"] as const) {
     await expect(confirm).toBeInViewport({ ratio: 1 });
     await technical.click();
     await expect(technical).toHaveAttribute("aria-expanded", "true");
+    await waitForTechnicalLayout(review);
     await review.locator("pre").scrollIntoViewIfNeeded();
+    await recordTechnicalScrollGeometry(review);
     await expect(review.locator("pre")).toBeInViewport();
     await expect(review.locator("pre")).not.toHaveText("");
     await technical.click();
@@ -2102,7 +2150,9 @@ test("scoped configuration creates one independent second-client subscription an
   await expect(publish).toBeInViewport({ ratio: 1 });
   await technical.click();
   await expect(technical).toHaveAttribute("aria-expanded", "true");
+  await waitForTechnicalLayout(create);
   await create.locator("pre").scrollIntoViewIfNeeded();
+  await recordTechnicalScrollGeometry(create);
   await expect(create.locator("pre")).toBeInViewport();
   await expect(create.locator("pre")).not.toHaveText("");
   await technical.click();

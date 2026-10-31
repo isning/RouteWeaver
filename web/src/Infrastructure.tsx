@@ -79,9 +79,11 @@ export const loadInfrastructure = async (): Promise<Infrastructure> => {
     deployments: deployments.map(normalizeDeployment),
   };
 };
+// New instance defaults only; editing preserves the saved version. Client render
+// targets and the managed embedded core have independent version contracts.
 const coreVersions: Record<string, string> = {
-  "routeweaver/sing-box": "1.14.3",
-  "routeweaver/xray": "26.3.27",
+  "routeweaver/sing-box": "1.14.4",
+  "routeweaver/xray": "26.10.29",
   "routeweaver/managed-xray": "26.3.27-rw1",
 };
 // Creation recipe for the verified platform-entry target, not a registry of all
@@ -724,7 +726,7 @@ function InventoryEditor({
         : entity.kind === "core-instances"
           ? {
               adapterId: "routeweaver/sing-box",
-              version: "1.14.3",
+              version: coreVersions["routeweaver/sing-box"],
               hostId: entity.hostId || inventory?.hosts[0]?.id,
             }
           : entity.kind === "managed-endpoints"
@@ -882,12 +884,14 @@ function InventoryEditor({
                     label: "受管 Xray · 平台服务入口",
                   },
                 ]}
-                onValueChange={(v) =>
-                  form.setFieldValue(
-                    "version",
-                    coreVersions[v ?? "routeweaver/sing-box"],
-                  )
-                }
+                onValueChange={(v) => {
+                  if (v !== adapter) {
+                    form.setFieldValue(
+                      "version",
+                      coreVersions[v ?? "routeweaver/sing-box"],
+                    );
+                  }
+                }}
               />
             </AppField>
             <AppField

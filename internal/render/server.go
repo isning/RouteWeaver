@@ -18,6 +18,14 @@ import (
 const (
 	ServerAdapterXray    = "routeweaver/xray"
 	ServerAdapterSingBox = "routeweaver/sing-box"
+	// Current stock release defaults do not change client or managed identities.
+	StockXrayVersion    = "26.10.29"
+	StockSingBoxVersion = "1.14.4"
+	// Historical identities remain supported for saved configurations and recovery.
+	HistoricalStockXrayVersion    = "26.3.27"
+	HistoricalStockSingBoxVersion = "1.14.3"
+	// XrayVersion retains the historical configuration/test contract.
+	XrayVersion = HistoricalStockXrayVersion
 )
 
 type ServerCapability struct {
@@ -79,7 +87,7 @@ func (r *ServerRegistry) Render(ir domain.ServerDeploymentIR) ([]domain.Artifact
 		if err := domain.ValidateDestinationPolicy(p.DestinationPolicy); err != nil {
 			return nil, err
 		}
-		if p.DestinationPolicy != nil && !c.ManagedAccess {
+		if p.DestinationPolicy != nil && !c.ManagedAccess && !supportsStockXrayDestinationPolicy(p) {
 			return nil, fmt.Errorf("SERVER_DESTINATION_POLICY_UNVERIFIED: selected adapter does not enforce resolved target policy")
 		}
 		if err := domain.ValidateServerListener(p); err != nil {
@@ -241,10 +249,18 @@ func validateRealityPair(client *domain.TLSOptions, server *domain.ServerReality
 	return fmt.Errorf("REALITY client short ID is not accepted by server")
 }
 
+// The reviewed stock runtime applies its default resolved-IP guard only to these
+// inbound protocols. Do not advertise exceptions for SOCKS or historical cores.
+// https://github.com/XTLS/Xray-core/blob/v26.10.29/proxy/freedom/freedom.go
+func supportsStockXrayDestinationPolicy(p domain.ServerProgram) bool {
+	return p.Instance.AdapterID == ServerAdapterXray && p.Instance.Version == StockXrayVersion &&
+		has([]string{"vless", "vmess", "trojan", "shadowsocks"}, p.Listener.Connection.Protocol)
+}
+
 type XrayServer struct{}
 
 func (XrayServer) ServerCapability() ServerCapability {
-	return ServerCapability{AdapterID: ServerAdapterXray, Versions: []string{XrayVersion}, Protocols: []string{"socks", "shadowsocks", "vless", "trojan", "vmess"}, MultiPrincipalProtocols: []string{"vless"}}
+	return ServerCapability{AdapterID: ServerAdapterXray, Versions: []string{StockXrayVersion, HistoricalStockXrayVersion}, Protocols: []string{"socks", "shadowsocks", "vless", "trojan", "vmess"}, MultiPrincipalProtocols: []string{"vless"}}
 }
 func (XrayServer) RenderServer(p domain.ServerProgram) (any, error) {
 	if err := validateXraySecurity(p.Listener.Connection); err != nil {
@@ -312,7 +328,17 @@ func (XrayServer) RenderServer(p domain.ServerProgram) (any, error) {
 		}
 		outs = append(outs, out)
 	}
-	outs = append(outs, map[string]any{"tag": "rw-direct", "protocol": "freedom", "settings": map[string]any{}}, map[string]any{"tag": "rw-reject", "protocol": "blackhole", "settings": map[string]any{}})
+	directSettings := map[string]any{}
+	if supportsStockXrayDestinationPolicy(p) && p.DestinationPolicy != nil && len(p.DestinationPolicy.AllowCIDRs) > 0 {
+		// Matching bounded exceptions precede the upstream default guard; no
+		// catch-all allow rule or connector policy is synthesized.
+		finalRules := []any{}
+		for _, cidr := range p.DestinationPolicy.AllowCIDRs {
+			finalRules = append(finalRules, map[string]any{"action": "allow", "ip": []string{cidr}})
+		}
+		directSettings["finalRules"] = finalRules
+	}
+	outs = append(outs, map[string]any{"tag": "rw-direct", "protocol": "freedom", "settings": directSettings}, map[string]any{"tag": "rw-reject", "protocol": "blackhole", "settings": map[string]any{}})
 	if len(p.Resources) > 0 {
 		return nil, fmt.Errorf("XRAY_RULE_RESOURCE_UNSUPPORTED: DAT resources need a separate proven adapter; no file is flattened")
 	}
@@ -412,7 +438,7 @@ func xrayStream(c domain.Connection) map[string]any {
 type SingBoxServer struct{}
 
 func (SingBoxServer) ServerCapability() ServerCapability {
-	return ServerCapability{AdapterID: ServerAdapterSingBox, Versions: []string{SingBoxVersion}, Protocols: []string{"socks", "shadowsocks", "vless", "trojan", "vmess"}, MultiPrincipalProtocols: []string{"vless"}}
+	return ServerCapability{AdapterID: ServerAdapterSingBox, Versions: []string{StockSingBoxVersion, HistoricalStockSingBoxVersion}, Protocols: []string{"socks", "shadowsocks", "vless", "trojan", "vmess"}, MultiPrincipalProtocols: []string{"vless"}}
 }
 func (SingBoxServer) RenderServer(p domain.ServerProgram) (any, error) {
 	if err := domain.ValidateListenerTransport(p.Listener.Connection); err != nil {

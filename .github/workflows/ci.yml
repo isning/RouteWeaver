@@ -184,6 +184,7 @@ jobs:
     timeout-minutes: 30
     env:
       ROUTEWEAVER_CORE_BIN_DIR: ${{ github.workspace }}/bin/cores
+      ROUTEWEAVER_STOCK_CORE_BIN_DIR: ${{ github.workspace }}/bin/stock-cores
       ROUTEWEAVER_NATIVE_PROCESS_TESTS: xray,sing-box
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5

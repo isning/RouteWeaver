@@ -165,7 +165,21 @@ func ArtifactDigest(artifacts []domain.Artifact) (string, error) {
 	sum := sha256.Sum256(b)
 	return hex.EncodeToString(sum[:]), nil
 }
+
+// ValidateDesired validates incoming intent, including the current install policy.
 func ValidateDesired(d Desired, scope Scope) error {
+	if d.Action == "install" || d.Action == "upgrade" {
+		if _, err := FindInstallableCoreRelease(d.CoreReleaseID); err != nil {
+			return err
+		}
+	}
+	return ValidateRetainedDesired(d, scope)
+}
+
+// ValidateRetainedDesired checks immutable identity and artifact integrity for a
+// previously accepted private journal. It does not authorize new intent or
+// re-install retired releases. Incoming transport and Submit use ValidateDesired.
+func ValidateRetainedDesired(d Desired, scope Scope) error {
 	if err := validateCoreLifecycle(d, scope); err != nil {
 		return err
 	}

@@ -10,6 +10,9 @@ import (
 const ServerAdapterManagedXray = "routeweaver/managed-xray"
 const ManagedXrayVersion = "26.3.27-rw1"
 
+// ManagedXrayCoreVersion identifies the embedded module, not the stock catalog.
+const ManagedXrayCoreVersion = "26.3.27"
+
 // ServerArtifactRenderer is optional so a future managed adapter can add private
 // runtime policy without teaching the registry about a particular core family.
 type ServerArtifactRenderer interface {
@@ -55,7 +58,7 @@ func (ManagedXrayServer) RenderServer(p domain.ServerProgram) (any, error) {
 	return (XrayServer{}).RenderServer(p)
 }
 func (ManagedXrayServer) ServerArtifacts(p domain.ServerProgram) ([]domain.Artifact, error) {
-	descriptor := entrypolicy.Descriptor{SchemaVersion: entrypolicy.SchemaVersion, AdapterID: ServerAdapterManagedXray, RuntimeVersion: ManagedXrayVersion, CoreVersion: XrayVersion, Bindings: []entrypolicy.Binding{}}
+	descriptor := entrypolicy.Descriptor{SchemaVersion: entrypolicy.SchemaVersion, AdapterID: ServerAdapterManagedXray, RuntimeVersion: ManagedXrayVersion, CoreVersion: ManagedXrayCoreVersion, Bindings: []entrypolicy.Binding{}}
 	if p.DestinationPolicy != nil {
 		descriptor.DestinationPolicy = entrypolicy.DestinationPolicy{AllowCIDRs: append([]string(nil), p.DestinationPolicy.AllowCIDRs...)}
 	}

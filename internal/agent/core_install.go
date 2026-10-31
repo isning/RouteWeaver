@@ -61,7 +61,7 @@ func NewCoreInstaller(root string, options CoreInstallerOptions) (*CoreInstaller
 // Prepare checks catalog/platform and both hashes before publishing an immutable
 // executable. It never starts a service or replaces an existing release path.
 func (i *CoreInstaller) Prepare(ctx context.Context, releaseID string) (InstalledCore, error) {
-	release, err := controlprotocol.FindCoreRelease(releaseID)
+	release, err := controlprotocol.FindInstallableCoreRelease(releaseID)
 	if err != nil {
 		return InstalledCore{}, err
 	}
@@ -327,6 +327,11 @@ func (r *Reconciler) recoverInstallationLocked(ctx context.Context) (State, erro
 		}
 	}
 	r.disk.State.RecoveryRequired = false
+	if !completed {
+		if _, err := controlprotocol.FindInstallableCoreRelease(r.disk.Payload.CoreReleaseID); err != nil {
+			return r.fail(Blocked, "core_release_retired", err)
+		}
+	}
 	if completed {
 		r.disk.State.Phase = "installed"
 		r.disk.State.Code = "artifact_installed"
@@ -378,7 +383,13 @@ func (r *Reconciler) prepareCoreLocked(ctx context.Context, releaseID string) (I
 	var installed InstalledCore
 	err := r.awaitPreparationLocked(ctx, func(ctx context.Context) error {
 		var err error
-		installed, err = r.options.CoreInstaller.Prepare(ctx, releaseID)
+		// Admission already rejects retired install/upgrade intent. Other lifecycle
+		// actions may recover an existing historical receipt, never fetch it anew.
+		if _, activeErr := controlprotocol.FindInstallableCoreRelease(releaseID); activeErr != nil {
+			installed, err = r.options.CoreInstaller.Installed(releaseID)
+		} else {
+			installed, err = r.options.CoreInstaller.Prepare(ctx, releaseID)
+		}
 		return err
 	})
 	if err != nil {

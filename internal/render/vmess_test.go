@@ -54,26 +54,13 @@ func TestNativeVMessConfigurationMatrix(t *testing.T) {
 			security = "auto"
 		}
 		for _, transport := range []string{"tcp", "ws", "httpupgrade", "grpc"} {
-			for _, kind := range []string{"mihomo", "sing-box", "xray-server", "sing-box-server"} {
-				t.Run(kind+"/"+transport+"/"+securityVariant, func(t *testing.T) {
-					env := "ROUTEWEAVER_MIHOMO_BIN"
-					if strings.HasPrefix(kind, "sing-box") {
-						env = "ROUTEWEAVER_SINGBOX_BIN"
-					}
-					if kind == "xray-server" {
-						env = "ROUTEWEAVER_XRAY_BIN"
-					}
-					binary := os.Getenv(env)
-					if binary == "" {
-						t.Skip("native validator not requested")
-					}
+			for _, target := range nativeProtocolTargets() {
+				kind := target.kind
+				t.Run(kind+"/"+target.Version+"/"+transport+"/"+securityVariant, func(t *testing.T) {
+					binary := target.binary(t)
 					var artifacts []domain.Artifact
 					if strings.HasSuffix(kind, "-server") {
-						adapter, version := render.ServerAdapterXray, render.XrayVersion
-						if kind == "sing-box-server" {
-							adapter, version = render.ServerAdapterSingBox, render.SingBoxVersion
-						}
-						ir := serverIR(adapter, version)
+						ir := serverIR(target.AdapterID, target.Version)
 						p := &ir.Programs[0]
 						p.Listener.Connection = vmessConnection(transport, "auto")
 						p.Listener.Connection.Host = "127.0.0.1"
@@ -99,11 +86,7 @@ func TestNativeVMessConfigurationMatrix(t *testing.T) {
 						if plain {
 							p.Endpoints[0].Connection.TLS = nil
 						}
-						version := render.MihomoVersion
-						if kind == "sing-box" {
-							version = render.SingBoxVersion
-						}
-						result, err := render.DefaultClients().Render(p, render.Target{AdapterID: kind, Version: version}, render.FullConfig)
+						result, err := render.DefaultClients().Render(p, target.Target, render.FullConfig)
 						if err != nil {
 							t.Fatal(err)
 						}

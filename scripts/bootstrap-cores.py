@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Materialize exact official release assets for isolated local/CI native tests."""
+"""Verify isolated compatibility and version-addressed stock core test assets."""
+import argparse
 import gzip
 import hashlib
 import io
@@ -7,19 +8,35 @@ import json
 import os
 from pathlib import Path
 import platform
+import re
+import stat
 import subprocess
-import sys
 import tarfile
 import tempfile
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-if platform.system() != "Linux" or platform.machine() not in {"x86_64", "amd64"}:
-    raise SystemExit("Native bootstrap is pinned for Linux amd64 only; do not substitute unverified platform assets.")
-destination = Path(os.environ.get("ROUTEWEAVER_CORE_BIN_DIR", ROOT / "bin/cores")).resolve()
-destination.mkdir(parents=True, exist_ok=True)
-lock = json.loads((ROOT / "scripts/core-lock.json").read_text())
-for core in lock["cores"]:
+
+
+def compatibility_entries(lock):
+    entries = []
+    for pin in lock["cores"]:
+        core = dict(pin)
+        if core["id"] == "mihomo":
+            core.update(archiveFormat="gzip", executablePath="")
+        elif core["id"] == "sing-box":
+            core.update(archiveFormat="tar.gz", executablePath=f"sing-box-{core['version']}-linux-amd64/sing-box")
+        elif core["id"] == "xray":
+            core.update(archiveFormat="zip", executablePath="xray")
+        else:
+            raise SystemExit("Unknown compatibility core packaging; refusing to guess.")
+        entries.append(core)
+    return entries
+
+
+def materialize(core, destination):
+    if not re.fullmatch(r"[a-zA-Z0-9._-]+", core["id"]):
+        raise SystemExit("Unsafe core cache identity")
     path = destination / core["id"]
     if path.is_symlink() or (path.exists() and not path.is_file()):
         raise SystemExit(f"Unsafe native executable path: {path}")
@@ -38,9 +55,8 @@ for core in lock["cores"]:
             subprocess.run(["curl", "--disable", "--fail", "--location", "--proto", "=https", "--proto-redir", "=https", "--tlsv1.2", "--max-time", "180", "--max-filesize", "134217728", core["url"], "-o", str(archive)], check=True)
             data = archive.read_bytes()
         if hashlib.sha256(data).hexdigest() != core["archiveSHA256"]:
-            raise SystemExit(f"Archive checksum mismatch for {core['id']}; refusing to run.")
+            raise SystemExit(f"Archive checksum mismatch for {core['id']}; refusing to extract.")
         if not cached_archive.exists():
-            # Exclusive creation never replaces a concurrent/unexpected file.
             try:
                 with cached_archive.open("xb") as output:
                     output.write(data)
@@ -48,19 +64,26 @@ for core in lock["cores"]:
                 if cached_archive.is_symlink() or hashlib.sha256(cached_archive.read_bytes()).hexdigest() != core["archiveSHA256"]:
                     raise SystemExit(f"Archive cache changed: {cached_archive}")
         if path.exists():
-            continue
-        # Extract only the named executable, never arbitrary archive paths.
-        if core["id"] == "mihomo":
+            return
+        # Read one pinned member into memory; never extract arbitrary archive paths.
+        if core["archiveFormat"] == "gzip":
             executable = gzip.decompress(data)
-        elif core["id"] == "sing-box":
+        elif core["archiveFormat"] == "tar.gz":
             with tarfile.open(fileobj=io.BytesIO(data), mode="r:gz") as tar:
-                stream = tar.extractfile(f"sing-box-{core['version']}-linux-amd64/sing-box")
+                member = tar.getmember(core["executablePath"])
+                if not member.isfile():
+                    raise SystemExit("Expected executable must be a regular archive member.")
+                stream = tar.extractfile(member)
                 if stream is None:
-                    raise SystemExit("Expected sing-box executable is missing from the archive.")
+                    raise SystemExit("Expected executable is missing from the archive.")
                 executable = stream.read()
-        elif core["id"] == "xray":
+        elif core["archiveFormat"] == "zip":
             with zipfile.ZipFile(io.BytesIO(data)) as archive_file:
-                executable = archive_file.read("xray")
+                member = archive_file.getinfo(core["executablePath"])
+                mode = member.external_attr >> 16
+                if member.is_dir() or stat.S_IFMT(mode) not in {0, stat.S_IFREG}:
+                    raise SystemExit("Expected executable must be a regular archive member.")
+                executable = archive_file.read(member)
         else:
             raise SystemExit("Unknown core packaging; refusing to guess an extraction command.")
         if hashlib.sha256(executable).hexdigest() != core["executableSHA256"]:
@@ -73,4 +96,31 @@ for core in lock["cores"]:
             if path.is_symlink() or hashlib.sha256(path.read_bytes()).hexdigest() != core["executableSHA256"]:
                 raise SystemExit(f"Native executable changed: {path}")
         print(f"Verified official release bytes: {core['id']} {core['version']}")
-print("Native test binaries ready. No core service has been installed or started.")
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--kind", choices=["all", "compatibility", "stock"], default="all")
+    args = parser.parse_args()
+    if platform.system() != "Linux" or platform.machine() not in {"x86_64", "amd64"}:
+        raise SystemExit("Native bootstrap is pinned for Linux amd64 only; do not substitute unverified platform assets.")
+    groups = []
+    if args.kind in {"all", "compatibility"}:
+        lock = json.loads((ROOT / "scripts/core-lock.json").read_text())
+        groups.append((Path(os.environ.get("ROUTEWEAVER_CORE_BIN_DIR", ROOT / "bin/cores")).resolve(), compatibility_entries(lock)))
+    if args.kind in {"all", "stock"}:
+        lock = json.loads((ROOT / "scripts/stock-core-lock.json").read_text())
+        if any(core["platform"] != "linux-amd64" for core in lock["releases"]):
+            raise SystemExit("Stock lock has an unverified platform")
+        groups.append((Path(os.environ.get("ROUTEWEAVER_STOCK_CORE_BIN_DIR", ROOT / "bin/stock-cores")).resolve(), lock["releases"]))
+    for destination, cores in groups:
+        destination.mkdir(parents=True, exist_ok=True)
+        if len({core["id"] for core in cores}) != len(cores):
+            raise SystemExit("Duplicate core cache identity")
+        for core in cores:
+            materialize(core, destination)
+    print("Native test binaries ready. No core service has been installed or started.")
+
+
+if __name__ == "__main__":
+    main()

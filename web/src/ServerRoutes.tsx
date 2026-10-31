@@ -89,6 +89,16 @@ import type {
 import { useDiscardConfirmation } from "./useDiscardConfirmation";
 import type { PublicationOwner } from "./usePublicationRequest";
 import { useWorkspaceViewEntry } from "./useWorkspaceViewEntry";
+// Use the saved program identity, not newer inventory metadata. Stock SOCKS
+// lacks Xray's default resolved-target guard and cannot expose allow exceptions.
+const supportsDestinationExceptions = (program: ServerProgram) =>
+  program.instance.adapterId === "routeweaver/managed-xray" ||
+  (program.instance.adapterId === "routeweaver/xray" &&
+    program.instance.version === "26.10.29" &&
+    ["vless", "vmess", "trojan", "shadowsocks"].includes(
+      program.listener.connection.protocol,
+    ));
+
 const newDeployment = (): ServerDeployment => {
   const id = newID("deployment");
   return {
@@ -1008,21 +1018,27 @@ function ServerRouteEditor({
                 "\u9AD8\u7EA7\uFF1A\u5185\u90E8\u76EE\u6807\u8BBF\u95EE\u4F8B\u5916",
               children: (
                 <>
-                  <p className="muted text-sm text-muted-foreground">
-                    受管公开入口默认阻止用户连接内网和特殊地址；声明的中转连接不受此限制。仅为确实需要提供的内部服务添加明确网段，修改后需重新应用。
-                  </p>
-                  {draft.ir.programs.filter(
-                    (p) => p.instance.adapterId === "routeweaver/managed-xray",
-                  ).length ? (
+                  {draft.ir.programs.some(supportsDestinationExceptions) && (
+                    <p className="muted text-sm text-muted-foreground">
+                      仅为确实需要提供的内部服务添加明确网段；留空保留默认限制。修改后需重新应用。
+                    </p>
+                  )}
+                  {draft.ir.programs.some(supportsDestinationExceptions) ? (
                     draft.ir.programs.map(
                       (p, index) =>
-                        p.instance.adapterId === "routeweaver/managed-xray" && (
+                        supportsDestinationExceptions(p) && (
                           <label
                             key={p.listener.id}
                             className="standalone-label grid gap-2 text-sm font-medium"
                           >
                             {p.listener.name} · 允许访问的内部网段
+                            <span className="text-muted-foreground text-xs font-normal">
+                              {p.instance.adapterId === "routeweaver/xray"
+                                ? "用于 Xray 直接出站的目标；不更改中转连接。"
+                                : "用于受管入口的用户目标；不更改中转连接。"}
+                            </span>
                             <MultiChoice
+                              aria-label={`${p.listener.name} · 允许访问的内部网段`}
                               options={[]}
                               value={p.destinationPolicy?.allowCidrs || []}
                               placeholder="例如 10.20.0.0/16，默认不允许"
@@ -1040,7 +1056,7 @@ function ServerRouteEditor({
                     )
                   ) : (
                     <p className="muted text-sm text-muted-foreground">
-                      当前路径没有受管公开入口。
+                      当前路径没有支持目标访问例外的入口。
                     </p>
                   )}
                 </>

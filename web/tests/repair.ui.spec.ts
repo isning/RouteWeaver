@@ -1,5 +1,6 @@
 import { openWorkspace, navigateWorkspace } from "./ui-session";
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Page, type Route } from "@playwright/test";
+import type { Preview, Profile } from "../src/types";
 // Publication opens access-bearing UI after explicit confirmation. Never retain
 // traces or automatic screenshots; only the safe pre-publication business states
 // below are deliberately captured.
@@ -150,6 +151,35 @@ test("real default repair retains selected existing client and requires fresh ch
   page,
 }, info) => {
   const { profile, outputs } = await fixture(page);
+  expect(outputs[1].revision).toEqual(expect.any(String));
+  expect(outputs[1].revision.length).toBeGreaterThan(0);
+  const previewPath = `/api/me/profiles/${profile.id}/preview`;
+  const profilePath = `/api/me/profiles/${profile.id}`;
+  const previewRequests: unknown[] = [];
+  const publications: { path: string; body: unknown }[] = [];
+  page.on("request", (request) => {
+    const method = request.method();
+    const path = new URL(request.url()).pathname;
+    if (method === "POST" && path === previewPath)
+      previewRequests.push(request.postDataJSON());
+    if (
+      ["POST", "PUT", "PATCH", "DELETE"].includes(method) &&
+      path.startsWith("/api/me/outputs") &&
+      !path.endsWith("/preview")
+    )
+      publications.push({
+        path,
+        body: request.postData() ? request.postDataJSON() : undefined,
+      });
+  });
+  const beforeRepair = (await json(page, "/me/profiles")).find(
+    (item: Profile) => item.id === profile.id,
+  ) as Profile;
+  const failedPreview = page.waitForResponse(
+    (response) =>
+      new URL(response.url()).pathname === previewPath &&
+      response.request().method() === "POST",
+  );
   await page.getByRole("button", { name: "检查发布", exact: true }).click();
   await page
     .getByRole("radio", { name: new RegExp("更新「" + outputs[1].name + "」") })
@@ -163,6 +193,9 @@ test("real default repair retains selected existing client and requires fresh ch
     name: "无法检查：默认流量去向已不可用",
   });
   await expect(failure).toBeVisible();
+  expect((await failedPreview).status()).toBe(422);
+  expect(previewRequests).toHaveLength(1);
+  expect(publications).toEqual([]);
   await unchanged(page, outputs);
   await failure.getByRole("button", { name: "调整默认流量去向" }).click();
   await expect(dialog).not.toBeVisible();
@@ -174,19 +207,97 @@ test("real default repair retains selected existing client and requires fresh ch
   await expect(control).toBeInViewport();
   await unchanged(page, outputs);
   await choose(page, "默认流量行为", "直连");
-  await saveAndResume(page);
-  await expect(dialog).toBeVisible();
+  // 保存并检查 intentionally starts a fresh automatic inspection on resume.
+  // Hold only that exact real API response to inspect the pending boundary;
+  // never replace its status/body or depend on winning a fast-response race.
+  let releaseFreshPreview!: () => void;
+  const held = new Promise<void>((resolve) => {
+    releaseFreshPreview = resolve;
+  });
+  let fresh:
+    { status: number; preview: Preview; storedProfile: Profile } | undefined;
+  const holdFreshPreview = async (route: Route) => {
+    expect(route.request().method()).toBe("POST");
+    const response = await route.fetch();
+    fresh = {
+      status: response.status(),
+      preview: await response.json(),
+      storedProfile: (await json(page, "/me/profiles")).find(
+        (item: Profile) => item.id === profile.id,
+      ),
+    };
+    await held;
+    await route.fulfill({ response });
+  };
+  const previewURL = `**${previewPath}`;
+  await page.route(previewURL, holdFreshPreview);
+  const savedResponse = page.waitForResponse(
+    (response) =>
+      new URL(response.url()).pathname === profilePath &&
+      response.request().method() === "PUT",
+  );
   const confirm = dialog.getByRole("button", {
     name: "确认更新「" + outputs[1].name + "」",
     exact: true,
   });
-  await expect(confirm).toBeDisabled();
-  await unchanged(page, outputs);
-  await dialog
-    .getByRole("button", { name: "预览此订阅更新", exact: true })
-    .click();
-  await expect(confirm).toBeEnabled();
-  await unchanged(page, outputs);
+  let freshDigest: string;
+  try {
+    await saveAndResume(page);
+    const savedReply = await savedResponse;
+    expect(savedReply.status()).toBe(200);
+    const saved = (await savedReply.json()) as Profile;
+    await expect(dialog).toBeVisible();
+    await expect.poll(() => fresh !== undefined).toBe(true);
+    expect(previewRequests).toEqual(
+      [0, 1].map(() => ({
+        outputId: outputs[1].id,
+        target: outputs[1].target,
+        mode: outputs[1].mode,
+      })),
+    );
+    // The public Profile has no monotonic record revision. Its saved timestamp
+    // and complete redacted read-back bind this request to the repaired intent;
+    // the server's opaque preview digest binds the captured input/output records.
+    expect(saved.updatedAt).toEqual(expect.any(String));
+    expect(saved.updatedAt).not.toBe(beforeRepair.updatedAt);
+    expect(fresh!.storedProfile).toEqual(saved);
+    expect(fresh!.storedProfile.ir.defaultAction).toEqual({ kind: "direct" });
+    expect(fresh!.status).toBe(200);
+    expect(fresh!.preview).toMatchObject({
+      outputId: outputs[1].id,
+      previewScope: "output-update",
+      valid: true,
+      routingIntent: { defaultAction: { kind: "direct" } },
+    });
+    expect(fresh!.preview.previewDigest).toMatch(/^[a-f0-9]{64}$/);
+    freshDigest = fresh!.preview.previewDigest!;
+    await info.attach("repair-fresh-preview-boundary", {
+      body: JSON.stringify({
+        previewRequests: previewRequests.length,
+        selectedOutputId: outputs[1].id,
+        selectedOutputRevision: outputs[1].revision,
+        savedProfileUpdatedAt: saved.updatedAt,
+        reviewedProfileUpdatedAt: fresh!.storedProfile.updatedAt,
+        status: fresh!.status,
+        valid: fresh!.preview.valid,
+        disabledUntilDelivery: await confirm.isDisabled(),
+        publicationWrites: publications.length,
+      }),
+      contentType: "application/json",
+    });
+    await expect(confirm).toBeDisabled();
+    expect(publications).toEqual([]);
+    await unchanged(page, outputs);
+    releaseFreshPreview();
+    await expect(dialog.getByRole("status")).toHaveText("兼容检查通过。");
+    await expect(confirm).toBeEnabled();
+    expect(previewRequests).toHaveLength(2);
+    expect(publications).toEqual([]);
+    await unchanged(page, outputs);
+  } finally {
+    releaseFreshPreview();
+    await page.unroute(previewURL, holdFreshPreview);
+  }
   await expect(page.locator("[data-sonner-toast]")).toHaveCount(0);
   await page.screenshot({
     path: info.outputPath("repaired-phone-ready-for-explicit-confirmation.png"),
@@ -194,6 +305,12 @@ test("real default repair retains selected existing client and requires fresh ch
   });
   await confirm.click();
   await expect(dialog).not.toBeVisible();
+  expect(publications).toEqual([
+    {
+      path: `/api/me/outputs/${outputs[1].id}/publish`,
+      body: { previewDigest: freshDigest! },
+    },
+  ]);
   const rows = await json(page, "/me/outputs");
   expect(rows.find((r: any) => r.id === outputs[0].id)).toEqual(outputs[0]);
   const changed = rows.find((r: any) => r.id === outputs[1].id);

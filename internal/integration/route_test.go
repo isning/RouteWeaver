@@ -22,7 +22,7 @@ import (
 // This crosses the real server IR → renderer → native check → owned process
 // → loopback traffic seams. No production node, secret or external destination.
 func TestRenderedTwoHopRouteHasNoDirectFallback(t *testing.T) {
-	dir := os.Getenv("ROUTEWEAVER_CORE_BIN_DIR")
+	dir := os.Getenv("ROUTEWEAVER_STOCK_CORE_BIN_DIR")
 	if dir == "" || !strings.Contains(","+os.Getenv("ROUTEWEAVER_NATIVE_PROCESS_TESTS")+",", ",xray,") {
 		t.Skip("requires explicit local Xray process opt-in")
 	}
@@ -53,7 +53,7 @@ func TestRenderedTwoHopRouteHasNoDirectFallback(t *testing.T) {
 		return domain.Connection{Protocol: "socks", Host: "127.0.0.1", Port: port, Username: "fixture", Password: "local-only"}
 	}
 	program := func(id string, port int, egress []domain.Connection) domain.ServerProgram {
-		return domain.ServerProgram{Instance: domain.CoreInstance{ID: id, HostID: "local-host", AdapterID: "routeweaver/xray", Version: "26.3.27"}, Listener: domain.ManagedEndpoint{ID: id + "-entry", InstanceID: id, Name: id, Connection: connection(port)}, Egress: egress}
+		return domain.ServerProgram{Instance: domain.CoreInstance{ID: id, HostID: "local-host", AdapterID: "routeweaver/xray", Version: "26.10.29"}, Listener: domain.ManagedEndpoint{ID: id + "-entry", InstanceID: id, Name: id, Connection: connection(port)}, Egress: egress}
 	}
 	ir := domain.ServerDeploymentIR{SchemaVersion: "1.0", ID: "local-route", TopologyRevision: "1", Programs: []domain.ServerProgram{program("b", bPort, nil), program("a", aPort, []domain.Connection{connection(bPort)})}}
 	artifacts, err := render.DefaultServers().Render(ir)
@@ -64,7 +64,7 @@ func TestRenderedTwoHopRouteHasNoDirectFallback(t *testing.T) {
 	roots := map[string]string{}
 	for _, artifact := range artifacts {
 		instance := strings.Split(artifact.Path, "/")[0]
-		checker, e := agent.NewNativeChecker("routeweaver/xray", "26.3.27", filepath.Join(dir, "xray"), 5*time.Second)
+		checker, e := agent.NewNativeChecker("routeweaver/xray", "26.10.29", filepath.Join(dir, "xray-26.10.29-linux-amd64"), 5*time.Second)
 		if e != nil {
 			t.Fatal(e)
 		}
@@ -89,7 +89,7 @@ func TestRenderedTwoHopRouteHasNoDirectFallback(t *testing.T) {
 		now := time.Now()
 		material := []domain.Artifact{{Path: "config.json", Content: artifact.Content}}
 		digest, _ := agent.ArtifactDigest(material)
-		desired := agent.Desired{Scope: scope, AdapterID: "routeweaver/xray", CoreVersion: "26.3.27", Generation: 1, RevisionID: "revision-one", OperationID: "apply-one", Digest: digest, EntryFile: "config.json", Artifacts: material, Lease: agent.PolicyLease{Revision: "policy-one", IssuedAt: now.Add(-time.Second), ExpiresAt: now.Add(10 * time.Minute), AccessAllowed: true, QuotaCertain: true}}
+		desired := agent.Desired{Scope: scope, AdapterID: "routeweaver/xray", CoreVersion: "26.10.29", Generation: 1, RevisionID: "revision-one", OperationID: "apply-one", Digest: digest, EntryFile: "config.json", Artifacts: material, Lease: agent.PolicyLease{Revision: "policy-one", IssuedAt: now.Add(-time.Second), ExpiresAt: now.Add(10 * time.Minute), AccessAllowed: true, QuotaCertain: true}}
 		state, e := reconciler.Submit(context.Background(), desired)
 		if e != nil || state.Phase != agent.ObservedConformant {
 			t.Fatalf("generated deployment failed: %s %v", state.Phase, e)
@@ -127,6 +127,9 @@ func TestRenderedTwoHopRouteHasNoDirectFallback(t *testing.T) {
 	}
 }
 func socksConnect(address string, port int) (net.Conn, error) {
+	return socksConnectDestination(address, "127.0.0.1", port)
+}
+func socksConnectDestination(address, host string, port int) (net.Conn, error) {
 	c, err := net.DialTimeout("tcp", address, time.Second)
 	if err != nil {
 		return nil, err
@@ -161,8 +164,17 @@ func socksConnect(address string, port int) (net.Conn, error) {
 	if reply[1] != 0 {
 		return nil, fmt.Errorf("SOCKS auth rejected")
 	}
-	request := []byte{5, 1, 0, 1, 127, 0, 0, 1, 0, 0}
-	binary.BigEndian.PutUint16(request[8:], uint16(port))
+	var request []byte
+	if ip := net.ParseIP(host); ip != nil && ip.To4() != nil {
+		request = append([]byte{5, 1, 0, 1}, ip.To4()...)
+	} else {
+		if len(host) == 0 || len(host) > 255 {
+			return nil, fmt.Errorf("invalid fixture destination")
+		}
+		request = append([]byte{5, 1, 0, 3, byte(len(host))}, []byte(host)...)
+	}
+	request = append(request, 0, 0)
+	binary.BigEndian.PutUint16(request[len(request)-2:], uint16(port))
 	if _, err = c.Write(request); err != nil {
 		return nil, err
 	}

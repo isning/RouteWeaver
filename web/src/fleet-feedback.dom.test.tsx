@@ -355,3 +355,65 @@ it("keeps unexecuted targets visible in mixed and waiting stages", async () => {
       .disabled,
   ).toBe(true);
 });
+
+it("shows stock security migration consequences only for the selected Xray release", async (context) => {
+  const scenario = ownedClickScenario(context),
+    writes: unknown[] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url, init) => {
+      if (String(url).endsWith("/core-releases"))
+        return json([
+          {
+            id: "xray-26.10.29-linux-amd64",
+            adapterId: "routeweaver/xray",
+            version: "26.10.29",
+            platform: "linux-amd64",
+            url: "https://github.com/XTLS/Xray-core/releases/download/v26.10.29/Xray-linux-64.zip",
+            archiveSHA256: "a".repeat(64),
+            executableSHA256: "b".repeat(64),
+          },
+          {
+            id: "sing-box-1.14.4-linux-amd64",
+            adapterId: "routeweaver/sing-box",
+            version: "1.14.4",
+            platform: "linux-amd64",
+            url: "https://github.com/SagerNet/sing-box/releases/download/v1.14.4/sing-box-1.14.4-linux-amd64.tar.gz",
+            archiveSHA256: "c".repeat(64),
+            executableSHA256: "d".repeat(64),
+          },
+        ]);
+      writes.push(init?.body);
+      return json({});
+    }),
+  );
+  mount(
+    <FleetPlanForm
+      inventory={inventory}
+      history={[]}
+      initialAction="upgrade"
+      initialDeploymentId="path"
+      initialTargetIds={["core"]}
+      onClose={() => {}}
+      onCreated={() => {}}
+    />,
+  );
+  const dialog = within(screen.getByRole("dialog"));
+  expect(dialog.queryByText(/不能直接沿用自定义系统 CA/)).toBeNull();
+  await scenario.click(() =>
+    dialog.findByRole("combobox", { name: "目标核心版本" }),
+  );
+  await scenario.click(() =>
+    screen.findByRole("option", { name: "xray 26.10.29 · linux-amd64" }),
+  );
+  await dialog.findByText(/不能直接沿用自定义系统 CA/);
+  expect(dialog.getByText(/旧版本不能直接保存网段例外/)).toBeTruthy();
+  await scenario.click(() =>
+    dialog.findByRole("combobox", { name: "目标核心版本" }),
+  );
+  await scenario.click(() =>
+    screen.findByRole("option", { name: "sing-box 1.14.4 · linux-amd64" }),
+  );
+  expect(dialog.queryByText(/不能直接沿用自定义系统 CA/)).toBeNull();
+  expect(writes).toEqual([]);
+});

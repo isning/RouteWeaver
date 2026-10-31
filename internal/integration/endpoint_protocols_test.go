@@ -17,6 +17,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -28,30 +29,42 @@ import (
 // This reuses the owned-process/reconciler harness. Destinations, listeners and
 // certificate trust are fixture-local. It never changes the host trust store.
 func TestNativeEndpointProtocolsLoopback(t *testing.T) {
-	dir := os.Getenv("ROUTEWEAVER_CORE_BIN_DIR")
+	dir := os.Getenv("ROUTEWEAVER_STOCK_CORE_BIN_DIR")
 	if dir == "" || !strings.Contains(","+os.Getenv("ROUTEWEAVER_NATIVE_PROCESS_TESTS")+",", ",xray,") {
 		t.Skip("requires explicit local Xray process opt-in")
 	}
 	for _, protocol := range []string{"vmess", "trojan"} {
 		for _, transport := range []string{"tcp", "ws", "httpupgrade", "grpc"} {
-			t.Run(protocol+"/"+transport, func(t *testing.T) { endpointProtocolLoopback(t, dir, protocol, transport) })
+			t.Run(protocol+"/"+transport, func(t *testing.T) {
+				endpointProtocolLoopback(t, dir, protocol, transport, stockLoopbackOptions{privateCIDRs: []string{"127.0.0.1/32"}, trustFixtureCA: true})
+			})
 		}
 	}
 }
 
-func endpointProtocolLoopback(t *testing.T, dir, protocol, transport string) {
+type stockLoopbackOptions struct {
+	privateCIDRs    []string
+	destinationHost string
+	trustFixtureCA  bool
+	wrongServerName bool
+	wantDenied      bool
+}
+
+func endpointProtocolLoopback(t *testing.T, dir, protocol, transport string, options stockLoopbackOptions) {
 	t.Helper()
 	echo, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer echo.Close()
+	var accepted atomic.Int64
 	go func() {
 		for {
 			c, e := echo.Accept()
 			if e != nil {
 				return
 			}
+			accepted.Add(1)
 			go func() { defer c.Close(); c.SetDeadline(time.Now().Add(5 * time.Second)); io.Copy(c, c) }()
 		}
 	}()
@@ -73,6 +86,9 @@ func endpointProtocolLoopback(t *testing.T, dir, protocol, transport string) {
 		if protocol == "trojan" {
 			c.Password = "synthetic-loopback-password"
 			c.TLS = &domain.TLSOptions{Enabled: true, ServerName: "localhost"}
+			if options.wrongServerName {
+				c.TLS.ServerName = "wrong.fixture.invalid"
+			}
 		} else {
 			c.UUID = "00000000-0000-4000-8000-000000000001"
 			c.VMessSecurity = "auto"
@@ -87,9 +103,12 @@ func endpointProtocolLoopback(t *testing.T, dir, protocol, transport string) {
 		return c
 	}
 	program := func(id string, c domain.Connection) domain.ServerProgram {
-		return domain.ServerProgram{Instance: domain.CoreInstance{ID: id, HostID: "local-host", AdapterID: render.ServerAdapterXray, Version: render.XrayVersion}, Listener: domain.ManagedEndpoint{ID: id + "-entry", InstanceID: id, Name: id, Connection: c}}
+		return domain.ServerProgram{Instance: domain.CoreInstance{ID: id, HostID: "local-host", AdapterID: render.ServerAdapterXray, Version: render.StockXrayVersion}, Listener: domain.ManagedEndpoint{ID: id + "-entry", InstanceID: id, Name: id, Connection: c}}
 	}
 	exit := program("exit", connection())
+	if len(options.privateCIDRs) > 0 {
+		exit.DestinationPolicy = &domain.DestinationPolicy{AllowCIDRs: options.privateCIDRs}
+	}
 	if protocol == "trojan" {
 		exit.TLS = &domain.ServerTLSOptions{CertificatePath: "tls/cert.pem", KeyPath: "tls/key.pem", CertificatePEM: certificate, PrivateKeyPEM: key}
 	}
@@ -103,6 +122,9 @@ func endpointProtocolLoopback(t *testing.T, dir, protocol, transport string) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if options.trustFixtureCA && caPath != "" {
+		artifacts = stockFixtureCATrust(t, artifacts, caPath)
+	}
 	grouped := map[string][]domain.Artifact{}
 	for _, a := range artifacts {
 		id, relative, ok := strings.Cut(a.Path, "/")
@@ -114,27 +136,9 @@ func endpointProtocolLoopback(t *testing.T, dir, protocol, transport string) {
 	var exitSupervisor *agent.ProcessSupervisor
 	var exitRoot string
 	for _, id := range []string{"exit", "entry"} {
-		binary := filepath.Join(dir, "xray")
-		checker, err := agent.NewNativeChecker(render.ServerAdapterXray, render.XrayVersion, binary, 5*time.Second)
-		if protocol == "trojan" {
-			// Trusted test adapter only: retain native validation and certificate/host
-			// verification; add this fixture CA solely to these owned child processes.
-			checker, err = agent.NewCommandChecker(agent.Descriptor{ID: render.ServerAdapterXray, Version: render.XrayVersion, NativeValidation: true, Source: "https://github.com/XTLS/Xray-core/tree/v26.3.27"}, binary, 5*time.Second, agent.NativeCommandSpec{
-				VersionArgs: []string{"version"}, MatchVersion: func(out, version string) bool {
-					words := strings.Fields(out)
-					return len(words) > 1 && words[0] == "Xray" && words[1] == version
-				},
-				ValidateArgs: func(s agent.Staged) []string {
-					return []string{"run", "-test", "-format", "json", "-config", filepath.Join(s.Directory, s.Desired.EntryFile)}
-				},
-				RunArgs: func(s agent.Staged) []string {
-					return []string{"run", "-format", "json", "-config", filepath.Join(s.Directory, s.Desired.EntryFile)}
-				},
-				Environment: func(s agent.Staged) []string {
-					return []string{"XRAY_LOCATION_CERT=" + s.Directory, "XRAY_LOCATION_ASSET=" + s.Directory, "SSL_CERT_FILE=" + caPath}
-				},
-			})
-		}
+		binary := filepath.Join(dir, "xray-26.10.29-linux-amd64")
+		checker, err := agent.NewNativeChecker(render.ServerAdapterXray, render.StockXrayVersion, binary, 5*time.Second)
+
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -165,7 +169,7 @@ func endpointProtocolLoopback(t *testing.T, dir, protocol, transport string) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		desired := agent.Desired{Scope: scope, AdapterID: render.ServerAdapterXray, CoreVersion: render.XrayVersion, Generation: 1, RevisionID: "revision-one", OperationID: "apply-one", Digest: digest, EntryFile: "config.json", Artifacts: grouped[id], Lease: agent.PolicyLease{Revision: "policy-one", IssuedAt: now.Add(-time.Second), ExpiresAt: now.Add(5 * time.Minute), AccessAllowed: true, QuotaCertain: true}}
+		desired := agent.Desired{Scope: scope, AdapterID: render.ServerAdapterXray, CoreVersion: render.StockXrayVersion, Generation: 1, RevisionID: "revision-one", OperationID: "apply-one", Digest: digest, EntryFile: "config.json", Artifacts: grouped[id], Lease: agent.PolicyLease{Revision: "policy-one", IssuedAt: now.Add(-time.Second), ExpiresAt: now.Add(5 * time.Minute), AccessAllowed: true, QuotaCertain: true}}
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		state, err := reconciler.Submit(ctx, desired)
 		cancel()
@@ -173,7 +177,23 @@ func endpointProtocolLoopback(t *testing.T, dir, protocol, transport string) {
 			t.Fatalf("loopback apply failed: %s %v", state.Phase, err)
 		}
 	}
-	c, err := socksConnect(fmt.Sprintf("127.0.0.1:%d", entryPort), echo.Addr().(*net.TCPAddr).Port)
+	destinationHost := options.destinationHost
+	if destinationHost == "" {
+		destinationHost = "127.0.0.1"
+	}
+	c, err := socksConnectDestination(fmt.Sprintf("127.0.0.1:%d", entryPort), destinationHost, echo.Addr().(*net.TCPAddr).Port)
+	if options.wantDenied {
+		if err == nil {
+			defer c.Close()
+			if _, err = io.WriteString(c, "must-not-reach-origin"); err == nil {
+				_, err = io.ReadFull(c, make([]byte, len("must-not-reach-origin")))
+			}
+		}
+		if err == nil || accepted.Load() != 0 {
+			t.Fatalf("security default or exception boundary allowed origin traffic: err=%v originConnections=%d", err, accepted.Load())
+		}
+		return
+	}
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -198,7 +218,7 @@ func endpointProtocolLoopback(t *testing.T, dir, protocol, transport string) {
 	}
 	// Echo remains available. A fresh successful payload now would demonstrate
 	// an unintended direct fallback rather than use of the selected protocol.
-	bypass, bypassErr := socksConnect(fmt.Sprintf("127.0.0.1:%d", entryPort), echo.Addr().(*net.TCPAddr).Port)
+	bypass, bypassErr := socksConnectDestination(fmt.Sprintf("127.0.0.1:%d", entryPort), destinationHost, echo.Addr().(*net.TCPAddr).Port)
 	if bypassErr == nil {
 		defer bypass.Close()
 		if _, bypassErr = io.WriteString(bypass, payload); bypassErr == nil {

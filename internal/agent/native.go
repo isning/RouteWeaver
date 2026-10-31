@@ -51,6 +51,17 @@ var nativeRegistrations = map[string]nativeRegistration{
 	}},
 }
 
+// The current stock versions retain these source-reviewed CLI contracts. Old
+// registrations remain available for recovery of immutable historical receipts.
+func init() {
+	xray := nativeRegistrations["routeweaver/xray@26.3.27"]
+	xray.source = "https://github.com/XTLS/Xray-core/blob/v26.10.29/main/run.go"
+	nativeRegistrations["routeweaver/xray@26.10.29"] = xray
+	singbox := nativeRegistrations["routeweaver/sing-box@1.14.3"]
+	singbox.source = "https://github.com/SagerNet/sing-box/blob/v1.14.4/cmd/sing-box/cmd_check.go"
+	nativeRegistrations["routeweaver/sing-box@1.14.4"] = singbox
+}
+
 // NativeChecker validates only. A ProcessSupervisor separately opts in to
 // foreground child-process ownership; neither result proves a live route.
 type NativeChecker struct {

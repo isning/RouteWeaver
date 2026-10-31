@@ -80,6 +80,16 @@ class CIGateTests(unittest.TestCase):
         self.assertIn("globalThis.process.env.ROUTEWEAVER_CHROMIUM", native)
         self.assertNotIn("--no-sandbox", native)
 
+    def test_native_ci_keeps_compatibility_and_stock_caches_separate(self):
+        root = Path(__file__).resolve().parents[1]
+        workflow = (root / ".github/workflows/ci.yml").read_text()
+        native = workflow.split("\n  native:\n", 1)[1].split("\n  package:\n", 1)[0]
+        self.assertIn("ROUTEWEAVER_CORE_BIN_DIR: ${{ github.workspace }}/bin/cores", native)
+        self.assertIn("ROUTEWEAVER_STOCK_CORE_BIN_DIR: ${{ github.workspace }}/bin/stock-cores", native)
+        self.assertIn("- run: python3 scripts/bootstrap-cores.py\n", native)
+        self.assertIn("- run: scripts/verify.sh native", native)
+        self.assertIn("- run: scripts/verify.sh runtime", native)
+
 
 if __name__ == "__main__":
     unittest.main()

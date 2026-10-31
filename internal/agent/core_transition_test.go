@@ -267,7 +267,7 @@ func TestFailedCorePreparationStillAllowsStoppingOldRuntime(t *testing.T) {
 	if _, err = r.Submit(context.Background(), first); err != nil {
 		t.Fatal(err)
 	}
-	release, _ := controlprotocol.FindCoreRelease("xray-26.3.27-linux-amd64")
+	release, _ := controlprotocol.FindCoreRelease("xray-26.10.29-linux-amd64")
 	upgrade := testDesired(t, 2)
 	upgrade.Action = "upgrade"
 	upgrade.AdapterID = release.AdapterID

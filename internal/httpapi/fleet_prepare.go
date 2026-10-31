@@ -125,7 +125,7 @@ func (h *server) prepareFleet(in fleet.Input) (preparedFleet, error) {
 		if in.TargetReleaseID == "" {
 			return p, fmt.Errorf("select a targetReleaseId from the official core catalog")
 		}
-		release, err := controlprotocol.FindCoreRelease(in.TargetReleaseID)
+		release, err := controlprotocol.FindInstallableCoreRelease(in.TargetReleaseID)
 		if err != nil {
 			return p, err
 		}

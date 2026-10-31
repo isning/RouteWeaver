@@ -73,7 +73,7 @@ func TestCoreTransitionRequiresExactCatalogIdentity(t *testing.T) {
 	scope := Scope{NodeID: "node", InstanceID: "core", EnrollmentEpoch: "epoch"}
 	artifacts := []domain.Artifact{{Path: "config.json", Content: "{}"}}
 	digest, _ := ArtifactDigest(artifacts)
-	release, _ := FindCoreRelease("xray-26.3.27-linux-amd64")
+	release, _ := FindCoreRelease("xray-26.10.29-linux-amd64")
 	from := Identity{Scope: scope, AdapterID: "routeweaver/xray", CoreVersion: "26.2.6", Generation: 1, RevisionID: "old", OperationID: "old-op", Digest: digest}
 	d := Desired{Scope: scope, AdapterID: release.AdapterID, CoreVersion: release.Version, Generation: 2, RevisionID: "next", OperationID: "next-op", Digest: digest, EntryFile: "config.json", Artifacts: artifacts, Action: "upgrade", CoreReleaseID: release.ID, Transition: &CoreTransition{From: from, ReleaseID: release.ID, ExecutableSHA256: release.ExecutableSHA256}}
 	if err := ValidateDesired(d, scope); err != nil {
@@ -92,5 +92,37 @@ func TestCoreTransitionRequiresExactCatalogIdentity(t *testing.T) {
 	d.Transition.From.CoreVersion = release.Version
 	if err := ValidateDesired(d, scope); err == nil {
 		t.Fatal("same-version fake upgrade accepted")
+	}
+}
+
+func TestRetiredReleaseAdmissionIsSeparateFromRetainedHistory(t *testing.T) {
+	for _, id := range []string{"xray-26.3.27-linux-amd64", "sing-box-1.14.3-linux-amd64"} {
+		release, _ := FindCoreRelease(id)
+		scope := Scope{NodeID: "node", InstanceID: "core", EnrollmentEpoch: "epoch"}
+		artifacts := []domain.Artifact{{Path: "config.json", Content: "{}"}}
+		digest, _ := ArtifactDigest(artifacts)
+		for _, action := range []string{"install", "upgrade", "configure", "start", "stop", "rollback"} {
+			t.Run(id+"/"+action, func(t *testing.T) {
+				d := Desired{Scope: scope, AdapterID: release.AdapterID, CoreVersion: release.Version, Generation: 2, RevisionID: "revision", OperationID: "operation", EntryFile: "config.json", Artifacts: artifacts, Digest: digest, Action: action, CoreReleaseID: id}
+				if action == "upgrade" {
+					d.Transition = &CoreTransition{From: Identity{Scope: scope, AdapterID: "prior", CoreVersion: "1", Generation: 1, RevisionID: "old", OperationID: "old-op", Digest: digest}, ReleaseID: id, ExecutableSHA256: release.ExecutableSHA256}
+				}
+				if err := ValidateRetainedDesired(d, scope); err != nil {
+					t.Fatal("authentic retained history rejected", err)
+				}
+				err := ValidateDesired(d, scope)
+				if action == "install" || action == "upgrade" {
+					if err == nil || !strings.Contains(err.Error(), "retired") {
+						t.Fatal("retired incoming action admitted", err)
+					}
+				} else if err != nil {
+					t.Fatal("historical lifecycle rejected", err)
+				}
+				d.Artifacts = []domain.Artifact{{Path: "config.json", Content: "tampered"}}
+				if ValidateRetainedDesired(d, scope) == nil {
+					t.Fatal("retained artifact tampering accepted")
+				}
+			})
+		}
 	}
 }

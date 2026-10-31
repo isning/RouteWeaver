@@ -500,6 +500,15 @@ export function FleetPlanForm({
                 ? "准备固定版本文件，不启动或替换当前运行的核心。"
                 : "升级到不同的明确版本，当前连接可能中断。预览会检查实例当前版本与兼容性。"}
             </p>
+            {selectedRelease?.adapterId === "routeweaver/xray" &&
+              selectedRelease.version === "26.10.29" && (
+                <Notice tone="warning" role="note">
+                  此版本默认阻止 VLESS、VMess、Trojan、Shadowsocks
+                  访问内网目标。
+                  依赖内网服务的旧路径可能中断，需先评审目标版本配置与迁移方案；旧版本不能直接保存网段例外。
+                  它使用内置 CA，不能直接沿用自定义系统 CA 信任。
+                </Notice>
+              )}
             {selectedRelease && (
               <Accordion type="multiple" defaultValue={[]} className="w-full">
                 {[

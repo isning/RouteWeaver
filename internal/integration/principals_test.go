@@ -34,6 +34,11 @@ func TestManagedSharedVLESSIngressKeepsPrincipalPathsSeparate(t *testing.T) {
 }
 func testSharedVLESSIngress(t *testing.T, managed bool) {
 	dir := os.Getenv("ROUTEWEAVER_CORE_BIN_DIR")
+	stockVersion, stockBinary := render.XrayVersion, "xray"
+	if !managed {
+		dir = os.Getenv("ROUTEWEAVER_STOCK_CORE_BIN_DIR")
+		stockVersion, stockBinary = render.StockXrayVersion, "xray-"+render.StockXrayVersion+"-linux-amd64"
+	}
 	if dir == "" || !strings.Contains(","+os.Getenv("ROUTEWEAVER_NATIVE_PROCESS_TESTS")+",", ",xray,") {
 		t.Skip("requires explicit local Xray process opt-in")
 	}
@@ -62,12 +67,12 @@ func testSharedVLESSIngress(t *testing.T, managed bool) {
 	entryPort, exitPort := freePort(), freePort()
 	transit := domain.Connection{Protocol: "socks", Host: "127.0.0.1", Port: exitPort, Username: "synthetic-transit", Password: "not-a-public-user-credential"}
 	uuidA, uuidB := "00000000-0000-4000-8000-000000000001", "00000000-0000-4000-8000-000000000002"
-	ingress := domain.ServerProgram{Instance: domain.CoreInstance{ID: "shared", HostID: "fixture", AdapterID: render.ServerAdapterXray, Version: render.XrayVersion}, Listener: domain.ManagedEndpoint{ID: "public-entry", InstanceID: "shared", Name: "Shared public ingress", Authentication: "principals", Connection: domain.Connection{Protocol: "vless", Host: "127.0.0.1", Port: entryPort}}, Connectors: []domain.ServerConnector{{ID: "via-exit", Connection: transit}}, DefaultAction: domain.ActionRef{Kind: "reject"}, Principals: []domain.ServerPrincipal{
+	ingress := domain.ServerProgram{Instance: domain.CoreInstance{ID: "shared", HostID: "fixture", AdapterID: render.ServerAdapterXray, Version: stockVersion}, Listener: domain.ManagedEndpoint{ID: "public-entry", InstanceID: "shared", Name: "Shared public ingress", Authentication: "principals", Connection: domain.Connection{Protocol: "vless", Host: "127.0.0.1", Port: entryPort}}, Connectors: []domain.ServerConnector{{ID: "via-exit", Connection: transit}}, DefaultAction: domain.ActionRef{Kind: "reject"}, Principals: []domain.ServerPrincipal{
 		{SubjectID: "opaque-alice", AccountID: "alice", RouteID: "direct-path", CredentialVersion: "v1", Credential: domain.PrincipalCredential{UUID: uuidA}, Action: domain.ActionRef{Kind: "direct"}},
 		{SubjectID: "opaque-bob", AccountID: "bob", RouteID: "transit-path", CredentialVersion: "v1", Credential: domain.PrincipalCredential{UUID: uuidB}, Action: domain.ActionRef{Kind: "forward", Ref: "via-exit"}},
 	}}
+	ingress.DestinationPolicy = &domain.DestinationPolicy{AllowCIDRs: []string{"127.0.0.1/32"}}
 	if managed {
-		ingress.DestinationPolicy = &domain.DestinationPolicy{AllowCIDRs: []string{"127.0.0.1/32"}}
 		ingress.Instance.AdapterID = render.ServerAdapterManagedXray
 		ingress.Instance.Version = render.ManagedXrayVersion
 		for i := range ingress.Principals {
@@ -75,7 +80,7 @@ func testSharedVLESSIngress(t *testing.T, managed bool) {
 			ingress.Principals[i].CycleID = "cycle1"
 		}
 	}
-	exit := domain.ServerProgram{Instance: domain.CoreInstance{ID: "exit", HostID: "fixture", AdapterID: render.ServerAdapterXray, Version: render.XrayVersion}, Listener: domain.ManagedEndpoint{ID: "transit-entry", InstanceID: "exit", Name: "Private transit", Connection: transit}}
+	exit := domain.ServerProgram{Instance: domain.CoreInstance{ID: "exit", HostID: "fixture", AdapterID: render.ServerAdapterXray, Version: stockVersion}, Listener: domain.ManagedEndpoint{ID: "transit-entry", InstanceID: "exit", Name: "Private transit", Connection: transit}}
 	artifacts, err := render.DefaultServers().Render(domain.ServerDeploymentIR{SchemaVersion: "1.0", ID: "shared-ingress-proof", TopologyRevision: "r1", Programs: []domain.ServerProgram{exit, ingress}})
 	if err != nil {
 		t.Fatal(err)
@@ -83,7 +88,7 @@ func testSharedVLESSIngress(t *testing.T, managed bool) {
 	supervisors := map[string]*agent.ProcessSupervisor{}
 	roots := map[string]string{}
 	for _, instance := range []string{"exit", "shared"} {
-		adapter, version, binary := render.ServerAdapterXray, render.XrayVersion, filepath.Join(dir, "xray")
+		adapter, version, binary := render.ServerAdapterXray, stockVersion, filepath.Join(dir, stockBinary)
 		if managed && instance == "shared" {
 			adapter, version, binary = render.ServerAdapterManagedXray, render.ManagedXrayVersion, os.Getenv("ROUTEWEAVER_MANAGED_XRAY_BIN")
 		}

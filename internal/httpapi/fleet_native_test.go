@@ -17,12 +17,13 @@ import (
 	"routeweaver/internal/controlprotocol"
 	"routeweaver/internal/domain"
 	"routeweaver/internal/httpapi"
+	"routeweaver/internal/render"
 )
 
 // Real loopback CP→scoped desired→native supervisor→HTTP-through-SOCKS traffic.
 // This intentionally does not imply browser acceptance or real VPS execution.
 func TestNativeFleetConfigureStopStartAndRollback(t *testing.T) {
-	dir := os.Getenv("ROUTEWEAVER_CORE_BIN_DIR")
+	dir := os.Getenv("ROUTEWEAVER_STOCK_CORE_BIN_DIR")
 	if dir == "" || !strings.Contains(","+os.Getenv("ROUTEWEAVER_NATIVE_PROCESS_TESTS")+",", ",xray,") {
 		t.Skip("explicit pinned Xray process opt-in required")
 	}
@@ -34,6 +35,8 @@ func TestNativeFleetConfigureStopStartAndRollback(t *testing.T) {
 	}
 	for i := range deployment.IR.Programs {
 		program := &deployment.IR.Programs[i]
+		program.Instance.Version = render.StockXrayVersion
+		f.post(t, "core-instances", program.Instance, 200)
 		program.Listener.Connection.Port = publishedFreePort(t)
 		f.post(t, "managed-endpoints", program.Listener, 200)
 	}
@@ -46,7 +49,7 @@ func TestNativeFleetConfigureStopStartAndRollback(t *testing.T) {
 			t.Fatal(e)
 		}
 		binary := filepath.Join(root, "xray-pinned")
-		content, e := os.ReadFile(filepath.Join(dir, "xray"))
+		content, e := os.ReadFile(filepath.Join(dir, "xray-"+render.StockXrayVersion+"-linux-amd64"))
 		if e != nil {
 			t.Fatal(e)
 		}
@@ -64,7 +67,7 @@ func TestNativeFleetConfigureStopStartAndRollback(t *testing.T) {
 		var enrollment httpapi.Enrollment
 		f.s.Get("instance-enrollments", instance, &enrollment)
 		installer, e := agent.NewCoreInstaller(filepath.Join(root, "immutable-cores"), agent.CoreInstallerOptions{OpenArchive: func(_ context.Context, release controlprotocol.CoreRelease) (io.ReadCloser, error) {
-			return os.Open(filepath.Join(dir, strings.TrimPrefix(release.AdapterID, "routeweaver/")+".download"))
+			return os.Open(filepath.Join(dir, release.ID+".download"))
 		}})
 		if e != nil {
 			t.Fatal(e)
@@ -147,7 +150,7 @@ func TestNativeFleetConfigureStopStartAndRollback(t *testing.T) {
 		return id
 	}
 	f.in.Action = "install"
-	f.in.TargetReleaseID = "xray-26.3.27-linux-amd64"
+	f.in.TargetReleaseID = "xray-26.10.29-linux-amd64"
 	execute()
 	traffic(false)
 	f.in.Action = "configure"

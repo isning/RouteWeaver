@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -748,6 +749,114 @@ it("keeps the explicitly selected existing output when returning from repair", a
   ).toMatchObject([{ outputId: "laptop" }, { outputId: "laptop" }]);
   expect(writes.some((write) => write.path.endsWith("/publish"))).toBe(false);
 });
+
+it.each(["immediate", "held"] as const)(
+  "requires the resumed automatic review before explicit publication with an %s response",
+  async (delivery) => {
+    const profile = fixture();
+    const phone: Output = {
+      id: "phone",
+      name: "Phone",
+      profileId: profile.id,
+      target: profile.target,
+      mode: "full",
+      status: "published",
+    };
+    const laptop: Output = { ...phone, id: "laptop", name: "Laptop" };
+    let release!: () => void;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let inspections = 0;
+    const digest = "b".repeat(64);
+    const { writes } = mount(profile, missing({ kind: "default" }), {
+      output: phone,
+      outputs: [phone, laptop],
+      preview: async () => {
+        inspections++;
+        if (inspections === 1)
+          return json(
+            {
+              detail: "defaultAction: endpoint reference missing",
+              validation: missing({ kind: "default" }),
+            },
+            422,
+          );
+        if (delivery === "held") await held;
+        return json({
+          valid: true,
+          outputId: laptop.id,
+          previewScope: "output-update",
+          previewDigest: digest,
+          publicationEffect: { version: 1, link: "preserve" },
+          artifacts: [],
+        });
+      },
+    });
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "检查发布" }));
+    await user.click(
+      await screen.findByRole("radio", { name: /更新「Laptop」/ }),
+    );
+    await user.click(screen.getByRole("button", { name: "检查所选订阅" }));
+    let dialog = await screen.findByRole("dialog", {
+      name: "检查订阅更新「Laptop」",
+    });
+    const failure = await within(dialog).findByRole("alert", {
+      name: /^无法检查：/,
+    });
+    await user.click(
+      within(failure).getByRole("button", { name: "调整默认流量去向" }),
+    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    await user.click(screen.getByRole("combobox", { name: "默认流量行为" }));
+    await user.click(await screen.findByRole("option", { name: "直连" }));
+    await user.click(screen.getByRole("button", { name: "保存并检查" }));
+    dialog = await screen.findByRole("dialog", {
+      name: "检查订阅更新「Laptop」",
+    });
+    await waitFor(() => expect(inspections).toBe(2));
+    const confirmation = within(dialog).getByRole("button", {
+      name: "确认更新「Laptop」",
+    });
+    if (delivery === "held") {
+      expect(confirmation).toHaveProperty("disabled", true);
+      await user.click(confirmation);
+      expect(writes.some((write) => write.path.endsWith("/publish"))).toBe(
+        false,
+      );
+      await act(async () => {
+        release();
+      });
+    }
+    await waitFor(() => expect(confirmation).toHaveProperty("disabled", false));
+    expect(within(dialog).getByRole("status").textContent).toBe(
+      "兼容检查通过。",
+    );
+    expect(
+      writes
+        .filter((write) => write.path.endsWith("/preview"))
+        .map((write) => write.body),
+    ).toEqual(
+      [0, 1].map(() => ({
+        outputId: laptop.id,
+        target: laptop.target,
+        mode: laptop.mode,
+      })),
+    );
+    expect(writes.some((write) => write.path.endsWith("/publish"))).toBe(false);
+    await user.click(confirmation);
+    await waitFor(() =>
+      expect(
+        writes.filter((write) => write.path.endsWith("/publish")),
+      ).toHaveLength(1),
+    );
+    expect(writes.at(-1)).toEqual({
+      path: "/api/me/outputs/laptop/publish",
+      body: { previewDigest: digest },
+    });
+  },
+);
 
 it.each(["group", "rule"] as const)(
   "uses the checked %s occurrence rather than the error text or the first shared reference",

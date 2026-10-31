@@ -10,13 +10,10 @@ import (
 )
 
 func TestNativeMultiPrincipalVLESSFixtures(t *testing.T) {
-	for _, target := range []struct{ adapter, version, env string }{{render.ServerAdapterXray, render.XrayVersion, "ROUTEWEAVER_XRAY_BIN"}, {render.ServerAdapterSingBox, render.SingBoxVersion, "ROUTEWEAVER_SINGBOX_BIN"}} {
-		t.Run(target.adapter, func(t *testing.T) {
-			binary := os.Getenv(target.env)
-			if binary == "" {
-				t.Skip("explicit native binary required: " + target.env)
-			}
-			p := principalProgram(target.adapter, target.version)
+	for _, target := range nativeStockServerTargets() {
+		t.Run(target.AdapterID+"/"+target.Version, func(t *testing.T) {
+			binary := target.binary(t)
+			p := principalProgram(target.AdapterID, target.Version)
 			artifacts, err := render.DefaultServers().Render(domain.ServerDeploymentIR{SchemaVersion: "1.0", ID: "multi-user", TopologyRevision: "r1", Programs: []domain.ServerProgram{p}})
 			if err != nil {
 				t.Fatal(err)
@@ -26,7 +23,7 @@ func TestNativeMultiPrincipalVLESSFixtures(t *testing.T) {
 				t.Fatal(err)
 			}
 			args := []string{"run", "-test", "-config", file}
-			if target.adapter == render.ServerAdapterSingBox {
+			if target.AdapterID == render.ServerAdapterSingBox {
 				args = []string{"check", "-c", file}
 			}
 			if output, err := exec.Command(binary, args...).CombinedOutput(); err != nil {
