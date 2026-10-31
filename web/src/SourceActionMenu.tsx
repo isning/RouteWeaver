@@ -25,15 +25,30 @@ export function SourceActionMenu({
   const trigger = useRef<HTMLButtonElement>(null);
   const releaseFocus = useRef(false);
   return (
-    <DropdownMenu modal={false} open={open} onOpenChange={setOpen}>
+    <DropdownMenu
+      modal={false}
+      open={open}
+      onOpenChange={(next) => {
+        if (!next || !loading) setOpen(next);
+      }}
+    >
       <DropdownMenuTrigger asChild>
         <Button
           ref={trigger}
           variant="ghost"
           size="icon"
           aria-label={`更多操作 ${sourceName}`}
-          disabled={loading}
+          // Keep the durable opener focused while deletion references are read;
+          // native disabled would blur it before the confirmation captures focus.
+          aria-disabled={loading || undefined}
           aria-busy={loading || undefined}
+          onPointerDown={(event) => {
+            if (loading) event.preventDefault();
+          }}
+          onKeyDown={(event) => {
+            if (loading && ["Enter", " ", "ArrowDown"].includes(event.key))
+              event.preventDefault();
+          }}
         >
           {loading ? (
             <LoaderCircle

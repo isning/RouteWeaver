@@ -306,10 +306,14 @@ test("automatic members are an explicit additive choice over current source, col
       .getByRole("article", { name: `分流配置 ${profileName}`, exact: true })
       .getByRole("button", { name: "继续配置", exact: true })
       .click();
+    // A fresh editor opens its ordinary routing tab; inspect persisted membership
+    // through the visible group tab rather than an unmounted previous-session panel.
+    await page.getByRole("tab", { name: "策略组", exact: true }).click();
     await expect(toggle).toBeChecked();
     await expect(
       group.getByText("当前配置中的全部连接", { exact: true }),
     ).toBeVisible();
+    await page.getByRole("button", { name: "编辑来源", exact: true }).click();
     await page
       .getByRole("radio", { name: "使用节点集合", exact: true })
       .check();

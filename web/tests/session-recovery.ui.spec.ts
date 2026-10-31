@@ -82,7 +82,61 @@ async function signIn(page: Page, navigate = true) {
   await expect(account(page)).toBeVisible();
   await expect(workspace(page)).not.toHaveAttribute("inert", "");
 }
+// Native noDefaults tabs do not auto-activate for input or screenshots. Restore
+// the intended user's tab, then verify the real activation and session response;
+// do not force a hidden tab's actions or synthesize focus/visibility events.
+async function activateWorkspace(page: Page, purpose: string) {
+  const before = await page.evaluate(() => ({
+    visible: document.visibilityState,
+    focus: document.hasFocus(),
+    eventStart: (window as any).__focusEvents.length,
+  }));
+  const wasActive = before.visible === "visible" && before.focus;
+  let authStatus: number | undefined;
+  const read = wasActive ? undefined : page.waitForResponse(me);
+  await Promise.all([
+    read?.then((response) => {
+      authStatus = response.status();
+      expect(authStatus).toBe(200);
+    }),
+    (async () => {
+      if (!wasActive) await page.bringToFront();
+      await expect
+        .poll(() =>
+          page.evaluate(() => ({
+            visible: document.visibilityState,
+            focus: document.hasFocus(),
+          })),
+        )
+        .toEqual({ visible: "visible", focus: true });
+    })(),
+  ]);
+  const events = await page.evaluate(
+    (start) => (window as any).__focusEvents.slice(start),
+    before.eventStart,
+  );
+  const trustedFocus = events.some((e: any) => e.type === "focus" && e.trusted);
+  const trustedVisible = events.some(
+    (e: any) =>
+      e.type === "visibilitychange" && e.trusted && e.visible === "visible",
+  );
+  if (!before.focus) expect(trustedFocus).toBe(true);
+  if (before.visible !== "visible") expect(trustedVisible).toBe(true);
+  await expect(workspace(page)).not.toHaveAttribute("hidden", "");
+  await expect(workspace(page)).not.toHaveAttribute("inert", "");
+  await test.info().attach("native-tab-activation", {
+    body: JSON.stringify({
+      purpose,
+      wasActive,
+      trustedFocus,
+      trustedVisible,
+      authStatus,
+    }),
+    contentType: "application/json",
+  });
+}
 async function logout(page: Page) {
+  await activateWorkspace(page, "logout");
   await account(page).click();
   await page.getByRole("menuitem", { name: "退出登录", exact: true }).click();
   await expect(
@@ -311,6 +365,12 @@ test("real invite signup switches identity without inheriting old account draft 
   expect(writes).toBe(0);
   const list = await realCollections(other);
   expect(list.some((x: any) => x.name === draftName)).toBe(false);
+  // The other tab still owns native focus. Activate this recovered workspace
+  // before asking its compositor for pixels, and recheck the visible identity.
+  await activateWorkspace(page, "cross-account-evidence");
+  await expect(account(page)).toHaveText(newName, { useInnerText: true });
+  await expect(page.getByLabel("集合名称", { exact: true })).toHaveCount(0);
+  expect(writes).toBe(0);
   // Only synthetic business screen, no invitation/password/auth fields captured.
   await page.screenshot({
     path: info.outputPath("different-account-clean-workspace.png"),

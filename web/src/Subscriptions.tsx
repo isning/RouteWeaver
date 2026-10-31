@@ -1021,7 +1021,7 @@ export function SubscriptionsPage({
             >
               <header className="subscription-configuration-heading flex flex-wrap items-start justify-between gap-3 px-4 py-4 sm:px-5">
                 <div className="subscription-info min-w-0 space-y-1">
-                  <h2 className="text-base font-semibold tracking-tight text-foreground">
+                  <h2 className="text-base font-semibold tracking-tight text-foreground wrap-anywhere">
                     {profile?.name ||
                       (profiles.isLoading
                         ? "正在核对关联配置…"
@@ -3125,9 +3125,55 @@ export function UpdateOutput({
         </span>
       }
       className="update-output-review"
+      scrollMode="auto"
       bodyProps={{ className: "space-y-5" }}
       open={!suspended && !closing}
-      footer={null}
+      footer={
+        <div
+          className="update-output-decision min-w-0 w-full space-y-3 text-left wrap-anywhere"
+          role="group"
+          aria-label="更新确认"
+        >
+          <p>
+            更新订阅：<strong>{review?.name || output.name}</strong>
+          </p>
+          {review?.link && preview?.valid === true && (
+            <p>
+              {bundlePreview
+                ? `${review.link === "replace" ? "重新发布将更换访问凭据。" : ""}发布后请下载配置与规则文件包并导入客户端，不提供普通订阅链接或二维码。其他订阅不受影响。`
+                : review.link === "replace"
+                  ? "发布后请在客户端换用新链接，其他订阅不受影响。"
+                  : "链接不变，其他订阅不受影响。"}
+            </p>
+          )}
+          <div className="flex flex-wrap justify-end gap-2">
+            <ActionButton
+              className="min-h-11"
+              disabled={publish.isPending}
+              onClick={close}
+              variant="outline"
+            >
+              取消
+            </ActionButton>
+            <ActionButton
+              className="h-auto min-h-11 max-w-full whitespace-normal wrap-anywhere"
+              aria-label={`${label}「${review?.name || output.name}」`}
+              aria-busy={publish.isPending}
+              disabled={
+                !review?.link ||
+                !preview?.previewDigest ||
+                preview.valid !== true ||
+                inspect.isPending
+              }
+              onClick={confirm}
+              variant="default"
+              pending={!!publish.isPending}
+            >
+              {label}
+            </ActionButton>
+          </div>
+        </div>
+      }
       onOpenChange={(nextOpen) => {
         if (!nextOpen) close();
       }}
@@ -3255,50 +3301,6 @@ export function UpdateOutput({
           />
         </div>
       )}
-      <div
-        className="update-output-decision space-y-3 rounded-lg border p-4"
-        role="group"
-        aria-label="更新确认"
-      >
-        <p>
-          更新订阅：<strong>{review?.name || output.name}</strong>
-        </p>
-        {review?.link && preview?.valid === true && (
-          <p>
-            {bundlePreview
-              ? `${review.link === "replace" ? "重新发布将更换访问凭据。" : ""}发布后请下载配置与规则文件包并导入客户端，不提供普通订阅链接或二维码。其他订阅不受影响。`
-              : review.link === "replace"
-                ? "发布后请在客户端换用新链接，其他订阅不受影响。"
-                : "链接不变，其他订阅不受影响。"}
-          </p>
-        )}
-        <div className="flex flex-wrap justify-end gap-2">
-          <ActionButton
-            className="min-h-11"
-            disabled={publish.isPending}
-            onClick={close}
-            variant="outline"
-          >
-            取消
-          </ActionButton>
-          <ActionButton
-            className="h-auto min-h-11 max-w-full whitespace-normal wrap-anywhere"
-            aria-label={`${label}「${review?.name || output.name}」`}
-            aria-busy={publish.isPending}
-            disabled={
-              !review?.link ||
-              !preview?.previewDigest ||
-              preview.valid !== true ||
-              inspect.isPending
-            }
-            onClick={confirm}
-            variant="default"
-            pending={!!publish.isPending}
-          >
-            {label}
-          </ActionButton>
-        </div>
-      </div>
     </TaskDialog>
   );
 }

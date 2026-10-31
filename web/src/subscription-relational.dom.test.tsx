@@ -619,3 +619,22 @@ it("lets long client names wrap inside the owned-link row instead of clipping th
     style.remove();
   }
 });
+
+it("wraps an unbroken configuration identity instead of clipping it at the card edge", async () => {
+  const name = `${"Travel_Work_".repeat(12)}東京`;
+  inventory([{ ...profile, name }], [output("phone", "Phone")]);
+  mount();
+  const heading = await screen.findByRole("heading", { name });
+  const style = document.createElement("style");
+  style.textContent = (
+    await compile("@theme { --spacing: 0.25rem; } @tailwind utilities;")
+  ).build([...heading.classList]);
+  document.head.append(style);
+  try {
+    expect(heading.textContent).toBe(name);
+    expect(getComputedStyle(heading).overflowWrap).toBe("anywhere");
+    expect(getComputedStyle(heading).textOverflow).not.toBe("ellipsis");
+  } finally {
+    style.remove();
+  }
+});

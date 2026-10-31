@@ -20,7 +20,9 @@ import { X } from "lucide-react";
 import {
   useCallback,
   useId,
+  useLayoutEffect,
   useRef,
+  useState,
   type ComponentProps,
   type ReactNode,
   type Ref,
@@ -46,7 +48,7 @@ export interface TaskOverlayProps {
   footer?: ReactNode;
   pending?: boolean;
   size?: "sm" | "md" | "lg" | "xl";
-  scrollMode?: "body" | "task";
+  scrollMode?: "body" | "task" | "auto";
   className?: string;
   initialFocus?: () => HTMLElement | null;
   onReady?(): void;
@@ -141,6 +143,74 @@ export function useTaskOverlayFocus(
   return { onOpenAutoFocus, onCloseAutoFocus };
 }
 
+/** Keep fixed completion when usable; tall chrome gets one sequential task flow. */
+function useMeasuredTaskScroll(
+  requested: NonNullable<TaskOverlayProps["scrollMode"]>,
+  hasFooter: boolean,
+  dialogInsetRem: number,
+) {
+  const [header, headerRef] = useState<HTMLDivElement | null>(null);
+  const [measured, setMeasured] = useState<"body" | "task">("body");
+  useLayoutEffect(() => {
+    if (requested !== "auto" || !header) return;
+    const container = header.closest<HTMLElement>("[data-task-overlay]");
+    if (!container) return;
+    const footer = container.querySelector<HTMLElement>(
+      "[data-task-overlay-footer]",
+    );
+    const measure = () => {
+      const style = getComputedStyle(container);
+      const rootFont =
+        parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
+      const viewport = Math.min(
+        window.innerHeight,
+        window.visualViewport?.height || window.innerHeight,
+      );
+      // The dialog's shared max-height leaves 2 rem outside; Sheets use the full
+      // viewport. Never derive capacity from the mode-dependent body height.
+      const viewportCapacity = Math.max(
+        0,
+        viewport - rootFont * dialogInsetRem,
+      );
+      const declaredMax = style.maxHeight.endsWith("px")
+        ? parseFloat(style.maxHeight)
+        : Infinity;
+      const capacity = Math.min(viewportCapacity, declaredMax);
+      // offsetHeight excludes the opening zoom transform, so animation cannot
+      // change this capacity decision without a real layout change.
+      const chrome =
+        header.offsetHeight +
+        (footer?.offsetHeight || 0) +
+        (parseFloat(style.paddingTop) || 0) +
+        (parseFloat(style.paddingBottom) || 0);
+      // Match the source task's usable reading/field reserve, scaling with
+      // enlarged text rather than shrinking copy or the consent controls.
+      const bodyReserve = Math.max(
+        200,
+        (parseFloat(style.fontSize) || 16) * 14,
+      );
+      const next = chrome + bodyReserve > capacity ? "task" : "body";
+      setMeasured((previous) => (previous === next ? previous : next));
+    };
+    measure();
+    const observer =
+      typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(measure)
+        : null;
+    observer?.observe(header);
+    if (footer) observer?.observe(footer);
+    observer?.observe(container);
+    window.addEventListener("resize", measure);
+    window.visualViewport?.addEventListener("resize", measure);
+    return () => {
+      observer?.disconnect();
+      window.removeEventListener("resize", measure);
+      window.visualViewport?.removeEventListener("resize", measure);
+    };
+  }, [requested, header, hasFooter, dialogInsetRem]);
+  return { headerRef, mode: requested === "auto" ? measured : requested };
+}
+
 const dialogSizes = {
   sm: "sm:max-w-sm",
   md: "sm:max-w-lg",
@@ -172,6 +242,11 @@ export function TaskDialog({
 }: TaskOverlayProps) {
   const focusEvents = useTaskOverlayFocus({ open, ...focus });
   const descriptionId = useId();
+  const { headerRef, mode } = useMeasuredTaskScroll(
+    scrollMode,
+    footer != null,
+    2,
+  );
   return (
     <Dialog
       open={open}
@@ -185,12 +260,12 @@ export function TaskDialog({
         {...focusEvents}
         showCloseButton={false}
         data-task-overlay="dialog"
-        data-task-scroll={scrollMode}
+        data-task-scroll={mode}
         aria-busy={pending || undefined}
         aria-describedby={description ? descriptionId : undefined}
         className={cn(
           "flex min-h-0 max-h-[calc(100dvh-2rem)] flex-col gap-0 overflow-clip p-0 motion-reduce:animate-none",
-          scrollMode === "task" && "overflow-y-auto",
+          mode === "task" && "overflow-y-auto",
           dialogSizes[size],
           className,
           contentProps?.className,
@@ -203,6 +278,7 @@ export function TaskDialog({
         }}
       >
         <DialogHeader
+          ref={scrollMode === "auto" ? headerRef : undefined}
           data-task-overlay-header
           className="min-w-0 shrink-0 border-b px-5 py-4 pr-14 text-left sm:px-6 sm:pr-14"
         >
@@ -235,7 +311,7 @@ export function TaskDialog({
           data-task-overlay-body
           className={cn(
             "min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain p-5 sm:p-6",
-            scrollMode === "task" && "flex-none overflow-visible",
+            mode === "task" && "flex-none overflow-visible",
             bodyProps?.className,
           )}
         >
@@ -273,6 +349,11 @@ export function TaskSheet({
 }: TaskOverlayProps & { side?: "left" | "right" }) {
   const focusEvents = useTaskOverlayFocus({ open, ...focus });
   const descriptionId = useId();
+  const { headerRef, mode } = useMeasuredTaskScroll(
+    scrollMode,
+    footer != null,
+    0,
+  );
   return (
     <Sheet
       open={open}
@@ -287,12 +368,13 @@ export function TaskSheet({
         {...focusEvents}
         showCloseButton={false}
         data-task-overlay="sheet"
-        data-task-scroll={scrollMode}
+        data-task-scroll={mode}
         aria-busy={pending || undefined}
         aria-describedby={description ? descriptionId : undefined}
         className={cn(
           "flex data-[side=left]:w-full data-[side=right]:w-full flex-col gap-0 overflow-hidden p-0 motion-reduce:animate-none motion-reduce:transition-none",
-          scrollMode === "task" && "overflow-y-auto",
+          mode === "task" && "overflow-y-auto",
+          scrollMode === "auto" && "max-h-dvh",
           sheetSizes[size],
           className,
           contentProps?.className,
@@ -305,6 +387,7 @@ export function TaskSheet({
         }}
       >
         <SheetHeader
+          ref={scrollMode === "auto" ? headerRef : undefined}
           data-task-overlay-header
           className="min-w-0 shrink-0 border-b px-5 py-4 pr-14 text-left sm:px-6 sm:pr-14"
         >
@@ -337,7 +420,7 @@ export function TaskSheet({
           data-task-overlay-body
           className={cn(
             "min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain p-5 sm:p-6",
-            scrollMode === "task" && "flex-none overflow-visible",
+            mode === "task" && "flex-none overflow-visible",
             bodyProps?.className,
           )}
         >

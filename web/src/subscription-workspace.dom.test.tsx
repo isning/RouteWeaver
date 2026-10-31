@@ -1197,8 +1197,11 @@ it.each(["create", "update"])(
       expect(
         within(decision).getByText("链接不变，其他订阅不受影响。"),
       ).toBeTruthy();
-      expect(decision.closest("[data-task-overlay-body]")).not.toBeNull();
-      expect(final.closest('[data-slot="dialog-footer"]')).toBeNull();
+      // Consequence and approval remain one decision outside the independently
+      // scrolling evidence body; constrained viewports use the whole-task flow.
+      expect(decision.closest("[data-task-overlay-body]")).toBeNull();
+      expect(decision.closest('[data-slot="dialog-footer"]')).not.toBeNull();
+      expect(final.closest('[data-slot="dialog-footer"]')).not.toBeNull();
     }
     for (const button of [
       final,
@@ -1223,9 +1226,10 @@ it.each(["create", "update"])(
         container.querySelector("[data-task-overlay-body]") as HTMLElement
       ).classList.contains("overflow-y-auto"),
     ).toBe(true);
-    for (const part of mode === "create"
-      ? ['[data-slot="dialog-header"]', '[data-slot="dialog-footer"]']
-      : ['[data-slot="dialog-header"]']) {
+    for (const part of [
+      '[data-slot="dialog-header"]',
+      '[data-slot="dialog-footer"]',
+    ]) {
       expect(
         (container.querySelector(part) as HTMLElement).classList.contains(
           "shrink-0",

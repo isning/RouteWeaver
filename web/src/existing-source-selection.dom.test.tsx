@@ -215,6 +215,11 @@ it(
     parent = within(
       await screen.findByRole("dialog", { name: "Unsaved collection" }),
     );
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        parent.getByRole("button", { name: "编辑来源 Paused" }),
+      ),
+    );
     expect(screen.queryByText("来源尚未加入集合")).toBeNull();
     expect((parent.getByLabelText("集合名称") as HTMLInputElement).value).toBe(
       "Unsaved collection",
@@ -241,6 +246,11 @@ it(
       expect(
         screen.queryByRole("region", { name: "需要处理的来源" }),
       ).toBeNull(),
+    );
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        parent.getByRole("button", { name: "添加来源" }),
+      ),
     );
     expect(
       (parent.getByLabelText("步骤 1 命名模板") as HTMLInputElement).value,

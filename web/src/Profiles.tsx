@@ -169,10 +169,10 @@ function ActionReferenceDetails({
   return (
     <details
       id={`${controlID}-references`}
-      className="profile-linked-details profile-reference-details text-sm [&>summary]:cursor-pointer [&>p]:mt-2 [&>ul]:mt-2"
+      className="profile-linked-details profile-reference-details min-w-0 text-sm wrap-anywhere [&>summary]:cursor-pointer [&>p]:mt-2 [&>ul]:mt-2"
       aria-label={`${location}的引用详情`}
     >
-      <summary>引用详情</summary>
+      <summary className="min-h-11 py-3">引用详情</summary>
       <ul>
         {options.map((option) => (
           <li key={option.value}>

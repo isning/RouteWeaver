@@ -1,6 +1,13 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { flushSync } from "react-dom";
 import { UIProviders } from "./ui-patterns/providers";
@@ -796,3 +803,40 @@ it("identifies exported node changes in the selected nodes-only decision without
     fetch.mock.calls.filter(([url]) => String(url).endsWith("/publish")),
   ).toHaveLength(0);
 });
+
+it.each(["preserve", "replace"] as const)(
+  "keeps %s consequence and approval outside independently scrolling review evidence",
+  async (link) => {
+    const diagnostics = Array.from(
+      { length: 40 },
+      (_, i) => `Review detail ${i + 1}`,
+    );
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => json(checked(link, { diagnostics }))),
+    );
+    mount(<UpdateOutput output={output} autoInspect onClose={() => {}} />);
+    const label =
+      link === "replace"
+        ? "重新发布并生成新链接「Daily」"
+        : "确认更新「Daily」";
+    const confirm = await screen.findByRole("button", { name: label });
+    await waitFor(() => expect(confirm).toHaveProperty("disabled", false));
+    const decision = screen.getByRole("group", { name: "更新确认" });
+    const consequence = within(decision).getByText(
+      link === "replace"
+        ? "发布后请在客户端换用新链接，其他订阅不受影响。"
+        : "链接不变，其他订阅不受影响。",
+    );
+    const footer = decision.closest("[data-task-overlay-footer]");
+    expect(footer).not.toBeNull();
+    expect(footer!.contains(consequence)).toBe(true);
+    expect(footer!.contains(confirm)).toBe(true);
+    expect(decision.closest("[data-task-overlay-body]")).toBeNull();
+    expect(
+      screen.getByText("Review detail 40").closest("[data-task-overlay-body]"),
+    ).not.toBeNull();
+    expect(within(decision).getByText("Daily")).toBeTruthy();
+    expect(within(decision).getByRole("button", { name: "取消" })).toBeTruthy();
+  },
+);

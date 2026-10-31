@@ -1,5 +1,30 @@
 import { test, expect, type Page, type Locator } from "@playwright/test";
 import { openWorkspace } from "./ui-session";
+import { surfaceMotionState } from "./ui-surface-stability";
+
+// Runs inside the page; capture geometry without exposing displayed values.
+function confirmationPointerGeometry(
+  el: Element,
+  point: { x: number; y: number },
+) {
+  const describe = (target: Element | null) =>
+    target && {
+      tag: target.tagName,
+      slot: target.getAttribute("data-slot"),
+      action: target.closest("button")?.getAttribute("aria-label") ?? null,
+      box: target.getBoundingClientRect().toJSON(),
+    };
+  return {
+    confirmation: describe(el),
+    hit: describe(document.elementFromPoint(point.x, point.y)),
+    stack: document
+      .elementsFromPoint(point.x, point.y)
+      .slice(0, 5)
+      .map(describe),
+    active: describe(document.activeElement),
+    viewport: { width: innerWidth, height: innerHeight, scrollX, scrollY },
+  };
+}
 
 // Only synthetic pre-publication states are deliberately photographed. The
 // explicit publish at the end can expose bearer links, so automatic capture is off.
@@ -576,9 +601,33 @@ for (const gesture of ["double click", "held Enter"] as const) {
       // In a short real viewport both stages share the constrained completion
       // position. In a tall viewport the new review legitimately moves the footer.
       await page.setViewportSize({ width: 1280, height: 480 });
+      await check.scrollIntoViewIfNeeded();
+      await info.attach("confirmation-check-viewport", {
+        body: JSON.stringify({
+          box: await check.boundingBox(),
+          viewport: await page.evaluate(() => ({
+            width: innerWidth,
+            height: innerHeight,
+          })),
+        }),
+        contentType: "application/json",
+      });
+      await expect(check).toBeInViewport({ ratio: 1 });
+      await expect
+        .poll(() => dialog.evaluate(surfaceMotionState))
+        .toEqual({
+          opacity: "1",
+          preparing: false,
+          running: false,
+        });
       const box = await check.boundingBox();
       expect(box).not.toBeNull();
-      const point = { x: box!.x + box!.width / 2, y: box!.y + box!.height / 2 };
+      // The prior native trace reported integer CSS coordinates. Hit-test the
+      // same integer point rather than a different fractional edge position.
+      const point = {
+        x: Math.floor(box!.x + box!.width / 2),
+        y: Math.floor(box!.y + box!.height / 2),
+      };
       await page.mouse.click(point.x, point.y);
       await expect(status).toBeFocused();
       const fresh = dialog.getByRole("button", {
@@ -586,10 +635,37 @@ for (const gesture of ["double click", "held Enter"] as const) {
         exact: true,
       });
       await expect(fresh).toBeEnabled();
+      await info.attach("confirmation-fresh-viewport", {
+        body: JSON.stringify(
+          await fresh.evaluate(confirmationPointerGeometry, point),
+        ),
+        contentType: "application/json",
+      });
+      await expect(fresh).toBeInViewport({ ratio: 1 });
+      await expect
+        .poll(() => dialog.evaluate(surfaceMotionState))
+        .toEqual({
+          opacity: "1",
+          preparing: false,
+          running: false,
+        });
       const hitsFreshConfirmation = await fresh.evaluate(
         (el, p) => el.contains(document.elementFromPoint(p.x, p.y)),
         point,
       );
+      await info.attach("confirmation-shared-pointer-geometry", {
+        body: JSON.stringify({
+          point,
+          checkBox: box,
+          confirmationBox: await fresh.boundingBox(),
+          viewport: await page.evaluate(() => ({
+            width: innerWidth,
+            height: innerHeight,
+          })),
+          hitsFreshConfirmation,
+        }),
+        contentType: "application/json",
+      });
       expect(hitsFreshConfirmation).toBe(true);
       // mouse.click({clickCount:2}) generates a new detail=1 click first.
       // Send only this gesture's native second down/up pair at the unchanged
@@ -599,6 +675,10 @@ for (const gesture of ["double click", "held Enter"] as const) {
           type: string;
           detail: number;
           action: string | null;
+          targetTag: string | null;
+          targetSlot: string | null;
+          targetBox: unknown;
+          confirmationBox: unknown;
           x: number;
           y: number;
         };
@@ -621,6 +701,17 @@ for (const gesture of ["double click", "held Enter"] as const) {
             type: event.type,
             detail: mouse.detail,
             action,
+            targetTag:
+              event.target instanceof Element ? event.target.tagName : null,
+            targetSlot:
+              event.target instanceof Element
+                ? event.target.getAttribute("data-slot")
+                : null,
+            targetBox:
+              event.target instanceof Element
+                ? event.target.getBoundingClientRect().toJSON()
+                : null,
+            confirmationBox: el.getBoundingClientRect().toJSON(),
             x: mouse.clientX,
             y: mouse.clientY,
           });
@@ -639,8 +730,16 @@ for (const gesture of ["double click", "held Enter"] as const) {
       // Refresh native hit targeting after the keyed Check button was replaced;
       // do not move to a new point or dispatch a synthetic DOM click.
       await page.mouse.move(point.x, point.y);
+      const beforeNativePair = await fresh.evaluate(
+        confirmationPointerGeometry,
+        point,
+      );
       await page.mouse.down({ clickCount: 2 });
       await page.mouse.up({ clickCount: 2 });
+      const afterNativePair = await fresh.evaluate(
+        confirmationPointerGeometry,
+        point,
+      );
       const nativeGesture = await page.evaluate(() => {
         const state = window as unknown as {
           confirmationClickDetails: number[];
@@ -658,6 +757,8 @@ for (const gesture of ["double click", "held Enter"] as const) {
           point,
           expectedAction: `创建并发布「${changedName}」`,
           hitsFreshConfirmation,
+          beforeNativePair,
+          afterNativePair,
           ...nativeGesture,
         }),
         contentType: "application/json",

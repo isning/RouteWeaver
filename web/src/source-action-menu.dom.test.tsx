@@ -2,6 +2,8 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
+import { useConfirm } from "./ui-patterns/confirmations";
 import { UIProviders } from "./ui-patterns/providers";
 import { SourceActionMenu } from "./SourceActionMenu";
 
@@ -113,4 +115,63 @@ it("keeps the row available while open and releases Tab to native page traversal
   await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
   expect(document.activeElement).toBe(trigger);
   expect(onDelete).not.toHaveBeenCalled();
+});
+
+it("keeps the pending review opener focusable without allowing another menu action", async () => {
+  let finish!: () => void;
+  const checking = new Promise<void>((resolve) => {
+    finish = resolve;
+  });
+  const onConfirm = vi.fn();
+  function Host() {
+    const [loading, setLoading] = useState(false);
+    const confirm = useConfirm();
+    return (
+      <SourceActionMenu
+        sourceName="Checked source"
+        loading={loading}
+        deleteDisabled={loading}
+        onDelete={async () => {
+          setLoading(true);
+          await checking;
+          confirm({
+            title: "删除来源？",
+            description: "删除已检查的来源。",
+            confirmLabel: "删除",
+            cancelLabel: "保留来源",
+            onConfirm,
+          });
+          setLoading(false);
+        }}
+      />
+    );
+  }
+  render(
+    <UIProviders>
+      <Host />
+    </UIProviders>,
+  );
+  const user = userEvent.setup();
+  const trigger = screen.getByRole("button", {
+    name: "更多操作 Checked source",
+  }) as HTMLButtonElement;
+  await user.click(trigger);
+  await user.click(await screen.findByRole("menuitem", { name: "删除来源" }));
+  await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
+  // Native disabled buttons lose focus while the asynchronous reference check runs.
+  expect(trigger.disabled).toBe(false);
+  expect(trigger.getAttribute("aria-disabled")).toBe("true");
+  expect(trigger.getAttribute("aria-busy")).toBe("true");
+  expect(document.activeElement).toBe(trigger);
+  await user.keyboard("{Enter}");
+  await user.click(trigger);
+  expect(screen.queryByRole("menu")).toBeNull();
+  await act(async () => {
+    finish();
+  });
+  await screen.findByRole("alertdialog", { name: "删除来源？" });
+  await user.keyboard("{Escape}");
+  await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+  await waitFor(() => expect(document.activeElement).toBe(trigger));
+  expect(onConfirm).not.toHaveBeenCalled();
 });

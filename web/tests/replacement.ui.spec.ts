@@ -1,5 +1,6 @@
 import { openWorkspace, navigateWorkspace } from "./ui-session";
 import { createHash } from "node:crypto";
+import { auditTextGeometry } from "./text-geometry";
 import {
   test,
   expect,
@@ -394,7 +395,7 @@ test("normal private-rule bundle update immediately offers a real configuration-
     headers,
     data: {
       id: `bundle-${profile.id}`,
-      name: `Private bundle ${Date.now().toString(36)}`,
+      name: `Travel laptop — private company domains and family streaming — configuration bundle ${Date.now().toString(36)}`,
       profileId: profile.id,
       target: profile.target,
       mode: "full",
@@ -439,14 +440,199 @@ test("normal private-rule bundle update immediately offers a real configuration-
     path: testInfo.outputPath("bundle-normal-update-review.png"),
     animations: "disabled",
   });
-  await review
-    .getByRole("button", { name: `确认更新「${output.name}」`, exact: true })
-    .click();
+  const confirm = review.getByRole("button", {
+    name: `确认更新「${output.name}」`,
+    exact: true,
+  });
+  const originalViewport = page.viewportSize()!;
+  const identity = review
+    .getByRole("group", { name: "更新确认", exact: true })
+    .getByText(output.name, { exact: true });
+  const consequence = review.getByText(
+    "发布后请下载配置与规则文件包并导入客户端，不提供普通订阅链接或二维码。其他订阅不受影响。",
+    { exact: true },
+  );
+  // Review is read-only even when resizing, scrolling and enlarging its text.
+  const publications: string[] = [];
+  page.on("request", (request) => {
+    const path = new URL(request.url()).pathname;
+    if (
+      request.method() === "POST" &&
+      path === `/api/me/outputs/${output.id}/publish`
+    )
+      publications.push(path);
+  });
+  const revealWithWheel = async (target: Locator) => {
+    const maximumSteps = await review.evaluate(
+      (element) => Math.ceil(element.scrollHeight / 120) + 2,
+    );
+    for (let attempt = 0; attempt < maximumSteps; attempt++) {
+      const bounds = await target.boundingBox();
+      const surface = await review.boundingBox();
+      expect(bounds).not.toBeNull();
+      expect(surface).not.toBeNull();
+      if (
+        bounds!.y >= surface!.y + 1 &&
+        bounds!.y + bounds!.height <= surface!.y + surface!.height - 1
+      )
+        break;
+      await page.mouse.move(surface!.x + 8, surface!.y + surface!.height / 2);
+      await page.mouse.wheel(0, bounds!.y < surface!.y + 1 ? -120 : 120);
+      // Observe a rendered wheel frame, not a fixed sleep or programmatic scroll.
+      await page.evaluate(
+        () =>
+          new Promise<void>((resolve) =>
+            requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+          ),
+      );
+    }
+    await expect(target).toBeInViewport({ ratio: 1 });
+  };
+  await page.setViewportSize({ width: 390, height: 480 });
+  await expect(review).toHaveAttribute("data-task-scroll", "task");
+  await revealWithWheel(review.locator("[data-task-overlay-header]"));
+  await revealWithWheel(identity);
+  await expect(identity).toHaveText(output.name);
+  await revealWithWheel(consequence);
+  await revealWithWheel(confirm);
+  await expect(consequence).toBeInViewport({ ratio: 1 });
+  await expect(confirm).toBeEnabled();
+  await page.screenshot({
+    path: testInfo.outputPath("bundle-long-name-short-review.png"),
+    animations: "disabled",
+  });
+  const originalFont = await confirm.evaluate((element) =>
+    parseFloat(getComputedStyle(element).fontSize),
+  );
+  // Snapshot every computed size before changing ancestors: exactly 2x text,
+  // not compounded inheritance. This is not browser-native zoom.
+  const textSizes = await review.evaluateHandle((root) => {
+    const entries = [root, ...root.querySelectorAll<HTMLElement>("*")]
+      .filter(
+        (element): element is HTMLElement => element instanceof HTMLElement,
+      )
+      .map((element) => ({
+        element,
+        font: element.style.getPropertyValue("font-size"),
+        fontPriority: element.style.getPropertyPriority("font-size"),
+        line: element.style.getPropertyValue("line-height"),
+        linePriority: element.style.getPropertyPriority("line-height"),
+        computedFont: parseFloat(getComputedStyle(element).fontSize),
+        computedLine: getComputedStyle(element).lineHeight,
+      }));
+    for (const value of entries) {
+      value.element.style.setProperty(
+        "font-size",
+        `${value.computedFont * 2}px`,
+        "important",
+      );
+      if (value.computedLine !== "normal")
+        value.element.style.setProperty(
+          "line-height",
+          `${parseFloat(value.computedLine) * 2}px`,
+          "important",
+        );
+    }
+    return entries;
+  });
+  try {
+    await expect
+      .poll(() =>
+        confirm.evaluate((element) =>
+          parseFloat(getComputedStyle(element).fontSize),
+        ),
+      )
+      .toBeCloseTo(originalFont * 2, 2);
+    await expect(review).toHaveAttribute("data-task-scroll", "task");
+    await revealWithWheel(review.locator("[data-task-overlay-header]"));
+    await revealWithWheel(identity);
+    const namePaint = await identity.evaluate((element) => {
+      const range = document.createRange();
+      range.selectNodeContents(element);
+      const parent = element.parentElement!.getBoundingClientRect();
+      return Array.from(range.getClientRects()).every(
+        (line) =>
+          line.left >= parent.left - 1 &&
+          line.right <= parent.right + 1 &&
+          line.top >= parent.top - 1 &&
+          line.bottom <= parent.bottom + 1,
+      );
+    });
+    expect(
+      namePaint,
+      "The complete long identity wraps inside its decision paragraph",
+    ).toBe(true);
+    await page.screenshot({
+      path: testInfo.outputPath("bundle-long-name-200pct-identity.png"),
+      animations: "disabled",
+    });
+    await revealWithWheel(consequence);
+    await revealWithWheel(confirm);
+    const tabStops = await review
+      .locator("button,a[href],input,select,textarea,[tabindex='0']")
+      .count();
+    for (
+      let step = 0;
+      step <= tabStops &&
+      !(await confirm.evaluate(
+        (element) => element === document.activeElement,
+      ));
+      step++
+    )
+      await page.keyboard.press("Tab");
+    await expect(confirm).toBeFocused();
+    await expect(consequence).toBeInViewport({ ratio: 1 });
+    await expect(confirm).toBeInViewport({ ratio: 1 });
+    expect((await confirm.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    await expect(page.locator("body")).toHaveJSProperty("scrollWidth", 390);
+    const geometry = await review.evaluate(auditTextGeometry);
+    expect(geometry.issues).toEqual([]);
+    await page.screenshot({
+      path: testInfo.outputPath("bundle-long-name-short-200pct-decision.png"),
+      animations: "disabled",
+    });
+    await testInfo.attach("bundle-long-name-reflow", {
+      body: JSON.stringify({
+        viewport: "390x480",
+        simulation: "computed font and line-height doubled; not native zoom",
+        wholeTaskScroll: true,
+        identityReachable: true,
+        consequenceBesideAction: true,
+        ...geometry,
+      }),
+      contentType: "application/json",
+    });
+  } finally {
+    await textSizes.evaluate((entries) => {
+      for (const value of entries) {
+        for (const [property, saved, priority] of [
+          ["font-size", value.font, value.fontPriority],
+          ["line-height", value.line, value.linePriority],
+        ]) {
+          if (saved) value.element.style.setProperty(property, saved, priority);
+          else value.element.style.removeProperty(property);
+        }
+      }
+    });
+    await textSizes.dispose();
+    await page.setViewportSize(originalViewport);
+  }
+  await expect(review).toHaveAttribute("data-task-scroll", "body");
+  expect(publications).toEqual([]);
+  const unchangedBundle = await page.request.get(before.downloadPath);
+  expect(unchangedBundle.ok()).toBe(true);
+  expect(
+    createHash("sha256")
+      .update(await unchangedBundle.body())
+      .digest("hex"),
+  ).toBe(createHash("sha256").update(beforeBytes).digest("hex"));
+  await confirm.click();
   const access = page.getByRole("dialog", {
     name: `获取「${output.name}」`,
     exact: true,
   });
   await expect(access).toBeVisible();
+  expect(publications).toHaveLength(1);
   await expect(
     access.getByLabel("订阅链接", { exact: true }),
   ).not.toBeVisible();

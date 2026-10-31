@@ -2624,6 +2624,61 @@ test("25 synthetic configurations and 100 independent links remain searchable, b
     longProfile.getByRole("group", { name: /^客户端订阅 / }),
   ).toHaveCount(5);
   await expect(page.locator("body")).toHaveJSProperty("scrollWidth", 390);
+  const longHeading = longProfile.getByRole("heading", {
+    level: 2,
+    name: profiles[0].name,
+    exact: true,
+  });
+  await expect(longHeading).toHaveText(profiles[0].name);
+  await longHeading.scrollIntoViewIfNeeded();
+  await expect(longHeading).toBeInViewport({ ratio: 1 });
+  // Body scrollWidth cannot detect text clipped by the owning card. Measure
+  // every painted line of the full identity, not just its containing element.
+  const headingGeometry = await longHeading.evaluate((element) => {
+    const bounds = element.getBoundingClientRect();
+    const card = element.closest("article")!.getBoundingClientRect();
+    const range = document.createRange();
+    range.selectNodeContents(element);
+    return {
+      textOverflow: getComputedStyle(element).textOverflow,
+      bounds: {
+        left: bounds.left,
+        right: bounds.right,
+        top: bounds.top,
+        bottom: bounds.bottom,
+      },
+      card: { left: card.left, right: card.right },
+      viewportWidth: innerWidth,
+      lines: Array.from(range.getClientRects())
+        .filter((line) => line.width > 0 && line.height > 0)
+        .map((line) => ({
+          left: line.left,
+          right: line.right,
+          top: line.top,
+          bottom: line.bottom,
+        })),
+    };
+  });
+  await testInfo.attach("long-profile-heading-geometry", {
+    body: JSON.stringify(headingGeometry),
+    contentType: "application/json",
+  });
+  expect(headingGeometry.textOverflow).not.toBe("ellipsis");
+  expect(headingGeometry.lines.length).toBeGreaterThan(1);
+  for (const line of headingGeometry.lines) {
+    expect(line.left).toBeGreaterThanOrEqual(
+      Math.max(headingGeometry.bounds.left, headingGeometry.card.left, 0) - 1,
+    );
+    expect(line.right).toBeLessThanOrEqual(
+      Math.min(
+        headingGeometry.bounds.right,
+        headingGeometry.card.right,
+        headingGeometry.viewportWidth,
+      ) + 1,
+    );
+    expect(line.top).toBeGreaterThanOrEqual(headingGeometry.bounds.top - 1);
+    expect(line.bottom).toBeLessThanOrEqual(headingGeometry.bounds.bottom + 1);
+  }
   await page.screenshot({
     path: testInfo.outputPath("long-names-bounded-links-mobile.png"),
     animations: "disabled",

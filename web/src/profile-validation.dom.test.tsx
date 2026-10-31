@@ -9,6 +9,7 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { compile } from "tailwindcss";
 import { UIProviders } from "./ui-patterns/providers";
 import {
   onlineManager,
@@ -1187,4 +1188,33 @@ it("keeps a large connection list bounded while a retained reference remains sea
     ).toHaveLength(1),
   );
   expect(writes[0].body.ir.defaultAction).toEqual(profile.ir.defaultAction);
+});
+
+it("keeps reference disclosure native, touch-sized, and its full identity readable", async () => {
+  const profile = fixture();
+  const reference = `ep_${"retained-reference-".repeat(12)}`;
+  profile.ir.defaultAction = { kind: "endpoint", ref: reference };
+  mount(profile);
+  const details = await screen.findByLabelText("默认去向的引用详情", {
+    selector: "details",
+  });
+  const summary = within(details).getByText("引用详情");
+  const style = document.createElement("style");
+  style.textContent = (
+    await compile("@theme { --spacing: 0.25rem; } @tailwind utilities;")
+  ).build([...details.classList, ...summary.classList]);
+  document.head.append(style);
+  try {
+    expect(summary.tagName).toBe("SUMMARY");
+    expect(getComputedStyle(summary).display).toBe("list-item");
+    expect(getComputedStyle(summary).minHeight).toBe(
+      "calc(var(--spacing) * 11)",
+    );
+    expect(getComputedStyle(details).overflowWrap).toBe("anywhere");
+    await userEvent.click(summary);
+    expect(details).toHaveProperty("open", true);
+    expect(within(details).getByText(reference).textContent).toBe(reference);
+  } finally {
+    style.remove();
+  }
 });

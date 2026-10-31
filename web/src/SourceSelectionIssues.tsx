@@ -22,11 +22,17 @@ export function sourceSelectionLabel(source: Source, checked: boolean) {
 export function SourceSelectionIssues({
   sources,
   onRepair,
+  onRepairButtonRef,
   onRemove,
   removeCollection,
 }: {
   sources: Source[];
   onRepair: (source: Source, trigger: HTMLElement) => void;
+  /** Allows an owning task to restore this source's action after remount. */
+  onRepairButtonRef?: (
+    sourceID: string,
+    button: HTMLButtonElement | null,
+  ) => void;
   onRemove?: (source: Source) => void;
   removeCollection?: ReactNode;
 }) {
@@ -47,6 +53,9 @@ export function SourceSelectionIssues({
             </span>
             <div className="flex shrink-0 flex-wrap items-center gap-2">
               <ActionButton
+                ref={(button) => {
+                  onRepairButtonRef?.(source.id, button);
+                }}
                 size="sm"
                 variant="outline"
                 aria-label={`${source.enabled && source.candidate ? "检查导入" : "编辑来源"} ${source.name}`}

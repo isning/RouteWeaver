@@ -72,6 +72,9 @@ import {
 } from "./SourceSelectionIssues";
 export { SourceEditorDialog } from "./SourceEditorDialog";
 export type { SourceEditorDialogProps } from "./SourceEditorDialog";
+const sourceApplicationNoticeID = (sourceID: string) =>
+  `source-application:${sourceID}`;
+
 export function SourcesPage({
   onAdded,
   onEditingChange,
@@ -116,7 +119,9 @@ export function SourcesPage({
       }));
     onAccepted?.(receipt);
     setDetail((current) => (current?.id === source.id ? source : current));
-    message.success("来源已应用，已发布订阅未改变");
+    message.success(`「${source.name}」已应用，已发布订阅未改变`, {
+      id: sourceApplicationNoticeID(source.id),
+    });
   };
   const recoverApplication = (
     source: Source,
@@ -419,8 +424,12 @@ export function SourcesPage({
                           aria-label={`查看上次应用结果 ${s.name}`}
                           disabled={application.pending || otherWritePending}
                           onClick={() => {
-                            if (!application.isRunning())
+                            if (!application.isRunning()) {
+                              // This durable receipt now owns the success feedback.
+                              // Preserve unrelated-source and failure notices.
+                              message.dismiss(sourceApplicationNoticeID(s.id));
                               setAccepted(receipts[s.id]);
+                            }
                           }}
                           variant="link"
                         >
@@ -515,10 +524,12 @@ export function SourcesPage({
       <SourceUpdateReview
         source={review}
         recovery={reviewRecovery}
-        onAccepted={(receipt) => {
+        onAccepted={(receipt, source) => {
           // Acceptance is complete: do not keep a pending review/dirty guard alive.
           setReview(null);
-          message.success("来源已应用，已发布订阅未改变");
+          message.success(`「${source.name}」已应用，已发布订阅未改变`, {
+            id: sourceApplicationNoticeID(source.id),
+          });
           if (!acceptanceReceipts)
             setLocalReceipts((current) => ({
               ...current,
@@ -749,6 +760,22 @@ export function CollectionsPage() {
   const sourceReturnTrigger = useRef<HTMLElement | null>(null);
   const sourceNoticeTrigger = useRef<HTMLButtonElement>(null);
   const sourceReturnNotice = useRef(false);
+  const sourceReturnSelectedID = useRef<string | null>(null);
+  const sourceRepairButtons = useRef(new Map<string, HTMLButtonElement>());
+  const sourceReturnTarget = () => {
+    if (sourceReturnTrigger.current?.isConnected)
+      return sourceReturnTrigger.current;
+    // The owning Sheet remounts after a subtask. Resolve the logical source
+    // identity, not its now-disconnected DOM node or a duplicate display name.
+    const repair = sourceReturnSelectedID.current
+      ? sourceRepairButtons.current.get(sourceReturnSelectedID.current)
+      : null;
+    return (
+      repair ||
+      (sourceReturnNotice.current && sourceNoticeTrigger.current) ||
+      sourceTrigger.current
+    );
+  };
   const returnFocus = useRef<number | null>(null);
   useLayoutEffect(
     () => () => {
@@ -852,6 +879,7 @@ export function CollectionsPage() {
     if (sourceOwner.current || save.isPending) return;
     sourceReturnTrigger.current = trigger;
     sourceReturnNotice.current = false;
+    sourceReturnSelectedID.current = source.id;
     const task = { owner: collectionSession.current, source };
     setSourceNotice(null);
     setError(null);
@@ -929,12 +957,7 @@ export function CollectionsPage() {
           ((open) => {
             if (open && returnFocus.current === collectionSession.current) {
               returnFocus.current = null;
-              (sourceReturnTrigger.current?.isConnected
-                ? sourceReturnTrigger.current
-                : sourceReturnNotice.current
-                  ? (sourceNoticeTrigger.current ?? sourceTrigger.current)
-                  : sourceTrigger.current
-              )?.focus();
+              sourceReturnTarget()?.focus();
             }
           })(true)
         }
@@ -942,12 +965,7 @@ export function CollectionsPage() {
           ((open) => {
             if (open && returnFocus.current === collectionSession.current) {
               returnFocus.current = null;
-              (sourceReturnTrigger.current?.isConnected
-                ? sourceReturnTrigger.current
-                : sourceReturnNotice.current
-                  ? (sourceNoticeTrigger.current ?? sourceTrigger.current)
-                  : sourceTrigger.current
-              )?.focus();
+              sourceReturnTarget()?.focus();
             }
           })(false)
         }
@@ -1018,6 +1036,10 @@ export function CollectionsPage() {
             <SourceSelectionIssues
               sources={unavailableSources}
               onRepair={openSelectedSource}
+              onRepairButtonRef={(id, button) => {
+                if (button) sourceRepairButtons.current.set(id, button);
+                else sourceRepairButtons.current.delete(id);
+              }}
               onRemove={(source) => {
                 setError(null);
                 changeDraft({
@@ -1044,6 +1066,7 @@ export function CollectionsPage() {
                 if (sourceOwner.current || save.isPending) return;
                 sourceReturnTrigger.current = event.currentTarget;
                 sourceReturnNotice.current = false;
+                sourceReturnSelectedID.current = null;
                 const task = { owner: collectionSession.current };
                 setSourceNotice(null);
                 sourceOwner.current = task;
@@ -1075,6 +1098,7 @@ export function CollectionsPage() {
                       if (sourceOwner.current || save.isPending) return;
                       sourceReturnTrigger.current = event.currentTarget;
                       sourceReturnNotice.current = true;
+                      sourceReturnSelectedID.current = null;
                       const task = {
                         owner: collectionSession.current,
                         source: sourceNotice,

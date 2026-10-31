@@ -8,6 +8,7 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { toast } from "sonner";
 import { UIProviders } from "./ui-patterns/providers";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SourcesPage } from "./Sources";
@@ -146,10 +147,16 @@ it("offers optional change details and applies the exact manual update without a
   expect(within(dialog).queryByText("新增 · 0")).toBeNull();
   await user.click(within(dialog).getByRole("button", { name: "应用更新" }));
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  expect(
+    await screen.findByText("「My airport」已应用，已发布订阅未改变"),
+  ).toBeTruthy();
+  const dismiss = vi.spyOn(toast, "dismiss");
   await user.click(
     await screen.findByRole("button", { name: "查看上次应用结果 My airport" }),
   );
   const accepted = await screen.findByRole("dialog", { name: "上次应用详情" });
+  // The durable receipt owns this success now; unrelated/error feedback is not cleared.
+  expect(dismiss).toHaveBeenCalledExactlyOnceWith("source-application:airport");
   expect(hasUnsavedChanges()).toBe(false);
   expect(
     within(accepted).getByText("来源已更新，已发布订阅未改变。"),
