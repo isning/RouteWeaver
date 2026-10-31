@@ -55,6 +55,26 @@ class CIGateTests(unittest.TestCase):
             if not reference.startswith("./"):
                 self.assertRegex(reference, r"^[^@]+@[0-9a-f]{40}$")
 
+    def test_browser_ci_uses_installed_chrome_without_weakening_sandbox(self):
+        root = Path(__file__).resolve().parents[1]
+        workflow = (root / ".github/workflows/ci.yml").read_text()
+        browser = workflow.split("\n  browser:\n", 1)[1].split("\n  native:\n", 1)[0]
+        self.assertIn("ROUTEWEAVER_CHROMIUM: /opt/google/chrome/chrome", browser)
+        self.assertIn("dpkg-query -S", browser)
+        self.assertIn("dpkg-query --control-show google-chrome-stable md5sums", browser)
+        self.assertIn("md5sum --check --strict", browser)
+        self.assertIn("browser-environment.json", browser)
+        self.assertIn("chromiumSandbox: true", browser)
+        self.assertNotIn("playwright install --with-deps chromium", browser)
+        for forbidden in ("--no-sandbox", "chromiumSandbox: false", "sysctl", "apparmor_parser", "continue-on-error"):
+            self.assertNotIn(forbidden, browser)
+        config = (root / "web/playwright.config.ts").read_text()
+        self.assertIn("chromiumSandbox: true", config)
+        self.assertIn("executablePath: process.env.ROUTEWEAVER_CHROMIUM", config)
+        native = (root / "web/tests/native-browser.ts").read_text()
+        self.assertIn("globalThis.process.env.ROUTEWEAVER_CHROMIUM", native)
+        self.assertNotIn("--no-sandbox", native)
+
 
 if __name__ == "__main__":
     unittest.main()
