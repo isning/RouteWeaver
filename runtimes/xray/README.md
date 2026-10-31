@@ -131,7 +131,7 @@ The delivered agent-supervised process path is supported and positively tested o
 Linux (this environment: amd64). It uses the Linux supervisor's existing pidfd
 ownership checks and parent-death signal. Do not infer Windows/macOS supervised
 runtime support from Go portability; unsupported supervisors remain rejected.
-The module requires the pinned Go version declared in `go.mod` (currently 1.27.2).
+The module requires the pinned Go version declared in `go.mod` (currently 1.27.3).
 No Xray source files are modified or vendored. Transitive libraries are selected
 by Go's module graph and checked in `go.sum`; some shared Go libraries are newer
 than Xray's minimum due to the root module requirements.

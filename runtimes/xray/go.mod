@@ -1,6 +1,6 @@
 module routeweaver/runtimes/xray
 
-go 1.27.2
+go 1.27.3
 
 require (
 	github.com/andybalholm/brotli v1.0.6 // indirect

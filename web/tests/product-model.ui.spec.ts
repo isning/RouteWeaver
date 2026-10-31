@@ -555,6 +555,9 @@ test("controlled empty inventories name the task and server registration does no
   await registration.getByRole("button", { name: /^取\s*消$/ }).click();
   await expect(registration).not.toBeVisible();
   await page.setViewportSize({ width: 1440, height: 900 });
+  await expect(
+    page.getByRole("navigation", { name: "工作空间导航", exact: true }),
+  ).toBeVisible();
   await navigateWorkspace(page, "转发路径");
   await expect(
     page.getByRole("heading", { name: "转发路径", exact: true }),
@@ -2279,8 +2282,28 @@ test("same rule counts are not represented as identical routing when rule conten
   await expect(
     decision.getByText("链接不变，其他订阅不受影响。", { exact: true }),
   ).toBeInViewport({ ratio: 1 });
+  const technical = review.getByRole("button", {
+    name: "查看待发布技术配置",
+    exact: true,
+  });
+  // The evidence body scrolls independently of the fixed decision footer.
+  // Reaching that footer does not scroll the body's last optional disclosure.
+  await review
+    .locator("[data-task-overlay-body]")
+    .hover({ position: { x: 8, y: 8 } });
+  await page.mouse.wheel(0, 1000);
+  await page.screenshot({
+    path: testInfo.outputPath("equal-counts-not-equal-rules-mobile.png"),
+    // Diagnostic capture must not fast-forward motion before geometry assertions.
+    animations: "allow",
+  });
+  await expect(technical).toBeInViewport({ ratio: 1 });
+  await expect(review.locator("[data-task-overlay-header]")).toBeInViewport({
+    ratio: 1,
+  });
+  await expect(decision).toBeInViewport({ ratio: 1 });
   await expect(
-    review.getByRole("button", { name: "查看待发布技术配置", exact: true }),
+    decision.getByText("链接不变，其他订阅不受影响。", { exact: true }),
   ).toBeInViewport({ ratio: 1 });
   await expect(confirm).toBeInViewport({ ratio: 1 });
   await expect(
@@ -2291,10 +2314,6 @@ test("same rule counts are not represented as identical routing when rule conten
     .toBeGreaterThanOrEqual(44);
   await expect(page.locator("body")).toHaveJSProperty("scrollWidth", 390);
   await expect(page.locator("[data-sonner-toast]")).toHaveCount(0);
-  await page.screenshot({
-    path: testInfo.outputPath("equal-counts-not-equal-rules-mobile.png"),
-    animations: "disabled",
-  });
   await confirm.click();
   await expect(review).not.toBeVisible();
   const after = await frozenState(page, selected.id);
