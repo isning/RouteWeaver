@@ -248,7 +248,16 @@ for (const viewportSize of [
     await expect(dialog.getByText("公告标题", { exact: true })).toBeInViewport({
       ratio: 1,
     });
-    await expect(dialog).toHaveAttribute("data-task-scroll", "task");
+    // Auto mode follows measured header/footer capacity, not viewport width alone.
+    // 320×360 needs whole-task scroll; 640×400 can retain a usable body rail.
+    if (viewportSize.width === 320) {
+      await expect(dialog).toHaveAttribute("data-task-scroll", "task");
+    } else {
+      const body = dialog.locator("[data-task-overlay-body]");
+      expect(
+        await body.evaluate((element) => element.clientHeight),
+      ).toBeGreaterThanOrEqual(200);
+    }
     await page.screenshot({
       path: info.outputPath(
         `announcement-short-reflow-${viewportSize.width}-field.png`,

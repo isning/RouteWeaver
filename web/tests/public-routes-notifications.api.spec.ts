@@ -134,6 +134,9 @@ test("real public route provisions a private principal but never claims an unreg
 test("announcement editing preserves read receipt, disabling removes it, and in-app test reports actual availability", async ({
   request,
 }) => {
+  // The real daemon evaluates once per minute, with a 15-second batch budget.
+  // Allow that lifecycle plus runner margin here, not a global UI timeout change.
+  test.setTimeout(90000);
   const auth = await request.post("/api/auth/login", {
     data: { username: "routeweaver", password: "local-demo-password" },
   });
@@ -155,8 +158,40 @@ test("announcement editing preserves read receipt, disabling removes it, and in-
     data: announcement,
   });
   expect(created.ok(), await created.text()).toBeTruthy();
-  const inbox = await (await request.get("/api/me/notifications")).json();
-  const item = inbox.find((n: any) => n.title === announcement.title);
+  // Saving schedules the notice; inbox GET is read-only and must not evaluate
+  // or dispatch it. Observe actual availability from the production worker.
+  await expect
+    .poll(
+      async () => {
+        const response = await request.get("/api/me/notifications");
+        if (!response.ok()) {
+          return { status: response.status(), error: await response.text() };
+        }
+        const inbox = await response.json();
+        return {
+          status: response.status(),
+          announcement: inbox.find((n: any) => n.announcementId === id),
+        };
+      },
+      {
+        message:
+          "saved announcement becomes available through the daemon worker",
+        timeout: 80000, // 60s tick + 15s batch + 5s runner margin
+        intervals: [250, 1000],
+      },
+    )
+    .toMatchObject({
+      status: 200,
+      announcement: {
+        announcementId: id,
+        title: announcement.title,
+        body: announcement.body,
+      },
+    });
+  const inboxResponse = await request.get("/api/me/notifications");
+  expect(inboxResponse.ok(), await inboxResponse.text()).toBeTruthy();
+  const inbox = await inboxResponse.json();
+  const item = inbox.find((n: any) => n.announcementId === id);
   expect(item).toBeTruthy();
   expect(
     (

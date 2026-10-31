@@ -44,6 +44,13 @@ func TestNotificationHTTPAudienceReadAndSettingsIsolation(t *testing.T) {
 	if code != 200 {
 		t.Fatalf("publish: %d %s", code, raw)
 	}
+	// A saved schedule is not delivery. Reading the inbox cannot replace the
+	// background worker, even for an immediately active announcement.
+	beforeCode, _, beforeBody := req(t, alice.c, "GET", srv.URL+"/api/me/notifications", "", nil)
+	var before []notifications.InboxItem
+	if beforeCode != 200 || json.Unmarshal([]byte(beforeBody), &before) != nil || len(before) != 0 {
+		t.Fatalf("announcement became available without worker delivery: %d %s", beforeCode, beforeBody)
+	}
 	if _, err := httpapi.RunNotificationBatch(context.Background(), s, "", now); err != nil {
 		t.Fatal(err)
 	}
