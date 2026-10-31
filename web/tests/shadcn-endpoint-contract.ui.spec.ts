@@ -164,7 +164,7 @@ test("native Enter submits the associated pinned footer once and retains the dra
   });
   const dialog = await editor(page);
   await dialog
-    .getByLabel("名称", { exact: true })
+    .getByLabel("端点名称", { exact: true })
     .fill("native-submit-fixture");
   await dialog.getByLabel("连接地址", { exact: true }).fill("endpoint.test");
   const submit = dialog.getByRole("button", { name: "保存", exact: true });
@@ -185,7 +185,7 @@ test("native Enter submits the associated pinned footer once and retains the dra
   await expect(
     dialog.getByText("synthetic endpoint save rejected"),
   ).toBeVisible();
-  await expect(dialog.getByLabel("名称", { exact: true })).toHaveValue(
+  await expect(dialog.getByLabel("端点名称", { exact: true })).toHaveValue(
     "native-submit-fixture",
   );
   await expect(submit).not.toHaveAttribute("aria-busy", "true");

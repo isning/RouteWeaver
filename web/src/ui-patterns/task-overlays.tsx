@@ -46,6 +46,7 @@ export interface TaskOverlayProps {
   footer?: ReactNode;
   pending?: boolean;
   size?: "sm" | "md" | "lg" | "xl";
+  scrollMode?: "body" | "task";
   className?: string;
   initialFocus?: () => HTMLElement | null;
   onReady?(): void;
@@ -162,6 +163,7 @@ export function TaskDialog({
   footer,
   pending = false,
   size = "md",
+  scrollMode = "body",
   className,
   contentProps,
   contentRef,
@@ -183,10 +185,12 @@ export function TaskDialog({
         {...focusEvents}
         showCloseButton={false}
         data-task-overlay="dialog"
+        data-task-scroll={scrollMode}
         aria-busy={pending || undefined}
         aria-describedby={description ? descriptionId : undefined}
         className={cn(
           "flex min-h-0 max-h-[calc(100dvh-2rem)] flex-col gap-0 overflow-clip p-0 motion-reduce:animate-none",
+          scrollMode === "task" && "overflow-y-auto",
           dialogSizes[size],
           className,
           contentProps?.className,
@@ -198,10 +202,18 @@ export function TaskDialog({
           if (pending) event.preventDefault();
         }}
       >
-        <DialogHeader className="min-w-0 shrink-0 border-b px-5 py-4 pr-14 text-left sm:px-6 sm:pr-14">
-          <DialogTitle className="min-w-0 text-lg leading-snug font-semibold tracking-tight [overflow-wrap:anywhere]">{title}</DialogTitle>
+        <DialogHeader
+          data-task-overlay-header
+          className="min-w-0 shrink-0 border-b px-5 py-4 pr-14 text-left sm:px-6 sm:pr-14"
+        >
+          <DialogTitle className="min-w-0 text-lg leading-snug font-semibold tracking-tight [overflow-wrap:anywhere]">
+            {title}
+          </DialogTitle>
           {description && (
-            <DialogDescription id={descriptionId} className="[overflow-wrap:anywhere]">
+            <DialogDescription
+              id={descriptionId}
+              className="[overflow-wrap:anywhere]"
+            >
               {description}
             </DialogDescription>
           )}
@@ -223,13 +235,17 @@ export function TaskDialog({
           data-task-overlay-body
           className={cn(
             "min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain p-5 sm:p-6",
+            scrollMode === "task" && "flex-none overflow-visible",
             bodyProps?.className,
           )}
         >
           {children}
         </div>
         {footer != null && (
-          <DialogFooter className="mx-0 mb-0 shrink-0 border-t px-5 py-3 sm:px-6 [&_button:not([role=checkbox]):not([role=switch]):not([role=radio])]:min-h-11 sm:[&_button:not([role=checkbox]):not([role=switch]):not([role=radio])]:min-h-9">
+          <DialogFooter
+            data-task-overlay-footer
+            className="mx-0 mb-0 shrink-0 border-t px-5 py-3 sm:px-6 [&_button:not([role=checkbox]):not([role=switch]):not([role=radio])]:min-h-11"
+          >
             {footer}
           </DialogFooter>
         )}
@@ -247,6 +263,7 @@ export function TaskSheet({
   footer,
   pending = false,
   size = "md",
+  scrollMode = "body",
   side = "right",
   className,
   contentProps,
@@ -270,10 +287,12 @@ export function TaskSheet({
         {...focusEvents}
         showCloseButton={false}
         data-task-overlay="sheet"
+        data-task-scroll={scrollMode}
         aria-busy={pending || undefined}
         aria-describedby={description ? descriptionId : undefined}
         className={cn(
           "flex data-[side=left]:w-full data-[side=right]:w-full flex-col gap-0 overflow-hidden p-0 motion-reduce:animate-none motion-reduce:transition-none",
+          scrollMode === "task" && "overflow-y-auto",
           sheetSizes[size],
           className,
           contentProps?.className,
@@ -285,10 +304,18 @@ export function TaskSheet({
           if (pending) event.preventDefault();
         }}
       >
-        <SheetHeader className="min-w-0 shrink-0 border-b px-5 py-4 pr-14 text-left sm:px-6 sm:pr-14">
-          <SheetTitle className="min-w-0 text-lg leading-snug font-semibold tracking-tight [overflow-wrap:anywhere]">{title}</SheetTitle>
+        <SheetHeader
+          data-task-overlay-header
+          className="min-w-0 shrink-0 border-b px-5 py-4 pr-14 text-left sm:px-6 sm:pr-14"
+        >
+          <SheetTitle className="min-w-0 text-lg leading-snug font-semibold tracking-tight [overflow-wrap:anywhere]">
+            {title}
+          </SheetTitle>
           {description && (
-            <SheetDescription id={descriptionId} className="[overflow-wrap:anywhere]">
+            <SheetDescription
+              id={descriptionId}
+              className="[overflow-wrap:anywhere]"
+            >
               {description}
             </SheetDescription>
           )}
@@ -310,13 +337,17 @@ export function TaskSheet({
           data-task-overlay-body
           className={cn(
             "min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain p-5 sm:p-6",
+            scrollMode === "task" && "flex-none overflow-visible",
             bodyProps?.className,
           )}
         >
           {children}
         </div>
         {footer != null && (
-          <SheetFooter className="shrink-0 border-t px-5 py-3 sm:px-6 [&_button:not([role=checkbox]):not([role=switch]):not([role=radio])]:min-h-11 sm:[&_button:not([role=checkbox]):not([role=switch]):not([role=radio])]:min-h-9">
+          <SheetFooter
+            data-task-overlay-footer
+            className="shrink-0 border-t px-5 py-3 sm:px-6 [&_button:not([role=checkbox]):not([role=switch]):not([role=radio])]:min-h-11"
+          >
             {footer}
           </SheetFooter>
         )}

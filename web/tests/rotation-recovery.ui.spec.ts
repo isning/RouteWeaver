@@ -268,7 +268,7 @@ for (const { width, origin } of [
         row.getByText("伦敦线路", { exact: true }),
         next,
         row.getByRole("button", { name: "轮换凭据", exact: true }),
-        row.getByRole("button", { name: "撤销", exact: true }),
+        row.getByRole("button", { name: "停止交付", exact: true }),
       ]) {
         const bounds = await target.boundingBox();
         expect(bounds).not.toBeNull();

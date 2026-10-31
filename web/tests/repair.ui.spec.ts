@@ -97,6 +97,11 @@ async function fixture(page: Page, repeated = false) {
   await page.reload();
   await page.getByText("订阅素材", { exact: true }).click();
   await navigateWorkspace(page, "订阅来源");
+  // Other journeys may leave synthetic sources on a different table page.
+  // Locate this exact named fixture through the same visible search as a user.
+  await page
+    .getByRole("textbox", { name: "搜索来源", exact: true })
+    .fill(source.name);
   await page
     .getByRole("button", { name: "编辑 " + source.name, exact: true })
     .click();

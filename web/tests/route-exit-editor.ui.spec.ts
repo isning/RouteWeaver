@@ -164,8 +164,17 @@ async function openEditor(page: Page) {
   await page.getByRole("button", { name: "英国线路", exact: true }).click();
   await page.getByRole("button", { name: "更换出口", exact: true }).click();
   await expect(
-    page.getByRole("dialog", { name: "英国线路", exact: true }),
+    page.getByRole("dialog", {
+      name: "英国线路",
+      exact: true,
+      includeHidden: true,
+    }),
   ).toHaveCount(1);
+  // Only the top modal is exposed to assistive technology; the route context
+  // remains mounted underneath and is restored on dismissal.
+  await expect(
+    page.getByRole("dialog", { name: "英国线路", exact: true }),
+  ).toHaveCount(0);
   await expect(
     page.getByRole("dialog", { name: "更换「英国线路」的出口", exact: true }),
   ).toHaveCount(1);
@@ -309,12 +318,16 @@ test("stale full-editor draft cannot overwrite a newer route; confirmation retur
   await expect(page.getByRole("textbox", { name: "线路名称" })).toHaveValue(
     "未保存的名称",
   );
-  const ordinaryGuard = page.waitForEvent("dialog");
-  const ordinaryEscape = page.keyboard.press("Escape");
-  const nativeConfirm = await ordinaryGuard;
-  expect(nativeConfirm.message()).toBe("放弃未保存的公开线路修改？");
-  await nativeConfirm.dismiss();
-  await ordinaryEscape;
+  await page.keyboard.press("Escape");
+  const ordinaryGuard = page.getByRole("alertdialog", {
+    name: "放弃未保存的公开线路修改？",
+    exact: true,
+  });
+  await expect(ordinaryGuard).toBeVisible();
+  await ordinaryGuard
+    .getByRole("button", { name: "继续编辑", exact: true })
+    .click();
+  await expect(ordinaryGuard).not.toBeVisible();
   await expect(discard).toBeFocused();
   await page.keyboard.press("Enter");
   await expect

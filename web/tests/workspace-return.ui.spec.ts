@@ -116,7 +116,7 @@ test("actual subscription search page and scroll survive materials detour withou
   await search(page).fill(f.prefix);
   await page
     .getByRole("navigation", { name: "配置清单分页" })
-    .getByTitle("2", { exact: true })
+    .getByRole("button", { name: "下一页", exact: true })
     .click();
   await expect(
     page.getByRole("article", {
@@ -184,7 +184,7 @@ test("Output owned Back Forward restores exact trigger and position; direct link
   await search(page).fill(f.prefix);
   await page
     .getByRole("navigation", { name: "配置清单分页" })
-    .getByTitle("2", { exact: true })
+    .getByRole("button", { name: "下一页", exact: true })
     .click();
   const trigger = page.getByRole("button", {
     name: "查看订阅 " + f.output.name,

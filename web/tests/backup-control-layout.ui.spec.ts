@@ -48,9 +48,9 @@ for (const width of [1440, 390]) {
     } else {
       expect(Math.abs(fileBox.width - passwordBox.width)).toBeLessThanOrEqual(2);
       expect(fileBox.width).toBeGreaterThan(300);
-      // Existing 390px screenshot target is 38px; no height change is intended.
-      expect(fileBox.height).toBeGreaterThanOrEqual(37);
-      expect(fileBox.height).toBeLessThanOrEqual(39);
+      // Task actions retain a real touch target, not the old38px skin height.
+      expect(fileBox.height).toBeGreaterThanOrEqual(44);
+      expect(fileBox.height).toBeLessThanOrEqual(48);
     }
     expect(Math.abs(fileBox.x - passwordBox.x)).toBeLessThanOrEqual(2);
     await choose.focus();

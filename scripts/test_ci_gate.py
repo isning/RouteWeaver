@@ -65,6 +65,11 @@ class CIGateTests(unittest.TestCase):
         self.assertIn("md5sum --check --strict", browser)
         self.assertIn("browser-environment.json", browser)
         self.assertIn("chromiumSandbox: true", browser)
+        self.assertIn("fail-fast: false", browser)
+        self.assertIn("shard: [1, 2, 3, 4]", browser)
+        self.assertIn("ROUTEWEAVER_BROWSER_SHARD: ${{ matrix.shard }}/4", browser)
+        self.assertIn("name: browser-diagnostics-${{ matrix.shard }}-of-4", browser)
+        self.assertIn("playwrightShard: process.env.ROUTEWEAVER_BROWSER_SHARD", browser)
         self.assertNotIn("playwright install --with-deps chromium", browser)
         for forbidden in ("--no-sandbox", "chromiumSandbox: false", "sysctl", "apparmor_parser", "continue-on-error"):
             self.assertNotIn(forbidden, browser)

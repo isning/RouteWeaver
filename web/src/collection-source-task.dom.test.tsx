@@ -285,6 +285,12 @@ it(
     expect(returnedParent.getByText("1. Two")).toBeTruthy();
     expect(returnedParent.getByText("2. One")).toBeTruthy();
     expect(returnedParent.getByText("3. New provider")).toBeTruthy();
+    expect(screen.queryByText("来源已添加", { exact: true })).toBeNull();
+    expect(
+      returnedParent
+        .getByText("当前集合已选择来源「New provider」。")
+        .getAttribute("role"),
+    ).toBe("status");
     expect(
       returnedParent.getByRole("button", { name: /3\. New provider.*来源处理/ })
         .textContent,
@@ -759,7 +765,7 @@ it(
     expect(writes).toHaveLength(1);
     await waitFor(() =>
       expect(document.activeElement).toBe(
-        parent.getByRole("button", { name: "添加来源" }),
+        parent.getByRole("button", { name: "查看变化" }),
       ),
     );
     await userEvent.click(parent.getByRole("button", { name: "查看变化" }));
@@ -1099,6 +1105,11 @@ it(
     expect(parent.getByText("1. Two")).toBeTruthy();
     expect(parent.getByText("2. One")).toBeTruthy();
     expect(parent.getByText("3. Full client configuration")).toBeTruthy();
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        parent.getByRole("button", { name: "添加来源" }),
+      ),
+    );
     expect(writes.map(({ path }) => path)).toEqual([
       "/me/sources",
       `/me/sources/${saved!.id}/apply`,

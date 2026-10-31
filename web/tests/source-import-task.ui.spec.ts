@@ -493,6 +493,7 @@ test("a rich Profile keeps its routing and ordered inputs through immediate real
     await page
       .getByLabel("策略组名称", { exact: true })
       .fill("Unsaved chosen group");
+    await page.getByRole("button", { name: "编辑来源", exact: true }).click();
     await page.getByRole("button", { name: "添加来源", exact: true }).click();
     const editor = page.getByRole("dialog", {
       name: "添加订阅来源",

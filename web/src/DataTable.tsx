@@ -59,7 +59,7 @@ export function TableRowActions({
 }) {
   return (
     <div
-      className="table-row-actions flex flex-col items-end gap-1"
+      className="table-row-actions flex w-48 max-w-[calc(var(--table-viewport-width,100vw)-2rem)] flex-col items-end gap-1"
       role="group"
       aria-label={`${name} 的操作`}
       onFocusCapture={(event) => {
@@ -77,10 +77,12 @@ export function TableRowActions({
           context.scrollIntoView({ block: "nearest", inline: "nearest" });
       }}
     >
-      <span className="table-row-action-target hidden text-xs text-muted-foreground group-data-[overflow=true]/table:block">
+      <span className="table-row-action-target hidden w-full whitespace-normal text-right text-xs text-muted-foreground [overflow-wrap:anywhere] group-data-[overflow=true]/table:block">
         {name}
       </span>
-      <div className="flex flex-wrap items-center justify-end gap-1">{children}</div>
+      <div className="flex flex-wrap items-center justify-end gap-1">
+        {children}
+      </div>
     </div>
   );
 }
@@ -286,11 +288,16 @@ export function DataTable<T extends object>({
     if (!root || !viewport) return;
     // The official Table always owns horizontal scrolling; content can overflow
     // even without a caller-provided minimum width.
-    const measure = () =>
+    const measure = () => {
+      root.style.setProperty(
+        "--table-viewport-width",
+        `${viewport.clientWidth}px`,
+      );
       setOverflows(
         viewport.clientWidth > 0 &&
           viewport.scrollWidth > viewport.clientWidth + 1,
       );
+    };
     measure();
     if (typeof ResizeObserver === "undefined") {
       window.addEventListener("resize", measure);
@@ -373,7 +380,10 @@ export function DataTable<T extends object>({
       >
         <Table
           style={minWidth ? { minWidth } : undefined}
-          className={cn("[&_th]:px-4 [&_th]:text-xs [&_th]:text-muted-foreground [&_td]:px-4", compact ? "text-xs" : "[&_td]:py-3")}
+          className={cn(
+            "[&_th]:px-4 [&_th]:text-xs [&_th]:text-muted-foreground [&_td]:px-4",
+            compact ? "text-xs" : "[&_td]:py-3",
+          )}
         >
           <TableHeader
             className={
@@ -515,7 +525,10 @@ export function DataTable<T extends object>({
                       <TableCell
                         key={cell.id}
                         style={columnStyles(cell.column.id)}
-                        className={cn("align-middle", columnClass(cell.column.id))}
+                        className={cn(
+                          "align-middle",
+                          columnClass(cell.column.id),
+                        )}
                       >
                         {renderCell(
                           cell.column.id,

@@ -299,7 +299,6 @@ test("rotating one link immediately exposes its exact replacement and offline re
     await context.setOffline(false);
     expect((await confirmedSession).ok()).toBe(true);
     await expect(recovery).not.toBeVisible();
-    await expect(row).toBeVisible();
     expect(
       writes.slice(writesAfterRotation),
       "Reconnection does not replay rotation",
@@ -311,6 +310,9 @@ test("rotating one link immediately exposes its exact replacement and offline re
     );
     await page.keyboard.press("Escape");
     await expect(access).not.toBeVisible();
+    // A restored modal deliberately hides its background from accessibility.
+    // The exact subscription becomes available again after the modal closes.
+    await expect(row).toBeVisible();
     expect(recoveredFingerprint).toBe(rotated.accessFingerprint);
   } finally {
     await context.setOffline(false);

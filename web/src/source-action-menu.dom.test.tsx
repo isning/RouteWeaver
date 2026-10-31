@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { UIProviders } from "./ui-patterns/providers";
 import { SourceActionMenu } from "./SourceActionMenu";
@@ -74,5 +74,43 @@ it("preserves the disabled deletion guard while another review is pending", asyn
   const remove = await screen.findByRole("menuitem", { name: "删除来源" });
   expect(remove.getAttribute("aria-disabled")).toBe("true");
   await user.click(remove);
+  expect(onDelete).not.toHaveBeenCalled();
+});
+
+it("keeps the row available while open and releases Tab to native page traversal", async () => {
+  const onDelete = vi.fn();
+  render(
+    <UIProviders>
+      <button>Before source action</button>
+      <SourceActionMenu
+        sourceName="Keyboard source"
+        loading={false}
+        deleteDisabled={false}
+        onDelete={onDelete}
+      />
+      <button>After source action</button>
+    </UIProviders>,
+  );
+  const user = userEvent.setup();
+  const trigger = screen.getByRole("button", {
+    name: "更多操作 Keyboard source",
+  });
+  await user.click(trigger);
+  const item = await screen.findByRole("menuitem", { name: "删除来源" });
+  expect(screen.getByRole("button", { name: "更多操作 Keyboard source" })).toBe(
+    trigger,
+  );
+  item.focus();
+  const tab = new KeyboardEvent("keydown", {
+    key: "Tab",
+    bubbles: true,
+    cancelable: true,
+  });
+  act(() => {
+    item.dispatchEvent(tab);
+  });
+  expect(tab.defaultPrevented).toBe(false);
+  await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
+  expect(document.activeElement).toBe(trigger);
   expect(onDelete).not.toHaveBeenCalled();
 });

@@ -1372,86 +1372,89 @@ export function ProfileEditor({
     },
   ];
   return (
-    <div className="profile-intent-editor space-y-6" inert={!!sourceTask}>
+    <div
+      className="profile-intent-editor space-y-6 [&_input]:scroll-mt-32 [&_textarea]:scroll-mt-32 [&_[role=combobox]]:scroll-mt-32"
+      inert={!!sourceTask}
+    >
       <div className="profile-editor-heading flex flex-wrap items-end justify-between gap-4">
         <PageHeader
           title={persisted ? draft.name : "新建分流配置"}
           back={close}
         />
-        <div
-          className="profile-publish-action flex flex-wrap items-center justify-end gap-3"
-          role="group"
-          aria-label="保存与检查配置"
+      </div>
+      <div
+        className="profile-publish-action sticky top-0 z-20 flex flex-wrap items-center justify-end gap-3 border-b bg-background py-3"
+        role="group"
+        aria-label="保存与检查配置"
+      >
+        <span
+          className="profile-save-state text-sm text-muted-foreground"
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
         >
-          <span
-            className="profile-save-state text-sm text-muted-foreground"
-            role="status"
-            aria-live="polite"
-            aria-atomic="true"
+          {saved && !codeDirty
+            ? "草稿已保存"
+            : codeDirty
+              ? "JSON 修改尚未应用"
+              : !persisted || changed
+                ? "草稿尚未保存"
+                : "已保存草稿"}
+        </span>
+        <div className={"flex flex-wrap items-center gap-2"}>
+          <ActionButton
+            leadingIcon={<SaveOutlined aria-hidden="true" />}
+            aria-label="保存草稿"
+            aria-busy={save.isPending}
+            onClick={() => {
+              if (sourceOwner.current) return;
+              setError(null);
+              if (!checkDestinations()) return;
+              save.mutate();
+            }}
+            disabled={
+              !draft.name.trim() ||
+              codeDirty ||
+              save.isPending ||
+              !!sourceTask ||
+              unavailableSources.length > 0
+            }
+            variant="outline"
+            pending={!!save.isPending}
           >
-            {saved && !codeDirty
-              ? "草稿已保存"
-              : codeDirty
-                ? "JSON 修改尚未应用"
-                : !persisted || changed
-                  ? "草稿尚未保存"
-                  : "已保存草稿"}
-          </span>
-          <div className={"flex flex-wrap items-center gap-2"}>
-            <ActionButton
-              leadingIcon={<SaveOutlined aria-hidden="true" />}
-              aria-label="保存草稿"
-              aria-busy={save.isPending}
-              onClick={() => {
-                if (sourceOwner.current) return;
-                setError(null);
-                if (!checkDestinations()) return;
-                save.mutate();
-              }}
-              disabled={
-                !draft.name.trim() ||
-                codeDirty ||
-                save.isPending ||
-                !!sourceTask ||
-                unavailableSources.length > 0
+            保存草稿
+          </ActionButton>
+          <ActionButton
+            aria-label={!persisted || changed ? "保存并检查" : "检查发布"}
+            aria-busy={save.isPending}
+            disabled={
+              !draft.name.trim() ||
+              codeDirty ||
+              save.isPending ||
+              !!sourceTask ||
+              unavailableSources.length > 0
+            }
+            onClick={async () => {
+              if (sourceOwner.current) return;
+              setError(null);
+              if (!checkDestinations()) return;
+              const handoffRevision = revision.current;
+              try {
+                if (!persisted || changed) await save.mutateAsync();
+                if (revision.current !== handoffRevision) return;
+                setPublicationProfile(payload());
+                setRepairingReview(false);
+                setReviewRevision(handoffRevision);
+                setReviewOpen(true);
+              } catch {
+                /* The mutation keeps the editable draft and reports the failure. */
               }
-              variant="outline"
-              pending={!!save.isPending}
-            >
-              保存草稿
-            </ActionButton>
-            <ActionButton
-              aria-label={!persisted || changed ? "保存并检查" : "检查发布"}
-              aria-busy={save.isPending}
-              disabled={
-                !draft.name.trim() ||
-                codeDirty ||
-                save.isPending ||
-                !!sourceTask ||
-                unavailableSources.length > 0
-              }
-              onClick={async () => {
-                if (sourceOwner.current) return;
-                setError(null);
-                if (!checkDestinations()) return;
-                const handoffRevision = revision.current;
-                try {
-                  if (!persisted || changed) await save.mutateAsync();
-                  if (revision.current !== handoffRevision) return;
-                  setPublicationProfile(payload());
-                  setRepairingReview(false);
-                  setReviewRevision(handoffRevision);
-                  setReviewOpen(true);
-                } catch {
-                  /* The mutation keeps the editable draft and reports the failure. */
-                }
-              }}
-              variant="default"
-              pending={!!save.isPending}
-            >
-              {!persisted || changed ? "保存并检查" : "检查发布"}
-            </ActionButton>
-          </div>
+            }}
+            variant="default"
+            pending={!!save.isPending}
+          >
+            {!persisted || changed ? "保存并检查" : "检查发布"}
+          </ActionButton>
         </div>
       </div>
       <div
@@ -1529,6 +1532,13 @@ export function ProfileEditor({
                     aria-label={sourceExpanded ? "收起来源设置" : "编辑来源"}
                     aria-expanded={sourceExpanded}
                     aria-controls={sourcePanelID}
+                    onKeyDown={(event) => {
+                      if (
+                        event.repeat &&
+                        (event.key === "Enter" || event.key === " ")
+                      )
+                        event.preventDefault();
+                    }}
                     onClick={() => setSourceExpanded((expanded) => !expanded)}
                     variant="outline"
                   >

@@ -168,6 +168,12 @@ def smoke(archive_path):
         bootstrap = {**persistent, "ROUTEWEAVER_ADMIN_USERNAME": username, "ROUTEWEAVER_ADMIN_PASSWORD": password}
         with server(executable, workspace, ["--db", str(database)], bootstrap) as client:
             client.login(username, password)
+            # Genuine fresh-store evidence, before any fixture writes. The
+            # browser's controlled-empty inventories do not prove startup state.
+            for path in ("/api/hosts", "/api/server-deployments", "/api/me/collections"):
+                inventory = client.json(path)
+                if not isinstance(inventory, list) or inventory:
+                    raise RuntimeError(f"Fresh non-demo inventory is not an empty list: {path}")
             feed_path, original = create_subscription(client)
         if not database.is_file():
             raise RuntimeError("Persistent package did not create a database")
@@ -187,11 +193,12 @@ def smoke(archive_path):
         if list(workspace.glob("routeweaver-demo-*")):
             raise RuntimeError("Demo did not remove its disposable state on shutdown")
     receipt = {"schemaVersion": 1, "result": "passed", "archive": provenance["archive"], "source": provenance["source"],
-               "checks": ["demo-static-ui-and-auth", "missing-key-startup-rejected", "non-demo-source-profile-publication",
+               "checks": ["demo-static-ui-and-auth", "missing-key-startup-rejected", "fresh-non-demo-inventories-empty",
+                          "non-demo-source-profile-publication",
                           "anonymous-subscription", "persistent-restart-without-bootstrap", "rotation-and-old-link-denial", "clean-shutdown"],
                "limitations": "No Chromium, real client, native process, node deployment, TLS proxy, or production acceptance."}
     Path(str(archive_path) + ".smoke.json").write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n")
-    print("PASS: extracted package static/auth, non-demo persistence, anonymous subscription, rotation and old-link denial. Not browser or deployment acceptance.")
+    print("PASS: extracted package static/auth, fresh non-demo empty inventories, persistence, anonymous subscription, rotation and old-link denial. Not browser or deployment acceptance.")
 
 
 def main():

@@ -56,6 +56,8 @@ test("automatic members are an explicit additive choice over current source, col
     await search.fill(text);
     await search.press("Enter");
     await page.keyboard.press("Escape");
+    await expect(input).toHaveAttribute("aria-expanded", "false");
+    await expect(page.getByRole("listbox")).toHaveCount(0);
   };
   const profileWrites: string[] = [];
   const outputWrites: string[] = [];

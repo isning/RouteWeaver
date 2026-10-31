@@ -369,3 +369,19 @@ it("binds footer submission and field labels to each mounted editor even when th
     content: source.content,
   });
 });
+
+it("uses sequential scrolling on short screens and restores body scrolling when space returns", async () => {
+  // JSDOM checks the resize decision, not actual field geometry or keyboard visibility.
+  // The browser journey separately checks those contracts with doubled text.
+  vi.stubGlobal("innerHeight", 240);
+  mount(true);
+  const dialog = await screen.findByRole("dialog", { name: "添加订阅来源" });
+  await waitFor(() =>
+    expect(dialog.getAttribute("data-task-scroll")).toBe("task"),
+  );
+  vi.stubGlobal("innerHeight", 844);
+  fireEvent(window, new Event("resize"));
+  await waitFor(() =>
+    expect(dialog.getAttribute("data-task-scroll")).toBe("body"),
+  );
+});

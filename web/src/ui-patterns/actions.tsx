@@ -7,6 +7,7 @@ import {
 } from "react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { cn } from "@/lib/utils";
 
 /** A task button keeps its target and accessible name stable while a request settles. */
 export function ActionButton({
@@ -17,6 +18,7 @@ export function ActionButton({
   children,
   disabled,
   asChild,
+  className,
   ...props
 }: ComponentProps<typeof Button> & {
   pending?: boolean;
@@ -35,6 +37,7 @@ export function ActionButton({
     return (
       <Button
         {...props}
+        className={cn("min-h-11 min-w-11", className)}
         asChild
         disabled={disabled || pending}
         aria-disabled={
@@ -70,6 +73,7 @@ export function ActionButton({
     <Button
       type="button"
       {...props}
+      className={cn("min-h-11 min-w-11", className)}
       disabled={disabled || (pending && !keepFocusableWhilePending)}
       aria-disabled={disabled || pending || props["aria-disabled"] || undefined}
       aria-busy={pending || undefined}

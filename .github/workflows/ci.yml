@@ -96,14 +96,21 @@ jobs:
           retention-days: 7
 
   browser:
-    name: Chrome Stable user tasks (fixture and real API scopes)
+    name: Chrome Stable user tasks (${{ matrix.shard }}/4, fixture and real API scopes)
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     env:
       # Use the runner's vendor-installed Stable binary, covered by Ubuntu's
       # shipped Chrome AppArmor profile. Never relocate a downloaded browser.
       # Both Playwright and the native-focus fixture honor this selection.
       ROUTEWEAVER_CHROMIUM: /opt/google/chrome/chrome
+      # Every matrix job owns its own demo process/database; never parallelize
+      # workers against shared mutable demo state or a shared login limiter.
+      ROUTEWEAVER_BROWSER_SHARD: ${{ matrix.shard }}/4
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
@@ -133,6 +140,7 @@ jobs:
             runnerImage: process.env.ImageOS,
             runnerImageVersion: process.env.ImageVersion,
             executablePath,
+            playwrightShard: process.env.ROUTEWEAVER_BROWSER_SHARD,
             installedVersion: execFileSync(executablePath, ['--version'], { encoding: 'utf8' }).trim(),
             packageVersion: execFileSync('dpkg-query', ['-W', '-f=${Version}', 'google-chrome-stable'], { encoding: 'utf8' }).trim(),
             executableSHA256: execFileSync('sha256sum', [executablePath], { encoding: 'utf8' }).split(' ')[0],
@@ -162,7 +170,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: browser-diagnostics
+          name: browser-diagnostics-${{ matrix.shard }}-of-4
           path: |
             web/playwright-report/
             web/test-results/

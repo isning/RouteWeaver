@@ -285,7 +285,7 @@ test("overflow identity settles across the Users table width boundary", async ({
   const states = new Set<boolean>();
   const measurements = [];
   for (const width of [
-    980, 1000, 1010, 1020, 1028, 1030, 1040, 1060, 1040, 1028, 1020, 1000,
+    390, 768, 980, 1020, 1060, 1280, 1440, 1920, 1440, 1280, 1060, 980, 390,
   ]) {
     await page.setViewportSize({ width, height: 1000 });
     const samples = await page

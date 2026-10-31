@@ -1,4 +1,10 @@
-import { test, expect, type Page, type Locator } from "@playwright/test";
+import {
+  test as base,
+  expect,
+  type Page,
+  type Locator,
+} from "@playwright/test";
+import type { Collection } from "../src/types";
 import { openWorkspace } from "./ui-session";
 import { writeFile } from "node:fs/promises";
 async function settle(root: Locator) {
@@ -43,7 +49,14 @@ const names = [
   "备用线路",
   "跨地区办公与旅行备用连接名称LongIdentity-ABCDEFGHIJKLMNOPQRSTUVWXYZ",
 ];
-async function fixture(page: Page) {
+type RichEditorFixture = { drawer: Locator; collection: Collection };
+const test = base.extend<{ richEditor: RichEditorFixture }>({
+  richEditor: async ({ page }, use) => fixture(page, use),
+});
+async function fixture(
+  page: Page,
+  use: (fixture: RichEditorFixture) => Promise<void>,
+) {
   await openWorkspace(page);
   const auth = await page.request.get("/api/auth/me");
   expect(auth.ok()).toBe(true);
@@ -56,67 +69,66 @@ async function fixture(page: Page) {
     created.push(path + "/" + v.id);
     return v;
   };
-  const suffix = Date.now().toString(36);
-  const sources = [];
-  for (let i = 0; i < names.length; i++)
-    sources.push(
-      await post("sources", {
-        id: `rich-source-${suffix}-${i}`,
-        name: names[i],
-        kind: "text",
-        enabled: true,
-        content: `socks5://synthetic-${i}.example:1080#Editor ${i}`,
-      }),
-    );
-  const steps = (prefix: string) => [
-    {
-      id: prefix + "rename",
-      kind: "rename",
-      enabled: false,
-      template: prefix + " {name}",
-    },
-    { id: prefix + "dedupe", kind: "deduplicate", enabled: true },
-    { id: prefix + "sort", kind: "sort", enabled: true, sortBy: "name" },
-  ];
-  const collection = await post("collections", {
-    id: `rich-collection-${suffix}`,
-    name: "有序处理编辑",
-    sources: sources.map((s, i) => ({
-      sourceId: s.id,
-      steps: steps("source" + i),
-    })),
-    steps: steps("merged"),
-  });
-  await page.goto("/#collections");
-  await page
-    .getByRole("button")
-    .filter({
-      has: page.getByRole("heading", { name: collection.name, exact: true }),
-    })
-    .click();
-  const drawer = page.getByRole("dialog", {
-    name: collection.name,
-    exact: true,
-  });
-  await settle(drawer);
-  return {
-    drawer,
-    collection,
-    headers,
-    cleanup: async () => {
-      for (const path of created.reverse()) {
-        const r = await page.request.delete("/api/me/" + path, { headers });
-        expect(r.ok()).toBe(true);
-      }
-    },
-  };
+  // A setup failure still runs fixture teardown; it must not leak sources into
+  // later real-API journeys. Teardown has Playwright's separate cleanup budget.
+  try {
+    const suffix = Date.now().toString(36);
+    const sources = [];
+    for (let i = 0; i < names.length; i++)
+      sources.push(
+        await post("sources", {
+          id: `rich-source-${suffix}-${i}`,
+          name: names[i],
+          kind: "text",
+          enabled: true,
+          content: `socks5://synthetic-${i}.example:1080#Editor ${i}`,
+        }),
+      );
+    const steps = (prefix: string) => [
+      {
+        id: prefix + "rename",
+        kind: "rename",
+        enabled: false,
+        template: prefix + " {name}",
+      },
+      { id: prefix + "dedupe", kind: "deduplicate", enabled: true },
+      { id: prefix + "sort", kind: "sort", enabled: true, sortBy: "name" },
+    ];
+    const collection = await post("collections", {
+      id: `rich-collection-${suffix}`,
+      name: `有序处理编辑 ${suffix}`,
+      sources: sources.map((s, i) => ({
+        sourceId: s.id,
+        steps: steps("source" + i),
+      })),
+      steps: steps("merged"),
+    });
+    await page.goto("/#collections");
+    await page
+      .getByRole("button", {
+        name: `${collection.name} 4 个来源 · 3 个聚合步骤 编辑集合`,
+        exact: true,
+      })
+      .click();
+    const drawer = page.getByRole("dialog", {
+      name: collection.name,
+      exact: true,
+    });
+    await settle(drawer);
+    await use({ drawer, collection });
+  } finally {
+    for (const path of created.reverse()) {
+      const r = await page.request.delete("/api/me/" + path, { headers });
+      expect(r.ok()).toBe(true);
+    }
+  }
 }
 
 test("source reorder is independent from disclosure for Enter and Space", async ({
   page,
+  richEditor: f,
 }, info) => {
-  const f = await fixture(page),
-    out: any = {};
+  const out: any = {};
   try {
     const { drawer } = f;
     const disclosure = (name: string) =>
@@ -235,15 +247,14 @@ test("source reorder is independent from disclosure for Enter and Space", async 
       info.outputPath("keyboard.json"),
       JSON.stringify(out, null, 2),
     );
-    await f.cleanup();
   }
 });
 
 test("both processing stages keep ordinary titles readable and offer genuine comfortable targets at 320px", async ({
   page,
+  richEditor: f,
 }, info) => {
-  const f = await fixture(page),
-    out: any = {};
+  const out: any = {};
   try {
     const { drawer } = f;
     await drawer
@@ -279,15 +290,14 @@ test("both processing stages keep ordinary titles readable and offer genuine com
       info.outputPath("geometry.json"),
       JSON.stringify(out, null, 2),
     );
-    await f.cleanup();
   }
 });
 
 test("a processing-disabled step stays editable with readable active text", async ({
   page,
+  richEditor: f,
 }, info) => {
-  const f = await fixture(page),
-    out: any = {};
+  const out: any = {};
   try {
     const { drawer } = f;
     await drawer
@@ -303,43 +313,72 @@ test("a processing-disabled step stays editable with readable active text", asyn
       editor.getByRole("switch", { name: "启用步骤 1", exact: true }),
     ).not.toBeChecked();
     out.input = await input.evaluate((el) => {
-      const rgb = (s: string) =>
-        s
-          .match(/[\d.]+/g)!
-          .slice(0, 3)
-          .map(Number);
-      const c = getComputedStyle(el),
-        fg = rgb(c.color),
-        bg = rgb(c.backgroundColor);
-      let p: Element | null = el,
+      // Modern semantic tokens compute to oklch; use Chromium's color
+      // conversion, then composite every transparent background/opacity layer.
+      const rgba = (color: string): number[] => {
+        const canvas = document.createElement("canvas");
+        canvas.width = canvas.height = 1;
+        const context = canvas.getContext("2d")!;
+        context.fillStyle = color;
+        context.fillRect(0, 0, 1, 1);
+        const pixel = Array.from(context.getImageData(0, 0, 1, 1).data);
+        return [...pixel.slice(0, 3), pixel[3] / 255];
+      };
+      const over = (front: number[], back: number[]) => {
+        const alpha = front[3] + back[3] * (1 - front[3]);
+        return [
+          ...front
+            .slice(0, 3)
+            .map((channel, index) =>
+              alpha === 0
+                ? 0
+                : (channel * front[3] +
+                    back[index] * back[3] * (1 - front[3])) /
+                  alpha,
+            ),
+          alpha,
+        ];
+      };
+      const c = getComputedStyle(el);
+      let foreground = rgba(c.color),
+        background = [0, 0, 0, 0],
+        p: Element | null = el,
         opacity = 1;
       const ancestors = [];
       while (p) {
-        const s = getComputedStyle(p);
+        const style = getComputedStyle(p),
+          layer = rgba(style.backgroundColor),
+          layerOpacity = Number(style.opacity);
         ancestors.push({
           tag: p.tagName,
           class: p.className,
-          color: s.color,
-          background: s.backgroundColor,
-          opacity: s.opacity,
+          color: style.color,
+          background: style.backgroundColor,
+          opacity: style.opacity,
         });
-        opacity *= Number(s.opacity);
+        foreground = over(foreground, layer);
+        background = over(background, layer);
+        foreground[3] *= layerOpacity;
+        background[3] *= layerOpacity;
+        opacity *= layerOpacity;
         p = p.parentElement;
       }
-      const effective = (color: number[]) =>
-        color.map((x) => x * opacity + 255 * (1 - opacity));
+      const foregroundRGB = over(foreground, [255, 255, 255, 1]).slice(0, 3),
+        backgroundRGB = over(background, [255, 255, 255, 1]).slice(0, 3);
       const light = (color: number[]) =>
         color
           .map((x) => x / 255)
           .map((x) => (x <= 0.04045 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4))
           .reduce((n, x, i) => n + x * [0.2126, 0.7152, 0.0722][i], 0);
-      const lights = [light(effective(fg)), light(effective(bg))].sort(
+      const lights = [light(foregroundRGB), light(backgroundRGB)].sort(
         (a, b) => a - b,
       );
       return {
         color: c.color,
         background: c.backgroundColor,
         opacity,
+        foregroundRGB,
+        backgroundRGB,
         ratio: (lights[1] + 0.05) / (lights[0] + 0.05),
         ancestors,
         disabled: (el as HTMLInputElement).disabled,
@@ -354,7 +393,6 @@ test("a processing-disabled step stays editable with readable active text", asyn
       info.outputPath("contrast.json"),
       JSON.stringify(out, null, 2),
     );
-    await f.cleanup();
   }
 });
 
@@ -417,9 +455,9 @@ async function textStyle(control: Locator) {
 }
 test("desktop and narrow pixels preserve identities, contained targets and editable off-state contrast", async ({
   page,
+  richEditor: f,
 }, info) => {
-  const f = await fixture(page),
-    out: any = { viewports: {}, keyboard: {} };
+  const out: any = { viewports: {}, keyboard: {} };
   try {
     const { drawer } = f;
     const disclosure = drawer.getByRole("button", {
@@ -542,15 +580,14 @@ test("desktop and narrow pixels preserve identities, contained targets and edita
       info.outputPath("pixels-and-targets.json"),
       JSON.stringify(out, null, 2),
     );
-    await f.cleanup();
   }
 });
 
 test("step order and execution state stay with the acted-on step at both boundaries", async ({
   page,
+  richEditor: f,
 }, info) => {
-  const f = await fixture(page),
-    out: any = {};
+  const out: any = {};
   try {
     const { drawer } = f;
     await drawer
@@ -617,15 +654,14 @@ test("step order and execution state stay with the acted-on step at both boundar
       info.outputPath("step-keyboard.json"),
       JSON.stringify(out, null, 2),
     );
-    await f.cleanup();
   }
 });
 
 test("disabled boundary controls retain their disabled visual state under pointer hover", async ({
   page,
+  richEditor: f,
 }, info) => {
-  const f = await fixture(page),
-    out: Record<string, unknown> = {};
+  const out: Record<string, unknown> = {};
   try {
     const { drawer } = f;
     await drawer
@@ -668,6 +704,5 @@ test("disabled boundary controls retain their disabled visual state under pointe
       info.outputPath("disabled-hover.json"),
       JSON.stringify(out, null, 2),
     );
-    await f.cleanup();
   }
 });

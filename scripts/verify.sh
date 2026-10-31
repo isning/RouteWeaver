@@ -43,7 +43,18 @@ web_gate() {
   stage 'Web production build' npm --prefix web run build
 }
 api_gate() { stage 'Real HTTP API integration (no browser/Vite)' npm --prefix web run test:api; }
-browser_gate() { stage 'Browser user tasks (Chromium)' npm --prefix web run test:browser; }
+browser_gate() {
+  local args=() label='Browser user tasks (Chromium)'
+  if [[ -n "${ROUTEWEAVER_BROWSER_SHARD:-}" ]]; then
+    if [[ ! "$ROUTEWEAVER_BROWSER_SHARD" =~ ^([1-9][0-9]{0,2})/([1-9][0-9]{0,2})$ ]] || (( BASH_REMATCH[1] > BASH_REMATCH[2] )); then
+      echo 'Browser shard must be a one-based index/total (index <= total, each <= 999).' >&2
+      return 2
+    fi
+    args=(-- "--shard=$ROUTEWEAVER_BROWSER_SHARD")
+    label="Browser user tasks (Chromium, shard $ROUTEWEAVER_BROWSER_SHARD only)"
+  fi
+  stage "$label" npm --prefix web run test:browser "${args[@]}"
+}
 native_gate() { stage 'Pinned native parser integration' scripts/native-cores.sh parsers; }
 runtime_gate() { stage 'Explicitly selected native process lifecycle' scripts/native-cores.sh runtime; }
 managed_gate() { stage 'Managed native runtime end-to-end' scripts/managed-runtime.sh; }
@@ -69,6 +80,10 @@ PY
 case "$MODE" in
   quick) static_gate; backend_gate; web_gate ;;
   full)
+    if [[ -n "${ROUTEWEAVER_BROWSER_SHARD:-}" ]]; then
+      echo 'Full verification cannot select a partial browser shard. Unset ROUTEWEAVER_BROWSER_SHARD.' >&2
+      exit 2
+    fi
     if [[ "${ROUTEWEAVER_NATIVE_PROCESS_TESTS:-}" != xray,sing-box ]]; then
       echo 'Full verification requires ROUTEWEAVER_NATIVE_PROCESS_TESTS=xray,sing-box on an authorized compatible host. Missing or denied targets are not passes.' >&2
       exit 2
@@ -77,4 +92,8 @@ case "$MODE" in
     native_gate; runtime_gate; managed_gate; package_gate ;;
   *) "${MODE}_gate" ;;
 esac
-printf '\nPASS: %s verification. This is the named gate only, not deployed acceptance or completion of all 35 stories.\n' "$MODE"
+if [[ "$MODE" == browser && -n "${ROUTEWEAVER_BROWSER_SHARD:-}" ]]; then
+  printf '\nPASS: browser shard %s only. All shards must pass before the browser gate is complete.\n' "$ROUTEWEAVER_BROWSER_SHARD"
+else
+  printf '\nPASS: %s verification. This is the named gate only, not deployed acceptance or completion of all 35 stories.\n' "$MODE"
+fi

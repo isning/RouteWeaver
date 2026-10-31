@@ -20,8 +20,17 @@ async function establishSession(page: Page) {
   if (!browser)
     throw new Error("Synthetic UI session setup requires a browser.");
   const setup = await browser.newContext({ baseURL });
+  const responses: { operation: "login" | "me"; status: number }[] = [];
   try {
     const login = await setup.newPage();
+    login.on("response", (response) => {
+      const path = new URL(response.url()).pathname;
+      if (path === "/api/auth/login" || path === "/api/auth/me")
+        responses.push({
+          operation: path.endsWith("/login") ? "login" : "me",
+          status: response.status(),
+        });
+    });
     await login.goto("/");
     await login.getByLabel("账号", { exact: true }).fill("routeweaver");
     await login.getByLabel("密码", { exact: true }).fill("local-demo-password");
@@ -39,6 +48,13 @@ async function establishSession(page: Page) {
     }
     return cookies;
   } finally {
+    // Preserve the status evidence even when a failed worker's new login is
+    // rejected. No credential, response body, cookie or URL is attached, and
+    // diagnostic collection never retries the authentication operation.
+    await test.info().attach("normal-ui-login-http", {
+      body: JSON.stringify({ responses }),
+      contentType: "application/json",
+    });
     await setup.close();
   }
 }

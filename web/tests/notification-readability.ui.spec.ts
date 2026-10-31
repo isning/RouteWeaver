@@ -112,9 +112,12 @@ for (const width of [1440, 390])
         .getByRole("button", { name: /额度提醒.*未读/ })
         .getByText("未读", { exact: true }),
     ).toBeVisible();
-    const content = row.locator(".inbox-copy"),
-      metadata = row.locator("small");
-    await expect(row.locator("strong")).toHaveText(title);
+    const content = row.getByText(
+        "请在维护结束后检查连接；这条消息保留完整内容供打开后阅读。",
+        { exact: true },
+      ),
+      metadata = row.getByText("已读", { exact: true });
+    await expect(row.getByText(title, { exact: true })).toBeVisible();
     if (width === 390) {
       const bodyBox = await content.boundingBox(),
         metadataBox = await metadata.boundingBox();

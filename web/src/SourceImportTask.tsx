@@ -76,6 +76,7 @@ function SourceImportSession({
         open={!reviewing}
         source={initial}
         primaryActionText="导入来源"
+        successFeedback="parent"
         onSaved={saved}
         onClose={(retained) => {
           // onSaved runs before onClose in the same stack. Its new review owns

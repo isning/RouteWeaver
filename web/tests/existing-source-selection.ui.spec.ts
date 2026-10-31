@@ -109,7 +109,7 @@ test("an existing failed first import is selected explicitly and corrected in th
     .last()
     .click();
   await page.getByLabel("集合名称", { exact: true }).click();
-  expect(await page.getByRole("dialog").count()).toBe(1);
+  await expect(page.getByRole("dialog")).toHaveCount(1);
   await expect(
     page.getByRole("button", { name: "保存集合", exact: true }),
   ).toBeDisabled();
@@ -201,7 +201,7 @@ test("an existing failed first import is selected explicitly and corrected in th
     parent.getByRole("button", { name: "添加来源", exact: true }),
   ).toBeFocused();
   expect(decisions).toBe(1);
-  expect(await page.getByRole("dialog").count()).toBe(1);
+  await expect(page.getByRole("dialog")).toHaveCount(1);
   await expect(parent.getByText("1. South", { exact: true })).toBeVisible();
   await expect(
     parent.getByText("3. Pending provider", { exact: true }),
@@ -340,13 +340,19 @@ test("Profile collection source correction preserves mode and intent; explicit c
   await editor.getByRole("button", { name: "导入来源", exact: true }).focus();
   await page.keyboard.down("Enter");
   expect((await changed).status()).toBe(200);
-  await expect(
-    page.getByRole("button", { name: "添加来源", exact: true }),
-  ).toBeFocused();
+  // The selected source's repair action disappears once it is usable. Return
+  // to the visible source disclosure, not the concealed Add source control.
+  const sourceSettings = page.getByRole("button", {
+    name: "编辑来源",
+    exact: true,
+  });
+  await expect(sourceSettings).toBeFocused();
   await page.keyboard.down("Enter");
   await page.keyboard.up("Enter");
   expect(sourceWrites).toBe(1);
   await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(sourceSettings).toHaveAttribute("aria-expanded", "false");
+  await sourceSettings.click();
   await expect(
     page.getByRole("radio", { name: "使用节点集合", exact: true }),
   ).toBeChecked();

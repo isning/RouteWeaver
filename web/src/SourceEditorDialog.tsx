@@ -49,6 +49,8 @@ export interface SourceEditorDialogProps {
   /** A successful source write; inspect diagnostics/candidate before using it. */
   onSaved: (source: Source) => void;
   primaryActionText?: string;
+  /** Contextual owners show the selected source in their retained draft. */
+  successFeedback?: "toast" | "parent";
   /** True while open, including loading, discard confirmation and pending writes. */
   onActivityChange?: (blocked: boolean) => void;
 }
@@ -70,6 +72,7 @@ function SourceEditorSession({
   onClose,
   onSaved,
   primaryActionText,
+  successFeedback = "toast",
 }: Omit<SourceEditorDialogProps, "open" | "onActivityChange">) {
   const client = useQueryClient();
   const message = toast,
@@ -145,30 +148,33 @@ function SourceEditorSession({
   useLayoutEffect(() => {
     if (!completionElement) return;
     const container = completionElement.closest<HTMLElement>(
-      ".source-editor-task",
+      '[data-task-overlay="dialog"]',
     );
     const header = container?.querySelector<HTMLElement>(
-      ".source-editor-heading",
+      '[data-slot="dialog-header"]',
     );
-    if (!container || !header) return;
+    const footer = completionElement.closest<HTMLElement>(
+      '[data-slot="dialog-footer"]',
+    );
+    if (!container || !header || !footer) return;
     const measure = () => {
       const style = getComputedStyle(container);
       const viewportHeight =
         window.visualViewport?.height || window.innerHeight;
       const chromeHeight =
         header.getBoundingClientRect().height +
-        completionElement.getBoundingClientRect().height +
-        parseFloat(style.paddingTop) +
-        parseFloat(style.paddingBottom) +
+        footer.getBoundingClientRect().height +
+        (parseFloat(style.paddingTop) || 0) +
+        (parseFloat(style.paddingBottom) || 0) +
         32;
       // Keep a usable field area, including when text grows. When there is not
       // enough room, the whole task scrolls in document order: no overlay footer.
-      const fieldSpace = Math.max(200, parseFloat(style.fontSize) * 14);
+      const fieldSpace = Math.max(200, (parseFloat(style.fontSize) || 16) * 14);
       setSequentialScroll(chromeHeight + fieldSpace > viewportHeight - 64);
     };
     measure();
     const observer = new ResizeObserver(measure);
-    observer.observe(completionElement);
+    observer.observe(footer);
     observer.observe(header);
     observer.observe(container);
     window.addEventListener("resize", measure);
@@ -279,7 +285,7 @@ function SourceEditorSession({
       if (!active.current) return;
       setSaveUncertain(false);
       setEditorDirty(false);
-      if (!result.candidate)
+      if (!result.candidate && successFeedback === "toast")
         message.success(editing ? "来源已更新" : "来源已添加");
       onSaved(result);
       onClose();
@@ -373,7 +379,7 @@ function SourceEditorSession({
       title: saveUncertain ? "关闭来源编辑？" : "放弃尚未保存的来源修改？",
       description: saveUncertain
         ? "尚未确认上次提交是否已保存。关闭不会撤销已提交的来源输入；当前窗口中的输入将不再保留。"
-        : savedFailure
+        : savedSummary
           ? "本次提交后的修改尚未保存。已保存的来源输入会保留。"
           : "这次修改的来源设置尚未保存。",
       confirmLabel: saveUncertain ? "关闭编辑" : "放弃修改",
@@ -471,6 +477,7 @@ function SourceEditorSession({
       }}
       size="lg"
       contentRef={modalBody}
+      scrollMode={sequentialScroll ? "task" : "body"}
     >
       <AppForm
         id={formID}

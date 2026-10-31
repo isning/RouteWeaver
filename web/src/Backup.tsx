@@ -323,7 +323,7 @@ export function BackupSettings() {
             }} variant="ghost">
               清空备份输入
             </ActionButton>)}
-          {preview && (<div className="backup-preview space-y-4 rounded-lg border p-4">
+          {preview && (<div className="backup-preview space-y-4 border-t pt-4">
               <p role="status">文件校验通过</p>
               <div className="key-value flex flex-wrap justify-between gap-x-6 gap-y-1 text-sm">
                 <span>备份时间</span>

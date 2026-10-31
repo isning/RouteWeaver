@@ -586,6 +586,45 @@ it("imports files locally, preserves newer typed content and rejects oversized f
   expect(fetcher).not.toHaveBeenCalled();
 });
 
+it("explains that an existing accepted source survives discarding local edits", async () => {
+  const source: Source = {
+    id: "accepted-source",
+    name: "Saved accepted source",
+    kind: "text",
+    enabled: true,
+    revision: "accepted-r1",
+    refreshStatus: "accepted",
+    content: "socks5://proxy.example:1080#Saved",
+    snapshot: { endpoints: [] },
+  };
+  const fetcher = vi.fn(async () => json(source));
+  vi.stubGlobal("fetch", fetcher);
+  mount({ source });
+  const dialog = within(
+    await screen.findByRole("dialog", { name: "编辑来源" }),
+  );
+  await waitFor(() =>
+    expect((dialog.getByLabelText("来源名称") as HTMLInputElement).value).toBe(
+      source.name,
+    ),
+  );
+  fireEvent.change(dialog.getByLabelText("来源名称"), {
+    target: { value: "Local unsaved name" },
+  });
+  await userEvent.click(dialog.getByRole("button", { name: "取消" }));
+  const discard = within(
+    await screen.findByRole("alertdialog", {
+      name: "放弃尚未保存的来源修改？",
+    }),
+  );
+  expect(
+    discard.getByText("本次提交后的修改尚未保存。已保存的来源输入会保留。"),
+  ).toBeTruthy();
+  await userEvent.click(discard.getByRole("button", { name: "放弃修改" }));
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  expect(fetcher).toHaveBeenCalledTimes(2); // Only the original summary and reveal reads.
+});
+
 it("identifies a retained 422 input as saved and only asks to discard later local edits", async () => {
   let submitted: Source;
   const fetcher = vi.fn(async (_url: unknown, init?: RequestInit) => {

@@ -1,17 +1,19 @@
 import { test, expect } from "@playwright/test";
 import { readFile, writeFile } from "node:fs/promises";
 import { surfaceMotionState } from "./ui-surface-stability";
+import { openWorkspace } from "./ui-session";
 // Actual loopback demo HTTP persistence; no agent starts, native apply or traffic.
 for (const width of [1440, 390])
   test(`real accepted publication with dropped response recovers after reload at ${width}`, async ({
     page,
   }, info) => {
     await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
-    const login = await page.request.post("/api/auth/login", {
-      data: { username: "routeweaver", password: "local-demo-password" },
-    });
-    expect(login.ok()).toBe(true);
-    const session = await login.json();
+    await openWorkspace(page);
+    const me = await page.request.get("/api/auth/me");
+    expect(me.ok(), "The normally authenticated actor remains confirmed").toBe(
+      true,
+    );
+    const session = await me.json();
     const headers = { "X-CSRF-Token": session.csrfToken };
     const suffix = `rw-pub-${width}-${Date.now().toString(36)}`;
     const fixture = JSON.parse(

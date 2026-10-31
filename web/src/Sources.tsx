@@ -737,6 +737,7 @@ export function CollectionsPage() {
     source?: Source;
   } | null>(null);
   const [sourceNotice, setSourceNotice] = useState<Source | null>(null);
+  const [sourceSelectionStatus, setSourceSelectionStatus] = useState("");
   const [savedSourceNames, setSavedSourceNames] = useState(
     () => new Map<string, string>(),
   );
@@ -746,6 +747,8 @@ export function CollectionsPage() {
   const sourceTrigger = useRef<HTMLButtonElement>(null);
   const sourceSelection = useRef<HTMLButtonElement>(null);
   const sourceReturnTrigger = useRef<HTMLElement | null>(null);
+  const sourceNoticeTrigger = useRef<HTMLButtonElement>(null);
+  const sourceReturnNotice = useRef(false);
   const returnFocus = useRef<number | null>(null);
   useLayoutEffect(
     () => () => {
@@ -767,6 +770,7 @@ export function CollectionsPage() {
   };
   const revision = useRef(0);
   const changeDraft = (value: Collection | null) => {
+    setSourceSelectionStatus("");
     revision.current++;
     if (!value || value.id !== draft?.id) stageDisclosures.current.clear();
     else
@@ -847,6 +851,7 @@ export function CollectionsPage() {
   const openSelectedSource = (source: Source, trigger: HTMLElement) => {
     if (sourceOwner.current || save.isPending) return;
     sourceReturnTrigger.current = trigger;
+    sourceReturnNotice.current = false;
     const task = { owner: collectionSession.current, source };
     setSourceNotice(null);
     setError(null);
@@ -926,7 +931,9 @@ export function CollectionsPage() {
               returnFocus.current = null;
               (sourceReturnTrigger.current?.isConnected
                 ? sourceReturnTrigger.current
-                : sourceTrigger.current
+                : sourceReturnNotice.current
+                  ? (sourceNoticeTrigger.current ?? sourceTrigger.current)
+                  : sourceTrigger.current
               )?.focus();
             }
           })(true)
@@ -937,7 +944,9 @@ export function CollectionsPage() {
               returnFocus.current = null;
               (sourceReturnTrigger.current?.isConnected
                 ? sourceReturnTrigger.current
-                : sourceTrigger.current
+                : sourceReturnNotice.current
+                  ? (sourceNoticeTrigger.current ?? sourceTrigger.current)
+                  : sourceTrigger.current
               )?.focus();
             }
           })(false)
@@ -1034,6 +1043,7 @@ export function CollectionsPage() {
               onClick={(event) => {
                 if (sourceOwner.current || save.isPending) return;
                 sourceReturnTrigger.current = event.currentTarget;
+                sourceReturnNotice.current = false;
                 const task = { owner: collectionSession.current };
                 setSourceNotice(null);
                 sourceOwner.current = task;
@@ -1043,6 +1053,9 @@ export function CollectionsPage() {
             >
               添加来源
             </ActionButton>
+            <p role="status" className="sr-only">
+              {sourceSelectionStatus}
+            </p>
             {sourceNotice && (
               <Notice
                 className="collection-source-notice my-3"
@@ -1050,6 +1063,7 @@ export function CollectionsPage() {
                 title="来源尚未加入集合"
                 action={
                   <ActionButton
+                    ref={sourceNoticeTrigger}
                     onKeyDown={(event) => {
                       if (
                         event.repeat &&
@@ -1060,6 +1074,7 @@ export function CollectionsPage() {
                     onClick={(event) => {
                       if (sourceOwner.current || save.isPending) return;
                       sourceReturnTrigger.current = event.currentTarget;
+                      sourceReturnNotice.current = true;
                       const task = {
                         owner: collectionSession.current,
                         source: sourceNotice,
@@ -1140,6 +1155,7 @@ export function CollectionsPage() {
                         <div className={"flex flex-wrap items-center gap-2"}>
                           <ActionButton
                             aria-label={`上移来源 ${index + 1}`}
+                            className="aria-disabled:text-muted-foreground aria-disabled:hover:bg-background aria-disabled:hover:text-muted-foreground dark:aria-disabled:hover:bg-input/30"
                             leadingIcon={<ArrowUp />}
                             aria-disabled={index === 0}
                             onClick={() =>
@@ -1158,6 +1174,7 @@ export function CollectionsPage() {
                           />
                           <ActionButton
                             aria-label={`下移来源 ${index + 1}`}
+                            className="aria-disabled:text-muted-foreground aria-disabled:hover:bg-background aria-disabled:hover:text-muted-foreground dark:aria-disabled:hover:bg-input/30"
                             leadingIcon={<ArrowDown />}
                             aria-disabled={index === draft.sources.length - 1}
                             onClick={() =>
@@ -1248,6 +1265,7 @@ export function CollectionsPage() {
                 : [...draft.sources, { sourceId: source.id, steps: [] }],
             });
             setSourceNotice(null);
+            setSourceSelectionStatus(`当前集合已选择来源「${source.name}」。`);
           } else
             setSourceNotice(
               result.source &&

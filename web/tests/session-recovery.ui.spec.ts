@@ -40,7 +40,10 @@ async function realCollections(page: Page) {
   expect(result.ok).toBe(true);
   return result.records;
 }
-const account = (page: Page) => page.locator(".account-button strong");
+const account = (page: Page) =>
+  page
+    .getByRole("complementary")
+    .getByRole("button", { name: /(?:管理员|个人账号)$/ });
 const workspace = (page: Page) => page.locator("[data-session-workspace]");
 const me = (r: any) =>
   r.url().endsWith("/api/auth/me") && r.request().method() === "GET";
@@ -58,7 +61,7 @@ async function signIn(page: Page, navigate = true) {
   await expect(workspace(page)).not.toHaveAttribute("inert", "");
 }
 async function logout(page: Page) {
-  await page.locator(".account-button").click();
+  await account(page).click();
   await page.getByRole("menuitem", { name: "退出登录", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "登录 RouteWeaver", exact: true }),

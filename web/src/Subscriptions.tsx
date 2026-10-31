@@ -3055,7 +3055,15 @@ export function UpdateOutput({
     publish.reset();
     setReview(null);
     setError(null);
-    if (!suspended && autoInspect) check();
+    if (!suspended && autoInspect) {
+      // A committed opening owns one inspection. React StrictMode replays the
+      // setup/cleanup pair; do not dispatch an obsolete request during that
+      // replay or race a newer authoritative result against a second preview.
+      const openingGeneration = generation.current;
+      queueMicrotask(() => {
+        if (active.current && generation.current === openingGeneration) check();
+      });
+    }
     return () => {
       active.current = false;
       generation.current++;

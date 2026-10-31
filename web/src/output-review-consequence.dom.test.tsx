@@ -6,7 +6,7 @@ import { flushSync } from "react-dom";
 import { UIProviders } from "./ui-patterns/providers";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { UpdateOutput } from "./Subscriptions";
-import type { ReactNode } from "react";
+import { StrictMode, useState, type ReactNode } from "react";
 import realOwnerPreview from "./test-fixtures/platform-entry-refresh-owner-preview.json?raw";
 const summary = (chat: string, other: string) => ({
   version: 1 as const,
@@ -90,6 +90,98 @@ const check = async () => {
   await userEvent.click(screen.getByRole("button", { name: "预览此订阅更新" }));
   await screen.findByText("兼容检查通过。");
 };
+it("opens one authoritative automatic inspection in StrictMode and explicitly rechecks once", async () => {
+  let inspections = 0;
+  const fetch = vi.fn(async () =>
+    json(checked(++inspections === 1 ? "replace" : "preserve")),
+  );
+  vi.stubGlobal("fetch", fetch);
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  render(
+    <StrictMode>
+      <QueryClientProvider client={client}>
+        <UIProviders>
+          <UpdateOutput output={output} autoInspect onClose={() => {}} />
+        </UIProviders>
+      </QueryClientProvider>
+    </StrictMode>,
+  );
+  await screen.findByRole("button", { name: "重新发布并生成新链接「Daily」" });
+  expect(fetch).toHaveBeenCalledTimes(1);
+  await userEvent.click(screen.getByRole("button", { name: "重新检查" }));
+  await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+  await screen.findByRole("button", { name: "确认更新「Daily」" });
+  expect(screen.getByText("链接不变，其他订阅不受影响。")).toBeTruthy();
+  expect(
+    screen.queryByText("发布后请在客户端换用新链接，其他订阅不受影响。"),
+  ).toBeNull();
+});
+it("reopens the same output with a fresh review and ignores the closed opening's late response", async () => {
+  const old = deferred<Response>();
+  const fetch = vi
+    .fn()
+    .mockImplementationOnce(() => old.promise)
+    .mockImplementationOnce(async () => json(checked("replace")));
+  vi.stubGlobal("fetch", fetch);
+  function Task() {
+    const [open, setOpen] = useState(true);
+    return (
+      <>
+        <button onClick={() => setOpen(true)}>重新打开同一订阅</button>
+        {open && (
+          <UpdateOutput
+            output={output}
+            autoInspect
+            onClose={() => setOpen(false)}
+          />
+        )}
+      </>
+    );
+  }
+  const client = new QueryClient({
+    defaultOptions: { mutations: { retry: false } },
+  });
+  render(
+    <StrictMode>
+      <QueryClientProvider client={client}>
+        <UIProviders>
+          <Task />
+        </UIProviders>
+      </QueryClientProvider>
+    </StrictMode>,
+  );
+  await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
+  await userEvent.click(screen.getByRole("button", { name: /^取\s*消$/ }));
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  await userEvent.click(
+    screen.getByRole("button", { name: "重新打开同一订阅" }),
+  );
+  const approve = await screen.findByRole("button", {
+    name: "重新发布并生成新链接「Daily」",
+  });
+  expect(approve).toHaveProperty("disabled", false);
+  expect(fetch).toHaveBeenCalledTimes(2);
+  await act(async () => old.resolve(json(checked("preserve"))));
+  expect(
+    screen.getByRole("button", { name: "重新发布并生成新链接「Daily」" }),
+  ).toHaveProperty("disabled", false);
+  expect(screen.queryByText(/链接不变/)).toBeNull();
+  expect(fetch).toHaveBeenCalledTimes(2);
+});
+it("does not dispatch an automatic inspection after its opening is synchronously unmounted", async () => {
+  const fetch = vi.fn(async () => json(checked("replace")));
+  vi.stubGlobal("fetch", fetch);
+  const view = mount(
+    <UpdateOutput output={output} autoInspect onClose={() => {}} />,
+  );
+  view.unmount();
+  await act(async () => {
+    await Promise.resolve();
+  });
+  expect(fetch).not.toHaveBeenCalled();
+});
 it.each(["preserve", "replace"] as const)(
   "uses authoritative %s effect rather than cached lifecycle",
   async (link) => {

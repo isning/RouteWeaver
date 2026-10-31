@@ -128,6 +128,7 @@ export function StepsEditor({
             </div>
             <div className="step-actions ml-auto flex shrink-0 items-center gap-1">
               <Switch
+                className="data-[size=default]:h-11 data-[size=default]:w-11 rounded-md px-1.5 data-checked:bg-transparent data-unchecked:bg-transparent dark:data-unchecked:bg-transparent after:inset-0 before:absolute before:inset-x-1.5 before:top-1/2 before:h-[18.4px] before:-translate-y-1/2 before:rounded-full before:bg-input data-checked:before:bg-primary dark:data-unchecked:before:bg-input/80"
                 checked={step.enabled}
                 aria-label={`启用步骤 ${index + 1}`}
                 onCheckedChange={(enabled) => update(index, { enabled })}
@@ -143,6 +144,7 @@ export function StepsEditor({
                     }
                     variant="ghost"
                     size="sm"
+                    className="aria-disabled:text-muted-foreground aria-disabled:hover:bg-transparent aria-disabled:hover:text-muted-foreground"
                   />
                 </TooltipTrigger>
                 <TooltipContent>上移</TooltipContent>
@@ -157,6 +159,7 @@ export function StepsEditor({
                 }
                 variant="ghost"
                 size="sm"
+                className="aria-disabled:text-muted-foreground aria-disabled:hover:bg-transparent aria-disabled:hover:text-muted-foreground"
               />
               <ActionButton
                 aria-label={`删除步骤 ${index + 1}`}

@@ -322,7 +322,7 @@ export function CodePreview({
 }) {
   return (
     <pre
-      className="code-preview max-h-96 overflow-auto rounded-lg border bg-muted/40 p-4 font-mono text-xs leading-relaxed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="code-preview max-h-40 overflow-auto rounded-lg border bg-muted/40 p-4 font-mono text-xs leading-relaxed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:max-h-96"
       tabIndex={tabIndex}
       aria-label="配置预览"
     >

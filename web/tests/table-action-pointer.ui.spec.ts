@@ -155,14 +155,32 @@ for (const mode of ["visible-clipped", "fully-right"] as const) {
       );
     }
     const viewport = page.locator('[data-slot="table-container"]').first();
+    const table = await viewport.boundingBox();
+    expect(table).not.toBeNull();
+    await page.mouse.move(
+      table!.x + 40,
+      Math.max(100, Math.min(260, table!.y + 40)),
+    );
     if (mode === "fully-right") {
-      const t = await viewport.boundingBox();
-      expect(t).not.toBeNull();
-      await page.mouse.move(t!.x + 40, Math.max(100, Math.min(260, t!.y + 40)));
       await page.mouse.wheel(1200, 0);
       await expect
         .poll(() => viewport.evaluate((el) => el.scrollLeft))
         .toBeGreaterThan(0);
+    } else {
+      // Column widths need not leave an unscrolled action partly visible.
+      // Reach that deliberate test state using the same horizontal wheel a
+      // user would use; do not focus, force-click or mutate scrollLeft.
+      const action = await edit.boundingBox();
+      expect(action).not.toBeNull();
+      const rightEdge = Math.min(640, table!.x + table!.width - 1);
+      const visibleWidth = Math.min(24, action!.width / 2);
+      await page.mouse.wheel(action!.x - (rightEdge - visibleWidth), 0);
+      await expect
+        .poll(async () => {
+          const box = await edit.boundingBox();
+          return !!box && box.x < rightEdge && box.x + box.width > rightEdge;
+        })
+        .toBe(true);
     }
     const before = await edit.boundingBox(),
       clip = await viewport.boundingBox();

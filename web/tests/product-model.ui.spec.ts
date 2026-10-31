@@ -554,17 +554,20 @@ async function auditReflowAndTextScale(
   }
 }
 
-test("initial empty pages name the task and server registration does not imply deployment", async ({
+test("controlled empty inventories name the task and server registration does not imply deployment", async ({
   page,
 }, testInfo) => {
-  // This case deliberately runs before fixture creation. It does not delete data
-  // to manufacture empty states, and it uses the real local authentication flow.
+  // Empty read-side fixtures are explicit: other files may already have created
+  // synthetic records in the shared demo. Never delete them to fake freshness.
+  // Authentication and all potential writes still use the real loopback API.
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto("/");
   await expect(
     page.getByRole("heading", { name: "登录 RouteWeaver", exact: true }),
   ).toBeVisible();
-  await expect(page.locator(".login-story-copy")).toHaveText("");
+  const login = page.getByRole("region", { name: "恢复登录", exact: true });
+  await expect(login.getByRole("heading")).toHaveCount(1);
+  await expect(login.locator("p")).toHaveCount(0);
   await expect(page.getByLabel("账号", { exact: true })).toHaveValue("");
   await expect(page.getByLabel("密码", { exact: true })).toHaveValue("");
   await page.screenshot({
@@ -581,11 +584,16 @@ test("initial empty pages name the task and server registration does not imply d
   });
   await page.setViewportSize({ width: 1440, height: 900 });
   await openWorkspace(page);
-  for (const path of ["/hosts", "/server-deployments", "/me/collections"])
-    expect(
-      await readJSON<unknown[]>(page, path),
-      `Fresh demo ${path} is empty`,
-    ).toHaveLength(0);
+  const inventories = ["/hosts", "/server-deployments", "/me/collections"];
+  const before = new Map<string, unknown[]>();
+  for (const path of inventories) {
+    before.set(path, await readJSON<unknown[]>(page, path));
+    await page.route(`**/api${path}`, (route) =>
+      route.request().method() === "GET"
+        ? route.fulfill({ json: [] })
+        : route.continue(),
+    );
+  }
 
   const writes: string[] = [];
   const observeWrite = (request: import("@playwright/test").Request) => {
@@ -688,17 +696,26 @@ test("initial empty pages name the task and server registration does not imply d
     writes,
     "Viewing empty pages and cancelling registration does not mutate the backend",
   ).toEqual([]);
-  for (const path of ["/hosts", "/server-deployments", "/me/collections"])
-    expect(await readJSON<unknown[]>(page, path)).toHaveLength(0);
-  await report(testInfo, "ordinary empty pages and registration consequence", {
-    realDemoAuthentication: true,
-    loginScreenshotsBeforeCredentialEntry: true,
-    emptyObjects: ["servers", "server routes", "node collections"],
-    registrationOnlyConsequenceAtDecision: true,
-    registrationSubmitted: false,
-    backendWrites: 0,
-    deployedOrConnectedServer: false,
-  });
+  for (const path of inventories)
+    expect(
+      await readJSON<unknown[]>(page, path),
+      `${path} remains unchanged`,
+    ).toEqual(before.get(path));
+  await report(
+    testInfo,
+    "controlled empty pages and registration consequence",
+    {
+      realDemoAuthentication: true,
+      loginScreenshotsBeforeCredentialEntry: true,
+      inventoryScope: "controlled GET-only empty fixtures",
+      emptyObjects: ["servers", "server routes", "node collections"],
+      registrationOnlyConsequenceAtDecision: true,
+      registrationSubmitted: false,
+      backendWrites: 0,
+      existingBackendInventoriesUnchanged: true,
+      deployedOrConnectedServer: false,
+    },
+  );
 });
 
 for (const intent of ["endpoint", "direct"] as const) {
@@ -924,7 +941,9 @@ for (const intent of ["endpoint", "direct"] as const) {
       outputName,
     );
     await create.getByLabel("目标客户端", { exact: true }).click();
-    await page.getByTitle("sing-box 1.14.3", { exact: true }).click();
+    await page
+      .getByRole("option", { name: "sing-box 1.14.3", exact: true })
+      .click();
     await create
       .getByRole("button", { name: "检查发布内容", exact: true })
       .click();
@@ -1350,7 +1369,7 @@ for (const entry of ["workspace", "legacy-profile"] as const) {
       await page
         .getByLabel("草稿检查与新订阅默认客户端", { exact: true })
         .click();
-      await page.getByTitle("sing-box", { exact: true }).click();
+      await page.getByRole("option", { name: "sing-box", exact: true }).click();
     }
     await expect(page.getByLabel("配置名称", { exact: true })).toHaveValue(
       profile.name,
@@ -1910,7 +1929,7 @@ test("operator keeps line and user context through authorization, entry preparat
   const detail = page.getByRole("dialog", { name: line.name, exact: true });
   await expect(detail).toBeVisible();
   await detail.getByLabel("线路使用用户", { exact: true }).click();
-  await page.getByTitle(user.name, { exact: true }).click();
+  await page.getByRole("option", { name: user.name, exact: true }).click();
   await expect(detail.getByText(/已获准使用此线路/)).toBeVisible();
   await expect(
     detail.getByText("尚未准备此用户的独立入口", { exact: true }),
@@ -2137,10 +2156,12 @@ test("scoped configuration creates one independent second-client subscription an
   );
   await create.getByLabel("订阅名称", { exact: true }).fill(newName);
   await create.getByLabel("目标客户端", { exact: true }).click();
-  await page.getByTitle("sing-box 1.14.3", { exact: true }).click();
+  await page
+    .getByRole("option", { name: "sing-box 1.14.3", exact: true })
+    .click();
   await expect(
-    create.getByTitle("sing-box 1.14.3", { exact: true }),
-  ).toBeVisible();
+    create.getByRole("combobox", { name: "目标客户端", exact: true }),
+  ).toHaveText("sing-box 1.14.3");
   const selectedTarget = { adapterId: "sing-box", version: "1.14.3" };
   // Observe only this UI operation; do not replace requests or responses.
   const previewRequest = page.waitForRequest(
@@ -2597,7 +2618,9 @@ test("25 synthetic configurations and 100 independent links remain searchable, b
   const firstPageNames = await inventory
     .getByRole("heading", { level: 2 })
     .allTextContents();
-  await configurationPages.getByTitle("下一页", { exact: true }).click();
+  await configurationPages
+    .getByRole("button", { name: "下一页", exact: true })
+    .click();
   await expect(inventory.getByRole("article")).toHaveCount(10);
   await expect
     .poll(() => inventory.getByRole("heading", { level: 2 }).allTextContents())
@@ -2704,7 +2727,7 @@ test("25 synthetic configurations and 100 independent links remain searchable, b
     name: `${profiles[0].name}的客户端订阅分页`,
     exact: true,
   });
-  await linksPage.getByTitle("下一页", { exact: true }).click();
+  await linksPage.getByRole("button", { name: "下一页", exact: true }).click();
   await expect(
     longProfile.getByRole("group", { name: /^客户端订阅 / }),
   ).toHaveCount(5);

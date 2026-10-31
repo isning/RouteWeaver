@@ -158,7 +158,7 @@ test("short source task and doubled text retain native keyboard access without a
   await openWorkspace(page);
   const before = await json(page, "/me/sources");
   const dialog = await openSource(page);
-  const container = dialog.locator(".source-editor-task");
+  const container = dialog;
   await expect(container).toHaveCSS("overflow-y", "auto");
   const submit = dialog.getByRole("button", { name: "导入来源", exact: true });
   // The short-layout contract is sequential reachability, not permanently fixed completion.
@@ -197,7 +197,7 @@ test("short source task and doubled text retain native keyboard access without a
   const geometry = await content.evaluate((el) => {
     const rect = el.getBoundingClientRect();
     const footer = document
-      .querySelector(".source-editor-completion")!
+      .querySelector('[role="group"][aria-label="来源导入确认"]')!
       .getBoundingClientRect();
     const top = rect.top + parseFloat(getComputedStyle(el).paddingTop);
     const lineHeight = parseFloat(getComputedStyle(el).lineHeight);
@@ -723,6 +723,9 @@ async function missingReferenceFixture(page: Page) {
   await page.reload();
   await page.getByText("订阅素材", { exact: true }).click();
   await page.getByRole("button", { name: "订阅来源", exact: true }).click();
+  await page
+    .getByRole("textbox", { name: "搜索来源", exact: true })
+    .fill(source.name);
   await page
     .getByRole("button", { name: "编辑 " + source.name, exact: true })
     .click();

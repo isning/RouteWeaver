@@ -23,8 +23,9 @@ export function SourceActionMenu({
 }: SourceActionMenuProps) {
   const [open, setOpen] = useState(false);
   const trigger = useRef<HTMLButtonElement>(null);
+  const releaseFocus = useRef(false);
   return (
-    <DropdownMenu open={open} onOpenChange={setOpen}>
+    <DropdownMenu modal={false} open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
         <Button
           ref={trigger}
@@ -44,13 +45,30 @@ export function SourceActionMenu({
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
+      <DropdownMenuContent
+        align="end"
+        onKeyDownCapture={(event) => {
+          if (event.key !== "Tab") return;
+          // Continue the browser's native tab order from this row's opener.
+          // Stop only the menu's Tab trap, not the key's default navigation.
+          event.stopPropagation();
+          releaseFocus.current = true;
+          trigger.current?.focus();
+          setOpen(false);
+        }}
+        onCloseAutoFocus={(event) => {
+          if (!releaseFocus.current) return;
+          releaseFocus.current = false;
+          event.preventDefault();
+        }}
+      >
         <DropdownMenuItem
           variant="destructive"
           disabled={deleteDisabled}
           onSelect={() => {
             setOpen(false);
             // The review owns the durable opener rather than an unmounted item.
+            releaseFocus.current = true;
             trigger.current?.focus();
             onDelete();
           }}

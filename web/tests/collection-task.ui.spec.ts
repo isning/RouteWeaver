@@ -475,7 +475,7 @@ test("source acquisition preserves ordered source and merged steps until explici
   const originals = await read(page, "sources");
   const csrf = await headers(page);
   const suffix = Date.now().toString(36);
-  const names = ["北区线路", "南区线路"];
+  const names = [`北区线路 ${suffix}`, `南区线路 ${suffix}`];
   const sources: Array<{ id: string; name: string }> = [];
   for (const [i, name] of names.entries()) {
     const response = await page.request.post("/api/me/sources", {
@@ -550,8 +550,8 @@ test("source acquisition preserves ordered source and merged steps until explici
   await expect(row(drawer, page, 3, addedName)).toBeVisible();
   expect(observed).toEqual(["POST /api/me/sources"]);
   expect(await inventory(page)).toEqual(before);
-  // Capture the real retained collection, not another blank import form. Wait
-  // only for the transient success message lifecycle so it cannot cover title.
+  // The parent selection is the completion feedback; no redundant toast may
+  // cover the retained collection's Save footer.
   await expect(page.getByText("来源已添加", { exact: true })).not.toBeVisible();
   for (const width of [1280, 390, 320]) {
     await page.setViewportSize({ width, height: 844 });

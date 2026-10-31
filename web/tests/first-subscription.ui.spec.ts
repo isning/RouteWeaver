@@ -37,8 +37,8 @@ test("first subscription skips the empty target gate but preserves save, cancel,
     await page.getByLabel("配置名称", { exact: true }).fill(profileName);
     const route = page.getByLabel("默认流量行为", { exact: true });
     await route.click();
-    await route.fill("直连");
-    await route.press("Enter");
+    await page.getByRole("option", { name: "直连", exact: true }).click();
+    await expect(route).toHaveAttribute("aria-expanded", "false");
     await page.getByRole("button", { name: "保存并检查", exact: true }).click();
     const create = page.getByRole("dialog", {
       name: "新增客户端订阅",
@@ -87,7 +87,9 @@ test("first subscription skips the empty target gate but preserves save, cancel,
     await expect(create).toBeVisible();
     await create.getByLabel("订阅名称", { exact: true }).fill(outputName);
     await create.getByLabel("目标客户端", { exact: true }).click();
-    await page.getByTitle("sing-box 1.14.3", { exact: true }).click();
+    await page
+      .getByRole("option", { name: "sing-box 1.14.3", exact: true })
+      .click();
     for (const width of [1280, 390, 375, 320]) {
       await page.setViewportSize({ width, height: width === 1280 ? 900 : 844 });
       await expect(
