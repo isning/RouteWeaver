@@ -1,0 +1,30 @@
+{
+  "platform": "linux-amd64",
+  "provenanceNote": "Official upstream HTTPS release assets. SHA256 values pin retrieved bytes. upstreamChecksumVerified distinguishes a matching upstream checksum from a local content pin; neither is a signature attestation.",
+  "cores": [
+    {
+      "url": "https://github.com/MetaCubeX/mihomo/releases/download/v1.19.32/mihomo-linux-amd64-v1-v1.19.32.gz",
+      "archiveSHA256": "306f81e723e60ce6b828899a6fe83e1d00e9ecefb2dc8d4d849312a5bc00efdc",
+      "executableSHA256": "6de241191ca39f9ac1cd6e3194fc9303c19055d3549c8bdb4ff1349c89173819",
+      "upstreamChecksumVerified": false,
+      "id": "mihomo",
+      "version": "1.19.32"
+    },
+    {
+      "url": "https://github.com/SagerNet/sing-box/releases/download/v1.14.3/sing-box-1.14.3-linux-amd64.tar.gz",
+      "archiveSHA256": "e2bdf179c15a3652955dc44867e33ca0965c9c9b91b34267dcc5a5d639a5feee",
+      "executableSHA256": "768d31fa7f68debc067bb4626539498a1e8751d36a7b99e1a54bee6a23815f93",
+      "upstreamChecksumVerified": false,
+      "id": "sing-box",
+      "version": "1.14.3"
+    },
+    {
+      "url": "https://github.com/XTLS/Xray-core/releases/download/v26.3.27/Xray-linux-64.zip",
+      "archiveSHA256": "23cd9af937744d97776ee35ecad4972cf4b2109d1e0fe6be9930467608f7c8ae",
+      "executableSHA256": "8255dd939c34cf966cc91517b6324dd3c8d0bcf49ffac8beca049a38c46845ed",
+      "upstreamChecksumVerified": true,
+      "id": "xray",
+      "version": "26.3.27"
+    }
+  ]
+}

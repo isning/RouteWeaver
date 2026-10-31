@@ -1,0 +1,32 @@
+name: Locked toolchains and dependencies
+description: Shared setup for local-equivalent gates; no credential persistence.
+inputs:
+  go:
+    description: Install the exact Go compiler declared by go.mod
+    default: "false"
+  node:
+    description: Install the pinned Node runtime and locked web dependencies
+    default: "false"
+runs:
+  using: composite
+  steps:
+    - name: Set up exact Go compiler and both module caches
+      if: inputs.go == 'true'
+      uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+      with:
+        go-version-file: go.mod
+        cache: true
+        cache-dependency-path: |
+          go.sum
+          runtimes/xray/go.sum
+    - name: Set up pinned Node runtime and npm download cache
+      if: inputs.node == 'true'
+      uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+      with:
+        node-version-file: scripts/node-version
+        cache: npm
+        cache-dependency-path: web/package-lock.json
+    - name: Install exact locked web dependencies
+      if: inputs.node == 'true'
+      shell: bash
+      run: npm --prefix web ci

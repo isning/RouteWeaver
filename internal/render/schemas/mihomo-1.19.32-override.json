@@ -1,0 +1,550 @@
+{
+  "type": "object",
+  "properties": {
+    "dns": {
+      "type": "object",
+      "properties": {
+        "enable": {
+          "type": "boolean"
+        },
+        "listen": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "ipv6": {
+          "type": "boolean"
+        },
+        "enhanced-mode": {
+          "enum": [
+            "fake-ip",
+            "redir-host"
+          ]
+        },
+        "fake-ip-range": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "fake-ip-filter": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "maxItems": 4096
+        },
+        "fake-ip-filter-mode": {
+          "enum": [
+            "blacklist",
+            "whitelist",
+            "rule"
+          ]
+        },
+        "nameserver": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "maxItems": 4096
+        },
+        "fallback": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "maxItems": 4096
+        },
+        "default-nameserver": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "maxItems": 4096
+        },
+        "proxy-server-nameserver": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "maxItems": 4096
+        },
+        "direct-nameserver": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "maxItems": 4096
+        },
+        "direct-nameserver-follow-policy": {
+          "type": "boolean"
+        },
+        "nameserver-policy": {
+          "type": "object",
+          "additionalProperties": {
+            "oneOf": [
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4096
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 4096
+                },
+                "maxItems": 4096
+              }
+            ]
+          }
+        },
+        "use-hosts": {
+          "type": "boolean"
+        },
+        "use-system-hosts": {
+          "type": "boolean"
+        },
+        "respect-rules": {
+          "type": "boolean"
+        },
+        "prefer-h3": {
+          "type": "boolean"
+        },
+        "cache-algorithm": {
+          "enum": [
+            "lru",
+            "arc"
+          ]
+        },
+        "cache-max-size": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "fallback-filter": {
+          "type": "object",
+          "properties": {
+            "geoip": {
+              "type": "boolean"
+            },
+            "geoip-code": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
+            },
+            "ipcidr": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4096
+              },
+              "maxItems": 4096
+            },
+            "domain": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 4096
+              },
+              "maxItems": 4096
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "sniffer": {
+      "type": "object",
+      "properties": {
+        "enable": {
+          "type": "boolean"
+        },
+        "force-dns-mapping": {
+          "type": "boolean"
+        },
+        "parse-pure-ip": {
+          "type": "boolean"
+        },
+        "override-destination": {
+          "type": "boolean"
+        },
+        "skip-domain": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "maxItems": 4096
+        },
+        "force-domain": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "maxItems": 4096
+        },
+        "skip-src-address": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "maxItems": 4096
+        },
+        "skip-dst-address": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "maxItems": 4096
+        },
+        "sniff": {
+          "type": "object",
+          "properties": {
+            "HTTP": {
+              "type": "object",
+              "properties": {
+                "ports": {
+                  "type": "array",
+                  "items": {
+                    "oneOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 4096
+                      }
+                    ]
+                  },
+                  "maxItems": 4096
+                },
+                "override-destination": {
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": false
+            },
+            "TLS": {
+              "type": "object",
+              "properties": {
+                "ports": {
+                  "type": "array",
+                  "items": {
+                    "oneOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 4096
+                      }
+                    ]
+                  },
+                  "maxItems": 4096
+                },
+                "override-destination": {
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": false
+            },
+            "QUIC": {
+              "type": "object",
+              "properties": {
+                "ports": {
+                  "type": "array",
+                  "items": {
+                    "oneOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 4096
+                      }
+                    ]
+                  },
+                  "maxItems": 4096
+                },
+                "override-destination": {
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "tun": {
+      "type": "object",
+      "properties": {
+        "enable": {
+          "type": "boolean"
+        },
+        "device": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "stack": {
+          "enum": [
+            "system",
+            "gvisor",
+            "mixed"
+          ]
+        },
+        "auto-route": {
+          "type": "boolean"
+        },
+        "auto-detect-interface": {
+          "type": "boolean"
+        },
+        "dns-hijack": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "maxItems": 4096
+        },
+        "strict-route": {
+          "type": "boolean"
+        },
+        "mtu": {
+          "type": "integer",
+          "minimum": 1280,
+          "maximum": 65535
+        },
+        "route-address": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "maxItems": 4096
+        },
+        "route-exclude-address": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "maxItems": 4096
+        },
+        "include-interface": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "maxItems": 4096
+        },
+        "exclude-interface": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "maxItems": 4096
+        },
+        "auto-redirect": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "profile": {
+      "type": "object",
+      "properties": {
+        "store-selected": {
+          "type": "boolean"
+        },
+        "store-fake-ip": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ipv6": {
+      "type": "boolean"
+    },
+    "unified-delay": {
+      "type": "boolean"
+    },
+    "tcp-concurrent": {
+      "type": "boolean"
+    },
+    "keep-alive-interval": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "keep-alive-idle": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "find-process-mode": {
+      "enum": [
+        "always",
+        "strict",
+        "off"
+      ]
+    },
+    "log-level": {
+      "enum": [
+        "debug",
+        "info",
+        "warning",
+        "error",
+        "silent"
+      ]
+    },
+    "rules": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 4096
+      },
+      "maxItems": 4096
+    },
+    "proxy-groups": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "type": {
+            "enum": [
+              "select",
+              "url-test",
+              "fallback",
+              "load-balance"
+            ]
+          },
+          "proxies": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
+            },
+            "maxItems": 4096
+          },
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "interval": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "tolerance": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "lazy": {
+            "type": "boolean"
+          },
+          "timeout": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "max-failed-times": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "disable-udp": {
+            "type": "boolean"
+          },
+          "hidden": {
+            "type": "boolean"
+          },
+          "icon": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          },
+          "strategy": {
+            "enum": [
+              "consistent-hashing",
+              "round-robin",
+              "sticky-sessions"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "name",
+          "type",
+          "proxies"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "enum": [
+                    "url-test",
+                    "fallback",
+                    "load-balance"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "url",
+                "interval"
+              ]
+            }
+          }
+        ]
+      },
+      "maxItems": 4096
+    }
+  },
+  "additionalProperties": false,
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RouteWeaver supported Mihomo 1.19.32 native extension subset (not an upstream schema)"
+}

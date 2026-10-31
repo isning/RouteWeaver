@@ -1,0 +1,172 @@
+// Command control-plane runs RouteWeaver's local control-plane application.
+package main
+
+import (
+	"context"
+	"crypto/rand"
+	"encoding/hex"
+	"errors"
+	"flag"
+	"fmt"
+	"log"
+	"net"
+	"net/http"
+	"os"
+	"os/signal"
+	"path/filepath"
+	"routeweaver/internal/backup"
+	"routeweaver/internal/httpapi"
+	"routeweaver/internal/render"
+	"routeweaver/internal/store"
+	"syscall"
+	"time"
+)
+
+func main() {
+	if e := run(); e != nil {
+		log.Print(e)
+		os.Exit(1)
+	}
+}
+func run() error {
+	listen := flag.String("listen", "127.0.0.1:8080", "bind address; remote interfaces require TLS")
+	dbPath := flag.String("db", ".local/routeweaver.db", "encrypted SQLite database path")
+	uiDir := flag.String("ui-dir", "web/dist", "built web UI directory")
+	demo := flag.Bool("demo", false, "isolated ephemeral demo with known local credentials; loopback only")
+	tlsCert := flag.String("tls-cert", "", "TLS certificate path")
+	tlsKey := flag.String("tls-key", "", "TLS private key path")
+	publicOriginFlag := flag.String("public-origin", "", "explicit external HTTPS origin behind a Host-preserving reverse proxy")
+	backupArchiveMiB := flag.Int64("backup-max-archive-mib", 1024, "maximum encrypted backup upload/download MiB (1–1024)")
+	backupRecordMiB := flag.Int("backup-max-record-mib", 32, "maximum logical backup record MiB (1–128)")
+	backupRows := flag.Int("backup-max-rows", 2000000, "maximum logical backup rows (1–2000000)")
+	backupTimeout := flag.Duration("backup-timeout", 10*time.Minute, "bounded backup operation timeout (at most 10m)")
+	flag.Parse()
+	publicOrigin, originErr := httpapi.CanonicalPublicOrigin(*publicOriginFlag)
+	if originErr != nil {
+		return originErr
+	}
+	if *demo && publicOrigin != "" {
+		return fmt.Errorf("demo mode cannot advertise a public origin")
+	}
+	if *backupArchiveMiB < 1 || *backupArchiveMiB > 1024 || *backupRecordMiB < 1 || *backupRecordMiB > 128 || *backupRows < 1 || *backupRows > 2000000 || *backupTimeout <= 0 {
+		return fmt.Errorf("backup limits must be positive and within the documented hard bounds")
+	}
+	backupLimits, err := (backup.Limits{ArchiveBytes: *backupArchiveMiB << 20, RecordBytes: *backupRecordMiB << 20, Rows: *backupRows, Duration: *backupTimeout}).Normalize()
+	if err != nil {
+		return fmt.Errorf("backup limits: %w", err)
+	}
+	host, _, e := net.SplitHostPort(*listen)
+	if e != nil {
+		return fmt.Errorf("invalid listen address")
+	}
+	ip := net.ParseIP(host)
+	loopback := host == "localhost" || ip != nil && ip.IsLoopback()
+	tlsEnabled := *tlsCert != "" && *tlsKey != ""
+	if (*tlsCert == "") != (*tlsKey == "") {
+		return fmt.Errorf("both TLS certificate and key are required")
+	}
+	if !loopback && !tlsEnabled {
+		return fmt.Errorf("remote binding requires TLS certificate and key; use 127.0.0.1 for local development")
+	}
+	if *demo && !loopback {
+		return fmt.Errorf("demo mode is restricted to loopback")
+	}
+	var key []byte
+	adminToken := os.Getenv("ROUTEWEAVER_ADMIN_TOKEN")
+	username, password := os.Getenv("ROUTEWEAVER_ADMIN_USERNAME"), os.Getenv("ROUTEWEAVER_ADMIN_PASSWORD")
+	cleanup := func() {}
+	if *demo {
+		dir, e := os.MkdirTemp("", "routeweaver-demo-")
+		if e != nil {
+			return e
+		}
+		cleanup = func() { os.RemoveAll(dir) }
+		*dbPath = filepath.Join(dir, "state.db")
+		key = make([]byte, 32)
+		if _, e = rand.Read(key); e != nil {
+			cleanup()
+			return e
+		}
+		adminToken = ""
+		username = "routeweaver"
+		password = "local-demo-password"
+	} else {
+		key, e = hex.DecodeString(os.Getenv("ROUTEWEAVER_MASTER_KEY"))
+		if e != nil || len(key) != 32 {
+			return fmt.Errorf("ROUTEWEAVER_MASTER_KEY must be 64 hexadecimal characters (32 bytes), supplied by the operator")
+		}
+		if adminToken != "" && len(adminToken) < 32 {
+			return fmt.Errorf("ROUTEWEAVER_ADMIN_TOKEN must be at least 32 characters")
+		}
+		if (username == "") != (password == "") {
+			return fmt.Errorf("supply both ROUTEWEAVER_ADMIN_USERNAME and ROUTEWEAVER_ADMIN_PASSWORD for initial setup")
+		}
+	}
+	defer cleanup()
+	s, e := store.Open(*dbPath, key)
+	if e != nil {
+		return fmt.Errorf("open state: %w", e)
+	}
+	defer s.Close()
+	if username != "" {
+		if e = s.EnsureAdmin(username, password); e != nil {
+			return fmt.Errorf("initialize administrator: %w", e)
+		}
+	}
+	restoreDir, e := filepath.Abs(filepath.Join(filepath.Dir(*dbPath), "restore-staging"))
+	if e != nil {
+		return fmt.Errorf("resolve restore directory: %w", e)
+	}
+	app := httpapi.NewWithOptions(s, render.Default(), httpapi.Options{PublicOrigin: publicOrigin, AdminToken: adminToken, UIDir: *uiDir, SecureCookies: tlsEnabled, BackupRestoreDir: restoreDir, BackupRestoreKey: key, BackupLimits: backupLimits})
+	srv := &http.Server{Addr: *listen, Handler: app, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 30 * time.Second, WriteTimeout: 30 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 1 << 20}
+	listener, e := net.Listen("tcp", *listen)
+	if e != nil {
+		return e
+	}
+	defer listener.Close()
+	scheme := "http"
+	if tlsEnabled {
+		scheme = "https"
+	}
+	log.Printf("RouteWeaver listening at %s://%s", scheme, listener.Addr())
+	if *demo {
+		log.Print("Ephemeral local demo: username routeweaver; password local-demo-password. State is removed on exit.")
+	}
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	notificationCtx, cancelNotifications := context.WithCancel(ctx)
+	notificationsDone := make(chan struct{})
+	go func() {
+		defer close(notificationsDone)
+		httpapi.RunNotifications(notificationCtx, s, time.Minute, func(error) {
+			log.Print("Background notification evaluation or delivery failed; the durable outbox will retry")
+		})
+	}()
+	defer func() { cancelNotifications(); <-notificationsDone }()
+	done := make(chan error, 1)
+	go func() {
+		if tlsEnabled {
+			done <- srv.ServeTLS(listener, *tlsCert, *tlsKey)
+		} else {
+			done <- srv.Serve(listener)
+		}
+	}()
+	select {
+	case e := <-done:
+		if !errors.Is(e, http.ErrServerClosed) {
+			return e
+		}
+	case <-ctx.Done():
+		shutdown, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		if e = srv.Shutdown(shutdown); e != nil {
+			srv.Close()
+			return e
+		}
+		e = <-done
+		if !errors.Is(e, http.ErrServerClosed) {
+			return e
+		}
+	}
+	return nil
+}

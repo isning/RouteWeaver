@@ -1,0 +1,34 @@
+=== RUN   TestStreamingBackupLedgerGrowthAndCompleteRecovery
+    stream_test.go:96: ciphertext bytes=17314943
+    stream_test.go:94: streaming ledger rows=40000 peak sampled Go heap=525285728 bytes
+--- PASS: TestStreamingBackupLedgerGrowthAndCompleteRecovery (6.59s)
+=== RUN   TestStreamingBackupRejectsUnauthenticatedOrMalformedFramesAndCleansStaging
+=== RUN   TestStreamingBackupRejectsUnauthenticatedOrMalformedFramesAndCleansStaging/unknown_frame_field
+=== RUN   TestStreamingBackupRejectsUnauthenticatedOrMalformedFramesAndCleansStaging/missing_footer
+=== RUN   TestStreamingBackupRejectsUnauthenticatedOrMalformedFramesAndCleansStaging/wrong_footer_count
+=== RUN   TestStreamingBackupRejectsUnauthenticatedOrMalformedFramesAndCleansStaging/missing_feed_index
+=== RUN   TestStreamingBackupRejectsUnauthenticatedOrMalformedFramesAndCleansStaging/tampered_ciphertext
+=== RUN   TestStreamingBackupRejectsUnauthenticatedOrMalformedFramesAndCleansStaging/duplicate_row
+=== RUN   TestStreamingBackupRejectsUnauthenticatedOrMalformedFramesAndCleansStaging/behind_generation
+=== RUN   TestStreamingBackupRejectsUnauthenticatedOrMalformedFramesAndCleansStaging/truncated_ciphertext
+=== RUN   TestStreamingBackupRejectsUnauthenticatedOrMalformedFramesAndCleansStaging/trailing_ciphertext
+=== RUN   TestStreamingBackupRejectsUnauthenticatedOrMalformedFramesAndCleansStaging/unknown_schema
+=== RUN   TestStreamingBackupRejectsUnauthenticatedOrMalformedFramesAndCleansStaging/rows
+=== RUN   TestStreamingBackupRejectsUnauthenticatedOrMalformedFramesAndCleansStaging/record
+=== RUN   TestStreamingBackupRejectsUnauthenticatedOrMalformedFramesAndCleansStaging/total
+--- PASS: TestStreamingBackupRejectsUnauthenticatedOrMalformedFramesAndCleansStaging (7.38s)
+    --- PASS: TestStreamingBackupRejectsUnauthenticatedOrMalformedFramesAndCleansStaging/unknown_frame_field (0.01s)
+    --- PASS: TestStreamingBackupRejectsUnauthenticatedOrMalformedFramesAndCleansStaging/missing_footer (0.01s)
+    --- PASS: TestStreamingBackupRejectsUnauthenticatedOrMalformedFramesAndCleansStaging/wrong_footer_count (0.01s)
+    --- PASS: TestStreamingBackupRejectsUnauthenticatedOrMalformedFramesAndCleansStaging/missing_feed_index (0.01s)
+    --- PASS: TestStreamingBackupRejectsUnauthenticatedOrMalformedFramesAndCleansStaging/tampered_ciphertext (0.68s)
+    --- PASS: TestStreamingBackupRejectsUnauthenticatedOrMalformedFramesAndCleansStaging/duplicate_row (0.00s)
+    --- PASS: TestStreamingBackupRejectsUnauthenticatedOrMalformedFramesAndCleansStaging/behind_generation (0.00s)
+    --- PASS: TestStreamingBackupRejectsUnauthenticatedOrMalformedFramesAndCleansStaging/truncated_ciphertext (0.75s)
+    --- PASS: TestStreamingBackupRejectsUnauthenticatedOrMalformedFramesAndCleansStaging/trailing_ciphertext (0.60s)
+    --- PASS: TestStreamingBackupRejectsUnauthenticatedOrMalformedFramesAndCleansStaging/unknown_schema (0.00s)
+    --- PASS: TestStreamingBackupRejectsUnauthenticatedOrMalformedFramesAndCleansStaging/rows (0.58s)
+    --- PASS: TestStreamingBackupRejectsUnauthenticatedOrMalformedFramesAndCleansStaging/record (0.61s)
+    --- PASS: TestStreamingBackupRejectsUnauthenticatedOrMalformedFramesAndCleansStaging/total (0.58s)
+PASS
+ok  	routeweaver/internal/backup	14.006s

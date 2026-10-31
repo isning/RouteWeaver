@@ -1,0 +1,22 @@
+# Publication retry action verification — 2026-10-24
+
+The pending task now has exactly one footer action, **重试上次发布**; GET recovery remains in the pending section. The footer uses the former inline direct retry handler with the same frozen payload, opening owner, busy flag and write-readiness fence. It does not submit the current form or require a current preview digest. Normal fresh creation and its validation remain unchanged. Status0/4xx/read-only errors retain their existing visibility; suppression remains limited to pending5xx.
+
+Two existing test files intentionally changed the old disabled-create expectation after replay409+unavailableGET: the obsolete fresh-create control is absent and the sole frozen retry retains the prior inline button's enabled state when busy=false/writeReady=true. This is not a new write authority. Existing conflict, locked-field, GET, twoPOST, same body/ID/digest and one-preview assertions remain. A reachable public no-preview replay test confirms frozen reuse. An invalid current form cannot be publicly constructed while pending because its inputs are locked; no private state mutation or disabled-input injection was used. A separate normal invalid-fresh-form case still rejects publication.
+
+Nine bounded DOM files declared and passed77cases with worker1/retry0 and original budgets; typecheck native0. The new retry-action file contributes9 cases; the prior27 output cases,8 safety cases and all receipt/identity/ownership assertions remain. The first candidate run was76/77 because a new unscoped validation-text locator matched both alert and field error. The sole correction scopes the text to its field and additionally requires aria-invalid=true; no product change or validation bypass. That first result remains recorded.
+
+```sh
+npm --prefix web run test -- src/publication-retry-action.dom.test.tsx src/publication-modal-focus.dom.test.tsx src/uncertain-publication-feedback.dom.test.tsx src/uncertain-publication-safety.dom.test.tsx src/output-creation.dom.test.tsx src/subscription-creation-session.dom.test.tsx src/subscription-creation-readiness.dom.test.tsx src/subscription-creation-ownership.dom.test.tsx src/publish-input-lifecycle.dom.test.tsx --maxWorkers=1 --retry=0
+npm --prefix web run typecheck
+```
+
+The new tracer's baseline RED reached the actual settled503/GET state and failed because the old create control was present. The corrected77run preserved canonical/source/dependency/staged-test invariants and released QA at2026-10-24T13:28:30.199019Z. This follow-on does not erase any historical failures or missing audits above.
+
+Fresh web build and plain controlled browser acceptance both returned native0: exact7/7,45s/one worker/retry0, original actions and ledgers retained. Pending assertions require exactly one footer retry, no fresh-create action or inline retry, and GET in the pending section. Both pending503 cases retained one preview/one controlled create and GET-only recovery; ordinary cases retained zero create; departed409 cases retained distinct IDs and new-owner access only. All7 backend output-invariance audits completed. The backend binary was reused only after verified original provenance and equality of every non-web/non-doc source byte and mode; web assets were freshly built. All source/dependency/canonical/overlay/backend/assets checks passed; QA released2026-10-24T13:32:19.287604Z, port4396closed and owned demo DB removed.
+
+Desktop1440 and narrow390 viewport screenshots show one disabled footer retry while the profile is absent, with GET keyboard focus still visible. The narrow task uses complementary inner-scroll captures; no full-page stitching. Screenshots, private browser fixtures/runners, raw ledgers and provenance files stay outside canonical source. Browser creation/receipts/access were controlled seams, not live backend publication or native-routing evidence.
+
+Historical53/55,5/6,4/7 failures and missing audits remain described in [the preceding verification](subscription-publication-feedback-2026-10-24.md); neither this77 nor current7 erases them. No full aggregate, native routing, deployment, or overall quality certification is claimed.
+
+Candidate production SHA256: `bf696e7532615f1eaefa545c924c7a4a6974298d086b8c76188d7c01bc725b59`. Frozen preintegration source: `9b15bc761c83736c879920179be614fdc49e566b89c4a9d5da577ffdc6a3674c`. File-scoped integration must preserve unrelated work.

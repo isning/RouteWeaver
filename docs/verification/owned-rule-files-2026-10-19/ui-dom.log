@@ -1,0 +1,10 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+ RUN  v5.0.5 /workspace/scratch/d385eb428cee/routeweaver/web
+
+
+ Test Files  1 passed (1)
+      Tests  2 passed (2)
+   Start at  03:57:07
+   Duration  3.07s (import 47%, tests 33%, environment 17%, transform 3%)
+

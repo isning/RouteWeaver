@@ -1,0 +1,36 @@
+package agent
+
+import (
+ "context"
+ "errors"
+ "testing"
+)
+
+type reviewStopFixture struct { transitionFixture }
+func (a *reviewStopFixture) Activate(ctx context.Context, s Staged) error {
+ if s.Desired.Action == "stop" { return a.Restrict(ctx, s.Root) }; return a.LocalFixture.Activate(ctx, s)
+}
+
+func TestIndependentStopCannotEraseAcceptedDenialFence(t *testing.T) {
+ old, next := &reviewStopFixture{transitionFixture: transitionFixture{version: "1"}}, &transitionFixture{version: "2"}
+ r := openTransitionTest(t, old, next)
+ ctx := context.Background()
+ first := testDesired(t, 1)
+ if _, err := r.Submit(ctx, first); err != nil { t.Fatal(err) }
+ denied := first
+ denied.Generation = 2
+ denied.Action = "stop"
+ denied.Lease.AccessAllowed = false
+ denied.Lease.Revision = "revoked"
+ if _, err := r.Submit(ctx, denied); !errors.Is(err, ErrLeaseBlocked) { t.Fatal(err) }
+ stop := first
+ stop.Generation = 3
+ stop.Action = "stop"
+ state, err := r.Submit(ctx, stop)
+ t.Logf("old-lease stop: phase=%s generation=%d err=%v", state.Phase, state.HighestAccepted, err)
+ replay := first
+ replay.Generation = 4
+ replay.Action = "start"
+ state, err = r.Submit(ctx, replay)
+ if err == nil || state.Phase == ObservedConformant || state.Observed != nil { t.Fatalf("old allowed lease was restored after denial via intervening stop: %+v %v", state, err) }
+}

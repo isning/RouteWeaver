@@ -1,0 +1,513 @@
+{
+  "accepted": false,
+  "exclusions": [
+    "Official verify.sh static/quick/full not invoked: NoGit tracked-file checks unavailable; no Git recreation.",
+    "Root Go NONRACE only; race and nested runtime-module tests excluded.",
+    "Native-core parser/process/traffic/live runtime opt-ins excluded; no inherited opt-in environment.",
+    "API Playwright project, package/deployment/live actions excluded.",
+    "Current17 browser tasks and targeted recovery smoke are separately reported."
+  ],
+  "failed_stage": "web-tests",
+  "failure_kind": "Two historical fixture-contract migrations subsequently independently reviewed; no production edits in correction. Original run stays failed.",
+  "finished": "2026-10-25T16:22:07.897080+00:00",
+  "go": {
+    "explicit_skipped_test_events": 50,
+    "failed_events": 0,
+    "mode": "root-module NONRACE",
+    "no_test_packages": 3,
+    "package_outcomes": [
+      {
+        "Action": "skip",
+        "Package": "routeweaver/cmd/control-plane"
+      },
+      {
+        "Action": "pass",
+        "Package": "routeweaver/cmd/node-agent"
+      },
+      {
+        "Action": "pass",
+        "Package": "routeweaver/internal/agent"
+      },
+      {
+        "Action": "skip",
+        "Package": "routeweaver/internal/auth"
+      },
+      {
+        "Action": "pass",
+        "Package": "routeweaver/internal/backup"
+      },
+      {
+        "Action": "pass",
+        "Package": "routeweaver/internal/controlprotocol"
+      },
+      {
+        "Action": "pass",
+        "Package": "routeweaver/internal/conversion"
+      },
+      {
+        "Action": "pass",
+        "Package": "routeweaver/internal/diagnosticexec"
+      },
+      {
+        "Action": "pass",
+        "Package": "routeweaver/internal/diagnostics"
+      },
+      {
+        "Action": "pass",
+        "Package": "routeweaver/internal/domain"
+      },
+      {
+        "Action": "skip",
+        "Package": "routeweaver/internal/entrypolicy"
+      },
+      {
+        "Action": "pass",
+        "Package": "routeweaver/internal/fleet"
+      },
+      {
+        "Action": "pass",
+        "Package": "routeweaver/internal/httpapi"
+      },
+      {
+        "Action": "pass",
+        "Package": "routeweaver/internal/importer"
+      },
+      {
+        "Action": "pass",
+        "Package": "routeweaver/internal/integration"
+      },
+      {
+        "Action": "pass",
+        "Package": "routeweaver/internal/notifications"
+      },
+      {
+        "Action": "pass",
+        "Package": "routeweaver/internal/observability"
+      },
+      {
+        "Action": "pass",
+        "Package": "routeweaver/internal/privateipc"
+      },
+      {
+        "Action": "pass",
+        "Package": "routeweaver/internal/render"
+      },
+      {
+        "Action": "pass",
+        "Package": "routeweaver/internal/resources"
+      },
+      {
+        "Action": "pass",
+        "Package": "routeweaver/internal/reuse"
+      },
+      {
+        "Action": "pass",
+        "Package": "routeweaver/internal/service"
+      },
+      {
+        "Action": "pass",
+        "Package": "routeweaver/internal/store"
+      },
+      {
+        "Action": "pass",
+        "Package": "routeweaver/scripts/check-architecture"
+      }
+    ],
+    "passing_packages": 21,
+    "passing_test_subtest_terminal_events": 1246,
+    "skipped_test_identifiers": [
+      {
+        "Action": "skip",
+        "Package": "routeweaver/internal/agent",
+        "Test": "TestNativeCoreInstallerPreparesImmutableOfficialExecutables"
+      },
+      {
+        "Action": "skip",
+        "Package": "routeweaver/internal/agent",
+        "Test": "TestNativeInstallDesiredPreservesActiveRuntimeAndLease"
+      },
+      {
+        "Action": "skip",
+        "Package": "routeweaver/internal/agent",
+        "Test": "TestNativeInstallDoesNotEraseAcceptedRevocation"
+      },
+      {
+        "Action": "skip",
+        "Package": "routeweaver/internal/agent",
+        "Test": "TestNativeInstallDownloadCannotDelayActiveLeaseExpiry"
+      },
+      {
+        "Action": "skip",
+        "Package": "routeweaver/internal/agent",
+        "Test": "TestNativeInstallDoesNotMutateAnotherInstancesRegistry"
+      },
+      {
+        "Action": "skip",
+        "Package": "routeweaver/internal/agent",
+        "Test": "TestNativeXrayTwoHopLoopbackRoundtrip"
+      },
+      {
+        "Action": "skip",
+        "Package": "routeweaver/internal/agent",
+        "Test": "TestPrivateAdmissionBrokerHasOnlyBoundedLeaseOperations"
+      },
+      {
+        "Action": "skip",
+        "Package": "routeweaver/internal/agent",
+        "Test": "TestManagedNativeBrokerEOFStopsActivePayloadAndPersistsFinalJournal"
+      },
+      {
+        "Action": "skip",
+        "Package": "routeweaver/internal/agent",
+        "Test": "TestNativePinnedBinariesWhenExplicitlyAvailable"
+      },
+      {
+        "Action": "skip",
+        "Package": "routeweaver/internal/agent",
+        "Test": "TestNativeSupervisorLifecycleAndRestart"
+      },
+      {
+        "Action": "skip",
+        "Package": "routeweaver/internal/agent",
+        "Test": "TestLocalProcfsResourceReadOptIn"
+      },
+      {
+        "Action": "skip",
+        "Package": "routeweaver/internal/httpapi",
+        "Test": "TestNativeFleetConfigureStopStartAndRollback"
+      },
+      {
+        "Action": "skip",
+        "Package": "routeweaver/internal/httpapi",
+        "Test": "TestNativeOverridePublishedArtifactsPassPinnedNativeParsers/mihomo"
+      },
+      {
+        "Action": "skip",
+        "Package": "routeweaver/internal/httpapi",
+        "Test": "TestNativeOverridePublishedArtifactsPassPinnedNativeParsers/sing-box"
+      },
+      {
+        "Action": "skip",
+        "Package": "routeweaver/internal/httpapi",
+        "Test": "TestNativePublishedManagedPrincipalEndToEnd"
+      },
+      {
+        "Action": "skip",
+        "Package": "routeweaver/internal/httpapi",
+        "Test": "TestNativeOwnedRuleFileBundles/mihomo-yaml"
+      },
+      {
+        "Action": "skip",
+        "Package": "routeweaver/internal/httpapi",
+        "Test": "TestNativeOwnedRuleFileBundles/mrs"
+      },
+      {
+        "Action": "skip",
+        "Package": "routeweaver/internal/httpapi",
+        "Test": "TestNativeOwnedRuleFileBundles/sing-box-source"
+      },
+      {
+        "Action": "skip",
+        "Package": "routeweaver/internal/httpapi",
+        "Test": "TestNativeOwnedRuleFileBundles/srs"
+      },
+      {
+        "Action": "skip",
+        "Package": "routeweaver/internal/httpapi",
+        "Test": "TestNativeTemplateFollowedProfileUpdate/mihomo"
+      },
+      {
+        "Action": "skip",
+        "Package": "routeweaver/internal/httpapi",
+        "Test": "TestNativeTemplateFollowedProfileUpdate/sing-box"
+      },
+      {
+        "Action": "skip",
+        "Package": "routeweaver/internal/integration",
+        "Test": "TestImportedProcessedVLESSPassesBothNativeClients"
+      },
+      {
+        "Action": "skip",
+        "Package": "routeweaver/internal/integration",
+        "Test": "TestNativeSharedVLESSIngressKeepsPrincipalPathsSeparate"
+      },
+      {
+        "Action": "skip",
+        "Package": "routeweaver/internal/integration",
+        "Test": "TestManagedSharedVLESSIngressKeepsPrincipalPathsSeparate"
+      },
+      {
+        "Action": "skip",
+        "Package": "routeweaver/internal/integration",
+        "Test": "TestRenderedTwoHopRouteHasNoDirectFallback"
+      },
+      {
+        "Action": "skip",
+        "Package": "routeweaver/internal/render",
+        "Test": "TestNativeClientFixtures/mihomo"
+      },
+      {
+        "Action": "skip",
+        "Package": "routeweaver/internal/render",
+        "Test": "TestNativeClientFixtures/sing-box"
+      },
+      {
+        "Action": "skip",
+        "Package": "routeweaver/internal/render",
+        "Test": "TestNativeVLESSClientFixtures/mihomo/tcp"
+      },
+      {
+        "Action": "skip",
+        "Package": "routeweaver/internal/render",
+        "Test": "TestNativeVLESSClientFixtures/mihomo/ws"
+      },
+      {
+        "Action": "skip",
+        "Package": "routeweaver/internal/render",
+        "Test": "TestNativeVLESSClientFixtures/mihomo/grpc"
+      },
+      {
+        "Action": "skip",
+        "Package": "routeweaver/internal/render",
+        "Test": "TestNativeVLESSClientFixtures/mihomo/httpupgrade"
+      },
+      {
+        "Action": "skip",
+        "Package": "routeweaver/internal/render",
+        "Test": "TestNativeVLESSClientFixtures/sing-box/tcp"
+      },
+      {
+        "Action": "skip",
+        "Package": "routeweaver/internal/render",
+        "Test": "TestNativeVLESSClientFixtures/sing-box/ws"
+      },
+      {
+        "Action": "skip",
+        "Package": "routeweaver/internal/render",
+        "Test": "TestNativeVLESSClientFixtures/sing-box/grpc"
+      },
+      {
+        "Action": "skip",
+        "Package": "routeweaver/internal/render",
+        "Test": "TestNativeVLESSClientFixtures/sing-box/httpupgrade"
+      },
+      {
+        "Action": "skip",
+        "Package": "routeweaver/internal/render",
+        "Test": "TestNativeServerFixtures/routeweaver/xray/socks"
+      },
+      {
+        "Action": "skip",
+        "Package": "routeweaver/internal/render",
+        "Test": "TestNativeServerFixtures/routeweaver/xray/shadowsocks"
+      },
+      {
+        "Action": "skip",
+        "Package": "routeweaver/internal/render",
+        "Test": "TestNativeServerFixtures/routeweaver/xray/vless"
+      },
+      {
+        "Action": "skip",
+        "Package": "routeweaver/internal/render",
+        "Test": "TestNativeServerFixtures/routeweaver/sing-box/socks"
+      },
+      {
+        "Action": "skip",
+        "Package": "routeweaver/internal/render",
+        "Test": "TestNativeServerFixtures/routeweaver/sing-box/shadowsocks"
+      },
+      {
+        "Action": "skip",
+        "Package": "routeweaver/internal/render",
+        "Test": "TestNativeServerFixtures/routeweaver/sing-box/vless"
+      },
+      {
+        "Action": "skip",
+        "Package": "routeweaver/internal/render",
+        "Test": "TestNativeClientNodesOnlyConsumption/mihomo"
+      },
+      {
+        "Action": "skip",
+        "Package": "routeweaver/internal/render",
+        "Test": "TestNativeClientNodesOnlyConsumption/sing-box"
+      },
+      {
+        "Action": "skip",
+        "Package": "routeweaver/internal/render",
+        "Test": "TestNativeMultiPrincipalVLESSFixtures/routeweaver/xray"
+      },
+      {
+        "Action": "skip",
+        "Package": "routeweaver/internal/render",
+        "Test": "TestNativeMultiPrincipalVLESSFixtures/routeweaver/sing-box"
+      },
+      {
+        "Action": "skip",
+        "Package": "routeweaver/internal/store",
+        "Test": "TestAdmissionClosedHistoryScalingCharacterization"
+      },
+      {
+        "Action": "skip",
+        "Package": "routeweaver/internal/store",
+        "Test": "TestAdmissionSnapshotSeededHistoryCharacterization"
+      },
+      {
+        "Action": "skip",
+        "Package": "routeweaver/internal/store",
+        "Test": "TestAdmissionLiveObligationChurnCharacterization"
+      },
+      {
+        "Action": "skip",
+        "Package": "routeweaver/internal/store",
+        "Test": "TestAdmissionConcurrentArrivalCharacterization"
+      },
+      {
+        "Action": "skip",
+        "Package": "routeweaver/internal/store",
+        "Test": "TestAdmissionHistoryScalingCharacterization"
+      }
+    ]
+  },
+  "guards": {
+    "canonicalUnchanged": true,
+    "privateSourceInputsUnchanged": true,
+    "reviewedInputsUnchanged": true,
+    "toolsUnchanged": true
+  },
+  "input_sha256": "af6e203cca490221417d3e15f1cde21c8757646a51c1b078aee8d5fb29cc9edc",
+  "native_evidence_hashes_only": {
+    "architecture.log": "3d5196144af902ba7bc19dcdf5798490548b58a63fbfff67ba96fde73d60b250",
+    "format.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "go-build.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "go-tests.log": "6328e1aca4799dbea244a84153fdbd0c38996912fc933e7b8c524358758f7ba4",
+    "go-vet.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "python-guard-tests.log": "7c758af7411e05fc2e6c4fb89045f7a03d9a5957d5305092903a23a66373d034",
+    "tickets.log": "3e78bb3193829406388bf58a9448686070ce9c99f3f0d348cfd1f1cd5e0ea667",
+    "web-results.json": "e9206bc1dcbd5bc3e7408d3611160a4ce4f33c646dee40e0e4435dbe8e6ac188",
+    "web-tests.log": "c374b16dcca34639c4e703e840fc9832876524aebce9ad1362eaba881c0c95fb",
+    "web-typecheck.log": "d9dd95a5d29e2c8680342dd6d79eb56c5cc54980f2328e98854e8e67aa24d7df"
+  },
+  "omissions": [
+    "Absolute workspace/tool executable paths and process IDs",
+    "Raw logs, stack traces and DOM dumps",
+    "Demo/auth/session/cookie/CSRF state, private feed values and credentials",
+    "Browser screenshots, traces and runtime source copies"
+  ],
+  "original_records": [
+    {
+      "included_native_bytes": false,
+      "record": "final-aggregate-preparation-20261025/run/run.json",
+      "sha256": "cab4211e7a6d7d1069355fc3e3d85a30405d1651fe662677a98257fbad4deff3"
+    },
+    {
+      "included_native_bytes": false,
+      "record": "final-aggregate-preparation-20261025/NATIVE-RESULT-SUMMARY.json",
+      "sha256": "40607a1e93c22c9a7e8376259ab46654b7cc9c78f1eed1a292269b33e46e33e3"
+    }
+  ],
+  "passed_stage_count": 8,
+  "privacy_rule": "Explicitly selected scalar/count/identity fields only; original immutable record hashes retained.",
+  "purpose": "original_available_aggregate_attempt_failure_preserved",
+  "qa_released_utc": "2026-10-25T16:22:07.897056+00:00",
+  "record_kind": "derived_allowlisted_terminal_summary_not_native_byte_copy",
+  "runner_sha256": "2198b8b69ac83f587fa9e99c2b10fdfebdb72810b881f75c7b22482c4f59713d",
+  "schema": "routeweaver.portable-verification.v1",
+  "source_sha256": "b124729420964ab2abb434b7716e2369fdda61072c744b07e57bd254b61c59c5",
+  "stages": [
+    {
+      "command_description": "python scripts/tickets.py check",
+      "finished": "2026-10-25T16:06:55.269146+00:00",
+      "name": "tickets",
+      "nativeExit": 0,
+      "started": "2026-10-25T16:06:55.235522+00:00"
+    },
+    {
+      "command_description": "python -m unittest discover -s scripts -p test_*.py",
+      "finished": "2026-10-25T16:06:55.602948+00:00",
+      "name": "python-guard-tests",
+      "nativeExit": 0,
+      "started": "2026-10-25T16:06:55.510217+00:00"
+    },
+    {
+      "command_description": "gofmt -l on the exact runner-selected Go source list (read-only)",
+      "finished": "2026-10-25T16:06:55.999867+00:00",
+      "name": "format",
+      "nativeExit": 0,
+      "started": "2026-10-25T16:06:55.842666+00:00"
+    },
+    {
+      "command_description": "go run ./scripts/check-architecture",
+      "finished": "2026-10-25T16:06:56.416478+00:00",
+      "name": "architecture",
+      "nativeExit": 0,
+      "started": "2026-10-25T16:06:56.230247+00:00"
+    },
+    {
+      "command_description": "go vet ./...",
+      "finished": "2026-10-25T16:07:08.184588+00:00",
+      "name": "go-vet",
+      "nativeExit": 0,
+      "started": "2026-10-25T16:06:56.649804+00:00"
+    },
+    {
+      "command_description": "go test -json -p=1 -count=1 -timeout=20m ./...",
+      "finished": "2026-10-25T16:09:48.410256+00:00",
+      "name": "go-tests",
+      "nativeExit": 0,
+      "started": "2026-10-25T16:07:08.438897+00:00"
+    },
+    {
+      "command_description": "go build ./...",
+      "finished": "2026-10-25T16:09:50.233110+00:00",
+      "name": "go-build",
+      "nativeExit": 0,
+      "started": "2026-10-25T16:09:48.639603+00:00"
+    },
+    {
+      "command_description": "npm --prefix web run typecheck",
+      "finished": "2026-10-25T16:09:53.707011+00:00",
+      "name": "web-typecheck",
+      "nativeExit": 0,
+      "started": "2026-10-25T16:09:50.468078+00:00"
+    },
+    {
+      "command_description": "npm --prefix web run test -- --maxWorkers=1 --retry=0 --reporter=default --reporter=json --outputFile.json=<native-report>",
+      "finished": "2026-10-25T16:22:07.369921+00:00",
+      "name": "web-tests",
+      "nativeExit": 1,
+      "started": "2026-10-25T16:09:53.943075+00:00"
+    }
+  ],
+  "started": "2026-10-25T16:06:54.633078+00:00",
+  "status": "failed",
+  "web": {
+    "counts": {
+      "numFailedTestSuites": 2,
+      "numFailedTests": 2,
+      "numPassedTestSuites": 146,
+      "numPassedTests": 1529,
+      "numPendingTestSuites": 0,
+      "numPendingTests": 0,
+      "numTodoTests": 0,
+      "numTotalTestSuites": 148,
+      "numTotalTests": 1531,
+      "success": false
+    },
+    "failed_cases": [
+      {
+        "file": "web/src/line-workflow.dom.test.tsx",
+        "test_title": "returns from authorization, credentials and the path planner to the same line and user without writing"
+      },
+      {
+        "file": "web/src/workspace.dom.test.tsx",
+        "test_title": "keeps the existing reset anchor and hidden service limits when saving ordinary service fields"
+      }
+    ],
+    "native_report_sha256": "e9206bc1dcbd5bc3e7408d3611160a4ce4f33c646dee40e0e4435dbe8e6ac188",
+    "passed_physical_files": 128,
+    "physical_files": 130,
+    "skipped": 0,
+    "unhandled_reported": false
+  },
+  "web_build_in_this_attempt": "not reached after web-tests failed"
+}

@@ -1,0 +1,61 @@
+{
+  "canonical_relation": "The final31 code/test source matches first38 integration exactly. Subsequent two replacements are other DOM tests only. This historical candidate result is not relabeled an execution on full final582c.",
+  "limits": [
+    "Local synthetic demo only; two complete desktop/narrow entitlement tasks and one320px control probe, not three full journeys.",
+    "Same original reset-control full border box is visible with body-only scroll; no dedicated focused reset screenshot or expanded-outline/AT claim.",
+    "Bounded finite30 excludes AccessPolicy Modal wiring, so228 is not combined Modal/full-application coverage."
+  ],
+  "native_actual": {
+    "cases": 3,
+    "images": 8,
+    "independent_review": {
+      "path": "policy-ux-review-20261025/ENTITLEMENT-FINAL-ACTUAL-ACCEPTANCE-REVIEW.json",
+      "sha256": "d6153bc6deb879d8b95ffe3f9d228c6235dc750a4f41594b1f5fb5d77d7893a6"
+    },
+    "receipt": {
+      "path": "entitlement-policy-edit-frontend-proposal-20261025/browser/selected-date-state-refinement/run/run.json",
+      "sha256": "f189da17cf352360a39d8b6c3a9b1184c89d06db2bbbd269688cfdbdc93f95d1"
+    },
+    "scope": "Desktop and390px full entitlement tasks plus one320px control boundary/reachability probe, not three full authorization journeys; local synthetic demo only. All31 executed source hashes match integrated code/test paths. Two viewport settled reverse-Tab controls visible with body-only scroll and no reset request. Not expanded-outline/AT or overall product acceptance.",
+    "totals": {
+      "additionalControlProbePolicyWrites": 0,
+      "cases": 3,
+      "domainUsersCreated": 0,
+      "entitlementRowsInserted": 1,
+      "entitlementUpdates": 5,
+      "existingDemoAdminSessionPairs": 7,
+      "groupsCreated": 0,
+      "guardedPreviews": 9,
+      "plansCreated": 0,
+      "policyApplies": 6,
+      "policyAuditEvents": 6,
+      "screenshots": 8,
+      "stale409Previews": 2,
+      "successfulPreviews": 7
+    }
+  },
+  "native_finite": {
+    "actual_whole_files": 12,
+    "passed": 228,
+    "receipt": {
+      "path": "entitlement-policy-edit-frontend-proposal-20261025/finite-validation/validation-green-reset-focus/run.json",
+      "sha256": "d7f9fc0169d23bef8b854a66078b813be5e3b0e8d3f2eaac78c7d61f89910dcf"
+    },
+    "runner_reported_suites": 13,
+    "source_scope": "finite30 includes reviewed helper prefix and reset adapter but excludes AccessPolicy Modal wiring; not a 31-path combined aggregate/Modal task rerun",
+    "total": 228,
+    "typecheck_native_exit": 0,
+    "unhandled_reported": 0
+  },
+  "omissions": [
+    "Absolute workspace/tool executable paths and process IDs",
+    "Raw logs, stack traces and DOM dumps",
+    "Demo/auth/session/cookie/CSRF state, private feed values and credentials",
+    "Browser screenshots, traces and runtime source copies"
+  ],
+  "overall_product_acceptance": false,
+  "privacy_rule": "Explicitly selected scalar/count/identity fields only; original immutable record hashes retained.",
+  "purpose": "bounded_entitlement_stage_prior_to_canonical_integration",
+  "record_kind": "derived_allowlisted_terminal_summary_not_native_byte_copy",
+  "schema": "routeweaver.portable-verification.v1"
+}

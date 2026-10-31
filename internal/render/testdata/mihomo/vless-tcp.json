@@ -1,0 +1,48 @@
+{
+  "allow-lan": false,
+  "bind-address": "127.0.0.1",
+  "log-level": "warning",
+  "mixed-port": 17890,
+  "mode": "rule",
+  "proxies": [
+    {
+      "client-fingerprint": "chrome",
+      "flow": "xtls-rprx-vision",
+      "name": "United Kingdom",
+      "network": "tcp",
+      "packet-encoding": "xudp",
+      "port": 443,
+      "reality-opts": {
+        "public-key": "ZCBkxteC4GSHx-8OeSWgGTcJfD-KQYJgKfAnPcnL_q0",
+        "short-id": "0123456789abcdef"
+      },
+      "server": "192.0.2.30",
+      "servername": "example.com",
+      "tls": true,
+      "type": "vless",
+      "uuid": "00000000-0000-4000-8000-000000000001"
+    },
+    {
+      "cipher": "aes-128-gcm",
+      "name": "United States",
+      "password": "synthetic-fixture-secret",
+      "port": 8388,
+      "server": "192.0.2.20",
+      "type": "ss"
+    }
+  ],
+  "proxy-groups": [
+    {
+      "name": "Choose",
+      "proxies": [
+        "United Kingdom",
+        "United States"
+      ],
+      "type": "select"
+    }
+  ],
+  "rules": [
+    "DOMAIN-SUFFIX,example.org,Choose",
+    "MATCH,DIRECT"
+  ]
+}

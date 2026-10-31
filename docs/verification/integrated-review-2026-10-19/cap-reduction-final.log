@@ -1,0 +1,56 @@
+=== RUN   TestAdmissionUnionCountsNormalizedIPsAcrossEntriesAndDurablyRenews
+--- PASS: TestAdmissionUnionCountsNormalizedIPsAcrossEntriesAndDurablyRenews (0.13s)
+=== RUN   TestAdmissionRenewalRespectsRevocationQuotaAndHolds
+=== RUN   TestAdmissionRenewalRespectsRevocationQuotaAndHolds/disabled
+=== RUN   TestAdmissionRenewalRespectsRevocationQuotaAndHolds/expired
+=== RUN   TestAdmissionRenewalRespectsRevocationQuotaAndHolds/credential-revoked
+=== RUN   TestAdmissionRenewalRespectsRevocationQuotaAndHolds/route-not-entitled
+=== RUN   TestAdmissionRenewalRespectsRevocationQuotaAndHolds/exhausted
+=== RUN   TestAdmissionRenewalRespectsRevocationQuotaAndHolds/accounting-pending
+=== RUN   TestAdmissionRenewalRespectsRevocationQuotaAndHolds/enrollment-revoked
+--- PASS: TestAdmissionRenewalRespectsRevocationQuotaAndHolds (0.37s)
+    --- PASS: TestAdmissionRenewalRespectsRevocationQuotaAndHolds/disabled (0.08s)
+    --- PASS: TestAdmissionRenewalRespectsRevocationQuotaAndHolds/expired (0.06s)
+    --- PASS: TestAdmissionRenewalRespectsRevocationQuotaAndHolds/credential-revoked (0.06s)
+    --- PASS: TestAdmissionRenewalRespectsRevocationQuotaAndHolds/route-not-entitled (0.05s)
+    --- PASS: TestAdmissionRenewalRespectsRevocationQuotaAndHolds/exhausted (0.05s)
+    --- PASS: TestAdmissionRenewalRespectsRevocationQuotaAndHolds/accounting-pending (0.05s)
+    --- PASS: TestAdmissionRenewalRespectsRevocationQuotaAndHolds/enrollment-revoked (0.04s)
+=== RUN   TestAdmissionIPClaimIsAtomicAcrossStoreHandles
+--- PASS: TestAdmissionIPClaimIsAtomicAcrossStoreHandles (0.06s)
+=== RUN   TestAdmissionScopesPresenceAndExpiresStaleIPs
+--- PASS: TestAdmissionScopesPresenceAndExpiresStaleIPs (0.06s)
+=== RUN   TestConnectionLimitCountsIndependentStreamsOnSameIPAndRenewsAtCap
+--- PASS: TestConnectionLimitCountsIndependentStreamsOnSameIPAndRenewsAtCap (0.10s)
+=== RUN   TestConnectionClaimIsAtomicAcrossStoreHandlesWithSameIP
+--- PASS: TestConnectionClaimIsAtomicAcrossStoreHandlesWithSameIP (0.06s)
+=== RUN   TestAdmissionStatusReportsLeasesNotHardwareAndReleasesStreamsIndependently
+--- PASS: TestAdmissionStatusReportsLeasesNotHardwareAndReleasesStreamsIndependently (0.06s)
+=== RUN   TestIndividualConnectionAndExactRouteOverridesFeedAdmission
+--- PASS: TestIndividualConnectionAndExactRouteOverridesFeedAdmission (0.12s)
+=== RUN   TestConnectionCapReductionRequiresExistingStreamsToFit
+--- PASS: TestConnectionCapReductionRequiresExistingStreamsToFit (0.19s)
+=== RUN   TestGroupPreviewApplySharesAdmissionPolicyAndRejectsStaleRevision
+--- PASS: TestGroupPreviewApplySharesAdmissionPolicyAndRejectsStaleRevision (0.09s)
+=== RUN   TestPolicyPreviewBindsExactChangeAndInitialCycleAnchor
+--- PASS: TestPolicyPreviewBindsExactChangeAndInitialCycleAnchor (0.10s)
+=== RUN   TestGroupChangesCannotDiscardIssuedBudgetOrSilentlyStackServices
+--- PASS: TestGroupChangesCannotDiscardIssuedBudgetOrSilentlyStackServices (0.33s)
+=== RUN   TestGroupPreviewCASSerializesIndependentStoreWriters
+--- PASS: TestGroupPreviewCASSerializesIndependentStoreWriters (0.18s)
+=== RUN   TestProvisioningPolicyFenceRejectsConcurrentGroupRemoval
+--- PASS: TestProvisioningPolicyFenceRejectsConcurrentGroupRemoval (0.22s)
+=== RUN   TestFirstGroupCalendarPreservesExistingDirectRouteBudget
+--- PASS: TestFirstGroupCalendarPreservesExistingDirectRouteBudget (0.20s)
+=== RUN   TestFirstGroupAssignmentDoesNotEraseSettledLegacyUsage
+--- PASS: TestFirstGroupAssignmentDoesNotEraseSettledLegacyUsage (0.10s)
+=== RUN   TestFirstGroupPreviewRejectsInterveningLegacyUsage
+--- PASS: TestFirstGroupPreviewRejectsInterveningLegacyUsage (0.10s)
+=== RUN   TestIndependentCapReductionCannotLeaveRenewableOverCapState
+=== RUN   TestIndependentCapReductionCannotLeaveRenewableOverCapState/streams
+=== RUN   TestIndependentCapReductionCannotLeaveRenewableOverCapState/ips
+--- PASS: TestIndependentCapReductionCannotLeaveRenewableOverCapState (0.20s)
+    --- PASS: TestIndependentCapReductionCannotLeaveRenewableOverCapState/streams (0.11s)
+    --- PASS: TestIndependentCapReductionCannotLeaveRenewableOverCapState/ips (0.09s)
+PASS
+ok  	routeweaver/internal/store	3.687s

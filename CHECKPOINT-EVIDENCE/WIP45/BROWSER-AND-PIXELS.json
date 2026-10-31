@@ -1,0 +1,187 @@
+{
+  "frozenWebManifestSha256": "b8194c14c0f1214d63da39926a5ac86f0b38445eb7ea238cbbf8187dbf7d7fb9",
+  "frozenWebFiles": 308,
+  "initialRun": {
+    "file": "terminal.json",
+    "sha256": "82eaaac55aa5de419190921d4873a6e96061e1c9c7dc26e1c0630b773c701701",
+    "cases": 9,
+    "passed": 9,
+    "durationSeconds": 25.9,
+    "typecheckExit": 0,
+    "installedViteBuildExit": 0
+  },
+  "settledCaptureRepeat": {
+    "file": "settled-terminal.json",
+    "sha256": "5fe6ce8ad2b6109f83b34d381b81babdff14701dac8987918ba98248466498d6",
+    "casesRepeated": 3,
+    "passed": 3,
+    "durationSeconds": 22.1
+  },
+  "distinctInitialCases": 9,
+  "repeatedCasesAreNotAdditionalUniqueCases": true,
+  "backend": "Explicit controlled API fixtures with actual frozen frontend; no real backend acceptance.",
+  "cases": [
+    "Inbox visible read/unread and narrow full-width content at1440",
+    "Inbox visible read/unread and narrow full-width content at390",
+    "Announcement keyboard edit/Escape, scroll hints, outbox failure reason reachable at390",
+    "Default rate-policy measured contrast at least4.5:1 at390 (baseline1.833992)",
+    "User Escape keeps draft until explicit discard; focus returns; search no-match and clear at1440",
+    "Same user draft and search at390",
+    "Basic settings dirty navigation canceled safely; accepted save then return retains authoritative name, exactly1 settings GET and1 simulated PUT at1440",
+    "Same settings protection/cache at390",
+    "Template target selection protected; pending Escape cannot close; browser Back requires explicit departure; late Alpha completion cannot close or overwrite Beta selection"
+  ],
+  "sourceUnchangedBeforeAndAfterBothRuns": true,
+  "temporaryServiceClosed": true,
+  "externalRequestsAndUnplannedWritesDeniedByFixture": true,
+  "productionSourceEditedForRecapture": false,
+  "acceptedFrameCount": 16,
+  "acceptedOriginalFrameCount": 9,
+  "acceptedSettledFrameCount": 7,
+  "acceptedFrames": [
+    {
+      "path": "results/notification-readability.u-078c7-width-narrow-content-at-390/inbox-read-state-390.png",
+      "sha256": "020b75273f15575e3eaf2885968bda861998367a480d2e680afd5a540a4cb661",
+      "bytes": 33139,
+      "width": 390,
+      "height": 844,
+      "acceptance": "Unread/read labels and full date below long title; content wider, no overlap."
+    },
+    {
+      "path": "results/notification-readability.u-622e7-idth-narrow-content-at-1440/inbox-read-state-1440.png",
+      "sha256": "05bd9f50f00d0ee736c64c1bb2f8a5ef66f1842f7aba6e818a35307b3b0f925d",
+      "bytes": 63138,
+      "width": 1440,
+      "height": 1000,
+      "acceptance": "Visible read status and date aligned at right; title and preview remain readable."
+    },
+    {
+      "path": "results/notification-readability.u-be6d6-actions-and-failure-reasons/announcements-scroll-hint-390.png",
+      "sha256": "afd3de93d800b32b3987698f1e6be4f083238a3f97b8d6f62967327317d81a2f",
+      "bytes": 37166,
+      "width": 390,
+      "height": 844,
+      "acceptance": "Existing horizontal-scroll hint is visible below narrow table; no page overflow."
+    },
+    {
+      "path": "results/notification-readability.u-be6d6-actions-and-failure-reasons/delivery-failure-reason-390.png",
+      "sha256": "93593e4bf8f73956765590e78b56021ba0b172025fd4c7cc181394f58991f2f1",
+      "bytes": 33921,
+      "width": 390,
+      "height": 844,
+      "acceptance": "Failure reason readable after intentional rightward table scroll; clipped left columns are expected scroll position."
+    },
+    {
+      "path": "results/notification-readability.u-20be5-formation-not-disabled-text/rate-policy-readable-390.png",
+      "sha256": "dff6107accfa6ad02bf29d1418ded77360435cf0e6f3358bafd1b846740d54b3",
+      "bytes": 47525,
+      "width": 390,
+      "height": 911,
+      "acceptance": "Default 1x quota rule visibly legible as ordinary semantic text; policy copy unchanged."
+    },
+    {
+      "path": "user-draft-protected-1440.png",
+      "sha256": "ae1a350ccbd7550df285f440d2bdd1ef4dfab671a98284fd085d592de913aa81",
+      "bytes": 90607,
+      "width": 1440,
+      "height": 1000,
+      "acceptance": "Discard confirmation clearly states consequence; continue editing and destructive action visible with focus indication."
+    },
+    {
+      "path": "user-draft-protected-390.png",
+      "sha256": "dfa1e8959a894b3bd63a455d323bb1f7f934f29a256e5e55e05aa879213fb20f",
+      "bytes": 43302,
+      "width": 390,
+      "height": 844,
+      "acceptance": "Discard confirmation fits narrow screen; full copy and both controls visible."
+    },
+    {
+      "path": "users-search-empty-1440.png",
+      "sha256": "6c7080b14508d3d41763f69720f2d2268dbe2f2cbb25f2be0bb47c0929fb89bc",
+      "bytes": 69173,
+      "width": 1440,
+      "height": 1000,
+      "acceptance": "No-match state and clear-search recovery visible instead of generic empty data."
+    },
+    {
+      "path": "users-search-empty-390.png",
+      "sha256": "b04e0683e98887948c0b916e3661d54535e8eafc92a95e7197b11f3df21459b3",
+      "bytes": 34858,
+      "width": 390,
+      "height": 1070,
+      "acceptance": "No-match recovery is readable at narrow width; no added page overflow."
+    },
+    {
+      "path": "settled-captures/settings-draft-protected-1440.png",
+      "sha256": "17570529ac4e8201282b29f70bf135eba079d9c0c0267b44221b6226b3c0ed7d",
+      "bytes": 112850,
+      "width": 1440,
+      "height": 1000,
+      "acceptance": "Settled confirmation visible above settings; consequence and both actions readable."
+    },
+    {
+      "path": "settled-captures/settings-draft-protected-390.png",
+      "sha256": "fc5ca677d955ac5ef6d023df6b8623e452d602de8ec179f6cc7b5ab4365401ef",
+      "bytes": 41890,
+      "width": 390,
+      "height": 844,
+      "acceptance": "Settled confirmation visibly above drawer; full wrapped consequence and both controls fit."
+    },
+    {
+      "path": "settled-captures/settings-accepted-return-1440.png",
+      "sha256": "a729e8174188945518ac580bfeba15568479039e27a7268986416be9e7f059bb",
+      "bytes": 109724,
+      "width": 1440,
+      "height": 1143,
+      "acceptance": "Accepted saved name present on returned settings page; readable form layout."
+    },
+    {
+      "path": "settled-captures/settings-accepted-return-390.png",
+      "sha256": "6e0d92f8fb8711806f858cbf405df16b10fa39950ef8339b4b543ef60110b191",
+      "bytes": 67258,
+      "width": 390,
+      "height": 1154,
+      "acceptance": "Accepted saved name present on returned narrow settings page; no field clipping."
+    },
+    {
+      "path": "settled-captures/template-draft-protected-1440.png",
+      "sha256": "74137089d63e4d243e7685ee84d882f6a5104f75f02d7396ad50be06069eb2ec",
+      "bytes": 108267,
+      "width": 1440,
+      "height": 1000,
+      "acceptance": "Specific unapplied-selection discard confirmation visible above template dialog with both actions."
+    },
+    {
+      "path": "settled-captures/template-pending-1440.png",
+      "sha256": "1f151d5c574ce39c57a7aeb0d8bef05ad8cdda1d6e3763a8f1f66ee5ff2f7e3b",
+      "bytes": 101254,
+      "width": 1440,
+      "height": 1000,
+      "acceptance": "Pending Apply state visible; template context and selection intact."
+    },
+    {
+      "path": "settled-captures/template-newer-task-retained-1440.png",
+      "sha256": "a135368e579a8b087cd176532389679147f186b5aec78dd1a4032afd324acd06",
+      "bytes": 101958,
+      "width": 1440,
+      "height": 1000,
+      "acceptance": "Newer Beta template dialog remains visible with its selected collection; no clipping."
+    }
+  ],
+  "initialTransientConfirmCapturesExcluded": [
+    "settings-draft-protected-1440.png",
+    "settings-draft-protected-390.png",
+    "template-draft-protected-1440.png"
+  ],
+  "pixelReviewIndependence": "Reviewer was separate from browser operator but authored three UI slices; source review was separately independent.",
+  "pixelReviewReceiptSha256": "0a3ed2da642aa4af6a5b028d376f6df27a5c9605220891d0bf06ba67ce300d1b",
+  "browserSummarySha256": "127f6d6eb3cdd55c8681682b7ad70f28de303a54e07d7037308f0b9f525dc4bb",
+  "screenshotBytesIncluded": false,
+  "limitations": [
+    "No current Go compiler/backend run; no backend persistence or authentication acceptance.",
+    "No full WCAG, native apply, live traffic, deployment, mailbox delivery, encrypted-backup or real-server claim.",
+    "Admin endpoint/legacy-route and additional template lifecycle variants have parent/co-owner DOM evidence, not an assertion of exhaustive browser coverage here.",
+    "The4 permanent readability cases reproduce4 baseline failures; the original broad screenshot sweep is observation evidence, not all-green product certification.",
+    "Some before/after fixture text and viewport differ; selected images are not pixel-identical diff pairs."
+  ]
+}

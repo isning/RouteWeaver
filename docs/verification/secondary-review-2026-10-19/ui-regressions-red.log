@@ -1,0 +1,540 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> routeweaver-web@1.0.0 test
+> vitest run --reporter=dot
+
+
+ RUN  v5.0.5 /workspace/scratch/d385eb428cee/routeweaver/web
+
+··································xxx
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/workspace.dom.test.tsx > shows and previews the exact pinned template version rather than the latest spec
+TestingLibraryElementError: Unable to find an element with the text: Version one slot. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"css-dev-only-do-not-override-jdb7z4 ant-app css-var-_r_4g_"[39m
+    [36m>[39m
+      [36m<header[39m
+        [33mclass[39m=[32m"page-heading"[39m
+      [36m>[39m
+        [36m<div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"eyebrow"[39m
+          [36m>[39m
+            [0mSTART WITH A GOOD PATTERN[0m
+          [36m</div>[39m
+          [36m<h1>[39m
+            [0m模板与预设[0m
+          [36m</h1>[39m
+          [36m<p>[39m
+            [0m复用成熟的处理步骤和分流结构，保留自己的来源与凭据。[0m
+          [36m</p>[39m
+        [36m</div>[39m
+      [36m</header>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"ant-tabs ant-tabs-top css-dev-only-do-not-override-jdb7z4 css-var-_r_4g_ ant-tabs-css-var"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33maria-orientation[39m=[32m"horizontal"[39m
+          [33mclass[39m=[32m"ant-tabs-nav"[39m
+          [33mrole[39m=[32m"tablist"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"ant-tabs-nav-wrap"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"ant-tabs-nav-list"[39m
+              [33mstyle[39m=[32m"transform: translate(0px, 0px);"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"ant-tabs-tab"[39m
+                [33mdata-node-key[39m=[32m"library"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33maria-controls[39m=[32m"rc-tabs-test-panel-library"[39m
+                  [33maria-selected[39m=[32m"false"[39m
+                  [33mclass[39m=[32m"ant-tabs-tab-btn"[39m
+                  [33mid[39m=[32m"rc-tabs-test-tab-library"[39m
+                  [33mrole[39m=[32m"tab"[39m
+                  [33mtabindex[39m=[32m"-1"[39m
+                [36m>[39m
+                  [0m模板库[0m
+                [36m</div>[39m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"ant-tabs-tab ant-tabs-tab-active"[39m
+                [33mdata-node-key[39m=[32m"mine"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33maria-controls[39m=[32m"rc-tabs-test-panel-mine"[39m
+                  [33maria-selected[39m=[32m"true"[39m
+                  [33mclass[39m=[32m"ant-tabs-tab-btn"[39m
+                  [33mid[39m=[32m"rc-tabs-test-tab-mine"[39m
+                  [33mrole[39m=[32m"tab"[39m
+                  [33mtabindex[39m=[32m"0"[39m
+                [36m>[39m
+                  [0m我的引用[0m
+                [36m</div>[39m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"ant-tabs-ink-bar ant-tabs-ink-bar-animated"[39m
+                [33mstyle[39m=[32m"width: 0px; left: 0px; transform: translateX(-50%);"[39m
+              [36m/>[39m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"ant-tabs-nav-operations ant-tabs-nav-operations-hidden"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33maria-controls[39m=[32m"rc-tabs-test-more-popup"[39m
+              [33maria-expanded[39m=[32m"false"[39m
+              [33maria-haspopup[39m=[32m"listbox"[39m
+              [33mclass[39m=[32m"ant-tabs-nav-more"[39m
+              [33mid[39m=[32m"rc-tabs-test-more"[39m
+              [33mstyle[39m=[32m"visibility: hidden; order: 1;"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33maria-label[39m=[32m"ellipsis"[39m
+                [33mclass[39m=[32m"anticon anticon-ellipsis"[39m
+                [33mrole[39m=[32m"img"[39m
+              [36m>[39m
+                [36m<svg[39m
+                  [33maria-hidden[39m=[32m"true"[39m
+                  [33mdata-icon[39m=[32m"ellipsis"[39m
+                  [33mfill[39m=[32m"currentColor"[39m
+                  [33mfocusable[39m=[32m"false"[39m
+                  [33mheight[39m=[32m"1em"[39m
+                  [33mviewBox[39m=[32m"64 64 896 896"[39m
+                  [33mwidth[39m=[32m"1em"[39m
+                [36m>[39m
+                  [36m<path[39m
+                    [33md[39m=[32m"M176 511a56 56 0 10112 0 56 56 0 10-112 0zm280 0a56 56 0 10112 0 56 56 0 10-112 0zm280 0a56 56 0 10112 0 56 56 0 10-112 0z"[39m
+                  [36m/>[39m
+                [36m</svg>[39m
+              [36m</span>[39m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"ant-tabs-body-holder"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"ant-tabs-body ant-tabs-body-top"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33maria-hidden[39m=[32m"true"[39m
+              [33maria-labelledby[39m=[32m"rc-tabs-test-tab-library"[39m
+              [33mclass[39m=[32m"ant-tabs-content ant-tabs-content-hidden"[39m
+              [33mid[39m=[32m"rc-tabs-test-panel-library"[39m
+              [33mrole[39m=[32m"tabpanel"[39m
+              [33mtabindex[39m=[32m"-1"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"card-grid"[39m
+              [36m>[39m
+                [36m<article[39m
+                  [33mclass[39m=[32m"surface profile-card"[39m
+                [36m>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"profile-card-top"[39m
+                  [36m>[39m
+                    [36m<span[39m
+                      [33mclass[39m=[32m"tile-icon"[39m
+                    [36m>[39m
+                      [36m<span[39m
+                        [33maria-hidden[39m=[32m"true"[39m
+                        [33maria-label[39m=[32m"book"[39m
+                        [33mclass[39m=[32m"anticon anticon-book"[39m
+                        [33mrole[39m=[32m"img"[39m
+                      [36m>[39m
+                        [36m<svg[39m
+                          [33maria-hidden[39m=[32m"true"[39m
+                          [33mdata-icon[39m=[32m"book"[39m
+                          [33mfill[39m=[32m"currentColor"[39m
+                          [33mfocusable[39m=[32m"false"[39m
+                          [33mheight[39m=[32m"1em"[39m
+                          [33mviewBox[39m=[32m"64 64 896 896"[39m
+                          [33mwidth[39m=[32m"1em"[39m
+                        [36m>[39m
+                          [36m<path[39m
+                            [33md[39m=[32m"M832 64H192c-17.7 0-32 14.3-32 32v832c0 17.7 14.3 32 32 32h640c17.7 0 32-14.3 32-32V96c0-17.7-14.3-32-32-32zm-260 72h96v209.9L621.5 312 572 347.4V136zm220 752H232V136h280v296.9c0 3.3 1 6.6 3 9.3a15.9 15.9 0 0022.3 ...
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"css-dev-only-do-not-override-jdb7z4 ant-app css-var-_r_4g_"[39m
+    [36m>[39m
+      [36m<header[39m
+        [33mclass[39m=[32m"page-heading"[39m
+      [36m>[39m
+        [36m<div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"eyebrow"[39m
+          [36m>[39m
+            [0mSTART WITH A GOOD PATTERN[0m
+          [36m</div>[39m
+          [36m<h1>[39m
+            [0m模板与预设[0m
+          [36m</h1>[39m
+          [36m<p>[39m
+            [0m复用成熟的处理步骤和分流结构，保留自己的来源与凭据。[0m
+          [36m</p>[39m
+        [36m</div>[39m
+      [36m</header>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"ant-tabs ant-tabs-top css-dev-only-do-not-override-jdb7z4 css-var-_r_4g_ ant-tabs-css-var"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33maria-orientation[39m=[32m"horizontal"[39m
+          [33mclass[39m=[32m"ant-tabs-nav"[39m
+          [33mrole[39m=[32m"tablist"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"ant-tabs-nav-wrap"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"ant-tabs-nav-list"[39m
+              [33mstyle[39m=[32m"transform: translate(0px, 0px);"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"ant-tabs-tab"[39m
+                [33mdata-node-key[39m=[32m"library"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33maria-controls[39m=[32m"rc-tabs-test-panel-library"[39m
+                  [33maria-selected[39m=[32m"false"[39m
+                  [33mclass[39m=[32m"ant-tabs-tab-btn"[39m
+                  [33mid[39m=[32m"rc-tabs-test-tab-library"[39m
+                  [33mrole[39m=[32m"tab"[39m
+                  [33mtabindex[39m=[32m"-1"[39m
+                [36m>[39m
+                  [0m模板库[0m
+                [36m</div>[39m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"ant-tabs-tab ant-tabs-tab-active"[39m
+                [33mdata-node-key[39m=[32m"mine"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33maria-controls[39m=[32m"rc-tabs-test-panel-mine"[39m
+                  [33maria-selected[39m=[32m"true"[39m
+                  [33mclass[39m=[32m"ant-tabs-tab-btn"[39m
+                  [33mid[39m=[32m"rc-tabs-test-tab-mine"[39m
+                  [33mrole[39m=[32m"tab"[39m
+                  [33mtabindex[39m=[32m"0"[39m
+                [36m>[39m
+                  [0m我的引用[0m
+                [36m</div>[39m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"ant-tabs-ink-bar ant-tabs-ink-bar-animated"[39m
+                [33mstyle[39m=[32m"width: 0px; left: 0px; transform: translateX(-50%);"[39m
+              [36m/>[39m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"ant-tabs-nav-operations ant-tabs-nav-operations-hidden"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33maria-controls[39m=[32m"rc-tabs-test-more-popup"[39m
+              [33maria-expanded[39m=[32m"false"[39m
+              [33maria-haspopup[39m=[32m"listbox"[39m
+              [33mclass[39m=[32m"ant-tabs-nav-more"[39m
+              [33mid[39m=[32m"rc-tabs-test-more"[39m
+              [33mstyle[39m=[32m"visibility: hidden; order: 1;"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33maria-label[39m=[32m"ellipsis"[39m
+                [33mclass[39m=[32m"anticon anticon-ellipsis"[39m
+                [33mrole[39m=[32m"img"[39m
+              [36m>[39m
+                [36m<svg[39m
+                  [33maria-hidden[39m=[32m"true"[39m
+                  [33mdata-icon[39m=[32m"ellipsis"[39m
+                  [33mfill[39m=[32m"currentColor"[39m
+                  [33mfocusable[39m=[32m"false"[39m
+                  [33mheight[39m=[32m"1em"[39m
+                  [33mviewBox[39m=[32m"64 64 896 896"[39m
+                  [33mwidth[39m=[32m"1em"[39m
+                [36m>[39m
+                  [36m<path[39m
+                    [33md[39m=[32m"M176 511a56 56 0 10112 0 56 56 0 10-112 0zm280 0a56 56 0 10112 0 56 56 0 10-112 0zm280 0a56 56 0 10112 0 56 56 0 10-112 0z"[39m
+                  [36m/>[39m
+                [36m</svg>[39m
+              [36m</span>[39m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"ant-tabs-body-holder"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"ant-tabs-body ant-tabs-body-top"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33maria-hidden[39m=[32m"true"[39m
+              [33maria-labelledby[39m=[32m"rc-tabs-test-tab-library"[39m
+              [33mclass[39m=[32m"ant-tabs-content ant-tabs-content-hidden"[39m
+              [33mid[39m=[32m"rc-tabs-test-panel-library"[39m
+              [33mrole[39m=[32m"tabpanel"[39m
+              [33mtabindex[39m=[32m"-1"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"card-grid"[39m
+              [36m>[39m
+                [36m<article[39m
+                  [33mclass[39m=[32m"surface profile-card"[39m
+                [36m>[39m
+                  [36m<div[39m
+                    [33mclass[39m=[32m"profile-card-top"[39m
+                  [36m>[39m
+                    [36m<span[39m
+                      [33mclass[39m=[32m"tile-icon"[39m
+                    [36m>[39m
+                      [36m<span[39m
+                        [33maria-hidden[39m=[32m"true"[39m
+                        [33maria-label[39m=[32m"book"[39m
+                        [33mclass[39m=[32m"anticon anticon-book"[39m
+                        [33mrole[39m=[32m"img"[39m
+                      [36m>[39m
+                        [36m<svg[39m
+                          [33maria-hidden[39m=[32m"true"[39m
+                          [33mdata-icon[39m=[32m"book"[39m
+                          [33mfill[39m=[32m"currentColor"[39m
+                          [33mfocusable[39m=[32m"false"[39m
+                          [33mheight[39m=[32m"1em"[39m
+                          [33mviewBox[39m=[32m"64 64 896 896"[39m
+                          [33mwidth[39m=[32m"1em"[39m
+                        [36m>[39m
+                          [36m<path[39m
+                            [33md[39m=[32m"M832 64H192c-17.7 0-32 14.3-32 32v832c0 17.7 14.3 32 32 32h640c17.7 0 32-14.3 32-32V96c0-17.7-14.3-32-32-32zm-260 72h96v209.9L621.5 312 572 347.4V136zm220 752H232V136h280v296.9c0 3.3 1 6.6 3 9.3a15.9 15.9 0 0022.3 ...
+ ❯ waitForWrapper node_modules/@testing-library/dom/dist/wait-for.js:163:27
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:86:33
+ ❯ src/workspace.dom.test.tsx:606:23
+    604| it("shows and previews the exact pinned template version rather than t…
+    605|   const {requests}=await templateUpdateFixture("pinned");
+    606|   expect(await screen.findByText("Version one slot")).toBeTruthy();
+       |                       ^
+    607|   await waitFor(()=>expect(requests).toHaveLength(1));
+    608|   expect(requests[0].body.version).toBe(1);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  src/workspace.dom.test.tsx > drops removed template slots and submits the same exact version and bindings on preview and apply
+AssertionError: expected { bindings: { endpoints: { …(2) } } } to match object { version: 2, bindings: { …(1) } }
+
+- Expected
++ Received
+
+@@ -2,7 +2,6 @@
+    "bindings": {
+      "endpoints": {
+        "keep": "owned",
+      },
+    },
+-   "version": 2,
+  }
+
+ ❯ src/workspace.dom.test.tsx:614:28
+    612|   const {requests,user}=await templateUpdateFixture("follow");
+    613|   await waitFor(()=>expect(requests).toHaveLength(1));
+    614|   expect(requests[0].body).toMatchObject({version:2,bindings:{endpoint…
+       |                            ^
+    615|   expect(requests[0].body.bindings.endpoints.retired).toBeUndefined();
+    616|   await user.click(await screen.findByRole("button",{name:"将更新应用到草稿"})…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  src/workspace.dom.test.tsx > explains that announcements are in-app only, not automatic external messages
+TestingLibraryElementError: Unable to find an element with the text: /公告仅在站内/. This could be because the text is broken up by multiple elements. In this case, you can provide a function for your text matcher to make your matcher more flexible.
+
+Ignored nodes: comments, script, style
+[36m<body>[39m
+  [36m<div>[39m
+    [36m<div[39m
+      [33mclass[39m=[32m"css-dev-only-do-not-override-jdb7z4 ant-app css-var-_r_54_"[39m
+    [36m>[39m
+      [36m<header[39m
+        [33mclass[39m=[32m"page-heading"[39m
+      [36m>[39m
+        [36m<div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"eyebrow"[39m
+          [36m>[39m
+            [0mCLEAR COMMUNICATION[0m
+          [36m</div>[39m
+          [36m<h1>[39m
+            [0m公告与通知[0m
+          [36m</h1>[39m
+          [36m<p>[39m
+            [0m安排清晰的服务公告，按实际交付结果追踪提醒。[0m
+          [36m</p>[39m
+        [36m</div>[39m
+      [36m</header>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"ant-tabs ant-tabs-top css-dev-only-do-not-override-jdb7z4 css-var-_r_54_ ant-tabs-css-var"[39m
+      [36m>[39m
+        [36m<div[39m
+          [33maria-orientation[39m=[32m"horizontal"[39m
+          [33mclass[39m=[32m"ant-tabs-nav"[39m
+          [33mrole[39m=[32m"tablist"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"ant-tabs-nav-wrap"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"ant-tabs-nav-list"[39m
+              [33mstyle[39m=[32m"transform: translate(0px, 0px);"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"ant-tabs-tab ant-tabs-tab-active"[39m
+                [33mdata-node-key[39m=[32m"announcements"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33maria-controls[39m=[32m"rc-tabs-test-panel-announcements"[39m
+                  [33maria-selected[39m=[32m"true"[39m
+                  [33mclass[39m=[32m"ant-tabs-tab-btn"[39m
+                  [33mid[39m=[32m"rc-tabs-test-tab-announcements"[39m
+                  [33mrole[39m=[32m"tab"[39m
+                  [33mtabindex[39m=[32m"0"[39m
+                [36m>[39m
+                  [0m公告[0m
+                [36m</div>[39m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"ant-tabs-tab"[39m
+                [33mdata-node-key[39m=[32m"settings"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33maria-controls[39m=[32m"rc-tabs-test-panel-settings"[39m
+                  [33maria-selected[39m=[32m"false"[39m
+                  [33mclass[39m=[32m"ant-tabs-tab-btn"[39m
+                  [33mid[39m=[32m"rc-tabs-test-tab-settings"[39m
+                  [33mrole[39m=[32m"tab"[39m
+                  [33mtabindex[39m=[32m"-1"[39m
+                [36m>[39m
+                  [0m提醒与渠道[0m
+                [36m</div>[39m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"ant-tabs-tab"[39m
+                [33mdata-node-key[39m=[32m"deliveries"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33maria-controls[39m=[32m"rc-tabs-test-panel-deliveries"[39m
+                  [33maria-selected[39m=[32m"false"[39m
+                  [33mclass[39m=[32m"ant-tabs-tab-btn"[39m
+                  [33mid[39m=[32m"rc-tabs-test-tab-deliveries"[39m
+                  [33mrole[39m=[32m"tab"[39m
+                  [33mtabindex[39m=[32m"-1"[39m
+                [36m>[39m
+                  [0m发送记录[0m
+                [36m</div>[39m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"ant-tabs-ink-bar ant-tabs-ink-bar-animated"[39m
+                [33mstyle[39m=[32m"width: 0px; left: 0px; transform: translateX(-50%);"[39m
+              [36m/>[39m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"ant-tabs-nav-operations ant-tabs-nav-operations-hidden"[39m
+          [36m>[39m
+            [36m<button[39m
+              [33maria-controls[39m=[32m"rc-tabs-test-more-popup"[39m
+              [33maria-expanded[39m=[32m"false"[39m
+              [33maria-haspopup[39m=[32m"listbox"[39m
+              [33mclass[39m=[32m"ant-tabs-nav-more"[39m
+              [33mid[39m=[32m"rc-tabs-test-more"[39m
+              [33mstyle[39m=[32m"visibility: hidden; order: 1;"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33maria-label[39m=[32m"ellipsis"[39m
+                [33mclass[39m=[32m"anticon anticon-ellipsis"[39m
+                [33mrole[39m=[32m"img"[39m
+              [36m>[39m
+                [36m<svg[39m
+                  [33maria-hidden[39m=[32m"true"[39m
+                  [33mdata-icon[39m=[32m"ellipsis"[39m
+                  [33mfill[39m=[32m"currentColor"[39m
+                  [33mfocusable[39m=[32m"false"[39m
+                  [33mheight[39m=[32m"1em"[39m
+                  [33mviewBox[39m=[32m"64 64 896 896"[39m
+                  [33mwidth[39m=[32m"1em"[39m
+                [36m>[39m
+                  [36m<path[39m
+                    [33md[39m=[32m"M176 511a56 56 0 10112 0 56 56 0 10-112 0zm280 0a56 56 0 10112 0 56 56 0 10-112 0zm280 0a56 56 0 10112 0 56 56 0 10-112 0z"[39m
+                  [36m/>[39m
+                [36m</svg>[39m
+              [36m</span>[39m
+            [36m</button>[39m
+          [36m</div>[39m
+        [36m</div>[39m
+        [36m<div[39m
+          [33mclass[39m=[32m"ant-tabs-body-holder"[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"ant-tabs-body ant-tabs-body-top"[39m
+          [36m>[39m
+            [36m<div[39m
+              [33maria-hidden[39m=[32m"false"[39m
+              [33maria-labelledby[39m=[32m"rc-tabs-test-tab-announcements"[39m
+              [33mclass[39m=[32m"ant-tabs-content ant-tabs-content-active"[39m
+              [33mid[39m=[32m"rc-tabs-test-panel-announcements"[39m
+              [33mrole[39m=[32m"tabpanel"[39m
+              [33mtabindex[39m=[32m"0"[39m
+            [36m>[39m
+              [36m<section[39m
+                [33mclass[39m=[32m"surface "[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"section-heading"[39m
+                [36m>[39m
+                  [36m<div>[39m
+                    [36m<h2>[39m
+                      [0m服务公告[0m
+                    [36m</h2>[39m
+                    [36m<p>[39m
+                      [0m修改同一公告保留已读记录；需要重新通知时创建新公告。[0m
+                    [36m</p>[39m
+                  [36m</div>[39m
+                  [36m<button[39m
+                    [33mclass[39m=[32m"ant-btn css-dev-only-do-not-override-jdb7z4 css-var-_r_54_ ant-btn-primary ant-btn-color-primary ant-btn-variant-solid"[39m
+                    [33mtype[39m=[32m"button"[39m
+                  [36m>[39m
+                    [36m<span[39m
+                      [33mclass[39m=[32m"a...
+ ❯ Object.getElementError node_modules/@testing-library/dom/dist/config.js:37:19
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:76:38
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:52:17
+ ❯ node_modules/@testing-library/dom/dist/query-helpers.js:95:19
+ ❯ src/workspace.dom.test.tsx:625:17
+    623|   mount(<NotificationsAdminPage/>);
+    624|   await userEvent.setup().click(await screen.findByRole("button",{name…
+    625|   expect(screen.getByText(/公告仅在站内/)).toBeTruthy();
+       |                 ^
+    626|   expect(screen.queryByText(/外部通知按已启用/)).toBeNull();
+    627| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  1 failed | 4 passed (5)
+      Tests  3 failed | 34 passed (37)
+   Start at  02:54:54
+   Duration  11.60s (tests 76%, import 18%, environment 5%, transform 1%)
+
+npm notice
+npm notice New major version of npm available! 11.9.0 -> 12.2.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
+npm notice To update run: npm install -g npm@12.2.0
+npm notice

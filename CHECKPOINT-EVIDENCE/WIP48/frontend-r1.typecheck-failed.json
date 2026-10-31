@@ -1,0 +1,30 @@
+{
+  "checkpoint": "WIP48",
+  "attempt": "frontend-r1",
+  "status": "failed",
+  "stage": "TypeScript",
+  "reason": "Two newly added getByRole test calls used unsupported exact option. Replaced with anchored accessible-name regular expressions.",
+  "vitest": "not started",
+  "production_build": "not started",
+  "final_acceptance": false,
+  "evidence": [
+    {
+      "filename": "final-typecheck-r1.log",
+      "sha256": "feaa41856181923bdc2a5eaaeddb2a8452006c9ca20743619add5c306c7138b1",
+      "bytes": 834,
+      "availability": "local-only diagnostic; not an archive attachment"
+    },
+    {
+      "filename": "final-web-r1.exit",
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+      "bytes": 2,
+      "availability": "local-only diagnostic; not an archive attachment"
+    },
+    {
+      "filename": "final-web-freeze-r1.json",
+      "sha256": "fa7e41cd5297bfb07b12881184d4d8369fbaa8641d285bfb6c6af305d893c10b",
+      "bytes": 57043,
+      "availability": "local-only diagnostic; not an archive attachment"
+    }
+  ]
+}

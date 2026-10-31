@@ -1,0 +1,5 @@
+--- FAIL: TestStreamingBackupRejectsUnauthenticatedOrMalformedFramesAndCleansStaging (8.55s)
+    stream_test.go:342: formatted v1 compatibility lost: backup cannot be authenticated or is incomplete; check the passphrase and file
+FAIL
+FAIL	routeweaver/internal/backup	8.589s
+FAIL

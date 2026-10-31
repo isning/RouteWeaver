@@ -1,0 +1,11 @@
+=== RUN   TestSecondaryDispatchLeaseUsesActualClaimTime
+    secondary_review_test.go:26: newly claimed event lease remaining: 59.998538913s
+--- PASS: TestSecondaryDispatchLeaseUsesActualClaimTime (65.04s)
+=== RUN   TestBatchClaimsFreshLeaseAfterSlowEarlierSend
+--- PASS: TestBatchClaimsFreshLeaseAfterSlowEarlierSend (0.01s)
+=== RUN   TestRetryDelayStartsAfterTransportFailure
+--- PASS: TestRetryDelayStartsAfterTransportFailure (0.00s)
+=== RUN   TestQueuedExpiryRecheckedAfterEarlierSend
+--- PASS: TestQueuedExpiryRecheckedAfterEarlierSend (0.00s)
+PASS
+ok  	routeweaver/internal/notifications	65.068s

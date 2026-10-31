@@ -1,0 +1,7 @@
+# routeweaver/internal/backup_test [routeweaver/internal/backup.test]
+internal/backup/stream_test.go:21:16: undefined: backup.CreateStream
+internal/backup/stream_test.go:21:82: undefined: backup.DefaultLimits
+internal/backup/stream_test.go:24:16: undefined: backup.PreviewStream
+internal/backup/stream_test.go:24:81: undefined: backup.DefaultLimits
+FAIL	routeweaver/internal/backup [build failed]
+FAIL

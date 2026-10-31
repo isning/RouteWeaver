@@ -1,0 +1,51 @@
+{
+  "status": "passed",
+  "backend_manifest": "docs/verification/wip47/backend-parity-final.sha256",
+  "backend_manifest_sha256": "2271b511a690e7593dd6a318ba92bbe4bc531f5303b0fda8143022079df293ab",
+  "native_parser": {
+    "configurations": 112,
+    "cores": {
+      "mihomo": "1.19.32",
+      "sing-box": "1.14.3",
+      "xray": "26.3.27"
+    },
+    "scope": "Native configuration parsing, not traffic tests."
+  },
+  "xray_loopback": {
+    "new_protocol_transport_cases": 8,
+    "protocols": [
+      "VMess",
+      "Trojan"
+    ],
+    "transports": [
+      "TCP",
+      "WebSocket",
+      "HTTPUpgrade",
+      "gRPC"
+    ],
+    "positive": "Local SOCKS request carries echo payload through owned Xray processes.",
+    "negative": "Fresh request fails after stopping exit, while echo target remains live; no direct fallback."
+  },
+  "other_runtime_scope": "Canonical Xray-only lifecycle, fleet and two-hop fixtures passed.",
+  "sing_box_runtime": {
+    "status": "not-run",
+    "reason": "Known host netlink restriction; not bypassed."
+  },
+  "limits": [
+    "Not production network reachability, throughput, live quota enforcement or deployed-node evidence."
+  ],
+  "raw_evidence": [
+    {
+      "filename": "native-parity-parser-gate.log",
+      "sha256": "fa3ae775569d1b663a0e5677da81ef1c1a9c704760f1af44d8c9affdeee25b0e",
+      "size_bytes": 175603,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "filename": "native-parity-xray-runtime-gate.log",
+      "sha256": "a9cf8505b4502f40c0914af76a32b9d1871eba7d2d2237b5298cb28609ab62eb",
+      "size_bytes": 15777,
+      "availability": "local-only-not-in-archive"
+    }
+  ]
+}

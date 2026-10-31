@@ -1,0 +1,124 @@
+[
+  {
+    "path": "hosts",
+    "body": {
+      "id": "rw-publication-1-host",
+      "name": "本地验证主机 1",
+      "address": "127.0.0.1"
+    }
+  },
+  {
+    "path": "core-instances",
+    "body": {
+      "id": "rw-publication-1-core",
+      "name": "本地验证实例 1",
+      "hostId": "rw-publication-1-host",
+      "adapterId": "routeweaver/xray",
+      "version": "26.3.27"
+    }
+  },
+  {
+    "path": "managed-endpoints",
+    "body": {
+      "id": "rw-publication-1-endpoint",
+      "instanceId": "rw-publication-1-core",
+      "name": "本地验证端点 1",
+      "connection": {
+        "protocol": "socks",
+        "host": "127.0.0.1",
+        "port": 22101,
+        "username": "synthetic-fixture",
+        "password": "synthetic-local-only"
+      }
+    }
+  },
+  {
+    "path": "hosts",
+    "body": {
+      "id": "rw-publication-2-host",
+      "name": "本地验证主机 2",
+      "address": "127.0.0.1"
+    }
+  },
+  {
+    "path": "core-instances",
+    "body": {
+      "id": "rw-publication-2-core",
+      "name": "本地验证实例 2",
+      "hostId": "rw-publication-2-host",
+      "adapterId": "routeweaver/xray",
+      "version": "26.3.27"
+    }
+  },
+  {
+    "path": "managed-endpoints",
+    "body": {
+      "id": "rw-publication-2-endpoint",
+      "instanceId": "rw-publication-2-core",
+      "name": "本地验证端点 2",
+      "connection": {
+        "protocol": "socks",
+        "host": "127.0.0.1",
+        "port": 22102,
+        "username": "synthetic-fixture",
+        "password": "synthetic-local-only"
+      }
+    }
+  },
+  {
+    "path": "server-deployments",
+    "body": {
+      "id": "rw-publication-deployment",
+      "name": "本地提交恢复验证",
+      "ir": {
+        "schemaVersion": "1.0",
+        "id": "rw-publication-deployment",
+        "topologyRevision": "local-review-1",
+        "programs": [
+          {
+            "instance": {
+              "id": "rw-publication-1-core",
+              "name": "本地验证实例 1",
+              "hostId": "rw-publication-1-host",
+              "adapterId": "routeweaver/xray",
+              "version": "26.3.27"
+            },
+            "listener": {
+              "id": "rw-publication-1-endpoint",
+              "instanceId": "rw-publication-1-core",
+              "name": "本地验证端点 1",
+              "connection": {
+                "protocol": "socks",
+                "host": "127.0.0.1",
+                "port": 22101,
+                "username": "synthetic-fixture",
+                "password": "synthetic-local-only"
+              }
+            }
+          },
+          {
+            "instance": {
+              "id": "rw-publication-2-core",
+              "name": "本地验证实例 2",
+              "hostId": "rw-publication-2-host",
+              "adapterId": "routeweaver/xray",
+              "version": "26.3.27"
+            },
+            "listener": {
+              "id": "rw-publication-2-endpoint",
+              "instanceId": "rw-publication-2-core",
+              "name": "本地验证端点 2",
+              "connection": {
+                "protocol": "socks",
+                "host": "127.0.0.1",
+                "port": 22102,
+                "username": "synthetic-fixture",
+                "password": "synthetic-local-only"
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+]

@@ -1,0 +1,91 @@
+{
+  "formatVersion": 1,
+  "checkpoint": "WIP46",
+  "exportStatus": "FULL_CHECKS_ASSETS_SCRIPTED_BROWSER_AND_BOUNDED_GOALS_ACCEPTED",
+  "derivation": "Public delivery summary derived from retained original records; private paths and coordination identities omitted; not a byte-identical copy.",
+  "codeFreezeSha256": "b66e216092a11796d9a8badeb4aa572df9e32cbe2ce91601cab6fabd0d81cb3c",
+  "independentAggregateReview": {
+    "sourceRecordLabel": "INDEPENDENT-AGGREGATE-REVIEW.r5.json",
+    "sourceRecordSha256": "3963c7a2ebaeb5593d5616b462092c02481b44fbf43b9ce6ffd478bdd3571dbe",
+    "reviewedAtUTC": "2026-10-27T17:10:52.965900+00:00",
+    "stageExits": {
+      "tickets": 0,
+      "python-guards": 0,
+      "typecheck": 0,
+      "web-full": 0,
+      "production-build": 0
+    },
+    "physicalTestFiles": 149,
+    "passed": 1722,
+    "failed": 0,
+    "pending": 0,
+    "todo": 0,
+    "pythonTests": 9,
+    "sourceHashesAndModesVerified": 1250,
+    "beforeAfterInventorySha256": "52f1da109550bca751864ede731f6beac97e86da8b87b63eb808e1c951065356",
+    "reviewerLaunchedFullSuiteOrBrowser": false
+  },
+  "independentAssetBindingReview": {
+    "sourceRecordLabel": "INDEPENDENT-ASSET-BINDING-REVIEW.r5.json",
+    "sourceRecordSha256": "209703e8dca7bb5b7272a271a52dd625054f9418b8acead778fe5ccf12b9effc",
+    "reviewedAtUTC": "2026-10-27T17:16:01.499234+00:00",
+    "builtFileCount": 31,
+    "allMatch": true,
+    "extra": [],
+    "missing": [],
+    "assetHashes": {
+      "assets/Admin-D3O71Qa5.js": "6220890d03997f60baa167d8848431684122707a8457f7d1f485d845210779e8",
+      "assets/ArrowUpOutlined-B2ctMyla.js": "f21e54c22e5970136b5c20c709001f1326cf539ae9a5deb14a93948e61db77fd",
+      "assets/ConnectionFields-Cwgngu53.js": "92c31ac7f4c5b9df80b0cbb9ba2ca60e0141bd90ab57fbd94eda8e349ad4d657",
+      "assets/DataTable-CwiJOCED.js": "3b6359061ae55917f27df39c497a5f393731ed1d548d3815d313abf48e79d411",
+      "assets/Fleet-DkxvWb6J.js": "8f59b398fa6506f756cfd7d74299f1c408b59fbf57d0bd05374b4304d4ab8a95",
+      "assets/Infrastructure-CyhUSaEw.js": "984fc97eaee979699759f78b2d47220573e73b7d9d03227151fd4fdc1e7a8181",
+      "assets/Notifications-BvxuCe0B.js": "16cd67d13410027655f5111f824c5e0453d5b2c86654a10085ce3119c2ed77d4",
+      "assets/Pipeline-DRgnqjXk.js": "cdd8b086a9f46c68bdd65d2ee6af42424c51d0a4cad90fca2201fd8864aa9f68",
+      "assets/Pipeline-xu1UOdOw.css": "484daf60664bd809cb68e79b0e02446fd1f07eab556814b080a97af29efd23f7",
+      "assets/Profiles-BswZMWae.js": "7cb3653e6da9b9feee916f6710b880a261a49f5b077d0ae73540054ba38c19b2",
+      "assets/Profiles-DuRzQ4o_.css": "d40645678748d0da04c7691f683fadaefc83e6ad86c7f1c1d8c2fba471974858",
+      "assets/PublishedRoutes-CqCI1i4z.css": "214689e4cdd31718845ca243c5504c009a3be73dc8be6e61cc5f5f442f3481db",
+      "assets/PublishedRoutes-D7rfHEm6.js": "9891cb45d9cc9a6801e50941e14a533e9212fa7469e1872d600186b8d4eba16a",
+      "assets/SaveOutlined-DfFEdlhS.js": "d58383def40be33a5b5a263f7cec6562d14d0dd5ec66a35546f95c2b5fa236b2",
+      "assets/ServerRoutes-C2IToty2.css": "56de6c8c6e6e4bc10e11e17f622125ca8eb2e2fb8c9ac02aafa2ec12dd99440e",
+      "assets/ServerRoutes-T_KkgSnK.js": "ece1783632c3e6e7ed34de2e39d2fa38f5963bafc24fa77d6caabbf06ecdf1fd",
+      "assets/Sources-DeBrI_3g.js": "0b303ebe54fa43c8c1aab7aa0b1621d54096ce602de32ece46431a99957b51be",
+      "assets/TLSMaterial-jIAALZSD.js": "bb2d26d1b4382b7f221f119c896cdf6e67630e2176d4f72c4379c4fca44452dc",
+      "assets/Templates-BzUusLgv.js": "1b159fac0defee684a4c9d354d9225601e37c4558a9994e2b5f91f5d3289239f",
+      "assets/UserEntries-nYnxiqMz.js": "4c6b582d059992bf82bcc09edba7b58362ae539856185c9825ad7f75ba23efb1",
+      "assets/index-DcM0ys7w.css": "70134e097706fbd560724804ed296fdf0c5d637c9a917d43264c07d826046b71",
+      "assets/index-Dmvu8UrT.js": "c922ddf90e2f19996f9d5b4081606cdfbaab9900edbee5c199cdcd098e5cd03d",
+      "assets/popconfirm-CibPHKdT.js": "0a8e9e89ce04723cd72c0b282e33ebf0dec0d8d0959c538bb0f758ef87ba2a5b",
+      "assets/publication-modal-focus-BzuNcF_9.js": "254cdd2aa790a1c82218da720f59e6833ee3f02c1fb845a3cb5d633b83ba4f28",
+      "assets/rolldown-runtime-WkwZ5CU-.js": "2629f2ad3cb75a57d98de697127f5af7d777ef572bbcdfa6e3ce8f438cd4527e",
+      "assets/style-D6QsW_sD.js": "1bd329aa91467700e54bbd2830c5e97baa4eb35e380ce264dbbebee0c874ac78",
+      "assets/style-DLioOiRN.css": "b0cb7bd6fec5951c9c8f5808821438206604b1629a912c96009ac427f38e7d69",
+      "assets/switch-DkLZEktN.js": "8b5977181a17c4714d01c6c5c255ea40f221b1661d8e6818c213d0465163962d",
+      "assets/table-DsoJGPCY.js": "1e9973d240b81b43f23e865dd00cca920130709d3980426fe6900e65b906939e",
+      "assets/useDiscardConfirmation-Bl5jwRZH.js": "6ca5511a725102a323e27df0636ed1ac0be81c549b3db5d2a4c70b7563f44274",
+      "index.html": "0d8348eb384cb560b9a9f5587066fee40eb345fcc92fb7d642ca7969a484327a"
+    },
+    "reviewerBrowserActions": false
+  },
+  "limits": [
+    "Frontend/Python aggregate, source/assets binding and final composed browser/goal acceptance are distinct.",
+    "Historical1670/1671 and r4 1720/1722 plus failed app typecheck remain preserved, not retroactively green.",
+    "No current Go/native/Git aggregate, backend/live/deployment, zoom/assistive-technology or Library save acceptance."
+  ],
+  "finalBrowserAcceptance": {
+    "reviewSha256": "e3b89470dd8653f4c0b2514b0737c5e98e519e047b8e0ca0f09a119e2fb669f9",
+    "scope": "bounded scripted campaign only; fresh goal conclusion separate"
+  },
+  "finalGoalAcceptance": {
+    "publicSummary": "GOAL-WALKTHROUGH.r5.public.json",
+    "sha256": "207aee54223c97293a3aecc4e054e38ede4597209ca71c0d1c382221341a63c4",
+    "boundedAccepted": true
+  },
+  "archiveOrSaveAccepted": false,
+  "freshGoalConclusion": {
+    "publicSummary": "GOAL-WALKTHROUGH.r5.public.json",
+    "sha256": "207aee54223c97293a3aecc4e054e38ede4597209ca71c0d1c382221341a63c4",
+    "boundedAccepted": true
+  }
+}

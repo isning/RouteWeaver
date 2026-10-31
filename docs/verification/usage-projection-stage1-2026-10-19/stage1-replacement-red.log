@@ -1,0 +1,6 @@
+=== RUN   TestIndependentStage1LedgerReplacement
+    review_stage1_test.go:116: public replacement rejected: constraint failed: UNIQUE constraint failed: usage_projection_state.id (1555)
+--- FAIL: TestIndependentStage1LedgerReplacement (0.03s)
+FAIL
+FAIL	routeweaver/internal/store	0.045s
+FAIL

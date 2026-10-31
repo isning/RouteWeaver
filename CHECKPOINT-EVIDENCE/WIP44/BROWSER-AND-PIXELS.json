@@ -1,0 +1,182 @@
+{
+  "testedPayloadInventorySha256": "d0a98a57fa5146c7974f5d3e422e9b635eb9fba69d04d1617ec6bad9fe9fa8d8",
+  "routing": {
+    "cases": 4,
+    "passed": 4,
+    "browserSeconds": 33.2,
+    "actualLocalBackendCases": 3,
+    "simulatedPresentationOnlyCases": 1,
+    "scope": "Task-first routing and package acquisition; pin retention, interrupted contextual creation, cancel/reopen and contained narrow-modal scroll. Exact IR, bundle membership and bytes checked.",
+    "buildExit": 0,
+    "browserExit": 0,
+    "guardsBeforeAfterExit": [
+      0,
+      0
+    ],
+    "inspectedOriginalFrames": 10,
+    "generatedImages": 23,
+    "allGeneratedImagesInspected": false,
+    "acceptedFrames": [
+      {
+        "fileName": "expanded-group-footer-viewport-320.png",
+        "sha256": "8ada8499b6b664ff7eaace8670d13ebac0bb3bcdcb269c324a17ebe9b2f028ee",
+        "presentationOnlySimulation": false,
+        "captureKind": "viewport"
+      },
+      {
+        "fileName": "expanded-group-footer-viewport-390.png",
+        "sha256": "c7bff78eacaa86abf3b076ec8f3ac9958b49ab1d3519a51f1118f66b3fd9a9d5",
+        "presentationOnlySimulation": false,
+        "captureKind": "viewport"
+      },
+      {
+        "fileName": "expanded-group-initial-viewport-320.png",
+        "sha256": "525e44fcc8966bf6509642c94585216a79a3738ee21ef25e781a03995b9a780d",
+        "presentationOnlySimulation": false,
+        "captureKind": "viewport"
+      },
+      {
+        "fileName": "expanded-group-initial-viewport-390.png",
+        "sha256": "1d276e66ff0ac8e00e6e020fbae9d4935a8a50e6c70b89f38ee2f70b0d0ce338",
+        "presentationOnlySimulation": false,
+        "captureKind": "viewport"
+      },
+      {
+        "fileName": "simulated-choice-viewport-1440.png",
+        "sha256": "26f3215b39b46c0c8265f87fcc4b3d55ce091d37da58f3dc783a03d5064790b0",
+        "presentationOnlySimulation": true,
+        "captureKind": "viewport"
+      },
+      {
+        "fileName": "simulated-choice-viewport-320.png",
+        "sha256": "b9a52c02628d0347a20afbf667ffbe5adebc15c8e2f2c79a662195ac36594d43",
+        "presentationOnlySimulation": true,
+        "captureKind": "viewport"
+      },
+      {
+        "fileName": "simulated-unavailable-viewport-320.png",
+        "sha256": "ba9728e9cdbc1bdc80ea581088e0bd060791325a161182172a06434864387e89",
+        "presentationOnlySimulation": true,
+        "captureKind": "viewport"
+      },
+      {
+        "fileName": "bundle-review-viewport-390.png",
+        "sha256": "c5cc828947b61c2636c5e742c3caf5722539b8ab57129ef9c891c02a92940c7a",
+        "presentationOnlySimulation": false,
+        "captureKind": "viewport"
+      },
+      {
+        "fileName": "new-group-viewport-390.png",
+        "sha256": "aa8a0d3807734e8a64c073b0cbc764187f2621d43867f1c7edcc26d66db00b52",
+        "presentationOnlySimulation": false,
+        "captureKind": "viewport"
+      },
+      {
+        "fileName": "routing-draft-1440.png",
+        "sha256": "c73bde8875fa1d819c3b2b17d32828920e1e588d6641a96b73a009283c124f0b",
+        "presentationOnlySimulation": false,
+        "captureKind": "full-page content overview"
+      }
+    ],
+    "terminalReceiptSha256": "f7b5bf1536a8c6323c93b892339a8fc4bd037e5ebe0171fcd265eb9bcbc54e81",
+    "visualReviewSha256": "183056f1f03ac5a60b6e9d110df40a8d371b6acd7ed843b2b3767fe9b642bc86",
+    "fixtureSha256": "71190e58f11f04a18787f12bbdffd1094810a2907c50271de7b26846c65d9be2",
+    "configSha256": "2b4cc51dcda24afcb2d8b7e8f9298c7c00f46b8e48b6f1aca59111068cf94a10",
+    "fixtureIncludedInCanonicalSource": false,
+    "builtAssetsUnchanged": true,
+    "newDemoDirectoriesRemaining": [],
+    "ownedDemoServerStopped": true,
+    "limits": [
+      "Simulated chooser is presentation evidence, not actual entitlement or real rate correctness.",
+      "Desktop Enter activation used programmatic focus; not a natural full-Tab traversal claim.",
+      "Full-page overview is not initial-viewport ergonomics evidence.",
+      "Acceptance covers the 10 inspected originals, not all 23 images or all states."
+    ]
+  },
+  "semantic": {
+    "cases": 3,
+    "passed": 3,
+    "browserSeconds": 12.1,
+    "backend": "actual local loopback",
+    "typecheck": "passed",
+    "productionBuild": "passed; known large-chunk warning retained",
+    "selectedMemberPublication": "one explicit selected Laptop publication; selected frozen revision/content advanced; selected link preserved; peer frozen revision/content/link unchanged",
+    "otherCases": "strategy and connection preview/cancel only; frozen state unchanged",
+    "defaultHierarchy": "unchanged routing and quantity details remained closed; exact changes before unchanged summaries; direct references exercised only after default screenshots",
+    "externalRequests": 0,
+    "unexpectedBrowserWrites": 0,
+    "noCredentialsOrFeedPathsDisplayed": true,
+    "builtAssetsUnchanged": true,
+    "cleanup": {
+      "newDemoDirectoriesRemaining": [],
+      "ownedPortClosed": true,
+      "sourceInputsUnchanged": true,
+      "integrationPayloadUnchanged": true
+    },
+    "framesViewed": 11,
+    "uniqueImageHashes": 9,
+    "frameReferences": [
+      {
+        "fileName": "connection-desktop-changes.png",
+        "sha256": "54a240129e2226b521895ac91356e15995a5860729af0fceec0aff31a545c220"
+      },
+      {
+        "fileName": "connection-narrow-changes.png",
+        "sha256": "2c2432913bee4cec04afd53e13fe15866d501f6838825013fe0a0bc5b9a053fc"
+      },
+      {
+        "fileName": "connection-narrow-decision.png",
+        "sha256": "b8c3f690b2d5961e4f6572f1cd4aff0d8e4302061cebd9cade703355a246fa06"
+      },
+      {
+        "fileName": "strategy-desktop-changes.png",
+        "sha256": "6c6d73a870dbee57831fab634dc484a3cab03fd04bf6f803418c42771c024291"
+      },
+      {
+        "fileName": "strategy-narrow-changes.png",
+        "sha256": "ef546ef61229239aff89cfd0f35087bc1cc8295dd63a4ba49c09716f620fe5c5"
+      },
+      {
+        "fileName": "strategy-narrow-decision.png",
+        "sha256": "889afbd1f99a79c736916a2dc4f5c56a8843076d67b119e40ac23e46f7153cf3"
+      },
+      {
+        "fileName": "members-desktop-changes.png",
+        "sha256": "4cae1bf62de2b4bb57a9d8103360afddba7803a38aca82116815d87a7d3efe1d"
+      },
+      {
+        "fileName": "members-narrow-changes.png",
+        "sha256": "8821db46da3ac781a4e163bce18f2998d961a6f1cb2d595564ce6479a5c5fd7f"
+      },
+      {
+        "fileName": "members-narrow-decision.png",
+        "sha256": "5124015c427decd0e08015359f55c06c19df1d45d24b4e653608d93aef7b7d04"
+      },
+      {
+        "fileName": "members-narrow-default.png",
+        "sha256": "8821db46da3ac781a4e163bce18f2998d961a6f1cb2d595564ce6479a5c5fd7f"
+      },
+      {
+        "fileName": "members-narrow-untouched-opening.png",
+        "sha256": "8821db46da3ac781a4e163bce18f2998d961a6f1cb2d595564ce6479a5c5fd7f"
+      }
+    ],
+    "confirmed": [
+      "Actual named deltas lead",
+      "Quantity and unchanged-routing inventories remain closed by default",
+      "Comparison exclusions visible",
+      "Direct-reference caveat truthful when opened",
+      "Narrow exact target, consequence and buttons intact"
+    ],
+    "remainingObservation": "Desktop member/strategy opening needs a small modal-body scroll for full buttons; no above-fold claim. No blocking issue or further change requested.",
+    "resultReceiptSha256": "7f4c11d69190bc29cddb5c0c743b10050b3f23f19e53b64616700936a50dce60",
+    "visualReviewSha256": "c381403a3a705f9bceee928d3193783b2c9bcfa49859ebf13bfc5923acbf4732",
+    "limits": [
+      "bounded three-case actual acceptance, not whole-browser regression",
+      "rule-file contents and runtime settings intentionally excluded from semantic categories",
+      "no native client apply/traffic/deployment",
+      "no accessibility research or Google-level certification"
+    ]
+  },
+  "scopeBoundary": "Separate final composed local task collections, not a whole-browser regression, accessibility/user-research, native/live-traffic or whole-product certification."
+}

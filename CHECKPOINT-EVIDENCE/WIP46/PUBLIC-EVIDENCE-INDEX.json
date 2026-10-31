@@ -1,0 +1,76 @@
+{
+  "formatVersion": 1,
+  "checkpoint": "WIP46",
+  "exportStatus": "LOCAL_CODE_BROWSER_GOAL_EVIDENCE_COMPLETE_DOC_ARCHIVE_REVIEW_PENDING",
+  "derivation": "Public delivery summary derived from retained original records; not a byte-identical copy of those originals. Internal workspace/thread paths and raw conversations are omitted.",
+  "wholeProductAcceptanceClaimed": false,
+  "files": [
+    {
+      "path": "AGGREGATE-ASSET-CLOSURE.public.json",
+      "sha256": "12e0683481048325736c19c034ffa43ca80c0fb5ef56a561292cb6270a8b3c06",
+      "bytes": 5823,
+      "mode": "0644"
+    },
+    {
+      "path": "BOUNDED-REVIEW-SUMMARY.public.json",
+      "sha256": "6e63a594d231a8074fc3f72957d3298fd53524fbc37536556843035e10be10a3",
+      "bytes": 10694,
+      "mode": "0644"
+    },
+    {
+      "path": "CHECK-ATTEMPTS.public.json",
+      "sha256": "c5c4d20cdca35ebab1c55ae94b28e49e9edb30a0ee656c0e1e192c0a1c488002",
+      "bytes": 14534,
+      "mode": "0644"
+    },
+    {
+      "path": "COMPOSED-BROWSER.r5.public.json",
+      "sha256": "428c86a9bafd492b5cea776d819c284ec5d4475e47376cfe569eba16165c80ab",
+      "bytes": 11083,
+      "mode": "0644"
+    },
+    {
+      "path": "FINITE-SCOPE-AND-EXCLUSIONS.public.json",
+      "sha256": "d18cb955270a20faede0a3bf3b2511b3157700e462613850c1de1e389da79126",
+      "bytes": 8413,
+      "mode": "0644"
+    },
+    {
+      "path": "GOAL-WALKTHROUGH.r5.public.json",
+      "sha256": "207aee54223c97293a3aecc4e054e38ede4597209ca71c0d1c382221341a63c4",
+      "bytes": 6164,
+      "mode": "0644"
+    },
+    {
+      "path": "PAYLOAD-DELTA.r5.public.json",
+      "sha256": "4fe6eb63949dab5a78e95e37c6ff3dca0d0e968cc2371539f19537d281a5d5ec",
+      "bytes": 231319,
+      "mode": "0644"
+    },
+    {
+      "path": "README.md",
+      "sha256": "d24f2c9641d653e8ef4e0a0f71de3c103d85d1b22f0b92397f74d4281e4881ba",
+      "bytes": 1085,
+      "mode": "0644"
+    },
+    {
+      "path": "REFERENCE-AND-PRESERVATION.public.json",
+      "sha256": "ccdca3a44d0d398460ecc5f148bc384d94264901d956d206c587bdbccc0048a2",
+      "bytes": 2239,
+      "mode": "0644"
+    },
+    {
+      "path": "SOURCE-CODE-FREEZE.r5.public.json",
+      "sha256": "6ff0e70537c543dfb7d65751de916286831b3f3db4b0885033b8169f262f77df",
+      "bytes": 211315,
+      "mode": "0644"
+    }
+  ],
+  "boundedSensitiveMarkerScan": "No configured private-path/thread/auth markers found; manual review still required.",
+  "pending": [
+    "final docs byte/mode closure",
+    "independent public-evidence/archive review",
+    "separate authorization to freeze packing plan"
+  ],
+  "archiveBuildOrLibraryMutationPerformed": false
+}

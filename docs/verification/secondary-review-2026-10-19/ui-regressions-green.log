@@ -1,0 +1,20 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> routeweaver-web@1.0.0 test
+> vitest run --reporter=dot
+
+
+ RUN  v5.0.5 /workspace/scratch/d385eb428cee/routeweaver/web
+
+·····································
+
+ Test Files  5 passed (5)
+      Tests  37 passed (37)
+   Start at  02:55:47
+   Duration  10.12s (tests 74%, import 20%, environment 4%, transform 1%)
+
+npm notice
+npm notice New major version of npm available! 11.9.0 -> 12.2.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
+npm notice To update run: npm install -g npm@12.2.0
+npm notice

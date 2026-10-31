@@ -1,0 +1,239 @@
+package store_test
+
+import (
+	"bytes"
+	"context"
+	"database/sql"
+	"fmt"
+	"path/filepath"
+	"testing"
+	"time"
+
+	"routeweaver/internal/domain"
+	"routeweaver/internal/service"
+	"routeweaver/internal/store"
+)
+
+// Fault injection is confined to a synthetic temp database. Expected decisions
+// use the public full-history Usage reducer and public admission API.
+func TestIndependentStage2MissingTriggerCannotReuseWarmUsage(t *testing.T) {
+	s, path, _, scope, now := admissionFixture(t)
+	r := projectionRecord("account", 29, 31, service.RateScale, now)
+	if err := s.Put("ledger", "restore", r); err != nil {
+		t.Fatal(err)
+	}
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	var ciphertext []byte
+	if err = db.QueryRow(`SELECT data FROM records WHERE kind='ledger' AND id='restore'`).Scan(&ciphertext); err != nil {
+		t.Fatal(err)
+	}
+	if err = s.Remove("ledger", "restore"); err != nil {
+		t.Fatal(err)
+	}
+	projectionAssertRemaining(t, s, scope, now, time.Time{}, time.Time{}, 0)
+	if _, err = db.Exec(`DROP TRIGGER usage_ledger_insert; INSERT INTO records(kind,id,data) VALUES('ledger','restore',?)`, ciphertext); err != nil {
+		t.Fatal(err)
+	}
+	finiteAdmissionPlan(t, s, 36)
+	got, err := s.AcquireAdmission(scope, admissionRequest("entry1", "192.0.2.80", "missing-trigger"), now)
+	if err == nil && (got.Allowed && (got.ByteBudget == nil || *got.ByteBudget != 7)) {
+		t.Fatalf("missing trigger let stale cache change canonical remaining 7 to %d (decision %+v)", func() uint64 {
+			if got.ByteBudget == nil {
+				return 0
+			}
+			return *got.ByteBudget
+		}(), got)
+	}
+	if err == nil && !got.Allowed {
+		t.Logf("failed closed: %s", got.Reason)
+	}
+}
+
+func TestIndependentStage2FaultThenTrackedWriteCannotInitializePartialTotal(t *testing.T) {
+	for _, fault := range []string{"missing-window", "corrupt-window", "missing-state", "unknown-version"} {
+		t.Run(fault, func(t *testing.T) {
+			s, path, _, scope, now := admissionFixture(t)
+			if err := s.Put("ledger", "old", projectionRecord("account", 23, 37, 333333, now)); err != nil {
+				t.Fatal(err)
+			}
+			projectionAssertRemaining(t, s, scope, now, time.Time{}, time.Time{}, 0)
+			db, err := sql.Open("sqlite", path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer db.Close()
+			query := map[string]string{"missing-window": `DELETE FROM usage_windows`, "corrupt-window": `UPDATE usage_windows SET data=X'00'`, "missing-state": `DELETE FROM usage_projection_state`, "unknown-version": `UPDATE usage_projection_state SET version=999`}[fault]
+			if _, err = db.Exec(query); err != nil {
+				t.Fatal(err)
+			}
+			if err = s.Put("ledger", "new", projectionRecord("account", 7, 13, 666667, now)); err != nil {
+				t.Fatal(err)
+			}
+			projectionAssertRemaining(t, s, scope, now, time.Time{}, time.Time{}, 1)
+		})
+	}
+}
+
+func TestIndependentStage2DeniedSettlementUpdatesAlreadyWarmWindow(t *testing.T) {
+	s, _, _, scope, now := admissionFixture(t)
+	finiteAdmissionPlan(t, s, 100)
+	in := admissionRequest("entry1", "192.0.2.80", "warm-settlement")
+	if got, err := s.AcquireAdmission(scope, in, now); err != nil || !got.Allowed {
+		t.Fatalf("initial %+v %v", got, err)
+	}
+	if err := s.PutUser(domain.User{ID: "account", Name: "Fixture", Enabled: false}); err != nil {
+		t.Fatal(err)
+	}
+	in.AdmittedBytes = 40
+	if got, err := s.AcquireAdmission(scope, in, now.Add(time.Second)); err != nil || got.Reason != "disabled" {
+		t.Fatalf("denial %+v %v", got, err)
+	}
+	in.Final = true
+	if got, err := s.AcquireAdmission(scope, in, now.Add(2*time.Second)); err != nil || got.Reason != "presence-closed" {
+		t.Fatalf("final %+v %v", got, err)
+	}
+	if err := s.PutUser(domain.User{ID: "account", Name: "Fixture", Enabled: true}); err != nil {
+		t.Fatal(err)
+	}
+	got, err := s.AcquireAdmission(scope, admissionRequest("entry1", "192.0.2.80", "warm-after-denial"), now.Add(3*time.Second))
+	if err != nil || !got.Allowed || got.ByteBudget == nil || *got.ByteBudget != 60 {
+		t.Fatalf("warm settlement lost without reopen: %+v %v", got, err)
+	}
+}
+
+func TestIndependentStage2RawAccountLookupNotPersisted(t *testing.T) {
+	s, path, _, scope, now := admissionFixture(t)
+	projectionAssertRemaining(t, s, scope, now, time.Time{}, time.Time{}, 0)
+	db, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	var key string
+	if err = db.QueryRow(`SELECT account FROM usage_windows`).Scan(&key); err != nil {
+		t.Fatal(err)
+	}
+	if key == "account" {
+		t.Fatal("derived row exposes raw account-to-projection mapping")
+	}
+	if len(key) != 64 {
+		t.Fatalf("expected opaque keyed SHA256 lookup, got length %d", len(key))
+	}
+}
+
+func TestIndependentStage2WarmOwnerTransferAndBatchRollback(t *testing.T) {
+	s, path, key, scope, now := admissionFixture(t)
+	if err := s.PutUser(domain.User{ID: "second", Name: "Second", Enabled: true}); err != nil {
+		t.Fatal(err)
+	}
+	for kind, v := range map[string]any{
+		"entitlements": service.Entitlement{UserID: "second", ServiceID: "plan", StartsAt: now.Add(-time.Hour), Cycle: service.CyclePolicy{Mode: "none"}},
+	} {
+		if err := s.Put(kind, "second", v); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := s.Put("managed-endpoints", "entry-second", domain.ManagedEndpoint{ID: "entry-second", InstanceID: scope.InstanceID}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.TenantPut("second", "platform-entries", "entry-second", map[string]any{"id": "entry-second", "userId": "second", "routeId": "route", "credentialVersion": "v1"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetEntryAdmissionBinding(store.EntryAdmissionBinding{ID: "entry-second", InstanceID: scope.InstanceID, EntryID: "entry-second", SubjectID: "subject", UserID: "second", RouteID: "route", GrantID: "entry-second", CredentialVersion: "v1"}); err != nil {
+		t.Fatal(err)
+	}
+	other, err := store.Open(path, key)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer other.Close()
+	check := func(serial int) {
+		projectionAssertRemaining(t, s, scope, now, time.Time{}, time.Time{}, serial)
+		projectionAssertAccountRemaining(t, other, scope, now, time.Time{}, time.Time{}, serial, "second", "entry-second")
+	}
+	check(0)
+	for i, owner := range []string{"account", "second", "account", "second"} {
+		r := projectionRecord(owner, int64(i+1), 7, 333333, now)
+		if err := other.Put("ledger", "moving", r); err != nil {
+			t.Fatal(err)
+		}
+		check(i + 1)
+	}
+	before, err := s.Usage("account", time.Time{}, time.Time{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := s.CompareAndPutRecords(nil, []store.RecordWrite{{Kind: "ledger", ID: "moving", Value: projectionRecord("account", 73, 71, 333333, now)}, {Kind: "bad", ID: "marshal", Value: make(chan int)}}); err == nil {
+		t.Fatal("bad batch committed")
+	}
+	after, err := s.Usage("account", time.Time{}, time.Time{})
+	if err != nil || before != after {
+		t.Fatalf("rollback %+v -> %+v (%v)", before, after, err)
+	}
+	check(5)
+	// Two replacements to the same key in one transaction must observe sequential OLD values.
+	writes := []store.RecordWrite{}
+	for i, owner := range []string{"account", "second", "account"} {
+		writes = append(writes, store.RecordWrite{Kind: "ledger", ID: "moving", Value: projectionRecord(owner, int64(11+i), int64(17+i), 666667, now)})
+	}
+	if err := s.CompareAndPutRecords(nil, writes); err != nil {
+		t.Fatal(fmt.Errorf("sequential batch: %w", err))
+	}
+	check(6)
+}
+
+func TestIndependentStage2RestoreRekeysOpaqueLookupAndRejectsSourceCiphertext(t *testing.T) {
+	s, path, _, scope, now := admissionFixture(t)
+	if err := s.Put("ledger", "canonical", projectionRecord("account", 23, 17, 333333, now)); err != nil {
+		t.Fatal(err)
+	}
+	projectionAssertRemaining(t, s, scope, now, time.Time{}, time.Time{}, 0)
+	sourceDB, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer sourceDB.Close()
+	var sourceToken string
+	var sourceCiphertext []byte
+	if err = sourceDB.QueryRow(`SELECT account,data FROM usage_windows`).Scan(&sourceToken, &sourceCiphertext); err != nil {
+		t.Fatal(err)
+	}
+	snapshot, err := s.ExportSnapshot(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	target := filepath.Join(t.TempDir(), "restore.db")
+	differentKey := bytes.Repeat([]byte{89}, 32)
+	if err = store.RestoreFresh(context.Background(), target, differentKey, snapshot); err != nil {
+		t.Fatal(err)
+	}
+	restored, err := store.Open(target, differentKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer restored.Close()
+	projectionAssertRemaining(t, restored, scope, now, time.Time{}, time.Time{}, 1)
+	targetDB, err := sql.Open("sqlite", target)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer targetDB.Close()
+	var targetToken string
+	if err = targetDB.QueryRow(`SELECT account FROM usage_windows`).Scan(&targetToken); err != nil {
+		t.Fatal(err)
+	}
+	if targetToken == sourceToken {
+		t.Fatal("different master key retained the same account lookup mapping")
+	}
+	if _, err = targetDB.Exec(`UPDATE usage_windows SET data=?`, sourceCiphertext); err != nil {
+		t.Fatal(err)
+	}
+	if err = restored.Put("ledger", "after", projectionRecord("account", 7, 11, 666667, now)); err != nil {
+		t.Fatal(err)
+	}
+	projectionAssertRemaining(t, restored, scope, now, time.Time{}, time.Time{}, 2)
+}

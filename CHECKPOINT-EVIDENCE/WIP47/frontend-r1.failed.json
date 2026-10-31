@@ -1,0 +1,20 @@
+{
+  "scope": "Full frontend Vitest suite; historical source-bound attempt, not final WIP47 certification",
+  "revision": "r1",
+  "physical_test_files": 155,
+  "tests": {
+    "total": 1708,
+    "passed": 1465,
+    "failed": 243,
+    "pending": 0
+  },
+  "status": "failed",
+  "raw_result_sha256": "c5585c456cba2a995a3909246cc2255025b0b98b465dfd1a7f3299307cfa4161",
+  "raw_log_sha256": "2a2936ca3276605ec795605c06036c5e7d31334514832dce0bbfc249dfb88bb4",
+  "raw_evidence": "Retained locally; verbose fixture diagnostics are not included in this public checkpoint.",
+  "source_manifest_sha256": "add859ca57834083af79b26eb59022a8a90ce9c444b56b3fad5c697600ba8bb7",
+  "source_unchanged_during_run": true,
+  "final_checkpoint_acceptance": false,
+  "collection_limit": "readability.test.ts failed import before collecting its assertions; total is not a complete test inventory.",
+  "source_scope": "312 production/src/config files checked byte-identical; readability assertion file remained unchanged until terminal but failed import. Browser .spec helper migration continued outside the executed Vitest scope."
+}

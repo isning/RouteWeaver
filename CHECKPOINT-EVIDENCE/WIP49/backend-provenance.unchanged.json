@@ -1,0 +1,11 @@
+{
+  "checkpoint": "WIP49",
+  "baseline": "verified WIP48 source v57",
+  "scope": "cmd,internal,runtimes,scripts,go.mod,go.sum",
+  "files": 480,
+  "scope_sha256": "6de67b042b8ef1be274859da6721f041df2877504ddc1269736630e415803d47",
+  "changed": [],
+  "status": "unchanged",
+  "new_backend_runtime_tests_claimed": false,
+  "final_acceptance": true
+}

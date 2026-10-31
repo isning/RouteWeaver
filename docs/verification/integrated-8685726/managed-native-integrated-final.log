@@ -1,0 +1,27 @@
+{"Time":"2026-10-20T04:55:52.77166138+08:00","Action":"start","Package":"routeweaver/internal/agent"}
+{"Time":"2026-10-20T04:55:52.797752412+08:00","Action":"run","Package":"routeweaver/internal/agent","Test":"TestManagedNativeBrokerEOFStopsActivePayloadAndPersistsFinalJournal"}
+{"Time":"2026-10-20T04:55:52.797838161+08:00","Action":"output","Package":"routeweaver/internal/agent","Test":"TestManagedNativeBrokerEOFStopsActivePayloadAndPersistsFinalJournal","Output":"=== RUN   TestManagedNativeBrokerEOFStopsActivePayloadAndPersistsFinalJournal\n","OutputType":"frame"}
+{"Time":"2026-10-20T04:55:53.297508856+08:00","Action":"output","Package":"routeweaver/internal/agent","Test":"TestManagedNativeBrokerEOFStopsActivePayloadAndPersistsFinalJournal","Output":"    managed_xray_process_test.go:188: broker EOF stopped live payload and owned process, preserved 44-byte final in 6.949749ms\n"}
+{"Time":"2026-10-20T04:55:53.300165074+08:00","Action":"output","Package":"routeweaver/internal/agent","Test":"TestManagedNativeBrokerEOFStopsActivePayloadAndPersistsFinalJournal","Output":"--- PASS: TestManagedNativeBrokerEOFStopsActivePayloadAndPersistsFinalJournal (0.50s)\n","OutputType":"frame"}
+{"Time":"2026-10-20T04:55:53.300176221+08:00","Action":"pass","Package":"routeweaver/internal/agent","Test":"TestManagedNativeBrokerEOFStopsActivePayloadAndPersistsFinalJournal","Elapsed":0.5}
+{"Time":"2026-10-20T04:55:53.312966004+08:00","Action":"output","Package":"routeweaver/internal/agent","Output":"PASS\n","OutputType":"frame"}
+{"Time":"2026-10-20T04:55:54.325570129+08:00","Action":"output","Package":"routeweaver/internal/agent","Output":"ok  \trouteweaver/internal/agent\t1.554s\n"}
+{"Time":"2026-10-20T04:55:54.325627015+08:00","Action":"pass","Package":"routeweaver/internal/agent","Elapsed":1.554}
+{"Time":"2026-10-20T04:55:54.77873736+08:00","Action":"start","Package":"routeweaver/internal/integration"}
+{"Time":"2026-10-20T04:55:54.811625167+08:00","Action":"run","Package":"routeweaver/internal/integration","Test":"TestManagedSharedVLESSIngressKeepsPrincipalPathsSeparate"}
+{"Time":"2026-10-20T04:55:54.811719799+08:00","Action":"output","Package":"routeweaver/internal/integration","Test":"TestManagedSharedVLESSIngressKeepsPrincipalPathsSeparate","Output":"=== RUN   TestManagedSharedVLESSIngressKeepsPrincipalPathsSeparate\n","OutputType":"frame"}
+{"Time":"2026-10-20T04:55:56.737014146+08:00","Action":"output","Package":"routeweaver/internal/integration","Test":"TestManagedSharedVLESSIngressKeepsPrincipalPathsSeparate","Output":"--- PASS: TestManagedSharedVLESSIngressKeepsPrincipalPathsSeparate (1.93s)\n","OutputType":"frame"}
+{"Time":"2026-10-20T04:55:56.737137952+08:00","Action":"pass","Package":"routeweaver/internal/integration","Test":"TestManagedSharedVLESSIngressKeepsPrincipalPathsSeparate","Elapsed":1.93}
+{"Time":"2026-10-20T04:55:56.738087542+08:00","Action":"output","Package":"routeweaver/internal/integration","Output":"PASS\n","OutputType":"frame"}
+{"Time":"2026-10-20T04:55:57.760377029+08:00","Action":"output","Package":"routeweaver/internal/integration","Output":"ok  \trouteweaver/internal/integration\t2.982s\n"}
+{"Time":"2026-10-20T04:55:57.760429578+08:00","Action":"pass","Package":"routeweaver/internal/integration","Elapsed":2.982}
+{"Time":"2026-10-20T04:56:02.282787349+08:00","Action":"start","Package":"routeweaver/internal/httpapi"}
+{"Time":"2026-10-20T04:56:02.342447438+08:00","Action":"run","Package":"routeweaver/internal/httpapi","Test":"TestNativePublishedManagedPrincipalEndToEnd"}
+{"Time":"2026-10-20T04:56:02.342511034+08:00","Action":"output","Package":"routeweaver/internal/httpapi","Test":"TestNativePublishedManagedPrincipalEndToEnd","Output":"=== RUN   TestNativePublishedManagedPrincipalEndToEnd\n","OutputType":"frame"}
+{"Time":"2026-10-20T04:56:23.098413824+08:00","Action":"output","Package":"routeweaver/internal/httpapi","Test":"TestNativePublishedManagedPrincipalEndToEnd","Output":"    published_routes_test.go:194: real CP/native: one IP, two independent TCP/mux streams; extra TCP and mux streams denied; existing streams renewed at cap; final close released slots\n"}
+{"Time":"2026-10-20T04:56:23.312478493+08:00","Action":"output","Package":"routeweaver/internal/httpapi","Test":"TestNativePublishedManagedPrincipalEndToEnd","Output":"--- PASS: TestNativePublishedManagedPrincipalEndToEnd (20.97s)\n","OutputType":"frame"}
+{"Time":"2026-10-20T04:56:23.312523431+08:00","Action":"pass","Package":"routeweaver/internal/httpapi","Test":"TestNativePublishedManagedPrincipalEndToEnd","Elapsed":20.97}
+{"Time":"2026-10-20T04:56:23.326343372+08:00","Action":"output","Package":"routeweaver/internal/httpapi","Output":"PASS\n","OutputType":"frame"}
+{"Time":"2026-10-20T04:56:24.355427003+08:00","Action":"output","Package":"routeweaver/internal/httpapi","Output":"ok  \trouteweaver/internal/httpapi\t22.073s\n"}
+{"Time":"2026-10-20T04:56:24.355472782+08:00","Action":"pass","Package":"routeweaver/internal/httpapi","Elapsed":22.073}
+PASS: required loopback managed runtime / CP integration. Not production VPS acceptance.

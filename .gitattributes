@@ -1,0 +1,6 @@
+# Preserve upstream license/notice bytes, including their original whitespace.
+runtimes/xray/licenses/** -whitespace
+
+# Retain exact upstream licenses and captured tool evidence.
+internal/render/schemas/LICENSE.* -whitespace
+docs/verification/**/*.log -whitespace

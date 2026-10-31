@@ -1,0 +1,15 @@
+=== RUN   TestSecondaryBackupRejectsMissingLiveFeedIndex
+--- PASS: TestSecondaryBackupRejectsMissingLiveFeedIndex (0.00s)
+=== RUN   TestSecondaryBackupRejectsMissingGenerationCounter
+--- PASS: TestSecondaryBackupRejectsMissingGenerationCounter (0.00s)
+=== RUN   TestBackupGenerationFenceCannotRegressButTombstoneMayLead
+--- PASS: TestBackupGenerationFenceCannotRegressButTombstoneMayLead (0.00s)
+PASS
+ok  	routeweaver/internal/store	0.012s
+=== RUN   TestSecondaryPresetDigestRejectsChangedSource
+    template_input_manifest_test.go:54: artifact host changed; same digest=false
+--- PASS: TestSecondaryPresetDigestRejectsChangedSource (0.07s)
+=== RUN   TestTemplatePresetReviewFencesNewDependentProfile
+--- PASS: TestTemplatePresetReviewFencesNewDependentProfile (0.07s)
+PASS
+ok  	routeweaver/internal/httpapi	0.150s

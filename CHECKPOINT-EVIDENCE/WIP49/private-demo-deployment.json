@@ -1,0 +1,44 @@
+{
+  "checkpoint": "WIP49",
+  "status": "succeeded",
+  "audience": "same owner-private Site preserved; private deployment enforced",
+  "project_id": "appgprj_6ae34b315790819181808e9e2afe0342",
+  "deployment_id": "appgdep_6ae42e56e94c8191951490789a692126",
+  "version_id": "appgprj_6ae34b315790819181808e9e2afe0342~appgver_de597160d5b4819184218cca5d5f8928",
+  "source_commit": "f8d53d7ca5edccb81d417f6e6bed4efa16c27bf3",
+  "url": "https://routeweaver-wip46-test.garden-lake-3493.chatgpt.site",
+  "updated_at": "2026-10-30T05:42:54.978934+00:00",
+  "final_offline_build_exit": 0,
+  "containment_tests_passed": 12,
+  "source_files": 372,
+  "byte_identical_source_files": 371,
+  "source_exception": "main.tsx demo-only imports; canonical real backend remains separate",
+  "fixture": "isolated read-only sample data, including unverified .demo.invalid origin draft with no real token",
+  "qa_iframe_pages_shipped": false,
+  "evidence": [
+    {
+      "filename": "deployment-receipt.json",
+      "sha256": "55bae4717acaf62b5b4adfdd9d16009538a4c29567871a28b34c70d648220346",
+      "bytes": 674,
+      "availability": "local-only operational evidence; public summary here"
+    },
+    {
+      "filename": "receipt.json",
+      "sha256": "27b3117c51f18e9202bde01864bd71583f530f1bb4402bff8a8d76e5a7e1b4cd",
+      "bytes": 1520,
+      "availability": "local-only operational evidence; public summary here"
+    },
+    {
+      "filename": "build-final-offline.log",
+      "sha256": "443c7b4bdb6d169d1f5da4ded765962faf913ebdb1ed4f0aa203165d0c06fbc3",
+      "bytes": 2980,
+      "availability": "local-only operational evidence; public summary here"
+    },
+    {
+      "filename": "containment-final-offline.log",
+      "sha256": "aaff681eb1bcd4f61ff98316d667b74f2c7d0ab54edb3504dea3a4030e084213",
+      "bytes": 419,
+      "availability": "local-only operational evidence; public summary here"
+    }
+  ]
+}

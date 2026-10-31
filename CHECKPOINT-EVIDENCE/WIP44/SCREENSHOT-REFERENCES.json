@@ -1,0 +1,40 @@
+{
+  "screenshotBytesIncluded": false,
+  "finalSemanticScreenshots": [
+    {
+      "order": 1,
+      "fileName": "成员发布审阅_桌面变更摘要_20261026.png",
+      "libraryFileId": "libfile_5f4013e22a9c8191b2922c596a7c8dd8",
+      "fileId": "file_0000000032b481f59f221bf099becaf7",
+      "version": 0,
+      "sizeBytes": 99828,
+      "sha256": "4cae1bf62de2b4bb57a9d8103360afddba7803a38aca82116815d87a7d3efe1d",
+      "scope": "Desktop change summary; not a claim that all content is above the fold."
+    },
+    {
+      "order": 2,
+      "fileName": "成员发布审阅_窄屏发布决策_20261026.png",
+      "libraryFileId": "libfile_243a038074188191b93ea468c644b04d",
+      "fileId": "file_0000000013dc81f58fb899f878a8913b",
+      "version": 0,
+      "sizeBytes": 54660,
+      "sha256": "5124015c427decd0e08015359f55c06c19df1d45d24b4e653608d93aef7b7d04",
+      "scope": "Narrow final decision after ordinary scroll and direct-reference expansion."
+    }
+  ],
+  "semanticVerificationReceiptSha256": "3d266a05c6482c6a64617aa5a5f80039969bbae7ffb8a2ce67fbfe637d8aff6e",
+  "previouslyDeliveredTaskFirstScreenshots": [
+    {
+      "library_file_id": "libfile_ca8c7c42752481919f7b52f6e079bfa1",
+      "scope": "task-first desktop; earlier isolated accepted source, not automatically final composed source",
+      "delivered_at_utc": "2026-10-26T04:41:19Z"
+    },
+    {
+      "library_file_id": "libfile_852c1ca1ff7c8191bf3231109eb628fc",
+      "scope": "task-first mobile; earlier isolated accepted source, not automatically final composed source",
+      "delivered_at_utc": "2026-10-26T04:41:19Z"
+    }
+  ],
+  "taskFirstAttribution": "Previously delivered isolated task-first frames retain their original source attribution; final composed task-first pixels are separately recorded in BROWSER-AND-PIXELS.json.",
+  "oldAssetsReplacedOrDeleted": false
+}

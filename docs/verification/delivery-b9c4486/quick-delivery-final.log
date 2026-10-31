@@ -1,0 +1,129 @@
+
+== Tracked operator-state exclusion ==
+Tracked private-file guard: 758 files inspected. This is not secret-content analysis.
+
+== Ticket DAG and complete story traceability ==
+Ticket DAG: 24 local tickets, 35/35 confirmed stories covered, no cycles; check passed.
+
+== Ticket guard negative fixtures ==
+....
+----------------------------------------------------------------------
+Ran 4 tests in 0.004s
+
+OK
+
+== Architecture guard negative fixtures ==
+ok  	routeweaver/scripts/check-architecture	(cached)
+
+== Production dependency direction ==
+Architecture imports: passed (production Go imports; not a complete effect or security proof)
+
+== Go formatting ==
+
+== Go vet ==
+
+== Go behavior and race tests ==
+?   	routeweaver/cmd/control-plane	[no test files]
+ok  	routeweaver/cmd/node-agent	1.122s
+ok  	routeweaver/internal/agent	3.988s
+?   	routeweaver/internal/auth	[no test files]
+ok  	routeweaver/internal/backup	577.236s
+ok  	routeweaver/internal/controlprotocol	1.013s
+ok  	routeweaver/internal/conversion	1.013s
+ok  	routeweaver/internal/diagnosticexec	1.015s
+ok  	routeweaver/internal/diagnostics	1.011s
+ok  	routeweaver/internal/domain	1.012s
+?   	routeweaver/internal/entrypolicy	[no test files]
+ok  	routeweaver/internal/fleet	1.012s
+ok  	routeweaver/internal/httpapi	193.138s
+ok  	routeweaver/internal/importer	1.019s
+ok  	routeweaver/internal/integration	1.421s
+ok  	routeweaver/internal/notifications	2.135s
+ok  	routeweaver/internal/observability	1.016s
+ok  	routeweaver/internal/privateipc	1.050s
+ok  	routeweaver/internal/render	1.860s
+ok  	routeweaver/internal/resources	1.064s
+ok  	routeweaver/internal/reuse	1.017s
+ok  	routeweaver/internal/service	1.011s
+ok  	routeweaver/internal/store	130.469s
+ok  	routeweaver/scripts/check-architecture	1.013s
+
+== Go build ==
+
+== Managed runtime vet ==
+
+== Managed runtime behavior and race tests ==
+ok  	routeweaver/runtimes/xray	12.591s
+?   	routeweaver/runtimes/xray/cmd/routeweaver-xray	[no test files]
+
+== Managed runtime build ==
+
+== Web typecheck ==
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> routeweaver-web@1.0.0 typecheck
+> tsc -b
+
+
+== Web behavior tests ==
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> routeweaver-web@1.0.0 test
+> vitest run
+
+
+ RUN  v5.0.5 /workspace/scratch/d385eb428cee/routeweaver/web
+
+Not implemented: HTMLCanvasElement's getContext() method: without installing the canvas npm package
+
+ Test Files  16 passed (16)
+      Tests  129 passed (129)
+   Start at  05:42:10
+   Duration  22.52s (tests 71%, import 21%, environment 8%, transform 1%)
+
+
+== Web production build ==
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> routeweaver-web@1.0.0 build
+> tsc -b && vite build
+
+vite v8.3.4 building client environment for production...
+transforming...
+✓ 3339 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                             0.58 kB │ gzip:   0.37 kB
+dist/assets/Sources-BX28mVmq.css            0.82 kB │ gzip:   0.37 kB
+dist/assets/style-DLioOiRN.css             15.41 kB │ gzip:   2.56 kB
+dist/assets/index-D_VNB41H.css             28.39 kB │ gzip:   7.08 kB
+dist/assets/rolldown-runtime-XKyaHtl9.js    0.72 kB │ gzip:   0.42 kB
+dist/assets/DeleteOutlined-CYSrhR8X.js      0.90 kB │ gzip:   0.60 kB
+dist/assets/SaveOutlined-C2K0F012.js        0.99 kB │ gzip:   0.63 kB
+dist/assets/ArrowUpOutlined-PhT_6vlf.js     1.44 kB │ gzip:   0.70 kB
+dist/assets/popconfirm-CJK_DqO7.js          3.50 kB │ gzip:   1.55 kB
+dist/assets/ConnectionFields-D0WwdqGB.js    4.52 kB │ gzip:   1.57 kB
+dist/assets/Pipeline-CZuBvPIy.js            4.66 kB │ gzip:   1.82 kB
+dist/assets/PublishedRoutes-D6orHEoJ.js    10.29 kB │ gzip:   4.02 kB
+dist/assets/Notifications-ByTcQs5R.js      13.33 kB │ gzip:   4.59 kB
+dist/assets/Templates-FHpAxJTc.js          14.90 kB │ gzip:   5.22 kB
+dist/assets/Fleet-4GjK-jlB.js              15.06 kB │ gzip:   5.73 kB
+dist/assets/ServerRoutes-Cv2Ric-i.js       19.15 kB │ gzip:   6.94 kB
+dist/assets/switch-9XcEbP6K.js             28.03 kB │ gzip:   9.43 kB
+dist/assets/Profiles-VekXVxC9.js           28.75 kB │ gzip:   9.49 kB
+dist/assets/Sources-U2jcJjc2.js            32.42 kB │ gzip:  11.19 kB
+dist/assets/tabs-xl9QFMir.js               34.76 kB │ gzip:  10.86 kB
+dist/assets/Infrastructure-laJ1YaLv.js     49.29 kB │ gzip:  15.75 kB
+dist/assets/Admin-5DwWLZmV.js              65.43 kB │ gzip:  20.49 kB
+dist/assets/index-CEWYyLFA.js             156.12 kB │ gzip:  52.35 kB
+dist/assets/style-DeTjyvrx.js             177.77 kB │ gzip:  57.32 kB
+dist/assets/model-DA87E_cn.js             987.15 kB │ gzip: 316.09 kB
+
+[plugin builtin:vite-reporter] 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 605ms
+
+PASS: quick verification. This does not authorize a deployment or imply all 35 stories are complete.

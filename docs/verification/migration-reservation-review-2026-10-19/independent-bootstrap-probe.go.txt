@@ -1,0 +1,37 @@
+package store
+
+import (
+	"bytes"
+	"database/sql"
+	"path/filepath"
+	"testing"
+)
+
+func TestIndependentMigrationBootstrapReservationDoesNotMutateRows(t *testing.T) {
+	db, err := sql.Open("sqlite", filepath.Join(t.TempDir(), "records-only.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	db.SetMaxOpenConns(1)
+	if _, err = db.Exec(`CREATE TABLE records(kind TEXT NOT NULL,id TEXT NOT NULL,data BLOB NOT NULL,PRIMARY KEY(kind,id)); INSERT INTO records(kind,id,data) VALUES('fixture','existing',X'010203'); CREATE TRIGGER reject_canonical_update AFTER UPDATE ON records BEGIN SELECT RAISE(ABORT,'bootstrap touched canonical row'); END`); err != nil {
+		t.Fatal(err)
+	}
+	s, err := newStore(db, bytes.Repeat([]byte{31}, 32))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 2; i++ {
+		if err = s.migrate(); err != nil {
+			t.Fatalf("migration %d from records-only schema: %v", i, err)
+		}
+		var raw []byte
+		if err = db.QueryRow(`SELECT data FROM records WHERE kind='fixture' AND id='existing'`).Scan(&raw); err != nil || !bytes.Equal(raw, []byte{1, 2, 3}) {
+			t.Fatalf("canonical bytes changed: %x %v", raw, err)
+		}
+		var n int
+		if err = db.QueryRow(`SELECT count(*) FROM schema_migrations`).Scan(&n); err != nil || n != 2 {
+			t.Fatalf("migration rows: %d %v", n, err)
+		}
+	}
+}

@@ -1,0 +1,573 @@
+{
+  "status": "final-local-evidence-hash-index",
+  "notice": "Raw logs are deliberately not archive attachments. Results and scope are stated in public receipts. Later deployment/upload receipts are separate.",
+  "files": [
+    {
+      "source_group": "wip47",
+      "filename": "INDEPENDENT-BACKEND-REVIEW.initial.md",
+      "sha256": "fec38a25744001f8e4afbe628ced98bc174476a20809ad910d030e736c7dbb09",
+      "size_bytes": 2223,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47",
+      "filename": "backend-final.sha256",
+      "sha256": "90bfca8bf97ab7027631a6deefbc1694bbf1127bb6978f5b6b2395e40f3d4f59",
+      "size_bytes": 50476,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47",
+      "filename": "backend-freeze.after-check.log",
+      "sha256": "2965e4a1455ea3448c27485c948490093512cddcafaefe9b09a4b4a52af8678b",
+      "size_bytes": 20778,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47",
+      "filename": "backend-freeze.sha256",
+      "sha256": "1e470212066ff88ed183230fed13ee18f92c6b21a11d66fff3911e9c1841c022",
+      "size_bytes": 50476,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47",
+      "filename": "backend-package-preflight.log",
+      "sha256": "21d7c2e9a3bdbe14a633fbd4a21eaf089931b2083e1238adead2eaa4c87eec86",
+      "size_bytes": 739,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47",
+      "filename": "backend-parity-final.after-check.log",
+      "sha256": "528191c9e672f9c991c084f687c58d075da38e6a9afeb5eebc05545ee8c62790",
+      "size_bytes": 20724,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47",
+      "filename": "backend-parity-final.sha256",
+      "sha256": "2271b511a690e7593dd6a318ba92bbe4bc531f5303b0fda8143022079df293ab",
+      "size_bytes": 50484,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47",
+      "filename": "backend-postfix-focused.log",
+      "sha256": "17ede3295bf03042d723cafda13523e9beadb939ec6c268dcd333cf718baabca",
+      "size_bytes": 166,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47",
+      "filename": "backend-postfix-http.log",
+      "sha256": "346c228b488347ac8b58c72f2713fe574d9a40380fc2c4077334f84538da1495",
+      "size_bytes": 42,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47",
+      "filename": "backend-preparity-race.log",
+      "sha256": "a04ff364b3fbdbd8d464cd89369da104a22b522d03d6d1b96c318b346d019895",
+      "size_bytes": 1060,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47",
+      "filename": "backend-preparity-vet.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47",
+      "filename": "backend-race-bootstrap-failed.log",
+      "sha256": "dd251632b6ac2fbd99fbfa55aa1e4ac30a306baa104b6e449c02df7d0965abd9",
+      "size_bytes": 151840,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47",
+      "filename": "backend-race-overlap-interrupted.log",
+      "sha256": "1010dc51a9d787f7fcf73d3f0798e2854ed187deea7d60b2c395be3e79c1fe71",
+      "size_bytes": 176,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47",
+      "filename": "backend-race.prefinal.log",
+      "sha256": "42b352ca8f973235faf080240456f23692e9326586c3c509d486ee06fe58f279",
+      "size_bytes": 1060,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47",
+      "filename": "backend-release-cache-boundary-failed.log",
+      "sha256": "8d6f499f069c335693ddc87d9c73ac1acca127fdf08b09768869dd7dd3c09ff6",
+      "size_bytes": 334,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47",
+      "filename": "backend-release-candidate.sha256",
+      "sha256": "3a405c70031196c972e9a8902b6d0508461e49631654c7302d56787ebcb229da",
+      "size_bytes": 50270,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47",
+      "filename": "backend-release-command.txt",
+      "sha256": "a2c73d6fe0c9fe0fde58d551f38db595ab992dfc7dc805a52895f2c8ba6d3d51",
+      "size_bytes": 586,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47",
+      "filename": "backend-release-final.after-check.log",
+      "sha256": "5e49eda44cb1955a5e325644a18ea745f5253c6a490d6ea9c1fa08b57937412c",
+      "size_bytes": 20634,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47",
+      "filename": "backend-release-final.sha256",
+      "sha256": "676847a6bf89eb3c0207b1c98b3d7f91532cf004034599a1d2bd7ed839203867",
+      "size_bytes": 50270,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47",
+      "filename": "backend-vet.prefinal.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47",
+      "filename": "browser-shadcn-smoke-r1.json",
+      "sha256": "991e12529975319872a592b50d1c32832cec505af00bd46a143598f0f4b36669",
+      "size_bytes": 54968,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47",
+      "filename": "browser-shadcn-smoke-r1.log",
+      "sha256": "f39c20e64707ea5902ebb5b1f3b8083f20b5bd59653daaaf6d07d540b04ed087",
+      "size_bytes": 17768,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47",
+      "filename": "endpoint-target-parity-audit.md",
+      "sha256": "624a4a091c308c343259c733ef002c8ef1c4ef1dc58aa315686676893326f752",
+      "size_bytes": 6484,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47",
+      "filename": "frontend-acceptance-r2.json",
+      "sha256": "46e562d1f63ef0d6b74bfff78cf741656d86cfcf34e14e375ca74ed349cb6cbc",
+      "size_bytes": 259,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47",
+      "filename": "frontend-failures-r1.json",
+      "sha256": "870c9703016f813429ac82560bb94853819a4d1814423b0f6f54f5602e564d0f",
+      "size_bytes": 2642164,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47",
+      "filename": "frontend-freeze-r1.json",
+      "sha256": "8776fd6b6282ce87f2d28c9610bd278ffe5c001c951980fe59c1788d9b4461ea",
+      "size_bytes": 40993,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47",
+      "filename": "frontend-freeze-r2.json",
+      "sha256": "1a6aedeb922320985c663a2931acc05f41304db90ef84164ce39476260b0e407",
+      "size_bytes": 41328,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47",
+      "filename": "frontend-scope-r1-check.json",
+      "sha256": "1afa29304545b78b7993e6fe072af699a731f490e5b4278b3b85b9852e29fbe5",
+      "size_bytes": 35,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47",
+      "filename": "frontend-suite-r1.json",
+      "sha256": "c5585c456cba2a995a3909246cc2255025b0b98b465dfd1a7f3299307cfa4161",
+      "size_bytes": 3175017,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47",
+      "filename": "frontend-suite-r1.log",
+      "sha256": "2a2936ca3276605ec795605c06036c5e7d31334514832dce0bbfc249dfb88bb4",
+      "size_bytes": 2605171,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47",
+      "filename": "frontend-suite-r2.json",
+      "sha256": "394a8fe3f943bb71f50cdca0208caac0305c0df7ff47c3c756dc9fe57497a325",
+      "size_bytes": 594424,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47",
+      "filename": "frontend-suite-r2.log",
+      "sha256": "fa396f2edcb2aa708f64215d79ed503e39953b8644e654e586c5079c8b693e9d",
+      "size_bytes": 63118,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47",
+      "filename": "frontend-vitest-scope-r1.json",
+      "sha256": "add859ca57834083af79b26eb59022a8a90ce9c444b56b3fad5c697600ba8bb7",
+      "size_bytes": 33948,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47",
+      "filename": "independent-endpoint-tests.initial.log",
+      "sha256": "43a2fc0351a5c0efa7236401c3dd4727d9730a41f1c0687217806799982d8e5b",
+      "size_bytes": 16072,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47",
+      "filename": "managed-preparity-race.log",
+      "sha256": "469f9b1879b8b089a87c379dc3b804fb3dfdbce76d20b9fd084f1b78be0318cf",
+      "size_bytes": 107,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47",
+      "filename": "managed-unit-prefinal.log",
+      "sha256": "dd8425b9d460921610aac9b5509064fbba9d495c00ac3b5ef1d65ea319072d71",
+      "size_bytes": 1901,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47",
+      "filename": "managed-vet-prefinal.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47",
+      "filename": "native-parity-parser-gate.log",
+      "sha256": "fa3ae775569d1b663a0e5677da81ef1c1a9c704760f1af44d8c9affdeee25b0e",
+      "size_bytes": 175603,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47",
+      "filename": "native-parity-xray-runtime-gate.log",
+      "sha256": "a9cf8505b4502f40c0914af76a32b9d1871eba7d2d2237b5298cb28609ab62eb",
+      "size_bytes": 15777,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47",
+      "filename": "native-parser-gate.log",
+      "sha256": "b1938f794ce293ee5fdf8831941de560079858d46f935455e441ab4acfa0fb7f",
+      "size_bytes": 175590,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47",
+      "filename": "native-postfix.log",
+      "sha256": "68218c0c6b621d8d3b5dc507bd6bb27b8fb4d370059d1917eefb94730cd38778",
+      "size_bytes": 17331,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47",
+      "filename": "provider-test-migration.json",
+      "sha256": "333c5a61ed08f5fd86357395699a60fdefa29de1b7d54703b7280504128c3bd6",
+      "size_bytes": 3689,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47",
+      "filename": "target-parity-architecture.log",
+      "sha256": "623aa4da73bf35864ed971f965e3310cce49e81b3d1e8ad6c055002f6b83482a",
+      "size_bytes": 145,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47",
+      "filename": "target-parity-before.log",
+      "sha256": "17106e1c02e7fe118d816fb739c49c7e0f41c313bff8c56f7af28f7de91d97f1",
+      "size_bytes": 1024,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47",
+      "filename": "target-parity-focused.log",
+      "sha256": "af603e8c7dfed40a0276c1d0fdec94a0deac8ff62e214f7bb8e10720def41b1c",
+      "size_bytes": 166,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47",
+      "filename": "target-parity-format.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size_bytes": 0,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47",
+      "filename": "target-parity-http.log",
+      "sha256": "0286a1632d570b71d0bf5e428e1be9cd1d944b9eff0bc3d185cfa7cb3879101c",
+      "size_bytes": 41,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47",
+      "filename": "xray-loopback-protocols.log",
+      "sha256": "508e886004972de2d7628c5459d2c902fea92b71e44d61ce2549825f57523b9c",
+      "size_bytes": 1184,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47",
+      "filename": "xray-runtime-gate.log",
+      "sha256": "0a8d1a8a222161a634c6be17db9cb8cfc650b6581d77ae6fa6aff29b95c4c9f9",
+      "size_bytes": 15786,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47-final-acceptance",
+      "filename": "api-r1.exit",
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+      "size_bytes": 2,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47-final-acceptance",
+      "filename": "api-r1.json",
+      "sha256": "f6801a9949d69b8bc7f39149545ba3c9f72902e9e0d5970af334ece56480636c",
+      "size_bytes": 25846,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47-final-acceptance",
+      "filename": "api-r1.log",
+      "sha256": "e0bdebe34f2ceccc414b4f6bcf1ac8446205ff9b93d23e79f849cfb6c1f3a01c",
+      "size_bytes": 4680,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47-final-acceptance",
+      "filename": "api-r2.json",
+      "sha256": "50ca8da88bbf84f992af461f149f2b0b2ee5a8a37c25b2b629997f8be502aef4",
+      "size_bytes": 23274,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47-final-acceptance",
+      "filename": "api-r2.log",
+      "sha256": "7a05d281232f253ffcd716a62e2c6f0a6b51e80c13c45872b971b9d085cc9ad2",
+      "size_bytes": 3442,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47-final-acceptance",
+      "filename": "api-secret-after.log",
+      "sha256": "3f21822630d41c86d127e0097ccbfc79397cca9747b24f0fafd0e3ff0b318fac",
+      "size_bytes": 776,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47-final-acceptance",
+      "filename": "api-secret-before.log",
+      "sha256": "5531ae5a6df29d031247666fe2c742808cc6ff32d46671baf8b19c73bee86dcf",
+      "size_bytes": 1784,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47-final-acceptance",
+      "filename": "frontend-repair-aggregate.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "size_bytes": 2,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47-final-acceptance",
+      "filename": "frontend-repair-build.log",
+      "sha256": "c7c52ab6fd757cd3398a1b72b2439eb9d982666965ecc4b3849612d122e3d173",
+      "size_bytes": 2980,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47-final-acceptance",
+      "filename": "frontend-repair-focused.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "size_bytes": 2,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47-final-acceptance",
+      "filename": "frontend-repair-focused.log",
+      "sha256": "094d6a7400f169536ce916f6b5033a2c8b1f40e8d1928dc11cb5c90c4bb2dcc0",
+      "size_bytes": 918,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47-final-acceptance",
+      "filename": "frontend-repair-freeze.json",
+      "sha256": "e95d5130aa0d6c961565744ef02d115267ce01d85019cd9e85b23ae5460a8dc2",
+      "size_bytes": 41435,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47-final-acceptance",
+      "filename": "frontend-repair-source-check.json",
+      "sha256": "7229e40827b13e0e7e68b0648c96c80258e4a3d46bda3456f0dab02ca918a3dc",
+      "size_bytes": 155,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47-final-acceptance",
+      "filename": "frontend-repair-suite.json",
+      "sha256": "ada4e8e6e98d60410c18ec52aa4221047ef8fcf2ac96c6313436ad3019a76a1c",
+      "size_bytes": 601955,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47-final-acceptance",
+      "filename": "frontend-repair-suite.log",
+      "sha256": "4466bef5faba788a4701cc9ba75c92297b2db8759f26fd98f808bc7afefd8e76",
+      "size_bytes": 60897,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47-final-acceptance",
+      "filename": "frontend-repair-typecheck.log",
+      "sha256": "3eeba694beb40e350731996df1916da84a1348266b4c9d68b105dcdd21c1bc6f",
+      "size_bytes": 144,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47-final-acceptance",
+      "filename": "global-source-freeze-r2.json",
+      "sha256": "7df27a731969f467faf1fbe2ab4374bde116036f19ed41d698400c2eef9195ae",
+      "size_bytes": 220355,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47-final-acceptance",
+      "filename": "global-source-freeze.json",
+      "sha256": "61da2cb46906ee9da35c2aaf8cd58c62f9aeaa71a1bf14f1ad0b06420b9effa5",
+      "size_bytes": 219992,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47-final-acceptance",
+      "filename": "interrupted-source-check.json",
+      "sha256": "607748ba7e6a2b570b576cd6738b5311ed4284f366fb75d076a9b3fbccfbfe74",
+      "size_bytes": 160,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47-final-acceptance",
+      "filename": "quick-r2-source-check.json",
+      "sha256": "378e60fc21d8e27b1ffb07c0c33e1da555ef3ce8bcb763b63a135597d27c4c4d",
+      "size_bytes": 561,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47-final-acceptance",
+      "filename": "site-final-build.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "size_bytes": 2,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47-final-acceptance",
+      "filename": "site-final-build.log",
+      "sha256": "dabf34a066f303e878187cc6c3ba26cb30ea2cb8b61137d362237769aa268763",
+      "size_bytes": 2980,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47-final-acceptance",
+      "filename": "site-final-containment.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "size_bytes": 2,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47-final-acceptance",
+      "filename": "site-final-containment.log",
+      "sha256": "6df3eb4f5b5790f880b78bfe5649742a355d8e79f89aaeb0843399c45df77f8e",
+      "size_bytes": 419,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47-final-acceptance",
+      "filename": "site-final-preparation.json",
+      "sha256": "18a36f5ab4b067cf5ae8057220a76499bca9981444f0095908d7be85f9199c71",
+      "size_bytes": 1233,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47-final-acceptance",
+      "filename": "static-repair.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "size_bytes": 2,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47-final-acceptance",
+      "filename": "static-repair.log",
+      "sha256": "1eab861cf6029b4146bb09a6c4bfb5a4d6d83eb3f1e9136ba3663324ae0e32df",
+      "size_bytes": 640,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47-final-acceptance",
+      "filename": "unchanged-backend-api-scope.json",
+      "sha256": "6a5ae6ebcf0a9b93108e871a8b4228da20725d04a9342010382aeac225ee7af0",
+      "size_bytes": 369,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47-final-acceptance",
+      "filename": "verify-quick-r2.exit",
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+      "size_bytes": 2,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47-final-acceptance",
+      "filename": "verify-quick-r2.log",
+      "sha256": "6f842122d0f286edda34df7eafbb05c80c39d5020ae9a67217921222eaaf7fc8",
+      "size_bytes": 27145,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47-final-acceptance",
+      "filename": "verify-quick.exit",
+      "sha256": "f5bde7eb9f6c71611dc5726e8aca3eb4eba3e386da49e0a4ed5c295a90a73a0d",
+      "size_bytes": 4,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "source_group": "wip47-final-acceptance",
+      "filename": "verify-quick.log",
+      "sha256": "0c9c81c347d6c52db49f6911dcb6e3fbbd61cfa3f39e499a36ba7553269baf14",
+      "size_bytes": 1028,
+      "availability": "local-only-not-in-archive"
+    }
+  ]
+}

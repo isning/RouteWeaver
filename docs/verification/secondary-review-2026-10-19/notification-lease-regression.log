@@ -1,0 +1,7 @@
+=== RUN   TestSecondaryDispatchLeaseUsesActualClaimTime
+    secondary_review_test.go:26: newly claimed event lease remaining: -5.031838228s
+    secondary_review_test.go:37: sixth delivery was newly claimed with an already expired lease
+--- FAIL: TestSecondaryDispatchLeaseUsesActualClaimTime (65.03s)
+FAIL
+FAIL	routeweaver/internal/notifications	65.039s
+FAIL

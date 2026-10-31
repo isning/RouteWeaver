@@ -1,0 +1,111 @@
+{
+  "accepted": true,
+  "exclusions": [
+    "Official verify.sh static/quick/full not invoked: NoGit tracked-file checks unavailable; no Git recreation.",
+    "Root Go NONRACE only; race and nested runtime-module tests excluded.",
+    "Native-core parser/process/traffic/live runtime opt-ins excluded; no inherited opt-in environment.",
+    "API Playwright project, package/deployment/live actions excluded.",
+    "Current17 browser tasks and targeted recovery smoke are separately reported."
+  ],
+  "finished": "2026-10-25T16:45:28.590122+00:00",
+  "guards": {
+    "canonicalUnchanged": true,
+    "privateSourceInputsUnchanged": true,
+    "reviewedInputsUnchanged": true,
+    "toolsUnchanged": true
+  },
+  "input_sha256": "858d28a0224b35deb5f9a438cc59c6e7b7fa833af998acc14c273276ef0c4d1f",
+  "interpretation": "Corrected unfiltered Web and build passed separately. This is not a fresh one-run full aggregate or official verify.sh pass. Browser/current17/recovery/ordinary-user evidence remains separate.",
+  "native_evidence_hashes_only": {
+    "web-build.log": "48c30d22800012b5124d84610113b8c76b236d2681b42ef89ba45a0a28951aa0",
+    "web-results.json": "22cfaa4c72eb563badfb220db7390103b40ed4b12cee5edf64bf4629f91c8c9a",
+    "web-tests.log": "8be55f2234651857592ca33033fc35c1485af96893bbc01fe42ca9cf3792e32d",
+    "web-typecheck.log": "d9dd95a5d29e2c8680342dd6d79eb56c5cc54980f2328e98854e8e67aa24d7df"
+  },
+  "omissions": [
+    "Absolute workspace/tool executable paths and process IDs",
+    "Raw logs, stack traces and DOM dumps",
+    "Demo/auth/session/cookie/CSRF state, private feed values and credentials",
+    "Browser screenshots, traces and runtime source copies"
+  ],
+  "original_records": [
+    {
+      "included_native_bytes": false,
+      "record": "final-web-continuation-validation-20261025/run/run.json",
+      "sha256": "34931cb38f3de2a05f6bebd808e60059b31a6c7e5d75a7017eeb6a27762e345e"
+    }
+  ],
+  "privacy_rule": "Explicitly selected scalar/count/identity fields only; original immutable record hashes retained.",
+  "purpose": "corrected_whole_web_typecheck_tests_build_on_actual_final_source",
+  "qa_released_utc": "2026-10-25T16:45:28.590101+00:00",
+  "record_kind": "derived_allowlisted_terminal_summary_not_native_byte_copy",
+  "retained_earlier_stages": {
+    "all_native_exits": 0,
+    "note": "Original aggregate remains failed; prior eight native0 stages retained solely because only two test fixture files changed. Current whole-web/build are separately executed.",
+    "original_receipt_sha256": "cab4211e7a6d7d1069355fc3e3d85a30405d1651fe662677a98257fbad4deff3",
+    "original_source_sha256": "b124729420964ab2abb434b7716e2369fdda61072c744b07e57bd254b61c59c5",
+    "source_equivalence_basis": "Only web/src/line-workflow.dom.test.tsx and web/src/workspace.dom.test.tsx changed in exact terminal two-test integration; production, backend, configuration, other tests and seven docs unchanged. No rerun claim for these eight historical stages.",
+    "stage_names": [
+      "tickets",
+      "python-guard-tests",
+      "format",
+      "architecture",
+      "go-vet",
+      "go-tests",
+      "go-build",
+      "web-typecheck"
+    ]
+  },
+  "runner_sha256": "9d8b71537da6d5a5be530043d8e39f9d413f06bf3bccf60cddc498293f1170c2",
+  "schema": "routeweaver.portable-verification.v1",
+  "source_sha256": "582c068fd5016f4d239a2fa9d72e5199a988aade034fb762d7e863201a51e21a",
+  "stages": [
+    {
+      "command_description": "npm --prefix web run typecheck",
+      "finished": "2026-10-25T16:33:09.465902+00:00",
+      "name": "web-typecheck",
+      "nativeExit": 0,
+      "started": "2026-10-25T16:33:06.662845+00:00"
+    },
+    {
+      "command_description": "npm --prefix web run test -- --maxWorkers=1 --retry=0 --reporter=default --reporter=json --outputFile.json=<native-report>",
+      "finished": "2026-10-25T16:45:24.299792+00:00",
+      "name": "web-tests",
+      "nativeExit": 0,
+      "started": "2026-10-25T16:33:09.729689+00:00"
+    },
+    {
+      "command_description": "npm --prefix web run build",
+      "finished": "2026-10-25T16:45:28.095961+00:00",
+      "name": "web-build",
+      "nativeExit": 0,
+      "started": "2026-10-25T16:45:24.568720+00:00"
+    }
+  ],
+  "started": "2026-10-25T16:33:06.058214+00:00",
+  "status": "corrected-whole-web-and-build-passed",
+  "web": {
+    "counts": {
+      "numFailedTestSuites": 0,
+      "numFailedTests": 0,
+      "numPassedTestSuites": 148,
+      "numPassedTests": 1531,
+      "numPendingTestSuites": 0,
+      "numPendingTests": 0,
+      "numTodoTests": 0,
+      "numTotalTestSuites": 148,
+      "numTotalTests": 1531,
+      "success": true
+    },
+    "failed_cases": 0,
+    "native_report_sha256": "22cfaa4c72eb563badfb220db7390103b40ed4b12cee5edf64bf4629f91c8c9a",
+    "passed_cases": 1531,
+    "passed_physical_files": 130,
+    "physical_files": 130,
+    "runner_reported_suites": 148,
+    "skipped_cases": 0,
+    "todo_cases": 0,
+    "total_cases": 1531,
+    "unhandled_reported": false
+  }
+}

@@ -1,0 +1,35 @@
+=== RUN   TestAdmissionClaimsAcrossProcesses
+=== RUN   TestAdmissionClaimsAcrossProcesses/last-ip
+=== RUN   TestAdmissionClaimsAcrossProcesses/last-stream
+=== RUN   TestAdmissionClaimsAcrossProcesses/last-quota-byte
+--- PASS: TestAdmissionClaimsAcrossProcesses (3.46s)
+    --- PASS: TestAdmissionClaimsAcrossProcesses/last-ip (1.16s)
+    --- PASS: TestAdmissionClaimsAcrossProcesses/last-stream (1.14s)
+    --- PASS: TestAdmissionClaimsAcrossProcesses/last-quota-byte (1.16s)
+=== RUN   TestAdmissionClaimsAcrossProcesses
+=== RUN   TestAdmissionClaimsAcrossProcesses/last-ip
+=== RUN   TestAdmissionClaimsAcrossProcesses/last-stream
+    admission_process_test.go:115: child 1 not ready: --- FAIL: TestAdmissionClaimsAcrossProcesses (0.01s); wait=exit status 1; stdout=    admission_process_test.go:35: database is locked (5) (SQLITE_BUSY)
+        FAIL; stderr=
+=== RUN   TestAdmissionClaimsAcrossProcesses/last-quota-byte
+    admission_process_test.go:115: child 1 not ready: --- FAIL: TestAdmissionClaimsAcrossProcesses (0.01s); wait=exit status 1; stdout=    admission_process_test.go:35: database is locked (5) (SQLITE_BUSY)
+        FAIL; stderr=
+--- FAIL: TestAdmissionClaimsAcrossProcesses (1.33s)
+    --- PASS: TestAdmissionClaimsAcrossProcesses/last-ip (1.15s)
+    --- FAIL: TestAdmissionClaimsAcrossProcesses/last-stream (0.08s)
+    --- FAIL: TestAdmissionClaimsAcrossProcesses/last-quota-byte (0.10s)
+=== RUN   TestAdmissionClaimsAcrossProcesses
+=== RUN   TestAdmissionClaimsAcrossProcesses/last-ip
+    admission_process_test.go:115: child 0 not ready: --- FAIL: TestAdmissionClaimsAcrossProcesses (0.01s); wait=signal: killed; stdout=    admission_process_test.go:35: database is locked (5) (SQLITE_BUSY)
+        FAIL; stderr=
+=== RUN   TestAdmissionClaimsAcrossProcesses/last-stream
+=== RUN   TestAdmissionClaimsAcrossProcesses/last-quota-byte
+    admission_process_test.go:115: child 1 not ready: --- FAIL: TestAdmissionClaimsAcrossProcesses (0.01s); wait=exit status 1; stdout=    admission_process_test.go:35: database is locked (5) (SQLITE_BUSY)
+        FAIL; stderr=
+--- FAIL: TestAdmissionClaimsAcrossProcesses (1.29s)
+    --- FAIL: TestAdmissionClaimsAcrossProcesses/last-ip (0.07s)
+    --- PASS: TestAdmissionClaimsAcrossProcesses/last-stream (1.14s)
+    --- FAIL: TestAdmissionClaimsAcrossProcesses/last-quota-byte (0.08s)
+FAIL
+FAIL	routeweaver/internal/store	6.098s
+FAIL

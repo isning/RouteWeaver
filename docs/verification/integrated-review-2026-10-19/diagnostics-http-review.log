@@ -1,0 +1,137 @@
+testing: warning: no tests to run
+PASS
+ok  	routeweaver/internal/privateipc	1.020s [no tests to run]
+=== RUN   TestRequestedDiagnosticHasExplicitDirectionCostAndScope
+--- PASS: TestRequestedDiagnosticHasExplicitDirectionCostAndScope (0.00s)
+=== RUN   TestDiagnosticResultsCannotClaimSuccessWithoutCompletedPayload
+--- PASS: TestDiagnosticResultsCannotClaimSuccessWithoutCompletedPayload (0.00s)
+PASS
+ok  	routeweaver/internal/diagnostics	1.013s
+=== RUN   TestManagedDiagnosticPinsEveryAppliedHopAndRejectsUnknownOrAmbiguousPath
+--- PASS: TestManagedDiagnosticPinsEveryAppliedHopAndRejectsUnknownOrAmbiguousPath (0.07s)
+=== RUN   TestManagedDiagnosticChangedHopCannotReportSuccessAndExactReplayRemainsIdempotent
+--- PASS: TestManagedDiagnosticChangedHopCannotReportSuccessAndExactReplayRemainsIdempotent (0.05s)
+=== RUN   TestManagedDiagnosticRequiresFreshAllHopObservationEnrollmentAndLease
+=== RUN   TestManagedDiagnosticRequiresFreshAllHopObservationEnrollmentAndLease/old-observation
+=== RUN   TestManagedDiagnosticRequiresFreshAllHopObservationEnrollmentAndLease/expired-policy
+=== RUN   TestManagedDiagnosticRequiresFreshAllHopObservationEnrollmentAndLease/old-epoch
+=== RUN   TestManagedDiagnosticRequiresFreshAllHopObservationEnrollmentAndLease/unobserved
+=== RUN   TestManagedDiagnosticRequiresFreshAllHopObservationEnrollmentAndLease/wrong-fingerprint
+--- PASS: TestManagedDiagnosticRequiresFreshAllHopObservationEnrollmentAndLease (0.13s)
+    --- PASS: TestManagedDiagnosticRequiresFreshAllHopObservationEnrollmentAndLease/old-observation (0.03s)
+    --- PASS: TestManagedDiagnosticRequiresFreshAllHopObservationEnrollmentAndLease/expired-policy (0.03s)
+    --- PASS: TestManagedDiagnosticRequiresFreshAllHopObservationEnrollmentAndLease/old-epoch (0.03s)
+    --- PASS: TestManagedDiagnosticRequiresFreshAllHopObservationEnrollmentAndLease/unobserved (0.02s)
+    --- PASS: TestManagedDiagnosticRequiresFreshAllHopObservationEnrollmentAndLease/wrong-fingerprint (0.03s)
+=== RUN   TestDiagnosticUnknownOutcomeRetainsPhysicalNodeLaneUntilBoundedStopHorizon
+--- PASS: TestDiagnosticUnknownOutcomeRetainsPhysicalNodeLaneUntilBoundedStopHorizon (0.04s)
+=== RUN   TestManagedDiagnosticChangedPathPreservesNotRunAndUnknownEvidence
+=== RUN   TestManagedDiagnosticChangedPathPreservesNotRunAndUnknownEvidence/not_run
+=== RUN   TestManagedDiagnosticChangedPathPreservesNotRunAndUnknownEvidence/unknown
+--- PASS: TestManagedDiagnosticChangedPathPreservesNotRunAndUnknownEvidence (0.09s)
+    --- PASS: TestManagedDiagnosticChangedPathPreservesNotRunAndUnknownEvidence/not_run (0.04s)
+    --- PASS: TestManagedDiagnosticChangedPathPreservesNotRunAndUnknownEvidence/unknown (0.04s)
+=== RUN   TestDiagnosticQueueAndClaimsSurviveRestartAndSerializeAcrossStoreHandles
+--- PASS: TestDiagnosticQueueAndClaimsSurviveRestartAndSerializeAcrossStoreHandles (0.07s)
+=== RUN   TestDiagnosticQueueBoundAndEnrollmentChange
+--- PASS: TestDiagnosticQueueBoundAndEnrollmentChange (0.06s)
+PASS
+ok  	routeweaver/internal/store	1.545s
+=== RUN   TestCoreTransitionCannotReplayEqualTimeLeaseAfterRevocation
+--- PASS: TestCoreTransitionCannotReplayEqualTimeLeaseAfterRevocation (0.00s)
+=== RUN   TestCoreTransitionCannotReplayAfterBackdatedRevocation
+--- PASS: TestCoreTransitionCannotReplayAfterBackdatedRevocation (0.00s)
+=== RUN   TestFailedCorePreparationStillAllowsStoppingOldRuntime
+--- PASS: TestFailedCorePreparationStillAllowsStoppingOldRuntime (0.00s)
+=== RUN   TestMissingStagedTransitionAdapterIsNotAssumedAbsent
+--- PASS: TestMissingStagedTransitionAdapterIsNotAssumedAbsent (0.01s)
+=== RUN   TestManagedDiagnosticFenceRequiresExactEffectiveProcessArtifactsAndPolicy
+=== RUN   TestManagedDiagnosticFenceRequiresExactEffectiveProcessArtifactsAndPolicy/current
+=== RUN   TestManagedDiagnosticFenceRequiresExactEffectiveProcessArtifactsAndPolicy/inactive-install
+=== RUN   TestManagedDiagnosticFenceRequiresExactEffectiveProcessArtifactsAndPolicy/recovery
+=== RUN   TestManagedDiagnosticFenceRequiresExactEffectiveProcessArtifactsAndPolicy/observed-different
+=== RUN   TestManagedDiagnosticFenceRequiresExactEffectiveProcessArtifactsAndPolicy/unknown
+=== RUN   TestManagedDiagnosticFenceRequiresExactEffectiveProcessArtifactsAndPolicy/nonquiescent
+=== RUN   TestManagedDiagnosticFenceRequiresExactEffectiveProcessArtifactsAndPolicy/artifact-drift
+=== RUN   TestManagedDiagnosticFenceRequiresExactEffectiveProcessArtifactsAndPolicy/expired
+=== RUN   TestManagedDiagnosticFenceRequiresExactEffectiveProcessArtifactsAndPolicy/pipe-different
+=== RUN   TestManagedDiagnosticFenceRequiresExactEffectiveProcessArtifactsAndPolicy/last-valid-different
+--- PASS: TestManagedDiagnosticFenceRequiresExactEffectiveProcessArtifactsAndPolicy (0.01s)
+    --- PASS: TestManagedDiagnosticFenceRequiresExactEffectiveProcessArtifactsAndPolicy/current (0.00s)
+    --- PASS: TestManagedDiagnosticFenceRequiresExactEffectiveProcessArtifactsAndPolicy/inactive-install (0.00s)
+    --- PASS: TestManagedDiagnosticFenceRequiresExactEffectiveProcessArtifactsAndPolicy/recovery (0.00s)
+    --- PASS: TestManagedDiagnosticFenceRequiresExactEffectiveProcessArtifactsAndPolicy/observed-different (0.00s)
+    --- PASS: TestManagedDiagnosticFenceRequiresExactEffectiveProcessArtifactsAndPolicy/unknown (0.00s)
+    --- PASS: TestManagedDiagnosticFenceRequiresExactEffectiveProcessArtifactsAndPolicy/nonquiescent (0.00s)
+    --- PASS: TestManagedDiagnosticFenceRequiresExactEffectiveProcessArtifactsAndPolicy/artifact-drift (0.00s)
+    --- PASS: TestManagedDiagnosticFenceRequiresExactEffectiveProcessArtifactsAndPolicy/expired (0.00s)
+    --- PASS: TestManagedDiagnosticFenceRequiresExactEffectiveProcessArtifactsAndPolicy/pipe-different (0.00s)
+    --- PASS: TestManagedDiagnosticFenceRequiresExactEffectiveProcessArtifactsAndPolicy/last-valid-different (0.00s)
+=== RUN   TestDiagnosticCrashHelper
+--- PASS: TestDiagnosticCrashHelper (0.00s)
+=== RUN   TestDiagnosticCrashRecoveryNeverRepeatsUncertainTraffic
+--- PASS: TestDiagnosticCrashRecoveryNeverRepeatsUncertainTraffic (0.02s)
+=== RUN   TestDiagnosticLostReceiptRetriesPersistedResultWithoutTraffic
+--- PASS: TestDiagnosticLostReceiptRetriesPersistedResultWithoutTraffic (0.01s)
+=== RUN   TestBoundedDiagnosticExecutesOnlyLocallyAuthorizedFixture
+=== RUN   TestBoundedDiagnosticExecutesOnlyLocallyAuthorizedFixture/download
+=== RUN   TestBoundedDiagnosticExecutesOnlyLocallyAuthorizedFixture/upload
+--- PASS: TestBoundedDiagnosticExecutesOnlyLocallyAuthorizedFixture (0.00s)
+    --- PASS: TestBoundedDiagnosticExecutesOnlyLocallyAuthorizedFixture/download (0.00s)
+    --- PASS: TestBoundedDiagnosticExecutesOnlyLocallyAuthorizedFixture/upload (0.00s)
+=== RUN   TestDiagnosticRejectsMetadataCredentialsPrivateAndReboundFixtureTargets
+=== RUN   TestDiagnosticRejectsMetadataCredentialsPrivateAndReboundFixtureTargets/http://169.254.169.254/latest/meta-data
+=== RUN   TestDiagnosticRejectsMetadataCredentialsPrivateAndReboundFixtureTargets/https://169.254.169.254/
+=== RUN   TestDiagnosticRejectsMetadataCredentialsPrivateAndReboundFixtureTargets/https://127.0.0.1/
+=== RUN   TestDiagnosticRejectsMetadataCredentialsPrivateAndReboundFixtureTargets/https://10.0.0.1/
+=== RUN   TestDiagnosticRejectsMetadataCredentialsPrivateAndReboundFixtureTargets/https://[::1]/
+=== RUN   TestDiagnosticRejectsMetadataCredentialsPrivateAndReboundFixtureTargets/https://[::ffff:127.0.0.1]/
+=== RUN   TestDiagnosticRejectsMetadataCredentialsPrivateAndReboundFixtureTargets/https://localhost/
+=== RUN   TestDiagnosticRejectsMetadataCredentialsPrivateAndReboundFixtureTargets/https://service.internal/
+=== RUN   TestDiagnosticRejectsMetadataCredentialsPrivateAndReboundFixtureTargets/https://user:secret@example.com/
+=== RUN   TestDiagnosticRejectsMetadataCredentialsPrivateAndReboundFixtureTargets/https://example.com/?token=secret
+=== RUN   TestDiagnosticRejectsMetadataCredentialsPrivateAndReboundFixtureTargets/file:///etc/passwd
+--- PASS: TestDiagnosticRejectsMetadataCredentialsPrivateAndReboundFixtureTargets (0.00s)
+    --- PASS: TestDiagnosticRejectsMetadataCredentialsPrivateAndReboundFixtureTargets/http://169.254.169.254/latest/meta-data (0.00s)
+    --- PASS: TestDiagnosticRejectsMetadataCredentialsPrivateAndReboundFixtureTargets/https://169.254.169.254/ (0.00s)
+    --- PASS: TestDiagnosticRejectsMetadataCredentialsPrivateAndReboundFixtureTargets/https://127.0.0.1/ (0.00s)
+    --- PASS: TestDiagnosticRejectsMetadataCredentialsPrivateAndReboundFixtureTargets/https://10.0.0.1/ (0.00s)
+    --- PASS: TestDiagnosticRejectsMetadataCredentialsPrivateAndReboundFixtureTargets/https://[::1]/ (0.00s)
+    --- PASS: TestDiagnosticRejectsMetadataCredentialsPrivateAndReboundFixtureTargets/https://[::ffff:127.0.0.1]/ (0.00s)
+    --- PASS: TestDiagnosticRejectsMetadataCredentialsPrivateAndReboundFixtureTargets/https://localhost/ (0.00s)
+    --- PASS: TestDiagnosticRejectsMetadataCredentialsPrivateAndReboundFixtureTargets/https://service.internal/ (0.00s)
+    --- PASS: TestDiagnosticRejectsMetadataCredentialsPrivateAndReboundFixtureTargets/https://user:secret@example.com/ (0.00s)
+    --- PASS: TestDiagnosticRejectsMetadataCredentialsPrivateAndReboundFixtureTargets/https://example.com/?token=secret (0.00s)
+    --- PASS: TestDiagnosticRejectsMetadataCredentialsPrivateAndReboundFixtureTargets/file:///etc/passwd (0.00s)
+=== RUN   TestDiagnosticBoundsRedirectSizeDeadlineAndCancellation
+=== RUN   TestDiagnosticBoundsRedirectSizeDeadlineAndCancellation/redirect
+=== RUN   TestDiagnosticBoundsRedirectSizeDeadlineAndCancellation/oversize
+=== RUN   TestDiagnosticBoundsRedirectSizeDeadlineAndCancellation/chunked
+=== RUN   TestDiagnosticBoundsRedirectSizeDeadlineAndCancellation/short
+=== RUN   TestDiagnosticBoundsRedirectSizeDeadlineAndCancellation/deadline
+=== RUN   TestDiagnosticBoundsRedirectSizeDeadlineAndCancellation/cancel
+--- PASS: TestDiagnosticBoundsRedirectSizeDeadlineAndCancellation (1.05s)
+    --- PASS: TestDiagnosticBoundsRedirectSizeDeadlineAndCancellation/redirect (0.00s)
+    --- PASS: TestDiagnosticBoundsRedirectSizeDeadlineAndCancellation/oversize (0.00s)
+    --- PASS: TestDiagnosticBoundsRedirectSizeDeadlineAndCancellation/chunked (0.00s)
+    --- PASS: TestDiagnosticBoundsRedirectSizeDeadlineAndCancellation/short (0.00s)
+    --- PASS: TestDiagnosticBoundsRedirectSizeDeadlineAndCancellation/deadline (1.00s)
+    --- PASS: TestDiagnosticBoundsRedirectSizeDeadlineAndCancellation/cancel (0.04s)
+=== RUN   TestDiagnosticExecutorRejectsConcurrentTraffic
+--- PASS: TestDiagnosticExecutorRejectsConcurrentTraffic (0.00s)
+PASS
+ok  	routeweaver/internal/agent	2.150s
+# routeweaver/internal/httpapi [routeweaver/internal/httpapi.test]
+internal/httpapi/source_refresh.go:181:9: after.RefreshStatus undefined (type *Source has no field or method RefreshStatus)
+internal/httpapi/source_refresh.go:186:91: after.RefreshStatus undefined (type *Source has no field or method RefreshStatus)
+internal/httpapi/source_refresh.go:195:8: after.Candidate undefined (type *Source has no field or method Candidate)
+internal/httpapi/source_refresh.go:195:104: after.RefreshStatus undefined (type *Source has no field or method RefreshStatus)
+internal/httpapi/source_refresh.go:203:7: v.Candidate undefined (type Source has no field or method Candidate)
+internal/httpapi/source_refresh.go:209:12: source.Candidate undefined (type Source has no field or method Candidate)
+internal/httpapi/source_refresh.go:210:98: source.Candidate undefined (type Source has no field or method Candidate)
+internal/httpapi/source_refresh.go:210:135: source.Revision undefined (type Source has no field or method Revision)
+internal/httpapi/source_refresh.go:210:162: source.Candidate undefined (type Source has no field or method Candidate)
+internal/httpapi/source_refresh.go:219:12: source.Candidate undefined (type Source has no field or method Candidate)
+internal/httpapi/source_refresh.go:219:12: too many errors
+FAIL	routeweaver/internal/httpapi [build failed]
+FAIL

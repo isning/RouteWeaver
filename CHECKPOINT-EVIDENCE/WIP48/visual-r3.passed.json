@@ -1,0 +1,80 @@
+{
+  "checkpoint": "WIP48",
+  "status": "passed bounded visual review",
+  "review": "actual isolated sample UI, final candidate r3",
+  "desktop_css_viewport": "1180x757",
+  "narrow_css_viewport": "authored child iframe390x568",
+  "not_claimed": [
+    "physical mobile or touch testing",
+    "assistive technology audit",
+    "full browser automation",
+    "Google or panel parity",
+    "user acceptance"
+  ],
+  "findings_rechecked": [
+    "single table surface and bounded toolbar",
+    "subscription retrieval visible in initial narrow viewport",
+    "compact server cards approximately210to114px",
+    "compact forwarding row approximately210to116px with policy semantics retained",
+    "desktop endpoint essentialTLSfields visible initially",
+    "narrow navigation sheet blankstrip removed",
+    "narrow dialog title,close,footer visible with internal scroll"
+  ],
+  "safe_interaction_checks": [
+    "Endpoint delete dialog names exact target, initially focuses Keep, cancel restores exact durable menu opener.",
+    "Single-subscription background comparison remains separately discoverable from per-row review; neither invoked in this check.",
+    "Source menu opens with Return and closes with Escape, returning focus to durable opener."
+  ],
+  "mutating_confirmation_executed": false,
+  "evidence": [
+    {
+      "name": "REVIEW.md",
+      "sha256": "e7957190f1ce49053ef6ab91de34b19f76ca4edb6430591a19fce481377a06eb",
+      "bytes": 3687,
+      "availability": "local-only; selected screenshots delivered separately"
+    },
+    {
+      "name": "01-subscriptions-desktop.jpg",
+      "sha256": "3cf55cb950a74ef7e68e3c08c6110fd146e117966b8f61b24ca3e30a58cc6085",
+      "bytes": 58261,
+      "availability": "local-only; selected screenshots delivered separately"
+    },
+    {
+      "name": "04-servers-desktop.jpg",
+      "sha256": "b0971cd84dba5874e494dc3e0572046f15f5c898ed68cc39c19d00d451ffae5a",
+      "bytes": 45107,
+      "availability": "local-only; selected screenshots delivered separately"
+    },
+    {
+      "name": "06-users-desktop.jpg",
+      "sha256": "e05d3cd844533d3d3dcc723c192d66fa8946f63a9267fa32525aaaefe17e6436",
+      "bytes": 49171,
+      "availability": "local-only; selected screenshots delivered separately"
+    },
+    {
+      "name": "07-endpoint-dialog-desktop.jpg",
+      "sha256": "14d23ef681198a5da9df984f1a198a4a6cfe7b7705302d7108f74de8fd5ff7d8",
+      "bytes": 55441,
+      "availability": "local-only; selected screenshots delivered separately"
+    },
+    {
+      "name": "08-subscriptions-phone-frame.jpg",
+      "sha256": "4f9b7ca4379179ffdd7a90a79ec41b0fa4af4b1381aab029baf02b7594de6530",
+      "bytes": 34822,
+      "availability": "local-only; selected screenshots delivered separately"
+    },
+    {
+      "name": "09-navigation-phone-fixed.jpg",
+      "sha256": "55bc5af456578924a7db89fa90f09233b7c5b7fc9d05c22a68ac5c9adb01f8a5",
+      "bytes": 21296,
+      "availability": "local-only; selected screenshots delivered separately"
+    },
+    {
+      "name": "10-endpoint-dialog-phone-frame.jpg",
+      "sha256": "9dd61bdb6a9aeeea105d826d284d340242800f5a7b1a68385ee0673513b9267e",
+      "bytes": 24647,
+      "availability": "local-only; selected screenshots delivered separately"
+    }
+  ],
+  "final_frontend_acceptance": "passed; see frontend-final.passed.json"
+}

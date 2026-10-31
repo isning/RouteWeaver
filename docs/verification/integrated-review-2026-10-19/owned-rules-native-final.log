@@ -1,0 +1,24 @@
+=== RUN   TestNativeOwnedRuleFileBundles
+=== RUN   TestNativeOwnedRuleFileBundles/mihomo-yaml
+    resource_bundle_native_test.go:113: mihomo 1.19.32 accepted generated configuration referencing bundled mihomo-yaml
+    resource_bundle_native_test.go:133: Mihomo native converter separately parsed downloaded mihomo-yaml and recovered the expected domain
+    resource_bundle_native_test.go:150: Mihomo check alone does not reject malformed mihomo-yaml payload; it establishes only config/reference parsing
+    resource_bundle_native_test.go:160: Mihomo native file converter rejects malformed mihomo-yaml payload
+=== RUN   TestNativeOwnedRuleFileBundles/mrs
+    resource_bundle_native_test.go:113: mihomo 1.19.32 accepted generated configuration referencing bundled mrs
+    resource_bundle_native_test.go:133: Mihomo native converter separately parsed downloaded mrs and recovered the expected domain
+    resource_bundle_native_test.go:150: Mihomo check alone does not reject malformed mrs payload; it establishes only config/reference parsing
+    resource_bundle_native_test.go:160: Mihomo native file converter rejects malformed mrs payload
+=== RUN   TestNativeOwnedRuleFileBundles/sing-box-source
+    resource_bundle_native_test.go:113: sing-box 1.14.3 accepted generated configuration referencing bundled sing-box-source
+    resource_bundle_native_test.go:147: sing-box check rejects malformed sing-box-source payload: [31mFATAL[0m[0000] initialize router: parse rule-set[0]: invalid character 'i' looking for beginning of value: row 1, column 1
+=== RUN   TestNativeOwnedRuleFileBundles/srs
+    resource_bundle_native_test.go:113: sing-box 1.14.3 accepted generated configuration referencing bundled srs
+    resource_bundle_native_test.go:147: sing-box check rejects malformed srs payload: [31mFATAL[0m[0000] initialize router: parse rule-set[0]: invalid sing-box rule-set file
+--- PASS: TestNativeOwnedRuleFileBundles (5.05s)
+    --- PASS: TestNativeOwnedRuleFileBundles/mihomo-yaml (2.03s)
+    --- PASS: TestNativeOwnedRuleFileBundles/mrs (0.90s)
+    --- PASS: TestNativeOwnedRuleFileBundles/sing-box-source (1.08s)
+    --- PASS: TestNativeOwnedRuleFileBundles/srs (1.05s)
+PASS
+ok  	routeweaver/internal/httpapi	6.102s

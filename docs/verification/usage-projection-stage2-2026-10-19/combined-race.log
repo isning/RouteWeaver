@@ -1,0 +1,116 @@
+=== RUN   TestCanonicalRecordMutationInventory
+--- PASS: TestCanonicalRecordMutationInventory (0.06s)
+=== RUN   TestUsageProjectionNormalMutationSeamsStayIncremental
+=== RUN   TestUsageProjectionNormalMutationSeamsStayIncremental/put
+=== RUN   TestUsageProjectionNormalMutationSeamsStayIncremental/replace
+=== RUN   TestUsageProjectionNormalMutationSeamsStayIncremental/immutable
+=== RUN   TestUsageProjectionNormalMutationSeamsStayIncremental/immutable-replay
+=== RUN   TestUsageProjectionNormalMutationSeamsStayIncremental/update-records
+=== RUN   TestUsageProjectionNormalMutationSeamsStayIncremental/generate
+=== RUN   TestUsageProjectionNormalMutationSeamsStayIncremental/cas
+=== RUN   TestUsageProjectionNormalMutationSeamsStayIncremental/set-cas
+=== RUN   TestUsageProjectionNormalMutationSeamsStayIncremental/set-generate
+=== RUN   TestUsageProjectionNormalMutationSeamsStayIncremental/token
+=== RUN   TestUsageProjectionNormalMutationSeamsStayIncremental/token-cas
+=== RUN   TestUsageProjectionNormalMutationSeamsStayIncremental/delete
+--- PASS: TestUsageProjectionNormalMutationSeamsStayIncremental (0.14s)
+    --- PASS: TestUsageProjectionNormalMutationSeamsStayIncremental/put (0.01s)
+    --- PASS: TestUsageProjectionNormalMutationSeamsStayIncremental/replace (0.01s)
+    --- PASS: TestUsageProjectionNormalMutationSeamsStayIncremental/immutable (0.01s)
+    --- PASS: TestUsageProjectionNormalMutationSeamsStayIncremental/immutable-replay (0.00s)
+    --- PASS: TestUsageProjectionNormalMutationSeamsStayIncremental/update-records (0.01s)
+    --- PASS: TestUsageProjectionNormalMutationSeamsStayIncremental/generate (0.01s)
+    --- PASS: TestUsageProjectionNormalMutationSeamsStayIncremental/cas (0.01s)
+    --- PASS: TestUsageProjectionNormalMutationSeamsStayIncremental/set-cas (0.01s)
+    --- PASS: TestUsageProjectionNormalMutationSeamsStayIncremental/set-generate (0.01s)
+    --- PASS: TestUsageProjectionNormalMutationSeamsStayIncremental/token (0.01s)
+    --- PASS: TestUsageProjectionNormalMutationSeamsStayIncremental/token-cas (0.02s)
+    --- PASS: TestUsageProjectionNormalMutationSeamsStayIncremental/delete (0.01s)
+=== RUN   TestUsageProjectionFailedTransactionRollsBackCanonicalAndDerived
+--- PASS: TestUsageProjectionFailedTransactionRollsBackCanonicalAndDerived (0.03s)
+=== RUN   TestUsageProjectionAccountCiphertextSwapRebuilds
+--- PASS: TestUsageProjectionAccountCiphertextSwapRebuilds (0.05s)
+=== RUN   TestUsageProjectionBackupDoesNotRepairOrExportDerivedState
+--- PASS: TestUsageProjectionBackupDoesNotRepairOrExportDerivedState (0.07s)
+=== RUN   TestUsageProjectionMissingTriggerFailsClosedUntilReopen
+--- PASS: TestUsageProjectionMissingTriggerFailsClosedUntilReopen (0.05s)
+=== RUN   TestUsageProjectionRowKeysAreSeparatelyKeyedAndContextRequired
+--- PASS: TestUsageProjectionRowKeysAreSeparatelyKeyedAndContextRequired (0.06s)
+=== RUN   TestUsageProjectionSchemaTracksOnlyCanonicalLedger
+--- PASS: TestUsageProjectionSchemaTracksOnlyCanonicalLedger (0.04s)
+=== RUN   TestIndependentStage2MissingTriggerCannotReuseWarmUsage
+--- PASS: TestIndependentStage2MissingTriggerCannotReuseWarmUsage (0.09s)
+=== RUN   TestIndependentStage2FaultThenTrackedWriteCannotInitializePartialTotal
+=== RUN   TestIndependentStage2FaultThenTrackedWriteCannotInitializePartialTotal/missing-window
+=== RUN   TestIndependentStage2FaultThenTrackedWriteCannotInitializePartialTotal/corrupt-window
+=== RUN   TestIndependentStage2FaultThenTrackedWriteCannotInitializePartialTotal/missing-state
+=== RUN   TestIndependentStage2FaultThenTrackedWriteCannotInitializePartialTotal/unknown-version
+--- PASS: TestIndependentStage2FaultThenTrackedWriteCannotInitializePartialTotal (0.44s)
+    --- PASS: TestIndependentStage2FaultThenTrackedWriteCannotInitializePartialTotal/missing-window (0.11s)
+    --- PASS: TestIndependentStage2FaultThenTrackedWriteCannotInitializePartialTotal/corrupt-window (0.10s)
+    --- PASS: TestIndependentStage2FaultThenTrackedWriteCannotInitializePartialTotal/missing-state (0.12s)
+    --- PASS: TestIndependentStage2FaultThenTrackedWriteCannotInitializePartialTotal/unknown-version (0.11s)
+=== RUN   TestIndependentStage2DeniedSettlementUpdatesAlreadyWarmWindow
+--- PASS: TestIndependentStage2DeniedSettlementUpdatesAlreadyWarmWindow (0.14s)
+=== RUN   TestIndependentStage2RawAccountLookupNotPersisted
+--- PASS: TestIndependentStage2RawAccountLookupNotPersisted (0.07s)
+=== RUN   TestIndependentStage2WarmOwnerTransferAndBatchRollback
+--- PASS: TestIndependentStage2WarmOwnerTransferAndBatchRollback (0.50s)
+=== RUN   TestUsageProjectionPublicMutationDifferential
+--- PASS: TestUsageProjectionPublicMutationDifferential (2.01s)
+=== RUN   TestUsageProjectionPublicOverflowRecoversAfterDeletion
+=== RUN   TestUsageProjectionPublicOverflowRecoversAfterDeletion/raw
+=== RUN   TestUsageProjectionPublicOverflowRecoversAfterDeletion/provider
+=== RUN   TestUsageProjectionPublicOverflowRecoversAfterDeletion/weighted
+--- PASS: TestUsageProjectionPublicOverflowRecoversAfterDeletion (0.36s)
+    --- PASS: TestUsageProjectionPublicOverflowRecoversAfterDeletion/raw (0.11s)
+    --- PASS: TestUsageProjectionPublicOverflowRecoversAfterDeletion/provider (0.13s)
+    --- PASS: TestUsageProjectionPublicOverflowRecoversAfterDeletion/weighted (0.12s)
+=== RUN   TestUsageProjectionPublicDirtyDeleteCannotBeMaskedByTrackedWrite
+--- PASS: TestUsageProjectionPublicDirtyDeleteCannotBeMaskedByTrackedWrite (0.12s)
+=== RUN   TestUsageProjectionPublicDeniedRenewalCommitsSettlement
+--- PASS: TestUsageProjectionPublicDeniedRenewalCommitsSettlement (0.15s)
+=== RUN   TestUsageProjectionPublicFutureResetAndBackwardsArrival
+--- PASS: TestUsageProjectionPublicFutureResetAndBackwardsArrival (0.21s)
+=== RUN   TestUsageProjectionPublicAtomicBatchRollback
+--- PASS: TestUsageProjectionPublicAtomicBatchRollback (0.34s)
+=== RUN   TestUsageProjectionPublicFiniteHalfOpenWindows
+=== RUN   TestUsageProjectionPublicFiniteHalfOpenWindows/monthly
+=== RUN   TestUsageProjectionPublicFiniteHalfOpenWindows/anniversary
+=== RUN   TestUsageProjectionPublicFiniteHalfOpenWindows/fixed-days
+--- PASS: TestUsageProjectionPublicFiniteHalfOpenWindows (0.38s)
+    --- PASS: TestUsageProjectionPublicFiniteHalfOpenWindows/monthly (0.13s)
+    --- PASS: TestUsageProjectionPublicFiniteHalfOpenWindows/anniversary (0.13s)
+    --- PASS: TestUsageProjectionPublicFiniteHalfOpenWindows/fixed-days (0.12s)
+=== RUN   TestUsageProjectionPublicConcurrentMeterReplay
+--- PASS: TestUsageProjectionPublicConcurrentMeterReplay (0.77s)
+=== RUN   TestUsageProjectionPublicDirtyInvalidatesOtherAccounts
+--- PASS: TestUsageProjectionPublicDirtyInvalidatesOtherAccounts (0.18s)
+=== RUN   TestUsageProjectionPublicBypassedCiphertextWrites
+=== RUN   TestUsageProjectionPublicBypassedCiphertextWrites/insert
+=== RUN   TestUsageProjectionPublicBypassedCiphertextWrites/update
+--- PASS: TestUsageProjectionPublicBypassedCiphertextWrites (0.24s)
+    --- PASS: TestUsageProjectionPublicBypassedCiphertextWrites/insert (0.13s)
+    --- PASS: TestUsageProjectionPublicBypassedCiphertextWrites/update (0.12s)
+=== RUN   TestUsageProjectionRestoreCanonicalDifferentKey
+=== RUN   TestUsageProjectionRestoreCanonicalDifferentKey/snapshot-import
+=== RUN   TestUsageProjectionRestoreCanonicalDifferentKey/snapshot-fresh
+=== RUN   TestUsageProjectionRestoreCanonicalDifferentKey/stream-import
+=== RUN   TestUsageProjectionRestoreCanonicalDifferentKey/stream-fresh
+--- PASS: TestUsageProjectionRestoreCanonicalDifferentKey (0.97s)
+    --- PASS: TestUsageProjectionRestoreCanonicalDifferentKey/snapshot-import (0.21s)
+    --- PASS: TestUsageProjectionRestoreCanonicalDifferentKey/snapshot-fresh (0.24s)
+    --- PASS: TestUsageProjectionRestoreCanonicalDifferentKey/stream-import (0.22s)
+    --- PASS: TestUsageProjectionRestoreCanonicalDifferentKey/stream-fresh (0.30s)
+=== RUN   TestUsageProjectionDerivedFaultRecovery
+=== RUN   TestUsageProjectionDerivedFaultRecovery/missing-row
+=== RUN   TestUsageProjectionDerivedFaultRecovery/corrupt-ciphertext
+=== RUN   TestUsageProjectionDerivedFaultRecovery/missing-state
+=== RUN   TestUsageProjectionDerivedFaultRecovery/unknown-version
+--- PASS: TestUsageProjectionDerivedFaultRecovery (0.51s)
+    --- PASS: TestUsageProjectionDerivedFaultRecovery/missing-row (0.13s)
+    --- PASS: TestUsageProjectionDerivedFaultRecovery/corrupt-ciphertext (0.12s)
+    --- PASS: TestUsageProjectionDerivedFaultRecovery/missing-state (0.13s)
+    --- PASS: TestUsageProjectionDerivedFaultRecovery/unknown-version (0.13s)
+PASS
+ok  	routeweaver/internal/store	9.011s

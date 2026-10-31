@@ -1,0 +1,205 @@
+{
+  "aggregate_attribution": {
+    "go_explicit_skipped_test_events": 50,
+    "go_passing_packages": 21,
+    "go_passing_test_subtest_events": 1246,
+    "old_web_typecheck": "eighth passed stage of original aggregate; retain as historical only, final canonical typecheck is required anew",
+    "one_fresh_whole_aggregate_pass": false,
+    "original_portable_record": "CHECKPOINT-EVIDENCE/WIP42/receipts/original-aggregate-failed.json",
+    "original_portable_record_sha256": "743dc58f7a71f15d924e3c5e3a5c910e86d37caf4ab74c031bcf37ce180da9c4",
+    "original_receipt_sha256": "cab4211e7a6d7d1069355fc3e3d85a30405d1651fe662677a98257fbad4deff3",
+    "original_source_sha256": "b124729420964ab2abb434b7716e2369fdda61072c744b07e57bd254b61c59c5",
+    "original_status": "failed; unchanged",
+    "original_web_failure": "1529/1531; two failures; original web build not reached",
+    "root_go_mode": "NONRACE",
+    "seven_nonweb_passed_stages_retained_not_rerun": [
+      {
+        "name": "tickets",
+        "native_exit": 0
+      },
+      {
+        "name": "python-guard-tests",
+        "native_exit": 0
+      },
+      {
+        "name": "format",
+        "native_exit": 0
+      },
+      {
+        "name": "architecture",
+        "native_exit": 0
+      },
+      {
+        "name": "go-vet",
+        "native_exit": 0
+      },
+      {
+        "name": "go-tests",
+        "native_exit": 0
+      },
+      {
+        "name": "go-build",
+        "native_exit": 0
+      }
+    ]
+  },
+  "final_source_sha256": "b670ad77345a032511c5a071159471e1fdbb68b94eb507df87982d3f288389a5",
+  "format": "derived sanitized portable attribution and immutable inventory comparison; not native runtime evidence",
+  "inventory_comparison": {
+    "WIP42_inventory_file_sha256": "9bf874f7c96448171c2c367fb54576d6b988afc2a45769f5b29ee5ccdc698ebc",
+    "added_removed_files": 0,
+    "all_non_web_entries_unchanged_since_original_aggregate": true,
+    "all_prior_WIP42_approved40_paths_unchanged": true,
+    "basis": "Hash-and-full-mode entries in immutable integration/aggregate inventories only; no current canonical scan, runtime or tests.",
+    "canonical_payload_files_excluding_generated_checkpoint": 1172,
+    "changed_since_WIP42": [
+      "web/src/Subscriptions.tsx",
+      "web/src/output-review-consequence.dom.test.tsx",
+      "web/src/subscription-content-decisions.dom.test.tsx",
+      "web/src/subscription-relational.dom.test.tsx",
+      "web/src/subscription-workspace.dom.test.tsx",
+      "web/tests/output-review-consequence.ui.spec.ts",
+      "web/tests/product-model.ui.spec.ts"
+    ],
+    "changed_since_original_aggregate": [
+      "web/src/Subscriptions.tsx",
+      "web/src/line-workflow.dom.test.tsx",
+      "web/src/output-review-consequence.dom.test.tsx",
+      "web/src/subscription-content-decisions.dom.test.tsx",
+      "web/src/subscription-relational.dom.test.tsx",
+      "web/src/subscription-workspace.dom.test.tsx",
+      "web/src/workspace.dom.test.tsx",
+      "web/tests/output-review-consequence.ui.spec.ts",
+      "web/tests/product-model.ui.spec.ts"
+    ],
+    "explicit_unchanged_service_group_related_paths": {
+      "web/src/AccessPolicy.tsx": {
+        "mode": 420,
+        "sha256": "480e279d835a94b500bcd021a16685a685a19109b0751f4de1785057447edee1"
+      },
+      "web/src/GroupPolicyComparison.tsx": {
+        "mode": 420,
+        "sha256": "d8fa71a4310523067d6ae25eaf49ecc46f72de30636f564f25916916a331dd52"
+      },
+      "web/src/GroupPolicyEditor.tsx": {
+        "mode": 420,
+        "sha256": "2a6e8aa041d7b8cfc5c371dcdb9f44a160e9b720411faf00e676bfc505ac8284"
+      },
+      "web/src/ServicePolicyComparison.tsx": {
+        "mode": 420,
+        "sha256": "71038b0a664eccb104868ce5f0eda688e4658bd30c66e074c1d321137b8a039c"
+      },
+      "web/src/ServicePolicyEditor.tsx": {
+        "mode": 420,
+        "sha256": "075de05e96779cae19f20a45b6b2e52c01f234e75c49bca38763e6bbcd9cadf2"
+      },
+      "web/src/service-policy-edit.ts": {
+        "mode": 420,
+        "sha256": "602bc0b57254486e89f4076269f42ef5866af9ae914ee0c63cc9ab17b1131fbd"
+      },
+      "web/src/styles.css": {
+        "mode": 420,
+        "sha256": "5dd590dcfce5ab6484fc477832d573375721803df34c4d4dd81d1653de596dd7"
+      },
+      "web/src/test-support/group-edit-fixture.ts": {
+        "mode": 420,
+        "sha256": "a63ec3019b919e8a529987742ef94001bbfc3dcbf0695ad41f278a5494282274"
+      },
+      "web/src/test-support/service-edit-fixture.ts": {
+        "mode": 420,
+        "sha256": "fb7d3bb7623306bfa1ac09e664ac75dd0e7dbc3d15088e3a07737ac9eb684228"
+      }
+    },
+    "final_inventory_file_sha256": "c493c01cf8cb613c4d35e5c193d4fa68189048ec026fc6d3a8d1de834f53031a",
+    "full_inventory_files_including_historical_checkpoint": 1173,
+    "original_aggregate_inventory_file_sha256": "a2edffd474f027ce36ed9c29293428bdad0e6e3713e214bcbbea64f31411ce03",
+    "unchanged_since_WIP42_files": 1166
+  },
+  "limits": [
+    "File equality is not a runtime rerun or proof of behavioral equivalence of the entire rebuilt application.",
+    "Service/Group selected source paths and all non-web files are unchanged, but their browser results remain attributed to582c, not relabeled as final b670 executions.",
+    "Historical WIP42 summaries may state then-unresolved primary17 failures; their bytes remain true historical records even if later evidence closes a scoped gate.",
+    "Official NoGit verify.sh, race/nested runtime, native-core/live enforcement, broad accessibility/AT, user research, production deployment and general certification remain excluded."
+  ],
+  "no_raw_runtime_or_auth_artifacts_included": true,
+  "ordinary_role_limit": "Subscriptions.tsx changed after the582c ordinary-role execution. That flow is retained as historical genuine-user evidence; no exact whole-relevant-source equality or fresh b670 ordinary-role acceptance is claimed.",
+  "retained_browser_stages": [
+    {
+      "attribution": "historical accepted bounded slice; not a fresh final-canonical execution",
+      "cases": 2,
+      "images": 6,
+      "original_receipt_sha256": "f0a780f863012c030940e9bcb9ae5be218311c948587295b89cbfe123fbea355",
+      "portable_WIP42_record": "CHECKPOINT-EVIDENCE/WIP42/receipts/service-final-source.json",
+      "portable_WIP42_record_sha256": "4cb08e355741225fbfbf1353f59f124df39a6c21057a0211a785a2a0129b87e1",
+      "purpose": "service-final-source",
+      "rerun_on_final_b670": false,
+      "review_sha256": "7af5b14565619eb7b36098155e0b7712f286c062955d220b84884fcd8589b317",
+      "role_scope": "Two administrator desktop/narrow journeys against owned temporary local synthetic demo, not ordinary subscriber or live account migration.",
+      "source_sha256_at_execution": "582c068fd5016f4d239a2fa9d72e5199a988aade034fb762d7e863201a51e21a"
+    },
+    {
+      "attribution": "historical accepted bounded slice; not a fresh final-canonical execution",
+      "cases": 2,
+      "images": 6,
+      "original_receipt_sha256": "0a0205208773e10ccac183cef2f2b9b60b098d06c4a34c226e9774c4b2960656",
+      "portable_WIP42_record": "CHECKPOINT-EVIDENCE/WIP42/receipts/group-final-source.json",
+      "portable_WIP42_record_sha256": "e7b2386dcb216d206c38ccd5d45857937389a849005c1d73292ffc5c6466c101",
+      "purpose": "group-final-source",
+      "rerun_on_final_b670": false,
+      "review_sha256": "ab914ed7f10e82a83e3ef20a77a4d40f94121b71884a68dbc6dd5e3cb4c111dd",
+      "role_scope": "Two administrator desktop/narrow group journeys against owned temporary local synthetic demo; concurrent reference-label renaming not exercised.",
+      "source_sha256_at_execution": "582c068fd5016f4d239a2fa9d72e5199a988aade034fb762d7e863201a51e21a"
+    },
+    {
+      "attribution": "historical accepted bounded slice; not a fresh final-canonical execution",
+      "cases": 1,
+      "images": 2,
+      "original_receipt_sha256": "3154ba0a1e5326fb64052dedea50ad9855bb13398a4c5e07d3090a5782243921",
+      "portable_WIP42_record": "CHECKPOINT-EVIDENCE/WIP42/receipts/ordinary-subscriber.json",
+      "portable_WIP42_record_sha256": "74f319b10634e6f5cc647c20c942fc1d2509389b7f33d5e0e0b578d9046f00d1",
+      "purpose": "ordinary-subscriber",
+      "rerun_on_final_b670": false,
+      "review_sha256": "df980674315bfa773fa8b9d937402017b4150c36951a434de9afcdfdfc8759a4",
+      "role_scope": "Separate genuine role:user subscriber flow; password return, own direct profile/output and administrator403. Not the administrator current17 gate.",
+      "source_sha256_at_execution": "582c068fd5016f4d239a2fa9d72e5199a988aade034fb762d7e863201a51e21a"
+    },
+    {
+      "accepted_WIP42_scope": {
+        "cases": 3,
+        "images": 8,
+        "independent_review": {
+          "path": "policy-ux-review-20261025/ENTITLEMENT-FINAL-ACTUAL-ACCEPTANCE-REVIEW.json",
+          "sha256": "d6153bc6deb879d8b95ffe3f9d228c6235dc750a4f41594b1f5fb5d77d7893a6"
+        },
+        "receipt": {
+          "path": "entitlement-policy-edit-frontend-proposal-20261025/browser/selected-date-state-refinement/run/run.json",
+          "sha256": "f189da17cf352360a39d8b6c3a9b1184c89d06db2bbbd269688cfdbdc93f95d1"
+        },
+        "scope": "Desktop and390px full entitlement tasks plus one320px control boundary/reachability probe, not three full authorization journeys; local synthetic demo only. All31 executed source hashes match integrated code/test paths. Two viewport settled reverse-Tab controls visible with body-only scroll and no reset request. Not expanded-outline/AT or overall product acceptance.",
+        "totals": {
+          "additionalControlProbePolicyWrites": 0,
+          "cases": 3,
+          "domainUsersCreated": 0,
+          "entitlementRowsInserted": 1,
+          "entitlementUpdates": 5,
+          "existingDemoAdminSessionPairs": 7,
+          "groupsCreated": 0,
+          "guardedPreviews": 9,
+          "plansCreated": 0,
+          "policyApplies": 6,
+          "policyAuditEvents": 6,
+          "screenshots": 8,
+          "stale409Previews": 2,
+          "successfulPreviews": 7
+        }
+      },
+      "attribution": "prior bounded three-case/eight-image stage; its31 executed code/test path equality was already established by WIP42, all WIP42-approved40 paths remain identical through final7 integration; not a fresh full canonical browser execution",
+      "portable_WIP42_record": "CHECKPOINT-EVIDENCE/WIP42/receipts/entitlement-bounded-stage.json",
+      "portable_WIP42_record_sha256": "3b575118d662483c6de00f5330f1702415b038554c17d4972cb9328bf995159a",
+      "purpose": "entitlement-bounded-stage",
+      "rerun_on_final_b670": false
+    }
+  ],
+  "schema": 1,
+  "status": "historical results retained with explicit source and runtime limits"
+}

@@ -1,0 +1,417 @@
+{
+  "formatVersion": 1,
+  "checkpoint": "WIP46",
+  "exportStatus": "LOCAL_CODE_BROWSER_GOAL_EVIDENCE_COMPLETE_DOC_ARCHIVE_REVIEW_PENDING",
+  "derivation": "Public delivery summary derived from retained original records; not a byte-identical copy of those originals. Internal workspace/thread paths and raw conversations are omitted.",
+  "wholeProductAcceptanceClaimed": false,
+  "commandNormalization": "Only report destination and working-directory location are normalized to reusable relative locations; original terminal hashes remain bound.",
+  "completedAttempts": [
+    {
+      "attempt": "initial-composition",
+      "terminal": {
+        "sourceRecordLabel": "terminal.json",
+        "sourceRecordSha256": "34d97877678769fec9c50478483fdab53b9acf2aea0b226fdb93409eba26131c",
+        "originalBytesIncluded": false
+      },
+      "nativeReport": {
+        "sourceRecordLabel": "vitest.json",
+        "sourceRecordSha256": "6d3f783280216be6befd2ce83847c09516d72f28547bb94ced0adba25928e4ef",
+        "originalBytesIncluded": false
+      },
+      "codeFreezeSha256": "9fd2c4e0490e917937a539df1f268ea7f30c5dcba0566b67400494c5377de0a9",
+      "sourceUnchanged": true,
+      "sourceFiles": 1241,
+      "stages": [
+        {
+          "name": "tickets",
+          "replayCommand": [
+            "python3",
+            "scripts/tickets.py",
+            "check"
+          ],
+          "workingDirectory": ".",
+          "exitCode": 0,
+          "startedUTC": "2026-10-27T12:56:15.031158+00:00",
+          "endedUTC": "2026-10-27T12:56:15.065798+00:00"
+        },
+        {
+          "name": "python-guards",
+          "replayCommand": [
+            "python3",
+            "-m",
+            "unittest",
+            "discover",
+            "-s",
+            "scripts",
+            "-p",
+            "test_*.py"
+          ],
+          "workingDirectory": ".",
+          "exitCode": 0,
+          "startedUTC": "2026-10-27T12:56:15.065943+00:00",
+          "endedUTC": "2026-10-27T12:56:15.157720+00:00"
+        },
+        {
+          "name": "typecheck",
+          "replayCommand": [
+            "node",
+            "node_modules/typescript/bin/tsc",
+            "-b"
+          ],
+          "workingDirectory": "web",
+          "exitCode": 0,
+          "startedUTC": "2026-10-27T12:56:15.157917+00:00",
+          "endedUTC": "2026-10-27T12:56:16.855832+00:00"
+        },
+        {
+          "name": "web-full",
+          "replayCommand": [
+            "node",
+            "node_modules/vitest/vitest.mjs",
+            "run",
+            "--maxWorkers=1",
+            "--reporter=default",
+            "--reporter=json",
+            "--outputFile=<report-directory>/vitest.json"
+          ],
+          "workingDirectory": "web",
+          "exitCode": 1,
+          "startedUTC": "2026-10-27T12:56:16.856105+00:00",
+          "endedUTC": "2026-10-27T13:11:51.973608+00:00"
+        },
+        {
+          "name": "production-build",
+          "replayCommand": [
+            "node",
+            "node_modules/vite/bin/vite.js",
+            "build"
+          ],
+          "workingDirectory": "web",
+          "exitCode": 0,
+          "startedUTC": "2026-10-27T13:11:51.974013+00:00",
+          "endedUTC": "2026-10-27T13:11:52.712139+00:00"
+        }
+      ],
+      "physicalTestFiles": 143,
+      "reportedSuiteGroups": 161,
+      "tests": 1671,
+      "passed": 1670,
+      "failed": 1,
+      "pending": 0,
+      "todo": 0,
+      "failures": [
+        {
+          "file": "web/src/source-search.dom.test.tsx",
+          "test": "distinguishes no matches and clears only the query to recover the same source identities and order",
+          "firstDiagnostic": "Error: Found multiple elements with the text: 南区 Beta"
+        }
+      ],
+      "allListedStagesPassed": false,
+      "wholeProductAccepted": false
+    },
+    {
+      "attempt": "r4",
+      "terminal": {
+        "sourceRecordLabel": "terminal.json",
+        "sourceRecordSha256": "2d5b9e7e24fa36e07e276bbdfb8c754c75ac254d85a088f16033c568136a4336",
+        "originalBytesIncluded": false
+      },
+      "nativeReport": {
+        "sourceRecordLabel": "vitest.json",
+        "sourceRecordSha256": "589af72254cf8f104db5a8645ee383b85951a97fedf4faf0c54792521b1ee4df",
+        "originalBytesIncluded": false
+      },
+      "codeFreezeSha256": "90a28dec23d8f7884a2a5d56adfb4d5850e93c3e0c0cecae7380646fc093452c",
+      "sourceUnchanged": true,
+      "sourceFiles": 1250,
+      "stages": [
+        {
+          "name": "tickets",
+          "replayCommand": [
+            "python3",
+            "scripts/tickets.py",
+            "check"
+          ],
+          "workingDirectory": ".",
+          "exitCode": 0,
+          "startedUTC": "2026-10-27T16:30:23.969790+00:00",
+          "endedUTC": "2026-10-27T16:30:24.006538+00:00"
+        },
+        {
+          "name": "python-guards",
+          "replayCommand": [
+            "python3",
+            "-m",
+            "unittest",
+            "discover",
+            "-s",
+            "scripts",
+            "-p",
+            "test_*.py"
+          ],
+          "workingDirectory": ".",
+          "exitCode": 0,
+          "startedUTC": "2026-10-27T16:30:24.006668+00:00",
+          "endedUTC": "2026-10-27T16:30:24.098016+00:00"
+        },
+        {
+          "name": "typecheck",
+          "replayCommand": [
+            "node",
+            "node_modules/typescript/bin/tsc",
+            "-b"
+          ],
+          "workingDirectory": "web",
+          "exitCode": 1,
+          "startedUTC": "2026-10-27T16:30:24.098204+00:00",
+          "endedUTC": "2026-10-27T16:30:25.773901+00:00"
+        },
+        {
+          "name": "web-full",
+          "replayCommand": [
+            "node",
+            "node_modules/vitest/vitest.mjs",
+            "run",
+            "--maxWorkers=1",
+            "--reporter=default",
+            "--reporter=json",
+            "--outputFile=<report-directory>/vitest.json"
+          ],
+          "workingDirectory": "web",
+          "exitCode": 1,
+          "startedUTC": "2026-10-27T16:30:25.774166+00:00",
+          "endedUTC": "2026-10-27T16:45:44.726889+00:00"
+        },
+        {
+          "name": "production-build",
+          "replayCommand": [
+            "node",
+            "node_modules/vite/bin/vite.js",
+            "build"
+          ],
+          "workingDirectory": "web",
+          "exitCode": 0,
+          "startedUTC": "2026-10-27T16:45:44.727257+00:00",
+          "endedUTC": "2026-10-27T16:45:45.443939+00:00"
+        }
+      ],
+      "physicalTestFiles": 149,
+      "reportedSuiteGroups": 167,
+      "tests": 1722,
+      "passed": 1720,
+      "failed": 2,
+      "pending": 0,
+      "todo": 0,
+      "failures": [
+        {
+          "file": "web/src/collection-source-task.dom.test.tsx",
+          "test": "blocks parent save/close/replacement while a source write is pending, retains failed input, then safely retries",
+          "firstDiagnostic": "TestingLibraryElementError: Unable to find an accessible element with the role \"button\" and name \"Close\""
+        },
+        {
+          "file": "web/src/ux-recovery.dom.test.tsx",
+          "test": "keeps changed source values and identity when dismissal is canceled, and blocks dismissal while saving",
+          "firstDiagnostic": "TestingLibraryElementError: Unable to find an accessible element with the role \"button\" and name \"Close\""
+        }
+      ],
+      "allListedStagesPassed": false,
+      "wholeProductAccepted": false
+    },
+    {
+      "attempt": "r5",
+      "terminal": {
+        "sourceRecordLabel": "terminal.json",
+        "sourceRecordSha256": "6e25dd4ba3bacf24782765cc4940130346beec3067e15849d86c21a6da4984ec",
+        "originalBytesIncluded": false
+      },
+      "nativeReport": {
+        "sourceRecordLabel": "vitest.json",
+        "sourceRecordSha256": "b92c871fc8053e664e69bb01dafdaf249e2a33bebefdb8e11ebde3d87641da06",
+        "originalBytesIncluded": false
+      },
+      "codeFreezeSha256": "b66e216092a11796d9a8badeb4aa572df9e32cbe2ce91601cab6fabd0d81cb3c",
+      "sourceUnchanged": true,
+      "sourceFiles": 1250,
+      "stages": [
+        {
+          "name": "tickets",
+          "replayCommand": [
+            "python3",
+            "scripts/tickets.py",
+            "check"
+          ],
+          "workingDirectory": ".",
+          "exitCode": 0,
+          "startedUTC": "2026-10-27T16:52:25.280808+00:00",
+          "endedUTC": "2026-10-27T16:52:25.312969+00:00"
+        },
+        {
+          "name": "python-guards",
+          "replayCommand": [
+            "python3",
+            "-m",
+            "unittest",
+            "discover",
+            "-s",
+            "scripts",
+            "-p",
+            "test_*.py"
+          ],
+          "workingDirectory": ".",
+          "exitCode": 0,
+          "startedUTC": "2026-10-27T16:52:25.313123+00:00",
+          "endedUTC": "2026-10-27T16:52:25.396063+00:00"
+        },
+        {
+          "name": "typecheck",
+          "replayCommand": [
+            "node",
+            "node_modules/typescript/bin/tsc",
+            "-b"
+          ],
+          "workingDirectory": "web",
+          "exitCode": 0,
+          "startedUTC": "2026-10-27T16:52:25.396251+00:00",
+          "endedUTC": "2026-10-27T16:52:26.994205+00:00"
+        },
+        {
+          "name": "web-full",
+          "replayCommand": [
+            "node",
+            "node_modules/vitest/vitest.mjs",
+            "run",
+            "--maxWorkers=1",
+            "--reporter=default",
+            "--reporter=json",
+            "--outputFile=<report-directory>/vitest.json"
+          ],
+          "workingDirectory": "web",
+          "exitCode": 0,
+          "startedUTC": "2026-10-27T16:52:26.994507+00:00",
+          "endedUTC": "2026-10-27T17:08:09.048602+00:00"
+        },
+        {
+          "name": "production-build",
+          "replayCommand": [
+            "node",
+            "node_modules/vite/bin/vite.js",
+            "build"
+          ],
+          "workingDirectory": "web",
+          "exitCode": 0,
+          "startedUTC": "2026-10-27T17:08:09.048980+00:00",
+          "endedUTC": "2026-10-27T17:08:09.891860+00:00"
+        }
+      ],
+      "physicalTestFiles": 149,
+      "reportedSuiteGroups": 167,
+      "tests": 1722,
+      "passed": 1722,
+      "failed": 0,
+      "pending": 0,
+      "todo": 0,
+      "failures": [],
+      "allListedStagesPassed": true,
+      "wholeProductAccepted": false
+    }
+  ],
+  "currentAttempt": {
+    "attempt": "r5",
+    "codeFreezeSha256": "b66e216092a11796d9a8badeb4aa572df9e32cbe2ce91601cab6fabd0d81cb3c",
+    "status": "all five listed stages passed; exact scripted browser and fresh bounded goal conclusion independently accepted; archive/save separate",
+    "terminal": {
+      "sourceRecordLabel": "terminal.json",
+      "sourceRecordSha256": "6e25dd4ba3bacf24782765cc4940130346beec3067e15849d86c21a6da4984ec",
+      "originalBytesIncluded": false
+    },
+    "nativeReport": {
+      "sourceRecordLabel": "vitest.json",
+      "sourceRecordSha256": "b92c871fc8053e664e69bb01dafdaf249e2a33bebefdb8e11ebde3d87641da06",
+      "originalBytesIncluded": false
+    },
+    "physicalTestFiles": 149,
+    "tests": 1722,
+    "passed": 1722,
+    "failed": 0,
+    "pending": 0,
+    "todo": 0,
+    "pythonTests": 9,
+    "sourceFilesUnchanged": 1250,
+    "allListedStageExits": [
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "success": true,
+    "notOfficialGitGoAggregate": true
+  },
+  "observerCorrections": [
+    {
+      "scope": "initial source search",
+      "intermediateR2": "11 passed / 1 failed; run failed",
+      "acceptedR3": "3 files 12/12",
+      "change": "Unique exact accessible button identity allowing separating whitespace; original task/identity/private-content/single-read assertions retained.",
+      "review": {
+        "sourceRecordLabel": "INDEPENDENT-OBSERVER-REVIEW.r3.json",
+        "sourceRecordSha256": "4fd4dcd960f81e972f55f4d0578ec7bae35284f897cf572ca2952f0f61ab9ae9",
+        "originalBytesIncluded": false
+      }
+    },
+    {
+      "scope": "Infrastructure role-query options",
+      "change": "Removed three unsupported exact:true options; exact string names/roles and all assertions retained.",
+      "focusedTests": "4/4",
+      "appTypecheckExit": 0,
+      "review": {
+        "sourceRecordLabel": "INDEPENDENT-INFRASTRUCTURE-TYPEFIX-REVIEW.json",
+        "sourceRecordSha256": "6305fa7a75b2fe33975d2260ba6b51ebeb03d6acc1c4186ace757026a6230efb",
+        "originalBytesIncluded": false
+      },
+      "attributionCorrection": {
+        "sourceRecordLabel": "INDEPENDENT-ACTION-MATRIX-ATTRIBUTION-CORRECTION.json",
+        "sourceRecordSha256": "f13bcb8f0e6683fa39e884d62afe4cee0a8232c10a2f76397e6af1918e26ab77",
+        "originalBytesIncluded": false
+      },
+      "chronology": "Seven-table app build/typecheck preceded the final DOM observer edit; later standalone tsc covered only browser spec. Earlier final DOM-typecheck attribution was overstated."
+    },
+    {
+      "scope": "pending Source dismissal observers",
+      "change": "Assert unavailable Close, disabled Cancel, exact enabled busy action and owned focus, then natural Escape; retain parent locking, one write, draft/identity/payload, failure/retry/success behavior and restored Close/Cancel after failure.",
+      "originalTasksRed": "0/2",
+      "twoAffectedFilesGreen": "22/22",
+      "threeFilesIncludingInfrastructureGreen": "26/26",
+      "countsOverlap": true,
+      "appTypecheckExit": 0,
+      "review": {
+        "sourceRecordLabel": "INDEPENDENT-SOURCE-PENDING-OBSERVER-REVIEW.json",
+        "sourceRecordSha256": "3e599774ebc8f888229618b17e95a056557bc233dad3bfe8621bd9395271e18e",
+        "originalBytesIncluded": false
+      }
+    }
+  ],
+  "currentPrerequisites": {
+    "sourceRecordLabel": "PREREQUISITE-LIMITS.json",
+    "sourceRecordSha256": "a60e5df5d90f24a2461c4524a6bac555743239788b259b8ea222a5cd05ea200f",
+    "originalBytesIncluded": false,
+    "git": {
+      "privateFilesCommandExit": 1,
+      "underlyingGitLsFilesExit": 128,
+      "syntheticIndexCreated": false
+    },
+    "go": {
+      "versionCommandExit": 2,
+      "compilerFound": false,
+      "currentGoNativeRun": false,
+      "installAttempted": false
+    },
+    "notProductPasses": true
+  },
+  "environmentLimits": [
+    "Official Git-based aggregate entry unavailable in recovered workspace; no fabricated Git index.",
+    "No real Go compiler; Go/native stages not run.",
+    "Frontend, Python, build, browser, backend and deployed operation are distinct evidence.",
+    "Build chunk warning over500kB retained; no dependency/backend change."
+  ]
+}

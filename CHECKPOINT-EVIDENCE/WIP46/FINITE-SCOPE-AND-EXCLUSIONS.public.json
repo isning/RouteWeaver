@@ -1,0 +1,130 @@
+{
+  "formatVersion": 1,
+  "checkpoint": "WIP46",
+  "exportStatus": "LOCAL_CODE_BROWSER_GOAL_EVIDENCE_COMPLETE_DOC_ARCHIVE_REVIEW_PENDING",
+  "derivation": "Public delivery summary derived from retained original records; not a byte-identical copy of those originals. Internal workspace/thread paths and raw conversations are omitted.",
+  "wholeProductAcceptanceClaimed": false,
+  "initialGoalWalkthrough": {
+    "record": {
+      "sourceRecordLabel": "goal-only-walkthrough-report.json",
+      "sourceRecordSha256": "8455e8f0e27d877d5bacae67e1bc5c1619078045b184158c2c1c7ba04986aae3",
+      "originalBytesIncluded": false
+    },
+    "method": "Independent goal-only AI walkthrough of actual built frontend using visible labels, rendered accessibility tree, and screenshots. No application source, component names, tests, solution reports, or expected click paths inspected. Not a real novice-human test; no invented timings or satisfaction metrics.",
+    "environment": "Isolated loopback frontend with controlled synthetic API fixtures. Real backend compilation, delivery, authorization, topology, credentials, or live health not established. No production changes or external requests.",
+    "findings": [
+      {
+        "id": "GW1",
+        "kind": "next-step discoverability",
+        "observation": "For available imported source, source detail has node table and Close only. More actions only offers Delete source. No next-step copy explains use in a routing configuration/client subscription.",
+        "limit": null,
+        "screenshotCaution": "100014.png is an old-helper entry-animation frame; not layout evidence. Operator reproduced exact observed path after settling; replacement1440 inspected and confirms table/Close-only detail."
+      },
+      {
+        "id": "GW2",
+        "kind": "navigation/title/action consistency",
+        "observation": "连接诊断→连接素材 lands on heading 连接端点 with maintenance/create actions. 连接诊断→链路配置预览 lands on heading 线路 with 新建线路, while 网络资源→线路 is a different page. This complicated locating a platform-availability explanation.",
+        "limit": "Empty infrastructure datasets are fixture gaps, not evidence of actual missing resources. No create action was performed.",
+        "screenshotCaution": null
+      },
+      {
+        "id": "GW3",
+        "kind": "update-check scope clarity",
+        "observation": "With pending source candidate, first-choice home output 检查更新 reports same generated text as published. Backtracking to 订阅来源 reveals 待确认更新. No cue in output check clarifies it is checking current draft/accepted source state, not discovering/accepting source changes.",
+        "limit": "Not a wrong-comparison or auto-publication defect; refusing to silently apply pending source is correct.",
+        "screenshotCaution": null
+      },
+      {
+        "id": "GW4",
+        "kind": "status-to-next-action clarity",
+        "observation": "Paused platform-service badge is visible on home but cycle details provide quota/dates only, with no local next-step explanation. I sought 用户与权限 to distinguish account access from platform suspension.",
+        "limit": "Cannot evaluate admin recovery UI because 平台入口 and 授权与续期 reads explicitly unsupported in fixture. Treat as narrow context observation, not proven recovery failure.",
+        "screenshotCaution": null
+      }
+    ],
+    "freshFinalGoalReview": {
+      "publicSummary": "GOAL-WALKTHROUGH.r5.public.json",
+      "sha256": "207aee54223c97293a3aecc4e054e38ede4597209ca71c0d1c382221341a63c4",
+      "boundedAccepted": true
+    }
+  },
+  "modalInventory": {
+    "matrix": {
+      "sourceRecordLabel": "FULL-SOURCE-MATRIX.r7.json",
+      "sourceRecordSha256": "4350b5294311c3a0edec9cb305d8f6355cf6a68f6cc305d9e66c9d617e469eec",
+      "originalBytesIncluded": false
+    },
+    "directSurfaces": 30,
+    "modalConfirmCallsitesSeparate": 26,
+    "nativeConfirmCallsitesSeparate": 8,
+    "baselineClassification": {
+      "priorBounded": 2,
+      "acceptedIsolated": 5,
+      "actualForwardDefects": 12,
+      "unsupportedFixturePrerequisites": 11
+    },
+    "isolatedClosureClassification": {
+      "priorBoundedProof": 2,
+      "independentlyAcceptedIsolatedRepairs": 17,
+      "unsupportedCurrentFixturePrerequisites": 11
+    },
+    "acceptedIsolatedSurfaceNames": [
+      "entity-editor",
+      "invite-user",
+      "backup-create",
+      "inventory-editor",
+      "announcement-editor",
+      "profile-create-group",
+      "rates-adjustment",
+      "resource-reference",
+      "resource-file",
+      "server-json",
+      "source-editor",
+      "subscription-detail",
+      "output-access",
+      "update-output",
+      "publication-target-chooser",
+      "template-apply",
+      "template-publish"
+    ],
+    "unsupportedFixtureStates": {
+      "accounting-baseline": "Blocked by absent core instance and accounting-pending receipt; GET /agent/instances/:id/accounting-pending not implemented in current fixture.",
+      "diagnostic-target": "Requires a host detail and diagnostics panel; seed has no hosts and /admin/diagnostic-targets GET not implemented.",
+      "diagnostic-start": "No host/core/authorized test target; New test disabled without targets and instances. Diagnostic GET routes unsupported.",
+      "core-enrollment": "Needs an existing core instance; current seed has none. Enrollment mutation is not modeled.",
+      "listener-refresh": "Requires populated managed endpoint/deployment and comparison response; current seed/GET contract lacks them.",
+      "observation-config": "Needs NodeObservationView for a host; no populated hosts or observation GET route in current fixture.",
+      "provider-measurement": "Needs observation provider config and known cycle/current readings; seed lacks them and observation GET unsupported.",
+      "principal-editor": "Requires existing published route and deployment; current /published-routes and deployments empty. Populated entrance contract absent.",
+      "server-apply-review": "Requires populated deployment/review/preview not present in current fixture; deploy/apply routes unsupported.",
+      "origin-activation": "Fixture GET provides default/not-required origin but no verified changed draft or activation review. Reaching review needs an unsupported verification mutation.",
+      "user-entry-allocation": "Requires published route inventory and per-user entry records; current routes empty and detailed user-entry read routes not implemented."
+    },
+    "classificationNotFinalCompositionPass": true
+  },
+  "exclusions": [
+    "Initial empty-source frame had cached data; corrected genuine empty state is separate.",
+    "Source entry-animation frames are not stable layout evidence.",
+    "Unsupported source status/preview/admin/infra fixture shapes are not backend product defects.",
+    "Ordinary matrix diagnostic27 plus serverJSON3 observations are RED evidence, not30passing tests.",
+    "Repeated native multisegment input node is not a full focus cycle; Rates false-cycle prefix retained.",
+    "Source r1 clean Escape BODY with unchanged route was observed; baseline post-Escape focus was not recorded, so no introduced regression or baseline defect established.",
+    "R2 Source later cancellation cells after nested failure were unexecuted, not successes or further product failures.",
+    "Old residual partial results and oversized JSON whole-rect observer mismatch are preserved separately.",
+    "Actual zoom shortcut did not change effective zoom; CSS viewport reflow is not real zoom proof.",
+    "No human usability research, invented duration/satisfaction, fullAT/WCAG or Google parity/certification."
+  ],
+  "vis04": {
+    "disposition": "closed-no-change-not-deferred",
+    "reason": "Stable header creation entry and same contextual empty-state action retain location, focus continuity and search text; observed narrow empty state did not crowd/clip. No measured task benefit justified cross-page empty-state rewrite."
+  },
+  "noEvidenceEstablished": [
+    "real backend authorization/persistence",
+    "external source fetching",
+    "client configuration compilation/delivery",
+    "native execution or actual proxy traffic",
+    "deployment",
+    "unmodeled operational confirmations",
+    "comprehensive assistive technology, cross-browser or physical device behavior"
+  ]
+}

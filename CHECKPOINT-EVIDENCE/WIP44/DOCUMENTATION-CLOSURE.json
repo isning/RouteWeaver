@@ -1,0 +1,44 @@
+{
+  "status": "one report-only document updated after final composed runs",
+  "startedUtc": "2026-10-26T05:31:40.292189+00:00",
+  "endedUtc": "2026-10-26T05:31:41.145475+00:00",
+  "path": "docs/verification/TASK-FIRST-ROUTING-2026-10-26.md",
+  "sha256Before": "325763265b4769238a96aacb2d026eb0c94866896313595a5fe4d49de2ba67df",
+  "sha256After": "7a755e977687cc06c999c503d6312bb57671534a2d30fa96d23c85b48ca38790",
+  "modeBefore": "0644",
+  "modeAfter": "0644",
+  "testedInventorySha256": "d0a98a57fa5146c7974f5d3e422e9b635eb9fba69d04d1617ec6bad9fe9fa8d8",
+  "finalInventorySha256": "7ce49b0b0260e413d70b1939bd2640b6bbf45e17b273f3e920b738a2523f92d8",
+  "otherPayloadFilesByteModeIdentical": 1185,
+  "preservedHistoricalEvidenceStatusFilesByteModeIdentical": 22,
+  "testedCodeEquivalent": true,
+  "fullSuiteRepeatedForReportText": false,
+  "applicableFastChecks": [
+    {
+      "name": "tickets",
+      "nativeExit": 0,
+      "started": "2026-10-26T05:31:40.292940+00:00",
+      "ended": "2026-10-26T05:31:40.341208+00:00"
+    },
+    {
+      "name": "negative-fixtures",
+      "nativeExit": 0,
+      "started": "2026-10-26T05:31:40.341514+00:00",
+      "ended": "2026-10-26T05:31:40.456423+00:00"
+    },
+    {
+      "name": "architecture-negative",
+      "nativeExit": 0,
+      "started": "2026-10-26T05:31:40.456850+00:00",
+      "ended": "2026-10-26T05:31:40.995836+00:00"
+    },
+    {
+      "name": "architecture",
+      "nativeExit": 0,
+      "started": "2026-10-26T05:31:40.996218+00:00",
+      "ended": "2026-10-26T05:31:41.103334+00:00"
+    }
+  ],
+  "postMembershipSha256": "5d39a2ccae3f824fba64c87876f2499e347c90f1f60439c37dfffbe234b26c4f",
+  "originalClosureReceiptSha256": "fbf7fea553792b9d3f80e6a8d26d2128cc6c67f74bb3916dde8865ff273c038b"
+}

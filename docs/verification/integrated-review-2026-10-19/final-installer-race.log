@@ -1,0 +1,258 @@
+=== RUN   TestVerifyCoreArchiveRejectsDangerousPinnedPackaging
+=== RUN   TestVerifyCoreArchiveRejectsDangerousPinnedPackaging/zip../core
+=== RUN   TestVerifyCoreArchiveRejectsDangerousPinnedPackaging/zip/tmp/core
+=== RUN   TestVerifyCoreArchiveRejectsDangerousPinnedPackaging/zipdir/../../core
+=== RUN   TestVerifyCoreArchiveRejectsDangerousPinnedPackaging/zipdir\core
+=== RUN   TestVerifyCoreArchiveRejectsDangerousPinnedPackaging/zipC:core
+=== RUN   TestVerifyCoreArchiveRejectsDangerousPinnedPackaging/zipsymlink
+=== RUN   TestVerifyCoreArchiveRejectsDangerousPinnedPackaging/zipsafe
+=== RUN   TestVerifyCoreArchiveRejectsDangerousPinnedPackaging/tar.gz../core
+=== RUN   TestVerifyCoreArchiveRejectsDangerousPinnedPackaging/tar.gz/tmp/core
+=== RUN   TestVerifyCoreArchiveRejectsDangerousPinnedPackaging/tar.gzdir/../../core
+=== RUN   TestVerifyCoreArchiveRejectsDangerousPinnedPackaging/tar.gzdir\core
+=== RUN   TestVerifyCoreArchiveRejectsDangerousPinnedPackaging/tar.gzC:core
+=== RUN   TestVerifyCoreArchiveRejectsDangerousPinnedPackaging/tar.gzsymlink
+=== RUN   TestVerifyCoreArchiveRejectsDangerousPinnedPackaging/tar.gzsafe
+--- PASS: TestVerifyCoreArchiveRejectsDangerousPinnedPackaging (0.02s)
+    --- PASS: TestVerifyCoreArchiveRejectsDangerousPinnedPackaging/zip../core (0.00s)
+    --- PASS: TestVerifyCoreArchiveRejectsDangerousPinnedPackaging/zip/tmp/core (0.00s)
+    --- PASS: TestVerifyCoreArchiveRejectsDangerousPinnedPackaging/zipdir/../../core (0.00s)
+    --- PASS: TestVerifyCoreArchiveRejectsDangerousPinnedPackaging/zipdir\core (0.00s)
+    --- PASS: TestVerifyCoreArchiveRejectsDangerousPinnedPackaging/zipC:core (0.00s)
+    --- PASS: TestVerifyCoreArchiveRejectsDangerousPinnedPackaging/zipsymlink (0.00s)
+    --- PASS: TestVerifyCoreArchiveRejectsDangerousPinnedPackaging/zipsafe (0.00s)
+    --- PASS: TestVerifyCoreArchiveRejectsDangerousPinnedPackaging/tar.gz../core (0.00s)
+    --- PASS: TestVerifyCoreArchiveRejectsDangerousPinnedPackaging/tar.gz/tmp/core (0.00s)
+    --- PASS: TestVerifyCoreArchiveRejectsDangerousPinnedPackaging/tar.gzdir/../../core (0.00s)
+    --- PASS: TestVerifyCoreArchiveRejectsDangerousPinnedPackaging/tar.gzdir\core (0.00s)
+    --- PASS: TestVerifyCoreArchiveRejectsDangerousPinnedPackaging/tar.gzC:core (0.00s)
+    --- PASS: TestVerifyCoreArchiveRejectsDangerousPinnedPackaging/tar.gzsymlink (0.00s)
+    --- PASS: TestVerifyCoreArchiveRejectsDangerousPinnedPackaging/tar.gzsafe (0.00s)
+=== RUN   TestVerifyCoreArchiveRejectsDuplicateAndExpansionBombMetadata
+--- PASS: TestVerifyCoreArchiveRejectsDuplicateAndExpansionBombMetadata (0.01s)
+=== RUN   TestCoreInstallerRejectsUnpinnedReleaseAndCorruptArchive
+--- PASS: TestCoreInstallerRejectsUnpinnedReleaseAndCorruptArchive (0.00s)
+=== RUN   TestNativeCoreInstallerPreparesImmutableOfficialExecutables
+=== RUN   TestNativeCoreInstallerPreparesImmutableOfficialExecutables/xray-26.3.27-linux-amd64
+=== RUN   TestNativeCoreInstallerPreparesImmutableOfficialExecutables/sing-box-1.14.3-linux-amd64
+--- PASS: TestNativeCoreInstallerPreparesImmutableOfficialExecutables (16.15s)
+    --- PASS: TestNativeCoreInstallerPreparesImmutableOfficialExecutables/xray-26.3.27-linux-amd64 (7.31s)
+    --- PASS: TestNativeCoreInstallerPreparesImmutableOfficialExecutables/sing-box-1.14.3-linux-amd64 (8.84s)
+=== RUN   TestNativeInstallDesiredPreservesActiveRuntimeAndLease
+--- PASS: TestNativeInstallDesiredPreservesActiveRuntimeAndLease (6.17s)
+=== RUN   TestNativeInstallDoesNotEraseAcceptedRevocation
+--- PASS: TestNativeInstallDoesNotEraseAcceptedRevocation (5.85s)
+=== RUN   TestCoreInstallerRejectsRootReplacementBeforeFetching
+--- PASS: TestCoreInstallerRejectsRootReplacementBeforeFetching (0.00s)
+=== RUN   TestNativeInstallDownloadCannotDelayActiveLeaseExpiry
+--- PASS: TestNativeInstallDownloadCannotDelayActiveLeaseExpiry (6.22s)
+=== RUN   TestNativeInstallDoesNotMutateAnotherInstancesRegistry
+--- PASS: TestNativeInstallDoesNotMutateAnotherInstancesRegistry (6.39s)
+=== RUN   TestCoreTransitionOwnedHelper
+--- PASS: TestCoreTransitionOwnedHelper (0.00s)
+=== RUN   TestCoreTransitionStopsOnlyVerifiedOldExecutableAndObservesNewVersion
+--- PASS: TestCoreTransitionStopsOnlyVerifiedOldExecutableAndObservesNewVersion (0.60s)
+=== RUN   TestCoreTransitionRejectsChangedCheckedBinaryBeforeStoppingOld
+--- PASS: TestCoreTransitionRejectsChangedCheckedBinaryBeforeStoppingOld (0.30s)
+=== RUN   TestExplicitCoreTransitionValidatesBeforeStoppingAndFencesRollback
+--- PASS: TestExplicitCoreTransitionValidatesBeforeStoppingAndFencesRollback (0.01s)
+=== RUN   TestUnknownCoreTransitionStopNeverBecomesGreenOrOvertakes
+--- PASS: TestUnknownCoreTransitionStopNeverBecomesGreenOrOvertakes (0.00s)
+=== RUN   TestCoreTransitionValidationCannotExtendOldLease
+--- PASS: TestCoreTransitionValidationCannotExtendOldLease (0.11s)
+=== RUN   TestStopAfterFailedVersionTransitionTargetsActualOldRuntime
+--- PASS: TestStopAfterFailedVersionTransitionTargetsActualOldRuntime (0.00s)
+=== RUN   TestCoreTransitionCannotReplayEqualTimeLeaseAfterRevocation
+--- PASS: TestCoreTransitionCannotReplayEqualTimeLeaseAfterRevocation (0.00s)
+=== RUN   TestBoundedDriverReconcilesReportsAndStopsOwnedSession
+--- PASS: TestBoundedDriverReconcilesReportsAndStopsOwnedSession (0.08s)
+=== RUN   TestSlowControlPlaneCannotDelayLeaseRestriction
+--- PASS: TestSlowControlPlaneCannotDelayLeaseRestriction (0.20s)
+=== RUN   TestBoundedDriverIntegratesTLSDesiredObservationAndMeterReceipt
+--- PASS: TestBoundedDriverIntegratesTLSDesiredObservationAndMeterReceipt (0.09s)
+=== RUN   TestReviewSlowValidationCannotExtendOldRuntimeLease
+--- PASS: TestReviewSlowValidationCannotExtendOldRuntimeLease (0.26s)
+=== RUN   TestNativeXrayTwoHopLoopbackRoundtrip
+--- PASS: TestNativeXrayTwoHopLoopbackRoundtrip (1.56s)
+=== RUN   TestPrivateAdmissionBrokerHasOnlyBoundedLeaseOperations
+    managed_xray_ipc_test.go:35: optional Unix transport needs explicit native socket-test opt-in; inherited-pipe tests remain mandatory
+--- SKIP: TestPrivateAdmissionBrokerHasOnlyBoundedLeaseOperations (0.00s)
+=== RUN   TestAdmissionBrokerNeverReplacesUnrelatedFile
+--- PASS: TestAdmissionBrokerNeverReplacesUnrelatedFile (0.00s)
+=== RUN   TestManagedNativeBrokerEOFStopsActivePayloadAndPersistsFinalJournal
+    managed_xray_process_test.go:188: broker EOF stopped live payload and owned process, preserved 44-byte final in 7.056237ms
+--- PASS: TestManagedNativeBrokerEOFStopsActivePayloadAndPersistsFinalJournal (0.59s)
+=== RUN   TestManagedMeterRequiresRealBaselineAndRecoversCollectionCursor
+--- PASS: TestManagedMeterRequiresRealBaselineAndRecoversCollectionCursor (0.00s)
+=== RUN   TestManagedCheckerUsesDistinctIdentityAndNativeSidecarCommands
+--- PASS: TestManagedCheckerUsesDistinctIdentityAndNativeSidecarCommands (0.00s)
+=== RUN   TestMeterBatchesAreDurableSequencedAndScoped
+--- PASS: TestMeterBatchesAreDurableSequencedAndScoped (0.00s)
+=== RUN   TestNativeCheckIsNotRuntimeApplication
+--- PASS: TestNativeCheckIsNotRuntimeApplication (0.00s)
+=== RUN   TestNativeVersionFailureAndOutputAreBounded
+=== RUN   TestNativeVersionFailureAndOutputAreBounded/version_mismatch
+=== RUN   TestNativeVersionFailureAndOutputAreBounded/timeout
+=== RUN   TestNativeVersionFailureAndOutputAreBounded/output_limit
+=== RUN   TestNativeVersionFailureAndOutputAreBounded/secret_error
+--- PASS: TestNativeVersionFailureAndOutputAreBounded (0.05s)
+    --- PASS: TestNativeVersionFailureAndOutputAreBounded/version_mismatch (0.00s)
+    --- PASS: TestNativeVersionFailureAndOutputAreBounded/timeout (0.03s)
+    --- PASS: TestNativeVersionFailureAndOutputAreBounded/output_limit (0.01s)
+    --- PASS: TestNativeVersionFailureAndOutputAreBounded/secret_error (0.01s)
+=== RUN   TestNativePinnedBinariesWhenExplicitlyAvailable
+=== RUN   TestNativePinnedBinariesWhenExplicitlyAvailable/xray
+=== RUN   TestNativePinnedBinariesWhenExplicitlyAvailable/sing-box
+--- PASS: TestNativePinnedBinariesWhenExplicitlyAvailable (0.38s)
+    --- PASS: TestNativePinnedBinariesWhenExplicitlyAvailable/xray (0.10s)
+    --- PASS: TestNativePinnedBinariesWhenExplicitlyAvailable/sing-box (0.28s)
+=== RUN   TestValidateBeforeActivationAndGenerationFence
+--- PASS: TestValidateBeforeActivationAndGenerationFence (0.00s)
+=== RUN   TestRestartRetainsFenceAndDoesNotReplay
+--- PASS: TestRestartRetainsFenceAndDoesNotReplay (0.00s)
+=== RUN   TestExpiredOrUncertainLeaseDoesNotActivate
+=== RUN   TestExpiredOrUncertainLeaseDoesNotActivate/expired
+=== RUN   TestExpiredOrUncertainLeaseDoesNotActivate/quota_uncertain
+--- PASS: TestExpiredOrUncertainLeaseDoesNotActivate (0.00s)
+    --- PASS: TestExpiredOrUncertainLeaseDoesNotActivate/expired (0.00s)
+    --- PASS: TestExpiredOrUncertainLeaseDoesNotActivate/quota_uncertain (0.00s)
+=== RUN   TestKnownFailedActivationRestoresOnlyUncommittedPointer
+--- PASS: TestKnownFailedActivationRestoresOnlyUncommittedPointer (0.00s)
+=== RUN   TestUnknownOutcomeBlocksNewerMutationUntilObserved
+--- PASS: TestUnknownOutcomeBlocksNewerMutationUntilObserved (0.00s)
+=== RUN   TestLostAcknowledgementRecoveredByIdentityNotReplayed
+--- PASS: TestLostAcknowledgementRecoveredByIdentityNotReplayed (0.00s)
+=== RUN   TestInvalidArtifactScopeAndDriftAreRejected
+=== RUN   TestInvalidArtifactScopeAndDriftAreRejected/../outside.json
+=== RUN   TestInvalidArtifactScopeAndDriftAreRejected//tmp/outside.json
+=== RUN   TestInvalidArtifactScopeAndDriftAreRejected/a/../../out.json
+=== RUN   TestInvalidArtifactScopeAndDriftAreRejected/a\b.json
+=== RUN   TestInvalidArtifactScopeAndDriftAreRejected/config.json_
+--- PASS: TestInvalidArtifactScopeAndDriftAreRejected (0.00s)
+    --- PASS: TestInvalidArtifactScopeAndDriftAreRejected/../outside.json (0.00s)
+    --- PASS: TestInvalidArtifactScopeAndDriftAreRejected//tmp/outside.json (0.00s)
+    --- PASS: TestInvalidArtifactScopeAndDriftAreRejected/a/../../out.json (0.00s)
+    --- PASS: TestInvalidArtifactScopeAndDriftAreRejected/a\b.json (0.00s)
+    --- PASS: TestInvalidArtifactScopeAndDriftAreRejected/config.json_ (0.00s)
+=== RUN   TestStateDoesNotExposePrivateArtifactsAndRootHasOneWriter
+--- PASS: TestStateDoesNotExposePrivateArtifactsAndRootHasOneWriter (0.00s)
+=== RUN   TestLastValidLeaseExpiryAndClockRollbackRestrictAccess
+--- PASS: TestLastValidLeaseExpiryAndClockRollbackRestrictAccess (0.00s)
+=== RUN   TestDelayedOldOperationCannotOvertakeCompletedNewGeneration
+--- PASS: TestDelayedOldOperationCannotOvertakeCompletedNewGeneration (0.02s)
+=== RUN   TestRuntimeRegistryAcceptsThirdAdapterWithoutRendererSwitch
+--- PASS: TestRuntimeRegistryAcceptsThirdAdapterWithoutRendererSwitch (0.00s)
+=== RUN   TestRenewedNewGenerationCanReplaceExpiredLeaseAfterRestart
+--- PASS: TestRenewedNewGenerationCanReplaceExpiredLeaseAfterRestart (0.04s)
+=== RUN   TestAcceptedRevokedPolicyStopsOldRuntimeInsteadOfReusingLease
+--- PASS: TestAcceptedRevokedPolicyStopsOldRuntimeInsteadOfReusingLease (0.00s)
+=== RUN   TestExpiredFirstActivationWithLostAcknowledgementStillRestricts
+--- PASS: TestExpiredFirstActivationWithLostAcknowledgementStillRestricts (0.03s)
+=== RUN   TestClosedAgentCannotOverwriteNewWritersFence
+--- PASS: TestClosedAgentCannotOverwriteNewWritersFence (0.01s)
+=== RUN   TestNativeSupervisorLifecycleAndRestart
+=== RUN   TestNativeSupervisorLifecycleAndRestart/xray
+=== RUN   TestNativeSupervisorLifecycleAndRestart/sing-box
+    supervisor_test.go:25: native process family not explicitly enabled
+--- PASS: TestNativeSupervisorLifecycleAndRestart (0.56s)
+    --- PASS: TestNativeSupervisorLifecycleAndRestart/xray (0.56s)
+    --- SKIP: TestNativeSupervisorLifecycleAndRestart/sing-box (0.00s)
+=== RUN   TestSupervisorWaitsForOwnedZombieReapingWithoutWeakeningGroupSafety
+=== RUN   TestSupervisorWaitsForOwnedZombieReapingWithoutWeakeningGroupSafety/live-descendant=false
+=== RUN   TestSupervisorWaitsForOwnedZombieReapingWithoutWeakeningGroupSafety/live-descendant=true
+--- PASS: TestSupervisorWaitsForOwnedZombieReapingWithoutWeakeningGroupSafety (0.23s)
+    --- PASS: TestSupervisorWaitsForOwnedZombieReapingWithoutWeakeningGroupSafety/live-descendant=false (0.08s)
+    --- PASS: TestSupervisorWaitsForOwnedZombieReapingWithoutWeakeningGroupSafety/live-descendant=true (0.15s)
+=== RUN   TestOutboundTransportIsScopedAuthenticatedBoundedAndRetryable
+--- PASS: TestOutboundTransportIsScopedAuthenticatedBoundedAndRetryable (0.01s)
+=== RUN   TestOutboundTransportRejectsInsecureAndWrongScope
+--- PASS: TestOutboundTransportRejectsInsecureAndWrongScope (0.00s)
+=== RUN   TestOutboundTransportDoesNotForwardTokenOnRedirect
+--- PASS: TestOutboundTransportDoesNotForwardTokenOnRedirect (0.01s)
+=== RUN   TestOutboundTransportRejectsUnknownWireBehaviorAndWrongMeterReceipt
+--- PASS: TestOutboundTransportRejectsUnknownWireBehaviorAndWrongMeterReceipt (0.00s)
+=== RUN   TestDiagnosticCrashHelper
+--- PASS: TestDiagnosticCrashHelper (0.00s)
+=== RUN   TestDiagnosticCrashRecoveryNeverRepeatsUncertainTraffic
+--- PASS: TestDiagnosticCrashRecoveryNeverRepeatsUncertainTraffic (0.02s)
+=== RUN   TestDiagnosticLostReceiptRetriesPersistedResultWithoutTraffic
+--- PASS: TestDiagnosticLostReceiptRetriesPersistedResultWithoutTraffic (0.00s)
+=== RUN   TestBoundedDiagnosticExecutesOnlyLocallyAuthorizedFixture
+=== RUN   TestBoundedDiagnosticExecutesOnlyLocallyAuthorizedFixture/download
+=== RUN   TestBoundedDiagnosticExecutesOnlyLocallyAuthorizedFixture/upload
+--- PASS: TestBoundedDiagnosticExecutesOnlyLocallyAuthorizedFixture (0.00s)
+    --- PASS: TestBoundedDiagnosticExecutesOnlyLocallyAuthorizedFixture/download (0.00s)
+    --- PASS: TestBoundedDiagnosticExecutesOnlyLocallyAuthorizedFixture/upload (0.00s)
+=== RUN   TestDiagnosticRejectsMetadataCredentialsPrivateAndReboundFixtureTargets
+=== RUN   TestDiagnosticRejectsMetadataCredentialsPrivateAndReboundFixtureTargets/http://169.254.169.254/latest/meta-data
+=== RUN   TestDiagnosticRejectsMetadataCredentialsPrivateAndReboundFixtureTargets/https://169.254.169.254/
+=== RUN   TestDiagnosticRejectsMetadataCredentialsPrivateAndReboundFixtureTargets/https://127.0.0.1/
+=== RUN   TestDiagnosticRejectsMetadataCredentialsPrivateAndReboundFixtureTargets/https://10.0.0.1/
+=== RUN   TestDiagnosticRejectsMetadataCredentialsPrivateAndReboundFixtureTargets/https://[::1]/
+=== RUN   TestDiagnosticRejectsMetadataCredentialsPrivateAndReboundFixtureTargets/https://[::ffff:127.0.0.1]/
+=== RUN   TestDiagnosticRejectsMetadataCredentialsPrivateAndReboundFixtureTargets/https://localhost/
+=== RUN   TestDiagnosticRejectsMetadataCredentialsPrivateAndReboundFixtureTargets/https://service.internal/
+=== RUN   TestDiagnosticRejectsMetadataCredentialsPrivateAndReboundFixtureTargets/https://user:secret@example.com/
+=== RUN   TestDiagnosticRejectsMetadataCredentialsPrivateAndReboundFixtureTargets/https://example.com/?token=secret
+=== RUN   TestDiagnosticRejectsMetadataCredentialsPrivateAndReboundFixtureTargets/file:///etc/passwd
+--- PASS: TestDiagnosticRejectsMetadataCredentialsPrivateAndReboundFixtureTargets (0.00s)
+    --- PASS: TestDiagnosticRejectsMetadataCredentialsPrivateAndReboundFixtureTargets/http://169.254.169.254/latest/meta-data (0.00s)
+    --- PASS: TestDiagnosticRejectsMetadataCredentialsPrivateAndReboundFixtureTargets/https://169.254.169.254/ (0.00s)
+    --- PASS: TestDiagnosticRejectsMetadataCredentialsPrivateAndReboundFixtureTargets/https://127.0.0.1/ (0.00s)
+    --- PASS: TestDiagnosticRejectsMetadataCredentialsPrivateAndReboundFixtureTargets/https://10.0.0.1/ (0.00s)
+    --- PASS: TestDiagnosticRejectsMetadataCredentialsPrivateAndReboundFixtureTargets/https://[::1]/ (0.00s)
+    --- PASS: TestDiagnosticRejectsMetadataCredentialsPrivateAndReboundFixtureTargets/https://[::ffff:127.0.0.1]/ (0.00s)
+    --- PASS: TestDiagnosticRejectsMetadataCredentialsPrivateAndReboundFixtureTargets/https://localhost/ (0.00s)
+    --- PASS: TestDiagnosticRejectsMetadataCredentialsPrivateAndReboundFixtureTargets/https://service.internal/ (0.00s)
+    --- PASS: TestDiagnosticRejectsMetadataCredentialsPrivateAndReboundFixtureTargets/https://user:secret@example.com/ (0.00s)
+    --- PASS: TestDiagnosticRejectsMetadataCredentialsPrivateAndReboundFixtureTargets/https://example.com/?token=secret (0.00s)
+    --- PASS: TestDiagnosticRejectsMetadataCredentialsPrivateAndReboundFixtureTargets/file:///etc/passwd (0.00s)
+=== RUN   TestDiagnosticBoundsRedirectSizeDeadlineAndCancellation
+=== RUN   TestDiagnosticBoundsRedirectSizeDeadlineAndCancellation/redirect
+=== RUN   TestDiagnosticBoundsRedirectSizeDeadlineAndCancellation/oversize
+=== RUN   TestDiagnosticBoundsRedirectSizeDeadlineAndCancellation/chunked
+=== RUN   TestDiagnosticBoundsRedirectSizeDeadlineAndCancellation/short
+=== RUN   TestDiagnosticBoundsRedirectSizeDeadlineAndCancellation/deadline
+=== RUN   TestDiagnosticBoundsRedirectSizeDeadlineAndCancellation/cancel
+--- PASS: TestDiagnosticBoundsRedirectSizeDeadlineAndCancellation (1.05s)
+    --- PASS: TestDiagnosticBoundsRedirectSizeDeadlineAndCancellation/redirect (0.00s)
+    --- PASS: TestDiagnosticBoundsRedirectSizeDeadlineAndCancellation/oversize (0.00s)
+    --- PASS: TestDiagnosticBoundsRedirectSizeDeadlineAndCancellation/chunked (0.00s)
+    --- PASS: TestDiagnosticBoundsRedirectSizeDeadlineAndCancellation/short (0.00s)
+    --- PASS: TestDiagnosticBoundsRedirectSizeDeadlineAndCancellation/deadline (1.00s)
+    --- PASS: TestDiagnosticBoundsRedirectSizeDeadlineAndCancellation/cancel (0.04s)
+=== RUN   TestDiagnosticExecutorRejectsConcurrentTraffic
+--- PASS: TestDiagnosticExecutorRejectsConcurrentTraffic (0.00s)
+=== RUN   TestUploadEarlyAcknowledgementAndResetNeverInventReceiverConsumption
+=== RUN   TestUploadEarlyAcknowledgementAndResetNeverInventReceiverConsumption/early-success
+=== RUN   TestUploadEarlyAcknowledgementAndResetNeverInventReceiverConsumption/early-reject
+=== RUN   TestUploadEarlyAcknowledgementAndResetNeverInventReceiverConsumption/reset
+--- PASS: TestUploadEarlyAcknowledgementAndResetNeverInventReceiverConsumption (0.00s)
+    --- PASS: TestUploadEarlyAcknowledgementAndResetNeverInventReceiverConsumption/early-success (0.00s)
+    --- PASS: TestUploadEarlyAcknowledgementAndResetNeverInventReceiverConsumption/early-reject (0.00s)
+    --- PASS: TestUploadEarlyAcknowledgementAndResetNeverInventReceiverConsumption/reset (0.00s)
+=== RUN   TestConnectivityUsesHeadAndNeverFabricatesSpeed
+--- PASS: TestConnectivityUsesHeadAndNeverFabricatesSpeed (0.00s)
+=== RUN   TestDelayedClaimCannotOutliveItsControlPlaneExecutionWindow
+--- PASS: TestDelayedClaimCannotOutliveItsControlPlaneExecutionWindow (0.00s)
+=== RUN   TestNodeCollectorReadsNamedCountersAndExcludesCPUGuestDoubleCount
+--- PASS: TestNodeCollectorReadsNamedCountersAndExcludesCPUGuestDoubleCount (0.00s)
+=== RUN   TestNodeCollectorRejectsMissingMalformedOrUnboundedFacts
+=== RUN   TestNodeCollectorRejectsMissingMalformedOrUnboundedFacts/stat
+=== RUN   TestNodeCollectorRejectsMissingMalformedOrUnboundedFacts/meminfo
+=== RUN   TestNodeCollectorRejectsMissingMalformedOrUnboundedFacts/loadavg
+=== RUN   TestNodeCollectorRejectsMissingMalformedOrUnboundedFacts/net/dev
+=== RUN   TestNodeCollectorRejectsMissingMalformedOrUnboundedFacts/sys/kernel/random/boot_id
+--- PASS: TestNodeCollectorRejectsMissingMalformedOrUnboundedFacts (0.00s)
+    --- PASS: TestNodeCollectorRejectsMissingMalformedOrUnboundedFacts/stat (0.00s)
+    --- PASS: TestNodeCollectorRejectsMissingMalformedOrUnboundedFacts/meminfo (0.00s)
+    --- PASS: TestNodeCollectorRejectsMissingMalformedOrUnboundedFacts/loadavg (0.00s)
+    --- PASS: TestNodeCollectorRejectsMissingMalformedOrUnboundedFacts/net/dev (0.00s)
+    --- PASS: TestNodeCollectorRejectsMissingMalformedOrUnboundedFacts/sys/kernel/random/boot_id (0.00s)
+=== RUN   TestNodeObserverRetainsExactSampleUntilAcknowledged
+--- PASS: TestNodeObserverRetainsExactSampleUntilAcknowledged (0.00s)
+=== RUN   TestLocalProcfsResourceReadOptIn
+    node_observer_test.go:110: optional real local read requires ROUTEWEAVER_LOCAL_PROCFS=1; synthetic procfs fixtures run normally
+--- SKIP: TestLocalProcfsResourceReadOptIn (0.00s)
+PASS
+ok  	routeweaver/internal/agent	48.151s

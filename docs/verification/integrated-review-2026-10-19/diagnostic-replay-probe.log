@@ -1,0 +1,5 @@
+=== RUN   TestIndependentManagedDiagnosticReplayMutationDoesNotSend
+--- PASS: TestIndependentManagedDiagnosticReplayMutationDoesNotSend (0.02s)
+PASS
+ok  	routeweaver/runtimes/xray	1.066s
+?   	routeweaver/runtimes/xray/cmd/routeweaver-xray	[no test files]

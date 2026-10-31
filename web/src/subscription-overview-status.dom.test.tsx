@@ -1,0 +1,212 @@
+// @vitest-environment jsdom
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { cleanup, render, screen, within } from "@testing-library/react";
+import { UIProviders } from "./ui-patterns/providers";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { SubscriptionsPage } from "./Subscriptions";
+import { emptyProfile } from "./model";
+import type { Output, Profile } from "./types";
+
+const clients: QueryClient[] = [];
+const unexpectedRequests: string[] = [];
+const json = (value: unknown) =>
+  new Response(JSON.stringify(value), {
+    headers: { "Content-Type": "application/json" },
+  });
+
+function mountWorkspace(
+  status: string | undefined,
+  inventory: { profiles: Profile[]; outputs: Output[] } = {
+    profiles: [],
+    outputs: [],
+  },
+) {
+  const responses: Record<string, unknown> = {
+    "/api/me/overview": {
+      status,
+      accountingPending: status === "accounting-pending",
+      quotaBytes: 0,
+      user: { id: "ordinary-user", name: "个人账号" },
+      usage: { rawBytes: 0, weightedBytes: 0 },
+      routes: [],
+    },
+    "/api/me/profiles": inventory.profiles,
+    "/api/me/outputs": inventory.outputs,
+  };
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url, init) => {
+      const path = String(url);
+      if ((init?.method || "GET") === "GET" && Object.hasOwn(responses, path))
+        return json(responses[path]);
+      unexpectedRequests.push(`${init?.method || "GET"} ${path}`);
+      throw new Error(`Unexpected request ${path}`);
+    }),
+  );
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  clients.push(client);
+  render(
+    <QueryClientProvider client={client}>
+      <UIProviders>
+        <SubscriptionsPage />
+      </UIProviders>
+    </QueryClientProvider>,
+  );
+}
+
+async function usageCard() {
+  const heading = await screen.findByRole("heading", { name: "平台服务用量" });
+  const section = heading.closest<HTMLElement>('[data-slot="card"]');
+  expect(section).not.toBeNull();
+  return within(section!);
+}
+
+beforeEach(() => {
+  unexpectedRequests.length = 0;
+  history.replaceState(null, "", "#subscriptions");
+  vi.stubEnv("NODE_ENV", "development");
+  vi.spyOn(window, "scrollTo").mockImplementation(() => {});
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    value: vi.fn(() => ({
+      matches: false,
+      addListener() {},
+      removeListener() {},
+      addEventListener() {},
+      removeEventListener() {},
+    })),
+  });
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    },
+  );
+  const original = window.getComputedStyle;
+  vi.spyOn(window, "getComputedStyle").mockImplementation((element) =>
+    original(element),
+  );
+});
+
+afterEach(() => {
+  cleanup();
+  clients.splice(0).forEach((client) => client.clear());
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
+  expect(unexpectedRequests).toEqual([]);
+});
+
+it.each([
+  ["active", "平台授权有效"],
+  ["paused", "平台服务已暂停"],
+  ["disabled", "账号已停用"],
+  ["expired", "已到期"],
+  ["not-started", "尚未开通"],
+  ["ambiguous", "用户组方案冲突"],
+  ["service-missing", "服务方案已缺失"],
+  ["exhausted", "额度已用尽"],
+  ["accounting-pending", "等待统计同步"],
+])("names the ordinary account's %s policy state", async (status, label) => {
+  mountWorkspace(status);
+  const card = await usageCard();
+  expect(card.getByText(label, { exact: true, selector: '[data-slot="badge"]' })).toBeTruthy();
+  expect(card.queryByText(status, { exact: true })).toBeNull();
+});
+
+it.each<{ status: string | undefined; label: string }>([
+  { status: "future-policy-state", label: "future-policy-state" },
+  { status: "", label: "未设置" },
+  { status: undefined, label: "未设置" },
+])("preserves the existing fallback for $status", async ({ status, label }) => {
+  mountWorkspace(status);
+  const card = await usageCard();
+  expect(card.getByText(label, { exact: true, selector: '[data-slot="badge"]' })).toBeTruthy();
+  expect(card.queryByText("平台授权有效")).toBeNull();
+});
+
+it("names active authorization without presenting unlimited quota as available routes", async () => {
+  mountWorkspace("active");
+  const card = await usageCard();
+  expect(card.getByText("平台授权有效")).toBeTruthy();
+  expect(card.getAllByText("不限额")).toHaveLength(2);
+  expect(card.getByText("剩余额度")).toBeTruthy();
+  expect(card.getByText("总额度")).toBeTruthy();
+  expect(card.queryByText("生效中")).toBeNull();
+  expect(screen.queryByText(/平台提供的线路/)).toBeNull();
+});
+
+it("keeps published and revoked client subscription states separate from account policy", async () => {
+  const profile = { ...emptyProfile(), id: "personal", name: "日常分流" };
+  const outputs: Output[] = [
+    {
+      id: "laptop",
+      name: "电脑订阅",
+      profileId: profile.id,
+      target: profile.target,
+      mode: "full",
+      status: "published",
+    },
+    {
+      id: "phone",
+      name: "手机订阅",
+      profileId: profile.id,
+      target: profile.target,
+      mode: "full",
+      status: "revoked",
+    },
+  ];
+  mountWorkspace("paused", { profiles: [profile], outputs });
+  const card = await usageCard();
+  expect(card.getByText("平台服务已暂停")).toBeTruthy();
+  const published = within(
+    await screen.findByRole("group", { name: "客户端订阅 电脑订阅" }),
+  );
+  const revoked = within(
+    await screen.findByRole("group", { name: "客户端订阅 手机订阅" }),
+  );
+  expect(published.getByText("已发布", { exact: true })).toBeTruthy();
+  expect(revoked.getByText("已撤销", { exact: true })).toBeTruthy();
+  expect(published.getByRole("button", { name: "获取订阅" })).toHaveProperty(
+    "disabled",
+    false,
+  );
+  expect(revoked.getByRole("button", { name: "获取订阅" })).toHaveProperty(
+    "disabled",
+    true,
+  );
+});
+
+it("gives paused platform service a next step without granting restoration or changing personal subscriptions", async () => {
+  mountWorkspace("paused");
+  const card = await usageCard();
+  expect(
+    card.getByText("如需恢复平台服务，请联系管理员检查服务授权。", {
+      exact: true,
+    }),
+  ).toBeTruthy();
+  expect(
+    card.queryByRole("button", { name: /恢复平台服务|自动恢复/ }),
+  ).toBeNull();
+});
+
+it.each([
+  "active",
+  "disabled",
+  "expired",
+  "exhausted",
+  "future-policy-state",
+  undefined,
+])("does not invent paused-service recovery for %s", async (status) => {
+  mountWorkspace(status);
+  const card = await usageCard();
+  expect(
+    card.queryByText("如需恢复平台服务，请联系管理员检查服务授权。", {
+      exact: true,
+    }),
+  ).toBeNull();
+});

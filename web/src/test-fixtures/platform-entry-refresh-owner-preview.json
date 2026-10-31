@@ -1,0 +1,43 @@
+{
+  "artifacts": [
+    {
+      "content": "{\n  \"proxies\": [\n    {\n      \"name\": \"Synthetic rotation line\",\n      \"port\": 12345,\n      \"server\": \"127.0.0.1\",\n      \"type\": \"vless\",\n      \"uuid\": \"[REDACTED]\"\n    }\n  ]\n}",
+      "path": "mihomo-nodes.json"
+    }
+  ],
+  "diagnostics": [],
+  "names": {
+    "rotation-grant": "Synthetic rotation line"
+  },
+  "nativeChecked": false,
+  "nativeOverride": null,
+  "outputId": "refresh-phone",
+  "platformEntryRefresh": {
+    "count": 1,
+    "version": 1
+  },
+  "previewDigest": "9564758192730873bfe4ed57b427858011e09fc9daadcde4df9891028ae759e9",
+  "previewScope": "output-update",
+  "publicationEffect": {
+    "link": "preserve",
+    "version": 1
+  },
+  "publishedRoutingIntent": {
+    "kind": "nodes-only",
+    "version": 1
+  },
+  "publishedRoutingSummary": {
+    "kind": "nodes-only",
+    "version": 1
+  },
+  "resources": null,
+  "routingIntent": {
+    "kind": "nodes-only",
+    "version": 1
+  },
+  "routingSummary": {
+    "kind": "nodes-only",
+    "version": 1
+  },
+  "valid": true
+}

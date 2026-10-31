@@ -1,0 +1,164 @@
+[
+  {
+    "path": "web/src/server-tls-editor.dom.test.tsx",
+    "rule": "generic-api-key",
+    "lineSHA256": "1f2f59b579513d0d94d34eb5f29831595a839533d2f2a25d433fddfe2d2f3044",
+    "reason": "Static synthetic Reality key used only in DOM test fixtures; not an issued external credential."
+  },
+  {
+    "path": "internal/httpapi/notifications_test.go",
+    "rule": "generic-api-key",
+    "lineSHA256": "51217a8cafeabb4eb9ee0f5d6b598c3e96e59696c64a00fec723c3191519836d",
+    "reason": "Synthetic webhook HMAC fixture created and consumed within this local HTTP test."
+  },
+  {
+    "path": "internal/render/native_test.go",
+    "rule": "generic-api-key",
+    "lineSHA256": "f3531e6c893761dd196efad0e478b471c3cf80e8cbeebd76c083d606703d07d5",
+    "reason": "Synthetic Reality key for isolated native parser fixtures; no external service identity."
+  },
+  {
+    "path": "internal/render/testdata/server-sing-box/vless.json",
+    "rule": "generic-api-key",
+    "lineSHA256": "88d27140d9c2cca22dcf2a1f171df239fc05e51e33cfbf1ccd1247616b98f90c",
+    "reason": "Static generated native-parser fixture Reality key; no deployed server identity."
+  },
+  {
+    "path": "internal/render/testdata/server-xray/vless.json",
+    "rule": "generic-api-key",
+    "lineSHA256": "28b87f4cbcfa958c6a3f1662f2ed645f1859821ea388d4cead91914d42261961",
+    "reason": "Static generated native-parser fixture key; no deployed server identity."
+  },
+  {
+    "path": "internal/render/testdata/server-xray/vless.json",
+    "rule": "generic-api-key",
+    "lineSHA256": "873f5881e8d0bac367f9d02c5e6df1d194bbbd4725abe2459726d6d7688e70ff",
+    "reason": "Static generated native-parser fixture key; no deployed server identity."
+  },
+  {
+    "path": "runtimes/xray/go.sum",
+    "rule": "generic-api-key",
+    "lineSHA256": "a40310868e3f8f77b8cbb543fb72c57a431aa3f4285e337ea28fc403db324689",
+    "reason": "Go dependency module checksum, not a credential; exact line is reviewed."
+  },
+  {
+    "path": "runtimes/xray/go.sum",
+    "rule": "generic-api-key",
+    "lineSHA256": "3676856a21508a2a5b0815c8e35cd494d238eed2579548bf927dcc160f1cf9f6",
+    "reason": "Go dependency module checksum, not a credential; exact line is reviewed."
+  },
+  {
+    "path": "runtimes/xray/go.sum",
+    "rule": "generic-api-key",
+    "lineSHA256": "c54a2f3ea58f5352ac8e7bdf4c5a839f7558a1badf04874b7fb9f907df74707d",
+    "reason": "Go dependency module checksum, not a credential; exact line is reviewed."
+  },
+  {
+    "path": "CHECKPOINT-EVIDENCE/WIP50/backend-provenance.unchanged.json",
+    "rule": "jfrog-identity-token",
+    "lineSHA256": "fb75a805fe254fbd5cdd466e9aacb80583f8b23fee2ff02829e0cc2495480a7b",
+    "reason": "Archived source-file SHA256 value in verification provenance, not a credential."
+  },
+  {
+    "path": "CHECKPOINT-EVIDENCE/WIP50/backend-provenance.unchanged.json",
+    "rule": "jfrog-identity-token",
+    "lineSHA256": "ed5cf977a9707a43dd711fb87aa22a4e4ad4ea0fdb235ded3195dc1f05bb0311",
+    "reason": "Archived source-file SHA256 value in verification provenance, not a credential."
+  },
+  {
+    "path": "CHECKPOINT-EVIDENCE/WIP50/backend-provenance.unchanged.json",
+    "rule": "jfrog-identity-token",
+    "lineSHA256": "0fec0b103573d4244aefb3508dc5402fa79c9eba7e254ccbb635df3d3d0f13f9",
+    "reason": "Archived source-file SHA256 value in verification provenance, not a credential."
+  },
+  {
+    "path": "CHECKPOINT-EVIDENCE/WIP50/backend-provenance.unchanged.json",
+    "rule": "jfrog-identity-token",
+    "lineSHA256": "b92f029e48790da466edb1f4565267bc30fdea4aa410ea0d438f65a374132e4a",
+    "reason": "Archived source-file SHA256 value in verification provenance, not a credential."
+  },
+  {
+    "path": "CHECKPOINT-EVIDENCE/WIP50/backend-provenance.unchanged.json",
+    "rule": "jfrog-identity-token",
+    "lineSHA256": "7ba902a64ce52ea0cad883f6397c9bd2364c89e1f2829990dced0d7b4e87ac58",
+    "reason": "Archived source-file SHA256 value in verification provenance, not a credential."
+  },
+  {
+    "path": "CHECKPOINT-EVIDENCE/WIP50/backend-provenance.unchanged.json",
+    "rule": "jfrog-identity-token",
+    "lineSHA256": "bce1bd658dbe5f0b3d503be87cbb3e49d3dcbe5678b6fc9897f18128d4cbbc4b",
+    "reason": "Archived source-file SHA256 value in verification provenance, not a credential."
+  },
+  {
+    "path": "CHECKPOINT-EVIDENCE/WIP50/backend-provenance.unchanged.json",
+    "rule": "jfrog-identity-token",
+    "lineSHA256": "4ecf7759d0b2a224fa5e92f7ce650c87c6586031f65a326eee6786b48cdf29f8",
+    "reason": "Archived source-file SHA256 value in verification provenance, not a credential."
+  },
+  {
+    "path": "CHECKPOINT-EVIDENCE/WIP50/backend-provenance.unchanged.json",
+    "rule": "jfrog-identity-token",
+    "lineSHA256": "7a6cb22a86da441427fba62e5aa06c9f9f0c566b62dd1861a9f55c99af75ca1b",
+    "reason": "Archived source-file SHA256 value in verification provenance, not a credential."
+  },
+  {
+    "path": "CHECKPOINT-EVIDENCE/WIP50/backend-provenance.unchanged.json",
+    "rule": "jfrog-identity-token",
+    "lineSHA256": "9dc718ed8b5d7dcefb5486e11016c6c09f488cb44a4a91fe82820be79789fadb",
+    "reason": "Archived source-file SHA256 value in verification provenance, not a credential."
+  },
+  {
+    "path": "CHECKPOINT-EVIDENCE/WIP50/backend-provenance.unchanged.json",
+    "rule": "generic-api-key",
+    "lineSHA256": "88021defe61f3f07a0a81270d3f534904be8f5fd439b3e30d24880721c4c5c1f",
+    "reason": "Archived source-file SHA256 value in verification provenance, not a credential."
+  },
+  {
+    "path": "CHECKPOINT-EVIDENCE/WIP50/backend-provenance.unchanged.json",
+    "rule": "generic-api-key",
+    "lineSHA256": "7377406186b5090cb068e3e867c32cb5faa7f2d2b835a626302b16b6381c89c6",
+    "reason": "Archived source-file SHA256 value in verification provenance, not a credential."
+  },
+  {
+    "path": "CHECKPOINT-EVIDENCE/WIP50/backend-provenance.unchanged.json",
+    "rule": "generic-api-key",
+    "lineSHA256": "78e71f34737fe57e6c121551a03d1ec784233a914a57b8529a9c815e8109772f",
+    "reason": "Archived source-file SHA256 value in verification provenance, not a credential."
+  },
+  {
+    "path": "CHECKPOINT-EVIDENCE/WIP50/backend-provenance.unchanged.json",
+    "rule": "generic-api-key",
+    "lineSHA256": "6dc1399c6ea625037cec9db5222258a9ba84fc5e854c4873e7fa1fa9dd53fff8",
+    "reason": "Archived source-file SHA256 value in verification provenance, not a credential."
+  },
+  {
+    "path": "CHECKPOINT-EVIDENCE/WIP50/backend-provenance.unchanged.json",
+    "rule": "generic-api-key",
+    "lineSHA256": "456b5ee74f939a785e70ba993058706e2ee68495be84201d7717262871d727dc",
+    "reason": "Archived source-file SHA256 value in verification provenance, not a credential."
+  },
+  {
+    "path": "CHECKPOINT-EVIDENCE/WIP50/backend-provenance.unchanged.json",
+    "rule": "generic-api-key",
+    "lineSHA256": "d360ae8c9edd350c638561d7ec0a4a20600d130dcf661f01e9ca8493e925b1f6",
+    "reason": "Archived source-file SHA256 value in verification provenance, not a credential."
+  },
+  {
+    "path": "CHECKPOINT-EVIDENCE/WIP50/backend-provenance.unchanged.json",
+    "rule": "generic-api-key",
+    "lineSHA256": "3c01935517db129e41a9355a5ed7ac4de21e420c1a8216bc64ce459eea4c08e9",
+    "reason": "Archived source-file SHA256 value in verification provenance, not a credential."
+  },
+  {
+    "path": "CHECKPOINT-EVIDENCE/WIP50/backend-provenance.unchanged.json",
+    "rule": "generic-api-key",
+    "lineSHA256": "1f52b02948d1626b99cd06c44bde0c306c9b576fc3ef8d537bab61deac1e9ed5",
+    "reason": "Archived source-file SHA256 value in verification provenance, not a credential."
+  },
+  {
+    "path": "CHECKPOINT-EVIDENCE/WIP50/backend-provenance.unchanged.json",
+    "rule": "generic-api-key",
+    "lineSHA256": "e400e852878a8373dba046cf8978f615f24ad8b0aae8f0268ec2759b586c6c48",
+    "reason": "Archived source-file SHA256 value in verification provenance, not a credential."
+  }
+]

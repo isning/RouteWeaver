@@ -1,0 +1,21 @@
+{
+  "scope": "synthetic local real-browser product journeys; not authentication remediation or human usability research",
+  "browser": "Chromium 153.0.8010.0",
+  "sandbox": true,
+  "start_utc": "2026-10-22T12:56:07.281Z",
+  "duration_ms": 156187.842,
+  "total": 19,
+  "passed": 19,
+  "unexpected": 0,
+  "flaky": 0,
+  "skipped": 0,
+  "production_manifest_file_count": 227,
+  "production_manifest_scope": "web/src TS, TSX, CSS excluding test files; cmd/internal Go excluding Go tests",
+  "production_manifest_sha256_before": "b65ebc54967880bba8d30c5bd144b24a0cf9957d005f514bd3ea3034ce82aad9",
+  "production_manifest_sha256_after": "b65ebc54967880bba8d30c5bd144b24a0cf9957d005f514bd3ea3034ce82aad9",
+  "runtime_cleanup_confirmed": true,
+  "earlier_full_run": "18/19; exact doubled-font assertion sampled CSS transition mid-frame; retained, then corrected to wait for exact computed target and repeated all 19",
+  "web_regressions": {"tests": 492, "files": 53, "passed": true},
+  "offline_preview": {"source_files": 116, "containment": "10/10", "smoke": "5/5", "deployed": false},
+  "excluded": ["raw traces", "screenshots", "database", "credentials", "access URLs", "auth isolated-copy findings"]
+}

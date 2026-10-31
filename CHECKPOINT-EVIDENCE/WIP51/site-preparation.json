@@ -1,0 +1,47 @@
+{
+  "checkpoint": "WIP51",
+  "status": "normal read-only preparation passed; subsequent owner-private publication succeeded",
+  "containment_passed": 22,
+  "typecheck_build_exit": 0,
+  "early_containment": {
+    "passed": 20,
+    "failed": 2,
+    "final_passed": 22
+  },
+  "qa_runtime_excluded": true,
+  "publication_success": true,
+  "evidence": [
+    {
+      "filename": "receipt-format-final-pending.json",
+      "bytes": 47413,
+      "sha256": "8a8bea9a13e63a988e66d2dc2a605307a88268659179d57175b04850d9de7518",
+      "availability": "local-only evidence"
+    },
+    {
+      "filename": "containment-format-final.log",
+      "bytes": 335,
+      "sha256": "216ee70c0045bd631e729b1ca153a71b6a13e2a763962fe9000d87648f7cb35c",
+      "availability": "local-only evidence"
+    },
+    {
+      "filename": "containment-format-final.exit",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "availability": "local-only evidence"
+    },
+    {
+      "filename": "build-format-final.log",
+      "bytes": 3340,
+      "sha256": "3f928a3aae39334bd3007e226a0a3a6abdbcebc25a7b8cc69285d413943f764b",
+      "availability": "local-only evidence"
+    },
+    {
+      "filename": "build-format-final.exit",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "availability": "local-only evidence"
+    }
+  ],
+  "publication": "private-demo-deployment.json",
+  "hosted_authenticated_ui_smoke_verified": false
+}

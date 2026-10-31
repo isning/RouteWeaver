@@ -1,0 +1,5 @@
+# Readable secondary text
+
+Live UI review showed faint small instructional text. Selected meaningful-text CSS colors had approximately 2.35–3.14 contrast against the workspace background; Ant's configured secondary color was also below 4.5 there. A shared muted color now meets 4.5 on the tested light surfaces. Workspace/account labels and source metadata are at least 12px; inactive controls, dark-card accents and decorative brand text were not indiscriminately recolored.
+
+Reference: [W3C contrast minimum](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html). A bounded stylesheet/token regression computes unrounded luminance ratios for eight meaningful-text selectors and library secondary/placeholder tokens on three known light backgrounds. Nine checks failed before and passed after. This is not a full accessibility audit: it does not prove all dynamic backgrounds, focus indicators, disabled states or every remaining selector. The static design test lives in web/tests outside the browser TypeScript source set; the same Vitest gate includes it. This avoids adding Node globals to production source merely to read stylesheet fixtures.

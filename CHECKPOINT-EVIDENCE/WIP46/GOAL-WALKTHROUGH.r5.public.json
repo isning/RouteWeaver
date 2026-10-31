@@ -1,0 +1,127 @@
+{
+  "formatVersion": 1,
+  "checkpoint": "WIP46",
+  "exportStatus": "BOUNDED_GOAL_WALKTHROUGH_INDEPENDENTLY_ACCEPTED",
+  "derivation": "Public delivery summary derived from retained original records; not a byte-identical copy of those originals. Internal workspace/thread paths and raw conversations are omitted.",
+  "wholeProductAcceptanceClaimed": false,
+  "sourceReport": {
+    "sourceRecordLabel": "GOAL-ONLY-WALKTHROUGH.md",
+    "sourceRecordSha256": "4ef091a8799c0d50b7d115fd3ec22cf1b320b973a54ec0c70af7849fd084cb57",
+    "originalBytesIncluded": false
+  },
+  "independentReview": {
+    "sourceRecordLabel": "INDEPENDENT-GOAL-CLOSURE-REVIEW.r5.json",
+    "sourceRecordSha256": "73e9567ca52e218671f11420946c7b1a6a370d44752cf9ce26cd364e95b9883b",
+    "originalBytesIncluded": false
+  },
+  "nativeTerminal": {
+    "sourceRecordLabel": "NATIVE-GOAL-TERMINAL.json",
+    "sourceRecordSha256": "75bd799dce7d696eb0123f1c4ee27675b0beb387d1cfecad9e4a3406bb243687",
+    "originalBytesIncluded": false
+  },
+  "resultsBinding": {
+    "sourceRecordLabel": "GOAL-HARNESS-RESULTS-BINDING.json",
+    "sourceRecordSha256": "5bebf9878a1193ac35386302f38dd0db3b4d8bf369bdb35c0b769b3700f3c135",
+    "originalBytesIncluded": false
+  },
+  "codeFreezeSha256": "b66e216092a11796d9a8badeb4aa572df9e32cbe2ce91601cab6fabd0d81cb3c",
+  "method": "Independent AI cognitive walkthrough of visible desktop frontend, neutral goal inputs and rendered accessibility tree/screenshots; no source/tests/prior reports/expected click path inspected. Not human usability research.",
+  "browser": "Chromium153",
+  "viewportCSSPixels": [
+    1440,
+    1000
+  ],
+  "nativeExitCode": 0,
+  "units": {
+    "reviewerObservations": 67,
+    "neutralInitialObservation": 1,
+    "not68TestsOrJourneys": true
+  },
+  "sourceFilesModesUnchanged": 1250,
+  "builtAssetsUnchanged": 31,
+  "goals": [
+    {
+      "goal": 1,
+      "result": "completed-in-controlled-model",
+      "observation": "Created an independent Mihomo work configuration/output with Tokyo default; original phone remained under original configuration with original displayed publication timestamp.",
+      "limit": "Modeled create/publication transition, not production storage or client-valid output."
+    },
+    {
+      "goal": 2,
+      "result": "completed-in-controlled-model",
+      "observation": "Selected exact domain work.example to London, kept Tokyo default, and explicitly selected one named work output; comparison said rule-file contents/runtime settings were not compared.",
+      "limit": "Modeled target/update evidence, not native renderer or actual delivery."
+    },
+    {
+      "goal": 3,
+      "result": "completed-in-controlled-model",
+      "observation": "Reviewed/accepted added source connection; before and after acceptance, published subscriptions were explicitly unchanged; no client publish performed in this goal.",
+      "limit": "Controlled source transition, not external fetcher or durable source validation."
+    },
+    {
+      "goal": 4,
+      "result": "completed-in-controlled-model",
+      "observation": "Cancel/continue retained rule-file name and selected51B file; controlled save failure retained values and same-action retry completed modeled acceptance.",
+      "limit": "Not native parser, production persistence or packaging validation."
+    },
+    {
+      "goal": 5,
+      "result": "supported-explanation-and-next-step; deeper-diagnosis-fixture-limited",
+      "observation": "Paused platform service despite32GiB remaining; administrator review of service authorization is the next reasonable step.",
+      "limit": "Platform-entry and authorization drawers unmodeled; no live health/full platform diagnosis."
+    },
+    {
+      "goal": 6,
+      "result": "completed-in-controlled-model",
+      "observation": "Explicit unread/read text changed after opening notice and remained read after page refresh and browser reload.",
+      "limit": "Fixture memory state, not server durability."
+    }
+  ],
+  "retainedDetours": [
+    {
+      "observation": "Resource name opened a clearly labeled replacement editor when detail was expected.",
+      "adjudication": "Observed expectation mismatch, but no read-only promise, mutation, lost state or blocked goal; insufficient alone to justify a copy/interface change."
+    },
+    {
+      "observation": "Platform investigation detoured through personal output, diagnostic navigation and account administration.",
+      "adjudication": "Visible labels/status/administrator advice did not make a false promise; unmodeled deeper drawers prevent judging complete production flow, so no shortcut requirement is inferred."
+    }
+  ],
+  "otherRetainedObservation": "AX retained a loading image after publication, but a fresh check worked; persistent visible busy defect not established.",
+  "fixtureLimits": {
+    "unsupportedBranches": 2,
+    "unsupportedGETRequests": 3,
+    "branches": [
+      {
+        "pathTemplate": "/api/users/{fixture-account}/entries",
+        "reads": 2,
+        "meaning": "initial query plus one automatic retry; not evaluator retry"
+      },
+      {
+        "pathTemplate": "/api/access-policy/edit-context/entitlement/{fixture-account}",
+        "reads": 1
+      }
+    ],
+    "operationErrors": 0,
+    "pageErrors": 0,
+    "externalDenials": 0,
+    "notProductFailures": true
+  },
+  "provenance": {
+    "queueHelperMatchesExistingArchivedHash": true,
+    "fixtureMatchesPreCampaignHash": true,
+    "launcherChecksumTiming": "terminal-only; no claimed pre-run checksum",
+    "reviewedBoundFiles": 220,
+    "verifiedReportLinks": 14,
+    "independentlyInspectedGoalPixels": 9,
+    "pixelsNotSummedWithScriptedCampaignAsUniqueScenes": true
+  },
+  "stoppingBoundary": "No newly demonstrated local correction remains in the supported inspected scope; not zero friction or exhaustion of every possible product improvement.",
+  "noClaims": [
+    "human study/satisfaction/timing metrics",
+    "mobile or fullAT/actual zoom certification from this desktop walkthrough",
+    "real parser/compiler/storage/auth/publication/client delivery",
+    "live platform topology/health/operation",
+    "whole-product or artifact-save acceptance"
+  ]
+}

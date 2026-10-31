@@ -1,0 +1,39 @@
+{
+  "checkpoint": "WIP50",
+  "snapshot": "accepted bounded UI source checkpoint; overall task and approval-dependent backup file flow remain incomplete",
+  "acceptance": "CHECKPOINT-EVIDENCE/WIP50/aggregate-acceptance.json",
+  "verification": {
+    "frontend_tests_passed": 1858,
+    "frontend_test_files": 167,
+    "frontend_failed": 0,
+    "frontend_pending": 0,
+    "typecheck": "passed",
+    "production_build": "passed",
+    "aggregate_exit": 0,
+    "unchanged_web_scope_files": 388,
+    "static": "R3 passed",
+    "visual": "bounded actual desktop, short and narrow CSS viewport review",
+    "backend_unchanged_scope_files": 480,
+    "new_backend_runtime_tests": false,
+    "normal_site_containment_tests_passed": 21
+  },
+  "limits": [
+    "Backup native file choice/upload authorization and post-file validation remain outstanding.",
+    "17 pages and 107 callsites do not establish every task/state permutation.",
+    "Synthetic UI and isolated components are not live backend acceptance.",
+    "Native Playwright browser launch blocked before page assertions.",
+    "Actual reduced-motion preference emulation unavailable; no real-device/touch/full-assistive-technology or performance acceptance.",
+    "Inherited native runtime limitations remain; no new backend or protocol-parity claim.",
+    "No Google certification or production-readiness claim."
+  ],
+  "prior_status": "CHECKPOINT-EVIDENCE/WIP50/historical-wip49-checkpoint-status.json",
+  "library_save_success": false,
+  "library_save_status": "external successful receipt required",
+  "private_demo_deployment": "CHECKPOINT-EVIDENCE/WIP50/private-demo-deployment.json",
+  "production_ready": false,
+  "production_deployed": false,
+  "project_complete": false,
+  "user_acceptance": false,
+  "artifact_kind": "source",
+  "selected_screenshot_bytes_in_archives": false
+}

@@ -1,0 +1,13 @@
+=== RUN   TestAdmissionHistoryScalingCharacterization
+=== RUN   TestAdmissionHistoryScalingCharacterization/0
+    admission_scaling_test.go:48: unrelated ledger rows=0 renewal median=498.861µs max=572.562µs samples=6
+=== RUN   TestAdmissionHistoryScalingCharacterization/1000
+    admission_scaling_test.go:48: unrelated ledger rows=1000 renewal median=10.378953ms max=14.074065ms samples=6
+=== RUN   TestAdmissionHistoryScalingCharacterization/10000
+    admission_scaling_test.go:48: unrelated ledger rows=10000 renewal median=124.647096ms max=139.898617ms samples=6
+--- PASS: TestAdmissionHistoryScalingCharacterization (1.17s)
+    --- PASS: TestAdmissionHistoryScalingCharacterization/0 (0.01s)
+    --- PASS: TestAdmissionHistoryScalingCharacterization/1000 (0.09s)
+    --- PASS: TestAdmissionHistoryScalingCharacterization/10000 (1.07s)
+PASS
+ok  	routeweaver/internal/store	1.173s

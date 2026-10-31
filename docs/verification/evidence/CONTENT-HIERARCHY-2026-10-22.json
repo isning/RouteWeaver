@@ -1,0 +1,423 @@
+{
+  "schema_version": 1,
+  "recorded_date": "2026-10-22",
+  "status": "completed_bounded_with_limits",
+  "purpose": "Portable bounded acceptance ledger; summary evidence, not raw diagnostics or a complete conformance claim.",
+  "guideline_policy": "Existing GS registry URLs and access dates retained; no new external source visit claimed.",
+  "review_scope": "Expert screenshot/source review, targeted tests, final integrated Chromium tasks and selected rendered-content review; not human usability research.",
+  "records": [
+    {
+      "id": "CH-01",
+      "finding_status": "observed",
+      "evidence_layer": "existing_screenshot_and_source_review",
+      "summary": "Long opaque reference IDs obscured unavailable state in selection controls.",
+      "required_invariants": "Readable state, accessible complete stable identity, distinct checking states, exact repair occurrence, no automatic replacement.",
+      "ux_ids": [
+        "UX-03",
+        "UX-08",
+        "UX-10",
+        "UX-12"
+      ],
+      "gs_ids": [
+        "GS-18",
+        "GS-20",
+        "GS-23"
+      ],
+      "final_acceptance": {
+        "status": "passed_bounded",
+        "evidence_ids": [
+          "CH-EV-09",
+          "CH-EV-10",
+          "CH-EV-13"
+        ]
+      },
+      "candidate_regression": {
+        "status": "targeted_red_to_green_integrated_acceptance_recorded",
+        "affected_version": "Initial candidate disabling default Select virtualization, not the original product baseline",
+        "summary": "A 2,000-node data set rendered 2,003 options on opening. Default virtualization was restored while preserving readable complete long identities."
+      },
+      "additional_findings": [
+        {
+          "summary": "Paused reads with cached data must not imply confirmed missing references.",
+          "evidence_layer": "isolated_Profile_DOM",
+          "limitation": "Does not establish that a complete offline application displays the workspace."
+        },
+        {
+          "summary": "Mobile reference disclosure retains a visible native expansion marker and a 44 px project target.",
+          "limitation": "The 44 px target is a project choice, not a universal WCAG AA rule."
+        }
+      ]
+    },
+    {
+      "id": "CH-02",
+      "finding_status": "observed_with_limit",
+      "evidence_layer": "existing_screenshot_and_source_review",
+      "summary": "Initial source-file dialog screenshot omitted completion actions; other disclosure screenshots were taken after scripted scrolling. This does not prove the task was impossible.",
+      "required_invariants": "Disclosure and completion stay together; required inputs, errors and focus remain reachable; local file reading precedes upload on submit.",
+      "privacy_facts": [
+        "Parsed by platform server",
+        "Operator can process connection information",
+        "Visible only to this account",
+        "Not automatically added to shared server routes"
+      ],
+      "candidate_regression": {
+        "status": "targeted_red_to_green_integrated_acceptance_recorded",
+        "affected_version": "Completion-area relocation and shared-record instance candidates, not the original product baseline",
+        "summary": "Native submit association was first restored; simultaneous instances of the same business record then exposed label/submit ownership collisions. Instance-unique React useId associates each form, label and submit while preserving record identity and payload fields."
+      },
+      "ux_ids": [
+        "UX-03",
+        "UX-10",
+        "UX-11",
+        "UX-12"
+      ],
+      "gs_ids": [
+        "GS-07",
+        "GS-08",
+        "GS-12",
+        "GS-17"
+      ],
+      "final_acceptance": {
+        "status": "passed_bounded",
+        "evidence_ids": [
+          "CH-EV-09",
+          "CH-EV-10",
+          "CH-EV-13"
+        ]
+      }
+    },
+    {
+      "id": "CH-03",
+      "finding_status": "observed_repetition_with_expert_interpretation",
+      "evidence_layer": "existing_screenshot_and_source_review",
+      "summary": "New subscription repeated mode restrictions while the required checking action had an ambiguous name; comprehension impact is an expert judgment.",
+      "required_invariants": "Checking does not create or publish; changed inputs invalidate the check; new independent link and unchanged sibling subscriptions are disclosed; a new explicit action authorizes publishing.",
+      "candidate_regression": {
+        "status": "targeted_red_to_green_integrated_acceptance_recorded",
+        "affected_version": "Initial in-place check-to-publish candidate, not the original product baseline",
+        "summary": "Double-click continuation or held Enter could publish without fresh intent after the primary action changed.",
+        "correction_scope": "Distinct button identity, rejection of continuation clicks and current-review focus; targeted double-click and held-Enter cases changed from failure to pass without artificial delay. Final browser acceptance also verified a native continuation at the same screen coordinate does not publish, while later fresh intent publishes exactly once."
+      },
+      "ux_ids": [
+        "UX-01",
+        "UX-04",
+        "UX-07",
+        "UX-10",
+        "UX-11"
+      ],
+      "gs_ids": [
+        "GS-16",
+        "GS-18",
+        "GS-23"
+      ],
+      "final_acceptance": {
+        "status": "passed_bounded",
+        "evidence_ids": [
+          "CH-EV-09",
+          "CH-EV-10",
+          "CH-EV-13"
+        ]
+      }
+    },
+    {
+      "id": "CH-04",
+      "finding_status": "observed_with_limit",
+      "evidence_layer": "existing_screenshot_and_source_review",
+      "summary": "Zero-source collection editor still described merging and retaining nodes; observation was in a confirmation screenshot background, not the collection list empty state.",
+      "required_invariants": "Truthful zero-source text; processing can be prepared before source selection; order, per-source steps, post-merge steps, preview and save remain available.",
+      "ux_ids": [
+        "UX-03",
+        "UX-04",
+        "UX-08"
+      ],
+      "gs_ids": [
+        "GS-10",
+        "GS-16",
+        "GS-17",
+        "GS-23"
+      ],
+      "final_acceptance": {
+        "status": "passed_bounded",
+        "evidence_ids": [
+          "CH-EV-09",
+          "CH-EV-10",
+          "CH-EV-13"
+        ]
+      },
+      "additional_findings": [
+        {
+          "summary": "Collection save hitbox measured 88x38 px before the narrow correction and 88x44 px after at 320/390 widths.",
+          "limitation": "Project touch target, not a universal WCAG AA rule."
+        },
+        {
+          "summary": "Public StepsEditor default empty text was made neutral after the isolated browser run. Existing production callers already explicitly supply text or null.",
+          "limitation": "A later 32-test DOM and typecheck pass does not mean the earlier 8 browser cases were rerun."
+        }
+      ]
+    }
+  ],
+  "final_verification": {
+    "status": "completed_bounded_with_limits",
+    "source_manifest_sha256": "86a2c9ffc3dc19109feb4dbc50a4ae3c7302c620a0c36b78664fdfdb8163284c",
+    "source_manifest_scope": "583 source/config/test files for full Web and static verification; not all workspace/document files",
+    "source_unchanged": true,
+    "runs": [
+      {
+        "id": "CH-EV-09",
+        "layer": "final_integrated_browser",
+        "status": "passed_bounded",
+        "single_complete_invocation": true,
+        "start_utc": "2026-10-22T17:26:24.704Z",
+        "terminal_utc": "2026-10-22T17:30:36Z",
+        "duration_ms": 251324.856,
+        "test_files": 9,
+        "tests_passed": 41,
+        "unexpected": 0,
+        "skipped": 0,
+        "flaky": 0,
+        "production_manifest": {
+          "files": 234,
+          "sha256": "dc35c6f64c8817393abec5af2425cb0474a994da6197186ac840c18b78ee86b4",
+          "before_after_identical": true
+        },
+        "test_manifest": {
+          "files": 21,
+          "sha256": "a9cd4210fa15bfd38b137cf7dfc1354eed8a46cf8d6eb452ecf33cd76cc8b20a",
+          "before_after_identical": true
+        },
+        "summary": "Independent full rerun after fixture corrections; source disclosure, reference identity, distinct publication intent and collection controls verified on the integrated tree.",
+        "scope": "Local synthetic Chromium 153 sandbox tasks, not deployment or all-device evidence.",
+        "coverage_limit": "Final zero-selection collection task had available inventory. No-available-sources was a separate cold diagnostic, not an additional member of this 41 count."
+      },
+      {
+        "id": "CH-EV-10",
+        "layer": "full_Web_and_static",
+        "status": "passed_with_other_gate_limits",
+        "run_start_utc": "2026-10-22T17:30:42Z",
+        "run_end_utc": "2026-10-22T17:36:44Z",
+        "verification_window_utc": [
+          "2026-10-22T17:30:36Z",
+          "2026-10-22T17:36:45Z"
+        ],
+        "test_files": 61,
+        "tests_passed": 643,
+        "exit_code": 0,
+        "unhandled_or_uncaught_errors": 0,
+        "source_manifest_files": 583,
+        "source_manifest_sha256": "86a2c9ffc3dc19109feb4dbc50a4ae3c7302c620a0c36b78664fdfdb8163284c",
+        "source_unchanged": true,
+        "checks": {
+          "TypeScript": "passed",
+          "Vite": "passed",
+          "independent_static_checks": "passed",
+          "full_src_Prettier": "passed"
+        },
+        "previous_eight_format_warnings": "resolved_in_this_round",
+        "limitation": "Tracked-private guard remains blocked by absent Git metadata; not an aggregate all-gates pass."
+      },
+      {
+        "id": "CH-EV-11",
+        "layer": "reused_backend_evidence",
+        "status": "reused_unchanged_inputs_with_limits",
+        "rerun_this_round": false,
+        "unchanged_inputs": 424,
+        "input_manifest_sha256": "cb154e86d3b884acd9c99225acb88cc89b43a9327f5a3165119c3ec04c065222",
+        "prior_source_before_after_identical": true,
+        "ordinary_packages_passed": 21,
+        "uncached_race_packages_passed": 21,
+        "top_level_tests_per_run": 442,
+        "vet": "prior_pass_reused",
+        "source_archive_build": "prior_pass_reused_with_buildvcs_false",
+        "native_or_opt_in_skip_events": 50,
+        "limitation": "Unchanged inputs justify reuse, not a new Go execution. Managed-runtime offline dependencies, skipped native paths and VCS stamping remain unverified."
+      },
+      {
+        "id": "CH-EV-12",
+        "layer": "offline_preview",
+        "status": "passed_bounded",
+        "synced_at_utc": "2026-10-22T17:36:45.711535Z",
+        "completed_utc": "2026-10-22T17:36:52Z",
+        "source_files_synced": 131,
+        "changed_files": 20,
+        "added_files": 1,
+        "source_manifest_sha256": "58c7b5801acb7aecec39c5d425c68dac8f153a3852f646b401a1752eb6cc9965",
+        "build_exit": 0,
+        "containment_passed": 10,
+        "sandbox_smoke_passed": 5,
+        "source_drift": false,
+        "isolation_policy_changed": false,
+        "deployed": false,
+        "limitation": "Synthetic read-only preview does not prove real authentication, backend writes, publication or applied network behavior."
+      }
+    ],
+    "visual_review": {
+      "id": "CH-EV-13",
+      "status": "passed_bounded",
+      "layer": "independent_expert_rendered_content_review",
+      "from_final_browser_record": "CH-EV-09",
+      "reviewed_business_screenshots": 13,
+      "reviewed_views": [
+        "Initial source disclosure/completion at 1280, 390 and 320 px",
+        "Missing reference status and exact occurrence details at desktop and narrow widths",
+        "Full configuration natural-result focus at 1280, 390 and 320 px",
+        "Nodes-only natural-result focus at 320 px",
+        "Zero/one/multiple collection source editor states"
+      ],
+      "summary": "Required object/client/mode/consequence context remains visible, optional technical content remains scrollable, and no repetitive footer explanation is needed.",
+      "limitation": "Selected synthetic business states only, not human comprehension research or all-state accessibility certification."
+    },
+    "human_usability_research": "not_performed",
+    "deployment": "not_performed"
+  },
+  "limitations": [
+    "Different targeted runs, historical failed runs and the final 41-task run are not summed into a synthetic pass rate.",
+    "Full Web, final browser and offline preview are bounded passing evidence, not an aggregate all-gates pass or complete product acceptance.",
+    "Absent Git metadata blocks the tracked-private guard and unmodified aggregate gate.",
+    "Managed-runtime offline dependency gaps and 50 native/opt-in skip events remain outside passing evidence; no deployment or applied traffic is established.",
+    "Previous eight formatting warnings are resolved; existing large-chunk and non-failing component deprecation advisories remain maintenance items.",
+    "Official guidance and project synthesis are distinct; no Google certification, complete WCAG conformance or human-comprehension outcome is claimed.",
+    "Two later collection continuity/discoverability findings remain open outside CH-01–04 acceptance."
+  ],
+  "bounded_verification": [
+    {
+      "id": "CH-EV-01",
+      "finding_ids": [
+        "CH-01"
+      ],
+      "layer": "targeted_DOM",
+      "status": "passed_bounded",
+      "tests_passed": 59,
+      "typecheck": "passed",
+      "summary": "Reference state and identity contracts, including virtualization and paused-read behavior.",
+      "limitation": "Not a complete application offline or integrated browser claim."
+    },
+    {
+      "id": "CH-EV-02",
+      "finding_ids": [
+        "CH-01"
+      ],
+      "layer": "isolated_browser",
+      "status": "passed_bounded",
+      "tests_passed": 1,
+      "viewport_widths_px": [
+        1280,
+        390,
+        320
+      ],
+      "summary": "Readable states and complete identity access in the bounded reference-repair task."
+    },
+    {
+      "id": "CH-EV-03",
+      "finding_ids": [
+        "CH-02",
+        "CH-04"
+      ],
+      "layer": "targeted_DOM",
+      "status": "passed_bounded",
+      "tests_passed": 14,
+      "typecheck": "passed",
+      "summary": "Native per-instance form association, zero/one/multiple sources, ordering, processing layers and preserved input contracts."
+    },
+    {
+      "id": "CH-EV-04",
+      "finding_ids": [
+        "CH-02",
+        "CH-04"
+      ],
+      "layer": "isolated_sandbox_browser",
+      "status": "passed_bounded",
+      "tests_passed": 8,
+      "summary": "Initial disclosure/completion pairing, files and options, short viewport and doubled text, zero/one/multiple collections, preview and save.",
+      "synthetic_failure": "One explicitly synthetic POST 503 supplied the long-error layout state; not an observed real service outage.",
+      "version_limit": "Precedes the later shared Pipeline default-text cleanup."
+    },
+    {
+      "id": "CH-EV-05",
+      "finding_ids": [
+        "CH-04"
+      ],
+      "layer": "targeted_DOM",
+      "status": "passed_bounded",
+      "tests_passed": 32,
+      "typecheck": "passed",
+      "summary": "Public neutral StepsEditor empty state and workspace regressions.",
+      "browser_retested": false,
+      "limitation": "Later cleanup was not a rerun of CH-EV-04."
+    },
+    {
+      "id": "CH-EV-06",
+      "finding_ids": [
+        "CH-03"
+      ],
+      "layer": "targeted_DOM",
+      "status": "passed_bounded",
+      "tests_passed": 32,
+      "typecheck": "passed",
+      "candidate_gesture_regressions_red_to_green": 2,
+      "baseline_contract_cases_red": 8,
+      "summary": "Check/publish stages, exact review identity, separate explicit intent and recovery contracts.",
+      "limitation": "Eight new contract cases failing against baseline are not eight independent pre-existing defects."
+    },
+    {
+      "id": "CH-EV-07",
+      "finding_ids": [
+        "CH-03"
+      ],
+      "layer": "integrated_expert_visual_review",
+      "status": "passed_bounded",
+      "reviewed_views": [
+        {
+          "mode": "nodes-only",
+          "viewport_width_px": 320
+        },
+        {
+          "mode": "full-configuration",
+          "viewport_width_px": 1280
+        }
+      ],
+      "state": "Natural focus after checking completes",
+      "summary": "Object, client, mode and independent-link consequence remain visible in the reviewed states; no additional repetitive footer copy added.",
+      "limitation": "Not all viewports/states or human-comprehension evidence.",
+      "later_final_visual_record": "CH-EV-13"
+    },
+    {
+      "id": "CH-EV-08",
+      "finding_ids": [
+        "CH-01",
+        "CH-02",
+        "CH-03",
+        "CH-04"
+      ],
+      "layer": "integrated_browser",
+      "status": "historical_failed_closed_by_independent_full_rerun",
+      "tests_total": 41,
+      "tests_passed": 39,
+      "tests_failed": 2,
+      "failure_classification": [
+        "Test selector matched a hidden dropdown",
+        "Test assumed obsolete pointer coordinates"
+      ],
+      "production_change_for_these_failures": false,
+      "summary": "The original 39/41 run remains failed. Test assumptions were corrected without changing production; a later independent invocation freshly reran all 41. Counts are not concatenated.",
+      "closed_by": "CH-EV-09"
+    }
+  ],
+  "remaining_findings": [
+    {
+      "id": "NEXT-01",
+      "status": "open_not_part_of_CH01_to_CH04_acceptance",
+      "evidence_layer": "read_only_source_and_existing_screenshot_expert_review",
+      "summary": "Collection editor lacks in-task source add/import. Saving or explicitly discarding, visiting sources and reopening remains possible; this is a continuity gap, not a dead end.",
+      "next_scope": "Preserve the same collection draft and explicit save boundary while adding a source in context.",
+      "limitation": "The reviewed empty editor screenshot shows zero selected sources, not a proven zero-inventory account; the no-available-source branch is source-confirmed."
+    },
+    {
+      "id": "NEXT-02",
+      "status": "open_not_part_of_CH01_to_CH04_acceptance",
+      "evidence_layer": "read_only_source_and_existing_screenshot_expert_review",
+      "summary": "Collapsed source rows show name/order but hide source-processing purpose and configured-step state until expanded.",
+      "next_scope": "Make purpose and configured-step state discoverable while preserving source identity, order, keyboard behavior and both processing layers."
+    }
+  ],
+  "next_round_scope": "Only NEXT-01 and NEXT-02; no global terminology sweep. Findings are expert review, not human user-study results."
+}

@@ -1,0 +1,17 @@
+it("independent: keeps a definite stale-review rejection distinct from a failed lookup", async () => {
+  const original = fetch;
+  vi.stubGlobal("fetch", vi.fn(async (url, init) => {
+    if (String(url) === "/api/me/outputs") {
+      if (init?.method === "POST") return json({detail:"Review is stale; preview again"},409);
+      throw new TypeError("Lookup unavailable");
+    }
+    return original(url,init);
+  }));
+  mount(); await ready();
+  await userEvent.click(screen.getByRole("button",{name:"预览此输出"}));
+  await screen.findByText("reviewed-config");
+  await userEvent.click(screen.getByRole("button",{name:"检查并发布"}));
+  await screen.findByRole("alert");
+  expect(screen.getByRole("alert").textContent).toContain("Review is stale");
+  expect((screen.getByRole("button",{name:"检查并发布"}) as HTMLButtonElement).disabled).toBe(true);
+});

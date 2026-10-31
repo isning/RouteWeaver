@@ -1,0 +1,396 @@
+{
+  "schema_version": 1,
+  "recorded_date": "2026-10-22",
+  "status": "completed_bounded_with_limits",
+  "purpose": "Portable collection-task design and bounded evidence ledger; no raw diagnostics or complete product/conformance claim.",
+  "review_scope": "Collection draft continuity and collapsed source-stage discoverability only; source and rendered-state heuristic review, not human usability research.",
+  "guideline_policy": {
+    "registry": "docs/design/UX-GUIDELINE-SOURCES.md",
+    "new_external_UX_source_visits": false,
+    "access_dates_retained": {
+      "2026-10-21": [
+        "GS-05",
+        "GS-07",
+        "GS-08",
+        "GS-09",
+        "GS-10",
+        "GS-11",
+        "GS-12"
+      ],
+      "2026-10-22": [
+        "GS-16",
+        "GS-21"
+      ]
+    },
+    "synthesis_limit": "Draft ownership, independent persistence, identity hints and the verification matrix are project decisions, not verbatim source requirements."
+  },
+  "records": [
+    {
+      "id": "CT-01",
+      "predecessor": "CONTENT-HIERARCHY-2026-10-22:NEXT-01",
+      "finding_status": "observed_with_limit",
+      "evidence_layer": "existing_screenshot_and_source_heuristic_review",
+      "priority": "P1_project_judgment",
+      "summary": "Collection authoring had no contextual source acquisition entry. Saving or explicitly discarding, visiting Sources and reopening remained possible; a continuity gap, not a dead end.",
+      "observation_limit": "The reviewed empty editor screenshot had zero selected sources, not proven zero inventory; the no-available-source branch was source-confirmed.",
+      "required_invariants": [
+        "Return to the owning unsaved collection with its name, ordered source references, per-source steps and post-merge steps preserved.",
+        "One visible task; actual dirty and pending state govern cancellation and navigation.",
+        "HTTP save failure retains the Source subtask inputs and error for retry or cancellation while preserving the hidden parent collection draft; it does not automatically return to the collection or claim persistence.",
+        "A successfully saved usable Source is independently persisted and appended only to the collection draft.",
+        "No implicit Collection or Profile save, source-candidate acceptance, subscription publication or update.",
+        "Discarding the collection does not undo an independently saved Source.",
+        "A successful save response containing a candidate, diagnostic, failed-status or last-error returns to the collection with an honest saved-source notice and actual recovery; the source remains unselected. This is distinct from HTTP save failure.",
+        "Diagnostic recovery navigates to the existing Sources page through the leave guard; canceling navigation retains the collection draft. This is not full inline recovery.",
+        "Return focus belongs to the originating source trigger after animation; late results cannot revive a replaced task."
+      ],
+      "ux_ids": [
+        "UX-01",
+        "UX-02",
+        "UX-07",
+        "UX-08",
+        "UX-09",
+        "UX-10",
+        "UX-11"
+      ],
+      "gs_ids": [
+        "GS-05",
+        "GS-07",
+        "GS-08",
+        "GS-09",
+        "GS-10",
+        "GS-11"
+      ],
+      "final_acceptance": {
+        "status": "passed_bounded",
+        "evidence_ids": [
+          "CT-EV-04",
+          "CT-EV-05",
+          "CT-EV-06",
+          "CT-EV-08"
+        ]
+      }
+    },
+    {
+      "id": "CT-02",
+      "predecessor": "CONTENT-HIERARCHY-2026-10-22:NEXT-02",
+      "finding_status": "observed",
+      "evidence_layer": "existing_screenshot_and_source_heuristic_review",
+      "priority": "P2_project_judgment",
+      "summary": "Collapsed source rows showed identity and order but concealed source-processing purpose and configured-step state until expanded.",
+      "required_invariants": [
+        "Collapsed rows identify source processing and show a nonzero configured-step count.",
+        "The configured count includes disabled steps and is not an execution or applied-state claim.",
+        "Source identity, order, keyboard disclosure and reorder controls remain usable.",
+        "Expanding or collapsing does not change values; reordering keeps source-specific steps with the same source.",
+        "Post-merge processing remains separate and available, including prepared zero-source and one-source recipes."
+      ],
+      "ux_ids": [
+        "UX-03",
+        "UX-04",
+        "UX-10",
+        "UX-11",
+        "UX-12"
+      ],
+      "gs_ids": [
+        "GS-07",
+        "GS-08",
+        "GS-12",
+        "GS-16",
+        "GS-21"
+      ],
+      "final_acceptance": {
+        "status": "passed_bounded",
+        "evidence_ids": [
+          "CT-EV-04",
+          "CT-EV-05",
+          "CT-EV-06",
+          "CT-EV-08"
+        ]
+      }
+    }
+  ],
+  "candidate_regressions": [
+    {
+      "id": "CT-REG-01",
+      "affected_version": "Initial contextual-source candidate, not the original product baseline",
+      "summary": "A successful source save could return to a draft without its friendly source name while authoritative list refetch was pending or failed.",
+      "status": "targeted_red_to_green_and_final_browser_passed_bounded",
+      "correction": "Current-draft-only stable ID and name hints preserve known identity without copying connection content, changing query status or claiming freshness. The authoritative list name takes precedence after recovery; removal and a new collection opening retire the hint.",
+      "verification_scope": "Focused public-DOM regression covers pending, failed and renamed authoritative refetch, removal and new-opening isolation. Final real-backend POST with synthetic GET failure proves immediate friendly identity; terminal list-error presentation remains separately DOM-covered."
+    },
+    {
+      "id": "CT-REG-02",
+      "affected_version": "Initial contextual-source diagnostic UI candidate, not the original product baseline",
+      "summary": "At 320 px the diagnostic text was compressed by a side-by-side recovery action, despite functional browser passes.",
+      "status": "corrected_final_browser_and_selected_pixels_passed_bounded",
+      "correction": "Scoped narrow-layout stacking of diagnostic content and action, without adding explanatory copy.",
+      "verification_scope": "Final integrated 320 px candidate and diagnostic screenshots and browser geometry confirm stacked action and readable message; not all-state or all-device acceptance."
+    }
+  ],
+  "verification_history": [
+    {
+      "id": "CT-EV-01",
+      "layer": "earlier_candidate_targeted_DOM_and_browser",
+      "status": "historical_superseded",
+      "summary": "Earlier candidate passed its focused and browser tasks but preceded the identity-refetch and diagnostic-width corrections.",
+      "limitation": "Not final acceptance; its counts are not added to subsequent runs."
+    },
+    {
+      "id": "CT-EV-02",
+      "layer": "browser_fixture_diagnosis",
+      "status": "test_assumption_corrected",
+      "summary": "An early fixture expectation omitted the backend-normalized override object. Correcting the expectation does not establish a product defect.",
+      "product_defect": false
+    },
+    {
+      "id": "CT-EV-03",
+      "layer": "first_integrated_browser",
+      "status": "historical_failed_followed_by_independent_complete_pass",
+      "tests_total": 48,
+      "tests_passed": 45,
+      "tests_failed": 3,
+      "source_changed_for_diagnosis": false,
+      "failure_classification": [
+        {
+          "summary": "Reopening a saved collection timed out while the helper awaited animation completion across the whole subtree.",
+          "status": "not_reproduced_exact_cause_unproven"
+        },
+        {
+          "summary": "A later empty-state assertion encountered a collection left by a prior failed task.",
+          "status": "fixture_contamination_observed"
+        },
+        {
+          "summary": "A later source-list task could not find the newly added source.",
+          "status": "cause_not_established"
+        }
+      ],
+      "limitation": "Original failed invocation preserved. Fresh full rerun passes without production changes; the original timeout direct cause and later missing-source failure cause remain unproven, not rewritten as a proven spinner fix. Diagnostic/probe counts are not pooled.",
+      "fixture_correction": {
+        "production_changed": false,
+        "animation_wait": "Added actual Drawer motion ancestor while preserving running-subtree checks and the original five-second failure boundary.",
+        "isolation": "Exact-object cleanup after each task; a deliberate failure followed by an independent check validated cleanup.",
+        "failure_probe_product_pass_count": 0,
+        "limitation": "Observed helper coverage and cleanup gaps are not proof of the initial timeout cause or the later missing-source failure cause."
+      },
+      "followed_by": "CT-EV-06"
+    }
+  ],
+  "final_verification": {
+    "status": "completed_bounded_with_limits",
+    "source_manifest_sha256": "5eeb812911b570f1433d02bc27fe284aac264f7bbc6a468b0bd5ddc72bfc41b3",
+    "source_manifest_scope": "585 source/config/test files after the browser-only fixture correction; original full Web input manifests and the unchanged-input reuse bridge remain separately recorded.",
+    "runs": [
+      {
+        "id": "CT-EV-04",
+        "layer": "full_Web_and_independent_static",
+        "status": "passed_with_other_gate_limits",
+        "single_complete_invocation": true,
+        "test_files": 62,
+        "tests_passed": 656,
+        "exit_code": 0,
+        "duration_seconds": 384.87,
+        "checks": {
+          "TypeScript": "passed",
+          "Vite": "passed",
+          "full_src_Prettier": "passed",
+          "ticket_DAG": "passed",
+          "Go_format": "passed",
+          "architecture_checks": "passed",
+          "import_policy": "passed",
+          "tracked_private_guard": "blocked_absent_Git_metadata",
+          "aggregate_all_gates": "not_passed",
+          "Python_tests_passed": 9
+        },
+        "input_manifests": {
+          "source": {
+            "files": 585,
+            "sha256": "2965956044acfe48955b278f62a9844715cba65837eb95925ec8267cf39e5059",
+            "before_after_identical": true,
+            "scope": "Source, configuration and test inputs for this invocation; excludes unrelated documentation and generated artifacts."
+          },
+          "extended": {
+            "files": 614,
+            "sha256": "729a16b6b0f716628ef4d6650a1babcbc535650a9088ea8d5dec9f2dab197dcd",
+            "before_after_identical": true,
+            "scope": "Standard scope plus direct ticket-check documentary inputs, repository instructions and relevant root formatting/configuration inputs."
+          }
+        },
+        "backend_evidence_reused": {
+          "inputs": 424,
+          "byte_identical": true,
+          "rerun_this_round": false,
+          "manifest_sha256": "cb154e86d3b884acd9c99225acb88cc89b43a9327f5a3165119c3ec04c065222",
+          "ordinary_packages_passed": 21,
+          "uncached_race_packages_passed": 21,
+          "top_level_tests_per_run": 442,
+          "native_or_opt_in_skip_events": 50,
+          "vet": "prior_pass_reused",
+          "source_archive_build": "prior_pass_reused_with_buildvcs_false"
+        },
+        "limitation": "Not an aggregate all-gates pass. CT-EV-05 separately supports reuse after a browser-spec-only correction; the original 585/614-file manifests remain historical.",
+        "run_start_utc": "2026-10-22T18:21:43Z",
+        "run_end_utc": "2026-10-22T18:28:08Z",
+        "unhandled_or_uncaught_errors": 0
+      },
+      {
+        "id": "CT-EV-05",
+        "layer": "nonbrowser_scope_reuse_after_browser_fixture_change",
+        "status": "verified_unchanged_executed_inputs",
+        "prior_evidence_id": "CT-EV-04",
+        "nonbrowser_suites_rerun": false,
+        "changed_file": "web/tests/collection-task.ui.spec.ts",
+        "prior_sha256": "b5b809acf6ecb65d9c204a62c085f84b0a02f8e759a86205f18b729521f47456",
+        "current_sha256": "87b88b2c52721796dc5e5780af65a604a45a93b2b807c695839c3411696d832f",
+        "other_source_files_identical": 584,
+        "other_extended_inputs_identical": 613,
+        "backend_inputs_identical": 424,
+        "executed_input_scope": {
+          "Vitest_selected_entries": 62,
+          "Vitest_local_closure_files": 132,
+          "Vite_local_closure_files": 69,
+          "changed_spec_in_those_closures": false,
+          "TypeScript_src_and_vite_config_unchanged": true,
+          "Prettier_src_unchanged": true,
+          "static_script_Go_and_ticket_inputs_unchanged": true,
+          "dynamic_bulk_file_loading_found_in_local_closures": false
+        },
+        "current_manifests": {
+          "source": {
+            "files": 585,
+            "sha256": "5eeb812911b570f1433d02bc27fe284aac264f7bbc6a468b0bd5ddc72bfc41b3",
+            "bridge_before_after_identical": true
+          },
+          "extended": {
+            "files": 614,
+            "sha256": "02e406db79c5b082a44122c2f7abcae9bdd14b103cffb7194c9346ebb85e151a",
+            "bridge_before_after_identical": true
+          }
+        },
+        "limitation": "The original full-run manifests remain historical. This bounded input comparison supports nonbrowser evidence reuse, not browser acceptance or a general JavaScript effect proof."
+      },
+      {
+        "id": "CT-EV-06",
+        "layer": "final_integrated_browser",
+        "status": "passed_bounded",
+        "single_complete_invocation": true,
+        "start_utc": "2026-10-22T18:38:12.260Z",
+        "terminal_utc": "2026-10-22T18:43:32Z",
+        "duration_ms": 319900.187,
+        "test_files": 10,
+        "tests_passed": 48,
+        "unexpected": 0,
+        "skipped": 0,
+        "flaky": 0,
+        "workers": 1,
+        "retries": 0,
+        "production_manifest": {
+          "files": 234,
+          "sha256": "d1b71bc71fa40b6d75d2415b1b4e6ca2c2c2dd5ffaad1b334cd4435aea42d6d1",
+          "before_after_identical": true
+        },
+        "test_helper_manifest": {
+          "files": 22,
+          "sha256": "182c1075e4577e64efab62a5292f8878e6507c7d390609ef68a40b786ca12d55",
+          "before_after_identical": true
+        },
+        "frozen_production": {
+          "web/src/Sources.tsx": "6d8adce58a511f87e18a9f04998a568222a67974294ba76f9f029a3c3a7f0f6f",
+          "web/src/styles.css": "85f5814d299ff0357fc4ce93bdc246f51ab04d13e1a4ed4dd2ae1328bd5a7841"
+        },
+        "summary": "Independent complete run of 48 tasks, not prior passes plus diagnostic subsets. Creation returns to the owning unsaved collection, independent Source persistence and explicit Collection save/reopen preserve order and both stages; normal focus returns after motion.",
+        "synthetic_fault_scope": "Candidate/diagnostic branches alter response state after real Source persistence, not actual importer-generated candidates. Save 503 and post-save list-GET failure are explicitly synthetic HTTP faults.",
+        "limitation": "Selected local Chromium tasks and viewports, not external clients, production or human understanding. Browser immediate-name evidence does not newly certify terminal list-error recovery."
+      },
+      {
+        "id": "CT-EV-07",
+        "layer": "offline_preview",
+        "status": "passed_bounded",
+        "start_utc": "2026-10-22T18:44:42Z",
+        "terminal_utc": "2026-10-22T18:44:49Z",
+        "canonical_source_files_synced": 132,
+        "preview_source_files": 134,
+        "changed_files": 2,
+        "added_files": 1,
+        "removed_files": 0,
+        "source_sync_manifest_sha256": "1ce5ecd43b587cda11f970b2dff4a6bd3a539280972a716a7596ea19431961c5",
+        "canonical_before_after_manifest_sha256": "a98e1649d9a31ba3a086c6a7e0b234e7537b36722fbe46e6f613897df40a1761",
+        "canonical_before_after_identical": true,
+        "preserved_isolation_config_harness_files": 17,
+        "preserved_files_unchanged": true,
+        "build_exit": 0,
+        "containment_passed": 10,
+        "sandbox_smoke_passed": 5,
+        "source_drift": false,
+        "isolation_policy_changed": false,
+        "deployed": false,
+        "limitation": "Local synthetic read-only containment and source synchronization, not real authentication, successful backend save, publication, deployment or traffic enforcement."
+      }
+    ],
+    "visual_review": {
+      "id": "CT-EV-08",
+      "status": "passed_bounded",
+      "layer": "independent_heuristic_actual_pixel_review",
+      "from_final_browser_record": "CT-EV-06",
+      "inventoried_new_task_screenshots": 15,
+      "reviewed_views": [
+        "Rich returned collection draft at 1280, 390 and 320 px",
+        "Candidate and diagnostic warning at 320 px",
+        "Initial Source at 320 px",
+        "Failed-refetch returned collection at 1280 px",
+        "Persisted reopened summary at 320 px"
+      ],
+      "summary": "Source identity, ordered stages, configured counts and natural keyboard focus remain readable. Narrow recovery actions stack under the message; 320 px uses ordinary vertical scrolling without observed overlap or horizontal overflow.",
+      "limitation": "Selected actual synthetic business states only; inventory is not an all-screenshots-reviewed claim, and heuristic review is not human usability research."
+    },
+    "overall_seven_dimension_readiness": {
+      "status": "bounded_heuristic_judgment_after_final_checks",
+      "reference": "docs/design/PRODUCT-MATURITY-REVIEW-2026-10-22.md",
+      "judgment": "No still-confirmed high-impact UX/model gap requiring another autonomous design round was established. Final bounded checks are complete; primary flows are reasonably mature for holistic user acceptance, with stated evidence limits and residual risks retained.",
+      "evidence_layer": "independent_heuristic_review_of_existing_task_evidence_current_source_and_representative_actual_pixels",
+      "dimensions": [
+        "task_completeness",
+        "objects_and_scope",
+        "truthful_state",
+        "recovery_and_control",
+        "cross_device_operation",
+        "consistency_and_accessibility",
+        "runtime_and_waiting"
+      ],
+      "historical_references": [
+        "docs/verification/PRODUCT-QUALITY-2026-10-22.md",
+        "docs/verification/PRODUCT-COMPLETION-2026-10-22.md",
+        "docs/design/RECOVERY-UX-EVIDENCE-2026-10-22.md",
+        "docs/design/CONTENT-HIERARCHY-REVIEW-2026-10-22.md"
+      ],
+      "retained_risks": [
+        "Abnormal import recovery remains guarded navigation to Sources, not inline acceptance.",
+        "In some unowned-history scenarios, canceling navigation may require a new current entry that truncates Forward history; this tradeoff is disclosed.",
+        "A historical logout did not reach its login-title assertion in time; its cause remains unproven and is not closed by later passing runs."
+      ],
+      "limitation": "Representative heuristic review, not human usability acceptance, complete accessibility, all-device or native acceptance. Historical and current versions remain separately identified; test counts do not by themselves establish maturity.",
+      "final_gate_completion_utc": "2026-10-22T18:44:49Z",
+      "final_evidence_ids": [
+        "CT-EV-04",
+        "CT-EV-05",
+        "CT-EV-06",
+        "CT-EV-07",
+        "CT-EV-08"
+      ]
+    },
+    "human_usability_research": "not_performed",
+    "deployment": "not_performed",
+    "production_unchanged_across_final_checks": true,
+    "all_input_manifests_identical_across_runs": false
+  },
+  "limitations": [
+    "Historical content-round, previous preview and superseded candidate passes do not sign off this round or its final combination.",
+    "A saved Source with unresolved diagnostics is not automatically accepted, selected or usable; recovery still requires guarded navigation to the existing Sources page.",
+    "Known source identity can be retained while list freshness remains unknown; this is not permission to synthesize current health or loading success.",
+    "Focused DOM, actual backend tasks, selected pixel review and human comprehension research establish different conclusions.",
+    "No Google certification, complete WCAG conformance, complete native-runtime acceptance, production deployment or applied traffic is claimed.",
+    "Completing CT-01/02 does not by itself establish readiness across all seven product-maturity dimensions.",
+    "Absent Git metadata still blocks the tracked-private guard and unmodified aggregate gate; managed-runtime offline dependencies and native/opt-in skips remain outside passing evidence.",
+    "Existing large-chunk, component deprecation and JSDOM capability advisories are not newly resolved by this round."
+  ]
+}

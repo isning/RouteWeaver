@@ -1,0 +1,41 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> routeweaver-web@1.0.0 test:api
+> playwright test --project=api
+
+[WebServer] 2026/10/20 04:10:52 RouteWeaver listening at http://127.0.0.1:8080
+[WebServer] 2026/10/20 04:10:52 Ephemeral local demo: username routeweaver; password local-demo-password. State is removed on exit.
+[WebServer] (node:301) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+[WebServer] npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+[WebServer] (node:314) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 17 tests using 1 worker
+
+(node:349) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 [api] › tests/access-policy.api.spec.ts:2:1 › policy group preview applies exact limits, rejects stale reviews and prevents ambiguous group stacking (239ms)
+  ✓   2 [api] › tests/access-policy.api.spec.ts:111:1 › ordinary users cannot read or mutate administrative policy, subscription domains or diagnostic paths (194ms)
+  ✓   3 [api] › tests/fleet.api.spec.ts:3:1 › fleet preview binds the exact configuration and keeps later stages blocked until actual confirmation (186ms)
+  ✓   4 [api] › tests/native-diagnostics.api.spec.ts:4:1 › native client edits survive private draft editing and cannot replace an already published feed when invalid (295ms)
+  ✓   5 [api] › tests/native-diagnostics.api.spec.ts:125:1 › bounded diagnostic intent queues and cancels without claiming an unexecuted network test succeeded (139ms)
+  ✓   6 [api] › tests/observability.api.spec.ts:2:1 › real provider settings and statement preserve unknown host observations and reject stale configuration (127ms)
+  ✓   7 [api] › tests/public-routes-notifications.api.spec.ts:3:1 › real public route provisions a private principal but never claims an unregistered core is applied (136ms)
+  ✓   8 [api] › tests/public-routes-notifications.api.spec.ts:122:1 › announcement editing preserves read receipt, disabling removes it, and in-app test reports actual availability (136ms)
+  ✓   9 [api] › tests/public-routes-notifications.api.spec.ts:209:1 › admin infrastructure summaries hide secrets and explicit edit reveal preserves them (120ms)
+  ✓  10 [api] › tests/rule-files.api.spec.ts:4:1 › owned rule files publish a frozen ZIP bundle while a bare config feed is blocked (131ms)
+  ✓  11 [api] › tests/subscription-origin.api.spec.ts:2:1 › subscription origin saves only a draft, rejects invalid and stale writes, and explicitly restores the default without a network probe (101ms)
+  ✓  12 [api] › tests/templates-backup.api.spec.ts:2:1 › template follow updates preserve local steps and require a current review digest (120ms)
+  ✓  13 [api] › tests/templates-backup.api.spec.ts:133:1 › encrypted backup downloads as a file and preview authenticates before offering restore (2.2s)
+  ✓  14 [api] › tests/workspace.api.spec.ts:2:1 › private source → ordered collection → profile → published feed → revocation (114ms)
+  ✓  15 [api] › tests/workspace.api.spec.ts:146:1 › rejected profile publication leaves its existing feed retrievable (91ms)
+  ✓  16 [api] › tests/workspace.api.spec.ts:212:1 › managed inventory compiles a real multi-instance server path without pretending it was applied (121ms)
+  ✓  17 [api] › tests/workspace.api.spec.ts:325:1 › explicit reveal editing preserves a synthetic credential across source and profile saves (111ms)
+
+  17 passed (7.2s)
+npm notice
+npm notice New major version of npm available! 11.9.0 -> 12.2.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
+npm notice To update run: npm install -g npm@12.2.0
+npm notice

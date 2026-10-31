@@ -1,0 +1,14 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> routeweaver-web@1.0.0 test
+> vitest run src/basic-routing.dom.test.tsx -t independent: preserves GET-only --maxWorkers=1
+
+
+ RUN  v5.0.5 /tmp/routeweaver-output-create-final-review/web
+
+
+ Test Files  1 passed (1)
+      Tests  1 passed | 22 skipped (23)
+   Start at  05:26:48
+   Duration  2.90s (import 51%, tests 29%, environment 18%, transform 3%)
+

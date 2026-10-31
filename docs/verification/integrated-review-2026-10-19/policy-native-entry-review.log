@@ -1,0 +1,5 @@
+=== RUN   TestNativePublishedManagedPrincipalEndToEnd
+    published_routes_test.go:194: real CP/native: one IP, two independent TCP/mux streams; extra TCP and mux streams denied; existing streams renewed at cap; final close released slots
+--- PASS: TestNativePublishedManagedPrincipalEndToEnd (20.52s)
+PASS
+ok  	routeweaver/internal/httpapi	21.579s

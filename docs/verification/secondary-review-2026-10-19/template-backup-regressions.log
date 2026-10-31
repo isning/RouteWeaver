@@ -1,0 +1,15 @@
+=== RUN   TestSecondaryPresetDigestRejectsChangedSource
+    secondary_review_test.go:24: artifact host changed; same digest=true
+    secondary_review_test.go:26: stale source preview accepted: status=200; digestEqual=true
+--- FAIL: TestSecondaryPresetDigestRejectsChangedSource (0.07s)
+FAIL
+FAIL	routeweaver/internal/httpapi	0.079s
+=== RUN   TestSecondaryBackupRejectsMissingLiveFeedIndex
+    secondary_review_test.go:15: snapshot with active output but missing token index was restored
+--- FAIL: TestSecondaryBackupRejectsMissingLiveFeedIndex (0.00s)
+=== RUN   TestSecondaryBackupRejectsMissingGenerationCounter
+    secondary_review_test.go:26: missing generation fence accepted; next generation=1, err=<nil> (was 3)
+--- FAIL: TestSecondaryBackupRejectsMissingGenerationCounter (0.00s)
+FAIL
+FAIL	routeweaver/internal/store	0.012s
+FAIL

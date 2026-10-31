@@ -1,0 +1,13 @@
+{
+  "status": "deployed",
+  "completed_utc": "2026-10-29T18:13:11.867554Z",
+  "project_id": "appgprj_6ae34b315790819181808e9e2afe0342",
+  "commit_sha": "75986f2d3382834aa5555db2e88227dca66c53d0",
+  "deployment_id": "appgdep_6ae38cac2130819195a78e13ba471224",
+  "version": "appgprj_6ae34b315790819181808e9e2afe0342~appgver_36f9857706b08191aef7259842fb08ac",
+  "url": "https://routeweaver-wip46-test.garden-lake-3493.chatgpt.site",
+  "audience": "existing owner-private Site",
+  "build": "passed",
+  "demo_containment_tests": 11,
+  "scope": "Synthetic sample data and read-only demonstration, not canonical live backend deployment. No real node or credential changes."
+}

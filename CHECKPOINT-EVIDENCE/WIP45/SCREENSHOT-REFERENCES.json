@@ -1,0 +1,39 @@
+{
+  "screenshotBytesIncluded": false,
+  "screenshotsSavedSeparately": true,
+  "receiptSha256": "65d91a2e4cf5f8c342d424f67004eb326025527df12b7f9ee7b9b5eaad4115d9",
+  "evidenceType": "Actual final integrated RouteWeaver WIP45 frontend screenshots with controlled API fixtures; not real backend/live service.",
+  "images": [
+    {
+      "file_name": "RouteWeaver-WIP45-移动端消息已读未读.png",
+      "library_file_id": "libfile_8b25a865ab5081919c4ccf459f0a82f3",
+      "file_id": "file_000000002f4481fdab1214934d506e7a",
+      "current_version_number": 0,
+      "bytes": 33139,
+      "sha256": "020b75273f15575e3eaf2885968bda861998367a480d2e680afd5a540a4cb661",
+      "byte_identical": true,
+      "identity_verified": true
+    },
+    {
+      "file_name": "RouteWeaver-WIP45-未保存编辑保护确认.png",
+      "library_file_id": "libfile_42229cbf11548191be1a880b0e423aed",
+      "file_id": "file_00000000883481f597b8272f478c03bd",
+      "current_version_number": 0,
+      "bytes": 90607,
+      "sha256": "ae1a350ccbd7550df285f440d2bdd1ef4dfab671a98284fd085d592de913aa81",
+      "byte_identical": true,
+      "identity_verified": true
+    },
+    {
+      "file_name": "RouteWeaver-WIP45-移动端倍率规则清晰可读.png",
+      "library_file_id": "libfile_5ff15cd3947c8191a4f8ad01d6903ff3",
+      "file_id": "file_00000000c58081f4a71ea4714c0a1b25",
+      "current_version_number": 0,
+      "bytes": 47525,
+      "sha256": "dff6107accfa6ad02bf29d1418ded77360435cf0e6f3358bafd1b846740d54b3",
+      "byte_identical": true,
+      "identity_verified": true
+    }
+  ],
+  "oldScreenshotsAndPreviewUnchanged": true
+}

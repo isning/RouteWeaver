@@ -1,0 +1,16 @@
+=== RUN   TestAdmissionClosedHistoryScalingCharacterization
+=== RUN   TestAdmissionClosedHistoryScalingCharacterization/0
+    admission_lifecycle_scaling_test.go:93: closed lease+budget pairs=0 mode=renewal median=528.765µs max=583.858µs
+    admission_lifecycle_scaling_test.go:93: closed lease+budget pairs=0 mode=new-stream median=446.932µs max=602.507µs
+=== RUN   TestAdmissionClosedHistoryScalingCharacterization/1000
+    admission_lifecycle_scaling_test.go:93: closed lease+budget pairs=1000 mode=renewal median=11.612721ms max=13.925791ms
+    admission_lifecycle_scaling_test.go:93: closed lease+budget pairs=1000 mode=new-stream median=11.812361ms max=12.350952ms
+=== RUN   TestAdmissionClosedHistoryScalingCharacterization/10000
+    admission_lifecycle_scaling_test.go:93: closed lease+budget pairs=10000 mode=renewal median=131.975787ms max=134.24728ms
+    admission_lifecycle_scaling_test.go:93: closed lease+budget pairs=10000 mode=new-stream median=135.745113ms max=147.099695ms
+--- PASS: TestAdmissionClosedHistoryScalingCharacterization (2.40s)
+    --- PASS: TestAdmissionClosedHistoryScalingCharacterization/0 (0.01s)
+    --- PASS: TestAdmissionClosedHistoryScalingCharacterization/1000 (0.21s)
+    --- PASS: TestAdmissionClosedHistoryScalingCharacterization/10000 (2.18s)
+PASS
+ok  	routeweaver/internal/store	2.408s

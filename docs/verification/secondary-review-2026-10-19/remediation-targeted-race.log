@@ -1,0 +1,4 @@
+ok  	routeweaver/internal/notifications	1.371s
+ok  	routeweaver/internal/resources	1.028s
+ok  	routeweaver/internal/httpapi	34.893s
+ok  	routeweaver/internal/store	5.686s

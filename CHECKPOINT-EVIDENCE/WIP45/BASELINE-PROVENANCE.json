@@ -1,0 +1,35 @@
+{
+  "baselineCheckpoint": "WIP44",
+  "source": {
+    "library_file_id": "libfile_4adfb4c9b0b88191b0cf13ba49328a76",
+    "file_id": "file_000000002ee481f6b62916ac1253a58a",
+    "file_name": "RouteWeaver-unified-ui-source.tar.gz",
+    "current_version_number": 53,
+    "sha256": "eead9e256ddd012b595bb0b90dc58d1801dcdeccaacea3b2700200a12e619be8",
+    "size_bytes": 2879180,
+    "archive_members": 1219
+  },
+  "methods": {
+    "library_file_id": "libfile_cd417f8f407881918796e63afdb5f300",
+    "file_id": "file_00000000b40c81f68bfa94d469d397f9",
+    "file_name": "RouteWeaver-UX-methodology.zip",
+    "current_version_number": 49,
+    "sha256": "9a33c75ebb3eb5007e862bbe22f4b0e52e7c896256f692816b0100c0c07e9235",
+    "size_bytes": 981068,
+    "archive_members": 144
+  },
+  "exactPriorCurrentPointerSha256": "fc85b9970470a85f47e5aacdd21fd1b11cd960f2ce8c60749e36a43f1273ec68",
+  "exactPriorCurrentPointerBytesPreserved": true,
+  "priorSourceStatusSha256": "a9a7dc119dff985ced8ad143a9a11a0c9c1114e92e0afccee8ac892c49023fa5",
+  "priorMethodsStatusSha256": "158dc6cab4d9ef2f75e7d27d5fcb4b416e0d1e3589b7a87b1a2432875ef78866",
+  "olderLineageCaveat": "WIP44 reconstructed earlier WIP43 lineage from verified Library versions and archive hashes. Original WIP43 pointer bytes were not recovered; no byte identity to unavailable older pointers is claimed.",
+  "olderVerifiedLineageReferences": {
+    "receipt_sha256": "48d3901e1c57fbe423eb489fd5e14181741943fb55139399a3b676df0c7e03be",
+    "current_pointer_sha256": "0d2a08be057d2759a6feebe12b3918c00a780fe7ffd864d3c280728ef96866df",
+    "basis": "previous verified records supplied by project continuation; corresponding original bytes not established in recovered local filesystem",
+    "reconstruction_rule": "If a history/current pointer is reconstructed later, label it reconstructed from verified Library versions and archive hashes; do not assert byte identity to these prior external records."
+  },
+  "archivePreservation": "All WIP42/WIP43/WIP44 evidence retained exactly; original member order, TarInfo/PAX and ZipInfo/untouched compressed records retained. No deletions.",
+  "previewUnchanged": true,
+  "deployment": false
+}

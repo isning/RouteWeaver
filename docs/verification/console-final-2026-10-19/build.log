@@ -1,0 +1,42 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> routeweaver-web@1.0.0 build
+> tsc -b && vite build
+
+vite v8.3.4 building client environment for production...
+transforming...
+✓ 3338 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                             0.58 kB │ gzip:   0.36 kB
+dist/assets/Sources-BX28mVmq.css            0.82 kB │ gzip:   0.37 kB
+dist/assets/style-DLioOiRN.css             15.41 kB │ gzip:   2.56 kB
+dist/assets/index-BZOTmNdm.css             28.00 kB │ gzip:   7.01 kB
+dist/assets/rolldown-runtime-XKyaHtl9.js    0.72 kB │ gzip:   0.42 kB
+dist/assets/DeleteOutlined-CYSrhR8X.js      0.90 kB │ gzip:   0.60 kB
+dist/assets/SaveOutlined-C2K0F012.js        0.99 kB │ gzip:   0.63 kB
+dist/assets/ArrowUpOutlined-PhT_6vlf.js     1.44 kB │ gzip:   0.70 kB
+dist/assets/popconfirm-BBwkQX_z.js          3.50 kB │ gzip:   1.55 kB
+dist/assets/ConnectionFields-Cxd5EoRQ.js    4.52 kB │ gzip:   1.57 kB
+dist/assets/Pipeline-CZuBvPIy.js            4.66 kB │ gzip:   1.82 kB
+dist/assets/PublishedRoutes-H3lRmB76.js    10.29 kB │ gzip:   4.02 kB
+dist/assets/Notifications-U88XO5L-.js      13.33 kB │ gzip:   4.59 kB
+dist/assets/Templates-uO7vYhly.js          14.90 kB │ gzip:   5.22 kB
+dist/assets/Fleet-DxT9ceAH.js              15.06 kB │ gzip:   5.72 kB
+dist/assets/ServerRoutes-C3ClEFCO.js       19.15 kB │ gzip:   6.94 kB
+dist/assets/switch-9XcEbP6K.js             28.03 kB │ gzip:   9.43 kB
+dist/assets/Profiles-CJH4aI6q.js           28.75 kB │ gzip:   9.49 kB
+dist/assets/Sources-CJoxIyU1.js            32.42 kB │ gzip:  11.18 kB
+dist/assets/tabs-xl9QFMir.js               34.76 kB │ gzip:  10.86 kB
+dist/assets/Infrastructure-M-ICaFrR.js     49.29 kB │ gzip:  15.75 kB
+dist/assets/Admin-BhYwdap1.js              65.43 kB │ gzip:  20.49 kB
+dist/assets/index-Dncckoln.js             150.06 kB │ gzip:  51.03 kB
+dist/assets/style-DeTjyvrx.js             177.77 kB │ gzip:  57.32 kB
+dist/assets/model-DA87E_cn.js             987.15 kB │ gzip: 316.09 kB
+
+[plugin builtin:vite-reporter] 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 551ms

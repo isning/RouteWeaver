@@ -1,0 +1,31 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> routeweaver-web@1.0.0 test
+> vitest run --maxWorkers=1 src/basic-routing.dom.test.tsx -t independent:
+
+
+ RUN  v5.0.5 /tmp/routeweaver-output-create-review/web
+
+ ❯ src/basic-routing.dom.test.tsx (18 tests | 1 failed | 17 skipped) 862ms
+   × independent: preserves reconciliation after source data changes during an unresolved accepted creation 861ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/basic-routing.dom.test.tsx > independent: preserves reconciliation after source data changes during an unresolved accepted creation
+AssertionError: expected null not to be null
+ ❯ src/basic-routing.dom.test.tsx:681:21
+    679|   // A committed prior creation remains reconcilable even though its o…
+    680|   const retry=screen.queryByRole("button",{name:"发布并获取订阅"});
+    681|   expect(retry).not.toBeNull();
+       |                     ^
+    682|   await userEvent.click(retry!);
+    683|   await waitFor(()=>expect(published).toHaveBeenCalledWith(existing));
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 17 skipped (18)
+   Start at  05:15:16
+   Duration  2.98s (import 48%, tests 30%, environment 18%, transform 3%)
+

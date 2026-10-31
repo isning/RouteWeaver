@@ -1,0 +1,32 @@
+package managedxray_test
+
+import (
+ "context"
+ "io"
+ "net/http"
+ "net/http/httptest"
+ "strings"
+ "sync/atomic"
+ "testing"
+)
+
+func TestIndependentManagedDiagnosticReplayMutationDoesNotSend(t *testing.T) {
+ var requests atomic.Int64
+ target := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+  requests.Add(1); w.Header().Set("Content-Length", "4096"); io.WriteString(w, strings.Repeat("x", 4096))
+ }))
+ defer target.Close()
+ _, _, client, _ := managedDiagnosticFixture(t, target.URL)
+ j := diagnosticJob(t, target.URL)
+ if result, err := client.RunDiagnostic(context.Background(), j); err != nil || result.Status != "succeeded" { t.Fatalf("initial result %+v %v", result, err) }
+ for _, mode := range []string{"payload", "identity"} {
+  changed := j
+  if mode == "payload" { changed.MaxBytes *= 2; changed.EstimatedMaxBytes *= 2 } else {
+   p := *changed.ManagedPath
+   p.Fingerprint = strings.Repeat("c", 64)
+   changed.ManagedPath = &p
+  }
+  result, err := client.RunDiagnostic(context.Background(), changed)
+  if err != nil || result.Status != "not_run" || requests.Load() != 1 { t.Fatalf("mutated %s replay result=%+v error=%v requests=%d", mode, result, err, requests.Load()) }
+ }
+}

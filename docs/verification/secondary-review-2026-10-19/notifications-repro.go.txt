@@ -1,0 +1,38 @@
+package notifications_test
+
+import (
+ "context"
+ "fmt"
+ "sync/atomic"
+ "testing"
+ "time"
+ "routeweaver/internal/notifications"
+)
+
+type secondarySlowTransport struct { count atomic.Int32; check func(notifications.Event) }
+func (s *secondarySlowTransport) Send(ctx context.Context, channel string, event notifications.Event, settings notifications.Settings, secrets notifications.Secrets) error {
+ n:=s.count.Add(1)
+ if n<=5 {select {case <-time.After(13*time.Second):case <-ctx.Done():return ctx.Err()}} else {s.check(event)}
+ return nil
+}
+func TestSecondaryDispatchLeaseUsesActualClaimTime(t *testing.T) {
+ repository:=repo(t)
+ var expired bool
+ transport:=&secondarySlowTransport{}
+ transport.check=func(event notifications.Event){
+  state,err:=repository.ReadNotifications();if err!=nil {t.Fatal(err)}
+  d:=state.Deliveries[event.EventID+"/webhook"]
+  expired=!time.Now().Before(d.LeaseUntil)
+  t.Logf("newly claimed event lease remaining: %s",time.Until(d.LeaseUntil))
+ }
+ service:=notifications.New(repository,transport)
+ settings,err:=service.Settings();if err!=nil {t.Fatal(err)}
+ secret:="synthetic-signing-secret-for-review-only"
+ settings.Webhook=notifications.WebhookSettings{Enabled:true,URL:"https://notifications.example.com/events"}
+ _,err=service.SaveSettings(notifications.SettingsInput{Settings:settings.Settings,WebhookSecret:&secret});if err!=nil {t.Fatal(err)}
+ now:=time.Now()
+ recipient:=notifications.Recipient{ID:"admin",Role:"admin",Enabled:true}
+ for i:=0;i<6;i++ {if _,err=service.Test("webhook",recipient,now);err!=nil {t.Fatal(fmt.Errorf("enqueue %d: %w",i,err))}}
+ if err=service.Dispatch(context.Background(),[]notifications.Recipient{recipient},now);err!=nil {t.Fatal(err)}
+ if expired {t.Fatal("sixth delivery was newly claimed with an already expired lease")}
+}

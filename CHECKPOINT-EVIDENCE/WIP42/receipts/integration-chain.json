@@ -1,0 +1,428 @@
+{
+  "approved_file_hashes_modes": [
+    {
+      "after_mode": "0644",
+      "after_sha256": "bcda24c34c18199f0aad1ca22e707b2c069ea650cd7319fa179d884a544ad2b6",
+      "before_mode": "0644",
+      "before_sha256": "715b932d24aec920bcffd0b4c027a2cce4e10d2f0f4b9502c995af97a6c97e62",
+      "classification": "executed-code-or-test",
+      "path": "internal/httpapi/access_policy.go"
+    },
+    {
+      "after_mode": "0644",
+      "after_sha256": "d3f419fbdb07a1fe7ceddeb8435e083aa624e843a8d493a0702fae7685462499",
+      "before_mode": null,
+      "before_sha256": null,
+      "classification": "executed-code-or-test",
+      "path": "internal/httpapi/entitlement_policy_edit_test.go"
+    },
+    {
+      "after_mode": "0644",
+      "after_sha256": "231104b58c2ab94d0259f9c29926d79bd03bf43ed88b00841d8a7ccdcdab9369",
+      "before_mode": null,
+      "before_sha256": null,
+      "classification": "executed-code-or-test",
+      "path": "internal/httpapi/group_policy_edit_test.go"
+    },
+    {
+      "after_mode": "0644",
+      "after_sha256": "500f0982b0ae96409e99db868c12bacc50c412cc02d955a0e08e3ed546e62684",
+      "before_mode": "0644",
+      "before_sha256": "dbfb2c85ec8434e550424815df1e17310ddcf6910b34c1d5210bddfd9ce29fb5",
+      "classification": "executed-code-or-test",
+      "path": "internal/service/effective.go"
+    },
+    {
+      "after_mode": "0644",
+      "after_sha256": "0462cb67655d12a7b8f86de04e579b817553a2d448f5e044f7a7ca382f35cb16",
+      "before_mode": "0644",
+      "before_sha256": "e886ab54dcb2022da1c5aa50e67f97433041b2f48ed58dc9818f765e8a15ef3d",
+      "classification": "executed-code-or-test",
+      "path": "internal/store/effective_policy.go"
+    },
+    {
+      "after_mode": "0644",
+      "after_sha256": "6083b283b1b560005bda88c147277757a14b58c37a7c3de93e82ac4552b56258",
+      "before_mode": null,
+      "before_sha256": null,
+      "classification": "executed-code-or-test",
+      "path": "internal/store/entitlement_policy_edit_test.go"
+    },
+    {
+      "after_mode": "0644",
+      "after_sha256": "ef4e4a0cbb8c87f7da22f3f676e85648aa4062845b10b335c82208d318f2c280",
+      "before_mode": null,
+      "before_sha256": null,
+      "classification": "executed-code-or-test",
+      "path": "internal/store/group_policy_edit_test.go"
+    },
+    {
+      "after_mode": "0644",
+      "after_sha256": "555c501fdc751a77d15cc44309717650ef04b8f6832365b97dba7b5c04168938",
+      "before_mode": "0644",
+      "before_sha256": "c3a4a1894242fdfc9cf3e0346a3f9187c9c9e213809345077fc014ead9a01fde",
+      "classification": "executed-code-or-test",
+      "path": "internal/store/policy_edit.go"
+    },
+    {
+      "after_mode": "0644",
+      "after_sha256": "480e279d835a94b500bcd021a16685a685a19109b0751f4de1785057447edee1",
+      "before_mode": "0644",
+      "before_sha256": "79f5efde3b071fb5a49a2b8a4f3219c237824bec2b6b937a539c2595a5985eec",
+      "classification": "executed-code-or-test",
+      "path": "web/src/AccessPolicy.tsx"
+    },
+    {
+      "after_mode": "0644",
+      "after_sha256": "8ad0284ce62cd44b1880a080bca6dfeb7b4a0e9312e20938c3f4d7baaf226171",
+      "before_mode": "0644",
+      "before_sha256": "84cc99d2804f2aac1ecf0d1ea9e0175c250c44c58bfc4cf4bbf11e13ee3af8eb",
+      "classification": "executed-code-or-test",
+      "path": "web/src/ByteQuantityInput.tsx"
+    },
+    {
+      "after_mode": "0644",
+      "after_sha256": "612dbbd0b3dc3b77b0c11bc6413fedd2c4bbe8587ee4cf32fe0f3b4367a76a86",
+      "before_mode": null,
+      "before_sha256": null,
+      "classification": "executed-code-or-test",
+      "path": "web/src/EntitlementPolicyComparison.tsx"
+    },
+    {
+      "after_mode": "0644",
+      "after_sha256": "d8fa71a4310523067d6ae25eaf49ecc46f72de30636f564f25916916a331dd52",
+      "before_mode": null,
+      "before_sha256": null,
+      "classification": "executed-code-or-test",
+      "path": "web/src/GroupPolicyComparison.tsx"
+    },
+    {
+      "after_mode": "0644",
+      "after_sha256": "2a6e8aa041d7b8cfc5c371dcdb9f44a160e9b720411faf00e676bfc505ac8284",
+      "before_mode": null,
+      "before_sha256": null,
+      "classification": "executed-code-or-test",
+      "path": "web/src/GroupPolicyEditor.tsx"
+    },
+    {
+      "after_mode": "0644",
+      "after_sha256": "28fe21488553ea126498313ee4e6ebe80932211b959f5a62659a3747ceee043b",
+      "before_mode": "0644",
+      "before_sha256": "6835e0947326b6c34747c35b0f89c6674bc9fe30e750fc8b38715bf0923b6a50",
+      "classification": "executed-code-or-test",
+      "path": "web/src/PolicyDateInput.tsx"
+    },
+    {
+      "after_mode": "0644",
+      "after_sha256": "175b2276557817702899cfcec524482a8496213093fdef6a79105d7320310633",
+      "before_mode": "0644",
+      "before_sha256": "0a9a80297d84c313dcc7ca445522735fbdb2391af70582c97ec690c08f39b96c",
+      "classification": "executed-code-or-test",
+      "path": "web/src/PolicyFields.tsx"
+    },
+    {
+      "after_mode": "0644",
+      "after_sha256": "ebb4c7866f59376979053f901ee56c8957498312c82ad29e3f54d59d85bcd23e",
+      "before_mode": "0644",
+      "before_sha256": "7c84308c50f43244f3a74e86b86b55857e4758aa84e2bfabe052602637365a5d",
+      "classification": "executed-code-or-test",
+      "path": "web/src/UserPolicyEditor.tsx"
+    },
+    {
+      "after_mode": "0644",
+      "after_sha256": "a95ada40ae73ae921f61ceb2557dcd528430a25bd6a005313f1a09809931b40f",
+      "before_mode": "0644",
+      "before_sha256": "d54e1f4fa84447c7cae73bc891207c048ab898c23796a2424f243889f743a3aa",
+      "classification": "executed-code-or-test",
+      "path": "web/src/access-policy-model.ts"
+    },
+    {
+      "after_mode": "0644",
+      "after_sha256": "1c3d63c8b196130d8f99b0900d9d36fb737d4787d32e41a529384972f151d32a",
+      "before_mode": "0644",
+      "before_sha256": "e9eb552d019d0e26db61ab744d5f04b1933f01c08413057cab89a75c236e825b",
+      "classification": "executed-code-or-test",
+      "path": "web/src/access-policy.dom.test.tsx"
+    },
+    {
+      "after_mode": "0644",
+      "after_sha256": "b451e846c39173b4c10eb4d5d4ce8d519c4f051249d0a7d182ccfedf407730f4",
+      "before_mode": "0644",
+      "before_sha256": "415d93a4a6004a3ce1f0965f50504c9cf2d073e53841c70c617c275de8659883",
+      "classification": "executed-code-or-test",
+      "path": "web/src/drawer-control-visibility.ts"
+    },
+    {
+      "after_mode": "0644",
+      "after_sha256": "b722d72c7144cb6f11413d8d26b00252bfe135c3582124eaa0c9fc63a8f6629b",
+      "before_mode": "0644",
+      "before_sha256": "eb53fcdf40a11c7d3ae5193e4e895fd878ea0854d92b7d783bfc226af906a92f",
+      "classification": "executed-code-or-test",
+      "path": "web/src/policy-action-accessibility.dom.test.tsx"
+    },
+    {
+      "after_mode": "0644",
+      "after_sha256": "9c2eeaf93b9073c3c16b056aa4da3c9c9dd3b2a43c7c5ded843dd09a39caec84",
+      "before_mode": "0644",
+      "before_sha256": "1a71c34e4b18be938be376d06e931eb15845455ce0d525403f673ebea4a591b6",
+      "classification": "executed-code-or-test",
+      "path": "web/src/policy-confirmation-content.dom.test.tsx"
+    },
+    {
+      "after_mode": "0644",
+      "after_sha256": "27f8c5c814d90becdbd9a1499f2a418fc1b028b969950aed6b89363434bd9163",
+      "before_mode": null,
+      "before_sha256": null,
+      "classification": "executed-code-or-test",
+      "path": "web/src/policy-control-settlement.dom.test.tsx"
+    },
+    {
+      "after_mode": "0644",
+      "after_sha256": "6c252514d9ddf56923d1fc690e3e2ed1bf6dbe7dc2d0c5c7d7c9ae762016d435",
+      "before_mode": null,
+      "before_sha256": null,
+      "classification": "executed-code-or-test",
+      "path": "web/src/policy-entitlement-edit-intent.dom.test.tsx"
+    },
+    {
+      "after_mode": "0644",
+      "after_sha256": "f11137a297c27e3c2130d283659a4fcd9fa6a05ac32d08b30092c1bc2020d3a2",
+      "before_mode": "0644",
+      "before_sha256": "2e7ae6aa3b59ca2042d6b682e06c963979ab6f11c1cb624ae6ae1ff898ea0981",
+      "classification": "executed-code-or-test",
+      "path": "web/src/policy-error-focus.dom.test.tsx"
+    },
+    {
+      "after_mode": "0644",
+      "after_sha256": "d6aa5625cb9a15363bdcc0c474e0880dd842aaab44dc134081754d56c0e5adc6",
+      "before_mode": null,
+      "before_sha256": null,
+      "classification": "executed-code-or-test",
+      "path": "web/src/policy-group-edit-intent.dom.test.tsx"
+    },
+    {
+      "after_mode": "0644",
+      "after_sha256": "c532378196d55bac51df8205d31d1bc2b3dec2e5577d1d3531c6171bc3170da6",
+      "before_mode": null,
+      "before_sha256": null,
+      "classification": "executed-code-or-test",
+      "path": "web/src/policy-modal-focus.dom.test.tsx"
+    },
+    {
+      "after_mode": "0644",
+      "after_sha256": "808907f44ab6d5aea0dd263fafa48c3e4911d804a6a4ad546a0ea41f84a7b930",
+      "before_mode": "0644",
+      "before_sha256": "d356996410137b37218ccbc4f3865e2f8bad709030c7297d82dd01d33edbf278",
+      "classification": "executed-code-or-test",
+      "path": "web/src/service-cycle-defaults.dom.test.tsx"
+    },
+    {
+      "after_mode": "0644",
+      "after_sha256": "602bc0b57254486e89f4076269f42ef5866af9ae914ee0c63cc9ab17b1131fbd",
+      "before_mode": "0644",
+      "before_sha256": "92ec13c566d8895c45b430a00887da25e2e7ce65cac6329e4dec5a996f7fb39b",
+      "classification": "executed-code-or-test",
+      "path": "web/src/service-policy-edit.ts"
+    },
+    {
+      "after_mode": "0644",
+      "after_sha256": "5dd590dcfce5ab6484fc477832d573375721803df34c4d4dd81d1653de596dd7",
+      "before_mode": "0644",
+      "before_sha256": "b7fe08e793cc54c9237289c214b6f87737b33943dd52ce901b87da6465f8f02f",
+      "classification": "executed-code-or-test",
+      "path": "web/src/styles.css"
+    },
+    {
+      "after_mode": "0644",
+      "after_sha256": "7da0d3248367cc3bcd164fa20bbc4a43efea38f0cf8224b6a7136d0dc5259b88",
+      "before_mode": null,
+      "before_sha256": null,
+      "classification": "executed-code-or-test",
+      "path": "web/src/test-support/entitlement-edit-fixture.ts"
+    },
+    {
+      "after_mode": "0644",
+      "after_sha256": "a63ec3019b919e8a529987742ef94001bbfc3dcbf0695ad41f278a5494282274",
+      "before_mode": null,
+      "before_sha256": null,
+      "classification": "executed-code-or-test",
+      "path": "web/src/test-support/group-edit-fixture.ts"
+    },
+    {
+      "after_mode": "0644",
+      "after_sha256": "dface4e07d757d8e18f6a520c0a6773be9246b0a3a12fd7d75a3aaad3ac12ede",
+      "before_mode": "0644",
+      "before_sha256": "d84e373c3fadeaad7aa3c63919f381caa5a3f8ac15ed5d75d3a37de159784a4b",
+      "classification": "post-validation-documentation",
+      "path": "docs/verification/CONTROL-PLANE-API-NOTES.md"
+    },
+    {
+      "after_mode": "0644",
+      "after_sha256": "6f253ee9e390f6e738f779df42c82284850b766ffcf1d336f57402c30ab0370d",
+      "before_mode": "0644",
+      "before_sha256": "b6becaec048dbdbc3690f558388e9cd3973163b09ce788cca2048bd4b340e760",
+      "classification": "post-validation-documentation",
+      "path": "docs/design/UX-METHODOLOGY.md"
+    },
+    {
+      "after_mode": "0644",
+      "after_sha256": "ebf93d7ad915702cc0883dd75d4eaaa7768c506f5e8981c7653eec6d8856db23",
+      "before_mode": "0644",
+      "before_sha256": "c680b38f2e6400449a16ee34995417bcd86ca8b5858794f1801587874ec62667",
+      "classification": "post-validation-documentation",
+      "path": "docs/design/UX-GUIDELINE-SOURCES.md"
+    },
+    {
+      "after_mode": "0644",
+      "after_sha256": "b89dfe5dff192fc4e5b4e1b800d74c1c92014cc17d9ca977915f87e9cdd75603",
+      "before_mode": "0644",
+      "before_sha256": "fc90f1f6f551b565c417cf1d36a549571587f7a747493a5749f675fcb183b48f",
+      "classification": "post-validation-documentation",
+      "path": "docs/verification/POLICY-EDIT-INTENT-2026-10-25.md"
+    },
+    {
+      "after_mode": "0644",
+      "after_sha256": "730ecbcaed08bb09fb24821c26162756235a9ba2e475cc1b20a53fc63629a775",
+      "before_mode": null,
+      "before_sha256": null,
+      "classification": "post-validation-documentation",
+      "path": "docs/verification/GROUP-POLICY-EDIT-2026-10-25.md"
+    },
+    {
+      "after_mode": "0644",
+      "after_sha256": "e46c98a307c98a71774d1d65da981bfd5c6ca76ef0eaeb4181bf99036784bc1c",
+      "before_mode": null,
+      "before_sha256": null,
+      "classification": "post-validation-documentation",
+      "path": "docs/verification/POLICY-MODAL-KEYBOARD-2026-10-25.md"
+    },
+    {
+      "after_mode": "0644",
+      "after_sha256": "575756dbcda4e0d926aa03e0f3d0dd66c78479ead229d24fc51e72cf9b16e4fe",
+      "before_mode": null,
+      "before_sha256": null,
+      "classification": "post-validation-documentation",
+      "path": "docs/verification/ENTITLEMENT-POLICY-EDIT-2026-10-25.md"
+    },
+    {
+      "after_mode": "0644",
+      "after_sha256": "4c3c9b374a42c45e01eeb12b8f365d375679741e202dd4269ca22d9582b834b5",
+      "before_mode": "0644",
+      "before_sha256": "2d3a9195221c7832aaebb29a2649165382bd7a29c4b2e1bb635ef49dd3a2d5c4",
+      "classification": "executed-code-or-test",
+      "path": "web/src/line-workflow.dom.test.tsx"
+    },
+    {
+      "after_mode": "0644",
+      "after_sha256": "2ccacdb42c2ab7f080dbf22d0db6e18af54d926839b88fdc10abb9b3186cac11",
+      "before_mode": "0644",
+      "before_sha256": "5817e659b132f7331d18c426d04d96fd4a341f794deac88a783bc041c43e8026",
+      "classification": "executed-code-or-test",
+      "path": "web/src/workspace.dom.test.tsx"
+    }
+  ],
+  "baseline_source_sha256": "969a86113edd49e484e76ce6917449dccad6358af309932f9b0eb7875f31d47b",
+  "canonical_checkpoint": "Historical WIP37 CHECKPOINT-STATUS.json preserved; archive-generated status/evidence is separate.",
+  "code_test_paths": 33,
+  "documentation_paths": 7,
+  "exact_total_delta": 40,
+  "final_source_sha256": "582c068fd5016f4d239a2fa9d72e5199a988aade034fb762d7e863201a51e21a",
+  "focused_fixture_validation": {
+    "native_summary": {
+      "accepted": true,
+      "finished": "2026-10-25T16:25:49.232101+00:00",
+      "stages": [
+        {
+          "command_description": "npm --prefix web run typecheck",
+          "finished": "2026-10-25T16:25:18.433914+00:00",
+          "name": "web-typecheck",
+          "nativeExit": 0,
+          "started": "2026-10-25T16:25:15.099617+00:00"
+        },
+        {
+          "command_description": "npm --prefix web run test -- --maxWorkers=1 --retry=0 --reporter=default --reporter=json --outputFile.json=<native-report>",
+          "finished": "2026-10-25T16:25:48.697550+00:00",
+          "name": "web-tests",
+          "nativeExit": 0,
+          "started": "2026-10-25T16:25:18.698064+00:00"
+        }
+      ],
+      "started": "2026-10-25T16:25:14.317990+00:00",
+      "status": "focused-context-fixture-40-passed",
+      "webCounts": {
+        "numFailedTestSuites": 0,
+        "numFailedTests": 0,
+        "numPassedTestSuites": 3,
+        "numPassedTests": 40,
+        "numPendingTestSuites": 0,
+        "numPendingTests": 0,
+        "numTodoTests": 0,
+        "numTotalTestSuites": 3,
+        "numTotalTests": 40,
+        "success": true
+      },
+      "webUnhandledClear": true
+    },
+    "original_record": {
+      "included_native_bytes": false,
+      "record": "final-context-fixture-validation-20261025/run/run.json",
+      "sha256": "2d27d9aabf69fa4f50afe48857afa97545edd428ac8146372fd22c38044cd6f2"
+    },
+    "scope": "Exactly two migrated test files; not a production change or aggregate result."
+  },
+  "guards": {
+    "all127_historical_logs_invariant": true,
+    "all40_current_hash_modes_match": true,
+    "all_manifest_bindings_verified": true,
+    "canonical_checkpoint_invariant": true,
+    "chain_snapshots_match_exactly": true,
+    "final_layer_production_docs_unchanged": true
+  },
+  "integrations": [
+    {
+      "after_inventory_file_sha256": "a2edffd474f027ce36ed9c29293428bdad0e6e3713e214bcbbea64f31411ce03",
+      "after_inventory_path": "combined-policy-edit-integration-proposal-20261025/integration-run/after.json",
+      "manifest_path": "combined-policy-edit-integration-proposal-20261025/integration-manifest.json",
+      "manifest_sha256": "cb0d3f0cea910111feefd8538101c153d23514183ffd94427d8f056312b57684",
+      "qa_released_utc": "2026-10-25T16:04:35.637620+00:00",
+      "receipt_path": "combined-policy-edit-integration-proposal-20261025/integration-run/run.json",
+      "receipt_sha256": "941aed53310afcd5f594fab29f02263140fccb75b68dcedfb1c929f130c5e4d9",
+      "runner_review_sha256": "b87449ed7c017abce44242a1b815f0205b8d3b3ba6b0f244adac7a01ca13e921",
+      "source_review_sha256": "50e611f4c774862ccc3762e0205ca7f849a50aeae70f92fb65b866a84f1c4ee3",
+      "source_sha256": "b124729420964ab2abb434b7716e2369fdda61072c744b07e57bd254b61c59c5"
+    },
+    {
+      "after_inventory_file_sha256": "9bf874f7c96448171c2c367fb54576d6b988afc2a45769f5b29ee5ccdc698ebc",
+      "after_inventory_path": "final-context-fixture-integration-proposal-20261025/integration-run/after.json",
+      "manifest_path": "final-context-fixture-integration-proposal-20261025/integration-manifest.json",
+      "manifest_sha256": "5f998e27c1d08e0b8eb4aa32e14c4337b72890b5807a52878b2472291e349616",
+      "qa_released_utc": "2026-10-25T16:31:00.246204+00:00",
+      "receipt_path": "final-context-fixture-integration-proposal-20261025/integration-run/run.json",
+      "receipt_sha256": "4e27238bd4eb34bd260eaa24f0a5acb2fea155e5b9d207dbcc3ca5186b0ab363",
+      "runner_review_sha256": "5bfc1740e91bf440437472139545ce8518bf2f8330d7214f27ed71952c09ee96",
+      "source_review_sha256": "00e673fa1a81d59b38773d4701adc038ed534895f29f5430f87848647792a5c8",
+      "source_sha256": "582c068fd5016f4d239a2fa9d72e5199a988aade034fb762d7e863201a51e21a"
+    }
+  ],
+  "intermediate_source_sha256": "b124729420964ab2abb434b7716e2369fdda61072c744b07e57bd254b61c59c5",
+  "omissions": [
+    "Absolute workspace/tool executable paths and process IDs",
+    "Raw logs, stack traces and DOM dumps",
+    "Demo/auth/session/cookie/CSRF state, private feed values and credentials",
+    "Browser screenshots, traces and runtime source copies"
+  ],
+  "privacy_rule": "Explicitly selected scalar/count/identity fields only; original immutable record hashes retained.",
+  "project_derived_engineering_lesson": {
+    "canonical_methodology_catalogue_changed": false,
+    "classification": "Project-derived engineering finding; not an external UX guideline",
+    "finding": "When strict edit-context APIs evolve, migrate historical mocks to endpoint-specific coherent contexts and complete typed DTOs. Preserve production validation and the original behavioral/no-write/value-preservation assertions; do not hide obsolete mock contracts behind catch-all successful responses or weaker checks.",
+    "review_sha256": "7d2cbf79c25b29993efce6a1b3fe3f244b4c085078fe42628602c1e7c6c83253",
+    "terminal_diagnosis_sha256": "7b72105b0e7784ff24b2edcd51646af18b1fc5d8de9b16ace9d713d3b0df08ed"
+  },
+  "purpose": "two_step_actual_integration_and_focused_fixture_correction_lineage",
+  "record_kind": "derived_allowlisted_terminal_summary_not_native_byte_copy",
+  "schema": "routeweaver.portable-verification.v1",
+  "source_additions": 16,
+  "source_inventory_excludes_generated_archive_evidence": true,
+  "source_replacements": 24
+}

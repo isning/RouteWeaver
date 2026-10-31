@@ -1,0 +1,109 @@
+{
+  "inbounds": [
+    {
+      "listen": "127.0.0.1",
+      "port": 18080,
+      "protocol": "shadowsocks",
+      "settings": {
+        "method": "aes-128-gcm",
+        "network": "tcp,udp",
+        "password": "synthetic-only"
+      },
+      "tag": "entry"
+    }
+  ],
+  "log": {
+    "loglevel": "warning"
+  },
+  "outbounds": [
+    {
+      "protocol": "socks",
+      "settings": {
+        "servers": [
+          {
+            "address": "192.0.2.10",
+            "port": 1080
+          }
+        ]
+      },
+      "tag": "egress-1"
+    },
+    {
+      "protocol": "socks",
+      "settings": {
+        "servers": [
+          {
+            "address": "192.0.2.20",
+            "port": 1080
+          }
+        ]
+      },
+      "streamSettings": {
+        "sockopt": {
+          "dialerProxy": "egress-1"
+        }
+      },
+      "tag": "egress-2"
+    },
+    {
+      "protocol": "shadowsocks",
+      "settings": {
+        "servers": [
+          {
+            "address": "192.0.2.30",
+            "method": "aes-128-gcm",
+            "password": "synthetic-only",
+            "port": 8388
+          }
+        ]
+      },
+      "streamSettings": {
+        "sockopt": {
+          "dialerProxy": "egress-2"
+        }
+      },
+      "tag": "egress-3"
+    },
+    {
+      "protocol": "freedom",
+      "settings": {},
+      "tag": "rw-direct"
+    },
+    {
+      "protocol": "blackhole",
+      "settings": {},
+      "tag": "rw-reject"
+    }
+  ],
+  "routing": {
+    "rules": [
+      {
+        "domain": [
+          "full:blocked.example"
+        ],
+        "inboundTag": [
+          "entry"
+        ],
+        "outboundTag": "rw-reject",
+        "type": "field"
+      },
+      {
+        "inboundTag": [
+          "entry"
+        ],
+        "ip": [
+          "192.0.2.0/24"
+        ],
+        "outboundTag": "rw-direct",
+        "type": "field"
+      },
+      {
+        "inboundTag": [
+          "entry"
+        ],
+        "outboundTag": "egress-3",
+        "type": "field"
+      }
+    ]
+  }
+}

@@ -1,0 +1,119 @@
+package store
+
+import (
+	"context"
+	"encoding/json"
+	"path/filepath"
+	"routeweaver/internal/domain"
+	"sync"
+	"testing"
+	"time"
+)
+
+func TestIndependentStage1CrossStoreMeterReplayIsAtomic(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "db")
+	s, e := Open(path, make([]byte, 32))
+	if e != nil {
+		t.Fatal(e)
+	}
+	defer s.Close()
+	if e = s.PutUser(domain.User{ID: "u", Name: "User", Enabled: true}); e != nil {
+		t.Fatal(e)
+	}
+	other, e := Open(path, make([]byte, 32))
+	if e != nil {
+		t.Fatal(e)
+	}
+	defer other.Close()
+	start := make(chan struct{})
+	var wg sync.WaitGroup
+	results := make(chan int64, 2)
+	now := time.Now().UTC()
+	for i, h := range []*Store{s, other} {
+		wg.Add(1)
+		go func(h *Store, n int64) {
+			defer wg.Done()
+			<-start
+			e := h.RecordMeter(MeterBatch{UserID: "u", RouteID: "r", MeterID: "m", Epoch: "ep", Sequence: 1, RawBytes: n, ObservedAt: now})
+			if e == nil {
+				results <- n
+			}
+		}(h, int64(i+1))
+	}
+	close(start)
+	wg.Wait()
+	close(results)
+	winners := []int64{}
+	for n := range results {
+		winners = append(winners, n)
+	}
+	if len(winners) != 1 {
+		t.Fatalf("conflicting replay winners=%v", winners)
+	}
+	totals, e := s.Usage("u", time.Time{}, time.Time{})
+	if e != nil || totals.RawBytes != winners[0] {
+		t.Fatalf("totals=%+v err=%v winners=%v", totals, e, winners)
+	}
+}
+
+func TestIndependentStage1RollbackAndReadonlyExport(t *testing.T) {
+	s, e := Open(filepath.Join(t.TempDir(), "db"), make([]byte, 32))
+	if e != nil {
+		t.Fatal(e)
+	}
+	defer s.Close()
+	generation := func() int64 {
+		var n int64
+		if e := s.db.QueryRow(`SELECT generation FROM usage_projection_state WHERE id=1`).Scan(&n); e != nil {
+			t.Fatal(e)
+		}
+		return n
+	}
+	before := generation()
+	e = s.CompareAndPutRecords(nil, []RecordWrite{{Kind: "ledger", ID: "rolled-back", Value: MeterRecord{}}, {Kind: "other", ID: "unserializable", Value: make(chan int)}})
+	if e == nil {
+		t.Fatal("invalid batch accepted")
+	}
+	var raw json.RawMessage
+	if s.Get("ledger", "rolled-back", &raw) != ErrNotFound || generation() != before {
+		t.Fatal("canonical/trigger state survived rollback")
+	}
+	if e = s.SwapToken("test", "", "occupied", "owner"); e != nil {
+		t.Fatal(e)
+	}
+	e = s.PutWithToken("ledger", "rolled-back-token", MeterRecord{}, "test", "", "occupied", "new-owner")
+	if e == nil || s.Get("ledger", "rolled-back-token", &raw) != ErrNotFound || generation() != before {
+		t.Fatal("token failure did not roll back ledger/trigger")
+	}
+	if _, e = s.db.Exec(`INSERT INTO usage_windows(account,data) VALUES('u',x'010203'); UPDATE usage_projection_state SET generation=19,acknowledged=7`); e != nil {
+		t.Fatal(e)
+	}
+	// This synthetic token is not a known feed relationship; canonical backup preserves it.
+	if _, e = s.ExportSnapshot(context.Background()); e != nil {
+		t.Fatal(e)
+	}
+	if e = s.ExportBackup(context.Background(), BackupLimits{MaxBytes: 1 << 20, MaxRows: 1000, MaxRecordBytes: 1 << 20}, func(BackupFrame) error { return nil }); e != nil {
+		t.Fatal(e)
+	}
+	var count, ack int
+	if e = s.db.QueryRow(`SELECT count(*) FROM usage_windows`).Scan(&count); e != nil {
+		t.Fatal(e)
+	}
+	if e = s.db.QueryRow(`SELECT acknowledged FROM usage_projection_state WHERE id=1`).Scan(&ack); e != nil {
+		t.Fatal(e)
+	}
+	if count != 1 || generation() != 19 || ack != 7 {
+		t.Fatal("readonly export mutated derived state")
+	}
+}
+
+// Independent recheck of the replacement defect reported by the dedicated test worker.
+func TestIndependentStage1LedgerReplacement(t *testing.T) {
+ s,e:=Open(filepath.Join(t.TempDir(),"db"),make([]byte,32));if e!=nil {t.Fatal(e)};defer s.Close()
+ first:=MeterRecord{MeterBatch:MeterBatch{UserID:"u",RawBytes:1,ObservedAt:time.Now().UTC()},RateMicros:1000000}
+ if e=s.Put("ledger","entry",first);e!=nil{t.Fatal(e)}
+ first.RawBytes=2
+ if e=s.Put("ledger","entry",first);e!=nil{t.Fatalf("public replacement rejected: %v",e)}
+ var got MeterRecord
+ if e=s.Get("ledger","entry",&got);e!=nil||got.RawBytes!=2{t.Fatalf("got %+v: %v",got,e)}
+}

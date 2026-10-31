@@ -1,0 +1,19 @@
+{
+  "checkpoint": "WIP50",
+  "status": "static R3 passed",
+  "exit": 0,
+  "evidence": [
+    {
+      "filename": "static-r3.log",
+      "sha256": "4993f4514ae078c722eaa6acea3bf9ff01fdb0dcbc6e5b07773428727509028e",
+      "bytes": 640,
+      "availability": "local-only evidence; not an archive attachment"
+    },
+    {
+      "filename": "static-r3.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "bytes": 2,
+      "availability": "local-only evidence; not an archive attachment"
+    }
+  ]
+}

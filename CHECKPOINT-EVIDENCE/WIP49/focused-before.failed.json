@@ -1,0 +1,42 @@
+{
+  "checkpoint": "WIP49",
+  "status": "historical focused failing-before evidence",
+  "not_full_suite_results": true,
+  "attempts": [
+    {
+      "name": "motion and numeric progress contract before implementation",
+      "passed": 0,
+      "failed": 2,
+      "evidence": {
+        "filename": "w49-motion-before.log",
+        "sha256": "0373f8c8577fcb4ae71eab09b0efdcd425dafd1ea07cfe1dc7f9dbeb4528ffeb",
+        "bytes": 2378,
+        "availability": "local-only diagnostic; not an archive attachment"
+      }
+    },
+    {
+      "name": "Admin retained exit presentation before correction",
+      "passed": 2,
+      "failed": 1,
+      "evidence": {
+        "filename": "wip49-exit-before.log",
+        "sha256": "e9fd4eb323165441679ea08887544740acc2649e6a6dd5758584c9c69c03cd4a",
+        "bytes": 17277,
+        "availability": "local-only diagnostic; not an archive attachment"
+      }
+    },
+    {
+      "name": "Inventory retained exit presentation before correction",
+      "passed": 0,
+      "failed": 2,
+      "skipped_by_focus_filter": 24,
+      "evidence": {
+        "filename": "inventory-exit-before.log",
+        "sha256": "3fb9dce85a0af3dd3d26afb34ea4cf4438ef176d38c02fabf6c30de58f4a44a6",
+        "bytes": 44648,
+        "availability": "local-only diagnostic; not an archive attachment"
+      }
+    }
+  ],
+  "superseded_by": "frontend-final.passed.json; historical focused failures unchanged"
+}

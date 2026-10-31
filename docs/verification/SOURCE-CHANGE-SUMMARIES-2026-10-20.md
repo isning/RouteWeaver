@@ -1,0 +1,9 @@
+# Distinguish same-name source replacements without credentials
+
+Actual original cloud preview: harmless node rename was accepted without a material-change review; changing the same-name node port from 1080 to 1081 produced an explicit removal/addition review. Reject preserved the accepted connection. The edited fixture input was subsequently restored to port 1080. The old review showed the same name under both Removed and Added with no way to identify the differing connection.
+
+Added optional beforeConnection/afterConnection display summaries to source-change DTOs. They contain only protocol and bracket-correct host:port, passed through the existing credential/URL label redactor. Candidate private snapshots and inputs remain omitted. Credential-only changes retain identical safe endpoint context plus their existing changed-field tags; credentials are never added to the summary. Legacy candidates without these fields still render normally. Acceptance/rejection revision fences, selection semantics and publication remain unchanged.
+
+Red/green HTTP user seam verifies a same-name IPv6 port replacement with distinct old/new summaries and no username/password/private candidate disclosure. Existing exact-acceptance test now also verifies credential-only safe context. Source HTTP regression with race detection passed in 10.996 seconds. DOM source-update regression passed 6/6 and typecheck/build passed. This proves API and UI seams separately, not a completed new-backend browser journey.
+
+A separate loopback demo of the new backend started and served its login page, then was stopped without signing in or changing the original preview. The original 8187 demo was not restarted because its encryption key/state are ephemeral. Actual new-summary rendering against the new backend remains a browser acceptance gap; no login bypass or private-state extraction was attempted. Original preview state was preserved.

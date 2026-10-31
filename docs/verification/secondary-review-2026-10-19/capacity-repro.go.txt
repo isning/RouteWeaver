@@ -1,0 +1,14 @@
+package store_test
+import (
+ "encoding/json"
+ "testing"
+ "time"
+ "routeweaver/internal/store"
+)
+func TestSecondaryMeasureSyntheticLedgerBackupBytes(t *testing.T){
+ at:=time.Date(2026,10,19,12,0,0,0,time.UTC)
+ r:=store.MeterRecord{MeterBatch:store.MeterBatch{UserID:"synthetic-user",RouteID:"synthetic-route",MeterID:"synthetic-meter",Epoch:"synthetic-epoch",Sequence:1,RawBytes:1024,ObservedAt:at},IntervalStart:at.Add(-time.Minute),IntervalEnd:at,WeightedBytes:1024,RateID:"synthetic-rate",RateMicros:1000000,RecordedAt:at}
+ data,e:=json.Marshal(r);if e!=nil {t.Fatal(e)}
+ b,e:=json.Marshal(store.BackupRecord{Kind:"ledger",ID:"counter:instance:enrollment:stream:1:0",Data:data});if e!=nil {t.Fatal(e)}
+ t.Logf("synthetic ledger row serialized bytes=%d; 15MiB/row=%d (before every other record/table and framing)",len(b),store.MaxSnapshotBytes/(len(b)+1))
+}

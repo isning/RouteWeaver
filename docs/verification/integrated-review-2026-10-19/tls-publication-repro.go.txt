@@ -1,0 +1,17 @@
+package httpapi_test
+import("crypto/ed25519";"crypto/rand";"crypto/x509";"encoding/pem";"math/big";"testing";"time";"routeweaver/internal/domain";"routeweaver/internal/httpapi")
+func TestReviewPublishRejectsUnusablePackagedCertificate(t *testing.T){
+ for _,kind:=range []string{"expired","not-yet-valid","wrong-SNI"}{t.Run(kind,func(t *testing.T){
+ f:=newFleetFixture(t);var d httpapi.ServerDeployment;if e:=f.s.Get("server-deployments",f.in.DeploymentID,&d);e!=nil{t.Fatal(e)}
+ now:=time.Now();pub,key,e:=ed25519.GenerateKey(rand.Reader);if e!=nil{t.Fatal(e)}
+ cert:=&x509.Certificate{SerialNumber:big.NewInt(1),DNSNames:[]string{"expected.example"},NotBefore:now.Add(-time.Hour),NotAfter:now.Add(time.Hour),KeyUsage:x509.KeyUsageDigitalSignature,ExtKeyUsage:[]x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth}}
+ switch kind{case "expired":cert.NotAfter=now.Add(-time.Minute);case "not-yet-valid":cert.NotBefore=now.Add(time.Minute);case "wrong-SNI":cert.DNSNames=[]string{"other.example"}}
+ der,e:=x509.CreateCertificate(rand.Reader,cert,cert,pub,key);if e!=nil{t.Fatal(e)};priv,e:=x509.MarshalPKCS8PrivateKey(key);if e!=nil{t.Fatal(e)}
+ leaf,e:=x509.ParseCertificate(der);if e!=nil{t.Fatal(e)};roots:=x509.NewCertPool();roots.AddCert(leaf)
+ if _,e=leaf.Verify(x509.VerifyOptions{Roots:roots,DNSName:"expected.example",CurrentTime:now});e==nil{t.Fatal("negative TLS fixture unexpectedly verifies")};t.Logf("actual x509 verification rejects this fixture: %v",e)
+ p:=&d.IR.Programs[0];p.Listener.Connection=domain.Connection{Protocol:"vless",Host:"127.0.0.1",Port:22000,UUID:"00112233-4455-6677-8899-aabbccddeeff",TLS:&domain.TLSOptions{Enabled:true,ServerName:"expected.example"}};p.TLS=&domain.ServerTLSOptions{CertificatePath:"tls/cert.pem",KeyPath:"tls/key.pem",CertificatePEM:string(pem.EncodeToMemory(&pem.Block{Type:"CERTIFICATE",Bytes:der})),PrivateKeyPEM:string(pem.EncodeToMemory(&pem.Block{Type:"PRIVATE KEY",Bytes:priv}))}
+ f.post(t,"managed-endpoints",p.Listener,200);f.post(t,"server-deployments",d,200);v:=f.post(t,"server-deployments/"+d.ID+"/validate",map[string]any{},200)
+ code,_,raw:=req(t,operatorClient(),"POST",f.srv.URL+"/api/server-deployments/"+d.ID+"/publish","",map[string]any{"leaseSeconds":300,"accessAllowed":true,"quotaCertain":true,"expectedFingerprint":v["fingerprint"]})
+ if code!=422 {t.Fatalf("publication accepted known unusable %s certificate: HTTP%d %s",kind,code,raw)}
+ })}
+}

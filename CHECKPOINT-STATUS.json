@@ -1,0 +1,24 @@
+{
+  "checkpoint": "WIP54",
+  "snapshot": "Recovered WIP51 baseline with ongoing reliability, UX and repository-quality repairs",
+  "baseline": {
+    "archive": "WIP51 source v60",
+    "sha256": "dc2eb54bbe7f80c83d7a0441a1615fccf1abcd8d1060e87b0255850d2ba321fd",
+    "recoveredCommit": "9094fe74545c48092e745e5cd2086b4625740fd1",
+    "history": "Original WIP51/52/53 Git objects were not recovered. This repository starts from the verified durable WIP51 source archive."
+  },
+  "prior_status": "CHECKPOINT-EVIDENCE/WIP54/historical-wip51-checkpoint-status.json",
+  "current_requested_features_complete": false,
+  "verification_status": "in_progress",
+  "verification_note": "Historical WIP51 and unrecovered WIP53 passes do not apply to current modified source. See source-bound WIP54 receipts when available.",
+  "production_ready": false,
+  "production_deployed": false,
+  "project_complete": false,
+  "user_acceptance": false,
+  "artifact_kind": "source",
+  "limits": [
+    "Actual GitHub CI for the imported source is not yet verified.",
+    "DOM and HTTP tests are distinct from actual browser, real-client traffic and deployed acceptance.",
+    "No production deployment, external credentials or real accounting mutation is authorized by this source checkpoint."
+  ]
+}

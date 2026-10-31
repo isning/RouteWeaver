@@ -1,0 +1,51 @@
+{
+  "format": "derived sanitized portable summary; not a byte-identical native receipt",
+  "limits": [
+    "47 completed files and 797 partial passing tests are not a completed suite result.",
+    "Original build was not reached; original receipt reports no lock-release event.",
+    "Absent exclusive-lock lifecycle evidence supported one authorized retry, not proof of universal descendant termination.",
+    "Original incomplete evidence and prior WIP42 failed evidence remain unchanged; no later run retroactively changes these results."
+  ],
+  "no_raw_runtime_or_auth_artifacts_included": true,
+  "observations": {
+    "buildNeverReached": true,
+    "exclusiveQaLockHeldAtThreeReadOnlyProbes": false,
+    "originalLogLastModifiedUtc": "2026-10-25T17:53:04.273539+00:00",
+    "partialCompletedPassFiles": 47,
+    "partialCompletedPassTests": 797,
+    "partialCountsAreNotTerminal": true,
+    "processVisibility": "Each execution sees its own process namespace; no definitive old child-liveness claim. Original reviewed parent must hold exclusive QA lock throughout execution. Root accepted absent-lock lifecycle evidence for one retry.",
+    "reportedLockReleased": null,
+    "typecheckNativeExit": 0,
+    "webResultsAbsent": true
+  },
+  "original_evidence_hashes": {
+    "final-stable-web-validation-20261025/RUNNER-REVIEW.json": "b1f9bef0af8f11b80ba8d07d4619c56976dea13da3c91a43d11cbae54843e35a",
+    "final-stable-web-validation-20261025/inputs.json": "639224c5f8de29f5a52acb54078a208faab28b3f0785c44acc5f5e4e07fe6e03",
+    "final-stable-web-validation-20261025/run/before.json": "c493c01cf8cb613c4d35e5c193d4fa68189048ec026fc6d3a8d1de834f53031a",
+    "final-stable-web-validation-20261025/run/run.json": "b5b4e99c20a85f62f095c6a448258a465758d6cd4236b681d81e492d1fcf3857",
+    "final-stable-web-validation-20261025/run/web-tests.log": "35c4928525e1b82444d64eba348f7c337003b628da03a66d0ba34d170707c013",
+    "final-stable-web-validation-20261025/run/web-typecheck.log": "d9dd95a5d29e2c8680342dd6d79eb56c5cc54980f2328e98854e8e67aa24d7df",
+    "final-stable-web-validation-20261025/validate.py": "b09846e22d38f58b77928dd6975eeab7c3ec1dabc60bd987fda146488ed96c35"
+  },
+  "original_inputs_sha256": "639224c5f8de29f5a52acb54078a208faab28b3f0785c44acc5f5e4e07fe6e03",
+  "original_receipt_sha256": "b5b4e99c20a85f62f095c6a448258a465758d6cd4236b681d81e492d1fcf3857",
+  "original_receipt_status": "preparing",
+  "original_runner_sha256": "b09846e22d38f58b77928dd6975eeab7c3ec1dabc60bd987fda146488ed96c35",
+  "original_started_utc": "2026-10-25T17:44:29.362913+00:00",
+  "recovery_record_sha256": "f23aa6754a9c56c4f079b6d05c0b471eeeec3cd5b764b6faff1bc8bb6d2c5db5",
+  "retry_equivalence": {
+    "all57BindingsVerified": true,
+    "checksAndTimeoutsUnchanged": true,
+    "inputsByteIdentical": true,
+    "onlyOutputRootChangedImplicitlyByScriptLocation": true,
+    "originalSourceOnlyRunnerReviewReusedWithoutClaimOfNewIndependentReview": true,
+    "runnerByteIdentical": true
+  },
+  "retry_prepared_utc": "2026-10-25T17:56:16.177801+00:00",
+  "retry_result": "Pending when this immutable historical record was generated; any later terminal result belongs in a separate record.",
+  "retry_scope": "One fresh recovery execution, full typecheck + unfiltered single-worker Web suite + build, same budgets/assertions, no primary17, no product/test edits, no unrelated process kills.",
+  "schema": 1,
+  "source_sha256": "b670ad77345a032511c5a071159471e1fdbb68b94eb507df87982d3f288389a5",
+  "status": "original final web attempt incomplete; not accepted as a terminal result"
+}

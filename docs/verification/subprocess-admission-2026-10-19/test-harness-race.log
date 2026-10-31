@@ -1,0 +1,202 @@
+=== RUN   TestAdmissionClaimsAcrossProcesses
+=== RUN   TestAdmissionClaimsAcrossProcesses/last-ip
+==================
+WARNING: DATA RACE
+Read at 0x00c00016c8d8 by goroutine 10:
+  bytes.(*Buffer).String()
+      /workspace/shared/routeweaver-tools/go/src/bytes/buffer.go:77 +0xf44
+  routeweaver/internal/store_test.TestAdmissionClaimsAcrossProcesses.func1()
+      /workspace/shared/routeweaver-live-state/internal/store/admission_process_test.go:104 +0xf03
+  testing.tRunner()
+      /workspace/shared/routeweaver-tools/go/src/testing/testing.go:2195 +0x21c
+  testing.(*T).Run.gowrap1()
+      /workspace/shared/routeweaver-tools/go/src/testing/testing.go:2260 +0x38
+
+Previous write at 0x00c00016c8d8 by goroutine 35:
+  bytes.(*Buffer).grow()
+      /workspace/shared/routeweaver-tools/go/src/bytes/buffer.go:172 +0x3b1
+  bytes.(*Buffer).ReadFrom()
+      /workspace/shared/routeweaver-tools/go/src/bytes/buffer.go:227 +0x5e
+  io.copyBuffer()
+      /workspace/shared/routeweaver-tools/go/src/io/io.go:415 +0x20e
+  io.Copy()
+      /workspace/shared/routeweaver-tools/go/src/io/io.go:388 +0x49
+  os.genericWriteTo()
+      /workspace/shared/routeweaver-tools/go/src/os/file.go:295 +0xe
+  os.(*File).WriteTo()
+      /workspace/shared/routeweaver-tools/go/src/os/file.go:273 +0xd4
+  io.copyBuffer()
+      /workspace/shared/routeweaver-tools/go/src/io/io.go:411 +0xd3
+  io.Copy()
+      /workspace/shared/routeweaver-tools/go/src/io/io.go:388 +0x5a
+  os/exec.(*Cmd).writerDescriptor.func1()
+      /workspace/shared/routeweaver-tools/go/src/os/exec/exec.go:613 +0x37
+  os/exec.(*Cmd).Start.func2()
+      /workspace/shared/routeweaver-tools/go/src/os/exec/exec.go:768 +0x3c
+  os/exec.(*Cmd).Start.gowrap1()
+      /workspace/shared/routeweaver-tools/go/src/os/exec/exec.go:780 +0x38
+
+Goroutine 10 (running) created at:
+  testing.(*T).Run()
+      /workspace/shared/routeweaver-tools/go/src/testing/testing.go:2260 +0xb12
+  routeweaver/internal/store_test.TestAdmissionClaimsAcrossProcesses()
+      /workspace/shared/routeweaver-live-state/internal/store/admission_process_test.go:52 +0xb71
+  testing.tRunner()
+      /workspace/shared/routeweaver-tools/go/src/testing/testing.go:2195 +0x21c
+  testing.(*T).Run.gowrap1()
+      /workspace/shared/routeweaver-tools/go/src/testing/testing.go:2260 +0x38
+
+Goroutine 35 (running) created at:
+  os/exec.(*Cmd).Start()
+      /workspace/shared/routeweaver-tools/go/src/os/exec/exec.go:767 +0x10f1
+  routeweaver/internal/store_test.TestAdmissionClaimsAcrossProcesses.func1()
+      /workspace/shared/routeweaver-live-state/internal/store/admission_process_test.go:98 +0xd79
+  testing.tRunner()
+      /workspace/shared/routeweaver-tools/go/src/testing/testing.go:2195 +0x21c
+  testing.(*T).Run.gowrap1()
+      /workspace/shared/routeweaver-tools/go/src/testing/testing.go:2260 +0x38
+==================
+==================
+WARNING: DATA RACE
+Read at 0x00c00016c8c0 by goroutine 10:
+  bytes.(*Buffer).String()
+      /workspace/shared/routeweaver-tools/go/src/bytes/buffer.go:77 +0xf6e
+  routeweaver/internal/store_test.TestAdmissionClaimsAcrossProcesses.func1()
+      /workspace/shared/routeweaver-live-state/internal/store/admission_process_test.go:104 +0xf03
+  testing.tRunner()
+      /workspace/shared/routeweaver-tools/go/src/testing/testing.go:2195 +0x21c
+  testing.(*T).Run.gowrap1()
+      /workspace/shared/routeweaver-tools/go/src/testing/testing.go:2260 +0x38
+
+Previous write at 0x00c00016c8c0 by goroutine 35:
+  bytes.(*Buffer).grow()
+      /workspace/shared/routeweaver-tools/go/src/bytes/buffer.go:169 +0x2cc
+  bytes.(*Buffer).ReadFrom()
+      /workspace/shared/routeweaver-tools/go/src/bytes/buffer.go:227 +0x5e
+  io.copyBuffer()
+      /workspace/shared/routeweaver-tools/go/src/io/io.go:415 +0x20e
+  io.Copy()
+      /workspace/shared/routeweaver-tools/go/src/io/io.go:388 +0x49
+  os.genericWriteTo()
+      /workspace/shared/routeweaver-tools/go/src/os/file.go:295 +0xe
+  os.(*File).WriteTo()
+      /workspace/shared/routeweaver-tools/go/src/os/file.go:273 +0xd4
+  io.copyBuffer()
+      /workspace/shared/routeweaver-tools/go/src/io/io.go:411 +0xd3
+  io.Copy()
+      /workspace/shared/routeweaver-tools/go/src/io/io.go:388 +0x5a
+  os/exec.(*Cmd).writerDescriptor.func1()
+      /workspace/shared/routeweaver-tools/go/src/os/exec/exec.go:613 +0x37
+  os/exec.(*Cmd).Start.func2()
+      /workspace/shared/routeweaver-tools/go/src/os/exec/exec.go:768 +0x3c
+  os/exec.(*Cmd).Start.gowrap1()
+      /workspace/shared/routeweaver-tools/go/src/os/exec/exec.go:780 +0x38
+
+Goroutine 10 (running) created at:
+  testing.(*T).Run()
+      /workspace/shared/routeweaver-tools/go/src/testing/testing.go:2260 +0xb12
+  routeweaver/internal/store_test.TestAdmissionClaimsAcrossProcesses()
+      /workspace/shared/routeweaver-live-state/internal/store/admission_process_test.go:52 +0xb71
+  testing.tRunner()
+      /workspace/shared/routeweaver-tools/go/src/testing/testing.go:2195 +0x21c
+  testing.(*T).Run.gowrap1()
+      /workspace/shared/routeweaver-tools/go/src/testing/testing.go:2260 +0x38
+
+Goroutine 35 (running) created at:
+  os/exec.(*Cmd).Start()
+      /workspace/shared/routeweaver-tools/go/src/os/exec/exec.go:767 +0x10f1
+  routeweaver/internal/store_test.TestAdmissionClaimsAcrossProcesses.func1()
+      /workspace/shared/routeweaver-live-state/internal/store/admission_process_test.go:98 +0xd79
+  testing.tRunner()
+      /workspace/shared/routeweaver-tools/go/src/testing/testing.go:2195 +0x21c
+  testing.(*T).Run.gowrap1()
+      /workspace/shared/routeweaver-tools/go/src/testing/testing.go:2260 +0x38
+==================
+    admission_process_test.go:104: child 0 not ready: --- FAIL: TestAdmissionClaimsAcrossProcesses (0.01s); 
+    testing.go:1867: race detected during execution of test
+=== RUN   TestAdmissionClaimsAcrossProcesses/last-stream
+==================
+WARNING: DATA RACE
+Read at 0x00c000394208 by goroutine 39:
+  bytes.(*Buffer).String()
+      /workspace/shared/routeweaver-tools/go/src/bytes/buffer.go:77 +0xf6e
+  routeweaver/internal/store_test.TestAdmissionClaimsAcrossProcesses.func1()
+      /workspace/shared/routeweaver-live-state/internal/store/admission_process_test.go:104 +0xf03
+  testing.tRunner()
+      /workspace/shared/routeweaver-tools/go/src/testing/testing.go:2195 +0x21c
+  testing.(*T).Run.gowrap1()
+      /workspace/shared/routeweaver-tools/go/src/testing/testing.go:2260 +0x38
+
+Previous write at 0x00c000394208 by goroutine 66:
+  bytes.(*Buffer).ReadFrom()
+      /workspace/shared/routeweaver-tools/go/src/bytes/buffer.go:234 +0x158
+  io.copyBuffer()
+      /workspace/shared/routeweaver-tools/go/src/io/io.go:415 +0x20e
+  io.Copy()
+      /workspace/shared/routeweaver-tools/go/src/io/io.go:388 +0x49
+  os.genericWriteTo()
+      /workspace/shared/routeweaver-tools/go/src/os/file.go:295 +0xe
+  os.(*File).WriteTo()
+      /workspace/shared/routeweaver-tools/go/src/os/file.go:273 +0xd4
+  io.copyBuffer()
+      /workspace/shared/routeweaver-tools/go/src/io/io.go:411 +0xd3
+  io.Copy()
+      /workspace/shared/routeweaver-tools/go/src/io/io.go:388 +0x5a
+  os/exec.(*Cmd).writerDescriptor.func1()
+      /workspace/shared/routeweaver-tools/go/src/os/exec/exec.go:613 +0x37
+  os/exec.(*Cmd).Start.func2()
+      /workspace/shared/routeweaver-tools/go/src/os/exec/exec.go:768 +0x3c
+  os/exec.(*Cmd).Start.gowrap1()
+      /workspace/shared/routeweaver-tools/go/src/os/exec/exec.go:780 +0x38
+
+Goroutine 39 (running) created at:
+  testing.(*T).Run()
+      /workspace/shared/routeweaver-tools/go/src/testing/testing.go:2260 +0xb12
+  routeweaver/internal/store_test.TestAdmissionClaimsAcrossProcesses()
+      /workspace/shared/routeweaver-live-state/internal/store/admission_process_test.go:52 +0xb71
+  testing.tRunner()
+      /workspace/shared/routeweaver-tools/go/src/testing/testing.go:2195 +0x21c
+  testing.(*T).Run.gowrap1()
+      /workspace/shared/routeweaver-tools/go/src/testing/testing.go:2260 +0x38
+
+Goroutine 66 (finished) created at:
+  os/exec.(*Cmd).Start()
+      /workspace/shared/routeweaver-tools/go/src/os/exec/exec.go:767 +0x10f1
+  routeweaver/internal/store_test.TestAdmissionClaimsAcrossProcesses.func1()
+      /workspace/shared/routeweaver-live-state/internal/store/admission_process_test.go:98 +0xd79
+  testing.tRunner()
+      /workspace/shared/routeweaver-tools/go/src/testing/testing.go:2195 +0x21c
+  testing.(*T).Run.gowrap1()
+      /workspace/shared/routeweaver-tools/go/src/testing/testing.go:2260 +0x38
+==================
+    admission_process_test.go:104: child 1 not ready: --- FAIL: TestAdmissionClaimsAcrossProcesses (0.01s); 
+    testing.go:1867: race detected during execution of test
+=== RUN   TestAdmissionClaimsAcrossProcesses/last-quota-byte
+--- FAIL: TestAdmissionClaimsAcrossProcesses (1.67s)
+    --- FAIL: TestAdmissionClaimsAcrossProcesses/last-ip (0.18s)
+    --- FAIL: TestAdmissionClaimsAcrossProcesses/last-stream (0.17s)
+    --- PASS: TestAdmissionClaimsAcrossProcesses/last-quota-byte (1.32s)
+=== RUN   TestAdmissionClaimsAcrossProcesses
+=== RUN   TestAdmissionClaimsAcrossProcesses/last-ip
+    admission_process_test.go:104: child 0 not ready: --- FAIL: TestAdmissionClaimsAcrossProcesses (0.02s); 
+=== RUN   TestAdmissionClaimsAcrossProcesses/last-stream
+=== RUN   TestAdmissionClaimsAcrossProcesses/last-quota-byte
+    admission_process_test.go:104: child 1 not ready: --- FAIL: TestAdmissionClaimsAcrossProcesses (0.02s); 
+--- FAIL: TestAdmissionClaimsAcrossProcesses (1.71s)
+    --- FAIL: TestAdmissionClaimsAcrossProcesses/last-ip (0.14s)
+    --- PASS: TestAdmissionClaimsAcrossProcesses/last-stream (1.30s)
+    --- FAIL: TestAdmissionClaimsAcrossProcesses/last-quota-byte (0.28s)
+=== RUN   TestAdmissionClaimsAcrossProcesses
+=== RUN   TestAdmissionClaimsAcrossProcesses/last-ip
+    admission_process_test.go:104: child 1 not ready: --- FAIL: TestAdmissionClaimsAcrossProcesses (0.02s); 
+=== RUN   TestAdmissionClaimsAcrossProcesses/last-stream
+    admission_process_test.go:104: child 1 not ready: --- FAIL: TestAdmissionClaimsAcrossProcesses (0.01s); 
+=== RUN   TestAdmissionClaimsAcrossProcesses/last-quota-byte
+    admission_process_test.go:104: child 1 not ready: --- FAIL: TestAdmissionClaimsAcrossProcesses (0.01s); 
+--- FAIL: TestAdmissionClaimsAcrossProcesses (0.50s)
+    --- FAIL: TestAdmissionClaimsAcrossProcesses/last-ip (0.17s)
+    --- FAIL: TestAdmissionClaimsAcrossProcesses/last-stream (0.17s)
+    --- FAIL: TestAdmissionClaimsAcrossProcesses/last-quota-byte (0.15s)
+FAIL
+FAIL	routeweaver/internal/store	3.897s
+FAIL

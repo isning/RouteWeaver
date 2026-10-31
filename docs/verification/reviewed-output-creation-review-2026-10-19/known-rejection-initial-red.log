@@ -1,0 +1,205 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> routeweaver-web@1.0.0 test
+> vitest run --maxWorkers=1 src/output-creation.dom.test.tsx src/basic-routing.dom.test.tsx -t independent:
+
+
+ RUN  v5.0.5 /tmp/routeweaver-output-create-review/web
+
+ ❯ src/basic-routing.dom.test.tsx (18 tests | 1 failed | 17 skipped) 1782ms
+   × independent: preserves reconciliation after source data changes during an unresolved accepted creation 1780ms
+ ❯ src/output-creation.dom.test.tsx (12 tests | 1 failed | 11 skipped) 756ms
+   × independent: keeps a definite stale-review rejection distinct from a failed lookup 755ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/basic-routing.dom.test.tsx > independent: preserves reconciliation after source data changes during an unresolved accepted creation
+AssertionError: expected null not to be null
+
+Ignored nodes: comments, script, style
+[36m<html>[39m
+  [36m<head />[39m
+  [36m<body>[39m
+    [36m<div>[39m
+      [36m<div[39m
+        [33mclass[39m=[32m"css-dev-only-do-not-override-jdb7z4 ant-app css-var-_r_0_"[39m
+      [36m>[39m
+        [36m<header[39m
+          [33mclass[39m=[32m"page-heading"[39m
+        [36m>[39m
+          [36m<div>[39m
+            [36m<button[39m
+              [33mclass[39m=[32m"ant-btn css-dev-only-do-not-override-jdb7z4 css-var-_r_0_ ant-btn-text ant-btn-color-default ant-btn-variant-text back-button"[39m
+              [33mtype[39m=[32m"button"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33mclass[39m=[32m"ant-btn-icon"[39m
+              [36m>[39m
+                [36m<span[39m
+                  [33maria-hidden[39m=[32m"true"[39m
+                  [33maria-label[39m=[32m"arrow-left"[39m
+                  [33mclass[39m=[32m"anticon anticon-arrow-left"[39m
+                  [33mrole[39m=[32m"img"[39m
+                [36m>[39m
+                  [36m<svg[39m
+                    [33maria-hidden[39m=[32m"true"[39m
+                    [33mdata-icon[39m=[32m"arrow-left"[39m
+                    [33mfill[39m=[32m"currentColor"[39m
+                    [33mfocusable[39m=[32m"false"[39m
+                    [33mheight[39m=[32m"1em"[39m
+                    [33mviewBox[39m=[32m"64 64 896 896"[39m
+                    [33mwidth[39m=[32m"1em"[39m
+                  [36m>[39m
+                    [36m<path[39m
+                      [33md[39m=[32m"M872 474H286.9l350.2-304c5.6-4.9 2.2-14-5.2-14h-88.5c-3.9 0-7.6 1.4-10.5 3.9L155 487.8a31.96 31.96 0 000 48.3L535.1 866c1.5 1.3 3.3 2 5.2 2h91.5c7.4 0 10.8-9.2 5.2-14L286.9 550H872c4.4 0 8-3.6 8-8v-60c0-4.4-3.6-8-8-8z"[39m
+                    [36m/>[39m
+                  [36m</svg>[39m
+                [36m</span>[39m
+              [36m</span>[39m
+              [36m<span>[39m
+                [0m返回[0m
+              [36m</span>[39m
+            [36m</button>[39m
+            [36m<h1>[39m
+              [0m设置订阅[0m
+            [36m</h1>[39m
+            [36m<p>[39m
+              [0m选好日常线路，查看修改后再发布。[0m
+            [36m</p>[39m
+          [36m</div>[39m
+        [36m</header>[39m
+        [36m<section[39m
+          [33mclass[39m=[32m"surface "[39m
+        [36m>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"section-heading"[39m
+          [36m>[39m
+            [36m<div>[39m
+              [36m<h2>[39m
+                [0m日常连接[0m
+              [36m</h2>[39m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"ant-alert ant-alert-error ant-alert-outlined ant-alert-with-description form-error css-var-_r_0_ css-dev-only-do-not-override-jdb7z4"[39m
+            [33mdata-show[39m=[32m"true"[39m
+            [33mrole[39m=[32m"alert"[39m
+          [36m>[39m
+            [36m<span[39m
+              [33mclass[39m=[32m"ant-alert-icon"[39m
+            [36m>[39m
+              [36m<span[39m
+                [33maria-label[39m=[32m"close-circle"[39m
+                [33mclass[39m=[32m"anticon anticon-close-circle"[39m
+                [33mrole[39m=[32m"img"[39m
+              [36m>[39m
+                [36m<svg[39m
+                  [33maria-hidden[39m=[32m"true"[39m
+                  [33mdata-icon[39m=[32m"close-circle"[39m
+                  [33mfill[39m=[32m"currentColor"[39m
+                  [33mfill-rule[39m=[32m"evenodd"[39m
+                  [33mfocusable[39m=[32m"false"[39m
+                  [33mheight[39m=[32m"1em"[39m
+                  [33mviewBox[39m=[32m"64 64 896 896"[39m
+                  [33mwidth[39m=[32m"1em"[39m
+                [36m>[39m
+                  [36m<path[39m
+                    [33md[39m=[32m"M512 64c247.4 0 448 200.6 448 448S759.4 960 512 960 64 759.4 64 512 264.6 64 512 64zm127.98 274.82h-.04l-.08.06L512 466.75 384.14 338.88c-.04-.05-.06-.06-.08-.06a.12.12 0 00-.07 0c-.03 0-.05.01-.09.05l-45.02 45.02a.2.2 0 00-.05.09.12.12 0 000 .07v.02a.27.27 0 00.06.06L466.75 512 338.88 639.86c-.05.04-.06.06-.06.08a.12.12 0 000 .07c0 .03.01.05.05.09l45.02 45.02a.2.2 0 00.09.05.12.12 0 00.07 0c.02 0 .04-.01.08-.05L512 557.25l127.86 127.87c.04.04.06.05.08.05a.12.12 0 00.07 0c.03 0 .05-.01.09-.05l45.02-45.02a.2.2 0 00.05-.09.12.12 0 000-.07v-.02a.27.27 0 00-.05-.06L557.25 512l127.87-127.86c.04-.04.05-.06.05-.08a.12.12 0 000-.07c0-.03-.01-.05-.05-.09l-45.02-45.02a.2.2 0 00-.09-.05.12.12 0 00-.07 0z"[39m
+                  [36m/>[39m
+                [36m</svg>[39m
+              [36m</span>[39m
+            [36m</span>[39m
+            [36m<div[39m
+              [33mclass[39m=[32m"ant-alert-section"[39m
+            [36m>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"ant-alert-title"[39m
+              [36m>[39m
+                [0m操作未完成[0m
+              [36m</div>[39m
+              [36m<div[39m
+                [33mclass[39m=[32m"ant-alert-description"[39m
+              [36m>[39m
+                [0m无法确认订阅是否已发布。请重试以核对同一份订阅，当前选择已保留。[0m
+              [36m</div>[39m
+            [36m</div>[39m
+          [36m</div>[39m
+          [36m<div[39m
+            [33mclass[39m=[32m"settings-form"[39m
+          [36m>[39m
+            [36m<label[39m
+              [33mclass[39m=[32m"standalone-label"[39m
+            [36m>[39m
+              [0m订阅名称[0m
+              [36m<input[39m
+                [33maria-label[39m=[32m"订阅名称"[39m
+                [33mclass[39m=[32m"ant-input css-dev-only-do-not-override-jdb7z4 ant-input-outlined css-var-_r_0_ ant-input-css-var"[39m
+                [33mtype[39m=[32m"text"[39m
+                [33mvalue[39m=[32m"日常订阅"[39m
+              [36m/>[39m
+            [36m</label>[39m
+            [36m<label[39m
+              [33mclass[39m=[32m"standalone-label"[39m
+            [36m>[39m
+              [0m使用的客户端[0m
+              [36m<div[39m
+                [33mclass[39m=[32m"ant-select ant-select-outlined css-var-_r_0_ ant-select-css-var css-dev-only-do-not-override-jdb7z4 ant-select-single ant-select-show-arrow"[39m
+              [36m>[39m
+                [36m<div[39m
+                  [33mclass[39m=[32m"ant-select-content ant-select-content-has-value"[39m
+                  [33mtitle[39m=[32m"Mihomo"[39m
+                [36m>[39m
+                  [0mMihomo[0m
+                  [36m<input[39m
+                    [33maria-autocomplete[39m=[32m"list"[39m
+                    [33maria-expanded[39m=[32m"false"[39m
+                    [33maria-haspopup[39m=[32m"listbox"[39m
+                    [33maria-label[39m=[32m"使用的客户端"[39m
+                    [33mautocomplete[39m=[32m"new-password"[39m
+                    [33mclass[39m=[32m"ant-select-input"[39m
+                    [33mid[39m=[32m"test-id"[39m
+           ...
+ ❯ src/basic-routing.dom.test.tsx:678:103
+    676|   expect(published).not.toHaveBeenCalled();
+    677|   changed=true; focusManager.setFocused(false); focusManager.setFocuse…
+    678|   await waitFor(()=>expect(screen.queryByText("线路资料已更新，请重新查看修改。")||scr…
+       |                                                                                                       ^
+    679|   // A committed prior creation remains reconcilable even though its o…
+    680|   const retry=screen.queryByRole("button",{name:"发布并获取订阅"});
+ ❯ runWithExpensiveErrorDiagnosticsDisabled ../../../workspace/scratch/d385eb428cee/routeweaver/web/node_modules/@testing-library/dom/dist/config.js:47:12
+ ❯ checkCallback ../../../workspace/scratch/d385eb428cee/routeweaver/web/node_modules/@testing-library/dom/dist/wait-for.js:124:77
+ ❯ Timeout.checkRealTimersCallback ../../../workspace/scratch/d385eb428cee/routeweaver/web/node_modules/@testing-library/dom/dist/wait-for.js:118:16
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  src/output-creation.dom.test.tsx > independent: keeps a definite stale-review rejection distinct from a failed lookup
+AssertionError: expected '操作未完成无法确认订阅是否已发布。请重试以核对同一份订阅，当前选择已保留。' to contain 'Review is stale'
+
+Expected: "Review is stale"
+Received: "操作未完成无法确认订阅是否已发布。请重试以核对同一份订阅，当前选择已保留。"
+
+ ❯ src/output-creation.dom.test.tsx:425:49
+    423|   await userEvent.click(screen.getByRole("button",{name:"检查并发布"}));
+    424|   await screen.findByRole("alert");
+    425|   expect(screen.getByRole("alert").textContent).toContain("Review is s…
+       |                                                 ^
+    426|   expect((screen.getByRole("button",{name:"检查并发布"}) as HTMLButtonEleme…
+    427| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  2 failed | 28 skipped (30)
+   Start at  05:14:29
+   Duration  6.84s (import 42%, tests 39%, environment 16%, transform 3%)
+
+     Import  17 modules were evaluated 23 times · 2.73s total, 42% of tracked time
+             ~711ms faster with isolate: false — shared modules are evaluated once per worker instead of once per file
+             learn more: https://vitest.dev/guide/improving-performance#test-isolation
+
+npm notice
+npm notice New major version of npm available! 11.9.0 -> 12.2.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.0
+npm notice To update run: npm install -g npm@12.2.0
+npm notice

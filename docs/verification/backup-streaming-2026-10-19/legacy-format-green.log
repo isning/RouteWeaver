@@ -1,0 +1,30 @@
+=== RUN   TestStreamingBackupRejectsUnauthenticatedOrMalformedFramesAndCleansStaging
+=== RUN   TestStreamingBackupRejectsUnauthenticatedOrMalformedFramesAndCleansStaging/missing_footer
+=== RUN   TestStreamingBackupRejectsUnauthenticatedOrMalformedFramesAndCleansStaging/wrong_footer_count
+=== RUN   TestStreamingBackupRejectsUnauthenticatedOrMalformedFramesAndCleansStaging/missing_feed_index
+=== RUN   TestStreamingBackupRejectsUnauthenticatedOrMalformedFramesAndCleansStaging/truncated_ciphertext
+=== RUN   TestStreamingBackupRejectsUnauthenticatedOrMalformedFramesAndCleansStaging/tampered_ciphertext
+=== RUN   TestStreamingBackupRejectsUnauthenticatedOrMalformedFramesAndCleansStaging/unknown_schema
+=== RUN   TestStreamingBackupRejectsUnauthenticatedOrMalformedFramesAndCleansStaging/behind_generation
+=== RUN   TestStreamingBackupRejectsUnauthenticatedOrMalformedFramesAndCleansStaging/trailing_ciphertext
+=== RUN   TestStreamingBackupRejectsUnauthenticatedOrMalformedFramesAndCleansStaging/unknown_frame_field
+=== RUN   TestStreamingBackupRejectsUnauthenticatedOrMalformedFramesAndCleansStaging/duplicate_row
+=== RUN   TestStreamingBackupRejectsUnauthenticatedOrMalformedFramesAndCleansStaging/total
+=== RUN   TestStreamingBackupRejectsUnauthenticatedOrMalformedFramesAndCleansStaging/rows
+=== RUN   TestStreamingBackupRejectsUnauthenticatedOrMalformedFramesAndCleansStaging/record
+--- PASS: TestStreamingBackupRejectsUnauthenticatedOrMalformedFramesAndCleansStaging (10.77s)
+    --- PASS: TestStreamingBackupRejectsUnauthenticatedOrMalformedFramesAndCleansStaging/missing_footer (0.00s)
+    --- PASS: TestStreamingBackupRejectsUnauthenticatedOrMalformedFramesAndCleansStaging/wrong_footer_count (0.00s)
+    --- PASS: TestStreamingBackupRejectsUnauthenticatedOrMalformedFramesAndCleansStaging/missing_feed_index (0.01s)
+    --- PASS: TestStreamingBackupRejectsUnauthenticatedOrMalformedFramesAndCleansStaging/truncated_ciphertext (1.07s)
+    --- PASS: TestStreamingBackupRejectsUnauthenticatedOrMalformedFramesAndCleansStaging/tampered_ciphertext (0.95s)
+    --- PASS: TestStreamingBackupRejectsUnauthenticatedOrMalformedFramesAndCleansStaging/unknown_schema (0.00s)
+    --- PASS: TestStreamingBackupRejectsUnauthenticatedOrMalformedFramesAndCleansStaging/behind_generation (0.01s)
+    --- PASS: TestStreamingBackupRejectsUnauthenticatedOrMalformedFramesAndCleansStaging/trailing_ciphertext (0.92s)
+    --- PASS: TestStreamingBackupRejectsUnauthenticatedOrMalformedFramesAndCleansStaging/unknown_frame_field (0.00s)
+    --- PASS: TestStreamingBackupRejectsUnauthenticatedOrMalformedFramesAndCleansStaging/duplicate_row (0.01s)
+    --- PASS: TestStreamingBackupRejectsUnauthenticatedOrMalformedFramesAndCleansStaging/total (0.79s)
+    --- PASS: TestStreamingBackupRejectsUnauthenticatedOrMalformedFramesAndCleansStaging/rows (0.74s)
+    --- PASS: TestStreamingBackupRejectsUnauthenticatedOrMalformedFramesAndCleansStaging/record (0.82s)
+PASS
+ok  	routeweaver/internal/backup	10.821s

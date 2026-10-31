@@ -1,0 +1,83 @@
+{
+  "dns": {
+    "final": "rw-system-dns",
+    "servers": [
+      {
+        "tag": "rw-system-dns",
+        "type": "local"
+      }
+    ]
+  },
+  "inbounds": [
+    {
+      "listen": "127.0.0.1",
+      "listen_port": 17890,
+      "tag": "rw-mixed",
+      "type": "mixed"
+    }
+  ],
+  "log": {
+    "level": "warn"
+  },
+  "outbounds": [
+    {
+      "packet_encoding": "xudp",
+      "server": "192.0.2.30",
+      "server_port": 443,
+      "tag": "United Kingdom",
+      "tls": {
+        "alpn": [
+          "http/1.1"
+        ],
+        "enabled": true,
+        "server_name": "example.com",
+        "utls": {
+          "enabled": true,
+          "fingerprint": "chrome"
+        }
+      },
+      "transport": {
+        "headers": {
+          "Host": "cdn.example.com"
+        },
+        "path": "/proxy",
+        "type": "ws"
+      },
+      "type": "vless",
+      "uuid": "00000000-0000-4000-8000-000000000001"
+    },
+    {
+      "method": "aes-128-gcm",
+      "password": "synthetic-fixture-secret",
+      "server": "192.0.2.20",
+      "server_port": 8388,
+      "tag": "United States",
+      "type": "shadowsocks"
+    },
+    {
+      "tag": "rw-direct",
+      "type": "direct"
+    },
+    {
+      "outbounds": [
+        "United Kingdom",
+        "United States"
+      ],
+      "tag": "Choose",
+      "type": "selector"
+    }
+  ],
+  "route": {
+    "default_domain_resolver": "rw-system-dns",
+    "final": "rw-direct",
+    "rules": [
+      {
+        "action": "route",
+        "domain_suffix": [
+          "example.org"
+        ],
+        "outbound": "Choose"
+      }
+    ]
+  }
+}

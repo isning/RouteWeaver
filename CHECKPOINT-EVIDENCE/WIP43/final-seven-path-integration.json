@@ -1,0 +1,97 @@
+{
+  "actual_after_inventory_file_sha256": "c493c01cf8cb613c4d35e5c193d4fa68189048ec026fc6d3a8d1de834f53031a",
+  "added_or_removed_canonical_paths": 0,
+  "after_source_sha256": "b670ad77345a032511c5a071159471e1fdbb68b94eb507df87982d3f288389a5",
+  "approved_files": [
+    {
+      "after_mode": "0644",
+      "after_sha256": "72a4ddc0a6e25b4b64526a95405b49eca25f1a857aa355d6cfd9753eb886e90e",
+      "before_mode": "0644",
+      "before_sha256": "4a21892475c7fb5c73f306a33f8f796da17fb8b8440293138195cae0965f5f03",
+      "classification": "executed-code-or-test",
+      "path": "web/src/Subscriptions.tsx"
+    },
+    {
+      "after_mode": "0644",
+      "after_sha256": "e5196f5a651e82f123891838f8f2f40dced2e23532a6255d67614c15b048360f",
+      "before_mode": "0644",
+      "before_sha256": "f48f7005dc69ed806da33ab0f952b34fd888f5bb5f06e35c113fa8f0f167c07a",
+      "classification": "executed-code-or-test",
+      "path": "web/src/output-review-consequence.dom.test.tsx"
+    },
+    {
+      "after_mode": "0644",
+      "after_sha256": "ae2fa8e32762d4bdac5514f3a37f491b29bcdb6df81e7daf9b1cc2b75f62f511",
+      "before_mode": "0644",
+      "before_sha256": "d5244a29249ad5d8bf165b03ea0e78d57c602f51d229ccb426e8ed1d0ba7ed2e",
+      "classification": "executed-code-or-test",
+      "path": "web/src/subscription-content-decisions.dom.test.tsx"
+    },
+    {
+      "after_mode": "0644",
+      "after_sha256": "3fc8356c900b22f1ff9d02c182b49c334e35b68aa2541362fc95abe23c319b3b",
+      "before_mode": "0644",
+      "before_sha256": "a12d2dfa119d8a855b6b2b22d4b42e9fd75619f484ebade5306c3d319f9408e3",
+      "classification": "executed-code-or-test",
+      "path": "web/src/subscription-workspace.dom.test.tsx"
+    },
+    {
+      "after_mode": "0644",
+      "after_sha256": "6e39ba4e704a3ff69d58f0b813d844ec19aafeaee172ec53f3f5a3572abfb174",
+      "before_mode": "0644",
+      "before_sha256": "3e75fa43da558b9bbab409eaaf246f0429d3a2a7500f41ebafca34f9df756d62",
+      "classification": "executed-code-or-test",
+      "path": "web/src/subscription-relational.dom.test.tsx"
+    },
+    {
+      "after_mode": "0644",
+      "after_sha256": "41be5170eebb4aee0adb39974368353ecfed74c5fcc438559b693f172a26a4b5",
+      "before_mode": "0644",
+      "before_sha256": "c24bb7f00b93f9769e30a90ef56994af042d66a9da2def4ae1b9165268576b84",
+      "classification": "executed-code-or-test",
+      "path": "web/tests/output-review-consequence.ui.spec.ts"
+    },
+    {
+      "after_mode": "0644",
+      "after_sha256": "7492a68d0e7863cdfb28df34245a7e2f71eb2d71ab9f19c7e1d8e83a91edb1a3",
+      "before_mode": "0644",
+      "before_sha256": "80f517bdd9eac9e584babeb8018b3e7073ac92c1431744319260018e7964232d",
+      "classification": "reviewed-stable-test-extraction",
+      "path": "web/tests/product-model.ui.spec.ts"
+    }
+  ],
+  "before_source_sha256": "582c068fd5016f4d239a2fa9d72e5199a988aade034fb762d7e863201a51e21a",
+  "canonical_checkpoint_unchanged": true,
+  "canonical_payload_files": 1172,
+  "code_or_test_previously_executed_paths": 6,
+  "documentation_changes": 0,
+  "format": "derived sanitized portable summary; not a byte-identical native receipt",
+  "guards": {
+    "checkpointInvariant": true,
+    "exactDelta": true,
+    "historicalLogsInvariant": true,
+    "immutableInputsInvariant": true,
+    "lockReleased": true,
+    "unrelatedInvariant": true
+  },
+  "integration_manifest_sha256": "8a987965c60c7f159355abf7c2dbb6ee2b386f8990fabbfb1c333afc02cb4c1f",
+  "integration_receipt_sha256": "da52b5f87948a8172d47a278ccf7dee17bca978f7c0f0bad55b7334e7a573680",
+  "limits": [
+    "Integration success is not final whole-web or canonical17 runtime success.",
+    "This derived record preserves the time-specific pending state; subsequent terminal records establish final results separately."
+  ],
+  "native_exit_code": 0,
+  "no_raw_runtime_or_auth_artifacts_included": true,
+  "preserved_historical_logs": 127,
+  "prior_integration_history": "WIP42 retains actual38+2 chain and original aggregate/current17 failed receipts unchanged. This7-path delta composes over its582c canonical payload.",
+  "private_instrumentation_or_diagnostics_integrated": false,
+  "qa_released_utc": "2026-10-25T17:43:22.097600+00:00",
+  "runner_review_sha256": "830f5263d60bec3b2fb7f2e4a4d063754d2ecf433754579d2a8c20bcb404130f",
+  "runner_sha256": "211164bfbe494f1cf40c8937c44461dc8c67bc007626e3d47c18503aea286b7d",
+  "schema": 1,
+  "source_review_sha256": "a379c75227a4c9e0311ebfe29b55eac69b99cd4239d4e3ae0534686e844d4a7f",
+  "stable_extraction_mapping_sha256": "7b827b22119969aa25d21d472b31606336330c73a6fdb28a5a855231b125c66d",
+  "stable_fixture_source_review_sha256": "4d2b00d24587c76485c66c5a8937537a6483d63821f948845b6bd293e233b3ef",
+  "stable_reviewed_test_extraction_paths": 1,
+  "status": "actual seven-path canonical integration; final runtime results pending when this record was generated"
+}

@@ -1,0 +1,25 @@
+=== RUN   TestDiagnosticMappingRequiresUniqueGeneratedPrincipalPrefix
+=== RUN   TestDiagnosticMappingRequiresUniqueGeneratedPrincipalPrefix/unique
+=== RUN   TestDiagnosticMappingRequiresUniqueGeneratedPrincipalPrefix/principal_after_generic_cannot_define_route
+=== RUN   TestDiagnosticMappingRequiresUniqueGeneratedPrincipalPrefix/duplicate_principal
+=== RUN   TestDiagnosticMappingRequiresUniqueGeneratedPrincipalPrefix/missing_connector_never_default
+=== RUN   TestDiagnosticMappingRequiresUniqueGeneratedPrincipalPrefix/duplicate_outbound
+--- PASS: TestDiagnosticMappingRequiresUniqueGeneratedPrincipalPrefix (0.00s)
+    --- PASS: TestDiagnosticMappingRequiresUniqueGeneratedPrincipalPrefix/unique (0.00s)
+    --- PASS: TestDiagnosticMappingRequiresUniqueGeneratedPrincipalPrefix/principal_after_generic_cannot_define_route (0.00s)
+    --- PASS: TestDiagnosticMappingRequiresUniqueGeneratedPrincipalPrefix/duplicate_principal (0.00s)
+    --- PASS: TestDiagnosticMappingRequiresUniqueGeneratedPrincipalPrefix/missing_connector_never_default (0.00s)
+    --- PASS: TestDiagnosticMappingRequiresUniqueGeneratedPrincipalPrefix/duplicate_outbound (0.00s)
+=== RUN   TestManagedDiagnosticTraversesNativeTransitAndNeverFallsBack
+--- PASS: TestManagedDiagnosticTraversesNativeTransitAndNeverFallsBack (2.03s)
+=== RUN   TestManagedDiagnosticCancellationAndPrivateEOFCloseNativeTunnel
+=== RUN   TestManagedDiagnosticCancellationAndPrivateEOFCloseNativeTunnel/cancel
+=== RUN   TestManagedDiagnosticCancellationAndPrivateEOFCloseNativeTunnel/eof
+--- PASS: TestManagedDiagnosticCancellationAndPrivateEOFCloseNativeTunnel (4.02s)
+    --- PASS: TestManagedDiagnosticCancellationAndPrivateEOFCloseNativeTunnel/cancel (2.01s)
+    --- PASS: TestManagedDiagnosticCancellationAndPrivateEOFCloseNativeTunnel/eof (2.01s)
+=== RUN   TestManagedDiagnosticStillEnforcesNativeDestinationPolicy
+--- PASS: TestManagedDiagnosticStillEnforcesNativeDestinationPolicy (0.01s)
+PASS
+ok  	routeweaver/runtimes/xray	7.106s
+?   	routeweaver/runtimes/xray/cmd/routeweaver-xray	[no test files]

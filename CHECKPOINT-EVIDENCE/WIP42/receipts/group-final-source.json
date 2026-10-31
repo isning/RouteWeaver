@@ -1,0 +1,115 @@
+{
+  "acceptance_scope_at_native_terminal": "Pending independent six actual images, including count-first named delta, duplicate-name ID disambiguation and complete direct-child ring paint. Native details are checked but not extra screenshot captures; concurrent label-renaming is not exercised. Native/public-state checks are not broad accessibility, live enforcement or Google-level certification.",
+  "actual_screenshot_count": 6,
+  "cleanup_scope": "Playwright-owned graceful server shutdown; ports closed and demo database absent, not universal descendant-liveness proof.",
+  "finished": "2026-10-25T16:55:58.951495+00:00",
+  "guards": {
+    "builtArtifactsUnchanged": true,
+    "demoDBRemoved": true,
+    "fixtureToolBindingsUnchanged": true,
+    "portClosed": true,
+    "privateSourceInputsUnchanged": true,
+    "recoveredSourceUnchanged": true
+  },
+  "independent_pixel_review": {
+    "all_reviewed_image_hashes_verified": true,
+    "findings": [
+      "Both first-conflict passive Alert rings are complete and discernible; recovery text and action are readable.",
+      "Both latest comparisons present 1 to 2 members and one added named identity with its necessary full duplicate-name ID. The latest ID is legible at 390px; the adoption action remains explicit.",
+      "Both final authoritative reviews show rename-only change, unchanged effective users, retained-draft disposal consent and visible Return/Update actions. No old member is silently lost.",
+      "Actual opening/latest records contain one/two members; each final record retains both latest members and changes name only. UI POST sequences are 409,409,200,200 for both cases.",
+      "Per-side complete membership/reference details were exercised by native DOM receipts and retain their opening/latest provenance; they are not additional screenshot evidence.",
+      "All image/evidence hashes verified; exact candidate map equals integrated after inventory; source/tool/artifact/port/DB guards true."
+    ],
+    "limits": [
+      "No broad keyboard/assistive-technology certification or ordinary-user role claim.",
+      "No concurrent referenced-label rename exercised; labels are read-time snapshot metadata, not historical-save provenance.",
+      "Cleanup establishes owned process shutdown, ports closed and disposable DB absent, not universal descendant liveness.",
+      "Current17 primary-task failures remain separate and unresolved; this is not overall product acceptance."
+    ],
+    "native_receipt_binding_verified": true,
+    "native_record_pending_review_text_retained_as_history": true,
+    "nonblocking_polish": [
+      "After latest comparison loads, the earlier view-latest action and error instruction remain redundant; comparison spacing is tight but the task remains understandable.",
+      "Long member ID is truncated in the narrow editable chip; the material added-member comparison displays the full disambiguating ID and exact full per-side details are available."
+    ],
+    "record": "policy-ux-review-20261025/GROUP-FINAL-SOURCE-ACTUAL-PIXEL-REVIEW.json",
+    "reviewed_at_utc": "2026-10-25T17:00:49.925784+00:00",
+    "reviewed_image_count": 6,
+    "scope": "accepted-for-the-bounded-final-source-group-recovery-slice",
+    "sha256": "ab914ed7f10e82a83e3ef20a77a4d40f94121b71884a68dbc6dd5e3cb4c111dd",
+    "source_binding_verified": true,
+    "status": "accepted_bounded_slice"
+  },
+  "native_cases": 2,
+  "native_report_sha256": "d0802f72ad231ac25190ff18dedb37d41f33656fc1d1d01d561206b5d5eb8fe9",
+  "native_status": "passed",
+  "omissions": [
+    "Absolute workspace/tool executable paths and process IDs",
+    "Raw logs, stack traces and DOM dumps",
+    "Demo/auth/session/cookie/CSRF state, private feed values and credentials",
+    "Browser screenshots, traces and runtime source copies"
+  ],
+  "original_record": {
+    "included_native_bytes": false,
+    "record": "group-policy-edit-proposal-20261025/browser/final-source-smoke/run/run.json",
+    "sha256": "0a0205208773e10ccac183cef2f2b9b60b098d06c4a34c226e9774c4b2960656"
+  },
+  "overall_product_acceptance": false,
+  "privacy_rule": "Explicitly selected scalar/count/identity fields only; original immutable record hashes retained.",
+  "purpose": "group-final-source",
+  "qa_released_utc": "2026-10-25T16:55:58.951476+00:00",
+  "record_kind": "derived_allowlisted_terminal_summary_not_native_byte_copy",
+  "role_scope": "Two administrator desktop/narrow group journeys against owned temporary local synthetic demo; concurrent reference-label renaming not exercised.",
+  "schema": "routeweaver.portable-verification.v1",
+  "screenshot_bytes_included": false,
+  "source_binding": {
+    "all_input_binding_hashes_verified": true,
+    "bindings_record_sha256": "093bbe61d49fb88beea37e830a26b0e318b888650fb50cd6542e46d5c363060b",
+    "candidate_inventory_sha256": "9bf874f7c96448171c2c367fb54576d6b988afc2a45769f5b29ee5ccdc698ebc",
+    "exact_final_integration_after_inventory": true,
+    "source_before_inventory_sha256": "9bf874f7c96448171c2c367fb54576d6b988afc2a45769f5b29ee5ccdc698ebc"
+  },
+  "source_sha256": "582c068fd5016f4d239a2fa9d72e5199a988aade034fb762d7e863201a51e21a",
+  "stages": [
+    {
+      "finished": "2026-10-25T16:55:26.053581+00:00",
+      "name": "go-build",
+      "nativeExit": 0,
+      "started": "2026-10-25T16:55:21.742695+00:00"
+    },
+    {
+      "finished": "2026-10-25T16:55:29.939002+00:00",
+      "name": "web-build",
+      "nativeExit": 0,
+      "started": "2026-10-25T16:55:26.053873+00:00"
+    },
+    {
+      "finished": "2026-10-25T16:55:58.382267+00:00",
+      "name": "browser",
+      "nativeExit": 0,
+      "started": "2026-10-25T16:55:30.400770+00:00"
+    }
+  ],
+  "started": "2026-10-25T16:55:21.116213+00:00",
+  "stats": {
+    "duration": 27429.477000000003,
+    "expected": 2,
+    "flaky": 0,
+    "skipped": 0,
+    "startTime": "2026-10-25T16:55:30.932Z",
+    "unexpected": 0
+  },
+  "synthetic_operation_counts": {
+    "automaticEntitlements": 4,
+    "cases": 2,
+    "configurationWrites": 11,
+    "domainUserPosts": 4,
+    "policyApplies": 7,
+    "policyAuditRows": 7,
+    "previews200": 7,
+    "previews409": 4,
+    "screenshots": 6,
+    "sessionPairs": 6
+  }
+}

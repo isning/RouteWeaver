@@ -1,0 +1,52 @@
+{
+  "checkpoint": "WIP49",
+  "attempt": "final-web-r1",
+  "status": "failed",
+  "tests_passed": 1816,
+  "tests_failed": 1,
+  "tests_pending": 0,
+  "physical_test_files": 160,
+  "typecheck": "passed",
+  "production_build": "not started in aggregate",
+  "source_scope_files": 381,
+  "source_changed": [],
+  "failure": "profile-source-disclosure.dom.test.tsx: exact focus assertion after dirty-dialog cancel saw body after dialog absence; cause under investigation, not waived or presumed flaky",
+  "evidence": [
+    {
+      "filename": "final-suite-r1.json",
+      "sha256": "db16a3235d3a779b1abae4fc4e220e59202d13db5a5ba70020bf7b7224d7523f",
+      "bytes": 609311,
+      "availability": "local-only evidence; not an archive attachment"
+    },
+    {
+      "filename": "final-suite-r1.log",
+      "sha256": "e4dcdd1a88e036b05f1c7b0f848eb79c82ee42a34869ac040c50864027d0a0e3",
+      "bytes": 115293,
+      "availability": "local-only evidence; not an archive attachment"
+    },
+    {
+      "filename": "final-typecheck-r1.log",
+      "sha256": "3eeba694beb40e350731996df1916da84a1348266b4c9d68b105dcdd21c1bc6f",
+      "bytes": 144,
+      "availability": "local-only evidence; not an archive attachment"
+    },
+    {
+      "filename": "final-web-r1.exit",
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+      "bytes": 2,
+      "availability": "local-only evidence; not an archive attachment"
+    },
+    {
+      "filename": "final-web-freeze-r1.json",
+      "sha256": "025cbdd8e5930ec7352be3018be4dae2ee2fa2577ee993b448d8ce11fcb1fd03",
+      "bytes": 57344,
+      "availability": "local-only evidence; not an archive attachment"
+    },
+    {
+      "filename": "final-web-source-check-r1.json",
+      "sha256": "7e5c68dd79ef169daf024d74abb7ffa3ff02f9bbe2f4c415105e25bb11146d3e",
+      "bytes": 57,
+      "availability": "local-only evidence; not an archive attachment"
+    }
+  ]
+}

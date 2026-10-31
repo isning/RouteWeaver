@@ -1,0 +1,22 @@
+=== RUN   TestIndependentStage2MissingTriggerCannotReuseWarmUsage
+--- PASS: TestIndependentStage2MissingTriggerCannotReuseWarmUsage (0.12s)
+=== RUN   TestIndependentStage2FaultThenTrackedWriteCannotInitializePartialTotal
+=== RUN   TestIndependentStage2FaultThenTrackedWriteCannotInitializePartialTotal/missing-window
+=== RUN   TestIndependentStage2FaultThenTrackedWriteCannotInitializePartialTotal/corrupt-window
+=== RUN   TestIndependentStage2FaultThenTrackedWriteCannotInitializePartialTotal/missing-state
+=== RUN   TestIndependentStage2FaultThenTrackedWriteCannotInitializePartialTotal/unknown-version
+--- PASS: TestIndependentStage2FaultThenTrackedWriteCannotInitializePartialTotal (0.49s)
+    --- PASS: TestIndependentStage2FaultThenTrackedWriteCannotInitializePartialTotal/missing-window (0.13s)
+    --- PASS: TestIndependentStage2FaultThenTrackedWriteCannotInitializePartialTotal/corrupt-window (0.13s)
+    --- PASS: TestIndependentStage2FaultThenTrackedWriteCannotInitializePartialTotal/missing-state (0.12s)
+    --- PASS: TestIndependentStage2FaultThenTrackedWriteCannotInitializePartialTotal/unknown-version (0.12s)
+=== RUN   TestIndependentStage2DeniedSettlementUpdatesAlreadyWarmWindow
+--- PASS: TestIndependentStage2DeniedSettlementUpdatesAlreadyWarmWindow (0.13s)
+=== RUN   TestIndependentStage2RawAccountLookupNotPersisted
+--- PASS: TestIndependentStage2RawAccountLookupNotPersisted (0.08s)
+=== RUN   TestIndependentStage2WarmOwnerTransferAndBatchRollback
+--- PASS: TestIndependentStage2WarmOwnerTransferAndBatchRollback (0.52s)
+=== RUN   TestIndependentStage2RestoreRekeysOpaqueLookupAndRejectsSourceCiphertext
+--- PASS: TestIndependentStage2RestoreRekeysOpaqueLookupAndRejectsSourceCiphertext (0.25s)
+PASS
+ok  	routeweaver/internal/store	2.599s

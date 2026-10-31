@@ -1,0 +1,64 @@
+{
+  "checkpoint": "WIP51",
+  "preliminary_source_backend_race": {
+    "status": "cancelled",
+    "exit": 130,
+    "reason": "scope expanded to combined source and accounting verification; partial results not final acceptance"
+  },
+  "quick_R1": {
+    "exit": 1,
+    "frontend_passed": 1875,
+    "frontend_failed": 1,
+    "frontend_total": 1876,
+    "physical_test_files": 169,
+    "typecheck": "passed",
+    "web_build": "not run",
+    "failure": "unsupported stored source format not shown on first ready render"
+  },
+  "repair": "Original failing test unchanged; actual form-store fallback plus deterministic red-to-green regression. 53 focused tests passed.",
+  "phase_freezes": "Original 874 inputs were not globally unchanged. Two web files changed before R1 web gates; later format repair validated under separate R2 web freeze. Existing non-web inputs remained unchanged.",
+  "evidence": [
+    {
+      "filename": "combined-quick-r1.exit",
+      "bytes": 2,
+      "sha256": "4355a46b19d348dc2f57c046f8ef63d4538ebb936000f3c9ee954a27460dd865",
+      "availability": "local-only evidence"
+    },
+    {
+      "filename": "combined-code-freeze-r1.json",
+      "bytes": 136373,
+      "sha256": "ff23bcdbfe3f36ec3f409c475e47bf94ac068cee8f0ca0e7a0ecbe0949e0210e",
+      "availability": "local-only evidence"
+    },
+    {
+      "filename": "combined-code-freeze-r1-web-final.json",
+      "bytes": 136721,
+      "sha256": "dba522cb8cb92a4983d054c92d67b062d10593009db33d57ef0f21635778fe5b",
+      "availability": "local-only evidence"
+    },
+    {
+      "filename": "combined-code-freeze-r1-web-focus-final.json",
+      "bytes": 136763,
+      "sha256": "61d7a7ec9fe7c72c02d41a43df78bf94dc7ee7dc5d12844af0fc399b5eff9e82",
+      "availability": "local-only evidence"
+    },
+    {
+      "filename": "format-first-render-red.log",
+      "bytes": 1351,
+      "sha256": "3215d8805c56808366f241b5f118049af76d1670ca5404dd83e84c782fd44843",
+      "availability": "local-only evidence"
+    },
+    {
+      "filename": "format-first-render-green.log",
+      "bytes": 948,
+      "sha256": "67d4aa164297416c8ba71be6cd71d9bd093883e1ad46857d11141d722f9b53e4",
+      "availability": "local-only evidence"
+    },
+    {
+      "filename": "wip51-source-backend-race.cancelled",
+      "bytes": 170,
+      "sha256": "8ccbafb7f89f35bebc585ced37d0e66bc0f273bedf08cfafb29288206e34f703",
+      "availability": "local-only evidence"
+    }
+  ]
+}

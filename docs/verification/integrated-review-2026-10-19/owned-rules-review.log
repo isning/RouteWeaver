@@ -1,0 +1,56 @@
+=== RUN   TestAcceptedRuleFileIntegrityAndEnvelopeLimits
+=== RUN   TestAcceptedRuleFileIntegrityAndEnvelopeLimits/html
+=== RUN   TestAcceptedRuleFileIntegrityAndEnvelopeLimits/yaml_aliases
+=== RUN   TestAcceptedRuleFileIntegrityAndEnvelopeLimits/yaml_documents
+=== RUN   TestAcceptedRuleFileIntegrityAndEnvelopeLimits/excessive_depth
+=== RUN   TestAcceptedRuleFileIntegrityAndEnvelopeLimits/excessive_bytes
+=== RUN   TestAcceptedRuleFileIntegrityAndEnvelopeLimits/fake_srs
+=== RUN   TestAcceptedRuleFileIntegrityAndEnvelopeLimits/fake_mrs
+--- PASS: TestAcceptedRuleFileIntegrityAndEnvelopeLimits (0.02s)
+    --- PASS: TestAcceptedRuleFileIntegrityAndEnvelopeLimits/html (0.00s)
+    --- PASS: TestAcceptedRuleFileIntegrityAndEnvelopeLimits/yaml_aliases (0.00s)
+    --- PASS: TestAcceptedRuleFileIntegrityAndEnvelopeLimits/yaml_documents (0.00s)
+    --- PASS: TestAcceptedRuleFileIntegrityAndEnvelopeLimits/excessive_depth (0.00s)
+    --- PASS: TestAcceptedRuleFileIntegrityAndEnvelopeLimits/excessive_bytes (0.00s)
+    --- PASS: TestAcceptedRuleFileIntegrityAndEnvelopeLimits/fake_srs (0.00s)
+    --- PASS: TestAcceptedRuleFileIntegrityAndEnvelopeLimits/fake_mrs (0.00s)
+PASS
+ok  	routeweaver/internal/resources	1.041s
+=== RUN   TestNativeOwnedRuleFileBundles
+=== RUN   TestNativeOwnedRuleFileBundles/mihomo-yaml
+    resource_bundle_native_test.go:112: mihomo 1.19.32 accepted actual mihomo-yaml file bundle
+=== RUN   TestNativeOwnedRuleFileBundles/mrs
+    resource_bundle_native_test.go:112: mihomo 1.19.32 accepted actual mrs file bundle
+=== RUN   TestNativeOwnedRuleFileBundles/sing-box-source
+    resource_bundle_native_test.go:112: sing-box 1.14.3 accepted actual sing-box-source file bundle
+=== RUN   TestNativeOwnedRuleFileBundles/srs
+    resource_bundle_native_test.go:112: sing-box 1.14.3 accepted actual srs file bundle
+--- PASS: TestNativeOwnedRuleFileBundles (4.82s)
+    --- PASS: TestNativeOwnedRuleFileBundles/mihomo-yaml (1.74s)
+    --- PASS: TestNativeOwnedRuleFileBundles/mrs (0.97s)
+    --- PASS: TestNativeOwnedRuleFileBundles/sing-box-source (1.06s)
+    --- PASS: TestNativeOwnedRuleFileBundles/srs (1.05s)
+=== RUN   TestOwnedRuleFilesPublishAsExactFrozenBundle
+--- PASS: TestOwnedRuleFilesPublishAsExactFrozenBundle (1.91s)
+=== RUN   TestRuleFileImportRejectsUnownedPathsAndMismatchedPins
+=== RUN   TestRuleFileImportRejectsUnownedPathsAndMismatchedPins/csrf
+=== RUN   TestRuleFileImportRejectsUnownedPathsAndMismatchedPins/owner
+=== RUN   TestRuleFileImportRejectsUnownedPathsAndMismatchedPins/path
+=== RUN   TestRuleFileImportRejectsUnownedPathsAndMismatchedPins/absolute_path
+=== RUN   TestRuleFileImportRejectsUnownedPathsAndMismatchedPins/forged_version
+=== RUN   TestRuleFileImportRejectsUnownedPathsAndMismatchedPins/wrong_digest
+--- PASS: TestRuleFileImportRejectsUnownedPathsAndMismatchedPins (2.03s)
+    --- PASS: TestRuleFileImportRejectsUnownedPathsAndMismatchedPins/csrf (0.01s)
+    --- PASS: TestRuleFileImportRejectsUnownedPathsAndMismatchedPins/owner (0.00s)
+    --- PASS: TestRuleFileImportRejectsUnownedPathsAndMismatchedPins/path (0.00s)
+    --- PASS: TestRuleFileImportRejectsUnownedPathsAndMismatchedPins/absolute_path (0.00s)
+    --- PASS: TestRuleFileImportRejectsUnownedPathsAndMismatchedPins/forged_version (0.00s)
+    --- PASS: TestRuleFileImportRejectsUnownedPathsAndMismatchedPins/wrong_digest (0.00s)
+=== RUN   TestFrozenBundleTokenRotationRevocationAndStaleReview
+--- PASS: TestFrozenBundleTokenRotationRevocationAndStaleReview (1.32s)
+=== RUN   TestRuleRefreshFailureRetainsAcceptedBytesWithoutPretendingFreshness
+--- PASS: TestRuleRefreshFailureRetainsAcceptedBytesWithoutPretendingFreshness (1.64s)
+=== RUN   TestRuleBundleRejectsTamperedFileAndForeignAcceptedVersion
+--- PASS: TestRuleBundleRejectsTamperedFileAndForeignAcceptedVersion (3.73s)
+PASS
+ok  	routeweaver/internal/httpapi	16.511s

@@ -1,0 +1,10 @@
+ok  	routeweaver/internal/privateipc	1.063s
+ok  	routeweaver/internal/diagnostics	1.030s
+ok  	routeweaver/internal/store	34.495s
+ok  	routeweaver/internal/httpapi	137.302s
+ok  	routeweaver/internal/agent	3.503s
+--- FAIL: TestNativeNumericObjectKeysAreNotReflectedAsArrayIndices (0.00s)
+    native_override_test.go:247: numeric untrusted object key leaked: NATIVE_PROTECTED_FIELD: /928374651: unknown or managed field; use structured profile settings
+FAIL
+FAIL	routeweaver/internal/render	1.197s
+FAIL

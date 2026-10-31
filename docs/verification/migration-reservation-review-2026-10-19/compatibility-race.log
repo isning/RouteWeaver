@@ -1,0 +1,18 @@
+=== RUN   TestCanonicalRecordMutationInventory
+--- PASS: TestCanonicalRecordMutationInventory (0.06s)
+=== RUN   TestIndependentMigrationBootstrapReservationDoesNotMutateRows
+--- PASS: TestIndependentMigrationBootstrapReservationDoesNotMutateRows (0.02s)
+=== RUN   TestUsageProjectionBackupDoesNotRepairOrExportDerivedState
+--- PASS: TestUsageProjectionBackupDoesNotRepairOrExportDerivedState (0.06s)
+=== RUN   TestUsageProjectionRestoreCanonicalDifferentKey
+=== RUN   TestUsageProjectionRestoreCanonicalDifferentKey/snapshot-import
+=== RUN   TestUsageProjectionRestoreCanonicalDifferentKey/snapshot-fresh
+=== RUN   TestUsageProjectionRestoreCanonicalDifferentKey/stream-import
+=== RUN   TestUsageProjectionRestoreCanonicalDifferentKey/stream-fresh
+--- PASS: TestUsageProjectionRestoreCanonicalDifferentKey (0.92s)
+    --- PASS: TestUsageProjectionRestoreCanonicalDifferentKey/snapshot-import (0.18s)
+    --- PASS: TestUsageProjectionRestoreCanonicalDifferentKey/snapshot-fresh (0.25s)
+    --- PASS: TestUsageProjectionRestoreCanonicalDifferentKey/stream-import (0.21s)
+    --- PASS: TestUsageProjectionRestoreCanonicalDifferentKey/stream-fresh (0.28s)
+PASS
+ok  	routeweaver/internal/store	2.087s

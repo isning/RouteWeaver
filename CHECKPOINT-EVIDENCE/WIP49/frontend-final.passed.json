@@ -1,0 +1,67 @@
+{
+  "checkpoint": "WIP49",
+  "status": "passed separate final frontend stages",
+  "acceptance_kind": "source-bound modular aggregate; not one uninterrupted aggregate command",
+  "tests_passed": 1817,
+  "tests_failed": 0,
+  "tests_pending": 0,
+  "physical_test_files": 160,
+  "typecheck": "passed",
+  "production_build": "separate same-source offline build passed exit0",
+  "source_scope_files": 381,
+  "changed": [],
+  "original_aggregate_exit": "not recorded; interrupted by tool-level network block after tests and build header",
+  "network_error": "Unified exec process failed: Network access to https://registry.npmjs.org:443 was blocked by policy.",
+  "network_request_cause": "not established",
+  "recovery": "local installed dependencies only; npm_config_offline=true and update_notifier=false; denied registry request not retried",
+  "evidence": [
+    {
+      "filename": "final-suite-r2.json",
+      "sha256": "34851ab294e74974cd88c4f962d168c6999814e3c77fd0f2c4e8747ea4cb6c1f",
+      "bytes": 608818,
+      "availability": "local-only evidence; not an archive attachment"
+    },
+    {
+      "filename": "final-suite-r2.log",
+      "sha256": "f9f5dc56a554327e3e29f3358a4942f10a5908ea68b5a8c76523ec670c5c145a",
+      "bytes": 58887,
+      "availability": "local-only evidence; not an archive attachment"
+    },
+    {
+      "filename": "final-typecheck-r2.log",
+      "sha256": "3eeba694beb40e350731996df1916da84a1348266b4c9d68b105dcdd21c1bc6f",
+      "bytes": 144,
+      "availability": "local-only evidence; not an archive attachment"
+    },
+    {
+      "filename": "final-build-r2.log",
+      "sha256": "73b90662fa1dcea669c4f036f34e75c04fa062e2f9084a4c5f45181d41dba8d1",
+      "bytes": 154,
+      "availability": "local-only evidence; not an archive attachment"
+    },
+    {
+      "filename": "final-build-offline.log",
+      "sha256": "1e54c53a30ee51e1052bdbbb12e8fff823c3d372242fa54c57cd6cc9678b6ffc",
+      "bytes": 2980,
+      "availability": "local-only evidence; not an archive attachment"
+    },
+    {
+      "filename": "final-build-offline.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "bytes": 2,
+      "availability": "local-only evidence; not an archive attachment"
+    },
+    {
+      "filename": "final-web-freeze-r2.json",
+      "sha256": "cb3575cd7a16cc5400965149d027dcbd045bde5d443a6124717cea72706237a6",
+      "bytes": 57344,
+      "availability": "local-only evidence; not an archive attachment"
+    },
+    {
+      "filename": "final-web-source-check-r2.json",
+      "sha256": "c068529ace249af6ef968f59cdd5193c7cf3f8a3db7bdcd24b00d655f8f0ca4c",
+      "bytes": 109,
+      "availability": "local-only evidence; not an archive attachment"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+=== RUN   TestDiagnosticAdminRequestRunsThroughRealAgentAndDurableResult
+--- PASS: TestDiagnosticAdminRequestRunsThroughRealAgentAndDurableResult (1.01s)
+=== RUN   TestDiagnosticDriverCancellationStopsActualTransfer
+--- PASS: TestDiagnosticDriverCancellationStopsActualTransfer (0.32s)
+=== RUN   TestPrivateExternalFeedDoesNotConsumePlatformServiceEligibility
+=== RUN   TestPrivateExternalFeedDoesNotConsumePlatformServiceEligibility/exhausted
+=== RUN   TestPrivateExternalFeedDoesNotConsumePlatformServiceEligibility/expired
+--- PASS: TestPrivateExternalFeedDoesNotConsumePlatformServiceEligibility (2.21s)
+    --- PASS: TestPrivateExternalFeedDoesNotConsumePlatformServiceEligibility/exhausted (1.23s)
+    --- PASS: TestPrivateExternalFeedDoesNotConsumePlatformServiceEligibility/expired (0.98s)
+=== RUN   TestIndependentForwardedHeadersCannotGrantMutationOrigin
+--- PASS: TestIndependentForwardedHeadersCannotGrantMutationOrigin (0.04s)
+=== RUN   TestConfiguredHTTPSOriginBehindLoopbackProxy
+--- PASS: TestConfiguredHTTPSOriginBehindLoopbackProxy (1.63s)
+=== RUN   TestPublicOriginConfigurationIsAnHTTPSOriginOnly
+--- PASS: TestPublicOriginConfigurationIsAnHTTPSOriginOnly (0.00s)
+=== RUN   TestPublishedRoutePrincipalsRequireExactAppliedManifest
+--- PASS: TestPublishedRoutePrincipalsRequireExactAppliedManifest (1.90s)
+PASS
+ok  	routeweaver/internal/httpapi	8.172s

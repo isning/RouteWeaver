@@ -1,0 +1,4 @@
+=== RUN   TestIndependentFrozenBundleRechecksCurrentAccountAndUser
+--- PASS: TestIndependentFrozenBundleRechecksCurrentAccountAndUser (1.98s)
+PASS
+ok  	routeweaver/internal/httpapi	3.032s

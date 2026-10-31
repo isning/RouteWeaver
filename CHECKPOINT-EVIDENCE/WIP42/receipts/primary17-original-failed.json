@@ -1,0 +1,255 @@
+{
+  "accepted": false,
+  "cases": [
+    {
+      "failure_locations": [],
+      "nativeResultStatuses": [
+        "passed"
+      ],
+      "status": "expected",
+      "title": "initial empty pages name the task and server registration does not imply deployment"
+    },
+    {
+      "failure_locations": [
+        {
+          "column": 7,
+          "file": "web/tests/product-model.ui.spec.ts",
+          "line": 838
+        }
+      ],
+      "nativeResultStatuses": [
+        "failed"
+      ],
+      "status": "unexpected",
+      "title": "first-use endpoint: two imported connections are only routed by an explicit user choice"
+    },
+    {
+      "failure_locations": [
+        {
+          "column": 7,
+          "file": "web/tests/product-model.ui.spec.ts",
+          "line": 838
+        }
+      ],
+      "nativeResultStatuses": [
+        "failed"
+      ],
+      "status": "unexpected",
+      "title": "first-use direct: two imported connections are only routed by an explicit user choice"
+    },
+    {
+      "failure_locations": [
+        {
+          "column": 29,
+          "file": "web/tests/product-model.ui.spec.ts",
+          "line": 1169
+        }
+      ],
+      "nativeResultStatuses": [
+        "failed"
+      ],
+      "status": "unexpected",
+      "title": "existing strategy groups remain editable and revoked recovery replaces only the selected client link"
+    },
+    {
+      "failure_locations": [
+        {
+          "column": 29,
+          "file": "web/tests/product-model.ui.spec.ts",
+          "line": 1444
+        }
+      ],
+      "nativeResultStatuses": [
+        "failed"
+      ],
+      "status": "unexpected",
+      "title": "workspace: explicit publication changes only one of two independent client links"
+    },
+    {
+      "failure_locations": [
+        {
+          "column": 29,
+          "file": "web/tests/product-model.ui.spec.ts",
+          "line": 1444
+        }
+      ],
+      "nativeResultStatuses": [
+        "failed"
+      ],
+      "status": "unexpected",
+      "title": "legacy-profile: explicit publication changes only one of two independent client links"
+    },
+    {
+      "failure_locations": [],
+      "nativeResultStatuses": [
+        "passed"
+      ],
+      "status": "expected",
+      "title": "saving a draft leaves frozen advanced published summary and delivery unchanged"
+    },
+    {
+      "failure_locations": [],
+      "nativeResultStatuses": [
+        "passed"
+      ],
+      "status": "expected",
+      "title": "invalid JSON, cancel, and Back retain the draft until an explicit retry succeeds"
+    },
+    {
+      "failure_locations": [
+        {
+          "column": 50,
+          "file": "web/tests/product-model.ui.spec.ts",
+          "line": 1655
+        }
+      ],
+      "nativeResultStatuses": [
+        "timedOut"
+      ],
+      "status": "unexpected",
+      "title": "invalid and mismatched deep-link scope never silently selects a different configuration"
+    },
+    {
+      "failure_locations": [],
+      "nativeResultStatuses": [
+        "passed"
+      ],
+      "status": "expected",
+      "title": "operator keeps line and user context through authorization, entry preparation, and a non-executing scoped batch plan"
+    },
+    {
+      "failure_locations": [],
+      "nativeResultStatuses": [
+        "passed"
+      ],
+      "status": "expected",
+      "title": "scoped configuration creates one independent second-client subscription and immediately exposes its new link"
+    },
+    {
+      "failure_locations": [
+        {
+          "column": 5,
+          "file": "web/tests/product-model.ui.spec.ts",
+          "line": 2263
+        }
+      ],
+      "nativeResultStatuses": [
+        "failed"
+      ],
+      "status": "unexpected",
+      "title": "same rule counts are not represented as identical routing when rule contents changed"
+    },
+    {
+      "failure_locations": [],
+      "nativeResultStatuses": [
+        "passed"
+      ],
+      "status": "expected",
+      "title": "25 synthetic configurations and 100 independent links remain searchable, bounded, and explicitly scoped"
+    },
+    {
+      "failure_locations": [],
+      "nativeResultStatuses": [
+        "passed"
+      ],
+      "status": "expected",
+      "title": "reviews material source changes and preserves accepted options until an explicit decision"
+    },
+    {
+      "failure_locations": [],
+      "nativeResultStatuses": [
+        "passed"
+      ],
+      "status": "expected",
+      "title": "imports directly into a configuration, retains a failed source, and saves only the draft"
+    },
+    {
+      "failure_locations": [],
+      "nativeResultStatuses": [
+        "passed"
+      ],
+      "status": "expected",
+      "title": "mobile navigation and cancellation preserve a useful return path"
+    },
+    {
+      "failure_locations": [],
+      "nativeResultStatuses": [
+        "passed"
+      ],
+      "status": "expected",
+      "title": "administrator edits an ordered route without dragging"
+    }
+  ],
+  "cleanup_scope": "Owned command process group termination on interruption; normal Playwright-managed server shutdown, both loopback ports closed and demo database absent. No universal descendant-liveness claim.",
+  "discovered_cases": 17,
+  "finished": "2026-10-25T16:50:25.698268+00:00",
+  "guards": {
+    "adaptedConfigUnchanged": true,
+    "demoDBRemoved": true,
+    "fixtureToolBindingsUnchanged": true,
+    "portsClosed": {
+      "4173": true,
+      "8080": true
+    },
+    "privateSourceInputsUnchanged": true,
+    "recoveredSourceUnchanged": true
+  },
+  "interpretation": "Ten passed and seven failed with no skipped/flaky cases. Native failure is retained. Diagnosis/correction and any later rerun are separate evidence; not final readiness or ordinary-subscriber acceptance.",
+  "native_report_sha256": "4669f4c75eb6d34d3d2e26ccbde1d6c5e7b5cf09d6b5ad12b50d1083474e0d5d",
+  "omissions": [
+    "Absolute workspace/tool executable paths and process IDs",
+    "Raw logs, stack traces and DOM dumps",
+    "Demo/auth/session/cookie/CSRF state, private feed values and credentials",
+    "Browser screenshots, traces and runtime source copies"
+  ],
+  "original_records": [
+    {
+      "included_native_bytes": false,
+      "record": "final-primary17-validation-20261025/run/run.json",
+      "sha256": "60ff9f6e5ec3908f50231d2eb98953db17dfde3be2c644be9041c2db5fb0618d"
+    },
+    {
+      "included_native_bytes": false,
+      "record": "final-primary17-validation-20261025/NATIVE-RESULT-SUMMARY.json",
+      "sha256": "65b39fa19a64ae153033b71b4ffd642617eaca4a542f5a19736d867f8f9e0ac8"
+    }
+  ],
+  "privacy_rule": "Explicitly selected scalar/count/identity fields only; original immutable record hashes retained.",
+  "purpose": "original_current17_primary_browser_failure_preserved",
+  "qa_released_utc": "2026-10-25T16:50:25.698249+00:00",
+  "record_kind": "derived_allowlisted_terminal_summary_not_native_byte_copy",
+  "role_scope": "Existing demo administrator login and own workspace, not ordinary subscriber login",
+  "schema": "routeweaver.portable-verification.v1",
+  "source_sha256": "582c068fd5016f4d239a2fa9d72e5199a988aade034fb762d7e863201a51e21a",
+  "source_snapshot_binding": {
+    "all_input_binding_hashes_verified": true,
+    "bindings_record_sha256": "210a8db8f08744b085bcf49612d63d8ab6bf20c7954a3cf447b213a1b40c6810",
+    "both_exactly_equal_final_integration_after_inventory": true,
+    "candidate_inventory_sha256": "9bf874f7c96448171c2c367fb54576d6b988afc2a45769f5b29ee5ccdc698ebc",
+    "source_before_inventory_sha256": "9bf874f7c96448171c2c367fb54576d6b988afc2a45769f5b29ee5ccdc698ebc"
+  },
+  "stages": [
+    {
+      "finished": "2026-10-25T16:47:30.147437+00:00",
+      "name": "discovery",
+      "nativeExit": 0,
+      "started": "2026-10-25T16:47:29.118226+00:00"
+    },
+    {
+      "finished": "2026-10-25T16:50:25.051264+00:00",
+      "name": "browser",
+      "nativeExit": 1,
+      "started": "2026-10-25T16:47:30.662636+00:00"
+    }
+  ],
+  "started": "2026-10-25T16:47:28.452283+00:00",
+  "stats": {
+    "duration": 173804.551,
+    "expected": 10,
+    "flaky": 0,
+    "skipped": 0,
+    "startTime": "2026-10-25T16:47:31.144Z",
+    "unexpected": 7
+  },
+  "status": "failed"
+}

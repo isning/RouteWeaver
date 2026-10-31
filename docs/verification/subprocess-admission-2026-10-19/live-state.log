@@ -1,0 +1,29 @@
+=== RUN   TestAdmissionClaimsAcrossProcesses
+=== RUN   TestAdmissionClaimsAcrossProcesses/last-ip
+=== RUN   TestAdmissionClaimsAcrossProcesses/last-stream
+=== RUN   TestAdmissionClaimsAcrossProcesses/last-quota-byte
+--- PASS: TestAdmissionClaimsAcrossProcesses (3.93s)
+    --- PASS: TestAdmissionClaimsAcrossProcesses/last-ip (1.32s)
+    --- PASS: TestAdmissionClaimsAcrossProcesses/last-stream (1.32s)
+    --- PASS: TestAdmissionClaimsAcrossProcesses/last-quota-byte (1.30s)
+=== RUN   TestAdmissionClaimsAcrossProcesses
+=== RUN   TestAdmissionClaimsAcrossProcesses/last-ip
+    admission_process_test.go:115: child 0 not ready: --- FAIL: TestAdmissionClaimsAcrossProcesses (0.01s); wait=signal: killed; stdout=    admission_process_test.go:35: database is locked (5) (SQLITE_BUSY); stderr=
+=== RUN   TestAdmissionClaimsAcrossProcesses/last-stream
+=== RUN   TestAdmissionClaimsAcrossProcesses/last-quota-byte
+--- FAIL: TestAdmissionClaimsAcrossProcesses (2.69s)
+    --- FAIL: TestAdmissionClaimsAcrossProcesses/last-ip (0.11s)
+    --- PASS: TestAdmissionClaimsAcrossProcesses/last-stream (1.29s)
+    --- PASS: TestAdmissionClaimsAcrossProcesses/last-quota-byte (1.29s)
+=== RUN   TestAdmissionClaimsAcrossProcesses
+=== RUN   TestAdmissionClaimsAcrossProcesses/last-ip
+=== RUN   TestAdmissionClaimsAcrossProcesses/last-stream
+=== RUN   TestAdmissionClaimsAcrossProcesses/last-quota-byte
+    admission_process_test.go:115: child 0 not ready: --- FAIL: TestAdmissionClaimsAcrossProcesses (0.01s); wait=signal: killed; stdout=    admission_process_test.go:35: database is locked (5) (SQLITE_BUSY); stderr=
+--- FAIL: TestAdmissionClaimsAcrossProcesses (2.74s)
+    --- PASS: TestAdmissionClaimsAcrossProcesses/last-ip (1.27s)
+    --- PASS: TestAdmissionClaimsAcrossProcesses/last-stream (1.34s)
+    --- FAIL: TestAdmissionClaimsAcrossProcesses/last-quota-byte (0.13s)
+FAIL
+FAIL	routeweaver/internal/store	9.387s
+FAIL

@@ -1,0 +1,142 @@
+{
+  "acceptance_scope_at_native_terminal": "Pending independent two-image ordinary-subscriber review; separate from admin current17.",
+  "actual_screenshot_count": 2,
+  "cleanup_scope": "Playwright-owned graceful server shutdown; ports closed and demo database absent, not universal descendant-liveness proof.",
+  "finished": "2026-10-25T16:56:42.838669+00:00",
+  "guards": {
+    "builtArtifactsUnchanged": true,
+    "demoDBRemoved": true,
+    "fixtureToolBindingsUnchanged": true,
+    "portClosed": true,
+    "privateSourceInputsUnchanged": true,
+    "recoveredSourceUnchanged": true
+  },
+  "independent_pixel_review": {
+    "all_reviewed_image_hashes_verified": true,
+    "findings": [
+      "Genuine newly onboarded user role, personal navigation and absent administrator navigation.",
+      "Own direct profile and one client Output created/published with one read-only preview; same-origin local delivered feed read successfully.",
+      "Normal logout/password login retains same account/profile/Output/feed identity and delivered content.",
+      "Direct administrative hash denied in UI and /api/state returns 403; setup administrator own profile/Output workspace remains separate.",
+      "Three session pairs terminate with HTTP200 logout; one invite/one account/one profile/one Output; exact nine state-affecting HTTP requests plus one read-only Output preview.",
+      "Creation review names the configuration and subscription, shows target client/output content, explicit unmatched-traffic Direct, compatibility result, independent-link scope and visible Create-and-publish action. Technical details stay optional.",
+      "Returned personal workspace clearly shows one saved configuration with one published subscription, Edit/Get subscription/Check updates actions, personal account identity and no administrative navigation. All key text/actions fit the 1440x1000 captured viewport.",
+      "No invitation code, password, session or feed value is visible in either original screenshot; no task-clarity or overflow blocker found in this bounded desktop flow."
+    ],
+    "limits": [
+      "This closes the genuine ordinary-role smoke gap; it does not relabel the separate admin current17 suite, whose seven original failures remain unresolved.",
+      "No ordinary-user responsive/AT/general keyboard matrix, platform entitlement/live proxy traffic, external email/service or production-data claim.",
+      "Generated secrets deliberately remain in process, so actual acceptance combines inspected safe artifacts with the independently reviewed no-serialization fixture and installed artifact guards; it is not a universal information-flow proof.",
+      "Cleanup evidence is owned shutdown, port closed and disposable DB removed, not universal descendant liveness."
+    ],
+    "native_receipt_binding_verified": true,
+    "native_record_pending_review_text_retained_as_history": true,
+    "nonblocking_polish": [],
+    "record": "policy-ux-review-20261025/ORDINARY-SUBSCRIBER-ACTUAL-PIXEL-PRIVACY-REVIEW.json",
+    "reviewed_at_utc": "2026-10-25T17:02:36.988942+00:00",
+    "reviewed_image_count": 2,
+    "scope": "accepted-for-bounded-ordinary-subscriber-local-smoke",
+    "sha256": "df980674315bfa773fa8b9d937402017b4150c36951a434de9afcdfdfc8759a4",
+    "source_binding_verified": true,
+    "status": "accepted_bounded_slice"
+  },
+  "independent_privacy_checks": {
+    "allEvidenceAndImageHashesVerified": true,
+    "feedRequestPathRedacted": true,
+    "knownDemoCredentialAbsentFromTextEvidenceIndependentlyChecked": true,
+    "noErrorContextOrPageSnapshot": true,
+    "noTraceVideoHARStorageStateArtifacts": true,
+    "requestLedgerOnlyActorMethodSanitizedEndpointStatus": true,
+    "resultsFilesExactlyLastRunAndTwoApprovedPNGs": true,
+    "savedEnvironmentOmitsDemoCredentialVariable": true,
+    "sourceToolArtifactAndCleanupGuardsTrue": true
+  },
+  "known_demo_secret_absent_from_text_evidence": true,
+  "native_cases": 1,
+  "native_report_sha256": "b7b13e4a552a741b560d71f80ec9bc9629de831e9088ac8b0aa9b2685b18a326",
+  "native_status": "passed",
+  "omissions": [
+    "Absolute workspace/tool executable paths and process IDs",
+    "Raw logs, stack traces and DOM dumps",
+    "Demo/auth/session/cookie/CSRF state, private feed values and credentials",
+    "Browser screenshots, traces and runtime source copies"
+  ],
+  "original_record": {
+    "included_native_bytes": false,
+    "record": "group-policy-edit-proposal-20261025/browser/ordinary-subscriber/run/run.json",
+    "sha256": "3154ba0a1e5326fb64052dedea50ad9855bb13398a4c5e07d3090a5782243921"
+  },
+  "overall_product_acceptance": false,
+  "privacy_rule": "Explicitly selected scalar/count/identity fields only; original immutable record hashes retained.",
+  "private_artifact_guards": {
+    "automaticPageSnapshotContexts": [],
+    "forbiddenAutomaticArtifacts": []
+  },
+  "purpose": "ordinary-subscriber",
+  "qa_released_utc": "2026-10-25T16:56:42.838613+00:00",
+  "record_kind": "derived_allowlisted_terminal_summary_not_native_byte_copy",
+  "role_scope": "Separate genuine role:user subscriber flow; password return, own direct profile/output and administrator403. Not the administrator current17 gate.",
+  "safe_artifact_policy": {
+    "automaticSnapshotCopyPrompt": false,
+    "nativeFailure": "safe phase only; no original action error or token URL serialized",
+    "savedSensitiveEnvironment": false,
+    "startupRedaction": "before persistence"
+  },
+  "schema": "routeweaver.portable-verification.v1",
+  "screenshot_bytes_included": false,
+  "source_binding": {
+    "all_input_binding_hashes_verified": true,
+    "bindings_record_sha256": "d47639d1b266b1a1b46e276c4515b48fe62fa032f1d9dbdc4b10dd492887be73",
+    "candidate_inventory_sha256": "9bf874f7c96448171c2c367fb54576d6b988afc2a45769f5b29ee5ccdc698ebc",
+    "exact_final_integration_after_inventory": true,
+    "source_before_inventory_sha256": "9bf874f7c96448171c2c367fb54576d6b988afc2a45769f5b29ee5ccdc698ebc"
+  },
+  "source_sha256": "582c068fd5016f4d239a2fa9d72e5199a988aade034fb762d7e863201a51e21a",
+  "stages": [
+    {
+      "finished": "2026-10-25T16:56:31.803751+00:00",
+      "name": "go-build",
+      "nativeExit": 0,
+      "started": "2026-10-25T16:56:27.258229+00:00"
+    },
+    {
+      "finished": "2026-10-25T16:56:35.575391+00:00",
+      "name": "web-build",
+      "nativeExit": 0,
+      "started": "2026-10-25T16:56:31.804163+00:00"
+    },
+    {
+      "finished": "2026-10-25T16:56:42.181753+00:00",
+      "name": "browser",
+      "nativeExit": 0,
+      "started": "2026-10-25T16:56:35.979683+00:00"
+    }
+  ],
+  "started": "2026-10-25T16:56:26.627409+00:00",
+  "stats": {
+    "duration": 5695.4169999999995,
+    "expected": 1,
+    "flaky": 0,
+    "skipped": 0,
+    "startTime": "2026-10-25T16:56:36.471Z",
+    "unexpected": 0
+  },
+  "subscriber_checks": {
+    "administratorHTTPDenied": 403,
+    "invites": 1,
+    "localFeedIdentities": 1,
+    "onboardingAccounts": 1,
+    "ordinaryUserRole": true,
+    "ownOutputs": 1,
+    "ownProfiles": 1,
+    "readonlyOutputPreviews": 1,
+    "sessionPairs": 3,
+    "stateAffectingHTTPRequests": 9
+  },
+  "subscriber_limits": [
+    "No platform entitlement/live proxy traffic",
+    "No broad role/responsive/AT matrix",
+    "PNG identities are not independent pixel acceptance",
+    "Owned demo/database cleanup is runner evidence"
+  ]
+}

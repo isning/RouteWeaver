@@ -1,0 +1,22 @@
+{
+  "checkpoint": "WIP51",
+  "accepted": true,
+  "acceptance_kind": "modular: Go/runtime R1 + supplemental mixed-recovery test + full web R2 + bounded actual UI review",
+  "current_requested_features_complete": true,
+  "scope": [
+    "source automatic/manual application without forced review",
+    "automatic accounting baseline/replay without manual UI"
+  ],
+  "frontend": "frontend-final.passed.json",
+  "backend": "modular-backend.passed.json",
+  "history": "verification-history.json",
+  "visual": "visual-coverage.passed.json",
+  "site": "site-preparation.json",
+  "older_backup_flow": "authorization not established after tool timeout; no validation/restore executed; remains separately blocked",
+  "project_complete": false,
+  "full_native_acceptance": false,
+  "production_ready": false,
+  "library_save_success": false,
+  "publication": "private-demo-deployment.json",
+  "private_preview_published": true
+}

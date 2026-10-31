@@ -1,0 +1,11 @@
+{
+  "checked_utc": "2026-10-29T18:04:40.896537+00:00",
+  "baseline": "global-source-freeze-r2.json",
+  "scope": "all baseline internal,cmd,runtimes,scripts,api,Go module files,web/tests and Playwright configuration",
+  "file_count": 542,
+  "changed_files": [],
+  "unchanged": true,
+  "scope_sha256": "fbef156c29d22314e858a681ff61f6d67658c7579d7187757b788531f8971c2f",
+  "status": "passed",
+  "notice": "Source reuse provenance only; not a rerun of backend or API tests. Recheck against the final delivery freeze."
+}

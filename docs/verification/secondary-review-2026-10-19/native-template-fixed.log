@@ -1,0 +1,10 @@
+=== RUN   TestNativeTemplateFollowedProfileUpdate
+=== RUN   TestNativeTemplateFollowedProfileUpdate/mihomo
+    templates_native_test.go:111: mihomo 1.19.32: library selection, followed preview, draft apply, native parser check and publication passed
+=== RUN   TestNativeTemplateFollowedProfileUpdate/sing-box
+    templates_native_test.go:111: sing-box 1.14.3: library selection, followed preview, draft apply, native parser check and publication passed
+--- PASS: TestNativeTemplateFollowedProfileUpdate (0.52s)
+    --- PASS: TestNativeTemplateFollowedProfileUpdate/mihomo (0.15s)
+    --- PASS: TestNativeTemplateFollowedProfileUpdate/sing-box (0.38s)
+PASS
+ok  	routeweaver/internal/httpapi	0.539s

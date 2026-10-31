@@ -1,0 +1,229 @@
+{
+  "module": "routeweaver",
+  "allowed": {
+    "domain": [],
+    "conversion": [
+      "domain"
+    ],
+    "render": [
+      "domain",
+      "entrypolicy"
+    ],
+    "store": [
+      "domain",
+      "auth",
+      "service",
+      "entrypolicy",
+      "notifications",
+      "observability",
+      "diagnostics"
+    ],
+    "auth": [
+      "domain"
+    ],
+    "resources": [
+      "domain"
+    ],
+    "agent": [
+      "domain",
+      "controlprotocol",
+      "entrypolicy",
+      "privateipc",
+      "observability",
+      "diagnostics",
+      "resources",
+      "diagnosticexec"
+    ],
+    "service": [
+      "domain"
+    ],
+    "httpapi": [
+      "application",
+      "domain",
+      "service",
+      "store",
+      "render",
+      "auth",
+      "conversion",
+      "resources",
+      "importer",
+      "controlprotocol",
+      "backup",
+      "reuse",
+      "entrypolicy",
+      "notifications",
+      "observability",
+      "fleet",
+      "diagnostics"
+    ],
+    "application": [
+      "domain",
+      "service",
+      "conversion",
+      "render",
+      "store",
+      "auth",
+      "resources",
+      "importer",
+      "controlprotocol",
+      "backup",
+      "reuse",
+      "entrypolicy",
+      "notifications",
+      "observability"
+    ],
+    "importer": [
+      "domain"
+    ],
+    "controlprotocol": [
+      "domain",
+      "entrypolicy"
+    ],
+    "backup": [
+      "store"
+    ],
+    "reuse": [
+      "domain"
+    ],
+    "entrypolicy": [],
+    "notifications": [
+      "domain",
+      "resources"
+    ],
+    "privateipc": [
+      "entrypolicy",
+      "diagnostics"
+    ],
+    "observability": [
+      "domain"
+    ],
+    "fleet": [
+      "domain",
+      "controlprotocol"
+    ],
+    "diagnostics": [
+      "domain"
+    ],
+    "diagnosticexec": [
+      "diagnostics",
+      "resources"
+    ]
+  },
+  "forbidden_imports": {
+    "domain": [
+      "net/http",
+      "database/sql",
+      "os",
+      "syscall",
+      "github.com/go-chi",
+      "github.com/danielgtaylor/huma",
+      "modernc.org",
+      "github.com/xtls",
+      "github.com/sagernet"
+    ],
+    "conversion": [
+      "net/http",
+      "database/sql",
+      "os/exec",
+      "github.com/go-chi",
+      "modernc.org"
+    ],
+    "render": [
+      "net/http",
+      "database/sql",
+      "os/exec",
+      "github.com/go-chi",
+      "modernc.org"
+    ],
+    "store": [
+      "net/http",
+      "os/exec"
+    ],
+    "auth": [
+      "database/sql",
+      "os/exec"
+    ],
+    "agent": [
+      "database/sql",
+      "modernc.org"
+    ],
+    "service": [
+      "net/http",
+      "database/sql",
+      "os",
+      "syscall",
+      "github.com/go-chi",
+      "modernc.org"
+    ],
+    "importer": [
+      "net/http",
+      "database/sql",
+      "os/exec",
+      "github.com/go-chi",
+      "modernc.org"
+    ],
+    "controlprotocol": [
+      "net/http",
+      "database/sql",
+      "os",
+      "syscall",
+      "os/exec",
+      "github.com/go-chi",
+      "modernc.org"
+    ],
+    "backup": [
+      "net/http",
+      "os/exec"
+    ],
+    "reuse": [
+      "net/http",
+      "database/sql",
+      "os",
+      "syscall",
+      "os/exec",
+      "github.com/go-chi",
+      "modernc.org"
+    ],
+    "entrypolicy": [
+      "net/http",
+      "database/sql",
+      "os",
+      "syscall",
+      "os/exec",
+      "github.com/go-chi",
+      "modernc.org"
+    ],
+    "notifications": [
+      "database/sql",
+      "modernc.org",
+      "os/exec"
+    ],
+    "privateipc": [
+      "database/sql",
+      "net/http",
+      "os",
+      "os/exec",
+      "modernc.org"
+    ],
+    "observability": [
+      "os",
+      "syscall",
+      "database/sql",
+      "net/http",
+      "os/exec",
+      "modernc.org"
+    ],
+    "fleet": [
+      "net/http",
+      "database/sql",
+      "os",
+      "os/exec"
+    ],
+    "diagnostics": [
+      "net/http",
+      "database/sql",
+      "os",
+      "os/exec"
+    ]
+  }
+}

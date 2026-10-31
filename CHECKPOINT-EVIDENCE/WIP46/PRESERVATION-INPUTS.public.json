@@ -1,0 +1,32 @@
+{
+  "checkpoint": "WIP46",
+  "baseline": {
+    "sourceVersion": 54,
+    "sourceSha256": "4da282eca0fdec9575df49000885af69fe16762d5cfb88c4b317e48ba74260be",
+    "sourceMembers": 1235,
+    "sourceBytes": 3155624,
+    "methodsVersion": 50,
+    "methodsSha256": "b0a7cc2520b714d674a3f658654030bc1456c01d9f80ba3141f1ee114655f9d7",
+    "methodsMembers": 156,
+    "methodsBytes": 1253822
+  },
+  "preservationContract": [
+    "Preserve all baseline memberships and order; no deletion or prior evidence overwrite.",
+    "Unchanged decompressed TAR member records/PAX/padding preserved; replaced TarInfo metadata retained except approved size/mode.",
+    "Unchanged ZIP local/compressed records and central metadata preserved except relocated offsets; archive comment retained.",
+    "All new WIP46 evidence and design/verification docs mirrored byte-for-byte.",
+    "Both exact WIP45 statuses retained; methods README ends with exact prior README bytes."
+  ],
+  "metadataToolSha256": "025379c0ba0ada7b1cc2d208d21d9c1c9aaba7689a42254d2ecd249400b39d30",
+  "sourcePayloadDeltaSha256": "68a5a073d40f4c498472f668e5e44d8e3c2556caa7b63b23b1160f51edd20eca",
+  "sourcePayloadInventorySha256": "c5b11c16f9a7829578ade13e11c2db19a0a09f9f5586075ea0f2f362e4a81f01",
+  "lineage": {
+    "preservedLocalWIP44PointerSha256": "fc85b9970470a85f47e5aacdd21fd1b11cd960f2ce8c60749e36a43f1273ec68",
+    "originalWIP45PointerBytesPresent": false,
+    "historicalWIP45PointerHashNotRecomputed": "a558d57d5679f1ed6ee35b59f4149968a4502cc84e2c828b90c8704c464f1b4d",
+    "laterPointerMustLabelReconstructionFromVerifiedV54V50": true
+  },
+  "preUploadSnapshot": true,
+  "noRemoteSaveOrDeploymentClaim": true,
+  "independentArchiveAcceptanceRequiredOutsideThesePreUploadBytes": true
+}

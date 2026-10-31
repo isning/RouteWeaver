@@ -1,0 +1,22 @@
+=== RUN   TestOutputReviewRejectsChangedProfileAndPreservesFeed
+--- PASS: TestOutputReviewRejectsChangedProfileAndPreservesFeed (1.67s)
+=== RUN   TestOutputReviewFencesSourceAndOutputChanges
+=== RUN   TestOutputReviewFencesSourceAndOutputChanges/source
+=== RUN   TestOutputReviewFencesSourceAndOutputChanges/output
+--- PASS: TestOutputReviewFencesSourceAndOutputChanges (1.75s)
+    --- PASS: TestOutputReviewFencesSourceAndOutputChanges/source (0.89s)
+    --- PASS: TestOutputReviewFencesSourceAndOutputChanges/output (0.86s)
+=== RUN   TestOutputReviewFencesOwnedResourceAndGrantInputs
+=== RUN   TestOutputReviewFencesOwnedResourceAndGrantInputs/resource
+=== RUN   TestOutputReviewFencesOwnedResourceAndGrantInputs/grant
+--- PASS: TestOutputReviewFencesOwnedResourceAndGrantInputs (1.74s)
+    --- PASS: TestOutputReviewFencesOwnedResourceAndGrantInputs/resource (0.85s)
+    --- PASS: TestOutputReviewFencesOwnedResourceAndGrantInputs/grant (0.89s)
+PASS
+ok  	routeweaver/internal/httpapi	6.225s
+=== RUN   TestReviewBackupExportDoesNotBlockAdmission
+--- PASS: TestReviewBackupExportDoesNotBlockAdmission (0.05s)
+=== RUN   TestTokenPublicationFencesCapturedInputsAndRollsBackIndex
+--- PASS: TestTokenPublicationFencesCapturedInputsAndRollsBackIndex (0.02s)
+PASS
+ok  	routeweaver/internal/store	1.095s

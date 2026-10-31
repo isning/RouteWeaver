@@ -1,0 +1,102 @@
+{
+  "checkpoint": "WIP50",
+  "status": "R4 passed",
+  "runs": [
+    {
+      "round": 1,
+      "passed": 1844,
+      "failed": 2,
+      "pending": 0,
+      "physical_test_files": 164,
+      "evidence": {
+        "filename": "integrated-suite-r1.json",
+        "sha256": "25db937655a660409235e3c51df933cb07941da4f88c42d5ee059f9a585c14d4",
+        "bytes": 638389,
+        "availability": "local-only evidence; not an archive attachment"
+      }
+    },
+    {
+      "round": 2,
+      "passed": 1845,
+      "failed": 1,
+      "pending": 0,
+      "physical_test_files": 164,
+      "evidence": {
+        "filename": "integrated-suite-r2.json",
+        "sha256": "7b6bddba7a100df39fe74486c87e0cf19f887207cf4e032c3b689b8bb021fec2",
+        "bytes": 628380,
+        "availability": "local-only evidence; not an archive attachment"
+      }
+    },
+    {
+      "round": 3,
+      "passed": 1853,
+      "failed": 0,
+      "pending": 0,
+      "physical_test_files": 164,
+      "evidence": {
+        "filename": "integrated-suite-r3.json",
+        "sha256": "b5f38170937442e55e1868dbf972f3c3e8cf73ef2e1e6443d9bad237e7e08a81",
+        "bytes": 619875,
+        "availability": "local-only evidence; not an archive attachment"
+      }
+    },
+    {
+      "round": 4,
+      "passed": 1858,
+      "failed": 0,
+      "pending": 0,
+      "physical_test_files": 167,
+      "evidence": {
+        "filename": "integrated-suite-r4.json",
+        "sha256": "44e7af3efa75a67f4a4e95820253c27246794ceac070eb00f89c000f1662264b",
+        "bytes": 622247,
+        "availability": "local-only evidence; not an archive attachment"
+      }
+    }
+  ],
+  "repairs": [
+    "R1: import only the supported Chinese date locale subpath; original navigation assertions retained.",
+    "R2: determine source editor mode using current form value and edit session before registration completes.",
+    "After R3: compact destination wrapping, footer control sizing and collection-stage tabs corrected with regression tests."
+  ],
+  "r4": {
+    "typecheck": "passed",
+    "production_build": "passed",
+    "aggregate_exit": 0,
+    "frozen_files": 388,
+    "unchanged": true
+  },
+  "evidence": [
+    {
+      "filename": "integrated-typecheck-r4.log",
+      "sha256": "3eeba694beb40e350731996df1916da84a1348266b4c9d68b105dcdd21c1bc6f",
+      "bytes": 144,
+      "availability": "local-only evidence; not an archive attachment"
+    },
+    {
+      "filename": "integrated-build-r4.log",
+      "sha256": "77d37ff8f92bdc07b9387025423ae98d0cf032e8c15dadcb8ef79e8241f55d3b",
+      "bytes": 2980,
+      "availability": "local-only evidence; not an archive attachment"
+    },
+    {
+      "filename": "integrated-web-r4.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "bytes": 2,
+      "availability": "local-only evidence; not an archive attachment"
+    },
+    {
+      "filename": "integrated-web-freeze-r4.json",
+      "sha256": "3842b8406f11eec2beb2e9a94ee49339df3e2263d66682e911f13019801e50d6",
+      "bytes": 58457,
+      "availability": "local-only evidence; not an archive attachment"
+    },
+    {
+      "filename": "integrated-source-check-r4.json",
+      "sha256": "0d777a42121d69666154c017f1b4187274f9e41b40f9f0014f60823432205e05",
+      "bytes": 103,
+      "availability": "local-only evidence; not an archive attachment"
+    }
+  ]
+}

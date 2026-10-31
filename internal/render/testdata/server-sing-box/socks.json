@@ -1,0 +1,91 @@
+{
+  "dns": {
+    "final": "rw-system-dns",
+    "servers": [
+      {
+        "tag": "rw-system-dns",
+        "type": "local"
+      }
+    ]
+  },
+  "inbounds": [
+    {
+      "listen": "127.0.0.1",
+      "listen_port": 18080,
+      "tag": "entry",
+      "type": "socks",
+      "users": [
+        {
+          "password": "synthetic-only",
+          "username": "test-user"
+        }
+      ]
+    }
+  ],
+  "log": {
+    "level": "warn"
+  },
+  "outbounds": [
+    {
+      "server": "192.0.2.10",
+      "server_port": 1080,
+      "tag": "egress-1",
+      "type": "socks",
+      "version": "5"
+    },
+    {
+      "detour": "egress-1",
+      "server": "192.0.2.20",
+      "server_port": 1080,
+      "tag": "egress-2",
+      "type": "socks",
+      "version": "5"
+    },
+    {
+      "detour": "egress-2",
+      "method": "aes-128-gcm",
+      "password": "synthetic-only",
+      "server": "192.0.2.30",
+      "server_port": 8388,
+      "tag": "egress-3",
+      "type": "shadowsocks"
+    },
+    {
+      "tag": "rw-direct",
+      "type": "direct"
+    }
+  ],
+  "route": {
+    "default_domain_resolver": "rw-system-dns",
+    "final": "egress-3",
+    "rule_set": [
+      {
+        "format": "source",
+        "path": "server-rules.json",
+        "tag": "server-rules",
+        "type": "local"
+      }
+    ],
+    "rules": [
+      {
+        "action": "reject",
+        "domain": [
+          "blocked.example"
+        ]
+      },
+      {
+        "action": "route",
+        "ip_cidr": [
+          "192.0.2.0/24"
+        ],
+        "outbound": "rw-direct"
+      },
+      {
+        "action": "reject",
+        "rule_set": [
+          "server-rules"
+        ]
+      }
+    ]
+  }
+}

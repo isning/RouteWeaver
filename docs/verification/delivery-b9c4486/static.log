@@ -1,0 +1,19 @@
+
+== Tracked operator-state exclusion ==
+Tracked private-file guard: 761 files inspected. This is not secret-content analysis.
+
+== Ticket DAG and complete story traceability ==
+Ticket DAG: 24 local tickets, 35/35 confirmed stories covered, no cycles; check passed.
+
+== Ticket guard negative fixtures ==
+.........
+----------------------------------------------------------------------
+Ran 9 tests in 0.005s
+
+OK
+
+== Architecture guard negative fixtures ==
+ok  	routeweaver/scripts/check-architecture	(cached)
+
+== Production dependency direction ==
+Architecture imports: passed (production Go imports; not a complete effect or security proof)

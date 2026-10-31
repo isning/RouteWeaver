@@ -1,0 +1,15 @@
+package store_test
+import("context";"testing";"time";"routeweaver/internal/store")
+func TestReviewBackupExportDoesNotBlockAdmission(t *testing.T){
+ s,_,_,scope,now:=admissionFixture(t)
+ entered,release,exportDone:=make(chan struct{}),make(chan struct{}),make(chan error,1)
+ go func(){ first:=true; exportDone<-s.ExportBackup(context.Background(),store.BackupLimits{MaxBytes:1<<20,MaxRows:1000,MaxRecordBytes:1<<20},func(store.BackupFrame)error{if first {first=false;close(entered);<-release};return nil}) }()
+ <-entered
+ admissionDone:=make(chan error,1)
+ go func(){ _,e:=s.AcquireAdmission(scope,admissionRequest("entry1","192.0.2.10","during-backup"),now);admissionDone<-e }()
+ blocked:=false
+ select{case e:=<-admissionDone:if e!=nil {t.Fatal(e)};case<-time.After(100*time.Millisecond):blocked=true}
+ close(release)
+ if e:=<-exportDone;e!=nil {t.Fatal(e)}
+ if blocked {if e:=<-admissionDone;e!=nil {t.Fatal(e)};t.Fatal("admission cannot execute until streaming backup callback releases the global Store mutex")}
+}

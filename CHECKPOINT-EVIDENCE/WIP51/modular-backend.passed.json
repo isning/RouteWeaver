@@ -1,0 +1,64 @@
+{
+  "checkpoint": "WIP51",
+  "status": "passed modular backend evidence",
+  "go_R1": [
+    "vet passed",
+    "all race tests passed",
+    "build passed"
+  ],
+  "managed_runtime_R1": [
+    "vet passed",
+    "all race tests passed",
+    "build passed"
+  ],
+  "existing_non_web_freeze_inputs": 483,
+  "existing_non_web_inputs_unchanged": true,
+  "supplemental_test": "internal/store/counter_mixed_recovery_test.go",
+  "supplemental_sha256": "56f94d5426f49fb341548169ac7bc55c3c4ff20d1fb52c9d371040fc5544e4c7",
+  "supplemental_format_vet_focused_race_exit": 0,
+  "note": "Supplemental test added after initial Go stages; prior production inputs unchanged. This is not one uninterrupted all-pass quick run.",
+  "evidence": [
+    {
+      "filename": "combined-quick-r1.log",
+      "bytes": 12033,
+      "sha256": "c59a5a38e465a65653cf5bd751f2569a0e73382f3bd73bb7f763ecd08728e6a0",
+      "availability": "local-only evidence"
+    },
+    {
+      "filename": "backend-modular-provenance.json",
+      "bytes": 600,
+      "sha256": "0510e450664a9710e7ea628ff97949d2966375d0489b9efa7ef513aeddf0fb20",
+      "availability": "local-only evidence"
+    },
+    {
+      "filename": "go-inputs-r1-unchanged.json",
+      "bytes": 124,
+      "sha256": "b461908ce93020703d5f714cc049372bb93e8d03cfea1585be2830d9e6416577",
+      "availability": "local-only evidence"
+    },
+    {
+      "filename": "accounting-mixed-format.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "availability": "local-only evidence"
+    },
+    {
+      "filename": "accounting-mixed-vet.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "availability": "local-only evidence"
+    },
+    {
+      "filename": "accounting-mixed-race.log",
+      "bytes": 39,
+      "sha256": "cb531abb9ed25a4bf4c1cbe1bcf2a80be84352d2b1ee067a3ee6a76af596b1a1",
+      "availability": "local-only evidence"
+    },
+    {
+      "filename": "accounting-mixed.exit",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "availability": "local-only evidence"
+    }
+  ]
+}

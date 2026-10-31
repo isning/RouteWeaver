@@ -1,0 +1,291 @@
+{
+  "schema_version": 1,
+  "recorded_at_utc": "2026-10-22T16:41:00Z",
+  "purpose": "Safe retained acceptance ledger; summary evidence, not raw diagnostics or a complete conformance claim.",
+  "guideline_policy": "Existing GS registry dates retained; no new external source visits claimed.",
+  "records": [
+    {
+      "id": "EV-01",
+      "layer": "real_browser",
+      "status": "passed_bounded",
+      "date": "2026-10-22",
+      "runs": [
+        {
+          "start_utc": "2026-10-22T14:20:09.649Z",
+          "passed": 3
+        },
+        {
+          "start_utc": "2026-10-22T14:20:53.048Z",
+          "passed": 19
+        }
+      ],
+      "source_manifest_sha256": "9c53a5bd4af86e3e5ef80a7dd460482da6dc9d4bf0a69630a1eb3cc8a367d431",
+      "summary": "Exact occurrence repair, target preservation and complete narrow viewport visibility; separate runs, not one 22-test gate."
+    },
+    {
+      "id": "EV-02",
+      "layer": "DOM",
+      "status": "passed",
+      "date": "2026-10-22",
+      "files": 3,
+      "assertions": 26,
+      "confirmed_failure": "Visible import label pointed to hidden editor field; native control association, click focus and keyboard input failed.",
+      "summary": "Namespaced co-mounted forms; no claim of full application accessibility."
+    },
+    {
+      "id": "EV-03",
+      "layer": "real_browser",
+      "status": "passed",
+      "start_utc": "2026-10-22T15:44:03.724Z",
+      "duration_ms": 24789.252,
+      "counts": {
+        "expected": 5,
+        "unexpected": 0,
+        "skipped": 0,
+        "flaky": 0
+      },
+      "source_manifest_sha256": "9fad0f4591a394b3a31dadb015e75e2a2686254504796f038e45766401d7ceea",
+      "source_unchanged": true,
+      "summary": "Five bounded recovery journeys; earlier intermittent logout failure remains unexplained; this source predates later completion fixes."
+    },
+    {
+      "id": "EV-04",
+      "layer": "DOM",
+      "status": "passed",
+      "date": "2026-10-22",
+      "new_red_cases": 6,
+      "auth_tests": 28,
+      "regression_files": 10,
+      "regression_assertions": 133,
+      "typecheck_exit": 0,
+      "summary": "Late login/invitation body cannot replace cookie authority; old failure cannot clear later token."
+    },
+    {
+      "id": "EV-05",
+      "layer": "DOM",
+      "status": "passed",
+      "date": "2026-10-22",
+      "baseline_behavioral_failures": 2,
+      "capture_ablation_failures": 2,
+      "files": 7,
+      "assertions": 99,
+      "typecheck_exit": 0,
+      "summary": "Capture originating save completion; stale view cannot reopen or close later editor; successful server facts still invalidate inventories."
+    },
+    {
+      "id": "EV-06",
+      "layer": "visual_review",
+      "status": "passed_bounded",
+      "date": "2026-10-22",
+      "confirmed_failure": "Duplicate English native file control visible beneath custom localized button.",
+      "pending": [],
+      "final_verification_record": "EV-14",
+      "visual_review": "Final synthetic file region visibly shows localized chooser and filename without duplicate native English control; not a whole long-dialog reachability claim."
+    },
+    {
+      "id": "EV-07",
+      "layer": "real_browser",
+      "status": "passed",
+      "start_utc": "2026-10-22T15:54:26.047Z",
+      "duration_ms": 9677.981,
+      "counts": {
+        "expected": 3,
+        "unexpected": 0,
+        "skipped": 0,
+        "flaky": 0
+      },
+      "source_manifest_sha256": "9d3b7381e973481ade84159e71f1ce91446e831d59cfbfe4302c0444646af3c7",
+      "source_unchanged": true,
+      "summary": "320 buttons each 244x44 and left 38; 390 each 151x44; computed margins 0. Earlier 320 screenshot omitted dialog; cause not proven; replacement reviewed after natural animation completion."
+    },
+    {
+      "id": "EV-08",
+      "layer": "real_browser",
+      "status": "passed",
+      "start_utc": "2026-10-22T15:49:37.869Z",
+      "duration_ms": 12627.33,
+      "counts": {
+        "expected": 3,
+        "unexpected": 0,
+        "skipped": 0,
+        "flaky": 0
+      },
+      "source_manifest_sha256": "d8722b53e4e11e99786cb88ca59d58f288ba09b2716dab134a2433895e68bb9d",
+      "source_unchanged": true,
+      "summary": "Native Back/Forward, trusted window focus, scroll 2181 to 2181 and 203 to 203. Unknown history cancel explicitly costs Forward history."
+    },
+    {
+      "id": "EV-09",
+      "layer": "DOM",
+      "status": "passed",
+      "date": "2026-10-22",
+      "freeze_utc": "2026-10-22T16:16:00Z",
+      "auth_tests": 34,
+      "files": 10,
+      "assertions": 139,
+      "exit_code": 0,
+      "unhandled_errors": 0,
+      "typecheck_exit": 0,
+      "summary": "Logout ordering, confirmed same-epoch cleanup, disposed read/token/URL fences.",
+      "limitation": "Does not establish root cause of earlier real-browser intermittent logout."
+    },
+    {
+      "id": "EV-10",
+      "layer": "combined_regression",
+      "status": "mixed",
+      "start_utc": "2026-10-22T15:18:13Z",
+      "end_utc": "2026-10-22T15:44:03Z",
+      "source_manifest_sha256": "04f7d020c36d9af9b6b6ec18cd8909a8ae2772a8c55cb9485904dee8f0acbeaa",
+      "go": {
+        "regular_packages_passed": 21,
+        "race_packages_passed": 21,
+        "skip_events": 50,
+        "top_level_tests_passed": 442,
+        "reused_for_final_source": true,
+        "reuse_reason": "Go source unchanged; conditional skips are not passes."
+      },
+      "web": {
+        "files": 60,
+        "assertions_passed": 590,
+        "exit_code": 1,
+        "unhandled_errors": 2
+      },
+      "not_passed": [
+        "Tracked-private-file guard: missing Git metadata",
+        "Managed runtime vet/race/build: offline dependency cache misses",
+        "Native or deployed enforcement not established"
+      ],
+      "source_archive_build": {
+        "exit_code": 0,
+        "vcs_stamping": false
+      }
+    },
+    {
+      "id": "EV-11",
+      "layer": "combined_regression",
+      "status": "passed_web_with_other_gate_limits",
+      "date": "2026-10-22",
+      "counts": {
+        "files": 60,
+        "tests_passed": 612
+      },
+      "exit_code": 0,
+      "source_manifest_sha256": "34d104a32c84ab0b970b85031a52787f3d4195d7714c77825f765ec862920466",
+      "summary": "Full Web exits cleanly after cleanup change; not a claim that every gate passed. Git-based private-file guard and managed runtime dependency limits remain.",
+      "start_utc": "2026-10-22T16:19:35Z",
+      "end_utc": "2026-10-22T16:25:35Z",
+      "unhandled_errors": 0,
+      "uncaught_errors": 0,
+      "source_file_count": 581,
+      "source_unchanged": true,
+      "typecheck": "passed",
+      "vite_build": "passed",
+      "independent_static_checks": "passed",
+      "full_src_format_check": {
+        "status": "failed",
+        "exit_code": 1,
+        "existing_warnings": 8,
+        "affected_file_hashes_unchanged_from": "2026-10-22T15:18:00Z"
+      }
+    },
+    {
+      "id": "EV-12",
+      "layer": "real_browser",
+      "status": "failed",
+      "date": "2026-10-22",
+      "passed": 19,
+      "failed": 3,
+      "total": 22,
+      "summary": "Prior combined run: outdated unknown-history contract and real login rate limit. Correct fixture setup without weakening production rate limit."
+    },
+    {
+      "id": "EV-13",
+      "layer": "integrated_source",
+      "status": "verified_bounded",
+      "freeze_utc": "2026-10-22T16:18:00Z",
+      "files": {
+        "web/src/App.tsx": "6883610d3c27bcb0bd2d4254928031d0735d19d43cf48453a7d92988cbf7fc78",
+        "web/src/styles.css": "d665659282b775e11689593c556841a7a392a9c5df3c1a3c9b23307c4806b545"
+      },
+      "integrated": [
+        "login completion",
+        "logout completion",
+        "navigation save completion",
+        "file control and confirmation CSS"
+      ],
+      "browser": {
+        "status": "passed",
+        "evidence_record": "EV-14"
+      },
+      "preview": {
+        "status": "passed_bounded",
+        "evidence_record": "EV-15"
+      }
+    },
+    {
+      "id": "EV-14",
+      "layer": "real_browser",
+      "status": "passed",
+      "start_utc": "2026-10-22T16:36:47.819Z",
+      "end_utc": "2026-10-22T16:40:17Z",
+      "duration_ms": 208675.61299999998,
+      "files": 8,
+      "passed": 33,
+      "failed": 0,
+      "skipped": 0,
+      "flaky": 0,
+      "production_source_files": 234,
+      "test_manifest_files": 20,
+      "source_manifest_sha256": "51a93aa0e55edd4ff642ad175f1082ddf6872a3e40fcd996326c035d9ecdffb0",
+      "tests_manifest_sha256": "19bdd838b06b6328f44fd55ee2389406ecb6c1b66b6525fd3aff726443ebddb4",
+      "source_unchanged": true,
+      "tests_unchanged": true,
+      "summary": "Final combined local Chromium journeys; production unchanged. Two fixture corrections cover natural animation measurement and existing offline global-conceal contract.",
+      "limitations": [
+        "Earlier intermittent logout root cause not directly captured",
+        "Not exhaustive browser/device/accessibility or user-research acceptance"
+      ],
+      "file_control": {
+        "native_input_hidden": true,
+        "custom_chooser": true,
+        "same_name_changed_content_reread": true,
+        "renewed_session_retains_second_content_and_filename": true,
+        "visual_file_region_reviewed": true
+      }
+    },
+    {
+      "id": "EV-15",
+      "layer": "offline_preview",
+      "status": "passed_bounded",
+      "start_utc": "2026-10-22T16:29:46Z",
+      "end_utc": "2026-10-22T16:29:53Z",
+      "source_file_count": 130,
+      "source_manifest_sha256": "45311ad10a616208a2620089476005ec91fec36dfc9d6f23278f8611a370efc5",
+      "unexpected_preview_differences": 0,
+      "typecheck": "passed",
+      "vite_build": "passed",
+      "containment": {
+        "passed": 10,
+        "total": 10
+      },
+      "sandbox_smoke": {
+        "passed": 5,
+        "total": 5
+      },
+      "exit_code": 0,
+      "deployed": false,
+      "uploaded": false,
+      "summary": "Preview adapter, CSP containment and proxy-free configuration preserved; synthetic local data only.",
+      "warnings": [
+        "Existing shared chunk 845.03 kB minified",
+        "Inherited unknown http-proxy environment-config warning"
+      ],
+      "limitations": [
+        "No real authentication or backend persistence",
+        "No save/publication/deployment or real traffic enforcement proof",
+        "Not full accessibility or all-view responsive acceptance"
+      ],
+      "production_source_drift": 0
+    }
+  ]
+}

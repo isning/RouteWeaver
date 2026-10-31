@@ -1,0 +1,29 @@
+{
+  "round": "WIP45",
+  "changedDocPaths": [
+    "docs/design/UI-CONVERGENCE-2026-10-26.md",
+    "docs/tickets/RW-01.md",
+    "docs/tickets/RW-02.md",
+    "docs/tickets/RW-13.md",
+    "docs/tickets/RW-19.md",
+    "docs/tickets/RW-20.md",
+    "docs/tickets/RW-22.md",
+    "docs/tickets/RW-24.md",
+    "docs/tickets/catalog.json",
+    "docs/verification/UI-CONVERGENCE-2026-10-26.md"
+  ],
+  "onlyExpectedDocsChanged": true,
+  "all308FrozenWebFilesUnchanged": true,
+  "finalFileCount": 1214,
+  "ticketCheckExit": 0,
+  "pythonGuardsExit": 0,
+  "pythonTests": 9,
+  "timeUTC": "2026-10-26T13:11:05.086221+00:00",
+  "fullFrontendNotRepeated": "Only ten documentation/ticket paths changed; exact tested code preserved.",
+  "closureReceiptSha256": "be53ec4a518ca24580a07a2692970a1b13e7cc48d284da76ee737efa712e5260",
+  "finalDocumentManifestSha256": "43beadb519f87c57cc04365a0cec747eab4626c033e64f9c3106bd04bbbe8108",
+  "postDocInventoryDocumentSha256": "76e68e051cd50f9a96c49ada4fc37e91d584a53ce74e44e8c64a9edd9abc4155",
+  "onlyDocumentationAndTicketEvidenceChanged": true,
+  "ticketStatusesOrPrerequisitesChanged": false,
+  "claimBoundary": "Post-documentation ticket and nine Python checks passed; full frontend/browser results remain attributed to unchanged code."
+}

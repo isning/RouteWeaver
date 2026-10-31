@@ -1,0 +1,304 @@
+{
+  "accepted": false,
+  "base_canonical_source_sha256": "582c068fd5016f4d239a2fa9d72e5199a988aade034fb762d7e863201a51e21a",
+  "candidate_diff_from_canonical": [
+    {
+      "canonical": {
+        "mode": 420,
+        "sha256": "4a21892475c7fb5c73f306a33f8f796da17fb8b8440293138195cae0965f5f03"
+      },
+      "path": "web/src/Subscriptions.tsx",
+      "private_candidate": {
+        "mode": 420,
+        "sha256": "72a4ddc0a6e25b4b64526a95405b49eca25f1a857aa355d6cfd9753eb886e90e"
+      }
+    },
+    {
+      "canonical": {
+        "mode": 420,
+        "sha256": "f48f7005dc69ed806da33ab0f952b34fd888f5bb5f06e35c113fa8f0f167c07a"
+      },
+      "path": "web/src/output-review-consequence.dom.test.tsx",
+      "private_candidate": {
+        "mode": 420,
+        "sha256": "e5196f5a651e82f123891838f8f2f40dced2e23532a6255d67614c15b048360f"
+      }
+    },
+    {
+      "canonical": {
+        "mode": 420,
+        "sha256": "d5244a29249ad5d8bf165b03ea0e78d57c602f51d229ccb426e8ed1d0ba7ed2e"
+      },
+      "path": "web/src/subscription-content-decisions.dom.test.tsx",
+      "private_candidate": {
+        "mode": 420,
+        "sha256": "ae2fa8e32762d4bdac5514f3a37f491b29bcdb6df81e7daf9b1cc2b75f62f511"
+      }
+    },
+    {
+      "canonical": {
+        "mode": 420,
+        "sha256": "3e75fa43da558b9bbab409eaaf246f0429d3a2a7500f41ebafca34f9df756d62"
+      },
+      "path": "web/src/subscription-relational.dom.test.tsx",
+      "private_candidate": {
+        "mode": 420,
+        "sha256": "6e39ba4e704a3ff69d58f0b813d844ec19aafeaee172ec53f3f5a3572abfb174"
+      }
+    },
+    {
+      "canonical": {
+        "mode": 420,
+        "sha256": "a12d2dfa119d8a855b6b2b22d4b42e9fd75619f484ebade5306c3d319f9408e3"
+      },
+      "path": "web/src/subscription-workspace.dom.test.tsx",
+      "private_candidate": {
+        "mode": 420,
+        "sha256": "3fc8356c900b22f1ff9d02c182b49c334e35b68aa2541362fc95abe23c319b3b"
+      }
+    },
+    {
+      "canonical": {
+        "mode": 420,
+        "sha256": "c24bb7f00b93f9769e30a90ef56994af042d66a9da2def4ae1b9165268576b84"
+      },
+      "path": "web/tests/output-review-consequence.ui.spec.ts",
+      "private_candidate": {
+        "mode": 420,
+        "sha256": "41be5170eebb4aee0adb39974368353ecfed74c5fcc438559b693f172a26a4b5"
+      }
+    },
+    {
+      "canonical": {
+        "mode": 420,
+        "sha256": "80f517bdd9eac9e584babeb8018b3e7073ac92c1431744319260018e7964232d"
+      },
+      "path": "web/tests/product-model.ui.spec.ts",
+      "private_candidate": {
+        "mode": 420,
+        "sha256": "779fe8c560b1e49acf7b25195c4e213399661ef02d97aeadaa8b7ce18d9eab51"
+      }
+    },
+    {
+      "canonical": null,
+      "path": "web/tests/ui-primary17-observations.ts",
+      "private_candidate": {
+        "mode": 420,
+        "sha256": "78583eb18327caa80a277f0d62d7bdcc470000ced453787935c94809a2556a8a"
+      }
+    }
+  ],
+  "candidate_inventory_file_sha256": "12119b89c84fe579ecc626b97aa439b42366666bb80a3deb6c49a30901b9a57e",
+  "candidate_source_inventory_sha256": "fc7dd130c81f77e13da95125e5a83cc6a568e9991da4997c309d4ff975f3a21a",
+  "cases": [
+    {
+      "nativeResultStatuses": [
+        "passed"
+      ],
+      "status": "expected",
+      "title": "initial empty pages name the task and server registration does not imply deployment"
+    },
+    {
+      "nativeResultStatuses": [
+        "failed"
+      ],
+      "status": "unexpected",
+      "title": "first-use endpoint: two imported connections are only routed by an explicit user choice"
+    },
+    {
+      "nativeResultStatuses": [
+        "failed"
+      ],
+      "status": "unexpected",
+      "title": "first-use direct: two imported connections are only routed by an explicit user choice"
+    },
+    {
+      "nativeResultStatuses": [
+        "failed"
+      ],
+      "status": "unexpected",
+      "title": "existing strategy groups remain editable and revoked recovery replaces only the selected client link"
+    },
+    {
+      "nativeResultStatuses": [
+        "failed"
+      ],
+      "status": "unexpected",
+      "title": "workspace: explicit publication changes only one of two independent client links"
+    },
+    {
+      "nativeResultStatuses": [
+        "passed"
+      ],
+      "status": "expected",
+      "title": "legacy-profile: explicit publication changes only one of two independent client links"
+    },
+    {
+      "nativeResultStatuses": [
+        "passed"
+      ],
+      "status": "expected",
+      "title": "saving a draft leaves frozen advanced published summary and delivery unchanged"
+    },
+    {
+      "nativeResultStatuses": [
+        "passed"
+      ],
+      "status": "expected",
+      "title": "invalid JSON, cancel, and Back retain the draft until an explicit retry succeeds"
+    },
+    {
+      "nativeResultStatuses": [
+        "passed"
+      ],
+      "status": "expected",
+      "title": "invalid and mismatched deep-link scope never silently selects a different configuration"
+    },
+    {
+      "nativeResultStatuses": [
+        "passed"
+      ],
+      "status": "expected",
+      "title": "operator keeps line and user context through authorization, entry preparation, and a non-executing scoped batch plan"
+    },
+    {
+      "nativeResultStatuses": [
+        "passed"
+      ],
+      "status": "expected",
+      "title": "scoped configuration creates one independent second-client subscription and immediately exposes its new link"
+    },
+    {
+      "nativeResultStatuses": [
+        "failed"
+      ],
+      "status": "unexpected",
+      "title": "same rule counts are not represented as identical routing when rule contents changed"
+    },
+    {
+      "nativeResultStatuses": [
+        "passed"
+      ],
+      "status": "expected",
+      "title": "25 synthetic configurations and 100 independent links remain searchable, bounded, and explicitly scoped"
+    },
+    {
+      "nativeResultStatuses": [
+        "passed"
+      ],
+      "status": "expected",
+      "title": "reviews material source changes and preserves accepted options until an explicit decision"
+    },
+    {
+      "nativeResultStatuses": [
+        "passed"
+      ],
+      "status": "expected",
+      "title": "imports directly into a configuration, retains a failed source, and saves only the draft"
+    },
+    {
+      "nativeResultStatuses": [
+        "passed"
+      ],
+      "status": "expected",
+      "title": "mobile navigation and cancellation preserve a useful return path"
+    },
+    {
+      "nativeResultStatuses": [
+        "passed"
+      ],
+      "status": "expected",
+      "title": "administrator edits an ordered route without dragging"
+    }
+  ],
+  "guards": {
+    "adaptedConfigUnchanged": true,
+    "demoDBRemoved": true,
+    "fixtureToolBindingsUnchanged": true,
+    "portsClosed": {
+      "4173": true,
+      "8080": true
+    },
+    "privateSourceInputsUnchanged": true,
+    "recoveredSourceUnchanged": true
+  },
+  "independent_failure_review": {
+    "accepted": false,
+    "classification": {
+      "deepLink": "Original case now passes with passive observation. Both original menu clicks show trusted pointerdown/up/click and selected-profile reveal200, with no accepted-navigation event between click and response. This run establishes the case passed, not a proved fix or cause for the previous timeout.",
+      "equalCountComparison": "Updated exact semantic comparison passes, then Confirm full-viewport assertion at2307 reports ratio about0.489 after390 resize. No dedicated narrow geometry/frame at this boundary; do not infer unreachable action or relax acceptance without owned scrolling evidence.",
+      "firstUseEndpointAndDirect": "Ordinary vertical reflow below expanded source settings at document scrollY0: both true input and visible Select owner are below the initial viewport, with document width390 and scrollable height1306. No hidden-control proxy or horizontal clipping. Existing strict above-fold assertion fails; usability/reachability by normal scrolling has not yet been exercised.",
+      "twoTechnicalDisclosureFailures": "Shared update-review helper retains creation-only 技术配置（可选查看） at254; actual update review exposes 查看待发布技术配置. Migration was incomplete. Scope helper by creation/update, keep all real toggle/content/action assertions."
+    },
+    "limits": [
+      "Only the two new first-use failure PNGs independently viewed in this receipt; other images remain native artifacts, not pixel acceptance.",
+      "Admin own-workspace scope remains distinct from separately accepted ordinary subscriber.",
+      "All final source/config/tool/port/DB guards true; no canonical mutation or runtime by reviewer."
+    ],
+    "recommendations": [
+      "Use bounded explicit task-region viewing for normal below-fold form content while retaining full control visibility and horizontal-overflow checks; no production compaction justified solely by above-fold assumption.",
+      "Complete exact update-only shared/reopened disclosure observation migration, leave creation labels unchanged.",
+      "Capture equal-count actual modal/frame and scroller geometry before its unchanged failure assertion; then classify task reachability.",
+      "Retain both failed receipts; no automatic retry or whole17 acceptance."
+    ],
+    "record": "policy-ux-review-20261025/PRIMARY17-OBSERVER-ACTUAL-FAILURE-REVIEW.json",
+    "review_is_diagnosis_not_success": true,
+    "reviewed_at_utc": "2026-10-25T17:14:19.241298+00:00",
+    "sha256": "2c426c14ad4abe3a2d52ed587ebb67f3518521c70bd75f9b15b9f8520f8855f5"
+  },
+  "inputs_record_sha256": "e9c6ce084fd3d511e0db05b0a06f58dbd620c29537abebe763057a89abf29e19",
+  "interpretation": "Private six-path revoked-consequence candidate plus reviewed observer spec/helper only. Twelve pass/five fail; canonical remains582c. Deep-link passing with passive observation is not causal product repair.197 denotes static happy-path accounting, not observed mutation census. No overall readiness or integration claim.",
+  "limits": [
+    "Six reviewed revoked-consequence source paths plus reviewed observer spec/helper in private copy only",
+    "Deep-link passed under passive observation; no causal product repair established",
+    "197 is static happy-path accounting, not observed mutation census",
+    "Existing demo administrator sessions, not ordinary-user role evidence"
+  ],
+  "native_report_sha256": "0157344c133d96c6f068abd7ca8aee0f2549cb7c4ef0cbbcd57df66867ac029e",
+  "omissions": [
+    "Absolute workspace/tool executable paths and process IDs",
+    "Raw logs, stack traces and DOM dumps",
+    "Demo/auth/session/cookie/CSRF state, private feed values and credentials",
+    "Browser screenshots, traces and runtime source copies"
+  ],
+  "original_records": [
+    {
+      "included_native_bytes": false,
+      "record": "final-primary17-observer-validation-20261025/run/run.json",
+      "sha256": "aff9da519b1b99f1328c7f49075cbb607a2001e47fda45cefc979a12d450befb"
+    },
+    {
+      "included_native_bytes": false,
+      "record": "final-primary17-observer-validation-20261025/NATIVE-RESULT-SUMMARY.json",
+      "sha256": "320da2867860b8c1424f29bb104e4ce8e48502ceeab555490af881f152c148ef"
+    }
+  ],
+  "privacy_rule": "Explicitly selected scalar/count/identity fields only; original immutable record hashes retained.",
+  "purpose": "failed_private_current17_observer_candidate_not_canonical_acceptance",
+  "qa_released_utc": "2026-10-25T17:12:32.444110+00:00",
+  "record_kind": "derived_allowlisted_terminal_summary_not_native_byte_copy",
+  "schema": "routeweaver.portable-verification.v1",
+  "stages": [
+    {
+      "finished": "2026-10-25T17:10:20.592664+00:00",
+      "name": "discovery",
+      "nativeExit": 0,
+      "started": "2026-10-25T17:10:19.752453+00:00"
+    },
+    {
+      "finished": "2026-10-25T17:12:31.871083+00:00",
+      "name": "browser",
+      "nativeExit": 1,
+      "started": "2026-10-25T17:10:20.974017+00:00"
+    }
+  ],
+  "stats": {
+    "duration": 130341.927,
+    "expected": 12,
+    "flaky": 0,
+    "skipped": 0,
+    "startTime": "2026-10-25T17:10:21.419Z",
+    "unexpected": 5
+  },
+  "status": "failed"
+}

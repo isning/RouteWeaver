@@ -1,0 +1,88 @@
+{
+  "evidence_hashes_only": {
+    "web-build.log": "3777a06397e8c5449703e4012530230fd19dfad0b8c4c5ba73e44caff1299cfa",
+    "web-results.json": "52fe738f89203bb77b313184f11f5bde201ef42b5f8780ac6cf32661d26b72f1",
+    "web-tests.log": "c6b199c326068a3123456d057df9b47507fb70a2c44ef106b3548fad0c2fc1ea",
+    "web-typecheck.log": "d9dd95a5d29e2c8680342dd6d79eb56c5cc54980f2328e98854e8e67aa24d7df"
+  },
+  "finished_utc": "2026-10-25T18:08:34.939108+00:00",
+  "format": "derived sanitized portable terminal summary; not a byte-identical native receipt",
+  "guards": {
+    "canonicalUnchanged": true,
+    "privateSourceInputsUnchanged": true,
+    "reviewedInputsUnchanged": true,
+    "toolsUnchanged": true
+  },
+  "input_sha256": "639224c5f8de29f5a52acb54078a208faab28b3f0785c44acc5f5e4e07fe6e03",
+  "limits": [
+    "No root Go/static rerun; exact nine web-only inventory differences retain prior eight stage outcomes with explicit original failed aggregate attribution.",
+    "No race/nested runtime/native-core/live/deployment/NoGit verify.sh success claim.",
+    "Final canonical browser17 is separate. Prior ordinary-subscriber evidence belongs to source582c and uses Subscriptions.tsx changed in b670; no blanket production-path equality or final-source ordinary-role pass is claimed. Any retained recovery evidence requires its own specific unchanged-path basis.",
+    "Accepted only for b670 source. Later overview status proposal and final canonical17/pixel acceptance remain separate and pending root-authorized source resolution.",
+    "Original interrupted run remains incomplete; earlier failed aggregate and current17 failures remain historical failures.",
+    "Non-failing build size and existing test-environment/deprecation warnings are retained in logs, not hidden."
+  ],
+  "native_counts": {
+    "numFailedTestSuites": 0,
+    "numFailedTests": 0,
+    "numPassedTestSuites": 148,
+    "numPassedTests": 1531,
+    "numPendingTestSuites": 0,
+    "numPendingTests": 0,
+    "numTodoTests": 0,
+    "numTotalTestSuites": 148,
+    "numTotalTests": 1531,
+    "success": true
+  },
+  "native_summary_sha256": "e4705ae295b3041546c162d0311d900f4f3e85ba1b71c74ea4db5cb436e9295a",
+  "no_raw_runtime_or_auth_artifacts_included": true,
+  "original_incomplete_receipt_sha256": "b5b4e99c20a85f62f095c6a448258a465758d6cd4236b681d81e492d1fcf3857",
+  "original_interruption_unchanged": true,
+  "qa_released_utc": "2026-10-25T18:08:34.939086+00:00",
+  "receipt_wording_clarification": "The immutable runner receipt retains its runner-era generic recovery/ordinary-role exclusion wording. The narrower limits in this summary govern attribution; the receipt has not been edited.",
+  "recovery_record_sha256": "f23aa6754a9c56c4f079b6d05c0b471eeeec3cd5b764b6faff1bc8bb6d2c5db5",
+  "retained_stage_attribution": "Original aggregate has eight native-zero stages, including historical web-typecheck, but remains failed overall. Seven non-web stages are retained under their original attribution; this recovery freshly executed typecheck, all Web tests and build.",
+  "retry_count": 0,
+  "runner_sha256": "b09846e22d38f58b77928dd6975eeab7c3ec1dabc60bd987fda146488ed96c35",
+  "runner_source_only_review_sha256": "b1f9bef0af8f11b80ba8d07d4619c56976dea13da3c91a43d11cbae54843e35a",
+  "schema": 1,
+  "source_inventory_file_sha256": "c493c01cf8cb613c4d35e5c193d4fa68189048ec026fc6d3a8d1de834f53031a",
+  "source_scope_limit": "This executes b670, not any subsequent overview-status integration. Later source results must remain separately attributed.",
+  "source_sha256": "b670ad77345a032511c5a071159471e1fdbb68b94eb507df87982d3f288389a5",
+  "stages": [
+    {
+      "finished": "2026-10-25T17:56:19.914274+00:00",
+      "name": "web-typecheck",
+      "nativeExit": 0,
+      "started": "2026-10-25T17:56:17.027919+00:00"
+    },
+    {
+      "finished": "2026-10-25T18:08:30.247902+00:00",
+      "name": "web-tests",
+      "nativeExit": 0,
+      "started": "2026-10-25T17:56:20.184076+00:00"
+    },
+    {
+      "finished": "2026-10-25T18:08:34.424603+00:00",
+      "name": "web-build",
+      "nativeExit": 0,
+      "started": "2026-10-25T18:08:30.523922+00:00"
+    }
+  ],
+  "status": "b670 recovered whole-web/typecheck/build accepted; final-source/browser decision separate",
+  "terminal_receipt_sha256": "a6d6357f7a522b008f2a12be2c9890ed16cc7db65af9f931eb86b8e3d7b1b5cf",
+  "unfiltered_suite": true,
+  "web": {
+    "actualCases": 1531,
+    "actualFiles": 130,
+    "allPassed": true,
+    "failed": 0,
+    "nativeSuiteGroups": 148,
+    "nativeTests": 1531,
+    "pending": 0,
+    "todo": 0,
+    "unhandledClear": true
+  },
+  "web_skipped_cases": [],
+  "worker_count": 1
+}

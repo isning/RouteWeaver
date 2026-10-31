@@ -1,0 +1,42 @@
+=== RUN   TestReviewedOutputCreationRejectsChangedProfile
+--- PASS: TestReviewedOutputCreationRejectsChangedProfile (1.63s)
+=== RUN   TestReviewedOutputCreationFencesInputsAndPublishesExactArtifact
+=== RUN   TestReviewedOutputCreationFencesInputsAndPublishesExactArtifact/source
+=== RUN   TestReviewedOutputCreationFencesInputsAndPublishesExactArtifact/secret
+=== RUN   TestReviewedOutputCreationFencesInputsAndPublishesExactArtifact/resource
+=== RUN   TestReviewedOutputCreationFencesInputsAndPublishesExactArtifact/name
+=== RUN   TestReviewedOutputCreationFencesInputsAndPublishesExactArtifact/id
+=== RUN   TestReviewedOutputCreationFencesInputsAndPublishesExactArtifact/mode
+=== RUN   TestReviewedOutputCreationFencesInputsAndPublishesExactArtifact/target
+=== RUN   TestReviewedOutputCreationFencesInputsAndPublishesExactArtifact/owner
+--- PASS: TestReviewedOutputCreationFencesInputsAndPublishesExactArtifact (7.99s)
+    --- PASS: TestReviewedOutputCreationFencesInputsAndPublishesExactArtifact/source (0.88s)
+    --- PASS: TestReviewedOutputCreationFencesInputsAndPublishesExactArtifact/secret (0.90s)
+    --- PASS: TestReviewedOutputCreationFencesInputsAndPublishesExactArtifact/resource (0.87s)
+    --- PASS: TestReviewedOutputCreationFencesInputsAndPublishesExactArtifact/name (0.88s)
+    --- PASS: TestReviewedOutputCreationFencesInputsAndPublishesExactArtifact/id (0.90s)
+    --- PASS: TestReviewedOutputCreationFencesInputsAndPublishesExactArtifact/mode (0.91s)
+    --- PASS: TestReviewedOutputCreationFencesInputsAndPublishesExactArtifact/target (0.95s)
+    --- PASS: TestReviewedOutputCreationFencesInputsAndPublishesExactArtifact/owner (1.70s)
+=== RUN   TestReviewedOutputCreationFreezesPrivateBundleAndRejectsForgedReceipt
+--- PASS: TestReviewedOutputCreationFreezesPrivateBundleAndRejectsForgedReceipt (0.94s)
+=== RUN   TestOutputReviewRejectsChangedProfileAndPreservesFeed
+--- PASS: TestOutputReviewRejectsChangedProfileAndPreservesFeed (0.89s)
+=== RUN   TestOutputReviewFencesSourceAndOutputChanges
+=== RUN   TestOutputReviewFencesSourceAndOutputChanges/source
+=== RUN   TestOutputReviewFencesSourceAndOutputChanges/output
+--- PASS: TestOutputReviewFencesSourceAndOutputChanges (2.04s)
+    --- PASS: TestOutputReviewFencesSourceAndOutputChanges/source (0.98s)
+    --- PASS: TestOutputReviewFencesSourceAndOutputChanges/output (1.06s)
+=== RUN   TestOutputReviewFencesOwnedResourceAndGrantInputs
+=== RUN   TestOutputReviewFencesOwnedResourceAndGrantInputs/resource
+=== RUN   TestOutputReviewFencesOwnedResourceAndGrantInputs/grant
+--- PASS: TestOutputReviewFencesOwnedResourceAndGrantInputs (2.09s)
+    --- PASS: TestOutputReviewFencesOwnedResourceAndGrantInputs/resource (1.00s)
+    --- PASS: TestOutputReviewFencesOwnedResourceAndGrantInputs/grant (1.08s)
+=== RUN   TestOutputReviewBindsUnredactedNativeData
+--- PASS: TestOutputReviewBindsUnredactedNativeData (1.08s)
+=== RUN   TestOwnedRuleFilesPublishAsExactFrozenBundle
+--- PASS: TestOwnedRuleFilesPublishAsExactFrozenBundle (1.95s)
+PASS
+ok  	routeweaver/internal/httpapi	19.669s

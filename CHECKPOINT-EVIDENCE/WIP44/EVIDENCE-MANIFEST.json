@@ -1,0 +1,69 @@
+{
+  "schema": 1,
+  "checkpoint": "WIP44",
+  "archiveOnly": true,
+  "membersExcludingThisManifest": [
+    {
+      "path": "CHECKPOINT-EVIDENCE/WIP44/BASELINE-PROVENANCE.json",
+      "bytes": 3429,
+      "sha256": "821547aff9c2f6305d1a4ae2b69d56604438e0f174a89fb5476314a26e6dd430",
+      "mode": "0644"
+    },
+    {
+      "path": "CHECKPOINT-EVIDENCE/WIP44/BROWSER-AND-PIXELS.json",
+      "bytes": 7949,
+      "sha256": "711fbf4944ddd5ced57de6b1de739135fa51e88fb6936052d23a1edba7c8b1c4",
+      "mode": "0644"
+    },
+    {
+      "path": "CHECKPOINT-EVIDENCE/WIP44/DOCUMENTATION-CLOSURE.json",
+      "bytes": 1749,
+      "sha256": "1fdcdfbcdce52f8745cf0a8b7cd731c414de55df24f0756b95a9d3ce94ad840d",
+      "mode": "0644"
+    },
+    {
+      "path": "CHECKPOINT-EVIDENCE/WIP44/GO-SKIPS.json",
+      "bytes": 10157,
+      "sha256": "bfda8573594d6c41ee77c60b97009dbc7c6d690ea003330e4de4047833928c23",
+      "mode": "0644"
+    },
+    {
+      "path": "CHECKPOINT-EVIDENCE/WIP44/PRIOR-WIP43-METHODS-STATUS.json",
+      "bytes": 628076,
+      "sha256": "da97efd14b3c28537526480c432611a1fa7dc04ea4d64d4df483b0212b0c856b",
+      "mode": "0644"
+    },
+    {
+      "path": "CHECKPOINT-EVIDENCE/WIP44/PRIOR-WIP43-SOURCE-STATUS.json",
+      "bytes": 624321,
+      "sha256": "30138a86b4c1c5c1ab32c55debe1b771e072ea00af7bc2e069d7e1a232e351f2",
+      "mode": "0644"
+    },
+    {
+      "path": "CHECKPOINT-EVIDENCE/WIP44/SCREENSHOT-REFERENCES.json",
+      "bytes": 1857,
+      "sha256": "444266ba28e7a772df092ffe23066d651546beab1b93f4ecc5b0a56d3ad7405d",
+      "mode": "0644"
+    },
+    {
+      "path": "CHECKPOINT-EVIDENCE/WIP44/SOURCE-MEMBERSHIP.json",
+      "bytes": 228709,
+      "sha256": "e65e1d02c45dfdde346bfcd908a100bf9a6c00fa3d28a6cd339bdf88838ebdd5",
+      "mode": "0644"
+    },
+    {
+      "path": "CHECKPOINT-EVIDENCE/WIP44/SUMMARY.md",
+      "bytes": 3148,
+      "sha256": "b1fac5253aa9af449b58420a5a39ed29182e2a594442815bb72ec39570bd2a2c",
+      "mode": "0644"
+    },
+    {
+      "path": "CHECKPOINT-EVIDENCE/WIP44/VERIFICATION.json",
+      "bytes": 4220,
+      "sha256": "b153d08428a86c0d27194d9d06613895545edb4388a1c9b2d4aadbafc1e205a8",
+      "mode": "0644"
+    }
+  ],
+  "memberCountIncludingThisManifest": 11,
+  "noSourcePayloadIdentityClaim": true
+}

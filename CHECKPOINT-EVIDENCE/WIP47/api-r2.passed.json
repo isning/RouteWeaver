@@ -1,0 +1,35 @@
+{
+  "command": "playwright test --project=api --reporter=list,json",
+  "status": "passed",
+  "counts": {
+    "startTime": "2026-10-29T17:14:15.003Z",
+    "duration": 6603.316,
+    "expected": 17,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "scope": "17 request-level tests against local Go demo API and Vite; no browser UI assertions.",
+  "repair": "Reveal-only revisionToken is excluded from strict write DTO and supplied as If-Match. Missing/stale token 409 regressions retain unchanged draft/revision assertions.",
+  "final_checkpoint_acceptance": false,
+  "raw_evidence": [
+    {
+      "filename": "api-r1.log",
+      "sha256": "e0bdebe34f2ceccc414b4f6bcf1ac8446205ff9b93d23e79f849cfb6c1f3a01c",
+      "size_bytes": 4680,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "filename": "api-r2.log",
+      "sha256": "7a05d281232f253ffcd716a62e2c6f0a6b51e80c13c45872b971b9d085cc9ad2",
+      "size_bytes": 3442,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "filename": "api-r2.json",
+      "sha256": "50ca8da88bbf84f992af461f149f2b0b2ee5a8a37c25b2b629997f8be502aef4",
+      "size_bytes": 23274,
+      "availability": "local-only-not-in-archive"
+    }
+  ]
+}

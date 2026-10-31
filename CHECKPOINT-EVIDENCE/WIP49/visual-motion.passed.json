@@ -1,0 +1,52 @@
+{
+  "checkpoint": "WIP49",
+  "status": "passed reviewed visual/motion states; not full frontend acceptance",
+  "scope": [
+    "desktop1180x757",
+    "authored child CSS viewport390x568",
+    "full-page settings capture"
+  ],
+  "verified_states": [
+    "collection card hierarchy",
+    "bounded Basic/Origin settings layout and wrapping",
+    "sidebar measured200ms open150ms close with rapid toggle plus Tab avoiding closing links",
+    "dialog/sheet measured200ms entry; drawer Escape/reopen and focus return",
+    "endpoint/server/core closing presentation correct,inert,absent from accessibility tree; new task fields correct",
+    "quota progress accessibility value18,transform transition300ms"
+  ],
+  "not_claimed": [
+    "frame-rate or video animation measurement",
+    "actual reduced-motion preference run",
+    "populated Resources table visual acceptance",
+    "physical mobile/touch or assistive-technology audit",
+    "all product flows or Google-level quality"
+  ],
+  "mutations_executed": false,
+  "final_frontend_acceptance": "passed separate source-bound stages; see frontend-final.passed.json",
+  "evidence": [
+    {
+      "filename": "REVIEW.md",
+      "sha256": "91d2ed1f97dfb4838619619573e3bcd475c6d0b39552e4211b9452e6e81f991a",
+      "bytes": 2480,
+      "availability": "local-only evidence; not an archive attachment"
+    },
+    {
+      "filename": "01-collections.jpg",
+      "sha256": "92e8e486559eec4ada9dd22707df0b01de989db85d50679b9faa834a67552b76",
+      "bytes": 38493,
+      "availability": "local-only evidence; not an archive attachment"
+    },
+    {
+      "filename": "02-settings-loaded-origin.jpg",
+      "sha256": "65bcd994fbe33c4bbb9092d1ee3a7e25270a11f67f87a028912acf8da739fac3",
+      "bytes": 96864,
+      "availability": "local-only evidence; not an archive attachment"
+    },
+    {
+      "filename": "03-endpoint-dialog.jpg",
+      "sha256": "14d23ef681198a5da9df984f1a198a4a6cfe7b7705302d7108f74de8fd5ff7d8",
+      "bytes": 55441,
+      "availability": "local-only evidence; not an archive attachment"
+    }
+  ]
+}

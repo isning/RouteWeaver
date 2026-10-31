@@ -1,0 +1,53 @@
+{
+  "status": "passed",
+  "scope": "Final repaired frontend typecheck, entire Vitest suite and production build",
+  "physical_test_files": 157,
+  "tests": {
+    "total": 1796,
+    "passed": 1796,
+    "failed": 0,
+    "pending": 0
+  },
+  "typecheck_exit": 0,
+  "production_build_exit": 0,
+  "aggregate_exit": 0,
+  "source_manifest_sha256": "e95d5130aa0d6c961565744ef02d115267ce01d85019cd9e85b23ae5460a8dc2",
+  "source_manifest_files": 379,
+  "source_unchanged_during_and_after_run": true,
+  "repairs": [
+    "Allow metadata-only save of unchanged legacy unsupported connection only when complete connection/authentication/core target identity stays identical; changed config and deployment gates remain strict.",
+    "Scheduled source-review focus restoration checks exact connected ownership and does not steal a newer selected read-back control; held Enter requires a separate fresh use gesture."
+  ],
+  "raw_evidence": [
+    {
+      "filename": "frontend-repair-suite.json",
+      "sha256": "ada4e8e6e98d60410c18ec52aa4221047ef8fcf2ac96c6313436ad3019a76a1c",
+      "size_bytes": 601955,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "filename": "frontend-repair-suite.log",
+      "sha256": "4466bef5faba788a4701cc9ba75c92297b2db8759f26fd98f808bc7afefd8e76",
+      "size_bytes": 60897,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "filename": "frontend-repair-typecheck.log",
+      "sha256": "3eeba694beb40e350731996df1916da84a1348266b4c9d68b105dcdd21c1bc6f",
+      "size_bytes": 144,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "filename": "frontend-repair-build.log",
+      "sha256": "c7c52ab6fd757cd3398a1b72b2439eb9d982666965ecc4b3849612d122e3d173",
+      "size_bytes": 2980,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "filename": "frontend-repair-source-check.json",
+      "sha256": "7229e40827b13e0e7e68b0648c96c80258e4a3d46bda3456f0dab02ca918a3dc",
+      "size_bytes": 155,
+      "availability": "local-only-not-in-archive"
+    }
+  ]
+}

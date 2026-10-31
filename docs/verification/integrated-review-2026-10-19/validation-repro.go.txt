@@ -1,0 +1,31 @@
+package agent
+
+import (
+ "context"
+ "errors"
+ "testing"
+ "time"
+)
+
+type reviewSlowValidation struct { LocalFixture; entered, release chan struct{} }
+func (a *reviewSlowValidation) Validate(ctx context.Context, st Staged) error {
+ if st.Desired.Generation == 2 { close(a.entered); select { case <-a.release: return errors.New("synthetic native validation failed"); case <-ctx.Done(): return ctx.Err() } }
+ return a.LocalFixture.Validate(ctx, st)
+}
+func TestReviewSlowValidationCannotExtendOldRuntimeLease(t *testing.T) {
+ a:= &reviewSlowValidation{entered:make(chan struct{}), release:make(chan struct{})}
+ r:=openTest(t,t.TempDir(),a)
+ d:=testDesired(t,1); d.Lease.ExpiresAt=time.Now().Add(150*time.Millisecond)
+ if _,e:=r.Submit(context.Background(),d);e!=nil {t.Fatal(e)}
+ next:=testDesired(t,2)
+ done:=make(chan struct{})
+ go func(){r.Submit(context.Background(),next);close(done)}()
+ <-a.entered
+ enforced:=make(chan struct{})
+ go func(){r.EnforcePolicy(context.Background());close(enforced)}()
+ time.Sleep(250*time.Millisecond)
+ obs,e:=a.Observe(context.Background(),r.Root())
+ close(a.release); <-done; <-enforced
+ if e!=nil {t.Fatal(e)}
+ if obs.Generation!=0 {t.Fatalf("old generation %d remained live %s after its own lease expired while candidate validation held the mutation lane",obs.Generation,time.Since(d.Lease.ExpiresAt))}
+}

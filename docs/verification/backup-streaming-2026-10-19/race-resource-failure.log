@@ -1,0 +1,6 @@
+signal: killed
+FAIL	routeweaver/internal/backup	126.723s
+ok  	routeweaver/internal/store	6.656s
+signal: killed
+FAIL	routeweaver/internal/httpapi	16.537s
+FAIL

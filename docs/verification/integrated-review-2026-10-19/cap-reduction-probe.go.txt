@@ -1,0 +1,40 @@
+package store_test
+
+import (
+ "testing"
+ "time"
+ "routeweaver/internal/service"
+)
+
+func TestIndependentCapReductionCannotLeaveRenewableOverCapState(t *testing.T) {
+ for _, kind := range []string{"streams", "ips"} {
+  t.Run(kind, func(t *testing.T) {
+   s, _, _, scope, now := admissionFixture(t)
+   var plan service.Plan
+   if err := s.Get("services", "plan", &plan); err != nil { t.Fatal(err) }
+   plan.ConnectionLimit = 2
+   plan.OnlineIPLimit = 2
+   if err := s.PutServicePlan(plan); err != nil { t.Fatal(err) }
+   first := admissionRequest("entry1", "192.0.2.1", "first")
+   second := admissionRequest("entry2", "192.0.2.1", "second")
+   if kind == "ips" { second.ClientIP = "192.0.2.2" }
+   for _, req := range []struct{ which int }{{0},{1}} {
+    in := first; if req.which == 1 { in = second }
+    if decision, err := s.AcquireAdmission(scope, in, now); err != nil || !decision.Allowed { t.Fatalf("initial admission %+v %v", decision, err) }
+   }
+   if kind == "streams" { plan.ConnectionLimit = 1 } else { plan.OnlineIPLimit = 1 }
+   err := s.PutServicePlan(plan)
+   if err != nil { return }
+   for _, step := range []time.Duration{10*time.Second, 20*time.Second, 40*time.Second} {
+    for _, in := range []struct{ which int }{{0},{1}} {
+     req := first; if in.which == 1 { req = second }
+     decision, err := s.AcquireAdmission(scope, req, now.Add(step))
+     if err != nil || !decision.Allowed { t.Fatalf("test requires demonstrated renewable excess; %+v %v", decision, err) }
+    }
+   }
+   status, err := s.AdmissionStatus("account", now.Add(40*time.Second))
+   if err != nil { t.Fatal(err) }
+   t.Fatalf("reduction accepted with renewable excess beyond original 30-second leases: cap=1 activeStreams=%d onlineIPs=%d", status.ActiveStreams, len(status.OnlineIPs))
+  })
+ }
+}

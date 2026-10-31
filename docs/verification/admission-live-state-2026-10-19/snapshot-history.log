@@ -1,0 +1,25 @@
+=== RUN   TestAdmissionSnapshotSeededHistoryCharacterization
+=== RUN   TestAdmissionSnapshotSeededHistoryCharacterization/0
+    admission_live_history_test.go:87: snapshot-seeded pairs=0 setup=3.114365ms
+    admission_live_history_test.go:94: snapshot-seeded pairs=0 first cold admission=1.265654ms
+    admission_live_history_test.go:127: snapshot-seeded closed lease+budget pairs=0 mode=renewal median=1.670112ms max=1.869422ms
+    admission_live_history_test.go:127: snapshot-seeded closed lease+budget pairs=0 mode=settlement-renewal median=2.277486ms max=2.516315ms
+    admission_live_history_test.go:127: snapshot-seeded closed lease+budget pairs=0 mode=new-stream median=1.323351ms max=1.444122ms
+=== RUN   TestAdmissionSnapshotSeededHistoryCharacterization/1000
+    admission_live_history_test.go:87: snapshot-seeded pairs=1000 setup=139.745738ms
+    admission_live_history_test.go:94: snapshot-seeded pairs=1000 first cold admission=13.971997ms
+    admission_live_history_test.go:127: snapshot-seeded closed lease+budget pairs=1000 mode=renewal median=2.082618ms max=3.37085ms
+    admission_live_history_test.go:127: snapshot-seeded closed lease+budget pairs=1000 mode=settlement-renewal median=2.654673ms max=2.940163ms
+    admission_live_history_test.go:127: snapshot-seeded closed lease+budget pairs=1000 mode=new-stream median=1.809662ms max=1.906227ms
+=== RUN   TestAdmissionSnapshotSeededHistoryCharacterization/10000
+    admission_live_history_test.go:87: snapshot-seeded pairs=10000 setup=1.334403788s
+    admission_live_history_test.go:94: snapshot-seeded pairs=10000 first cold admission=125.712917ms
+    admission_live_history_test.go:127: snapshot-seeded closed lease+budget pairs=10000 mode=renewal median=2.681252ms max=3.290594ms
+    admission_live_history_test.go:127: snapshot-seeded closed lease+budget pairs=10000 mode=settlement-renewal median=2.675224ms max=3.365873ms
+    admission_live_history_test.go:127: snapshot-seeded closed lease+budget pairs=10000 mode=new-stream median=1.81494ms max=2.529895ms
+--- PASS: TestAdmissionSnapshotSeededHistoryCharacterization (1.78s)
+    --- PASS: TestAdmissionSnapshotSeededHistoryCharacterization/0 (0.05s)
+    --- PASS: TestAdmissionSnapshotSeededHistoryCharacterization/1000 (0.21s)
+    --- PASS: TestAdmissionSnapshotSeededHistoryCharacterization/10000 (1.52s)
+PASS
+ok  	routeweaver/internal/store	1.785s

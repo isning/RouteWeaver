@@ -1,0 +1,258 @@
+{
+  "testAndSubtestSkipEvents": 50,
+  "topLevelSkipEvents": 22,
+  "skipEvents": [
+    {
+      "package": "routeweaver/internal/agent",
+      "test": "TestNativeCoreInstallerPreparesImmutableOfficialExecutables",
+      "reason": "official archive cache not configured"
+    },
+    {
+      "package": "routeweaver/internal/agent",
+      "test": "TestNativeInstallDesiredPreservesActiveRuntimeAndLease",
+      "reason": "official archive cache not configured"
+    },
+    {
+      "package": "routeweaver/internal/agent",
+      "test": "TestNativeInstallDoesNotEraseAcceptedRevocation",
+      "reason": "official archive cache not configured"
+    },
+    {
+      "package": "routeweaver/internal/agent",
+      "test": "TestNativeInstallDownloadCannotDelayActiveLeaseExpiry",
+      "reason": "official archive cache not configured"
+    },
+    {
+      "package": "routeweaver/internal/agent",
+      "test": "TestNativeInstallDoesNotMutateAnotherInstancesRegistry",
+      "reason": "official archive cache not configured"
+    },
+    {
+      "package": "routeweaver/internal/agent",
+      "test": "TestNativeXrayTwoHopLoopbackRoundtrip",
+      "reason": "explicit Xray process opt-in required"
+    },
+    {
+      "package": "routeweaver/internal/agent",
+      "test": "TestPrivateAdmissionBrokerHasOnlyBoundedLeaseOperations",
+      "reason": "optional Unix transport needs explicit native socket-test opt-in; inherited-pipe tests remain mandatory"
+    },
+    {
+      "package": "routeweaver/internal/agent",
+      "test": "TestManagedNativeBrokerEOFStopsActivePayloadAndPersistsFinalJournal",
+      "reason": "explicit managed native executable required"
+    },
+    {
+      "package": "routeweaver/internal/agent",
+      "test": "TestNativePinnedBinariesWhenExplicitlyAvailable",
+      "reason": "native binaries not configured; fixture tests are not native-core evidence"
+    },
+    {
+      "package": "routeweaver/internal/agent",
+      "test": "TestNativeSupervisorLifecycleAndRestart",
+      "reason": "explicit native binaries required"
+    },
+    {
+      "package": "routeweaver/internal/agent",
+      "test": "TestLocalProcfsResourceReadOptIn",
+      "reason": "optional real local read requires ROUTEWEAVER_LOCAL_PROCFS=1; synthetic procfs fixtures run normally"
+    },
+    {
+      "package": "routeweaver/internal/httpapi",
+      "test": "TestNativeFleetConfigureStopStartAndRollback",
+      "reason": "explicit pinned Xray process opt-in required"
+    },
+    {
+      "package": "routeweaver/internal/httpapi",
+      "test": "TestNativeOverridePublishedArtifactsPassPinnedNativeParsers/mihomo",
+      "reason": "native validator not requested: ROUTEWEAVER_MIHOMO_BIN is unset"
+    },
+    {
+      "package": "routeweaver/internal/httpapi",
+      "test": "TestNativeOverridePublishedArtifactsPassPinnedNativeParsers/sing-box",
+      "reason": "native validator not requested: ROUTEWEAVER_SINGBOX_BIN is unset"
+    },
+    {
+      "package": "routeweaver/internal/httpapi",
+      "test": "TestNativePublishedManagedPrincipalEndToEnd",
+      "reason": "explicit managed runtime and Xray process opt-in required"
+    },
+    {
+      "package": "routeweaver/internal/httpapi",
+      "test": "TestNativeOwnedRuleFileBundles/mihomo-yaml",
+      "reason": "native bundle parser not requested: ROUTEWEAVER_MIHOMO_BIN is unset"
+    },
+    {
+      "package": "routeweaver/internal/httpapi",
+      "test": "TestNativeOwnedRuleFileBundles/mrs",
+      "reason": "native bundle parser not requested: ROUTEWEAVER_MIHOMO_BIN is unset"
+    },
+    {
+      "package": "routeweaver/internal/httpapi",
+      "test": "TestNativeOwnedRuleFileBundles/sing-box-source",
+      "reason": "native bundle parser not requested: ROUTEWEAVER_SINGBOX_BIN is unset"
+    },
+    {
+      "package": "routeweaver/internal/httpapi",
+      "test": "TestNativeOwnedRuleFileBundles/srs",
+      "reason": "native bundle parser not requested: ROUTEWEAVER_SINGBOX_BIN is unset"
+    },
+    {
+      "package": "routeweaver/internal/httpapi",
+      "test": "TestNativeTemplateFollowedProfileUpdate/mihomo",
+      "reason": "native validator not requested: ROUTEWEAVER_MIHOMO_BIN is unset"
+    },
+    {
+      "package": "routeweaver/internal/httpapi",
+      "test": "TestNativeTemplateFollowedProfileUpdate/sing-box",
+      "reason": "native validator not requested: ROUTEWEAVER_SINGBOX_BIN is unset"
+    },
+    {
+      "package": "routeweaver/internal/integration",
+      "test": "TestImportedProcessedVLESSPassesBothNativeClients",
+      "reason": "pinned native binaries not configured"
+    },
+    {
+      "package": "routeweaver/internal/integration",
+      "test": "TestNativeSharedVLESSIngressKeepsPrincipalPathsSeparate",
+      "reason": "requires explicit local Xray process opt-in"
+    },
+    {
+      "package": "routeweaver/internal/integration",
+      "test": "TestManagedSharedVLESSIngressKeepsPrincipalPathsSeparate",
+      "reason": "explicit managed runtime binary required"
+    },
+    {
+      "package": "routeweaver/internal/integration",
+      "test": "TestRenderedTwoHopRouteHasNoDirectFallback",
+      "reason": "requires explicit local Xray process opt-in"
+    },
+    {
+      "package": "routeweaver/internal/render",
+      "test": "TestNativeClientFixtures/mihomo",
+      "reason": "native validator not requested: ROUTEWEAVER_MIHOMO_BIN is unset"
+    },
+    {
+      "package": "routeweaver/internal/render",
+      "test": "TestNativeClientFixtures/sing-box",
+      "reason": "native validator not requested: ROUTEWEAVER_SINGBOX_BIN is unset"
+    },
+    {
+      "package": "routeweaver/internal/render",
+      "test": "TestNativeVLESSClientFixtures/mihomo/tcp",
+      "reason": "native validator not requested"
+    },
+    {
+      "package": "routeweaver/internal/render",
+      "test": "TestNativeVLESSClientFixtures/mihomo/ws",
+      "reason": "native validator not requested"
+    },
+    {
+      "package": "routeweaver/internal/render",
+      "test": "TestNativeVLESSClientFixtures/mihomo/grpc",
+      "reason": "native validator not requested"
+    },
+    {
+      "package": "routeweaver/internal/render",
+      "test": "TestNativeVLESSClientFixtures/mihomo/httpupgrade",
+      "reason": "native validator not requested"
+    },
+    {
+      "package": "routeweaver/internal/render",
+      "test": "TestNativeVLESSClientFixtures/sing-box/tcp",
+      "reason": "native validator not requested"
+    },
+    {
+      "package": "routeweaver/internal/render",
+      "test": "TestNativeVLESSClientFixtures/sing-box/ws",
+      "reason": "native validator not requested"
+    },
+    {
+      "package": "routeweaver/internal/render",
+      "test": "TestNativeVLESSClientFixtures/sing-box/grpc",
+      "reason": "native validator not requested"
+    },
+    {
+      "package": "routeweaver/internal/render",
+      "test": "TestNativeVLESSClientFixtures/sing-box/httpupgrade",
+      "reason": "native validator not requested"
+    },
+    {
+      "package": "routeweaver/internal/render",
+      "test": "TestNativeServerFixtures/routeweaver/xray/socks",
+      "reason": "native validator not requested: ROUTEWEAVER_XRAY_BIN"
+    },
+    {
+      "package": "routeweaver/internal/render",
+      "test": "TestNativeServerFixtures/routeweaver/xray/shadowsocks",
+      "reason": "native validator not requested: ROUTEWEAVER_XRAY_BIN"
+    },
+    {
+      "package": "routeweaver/internal/render",
+      "test": "TestNativeServerFixtures/routeweaver/xray/vless",
+      "reason": "native validator not requested: ROUTEWEAVER_XRAY_BIN"
+    },
+    {
+      "package": "routeweaver/internal/render",
+      "test": "TestNativeServerFixtures/routeweaver/sing-box/socks",
+      "reason": "native validator not requested: ROUTEWEAVER_SINGBOX_BIN"
+    },
+    {
+      "package": "routeweaver/internal/render",
+      "test": "TestNativeServerFixtures/routeweaver/sing-box/shadowsocks",
+      "reason": "native validator not requested: ROUTEWEAVER_SINGBOX_BIN"
+    },
+    {
+      "package": "routeweaver/internal/render",
+      "test": "TestNativeServerFixtures/routeweaver/sing-box/vless",
+      "reason": "native validator not requested: ROUTEWEAVER_SINGBOX_BIN"
+    },
+    {
+      "package": "routeweaver/internal/render",
+      "test": "TestNativeClientNodesOnlyConsumption/mihomo",
+      "reason": "native validator not requested: ROUTEWEAVER_MIHOMO_BIN"
+    },
+    {
+      "package": "routeweaver/internal/render",
+      "test": "TestNativeClientNodesOnlyConsumption/sing-box",
+      "reason": "native validator not requested: ROUTEWEAVER_SINGBOX_BIN"
+    },
+    {
+      "package": "routeweaver/internal/render",
+      "test": "TestNativeMultiPrincipalVLESSFixtures/routeweaver/xray",
+      "reason": "explicit native binary required: ROUTEWEAVER_XRAY_BIN"
+    },
+    {
+      "package": "routeweaver/internal/render",
+      "test": "TestNativeMultiPrincipalVLESSFixtures/routeweaver/sing-box",
+      "reason": "explicit native binary required: ROUTEWEAVER_SINGBOX_BIN"
+    },
+    {
+      "package": "routeweaver/internal/store",
+      "test": "TestAdmissionClosedHistoryScalingCharacterization",
+      "reason": "explicit workload characterization not requested"
+    },
+    {
+      "package": "routeweaver/internal/store",
+      "test": "TestAdmissionSnapshotSeededHistoryCharacterization",
+      "reason": "explicit workload characterization not requested"
+    },
+    {
+      "package": "routeweaver/internal/store",
+      "test": "TestAdmissionLiveObligationChurnCharacterization",
+      "reason": "explicit live obligation characterization not requested"
+    },
+    {
+      "package": "routeweaver/internal/store",
+      "test": "TestAdmissionConcurrentArrivalCharacterization",
+      "reason": "explicit concurrent arrival characterization not requested"
+    },
+    {
+      "package": "routeweaver/internal/store",
+      "test": "TestAdmissionHistoryScalingCharacterization",
+      "reason": "explicit workload characterization not requested"
+    }
+  ],
+  "sourceSummarySha256": "6573c682fcd80ea11276e05b64920de799af37964409d4c0647cb1257b610742",
+  "countingBoundary": "Subtests and their parents are event dimensions, not 50 additional independent top-level tests. Skips are not passes. Raw log lines are omitted."
+}

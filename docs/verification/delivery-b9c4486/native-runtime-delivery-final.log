@@ -1,0 +1,46 @@
+Pinned native executable: mihomo 1.19.32
+Pinned native executable: sing-box 1.14.3
+Pinned native executable: xray 26.3.27
+{"Time":"2026-10-20T05:26:32.327333956+08:00","Action":"start","Package":"routeweaver/internal/agent"}
+{"Time":"2026-10-20T05:26:32.3326428+08:00","Action":"run","Package":"routeweaver/internal/agent","Test":"TestNativeXrayTwoHopLoopbackRoundtrip"}
+{"Time":"2026-10-20T05:26:32.332712114+08:00","Action":"output","Package":"routeweaver/internal/agent","Test":"TestNativeXrayTwoHopLoopbackRoundtrip","Output":"=== RUN   TestNativeXrayTwoHopLoopbackRoundtrip\n","OutputType":"frame"}
+{"Time":"2026-10-20T05:26:33.820258702+08:00","Action":"output","Package":"routeweaver/internal/agent","Test":"TestNativeXrayTwoHopLoopbackRoundtrip","Output":"--- PASS: TestNativeXrayTwoHopLoopbackRoundtrip (1.49s)\n","OutputType":"frame"}
+{"Time":"2026-10-20T05:26:33.820323559+08:00","Action":"pass","Package":"routeweaver/internal/agent","Test":"TestNativeXrayTwoHopLoopbackRoundtrip","Elapsed":1.49}
+{"Time":"2026-10-20T05:26:33.820346895+08:00","Action":"run","Package":"routeweaver/internal/agent","Test":"TestNativeSupervisorLifecycleAndRestart"}
+{"Time":"2026-10-20T05:26:33.820349478+08:00","Action":"output","Package":"routeweaver/internal/agent","Test":"TestNativeSupervisorLifecycleAndRestart","Output":"=== RUN   TestNativeSupervisorLifecycleAndRestart\n","OutputType":"frame"}
+{"Time":"2026-10-20T05:26:33.820351482+08:00","Action":"run","Package":"routeweaver/internal/agent","Test":"TestNativeSupervisorLifecycleAndRestart/xray"}
+{"Time":"2026-10-20T05:26:33.820353184+08:00","Action":"output","Package":"routeweaver/internal/agent","Test":"TestNativeSupervisorLifecycleAndRestart/xray","Output":"=== RUN   TestNativeSupervisorLifecycleAndRestart/xray\n","OutputType":"frame"}
+{"Time":"2026-10-20T05:26:34.278021577+08:00","Action":"output","Package":"routeweaver/internal/agent","Test":"TestNativeSupervisorLifecycleAndRestart/xray","Output":"--- PASS: TestNativeSupervisorLifecycleAndRestart/xray (0.46s)\n","OutputType":"frame"}
+{"Time":"2026-10-20T05:26:34.278069569+08:00","Action":"pass","Package":"routeweaver/internal/agent","Test":"TestNativeSupervisorLifecycleAndRestart/xray","Elapsed":0.46}
+{"Time":"2026-10-20T05:26:34.27807632+08:00","Action":"run","Package":"routeweaver/internal/agent","Test":"TestNativeSupervisorLifecycleAndRestart/sing-box"}
+{"Time":"2026-10-20T05:26:34.278078393+08:00","Action":"output","Package":"routeweaver/internal/agent","Test":"TestNativeSupervisorLifecycleAndRestart/sing-box","Output":"=== RUN   TestNativeSupervisorLifecycleAndRestart/sing-box\n","OutputType":"frame"}
+{"Time":"2026-10-20T05:26:34.278084041+08:00","Action":"output","Package":"routeweaver/internal/agent","Test":"TestNativeSupervisorLifecycleAndRestart/sing-box","Output":"    supervisor_test.go:25: native process family not explicitly enabled\n"}
+{"Time":"2026-10-20T05:26:34.278088308+08:00","Action":"output","Package":"routeweaver/internal/agent","Test":"TestNativeSupervisorLifecycleAndRestart/sing-box","Output":"--- SKIP: TestNativeSupervisorLifecycleAndRestart/sing-box (0.00s)\n","OutputType":"frame"}
+{"Time":"2026-10-20T05:26:34.278094427+08:00","Action":"skip","Package":"routeweaver/internal/agent","Test":"TestNativeSupervisorLifecycleAndRestart/sing-box","Elapsed":0}
+{"Time":"2026-10-20T05:26:34.27809663+08:00","Action":"output","Package":"routeweaver/internal/agent","Test":"TestNativeSupervisorLifecycleAndRestart","Output":"--- PASS: TestNativeSupervisorLifecycleAndRestart (0.46s)\n","OutputType":"frame"}
+{"Time":"2026-10-20T05:26:34.278098733+08:00","Action":"pass","Package":"routeweaver/internal/agent","Test":"TestNativeSupervisorLifecycleAndRestart","Elapsed":0.46}
+{"Time":"2026-10-20T05:26:34.279301954+08:00","Action":"output","Package":"routeweaver/internal/agent","Output":"PASS\n","OutputType":"frame"}
+{"Time":"2026-10-20T05:26:34.280882672+08:00","Action":"output","Package":"routeweaver/internal/agent","Output":"ok  \trouteweaver/internal/agent\t1.953s\n"}
+{"Time":"2026-10-20T05:26:34.280925386+08:00","Action":"pass","Package":"routeweaver/internal/agent","Elapsed":1.954}
+{"Time":"2026-10-20T05:26:34.576402643+08:00","Action":"start","Package":"routeweaver/internal/integration"}
+{"Time":"2026-10-20T05:26:34.583072289+08:00","Action":"run","Package":"routeweaver/internal/integration","Test":"TestNativeSharedVLESSIngressKeepsPrincipalPathsSeparate"}
+{"Time":"2026-10-20T05:26:34.583133982+08:00","Action":"output","Package":"routeweaver/internal/integration","Test":"TestNativeSharedVLESSIngressKeepsPrincipalPathsSeparate","Output":"=== RUN   TestNativeSharedVLESSIngressKeepsPrincipalPathsSeparate\n","OutputType":"frame"}
+{"Time":"2026-10-20T05:26:36.228216277+08:00","Action":"output","Package":"routeweaver/internal/integration","Test":"TestNativeSharedVLESSIngressKeepsPrincipalPathsSeparate","Output":"--- PASS: TestNativeSharedVLESSIngressKeepsPrincipalPathsSeparate (1.64s)\n","OutputType":"frame"}
+{"Time":"2026-10-20T05:26:36.228287585+08:00","Action":"pass","Package":"routeweaver/internal/integration","Test":"TestNativeSharedVLESSIngressKeepsPrincipalPathsSeparate","Elapsed":1.64}
+{"Time":"2026-10-20T05:26:36.228296338+08:00","Action":"run","Package":"routeweaver/internal/integration","Test":"TestRenderedTwoHopRouteHasNoDirectFallback"}
+{"Time":"2026-10-20T05:26:36.228300654+08:00","Action":"output","Package":"routeweaver/internal/integration","Test":"TestRenderedTwoHopRouteHasNoDirectFallback","Output":"=== RUN   TestRenderedTwoHopRouteHasNoDirectFallback\n","OutputType":"frame"}
+{"Time":"2026-10-20T05:26:37.80306414+08:00","Action":"output","Package":"routeweaver/internal/integration","Test":"TestRenderedTwoHopRouteHasNoDirectFallback","Output":"--- PASS: TestRenderedTwoHopRouteHasNoDirectFallback (1.58s)\n","OutputType":"frame"}
+{"Time":"2026-10-20T05:26:37.80311734+08:00","Action":"pass","Package":"routeweaver/internal/integration","Test":"TestRenderedTwoHopRouteHasNoDirectFallback","Elapsed":1.58}
+{"Time":"2026-10-20T05:26:37.808198562+08:00","Action":"output","Package":"routeweaver/internal/integration","Output":"PASS\n","OutputType":"frame"}
+{"Time":"2026-10-20T05:26:37.809237474+08:00","Action":"output","Package":"routeweaver/internal/integration","Output":"ok  \trouteweaver/internal/integration\t3.233s\n"}
+{"Time":"2026-10-20T05:26:37.809252857+08:00","Action":"pass","Package":"routeweaver/internal/integration","Elapsed":3.233}
+{"Time":"2026-10-20T05:26:38.343796775+08:00","Action":"start","Package":"routeweaver/internal/httpapi"}
+{"Time":"2026-10-20T05:26:38.354632515+08:00","Action":"run","Package":"routeweaver/internal/httpapi","Test":"TestNativeFleetConfigureStopStartAndRollback"}
+{"Time":"2026-10-20T05:26:38.35472923+08:00","Action":"output","Package":"routeweaver/internal/httpapi","Test":"TestNativeFleetConfigureStopStartAndRollback","Output":"=== RUN   TestNativeFleetConfigureStopStartAndRollback\n","OutputType":"frame"}
+{"Time":"2026-10-20T05:26:41.731162827+08:00","Action":"output","Package":"routeweaver/internal/httpapi","Test":"TestNativeFleetConfigureStopStartAndRollback","Output":"--- PASS: TestNativeFleetConfigureStopStartAndRollback (3.38s)\n","OutputType":"frame"}
+{"Time":"2026-10-20T05:26:41.73121815+08:00","Action":"pass","Package":"routeweaver/internal/httpapi","Test":"TestNativeFleetConfigureStopStartAndRollback","Elapsed":3.38}
+{"Time":"2026-10-20T05:26:41.73491939+08:00","Action":"output","Package":"routeweaver/internal/httpapi","Output":"PASS\n","OutputType":"frame"}
+{"Time":"2026-10-20T05:26:41.742771095+08:00","Action":"output","Package":"routeweaver/internal/httpapi","Output":"ok  \trouteweaver/internal/httpapi\t3.399s\n"}
+{"Time":"2026-10-20T05:26:41.742808001+08:00","Action":"pass","Package":"routeweaver/internal/httpapi","Elapsed":3.399}
+PASS: selected isolated process lifecycle tests: xray. Not requested: sing-box.
+This is not proof of production network reachability, traffic throughput or live quota enforcement.

@@ -1,0 +1,182 @@
+{
+  "schemaVersion": "1.0",
+  "id": "daily",
+  "name": "Daily",
+  "ownerId": "u",
+  "revision": "1",
+  "endpoints": [
+    {
+      "id": "uk",
+      "name": "United Kingdom (Work), [TLS]",
+      "ownerId": "u",
+      "origin": "imported",
+      "connection": {
+        "host": "192.0.2.10",
+        "port": 1080,
+        "protocol": "socks"
+      }
+    },
+    {
+      "id": "us",
+      "name": "United States",
+      "ownerId": "u",
+      "origin": "platform-entry",
+      "connection": {
+        "host": "192.0.2.20",
+        "port": 8388,
+        "protocol": "shadowsocks",
+        "password": "synthetic-fixture-secret",
+        "method": "aes-128-gcm"
+      }
+    }
+  ],
+  "groups": [
+    {
+      "id": "manual",
+      "name": "Choose (Main), [Group]",
+      "kind": "manual",
+      "members": [
+        {
+          "kind": "endpoint",
+          "ref": "uk"
+        },
+        {
+          "kind": "endpoint",
+          "ref": "us"
+        }
+      ]
+    },
+    {
+      "id": "auto",
+      "name": "Fast",
+      "kind": "url-test",
+      "members": [
+        {
+          "kind": "group",
+          "ref": "manual"
+        },
+        {
+          "kind": "endpoint",
+          "ref": "us"
+        }
+      ],
+      "testUrl": "https://example.org/generate_204",
+      "intervalSeconds": 300,
+      "toleranceMs": 50
+    },
+    {
+      "id": "fallback",
+      "name": "Fallback",
+      "kind": "fallback",
+      "members": [
+        {
+          "kind": "endpoint",
+          "ref": "uk"
+        },
+        {
+          "kind": "endpoint",
+          "ref": "us"
+        }
+      ],
+      "testUrl": "https://example.org/generate_204",
+      "intervalSeconds": 300
+    },
+    {
+      "id": "balance",
+      "name": "Balance",
+      "kind": "load-balance",
+      "members": [
+        {
+          "kind": "endpoint",
+          "ref": "uk"
+        },
+        {
+          "kind": "endpoint",
+          "ref": "us"
+        }
+      ],
+      "testUrl": "https://example.org/generate_204",
+      "intervalSeconds": 300,
+      "strategy": "round-robin"
+    }
+  ],
+  "rules": [
+    {
+      "id": "work",
+      "match": {
+        "op": "domain-suffix",
+        "value": "example.org"
+      },
+      "action": {
+        "kind": "group",
+        "ref": "manual"
+      }
+    },
+    {
+      "id": "logic",
+      "match": {
+        "op": "and",
+        "children": [
+          {
+            "op": "domain-suffix",
+            "value": "example.net"
+          },
+          {
+            "op": "not",
+            "children": [
+              {
+                "op": "domain",
+                "value": "excluded.example.net"
+              }
+            ]
+          }
+        ]
+      },
+      "action": {
+        "kind": "reject"
+      }
+    },
+    {
+      "id": "resource",
+      "match": {
+        "op": "resource",
+        "value": "work"
+      },
+      "action": {
+        "kind": "group",
+        "ref": "auto"
+      }
+    }
+  ],
+  "resources": [
+    {
+      "id": "work",
+      "revision": "1",
+      "digest": "sha256:e7c992a52f6a83d9e7ee0d13b51f40b03cd6a198ffbecb864822634ee3ac2d85",
+      "format": "mihomo-yaml",
+      "formatVersion": 5,
+      "behavior": "classical",
+      "location": "local",
+      "path": "rules/work.yaml",
+      "updatePolicy": "pinned"
+    }
+  ],
+  "defaultAction": {
+    "kind": "direct"
+  },
+  "runtime": {
+    "mixedPort": 17890,
+    "dns": {
+      "servers": [
+        {
+          "id": "dns",
+          "type": "udp",
+          "address": "1.1.1.1",
+          "port": 53
+        }
+      ],
+      "final": "dns"
+    },
+    "sniff": true
+  }
+}

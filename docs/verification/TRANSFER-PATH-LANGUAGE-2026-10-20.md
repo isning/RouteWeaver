@@ -1,0 +1,7 @@
+# Distinguish transfer paths from public routes
+
+The navigation and public-route setup already say “转发路径”, but the server path page still called creation, naming, search, editing and application “线路”. That made the infrastructure object look interchangeable with the user-facing public route. Standardize the server page on “转发路径”; keep “公开线路” and its route name separate. No IDs, API types, route topology, deployment behavior or saved user names change.
+
+The graph task was red when looking for 新建转发路径. Existing graph, ordered selection, TLS editing, actionable validation, dirty navigation, public onboarding and immutable deployment-review tests are updated only for the deliberate server-page terminology, not weaker assertions. Public-route editor naming must remain unchanged. Focused and full regression results are recorded after integration.
+
+At 20d7ecc, all 262 frontend tests passed. Browser inspection caught a layout regression from longer view labels: duplicated View buttons squeezed the path columns. Removed the redundant View action because the path name already opens the same detail, retaining the clearly labelled edit action. Focused graph/validation tests passed 5/5. A subsequent screenshot confirmed freed column space but exposed count wrapping even with shorter “共 N 条” text. The count now has a scoped non-shrinking, no-wrap style rather than changing all toolbar helper text. Final browser confirmation follows integration.

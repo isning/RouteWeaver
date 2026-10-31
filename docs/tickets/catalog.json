@@ -1,0 +1,813 @@
+{
+  "schema_version": 1,
+  "scope_source": "docs/product/CAPABILITY-REGISTER.md",
+  "authorization": "Full-scope engineering and implementation were authorized by the user after product review on 2026-10-19. Local tickets are not GitHub issues.",
+  "excluded_stories": [
+    "K06"
+  ],
+  "quality_gates": [
+    "Q01",
+    "Q02",
+    "Q03",
+    "Q04",
+    "Q05"
+  ],
+  "tickets": [
+    {
+      "id": "RW-01",
+      "title": "Create and validate direct or multi-hop routes",
+      "stories": [
+        "F01",
+        "F02",
+        "K02"
+      ],
+      "blocked_by": [],
+      "status": "in_progress",
+      "outcome": "An administrator inventories VPS nodes, independent core instances and connection endpoints, then saves a named direct or multi-hop route in graph or ordered-form view.",
+      "seams": [
+        "Route intent validator",
+        "Inventory/route repository and authorized HTTP operations",
+        "Graph and keyboard/form route-editing tasks"
+      ],
+      "acceptance": [
+        "A one-endpoint direct route and a path with more than two distinct endpoints round-trip through storage and UI without a hard-coded engine or hop enum.",
+        "Endpoint identity, not display name or VPS identity, governs cycle detection; rename preserves references; invalid draft preserves form values.",
+        "Protocol/TLS capability errors name the offending endpoint and exact target; shared connection edits preview dependent routes.",
+        "The architecture negative fixture, API authorization, persistence and graph/form tests pass using the same local and CI harness."
+      ],
+      "evidence": [
+        "docs/verification/INTEGRATION-2026-10-19.md; bounded route model and real two-hop tests. Browser graph/keyboard acceptance remains open.",
+        "docs/design/SERVER-CORE-ENDPOINT-MODEL-2026-10-20.md; source-reviewed proposal only: server-to-endpoint UX preserves runtime identities and multiple instances. Cross-deployment publication currently replaces instance desired state; proposed atomic ownership guard and later multi-listener composition remain unimplemented and unverified end to end.",
+        "docs/verification/SERVER-ENDPOINT-SELECTION-2026-10-20.md; server-first ordered and public-route endpoint selection, stable identity/no-remap DOM regressions, host-scoped infrastructure creation. Singleton/multi-listener semantics and full browser/native acceptance remain separate.",
+        "docs/verification/HOST-SETUP-JOURNEY-2026-10-20.md; task-first host detail, same-host core-to-listener continuation, scoped listener creation, reachable operational panels, and single-active-overlay correction after browser review. DOM/build/static evidence only; post-change full browser/native acceptance remains open.",
+        "docs/verification/HOST-SETUP-JOURNEY-2026-10-20.md#managed-platform-entry-creation-preset; exact managed-Xray version new-listener VLESS/principals preset, explicit port, draft/edit preservation and unknown-target regression coverage. No server-wide capability inference or deployment claim.",
+        "docs/verification/HOST-SETUP-JOURNEY-2026-10-20.md#managed-listener-transport-options; exact-target managed transport choices, visible/correctable unsupported intent and preserved client TLS template parameters. Focused DOM evidence only; parent owns integrated browser/full-suite validation.",
+        "docs/verification/SERVER-TLS-EDITOR-2026-10-20.md; route-editor REALITY input-order/default recovery and explicit port/list preservation, plus certificate-only package-path controls. Focused page-save DOM evidence; no runtime capability expansion or native/deployment claim.",
+        "docs/verification/LIVE-PRODUCT-REVIEW-2026-10-20.md; actual synthetic cloud-browser setup and subscription-download journey, integrated quick gate and 216 web tests. Live VPS/complete TLS upload acceptance remains open.",
+        "docs/verification/GRAPH-NODE-MEASUREMENT-2026-10-20.md; real cloud-browser node visibility, drag-to-connect, ordered-view equivalence, transient layout retention and draft save verified with synthetic FRA/UK inventory. Full web regression 244/244 at that checkpoint. No live Agent or network deployment claim.",
+        "docs/verification/LIVE-PRODUCT-REVIEW-2026-10-20.md#new-server-continuation; host save directly opens scoped core setup, verified by DOM journey and actual cloud browser. Earlier proposal-era ownership and browser gaps in this evidence list are historical checkpoints, not current completion claims; multi-listener composition remains separate.",
+        "docs/design/REFACTORING-UI-AUDIT-2026-10-20.md; user-selected design reference applied to status contrast, desktop/narrow route layout and server-first endpoint selection. Synthetic UI evidence only; no runtime capability expansion.",
+        "docs/verification/UI-CONVERGENCE-2026-10-26.md; WIP45: bounded endpoint and legacy-route editor draft-loss, pending-write and older-task completion regressions. Composed frontend and scoped controlled-API browser/pixel checks passed; documentation-only closure is recorded separately; route/native/runtime prerequisites and ticket status are unchanged.",
+        "docs/verification/UX-REFINEMENT-2026-10-27.md; WIP46: navigation and editable legacy-chain terminology align with actual objects; reviewed horizontal-list action context preserves endpoint, instance, path and route identities without changing columns/callbacks. Bounded controlled UI evidence only; no new topology, native validation, runtime health or deployment acceptance.",
+        "docs/verification/ENDPOINT-CAPABILITIES-2026-10-29.md; typed transport headers/Xray authority, Trojan and VMess AEAD generic-core contracts, strict native/URI import and privacy regressions; 112 actual native parser cases plus 8 Xray loopback handshake/payload-and-exit-stop-negative cases; listener role/path and reserved-header guards. Managed accounting boundary unchanged; final integrated UI/deployment acceptance remains separate.",
+        "docs/verification/wip47/endpoint-target-parity-audit.md: complete field audit, shared legacy/generic/direct target validation, Xray REALITY transport/ALPN guards, inventory VMess listener role guard and direct managed egress allowlist. Failing-before/passing-after parity tests; final focused race/native parser/Xray-loopback gates pass; root owns final global verification."
+      ],
+      "kind": "feature"
+    },
+    {
+      "id": "RW-02",
+      "title": "Invite and manage local accounts securely",
+      "stories": [
+        "A01",
+        "M03"
+      ],
+      "blocked_by": [],
+      "status": "in_progress",
+      "outcome": "An administrator invites a user, manages account state, and verifies authorized access with local sign-in and optional administrator second factor.",
+      "seams": [
+        "Authentication and account lifecycle API",
+        "Identity repository",
+        "Sign-in and user management tasks"
+      ],
+      "acceptance": [
+        "Invitation claim, sign-in, sign-out and expired/revoked sessions have positive and negative tests; passwords are salted and secrets never returned in normal listings.",
+        "Pause/expiry/renewal are separate commands with visible effect and audit records; a normal user cannot perform administrator commands.",
+        "Administrator second-factor enrollment/verification and recovery behavior have explicit bounded tests and do not bypass authorization.",
+        "Tenant ownership is enforced on every read/write/export, with another-user and unauthenticated denial tests."
+      ],
+      "evidence": [
+        "docs/verification/CONTROL-PLANE-API-NOTES.md; invite/session/MFA and tenant isolation public-seam regressions.",
+        "docs/verification/UI-CONVERGENCE-2026-10-26.md; WIP45: user-editor Escape draft protection and search-no-match recovery, supported by bounded DOM and controlled-API baseline evidence. No new invitation, MFA, authentication or tenant-isolation acceptance; composed frontend and scoped controlled-API browser/pixel checks passed; documentation-only closure is recorded separately.",
+        "docs/verification/UX-REFINEMENT-2026-10-27.md; WIP46: users-list overflow actions retain complete target identity; normal existing-user and blank-invitation boundaries are separate from the independently accepted two name-only held/503 cells. Initial busy and retained failure actions are visible/owned; browser did not retry or generate invitations. No authentication, MFA, permission or endpoint acceptance; these bounded tasks were repeated on exact composed r5; fresh goal evidence remains bounded and artifact closure separate."
+      ],
+      "kind": "feature"
+    },
+    {
+      "id": "RW-03",
+      "title": "Grant services and inspect effective access",
+      "stories": [
+        "A02",
+        "S01"
+      ],
+      "blocked_by": [
+        "RW-01",
+        "RW-02"
+      ],
+      "status": "in_progress",
+      "outcome": "An administrator creates a service offering, assigns routes to user groups and individual users, and previews each user’s effective entitlement.",
+      "seams": [
+        "Entitlement evaluator",
+        "Service/group/grant API and repository",
+        "Service assignment and user service-view tasks"
+      ],
+      "acceptance": [
+        "Group membership plus an explicit individual override produces a deterministic documented effective grant; multiple groups cannot silently add quota or routes.",
+        "The affected-user preview and stored result agree; a revoked or expired grant is rechecked when a subscription is obtained.",
+        "Not-started, active, paused and expired services display correctly without inferring runtime deployment.",
+        "An invited user sees only their authorized service and public entry connectivity, not transit credentials."
+      ],
+      "evidence": [
+        "docs/verification/CONTROL-PLANE-API-NOTES.md; grant eligibility, quota cycles and exact finite native reservations.",
+        "docs/verification/GROUP-AND-CONNECTION-LIMITS-2026-10-19.md; canonical group precedence, exact individual overrides, preview/CAS/budget fences, independent atomic stream cap and real CP/native TCP+mux evidence. UI and integrated gates remain separate.",
+        "docs/verification/UX-REFINEMENT-2026-10-27.md; WIP46: authoritative paused-service state receives a feasible next-step explanation without inferred cause or runtime health; service/user-group row actions retain complete target names. Focused and controlled UI evidence only, not grant calculation, authorization or recovery-enforcement acceptance."
+      ],
+      "kind": "feature"
+    },
+    {
+      "id": "RW-04",
+      "title": "Import private sources without unsafe fetching",
+      "stories": [
+        "C101",
+        "F04"
+      ],
+      "blocked_by": [
+        "RW-02"
+      ],
+      "status": "in_progress",
+      "outcome": "A user imports supported node URI, text, configuration or subscription URL sources, inspects diagnostics and refreshes without losing the last accepted snapshot.",
+      "seams": [
+        "Bounded parser and safe resource fetcher",
+        "Owner-scoped source API and snapshot repository",
+        "Import/refresh/pause/delete user task"
+      ],
+      "acceptance": [
+        "At least one explicit supported input fixture for each exposed input mode imports successfully and retains source provenance; configuration extraction reports ignored sections.",
+        "Malformed, partially supported and oversized input has bounded diagnostics; failed refresh leaves the prior accepted snapshot and edited input intact.",
+        "Private/loopback/link-local destinations, redirects and DNS rebinding protections are tested at the fetcher seam; only an explicit loopback test transport bypass exists in tests.",
+        "Operator visibility is disclosed at import; logs, ordinary errors and source listings do not expose bearer URLs or credentials; cross-user access is denied."
+      ],
+      "evidence": [
+        "docs/verification/source-refresh-2026-10-19/README.md",
+        "docs/verification/UX-REFINEMENT-2026-10-27.md; WIP46: an enabled accepted source can start an owner-bound unsaved full-profile draft without accepting a candidate. Exact Source r3 cancellation has three independently accepted observations; normal 6 / held 4/reverse geometry remain r2 predecessor evidence, not r3 actual. Initial clean-Escape BODY defect has no established baseline regression attribution. No fetcher-safety, cross-tenant or live-source acceptance; normal/held/cancellation tasks now also have exact composed r5 accepted actual evidence, without relabeling r2/r3.",
+        "docs/verification/ENDPOINT-CAPABILITIES-2026-10-29.md; typed transport headers/Xray authority, Trojan and VMess AEAD generic-core contracts, strict native/URI import and privacy regressions; 112 actual native parser cases plus 8 Xray loopback handshake/payload-and-exit-stop-negative cases; listener role/path and reserved-header guards. Managed accounting boundary unchanged; final integrated UI/deployment acceptance remains separate."
+      ],
+      "kind": "feature"
+    },
+    {
+      "id": "RW-05",
+      "title": "Preview ordered source processing stages",
+      "stories": [
+        "C201",
+        "C202",
+        "C203"
+      ],
+      "blocked_by": [
+        "RW-04"
+      ],
+      "status": "in_progress",
+      "outcome": "A user filters, renames, stably sorts, deduplicates and overrides endpoint fields, inspecting before/after results for each enabled source-processing step.",
+      "seams": [
+        "Deterministic processing pipeline",
+        "Preview/save API",
+        "Source-processing form and intermediate-result task"
+      ],
+      "acceptance": [
+        "Filter, rename, stable sort, explicit connection-identity deduplication and allowlisted field override each have positive fixtures and precise invalid-step diagnostics.",
+        "Disabling or reordering a step changes the preview deterministically; renaming never changes connection identity.",
+        "Every stage reports added/removed/changed options and reasons while redacting secrets; preview does not persist or publish.",
+        "No-op changes do not create a false pending publication; an invalid override cannot change owner or administrator topology."
+      ],
+      "evidence": [
+        "internal/importer/README.md and docs/verification/INTEGRATION-2026-10-19.md; strict import, identity reconciliation and bounded fuzz evidence.",
+        "docs/verification/CONVERSION-INSPECTION-2026-10-20.md; actual three-source naming and connection-dedup preview, same-name different connections retained, result-first tabs and identifiable addresses/stage labels. Focused 41-test DOM regression and build passed; prior integrated 247-test suite passed. No external airport/network execution claim; ticket remains incomplete."
+      ],
+      "kind": "feature"
+    },
+    {
+      "id": "RW-06",
+      "title": "Compose reusable ordered collections",
+      "stories": [
+        "C102",
+        "C201",
+        "C202",
+        "C203"
+      ],
+      "blocked_by": [
+        "RW-05"
+      ],
+      "status": "in_progress",
+      "outcome": "A user combines named source selections into a reusable collection, then previews aggregate processing after deterministic ordered merge.",
+      "seams": [
+        "Collection resolver and aggregate pipeline",
+        "Collection API/repository",
+        "Collection membership and preview task"
+      ],
+      "acceptance": [
+        "Source processing runs before ordered merge and aggregate processing; a golden scenario exercises all three layers.",
+        "Collection rename preserves references; delete previews dependents; missing or ambiguous identities produce diagnostics rather than silent substitution.",
+        "Multiple configurations can reuse a collection without sharing ownership or changing one another.",
+        "Concurrent source update has a frozen snapshot identity; failed candidate preserves the last accepted collection."
+      ],
+      "evidence": [
+        "docs/verification/ACCEPTANCE-MATRIX-2026-10-19.md; bounded partial implementation and verification evidence. Remaining acceptance gaps and prerequisites are explicit; this does not verify the ticket.",
+        "docs/verification/CONVERSION-INSPECTION-2026-10-20.md; actual three-source naming and connection-dedup preview, same-name different connections retained, result-first tabs and identifiable addresses/stage labels. Focused 41-test DOM regression and build passed; prior integrated 247-test suite passed. No external airport/network execution claim; ticket remains incomplete."
+      ],
+      "kind": "feature"
+    },
+    {
+      "id": "RW-07",
+      "title": "Save independent full client profiles",
+      "stories": [
+        "C501",
+        "F03"
+      ],
+      "blocked_by": [
+        "RW-06"
+      ],
+      "status": "in_progress",
+      "outcome": "A user creates multiple named client profiles from templates and saves independent draft versions without changing shared server topology.",
+      "seams": [
+        "Client-profile intent validation",
+        "Owner-scoped profile revision API",
+        "Profile creation/edit/duplicate task"
+      ],
+      "acceptance": [
+        "Two profiles with different targets and settings persist independently; copying a template records provenance but future edits remain independent.",
+        "Server deployment intent and client profile intent are distinct contracts; client operations cannot create deployments or retrieve transit secrets.",
+        "Draft and published revision are separate and stale writes fail without losing the submitted draft.",
+        "Default-template values and explicit overrides are visible and deterministic; the profile is not reduced to a node-only list."
+      ],
+      "evidence": [
+        "docs/design/basic-routing.md; task-oriented first-use and routing edit with explicit review/publication, strict advanced-profile preservation, 21 focused web tests and authenticated HTTP contract coverage. Browser/native and full ticket prerequisites remain open.",
+        "docs/verification/PROFILE-TAB-PANELS-2026-10-20.md; existing editor controls are now inside their named library tab panels, with actual desktop keyboard/AX and 375 px layout checks. 277-test Web gate passed, followed by focused responsive verification; no client engine capability change.",
+        "docs/design/TASK-FIRST-ROUTING-2026-10-26.md; docs/verification/TASK-FIRST-ROUTING-2026-10-26.md: isolated WIP43 task-first existing-IR refinement, contextual create-and-bind, atomic accepted-file references/pin retention, structural uses, current-rate choice metadata and truthful bundle consequence. Focused and retained browser checkpoints; final repaired-source acceptance recorded in verification note. No full-suite/native/traffic/deployment or verified-status upgrade.",
+        "docs/verification/UX-REFINEMENT-2026-10-27.md; WIP46: accepted-source continuation reuses the full editor with one session-owned transient handoff, explicit source references, dirty navigation and unchanged default routing; no automatic save/publication. Create-group ordinary boundary and exact cancellation opener have isolated controlled browser evidence, not successful group creation. The same bounded source/group tasks were repeated on exact composed r5; no successful group-write claim. Fresh independent goal modeled a separate Tokyo-default work output without changing the displayed original phone output; no real client-delivery claim."
+      ],
+      "kind": "feature"
+    },
+    {
+      "id": "RW-08",
+      "title": "Configure nested client strategy groups",
+      "stories": [
+        "C301",
+        "C302"
+      ],
+      "blocked_by": [
+        "RW-07"
+      ],
+      "status": "in_progress",
+      "outcome": "A user builds nested groups with explicit or dynamic membership and chooses manual, URL-test, fallback or load-balance semantics.",
+      "seams": [
+        "Group graph validator and capability negotiation",
+        "Profile group API",
+        "Group editor and dynamic-member preview"
+      ],
+      "acceptance": [
+        "Valid nesting deeper than two levels works; self-reference, indirect cycles and empty effective membership are rejected with exact group diagnostics.",
+        "Manual, URL-test, fallback and load-balance each have positive native-validated output on at least one pinned target, not just an unsupported response.",
+        "Dynamic predicates resolve against the frozen source snapshot and preview member changes after refresh.",
+        "Unsupported target strategy or depth is diagnosed without coercing the group to manual or changing the intended server exit."
+      ],
+      "evidence": [
+        "docs/verification/ACCEPTANCE-MATRIX-2026-10-19.md; bounded partial implementation and verification evidence. Remaining acceptance gaps and prerequisites are explicit; this does not verify the ticket.",
+        "docs/verification/PROFILE-TAB-PANELS-2026-10-20.md; existing editor controls are now inside their named library tab panels, with actual desktop keyboard/AX and 375 px layout checks. 277-test Web gate passed, followed by focused responsive verification; no client engine capability change."
+      ],
+      "kind": "feature"
+    },
+    {
+      "id": "RW-09",
+      "title": "Edit ordered rules and resource references",
+      "stories": [
+        "C401",
+        "C402"
+      ],
+      "blocked_by": [
+        "RW-07"
+      ],
+      "status": "in_progress",
+      "outcome": "A user edits ordered and combined client routing rules, a final action, and versioned external rule resources appropriate to the selected target.",
+      "seams": [
+        "Rule semantics and resource negotiation",
+        "Rule/resource API",
+        "Ordered rule and resource editor task"
+      ],
+      "acceptance": [
+        "A positive fixture covers ordered matching, a combined predicate and explicit final action; native validation confirms each claimed supported target.",
+        "Rule resources support fixed/following versions with digest, provenance and explicit cache/fetch errors; resource failures preserve previous valid publication.",
+        "Target-specific resource formats are respected; SRS is not treated as universally compatible and mandatory semantics are not silently omitted or expanded.",
+        "Private resource access is owner-scoped at retrieval and does not leak its bearer URL into ordinary previews or logs."
+      ],
+      "evidence": [
+        "docs/design/owned-rule-file-delivery.md and docs/verification/OWNED-RULE-FILES-2026-10-19.md; owner-scoped accepted immutable files, safe frozen config-plus-files ZIP, pin/refresh/integrity/revocation fencing, actual native YAML/MRS/source/SRS bundles, DOM and real-backend API tasks. Independent review and aggregate prerequisites remain open.",
+        "docs/verification/PROFILE-TAB-PANELS-2026-10-20.md; existing editor controls are now inside their named library tab panels, with actual desktop keyboard/AX and 375 px layout checks. 277-test Web gate passed, followed by focused responsive verification; no client engine capability change.",
+        "docs/design/TASK-FIRST-ROUTING-2026-10-26.md; docs/verification/TASK-FIRST-ROUTING-2026-10-26.md: isolated WIP43 task-first existing-IR refinement, contextual create-and-bind, atomic accepted-file references/pin retention, structural uses, current-rate choice metadata and truthful bundle consequence. Focused and retained browser checkpoints; final repaired-source acceptance recorded in verification note. No full-suite/native/traffic/deployment or verified-status upgrade.",
+        "docs/verification/UX-REFINEMENT-2026-10-27.md; WIP46: reference/file editing preserves actual dirty values and selected File payload, pending single-write ownership, nested discard and retained failure/retry state. Separately reviewed initial busy/immediate503 visibility uses only current-task focus and local disclosure transitions; DOM, browser observations and final composition remain distinct. No native format/fetch/publication acceptance. Fresh goal retained the selected 51 B file through cancel/continue and controlled failure/retry; not native parsing/storage proof."
+      ],
+      "kind": "feature"
+    },
+    {
+      "id": "RW-10",
+      "title": "Manage runtime settings and native overrides",
+      "stories": [
+        "C502",
+        "C503"
+      ],
+      "blocked_by": [
+        "RW-07",
+        "RW-08",
+        "RW-09"
+      ],
+      "status": "in_progress",
+      "outcome": "A user edits DNS, sniffing and TUN through structured settings and optionally adds target-specific native configuration overrides.",
+      "seams": [
+        "Profile setting validation and native overlay merge",
+        "Profile preview/save API",
+        "Structured settings and advanced editor task"
+      ],
+      "acceptance": [
+        "DNS, sniffing and TUN each have at least one positive supported-target fixture and a visible structured UI, without changing host OS permissions.",
+        "Overlay precedence and conflicts are deterministic, namespace-scoped and target-bound; unsupported mandatory fields are rejected, not dropped.",
+        "Native edits survive save/reopen/regeneration; malformed advanced input preserves the text and points to the conflicting field.",
+        "Portable and target-only fields are distinguished in preview; unknown credentials or cross-tenant references cannot be introduced through overlays."
+      ],
+      "evidence": [
+        "C503 native client extension implementation and precedence/security contract: docs/design/native-client-overrides.md.",
+        "Renderer/owner HTTP red-green, exact published-byte native parser fixtures (Mihomo 1.19.32 and sing-box 1.14.3), scoped race and architecture evidence: docs/verification/NATIVE-OVERRIDES-2026-10-19.md. Browser/full acceptance remains pending.",
+        "internal/httpapi/output_review_test.go and internal/store/token_inputs_test.go: existing-output previewDigest binds cached owner inputs and unredacted final render; stale profile/source/output/resource/grant rejects409; captured-input CAS atomically preserves output/token index on conflict. Existing-output UI requires this digest; no-digest APIs retain latest-draft semantics. Global runtime/accounting eligibility is rechecked by feed, not frozen by review.",
+        "docs/verification/PROFILE-TAB-PANELS-2026-10-20.md; existing editor controls are now inside their named library tab panels, with actual desktop keyboard/AX and 375 px layout checks. 277-test Web gate passed, followed by focused responsive verification; no client engine capability change."
+      ],
+      "kind": "feature"
+    },
+    {
+      "id": "RW-11",
+      "title": "Render and verify actual client outputs",
+      "stories": [
+        "C601",
+        "F03"
+      ],
+      "blocked_by": [
+        "RW-08",
+        "RW-09",
+        "RW-10"
+      ],
+      "status": "in_progress",
+      "outcome": "A user previews and downloads either node-only output or a complete client configuration for an explicitly supported target/version.",
+      "seams": [
+        "Client renderer registry",
+        "Rendered artifact API",
+        "Output mode/target preview and download task"
+      ],
+      "acceptance": [
+        "Node-only and complete modes produce structurally different correct outputs, each parsed and validated rather than renamed file extensions.",
+        "Mihomo and sing-box are separately described with exact pinned version, supported/unsupported/unverified capabilities and positive native validator evidence.",
+        "Output is deterministic from a frozen manifest, preserves stable output references and includes only necessary user-owned or granted entry credentials.",
+        "No output exports administrator topology, transit credentials, owner/source identifiers or hidden unresolved references; redacted preview is not labeled importable."
+      ],
+      "evidence": [
+        "docs/verification/ACCEPTANCE-MATRIX-2026-10-19.md; bounded partial implementation and verification evidence. Remaining acceptance gaps and prerequisites are explicit; this does not verify the ticket.",
+        "docs/verification/ENDPOINT-CAPABILITIES-2026-10-29.md; typed transport headers/Xray authority, Trojan and VMess AEAD generic-core contracts, strict native/URI import and privacy regressions; 112 actual native parser cases plus 8 Xray loopback handshake/payload-and-exit-stop-negative cases; listener role/path and reserved-header guards. Managed accounting boundary unchanged; final integrated UI/deployment acceptance remains separate."
+      ],
+      "kind": "feature"
+    },
+    {
+      "id": "RW-12",
+      "title": "Publish and rotate multiple subscriptions",
+      "stories": [
+        "C602"
+      ],
+      "blocked_by": [
+        "RW-03",
+        "RW-11"
+      ],
+      "status": "in_progress",
+      "outcome": "A user publishes multiple independently named profile/target subscriptions, obtains their published content, rotates links or revokes an output.",
+      "seams": [
+        "Publication/access check and stable naming",
+        "Output repository and bearer retrieval API",
+        "Publish/copy/download/rotate/revoke task"
+      ],
+      "acceptance": [
+        "Draft edits do not remove access to an existing published revision; failed compilation or compatibility checks retain the previous valid output.",
+        "Rotation invalidates only the selected old link; revoke and grant expiry are checked at every fetch; cross-user listing and retrieval fail.",
+        "Names and collision disambiguation are stable under input reordering and all group/rule references follow a deliberate rename.",
+        "At least copied links and file download work end-to-end; any additional QR/import button only appears when its supported target integration actually works."
+      ],
+      "evidence": [
+        "docs/design/basic-routing.md; task-oriented first-use and routing edit with explicit review/publication, strict advanced-profile preservation, 21 focused web tests and authenticated HTTP contract coverage. Browser/native and full ticket prerequisites remain open.",
+        "docs/design/TASK-FIRST-ROUTING-2026-10-26.md; docs/verification/TASK-FIRST-ROUTING-2026-10-26.md: isolated WIP43 task-first existing-IR refinement, contextual create-and-bind, atomic accepted-file references/pin retention, structural uses, current-rate choice metadata and truthful bundle consequence. Focused and retained browser checkpoints; final repaired-source acceptance recorded in verification note. No full-suite/native/traffic/deployment or verified-status upgrade.",
+        "docs/verification/UX-REFINEMENT-2026-10-27.md; WIP46: source-backed unchanged-text review explains accepted-source comparison without claiming all bundle content unchanged. Separately accepted ordinary subscription-detail/access/update/chooser boundaries and exact cancellation preserve explicit review; native anchor focus never activates download. No extra source reads, implicit acceptance, credential rotation or actual publication; exact composed r5 repeat is independently accepted within those boundaries. Fresh goal selected exact-domain London rule with Tokyo default and a single named output, while source acceptance remained distinct from publication; modeled frontend only."
+      ],
+      "kind": "feature"
+    },
+    {
+      "id": "RW-13",
+      "title": "Account route usage and reset periods",
+      "stories": [
+        "F05",
+        "S02",
+        "A03"
+      ],
+      "blocked_by": [
+        "RW-03"
+      ],
+      "status": "in_progress",
+      "outcome": "An administrator ingests attributable measurements and operates service cycles while users see actual traffic, weighted debit and their exact next reset.",
+      "seams": [
+        "Measurement/ledger ingestion and cycle evaluator",
+        "Usage and reset API/repository",
+        "Quota and cycle administration tasks"
+      ],
+      "acceptance": [
+        "A 1 GB whole-route measurement at 2× debits 2 GB once, never once per hop; duplicate/reordered measurements do not double-charge.",
+        "Every debit retains its applicable multiplier/policy and period; provider IN+OUT is separate; late-data attribution and rounding rules are documented and tested.",
+        "Fixed monthly day, activation calendar-month anniversary, fixed-day interval and no-auto-reset work in UTC+8; missing dates clamp to month-end then recover the original anchor.",
+        "Manual reset keeps the next automatic reset anchor; renewal does not reset usage and unused quota does not roll over; history remains queryable.",
+        "Displayed next reset/timezone/countdown matches the persisted policy; no-reset and unconfigured states never fabricate a countdown."
+      ],
+      "evidence": [
+        "docs/verification/ACCEPTANCE-MATRIX-2026-10-19.md; bounded partial implementation and verification evidence. Remaining acceptance gaps and prerequisites are explicit; this does not verify the ticket.",
+        "docs/verification/UI-CONVERGENCE-2026-10-26.md; WIP45: readable default 1x debit-policy text in an empty rate table. Presentation-only repair; no new ledger, multiplier calculation or reset acceptance. Composed frontend and scoped controlled-API browser/pixel checks passed; documentation-only closure is recorded separately."
+      ],
+      "kind": "feature"
+    },
+    {
+      "id": "RW-14",
+      "title": "Enforce online-IP and entry limits",
+      "stories": [
+        "A04"
+      ],
+      "blocked_by": [
+        "RW-03",
+        "RW-13",
+        "RW-15"
+      ],
+      "status": "in_progress",
+      "outcome": "An administrator sees deduplicated account-wide online client IPs and controls online-IP, connection and per-logical-entry shared rate limits.",
+      "seams": [
+        "Observation aggregation and lease/enforcement policy",
+        "Agent enforcement contract and limits API",
+        "Usage limit administration task"
+      ],
+      "acceptance": [
+        "The same client IP at multiple public entries counts once; transit VPS IPs and private-airport direct traffic are excluded; freshness/window is explicit.",
+        "An over-limit new IP is rejected; expired/paused/exhausted access stops under a documented bounded lease policy; unknown quota cannot grant unbounded access.",
+        "Rate limit is shared by upload/download and all connections for one user × logical entry, independent across entries; no strict global-rate claim.",
+        "At least one pinned executable runtime has positive limit enforcement evidence with latency and existing-connection behavior measured; simulation alone cannot close this ticket."
+      ],
+      "evidence": [
+        "docs/verification/GROUP-AND-CONNECTION-LIMITS-2026-10-19.md; canonical group precedence, exact individual overrides, preview/CAS/budget fences, independent atomic stream cap and real CP/native TCP+mux evidence. UI and integrated gates remain separate."
+      ],
+      "kind": "feature"
+    },
+    {
+      "id": "RW-15",
+      "title": "Apply and recover staged local revisions",
+      "stories": [
+        "F01",
+        "K03"
+      ],
+      "blocked_by": [
+        "RW-01"
+      ],
+      "status": "in_progress",
+      "outcome": "An administrator previews a server revision, applies it through a scoped local agent, sees observed results and explicitly retries or rolls back.",
+      "seams": [
+        "Server renderer and runtime adapter",
+        "Generation-fenced agent journal/reconciliation API",
+        "Revision diff/apply/history/rollback task"
+      ],
+      "acceptance": [
+        "Pinned Xray and sing-box configurations are natively validated and applied in an isolated local harness; generated is never reported as applied.",
+        "Stale generations, duplicate requests, partial failures, disconnect and restart are exercised; observed active artifact identifies the validated revision.",
+        "Rollback is a new fenced operation with verified result; failure preserves last known valid state and the attempted draft; no implicit exit substitution.",
+        "The scoped agent cannot run arbitrary shell or access unrelated tenant sources; live VPS enrollment/credentials are not performed by the development harness."
+      ],
+      "evidence": [
+        "docs/verification/FLEET-OPERATIONS-2026-10-19.md and internal/fleet/README.md: exact observed staged batches, atomic generation/manifests, partial-failure retry/history, current-authority configuration rollback and real two-target Xray loopback install/configure/stop/start/rollback. Browser and upstream cross-version native upgrade acceptance remain open."
+      ],
+      "kind": "feature"
+    },
+    {
+      "id": "RW-16",
+      "title": "Operate scoped fleet batches",
+      "stories": [
+        "K01"
+      ],
+      "blocked_by": [
+        "RW-15"
+      ],
+      "status": "in_progress",
+      "outcome": "An administrator groups/tags servers and plans a bounded install/upgrade/start/stop/configuration batch with per-target outcomes and retry.",
+      "seams": [
+        "Fleet operation planner and runtime port",
+        "Batch job API/repository",
+        "Fleet selection/impact/status task"
+      ],
+      "acceptance": [
+        "A batch names exact targets, core versions and expected disruption before execution; each target outcome and retry attempt is visible.",
+        "Only declared official release artifacts with integrity checks can be installed in an isolated sandbox; no arbitrary remote-shell endpoint is introduced.",
+        "A failed target does not turn the whole batch green or overwrite successful observations; retries are idempotent and generation-fenced.",
+        "Local tests establish planning and execution contracts; real VPS rollout remains separately authorized and is not required to run ordinary CI."
+      ],
+      "evidence": [
+        "docs/verification/FLEET-OPERATIONS-2026-10-19.md and internal/fleet/README.md: exact observed staged batches, atomic generation/manifests, partial-failure retry/history, current-authority configuration rollback and real two-target Xray loopback install/configure/stop/start/rollback. Browser and upstream cross-version native upgrade acceptance remain open."
+      ],
+      "kind": "feature"
+    },
+    {
+      "id": "RW-17",
+      "title": "Track provider resources separately",
+      "stories": [
+        "K04"
+      ],
+      "blocked_by": [
+        "RW-13",
+        "RW-15"
+      ],
+      "status": "in_progress",
+      "outcome": "An administrator records provider cycles/allowances and sees measured server resources, bandwidth and provider traffic separately from user quota.",
+      "seams": [
+        "Provider resource accounting and observation API",
+        "Provider policy repository",
+        "Provider resource/cycle/exhaustion task"
+      ],
+      "acceptance": [
+        "Provider cumulative IN+OUT, bandwidth rate, capacity and user weighted debit have distinct units and ledgers.",
+        "Provider cycles and alert/exhaustion thresholds persist with explicit timezone and source; missing samples appear unknown rather than zero.",
+        "Exhaustion behavior follows explicit policy and does not silently switch the route exit.",
+        "Counter epoch, duplicate sample, cycle boundary and stale-observation fixtures verify resource calculations and their presentation."
+      ],
+      "evidence": [
+        "internal/observability/README.md (when present) and node observation tests; real procfs/read-only and synthetic authenticated ingestion. Browser acceptance remains open.",
+        "docs/verification/PROVIDER-TIMESTAMP-PRESERVATION-2026-10-20.md; public form-save regression preserves untouched fractional/offset timestamps, supports explicit date edits and expiry clearing. Full Web gate 271 tests passed at this checkpoint; real provider/VPS accounting remains unverified."
+      ],
+      "kind": "feature"
+    },
+    {
+      "id": "RW-18",
+      "title": "Diagnose connectivity and notify operators",
+      "stories": [
+        "K05"
+      ],
+      "blocked_by": [
+        "RW-15",
+        "RW-17",
+        "RW-19"
+      ],
+      "status": "in_progress",
+      "outcome": "An administrator runs a scoped connectivity or speed diagnostic, sees direction/time/traffic cost, and receives controlled monitoring findings.",
+      "seams": [
+        "Bounded diagnostics executor and observation evaluator",
+        "Diagnostic job API",
+        "Diagnostic request/result/manual alternative-route task"
+      ],
+      "acceptance": [
+        "Target, direction, timestamp and estimated/actual traffic cost are shown; timeouts and error details point to an actionable failure.",
+        "Diagnostics cannot target arbitrary internal metadata services or silently send traffic beyond the authorized target.",
+        "Monitoring thresholds, audience and deduplication are configurable and tested using local sinks.",
+        "No automatic server failover is added; manual alternate route selection names its changed exit and follows the ordinary revision workflow."
+      ],
+      "evidence": [
+        "internal/diagnostics/README.md: bounded direct node and explicit managed connector-path HEAD/GET/PUT; immutable all-hop pins, exact live process fence, application-payload cost, public-entry/source limitations and no K06 auto-switch.",
+        "internal/httpapi/diagnostics_test.go: admin request through authenticated agent transport to actual synthetic HTTP transfer, immutable result replay and scope revocation; RunDriver cancellation stops the real loopback request.",
+        "internal/agent/diagnostics_test.go and diagnostics_recovery_test.go: positive bounded HEAD/GET/PUT; metadata/private/credential URL denial, redirect/size/deadline/concurrency, early upload response/reset, forced subprocess crash without traffic replay and lost receipt retries.",
+        "internal/store/diagnostics_test.go and internal/diagnostics/model_test.go: durable cross-handle per-node claims, queue bounds, enrollment/attempt fences, unknown versus not-run, late durable evidence, result bounds and no fabricated rate.",
+        "Notifications use existing controlled in-app/provider/email/webhook module; web Diagnostics UI and browser acceptance evidence are owned by the console workstream. This ticket is not verified until RW-15/RW-17/RW-19 prerequisites and joined final browser gate pass.",
+        "docs/verification/BOUNDED-DIAGNOSTICS-2026-10-19.md: red/green and review fixes, all six affected Go packages passed -race; static guard passed; no live external tests.",
+        "runtimes/xray/diagnostics_test.go: real managed entry → native VLESS transit → local HTTP target via private RPC; success, replay/override denial, stopped transit fails without direct fallback, cancel/EOF close tunnels; race-enabled native repeats passed.",
+        "internal/store/diagnostics_paths_test.go and internal/agent/diagnostics_managed_test.go: current all-hop manifest/enrollment/lease/observation checks, changed-path result downgrade, immutable replay, exact effective process/config/pipe identity fence.",
+        "internal/httpapi/diagnostics_paths_test.go joined to published_routes_test.go: actual authoring/render/publication → admin path selector/job → scoped agent claim; credential-free DTO, override rejection and unavailable runtime not_run. Managed extension independent security review and final UI/native project gates remain separate."
+      ],
+      "kind": "feature"
+    },
+    {
+      "id": "RW-19",
+      "title": "Publish announcements and audit reminders",
+      "stories": [
+        "A05"
+      ],
+      "blocked_by": [
+        "RW-02",
+        "RW-03",
+        "RW-13"
+      ],
+      "status": "in_progress",
+      "outcome": "An administrator publishes audience-scoped announcements, configures expiry/quota reminders and reviews redacted operation history.",
+      "seams": [
+        "Announcement/notification eligibility and deduplication",
+        "Outbox/audit repository and API",
+        "Announcement/reminder/audit task"
+      ],
+      "acceptance": [
+        "Announcements have audience and validity bounds; users see only messages intended for them.",
+        "In-app, email and Webhook adapters have bounded local contract tests; explicit configured destinations and permission are required before real external sends.",
+        "Reminder retries do not duplicate the same threshold/cycle notification; changed audience and expiry are rechecked at delivery.",
+        "Audit covers actor, object, action and effect but excludes passwords, tokens and full private-source URLs."
+      ],
+      "evidence": [
+        "docs/verification/SECONDARY-SECURITY-REVIEW-2026-10-19.md; audience/outbox timing fixes and bounded notification tests. No real external delivery.",
+        "docs/verification/UI-CONVERGENCE-2026-10-26.md; WIP45: explicit inbox read state, failed/delayed acknowledgement retention and narrow announcement/outbox scroll affordance. Local DOM and controlled-API evidence only; no external delivery or audience-authorization acceptance. Composed frontend and scoped controlled-API browser/pixel checks passed; documentation-only closure is recorded separately.",
+        "docs/verification/UX-REFINEMENT-2026-10-27.md; WIP46: announcement row Edit retains its full title at horizontal overflow; separately reviewed editor task ownership covers normal/nested Tab, initial busy action and held503 retained draft/retry state. Browser did not dispatch a retry; DOM retry evidence is separate. No actual announcement sending/scheduling, delivery, webhook or permission acceptance. Fresh goal notice read state survived UI refresh/browser reload in fixture memory, not server durability."
+      ],
+      "kind": "feature"
+    },
+    {
+      "id": "RW-20",
+      "title": "Reuse versioned templates and presets",
+      "stories": [
+        "M01"
+      ],
+      "blocked_by": [
+        "RW-05",
+        "RW-09",
+        "RW-11"
+      ],
+      "status": "in_progress",
+      "outcome": "An administrator publishes sanitized reusable templates/presets/rules and users choose independent copies or explicit fixed/following shared references.",
+      "seams": [
+        "Versioned resource resolver and conflict policy",
+        "Template/reference API/repository",
+        "Copy/reference/update-preview task"
+      ],
+      "acceptance": [
+        "Independent copies never change when upstream updates; fixed references stay pinned and following references produce a reviewable candidate.",
+        "Personal edits are preserved under documented conflict precedence; failed compatibility checks retain the previous valid output.",
+        "Shared resources carry provenance and versions but cannot contain owner-private subscription credentials.",
+        "A positive update scenario crosses template/preset selection, candidate preview, native validation and publication without silently changing unrelated profiles."
+      ],
+      "evidence": [
+        "docs/design/template-reuse.md and docs/verification/SECONDARY-SECURITY-REVIEW-2026-10-19.md; exact reviewed inputs, dependency membership CAS, native template output checks.",
+        "docs/verification/UI-CONVERGENCE-2026-10-26.md; WIP45: template application/update/publication task ownership, dirty-choice protection and pending/failure recovery through controlled HTTP DOM interactions. Composed frontend and scoped controlled-API browser/pixel checks passed; documentation-only closure is recorded separately; native validation, publication and prerequisite acceptance are unchanged.",
+        "docs/verification/UX-REFINEMENT-2026-10-27.md; WIP46: template cards retain full names and aligned actions; separately reviewed apply/publish task boundaries, stable pending actions and retained failure state preserve existing payload/intent. Three explicit accessible names match existing visible labels rather than implying previously unlabeled controls. Synthetic browser/DOM evidence is not native validation or real publication."
+      ],
+      "kind": "feature"
+    },
+    {
+      "id": "RW-21",
+      "title": "Restore encrypted backups safely",
+      "stories": [
+        "M02"
+      ],
+      "blocked_by": [
+        "RW-02",
+        "RW-12",
+        "RW-13",
+        "RW-20"
+      ],
+      "status": "in_progress",
+      "outcome": "An administrator creates a complete encrypted backup and previews/version-checks a restore or migration before replacing a selected local store.",
+      "seams": [
+        "Backup encryption and migration/restore planner",
+        "Admin backup/restore API",
+        "Backup/restore impact and result task"
+      ],
+      "acceptance": [
+        "Complete backups contain recovery-required secrets only in authenticated encryption; template sharing remains redacted and ordinary subscriptions retain only needed connection credentials.",
+        "Wrong key, truncated data, tampered ciphertext and unsupported schema are rejected before mutation.",
+        "Restore preserves users, grants, profile revisions, publication links and ledger history; conflict and target overwrite behavior are explicit.",
+        "Migration/restore fault injection proves a recoverable prior state and reports verified completion; no automatic third-party upload or secret sharing occurs."
+      ],
+      "evidence": [
+        "internal/backup/README.md and docs/verification/SECONDARY-SECURITY-REVIEW-2026-10-19.md; encrypted restore and reverse index/generation relationships; capacity limit remains."
+      ],
+      "kind": "feature"
+    },
+    {
+      "id": "RW-22",
+      "title": "Configure and maintain the platform",
+      "stories": [
+        "M04"
+      ],
+      "blocked_by": [
+        "RW-02",
+        "RW-12",
+        "RW-19"
+      ],
+      "status": "in_progress",
+      "outcome": "An administrator edits subscription domain and notification settings through validated forms while retaining prior effective settings on failure.",
+      "seams": [
+        "Settings validation and activation",
+        "Settings/secrets repository and API",
+        "Platform settings save/test/effective-state task"
+      ],
+      "acceptance": [
+        "Domain changes preview existing-link consequences and require valid explicit values; rejected edits preserve the submitted form and previous effective settings.",
+        "Notification configuration is separate from send permission; secrets are write-only/explicitly revealable under authorization, not ordinary state fields.",
+        "Saved and effective revision are distinct when activation fails; the visible result reflects observed activation rather than a generic success banner.",
+        "Settings maintenance works through authorized API/UI without raw database editing or implicit external domain/TLS changes."
+      ],
+      "evidence": [
+        "docs/design/subscription-origin.md; staged/verified/activated subscription link origins with normal-TLS/public-DNS-pinned checks, CAS/expiry, failed-draft retention and current access URL/token rotation regressions. Local evidence only; full UI/prerequisite acceptance remains in progress.",
+        "docs/verification/UI-CONVERGENCE-2026-10-26.md; WIP45: basic settings dirty navigation, accepted-value return, older save/newer draft ownership and delayed-read fencing. Controlled HTTP evidence is not real persistence or settings activation. Composed frontend and scoped controlled-API browser/pixel checks passed; documentation-only closure is recorded separately."
+      ],
+      "kind": "feature"
+    },
+    {
+      "id": "RW-23",
+      "title": "Use the complete service subscription center",
+      "stories": [
+        "S01",
+        "S02"
+      ],
+      "blocked_by": [
+        "RW-12",
+        "RW-13"
+      ],
+      "status": "in_progress",
+      "outcome": "An invited user signs in and retrieves a published subscription from a focused service center with meaningful access state, allowance and reset information.",
+      "seams": [
+        "Authenticated user-service query",
+        "Real API-backed browser task",
+        "Published output retrieval"
+      ],
+      "acceptance": [
+        "The main action gets a subscription; service, authorized routes, expiry, actual/weighted usage and next reset are clear without technical IDs dominating the page.",
+        "Loading, empty, expired, paused, offline and failed states are distinguished and preserve retry/navigation behavior.",
+        "A full browser journey uses the real local backend, not only intercepted fixtures: login, view own service, get a subscription, rotate and deny old link.",
+        "Keyboard-only and narrow mobile layouts complete the main task; no external-provider billing or physical-device identity is inferred."
+      ],
+      "evidence": [
+        "docs/verification/ACCEPTANCE-MATRIX-2026-10-19.md; bounded partial implementation and verification evidence. Remaining acceptance gaps and prerequisites are explicit; this does not verify the ticket.",
+        "docs/verification/UX-REFINEMENT-2026-10-27.md; WIP46: paused-only service-center guidance and narrow-navigation focus retain task boundaries; subscription-detail ordinary traversal/settled footer visibility and exact cancellation have isolated controlled evidence. These do not satisfy required real-backend subscription delivery or comprehensive accessibility acceptance. Fresh goal reached paused/remaining-quota explanation and administrator next step; deeper platform-entry/authorization branches remained fixture-limited."
+      ],
+      "kind": "feature"
+    },
+    {
+      "id": "RW-24",
+      "title": "Verify complete integration and recovery",
+      "stories": [
+        "F01",
+        "F02",
+        "F03",
+        "F04",
+        "F05",
+        "C101",
+        "C102",
+        "C201",
+        "C202",
+        "C203",
+        "C301",
+        "C302",
+        "C401",
+        "C402",
+        "C501",
+        "C502",
+        "C503",
+        "C601",
+        "C602",
+        "S01",
+        "S02",
+        "A01",
+        "A02",
+        "A03",
+        "A04",
+        "A05",
+        "K01",
+        "K02",
+        "K03",
+        "K04",
+        "K05",
+        "M01",
+        "M02",
+        "M03",
+        "M04"
+      ],
+      "blocked_by": [
+        "RW-01",
+        "RW-02",
+        "RW-03",
+        "RW-04",
+        "RW-05",
+        "RW-06",
+        "RW-07",
+        "RW-08",
+        "RW-09",
+        "RW-10",
+        "RW-11",
+        "RW-12",
+        "RW-13",
+        "RW-14",
+        "RW-15",
+        "RW-16",
+        "RW-17",
+        "RW-18",
+        "RW-19",
+        "RW-20",
+        "RW-21",
+        "RW-22",
+        "RW-23"
+      ],
+      "status": "in_progress",
+      "outcome": "A reviewer can reproduce every claimed story from a clean local checkout and distinguish verified support, unverified runtime behavior and separately authorized operations.",
+      "seams": [
+        "Same local/CI aggregate harness",
+        "Real-core isolated integration and real-backend browser tasks",
+        "Independent standards and product-spec review"
+      ],
+      "acceptance": [
+        "Every confirmed story has positive end-to-end evidence, not just a type, document, disabled button or unsupported diagnostic; evidence is attached to its local ticket.",
+        "Quick, full and native checks report their exact scope and fail on missing requested prerequisites; architecture checker rejects its intentional forbidden fixture.",
+        "Fault cases cover generation fencing/restart, tenant revocation, stale source/template updates, ledger dedup/cycles and backup recovery.",
+        "Standards and specification reviews are recorded separately; all blocking findings are resolved and affected final checks rerun.",
+        "No claim of GitHub publication, native CI execution, real VPS deployment or production readiness is made without corresponding verified evidence."
+      ],
+      "evidence": [
+        "docs/verification/ACCEPTANCE-MATRIX-2026-10-19.md; bounded partial implementation and verification evidence. Remaining acceptance gaps and prerequisites are explicit; this does not verify the ticket.",
+        "docs/design/REFACTORING-UI-AUDIT-2026-10-20.md; bounded desktop/narrow design review and serialized Web regressions, including 274-test server-form and 277-test client-panel checkpoints. No claim of all-story acceptance, full screen-reader certification or live deployment.",
+        "docs/verification/UI-CONVERGENCE-2026-10-26.md; WIP45: finite UI convergence scope, separate baseline pixels/DOM/final composed evidence and completed composed frontend and scoped controlled-API browser/pixel checks; documentation-only closure is recorded separately. No full integration, production, native, live-traffic or comprehensive accessibility acceptance; all feature prerequisites remain open as recorded.",
+        "docs/verification/UX-REFINEMENT-2026-10-27.md; WIP46: r5 freezes 48 web paths over WIP45, 1,250 total / 323 web; exactly 3 independently accepted test-only corrections from failed r4, production unchanged. Original 1,670/1,671 and r4 typecheck 1 / 1,720-of-1,722 failures, plus seven-table chronology correction, remain preserved. Pending-Source observers now assert unavailable Close/disabled Cancel/owned busy action/natural Escape while retaining parent locking, identity/payload and failure/retry coverage; focused 22 and 26 overlap. R5 unfiltered frontend 149 files / 1,722 tests, Python 9, tickets/type/build passed with 1,250 source files/modes unchanged; exact r5 browser 16 stages accepted,47 visual tests / 50 captures and19 independently viewed pixels kept as separate units; fresh independent goals 1–4 and 6 completed in the model; goal 5 explanation/next step supported but deeper diagnosis fixture-limited. Two mild detours retained, no new evidence-backed local correction; archive/save acceptance separate. Residual 33 boundary plus 10 cancellation observations are not 43 journeys;17 isolated modal repairs are not whole-product acceptance. No status/prerequisite upgrade."
+      ],
+      "kind": "integration"
+    }
+  ]
+}

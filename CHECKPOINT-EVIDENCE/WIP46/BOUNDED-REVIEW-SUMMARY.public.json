@@ -1,0 +1,247 @@
+{
+  "formatVersion": 1,
+  "checkpoint": "WIP46",
+  "exportStatus": "LOCAL_CODE_BROWSER_GOAL_EVIDENCE_COMPLETE_DOC_ARCHIVE_REVIEW_PENDING",
+  "derivation": "Public delivery summary derived from retained original records; not a byte-identical copy of those originals. Internal workspace/thread paths and raw conversations are omitted.",
+  "wholeProductAcceptanceClaimed": false,
+  "records": [
+    {
+      "category": "exact r5 source/test review",
+      "reviewRecord": {
+        "sourceRecordLabel": "INDEPENDENT-CONTRACT-REVIEW.r5.json",
+        "sourceRecordSha256": "090c0960f8199316c77dc54f99946f27a66048664d6ea4078db4fdc9d8b3a678",
+        "originalBytesIncluded": false
+      },
+      "scopeSummary": [
+        "1250 files/modes and48 changed web paths verified; no removals; only3 reviewed test corrections fromr4.",
+        "Production/dependencies/backend/styles and other1247 files unchanged.",
+        "Full rerun, exact composed browser, goal and archive/save remain separate."
+      ],
+      "metrics": {},
+      "reviewerReranFullSuite": false,
+      "reviewerPerformedBrowserActions": false
+    },
+    {
+      "category": "Source cancellation",
+      "reviewRecord": {
+        "sourceRecordLabel": "INDEPENDENT-SOURCE-MODAL-ACTUAL-REVIEW.r3.json",
+        "sourceRecordSha256": "9be6da973ccdba68fb29048476b096f25ebe9bfbe295b71727551a87f361b0d5",
+        "originalBytesIncluded": false
+      },
+      "scopeSummary": [
+        "Exactr3 normal dirty blank/existing confirmation and contextual clean cancellation return eligible original opener; no source/profile writes.",
+        "Normal6/held4/reverse-geometry1 remain r2 predecessor evidence, not r3 actual.",
+        "Newer-owner/departure races have DOM lifecycle evidence only; final composed actual remains separate."
+      ],
+      "metrics": {
+        "r3CancellationCells": 3,
+        "r2NormalCells": 6,
+        "r2HeldFailureCells": 4,
+        "r2OrdinaryReverseGeometryCells": 1
+      },
+      "reviewerReranFullSuite": false,
+      "reviewerPerformedBrowserActions": false
+    },
+    {
+      "category": "Entity name-only pending/failure",
+      "reviewRecord": {
+        "sourceRecordLabel": "INDEPENDENT-ENTITY-BUSY-ACTUAL-REVIEW.r2.json",
+        "sourceRecordSha256": "13b6c2bd9f7449b469cf71a9486181bcb8a0e361a4d5656856788ed45ed41ce2",
+        "originalBytesIncluded": false
+      },
+      "scopeSummary": [
+        "Request intercepted before synthetic fixture backend; one deliberate request per cell; no stored change.",
+        "Initial busy Save and retained enabled failure Save owned/visible after4 stable frames and0 finite animations.",
+        "Forward/reverse12step prefixes on one busy control are not a multi-control cycle; no actual retry/success/invitation/endpoint action."
+      ],
+      "metrics": {
+        "actualCells": 2
+      },
+      "reviewerReranFullSuite": false,
+      "reviewerPerformedBrowserActions": false
+    },
+    {
+      "category": "nine residual modal surfaces",
+      "reviewRecord": {
+        "sourceRecordLabel": "INDEPENDENT-RESIDUAL-MATRIX-ACTUAL-REVIEW.json",
+        "sourceRecordSha256": "f8a605b32872897a1a3138dcab54d984a695023d5b67f0a830f3e85d68e7b63e",
+        "originalBytesIncluded": false
+      },
+      "scopeSummary": [
+        "Nine surfaces plus access variants give11 finite task variants.",
+        "33 boundary observations and10 separate cancellation observations are not43 unique journeys.",
+        "Normal controls meet whole-rect visibility after finite motion and4stableframes; oversized JSON uses owned visible intersection and estimated caret/occlusion with separate pixels of current136characters/endcaret.",
+        "Download anchors only focused, never activated; no pending/result/newer-owner actual race or backend operation."
+      ],
+      "metrics": {
+        "normalObservations": 33,
+        "cancellationObservations": 10,
+        "not43UniqueJourneys": true
+      },
+      "reviewerReranFullSuite": false,
+      "reviewerPerformedBrowserActions": false
+    },
+    {
+      "category": "resource initial busy/immediate failure visibility",
+      "reviewRecord": {
+        "sourceRecordLabel": "INDEPENDENT-RESOURCE-VISIBILITY-REVIEW.r3.json",
+        "sourceRecordSha256": "51920a4875e6b069a1642b34e779b27fac6e21d18a916580bc57342f8d2cc7b1",
+        "originalBytesIncluded": false
+      },
+      "scopeSummary": [
+        "Current-task synchronous focus and owned disclosure-transition reveal; no delayed focus/timer/polling.",
+        "Separate scripts/records overlap and are not summed as unique cases."
+      ],
+      "metrics": {
+        "focusedDOM": 102,
+        "heldVisibilityRecords": 5,
+        "immediate503VisibilityRecords": 6,
+        "pendingRetryRecords": 12
+      },
+      "reviewerReranFullSuite": false,
+      "reviewerPerformedBrowserActions": false
+    },
+    {
+      "category": "template apply/publish and announcement editor",
+      "reviewRecord": {
+        "sourceRecordLabel": "INDEPENDENT-MODAL-NEIGHBOR-REVIEW.json",
+        "sourceRecordSha256": "1f4584130d52f46d2798bce7bdfbd283ea4c206ca7bacb3a839d7a8da965e5f2",
+        "originalBytesIncluded": false
+      },
+      "scopeSummary": [
+        "Normal/nested/pending/failure task ownership preserved; payload captured and single write.",
+        "Actual browser did not dispatch retry; retained enabled retry state and DOM retry-payload evidence separate.",
+        "Ordinary fractional-clipping samples do not prove every focused field fully visible."
+      ],
+      "metrics": {
+        "focusedDOM": 131,
+        "browserObservationRecords": 28
+      },
+      "reviewerReranFullSuite": false,
+      "reviewerPerformedBrowserActions": false
+    },
+    {
+      "category": "normal Entity and blank Invite",
+      "reviewRecord": {
+        "sourceRecordLabel": "INDEPENDENT-ADMIN-NORMAL-MODAL-REVIEW.json",
+        "sourceRecordSha256": "c58621def64e043506e9c250effc7372f1001702f83957319c2f78cea0f40de3",
+        "originalBytesIncluded": false
+      },
+      "scopeSummary": [
+        "Natural complete forward/reverse boundaries and settled visibility; Escape returns opener; no writes.",
+        "Does not establish invitation generation, pending/result/nested behavior or endpoint variant."
+      ],
+      "metrics": {
+        "focusedDOM": 90,
+        "normalBrowserRecords": 6
+      },
+      "reviewerReranFullSuite": false,
+      "reviewerPerformedBrowserActions": false
+    },
+    {
+      "category": "pointer-safe horizontal action reveal",
+      "reviewRecord": {
+        "sourceRecordLabel": "INDEPENDENT-TABLE-POINTER-REVIEW.json",
+        "sourceRecordSha256": "748586ab69ca6dc1fb633c39c8421e5a10539357ea1f751d64c5f7e7af49bab8",
+        "originalBytesIncluded": false
+      },
+      "scopeSummary": [
+        "Only focus-visible real DOM descendants reveal action context; portal guard retained.",
+        "Original button-down causes scroll then nonbutton-up defect corrected; outside-clip attempts excluded.",
+        "20browser tests include original18, not38."
+      ],
+      "metrics": {
+        "browserTests": 20,
+        "includesOriginalTests": 18,
+        "focusedDOM": 9
+      },
+      "reviewerReranFullSuite": false,
+      "reviewerPerformedBrowserActions": false
+    },
+    {
+      "category": "seven horizontal table target contexts",
+      "reviewRecord": {
+        "sourceRecordLabel": "INDEPENDENT-ACTION-MATRIX-REVIEW.json",
+        "sourceRecordSha256": "7be6cda4b9de5f8425ca7dc613e799b4d9db0b2256a73dca1964b345882c3a26",
+        "originalBytesIncluded": false
+      },
+      "scopeSummary": [
+        "7actual failures before21passing browser tests at320/390/1440.",
+        "81runtime DOM checks do not prove final app typing; explicit correction and exact later typefix retained.",
+        "Synthetic registered/draft inventories do not prove runtime health/deployment/publication."
+      ],
+      "metrics": {
+        "browserTests": 21,
+        "focusedDOM": 81
+      },
+      "reviewerReranFullSuite": false,
+      "reviewerPerformedBrowserActions": false
+    },
+    {
+      "category": "Services and Announcements target identity",
+      "reviewRecord": {
+        "sourceRecordLabel": "INDEPENDENT-VIS05-REVIEW.json",
+        "sourceRecordSha256": "c7a4471a6527ffafc57e3afb404a41255f38420ef6df59ee11f78953a088bf62",
+        "originalBytesIncluded": false
+      },
+      "scopeSummary": [
+        "Existing actions/columns/callbacks unchanged; complete names shown at actual overflow.",
+        "2actual failures before6passing; no real editing/publication."
+      ],
+      "metrics": {
+        "browserTests": 6,
+        "focusedDOM": 27
+      },
+      "reviewerReranFullSuite": false,
+      "reviewerPerformedBrowserActions": false
+    },
+    {
+      "category": "template select names",
+      "reviewRecord": {
+        "sourceRecordLabel": "INDEPENDENT-TEMPLATE-LABEL-REVIEW.json",
+        "sourceRecordSha256": "0d3249730de16ed54fbffea78d8a2cc9b90f007768d4fd6eddf3eb195991113e",
+        "originalBytesIncluded": false
+      },
+      "scopeSummary": [
+        "Three explicit names match existing visible labels; do not imply controls previously entirely unlabeled.",
+        "No value/disabled rule/action change or broad AT acceptance."
+      ],
+      "metrics": {
+        "focusedDOM": 20,
+        "actualSelectionStates": 3
+      },
+      "reviewerReranFullSuite": false,
+      "reviewerPerformedBrowserActions": false
+    }
+  ],
+  "historicalR3Browser": {
+    "record": {
+      "sourceRecordLabel": "SCRIPTED-ACCEPTANCE.json",
+      "sourceRecordSha256": "a0987423c41025892d19f9c56dd7b246ae88f9fc0f48960f6f7b8c5e4ca9cba3",
+      "originalBytesIncluded": false
+    },
+    "sourceFreezeSha256": "c156522cc8edc90de5fbd607bb45364c369f74c9378fd7c56614416d5aa9a63c",
+    "boundedScriptedAccepted": true,
+    "fullCompletionAccepted": false,
+    "units": {
+      "sourceContinuationObservations": 12,
+      "resourceAdaptationObservations": 42,
+      "resourcePendingObservations": 12,
+      "navigationObservations": 20,
+      "visualTests": 18,
+      "crossPageCapturedFrames": 50
+    },
+    "notSummedAsUniqueJourneys": true,
+    "limits": [
+      "Initial source ancestor-observer failure retained; corrected observation bound to same code.",
+      "Newer-navigation-owner race uses declared public DOM focus seam, not wholly natural pointer journey.",
+      "Later action/modal findings required further fixes; this is not finalr5 browser acceptance."
+    ]
+  },
+  "currentComposedBrowser": {
+    "publicSummary": "COMPOSED-BROWSER.r5.public.json",
+    "sha256": "428c86a9bafd492b5cea776d819c284ec5d4475e47376cfe569eba16165c80ab",
+    "exactR5RepeatAccepted": true,
+    "freshGoalConclusionPending": false
+  }
+}

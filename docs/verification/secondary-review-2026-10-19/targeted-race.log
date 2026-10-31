@@ -1,0 +1,6 @@
+ok  	routeweaver/internal/reuse	1.017s [no tests to run]
+ok  	routeweaver/internal/resources	1.033s
+ok  	routeweaver/internal/notifications	1.141s
+ok  	routeweaver/internal/backup	22.949s
+ok  	routeweaver/internal/store	5.896s
+ok  	routeweaver/internal/httpapi	37.131s

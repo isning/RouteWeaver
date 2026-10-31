@@ -1,0 +1,59 @@
+=== RUN   TestCanonicalRecordMutationInventory
+--- PASS: TestCanonicalRecordMutationInventory (0.05s)
+=== RUN   TestIndependentStage1CrossStoreMeterReplayIsAtomic
+--- PASS: TestIndependentStage1CrossStoreMeterReplayIsAtomic (0.05s)
+=== RUN   TestIndependentStage1RollbackAndReadonlyExport
+--- PASS: TestIndependentStage1RollbackAndReadonlyExport (0.06s)
+=== RUN   TestIndependentStage1LedgerReplacement
+--- PASS: TestIndependentStage1LedgerReplacement (0.03s)
+=== RUN   TestUsageProjectionSchemaTracksOnlyCanonicalLedger
+--- PASS: TestUsageProjectionSchemaTracksOnlyCanonicalLedger (0.03s)
+=== RUN   TestAdmissionHistoryScalingCharacterization
+    admission_scaling_test.go:18: explicit workload characterization not requested
+--- SKIP: TestAdmissionHistoryScalingCharacterization (0.00s)
+=== RUN   TestAdmissionUnionCountsNormalizedIPsAcrossEntriesAndDurablyRenews
+--- PASS: TestAdmissionUnionCountsNormalizedIPsAcrossEntriesAndDurablyRenews (0.16s)
+=== RUN   TestAdmissionRenewalRespectsRevocationQuotaAndHolds
+=== RUN   TestAdmissionRenewalRespectsRevocationQuotaAndHolds/disabled
+=== RUN   TestAdmissionRenewalRespectsRevocationQuotaAndHolds/expired
+=== RUN   TestAdmissionRenewalRespectsRevocationQuotaAndHolds/credential-revoked
+=== RUN   TestAdmissionRenewalRespectsRevocationQuotaAndHolds/route-not-entitled
+=== RUN   TestAdmissionRenewalRespectsRevocationQuotaAndHolds/exhausted
+=== RUN   TestAdmissionRenewalRespectsRevocationQuotaAndHolds/accounting-pending
+=== RUN   TestAdmissionRenewalRespectsRevocationQuotaAndHolds/enrollment-revoked
+--- PASS: TestAdmissionRenewalRespectsRevocationQuotaAndHolds (0.52s)
+    --- PASS: TestAdmissionRenewalRespectsRevocationQuotaAndHolds/disabled (0.10s)
+    --- PASS: TestAdmissionRenewalRespectsRevocationQuotaAndHolds/expired (0.07s)
+    --- PASS: TestAdmissionRenewalRespectsRevocationQuotaAndHolds/credential-revoked (0.07s)
+    --- PASS: TestAdmissionRenewalRespectsRevocationQuotaAndHolds/route-not-entitled (0.07s)
+    --- PASS: TestAdmissionRenewalRespectsRevocationQuotaAndHolds/exhausted (0.07s)
+    --- PASS: TestAdmissionRenewalRespectsRevocationQuotaAndHolds/accounting-pending (0.07s)
+    --- PASS: TestAdmissionRenewalRespectsRevocationQuotaAndHolds/enrollment-revoked (0.06s)
+=== RUN   TestAdmissionIPClaimIsAtomicAcrossStoreHandles
+--- PASS: TestAdmissionIPClaimIsAtomicAcrossStoreHandles (0.09s)
+=== RUN   TestAdmissionScopesPresenceAndExpiresStaleIPs
+--- PASS: TestAdmissionScopesPresenceAndExpiresStaleIPs (0.09s)
+=== RUN   TestAdmissionStatusReportsLeasesNotHardwareAndReleasesStreamsIndependently
+--- PASS: TestAdmissionStatusReportsLeasesNotHardwareAndReleasesStreamsIndependently (0.08s)
+=== RUN   TestMeterRecordsOverQuotaAndKeepsHistoricalRate
+--- PASS: TestMeterRecordsOverQuotaAndKeepsHistoricalRate (0.04s)
+=== RUN   TestCounterIngestionIsAtomicReplaySafeAndSeparatesProvider
+--- PASS: TestCounterIngestionIsAtomicReplaySafeAndSeparatesProvider (0.11s)
+=== RUN   TestCounterCursorDoesNotResetOnBillingCycleChange
+--- PASS: TestCounterCursorDoesNotResetOnBillingCycleChange (0.11s)
+=== RUN   TestCounterPolicyBoundaryRequiresEvidenceAndBlocksEligibility
+--- PASS: TestCounterPolicyBoundaryRequiresEvidenceAndBlocksEligibility (0.09s)
+=== RUN   TestCounterCalendarAndManualBoundaryNeedExactObservation
+=== RUN   TestCounterCalendarAndManualBoundaryNeedExactObservation/calendar
+=== RUN   TestCounterCalendarAndManualBoundaryNeedExactObservation/manual
+--- PASS: TestCounterCalendarAndManualBoundaryNeedExactObservation (0.15s)
+    --- PASS: TestCounterCalendarAndManualBoundaryNeedExactObservation/calendar (0.08s)
+    --- PASS: TestCounterCalendarAndManualBoundaryNeedExactObservation/manual (0.08s)
+=== RUN   TestComparedGenerationCommitsManifestAndAttemptAtomically
+--- PASS: TestComparedGenerationCommitsManifestAndAttemptAtomically (0.03s)
+=== RUN   TestCASCannotResurrectRevokedRecord
+--- PASS: TestCASCannotResurrectRevokedRecord (0.03s)
+=== RUN   TestTokenPublicationFencesCapturedInputsAndRollsBackIndex
+--- PASS: TestTokenPublicationFencesCapturedInputsAndRollsBackIndex (0.04s)
+PASS
+ok  	routeweaver/internal/store	2.777s

@@ -1,0 +1,1337 @@
+{
+  "schema_version": 2,
+  "record_id": "UX23-STATE-EDITOR",
+  "date": "2026-10-23",
+  "status": "ACCEPTED_BOUNDED_LOCAL_UX_WITH_UNRESOLVED_QA_FAILURES",
+  "record": "../UX-STATE-EDITOR-2026-10-23.md",
+  "evidence_form": "Curated portable summaries only; no raw log, trace, auth data, response body or unreviewed image included.",
+  "original_and_final_are_separate": true,
+  "cases": [
+    {
+      "id": "UX23-A01",
+      "status": "original_observation",
+      "subject": "F1动态条件同屏异义",
+      "observed_summary": "真实UI保存及权威后端预览：相同可见状态下成员1→2→1。",
+      "limits": "原发现；无Output发布或真实流量证明。"
+    },
+    {
+      "id": "UX23-A02",
+      "status": "original_observation",
+      "subject": "R1/R2父任务中断与保存反馈",
+      "observed_summary": "真实完整格式产生首次候选；已有来源422输入已保存，取消仍称未保存。",
+      "limits": "原发现；原始检查未覆盖全部富Profile及所有422变体。"
+    },
+    {
+      "id": "UX23-A03",
+      "status": "original_observation",
+      "subject": "VA01–03键盘布局与对比度",
+      "observed_summary": "Enter重排伴随收起；320px普通标题挤压；活动输入文字3.9219:1。",
+      "limits": "局部实际观察，不是全站WCAG结论。"
+    },
+    {
+      "id": "UX23-C01",
+      "status": "bounded_verified",
+      "subject": "动态成员状态",
+      "observed_summary": "DOM/模型21/21；真实后端任务1/1，集合处理与平台范围、固定成员去重及保存重开。",
+      "limits": "历史指针卡点仍未知；非全套通过。"
+    },
+    {
+      "id": "UX23-C02",
+      "status": "bounded_verified",
+      "subject": "上下文来源任务",
+      "observed_summary": "真实后端浏览器4/4：候选明确接受、父草稿保留、422、接受响应丢失后只读核对及独立使用。",
+      "limits": "任务当时冻结候选；后续整合仍有失败。未知输入写入不自动重放。"
+    },
+    {
+      "id": "UX23-C03",
+      "status": "bounded_verified_with_retained_failures",
+      "subject": "富编辑器",
+      "observed_summary": "真实浏览器6/6；输入13.839:1；320px普通标题22px高；44×44目标120/120采样命中。",
+      "limits": "原DOM聚合22/24；非全屏/全控件/全部辅助技术覆盖。"
+    },
+    {
+      "id": "UX23-C04",
+      "status": "bounded_verified_in_failed_integration",
+      "subject": "首份订阅直接表单与命名",
+      "observed_summary": "原真实任务1/1；公共DOM RED证明旧gate插入；F2 14/14及类型检查通过。第二轮整合首份订阅浏览器1/1通过。",
+      "limits": "DOM过渡不证明肉眼闪烁；该case通过不抵消整套失败。 Q04在新配置入口5秒等待超时，未进入整个首份订阅任务；历史通过不覆盖。"
+    },
+    {
+      "id": "UX23-C05",
+      "status": "bounded_verified_in_failed_integration",
+      "subject": "菜单关闭生命周期",
+      "observed_summary": "隐藏节点保留在两视口RED；修正后DOM2/2、浏览器2/2；第二轮整合菜单2/2通过。关闭节点为0后入口获焦，下一帧保持。",
+      "limits": "只针对来源菜单；未重建原失败完整事件顺序；不保证其他菜单。"
+    },
+    {
+      "id": "UX23-C06",
+      "status": "bounded_verified_in_failed_integration",
+      "subject": "诊断内容与披露边界",
+      "observed_summary": "聚焦9/9、真实浏览器1/1；首次/更新三宽度六图由执行者检查；第二轮整合来源审查内容1/1通过。",
+      "limits": "已知代码敏感串有负向断言；中间回归未合入；未知消息沿用旧展示，不声明通用脱敏。"
+    },
+    {
+      "id": "UX23-C07",
+      "status": "bounded_verified_in_non_green_integrations",
+      "subject": "浏览器测试公开合同迁移",
+      "observed_summary": "集合8/8，四文件5/5；既有兄弟Output完整记录、访问及内容指纹不变。",
+      "limits": "夹具注入不证明解析器；额外Node型spec类型检查因缺依赖阻塞。"
+    },
+    {
+      "id": "UX23-C08",
+      "status": "policy_boundary_verified_full_product_runs_non_green",
+      "subject": "DOM清理与总任务预算",
+      "observed_summary": "TLS6/6；受限来源多界面任务10秒后原Collection/Profile19/19。统一jsdom10秒/Node5秒另以3项正向及5项精确预期deadline负向核对；报告校验通过。",
+      "limits": "政策夹具exit1属预期，不是普通产品套件通过；Node5秒、步内1秒、显式短测试/钩子保留。Q03/Q04完整执行，分别仍有4项/3项10秒test-body deadline；非性能根因或用户响应改善。"
+    },
+    {
+      "id": "UX23-C09",
+      "status": "bounded_verified_in_failed_integration",
+      "subject": "可信422重复错误去重",
+      "observed_summary": "可信422重复提示明确断言RED→GREEN；新9项+既有8项17/17及类型检查通过；旧文本目标1/1，其余15未运行。真实390px首次/更新失败与同一来源修正任务1/1；重复同一任务仅取稳定图。",
+      "limits": "同一Source及确认保存revision、已知解析消息和失败元数据、无未知保存历史才合并；未知422/503/409及FileError保留。执行者复核两张图，不是最终集成或320/桌面复测。",
+      "integration": {
+        "confirmed_at_utc": "2026-10-23T05:27:57.069186Z",
+        "hash_guarded": true,
+        "full_integrated_validation": "Q03/Q04 source-saved-failure browser1/1 and trusted422 DOM9/9 passed; both overall runs failed"
+      }
+    },
+    {
+      "id": "UX23-C10",
+      "status": "bounded_verified_in_final_14px_failed_integration",
+      "subject": "既有来源具名可用性与原位恢复",
+      "observed_summary": "真实基线建立具名可用性缺口和移除引用后旧物化连接被当成手动连接的问题。修正经RED→GREEN；DOM13/13+类型检查，真实浏览器3/3。已合入最终14px前提文字版本。 Q03同三条浏览器在最终14px构建再次通过，协调者复核新320/390图。 Q04同三条再次通过，新320/390图实际复核。",
+      "limits": "最终选定状态有行为与像素证据；不是全站可访问性或计算字体测量，不抵消Q03/Q04其他失败。"
+    },
+    {
+      "id": "UX23-C11",
+      "status": "bounded_verified_in_failed_integration",
+      "subject": "浏览器前置 可见稳定与公开搜索",
+      "observed_summary": "四条原失败任务+六条helper回归10/10，单worker零重试，本地真实后端/Vite dev；应用及新增测试helper类型检查通过。 Q03六个helper及对应已修任务再次通过。",
+      "limits": "保留9/10旧尝试；18秒仅工作区前置，不改动作/断言。通过依赖单独Collection动作名/busy修正；Group旧指针原因未明，Q03/Q04六个helper合同通过但整套非全绿。"
+    },
+    {
+      "id": "UX23-C12",
+      "status": "bounded_cases_passed_in_non_green_Q04",
+      "subject": "成功来源响应夹具与有界清理合同",
+      "observed_summary": "六文件GET夹具79/79、原8+1观察9/9（7未运行）、async-act清理8/8、工作区422文案1/1；原懒编辑器诊断1/1未复现。8个测试文件合入，生产不变。",
+      "limits": "各运行重叠不相加；原同步清理也未复现，非旧Scheduler根因RED→GREEN。deadline及懒加载停滞仍无历史原因。Q04原17失败均通过但另有4失败；整体仍未过。"
+    },
+    {
+      "id": "UX23-C13",
+      "status": "supplemental_fault_contract_passed_not_part_of_Q04",
+      "subject": "缺失preferred Output不静默改目标",
+      "observed_summary": "单独真实浏览器fault-contract1/1、10.618秒、零跳过/重试；一次GET目录只去掉自有目标，独立对照保留；具名缺失、零自动替代/新建、明确选择前禁用、零浏览器写入、真实保存状态不变。",
+      "limits": "网络响应故障注入，不是真实后端删除；不解释原DOM deadline，不并入Q04的74项。"
+    },
+    {
+      "id": "UX23-D01",
+      "status": "unresolved_historical_cause",
+      "subject": "会话整合失败",
+      "observed_summary": "原会话失败带观察单项1/1未复现；第二轮会话恢复5/5通过，内容层级与工作区返回另在前置失败。",
+      "limits": "本次通过非认证根因修复；HTTP头200/终态快照不证明截止时消费正文、提交或可见。"
+    },
+    {
+      "id": "UX23-D02",
+      "status": "unknown_cause",
+      "subject": "Save与Accept指针卡点",
+      "observed_summary": "成员Save旧卡点未复现；首轮Accept停在实际点击。第二轮未知结果核对通过，成员combobox仍在实际点击前超时；富Profile已通过登录但等待目标按钮超时。 Q03成员任务1/1通过仍不建立旧指针根因。",
+      "limits": "不推断未完成点击已提交/重复，不笼统归因环境；前置、指针和目标卡片定位各自保留。"
+    },
+    {
+      "id": "UX23-Q01",
+      "status": "failed",
+      "subject": "首次完整整合",
+      "observed_summary": "Web683通过/19失败；浏览器45通过/17失败，单worker零重试；适用其他组件分别通过。",
+      "limits": "NoGit aggregate阻塞；后端仅历史字节一致复用；无整体质量通过。"
+    },
+    {
+      "id": "UX23-Q02",
+      "status": "failed",
+      "subject": "第二轮完整整合",
+      "observed_summary": "第二轮Web680通过/26失败，共706；Vite-dev Chromium59通过/5失败，共64，单worker零重试；类型/构建/所执行组件及一致性/清理通过。",
+      "limits": "两次完整运行仍失败；22项test-body deadline与4项断言/定位失败分别保留。C09/C10及统一DOM预算不在此冻结构建修复证明内；dev结果不能由built lane覆盖。"
+    },
+    {
+      "id": "UX23-Q03",
+      "status": "failed",
+      "subject": "后续独立标记整合",
+      "observed_summary": "built-frontend local real-backend完整Web711/728，17失败并另有3个未捕获window undefined异常；浏览器72/74，2失败；其他门槛/hash/清理通过。",
+      "limits": "无整体通过；新12个旧响应夹具、4个deadline、大型选项查询和2个浏览器失败分别诊断。未捕获异常另列，不断言跨case污染或根因。"
+    },
+    {
+      "id": "UX23-Q04",
+      "status": "failed",
+      "subject": "后续闭环与最终验收",
+      "observed_summary": "完整Web724/728，4失败、0报告未捕获异常；built Chromium71/74，3失败、0跳过/flaky/重试；其他适用门槛/hash/清理通过。",
+      "limits": "Q04仍未全通过；相同built历史通过与单独fault-contract1/1均不拼绿。本地模型/内容/任务连续性与所审查UX有界接受，完整工程与响应一致性不接受。"
+    }
+  ],
+  "first_full_run": {
+    "id": "UX23-Q01",
+    "manifest_sha256": "81d23d68f3d4be09c2d95bcb56de190dd3d1df9a6cd129732eb55e0cf8a4424f",
+    "web": {
+      "passed": 683,
+      "failed": 19,
+      "total": 702,
+      "exit_code": 1
+    },
+    "browser": {
+      "passed": 45,
+      "failed": 17,
+      "total": 62,
+      "skipped": 0,
+      "flaky": 0,
+      "exit_code": 1,
+      "lane": "vite_dev_local_real_backend"
+    },
+    "workers": 1,
+    "retries": 0
+  },
+  "final_integration": {
+    "case_id": "UX23-Q04",
+    "status": "FAILED",
+    "manifest_sha256": "44ebb78cf1ee3bd7a760d617e02f02ec1ac2577e4a390e9629cd7a9c76238b36",
+    "started_at_utc": null,
+    "finished_at_utc": null,
+    "web_result": {
+      "passed": 724,
+      "failed": 4,
+      "total": 728,
+      "files_passed": 68,
+      "files_failed": 4,
+      "files_total": 72,
+      "skipped": 0,
+      "todo": 0,
+      "duration_seconds": 1094.45,
+      "exit_code": 1,
+      "reported_uncaught_unhandled": 0,
+      "uncaught_limit": "Zero reported errors is not proof the historical three-error root cause was fixed."
+    },
+    "browser_result": {
+      "passed": 71,
+      "failed": 3,
+      "total": 74,
+      "files": 19,
+      "skipped": 0,
+      "flaky": 0,
+      "retries": 0,
+      "workers": 1,
+      "duration_seconds": 737.789,
+      "started_at_utc": "2026-10-23T06:36:27.841Z",
+      "exit_code": 1
+    },
+    "static_and_build_result": {
+      "individual_gates_passed": [
+        "TypeScript",
+        "Vite production build",
+        "Prettier entire src",
+        "Ticket DAG",
+        "Python negative fixtures",
+        "Go architecture negative fixtures",
+        "Production dependency direction",
+        "Go format"
+      ],
+      "python_negative_fixtures_passed": 9,
+      "aggregate_static_full": "NoGit blocked; not claimed"
+    },
+    "original_failure_disposition": {
+      "q03_failed_web_exact_name_matches_passed_in_q04": 17,
+      "q03_two_failed_browser_cases": "passed in Q04",
+      "historical_causes": "not established by later pass or absence of uncaught errors"
+    },
+    "independent_task_and_visual_review": "Seven Q03 screenshots and five relevant byte-identical production files independently reviewed; three newly generated Q04 narrow screenshots actually inspected; same28 built assets verified. No unconfirmed model/content/task-continuity issue was promoted to a defect.",
+    "integrity_and_cleanup": {
+      "integrity": {
+        "canonical_unchanged": true,
+        "snapshot_unchanged": true,
+        "tool_entrypoints_unchanged": true,
+        "build_artifacts_unchanged": true
+      },
+      "normal_cleanup": true,
+      "fallback_signals": false,
+      "remaining_owned_processes": 0,
+      "runtime_directory_residue": 0,
+      "test_ports_closed": true
+    },
+    "approved_portable_attachments": [],
+    "readiness_conclusion": "ACCEPTED WITH LIMITS for bounded local model/content/task continuity and reviewed UX. NOT accepted for full engineering verification, consistent waiting/interaction responsiveness or production readiness. Q04 remains724/728 Web and71/74 browser, with all failures and unknown causes retained.",
+    "additional_pending_cases": [],
+    "intended_browser_lane": "built_frontend_local_real_backend",
+    "lane_limit": "Local build preview, not production deployment or replacement of previous dev-lane results.",
+    "documentation_only_bridge": {
+      "record_location": "CHECKPOINT-STATUS.json in companion source archive",
+      "tested_source_manifest_sha256": "44ebb78cf1ee3bd7a760d617e02f02ec1ac2577e4a390e9629cd7a9c76238b36",
+      "contract": "Record exact approved doc changes and verify all original frozen production/test/config/build inputs byte-identical; any separately executed new test is listed outside the Q04 count.",
+      "self_hash_limit": "No archive or containing-manifest hash is embedded into this same document.",
+      "changed_document_paths": [
+        "docs/design/CONTENT-DESIGN-RULES.md",
+        "docs/design/PRODUCT-MATURITY-REVIEW-2026-10-22.md",
+        "docs/design/README.md",
+        "docs/design/UX-GUIDELINE-SOURCES.md",
+        "docs/design/UX-METHODOLOGY.md",
+        "docs/design/UX-STATE-AND-EDITOR-REVIEW-2026-10-23.md",
+        "docs/verification/UX-STATE-EDITOR-2026-10-23.md",
+        "docs/verification/evidence/UX-STATE-EDITOR-2026-10-23.json"
+      ]
+    },
+    "authorization_at_utc": "2026-10-23T06:16:22Z",
+    "web_started_at_utc": "2026-10-23T06:17:35Z",
+    "browser_discovery": {
+      "tests": 74,
+      "formal_files": 19,
+      "workers": 1,
+      "retries": 0
+    },
+    "acceptance_dimensions": {
+      "local_ux": "accepted_with_limits",
+      "full_suite_reliability": "not_passed",
+      "production_readiness": "not_assessed",
+      "principle": "Distinct judgments; unresolved deadlines are neither called harmless nor assigned an environmental/root-cause explanation. No automatic Q05.",
+      "consistent_responsiveness": "not_accepted"
+    },
+    "remaining_high_risk_outcome_checks": [],
+    "runner_completion_observed_utc": "2026-10-23T06:48:49Z",
+    "summary_after_cleanup_mtime_utc": "2026-10-23T06:48:48.258202+00:00",
+    "time_limit": "No instrumented exact cleanup-completed UTC; file mtime and observed process completion are distinct.",
+    "build_manifest_sha256": "73c0eabfebbd546139095aae48cda87bb7464df0bacb4ca73138e1589083fe77",
+    "build_file_count": 28,
+    "web_failures": [
+      {
+        "subject": "dirty registration pre-passive window",
+        "kind": "10000ms test-body deadline",
+        "observed_ms": 15567.18,
+        "limits": "No actual Back/unload in this DOM case and no observed dirty=false assertion failure; exact stalled await unknown."
+      },
+      {
+        "subject": "Profile group-choice initial two-connections readiness",
+        "kind": "initial RTL text query",
+        "observed_ms": 3930.06,
+        "limits": "Before user action; original truncated snapshot omits input result state; not an obsolete group option or missing availability fixture."
+      },
+      {
+        "subject": "missing preferred Output from stale entry context",
+        "kind": "10000ms test-body deadline",
+        "observed_ms": 10504.03,
+        "limits": "Exact stalled await unknown; supplemental no-silent-retarget outcome check separate."
+      },
+      {
+        "subject": "Source acceptance link through Profile and Back",
+        "kind": "10000ms test-body deadline",
+        "observed_ms": 19439.88,
+        "limits": "Exact stalled await unknown; current test remains failed, user-consequence browser coverage separate."
+      }
+    ],
+    "browser_failures": [
+      {
+        "subject": "390px Collection cancellation",
+        "checkpoint": "5000ms stability predicate",
+        "reached": [
+          "visible confirmation",
+          "continue-editing focused",
+          "trial click completed"
+        ],
+        "not_reached": [
+          "44px measurement",
+          "screenshot",
+          "actual continue-editing and value preservation"
+        ],
+        "limits": "Actual false conjunct and animation object not captured; earlier hidden-spinner diagnosis cannot be reused."
+      },
+      {
+        "subject": "first subscription entry",
+        "checkpoint": "5000ms exact new-configuration button locator",
+        "reached": [
+          "confirmed workspace",
+          "successful identity and Output reads"
+        ],
+        "not_reached": [
+          "configuration editor",
+          "save/cancel/review/publication journey"
+        ],
+        "limits": "Final button presence does not prove availability before deadline."
+      },
+      {
+        "subject": "first-use explicit endpoint choice",
+        "checkpoint": "5000ms success-notice disappearance;1 still present",
+        "reached": [
+          "two effective imported connections",
+          "direct default and unused-input guidance",
+          "unchanged Profile and Output identities",
+          "default control in viewport"
+        ],
+        "not_reached": [
+          "desktop capture",
+          "390 reflow",
+          "explicit endpoint choice",
+          "later draft persistence"
+        ],
+        "limits": "No toast timer/animation/event-loop measurements; cannot infer harmlessness or environment cause."
+      }
+    ],
+    "browser_by_file": {
+      "collection-task.ui.spec.ts": {
+        "passed": 8,
+        "failed": 0,
+        "skipped": 0,
+        "other": 0,
+        "duration_ms": 129667
+      },
+      "confirmation.ui.spec.ts": {
+        "passed": 2,
+        "failed": 1,
+        "skipped": 0,
+        "other": 0,
+        "duration_ms": 24575
+      },
+      "content-hierarchy.ui.spec.ts": {
+        "passed": 8,
+        "failed": 0,
+        "skipped": 0,
+        "other": 0,
+        "duration_ms": 57413
+      },
+      "existing-source-selection.ui.spec.ts": {
+        "passed": 3,
+        "failed": 0,
+        "skipped": 0,
+        "other": 0,
+        "duration_ms": 15429
+      },
+      "first-subscription.ui.spec.ts": {
+        "passed": 0,
+        "failed": 1,
+        "skipped": 0,
+        "other": 0,
+        "duration_ms": 12475
+      },
+      "group-membership.ui.spec.ts": {
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0,
+        "other": 0,
+        "duration_ms": 21356
+      },
+      "product-model.ui.spec.ts": {
+        "passed": 12,
+        "failed": 1,
+        "skipped": 0,
+        "other": 0,
+        "duration_ms": 151297
+      },
+      "repair.ui.spec.ts": {
+        "passed": 3,
+        "failed": 0,
+        "skipped": 0,
+        "other": 0,
+        "duration_ms": 36268
+      },
+      "replacement.ui.spec.ts": {
+        "passed": 2,
+        "failed": 0,
+        "skipped": 0,
+        "other": 0,
+        "duration_ms": 10945
+      },
+      "rich-editor.ui.spec.ts": {
+        "passed": 6,
+        "failed": 0,
+        "skipped": 0,
+        "other": 0,
+        "duration_ms": 41423
+      },
+      "session-recovery.ui.spec.ts": {
+        "passed": 5,
+        "failed": 0,
+        "skipped": 0,
+        "other": 0,
+        "duration_ms": 34599
+      },
+      "source-action-menu.ui.spec.ts": {
+        "passed": 2,
+        "failed": 0,
+        "skipped": 0,
+        "other": 0,
+        "duration_ms": 19459
+      },
+      "source-import-task.ui.spec.ts": {
+        "passed": 4,
+        "failed": 0,
+        "skipped": 0,
+        "other": 0,
+        "duration_ms": 35386
+      },
+      "source-refresh.ui.spec.ts": {
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0,
+        "other": 0,
+        "duration_ms": 11826
+      },
+      "source-review-content.ui.spec.ts": {
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0,
+        "other": 0,
+        "duration_ms": 5570
+      },
+      "source-saved-failure.ui.spec.ts": {
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0,
+        "other": 0,
+        "duration_ms": 8740
+      },
+      "ui-setup-contract.ui.spec.ts": {
+        "passed": 6,
+        "failed": 0,
+        "skipped": 0,
+        "other": 0,
+        "duration_ms": 12346
+      },
+      "workspace-return.ui.spec.ts": {
+        "passed": 3,
+        "failed": 0,
+        "skipped": 0,
+        "other": 0,
+        "duration_ms": 31656
+      },
+      "workspace.ui.spec.ts": {
+        "passed": 3,
+        "failed": 0,
+        "skipped": 0,
+        "other": 0,
+        "duration_ms": 11645
+      }
+    },
+    "q03_q04_build_bridge": {
+      "production_unchanged": true,
+      "authorized_test_files_changed": 8,
+      "built_file_count": 28,
+      "paths_modes_sizes_content_byte_identical": true,
+      "build_manifest_sha256": "73c0eabfebbd546139095aae48cda87bb7464df0bacb4ca73138e1589083fe77",
+      "q04_failed_browser_historical_q03_statuses": [
+        {
+          "file": "confirmation.ui.spec.ts",
+          "title": "collection cancellation has 44px targets at 390",
+          "q03_statuses": [
+            "passed"
+          ],
+          "q04_status": "failed"
+        },
+        {
+          "file": "first-subscription.ui.spec.ts",
+          "title": "first subscription skips the empty target gate but preserves save, cancel, review, and explicit publication",
+          "q03_statuses": [
+            "passed"
+          ],
+          "q04_status": "failed"
+        },
+        {
+          "file": "product-model.ui.spec.ts",
+          "title": "first-use endpoint: two imported connections are only routed by an explicit user choice",
+          "q03_statuses": [
+            "passed"
+          ],
+          "q04_status": "failed"
+        }
+      ],
+      "limit": "Historical per-case passes are not current passes. Identical built product bytes do not diagnose differing run outcomes or permit a combined all-green claim."
+    }
+  },
+  "excluded_claims": [
+    "full WCAG conformance",
+    "human usability research",
+    "multi-browser/device completeness",
+    "production deployment or external traffic",
+    "historical failure root causes established by non-reproduction",
+    "built-preview pass erases earlier dev-lane failures"
+  ],
+  "second_full_run": {
+    "id": "UX23-Q02",
+    "status": "failed",
+    "manifest_sha256": "93d40ea706ceff59d8679adb4cfb8ca29228948bfa19b3c9c037b4dfc3754df7",
+    "workers": 1,
+    "retries": 0,
+    "overall_exit_code": 1,
+    "web": {
+      "passed": 680,
+      "failed": 26,
+      "total": 706,
+      "files_passed": 56,
+      "files_failed": 14,
+      "files_total": 70,
+      "started_at_utc": "2026-10-23T04:35:20Z",
+      "duration_seconds": 1339.96,
+      "exit_code": 1,
+      "failure_classes": {
+        "test_body_5000ms_deadline": 22,
+        "stale_warning_text_assertion": 1,
+        "missing_profile_client_selection_dialog": 1,
+        "missing_rule_import_button": 1,
+        "tls_synthetic_fixture_value_mismatch": 1
+      }
+    },
+    "browser": {
+      "lane": "vite_dev_local_real_backend",
+      "passed": 59,
+      "failed": 5,
+      "total": 64,
+      "files": 16,
+      "skipped": 0,
+      "flaky": 0,
+      "retries": 0,
+      "started_at_utc": "2026-10-23T04:58:00.689Z",
+      "duration_seconds": 835.511,
+      "exit_code": 1
+    },
+    "individual_gates_passed": [
+      "TypeScript",
+      "Vite production build",
+      "Prettier entire src",
+      "Ticket DAG",
+      "Python negative fixtures",
+      "Go architecture negative fixtures",
+      "Production dependency direction",
+      "Go format"
+    ],
+    "build_warning_retained": "Existing greater-than-500kB chunk warning; no measured performance pass.",
+    "aggregate_static_full": "blocked_by_NoGit_tracked_file_guard_not_claimed",
+    "integrity": {
+      "canonical_unchanged": true,
+      "snapshot_unchanged": true,
+      "tool_entrypoints_unchanged": true
+    },
+    "cleanup": {
+      "normal": true,
+      "remaining_owned_processes": 0,
+      "fallback_signals": false,
+      "temporary_runtime_directories_remaining": 0,
+      "test_ports_closed": true
+    },
+    "browser_failure_disposition": [
+      {
+        "case": "collection_reopen_stability",
+        "observed": "Hidden zero-size spinner under transparent leaving ancestor still had an infinite animation; visible save button was enabled and sampled layout stable.",
+        "interpretation": "Supports overly broad descendant-animation predicate false positive, not pending save; all-animation bypass is not justified.",
+        "closure": "bounded helper correction verified; corresponding task passed Q03/Q04; historical run remains failed"
+      },
+      {
+        "case": "content_hierarchy_390_setup",
+        "observed": "Fresh-page authenticated-workspace heading missed 5-second setup deadline; task body not reached.",
+        "interpretation": "Final heading presence does not prove deadline visibility; request/commit timing was not collected.",
+        "closure": "bounded helper correction verified; corresponding task passed Q03/Q04; historical run remains failed"
+      },
+      {
+        "case": "group_membership_click",
+        "observed": "Fixed-member combobox action stopped at performing click; task assertions not reached.",
+        "interpretation": "Pointer cause remains unknown; no empty-Output baseline diagnosis.",
+        "closure": "unknown_cause"
+      },
+      {
+        "case": "rich_profile_source_import",
+        "observed": "Login passed; target continue button absent within 45-second test; list included earlier suite fixtures.",
+        "interpretation": "Public search and controlled pagination fixture subsequently verified; exact historical locator cause not established.",
+        "closure": "bounded helper correction verified; corresponding task passed Q03/Q04; historical run remains failed"
+      },
+      {
+        "case": "workspace_return_setup",
+        "observed": "Separate login helper missed 5-second heading deadline and remained at busy login form; return task not reached.",
+        "interpretation": "No safe auth timing evidence from this helper.",
+        "closure": "bounded helper correction verified; corresponding task passed Q03/Q04; historical run remains failed"
+      }
+    ],
+    "new_bounded_passes": {
+      "session_recovery": 5,
+      "source_menu": 2,
+      "rich_editor": 6,
+      "first_subscription": 1,
+      "source_review_content": 1,
+      "unknown_accept_outcome_readback": "passed"
+    },
+    "historical_backend_reuse": {
+      "input_files_byte_identical": 424,
+      "rerun_this_round": false,
+      "ordinary_packages": 21,
+      "race_packages": 21,
+      "top_level_tests_per_run": 442,
+      "native_or_opt_in_skip_events": 50,
+      "vet": "historical_pass_reused",
+      "source_archive_build": "historical_pass_reused"
+    },
+    "unrun": [
+      "API Playwright",
+      "full Go behavior/race/vet in this invocation",
+      "nested runtime",
+      "native parsers/processes",
+      "managed runtime",
+      "packaging smoke",
+      "external deployment and traffic"
+    ],
+    "progress_count_correction": "Earlier failed-file-only reporter counts were lower bounds, not all completed files; terminal 70 files and 706 tests are authoritative."
+  },
+  "dom_budget_policy": {
+    "case_id": "UX23-C08",
+    "status": "policy_boundaries_verified_in_private_fixtures",
+    "tool_version": "Vitest 5.0.5",
+    "default_dom_test_body_ms": 10000,
+    "default_node_test_body_ms": 5000,
+    "rtl_async_step_ms": 1000,
+    "explicit_shorter_tests_unchanged": true,
+    "hook_budgets_unchanged": true,
+    "started_at_utc": "2026-10-23T05:13:15Z",
+    "finished_at_utc": "2026-10-23T05:13:43Z",
+    "positive_passes": 3,
+    "expected_deadline_failures": 5,
+    "skipped": 0,
+    "retries": 0,
+    "actual_process_exit_code": 1,
+    "expected_process_exit_code": 1,
+    "strict_report_validator_exit_code": 0,
+    "observed_boundaries": [
+      {
+        "subject": "DOM default permits a task longer than 5 seconds",
+        "status": "passed",
+        "expected_negative": false,
+        "duration_ms": 5213.114,
+        "deadline_message": null
+      },
+      {
+        "subject": "RTL step timeout remains 1000ms",
+        "status": "passed",
+        "expected_negative": false,
+        "duration_ms": 1051.659,
+        "deadline_message": null
+      },
+      {
+        "subject": "DOM default rejects an incomplete task at 10000ms",
+        "status": "failed",
+        "expected_negative": true,
+        "duration_ms": 10028.218,
+        "deadline_message": "Error: Test timed out in 10000ms."
+      },
+      {
+        "subject": "explicit numeric 50ms remains enforced",
+        "status": "failed",
+        "expected_negative": true,
+        "duration_ms": 90.572,
+        "deadline_message": "Error: Test timed out in 50ms."
+      },
+      {
+        "subject": "explicit options 50ms remains enforced",
+        "status": "failed",
+        "expected_negative": true,
+        "duration_ms": 67.397,
+        "deadline_message": "Error: Test timed out in 50ms."
+      },
+      {
+        "subject": "explicit hook 50ms remains enforced",
+        "status": "failed",
+        "expected_negative": true,
+        "duration_ms": 52.978,
+        "deadline_message": "Error: Hook timed out in 50ms."
+      },
+      {
+        "subject": "Node default remains 5000ms",
+        "status": "passed",
+        "expected_negative": false,
+        "duration_ms": 2.601,
+        "deadline_message": null
+      },
+      {
+        "subject": "Node default rejects an incomplete task at 5000ms",
+        "status": "failed",
+        "expected_negative": true,
+        "duration_ms": 5060.751,
+        "deadline_message": "Error: Test timed out in 5000ms."
+      }
+    ],
+    "scope_limit": "Configuration semantics only. Private fixtures are not distributed and their deliberate failures are not part of ordinary product counts. Full product integration and performance root cause remain unestablished.",
+    "integration": {
+      "confirmed_at_utc": "2026-10-23T05:27:57.069186Z",
+      "hash_guarded": true,
+      "full_integrated_validation": "Q03 ran policy; 4 test-body10000ms deadline failures remain, overall failed"
+    }
+  },
+  "browser_helper_closure": {
+    "case_id": "UX23-C11",
+    "status": "bounded_verified_in_failed_integration",
+    "browser_lane": "vite_dev_local_real_backend",
+    "passed": 10,
+    "failed": 0,
+    "original_failed_tasks": 4,
+    "new_helper_regressions": 6,
+    "workers": 1,
+    "retries": 0,
+    "setup_only_timeout_ms": 18000,
+    "product_existing_session_deadline_ms": 15000,
+    "render_allowance_ms": 3000,
+    "user_action_budgets_changed": false,
+    "delayed_confirmation_observed_ms": 6379,
+    "session_503_early_rejection_ms": 260,
+    "known_error_reobservation_additional_requests": 0,
+    "public_search_pagination_control": {
+      "preceding_synthetic_profiles": 12,
+      "page_size": 10,
+      "entire_existing_records_unchanged": true,
+      "owned_only_cleanup": true,
+      "outputs_published": 0
+    },
+    "retained_non_green_attempt": {
+      "passed": 9,
+      "failed": 1,
+      "reason": "503 fixture assumed one development startup confirmation request but observed two; final check compares unchanged count after known error state."
+    },
+    "separate_product_dependency": "Collection save/preview stable action labels and truthful busy states; integrate through its owner, not the test-only candidate tree.",
+    "untouched_historical_failure": "Group membership performing-click timeout",
+    "app_typecheck": "passed",
+    "new_helpers_and_regression_types": "passed",
+    "visual_review": "Executor inspected selected Collection 320px and Source/Profile 390px screenshots; no raw images attached here.",
+    "limits": "Focused run only; no product speed, auth root cause, production deployment or full-suite claim. Optional port probe was blocked by netlink sandbox; runner teardown and lock release observed, not a port-check pass.",
+    "product_dependency_integrated": true,
+    "full_integration": "Q03 six helper tests and original targeted tasks passed; overall run failed"
+  },
+  "resource_label_bootstrap": {
+    "status": "bounded_verified_in_failed_integration",
+    "observed": "At 3819ms with DOM10 policy, authenticated main held only lazy-loading placeholder; resource API had not been called.",
+    "scope": "Failed before resource label task; not evidence the label action itself completed then failed.",
+    "proposed_change": "Test-only RTL act plus real dynamic import settlement before unchanged 1-second label/focus/input assertions.",
+    "verification": {
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0,
+      "retries": 0,
+      "exit_code": 0,
+      "total_duration_ms": 3066,
+      "body_budget_ms": 10000,
+      "per_query_budget_ms": 1000,
+      "product_hashes_unchanged": true,
+      "stripped_private_instrumentation_matches_candidate": true,
+      "full_integration": "Q03 resource-label file passed; overall run failed"
+    }
+  },
+  "existing_source_closure": {
+    "case_id": "UX23-C10",
+    "status": "bounded_verified_in_final_14px_failed_integration",
+    "baseline_http_matrix": {
+      "operations": [
+        "Collection save",
+        "Collection preview",
+        "Profile save",
+        "Profile preview"
+      ],
+      "all_four_200": [
+        "clean accepted",
+        "enabled accepted old snapshot with later import failure",
+        "enabled accepted old snapshot with pending candidate"
+      ],
+      "all_four_400": [
+        "first pending candidate with no accepted snapshot",
+        "first import failure with no accepted snapshot",
+        "paused old accepted snapshot"
+      ],
+      "source_free_incomplete_profile": {
+        "draft_save": 200,
+        "preview": 400
+      }
+    },
+    "dom": {
+      "passed": 13,
+      "failed": 0,
+      "typecheck": "passed"
+    },
+    "browser": {
+      "passed": 3,
+      "failed": 0,
+      "workers": 1,
+      "retries": 0,
+      "task_budget_seconds": 45,
+      "duration_seconds": 30.0,
+      "source_hashes_unchanged": true,
+      "owned_synthetic_cleanup": "passed",
+      "ports_closed": true
+    },
+    "verified_boundaries": [
+      "in-context Source-only recovery with unsaved parent values and ordered recipes preserved",
+      "no implicit parent save, enabling, acceptance or publication",
+      "Profile collection mode and shared Collection recipe unchanged",
+      "actual HTTP200 save after explicit collection/last-source clear excludes old materialized endpoints",
+      "route groups/rules/default and platform references preserved",
+      "no-reference advanced JSON manual endpoints retain existing semantics",
+      "cancel/defer preserves existing selected reference",
+      "all three explicit-removal controls restore selector focus"
+    ],
+    "retained_non_green_evidence": [
+      "Focused regression 37/38: old extraction copy assertion separately owned",
+      "Baseline bundled journey timeout interrupted in-test cleanup",
+      "Baseline variable-shadowing cleanup error",
+      "Candidate created before parent fixture mutation correctly returned409; fixture order corrected without weakening conflict guard"
+    ],
+    "last_change_after_browser_pass": {
+      "scope": "action-critical prerequisite text font size only",
+      "from_px": 12,
+      "to_px": 14,
+      "integrated_320_390_pixel_recheck": "passed in Q03, actual final14px screenshots independently viewed by coordinator"
+    },
+    "integrated_at_utc": "2026-10-23T05:38:49.003200Z",
+    "full_integration": "Q03 three formal browser tasks passed; overall run failed",
+    "final_visual_review": {
+      "source_manifest_sha256": "26d3d031764195815494640424532f4f03fb1c831fcbb01689717b7756a224cd",
+      "build_manifest_sha256": "73c0eabfebbd546139095aae48cda87bb7464df0bacb4ca73138e1589083fe77",
+      "images": [
+        {
+          "evidence_id": "UX23-C10-320",
+          "sha256": "1855c6479de05f65100aa55cfefcce01ad939d939edccacdab2071722b68f4c2",
+          "bytes": 48327,
+          "visually_inspected": true,
+          "included_in_this_record": false
+        },
+        {
+          "evidence_id": "UX23-C10-390",
+          "sha256": "fb5c0639d96ee3fcc4e767974e80b2154c57a0dcde21c0b6e3100f25184011b0",
+          "bytes": 55407,
+          "visually_inspected": true,
+          "included_in_this_record": false
+        },
+        {
+          "evidence_id": "UX23-C10-PROFILE-390",
+          "sha256": "03e46a8b6ef2018cd674e5e2d89eb3320018c6792fa2d7a79545f844e7681eb0",
+          "bytes": 55279,
+          "visually_inspected": true,
+          "included_in_this_record": false
+        }
+      ],
+      "safe_observations": [
+        "At 320, the explanatory sentence wraps over two readable lines without overlaying action buttons; at 390 it occupies one line.",
+        "Issue actions remain separated from the explanation and visible; the long Collection title wraps naturally at 320.",
+        "The inspected 320/390 views show no horizontal cropping; lower content continues within the intended scrollable editor.",
+        "Profile returned-390 preserves collection mode, selected collection and routing intent; transient success toast does not overlap the form title or primary controls."
+      ],
+      "limits": "Pixel review of these captured states, not universal accessibility/comprehension or computed-font measurement. Final frozen CSS declares the 14px footer; no prior 12px screenshots reused."
+    }
+  },
+  "third_full_run": {
+    "id": "UX23-Q03",
+    "status": "failed",
+    "source_manifest_sha256": "26d3d031764195815494640424532f4f03fb1c831fcbb01689717b7756a224cd",
+    "build_manifest_sha256": "73c0eabfebbd546139095aae48cda87bb7464df0bacb4ca73138e1589083fe77",
+    "build_file_count": 28,
+    "browser_lane": "built_frontend_local_real_backend",
+    "workers": 1,
+    "retries": 0,
+    "web": {
+      "passed": 711,
+      "failed": 17,
+      "total": 728,
+      "skipped": 0,
+      "files_total": 72,
+      "files_passed": 67,
+      "files_failed": 5,
+      "duration_seconds": 1051.98,
+      "started_at_utc": "2026-10-23T05:39:53Z",
+      "exit_code": 1
+    },
+    "unhandled_errors": {
+      "count": 3,
+      "message": "ReferenceError: window is not defined",
+      "reported_during": "source-editor DOM test execution",
+      "limits": "Separate from failed test count; file attribution does not establish code location, root cause or cross-case contamination."
+    },
+    "web_failure_triage": {
+      "legacy_source_get_fixture_contract": {
+        "count": 12,
+        "status": "six-file GET correction79/79 and merged; original12 passed Q04"
+      },
+      "test_body_10000ms_deadline": {
+        "count": 4,
+        "status": "all original4 passed Q04; historical cause not established; Q04 has3 different body deadlines"
+      },
+      "large_option_query": {
+        "count": 1,
+        "status": "original case passed Q04; historical cause not established"
+      }
+    },
+    "browser": {
+      "passed": 72,
+      "failed": 2,
+      "total": 74,
+      "files": 19,
+      "skipped": 0,
+      "flaky": 0,
+      "duration_seconds": 541.364,
+      "started_at_utc": "2026-10-23T05:57:55.450Z",
+      "exit_code": 1
+    },
+    "browser_failure_triage": [
+      {
+        "subject": "missing destination deep-link warning",
+        "observed": "Expected warning missing within 5s; final state still lazy editor loading.",
+        "status": "same immutable artifact1/1 diagnostic not reproduced; historical cause unresolved"
+      },
+      {
+        "subject": "workspace saved422 copy",
+        "observed": "Exact generic notice assertion no longer matches truthful saved-input feedback.",
+        "status": "one-line exact-copy migration1/1 passed and merged; original task passed Q04"
+      }
+    ],
+    "individual_gates_passed": [
+      "TypeScript",
+      "Vite production build",
+      "Prettier entire src",
+      "Ticket DAG",
+      "Python negative fixtures",
+      "Go architecture negative fixtures",
+      "Production dependency direction",
+      "Go format"
+    ],
+    "integrity": {
+      "canonical_unchanged": true,
+      "snapshot_unchanged": true,
+      "tool_entrypoints_unchanged": true,
+      "build_artifacts_unchanged": true
+    },
+    "cleanup": {
+      "normal": true,
+      "remaining_owned_processes": 0,
+      "fallback_signals": false,
+      "temporary_runtime_directories_remaining": 0,
+      "test_ports_closed": true
+    },
+    "aggregate_static_full": "blocked_by_NoGit_tracked_file_guard_not_claimed",
+    "backend_reuse": "424 unchanged inputs; historical evidence only, no backend/race/vet rerun",
+    "unrun": [
+      "API Playwright",
+      "full Go behavior/race/vet in this invocation",
+      "nested runtime",
+      "native parsers/processes",
+      "managed runtime",
+      "packaging smoke",
+      "external deployment and traffic"
+    ],
+    "browser_by_file": {
+      "collection-task.ui.spec.ts": {
+        "passed": 8,
+        "failed": 0,
+        "skipped": 0
+      },
+      "confirmation.ui.spec.ts": {
+        "passed": 3,
+        "failed": 0,
+        "skipped": 0
+      },
+      "content-hierarchy.ui.spec.ts": {
+        "passed": 7,
+        "failed": 1,
+        "skipped": 0
+      },
+      "existing-source-selection.ui.spec.ts": {
+        "passed": 3,
+        "failed": 0,
+        "skipped": 0
+      },
+      "first-subscription.ui.spec.ts": {
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0
+      },
+      "group-membership.ui.spec.ts": {
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0
+      },
+      "product-model.ui.spec.ts": {
+        "passed": 13,
+        "failed": 0,
+        "skipped": 0
+      },
+      "repair.ui.spec.ts": {
+        "passed": 3,
+        "failed": 0,
+        "skipped": 0
+      },
+      "replacement.ui.spec.ts": {
+        "passed": 2,
+        "failed": 0,
+        "skipped": 0
+      },
+      "rich-editor.ui.spec.ts": {
+        "passed": 6,
+        "failed": 0,
+        "skipped": 0
+      },
+      "session-recovery.ui.spec.ts": {
+        "passed": 5,
+        "failed": 0,
+        "skipped": 0
+      },
+      "source-action-menu.ui.spec.ts": {
+        "passed": 2,
+        "failed": 0,
+        "skipped": 0
+      },
+      "source-import-task.ui.spec.ts": {
+        "passed": 4,
+        "failed": 0,
+        "skipped": 0
+      },
+      "source-refresh.ui.spec.ts": {
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0
+      },
+      "source-review-content.ui.spec.ts": {
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0
+      },
+      "source-saved-failure.ui.spec.ts": {
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0
+      },
+      "ui-setup-contract.ui.spec.ts": {
+        "passed": 6,
+        "failed": 0,
+        "skipped": 0
+      },
+      "workspace-return.ui.spec.ts": {
+        "passed": 3,
+        "failed": 0,
+        "skipped": 0
+      },
+      "workspace.ui.spec.ts": {
+        "passed": 2,
+        "failed": 1,
+        "skipped": 0
+      }
+    },
+    "readiness_conclusion": "Q03 remains failed. Specific source repair/removal and final14px captured states verified. Subsequent bounded local UX acceptance is separate from non-green full engineering results."
+  },
+  "post_q03_test_closure": {
+    "case_id": "UX23-C12",
+    "scope": "8 test-only files; production unchanged",
+    "integrated_at_utc": "2026-10-23T06:15:58.904425Z",
+    "resulting_source_manifest_sha256": "44ebb78cf1ee3bd7a760d617e02f02ec1ac2577e4a390e9629cd7a9c76238b36",
+    "runs": [
+      {
+        "subject": "six-file successful Source GET fixture contract",
+        "passed": 79,
+        "failed": 0,
+        "skipped": 0,
+        "files": 6,
+        "duration_seconds": 121.25,
+        "unhandled_errors": 0,
+        "limits": "Only successful existing source GET responses gain correct availability fields; unavailable states/actions/assertions/budgets unchanged. Some unrelated historical deadlines passed without proven root cause."
+      },
+      {
+        "subject": "original Source editor8 and one Source refresh target observation",
+        "passed": 9,
+        "failed": 0,
+        "unselected": 7,
+        "duration_seconds": 21.6,
+        "unhandled_errors": 0,
+        "limits": "Original synchronous cleanup also passed; not failing-before-passing proof."
+      },
+      {
+        "subject": "Source editor awaited cleanup",
+        "passed": 8,
+        "failed": 0,
+        "skipped": 0,
+        "duration_seconds": 17.45,
+        "unhandled_errors": 0,
+        "limits": "Test-only awaited RTL act around existing cleanup and QueryClient.clear; original end-open unmount/assertions remain; no timer/window shim/error suppression. Historical root cause unresolved."
+      },
+      {
+        "subject": "workspace trusted422 exact-copy migration",
+        "passed": 1,
+        "failed": 0,
+        "limits": "One exact text assertion updated; original task/retained input/draft/no-Output assertions unchanged. No added same-source-ID proof."
+      },
+      {
+        "subject": "same-built-artifact missing destination diagnostic",
+        "passed": 1,
+        "failed": 0,
+        "warning_after_click_ms": 524.6,
+        "editor_after_click_ms": 408.7,
+        "original_assertion_budget_ms": 5000,
+        "limits": "Original failure not reproduced; instrumentation changes observation conditions; no product optimization, timeout change or historical causal conclusion."
+      }
+    ],
+    "run_counts_overlap": true,
+    "full_integration": "Q04 completed non-green; all original17 Web and2 browser failures passed, with4 new Web and3 new browser failures retained"
+  },
+  "independent_product_reassessment": {
+    "status": "accepted_with_limits_after_terminal_and_supplemental_evidence",
+    "date": "2026-10-23",
+    "source_run": "UX23-Q03",
+    "source_manifest_sha256": "26d3d031764195815494640424532f4f03fb1c831fcbb01689717b7756a224cd",
+    "build_manifest_sha256": "73c0eabfebbd546139095aae48cda87bb7464df0bacb4ca73138e1589083fe77",
+    "actual_images_viewed": 7,
+    "captured_states": [
+      "saved first parse failure390",
+      "saved update parse failure390",
+      "existing Source selection1440",
+      "existing Source selection390",
+      "existing Source selection320",
+      "returned Profile390",
+      "last direct Source removed"
+    ],
+    "specified_production_files_compared_byte_identical": 5,
+    "comparison_scope": "Five named relevant production files only, not a newly independent whole-production-directory audit.",
+    "findings": [
+      "Trusted422 duplicate feedback closed with factual Chinese notice and recovery",
+      "Existing unavailable Source identity/reason and in-context repair/removal closed",
+      "Explicit last-reference removal clears old materialized connections while preserving input mode, recipes and routing identity"
+    ],
+    "new_blocking_ux_or_model_issue_found": false,
+    "recommendation": "Accept bounded local model/content/task continuity and reviewed UX; stop speculative redesign and blanket green-chasing. Keep full engineering and waiting/interaction consistency unaccepted and retain all non-green outcomes.",
+    "limits": [
+      "not a replacement for test gates",
+      "not a human comprehension study",
+      "not production readiness",
+      "not complete WCAG conformance",
+      "not Google endorsement",
+      "historical timing and unhandled-error root causes remain unresolved"
+    ]
+  },
+  "post_q04_profile_initial_query_diagnostic": {
+    "status": "single_unchanged_case_passed_original_failure_unresolved",
+    "passed": 1,
+    "failed": 0,
+    "unselected_skips": 8,
+    "original_query_budget_ms": 1000,
+    "observed_query_ms": 419,
+    "selected_case_duration_ms": 3054,
+    "production_change": false,
+    "test_patch": false,
+    "stripped_instrumentation_byte_identical": true,
+    "original_group_choice_preservation_save_assertions": "passed",
+    "limits": "Standalone instrumented observation, not a Q04 correction or additional whole-suite pass; no established root cause or startup/host explanation."
+  },
+  "navigation_risk_coverage": {
+    "failed_dom_contract": "Synchronous layout-commit dirty registration and false after unmount, not actual Back/unload. Test-body timeout, no observed false-value assertion.",
+    "user_consequence_coverage": [
+      "dirty native Back cancellation preserves field and history entry",
+      "auth-paused Back deferred",
+      "explicit discard once and Forward intact",
+      "deep-link Back/Forward cancellation preserves URL and input"
+    ],
+    "current_browser_scopes": {
+      "workspace_return": "3/3 passed Q04",
+      "product_model": "12/13 passed; relevant navigation tasks passed, unrelated endpoint-notice task failed"
+    },
+    "limits": "Does not prove the precise pre-passive scheduling window; no extra duplicate navigation task justified."
+  },
+  "supplemental_preferred_output_fault_contract": {
+    "case_id": "UX23-C13",
+    "evidence_kind": "One separate real-browser catalog-response fault-contract over real local account/backend; not real backend deletion",
+    "status": "passed",
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "flaky": 0,
+    "retries": 0,
+    "test_duration_seconds": 10.618,
+    "run_duration_seconds": 24.228,
+    "started_at_utc": "2026-10-23T06:53:06.838Z",
+    "included_in_Q04_74_tests": false,
+    "new_test_path": "web/tests/preferred-output-missing.ui.spec.ts",
+    "executed_and_candidate_test_sha256": "8e580888bbb486c87be58596d5ff18f0a5db788807dfdb00167f0d7e64cf6f1e",
+    "source_manifest_sha256": "44ebb78cf1ee3bd7a760d617e02f02ec1ac2577e4a390e9629cd7a9c76238b36",
+    "build_manifest_sha256": "73c0eabfebbd546139095aae48cda87bb7464df0bacb4ca73138e1589083fe77",
+    "frozen_built_files_unchanged": 28,
+    "production_src_files_byte_identical": 149,
+    "format": "passed",
+    "new_spec_typecheck": "passed",
+    "fault": {
+      "injected_catalog_responses": 1,
+      "hidden_owned_target_count": 1,
+      "same_profile_remaining_outputs": 0,
+      "independent_control_retained": true
+    },
+    "observed_boundaries": {
+      "namedMissingPreferred": true,
+      "noAutomaticAlternativeOrCreation": true,
+      "checkDisabledUntilExplicitChoice": true,
+      "browserMutationCount": 0,
+      "entireOutputCatalogUnchanged": true,
+      "savedProfileUnchanged": true,
+      "publicationDuringJourney": false
+    },
+    "cleanup": {
+      "owned_output_revocations": 2,
+      "owned_profile_deletions": 2,
+      "all_owned_cleanup_http_ok": true,
+      "unowned_ids_changed": false
+    },
+    "optional_desktop_image": "Captured transition; rejected for clean desktop delivery, no rerun",
+    "limits": [
+      "No actual backend deletion",
+      "No explanation or erasure of Q04 DOM deadline",
+      "No check/publish action executed in guarded journey",
+      "Setup creates synthetic objects before zero-browser-write assertions",
+      "No combined75-test full-suite claim"
+    ],
+    "integration": "Exact executed new test bytes merged separately after Q04; not part of Q04 74-case run"
+  },
+  "q04_actual_visual_review": {
+    "source_manifest_sha256": "44ebb78cf1ee3bd7a760d617e02f02ec1ac2577e4a390e9629cd7a9c76238b36",
+    "build_manifest_sha256": "73c0eabfebbd546139095aae48cda87bb7464df0bacb4ca73138e1589083fe77",
+    "css_sha256": "1163ffe6ea249fa7bf4c34af39643271576d0d69fee8566973928031b588fa90",
+    "actual_new_images_viewed": 3,
+    "images": [
+      {
+        "evidence_id": "UX23-Q04-320",
+        "sha256": "1855c6479de05f65100aa55cfefcce01ad939d939edccacdab2071722b68f4c2",
+        "bytes": 48327,
+        "included_in_this_record": false
+      },
+      {
+        "evidence_id": "UX23-Q04-390",
+        "sha256": "2d937f562b5b682ba9a3c9ef2bf7c2ba42efddd3fd14f787dc520c40298abde2",
+        "bytes": 55396,
+        "included_in_this_record": false
+      },
+      {
+        "evidence_id": "UX23-Q04-PROFILE-390",
+        "sha256": "03e46a8b6ef2018cd674e5e2d89eb3320018c6792fa2d7a79545f844e7681eb0",
+        "bytes": 55279,
+        "included_in_this_record": false
+      }
+    ],
+    "observations": [
+      "320: action buttons separated; warning consequence wraps legibly onto two lines; long synthetic title wraps naturally; no horizontal clipping/overlap in shown area.",
+      "390: warning consequence fits one line; source/processing order and distinct actions remain readable.",
+      "Profile390: collection-mode choice, selected collection and retained group remain visible; source-updated toast does not cover editor primary actions."
+    ],
+    "limits": "Only shown pixels at captured states; not universal usability/accessibility or a measured computed-font-size claim. Lower content uses normal editor scrolling."
+  },
+  "final_product_decision": {
+    "recorded_at_utc": "2026-10-23T06:56:24Z",
+    "status": "accepted_with_limits",
+    "accepted_scope": [
+      "local model",
+      "content",
+      "task continuity",
+      "reviewed local UX"
+    ],
+    "not_accepted": [
+      "full engineering gate",
+      "consistent waiting and interaction responsiveness",
+      "production readiness"
+    ],
+    "not_claimed": [
+      "Google parity or endorsement",
+      "complete WCAG conformance",
+      "human comprehension study"
+    ],
+    "stopping_condition": "Four full runs recorded, concrete product gaps closed in bounded evidence, independent review found no confirmed remaining model/content/task-continuity blocker, remaining high-risk target outcome checked once; no speculative broad redesign or fullQ05 green-chasing.",
+    "remaining_risks": [
+      "4 failed Q04 Web tests",
+      "3 interrupted Q04 browser tasks",
+      "unknown timing/readiness causes",
+      "historical uncaught cause not established despite zero Q04 reports"
+    ],
+    "source_and_build_identity_preserved": true
+  }
+}

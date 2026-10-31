@@ -1,0 +1,37 @@
+{
+  "checkpoint": "WIP51",
+  "snapshot": "accepted bounded source-apply and automatic-accounting refinements",
+  "acceptance": "CHECKPOINT-EVIDENCE/WIP51/aggregate-acceptance.json",
+  "acceptance_kind": "modular; original quick R1 exit1 retained",
+  "current_requested_features_complete": true,
+  "verification": {
+    "frontend_tests_passed": 1877,
+    "frontend_test_files": 169,
+    "frontend_failed": 0,
+    "frontend_pending": 0,
+    "typecheck": "passed",
+    "production_build": "passed",
+    "web_R2_exit": 0,
+    "unchanged_web_scope_files": 391,
+    "go_and_managed_runtime": "R1 vet/all race/build passed; original non-web inputs unchanged",
+    "mixed_recovery_supplement": "format/vet/focused race passed",
+    "visual": "bounded r6/r8/r9 observed states; r7 focus failure preserved",
+    "normal_site_containment_tests_passed": 22
+  },
+  "limits": [
+    "Older backup native file authorization is not established; no post-file validation/restore accepted.",
+    "Synthetic UI is not real backend execution; not every protocol or terminal state tested.",
+    "No full native/browser/device/assistive technology or production acceptance.",
+    "No Google-level certification; inherited native runtime limits remain."
+  ],
+  "prior_status": "CHECKPOINT-EVIDENCE/WIP51/historical-wip50-checkpoint-status.json",
+  "library_save_success": false,
+  "library_save_status": "external successful receipt required",
+  "private_demo_deployment": "CHECKPOINT-EVIDENCE/WIP51/private-demo-deployment.json",
+  "production_ready": false,
+  "production_deployed": false,
+  "project_complete": false,
+  "user_acceptance": false,
+  "artifact_kind": "source",
+  "selected_screenshot_bytes_in_archives": false
+}

@@ -1,0 +1,17 @@
+{
+  "checkpoint": "WIP49",
+  "status": "accepted bounded UI and motion source checkpoint",
+  "acceptance_kind": "source-bound modular aggregate with separately completed offline build",
+  "accepted_utc": "2026-10-30T05:42:24.130180+00:00",
+  "frontend": "frontend-final.passed.json",
+  "visual": "visual-motion.passed.json",
+  "static": "static-r2.passed.json",
+  "backend_provenance": "backend-provenance.unchanged.json",
+  "historical_failure": "frontend-r1.failed.json",
+  "focus_repair": "focus-observer-repair.json",
+  "new_backend_runtime_tests": false,
+  "private_demo_publication": "private-demo-deployment.json",
+  "library_save": "pending external receipt",
+  "user_acceptance": false,
+  "production_ready": false
+}

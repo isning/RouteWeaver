@@ -1,0 +1,12 @@
+=== RUN   TestNativeInstallDoesNotEraseAcceptedRevocation
+--- PASS: TestNativeInstallDoesNotEraseAcceptedRevocation (7.39s)
+=== RUN   TestCoreTransitionCannotReplayEqualTimeLeaseAfterRevocation
+--- PASS: TestCoreTransitionCannotReplayEqualTimeLeaseAfterRevocation (0.00s)
+=== RUN   TestCoreTransitionCannotReplayAfterBackdatedRevocation
+--- PASS: TestCoreTransitionCannotReplayAfterBackdatedRevocation (0.00s)
+=== RUN   TestFailedCorePreparationStillAllowsStoppingOldRuntime
+--- PASS: TestFailedCorePreparationStillAllowsStoppingOldRuntime (0.00s)
+=== RUN   TestMissingStagedTransitionAdapterIsNotAssumedAbsent
+--- PASS: TestMissingStagedTransitionAdapterIsNotAssumedAbsent (0.00s)
+PASS
+ok  	routeweaver/internal/agent	8.470s

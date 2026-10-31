@@ -1,0 +1,24 @@
+{
+  "checkpoint": "WIP47",
+  "status": "accepted-bounded-source-checkpoint",
+  "acceptance_kind": "Repaired modular aggregate, not a single all-green quick invocation",
+  "accepted_utc": "2026-10-29T18:12:20.062848+00:00",
+  "frontend": "frontend-final.passed.json",
+  "static": "static-repair.passed.json",
+  "backend": "All main and managed vet/race/build stages passed in quick R2; final 542-file backend/API/test-harness scope compared unchanged.",
+  "backend_scope_file_count": 542,
+  "backend_scope_unchanged": true,
+  "backend_api_reuse_receipt": "unchanged-backend-api-scope.json",
+  "backend_manifest_sha256": "2271b511a690e7593dd6a318ba92bbe4bc531f5303b0fda8143022079df293ab",
+  "api": "api-r2.passed.json",
+  "native": "native-parity.passed.json",
+  "historical_failed_quick_preserved": "quick-r2.failed.json",
+  "browser": "browser-native-launch.blocked.json",
+  "limits": [
+    "179 collected native browser cases not executed; three smoke cases blocked before assertions.",
+    "Actual cloud-browser desktop and390x568/1024x568 iframe CSS viewport review is separate; not physical device/touch/full accessibility testing.",
+    "sing-box runtime not run under known host netlink restriction; parser checks passed.",
+    "No production deployment, network performance, live quota proof, all35-story completion or Google/panel equivalence claimed."
+  ],
+  "delivery": "Archive save and private demo deployment are external subsequent receipts, not asserted here."
+}

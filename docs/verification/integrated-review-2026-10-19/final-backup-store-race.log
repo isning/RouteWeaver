@@ -1,0 +1,38 @@
+=== RUN   TestBackupStreamingDoesNotBlockAdmissionOrConfigurationWrites
+--- PASS: TestBackupStreamingDoesNotBlockAdmissionOrConfigurationWrites (0.08s)
+=== RUN   TestSecondaryBackupRejectsMissingLiveFeedIndex
+--- PASS: TestSecondaryBackupRejectsMissingLiveFeedIndex (0.02s)
+=== RUN   TestSecondaryBackupRejectsMissingGenerationCounter
+--- PASS: TestSecondaryBackupRejectsMissingGenerationCounter (0.02s)
+=== RUN   TestBackupGenerationFenceCannotRegressButTombstoneMayLead
+--- PASS: TestBackupGenerationFenceCannotRegressButTombstoneMayLead (0.02s)
+=== RUN   TestBackupFreshRestorePreservesSecretsIdentitiesIndexesCountersAndHistory
+--- PASS: TestBackupFreshRestorePreservesSecretsIdentitiesIndexesCountersAndHistory (2.22s)
+=== RUN   TestBackupRejectsInvalidOrOccupiedTargetBeforeMutation
+=== RUN   TestBackupRejectsInvalidOrOccupiedTargetBeforeMutation/unsupported_schema
+=== RUN   TestBackupRejectsInvalidOrOccupiedTargetBeforeMutation/missing_identity
+=== RUN   TestBackupRejectsInvalidOrOccupiedTargetBeforeMutation/duplicate_record
+=== RUN   TestBackupRejectsInvalidOrOccupiedTargetBeforeMutation/missing_migration
+=== RUN   TestBackupRejectsInvalidOrOccupiedTargetBeforeMutation/orphan_token
+--- PASS: TestBackupRejectsInvalidOrOccupiedTargetBeforeMutation (0.83s)
+    --- PASS: TestBackupRejectsInvalidOrOccupiedTargetBeforeMutation/unsupported_schema (0.00s)
+    --- PASS: TestBackupRejectsInvalidOrOccupiedTargetBeforeMutation/missing_identity (0.00s)
+    --- PASS: TestBackupRejectsInvalidOrOccupiedTargetBeforeMutation/duplicate_record (0.00s)
+    --- PASS: TestBackupRejectsInvalidOrOccupiedTargetBeforeMutation/missing_migration (0.00s)
+    --- PASS: TestBackupRejectsInvalidOrOccupiedTargetBeforeMutation/orphan_token (0.00s)
+=== RUN   TestBackupImportRollsBackPartialDatabaseFailure
+--- PASS: TestBackupImportRollsBackPartialDatabaseFailure (1.50s)
+=== RUN   TestBackupSnapshotIsAtomicAcrossRecordAndGeneration
+--- PASS: TestBackupSnapshotIsAtomicAcrossRecordAndGeneration (0.26s)
+=== RUN   TestBackupRefusesUnknownDatabaseTablesRatherThanOmittingThem
+--- PASS: TestBackupRefusesUnknownDatabaseTablesRatherThanOmittingThem (0.02s)
+=== RUN   TestBackupPreservesGenerationFenceAfterCurrentRecordRemoval
+--- PASS: TestBackupPreservesGenerationFenceAfterCurrentRecordRemoval (0.05s)
+=== RUN   TestBackupRefusesUnknownColumnsRatherThanLosingFutureState
+--- PASS: TestBackupRefusesUnknownColumnsRatherThanLosingFutureState (0.02s)
+=== RUN   TestBackupStreamingReadTransactionPreservesGenerationAndRejectsCancelledImport
+--- PASS: TestBackupStreamingReadTransactionPreservesGenerationAndRejectsCancelledImport (0.41s)
+=== RUN   TestReviewBackupExportDoesNotBlockAdmission
+--- PASS: TestReviewBackupExportDoesNotBlockAdmission (0.05s)
+PASS
+ok  	routeweaver/internal/store	6.546s

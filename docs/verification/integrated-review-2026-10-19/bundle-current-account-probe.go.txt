@@ -1,0 +1,60 @@
+package httpapi_test
+
+import (
+	"encoding/base64"
+	"net/http"
+	"routeweaver/internal/domain"
+	"routeweaver/internal/render"
+	"routeweaver/internal/store"
+	"testing"
+)
+
+func TestIndependentFrozenBundleRechecksCurrentAccountAndUser(t *testing.T) {
+	s, srv := makeServer(t)
+	u := inviteClient(t, s, srv, "bundle-gate-review")
+	code, _, raw := req(t, u.c, "POST", srv.URL+"/api/me/resources/import", u.csrf, map[string]any{"resource": map[string]any{"id": "gate-file", "format": "sing-box-source", "updatePolicy": "pinned"}, "contentBase64": base64.StdEncoding.EncodeToString([]byte(`{"version":5,"rules":[{"domain":["gate.example"]}]}`))})
+	if code != 201 {
+		t.Fatal(raw)
+	}
+	p := nativeProfile(render.Target{AdapterID: "sing-box", Version: render.SingBoxVersion}, `{}`)
+	p.IR.Resources = []domain.RuleResource{{ID: "gate-file"}}
+	p.IR.Rules = []domain.PolicyRule{{ID: "file", Match: domain.MatchExpression{Op: "resource", Value: "gate-file"}, Action: domain.ActionRef{Kind: "reject"}}}
+	code, _, raw = req(t, u.c, "POST", srv.URL+"/api/me/profiles", u.csrf, p)
+	if code != 200 {
+		t.Fatal(raw)
+	}
+	code, out, raw := req(t, u.c, "POST", srv.URL+"/api/me/outputs", u.csrf, map[string]any{"id": "gate-output", "name": "Gate", "profileId": p.ID})
+	if code != 201 {
+		t.Fatal(raw)
+	}
+	path := srv.URL + out["bundlePath"].(string)
+	downloadBundle(t, http.DefaultClient, path)
+	var account store.Account
+	if err := s.Get("accounts", u.id, &account); err != nil {
+		t.Fatal(err)
+	}
+	account.Disabled = true
+	if err := s.Put("accounts", u.id, account); err != nil {
+		t.Fatal(err)
+	}
+	code, _, raw = req(t, http.DefaultClient, "GET", path, "", nil)
+	if code != 403 {
+		t.Fatalf("disabled account bundle: %d %s", code, raw)
+	}
+	account.Disabled = false
+	if err := s.Put("accounts", u.id, account); err != nil {
+		t.Fatal(err)
+	}
+	var user domain.User
+	if err := s.Get("users", u.id, &user); err != nil {
+		t.Fatal(err)
+	}
+	user.Enabled = false
+	if err := s.Put("users", u.id, user); err != nil {
+		t.Fatal(err)
+	}
+	code, _, raw = req(t, http.DefaultClient, "GET", path, "", nil)
+	if code != 403 {
+		t.Fatalf("disabled user bundle: %d %s", code, raw)
+	}
+}

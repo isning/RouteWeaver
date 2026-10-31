@@ -1,0 +1,71 @@
+{
+  "checkpoint": "WIP45",
+  "status": "bounded local frontend behavior and pixel acceptance; user acceptance pending",
+  "stages": [
+    {
+      "name": "tickets",
+      "started": "2026-10-26T12:42:58.437178+00:00",
+      "ended": "2026-10-26T12:42:58.470883+00:00",
+      "exitCode": 0
+    },
+    {
+      "name": "python-guards",
+      "started": "2026-10-26T12:42:58.471160+00:00",
+      "ended": "2026-10-26T12:42:58.567671+00:00",
+      "exitCode": 0
+    },
+    {
+      "name": "typecheck",
+      "started": "2026-10-26T12:42:58.567919+00:00",
+      "ended": "2026-10-26T12:43:00.466736+00:00",
+      "exitCode": 0
+    },
+    {
+      "name": "web-full",
+      "started": "2026-10-26T12:43:00.467149+00:00",
+      "ended": "2026-10-26T12:57:22.908213+00:00",
+      "exitCode": 0
+    }
+  ],
+  "web": {
+    "physicalTestFiles": 138,
+    "passed": 1608,
+    "total": 1608,
+    "failed": 0,
+    "pending": 0,
+    "todo": 0,
+    "reportedSuiteGroups": 156,
+    "separateUnhandledErrorCountAvailable": false
+  },
+  "build": {
+    "initialAttempt": "runner terminated by policy-blocked registry access; no native exit collected",
+    "offlineAttemptExitCode": 0,
+    "command": "npm_config_offline=true NPM_CONFIG_OFFLINE=true npm --prefix web run build",
+    "scope": "existing installed dependencies only, no registry access or installation"
+  },
+  "retainedWarnings": [
+    "Build output contains chunks larger than 500kB.",
+    "Existing npm http-proxy configuration warning."
+  ],
+  "pythonGuardsTests": 9,
+  "sourceUnchangedDuringStages": true,
+  "sourceInventoryFiles": 1212,
+  "aggregate": {
+    "status": "blocked",
+    "privateFileCheckExit": 1,
+    "underlyingGitLsFilesExit": 128,
+    "reason": "Archive workspace lacks Git metadata; no synthetic Git baseline."
+  },
+  "goAndNative": {
+    "status": "not_run",
+    "reason": "No usable real Go toolchain in this environment. No backend source or dependency changes in this UI-only round; older Go results are not relabeled."
+  },
+  "sourceReview": {
+    "specBlockingFindings": 0,
+    "standardsBlockingFindings": 0,
+    "reportSha256": "827620b08ae2ce52ac35ef6cd889e120c63bddf4d69d64eee963e7496f452587"
+  },
+  "terminalReceiptSha256": "44fc73eba9a15804b7dcc48e61be05e2d10be6fd0252b297c3de723362ba66ed",
+  "nonblockingResidual": "Template update touched-state guard can conservatively confirm discard after an edit was restored; no observed task loss.",
+  "scopeBoundary": "Not the official aggregate, real backend/authentication/persistence, native/live traffic, deployment, full accessibility or whole-product acceptance."
+}

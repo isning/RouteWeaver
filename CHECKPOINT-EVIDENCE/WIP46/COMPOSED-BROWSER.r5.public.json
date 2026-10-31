@@ -1,0 +1,321 @@
+{
+  "formatVersion": 1,
+  "checkpoint": "WIP46",
+  "exportStatus": "SCRIPTED_BROWSER_AND_BOUNDED_GOALS_INDEPENDENTLY_ACCEPTED",
+  "derivation": "Public delivery summary derived from retained original records; not a byte-identical copy of those originals. Internal workspace/thread paths and raw conversations are omitted.",
+  "wholeProductAcceptanceClaimed": false,
+  "reviewRecord": {
+    "sourceRecordLabel": "INDEPENDENT-COMPOSED-BROWSER-REVIEW.r5.json",
+    "sourceRecordSha256": "e3b89470dd8653f4c0b2514b0737c5e98e519e047b8e0ca0f09a119e2fb669f9",
+    "originalBytesIncluded": false
+  },
+  "codeFreezeSha256": "b66e216092a11796d9a8badeb4aa572df9e32cbe2ce91601cab6fabd0d81cb3c",
+  "nativeTerminal": {
+    "sourceRecordLabel": "NATIVE-CAMPAIGN-TERMINAL.json",
+    "sourceRecordSha256": "bfc063ce9698e6b5fdaf3a4475ed6b05b21c0880eecc87980d82b94b75bf9a24",
+    "originalBytesIncluded": false
+  },
+  "scriptedTerminal": {
+    "sourceRecordLabel": "terminal.json",
+    "sourceRecordSha256": "7ca1b887c0a0ca5e48b87d3b14be0158edc48a4258c5d48f12a802c22f63f92a",
+    "originalBytesIncluded": false
+  },
+  "nativeExitCode": 0,
+  "acceptedStages": 16,
+  "sourceFilesAndModesUnchanged": 1250,
+  "builtAssetsUnchanged": 31,
+  "harnessFilesUnchanged": 20,
+  "independentRecheckCopies": {
+    "source": 2,
+    "assets": 2
+  },
+  "stages": [
+    {
+      "name": "source-continuation",
+      "exitCode": 0,
+      "accepted": true,
+      "records": 12,
+      "stats": null,
+      "resultSHA256": "2ad03d944c4c2d14186d6c33348e4a499244dfe40411104d5cbdabd7b04c3a3d",
+      "unit": "observation records"
+    },
+    {
+      "name": "resource-adaptation",
+      "exitCode": 0,
+      "accepted": true,
+      "records": 42,
+      "stats": null,
+      "resultSHA256": "d9a844336e378918668ffd2f674d5f9aabefea353d61475667aaec7934040d23",
+      "unit": "observation records"
+    },
+    {
+      "name": "resource-pending",
+      "exitCode": 0,
+      "accepted": true,
+      "records": 12,
+      "stats": null,
+      "resultSHA256": "bbec76bf0e39d5261bf5aa4aaea2845d337a2e334fa5486be1854178fdf461df",
+      "unit": "observation records"
+    },
+    {
+      "name": "resource-held-visibility",
+      "exitCode": 0,
+      "accepted": true,
+      "records": 5,
+      "stats": null,
+      "resultSHA256": "5a1a44d2370d3e9795b6244523bcc879feeb3f1a77b33c6b797889a0c96a4253",
+      "unit": "observation records"
+    },
+    {
+      "name": "resource-failure-visibility",
+      "exitCode": 0,
+      "accepted": true,
+      "records": 6,
+      "stats": null,
+      "resultSHA256": "9a2b4b4468951d2c6897fe2fcc2b20649cda081e81a79fa28478f9bb883c43ad",
+      "unit": "observation records"
+    },
+    {
+      "name": "modal-neighbors",
+      "exitCode": 0,
+      "accepted": true,
+      "records": 28,
+      "stats": null,
+      "resultSHA256": "f7c9312ab9640b90acb1721f7dadd01510c5c419fac7d0b361794bb2fdfae19e",
+      "unit": "observation records"
+    },
+    {
+      "name": "template-labels",
+      "exitCode": 0,
+      "accepted": true,
+      "records": 3,
+      "stats": null,
+      "resultSHA256": "46db969d1d1c22a0ec06791c0fd2fa8c4be2a80d507355e9a9f157ffa3eb3a7b",
+      "unit": "observation records"
+    },
+    {
+      "name": "admin-normal",
+      "exitCode": 0,
+      "accepted": true,
+      "records": 6,
+      "stats": null,
+      "resultSHA256": "1cd0b818617b8b47765bf30c63601543a5e900d3a6e78f82e64f8eb00da7d87f",
+      "unit": "observation records"
+    },
+    {
+      "name": "source-normal",
+      "exitCode": 0,
+      "accepted": true,
+      "records": 6,
+      "stats": null,
+      "resultSHA256": "9e1b48c5cc0f059d53ba041192b171b765cfc3875805c9b588f555e9a7fba066",
+      "unit": "observation records"
+    },
+    {
+      "name": "name-only-pending",
+      "exitCode": 0,
+      "accepted": true,
+      "records": 7,
+      "stats": null,
+      "resultSHA256": "5867103d493877297f4168f2f4a5b92df6c4199837e3542f67ebf1aef71b437d",
+      "unit": "observation records"
+    },
+    {
+      "name": "source-cancel",
+      "exitCode": 0,
+      "accepted": true,
+      "records": 3,
+      "stats": null,
+      "resultSHA256": "71ed90c4795be82022db508b447f20dd19a1b7ef5a17c86279d95649a5ba2c9a",
+      "unit": "observation records"
+    },
+    {
+      "name": "residual-modals",
+      "exitCode": 0,
+      "accepted": true,
+      "records": 33,
+      "stats": null,
+      "resultSHA256": "5636ad9decebd677700787f1f80dc163e49cac4aa4eb359af7f91f96b7774ba2",
+      "unit": "observation records"
+    },
+    {
+      "name": "cancel-opener",
+      "exitCode": 0,
+      "accepted": true,
+      "records": 10,
+      "stats": null,
+      "resultSHA256": "5b8f3e4cb80e40c5b8f35e27d38a1d03516a944411d634a6c495142e40429a0f",
+      "unit": "observation records"
+    },
+    {
+      "name": "navigation",
+      "exitCode": 0,
+      "accepted": true,
+      "records": 20,
+      "stats": null,
+      "resultSHA256": "7fc2c1416d66764d7de016345311d6aeb84471b250b62cffd3db7fa36ed6cbee",
+      "unit": "observation records"
+    },
+    {
+      "name": "visual",
+      "exitCode": 0,
+      "accepted": true,
+      "records": null,
+      "stats": {
+        "startTime": "2026-10-27T17:19:55.397Z",
+        "duration": 57363.236,
+        "expected": 47,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      },
+      "resultSHA256": "e5bd7ed163b3943ed2752296e6b3b2731869ea4d5fd2f60c71dca92dbff8e735",
+      "unit": "actual browser tests"
+    },
+    {
+      "name": "cross-page",
+      "exitCode": 0,
+      "accepted": true,
+      "records": 50,
+      "stats": null,
+      "resultSHA256": "00a3caed72c7719fe53bb1426ee3c28d36450f212b6f221714e382d9f8d946e9",
+      "unit": "captured frames"
+    }
+  ],
+  "countsPolicy": "Do not sum stages, observation records, tests, captures or inspected pixels as unique journeys.",
+  "nameOnlyPendingRecordMeaning": {
+    "heldCells": 6,
+    "entityHeldCells": 2,
+    "sourceHeldCells": 4,
+    "ordinarySourceReverseGeometryRecord": 1,
+    "notSevenPendingCycles": true
+  },
+  "residualRecordMeaning": {
+    "boundaryObservations": 33,
+    "taskVariants": 11,
+    "separateCancellationObservations": 10,
+    "not43UniqueJourneys": true
+  },
+  "crossPage": {
+    "captures": 50,
+    "pageErrors": 0,
+    "externalDenials": 0,
+    "unsupportedFixtureReads": 0
+  },
+  "independentPixelInspection": {
+    "count": 19,
+    "concreteScopedRegressionFound": false,
+    "pixelReferences": [
+      {
+        "label": "source-draft-focused-390.png",
+        "sha256": "045b08e7c06486ebe436cb10e003d73d6b5225b0dd3e1eddb8eec26d737c6a07",
+        "bytesIncluded": false
+      },
+      {
+        "label": "reference-rapid-settled-pending.png",
+        "sha256": "70b03c163d462a8cee9c6045a0586e47d362417ddedea0f0019fd1553efa660c",
+        "bytesIncluded": false
+      },
+      {
+        "label": "file-rapid-settled-pending.png",
+        "sha256": "7008c6c1b4b1ec3da2363d3c91de9a329e34d892aec06219a3f1a8b273667945",
+        "bytesIncluded": false
+      },
+      {
+        "label": "source-reverse-settled.png",
+        "sha256": "6a5039f93a58096d1a7bd66c5c6db72a09b32c4eb2c4d11e75902e20e1169a72",
+        "bytesIncluded": false
+      },
+      {
+        "label": "publish-pending-initial.png",
+        "sha256": "bc69cfe9068b9cd2e29708f27e2bccea2746bc641bdd7d714a81f8df0b997fc5",
+        "bytesIncluded": false
+      },
+      {
+        "label": "announcement-failure-retained.png",
+        "sha256": "36ff6608f547b55ccda222052ba70a8b0e09d9285744f5a04b6b535539001da4",
+        "bytesIncluded": false
+      },
+      {
+        "label": "contextual-returned.png",
+        "sha256": "845c72f2bbc7ab854a7f92cfeb5817d7cf69187ccb256f8d5feba20faeda4f7a",
+        "bytesIncluded": false
+      },
+      {
+        "label": "output-comparison-reverse.png",
+        "sha256": "18d7f30f746a3fb085e9a8cc6d636f401503a9a69e94094ab6ff86471defcaaf",
+        "bytesIncluded": false
+      },
+      {
+        "label": "no-preference-newer-editor-owner.png",
+        "sha256": "4c0700c54acdb50471469ff90970b54edf1d3562e78d83af41ea61f6324a44fb",
+        "bytesIncluded": false
+      },
+      {
+        "label": "resources-target-context-320.png",
+        "sha256": "e49581a328ec1b5da48043fd25741d7b0f55df7df3ee11b2dc35e4ff60c2f38f",
+        "bytesIncluded": false
+      },
+      {
+        "label": "user-groups-320-action-edge.png",
+        "sha256": "d481f9bc30ed3cf215b6caf9d4ed3f8dcd5b4e375b164bbad91b25613cdc6a55",
+        "bytesIncluded": false
+      },
+      {
+        "label": "notifications-390-action-edge.png",
+        "sha256": "5b91bc358f1e82235e72cf17c8a5b270f557f7a2d4841e94b379083c326071c8",
+        "bytesIncluded": false
+      },
+      {
+        "label": "template-library-1440.png",
+        "sha256": "4de4f0cfe556123bfb5e2fcd74939197eead29d030c6df950e44c92e48bf7713",
+        "bytesIncluded": false
+      },
+      {
+        "label": "subscriptions-1440.png",
+        "sha256": "650c32181d6586d2263815f3c93aee331acda43d290dc238a90d0bf807001b1e",
+        "bytesIncluded": false
+      },
+      {
+        "label": "legacy-routes-390.png",
+        "sha256": "7ee027b1e053d1252b5084c889e4fa310d75be734a8b21b69a4714c285afaa58",
+        "bytesIncluded": false
+      },
+      {
+        "label": "sources-390-read-error.png",
+        "sha256": "bfa18030c6ee809045add8faf00f9b30c30d2ef1a04e016eea95a43249f915ce",
+        "bytesIncluded": false
+      },
+      {
+        "label": "templates-390.png",
+        "sha256": "d7c08cc943abb0bc068bba8f11349bfc8feb9bece7299284e752db5242472bd6",
+        "bytesIncluded": false
+      },
+      {
+        "label": "visible-clipped-after-click.png",
+        "sha256": "62cd3b08d0a0beaecd62c76b8f9b6b79e8292338c67977ee604285b624a86832",
+        "bytesIncluded": false
+      },
+      {
+        "label": "clean-publication-chooser-return-return-edit.png",
+        "sha256": "7fc41029f509d7d60a8a82ca95f0ed50f4b38f885a34294c23f4e988e46f9e32",
+        "bytesIncluded": false
+      }
+    ]
+  },
+  "sourceEvidenceAttribution": "Normal/held/cancellation Source tasks were actually repeated on composedr5. Earlier r2/r3 results remain distinct historical records.",
+  "aggregateTextCorrection": "The original scripted terminal contains stale generic aggregateCompletion text; it remains unmodified. The native terminal clarifies it, and separate r5 terminal/independent aggregate review establishes the full frontend/Python pass.",
+  "reviewerLaunchedSuiteOrBrowser": false,
+  "limits": [
+    "Controlled synthetic API only; held requests intercepted or fixture-resolved, not real backend writes/publication/delivery.",
+    "Visible large-JSON intersection and estimated caret/occlusion are not whole-textarea or compositor/AT proof.",
+    "Natural task paths and declared public DOM focus seam for newer-navigation-owner race remain distinct.",
+    "No native client/live authentication/unsupported modal/actual zoom/comprehensive AT or whole-product certification."
+  ],
+  "freshGoalConclusion": {
+    "publicSummary": "GOAL-WALKTHROUGH.r5.public.json",
+    "sha256": "207aee54223c97293a3aecc4e054e38ede4597209ca71c0d1c382221341a63c4",
+    "boundedAccepted": true
+  },
+  "archiveAndSaveAcceptance": null
+}

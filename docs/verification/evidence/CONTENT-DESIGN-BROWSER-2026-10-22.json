@@ -1,0 +1,99 @@
+{
+  "date": "2026-10-22",
+  "scope": "Real loopback Go control-plane + sandboxed Chromium; exports are frozen backend artifacts, not live traffic or runtime evidence.",
+  "result": "17/17 passed",
+  "manifest_sha256": "eb2e3058cf19011907916f32c258aa5e8d6b744b9b9caf198433ae570adf9bf6",
+  "production_manifest_unchanged": true,
+  "tests": [
+    {
+      "title": "initial empty pages name the task and server registration does not imply deployment",
+      "status": "passed",
+      "outcome": "expected"
+    },
+    {
+      "title": "first-use endpoint: two imported connections are only routed by an explicit user choice",
+      "status": "passed",
+      "outcome": "expected"
+    },
+    {
+      "title": "first-use direct: two imported connections are only routed by an explicit user choice",
+      "status": "passed",
+      "outcome": "expected"
+    },
+    {
+      "title": "existing strategy groups remain editable and revoked recovery replaces only the selected client link",
+      "status": "passed",
+      "outcome": "expected"
+    },
+    {
+      "title": "workspace: explicit publication changes only one of two independent client links",
+      "status": "passed",
+      "outcome": "expected"
+    },
+    {
+      "title": "legacy-profile: explicit publication changes only one of two independent client links",
+      "status": "passed",
+      "outcome": "expected"
+    },
+    {
+      "title": "saving a draft leaves frozen advanced published summary and delivery unchanged",
+      "status": "passed",
+      "outcome": "expected"
+    },
+    {
+      "title": "invalid JSON, cancel, and Back retain the draft until an explicit retry succeeds",
+      "status": "passed",
+      "outcome": "expected"
+    },
+    {
+      "title": "invalid and mismatched deep-link scope never silently selects a different configuration",
+      "status": "passed",
+      "outcome": "expected"
+    },
+    {
+      "title": "operator keeps line and user context through authorization, entry preparation, and a non-executing scoped batch plan",
+      "status": "passed",
+      "outcome": "expected"
+    },
+    {
+      "title": "scoped configuration creates one independent second-client subscription and immediately exposes its new link",
+      "status": "passed",
+      "outcome": "expected"
+    },
+    {
+      "title": "same rule counts are not represented as identical routing when rule contents changed",
+      "status": "passed",
+      "outcome": "expected"
+    },
+    {
+      "title": "25 synthetic configurations and 100 independent links remain searchable, bounded, and explicitly scoped",
+      "status": "passed",
+      "outcome": "expected"
+    },
+    {
+      "title": "reviews material source changes and preserves accepted options until an explicit decision",
+      "status": "passed",
+      "outcome": "expected"
+    },
+    {
+      "title": "imports directly into a configuration, retains a failed source, and saves only the draft",
+      "status": "passed",
+      "outcome": "expected"
+    },
+    {
+      "title": "mobile navigation and cancellation preserve a useful return path",
+      "status": "passed",
+      "outcome": "expected"
+    },
+    {
+      "title": "administrator edits an ordered route without dragging",
+      "status": "passed",
+      "outcome": "expected"
+    }
+  ],
+  "limits": [
+    "Synthetic demo data; no real VPS or external client/runtime verification",
+    "200% text-size simulation is not native browser zoom",
+    "Screenshot content review is not human usability research"
+  ]
+}

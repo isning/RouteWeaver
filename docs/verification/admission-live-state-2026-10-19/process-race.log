@@ -1,0 +1,42 @@
+=== RUN   TestAdmissionClaimsAcrossProcesses
+=== RUN   TestAdmissionClaimsAcrossProcesses/last-ip
+=== RUN   TestAdmissionClaimsAcrossProcesses/last-stream
+=== RUN   TestAdmissionClaimsAcrossProcesses/last-quota-byte
+--- PASS: TestAdmissionClaimsAcrossProcesses (3.89s)
+    --- PASS: TestAdmissionClaimsAcrossProcesses/last-ip (1.28s)
+    --- PASS: TestAdmissionClaimsAcrossProcesses/last-stream (1.28s)
+    --- PASS: TestAdmissionClaimsAcrossProcesses/last-quota-byte (1.32s)
+=== RUN   TestAdmissionClaimsAcrossProcesses
+=== RUN   TestAdmissionClaimsAcrossProcesses/last-ip
+=== RUN   TestAdmissionClaimsAcrossProcesses/last-stream
+=== RUN   TestAdmissionClaimsAcrossProcesses/last-quota-byte
+--- PASS: TestAdmissionClaimsAcrossProcesses (3.92s)
+    --- PASS: TestAdmissionClaimsAcrossProcesses/last-ip (1.31s)
+    --- PASS: TestAdmissionClaimsAcrossProcesses/last-stream (1.29s)
+    --- PASS: TestAdmissionClaimsAcrossProcesses/last-quota-byte (1.33s)
+=== RUN   TestAdmissionClaimsAcrossProcesses
+=== RUN   TestAdmissionClaimsAcrossProcesses/last-ip
+=== RUN   TestAdmissionClaimsAcrossProcesses/last-stream
+=== RUN   TestAdmissionClaimsAcrossProcesses/last-quota-byte
+--- PASS: TestAdmissionClaimsAcrossProcesses (3.91s)
+    --- PASS: TestAdmissionClaimsAcrossProcesses/last-ip (1.28s)
+    --- PASS: TestAdmissionClaimsAcrossProcesses/last-stream (1.31s)
+    --- PASS: TestAdmissionClaimsAcrossProcesses/last-quota-byte (1.33s)
+=== RUN   TestAdmissionClaimsAcrossProcesses
+=== RUN   TestAdmissionClaimsAcrossProcesses/last-ip
+=== RUN   TestAdmissionClaimsAcrossProcesses/last-stream
+=== RUN   TestAdmissionClaimsAcrossProcesses/last-quota-byte
+--- PASS: TestAdmissionClaimsAcrossProcesses (3.97s)
+    --- PASS: TestAdmissionClaimsAcrossProcesses/last-ip (1.34s)
+    --- PASS: TestAdmissionClaimsAcrossProcesses/last-stream (1.28s)
+    --- PASS: TestAdmissionClaimsAcrossProcesses/last-quota-byte (1.35s)
+=== RUN   TestAdmissionClaimsAcrossProcesses
+=== RUN   TestAdmissionClaimsAcrossProcesses/last-ip
+=== RUN   TestAdmissionClaimsAcrossProcesses/last-stream
+=== RUN   TestAdmissionClaimsAcrossProcesses/last-quota-byte
+--- PASS: TestAdmissionClaimsAcrossProcesses (3.94s)
+    --- PASS: TestAdmissionClaimsAcrossProcesses/last-ip (1.31s)
+    --- PASS: TestAdmissionClaimsAcrossProcesses/last-stream (1.30s)
+    --- PASS: TestAdmissionClaimsAcrossProcesses/last-quota-byte (1.34s)
+PASS
+ok  	routeweaver/internal/store	20.660s

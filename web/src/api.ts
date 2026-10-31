@@ -1,0 +1,388 @@
+import type { State, Session } from "./types";
+let adminToken = "";
+let tokenRevision = 0;
+let legacyTokenValidated = false;
+let csrfToken = "";
+type SessionTransport = {
+  beforeRequest: () => {
+    waitForResponse: () => Promise<void>;
+    beforeSend: () => void;
+  };
+  failed: (error: APIError) => void;
+};
+let sessionTransport: SessionTransport | null = null;
+const responseGuards = new WeakMap<Response, () => Promise<void>>();
+export function installSessionTransport(value: SessionTransport) {
+  sessionTransport = value;
+  return () => {
+    if (sessionTransport === value) sessionTransport = null;
+  };
+}
+const isSessionEntry = (path: string) =>
+  ["/auth/me", "/auth/login", "/auth/accept-invite"].includes(path);
+export function setToken(value: string) {
+  tokenRevision++;
+  adminToken = value;
+  legacyTokenValidated = false;
+}
+export function setCSRF(value: string) {
+  csrfToken = value;
+}
+export class APIError extends Error {
+  constructor(
+    message: string,
+    public status: number,
+    public details?: unknown,
+  ) {
+    super(message);
+    this.name = "APIError";
+  }
+}
+async function send(
+  path: string,
+  init: RequestInit = {},
+  sessionEntry = false,
+): Promise<Response> {
+  const transport =
+    sessionEntry || isSessionEntry(path) ? null : sessionTransport;
+  const guard = transport?.beforeRequest();
+  const headers = new Headers(init.headers);
+  if (typeof init.body === "string" && !headers.has("Content-Type"))
+    headers.set("Content-Type", "application/json");
+  if (adminToken) headers.set("Authorization", `Bearer ${adminToken}`);
+  if (csrfToken && init.method && init.method !== "GET")
+    headers.set("X-CSRF-Token", csrfToken);
+  let response: Response;
+  try {
+    response = await fetch(`/api${path}`, {
+      ...init,
+      credentials: "same-origin",
+      headers,
+    });
+  } catch {
+    throw new APIError("无法连接服务。请检查网络后重试，当前输入已保留。", 0);
+  }
+  await guard?.waitForResponse();
+  if (guard) responseGuards.set(response, guard.waitForResponse);
+  if (transport && [401, 403].includes(response.status))
+    transport.failed(new APIError("登录状态需要确认。", response.status));
+  return response;
+}
+async function readResponse<T>(response: Response): Promise<T> {
+  const body = await response.text();
+  // Auth failures retain their original status; successful stale responses never escape.
+  if (response.ok) await responseGuards.get(response)?.();
+  let data: unknown;
+  try {
+    data = body ? JSON.parse(body) : null;
+  } catch {
+    if (!response.ok)
+      throw new APIError(
+        response.status === 401
+          ? "登录已失效，请重新登录。"
+          : `请求失败 (${response.status})，请重试。`,
+        response.status,
+      );
+    throw new APIError(
+      "服务返回了无法识别的响应，请稍后重试。",
+      response.status,
+    );
+  }
+  if (!response.ok) {
+    const error = data as { message?: string; error?: string; detail?: string };
+    throw new APIError(
+      error?.detail ||
+        error?.message ||
+        error?.error ||
+        `请求失败 (${response.status})`,
+      response.status,
+      data,
+    );
+  }
+  return data as T;
+}
+export async function request<T>(
+  path: string,
+  init: RequestInit = {},
+): Promise<T> {
+  return readResponse<T>(await send(path, init));
+}
+export async function requestFile(path: string, value: unknown): Promise<Blob> {
+  const response = await send(path, {
+    method: "POST",
+    body: JSON.stringify(value),
+  });
+  if (!response.ok) {
+    try {
+      await readResponse<never>(response);
+    } catch (error) {
+      if (
+        path === "/admin/backups" &&
+        error instanceof APIError &&
+        error.status === 503 &&
+        typeof error.details === "object" &&
+        error.details !== null &&
+        "reason" in error.details &&
+        error.details.reason === "backup_export_deadline_exceeded"
+      ) {
+        throw new APIError(
+          "备份创建超时。请检查服务资源和备份时限后重新创建。",
+          error.status,
+          error.details,
+        );
+      }
+      throw error;
+    }
+  }
+  if (
+    !(response.headers.get("content-type") || "").includes(
+      "application/octet-stream",
+    )
+  )
+    throw new APIError("服务器没有返回预期的加密备份文件。", response.status);
+  const blob = await response.blob();
+  await responseGuards.get(response)?.();
+  return blob;
+}
+export const loadState = () => request<State>("/state");
+async function validateLegacyToken(signal?: AbortSignal): Promise<Session> {
+  if (!adminToken) throw new APIError("请输入管理员令牌。", 401);
+  // Only an explicit token login (or its subsequent validation) can use this
+  // bootstrap read. The ordinary /state request remains behind the session gate.
+  await readResponse(await send("/state", { signal }, true));
+  return {
+    user: { id: "operator", name: "管理员", role: "admin" },
+    csrfToken: "",
+  };
+}
+export const getSession = async (signal?: AbortSignal): Promise<Session> => {
+  try {
+    return await request<Session>("/auth/me", { signal });
+  } catch (error) {
+    if (legacyTokenValidated) return validateLegacyToken(signal);
+    throw error;
+  }
+};
+export async function loginWithToken(token: string): Promise<Session> {
+  setToken(token);
+  const owner = tokenRevision;
+  const requireOwner = () => {
+    if (owner !== tokenRevision)
+      throw new APIError("登录方式已变更，请使用当前登录结果。", 409);
+  };
+  try {
+    try {
+      const session = await getSession();
+      requireOwner();
+      return session;
+    } catch {
+      requireOwner();
+      const session = await validateLegacyToken();
+      requireOwner();
+      legacyTokenValidated = true;
+      return session;
+    }
+  } catch (error) {
+    if (owner === tokenRevision) setToken("");
+    throw error;
+  }
+}
+export const post = <T>(path: string, value: unknown = {}) =>
+  request<T>(path, { method: "POST", body: JSON.stringify(value) });
+export const put = <T>(path: string, value: unknown) =>
+  request<T>(path, { method: "PUT", body: JSON.stringify(value) });
+export function saveRecord<T>(kind: string, value: object, isNew = false) {
+  const { revisionToken, ...record } = value as {
+    id?: string;
+    revisionToken?: string;
+  };
+  const id = record.id;
+  const guarded = kind === "server-deployments" || kind === "published-routes";
+  return request<T>(
+    `/${kind}${!isNew && id ? `/${encodeURIComponent(id)}` : ""}`,
+    {
+      method: !isNew && id ? "PUT" : "POST",
+      ...(guarded && !isNew && id && revisionToken
+        ? { headers: { "If-Match": revisionToken } }
+        : {}),
+      body: JSON.stringify(guarded ? record : value),
+    },
+  );
+}
+export const deleteRecord = (kind: string, id: string) =>
+  request(`/${kind}/${encodeURIComponent(id)}`, { method: "DELETE" });
+export const list = <T>(path: string) =>
+  request<T[] | { items: T[] }>(path).then((result) =>
+    Array.isArray(result) ? result : (result?.items ?? []),
+  );
+
+export function postArchive<T>(
+  path: string,
+  metadata: object,
+  archive: File,
+): Promise<T> {
+  const body = new FormData();
+  body.append("metadata", JSON.stringify(metadata));
+  body.append("archive", archive);
+  return request<T>(path, { method: "POST", body });
+}
+
+/** Keep an asynchronous file preparation tied to the authority that began it. */
+export function prepareFilePost() {
+  const guard = sessionTransport?.beforeRequest();
+  return async <T>(path: string, value: unknown): Promise<T> => {
+    try {
+      await guard?.waitForResponse();
+      // No await between this final scope check and dispatching the POST.
+      guard?.beforeSend();
+    } catch {
+      throw new APIError(
+        "登录状态已变化，文件尚未上传。请确认当前账号后重新导入。",
+        409,
+      );
+    }
+    return post<T>(path, value);
+  };
+}
+
+export interface BackupRestoreResult {
+  status: "restored";
+  target: string;
+  activated: false;
+}
+export class BackupRestoreError extends APIError {
+  constructor(
+    message: string,
+    status: number,
+    public outcome: "not_published" | "uncertain" | "unknown",
+    details?: unknown,
+    public target?: string,
+  ) {
+    super(message, status, details);
+    this.name = "BackupRestoreError";
+  }
+}
+const isRestoreTarget = (value: unknown): value is string =>
+  typeof value === "string" && /^restore_[A-Za-z0-9_-]{43}\.db$/.test(value);
+const restoreUnknownMessage =
+  "恢复结果尚未确认。新数据库可能已创建。本次恢复不会自动切换服务。请确认操作已结束并检查恢复目录，再决定是否再次恢复。";
+
+const restoreReasonMessages = new Map<string, string>([
+  [
+    "restore_storage_prepare_failed",
+    "无法准备恢复目录。请检查目录权限和可用空间后重试。",
+  ],
+  [
+    "restore_target_reservation_failed",
+    "无法分配恢复目标。请检查恢复目录后重试。",
+  ],
+  [
+    "restore_publication_failed",
+    "未能创建恢复数据库。请检查恢复目录和可用空间后重试。",
+  ],
+  [
+    "restore_prepublication_cancelled",
+    "恢复已停止，尚未创建恢复数据库。请检查备份大小和服务资源后重试。",
+  ],
+]);
+
+/** A lost response is not evidence that a restore failed before publication. */
+export async function restoreArchive(
+  metadata: object,
+  archive: File,
+): Promise<BackupRestoreResult> {
+  const body = new FormData();
+  body.append("metadata", JSON.stringify(metadata));
+  body.append("archive", archive);
+  // Preserve a known local authority refusal before dispatch, distinct from a
+  // stale/lost response after dispatch. No await between this check and send.
+  try {
+    sessionTransport?.beforeRequest().beforeSend();
+  } catch (error) {
+    if (error instanceof APIError) {
+      throw new BackupRestoreError(
+        error.message,
+        error.status,
+        "not_published",
+        error.details,
+      );
+    }
+    throw error;
+  }
+  let response: Response;
+  try {
+    response = await send("/admin/backups/restore", { method: "POST", body });
+  } catch {
+    throw new BackupRestoreError(restoreUnknownMessage, 0, "unknown");
+  }
+  let value: unknown;
+  try {
+    value = await readResponse<unknown>(response);
+  } catch (error) {
+    if (!response.ok && error instanceof APIError) {
+      const details = error.details;
+      const outcome =
+        details && typeof details === "object"
+          ? (details as {
+              restoreOutcome?: unknown;
+              activated?: unknown;
+              target?: unknown;
+              restoreReason?: unknown;
+            })
+          : null;
+      if (
+        outcome?.activated === false &&
+        outcome.restoreOutcome === "uncertain" &&
+        isRestoreTarget(outcome.target)
+      ) {
+        throw new BackupRestoreError(
+          error.message,
+          error.status,
+          "uncertain",
+          details,
+          outcome.target,
+        );
+      }
+      if (
+        (outcome?.activated === false &&
+          outcome.restoreOutcome === "not_published") ||
+        [400, 401, 403, 409, 413, 429].includes(response.status)
+      ) {
+        const reason = outcome?.restoreReason;
+        const message =
+          [500, 503].includes(response.status) &&
+          outcome?.activated === false &&
+          outcome.restoreOutcome === "not_published" &&
+          typeof reason === "string"
+            ? (restoreReasonMessages.get(reason) ?? error.message)
+            : error.message;
+        throw new BackupRestoreError(
+          message,
+          error.status,
+          "not_published",
+          details,
+        );
+      }
+    }
+    throw new BackupRestoreError(
+      restoreUnknownMessage,
+      response.status,
+      "unknown",
+    );
+  }
+  if (
+    response.status !== 201 ||
+    !value ||
+    typeof value !== "object" ||
+    (value as BackupRestoreResult).status !== "restored" ||
+    (value as BackupRestoreResult).activated !== false ||
+    !isRestoreTarget((value as BackupRestoreResult).target)
+  ) {
+    throw new BackupRestoreError(
+      restoreUnknownMessage,
+      response.status,
+      "unknown",
+    );
+  }
+  return value as BackupRestoreResult;
+}

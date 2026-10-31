@@ -1,0 +1,78 @@
+{
+  "canonical_source_sha256": "1b82ac801d752bc24391e7d3d1b01a2f1832cafc4496418d2eadd7155d9dd9a2",
+  "checkpoint": "WIP43",
+  "members_excluding_this_manifest": [
+    {
+      "bytes": 5694,
+      "mode": "0644",
+      "path": "SUMMARY.md",
+      "sha256": "c196e777c72d2509ea76c59aae1956eae2a6da6b69c8d7f0035d6fb4e5e3f019"
+    },
+    {
+      "bytes": 4640,
+      "mode": "0644",
+      "path": "b670-recovered-web-result.json",
+      "sha256": "5c7063fe059a087197e6ab424e7da78bd73f4a511c3a2ef4ec4c697d11343fcd"
+    },
+    {
+      "bytes": 16592,
+      "mode": "0644",
+      "path": "final-canonical-primary17-accepted.json",
+      "sha256": "ba8675d058d3ef54f233ea2987a76b1f8102a1a5a82713ef87c561fc1fbba300"
+    },
+    {
+      "bytes": 6266,
+      "mode": "0644",
+      "path": "final-canonical-web-result.json",
+      "sha256": "52480eb6385d965a68aaf6dbaab51ea605a163e138cbe77424f6d4cc1e4950de"
+    },
+    {
+      "bytes": 4851,
+      "mode": "0644",
+      "path": "final-seven-path-integration.json",
+      "sha256": "f4c1fc28c7464f16324a0c2ea6c75b1adfb805681c6b6475d109930771dbe612"
+    },
+    {
+      "bytes": 3566,
+      "mode": "0644",
+      "path": "final-web-original-incomplete.json",
+      "sha256": "dc853e92a7ecb1e7d16385731edfc74a23b73713cd8eb84abcb7a154e011c007"
+    },
+    {
+      "bytes": 16779,
+      "mode": "0644",
+      "path": "overview-correction-and-integration.json",
+      "sha256": "90773160fdaa17d9695d75abea3aee8725fe310ce7beeb9d2c56673620d5dcbf"
+    },
+    {
+      "bytes": 7822,
+      "mode": "0644",
+      "path": "private-primary17-candidate-accepted.json",
+      "sha256": "9d3fa487287714691c8da5b07b367c2ca56e0782f92dad560a23971cc4b1c1b6"
+    },
+    {
+      "bytes": 10627,
+      "mode": "0644",
+      "path": "retained-evidence-attribution.json",
+      "sha256": "96072b40d8fa02db9c19a4d22f91276d5aa28ac5997ea67115865b41e05e82c2"
+    }
+  ],
+  "native_terminal_and_review_bindings": {
+    "final-overview-web-validation-20261025/NATIVE-RESULT-SUMMARY.json": "c1a5797b9deb9c32f786f1ca92ee3d1c9c36f5789e5658510b2e38290fd88343",
+    "final-overview-web-validation-20261025/TERMINAL-RESULT-REVIEW.json": "7cfb65105546698943a63c3743015e0828441b875c36ce5efaf5b4a1b29f53fc",
+    "final-overview-web-validation-20261025/run/run.json": "69e3bd86028d3810df00db12c3598ea45a43ca92477d7b0e2c545a69c1c686e7",
+    "final-stable-primary17-validation-20261025/ACTUAL-PIXEL-REVIEW.json": "773aaa5062f485173e73e4e52bc3152f5bb4e894d6ce9d6b34aeaee99b3b1412",
+    "final-stable-primary17-validation-20261025/NATIVE-RESULT-SUMMARY.json": "ee14206195eb4d8e570e6bfdc11fb8544093d8fb1b05e455afc2318dbeeda674",
+    "final-stable-primary17-validation-20261025/run/run.json": "fe7c38464c901a602caf5089402579a2585788d099aa5da20cb8ce1b139a34fa"
+  },
+  "omissions": [
+    "Raw logs, stack traces, DOM dumps, browser screenshots/traces and runtime source copies",
+    "Auth/session/cookie/CSRF values, private feeds, credentials and databases",
+    "Build outputs, caches and dependencies"
+  ],
+  "readiness_scope": "Autonomous UI/UX refinement round complete; user design review and broader project acceptance pending. Not production or certification.",
+  "records_are_derived_sanitized_summaries": true,
+  "schema": "routeweaver.portable-evidence-manifest.v1",
+  "self_hash_rule": "This manifest is bound by generated archive status and the outer complete member inventory, not recursively by itself.",
+  "status": "READY_FOR_USER_DESIGN_REVIEW"
+}

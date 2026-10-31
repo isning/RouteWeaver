@@ -1,0 +1,23 @@
+{
+  "command": "scripts/verify.sh quick",
+  "status": "interrupted",
+  "exit_code": 130,
+  "reason": "Stopped to repair independently observed dynamic accordion clipping; frontend stage not reached.",
+  "source_manifest_sha256": "61da2cb46906ee9da35c2aaf8cd58c62f9aeaa71a1bf14f1ad0b06420b9effa5",
+  "source_unchanged_during_run": true,
+  "final_checkpoint_acceptance": false,
+  "raw_evidence": [
+    {
+      "filename": "verify-quick.log",
+      "sha256": "0c9c81c347d6c52db49f6911dcb6e3fbbd61cfa3f39e499a36ba7553269baf14",
+      "size_bytes": 1028,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "filename": "interrupted-source-check.json",
+      "sha256": "607748ba7e6a2b570b576cd6738b5311ed4284f366fb75d076a9b3fbccfbfe74",
+      "size_bytes": 160,
+      "availability": "local-only-not-in-archive"
+    }
+  ]
+}

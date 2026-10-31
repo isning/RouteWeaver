@@ -1,0 +1,107 @@
+{
+  "allow-lan": false,
+  "bind-address": "127.0.0.1",
+  "dns": {
+    "enable": true,
+    "enhanced-mode": "redir-host",
+    "nameserver": [
+      "udp://1.1.1.1:53"
+    ]
+  },
+  "log-level": "warning",
+  "mixed-port": 17890,
+  "mode": "rule",
+  "proxies": [
+    {
+      "name": "United Kingdom (Work)， [TLS]",
+      "port": 1080,
+      "server": "192.0.2.10",
+      "type": "socks5"
+    },
+    {
+      "cipher": "aes-128-gcm",
+      "name": "United States",
+      "password": "synthetic-fixture-secret",
+      "port": 8388,
+      "server": "192.0.2.20",
+      "type": "ss"
+    }
+  ],
+  "proxy-groups": [
+    {
+      "name": "Choose (Main)， [Group]",
+      "proxies": [
+        "United Kingdom (Work)， [TLS]",
+        "United States"
+      ],
+      "type": "select"
+    },
+    {
+      "interval": 300,
+      "name": "Fast",
+      "proxies": [
+        "Choose (Main)， [Group]",
+        "United States"
+      ],
+      "tolerance": 50,
+      "type": "url-test",
+      "url": "https://example.org/generate_204"
+    },
+    {
+      "interval": 300,
+      "name": "Fallback",
+      "proxies": [
+        "United Kingdom (Work)， [TLS]",
+        "United States"
+      ],
+      "type": "fallback",
+      "url": "https://example.org/generate_204"
+    },
+    {
+      "interval": 300,
+      "name": "Balance",
+      "proxies": [
+        "United Kingdom (Work)， [TLS]",
+        "United States"
+      ],
+      "strategy": "round-robin",
+      "type": "load-balance",
+      "url": "https://example.org/generate_204"
+    }
+  ],
+  "rule-providers": {
+    "work": {
+      "behavior": "classical",
+      "format": "yaml",
+      "path": "rules/work.yaml",
+      "type": "file"
+    }
+  },
+  "rules": [
+    "DOMAIN-SUFFIX,example.org,Choose (Main)， [Group]",
+    "AND,((DOMAIN-SUFFIX,example.net),(NOT,((DOMAIN,excluded.example.net)))),REJECT",
+    "RULE-SET,work,Fast",
+    "MATCH,DIRECT"
+  ],
+  "sniffer": {
+    "enable": true,
+    "sniff": {
+      "HTTP": {
+        "ports": [
+          80,
+          8080
+        ]
+      },
+      "QUIC": {
+        "ports": [
+          443
+        ]
+      },
+      "TLS": {
+        "ports": [
+          443
+        ]
+      }
+    }
+  }
+}

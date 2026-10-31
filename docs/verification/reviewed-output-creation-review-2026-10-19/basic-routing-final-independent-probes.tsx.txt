@@ -1,0 +1,75 @@
+it("independent: preserves reconciliation after source data changes during an unresolved accepted creation", async () => {
+  const original = fetch; let existing: any; let reads=0; let changed=false;
+  vi.stubGlobal("fetch",vi.fn(async (url,init)=>{
+    const path=String(url);
+    if(path==="/api/me/outputs") {
+      const method=init?.method||"GET",body=init?.body?JSON.parse(String(init.body)):null;
+      if(method==="POST") {
+        if(existing) return json({detail:"Output already exists"},409);
+        existing={...body,status:"published",creationReviewDigest:body.previewDigest};
+        throw new TypeError("Lost creation response");
+      }
+      if(++reads===1) throw new TypeError("Lookup unavailable");
+      return json([existing]);
+    }
+    if(path==="/api/me/sources" && changed) {
+      const response=await original(url,init), sources=await response.json();
+      sources[0].name="Airport renamed after creation";
+      return json(sources);
+    }
+    return original(url,init);
+  }));
+  const {published}=mount();
+  await screen.findByRole("combobox",{name:"ChatGPT 使用的线路"});
+  await select("ChatGPT 使用的线路","FRA → UK · 2×");
+  await select("其他流量使用的线路","My airport · Tokyo");
+  await userEvent.click(screen.getByRole("button",{name:"保存并查看修改"}));
+  await screen.findByRole("region",{name:"发布前确认"});
+  await userEvent.click(screen.getByRole("button",{name:"发布并获取订阅"}));
+  await screen.findByRole("alert");
+  expect(published).not.toHaveBeenCalled();
+  changed=true; focusManager.setFocused(false); focusManager.setFocused(true);
+  await waitFor(()=>expect(screen.queryByText("线路信息已变化，请先核对上次发布结果。")).not.toBeNull());
+  // A committed prior creation remains reconcilable even though its old inputs changed.
+  const retry=screen.queryByRole("button",{name:"核对上次发布结果"});
+  expect(retry).not.toBeNull();
+  await userEvent.click(retry!);
+  await waitFor(()=>expect(published).toHaveBeenCalledWith(existing));
+});
+
+it("independent: preserves GET-only receipt recovery during source-query outage", async () => {
+  const original = fetch; let existing: any; let reads=0; let changed=false;
+  vi.stubGlobal("fetch",vi.fn(async (url,init)=>{
+    const path=String(url);
+    if(path==="/api/me/outputs") {
+      const method=init?.method||"GET",body=init?.body?JSON.parse(String(init.body)):null;
+      if(method==="POST") {
+        if(existing) return json({detail:"Output already exists"},409);
+        existing={...body,status:"published",creationReviewDigest:body.previewDigest};
+        throw new TypeError("Lost creation response");
+      }
+      if(++reads===1) throw new TypeError("Lookup unavailable");
+      return json([existing]);
+    }
+    if(path==="/api/me/sources" && changed) {
+      throw new TypeError("source query outage");
+    }
+    return original(url,init);
+  }));
+  const {published}=mount();
+  await screen.findByRole("combobox",{name:"ChatGPT 使用的线路"});
+  await select("ChatGPT 使用的线路","FRA → UK · 2×");
+  await select("其他流量使用的线路","My airport · Tokyo");
+  await userEvent.click(screen.getByRole("button",{name:"保存并查看修改"}));
+  await screen.findByRole("region",{name:"发布前确认"});
+  await userEvent.click(screen.getByRole("button",{name:"发布并获取订阅"}));
+  await screen.findByRole("alert");
+  expect(published).not.toHaveBeenCalled();
+  changed=true; focusManager.setFocused(false); focusManager.setFocused(true);
+  await waitFor(()=>expect(screen.queryByRole("combobox",{name:"ChatGPT 使用的线路"})).toBeNull());
+  // A committed prior creation remains reconcilable even though its old inputs changed.
+  const retry=screen.queryByRole("button",{name:"核对上次发布结果"});
+  expect(retry).not.toBeNull();
+  await userEvent.click(retry!);
+  await waitFor(()=>expect(published).toHaveBeenCalledWith(existing));
+});

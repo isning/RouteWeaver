@@ -1,0 +1,58 @@
+{
+  "command": "scripts/verify.sh quick",
+  "status": "failed",
+  "exit_code": 1,
+  "source_manifest_sha256": "7df27a731969f467faf1fbe2ab4374bde116036f19ed41d698400c2eef9195ae",
+  "source_files": 1355,
+  "source_unchanged_during_run": true,
+  "passed_stages": [
+    "Tracked private-file guard",
+    "Ticket DAG",
+    "Python guard negatives",
+    "Architecture guard negatives",
+    "Production imports",
+    "Go formatting",
+    "Go vet",
+    "Go race",
+    "Go build",
+    "Managed runtime vet",
+    "Managed runtime race",
+    "Managed runtime build",
+    "Web typecheck"
+  ],
+  "failed_stage": "Web behavior tests",
+  "web_tests": {
+    "passed": 1783,
+    "failed": 2,
+    "total": 1785
+  },
+  "physical_web_test_files": 157,
+  "production_build_stage": "not reached",
+  "failed_tests": [
+    {
+      "file": "web/src/infrastructure-creation.dom.test.tsx",
+      "name": "preserves an existing incompatible protocol instead of silently applying the creation preset",
+      "issue": "Metadata-only editing of a legacy unsupported managed endpoint was blocked."
+    },
+    {
+      "file": "web/src/source-import-task.dom.test.tsx",
+      "name": "requires a new use gesture after read-back by held Enter, including an accepted snapshot whose newer input failed",
+      "issue": "Held-Enter read-back did not open its review dialog in this run."
+    }
+  ],
+  "final_checkpoint_acceptance": false,
+  "raw_evidence": [
+    {
+      "filename": "verify-quick-r2.log",
+      "sha256": "6f842122d0f286edda34df7eafbb05c80c39d5020ae9a67217921222eaaf7fc8",
+      "size_bytes": 27145,
+      "availability": "local-only-not-in-archive"
+    },
+    {
+      "filename": "quick-r2-source-check.json",
+      "sha256": "378e60fc21d8e27b1ffb07c0c33e1da555ef3ce8bcb763b63a135597d27c4c4d",
+      "size_bytes": 561,
+      "availability": "local-only-not-in-archive"
+    }
+  ]
+}

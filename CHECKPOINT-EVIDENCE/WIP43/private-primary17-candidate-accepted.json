@@ -1,0 +1,173 @@
+{
+  "candidate_inventory_file_sha256": "1285ff02e4c6d38a761c3902245c8b687e716bb3cfe1d5ecca4adb41e4f2d30f",
+  "counts": {
+    "cases": 17,
+    "failed": 0,
+    "flaky": 0,
+    "imageIdentities": 57,
+    "passed": 17,
+    "skipped": 0
+  },
+  "format": "derived sanitized portable summary; not a byte-identical native receipt",
+  "guards": {
+    "adaptedConfigUnchanged": true,
+    "demoDBRemoved": true,
+    "fixtureToolBindingsUnchanged": true,
+    "portsClosed": {
+      "4173": true,
+      "8080": true
+    },
+    "privateSourceInputsUnchanged": true,
+    "recoveredSourceUnchanged": true
+  },
+  "historical_failures": [
+    {
+      "receipt_sha256": "60ff9f6e5ec3908f50231d2eb98953db17dfde3be2c644be9041c2db5fb0618d",
+      "result": "10/17; unchanged failed evidence"
+    },
+    {
+      "receipt_sha256": "aff9da519b1b99f1328c7f49075cbb607a2001e47fda45cefc979a12d450befb",
+      "result": "12/17; unchanged failed evidence"
+    }
+  ],
+  "independent_review": {
+    "accepted": true,
+    "checks": {
+      "allReportedSourceToolConfigAndCleanupGuardsTrue": true,
+      "candidateMapEqualsExpected": true,
+      "evidenceFileHashesVerified": 65,
+      "failed": 0,
+      "geometryAttachmentsReviewed": 8,
+      "imageIdentitiesVerified": 57,
+      "journeyResultAttachmentsReviewed": 14,
+      "nativeCases": 17,
+      "passed": 17,
+      "passiveDiagnosticsReviewed": 8,
+      "retries": 0,
+      "skipped": 0
+    },
+    "diagnostics": {
+      "deepLink": {
+        "awaitedSnapshotsAroundClicks": 0,
+        "interpretation": "Restored original click sequence succeeds with synchronous passive event evidence and exact scope assertions. The original timeout cause is not established, and no production deep-link repair is claimed.",
+        "revealResponses": [
+          200,
+          200
+        ],
+        "snapshotOnlyAfterCase": true,
+        "trustedOwnedEditClicks": 2,
+        "trustedOwnedMoreClicks": 2
+      },
+      "equalCount": {
+        "bodyClientHeight": 708,
+        "bodyScrollHeight": 738,
+        "bothButtonCentersOwned": true,
+        "bothButtonsFinalY": [
+          740.46875,
+          784.46875
+        ],
+        "bothButtonsHeight": 44,
+        "changedRuleFinalY": [
+          314.28125,
+          533.46875
+        ],
+        "comparisonFramedScrollTop": 0,
+        "decisionFinalY": [
+          655.46875,
+          784.46875
+        ],
+        "decisionFramedScrollTop": 30,
+        "interpretation": "Actual connected modal-body scrolling makes the decision fully reachable; earlier full-viewport assertion before reaching the decision was not proof of a product clipping defect."
+      },
+      "firstUse": {
+        "bothAfterOrdinaryScrollY": 96,
+        "bothInputBottom": 799.234375,
+        "bothOwnerRect": {
+          "bottom": 810.234375,
+          "height": 44,
+          "width": 320,
+          "x": 35,
+          "y": 766.234375
+        },
+        "interpretation": "Earlier ratio-zero failure concerned an ordinary below-fold section, not a hidden Select proxy.",
+        "viewport": [
+          390,
+          844
+        ]
+      },
+      "reflow": {
+        "320CheckedCounts": [
+          20,
+          29,
+          5,
+          9
+        ],
+        "allIssuesEmpty": true,
+        "doubledTextCheckedCounts": [
+          20,
+          29,
+          5,
+          9
+        ],
+        "limit": "Doubled computed font/line-height is a simulation, not browser-native zoom or assistive-technology validation."
+      }
+    },
+    "findings": [
+      "Normal workspace clearly distinguishes one editable configuration from two independently published client Outputs and their separate Get/Check actions.",
+      "Both first-use routes visibly separate imported available connections from operative traffic choice. Narrow ordinary task scrolling brings the labeled 44-pixel Select and painted value into view without horizontal overflow; importing alone does not select an endpoint.",
+      "Revoked recovery visibly names the selected client and the new-link consequence before confirmation: 发布后请在客户端换用新链接，其他订阅不受影响。 No requirement to delete/re-add a client is invented.",
+      "Workspace and legacy publication retain explicit selected-target ownership; native receipts confirm only the selected Output changes and sibling frozen content/access stays unchanged.",
+      "Equal-count changed rules visibly show exact before/after content and comparison limits. Comparison is read first; ordinary modal-body scrolling then reveals the entire named decision, consequence and both actions. No requirement that all detail remain simultaneously visible is imposed.",
+      "Empty-state instructions, cancellation/return path, source-change acceptance and unavailable-reference repair are clear in representative normal and recovery images; no silent replacement is represented.",
+      "No task-clarity, readable-content or actionable-control blocker was found in the inspected representative frames. Minor scroll-position cropping of unrelated page chrome and a transient toast do not block the demonstrated task."
+    ],
+    "role_accounting_limits": {
+      "actualBrowserActor": "existing demo administrator",
+      "cleanupScope": "Owned command process group termination on interruption; normal Playwright-managed server shutdown, both loopback ports closed and demo database absent. No universal descendant-liveness claim.",
+      "ordinaryUserEvidenceSeparate": "ORDINARY-SUBSCRIBER-ACTUAL-PIXEL-PRIVACY-REVIEW.json",
+      "ordinaryUserLoginExercised": false,
+      "requests": {
+        "collectionPreviewMultiplicity": "not fixed",
+        "explicitReadonlyPreviewPostsStatic": 9,
+        "observedUniversalRequestCount": null,
+        "staticHappyPathBusinessRequests": 197
+      },
+      "sessions": {
+        "explicitLogout": "not in unchanged helper",
+        "observedNormalUILogins": 1,
+        "termination": "must be established by owned demo/database cleanup"
+      }
+    },
+    "sha256": "8193a26006570acc76478c696f2396789fc7e59db74be14f95656f716734c5be",
+    "visual_method": "Nineteen representative actual PNGs individually viewed at original detail, not a contact sheet. All 57 image identities were verified; no assertion that all 57 were visually inspected."
+  },
+  "input_sha256": "704955bccd2813896562ff38f0d083dd3111810ba9ea4d02ddd0f2473b1635c5",
+  "limits": [
+    "Private candidate execution, not execution of subsequently extracted stable canonical fixture.",
+    "No claim that all57 images were individually visually inspected:19 representative PNGs were viewed, all57 identities verified.",
+    "Ordinary subscriber result is separate. No production/live/native zoom/AT/general product certification.",
+    "Final canonical integration and final gates have separate receipts."
+  ],
+  "native_sha256": "0cf283d9875e65816f408937298a06126611c3219ccc2f5ae0befac2e6546c86",
+  "no_raw_runtime_or_auth_artifacts_included": true,
+  "qa_released_utc": "2026-10-25T17:29:32.575209+00:00",
+  "receipt_sha256": "bb7202a7cf42c95c19c570e19a296953d4637c91597ec48b979e38f407f4df54",
+  "requests": {
+    "collectionPreviewMultiplicity": "not fixed",
+    "explicitReadonlyPreviewPostsStatic": 9,
+    "observedUniversalRequestCount": null,
+    "staticHappyPathBusinessRequests": 197
+  },
+  "roles": {
+    "actualBrowserActor": "existing demo administrator",
+    "ordinaryUserLoginExercised": false
+  },
+  "schema": 1,
+  "sessions": {
+    "explicitLogout": "not in unchanged helper",
+    "observedNormalUILogins": 1,
+    "termination": "must be established by owned demo/database cleanup"
+  },
+  "source_scope": "Canonical582c plus six reviewed revoked-consequence paths and reviewed reachability observer spec/helper in private copy only",
+  "status": "private candidate accepted; not final canonical execution"
+}

@@ -1,0 +1,39 @@
+{
+  "checkpoint": "WIP49",
+  "snapshot": "accepted bounded UI/motion source checkpoint; saves require external receipts",
+  "acceptance": "CHECKPOINT-EVIDENCE/WIP49/aggregate-acceptance.json",
+  "acceptance_kind": "modular aggregate; original command interrupted after test success",
+  "verification": {
+    "frontend_tests_passed": 1817,
+    "frontend_test_files": 160,
+    "frontend_failed": 0,
+    "frontend_pending": 0,
+    "typecheck": "passed",
+    "same_source_offline_build_exit": 0,
+    "original_aggregate_exit": "unavailable after tool-level network block",
+    "unchanged_web_scope_files": 381,
+    "static": "passed",
+    "visual": "bounded actual desktop and narrow CSS viewport review",
+    "backend_unchanged_scope_files": 480,
+    "new_backend_runtime_tests": false
+  },
+  "limits": [
+    "Not full native browser matrix; launch blocked before assertions.",
+    "Actual CSS viewport inspection does not establish real mobile-device, touch, zoom or full accessibility acceptance.",
+    "sing-box runtime blocked by host netlink restriction; parsers passed.",
+    "Bounded protocol/target feature matrix; no blanket3x-ui/s-ui parity.",
+    "No all35-story completion, Google certification, live node deployment or production-readiness claim.",
+    "Actual reduced-motion browser preference emulation unavailable.",
+    "No frame-rate/video/performance measurement; populated Resources list not actually reviewed."
+  ],
+  "prior_status": "CHECKPOINT-EVIDENCE/WIP49/historical-wip48-checkpoint-status.json",
+  "library_save_success": false,
+  "library_save_status": "external successful receipt required",
+  "private_demo_deployment": "CHECKPOINT-EVIDENCE/WIP49/private-demo-deployment.json",
+  "production_ready": false,
+  "production_deployed": false,
+  "project_complete": false,
+  "user_acceptance": false,
+  "artifact_kind": "source",
+  "selected_screenshot_bytes_in_archives": false
+}

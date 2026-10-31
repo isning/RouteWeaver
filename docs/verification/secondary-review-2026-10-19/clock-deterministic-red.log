@@ -1,0 +1,13 @@
+=== RUN   TestBatchClaimsFreshLeaseAfterSlowEarlierSend
+    service_clock_test.go:34: newly claimed event lease = 2026-10-19 12:01:00 +0000 UTC, want 2026-10-19 12:02:05 +0000 UTC
+--- FAIL: TestBatchClaimsFreshLeaseAfterSlowEarlierSend (0.01s)
+=== RUN   TestRetryDelayStartsAfterTransportFailure
+    service_clock_test.go:91: retry due = 2026-10-19 12:01:00 +0000 UTC, want 2026-10-19 12:01:20 +0000 UTC
+    service_clock_test.go:96: retry ran before full post-failure delay: 2 sends
+--- FAIL: TestRetryDelayStartsAfterTransportFailure (0.00s)
+=== RUN   TestQueuedExpiryRecheckedAfterEarlierSend
+    service_clock_test.go:147: expired queued event sent: sends=2 statuses=map[accepted:2]
+--- FAIL: TestQueuedExpiryRecheckedAfterEarlierSend (0.00s)
+FAIL
+FAIL	routeweaver/internal/notifications	0.015s
+FAIL

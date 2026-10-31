@@ -1,0 +1,10 @@
+=== RUN   TestUsageProjectionPublicWarmCounterIngestion
+=== RUN   TestUsageProjectionPublicWarmCounterIngestion/counter-deltas-and-provider-replay
+=== RUN   TestUsageProjectionPublicWarmCounterIngestion/operator-baseline-does-not-invent-usage
+=== RUN   TestUsageProjectionPublicWarmCounterIngestion/admission-budget-snapshot-is-not-a-second-charge
+--- PASS: TestUsageProjectionPublicWarmCounterIngestion (0.56s)
+    --- PASS: TestUsageProjectionPublicWarmCounterIngestion/counter-deltas-and-provider-replay (0.24s)
+    --- PASS: TestUsageProjectionPublicWarmCounterIngestion/operator-baseline-does-not-invent-usage (0.18s)
+    --- PASS: TestUsageProjectionPublicWarmCounterIngestion/admission-budget-snapshot-is-not-a-second-charge (0.14s)
+PASS
+ok  	routeweaver/internal/store	1.582s

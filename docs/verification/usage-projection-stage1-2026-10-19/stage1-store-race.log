@@ -1,0 +1,377 @@
+=== RUN   TestCanonicalRecordMutationInventory
+--- PASS: TestCanonicalRecordMutationInventory (0.05s)
+=== RUN   TestUsageProjectionSchemaTracksOnlyCanonicalLedger
+--- PASS: TestUsageProjectionSchemaTracksOnlyCanonicalLedger (0.03s)
+=== RUN   TestByteBudgetReservesWeightedPoolAndSettlesExactlyOnce
+--- PASS: TestByteBudgetReservesWeightedPoolAndSettlesExactlyOnce (0.15s)
+=== RUN   TestExpiredBudgetCannotBeReissuedUntilFinalEvidence
+--- PASS: TestExpiredBudgetCannotBeReissuedUntilFinalEvidence (0.10s)
+=== RUN   TestBudgetFinalAcceptsMeasuredConsumptionAfterDisable
+--- PASS: TestBudgetFinalAcceptsMeasuredConsumptionAfterDisable (0.10s)
+=== RUN   TestFinalBeforeInitialRequestFencesDelayedGrant
+--- PASS: TestFinalBeforeInitialRequestFencesDelayedGrant (0.06s)
+=== RUN   TestBudgetPinsRateBoundaryAndPreservesLateHistoricalCharge
+--- PASS: TestBudgetPinsRateBoundaryAndPreservesLateHistoricalCharge (0.09s)
+=== RUN   TestManagedAggregateSnapshotsDoNotDoubleDebitAdmissionLedger
+--- PASS: TestManagedAggregateSnapshotsDoNotDoubleDebitAdmissionLedger (0.08s)
+=== RUN   TestBudgetPolicyChangeCannotCrossIssuedReservation
+--- PASS: TestBudgetPolicyChangeCannotCrossIssuedReservation (0.07s)
+=== RUN   TestIssuedBudgetsFenceQuotaReductionAndCycleChange
+--- PASS: TestIssuedBudgetsFenceQuotaReductionAndCycleChange (0.15s)
+=== RUN   TestConcurrentStoresCannotOverReserveWeightedAccountQuota
+--- PASS: TestConcurrentStoresCannotOverReserveWeightedAccountQuota (0.12s)
+=== RUN   TestOverBudgetEvidenceIsRetainedWithoutInventingAttribution
+--- PASS: TestOverBudgetEvidenceIsRetainedWithoutInventingAttribution (0.07s)
+=== RUN   TestQueuedAdmissionCannotIgnoreLaterCommittedSettlement
+--- PASS: TestQueuedAdmissionCannotIgnoreLaterCommittedSettlement (0.09s)
+=== RUN   TestManagedAdmissionRequiresCurrentAppliedImmutableManifest
+=== RUN   TestManagedAdmissionRequiresCurrentAppliedImmutableManifest/none
+=== RUN   TestManagedAdmissionRequiresCurrentAppliedImmutableManifest/missing
+=== RUN   TestManagedAdmissionRequiresCurrentAppliedImmutableManifest/expired-policy
+=== RUN   TestManagedAdmissionRequiresCurrentAppliedImmutableManifest/wrong-credential
+=== RUN   TestManagedAdmissionRequiresCurrentAppliedImmutableManifest/changed-generation
+=== RUN   TestManagedAdmissionRequiresCurrentAppliedImmutableManifest/revoked-enrollment
+--- PASS: TestManagedAdmissionRequiresCurrentAppliedImmutableManifest (0.34s)
+    --- PASS: TestManagedAdmissionRequiresCurrentAppliedImmutableManifest/none (0.07s)
+    --- PASS: TestManagedAdmissionRequiresCurrentAppliedImmutableManifest/missing (0.05s)
+    --- PASS: TestManagedAdmissionRequiresCurrentAppliedImmutableManifest/expired-policy (0.05s)
+    --- PASS: TestManagedAdmissionRequiresCurrentAppliedImmutableManifest/wrong-credential (0.05s)
+    --- PASS: TestManagedAdmissionRequiresCurrentAppliedImmutableManifest/changed-generation (0.06s)
+    --- PASS: TestManagedAdmissionRequiresCurrentAppliedImmutableManifest/revoked-enrollment (0.06s)
+=== RUN   TestManagedBindingCannotUseLegacyGrantBypass
+--- PASS: TestManagedBindingCannotUseLegacyGrantBypass (0.04s)
+=== RUN   TestBoundedAdmissionLifecycleInterleavings
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate1/stalefalse/trace00
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate1/stalefalse/trace01
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate1/stalefalse/trace02
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate1/stalefalse/trace03
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate1/stalefalse/trace04
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate1/stalefalse/trace05
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate1/stalefalse/trace06
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate1/stalefalse/trace07
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate1/stalefalse/trace08
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate1/stalefalse/trace09
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate1/stalefalse/trace10
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate1/stalefalse/trace11
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate1/stalefalse/trace12
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate1/stalefalse/trace13
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate1/stalefalse/trace14
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate1/stalefalse/trace15
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate1/stalefalse/trace16
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate1/stalefalse/trace17
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate1/stalefalse/trace18
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate1/stalefalse/trace19
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate1/staletrue/trace00
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate1/staletrue/trace01
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate1/staletrue/trace02
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate1/staletrue/trace03
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate1/staletrue/trace04
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate1/staletrue/trace05
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate1/staletrue/trace06
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate1/staletrue/trace07
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate1/staletrue/trace08
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate1/staletrue/trace09
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate1/staletrue/trace10
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate1/staletrue/trace11
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate1/staletrue/trace12
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate1/staletrue/trace13
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate1/staletrue/trace14
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate1/staletrue/trace15
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate1/staletrue/trace16
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate1/staletrue/trace17
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate1/staletrue/trace18
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate1/staletrue/trace19
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate2/stalefalse/trace00
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate2/stalefalse/trace01
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate2/stalefalse/trace02
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate2/stalefalse/trace03
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate2/stalefalse/trace04
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate2/stalefalse/trace05
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate2/stalefalse/trace06
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate2/stalefalse/trace07
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate2/stalefalse/trace08
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate2/stalefalse/trace09
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate2/stalefalse/trace10
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate2/stalefalse/trace11
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate2/stalefalse/trace12
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate2/stalefalse/trace13
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate2/stalefalse/trace14
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate2/stalefalse/trace15
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate2/stalefalse/trace16
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate2/stalefalse/trace17
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate2/stalefalse/trace18
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate2/stalefalse/trace19
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate2/staletrue/trace00
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate2/staletrue/trace01
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate2/staletrue/trace02
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate2/staletrue/trace03
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate2/staletrue/trace04
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate2/staletrue/trace05
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate2/staletrue/trace06
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate2/staletrue/trace07
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate2/staletrue/trace08
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate2/staletrue/trace09
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate2/staletrue/trace10
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate2/staletrue/trace11
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate2/staletrue/trace12
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate2/staletrue/trace13
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate2/staletrue/trace14
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate2/staletrue/trace15
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate2/staletrue/trace16
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate2/staletrue/trace17
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate2/staletrue/trace18
+=== RUN   TestBoundedAdmissionLifecycleInterleavings/rate2/staletrue/trace19
+--- PASS: TestBoundedAdmissionLifecycleInterleavings (17.02s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate1/stalefalse/trace00 (0.21s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate1/stalefalse/trace01 (0.23s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate1/stalefalse/trace02 (0.20s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate1/stalefalse/trace03 (0.21s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate1/stalefalse/trace04 (0.21s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate1/stalefalse/trace05 (0.20s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate1/stalefalse/trace06 (0.20s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate1/stalefalse/trace07 (0.20s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate1/stalefalse/trace08 (0.20s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate1/stalefalse/trace09 (0.19s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate1/stalefalse/trace10 (0.20s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate1/stalefalse/trace11 (0.19s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate1/stalefalse/trace12 (0.20s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate1/stalefalse/trace13 (0.20s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate1/stalefalse/trace14 (0.19s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate1/stalefalse/trace15 (0.22s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate1/stalefalse/trace16 (0.20s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate1/stalefalse/trace17 (0.22s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate1/stalefalse/trace18 (0.22s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate1/stalefalse/trace19 (0.22s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate1/staletrue/trace00 (0.21s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate1/staletrue/trace01 (0.21s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate1/staletrue/trace02 (0.20s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate1/staletrue/trace03 (0.22s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate1/staletrue/trace04 (0.24s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate1/staletrue/trace05 (0.30s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate1/staletrue/trace06 (0.26s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate1/staletrue/trace07 (0.22s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate1/staletrue/trace08 (0.20s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate1/staletrue/trace09 (0.22s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate1/staletrue/trace10 (0.23s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate1/staletrue/trace11 (0.21s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate1/staletrue/trace12 (0.21s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate1/staletrue/trace13 (0.21s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate1/staletrue/trace14 (0.28s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate1/staletrue/trace15 (0.22s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate1/staletrue/trace16 (0.22s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate1/staletrue/trace17 (0.19s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate1/staletrue/trace18 (0.21s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate1/staletrue/trace19 (0.21s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate2/stalefalse/trace00 (0.23s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate2/stalefalse/trace01 (0.22s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate2/stalefalse/trace02 (0.22s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate2/stalefalse/trace03 (0.20s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate2/stalefalse/trace04 (0.23s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate2/stalefalse/trace05 (0.22s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate2/stalefalse/trace06 (0.21s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate2/stalefalse/trace07 (0.24s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate2/stalefalse/trace08 (0.20s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate2/stalefalse/trace09 (0.20s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate2/stalefalse/trace10 (0.20s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate2/stalefalse/trace11 (0.22s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate2/stalefalse/trace12 (0.22s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate2/stalefalse/trace13 (0.22s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate2/stalefalse/trace14 (0.21s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate2/stalefalse/trace15 (0.21s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate2/stalefalse/trace16 (0.20s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate2/stalefalse/trace17 (0.21s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate2/stalefalse/trace18 (0.21s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate2/stalefalse/trace19 (0.22s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate2/staletrue/trace00 (0.23s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate2/staletrue/trace01 (0.23s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate2/staletrue/trace02 (0.21s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate2/staletrue/trace03 (0.21s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate2/staletrue/trace04 (0.20s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate2/staletrue/trace05 (0.22s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate2/staletrue/trace06 (0.21s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate2/staletrue/trace07 (0.19s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate2/staletrue/trace08 (0.20s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate2/staletrue/trace09 (0.19s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate2/staletrue/trace10 (0.19s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate2/staletrue/trace11 (0.20s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate2/staletrue/trace12 (0.20s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate2/staletrue/trace13 (0.19s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate2/staletrue/trace14 (0.20s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate2/staletrue/trace15 (0.19s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate2/staletrue/trace16 (0.19s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate2/staletrue/trace17 (0.21s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate2/staletrue/trace18 (0.25s)
+    --- PASS: TestBoundedAdmissionLifecycleInterleavings/rate2/staletrue/trace19 (0.24s)
+=== RUN   TestReviewedFinalBudgetRecoveryRequiresExactStateAndKeepsAudit
+--- PASS: TestReviewedFinalBudgetRecoveryRequiresExactStateAndKeepsAudit (0.09s)
+=== RUN   TestAdmissionHistoryScalingCharacterization
+    admission_scaling_test.go:18: explicit workload characterization not requested
+--- SKIP: TestAdmissionHistoryScalingCharacterization (0.00s)
+=== RUN   TestAdmissionUnionCountsNormalizedIPsAcrossEntriesAndDurablyRenews
+--- PASS: TestAdmissionUnionCountsNormalizedIPsAcrossEntriesAndDurablyRenews (0.14s)
+=== RUN   TestAdmissionRenewalRespectsRevocationQuotaAndHolds
+=== RUN   TestAdmissionRenewalRespectsRevocationQuotaAndHolds/disabled
+=== RUN   TestAdmissionRenewalRespectsRevocationQuotaAndHolds/expired
+=== RUN   TestAdmissionRenewalRespectsRevocationQuotaAndHolds/credential-revoked
+=== RUN   TestAdmissionRenewalRespectsRevocationQuotaAndHolds/route-not-entitled
+=== RUN   TestAdmissionRenewalRespectsRevocationQuotaAndHolds/exhausted
+=== RUN   TestAdmissionRenewalRespectsRevocationQuotaAndHolds/accounting-pending
+=== RUN   TestAdmissionRenewalRespectsRevocationQuotaAndHolds/enrollment-revoked
+--- PASS: TestAdmissionRenewalRespectsRevocationQuotaAndHolds (0.43s)
+    --- PASS: TestAdmissionRenewalRespectsRevocationQuotaAndHolds/disabled (0.07s)
+    --- PASS: TestAdmissionRenewalRespectsRevocationQuotaAndHolds/expired (0.06s)
+    --- PASS: TestAdmissionRenewalRespectsRevocationQuotaAndHolds/credential-revoked (0.06s)
+    --- PASS: TestAdmissionRenewalRespectsRevocationQuotaAndHolds/route-not-entitled (0.06s)
+    --- PASS: TestAdmissionRenewalRespectsRevocationQuotaAndHolds/exhausted (0.06s)
+    --- PASS: TestAdmissionRenewalRespectsRevocationQuotaAndHolds/accounting-pending (0.06s)
+    --- PASS: TestAdmissionRenewalRespectsRevocationQuotaAndHolds/enrollment-revoked (0.06s)
+=== RUN   TestAdmissionIPClaimIsAtomicAcrossStoreHandles
+--- PASS: TestAdmissionIPClaimIsAtomicAcrossStoreHandles (0.08s)
+=== RUN   TestAdmissionScopesPresenceAndExpiresStaleIPs
+--- PASS: TestAdmissionScopesPresenceAndExpiresStaleIPs (0.10s)
+=== RUN   TestConnectionLimitCountsIndependentStreamsOnSameIPAndRenewsAtCap
+--- PASS: TestConnectionLimitCountsIndependentStreamsOnSameIPAndRenewsAtCap (0.12s)
+=== RUN   TestConnectionClaimIsAtomicAcrossStoreHandlesWithSameIP
+--- PASS: TestConnectionClaimIsAtomicAcrossStoreHandlesWithSameIP (0.09s)
+=== RUN   TestAdmissionStatusReportsLeasesNotHardwareAndReleasesStreamsIndependently
+--- PASS: TestAdmissionStatusReportsLeasesNotHardwareAndReleasesStreamsIndependently (0.08s)
+=== RUN   TestIndividualConnectionAndExactRouteOverridesFeedAdmission
+--- PASS: TestIndividualConnectionAndExactRouteOverridesFeedAdmission (0.12s)
+=== RUN   TestConnectionCapReductionRequiresExistingStreamsToFit
+--- PASS: TestConnectionCapReductionRequiresExistingStreamsToFit (0.18s)
+=== RUN   TestBackupStreamingDoesNotBlockAdmissionOrConfigurationWrites
+--- PASS: TestBackupStreamingDoesNotBlockAdmissionOrConfigurationWrites (0.09s)
+=== RUN   TestSecondaryBackupRejectsMissingLiveFeedIndex
+--- PASS: TestSecondaryBackupRejectsMissingLiveFeedIndex (0.03s)
+=== RUN   TestSecondaryBackupRejectsMissingGenerationCounter
+--- PASS: TestSecondaryBackupRejectsMissingGenerationCounter (0.04s)
+=== RUN   TestBackupGenerationFenceCannotRegressButTombstoneMayLead
+--- PASS: TestBackupGenerationFenceCannotRegressButTombstoneMayLead (0.04s)
+=== RUN   TestBackupFreshRestorePreservesSecretsIdentitiesIndexesCountersAndHistory
+--- PASS: TestBackupFreshRestorePreservesSecretsIdentitiesIndexesCountersAndHistory (2.29s)
+=== RUN   TestBackupRejectsInvalidOrOccupiedTargetBeforeMutation
+=== RUN   TestBackupRejectsInvalidOrOccupiedTargetBeforeMutation/unsupported_schema
+=== RUN   TestBackupRejectsInvalidOrOccupiedTargetBeforeMutation/missing_identity
+=== RUN   TestBackupRejectsInvalidOrOccupiedTargetBeforeMutation/duplicate_record
+=== RUN   TestBackupRejectsInvalidOrOccupiedTargetBeforeMutation/missing_migration
+=== RUN   TestBackupRejectsInvalidOrOccupiedTargetBeforeMutation/orphan_token
+--- PASS: TestBackupRejectsInvalidOrOccupiedTargetBeforeMutation (0.77s)
+    --- PASS: TestBackupRejectsInvalidOrOccupiedTargetBeforeMutation/unsupported_schema (0.00s)
+    --- PASS: TestBackupRejectsInvalidOrOccupiedTargetBeforeMutation/missing_identity (0.00s)
+    --- PASS: TestBackupRejectsInvalidOrOccupiedTargetBeforeMutation/duplicate_record (0.00s)
+    --- PASS: TestBackupRejectsInvalidOrOccupiedTargetBeforeMutation/missing_migration (0.00s)
+    --- PASS: TestBackupRejectsInvalidOrOccupiedTargetBeforeMutation/orphan_token (0.00s)
+=== RUN   TestBackupImportRollsBackPartialDatabaseFailure
+--- PASS: TestBackupImportRollsBackPartialDatabaseFailure (1.53s)
+=== RUN   TestBackupSnapshotIsAtomicAcrossRecordAndGeneration
+--- PASS: TestBackupSnapshotIsAtomicAcrossRecordAndGeneration (0.28s)
+=== RUN   TestBackupRefusesUnknownDatabaseTablesRatherThanOmittingThem
+--- PASS: TestBackupRefusesUnknownDatabaseTablesRatherThanOmittingThem (0.03s)
+=== RUN   TestBackupPreservesGenerationFenceAfterCurrentRecordRemoval
+--- PASS: TestBackupPreservesGenerationFenceAfterCurrentRecordRemoval (0.06s)
+=== RUN   TestBackupRefusesUnknownColumnsRatherThanLosingFutureState
+--- PASS: TestBackupRefusesUnknownColumnsRatherThanLosingFutureState (0.03s)
+=== RUN   TestBackupStreamingReadTransactionPreservesGenerationAndRejectsCancelledImport
+--- PASS: TestBackupStreamingReadTransactionPreservesGenerationAndRejectsCancelledImport (0.48s)
+=== RUN   TestMeterRecordsOverQuotaAndKeepsHistoricalRate
+--- PASS: TestMeterRecordsOverQuotaAndKeepsHistoricalRate (0.03s)
+=== RUN   TestTenantIDsCannotCrossOwners
+--- PASS: TestTenantIDsCannotCrossOwners (0.03s)
+=== RUN   TestFractionalRateRoundsAfterAggregation
+--- PASS: TestFractionalRateRoundsAfterAggregation (0.04s)
+=== RUN   TestRelatedRecordCASRetainsTargetWhenBindingChanges
+--- PASS: TestRelatedRecordCASRetainsTargetWhenBindingChanges (0.03s)
+=== RUN   TestRelatedRecordCASCommitsTogetherAndRollsBackSerializationFailure
+--- PASS: TestRelatedRecordCASCommitsTogetherAndRollsBackSerializationFailure (0.03s)
+=== RUN   TestRelatedRecordCASFencesNewDependentMembership
+--- PASS: TestRelatedRecordCASFencesNewDependentMembership (0.02s)
+=== RUN   TestCounterIngestionIsAtomicReplaySafeAndSeparatesProvider
+--- PASS: TestCounterIngestionIsAtomicReplaySafeAndSeparatesProvider (0.09s)
+=== RUN   TestCounterCursorDoesNotResetOnBillingCycleChange
+--- PASS: TestCounterCursorDoesNotResetOnBillingCycleChange (0.06s)
+=== RUN   TestCounterPolicyBoundaryRequiresEvidenceAndBlocksEligibility
+--- PASS: TestCounterPolicyBoundaryRequiresEvidenceAndBlocksEligibility (0.07s)
+=== RUN   TestCounterCalendarAndManualBoundaryNeedExactObservation
+=== RUN   TestCounterCalendarAndManualBoundaryNeedExactObservation/calendar
+=== RUN   TestCounterCalendarAndManualBoundaryNeedExactObservation/manual
+--- PASS: TestCounterCalendarAndManualBoundaryNeedExactObservation (0.13s)
+    --- PASS: TestCounterCalendarAndManualBoundaryNeedExactObservation/calendar (0.06s)
+    --- PASS: TestCounterCalendarAndManualBoundaryNeedExactObservation/manual (0.06s)
+=== RUN   TestFirstNonzeroCounterRequiresObservedEpochBaseline
+--- PASS: TestFirstNonzeroCounterRequiresObservedEpochBaseline (0.05s)
+=== RUN   TestOperatorBaselineIsAuditedAndDoesNotChargeUnknownInterval
+--- PASS: TestOperatorBaselineIsAuditedAndDoesNotChargeUnknownInterval (0.08s)
+=== RUN   TestManagedDiagnosticPinsEveryAppliedHopAndRejectsUnknownOrAmbiguousPath
+--- PASS: TestManagedDiagnosticPinsEveryAppliedHopAndRejectsUnknownOrAmbiguousPath (0.09s)
+=== RUN   TestManagedDiagnosticChangedHopCannotReportSuccessAndExactReplayRemainsIdempotent
+--- PASS: TestManagedDiagnosticChangedHopCannotReportSuccessAndExactReplayRemainsIdempotent (0.07s)
+=== RUN   TestManagedDiagnosticRequiresFreshAllHopObservationEnrollmentAndLease
+=== RUN   TestManagedDiagnosticRequiresFreshAllHopObservationEnrollmentAndLease/old-observation
+=== RUN   TestManagedDiagnosticRequiresFreshAllHopObservationEnrollmentAndLease/expired-policy
+=== RUN   TestManagedDiagnosticRequiresFreshAllHopObservationEnrollmentAndLease/old-epoch
+=== RUN   TestManagedDiagnosticRequiresFreshAllHopObservationEnrollmentAndLease/unobserved
+=== RUN   TestManagedDiagnosticRequiresFreshAllHopObservationEnrollmentAndLease/wrong-fingerprint
+--- PASS: TestManagedDiagnosticRequiresFreshAllHopObservationEnrollmentAndLease (0.23s)
+    --- PASS: TestManagedDiagnosticRequiresFreshAllHopObservationEnrollmentAndLease/old-observation (0.04s)
+    --- PASS: TestManagedDiagnosticRequiresFreshAllHopObservationEnrollmentAndLease/expired-policy (0.05s)
+    --- PASS: TestManagedDiagnosticRequiresFreshAllHopObservationEnrollmentAndLease/old-epoch (0.05s)
+    --- PASS: TestManagedDiagnosticRequiresFreshAllHopObservationEnrollmentAndLease/unobserved (0.04s)
+    --- PASS: TestManagedDiagnosticRequiresFreshAllHopObservationEnrollmentAndLease/wrong-fingerprint (0.05s)
+=== RUN   TestDiagnosticUnknownOutcomeRetainsPhysicalNodeLaneUntilBoundedStopHorizon
+--- PASS: TestDiagnosticUnknownOutcomeRetainsPhysicalNodeLaneUntilBoundedStopHorizon (0.10s)
+=== RUN   TestManagedDiagnosticChangedPathPreservesNotRunAndUnknownEvidence
+=== RUN   TestManagedDiagnosticChangedPathPreservesNotRunAndUnknownEvidence/not_run
+=== RUN   TestManagedDiagnosticChangedPathPreservesNotRunAndUnknownEvidence/unknown
+--- PASS: TestManagedDiagnosticChangedPathPreservesNotRunAndUnknownEvidence (0.14s)
+    --- PASS: TestManagedDiagnosticChangedPathPreservesNotRunAndUnknownEvidence/not_run (0.07s)
+    --- PASS: TestManagedDiagnosticChangedPathPreservesNotRunAndUnknownEvidence/unknown (0.07s)
+=== RUN   TestDiagnosticQueueAndClaimsSurviveRestartAndSerializeAcrossStoreHandles
+--- PASS: TestDiagnosticQueueAndClaimsSurviveRestartAndSerializeAcrossStoreHandles (0.09s)
+=== RUN   TestUnrunExpiredCancelledAndMissingResultsAreNeverSuccess
+--- PASS: TestUnrunExpiredCancelledAndMissingResultsAreNeverSuccess (0.06s)
+=== RUN   TestDiagnosticQueueBoundAndEnrollmentChange
+--- PASS: TestDiagnosticQueueBoundAndEnrollmentChange (0.09s)
+=== RUN   TestLateDurableResultRefinesUnknownWithoutReexecutingJob
+--- PASS: TestLateDurableResultRefinesUnknownWithoutReexecutingJob (0.05s)
+=== RUN   TestGroupPreviewApplySharesAdmissionPolicyAndRejectsStaleRevision
+--- PASS: TestGroupPreviewApplySharesAdmissionPolicyAndRejectsStaleRevision (0.12s)
+=== RUN   TestPolicyPreviewBindsExactChangeAndInitialCycleAnchor
+--- PASS: TestPolicyPreviewBindsExactChangeAndInitialCycleAnchor (0.11s)
+=== RUN   TestGroupChangesCannotDiscardIssuedBudgetOrSilentlyStackServices
+--- PASS: TestGroupChangesCannotDiscardIssuedBudgetOrSilentlyStackServices (0.24s)
+=== RUN   TestGroupPreviewCASSerializesIndependentStoreWriters
+--- PASS: TestGroupPreviewCASSerializesIndependentStoreWriters (0.11s)
+=== RUN   TestProvisioningPolicyFenceRejectsConcurrentGroupRemoval
+--- PASS: TestProvisioningPolicyFenceRejectsConcurrentGroupRemoval (0.11s)
+=== RUN   TestFirstGroupCalendarPreservesExistingDirectRouteBudget
+--- PASS: TestFirstGroupCalendarPreservesExistingDirectRouteBudget (0.15s)
+=== RUN   TestFirstGroupAssignmentDoesNotEraseSettledLegacyUsage
+--- PASS: TestFirstGroupAssignmentDoesNotEraseSettledLegacyUsage (0.08s)
+=== RUN   TestFirstGroupPreviewRejectsInterveningLegacyUsage
+--- PASS: TestFirstGroupPreviewRejectsInterveningLegacyUsage (0.07s)
+=== RUN   TestComparedGenerationCommitsManifestAndAttemptAtomically
+--- PASS: TestComparedGenerationCommitsManifestAndAttemptAtomically (0.03s)
+=== RUN   TestInviteIsSingleUseAndUsernameUnique
+--- PASS: TestInviteIsSingleUseAndUsernameUnique (3.69s)
+=== RUN   TestTOTPActualStepReplayRejected
+--- PASS: TestTOTPActualStepReplayRejected (2.10s)
+=== RUN   TestEncryptedStateAndSessionSurviveReopen
+--- PASS: TestEncryptedStateAndSessionSurviveReopen (1.45s)
+=== RUN   TestMFAEnableRevokesSessionsAndCannotRepeat
+--- PASS: TestMFAEnableRevokesSessionsAndCannotRepeat (2.91s)
+=== RUN   TestCASCannotResurrectRevokedRecord
+--- PASS: TestCASCannotResurrectRevokedRecord (0.02s)
+=== RUN   TestNodeObservationsPersistAndDesignateOneCorePerPhysicalNode
+--- PASS: TestNodeObservationsPersistAndDesignateOneCorePerPhysicalNode (0.05s)
+=== RUN   TestNodeObservationWritesSerializeAcrossStoreHandles
+--- PASS: TestNodeObservationWritesSerializeAcrossStoreHandles (0.25s)
+=== RUN   TestNotificationSecretPersistenceIsEncryptedAndNotOrdinaryState
+--- PASS: TestNotificationSecretPersistenceIsEncryptedAndNotOrdinaryState (0.04s)
+=== RUN   TestStateReadsOnlyOperationalKinds
+--- PASS: TestStateReadsOnlyOperationalKinds (0.48s)
+=== RUN   TestUsageDedupAndQuota
+--- PASS: TestUsageDedupAndQuota (0.03s)
+=== RUN   TestTokenPublicationFencesCapturedInputsAndRollsBackIndex
+--- PASS: TestTokenPublicationFencesCapturedInputsAndRollsBackIndex (0.03s)
+PASS
+ok  	routeweaver/internal/store	40.377s

@@ -1,0 +1,11 @@
+=== RUN   TestIndependentCapReductionCannotLeaveRenewableOverCapState
+=== RUN   TestIndependentCapReductionCannotLeaveRenewableOverCapState/streams
+    integrated_cap_reduction_review_test.go:37: reduction accepted with renewable excess beyond original 30-second leases: cap=1 activeStreams=2 onlineIPs=1
+=== RUN   TestIndependentCapReductionCannotLeaveRenewableOverCapState/ips
+    integrated_cap_reduction_review_test.go:37: reduction accepted with renewable excess beyond original 30-second leases: cap=1 activeStreams=2 onlineIPs=2
+--- FAIL: TestIndependentCapReductionCannotLeaveRenewableOverCapState (0.33s)
+    --- FAIL: TestIndependentCapReductionCannotLeaveRenewableOverCapState/streams (0.17s)
+    --- FAIL: TestIndependentCapReductionCannotLeaveRenewableOverCapState/ips (0.16s)
+FAIL
+FAIL	routeweaver/internal/store	0.352s
+FAIL

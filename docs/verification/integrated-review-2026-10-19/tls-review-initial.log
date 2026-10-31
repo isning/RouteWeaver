@@ -1,0 +1,17 @@
+=== RUN   TestReviewPublishRejectsUnusablePackagedCertificate
+=== RUN   TestReviewPublishRejectsUnusablePackagedCertificate/expired
+    integrated_tls_review_test.go:11: actual x509 verification rejects this fixture: x509: certificate has expired or is not yet valid: current time 2026-10-20T03:33:06+08:00 is after 2026-10-19T19:32:06Z
+    integrated_tls_review_test.go:15: publication accepted known unusable expired certificate: HTTP200 {"id":"fleet-deployment","instances":[{"digest":"6fdb643b13e5f3c007164094d315c78e309db6b4023800863109c17b78f14c5b","generation":"1","instanceId":"fleet-a","status":"queued"},{"digest":"0fd20184e3145d904c299be22250f0fbb5f5e9444cdf349b89b33e0667c0015b","generation":"1","instanceId":"fleet-b","status":"queued"}],"nativeChecked":false,"status":"queued"}
+=== RUN   TestReviewPublishRejectsUnusablePackagedCertificate/not-yet-valid
+    integrated_tls_review_test.go:11: actual x509 verification rejects this fixture: x509: certificate has expired or is not yet valid: current time 2026-10-20T03:33:06+08:00 is before 2026-10-19T19:34:06Z
+    integrated_tls_review_test.go:15: publication accepted known unusable not-yet-valid certificate: HTTP200 {"id":"fleet-deployment","instances":[{"digest":"faf6adb3df9dee04179b2a2eb181cb82da53e626bb86a6eb6b458f7a4c111703","generation":"1","instanceId":"fleet-a","status":"queued"},{"digest":"0fd20184e3145d904c299be22250f0fbb5f5e9444cdf349b89b33e0667c0015b","generation":"1","instanceId":"fleet-b","status":"queued"}],"nativeChecked":false,"status":"queued"}
+=== RUN   TestReviewPublishRejectsUnusablePackagedCertificate/wrong-SNI
+    integrated_tls_review_test.go:11: actual x509 verification rejects this fixture: x509: certificate is valid for other.example, not expected.example
+    integrated_tls_review_test.go:15: publication accepted known unusable wrong-SNI certificate: HTTP200 {"id":"fleet-deployment","instances":[{"digest":"423602ff31cef47b03b686dac45b218a88c09726a8c412066369e1745317be37","generation":"1","instanceId":"fleet-a","status":"queued"},{"digest":"0fd20184e3145d904c299be22250f0fbb5f5e9444cdf349b89b33e0667c0015b","generation":"1","instanceId":"fleet-b","status":"queued"}],"nativeChecked":false,"status":"queued"}
+--- FAIL: TestReviewPublishRejectsUnusablePackagedCertificate (0.04s)
+    --- FAIL: TestReviewPublishRejectsUnusablePackagedCertificate/expired (0.01s)
+    --- FAIL: TestReviewPublishRejectsUnusablePackagedCertificate/not-yet-valid (0.01s)
+    --- FAIL: TestReviewPublishRejectsUnusablePackagedCertificate/wrong-SNI (0.01s)
+FAIL
+FAIL	routeweaver/internal/httpapi	0.048s
+FAIL

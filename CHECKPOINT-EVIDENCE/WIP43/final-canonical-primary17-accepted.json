@@ -1,0 +1,317 @@
+{
+  "all_image_hashes_verified": true,
+  "attachment_counts": {
+    "client-inventory-200pct-geometry": 1,
+    "client-inventory-320-geometry": 1,
+    "domain-session-setup": 17,
+    "intent-editor-200pct-geometry": 1,
+    "intent-editor-320-geometry": 1,
+    "journey-result": 14,
+    "lower-group-completion-200pct-geometry": 1,
+    "lower-group-completion-320-geometry": 1,
+    "publication-review-200pct-geometry": 1,
+    "publication-review-320-geometry": 1,
+    "workspace-setup-confirmation": 18
+  },
+  "cases": [
+    {
+      "file": "product-model.ui.spec.ts",
+      "retry": 0,
+      "status": "passed",
+      "title": "initial empty pages name the task and server registration does not imply deployment"
+    },
+    {
+      "file": "product-model.ui.spec.ts",
+      "retry": 0,
+      "status": "passed",
+      "title": "first-use endpoint: two imported connections are only routed by an explicit user choice"
+    },
+    {
+      "file": "product-model.ui.spec.ts",
+      "retry": 0,
+      "status": "passed",
+      "title": "first-use direct: two imported connections are only routed by an explicit user choice"
+    },
+    {
+      "file": "product-model.ui.spec.ts",
+      "retry": 0,
+      "status": "passed",
+      "title": "existing strategy groups remain editable and revoked recovery replaces only the selected client link"
+    },
+    {
+      "file": "product-model.ui.spec.ts",
+      "retry": 0,
+      "status": "passed",
+      "title": "workspace: explicit publication changes only one of two independent client links"
+    },
+    {
+      "file": "product-model.ui.spec.ts",
+      "retry": 0,
+      "status": "passed",
+      "title": "legacy-profile: explicit publication changes only one of two independent client links"
+    },
+    {
+      "file": "product-model.ui.spec.ts",
+      "retry": 0,
+      "status": "passed",
+      "title": "saving a draft leaves frozen advanced published summary and delivery unchanged"
+    },
+    {
+      "file": "product-model.ui.spec.ts",
+      "retry": 0,
+      "status": "passed",
+      "title": "invalid JSON, cancel, and Back retain the draft until an explicit retry succeeds"
+    },
+    {
+      "file": "product-model.ui.spec.ts",
+      "retry": 0,
+      "status": "passed",
+      "title": "invalid and mismatched deep-link scope never silently selects a different configuration"
+    },
+    {
+      "file": "product-model.ui.spec.ts",
+      "retry": 0,
+      "status": "passed",
+      "title": "operator keeps line and user context through authorization, entry preparation, and a non-executing scoped batch plan"
+    },
+    {
+      "file": "product-model.ui.spec.ts",
+      "retry": 0,
+      "status": "passed",
+      "title": "scoped configuration creates one independent second-client subscription and immediately exposes its new link"
+    },
+    {
+      "file": "product-model.ui.spec.ts",
+      "retry": 0,
+      "status": "passed",
+      "title": "same rule counts are not represented as identical routing when rule contents changed"
+    },
+    {
+      "file": "product-model.ui.spec.ts",
+      "retry": 0,
+      "status": "passed",
+      "title": "25 synthetic configurations and 100 independent links remain searchable, bounded, and explicitly scoped"
+    },
+    {
+      "file": "source-refresh.ui.spec.ts",
+      "retry": 0,
+      "status": "passed",
+      "title": "reviews material source changes and preserves accepted options until an explicit decision"
+    },
+    {
+      "file": "workspace.ui.spec.ts",
+      "retry": 0,
+      "status": "passed",
+      "title": "imports directly into a configuration, retains a failed source, and saves only the draft"
+    },
+    {
+      "file": "workspace.ui.spec.ts",
+      "retry": 0,
+      "status": "passed",
+      "title": "mobile navigation and cancellation preserve a useful return path"
+    },
+    {
+      "file": "workspace.ui.spec.ts",
+      "retry": 0,
+      "status": "passed",
+      "title": "administrator edits an ordered route without dragging"
+    }
+  ],
+  "cleanup_evidence_scope": "Owned command process group termination on interruption; normal Playwright-managed server shutdown, both loopback ports closed and demo database absent. No universal descendant-liveness claim.",
+  "final_guards": {
+    "adaptedConfigUnchanged": true,
+    "demoDBRemoved": true,
+    "fixtureToolBindingsUnchanged": true,
+    "lockReleased": "2026-10-25T18:41:28.171099+00:00",
+    "portClosed": true,
+    "portsClosed": {
+      "4173": true,
+      "8080": true
+    },
+    "privateSourceInputsUnchanged": true,
+    "recoveredSourceUnchanged": true,
+    "startupCredentialRedactions": 1
+  },
+  "final_whole_web_prerequisite_sha256": "69e3bd86028d3810df00db12c3598ea45a43ca92477d7b0e2c545a69c1c686e7",
+  "fixture_inputs": [
+    {
+      "path": "web/tests/product-model.ui.spec.ts",
+      "sha256": "7492a68d0e7863cdfb28df34245a7e2f71eb2d71ab9f19c7e1d8e83a91edb1a3"
+    },
+    {
+      "path": "web/tests/source-refresh.ui.spec.ts",
+      "sha256": "29cf277d53ab278063cb978be2fc9cc7e3d9b3fda6575a3d6ff97011bb868e17"
+    },
+    {
+      "path": "web/tests/workspace.ui.spec.ts",
+      "sha256": "70f49afc9c60d916e5f7d49add4a305fe8a633bef07cef8ddcd17ad6dc806378"
+    },
+    {
+      "path": "web/tests/ui-session.ts",
+      "sha256": "bf4cc4c5131a3a78d2614196eb3586b24e639a4d174b091126567bfd2e9d0352"
+    },
+    {
+      "path": "web/tests/ui-workspace-confirmation.ts",
+      "sha256": "5f5c5695b97251dcdd5a8018b011e5cd00e7313164804b09378cad31cd6cb43a"
+    },
+    {
+      "path": "web/playwright.config.ts",
+      "sha256": "da5b6d5267fee4679d9cfcc200cdb83d2708cc50852839812f557abe6827f6d3"
+    }
+  ],
+  "format": "derived sanitized portable native and independent visual summary; not byte-identical native receipts",
+  "history_and_scope": [
+    "Native receipt and native summary retain their time-specific pending independent pixel review state; later acceptance is this separately bound review.",
+    "This is actual stable canonical1b82 execution, not the earlier private instrumented candidatebb720 or failed60ff/aff9 runs.",
+    "The actual actor is an existing synthetic demo administrator, not a fresh final-source ordinary-user RBAC test. Prior582c ordinary-role smoke stays historically attributed.",
+    "All57 final original images were individually viewed by the independent reviewer; earlier private candidate review viewed19 representatives only.",
+    "No screenshot bytes, raw native logs, auth/session/database/feed state or runtime sources are included."
+  ],
+  "image_count": 57,
+  "independent_review": {
+    "accepted": true,
+    "checks": {
+      "all57ImageHashesDimensionsAndUniqueIdentitiesVerified": true,
+      "allLifecycleGuardsTrue": true,
+      "demoStartupCredentialRedacted": true,
+      "evidenceFileHashesVerified": 62,
+      "failed": 0,
+      "flaky": 0,
+      "frozenInputHashesVerified": 58,
+      "geometryAttachmentsReviewed": 8,
+      "journeyResultAttachmentsReviewed": 14,
+      "nativeAttachmentsIndependentlyDecoded": 57,
+      "nativeOrderedCases": 17,
+      "passed": 17,
+      "previous19RepresentativeNamesAllIncluded": true,
+      "retries": 0,
+      "skipped": 0,
+      "sourceInventoryFilesVerified": 1174,
+      "threeLegacyCopiesByteEqual": true,
+      "toolHashesVerified": 8
+    },
+    "findings": [
+      "No blocking task-clarity,layout,content or privacy regression found across the57 captured final frames. This is bounded screenshot/task evidence,not universal product acceptance.",
+      "Configuration editing keeps available imported connections separate from operative traffic direction. Both first-use variants state that imported connections have not yet been used for routing; the default remains visible rather than silently selecting a proxy.",
+      "Populated strategy-group and rule forms retain labeled choices,visible values,clear saved/unsaved state and distinct save/review actions. Narrow and short viewport captures show the relevant lower control and persistent completion actions without horizontal overlap.",
+      "Publication review visibly names the selected client and exact before/after rule or default-direction changes. Same-count changes show before.example versus after.example rather than equating counts. Comparison limitations are explicit; technical configuration remains an optional disclosure.",
+      "Revoked-link recovery says the client must switch to the new link after publication and that other subscriptions remain unchanged. The entire named consequence and both actions are readable in the390px decision frame. Existing-link updates separately state that the link remains unchanged.",
+      "Subscription overview frames show the corrected 平台授权有效 badge under 平台服务用量,including320px and390px views,while published client state,unchecked changes and quota figures remain separate. These frames establish only the actual active-admin state; other policy states retain their separately scoped evidence.",
+      "Source-import disclosure is visible before submission in desktop and narrow captures; it describes local file reading versus upload and server processing/account-private scope. Actual source-refresh frames preserve removed-connection warning,affected object identities,explicit accept/retain actions and unavailable-reference repair without claiming prior published outputs changed automatically.",
+      "Saved-but-unpublished summaries,default-cancel discard decisions,invalid-JSON retention and scoped operator preparation all distinguish proposed/saved work from actual publication or deployment. Server registration explicitly says it does not connect to or alter the server.",
+      "Recommended milestone frames contain no exposed login credentials,session values,bearer subscription links,QR codes or user-private source content. Visible names and domains are synthetic fixture data."
+    ],
+    "geometry": [
+      {
+        "checkedControlsAndLabels": 20,
+        "issues": [],
+        "name": "intent-editor-320-geometry"
+      },
+      {
+        "checkedControlsAndLabels": 20,
+        "issues": [],
+        "name": "intent-editor-200pct-geometry"
+      },
+      {
+        "checkedControlsAndLabels": 29,
+        "issues": [],
+        "name": "lower-group-completion-320-geometry"
+      },
+      {
+        "checkedControlsAndLabels": 29,
+        "issues": [],
+        "name": "lower-group-completion-200pct-geometry"
+      },
+      {
+        "checkedControlsAndLabels": 5,
+        "issues": [],
+        "name": "publication-review-320-geometry"
+      },
+      {
+        "checkedControlsAndLabels": 5,
+        "issues": [],
+        "name": "publication-review-200pct-geometry"
+      },
+      {
+        "checkedControlsAndLabels": 9,
+        "issues": [],
+        "name": "client-inventory-320-geometry"
+      },
+      {
+        "checkedControlsAndLabels": 9,
+        "issues": [],
+        "name": "client-inventory-200pct-geometry"
+      }
+    ],
+    "independence": "Reviewer did not author production correction, stable fixture or execute this browser run. Reviewed immutable native/source artifacts and every original PNG directly; no source/geometry-only visual inference.",
+    "limits": [
+      "Actual actor is the existing demo administrator. No ordinary-user browser authentication/RBAC acceptance or blanket equivalence to earlier ordinary-role582c is claimed.",
+      "Only captured states are visually inspected; no new browser run,test matrix,interaction,a11y automation or real-user usability study performed by reviewer.",
+      "Doubled font/line-height captures are text simulations,not browser-native zoom. No universal keyboard,screen-reader,assistive-technology or WCAG certification.",
+      "197 business requests remain static happy-path accounting,not an observed universal request ledger. No live proxy traffic,deployed enforcement,capacity or public publication claim.",
+      "Fixture has no explicit logout; ephemeral termination is the runner-reported managed shutdown,closed4173/8080 ports and removed owned demo database. No universal descendant-liveness proof.",
+      "Old60ff andaff9 failures and the instrumentedbb720 pass remain separate unchanged evidence. Final stable17 is supported by this actualfe7c receipt,not by reattributing earlier results.",
+      "This bounded acceptance does not assert Google endorsement or a full-product design certification."
+    ],
+    "nonblocking_capture_caveats": [
+      "Several captures are intentionally taken after task scrolling; unrelated page chrome or offscreen body sections are cropped while the current action remains reachable. Do not reinterpret a scrolled capture as a full-document clipping proof.",
+      "Source-refresh captures include transient success/latest-content toasts over part of the drawer heading. They do not obstruct the consent controls or lasting warning text and are not selected as milestone images.",
+      "Legacy profile-mobile.png is a full-page capture1272px tall from an844px viewport; its fixed modal mask ends at the viewport while lower document content remains in the capture. Use the crisp viewport discard-default-cancel-mobile.png for that state; do not claim this artifact shows an interactive overlay leak.",
+      "The advanced invalid-JSON capture includes the literal English parser diagnostic Unexpected end of JSON input. Chinese continue-edit/discard consequences remain explicit. This is not a newly introduced overview regression and is not selected as a milestone frame."
+    ],
+    "original_images_individually_viewed": 57,
+    "reviewed_at": "2026-10-25T18:46:37.562786+00:00",
+    "sha256": "773aaa5062f485173e73e4e52bc3152f5bb4e894d6ce9d6b34aeaee99b3b1412",
+    "status": "Accepted for bounded final canonical primary17 administrator UI and all57 captured-frame visual scope",
+    "visual_method": "All57 original PNGs individually displayed through view_image at original detail and visually inspected. No contact sheet, crop,rescale,AI edit or synthetic image substitute. Includes every19 previously selected representative frame plus all38 remaining actual final frames."
+  },
+  "inputs_sha256": "ce00dd48a3e8336268289f026e4f61bb271cbfdd003c08d785dcccbb1545ac2d",
+  "native_limits": [
+    "PNG identity is not pixel/comprehension acceptance",
+    "Admin own-workspace UI is not ordinary-user browser RBAC",
+    "No live proxy traffic, actual deployment or native zoom acceptance",
+    "This artifact establishes native result and recorded guards, not independent pixel acceptance.",
+    "The actor is the existing synthetic demo administrator; ordinary-user browser582c evidence is historical and not blanket final-source equivalence.",
+    "No explicit fixture logout; ephemeral session ends with owned demo/database disposal.",
+    "197 remains static happy-path business-request accounting, not universal observed network count.",
+    "No rerun, product/canonical edit, extra suite, external subscription, live traffic, deployment, package install or publication performed."
+  ],
+  "native_pending_pixel_status_preserved": "native-stages-passed-pixel-review-pending",
+  "native_report_sha256": "c131a92b5b2c770d77bb7a1a4d773dcbb57d3380829e584a1628e143990c32dd",
+  "native_summary_sha256": "ee14206195eb4d8e570e6bfdc11fb8544093d8fb1b05e455afc2318dbeeda674",
+  "no_raw_runtime_or_auth_artifacts_included": true,
+  "primary_evidence_sha256": "1f6dceaae07fe5036b126f9b4b07e8dbff0e339bacd32ddb169ca21f0bf79b26",
+  "requests": {
+    "collectionPreviewMultiplicity": "not fixed",
+    "explicitReadonlyPreviewPostsStatic": 9,
+    "observedUniversalRequestCount": null,
+    "staticHappyPathBusinessRequests": 197
+  },
+  "roles": {
+    "actualBrowserActor": "existing demo administrator",
+    "ordinaryUserLoginExercised": false
+  },
+  "runner_review_sha256": "e262a033ceb04744741bcea20b0f8beada5957468acf3fe9e3cf5442d5e930fc",
+  "runner_sha256": "690a5c1d5f7c210e1d0c5aa887ab3ec5a577f40f93d3b912b2d53a028b17b7fd",
+  "schema": 1,
+  "sessions": {
+    "explicitLogout": "not in unchanged helper",
+    "observedNormalUILogins": 1,
+    "termination": "must be established by owned demo/database cleanup"
+  },
+  "source_sha256": "1b82ac801d752bc24391e7d3d1b01a2f1832cafc4496418d2eadd7155d9dd9a2",
+  "stage_exits": {
+    "browser": 0,
+    "discovery": 0
+  },
+  "stats": {
+    "duration": 105387.998,
+    "expected": 17,
+    "flaky": 0,
+    "skipped": 0,
+    "startTime": "2026-10-25T18:39:42.080Z",
+    "unexpected": 0
+  },
+  "status": "final canonical1b82 primary17 and independent all57 captured-frame scope accepted",
+  "terminal_receipt_sha256": "fe7c38464c901a602caf5089402579a2585788d099aa5da20cb8ce1b139a34fa"
+}

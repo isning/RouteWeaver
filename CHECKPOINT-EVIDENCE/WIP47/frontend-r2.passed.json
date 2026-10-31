@@ -1,0 +1,18 @@
+{
+  "scope": "Full frontend Vitest suite; historical source-bound attempt, not final WIP47 certification",
+  "revision": "r2",
+  "physical_test_files": 157,
+  "tests": {
+    "total": 1774,
+    "passed": 1774,
+    "failed": 0,
+    "pending": 0
+  },
+  "status": "passed",
+  "raw_result_sha256": "394a8fe3f943bb71f50cdca0208caac0305c0df7ff47c3c756dc9fe57497a325",
+  "raw_log_sha256": "fa396f2edcb2aa708f64215d79ed503e39953b8644e654e586c5079c8b693e9d",
+  "raw_evidence": "Retained locally; verbose fixture diagnostics are not included in this public checkpoint.",
+  "source_manifest_sha256": "1a6aedeb922320985c663a2931acc05f41304db90ef84164ce39476260b0e407",
+  "source_unchanged_during_run": true,
+  "final_checkpoint_acceptance": false
+}

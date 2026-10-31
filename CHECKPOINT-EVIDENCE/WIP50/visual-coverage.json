@@ -1,0 +1,70 @@
+{
+  "checkpoint": "WIP50",
+  "status": "accepted bounded UI inspection, not full state coverage",
+  "inventory": {
+    "real_pages": 17,
+    "compatibility_entries": 2,
+    "dialog_sheet_callsites": 58,
+    "confirmation_callsites": 49,
+    "callsites_are_not_independent_tasks": true
+  },
+  "viewports": [
+    "390x568 CSS phone-width",
+    "1024x568 CSS short",
+    "1180x757 CSS desktop"
+  ],
+  "actual_fixes": [
+    "Compact forwarding destination wraps within its cell at all three viewports.",
+    "Apply-review consent checkboxes remain 16x16; actions remain usable and reachable.",
+    "Collection stages remain a single-row scroll rail with full selected identity; native arrow/Home/End inspected.",
+    "Date popup heading and bottom actions reachable; long form footers and ordered path actions bounded."
+  ],
+  "r5": {
+    "user_entry": "populated list, rotate/stop confirmations and legacy editor at phone/short; canceled with correct focus return and stable labels",
+    "origin": "enable-saved-draft review at phone/short; unchecked consent and disabled final action, canceled with focus return",
+    "terminal_actions_executed": false
+  },
+  "outstanding": [
+    "Native backup file choice/upload authorization and post-file validation are outstanding.",
+    "Historical generated detail inspected at desktop, not newly at phone/short.",
+    "Not all protocol/data/loading/error/success/terminal combinations were inspected."
+  ],
+  "limits": [
+    "Synthetic API/isolated component UI is not backend workflow validation.",
+    "CSS viewport checks are not real device, touch, screen reader, performance or full animation audit.",
+    "Native Playwright launch blocked before page assertions; not a pass.",
+    "Actual reduced-motion preference emulation unavailable."
+  ],
+  "evidence": [
+    {
+      "filename": "VISUAL-INDEPENDENT-R4-AB.md",
+      "sha256": "7cb49ee3aea151af39d3128cbecda58bd58441b250082b455968d1bc4f2fa008",
+      "bytes": 2444,
+      "availability": "local-only evidence; not an archive attachment"
+    },
+    {
+      "filename": "VISUAL-INDEPENDENT-R5-D.md",
+      "sha256": "e8cb2458734121c8db03c00989a082944676eb9c5599764d8a8706428fb1c9ed",
+      "bytes": 2240,
+      "availability": "local-only evidence; not an archive attachment"
+    },
+    {
+      "filename": "VISUAL-NETWORK.md",
+      "sha256": "f0a2144f595e54f1020fae13732fb8d8339242ef875c4c28a3ebac415057f453",
+      "bytes": 20949,
+      "availability": "local-only evidence; not an archive attachment"
+    },
+    {
+      "filename": "VISUAL-AB-PAGE-SUMMARY.md",
+      "sha256": "901a23b2ed64909fc79fc8a7bb52f71e3ce2df0c3763949bf8bbd5bba816f04a",
+      "bytes": 3489,
+      "availability": "local-only evidence; not an archive attachment"
+    },
+    {
+      "filename": "VISUAL-D-COMPARE-RECHECK.md",
+      "sha256": "f9c0c3932347a124bf61227462556e7c6d1884aa1bf759ffeb3f3c35914d770d",
+      "bytes": 2452,
+      "availability": "local-only evidence; not an archive attachment"
+    }
+  ]
+}

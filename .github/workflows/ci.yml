@@ -1,0 +1,188 @@
+name: Repository quality
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: routeweaver-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI: "true"
+  GOTOOLCHAIN: local
+  GOCACHE: ${{ github.workspace }}/bin/cache/go-build
+  GOMODCACHE: ${{ github.workspace }}/bin/cache/go-mod
+  npm_config_cache: ${{ github.workspace }}/bin/cache/npm
+  ROUTEWEAVER_WEB_TEST_WORKERS: "1"
+
+jobs:
+  static:
+    name: Source contracts and harness regressions
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          go: "true"
+      - run: scripts/verify.sh static
+
+  secrets:
+    name: Pinned secret scan and rejecting fixtures
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - run: scripts/verify.sh secrets
+
+  backend:
+    name: Control plane, agent and managed runtime
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          go: "true"
+      - run: scripts/verify.sh backend
+
+  web:
+    name: Frontend types, behavior and production build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          node: "true"
+      - run: scripts/verify.sh web
+
+  api:
+    name: Real HTTP API integration (no browser)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          go: "true"
+          node: "true"
+      - run: scripts/verify.sh api
+      - name: API diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: api-diagnostics
+          path: |
+            web/playwright-report/
+            web/test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  browser:
+    name: Chromium user tasks (fixture and real API scopes)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          go: "true"
+          node: "true"
+      - name: Install pinned Playwright Chromium with OS dependencies
+        working-directory: web
+        run: npx --no-install playwright install --with-deps chromium
+      - run: scripts/verify.sh browser
+      - name: Browser diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: browser-diagnostics
+          path: |
+            web/playwright-report/
+            web/test-results/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  native:
+    name: Pinned parsers, both stock processes and managed loopback
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      ROUTEWEAVER_CORE_BIN_DIR: ${{ github.workspace }}/bin/cores
+      ROUTEWEAVER_NATIVE_PROCESS_TESTS: xray,sing-box
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          go: "true"
+      - run: python3 scripts/bootstrap-cores.py
+      - run: scripts/verify.sh native
+      - run: scripts/verify.sh runtime
+      - run: scripts/verify.sh managed
+      - name: Native diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: native-diagnostics
+          path: bin/verification/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  package:
+    name: Exact-source Linux package, rebuild and durable smoke
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      ROUTEWEAVER_REQUIRE_CLEAN_SOURCE: "1"
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          go: "true"
+          node: "true"
+      - run: scripts/verify.sh package
+      - name: Preserve tested candidate (not a published release)
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: linux-amd64-candidate-${{ github.sha }}
+          path: bin/packages/routeweaver-linux-amd64.tar.gz*
+          if-no-files-found: error
+          retention-days: 7
+
+  verify:
+    name: Required repository gates
+    if: ${{ always() }}
+    needs: [static, secrets, backend, web, api, browser, native, package]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - name: Reject missing, skipped, cancelled or failed gates
+        env:
+          ROUTEWEAVER_CI_RESULTS: ${{ toJSON(needs) }}
+        run: python3 scripts/ci_gate.py

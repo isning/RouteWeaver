@@ -1,0 +1,6 @@
+=== RUN   TestBackupStreamingDoesNotBlockAdmissionOrConfigurationWrites
+    backup_concurrency_test.go:68: live admission/configuration waited for backup emitter
+--- FAIL: TestBackupStreamingDoesNotBlockAdmissionOrConfigurationWrites (0.51s)
+FAIL
+FAIL	routeweaver/internal/store	0.509s
+FAIL

@@ -1,0 +1,40 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> routeweaver-web@1.0.0 build
+> tsc -b && vite build
+
+vite v8.3.4 building client environment for production...
+transforming...
+✓ 3326 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                             0.58 kB │ gzip:   0.36 kB
+dist/assets/style-DLioOiRN.css             15.41 kB │ gzip:   2.56 kB
+dist/assets/index-BZOTmNdm.css             28.00 kB │ gzip:   7.01 kB
+dist/assets/rolldown-runtime-XKyaHtl9.js    0.72 kB │ gzip:   0.42 kB
+dist/assets/DeleteOutlined-CFyR4luq.js      0.90 kB │ gzip:   0.60 kB
+dist/assets/SaveOutlined-CkSPuUaY.js        0.99 kB │ gzip:   0.63 kB
+dist/assets/ArrowUpOutlined-CqcFfGlX.js     1.44 kB │ gzip:   0.70 kB
+dist/assets/Pipeline-Dc0BQuAu.js            4.27 kB │ gzip:   1.69 kB
+dist/assets/ConnectionFields-mGT6Qu8y.js    4.52 kB │ gzip:   1.57 kB
+dist/assets/PublishedRoutes-BhOFUSQW.js    10.28 kB │ gzip:   4.01 kB
+dist/assets/Notifications-DM6ZIsFM.js      13.33 kB │ gzip:   4.60 kB
+dist/assets/Templates-DnPqJhdr.js          14.90 kB │ gzip:   5.19 kB
+dist/assets/Fleet-D1XOR7Ib.js              15.05 kB │ gzip:   5.71 kB
+dist/assets/ServerRoutes-Bfqvj8zh.js       19.15 kB │ gzip:   6.96 kB
+dist/assets/Sources-CcyR2eTs.js            21.43 kB │ gzip:   7.82 kB
+dist/assets/switch-tqIPQBsQ.js             28.04 kB │ gzip:   9.42 kB
+dist/assets/Profiles-Dmr_mfR4.js           28.25 kB │ gzip:   9.30 kB
+dist/assets/tabs-1nxKugOA.js               34.76 kB │ gzip:  10.83 kB
+dist/assets/Infrastructure-BKGuR-oH.js     46.34 kB │ gzip:  14.97 kB
+dist/assets/Admin-DQpVr-ui.js              50.02 kB │ gzip:  16.62 kB
+dist/assets/index-CmEe49Jw.js             137.48 kB │ gzip:  47.37 kB
+dist/assets/style-C8sK_Ie_.js             177.77 kB │ gzip:  57.32 kB
+dist/assets/model-DeIGg8bn.js             987.14 kB │ gzip: 316.09 kB
+
+[plugin builtin:vite-reporter] 
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 550ms

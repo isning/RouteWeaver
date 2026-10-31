@@ -1,0 +1,120 @@
+{
+  "dns": {
+    "final": "rw-system-dns",
+    "servers": [
+      {
+        "tag": "rw-system-dns",
+        "type": "local"
+      }
+    ]
+  },
+  "inbounds": [
+    {
+      "listen": "127.0.0.1",
+      "listen_port": 18443,
+      "tag": "entry",
+      "tls": {
+        "enabled": true,
+        "reality": {
+          "enabled": true,
+          "handshake": {
+            "server": "example.com",
+            "server_port": 443
+          },
+          "private_key": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8",
+          "short_id": [
+            "0123456789abcdef"
+          ]
+        },
+        "server_name": "example.com"
+      },
+      "type": "vless",
+      "users": [
+        {
+          "flow": "xtls-rprx-vision",
+          "name": "entry",
+          "uuid": "00000000-0000-4000-8000-000000000001"
+        }
+      ]
+    }
+  ],
+  "log": {
+    "level": "warn"
+  },
+  "outbounds": [
+    {
+      "server": "192.0.2.10",
+      "server_port": 1080,
+      "tag": "egress-1",
+      "type": "socks",
+      "version": "5"
+    },
+    {
+      "detour": "egress-1",
+      "server": "192.0.2.20",
+      "server_port": 1080,
+      "tag": "egress-2",
+      "type": "socks",
+      "version": "5"
+    },
+    {
+      "detour": "egress-2",
+      "flow": "xtls-rprx-vision",
+      "server": "192.0.2.30",
+      "server_port": 443,
+      "tag": "egress-3",
+      "tls": {
+        "enabled": true,
+        "reality": {
+          "enabled": true,
+          "public_key": "ZCBkxteC4GSHx-8OeSWgGTcJfD-KQYJgKfAnPcnL_q0",
+          "short_id": "0123456789abcdef"
+        },
+        "server_name": "example.com",
+        "utls": {
+          "enabled": true,
+          "fingerprint": "chrome"
+        }
+      },
+      "type": "vless",
+      "uuid": "00000000-0000-4000-8000-000000000002"
+    },
+    {
+      "tag": "rw-direct",
+      "type": "direct"
+    }
+  ],
+  "route": {
+    "default_domain_resolver": "rw-system-dns",
+    "final": "egress-3",
+    "rule_set": [
+      {
+        "format": "source",
+        "path": "server-rules.json",
+        "tag": "server-rules",
+        "type": "local"
+      }
+    ],
+    "rules": [
+      {
+        "action": "reject",
+        "domain": [
+          "blocked.example"
+        ]
+      },
+      {
+        "action": "route",
+        "ip_cidr": [
+          "192.0.2.0/24"
+        ],
+        "outbound": "rw-direct"
+      },
+      {
+        "action": "reject",
+        "rule_set": [
+          "server-rules"
+        ]
+      }
+    ]
+  }
+}

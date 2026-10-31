@@ -1,0 +1,23 @@
+=== RUN   TestNativeFleetConfigureStopStartAndRollback
+--- PASS: TestNativeFleetConfigureStopStartAndRollback (2.59s)
+=== RUN   TestNativeOverridePublishedArtifactsPassPinnedNativeParsers
+=== RUN   TestNativeOverridePublishedArtifactsPassPinnedNativeParsers/mihomo
+    native_overrides_native_test.go:86: mihomo 1.19.32: saved native process policy, native selector group and DNS settings accepted; published bytes exactly match parser input
+=== RUN   TestNativeOverridePublishedArtifactsPassPinnedNativeParsers/sing-box
+    native_overrides_native_test.go:86: sing-box 1.14.3: saved native process policy, native selector group and DNS settings accepted; published bytes exactly match parser input
+--- PASS: TestNativeOverridePublishedArtifactsPassPinnedNativeParsers (0.41s)
+    --- PASS: TestNativeOverridePublishedArtifactsPassPinnedNativeParsers/mihomo (0.23s)
+    --- PASS: TestNativeOverridePublishedArtifactsPassPinnedNativeParsers/sing-box (0.19s)
+=== RUN   TestNativePublishedManagedPrincipalEndToEnd
+--- PASS: TestNativePublishedManagedPrincipalEndToEnd (3.97s)
+PASS
+ok  	routeweaver/internal/httpapi	6.990s
+=== RUN   TestManagedNativeBrokerEOFStopsActivePayloadAndPersistsFinalJournal
+    managed_xray_process_test.go:188: broker EOF stopped live payload and owned process, preserved 44-byte final in 5.635876ms
+--- PASS: TestManagedNativeBrokerEOFStopsActivePayloadAndPersistsFinalJournal (0.26s)
+PASS
+ok  	routeweaver/internal/agent	0.269s
+=== RUN   TestNativeNumericObjectKeysAreNotReflectedAsArrayIndices
+--- PASS: TestNativeNumericObjectKeysAreNotReflectedAsArrayIndices (0.01s)
+PASS
+ok  	routeweaver/internal/render	0.024s

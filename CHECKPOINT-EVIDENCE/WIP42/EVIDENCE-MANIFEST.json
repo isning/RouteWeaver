@@ -1,0 +1,77 @@
+{
+  "canonical_source_sha256": "582c068fd5016f4d239a2fa9d72e5199a988aade034fb762d7e863201a51e21a",
+  "checkpoint": "WIP42",
+  "members_excluding_this_manifest": [
+    {
+      "bytes": 5752,
+      "mode": "0644",
+      "path": "SUMMARY.md",
+      "sha256": "43c834265560926b3aa8737ff8788ef1b5813e9739022ce2835bf465b1fee72d"
+    },
+    {
+      "bytes": 4973,
+      "mode": "0644",
+      "path": "receipts/corrected-web-build.json",
+      "sha256": "ef3931c32c3f81b32b0235dd7cac2b65e3d2db7ecf00487456c931e6937d32d1"
+    },
+    {
+      "bytes": 3197,
+      "mode": "0644",
+      "path": "receipts/entitlement-bounded-stage.json",
+      "sha256": "3b575118d662483c6de00f5330f1702415b038554c17d4972cb9328bf995159a"
+    },
+    {
+      "bytes": 6169,
+      "mode": "0644",
+      "path": "receipts/group-final-source.json",
+      "sha256": "e7b2386dcb216d206c38ccd5d45857937389a849005c1d73292ffc5c6466c101"
+    },
+    {
+      "bytes": 19027,
+      "mode": "0644",
+      "path": "receipts/integration-chain.json",
+      "sha256": "5f7532116955a3421f201f5e3ceccc80c4afe6efcb79d8ac64acecc09ca26cc0"
+    },
+    {
+      "bytes": 7333,
+      "mode": "0644",
+      "path": "receipts/ordinary-subscriber.json",
+      "sha256": "74f319b10634e6f5cc647c20c942fc1d2509389b7f33d5e0e0b578d9046f00d1"
+    },
+    {
+      "bytes": 17105,
+      "mode": "0644",
+      "path": "receipts/original-aggregate-failed.json",
+      "sha256": "743dc58f7a71f15d924e3c5e3a5c910e86d37caf4ab74c031bcf37ce180da9c4"
+    },
+    {
+      "bytes": 12044,
+      "mode": "0644",
+      "path": "receipts/primary17-observer-failed.json",
+      "sha256": "776b7f7451b3b319c62073485b10779de86ede9555bd3cc00fee19aa398e3037"
+    },
+    {
+      "bytes": 8154,
+      "mode": "0644",
+      "path": "receipts/primary17-original-failed.json",
+      "sha256": "4e6d798211630de7bc0b615f5c467de09e7ec18eda439457469fbeb848c699db"
+    },
+    {
+      "bytes": 5720,
+      "mode": "0644",
+      "path": "receipts/service-final-source.json",
+      "sha256": "4cb08e355741225fbfbf1353f59f124df39a6c21057a0211a785a2a0129b87e1"
+    }
+  ],
+  "omissions": [
+    "Absolute workspace/tool executable paths and process IDs",
+    "Raw logs, stack traces and DOM dumps",
+    "Demo/auth/session/cookie/CSRF state, private feed values and credentials",
+    "Browser screenshots, traces and runtime source copies"
+  ],
+  "records_are_derived_sanitized_summaries": true,
+  "schema": "routeweaver.portable-evidence-manifest.v1",
+  "self_hash_rule": "This manifest is bound by the outer archive-member manifest, not recursively by itself.",
+  "status": "IN_PROGRESS_PRIMARY17_UNRESOLVED_NOT_FINAL_RELEASE",
+  "unintegrated_revoked_consequence_candidate_excluded": true
+}

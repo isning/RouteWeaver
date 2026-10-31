@@ -1,0 +1,8 @@
+# Initial stack and scope
+Status: HISTORICAL INITIAL DECISION, updated 2026-10-19. The earlier product-discovery pause was superseded by the user’s full-scope implementation authorization and final recommended defaults. The basic Go/React/SQLite stack remains in use; consult the capability register and ADR 0002/0003 for current delivery boundaries and managed-runtime architecture. This historical record is not a stop-work instruction.
+
+Go modular backend and agent; React + TypeScript + Vite + Ant Design, React Flow for graph editing, TanStack Query for server state. Stock core processes remain upstream Xray/sing-box; the separately identified managed Xray adapter embeds the unchanged pinned SDK as described in ADR 0003. Engine registry is extensible. No custom graph engine, ORM framework, message bus, distributed consensus, or billing store.
+
+Initial durable local control-plane storage uses SQLite. This is a single-control-plane deployment, not a distributed multi-writer cluster. Repository transactions nevertheless fence concurrent SQLite store handles; local mutexes alone are not sufficient. Actual dependencies and exact versions are locked in go.sum/package-lock.json. The Go compiler is installed from an official checksum-verified archive, not the unrelated system `go` executable.
+
+First target: real CRUD, safe route intent validation, generated artifacts/revisions and graph interaction. Runtime apply, node authentication, per-user subscription isolation and strict quota enforcement are distinct delivery gates. A renderer or mocked status never satisfies those gates. No production-ready claim until real-core integration and end-to-end acceptance pass.

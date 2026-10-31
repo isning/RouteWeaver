@@ -1,0 +1,62 @@
+{
+  "checkpoint": "WIP45",
+  "files": [
+    {
+      "path": "CHECKPOINT-EVIDENCE/WIP45/BASELINE-PROVENANCE.json",
+      "sha256": "e2447f8cabab6b847c0285b9380caca4be984ca0108267238ecb980ea26b73f8",
+      "bytes": 2173,
+      "mode": "0644"
+    },
+    {
+      "path": "CHECKPOINT-EVIDENCE/WIP45/BROWSER-AND-PIXELS.json",
+      "sha256": "829b50f8bb00d013cff23cee467c04b02ecefeb10ba20330ddc68e3091eb95d7",
+      "bytes": 8732,
+      "mode": "0644"
+    },
+    {
+      "path": "CHECKPOINT-EVIDENCE/WIP45/DOCUMENTATION-CLOSURE.json",
+      "sha256": "9623ed2f690899f8c0586fdeb13a7cc965c5a8e6f61c13575b919dc5d04c712d",
+      "bytes": 1261,
+      "mode": "0644"
+    },
+    {
+      "path": "CHECKPOINT-EVIDENCE/WIP45/PRIOR-WIP44-METHODS-STATUS.json",
+      "sha256": "158dc6cab4d9ef2f75e7d27d5fcb4b416e0d1e3589b7a87b1a2432875ef78866",
+      "bytes": 651318,
+      "mode": "0644"
+    },
+    {
+      "path": "CHECKPOINT-EVIDENCE/WIP45/PRIOR-WIP44-SOURCE-STATUS.json",
+      "sha256": "a9a7dc119dff985ced8ad143a9a11a0c9c1114e92e0afccee8ac892c49023fa5",
+      "bytes": 647512,
+      "mode": "0644"
+    },
+    {
+      "path": "CHECKPOINT-EVIDENCE/WIP45/SCREENSHOT-REFERENCES.json",
+      "sha256": "bd7fdf445d56414d8c6815cc02427270704a53b6669829e4463595f9c8df4c55",
+      "bytes": 1623,
+      "mode": "0644"
+    },
+    {
+      "path": "CHECKPOINT-EVIDENCE/WIP45/SOURCE-MEMBERSHIP.json",
+      "sha256": "d05655beaea99b7e9d72ca1119881334ab66aac124fe19d45ceb85da20e6cddd",
+      "bytes": 219687,
+      "mode": "0644"
+    },
+    {
+      "path": "CHECKPOINT-EVIDENCE/WIP45/SUMMARY.md",
+      "sha256": "72366229f17497c38351144ebaa81b00f630e0f8a6fb43c73dff907cf3bfba89",
+      "bytes": 1925,
+      "mode": "0644"
+    },
+    {
+      "path": "CHECKPOINT-EVIDENCE/WIP45/VERIFICATION.json",
+      "sha256": "cef04d059d2af0b00d484210e9733d2f2aea9ae7902f758f75be8acdbd5661ec",
+      "bytes": 2587,
+      "mode": "0644"
+    }
+  ],
+  "selfExcluded": true,
+  "newEvidenceCountIncludingManifest": 10,
+  "rawScreenshotsOrLogsIncluded": false
+}

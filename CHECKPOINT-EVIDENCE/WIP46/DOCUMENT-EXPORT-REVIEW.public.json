@@ -1,0 +1,203 @@
+{
+  "checkpoint": "WIP46",
+  "derivation": "Public summary of independent review; reviewer coordination identity and private paths omitted, not original receipt bytes.",
+  "sourceRecordLabel": "INDEPENDENT-DOCUMENT-EXPORT-REVIEW.r5.json",
+  "sourceRecordSha256": "9df89dce252e4906db110d1f9549ffe13eb45456562462639f3adc1f9008c5da",
+  "reviewedAtUTC": "2026-10-27T17:48:47.871146+00:00",
+  "codeFreezeSha256": "b66e216092a11796d9a8badeb4aa572df9e32cbe2ce91601cab6fabd0d81cb3c",
+  "documentationManifestSha256": "8ed8c13e59b3e8d0838b23118f932ff6c4ada54931b49c9aca2f8156848ec500",
+  "acceptedPublicIndexSha256": "edd1fcb41db461ae3434cfe6d222398a46ba3e896814190a4b8a4ffb6472357f",
+  "specBlockers": [],
+  "standardsBlockers": [],
+  "documentation": [
+    {
+      "path": "docs/design/UX-REFINEMENT-2026-10-27.md",
+      "operation": "add",
+      "sha256": "a9d9ae9f4482029189cd1db64fc37f4f1cabd3fe9f51b88c8002f533a6d57ca1",
+      "mode": "0644",
+      "baselineSha256": null,
+      "baselineMode": null
+    },
+    {
+      "path": "docs/tickets/RW-01.md",
+      "operation": "replace",
+      "sha256": "b8591de379d4b9d2fdf5670ad51491ff3820a14bfb0f0fb156beb72e325cb61f",
+      "mode": "0644",
+      "baselineSha256": "b830c2d45c7b0c19482c07d29b8ead8e7d3398ab6a48b17307c3d204b3a5e479",
+      "baselineMode": "0644"
+    },
+    {
+      "path": "docs/tickets/RW-02.md",
+      "operation": "replace",
+      "sha256": "d3506950867cc8cfc493b1ba291b3cb718d213e1b787b920ebf31221555cf39d",
+      "mode": "0644",
+      "baselineSha256": "e6785cfae41b1dd7cc6129096fc2c784790253a1b340561fd0b33187c39e73d0",
+      "baselineMode": "0644"
+    },
+    {
+      "path": "docs/tickets/RW-03.md",
+      "operation": "replace",
+      "sha256": "7d87209ff843569d861086d21e34decfd53aa59a63506ddbd13a43ce12258f01",
+      "mode": "0644",
+      "baselineSha256": "ee8ab7582ca878d3e2b049422efed592f843c0e09ab5ea431d61e6b4632bbab4",
+      "baselineMode": "0644"
+    },
+    {
+      "path": "docs/tickets/RW-04.md",
+      "operation": "replace",
+      "sha256": "0a1c1b33659b9750c65c586835253aad4862e12215fb5c999f572c5578691bf6",
+      "mode": "0644",
+      "baselineSha256": "0a05426cebf645ad2d14b00d0ba417cc1babd4809d9791a43adebaa0edf3afec",
+      "baselineMode": "0644"
+    },
+    {
+      "path": "docs/tickets/RW-07.md",
+      "operation": "replace",
+      "sha256": "63c3db36f7eca5f9965883c66b77c83cabe5a2372b1c3cd94075484ec0e977bb",
+      "mode": "0644",
+      "baselineSha256": "bbdc16c1ec6282a4ab36e5b689876820687b908ba0a8770be41f0b13c32a254b",
+      "baselineMode": "0644"
+    },
+    {
+      "path": "docs/tickets/RW-09.md",
+      "operation": "replace",
+      "sha256": "d346b8b149f8485a893fedcd57f75e402f6aee48cbb02edf0e955ad1591697ec",
+      "mode": "0644",
+      "baselineSha256": "0da57b5fda4e2fddf16bb042c8a4ab188757f166109112884f0ccc19840c7b0c",
+      "baselineMode": "0644"
+    },
+    {
+      "path": "docs/tickets/RW-12.md",
+      "operation": "replace",
+      "sha256": "40d00c81ee2e9b9a5886f8912843759040d35da73081415db713a64299edc0cc",
+      "mode": "0644",
+      "baselineSha256": "576300188a9a70f0afca245511e6fbeb258072fb0ac80c9e5b4eb3b06cb40091",
+      "baselineMode": "0644"
+    },
+    {
+      "path": "docs/tickets/RW-19.md",
+      "operation": "replace",
+      "sha256": "3701fc6b63cb09efb9ad86180737bd85561ee4cef952fe708481c6011871a991",
+      "mode": "0644",
+      "baselineSha256": "35b74fa1f6f7bab42cf883274a79af9614fa533805238aba0758efe9e1d919ea",
+      "baselineMode": "0644"
+    },
+    {
+      "path": "docs/tickets/RW-20.md",
+      "operation": "replace",
+      "sha256": "e200d2ba13e74c75762bbddaa2f1c61845c2c42bc2512cb3b8fdc8f4e178b7ce",
+      "mode": "0644",
+      "baselineSha256": "339fe0ee73f66b3ffaf0f73101c2dd0a8ce5f2838c171162a943e3a689596a97",
+      "baselineMode": "0644"
+    },
+    {
+      "path": "docs/tickets/RW-23.md",
+      "operation": "replace",
+      "sha256": "494efde9434b2079290db325542ccb2523175fdf05d36c062c349eba702796a5",
+      "mode": "0644",
+      "baselineSha256": "33d12ccc7454da6d90dbc20219e1e6c8a1e87025cdd9b452350b746e2fcc6ce6",
+      "baselineMode": "0644"
+    },
+    {
+      "path": "docs/tickets/RW-24.md",
+      "operation": "replace",
+      "sha256": "8d15d0c6d83aeed67760263ec545f9915ce51e2e254ce65990f168c8fa39dfca",
+      "mode": "0644",
+      "baselineSha256": "cedab0de1870b4b1164f9b1eff0d1c796c7c14736973770816a304863dc785ac",
+      "baselineMode": "0644"
+    },
+    {
+      "path": "docs/tickets/catalog.json",
+      "operation": "replace",
+      "sha256": "673f274d36822fb25b0a7008dbe61ef18a2f87f8c0a979aeacb75e3ec2d2aa72",
+      "mode": "0644",
+      "baselineSha256": "5cfddbf64ef488e3b4a6af5e9d88ff67ca7633dca21e8e2c55464997a5e62746",
+      "baselineMode": "0644"
+    },
+    {
+      "path": "docs/verification/UX-REFINEMENT-2026-10-27.md",
+      "operation": "add",
+      "sha256": "00f676c6dbfa2a1486758ef6bcb15c45c0ad6f26ac94c3bd7aadb5c9ad3b751e",
+      "mode": "0644",
+      "baselineSha256": null,
+      "baselineMode": null
+    }
+  ],
+  "publicExports": [
+    {
+      "path": "AGGREGATE-ASSET-CLOSURE.public.json",
+      "sha256": "12e0683481048325736c19c034ffa43ca80c0fb5ef56a561292cb6270a8b3c06",
+      "bytes": 5823,
+      "mode": "0644"
+    },
+    {
+      "path": "BOUNDED-REVIEW-SUMMARY.public.json",
+      "sha256": "6e63a594d231a8074fc3f72957d3298fd53524fbc37536556843035e10be10a3",
+      "bytes": 10694,
+      "mode": "0644"
+    },
+    {
+      "path": "CHECK-ATTEMPTS.public.json",
+      "sha256": "c5c4d20cdca35ebab1c55ae94b28e49e9edb30a0ee656c0e1e192c0a1c488002",
+      "bytes": 14534,
+      "mode": "0644"
+    },
+    {
+      "path": "COMPOSED-BROWSER.r5.public.json",
+      "sha256": "428c86a9bafd492b5cea776d819c284ec5d4475e47376cfe569eba16165c80ab",
+      "bytes": 11083,
+      "mode": "0644"
+    },
+    {
+      "path": "FINITE-SCOPE-AND-EXCLUSIONS.public.json",
+      "sha256": "d18cb955270a20faede0a3bf3b2511b3157700e462613850c1de1e389da79126",
+      "bytes": 8413,
+      "mode": "0644"
+    },
+    {
+      "path": "GOAL-WALKTHROUGH.r5.public.json",
+      "sha256": "207aee54223c97293a3aecc4e054e38ede4597209ca71c0d1c382221341a63c4",
+      "bytes": 6164,
+      "mode": "0644"
+    },
+    {
+      "path": "PAYLOAD-DELTA.r5.public.json",
+      "sha256": "4fe6eb63949dab5a78e95e37c6ff3dca0d0e968cc2371539f19537d281a5d5ec",
+      "bytes": 231319,
+      "mode": "0644"
+    },
+    {
+      "path": "README.md",
+      "sha256": "d24f2c9641d653e8ef4e0a0f71de3c103d85d1b22f0b92397f74d4281e4881ba",
+      "bytes": 1085,
+      "mode": "0644"
+    },
+    {
+      "path": "REFERENCE-AND-PRESERVATION.public.json",
+      "sha256": "ccdca3a44d0d398460ecc5f148bc384d94264901d956d206c587bdbccc0048a2",
+      "bytes": 2239,
+      "mode": "0644"
+    },
+    {
+      "path": "SOURCE-CODE-FREEZE.r5.public.json",
+      "sha256": "6ff0e70537c543dfb7d65751de916286831b3f3db4b0885033b8169f262f77df",
+      "bytes": 211315,
+      "mode": "0644"
+    }
+  ],
+  "publicIndexIncludedSeparately": true,
+  "verification": {
+    "documentationPaths": 14,
+    "newDocs": 2,
+    "catalogAndTicketReplacements": 12,
+    "appendedTicketEvidenceItems": 11,
+    "publicFilesIncludingIndex": 11,
+    "sourceFilesModesRehashedUnchanged": 1250,
+    "reviewerRanFullSuiteOrBrowser": false
+  },
+  "limits": [
+    "Accepts exact proposal/export bytes, not subsequent archive containers.",
+    "Documentation-only delivery closure is bound separately.",
+    "Archive metadata/history/mirror verification and remote saved-byte verification remain separate."
+  ]
+}

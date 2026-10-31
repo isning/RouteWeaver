@@ -1,0 +1,105 @@
+{
+  "schema": 1,
+  "status": "all 11 independent stages passed on exact composed code; final scoped browser and pixel acceptance completed separately",
+  "testedSource": {
+    "label": "RouteWeaver UX r4 composed candidate 2026-10-26",
+    "payloadInventoryFormat": "actual-file-byte-mode-inventory-v1",
+    "payloadInventorySha256": "d0a98a57fa5146c7974f5d3e422e9b635eb9fba69d04d1617ec6bad9fe9fa8d8",
+    "payloadFiles": 1186,
+    "integrationReceiptSha256": "d10707de1bede472a314b16320693fae9c37baec7fbb074aef243ba686d77d23",
+    "historicalCanonicalDigestRecomputed": false
+  },
+  "run": {
+    "startedUtc": "2026-10-26T05:04:23.975110+00:00",
+    "endedUtc": "2026-10-26T05:23:39.910276+00:00",
+    "stageNativeExits": {
+      "tickets": 0,
+      "negative-fixtures": 0,
+      "architecture-negative": 0,
+      "architecture": 0,
+      "format": 0,
+      "root-go-vet": 0,
+      "root-go-nonrace": 0,
+      "root-go-build": 0,
+      "web-typecheck": 0,
+      "web-full": 0,
+      "web-build": 0
+    }
+  },
+  "rootGoNonrace": {
+    "allTestAndSubtestEvents": {
+      "pass": 1290,
+      "skip": 50
+    },
+    "topLevelEvents": {
+      "pass": 601,
+      "skip": 22
+    },
+    "packageEndEvents": {
+      "skip": 3,
+      "pass": 21
+    },
+    "skipDetailFile": "GO-SKIPS.json",
+    "raceOrNestedNativePassClaimed": false
+  },
+  "web": {
+    "physicalFiles": 135,
+    "reportedSuiteGroups": 153,
+    "total": 1590,
+    "passed": 1590,
+    "failed": 0,
+    "pending": 0,
+    "todo": 0,
+    "nativeJsonSuccess": true,
+    "nativeJsonHasExplicitUnhandledCount": false,
+    "unhandledReportMarkerScan": [
+      {
+        "pattern": "Vitest caught \\d+ unhandled",
+        "matches": 0
+      },
+      {
+        "pattern": "Unhandled Errors?",
+        "matches": 0
+      },
+      {
+        "pattern": "Unhandled Rejection",
+        "matches": 0
+      },
+      {
+        "pattern": "Uncaught Exception",
+        "matches": 0
+      }
+    ],
+    "unhandledReportedInNativeLogs": false
+  },
+  "sourcePreservation": {
+    "payloadFiles": 1186,
+    "preservedStatusEvidenceFiles": 22,
+    "all1208ByteModeMembershipMatch": true,
+    "all1195BaselineFilesStillByteModeIdentical": true,
+    "baselineMismatches": []
+  },
+  "nativeEvidenceHashes": {
+    "terminal.json": "f6561399d03ca847adf088814433f1a20adb76a7df11d4d915a04c061a26c3ca",
+    "stages.json": "e6a86e0938339d9336bf790ff98f64fa192c4532c4f57f9389a43090eae8acc4",
+    "source-before.json": "478cee898172e58c7a402b635193d86e6ede12c41c2e45e8e0a8b7c542f2879e",
+    "source-after.json": "24356cee63ca153dc3cfec24822c9420d0dec63cf2dbea37ea763a1f39d945d3",
+    "tool-bindings.json": "db82421c5319f01de797b1fe0569c6385d8c90a266e752e6c0cc8e055c34113a",
+    "web-vitest.json": "f099013284d70f516e44d47b10994a2663416be7df1d3514d92ef6e90119a129",
+    "root-go-nonrace.jsonl": "15e0dc5c8bfe768c9f2ce8b0ded7203b901bd8ebbf524adf59b832230a7f16fa",
+    "go-explicit-skips.json": "6573c682fcd80ea11276e05b64920de799af37964409d4c0647cb1257b610742",
+    "web-build.log": "14768528ab0ebbc78ca22bc59fa7ba4672d4544b718c09636137e82b0ab3b42b",
+    "web-build.stderr.log": "f97a3e7c7d1a5fbe14acbdfa8bae8bcb510b12cfa0454f6aec301ba19b64467f"
+  },
+  "summaryOriginalSha256": "5d55bd5c085555a2d85d37f3838963267a3e15a07442e260178e675722a09a70",
+  "limits": [
+    "Independent checks are not the official verify.sh aggregate; tracked-file Git guard is unavailable and no repository was fabricated.",
+    "50 Go test/subtest skip events remain explicit; top-level and package counts are separate dimensions, not additional passes.",
+    "No race, nested/native-runtime, client parser/application, live proxy traffic or deployed-enforcement acceptance.",
+    "Native web JSON has no explicit unhandled-count field; log marker review found no reported unhandled error markers.",
+    "Existing Ant Design deprecation and production-build chunk-size warnings remain.",
+    "No deployment or production-readiness claim.",
+    "Only a sanitized result summary and hash bindings are prepared here; raw logs and runtime data are not new archive additions.",
+    "Browser and pixel results are separate bounded evidence in BROWSER-AND-PIXELS.json; they are not added to this run as a combined test total."
+  ]
+}

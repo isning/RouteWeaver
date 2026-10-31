@@ -1,0 +1,50 @@
+{
+  "checkpoint": "WIP50",
+  "status": "normal read-only Site preparation passed; subsequent private publication succeeded",
+  "containment_tests_passed": 21,
+  "build_exit": 0,
+  "typecheck": "passed as part of build",
+  "release": true,
+  "no_qa_imports_or_frames": true,
+  "warning": "existing build chunk larger than 500 kB",
+  "evidence": [
+    {
+      "filename": "receipt-r4.json",
+      "sha256": "1791fb76e864143213fb2cdee1b197947427ab1cb32933a0bd241053b9bd068a",
+      "bytes": 1637,
+      "availability": "local-only evidence; not an archive attachment"
+    },
+    {
+      "filename": "containment-r4.log",
+      "sha256": "d6199d20cadc23b9f1b5fbf2fcdd1c295bd0b55374e5d2f26d6d2dc029f7274d",
+      "bytes": 336,
+      "availability": "local-only evidence; not an archive attachment"
+    },
+    {
+      "filename": "containment-r4.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "bytes": 2,
+      "availability": "local-only evidence; not an archive attachment"
+    },
+    {
+      "filename": "build-r4.log",
+      "sha256": "314f4c3f7645562f65947af5948022d41339df3cee96fe49903c8636445710bf",
+      "bytes": 3340,
+      "availability": "local-only evidence; not an archive attachment"
+    },
+    {
+      "filename": "build-r4.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "bytes": 2,
+      "availability": "local-only evidence; not an archive attachment"
+    }
+  ],
+  "release_scope": "bounded owner-private preview only",
+  "publication": "private-demo-deployment.json",
+  "post_publication_browser_check": {
+    "observed": "expected private login gate",
+    "login_or_bypass_attempted": false,
+    "hosted_product_ui_smoke_verified": false,
+    "scope": "Native publication succeeded; locally reviewed canonical UI does not substitute for hosted authenticated UI smoke."
+  }
+}

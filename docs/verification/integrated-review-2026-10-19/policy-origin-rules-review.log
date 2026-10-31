@@ -1,0 +1,73 @@
+=== RUN   TestEffectiveAccessSelectsOneGroupAndIndividualOverrides
+--- PASS: TestEffectiveAccessSelectsOneGroupAndIndividualOverrides (0.00s)
+PASS
+ok  	routeweaver/internal/service	1.016s
+=== RUN   TestConnectionLimitCountsIndependentStreamsOnSameIPAndRenewsAtCap
+--- PASS: TestConnectionLimitCountsIndependentStreamsOnSameIPAndRenewsAtCap (0.09s)
+=== RUN   TestConnectionClaimIsAtomicAcrossStoreHandlesWithSameIP
+--- PASS: TestConnectionClaimIsAtomicAcrossStoreHandlesWithSameIP (0.05s)
+=== RUN   TestAdmissionStatusReportsLeasesNotHardwareAndReleasesStreamsIndependently
+--- PASS: TestAdmissionStatusReportsLeasesNotHardwareAndReleasesStreamsIndependently (0.05s)
+=== RUN   TestIndividualConnectionAndExactRouteOverridesFeedAdmission
+--- PASS: TestIndividualConnectionAndExactRouteOverridesFeedAdmission (0.11s)
+=== RUN   TestGroupPreviewApplySharesAdmissionPolicyAndRejectsStaleRevision
+--- PASS: TestGroupPreviewApplySharesAdmissionPolicyAndRejectsStaleRevision (0.08s)
+=== RUN   TestPolicyPreviewBindsExactChangeAndInitialCycleAnchor
+--- PASS: TestPolicyPreviewBindsExactChangeAndInitialCycleAnchor (0.06s)
+=== RUN   TestGroupChangesCannotDiscardIssuedBudgetOrSilentlyStackServices
+--- PASS: TestGroupChangesCannotDiscardIssuedBudgetOrSilentlyStackServices (0.20s)
+=== RUN   TestGroupPreviewCASSerializesIndependentStoreWriters
+--- PASS: TestGroupPreviewCASSerializesIndependentStoreWriters (0.09s)
+=== RUN   TestProvisioningPolicyFenceRejectsConcurrentGroupRemoval
+--- PASS: TestProvisioningPolicyFenceRejectsConcurrentGroupRemoval (0.10s)
+=== RUN   TestFirstGroupCalendarCannotResetExistingDirectRouteBudget
+--- PASS: TestFirstGroupCalendarCannotResetExistingDirectRouteBudget (0.12s)
+PASS
+ok  	routeweaver/internal/store	1.970s
+=== RUN   TestSubscriptionOriginStageIsAdminOnlyAndNeverActivates
+--- PASS: TestSubscriptionOriginStageIsAdminOnlyAndNeverActivates (0.02s)
+=== RUN   TestSubscriptionOriginVerifiedActivationRetainsTokensAndSurvivesFailedReplacement
+--- PASS: TestSubscriptionOriginVerifiedActivationRetainsTokensAndSurvivesFailedReplacement (0.07s)
+=== RUN   TestSubscriptionOriginProofExpiresAndConcurrentEditFencesVerification
+--- PASS: TestSubscriptionOriginProofExpiresAndConcurrentEditFencesVerification (0.05s)
+=== RUN   TestSubscriptionOriginVerificationRejectsRedirectsAndInvalidTLS
+=== RUN   TestSubscriptionOriginVerificationRejectsRedirectsAndInvalidTLS/redirect
+=== RUN   TestSubscriptionOriginVerificationRejectsRedirectsAndInvalidTLS/untrusted-certificate
+=== RUN   TestSubscriptionOriginVerificationRejectsRedirectsAndInvalidTLS/wrong-hostname
+=== RUN   TestSubscriptionOriginVerificationRejectsRedirectsAndInvalidTLS/wrong-challenge-host
+=== RUN   TestSubscriptionOriginVerificationRejectsRedirectsAndInvalidTLS/oversized-answer
+--- PASS: TestSubscriptionOriginVerificationRejectsRedirectsAndInvalidTLS (0.17s)
+    --- PASS: TestSubscriptionOriginVerificationRejectsRedirectsAndInvalidTLS/redirect (0.03s)
+    --- PASS: TestSubscriptionOriginVerificationRejectsRedirectsAndInvalidTLS/untrusted-certificate (0.03s)
+    --- PASS: TestSubscriptionOriginVerificationRejectsRedirectsAndInvalidTLS/wrong-hostname (0.04s)
+    --- PASS: TestSubscriptionOriginVerificationRejectsRedirectsAndInvalidTLS/wrong-challenge-host (0.03s)
+    --- PASS: TestSubscriptionOriginVerificationRejectsRedirectsAndInvalidTLS/oversized-answer (0.04s)
+=== RUN   TestSubscriptionOriginUsesOnlyExplicitDefaultAndAdminMayMaintainIt
+--- PASS: TestSubscriptionOriginUsesOnlyExplicitDefaultAndAdminMayMaintainIt (0.85s)
+=== RUN   TestAccessPolicyHTTPPreviewApplyAndTenantIsolation
+--- PASS: TestAccessPolicyHTTPPreviewApplyAndTenantIsolation (1.78s)
+=== RUN   TestAccessPolicyPreviewRejectsUnknownReferencesAndShowsAmbiguity
+--- PASS: TestAccessPolicyPreviewRejectsUnknownReferencesAndShowsAmbiguity (0.94s)
+=== RUN   TestPublishedRoutePrincipalsRequireExactAppliedManifest
+--- PASS: TestPublishedRoutePrincipalsRequireExactAppliedManifest (2.03s)
+=== RUN   TestOwnedRuleFilesPublishAsExactFrozenBundle
+--- PASS: TestOwnedRuleFilesPublishAsExactFrozenBundle (2.43s)
+=== RUN   TestRuleFileImportRejectsUnownedPathsAndMismatchedPins
+=== RUN   TestRuleFileImportRejectsUnownedPathsAndMismatchedPins/csrf
+=== RUN   TestRuleFileImportRejectsUnownedPathsAndMismatchedPins/owner
+=== RUN   TestRuleFileImportRejectsUnownedPathsAndMismatchedPins/path
+=== RUN   TestRuleFileImportRejectsUnownedPathsAndMismatchedPins/absolute_path
+=== RUN   TestRuleFileImportRejectsUnownedPathsAndMismatchedPins/forged_version
+=== RUN   TestRuleFileImportRejectsUnownedPathsAndMismatchedPins/wrong_digest
+--- PASS: TestRuleFileImportRejectsUnownedPathsAndMismatchedPins (1.53s)
+    --- PASS: TestRuleFileImportRejectsUnownedPathsAndMismatchedPins/csrf (0.00s)
+    --- PASS: TestRuleFileImportRejectsUnownedPathsAndMismatchedPins/owner (0.00s)
+    --- PASS: TestRuleFileImportRejectsUnownedPathsAndMismatchedPins/path (0.00s)
+    --- PASS: TestRuleFileImportRejectsUnownedPathsAndMismatchedPins/absolute_path (0.00s)
+    --- PASS: TestRuleFileImportRejectsUnownedPathsAndMismatchedPins/forged_version (0.00s)
+    --- PASS: TestRuleFileImportRejectsUnownedPathsAndMismatchedPins/wrong_digest (0.00s)
+PASS
+ok  	routeweaver/internal/httpapi	10.914s
+testing: warning: no tests to run
+PASS
+ok  	routeweaver/internal/resources	1.014s [no tests to run]

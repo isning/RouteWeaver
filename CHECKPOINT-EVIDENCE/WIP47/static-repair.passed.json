@@ -1,0 +1,15 @@
+{
+  "command": "scripts/verify.sh static",
+  "status": "passed",
+  "exit_code": 0,
+  "scope": "Tracked private-file guard, ticket DAG and nine Python guard negatives, architecture rejecting fixtures and production imports.",
+  "raw_evidence": [
+    {
+      "filename": "static-repair.log",
+      "sha256": "1eab861cf6029b4146bb09a6c4bfb5a4d6d83eb3f1e9136ba3663324ae0e32df",
+      "size_bytes": 640,
+      "availability": "local-only-not-in-archive"
+    }
+  ],
+  "final_checkpoint_acceptance": false
+}

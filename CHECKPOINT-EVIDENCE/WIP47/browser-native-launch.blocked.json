@@ -1,0 +1,18 @@
+{
+  "scope": "Three requested Chromium shadcn endpoint-contract tests",
+  "status": "blocked_before_ui_assertions",
+  "test_assertions_executed": 0,
+  "attempts": [
+    {
+      "kind": "default execution",
+      "result": "Chromium startup failed: local process-singleton socket operation not permitted; no UI assertion ran."
+    },
+    {
+      "kind": "execution escalation",
+      "result": "Execution infrastructure failed before command start; no browser assertion ran."
+    }
+  ],
+  "security_controls": "Chromium sandbox remained enabled; no security setting or restricted path was changed.",
+  "alternative": "Supported cloud browser manual review is a separate bounded verification, not the automated 179-test matrix.",
+  "final_checkpoint_acceptance": false
+}

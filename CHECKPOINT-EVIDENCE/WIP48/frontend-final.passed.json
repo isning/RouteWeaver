@@ -1,0 +1,58 @@
+{
+  "checkpoint": "WIP48",
+  "attempt": "final-web-r2",
+  "status": "passed",
+  "tests_passed": 1806,
+  "tests_failed": 0,
+  "tests_pending": 0,
+  "physical_test_files": 158,
+  "typecheck_exit": 0,
+  "production_build_exit": 0,
+  "aggregate_exit": 0,
+  "source_scope_files": 379,
+  "source_changed_during_run": [],
+  "evidence": [
+    {
+      "filename": "final-suite-r2.json",
+      "sha256": "e70c58b09150ac5df0ea11bbb7c589f8d739d50f93903d084dcd5151e628c181",
+      "bytes": 605072,
+      "availability": "local-only diagnostic; not an archive attachment"
+    },
+    {
+      "filename": "final-suite-r2.log",
+      "sha256": "f7d4377b2c4bf243ac328611d32a2ec9dcd0fa0dd60d3bf084aa058c0e951376",
+      "bytes": 70988,
+      "availability": "local-only diagnostic; not an archive attachment"
+    },
+    {
+      "filename": "final-typecheck-r2.log",
+      "sha256": "3eeba694beb40e350731996df1916da84a1348266b4c9d68b105dcdd21c1bc6f",
+      "bytes": 144,
+      "availability": "local-only diagnostic; not an archive attachment"
+    },
+    {
+      "filename": "final-build-r2.log",
+      "sha256": "5549c4194af1cbd92accd9dd7f14cdf9687eb41dee5b44599d900eb81d36b16e",
+      "bytes": 3188,
+      "availability": "local-only diagnostic; not an archive attachment"
+    },
+    {
+      "filename": "final-web-r2.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "bytes": 2,
+      "availability": "local-only diagnostic; not an archive attachment"
+    },
+    {
+      "filename": "final-web-freeze-r2.json",
+      "sha256": "76a53c22683545a8adcf57613ac75ef0f8e0c67aa31b09b6703453b35a4c97d0",
+      "bytes": 57043,
+      "availability": "local-only diagnostic; not an archive attachment"
+    },
+    {
+      "filename": "final-web-source-check.json",
+      "sha256": "180cc16c4d1ee0e1e15f35f66a6ed19bc6b86d6ea99e0892214ba28a0fddff7d",
+      "bytes": 191,
+      "availability": "local-only diagnostic; not an archive attachment"
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+=== RUN   TestReviewSlowValidationCannotExtendOldRuntimeLease
+    integrated_review_test.go:30: old generation 1 remained live 101.633331ms after its own lease expired while candidate validation held the mutation lane
+--- FAIL: TestReviewSlowValidationCannotExtendOldRuntimeLease (0.25s)
+FAIL
+FAIL	routeweaver/internal/agent	0.257s
+=== RUN   TestReviewedFinalBudgetRecoveryRequiresExactStateAndKeepsAudit
+--- PASS: TestReviewedFinalBudgetRecoveryRequiresExactStateAndKeepsAudit (0.01s)
+=== RUN   TestReviewBackupExportDoesNotBlockAdmission
+    integrated_review_test.go:14: admission cannot execute until streaming backup callback releases the global Store mutex
+--- FAIL: TestReviewBackupExportDoesNotBlockAdmission (0.10s)
+FAIL
+FAIL	routeweaver/internal/store	0.114s
+FAIL

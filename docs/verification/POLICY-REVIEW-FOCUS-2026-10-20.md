@@ -1,0 +1,11 @@
+# Focus authorization review on effective changes
+
+Actual cloud Chrome review of a single 100 Mbps override displayed two full copies of every unchanged plan, quota, online-IP limit, flow limit, route, date and cycle. The review now defaults to changed effective-policy fields, with a “显示完整授权” toggle retaining the complete comparison. The affected user list, blockers, explicit confirmation checkbox, immutable reviewed payload and revision check are unchanged. This is a display change, not a new policy evaluator or relaxed authorization gate.
+
+A typed pure projection compares server-supplied effective values and provenance, not rounded labels. Source-only changes remain visible even if the effective number is identical. Status, service, quota, online IP, concurrency, rate, routes, validity and cycle are included. Identical effective policies say current effective authorization is unchanged; this does not say a group membership or stored setting was not changed. The full display remains accessible without leaving review.
+
+Red: single-rate review contained unchanged quota fields. Green: 100 Mbps shown, unchanged quota/cycle hidden until the full toggle is selected, and Apply remains disabled without explicit confirmation. Added bounded comparison tests for exact values, provenance-only changes, status/routes/expiry/cycle and identical policy. Stale revision, pending review, draft-preservation and existing policy tests remain regression gates. Integration and actual new-build browser verification follow; no independent review claimed.
+
+Integrated at d86590d. Focused policy/workspace/model tests passed 65/65, typecheck and production build passed. Actual cloud Chrome preview of a single 100 Mbps override displayed only that rate and its provenance in before/after columns; toggling 显示完整授权 restored status, plan, quota, IP, concurrency, routes, validity and cycle. Apply remained disabled before the explicit confirmation checkbox. The fixture was not applied. Complete frontend regression is running separately.
+
+Complete serialized frontend regression at d86590d passed 262 tests across 29 files in 179.93 seconds (/tmp/policy-diff-integrated-ui.log). The real-browser 100 Mbps fixture was returned to editing and explicitly discarded; no new rate policy was applied.

@@ -1,0 +1,35 @@
+{
+  "checkpoint": "WIP48",
+  "snapshot": "accepted bounded UI source checkpoint; artifact saving requires external receipts",
+  "acceptance": "CHECKPOINT-EVIDENCE/WIP48/aggregate-acceptance.json",
+  "verification": {
+    "frontend_tests_passed": 1806,
+    "frontend_test_files": 158,
+    "frontend_failed": 0,
+    "frontend_pending": 0,
+    "typecheck_exit": 0,
+    "production_build_exit": 0,
+    "unchanged_frontend_scope_files": 379,
+    "static_exit": 0,
+    "visual_review": "bounded actual desktop and authored narrow CSS viewport accepted",
+    "unchanged_backend_provenance_files": 480,
+    "new_backend_runtime_tests": false
+  },
+  "limits": [
+    "Not full native browser matrix; launch blocked before assertions.",
+    "Actual CSS viewport inspection does not establish real mobile-device, touch, zoom or full accessibility acceptance.",
+    "sing-box runtime blocked by host netlink restriction; parsers passed.",
+    "Bounded protocol/target feature matrix; no blanket3x-ui/s-ui parity.",
+    "No all35-story completion, Google certification, live node deployment or production-readiness claim."
+  ],
+  "prior_status": "CHECKPOINT-EVIDENCE/WIP48/historical-wip47-checkpoint-status.json",
+  "library_save_success": false,
+  "library_save_status": "not asserted before upload; external receipts required",
+  "production_ready": false,
+  "production_deployed": false,
+  "project_complete": false,
+  "user_acceptance": false,
+  "artifact_kind": "source",
+  "private_demo_deployment": "CHECKPOINT-EVIDENCE/WIP48/private-demo-deployment.json",
+  "selected_screenshot_bytes_in_archives": false
+}

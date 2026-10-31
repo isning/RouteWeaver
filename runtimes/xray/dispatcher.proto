@@ -1,0 +1,5 @@
+syntax = "proto3";
+package routeweaver.managedxray;
+option go_package = "routeweaver/runtimes/xray";
+// Private constructor identity; all policy comes from an explicit context.
+message DispatcherConfig {}

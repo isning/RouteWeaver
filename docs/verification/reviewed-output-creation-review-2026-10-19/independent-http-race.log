@@ -1,0 +1,6 @@
+=== RUN   TestIndependentReviewedCreateConcurrentIdentityAndReceipt
+--- PASS: TestIndependentReviewedCreateConcurrentIdentityAndReceipt (1.52s)
+=== RUN   TestIndependentReviewedCreateInvalidDigestAndNullLegacySemantics
+--- PASS: TestIndependentReviewedCreateInvalidDigestAndNullLegacySemantics (0.85s)
+PASS
+ok  	routeweaver/internal/httpapi	3.425s

@@ -1,0 +1,4 @@
+=== RUN   TestReviewSlowValidationCannotExtendOldRuntimeLease
+--- PASS: TestReviewSlowValidationCannotExtendOldRuntimeLease (0.25s)
+PASS
+ok  	routeweaver/internal/agent	1.272s

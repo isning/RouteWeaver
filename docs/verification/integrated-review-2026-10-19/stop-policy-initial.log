@@ -1,0 +1,5 @@
+=== RUN   TestIndependentStopCannotEraseAcceptedDenialFence
+    integrated_policy_stop_review_test.go:30: old-lease stop: phase=blocked generation=2 err=stop action must revoke access in its policy lease
+--- PASS: TestIndependentStopCannotEraseAcceptedDenialFence (0.00s)
+PASS
+ok  	routeweaver/internal/agent	1.021s

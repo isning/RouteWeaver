@@ -1,0 +1,142 @@
+{
+  "context": {
+    "focused51AndBrowser8": "Separately accepted candidate scope; all8 frames independently reviewed in integration source clearance. Four status states and ordinary identity were HTTP simulations, not backend policy/authentication proof.",
+    "originalInterruptedRun": "final-stable-web-validation-20261025/run/run.json remains incomplete with47 files/797 partial passes, not a terminal outcome.",
+    "overviewExactTwoPathDelta": "One production presentation replacement and one new14-case public-seam test file; no other source edit."
+  },
+  "evidence_hashes_only": {
+    "web-build.log": "ef47717be521b92446485699eb0a686ef22eb3554606feb9551167094c2686a1",
+    "web-results.json": "21b5c3f943ab767100f851f75aa7a81e39e92edc9728b4dce51c482f5aea67d4",
+    "web-tests.log": "4104167ee4f21b75d887362303bce563372da961ed492daf2f8be1212a7fb3a9",
+    "web-typecheck.log": "d9dd95a5d29e2c8680342dd6d79eb56c5cc54980f2328e98854e8e67aa24d7df"
+  },
+  "finished_utc": "2026-10-25T18:37:27.718523+00:00",
+  "format": "derived sanitized portable terminal summary; not a byte-identical native receipt",
+  "guards": {
+    "canonicalUnchanged": true,
+    "privateSourceInputsUnchanged": true,
+    "reviewedInputsUnchanged": true,
+    "toolsUnchanged": true
+  },
+  "input_sha256": "18f9e6a13ae86a938655bde94392636298b880e446bd8ed2e61fb139eb59d01c",
+  "integration_receipt_sha256": "3e67a20a7ba7cc40c1816d350b5c38e71752072fbb5835206f4611758d22d11e",
+  "limits": [
+    "No root Go/static rerun. Seven non-web native-zero stages retain original attribution from failed aggregate; historical old typecheck remains historical, while current typecheck/full Web/build are rerun.",
+    "No race/nested runtime/native-core/live/deployment/NoGit verify.sh success claim.",
+    "Final canonical browser17 and independent pixel acceptance are separate. Prior ordinary-role evidence remains source582c; no blanket final-source equivalence after Subscriptions.tsx changes.",
+    "Prior b670 recovered whole1531/130 pass is preserved under its own exact identity; it is not reattributed to the new overview source.",
+    "Final canonical primary17 execution and independent final browser/pixel acceptance remain separate and pending; this is not an all-project completion claim.",
+    "No source edits after exact2 integration; no deployment, Library write or preview change performed by this task.",
+    "Existing non-failing environment/deprecation/build-size warnings remain preserved in raw logs."
+  ],
+  "native_counts": {
+    "numFailedTestSuites": 0,
+    "numFailedTests": 0,
+    "numPassedTestSuites": 149,
+    "numPassedTests": 1545,
+    "numPendingTestSuites": 0,
+    "numPendingTests": 0,
+    "numTodoTests": 0,
+    "numTotalTestSuites": 149,
+    "numTotalTests": 1545,
+    "success": true
+  },
+  "native_summary_sha256": "c1a5797b9deb9c32f786f1ca92ee3d1c9c36f5789e5658510b2e38290fd88343",
+  "no_raw_runtime_or_auth_artifacts_included": true,
+  "prior_accepted_b670_whole_web": {
+    "files": 130,
+    "receipt": "final-recovered-web-validation-20261025/run/run.json",
+    "receiptSha256": "a6d6357f7a522b008f2a12be2c9890ed16cc7db65af9f931eb86b8e3d7b1b5cf",
+    "separateNotReattributed": true,
+    "sourceSha256": "b670ad77345a032511c5a071159471e1fdbb68b94eb507df87982d3f288389a5",
+    "tests": 1531
+  },
+  "qa_released_utc": "2026-10-25T18:37:27.718498+00:00",
+  "retained_nonweb_stages": [
+    {
+      "finished": "2026-10-25T16:06:55.269146+00:00",
+      "name": "tickets",
+      "nativeExit": 0,
+      "started": "2026-10-25T16:06:55.235522+00:00"
+    },
+    {
+      "finished": "2026-10-25T16:06:55.602948+00:00",
+      "name": "python-guard-tests",
+      "nativeExit": 0,
+      "started": "2026-10-25T16:06:55.510217+00:00"
+    },
+    {
+      "finished": "2026-10-25T16:06:55.999867+00:00",
+      "name": "format",
+      "nativeExit": 0,
+      "started": "2026-10-25T16:06:55.842666+00:00"
+    },
+    {
+      "finished": "2026-10-25T16:06:56.416478+00:00",
+      "name": "architecture",
+      "nativeExit": 0,
+      "started": "2026-10-25T16:06:56.230247+00:00"
+    },
+    {
+      "finished": "2026-10-25T16:07:08.184588+00:00",
+      "name": "go-vet",
+      "nativeExit": 0,
+      "started": "2026-10-25T16:06:56.649804+00:00"
+    },
+    {
+      "finished": "2026-10-25T16:09:48.410256+00:00",
+      "name": "go-tests",
+      "nativeExit": 0,
+      "started": "2026-10-25T16:07:08.438897+00:00"
+    },
+    {
+      "finished": "2026-10-25T16:09:50.233110+00:00",
+      "name": "go-build",
+      "nativeExit": 0,
+      "started": "2026-10-25T16:09:48.639603+00:00"
+    }
+  ],
+  "retained_stage_attribution": "Original aggregate remains failed; its seven non-web native-zero stages retain original identity. Historical original typecheck is not current coverage. This final run freshly executes typecheck, unfiltered Web1545/131 and build.",
+  "runner_review_sha256": "9949cd3b349d1b2799fdaf764c1e62fec73c8c6fca68d3928d3197996b2799ed",
+  "runner_sha256": "eedcba1007dc1a05373260d8ae20155232cc665bceac668e362e6c01bda1ba18",
+  "schema": 1,
+  "source_inventory_file_sha256": "b2d7e3d425c2808a549927eb883bf07e0ce4a5bca87032c7aed3ac66bf01823c",
+  "source_sha256": "1b82ac801d752bc24391e7d3d1b01a2f1832cafc4496418d2eadd7155d9dd9a2",
+  "stages": [
+    {
+      "finished": "2026-10-25T18:25:14.297848+00:00",
+      "name": "web-typecheck",
+      "nativeExit": 0,
+      "started": "2026-10-25T18:25:11.248432+00:00"
+    },
+    {
+      "finished": "2026-10-25T18:37:23.627471+00:00",
+      "name": "web-tests",
+      "nativeExit": 0,
+      "started": "2026-10-25T18:25:14.543026+00:00"
+    },
+    {
+      "finished": "2026-10-25T18:37:27.187250+00:00",
+      "name": "web-build",
+      "nativeExit": 0,
+      "started": "2026-10-25T18:37:23.872982+00:00"
+    }
+  ],
+  "status": "final1b82 canonical whole-web/typecheck/build accepted; canonical17 acceptance separate",
+  "terminal_receipt_sha256": "69e3bd86028d3810df00db12c3598ea45a43ca92477d7b0e2c545a69c1c686e7",
+  "web": {
+    "actualCases": 1545,
+    "actualFiles": 131,
+    "allPassed": true,
+    "failed": 0,
+    "maxWorkers": 1,
+    "nativeSuiteGroups": 149,
+    "nativeTests": 1545,
+    "pending": 0,
+    "retry": 0,
+    "todo": 0,
+    "unfiltered": true,
+    "unhandledClear": true
+  },
+  "web_skipped_cases": []
+}

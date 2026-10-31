@@ -1,0 +1,20 @@
+{
+  "checkpoint": "WIP51",
+  "status": "succeeded",
+  "scope": "owner-private synthetic read-only preview; not real backend deployment",
+  "published_at": "2026-10-30T14:33:08.002526+00:00",
+  "url": "https://routeweaver-wip46-test.garden-lake-3493.chatgpt.site",
+  "source_commit": "574a5dd232cf4dae392f84dff94d80b4b5677c31",
+  "version_id": "appgprj_6ae34b315790819181808e9e2afe0342~appgver_16673a090c44819195d8919523742f44",
+  "deployment_id": "appgdep_6ae4aa9abf1c81919ca787a78b0f34b6",
+  "requested_refinements_complete": true,
+  "older_backup_flow_complete": false,
+  "authenticated_hosted_ui_smoke": "not newly verified; prior private login gate remains a limitation",
+  "local_actual_ui": "bounded r9 source review and r8 retry-focus acceptance passed",
+  "evidence": {
+    "filename": "deployment-success.json",
+    "sha256": "00cf4a464634d88ce4c9735815580f4744b4c684cd3bec2a4db411b5303fbae1",
+    "bytes": 1128,
+    "availability": "native deployment receipt retained locally"
+  }
+}

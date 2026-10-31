@@ -1,0 +1,1 @@
+Broad race run intentionally interrupted with exit 130 before package results to avoid concurrent backup-KDF workload with the parent serial aggregate gate. Not passing evidence; see focused-race.log and parent aggregate results.

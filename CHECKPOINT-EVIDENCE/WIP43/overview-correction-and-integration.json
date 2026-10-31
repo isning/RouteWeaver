@@ -1,0 +1,352 @@
+{
+  "after_source_sha256": "1b82ac801d752bc24391e7d3d1b01a2f1832cafc4496418d2eadd7155d9dd9a2",
+  "before_source_sha256": "b670ad77345a032511c5a071159471e1fdbb68b94eb507df87982d3f288389a5",
+  "browser_validation": {
+    "candidate_product_sha256": "1b82ac801d752bc24391e7d3d1b01a2f1832cafc4496418d2eadd7155d9dd9a2",
+    "cases": 8,
+    "cleanup_scope": "Owned process-group termination on interruption; normal Playwright preview shutdown and loopback4187 closed. No backend/database created; no universal descendant-liveness claim.",
+    "failed": 0,
+    "guards": {
+      "bindingsUnchanged": true,
+      "builtArtifactsUnchanged": true,
+      "canonicalUnchanged": true,
+      "portClosed": true,
+      "privateSourceInputsUnchanged": true
+    },
+    "inputs_sha256": "50d1fde1c5b1a1ba2b4c5e09a216e3721578d09670dc94fe62c6acea3b1a1f48",
+    "limits": [
+      "All four overview states and ordinary identity are HTTP simulations, not backend state or authentication evidence.",
+      "No backend process, database, accounts, credentials, external network request, source fetch, traffic, deployment or generic-status change.",
+      "Single worker, zero retry, fresh private source, native discovery exactly8, private build then browser exactly8 with eight PNGs.",
+      "No full WCAG/keyboard/AT certification or overall ordinary-user production acceptance.",
+      "Native completion still requires independent actual-pixel review; failures remain failures and are preserved."
+    ],
+    "native_pending_review_status_preserved": "native-eight-passed-independent-pixel-review-pending",
+    "native_report_sha256": "16b78fa48ae475062a00ff62098e23e28b8ffa5b8e5a127f9b68716db9cc092d",
+    "passed": 8,
+    "qa_released_utc": "2026-10-25T18:15:59.614754+00:00",
+    "receipt_sha256": "f991fa8251f12c87af06d3d5c441f6b7ac1c4a1abfd5e2e9de49970553d7254d",
+    "retries": 0,
+    "runner_sha256": "05c23a3759efc8c608af234d52ca0d1d46611ed8bf84788e6396c12f54ec000c",
+    "simulated_states": [
+      "active",
+      "paused",
+      "ambiguous",
+      "service-missing"
+    ],
+    "skipped": 0,
+    "stages": [
+      {
+        "finished": "2026-10-25T18:15:49.186030+00:00",
+        "name": "discovery",
+        "nativeExit": 0,
+        "started": "2026-10-25T18:15:48.559692+00:00"
+      },
+      {
+        "finished": "2026-10-25T18:15:52.339177+00:00",
+        "name": "web-build",
+        "nativeExit": 0,
+        "started": "2026-10-25T18:15:50.030447+00:00"
+      },
+      {
+        "finished": "2026-10-25T18:15:59.008454+00:00",
+        "name": "browser",
+        "nativeExit": 0,
+        "started": "2026-10-25T18:15:53.200599+00:00"
+      }
+    ],
+    "viewports": [
+      [
+        320,
+        844
+      ],
+      [
+        1440,
+        1000
+      ]
+    ]
+  },
+  "canonical_payload_files": 1173,
+  "focused_validation": {
+    "candidate_counts": {
+      "numFailedTestSuites": 0,
+      "numFailedTests": 0,
+      "numPassedTestSuites": 3,
+      "numPassedTests": 51,
+      "numPendingTestSuites": 0,
+      "numPendingTests": 0,
+      "numTodoTests": 0,
+      "numTotalTestSuites": 3,
+      "numTotalTests": 51,
+      "success": true
+    },
+    "candidate_source_sha256": "1b82ac801d752bc24391e7d3d1b01a2f1832cafc4496418d2eadd7155d9dd9a2",
+    "candidate_unhandled_clear": true,
+    "evidence_hashes_only": {
+      "candidate-results.json": "7ee86e8f21c539b3b6750efb6a0954be947ee05effb4c99e8ea620b5c3caac48",
+      "candidate-tests.log": "4f8cc1971b2f3a82530d6ae094dcc11392e3f34b32531cce46dc33f5de23f8d6",
+      "candidate-typecheck.log": "d9dd95a5d29e2c8680342dd6d79eb56c5cc54980f2328e98854e8e67aa24d7df",
+      "red-results.json": "0e1525915cca04c038f49e8afee758796cc63203e1ab5496a285905dd4c2ee20",
+      "red-tests.log": "b646023f57305c4f10944094c055936e672dbf23d872022c3aa2e24f1b09610a"
+    },
+    "expected_red_eight_failures_six_controls_passed": true,
+    "inputs_sha256": "9bfca876713378422cb119ce062243d2f7e08356224eb90f33a5b6892feeba95",
+    "limits": [
+      "No canonical source edits or test bypasses.",
+      "RED runs only the new14; candidate runs typecheck and focused51, not a fresh whole suite.",
+      "No browser, actual-pixel, backend authorization, full accessibility, native-runtime or deployment claim.",
+      "Unknown and accounting statuses retain generic fallback; no generic Status or Output lifecycle edit."
+    ],
+    "qa_released_utc": "2026-10-25T18:10:40.529009+00:00",
+    "receipt_sha256": "5531567db6e7de9d72305343aac8c067bff24949d8c77a0586f6b896f8ddd13a",
+    "red_counts": {
+      "numFailedTestSuites": 1,
+      "numFailedTests": 8,
+      "numPassedTestSuites": 0,
+      "numPassedTests": 6,
+      "numPendingTestSuites": 0,
+      "numPendingTests": 0,
+      "numTodoTests": 0,
+      "numTotalTestSuites": 1,
+      "numTotalTests": 14,
+      "success": false
+    },
+    "red_source_sha256": "7621fa53360152baeab997757267d4bfa49216ba87fc0b5a9107f07368bc2353",
+    "runner_sha256": "71928ddb46e910e1c7986b983b8a27d95c0e717d8f66f0eefa16563ed42c225e",
+    "stages": [
+      {
+        "finished": "2026-10-25T18:10:12.854905+00:00",
+        "name": "red-tests",
+        "nativeExit": 1,
+        "started": "2026-10-25T18:10:09.347724+00:00"
+      },
+      {
+        "finished": "2026-10-25T18:10:14.438814+00:00",
+        "name": "candidate-typecheck",
+        "nativeExit": 0,
+        "started": "2026-10-25T18:10:13.093235+00:00"
+      },
+      {
+        "finished": "2026-10-25T18:10:39.956677+00:00",
+        "name": "candidate-tests",
+        "nativeExit": 0,
+        "started": "2026-10-25T18:10:14.650668+00:00"
+      }
+    ]
+  },
+  "format": "derived sanitized portable correction/integration summary; not a byte-identical native receipt",
+  "independent_source_and_actual_pixel_review": {
+    "accepted": true,
+    "all_eight_original_images_individually_viewed": true,
+    "author_review_separate_sha256": "6d263092b4fff1cba723b262e1e07a79b0e7af5703f44243fc9859682461fe0d",
+    "checks": {
+      "all28BrowserEvidenceHashesVerified": true,
+      "all35AcceptanceChecksVerified": true,
+      "all62ManifestBindingsVerified": true,
+      "allEightActualPNGsIndividuallyViewed": true,
+      "allEightImageHashesAndDimensionsVerified": true,
+      "allEightSanitizedCaseReceiptsReviewed": true,
+      "baseline127LogsAndCheckpointPreservedInProspective": true,
+      "baselineAndProspectiveInventoriesExactlyTwoPathDelta": true,
+      "browserAndFocusedQaReleased": true,
+      "browserCanonicalPrivateInputsBindingsBuiltArtifactsAndPortClosedGuardsTrue": true,
+      "browserNativeDiscovery8Build0EightPassNoRetrySkipOrPageErrors": true,
+      "browserProductInventoryEqualsFocusedCandidatePlusOnlyTwoPrivateFixtures": true,
+      "canonicalProductionPreimageStillUnchangedAndNewTestAbsent": true,
+      "declaredTwoOverlayHashesAndModesMatchExecutedFocusedSource": true,
+      "declaredTwoSourceBytesMatchBrowserSource": true,
+      "focusedNativeExpectedRed8Fail6PassThenTypecheck0And51Pass": true
+    },
+    "image_identities": [
+      {
+        "height": 844,
+        "sha256": "d24efc9e14198e000bb5907c3a8902c820140a092fa47f685159122bceaa0069",
+        "width": 320
+      },
+      {
+        "height": 844,
+        "sha256": "aaf2ae1266d0f7f01d80c8faa8758ad87097175ebf8a1af27741c6f9deea3636",
+        "width": 320
+      },
+      {
+        "height": 844,
+        "sha256": "3d4064e9ad8284bf8a30c0c2a9ff8800b31e16ddf76b8ba29df46b31c99a12a1",
+        "width": 320
+      },
+      {
+        "height": 844,
+        "sha256": "3932a97ff4a79c11cd7e89837321179b77baa27412836f0b7ebc9a210754ea68",
+        "width": 320
+      },
+      {
+        "height": 1000,
+        "sha256": "f768c127b74f9a804c0e8d2919b84a823c5eb467a41d6512799dfd14d02c15c4",
+        "width": 1440
+      },
+      {
+        "height": 1000,
+        "sha256": "d77c14c7b60725a0a08bd8bf6d4f693f4d24c9317941485e455bec9c465cfe7f",
+        "width": 1440
+      },
+      {
+        "height": 1000,
+        "sha256": "e42bf0d097a10bb46d03d53ee051f621dc2a9b5a0e2ac45cbe1db80a533f2086",
+        "width": 1440
+      },
+      {
+        "height": 1000,
+        "sha256": "9d65ebdbc7eb8265117909d9c001c4b354284d2208fb131cb54481bfd43f0108",
+        "width": 1440
+      }
+    ],
+    "independence": "Reviewer did not author the production correction, fixture, or execute focused/browser runs. Prepared and final reviews read immutable source, native evidence and actual original images independently of the implementation-author pixel record.",
+    "limits": [
+      "Four policy states and ordinary account identity are simulated HTTP responses rendered by the actual built production app; this does not establish backend authentication, assignment, policy resolution, enforcement or live traffic.",
+      "Read-only review of existing artifacts only: no reviewer browser execution, lock acquisition, canonical write, account creation, external request or deployment.",
+      "Cleanup evidence establishes owned preview shutdown,closed loopback4187 and released QA lock as reported by the guarded runner,not universal descendant liveness.",
+      "Focused51 and browser8 are candidate1b82 evidence,not yet integrated canonical or whole1545 acceptance. Final integrator freeze/runner review and fresh final gates remain separate.",
+      "No full WCAG,assistive-technology,broad keyboard,real-user research or Google endorsement claim."
+    ],
+    "native": {
+      "allBrowserStagesExit0": true,
+      "browserCases": 8,
+      "browserFailed": 0,
+      "browserPassed": 8,
+      "browserRetries": 0,
+      "browserSkipped": 0,
+      "focusedPassed": 51,
+      "focusedTypecheckExit": 0,
+      "redExpectedFailures": 8,
+      "redPassed": 6,
+      "redTotal": 14
+    },
+    "pixel_findings": [
+      "All eight actual screenshots contain the expected Chinese label: 平台授权有效,平台服务已暂停,用户组方案冲突,or服务方案已缺失. No raw known-state token appears.",
+      "At320px every complete badge fits beside 平台服务用量 with clear separation from the quota metrics; no clipping, overlap, horizontal overflow or forced ambiguous abbreviation is visible.",
+      "At1440px the status is placed consistently within the usage card. Paused is neutral; conflicting/missing service states use error emphasis and concrete text, so meaning does not depend only on color.",
+      "Active/unlimited/zero-route frames name authorization and label quota quantities; they do not claim that routes are available or deployed. Empty subscription and creation actions remain coherent.",
+      "No new blocking content or layout defect was found in this bounded correction; no additional redesign is justified before integration."
+    ],
+    "sha256": "031cdebfdb7d9cbccd2bdbb42b748f489a7b4ec99520aca1c95de720a7648a15",
+    "source_findings": [
+      "Actual patch adds only a policyStatus import and local overview badge helper, then replaces only the overview usage-card call site. No generic Status, Output lifecycle, API, quota, route or backend mutation.",
+      "Seven domain labels reuse the existing policy glossary. Accounting and unknown/empty/absent cases continue through the unchanged generic fallback. Active now explicitly describes platform authorization, not usable routes.",
+      "New14-case HTTP-to-page DOM coverage uses literal labels, permits only existing GETs, preserves fallback expectations and verifies published/revoked lifecycle separation. The exact proposed bytes were executed in focused51."
+    ]
+  },
+  "integration": {
+    "after_inventory_file_sha256": "b2d7e3d425c2808a549927eb883bf07e0ce4a5bca87032c7aed3ac66bf01823c",
+    "before_inventory_file_sha256": "c493c01cf8cb613c4d35e5c193d4fa68189048ec026fc6d3a8d1de834f53031a",
+    "documentation_changes": 0,
+    "files": [
+      {
+        "after_mode": "0644",
+        "after_sha256": "f7809abffae71c852d0e16767f910660b41a0fc7e581e46b34507566bb09c68b",
+        "before_mode": "0644",
+        "before_sha256": "72a4ddc0a6e25b4b64526a95405b49eca25f1a857aa355d6cfd9753eb886e90e",
+        "classification": "executed-code-or-test",
+        "path": "web/src/Subscriptions.tsx"
+      },
+      {
+        "after_mode": "0644",
+        "after_sha256": "94b9e45d873cf9ed5f7eb1df0cc848446d2497f5c986b18c1558f9ac7960e88b",
+        "before_mode": null,
+        "before_sha256": null,
+        "classification": "executed-code-or-test",
+        "path": "web/src/subscription-overview-status.dom.test.tsx"
+      }
+    ],
+    "guards": {
+      "checkpointInvariant": true,
+      "exactDelta": true,
+      "historicalLogsInvariant": true,
+      "immutableInputsInvariant": true,
+      "lockReleased": true,
+      "unrelatedInvariant": true
+    },
+    "manifest_sha256": "03d1c96706a980a737990a43dd852c11f75d90d6aa7d3ab6625c147d2a56d642",
+    "native_exit": 0,
+    "new_paths": 1,
+    "qa_released_utc": "2026-10-25T18:22:12.643109+00:00",
+    "receipt_sha256": "3e67a20a7ba7cc40c1816d350b5c38e71752072fbb5835206f4611758d22d11e",
+    "removed_paths": 0,
+    "replaced_paths": 1,
+    "runner_review_sha256": "9bfa9a23c7609d1c2876a966da0a0cdbfecc1b83c7583fb5077051ca711ee974",
+    "runner_sha256": "ca0b756825eae207cba69776645f2cf3b0b3598bbd79b9b19d345158bf3a428a",
+    "source_review_sha256": "031cdebfdb7d9cbccd2bdbb42b748f489a7b4ec99520aca1c95de720a7648a15"
+  },
+  "limits": [
+    "Expected RED remains an expected failing run; candidate51 is separate green evidence.",
+    "Browser8 uses simulated HTTP state and ordinary identity on actual app rendering, not genuine ordinary-role authentication or backend/enforcement coverage.",
+    "Independent source/pixel review preceded canonical integration; its then-not-integrated wording remains historical. Actual integration is established by its separate terminal receipt.",
+    "Earlier b6701531 pass is not an execution on1b82; fresh final gates are separate.",
+    "No private browser fixtures, screenshots, raw logs, runtime copies, auth/session state, caches or build artifacts are included."
+  ],
+  "net_source_delta_from_WIP42": {
+    "additions": 1,
+    "distinct_paths": 8,
+    "files": [
+      {
+        "after_mode": "0644",
+        "after_sha256": "f7809abffae71c852d0e16767f910660b41a0fc7e581e46b34507566bb09c68b",
+        "before_mode": "0644",
+        "before_sha256": "4a21892475c7fb5c73f306a33f8f796da17fb8b8440293138195cae0965f5f03",
+        "path": "web/src/Subscriptions.tsx"
+      },
+      {
+        "after_mode": "0644",
+        "after_sha256": "e5196f5a651e82f123891838f8f2f40dced2e23532a6255d67614c15b048360f",
+        "before_mode": "0644",
+        "before_sha256": "f48f7005dc69ed806da33ab0f952b34fd888f5bb5f06e35c113fa8f0f167c07a",
+        "path": "web/src/output-review-consequence.dom.test.tsx"
+      },
+      {
+        "after_mode": "0644",
+        "after_sha256": "ae2fa8e32762d4bdac5514f3a37f491b29bcdb6df81e7daf9b1cc2b75f62f511",
+        "before_mode": "0644",
+        "before_sha256": "d5244a29249ad5d8bf165b03ea0e78d57c602f51d229ccb426e8ed1d0ba7ed2e",
+        "path": "web/src/subscription-content-decisions.dom.test.tsx"
+      },
+      {
+        "after_mode": "0644",
+        "after_sha256": "94b9e45d873cf9ed5f7eb1df0cc848446d2497f5c986b18c1558f9ac7960e88b",
+        "before_mode": null,
+        "before_sha256": null,
+        "path": "web/src/subscription-overview-status.dom.test.tsx"
+      },
+      {
+        "after_mode": "0644",
+        "after_sha256": "6e39ba4e704a3ff69d58f0b813d844ec19aafeaee172ec53f3f5a3572abfb174",
+        "before_mode": "0644",
+        "before_sha256": "3e75fa43da558b9bbab409eaaf246f0429d3a2a7500f41ebafca34f9df756d62",
+        "path": "web/src/subscription-relational.dom.test.tsx"
+      },
+      {
+        "after_mode": "0644",
+        "after_sha256": "3fc8356c900b22f1ff9d02c182b49c334e35b68aa2541362fc95abe23c319b3b",
+        "before_mode": "0644",
+        "before_sha256": "a12d2dfa119d8a855b6b2b22d4b42e9fd75619f484ebade5306c3d319f9408e3",
+        "path": "web/src/subscription-workspace.dom.test.tsx"
+      },
+      {
+        "after_mode": "0644",
+        "after_sha256": "41be5170eebb4aee0adb39974368353ecfed74c5fcc438559b693f172a26a4b5",
+        "before_mode": "0644",
+        "before_sha256": "c24bb7f00b93f9769e30a90ef56994af042d66a9da2def4ae1b9165268576b84",
+        "path": "web/tests/output-review-consequence.ui.spec.ts"
+      },
+      {
+        "after_mode": "0644",
+        "after_sha256": "7492a68d0e7863cdfb28df34245a7e2f71eb2d71ab9f19c7e1d8e83a91edb1a3",
+        "before_mode": "0644",
+        "before_sha256": "80f517bdd9eac9e584babeb8018b3e7073ac92c1431744319260018e7964232d",
+        "path": "web/tests/product-model.ui.spec.ts"
+      }
+    ],
+    "removals": 0,
+    "replacements": 7
+  },
+  "no_raw_runtime_or_auth_artifacts_included": true,
+  "schema": 1,
+  "status": "two-path overview correction integrated; final1b82 whole-web/canonical17 pending when generated"
+}

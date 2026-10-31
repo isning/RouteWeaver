@@ -1,0 +1,22 @@
+node_modules/
+web/dist/
+*.db
+*.db-*
+.env
+.env.*
+!.env.example
+bin/
+coverage/
+playwright-report/
+test-results/
+.local/
+*.age
+*.token
+
+*.tsbuildinfo
+
+# Verbose local verification runs; public source-bound receipts live in CHECKPOINT-EVIDENCE.
+docs/verification/wip47/*.log
+docs/verification/wip47/frontend-suite-*.json
+docs/verification/wip47/frontend-failures-*.json
+docs/verification/wip47/browser-shadcn-smoke-*.json

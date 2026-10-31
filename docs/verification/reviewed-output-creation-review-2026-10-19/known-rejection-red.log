@@ -1,0 +1,35 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> routeweaver-web@1.0.0 test
+> vitest run --maxWorkers=1 src/output-creation.dom.test.tsx -t independent:
+
+
+ RUN  v5.0.5 /tmp/routeweaver-output-create-review/web
+
+ ❯ src/output-creation.dom.test.tsx (12 tests | 1 failed | 11 skipped) 728ms
+   × independent: keeps a definite stale-review rejection distinct from a failed lookup 726ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/output-creation.dom.test.tsx > independent: keeps a definite stale-review rejection distinct from a failed lookup
+AssertionError: expected '操作未完成无法确认订阅是否已发布。请重试以核对同一份订阅，当前选择已保留。' to contain 'Review is stale'
+
+Expected: "Review is stale"
+Received: "操作未完成无法确认订阅是否已发布。请重试以核对同一份订阅，当前选择已保留。"
+
+ ❯ src/output-creation.dom.test.tsx:425:49
+    423|   await userEvent.click(screen.getByRole("button",{name:"检查并发布"}));
+    424|   await screen.findByRole("alert");
+    425|   expect(screen.getByRole("alert").textContent).toContain("Review is s…
+       |                                                 ^
+    426|   expect((screen.getByRole("button",{name:"检查并发布"}) as HTMLButtonEleme…
+    427| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 11 skipped (12)
+   Start at  05:18:28
+   Duration  2.61s (import 51%, tests 29%, environment 18%, transform 1%)
+

@@ -1,0 +1,24 @@
+{
+  "checkpoint": "WIP51",
+  "status": "bounded actual UI review passed",
+  "r6": "Seven synthetic flows observed across risk-selected phone, short or desktop views; not every flow at every size.",
+  "r7": "Card retained, focus failed when native disabled button lost focus.",
+  "r8": "Phone pointer and short native Return: same card/button retained, DOM disabled false and aria-disabled true while pending, focus retained during pending and after failure.",
+  "r9": "Unsupported format warning and preserved future-parser at phone/short; cancel restores trigger focus. Nested manual first import at phone returns directly to parent draft with two selected sources and Add source focus; no mandatory review or parent save.",
+  "unique_scenarios": 8,
+  "all_scenarios_each_viewport": false,
+  "limits": [
+    "Synthetic UI does not prove live network/backend persistence or accounting execution.",
+    "Browser inspection proves visible ready state, not frame-perfect first-connected rendering.",
+    "No actual GET-count observation; unit test covers request deduplication.",
+    "Not full native browser/device/assistive-technology/production acceptance."
+  ],
+  "evidence": [
+    {
+      "filename": "VISUAL-WIP51.md",
+      "bytes": 8663,
+      "sha256": "51eac97a82b515bd4c76332ea7b63b4efb2fda6e3434017a3520a5e1a00e8c0b",
+      "availability": "local-only evidence"
+    }
+  ]
+}

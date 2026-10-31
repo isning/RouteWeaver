@@ -1,0 +1,40 @@
+{
+  "checkpoint": "WIP47",
+  "snapshot": "accepted local source checkpoint; publication/save require external receipts",
+  "acceptance": "CHECKPOINT-EVIDENCE/WIP47/aggregate-acceptance.json",
+  "acceptance_kind": "repaired modular aggregate",
+  "verification": {
+    "frontend_files": 157,
+    "frontend_tests_passed": 1796,
+    "frontend_failed": 0,
+    "frontend_pending": 0,
+    "frontend_typecheck_exit": 0,
+    "frontend_production_build_exit": 0,
+    "backend_main_vet_race_build": "passed unchanged scope from quick R2",
+    "managed_runtime_vet_race_build": "passed unchanged scope from quick R2",
+    "unchanged_backend_api_scope_files": 542,
+    "api_tests_passed": 17,
+    "native_parser_configurations": 112,
+    "xray_new_loopback_cases": 8,
+    "static_exit": 0,
+    "native_browser_collected_not_run": 179,
+    "historical_failed_attempts_preserved": true
+  },
+  "limits": [
+    "Not full native browser matrix; launch blocked before assertions.",
+    "Actual CSS viewport inspection does not establish real mobile-device, touch, zoom or full accessibility acceptance.",
+    "sing-box runtime blocked by host netlink restriction; parsers passed.",
+    "Bounded protocol/target feature matrix; no blanket3x-ui/s-ui parity.",
+    "No all35-story completion, Google certification, live node deployment or production-readiness claim."
+  ],
+  "prior_status": "CHECKPOINT-EVIDENCE/WIP47/historical-wip46-checkpoint-status.json",
+  "library_save_success": false,
+  "library_save_status": "not asserted in pre-upload archive; exact external upload receipts required",
+  "production_ready": false,
+  "production_deployed": false,
+  "project_complete": false,
+  "google_certification_claimed": false,
+  "selected_screenshot_bytes_in_archives": false,
+  "artifact_kind": "source",
+  "private_demo_deployment": "CHECKPOINT-EVIDENCE/WIP47/private-demo-deployment.json"
+}

@@ -1,0 +1,106 @@
+{
+  "acceptance_scope_at_native_terminal": "Pending independent six actual images. Two independent viewport journeys, two synthetic unassigned plans, six actual guarded policy commits in owned temporary demo only. Ten actual previews (six200/four409); no mocked response/catalog. Not assigned-account migration, broad accessibility, live enforcement or aggregate certification.",
+  "actual_screenshot_count": 6,
+  "cleanup_scope": "Playwright-owned graceful server shutdown; ports closed and demo database absent, not universal descendant-liveness proof.",
+  "finished": "2026-10-25T16:54:56.820511+00:00",
+  "guards": {
+    "builtArtifactsUnchanged": true,
+    "demoDBRemoved": true,
+    "fixtureToolBindingsUnchanged": true,
+    "portClosed": true,
+    "privateSourceInputsUnchanged": true,
+    "recoveredSourceUnchanged": true
+  },
+  "independent_pixel_review": {
+    "all_reviewed_image_hashes_verified": true,
+    "findings": [
+      "Both first-conflict frames show a continuous discernible four-sided green indicator around the direct passive error Alert; owning summary focus and child nonfocusability are separately confirmed in native receipt. Error and explicit latest-version recovery action remain readable.",
+      "Latest comparison clearly distinguishes opening saved day1 from latest saved day15, while the still-unadopted quota100 draft remains visible. Narrow stacked comparison keeps values in proper before/after columns and exposes deliberate adoption.",
+      "Final authoritative review shows only quota50GiB→100GiB, unchanged existing-user impact, retained-draft disposal consent and visible Return/disabled Update actions. Narrow text wraps within its frame; all decision text and actions are visible.",
+      "Final monthly defaults/help continue to describe first-account initialization and retention rather than a hidden account migration. No new task-blocking hierarchy or readability defect found."
+    ],
+    "limits": [
+      "This is scoped service recovery acceptance, not current17 or ordinary-user overall readiness.",
+      "No assigned-account migration/live enforcement, broad keyboard/AT certification or visibility claim from ownership alone.",
+      "All native/source/build/tool/port/DB guards verified; no reviewer runtime or source edit."
+    ],
+    "native_receipt_binding_verified": true,
+    "native_record_pending_review_text_retained_as_history": true,
+    "nonblocking_polish": [
+      "Loaded-result error still asks to view latest and retains that button; tight comparison/details/adopt spacing is known nonblocking content/hierarchy polish, not reopened."
+    ],
+    "record": "policy-ux-review-20261025/SERVICE-FINAL-SOURCE-ACTUAL-PIXEL-REVIEW.json",
+    "reviewed_at_utc": "2026-10-25T16:56:36.756708+00:00",
+    "reviewed_image_count": 6,
+    "scope": "Final582c service stale-draft recovery two viewport journeys, six actual images",
+    "sha256": "7af5b14565619eb7b36098155e0b7712f286c062955d220b84884fcd8589b317",
+    "source_binding_verified": true,
+    "status": "accepted_bounded_slice"
+  },
+  "native_cases": 2,
+  "native_report_sha256": "bca64e0073e181a1c266c30979d268d75614cebd4a00cc790abc7dbcf385859d",
+  "native_status": "passed",
+  "omissions": [
+    "Absolute workspace/tool executable paths and process IDs",
+    "Raw logs, stack traces and DOM dumps",
+    "Demo/auth/session/cookie/CSRF state, private feed values and credentials",
+    "Browser screenshots, traces and runtime source copies"
+  ],
+  "original_record": {
+    "included_native_bytes": false,
+    "record": "policy-edit-intent-proposal-20261025/browser/final-source-smoke/run/run.json",
+    "sha256": "f0a780f863012c030940e9bcb9ae5be218311c948587295b89cbfe123fbea355"
+  },
+  "overall_product_acceptance": false,
+  "privacy_rule": "Explicitly selected scalar/count/identity fields only; original immutable record hashes retained.",
+  "purpose": "service-final-source",
+  "qa_released_utc": "2026-10-25T16:54:56.820491+00:00",
+  "record_kind": "derived_allowlisted_terminal_summary_not_native_byte_copy",
+  "role_scope": "Two administrator desktop/narrow journeys against owned temporary local synthetic demo, not ordinary subscriber or live account migration.",
+  "schema": "routeweaver.portable-verification.v1",
+  "screenshot_bytes_included": false,
+  "source_binding": {
+    "all_input_binding_hashes_verified": true,
+    "bindings_record_sha256": "4701c2c7ce01baa56dc9e0295a5725e2156f0f6fd1620105fa4e4cd5b7f51a92",
+    "candidate_inventory_sha256": "9bf874f7c96448171c2c367fb54576d6b988afc2a45769f5b29ee5ccdc698ebc",
+    "exact_final_integration_after_inventory": true,
+    "source_before_inventory_sha256": "9bf874f7c96448171c2c367fb54576d6b988afc2a45769f5b29ee5ccdc698ebc"
+  },
+  "source_sha256": "582c068fd5016f4d239a2fa9d72e5199a988aade034fb762d7e863201a51e21a",
+  "stages": [
+    {
+      "finished": "2026-10-25T16:54:26.385765+00:00",
+      "name": "go-build",
+      "nativeExit": 0,
+      "started": "2026-10-25T16:54:22.075458+00:00"
+    },
+    {
+      "finished": "2026-10-25T16:54:30.413887+00:00",
+      "name": "web-build",
+      "nativeExit": 0,
+      "started": "2026-10-25T16:54:26.386036+00:00"
+    },
+    {
+      "finished": "2026-10-25T16:54:56.271091+00:00",
+      "name": "browser",
+      "nativeExit": 0,
+      "started": "2026-10-25T16:54:30.814852+00:00"
+    }
+  ],
+  "started": "2026-10-25T16:54:21.455503+00:00",
+  "stats": {
+    "duration": 24940.665999999997,
+    "expected": 2,
+    "flaky": 0,
+    "skipped": 0,
+    "startTime": "2026-10-25T16:54:31.311Z",
+    "unexpected": 0
+  },
+  "synthetic_operation_counts": {
+    "guarded_policy_commits": 6,
+    "previews200": 6,
+    "previews409": 4,
+    "previews_total": 10,
+    "unassigned_plans": 2
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "checkpoint": "WIP49",
+  "status": "resolved observer timing mismatch; historical failure retained",
+  "affected_test": "profile-source-disclosure.dom.test.tsx",
+  "change": "Wait for exact original opener focus after separately awaiting dialog absence; retain no-write assertion. No production code change between R1 and R2.",
+  "reason": "Radix schedules unmount autofocus after removal; task overlay restores focus in a microtask. DOM absence is not the completed focus handoff.",
+  "focused_tests_passed": 74,
+  "evidence": [
+    {
+      "filename": "focus-observer-settlement-tests.log",
+      "sha256": "2c023b7eeb891d1b022c5761270d6a17f5c16a4cd85b98aeb77b11ce87432f93",
+      "bytes": 1023,
+      "availability": "local-only evidence; not an archive attachment"
+    },
+    {
+      "filename": "focus-observer-settlement-typecheck.log",
+      "sha256": "3eeba694beb40e350731996df1916da84a1348266b4c9d68b105dcdd21c1bc6f",
+      "bytes": 144,
+      "availability": "local-only evidence; not an archive attachment"
+    }
+  ]
+}

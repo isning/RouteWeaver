@@ -1,0 +1,6 @@
+=== RUN   TestStreamingBackupLedgerGrowthAndCompleteRecovery
+    stream_test.go:172: ciphertext bytes=86711873
+    stream_test.go:166: streaming ledger rows=200000 peak sampled Go heap=525411728 bytes
+--- PASS: TestStreamingBackupLedgerGrowthAndCompleteRecovery (20.63s)
+PASS
+elapsed_seconds=20.632 max_rss_kib=562028 exit=0

@@ -1,0 +1,25 @@
+{
+  "checkpoint": "WIP50",
+  "status": "succeeded",
+  "scope": "owner-private synthetic read-only preview; not production deployment",
+  "published_at": "2026-10-30T12:13:46.692916+00:00",
+  "url": "https://routeweaver-wip46-test.garden-lake-3493.chatgpt.site",
+  "source_commit": "9aed58f84594d0a3043b6ca1824bc681d1f38121",
+  "version_id": "appgprj_6ae34b315790819181808e9e2afe0342~appgver_3a01042939008191ad0514139d8c602a",
+  "deployment_id": "appgdep_6ae489f245908191a4623ffa5f059961",
+  "overall_task_complete": false,
+  "backup_post_file_validation": "pending user authorization",
+  "live_infrastructure_operations": false,
+  "evidence": {
+    "filename": "deployment-success.json",
+    "sha256": "b479d0d06f20f9aaa3cee1343f01f7df3b29428ea6ef9d9710cba7f33f2e5d0d",
+    "bytes": 1221,
+    "availability": "native deployment receipt retained locally"
+  },
+  "post_publication_browser_check": {
+    "observed": "expected private login gate",
+    "login_or_bypass_attempted": false,
+    "hosted_product_ui_smoke_verified": false,
+    "scope": "Native publication succeeded; locally reviewed canonical UI does not substitute for hosted authenticated UI smoke."
+  }
+}

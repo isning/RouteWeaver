@@ -1,0 +1,22 @@
+{
+  "checkpoint": "WIP49",
+  "status": "passed",
+  "command": "scripts/verify.sh static",
+  "exit_code": 0,
+  "scope": "private-file guard,ticket DAG,Python negative fixtures,architecture negative fixtures,production import direction",
+  "does_not_claim": "full frontend/runtime acceptance",
+  "evidence": [
+    {
+      "filename": "static-r2.log",
+      "sha256": "576696fdcbd5a6195e940fd82fc77ca5ab98ea77196c54ea168a3b1543a82f48",
+      "bytes": 640,
+      "availability": "local-only evidence; not an archive attachment"
+    },
+    {
+      "filename": "static-r2.exit",
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "bytes": 2,
+      "availability": "local-only evidence; not an archive attachment"
+    }
+  ]
+}

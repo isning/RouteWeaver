@@ -1,0 +1,6 @@
+=== RUN   TestBackupStreamingDoesNotBlockAdmissionOrConfigurationWrites
+--- PASS: TestBackupStreamingDoesNotBlockAdmissionOrConfigurationWrites (0.05s)
+=== RUN   TestBackupStreamingReadTransactionPreservesGenerationAndRejectsCancelledImport
+--- PASS: TestBackupStreamingReadTransactionPreservesGenerationAndRejectsCancelledImport (0.35s)
+PASS
+ok  	routeweaver/internal/store	1.430s

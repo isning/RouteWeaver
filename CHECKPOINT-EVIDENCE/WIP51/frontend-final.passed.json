@@ -1,0 +1,57 @@
+{
+  "checkpoint": "WIP51",
+  "status": "R2 passed",
+  "tests_passed": 1877,
+  "failed": 0,
+  "pending": 0,
+  "physical_test_files": 169,
+  "typecheck": "passed",
+  "production_build": "passed",
+  "exit": 0,
+  "frozen_web_files": 391,
+  "unchanged": true,
+  "evidence": [
+    {
+      "filename": "web-suite-r2.json",
+      "bytes": 628916,
+      "sha256": "2622ee76a381cb6bc5de716c941f36ad65b338dcd8978a5a2ad133405f3575a4",
+      "availability": "local-only evidence"
+    },
+    {
+      "filename": "web-suite-r2.log",
+      "bytes": 62944,
+      "sha256": "aa9a348efecc738da57f34a051fca84e23ec7245b90dbb2cd75ff5f9fc6f2223",
+      "availability": "local-only evidence"
+    },
+    {
+      "filename": "web-typecheck-r2.log",
+      "bytes": 144,
+      "sha256": "3eeba694beb40e350731996df1916da84a1348266b4c9d68b105dcdd21c1bc6f",
+      "availability": "local-only evidence"
+    },
+    {
+      "filename": "web-build-r2.log",
+      "bytes": 2980,
+      "sha256": "09e5aaa949e5900c5faf66f557010ed651a104977125de58eaa8c14e97b927ed",
+      "availability": "local-only evidence"
+    },
+    {
+      "filename": "web-r2.exit",
+      "bytes": 2,
+      "sha256": "9a271f2a916b0b6ee6cecb2426f0b3206ef074578be55d9bc94f6f3fe3ab86aa",
+      "availability": "local-only evidence"
+    },
+    {
+      "filename": "web-freeze-r2.json",
+      "bytes": 58917,
+      "sha256": "43955ac8b6755340fbd7cbca33d87f5c24dfb7bf047af77a4cc071fb03a3c619",
+      "availability": "local-only evidence"
+    },
+    {
+      "filename": "web-source-check-r2.json",
+      "bytes": 103,
+      "sha256": "7030610767b8337422769ff07bdff6ea920d5293096eaa6ddeb128c6c0746b99",
+      "availability": "local-only evidence"
+    }
+  ]
+}

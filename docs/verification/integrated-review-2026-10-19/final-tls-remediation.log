@@ -1,0 +1,56 @@
+=== RUN   TestServerPublicationIsScopedDesiredNotApplied
+--- PASS: TestServerPublicationIsScopedDesiredNotApplied (0.06s)
+=== RUN   TestIndependentPublishRejectsUnusablePackagedCertificate
+=== RUN   TestIndependentPublishRejectsUnusablePackagedCertificate/expired
+    integrated_tls_review_test.go:11: actual x509 verification rejects this fixture: x509: certificate has expired or is not yet valid: current time 2026-10-20T03:38:07+08:00 is after 2026-10-19T19:37:07Z
+=== RUN   TestIndependentPublishRejectsUnusablePackagedCertificate/not-yet-valid
+    integrated_tls_review_test.go:11: actual x509 verification rejects this fixture: x509: certificate has expired or is not yet valid: current time 2026-10-20T03:38:08+08:00 is before 2026-10-19T19:39:08Z
+=== RUN   TestIndependentPublishRejectsUnusablePackagedCertificate/wrong-SNI
+    integrated_tls_review_test.go:11: actual x509 verification rejects this fixture: x509: certificate is valid for other.example, not expected.example
+--- PASS: TestIndependentPublishRejectsUnusablePackagedCertificate (0.18s)
+    --- PASS: TestIndependentPublishRejectsUnusablePackagedCertificate/expired (0.06s)
+    --- PASS: TestIndependentPublishRejectsUnusablePackagedCertificate/not-yet-valid (0.06s)
+    --- PASS: TestIndependentPublishRejectsUnusablePackagedCertificate/wrong-SNI (0.05s)
+=== RUN   TestOutputReviewRejectsChangedProfileAndPreservesFeed
+--- PASS: TestOutputReviewRejectsChangedProfileAndPreservesFeed (1.74s)
+=== RUN   TestOutputReviewFencesSourceAndOutputChanges
+=== RUN   TestOutputReviewFencesSourceAndOutputChanges/source
+=== RUN   TestOutputReviewFencesSourceAndOutputChanges/output
+--- PASS: TestOutputReviewFencesSourceAndOutputChanges (1.83s)
+    --- PASS: TestOutputReviewFencesSourceAndOutputChanges/source (0.89s)
+    --- PASS: TestOutputReviewFencesSourceAndOutputChanges/output (0.94s)
+=== RUN   TestOutputReviewFencesOwnedResourceAndGrantInputs
+=== RUN   TestOutputReviewFencesOwnedResourceAndGrantInputs/resource
+=== RUN   TestOutputReviewFencesOwnedResourceAndGrantInputs/grant
+--- PASS: TestOutputReviewFencesOwnedResourceAndGrantInputs (1.81s)
+    --- PASS: TestOutputReviewFencesOwnedResourceAndGrantInputs/resource (0.93s)
+    --- PASS: TestOutputReviewFencesOwnedResourceAndGrantInputs/grant (0.88s)
+=== RUN   TestOutputReviewBindsUnredactedNativeData
+--- PASS: TestOutputReviewBindsUnredactedNativeData (0.85s)
+=== RUN   TestReviewPublishRejectsUnusablePackagedCertificate
+=== RUN   TestReviewPublishRejectsUnusablePackagedCertificate/expired
+    server_tls_publication_test.go:57: actual x509 verification rejects this fixture: x509: certificate has expired or is not yet valid: current time 2026-10-20T03:38:14+08:00 is after 2026-10-19T19:37:14Z
+=== RUN   TestReviewPublishRejectsUnusablePackagedCertificate/not-yet-valid
+    server_tls_publication_test.go:57: actual x509 verification rejects this fixture: x509: certificate has expired or is not yet valid: current time 2026-10-20T03:38:14+08:00 is before 2026-10-19T19:39:14Z
+=== RUN   TestReviewPublishRejectsUnusablePackagedCertificate/wrong-SNI
+    server_tls_publication_test.go:57: actual x509 verification rejects this fixture: x509: certificate is valid for other.example, not expected.example
+--- PASS: TestReviewPublishRejectsUnusablePackagedCertificate (0.17s)
+    --- PASS: TestReviewPublishRejectsUnusablePackagedCertificate/expired (0.05s)
+    --- PASS: TestReviewPublishRejectsUnusablePackagedCertificate/not-yet-valid (0.06s)
+    --- PASS: TestReviewPublishRejectsUnusablePackagedCertificate/wrong-SNI (0.05s)
+=== RUN   TestServerPublicationChecksPublicAndConnectorTLSNames
+=== RUN   TestServerPublicationChecksPublicAndConnectorTLSNames/public-host-fallback
+=== RUN   TestServerPublicationChecksPublicAndConnectorTLSNames/connector-server-name
+=== RUN   TestServerPublicationChecksPublicAndConnectorTLSNames/connector-host-fallback
+=== RUN   TestServerPublicationChecksPublicAndConnectorTLSNames/private-issuer-positive
+--- PASS: TestServerPublicationChecksPublicAndConnectorTLSNames (0.25s)
+    --- PASS: TestServerPublicationChecksPublicAndConnectorTLSNames/public-host-fallback (0.06s)
+    --- PASS: TestServerPublicationChecksPublicAndConnectorTLSNames/connector-server-name (0.05s)
+    --- PASS: TestServerPublicationChecksPublicAndConnectorTLSNames/connector-host-fallback (0.06s)
+    --- PASS: TestServerPublicationChecksPublicAndConnectorTLSNames/private-issuer-positive (0.06s)
+=== RUN   TestServerPublicationRejectsExpiredPackagedChain
+--- PASS: TestServerPublicationRejectsExpiredPackagedChain (0.05s)
+=== RUN   TestFleetPublicationRechecksTLSForAllActivatingActions
+--- PASS: TestFleetPublicationRechecksTLSForAllActivatingActions (2.23s)
+PASS
+ok  	routeweaver/internal/httpapi	10.232s

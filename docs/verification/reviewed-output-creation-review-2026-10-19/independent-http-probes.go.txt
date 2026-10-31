@@ -1,0 +1,87 @@
+package httpapi_test
+
+import (
+	"encoding/json"
+	"net/http"
+	"strings"
+	"sync"
+	"testing"
+
+	"routeweaver/internal/render"
+)
+
+func TestIndependentReviewedCreateConcurrentIdentityAndReceipt(t *testing.T) {
+	s, srv := makeServer(t)
+	u := inviteClient(t, s, srv, "review-concurrent-create")
+	p := nativeProfile(render.Target{AdapterID: "mihomo", Version: render.MihomoVersion}, `{}`)
+	code, _, raw := req(t, u.c, "POST", srv.URL+"/api/me/profiles", u.csrf, p)
+	if code != 200 {
+		t.Fatal(raw)
+	}
+	draft := map[string]any{"id": "same-reviewed-output", "name": "Reviewed", "profileId": p.ID}
+	code, preview, raw := req(t, u.c, "POST", srv.URL+"/api/me/outputs/preview", u.csrf, draft)
+	if code != 200 {
+		t.Fatal(raw)
+	}
+	draft["previewDigest"] = preview["previewDigest"]
+	var wg sync.WaitGroup
+	start := make(chan struct{})
+	codes := make(chan int, 2)
+	for i := 0; i < 2; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			<-start
+			c, _, _ := req(t, u.c, "POST", srv.URL+"/api/me/outputs", u.csrf, draft)
+			codes <- c
+		}()
+	}
+	close(start)
+	wg.Wait()
+	close(codes)
+	counts := map[int]int{}
+	for c := range codes {
+		counts[c]++
+	}
+	if counts[201] != 1 || counts[409] != 1 {
+		t.Fatalf("concurrent identity results: %v", counts)
+	}
+	code, _, raw = req(t, u.c, "GET", srv.URL+"/api/me/outputs", "", nil)
+	var outputs []map[string]any
+	if code != 200 || json.Unmarshal([]byte(raw), &outputs) != nil || len(outputs) != 1 || outputs[0]["creationReviewDigest"] != preview["previewDigest"] {
+		t.Fatalf("durable receipt mismatch: %s", raw)
+	}
+	if strings.Contains(raw, "feedPath") || strings.Contains(raw, "token") || strings.Contains(raw, "artifacts") {
+		t.Fatalf("owner list leaked hidden publication fields: %s", raw)
+	}
+	code, _, raw = req(t, u.c, "POST", srv.URL+"/api/me/outputs/same-reviewed-output/revoke", u.csrf, map[string]any{})
+	if code != 200 {
+		t.Fatal(raw)
+	}
+	code, _, raw = req(t, u.c, "POST", srv.URL+"/api/me/outputs/same-reviewed-output/publish", u.csrf, map[string]any{})
+	if code != 200 || strings.Contains(raw, "creationReviewDigest") {
+		t.Fatalf("revoked then republished retained creation receipt: %s", raw)
+	}
+}
+
+func TestIndependentReviewedCreateInvalidDigestAndNullLegacySemantics(t *testing.T) {
+	s, srv := makeServer(t)
+	u := inviteClient(t, s, srv, "review-digest-boundary")
+	p := nativeProfile(render.Target{AdapterID: "mihomo", Version: render.MihomoVersion}, `{}`)
+	code, _, raw := req(t, u.c, "POST", srv.URL+"/api/me/profiles", u.csrf, p)
+	if code != 200 {
+		t.Fatal(raw)
+	}
+	for _, digest := range []any{"", strings.Repeat("0", 64), 123} {
+		draft := map[string]any{"id": "new-reviewed-output", "name": "Reviewed", "profileId": p.ID, "previewDigest": digest}
+		code, _, raw = req(t, u.c, "POST", srv.URL+"/api/me/outputs", u.csrf, draft)
+		if code == http.StatusCreated {
+			t.Fatalf("invalid explicit digest accepted: %v %s", digest, raw)
+		}
+	}
+	// A JSON null pointer has existing optional-field semantics, not a reviewed receipt.
+	code, out, raw := req(t, u.c, "POST", srv.URL+"/api/me/outputs", u.csrf, map[string]any{"id": "new-reviewed-output", "name": "Legacy null", "profileId": p.ID, "previewDigest": nil})
+	if code != 201 || out["creationReviewDigest"] != nil {
+		t.Fatalf("null must be legacy/unreviewed, got %d %s", code, raw)
+	}
+}

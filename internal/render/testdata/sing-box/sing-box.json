@@ -1,0 +1,123 @@
+{
+  "dns": {
+    "final": "dns",
+    "servers": [
+      {
+        "server": "1.1.1.1",
+        "server_port": 53,
+        "tag": "dns",
+        "type": "udp"
+      }
+    ]
+  },
+  "inbounds": [
+    {
+      "listen": "127.0.0.1",
+      "listen_port": 17890,
+      "tag": "rw-mixed",
+      "type": "mixed"
+    },
+    {
+      "address": [
+        "172.19.0.1/30"
+      ],
+      "auto_route": true,
+      "stack": "system",
+      "tag": "rw-tun",
+      "type": "tun"
+    }
+  ],
+  "log": {
+    "level": "warn"
+  },
+  "outbounds": [
+    {
+      "server": "192.0.2.10",
+      "server_port": 1080,
+      "tag": "United Kingdom (Work), [TLS]",
+      "type": "socks",
+      "version": "5"
+    },
+    {
+      "method": "aes-128-gcm",
+      "password": "synthetic-fixture-secret",
+      "server": "192.0.2.20",
+      "server_port": 8388,
+      "tag": "United States",
+      "type": "shadowsocks"
+    },
+    {
+      "tag": "rw-direct",
+      "type": "direct"
+    },
+    {
+      "outbounds": [
+        "United Kingdom (Work), [TLS]",
+        "United States"
+      ],
+      "tag": "Choose (Main), [Group]",
+      "type": "selector"
+    },
+    {
+      "interval": "300s",
+      "outbounds": [
+        "Choose (Main), [Group]",
+        "United States"
+      ],
+      "tag": "Fast",
+      "tolerance": 50,
+      "type": "urltest",
+      "url": "https://example.org/generate_204"
+    }
+  ],
+  "route": {
+    "auto_detect_interface": true,
+    "default_domain_resolver": "dns",
+    "final": "rw-direct",
+    "rule_set": [
+      {
+        "format": "source",
+        "path": "rules/work.json",
+        "tag": "work",
+        "type": "local"
+      }
+    ],
+    "rules": [
+      {
+        "action": "sniff"
+      },
+      {
+        "action": "route",
+        "domain_suffix": [
+          "example.org"
+        ],
+        "outbound": "Choose (Main), [Group]"
+      },
+      {
+        "action": "reject",
+        "mode": "and",
+        "rules": [
+          {
+            "domain_suffix": [
+              "example.net"
+            ]
+          },
+          {
+            "domain": [
+              "excluded.example.net"
+            ],
+            "invert": true
+          }
+        ],
+        "type": "logical"
+      },
+      {
+        "action": "route",
+        "outbound": "Fast",
+        "rule_set": [
+          "work"
+        ]
+      }
+    ]
+  }
+}

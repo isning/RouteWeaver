@@ -1,0 +1,6 @@
+=== RUN   TestIndependentStage1CrossStoreMeterReplayIsAtomic
+--- PASS: TestIndependentStage1CrossStoreMeterReplayIsAtomic (0.06s)
+=== RUN   TestIndependentStage1RollbackAndReadonlyExport
+--- PASS: TestIndependentStage1RollbackAndReadonlyExport (0.05s)
+PASS
+ok  	routeweaver/internal/store	1.136s

@@ -1,0 +1,8 @@
+=== RUN   TestRelatedRecordCASRetainsTargetWhenBindingChanges
+--- PASS: TestRelatedRecordCASRetainsTargetWhenBindingChanges (0.04s)
+=== RUN   TestRelatedRecordCASCommitsTogetherAndRollsBackSerializationFailure
+--- PASS: TestRelatedRecordCASCommitsTogetherAndRollsBackSerializationFailure (0.05s)
+=== RUN   TestRelatedRecordCASFencesNewDependentMembership
+--- PASS: TestRelatedRecordCASFencesNewDependentMembership (0.04s)
+PASS
+ok  	routeweaver/internal/store	1.182s

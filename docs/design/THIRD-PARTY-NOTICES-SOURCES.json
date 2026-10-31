@@ -1,0 +1,350 @@
+{
+  "scope": "observed installed direct production dependencies; not exhaustive transitive audit",
+  "observed_at_utc": "2026-10-29T17:04:33.545068+00:00",
+  "package_json_sha256": "4f99ff3e60f8bf5280d45aebad8f76857b9011cdd7e2b30a61d7d53413dee3bf",
+  "package_lock_sha256": "cb9c0633d633bafddfd04a27c72de32b809a40ebb066aa2c6a93c7d6aa65f3f2",
+  "dependencies": [
+    {
+      "package": "@fontsource-variable/geist",
+      "version": "5.3.0",
+      "declared_license": "OFL-1.1",
+      "files": [
+        {
+          "source_path": "web/node_modules/@fontsource-variable/geist/LICENSE",
+          "copied_path": "license-texts/fontsource-variable__geist--LICENSE",
+          "sha256": "71609cbb5c78b5870d712eab73a31d76622635c6ed034ab5cee3b9ecbda8685f",
+          "bytes": 4486
+        }
+      ]
+    },
+    {
+      "package": "@rc-component/form",
+      "version": "1.8.6",
+      "declared_license": "MIT",
+      "files": [
+        {
+          "source_path": "web/node_modules/@rc-component/form/LICENSE",
+          "copied_path": "license-texts/rc-component__form--LICENSE",
+          "sha256": "8781f0ca192057330d7fbab763f8bcd3c8e671032f98e9cf1f8c82d6748e5654",
+          "bytes": 1079
+        }
+      ]
+    },
+    {
+      "package": "@tailwindcss/vite",
+      "version": "4.3.3",
+      "declared_license": "MIT",
+      "files": [
+        {
+          "source_path": "web/node_modules/@tailwindcss/vite/LICENSE",
+          "copied_path": "license-texts/tailwindcss__vite--LICENSE",
+          "sha256": "60e0b68c0f35c078eef3a5d29419d0b03ff84ec1df9c3f9d6e39a519a5ae7985",
+          "bytes": 1071
+        }
+      ]
+    },
+    {
+      "package": "@tanstack/react-query",
+      "version": "5.104.4",
+      "declared_license": "MIT",
+      "files": [
+        {
+          "source_path": "web/node_modules/@tanstack/react-query/LICENSE",
+          "copied_path": "license-texts/tanstack__react-query--LICENSE",
+          "sha256": "a405ee70c632bb938acb7ac5f210e814409b3760ea9d2329d8ed8ffcfd11a0e7",
+          "bytes": 1079
+        }
+      ]
+    },
+    {
+      "package": "@tanstack/react-table",
+      "version": "9.3.1",
+      "declared_license": "MIT",
+      "files": [
+        {
+          "source_path": "web/node_modules/@tanstack/react-table/LICENSE",
+          "copied_path": "license-texts/tanstack__react-table--LICENSE",
+          "sha256": "9db3f8ddd7031ab264b99bec49c221155d0c8649b53dd4aa007f2041d36cdf5f",
+          "bytes": 1071
+        }
+      ]
+    },
+    {
+      "package": "@xyflow/react",
+      "version": "12.12.0",
+      "declared_license": "MIT",
+      "files": [
+        {
+          "source_path": "web/node_modules/@xyflow/react/LICENSE",
+          "copied_path": "license-texts/xyflow__react--LICENSE",
+          "sha256": "023119ac20fb1c8c9930abe0bcd196989a1960388529a96fc43cebf96f07c9ff",
+          "bytes": 1073
+        }
+      ]
+    },
+    {
+      "package": "class-variance-authority",
+      "version": "0.7.1",
+      "declared_license": "Apache-2.0",
+      "files": [
+        {
+          "source_path": "web/node_modules/class-variance-authority/LICENSE",
+          "copied_path": "license-texts/class-variance-authority--LICENSE",
+          "sha256": "0ccbf956cffc8dcf515809433cb5242ee67c94513d46e48c261d68d0880de406",
+          "bytes": 10753
+        }
+      ]
+    },
+    {
+      "package": "clsx",
+      "version": "2.1.1",
+      "declared_license": "MIT",
+      "files": [
+        {
+          "source_path": "web/node_modules/clsx/license",
+          "copied_path": "license-texts/clsx--license",
+          "sha256": "9a9edad7baae52622bddf3c15b2ef8a33d2c89f2d25408ad13e8a7481c6b0c97",
+          "bytes": 1104
+        }
+      ]
+    },
+    {
+      "package": "cmdk",
+      "version": "1.1.1",
+      "declared_license": "MIT",
+      "files": [
+        {
+          "source_path": "web/node_modules/cmdk/LICENSE.md",
+          "copied_path": "license-texts/cmdk--LICENSE.md",
+          "sha256": "b5acfd21b3b61508365224c40ec1b03ec71091248baaf989d4be916551e7d532",
+          "bytes": 1069
+        }
+      ]
+    },
+    {
+      "package": "cn",
+      "version": "0.5.0",
+      "declared_license": "MIT",
+      "files": [
+        {
+          "source_path": "web/node_modules/cn/LICENSE",
+          "copied_path": "license-texts/cn--LICENSE",
+          "sha256": "00ff8408e93e2ecc4d90c0edeabdf434100c3aff50acc5d330e17eccd4a3faa5",
+          "bytes": 1063
+        }
+      ]
+    },
+    {
+      "package": "date-fns",
+      "version": "4.4.0",
+      "declared_license": "MIT",
+      "files": [
+        {
+          "source_path": "web/node_modules/date-fns/LICENSE.md",
+          "copied_path": "license-texts/date-fns--LICENSE.md",
+          "sha256": "8d3951c38967b964b1fe259bfd200c2647cc04c858b55a4414e3122a60f1ef4b",
+          "bytes": 1117
+        }
+      ]
+    },
+    {
+      "package": "lucide-react",
+      "version": "1.64.0",
+      "declared_license": "ISC",
+      "files": [
+        {
+          "source_path": "web/node_modules/lucide-react/LICENSE",
+          "copied_path": "license-texts/lucide-react--LICENSE",
+          "sha256": "b495047bd93a9b06913511076f504daba17d5bbeb3e0650f3bb53a4220329c57",
+          "bytes": 3208
+        }
+      ]
+    },
+    {
+      "package": "next-themes",
+      "version": "0.4.6",
+      "declared_license": "MIT",
+      "files": [
+        {
+          "source_path": "web/node_modules/next-themes/license.md",
+          "copied_path": "license-texts/next-themes--license.md",
+          "sha256": "b5acfd21b3b61508365224c40ec1b03ec71091248baaf989d4be916551e7d532",
+          "bytes": 1069
+        }
+      ]
+    },
+    {
+      "package": "qrcode.react",
+      "version": "4.2.0",
+      "declared_license": "ISC",
+      "files": [
+        {
+          "source_path": "web/node_modules/qrcode.react/LICENSE",
+          "copied_path": "license-texts/qrcode.react--LICENSE",
+          "sha256": "908a4454d01d77cd6a0ae1eea0bafaa74a2e3befdbc4b7b714de2499a22351ce",
+          "bytes": 877
+        }
+      ]
+    },
+    {
+      "package": "radix-ui",
+      "version": "1.8.1",
+      "declared_license": "MIT",
+      "files": [
+        {
+          "source_path": "web/node_modules/radix-ui/LICENSE",
+          "copied_path": "license-texts/radix-ui--LICENSE",
+          "sha256": "0e80a2d229d2fd4fc7e8636142ec5d0ff0bc031f14c15b682e2ac01dfd5b5138",
+          "bytes": 1063
+        }
+      ]
+    },
+    {
+      "package": "react",
+      "version": "19.3.1",
+      "declared_license": "MIT",
+      "files": [
+        {
+          "source_path": "web/node_modules/react/LICENSE",
+          "copied_path": "license-texts/react--LICENSE",
+          "sha256": "da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93",
+          "bytes": 1088
+        }
+      ]
+    },
+    {
+      "package": "react-day-picker",
+      "version": "10.0.2",
+      "declared_license": "MIT",
+      "files": [
+        {
+          "source_path": "web/node_modules/react-day-picker/LICENSE",
+          "copied_path": "license-texts/react-day-picker--LICENSE",
+          "sha256": "22cdffdf17a2b6b4d2e1a8c93df0ad35535193b84e6d32ed4945373126f4f3e6",
+          "bytes": 1122
+        }
+      ]
+    },
+    {
+      "package": "react-dom",
+      "version": "19.3.1",
+      "declared_license": "MIT",
+      "files": [
+        {
+          "source_path": "web/node_modules/react-dom/LICENSE",
+          "copied_path": "license-texts/react-dom--LICENSE",
+          "sha256": "da6d3703ed11cbe42bd212c725957c98da23cbff1998c05fa4b3d976d1a58e93",
+          "bytes": 1088
+        }
+      ]
+    },
+    {
+      "package": "shadcn",
+      "version": "4.23.0",
+      "declared_license": "MIT",
+      "files": [
+        {
+          "source_path": "web/node_modules/shadcn/LICENSE.md",
+          "copied_path": "license-texts/shadcn--LICENSE.md",
+          "sha256": "1564074e13439397221ffd522e2e504d56561994a23d371aa5e3ad43e4f5423f",
+          "bytes": 1063
+        }
+      ]
+    },
+    {
+      "package": "sonner",
+      "version": "2.0.8",
+      "declared_license": "MIT",
+      "files": [
+        {
+          "source_path": "web/node_modules/sonner/LICENSE.md",
+          "copied_path": "license-texts/sonner--LICENSE.md",
+          "sha256": "da9201378c36ffd81f51ad0b305f3f0981e90bc558789210ad65d1161eec3b7d",
+          "bytes": 1070
+        }
+      ]
+    },
+    {
+      "package": "tailwind-merge",
+      "version": "3.7.0",
+      "declared_license": "MIT",
+      "files": [
+        {
+          "source_path": "web/node_modules/tailwind-merge/LICENSE.md",
+          "copied_path": "license-texts/tailwind-merge--LICENSE.md",
+          "sha256": "d4c70c7ce38cea8778f0aed3fc0bef0a9dbd27f13bd8b6773cbd6d37941971e5",
+          "bytes": 1070
+        }
+      ]
+    },
+    {
+      "package": "tailwindcss",
+      "version": "4.3.3",
+      "declared_license": "MIT",
+      "files": [
+        {
+          "source_path": "web/node_modules/tailwindcss/LICENSE",
+          "copied_path": "license-texts/tailwindcss--LICENSE",
+          "sha256": "60e0b68c0f35c078eef3a5d29419d0b03ff84ec1df9c3f9d6e39a519a5ae7985",
+          "bytes": 1071
+        }
+      ]
+    },
+    {
+      "package": "tw-animate-css",
+      "version": "1.4.0",
+      "declared_license": "MIT",
+      "files": [
+        {
+          "source_path": "web/node_modules/tw-animate-css/LICENSE",
+          "copied_path": "license-texts/tw-animate-css--LICENSE",
+          "sha256": "039184dfa0a822397b3f45a435b5b1e538721587fbade96b9fa80f86cb354109",
+          "bytes": 1068
+        }
+      ]
+    }
+  ],
+  "observed_geist_build_assets": [
+    {
+      "observed_build_asset": "geist-cyrillic-ext-wght-normal-DjL33-gN.woff2",
+      "sha256": "2317fa4bb293c9c0b110e18315d529235c47a0ddd3338cea3d8c7955e927899e",
+      "bytes": 7420,
+      "matching_installed_font_paths": [
+        "web/node_modules/@fontsource-variable/geist/files/geist-cyrillic-ext-wght-normal.woff2"
+      ]
+    },
+    {
+      "observed_build_asset": "geist-cyrillic-wght-normal-BEAKL7Jp.woff2",
+      "sha256": "6894439694946a589d157ece003086960a6a4013d74a813dab7602efdb3d8c09",
+      "bytes": 15084,
+      "matching_installed_font_paths": [
+        "web/node_modules/@fontsource-variable/geist/files/geist-cyrillic-wght-normal.woff2"
+      ]
+    },
+    {
+      "observed_build_asset": "geist-latin-ext-wght-normal-DC-KSUi6.woff2",
+      "sha256": "824f485b5d26e2f2da3c2b236132ece1bc8e4e43373452950bb0e40548b4313f",
+      "bytes": 16512,
+      "matching_installed_font_paths": [
+        "web/node_modules/@fontsource-variable/geist/files/geist-latin-ext-wght-normal.woff2"
+      ]
+    },
+    {
+      "observed_build_asset": "geist-latin-wght-normal-BgDaEnEv.woff2",
+      "sha256": "19f9c92546aa300c312235e3125af1b81394d8db9a4bc4a425cd5b641d2d54e1",
+      "bytes": 29400,
+      "matching_installed_font_paths": [
+        "web/node_modules/@fontsource-variable/geist/files/geist-latin-wght-normal.woff2"
+      ]
+    },
+    {
+      "observed_build_asset": "geist-vietnamese-wght-normal-6IgcOCM7.woff2",
+      "sha256": "8fa40e5d248247735eb97a0bd593b8852440430600d6ba01364c31fe0abc1fe1",
+      "bytes": 8004,
+      "matching_installed_font_paths": [
+        "web/node_modules/@fontsource-variable/geist/files/geist-vietnamese-wght-normal.woff2"
+      ]
+    }
+  ],
+  "registry_provenance": "docs/design/SHADCN-MIGRATION.md; installed shadcn 4.23.0 LICENSE.md; generated files do not individually repeat a license header"
+}

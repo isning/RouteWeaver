@@ -1,0 +1,9 @@
+=== RUN   TestIndependentStage2MissingTriggerCannotReuseWarmUsage
+    review_stage2_public_test.go:44: missing trigger let stale cache change canonical remaining 7 to 36 (decision {ByteBudget:0xc0001794c8 Allowed:true LeaseID:cb458bb0cc1fb948fe397b8cc6572d91e5b5e1e64ba14c9080264cc997e2d575 AccountID:account RouteID:route ExpiresAt:2026-10-19 20:32:01.033702823 +0000 UTC Reason: EntryRateBPS:0})
+--- FAIL: TestIndependentStage2MissingTriggerCannotReuseWarmUsage (0.12s)
+=== RUN   TestIndependentStage2RawAccountLookupNotPersisted
+    review_stage2_public_test.go:121: derived row exposes raw account-to-projection mapping
+--- FAIL: TestIndependentStage2RawAccountLookupNotPersisted (0.08s)
+FAIL
+FAIL	routeweaver/internal/store	0.216s
+FAIL
