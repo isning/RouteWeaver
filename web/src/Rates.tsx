@@ -152,7 +152,7 @@ export function RateSettings({ routes }: { routes: RouteRecord[] }) {
       </QueryState>
       <TaskDialog
         title="调整线路扣量倍率"
-        pending={mutation.isPending || confirming}
+        pending={mutation.isPending}
         open={open}
         footer={null}
         onOpenChange={(open) => {

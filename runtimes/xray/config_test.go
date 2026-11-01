@@ -2,6 +2,8 @@ package managedxray_test
 
 import (
 	"encoding/json"
+	"fmt"
+	"github.com/xtls/xray-core/infra/conf"
 	"strings"
 	"testing"
 
@@ -101,5 +103,129 @@ func TestRuntimeReconstructionCreatesFreshExplicitCounterEpoch(t *testing.T) {
 	}
 	if before.Counters[0].CumulativeBytes != 0 || after.Counters[0].CumulativeBytes != 0 {
 		t.Fatal("new runtime did not expose genuine zero baseline")
+	}
+}
+
+// Certificate pinning is not a managed capability. The pinned native base has
+// GO-2026-6651; do not let hand-authored TLS settings opt into that verifier.
+func TestManagedRejectsCertificatePinningBeforeNativeConstruction(t *testing.T) {
+	for _, direction := range []string{"inbounds", "outbounds"} {
+		for _, field := range []string{"pinnedPeerCertSha256", "PinnedPeerCertSha256"} {
+			for _, value := range []any{strings.Repeat("ab", 32), "", nil} {
+				t.Run(fmt.Sprintf("%s/%s/%v", direction, field, value), func(t *testing.T) {
+					var native map[string]any
+					if err := json.Unmarshal(config(22001), &native); err != nil {
+						t.Fatal(err)
+					}
+					endpoint := native[direction].([]any)[0].(map[string]any)
+					endpoint["streamSettings"] = map[string]any{"network": "tcp", "security": "tls", "tlsSettings": map[string]any{field: value}}
+					encoded, err := json.Marshal(native)
+					if err != nil {
+						t.Fatal(err)
+					}
+					if err := managed.Validate(encoded, descriptor()); err == nil || !strings.Contains(err.Error(), "certificate pinning") {
+						t.Fatalf("expected explicit unsupported certificate pinning error, got %v", err)
+					}
+					runtime, err := managed.New(encoded, descriptor(), newLeaseService(0))
+					if runtime != nil {
+						runtime.Close()
+						t.Fatal("pinning constructed a runtime")
+					}
+					if err == nil || !strings.Contains(err.Error(), "certificate pinning") {
+						t.Fatalf("New did not reject unsupported pinning: %v", err)
+					}
+				})
+			}
+		}
+	}
+}
+
+func TestManagedRejectsAdvisoryTransportAndDynamicAPIPaths(t *testing.T) {
+	for _, network := range []string{"grpc", "hysteria"} {
+		for _, direction := range []string{"inbounds", "outbounds"} {
+			t.Run(direction+"/"+network, func(t *testing.T) {
+				var native map[string]any
+				json.Unmarshal(config(22001), &native)
+				endpoint := native[direction].([]any)[0].(map[string]any)
+				endpoint["streamSettings"] = map[string]any{"network": network, "security": "tls"}
+				encoded, _ := json.Marshal(native)
+				if err := managed.Validate(encoded, descriptor()); err == nil {
+					t.Fatal("unsupported transport accepted")
+				}
+			})
+		}
+	}
+	for _, field := range []string{"api", "reverse"} {
+		t.Run(field, func(t *testing.T) {
+			var native map[string]any
+			json.Unmarshal(config(22001), &native)
+			native[field] = map[string]any{}
+			encoded, _ := json.Marshal(native)
+			if err := managed.Validate(encoded, descriptor()); err == nil {
+				t.Fatal("dynamic API accepted")
+			}
+		})
+	}
+}
+
+func TestIndependentPinDecoderMatrix(t *testing.T) {
+	pin := `"pinnedPeerCertSha256":"` + strings.Repeat("ab", 32) + `"`
+	for _, direction := range []string{"inbounds", "outbounds"} {
+		for name, stream := range map[string]string{
+			"ordinary":              `"streamSettings":{"network":"tcp","security":"tls","tlsSettings":{"serverName":"example.invalid"}}`,
+			"pin":                   `"streamSettings":{"security":"tls","tlsSettings":{` + pin + `}}`,
+			"pin then empty object": `"streamSettings":{"security":"tls","tlsSettings":{` + pin + `},"tlsSettings":{}}`,
+			"empty object then pin": `"streamSettings":{"security":"tls","tlsSettings":{},"tlsSettings":{` + pin + `}}`,
+			"pin then null":         `"streamSettings":{"security":"tls","tlsSettings":{` + pin + `,"pinnedPeerCertSha256":null}}`,
+			"pin then empty":        `"streamSettings":{"security":"tls","tlsSettings":{` + pin + `,"pinnedPeerCertSha256":""}}`,
+			"stream merge":          `"streamSettings":{"security":"tls","tlsSettings":{` + pin + `}},"streamSettings":{}`,
+			"null stream":           `"streamSettings":{"security":"tls","tlsSettings":{` + pin + `}},"streamSettings":null`,
+			"null TLS":              `"streamSettings":{"security":"tls","tlsSettings":{` + pin + `},"tlsSettings":null}`,
+			"fold":                  `"STREAMSETTINGS":{"security":"tls","TLSSETTINGS":{"PINNEDPEERCERTSHA256":"` + strings.Repeat("ab", 32) + `"}}`,
+			"escaped":               `"streamSettings":{"security":"tls","tlsSettings":{"\u0070innedPeerCertSha256":"` + strings.Repeat("ab", 32) + `"}}`,
+			"unicode fold":          `"streamSettings":{"security":"tls","tlsSettings":{"pinnedPeerCertſha256":"` + strings.Repeat("ab", 32) + `"}}`,
+		} {
+			t.Run(direction+"/"+name, func(t *testing.T) {
+				native := string(config(22001))
+				if direction == "inbounds" {
+					native = strings.Replace(native, `"streamSettings":{"network":"tcp","security":"none"}`, stream, 1)
+				} else {
+					native = strings.Replace(native, `"protocol":"freedom"`, `"protocol":"freedom",`+stream, 1)
+				}
+				var parsed conf.Config
+				if err := json.Unmarshal([]byte(native), &parsed); err != nil {
+					t.Fatal(err)
+				}
+				st := parsed.InboundConfigs[0].StreamSetting
+				if direction == "outbounds" {
+					st = parsed.OutboundConfigs[0].StreamSetting
+				}
+				livePin := st != nil && st.TLSSettings != nil && st.TLSSettings.PinnedPeerCertSha256 != ""
+				err := managed.Validate([]byte(native), descriptor())
+				if name == "ordinary" {
+					if err != nil {
+						t.Fatal(err)
+					}
+					return
+				}
+				if err == nil || !strings.Contains(err.Error(), "certificate pinning") {
+					t.Fatalf("livePin=%v, expected pin rejection, got %v", livePin, err)
+				}
+				r, err := managed.New([]byte(native), descriptor(), newLeaseService(0))
+				if r != nil {
+					r.Close()
+					t.Fatal("constructed runtime")
+				}
+				if err == nil {
+					t.Fatal("New accepted")
+				}
+				t.Logf("native live pin=%v; both public seams rejected", livePin)
+			})
+		}
+	}
+	for _, suffix := range []string{` {}`, ` null`, ` garbage`} {
+		if managed.Validate(append(config(22001), suffix...), descriptor()) == nil {
+			t.Fatal("trailing JSON accepted")
+		}
 	}
 }

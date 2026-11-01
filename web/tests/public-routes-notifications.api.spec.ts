@@ -140,6 +140,7 @@ test("announcement editing preserves read receipt, disabling removes it, and in-
   const auth = await request.post("/api/auth/login", {
     data: { username: "routeweaver", password: "local-demo-password" },
   });
+  expect(auth.status()).toBe(200);
   const { csrfToken } = await auth.json();
   const headers = { "X-CSRF-Token": csrfToken };
   const id = `notice_${Date.now().toString(36)}`;
@@ -259,6 +260,7 @@ test("admin infrastructure summaries hide secrets and explicit edit reveal prese
   const auth = await request.post("/api/auth/login", {
     data: { username: "routeweaver", password: "local-demo-password" },
   });
+  expect(auth.status()).toBe(200);
   const { csrfToken } = await auth.json();
   const headers = { "X-CSRF-Token": csrfToken };
   const suffix = Date.now().toString(36);

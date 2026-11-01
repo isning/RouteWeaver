@@ -994,7 +994,7 @@ function RouteEditor({
       onOpenChange={(open) => {
         if (!open) close();
       }}
-      pending={!(!save.isPending && !confirming)}
+      pending={save.isPending}
       size="xl"
       footer={
         <ActionButton
@@ -1378,7 +1378,7 @@ function EntityEditor({
       onOpenChange={(open) => {
         if (!open) close();
       }}
-      pending={!(!pending && !confirming)}
+      pending={pending}
       size={displayEntity?.kind === "nodes" ? "lg" : "md"}
       contentProps={{
         onFocusCapture: revealFocusedModalAction,
@@ -1551,7 +1551,7 @@ function InviteUser({ open, onClose }: { open: boolean; onClose: () => void }) {
       bodyProps={{ className: "space-y-5" }}
       open={open}
       footer={null}
-      pending={mutation.isPending || confirming}
+      pending={mutation.isPending}
       onOpenChange={(next) => {
         if (!next) close();
       }}

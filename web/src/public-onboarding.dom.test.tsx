@@ -985,3 +985,30 @@ it.each([
     }
   },
 );
+
+it.each(["public", "server"] as const)("keeps the %s route Close control after twice canceling dirty dismissal", async (kind) => {
+  setup("routeweaver/managed-xray", "26.3.27-rw1", false);
+  const originalFetch = fetch;
+  const deployment = (await (await originalFetch("/api/server-deployments")).json())[0];
+  const writes: string[] = [];
+  vi.stubGlobal("fetch", vi.fn(async (url, init) => {
+    if (init?.method && init.method !== "GET") writes.push(String(url));
+    if (String(url).endsWith("/reveal")) return json(deployment);
+    return originalFetch(url, init);
+  }));
+  mount(kind === "public" ? <PublishedRoutesPage /> : <ServerRoutesPage />);
+  await userEvent.click(await screen.findByRole("button", { name: kind === "public" ? "编辑" : "编辑转发路径 Office transfer" }));
+  const dialog = await screen.findByRole("dialog", { name: kind === "public" ? "编辑 Office" : "编辑 Office transfer" });
+  const name = within(dialog).getByLabelText(kind === "public" ? "线路名称" : "转发路径名称");
+  fireEvent.change(name, { target: { value: "Retained route" } });
+  const close = within(dialog).getByRole("button", { name: "关闭" });
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await userEvent.click(close);
+    const review = await screen.findByRole("alertdialog");
+    await waitFor(() => expect(document.activeElement).toBe(within(review).getByRole("button", { name: "继续编辑" })));
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(document.activeElement).toBe(close));
+    expect((name as HTMLInputElement).value).toBe("Retained route");
+  }
+  expect(writes).toEqual([]);
+});

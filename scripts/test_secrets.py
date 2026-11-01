@@ -170,6 +170,34 @@ class SecretScannerTests(unittest.TestCase):
         self.write(path, (ROOT / path).read_bytes() + b"\n" + TOKEN.encode())
         self.assertIn("github-pat", self.scan(1))
 
+    def test_reviewed_module_checksum_is_exact_line_and_path_only(self):
+        path = "runtimes/xray/go.sum"
+        line = next(line for line in (ROOT / path).read_text().splitlines()
+                    if line.startswith("golang.org/x/oauth2 v0.36.0 "))
+        self.write(path, line + "\n")
+        self.assertIn("PASS", self.scan())
+        # Even a harmless change cannot inherit the content exception.
+        self.write(path, line + " changed\n")
+        self.assertIn("generic-api-key", self.scan(1))
+        (self.root / path).unlink()
+        self.write("other/go.sum", line + "\n")
+        self.assertIn("generic-api-key", self.scan(1))
+
+    def test_reviewed_source_manifest_is_exact_line_and_path_only(self):
+        path = "docs/verification/evidence/UPDATED-MANAGED-SOURCE-MANIFEST-2026-11-01.json"
+        content = (ROOT / path).read_bytes()
+        self.write(path, content)
+        self.assertIn("PASS", self.scan())
+        self.write(path, content.rstrip(b"\n") + b" \n")
+        modified = self.scan(1)
+        self.assertIn("generic-api-key", modified)
+        self.assertIn("jfrog-identity-token", modified)
+        (self.root / path).unlink()
+        self.write("other/source-manifest.json", content)
+        elsewhere = self.scan(1)
+        self.assertIn("generic-api-key", elsewhere)
+        self.assertIn("jfrog-identity-token", elsewhere)
+
     def test_secret_file_outside_repository_is_not_followed(self):
         with tempfile.TemporaryDirectory() as outside:
             target = Path(outside) / "outside.txt"

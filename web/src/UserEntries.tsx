@@ -567,7 +567,7 @@ function UserEntryTask({
           if (!next) closeEditor();
         }}
         size="md"
-        pending={save.isPending || confirming}
+        pending={save.isPending}
       >
         <AppForm
           id={formId}

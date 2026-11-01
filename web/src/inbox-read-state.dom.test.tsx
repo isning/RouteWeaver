@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeAll, expect, it, vi } from "vitest";
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -179,4 +180,112 @@ it("keeps the full dismissed message visible but inert until the sheet exit comp
   fireEvent(dialog, event);
   await waitFor(() => expect(dialog.isConnected).toBe(false));
   await waitFor(() => expect(document.activeElement).toBe(opener));
+});
+
+it("separates inbox loading and load failure from an empty inbox and recovers on explicit retry", async () => {
+  let release!: (response: Response) => void;
+  let reads = 0;
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => {
+      reads++;
+      if (reads === 1)
+        return new Promise<Response>((resolve) => {
+          release = resolve;
+        });
+      return json([]);
+    }),
+  );
+  mountInbox();
+  expect(screen.getByLabelText("正在加载").getAttribute("aria-busy")).toBe(
+    "true",
+  );
+  expect(screen.queryByText("暂无消息")).toBeNull();
+  release(json({ message: "消息暂时不可用" }, 503));
+  await screen.findByText("消息暂时不可用");
+  expect(screen.queryByText("暂无消息")).toBeNull();
+  await userEvent.click(screen.getByRole("button", { name: "重试" }));
+  await screen.findByText("暂无消息");
+  expect(screen.queryByText("消息暂时不可用")).toBeNull();
+});
+
+it("does not attach a failed acknowledgement to another message after repeated keyboard dismissal", async () => {
+  const writes: string[] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string, init?: RequestInit) => {
+      if (init?.method === "POST") {
+        writes.push(url);
+        return json({ message: "第一条消息未能标记已读" }, 503);
+      }
+      return json([
+        {
+          eventId: "first",
+          title: "第一条提醒",
+          body: "第一条正文",
+          createdAt: "2026-11-01T10:00:00Z",
+        },
+        {
+          eventId: "second",
+          title: "已读维护通知",
+          body: "第二条正文",
+          createdAt: "2026-11-01T11:00:00Z",
+          readAt: "2026-11-01T12:00:00Z",
+        },
+      ]);
+    }),
+  );
+  mountInbox();
+  const first = await screen.findByRole("button", { name: /第一条提醒.*未读/ });
+  await userEvent.click(first);
+  await screen.findByText("第一条消息未能标记已读");
+  await userEvent.keyboard("{Escape}");
+  await waitFor(() => expect(document.activeElement).toBe(first));
+  const second = screen.getByRole("button", { name: /已读维护通知.*已读/ });
+  for (let attempt = 0; attempt < 2; attempt++) {
+    second.focus();
+    await userEvent.keyboard("{Enter}");
+    const dialog = await screen.findByRole("dialog", { name: "已读维护通知" });
+    expect(within(dialog).getByText("第二条正文")).toBeTruthy();
+    expect(within(dialog).queryByText("第一条消息未能标记已读")).toBeNull();
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(document.activeElement).toBe(second));
+  }
+  expect(writes).toEqual(["/api/me/notifications/first/read"]);
+});
+
+
+it.each([200, 503])("keeps message B active when message A acknowledgement settles late with %s", async (status) => {
+  let settle!: (response: Response) => void;
+  let acknowledged = false;
+  const writes: string[] = [];
+  vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
+    if (init?.method === "POST") {
+      writes.push(url);
+      return new Promise<Response>((resolve) => { settle = resolve; });
+    }
+    return json([
+      { eventId: "first", title: "待确认提醒", body: "第一条正文", createdAt: "2026-11-01T10:00:00Z", ...(acknowledged ? { readAt: "2026-11-01T12:00:00Z" } : {}) },
+      { eventId: "second", title: "已读维护通知", body: "第二条正文", createdAt: "2026-11-01T11:00:00Z", readAt: "2026-11-01T12:00:00Z" },
+    ]);
+  }));
+  mountInbox();
+  await userEvent.click(await screen.findByRole("button", { name: /待确认提醒.*未读/ }));
+  await screen.findByRole("dialog", { name: "待确认提醒" });
+  await userEvent.keyboard("{Escape}");
+  const second = screen.getByRole("button", { name: /已读维护通知.*已读/ });
+  await userEvent.click(second);
+  const dialog = await screen.findByRole("dialog", { name: "已读维护通知" });
+  const close = within(dialog).getByRole("button", { name: "关闭" });
+  close.focus();
+  acknowledged = status === 200;
+  await act(async () => { settle(json(status === 200 ? {} : { message: "旧消息确认失败" }, status)); });
+  expect(within(dialog).getByText("第二条正文")).toBeTruthy();
+  expect(within(dialog).queryByText("旧消息确认失败")).toBeNull();
+  expect(document.activeElement).toBe(close);
+  await userEvent.keyboard("{Escape}");
+  await waitFor(() => expect(document.activeElement).toBe(second));
+  // Closing a presentation does not cancel the legitimate acknowledgement.
+  await screen.findByRole("button", { name: status === 200 ? /待确认提醒.*已读/ : /待确认提醒.*未读/ });
+  expect(writes).toEqual(["/api/me/notifications/first/read"]);
 });

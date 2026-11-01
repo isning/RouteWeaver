@@ -3,9 +3,10 @@ test("policy group preview applies exact limits, rejects stale reviews and preve
   request,
 }) => {
   const login = await request.post("/api/auth/login", {
-      data: { username: "routeweaver", password: "local-demo-password" },
-    }),
-    headers = { "X-CSRF-Token": (await login.json()).csrfToken },
+    data: { username: "routeweaver", password: "local-demo-password" },
+  });
+  expect(login.status()).toBe(200);
+  const headers = { "X-CSRF-Token": (await login.json()).csrfToken },
     id = Date.now().toString(36),
     base = "/api/access-policy";
   const user = {
@@ -114,9 +115,10 @@ test("ordinary users cannot read or mutate administrative policy, subscription d
   baseURL,
 }) => {
   const login = await request.post("/api/auth/login", {
-      data: { username: "routeweaver", password: "local-demo-password" },
-    }),
-    headers = { "X-CSRF-Token": (await login.json()).csrfToken };
+    data: { username: "routeweaver", password: "local-demo-password" },
+  });
+  expect(login.status()).toBe(200);
+  const headers = { "X-CSRF-Token": (await login.json()).csrfToken };
   const invited = await request.post("/api/invites", {
     headers,
     data: { name: "Ordinary policy test", role: "user", expiresInHours: 1 },

@@ -685,7 +685,7 @@ function PublicRouteEditor({
         })(false);
       }}
       size="lg"
-      pending={discardConfirming || save.isPending}
+      pending={save.isPending}
     >
       <ErrorNotice error={inspect.error || save.error} />
       {save.error instanceof APIError && save.error.status === 409 && (

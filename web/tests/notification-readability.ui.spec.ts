@@ -258,3 +258,42 @@ test("default rate policy remains readable as active information, not disabled t
   });
   expect(unexpected).toEqual([]);
 });
+
+test("inbox failure stays with its message across repeated keyboard close at 320px", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 700 });
+  const unexpected = await setup(page);
+  await page.route("**/api/me/notifications/unread/read", (route) =>
+    route.fulfill({ status: 503, json: { message: "额度提醒未能标记已读" } }),
+  );
+  await page.goto("/#inbox");
+  const unread = page.getByRole("button", { name: /额度提醒.*未读/ });
+  await unread.focus();
+  await page.keyboard.press("Enter");
+  await expect(
+    page
+      .getByRole("dialog", { name: "额度提醒" })
+      .getByText("额度提醒未能标记已读"),
+  ).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(unread).toBeFocused();
+  const read = page.getByRole("button", { name: new RegExp(`${title}.*已读`) });
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await read.focus();
+    await page.keyboard.press("Enter");
+    const dialog = page.getByRole("dialog", { name: title });
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByText("额度提醒未能标记已读")).toHaveCount(0);
+    await expect(
+      dialog.getByText(
+        "请在维护结束后检查连接；这条消息保留完整内容供打开后阅读。",
+      ),
+    ).toBeVisible();
+    await noOverflow(page);
+    await page.keyboard.press("Escape");
+    await expect(dialog).not.toBeVisible();
+    await expect(read).toBeFocused();
+  }
+  expect(unexpected).toEqual([]);
+});

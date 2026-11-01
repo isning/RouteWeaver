@@ -1,4 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
+import { type Page } from "@playwright/test";
+import { expect, test } from "./isolated-control-plane-fixture";
 import {
   changedPassword,
   demoPassword,
@@ -9,7 +10,7 @@ import {
   signInAPI,
 } from "./account-security-backend";
 
-// Real browser -> Vite -> ephemeral Go control plane. Do not replace requests
+// Real browser -> private built UI -> isolated normal Go control plane. Do not replace requests
 // with fulfilled fixtures. Auth journeys intentionally never use ui-session.
 test.use({ trace: "off", screenshot: "off", video: "off" });
 

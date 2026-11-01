@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { expect, type APIRequestContext } from "@playwright/test";
 
-// Only synthetic identities in the existing ephemeral --demo control plane.
+// Only synthetic identities in a fresh isolated normal control plane.
 // No database access, bearer-token shortcut, persisted storageState or API mocks.
 export const demoPassword = "local-demo-password";
 export const initialPassword = "synthetic-security-initial-password";
@@ -13,7 +13,9 @@ export function requireLoopback(baseURL: string | undefined) {
     !baseURL ||
     !["127.0.0.1", "localhost", "[::1]"].includes(new URL(baseURL).hostname)
   )
-    throw new Error("Account security journeys require a loopback demo server");
+    throw new Error(
+      "Account security journeys require an isolated loopback server",
+    );
 }
 
 export async function signInAPI(
@@ -31,13 +33,14 @@ export async function signInAPI(
 export async function inviteSyntheticAccount(
   admin: APIRequestContext,
   recipient: APIRequestContext,
+  role: "user" | "admin" = "user",
 ) {
   const session = await signInAPI(admin, "routeweaver", demoPassword);
   const username = `security-${randomUUID()}`;
   const name = `Synthetic security ${username}`;
   const invite = await admin.post("/api/invites", {
     headers: { "X-CSRF-Token": session.csrfToken },
-    data: { name, role: "user", expiresInHours: 1 },
+    data: { name, role, expiresInHours: 1 },
   });
   expect(invite.status()).toBe(201);
   const accepted = await recipient.post("/api/auth/accept-invite", {

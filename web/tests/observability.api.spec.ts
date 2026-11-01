@@ -5,6 +5,7 @@ test("real provider settings and statement preserve unknown host observations an
   const login = await request.post("/api/auth/login", {
     data: { username: "routeweaver", password: "local-demo-password" },
   });
+  expect(login.status()).toBe(200);
   const { csrfToken } = await login.json();
   const headers = { "X-CSRF-Token": csrfToken };
   const suffix = Date.now().toString(36),

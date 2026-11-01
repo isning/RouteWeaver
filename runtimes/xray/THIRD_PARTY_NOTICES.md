@@ -25,7 +25,7 @@ provides a second record of the actual linked module versions.
 | `github.com/google/btree` | `v1.1.2` | [LICENSE](licenses/github.com__google__btree@v1.1.2/LICENSE) |
 | `github.com/gorilla/websocket` | `v1.5.3` | [LICENSE](licenses/github.com__gorilla__websocket@v1.5.3/LICENSE) |
 | `github.com/juju/ratelimit` | `v1.0.2` | [LICENSE](licenses/github.com__juju__ratelimit@v1.0.2/LICENSE) |
-| `github.com/klauspost/compress` | `v1.17.4` | [LICENSE](licenses/github.com__klauspost__compress@v1.17.4/LICENSE) |
+| `github.com/klauspost/compress` | `v1.18.7` | [LICENSE](licenses/github.com__klauspost__compress@v1.18.7/LICENSE), [LICENSE](licenses/github.com__klauspost__compress@v1.18.7/s2/LICENSE), [LICENSE](licenses/github.com__klauspost__compress@v1.18.7/snappy/LICENSE), [AUTHORS](licenses/github.com__klauspost__compress@v1.18.7/snappy/AUTHORS), [LICENSE](licenses/github.com__klauspost__compress@v1.18.7/gzhttp/LICENSE), [LICENSE](licenses/github.com__klauspost__compress@v1.18.7/s2/cmd/internal/readahead/LICENSE), [LICENSE](licenses/github.com__klauspost__compress@v1.18.7/s2/cmd/internal/filepathx/LICENSE), [LICENSE](licenses/github.com__klauspost__compress@v1.18.7/snappy/xerial/LICENSE), [LICENSE.txt](licenses/github.com__klauspost__compress@v1.18.7/zstd/internal/xxhash/LICENSE.txt), [LICENSE](licenses/github.com__klauspost__compress@v1.18.7/internal/lz4ref/LICENSE), [LICENSE](licenses/github.com__klauspost__compress@v1.18.7/internal/snapref/LICENSE) |
 | `github.com/klauspost/cpuid/v2` | `v2.3.0` | [LICENSE](licenses/github.com__klauspost__cpuid__v2@v2.3.0/LICENSE) |
 | `github.com/miekg/dns` | `v1.1.72` | [LICENSE](licenses/github.com__miekg__dns@v1.1.72/LICENSE) |
 | `github.com/pelletier/go-toml` | `v1.9.5` | [LICENSE](licenses/github.com__pelletier__go-toml@v1.9.5/LICENSE) |
@@ -41,14 +41,14 @@ provides a second record of the actual linked module versions.
 | `go4.org/netipx` | `v0.0.0-20231129151722-fdeea329fbba` | [LICENSE](licenses/go4.org__netipx@v0.0.0-20231129151722-fdeea329fbba/LICENSE) |
 | `golang.org/x/crypto` | `v0.58.0` | [LICENSE](licenses/golang.org__x__crypto@v0.58.0/LICENSE) |
 | `golang.org/x/exp` | `v0.0.0-20240506185415-9bf2ced13842` | [LICENSE](licenses/golang.org__x__exp@v0.0.0-20240506185415-9bf2ced13842/LICENSE) |
-| `golang.org/x/net` | `v0.60.0` | [LICENSE](licenses/golang.org__x__net@v0.60.0/LICENSE) |
+| `golang.org/x/net` | `v0.62.0` | [LICENSE](licenses/golang.org__x__net@v0.62.0/LICENSE), [PATENTS](licenses/golang.org__x__net@v0.62.0/PATENTS) |
 | `golang.org/x/sync` | `v0.24.0` | [LICENSE](licenses/golang.org__x__sync@v0.24.0/LICENSE) |
 | `golang.org/x/sys` | `v0.49.0` | [LICENSE](licenses/golang.org__x__sys@v0.49.0/LICENSE) |
 | `golang.org/x/text` | `v0.43.0` | [LICENSE](licenses/golang.org__x__text@v0.43.0/LICENSE) |
 | `golang.org/x/time` | `v0.12.0` | [LICENSE](licenses/golang.org__x__time@v0.12.0/LICENSE) |
 | `golang.zx2c4.com/wireguard` | `v0.0.0-20250521234502-f333402bd9cb` | [LICENSE](licenses/golang.zx2c4.com__wireguard@v0.0.0-20250521234502-f333402bd9cb/LICENSE) |
-| `google.golang.org/genproto/googleapis/rpc` | `v0.0.0-20251202230838-ff82c1b0f217` | [LICENSE](licenses/google.golang.org__genproto__googleapis__rpc@v0.0.0-20251202230838-ff82c1b0f217/LICENSE) |
-| `google.golang.org/grpc` | `v1.79.3` | [NOTICE.txt](licenses/google.golang.org__grpc@v1.79.3/NOTICE.txt), [LICENSE](licenses/google.golang.org__grpc@v1.79.3/LICENSE) |
+| `google.golang.org/genproto/googleapis/rpc` | `v0.0.0-20260526163538-3dc84a4a5aaa` | [LICENSE](licenses/google.golang.org__genproto__googleapis__rpc@v0.0.0-20260526163538-3dc84a4a5aaa/LICENSE) |
+| `google.golang.org/grpc` | `v1.83.2` | [LICENSE](licenses/google.golang.org__grpc@v1.83.2/LICENSE), [AUTHORS](licenses/google.golang.org__grpc@v1.83.2/AUTHORS), [NOTICE.txt](licenses/google.golang.org__grpc@v1.83.2/NOTICE.txt) |
 | `google.golang.org/protobuf` | `v1.36.11` | [LICENSE](licenses/google.golang.org__protobuf@v1.36.11/LICENSE) |
 | `gopkg.in/yaml.v2` | `v2.4.0` | [NOTICE](licenses/gopkg.in__yaml.v2@v2.4.0/NOTICE), [LICENSE.libyaml](licenses/gopkg.in__yaml.v2@v2.4.0/LICENSE.libyaml), [LICENSE](licenses/gopkg.in__yaml.v2@v2.4.0/LICENSE) |
 | `gvisor.dev/gvisor` | `v0.0.0-20260122175437-89a5d21be8f0` | [LICENSE](licenses/gvisor.dev__gvisor@v0.0.0-20260122175437-89a5d21be8f0/LICENSE) |

@@ -1,0 +1,173 @@
+{
+  "raw_sha256": "6037c202aa689e37e1fe7aabdb0dc5fd83d671ebfae74b3848b343d0f9009e5e",
+  "records": [
+    {
+      "config": {
+        "protocol_version": "v1.0.0",
+        "scanner_name": "govulncheck",
+        "scanner_version": "v1.9.0",
+        "db": "https://vuln.go.dev",
+        "db_last_modified": "2026-10-27T21:16:18Z",
+        "go_version": "go1.27.3",
+        "scan_level": "symbol",
+        "scan_mode": "source"
+      }
+    },
+    {
+      "SBOM": {
+        "go_version": "go1.27.3",
+        "modules": [
+          {
+            "path": "routeweaver"
+          },
+          {
+            "path": "filippo.io/age",
+            "version": "v1.3.2"
+          },
+          {
+            "path": "filippo.io/hpke",
+            "version": "v0.4.0"
+          },
+          {
+            "path": "github.com/boombuler/barcode",
+            "version": "v1.0.1-0.20190219062509-6c824513bacc"
+          },
+          {
+            "path": "github.com/danielgtaylor/huma/v2",
+            "version": "v2.39.1"
+          },
+          {
+            "path": "github.com/dustin/go-humanize",
+            "version": "v1.0.1"
+          },
+          {
+            "path": "github.com/evanphx/json-patch/v5",
+            "version": "v5.9.11"
+          },
+          {
+            "path": "github.com/go-chi/chi/v5",
+            "version": "v5.5.0"
+          },
+          {
+            "path": "github.com/google/uuid",
+            "version": "v1.6.0"
+          },
+          {
+            "path": "github.com/pquerna/otp",
+            "version": "v1.5.0"
+          },
+          {
+            "path": "github.com/remyoudompheng/bigfft",
+            "version": "v0.0.0-20230129092748-24d4a6f8daec"
+          },
+          {
+            "path": "github.com/santhosh-tekuri/jsonschema/v6",
+            "version": "v6.0.2"
+          },
+          {
+            "path": "golang.org/x/crypto",
+            "version": "v0.58.0"
+          },
+          {
+            "path": "golang.org/x/net",
+            "version": "v0.60.0"
+          },
+          {
+            "path": "golang.org/x/sys",
+            "version": "v0.49.0"
+          },
+          {
+            "path": "golang.org/x/text",
+            "version": "v0.43.0"
+          },
+          {
+            "path": "gopkg.in/yaml.v3",
+            "version": "v3.0.1"
+          },
+          {
+            "path": "modernc.org/libc",
+            "version": "v1.77.1"
+          },
+          {
+            "path": "modernc.org/mathutil",
+            "version": "v1.7.1"
+          },
+          {
+            "path": "modernc.org/memory",
+            "version": "v1.12.1"
+          },
+          {
+            "path": "modernc.org/sqlite",
+            "version": "v1.60.1"
+          },
+          {
+            "path": "stdlib",
+            "version": "v1.27.3"
+          }
+        ],
+        "roots": [
+          "routeweaver/internal/auth",
+          "routeweaver/internal/domain",
+          "routeweaver/internal/diagnostics",
+          "routeweaver/internal/entrypolicy",
+          "routeweaver/internal/resources",
+          "routeweaver/internal/notifications",
+          "routeweaver/internal/observability",
+          "routeweaver/internal/service",
+          "routeweaver/internal/store",
+          "routeweaver/internal/backup",
+          "routeweaver/internal/controlprotocol",
+          "routeweaver/internal/conversion",
+          "routeweaver/internal/fleet",
+          "routeweaver/internal/importer",
+          "routeweaver/internal/render",
+          "routeweaver/internal/reuse",
+          "routeweaver/internal/httpapi",
+          "routeweaver/cmd/control-plane",
+          "routeweaver/internal/diagnosticexec",
+          "routeweaver/internal/privateipc",
+          "routeweaver/internal/agent",
+          "routeweaver/cmd/node-agent",
+          "routeweaver/cmd/notification-migrate",
+          "routeweaver/internal/integration",
+          "routeweaver/scripts/check-architecture"
+        ]
+      }
+    },
+    {
+      "finding": {
+        "osv": "GO-2026-6860",
+        "fixed_version": "v0.62.0",
+        "trace": [
+          {
+            "module": "golang.org/x/net",
+            "version": "v0.60.0"
+          }
+        ]
+      }
+    },
+    {
+      "finding": {
+        "osv": "GO-2026-6866",
+        "fixed_version": "v0.62.0",
+        "trace": [
+          {
+            "module": "golang.org/x/net",
+            "version": "v0.60.0"
+          }
+        ]
+      }
+    },
+    {
+      "finding": {
+        "osv": "GO-2026-5932",
+        "trace": [
+          {
+            "module": "golang.org/x/crypto",
+            "version": "v0.58.0"
+          }
+        ]
+      }
+    }
+  ]
+}

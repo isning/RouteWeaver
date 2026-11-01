@@ -866,3 +866,141 @@ it("does not let a departed name-only save close or unlock the current user's pe
   expect(currentName.hasAttribute("disabled")).toBe(false);
   expect(document.activeElement).toBe(currentSubmit);
 });
+
+it.each([
+  ["nodes", "连接端点", "暂无连接端点"],
+  ["users", "用户", "暂无用户"],
+  ["services", "服务方案", "暂无服务方案"],
+  ["legacy-routes", "链路配置", "暂无链路配置"],
+  ["activity", "变更记录", "还没有配置记录"],
+])("allows administrator #%s entry and recovers an unavailable inventory without presenting false empty data", async (hash, title, empty) => {
+  history.replaceState(null, "", `#${hash}`);
+  let release!: (response: Response) => void;
+  let stateReads = 0;
+  const unexpected: string[] = [];
+  vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
+    if (init?.method && init.method !== "GET") {
+      unexpected.push(`${init.method} ${url}`);
+      throw new Error("Read-only inventory case");
+    }
+    if (url === "/api/auth/me") return json({ user: { id: "admin-reader", name: "Admin", role: "admin" }, csrfToken: "fixture" });
+    if (url === "/api/state") {
+      stateReads++;
+      if (stateReads === 1) return new Promise<Response>((resolve) => { release = resolve; });
+      return json({ nodes: [], users: [], routes: [], revisions: [], capabilities: [] });
+    }
+    if (url === "/api/settings") return json({ name: "Read-only fixture", registration: "invite" });
+    if (["/api/services", "/api/published-routes", "/api/rates", "/api/user-groups", "/api/audit"].includes(url)) return json([]);
+    unexpected.push(url);
+    throw new Error(`Unexpected inventory request ${url}`);
+  }));
+  mount();
+  const main = await screen.findByRole("main");
+  await within(main).findByRole("heading", { name: title, level: 1 });
+  expect(within(main).getByLabelText("正在加载").getAttribute("aria-busy")).toBe("true");
+  expect(within(main).queryByText(empty)).toBeNull();
+  await act(async () => { release(json({ message: `${title}读取暂不可用` }, 503)); });
+  await within(main).findByText(`${title}读取暂不可用`);
+  expect(within(main).queryByText(empty)).toBeNull();
+  await userEvent.click(within(main).getByRole("button", { name: "重试" }));
+  await within(main).findByText(empty);
+  expect(within(main).queryByText(`${title}读取暂不可用`)).toBeNull();
+  expect(stateReads).toBe(2);
+  expect(unexpected).toEqual([]);
+});
+
+
+it("does not expose editable default settings during initial loading or failure and restores authoritative values on retry", async () => {
+  history.replaceState(null, "", "#settings");
+  let release!: (response: Response) => void;
+  const state = fixture(undefined, async (count, values) => {
+    if (count === 1) return new Promise<Response>((resolve) => { release = resolve; });
+    return json(values);
+  });
+  mount();
+  const main = await screen.findByRole("main");
+  await within(main).findByRole("heading", { name: "平台设置", level: 1 });
+  expect(within(main).getByLabelText("正在加载").getAttribute("aria-busy")).toBe("true");
+  expect(within(main).queryByLabelText("平台名称")).toBeNull();
+  await act(async () => { release(json({ message: "尚未读到平台设置" }, 503)); });
+  await within(main).findByText("尚未读到平台设置");
+  expect(within(main).queryByLabelText("平台名称")).toBeNull();
+  await userEvent.click(within(main).getByRole("button", { name: "重试" }));
+  const name = await within(main).findByLabelText("平台名称");
+  expect((name as HTMLInputElement).value).toBe("RouteWeaver");
+  expect(within(main).queryByText("尚未读到平台设置")).toBeNull();
+  expect(state.settingsReads).toBe(2);
+  expect(state.writes).toEqual([]);
+});
+
+it.each([
+  ["nodes", "Alpha endpoint", "仍被链路配置引用的端点不能删除。请先从相关链路配置中移除引用。"],
+  ["legacy-routes", "Example legacy route", "已分配用户将不能从此链路配置获取新配置。"],
+])("keeps the exact #%s deletion target and consequence through repeated safe-default cancellation", async (hash, target, consequence) => {
+  history.replaceState(null, "", `#${hash}`);
+  fixture();
+  mount();
+  const opener = await screen.findByRole("button", { name: hash === "nodes" ? `更多操作 ${target}` : `删除 ${target}` });
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await userEvent.click(opener);
+    if (hash === "nodes") await userEvent.click(await screen.findByRole("menuitem", { name: `删除 ${target}` }));
+    const confirmation = await screen.findByRole("alertdialog");
+    expect(within(confirmation).getByRole("heading").textContent).toContain(target);
+    expect(within(confirmation).getByText(consequence)).toBeTruthy();
+    const keep = within(confirmation).getByRole("button", { name: "保留" });
+    await waitFor(() => expect(document.activeElement).toBe(keep));
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(document.activeElement).toBe(opener));
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+  }
+  expect(vi.mocked(fetch).mock.calls.filter(([, init]) => init?.method && init.method !== "GET")).toEqual([]);
+});
+
+it("preserves the exact legacy route draft after failed save, canceled discard, and explicit retry", async () => {
+  let attempts = 0;
+  const state = fixture(async (_url, value) => ++attempts === 1 ? json({ message: "链路草稿暂未保存" }, 503) : json(value));
+  mount(<AdminPage page="legacy-routes" />);
+  const opener = await screen.findByRole("button", { name: /^Example legacy route/ });
+  await userEvent.click(opener);
+  const dialog = await screen.findByRole("dialog", { name: "编辑链路配置 Example legacy route" });
+  const name = within(dialog).getByRole("textbox", { name: "链路配置名称" });
+  fireEvent.change(name, { target: { value: "Retained route draft" } });
+  await userEvent.click(within(dialog).getByRole("button", { name: "保存草稿" }));
+  await within(dialog).findByText("链路草稿暂未保存");
+  expect((name as HTMLInputElement).value).toBe("Retained route draft");
+  expect(state.writes).toEqual([{ url: "/api/routes/route", values: { id: "route", name: "Retained route draft", engine: "sing-box", hops: ["a"], userIds: [] } }]);
+  const close = within(dialog).getByRole("button", { name: "关闭" });
+  await userEvent.click(close);
+  const confirmation = await screen.findByRole("alertdialog", { name: "放弃未保存的链路配置修改？" });
+  const keep = within(confirmation).getByRole("button", { name: "继续编辑" });
+  await waitFor(() => expect(document.activeElement).toBe(keep));
+  await userEvent.keyboard("{Escape}");
+  await waitFor(() => expect(document.activeElement).toBe(close));
+  await userEvent.click(within(dialog).getByRole("button", { name: "保存草稿" }));
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  expect(state.writes).toHaveLength(2);
+  expect(state.writes[1]).toEqual(state.writes[0]);
+  await waitFor(() => expect(document.activeElement).toBe(opener));
+});
+
+it.each([
+  ["nodes", "Alpha endpoint", "编辑端点", "端点名称"],
+  ["users", "Example user", "编辑用户", "用户名称"],
+] as const)("returns the %s editor to its stable Close control after canceled discard", async (page, target, title, field) => {
+  const state = fixture();
+  mount(<AdminPage page={page} />);
+  await userEvent.click(await screen.findByRole("button", { name: new RegExp(`^${target}`) }));
+  const dialog = await screen.findByRole("dialog", { name: title });
+  const name = within(dialog).getByRole("textbox", { name: field });
+  fireEvent.change(name, { target: { value: "Retained edit" } });
+  const close = within(dialog).getByRole("button", { name: "关闭" });
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await userEvent.click(close);
+    const review = await screen.findByRole("alertdialog");
+    await waitFor(() => expect(document.activeElement).toBe(within(review).getByRole("button", { name: "继续编辑" })));
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(document.activeElement).toBe(close));
+    expect((name as HTMLInputElement).value).toBe("Retained edit");
+  }
+  expect(state.writes).toEqual([]);
+});

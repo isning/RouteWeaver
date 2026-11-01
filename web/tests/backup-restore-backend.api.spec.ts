@@ -1,5 +1,5 @@
 import { request as createRequest } from "@playwright/test";
-import { test, expect } from "./backup-restore-fixture";
+import { test, expect } from "./isolated-control-plane-fixture";
 import {
   archiveUpload,
   backupPassword,
@@ -11,9 +11,9 @@ import {
 
 test("OPS01 real encrypted archive restores only to a fresh inactive database", async ({
   request,
-  isolatedBackup,
+  isolatedControlPlane,
 }) => {
-  requireBackupLoopback(isolatedBackup.url);
+  requireBackupLoopback(isolatedControlPlane.url);
   const ui = await request.get("/");
   expect(ui.status()).toBe(200);
   expect(ui.headers()["content-type"]).toContain("text/html");
@@ -79,7 +79,7 @@ test("OPS01 real encrypted archive restores only to a fresh inactive database", 
   expect(restored.status()).toBe(201);
   const result = await restored.json();
   expectFreshRestore(result);
-  const target = await isolatedBackup.restore(result.target);
+  const target = await isolatedControlPlane.restore(result.target);
   const reader = await createRequest.newContext({ baseURL: target.url });
   try {
     await sentinel.expectRestoredState(reader);

@@ -147,7 +147,7 @@ export function RuleFileImport({
       onOpenChange={(nextOpen) => {
         if (!nextOpen) close();
       }}
-      pending={!(!save.isPending && !confirming)}
+      pending={save.isPending}
       onClosed={() => {
         if (active.current) onClose();
       }}

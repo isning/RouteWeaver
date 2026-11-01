@@ -296,7 +296,7 @@ export function ResourcesPage() {
                           }
                           onClick={() =>
                             confirmRefresh({
-                              title: "重新读取并接纳远程规则文件？",
+                              title: `重新读取并接纳「${r.name || r.id}」的远程规则文件？`,
                               description:
                                 "固定版本会核对原校验值；失败保留原文件，并阻止基于失败刷新状态的新发布。已发布配置包不改变。",
                               confirmLabel: "读取并接纳",
@@ -356,7 +356,7 @@ export function ResourcesPage() {
         onOpenChange={(nextOpen) => {
           if (!nextOpen) close();
         }}
-        pending={!(!mutation.isPending && !confirming)}
+        pending={mutation.isPending}
         size="lg"
       >
         <AppForm

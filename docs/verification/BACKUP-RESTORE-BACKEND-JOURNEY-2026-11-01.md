@@ -46,7 +46,7 @@ Accounting and semantic published-routing coverage remain separately scoped. No 
   passes encrypted download, multipart wrong-password rejection, preview,
   missing-confirmation and stale-digest refusal, inactive fresh restore, replay
   refusal, unchanged-live sentinel, and exact-target login/config data join.
-- `web/tests/backup-restore-fixture.ts`: worker-local builds of the normal CLI
+- `web/tests/isolated-control-plane-fixture.ts`: worker-local builds of the normal CLI
   and compiled web UI, per-test private state, loopback port-zero listeners,
   captured actual URLs, and owned-process cleanup. All inherited `ROUTEWEAVER_`
   operator configuration is removed from server environments. Keys remain in
@@ -100,7 +100,7 @@ node node_modules/typescript/bin/tsc --ignoreConfig --noEmit --strict \
   --target ES2022 --module ESNext --moduleResolution bundler \
   --esModuleInterop --skipLibCheck --types node \
   tests/backup-restore-backend.ts tests/backup-restore-backend.api.spec.ts \
-  tests/backup-restore-backend.ui.spec.ts tests/backup-restore-fixture.ts \
+  tests/backup-restore-backend.ui.spec.ts tests/isolated-control-plane-fixture.ts \
   playwright.backup.config.ts
 node node_modules/playwright/cli.js test --config=playwright.backup.config.ts --project=chromium --list
 # ONLY on an authorized compatible browser host, not this denied host:

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"routeweaver/internal/agent"
 	"routeweaver/internal/controlprotocol"
 	"routeweaver/internal/domain"
@@ -19,16 +20,20 @@ import (
 )
 
 type fleetFixture struct {
-	s          *store.Store
-	srv        *httptest.Server
-	in         fleet.Input
-	transports map[string]*agent.HTTPTransport
+	databasePath string
+	s            *store.Store
+	srv          *httptest.Server
+	in           fleet.Input
+	transports   map[string]*agent.HTTPTransport
 }
 
 func newFleetFixture(t *testing.T) fleetFixture {
 	t.Helper()
-	s, srv := makeServer(t)
-	return fleetFixtureAt(t, s, srv)
+	databasePath := filepath.Join(t.TempDir(), "db")
+	s, srv := makeServerAt(t, databasePath)
+	f := fleetFixtureAt(t, s, srv)
+	f.databasePath = databasePath
+	return f
 }
 func fleetFixtureAt(t *testing.T, s *store.Store, srv *httptest.Server) fleetFixture {
 	t.Helper()

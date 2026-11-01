@@ -1167,3 +1167,22 @@ it("keeps enrollment expiry exact until date confirmation and blocks submission 
   expect(writes[0].value.instanceId).toBe("core-fra-1");
   expect(String(writes[0].value.expiresAt)).toMatch(/\.\d{3}Z$/);
 });
+
+it("keeps inventory Close focus after twice canceling a dirty server draft", async () => {
+  const writes = inventoryAPI();
+  mount();
+  await userEvent.click(await screen.findByRole("button", { name: "添加服务器" }));
+  const dialog = await screen.findByRole("dialog", { name: "添加服务器" });
+  const name = within(dialog).getByLabelText("服务器名称");
+  fireEvent.change(name, { target: { value: "Retained server" } });
+  const close = within(dialog).getByRole("button", { name: "关闭" });
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await userEvent.click(close);
+    const review = await screen.findByRole("alertdialog");
+    await waitFor(() => expect(document.activeElement).toBe(within(review).getByRole("button", { name: "继续编辑" })));
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(document.activeElement).toBe(close));
+    expect((name as HTMLInputElement).value).toBe("Retained server");
+  }
+  expect(writes).toEqual([]);
+});

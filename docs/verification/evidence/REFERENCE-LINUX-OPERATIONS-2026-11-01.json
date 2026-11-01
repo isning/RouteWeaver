@@ -1,0 +1,54 @@
+{
+  "profile": "single CP, synthetic admin/feed, loopback, two 30-second windows",
+  "kernel": "6.18.57",
+  "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+  "binary_sha256": "26386a0fb1fd959e402e149985914ca0281b566e62112029e71aa519077ac4d9",
+  "os_release": "PRETTY_NAME=\"Debian GNU/Linux 13 (trixie)\"\nNAME=\"Debian GNU/Linux\"\nVERSION_ID=\"13\"\nVERSION=\"13 (trixie)\"\nVERSION_CODENAME=trixie\nDEBIAN_VERSION_FULL=13.6\nID=debian\nHOME_URL=\"https://www.debian.org/\"\nSUPPORT_URL=\"https://www.debian.org/support\"\nBUG_REPORT_URL=\"https://bugs.debian.org/\"\n",
+  "nofile": [
+    16384,
+    16384
+  ],
+  "hard_cpu_memory_limits": "unknown: no assumption from Go runtime settings",
+  "GOMAXPROCS": "1",
+  "GOMEMLIMIT": "256MiB (soft Go memory target, not RSS ceiling)",
+  "cgroup": {
+    "cpu.max": "not exposed",
+    "memory.max": "not exposed"
+  },
+  "windows": [
+    {
+      "startup_seconds": 0.11365568900009748,
+      "observation_seconds": 30.000502348000055,
+      "successful_probes": 30,
+      "failed_probes": 0,
+      "max_rss_kib": 23024,
+      "max_readiness_latency_ms": 14.879166999890003,
+      "sampled_cpu_seconds": 0.01,
+      "db_bytes_before": 242896,
+      "db_bytes_after": 242896,
+      "private_permissions": true,
+      "sigterm_shutdown_seconds": 0.0018053610001516063
+    },
+    {
+      "startup_seconds": 0.0755990949999159,
+      "observation_seconds": 30.000275181000006,
+      "successful_probes": 30,
+      "failed_probes": 0,
+      "max_rss_kib": 22396,
+      "max_readiness_latency_ms": 46.721467999987,
+      "sampled_cpu_seconds": 0.09,
+      "db_bytes_before": 205264,
+      "db_bytes_after": 205264,
+      "private_permissions": true,
+      "sigterm_shutdown_seconds": 0.003243862999852354
+    }
+  ],
+  "refusals": [
+    "same inode writer refused: main",
+    "same inode writer refused: hardlink"
+  ],
+  "status": "passed",
+  "limitations": "Readiness is not service health; no external traffic, target host, backup, notifications delivery, capacity SLA or kernel security certification.",
+  "production_source_commit": "0f3cc5ee699a4cbc9d261276c4c4437a770ea961",
+  "test_script_commit": "b7988b7"
+}

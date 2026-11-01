@@ -1,0 +1,3 @@
+Retained notices for 400 dependencies; 2 missing text candidates. See /tmp/dependency-full-notices/inventory.json
+WARNING: MISSING-LICENSE-TEXT npm:@rolldown/binding-linux-x64-gnu@1.2.14
+WARNING: MISSING-LICENSE-TEXT npm:@rolldown/binding-linux-x64-musl@1.2.14

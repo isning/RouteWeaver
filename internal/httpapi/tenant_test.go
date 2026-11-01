@@ -24,7 +24,11 @@ type sessionClient struct {
 
 func makeServer(t *testing.T) (*store.Store, *httptest.Server) {
 	t.Helper()
-	s, e := store.Open(filepath.Join(t.TempDir(), "db"), bytes.Repeat([]byte{11}, 32))
+	return makeServerAt(t, filepath.Join(t.TempDir(), "db"))
+}
+func makeServerAt(t *testing.T, databasePath string) (*store.Store, *httptest.Server) {
+	t.Helper()
+	s, e := store.Open(databasePath, bytes.Repeat([]byte{11}, 32))
 	if e != nil {
 		t.Fatal(e)
 	}

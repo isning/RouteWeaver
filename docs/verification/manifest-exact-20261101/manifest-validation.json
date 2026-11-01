@@ -1,0 +1,11 @@
+{
+  "manifestPath": "docs/verification/evidence/UPDATED-MANAGED-SOURCE-MANIFEST-2026-11-01.json",
+  "productionBase": "a7963c689c7ae5c3c8abb19efa59083f19d0a970",
+  "entryCount": 224,
+  "allEntriesMatchGitBase": true,
+  "allEntriesMatchCurrentFiles": true,
+  "duplicateKeysRejected": true,
+  "strictPathAndSHA256Only": true,
+  "receiptByteHashBindingVerified": true,
+  "manifestLineSHA256": "492e506d6abfd6dc8bdb10608b10a2b972104431317a2a40b72b583c9d475e3c"
+}

@@ -1,0 +1,4 @@
+=== RUN   TestManagedHistoricalProfileJournalStillObservesAndStops
+--- PASS: TestManagedHistoricalProfileJournalStillObservesAndStops (0.00s)
+PASS
+ok  	routeweaver/internal/agent	0.008s

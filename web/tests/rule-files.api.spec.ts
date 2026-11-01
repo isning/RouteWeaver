@@ -5,9 +5,10 @@ test("owned rule files publish a frozen ZIP bundle while a bare config feed is b
   request,
 }) => {
   const login = await request.post("/api/auth/login", {
-      data: { username: "routeweaver", password: "local-demo-password" },
-    }),
-    headers = { "X-CSRF-Token": (await login.json()).csrfToken },
+    data: { username: "routeweaver", password: "local-demo-password" },
+  });
+  expect(login.status()).toBe(200);
+  const headers = { "X-CSRF-Token": (await login.json()).csrfToken },
     suffix = Date.now().toString(36),
     body = "payload:\n  - '+.private-rule.example'\n";
   const resource = {

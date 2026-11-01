@@ -1,0 +1,171 @@
+{
+  "sha256": "9cc369571f811ef551d73b37b5a9a0ca98cb06fe1af3be556ab6c5b5e35aa4a7",
+  "config": {
+    "protocol_version": "v1.0.0",
+    "scanner_name": "govulncheck",
+    "scanner_version": "v1.9.0",
+    "db": "https://vuln.go.dev",
+    "db_last_modified": "2026-10-27T21:16:18Z",
+    "go_version": "go1.27.3",
+    "scan_level": "symbol",
+    "scan_mode": "source"
+  },
+  "unique_advisory_count": 2,
+  "findings": [
+    {
+      "id": "GO-2026-5932",
+      "record_counts": {
+        "module": 1
+      },
+      "example_records": [
+        {
+          "osv": "GO-2026-5932",
+          "trace": [
+            {
+              "module": "golang.org/x/crypto",
+              "version": "v0.58.0"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "GO-2026-6651",
+      "record_counts": {
+        "module": 1,
+        "package": 159,
+        "symbol": 1940
+      },
+      "example_records": [
+        {
+          "osv": "GO-2026-6651",
+          "fixed_version": "v1.260327.1-0.20260710210335-64fada32b5b9",
+          "trace": [
+            {
+              "module": "github.com/xtls/xray-core",
+              "version": "v1.260327.0"
+            }
+          ]
+        },
+        {
+          "osv": "GO-2026-6651",
+          "fixed_version": "v1.260327.1-0.20260710210335-64fada32b5b9",
+          "trace": [
+            {
+              "module": "github.com/xtls/xray-core",
+              "version": "v1.260327.0",
+              "package": "github.com/xtls/xray-core/features/routing"
+            }
+          ]
+        },
+        {
+          "osv": "GO-2026-6651",
+          "fixed_version": "v1.260327.1-0.20260710210335-64fada32b5b9",
+          "trace": [
+            {
+              "module": "github.com/xtls/xray-core",
+              "version": "v1.260327.0",
+              "package": "github.com/xtls/xray-core/transport/internet",
+              "function": "GetDynamicStrategy",
+              "receiver": "DomainStrategy",
+              "position": {
+                "filename": "transport/internet/config.go",
+                "offset": 3495,
+                "line": 132,
+                "column": 25
+              }
+            },
+            {
+              "module": "github.com/xtls/xray-core",
+              "version": "v1.260327.0",
+              "package": "github.com/xtls/xray-core/app/proxyman/outbound",
+              "function": "Dispatch",
+              "receiver": "*Handler",
+              "position": {
+                "filename": "app/proxyman/outbound/handler.go",
+                "offset": 5594,
+                "line": 187,
+                "column": 42
+              }
+            },
+            {
+              "module": "github.com/xtls/xray-core",
+              "version": "v1.260327.0",
+              "package": "github.com/xtls/xray-core/app/proxyman/outbound",
+              "function": "Dial",
+              "receiver": "*Handler",
+              "position": {
+                "filename": "app/proxyman/outbound/handler.go",
+                "offset": 8993,
+                "line": 289,
+                "column": 5
+              }
+            },
+            {
+              "module": "github.com/xtls/xray-core",
+              "version": "v1.260327.0",
+              "package": "github.com/xtls/xray-core/proxy/vless/outbound",
+              "function": "Process$1$1",
+              "position": {
+                "filename": "proxy/vless/outbound/outbound.go",
+                "offset": 4986,
+                "line": 167,
+                "column": 31
+              }
+            },
+            {
+              "module": "github.com/xtls/xray-core",
+              "version": "v1.260327.0",
+              "package": "github.com/xtls/xray-core/proxy/vless/outbound",
+              "function": "Process$1",
+              "position": {
+                "filename": "proxy/vless/outbound/outbound.go",
+                "offset": 4829,
+                "line": 163,
+                "column": 5
+              }
+            },
+            {
+              "module": "stdlib",
+              "version": "v1.27.3",
+              "package": "sync",
+              "function": "doSlow",
+              "receiver": "*Once",
+              "position": {
+                "filename": "src/sync/once.go",
+                "offset": 2517,
+                "line": 78,
+                "column": 4
+              }
+            },
+            {
+              "module": "stdlib",
+              "version": "v1.27.3",
+              "package": "sync",
+              "function": "Do",
+              "receiver": "*Once",
+              "position": {
+                "filename": "src/sync/once.go",
+                "offset": 2390,
+                "line": 69,
+                "column": 11
+              }
+            },
+            {
+              "module": "routeweaver/runtimes/xray",
+              "package": "routeweaver/runtimes/xray",
+              "function": "Close",
+              "receiver": "*Runtime",
+              "position": {
+                "filename": "runtime.go",
+                "offset": 3673,
+                "line": 120,
+                "column": 16
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

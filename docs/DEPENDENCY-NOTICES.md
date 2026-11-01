@@ -41,3 +41,16 @@ fresh destination against identical binaries and installed sources produces the
 same inventory and notice contents. The current local pinned dependency scan
 retains `is-mobile@5.0.0`’s full original README, including its embedded MIT notice
 and upstream copyright. No license text is synthesized or fetched separately.
+
+## Rolldown binding review (2026-11-01)
+
+The two `@rolldown/binding-linux-x64-{gnu,musl}@1.2.14` missing-text
+candidates are native build-tool `.node` binaries, not files copied by
+`scripts/package.sh`. Do not suppress their inventory warnings or infer a license
+from package metadata. The actual web bundle does contain the injected
+`rolldown/runtime.js` helper: the collector already retains its parent
+`rolldown@1.2.14` upstream `LICENSE` and `THIRD-PARTY-LICENSE` unchanged.
+No additional omission was verified for this package recipe. This conclusion
+must be revisited if distributing `node_modules`, build-tool binaries or a changed
+bundler. See [the bounded dependency/input review](verification/DEPENDENCY-INPUT-REVIEW-2026-11-01.md)
+for module inclusion evidence and remaining maintenance findings.

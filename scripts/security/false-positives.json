@@ -160,5 +160,47 @@
     "rule": "generic-api-key",
     "lineSHA256": "e400e852878a8373dba046cf8978f615f24ad8b0aae8f0268ec2759b586c6c48",
     "reason": "Archived source-file SHA256 value in verification provenance, not a credential."
+  },
+  {
+    "path": "runtimes/xray/go.sum",
+    "rule": "generic-api-key",
+    "lineSHA256": "c33eab034b8da7305a11b02bb7440af0e3d7581c3303a1ad3c83715436ed5fe0",
+    "reason": "Public golang.org/x/oauth2 v0.36.0 module zip checksum; exact line verified against official sum.golang.org lookup and go mod download metadata on 2026-11-01. Not a credential; no path-wide exception."
+  },
+  {
+    "path": "docs/verification/evidence/UPDATED-MANAGED-SOURCE-MANIFEST-2026-11-01.json",
+    "rule": "generic-api-key",
+    "lineSHA256": "492e506d6abfd6dc8bdb10608b10a2b972104431317a2a40b72b583c9d475e3c",
+    "reason": "Immutable 224-entry production-source SHA256 manifest; every strict path/hash entry verified against Git a7963c689c7ae5c3c8abb19efa59083f19d0a970 and current unchanged source, and full bytes verified against reference receipt digest. Contains no other data. Exact line only."
+  },
+  {
+    "path": "docs/verification/evidence/UPDATED-MANAGED-SOURCE-MANIFEST-2026-11-01.json",
+    "rule": "jfrog-identity-token",
+    "lineSHA256": "492e506d6abfd6dc8bdb10608b10a2b972104431317a2a40b72b583c9d475e3c",
+    "reason": "Immutable 224-entry production-source SHA256 manifest; every strict path/hash entry verified against Git a7963c689c7ae5c3c8abb19efa59083f19d0a970 and current unchanged source, and full bytes verified against reference receipt digest. Contains no other data. Exact line only."
+  },
+  {
+    "path": "docs/verification/evidence/UPDATED-MANAGED-1800S-2026-11-01.json",
+    "rule": "jfrog-identity-token",
+    "lineSHA256": "c4fff25e42f5d0dd425b3b4d4096cde2a20b557627d2ab8c00848c2eb725adfb",
+    "reason": "Reference-run executable SHA256 metadata; verified against retained operations-updated-reference-20261101/bin/reference-managed-xray bytes on 2026-11-01. Exact path/rule/line only; receipt bytes unchanged."
+  },
+  {
+    "path": "docs/verification/evidence/UPDATED-MANAGED-1800S-2026-11-01.json",
+    "rule": "generic-api-key",
+    "lineSHA256": "2d678797879f4e3d64741f7793aa1d69c71ae7c5407f5a0afa8efd11dbaf480a",
+    "reason": "Reference-run executable SHA256 metadata; verified against retained operations-updated-reference-20261101/bin/reference-httpapi.test bytes on 2026-11-01. Exact path/rule/line only; receipt bytes unchanged."
+  },
+  {
+    "path": "docs/verification/evidence/STORAGE-ATTRIBUTION-120S-2026-11-01.json",
+    "rule": "generic-api-key",
+    "lineSHA256": "d00d6b6826ebf83991c94c212e824a4483aa466573ee1c66a4d00ebd32a3ae33",
+    "reason": "Historical reference executable SHA256 metadata from commit 99b7bdf; verified against retained capacity-evidence-20261101/httpapi.test bytes on 2026-11-01. Exact path/rule/line only; historical receipt not rewritten."
+  },
+  {
+    "path": "docs/verification/evidence/STORAGE-ATTRIBUTION-120S-2026-11-01.json",
+    "rule": "jfrog-identity-token",
+    "lineSHA256": "b453eb5deeb160744bcb38d1f18f446bec0c340fff2ee465fc891f74f52f25ca",
+    "reason": "Historical reference executable SHA256 metadata from commit 99b7bdf; verified against retained operations-updated-reference-20261101/bin/reference-managed-xray bytes on 2026-11-01. Exact path/rule/line only; historical receipt not rewritten."
   }
 ]

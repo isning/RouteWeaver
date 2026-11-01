@@ -221,3 +221,20 @@ it("closes a fully reverted invitation without a discard decision or navigation 
   );
   expect(state.requests).toHaveLength(0);
 });
+
+it("returns the invitation to its stable Close control after canceled discard", async () => {
+  const state = mount();
+  const dialog = await open();
+  const name = within(dialog).getByLabelText("受邀人名称");
+  fireEvent.change(name, { target: { value: "Retained invite" } });
+  const close = within(dialog).getByRole("button", { name: "关闭" });
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await userEvent.click(close);
+    const review = await screen.findByRole("alertdialog");
+    await waitFor(() => expect(document.activeElement).toBe(within(review).getByRole("button", { name: "继续编辑" })));
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(document.activeElement).toBe(close));
+    expect((name as HTMLInputElement).value).toBe("Retained invite");
+  }
+  expect(state.requests).toEqual([]);
+});

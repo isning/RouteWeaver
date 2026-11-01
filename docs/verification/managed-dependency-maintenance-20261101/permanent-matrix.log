@@ -1,0 +1,100 @@
+=== RUN   TestManagedRejectsCertificatePinningBeforeNativeConstruction
+=== RUN   TestManagedRejectsCertificatePinningBeforeNativeConstruction/inbounds/pinnedPeerCertSha256/abababababababababababababababababababababababababababababababab
+=== RUN   TestManagedRejectsCertificatePinningBeforeNativeConstruction/inbounds/pinnedPeerCertSha256/
+=== RUN   TestManagedRejectsCertificatePinningBeforeNativeConstruction/inbounds/pinnedPeerCertSha256/<nil>
+=== RUN   TestManagedRejectsCertificatePinningBeforeNativeConstruction/inbounds/PinnedPeerCertSha256/abababababababababababababababababababababababababababababababab
+=== RUN   TestManagedRejectsCertificatePinningBeforeNativeConstruction/inbounds/PinnedPeerCertSha256/
+=== RUN   TestManagedRejectsCertificatePinningBeforeNativeConstruction/inbounds/PinnedPeerCertSha256/<nil>
+=== RUN   TestManagedRejectsCertificatePinningBeforeNativeConstruction/outbounds/pinnedPeerCertSha256/abababababababababababababababababababababababababababababababab
+=== RUN   TestManagedRejectsCertificatePinningBeforeNativeConstruction/outbounds/pinnedPeerCertSha256/
+=== RUN   TestManagedRejectsCertificatePinningBeforeNativeConstruction/outbounds/pinnedPeerCertSha256/<nil>
+=== RUN   TestManagedRejectsCertificatePinningBeforeNativeConstruction/outbounds/PinnedPeerCertSha256/abababababababababababababababababababababababababababababababab
+=== RUN   TestManagedRejectsCertificatePinningBeforeNativeConstruction/outbounds/PinnedPeerCertSha256/
+=== RUN   TestManagedRejectsCertificatePinningBeforeNativeConstruction/outbounds/PinnedPeerCertSha256/<nil>
+--- PASS: TestManagedRejectsCertificatePinningBeforeNativeConstruction (0.00s)
+    --- PASS: TestManagedRejectsCertificatePinningBeforeNativeConstruction/inbounds/pinnedPeerCertSha256/abababababababababababababababababababababababababababababababab (0.00s)
+    --- PASS: TestManagedRejectsCertificatePinningBeforeNativeConstruction/inbounds/pinnedPeerCertSha256/ (0.00s)
+    --- PASS: TestManagedRejectsCertificatePinningBeforeNativeConstruction/inbounds/pinnedPeerCertSha256/<nil> (0.00s)
+    --- PASS: TestManagedRejectsCertificatePinningBeforeNativeConstruction/inbounds/PinnedPeerCertSha256/abababababababababababababababababababababababababababababababab (0.00s)
+    --- PASS: TestManagedRejectsCertificatePinningBeforeNativeConstruction/inbounds/PinnedPeerCertSha256/ (0.00s)
+    --- PASS: TestManagedRejectsCertificatePinningBeforeNativeConstruction/inbounds/PinnedPeerCertSha256/<nil> (0.00s)
+    --- PASS: TestManagedRejectsCertificatePinningBeforeNativeConstruction/outbounds/pinnedPeerCertSha256/abababababababababababababababababababababababababababababababab (0.00s)
+    --- PASS: TestManagedRejectsCertificatePinningBeforeNativeConstruction/outbounds/pinnedPeerCertSha256/ (0.00s)
+    --- PASS: TestManagedRejectsCertificatePinningBeforeNativeConstruction/outbounds/pinnedPeerCertSha256/<nil> (0.00s)
+    --- PASS: TestManagedRejectsCertificatePinningBeforeNativeConstruction/outbounds/PinnedPeerCertSha256/abababababababababababababababababababababababababababababababab (0.00s)
+    --- PASS: TestManagedRejectsCertificatePinningBeforeNativeConstruction/outbounds/PinnedPeerCertSha256/ (0.00s)
+    --- PASS: TestManagedRejectsCertificatePinningBeforeNativeConstruction/outbounds/PinnedPeerCertSha256/<nil> (0.00s)
+=== RUN   TestIndependentPinDecoderMatrix
+=== RUN   TestIndependentPinDecoderMatrix/inbounds/pin_then_empty
+    config_test.go:222: native live pin=false; both public seams rejected
+=== RUN   TestIndependentPinDecoderMatrix/inbounds/null_TLS
+    config_test.go:222: native live pin=false; both public seams rejected
+=== RUN   TestIndependentPinDecoderMatrix/inbounds/fold
+    config_test.go:222: native live pin=true; both public seams rejected
+=== RUN   TestIndependentPinDecoderMatrix/inbounds/ordinary
+=== RUN   TestIndependentPinDecoderMatrix/inbounds/pin
+    config_test.go:222: native live pin=true; both public seams rejected
+=== RUN   TestIndependentPinDecoderMatrix/inbounds/pin_then_empty_object
+    config_test.go:222: native live pin=true; both public seams rejected
+=== RUN   TestIndependentPinDecoderMatrix/inbounds/empty_object_then_pin
+    config_test.go:222: native live pin=true; both public seams rejected
+=== RUN   TestIndependentPinDecoderMatrix/inbounds/stream_merge
+    config_test.go:222: native live pin=true; both public seams rejected
+=== RUN   TestIndependentPinDecoderMatrix/inbounds/null_stream
+    config_test.go:222: native live pin=false; both public seams rejected
+=== RUN   TestIndependentPinDecoderMatrix/inbounds/escaped
+    config_test.go:222: native live pin=true; both public seams rejected
+=== RUN   TestIndependentPinDecoderMatrix/inbounds/unicode_fold
+    config_test.go:222: native live pin=true; both public seams rejected
+=== RUN   TestIndependentPinDecoderMatrix/inbounds/pin_then_null
+    config_test.go:222: native live pin=true; both public seams rejected
+=== RUN   TestIndependentPinDecoderMatrix/outbounds/pin_then_empty_object
+    config_test.go:222: native live pin=true; both public seams rejected
+=== RUN   TestIndependentPinDecoderMatrix/outbounds/empty_object_then_pin
+    config_test.go:222: native live pin=true; both public seams rejected
+=== RUN   TestIndependentPinDecoderMatrix/outbounds/pin_then_null
+    config_test.go:222: native live pin=true; both public seams rejected
+=== RUN   TestIndependentPinDecoderMatrix/outbounds/stream_merge
+    config_test.go:222: native live pin=true; both public seams rejected
+=== RUN   TestIndependentPinDecoderMatrix/outbounds/null_TLS
+    config_test.go:222: native live pin=false; both public seams rejected
+=== RUN   TestIndependentPinDecoderMatrix/outbounds/fold
+    config_test.go:222: native live pin=true; both public seams rejected
+=== RUN   TestIndependentPinDecoderMatrix/outbounds/escaped
+    config_test.go:222: native live pin=true; both public seams rejected
+=== RUN   TestIndependentPinDecoderMatrix/outbounds/ordinary
+=== RUN   TestIndependentPinDecoderMatrix/outbounds/pin
+    config_test.go:222: native live pin=true; both public seams rejected
+=== RUN   TestIndependentPinDecoderMatrix/outbounds/pin_then_empty
+    config_test.go:222: native live pin=false; both public seams rejected
+=== RUN   TestIndependentPinDecoderMatrix/outbounds/null_stream
+    config_test.go:222: native live pin=false; both public seams rejected
+=== RUN   TestIndependentPinDecoderMatrix/outbounds/unicode_fold
+    config_test.go:222: native live pin=true; both public seams rejected
+--- PASS: TestIndependentPinDecoderMatrix (0.01s)
+    --- PASS: TestIndependentPinDecoderMatrix/inbounds/pin_then_empty (0.00s)
+    --- PASS: TestIndependentPinDecoderMatrix/inbounds/null_TLS (0.00s)
+    --- PASS: TestIndependentPinDecoderMatrix/inbounds/fold (0.00s)
+    --- PASS: TestIndependentPinDecoderMatrix/inbounds/ordinary (0.00s)
+    --- PASS: TestIndependentPinDecoderMatrix/inbounds/pin (0.00s)
+    --- PASS: TestIndependentPinDecoderMatrix/inbounds/pin_then_empty_object (0.00s)
+    --- PASS: TestIndependentPinDecoderMatrix/inbounds/empty_object_then_pin (0.00s)
+    --- PASS: TestIndependentPinDecoderMatrix/inbounds/stream_merge (0.00s)
+    --- PASS: TestIndependentPinDecoderMatrix/inbounds/null_stream (0.00s)
+    --- PASS: TestIndependentPinDecoderMatrix/inbounds/escaped (0.00s)
+    --- PASS: TestIndependentPinDecoderMatrix/inbounds/unicode_fold (0.00s)
+    --- PASS: TestIndependentPinDecoderMatrix/inbounds/pin_then_null (0.00s)
+    --- PASS: TestIndependentPinDecoderMatrix/outbounds/pin_then_empty_object (0.00s)
+    --- PASS: TestIndependentPinDecoderMatrix/outbounds/empty_object_then_pin (0.00s)
+    --- PASS: TestIndependentPinDecoderMatrix/outbounds/pin_then_null (0.00s)
+    --- PASS: TestIndependentPinDecoderMatrix/outbounds/stream_merge (0.00s)
+    --- PASS: TestIndependentPinDecoderMatrix/outbounds/null_TLS (0.00s)
+    --- PASS: TestIndependentPinDecoderMatrix/outbounds/fold (0.00s)
+    --- PASS: TestIndependentPinDecoderMatrix/outbounds/escaped (0.00s)
+    --- PASS: TestIndependentPinDecoderMatrix/outbounds/ordinary (0.00s)
+    --- PASS: TestIndependentPinDecoderMatrix/outbounds/pin (0.00s)
+    --- PASS: TestIndependentPinDecoderMatrix/outbounds/pin_then_empty (0.00s)
+    --- PASS: TestIndependentPinDecoderMatrix/outbounds/null_stream (0.00s)
+    --- PASS: TestIndependentPinDecoderMatrix/outbounds/unicode_fold (0.00s)
+PASS
+ok  	routeweaver/runtimes/xray	0.026s

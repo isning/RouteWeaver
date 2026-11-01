@@ -749,7 +749,7 @@ export function TemplatesPage({ admin = false }: { admin?: boolean }) {
         onOpenChange={(nextOpen) => {
           if (!nextOpen) closeUpdate();
         }}
-        pending={!(!apply.isPending && !updateConfirming)}
+        pending={apply.isPending}
         size="lg"
       >
         <ErrorNotice
@@ -1189,7 +1189,7 @@ function SelectTemplate({
       onOpenChange={(nextOpen) => {
         if (!nextOpen) close();
       }}
-      pending={!(!select.isPending && !confirming)}
+      pending={select.isPending}
       onClosed={() => {
         if (active.current) onClose();
       }}
@@ -1624,7 +1624,7 @@ function PublishTemplate({
       onOpenChange={(nextOpen) => {
         if (!nextOpen) close();
       }}
-      pending={!(!publish.isPending && !confirming)}
+      pending={publish.isPending}
       onClosed={() => {
         if (active.current) onClose();
       }}

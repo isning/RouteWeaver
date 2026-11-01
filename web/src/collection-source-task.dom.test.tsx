@@ -45,12 +45,14 @@ function api({
   collections = [],
   sources = [],
   saveSource,
+  saveCollection,
   decideSource,
   readSource,
 }: {
   collections?: Collection[];
   sources?: Source[];
   saveSource?: (source: Source) => Promise<Response>;
+  saveCollection?: (collection: Collection) => Promise<Response>;
   decideSource?: (
     path: string,
     body: Record<string, unknown>,
@@ -98,8 +100,9 @@ function api({
       }
       if (path === "/me/collections/preview") return json({ endpoints: [] });
       if (path.startsWith("/me/collections")) {
-        savedCollections = [body];
-        return json(body);
+        const response = saveCollection ? await saveCollection(body) : json(body);
+        if (response.ok) savedCollections = [body];
+        return response;
       }
       throw new Error(`Unexpected write ${method} ${path}`);
     }
@@ -1171,3 +1174,39 @@ it.for(["double click", "held Enter"])(
     expect(review.getByRole("button", { name: "应用更新" })).toBeTruthy();
   },
 );
+
+
+it("retains a failed collection save through repeated canceled discard and retries the exact ordered draft", async () => {
+  let attempts = 0;
+  const { writes } = api({
+    collections: [recipe], sources: [source("one", "Provider one"), source("two", "Provider two")],
+    saveCollection: async (value) => ++attempts === 1 ? json({ message: "集合暂未保存，请重试" }, 503) : json(value),
+  });
+  mount();
+  const opener = await screen.findByRole("button", { name: /Travel/ });
+  await userEvent.click(opener);
+  fireEvent.change(screen.getByLabelText("集合名称"), { target: { value: "Travel edited" } });
+  await userEvent.click(screen.getByRole("button", { name: "保存集合" }));
+  await screen.findByText("集合暂未保存，请重试");
+  expect(writes).toHaveLength(1);
+  expect(writes[0].body).toEqual({ ...recipe, name: "Travel edited" });
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const dialog = screen.getByRole("dialog");
+    const close = within(dialog).getByRole("button", { name: "关闭" });
+    await userEvent.click(close);
+    const confirmation = await screen.findByRole("alertdialog", { name: "放弃尚未保存的集合修改？" });
+    expect(confirmation.textContent).toContain("已保存的来源会保留");
+    const keep = within(confirmation).getByRole("button", { name: "继续编辑" });
+    await waitFor(() => expect(document.activeElement).toBe(keep));
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(document.activeElement).toBe(close));
+    expect((screen.getByLabelText("集合名称") as HTMLInputElement).value).toBe("Travel edited");
+    expect(writes).toHaveLength(1);
+  }
+  await userEvent.click(screen.getByRole("button", { name: "保存集合" }));
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  expect(writes).toHaveLength(2);
+  expect(writes[1]).toEqual(writes[0]);
+  await screen.findByRole("button", { name: /Travel edited/ });
+  expect(hasUnsavedChanges()).toBe(false);
+});

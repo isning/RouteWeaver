@@ -9,6 +9,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { UIProviders } from "./ui-patterns/providers";
 import { AccountSecurityPage } from "./AccountSecurity";
@@ -546,4 +547,23 @@ it("conceals the security draft on expired-session failure without retrying the 
   await screen.findByText("请重新登录");
   expect(screen.queryByRole("button", { name: "修改密码" })).toBeNull();
   expect(changes).toBe(1);
+});
+
+
+it("keeps account recovery Close focus after twice canceling a dirty reason", async () => {
+  vi.stubGlobal("fetch", vi.fn(async (url) => json(String(url).endsWith("/admin/accounts") ? [{ id: "target", name: "Target", username: "target", role: "user", disabled: false, retired: false }] : [])));
+  mountSecurity({ ...person, user: { ...person.user, id: "admin", role: "admin" } });
+  await userEvent.click(await screen.findByRole("button", { name: "管理 Target" }));
+  fill("操作原因", "Retained recovery reason");
+  const dialog = screen.getByRole("dialog");
+  const close = within(dialog).getByRole("button", { name: "关闭" });
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await userEvent.click(close);
+    const review = await screen.findByRole("alertdialog");
+    await waitFor(() => expect(document.activeElement).toBe(within(review).getByRole("button", { name: "继续编辑" })));
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(document.activeElement).toBe(close));
+    expect((screen.getByLabelText("操作原因") as HTMLInputElement).value).toBe("Retained recovery reason");
+  }
+  expect(vi.mocked(fetch).mock.calls.filter(([, init]) => init?.method && init.method !== "GET")).toEqual([]);
 });

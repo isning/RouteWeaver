@@ -2,7 +2,7 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { request as createRequest } from "@playwright/test";
-import { test, expect } from "./backup-restore-fixture";
+import { test, expect } from "./isolated-control-plane-fixture";
 import { waitForConfirmedWorkspace } from "./ui-workspace-confirmation";
 import {
   backupPassword,
@@ -15,9 +15,9 @@ import {
 // Real HTTP throughout. Browser execution is separate from the API companion.
 test("OPS01 downloaded backup file rejects a wrong password and restores without activating", async ({
   page,
-  isolatedBackup,
+  isolatedControlPlane,
 }) => {
-  requireBackupLoopback(isolatedBackup.url);
+  requireBackupLoopback(isolatedControlPlane.url);
   const directory = await mkdtemp(join(tmpdir(), "routeweaver-ops01-"));
   try {
     await page.goto("/");
@@ -128,7 +128,7 @@ test("OPS01 downloaded backup file rejects a wrong password and restores without
     await expect(password).toHaveValue("");
     await expect(page.getByText("未选择文件", { exact: true })).toBeVisible();
     await expect(restore).not.toBeVisible();
-    const target = await isolatedBackup.restore(result.target);
+    const target = await isolatedControlPlane.restore(result.target);
     const reader = await createRequest.newContext({ baseURL: target.url });
     try {
       await sentinel.expectRestoredState(reader);

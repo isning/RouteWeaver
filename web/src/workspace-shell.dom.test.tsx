@@ -5,7 +5,11 @@ import userEvent from "@testing-library/user-event";
 import { UIProviders } from "./ui-patterns/providers";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import App from "./App";
-beforeAll(() => {
+beforeAll(async () => {
+  // This shell-navigation case does not measure Vite cold compilation. Keep
+  // module preparation outside RTL’s user-visible heading deadline; controlled
+  // pending/rejected imports are exercised in page-recovery.dom.test.tsx.
+  await import("./Infrastructure");
   Object.defineProperty(window, "matchMedia", {
     writable: true,
     value: vi.fn(() => ({
@@ -89,13 +93,31 @@ it("keeps subscription and network scopes in one navigation without a personal/a
   ).toBe("page");
   expect(within(nav).getByText("订阅与分流")).toBeTruthy();
 });
-it("does not expose administrator scopes to a regular account or bypass direct-route protection", async () => {
-  mount("member", "#servers");
-  const nav = await screen.findByRole("navigation", { name: "工作空间导航" });
-  expect(within(nav).queryByText("网络资源")).toBeNull();
-  expect(within(nav).queryByText("用户与权限")).toBeNull();
-  expect(await screen.findByText("需要管理员权限")).toBeTruthy();
-});
+it.each([
+  "published-routes",
+  "routes",
+  "servers",
+  "fleet",
+  "users",
+  "services",
+  "activity",
+  "settings",
+  "nodes",
+  "legacy-routes",
+  "notifications",
+])(
+  "denies the administrator-only #%s route to a regular account without requesting its data",
+  async (route) => {
+    mount("user", `#${route}`);
+    const nav = await screen.findByRole("navigation", { name: "工作空间导航" });
+    expect(within(nav).queryByText("网络资源")).toBeNull();
+    expect(within(nav).queryByText("用户与权限")).toBeNull();
+    expect(await screen.findByText("需要管理员权限")).toBeTruthy();
+    expect(vi.mocked(fetch).mock.calls.map(([url]) => String(url))).toEqual([
+      "/api/auth/me",
+    ]);
+  },
+);
 
 it("hides each breadcrumb ancestor together with its separator on narrow screens", async () => {
   mount();

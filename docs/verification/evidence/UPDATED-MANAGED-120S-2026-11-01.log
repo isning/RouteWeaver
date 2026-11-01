@@ -1,0 +1,12 @@
+=== RUN   TestNativeContinuousManagedServicePreservesPayloadAndRevocation
+    service_native_test.go:294: reference storage/process sample=0 cp_db_bytes=4096 cp_wal_bytes=1891112 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=33960 native_fds=12
+    service_native_test.go:295: reference progress sample=0 parent_Go_heap_bytes=2095704 agent_root_bytes=48637332 policy_issued=2026-11-01 16:14:35.82904505 +0000 UTC max_RTT=134.307µs
+    service_native_test.go:294: reference storage/process sample=30 cp_db_bytes=167936 cp_wal_bytes=4120032 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=34596 native_fds=12
+    service_native_test.go:295: reference progress sample=30 parent_Go_heap_bytes=3124920 agent_root_bytes=48637337 policy_issued=2026-11-01 16:14:35.82904505 +0000 UTC max_RTT=3.275001ms
+    service_native_test.go:294: reference storage/process sample=60 cp_db_bytes=167936 cp_wal_bytes=4120032 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=34740 native_fds=12
+    service_native_test.go:295: reference progress sample=60 parent_Go_heap_bytes=2554520 agent_root_bytes=48637338 policy_issued=2026-11-01 16:14:35.82904505 +0000 UTC max_RTT=60.786061ms
+    service_native_test.go:294: reference storage/process sample=90 cp_db_bytes=221184 cp_wal_bytes=4128272 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=34936 native_fds=12
+    service_native_test.go:295: reference progress sample=90 parent_Go_heap_bytes=2080896 agent_root_bytes=48637338 policy_issued=2026-11-01 16:14:35.82904505 +0000 UTC max_RTT=175.601037ms
+    service_native_test.go:305: reference managed payload: samples=120 duration=2m0.000335552s max_RTT=175.601037ms; identity unchanged; synthetic single flow, not capacity SLA
+--- PASS: TestNativeContinuousManagedServicePreservesPayloadAndRevocation (141.68s)
+PASS

@@ -150,3 +150,21 @@ it("keeps the selected route, factor, and start time when saving fails", async (
       .hasAttribute("disabled"),
   ).toBe(false);
 });
+
+it("keeps rate Close focus after twice canceling an unsaved adjustment", async () => {
+  const writes = mount();
+  await userEvent.click(screen.getByRole("button", { name: "调整倍率" }));
+  const dialog = screen.getByRole("dialog", { name: "调整线路扣量倍率" });
+  const rate = within(dialog).getByLabelText("整条线路倍率（×）");
+  fireEvent.change(rate, { target: { value: "2.5" } });
+  const close = within(dialog).getByRole("button", { name: "关闭" });
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await userEvent.click(close);
+    const review = await screen.findByRole("alertdialog");
+    await waitFor(() => expect(document.activeElement).toBe(within(review).getByRole("button", { name: "继续编辑" })));
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(document.activeElement).toBe(close));
+    expect((rate as HTMLInputElement).value).toBe("2.5");
+  }
+  expect(writes).toEqual([]);
+});

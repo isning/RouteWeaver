@@ -1,0 +1,65 @@
+{
+  "exit_code": 0,
+  "elapsed_seconds": 1823.732920943,
+  "child_user_cpu_seconds": 179.835918,
+  "child_system_cpu_seconds": 49.450634,
+  "child_wait4_maxrss_kib": 123348,
+  "scope": "wait4 child accounting; not sum of simultaneously resident process RSS",
+  "hard_cpu_memory_limits": "unknown, not exposed",
+  "requested_payload_window_seconds": 1800,
+  "parent_GOMAXPROCS": "1",
+  "parent_GOMEMLIMIT": "256MiB",
+  "native_GOMAXPROCS_GOMEMLIMIT": "not supplied: supervisor strips ambient Go settings; native defaults unmeasured",
+  "source_binding": {
+    "commit": "30355e4f0135e0e9f6fd4bc92560204b32ecb9e3",
+    "production_base": "a7963c689c7ae5c3c8abb19efa59083f19d0a970",
+    "sha256": {
+      "go.mod": "ac41bad1b515e40453ccf686c5c555a9e2bcdd58274683cac707c5a75bc6bbb0",
+      "go.sum": "8f15d4c388eb79f0054de2355b620fcffc3a2416be2441fe2f391547aca70fe2",
+      "runtimes/xray/go.mod": "37828388bdb101f7cbbb95d4b897ceb45769173b6d8a79826bf52df7bda2b30a",
+      "runtimes/xray/go.sum": "ed2f0a380fcd1b855f4c3c562298bc23d0fbacdb3045ea5c2ac3807dd2c2b5e3",
+      "internal/httpapi/service_native_test.go": "39f30fa80a945ada146872bb2d5d69fba1e3a1d95b4c6b5a06c0cd70d87fff9c",
+      "internal/httpapi/fleet_test.go": "5001462e39650dbab8eb437c1bbecf3646a22160a393105960618d7c067340f2",
+      "internal/httpapi/tenant_test.go": "376e306a32900a3b8cf5fc0c5f8aa993dc85be7644703357a4a1ae199b8b2356",
+      "bin/reference-managed-xray": "187c3349928dbf25796f3ea8753a37d2748484070e152a5d1896a7380394c344",
+      "bin/reference-httpapi.test": "79f97dcad8bc972093460d95d84656a69a3ffa0c7f3287d3adeeaeea3a3a7b95"
+    },
+    "production_manifest_entries": 224,
+    "production_manifest_sha256": "3aeb02d3e0387e48dbc7e3b5bdda82ab72964667b9c2b90327080c580c363b71"
+  },
+  "metrics": {
+    "progress_samples": 60,
+    "policy_issuances": 9,
+    "parent_heap_max": 3754976,
+    "agent_root_growth_max": 13,
+    "metrics_samples": 60,
+    "all_native_known": true,
+    "native_rss_initial": 33740,
+    "native_rss_final": 35296,
+    "native_rss_max": 35808,
+    "native_fds_min": 12,
+    "native_fds_max": 12,
+    "db_initial": [
+      4096,
+      1924072,
+      32768
+    ],
+    "db_final": [
+      2748416,
+      4152992,
+      32768
+    ],
+    "db_max": [
+      2748416,
+      4152992,
+      32768
+    ]
+  },
+  "status": "passed",
+  "payload_samples": 1800,
+  "payload_window_seconds": 1800.000268722,
+  "max_payload_rtt_ms": 492.193728,
+  "resource_sample_interval_seconds": 30,
+  "metric_notes": "Final storage/process sample is at second1770, before final payload/revocation/cleanup. CP file bytes and native RSS/FD are observational, not capacity or leak thresholds. Parent heap excludes native child. Full payload/identity/service assertions run once per second.",
+  "source_and_binary_hashes_rechecked_after_completion": true
+}

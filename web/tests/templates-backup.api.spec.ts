@@ -5,6 +5,7 @@ test("template follow updates preserve local steps and require a current review 
   const login = await request.post("/api/auth/login", {
     data: { username: "routeweaver", password: "local-demo-password" },
   });
+  expect(login.status()).toBe(200);
   const { csrfToken } = await login.json();
   const headers = { "X-CSRF-Token": csrfToken };
   const suffix = Date.now().toString(36);
@@ -136,6 +137,7 @@ test("encrypted backup downloads as a file and preview authenticates before offe
   const login = await request.post("/api/auth/login", {
     data: { username: "routeweaver", password: "local-demo-password" },
   });
+  expect(login.status()).toBe(200);
   const { csrfToken } = await login.json();
   const headers = { "X-CSRF-Token": csrfToken };
   const password = "synthetic-local-backup-passphrase";

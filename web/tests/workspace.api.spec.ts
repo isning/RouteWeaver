@@ -243,6 +243,7 @@ test("rejected profile publication leaves its existing feed retrievable", async 
   const auth = await request.post("/api/auth/login", {
     data: { username: "routeweaver", password: "local-demo-password" },
   });
+  expect(auth.status()).toBe(200);
   const { csrfToken } = await auth.json();
   const headers = { "X-CSRF-Token": csrfToken };
   const id = `draft_${Date.now().toString(36)}`;
@@ -309,6 +310,7 @@ test("managed inventory compiles a real multi-instance server path without prete
   const auth = await request.post("/api/auth/login", {
     data: { username: "routeweaver", password: "local-demo-password" },
   });
+  expect(auth.status()).toBe(200);
   const { csrfToken } = await auth.json();
   const headers = { "X-CSRF-Token": csrfToken };
   const suffix = Date.now().toString(36);
@@ -430,6 +432,7 @@ test("explicit reveal editing preserves a synthetic credential across source and
   const auth = await request.post("/api/auth/login", {
     data: { username: "routeweaver", password: "local-demo-password" },
   });
+  expect(auth.status()).toBe(200);
   const { csrfToken } = await auth.json();
   const headers = { "X-CSRF-Token": csrfToken };
   const suffix = Date.now().toString(36);

@@ -501,3 +501,40 @@ it("closes an existing unchanged or name-reverted reference without a discard pr
   }
   expect(state.writes).toHaveLength(0);
 });
+
+it("names the exact remote rule resource before refresh and returns focus after repeated cancellation", async () => {
+  const state = mount(false, false, [{
+    id: "rules-tokyo", name: "Tokyo business rules", revision: "r1", digest: "a".repeat(64),
+    format: "clash", location: "remote", url: "https://example.test/rules.yaml",
+    updatePolicy: "pinned", acceptedVersion: "v1", canRefresh: true,
+  }]);
+  const refresh = await screen.findByRole("button", { name: "刷新文件" });
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await userEvent.click(refresh);
+    const confirmation = await screen.findByRole("alertdialog");
+    expect(within(confirmation).getByRole("heading").textContent).toContain("Tokyo business rules");
+    expect(confirmation.textContent).toContain("失败保留原文件");
+    expect(confirmation.textContent).toContain("已发布配置包不改变");
+    const cancel = within(confirmation).getByRole("button", { name: "取消" });
+    await waitFor(() => expect(document.activeElement).toBe(cancel));
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(document.activeElement).toBe(refresh));
+  }
+  expect(state.writes).toEqual([]);
+});
+
+it.each(["file", "reference"] as const)("restores the %s editor Close control after canceled dirty dismissal", async (kind) => {
+  const state = mount();
+  const { dialog, name } = await open(kind);
+  const close = within(dialog).getByRole("button", { name: "关闭" });
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await userEvent.click(close);
+    const confirmation = await screen.findByRole("alertdialog", { name: /放弃/ });
+    const keep = within(confirmation).getByRole("button", { name: "继续编辑" });
+    await waitFor(() => expect(document.activeElement).toBe(keep));
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(document.activeElement).toBe(close));
+    expect((name as HTMLInputElement).value).toBe("Unsaved private rules");
+  }
+  expect(state.writes).toEqual([]);
+});

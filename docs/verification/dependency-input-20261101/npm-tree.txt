@@ -1,0 +1,11 @@
+routeweaver-web@1.0.0 /workspace/scratch/d385eb428cee/dependency-input-20261101/web
+├─┬ shadcn@4.23.0
+│ ├─┬ @shadcn/registry@0.2.1
+│ │ └── deepmerge@4.3.1 deduped
+│ ├── deepmerge@4.3.1
+│ └─┬ ts-morph@26.0.0
+│   └─┬ @ts-morph/common@0.27.0
+│     └── minimatch@10.2.6
+└─┬ vite@8.3.4
+  └── rolldown@1.2.14
+

@@ -220,3 +220,20 @@ it("does not let a departed announcement save close or focus the replacement edi
   expect(current.writes).toEqual([]);
   expect(screen.queryByText("公告安排已保存")).toBeNull();
 });
+
+it("returns to the announcement Close control after twice canceling dirty dismissal", async () => {
+  const state = mount();
+  const { dialog } = await edit();
+  const title = within(dialog).getByRole("textbox", { name: "公告标题" });
+  fireEvent.change(title, { target: { value: "Retained announcement" } });
+  const close = within(dialog).getByRole("button", { name: "关闭" });
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await userEvent.click(close);
+    const review = await screen.findByRole("alertdialog");
+    await waitFor(() => expect(document.activeElement).toBe(within(review).getByRole("button", { name: "继续编辑" })));
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(document.activeElement).toBe(close));
+    expect((title as HTMLInputElement).value).toBe("Retained announcement");
+  }
+  expect(state.writes).toEqual([]);
+});

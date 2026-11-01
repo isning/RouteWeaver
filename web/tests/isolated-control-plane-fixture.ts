@@ -5,11 +5,7 @@ import { mkdtemp, realpath, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import {
-  test as base,
-  expect,
-  request as createRequest,
-} from "@playwright/test";
+import { test as base, expect } from "@playwright/test";
 
 const execute = promisify(execFile);
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
@@ -93,14 +89,17 @@ async function start(
   }
 }
 
+// Share only build artifacts within a worker. Each test owns fresh database/key
+// and normal CLI bootstrap, so authentication budgets and identities never leak
+// between journeys. Production authentication policy is deliberately unchanged.
 export const test = base.extend<
-  { isolatedBackup: Instance },
-  { backupBuild: Build }
+  { isolatedControlPlane: Instance },
+  { controlPlaneBuild: Build }
 >({
-  backupBuild: [
+  controlPlaneBuild: [
     async ({}, use) => {
       const directory = await mkdtemp(
-        join(tmpdir(), "routeweaver-ops01-build-"),
+        join(tmpdir(), "routeweaver-isolated-build-"),
       );
       try {
         const binary = join(directory, "control-plane");
@@ -127,13 +126,15 @@ export const test = base.extend<
     },
     { scope: "worker", timeout: 180000 },
   ],
-  isolatedBackup: async ({ backupBuild }, use) => {
-    const directory = await mkdtemp(join(tmpdir(), "routeweaver-ops01-state-"));
+  isolatedControlPlane: async ({ controlPlaneBuild }, use) => {
+    const directory = await mkdtemp(
+      join(tmpdir(), "routeweaver-isolated-state-"),
+    );
     const key = randomBytes(32).toString("hex");
     const servers: Server[] = [];
     try {
       const live = await start(
-        backupBuild,
+        controlPlaneBuild,
         join(directory, "live.db"),
         key,
         true,
@@ -151,7 +152,7 @@ export const test = base.extend<
           const info = await stat(db);
           expect(info.isFile()).toBe(true);
           expect(info.mode & 0o777).toBe(0o600);
-          const restored = await start(backupBuild, db, key, false);
+          const restored = await start(controlPlaneBuild, db, key, false);
           servers.push(restored);
           return restored;
         },
@@ -168,23 +169,10 @@ export const test = base.extend<
       }
     }
   },
-  request: async ({ isolatedBackup }, use) => {
-    const request = await createRequest.newContext({
-      baseURL: isolatedBackup.url,
-    });
-    try {
-      await use(request);
-    } finally {
-      await request.dispose();
-    }
-  },
-  page: async ({ browser, isolatedBackup }, use) => {
-    const context = await browser.newContext({ baseURL: isolatedBackup.url });
-    try {
-      await use(await context.newPage());
-    } finally {
-      await context.close();
-    }
+  // Also binds contexts explicitly created by tests from their baseURL fixture.
+  // Default request/context/page fixtures inherit this URL and their usual cleanup.
+  baseURL: async ({ isolatedControlPlane }, use) => {
+    await use(isolatedControlPlane.url);
   },
 });
 export { expect };

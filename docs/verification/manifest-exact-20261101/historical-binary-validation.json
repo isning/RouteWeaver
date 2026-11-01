@@ -1,0 +1,16 @@
+[
+  {
+    "receipt": "docs/verification/evidence/STORAGE-ATTRIBUTION-120S-2026-11-01.json",
+    "commit": "99b7bdf20e2be26a6dc12b23f2e87c1cf2959887",
+    "line": 198,
+    "binaryPath": "capacity-evidence-20261101/httpapi.test",
+    "digestMatchesBinary": true
+  },
+  {
+    "receipt": "docs/verification/evidence/STORAGE-ATTRIBUTION-120S-2026-11-01.json",
+    "commit": "99b7bdf20e2be26a6dc12b23f2e87c1cf2959887",
+    "line": 199,
+    "binaryPath": "operations-updated-reference-20261101/bin/reference-managed-xray",
+    "digestMatchesBinary": true
+  }
+]

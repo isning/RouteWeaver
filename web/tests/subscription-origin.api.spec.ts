@@ -3,9 +3,10 @@ test("subscription origin saves only a draft, rejects invalid and stale writes, 
   request,
 }) => {
   const login = await request.post("/api/auth/login", {
-      data: { username: "routeweaver", password: "local-demo-password" },
-    }),
-    headers = { "X-CSRF-Token": (await login.json()).csrfToken },
+    data: { username: "routeweaver", password: "local-demo-password" },
+  });
+  expect(login.status()).toBe(200);
+  const headers = { "X-CSRF-Token": (await login.json()).csrfToken },
     base = "/api/admin/subscription-origin";
   const initial = await (await request.get(base)).json();
   const stage = await request.put(base, {

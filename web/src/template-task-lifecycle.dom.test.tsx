@@ -528,3 +528,47 @@ it("keeps template B intact when A completes after an explicitly confirmed works
   expect(screen.queryByText("模板已用于草稿，已发布订阅保持不变")).toBeNull();
   expect(state.writes).toHaveLength(1);
 });
+
+it.each(["select", "publish"] as const)("restores template %s Close focus after twice canceling dirty dismissal", async (task) => {
+  const { writes } = mount(undefined, task === "publish");
+  let dialog: HTMLElement;
+  if (task === "select") {
+    dialog = await openTemplate();
+    await chooseTarget(dialog);
+  } else {
+    await userEvent.click(await screen.findByRole("button", { name: "发布模板" }));
+    dialog = await screen.findByRole("dialog", { name: "发布共享模板" });
+    fireEvent.change(within(dialog).getByRole("textbox", { name: "模板名称" }), { target: { value: "Retained template" } });
+  }
+  const close = within(dialog).getByRole("button", { name: "关闭" });
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await userEvent.click(close);
+    const review = await screen.findByRole("alertdialog");
+    await waitFor(() => expect(document.activeElement).toBe(within(review).getByRole("button", { name: "继续编辑" })));
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(document.activeElement).toBe(close));
+    if (task === "select") expect(within(dialog).getByRole("combobox", { name: "模板目标" }).textContent).toContain("My collection");
+    else expect((within(dialog).getByRole("textbox", { name: "模板名称" }) as HTMLInputElement).value).toBe("Retained template");
+  }
+  expect(writes).toEqual([]);
+});
+
+it("keeps template update Close focus after twice canceling an unapplied version selection", async () => {
+  const { writes } = mount(async () => json({ compatible: true, hasUpdate: true, currentVersion: 1, candidateVersion: 2, previewDigest: "review", diagnostics: [], changes: [], preservedLocalEdits: [], artifacts: [] }));
+  await userEvent.click(await screen.findByRole("tab", { name: "我的引用" }));
+  await userEvent.click(await screen.findByRole("button", { name: "查看固定版本 · My collection" }));
+  const dialog = await screen.findByRole("dialog", { name: "模板更新 · My collection" });
+  const version = await within(dialog).findByLabelText("检查的模板版本");
+  await userEvent.click(version);
+  await userEvent.click(await screen.findByText("v2", { selector: "[cmdk-item] span" }));
+  const close = within(dialog).getAllByRole("button", { name: "关闭" })[0];
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await userEvent.click(close);
+    const review = await screen.findByRole("alertdialog");
+    await waitFor(() => expect(document.activeElement).toBe(within(review).getByRole("button", { name: "继续编辑" })));
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(document.activeElement).toBe(close));
+    expect(version.textContent).toContain("v2");
+  }
+  expect(writes.filter((write) => write.url.endsWith("/apply"))).toEqual([]);
+});

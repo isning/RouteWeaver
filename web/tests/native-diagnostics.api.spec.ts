@@ -7,6 +7,7 @@ test("native client edits survive private draft editing and cannot replace an al
   const login = await request.post("/api/auth/login", {
     data: { username: "routeweaver", password: "local-demo-password" },
   });
+  expect(login.status()).toBe(200);
   const headers = { "X-CSRF-Token": (await login.json()).csrfToken };
   const profile = emptyProfile();
   profile.name = "Native client API task";
@@ -128,6 +129,7 @@ test("bounded diagnostic intent queues and cancels without claiming an unexecute
   const login = await request.post("/api/auth/login", {
     data: { username: "routeweaver", password: "local-demo-password" },
   });
+  expect(login.status()).toBe(200);
   const headers = { "X-CSRF-Token": (await login.json()).csrfToken };
   const suffix = Date.now().toString(36),
     nodeId = `diag-host-${suffix}`,

@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { act, cleanup, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import App from "./App";
 import { UIProviders } from "./ui-patterns/providers";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SubscriptionsPage } from "./Subscriptions";
@@ -210,3 +212,41 @@ it.each([
     }),
   ).toBeNull();
 });
+
+
+for (const role of ["user", "admin"]) {
+  it.each(["subscriptions", "profiles", "outputs"])(`allows ${role} #%s inventory entry without converting a failed read into empty`, async (hash) => {
+    history.replaceState(null, "", `#${hash}`);
+    const endpoint = hash === "outputs" ? "/api/me/outputs" : "/api/me/profiles";
+    const failure = hash === "outputs" ? "暂时无法加载客户端订阅" : "暂时无法加载分流配置";
+    const retry = hash === "outputs" ? "重新核对订阅" : "重试配置";
+    let reads = 0;
+    let release!: (response: Response) => void;
+    vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
+      if (init?.method && init.method !== "GET") throw new Error("Read-only inventory case");
+      if (url === "/api/auth/me") return json({ user: { id: "inventory-reader", name: "Reader", role }, csrfToken: "synthetic" });
+      if (url === endpoint) {
+        reads++;
+        if (reads === 1) return new Promise<Response>((resolve) => { release = resolve; });
+        return json([]);
+      }
+      if (url === "/api/me/overview") return json({ user: { id: "inventory-reader", name: "Reader" }, status: "active", quotaBytes: 0, usage: { rawBytes: 0, weightedBytes: 0 }, routes: [] });
+      if (["/api/me/profiles", "/api/me/outputs"].includes(url)) return json([]);
+      unexpectedRequests.push(url); throw new Error(`Unexpected inventory request ${url}`);
+    }));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } }); clients.push(client);
+    render(<QueryClientProvider client={client}><UIProviders><App /></UIProviders></QueryClientProvider>);
+    const main = await screen.findByRole("main");
+    await within(main).findByRole("heading", { name: "我的订阅", level: 1 });
+    await within(main).findByText("正在加载配置与客户端订阅…");
+    expect(within(main).queryByText("暂无订阅")).toBeNull();
+    await act(async () => { release(new Response(JSON.stringify({ message: "Inventory unavailable" }), { status: 503, headers: { "Content-Type": "application/json" } })); });
+    await within(main).findByText(failure);
+    expect(within(main).queryByText("暂无订阅")).toBeNull();
+    await userEvent.click(within(main).getByRole("button", { name: retry }));
+    await within(main).findByText("暂无订阅");
+    expect(within(main).queryByText(failure)).toBeNull();
+    expect(location.hash).toBe(`#${hash}`);
+    expect(reads).toBe(2);
+  });
+}

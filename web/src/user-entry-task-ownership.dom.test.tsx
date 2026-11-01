@@ -9,6 +9,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { UIProviders } from "./ui-patterns/providers";
 import { UserEntries } from "./UserEntries";
@@ -320,4 +321,24 @@ it("closing a dirty editor requires a discard decision and cancellation preserve
     (screen.getByRole("textbox", { name: "入口名称" }) as HTMLInputElement)
       .value,
   ).toBe("Unsaved B");
+});
+
+
+it("keeps user-entry Close focus after twice canceling a dirty draft", async () => {
+  const b = deferred();
+  const task = mountTask({ b });
+  await editRow("Entry B");
+  await act(async () => { b.resolve(json(entries[1])); await b.promise; });
+  const name = await screen.findByRole("textbox", { name: "入口名称" });
+  fireEvent.change(name, { target: { value: "Retained entry" } });
+  const close = within(screen.getByRole("dialog")).getByRole("button", { name: "关闭" });
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await userEvent.click(close);
+    const review = await screen.findByRole("alertdialog");
+    await waitFor(() => expect(document.activeElement).toBe(within(review).getByRole("button", { name: "继续编辑" })));
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(document.activeElement).toBe(close));
+    expect((name as HTMLInputElement).value).toBe("Retained entry");
+  }
+  expect(task.writes).toEqual([]);
 });

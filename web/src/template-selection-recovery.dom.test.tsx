@@ -555,3 +555,33 @@ it("keeps a removed selected version visible instead of applying the newest vers
   ).toBe(true);
   expect(writes).toEqual([]);
 });
+
+it("preserves the selected target, pinned version and binding through a held source reload, failure, and explicit recovery", async () => {
+  const { choose, state, client, user, writes } = await selectionFixture();
+  await choose("模板目标", "家庭配置");
+  await choose("模板版本", /^v1 ·/);
+  await choose("出口连接", "家庭出口");
+  await user.click(screen.getByRole("radio", { name: "固定此版本" }));
+  let release!: () => void;
+  state.sourceWait = new Promise<void>((resolve) => { release = resolve; });
+  state.sourceFailure = true;
+  let refresh!: Promise<void>;
+  act(() => { refresh = client.refetchQueries({ queryKey: ["sources"] }); });
+  await screen.findByText("正在读取来源列表…");
+  expect(screen.queryByText("暂无可用连接")).toBeNull();
+  expect(screen.getByRole("button", { name: "应用模板到草稿" }).hasAttribute("disabled")).toBe(true);
+  await act(async () => { release(); await refresh; });
+  await screen.findByText("暂时无法加载来源");
+  expect(screen.queryByText("暂无可用连接")).toBeNull();
+  expect(screen.getByRole("combobox", { name: "出口连接" }).textContent).toContain("家庭出口 · 暂不可用");
+  expect(screen.getByRole("combobox", { name: "模板目标" }).textContent).toContain("家庭配置");
+  expect(screen.getByRole("combobox", { name: "模板版本" }).textContent).toContain("v1");
+  expect(screen.getByRole("radio", { name: "固定此版本" }).getAttribute("aria-checked")).toBe("true");
+  state.sourceFailure = false;
+  await user.click(screen.getByRole("button", { name: "重新加载来源" }));
+  await waitFor(() => expect(screen.queryByText("暂时无法加载来源")).toBeNull());
+  expect(screen.getByRole("combobox", { name: "出口连接" }).textContent).toContain("家庭出口");
+  expect(screen.getByRole("combobox", { name: "出口连接" }).textContent).not.toContain("不可用");
+  expect(screen.getByRole("button", { name: "应用模板到草稿" }).hasAttribute("disabled")).toBe(false);
+  expect(writes).toEqual([]);
+});

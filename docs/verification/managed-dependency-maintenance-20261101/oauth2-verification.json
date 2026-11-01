@@ -1,0 +1,9 @@
+{
+  "module": "golang.org/x/oauth2",
+  "version": "v0.36.0",
+  "source": "https://sum.golang.org/lookup/golang.org/x/oauth2@v0.36.0",
+  "lookupSHA256": "15ed82af7b89d0cee896bbf8c88b6fcf20873fc7ff09c552daf46d1a5240dd96",
+  "lineSHA256": "c33eab034b8da7305a11b02bb7440af0e3d7581c3303a1ad3c83715436ed5fe0",
+  "matchesOfficialLookup": true,
+  "matchesGoDownloadSum": true
+}

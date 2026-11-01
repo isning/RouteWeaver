@@ -1,0 +1,28 @@
+--- FAIL: TestManagedRejectsCertificatePinningBeforeNativeConstruction (0.01s)
+    --- FAIL: TestManagedRejectsCertificatePinningBeforeNativeConstruction/inbounds/pinnedPeerCertSha256/abababababababababababababababababababababababababababababababab (0.00s)
+        config_test.go:126: expected explicit unsupported certificate pinning error, got <nil>
+    --- FAIL: TestManagedRejectsCertificatePinningBeforeNativeConstruction/inbounds/pinnedPeerCertSha256/ (0.00s)
+        config_test.go:126: expected explicit unsupported certificate pinning error, got <nil>
+    --- FAIL: TestManagedRejectsCertificatePinningBeforeNativeConstruction/inbounds/pinnedPeerCertSha256/<nil> (0.00s)
+        config_test.go:126: expected explicit unsupported certificate pinning error, got <nil>
+    --- FAIL: TestManagedRejectsCertificatePinningBeforeNativeConstruction/inbounds/PinnedPeerCertSha256/abababababababababababababababababababababababababababababababab (0.00s)
+        config_test.go:126: expected explicit unsupported certificate pinning error, got <nil>
+    --- FAIL: TestManagedRejectsCertificatePinningBeforeNativeConstruction/inbounds/PinnedPeerCertSha256/ (0.00s)
+        config_test.go:126: expected explicit unsupported certificate pinning error, got <nil>
+    --- FAIL: TestManagedRejectsCertificatePinningBeforeNativeConstruction/inbounds/PinnedPeerCertSha256/<nil> (0.00s)
+        config_test.go:126: expected explicit unsupported certificate pinning error, got <nil>
+    --- FAIL: TestManagedRejectsCertificatePinningBeforeNativeConstruction/outbounds/pinnedPeerCertSha256/abababababababababababababababababababababababababababababababab (0.00s)
+        config_test.go:126: expected explicit unsupported certificate pinning error, got <nil>
+    --- FAIL: TestManagedRejectsCertificatePinningBeforeNativeConstruction/outbounds/pinnedPeerCertSha256/ (0.00s)
+        config_test.go:126: expected explicit unsupported certificate pinning error, got <nil>
+    --- FAIL: TestManagedRejectsCertificatePinningBeforeNativeConstruction/outbounds/pinnedPeerCertSha256/<nil> (0.00s)
+        config_test.go:126: expected explicit unsupported certificate pinning error, got <nil>
+    --- FAIL: TestManagedRejectsCertificatePinningBeforeNativeConstruction/outbounds/PinnedPeerCertSha256/abababababababababababababababababababababababababababababababab (0.00s)
+        config_test.go:126: expected explicit unsupported certificate pinning error, got <nil>
+    --- FAIL: TestManagedRejectsCertificatePinningBeforeNativeConstruction/outbounds/PinnedPeerCertSha256/ (0.00s)
+        config_test.go:126: expected explicit unsupported certificate pinning error, got <nil>
+    --- FAIL: TestManagedRejectsCertificatePinningBeforeNativeConstruction/outbounds/PinnedPeerCertSha256/<nil> (0.00s)
+        config_test.go:126: expected explicit unsupported certificate pinning error, got <nil>
+FAIL
+FAIL	routeweaver/runtimes/xray	0.029s
+FAIL

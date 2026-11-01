@@ -153,6 +153,7 @@ export function InboxPage() {
                   key={item.eventId}
                   className="flex w-full flex-wrap items-start gap-3 p-4 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   onClick={() => {
+                    read.reset();
                     setSelected(item);
                     if (!item.readAt) read.mutate(item.eventId);
                   }}
@@ -457,7 +458,7 @@ function Announcements() {
         onOpenChange={(nextOpen) => {
           if (!nextOpen) close();
         }}
-        pending={!(!save.isPending && !confirming)}
+        pending={save.isPending}
         size="lg"
       >
         <AppForm

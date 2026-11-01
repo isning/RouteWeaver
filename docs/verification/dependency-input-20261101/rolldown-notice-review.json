@@ -1,0 +1,56 @@
+[
+  {
+    "ecosystem": "npm",
+    "name": "@rolldown/binding-linux-x64-gnu",
+    "version": "1.2.14",
+    "installation": "node_modules/@rolldown/binding-linux-x64-gnu",
+    "declared_license": "MIT",
+    "texts": [],
+    "status": "MISSING-LICENSE-TEXT"
+  },
+  {
+    "ecosystem": "npm",
+    "name": "@rolldown/binding-linux-x64-musl",
+    "version": "1.2.14",
+    "installation": "node_modules/@rolldown/binding-linux-x64-musl",
+    "declared_license": "MIT",
+    "texts": [],
+    "status": "MISSING-LICENSE-TEXT"
+  },
+  {
+    "ecosystem": "npm",
+    "name": "@rolldown/pluginutils",
+    "version": "1.0.1",
+    "installation": "node_modules/@rolldown/pluginutils",
+    "declared_license": "MIT",
+    "texts": [
+      {
+        "path": "LICENSE",
+        "sha256": "e1919b3b98b8bf6c1b99fcc60a0ed46027c97ac947432e1278446c9606f50161"
+      },
+      {
+        "path": "README.md",
+        "sha256": "4886d9da5238f5d7e44fa2558a3c8d4939e5eb212cc1a3e587472ee2b65fd3fd"
+      }
+    ],
+    "status": "texts-retained"
+  },
+  {
+    "ecosystem": "npm",
+    "name": "rolldown",
+    "version": "1.2.14",
+    "installation": "node_modules/rolldown",
+    "declared_license": "MIT",
+    "texts": [
+      {
+        "path": "LICENSE",
+        "sha256": "23ecfff35a5a2e80d92142f75228912c3b1abc4b5a8337a821ff4397e2f9f734"
+      },
+      {
+        "path": "THIRD-PARTY-LICENSE",
+        "sha256": "a877291d800ed43692f3f9ae09d8e01cc6f7293ad39d43896059c188ffbb8b7c"
+      }
+    ],
+    "status": "texts-retained"
+  }
+]

@@ -6,6 +6,7 @@ test("fleet preview binds the exact configuration and keeps later stages blocked
   const login = await request.post("/api/auth/login", {
     data: { username: "routeweaver", password: "local-demo-password" },
   });
+  expect(login.status()).toBe(200);
   const headers = { "X-CSRF-Token": (await login.json()).csrfToken },
     suffix = Date.now().toString(36),
     deploymentId = `fleet-${suffix}`;

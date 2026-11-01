@@ -1,0 +1,124 @@
+=== RUN   TestNativeContinuousManagedServicePreservesPayloadAndRevocation
+    service_native_test.go:294: reference storage/process sample=0 cp_db_bytes=4096 cp_wal_bytes=1924072 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=33740 native_fds=12
+    service_native_test.go:295: reference progress sample=0 parent_Go_heap_bytes=3184328 agent_root_bytes=48637338 policy_issued=2026-11-01 16:17:06.269410115 +0000 UTC max_RTT=346.546µs
+    service_native_test.go:294: reference storage/process sample=30 cp_db_bytes=167936 cp_wal_bytes=4120032 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=34600 native_fds=12
+    service_native_test.go:295: reference progress sample=30 parent_Go_heap_bytes=2856720 agent_root_bytes=48637343 policy_issued=2026-11-01 16:17:06.269410115 +0000 UTC max_RTT=3.398532ms
+    service_native_test.go:294: reference storage/process sample=60 cp_db_bytes=221184 cp_wal_bytes=4120032 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=34916 native_fds=12
+    service_native_test.go:295: reference progress sample=60 parent_Go_heap_bytes=3638096 agent_root_bytes=48637342 policy_issued=2026-11-01 16:17:06.269410115 +0000 UTC max_RTT=3.398532ms
+    service_native_test.go:294: reference storage/process sample=90 cp_db_bytes=221184 cp_wal_bytes=4120032 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=34872 native_fds=12
+    service_native_test.go:295: reference progress sample=90 parent_Go_heap_bytes=3177816 agent_root_bytes=48637342 policy_issued=2026-11-01 16:17:06.269410115 +0000 UTC max_RTT=3.398532ms
+    service_native_test.go:294: reference storage/process sample=120 cp_db_bytes=274432 cp_wal_bytes=4140632 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=34848 native_fds=12
+    service_native_test.go:295: reference progress sample=120 parent_Go_heap_bytes=2576272 agent_root_bytes=48637346 policy_issued=2026-11-01 16:17:06.269410115 +0000 UTC max_RTT=3.398532ms
+    service_native_test.go:294: reference storage/process sample=150 cp_db_bytes=335872 cp_wal_bytes=4140632 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=35224 native_fds=12
+    service_native_test.go:295: reference progress sample=150 parent_Go_heap_bytes=2841128 agent_root_bytes=48637343 policy_issued=2026-11-01 16:17:06.269410115 +0000 UTC max_RTT=3.398532ms
+    service_native_test.go:294: reference storage/process sample=180 cp_db_bytes=389120 cp_wal_bytes=4140632 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=35268 native_fds=12
+    service_native_test.go:295: reference progress sample=180 parent_Go_heap_bytes=2074328 agent_root_bytes=48637347 policy_issued=2026-11-01 16:17:06.269410115 +0000 UTC max_RTT=3.398532ms
+    service_native_test.go:294: reference storage/process sample=210 cp_db_bytes=438272 cp_wal_bytes=4140632 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=35080 native_fds=12
+    service_native_test.go:295: reference progress sample=210 parent_Go_heap_bytes=3121400 agent_root_bytes=48637347 policy_issued=2026-11-01 16:20:27.569586427 +0000 UTC max_RTT=14.465975ms
+    service_native_test.go:294: reference storage/process sample=240 cp_db_bytes=438272 cp_wal_bytes=4140632 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=34968 native_fds=12
+    service_native_test.go:295: reference progress sample=240 parent_Go_heap_bytes=3369936 agent_root_bytes=48637347 policy_issued=2026-11-01 16:20:27.569586427 +0000 UTC max_RTT=14.465975ms
+    service_native_test.go:294: reference storage/process sample=270 cp_db_bytes=495616 cp_wal_bytes=4144752 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=34916 native_fds=12
+    service_native_test.go:295: reference progress sample=270 parent_Go_heap_bytes=3133912 agent_root_bytes=48637347 policy_issued=2026-11-01 16:20:27.569586427 +0000 UTC max_RTT=16.942463ms
+    service_native_test.go:294: reference storage/process sample=300 cp_db_bytes=552960 cp_wal_bytes=4144752 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=34920 native_fds=12
+    service_native_test.go:295: reference progress sample=300 parent_Go_heap_bytes=2463600 agent_root_bytes=48637347 policy_issued=2026-11-01 16:20:27.569586427 +0000 UTC max_RTT=50.91386ms
+    service_native_test.go:294: reference storage/process sample=330 cp_db_bytes=606208 cp_wal_bytes=4144752 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=34992 native_fds=12
+    service_native_test.go:295: reference progress sample=330 parent_Go_heap_bytes=2014384 agent_root_bytes=48637346 policy_issued=2026-11-01 16:20:27.569586427 +0000 UTC max_RTT=50.91386ms
+    service_native_test.go:294: reference storage/process sample=360 cp_db_bytes=659456 cp_wal_bytes=4144752 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=34984 native_fds=12
+    service_native_test.go:295: reference progress sample=360 parent_Go_heap_bytes=3516984 agent_root_bytes=48637347 policy_issued=2026-11-01 16:20:27.569586427 +0000 UTC max_RTT=50.91386ms
+    service_native_test.go:294: reference storage/process sample=390 cp_db_bytes=659456 cp_wal_bytes=4144752 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=35080 native_fds=12
+    service_native_test.go:295: reference progress sample=390 parent_Go_heap_bytes=3375160 agent_root_bytes=48637347 policy_issued=2026-11-01 16:20:27.569586427 +0000 UTC max_RTT=50.91386ms
+    service_native_test.go:294: reference storage/process sample=420 cp_db_bytes=716800 cp_wal_bytes=4144752 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=35308 native_fds=12
+    service_native_test.go:295: reference progress sample=420 parent_Go_heap_bytes=3412256 agent_root_bytes=48637346 policy_issued=2026-11-01 16:23:48.728114615 +0000 UTC max_RTT=50.91386ms
+    service_native_test.go:294: reference storage/process sample=450 cp_db_bytes=765952 cp_wal_bytes=4144752 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=35308 native_fds=12
+    service_native_test.go:295: reference progress sample=450 parent_Go_heap_bytes=2690704 agent_root_bytes=48637347 policy_issued=2026-11-01 16:23:48.728114615 +0000 UTC max_RTT=50.91386ms
+    service_native_test.go:294: reference storage/process sample=480 cp_db_bytes=823296 cp_wal_bytes=4144752 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=35580 native_fds=12
+    service_native_test.go:295: reference progress sample=480 parent_Go_heap_bytes=3754976 agent_root_bytes=48637346 policy_issued=2026-11-01 16:23:48.728114615 +0000 UTC max_RTT=50.91386ms
+    service_native_test.go:294: reference storage/process sample=510 cp_db_bytes=880640 cp_wal_bytes=4144752 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=35268 native_fds=12
+    service_native_test.go:295: reference progress sample=510 parent_Go_heap_bytes=2476280 agent_root_bytes=48637347 policy_issued=2026-11-01 16:23:48.728114615 +0000 UTC max_RTT=50.91386ms
+    service_native_test.go:294: reference storage/process sample=540 cp_db_bytes=880640 cp_wal_bytes=4144752 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=35148 native_fds=12
+    service_native_test.go:295: reference progress sample=540 parent_Go_heap_bytes=2670648 agent_root_bytes=48637346 policy_issued=2026-11-01 16:23:48.728114615 +0000 UTC max_RTT=50.91386ms
+    service_native_test.go:294: reference storage/process sample=570 cp_db_bytes=933888 cp_wal_bytes=4144752 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=35360 native_fds=12
+    service_native_test.go:295: reference progress sample=570 parent_Go_heap_bytes=3459728 agent_root_bytes=48637347 policy_issued=2026-11-01 16:23:48.728114615 +0000 UTC max_RTT=50.91386ms
+    service_native_test.go:294: reference storage/process sample=600 cp_db_bytes=987136 cp_wal_bytes=4144752 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=35256 native_fds=12
+    service_native_test.go:295: reference progress sample=600 parent_Go_heap_bytes=2465680 agent_root_bytes=48637342 policy_issued=2026-11-01 16:27:09.67540714 +0000 UTC max_RTT=50.91386ms
+    service_native_test.go:294: reference storage/process sample=630 cp_db_bytes=1040384 cp_wal_bytes=4144752 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=35476 native_fds=12
+    service_native_test.go:295: reference progress sample=630 parent_Go_heap_bytes=2525976 agent_root_bytes=48637342 policy_issued=2026-11-01 16:27:09.67540714 +0000 UTC max_RTT=92.917835ms
+    service_native_test.go:294: reference storage/process sample=660 cp_db_bytes=1105920 cp_wal_bytes=4144752 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=35328 native_fds=12
+    service_native_test.go:295: reference progress sample=660 parent_Go_heap_bytes=3118152 agent_root_bytes=48637342 policy_issued=2026-11-01 16:27:09.67540714 +0000 UTC max_RTT=92.917835ms
+    service_native_test.go:294: reference storage/process sample=690 cp_db_bytes=1105920 cp_wal_bytes=4144752 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=35080 native_fds=12
+    service_native_test.go:295: reference progress sample=690 parent_Go_heap_bytes=2329216 agent_root_bytes=48637342 policy_issued=2026-11-01 16:27:09.67540714 +0000 UTC max_RTT=92.917835ms
+    service_native_test.go:294: reference storage/process sample=720 cp_db_bytes=1163264 cp_wal_bytes=4144752 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=35808 native_fds=12
+    service_native_test.go:295: reference progress sample=720 parent_Go_heap_bytes=3176216 agent_root_bytes=48637342 policy_issued=2026-11-01 16:27:09.67540714 +0000 UTC max_RTT=151.446575ms
+    service_native_test.go:294: reference storage/process sample=750 cp_db_bytes=1220608 cp_wal_bytes=4144752 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=35400 native_fds=12
+    service_native_test.go:295: reference progress sample=750 parent_Go_heap_bytes=2158328 agent_root_bytes=48637342 policy_issued=2026-11-01 16:27:09.67540714 +0000 UTC max_RTT=151.446575ms
+    service_native_test.go:294: reference storage/process sample=780 cp_db_bytes=1273856 cp_wal_bytes=4144752 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=35444 native_fds=12
+    service_native_test.go:295: reference progress sample=780 parent_Go_heap_bytes=2541904 agent_root_bytes=48637341 policy_issued=2026-11-01 16:27:09.67540714 +0000 UTC max_RTT=151.446575ms
+    service_native_test.go:294: reference storage/process sample=810 cp_db_bytes=1327104 cp_wal_bytes=4144752 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=35212 native_fds=12
+    service_native_test.go:295: reference progress sample=810 parent_Go_heap_bytes=2458272 agent_root_bytes=48637347 policy_issued=2026-11-01 16:30:30.830098006 +0000 UTC max_RTT=151.446575ms
+    service_native_test.go:294: reference storage/process sample=840 cp_db_bytes=1327104 cp_wal_bytes=4144752 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=35340 native_fds=12
+    service_native_test.go:295: reference progress sample=840 parent_Go_heap_bytes=3452160 agent_root_bytes=48637347 policy_issued=2026-11-01 16:30:30.830098006 +0000 UTC max_RTT=158.772747ms
+    service_native_test.go:294: reference storage/process sample=870 cp_db_bytes=1388544 cp_wal_bytes=4144752 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=35420 native_fds=12
+    service_native_test.go:295: reference progress sample=870 parent_Go_heap_bytes=3651128 agent_root_bytes=48637347 policy_issued=2026-11-01 16:30:30.830098006 +0000 UTC max_RTT=158.772747ms
+    service_native_test.go:294: reference storage/process sample=900 cp_db_bytes=1441792 cp_wal_bytes=4144752 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=35256 native_fds=12
+    service_native_test.go:295: reference progress sample=900 parent_Go_heap_bytes=3105336 agent_root_bytes=48637346 policy_issued=2026-11-01 16:30:30.830098006 +0000 UTC max_RTT=158.772747ms
+    service_native_test.go:294: reference storage/process sample=930 cp_db_bytes=1499136 cp_wal_bytes=4144752 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=35400 native_fds=12
+    service_native_test.go:295: reference progress sample=930 parent_Go_heap_bytes=2839888 agent_root_bytes=48637347 policy_issued=2026-11-01 16:30:30.830098006 +0000 UTC max_RTT=158.772747ms
+    service_native_test.go:294: reference storage/process sample=960 cp_db_bytes=1548288 cp_wal_bytes=4144752 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=35132 native_fds=12
+    service_native_test.go:295: reference progress sample=960 parent_Go_heap_bytes=2598488 agent_root_bytes=48637346 policy_issued=2026-11-01 16:30:30.830098006 +0000 UTC max_RTT=158.772747ms
+    service_native_test.go:294: reference storage/process sample=990 cp_db_bytes=1548288 cp_wal_bytes=4144752 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=35316 native_fds=12
+    service_native_test.go:295: reference progress sample=990 parent_Go_heap_bytes=2838928 agent_root_bytes=48637348 policy_issued=2026-11-01 16:30:30.830098006 +0000 UTC max_RTT=158.772747ms
+    service_native_test.go:294: reference storage/process sample=1020 cp_db_bytes=1601536 cp_wal_bytes=4144752 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=35488 native_fds=12
+    service_native_test.go:295: reference progress sample=1020 parent_Go_heap_bytes=3114568 agent_root_bytes=48637350 policy_issued=2026-11-01 16:33:52.075175832 +0000 UTC max_RTT=158.772747ms
+    service_native_test.go:294: reference storage/process sample=1050 cp_db_bytes=1658880 cp_wal_bytes=4144752 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=35156 native_fds=12
+    service_native_test.go:295: reference progress sample=1050 parent_Go_heap_bytes=3316696 agent_root_bytes=48637350 policy_issued=2026-11-01 16:33:52.075175832 +0000 UTC max_RTT=158.772747ms
+    service_native_test.go:294: reference storage/process sample=1080 cp_db_bytes=1712128 cp_wal_bytes=4144752 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=35484 native_fds=12
+    service_native_test.go:295: reference progress sample=1080 parent_Go_heap_bytes=2105592 agent_root_bytes=48637350 policy_issued=2026-11-01 16:33:52.075175832 +0000 UTC max_RTT=206.008188ms
+    service_native_test.go:294: reference storage/process sample=1110 cp_db_bytes=1761280 cp_wal_bytes=4144752 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=35348 native_fds=12
+    service_native_test.go:295: reference progress sample=1110 parent_Go_heap_bytes=2576640 agent_root_bytes=48637349 policy_issued=2026-11-01 16:33:52.075175832 +0000 UTC max_RTT=206.008188ms
+    service_native_test.go:294: reference storage/process sample=1140 cp_db_bytes=1761280 cp_wal_bytes=4144752 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=35392 native_fds=12
+    service_native_test.go:295: reference progress sample=1140 parent_Go_heap_bytes=2835392 agent_root_bytes=48637350 policy_issued=2026-11-01 16:33:52.075175832 +0000 UTC max_RTT=206.008188ms
+    service_native_test.go:294: reference storage/process sample=1170 cp_db_bytes=1818624 cp_wal_bytes=4144752 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=35384 native_fds=12
+    service_native_test.go:295: reference progress sample=1170 parent_Go_heap_bytes=2405072 agent_root_bytes=48637348 policy_issued=2026-11-01 16:33:52.075175832 +0000 UTC max_RTT=206.008188ms
+    service_native_test.go:294: reference storage/process sample=1200 cp_db_bytes=1867776 cp_wal_bytes=4152992 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=35180 native_fds=12
+    service_native_test.go:295: reference progress sample=1200 parent_Go_heap_bytes=3152328 agent_root_bytes=48637345 policy_issued=2026-11-01 16:37:13.32904214 +0000 UTC max_RTT=206.008188ms
+    service_native_test.go:294: reference storage/process sample=1230 cp_db_bytes=1921024 cp_wal_bytes=4152992 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=35280 native_fds=12
+    service_native_test.go:295: reference progress sample=1230 parent_Go_heap_bytes=2629120 agent_root_bytes=48637345 policy_issued=2026-11-01 16:37:13.32904214 +0000 UTC max_RTT=206.008188ms
+    service_native_test.go:294: reference storage/process sample=1260 cp_db_bytes=1978368 cp_wal_bytes=4152992 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=35640 native_fds=12
+    service_native_test.go:295: reference progress sample=1260 parent_Go_heap_bytes=3392240 agent_root_bytes=48637344 policy_issued=2026-11-01 16:37:13.32904214 +0000 UTC max_RTT=206.008188ms
+    service_native_test.go:294: reference storage/process sample=1290 cp_db_bytes=2031616 cp_wal_bytes=4152992 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=35576 native_fds=12
+    service_native_test.go:295: reference progress sample=1290 parent_Go_heap_bytes=2008880 agent_root_bytes=48637345 policy_issued=2026-11-01 16:37:13.32904214 +0000 UTC max_RTT=206.008188ms
+    service_native_test.go:294: reference storage/process sample=1320 cp_db_bytes=2031616 cp_wal_bytes=4152992 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=35208 native_fds=12
+    service_native_test.go:295: reference progress sample=1320 parent_Go_heap_bytes=2345784 agent_root_bytes=48637345 policy_issued=2026-11-01 16:37:13.32904214 +0000 UTC max_RTT=206.008188ms
+    service_native_test.go:294: reference storage/process sample=1350 cp_db_bytes=2088960 cp_wal_bytes=4152992 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=35320 native_fds=12
+    service_native_test.go:295: reference progress sample=1350 parent_Go_heap_bytes=3147400 agent_root_bytes=48637344 policy_issued=2026-11-01 16:37:13.32904214 +0000 UTC max_RTT=206.008188ms
+    service_native_test.go:294: reference storage/process sample=1380 cp_db_bytes=2142208 cp_wal_bytes=4152992 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=35280 native_fds=12
+    service_native_test.go:295: reference progress sample=1380 parent_Go_heap_bytes=2101528 agent_root_bytes=48637344 policy_issued=2026-11-01 16:37:13.32904214 +0000 UTC max_RTT=206.008188ms
+    service_native_test.go:294: reference storage/process sample=1410 cp_db_bytes=2203648 cp_wal_bytes=4152992 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=35552 native_fds=12
+    service_native_test.go:295: reference progress sample=1410 parent_Go_heap_bytes=2905872 agent_root_bytes=48637350 policy_issued=2026-11-01 16:40:34.282720018 +0000 UTC max_RTT=206.008188ms
+    service_native_test.go:294: reference storage/process sample=1440 cp_db_bytes=2256896 cp_wal_bytes=4152992 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=35352 native_fds=12
+    service_native_test.go:295: reference progress sample=1440 parent_Go_heap_bytes=3358848 agent_root_bytes=48637350 policy_issued=2026-11-01 16:40:34.282720018 +0000 UTC max_RTT=206.008188ms
+    service_native_test.go:294: reference storage/process sample=1470 cp_db_bytes=2256896 cp_wal_bytes=4152992 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=35552 native_fds=12
+    service_native_test.go:295: reference progress sample=1470 parent_Go_heap_bytes=2822224 agent_root_bytes=48637350 policy_issued=2026-11-01 16:40:34.282720018 +0000 UTC max_RTT=206.008188ms
+    service_native_test.go:294: reference storage/process sample=1500 cp_db_bytes=2310144 cp_wal_bytes=4152992 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=35392 native_fds=12
+    service_native_test.go:295: reference progress sample=1500 parent_Go_heap_bytes=2838200 agent_root_bytes=48637350 policy_issued=2026-11-01 16:40:34.282720018 +0000 UTC max_RTT=206.008188ms
+    service_native_test.go:294: reference storage/process sample=1530 cp_db_bytes=2359296 cp_wal_bytes=4152992 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=35356 native_fds=12
+    service_native_test.go:295: reference progress sample=1530 parent_Go_heap_bytes=2627656 agent_root_bytes=48637350 policy_issued=2026-11-01 16:40:34.282720018 +0000 UTC max_RTT=492.193728ms
+    service_native_test.go:294: reference storage/process sample=1560 cp_db_bytes=2416640 cp_wal_bytes=4152992 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=35576 native_fds=12
+    service_native_test.go:295: reference progress sample=1560 parent_Go_heap_bytes=2547976 agent_root_bytes=48637350 policy_issued=2026-11-01 16:40:34.282720018 +0000 UTC max_RTT=492.193728ms
+    service_native_test.go:294: reference storage/process sample=1590 cp_db_bytes=2469888 cp_wal_bytes=4152992 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=35520 native_fds=12
+    service_native_test.go:295: reference progress sample=1590 parent_Go_heap_bytes=2531864 agent_root_bytes=48637350 policy_issued=2026-11-01 16:40:34.282720018 +0000 UTC max_RTT=492.193728ms
+    service_native_test.go:294: reference storage/process sample=1620 cp_db_bytes=2523136 cp_wal_bytes=4152992 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=35320 native_fds=12
+    service_native_test.go:295: reference progress sample=1620 parent_Go_heap_bytes=3308864 agent_root_bytes=48637349 policy_issued=2026-11-01 16:43:55.375641852 +0000 UTC max_RTT=492.193728ms
+    service_native_test.go:294: reference storage/process sample=1650 cp_db_bytes=2523136 cp_wal_bytes=4152992 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=35380 native_fds=12
+    service_native_test.go:295: reference progress sample=1650 parent_Go_heap_bytes=2547104 agent_root_bytes=48637350 policy_issued=2026-11-01 16:43:55.375641852 +0000 UTC max_RTT=492.193728ms
+    service_native_test.go:294: reference storage/process sample=1680 cp_db_bytes=2576384 cp_wal_bytes=4152992 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=35808 native_fds=12
+    service_native_test.go:295: reference progress sample=1680 parent_Go_heap_bytes=2210552 agent_root_bytes=48637350 policy_issued=2026-11-01 16:43:55.375641852 +0000 UTC max_RTT=492.193728ms
+    service_native_test.go:294: reference storage/process sample=1710 cp_db_bytes=2641920 cp_wal_bytes=4152992 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=35740 native_fds=12
+    service_native_test.go:295: reference progress sample=1710 parent_Go_heap_bytes=2351912 agent_root_bytes=48637349 policy_issued=2026-11-01 16:43:55.375641852 +0000 UTC max_RTT=492.193728ms
+    service_native_test.go:294: reference storage/process sample=1740 cp_db_bytes=2695168 cp_wal_bytes=4152992 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=35444 native_fds=12
+    service_native_test.go:295: reference progress sample=1740 parent_Go_heap_bytes=3675872 agent_root_bytes=48637350 policy_issued=2026-11-01 16:43:55.375641852 +0000 UTC max_RTT=492.193728ms
+    service_native_test.go:294: reference storage/process sample=1770 cp_db_bytes=2748416 cp_wal_bytes=4152992 cp_shm_bytes=32768 native_metrics_known=true native_rss_kib=35296 native_fds=12
+    service_native_test.go:295: reference progress sample=1770 parent_Go_heap_bytes=2960640 agent_root_bytes=48637351 policy_issued=2026-11-01 16:43:55.375641852 +0000 UTC max_RTT=492.193728ms
+    service_native_test.go:305: reference managed payload: samples=1800 duration=30m0.000268722s max_RTT=492.193728ms; identity unchanged; synthetic single flow, not capacity SLA
+--- PASS: TestNativeContinuousManagedServicePreservesPayloadAndRevocation (1823.67s)
+PASS

@@ -514,7 +514,7 @@ function AccountRecoveryTask({
       onOpenChange={(open) => {
         if (!open) close();
       }}
-      pending={save.isPending || confirming}
+      pending={save.isPending}
       footer={
         <div className="w-full space-y-3">
           <p className="text-sm text-muted-foreground">

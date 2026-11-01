@@ -1,0 +1,59 @@
+=== RUN   TestManagedRetirementWaitsForFinalAndExactReceipt
+--- PASS: TestManagedRetirementWaitsForFinalAndExactReceipt (0.00s)
+=== RUN   TestManagedRetirementPreservesRunningAndRejectsMalformedMarker
+=== RUN   TestManagedRetirementPreservesRunningAndRejectsMalformedMarker/{"counterEpoch":"epoch-one"}
+=== RUN   TestManagedRetirementPreservesRunningAndRejectsMalformedMarker/{"counterEpoch":"../escape"}
+=== RUN   TestManagedRetirementPreservesRunningAndRejectsMalformedMarker/not-json
+--- PASS: TestManagedRetirementPreservesRunningAndRejectsMalformedMarker (0.00s)
+    --- PASS: TestManagedRetirementPreservesRunningAndRejectsMalformedMarker/{"counterEpoch":"epoch-one"} (0.00s)
+    --- PASS: TestManagedRetirementPreservesRunningAndRejectsMalformedMarker/{"counterEpoch":"../escape"} (0.00s)
+    --- PASS: TestManagedRetirementPreservesRunningAndRejectsMalformedMarker/not-json (0.00s)
+=== RUN   TestManagedRetirementCrashReopenNeverReplaysAcknowledgedEpoch
+=== RUN   TestManagedRetirementCrashReopenNeverReplaysAcknowledgedEpoch/0
+=== RUN   TestManagedRetirementCrashReopenNeverReplaysAcknowledgedEpoch/1
+=== RUN   TestManagedRetirementCrashReopenNeverReplaysAcknowledgedEpoch/2
+=== RUN   TestManagedRetirementCrashReopenNeverReplaysAcknowledgedEpoch/3
+--- PASS: TestManagedRetirementCrashReopenNeverReplaysAcknowledgedEpoch (0.00s)
+    --- PASS: TestManagedRetirementCrashReopenNeverReplaysAcknowledgedEpoch/0 (0.00s)
+    --- PASS: TestManagedRetirementCrashReopenNeverReplaysAcknowledgedEpoch/1 (0.00s)
+    --- PASS: TestManagedRetirementCrashReopenNeverReplaysAcknowledgedEpoch/2 (0.00s)
+    --- PASS: TestManagedRetirementCrashReopenNeverReplaysAcknowledgedEpoch/3 (0.00s)
+=== RUN   TestManagedRetirementRecoveryRejectsChangedEvidenceAndUnsafePaths
+=== RUN   TestManagedRetirementRecoveryRejectsChangedEvidenceAndUnsafePaths/final-changed
+=== RUN   TestManagedRetirementRecoveryRejectsChangedEvidenceAndUnsafePaths/running
+=== RUN   TestManagedRetirementRecoveryRejectsChangedEvidenceAndUnsafePaths/malformed-marker
+=== RUN   TestManagedRetirementRecoveryRejectsChangedEvidenceAndUnsafePaths/symlink-final
+=== RUN   TestManagedRetirementRecoveryRejectsChangedEvidenceAndUnsafePaths/symlink-directory
+=== RUN   TestManagedRetirementRecoveryRejectsChangedEvidenceAndUnsafePaths/wrong-root
+--- PASS: TestManagedRetirementRecoveryRejectsChangedEvidenceAndUnsafePaths (0.01s)
+    --- PASS: TestManagedRetirementRecoveryRejectsChangedEvidenceAndUnsafePaths/final-changed (0.00s)
+    --- PASS: TestManagedRetirementRecoveryRejectsChangedEvidenceAndUnsafePaths/running (0.00s)
+    --- PASS: TestManagedRetirementRecoveryRejectsChangedEvidenceAndUnsafePaths/malformed-marker (0.00s)
+    --- PASS: TestManagedRetirementRecoveryRejectsChangedEvidenceAndUnsafePaths/symlink-final (0.00s)
+    --- PASS: TestManagedRetirementRecoveryRejectsChangedEvidenceAndUnsafePaths/symlink-directory (0.00s)
+    --- PASS: TestManagedRetirementRecoveryRejectsChangedEvidenceAndUnsafePaths/wrong-root (0.00s)
+=== RUN   TestManagedRetirementCanRecoverLegacyOutboxAtByteLimit
+--- PASS: TestManagedRetirementCanRecoverLegacyOutboxAtByteLimit (0.20s)
+=== RUN   TestManagedRetirementRejectsIncompleteOrChangedFinal
+=== RUN   TestManagedRetirementRejectsIncompleteOrChangedFinal/active-flow
+=== RUN   TestManagedRetirementRejectsIncompleteOrChangedFinal/missing-binding
+=== RUN   TestManagedRetirementRejectsIncompleteOrChangedFinal/changed-binding
+=== RUN   TestManagedRetirementRejectsIncompleteOrChangedFinal/regressed-total
+--- PASS: TestManagedRetirementRejectsIncompleteOrChangedFinal (0.00s)
+    --- PASS: TestManagedRetirementRejectsIncompleteOrChangedFinal/active-flow (0.00s)
+    --- PASS: TestManagedRetirementRejectsIncompleteOrChangedFinal/missing-binding (0.00s)
+    --- PASS: TestManagedRetirementRejectsIncompleteOrChangedFinal/changed-binding (0.00s)
+    --- PASS: TestManagedRetirementRejectsIncompleteOrChangedFinal/regressed-total (0.00s)
+=== RUN   TestManagedRetirementCancellationPreservesRecoveryIntent
+--- PASS: TestManagedRetirementCancellationPreservesRecoveryIntent (0.00s)
+=== RUN   TestManagedRetirementRejectsStaleLiveZeroSnapshot
+--- PASS: TestManagedRetirementRejectsStaleLiveZeroSnapshot (0.00s)
+=== RUN   TestManagedNativeBrokerEOFStopsActivePayloadAndPersistsFinalJournal
+    managed_xray_process_test.go:188: broker EOF stopped live payload and owned process, preserved 44-byte final in 6.542698ms
+--- PASS: TestManagedNativeBrokerEOFStopsActivePayloadAndPersistsFinalJournal (0.48s)
+=== RUN   TestManagedMeterRequiresRealBaselineAndRecoversCollectionCursor
+--- PASS: TestManagedMeterRequiresRealBaselineAndRecoversCollectionCursor (0.00s)
+=== RUN   TestWithdrawnReleaseJournalReopensAndStopsWithoutNewGrant
+--- PASS: TestWithdrawnReleaseJournalReopensAndStopsWithoutNewGrant (0.00s)
+PASS
+ok  	routeweaver/internal/agent	0.728s

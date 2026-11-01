@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeAll, expect, it, vi } from "vitest";
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -180,4 +181,17 @@ it("does not discard a still-mounted shell draft when a page import fails", asyn
     (screen.getByLabelText("工作空间草稿") as HTMLInputElement).value,
   ).toBe("keep me");
   expect(reload).not.toHaveBeenCalled();
+});
+
+
+it("keeps navigation available while a page import is pending and replaces loading only after it resolves", async () => {
+  let resolve!: (module: { default: () => ReactNode }) => void;
+  const PendingPage = lazyPage(() => new Promise<{ default: () => ReactNode }>((done) => { resolve = done; }));
+  mount(<><nav aria-label="页面导航"><button>其他页面</button></nav><PageBoundary><Suspense fallback={<p role="status">正在打开页面</p>}><PendingPage /></Suspense></PageBoundary></>);
+  expect(screen.getByRole("status").textContent).toBe("正在打开页面");
+  expect(screen.getByRole("button", { name: "其他页面" })).toBeTruthy();
+  expect(screen.queryByText("页面已加载")).toBeNull();
+  await act(async () => { resolve({ default: () => <h1>页面已加载</h1> }); });
+  await screen.findByRole("heading", { name: "页面已加载" });
+  expect(screen.queryByRole("status")).toBeNull();
 });

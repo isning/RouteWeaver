@@ -17,6 +17,12 @@ Xray; this nested module imports only the root's pure policy/private-IPC contrac
   UDP, fallbacks, reverse APIs,
   dynamic inbound APIs, PROXY protocol/socket/finalmask wrappers and enabled sniffing are
   rejected. Vision is not claimed safe from code inspection or a splice flag.
+- `tlsSettings.pinnedPeerCertSha256` is rejected on both ingress and egress,
+  including an explicitly empty/null value. Certificate pinning is not a managed
+  capability; the unchanged native base retains GO-2026-6651. Ordinary verified
+  TLS remains supported. Hand-authored managed configurations using pinning must
+  be migrated to ordinary verified TLS before activation; this does not alter
+  ownership or stop/recovery handling for existing processes and journals.
 - Ultimate user destinations default to public unicast only. Administrator-owned
   `destinationPolicy.allowCidrs` grants specific canonical networks for an
   intentional exception. This is independent of the declared transit connector.

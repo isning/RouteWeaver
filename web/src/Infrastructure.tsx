@@ -767,7 +767,7 @@ function InventoryEditor({
           form.resetFields();
         }
       }}
-      pending={mutation.isPending || confirming}
+      pending={mutation.isPending}
       footer={
         <div className="flex w-full flex-wrap items-center justify-end gap-2">
           <ActionButton

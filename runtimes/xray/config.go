@@ -32,7 +32,8 @@ type managedStreamProfile struct {
 	Raw       json.RawMessage `json:"rawSettings"`
 	FinalMask json.RawMessage `json:"finalmask"`
 	TLS       struct {
-		ECHSockopt json.RawMessage `json:"echSockopt"`
+		ECHSockopt           json.RawMessage `json:"echSockopt"`
+		PinnedPeerCertSha256 json.RawMessage `json:"pinnedPeerCertSha256"`
 	} `json:"tlsSettings"`
 }
 
@@ -143,6 +144,9 @@ func build(native []byte, d entrypolicy.Descriptor) (*core.Config, error) {
 		return nil, errors.New("no managed public entries")
 	}
 	for _, out := range raw.Outbounds {
+		if len(out.Stream.TLS.PinnedPeerCertSha256) != 0 {
+			return nil, errors.New("certificate pinning unsupported on managed path")
+		}
 		switch out.Protocol {
 		case "freedom", "blackhole", "socks", "shadowsocks", "vless":
 		default:
@@ -162,6 +166,9 @@ func build(native []byte, d entrypolicy.Descriptor) (*core.Config, error) {
 	seen := map[string]bool{}
 	tags := map[string]bool{}
 	for _, in := range raw.Inbounds {
+		if len(in.Stream.TLS.PinnedPeerCertSha256) != 0 {
+			return nil, errors.New("certificate pinning unsupported on managed path")
+		}
 		if tags[in.Tag] || !identifier.MatchString(in.Tag) {
 			return nil, errors.New("duplicate or invalid inbound tag")
 		}
