@@ -38,7 +38,7 @@ func TestNativeFleetConfigureStopStartAndRollback(t *testing.T) {
 		program.Instance.Version = render.StockXrayVersion
 		f.post(t, "core-instances", program.Instance, 200)
 		program.Listener.Connection.Port = publishedFreePort(t)
-		f.post(t, "managed-endpoints", program.Listener, 200)
+		f.updateEndpoint(t, program.Listener)
 	}
 	f.saveDeployment(t, deployment)
 	runtimes := map[string]*agent.Reconciler{}

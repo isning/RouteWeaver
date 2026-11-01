@@ -175,7 +175,7 @@ it(
       accepted("Available"),
     ]);
     await userEvent.click(
-      await screen.findByRole("button", { name: /Original collection/ }),
+      await screen.findByRole("button", { name: /^Original collection.*编辑集合/ }),
     );
     let parent = within(
       await screen.findByRole("dialog", { name: "Original collection" }),
@@ -643,7 +643,7 @@ it("returns focus to the Collection source selector after removing its unavailab
     accepted("Available"),
   ]);
   await userEvent.click(
-    await screen.findByRole("button", { name: /Original collection/ }),
+    await screen.findByRole("button", { name: /^Original collection.*编辑集合/ }),
   );
   await userEvent.click(
     await screen.findByRole("button", { name: "移除来源 Paused" }),

@@ -1,0 +1,39 @@
+{
+  "scope": "synthetic owned-loopback managed-Xray; no real provider/VPS",
+  "test": "TestNativeManagedProviderSuspensionAndRecovery",
+  "race": true,
+  "result": "pass",
+  "elapsed_seconds": 46.49,
+  "exhausted_close_seconds": 3.040982997,
+  "freshness_clipped_close_seconds": 3.872287376,
+  "exact_final_raw_and_weighted_bytes": 142,
+  "all_corresponding_budgets_closed": true,
+  "actual_browser": "unrun",
+  "source_sha256": {
+    "internal/httpapi/provider_native_test.go": "6d79c4198e3d6e45a25f483397e60e91ad6d81644357329020b3bf151450a121",
+    "internal/httpapi/service_native_test.go": "a15fd136080bc80a12225e653db02e342de09044107b81d01b4068ecab8175b0",
+    "internal/observability/provider_admission.go": "6d271535b38eed3adba441d4ad1ecd294c1fbf5709266caf3c7381deaac7c539",
+    "internal/store/provider_admission.go": "6191c6ba8b3057f57f3edf942892368ac4991b5c1dc9f01676582e185ff82dcd",
+    "internal/store/admission.go": "9fe55098a8f6adc3b2949d8213761165e387cee5999b3e651b0ecb7eb2ebe251",
+    "internal/store/admission_manifest.go": "62beece8fb9d8f4fde71b83e0d062b329cca43ae791e5d6bd324d4ea63fe7f74",
+    "internal/store/node_observations.go": "511742474acc60cc2f66aefc9510f663fcc0c82a9720ada13023ef036fb06bc1",
+    "runtimes/xray/go.mod": "37828388bdb101f7cbbb95d4b897ceb45769173b6d8a79826bf52df7bda2b30a",
+    "runtimes/xray/go.sum": "ed2f0a380fcd1b855f4c3c562298bc23d0fbacdb3045ea5c2ac3807dd2c2b5e3",
+    "go.mod": "ac41bad1b515e40453ccf686c5c555a9e2bcdd58274683cac707c5a75bc6bbb0",
+    "go.sum": "8f15d4c388eb79f0054de2355b620fcffc3a2416be2441fe2f391547aca70fe2",
+    "internal/store/provider_fence.go": "3199791e478e1e2edde99936595ef348646e122d4d602203c74abced0795fb11",
+    "internal/store/records.go": "38f45e9f537bb8f44d3a45d6d122bd177b7655bbda645a9b8c5afe0e0ebe0239",
+    "internal/store/schema_compatibility.go": "6258815bedab7ff4c94ea0f90e148ec30f8595fbd74ca8cc454e42d5be8887ff",
+    "internal/store/backup.go": "be91b3da174ed32a3a3494cae6bd57aee7abe9690b232261703d865d2ef460be",
+    "internal/store/backup_stream.go": "439c7d60d45d302f2808c11dcf11a99272c03c8775ef82defaafeaf03851c4a5",
+    "internal/store/backup_stream_validation.go": "4d22ed98eb08e4b0cce2d4bdde6dbe9758d72febf7a5d70f4fbb7776bf74f5cc"
+  },
+  "managed_binary_sha256": "406b974c9164414213f796f2a18398f5db6cca925b921b978e405a425da3f20e",
+  "raw_log_sha256": "15a63b9791d039034b35c7a05b2187f50c9412dafc74b8cb6518257f365fee17",
+  "downgrade_probe": {
+    "old_source_commit": "eafb493",
+    "result": "PASS: pre-feature snapshot validator, encrypted streaming backup reader and physical Store.Open reject migration 3",
+    "probe_source_sha256": "40177fcb9bfabfd0342e907873f500c558218d35207341eca644ad53c8b83d48",
+    "old_binary_sha256": "1619a28d080a0467289220e7602232ac0ac506b94efccf9f7a2c100ba0f242b9"
+  }
+}

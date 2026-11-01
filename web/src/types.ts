@@ -588,6 +588,7 @@ export interface CoreInstance {
   version: string;
 }
 export interface ManagedEndpoint {
+  revisionToken?: string;
   authentication?: string;
   id: string;
   instanceId: string;

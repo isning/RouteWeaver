@@ -46,6 +46,7 @@ func (s *Store) verifyEncryption() error {
 	if e != nil {
 		return e
 	}
+	providerFenceRequired := false
 	for rows.Next() {
 		var k, id string
 		var b []byte
@@ -58,11 +59,26 @@ func (s *Store) verifyEncryption() error {
 			rows.Close()
 			return fmt.Errorf("database key mismatch or corrupted record")
 		}
+		needed, err := providerRecordNeedsFence(k, raw)
+		if err != nil {
+			rows.Close()
+			return err
+		}
+		providerFenceRequired = providerFenceRequired || needed
 	}
 	e = rows.Err()
 	rows.Close()
 	if e != nil {
 		return e
+	}
+	if providerFenceRequired {
+		var present int
+		if err := s.db.QueryRow(`SELECT count(*) FROM schema_migrations WHERE version=?`, providerSuspensionMigrationVersion).Scan(&present); err != nil {
+			return err
+		}
+		if present != 1 {
+			return unsupportedSchema(fmt.Errorf("provider admission policy requires its migration fence"))
+		}
 	}
 	return s.put("metadata", "key-check", map[string]int{"version": 1})
 }

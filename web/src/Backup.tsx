@@ -1,3 +1,4 @@
+import { BackupCapacity } from "./BackupCapacity";
 import { PasswordInput } from "@/ui-patterns/password-input";
 import { TaskDialog } from "@/ui-patterns/task-overlays";
 import { DataTable } from "./DataTable";
@@ -235,6 +236,7 @@ export function BackupSettings() {
             创建加密备份
           </ActionButton>
         </div>
+        <BackupCapacity />
       </Section>
       <Section title="恢复备份" className="max-w-3xl" description="恢复到新数据库，不覆盖当前数据，也不会自动切换服务。">
         <div className="settings-form backup-restore-form max-w-[38.75rem] space-y-5">

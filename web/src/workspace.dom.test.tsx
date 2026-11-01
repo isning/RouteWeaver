@@ -256,7 +256,7 @@ it("protects unsaved profile changes when navigating by keyboard", async () => {
     vi.fn(async (url) =>
       String(url).endsWith("/auth/me")
         ? json({
-            user: { id: "u", name: "User", role: "member" },
+            user: { id: "u", name: "User", role: "user" },
             csrfToken: "test-csrf",
           })
         : json([]),
@@ -265,15 +265,19 @@ it("protects unsaved profile changes when navigating by keyboard", async () => {
   mount(<Workspace />);
   const user = userEvent.setup();
   await user.click(await screen.findByRole("button", { name: "新建分流配置" }));
-  await user.type(screen.getByLabelText("配置名称"), "Keep this draft");
+  await user.type(await screen.findByLabelText("配置名称"), "Keep this draft");
   await user.click(screen.getByText("订阅素材"));
-  screen.getByRole("button", { name: "订阅来源" }).focus();
-  await user.keyboard("{Enter}");
-  await user.click(await screen.findByRole("button", { name: "继续编辑" }));
-  expect((screen.getByLabelText("配置名称") as HTMLInputElement).value).toBe(
-    "Keep this draft",
-  );
-  expect(location.hash).toBe("#profiles");
+  const target = screen.getByRole("button", { name: "订阅来源" });
+  for (let attempt = 0; attempt < 2; attempt++) {
+    target.focus();
+    await user.keyboard("{Enter}");
+    const keep = await screen.findByRole("button", { name: "继续编辑" });
+    await waitFor(() => expect(document.activeElement).toBe(keep));
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(document.activeElement).toBe(target));
+    expect((screen.getByLabelText("配置名称") as HTMLInputElement).value).toBe("Keep this draft");
+    expect(location.hash).toBe("#profiles");
+  }
 });
 it("reorders processing steps using the keyboard without changing their identities", async () => {
   function Editor() {

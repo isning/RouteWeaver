@@ -206,3 +206,13 @@ it("reports private connection changes as categories without presenting their va
     ),
   ).toBe(true);
 });
+
+it("keeps revealed endpoint review tokens out of refreshed listener intent", () => {
+  const { inventory, draft, current } = fixture();
+  current.connection.port = 2080;
+  current.revisionToken = "inventory-review-only";
+  const plan = planListenerRefresh(draft, inventory, current.id, current);
+  expect(plan.status).toBe("ready");
+  expect(plan.next!.ir.programs[1].listener.revisionToken).toBeUndefined();
+  expect(current.revisionToken).toBe("inventory-review-only");
+});

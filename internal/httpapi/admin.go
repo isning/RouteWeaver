@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"context"
 	"encoding/json"
 	"github.com/go-chi/chi/v5"
 	"net/http"
@@ -27,7 +28,7 @@ func (h *server) registerAdmin(r chi.Router) {
 	h.registerPublishedRouteAdmin(r)
 	r.Get("/users/{id}/entitlement", func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "id")
-		o, e := h.overview(id, time.Now())
+		o, e := h.overviewContext(r.Context(), id, time.Now())
 		if e != nil {
 			storeError(w, e)
 			return
@@ -282,6 +283,12 @@ type OverviewRoute struct {
 }
 
 func (h *server) overview(id string, now time.Time) (Overview, error) {
+	return h.overviewContext(context.Background(), id, now)
+}
+func (h *server) overviewContext(ctx context.Context, id string, now time.Time) (Overview, error) {
+	if err := ctx.Err(); err != nil {
+		return Overview{}, err
+	}
 	v := Overview{Routes: []OverviewRoute{}, Status: "active"}
 	if e := h.s.Get("users", id, &v.User); e != nil {
 		return v, e
@@ -307,7 +314,7 @@ func (h *server) overview(id string, now time.Time) (Overview, error) {
 	if e != nil {
 		return v, e
 	}
-	v.Usage, e = h.s.Usage(id, v.Cycle.Start, now.Add(time.Nanosecond))
+	v.Usage, e = h.s.UsageContext(ctx, id, v.Cycle.Start, now.Add(time.Nanosecond))
 	if e != nil {
 		return v, e
 	}

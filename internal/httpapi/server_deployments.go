@@ -40,6 +40,7 @@ func (h *server) registerServerAdmin(r chi.Router) {
 		r.Post("/"+kind, save)
 		r.Put("/"+kind+"/{id}", save)
 	}
+	r.Post("/managed-endpoints/{id}/impact", h.previewEndpointImpact)
 	h.registerSecretInventoryRead(r, "server-deployments")
 	save := func(w http.ResponseWriter, r *http.Request) {
 		var v ServerDeployment
@@ -195,13 +196,24 @@ func (h *server) saveInventory(w http.ResponseWriter, r *http.Request, kind stri
 		fail(w, 400, "valid stable id required")
 		return
 	}
-	if e := h.s.Put(kind, id, value); e != nil {
+	var saveErr error
+	if kind == "managed-endpoints" {
+		saveErr = h.saveReviewedEndpoint(r, value.(domain.ManagedEndpoint))
+	} else {
+		saveErr = h.s.Put(kind, id, value)
+	}
+	if e := saveErr; e != nil {
+		if kind == "managed-endpoints" && r.Method == http.MethodPut && errors.Is(e, store.ErrConflict) {
+			fail(w, http.StatusConflict, "端点或引用已变化，请重新检查影响后再保存。当前输入仍保留。")
+			return
+		}
 		storeError(w, e)
 		return
 	}
 	h.s.Audit(current(r).Account.ID, "inventory.saved", kind+"/"+id)
 	if kind == "managed-endpoints" {
-		value = serverSummary(value)
+		raw, _ := json.Marshal(value)
+		value = h.revisionView(kind, id, raw, false)
 	}
 	writeJSON(w, 200, value)
 }

@@ -198,6 +198,21 @@ class SecretScannerTests(unittest.TestCase):
         self.assertIn("generic-api-key", elsewhere)
         self.assertIn("jfrog-identity-token", elsewhere)
 
+    def test_operational_drill_hash_exceptions_are_exact_lines_and_path(self):
+        path = "docs/verification/evidence/OPERATIONS-DRILLS-2026-11-01.json"
+        lines = (ROOT / path).read_text().splitlines()
+        for number in [93, 94]:
+            with self.subTest(receipt_line=number):
+                line = lines[number - 1]
+                self.write(path, line + "\n")
+                self.assertIn("PASS", self.scan())
+                self.write(path, line + " changed\n")
+                self.assertIn("jfrog-identity-token", self.scan(1))
+                (self.root / path).unlink()
+                self.write("other/drill-receipt.json", line + "\n")
+                self.assertIn("jfrog-identity-token", self.scan(1))
+                (self.root / "other/drill-receipt.json").unlink()
+
     def test_secret_file_outside_repository_is_not_followed(self):
         with tempfile.TemporaryDirectory() as outside:
             target = Path(outside) / "outside.txt"

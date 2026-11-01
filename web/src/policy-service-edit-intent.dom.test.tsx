@@ -822,3 +822,29 @@ it("preserves a stored null route list rather than replacing it with an empty li
   expect(submitted[0].cycle).toEqual(nilRoutes.cycle);
   expect(submitted[0].quotaBytes).toBe(100 * 1024 ** 3);
 });
+
+it("retains service-plan fields and exact Close focus after two canceled discard decisions", async () => {
+  const requests: string[] = [];
+  vi.stubGlobal("fetch", vi.fn(async (url, init) => {
+    requests.push(`${init?.method || "GET"} ${url}`);
+    if (String(url).includes("/edit-context/")) return json(context(plan));
+    throw new Error(`Unexpected write ${url}`);
+  }));
+  const onClose = vi.fn();
+  mount(plan, onClose);
+  const field = await screen.findByLabelText("服务方案名称") as HTMLInputElement;
+  owner.change(() => field, { target: { value: "Retained service plan" } });
+  const dialog = screen.getByRole("dialog", { name: "编辑 Standard" });
+  const close = within(dialog).getByRole("button", { name: "关闭" });
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await owner.click(() => close);
+    const review = await screen.findByRole("alertdialog", { name: "放弃尚未保存的授权修改？" });
+    const keep = within(review).getByRole("button", { name: "继续编辑" });
+    await waitFor(() => expect(document.activeElement).toBe(keep));
+    await owner.click(() => keep);
+    await waitFor(() => expect(document.activeElement).toBe(close));
+    expect(field.value).toBe("Retained service plan");
+    expect(onClose).not.toHaveBeenCalled();
+  }
+  expect(requests.every((request) => request.startsWith("GET "))).toBe(true);
+});

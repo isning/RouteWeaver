@@ -3,9 +3,13 @@ package store
 import (
 	"context"
 	"errors"
+	"strings"
 )
 
 func validateBackupSchema(ctx context.Context, tx schemaQuerier) error {
+	if err := validateRecordKeyCollation(ctx, tx); err != nil {
+		return err
+	}
 	// Refuse an unrecognized physical schema instead of silently omitting a new
 	// table introduced by another binary or migration.
 	schemaRows, err := tx.QueryContext(ctx, `SELECT name FROM sqlite_schema WHERE type='table' AND name NOT LIKE 'sqlite_%'`)
@@ -20,7 +24,7 @@ func validateBackupSchema(ctx context.Context, tx schemaQuerier) error {
 			schemaRows.Close()
 			return err
 		}
-		if name == "usage_projection_state" || name == "usage_windows" || name == "admission_lease_state" || name == "admission_budget_state" || name == "admission_lease_windows" || name == "admission_budget_windows" {
+		if name == "usage_history" || name == "usage_history_owners" || name == "usage_history_state" || name == "usage_rebuilds" || name == "usage_projection_state" || name == "usage_windows" || name == "admission_lease_state" || name == "admission_budget_state" || name == "admission_lease_windows" || name == "admission_budget_windows" {
 			derived[name] = true
 			continue
 		}
@@ -43,6 +47,22 @@ func validateBackupSchema(ctx context.Context, tx schemaQuerier) error {
 	columns := map[string][]string{"records": {"kind", "id", "data"}, "identities": {"username", "account_id"}, "token_index": {"kind", "digest", "record_id"}, "counters": {"kind", "id", "value"}, "schema_migrations": {"version", "applied_at"}}
 	// Older physical databases need not have derived tables; if present, only
 	// this exact rebuildable shape is accepted. They never enter logical frames.
+	if derived["usage_history"] {
+		columns["usage_history"] = []string{"account", "id"}
+		primaryKeys["usage_history"] = []int{1, 2}
+	}
+	if derived["usage_history_owners"] {
+		columns["usage_history_owners"] = []string{"account", "data"}
+		primaryKeys["usage_history_owners"] = []int{1, 0}
+	}
+	if derived["usage_history_state"] {
+		columns["usage_history_state"] = []string{"id", "generation", "data"}
+		primaryKeys["usage_history_state"] = []int{1, 0, 0}
+	}
+	if derived["usage_rebuilds"] {
+		columns["usage_rebuilds"] = []string{"account", "data"}
+		primaryKeys["usage_rebuilds"] = []int{1, 0}
+	}
 	if derived["usage_windows"] {
 		columns["usage_windows"] = []string{"account", "data"}
 		primaryKeys["usage_windows"] = []int{1, 0}
@@ -95,6 +115,46 @@ func validateBackupSchema(ctx context.Context, tx schemaQuerier) error {
 	}
 	if uniqueAccounts == 0 {
 		return errors.New("unsupported backup identity uniqueness constraint")
+	}
+	return nil
+}
+
+// Prefix reconstruction compares canonical IDs bytewise in Go. Reject alternate
+// key collations rather than losing index bounds with an explicit SQL sort.
+func validateRecordKeyCollation(ctx context.Context, q schemaQuerier) error {
+	// Generated legacy/current schemas have no explicit COLLATE declaration.
+	// A column NOCASE override can differ from its BINARY PK and would also alter
+	// generic old-value lookups. Refuse such custom DDL instead of guessing it.
+	var ddl []byte
+	if err := q.QueryRowContext(ctx, `SELECT CASE WHEN length(CAST(sql AS BLOB))<=16384 THEN CAST(sql AS BLOB) ELSE NULL END FROM sqlite_schema WHERE type='table' AND name='records'`).Scan(&ddl); err != nil {
+		return err
+	}
+	if len(ddl) == 0 || strings.Contains(strings.ToUpper(string(ddl)), "COLLATE") {
+		return errors.New("unsupported explicit canonical record collation")
+	}
+
+	rows, err := q.QueryContext(ctx, `SELECT x.name,x.coll FROM pragma_index_list('records') AS i JOIN pragma_index_xinfo(i.name) AS x WHERE i.origin='pk' AND x."key"=1 ORDER BY x.seqno`)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	want := []string{"kind", "id"}
+	n := 0
+	for rows.Next() {
+		var name, coll string
+		if err = rows.Scan(&name, &coll); err != nil {
+			return err
+		}
+		if n >= len(want) || name != want[n] || !strings.EqualFold(coll, "BINARY") {
+			return errors.New("unsupported canonical record key ordering")
+		}
+		n++
+	}
+	if err = rows.Err(); err != nil {
+		return err
+	}
+	if n != len(want) {
+		return errors.New("incomplete canonical record key ordering")
 	}
 	return nil
 }

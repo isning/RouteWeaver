@@ -1,0 +1,102 @@
+{
+  "status": "passed",
+  "production_source_commit": "eafb493e79d2f789eca5c95ceb8eeeca5e500f40",
+  "race": true,
+  "tests": [
+    {
+      "package": "routeweaver/internal/httpapi",
+      "test": "TestOperationalNotificationFailureVisibleAndRetry",
+      "elapsed_seconds": 0.26
+    },
+    {
+      "package": "routeweaver/internal/httpapi",
+      "test": "TestNativeManagedOperationalRecovery",
+      "elapsed_seconds": 116.96
+    },
+    {
+      "package": "routeweaver/internal/agent",
+      "test": "TestManagedNativeBrokerEOFStopsActivePayloadAndPersistsFinalJournal",
+      "elapsed_seconds": 2.09
+    },
+    {
+      "package": "routeweaver/internal/store",
+      "test": "TestEncryptedBackupRestorePreservesOutstandingAdmissionObligation",
+      "elapsed_seconds": 20.85
+    },
+    {
+      "package": "routeweaver/internal/store",
+      "test": "TestBackupStreamingDoesNotBlockAdmissionOrConfigurationWrites",
+      "elapsed_seconds": 0.34
+    },
+    {
+      "package": "routeweaver/internal/store",
+      "test": "TestCounterExplicitRestartPreservesKnownUsageAndRejectsRegression",
+      "elapsed_seconds": 0.32
+    },
+    {
+      "package": "routeweaver/internal/store",
+      "test": "TestCounterIngestionIsAtomicReplaySafeAndSeparatesProvider",
+      "elapsed_seconds": 0.36
+    },
+    {
+      "package": "routeweaver/internal/notifications",
+      "test": "TestRetryDelayStartsAfterTransportFailure",
+      "elapsed_seconds": 0.26
+    },
+    {
+      "package": "routeweaver/internal/notifications",
+      "test": "TestDurableOutboxRestartStableIdentityAndBoundedRetries",
+      "elapsed_seconds": 0.72
+    },
+    {
+      "package": "routeweaver/internal/notifications",
+      "test": "TestCrashAfterAcceptanceReusesEventIDAndRechecksSettings",
+      "elapsed_seconds": 0.32
+    },
+    {
+      "package": "routeweaver/internal/agent",
+      "test": "TestSlowControlPlaneCannotDelayLeaseRestriction",
+      "elapsed_seconds": 0.04
+    },
+    {
+      "package": "routeweaver/internal/agent",
+      "test": "TestDriverRestartRetainsGenerationFenceUntilNewDesired",
+      "elapsed_seconds": 0.11
+    },
+    {
+      "package": "routeweaver/internal/agent",
+      "test": "TestManagedRetirementCrashReopenNeverReplaysAcknowledgedEpoch",
+      "elapsed_seconds": 0.04
+    },
+    {
+      "package": "routeweaver/internal/agent",
+      "test": "TestManagedMeterRequiresRealBaselineAndRecoversCollectionCursor",
+      "elapsed_seconds": 0
+    }
+  ],
+  "observations": [
+    "notification failure visible=82.730494ms retry-to-accepted=57.610341ms scheduled-delay=1m0.041895738s (clock advanced; no real provider)",
+    "operational disconnect: HTTP503 window=254.386285ms retained last observation, reconnect refresh=74.144024ms; not long-outage expiry proof",
+    "operational exact traffic: native and CP raw/weighted=13346 bytes; active-flow settlement=9.225834154s",
+    "operational encrypted backup: bytes=94142 export=22.964423345s payload-exchanges-during=251 fresh-verify-restore-reopen=15.301215557s; restored copy not activated",
+    "operational long CP outage: existing flow restricted=29.888388082s (<=33s), native stayed live until explicit stop; stopped-final reconciliation=108.875709ms, fresh-generation restart/readmission=11.379583923s",
+    "operational real-native journal: exact 44 bytes retained across spool reopen/replay; synthetic matching receipts suppress acknowledged replay; recovery=7.883515ms",
+    "broker EOF stopped live payload and owned process, preserved 44-byte final in 17.523672ms"
+  ],
+  "sha256": {
+    "go.mod": "ac41bad1b515e40453ccf686c5c555a9e2bcdd58274683cac707c5a75bc6bbb0",
+    "go.sum": "8f15d4c388eb79f0054de2355b620fcffc3a2416be2441fe2f391547aca70fe2",
+    "runtimes/xray/go.mod": "37828388bdb101f7cbbb95d4b897ceb45769173b6d8a79826bf52df7bda2b30a",
+    "runtimes/xray/go.sum": "ed2f0a380fcd1b855f4c3c562298bc23d0fbacdb3045ea5c2ac3807dd2c2b5e3",
+    "internal/httpapi/operations_drill_test.go": "f6e6ce713a3399e3b642489477bf4acf8f9244cac77f4ee290dcf18c60ba43a5",
+    "internal/httpapi/service_native_test.go": "ca7fc2841efe348ae0989c4f911e50cca2bd36c6b0e8380ded6c42ba43b4079c",
+    "internal/agent/managed_xray_process_test.go": "870dad337244aa7de04f7478b034f628192c9354b89eb0218ea297eb54f3c441",
+    "bin/drill-managed-xray": "5aa40b3c6a2562f6f4ecce0dff58434462c7b7bb805fd164175496a1f50ae50d"
+  },
+  "parent_GOMAXPROCS": "1 for native drills; focused recovery used shared env2",
+  "parent_GOMEMLIMIT": "256MiB native drills; soft target only",
+  "native_GOMAXPROCS_GOMEMLIMIT": "not inherited from parent; trusted supervisor sanitizes environment",
+  "hard_cpu_memory_limits": "unknown",
+  "scope": "synthetic owned Linux loopback, explicit operator-assisted stopped-native reconciliation; no real host or provider or capacity SLA",
+  "receipt_note": "native EOF spool receipts are synthetic; separate native operational test settles actual raw/weighted payload in CP and rejects explicit finalization replay"
+}

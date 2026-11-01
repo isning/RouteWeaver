@@ -118,18 +118,19 @@ type State struct {
 	Statement        *Statement `json:"statement"`
 }
 type ProviderView struct {
-	Source               string     `json:"source"`
-	Coverage             string     `json:"coverage"`
-	StatusReason         string     `json:"statusReason"`
-	Fresh                bool       `json:"fresh"`
-	ObservedAt           *time.Time `json:"observedAt"`
-	ObservedSince        *time.Time `json:"observedSince"`
-	ObservedNICBytes     int64      `json:"observedNicBytes"`
-	TotalBytes           *int64     `json:"totalBytes"`
-	UsedBytes            *int64     `json:"usedBytes"`
-	RemainingBytes       *int64     `json:"remainingBytes"`
-	ExhaustionAction     string     `json:"exhaustionAction"`
-	NotificationEligible bool       `json:"notificationEligible"`
+	ManagedAdmissionReason string     `json:"managedAdmissionReason"`
+	Source                 string     `json:"source"`
+	Coverage               string     `json:"coverage"`
+	StatusReason           string     `json:"statusReason"`
+	Fresh                  bool       `json:"fresh"`
+	ObservedAt             *time.Time `json:"observedAt"`
+	ObservedSince          *time.Time `json:"observedSince"`
+	ObservedNICBytes       int64      `json:"observedNicBytes"`
+	TotalBytes             *int64     `json:"totalBytes"`
+	UsedBytes              *int64     `json:"usedBytes"`
+	RemainingBytes         *int64     `json:"remainingBytes"`
+	ExhaustionAction       string     `json:"exhaustionAction"`
+	NotificationEligible   bool       `json:"notificationEligible"`
 }
 type View struct {
 	NodeID    string       `json:"nodeId"`
@@ -203,8 +204,11 @@ func ValidateConfig(c Config) error {
 	if p.NotificationSource == "nic_estimate" && len(c.BilledInterfaces) == 0 {
 		return errors.New("NIC estimate requires explicit billed interfaces")
 	}
-	if p.ExhaustionAction != "advisory" {
-		return errors.New("provider exhaustion is advisory; no automatic route or exit changes")
+	if p.ExhaustionAction != "advisory" && p.ExhaustionAction != "suspend-managed" {
+		return errors.New("select advisory or suspend-managed; automatic route or exit changes are unsupported")
+	}
+	if p.ExhaustionAction == "suspend-managed" && (p.Mode != "limited" || p.NotificationSource == "none") {
+		return errors.New("managed suspension requires limited quota and an explicit usage source")
 	}
 	return nil
 }

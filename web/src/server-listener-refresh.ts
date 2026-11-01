@@ -4,7 +4,7 @@ import type {
   ManagedEndpoint,
   ServerDeployment,
 } from "./types";
-import { canEditLegacyPath } from "./infrastructure-model";
+import { canEditLegacyPath, endpointIntent } from "./infrastructure-model";
 
 export type ListenerRefreshPlan = {
   status: "unchanged" | "ready" | "blocked";
@@ -37,6 +37,7 @@ export function planListenerRefresh(
   endpointId: string,
   current: ManagedEndpoint,
 ): ListenerRefreshPlan {
+  current = endpointIntent(current);
   const matches = draft.ir.programs.filter(
     (program) => program.listener.id === endpointId,
   );

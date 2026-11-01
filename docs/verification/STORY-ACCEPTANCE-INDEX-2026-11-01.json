@@ -1,0 +1,2558 @@
+{
+  "schema_version": 1,
+  "purpose": "Exact story evidence index, not feature verification or a second production checklist",
+  "green_baseline": {
+    "remote_commit": "47c985ffc1b649b068903865fa2fd89225e0913d",
+    "local_same_tree_commit": "0f3cc5ee699a4cbc9d261276c4c4437a770ea961",
+    "ci": "https://github.com/isning/RouteWeaver/actions/runs/41321049032",
+    "scope": "12 gates green;177 browser cases, 19 real API cases. Native opt-in jobs independently required."
+  },
+  "inspected_candidate": "d17c61b7f5894fdac0e080309ba463e861706c0f",
+  "execution_rule": "47c985 remains last complete-green baseline. CI2 partial results are separate from locally tested new composition d17c61b. Exact test-file identity is a reuse aid, not proof after production/dependency changes. Native skip is never a pass; DOM fixture does not prove real backend or geometry. No guessed new-browser count: authoritative discovery belongs to coordinator.",
+  "excluded_stories": [
+    "K06"
+  ],
+  "quality_gates": [
+    "Q01",
+    "Q02",
+    "Q03",
+    "Q04",
+    "Q05"
+  ],
+  "integration_ticket": "RW-24",
+  "stories": [
+    {
+      "story": "F01",
+      "title": "Multi-core CP and agent",
+      "evidence": [
+        "render-extension",
+        "agent-fences",
+        "fleet-native"
+      ],
+      "covered_contract": "Adapter extension plus separated inventory/runtime, exact staged observation.",
+      "remaining": [
+        "E01",
+        "E04",
+        "R01"
+      ],
+      "status": "partial; concrete local evidence mapped, current integration pending, prerequisite status unchanged",
+      "feature_tickets": [
+        "RW-01",
+        "RW-15"
+      ],
+      "direct_prerequisites": {
+        "RW-01": [],
+        "RW-15": [
+          "RW-01"
+        ]
+      }
+    },
+    {
+      "story": "F02",
+      "title": "Graphical direct and multi-hop",
+      "evidence": [
+        "topology",
+        "ordered-route-browser",
+        "route-exit-browser",
+        "two-hop",
+        "endpoint-impact",
+        "endpoint-impact-ui",
+        "endpoint-impact-browser"
+      ],
+      "covered_contract": "Direct/three-hop model; ordered browser editing and real two-hop no-fallback. Shared inventory edit now requires current named dependency impact and exact draft/set-fenced confirmation; it never silently deploys.",
+      "remaining": [
+        "E04"
+      ],
+      "status": "partial; concrete local evidence mapped, current integration pending, prerequisite status unchanged",
+      "feature_tickets": [
+        "RW-01"
+      ],
+      "direct_prerequisites": {
+        "RW-01": []
+      }
+    },
+    {
+      "story": "F03",
+      "title": "Server/client intent isolation",
+      "evidence": [
+        "ir-isolation",
+        "tenant",
+        "native-overrides",
+        "frozen-routing",
+        "client-delivery"
+      ],
+      "covered_contract": "Transit/owner rejection, separate private client draft and immutable delivery.",
+      "remaining": [
+        "E01",
+        "E05"
+      ],
+      "status": "partial; concrete local evidence mapped, current integration pending, prerequisite status unchanged",
+      "feature_tickets": [
+        "RW-07",
+        "RW-11"
+      ],
+      "direct_prerequisites": {
+        "RW-07": [
+          "RW-06"
+        ],
+        "RW-11": [
+          "RW-08",
+          "RW-09",
+          "RW-10"
+        ]
+      }
+    },
+    {
+      "story": "F04",
+      "title": "Private external sources",
+      "evidence": [
+        "external-feed",
+        "tenant",
+        "fetch"
+      ],
+      "covered_contract": "Current named test closes previous locate-evidence gap for expired/exhausted platform vs private external feed.",
+      "remaining": [
+        "E01"
+      ],
+      "status": "partial; concrete local evidence mapped, current integration pending, prerequisite status unchanged",
+      "feature_tickets": [
+        "RW-04"
+      ],
+      "direct_prerequisites": {
+        "RW-04": [
+          "RW-02"
+        ]
+      }
+    },
+    {
+      "story": "F05",
+      "title": "Whole-route multiplier debit",
+      "evidence": [
+        "billing",
+        "counter",
+        "budget",
+        "published-native",
+        "cycle-api",
+        "operational-recovery"
+      ],
+      "covered_contract": "Pinned historical multiplier, replay-safe one accounting debit, provider separate.",
+      "remaining": [
+        "E08",
+        "R02"
+      ],
+      "status": "partial; concrete local evidence mapped, current integration pending, prerequisite status unchanged",
+      "feature_tickets": [
+        "RW-13"
+      ],
+      "direct_prerequisites": {
+        "RW-13": [
+          "RW-03"
+        ]
+      }
+    },
+    {
+      "story": "C101",
+      "title": "Import and maintain sources",
+      "evidence": [
+        "import",
+        "fetch",
+        "source-refresh"
+      ],
+      "covered_contract": "Explicit accepted extraction formats and atomic unsupported snapshot rejection; last accepted snapshot retained.",
+      "remaining": [
+        "D01",
+        "E01"
+      ],
+      "status": "partial; concrete local evidence mapped, current integration pending, prerequisite status unchanged",
+      "feature_tickets": [
+        "RW-04"
+      ],
+      "direct_prerequisites": {
+        "RW-04": [
+          "RW-02"
+        ]
+      }
+    },
+    {
+      "story": "C102",
+      "title": "Reusable ordered collections",
+      "evidence": [
+        "pipeline",
+        "pipeline-api",
+        "dependencies",
+        "collection-browser",
+        "collection-delete",
+        "collection-delete-ui",
+        "collection-delete-browser"
+      ],
+      "covered_contract": "Ordered reusable collection composition and concurrent reference integrity. Previously missing owner-scoped delete/dependency-review workflow is now implemented and locally tested; browser candidate pending.",
+      "remaining": [
+        "I02",
+        "E02"
+      ],
+      "status": "partial; concrete local evidence mapped, current integration pending, prerequisite status unchanged",
+      "feature_tickets": [
+        "RW-06"
+      ],
+      "direct_prerequisites": {
+        "RW-06": [
+          "RW-05"
+        ]
+      }
+    },
+    {
+      "story": "C201",
+      "title": "Filter rename sort",
+      "evidence": [
+        "pipeline",
+        "pipeline-api",
+        "processing-api",
+        "processing-browser"
+      ],
+      "covered_contract": "Filter/rename/order positive composition; precise invalid input and stable identity.",
+      "remaining": [
+        "E02",
+        "E03"
+      ],
+      "status": "partial; concrete local evidence mapped, current integration pending, prerequisite status unchanged",
+      "feature_tickets": [
+        "RW-05",
+        "RW-06"
+      ],
+      "direct_prerequisites": {
+        "RW-05": [
+          "RW-04"
+        ],
+        "RW-06": [
+          "RW-05"
+        ]
+      }
+    },
+    {
+      "story": "C202",
+      "title": "Deduplicate and override",
+      "evidence": [
+        "pipeline",
+        "override",
+        "pipeline-api",
+        "processing-api",
+        "processing-browser"
+      ],
+      "covered_contract": "Connection dedup provenance plus legal override precedence, tags and invalid overrides.",
+      "remaining": [
+        "E02",
+        "E05"
+      ],
+      "status": "partial; concrete local evidence mapped, current integration pending, prerequisite status unchanged",
+      "feature_tickets": [
+        "RW-05",
+        "RW-06"
+      ],
+      "direct_prerequisites": {
+        "RW-05": [
+          "RW-04"
+        ],
+        "RW-06": [
+          "RW-05"
+        ]
+      }
+    },
+    {
+      "story": "C203",
+      "title": "Intermediate previews",
+      "evidence": [
+        "pipeline",
+        "override",
+        "pipeline-api",
+        "processing-api",
+        "processing-browser"
+      ],
+      "covered_contract": "Eight-stage source/merge/aggregate preview, removed IDs and secret shielding without source mutation.",
+      "remaining": [
+        "E02",
+        "E03"
+      ],
+      "status": "partial; concrete local evidence mapped, current integration pending, prerequisite status unchanged",
+      "feature_tickets": [
+        "RW-05",
+        "RW-06"
+      ],
+      "direct_prerequisites": {
+        "RW-05": [
+          "RW-04"
+        ],
+        "RW-06": [
+          "RW-05"
+        ]
+      }
+    },
+    {
+      "story": "C301",
+      "title": "Nested dynamic groups",
+      "evidence": [
+        "topology",
+        "dynamic-browser",
+        "native-client"
+      ],
+      "covered_contract": "Deep model nesting/cycle checks and additive dynamic member editing, native client structures.",
+      "remaining": [
+        "E06"
+      ],
+      "status": "partial; concrete local evidence mapped, current integration pending, prerequisite status unchanged",
+      "feature_tickets": [
+        "RW-08"
+      ],
+      "direct_prerequisites": {
+        "RW-08": [
+          "RW-07"
+        ]
+      }
+    },
+    {
+      "story": "C302",
+      "title": "Manual/test/fallback/balance",
+      "evidence": [
+        "render-extension",
+        "native-client",
+        "client-delivery"
+      ],
+      "covered_contract": "Four named Mihomo strategies positive; unsupported sing-box semantics explicitly reject.",
+      "remaining": [
+        "E05",
+        "E06"
+      ],
+      "status": "partial; concrete local evidence mapped, current integration pending, prerequisite status unchanged",
+      "feature_tickets": [
+        "RW-08"
+      ],
+      "direct_prerequisites": {
+        "RW-08": [
+          "RW-07"
+        ]
+      }
+    },
+    {
+      "story": "C401",
+      "title": "Ordered rules and actions",
+      "evidence": [
+        "native-client",
+        "overlay-safety",
+        "frozen-routing",
+        "client-delivery"
+      ],
+      "covered_contract": "Combined AND/NOT match, explicit action and native parser; frozen published routing.",
+      "remaining": [
+        "E05",
+        "E07"
+      ],
+      "status": "partial; concrete local evidence mapped, current integration pending, prerequisite status unchanged",
+      "feature_tickets": [
+        "RW-09"
+      ],
+      "direct_prerequisites": {
+        "RW-09": [
+          "RW-07"
+        ]
+      }
+    },
+    {
+      "story": "C402",
+      "title": "Fixed/follow rule resources",
+      "evidence": [
+        "rule-bundle",
+        "rule-native",
+        "fetch"
+      ],
+      "covered_contract": "Owner-scoped exact frozen files and digest checks; correct native formats.",
+      "remaining": [
+        "E05",
+        "E07"
+      ],
+      "status": "partial; concrete local evidence mapped, current integration pending, prerequisite status unchanged",
+      "feature_tickets": [
+        "RW-09"
+      ],
+      "direct_prerequisites": {
+        "RW-09": [
+          "RW-07"
+        ]
+      }
+    },
+    {
+      "story": "C501",
+      "title": "Independent complete profiles",
+      "evidence": [
+        "native-overrides",
+        "frozen-routing",
+        "templates",
+        "template-browser"
+      ],
+      "covered_contract": "Independent draft/publication, personal overrides and shared update boundaries.",
+      "remaining": [
+        "E01"
+      ],
+      "status": "partial; concrete local evidence mapped, current integration pending, prerequisite status unchanged",
+      "feature_tickets": [
+        "RW-07"
+      ],
+      "direct_prerequisites": {
+        "RW-07": [
+          "RW-06"
+        ]
+      }
+    },
+    {
+      "story": "C502",
+      "title": "DNS sniff and TUN intent",
+      "evidence": [
+        "native-client",
+        "overlay-safety"
+      ],
+      "covered_contract": "Positive DNS/sniff/TUN parse and conflict checks, no OS activation implied.",
+      "remaining": [
+        "E05",
+        "E07"
+      ],
+      "status": "partial; concrete local evidence mapped, current integration pending, prerequisite status unchanged",
+      "feature_tickets": [
+        "RW-10"
+      ],
+      "direct_prerequisites": {
+        "RW-10": [
+          "RW-07",
+          "RW-08",
+          "RW-09"
+        ]
+      }
+    },
+    {
+      "story": "C503",
+      "title": "Target/native advanced overrides",
+      "evidence": [
+        "native-overrides",
+        "overlay-safety",
+        "native-overlay-parser"
+      ],
+      "covered_contract": "Private malformed draft preserved; target composition, refs and credentials constrained.",
+      "remaining": [
+        "E01",
+        "E07"
+      ],
+      "status": "partial; concrete local evidence mapped, current integration pending, prerequisite status unchanged",
+      "feature_tickets": [
+        "RW-10"
+      ],
+      "direct_prerequisites": {
+        "RW-10": [
+          "RW-07",
+          "RW-08",
+          "RW-09"
+        ]
+      }
+    },
+    {
+      "story": "C601",
+      "title": "Nodes-only and full output",
+      "evidence": [
+        "render-extension",
+        "native-client",
+        "native-nodes",
+        "ir-isolation",
+        "client-delivery"
+      ],
+      "covered_contract": "Structurally distinct output, stable names and pinned native validation with credential isolation.",
+      "remaining": [
+        "E05"
+      ],
+      "status": "partial; concrete local evidence mapped, current integration pending, prerequisite status unchanged",
+      "feature_tickets": [
+        "RW-11"
+      ],
+      "direct_prerequisites": {
+        "RW-11": [
+          "RW-08",
+          "RW-09",
+          "RW-10"
+        ]
+      }
+    },
+    {
+      "story": "C602",
+      "title": "Publish rotate multiple feeds",
+      "evidence": [
+        "tenant",
+        "frozen-routing",
+        "rotation-browser",
+        "client-delivery"
+      ],
+      "covered_contract": "Selected-link lifecycle and retained independent published revisions.",
+      "remaining": [
+        "E01",
+        "E09"
+      ],
+      "status": "partial; concrete local evidence mapped, current integration pending, prerequisite status unchanged",
+      "feature_tickets": [
+        "RW-12"
+      ],
+      "direct_prerequisites": {
+        "RW-12": [
+          "RW-03",
+          "RW-11"
+        ]
+      }
+    },
+    {
+      "story": "S01",
+      "title": "Own service subscription center",
+      "evidence": [
+        "policy",
+        "group-precedence",
+        "service-ui",
+        "first-feed-browser",
+        "cycle-browser"
+      ],
+      "covered_contract": "Effective service/grant presentation with first-feed action and explicit publication.",
+      "remaining": [
+        "E09",
+        "E10"
+      ],
+      "status": "partial; concrete local evidence mapped, current integration pending, prerequisite status unchanged",
+      "feature_tickets": [
+        "RW-03",
+        "RW-23"
+      ],
+      "direct_prerequisites": {
+        "RW-03": [
+          "RW-01",
+          "RW-02"
+        ],
+        "RW-23": [
+          "RW-12",
+          "RW-13"
+        ]
+      }
+    },
+    {
+      "story": "S02",
+      "title": "Usage cycles and reset time",
+      "evidence": [
+        "calendar",
+        "counter",
+        "cycle-ui",
+        "service-ui",
+        "cycle-api",
+        "cycle-browser",
+        "lossless-history"
+      ],
+      "covered_contract": "Calendar clamp/anchor and existing policy draft preservation.",
+      "remaining": [
+        "E10",
+        "R02"
+      ],
+      "status": "partial; concrete local evidence mapped, current integration pending, prerequisite status unchanged",
+      "feature_tickets": [
+        "RW-13",
+        "RW-23"
+      ],
+      "direct_prerequisites": {
+        "RW-13": [
+          "RW-03"
+        ],
+        "RW-23": [
+          "RW-12",
+          "RW-13"
+        ]
+      }
+    },
+    {
+      "story": "A01",
+      "title": "Invitation/account lifecycle",
+      "evidence": [
+        "invite-browser",
+        "account",
+        "account-browser",
+        "cycle-api",
+        "cycle-browser"
+      ],
+      "covered_contract": "Actual invitation identity switch and account security lifecycle.",
+      "remaining": [
+        "E01",
+        "E10"
+      ],
+      "status": "partial; concrete local evidence mapped, current integration pending, prerequisite status unchanged",
+      "feature_tickets": [
+        "RW-02"
+      ],
+      "direct_prerequisites": {
+        "RW-02": []
+      }
+    },
+    {
+      "story": "A02",
+      "title": "Plans groups individual override",
+      "evidence": [
+        "policy",
+        "group-precedence",
+        "policy-ui",
+        "cycle-api",
+        "cycle-browser"
+      ],
+      "covered_contract": "Deterministic precedence and current review + affected-user presentation.",
+      "remaining": [
+        "E09",
+        "E10"
+      ],
+      "status": "partial; concrete local evidence mapped, current integration pending, prerequisite status unchanged",
+      "feature_tickets": [
+        "RW-03"
+      ],
+      "direct_prerequisites": {
+        "RW-03": [
+          "RW-01",
+          "RW-02"
+        ]
+      }
+    },
+    {
+      "story": "A03",
+      "title": "Cycle quota/rate operations",
+      "evidence": [
+        "billing",
+        "counter",
+        "budget",
+        "calendar",
+        "cycle-ui",
+        "cycle-api",
+        "cycle-browser",
+        "lossless-history"
+      ],
+      "covered_contract": "Historical rates, exact counter boundary and issued-obligation fences.",
+      "remaining": [
+        "E10",
+        "R02"
+      ],
+      "status": "partial; concrete local evidence mapped, current integration pending, prerequisite status unchanged",
+      "feature_tickets": [
+        "RW-13"
+      ],
+      "direct_prerequisites": {
+        "RW-13": [
+          "RW-03"
+        ]
+      }
+    },
+    {
+      "story": "A04",
+      "title": "IP stream rate/revocation limits",
+      "evidence": [
+        "ip-limit",
+        "published-native",
+        "continuous-native",
+        "provider-native",
+        "operational-recovery"
+      ],
+      "covered_contract": "Normalized account IP union, streams, finite quota and real managed revocation.",
+      "remaining": [
+        "E08",
+        "R01",
+        "R02"
+      ],
+      "status": "partial; concrete local evidence mapped, current integration pending, prerequisite status unchanged",
+      "feature_tickets": [
+        "RW-14"
+      ],
+      "direct_prerequisites": {
+        "RW-14": [
+          "RW-03",
+          "RW-13",
+          "RW-15"
+        ]
+      }
+    },
+    {
+      "story": "A05",
+      "title": "Announcements reminders audit",
+      "evidence": [
+        "notifications",
+        "channels",
+        "account",
+        "notification-drill"
+      ],
+      "covered_contract": "Audience/expiry/read state, durable dedup/retry, local TLS channel contracts and security audit.",
+      "remaining": [
+        "E11"
+      ],
+      "status": "partial; concrete local evidence mapped, current integration pending, prerequisite status unchanged",
+      "feature_tickets": [
+        "RW-19"
+      ],
+      "direct_prerequisites": {
+        "RW-19": [
+          "RW-02",
+          "RW-03",
+          "RW-13"
+        ]
+      }
+    },
+    {
+      "story": "K01",
+      "title": "Install upgrade batch operation",
+      "evidence": [
+        "fleet",
+        "fleet-native",
+        "upgrade-native"
+      ],
+      "covered_contract": "Exact target planning/results and real official Xray version transition.",
+      "remaining": [
+        "E01",
+        "E12",
+        "R01"
+      ],
+      "status": "partial; concrete local evidence mapped, current integration pending, prerequisite status unchanged",
+      "feature_tickets": [
+        "RW-16"
+      ],
+      "direct_prerequisites": {
+        "RW-16": [
+          "RW-15"
+        ]
+      }
+    },
+    {
+      "story": "K02",
+      "title": "Shared endpoint TLS reuse",
+      "evidence": [
+        "topology",
+        "endpoint-tls",
+        "route-exit-browser",
+        "endpoint-impact",
+        "endpoint-impact-ui",
+        "endpoint-impact-browser"
+      ],
+      "covered_contract": "Stable connection identity and correct public TLS parameters; stored endpoint selection. Shared inventory edit now requires current named dependency impact and exact draft/set-fenced confirmation; it never silently deploys.",
+      "remaining": [
+        "E04"
+      ],
+      "status": "partial; concrete local evidence mapped, current integration pending, prerequisite status unchanged",
+      "feature_tickets": [
+        "RW-01"
+      ],
+      "direct_prerequisites": {
+        "RW-01": []
+      }
+    },
+    {
+      "story": "K03",
+      "title": "Publish retry rollback",
+      "evidence": [
+        "agent-fences",
+        "fleet",
+        "fleet-native",
+        "operational-recovery"
+      ],
+      "covered_contract": "Durable fencing, lost receipt and explicit observed rollback.",
+      "remaining": [
+        "E08",
+        "R01"
+      ],
+      "status": "partial; concrete local evidence mapped, current integration pending, prerequisite status unchanged",
+      "feature_tickets": [
+        "RW-15"
+      ],
+      "direct_prerequisites": {
+        "RW-15": [
+          "RW-01"
+        ]
+      }
+    },
+    {
+      "story": "K04",
+      "title": "Provider resource/exhaustion",
+      "evidence": [
+        "provider",
+        "provider-policy",
+        "provider-lease",
+        "provider-fence",
+        "provider-capacity",
+        "provider-native",
+        "provider-ui"
+      ],
+      "covered_contract": "Correct separate units, selected NIC/operator statement, unknowns and alert path. Explicit opt-in managed suspension now implemented and locally native-tested, with monotonic rollback fence. Stock/provider-billing limits remain explicit.",
+      "remaining": [
+        "I01",
+        "E11"
+      ],
+      "status": "partial; concrete local evidence mapped, current integration pending, prerequisite status unchanged",
+      "feature_tickets": [
+        "RW-17"
+      ],
+      "direct_prerequisites": {
+        "RW-17": [
+          "RW-13",
+          "RW-15"
+        ]
+      }
+    },
+    {
+      "story": "K05",
+      "title": "Diagnostics monitoring notification",
+      "evidence": [
+        "diagnostic",
+        "diagnostic-safety",
+        "provider",
+        "channels",
+        "notification-drill",
+        "operational-recovery"
+      ],
+      "covered_contract": "Current actual CP→agent→local target 4096-byte path closes old locate-evidence gap; no repeated traffic; cancellation.",
+      "remaining": [
+        "E11",
+        "R01"
+      ],
+      "status": "partial; concrete local evidence mapped, current integration pending, prerequisite status unchanged",
+      "feature_tickets": [
+        "RW-18"
+      ],
+      "direct_prerequisites": {
+        "RW-18": [
+          "RW-15",
+          "RW-17",
+          "RW-19"
+        ]
+      }
+    },
+    {
+      "story": "M01",
+      "title": "Versioned templates/presets",
+      "evidence": [
+        "templates",
+        "template-native",
+        "template-browser"
+      ],
+      "covered_contract": "Copy/pin/follow/private conflict semantics plus both native client target parsers.",
+      "remaining": [
+        "E01"
+      ],
+      "status": "partial; concrete local evidence mapped, current integration pending, prerequisite status unchanged",
+      "feature_tickets": [
+        "RW-20"
+      ],
+      "direct_prerequisites": {
+        "RW-20": [
+          "RW-05",
+          "RW-09",
+          "RW-11"
+        ]
+      }
+    },
+    {
+      "story": "M02",
+      "title": "Encrypted backup restore",
+      "evidence": [
+        "backup",
+        "backup-obligation",
+        "backup-browser",
+        "operational-recovery",
+        "lossless-history",
+        "history-capacity"
+      ],
+      "covered_contract": "Real encrypted file and fresh target identity/config; complete canonical data and pending accounting retained.",
+      "remaining": [
+        "R02",
+        "R03"
+      ],
+      "status": "partial; concrete local evidence mapped, current integration pending, prerequisite status unchanged",
+      "feature_tickets": [
+        "RW-21"
+      ],
+      "direct_prerequisites": {
+        "RW-21": [
+          "RW-02",
+          "RW-12",
+          "RW-13",
+          "RW-20"
+        ]
+      }
+    },
+    {
+      "story": "M03",
+      "title": "Permissions secrets MFA recovery",
+      "evidence": [
+        "tenant",
+        "account",
+        "account-browser",
+        "mfa-browser"
+      ],
+      "covered_contract": "Existing real password/reset, permission and session journeys; new MFA browser awaits CI.",
+      "remaining": [
+        "E01",
+        "R03"
+      ],
+      "status": "partial; concrete local evidence mapped, current integration pending, prerequisite status unchanged",
+      "feature_tickets": [
+        "RW-02"
+      ],
+      "direct_prerequisites": {
+        "RW-02": []
+      }
+    },
+    {
+      "story": "M04",
+      "title": "Settings/domain/notifications",
+      "evidence": [
+        "origin",
+        "origin-ui",
+        "channels",
+        "history-capacity"
+      ],
+      "covered_contract": "Saved/effective domain distinction and failed activation, guarded local channels.",
+      "remaining": [
+        "E13",
+        "R03"
+      ],
+      "status": "partial; concrete local evidence mapped, current integration pending, prerequisite status unchanged",
+      "feature_tickets": [
+        "RW-22"
+      ],
+      "direct_prerequisites": {
+        "RW-22": [
+          "RW-02",
+          "RW-12",
+          "RW-19"
+        ]
+      }
+    }
+  ],
+  "evidence": {
+    "topology": {
+      "path": "internal/domain/profile_test.go",
+      "selectors": [
+        {
+          "selector": "TestTopologyAllowsThreeHopsSameHostAndDirect",
+          "line": 31,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "TestProfileAcceptsDeepNestingAndRejectsCycle",
+          "line": 12,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "TestRenamingDoesNotChangeStableReferences",
+          "line": 73,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "Direct/three-hop selected endpoint paths, deeper-than-two client groups, cycle and stable identity checks.",
+      "gate": "backend",
+      "test_file_identical_to_green_baseline": true,
+      "candidate_execution": "pending full CI; source presence is not a pass"
+    },
+    "ir-isolation": {
+      "path": "internal/domain/profile_test.go",
+      "selectors": [
+        {
+          "selector": "TestProfileDoesNotExportTransitOrAnotherOwner",
+          "line": 22,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "TestReadableNamesPersistAcrossCollisionChanges",
+          "line": 85,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "Reject internal/transit and cross-owner endpoints; preserve allocated names across collisions.",
+      "gate": "backend",
+      "test_file_identical_to_green_baseline": true,
+      "candidate_execution": "pending full CI; source presence is not a pass"
+    },
+    "render-extension": {
+      "path": "internal/render/client_test.go",
+      "selectors": [
+        {
+          "selector": "TestClientRegistryAcceptsThirdNamespacedAdapterAndGatesVersions",
+          "line": 110,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "TestClientFullAndNodesOnlyAreDifferentOutputs",
+          "line": 14,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "TestMihomoPreservesFourStrategiesAndResourceFile",
+          "line": 47,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "Third adapter registration; distinct full/nodes output; four Mihomo strategies, explicit sing-box unsupported rejection. Render assertions, not traffic.",
+      "gate": "backend",
+      "test_file_identical_to_green_baseline": true,
+      "candidate_execution": "pending full CI; source presence is not a pass"
+    },
+    "native-client": {
+      "path": "internal/render/native_test.go",
+      "selectors": [
+        {
+          "selector": "TestNativeClientFixtures",
+          "line": 20,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "Pinned native parsers for full profiles, DNS/sniff, combined ordered match, file resource, Mihomo four strategies; sing-box TUN parse only, not host activation.",
+      "gate": "native parser (opt-in; ordinary backend skip does not count)",
+      "test_file_identical_to_green_baseline": true,
+      "candidate_execution": "pending full CI; source presence is not a pass"
+    },
+    "native-nodes": {
+      "path": "internal/render/nodes_native_test.go",
+      "selectors": [
+        {
+          "selector": "TestNativeClientNodesOnlyConsumption",
+          "line": 16,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "Nodes-only output consumed within each supported native client configuration. Parser consumption, not payload.",
+      "gate": "native parser (opt-in)",
+      "test_file_identical_to_green_baseline": true,
+      "candidate_execution": "pending full CI; source presence is not a pass"
+    },
+    "endpoint-tls": {
+      "path": "internal/render/reality_pair_test.go",
+      "selectors": [
+        {
+          "selector": "TestServerRealityClientParametersMatchServerMaterial",
+          "line": 11,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "Server REALITY material and public client parameters agree.",
+      "gate": "backend",
+      "test_file_identical_to_green_baseline": true,
+      "candidate_execution": "pending full CI; source presence is not a pass"
+    },
+    "ordered-route-browser": {
+      "path": "web/tests/workspace.ui.spec.ts",
+      "selectors": [
+        {
+          "selector": "administrator edits an ordered route without dragging",
+          "line": 134,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "Actual browser ordered-form route editing; does not establish all shared-endpoint impact paths.",
+      "gate": "browser",
+      "test_file_identical_to_green_baseline": true,
+      "candidate_execution": "pending full CI; source presence is not a pass"
+    },
+    "route-exit-browser": {
+      "path": "web/tests/route-exit-backend.ui.spec.ts",
+      "selectors": [
+        {
+          "selector": "existing managed route selects stored plain TCP endpoint absent from its programs and saves a real draft",
+          "line": 8,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "Real backend stored endpoint selection and route draft save; no applied claim.",
+      "gate": "browser",
+      "test_file_identical_to_green_baseline": true,
+      "candidate_execution": "pending full CI; source presence is not a pass"
+    },
+    "two-hop": {
+      "path": "internal/integration/route_test.go",
+      "selectors": [
+        {
+          "selector": "TestRenderedTwoHopRouteHasNoDirectFallback",
+          "line": 24,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "Actual rendered two-hop positive payload and required-hop failure behavior.",
+      "gate": "native runtime (opt-in)",
+      "test_file_identical_to_green_baseline": true,
+      "candidate_execution": "pending full CI; source presence is not a pass"
+    },
+    "published-native": {
+      "path": "internal/httpapi/published_native_test.go",
+      "selectors": [
+        {
+          "selector": "TestNativePublishedManagedPrincipalEndToEnd",
+          "line": 30,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "Invitation/principal, exact applied manifest, real managed entry/transit payload and quota path; not a downloaded stock-client journey.",
+      "gate": "managed native (opt-in)",
+      "test_file_identical_to_green_baseline": true,
+      "candidate_execution": "pending full CI; source presence is not a pass"
+    },
+    "external-feed": {
+      "path": "internal/httpapi/external_feed_policy_test.go",
+      "selectors": [
+        {
+          "selector": "TestPrivateExternalFeedDoesNotConsumePlatformServiceEligibility",
+          "line": 14,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "Expired/exhausted platform service does not block private external feed; platform-dependent feed and disabled account/user are denied.",
+      "gate": "backend",
+      "test_file_identical_to_green_baseline": true,
+      "candidate_execution": "pending full CI; source presence is not a pass"
+    },
+    "tenant": {
+      "path": "internal/httpapi/tenant_test.go",
+      "selectors": [
+        {
+          "selector": "TestTenantIsolationAndCSRFAtHTTPSeam",
+          "line": 75,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "TestSourceSummariesRedactAndExplicitRevealIsOwnerScoped",
+          "line": 147,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "TestFeedRotationAndRevocation",
+          "line": 102,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "HTTP owner/CSRF boundaries, explicit scoped reveal, selected feed rotation/revocation.",
+      "gate": "backend",
+      "test_file_identical_to_green_baseline": false,
+      "candidate_execution": "pending full CI; source presence is not a pass"
+    },
+    "import": {
+      "path": "internal/importer/import_test.go",
+      "selectors": [
+        {
+          "selector": "TestParseMihomoExtractsNodesAndReportsOtherConfig",
+          "line": 33,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "TestParseSingBoxExtractsNodesNotInternalGroups",
+          "line": 45,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "TestParseNoAuthSOCKSAndBase64SS",
+          "line": 55,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "TestParseRejectsUnsupportedSecurityWithoutPartialSnapshot",
+          "line": 80,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "Positive native-node/text imports; ignored config sections reported; malformed/unsupported snapshot rejected atomically.",
+      "gate": "backend",
+      "test_file_identical_to_green_baseline": true,
+      "candidate_execution": "pending full CI; source presence is not a pass"
+    },
+    "fetch": {
+      "path": "internal/resources/fetch_test.go",
+      "selectors": [
+        {
+          "selector": "TestFetchRejectsSpecialAddressesBeforeDial",
+          "line": 18,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "TestMixedDNSAnswersDeniedBeforeDial",
+          "line": 108,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "TestRedirectCannotReachPrivate",
+          "line": 93,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "TestTransportErrorRedactsSecret",
+          "line": 132,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "Fetcher SSRF/rebinding/redirect and redacted error boundaries; synthetic transports, not external-service access.",
+      "gate": "backend",
+      "test_file_identical_to_green_baseline": true,
+      "candidate_execution": "pending full CI; source presence is not a pass"
+    },
+    "source-refresh": {
+      "path": "internal/httpapi/source_refresh_test.go",
+      "selectors": [
+        {
+          "selector": "TestSourceRefreshMaterialCandidateRequiresExactAcceptance",
+          "line": 18,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "TestSourceRefreshUnchangedKeepsSnapshotAndHarmlessRenamePreservesIdentity",
+          "line": 77,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "TestSourceCandidateRevealStaleEditDeletionAndInvalidPartial",
+          "line": 240,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "Candidate acceptance, no-op/rename identity and stale/invalid partial snapshot preserve accepted source.",
+      "gate": "backend",
+      "test_file_identical_to_green_baseline": true,
+      "candidate_execution": "pending full CI; source presence is not a pass"
+    },
+    "pipeline": {
+      "path": "internal/conversion/pipeline_test.go",
+      "selectors": [
+        {
+          "selector": "TestSourceProcessingThenOrderedMergeThenAggregate",
+          "line": 12,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "TestDedupUsesConnectionNotDisplayNameAndKeepsProvenance",
+          "line": 36,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "TestPreviewRedactsSecretsWithoutMutatingAcceptedSnapshot",
+          "line": 55,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "TestCollectionOwnershipAndInvalidStepFailClosed",
+          "line": 72,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "Source→ordered merge→aggregate, explicit removed IDs/provenance, preview secrecy and invalid input; no dedicated stable-sort tie fixture here.",
+      "gate": "backend",
+      "test_file_identical_to_green_baseline": true,
+      "candidate_execution": "pending full CI; source presence is not a pass"
+    },
+    "override": {
+      "path": "internal/conversion/override_test.go",
+      "selectors": [
+        {
+          "selector": "TestProcessCollectionOverrideSourceThenAggregatePreservesIdentityAndPreviews",
+          "line": 34,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "TestProcessCollectionOverrideNilTagsPreservesAndEmptyTagsClears",
+          "line": 107,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "TestProcessCollectionInvalidOverrideRejectsWithoutMutatingAcceptedInput",
+          "line": 133,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "Positive allowlisted override precedence, nil/empty tags, clone isolation and invalid host/port rejection.",
+      "gate": "backend",
+      "test_file_identical_to_green_baseline": true,
+      "candidate_execution": "pending full CI; source presence is not a pass"
+    },
+    "pipeline-api": {
+      "path": "web/tests/workspace.api.spec.ts",
+      "selectors": [
+        {
+          "selector": "private source → ordered collection → profile → published feed → revocation",
+          "line": 2,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "Real API duplicate 2→1 provenance/RemovedIDs, source+aggregate field override, rendered export and revoke; no browser editor journey.",
+      "gate": "api",
+      "test_file_identical_to_green_baseline": false,
+      "candidate_execution": "pending full CI; source presence is not a pass"
+    },
+    "collection-browser": {
+      "path": "web/tests/collection-task.ui.spec.ts",
+      "selectors": [
+        {
+          "selector": "source acquisition preserves ordered source and merged steps until explicit collection save and reopened summaries",
+          "line": 470,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "Browser collection source acquisition preserves ordered recipe until explicit save/reopen; controlled HTTP fixture.",
+      "gate": "browser",
+      "test_file_identical_to_green_baseline": true,
+      "candidate_execution": "pending full CI; source presence is not a pass"
+    },
+    "dependencies": {
+      "path": "internal/httpapi/tenant_relationship_race_test.go",
+      "selectors": [
+        {
+          "selector": "TestDeleteSourceCreateCollectionRacePreservesReferences",
+          "line": 19,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "TestDeleteDependencyCreateProfileRacePreservesReferences",
+          "line": 101,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "Public HTTP mutation races preserve dependencies; rejection is not a full pre-delete dependency-review UI.",
+      "gate": "backend",
+      "test_file_identical_to_green_baseline": true,
+      "candidate_execution": "pending full CI; source presence is not a pass"
+    },
+    "frozen-routing": {
+      "path": "internal/httpapi/output_routing_summary_test.go",
+      "selectors": [
+        {
+          "selector": "TestPublishedRoutingSummaryStaysFrozenUntilReviewedPublication",
+          "line": 28,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "TestPublishedRoutingSummarySourceRenameChangesCandidateOnly",
+          "line": 267,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "Saved draft/renamed source does not alter frozen delivered routing until explicit reviewed publish.",
+      "gate": "backend",
+      "test_file_identical_to_green_baseline": true,
+      "candidate_execution": "pending full CI; source presence is not a pass"
+    },
+    "dynamic-browser": {
+      "path": "web/tests/group-membership.ui.spec.ts",
+      "selectors": [
+        {
+          "selector": "automatic members are an explicit additive choice over current source, collection and platform connections",
+          "line": 6,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "Browser dynamic membership edits preserve fixed members and current input scope; controlled fixture.",
+      "gate": "browser",
+      "test_file_identical_to_green_baseline": true,
+      "candidate_execution": "pending full CI; source presence is not a pass"
+    },
+    "native-overrides": {
+      "path": "internal/httpapi/native_overrides_test.go",
+      "selectors": [
+        {
+          "selector": "TestNativeDraftContentIsOwnerPrivateAndSurvivesInvalidSave",
+          "line": 18,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "TestNativePreviewAndPublishedOutputUseSameFinalComposition",
+          "line": 56,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "TestNativeOverrideSurvivesTemplateFollowAndKeepsPublicationSeparate",
+          "line": 129,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "Private native text survives invalid draft and follow; preview/export same composition, frozen publication remains separate.",
+      "gate": "backend",
+      "test_file_identical_to_green_baseline": true,
+      "candidate_execution": "pending full CI; source presence is not a pass"
+    },
+    "overlay-safety": {
+      "path": "internal/render/native_override_test.go",
+      "selectors": [
+        {
+          "selector": "TestNativeOverrideRejectsUnsupportedConflictsAndForeignReferences",
+          "line": 99,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "TestNativeSingBoxRejectsCredentialMaterialOutsideConnections",
+          "line": 185,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "TestNativeDNSResolverCyclesAndDanglingMihomoSelectorsAreRejected",
+          "line": 194,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "Target/namespace conflicts, foreign references, misplaced credentials and resolver cycles reject.",
+      "gate": "backend",
+      "test_file_identical_to_green_baseline": true,
+      "candidate_execution": "pending full CI; source presence is not a pass"
+    },
+    "native-overlay-parser": {
+      "path": "internal/httpapi/native_overrides_native_test.go",
+      "selectors": [
+        {
+          "selector": "TestNativeOverridePublishedArtifactsPassPinnedNativeParsers",
+          "line": 21,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "Published native overlay positive outputs pass exact pinned parsers.",
+      "gate": "native parser (opt-in)",
+      "test_file_identical_to_green_baseline": true,
+      "candidate_execution": "pending full CI; source presence is not a pass"
+    },
+    "rule-bundle": {
+      "path": "internal/httpapi/resource_bundle_test.go",
+      "selectors": [
+        {
+          "selector": "TestOwnedRuleFilesPublishAsExactFrozenBundle",
+          "line": 17,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "TestRuleFileImportRejectsUnownedPathsAndMismatchedPins",
+          "line": 107,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "Owned file bytes and manifest frozen; unowned paths and mismatched pinned digests reject.",
+      "gate": "backend",
+      "test_file_identical_to_green_baseline": true,
+      "candidate_execution": "pending full CI; source presence is not a pass"
+    },
+    "rule-native": {
+      "path": "internal/httpapi/resource_bundle_native_test.go",
+      "selectors": [
+        {
+          "selector": "TestNativeOwnedRuleFileBundles",
+          "line": 19,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "Four supported owned file formats loaded by pinned native validators; not automatic authenticated private fetch.",
+      "gate": "native parser (opt-in)",
+      "test_file_identical_to_green_baseline": true,
+      "candidate_execution": "pending full CI; source presence is not a pass"
+    },
+    "rotation-browser": {
+      "path": "web/tests/product-model.ui.spec.ts",
+      "selectors": [
+        {
+          "selector": "existing strategy groups remain editable and revoked recovery replaces only the selected client link",
+          "line": 996,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "scoped configuration creates one independent second-client subscription and immediately exposes its new link",
+          "line": 2079,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "Browser independent outputs and selected-link recovery; exact test body determines backend/fixture seam.",
+      "gate": "browser",
+      "test_file_identical_to_green_baseline": true,
+      "candidate_execution": "pending full CI; source presence is not a pass"
+    },
+    "policy": {
+      "path": "internal/httpapi/access_policy_test.go",
+      "selectors": [
+        {
+          "selector": "TestAccessPolicyHTTPPreviewApplyAndTenantIsolation",
+          "line": 12,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "TestAccessPolicyPreviewRejectsUnknownReferencesAndShowsAmbiguity",
+          "line": 77,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "Real HTTP policy preview/apply, current revision and owner/admin permission.",
+      "gate": "backend",
+      "test_file_identical_to_green_baseline": true,
+      "candidate_execution": "pending full CI; source presence is not a pass"
+    },
+    "group-precedence": {
+      "path": "internal/service/effective_test.go",
+      "selectors": [
+        {
+          "selector": "TestEffectiveAccessSelectsOneGroupAndIndividualOverrides",
+          "line": 9,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "TestEffectiveAccessSameServiceTiesDoNotStackAndOverridesCanDenyAll",
+          "line": 34,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "Deterministic winning group, individual override and no quota/route stacking.",
+      "gate": "backend",
+      "test_file_identical_to_green_baseline": true,
+      "candidate_execution": "pending full CI; source presence is not a pass"
+    },
+    "policy-ui": {
+      "path": "web/src/policy-confirmation-content.dom.test.tsx",
+      "selectors": [
+        {
+          "selector": "shows the authoritative affected count and preserves exact comparisons, provenance and full authorization",
+          "line": 290,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "DOM authoritative affected count/field provenance; mocked API, not actual grant persistence.",
+      "gate": "web DOM",
+      "test_file_identical_to_green_baseline": true,
+      "candidate_execution": "pending full CI; source presence is not a pass"
+    },
+    "billing": {
+      "path": "internal/store/billing_test.go",
+      "selectors": [
+        {
+          "selector": "TestMeterRecordsOverQuotaAndKeepsHistoricalRate",
+          "line": 13,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "TestFractionalRateRoundsAfterAggregation",
+          "line": 59,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "Actual/weighted/provider separation, historical rate and integer rounding through Store.",
+      "gate": "backend",
+      "test_file_identical_to_green_baseline": true,
+      "candidate_execution": "pending full CI; source presence is not a pass"
+    },
+    "counter": {
+      "path": "internal/store/counter_ingestion_test.go",
+      "selectors": [
+        {
+          "selector": "TestCounterIngestionIsAtomicReplaySafeAndSeparatesProvider",
+          "line": 15,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "TestCounterCursorDoesNotResetOnBillingCycleChange",
+          "line": 81,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "TestCounterCalendarAndManualBoundaryNeedExactObservation",
+          "line": 165,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "Atomic counter replay, provider separation and exact cycle boundaries without guessed attribution.",
+      "gate": "backend",
+      "test_file_identical_to_green_baseline": true,
+      "candidate_execution": "pending full CI; source presence is not a pass"
+    },
+    "budget": {
+      "path": "internal/store/admission_budget_test.go",
+      "selectors": [
+        {
+          "selector": "TestBudgetPinsRateBoundaryAndPreservesLateHistoricalCharge",
+          "line": 134,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "TestManagedAggregateSnapshotsDoNotDoubleDebitAdmissionLedger",
+          "line": 161,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "TestIssuedBudgetsFenceQuotaReductionAndCycleChange",
+          "line": 214,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "Historical rate pinned to issued budget, aggregate counters not double-debited, pending obligations fence policy changes.",
+      "gate": "backend",
+      "test_file_identical_to_green_baseline": true,
+      "candidate_execution": "pending full CI; source presence is not a pass"
+    },
+    "calendar": {
+      "path": "internal/service/cycle_test.go",
+      "selectors": [
+        {
+          "selector": "TestCalendarClampingRestoresDay",
+          "line": 10,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "TestWeightedUsesIntegerCeiling",
+          "line": 19,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "Calendar-anniversary month-end clamp/recovered anchor, exact integer ceiling; not alone proof of four cycle modes.",
+      "gate": "backend",
+      "test_file_identical_to_green_baseline": true,
+      "candidate_execution": "pending full CI; source presence is not a pass"
+    },
+    "cycle-ui": {
+      "path": "web/src/service-cycle-defaults.dom.test.tsx",
+      "selectors": [
+        {
+          "selector": "retains the complete $name cycle through an unrelated edit, preview and explicit apply",
+          "line": 300,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "leaves the account's no-reset anchor, timezone control and implicit start unchanged",
+          "line": 583,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "preserves hidden precise cycles across stale preview, explicit latest acceptance and a failed apply",
+          "line": 750,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "DOM four persisted policy shapes/anchor preservation, failed/stale drafts; not joined real backend renewal/reset.",
+      "gate": "web DOM",
+      "test_file_identical_to_green_baseline": true,
+      "candidate_execution": "pending full CI; source presence is not a pass"
+    },
+    "ip-limit": {
+      "path": "internal/store/admission_test.go",
+      "selectors": [
+        {
+          "selector": "TestAdmissionUnionCountsNormalizedIPsAcrossEntriesAndDurablyRenews",
+          "line": 52,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "TestAdmissionRenewalRespectsRevocationQuotaAndHolds",
+          "line": 90,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "TestConnectionLimitCountsIndependentStreamsOnSameIPAndRenewsAtCap",
+          "line": 206,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "Account-global normalized IP union, separate stream cap, quota/hold/revocation checks at admission renewal.",
+      "gate": "backend",
+      "test_file_identical_to_green_baseline": true,
+      "candidate_execution": "pending full CI; source presence is not a pass"
+    },
+    "continuous-native": {
+      "path": "internal/httpapi/service_native_test.go",
+      "selectors": [
+        {
+          "selector": "TestNativeContinuousManagedServicePreservesPayloadAndRevocation",
+          "line": 48,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "Managed real continued payload across original lease and final revocation closes old/refuses new connections; exact runtime scope only.",
+      "gate": "managed native (opt-in)",
+      "test_file_identical_to_green_baseline": false,
+      "candidate_execution": "pending full CI; source presence is not a pass"
+    },
+    "agent-fences": {
+      "path": "internal/agent/reconciler_test.go",
+      "selectors": [
+        {
+          "selector": "TestRestartRetainsFenceAndDoesNotReplay",
+          "line": 65,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "TestUnknownOutcomeBlocksNewerMutationUntilObserved",
+          "line": 152,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "TestLostAcknowledgementRecoveredByIdentityNotReplayed",
+          "line": 173,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "Durable generation/restart and unknown outcome ownership; synthetic runtime seam.",
+      "gate": "backend",
+      "test_file_identical_to_green_baseline": true,
+      "candidate_execution": "pending full CI; source presence is not a pass"
+    },
+    "fleet-native": {
+      "path": "internal/httpapi/fleet_native_test.go",
+      "selectors": [
+        {
+          "selector": "TestNativeFleetConfigureStopStartAndRollback",
+          "line": 25,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "Actual stock runtime configure/stop/start/explicit rollback; queued is not applied before exact observation.",
+      "gate": "native runtime (opt-in)",
+      "test_file_identical_to_green_baseline": false,
+      "candidate_execution": "pending full CI; source presence is not a pass"
+    },
+    "fleet": {
+      "path": "internal/httpapi/fleet_test.go",
+      "selectors": [
+        {
+          "selector": "TestFleetPhasesKeepSuccessAndRetryOnlyFailedTargets",
+          "line": 117,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "TestFleetStalePreviewConcurrentExecutionAndAuthorization",
+          "line": 150,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "TestFleetUpgradeNamesExactOldNewIdentityAndRejectsUnknownRuntime",
+          "line": 362,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "Exact batch/target outcomes, retry failed targets only, current review, named old/new upgrade identities.",
+      "gate": "backend",
+      "test_file_identical_to_green_baseline": false,
+      "candidate_execution": "pending full CI; source presence is not a pass"
+    },
+    "upgrade-native": {
+      "path": "internal/agent/stock_upgrade_native_test.go",
+      "selectors": [
+        {
+          "selector": "TestNativeStockXrayUpgradeKeepsExactRuntimeAndLease",
+          "line": 23,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "Official Xray cross-version upgrade, failed startup and explicit new-lease rollback. Does not establish sing-box cross-version upgrade.",
+      "gate": "native runtime (opt-in)",
+      "test_file_identical_to_green_baseline": true,
+      "candidate_execution": "pending full CI; source presence is not a pass"
+    },
+    "provider": {
+      "path": "internal/httpapi/node_observations_test.go",
+      "selectors": [
+        {
+          "selector": "TestNodeResourcesAndProviderAllowanceHaveAuthenticatedEndToEndDataPath",
+          "line": 17,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "TestNodeObservationScopeAndProviderStatementAuthorization",
+          "line": 128,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "TestDriverCollectsNodeProcfsThroughRealHTTPAdapter",
+          "line": 189,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "Real enrolled HTTP path and driver/synthetic procfs, selected NIC IN+OUT vs provider statement, unknowns and configured alerts. Advisory only. New optional enforcing policy is mapped separately under provider-policy; this original observer case remains advisory.",
+      "gate": "backend",
+      "test_file_identical_to_green_baseline": true,
+      "candidate_execution": "pending full CI; source presence is not a pass"
+    },
+    "diagnostic": {
+      "path": "internal/httpapi/diagnostics_test.go",
+      "selectors": [
+        {
+          "selector": "TestDiagnosticAdminRequestRunsThroughRealAgentAndDurableResult",
+          "line": 44,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "TestDiagnosticDriverCancellationStopsActualTransfer",
+          "line": 120,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "HTTP queue→enrolled worker→4096-byte local sink→durable measured result; no replay traffic, cancellation reaches real transfer. Explicit local fixture target registration.",
+      "gate": "backend",
+      "test_file_identical_to_green_baseline": true,
+      "candidate_execution": "pending full CI; source presence is not a pass"
+    },
+    "diagnostic-safety": {
+      "path": "internal/agent/diagnostics_test.go",
+      "selectors": [
+        {
+          "selector": "TestDiagnosticRejectsMetadataCredentialsPrivateAndReboundFixtureTargets",
+          "line": 69,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "TestDiagnosticBoundsRedirectSizeDeadlineAndCancellation",
+          "line": 87,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "Bounded permitted diagnostic targets, SSRF/rebinding and redirect/deadline guards.",
+      "gate": "backend",
+      "test_file_identical_to_green_baseline": true,
+      "candidate_execution": "pending full CI; source presence is not a pass"
+    },
+    "notifications": {
+      "path": "internal/notifications/service_test.go",
+      "selectors": [
+        {
+          "selector": "TestAnnouncementAudienceExpiryAndPrivateReadReceipts",
+          "line": 24,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "TestThresholdDeduplicationAndNewCycles",
+          "line": 81,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "TestDurableOutboxRestartStableIdentityAndBoundedRetries",
+          "line": 141,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "TestAnnouncementAudienceIsRecheckedBeforeDeliveryAndCanBeRestored",
+          "line": 329,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "Audience/validity/read receipts, cycle dedup, durable bounded retry and rechecked delivery eligibility.",
+      "gate": "backend",
+      "test_file_identical_to_green_baseline": true,
+      "candidate_execution": "pending full CI; source presence is not a pass"
+    },
+    "channels": {
+      "path": "internal/notifications/transport_test.go",
+      "selectors": [
+        {
+          "selector": "TestWebhookSignedHTTPSStableEventIDAndRejectedResponse",
+          "line": 54,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "TestSMTPVerifiedTLSAcceptanceStableMessageIDAndNoPlaintextFallback",
+          "line": 112,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "TestSMTPSTARTTLSAuthenticatesOnlyAfterVerifiedUpgrade",
+          "line": 225,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "Local HTTPS/SMTP/STARTTLS contracts, stable IDs, TLS verification and rejected response; no live external delivery permission.",
+      "gate": "backend",
+      "test_file_identical_to_green_baseline": true,
+      "candidate_execution": "pending full CI; source presence is not a pass"
+    },
+    "templates": {
+      "path": "internal/httpapi/templates_test.go",
+      "selectors": [
+        {
+          "selector": "TestTemplatePresetCopyIsIsolatedAndVersionsImmutable",
+          "line": 36,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "TestSharedTemplateRejectsPrivateShapesAndCrossTenantBindings",
+          "line": 124,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "TestProfileTemplatePreservesPersonalOverridesAndPublishedFallback",
+          "line": 188,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "TestSwitchingTemplateReferenceModeKeepsPersonalRuntimeAndPrivateBindings",
+          "line": 462,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "Copy isolation, immutable versions, private binding/credential guards, fixed/follow mode and personal edits.",
+      "gate": "backend",
+      "test_file_identical_to_green_baseline": true,
+      "candidate_execution": "pending full CI; source presence is not a pass"
+    },
+    "template-native": {
+      "path": "internal/httpapi/templates_native_test.go",
+      "selectors": [
+        {
+          "selector": "TestNativeTemplateFollowedProfileUpdate",
+          "line": 18,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "Actual native parsers for followed-template update on both client targets.",
+      "gate": "native parser (opt-in)",
+      "test_file_identical_to_green_baseline": true,
+      "candidate_execution": "pending full CI; source presence is not a pass"
+    },
+    "template-browser": {
+      "path": "web/tests/template-follow-backend.ui.spec.ts",
+      "selectors": [
+        {
+          "selector": "real template follow conflict → review → validate → selected publication at ${width}",
+          "line": 10,
+          "present_in_green_baseline": false
+        }
+      ],
+      "scope": "Real-backend desktop/narrow joined conflict/current-review/local override/selected publish; both CI2 cases failed early strict selection. Scoped selector fix is included; rerun pending.",
+      "gate": "browser new",
+      "test_file_identical_to_green_baseline": false,
+      "candidate_execution": "CI2 both width cases failed early on strict selector, not accepted. Scoped selector fix66b6a27 is included; rerun pending."
+    },
+    "backup": {
+      "path": "internal/store/backup_test.go",
+      "selectors": [
+        {
+          "selector": "TestBackupFreshRestorePreservesSecretsIdentitiesIndexesCountersAndHistory",
+          "line": 15,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "TestBackupRejectsInvalidOrOccupiedTargetBeforeMutation",
+          "line": 125,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "TestBackupImportRollsBackPartialDatabaseFailure",
+          "line": 208,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "Fresh encrypted restore preserves recovery secrets, identity/counters/history; malformed/occupied targets and fault rollback.",
+      "gate": "backend",
+      "test_file_identical_to_green_baseline": true,
+      "candidate_execution": "pending full CI; source presence is not a pass"
+    },
+    "backup-obligation": {
+      "path": "internal/store/backup_admission_obligations_test.go",
+      "selectors": [
+        {
+          "selector": "TestEncryptedBackupRestorePreservesOutstandingAdmissionObligation",
+          "line": 16,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "Recovery preserves pending accounting reservation and subsequent exact final settlement/replay.",
+      "gate": "backend",
+      "test_file_identical_to_green_baseline": true,
+      "candidate_execution": "pending full CI; source presence is not a pass"
+    },
+    "backup-browser": {
+      "path": "web/tests/backup-restore-backend.ui.spec.ts",
+      "selectors": [
+        {
+          "selector": "OPS01 downloaded backup file rejects a wrong password and restores without activating",
+          "line": 16,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "Real file download/select/wrong key/fresh inactive DB; exact restored DB CLI identity/config and unchanged source. Passed 47 baseline, new isolation harness pending CI2.",
+      "gate": "browser",
+      "test_file_identical_to_green_baseline": false,
+      "candidate_execution": "CI2 actual browser passed at exact eafb493 source; later d17c61b production composition still awaits full CI."
+    },
+    "account": {
+      "path": "internal/httpapi/account_security_test.go",
+      "selectors": [
+        {
+          "selector": "TestAccountSecurityHTTPRotationCSRFAndOwnership",
+          "line": 41,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "TestAdminAccountDisableResetAndRetirementHTTP",
+          "line": 96,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "HTTP password/session/CSRF rotation, account disable/reset/retirement and ownership checks.",
+      "gate": "backend",
+      "test_file_identical_to_green_baseline": true,
+      "candidate_execution": "pending full CI; source presence is not a pass"
+    },
+    "account-browser": {
+      "path": "web/tests/account-security-backend.ui.spec.ts",
+      "selectors": [
+        {
+          "selector": "real password change preserves failed reauthentication draft, rotates credentials and invalidates older sessions",
+          "line": 62,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "administrator resets a synthetic account through the UI and temporary login cannot bypass required password change",
+          "line": 157,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "Two actual browser account journeys passed47; new per-test CLI isolation must rerun.",
+      "gate": "browser",
+      "test_file_identical_to_green_baseline": false,
+      "candidate_execution": "CI2 actual browser passed at exact eafb493 source; later d17c61b production composition still awaits full CI."
+    },
+    "mfa-browser": {
+      "path": "web/tests/mfa-backend.ui.spec.ts",
+      "selectors": [
+        {
+          "selector": "synthetic administrator enrolls an authenticator, logs in with TOTP, and recovers through administrator reset",
+          "line": 41,
+          "present_in_green_baseline": false
+        }
+      ],
+      "scope": "Actual TOTP-time browser enrollment/login/admin recovery, no invented recovery codes; passed CI2 at eafb493, newer composition still pending.",
+      "gate": "browser new",
+      "test_file_identical_to_green_baseline": false,
+      "candidate_execution": "CI2 actual browser passed at exact eafb493 source; later d17c61b production composition still awaits full CI."
+    },
+    "invite-browser": {
+      "path": "web/tests/session-recovery.ui.spec.ts",
+      "selectors": [
+        {
+          "selector": "real invite signup switches identity without inheriting old account draft or cache",
+          "line": 322,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "Actual invitation identity switch clears prior owner workspace/cache; not full service expiry/renewal journey.",
+      "gate": "browser",
+      "test_file_identical_to_green_baseline": true,
+      "candidate_execution": "pending full CI; source presence is not a pass"
+    },
+    "origin": {
+      "path": "internal/httpapi/subscription_origin_test.go",
+      "selectors": [
+        {
+          "selector": "TestSubscriptionOriginStageIsAdminOnlyAndNeverActivates",
+          "line": 55,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "TestSubscriptionOriginVerifiedActivationRetainsTokensAndSurvivesFailedReplacement",
+          "line": 131,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "TestSubscriptionOriginVerificationRejectsRedirectsAndInvalidTLS",
+          "line": 284,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "Staged vs verified active subscription origin, safe failed replacement, redirect/TLS rejection with controlled endpoints.",
+      "gate": "backend",
+      "test_file_identical_to_green_baseline": true,
+      "candidate_execution": "pending full CI; source presence is not a pass"
+    },
+    "origin-ui": {
+      "path": "web/src/subscription-origin.dom.test.tsx",
+      "selectors": [
+        {
+          "selector": "retains a rejected draft, then requires verification before explicitly activating a saved replacement",
+          "line": 69,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "keeps unsaved domain text when a stale write is followed by a failed state refresh",
+          "line": 233,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "DOM rejected/stale origin draft retention and explicit verified activation; fixture backend.",
+      "gate": "web DOM",
+      "test_file_identical_to_green_baseline": true,
+      "candidate_execution": "pending full CI; source presence is not a pass"
+    },
+    "service-ui": {
+      "path": "web/src/subscription-overview-status.dom.test.tsx",
+      "selectors": [
+        {
+          "selector": "names active authorization without presenting unlimited quota as available routes",
+          "line": 134,
+          "present_in_green_baseline": true
+        },
+        {
+          "selector": "gives paused platform service a next step without granting restoration or changing personal subscriptions",
+          "line": 186,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "DOM policy availability independent of published feed and actual runtime.",
+      "gate": "web DOM",
+      "test_file_identical_to_green_baseline": false,
+      "candidate_execution": "pending full CI; source presence is not a pass"
+    },
+    "first-feed-browser": {
+      "path": "web/tests/first-subscription.ui.spec.ts",
+      "selectors": [
+        {
+          "selector": "first subscription skips the empty target gate but preserves save, cancel, review, and explicit publication",
+          "line": 4,
+          "present_in_green_baseline": true
+        }
+      ],
+      "scope": "Browser first subscription save/cancel/review/publish; not full ordinary invited account service/reset journey.",
+      "gate": "browser",
+      "test_file_identical_to_green_baseline": true,
+      "candidate_execution": "pending full CI; source presence is not a pass"
+    },
+    "collection-delete": {
+      "path": "internal/httpapi/collection_delete_test.go",
+      "selectors": [
+        {
+          "selector": "TestCollectionDeleteDependenciesAndOwnerBoundaryAtHTTPSeam",
+          "line": 10,
+          "present_in_green_baseline": false
+        }
+      ],
+      "scope": "Owner-only preview names all dependent profiles; fresh references block deletion; CSRF/foreign denial; successful deletion preserves source.",
+      "gate": "backend real HTTP",
+      "candidate_execution": "Focused local HTTP and independent review passed; full next composition CI pending.",
+      "test_file_identical_to_green_baseline": false
+    },
+    "collection-delete-ui": {
+      "path": "web/src/collection-delete.dom.test.tsx",
+      "selectors": [
+        {
+          "selector": "does not enable collection deletion before an authoritative dependency read and names every blocking profile",
+          "line": 63,
+          "present_in_green_baseline": false
+        },
+        {
+          "selector": "cancels collection deletion twice safely, then preserves failed deletion context and retries without cascading",
+          "line": 118,
+          "present_in_green_baseline": false
+        },
+        {
+          "selector": "keeps the selected collection after a newly added dependency rejects deletion and disables further deletion",
+          "line": 204,
+          "present_in_green_baseline": false
+        }
+      ],
+      "scope": "Real component with synthetic HTTP: unknown not deletable, repeated safe cancel, failure retention and newly added dependency refusal.",
+      "gate": "web DOM",
+      "candidate_execution": "Focused local DOM passed; full next composition pending.",
+      "test_file_identical_to_green_baseline": false
+    },
+    "collection-delete-browser": {
+      "path": "web/tests/collection-delete.ui.spec.ts",
+      "selectors": [
+        {
+          "selector": "collection dependency decision remains readable and returns keyboard focus at 320",
+          "line": 5,
+          "present_in_green_baseline": false
+        }
+      ],
+      "scope": "Actual 320px browser candidate for dependency context and keyboard return; controlled HTTP fixture.",
+      "gate": "browser new",
+      "candidate_execution": "UNRUN until next authorized CI; source/discovery is not geometry evidence.",
+      "test_file_identical_to_green_baseline": false
+    },
+    "endpoint-impact": {
+      "path": "internal/httpapi/endpoint_impact_test.go",
+      "selectors": [
+        {
+          "selector": "TestEndpointImpactReviewBindsDraftAndDependencies",
+          "line": 14,
+          "present_in_green_baseline": false
+        }
+      ],
+      "scope": "Administrator review names identity-based dependent routes/deployments; token binds exact draft including secrets and dependency set; changed membership/draft/stale metadata and POST overwrite reject; saved inventory does not silently deploy.",
+      "gate": "backend real HTTP",
+      "candidate_execution": "Focused race tests including migrated fleet/service/TLS edit fixtures passed; full next composition pending.",
+      "test_file_identical_to_green_baseline": false
+    },
+    "endpoint-impact-ui": {
+      "path": "web/src/endpoint-impact.dom.test.tsx",
+      "selectors": [
+        {
+          "selector": "retains draft on failed impact read and twice canceled review, without writing or exposing secrets",
+          "line": 153,
+          "present_in_green_baseline": false
+        },
+        {
+          "selector": "requires a fresh review after dependency conflict and writes only the reviewed draft",
+          "line": 192,
+          "present_in_green_baseline": false
+        }
+      ],
+      "scope": "Component retains failed/cancelled draft and requires new reviewed exact payload after dependency conflict.",
+      "gate": "web DOM",
+      "candidate_execution": "77 related DOM/model cases passed in author workstream; full next composition pending.",
+      "test_file_identical_to_green_baseline": false
+    },
+    "endpoint-impact-browser": {
+      "path": "web/tests/endpoint-impact.ui.spec.ts",
+      "selectors": [
+        {
+          "selector": "shared endpoint impact review stays readable and cancel preserves exact draft at 320px",
+          "line": 6,
+          "present_in_green_baseline": false
+        }
+      ],
+      "scope": "Controlled HTTP actual-App 320px impact review and focus candidate.",
+      "gate": "browser new",
+      "candidate_execution": "UNRUN until next authorized CI.",
+      "test_file_identical_to_green_baseline": false
+    },
+    "provider-policy": {
+      "path": "internal/store/provider_admission_test.go",
+      "selectors": [
+        {
+          "selector": "TestProviderSuspensionFollowsExactAppliedHopsAndKeepsSettlement",
+          "line": 49,
+          "present_in_green_baseline": false
+        },
+        {
+          "selector": "TestProviderSuspensionSerializesAcrossHandlesAndRejectsUnsupportedHost",
+          "line": 107,
+          "present_in_green_baseline": false
+        }
+      ],
+      "scope": "Explicit suspend-managed policy checks exact immutable applied hops; denies unknown/exhausted selected evidence, preserves final settlement, recovers on available evidence; concurrent handles serialize.",
+      "gate": "backend Store",
+      "candidate_execution": "Focused race and independent public-seam review passed; full next composition pending.",
+      "test_file_identical_to_green_baseline": false
+    },
+    "provider-lease": {
+      "path": "internal/store/provider_admission_review_test.go",
+      "selectors": [
+        {
+          "selector": "TestProviderSuspensionReviewClipsActualLeaseToEvidence",
+          "line": 9,
+          "present_in_green_baseline": false
+        },
+        {
+          "selector": "TestProviderSuspensionReviewSettlesPositiveDeniedRenewalAndFinal",
+          "line": 38,
+          "present_in_green_baseline": false
+        }
+      ],
+      "scope": "Actual issued lease clips to evidence/cycle/expiry; positive settlement remains durable when renewal denied and final closes obligations.",
+      "gate": "backend Store",
+      "candidate_execution": "Independent focused race review passed; next full composition pending.",
+      "test_file_identical_to_green_baseline": false
+    },
+    "provider-fence": {
+      "path": "internal/store/provider_fence_test.go",
+      "selectors": [
+        {
+          "selector": "TestProviderSuspensionRequiresMonotonicPortableDowngradeFence",
+          "line": 15,
+          "present_in_green_baseline": false
+        },
+        {
+          "selector": "TestProviderSuspensionOpenRejectsUnmarkedEnforcingRecord",
+          "line": 120,
+          "present_in_green_baseline": false
+        }
+      ],
+      "scope": "Semantic migration3 persists after disabling; unaware binary/restore cannot silently ignore enforcing records.",
+      "gate": "backend Store",
+      "candidate_execution": "Focused race plus old-eafb493 physical DB/snapshot/encrypted archive refusal probe passed; full next composition pending.",
+      "test_file_identical_to_green_baseline": false
+    },
+    "provider-capacity": {
+      "path": "internal/store/provider_capacity_compatibility_test.go",
+      "selectors": [
+        {
+          "selector": "TestProviderSuspensionCapacityInventoryAcceptsSemanticFence",
+          "line": 9,
+          "present_in_green_baseline": false
+        }
+      ],
+      "scope": "Capacity inventory recognizes semantic migration3; exact added record counts and monotonic marker retained.",
+      "gate": "backend Store",
+      "candidate_execution": "Local focused composed regression passed at d17c61b; full next composition pending.",
+      "test_file_identical_to_green_baseline": false
+    },
+    "provider-native": {
+      "path": "internal/httpapi/provider_native_test.go",
+      "selectors": [
+        {
+          "selector": "TestNativeManagedProviderSuspensionAndRecovery",
+          "line": 14,
+          "present_in_green_baseline": false
+        }
+      ],
+      "scope": "Actual owned managed flow closes after explicit provider exhaustion, new flow denied, restored current evidence permits new flow, second exhaustion and exact 142-byte native/CP settlement; identity unchanged.",
+      "gate": "managed native",
+      "candidate_execution": "Local -race native run passed 46.49s, zero selected skips; first closure 3.041s. Not stock traffic/whole-provider enforcement or SLA. Mandatory CI case awaiting next run.",
+      "test_file_identical_to_green_baseline": false
+    },
+    "provider-ui": {
+      "path": "web/src/observation-footer.dom.test.tsx",
+      "selectors": [
+        {
+          "selector": "confirms explicit managed suspension consequences, cancels without writing and preserves the selected policy on save",
+          "line": 187,
+          "present_in_green_baseline": false
+        },
+        {
+          "selector": "does not offer managed suspension based on another host's instance",
+          "line": 232,
+          "present_in_green_baseline": false
+        }
+      ],
+      "scope": "Explicit host/source/consequence confirmation, cancel retains focus, only local host managed support qualifies.",
+      "gate": "web DOM",
+      "candidate_execution": "Focused DOM/typecheck passed; actual new browser geometry not claimed.",
+      "test_file_identical_to_green_baseline": false
+    },
+    "processing-api": {
+      "path": "web/tests/processing-publication-backend.api.spec.ts",
+      "selectors": [
+        {
+          "selector": "isolated processing recipe preserves stages, source and sibling feed through exact publication",
+          "line": 5,
+          "present_in_green_baseline": false
+        }
+      ],
+      "scope": "Real isolated CLI/API: ordered override/dedup/stages, accepted source/recipe and both feeds survive invalid preview, only selected publication changes.",
+      "gate": "api new",
+      "candidate_execution": "One local real API case passed as part of 5/5 new processing/cycle cases; full next composition pending.",
+      "test_file_identical_to_green_baseline": false
+    },
+    "processing-browser": {
+      "path": "web/tests/processing-publication-backend.ui.spec.ts",
+      "selectors": [
+        {
+          "selector": "real processing editor → stage comparison → saved recipe → selected feed publication",
+          "line": 7,
+          "present_in_green_baseline": false
+        }
+      ],
+      "scope": "Ordinary invited user actual editor authors source+aggregate recipe, compares stages, saves/reopens, cancels then publishes selected feed; sibling/source unchanged.",
+      "gate": "browser new",
+      "candidate_execution": "UNRUN until next authorized CI.",
+      "test_file_identical_to_green_baseline": false
+    },
+    "cycle-api": {
+      "path": "web/tests/cycle-renewal-backend.api.spec.ts",
+      "selectors": [
+        {
+          "selector": "isolated ${mode} cycle renewal and reset preserve meter identity and boundary",
+          "line": 10,
+          "present_in_green_baseline": false
+        }
+      ],
+      "scope": "Four actual CLI/HTTP modes monthly/anniversary/fixed-days/none; pinned synthetic100raw→150weighted, renewal retains usage, reset preserves anchor/window and old exact replay remains accepted/conflict rejects.",
+      "gate": "api new",
+      "candidate_execution": "Four local real API cases passed as part of 5/5 new processing/cycle cases; full next composition pending.",
+      "test_file_identical_to_green_baseline": false
+    },
+    "cycle-browser": {
+      "path": "web/tests/cycle-renewal-backend.ui.spec.ts",
+      "selectors": [
+        {
+          "selector": "real ${mode} cycle editor, renewal, explicit reset and user countdown",
+          "line": 15,
+          "present_in_green_baseline": false
+        }
+      ],
+      "scope": "Four real browser candidates: account policy editor, expiry renewal, cancelled/explicit reset, new ordinary-user login/reload and UTC+8 countdown/no reset.",
+      "gate": "browser new",
+      "candidate_execution": "UNRUN until next authorized CI; synthetic public meter submission is not real payload.",
+      "test_file_identical_to_green_baseline": false
+    },
+    "client-delivery": {
+      "path": "internal/httpapi/client_delivery_native_test.go",
+      "selectors": [
+        {
+          "selector": "TestNativeInvitedUserDownloadedClientTraffic",
+          "line": 28,
+          "present_in_green_baseline": false
+        },
+        {
+          "selector": "TestClientDeliverySOCKSFixtureIsDestinationBounded",
+          "line": 299,
+          "present_in_green_baseline": false
+        }
+      ],
+      "scope": "Invited-user exact downloaded feed, actual Mihomo/sing-box, scoped SOCKS origin/domain delegation/reject rule/no fallback, selected link rotate/revoke; peer counts all refused attempts.",
+      "gate": "native client process new",
+      "candidate_execution": "Bounded SOCKS fixture and reject-proof negative mutation review passed locally; actual clients UNRUN until CI. No local DNS/fake-IP/TUN/multi-hop-client claim.",
+      "test_file_identical_to_green_baseline": false
+    },
+    "operational-recovery": {
+      "path": "internal/httpapi/service_native_test.go",
+      "selectors": [
+        {
+          "selector": "TestNativeManagedOperationalRecovery",
+          "line": 51,
+          "present_in_green_baseline": false
+        }
+      ],
+      "scope": "Native payload during complete encrypted backup, fresh inactive restore, exact accounting checkpoint, brief/long authority loss and explicit stopped-runtime reconciliation/new-generation recovery.",
+      "gate": "managed native drill",
+      "candidate_execution": "Local -race actual managed drill and independent 14-case review passed; production eafb493 binding retained. Changed next full composition pending.",
+      "test_file_identical_to_green_baseline": false
+    },
+    "notification-drill": {
+      "path": "internal/httpapi/operations_drill_test.go",
+      "selectors": [
+        {
+          "selector": "TestOperationalNotificationFailureVisibleAndRetry",
+          "line": 39,
+          "present_in_green_baseline": false
+        }
+      ],
+      "scope": "Real authenticated outbox shows sanitized retry failure; reopened worker uses same event ID, eventual accepted event not resent.",
+      "gate": "backend real HTTP/local sink",
+      "candidate_execution": "Local -race and independent 14-case review passed; logical backoff advance not wall-clock provider recovery.",
+      "test_file_identical_to_green_baseline": false
+    },
+    "lossless-history": {
+      "path": "internal/store/history_read_recovery_test.go",
+      "selectors": [
+        {
+          "selector": "TestHistoricalUsageContextStreamsCanonicalWindowAndCancels",
+          "line": 55,
+          "present_in_green_baseline": false
+        },
+        {
+          "selector": "TestReopenDoesNotTrustRestoredTriggerAfterOfflineBypass",
+          "line": 13,
+          "present_in_green_baseline": false
+        }
+      ],
+      "scope": "Single-snapshot row-at-time historical Usage, exact totals/cancellation; restart still invalidates derived projections after possible offline bypass.",
+      "gate": "backend Store",
+      "candidate_execution": "Focused race and full non-race Store on streaming composition passed; capacity/full current composition not inferred.",
+      "test_file_identical_to_green_baseline": false
+    },
+    "history-capacity": {
+      "path": "internal/store/history_capacity_test.go",
+      "selectors": [
+        {
+          "selector": "TestHistoryCapacityInventoryBoundsCountsAndPreservesCanonicalData",
+          "line": 9,
+          "present_in_green_baseline": false
+        },
+        {
+          "selector": "TestHistoryCapacityWarningStartsAtEightyPercent",
+          "line": 41,
+          "present_in_green_baseline": false
+        },
+        {
+          "selector": "TestHistoryCapacityWarnsForBytesBeforeRowLimit",
+          "line": 56,
+          "present_in_green_baseline": false
+        }
+      ],
+      "scope": "Bounded read-only count/byte pressure and 80% warning without deleting history; unavailable/unknown schema fails closed.",
+      "gate": "backend Store",
+      "candidate_execution": "Focused Store/HTTP race and21 DOM cases passed; this is explicit operator check, not retention or admission cutoff.",
+      "test_file_identical_to_green_baseline": false
+    }
+  },
+  "remaining_work": {
+    "E01": {
+      "kind": "integration_evidence",
+      "task": "Complete next-candidate CI. CI2 exact eafb493 browser had178 pass/3 strict-selector failures, not green; MFA/inbox passed. Fix66b6a27 is included. Confirm new/changed named cases and all required native jobs; do not infer new browser count without discovery."
+    },
+    "E02": {
+      "kind": "joined_journey_evidence",
+      "task": "One actual processing API case passed. Execute the new ordinary-user processing browser editor→compare→save/reopen→selected publish case; assert sibling/source invariants. No missing editor implementation is claimed from pending execution.",
+      "status": "local API passed; joined browser authored/unrun"
+    },
+    "E03": {
+      "kind": "targeted_test_gap",
+      "task": "Add explicit stable-sort equal-key/reorder/disabled-step fixtures and no-op publication assertion with precise stage change reasons; source implementation uses stable sort but current indexed pipeline tests do not prove those cells."
+    },
+    "E04": {
+      "kind": "joined_journey_evidence",
+      "task": "Shared endpoint dependency impact, exact draft/set CAS and metadata stripping are now implemented. Execute new 320px review/focus browser candidate and preserve graph/ordered-view evidence boundary; no new deployment/exit rewrite is implied.",
+      "status": "shared endpoint implementation/local HTTP+DOM passed; native browser pending"
+    },
+    "E05": {
+      "kind": "runtime_evidence",
+      "task": "Execute both new TestNativeInvitedUserDownloadedClientTraffic clients in authorized CI. Positive peer attempts/reject/no-fallback must pass. This closes stated downloaded-feed domain delegation/route behavior only, not local DNS/fake-IP/TUN/IPv6 or all protocols; claimed provider-resource loading remains its separately named scope.",
+      "status": "downloaded client process cases authored/unrun"
+    },
+    "E06": {
+      "kind": "joined_journey_evidence",
+      "task": "Source update changes dynamic nested members; preview vs frozen prior output and explicit publication preserve chosen strategy/depth. Do not turn unsupported sing-box fallback into manual."
+    },
+    "E07": {
+      "kind": "joined_journey_evidence",
+      "task": "Map or add structured rule/DNS/sniff/TUN editors to positive native outputs and conflict/failed-save retention, including fixed/follow owned resource update."
+    },
+    "E08": {
+      "kind": "operational_evidence",
+      "task": "The 14-case focused race drill set now joins actual managed payload, backup while active, exact checkpoint accounting, authority loss, final obligation/replay and operator-assisted restart. Reuse source-bound measurements; no need invent new failure dimensions or call it target RTO/SLA.",
+      "status": "bounded local operational reference verified; new full composition pending"
+    },
+    "E09": {
+      "kind": "joined_journey_evidence",
+      "task": "Ordinary invited user real backend: own granted service→subscription→download/rotate→old-link denial with other user/feed unchanged; desktop/narrow keyboard service-center path."
+    },
+    "E10": {
+      "kind": "joined_journey_evidence",
+      "task": "Execute four new real browser cycle/renewal/reset/user-view cases. Local API already proves monthly/anniversary/fixed-days/none,150 weighted synthetic usage, anchor/window preservation and replay/audit. Not actual metered payload or full historical export.",
+      "status": "four actual API cases passed; four joined browser cases authored/unrun"
+    },
+    "E11": {
+      "kind": "bounded_matrix_evidence",
+      "task": "Declare finite event×audience×channel matrix and exercise failure/retry/expiry visibility with local sinks; real external destinations need their own permission, not a software feature prerequisite."
+    },
+    "E12": {
+      "kind": "targeted_runtime_evidence",
+      "task": "Second actually supported sing-box version transition and failure rollback if cross-version support is claimed for that adapter; current actual version transition evidence is Xray only."
+    },
+    "E13": {
+      "kind": "joined_journey_evidence",
+      "task": "Real backend UI settings/domain failed/stale draft and saved-vs-effective activation state; existing DOM fixture and separate HTTP tests do not alone establish joined browser behavior."
+    },
+    "I01": {
+      "kind": "implemented_pending_integrated_acceptance",
+      "task": "Configurable advisory/suspend-managed is implemented, including explicit UI consequence, exact-hop source freshness/cycle/expiry, settlement before denial, native closure/recovery and monotonic downgrade marker. Complete current mandatory native and browser/DOM integration. No claim of stock traffic enforcement or whole-provider billing cutoff.",
+      "source": [
+        "docs/product/CAPABILITY-REGISTER.md#k04-供应商资源与额度运营",
+        "internal/observability/model.go",
+        "web/src/ObservationForms.tsx",
+        "internal/observability/README.md"
+      ],
+      "status": "implementation omission closed locally; current integration pending",
+      "previous_finding": "Confirmed absent behavior at eafb493; superseded by implementation in inspected d17c61b composition, not erased from history."
+    },
+    "I02": {
+      "kind": "implemented_pending_integrated_acceptance",
+      "task": "Owner-scoped dependency preview and explicit collection deletion now exist. Local HTTP/DOM cover all named blockers, stale dependencies, failures/cancel and source preservation. Execute new narrow browser case; retain atomic backend race guards.",
+      "source": [
+        "docs/tickets/catalog.json (RW-06 acceptance2)",
+        "web/src/Sources.tsx (CollectionsPage)",
+        "internal/httpapi/tenant.go (deleteTenant)"
+      ],
+      "status": "implementation omission closed locally; browser pending",
+      "previous_finding": "Confirmed absent behavior at eafb493; superseded by implementation in inspected d17c61b composition, not erased from history."
+    },
+    "D01": {
+      "kind": "contract_clarification",
+      "task": "Current importer rejects any unsupported/malformed member atomically; supported config extraction explicitly reports ignored non-node sections. This is a concrete safe contract, not absence of import. Decide whether mixed invalid members must allow reviewed partial acceptance before claiming that behavior; do not silently change safety semantics."
+    },
+    "R01": {
+      "kind": "deployment_gate_not_ordinary_feature_prerequisite",
+      "task": "Target Linux package permissions/single writer/restart and operational rollout profile. RW16 expressly separates real VPS rollout from ordinary CI. Reference environment evidence can close software behavior; actual deployment still needs authorization."
+    },
+    "R02": {
+      "kind": "measured_operational_risk",
+      "task": "Historical Usage now streams; explicit bounded history inventory exposes 80% warnings and unknowns. Raw history remains and complete backup/cold-rebuild caps are unchanged. Operator manual check is not automatic cutoff/retention: long-run window and lossless archive/rebuild solution remain open production gates per HISTORY-CAPACITY.md; do not erase data or claim this risk solved.",
+      "status": "lossless memory fix and bounded warning passed locally; lifecycle capacity still open"
+    },
+    "R03": {
+      "kind": "deployment_operation_gate",
+      "task": "Explicit key custody, independent restore RPO/RTO, actual origin/TLS/channel configuration and rollout authorization. Local synthetic tests never authorize real secrets, external sends or production changes."
+    }
+  },
+  "ci2": {
+    "source_commit": "eafb493e79d2f789eca5c95ceb8eeeca5e500f40",
+    "url": "https://github.com/isning/RouteWeaver/actions/runs/41337032895",
+    "as_of": "2026-11-01T18:44:00Z",
+    "browser": "181 unique cases:178 passed,3 strict-selector failures; MFA and inbox passed; two template cases failed early. No all-green claim.",
+    "other_gates": "backend/web/native still running at latest parent observation; do not infer their outcome",
+    "followup": "Test-only scoped selector fix66b6a27 included in inspected next composition; affected browsers not yet rerun."
+  }
+}

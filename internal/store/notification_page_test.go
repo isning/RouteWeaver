@@ -77,7 +77,7 @@ func TestNotificationColdPageSharesOneLedgerPassAndRefusesOversizedColdRead(t *t
 	if err != nil || len(page.Users) != 2 {
 		t.Fatalf("cold page: %+v %v", page, err)
 	}
-	if q, r := observer.Counts(); q != 2 || r != 3 {
+	if q, r := observer.Counts(); q != 2 || r != 4 {
 		t.Fatalf("per-user cold scans replaced shared pass: queries=%d rows=%d", q, r)
 	}
 	// A bypassed invalid large record dirties the canonical generation. Refusal
@@ -94,7 +94,7 @@ func TestNotificationColdPageSharesOneLedgerPassAndRefusesOversizedColdRead(t *t
 	if !errors.Is(err, ErrNotificationColdBudget) || len(page.Users) != 2 || !page.Users[0].UsageUnknown || !page.Users[1].UsageUnknown {
 		t.Fatalf("cold budget did not fail closed: %+v %v", page, err)
 	}
-	if q, r := observer.Counts(); q != 1 || r != 1 {
+	if q, r := observer.Counts(); q != 1 || r != 3 {
 		t.Fatalf("cold refusal fetched ledger bodies: queries=%d rows=%d", q, r)
 	}
 	var afterGeneration, afterAck int64
@@ -258,7 +258,7 @@ func TestNotificationSQLWriterWaitHonorsContextBudget(t *testing.T) {
 	}
 }
 
-func TestNotificationInjectedColdRowBudgetDoesNotReadLedgerBodies(t *testing.T) {
+func TestNotificationInjectedColdRowBudgetCommitsOnlyBoundedPrefix(t *testing.T) {
 	s, err := Open(filepath.Join(t.TempDir(), "db"), bytes.Repeat([]byte{83}, 32))
 	if err != nil {
 		t.Fatal(err)
@@ -275,10 +275,10 @@ func TestNotificationInjectedColdRowBudgetDoesNotReadLedgerBodies(t *testing.T) 
 	}
 	observer := installNotificationReadObserver(t, s)
 	page, err := s.NotificationInputPageWithBudget(context.Background(), "", 100, now, NotificationColdBudget{Rows: 1, Bytes: 1024})
-	if !errors.Is(err, ErrNotificationColdBudget) || len(page.Users) != 1 || !page.Users[0].UsageUnknown {
+	if !errors.Is(err, ErrNotificationRebuildPending) || len(page.Users) != 1 || !page.Users[0].UsageUnknown {
 		t.Fatalf("budget result %+v %v", page, err)
 	}
-	if queries, rows := observer.Counts(); queries != 1 || rows != 1 {
-		t.Fatalf("budget decrypted historical bodies: queries=%d rows=%d", queries, rows)
+	if queries, rows := observer.Counts(); queries != 2 || rows != 3 {
+		t.Fatalf("budget exceeded one canonical body plus bounded metadata: queries=%d rows=%d", queries, rows)
 	}
 }

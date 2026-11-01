@@ -21,22 +21,22 @@ type appliedManifestObservation struct {
 	} `json:"observed"`
 }
 
-func (s *Store) admissionManifestCurrent(tx *sql.Tx, binding EntryAdmissionBinding, grant admissionGrant, now time.Time) (bool, *time.Time, error) {
+func (s *Store) admissionManifestCurrent(tx *sql.Tx, binding EntryAdmissionBinding, grant admissionGrant, now time.Time) (bool, *time.Time, string, error) {
 	if grant.PublishedRouteID == "" {
-		return true, nil, nil
+		return true, nil, "", nil
 	}
 	if grant.PublishedRouteID != binding.RouteID || grant.SubjectID != binding.SubjectID {
-		return false, nil, nil
+		return false, nil, "", nil
 	}
 	raw, e := s.listTx(tx, "agent-observations")
 	if e != nil {
-		return false, nil, e
+		return false, nil, "", e
 	}
 	manifests := []domain.PublishedManifest{}
 	for _, b := range raw {
 		var observation appliedManifestObservation
 		if e = json.Unmarshal(b, &observation); e != nil {
-			return false, nil, e
+			return false, nil, "", e
 		}
 		if observation.Phase != "observed_conformant" || !observation.NativeChecked || observation.RecoveryRequired || observation.Observed == nil || !observation.Observed.Known || !observation.Observed.Quiescent || observation.Observed.Generation == 0 {
 			continue
@@ -46,14 +46,14 @@ func (s *Store) admissionManifestCurrent(tx *sql.Tx, binding EntryAdmissionBindi
 		if e = s.getTx(tx, "published-manifests", identity.RevisionID, &manifest); e == ErrNotFound {
 			continue
 		} else if e != nil {
-			return false, nil, e
+			return false, nil, "", e
 		}
 		if manifest.Identity != identity || manifest.Program.Instance.ID != identity.InstanceID || manifest.DeploymentID != grant.DeploymentID || !now.Before(manifest.PolicyExpiresAt) {
 			continue
 		}
 		current, e := s.admissionScopeCurrent(tx, AdmissionScope{NodeID: identity.NodeID, InstanceID: identity.InstanceID, EnrollmentEpoch: identity.EnrollmentEpoch}, now)
 		if e != nil {
-			return false, nil, e
+			return false, nil, "", e
 		}
 		if !current {
 			continue
@@ -62,7 +62,7 @@ func (s *Store) admissionManifestCurrent(tx *sql.Tx, binding EntryAdmissionBindi
 			ExpiresAt time.Time `json:"expiresAt"`
 		}
 		if e = s.getTx(tx, "instance-enrollments", identity.InstanceID, &enrollment); e != nil {
-			return false, nil, e
+			return false, nil, "", e
 		}
 		if enrollment.ExpiresAt.Before(manifest.PolicyExpiresAt) {
 			manifest.PolicyExpiresAt = enrollment.ExpiresAt
@@ -84,6 +84,16 @@ func (s *Store) admissionManifestCurrent(tx *sql.Tx, binding EntryAdmissionBindi
 			for _, hop := range manifests {
 				if hop.Program.Listener.ID == entry && hop.DeploymentID == manifest.DeploymentID && hop.Fingerprint == manifest.Fingerprint {
 					found = true
+					reason, providerUntil, err := s.providerAdmissionTx(tx, hop.Identity.NodeID, now)
+					if err != nil {
+						return false, nil, "", err
+					}
+					if reason != "" {
+						return false, nil, reason, nil
+					}
+					if providerUntil != nil && providerUntil.Before(until) {
+						until = *providerUntil
+					}
 					if hop.PolicyExpiresAt.Before(until) {
 						until = hop.PolicyExpiresAt
 					}
@@ -96,8 +106,8 @@ func (s *Store) admissionManifestCurrent(tx *sql.Tx, binding EntryAdmissionBindi
 			}
 		}
 		if covered && len(route.EndpointIDs) > 0 {
-			return true, &until, nil
+			return true, &until, "", nil
 		}
 	}
-	return false, nil, nil
+	return false, nil, "", nil
 }

@@ -166,6 +166,33 @@ class CoreBootstrapTests(unittest.TestCase):
         self.assertIn("TestNativeStockXrayUpgradeKeepsExactRuntimeAndLease", result.stderr)
         self.assertIn("TestNativeStockXraySecurityDefaults", result.stderr)
 
+    def test_singbox_runtime_requires_both_upgrade_outcomes(self):
+        self.good_compatibility()
+        path = self.stock / self.release["id"]
+        path.write_bytes(self.payload)
+        path.chmod(0o755)
+        self.cached_archive()
+        self.env["ROUTEWEAVER_NATIVE_PROCESS_TESTS"] = "sing-box"
+        base = "TestNativeStockSingBoxUpgradeKeepsExactRuntimeAndLease"
+        outcomes = [base + "/failed-new=false", base + "/failed-new=true"]
+        for absent, skip in ((outcomes[0], False), (outcomes[1], False),
+                             (outcomes[0], True), (outcomes[1], True), (None, False)):
+            with self.subTest(absent=absent, skip=skip):
+                names = ["TestNativeSupervisorLifecycleAndRestart/sing-box", base] + outcomes
+                events = [{"Package": "routeweaver/internal/agent", "Test": name,
+                           "Action": "skip" if name == absent and skip else "pass"}
+                          for name in names if name != absent or skip]
+                (self.root / "scripts/go.sh").write_text(
+                    "#!/bin/sh\ncat <<'EVENTS'\n" +
+                    "\n".join(json.dumps(event) for event in events) + "\nEVENTS\n")
+                result = subprocess.run(["bash", str(self.root / "scripts/native-cores.sh"), "runtime"],
+                                        env=self.env, capture_output=True, text=True, timeout=5)
+                if absent:
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertIn(absent, result.stderr)
+                else:
+                    self.assertEqual(result.returncode, 0, result.stderr)
+
     def test_default_bootstrap_materializes_all_groups_without_overwriting_compatibility(self):
         compat = []
         for name in ("mihomo", "sing-box", "xray"):

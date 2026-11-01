@@ -59,7 +59,7 @@ func TestServerPublicationRejectsUnusablePackagedCertificate(t *testing.T) {
 			p := &d.IR.Programs[0]
 			p.Listener.Connection = domain.Connection{Protocol: "vless", Host: "127.0.0.1", Port: 22000, UUID: "00112233-4455-6677-8899-aabbccddeeff", TLS: &domain.TLSOptions{Enabled: true, ServerName: "expected.example"}}
 			p.TLS = &domain.ServerTLSOptions{CertificatePath: "tls/cert.pem", KeyPath: "tls/key.pem", CertificatePEM: string(pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der})), PrivateKeyPEM: string(pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: priv}))}
-			f.post(t, "managed-endpoints", p.Listener, 200)
+			f.updateEndpoint(t, p.Listener)
 			f.saveDeployment(t, d)
 			opened := openServerDraft(t, operatorClient(), f.srv.URL+"/api/server-deployments/"+d.ID)
 			v := requireServerValidation(t, operatorClient(), f.srv.URL+"/api/server-deployments/"+d.ID, opened["revisionToken"].(string))
@@ -95,7 +95,7 @@ func TestServerPublicationChecksPublicAndConnectorTLSNames(t *testing.T) {
 				d.IR.Programs[1].Connectors = []domain.ServerConnector{{ID: "target", Connection: connection}}
 				d.IR.Programs[1].DefaultAction = domain.ActionRef{Kind: "forward", Ref: "target"}
 			}
-			f.post(t, "managed-endpoints", p.Listener, 200)
+			f.updateEndpoint(t, p.Listener)
 			f.saveDeployment(t, d)
 			if kind == "public-host-fallback" {
 				f.post(t, "published-routes", map[string]any{"id": "tls-route", "name": "TLS route", "deploymentId": d.ID, "endpointIds": []string{p.Listener.ID}, "publicHost": "other.example", "publicPort": 443}, 200)
@@ -120,7 +120,7 @@ func TestServerPublicationChecksPublicAndConnectorTLSNames(t *testing.T) {
 func TestServerPublicationRejectsExpiredPackagedChain(t *testing.T) {
 	f := newFleetFixture(t)
 	d := configurePublicationTLS(t, f, time.Now().Add(-time.Minute), true)
-	f.post(t, "managed-endpoints", d.IR.Programs[0].Listener, 200)
+	f.updateEndpoint(t, d.IR.Programs[0].Listener)
 	f.saveDeployment(t, d)
 	opened := openServerDraft(t, operatorClient(), f.srv.URL+"/api/server-deployments/"+d.ID)
 	v := requireServerValidation(t, operatorClient(), f.srv.URL+"/api/server-deployments/"+d.ID, opened["revisionToken"].(string))
@@ -155,7 +155,7 @@ func TestFleetPublicationRechecksTLSForAllActivatingActions(t *testing.T) {
 	f := newFleetFixture(t)
 	until := time.Now().Add(3 * time.Second).Truncate(time.Second)
 	d := configurePublicationTLS(t, f, until, false)
-	f.post(t, "managed-endpoints", d.IR.Programs[0].Listener, 200)
+	f.updateEndpoint(t, d.IR.Programs[0].Listener)
 	f.saveDeployment(t, d)
 	baseline := f.create(t)
 	for i, id := range f.in.TargetIDs {

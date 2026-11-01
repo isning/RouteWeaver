@@ -143,7 +143,7 @@ func newWithOptions(s *store.Store, registry *render.Registry, opts Options, ver
 						return nil, huma.Error500InternalServerError("cannot read state")
 					}
 					for i := range st.Users {
-						overview, err := h.overview(st.Users[i].ID, time.Now())
+						overview, err := h.overviewContext(ctx, st.Users[i].ID, time.Now())
 						if err != nil {
 							return nil, huma.Error500InternalServerError("cannot calculate user usage")
 						}

@@ -1,0 +1,10 @@
+{
+  "scripts/reference-overview-history.py": "e83a9b9e903b67f4fc74be4df70581a715cdc6155b067fe5a9c4c857fdefb4f1",
+  "scripts/overview-fixture/main.go": "353a1a40149fb261622856feed405adbf60e8216f99767236da90714956b0627",
+  "internal/store/usage_history.go": "e85afe8044f5424482027a771caec3f5489b4f2297f9e6202fbd73e057f1515f",
+  "internal/store/billing.go": "33dab5d8c883fae005c2a920de8909bd1ddb95199ad85517750cd968f69b9a7a",
+  "internal/store/ledger_mutations.go": "87a3aeff48463874e2f8469b6bf4774aad7213e1b789347b0b310990a5fe2fef",
+  "internal/store/usage_projection_schema.go": "f678beba92090a77031dc754a61b62bdd7e3dc7edcafd63089ccdc39e514995d",
+  "../overview-index-evidence-20261101/control-plane": "51a6cf5e1e4925e3f3132a46e2dd066306ae3ef03e2035e9dad83f3bafb2ddc5",
+  "../overview-index-evidence-20261101/fixture": "b1dd65346505184320858cc6c2bf1e3404c26de281e186418c2c9279d6e147f4"
+}

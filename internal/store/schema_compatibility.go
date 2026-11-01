@@ -11,6 +11,12 @@ import (
 // does not understand. Database upgrades are offline operations, not hot DDL.
 var ErrUnsupportedSchema = errors.New("database schema is not supported by this version; use a matching binary or restore a compatible backup")
 
+// Migration 3 is a semantic downgrade fence for provider admission guards.
+// The portable backup frame format remains version 2; the migration history
+// carries the minimum reader capability independently of that envelope.
+const maxSchemaMigrationVersion = 3
+const providerSuspensionMigrationVersion = 3
+
 type schemaQuerier interface {
 	QueryContext(context.Context, string, ...any) (*sql.Rows, error)
 	QueryRowContext(context.Context, string, ...any) *sql.Row
@@ -29,7 +35,7 @@ func validateMigrationVersions(ctx context.Context, q schemaQuerier) error {
 			return err
 		}
 		n++
-		if version != n || version > 2 {
+		if version != n || version > maxSchemaMigrationVersion {
 			return fmt.Errorf("unsupported migration version %d", version)
 		}
 	}
@@ -92,7 +98,8 @@ func validateExistingSchema(ctx context.Context, q schemaQuerier) error {
 		if i != len(want) {
 			return errors.New("incomplete legacy records schema")
 		}
-		return nil
+		fields.Close()
+		return validateRecordKeyCollation(ctx, q)
 	}
 	if err = validateBackupSchema(ctx, q); err != nil {
 		return err

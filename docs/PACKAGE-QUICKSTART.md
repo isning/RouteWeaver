@@ -96,7 +96,9 @@ flags `--backup-max-archive-mib` (default/hard maximum 1024),
 `--backup-max-record-mib` (default 32, hard maximum 128), `--backup-max-rows`
 (default/hard maximum 2,000,000), and `--backup-timeout` (default/hard maximum
 10m) bound operator resource use. Lower them for constrained hosts. These are
-finite limits, not unlimited history retention. Keep enough private disk space
+finite limits, not unlimited history retention. Use the backup settings history
+capacity check and [history-capacity escalation runbook](operations/HISTORY-CAPACITY.md)
+before growing the service or planning recovery. Keep enough private disk space
 for encrypted temporary staging and restore; never copy a master key into a
 shared template or repository. See the backup verification record for the exact
 streaming acceptance evidence and legacy import compatibility.

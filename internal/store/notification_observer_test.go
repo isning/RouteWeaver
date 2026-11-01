@@ -199,7 +199,7 @@ func (r *notificationObservedRows) ColumnTypeScanType(i int) reflect.Type {
 }
 
 var notificationRecordsFrom = regexp.MustCompile(`(?i)\b(?:from|join)\s+records\b`)
-var notificationKindEquals = regexp.MustCompile(`(?i)\bkind\s*=\s*('ledger'|\?[0-9]*|[:@$][a-z_][a-z0-9_]*)`)
+var notificationKindEquals = regexp.MustCompile(`(?i)\bkind(?:\s+COLLATE\s+BINARY)?\s*=\s*('ledger'|\?[0-9]*|[:@$][a-z_][a-z0-9_]*)`)
 var notificationSQLParameter = regexp.MustCompile(`\?[0-9]*|[:@$][a-zA-Z_][a-zA-Z0-9_]*`)
 
 // Match the repository's literal and bound kind equality queries, not arbitrary

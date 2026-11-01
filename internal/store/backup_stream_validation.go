@@ -48,14 +48,31 @@ func (s *Store) validateBackupDatabase(ctx context.Context, tx *sql.Tx, l Backup
 	if err = s.backupGet(ctx, tx, "metadata", "key-check", &check); err != nil || check.Version != 1 {
 		return errors.New("backup key metadata missing or unsupported")
 	}
+	// All notification relationships require the same configuration record.
+	// The transaction snapshot is immutable during validation. Retain only this
+	// one size-checked row, never a history-sized cache or a cross-call result.
+	var notificationConfig json.RawMessage
+	defer func() { clear(notificationConfig) }()
 	migrations := 0
+	providerFenceRequired := false
 	err = s.walkBackup(ctx, tx, l, func(f BackupFrame) error {
 		switch {
 		case f.Record != nil:
 			r := f.Record
+			needsFence, err := providerRecordNeedsFence(r.Kind, r.Data)
+			if err != nil {
+				return err
+			}
+			providerFenceRequired = providerFenceRequired || needsFence
 			if err := validateNotificationBackupRecord(*r, func(kind, id string) (json.RawMessage, error) {
+				if kind == notificationConfigKind && id == "settings" && notificationConfig != nil {
+					return notificationConfig, nil
+				}
 				var raw json.RawMessage
 				err := s.backupGet(ctx, tx, kind, id, &raw)
+				if err == nil && kind == notificationConfigKind && id == "settings" {
+					notificationConfig = raw
+				}
 				if err == sql.ErrNoRows {
 					err = ErrNotFound
 				}
@@ -125,8 +142,11 @@ func (s *Store) validateBackupDatabase(ctx context.Context, tx *sql.Tx, l Backup
 	if err != nil {
 		return err
 	}
-	if migrations != BackupSchemaVersion {
+	if migrations < BackupSchemaVersion || migrations > maxSchemaMigrationVersion {
 		return errors.New("incomplete backup migrations")
+	}
+	if providerFenceRequired && migrations < providerSuspensionMigrationVersion {
+		return errors.New("provider admission policy requires its migration fence")
 	}
 	return nil
 }

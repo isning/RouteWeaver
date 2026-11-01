@@ -4,8 +4,8 @@ set -euo pipefail
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 cd "$ROOT"
 MODE=${1:-quick}
-case "$MODE" in quick|full|static|secrets|backend|web|api|browser|native|runtime|managed|package) ;;
-  *) echo 'Usage: scripts/verify.sh [quick|full|static|secrets|backend|web|api|browser|native|runtime|managed|package]' >&2; exit 2 ;;
+case "$MODE" in quick|full|static|secrets|backend|backend_core|backend_backup|backend_httpapi|backend_store|backend_managed|web|api|browser|native|runtime|managed|package) ;;
+  *) echo 'Usage: scripts/verify.sh [quick|full|static|secrets|backend|backend_core|backend_backup|backend_httpapi|backend_store|backend_managed|web|api|browser|native|runtime|managed|package]' >&2; exit 2 ;;
 esac
 export GOMEMLIMIT=${GOMEMLIMIT:-768MiB}
 export npm_config_cache=${npm_config_cache:-"$ROOT/bin/cache/npm"}
@@ -28,14 +28,31 @@ secrets_gate() {
   stage 'Actual secret-scanner rejecting fixtures' python3 -m unittest discover -s scripts -p test_secrets.py
   stage 'Current tree, index and reachable Git history content scan' python3 scripts/check-secrets.py --scope all
 }
-backend_gate() {
+backend_tests() {
+  local inventory packages=()
+  # Command substitution propagates inventory errors (process substitution would
+  # hide them). Only complete package paths are selected, never individual tests.
+  inventory=$(python3 scripts/backend_packages.py "$1")
+  mapfile -t packages <<< "$inventory"
+  stage "Go behavior and race tests ($1 packages)" scripts/go.sh test -race -p=1 -count=1 -timeout=20m "${packages[@]}"
+}
+backend_core_gate() {
   stage 'Go formatting' scripts/format.sh --check
   stage 'Go vet' scripts/go.sh vet ./...
-  stage 'Go behavior and race tests' scripts/go.sh test -race -p=1 -count=1 -timeout=20m ./...
+  backend_tests core
   stage 'Go build' scripts/go.sh build ./...
+}
+backend_backup_gate() { backend_tests backup; }
+backend_httpapi_gate() { backend_tests httpapi; }
+backend_store_gate() { backend_tests store; }
+backend_managed_gate() {
   stage 'Managed runtime vet' scripts/go.sh -C runtimes/xray vet ./...
   stage 'Managed runtime behavior and race tests' scripts/go.sh -C runtimes/xray test -race -p=1 -count=1 -timeout=10m ./...
   stage 'Managed runtime build' scripts/go.sh -C runtimes/xray build ./...
+}
+backend_gate() {
+  backend_core_gate; backend_backup_gate; backend_httpapi_gate
+  backend_store_gate; backend_managed_gate
 }
 web_gate() {
   stage 'Web typecheck' npm --prefix web run typecheck
@@ -82,6 +99,10 @@ case "$MODE" in
   full)
     if [[ -n "${ROUTEWEAVER_BROWSER_SHARD:-}" ]]; then
       echo 'Full verification cannot select a partial browser shard. Unset ROUTEWEAVER_BROWSER_SHARD.' >&2
+      exit 2
+    fi
+    if [[ "${ROUTEWEAVER_CLIENT_PROCESS_TESTS:-}" != mihomo,sing-box ]]; then
+      echo 'Full verification requires ROUTEWEAVER_CLIENT_PROCESS_TESTS=mihomo,sing-box on an authorized compatible host.' >&2
       exit 2
     fi
     if [[ "${ROUTEWEAVER_NATIVE_PROCESS_TESTS:-}" != xray,sing-box ]]; then

@@ -79,7 +79,13 @@ func (s *Store) putTx(tx *sql.Tx, kind, id string, value any) error {
 		return err
 	}
 	if kind == "ledger" && clean {
+		if err = s.updateUsageHistoryTx(tx, generation, id, old, next); err != nil {
+			return err
+		}
 		if err = s.updateUsageWindowsTx(tx, old, next); err != nil {
+			return err
+		}
+		if err = s.updateUsageRebuildsTx(tx, id, old, next); err != nil {
 			return err
 		}
 		return s.acknowledgeUsageMutationTx(tx, generation)
@@ -128,8 +134,19 @@ func (s *Store) deleteTx(tx *sql.Tx, kind, id string) (int64, error) {
 			return 0, err
 		}
 	}
+	if kind == "users" && count > 0 {
+		if err = s.deleteUsageRebuildTx(tx, id); err != nil {
+			return 0, err
+		}
+	}
 	if kind == "ledger" && count > 0 && clean {
+		if err = s.updateUsageHistoryTx(tx, generation, id, old, nil); err != nil {
+			return 0, err
+		}
 		if err = s.updateUsageWindowsTx(tx, old, nil); err != nil {
+			return 0, err
+		}
+		if err = s.updateUsageRebuildsTx(tx, id, old, nil); err != nil {
 			return 0, err
 		}
 		if err = s.acknowledgeUsageMutationTx(tx, generation); err != nil {

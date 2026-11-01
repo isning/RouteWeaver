@@ -13,6 +13,7 @@ import (
 	"routeweaver/internal/agent"
 	"routeweaver/internal/domain"
 	"routeweaver/internal/entrypolicy"
+	"routeweaver/internal/store"
 	"runtime"
 	"strconv"
 	"strings"
@@ -46,6 +47,15 @@ func TestManagedObservationWindowBounds(t *testing.T) {
 }
 
 func TestNativeContinuousManagedServicePreservesPayloadAndRevocation(t *testing.T) {
+	testNativeContinuousManagedService(t, false, false)
+}
+func TestNativeManagedOperationalRecovery(t *testing.T) {
+	if os.Getenv("ROUTEWEAVER_OPERATIONAL_DRILL") != "1" {
+		t.Skip("explicit local operational drill opt-in required")
+	}
+	testNativeContinuousManagedService(t, true, false)
+}
+func testNativeContinuousManagedService(t *testing.T, operationalDrill, providerDrill bool) {
 	observationSeconds, err := managedObservationSeconds(os.Getenv("ROUTEWEAVER_MANAGED_OBSERVATION_SECONDS"))
 	if err != nil {
 		t.Fatal(err)
@@ -115,7 +125,8 @@ func TestNativeContinuousManagedServicePreservesPayloadAndRevocation(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
-	transport, err := agent.NewHTTPTransport(agent.HTTPTransportOptions{BaseURL: f.srv.URL, Scope: d.Scope, Token: token, RequestTimeout: time.Second, MaxAttempts: 1, Backoff: time.Millisecond, AllowLoopbackHTTP: true})
+	transportURL, operationalGate := operationalTransport(t, f, operationalDrill)
+	transport, err := agent.NewHTTPTransport(agent.HTTPTransportOptions{BaseURL: transportURL, Scope: d.Scope, Token: token, RequestTimeout: time.Second, MaxAttempts: 1, Backoff: time.Millisecond, AllowLoopbackHTTP: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -234,6 +245,14 @@ func TestNativeContinuousManagedServicePreservesPayloadAndRevocation(t *testing.
 	if err != nil || obs.Identity != d.Identity() {
 		t.Fatal("instance renewal replaced native identity")
 	}
+	if operationalGate != nil {
+		conn, d = runManagedOperationalDrill(t, f, conn, operationalGate, d, user.id, supervisor, reconciler, root, dial)
+		defer conn.Close()
+	}
+	if providerDrill {
+		conn = runNativeProviderSuspension(t, f, conn, d, user.id, supervisor, root, dial)
+		defer conn.Close()
+	}
 	// Explicit bounded reference observation; default CI retains the original test.
 	// This does not turn synthetic loopback traffic into a production capacity SLA.
 	if seconds := observationSeconds; seconds != 0 {
@@ -289,6 +308,28 @@ func TestNativeContinuousManagedServicePreservesPayloadAndRevocation(t *testing.
 					} else if !os.IsNotExist(statErr) {
 						databaseBytes[i] = -1
 					}
+				}
+				// Observation-only public persistence seam: aggregate counts/bytes, never values.
+				for _, kind := range []string{"meter-inbox", "meter-receipts", "meter-streams", "meter-pending", "ledger", "admission-budgets", "entry-admission-leases", "agent-desired", "agent-observations"} {
+					records, listErr := f.s.List(kind)
+					if listErr != nil {
+						t.Fatal(listErr)
+					}
+					var payloadBytes int
+					for _, record := range records {
+						payloadBytes += len(record)
+					}
+					t.Logf("reference records sample=%d kind=%s rows=%d logical_json_bytes=%d", sample, kind, len(records), payloadBytes)
+				}
+
+				// Existing bounded public inventory: metrics only, no plaintext row listing.
+				capacityCtx, capacityCancel := context.WithTimeout(context.Background(), time.Second)
+				capacity, capacityErr := f.s.HistoryCapacityInventory(capacityCtx, store.BackupLimits{MaxBytes: 1 << 30, MaxRows: 2000000, MaxRecordBytes: 32 << 20})
+				capacityCancel()
+				if capacityErr != nil {
+					t.Logf("reference history sample=%d inventory_known=false", sample)
+				} else {
+					t.Logf("reference history sample=%d inventory_known=true ledger_rows=%d ledger_at_least=%t backup_rows=%d backup_rows_at_least=%t", sample, capacity.NotificationLedgerRows.Count, capacity.NotificationLedgerRows.AtLeast, capacity.BackupRows.Count, capacity.BackupRows.AtLeast)
 				}
 				nativeRSS, nativeFDs, nativeKnown := referenceOwnedProcessMetrics(root)
 				t.Logf("reference storage/process sample=%d cp_db_bytes=%d cp_wal_bytes=%d cp_shm_bytes=%d native_metrics_known=%t native_rss_kib=%d native_fds=%d", sample, databaseBytes[0], databaseBytes[1], databaseBytes[2], nativeKnown, nativeRSS, nativeFDs)

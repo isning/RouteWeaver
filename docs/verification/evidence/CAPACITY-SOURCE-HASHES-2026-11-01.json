@@ -1,0 +1,9 @@
+{
+  "scripts/reference-cli-capacity.py": "e0ff1b0a73c7f2658a467e47ab42a604071213c6551ea5d9d42fefba65409dc0",
+  "scripts/capacity-fixture/main.go": "46fcd8b98e6299b7ba9192b3acb9bc019123aaac9c8d1ef7e867e92bddc75186",
+  "internal/httpapi/service_native_test.go": "7a1439db32e1a03e0c7c3b3f70dc2c25678126175477c0cbf85cc215f80b7d8d",
+  "go.mod": "ac41bad1b515e40453ccf686c5c555a9e2bcdd58274683cac707c5a75bc6bbb0",
+  "go.sum": "8f15d4c388eb79f0054de2355b620fcffc3a2416be2441fe2f391547aca70fe2",
+  "../capacity-evidence-20261101/control-plane": "665da126481b7c1748ac913b97ef32f7dc8420063688e5a429b85a6e3db13e21",
+  "../capacity-evidence-20261101/fixture": "df373aa9f8d11a4babbb19cc626e228ab987586f0d1ba4bafe45408e9382de22"
+}

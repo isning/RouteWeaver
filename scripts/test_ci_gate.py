@@ -44,9 +44,9 @@ class CIGateTests(unittest.TestCase):
 
     def test_workflow_declares_and_aggregates_every_required_gate(self):
         workflow = (Path(__file__).resolve().parents[1] / ".github/workflows/ci.yml").read_text()
-        jobs = set(re.findall(r"^  ([a-z]+):$", workflow, re.M)) - {"push", "pull_request", "workflow_dispatch", "verify"}
-        self.assertEqual(jobs, ci_gate.REQUIRED_JOBS)
-        needs = re.search(r"^    needs: \[([^\]]+)\]$", workflow, re.M)
+        jobs = set(re.findall(r"^  ([a-z_]+):$", workflow, re.M)) - {"push", "pull_request", "workflow_dispatch", "verify"}
+        self.assertEqual(jobs, ci_gate.REQUIRED_JOBS | ci_gate.BACKEND_JOBS)
+        needs = re.search(r"^    needs: \[([^\]]+)\]$", workflow.split("\n  verify:\n", 1)[1], re.M)
         self.assertIsNotNone(needs)
         self.assertEqual({name.strip() for name in needs.group(1).split(",")}, ci_gate.REQUIRED_JOBS)
         aggregate = workflow.split("\n  verify:\n", 1)[1]
@@ -56,6 +56,37 @@ class CIGateTests(unittest.TestCase):
         for reference in re.findall(r"uses: ([^\s]+)", workflow):
             if not reference.startswith("./"):
                 self.assertRegex(reference, r"^[^@]+@[0-9a-f]{40}$")
+
+    def test_backend_aggregate_is_fail_closed_and_required_transitively(self):
+        workflow = (Path(__file__).resolve().parents[1] / ".github/workflows/ci.yml").read_text()
+        backend = workflow.split("\n  backend:\n", 1)[1].split("\n  web:\n", 1)[0]
+        self.assertIn("name: Control plane, agent and managed runtime", backend)
+        self.assertIn("if: ${{ always() }}", backend)
+        self.assertIn("python3 scripts/ci_gate.py backend", backend)
+        needs = re.search(r"needs: \[([^\]]+)\]", backend)
+        self.assertEqual({n.strip() for n in needs[1].split(",")}, ci_gate.BACKEND_JOBS)
+        successes = {name: {"result": "success"} for name in ci_gate.BACKEND_JOBS}
+        ci_gate.verify_results(successes, ci_gate.BACKEND_JOBS)
+        for name in ci_gate.BACKEND_JOBS:
+            for state in ("failure", "cancelled", "skipped", None):
+                with self.subTest(name=name, state=state), self.assertRaises(ValueError):
+                    ci_gate.verify_results({**successes, name: {"result": state}}, ci_gate.BACKEND_JOBS)
+            with self.assertRaises(ValueError):
+                ci_gate.verify_results({k: v for k, v in successes.items() if k != name}, ci_gate.BACKEND_JOBS)
+            block = re.split(r"\n  [a-z_]+:\n", workflow.split(f"\n  {name}:\n", 1)[1], maxsplit=1)[0]
+            self.assertIn(f"scripts/verify.sh {name}", block)
+
+    def test_backend_cli_requires_exact_success_set(self):
+        import json
+        path = str(Path(__file__).with_name("ci_gate.py"))
+        successes = {n: {"result": "success"} for n in ci_gate.BACKEND_JOBS}
+        for data, args, expected in ((successes, ["backend"], 0),
+                                     ({}, ["backend"], 1),
+                                     (successes, [], 1),
+                                     (successes, ["unknown"], 1)):
+            result = subprocess.run([sys.executable, path, *args], capture_output=True,
+                                    env={**os.environ, "ROUTEWEAVER_CI_RESULTS": json.dumps(data)})
+            self.assertEqual(result.returncode, expected, result.stderr)
 
     def test_browser_ci_uses_installed_chrome_without_weakening_sandbox(self):
         root = Path(__file__).resolve().parents[1]

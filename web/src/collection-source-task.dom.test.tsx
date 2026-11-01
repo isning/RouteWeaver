@@ -243,7 +243,7 @@ it(
       sources: [source("one", "One"), source("two", "Two")],
     });
     mount();
-    await scenario.click(() => screen.findByRole("button", { name: /Travel/ }));
+    await scenario.click(() => screen.findByRole("button", { name: /^Travel.*编辑集合/ }));
     scenario.assertActive();
     fireEvent.change(screen.getByLabelText("集合名称"), {
       target: { value: "Unsaved travel" },
@@ -357,7 +357,7 @@ it(
       sources: [source("one", "One"), source("two", "Two")],
     });
     mount();
-    await scenario.click(() => screen.findByRole("button", { name: /Travel/ }));
+    await scenario.click(() => screen.findByRole("button", { name: /^Travel.*编辑集合/ }));
     scenario.assertActive();
     const one = screen.getByRole("button", {
       name: /1\. One.*来源处理.*已配置 1 步/,
@@ -392,7 +392,7 @@ it(
     scenario.assertActive();
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     scenario.assertActive();
-    await scenario.click(() => screen.getByRole("button", { name: /Travel/ }));
+    await scenario.click(() => screen.getByRole("button", { name: /^Travel.*编辑集合/ }));
     scenario.assertActive();
     expect(
       screen
@@ -734,7 +734,7 @@ it(
     });
     mount();
     await userEvent.click(
-      await screen.findByRole("button", { name: /Travel/ }),
+      await screen.findByRole("button", { name: /^Travel.*编辑集合/ }),
     );
     fireEvent.change(screen.getByLabelText("集合名称"), {
       target: { value: "Keep recovery draft" },
@@ -1072,7 +1072,7 @@ it(
     });
     mount();
     await userEvent.click(
-      await screen.findByRole("button", { name: /Travel/ }),
+      await screen.findByRole("button", { name: /^Travel.*编辑集合/ }),
     );
     fireEvent.change(screen.getByLabelText("集合名称"), {
       target: { value: "Unsaved review task" },
@@ -1183,7 +1183,7 @@ it("retains a failed collection save through repeated canceled discard and retri
     saveCollection: async (value) => ++attempts === 1 ? json({ message: "集合暂未保存，请重试" }, 503) : json(value),
   });
   mount();
-  const opener = await screen.findByRole("button", { name: /Travel/ });
+  const opener = await screen.findByRole("button", { name: /^Travel.*编辑集合/ });
   await userEvent.click(opener);
   fireEvent.change(screen.getByLabelText("集合名称"), { target: { value: "Travel edited" } });
   await userEvent.click(screen.getByRole("button", { name: "保存集合" }));
@@ -1207,6 +1207,6 @@ it("retains a failed collection save through repeated canceled discard and retri
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   expect(writes).toHaveLength(2);
   expect(writes[1]).toEqual(writes[0]);
-  await screen.findByRole("button", { name: /Travel edited/ });
+  await screen.findByRole("button", { name: /^Travel edited.*编辑集合/ });
   expect(hasUnsavedChanges()).toBe(false);
 });

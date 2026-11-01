@@ -1,0 +1,829 @@
+{
+  "source_commit": "a26b9f95b0d10653a2a191df43bfff9a72209cc0",
+  "status": "passed",
+  "bounds": {
+    "process_rss_kib": 524288,
+    "owned_data_bytes": 1073741824,
+    "measurement_watchdog_seconds": 240,
+    "request_timeout_seconds": 30
+  },
+  "profile": "25 synthetic accounts; empty then 100000 ledger rows, 4000/account; first+5 warm serial, then 2 requests/client at 1/5/25 concurrent clients with >=2 s between own request starts",
+  "environment": {
+    "GOMAXPROCS": 1,
+    "GOMEMLIMIT": "256MiB soft target",
+    "hard_cpu_rss_limits": "unknown",
+    "native_child": "none",
+    "shared_host": "not isolated"
+  },
+  "setup": [
+    {
+      "kind": "accounts",
+      "elapsed_seconds": 2.7667219350005325,
+      "max_rss_kib": 11148,
+      "sampled_cpu_seconds": 2.52,
+      "owned_data_bytes": 881496
+    },
+    {
+      "kind": "history",
+      "elapsed_seconds": 30.517065351999918,
+      "max_rss_kib": 21920,
+      "sampled_cpu_seconds": 30.34,
+      "owned_data_bytes": 62607428
+    }
+  ],
+  "stages": [
+    {
+      "ledger_rows": 0,
+      "observations": [
+        {
+          "concurrent_clients": 1,
+          "elapsed_seconds": 4.010614390999763,
+          "requests": 2,
+          "errors": 0,
+          "p50_ms": 2.057929001239245,
+          "p95_ms": 4.075000000739237,
+          "max_ms": 4.075000000739237,
+          "cpu_seconds": 0.0,
+          "results": [
+            {
+              "ms": 2.057929001239245,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 4.075000000739237,
+              "status": 200,
+              "exact_usage": true
+            }
+          ]
+        },
+        {
+          "concurrent_clients": 5,
+          "elapsed_seconds": 4.009971647999919,
+          "requests": 10,
+          "errors": 0,
+          "p50_ms": 4.9824849993456155,
+          "p95_ms": 8.068311999522848,
+          "max_ms": 8.068311999522848,
+          "cpu_seconds": 0.020000000000000018,
+          "results": [
+            {
+              "ms": 4.9824849993456155,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 6.051369000488194,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 5.497899999681977,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 8.068311999522848,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 4.65985699884186,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 4.437347999555641,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 4.4872899998154026,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 6.090273000154411,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 2.50829400101793,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 6.487418000688194,
+              "status": 200,
+              "exact_usage": true
+            }
+          ]
+        },
+        {
+          "concurrent_clients": 25,
+          "elapsed_seconds": 4.033582536998438,
+          "requests": 50,
+          "errors": 0,
+          "p50_ms": 29.082891000143718,
+          "p95_ms": 77.5106559995038,
+          "max_ms": 90.62248699956399,
+          "cpu_seconds": 0.16000000000000014,
+          "results": [
+            {
+              "ms": 4.984545999832335,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 4.498015998251503,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 6.365131999700679,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 90.62248699956399,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 8.510130999638932,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 8.242750000135857,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 18.09763400160591,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 19.174726001438103,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 12.26682400010759,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 4.564115000903257,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 15.927672999168863,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 18.423354000333347,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 17.648869999902672,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 25.10743399943749,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 4.264777000571485,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 26.41737500016461,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 26.59698500065133,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 28.405441998984315,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 29.334603001188952,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 26.782638999065966,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 28.361402000882663,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 68.43682500038994,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 29.082891000143718,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 27.895285000340664,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 31.297055998948053,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 77.20993600014481,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 32.532721999814385,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 27.87850800086744,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 33.325087000775966,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 60.611280001467094,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 34.70403299979807,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 52.035130000149366,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 36.16560699992988,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 57.47089699980279,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 39.72558099849266,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 26.209107998511172,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 38.094421001005685,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 66.50795799941989,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 39.2657890006376,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 77.8757370007952,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 11.768808000852005,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 75.70924900028331,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 30.382782000742736,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 73.93804000093951,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 31.425859000592027,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 75.22896799855516,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 33.72263299934275,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 77.5106559995038,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 4.304883999793674,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 66.295443000854,
+              "status": 200,
+              "exact_usage": true
+            }
+          ]
+        }
+      ],
+      "startup_seconds": 0.10099712199917121,
+      "first": {
+        "ms": 3.6258559994166717,
+        "status": 200,
+        "exact_usage": true
+      },
+      "warm": [
+        {
+          "ms": 1.8402709993097233,
+          "status": 200,
+          "exact_usage": true
+        },
+        {
+          "ms": 1.8657050004549092,
+          "status": 200,
+          "exact_usage": true
+        },
+        {
+          "ms": 1.5969180003594374,
+          "status": 200,
+          "exact_usage": true
+        },
+        {
+          "ms": 2.1927570014668163,
+          "status": 200,
+          "exact_usage": true
+        },
+        {
+          "ms": 2.9519719992094906,
+          "status": 200,
+          "exact_usage": true
+        }
+      ],
+      "before": {
+        "rss_kib": 23824,
+        "cpu_seconds": 2.61,
+        "owned_data_bytes": 575964
+      },
+      "after": {
+        "rss_kib": 24756,
+        "cpu_seconds": 2.81,
+        "owned_data_bytes": 575964
+      },
+      "max_rss_kib": 24756
+    },
+    {
+      "ledger_rows": 100000,
+      "observations": [
+        {
+          "concurrent_clients": 1,
+          "elapsed_seconds": 4.001541481000459,
+          "requests": 2,
+          "errors": 0,
+          "p50_ms": 616.9880559991725,
+          "p95_ms": 678.2119350009452,
+          "max_ms": 678.2119350009452,
+          "cpu_seconds": 1.3000000000000007,
+          "results": [
+            {
+              "ms": 616.9880559991725,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 678.2119350009452,
+              "status": 200,
+              "exact_usage": true
+            }
+          ]
+        },
+        {
+          "concurrent_clients": 5,
+          "elapsed_seconds": 8.514440310000282,
+          "requests": 10,
+          "errors": 0,
+          "p50_ms": 4032.571014000496,
+          "p95_ms": 5198.826669999107,
+          "max_ms": 5198.826669999107,
+          "cpu_seconds": 8.569999999999999,
+          "results": [
+            {
+              "ms": 4269.116150000627,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 4032.571014000496,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 5083.905004001281,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 3428.7045760011097,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 4966.49752400117,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 3436.840831000154,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 5136.985880999418,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 3335.5364609997196,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 5198.826669999107,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 3183.3386679991236,
+              "status": 200,
+              "exact_usage": true
+            }
+          ]
+        },
+        {
+          "concurrent_clients": 25,
+          "elapsed_seconds": 34.495261459000176,
+          "requests": 50,
+          "errors": 0,
+          "p50_ms": 16100.625222001327,
+          "p95_ms": 19197.703204999925,
+          "max_ms": 19224.478807000196,
+          "cpu_seconds": 34.870000000000005,
+          "results": [
+            {
+              "ms": 19224.478807000196,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 14475.1991739995,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 19197.703204999925,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 15159.684840999034,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 18823.351834998903,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 15247.068632999799,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 18384.677968000688,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 16041.101607999735,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 17666.911626,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 16682.12175700137,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 18785.243365000497,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 14388.081625000268,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 16896.333934999348,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 14562.502361000952,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 19186.832616000174,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 15029.896579000706,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 18371.5288530002,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 14896.332643998903,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 18383.53348900091,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 15916.1559639997,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 18380.189318000703,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 15808.6911040009,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 15769.40863100026,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 13914.033410999764,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 19206.31524900091,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 14981.52865800148,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 18380.274503999317,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 16069.704204001027,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 15942.548065000665,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 14196.065520000047,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 18378.89663399983,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 15066.319844001555,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 16274.070045999906,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 15453.466957998899,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 19173.615390000123,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 14542.665547998695,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 18790.0693470001,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 14900.191152999469,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 16469.76984899993,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 17692.652417999852,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 18378.520489999573,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 16100.625222001327,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 18374.7695080001,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 14994.20364800062,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 18378.386947000763,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 15949.697777999972,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 18372.492084999976,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 15923.218530000668,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 18376.43991999903,
+              "status": 200,
+              "exact_usage": true
+            },
+            {
+              "ms": 14895.213662999595,
+              "status": 200,
+              "exact_usage": true
+            }
+          ]
+        }
+      ],
+      "startup_seconds": 0.807306527000037,
+      "first": {
+        "ms": 671.5552620007657,
+        "status": 200,
+        "exact_usage": true
+      },
+      "warm": [
+        {
+          "ms": 627.1739410003647,
+          "status": 200,
+          "exact_usage": true
+        },
+        {
+          "ms": 580.5455990011978,
+          "status": 200,
+          "exact_usage": true
+        },
+        {
+          "ms": 592.1381909993215,
+          "status": 200,
+          "exact_usage": true
+        },
+        {
+          "ms": 690.9299620001548,
+          "status": 200,
+          "exact_usage": true
+        },
+        {
+          "ms": 615.8406960003049,
+          "status": 200,
+          "exact_usage": true
+        }
+      ],
+      "before": {
+        "rss_kib": 28188,
+        "cpu_seconds": 4.48,
+        "owned_data_bytes": 63077016
+      },
+      "after": {
+        "rss_kib": 61040,
+        "cpu_seconds": 53.03,
+        "owned_data_bytes": 63077016
+      },
+      "max_rss_kib": 437220
+    }
+  ],
+  "binary_sha256": "0a8f1dcc65c950474bb67fa53744262779d7015e316f0a4a7785ca097faa65a8",
+  "fixture_sha256": "eb1a42beaf5cc9cc50c4e6f65872ad5ea4db62f0a3668f98f19702ff371eb6d0",
+  "temporary_data_cleaned": true
+}

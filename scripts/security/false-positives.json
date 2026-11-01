@@ -202,5 +202,17 @@
     "rule": "jfrog-identity-token",
     "lineSHA256": "b453eb5deeb160744bcb38d1f18f446bec0c340fff2ee465fc891f74f52f25ca",
     "reason": "Historical reference executable SHA256 metadata from commit 99b7bdf; verified against retained operations-updated-reference-20261101/bin/reference-managed-xray bytes on 2026-11-01. Exact path/rule/line only; historical receipt not rewritten."
+  },
+  {
+    "path": "docs/verification/evidence/OPERATIONS-DRILLS-2026-11-01.json",
+    "rule": "jfrog-identity-token",
+    "lineSHA256": "1d998b97ba9d86dfaaae5d587f62eac33acfeba005fd4ef1fe7ced1e2f6aabf6",
+    "reason": "Operational drill source/executable SHA256 metadata; exact value recomputed against retained operations-drills-20261101/internal/agent/managed_xray_process_test.go bytes on 2026-11-01. Duplicate-free strict hash map and all eight hashes verified. Exact path/rule/line only; receipt unchanged."
+  },
+  {
+    "path": "docs/verification/evidence/OPERATIONS-DRILLS-2026-11-01.json",
+    "rule": "jfrog-identity-token",
+    "lineSHA256": "08ce6ddd0d1af33d96830e6322815b6142dfdea38b716b601019c598b2abb075",
+    "reason": "Operational drill source/executable SHA256 metadata; exact value recomputed against retained operations-drills-20261101/bin/drill-managed-xray bytes on 2026-11-01. Duplicate-free strict hash map and all eight hashes verified. Exact path/rule/line only; receipt unchanged."
   }
 ]

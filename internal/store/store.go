@@ -27,6 +27,7 @@ type State struct {
 	Revisions []domain.Revision `json:"revisions"`
 }
 type Store struct {
+	offlineBackupPrivate       bool
 	notificationMigrationLimit int64
 	db                         *sql.DB
 	aead                       cipher.AEAD

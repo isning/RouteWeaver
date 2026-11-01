@@ -5,6 +5,11 @@ import type {
   ServerDeployment,
   ServerProgram,
 } from "./types";
+/** Endpoint review metadata is never part of renderer/application intent. */
+export function endpointIntent(endpoint: ManagedEndpoint): ManagedEndpoint {
+  const { revisionToken: _revisionToken, ...intent } = endpoint;
+  return intent;
+}
 /** Only an exact, policy-free legacy chain may be rewritten by ordered controls.
  * This proof needs a revealed draft; redacted summaries are not editable intent.
  */
@@ -127,7 +132,7 @@ export function compilePath(
     return {
       ...prior,
       instance: prior?.instance || instance,
-      listener: endpoint,
+      listener: endpointIntent(endpoint),
       egress: next ? [{ ...next }] : [],
       rules: prior?.rules || [],
       resources: prior?.resources || [],
@@ -162,6 +167,9 @@ export function normalizeDeployment(value: ServerDeployment): ServerDeployment {
       ...value.ir,
       programs: (value.ir.programs || []).map((program) => ({
         ...program,
+        ...(program.listener
+          ? { listener: endpointIntent(program.listener) }
+          : {}),
         egress: program.egress || [],
         rules: program.rules || [],
         resources: program.resources || [],

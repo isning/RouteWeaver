@@ -660,18 +660,41 @@ function InventoryEditor({
       },
       selectedEndpointInstance,
     );
+  const endpointValue = (values: Record<string, unknown>) => {
+    const { endpointHostId: _endpointHostId, ...fields } = values;
+    const value = { ...entity!.value, ...fields, id: entity!.id };
+    if (entity!.kind === "managed-endpoints")
+      Object.assign(value, {
+        connection: normalizeConnection({
+          ...currentEndpoint?.connection,
+          ...(value as unknown as ManagedEndpoint).connection,
+        }),
+      });
+    return value;
+  };
   const mutation = useMutation({
-    mutationFn: (values: Record<string, unknown>) => {
-      const { endpointHostId: _endpointHostId, ...fields } = values;
-      const value = { ...entity!.value, ...fields, id: entity!.id };
-      if (entity!.kind === "managed-endpoints")
-        Object.assign(value, {
-          connection: normalizeConnection({
-            // Unopened advanced fields are not registered in the submitted form.
-            ...currentEndpoint?.connection,
-            ...(value as unknown as ManagedEndpoint).connection,
-          }),
-        });
+    mutationFn: ({
+      fields,
+      impact,
+    }: {
+      fields: Record<string, unknown>;
+      impact?: string;
+    }) => {
+      const value = endpointValue(fields);
+      if (entity!.kind === "managed-endpoints" && entity!.value) {
+        const { revisionToken, ...draft } = value as ManagedEndpoint;
+        return request<ManagedEndpoint>(
+          `/managed-endpoints/${encodeURIComponent(draft.id)}`,
+          {
+            method: "PUT",
+            headers: {
+              "If-Match": revisionToken || "",
+              "X-Endpoint-Impact": impact || "",
+            },
+            body: JSON.stringify(draft),
+          },
+        );
+      }
       return saveRecord<HostRecord | CoreInstance | ManagedEndpoint>(
         entity!.kind,
         value,
@@ -686,6 +709,89 @@ function InventoryEditor({
       onClose();
     },
   });
+  const impact = useMutation({
+    mutationFn: async (fields: Record<string, unknown>) => {
+      const task = entity;
+      const { revisionToken, ...draft } = endpointValue(
+        fields,
+      ) as ManagedEndpoint;
+      const review = await request<{
+        endpoint: { id: string; name: string };
+        proposed: {
+          name: string;
+          instanceId: string;
+          instanceName: string;
+          host: string;
+          port: number;
+          protocol: string;
+        };
+        changedFields: string[];
+        deployments: { id: string; name: string }[];
+        routes: { id: string; name: string }[];
+        links: { id: string; name: string }[];
+        reviewToken: string;
+      }>(`/managed-endpoints/${encodeURIComponent(draft.id)}/impact`, {
+        method: "POST",
+        headers: { "If-Match": revisionToken || "" },
+        body: JSON.stringify(draft),
+      });
+      return { task, fields, review };
+    },
+    onSuccess: ({ task, fields, review }) => {
+      if (!task || owner.current !== task) return;
+      confirm(
+        {
+          title: `保存端点「${review.endpoint.name}」的修改？`,
+          confirmLabel: "确认保存端点",
+          cancelLabel: "返回编辑",
+          description: (
+            <div className="space-y-3">
+              <p>修改项目：{review.changedFields.join("、") || "无变化"}。</p>
+              <p>
+                保存为：{review.proposed.name} ·{" "}
+                {review.proposed.instanceName || review.proposed.instanceId} ·{" "}
+                {review.proposed.protocol} · {review.proposed.host}:
+                {review.proposed.port}
+              </p>
+              {(
+                [
+                  ["转发配置", review.deployments],
+                  ["发布线路", review.routes],
+                  ["连接关系", review.links],
+                ] as const
+              ).map(([label, items]) => (
+                <div key={label}>
+                  <p>
+                    {label}：
+                    {items.length ? `${items.length} 项需要重新核对` : "无引用"}
+                  </p>
+                  {items.length > 0 && (
+                    <ul>
+                      {items.map((item) => (
+                        <li key={item.id}>
+                          {item.name || item.id}{" "}
+                          <span className="text-sm text-muted-foreground">
+                            （{item.id}）
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              ))}
+              <p>
+                只更新端点清单，不会修改已保存的转发配置、切换出口或下发到节点。引用此端点的配置需另行更新、校验并确认发布。
+              </p>
+            </div>
+          ),
+        },
+        (stillCurrent) => {
+          if (stillCurrent() && owner.current === task)
+            mutation.mutate({ fields, impact: review.reviewToken });
+        },
+      );
+    },
+  });
   const names: Record<string, string> = {
     hosts: "服务器",
     "core-instances": "核心实例",
@@ -698,6 +804,7 @@ function InventoryEditor({
     }
     form.resetFields();
     mutation.reset();
+    impact.reset();
     existingEndpointSnapshot.current =
       entity.kind === "managed-endpoints" && entity.value
         ? structuredClone({
@@ -743,7 +850,7 @@ function InventoryEditor({
     setBaseline(JSON.stringify(form.getFieldsValue(true)));
   }, [entity, form]);
   const close = () => {
-    if (mutation.isPending) return;
+    if (mutation.isPending || impact.isPending || confirming) return;
     if (!changed) return onClose();
     confirm(
       {
@@ -767,11 +874,11 @@ function InventoryEditor({
           form.resetFields();
         }
       }}
-      pending={mutation.isPending}
+      pending={mutation.isPending || impact.isPending}
       footer={
         <div className="flex w-full flex-wrap items-center justify-end gap-2">
           <ActionButton
-            disabled={mutation.isPending}
+            disabled={mutation.isPending || impact.isPending || confirming}
             onClick={close}
             variant="outline"
           >
@@ -780,7 +887,7 @@ function InventoryEditor({
           <ActionButton
             type="submit"
             form={formId}
-            pending={mutation.isPending}
+            pending={mutation.isPending || impact.isPending}
             variant="default"
           >
             保存
@@ -799,19 +906,22 @@ function InventoryEditor({
       <AppForm
         id={formId}
         form={form}
-        disabled={mutation.isPending}
+        disabled={mutation.isPending || impact.isPending || confirming}
         onFinish={(v) => {
           if (
             !entity ||
             owner.current !== entity ||
             mutation.isPending ||
+            impact.isPending ||
             confirming
           )
             return;
-          mutation.mutate(v);
+          if (entity.kind === "managed-endpoints" && entity.value)
+            impact.mutate(v);
+          else mutation.mutate({ fields: v });
         }}
       >
-        <ErrorNotice error={mutation.error} />
+        <ErrorNotice error={mutation.error || impact.error} />
         {displayEntity?.kind === "hosts" ? (
           <>
             <AppField

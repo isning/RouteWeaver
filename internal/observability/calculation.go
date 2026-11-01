@@ -207,6 +207,9 @@ func ViewOf(id string, s State, now time.Time) View {
 	c := s.Config.Provider
 	if e := ValidateConfig(s.Config); e != nil {
 		p.StatusReason = "invalid_provider_configuration"
+		if c != nil && c.ExhaustionAction != "advisory" {
+			p.ManagedAdmissionReason = "provider-usage-unknown"
+		}
 		result.Provider = p
 		return result
 	}
@@ -218,6 +221,7 @@ func ViewOf(id string, s State, now time.Time) View {
 		total, _ := TotalBytes(*c)
 		p.TotalBytes = &total
 	}
+	p.ExhaustionAction = c.ExhaustionAction
 	p.Source = c.NotificationSource
 	if p.Source == "none" {
 		if s.Statement != nil {
@@ -270,6 +274,7 @@ func ViewOf(id string, s State, now time.Time) View {
 		p.StatusReason = "operator_configured_unlimited"
 		p.NotificationEligible = false
 	}
+	p.ManagedAdmissionReason, _ = managedAdmissionView(c, p, now)
 	result.Provider = p
 	return result
 }

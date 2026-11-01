@@ -1,0 +1,203 @@
+{
+  "status": "passed",
+  "exit_code": 0,
+  "production_source_commit": "4d384e2",
+  "parent_test_cp_GOMAXPROCS": 1,
+  "parent_test_cp_GOMEMLIMIT": "256MiB soft target",
+  "native_environment": "Go settings not inherited; defaults unmeasured",
+  "hard_cpu_memory_limits": "unknown",
+  "scope": "single synthetic managed flow, bounded 120 s observation; aggregate public Store.List metric follow-on, not retrospective attribution of old DB",
+  "samples": {
+    "0": {
+      "records": {
+        "meter-inbox": {
+          "rows": 2,
+          "logical_json_bytes": 1421
+        },
+        "meter-receipts": {
+          "rows": 2,
+          "logical_json_bytes": 132
+        },
+        "meter-streams": {
+          "rows": 1,
+          "logical_json_bytes": 16
+        },
+        "meter-pending": {
+          "rows": 0,
+          "logical_json_bytes": 0
+        },
+        "ledger": {
+          "rows": 1,
+          "logical_json_bytes": 559
+        },
+        "admission-budgets": {
+          "rows": 1,
+          "logical_json_bytes": 542
+        },
+        "entry-admission-leases": {
+          "rows": 1,
+          "logical_json_bytes": 624
+        },
+        "agent-desired": {
+          "rows": 1,
+          "logical_json_bytes": 2687
+        },
+        "agent-observations": {
+          "rows": 1,
+          "logical_json_bytes": 1485
+        }
+      },
+      "db_bytes": 4096,
+      "wal_bytes": 1874632,
+      "shm_bytes": 32768,
+      "native_metrics_known": true,
+      "native_rss_kib": 33668,
+      "native_fds": 12
+    },
+    "30": {
+      "records": {
+        "meter-inbox": {
+          "rows": 32,
+          "logical_json_bytes": 22816
+        },
+        "meter-receipts": {
+          "rows": 32,
+          "logical_json_bytes": 2112
+        },
+        "meter-streams": {
+          "rows": 1,
+          "logical_json_bytes": 17
+        },
+        "meter-pending": {
+          "rows": 0,
+          "logical_json_bytes": 0
+        },
+        "ledger": {
+          "rows": 4,
+          "logical_json_bytes": 2242
+        },
+        "admission-budgets": {
+          "rows": 1,
+          "logical_json_bytes": 544
+        },
+        "entry-admission-leases": {
+          "rows": 1,
+          "logical_json_bytes": 624
+        },
+        "agent-desired": {
+          "rows": 1,
+          "logical_json_bytes": 2687
+        },
+        "agent-observations": {
+          "rows": 1,
+          "logical_json_bytes": 1485
+        }
+      },
+      "db_bytes": 167936,
+      "wal_bytes": 4120032,
+      "shm_bytes": 32768,
+      "native_metrics_known": true,
+      "native_rss_kib": 34652,
+      "native_fds": 12
+    },
+    "60": {
+      "records": {
+        "meter-inbox": {
+          "rows": 62,
+          "logical_json_bytes": 44236
+        },
+        "meter-receipts": {
+          "rows": 62,
+          "logical_json_bytes": 4092
+        },
+        "meter-streams": {
+          "rows": 1,
+          "logical_json_bytes": 17
+        },
+        "meter-pending": {
+          "rows": 0,
+          "logical_json_bytes": 0
+        },
+        "ledger": {
+          "rows": 7,
+          "logical_json_bytes": 3925
+        },
+        "admission-budgets": {
+          "rows": 1,
+          "logical_json_bytes": 544
+        },
+        "entry-admission-leases": {
+          "rows": 1,
+          "logical_json_bytes": 624
+        },
+        "agent-desired": {
+          "rows": 1,
+          "logical_json_bytes": 2687
+        },
+        "agent-observations": {
+          "rows": 1,
+          "logical_json_bytes": 1485
+        }
+      },
+      "db_bytes": 167936,
+      "wal_bytes": 4120032,
+      "shm_bytes": 32768,
+      "native_metrics_known": true,
+      "native_rss_kib": 34984,
+      "native_fds": 12
+    },
+    "90": {
+      "records": {
+        "meter-inbox": {
+          "rows": 92,
+          "logical_json_bytes": 65653
+        },
+        "meter-receipts": {
+          "rows": 92,
+          "logical_json_bytes": 6072
+        },
+        "meter-streams": {
+          "rows": 1,
+          "logical_json_bytes": 17
+        },
+        "meter-pending": {
+          "rows": 0,
+          "logical_json_bytes": 0
+        },
+        "ledger": {
+          "rows": 10,
+          "logical_json_bytes": 5609
+        },
+        "admission-budgets": {
+          "rows": 1,
+          "logical_json_bytes": 545
+        },
+        "entry-admission-leases": {
+          "rows": 1,
+          "logical_json_bytes": 624
+        },
+        "agent-desired": {
+          "rows": 1,
+          "logical_json_bytes": 2687
+        },
+        "agent-observations": {
+          "rows": 1,
+          "logical_json_bytes": 1485
+        }
+      },
+      "db_bytes": 221184,
+      "wal_bytes": 4120032,
+      "shm_bytes": 32768,
+      "native_metrics_known": true,
+      "native_rss_kib": 35160,
+      "native_fds": 12
+    }
+  },
+  "hashes": {
+    "service_native_test.go": "7a1439db32e1a03e0c7c3b3f70dc2c25678126175477c0cbf85cc215f80b7d8d",
+    "httpapi.test": "ce86c14a86fabdf60b3a3161853e17b5691e80855a32b41c38097e3843abc892",
+    "reference-managed-xray": "187c3349928dbf25796f3ea8753a37d2748484070e152a5d1896a7380394c344"
+  },
+  "assertion_result": "120 payload samples passed; max RTT 54.50486 ms; unchanged native identity; new revoked flow denied, existing flow closed within admission lease, runtime live, driver cancellation/cleanup passed",
+  "elapsed_test_seconds": 141.97
+}

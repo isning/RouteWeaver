@@ -193,7 +193,7 @@ it("reveals merge order only for multiple sources and preserves both processing 
   });
   vi.stubGlobal("fetch", fetcher);
   mount();
-  await userEvent.click(await screen.findByRole("button", { name: /Travel/ }));
+  await userEvent.click(await screen.findByRole("button", { name: /^Travel.*编辑集合/ }));
   expect(screen.queryByText(/按此顺序合并/)).toBeNull();
   expect(screen.queryByRole("button", { name: "下移来源 1" })).toBeNull();
   await userEvent.click(screen.getByText("1. One"));

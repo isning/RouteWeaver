@@ -1,0 +1,10 @@
+{
+  "scripts/reference-overview-history.py": "4b939314545fcdc0ee3a8c63e0422a8d89d39e79382eb9b9be00baac41a1e842",
+  "scripts/overview-fixture/main.go": "7001f8ce3cbfe5006c92a33b4e567fef108d4b63067dbbb3b010a7e55156d52b",
+  "internal/httpapi/admin.go": "a881e0c08ae44269d1872d0db3e645d596e3e4e27df327809045d7c9abdb341f",
+  "internal/store/billing.go": "d028c0b5fe4625288b6df87661c67b67c98daef1dbcfc448ce154e7fa2aaa00d",
+  "go.mod": "ac41bad1b515e40453ccf686c5c555a9e2bcdd58274683cac707c5a75bc6bbb0",
+  "go.sum": "8f15d4c388eb79f0054de2355b620fcffc3a2416be2441fe2f391547aca70fe2",
+  "../overview-evidence-20261101/control-plane": "0a8f1dcc65c950474bb67fa53744262779d7015e316f0a4a7785ca097faa65a8",
+  "../overview-evidence-20261101/fixture": "eb1a42beaf5cc9cc50c4e6f65872ad5ea4db62f0a3668f98f19702ff371eb6d0"
+}

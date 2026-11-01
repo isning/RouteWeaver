@@ -425,7 +425,7 @@ func managedServiceFixture(t *testing.T) (fleetFixture, sessionClient, int) {
 	instance := domain.CoreInstance{ID: "fleet-a", Name: "Managed entry", HostID: "host-fleet-a", AdapterID: render.ServerAdapterManagedXray, Version: render.ManagedXrayVersion}
 	endpoint := domain.ManagedEndpoint{ID: "entry-fleet-a", InstanceID: instance.ID, Name: "Managed public", Connection: domain.Connection{Protocol: "vless", Host: "127.0.0.1", Port: port, UUID: "00000000-0000-4000-8000-000000000001"}}
 	f.post(t, "core-instances", instance, 200)
-	f.post(t, "managed-endpoints", endpoint, 200)
+	f.updateEndpoint(t, endpoint)
 	deployment := httpapi.ServerDeployment{ID: f.in.DeploymentID, Name: "Managed fleet", IR: domain.ServerDeploymentIR{SchemaVersion: "1.0", ID: f.in.DeploymentID, TopologyRevision: "fleet-topology", Programs: []domain.ServerProgram{{Instance: instance, Listener: endpoint, DestinationPolicy: &domain.DestinationPolicy{AllowCIDRs: []string{"127.0.0.1/32"}}}}}}
 	f.saveDeployment(t, deployment)
 	f.post(t, "published-routes", map[string]any{"id": "fleet-route", "name": "Managed route", "deploymentId": deployment.ID, "endpointIds": []string{endpoint.ID}, "publicHost": "127.0.0.1", "publicPort": port}, 200)

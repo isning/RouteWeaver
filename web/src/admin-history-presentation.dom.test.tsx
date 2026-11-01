@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen, within, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { UIProviders } from "./ui-patterns/providers";
@@ -24,12 +24,22 @@ for (const status of ["rendered", "unknown-future-status"]) {
     }));
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } }); clients.push(client);
     render(<QueryClientProvider client={client}><UIProviders><AdminPage page="activity" /></UIProviders></QueryClientProvider>);
-    await userEvent.click(await screen.findByRole("button", { name: "查看" }));
+    const opener = await screen.findByRole("button", { name: "查看" });
+    await userEvent.click(opener);
     const dialog = await screen.findByRole("dialog", { name: "历史线路 · 生成记录" });
     expect(within(dialog).getByText("历史配置记录")).toBeTruthy();
     expect(within(dialog).queryByText("配置结构校验完成")).toBeNull();
     expect(within(dialog).getByText("这是当时保存的配置，不是本次校验；不代表服务器已经应用。" )).toBeTruthy();
     if (status !== "rendered") expect(within(dialog).getByText(status)).toBeTruthy();
+    for (let attempt = 0; attempt < 2; attempt++) {
+      await userEvent.keyboard("{Escape}");
+      await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+      await waitFor(() => expect(document.activeElement).toBe(opener));
+      if (attempt === 0) {
+        await userEvent.click(opener);
+        await screen.findByRole("dialog", { name: "历史线路 · 生成记录" });
+      }
+    }
     expect(requests.every(request => request.startsWith("GET "))).toBe(true);
   });
 }

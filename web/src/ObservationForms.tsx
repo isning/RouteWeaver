@@ -61,8 +61,10 @@ export function ObservationConfigForm({
   const { confirm: confirmDiscard } = useDiscardConfirmation(
     "ObservationForms-editor",
   );
+  const { confirm: confirmPolicy, confirming: confirmingPolicy } =
+    useDiscardConfirmation("provider-exhaustion-policy");
   const close = () => {
-    if (save.isPending) return;
+    if (save.isPending || confirmingPolicy) return;
     if (!dirty) return onClose();
     confirmDiscard(
       {
@@ -112,7 +114,10 @@ export function ObservationConfigForm({
               ),
               notificationSource:
                 p.mode === "unlimited" ? "none" : p.notificationSource,
-              exhaustionAction: "advisory",
+              exhaustionAction:
+                p.mode === "unlimited"
+                  ? "advisory"
+                  : p.exhaustionAction || "advisory",
             }
           : null,
       };
@@ -138,7 +143,8 @@ export function ObservationConfigForm({
         <div className="w-full space-y-3">
           <p className="text-sm leading-relaxed text-muted-foreground">
             更换采集实例、计费网卡或周期会重建估算基线；更换周期会清除原周期的账单引用，不修改用户流量账单。
-            {providerEnabled && "供应商用量单独记录，额度耗尽仅提醒，不自动更换线路。"}
+            {providerEnabled &&
+              "供应商用量单独记录；所选耗尽行为不修改用户账单，也不自动更换线路。"}
           </p>
           <div className="flex flex-wrap justify-end gap-2">
             <ActionButton
@@ -167,10 +173,27 @@ export function ObservationConfigForm({
       <AppForm
         id={formId}
         form={form}
-        disabled={save.isPending}
+        disabled={save.isPending || confirmingPolicy}
         onValuesChange={() => setDirty(true)}
         onFinish={() => {
-          if (!save.isPending) save.mutate();
+          if (save.isPending || confirmingPolicy) return;
+          const p = form.getFieldValue("provider");
+          if (
+            providerEnabled &&
+            mode === "limited" &&
+            p?.exhaustionAction === "suspend-managed"
+          ) {
+            confirmPolicy(
+              {
+                title: `启用 ${initial.nodeId} 的托管连接暂停策略？`,
+                description:
+                  "该主机参与的托管线路在额度耗尽、所选依据缺失或超过 15 分钟、周期失效时拒绝新连接及续期；现有连接按短租约结束。手工账单记录不会自动刷新。stock 内核和已导出的外部代理凭据不受此策略控制，不自动切换出口。更新有效用量或改回仅提醒可恢复后续准入。启用后数据需支持此策略的控制平面版本；回退旧版本需启用前备份，关闭策略不会降级数据。",
+                confirmLabel: "确认启用并保存",
+                cancelLabel: "返回修改",
+              },
+              () => save.mutate(),
+            );
+          } else save.mutate();
         }}
         initialValues={{
           ...initial.config,
@@ -182,6 +205,7 @@ export function ObservationConfigForm({
             mode: "limited",
             unit: "GB",
             notificationSource: "none",
+            exhaustionAction: "advisory",
             ...initial.config.provider,
             cycleId:
               initial.config.provider?.cycleId || newID("provider-cycle"),
@@ -340,6 +364,7 @@ export function ObservationConfigForm({
                   <AppField
                     name={["provider", "notificationSource"]}
                     label="供应商额度提醒依据"
+                    description="托管连接暂停策略也使用此依据；不会自动改用其他来源。"
                     trigger="onValueChange"
                   >
                     <ChoiceSelect
@@ -358,6 +383,29 @@ export function ObservationConfigForm({
                   </AppField>
                 )}
               </div>
+              {mode !== "unlimited" && (
+                <AppField
+                  name={["provider", "exhaustionAction"]}
+                  label="额度耗尽行为"
+                  description="暂停仅对通过控制平面准入的托管连接生效；缺失或过期用量也暂停，不把未知用量当作零。"
+                  trigger="onValueChange"
+                >
+                  <ChoiceSelect
+                    options={[
+                      { value: "advisory", label: "仅提醒" },
+                      {
+                        value: "suspend-managed",
+                        label: "暂停托管连接及续期",
+                        disabled: !instances.some(
+                          (i) =>
+                            i.hostId === initial.nodeId &&
+                            i.adapterId === "routeweaver/managed-xray",
+                        ),
+                      },
+                    ]}
+                  />
+                </AppField>
+              )}
               <Accordion type="multiple" defaultValue={[]} className="w-full">
                 {[
                   {

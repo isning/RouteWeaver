@@ -1012,3 +1012,58 @@ it.each(["public", "server"] as const)("keeps the %s route Close control after t
   }
   expect(writes).toEqual([]);
 });
+
+it("retains the checked public-route draft after failed save and twice canceled discard before exact retry", async () => {
+  setup("routeweaver/managed-xray", "26.3.27-rw1", false);
+  const originalFetch = fetch;
+  const writes: unknown[] = [];
+  let authoritativeRoute = route;
+  let release!: (response: Response) => void;
+  vi.stubGlobal("fetch", vi.fn(async (url, init) => {
+    if (String(url).endsWith("/resolve")) return json(authoritativeRoute);
+    if (String(url).endsWith("/published-routes") && !init?.method) return json([authoritativeRoute]);
+    if (String(url).endsWith("/published-routes/public") && init?.method === "PUT") {
+      writes.push(JSON.parse(String(init.body)));
+      if (writes.length === 1) return new Promise<Response>((resolve) => { release = resolve; });
+      authoritativeRoute = { ...route, ...JSON.parse(String(init.body)) };
+      return json(authoritativeRoute);
+    }
+    return originalFetch(url, init);
+  }));
+  history.replaceState(null, "", "#published-routes");
+  const controller = createWorkspaceHistory({ isDirty: hasUnsavedChanges, confirm: () => { throw new Error("Unexpected workspace departure during public-route retry"); }, accept: () => {} });
+  historyControllers.push(controller);
+  mount(<WorkspaceHistoryContext.Provider value={{ current: controller }}><PublishedRoutesPage /></WorkspaceHistoryContext.Provider>);
+  const opener = await screen.findByRole("button", { name: "编辑" });
+  await userEvent.click(opener);
+  const dialog = await screen.findByRole("dialog", { name: "编辑 Office" });
+  const name = within(dialog).getByLabelText("线路名称") as HTMLInputElement;
+  fireEvent.change(name, { target: { value: "Retained public route" } });
+  await userEvent.click(within(dialog).getByRole("button", { name: "检查公开线路" }));
+  await within(dialog).findByText("路径检查完成");
+  await userEvent.click(within(dialog).getByRole("button", { name: "保存公开线路" }));
+  await waitFor(() => expect(writes).toHaveLength(1));
+  await userEvent.keyboard("{Escape}");
+  expect(screen.getByRole("dialog", { name: "编辑 Office" })).toBe(dialog);
+  expect(within(dialog).queryByRole("button", { name: "关闭" })).toBeNull();
+  await act(async () => release(new Response(JSON.stringify({ message: "Public route save unavailable" }), { status: 503, headers: { "Content-Type": "application/json" } })));
+  await within(dialog).findByText("Public route save unavailable");
+  const close = within(dialog).getByRole("button", { name: "关闭" });
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await userEvent.click(close);
+    const review = await screen.findByRole("alertdialog");
+    await waitFor(() => expect(document.activeElement).toBe(within(review).getByRole("button", { name: "继续编辑" })));
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(document.activeElement).toBe(close));
+    expect(name.value).toBe("Retained public route");
+    expect(writes).toHaveLength(1);
+  }
+  await userEvent.click(within(dialog).getByRole("button", { name: "保存公开线路" }));
+  await screen.findByText("线路已保存");
+  expect(writes).toHaveLength(2);
+  expect(writes[1]).toEqual(writes[0]);
+  expect(writes[0]).toMatchObject({ name: "Retained public route", deploymentId: "deploy-office", endpointIds: ["entry"] });
+  const detail = await screen.findByRole("dialog", { name: "Retained public route" });
+  await waitFor(() => expect(detail.contains(document.activeElement)).toBe(true));
+  expect(location.hash).toBe("#published-routes?line=public");
+});

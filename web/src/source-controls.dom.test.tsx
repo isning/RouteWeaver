@@ -134,7 +134,7 @@ it("keeps collection membership and processing through unavailable inventory and
   });
   vi.stubGlobal("fetch", fetcher);
   mount();
-  await userEvent.click(await screen.findByRole("button", { name: /Travel/ }));
+  await userEvent.click(await screen.findByRole("button", { name: /^Travel.*编辑集合/ }));
   expect(screen.getByText("正在加载可选来源…")).toBeTruthy();
   expect(
     (
@@ -193,10 +193,10 @@ it("ignores preview failure from a closed collection and lets the current collec
     }),
   );
   mount();
-  await userEvent.click(await screen.findByRole("button", { name: /Alpha/ }));
+  await userEvent.click(await screen.findByRole("button", { name: /^Alpha.*编辑集合/ }));
   await userEvent.click(screen.getByRole("button", { name: "预览处理结果" }));
   await userEvent.click(screen.getByRole("button", { name: "关闭" }));
-  await userEvent.click(screen.getByRole("button", { name: /Beta/ }));
+  await userEvent.click(screen.getByRole("button", { name: /^Beta.*编辑集合/ }));
   await act(async () => {
     finish(json({ detail: "Old preview failed" }, 422));
   });

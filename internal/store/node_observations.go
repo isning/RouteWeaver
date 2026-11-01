@@ -2,6 +2,7 @@ package store
 
 import (
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"routeweaver/internal/domain"
 	"routeweaver/internal/observability"
@@ -69,6 +70,28 @@ func (s *Store) updateNodeObservations(id string, change func(*sql.Tx, observabi
 }
 func (s *Store) ConfigureNodeObservations(id string, config observability.Config) (observability.State, error) {
 	return s.updateNodeObservations(id, func(tx *sql.Tx, state observability.State) (observability.State, error) {
+		if config.Provider != nil && config.Provider.ExhaustionAction == "suspend-managed" {
+			raw, err := s.listTx(tx, "core-instances")
+			if err != nil {
+				return state, err
+			}
+			supported := false
+			for _, item := range raw {
+				var instance domain.CoreInstance
+				if err := json.Unmarshal(item, &instance); err != nil {
+					return state, err
+				}
+				if instance.HostID == id && instance.AdapterID == "routeweaver/managed-xray" {
+					supported = true
+				}
+			}
+			if !supported {
+				return state, errors.New("managed suspension requires a managed-Xray instance on this host; stock cores are not enforced")
+			}
+			if _, err := tx.Exec(`INSERT OR IGNORE INTO schema_migrations(version,applied_at) VALUES(3,strftime('%Y-%m-%dT%H:%M:%SZ','now'))`); err != nil {
+				return state, err
+			}
+		}
 		if config.ObserverInstanceID != "" {
 			var instance domain.CoreInstance
 			if e := s.getTx(tx, "core-instances", config.ObserverInstanceID, &instance); e != nil {

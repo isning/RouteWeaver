@@ -35,7 +35,7 @@ func TestWarmNotificationInputsDoNotReadCanonicalLedger(t *testing.T) {
 	if err != nil || len(users) != 1 || users[0].UsedBytes != 3 {
 		t.Fatalf("cold snapshot: %+v %v", users, err)
 	}
-	if queries, rows := observer.Counts(); queries != 2 || rows != 4 {
+	if queries, rows := observer.Counts(); queries != 2 || rows != 6 {
 		t.Fatalf("cold observer did not see exactly one metadata+ledger pass: queries=%d rows=%d", queries, rows)
 	}
 	observer.Reset()

@@ -40,7 +40,7 @@ func registerSubscriptions(api huma.API, s *store.Store, registry *render.Regist
 		if user == nil {
 			return nil, huma.Error404NotFound("user not found")
 		}
-		overview, e := h.overview(user.ID, time.Now())
+		overview, e := h.overviewContext(ctx, user.ID, time.Now())
 		if e != nil {
 			return nil, huma.Error500InternalServerError("cannot resolve effective entitlement")
 		}

@@ -47,6 +47,33 @@ func (h *server) registerBackupWithOperations(r chi.Router, create func(context.
 	gate := make(chan struct{}, 1)
 	previews := map[string]time.Time{}
 	limits, limitsError := h.opts.BackupLimits.Normalize()
+	// This router is mounted behind requireAdmin, like backup creation/restore.
+	// Inventory uses metadata only and a separate finite request budget.
+	r.Get("/admin/backups/capacity", func(w http.ResponseWriter, r *http.Request) {
+		select {
+		case gate <- struct{}{}:
+			defer func() { <-gate }()
+		case <-r.Context().Done():
+			return
+		default:
+			fail(w, 429, "another backup or capacity check is running; try again shortly")
+			return
+		}
+
+		if limitsError != nil {
+			fail(w, 500, "invalid operator backup limits")
+			return
+		}
+		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+		defer cancel()
+		inventory, err := h.s.HistoryCapacityInventory(ctx, store.BackupLimits{MaxBytes: limits.ArchiveBytes, MaxRows: limits.Rows, MaxRecordBytes: limits.RecordBytes})
+		if err != nil {
+			fail(w, 503, "history capacity is unknown; retry the check and inspect database availability before increasing traffic")
+			return
+		}
+		writeJSON(w, 200, inventory)
+	})
+
 	run := func(responseAllowance time.Duration, strictDeadlines bool, fn http.HandlerFunc) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {
 			select {

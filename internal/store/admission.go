@@ -153,14 +153,31 @@ func (s *Store) admissionEligibility(tx *sql.Tx, binding EntryAdmissionBinding, 
 		reason = "deployment-unverified"
 		return
 	}
-	if current, until, e := s.admissionManifestCurrent(tx, binding, grant, now); e != nil {
+	if grant.PublishedRouteID == "" {
+		if providerReason, providerUntil, e := s.providerAdmissionTx(tx, instance.HostID, now); e != nil {
+			err = e
+			return
+		} else if providerReason != "" {
+			reason = providerReason
+			return
+		} else {
+			expires = providerUntil
+		}
+	}
+
+	if current, until, providerReason, e := s.admissionManifestCurrent(tx, binding, grant, now); e != nil {
 		err = e
+		return
+	} else if providerReason != "" {
+		reason = providerReason
 		return
 	} else if !current {
 		reason = "deployment-unverified"
 		return
 	} else {
-		expires = until
+		if until != nil {
+			expires = earlier(expires, *until)
+		}
 	}
 	policy, e := s.effectivePolicyTx(tx, user.ID, now)
 	if e != nil {

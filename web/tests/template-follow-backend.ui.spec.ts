@@ -37,6 +37,11 @@ for (const width of [1440, 390])
         name: "模板更新 · 模板跟随草稿",
         exact: true,
       });
+      // Both the header icon and footer action are named “关闭”. Exercise the
+      // explicit completion action, without positional first()/last() matching.
+      const closeComparison = sheet
+        .locator("[data-task-overlay-footer]")
+        .getByRole("button", { name: "关闭", exact: true });
       const inspect = async () => {
         const response = page.waitForResponse(
           (r) =>
@@ -67,7 +72,7 @@ for (const width of [1440, 390])
       };
       await inspect();
       // Dismissed comparison grants no write authority.
-      await sheet.getByRole("button", { name: "关闭", exact: true }).click();
+      await closeComparison.click();
       await expect(sheet).toHaveCount(0);
       expect(applications).toBe(0);
       expect(publications).toEqual([]);
@@ -95,7 +100,7 @@ for (const width of [1440, 390])
       await expect(sheet).toBeVisible();
       expect(await f.draft()).toEqual(savedEdit);
       await f.unchanged();
-      await sheet.getByRole("button", { name: "关闭", exact: true }).click();
+      await closeComparison.click();
       await expect(sheet).toHaveCount(0);
       const fresh = await inspect();
       expect(fresh.previewDigest).not.toBe(first.previewDigest);

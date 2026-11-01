@@ -1,4 +1,4 @@
-import { TaskSheet } from "@/ui-patterns/task-overlays";
+import { TaskDialog, TaskSheet } from "@/ui-patterns/task-overlays";
 import { MultiChoice } from "@/ui-patterns/choice-select";
 import { Notice } from "@/ui-patterns/notice";
 import { Badge } from "@/components/ui/badge";
@@ -34,7 +34,7 @@ import {
   type ReactNode,
 } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { deleteRecord, list, post, saveRecord } from "./api";
+import { deleteRecord, list, post, request, saveRecord } from "./api";
 import type {
   Collection,
   Preview,
@@ -731,6 +731,8 @@ export function CollectionsPage() {
     queryKey: ["sources"],
     queryFn: () => list<Source>("/me/sources"),
   });
+  const [deleting, setDeleting] = useState<Collection | null>(null);
+  const createTrigger = useRef<HTMLButtonElement>(null);
   const [draft, setDraft] = useState<Collection | null>(null);
   // Disclosure belongs to the collection task, not the temporarily hidden sheet.
   const stageDisclosures = useRef(
@@ -892,6 +894,7 @@ export function CollectionsPage() {
         title="节点集合"
         action={
           <ActionButton
+            ref={createTrigger}
             leadingIcon={<Plus aria-hidden="true" />}
             onClick={() => edit()}
             variant="default"
@@ -919,34 +922,49 @@ export function CollectionsPage() {
         ) : (
           <div className="card-grid grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {query.data.map((item) => (
-              <ActionButton
-                key={item.id}
-                variant="outline"
-                className="collection-card surface h-auto min-w-0 flex-col items-start justify-start gap-4 rounded-xl p-5 text-left whitespace-normal"
-                onClick={() => edit(item)}
-              >
-                <span className="flex w-full min-w-0 items-start gap-3">
-                  <span className="tile-icon flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-                    <Link className="size-4" aria-hidden="true" />
-                  </span>
-                  <span className="min-w-0 space-y-1">
-                    <span className="block text-base font-semibold tracking-tight wrap-anywhere">
-                      {item.name}
+              <article key={item.id} className="flex min-w-0 flex-col gap-2">
+                <ActionButton
+                  variant="outline"
+                  className="collection-card surface h-auto min-w-0 flex-col items-start justify-start gap-4 rounded-xl p-5 text-left whitespace-normal"
+                  onClick={() => edit(item)}
+                >
+                  <span className="flex w-full min-w-0 items-start gap-3">
+                    <span className="tile-icon flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                      <Link className="size-4" aria-hidden="true" />
                     </span>
-                    <span className="block text-sm font-normal leading-relaxed text-muted-foreground">
-                      {item.sources.length} 个来源 · {item.steps.length}{" "}
-                      个聚合步骤
+                    <span className="min-w-0 space-y-1">
+                      <span className="block text-base font-semibold tracking-tight wrap-anywhere">
+                        {item.name}
+                      </span>
+                      <span className="block text-sm font-normal leading-relaxed text-muted-foreground">
+                        {item.sources.length} 个来源 · {item.steps.length}{" "}
+                        个聚合步骤
+                      </span>
                     </span>
                   </span>
-                </span>
-                <span className="card-action mt-auto flex w-full items-center justify-between border-t pt-3 text-sm font-medium">
-                  编辑集合 <span aria-hidden="true">→</span>
-                </span>
-              </ActionButton>
+                  <span className="card-action mt-auto flex w-full items-center justify-between border-t pt-3 text-sm font-medium">
+                    编辑集合 <span aria-hidden="true">→</span>
+                  </span>
+                </ActionButton>
+                <ActionButton
+                  variant="ghost"
+                  aria-label={`删除集合 ${item.name}`}
+                  onClick={() => setDeleting(item)}
+                >
+                  删除集合
+                </ActionButton>
+              </article>
             ))}
           </div>
         )}
       </QueryState>
+      {deleting && (
+        <CollectionDelete
+          collection={deleting}
+          onClose={() => setDeleting(null)}
+          afterDelete={() => createTrigger.current?.focus()}
+        />
+      )}
       <TaskSheet
         title={isNew ? "新建集合" : draft?.name}
         open={!!draft && !sourceTask}
@@ -1304,3 +1322,117 @@ export function CollectionsPage() {
   );
 }
 export { ResourcesPage } from "./Resources";
+
+function CollectionDelete({
+  collection,
+  onClose,
+  afterDelete,
+}: {
+  collection: Collection;
+  onClose(): void;
+  afterDelete(): void;
+}) {
+  const client = useQueryClient();
+  const keep = useRef<HTMLButtonElement>(null);
+  const deleted = useRef(false);
+  const dependencies = useQuery({
+    queryKey: ["collection-dependencies", collection.id],
+    queryFn: () =>
+      request<{
+        collection: { id: string; name: string };
+        profiles: { id: string; name: string }[];
+        deletable: boolean;
+      }>(`/me/collections/${encodeURIComponent(collection.id)}/dependencies`),
+    staleTime: 0,
+    refetchOnMount: "always",
+  });
+  const remove = useMutation({
+    mutationFn: () => deleteRecord("me/collections", collection.id),
+    onSuccess: () => {
+      deleted.current = true;
+      client.invalidateQueries({ queryKey: ["collections"] });
+      invalidateOutputInputs(client);
+      onClose();
+      toast.success("集合已删除");
+    },
+    onError: () => {
+      void dependencies.refetch();
+    },
+  });
+  const checked =
+    dependencies.isSuccess &&
+    !dependencies.isFetching &&
+    !dependencies.isPaused &&
+    dependencies.data.collection.id === collection.id;
+  const name = checked ? dependencies.data.collection.name : collection.name;
+  return (
+    <TaskDialog
+      open
+      title={`删除集合「${name}」？`}
+      initialFocus={() => keep.current}
+      pending={remove.isPending}
+      onOpenChange={(open) => {
+        if (!open && !remove.isPending) onClose();
+      }}
+      onCloseAutoFocus={(event) => {
+        if (deleted.current) {
+          event.preventDefault();
+          afterDelete();
+        }
+      }}
+      footer={
+        <>
+          <ActionButton
+            ref={keep}
+            variant="outline"
+            disabled={remove.isPending}
+            onClick={onClose}
+          >
+            保留集合
+          </ActionButton>
+          <ActionButton
+            variant="destructive"
+            pending={remove.isPending}
+            disabled={
+              !checked ||
+              !dependencies.data?.deletable ||
+              dependencies.data.profiles.length > 0 ||
+              remove.isPending
+            }
+            onClick={() => remove.mutate()}
+          >
+            删除集合
+          </ActionButton>
+        </>
+      }
+    >
+      <p>
+        只删除此集合及其处理步骤，不会删除订阅来源、配置或客户端订阅。此操作无法撤销。
+      </p>
+      <ErrorNotice error={remove.error} />
+      <QueryState
+        loading={dependencies.isLoading || dependencies.isFetching}
+        error={dependencies.error}
+        retry={() => dependencies.refetch()}
+      >
+        {dependencies.data?.profiles.length ? (
+          <section aria-label="引用此集合的配置">
+            <p>以下配置仍在引用此集合，无法删除。请先在这些配置中解除引用。</p>
+            <ul>
+              {dependencies.data.profiles.map((profile) => (
+                <li key={profile.id}>
+                  <span>{profile.name}</span>{" "}
+                  <span className="text-sm text-muted-foreground">
+                    （{profile.id}）
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : checked ? (
+          <p>没有配置引用此集合。</p>
+        ) : null}
+      </QueryState>
+    </TaskDialog>
+  );
+}

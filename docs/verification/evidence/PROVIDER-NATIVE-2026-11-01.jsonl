@@ -1,0 +1,9 @@
+{"Time":"2026-11-02T02:28:55.647795248+08:00","Action":"start","Package":"routeweaver/internal/httpapi"}
+{"Time":"2026-11-02T02:28:55.729058843+08:00","Action":"run","Package":"routeweaver/internal/httpapi","Test":"TestNativeManagedProviderSuspensionAndRecovery"}
+{"Time":"2026-11-02T02:28:55.729261445+08:00","Action":"output","Package":"routeweaver/internal/httpapi","Test":"TestNativeManagedProviderSuspensionAndRecovery","Output":"=== RUN   TestNativeManagedProviderSuspensionAndRecovery\n","OutputType":"frame"}
+{"Time":"2026-11-02T02:29:32.058739608+08:00","Action":"output","Package":"routeweaver/internal/httpapi","Test":"TestNativeManagedProviderSuspensionAndRecovery","Output":"    service_native_test.go:252: provider native: exhausted closure=3.040982997s freshness-clipped closure=3.872287376s exact finalized raw/weighted=142 bytes; all corresponding budget obligations closed, no route/core identity change\n"}
+{"Time":"2026-11-02T02:29:42.220271096+08:00","Action":"output","Package":"routeweaver/internal/httpapi","Test":"TestNativeManagedProviderSuspensionAndRecovery","Output":"--- PASS: TestNativeManagedProviderSuspensionAndRecovery (46.49s)\n","OutputType":"frame"}
+{"Time":"2026-11-02T02:29:42.22033286+08:00","Action":"pass","Package":"routeweaver/internal/httpapi","Test":"TestNativeManagedProviderSuspensionAndRecovery","Elapsed":46.49}
+{"Time":"2026-11-02T02:29:42.220489074+08:00","Action":"output","Package":"routeweaver/internal/httpapi","Output":"PASS\n","OutputType":"frame"}
+{"Time":"2026-11-02T02:29:43.237552184+08:00","Action":"output","Package":"routeweaver/internal/httpapi","Output":"ok  \trouteweaver/internal/httpapi\t47.589s\n"}
+{"Time":"2026-11-02T02:29:43.23761185+08:00","Action":"pass","Package":"routeweaver/internal/httpapi","Elapsed":47.59}

@@ -1,0 +1,8 @@
+goos: linux
+goarch: amd64
+pkg: routeweaver/internal/store
+cpu: INTEL(R) XEON(R) PLATINUM 8573C
+BenchmarkNotificationBackupValidation/events-100-2         	       5	  45956667 ns/op	       505.0 rows/op	19611942 B/op	   42849 allocs/op
+BenchmarkNotificationBackupValidation/events-1000-2        	       5	 488273539 ns/op	      5005 rows/op	195396953 B/op	  421647 allocs/op
+PASS
+ok  	routeweaver/internal/store	5.115s

@@ -28,6 +28,7 @@ for (const role of ["user", "admin"]) {
     ["resources", "/api/me/resources", "规则资源", "暂无规则资源"],
     ["collections", "/api/me/collections", "节点集合", "暂无节点集合"],
     ["templates", "/api/templates", "模板与预设", "暂无可用模板"],
+    ["templates", "/api/me/template-bindings", "模板与预设", "暂无模板引用"],
   ])(`allows ${role} into #%s and distinguishes pending, failed and authoritative empty reads`, async (hash, endpoint, heading, empty) => {
     history.replaceState(null, "", `/#${hash}`);
     vi.spyOn(window, "scrollTo").mockImplementation(() => {});
@@ -45,7 +46,7 @@ for (const role of ["user", "admin"]) {
         if (reads === 1) return new Promise<Response>((resolve) => { release = resolve; });
         return json([]);
       }
-      if (["/api/me/sources", "/api/me/template-bindings", "/api/me/profiles", "/api/me/collections", "/api/me/platform-entries"].includes(url)) return json([]);
+      if (["/api/templates", "/api/me/sources", "/api/me/template-bindings", "/api/me/profiles", "/api/me/collections", "/api/me/platform-entries"].includes(url)) return json([]);
       unexpected.push(url);
       throw new Error(`Unexpected read ${url}`);
     }));
@@ -54,6 +55,7 @@ for (const role of ["user", "admin"]) {
     render(<QueryClientProvider client={client}><UIProviders><App /></UIProviders></QueryClientProvider>);
     const main = await screen.findByRole("main");
     await within(main).findByRole("heading", { name: heading, level: 1 });
+    if (endpoint === "/api/me/template-bindings") await userEvent.click(within(main).getByRole("tab", { name: "我的引用" }));
     expect(within(main).getByLabelText("正在加载").getAttribute("aria-busy")).toBe("true");
     expect(within(main).queryByText(empty)).toBeNull();
     expect(screen.queryByText("需要管理员权限")).toBeNull();

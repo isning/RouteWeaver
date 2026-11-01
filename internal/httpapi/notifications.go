@@ -205,7 +205,17 @@ func runNotificationBatchWithBudget(ctx context.Context, s *store.Store, after s
 	if recipientErr == nil {
 		dispatchErr = n.DispatchBounded(ctx, recipients, now.Add(time.Since(started)), 1000)
 	}
-	return next, errors.Join(inputErr, evaluateErr, providerErr, recipientErr, dispatchErr)
+	return next, notificationBatchError(inputErr, evaluateErr, providerErr, recipientErr, dispatchErr)
+}
+
+// Pending is normal incomplete work, not a replacement for a real evaluation or
+// delivery failure. Preserve actual failures when a batch has both outcomes.
+func notificationBatchError(inputErr error, others ...error) error {
+	otherErr := errors.Join(others...)
+	if otherErr != nil && errors.Is(inputErr, store.ErrNotificationRebuildPending) {
+		return otherErr
+	}
+	return errors.Join(inputErr, otherErr)
 }
 
 // Partial enqueue must resume after the last committed user, not after the
@@ -249,30 +259,43 @@ func RunNotificationsWithBudget(ctx context.Context, s *store.Store, interval ti
 	if interval < time.Second {
 		interval = time.Minute
 	}
-	ticker := time.NewTicker(interval)
-	defer ticker.Stop()
+	timer := time.NewTimer(interval)
+	defer timer.Stop()
 	after := ""
-	run := func() {
+	run := func() time.Duration {
 		next, err := runNotificationBatchWithBudget(ctx, s, after, time.Now().UTC(), 5*time.Second, budget)
 		after = next
 		if err != nil && ctx.Err() == nil && report != nil {
 			switch {
-			case errors.Is(err, store.ErrNotificationColdBudget):
-				report(errors.New("notification quota cold rebuild exceeds the background budget; retained outbox processing continues; review notification maintenance guidance"))
 			case errors.Is(err, context.DeadlineExceeded):
 				report(errors.New("notification batch reached its time budget; durable partial progress is retained for later ticks"))
+			case errors.Is(err, store.ErrNotificationRebuildPending):
+				report(errors.New("notification quota totals are rebuilding in bounded steps; expiry and retained outbox processing continue"))
+			case errors.Is(err, store.ErrNotificationColdBudget):
+				report(errors.New("notification quota reconstruction encountered a record exceeding the step budget; retained outbox processing continues; review notification maintenance guidance"))
 			default:
 				report(errors.New("notification evaluation or dispatch failed; retained facts were not discarded"))
 			}
 		}
+		return notificationContinuationDelay(interval, err)
 	}
-	run()
+	timer.Reset(run())
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case <-ticker.C:
-			run()
+		case <-timer.C:
+			timer.Reset(run())
 		}
 	}
+}
+
+// Only a committed, otherwise successful incomplete chunk gets accelerated.
+// Delay starts after completion, leaving admission/other writers headroom; real
+// errors, oversized records and stalled deadlines use the ordinary backoff.
+func notificationContinuationDelay(interval time.Duration, err error) time.Duration {
+	if errors.Is(err, store.ErrNotificationRebuildPending) {
+		return min(interval, time.Second)
+	}
+	return interval
 }

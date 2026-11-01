@@ -1,0 +1,18 @@
+=== RUN   TestBackupRelationshipLookupReuseRetainsValidationAndFreshness
+=== RUN   TestBackupRelationshipLookupReuseRetainsValidationAndFreshness/notification-config
+=== RUN   TestBackupRelationshipLookupReuseRetainsValidationAndFreshness/notification-history
+=== RUN   TestBackupRelationshipLookupReuseRetainsValidationAndFreshness/notification-pending
+=== NAME  TestBackupRelationshipLookupReuseRetainsValidationAndFreshness
+    backup_validation_reuse_test.go:86: unsupported resource
+--- FAIL: TestBackupRelationshipLookupReuseRetainsValidationAndFreshness (0.65s)
+    --- PASS: TestBackupRelationshipLookupReuseRetainsValidationAndFreshness/notification-config (0.12s)
+    --- PASS: TestBackupRelationshipLookupReuseRetainsValidationAndFreshness/notification-history (0.10s)
+    --- PASS: TestBackupRelationshipLookupReuseRetainsValidationAndFreshness/notification-pending (0.12s)
+=== RUN   TestAcceptedNotificationsRemainBackupRecoverable
+    notification_scaling_test.go:44: accepted announcements=10 recipients=500 events=5000 deliveries=5000 state bytes=43701172
+    notification_scaling_test.go:58: backup canonical/index records=25012 maximum plaintext record bytes=8269
+    notification_scaling_test.go:59: default backup result: <nil>
+--- PASS: TestAcceptedNotificationsRemainBackupRecoverable (590.83s)
+FAIL
+FAIL	routeweaver/internal/store	591.598s
+FAIL

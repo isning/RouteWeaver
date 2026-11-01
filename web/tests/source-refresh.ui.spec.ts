@@ -100,6 +100,11 @@ test("reviews material source changes and preserves accepted options until an ex
     .locator(".page-heading")
     .getByRole("button", { name: "添加来源", exact: true })
     .click();
+  const importDialog = page.getByRole("dialog", {
+    name: "添加订阅来源",
+    exact: true,
+  });
+  await expect(importDialog).toBeVisible();
   await page.getByLabel("来源名称").fill(name);
   await page
     .getByRole("combobox", { name: "更新应用方式", exact: true })
@@ -111,7 +116,9 @@ test("reviews material source changes and preserves accepted options until an ex
       "socks5://synthetic:before-fixture@one.example:1080#London\nsocks5://two.example:1080#Tokyo",
     );
   await page.getByRole("button", { name: "导入来源", exact: true }).click();
-  await expect(page.getByRole("dialog")).not.toBeVisible();
+  // A closing field popover also has role=dialog. Wait for this owned task,
+  // not a strict single-element match across unrelated transient overlays.
+  await expect(importDialog).not.toBeVisible();
   let list = await (await page.request.get("/api/me/sources")).json();
   const original = list.find((item: { name: string }) => item.name === name);
   expect(original.snapshot.endpoints).toHaveLength(2);

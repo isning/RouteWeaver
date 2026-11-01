@@ -6,6 +6,7 @@ import {
 } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Notice } from "@/ui-patterns/notice";
 import { ActionButton } from "@/ui-patterns/actions";
 import { useQuery } from "@tanstack/react-query";
 import { RotateCw as ReloadOutlined } from "lucide-react";
@@ -207,6 +208,19 @@ export function NodeObservation({
                     : `${plan.allowance} ${plan.unit}`}
                 </Badge>
               </div>
+              {plan.exhaustionAction === "suspend-managed" && (
+                <Notice
+                  tone={provider.managedAdmissionReason ? "warning" : "info"}
+                >
+                  {provider.managedAdmissionReason === "provider-exhausted"
+                    ? "供应商额度耗尽：该主机参与的托管线路暂停新连接与续期。"
+                    : provider.managedAdmissionReason === "provider-expired"
+                      ? "供应商服务已到期：该主机参与的托管线路暂停新连接与续期。"
+                      : provider.managedAdmissionReason
+                        ? "缺少当前有效的供应商用量依据：托管线路暂停新连接与续期。请更新当前周期的所选依据。"
+                        : "托管连接暂停策略已配置；当前用量依据未阻止准入，实际连接仍需通过其余授权检查。"}
+                </Notice>
+              )}
               <div className="observation-grid grid min-w-0 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {plan.cycleId && (
                   <Metric
@@ -324,7 +338,11 @@ export function NodeObservation({
                             : sourceLabel(plan.notificationSource)}
                           。仅满足当前周期、连续覆盖及新鲜度要求时进入提醒评估。
                         </p>
-                        <p>配额耗尽仅提醒，不自动更换出口或修改线路。</p>
+                        <p>
+                          {plan.exhaustionAction === "suspend-managed"
+                            ? "托管连接暂停策略已配置：额度耗尽、依据缺失或过期时拒绝新连接与续期；现有连接按短租约结束。stock 内核不受控，不自动更换出口。"
+                            : "配额耗尽仅提醒，不自动更换出口或修改线路。"}
+                        </p>
                       </>
                     ),
                   },

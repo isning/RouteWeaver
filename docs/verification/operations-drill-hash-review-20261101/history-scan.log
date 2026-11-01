@@ -1,0 +1,3 @@
+PASS: pinned Gitleaks 8.24.3; 2084 distinct path/content pairs (5466 source entries); scope=all.
+Reviewed exact path/rule/line false positives: 52. No path-wide exemptions.
+Scope: source plaintext patterns; not credential validity, encrypted/archive content, unreachable history or a security certification.

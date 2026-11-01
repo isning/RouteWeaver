@@ -1004,3 +1004,24 @@ it.each([
   }
   expect(state.writes).toEqual([]);
 });
+
+it("keeps settings edits and exact navigation focus through two canceled departures", async () => {
+  fixture();
+  history.replaceState(null, "", "#settings");
+  mount();
+  const field = await screen.findByRole("textbox", { name: "平台名称" }) as HTMLInputElement;
+  fireEvent.change(field, { target: { value: "Retained settings" } });
+  const group = screen.getByRole("button", { name: "用户与权限" });
+  if (group.getAttribute("aria-expanded") === "false") await userEvent.click(group);
+  const target = within(screen.getByRole("navigation", { name: "工作空间导航" })).getByRole("button", { name: "用户" });
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await userEvent.click(target);
+    const review = await screen.findByRole("alertdialog", { name: "放弃未保存的修改？" });
+    const keep = within(review).getByRole("button", { name: "继续编辑" });
+    await waitFor(() => expect(document.activeElement).toBe(keep));
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(document.activeElement).toBe(target));
+    expect(field.value).toBe("Retained settings");
+    expect(location.hash).toBe("#settings");
+  }
+});

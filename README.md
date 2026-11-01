@@ -46,7 +46,7 @@ scripts/verify.sh browser
 # Explicitly selected isolated process tests:
 ROUTEWEAVER_NATIVE_PROCESS_TESTS=xray scripts/native-cores.sh runtime
 # Full configured gate, only on an authorized compatible host:
-ROUTEWEAVER_NATIVE_PROCESS_TESTS=xray,sing-box scripts/verify.sh full
+ROUTEWEAVER_NATIVE_PROCESS_TESTS=xray,sing-box ROUTEWEAVER_CLIENT_PROCESS_TESTS=mihomo,sing-box scripts/verify.sh full
 ```
 
 CI runs independent `static`, `secrets`, `backend`, `web`, `api`, `browser`, `native` and `package` jobs; **Required repository gates** rejects any missing, failed, cancelled or skipped job. All jobs use the same `scripts/verify.sh` commands as local development. Native CI also requires both stock process targets and the managed loopback gate. Go caches include both module lockfiles; npm uses the checked-in lock. Actions are pinned to full commit IDs with read-only permissions and no persisted checkout credentials.

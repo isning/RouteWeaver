@@ -72,6 +72,19 @@ function inventoryAPI({
     "fetch",
     vi.fn(async (url, init) => {
       const path = String(url);
+      if (path.endsWith("/impact"))
+        return json({
+          endpoint: JSON.parse(init.body),
+          proposed: {
+            ...JSON.parse(init.body),
+            ...JSON.parse(init.body).connection,
+          },
+          changedFields: ["连接参数"],
+          deployments: [],
+          routes: [],
+          links: [],
+          reviewToken: "fixture-impact",
+        });
       if (init?.method === "POST" || init?.method === "PUT") {
         const value = JSON.parse(init.body);
         writes.push({ path, value });
@@ -462,6 +475,9 @@ describe("infrastructure creation user tasks", () => {
     owner.assertActive();
     await user.click(editor.getByRole("button", { name: /保\s*存/ }));
     owner.assertActive();
+    await user.click(
+      await screen.findByRole("button", { name: "确认保存端点" }),
+    );
     await waitFor(() => expect(writes).toHaveLength(1));
     owner.assertActive();
     expect(writes[0].value.connection).toEqual(endpoint.connection);
@@ -801,6 +817,9 @@ describe("infrastructure creation user tasks", () => {
     await user.clear(screen.getByLabelText("端点名称"));
     await user.type(screen.getByLabelText("端点名称"), "Renamed endpoint");
     await user.click(within(dialog).getByRole("button", { name: /保\s*存/ }));
+    await user.click(
+      await screen.findByRole("button", { name: "确认保存端点" }),
+    );
     await waitFor(() => expect(writes).toHaveLength(1));
     expect(writes[0]).toEqual({
       path: "/api/managed-endpoints/endpoint-legacy",
@@ -834,6 +853,9 @@ describe("infrastructure creation user tasks", () => {
       "Renamed public listener",
     );
     await user.click(within(dialog).getByRole("button", { name: /保\s*存/ }));
+    await user.click(
+      await screen.findByRole("button", { name: "确认保存端点" }),
+    );
     await waitFor(() => expect(writes).toHaveLength(1));
     expect(writes[0]).toEqual({
       path: "/api/managed-endpoints/endpoint-principals",
@@ -872,6 +894,9 @@ describe("infrastructure creation user tasks", () => {
       "00000000-0000-4000-8000-000000000002",
     );
     await user.click(within(dialog).getByRole("button", { name: /保\s*存/ }));
+    await user.click(
+      await screen.findByRole("button", { name: "确认保存端点" }),
+    );
     await waitFor(() => expect(writes).toHaveLength(1));
     expect(writes[0]).toEqual({
       path: "/api/managed-endpoints/endpoint-vless",
@@ -1171,7 +1196,9 @@ it("keeps enrollment expiry exact until date confirmation and blocks submission 
 it("keeps inventory Close focus after twice canceling a dirty server draft", async () => {
   const writes = inventoryAPI();
   mount();
-  await userEvent.click(await screen.findByRole("button", { name: "添加服务器" }));
+  await userEvent.click(
+    await screen.findByRole("button", { name: "添加服务器" }),
+  );
   const dialog = await screen.findByRole("dialog", { name: "添加服务器" });
   const name = within(dialog).getByLabelText("服务器名称");
   fireEvent.change(name, { target: { value: "Retained server" } });
@@ -1179,7 +1206,11 @@ it("keeps inventory Close focus after twice canceling a dirty server draft", asy
   for (let attempt = 0; attempt < 2; attempt++) {
     await userEvent.click(close);
     const review = await screen.findByRole("alertdialog");
-    await waitFor(() => expect(document.activeElement).toBe(within(review).getByRole("button", { name: "继续编辑" })));
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        within(review).getByRole("button", { name: "继续编辑" }),
+      ),
+    );
     await userEvent.keyboard("{Escape}");
     await waitFor(() => expect(document.activeElement).toBe(close));
     expect((name as HTMLInputElement).value).toBe("Retained server");

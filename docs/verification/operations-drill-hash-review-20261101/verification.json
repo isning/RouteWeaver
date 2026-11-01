@@ -1,0 +1,10 @@
+{
+  "receipt": "docs/verification/evidence/OPERATIONS-DRILLS-2026-11-01.json",
+  "receiptSHA256": "035d8ef93dd53d5f168be625567564699eb878403d26797bc3d56eb2c1aae571",
+  "allEightHashesRecomputed": true,
+  "duplicateKeysRejected": true,
+  "flaggedRetainedPaths": [
+    "operations-drills-20261101/internal/agent/managed_xray_process_test.go",
+    "operations-drills-20261101/bin/drill-managed-xray"
+  ]
+}

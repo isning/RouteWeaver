@@ -236,3 +236,26 @@ it("places a single failed preview beside and describes the preview action", asy
   ).toBe(preview);
   expect(dialog.queryByRole("button", { name: "创建待执行批次" })).toBeNull();
 });
+
+it("keeps the fleet plan and exact Close focus after two canceled discard decisions", async () => {
+  const requests: string[] = [];
+  vi.stubGlobal("fetch", vi.fn(async (url) => { requests.push(String(url)); throw new Error(`Unexpected request ${url}`); }));
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  clients.push(client);
+  const onClose = vi.fn();
+  render(<QueryClientProvider client={client}><UIProviders><FleetPlanForm inventory={inventory} history={[]} initialDeploymentId="path" initialTargetIds={["core"]} onClose={onClose} onCreated={() => {}} /></UIProviders></QueryClientProvider>);
+  const dialog = screen.getByRole("dialog");
+  const continuous = within(dialog).getByRole("checkbox", { name: "持续运行并有限自动恢复" });
+  await userEvent.click(continuous);
+  const close = within(dialog).getByRole("button", { name: "关闭" });
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await userEvent.click(close);
+    const review = await screen.findByRole("alertdialog", { name: "放弃未创建的批量变更计划？" });
+    await waitFor(() => expect(document.activeElement).toBe(within(review).getByRole("button", { name: "继续编辑" })));
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(document.activeElement).toBe(close));
+    expect(continuous.getAttribute("aria-checked")).toBe("true");
+    expect(onClose).not.toHaveBeenCalled();
+  }
+  expect(requests).toEqual([]);
+});

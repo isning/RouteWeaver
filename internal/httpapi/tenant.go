@@ -69,7 +69,7 @@ type Profile struct {
 func (h *server) registerTenant(r chi.Router) {
 	r.Route("/me", func(r chi.Router) {
 		r.Get("/overview", func(w http.ResponseWriter, r *http.Request) {
-			v, e := h.overview(current(r).Account.ID, time.Now())
+			v, e := h.overviewContext(r.Context(), current(r).Account.ID, time.Now())
 			if e != nil {
 				storeError(w, e)
 				return
@@ -150,6 +150,7 @@ func (h *server) registerTenant(r chi.Router) {
 		r.Get("/sources/{id}/candidate/reveal", h.sourceCandidate)
 		r.Post("/sources/{id}/candidate/accept", h.decideSourceCandidate)
 		r.Post("/sources/{id}/candidate/reject", h.decideSourceCandidate)
+		r.Get("/collections/{id}/dependencies", h.collectionDependencies)
 		r.Post("/collections", h.saveCollection)
 		r.Put("/collections/{id}", h.saveCollection)
 		r.Post("/collections/preview", h.previewCollection)
@@ -514,6 +515,36 @@ func (h *server) saveResource(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, 200, v)
 }
+
+// collectionDependencies exposes only owner-scoped identities. This preview is not
+// authorization: deleteTenant rechecks the full profile set at the mutation seam.
+func (h *server) collectionDependencies(w http.ResponseWriter, r *http.Request) {
+	owner := current(r).Account.ID
+	var collection domain.Collection
+	if err := h.s.TenantGet(owner, "collections", chi.URLParam(r, "id"), &collection); err != nil {
+		storeError(w, err)
+		return
+	}
+	records, err := h.s.TenantList(owner, "profiles")
+	if err != nil {
+		storeError(w, err)
+		return
+	}
+	profiles := []map[string]string{}
+	for _, raw := range records {
+		var profile Profile
+		if err := json.Unmarshal(raw, &profile); err != nil {
+			storeError(w, err)
+			return
+		}
+		if profile.CollectionID == collection.ID {
+			profiles = append(profiles, map[string]string{"id": profile.ID, "name": profile.Name})
+		}
+	}
+	w.Header().Set("Cache-Control", "no-store")
+	writeJSON(w, 200, map[string]any{"collection": map[string]string{"id": collection.ID, "name": collection.Name}, "profiles": profiles, "deletable": len(profiles) == 0})
+}
+
 func (h *server) deleteTenant(owner, kind, id string) error {
 	inputs := newTemplateInputs(h.s)
 	var old json.RawMessage
@@ -542,13 +573,14 @@ func (h *server) deleteTenant(owner, kind, id string) error {
 		if e != nil {
 			return e
 		}
+		collectionDependents := []string{}
 		for _, b := range all {
 			var p Profile
 			if e := json.Unmarshal(b, &p); e != nil {
 				return e
 			}
 			if kind == "collections" && p.CollectionID == id {
-				return fmt.Errorf("collection is referenced by profile %s", p.Name)
+				collectionDependents = append(collectionDependents, fmt.Sprintf("%s (%s)", p.Name, p.ID))
 			}
 			for _, ref := range p.SourceIDs {
 				if kind == "sources" && ref == id {
@@ -560,6 +592,9 @@ func (h *server) deleteTenant(owner, kind, id string) error {
 					return fmt.Errorf("resource is referenced by profile %s", p.Name)
 				}
 			}
+		}
+		if len(collectionDependents) > 0 {
+			return fmt.Errorf("集合仍被以下配置引用，无法删除：%s", strings.Join(collectionDependents, "、"))
 		}
 	}
 	if kind == "profiles" {

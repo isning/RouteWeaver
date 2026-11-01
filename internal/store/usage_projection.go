@@ -158,18 +158,22 @@ func (w *usageWindow) apply(r *MeterRecord, sign int64) error {
 func (s *Store) usageGenerationTx(tx *sql.Tx) (generation int64, clean bool, err error) {
 	var version, current, acknowledged sql.NullInt64
 	var triggers int
-	// A missing marker is recoverable, but missing triggers cannot authorize a
-	// clean read: a bypassed writer may already have changed canonical facts.
+	// A missing marker is recoverable, but missing or changed trigger definitions
+	// cannot authorize a clean read or acknowledgement: a bypassed writer may
+	// already have changed canonical facts. Reopen reinstalls trusted definitions.
 	err = tx.QueryRow(`SELECT
   (SELECT version FROM usage_projection_state WHERE id=1),
   (SELECT generation FROM usage_projection_state WHERE id=1),
   (SELECT acknowledged FROM usage_projection_state WHERE id=1),
-  (SELECT count(*) FROM sqlite_schema WHERE type='trigger' AND name IN ('usage_ledger_insert','usage_ledger_update','usage_ledger_delete'))`).Scan(&version, &current, &acknowledged, &triggers)
+  (SELECT count(*) FROM sqlite_schema WHERE type='trigger' AND (
+   (name='usage_ledger_insert' AND sql=?) OR
+   (name='usage_ledger_update' AND sql=?) OR
+   (name='usage_ledger_delete' AND sql=?)))`, usageLedgerInsertTrigger, usageLedgerUpdateTrigger, usageLedgerDeleteTrigger).Scan(&version, &current, &acknowledged, &triggers)
 	if err != nil {
 		return 0, false, err
 	}
 	if triggers != 3 {
-		return 0, false, errors.New("usage projection triggers missing; reopen store to rebuild derived state")
+		return 0, false, errors.New("usage projection triggers missing or changed; reopen store to rebuild derived state")
 	}
 	if !version.Valid || !current.Valid || !acknowledged.Valid {
 		return 0, false, nil
@@ -199,6 +203,9 @@ func (s *Store) currentUsageTx(tx *sql.Tx, account string, start, end time.Time)
 			return service.UsageTotals{}, err
 		}
 		if err = s.writeUsageWindowTx(tx, account, w); err != nil {
+			return service.UsageTotals{}, err
+		}
+		if err = s.deleteUsageRebuildTx(tx, account); err != nil {
 			return service.UsageTotals{}, err
 		}
 	}

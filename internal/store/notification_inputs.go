@@ -17,7 +17,7 @@ const notificationColdBytes = 512 << 20
 const notificationColdRecordBytes = 1 << 20
 
 // NotificationColdBudget bounds metadata and ciphertext visited during one
-// cold rebuild. Callers may lower these limits, never exceed the reviewed maxima.
+// cold rebuild STEP. Callers may lower these limits, never exceed the reviewed maxima.
 type NotificationColdBudget struct {
 	Rows  int64
 	Bytes int64
@@ -33,7 +33,7 @@ func (b NotificationColdBudget) Validate() error {
 	return nil
 }
 
-var ErrNotificationColdBudget = errors.New("notification usage projection requires a cold rebuild exceeding the bounded worker budget")
+var ErrNotificationColdBudget = errors.New("notification usage reconstruction encountered a record exceeding the bounded step budget")
 
 type NotificationPage struct {
 	Recipients []notifications.Recipient
@@ -193,10 +193,10 @@ func (s *Store) NotificationInputPageWithBudget(ctx context.Context, after strin
 	var coldErr error
 	if len(cold) > 0 {
 		if err = s.rebuildNotificationWindowsTx(ctx, tx, cold, budget); err != nil {
-			if !errors.Is(err, ErrNotificationColdBudget) {
+			if !errors.Is(err, ErrNotificationColdBudget) && !errors.Is(err, ErrNotificationRebuildPending) {
 				return page, err
 			}
-			if !clean {
+			if !clean && !errors.Is(err, ErrNotificationRebuildPending) {
 				// Roll back invalidation/acknowledgement. These explicitly
 				// usage-unknown snapshots contain only policy/expiry facts.
 				if rollbackErr := tx.Rollback(); rollbackErr != nil {
@@ -246,54 +246,6 @@ func (s *Store) NotificationInputPageWithBudget(ctx context.Context, after strin
 	}
 	page.Users = snapshots
 	return page, coldErr
-}
-func (s *Store) rebuildNotificationWindowsTx(ctx context.Context, tx *sql.Tx, windows map[string]*usageWindow, budget NotificationColdBudget) error {
-	var count, total, largest int64
-	if err := tx.QueryRowContext(ctx, `SELECT count(*),coalesce(sum(bytes),0),coalesce(max(bytes),0) FROM (SELECT length(data) AS bytes FROM records WHERE kind='ledger' ORDER BY id LIMIT ?)`, budget.Rows+1).Scan(&count, &total, &largest); err != nil {
-		return err
-	}
-	if count > budget.Rows || total > budget.Bytes || largest > notificationColdRecordBytes {
-		return ErrNotificationColdBudget
-	}
-	rows, err := tx.QueryContext(ctx, `SELECT id,data FROM records WHERE kind='ledger' ORDER BY id`)
-	if err != nil {
-		return err
-	}
-	for rows.Next() {
-		if err = ctx.Err(); err != nil {
-			break
-		}
-		var id string
-		var b []byte
-		if err = rows.Scan(&id, &b); err != nil {
-			break
-		}
-		var meter MeterRecord
-		if err = s.open("ledger", id, b, &meter); err != nil {
-			break
-		}
-		if w := windows[meter.UserID]; w != nil {
-			if err = w.apply(&meter, 1); err != nil {
-				break
-			}
-		}
-	}
-	if err == nil {
-		err = rows.Err()
-	}
-	rows.Close()
-	if err != nil {
-		return err
-	}
-	for id, w := range windows {
-		if err = ctx.Err(); err != nil {
-			return err
-		}
-		if err = s.writeUsageWindowTx(tx, id, w); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 func (s *Store) notificationRecipientTx(tx *sql.Tx, user domain.User) (notifications.Recipient, error) {
 	r := notifications.Recipient{ID: user.ID, Role: "user", Enabled: user.Enabled}

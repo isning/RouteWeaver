@@ -44,7 +44,7 @@ export interface ProviderConfig {
   cycleEnd?: string;
   expiresAt?: string;
   notificationSource: "none" | "provider_statement" | "nic_estimate";
-  exhaustionAction: "advisory";
+  exhaustionAction: "advisory" | "suspend-managed";
 }
 export interface ObservationConfig {
   revision: number;
@@ -86,6 +86,7 @@ export interface NodeObservationView {
     usedBytes: number | null;
     remainingBytes: number | null;
     exhaustionAction: string;
+    managedAdmissionReason?: string;
     notificationEligible: boolean;
   };
   statement?: {

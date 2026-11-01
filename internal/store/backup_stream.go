@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/url"
 	"strings"
 	"unicode/utf8"
 )
@@ -107,7 +106,7 @@ func validateBackupFrame(f BackupFrame, l BackupLimits) error {
 		}
 	case f.Migration != nil:
 		m := f.Migration
-		if m.Version < 1 || m.Version > BackupSchemaVersion || !validMigrationTime(m.AppliedAt) {
+		if m.Version < 1 || m.Version > maxSchemaMigrationVersion || !validMigrationTime(m.AppliedAt) {
 			return errors.New("unsupported backup migration")
 		}
 	}
@@ -121,42 +120,22 @@ func (s *Store) ExportBackup(ctx context.Context, l BackupLimits, emit func(Back
 	if !l.valid() {
 		return errors.New("invalid backup limits")
 	}
-	// A long snapshot must not hold the Store mutex or its sole writable
-	// connection: admission lease renewal and normal writes remain available.
-	// The existing connection is borrowed only to resolve its SQLite filename.
-	var path string
-	if err := s.db.QueryRowContext(ctx, `SELECT file FROM pragma_database_list WHERE name='main'`).Scan(&path); err != nil {
-		return err
-	}
-	if path == "" {
-		return errors.New("streaming backup requires a file-backed store")
-	}
-	dsn := (&url.URL{Scheme: "file", Path: path, RawQuery: "mode=ro"}).String()
-	reader, err := sql.Open("sqlite", dsn)
-	if err != nil {
-		return err
-	}
-	defer reader.Close()
-	reader.SetMaxOpenConns(1)
-	// Apply connection-local pragmas explicitly; do not change the writer pool.
-	if _, err = reader.ExecContext(ctx, `PRAGMA query_only=ON; PRAGMA busy_timeout=5000; PRAGMA cache_size=-8192; PRAGMA temp_store=MEMORY`); err != nil {
-		return err
-	}
-	tx, err := reader.BeginTx(ctx, &sql.TxOptions{ReadOnly: true})
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-	if err = validateBackupSchema(ctx, tx); err != nil {
-		return err
-	}
-	if err = s.validateBackupDatabase(ctx, tx, l); err != nil {
-		return err
-	}
-	if err = s.walkBackup(ctx, tx, l, emit); err != nil {
-		return err
-	}
-	return tx.Commit()
+	return s.exportBackup(ctx, l, emit)
+}
+
+func (s *Store) exportBackup(ctx context.Context, l BackupLimits, emit func(BackupFrame) error) error {
+	return s.readSnapshot(ctx, func(tx *sql.Tx) error {
+		if err := validateBackupSchema(ctx, tx); err != nil {
+			return err
+		}
+		if err := s.validateBackupDatabase(ctx, tx, l); err != nil {
+			return err
+		}
+		if err := s.walkBackup(ctx, tx, l, emit); err != nil {
+			return err
+		}
+		return nil
+	})
 }
 
 // ImportBackup commits only after the producer has authenticated its entire
@@ -166,8 +145,24 @@ func (s *Store) ImportBackup(ctx context.Context, l BackupLimits, produce func(f
 	if !l.valid() {
 		return errors.New("invalid backup limits")
 	}
+	return s.importBackup(ctx, l, produce)
+}
+
+func (s *Store) importBackup(ctx context.Context, l BackupLimits, produce func(func(BackupFrame) error) error) error {
+	return s.importBackupMode(ctx, l, produce, false)
+}
+
+func (s *Store) importBackupMode(ctx context.Context, l BackupLimits, produce func(func(BackupFrame) error) error, offline bool) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	checkDisk := func() error { return nil }
+	if offline {
+		var err error
+		checkDisk, err = s.prepareOfflineBackupImport(ctx, l)
+		if err != nil {
+			return err
+		}
+	}
 	// Limit SQLite cache and database growth as well as archive bytes. WAL can
 	// temporarily approach another database-sized file during the atomic import.
 	var pageSize int64
@@ -224,6 +219,11 @@ func (s *Store) ImportBackup(ctx context.Context, l BackupLimits, produce func(f
 			return err
 		}
 		count++
+		if offline {
+			if err := checkDisk(); err != nil {
+				return err
+			}
+		}
 		if count > l.MaxRows {
 			return errors.New("backup exceeds configured row limit")
 		}
@@ -257,7 +257,10 @@ func (s *Store) ImportBackup(ctx context.Context, l BackupLimits, produce func(f
 			m := f.Migration
 			_, err = migrationInsert.ExecContext(ctx, m.Version, m.AppliedAt)
 		}
-		return err
+		if err != nil {
+			return err
+		}
+		return checkDisk()
 	})
 	if err != nil {
 		return err
@@ -279,7 +282,13 @@ func (s *Store) ImportBackup(ctx context.Context, l BackupLimits, produce func(f
 	if err = s.invalidateUsageTx(tx); err != nil {
 		return err
 	}
-	return tx.Commit()
+	if err = checkDisk(); err != nil {
+		return err
+	}
+	if err = tx.Commit(); err != nil {
+		return err
+	}
+	return checkDisk()
 }
 func (s *Store) walkBackup(ctx context.Context, tx *sql.Tx, l BackupLimits, emit func(BackupFrame) error) error {
 	queries := []string{`SELECT kind,id,data FROM records ORDER BY kind,id`, `SELECT username,account_id FROM identities ORDER BY username`, `SELECT kind,digest,record_id FROM token_index ORDER BY kind,digest`, `SELECT kind,id,value FROM counters ORDER BY kind,id`, `SELECT version,applied_at FROM schema_migrations ORDER BY version`}

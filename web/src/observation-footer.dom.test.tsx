@@ -13,6 +13,7 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { UIProviders } from "./ui-patterns/providers";
 import { ObservationConfigForm } from "./ObservationForms";
+import type { CoreInstance } from "./types";
 import type { NodeObservationView } from "./observability-model";
 const initial: NodeObservationView = {
   nodeId: "host",
@@ -49,7 +50,11 @@ const initial: NodeObservationView = {
   },
 };
 const clients: QueryClient[] = [];
-function mount(onClose = vi.fn()) {
+function mount(
+  onClose = vi.fn(),
+  value = initial,
+  instances: CoreInstance[] = [],
+) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -58,8 +63,8 @@ function mount(onClose = vi.fn()) {
     <QueryClientProvider client={client}>
       <UIProviders>
         <ObservationConfigForm
-          initial={initial}
-          instances={[]}
+          initial={value}
+          instances={instances}
           onClose={onClose}
         />
       </UIProviders>
@@ -177,4 +182,67 @@ it("submits from the external decision footer without changing the provider cycl
   expect(body.provider.cycleId).toBe("cycle");
   expect(body.provider.cycleStart).toBe("2026-10-01T00:00:00Z");
   expect(body.provider.cycleEnd).toBe("2026-11-01T00:00:00Z");
+});
+
+it("confirms explicit managed suspension consequences, cancels without writing and preserves the selected policy on save", async () => {
+  const value: NodeObservationView = structuredClone(initial);
+  value.config.provider!.exhaustionAction = "suspend-managed";
+  value.config.provider!.notificationSource = "provider_statement";
+  const fetcher = vi.fn(
+    async () =>
+      new Response(JSON.stringify(value), {
+        headers: { "Content-Type": "application/json" },
+      }),
+  );
+  vi.stubGlobal("fetch", fetcher);
+  const close = mount(vi.fn(), value, [
+    {
+      id: "managed",
+      hostId: "host",
+      adapterId: "routeweaver/managed-xray",
+      version: "fixture",
+    },
+  ]);
+  const user = userEvent.setup();
+  const submit = screen.getByRole("button", { name: "保存采集与额度设置" });
+  await user.click(submit);
+  let confirm = within(await screen.findByRole("alertdialog"));
+  expect(confirm.getByText("启用 host 的托管连接暂停策略？")).toBeTruthy();
+  expect(confirm.getByText(/超过 15 分钟/).textContent).toContain("stock 内核");
+  expect(confirm.getByText(/超过 15 分钟/).textContent).toContain(
+    "手工账单记录不会自动刷新",
+  );
+  expect(fetcher).not.toHaveBeenCalled();
+  await user.click(confirm.getByRole("button", { name: "返回修改" }));
+  await waitFor(() => expect(document.activeElement).toBe(submit));
+  expect(close).not.toHaveBeenCalled();
+  await user.click(submit);
+  confirm = within(await screen.findByRole("alertdialog"));
+  await user.click(confirm.getByRole("button", { name: "确认启用并保存" }));
+  await waitFor(() => expect(close).toHaveBeenCalledOnce());
+  expect(fetcher).toHaveBeenCalledOnce();
+  const body = JSON.parse(
+    (fetcher.mock.calls[0] as unknown as [string, RequestInit])[1]
+      .body as string,
+  );
+  expect(body.provider.exhaustionAction).toBe("suspend-managed");
+  expect(body.provider.notificationSource).toBe("provider_statement");
+});
+
+it("does not offer managed suspension based on another host's instance", async () => {
+  mount(vi.fn(), initial, [
+    {
+      id: "other-managed",
+      hostId: "other-host",
+      adapterId: "routeweaver/managed-xray",
+      version: "fixture",
+    },
+  ]);
+  await userEvent
+    .setup()
+    .click(screen.getByRole("combobox", { name: "额度耗尽行为" }));
+  const option = await screen.findByRole("option", {
+    name: "暂停托管连接及续期",
+  });
+  expect(option.getAttribute("aria-disabled")).toBe("true");
 });

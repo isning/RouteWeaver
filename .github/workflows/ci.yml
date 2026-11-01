@@ -45,10 +45,10 @@ jobs:
           fetch-depth: 0
       - run: scripts/verify.sh secrets
 
-  backend:
-    name: Control plane, agent and managed runtime
+  backend_core:
+    name: Backend core verification
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
@@ -56,7 +56,74 @@ jobs:
       - uses: ./.github/actions/setup
         with:
           go: "true"
-      - run: scripts/verify.sh backend
+      - run: scripts/verify.sh backend_core
+
+  backend_backup:
+    name: Backend backup verification
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          go: "true"
+      - run: scripts/verify.sh backend_backup
+
+  backend_httpapi:
+    name: Backend httpapi verification
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          go: "true"
+      - run: scripts/verify.sh backend_httpapi
+
+  backend_store:
+    name: Backend store verification
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          go: "true"
+      - run: scripts/verify.sh backend_store
+
+  backend_managed:
+    name: Backend managed verification
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          go: "true"
+      - run: scripts/verify.sh backend_managed
+
+  backend:
+    name: Control plane, agent and managed runtime
+    if: ${{ always() }}
+    needs: [backend_core, backend_backup, backend_httpapi, backend_store, backend_managed]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - name: Reject missing, skipped, cancelled or failed backend shards
+        env:
+          ROUTEWEAVER_CI_RESULTS: ${{ toJSON(needs) }}
+        run: python3 scripts/ci_gate.py backend
 
   web:
     name: Frontend types, behavior and production build
@@ -186,6 +253,7 @@ jobs:
       ROUTEWEAVER_CORE_BIN_DIR: ${{ github.workspace }}/bin/cores
       ROUTEWEAVER_STOCK_CORE_BIN_DIR: ${{ github.workspace }}/bin/stock-cores
       ROUTEWEAVER_NATIVE_PROCESS_TESTS: xray,sing-box
+      ROUTEWEAVER_CLIENT_PROCESS_TESTS: mihomo,sing-box
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:

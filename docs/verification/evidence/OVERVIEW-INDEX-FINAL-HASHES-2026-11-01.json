@@ -1,0 +1,12 @@
+{
+  "scripts/reference-overview-history.py": "6bf4f542b249865a61de26af0deca83294e1eef8ecde924a503d1e83db957375",
+  "scripts/overview-fixture/main.go": "353a1a40149fb261622856feed405adbf60e8216f99767236da90714956b0627",
+  "internal/store/usage_history.go": "3127be8f8542c4ceb8aff6fef7bebbed6696f9b2f854d59a0c25967e0f4681d5",
+  "internal/store/billing.go": "33dab5d8c883fae005c2a920de8909bd1ddb95199ad85517750cd968f69b9a7a",
+  "internal/store/ledger_mutations.go": "87a3aeff48463874e2f8469b6bf4774aad7213e1b789347b0b310990a5fe2fef",
+  "internal/store/usage_projection_schema.go": "47242772e7c5d38a5178f84de647937f4225766dcc2ee62a62d9c6efb8f7aa93",
+  "go.mod": "ac41bad1b515e40453ccf686c5c555a9e2bcdd58274683cac707c5a75bc6bbb0",
+  "go.sum": "8f15d4c388eb79f0054de2355b620fcffc3a2416be2441fe2f391547aca70fe2",
+  "../overview-index-final-evidence-20261101/control-plane": "0e986f6a4ce71601960042f9794794b9a5804b000a2bca0ab57f4106dc196687",
+  "../overview-index-final-evidence-20261101/fixture": "cd5e8d82afe796700d1fced3a22295cd7edc43379888c3873856380bbe38f5b7"
+}

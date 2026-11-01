@@ -190,7 +190,7 @@ func ValidateSnapshot(v Snapshot) error {
 	if len(v.Records)+len(v.Identities)+len(v.Tokens)+len(v.Counters) > MaxSnapshotRows {
 		return errors.New("backup exceeds row limit")
 	}
-	if len(v.Migrations) != BackupSchemaVersion {
+	if len(v.Migrations) < BackupSchemaVersion || len(v.Migrations) > maxSchemaMigrationVersion {
 		return errors.New("incomplete backup migrations")
 	}
 	for i, m := range v.Migrations {
@@ -205,6 +205,13 @@ func ValidateSnapshot(v Snapshot) error {
 	records := map[string]json.RawMessage{}
 	accounts := map[string]Account{}
 	for _, r := range v.Records {
+		needsFence, err := providerRecordNeedsFence(r.Kind, r.Data)
+		if err != nil {
+			return err
+		}
+		if needsFence && len(v.Migrations) < providerSuspensionMigrationVersion {
+			return errors.New("provider admission policy requires its migration fence")
+		}
 		if !valid(r.Kind) || !valid(r.ID) || !json.Valid(r.Data) {
 			return errors.New("invalid backup record")
 		}

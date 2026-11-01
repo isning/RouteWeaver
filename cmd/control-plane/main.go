@@ -30,6 +30,14 @@ func main() {
 	}
 }
 func run() error {
+	if len(os.Args) > 1 && os.Args[1] == "backup-set" {
+		ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+		defer stop()
+		return runBackupSet(ctx, os.Args[2:], os.Stdin, os.Stdout, os.Getenv)
+	}
+	if len(os.Args) > 1 && !strings.HasPrefix(os.Args[1], "-") {
+		return fmt.Errorf("unknown control-plane command")
+	}
 	listen := flag.String("listen", "127.0.0.1:8080", "bind address; remote interfaces require TLS")
 	dbPath := flag.String("db", ".local/routeweaver.db", "encrypted SQLite database path")
 	uiDir := flag.String("ui-dir", "web/dist", "built web UI directory")
@@ -46,6 +54,9 @@ func run() error {
 	backupRows := flag.Int("backup-max-rows", 2000000, "maximum logical backup rows (1–2000000)")
 	backupTimeout := flag.Duration("backup-timeout", 10*time.Minute, "bounded backup operation timeout (at most 10m)")
 	flag.Parse()
+	if flag.NArg() != 0 {
+		return fmt.Errorf("unexpected control-plane command arguments")
+	}
 	if (*recoverMFA || *recoverReason != "") && *recoverAccount == "" {
 		return fmt.Errorf("recovery options require --recover-account")
 	}

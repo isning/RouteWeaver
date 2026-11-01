@@ -25,7 +25,7 @@ func (h *server) revisionView(kind, id string, raw json.RawMessage, reveal bool)
 	if !reveal {
 		omitServerSecrets(value)
 	}
-	if kind == "server-deployments" {
+	if kind == "server-deployments" || kind == "managed-endpoints" {
 		value["revisionToken"] = h.recordRevision(kind, id, raw)
 	}
 	return value

@@ -185,5 +185,53 @@ func TestManagedNativeBrokerEOFStopsActivePayloadAndPersistsFinalJournal(t *test
 	if zeros != 1 || final.Counters[0].UploadBytes != uint64(len(payload)) || final.Counters[0].DownloadBytes != uint64(len(payload)) {
 		t.Fatalf("baseline/final counter attribution incorrect: %+v", snapshots)
 	}
+	if os.Getenv("ROUTEWEAVER_OPERATIONAL_DRILL") == "1" {
+		reopenStarted := time.Now()
+		spoolPath := filepath.Join(root, "operations-spool")
+		spool, openErr := OpenMeterSpool(spoolPath, desired.Scope, "operational-replay")
+		if openErr != nil {
+			t.Fatal(openErr)
+		}
+		if err = CollectManagedCounters(context.Background(), root, spool, false); err != nil {
+			spool.Close()
+			t.Fatal(err)
+		}
+		pending := spool.Pending()
+		if len(pending) != 2 || pending[0].Samples[0].CumulativeBytes != 0 || pending[1].Samples[0].CumulativeBytes != uint64(2*len(payload)) {
+			spool.Close()
+			t.Fatal("real final journal lost exact baseline/final")
+		}
+		spool.Close()
+		spool, err = OpenMeterSpool(spoolPath, desired.Scope, "operational-replay")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err = CollectManagedCounters(context.Background(), root, spool, false); err != nil {
+			spool.Close()
+			t.Fatal(err)
+		}
+		replay := spool.Pending()
+		if len(replay) != 2 || replay[0].Digest != pending[0].Digest || replay[1].Digest != pending[1].Digest {
+			spool.Close()
+			t.Fatal("reopen/recollect changed exact real-native meter batches")
+		}
+		// Synthetic matching receipts exercise the durable spool seam, not CP delivery.
+		for _, batch := range replay {
+			if err = spool.Ack(MeterReceipt{StreamEpoch: batch.StreamEpoch, Sequence: batch.Sequence, Digest: batch.Digest}); err != nil {
+				spool.Close()
+				t.Fatal(err)
+			}
+		}
+		spool.Close()
+		spool, err = OpenMeterSpool(spoolPath, desired.Scope, "operational-replay")
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer spool.Close()
+		if err = CollectManagedCounters(context.Background(), root, spool, false); err != nil || len(spool.Pending()) != 0 {
+			t.Fatal("acknowledged actual final replayed after restart", err)
+		}
+		t.Logf("operational real-native journal: exact %d bytes retained across spool reopen/replay; synthetic matching receipts suppress acknowledged replay; recovery=%s", 2*len(payload), time.Since(reopenStarted))
+	}
 	t.Logf("broker EOF stopped live payload and owned process, preserved %d-byte final in %s", final.Counters[0].CumulativeBytes, time.Since(began))
 }

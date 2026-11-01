@@ -44,7 +44,7 @@ func TestNotificationEvaluationTimeoutReservesDurableDispatch(t *testing.T) {
 	}
 }
 
-func TestColdBudgetRefusalKeepsExpiryAnnouncementsAndCursorProgress(t *testing.T) {
+func TestColdRebuildPendingKeepsExpiryAnnouncementsAndCursorProgress(t *testing.T) {
 	s, err := store.Open(filepath.Join(t.TempDir(), "db"), bytes.Repeat([]byte{81}, 32))
 	if err != nil {
 		t.Fatal(err)
@@ -76,10 +76,10 @@ func TestColdBudgetRefusalKeepsExpiryAnnouncementsAndCursorProgress(t *testing.T
 	for tick := 0; tick < 20; tick++ {
 		logicalNow := now.Add(time.Duration(tick) * 2 * time.Minute)
 		next, runErr := runNotificationBatchWithBudget(context.Background(), s, after, logicalNow, 5*time.Second, budget)
-		if !errors.Is(runErr, store.ErrNotificationColdBudget) {
-			t.Fatalf("missing visible cold-budget error: %v", runErr)
+		if runErr != nil && !errors.Is(runErr, store.ErrNotificationRebuildPending) && !errors.Is(runErr, context.DeadlineExceeded) {
+			t.Fatalf("unexpected batch failure: %v", runErr)
 		}
-		if next != "" && next <= after {
+		if next != "" && next < after {
 			t.Fatalf("cold refusal blocked cursor: after=%q next=%q", after, next)
 		}
 		if next == "" {
@@ -96,7 +96,8 @@ func TestColdBudgetRefusalKeepsExpiryAnnouncementsAndCursorProgress(t *testing.T
 			for _, item := range items {
 				switch item.Kind {
 				case "quota":
-					t.Fatal("unknown usage evaluated as known quota")
+					// Later visits may complete reconstruction; the dedicated
+					// small-fixture test asserts no quota before completion.
 				case "expiry":
 					expiryFound = true
 				case "announcement":
@@ -152,5 +153,94 @@ func TestPartialEnqueueResumesAfterCommittedUserNotInputPage(t *testing.T) {
 	}
 	if len(seen) != 101 || !seen["u099"] {
 		t.Fatalf("partial enqueue starved tail: recipients=%d tail=%v", len(seen), seen["u099"])
+	}
+}
+
+func TestNotificationRebuildPendingDoesNotHideDeliveryFailure(t *testing.T) {
+	delivery := errors.New("synthetic delivery failure")
+	got := notificationBatchError(store.ErrNotificationRebuildPending, delivery)
+	if !errors.Is(got, delivery) || errors.Is(got, store.ErrNotificationRebuildPending) {
+		t.Fatalf("pending hid actual failure: %v", got)
+	}
+	if got = notificationBatchError(store.ErrNotificationRebuildPending, nil); !errors.Is(got, store.ErrNotificationRebuildPending) {
+		t.Fatalf("pending status lost: %v", got)
+	}
+}
+
+func TestNotificationPendingRebuildEventuallyEvaluatesQuotaWithoutBlockingOutbox(t *testing.T) {
+	s, err := store.Open(filepath.Join(t.TempDir(), "db"), bytes.Repeat([]byte{84}, 32))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	now := time.Now().UTC()
+	expiry := now.Add(time.Hour)
+	if err = s.PutUser(domain.User{ID: "u", Name: "User", Enabled: true, QuotaBytes: 2}); err != nil {
+		t.Fatal(err)
+	}
+	if err = s.PutEntitlement(service.Entitlement{UserID: "u", StartsAt: now.Add(-time.Hour), ExpiresAt: &expiry, Cycle: service.CyclePolicy{Mode: "none", Timezone: "UTC+8"}}); err != nil {
+		t.Fatal(err)
+	}
+	for _, id := range []string{"a", "b", "c"} {
+		if err = s.Put("ledger", id, store.MeterRecord{MeterBatch: store.MeterBatch{UserID: "u", RawBytes: 1, ObservedAt: now}, RateMicros: 500000}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	n := notifications.New(s, nil)
+	if err = n.SaveAnnouncement(notifications.Announcement{ID: "notice", Title: "Notice", Body: "Independent", Audience: "all", StartsAt: now.Add(-time.Minute), ExpiresAt: now.Add(time.Hour), Enabled: true}); err != nil {
+		t.Fatal(err)
+	}
+	for step := 0; step < 3; step++ {
+		logicalNow := now.Add(time.Duration(step) * time.Minute)
+		_, err = runNotificationBatchWithBudget(context.Background(), s, "", logicalNow, 5*time.Second, store.NotificationColdBudget{Rows: 1, Bytes: 4096})
+		if step < 2 {
+			if !errors.Is(err, store.ErrNotificationRebuildPending) {
+				t.Fatal(err)
+			}
+		} else if err != nil {
+			t.Fatal(err)
+		}
+		items, e := n.Inbox(notifications.Recipient{ID: "u", Role: "user", Enabled: true}, logicalNow)
+		if e != nil {
+			t.Fatal(e)
+		}
+		announcement, quota := false, false
+		for _, item := range items {
+			announcement = announcement || item.Kind == "announcement"
+			quota = quota || item.Kind == "quota"
+		}
+		if !announcement {
+			t.Fatal("pending reconstruction blocked independent outbox")
+		}
+		if step < 2 && quota {
+			t.Fatal("partial totals authorized quota notice")
+		}
+		if step == 2 && !quota {
+			t.Fatal("completed reconstruction failed to evaluate exact quota")
+		}
+	}
+}
+
+func TestNotificationContinuationDelayYieldsAndBacksOff(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		err  error
+		want time.Duration
+	}{
+		{"complete", nil, time.Minute},
+		{"committed pending", store.ErrNotificationRebuildPending, time.Second},
+		{"deadline", context.DeadlineExceeded, time.Minute},
+		{"oversized", store.ErrNotificationColdBudget, time.Minute},
+		{"corrupt", errors.New("corrupt canonical record"), time.Minute},
+		{"pending with delivery failure", notificationBatchError(store.ErrNotificationRebuildPending, errors.New("delivery failed")), time.Minute},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := notificationContinuationDelay(time.Minute, tc.err); got != tc.want {
+				t.Fatalf("delay=%s want=%s", got, tc.want)
+			}
+		})
+	}
+	if got := notificationContinuationDelay(time.Second, store.ErrNotificationRebuildPending); got != time.Second {
+		t.Fatal(got)
 	}
 }

@@ -1,6 +1,8 @@
 package store
 
 import (
+	"context"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -151,20 +153,70 @@ func (s *Store) RecordMeter(m MeterBatch) error {
 	return tx.Commit()
 }
 func (s *Store) Usage(user string, start, end time.Time) (service.UsageTotals, error) {
-	raw, e := s.List("ledger")
-	if e != nil {
-		return service.UsageTotals{}, e
+	return s.UsageContext(context.Background(), user, start, end)
+}
+
+// UsageContext reduces complete owner history in a single read snapshot, using
+// authenticated derived membership when valid and otherwise scanning canonical
+// history. Both paths use O(maximum record) memory and the same exact reducer.
+// It never substitutes the future-inclusive current-cycle projection.
+func (s *Store) UsageContext(ctx context.Context, user string, start, end time.Time) (totals service.UsageTotals, err error) {
+	err = s.readSnapshot(ctx, func(tx *sql.Tx) error {
+		if indexed, usable, indexErr := s.indexedUsageTx(ctx, tx, user, start, end); indexErr == nil && usable {
+			totals = indexed
+			return nil
+		}
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		rows, e := tx.QueryContext(ctx, `SELECT id,data FROM records WHERE kind='ledger' ORDER BY id`)
+		if e != nil {
+			return e
+		}
+		defer rows.Close()
+		totals, e = reduceUsageRecords(func(r *MeterRecord) (bool, error) {
+			if !rows.Next() {
+				return false, rows.Err()
+			}
+			var id string
+			var data []byte
+			if e := rows.Scan(&id, &data); e != nil {
+				return false, e
+			}
+			if e := s.open("ledger", id, data, r); e != nil {
+				return false, e
+			}
+			return true, nil
+		}, user, start, end)
+		return e
+	})
+	if err != nil {
+		return service.UsageTotals{}, err
 	}
-	return aggregateUsageRecords(raw, user, start, end)
+	return totals, nil
 }
 func aggregateUsageRecords(raw []json.RawMessage, user string, start, end time.Time) (service.UsageTotals, error) {
-	var e error
+	i := 0
+	return reduceUsageRecords(func(r *MeterRecord) (bool, error) {
+		if i == len(raw) {
+			return false, nil
+		}
+		b := raw[i]
+		i++
+		return true, json.Unmarshal(b, r)
+	}, user, start, end)
+}
+func reduceUsageRecords(next func(*MeterRecord) (bool, error), user string, start, end time.Time) (service.UsageTotals, error) {
 	v := service.UsageTotals{}
 	weightedMicros := new(big.Int)
-	for _, b := range raw {
+	for {
 		var r MeterRecord
-		if e = json.Unmarshal(b, &r); e != nil {
+		more, e := next(&r)
+		if e != nil {
 			return v, e
+		}
+		if !more {
+			break
 		}
 		if r.UserID != user || r.ObservedAt.Before(start) || !end.IsZero() && !r.ObservedAt.Before(end) {
 			continue

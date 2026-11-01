@@ -92,6 +92,7 @@ func TestUsageProjectionNormalMutationSeamsStayIncremental(t *testing.T) {
 			if err := op.run(); err != nil {
 				t.Fatal(err)
 			}
+			assertHistoryIndexed(t, s, "account")
 			projectionTestClean(t, s) // Before the read: fallback must not mask missed plumbing.
 			got := projectionTestRead(t, s, "account")
 			want, err := s.Usage("account", time.Time{}, time.Time{})
@@ -110,6 +111,7 @@ func TestUsageProjectionNormalMutationSeamsStayIncremental(t *testing.T) {
 		t.Fatal(err)
 	}
 	projectionTestClean(t, s)
+	assertHistoryIndexed(t, s, "account")
 }
 
 func TestUsageProjectionFailedTransactionRollsBackCanonicalAndDerived(t *testing.T) {

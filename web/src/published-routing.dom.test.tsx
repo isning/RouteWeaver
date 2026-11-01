@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen, within, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { UIProviders } from "./ui-patterns/providers";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -65,7 +65,7 @@ afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
-it("shows only the selected publication and checks saved changes without revealing profiles or accessing subscriptions", async () => {
+it.each(["overview", "outputs"] as const)("shows only the selected publication in %s and restores exact detail opener after repeated dismissal", async (view) => {
   const paths: string[] = [];
   vi.stubGlobal(
     "fetch",
@@ -96,7 +96,8 @@ it("shows only the selected publication and checks saved changes without reveali
       throw new Error(`Unexpected ${path}`);
     }),
   );
-  mount(<SubscriptionsPage navigate={() => {}} />);
+  history.replaceState(null, "", view === "outputs" ? "#outputs" : "#subscriptions");
+  mount(<SubscriptionsPage view={view} />);
   await userEvent.click(
     await screen.findByRole("button", { name: "查看订阅 Daily" }),
   );
@@ -115,7 +116,16 @@ it("shows only the selected publication and checks saved changes without reveali
     "/api/me/outputs/one/status",
   ]);
   expect(paths.some((p) => /reveal|access/.test(p))).toBe(false);
-  await userEvent.click(screen.getByRole("button", { name: "关闭" }));
+  const dailyOpener = screen.getByRole("button", { name: "查看订阅 Daily", hidden: true });
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    await waitFor(() => expect(document.activeElement).toBe(dailyOpener));
+    if (attempt === 0) {
+      await userEvent.click(dailyOpener);
+      await screen.findByRole("dialog", { name: "订阅详情 · Daily" });
+    }
+  }
   await userEvent.click(
     screen.getByRole("button", { name: "查看订阅 Travel" }),
   );
@@ -124,7 +134,7 @@ it("shows only the selected publication and checks saved changes without reveali
   expect(within(travel).queryByText("Published UK")).toBeNull();
   expect(screen.queryByText("已保存的修改尚未发布")).toBeNull();
   expect(await screen.findByText("与已保存草稿一致")).toBeTruthy();
-  expect(paths.filter((p) => p.endsWith("/status"))).toEqual([
+  expect([...new Set(paths.filter((p) => p.endsWith("/status")))]).toEqual([
     "/api/me/outputs/one/status",
     "/api/me/outputs/two/status",
   ]);

@@ -188,3 +188,24 @@ describe("existing unsupported endpoint metadata allowance", () => {
     expect(isUnchangedEndpointDraft(original, endpoint, target)).toBe(false);
   });
 });
+
+it("keeps endpoint review metadata out of compiled and normalized server intent", () => {
+  const endpoints = inventory.endpoints.map((endpoint) => ({
+    ...endpoint,
+    revisionToken: "inventory-review-only",
+  }));
+  const result = compilePath(draft, ["entry", "exit"], {
+    ...inventory,
+    endpoints,
+  });
+  expect(
+    result.ir.programs.every(
+      (program) => !("revisionToken" in program.listener),
+    ),
+  ).toBe(true);
+  result.ir.programs[0].listener.revisionToken = "inventory-review-only";
+  expect(
+    normalizeDeployment(result).ir.programs[0].listener.revisionToken,
+  ).toBeUndefined();
+  expect(endpoints[0].revisionToken).toBe("inventory-review-only");
+});

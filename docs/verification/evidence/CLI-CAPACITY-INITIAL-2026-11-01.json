@@ -1,0 +1,235 @@
+{
+  "source_commit": "4d384e22464e46e5533b29d9925d8576343cb8aa",
+  "binary_sha256": "665da126481b7c1748ac913b97ef32f7dc8420063688e5a429b85a6e3db13e21",
+  "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+  "GOMAXPROCS": 1,
+  "GOMEMLIMIT": "256MiB soft target",
+  "native_child": "none",
+  "hard_cpu_memory_limits": "unknown",
+  "profile": "25 synthetic tenants, 1 private text source each; 1/5/25 concurrent clients, 30 seconds each, 2 requests/client/second, 90% GET source / 10% POST source update; login once per unique account outside timed windows",
+  "bounds": {
+    "max_rss_kib": 524288,
+    "max_data_bytes": 536870912,
+    "request_timeout_seconds": 5,
+    "benchmark_watchdog_seconds": 180,
+    "maximum_timed_requests": 1860
+  },
+  "windows": [
+    {
+      "concurrent_clients": 1,
+      "elapsed_seconds": 30.001948418999746,
+      "request_count": 60,
+      "errors": 0,
+      "status_counts": {
+        "200": 60
+      },
+      "mutations": 6,
+      "p50_ms": 1.967832999980601,
+      "p95_ms": 5.270663000374043,
+      "p99_ms": 19.97845599998982,
+      "max_ms": 19.97845599998982,
+      "max_cli_rss_kib": 25072,
+      "cli_cpu_seconds": 0.0900000000000003,
+      "before": {
+        "rows_by_kind": {
+          "accounts": 25,
+          "invites": 25,
+          "metadata": 1,
+          "notification-config": 1,
+          "sessions": 25,
+          "tenant/*/sources": 25,
+          "users": 25
+        },
+        "encrypted_payload_bytes_by_kind": {
+          "accounts": 7950,
+          "invites": 7696,
+          "metadata": 41,
+          "notification-config": 397,
+          "sessions": 8092,
+          "tenant/*/sources": 30691,
+          "users": 3675
+        },
+        "files": {
+          "state.db-shm": 32768,
+          "state.db-wal": 745752,
+          "state.db": 126976
+        },
+        "rss_kib": 24664,
+        "cpu_seconds": 2.09
+      },
+      "after": {
+        "rows_by_kind": {
+          "accounts": 25,
+          "invites": 25,
+          "metadata": 1,
+          "notification-config": 1,
+          "sessions": 25,
+          "tenant/*/sources": 25,
+          "users": 25
+        },
+        "encrypted_payload_bytes_by_kind": {
+          "accounts": 7950,
+          "invites": 7696,
+          "metadata": 41,
+          "notification-config": 397,
+          "sessions": 8092,
+          "tenant/*/sources": 32047,
+          "users": 3675
+        },
+        "files": {
+          "state.db-shm": 32768,
+          "state.db-wal": 803432,
+          "state.db": 126976
+        },
+        "rss_kib": 24792,
+        "cpu_seconds": 2.18
+      }
+    },
+    {
+      "concurrent_clients": 5,
+      "elapsed_seconds": 30.00186813399978,
+      "request_count": 300,
+      "errors": 0,
+      "status_counts": {
+        "200": 300
+      },
+      "mutations": 30,
+      "p50_ms": 5.509676000656327,
+      "p95_ms": 29.18453399979626,
+      "p99_ms": 221.6207219998978,
+      "max_ms": 242.45910399986315,
+      "max_cli_rss_kib": 25164,
+      "cli_cpu_seconds": 0.9499999999999997,
+      "before": {
+        "rows_by_kind": {
+          "accounts": 25,
+          "invites": 25,
+          "metadata": 1,
+          "notification-config": 1,
+          "sessions": 25,
+          "tenant/*/sources": 25,
+          "users": 25
+        },
+        "encrypted_payload_bytes_by_kind": {
+          "accounts": 7950,
+          "invites": 7696,
+          "metadata": 41,
+          "notification-config": 397,
+          "sessions": 8092,
+          "tenant/*/sources": 32047,
+          "users": 3675
+        },
+        "files": {
+          "state.db-shm": 32768,
+          "state.db-wal": 803432,
+          "state.db": 126976
+        },
+        "rss_kib": 24792,
+        "cpu_seconds": 2.18
+      },
+      "after": {
+        "rows_by_kind": {
+          "accounts": 25,
+          "invites": 25,
+          "metadata": 1,
+          "notification-config": 1,
+          "sessions": 25,
+          "tenant/*/sources": 25,
+          "users": 25
+        },
+        "encrypted_payload_bytes_by_kind": {
+          "accounts": 7950,
+          "invites": 7696,
+          "metadata": 41,
+          "notification-config": 397,
+          "sessions": 8092,
+          "tenant/*/sources": 38787,
+          "users": 3675
+        },
+        "files": {
+          "state.db-shm": 32768,
+          "state.db-wal": 992952,
+          "state.db": 126976
+        },
+        "rss_kib": 25108,
+        "cpu_seconds": 3.13
+      }
+    },
+    {
+      "concurrent_clients": 25,
+      "elapsed_seconds": 30.04779843400047,
+      "request_count": 1500,
+      "errors": 0,
+      "status_counts": {
+        "200": 1500
+      },
+      "mutations": 150,
+      "p50_ms": 13.626612000734895,
+      "p95_ms": 38.154499000484066,
+      "p99_ms": 132.05865700001596,
+      "max_ms": 186.922525999762,
+      "max_cli_rss_kib": 26108,
+      "cli_cpu_seconds": 1.5600000000000005,
+      "before": {
+        "rows_by_kind": {
+          "accounts": 25,
+          "invites": 25,
+          "metadata": 1,
+          "notification-config": 1,
+          "sessions": 25,
+          "tenant/*/sources": 25,
+          "users": 25
+        },
+        "encrypted_payload_bytes_by_kind": {
+          "accounts": 7950,
+          "invites": 7696,
+          "metadata": 41,
+          "notification-config": 397,
+          "sessions": 8092,
+          "tenant/*/sources": 38787,
+          "users": 3675
+        },
+        "files": {
+          "state.db-shm": 32768,
+          "state.db-wal": 992952,
+          "state.db": 126976
+        },
+        "rss_kib": 25108,
+        "cpu_seconds": 3.13
+      },
+      "after": {
+        "rows_by_kind": {
+          "accounts": 25,
+          "invites": 25,
+          "metadata": 1,
+          "notification-config": 1,
+          "sessions": 25,
+          "tenant/*/sources": 25,
+          "users": 25
+        },
+        "encrypted_payload_bytes_by_kind": {
+          "accounts": 7950,
+          "invites": 7696,
+          "metadata": 41,
+          "notification-config": 397,
+          "sessions": 8092,
+          "tenant/*/sources": 72568,
+          "users": 3675
+        },
+        "files": {
+          "state.db-shm": 32768,
+          "state.db-wal": 2010592,
+          "state.db": 126976
+        },
+        "rss_kib": 25820,
+        "cpu_seconds": 4.69
+      }
+    }
+  ],
+  "cpu.max": "not exposed",
+  "memory.max": "not exposed",
+  "tenant_isolation_and_fixed_source_count": true,
+  "status": "passed",
+  "temporary_data_cleaned": true,
+  "receipt_note": "Initial exploratory run; synthetic tenant source categories aggregated after measurement. Final repeat adds persisted source-name assertions and redirect refusal."
+}

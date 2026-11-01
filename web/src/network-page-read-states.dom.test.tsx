@@ -20,7 +20,9 @@ it.each([
   ["routes", "/api/hosts", "转发路径", "暂无服务器转发路径"],
   ["published-routes", "/api/published-routes", "线路", "暂无线路"],
   ["fleet", "/api/admin/fleet-batches", "执行任务", "暂无批量变更"],
-])("allows administrator #%s entry and separates an unavailable inventory from authoritative empty", async (hash, heldEndpoint, heading, empty) => {
+  ["fleet", "/api/core-instances", "执行任务", "暂无批量变更"],
+  ["published-routes", "/api/core-instances", "线路", "暂无线路"],
+])("allows administrator #%s entry and separates unavailable %s from authoritative empty", async (hash, heldEndpoint, heading, empty) => {
   history.replaceState(null, "", `/#${hash}`);
   vi.spyOn(window, "scrollTo").mockImplementation(() => {});
   let release!: (response: Response) => void;

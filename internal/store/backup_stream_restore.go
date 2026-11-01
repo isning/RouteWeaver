@@ -14,6 +14,13 @@ import (
 // rows into a new encrypted store, closes it, reopens without materializing State,
 // verifies a canonical streamed digest, and publishes with no-replace semantics.
 func RestoreBackupFresh(ctx context.Context, target string, key []byte, source *Store, l BackupLimits) error {
+	if !l.valid() {
+		return errors.New("invalid backup limits")
+	}
+	return restoreBackupFresh(ctx, target, key, source, l, false)
+}
+
+func restoreBackupFresh(ctx context.Context, target string, key []byte, source *Store, l BackupLimits, offline bool) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -47,14 +54,29 @@ func RestoreBackupFresh(ctx context.Context, target string, key []byte, source *
 	}
 	defer os.RemoveAll(dir)
 	path := filepath.Join(dir, "store.db")
-	s, err := Open(path, key)
+	openStage := Open
+	if offline {
+		openStage = OpenOfflineBackupStage
+	}
+	s, err := openStage(path, key)
 	if err != nil {
 		return err
 	}
 	defer func() { s.Close() }()
 	before := sha256.New()
-	err = s.ImportBackup(ctx, l, func(emit func(BackupFrame) error) error {
-		return source.ExportBackup(ctx, l, func(f BackupFrame) error {
+	importRows := s.importBackup
+	exportRows := func(src *Store, emit func(BackupFrame) error) error { return src.exportBackup(ctx, l, emit) }
+	if offline {
+		budget := OfflineBackupLimits{MaxBytes: l.MaxBytes, MaxRows: l.MaxRows, MaxRecordBytes: l.MaxRecordBytes}
+		importRows = func(ctx context.Context, _ BackupLimits, produce func(func(BackupFrame) error) error) error {
+			return s.ImportBackupOffline(ctx, budget, produce)
+		}
+		exportRows = func(src *Store, emit func(BackupFrame) error) error {
+			return src.ExportBackupOffline(ctx, budget, emit)
+		}
+	}
+	err = importRows(ctx, l, func(emit func(BackupFrame) error) error {
+		return exportRows(source, func(f BackupFrame) error {
 			if err := json.NewEncoder(before).Encode(f); err != nil {
 				return err
 			}
@@ -81,7 +103,7 @@ func RestoreBackupFresh(ctx context.Context, target string, key []byte, source *
 		return err
 	}
 	after := sha256.New()
-	if err = s.ExportBackup(ctx, l, func(f BackupFrame) error { return json.NewEncoder(after).Encode(f) }); err != nil {
+	if err = exportRows(s, func(f BackupFrame) error { return json.NewEncoder(after).Encode(f) }); err != nil {
 		return err
 	}
 	if string(before.Sum(nil)) != string(after.Sum(nil)) {
