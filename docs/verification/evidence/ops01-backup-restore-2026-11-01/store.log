@@ -1,0 +1,6 @@
+=== RUN   TestEncryptedBackupRestorePreservesOutstandingAdmissionObligation
+--- PASS: TestEncryptedBackupRestorePreservesOutstandingAdmissionObligation (1.39s)
+=== RUN   TestBackupFreshRestorePreservesSecretsIdentitiesIndexesCountersAndHistory
+--- PASS: TestBackupFreshRestorePreservesSecretsIdentitiesIndexesCountersAndHistory (0.35s)
+PASS
+ok  	routeweaver/internal/store	1.751s

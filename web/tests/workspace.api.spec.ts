@@ -19,13 +19,16 @@ test("private source → ordered collection → profile → published feed → r
       id: sourceId,
       name: "London source",
       kind: "text",
-      content: "socks5://proxy.example.com:1080#London",
+      content: [
+        "socks5://fixture-user:fixture-password@proxy.example.com:1080#London",
+        "socks5://fixture-user:fixture-password@proxy.example.com:1080#London%20duplicate",
+      ].join("\n"),
       enabled: true,
     },
   });
   expect(source.status(), await source.text()).toBe(200);
   const imported = await source.json();
-  expect(imported.snapshot.endpoints).toHaveLength(1);
+  expect(imported.snapshot.endpoints).toHaveLength(2);
   const endpoint = imported.snapshot.endpoints[0];
   const collection = {
     id: collectionId,
@@ -35,6 +38,17 @@ test("private source → ordered collection → profile → published feed → r
         sourceId,
         steps: [
           {
+            id: "source-override",
+            kind: "override",
+            enabled: true,
+            override: {
+              region: "DE",
+              tags: ["work"],
+              host: "source.example",
+              port: 2080,
+            },
+          },
+          {
             id: "rename",
             kind: "rename",
             enabled: true,
@@ -43,7 +57,16 @@ test("private source → ordered collection → profile → published feed → r
         ],
       },
     ],
-    steps: [{ id: "dedup", kind: "deduplicate", enabled: true }],
+    steps: [
+      { id: "dedup", kind: "deduplicate", enabled: true },
+      {
+        id: "aggregate-override",
+        kind: "override",
+        enabled: true,
+        filter: { region: "DE", tags: ["work"] },
+        override: { host: "aggregate.example", port: 3080, tags: [] },
+      },
+    ],
   };
   expect(
     (
@@ -56,7 +79,33 @@ test("private source → ordered collection → profile → published feed → r
   });
   expect(processed.ok(), await processed.text()).toBeTruthy();
   const processedBody = await processed.json();
+  expect(processedBody.endpoints).toHaveLength(1);
   expect(processedBody.endpoints[0].id).toBe(endpoint.id);
+  expect(processedBody.endpoints[0].region).toBe("DE");
+  expect(processedBody.endpoints[0].tags ?? []).toEqual([]);
+  expect(processedBody.endpoints[0].connection).toMatchObject({
+    host: "aggregate.example",
+    port: 3080,
+  });
+  expect(
+    processedBody.endpoints[0].provenance.map(
+      (ref: { endpointId: string }) => ref.endpointId,
+    ),
+  ).toEqual(imported.snapshot.endpoints.map((node: { id: string }) => node.id));
+  const dedupStage = processedBody.stages.find(
+    (stage: { stepId: string }) => stage.stepId === "dedup",
+  );
+  expect(dedupStage.removedIds).toEqual([imported.snapshot.endpoints[1].id]);
+  const sourceStage = processedBody.stages.find(
+    (stage: { stepId: string }) => stage.stepId === "source-override",
+  );
+  expect(sourceStage.endpoints).toHaveLength(2);
+  expect(sourceStage.endpoints[0].connection).toMatchObject({
+    host: "source.example",
+    port: 2080,
+  });
+  expect(sourceStage.endpoints[0].tags).toEqual(["work"]);
+  expect(JSON.stringify(processedBody)).not.toContain("fixture-password");
   expect(processedBody.endpoints[0].name).toBe("Work London");
   expect(processedBody.stages.length).toBeGreaterThan(2);
   const profile = {
@@ -105,7 +154,15 @@ test("private source → ordered collection → profile → published feed → r
   const previewBody = await preview.json();
   expect(previewBody.valid).toBe(true);
   expect(previewBody.nativeChecked).toBe(false);
-  expect(previewBody.artifacts[0].content).toContain("Work London");
+  expect(JSON.parse(previewBody.artifacts[0].content).proxies).toEqual([
+    expect.objectContaining({
+      name: "Work London",
+      server: "aggregate.example",
+      port: 3080,
+      username: "[REDACTED]",
+      password: "[REDACTED]",
+    }),
+  ]);
   const published = await request.post("/api/me/outputs", {
     headers,
     data: {
@@ -122,8 +179,45 @@ test("private source → ordered collection → profile → published feed → r
   expect((await access.json()).feedPath).toBe(output.feedPath);
   const feed = await request.get(output.feedPath);
   expect(feed.ok(), await feed.text()).toBeTruthy();
-  expect(await feed.text()).toContain("Work London");
+  expect((await feed.json()).proxies).toEqual([
+    expect.objectContaining({
+      name: "Work London",
+      server: "aggregate.example",
+      port: 3080,
+      username: "fixture-user",
+      password: "fixture-password",
+    }),
+  ]);
   expect(await feed.text()).not.toContain("<!doctype html>");
+  // A rejected processing preview must not alter the accepted source or published bytes.
+  const acceptedBefore = await request.get(`/api/me/sources/${sourceId}`);
+  expect(acceptedBefore.ok()).toBeTruthy();
+  const acceptedSource = await acceptedBefore.json();
+  for (const override of [{ host: "bad host" }, { port: 65536 }]) {
+    const rejected = await request.post("/api/me/collections/preview", {
+      headers,
+      data: {
+        ...collection,
+        steps: [
+          ...collection.steps,
+          {
+            id: "invalid-override",
+            kind: "override",
+            enabled: true,
+            override,
+          },
+        ],
+      },
+    });
+    expect(rejected.status()).toBe(400);
+    expect(await rejected.text()).toContain("invalid connection override");
+    const sourceAfter = await request.get(`/api/me/sources/${sourceId}`);
+    expect(sourceAfter.ok()).toBeTruthy();
+    expect(await sourceAfter.json()).toEqual(acceptedSource);
+    const unchangedFeed = await request.get(output.feedPath);
+    expect(unchangedFeed.ok()).toBeTruthy();
+    expect(await unchangedFeed.text()).toBe(await feed.text());
+  }
   const rotate = await request.post(`/api/me/outputs/${outputId}/rotate`, {
     headers,
     data: {},

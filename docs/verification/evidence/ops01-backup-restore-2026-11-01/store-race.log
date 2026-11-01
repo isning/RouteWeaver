@@ -1,0 +1,4 @@
+=== RUN   TestEncryptedBackupRestorePreservesOutstandingAdmissionObligation
+--- PASS: TestEncryptedBackupRestorePreservesOutstandingAdmissionObligation (8.84s)
+PASS
+ok  	routeweaver/internal/store	9.889s

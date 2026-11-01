@@ -1,0 +1,8 @@
+
+Running 1 test using 1 worker
+
+(node:31) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 [api] › tests/backup-restore-backend.api.spec.ts:12:1 › OPS01 real encrypted archive restores only to a fresh inactive database (2.8s)
+
+  1 passed (4.7s)

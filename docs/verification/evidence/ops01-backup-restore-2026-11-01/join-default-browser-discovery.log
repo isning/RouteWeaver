@@ -1,0 +1,7 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> routeweaver-web@1.0.0 test:browser
+> playwright test --project=chromium --list
+
+  [chromium] › backup-restore-backend.ui.spec.ts:16:1 › OPS01 downloaded backup file rejects a wrong password and restores without activating
+Total: 177 tests in 44 files
