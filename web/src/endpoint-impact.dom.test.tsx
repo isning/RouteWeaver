@@ -11,19 +11,14 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ConfirmationProvider } from "@/ui-patterns/confirmations";
 import { ServersPage } from "./Infrastructure";
+import { endpointImpactConnection } from "../tests/fixtures/endpoint-impact";
 
 const endpoint = {
   id: "shared",
   instanceId: "core",
   name: "Shared entry",
   revisionToken: "opened-private-revision",
-  connection: {
-    protocol: "socks",
-    host: "127.0.0.1",
-    port: 1080,
-    username: "fixture",
-    password: "fixture-private",
-  },
+  connection: { ...endpointImpactConnection },
 };
 const json = (value: unknown, status = 200) =>
   new Response(JSON.stringify(value), {
@@ -69,6 +64,7 @@ function setup({ failPreview = false, failSave = false } = {}) {
           endpoint.revisionToken,
         );
         expect(value.revisionToken).toBeUndefined();
+        expect(value.connection).toEqual(endpointImpactConnection);
         reviews.push(value);
         if (failPreview && reviews.length === 1)
           return json({ detail: "影响清单暂时不可用" }, 503);

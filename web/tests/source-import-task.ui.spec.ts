@@ -128,7 +128,10 @@ test("full sing-box import returns directly to the rich collection draft without
     collectionID = recipe.id;
     await page.goto("/#collections");
     await page
-      .getByRole("button", { name: new RegExp(`Original ${suffix}`) })
+      .getByRole("button", {
+        name: `Original ${suffix} 2 个来源 · 1 个聚合步骤 编辑集合`,
+        exact: true,
+      })
       .click();
     await page.getByLabel("集合名称", { exact: true }).fill(`Draft ${suffix}`);
     await page.getByRole("button", { name: "下移来源 1", exact: true }).click();

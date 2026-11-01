@@ -2,20 +2,12 @@ import { test, expect, type Page } from "@playwright/test";
 
 // Synthetic HTTP / actual App geometry and keyboard checks, not backend proof.
 test.use({ trace: "off", screenshot: "off", video: "off" });
-const name = "欧洲与亚太跨区域维护的历史链路配置";
+import { historyLegacyFixtures, historyLegacyName as name } from "./history-legacy-fixture";
 async function setup(page: Page) {
   const base = test.info().project.use.baseURL;
   if (!base || !["127.0.0.1", "localhost", "[::1]"].includes(new URL(base).hostname)) throw new Error("Controlled layout requires loopback");
   const unexpected: string[] = [];
-  const fixtures: Record<string, unknown> = {
-    "/auth/me": { user: { id: "layout-admin", name: "Admin", role: "admin" }, csrfToken: "fixture" },
-    "/state": {
-      nodes: [{ id: "node", name: "Office endpoint", host: "office.example", port: 1080, protocol: "socks" }], users: [], capabilities: [],
-      routes: [{ id: "route", name, engine: "sing-box", hops: ["node"], userIds: [] }],
-      revisions: [{ id: "revision", routeId: "route", engine: "sing-box", status: "rendered", createdAt: "2026-10-29T10:00:00Z", artifacts: [{ path: "config.json", content: '{"log":{}}' }], digest: "fixture-digest", nativeChecked: false }],
-    },
-    "/audit": [], "/services": [], "/published-routes": [], "/rates": [], "/user-groups": [],
-  };
+  const fixtures = historyLegacyFixtures;
   await page.route("**/*", route => {
     const request = route.request(), url = new URL(request.url());
     if (url.origin !== new URL(base).origin) { unexpected.push("external request"); return route.abort(); }

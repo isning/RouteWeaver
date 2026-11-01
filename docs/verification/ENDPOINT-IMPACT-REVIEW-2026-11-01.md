@@ -32,3 +32,22 @@ Pinned TDD/codebase-design reference skills were read from their official pinned
 Final local verification: 77/77 tests across seven related DOM/model files passed with one worker; web typecheck passed; the static gate (51 helper tests, architecture and actionlint) passed. The named endpoint/redaction/inventory HTTP cases passed under race. One new browser case passed strict source typechecking and discovery only. Full backend/browser/integrated release gates remain the coordinator's separate validation.
 
 Independent source review caught legacy fleet/service/TLS fixture edits that still used POST overwrite. Seven explicit edit sites now use the real opened-revision → impact preview → reviewed PUT flow; initial creates and duplicate-POST refusal remain unchanged. The named fleet rollback, service, server-publication and endpoint-impact regressions passed under race after migration. No native test process was launched.
+
+## CI3 fixture correction
+
+Run 41348313792 (remote aaabe51, local composition b397f89) reached the real
+endpoint editor but not the review. The shard-3 error context showed required
+SOCKS username/password errors; the browser fixture omitted both. No endpoint
+screenshot had been reached. This was invalid synthetic inventory, not a missing
+dependency in the review response.
+
+The DOM/browser journeys now share one authenticated, loopback-only synthetic
+connection. Reusing the former unauthenticated connection made both DOM journeys
+fail before review; adding the required synthetic credentials restored both.
+Both request stubs check the exact connection. The browser preview fixture now
+returns only the real API's non-secret target/identity fields, and the test also
+asserts that the review does not expose its synthetic password. Existing narrow
+geometry, dependency visibility, repeated cancellation and exact-focus assertions
+and timeouts are unchanged. Web and standalone browser-source typechecks pass.
+The corrected browser case still requires coordinator CI execution; no local
+browser, native runtime, CI or push was performed for this correction.

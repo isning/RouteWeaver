@@ -93,7 +93,10 @@ test("an existing failed first import is selected explicitly and corrected in th
   expect(pending.refreshStatus).toBe("failed");
   await page.goto("/#collections");
   await page
-    .getByRole("button", { name: /Original selection collection/ })
+    .getByRole("button", {
+      name: "Original selection collection 2 个来源 · 1 个聚合步骤 编辑集合",
+      exact: true,
+    })
     .click();
   await page
     .getByLabel("集合名称", { exact: true })

@@ -37,11 +37,11 @@ for (const width of [1440, 390])
         name: "模板更新 · 模板跟随草稿",
         exact: true,
       });
-      // Both the header icon and footer action are named “关闭”. Exercise the
-      // explicit completion action, without positional first()/last() matching.
+      // The real template task has an icon Close and a visible text Close in
+      // its body (no TaskSheet footer). Select the text action, not its position.
       const closeComparison = sheet
-        .locator("[data-task-overlay-footer]")
-        .getByRole("button", { name: "关闭", exact: true });
+        .getByRole("button", { name: "关闭", exact: true })
+        .filter({ hasText: /^关闭$/ });
       const inspect = async () => {
         const response = page.waitForResponse(
           (r) =>

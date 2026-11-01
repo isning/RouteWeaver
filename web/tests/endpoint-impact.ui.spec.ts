@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { endpointImpactConnection } from "./fixtures/endpoint-impact";
 
 // Controlled synthetic HTTP + actual App geometry; backend authorization/CAS
 // is exercised independently by TestEndpointImpactReviewBindsDraftAndDependencies.
@@ -18,7 +19,7 @@ test("shared endpoint impact review stays readable and cancel preserves exact dr
     name: "跨区域协作共享入口",
     instanceId: "core",
     revisionToken: "fixture-revision",
-    connection: { protocol: "socks", host: "127.0.0.1", port: 1080 },
+    connection: { ...endpointImpactConnection },
   };
   const fixtures: Record<string, unknown> = {
     "/auth/me": {
@@ -70,15 +71,18 @@ test("shared endpoint impact review stays readable and cancel preserves exact dr
       reviews++;
       const draft = request.postDataJSON();
       expect(draft.name).toBe("保留的共享入口修改");
+      expect(draft.connection).toEqual(endpointImpactConnection);
       expect(request.headers()["if-match"]).toBe("fixture-revision");
       return route.fulfill({
         json: {
-          endpoint,
+          endpoint: { id: endpoint.id, name: endpoint.name },
           proposed: {
             name: draft.name,
             instanceId: "core",
             instanceName: "参考核心",
-            ...draft.connection,
+            protocol: draft.connection.protocol,
+            host: draft.connection.host,
+            port: draft.connection.port,
           },
           changedFields: ["名称"],
           deployments: [
@@ -114,6 +118,7 @@ test("shared endpoint impact review stays readable and cancel preserves exact dr
     await expect(
       review.getByText("跨区域协作用户的公开线路", { exact: false }),
     ).toBeVisible();
+    await expect(review).not.toContainText(endpointImpactConnection.password);
     const box = await review.boundingBox();
     expect(box).not.toBeNull();
     expect(box!.x).toBeGreaterThanOrEqual(-1);

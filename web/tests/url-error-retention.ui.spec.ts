@@ -98,7 +98,12 @@ test("URL safe-fetch denial retains masked input and the rich parent draft", asy
     const beforeSources = await read("/me/sources");
     observing = true;
     await page.goto("/#collections");
-    await page.getByRole("button", { name: new RegExp(originalName) }).click();
+    await page
+      .getByRole("button", {
+        name: `${originalName} 2 个来源 · 1 个聚合步骤 编辑集合`,
+        exact: true,
+      })
+      .click();
     await page.getByLabel("集合名称", { exact: true }).fill(draftName);
     await page.getByRole("button", { name: "下移来源 1", exact: true }).click();
     await page.getByRole("button", { name: /2\. URL North.*来源处理/ }).click();

@@ -172,11 +172,19 @@ it.each(cases)(
     expect(
       screen.getByRole("dialog", { name: `模板更新 · ${other.name}` }),
     ).toBeTruthy();
-    await user.click(
-      within(
-        screen.getByRole("dialog", { name: `模板更新 · ${other.name}` }),
-      ).getByText(/^关\s*闭$/, { selector: "button" }),
+    const comparison = screen.getByRole("dialog", {
+      name: `模板更新 · ${other.name}`,
+    });
+    // Reproduce the browser selector against the real rendered template task.
+    const namedCloseActions = within(comparison).getAllByRole("button", {
+      name: "关闭",
+    });
+    expect(namedCloseActions).toHaveLength(2);
+    const closeActions = namedCloseActions.filter((button) =>
+      /^关闭$/.test(button.textContent || ""),
     );
+    expect(closeActions).toHaveLength(1);
+    await user.click(closeActions[0] as HTMLElement);
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(action(selected).getAttribute("aria-label")).toBe(
       `${mode === "follow" ? "检查更新" : "查看固定版本"} · ${selected.name}`,
