@@ -211,7 +211,7 @@ func TestProfileTemplatePreservesPersonalOverridesAndPublishedFallback(t *testin
 	}
 	personal.IR.Groups[0].Name = "Personal group"
 	personal.IR.Runtime.MixedPort = 9999
-	status, _, raw = req(t, u.c, "PUT", srv.URL+"/api/me/profiles/profile", u.csrf, personal)
+	status, _, raw = putCurrentProfileDraft(t, u, srv.URL+"/api/me/profiles/profile", personal)
 	if status != 200 {
 		t.Fatal(raw)
 	}
@@ -485,7 +485,7 @@ func TestSwitchingTemplateReferenceModeKeepsPersonalRuntimeAndPrivateBindings(t 
 	json.Unmarshal([]byte(raw), &p)
 	p.IR.Runtime.MixedPort = 9999
 	p.IR.DefaultAction = domain.ActionRef{Kind: "direct"}
-	status, _, raw = req(t, u.c, "PUT", srv.URL+"/api/me/profiles/profile", u.csrf, p)
+	status, _, raw = putCurrentProfileDraft(t, u, srv.URL+"/api/me/profiles/profile", p)
 	if status != 200 {
 		t.Fatal(raw)
 	}

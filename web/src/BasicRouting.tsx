@@ -16,6 +16,10 @@ import { useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { APIError, list, post, request, saveRecord } from "./api";
 import {
+  ProfileDraftConflict,
+  profileDraftChanged,
+} from "./ProfileDraftConflict";
+import {
   basicChoices,
   basicProfile,
   basicSelection,
@@ -135,6 +139,8 @@ function BasicRoutingEditor({
     useState<OutputCreation | null>(null);
   const [reviewedInputs, setReviewedInputs] = useState("");
   const [error, setError] = useState<Error | null>(null);
+  const [draftConflict, setDraftConflict] = useState(false);
+  const revisionToken = useRef(initial.revisionToken);
   const saved = useRef(!isNew),
     version = useRef(0),
     outputID = useRef(newID("output"));
@@ -204,7 +210,10 @@ function BasicRoutingEditor({
         ]
       : []),
   ];
-  const payload = () => basicProfile(initial, selection, choices);
+  const payload = () => ({
+    ...basicProfile(initial, selection, choices),
+    revisionToken: revisionToken.current,
+  });
   const update = (patch: Partial<BasicSelection>) => {
     version.current++;
     setSelection((s) => ({ ...s, ...patch }));
@@ -220,12 +229,26 @@ function BasicRoutingEditor({
       throw new Error("原选线路当前不可用，请明确选择替代线路后再保存。");
   };
   const saveDraft = async () => {
+    if (draftConflict)
+      throw new Error("请先处理配置版本变化，当前输入已保留。");
     valid();
     const atVersion = version.current;
     const draft = payload();
     invalidateOutputInputs(client, draft.id);
     try {
-      await saveRecord<Profile>("me/profiles", draft, !saved.current);
+      const result = await saveRecord<Profile>(
+        "me/profiles",
+        draft,
+        !saved.current,
+      );
+      revisionToken.current = result.revisionToken;
+    } catch (error) {
+      if (profileDraftChanged(error)) {
+        setDraftConflict(true);
+        setDirty(true);
+        setPreview(null);
+      }
+      throw error;
     } finally {
       invalidateOutputInputs(client, draft.id);
     }
@@ -438,7 +461,13 @@ function BasicRoutingEditor({
                   这里编辑已保存的草稿；发布后才会更新客户端订阅。
                 </p>
               )}
-              <ErrorNotice error={error} />
+              {draftConflict && (
+                <ProfileDraftConflict
+                  profileID={initial.id}
+                  onClose={onClose}
+                />
+              )}
+              <ErrorNotice error={profileDraftChanged(error) ? null : error} />
               <div className="settings-form grid gap-5 sm:grid-cols-2">
                 <label className="standalone-label grid min-w-0 gap-2 text-sm font-medium">
                   订阅名称
@@ -513,7 +542,7 @@ function BasicRoutingEditor({
                           和原生配置可在完整编辑器中调整。
                         </p>
                         <ActionButton
-                          disabled={locked}
+                          disabled={locked || draftConflict}
                           onClick={advanced}
                           variant="outline"
                         >
@@ -550,8 +579,9 @@ function BasicRoutingEditor({
               </Accordion>
               <div className="form-footer mt-6 flex flex-wrap items-center justify-end gap-2">
                 <ActionButton
-                  disabled={locked}
+                  disabled={locked || draftConflict}
                   onClick={() => {
+                    if (draftConflict) return;
                     setError(null);
                     save.mutate();
                   }}
@@ -560,8 +590,9 @@ function BasicRoutingEditor({
                   保存草稿
                 </ActionButton>
                 <ActionButton
-                  disabled={locked}
+                  disabled={locked || draftConflict}
                   onClick={() => {
+                    if (draftConflict) return;
                     setPreview(null);
                     setError(null);
                     inspect.mutate();

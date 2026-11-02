@@ -26,7 +26,7 @@ test("native client edits survive private draft editing and cannot replace an al
   });
   expect(saved.ok(), await saved.text()).toBeTruthy();
   expect((await saved.json()).ir.nativeOverride.content).toBeUndefined();
-  const revealed = await (
+  const { revisionToken: openedRevision, ...revealed } = await (
     await request.get(`/api/me/profiles/${profile.id}/reveal`)
   ).json();
   expect(revealed.ir.nativeOverride.content).toBe(
@@ -68,14 +68,12 @@ test("native client edits survive private draft editing and cannot replace an al
   expect(exactUpdate.artifacts[0].content.trim()).toBe(before.trim());
   expect(exactUpdate.previewDigest).toMatch(/^[a-f0-9]{64}$/);
   revealed.name = "Changed after output review";
-  expect(
-    (
-      await request.put(`/api/me/profiles/${profile.id}`, {
-        headers,
-        data: revealed,
-      })
-    ).ok(),
-  ).toBeTruthy();
+  const renamed = await request.put(`/api/me/profiles/${profile.id}`, {
+    headers: { ...headers, "If-Match": openedRevision },
+    data: revealed,
+  });
+  expect(renamed.ok(), await renamed.text()).toBeTruthy();
+  const renamedRevision = (await renamed.json()).revisionToken;
   const staleReview = await request.post(
     `/api/me/outputs/${outputId}/publish`,
     { headers, data: { previewDigest: exactUpdate.previewDigest } },
@@ -106,7 +104,7 @@ test("native client edits survive private draft editing and cannot replace an al
   expect(mismatched.status()).toBe(409);
   revealed.ir.nativeOverride.content = '{"dns":';
   const invalid = await request.put(`/api/me/profiles/${profile.id}`, {
-    headers,
+    headers: { ...headers, "If-Match": renamedRevision },
     data: revealed,
   });
   expect(invalid.ok(), await invalid.text()).toBeTruthy();

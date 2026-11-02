@@ -1,3 +1,4 @@
+import { currentProfileFixtureHeaders } from "./profile-fixture";
 import { expect, test } from "@playwright/test";
 import { openWorkspace } from "./ui-session";
 
@@ -79,7 +80,11 @@ for (const scenario of ["unchanged", "changed-long-name"] as const) {
         expect(
           (
             await page.request.put(`/api/me/profiles/${id}`, {
-              headers,
+              headers: await currentProfileFixtureHeaders(
+                page.request,
+                id,
+                headers,
+              ),
               data: {
                 ...profile,
                 ir: {

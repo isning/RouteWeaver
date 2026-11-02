@@ -10,7 +10,11 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { UIProviders } from "./ui-patterns/providers";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  QueryClient,
+  QueryClientProvider,
+  QueryObserver,
+} from "@tanstack/react-query";
 import { ProfileEditor } from "./Profiles";
 import { emptyProfile } from "./model";
 import type { ClientNode, Output, Profile, Source } from "./types";
@@ -145,7 +149,7 @@ function mount(
       </UIProviders>
     </QueryClientProvider>,
   );
-  return { writes, fetcher, onClose };
+  return { writes, fetcher, onClose, client };
 }
 
 it("offers one strategy-group action in an empty panel and retains it after adding", async () => {
@@ -311,4 +315,169 @@ it("new structured DNS selects its actual resolver and retains runtime intent af
   expect(
     writes.filter((entry) => entry.path.endsWith("/intent-profile"))[1].body,
   ).toEqual(saved);
+});
+
+it("retains the opened profile draft on a typed revision conflict without upgrading its token or retrying", async () => {
+  const profile = { ...fixture(), revisionToken: "opened-profile-revision" };
+  const { fetcher, writes, onClose } = mount(profile, {
+    saveResponse: async () =>
+      json(
+        { code: "PROFILE_DRAFT_CHANGED", message: "Changed in another editor" },
+        409,
+      ),
+  });
+  await screen.findByText("2 个有效连接");
+  const name = screen.getByRole("textbox", { name: "配置名称" });
+  fireEvent.change(name, { target: { value: "My submitted draft" } });
+  await userEvent.click(screen.getByRole("button", { name: "保存草稿" }));
+  await screen.findByText(
+    "配置或引用内容已变化。当前输入已保留，不能覆盖新版本。",
+  );
+  const sent = fetcher.mock.calls.find(
+    ([, init]) => init?.method === "PUT",
+  )![1]!;
+  expect(new Headers(sent.headers).get("If-Match")).toBe(
+    "opened-profile-revision",
+  );
+  expect(JSON.parse(String(sent.body))).not.toHaveProperty("revisionToken");
+  expect((name as HTMLInputElement).value).toBe("My submitted draft");
+  const save = screen.getByRole("button", { name: "保存草稿" });
+  expect((save as HTMLButtonElement).disabled).toBe(true);
+  expect(
+    (screen.getByRole("button", { name: "保存并检查" }) as HTMLButtonElement)
+      .disabled,
+  ).toBe(true);
+  fireEvent.change(name, { target: { value: "Still my retained draft" } });
+  await userEvent.click(save);
+  expect(writes.filter((w) => w.path.endsWith("/intent-profile"))).toHaveLength(
+    1,
+  );
+  const discard = screen.getByRole("button", { name: "放弃修改并返回" });
+  await userEvent.click(discard);
+  const first = await screen.findByRole("alertdialog", {
+    name: "放弃当前修改并返回？",
+  });
+  const keep = within(first).getByRole("button", { name: "保留当前输入" });
+  expect(document.activeElement).toBe(keep);
+  await userEvent.keyboard("{Enter}");
+  await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+  expect((name as HTMLInputElement).value).toBe("Still my retained draft");
+  expect(onClose).not.toHaveBeenCalled();
+  expect(document.activeElement).toBe(discard);
+  await userEvent.click(discard);
+  const second = await screen.findByRole("alertdialog", {
+    name: "放弃当前修改并返回？",
+  });
+  await userEvent.click(
+    within(second).getByRole("button", { name: "放弃修改并返回" }),
+  );
+  await waitFor(() => expect(onClose).toHaveBeenCalledOnce());
+  expect(writes.filter((w) => w.path.endsWith("/intent-profile"))).toHaveLength(
+    1,
+  );
+  expect(
+    fetcher.mock.calls.some(([url]) => String(url).endsWith("/reveal")),
+  ).toBe(false);
+});
+
+it("uses only successful save revisions for later edits and keeps tokens out of draft previews and clone creation", async () => {
+  let saved = 0;
+  const profile = { ...fixture(), revisionToken: "source-profile-revision" };
+  const { fetcher, writes } = mount(profile, {
+    isNew: true,
+    saveResponse: async () =>
+      json({ ...profile, revisionToken: `accepted-${++saved}` }),
+  });
+  await screen.findByText("2 个有效连接");
+  const save = screen.getByRole("button", { name: "保存草稿" });
+  await userEvent.click(save);
+  await screen.findByText("草稿已保存");
+  await userEvent.click(save);
+  await waitFor(() => expect(saved).toBe(2));
+  await waitFor(() => expect((save as HTMLButtonElement).disabled).toBe(false));
+  const requests = fetcher.mock.calls.filter(
+    ([url, init]) =>
+      String(url) === "/api/me/profiles" && init?.method === "POST",
+  );
+  expect(requests[0][1]?.method).toBe("POST");
+  expect(new Headers(requests[0][1]?.headers).has("If-Match")).toBe(false);
+  const update = fetcher.mock.calls.find(
+    ([, init]) => init?.method === "PUT",
+  )![1]!;
+  expect(new Headers(update.headers).get("If-Match")).toBe("accepted-1");
+  expect(JSON.parse(String(update.body))).not.toHaveProperty("revisionToken");
+  await userEvent.click(screen.getByRole("tab", { name: "检查与预览" }));
+  await userEvent.click(screen.getByRole("button", { name: "预览配置" }));
+  await waitFor(() =>
+    expect(
+      writes.some((write) => write.path === "/api/me/profiles/preview"),
+    ).toBe(true),
+  );
+  expect(
+    writes.find((write) => write.path === "/api/me/profiles/preview")!.body,
+  ).not.toHaveProperty("revisionToken");
+});
+
+it("does not label a rejected resave as saved after a previously accepted revision", async () => {
+  let saves = 0;
+  const profile = { ...fixture(), revisionToken: "opened" };
+  mount(profile, {
+    saveResponse: async () =>
+      ++saves === 1
+        ? json({ ...profile, revisionToken: "accepted" })
+        : json(
+            { code: "PROFILE_DRAFT_CHANGED", message: "Changed elsewhere" },
+            409,
+          ),
+  });
+  await screen.findByText("2 个有效连接");
+  const save = screen.getByRole("button", { name: "保存草稿" });
+  await userEvent.click(save);
+  await screen.findByText("草稿已保存");
+  await userEvent.click(save);
+  await screen.findByRole("button", { name: "放弃修改并返回" });
+  expect(
+    within(screen.getByRole("group", { name: "保存与检查配置" })).getByRole(
+      "status",
+    ).textContent,
+  ).toBe("草稿尚未保存");
+});
+
+it("finishes confirmed discard without leaving an editable form waiting on catalog refresh", async () => {
+  const { onClose, client } = mount(
+    { ...fixture(), revisionToken: "opened" },
+    {
+      saveResponse: async () => json({ code: "PROFILE_DRAFT_CHANGED" }, 409),
+    },
+  );
+  await screen.findByText("2 个有效连接");
+  let release!: (value: Profile[]) => void;
+  const refresh = new Promise<Profile[]>((resolve) => {
+    release = resolve;
+  });
+  client.setQueryData(["profiles"], [fixture()]);
+  // An active parent catalog refetch is independently pending, like Subscriptions.
+  const observer = new QueryObserver(client, {
+    queryKey: ["profiles"],
+    staleTime: Infinity,
+    queryFn: () => refresh,
+  });
+  const unsubscribe = observer.subscribe(() => {});
+  try {
+    await userEvent.click(screen.getByRole("button", { name: "保存草稿" }));
+    await userEvent.click(
+      await screen.findByRole("button", { name: "放弃修改并返回" }),
+    );
+    const confirmation = await screen.findByRole("alertdialog", {
+      name: "放弃当前修改并返回？",
+    });
+    await userEvent.click(
+      within(confirmation).getByRole("button", { name: "放弃修改并返回" }),
+    );
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+    expect(onClose).toHaveBeenCalledOnce();
+  } finally {
+    release([fixture()]);
+    unsubscribe();
+  }
 });

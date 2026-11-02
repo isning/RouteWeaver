@@ -197,7 +197,10 @@ export function saveRecord<T>(kind: string, value: object, isNew = false) {
     revisionToken?: string;
   };
   const id = record.id;
-  const guarded = kind === "server-deployments" || kind === "published-routes";
+  const guarded =
+    kind === "server-deployments" ||
+    kind === "published-routes" ||
+    kind === "me/profiles";
   return request<T>(
     `/${kind}${!isNew && id ? `/${encodeURIComponent(id)}` : ""}`,
     {

@@ -46,6 +46,26 @@ func validationRequest(t *testing.T, h http.Handler, path string, payload any) (
 	return w.Code, response
 }
 
+// The caller supplies the opened revision; this helper never refreshes it.
+func validationPutOpenedProfile(t *testing.T, h http.Handler, profile httpapi.Profile, revision string) (int, map[string]any) {
+	t.Helper()
+	body, err := json.Marshal(profile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := httptest.NewRequest(http.MethodPut, "/api/me/profiles/"+profile.ID, bytes.NewReader(body))
+	r.Header.Set("Content-Type", "application/json")
+	r.Header.Set("Authorization", "Bearer "+validationTestToken)
+	r.Header.Set("If-Match", revision)
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, r)
+	var response map[string]any
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Fatal(err)
+	}
+	return w.Code, response
+}
+
 func TestProfilePreviewLocatesMissingDefaultReference(t *testing.T) {
 	h := validationHandler(t)
 	p := templateTestProfile("missing-default", render.Target{AdapterID: "mihomo", Version: render.MihomoVersion})
@@ -67,14 +87,19 @@ func TestProfilePreviewLocatesMissingDefaultReference(t *testing.T) {
 func TestOutputPreviewsLocateMissingReferenceWithoutChangingStatus(t *testing.T) {
 	h := validationHandler(t)
 	p := templateTestProfile("output-feedback", render.Target{AdapterID: "mihomo", Version: render.MihomoVersion})
-	if status, response := validationRequest(t, h, "/api/me/profiles", p); status != 200 {
-		t.Fatalf("save valid profile: %d %#v", status, response)
+	status, saved := validationRequest(t, h, "/api/me/profiles", p)
+	if status != 200 {
+		t.Fatalf("save valid profile: %d %#v", status, saved)
+	}
+	openedRevision, ok := saved["revisionToken"].(string)
+	if !ok || openedRevision == "" {
+		t.Fatal("saved profile has no revision token")
 	}
 	if status, response := validationRequest(t, h, "/api/me/outputs", map[string]string{"id": "existing-output", "name": "Existing", "profileId": p.ID}); status != 201 {
 		t.Fatalf("create output: %d %#v", status, response)
 	}
 	p.IR.DefaultAction = domain.ActionRef{Kind: "group", Ref: "removed-group"}
-	if status, response := validationRequest(t, h, "/api/me/profiles", p); status != 200 {
+	if status, response := validationPutOpenedProfile(t, h, p, openedRevision); status != 200 {
 		t.Fatalf("preserve invalid draft: %d %#v", status, response)
 	}
 	for _, tc := range []struct {

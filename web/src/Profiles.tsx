@@ -61,6 +61,10 @@ import {
 } from "./routing-task";
 import { useUnsavedChanges } from "./navigation";
 import {
+  ProfileDraftConflict,
+  profileDraftChanged,
+} from "./ProfileDraftConflict";
+import {
   useId,
   useLayoutEffect,
   useRef,
@@ -214,6 +218,7 @@ export function ProfileEditor({
   } | null>(null);
   const [persisted, setPersisted] = useState(!isNew);
   const [saved, setSaved] = useState(false);
+  const [draftConflict, setDraftConflict] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
   // A suspended review owns its last ready payload and target selection.
   // Incomplete editor intent must never unmount that session or resume it.
@@ -516,15 +521,21 @@ export function ProfileEditor({
     const result = toPersistableProfile(draft);
     if (!result.ok) throw new Error(result.issues[0].message);
     // Existing request normalization: the editable profile name owns ir.name.
+    const { revisionToken: _revisionToken, ...profile } = result.profile;
     return {
-      ...result.profile,
-      ir: { ...result.profile.ir, name: draft.name },
+      ...profile,
+      ir: { ...profile.ir, name: draft.name },
     };
   };
   const save = useMutation({
     onMutate: () => invalidateOutputInputs(client, draft.id),
     onSettled: () => invalidateOutputInputs(client, draft.id),
-    mutationFn: () => saveRecord<Profile>("me/profiles", payload(), !persisted),
+    mutationFn: () =>
+      saveRecord<Profile>(
+        "me/profiles",
+        { ...payload(), revisionToken: draft.revisionToken },
+        !persisted,
+      ),
     onSuccess: (result) => {
       client.invalidateQueries({ queryKey: ["profiles"] });
       // A saved draft changes candidates, not frozen Output artifacts. Mark only
@@ -543,12 +554,18 @@ export function ProfileEditor({
         ...payload(),
         updatedAt: result?.updatedAt,
         revision: result?.revision,
+        revisionToken: result?.revisionToken,
       });
       setChanged(false);
       setPersisted(true);
       setSaved(true);
     },
     onError: (error) => {
+      if (profileDraftChanged(error)) {
+        setDraftConflict(true);
+        setSaved(false);
+        setChanged(true);
+      }
       setError(error);
       setErrorRevision(revision.current);
     },
@@ -1406,7 +1423,7 @@ export function ProfileEditor({
             aria-label="保存草稿"
             aria-busy={save.isPending}
             onClick={() => {
-              if (sourceOwner.current) return;
+              if (sourceOwner.current || draftConflict) return;
               setError(null);
               if (!checkDestinations()) return;
               save.mutate();
@@ -1415,6 +1432,7 @@ export function ProfileEditor({
               !draft.name.trim() ||
               codeDirty ||
               save.isPending ||
+              draftConflict ||
               !!sourceTask ||
               unavailableSources.length > 0
             }
@@ -1430,11 +1448,12 @@ export function ProfileEditor({
               !draft.name.trim() ||
               codeDirty ||
               save.isPending ||
+              draftConflict ||
               !!sourceTask ||
               unavailableSources.length > 0
             }
             onClick={async () => {
-              if (sourceOwner.current) return;
+              if (sourceOwner.current || draftConflict) return;
               setError(null);
               if (!checkDestinations()) return;
               const handoffRevision = revision.current;
@@ -1503,8 +1522,11 @@ export function ProfileEditor({
           </details>
         </div>
       </div>
+      {draftConflict && (
+        <ProfileDraftConflict profileID={draft.id} onClose={onClose} />
+      )}
       <ProfileValidationNotice
-        error={error}
+        error={profileDraftChanged(error) ? null : error}
         ir={draft.ir}
         onRepair={errorRevision === revision.current ? repairAction : undefined}
       />

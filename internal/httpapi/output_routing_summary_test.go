@@ -66,7 +66,7 @@ func TestPublishedRoutingSummaryStaysFrozenUntilReviewedPublication(t *testing.T
 	}
 	status("unchanged")
 	p.IR.Endpoints[0].Name = "New route"
-	code, _, raw = req(t, u.c, "PUT", srv.URL+"/api/me/profiles/"+p.ID, u.csrf, p)
+	code, _, raw = putCurrentProfileDraft(t, u, srv.URL+"/api/me/profiles/"+p.ID, p)
 	if code != 200 {
 		t.Fatal(raw)
 	}
@@ -92,7 +92,7 @@ func TestPublishedRoutingSummaryStaysFrozenUntilReviewedPublication(t *testing.T
 	}
 	// Secret-only changes must not disappear behind identical redacted previews.
 	p.IR.Endpoints[0].Connection.Password = "changed-secret"
-	code, _, raw = req(t, u.c, "PUT", srv.URL+"/api/me/profiles/"+p.ID, u.csrf, p)
+	code, _, raw = putCurrentProfileDraft(t, u, srv.URL+"/api/me/profiles/"+p.ID, p)
 	if code != 200 {
 		t.Fatal(raw)
 	}
@@ -102,7 +102,7 @@ func TestPublishedRoutingSummaryStaysFrozenUntilReviewedPublication(t *testing.T
 		t.Fatalf("stale review accepted: %d %s", code, raw)
 	}
 	p.IR.NativeOverride = &domain.NativeClientOverride{SchemaVersion: "1", Namespace: "routeweaver/native-client", Target: domain.NativeClientTarget{AdapterID: p.Target.AdapterID, Version: p.Target.Version}, Format: "json", RuleMode: "prepend", Content: `{"broken"`}
-	code, _, raw = req(t, u.c, "PUT", srv.URL+"/api/me/profiles/"+p.ID, u.csrf, p)
+	code, _, raw = putCurrentProfileDraft(t, u, srv.URL+"/api/me/profiles/"+p.ID, p)
 	if code != 200 {
 		t.Fatal(raw)
 	}
@@ -348,7 +348,7 @@ func TestPublishedRoutingSummaryUsesDeliveredAllocatedNames(t *testing.T) {
 				for i := range p.IR.Endpoints {
 					p.IR.Endpoints[i].Name = "Region，One"
 				}
-				code, _, raw = req(t, u.c, "PUT", srv.URL+"/api/me/profiles/"+p.ID, u.csrf, p)
+				code, _, raw = putCurrentProfileDraft(t, u, srv.URL+"/api/me/profiles/"+p.ID, p)
 				if code != 200 {
 					t.Fatal(raw)
 				}

@@ -48,7 +48,7 @@ jobs:
   backend_core:
     name: Backend core verification
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
@@ -100,7 +100,7 @@ jobs:
   backend_managed:
     name: Backend managed verification
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
@@ -141,7 +141,7 @@ jobs:
   api:
     name: Real HTTP API integration (no browser)
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
@@ -165,7 +165,7 @@ jobs:
   browser:
     name: Chrome Stable user tasks (${{ matrix.shard }}/4, fixture and real API scopes)
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 12
     strategy:
       fail-fast: false
       matrix:
@@ -248,7 +248,7 @@ jobs:
   browser_native:
     name: Same-instance browser to managed native acceptance
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 10
     env:
       ROUTEWEAVER_CHROMIUM: /opt/google/chrome/chrome
     steps:
@@ -321,7 +321,7 @@ jobs:
   native:
     name: Pinned parsers, both stock processes and managed loopback
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 15
     env:
       ROUTEWEAVER_CORE_BIN_DIR: ${{ github.workspace }}/bin/cores
       ROUTEWEAVER_STOCK_CORE_BIN_DIR: ${{ github.workspace }}/bin/stock-cores
@@ -354,7 +354,7 @@ jobs:
   package:
     name: Exact-source Linux package, rebuild and durable smoke
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 8
     env:
       ROUTEWEAVER_REQUIRE_CLEAN_SOURCE: "1"
     steps:

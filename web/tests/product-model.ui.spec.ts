@@ -1,3 +1,4 @@
+import { currentProfileFixtureHeaders } from "./profile-fixture";
 import { auditTextGeometry } from "./text-geometry";
 import { openWorkspace, navigateWorkspace } from "./ui-session";
 import { createHash } from "node:crypto";
@@ -1036,7 +1037,11 @@ test("existing strategy groups remain editable and revoked recovery replaces onl
   // Fixture setup only: a previously saved group and already-revoked link.
   // Recovery, review, and obtaining the replacement access are real UI actions below.
   const saved = await page.request.put(`/api/me/profiles/${profile.id}`, {
-    headers,
+    headers: await currentProfileFixtureHeaders(
+      page.request,
+      profile.id,
+      headers,
+    ),
     data: configured,
   });
   expect(saved.ok(), "Existing manual-group setup succeeds").toBe(true);

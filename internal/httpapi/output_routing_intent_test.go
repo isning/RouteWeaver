@@ -87,7 +87,7 @@ func TestPrivateFrozenRoutingIntentDetectsSameLabelStableReferenceChange(t *test
 	// bytes. It is still a different declared destination, not a rename.
 	p.IR.Endpoints[1].ID = "tokyo-replacement"
 	p.IR.Rules[0].Action.Ref = "tokyo-replacement"
-	code, _, raw = req(t, u.c, "PUT", srv.URL+"/api/me/profiles/"+p.ID, u.csrf, p)
+	code, _, raw = putCurrentProfileDraft(t, u, srv.URL+"/api/me/profiles/"+p.ID, p)
 	if code != 200 {
 		t.Fatal(raw)
 	}
@@ -171,7 +171,7 @@ func TestPrivateFrozenRoutingIntentLegacyAbsenceIsNotBackfilledOrPendingChange(t
 		}
 	}
 	p.IR.Rules[0].Action.Ref = "london"
-	code, _, raw = req(t, u.c, "PUT", srv.URL+"/api/me/profiles/"+p.ID, u.csrf, p)
+	code, _, raw = putCurrentProfileDraft(t, u, srv.URL+"/api/me/profiles/"+p.ID, p)
 	if code != 200 {
 		t.Fatal(raw)
 	}
@@ -322,7 +322,7 @@ func TestPrivateFrozenRoutingIntentStaysPublishedAndUpdatesOnlyReviewedOutput(t 
 		t.Fatal(raw)
 	}
 	p.IR.Rules[0].Action.Ref = "london"
-	code, _, raw = req(t, u.c, "PUT", srv.URL+"/api/me/profiles/"+p.ID, u.csrf, p)
+	code, _, raw = putCurrentProfileDraft(t, u, srv.URL+"/api/me/profiles/"+p.ID, p)
 	if code != 200 {
 		t.Fatal(raw)
 	}
@@ -347,7 +347,7 @@ func TestPrivateFrozenRoutingIntentStaysPublishedAndUpdatesOnlyReviewedOutput(t 
 		t.Fatal("ordinary output listing gained private rule details")
 	}
 	p.IR.Rules[0].Action = domain.ActionRef{Kind: "direct"}
-	code, _, raw = req(t, u.c, "PUT", srv.URL+"/api/me/profiles/"+p.ID, u.csrf, p)
+	code, _, raw = putCurrentProfileDraft(t, u, srv.URL+"/api/me/profiles/"+p.ID, p)
 	if code != 200 {
 		t.Fatal(raw)
 	}
@@ -356,7 +356,7 @@ func TestPrivateFrozenRoutingIntentStaysPublishedAndUpdatesOnlyReviewedOutput(t 
 		t.Fatalf("changed intent accepted stale publication review: %d", code)
 	}
 	p.IR.Rules[0].Action = domain.ActionRef{Kind: "endpoint", Ref: "london"}
-	code, _, raw = req(t, u.c, "PUT", srv.URL+"/api/me/profiles/"+p.ID, u.csrf, p)
+	code, _, raw = putCurrentProfileDraft(t, u, srv.URL+"/api/me/profiles/"+p.ID, p)
 	if code != 200 {
 		t.Fatal(raw)
 	}

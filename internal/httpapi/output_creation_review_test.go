@@ -28,7 +28,7 @@ func TestReviewedOutputCreationRejectsChangedProfile(t *testing.T) {
 		t.Fatal("missing review digest")
 	}
 	p.IR.NativeOverride.Content = `{"tcp-concurrent":false}`
-	code, _, raw = req(t, u.c, "PUT", srv.URL+"/api/me/profiles/"+p.ID, u.csrf, p)
+	code, _, raw = putCurrentProfileDraft(t, u, srv.URL+"/api/me/profiles/"+p.ID, p)
 	if code != 200 {
 		t.Fatal(raw)
 	}
@@ -104,7 +104,7 @@ func TestReviewedOutputCreationFencesInputsAndPublishesExactArtifact(t *testing.
 				code, _, raw = req(t, u.c, "PUT", srv.URL+"/api/me/sources/source", u.csrf, source)
 			case "secret":
 				p.IR.NativeOverride.Content = strings.ReplaceAll(p.IR.NativeOverride.Content, "synthetic-first", "synthetic-second")
-				code, _, raw = req(t, u.c, "PUT", srv.URL+"/api/me/profiles/"+p.ID, u.csrf, p)
+				code, _, raw = putCurrentProfileDraft(t, u, srv.URL+"/api/me/profiles/"+p.ID, p)
 			case "resource":
 				resource.Revision = "2"
 				resource.Digest = "sha256:" + strings.Repeat("1", 64)

@@ -1,3 +1,4 @@
+import { currentProfileFixtureHeaders } from "./profile-fixture";
 import { test, expect } from "@playwright/test";
 test("private source → ordered collection → profile → published feed → revocation", async ({
   request,
@@ -290,7 +291,7 @@ test("rejected profile publication leaves its existing feed retrievable", async 
     },
   };
   const save = await request.put(`/api/me/profiles/${id}`, {
-    headers,
+    headers: await currentProfileFixtureHeaders(request, id, headers),
     data: invalid,
   });
   expect(save.ok(), await save.text()).toBeTruthy();
@@ -494,7 +495,7 @@ test("explicit reveal editing preserves a synthetic credential across source and
   expect(await (await request.get("/api/me/profiles")).text()).not.toContain(
     secret,
   );
-  const revealedProfile = await (
+  const { revisionToken, ...revealedProfile } = await (
     await request.get(`/api/me/profiles/${id}/reveal`)
   ).json();
   expect(JSON.stringify(revealedProfile)).toContain(secret);
@@ -502,7 +503,7 @@ test("explicit reveal editing preserves a synthetic credential across source and
   expect(
     (
       await request.put(`/api/me/profiles/${id}`, {
-        headers,
+        headers: { ...headers, "If-Match": revisionToken },
         data: revealedProfile,
       })
     ).ok(),

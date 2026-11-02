@@ -35,7 +35,7 @@ func TestOutputReviewRejectsChangedProfileAndPreservesFeed(t *testing.T) {
 		t.Fatal("output review must include exact-input digest")
 	}
 	p.IR.NativeOverride.Content = `{"tcp-concurrent":false}`
-	code, _, raw = req(t, u.c, "PUT", srv.URL+"/api/me/profiles/"+p.ID, u.csrf, p)
+	code, _, raw = putCurrentProfileDraft(t, u, srv.URL+"/api/me/profiles/"+p.ID, p)
 	if code != 200 {
 		t.Fatal(raw)
 	}
@@ -229,7 +229,7 @@ func TestOutputReviewBindsUnredactedNativeData(t *testing.T) {
 		t.Fatal("review exposed private native URL data")
 	}
 	p.IR.NativeOverride.Content = strings.ReplaceAll(p.IR.NativeOverride.Content, "synthetic-first", "synthetic-second")
-	code, _, raw = req(t, u.c, "PUT", srv.URL+"/api/me/profiles/"+p.ID, u.csrf, p)
+	code, _, raw = putCurrentProfileDraft(t, u, srv.URL+"/api/me/profiles/"+p.ID, p)
 	if code != 200 {
 		t.Fatal(raw)
 	}

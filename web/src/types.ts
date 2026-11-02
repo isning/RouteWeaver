@@ -330,6 +330,7 @@ export interface ProfileIR {
   nativeOverride?: NativeClientOverride;
 }
 export interface Profile {
+  revisionToken?: string;
   id: string;
   name: string;
   target: { adapterId: string; version: string };

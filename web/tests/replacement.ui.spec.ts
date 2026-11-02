@@ -1,3 +1,4 @@
+import { currentProfileFixtureHeaders } from "./profile-fixture";
 import { openWorkspace, navigateWorkspace } from "./ui-session";
 import { createHash } from "node:crypto";
 import { auditTextGeometry } from "./text-geometry";
@@ -386,7 +387,11 @@ test("normal private-rule bundle update immediately offers a real configuration-
   expect(
     (
       await page.request.put(`/api/me/profiles/${profile.id}`, {
-        headers,
+        headers: await currentProfileFixtureHeaders(
+          page.request,
+          profile.id,
+          headers,
+        ),
         data: configured,
       })
     ).ok(),

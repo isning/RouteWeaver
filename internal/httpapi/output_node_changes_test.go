@@ -29,7 +29,7 @@ func TestNodesOnlyReviewComparesFrozenExportedSettings(t *testing.T) {
 	check("POST", "/me/profiles", p, 200)
 	check("POST", "/me/outputs", map[string]any{"id": "review", "name": "Review", "profileId": p.ID}, 201)
 	p.IR.Endpoints[0].Connection.Port++
-	check("PUT", "/me/profiles/"+p.ID, p, 200)
+	saveCurrentProfileDraft(t, u, srv.URL+"/api/me/profiles/"+p.ID, p)
 	preview := check("POST", "/me/profiles/"+p.ID+"/preview", map[string]any{"outputId": "review"}, 200)
 	changes, ok := preview["nodeChanges"].(map[string]any)
 	if !ok {
@@ -126,7 +126,7 @@ func TestNodesOnlyReviewIdentityPrivacyCountsAndOrder(t *testing.T) {
 				}
 				return
 			}
-			call("PUT", "/me/profiles/"+p.ID, p, 200)
+			saveCurrentProfileDraft(t, u, srv.URL+"/api/me/profiles/"+p.ID, p)
 			preview := call("POST", "/me/profiles/"+p.ID+"/preview", map[string]any{"outputId": "main"}, 200)
 			d := preview["nodeChanges"].(map[string]any)
 			if scenario == "legacy" || scenario == "malformed" {

@@ -32,7 +32,7 @@ func TestSemanticPublicationReviewExplainsFrozenGroupMembers(t *testing.T) {
 		call("POST", "/outputs", map[string]any{"id": id, "name": id, "profileId": p.ID}, 201)
 	}
 	p.IR.Groups[0].Members = []domain.ActionRef{{Kind: "endpoint", Ref: "other"}, {Kind: "direct"}}
-	call("PUT", "/profiles/"+p.ID, p, 200)
+	saveCurrentProfileDraft(t, u, srv.URL+"/api/me/profiles/"+p.ID, p)
 	preview := call("POST", "/profiles/"+p.ID+"/preview", map[string]any{"outputId": "chosen"}, 200)
 	semantic, ok := preview["semanticChanges"].(map[string]any)
 	if !ok {
@@ -68,7 +68,7 @@ func TestSemanticPublicationReviewExplainsFrozenGroupMembers(t *testing.T) {
 	}
 }
 
-func semanticReviewHarness(t *testing.T, p httpapi.Profile) (func(string, string, any, int) map[string]any, func(func(*httpapi.Output))) {
+func semanticReviewHarness(t *testing.T, p httpapi.Profile) (func(string, string, any, int) map[string]any, func(func(*httpapi.Output)), func(httpapi.Profile)) {
 	t.Helper()
 	s, srv := makeServer(t)
 	u := inviteClient(t, s, srv, "semantic-test")
@@ -93,7 +93,11 @@ func semanticReviewHarness(t *testing.T, p httpapi.Profile) (func(string, string
 			t.Fatal(err)
 		}
 	}
-	return call, fixture
+	save := func(profile httpapi.Profile) {
+		t.Helper()
+		saveCurrentProfileDraft(t, u, srv.URL+"/api/me/profiles/"+profile.ID, profile)
+	}
+	return call, fixture, save
 }
 
 func semanticCategory(t *testing.T, preview map[string]any, name string) map[string]any {
@@ -114,12 +118,12 @@ func TestSemanticPublicationReviewConnectionCategoriesRedactBothVersions(t *test
 		t.Run(target.AdapterID, func(t *testing.T) {
 			p := advancedSummaryProfile()
 			p.Target = target
-			call, _ := semanticReviewHarness(t, p)
+			call, _, save := semanticReviewHarness(t, p)
 			p.IR.Endpoints[0].Connection.Password = "rotated-sensitive"
 			p.IR.Endpoints[0].Connection.Port++
 			p.IR.Endpoints[0].Name = "Old secret-password and rotated-sensitive"
 			p.IR.Groups[0].Name = "Group secret-password rotated-sensitive"
-			call("PUT", "/profiles/"+p.ID, p, 200)
+			save(p)
 			preview := call("POST", "/profiles/"+p.ID+"/preview", map[string]any{"outputId": "main"}, 200)
 			nodes := semanticCategory(t, preview, "nodes")
 			if nodes["state"] != "available" || nodes["changedCount"] != float64(1) {
@@ -154,7 +158,7 @@ func TestSemanticPublicationReviewDoesNotRedefineDeliveredEquality(t *testing.T)
 				p.IR.Groups[0].Members = nil
 				p.IR.Groups[0].Dynamic = &domain.EndpointFilter{}
 			}
-			call, fixture := semanticReviewHarness(t, p)
+			call, fixture, save := semanticReviewHarness(t, p)
 			switch scenario {
 			case "legacy":
 				fixture(func(o *httpapi.Output) { o.SemanticSnapshot = nil })
@@ -167,7 +171,7 @@ func TestSemanticPublicationReviewDoesNotRedefineDeliveredEquality(t *testing.T)
 			case "dynamic-recipe":
 				p.IR.Groups[0].Dynamic.NamePattern = "Private"
 			}
-			call("PUT", "/profiles/"+p.ID, p, 200)
+			save(p)
 			status := call("GET", "/outputs/main/status", nil, 200)
 			if status["draftComparison"].(map[string]any)["state"] != "unchanged" {
 				t.Fatalf("metadata/identity edit invented pending delivery change: %#v", status["draftComparison"])
@@ -213,7 +217,7 @@ func TestSemanticPublicationReviewCoverageIsExplicitAndPublicationStillWorks(t *
 					p.IR.Endpoints = append(p.IR.Endpoints, n)
 				}
 			}
-			call, fixture := semanticReviewHarness(t, p)
+			call, fixture, _ := semanticReviewHarness(t, p)
 			switch scenario {
 			case "unknown-version":
 				fixture(func(o *httpapi.Output) { o.SemanticSnapshot.Version = 999 })
@@ -268,14 +272,14 @@ func TestSemanticPublicationReviewBoundsChangesAndDirectUses(t *testing.T) {
 	for i := 0; i < 12; i++ {
 		p.IR.Rules = append(p.IR.Rules, domain.PolicyRule{ID: fmt.Sprintf("rule-%d", i), Match: domain.MatchExpression{Op: "domain", Value: fmt.Sprintf("site%d.example", i)}, Action: domain.ActionRef{Kind: "endpoint", Ref: "node"}})
 	}
-	call, _ := semanticReviewHarness(t, p)
+	call, _, save := semanticReviewHarness(t, p)
 	for i := range p.IR.Groups {
 		p.IR.Groups[i].Kind = "url-test"
 		p.IR.Groups[i].TestURL = "https://probe.example/check"
 		p.IR.Groups[i].IntervalSeconds = 300
 	}
 	p.IR.Endpoints[0].Connection.Port++
-	call("PUT", "/profiles/"+p.ID, p, 200)
+	save(p)
 	preview := call("POST", "/profiles/"+p.ID+"/preview", map[string]any{"outputId": "main"}, 200)
 	groups := semanticCategory(t, preview, "groups")
 	if groups["changedCount"] != float64(60) || groups["omittedRowCount"] != float64(10) || len(groups["rows"].([]any)) != 50 {
@@ -297,7 +301,7 @@ func TestSemanticPublicationReviewBoundsChangesAndDirectUses(t *testing.T) {
 
 func TestSemanticPublicationReviewRemainsOwnerSelectedOnly(t *testing.T) {
 	p := advancedSummaryProfile()
-	call, _ := semanticReviewHarness(t, p)
+	call, _, _ := semanticReviewHarness(t, p)
 	for _, path := range []string{"/outputs/main/status", "/outputs/main/access", "/outputs/main/comparison"} {
 		view := call("GET", path, nil, 200)
 		for _, key := range []string{"semanticChanges", "semanticSnapshot", "categoryDigests", "parametersDigest"} {
@@ -329,7 +333,7 @@ func TestSemanticPublicationReviewMemberIdentityOrderAndPartialUses(t *testing.T
 	}
 	p.IR.Groups[0].Members = []domain.ActionRef{{Kind: "endpoint", Ref: "node"}, {Kind: "endpoint", Ref: "member-0"}}
 	p.IR.Rules = []domain.PolicyRule{{ID: "group-rule", Match: domain.MatchExpression{Op: "domain", Value: "work.example"}, Action: domain.ActionRef{Kind: "group", Ref: "default-group"}}}
-	call, fixture := semanticReviewHarness(t, p)
+	call, fixture, save := semanticReviewHarness(t, p)
 	// This models a previously bounded, truthful publication rather than
 	// reconstructing the absent rule from today's mutable profile.
 	fixture(func(o *httpapi.Output) { o.RoutingIntent.Rules = nil; o.RoutingIntent.OmittedRuleCount = 1 })
@@ -337,7 +341,7 @@ func TestSemanticPublicationReviewMemberIdentityOrderAndPartialUses(t *testing.T
 	for i := 1; i < 35; i++ {
 		p.IR.Groups[0].Members = append(p.IR.Groups[0].Members, domain.ActionRef{Kind: "endpoint", Ref: fmt.Sprintf("member-%d", i)})
 	}
-	call("PUT", "/profiles/"+p.ID, p, 200)
+	save(p)
 	preview := call("POST", "/profiles/"+p.ID+"/preview", map[string]any{"outputId": "main"}, 200)
 	row := semanticCategory(t, preview, "groups")["rows"].([]any)[0].(map[string]any)
 	if row["memberOrderChanged"] != true || len(row["membersAdded"].([]any)) != 20 || row["omittedAddedMemberCount"] != float64(14) {

@@ -973,3 +973,75 @@ it("does not infer a missing creation summary from selected source labels", asyn
     ).disabled,
   ).toBe(false);
 });
+
+it("carries each accepted basic draft revision into its next save and keeps stale form values", async () => {
+  const original = fetch;
+  const writes: { headers: Headers; body: any; method: string }[] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url, init) => {
+      const path = String(url);
+      if (
+        /\/api\/me\/profiles(?:\/[^/]+)?$/.test(path) &&
+        ["POST", "PUT"].includes(init?.method || "")
+      ) {
+        const body = JSON.parse(String(init?.body));
+        writes.push({
+          headers: new Headers(init?.headers),
+          body,
+          method: init!.method!,
+        });
+        return writes.length < 3
+          ? json({ ...body, revisionToken: `saved-${writes.length}` })
+          : json(
+              { code: "PROFILE_DRAFT_CHANGED", message: "Changed elsewhere" },
+              409,
+            );
+      }
+      return original(url, init);
+    }),
+  );
+  const onClose = vi.fn();
+  mount({ onClose });
+  await screen.findByRole("combobox", { name: "ChatGPT 使用的线路" });
+  await select("ChatGPT 使用的线路", "FRA → UK · 2×");
+  await select("其他流量使用的线路", "My airport · Tokyo");
+  const save = screen.getByRole("button", { name: "保存草稿" });
+  await userEvent.click(save);
+  await waitFor(() => expect(writes).toHaveLength(1));
+  await waitFor(() => expect((save as HTMLButtonElement).disabled).toBe(false));
+  await userEvent.click(save);
+  await waitFor(() => expect(writes).toHaveLength(2));
+  expect(writes[0].method).toBe("POST");
+  expect(writes[0].headers.has("If-Match")).toBe(false);
+  expect(writes[1].method).toBe("PUT");
+  expect(writes[1].headers.get("If-Match")).toBe("saved-1");
+  expect(writes[1].body).not.toHaveProperty("revisionToken");
+  await waitFor(() => expect((save as HTMLButtonElement).disabled).toBe(false));
+  const name = screen.getByRole("textbox", { name: "订阅名称" });
+  await userEvent.clear(name);
+  await userEvent.type(name, "Retained basic draft");
+  await userEvent.click(save);
+  const discard = await screen.findByRole("button", { name: "放弃修改并返回" });
+  expect(writes[2].headers.get("If-Match")).toBe("saved-2");
+  expect((name as HTMLInputElement).value).toBe("Retained basic draft");
+  expect((save as HTMLButtonElement).disabled).toBe(true);
+  expect(
+    (
+      screen.getByRole("button", {
+        name: "保存并查看修改",
+      }) as HTMLButtonElement
+    ).disabled,
+  ).toBe(true);
+  await userEvent.click(discard);
+  const confirm = await screen.findByRole("alertdialog", {
+    name: "放弃当前修改并返回？",
+  });
+  await userEvent.click(
+    within(confirm).getByRole("button", { name: "保留当前输入" }),
+  );
+  await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+  expect((name as HTMLInputElement).value).toBe("Retained basic draft");
+  expect(onClose).not.toHaveBeenCalled();
+  expect(writes).toHaveLength(3);
+});

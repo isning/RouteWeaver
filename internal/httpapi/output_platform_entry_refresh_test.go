@@ -187,7 +187,7 @@ func TestOutputPreviewPlatformEntryRefreshCountsDistinctMatchingEntries(t *testi
 		t.Fatal(err)
 	}
 	profile.PlatformEntryIDs = append(profile.PlatformEntryIDs, "second-grant")
-	f.ownerRequest("PUT", "/me/profiles/rotation-profile", profile, 200)
+	saveCurrentProfileDraft(t, f.owner, f.srv.URL+"/api/me/profiles/rotation-profile", profile)
 	f.ownerRequest("POST", "/me/outputs", map[string]any{"id": "two-phone", "name": "Phone", "profileId": "rotation-profile", "mode": "nodes-only"}, 201)
 	f.rotate("credential-v2")
 	f.rotateEntry("second-grant", "credential-v2")
@@ -224,7 +224,7 @@ func TestOutputPreviewOmitsPlatformEntryRefreshForNativeCandidate(t *testing.T) 
 		t.Fatal(err)
 	}
 	profile.IR.NativeOverride = nativeProfile(profile.Target, `{"tcp-concurrent":true}`).IR.NativeOverride
-	f.ownerRequest("PUT", "/me/profiles/rotation-profile", profile, 200)
+	saveCurrentProfileDraft(t, f.owner, f.srv.URL+"/api/me/profiles/rotation-profile", profile)
 	f.rotate("credential-v2")
 	f.queue("native-refresh")
 	f.observe(0, false)

@@ -32,7 +32,7 @@ func TestOutputStatusExplainsRepairableMissingReferenceWithoutChangingPublicatio
 		before[id] = output
 	}
 	p.IR.DefaultAction = domain.ActionRef{Kind: "endpoint", Ref: "removed-private-id"}
-	code, _, raw = req(t, owner.c, "PUT", srv.URL+"/api/me/profiles/"+p.ID, owner.csrf, p)
+	code, _, raw = putCurrentProfileDraft(t, owner, srv.URL+"/api/me/profiles/"+p.ID, p)
 	if code != 200 {
 		t.Fatal(raw)
 	}
@@ -65,7 +65,7 @@ func TestOutputStatusExplainsRepairableMissingReferenceWithoutChangingPublicatio
 	}
 	// Repairing the shared draft and reviewing one target are not publication.
 	p.IR.DefaultAction = domain.ActionRef{Kind: "endpoint", Ref: "node"}
-	code, _, raw = req(t, owner.c, "PUT", srv.URL+"/api/me/profiles/"+p.ID, owner.csrf, p)
+	code, _, raw = putCurrentProfileDraft(t, owner, srv.URL+"/api/me/profiles/"+p.ID, p)
 	if code != 200 {
 		t.Fatal(raw)
 	}
@@ -134,7 +134,7 @@ func TestOutputStatusOnlyClassifiesTypedRepairLocations(t *testing.T) {
 				t.Fatal(raw)
 			}
 			scenario.mutate(&p)
-			code, _, raw = req(t, owner.c, "PUT", srv.URL+"/api/me/profiles/"+p.ID, owner.csrf, p)
+			code, _, raw = putCurrentProfileDraft(t, owner, srv.URL+"/api/me/profiles/"+p.ID, p)
 			if code != 200 {
 				t.Fatal(raw)
 			}

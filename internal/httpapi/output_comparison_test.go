@@ -73,7 +73,7 @@ func TestOutputComparisonIsOwnerScopedCoarseAndReadOnly(t *testing.T) {
 	read("macbook", "unchanged")
 	read("android", "unchanged")
 	p.IR.Endpoints[0].Connection.Password = "changed-private-password"
-	code, _, raw = req(t, owner.c, "PUT", srv.URL+"/api/me/profiles/"+p.ID, owner.csrf, p)
+	code, _, raw = putCurrentProfileDraft(t, owner, srv.URL+"/api/me/profiles/"+p.ID, p)
 	if code != 200 {
 		t.Fatal(raw)
 	}
@@ -179,7 +179,7 @@ func TestOutputComparisonPreservesTypedRepairAndUnknownStates(t *testing.T) {
 				t.Fatal(err)
 			}
 			scenario.mutate(&p)
-			code, _, raw = req(t, owner.c, "PUT", srv.URL+"/api/me/profiles/"+p.ID, owner.csrf, p)
+			code, _, raw = putCurrentProfileDraft(t, owner, srv.URL+"/api/me/profiles/"+p.ID, p)
 			if code != 200 {
 				t.Fatal(raw)
 			}

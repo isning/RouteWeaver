@@ -154,6 +154,10 @@ func TestDeleteDependencyCreateProfileRacePreservesReferences(t *testing.T) {
 				target, dependent, endpoint, want = "profiles/dependent", "outputs/feed/access", "outputs", 201
 				body = map[string]any{"id": "feed", "name": "Feed", "profileId": p.ID}
 			}
+			var openedRevision string
+			if method == "PUT" {
+				openedRevision = currentProfileRevision(t, u, a1.URL+"/api/me/"+endpoint)
+			}
 			db, err := sql.Open("sqlite", path)
 			if err != nil {
 				t.Fatal(err)
@@ -177,6 +181,11 @@ func TestDeleteDependencyCreateProfileRacePreservesReferences(t *testing.T) {
 				deleted <- reply{c, r}
 			}()
 			go func() {
+				if method == "PUT" {
+					c, _, r := putOpenedProfile(t, u, a2.URL+"/api/me/"+endpoint, openedRevision, body)
+					created <- reply{c, r}
+					return
+				}
 				c, _, r := req(t, u.c, method, a2.URL+"/api/me/"+endpoint, u.csrf, body)
 				created <- reply{c, r}
 			}()

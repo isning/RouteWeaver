@@ -101,10 +101,13 @@ export async function templateFollowFixture(
     expect(response.status()).toBe(200);
     return response.json();
   }
-  async function save(value: unknown) {
+  async function save(value: Record<string, unknown>) {
+    const { revisionToken, ...profile } = value;
+    expect(typeof revisionToken).toBe("string");
+    expect(revisionToken).not.toBe("");
     const response = await owner.put(`/api/me/profiles/${id}`, {
-      headers,
-      data: value,
+      headers: { ...headers, "If-Match": revisionToken as string },
+      data: profile,
     });
     expect(response.status()).toBe(200);
   }

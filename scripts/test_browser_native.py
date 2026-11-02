@@ -31,7 +31,7 @@ class BrowserNativeGateTests(unittest.TestCase):
     def test_explicit_separate_job_and_gate(self):
         workflow = (ROOT / ".github/workflows/ci.yml").read_text()
         block = workflow.split("\n  browser_native:\n", 1)[1].split("\n  native:\n", 1)[0]
-        self.assertIn("timeout-minutes: 20", block)
+        self.assertIn("timeout-minutes: 10", block)
         self.assertIn("scripts/verify.sh browser_native", block)
         self.assertIn("dpkg-query --control-show google-chrome-stable md5sums", block)
         self.assertIn("chromiumSandbox: true", block)

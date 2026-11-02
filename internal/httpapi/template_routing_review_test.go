@@ -104,7 +104,7 @@ func TestTemplateRoutingReviewPreservesActualLocalEditsDeletionAndOrder(t *testi
 	f.selectTemplate(spec, reuse.Bindings{})
 	personal, _ := f.saved()
 	personal.IR.Rules = []domain.PolicyRule{reviewRule("personal", "my.example", "reject"), reviewRule("first", "first.example", "direct")}
-	f.request("PUT", "/api/me/profiles/"+f.profile.ID, personal, 200)
+	saveCurrentProfileDraft(t, f.user, f.srv.URL+"/api/me/profiles/"+f.profile.ID, personal)
 	spec.Rules = []domain.PolicyRule{reviewRule("first", "upstream.example", "reject"), reviewRule("personal", "upstream-personal.example", "direct"), reviewRule("deleted", "deleted.example", "reject"), reviewRule("new", "new.example", "direct")}
 	f.publish(1, spec)
 	_, stored := f.saved()
@@ -148,7 +148,7 @@ func TestTemplateRoutingReviewUnavailableCurrentDoesNotBlockValidRepair(t *testi
 	f.selectTemplate(spec, reuse.Bindings{})
 	broken, _ := f.saved()
 	broken.IR.Groups = nil
-	f.request("PUT", "/api/me/profiles/"+f.profile.ID, broken, 200)
+	saveCurrentProfileDraft(t, f.user, f.srv.URL+"/api/me/profiles/"+f.profile.ID, broken)
 	saved, stored := f.saved()
 	if len(saved.Diagnostics) == 0 {
 		t.Fatal("repair fixture did not persist an invalid current draft")

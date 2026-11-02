@@ -50,7 +50,7 @@ func TestStructuredRuntimeAndOwnedRuleVersionPublication(t *testing.T) {
 						t.Fatal(rejected)
 					}
 					p.IR.Runtime.TUN.Enabled = false
-					call("PUT", "/api/me/profiles/"+policy, p, 200)
+					saveCurrentProfileDraft(t, u, srv.URL+"/api/me/profiles/"+policy, p)
 				}
 				preview := call("POST", "/api/me/profiles/"+policy+"/preview", map[string]any{}, 200)
 				if preview["valid"] != true {

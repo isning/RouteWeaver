@@ -119,7 +119,7 @@ func (h *server) registerTenant(r chi.Router) {
 					}
 					writeJSON(w, 200, sourceView(source, true))
 				} else {
-					writeJSON(w, 200, v)
+					writeJSON(w, 200, h.tenantRecordView(current(r).Account.ID, kind, v, true))
 				}
 			})
 		}
@@ -132,7 +132,7 @@ func (h *server) registerTenant(r chi.Router) {
 					storeError(w, e)
 					return
 				}
-				writeJSON(w, 200, redactTenantRecord(kind, v))
+				writeJSON(w, 200, h.tenantRecordView(current(r).Account.ID, kind, v, false))
 			})
 			r.Delete("/"+kind+"/{id}", func(w http.ResponseWriter, r *http.Request) {
 				if e := h.deleteTenant(current(r).Account.ID, kind, chi.URLParam(r, "id")); e != nil {
@@ -174,7 +174,7 @@ func (h *server) listTenant(w http.ResponseWriter, r *http.Request, kind string)
 		return
 	}
 	for i := range v {
-		v[i] = redactTenantRecord(kind, v[i])
+		v[i] = h.tenantRecordView(current(r).Account.ID, kind, v[i], false)
 	}
 	writeJSON(w, 200, v)
 }
@@ -389,17 +389,19 @@ func (h *server) saveProfile(w http.ResponseWriter, r *http.Request) {
 		storeError(w, e)
 		return
 	}
-	inputs := newTemplateInputs(h.s)
-	if e := inputs.expectRecord(owner, "profiles", p.ID); e != nil {
-		storeError(w, e)
-		return
-	}
-	if e := h.materializeProfileWithReader(owner, &p, inputs); e != nil {
-		storeError(w, e)
-		return
-	}
 	if !pathMatches(r, p.ID) {
 		fail(w, 400, "id mismatch")
+		return
+	}
+	expected, e := h.expectedRecord(r, store.TenantKind(owner, "profiles"), p.ID)
+	if e != nil {
+		profileSaveError(w, e)
+		return
+	}
+	inputs := newTemplateInputs(h.s)
+	inputs.records[expected.Kind+"\x00"+p.ID] = *expected
+	if e := h.materializeProfileWithReader(owner, &p, inputs); e != nil {
+		storeError(w, e)
 		return
 	}
 	p.Status = "draft"
@@ -409,11 +411,11 @@ func (h *server) saveProfile(w http.ResponseWriter, r *http.Request) {
 	}
 	p.UpdatedAt = time.Now().UTC()
 	if e := h.s.CompareAndPutRecords(inputs.compares(), []store.RecordWrite{{Kind: store.TenantKind(owner, "profiles"), ID: p.ID, Value: p}}); e != nil {
-		storeError(w, e)
+		profileSaveError(w, e)
 		return
 	}
 	raw, _ := json.Marshal(p)
-	writeJSON(w, 200, redactTenantRecord("profiles", raw))
+	writeJSON(w, 200, h.tenantRecordView(owner, "profiles", raw, false))
 }
 func (h *server) previewProfile(w http.ResponseWriter, r *http.Request) {
 	owner := current(r).Account.ID

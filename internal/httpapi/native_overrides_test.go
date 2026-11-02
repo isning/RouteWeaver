@@ -90,7 +90,7 @@ func TestNativePreviewAndPublishedOutputUseSameFinalComposition(t *testing.T) {
 		t.Fatalf("target switch dropped native edit: %d %s", code, raw)
 	}
 	saved.IR.NativeOverride.Content = `{"proxies":[{"name":"Injected","password":"synthetic-native-private"}]}`
-	code, _, raw = req(t, u.c, "PUT", srv.URL+"/api/me/profiles/native-profile", u.csrf, saved)
+	code, _, raw = putCurrentProfileDraft(t, u, srv.URL+"/api/me/profiles/native-profile", saved)
 	if code != 200 {
 		t.Fatal(raw)
 	}
@@ -212,7 +212,7 @@ func TestNativeOutputScopedPreviewRetainsNamesWhenCollisionsChange(t *testing.T)
 			}
 			content, _ := json.Marshal(map[string]any{"rules": []string{"PROCESS-NAME,curl," + selectedName}})
 			p.IR.NativeOverride.Content = string(content)
-			code, _, raw = req(t, u.c, "PUT", srv.URL+"/api/me/profiles/native-profile", u.csrf, p)
+			code, _, raw = putCurrentProfileDraft(t, u, srv.URL+"/api/me/profiles/native-profile", p)
 			if code != 200 {
 				t.Fatal(raw)
 			}

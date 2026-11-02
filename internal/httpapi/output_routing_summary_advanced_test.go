@@ -103,7 +103,7 @@ func TestPublishedRoutingSummaryAdvancedPublicationIsIndependent(t *testing.T) {
 	p.IR.Groups[0].Name = "New default choice"
 	p.IR.DefaultAction = domain.ActionRef{Kind: "direct"}
 	p.IR.Rules = nil
-	code, _, raw = req(t, u.c, "PUT", srv.URL+"/api/me/profiles/"+p.ID, u.csrf, p)
+	code, _, raw = putCurrentProfileDraft(t, u, srv.URL+"/api/me/profiles/"+p.ID, p)
 	if code != 200 {
 		t.Fatal(raw)
 	}
@@ -224,7 +224,7 @@ func TestPublishedRoutingSummaryAdvancedLegacyDetailsDoNotInventPendingChanges(t
 		t.Fatal(raw)
 	}
 	p.IR.DefaultAction = domain.ActionRef{Kind: "reject"}
-	code, _, raw = req(t, u.c, "PUT", srv.URL+"/api/me/profiles/"+p.ID, u.csrf, p)
+	code, _, raw = putCurrentProfileDraft(t, u, srv.URL+"/api/me/profiles/"+p.ID, p)
 	if code != 200 {
 		t.Fatal(raw)
 	}
