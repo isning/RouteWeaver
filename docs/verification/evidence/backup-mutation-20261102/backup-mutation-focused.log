@@ -1,0 +1,28 @@
+=== RUN   TestBackupSetRoundTripAndFreshPublication
+--- PASS: TestBackupSetRoundTripAndFreshPublication (33.07s)
+=== RUN   TestBackupSetRejectsCorruptionAndCleansPrivateStage
+=== RUN   TestBackupSetRejectsCorruptionAndCleansPrivateStage/reordered
+=== RUN   TestBackupSetRejectsCorruptionAndCleansPrivateStage/extra
+=== RUN   TestBackupSetRejectsCorruptionAndCleansPrivateStage/manifest_truncated
+=== RUN   TestBackupSetRejectsCorruptionAndCleansPrivateStage/tampered
+=== RUN   TestBackupSetRejectsCorruptionAndCleansPrivateStage/terminal_tag
+=== RUN   TestBackupSetRejectsCorruptionAndCleansPrivateStage/manifest_tag
+=== RUN   TestBackupSetRejectsCorruptionAndCleansPrivateStage/symlink
+=== RUN   TestBackupSetRejectsCorruptionAndCleansPrivateStage/missing
+=== RUN   TestBackupSetRejectsCorruptionAndCleansPrivateStage/truncated
+--- PASS: TestBackupSetRejectsCorruptionAndCleansPrivateStage (54.35s)
+    --- PASS: TestBackupSetRejectsCorruptionAndCleansPrivateStage/reordered (7.65s)
+    --- PASS: TestBackupSetRejectsCorruptionAndCleansPrivateStage/extra (7.40s)
+    --- PASS: TestBackupSetRejectsCorruptionAndCleansPrivateStage/manifest_truncated (0.00s)
+    --- PASS: TestBackupSetRejectsCorruptionAndCleansPrivateStage/tampered (6.64s)
+    --- PASS: TestBackupSetRejectsCorruptionAndCleansPrivateStage/terminal_tag (6.13s)
+    --- PASS: TestBackupSetRejectsCorruptionAndCleansPrivateStage/manifest_tag (6.46s)
+    --- PASS: TestBackupSetRejectsCorruptionAndCleansPrivateStage/symlink (6.19s)
+    --- PASS: TestBackupSetRejectsCorruptionAndCleansPrivateStage/missing (6.81s)
+    --- PASS: TestBackupSetRejectsCorruptionAndCleansPrivateStage/truncated (7.05s)
+=== RUN   TestBackupSetCiphertextMutationChangesEveryByteValue
+--- PASS: TestBackupSetCiphertextMutationChangesEveryByteValue (0.02s)
+=== RUN   TestBackupSetUnchangedCiphertextRewriteRemainsValid
+--- PASS: TestBackupSetUnchangedCiphertextRewriteRemainsValid (7.08s)
+PASS
+ok  	routeweaver/internal/backup	95.676s

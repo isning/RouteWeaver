@@ -114,6 +114,11 @@ for (const width of [1440, 390])
         .getByRole("button", { name: "应用到草稿", exact: true })
         .click();
       expect((await applied).status()).toBe(200);
+      const appliedNotice = page.getByText(
+        "更新已应用到草稿，已发布订阅保持不变",
+        { exact: true },
+      );
+      await expect(appliedNotice).toBeVisible();
       await expect(sheet).toHaveCount(0);
       const updated = await f.draft();
       expect(updated.ir.groups[0].name).toBe("Personal group");
@@ -164,6 +169,17 @@ for (const width of [1440, 390])
       await settledTask(review);
       await page.screenshot({
         path: info.outputPath(`template-follow-review-${width}.png`),
+        fullPage: false,
+      });
+      // Keep the immediate capture, then observe Sonner's normal removal.
+      // Do not suppress the notification, disable motion, or extend timeouts.
+      await expect(appliedNotice).toHaveCount(0);
+      await settledTask(review);
+      await expect(
+        review.getByRole("button", { name: "确认更新「待更新订阅」", exact: true }),
+      ).toBeInViewport();
+      await page.screenshot({
+        path: info.outputPath(`template-follow-review-${width}-clear.png`),
         fullPage: false,
       });
       const publication = page.waitForResponse(

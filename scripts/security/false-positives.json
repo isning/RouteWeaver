@@ -226,5 +226,29 @@
     "rule": "generic-api-key",
     "lineSHA256": "8bd2542393c2086b4bcd9912d8d936393c65b0b5da1015b83f88aeb8c3cd8a68",
     "reason": "Final managed reference executable SHA256 metadata from d640f01; independently recomputed against retained operations-final-reference-20261101/bin/final-reference-httpapi.test bytes on 2026-11-01. Strict duplicate-free receipt and exact binary binding keys verified. Exact path/rule/line only; immutable receipt unchanged."
+  },
+  {
+    "path": "docs/verification/evidence/FINAL-OPERATIONS-REFRESH-2026-11-02-production-manifest.json",
+    "rule": "generic-api-key",
+    "lineSHA256": "5d48951e3bdee4d29f298d22cde035a5742dbc0c151b2ba6f66ba25ce118036d",
+    "reason": "Immutable operational refresh production source manifest: every 244 safe path/SHA256 entry verified against declared Git c95e477c1cf33908962017d103ea1326bd8f98e7; exact bytes match both receipt bindings. No non-hash data. Exact path/rule/line only; not a claim of current test-source identity."
+  },
+  {
+    "path": "docs/verification/evidence/FINAL-OPERATIONS-REFRESH-2026-11-02-production-manifest.json",
+    "rule": "jfrog-identity-token",
+    "lineSHA256": "5d48951e3bdee4d29f298d22cde035a5742dbc0c151b2ba6f66ba25ce118036d",
+    "reason": "Immutable operational refresh production source manifest: every 244 safe path/SHA256 entry verified against declared Git c95e477c1cf33908962017d103ea1326bd8f98e7; exact bytes match both receipt bindings. No non-hash data. Exact path/rule/line only; not a claim of current test-source identity."
+  },
+  {
+    "path": "docs/verification/evidence/FINAL-OPERATIONS-REFRESH-2026-11-02-tests-manifest.json",
+    "rule": "generic-api-key",
+    "lineSHA256": "6e41bbbfc64e793bc279bb8f88550bcecd1b92dad8bdb5328c260c44262f9a1e",
+    "reason": "Immutable operational refresh tests source manifest: every 297 safe path/SHA256 entry verified against declared Git db67b40c91098800aefe2eba36d5f03bf2198198; exact bytes match both receipt bindings. No non-hash data. Exact path/rule/line only; not a claim of current test-source identity."
+  },
+  {
+    "path": "docs/verification/evidence/FINAL-OPERATIONS-REFRESH-2026-11-02-tests-manifest.json",
+    "rule": "jfrog-identity-token",
+    "lineSHA256": "6e41bbbfc64e793bc279bb8f88550bcecd1b92dad8bdb5328c260c44262f9a1e",
+    "reason": "Immutable operational refresh tests source manifest: every 297 safe path/SHA256 entry verified against declared Git db67b40c91098800aefe2eba36d5f03bf2198198; exact bytes match both receipt bindings. No non-hash data. Exact path/rule/line only; not a claim of current test-source identity."
   }
 ]

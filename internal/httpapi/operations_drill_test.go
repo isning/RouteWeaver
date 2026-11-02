@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"routeweaver/internal/agent"
 	"routeweaver/internal/backup"
@@ -16,6 +17,7 @@ import (
 	"routeweaver/internal/entrypolicy"
 	"routeweaver/internal/notifications"
 	"routeweaver/internal/store"
+	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -369,4 +371,117 @@ func runManagedOperationalDrill(t *testing.T, f fleetFixture, conn net.Conn, gat
 	t.Logf("operational long CP outage: existing flow restricted=%s (<=%s), native stayed live until explicit stop; stopped-final reconciliation=%s, fresh-generation restart/readmission=%s", expiryTime, entrypolicy.MaxLease+3*time.Second, reconciledTime, time.Since(reconnectedAt))
 	return renewed, recovered
 
+}
+
+// Called only after the owned driver returns. No second stop or global PID scan:
+// the existing supervisor must establish absence from its stable ownership record.
+func checkOperationalTerminal(t *testing.T, f fleetFixture, supervisor *agent.ProcessSupervisor, spool *agent.MeterSpool, root, instance, user string) {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	observation, err := supervisor.Observe(ctx, root)
+	absent := err == nil && observation.Known && observation.Quiescent && observation.Identity == (controlprotocol.Identity{})
+	if !absent {
+		t.Errorf("terminal owned absence unknown: %v", err)
+	}
+	journal, journalErr := agent.ReadManagedJournal(root)
+	if journalErr != nil {
+		t.Errorf("terminal journal invalid: %v", journalErr)
+	}
+	finalFiles := 0
+	entries, readErr := os.ReadDir(agent.ManagedJournalDirectory(root))
+	if readErr != nil {
+		t.Errorf("terminal journal directory: %v", readErr)
+	}
+	for _, entry := range entries {
+		if strings.HasSuffix(entry.Name(), ".final.json") {
+			finalFiles++
+		}
+	}
+	_, markerErr := os.Lstat(filepath.Join(agent.ManagedJournalDirectory(root), "running.json"))
+	if !os.IsNotExist(markerErr) {
+		t.Errorf("terminal native final incomplete: final_files=%d running_marker_error=%v", finalFiles, markerErr)
+	}
+	pending := len(spool.Pending())
+	_, retirementErr := os.Lstat(filepath.Join(root, "meters", "managed-retirement.json"))
+	retired := finalFiles == 0 && len(journal) == 0 && journalErr == nil && pending == 0 && os.IsNotExist(markerErr) && os.IsNotExist(retirementErr)
+	// A final already represented by exact ACKed live counters may be retired
+	// by final collection. This same fixture proved the real running epoch;
+	// an empty journal with no pending batch/intent is consistent with ACKed
+	// retirement, not a separately preserved positive retirement receipt.
+	if finalFiles == 0 && !retired {
+		t.Errorf("terminal final neither retained nor consistent with completed retirement")
+	}
+	if !os.IsNotExist(retirementErr) {
+		t.Errorf("terminal retirement incomplete: %v", retirementErr)
+	}
+	if pending != 0 {
+		t.Errorf("terminal CP transport obligations remain: batches=%d", pending)
+	}
+	reviews, reviewErr := f.s.AdmissionBudgetReviews(instance, time.Now())
+	if reviewErr != nil {
+		t.Errorf("terminal budget review unavailable: %v", reviewErr)
+	}
+	open, unresolved := 0, 0
+	var retainedRaw, settledRaw uint64
+	for _, review := range reviews {
+		settledRaw += review.SettledRaw
+		if !review.Closed {
+			open++
+			if review.GrantedRaw > review.SettledRaw {
+				retainedRaw += review.GrantedRaw - review.SettledRaw
+			}
+		}
+		if review.Unresolved {
+			unresolved++
+		}
+	}
+	// The earlier injected final failure is manually resolved in this drill.
+	// At terminal shutdown authority is connected and revocation has completed.
+	if open != 0 || unresolved != 0 || retainedRaw != 0 {
+		t.Errorf("terminal unresolved admission obligations: open=%d unresolved=%d retained_raw=%d", open, unresolved, retainedRaw)
+	}
+	usage, usageErr := f.s.Usage(user, time.Time{}, time.Time{})
+	if usageErr != nil || usage.RawBytes != int64(settledRaw) || usage.WeightedBytes != int64(settledRaw) {
+		t.Errorf("terminal settled budget/CP usage mismatch: settled=%d raw=%d weighted=%d error=%v", settledRaw, usage.RawBytes, usage.WeightedBytes, usageErr)
+	}
+	t.Logf("operational terminal: owned_absent=%t final_files=%d journal_snapshots=%d running_marker_absent=%t consistent_with_acked_retirement=%t pending_batches=%d budget_records=%d open_budgets=%d unresolved_budgets=%d retained_raw=%d settled_raw=%d", absent, finalFiles, len(journal), os.IsNotExist(markerErr), retired, pending, len(reviews), open, unresolved, retainedRaw, settledRaw)
+}
+
+// Failure-only private forensic copies, never activated or claimed as an atomic
+// backup. Fixture key is synthetic makeServerAt context, not an operator key.
+func preserveOperationalFailure(t *testing.T, database, root string) {
+	t.Helper()
+	dir := filepath.Join(root, "failure-forensics")
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		t.Errorf("preserve forensic directory: %v", err)
+		return
+	}
+	for _, suffix := range []string{"", "-wal", "-shm"} {
+		source, err := os.Open(database + suffix)
+		if os.IsNotExist(err) {
+			continue
+		}
+		if err != nil {
+			t.Errorf("open forensic DB: %v", err)
+			continue
+		}
+		raw, readErr := io.ReadAll(io.LimitReader(source, (32<<20)+1))
+		source.Close()
+		if readErr != nil || len(raw) > 32<<20 {
+			t.Errorf("forensic DB unavailable or exceeds32MiB: %v", readErr)
+			continue
+		}
+		if err := os.WriteFile(filepath.Join(dir, "db"+suffix), raw, 0600); err != nil {
+			t.Errorf("write forensic DB: %v", err)
+		}
+	}
+	stacks := make([]byte, 1<<20)
+	n := runtime.Stack(stacks, true)
+	for name, data := range map[string][]byte{"goroutines.txt": stacks[:n], "synthetic-fixture-key.hex": []byte(strings.Repeat("0b", 32) + "\n"), "README.txt": []byte("Non-atomic physical diagnostic copies only; no restore/activation proof. Synthetic makeServerAt key. Goroutine capture may be truncated at1MiB.\n")} {
+		if err := os.WriteFile(filepath.Join(dir, name), data, 0600); err != nil {
+			t.Errorf("write private forensic context: %v", err)
+		}
+	}
+	t.Logf("private operational failure evidence retained: %s", root)
 }

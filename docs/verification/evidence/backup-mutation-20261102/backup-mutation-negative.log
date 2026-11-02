@@ -1,0 +1,6 @@
+=== RUN   TestBackupSetCiphertextMutationChangesEveryByteValue
+    set_test.go:158: ciphertext mutation was a no-op
+--- FAIL: TestBackupSetCiphertextMutationChangesEveryByteValue (0.00s)
+FAIL
+FAIL	routeweaver/internal/backup	0.028s
+FAIL

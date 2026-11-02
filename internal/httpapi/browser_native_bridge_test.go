@@ -102,7 +102,7 @@ func TestBrowserNativeBridge(t *testing.T) {
 	if e = os.WriteFile(binary, content, 0700); e != nil {
 		t.Fatal(e)
 	}
-	tr, e := agent.NewHTTPTransport(agent.HTTPTransportOptions{BaseURL: init.URL, Scope: init.Scope, Token: init.Token, RequestTimeout: 2 * time.Second, MaxAttempts: 1, AllowLoopbackHTTP: true})
+	tr, e := agent.NewHTTPTransport(bridgeTransportOptions(init.URL, init.Token, init.Scope))
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -215,6 +215,10 @@ func TestBrowserNativeBridge(t *testing.T) {
 	}
 }
 
+func bridgeTransportOptions(origin, token string, scope agent.Scope) agent.HTTPTransportOptions {
+	return agent.HTTPTransportOptions{BaseURL: origin, Scope: scope, Token: token, RequestTimeout: 2 * time.Second, MaxAttempts: 1, Backoff: time.Millisecond, AllowLoopbackHTTP: true}
+}
+
 func bridgeConfirmedRestriction(state agent.State, err error) bool {
 	return errors.Is(err, agent.ErrLeaseBlocked) && state.Phase == agent.Blocked && state.Code == "policy_restricted" && state.Observed == nil && !state.RecoveryRequired
 }
@@ -223,6 +227,19 @@ func bridgeIdentityRejected(err error) bool {
 	return errors.As(err, &response) && response.Status == 409 && response.Code == "request_rejected"
 }
 func TestBrowserNativeBridgeClassifiesOnlyExactOutcomes(t *testing.T) {
+	t.Run("exact-transport-constructor", func(t *testing.T) {
+		options := bridgeTransportOptions("http://127.0.0.1:1", "synthetic-private-fixture", agent.Scope{NodeID: "node", InstanceID: "instance", EnrollmentEpoch: "enrollment"})
+		transport, err := agent.NewHTTPTransport(options)
+		if err != nil {
+			t.Fatal("browser bridge transport options rejected before initialization", err)
+		}
+		transport.Close() // Constructor/close only: no HTTP request or native activation.
+		options.Backoff = 0
+		if rejected, err := agent.NewHTTPTransport(options); err == nil {
+			rejected.Close()
+			t.Fatal("missing explicit backoff accepted")
+		}
+	})
 	for _, err := range []error{nil, context.DeadlineExceeded, fmt.Errorf("network disconnected"), &agent.TransportError{Status: 500, Code: "request_rejected"}, &agent.TransportError{Status: 409, Code: "other"}} {
 		if bridgeIdentityRejected(err) {
 			t.Fatal("non-identity error accepted as rejection", err)

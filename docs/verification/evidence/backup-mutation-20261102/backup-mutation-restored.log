@@ -1,0 +1,4 @@
+=== RUN   TestBackupSetCiphertextMutationChangesEveryByteValue
+--- PASS: TestBackupSetCiphertextMutationChangesEveryByteValue (0.01s)
+PASS
+ok  	routeweaver/internal/backup	1.034s

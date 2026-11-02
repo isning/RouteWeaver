@@ -72,54 +72,142 @@ func TestBackupSetRoundTripAndFreshPublication(t *testing.T) {
 }
 func TestBackupSetRejectsCorruptionAndCleansPrivateStage(t *testing.T) {
 	original, l := immutableSetFixture(t)
-	cases := map[string]func(string){
-		"missing": func(p string) { os.Remove(filepath.Join(p, partName(1))) },
-		"truncated": func(p string) {
-			f, _ := os.OpenFile(filepath.Join(p, partName(1)), os.O_WRONLY, 0600)
-			f.Truncate(100)
-			f.Close()
+	cases := map[string]func(*testing.T, string){
+		"missing":      func(t *testing.T, p string) { mustSetMutation(t, os.Remove(filepath.Join(p, partName(1)))) },
+		"truncated":    func(t *testing.T, p string) { mustSetMutation(t, os.Truncate(filepath.Join(p, partName(1)), 100)) },
+		"tampered":     func(t *testing.T, p string) { flipSetCiphertextByte(t, filepath.Join(p, partName(1)), 200) },
+		"terminal_tag": func(t *testing.T, p string) { flipSetCiphertextByte(t, filepath.Join(p, partName(1)), -1) },
+		"manifest_tag": func(t *testing.T, p string) { flipSetCiphertextByte(t, filepath.Join(p, setManifestName), -1) },
+		"reordered": func(t *testing.T, p string) {
+			a, e := os.ReadFile(filepath.Join(p, partName(1)))
+			mustSetMutation(t, e)
+			b, e := os.ReadFile(filepath.Join(p, partName(2)))
+			mustSetMutation(t, e)
+			if bytes.Equal(a, b) {
+				t.Fatal("reorder fixture parts are identical")
+			}
+			mustSetMutation(t, os.WriteFile(filepath.Join(p, partName(1)), b, 0600))
+			mustSetMutation(t, os.WriteFile(filepath.Join(p, partName(2)), a, 0600))
 		},
-		"tampered": func(p string) {
-			f, _ := os.OpenFile(filepath.Join(p, partName(1)), os.O_WRONLY, 0600)
-			f.WriteAt([]byte{0xff}, 200)
-			f.Close()
+		"extra": func(t *testing.T, p string) {
+			mustSetMutation(t, os.WriteFile(filepath.Join(p, "extra.age"), []byte("x"), 0600))
 		},
-		"reordered": func(p string) {
-			a, _ := os.ReadFile(filepath.Join(p, partName(1)))
-			b, _ := os.ReadFile(filepath.Join(p, partName(2)))
-			os.WriteFile(filepath.Join(p, partName(1)), b, 0600)
-			os.WriteFile(filepath.Join(p, partName(2)), a, 0600)
+		"symlink": func(t *testing.T, p string) {
+			mustSetMutation(t, os.Remove(filepath.Join(p, partName(1))))
+			mustSetMutation(t, os.Symlink(filepath.Join(original, partName(1)), filepath.Join(p, partName(1))))
 		},
-		"extra": func(p string) { os.WriteFile(filepath.Join(p, "extra.age"), []byte("x"), 0600) },
-		"symlink": func(p string) {
-			os.Remove(filepath.Join(p, partName(1)))
-			os.Symlink(filepath.Join(original, partName(1)), filepath.Join(p, partName(1)))
+		"manifest_truncated": func(t *testing.T, p string) {
+			mustSetMutation(t, os.WriteFile(filepath.Join(p, setManifestName), []byte("age"), 0600))
 		},
-		"manifest_truncated": func(p string) { os.WriteFile(filepath.Join(p, setManifestName), []byte("age"), 0600) },
 	}
 	for name, mutate := range cases {
 		t.Run(name, func(t *testing.T) {
 			p := filepath.Join(t.TempDir(), "set")
 			copySet(t, original, p)
-			mutate(p)
+			mutate(t, p)
 			outDir := t.TempDir()
 			target := filepath.Join(outDir, "fresh.db")
 			if e := RestoreSet(context.Background(), p, setPassword, target, bytes.Repeat([]byte{32}, 32), l); e == nil {
 				t.Fatal("accepted corruption")
 			}
-			entries, _ := os.ReadDir(outDir)
+			entries, readErr := os.ReadDir(outDir)
+			mustSetMutation(t, readErr)
 			if len(entries) != 0 {
 				t.Fatalf("left partial output: %v", entries)
 			}
 		})
 	}
 }
+
+// A constant overwrite is not a mutation when the existing random ciphertext
+// byte already equals that constant. XOR changes every possible input byte.
+func flipSetCiphertextByte(t *testing.T, path string, offset int) {
+	t.Helper()
+	before, err := os.ReadFile(path)
+	mustSetMutation(t, err)
+	if offset == -1 {
+		offset = len(before) - 1
+	}
+	if offset < 0 || offset >= len(before) {
+		t.Fatal("ciphertext mutation offset outside fixture")
+	}
+	after := bytes.Clone(before)
+	after[offset] ^= 1
+	if bytes.Equal(before, after) {
+		t.Fatal("ciphertext mutation was a no-op")
+	}
+	mustSetMutation(t, os.WriteFile(path, after, 0600))
+	written, err := os.ReadFile(path)
+	mustSetMutation(t, err)
+	if !bytes.Equal(written, after) || bytes.Equal(written, before) {
+		t.Fatal("ciphertext mutation was not persisted exactly")
+	}
+}
+func mustSetMutation(t *testing.T, err error) {
+	t.Helper()
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestBackupSetCiphertextMutationChangesEveryByteValue(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "bytes")
+	for value := 255; value >= 0; value-- {
+		before := []byte{byte(value)}
+		mustSetMutation(t, os.WriteFile(path, before, 0600))
+		flipSetCiphertextByte(t, path, 0)
+		after, err := os.ReadFile(path)
+		mustSetMutation(t, err)
+		if len(after) != 1 || after[0] != byte(value)^1 {
+			t.Fatalf("mutation failed for input %d", value)
+		}
+	}
+	// Deterministic counterexample to the former mutator, not a claim about
+	// the unretained ciphertext preimage in the failing CI run.
+	mustSetMutation(t, os.WriteFile(path, []byte{0xff}, 0600))
+	f, err := os.OpenFile(path, os.O_WRONLY, 0600)
+	mustSetMutation(t, err)
+	n, err := f.WriteAt([]byte{0xff}, 0)
+	mustSetMutation(t, err)
+	mustSetMutation(t, f.Close())
+	after, err := os.ReadFile(path)
+	mustSetMutation(t, err)
+	if n != 1 || !bytes.Equal(after, []byte{0xff}) {
+		t.Fatal("legacy no-op counterexample invalid")
+	}
+}
+
+func TestBackupSetUnchangedCiphertextRewriteRemainsValid(t *testing.T) {
+	path, limits := immutableSetFixture(t)
+	part := filepath.Join(path, partName(1))
+	before, err := os.ReadFile(part)
+	mustSetMutation(t, err)
+	if len(before) <= 200 {
+		t.Fatal("ciphertext fixture too short")
+	}
+	f, err := os.OpenFile(part, os.O_WRONLY, 0600)
+	mustSetMutation(t, err)
+	n, err := f.WriteAt(before[200:201], 200)
+	mustSetMutation(t, err)
+	mustSetMutation(t, f.Close())
+	after, err := os.ReadFile(part)
+	mustSetMutation(t, err)
+	if n != 1 || !bytes.Equal(before, after) {
+		t.Fatal("same-byte rewrite changed ciphertext")
+	}
+	target := filepath.Join(t.TempDir(), "valid.db")
+	if err := RestoreSet(context.Background(), path, setPassword, target, bytes.Repeat([]byte{32}, 32), limits); err != nil {
+		t.Fatal("unchanged authenticated ciphertext rejected", err)
+	}
+}
+
 func copySet(t *testing.T, src, dst string) {
 	t.Helper()
 	if e := os.Mkdir(dst, 0700); e != nil {
 		t.Fatal(e)
 	}
-	entries, _ := os.ReadDir(src)
+	entries, err := os.ReadDir(src)
+	mustSetMutation(t, err)
 	for _, entry := range entries {
 		b, e := os.ReadFile(filepath.Join(src, entry.Name()))
 		if e != nil {

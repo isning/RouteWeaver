@@ -1,0 +1,28 @@
+[
+  {
+    "kind": "production",
+    "entries": 244,
+    "gitSource": "c95e477c1cf33908962017d103ea1326bd8f98e7",
+    "everyEntryMatchesDeclaredGitSnapshot": true,
+    "currentSnapshotDifferences": [],
+    "duplicateKeysRejected": true,
+    "strictPathHashOnly": true,
+    "receiptByteHashBindingVerified": true,
+    "path": "docs/verification/evidence/FINAL-OPERATIONS-REFRESH-2026-11-02-production-manifest.json",
+    "lineSHA256": "5d48951e3bdee4d29f298d22cde035a5742dbc0c151b2ba6f66ba25ce118036d"
+  },
+  {
+    "kind": "tests",
+    "entries": 297,
+    "gitSource": "db67b40c91098800aefe2eba36d5f03bf2198198",
+    "everyEntryMatchesDeclaredGitSnapshot": true,
+    "currentSnapshotDifferences": [
+      "internal/httpapi/browser_native_bridge_test.go"
+    ],
+    "duplicateKeysRejected": true,
+    "strictPathHashOnly": true,
+    "receiptByteHashBindingVerified": true,
+    "path": "docs/verification/evidence/FINAL-OPERATIONS-REFRESH-2026-11-02-tests-manifest.json",
+    "lineSHA256": "6e41bbbfc64e793bc279bb8f88550bcecd1b92dad8bdb5328c260c44262f9a1e"
+  }
+]

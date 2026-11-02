@@ -1,0 +1,294 @@
+{
+  "status": "FAIL (13 of 14 required top-level cases passed; no skips)",
+  "binding": {
+    "production_base": "c95e477c1cf33908962017d103ea1326bd8f98e7",
+    "test_commit": "db67b40c91098800aefe2eba36d5f03bf2198198",
+    "production_entries": 244,
+    "production_manifest_sha256": "219be2c72e6692df09413eb39591d861cfb3e604ea4504161f6abdb57aa96af2",
+    "test_entries": 297,
+    "tests_manifest_sha256": "539cd6ba07b4257efe3145bde881b13b490bccc47ac978e408a63a67be964a57",
+    "native_path": "/workspace/scratch/d385eb428cee/operations-final-reference-20261101/bin/final-reference-managed-xray",
+    "native_sha256": "31f6aa0cd8392763a527257cd3b7f7f95ec8c8ecd20e4bafcbdb6b89663eadbe",
+    "parent_GOMAXPROCS": "1",
+    "parent_GOMEMLIMIT": "256MiB soft Go target",
+    "native_limits": "not inherited; supervisor strips parent Go variables; hard CPU/RSS limits unknown",
+    "expected_tests": [
+      {
+        "package": "routeweaver/internal/httpapi",
+        "test": "TestOperationalNotificationFailureVisibleAndRetry",
+        "elapsed_seconds": 0.26
+      },
+      {
+        "package": "routeweaver/internal/httpapi",
+        "test": "TestNativeManagedOperationalRecovery",
+        "elapsed_seconds": 116.96
+      },
+      {
+        "package": "routeweaver/internal/agent",
+        "test": "TestManagedNativeBrokerEOFStopsActivePayloadAndPersistsFinalJournal",
+        "elapsed_seconds": 2.09
+      },
+      {
+        "package": "routeweaver/internal/store",
+        "test": "TestEncryptedBackupRestorePreservesOutstandingAdmissionObligation",
+        "elapsed_seconds": 20.85
+      },
+      {
+        "package": "routeweaver/internal/store",
+        "test": "TestBackupStreamingDoesNotBlockAdmissionOrConfigurationWrites",
+        "elapsed_seconds": 0.34
+      },
+      {
+        "package": "routeweaver/internal/store",
+        "test": "TestCounterExplicitRestartPreservesKnownUsageAndRejectsRegression",
+        "elapsed_seconds": 0.32
+      },
+      {
+        "package": "routeweaver/internal/store",
+        "test": "TestCounterIngestionIsAtomicReplaySafeAndSeparatesProvider",
+        "elapsed_seconds": 0.36
+      },
+      {
+        "package": "routeweaver/internal/notifications",
+        "test": "TestRetryDelayStartsAfterTransportFailure",
+        "elapsed_seconds": 0.26
+      },
+      {
+        "package": "routeweaver/internal/notifications",
+        "test": "TestDurableOutboxRestartStableIdentityAndBoundedRetries",
+        "elapsed_seconds": 0.72
+      },
+      {
+        "package": "routeweaver/internal/notifications",
+        "test": "TestCrashAfterAcceptanceReusesEventIDAndRechecksSettings",
+        "elapsed_seconds": 0.32
+      },
+      {
+        "package": "routeweaver/internal/agent",
+        "test": "TestSlowControlPlaneCannotDelayLeaseRestriction",
+        "elapsed_seconds": 0.04
+      },
+      {
+        "package": "routeweaver/internal/agent",
+        "test": "TestDriverRestartRetainsGenerationFenceUntilNewDesired",
+        "elapsed_seconds": 0.11
+      },
+      {
+        "package": "routeweaver/internal/agent",
+        "test": "TestManagedRetirementCrashReopenNeverReplaysAcknowledgedEpoch",
+        "elapsed_seconds": 0.04
+      },
+      {
+        "package": "routeweaver/internal/agent",
+        "test": "TestManagedMeterRequiresRealBaselineAndRecoversCollectionCursor",
+        "elapsed_seconds": 0
+      }
+    ]
+  },
+  "runs": [
+    {
+      "label": "native-drills",
+      "command": [
+        "scripts/go.sh",
+        "test",
+        "-json",
+        "-race",
+        "-p=1",
+        "-count=1",
+        "-timeout=180s",
+        "-run",
+        "^(TestOperationalNotificationFailureVisibleAndRetry|TestNativeManagedOperationalRecovery|TestManagedNativeBrokerEOFStopsActivePayloadAndPersistsFinalJournal)$",
+        "./internal/httpapi",
+        "./internal/agent"
+      ],
+      "start_utc": "2026-11-02T02:50:19.727339+00:00",
+      "end_utc": "2026-11-02T02:51:56.339338+00:00",
+      "elapsed_seconds": 96.61262693099707,
+      "exit_code": 1,
+      "child_user_cpu_seconds": 64.39410600000001,
+      "child_system_cpu_seconds": 12.725572,
+      "cumulative_wait4_maxrss_kib": 1065976,
+      "raw_sha256": "24fec7ce829efc7e7cf55f4adcb1058131e7b4732b526109af881ba61996e3f5"
+    },
+    {
+      "label": "recovery",
+      "command": [
+        "scripts/go.sh",
+        "test",
+        "-json",
+        "-race",
+        "-p=1",
+        "-count=1",
+        "-timeout=120s",
+        "-run",
+        "^(TestEncryptedBackupRestorePreservesOutstandingAdmissionObligation|TestBackupStreamingDoesNotBlockAdmissionOrConfigurationWrites|TestCounterExplicitRestartPreservesKnownUsageAndRejectsRegression|TestCounterIngestionIsAtomicReplaySafeAndSeparatesProvider|TestRetryDelayStartsAfterTransportFailure|TestDurableOutboxRestartStableIdentityAndBoundedRetries|TestCrashAfterAcceptanceReusesEventIDAndRechecksSettings|TestSlowControlPlaneCannotDelayLeaseRestriction|TestDriverRestartRetainsGenerationFenceUntilNewDesired|TestManagedRetirementCrashReopenNeverReplaysAcknowledgedEpoch|TestManagedMeterRequiresRealBaselineAndRecoversCollectionCursor)$",
+        "./internal/store",
+        "./internal/notifications",
+        "./internal/agent"
+      ],
+      "start_utc": "2026-11-02T02:51:56.345233+00:00",
+      "end_utc": "2026-11-02T02:52:34.354483+00:00",
+      "elapsed_seconds": 38.00931804600259,
+      "exit_code": 0,
+      "child_user_cpu_seconds": 30.174317000000002,
+      "child_system_cpu_seconds": 5.053236000000002,
+      "cumulative_wait4_maxrss_kib": 1065976,
+      "raw_sha256": "5efac07c7e0c4bad3227f0a25b1f9981ad20a5da3926be223e69bde56c985143"
+    }
+  ],
+  "after": {
+    "production_unchanged": true,
+    "tests_unchanged": true,
+    "native_unchanged": true
+  },
+  "test_results": [
+    {
+      "package": "routeweaver/internal/httpapi",
+      "test": "TestOperationalNotificationFailureVisibleAndRetry",
+      "action": "pass",
+      "elapsed_seconds": 0.36
+    },
+    {
+      "package": "routeweaver/internal/httpapi",
+      "test": "TestNativeManagedOperationalRecovery",
+      "action": "fail",
+      "elapsed_seconds": 85.26
+    },
+    {
+      "package": "routeweaver/internal/agent",
+      "test": "TestManagedNativeBrokerEOFStopsActivePayloadAndPersistsFinalJournal",
+      "action": "pass",
+      "elapsed_seconds": 1.14
+    },
+    {
+      "package": "routeweaver/internal/store",
+      "test": "TestEncryptedBackupRestorePreservesOutstandingAdmissionObligation",
+      "action": "pass",
+      "elapsed_seconds": 15.77
+    },
+    {
+      "package": "routeweaver/internal/store",
+      "test": "TestBackupStreamingDoesNotBlockAdmissionOrConfigurationWrites",
+      "action": "pass",
+      "elapsed_seconds": 0.27
+    },
+    {
+      "package": "routeweaver/internal/store",
+      "test": "TestCounterExplicitRestartPreservesKnownUsageAndRejectsRegression",
+      "action": "pass",
+      "elapsed_seconds": 0.41
+    },
+    {
+      "package": "routeweaver/internal/store",
+      "test": "TestCounterIngestionIsAtomicReplaySafeAndSeparatesProvider",
+      "action": "pass",
+      "elapsed_seconds": 0.46
+    },
+    {
+      "package": "routeweaver/internal/notifications",
+      "test": "TestRetryDelayStartsAfterTransportFailure",
+      "action": "pass",
+      "elapsed_seconds": 0.28
+    },
+    {
+      "package": "routeweaver/internal/notifications",
+      "test": "TestDurableOutboxRestartStableIdentityAndBoundedRetries",
+      "action": "pass",
+      "elapsed_seconds": 0.81
+    },
+    {
+      "package": "routeweaver/internal/notifications",
+      "test": "TestCrashAfterAcceptanceReusesEventIDAndRechecksSettings",
+      "action": "pass",
+      "elapsed_seconds": 0.33
+    },
+    {
+      "package": "routeweaver/internal/agent",
+      "test": "TestSlowControlPlaneCannotDelayLeaseRestriction/expired_at_startup=false",
+      "action": "pass",
+      "elapsed_seconds": 0.01
+    },
+    {
+      "package": "routeweaver/internal/agent",
+      "test": "TestSlowControlPlaneCannotDelayLeaseRestriction/expired_at_startup=true",
+      "action": "pass",
+      "elapsed_seconds": 0.01
+    },
+    {
+      "package": "routeweaver/internal/agent",
+      "test": "TestSlowControlPlaneCannotDelayLeaseRestriction",
+      "action": "pass",
+      "elapsed_seconds": 0.02
+    },
+    {
+      "package": "routeweaver/internal/agent",
+      "test": "TestDriverRestartRetainsGenerationFenceUntilNewDesired",
+      "action": "pass",
+      "elapsed_seconds": 0.1
+    },
+    {
+      "package": "routeweaver/internal/agent",
+      "test": "TestManagedRetirementCrashReopenNeverReplaysAcknowledgedEpoch/0",
+      "action": "pass",
+      "elapsed_seconds": 0.01
+    },
+    {
+      "package": "routeweaver/internal/agent",
+      "test": "TestManagedRetirementCrashReopenNeverReplaysAcknowledgedEpoch/1",
+      "action": "pass",
+      "elapsed_seconds": 0.01
+    },
+    {
+      "package": "routeweaver/internal/agent",
+      "test": "TestManagedRetirementCrashReopenNeverReplaysAcknowledgedEpoch/2",
+      "action": "pass",
+      "elapsed_seconds": 0
+    },
+    {
+      "package": "routeweaver/internal/agent",
+      "test": "TestManagedRetirementCrashReopenNeverReplaysAcknowledgedEpoch/3",
+      "action": "pass",
+      "elapsed_seconds": 0
+    },
+    {
+      "package": "routeweaver/internal/agent",
+      "test": "TestManagedRetirementCrashReopenNeverReplaysAcknowledgedEpoch",
+      "action": "pass",
+      "elapsed_seconds": 0.02
+    },
+    {
+      "package": "routeweaver/internal/agent",
+      "test": "TestManagedMeterRequiresRealBaselineAndRecoversCollectionCursor",
+      "action": "pass",
+      "elapsed_seconds": 0
+    }
+  ],
+  "observations": [
+    "operations_drill_test.go:93: notification failure visible=70.578057ms retry-to-accepted=61.294046ms scheduled-delay=1m0.036570002s (clock advanced; no real provider)",
+    "service_native_test.go:269: operational disconnect: HTTP503 window=254.663836ms retained last observation, reconnect refresh=28.549434ms; not long-outage expiry proof",
+    "service_native_test.go:269: operational exact traffic: native and CP raw/weighted=11630 bytes; active-flow settlement=3.913819081s",
+    "service_native_test.go:269: operational encrypted backup: bytes=96248 export=18.314180315s payload-exchanges-during=219 fresh-verify-restore-reopen=15.254262048s; restored copy not activated",
+    "service_native_test.go:269: stopped runtime lacks exact native final measurement",
+    "service_native_test.go:147: native service cleanup: live managed snapshot has no matching running epoch; evidence /tmp/rw-service-native-555640217",
+    "service_native_test.go:154: operational terminal: owned_absent=true final_files=0 journal_snapshots=0 running_marker_absent=true consistent_with_acked_retirement=true pending_batches=0 budget_records=1 open_budgets=1 unresolved_budgets=1 retained_raw=1036946 settled_raw=11630",
+    "service_native_test.go:168: private operational failure evidence retained: /tmp/rw-service-native-555640217",
+    "service_native_test.go:172: operational cleanup: driver_returned=true checked_spool_and_reconciler_close=true evidence_retained=true",
+    "managed_xray_process_test.go:247: operational real-native journal: exact 44 bytes retained across spool reopen/replay; synthetic matching receipts suppress acknowledged replay; recovery=6.84183ms",
+    "managed_xray_process_test.go:86: operational EOF cleanup: owned_absent=true checked_reconciler_close=true evidence_retained=false"
+  ],
+  "retained_private_root": "/tmp/rw-service-native-555640217",
+  "failure_classification": {
+    "confirmed_fixture_defect": "direct supervisor.Stop concurrently with active RunDriver violates documented caller lock and assumes journal survives collector",
+    "supported_not_proven_interleaving": "ACK-driven retirement overlapping direct stop/journal read; exact scheduling not captured",
+    "expected_fallout": "manual finalization not reached, 1036946-byte reservation retained rather than refunded",
+    "not_established": "production regression, first-soak failure cause, exact terminal native final bytes"
+  },
+  "private_forensics": "native root plus0600 physical CP DB/WAL/SHM, synthetic key context and stacks; non-atomic diagnostic copies, not backup/activation evidence; not committed",
+  "resource_scope": "Both command parents GOMAXPROCS1/GOMEMLIMIT256MiB soft target only. Native environment strips these. wait4 cumulative maxRSS includes compiler/test descendants, not native-only nor simultaneous aggregate. No new hard CPU/RSS limits imposed.",
+  "artifact_sha256": {
+    "FINAL-OPERATIONS-REFRESH-2026-11-02-native-drills.jsonl": "24fec7ce829efc7e7cf55f4adcb1058131e7b4732b526109af881ba61996e3f5",
+    "FINAL-OPERATIONS-REFRESH-2026-11-02-production-manifest.json": "219be2c72e6692df09413eb39591d861cfb3e604ea4504161f6abdb57aa96af2",
+    "FINAL-OPERATIONS-REFRESH-2026-11-02-recovery.jsonl": "5efac07c7e0c4bad3227f0a25b1f9981ad20a5da3926be223e69bde56c985143",
+    "FINAL-OPERATIONS-REFRESH-2026-11-02-tests-manifest.json": "539cd6ba07b4257efe3145bde881b13b490bccc47ac978e408a63a67be964a57"
+  }
+}

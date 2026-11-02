@@ -138,8 +138,10 @@ func testNativeContinuousManagedService(t *testing.T, operationalDrill, provider
 	}()
 	t.Cleanup(func() {
 		cancel()
+		driverStopped := false
 		select {
 		case err := <-done:
+			driverStopped = true
 			if err != nil {
 				retain = true
 				t.Errorf("native service cleanup: %v; evidence %s", err, root)
@@ -148,9 +150,27 @@ func testNativeContinuousManagedService(t *testing.T, operationalDrill, provider
 			retain = true
 			t.Errorf("native service shutdown timeout; evidence %s", root)
 		}
-		spool.Close()
-		reconciler.Close()
+		if operationalDrill && driverStopped {
+			checkOperationalTerminal(t, f, supervisor, spool, root, d.InstanceID, user.id)
+		}
+		if err := spool.Close(); err != nil {
+			retain = true
+			t.Errorf("meter spool close: %v; evidence %s", err, root)
+		}
+		if err := reconciler.Close(); err != nil {
+			retain = true
+			t.Errorf("reconciler close: %v; evidence %s", err, root)
+		}
 		transport.Close()
+		if t.Failed() {
+			retain = true
+			if operationalDrill {
+				preserveOperationalFailure(t, f.databasePath, root)
+			}
+		}
+		if operationalDrill {
+			t.Logf("operational cleanup: driver_returned=%t checked_spool_and_reconciler_close=true evidence_retained=%t", driverStopped, retain)
+		}
 	})
 	deadline := time.Now().Add(8 * time.Second)
 	for {
