@@ -101,9 +101,19 @@ export function CollectionPreview({
             children: (
               <>
                 <p className="muted text-sm text-muted-foreground">
-                  {stage.endpoints?.length || 0} 个节点 · 移除{" "}
-                  {stage.removedIds?.length || 0} 个 · 修改{" "}
-                  {stage.changedIds?.length || 0} 个
+                  {stage.endpoints?.length || 0} 个节点
+                  {(stage.comparison === "step-input" ||
+                    (!stage.comparison &&
+                      !!stage.stepId &&
+                      (stage.scope === "source" ||
+                        stage.scope === "aggregate"))) && (
+                    <>
+                      {" "}
+                      · 相对此步骤输入：新增 {stage.addedIds?.length || 0} 个 ·
+                      移除 {stage.removedIds?.length || 0} 个 · 修改{" "}
+                      {stage.changedIds?.length || 0} 个
+                    </>
+                  )}
                 </p>
                 {table(stage.endpoints)}
               </>

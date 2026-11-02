@@ -305,6 +305,25 @@ class SecretScannerTests(unittest.TestCase):
                 self.assertIn("jfrog-identity-token", elsewhere)
                 (self.root / "other/qualification-manifest.json").unlink()
 
+    def test_final_capacity_manifests_are_exact_line_and_path_only(self):
+        for kind in ["production", "tests"]:
+            with self.subTest(manifest=kind):
+                path = ("docs/verification/evidence/FINAL-CAPACITY-REFERENCE-"
+                        "2026-11-02-" + kind + "-manifest.json")
+                content = (ROOT / path).read_bytes()
+                self.write(path, content)
+                self.assertIn("PASS", self.scan())
+                self.write(path, content.rstrip(b"\n") + b" \n")
+                changed = self.scan(1)
+                self.assertIn("generic-api-key", changed)
+                self.assertIn("jfrog-identity-token", changed)
+                (self.root / path).unlink()
+                self.write("other/capacity-manifest.json", content)
+                elsewhere = self.scan(1)
+                self.assertIn("generic-api-key", elsewhere)
+                self.assertIn("jfrog-identity-token", elsewhere)
+                (self.root / "other/capacity-manifest.json").unlink()
+
     def test_secret_file_outside_repository_is_not_followed(self):
         with tempfile.TemporaryDirectory() as outside:
             target = Path(outside) / "outside.txt"

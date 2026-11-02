@@ -1,0 +1,32 @@
+{
+  "version": "1.4.0",
+  "devOnly": true,
+  "license": "Apache-2.0",
+  "runtimeDependencyCount": 0,
+  "officialTarballIntegrityMatchesLock": true,
+  "installedLicenseByteMatchesOfficialTarball": true,
+  "lockDeltaOnlyRootAndJsqr": true,
+  "productionImportSearch": "Only web/tests/service-center-backend.ui.spec.ts imports jsqr; no src import found",
+  "omitDevDependencyTreeHasJsqr": false,
+  "auditNodeNames": [
+    "@shadcn/registry",
+    "@ts-morph/common",
+    "deepmerge",
+    "minimatch",
+    "shadcn",
+    "ts-morph"
+  ],
+  "auditNodeNamesEqualPreviousReview": true,
+  "auditCounts": {
+    "info": 0,
+    "low": 2,
+    "moderate": 4,
+    "high": 0,
+    "critical": 0,
+    "total": 6
+  },
+  "productionBundleRerun": false,
+  "productionBundleLimit": "No web/dist present; production-exclusion conclusion is source/package-graph evidence, not a fresh emitted-bundle inspection.",
+  "primaryAdvisoriesEqualPreviousReview": true,
+  "primaryAdvisoryCount": 2
+}

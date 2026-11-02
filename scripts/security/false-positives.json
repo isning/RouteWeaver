@@ -304,5 +304,29 @@
     "rule": "jfrog-identity-token",
     "lineSHA256": "037943ba80c64315a8acd840f003799944d2eac08dd55e8085eb7b9220cc8667",
     "reason": "Immutable historical 81b5c7a11e62873a847dd0d42305f0acdcb1f793 qualification tests manifest; all 303 unique safe path/SHA256 entries recomputed from declared snapshot, exact manifest/retained binary/raw log bindings verified. Not current capacity-guard source. Exact path/rule/line only."
+  },
+  {
+    "path": "docs/verification/evidence/FINAL-CAPACITY-REFERENCE-2026-11-02-production-manifest.json",
+    "rule": "generic-api-key",
+    "lineSHA256": "2a9822b91a0c5637693cbec930df84f9cffc586d3a7ede897e2c6bbf05b6b155",
+    "reason": "Immutable final-capacity production manifest bound to historical 6742d04b7e1c036de8fcc3551d0c49390f562b75: all 250 strict unique safe-path/SHA256 entries verified against Git; both receipt bindings, retained binaries and qualification raw log verified. Exact path/rule/line only, not current-test equivalence."
+  },
+  {
+    "path": "docs/verification/evidence/FINAL-CAPACITY-REFERENCE-2026-11-02-production-manifest.json",
+    "rule": "jfrog-identity-token",
+    "lineSHA256": "2a9822b91a0c5637693cbec930df84f9cffc586d3a7ede897e2c6bbf05b6b155",
+    "reason": "Immutable final-capacity production manifest bound to historical 6742d04b7e1c036de8fcc3551d0c49390f562b75: all 250 strict unique safe-path/SHA256 entries verified against Git; both receipt bindings, retained binaries and qualification raw log verified. Exact path/rule/line only, not current-test equivalence."
+  },
+  {
+    "path": "docs/verification/evidence/FINAL-CAPACITY-REFERENCE-2026-11-02-tests-manifest.json",
+    "rule": "generic-api-key",
+    "lineSHA256": "942ee3f5d50a038f7c93044e7fbe4b1af70434cb33fc3b60fc13421c072352c3",
+    "reason": "Immutable final-capacity tests manifest bound to historical 6742d04b7e1c036de8fcc3551d0c49390f562b75: all 309 strict unique safe-path/SHA256 entries verified against Git; both receipt bindings, retained binaries and qualification raw log verified. Exact path/rule/line only, not current-test equivalence."
+  },
+  {
+    "path": "docs/verification/evidence/FINAL-CAPACITY-REFERENCE-2026-11-02-tests-manifest.json",
+    "rule": "jfrog-identity-token",
+    "lineSHA256": "942ee3f5d50a038f7c93044e7fbe4b1af70434cb33fc3b60fc13421c072352c3",
+    "reason": "Immutable final-capacity tests manifest bound to historical 6742d04b7e1c036de8fcc3551d0c49390f562b75: all 309 strict unique safe-path/SHA256 entries verified against Git; both receipt bindings, retained binaries and qualification raw log verified. Exact path/rule/line only, not current-test equivalence."
   }
 ]

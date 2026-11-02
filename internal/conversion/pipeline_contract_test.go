@@ -145,3 +145,61 @@ func TestProcessingStageChangesIdentifyExactContentAndRemoval(t *testing.T) {
 		t.Fatal("preview mutated accepted snapshot")
 	}
 }
+
+func TestProcessingAdditionsUseStepInputNotSnapshotSummary(t *testing.T) {
+	region := "DE"
+	for _, scope := range []string{"source", "aggregate"} {
+		for _, step := range []domain.ProcessingStep{
+			{Kind: "keep", Filter: domain.EndpointFilter{Region: "UK"}},
+			{Kind: "drop", Filter: domain.EndpointFilter{Region: "UK"}},
+			{Kind: "rename", Template: "Renamed"},
+			{Kind: "sort", SortBy: "name"},
+			{Kind: "deduplicate"},
+			{Kind: "override", Override: domain.EndpointOverride{Region: &region}},
+		} {
+			t.Run(scope+"/"+step.Kind, func(t *testing.T) {
+				step.ID, step.Enabled = "step", true
+				a, b := endpoint("a", "A", "UK"), endpoint("b", "B", "US")
+				b.Connection = a.Connection
+				c := domain.Collection{ID: "col", OwnerID: "u", Name: "Mine", Sources: []domain.CollectionSource{{SourceID: "source"}}}
+				if scope == "source" {
+					c.Sources[0].Steps = []domain.ProcessingStep{step}
+				} else {
+					c.Steps = []domain.ProcessingStep{step}
+				}
+				got, err := conversion.ProcessCollection(c, []domain.SourceSnapshot{{SourceID: "source", SnapshotID: "s1", OwnerID: "u", Endpoints: []domain.ClientEndpoint{a, b}}})
+				if err != nil {
+					t.Fatal(err)
+				}
+				for _, stage := range got.Stages {
+					if !reflect.DeepEqual(stage.AddedIDs, []string{}) {
+						t.Fatalf("invented additions or absent array: %#v", stage)
+					}
+					if stage.StepID == "" {
+						if stage.Comparison != "snapshot" || len(stage.RemovedIDs) != 0 || len(stage.ChangedIDs) != 0 {
+							t.Fatalf("summary invented delta: %#v", stage)
+						}
+						continue
+					}
+					if stage.Comparison != "step-input" || stage.Scope != scope {
+						t.Fatalf("wrong comparison: %#v", stage)
+					}
+					removed, changed := []string{}, []string{}
+					switch step.Kind {
+					case "keep":
+						removed = []string{"b"}
+					case "drop":
+						removed = []string{"a"}
+					case "rename", "override":
+						changed = []string{"a", "b"}
+					case "deduplicate":
+						removed, changed = []string{"b"}, []string{"a"}
+					}
+					if !reflect.DeepEqual(stage.RemovedIDs, removed) || !reflect.DeepEqual(stage.ChangedIDs, changed) {
+						t.Fatalf("wrong immediate delta: %#v", stage)
+					}
+				}
+			})
+		}
+	}
+}

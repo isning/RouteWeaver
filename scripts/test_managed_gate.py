@@ -14,11 +14,12 @@ REQUIRED = {
     "httpapi": "TestNativePublishedManagedPrincipalEndToEnd",
 }
 CONTINUOUS = "TestNativeContinuousManagedServicePreservesPayloadAndRevocation"
+RATE = "TestManagedNativeEntryRateSharesDuplexAcrossConnectionsAndIsolatesEntries"
 PROVIDER = "TestNativeManagedProviderSuspensionAndRecovery"
 
 
 class ManagedGateTests(unittest.TestCase):
-    def run_gate(self, action="pass", omit=False, fail_go=False, provider_action="pass", provider_omit=False):
+    def run_gate(self, action="pass", omit=False, fail_go=False, provider_action="pass", provider_omit=False, rate_action="pass", rate_omit=False):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "scripts").mkdir()
@@ -29,6 +30,8 @@ class ManagedGateTests(unittest.TestCase):
                 events.append({"Package": "routeweaver/internal/httpapi", "Test": CONTINUOUS, "Action": action})
             if not provider_omit:
                 events.append({"Package": "routeweaver/internal/httpapi", "Test": PROVIDER, "Action": provider_action})
+            if not rate_omit:
+                events.append({"Package": "routeweaver/internal/agent", "Test": RATE, "Action": rate_action})
             (root / "events").write_text("\n".join(map(json.dumps, events)) + "\n")
             go = root / "scripts/go.sh"
             go.write_text('''#!/usr/bin/env python3
@@ -52,6 +55,7 @@ if "test" in args:
             self.assertIn("-race", args)
             self.assertIn(CONTINUOUS, args[args.index("-run") + 1])
             self.assertIn(PROVIDER, args[args.index("-run") + 1])
+            self.assertIn(RATE, args[args.index("-run") + 1])
             self.assertIn("./internal/httpapi", args)
             self.assertEqual(calls[1]["targets"], "xray")
             self.assertEqual(calls[1]["managed"], str(root / "bin/routeweaver-xray"))
@@ -75,5 +79,12 @@ if "test" in args:
         for action, omit in (("pass", True), ("skip", False), ("fail", False)):
             with self.subTest(action=action, omit=omit):
                 result = self.run_gate(provider_action=action, provider_omit=omit)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("Managed native gate incomplete", result.stderr)
+
+    def test_entry_rate_missing_skipped_or_failed_never_passes(self):
+        for action, omit in (("pass", True), ("skip", False), ("fail", False)):
+            with self.subTest(action=action, omit=omit):
+                result = self.run_gate(rate_action=action, rate_omit=omit)
                 self.assertNotEqual(result.returncode, 0)
                 self.assertIn("Managed native gate incomplete", result.stderr)

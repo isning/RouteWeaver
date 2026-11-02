@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { abortDOMDiagnostics } from "./test-support/abort-dom-diagnostics";
 import { ownedClickScenario } from "./test-support/owned-click-scenario";
 import { SOURCE_IMPORT_JOURNEY_TIMEOUT_MS } from "./test-support/source-import-journey";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
@@ -237,7 +238,9 @@ it(
   "returns a newly saved source to the same unsaved collection, preserving order and both processing stages",
   async (context) => {
     const scenario = ownedClickScenario(context);
+    const mark = abortDOMDiagnostics(context);
     scenario.assertActive();
+    mark("start");
     const { writes } = api({
       collections: [recipe],
       sources: [source("one", "One"), source("two", "Two")],
@@ -245,6 +248,7 @@ it(
     mount();
     await scenario.click(() => screen.findByRole("button", { name: /^Travel.*编辑集合/ }));
     scenario.assertActive();
+    mark("collection-open");
     fireEvent.change(screen.getByLabelText("集合名称"), {
       target: { value: "Unsaved travel" },
     });
@@ -252,8 +256,10 @@ it(
       screen.getByRole("switch", { name: "启用步骤 1" }),
     );
     scenario.assertActive();
+    mark("merged-step-toggled");
     await scenario.click(() => screen.getByText("1. One"));
     scenario.assertActive();
+    mark("source-step-open");
     fireEvent.change(screen.getByLabelText("步骤 1 命名模板"), {
       target: { value: "unsaved-{name}" },
     });
@@ -261,23 +267,28 @@ it(
       screen.getByRole("button", { name: "下移来源 1" }),
     );
     scenario.assertActive();
+    mark("source-order-changed");
     const editor = await addSource("New provider", scenario);
     scenario.assertActive();
+    mark("source-editor-open");
     expect(screen.queryByRole("dialog", { name: "Unsaved travel" })).toBeNull();
     await scenario.click(() =>
       editor.getByRole("button", { name: "导入来源" }),
     );
     scenario.assertActive();
+    mark("import-click-completed");
     const returnedParent = within(
       await screen.findByRole("dialog", { name: "Unsaved travel" }),
     );
     scenario.assertActive();
+    mark("parent-returned");
     await waitFor(() =>
       expect(document.activeElement).toBe(
         returnedParent.getByRole("button", { name: "添加来源" }),
       ),
     );
     scenario.assertActive();
+    mark("parent-focus-returned");
     expect(writes).toHaveLength(1);
     expect(writes[0].path).toBe("/me/sources");
     expect(screen.queryByRole("dialog", { name: "查看导入变化" })).toBeNull();
@@ -306,8 +317,10 @@ it(
       returnedParent.getByRole("button", { name: "预览处理结果" }),
     );
     scenario.assertActive();
+    mark("preview-click-completed");
     await returnedParent.findByText("逐阶段预览");
     scenario.assertActive();
+    mark("preview-visible");
     const expected = {
       ...recipe,
       name: "Unsaved travel",
@@ -336,8 +349,10 @@ it(
       returnedParent.getByRole("button", { name: "保存集合" }),
     );
     scenario.assertActive();
+    mark("save-click-completed");
     await waitFor(() => expect(writes).toHaveLength(3));
     scenario.assertActive();
+    mark("save-recorded");
     expect(writes[2]).toMatchObject({
       path: "/me/collections/travel",
       method: "PUT",

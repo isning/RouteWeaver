@@ -65,9 +65,7 @@ it("bounds long stage labels to a one-line scrolling rail while preserving the s
   expect(
     within(panel).getByRole("heading", { name: `原始输入 · ${longName}` }),
   ).toBeTruthy();
-  expect(
-    within(panel).getByText("0 个节点 · 移除 0 个 · 修改 0 个"),
-  ).toBeTruthy();
+  expect(within(panel).getByText("0 个节点")).toBeTruthy();
   expect(panel.closest('[data-slot="scroll-area"]')).toBeNull();
 });
 
@@ -124,4 +122,71 @@ it("keeps keyboard traversal and stage identity after additional preview stages 
   ).toBeTruthy();
   await user.keyboard("{Home}");
   expect(screen.getByRole("tabpanel", { name: "最终结果" })).toBeTruthy();
+});
+
+it("reports step-input deltas but never treats snapshot summaries as additions, including older responses", async () => {
+  const value: Preview = {
+    endpoints: [],
+    stages: [
+      { scope: "raw", endpoints: [], comparison: "snapshot", addedIds: [] },
+      {
+        scope: "source-result",
+        endpoints: [],
+        comparison: "snapshot",
+        addedIds: [],
+      },
+      { scope: "merged", endpoints: [] },
+      {
+        scope: "source",
+        sourceId: "source",
+        stepId: "rename",
+        comparison: "step-input",
+        endpoints: [],
+        addedIds: [],
+        changedIds: ["renamed"],
+        removedIds: [],
+      },
+      {
+        scope: "aggregate",
+        stepId: "drop",
+        endpoints: [],
+        removedIds: ["removed"],
+        changedIds: [],
+      },
+    ],
+  };
+  const recipe: Collection = {
+    ...collection,
+    sources: [
+      {
+        sourceId: "source",
+        steps: [
+          { id: "rename", kind: "rename", enabled: true, template: "Named" },
+        ],
+      },
+    ],
+    steps: [{ id: "drop", kind: "drop", enabled: true }],
+  };
+  render(
+    <CollectionPreview value={value} sources={sources} collection={recipe} />,
+  );
+  const user = userEvent.setup();
+  for (const name of ["原始输入", "来源结果", "有序合并"]) {
+    await user.click(screen.getByRole("tab", { name }));
+    const panel = within(screen.getByRole("tabpanel"));
+    expect(panel.getByText("0 个节点")).toBeTruthy();
+    expect(panel.queryByText(/新增|移除|修改|相对此步骤输入/)).toBeNull();
+  }
+  await user.click(screen.getByRole("tab", { name: /1\. 重新命名/ }));
+  expect(
+    within(screen.getByRole("tabpanel")).getByText(
+      "0 个节点 · 相对此步骤输入：新增 0 个 · 移除 0 个 · 修改 1 个",
+    ),
+  ).toBeTruthy();
+  await user.click(screen.getByRole("tab", { name: /合并后 · 1\./ }));
+  expect(
+    within(screen.getByRole("tabpanel")).getByText(
+      "0 个节点 · 相对此步骤输入：新增 0 个 · 移除 1 个 · 修改 0 个",
+    ),
+  ).toBeTruthy();
 });

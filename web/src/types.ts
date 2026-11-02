@@ -465,6 +465,8 @@ export interface Preview {
     scope?: string;
     sourceId?: string;
     stepId?: string;
+    comparison?: "step-input" | "snapshot";
+    addedIds?: string[];
     removedIds?: string[];
     changedIds?: string[];
     endpoints: ClientNode[];

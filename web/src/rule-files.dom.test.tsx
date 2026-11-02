@@ -124,6 +124,7 @@ it("offers an authorized ZIP bundle download instead of a broken config subscrip
   expect(download.getAttribute("href")).toBe("/api/me/outputs/bundle1/bundle");
   expect(screen.queryByLabelText("订阅链接")).toBeNull();
   expect(screen.queryByRole("button", { name: "复制订阅链接" })).toBeNull();
+  expect(document.querySelector(".qr-container")).toBeNull();
   expect(screen.getByText(/保留文件夹结构/)).toBeTruthy();
 });
 it("lets the server detect the replacement file version instead of resubmitting hidden prior format metadata", async () => {

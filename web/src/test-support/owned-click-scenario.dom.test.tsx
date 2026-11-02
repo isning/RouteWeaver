@@ -152,3 +152,32 @@ it("blocks a post-await fixture mutation after its owner finishes without abort"
   await rejected;
   expect(replaceFixture).not.toHaveBeenCalled();
 });
+
+it("does not continue a timed-out two-action journey into the replacement page", async (context) => {
+  const controller = new AbortController();
+  const scenario = ownedClickScenario({
+    signal: controller.signal,
+    onTestFinished: context.onTestFinished,
+  });
+  const ready = deferred<Element>();
+  const nextTarget = vi.fn(() =>
+    screen.getByRole("button", { name: "Close detail" }),
+  );
+  const nextClick = vi.fn();
+  const journey = (async () => {
+    await scenario.click(() => ready.promise);
+    await scenario.click(nextTarget);
+  })();
+  const rejected = expect(journey).rejects.toThrow("expired scenario");
+  controller.abort(new Error("expired scenario"));
+  render(
+    <>
+      <button>Open detail</button>
+      <button onClick={nextClick}>Close detail</button>
+    </>,
+  );
+  ready.resolve(screen.getByRole("button", { name: "Open detail" }));
+  await rejected;
+  expect(nextTarget).not.toHaveBeenCalled();
+  expect(nextClick).not.toHaveBeenCalled();
+});

@@ -1,4 +1,5 @@
 import { type Locator, type Page } from "@playwright/test";
+import jsQR from "jsqr";
 import { test, expect } from "./isolated-control-plane-fixture";
 import { initialPassword, requireLoopback } from "./account-security-backend";
 import { settledTask } from "./ui-settled-task";
@@ -9,7 +10,7 @@ import {
   serviceCenterFixture,
 } from "./service-center-backend";
 
-// Credentials and feed URLs stay in memory: no trace, screenshot or video.
+// Credentials and feed URLs stay in memory: no persisted trace, screenshot or video.
 test.use({ trace: "off", screenshot: "off", video: "off" });
 async function tabTo(page: Page, target: Locator) {
   await expect(target).toBeVisible();
@@ -28,6 +29,101 @@ async function tabTo(page: Page, target: Locator) {
 async function activate(page: Page, target: Locator) {
   await tabTo(page, target);
   await page.keyboard.press("Enter");
+}
+// Observe delivery bytes, not clipboard calls or the SVG's input props. The
+// scratch textarea belongs to this test and stays inside the modal focus trap.
+async function expectDeliveryBytes(
+  page: Page,
+  access: Locator,
+  expectedURL: string,
+) {
+  await expect
+    .poll(
+      async () =>
+        (await access
+          .getByRole("textbox", { name: "订阅链接", exact: true })
+          .inputValue()) === expectedURL,
+    )
+    .toBe(true);
+  await access.evaluate((dialog) => {
+    const paste = document.createElement("textarea");
+    paste.dataset.deliveryPaste = "true";
+    paste.setAttribute("aria-label", "Synthetic delivery clipboard probe");
+    dialog.append(paste);
+  });
+  const paste = access.locator("textarea[data-delivery-paste]");
+  try {
+    // A fresh non-URL sentinel prevents an unchanged clipboard from satisfying
+    // a later reopen of the same URL. All copy/paste input is trusted keyboard.
+    await paste.fill("synthetic clipboard sentinel");
+    await paste.press("ControlOrMeta+a");
+    await paste.press("ControlOrMeta+c");
+    await paste.fill("");
+    await paste.press("ControlOrMeta+v");
+    expect(
+      (await paste.inputValue()) === "synthetic clipboard sentinel",
+      "Trusted copy/paste must establish a fresh clipboard sentinel",
+    ).toBe(true);
+    await activate(
+      page,
+      access.getByRole("button", {
+        name: "复制订阅链接",
+        exact: true,
+      }),
+    );
+    await expect
+      .poll(
+        async () => {
+          await paste.fill("");
+          await paste.press("ControlOrMeta+v");
+          return Buffer.from(await paste.inputValue(), "utf8").equals(
+            Buffer.from(expectedURL, "utf8"),
+          );
+        },
+        {
+          message:
+            "Trusted paste contains the currently authorized feed URL bytes",
+        },
+      )
+      .toBe(true);
+  } finally {
+    await paste.evaluate((element) => element.remove());
+  }
+
+  // Screenshot the actual rendered code plus its white quiet zone, in memory
+  // only. Browser PNG decoding is not a replacement QR renderer/decoder.
+  const qr = access.locator(".qr-container");
+  await expect(qr).toBeVisible();
+  const png = await qr.screenshot();
+  const pixels = await page.evaluate(async (base64) => {
+    const image = new Image();
+    image.src = `data:image/png;base64,${base64}`;
+    await image.decode();
+    const canvas = document.createElement("canvas");
+    canvas.width = image.naturalWidth;
+    canvas.height = image.naturalHeight;
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("Canvas unavailable for rendered QR pixels");
+    context.drawImage(image, 0, 0);
+    return {
+      width: canvas.width,
+      height: canvas.height,
+      rgba: Array.from(
+        context.getImageData(0, 0, canvas.width, canvas.height).data,
+      ),
+    };
+  }, png.toString("base64"));
+  const decoded = jsQR(
+    new Uint8ClampedArray(pixels.rgba),
+    pixels.width,
+    pixels.height,
+  );
+  // Keep bearer URLs out of assertion diagnostics and persisted attachments.
+  expect(decoded !== null, "Rendered QR must decode").toBe(true);
+  expect(
+    Buffer.from(decoded!.binaryData).equals(Buffer.from(expectedURL, "utf8")),
+    "Rendered QR contains the currently authorized feed URL bytes",
+  ).toBe(true);
 }
 async function fits(page: Page, dialog?: Locator) {
   // Visibility starts before the finite entrance transition has settled.
@@ -82,7 +178,10 @@ for (const width of [1440, 390]) {
       const mutations: { path: string; method: string }[] = [];
       page.on("request", (request) => {
         const path = new URL(request.url()).pathname;
-        if (path.startsWith("/api/") && !["GET", "HEAD"].includes(request.method()))
+        if (
+          path.startsWith("/api/") &&
+          !["GET", "HEAD"].includes(request.method())
+        )
           mutations.push({ path, method: request.method() });
       });
       expect(
@@ -128,6 +227,11 @@ for (const width of [1440, 390]) {
       const oldURL = await link.inputValue();
       expect(new URL(oldURL).origin).toBe(new URL(baseURL!).origin);
       expect(new URL(oldURL).pathname === f.outputs[0].feedPath).toBe(true);
+      await expectDeliveryBytes(
+        page,
+        access,
+        new URL(f.outputs[0].feedPath, baseURL!).href,
+      );
       const downloaded = page.waitForEvent("download");
       await activate(
         page,
@@ -210,6 +314,7 @@ for (const width of [1440, 390]) {
         )
         .toBe(true);
       await fits(page, access);
+      await expectDeliveryBytes(page, access, new URL(nextPath, baseURL!).href);
       await page.keyboard.press("Escape");
       await expect(access).toBeHidden();
       await activate(page, getSubscription);
@@ -219,6 +324,7 @@ for (const width of [1440, 390]) {
           async () => new URL(await link.inputValue()).pathname === nextPath,
         )
         .toBe(true);
+      await expectDeliveryBytes(page, access, new URL(nextPath, baseURL!).href);
       await page.keyboard.press("Escape");
       await expect(getSubscription).toBeFocused();
       expect(mutations).toEqual([

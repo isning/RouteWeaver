@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, expect, it, vi } from "vitest";
 import {
   cleanup,
   fireEvent,
@@ -15,6 +15,13 @@ import type { ReactNode } from "react";
 import Workspace from "./App";
 import { SubscriptionsPage } from "./Subscriptions";
 import { CollectionsPage, SourcesPage } from "./Sources";
+
+beforeAll(async () => {
+  // This shell-labeling contract is not a cold Vite compilation deadline.
+  // Actual pending server-module delivery and inventory ordering are covered
+  // separately in server-route-import.dom.test.tsx; keep RTL waits unchanged.
+  await import("./Infrastructure");
+});
 
 const json = (data: unknown, status = 200) =>
   new Response(JSON.stringify(data), {

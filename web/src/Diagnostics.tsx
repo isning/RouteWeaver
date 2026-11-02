@@ -309,7 +309,7 @@ export function DiagnosticResult({
             pending={cancel.isPending}
             onClick={() =>
               confirm({
-                title: "取消这次测试？",
+                title: `取消对「${job.target.name}」的${diagnosticKindLabel[job.kind]}？`,
                 description:
                   "节点收到后停止剩余测试。已经产生的流量不会撤销，取消请求不等于已停止。",
                 confirmLabel: "请求取消",

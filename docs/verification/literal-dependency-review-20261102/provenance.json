@@ -1,0 +1,30 @@
+[
+  {
+    "kind": "production",
+    "entries": 250,
+    "declaredSource": "6742d04b7e1c036de8fcc3551d0c49390f562b75",
+    "allDeclaredSnapshotHashesMatch": true,
+    "currentChangedManifestPaths": [
+      "internal/conversion/pipeline.go"
+    ],
+    "strictUniquePathHashMap": true,
+    "bothReceiptByteBindingsVerified": true
+  },
+  {
+    "kind": "tests",
+    "entries": 309,
+    "declaredSource": "6742d04b7e1c036de8fcc3551d0c49390f562b75",
+    "allDeclaredSnapshotHashesMatch": true,
+    "currentChangedManifestPaths": [
+      "internal/conversion/pipeline_contract_test.go",
+      "internal/httpapi/processing_noop_publication_test.go",
+      "internal/store/billing_test.go"
+    ],
+    "strictUniquePathHashMap": true,
+    "bothReceiptByteBindingsVerified": true
+  },
+  {
+    "actualRetainedNativeAndTestBinariesMatch": true,
+    "qualificationRawJSONLMatches": true
+  }
+]

@@ -11,6 +11,9 @@ import (
 )
 
 type Stage struct {
+	// Snapshot stages are views, not comparisons against an empty input.
+	Comparison string                  `json:"comparison"`
+	AddedIDs   []string                `json:"addedIds"`
 	Scope      string                  `json:"scope"`
 	SourceID   string                  `json:"sourceId,omitempty"`
 	StepID     string                  `json:"stepId,omitempty"`
@@ -243,7 +246,19 @@ func appendUniqueProvenance(in []domain.SourceRef, p domain.SourceRef) []domain.
 	return append(in, p)
 }
 func stage(scope, sourceID, stepID string, before, after []domain.ClientEndpoint) Stage {
-	s := Stage{Scope: scope, SourceID: sourceID, StepID: stepID, Endpoints: clone(after), RemovedIDs: []string{}, ChangedIDs: []string{}}
+	s := Stage{Comparison: "snapshot", AddedIDs: []string{}, Scope: scope, SourceID: sourceID, StepID: stepID, Endpoints: clone(after), RemovedIDs: []string{}, ChangedIDs: []string{}}
+	if scope == "source" || scope == "aggregate" {
+		s.Comparison = "step-input"
+		beforeIDs := map[string]bool{}
+		for _, e := range before {
+			beforeIDs[e.ID] = true
+		}
+		for _, e := range after {
+			if !beforeIDs[e.ID] {
+				s.AddedIDs = append(s.AddedIDs, e.ID)
+			}
+		}
+	}
 	index := map[string]domain.ClientEndpoint{}
 	for _, e := range after {
 		index[e.ID] = e

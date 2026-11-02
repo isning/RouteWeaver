@@ -1,0 +1,316 @@
+{
+  "operational": {
+    "binding": {
+      "production_base": "6742d04b7e1c036de8fcc3551d0c49390f562b75",
+      "source_tree": "2d70ec80c996c9a34587fa124cdb28326e180b82",
+      "test_commit": "6742d04b7e1c036de8fcc3551d0c49390f562b75",
+      "production_entries": 250,
+      "production_manifest_sha256": "37cec9637d2537edc7fa2ee2a1085e0a4d9c9ab42e4e0ff2395dfad1c0efa726",
+      "test_entries": 309,
+      "tests_manifest_sha256": "7074835cfbc289c378957846640541475bcd6808bf91c10ba6b5ccc02cd30b06",
+      "native_path": "/workspace/scratch/d385eb428cee/capacity-final-validation-20261102/bin/capacity-managed-xray",
+      "native_sha256": "1474c8cd30f3277ec3cd396e390cc7ae3441d13ad4852d38df3616fb19bc2fb1",
+      "parent_GOMAXPROCS": "1",
+      "parent_GOMEMLIMIT": "256MiB soft Go target",
+      "native_limits": "not inherited; supervisor strips parent Go variables; hard CPU/RSS limits unknown",
+      "expected_tests": [
+        "TestOperationalNotificationFailureVisibleAndRetry",
+        "TestNativeManagedOperationalRecovery",
+        "TestManagedNativeBrokerEOFStopsActivePayloadAndPersistsFinalJournal",
+        "TestEncryptedBackupRestorePreservesOutstandingAdmissionObligation",
+        "TestBackupStreamingDoesNotBlockAdmissionOrConfigurationWrites",
+        "TestCounterExplicitRestartPreservesKnownUsageAndRejectsRegression",
+        "TestCounterIngestionIsAtomicReplaySafeAndSeparatesProvider",
+        "TestRetryDelayStartsAfterTransportFailure",
+        "TestDurableOutboxRestartStableIdentityAndBoundedRetries",
+        "TestCrashAfterAcceptanceReusesEventIDAndRechecksSettings",
+        "TestSlowControlPlaneCannotDelayLeaseRestriction",
+        "TestDriverRestartRetainsGenerationFenceUntilNewDesired",
+        "TestManagedRetirementCrashReopenNeverReplaysAcknowledgedEpoch",
+        "TestManagedMeterRequiresRealBaselineAndRecoversCollectionCursor"
+      ]
+    },
+    "runs": [
+      {
+        "label": "native-drills",
+        "command": [
+          "scripts/go.sh",
+          "test",
+          "-json",
+          "-race",
+          "-p=1",
+          "-count=1",
+          "-timeout=180s",
+          "-run",
+          "^(TestOperationalNotificationFailureVisibleAndRetry|TestNativeManagedOperationalRecovery|TestManagedNativeBrokerEOFStopsActivePayloadAndPersistsFinalJournal)$",
+          "./internal/httpapi",
+          "./internal/agent"
+        ],
+        "start_utc": "2026-11-02T05:15:58.237005+00:00",
+        "end_utc": "2026-11-02T05:18:01.591054+00:00",
+        "elapsed_seconds": 123.35442967299605,
+        "exit_code": 0,
+        "child_user_cpu_seconds": 81.69050800000001,
+        "child_system_cpu_seconds": 8.608318,
+        "cumulative_wait4_maxrss_kib": 1066292,
+        "raw_sha256": "e8d5dff31adc4c9f50b6402583a1dcf0cd741f4c977a25b76bfecd3afc2c2052"
+      },
+      {
+        "label": "recovery",
+        "command": [
+          "scripts/go.sh",
+          "test",
+          "-json",
+          "-race",
+          "-p=1",
+          "-count=1",
+          "-timeout=120s",
+          "-run",
+          "^(TestEncryptedBackupRestorePreservesOutstandingAdmissionObligation|TestBackupStreamingDoesNotBlockAdmissionOrConfigurationWrites|TestCounterExplicitRestartPreservesKnownUsageAndRejectsRegression|TestCounterIngestionIsAtomicReplaySafeAndSeparatesProvider|TestRetryDelayStartsAfterTransportFailure|TestDurableOutboxRestartStableIdentityAndBoundedRetries|TestCrashAfterAcceptanceReusesEventIDAndRechecksSettings|TestSlowControlPlaneCannotDelayLeaseRestriction|TestDriverRestartRetainsGenerationFenceUntilNewDesired|TestManagedRetirementCrashReopenNeverReplaysAcknowledgedEpoch|TestManagedMeterRequiresRealBaselineAndRecoversCollectionCursor)$",
+          "./internal/store",
+          "./internal/notifications",
+          "./internal/agent"
+        ],
+        "start_utc": "2026-11-02T05:18:01.594387+00:00",
+        "end_utc": "2026-11-02T05:18:44.225197+00:00",
+        "elapsed_seconds": 42.63119948899839,
+        "exit_code": 0,
+        "child_user_cpu_seconds": 37.538540999999995,
+        "child_system_cpu_seconds": 3.6627039999999997,
+        "cumulative_wait4_maxrss_kib": 1066292,
+        "raw_sha256": "114c1cf2401690b2c54f4f770932a024caeed7f5e36deed83ea6273c4c5307d8"
+      }
+    ],
+    "after": {
+      "production_unchanged": true,
+      "tests_unchanged": true,
+      "native_unchanged": true
+    },
+    "tests": [
+      {
+        "test": "TestOperationalNotificationFailureVisibleAndRetry",
+        "seconds": 0.28
+      },
+      {
+        "test": "TestNativeManagedOperationalRecovery",
+        "seconds": 90.93
+      },
+      {
+        "test": "TestManagedNativeBrokerEOFStopsActivePayloadAndPersistsFinalJournal",
+        "seconds": 0.65
+      },
+      {
+        "test": "TestEncryptedBackupRestorePreservesOutstandingAdmissionObligation",
+        "seconds": 22.73
+      },
+      {
+        "test": "TestBackupStreamingDoesNotBlockAdmissionOrConfigurationWrites",
+        "seconds": 0.26
+      },
+      {
+        "test": "TestCounterExplicitRestartPreservesKnownUsageAndRejectsRegression",
+        "seconds": 0.31
+      },
+      {
+        "test": "TestCounterIngestionIsAtomicReplaySafeAndSeparatesProvider",
+        "seconds": 0.38
+      },
+      {
+        "test": "TestRetryDelayStartsAfterTransportFailure",
+        "seconds": 0.23
+      },
+      {
+        "test": "TestDurableOutboxRestartStableIdentityAndBoundedRetries",
+        "seconds": 0.69
+      },
+      {
+        "test": "TestCrashAfterAcceptanceReusesEventIDAndRechecksSettings",
+        "seconds": 0.3
+      },
+      {
+        "test": "TestSlowControlPlaneCannotDelayLeaseRestriction/expired_at_startup=false",
+        "seconds": 0.02
+      },
+      {
+        "test": "TestSlowControlPlaneCannotDelayLeaseRestriction/expired_at_startup=true",
+        "seconds": 0
+      },
+      {
+        "test": "TestSlowControlPlaneCannotDelayLeaseRestriction",
+        "seconds": 0.02
+      },
+      {
+        "test": "TestDriverRestartRetainsGenerationFenceUntilNewDesired",
+        "seconds": 0.1
+      },
+      {
+        "test": "TestManagedRetirementCrashReopenNeverReplaysAcknowledgedEpoch/0",
+        "seconds": 0.01
+      },
+      {
+        "test": "TestManagedRetirementCrashReopenNeverReplaysAcknowledgedEpoch/1",
+        "seconds": 0.01
+      },
+      {
+        "test": "TestManagedRetirementCrashReopenNeverReplaysAcknowledgedEpoch/2",
+        "seconds": 0.01
+      },
+      {
+        "test": "TestManagedRetirementCrashReopenNeverReplaysAcknowledgedEpoch/3",
+        "seconds": 0.01
+      },
+      {
+        "test": "TestManagedRetirementCrashReopenNeverReplaysAcknowledgedEpoch",
+        "seconds": 0.03
+      },
+      {
+        "test": "TestManagedMeterRequiresRealBaselineAndRecoversCollectionCursor",
+        "seconds": 0
+      }
+    ],
+    "required_pass": 14,
+    "total_pass_including_subtests": 20,
+    "failures": 0,
+    "skips": 0,
+    "retries": 0
+  },
+  "qualification": {
+    "binding": {
+      "source": "6742d04b7e1c036de8fcc3551d0c49390f562b75",
+      "tree": "2d70ec80c996c9a34587fa124cdb28326e180b82",
+      "production_entries": 250,
+      "production_manifest_sha256": "37cec9637d2537edc7fa2ee2a1085e0a4d9c9ab42e4e0ff2395dfad1c0efa726",
+      "test_entries": 309,
+      "tests_manifest_sha256": "7074835cfbc289c378957846640541475bcd6808bf91c10ba6b5ccc02cd30b06",
+      "native_sha256": "1474c8cd30f3277ec3cd396e390cc7ae3441d13ad4852d38df3616fb19bc2fb1",
+      "test_binary_sha256": "80d685d110b3082ca3fe75c19735a459f4fbe1e9718ab82f9d6ee7cf4e8c8399",
+      "race": false,
+      "parent_GOMAXPROCS": "1",
+      "parent_GOMEMLIMIT": "256MiB",
+      "child_limits": "not inherited; supervisor strips Go variables; hard caps unknown",
+      "window_seconds": 1800,
+      "samples": 1800,
+      "read_deadline_seconds": 2,
+      "outer_test_timeout": "35m",
+      "test": "TestNativeContinuousManagedServicePreservesPayloadAndRevocation",
+      "native_path": "/workspace/scratch/d385eb428cee/capacity-final-validation-20261102/bin/capacity-managed-xray",
+      "test_binary_path": "/workspace/scratch/d385eb428cee/capacity-final-validation-20261102/bin/capacity-httpapi.test"
+    },
+    "result": {
+      "command": [
+        "scripts/go.sh",
+        "tool",
+        "test2json",
+        "-t",
+        "-p",
+        "routeweaver/internal/httpapi",
+        "/workspace/scratch/d385eb428cee/capacity-final-validation-20261102/bin/capacity-httpapi.test",
+        "-test.v=test2json",
+        "-test.run=^TestNativeContinuousManagedServicePreservesPayloadAndRevocation$",
+        "-test.timeout=35m"
+      ],
+      "start_utc": "2026-11-02T05:24:10.216529+00:00",
+      "end_utc": "2026-11-02T05:54:34.198538+00:00",
+      "elapsed_seconds": 1823.9826686669985,
+      "exit_code": 0,
+      "child_user_cpu_seconds": 160.026261,
+      "child_system_cpu_seconds": 54.881343,
+      "wait4_maxrss_kib": 124020,
+      "resource_attribution": "maximum among parent test/tools/native descendants, not native-specific or summed RSS",
+      "raw_sha256": "f8f25cc6e9fe09fb037f993e0a9999b28ea9e58f4f5ed526b96e503742fc3d14",
+      "checks": {
+        "production_unchanged": true,
+        "tests_unchanged": true,
+        "native_unchanged": true,
+        "test_binary_unchanged": true
+      }
+    },
+    "metrics": {
+      "parent_Go_heap_bytes": {
+        "samples": 60,
+        "first": 4114280,
+        "last": 3895592,
+        "min": 2736800,
+        "max": 5386184,
+        "max_growth": 1271904
+      },
+      "agent_root_bytes": {
+        "samples": 60,
+        "first": 48660692,
+        "last": 48660705,
+        "min": 48660692,
+        "max": 48660705,
+        "max_growth": 13
+      },
+      "cp_db_bytes": {
+        "samples": 60,
+        "first": 4096,
+        "last": 2785280,
+        "min": 4096,
+        "max": 2785280,
+        "max_growth": 2781184
+      },
+      "cp_wal_bytes": {
+        "samples": 60,
+        "first": 1940552,
+        "last": 4161232,
+        "min": 1940552,
+        "max": 4161232,
+        "max_growth": 2220680
+      },
+      "cp_shm_bytes": {
+        "samples": 60,
+        "first": 32768,
+        "last": 32768,
+        "min": 32768,
+        "max": 32768,
+        "max_growth": 0
+      },
+      "native_rss_kib": {
+        "samples": 60,
+        "first": 33456,
+        "last": 35820,
+        "min": 33456,
+        "max": 35980,
+        "max_growth": 2524
+      },
+      "native_fds": {
+        "samples": 60,
+        "first": 12,
+        "last": 12,
+        "min": 12,
+        "max": 12,
+        "max_growth": 0
+      }
+    },
+    "window_seconds": 1800.000227342,
+    "samples": 1800,
+    "max_RTT_seconds": 0.750323488,
+    "named_test_seconds": 1823.3,
+    "failures": 0,
+    "skips": 0,
+    "retries": 0,
+    "terminal": [
+      "service_native_test.go:229: reference terminal: owned_absent=true retained_exact_proof=true cp_custody_checked=false cp_exact_custody=false pending_batches=0 open_budgets=0 unresolved_budgets=0 held_raw=0; observations do not imply settlement"
+    ],
+    "last_sample": 1770,
+    "last_records": [
+      "service_native_test.go:445: reference records sample=1770 kind=meter-inbox rows=1773 logical_json_bytes=1269769",
+      "service_native_test.go:445: reference records sample=1770 kind=meter-receipts rows=1773 logical_json_bytes=117018",
+      "service_native_test.go:445: reference records sample=1770 kind=meter-streams rows=1 logical_json_bytes=19",
+      "service_native_test.go:445: reference records sample=1770 kind=meter-pending rows=0 logical_json_bytes=0",
+      "service_native_test.go:445: reference records sample=1770 kind=ledger rows=178 logical_json_bytes=100064",
+      "service_native_test.go:445: reference records sample=1770 kind=admission-budgets rows=1 logical_json_bytes=547",
+      "service_native_test.go:445: reference records sample=1770 kind=entry-admission-leases rows=1 logical_json_bytes=624",
+      "service_native_test.go:445: reference records sample=1770 kind=agent-desired rows=1 logical_json_bytes=2689",
+      "service_native_test.go:445: reference records sample=1770 kind=agent-observations rows=1 logical_json_bytes=1485"
+    ],
+    "history": "Canonical raw history growth intentionally retained; no infinite-load cap/SLA claim.",
+    "prior_evidence": "Original sample410 unclassified failure, failed13/14 operational refresh, and81pass maxRTT2.046728779s remain separately preserved."
+  },
+  "platform": "Linux 6.18.57 x86_64\n0::/\n",
+  "toolchain": "go version go1.27.3 linux/amd64\n",
+  "cleanup_caveat": "Owned process absence and checked closes are verified. Successful fixture invokes RemoveAll but ignores error, so filesystem deletion is not independently asserted.",
+  "source_binding": "6742d04b7e1c036de8fcc3551d0c49390f562b75 / 2d70ec80c996c9a34587fa124cdb28326e180b82",
+  "resource_scope": "Parent GOMAXPROCS1 and soft GOMEMLIMIT256MiB only; native does not inherit these. No hard CPU/RSS quota claim."
+}

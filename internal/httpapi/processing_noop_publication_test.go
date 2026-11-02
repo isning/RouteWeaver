@@ -1,7 +1,9 @@
 package httpapi_test
 
 import (
+	"encoding/json"
 	"reflect"
+	"strings"
 	"testing"
 
 	"routeweaver/internal/domain"
@@ -23,10 +25,10 @@ func TestNoOpProcessingRecipePreservesPublishedContentAndSibling(t *testing.T) {
 		}
 		return result
 	}
-	call("POST", "/api/me/sources", map[string]any{"id": "source", "name": "No-op source", "kind": "text", "enabled": true, "content": "socks5://one.example.test:1080#One\nsocks5://two.example.test:1080#Two"}, 200)
+	call("POST", "/api/me/sources", map[string]any{"id": "source", "name": "No-op source", "kind": "text", "enabled": true, "content": "socks5://private-user:private-password@one.example.test:1080#One\nsocks5://two.example.test:1080#Two"}, 200)
 	sourceBefore := call("GET", "/api/me/sources/source/reveal", nil, 200)
 	collection := domain.Collection{ID: "collection", Name: "No-op collection", Sources: []domain.CollectionSource{{SourceID: "source"}}, Steps: []domain.ProcessingStep{}}
-	call("POST", "/api/me/collections", collection, 200)
+	savedCollection := call("POST", "/api/me/collections", collection, 200)
 	profile := templateTestProfile("profile", render.Target{AdapterID: "mihomo", Version: render.MihomoVersion})
 	profile.CollectionID = "collection"
 	profile.IR.Endpoints = nil
@@ -76,9 +78,30 @@ func TestNoOpProcessingRecipePreservesPublishedContentAndSibling(t *testing.T) {
 		{ID: "disabled-drop", Kind: "drop", Enabled: false},
 	}
 	preview := call("POST", "/api/me/collections/preview", collection, 200)
+	previewJSON, err := json.Marshal(preview)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(previewJSON), "private-password") || strings.Contains(string(previewJSON), "private-user") {
+		t.Fatal("preview leaked credentials")
+	}
+	if current := call("GET", "/api/me/collections/collection", nil, 200); !reflect.DeepEqual(current, savedCollection) {
+		t.Fatal("preview persisted recipe")
+	}
 	steps := []string{}
 	for _, raw := range preview["stages"].([]any) {
 		stage := raw.(map[string]any)
+		added, ok := stage["addedIds"].([]any)
+		if !ok || len(added) != 0 {
+			t.Fatalf("no-op stages must report an explicit empty additions array: %#v", stage)
+		}
+		wantComparison := "snapshot"
+		if stage["stepId"] != nil {
+			wantComparison = "step-input"
+		}
+		if stage["comparison"] != wantComparison {
+			t.Fatalf("wrong comparison baseline: %#v", stage)
+		}
 		if id, ok := stage["stepId"].(string); ok {
 			steps = append(steps, id)
 			if len(stage["changedIds"].([]any)) != 0 || len(stage["removedIds"].([]any)) != 0 {

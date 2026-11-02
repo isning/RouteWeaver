@@ -1,0 +1,126 @@
+FFFFFFFFFFF
+======================================================================
+FAIL: test_all_required_positive_results_pass (scripts.test_managed_gate.ManagedGateTests.test_all_required_positive_results_pass)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d385eb428cee/native-entry-rate-20261102/scripts/test_managed_gate.py", line 65, in test_all_required_positive_results_pass
+    result = self.run_gate()
+             ^^^^^^^^^^^^^^^
+  File "/workspace/scratch/d385eb428cee/native-entry-rate-20261102/scripts/test_managed_gate.py", line 58, in run_gate
+    self.assertIn(RATE, args[args.index("-run") + 1])
+AssertionError: 'TestManagedNativeEntryRateSharesDuplexAcrossConnectionsAndIsolatesEntries' not found in '^TestManagedSharedVLESSIngressKeepsPrincipalPathsSeparate$|^TestNativePublishedManagedPrincipalEndToEnd$|^TestManagedNativeBrokerEOFStopsActivePayloadAndPersistsFinalJournal$|^TestNativeContinuousManagedServicePreservesPayloadAndRevocation$|^TestNativeManagedProviderSuspensionAndRecovery$'
+
+======================================================================
+FAIL: test_continuous_missing_skipped_or_failed_never_passes (scripts.test_managed_gate.ManagedGateTests.test_continuous_missing_skipped_or_failed_never_passes) (action='pass', omit=True)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d385eb428cee/native-entry-rate-20261102/scripts/test_managed_gate.py", line 71, in test_continuous_missing_skipped_or_failed_never_passes
+    result = self.run_gate(action, omit)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/d385eb428cee/native-entry-rate-20261102/scripts/test_managed_gate.py", line 58, in run_gate
+    self.assertIn(RATE, args[args.index("-run") + 1])
+AssertionError: 'TestManagedNativeEntryRateSharesDuplexAcrossConnectionsAndIsolatesEntries' not found in '^TestManagedSharedVLESSIngressKeepsPrincipalPathsSeparate$|^TestNativePublishedManagedPrincipalEndToEnd$|^TestManagedNativeBrokerEOFStopsActivePayloadAndPersistsFinalJournal$|^TestNativeContinuousManagedServicePreservesPayloadAndRevocation$|^TestNativeManagedProviderSuspensionAndRecovery$'
+
+======================================================================
+FAIL: test_continuous_missing_skipped_or_failed_never_passes (scripts.test_managed_gate.ManagedGateTests.test_continuous_missing_skipped_or_failed_never_passes) (action='skip', omit=False)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d385eb428cee/native-entry-rate-20261102/scripts/test_managed_gate.py", line 71, in test_continuous_missing_skipped_or_failed_never_passes
+    result = self.run_gate(action, omit)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/d385eb428cee/native-entry-rate-20261102/scripts/test_managed_gate.py", line 58, in run_gate
+    self.assertIn(RATE, args[args.index("-run") + 1])
+AssertionError: 'TestManagedNativeEntryRateSharesDuplexAcrossConnectionsAndIsolatesEntries' not found in '^TestManagedSharedVLESSIngressKeepsPrincipalPathsSeparate$|^TestNativePublishedManagedPrincipalEndToEnd$|^TestManagedNativeBrokerEOFStopsActivePayloadAndPersistsFinalJournal$|^TestNativeContinuousManagedServicePreservesPayloadAndRevocation$|^TestNativeManagedProviderSuspensionAndRecovery$'
+
+======================================================================
+FAIL: test_continuous_missing_skipped_or_failed_never_passes (scripts.test_managed_gate.ManagedGateTests.test_continuous_missing_skipped_or_failed_never_passes) (action='fail', omit=False)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d385eb428cee/native-entry-rate-20261102/scripts/test_managed_gate.py", line 71, in test_continuous_missing_skipped_or_failed_never_passes
+    result = self.run_gate(action, omit)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/d385eb428cee/native-entry-rate-20261102/scripts/test_managed_gate.py", line 58, in run_gate
+    self.assertIn(RATE, args[args.index("-run") + 1])
+AssertionError: 'TestManagedNativeEntryRateSharesDuplexAcrossConnectionsAndIsolatesEntries' not found in '^TestManagedSharedVLESSIngressKeepsPrincipalPathsSeparate$|^TestNativePublishedManagedPrincipalEndToEnd$|^TestManagedNativeBrokerEOFStopsActivePayloadAndPersistsFinalJournal$|^TestNativeContinuousManagedServicePreservesPayloadAndRevocation$|^TestNativeManagedProviderSuspensionAndRecovery$'
+
+======================================================================
+FAIL: test_entry_rate_missing_skipped_or_failed_never_passes (scripts.test_managed_gate.ManagedGateTests.test_entry_rate_missing_skipped_or_failed_never_passes) (action='pass', omit=True)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d385eb428cee/native-entry-rate-20261102/scripts/test_managed_gate.py", line 88, in test_entry_rate_missing_skipped_or_failed_never_passes
+    result = self.run_gate(rate_action=action, rate_omit=omit)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/d385eb428cee/native-entry-rate-20261102/scripts/test_managed_gate.py", line 58, in run_gate
+    self.assertIn(RATE, args[args.index("-run") + 1])
+AssertionError: 'TestManagedNativeEntryRateSharesDuplexAcrossConnectionsAndIsolatesEntries' not found in '^TestManagedSharedVLESSIngressKeepsPrincipalPathsSeparate$|^TestNativePublishedManagedPrincipalEndToEnd$|^TestManagedNativeBrokerEOFStopsActivePayloadAndPersistsFinalJournal$|^TestNativeContinuousManagedServicePreservesPayloadAndRevocation$|^TestNativeManagedProviderSuspensionAndRecovery$'
+
+======================================================================
+FAIL: test_entry_rate_missing_skipped_or_failed_never_passes (scripts.test_managed_gate.ManagedGateTests.test_entry_rate_missing_skipped_or_failed_never_passes) (action='skip', omit=False)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d385eb428cee/native-entry-rate-20261102/scripts/test_managed_gate.py", line 88, in test_entry_rate_missing_skipped_or_failed_never_passes
+    result = self.run_gate(rate_action=action, rate_omit=omit)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/d385eb428cee/native-entry-rate-20261102/scripts/test_managed_gate.py", line 58, in run_gate
+    self.assertIn(RATE, args[args.index("-run") + 1])
+AssertionError: 'TestManagedNativeEntryRateSharesDuplexAcrossConnectionsAndIsolatesEntries' not found in '^TestManagedSharedVLESSIngressKeepsPrincipalPathsSeparate$|^TestNativePublishedManagedPrincipalEndToEnd$|^TestManagedNativeBrokerEOFStopsActivePayloadAndPersistsFinalJournal$|^TestNativeContinuousManagedServicePreservesPayloadAndRevocation$|^TestNativeManagedProviderSuspensionAndRecovery$'
+
+======================================================================
+FAIL: test_entry_rate_missing_skipped_or_failed_never_passes (scripts.test_managed_gate.ManagedGateTests.test_entry_rate_missing_skipped_or_failed_never_passes) (action='fail', omit=False)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d385eb428cee/native-entry-rate-20261102/scripts/test_managed_gate.py", line 88, in test_entry_rate_missing_skipped_or_failed_never_passes
+    result = self.run_gate(rate_action=action, rate_omit=omit)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/d385eb428cee/native-entry-rate-20261102/scripts/test_managed_gate.py", line 58, in run_gate
+    self.assertIn(RATE, args[args.index("-run") + 1])
+AssertionError: 'TestManagedNativeEntryRateSharesDuplexAcrossConnectionsAndIsolatesEntries' not found in '^TestManagedSharedVLESSIngressKeepsPrincipalPathsSeparate$|^TestNativePublishedManagedPrincipalEndToEnd$|^TestManagedNativeBrokerEOFStopsActivePayloadAndPersistsFinalJournal$|^TestNativeContinuousManagedServicePreservesPayloadAndRevocation$|^TestNativeManagedProviderSuspensionAndRecovery$'
+
+======================================================================
+FAIL: test_go_failure_not_hidden_by_tee_or_positive_events (scripts.test_managed_gate.ManagedGateTests.test_go_failure_not_hidden_by_tee_or_positive_events)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d385eb428cee/native-entry-rate-20261102/scripts/test_managed_gate.py", line 76, in test_go_failure_not_hidden_by_tee_or_positive_events
+    self.assertNotEqual(self.run_gate(fail_go=True).returncode, 0)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/d385eb428cee/native-entry-rate-20261102/scripts/test_managed_gate.py", line 58, in run_gate
+    self.assertIn(RATE, args[args.index("-run") + 1])
+AssertionError: 'TestManagedNativeEntryRateSharesDuplexAcrossConnectionsAndIsolatesEntries' not found in '^TestManagedSharedVLESSIngressKeepsPrincipalPathsSeparate$|^TestNativePublishedManagedPrincipalEndToEnd$|^TestManagedNativeBrokerEOFStopsActivePayloadAndPersistsFinalJournal$|^TestNativeContinuousManagedServicePreservesPayloadAndRevocation$|^TestNativeManagedProviderSuspensionAndRecovery$'
+
+======================================================================
+FAIL: test_provider_missing_skipped_or_failed_never_passes (scripts.test_managed_gate.ManagedGateTests.test_provider_missing_skipped_or_failed_never_passes) (action='pass', omit=True)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d385eb428cee/native-entry-rate-20261102/scripts/test_managed_gate.py", line 81, in test_provider_missing_skipped_or_failed_never_passes
+    result = self.run_gate(provider_action=action, provider_omit=omit)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/d385eb428cee/native-entry-rate-20261102/scripts/test_managed_gate.py", line 58, in run_gate
+    self.assertIn(RATE, args[args.index("-run") + 1])
+AssertionError: 'TestManagedNativeEntryRateSharesDuplexAcrossConnectionsAndIsolatesEntries' not found in '^TestManagedSharedVLESSIngressKeepsPrincipalPathsSeparate$|^TestNativePublishedManagedPrincipalEndToEnd$|^TestManagedNativeBrokerEOFStopsActivePayloadAndPersistsFinalJournal$|^TestNativeContinuousManagedServicePreservesPayloadAndRevocation$|^TestNativeManagedProviderSuspensionAndRecovery$'
+
+======================================================================
+FAIL: test_provider_missing_skipped_or_failed_never_passes (scripts.test_managed_gate.ManagedGateTests.test_provider_missing_skipped_or_failed_never_passes) (action='skip', omit=False)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d385eb428cee/native-entry-rate-20261102/scripts/test_managed_gate.py", line 81, in test_provider_missing_skipped_or_failed_never_passes
+    result = self.run_gate(provider_action=action, provider_omit=omit)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/d385eb428cee/native-entry-rate-20261102/scripts/test_managed_gate.py", line 58, in run_gate
+    self.assertIn(RATE, args[args.index("-run") + 1])
+AssertionError: 'TestManagedNativeEntryRateSharesDuplexAcrossConnectionsAndIsolatesEntries' not found in '^TestManagedSharedVLESSIngressKeepsPrincipalPathsSeparate$|^TestNativePublishedManagedPrincipalEndToEnd$|^TestManagedNativeBrokerEOFStopsActivePayloadAndPersistsFinalJournal$|^TestNativeContinuousManagedServicePreservesPayloadAndRevocation$|^TestNativeManagedProviderSuspensionAndRecovery$'
+
+======================================================================
+FAIL: test_provider_missing_skipped_or_failed_never_passes (scripts.test_managed_gate.ManagedGateTests.test_provider_missing_skipped_or_failed_never_passes) (action='fail', omit=False)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/scratch/d385eb428cee/native-entry-rate-20261102/scripts/test_managed_gate.py", line 81, in test_provider_missing_skipped_or_failed_never_passes
+    result = self.run_gate(provider_action=action, provider_omit=omit)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/d385eb428cee/native-entry-rate-20261102/scripts/test_managed_gate.py", line 58, in run_gate
+    self.assertIn(RATE, args[args.index("-run") + 1])
+AssertionError: 'TestManagedNativeEntryRateSharesDuplexAcrossConnectionsAndIsolatesEntries' not found in '^TestManagedSharedVLESSIngressKeepsPrincipalPathsSeparate$|^TestNativePublishedManagedPrincipalEndToEnd$|^TestManagedNativeBrokerEOFStopsActivePayloadAndPersistsFinalJournal$|^TestNativeContinuousManagedServicePreservesPayloadAndRevocation$|^TestNativeManagedProviderSuspensionAndRecovery$'
+
+----------------------------------------------------------------------
+Ran 5 tests in 1.157s
+
+FAILED (failures=11)

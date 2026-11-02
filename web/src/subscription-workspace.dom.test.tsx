@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+import { ownedClickScenario } from "./test-support/owned-click-scenario";
+import { abortDOMDiagnostics } from "./test-support/abort-dom-diagnostics";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import {
   cleanup,
@@ -21,6 +23,7 @@ import {
   UpdateOutput,
 } from "./Subscriptions";
 import { emptyProfile } from "./model";
+const clients: QueryClient[] = [];
 function mount(node: ReactNode, staleTime = 0) {
   const client = new QueryClient({
     defaultOptions: {
@@ -28,6 +31,7 @@ function mount(node: ReactNode, staleTime = 0) {
       mutations: { retry: false },
     },
   });
+  clients.push(client);
   return render(
     <QueryClientProvider client={client}>
       <UIProviders>{node}</UIProviders>
@@ -63,6 +67,7 @@ beforeEach(() => {
 });
 afterEach(() => {
   cleanup();
+  clients.splice(0).forEach((client) => client.clear());
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
@@ -299,72 +304,85 @@ it("keeps unpublished configurations and revoked links visible without conflatin
   expect(paths).toContain("/api/me/profiles/draft/reveal");
 });
 
-it.each(["profiles", "outputs"])(
-  "preserves configuration scope on legacy #%s links and workspace view changes",
-  async (page) => {
-    history.replaceState(null, "", `#${page}?profile=one`);
-    const profiles = ["one", "two"].map((id) => ({
-      ...emptyProfile(),
-      id,
-      name: `Configuration ${id}`,
-    }));
-    const links = profiles.map((profile) => ({
-      id: `link-${profile.id}`,
-      name: `Link ${profile.id}`,
-      profileId: profile.id,
-      target: profile.target,
-      mode: "full",
-      status: "published",
-    }));
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (url) => {
-        const path = String(url);
-        if (path.endsWith("/auth/me"))
-          return json({ user: { role: "member", name: "Member" } });
-        if (path.endsWith("/overview")) return json(overview);
-        if (path.endsWith("/profiles")) return json(profiles);
-        if (path.endsWith("/outputs")) return json(links);
-        return json([]);
-      }),
-    );
-    mount(<Workspace />);
-    await screen.findByRole("heading", { name: "我的订阅" });
-    expect(screen.queryByRole("tablist")).toBeNull();
-    expect(
-      await screen.findByRole("article", {
-        name: "分流配置 Configuration one",
-      }),
-    ).toBeTruthy();
-    expect(await screen.findByText("Link one", { exact: true })).toBeTruthy();
-    expect(screen.queryByText("Link two", { exact: true })).toBeNull();
-    await userEvent.click(
-      screen.getByRole("button", { name: "查看订阅 Link one" }),
-    );
-    const detail = await screen.findByRole("dialog", {
-      name: "订阅详情 · Link one",
-    });
-    expect(location.hash).toContain("profile=one");
-    await userEvent.click(within(detail).getByRole("button", { name: "关闭" }));
-    expect(location.hash).toContain("profile=one");
-    expect(screen.queryByText("Link two", { exact: true })).toBeNull();
-    // Wait for the closing modal scope to release background accessibility.
-    const navigation = await screen.findByRole("navigation", {
-      name: "工作空间导航",
-    });
-    expect(
-      within(navigation).queryByRole("button", { name: "客户端配置" }),
-    ).toBeNull();
-    expect(
-      within(navigation).queryByRole("button", { name: "发布管理" }),
-    ).toBeNull();
-    expect(
-      within(navigation)
-        .getByRole("button", { name: "我的订阅" })
-        .getAttribute("aria-current"),
-    ).toBe("page");
-  },
-);
+for (const page of ["profiles", "outputs"]) {
+  it(
+    `preserves configuration scope on legacy #${page} links and workspace view changes`,
+    async (context) => {
+      const scenario = ownedClickScenario(context);
+      const mark = abortDOMDiagnostics(context);
+      mark("start");
+      history.replaceState(null, "", `#${page}?profile=one`);
+      const profiles = ["one", "two"].map((id) => ({
+        ...emptyProfile(),
+        id,
+        name: `Configuration ${id}`,
+      }));
+      const links = profiles.map((profile) => ({
+        id: `link-${profile.id}`,
+        name: `Link ${profile.id}`,
+        profileId: profile.id,
+        target: profile.target,
+        mode: "full",
+        status: "published",
+      }));
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async (url) => {
+          const path = String(url);
+          if (path.endsWith("/auth/me"))
+            return json({ user: { role: "member", name: "Member" } });
+          if (path.endsWith("/overview")) return json(overview);
+          if (path.endsWith("/profiles")) return json(profiles);
+          if (path.endsWith("/outputs")) return json(links);
+          return json([]);
+        }),
+      );
+      mount(<Workspace />);
+      mark("mounted");
+      await screen.findByRole("heading", { name: "我的订阅" });
+      scenario.assertActive();
+      mark("heading-ready");
+      expect(screen.queryByRole("tablist")).toBeNull();
+      expect(
+        await screen.findByRole("article", {
+          name: "分流配置 Configuration one",
+        }),
+      ).toBeTruthy();
+      expect(await screen.findByText("Link one", { exact: true })).toBeTruthy();
+      expect(screen.queryByText("Link two", { exact: true })).toBeNull();
+      await scenario.click(() => screen.getByRole("button", { name: "查看订阅 Link one" }));
+      mark("detail-click-completed");
+      const detail = await screen.findByRole("dialog", {
+        name: "订阅详情 · Link one",
+      });
+      scenario.assertActive();
+      expect(location.hash).toContain("profile=one");
+      await scenario.click(() => within(detail).getByRole("button", { name: "关闭" }));
+      mark("detail-close-completed");
+      scenario.assertActive();
+      expect(location.hash).toContain("profile=one");
+      expect(screen.queryByText("Link two", { exact: true })).toBeNull();
+      // Wait for the closing modal scope to release background accessibility.
+      const navigation = await screen.findByRole("navigation", {
+        name: "工作空间导航",
+      });
+      scenario.assertActive();
+      mark("navigation-released");
+      expect(
+        within(navigation).queryByRole("button", { name: "客户端配置" }),
+      ).toBeNull();
+      expect(
+        within(navigation).queryByRole("button", { name: "发布管理" }),
+      ).toBeNull();
+      expect(
+        within(navigation)
+          .getByRole("button", { name: "我的订阅" })
+          .getAttribute("aria-current"),
+      ).toBe("page");
+    },
+  );
+
+}
 
 it("does not silently replace an unavailable output deep link with another publication", async () => {
   history.replaceState(null, "", "#subscriptions?output=missing");
