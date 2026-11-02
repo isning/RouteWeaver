@@ -2,8 +2,10 @@ package agent
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
+	"routeweaver/internal/domain"
 	"routeweaver/internal/entrypolicy"
 	"testing"
 	"time"
@@ -60,6 +62,19 @@ func TestManagedCheckerUsesDistinctIdentityAndNativeSidecarCommands(t *testing.T
 	os.WriteFile(filepath.Join(dir, "config.json"), []byte("{}"), 0600)
 	os.WriteFile(filepath.Join(dir, "entry-policy.json"), []byte("{}"), 0600)
 	desired := nativeDesired(t, ManagedXrayID, ManagedXrayVersion)
+	descriptor := entrypolicy.Descriptor{SchemaVersion: entrypolicy.SchemaVersion, AdapterID: ManagedXrayID, RuntimeVersion: ManagedXrayVersion, CoreVersion: "26.3.27", Bindings: []entrypolicy.Binding{managedSnapshot(time.Now().UTC(), 0).Counters[0].Binding}}
+	raw, err := json.Marshal(descriptor)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = os.WriteFile(filepath.Join(dir, "entry-policy.json"), raw, 0600); err != nil {
+		t.Fatal(err)
+	}
+	desired.Artifacts = append(desired.Artifacts, domain.Artifact{Path: "entry-policy.json", Content: string(raw)})
+	desired.Digest, err = ArtifactDigest(desired.Artifacts)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if e = checker.Validate(context.Background(), Staged{Desired: desired, Directory: dir}); e != nil {
 		t.Fatal(e)
 	}

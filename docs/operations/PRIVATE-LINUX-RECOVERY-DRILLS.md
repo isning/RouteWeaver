@@ -77,8 +77,30 @@ Pending proof and acknowledged-but-not-yet-retired custody survive restart; the
 existing retirement WAL removes files durably before cursors and its bounded
 custody entry. No terminal tombstone history accumulates on the agent. Limits stay
 at 1 MiB per envelope, 1,000 counters per snapshot, 128 pending batches/custody
-entries and 8 MiB spool state. Oversized or undeliverable proof retains the local
+entries and 8 MiB spool state. The 1,000 count is a ceiling, not a promise that
+all 1,000-binding metadata combinations fit. Managed rendering, agent native
+validation (before executable probing/replacement), and runtime configuration
+validation reject a conservative final-evidence upper bound above 1 MiB. The
+bound uses actual binding metadata, both snapshots, future uint64 counter growth,
+35-character timestamps, shared native epoch lengths and escaped scope/wrapper
+headroom. An initially small zero snapshot is not sufficient. On
+`MANAGED_TERMINAL_CAPACITY_EXCEEDED`, reduce the principal count or metadata before
+activation; bindings are never silently dropped and an otherwise healthy previous
+configuration is not replaced just to discover the capacity failure at shutdown.
+Oversized or undeliverable proof retains the local
 journals and backpressures collection; do not delete evidence to restore service.
+The capacity preflight applies to activation, not withdrawal: explicit agent
+stop/revoke and Fleet stop remain available for legacy oversized configurations.
+Manual publication with explicit `accessAllowed: false` uses restriction-only
+rendering that skips only this new capacity check; all existing
+structural/capability/credential validation remains. Normal review/render and
+any subsequent activation still enforce capacity. Manual denial still needs the
+exact previously reviewed fingerprint; a new oversized review does not issue one.
+If unavailable, use dedicated Fleet stop or owned agent stop, not a review bypass.
+Denial is carried by the
+existing authenticated desired-policy lease and publication-intent binding, not
+by a new signature or custody protocol.
+
 CP raw history remains subject to existing capacity monitoring and encrypted
 backup limits, not an automatic deletion policy. Orderly shutdown may first send
 new final raw samples; terminal custody can require a subsequent collection after

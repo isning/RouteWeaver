@@ -97,6 +97,9 @@ func build(native []byte, d entrypolicy.Descriptor) (*core.Config, error) {
 		}
 		bindings[key] = b
 	}
+	if err := entrypolicy.ValidateTerminalCapacity(d.Bindings); err != nil {
+		return nil, err
+	}
 	var raw struct {
 		Outbounds []struct {
 			Protocol string `json:"protocol"`

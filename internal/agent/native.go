@@ -96,6 +96,9 @@ func NewCommandChecker(d Descriptor, binary string, timeout time.Duration, c Nat
 }
 func (n *NativeChecker) Descriptor() Descriptor { return n.descriptor }
 func (n *NativeChecker) Validate(ctx context.Context, s Staged) error {
+	if err := rejectManagedTerminalCapacity(s.Desired); err != nil {
+		return err
+	}
 	if err := rejectNativeMPTCP(s.Desired); err != nil {
 		return err
 	}

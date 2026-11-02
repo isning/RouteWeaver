@@ -76,7 +76,7 @@ func NewWithOptions(native []byte, d entrypolicy.Descriptor, a entrypolicy.Admis
 	if err != nil {
 		return nil, err
 	}
-	epoch := make([]byte, 16)
+	epoch := make([]byte, entrypolicy.ManagedRuntimeEpochBytes)
 	if _, err = rand.Read(epoch); err != nil {
 		return nil, err
 	}
@@ -86,7 +86,7 @@ func NewWithOptions(native []byte, d entrypolicy.Descriptor, a entrypolicy.Admis
 		key := bindingKey(b.InboundTag, b.SubjectID)
 		r.bindings[key] = b
 		sum := sha256.Sum256([]byte(key))
-		r.counters[key] = &counter{epoch: r.epoch + "-" + hex.EncodeToString(sum[:8]), binding: b}
+		r.counters[key] = &counter{epoch: r.epoch + "-" + hex.EncodeToString(sum[:entrypolicy.ManagedCounterSuffixBytes]), binding: b}
 	}
 	found := false
 	for i, app := range c.App {

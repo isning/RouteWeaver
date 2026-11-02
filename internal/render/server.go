@@ -65,6 +65,15 @@ func (r *ServerRegistry) Register(a ServerRenderer) error {
 func DefaultServers() *ServerRegistry {
 	return NewServers(XrayServer{}, SingBoxServer{}, ManagedXrayServer{})
 }
+
+// RenderForAccessDenial preserves legacy revocation rendering without admitting
+// a new activation. Only the terminal-capacity preflight is skipped; all other
+// validation remains identical. Callers must bind the artifacts to a denied
+// desired policy. Agent activation independently enforces capacity regardless
+// of where an artifact originated.
+func RenderForAccessDenial(ir domain.ServerDeploymentIR) ([]domain.Artifact, error) {
+	return NewServers(XrayServer{}, SingBoxServer{}, ManagedXrayServer{restrictionOnly: true}).Render(ir)
+}
 func (r *ServerRegistry) Render(ir domain.ServerDeploymentIR) ([]domain.Artifact, error) {
 	if ir.SchemaVersion != "1.0" || !domain.ValidID(ir.ID) || ir.TopologyRevision == "" || len(ir.Programs) == 0 {
 		return nil, fmt.Errorf("invalid server deployment envelope")

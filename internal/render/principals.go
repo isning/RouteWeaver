@@ -19,12 +19,15 @@ type ServerArtifactRenderer interface {
 	ServerArtifacts(domain.ServerProgram) ([]domain.Artifact, error)
 }
 
-type ManagedXrayServer struct{}
+type ManagedXrayServer struct{ restrictionOnly bool }
 
 func (ManagedXrayServer) ServerCapability() ServerCapability {
 	return ServerCapability{AdapterID: ServerAdapterManagedXray, Versions: []string{ManagedXrayVersion}, Protocols: []string{"vless"}, EgressProtocols: []string{"socks", "shadowsocks", "vless"}, MultiPrincipalProtocols: []string{"vless"}, ManagedAccess: true}
 }
-func (ManagedXrayServer) RenderServer(p domain.ServerProgram) (any, error) {
+func (m ManagedXrayServer) RenderServer(p domain.ServerProgram) (any, error) {
+	if len(p.Principals) > 1000 {
+		return nil, fmt.Errorf("invalid managed binding count")
+	}
 	if err := domain.ValidateListenerTransport(p.Listener.Connection); err != nil {
 		return nil, err
 	}
@@ -55,21 +58,39 @@ func (ManagedXrayServer) RenderServer(p domain.ServerProgram) (any, error) {
 			return nil, fmt.Errorf("MANAGED_ACCOUNTING_IDENTITY_REQUIRED: policy revision and cycle identity required")
 		}
 	}
+	if !m.restrictionOnly {
+		if err := entrypolicy.ValidateTerminalCapacity(managedPrincipalBindings(p)); err != nil {
+			return nil, err
+		}
+	}
 	return (XrayServer{}).RenderServer(p)
 }
-func (ManagedXrayServer) ServerArtifacts(p domain.ServerProgram) ([]domain.Artifact, error) {
-	descriptor := entrypolicy.Descriptor{SchemaVersion: entrypolicy.SchemaVersion, AdapterID: ServerAdapterManagedXray, RuntimeVersion: ManagedXrayVersion, CoreVersion: ManagedXrayCoreVersion, Bindings: []entrypolicy.Binding{}}
+func (m ManagedXrayServer) ServerArtifacts(p domain.ServerProgram) ([]domain.Artifact, error) {
+	if len(p.Principals) > 1000 {
+		return nil, fmt.Errorf("invalid managed binding count")
+	}
+	bindings := managedPrincipalBindings(p)
+	if !m.restrictionOnly {
+		if err := entrypolicy.ValidateTerminalCapacity(bindings); err != nil {
+			return nil, err
+		}
+	}
+	descriptor := entrypolicy.Descriptor{SchemaVersion: entrypolicy.SchemaVersion, AdapterID: ServerAdapterManagedXray, RuntimeVersion: ManagedXrayVersion, CoreVersion: ManagedXrayCoreVersion, Bindings: bindings}
 	if p.DestinationPolicy != nil {
 		descriptor.DestinationPolicy = entrypolicy.DestinationPolicy{AllowCIDRs: append([]string(nil), p.DestinationPolicy.AllowCIDRs...)}
-	}
-	for _, v := range p.Principals {
-		descriptor.Bindings = append(descriptor.Bindings, entrypolicy.Binding{SubjectID: v.SubjectID, AccountID: v.AccountID, RouteID: v.RouteID, EntryID: p.Listener.ID, InboundTag: p.Listener.ID, CredentialVersion: v.CredentialVersion, PolicyRevision: v.PolicyRevision, CycleID: v.CycleID})
 	}
 	raw, err := json.MarshalIndent(descriptor, "", "  ")
 	if err != nil {
 		return nil, err
 	}
 	return []domain.Artifact{{Path: "entry-policy.json", Content: string(raw) + "\n"}}, nil
+}
+func managedPrincipalBindings(p domain.ServerProgram) []entrypolicy.Binding {
+	bindings := make([]entrypolicy.Binding, 0, len(p.Principals))
+	for _, v := range p.Principals {
+		bindings = append(bindings, entrypolicy.Binding{SubjectID: v.SubjectID, AccountID: v.AccountID, RouteID: v.RouteID, EntryID: p.Listener.ID, InboundTag: p.Listener.ID, CredentialVersion: v.CredentialVersion, PolicyRevision: v.PolicyRevision, CycleID: v.CycleID})
+	}
+	return bindings
 }
 func nativePrincipalUsers(p domain.ServerProgram, xray bool) []any {
 	users := []any{}

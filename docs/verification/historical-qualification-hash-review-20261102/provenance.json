@@ -1,0 +1,38 @@
+[
+  {
+    "kind": "production",
+    "entries": 248,
+    "declaredSource": "81b5c7a11e62873a847dd0d42305f0acdcb1f793",
+    "declaredTree": "6dc9f1db86cd60c5db8e7906d781893a6a024ff1",
+    "allDeclaredSnapshotHashesMatch": true,
+    "currentChangedManifestPaths": [
+      "internal/agent/native.go",
+      "internal/httpapi/server_deployments.go",
+      "internal/render/principals.go",
+      "internal/render/server.go",
+      "runtimes/xray/config.go",
+      "runtimes/xray/runtime.go"
+    ],
+    "currentSnapshotEquivalenceClaimed": false,
+    "strictUniquePathHashMap": true,
+    "receiptByteBindingVerified": true
+  },
+  {
+    "kind": "tests",
+    "entries": 303,
+    "declaredSource": "81b5c7a11e62873a847dd0d42305f0acdcb1f793",
+    "declaredTree": "6dc9f1db86cd60c5db8e7906d781893a6a024ff1",
+    "allDeclaredSnapshotHashesMatch": true,
+    "currentChangedManifestPaths": [
+      "internal/agent/managed_xray_test.go"
+    ],
+    "currentSnapshotEquivalenceClaimed": false,
+    "strictUniquePathHashMap": true,
+    "receiptByteBindingVerified": true
+  },
+  {
+    "bothActualRetainedBinariesMatchReceipt": true,
+    "rawJSONLMatchesReceipt": true,
+    "qualificationIsHistoricalNotCurrentCapacityGuard": true
+  }
+]

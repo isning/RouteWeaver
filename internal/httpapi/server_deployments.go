@@ -330,7 +330,15 @@ func (h *server) publishServer(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	artifacts, e := render.DefaultServers().Render(v.IR)
+	// Denial must remain possible for legacy configurations that predate the
+	// activation capacity bound. Never fall back from a failed normal render.
+	var artifacts []domain.Artifact
+	var e error
+	if in.AccessAllowed {
+		artifacts, e = render.DefaultServers().Render(v.IR)
+	} else {
+		artifacts, e = render.RenderForAccessDenial(v.IR)
+	}
 	if e != nil {
 		h.rejectPublication(w, a, "PUBLICATION_REJECTED", "The deployment cannot be rendered; correct its configuration and review again.")
 		return

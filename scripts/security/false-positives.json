@@ -280,5 +280,29 @@
     "rule": "jfrog-identity-token",
     "lineSHA256": "5cdad0a7962dc79116d1e3a65155c9af7c73efd379312f3ea490dada7df4aa48",
     "reason": "Legal lifecycle fixture source SHA256 metadata; all four source hashes independently recomputed against retained operational-legal-lifecycle-20261102 files, including internal/agent/managed_xray_process_test.go. Exact path/rule/line only; receipt unchanged."
+  },
+  {
+    "path": "docs/verification/evidence/TERMINAL-CUSTODY-REFERENCE-QUALIFICATION-2026-11-02-production-manifest.json",
+    "rule": "generic-api-key",
+    "lineSHA256": "ddff69c096ed82988f6371394ae35caece0f8eaf8bbe24401a6670759cdd86c2",
+    "reason": "Immutable historical 81b5c7a11e62873a847dd0d42305f0acdcb1f793 qualification production manifest; all 248 unique safe path/SHA256 entries recomputed from declared snapshot, exact manifest/retained binary/raw log bindings verified. Not current capacity-guard source. Exact path/rule/line only."
+  },
+  {
+    "path": "docs/verification/evidence/TERMINAL-CUSTODY-REFERENCE-QUALIFICATION-2026-11-02-production-manifest.json",
+    "rule": "jfrog-identity-token",
+    "lineSHA256": "ddff69c096ed82988f6371394ae35caece0f8eaf8bbe24401a6670759cdd86c2",
+    "reason": "Immutable historical 81b5c7a11e62873a847dd0d42305f0acdcb1f793 qualification production manifest; all 248 unique safe path/SHA256 entries recomputed from declared snapshot, exact manifest/retained binary/raw log bindings verified. Not current capacity-guard source. Exact path/rule/line only."
+  },
+  {
+    "path": "docs/verification/evidence/TERMINAL-CUSTODY-REFERENCE-QUALIFICATION-2026-11-02-tests-manifest.json",
+    "rule": "generic-api-key",
+    "lineSHA256": "037943ba80c64315a8acd840f003799944d2eac08dd55e8085eb7b9220cc8667",
+    "reason": "Immutable historical 81b5c7a11e62873a847dd0d42305f0acdcb1f793 qualification tests manifest; all 303 unique safe path/SHA256 entries recomputed from declared snapshot, exact manifest/retained binary/raw log bindings verified. Not current capacity-guard source. Exact path/rule/line only."
+  },
+  {
+    "path": "docs/verification/evidence/TERMINAL-CUSTODY-REFERENCE-QUALIFICATION-2026-11-02-tests-manifest.json",
+    "rule": "jfrog-identity-token",
+    "lineSHA256": "037943ba80c64315a8acd840f003799944d2eac08dd55e8085eb7b9220cc8667",
+    "reason": "Immutable historical 81b5c7a11e62873a847dd0d42305f0acdcb1f793 qualification tests manifest; all 303 unique safe path/SHA256 entries recomputed from declared snapshot, exact manifest/retained binary/raw log bindings verified. Not current capacity-guard source. Exact path/rule/line only."
   }
 ]

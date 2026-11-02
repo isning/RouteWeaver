@@ -1,0 +1,142 @@
+{
+  "binding": {
+    "source": "81b5c7a11e62873a847dd0d42305f0acdcb1f793",
+    "tree": "6dc9f1db86cd60c5db8e7906d781893a6a024ff1",
+    "production_entries": 248,
+    "production_manifest_sha256": "082022fa20d3f24dbc813bcb9828bb1fcb82ff0b35065e519f451e2176213bd1",
+    "test_entries": 303,
+    "tests_manifest_sha256": "e24b8d1cce3b9630b703c9ab62b19e1deb40f14a28f3d3cce099403017c88bb2",
+    "native_sha256": "1f913e5cfdb21b00b4e7a31c4b5488bf5ddf453471cfa90e5edc1b590b489afa",
+    "test_binary_sha256": "4835cd229f64fa8d05dc8552a9dd742321a3f1f57bb5de196ce7483bd5dd5c3d",
+    "race": false,
+    "parent_GOMAXPROCS": "1",
+    "parent_GOMEMLIMIT": "256MiB",
+    "child_limits": "not inherited; supervisor strips Go variables; hard caps unknown",
+    "window_seconds": 1800,
+    "samples": 1800,
+    "read_deadline_seconds": 2,
+    "outer_test_timeout": "35m",
+    "test": "TestNativeContinuousManagedServicePreservesPayloadAndRevocation",
+    "native_path": "/workspace/scratch/d385eb428cee/terminal-reference-qualification-20261102/bin/qualification-managed-xray",
+    "test_binary_path": "/workspace/scratch/d385eb428cee/terminal-reference-qualification-20261102/bin/qualification-httpapi.test"
+  },
+  "result": {
+    "command": [
+      "scripts/go.sh",
+      "tool",
+      "test2json",
+      "-t",
+      "-p",
+      "routeweaver/internal/httpapi",
+      "/workspace/scratch/d385eb428cee/terminal-reference-qualification-20261102/bin/qualification-httpapi.test",
+      "-test.v=test2json",
+      "-test.run=^TestNativeContinuousManagedServicePreservesPayloadAndRevocation$",
+      "-test.timeout=35m"
+    ],
+    "start_utc": "2026-11-02T04:05:10.620840+00:00",
+    "end_utc": "2026-11-02T04:35:37.011004+00:00",
+    "elapsed_seconds": 1826.3904658719985,
+    "exit_code": 0,
+    "child_user_cpu_seconds": 179.907439,
+    "child_system_cpu_seconds": 60.139521,
+    "wait4_maxrss_kib": 124392,
+    "resource_attribution": "maximum among parent test/tools/native descendants, not native-specific or summed RSS",
+    "raw_sha256": "1ac62096864a4896a7e8cf17f418da5db12c264e2d45da98f2ff142571a590a0",
+    "checks": {
+      "production_unchanged": true,
+      "tests_unchanged": true,
+      "native_unchanged": true,
+      "test_binary_unchanged": true
+    }
+  },
+  "metrics": {
+    "parent_Go_heap_bytes": {
+      "samples": 60,
+      "first": 3008704,
+      "last": 3110968,
+      "min": 2676008,
+      "max": 5307152,
+      "max_growth_from_first": 2298448
+    },
+    "agent_root_bytes": {
+      "samples": 60,
+      "first": 48637883,
+      "last": 48637891,
+      "min": 48637883,
+      "max": 48638610,
+      "max_growth_from_first": 727
+    },
+    "cp_db_bytes": {
+      "samples": 60,
+      "first": 4096,
+      "last": 2793472,
+      "min": 4096,
+      "max": 2793472,
+      "max_growth_from_first": 2789376
+    },
+    "cp_wal_bytes": {
+      "samples": 60,
+      "first": 1994112,
+      "last": 4148872,
+      "min": 1994112,
+      "max": 4148872,
+      "max_growth_from_first": 2154760
+    },
+    "cp_shm_bytes": {
+      "samples": 60,
+      "first": 32768,
+      "last": 32768,
+      "min": 32768,
+      "max": 32768,
+      "max_growth_from_first": 0
+    },
+    "native_rss_kib": {
+      "samples": 60,
+      "first": 33572,
+      "last": 35484,
+      "min": 33572,
+      "max": 35788,
+      "max_growth_from_first": 2216
+    },
+    "native_fds": {
+      "samples": 60,
+      "first": 12,
+      "last": 12,
+      "min": 12,
+      "max": 12,
+      "max_growth_from_first": 0
+    }
+  },
+  "payload_window_seconds": 1800.000224625,
+  "payload_samples": 1800,
+  "max_observed_roundtrip_seconds": 2.046728779,
+  "max_roundtrip_scope": "Includes post-read diagnostics/scheduling before elapsed measurement; no IO error occurred under unchanged 2s socket deadlines. Exact excess-latency cause unclassified. Not evidence all sample latencies were below2s.",
+  "last_sample": 1770,
+  "last_record_inventory": [
+    "service_native_test.go:445: reference records sample=1770 kind=meter-inbox rows=1776 logical_json_bytes=1271967",
+    "service_native_test.go:445: reference records sample=1770 kind=meter-receipts rows=1776 logical_json_bytes=117216",
+    "service_native_test.go:445: reference records sample=1770 kind=meter-streams rows=1 logical_json_bytes=19",
+    "service_native_test.go:445: reference records sample=1770 kind=meter-pending rows=0 logical_json_bytes=0",
+    "service_native_test.go:445: reference records sample=1770 kind=ledger rows=178 logical_json_bytes=100024",
+    "service_native_test.go:445: reference records sample=1770 kind=admission-budgets rows=1 logical_json_bytes=548",
+    "service_native_test.go:445: reference records sample=1770 kind=entry-admission-leases rows=1 logical_json_bytes=624",
+    "service_native_test.go:445: reference records sample=1770 kind=agent-desired rows=1 logical_json_bytes=2689",
+    "service_native_test.go:445: reference records sample=1770 kind=agent-observations rows=1 logical_json_bytes=1485"
+  ],
+  "terminal": [
+    "service_native_test.go:229: reference terminal: owned_absent=true retained_exact_proof=true cp_custody_checked=false cp_exact_custody=false pending_batches=0 open_budgets=0 unresolved_budgets=0 held_raw=0; observations do not imply settlement"
+  ],
+  "passes": [
+    {
+      "test": "TestNativeContinuousManagedServicePreservesPayloadAndRevocation",
+      "seconds": 1824.96
+    }
+  ],
+  "failures": 0,
+  "skips": 0,
+  "retries": 0,
+  "platform": "Linux 6.18.57 x86_64\n0::/\n",
+  "history_scope": "Intentional canonical raw transport/ledger history retained; sampled row growth is not classified as a memory leak or proven hard cap.",
+  "cleanup_scope": "Owned absence and valid retained exact-epoch proof verified; CP custody not queried when local proof exists; spool/reconciler Close checked. Successful fixture invokes RemoveAll but ignores its error, so filesystem deletion not independently confirmed.",
+  "prior_evidence": "Original sample410 failure remains unclassified; prior failed13/14 refresh remains separately preserved; this qualifies changed custody production, not a retroactive root-cause explanation."
+}
