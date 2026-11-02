@@ -7,8 +7,8 @@
     "ci": "https://github.com/isning/RouteWeaver/actions/runs/41321049032",
     "scope": "12 gates green;177 browser cases, 19 real API cases. Native opt-in jobs independently required."
   },
-  "inspected_candidate": "d17c61b7f5894fdac0e080309ba463e861706c0f",
-  "execution_rule": "47c985 remains last complete-green baseline. CI2 partial results are separate from locally tested new composition d17c61b. Exact test-file identity is a reuse aid, not proof after production/dependency changes. Native skip is never a pass; DOM fixture does not prove real backend or geometry. No guessed new-browser count: authoritative discovery belongs to coordinator.",
+  "inspected_candidate": "23650ca21e1adab40f0f90ce54476bca31179857",
+  "execution_rule": "47c985 remains the last complete-green baseline recorded by this index. CI3/CI4 browser outcomes are exact-source per-case evidence, not acceptance of the newer 23650ca composition or non-browser gates. CI4:195 unique,191 passed,4 failed,0 skipped/flaky. Fixtures do not prove real backend/native behavior; prepared fixes and screenshots during entrance motion are not settled browser acceptance. Nonbrowser CI4 evidence is independently reconciled in NONBROWSER-EVIDENCE-RECONCILIATION-2026-11-01.json; newer local composition remains unverified as a whole.",
   "excluded_stories": [
     "K06"
   ],
@@ -185,10 +185,9 @@
         "collection-delete-ui",
         "collection-delete-browser"
       ],
-      "covered_contract": "Ordered reusable collection composition and concurrent reference integrity. Previously missing owner-scoped delete/dependency-review workflow is now implemented and locally tested; browser candidate pending.",
+      "covered_contract": "Ordered reusable collection composition and concurrent reference integrity. Previously missing owner-scoped delete/dependency-review workflow is now implemented and locally tested; controlled320 browser dependency/cancel/focus case passed CI4; backend scope stays separately evidenced.",
       "remaining": [
-        "I02",
-        "E02"
+        "I02"
       ],
       "status": "partial; concrete local evidence mapped, current integration pending, prerequisite status unchanged",
       "feature_tickets": [
@@ -198,7 +197,10 @@
         "RW-06": [
           "RW-05"
         ]
-      }
+      },
+      "covered_work_ids": [
+        "E02"
+      ]
     },
     {
       "story": "C201",
@@ -211,7 +213,6 @@
       ],
       "covered_contract": "Filter/rename/order positive composition; precise invalid input and stable identity.",
       "remaining": [
-        "E02",
         "E03"
       ],
       "status": "partial; concrete local evidence mapped, current integration pending, prerequisite status unchanged",
@@ -226,7 +227,10 @@
         "RW-06": [
           "RW-05"
         ]
-      }
+      },
+      "covered_work_ids": [
+        "E02"
+      ]
     },
     {
       "story": "C202",
@@ -240,7 +244,6 @@
       ],
       "covered_contract": "Connection dedup provenance plus legal override precedence, tags and invalid overrides.",
       "remaining": [
-        "E02",
         "E05"
       ],
       "status": "partial; concrete local evidence mapped, current integration pending, prerequisite status unchanged",
@@ -255,7 +258,10 @@
         "RW-06": [
           "RW-05"
         ]
-      }
+      },
+      "covered_work_ids": [
+        "E02"
+      ]
     },
     {
       "story": "C203",
@@ -269,7 +275,6 @@
       ],
       "covered_contract": "Eight-stage source/merge/aggregate preview, removed IDs and secret shielding without source mutation.",
       "remaining": [
-        "E02",
         "E03"
       ],
       "status": "partial; concrete local evidence mapped, current integration pending, prerequisite status unchanged",
@@ -284,7 +289,10 @@
         "RW-06": [
           "RW-05"
         ]
-      }
+      },
+      "covered_work_ids": [
+        "E02"
+      ]
     },
     {
       "story": "C301",
@@ -513,8 +521,7 @@
       ],
       "covered_contract": "Effective service/grant presentation with first-feed action and explicit publication.",
       "remaining": [
-        "E09",
-        "E10"
+        "E09"
       ],
       "status": "partial; concrete local evidence mapped, current integration pending, prerequisite status unchanged",
       "feature_tickets": [
@@ -530,7 +537,10 @@
           "RW-12",
           "RW-13"
         ]
-      }
+      },
+      "covered_work_ids": [
+        "E10"
+      ]
     },
     {
       "story": "S02",
@@ -546,7 +556,6 @@
       ],
       "covered_contract": "Calendar clamp/anchor and existing policy draft preservation.",
       "remaining": [
-        "E10",
         "R02"
       ],
       "status": "partial; concrete local evidence mapped, current integration pending, prerequisite status unchanged",
@@ -562,7 +571,10 @@
           "RW-12",
           "RW-13"
         ]
-      }
+      },
+      "covered_work_ids": [
+        "E10"
+      ]
     },
     {
       "story": "A01",
@@ -576,8 +588,7 @@
       ],
       "covered_contract": "Actual invitation identity switch and account security lifecycle.",
       "remaining": [
-        "E01",
-        "E10"
+        "E01"
       ],
       "status": "partial; concrete local evidence mapped, current integration pending, prerequisite status unchanged",
       "feature_tickets": [
@@ -585,7 +596,10 @@
       ],
       "direct_prerequisites": {
         "RW-02": []
-      }
+      },
+      "covered_work_ids": [
+        "E10"
+      ]
     },
     {
       "story": "A02",
@@ -599,8 +613,7 @@
       ],
       "covered_contract": "Deterministic precedence and current review + affected-user presentation.",
       "remaining": [
-        "E09",
-        "E10"
+        "E09"
       ],
       "status": "partial; concrete local evidence mapped, current integration pending, prerequisite status unchanged",
       "feature_tickets": [
@@ -611,7 +624,10 @@
           "RW-01",
           "RW-02"
         ]
-      }
+      },
+      "covered_work_ids": [
+        "E10"
+      ]
     },
     {
       "story": "A03",
@@ -628,7 +644,6 @@
       ],
       "covered_contract": "Historical rates, exact counter boundary and issued-obligation fences.",
       "remaining": [
-        "E10",
         "R02"
       ],
       "status": "partial; concrete local evidence mapped, current integration pending, prerequisite status unchanged",
@@ -639,7 +654,10 @@
         "RW-13": [
           "RW-03"
         ]
-      }
+      },
+      "covered_work_ids": [
+        "E10"
+      ]
     },
     {
       "story": "A04",
@@ -946,7 +964,10 @@
       "scope": "Direct/three-hop selected endpoint paths, deeper-than-two client groups, cycle and stable identity checks.",
       "gate": "backend",
       "test_file_identical_to_green_baseline": true,
-      "candidate_execution": "pending full CI; source presence is not a pass"
+      "candidate_execution": "pending full CI; source presence is not a pass",
+      "supplemental_local_evidence": [
+        "docs/verification/NESTED-SOURCE-PUBLICATION-2026-11-01.md"
+      ]
     },
     "ir-isolation": {
       "path": "internal/domain/profile_test.go",
@@ -1045,7 +1066,11 @@
       "scope": "Actual browser ordered-form route editing; does not establish all shared-endpoint impact paths.",
       "gate": "browser",
       "test_file_identical_to_green_baseline": true,
-      "candidate_execution": "pending full CI; source presence is not a pass"
+      "candidate_execution": "PASSED 1/1 exact indexed selectors in CI4, attempt 0. Only the stated scope is established; full candidate integration remains pending.",
+      "execution_source": {
+        "remote_sha": "81dd62054e36b45c4c2f2c670d121ad3a7553b68",
+        "run_url": "https://github.com/isning/RouteWeaver/actions/runs/41351035317"
+      }
     },
     "route-exit-browser": {
       "path": "web/tests/route-exit-backend.ui.spec.ts",
@@ -1059,7 +1084,11 @@
       "scope": "Real backend stored endpoint selection and route draft save; no applied claim.",
       "gate": "browser",
       "test_file_identical_to_green_baseline": true,
-      "candidate_execution": "pending full CI; source presence is not a pass"
+      "candidate_execution": "PASSED 1/1 exact indexed selectors in CI4, attempt 0. Only the stated scope is established; full candidate integration remains pending.",
+      "execution_source": {
+        "remote_sha": "81dd62054e36b45c4c2f2c670d121ad3a7553b68",
+        "run_url": "https://github.com/isning/RouteWeaver/actions/runs/41351035317"
+      }
     },
     "two-hop": {
       "path": "internal/integration/route_test.go",
@@ -1087,7 +1116,10 @@
       "scope": "Invitation/principal, exact applied manifest, real managed entry/transit payload and quota path; not a downloaded stock-client journey.",
       "gate": "managed native (opt-in)",
       "test_file_identical_to_green_baseline": true,
-      "candidate_execution": "pending full CI; source presence is not a pass"
+      "candidate_execution": "pending full CI; source presence is not a pass",
+      "supplemental_local_evidence": [
+        "docs/verification/BROWSER-NATIVE-IDENTITY-JOIN-2026-11-01.md"
+      ]
     },
     "external-feed": {
       "path": "internal/httpapi/external_feed_policy_test.go",
@@ -1154,7 +1186,10 @@
       "scope": "Positive native-node/text imports; ignored config sections reported; malformed/unsupported snapshot rejected atomically.",
       "gate": "backend",
       "test_file_identical_to_green_baseline": true,
-      "candidate_execution": "pending full CI; source presence is not a pass"
+      "candidate_execution": "pending full CI; source presence is not a pass",
+      "supplemental_local_evidence": [
+        "docs/verification/MIXED-IMPORT-ATOMICITY-2026-11-01.md"
+      ]
     },
     "fetch": {
       "path": "internal/resources/fetch_test.go",
@@ -1236,7 +1271,10 @@
       "scope": "Source→ordered merge→aggregate, explicit removed IDs/provenance, preview secrecy and invalid input; no dedicated stable-sort tie fixture here.",
       "gate": "backend",
       "test_file_identical_to_green_baseline": true,
-      "candidate_execution": "pending full CI; source presence is not a pass"
+      "candidate_execution": "pending full CI; source presence is not a pass",
+      "supplemental_local_evidence": [
+        "docs/verification/PROCESSING-STAGE-CONTRACTS-2026-11-01.md"
+      ]
     },
     "override": {
       "path": "internal/conversion/override_test.go",
@@ -1274,7 +1312,10 @@
       "scope": "Real API duplicate 2→1 provenance/RemovedIDs, source+aggregate field override, rendered export and revoke; no browser editor journey.",
       "gate": "api",
       "test_file_identical_to_green_baseline": false,
-      "candidate_execution": "pending full CI; source presence is not a pass"
+      "candidate_execution": "pending full CI; source presence is not a pass",
+      "supplemental_local_evidence": [
+        "docs/verification/PROCESSING-STAGE-CONTRACTS-2026-11-01.md"
+      ]
     },
     "collection-browser": {
       "path": "web/tests/collection-task.ui.spec.ts",
@@ -1288,7 +1329,11 @@
       "scope": "Browser collection source acquisition preserves ordered recipe until explicit save/reopen; controlled HTTP fixture.",
       "gate": "browser",
       "test_file_identical_to_green_baseline": true,
-      "candidate_execution": "pending full CI; source presence is not a pass"
+      "candidate_execution": "PASSED 1/1 exact indexed selectors in CI4, attempt 0. Only the stated scope is established; full candidate integration remains pending.",
+      "execution_source": {
+        "remote_sha": "81dd62054e36b45c4c2f2c670d121ad3a7553b68",
+        "run_url": "https://github.com/isning/RouteWeaver/actions/runs/41351035317"
+      }
     },
     "dependencies": {
       "path": "internal/httpapi/tenant_relationship_race_test.go",
@@ -1340,7 +1385,11 @@
       "scope": "Browser dynamic membership edits preserve fixed members and current input scope; controlled fixture.",
       "gate": "browser",
       "test_file_identical_to_green_baseline": true,
-      "candidate_execution": "pending full CI; source presence is not a pass"
+      "candidate_execution": "PASSED 1/1 exact indexed selectors in CI4, attempt 0. Only the stated scope is established; full candidate integration remains pending.",
+      "execution_source": {
+        "remote_sha": "81dd62054e36b45c4c2f2c670d121ad3a7553b68",
+        "run_url": "https://github.com/isning/RouteWeaver/actions/runs/41351035317"
+      }
     },
     "native-overrides": {
       "path": "internal/httpapi/native_overrides_test.go",
@@ -1421,7 +1470,10 @@
       "scope": "Owned file bytes and manifest frozen; unowned paths and mismatched pinned digests reject.",
       "gate": "backend",
       "test_file_identical_to_green_baseline": true,
-      "candidate_execution": "pending full CI; source presence is not a pass"
+      "candidate_execution": "pending full CI; source presence is not a pass",
+      "supplemental_local_evidence": [
+        "docs/verification/STRUCTURED-RULE-JOURNEY-2026-11-01.md"
+      ]
     },
     "rule-native": {
       "path": "internal/httpapi/resource_bundle_native_test.go",
@@ -1454,7 +1506,11 @@
       "scope": "Browser independent outputs and selected-link recovery; exact test body determines backend/fixture seam.",
       "gate": "browser",
       "test_file_identical_to_green_baseline": true,
-      "candidate_execution": "pending full CI; source presence is not a pass"
+      "candidate_execution": "PASSED 2/2 exact indexed selectors in CI4, attempt 0. Only the stated scope is established; full candidate integration remains pending.",
+      "execution_source": {
+        "remote_sha": "81dd62054e36b45c4c2f2c670d121ad3a7553b68",
+        "run_url": "https://github.com/isning/RouteWeaver/actions/runs/41351035317"
+      }
     },
     "policy": {
       "path": "internal/httpapi/access_policy_test.go",
@@ -1730,7 +1786,7 @@
       "scope": "Official Xray cross-version upgrade, failed startup and explicit new-lease rollback. Does not establish sing-box cross-version upgrade.",
       "gate": "native runtime (opt-in)",
       "test_file_identical_to_green_baseline": true,
-      "candidate_execution": "pending full CI; source presence is not a pass"
+      "candidate_execution": "PASSED Xray native transition at CI4; separate TestNativeStockSingBoxUpgradeKeepsExactRuntimeAndLease passed both historical 1.14.3→1.14.4 outcomes. Retired 1.14.3 is not newly installable. See NONBROWSER-EVIDENCE-RECONCILIATION-2026-11-01.json."
     },
     "provider": {
       "path": "internal/httpapi/node_observations_test.go",
@@ -1821,7 +1877,10 @@
       "scope": "Audience/validity/read receipts, cycle dedup, durable bounded retry and rechecked delivery eligibility.",
       "gate": "backend",
       "test_file_identical_to_green_baseline": true,
-      "candidate_execution": "pending full CI; source presence is not a pass"
+      "candidate_execution": "pending full CI; source presence is not a pass",
+      "supplemental_local_evidence": [
+        "docs/verification/NOTIFICATION-MATRIX-2026-11-01.md"
+      ]
     },
     "channels": {
       "path": "internal/notifications/transport_test.go",
@@ -1899,10 +1958,14 @@
           "present_in_green_baseline": false
         }
       ],
-      "scope": "Real-backend desktop/narrow joined conflict/current-review/local override/selected publish; both CI2 cases failed early strict selection. Scoped selector fix is included; rerun pending.",
+      "scope": "Real-backend desktop/narrow joined conflict409/current re-review/local overrides/selected publication/feed equality and unchanged sibling after reload.",
       "gate": "browser new",
       "test_file_identical_to_green_baseline": false,
-      "candidate_execution": "CI2 both width cases failed early on strict selector, not accepted. Scoped selector fix66b6a27 is included; rerun pending."
+      "candidate_execution": "PASSED2/2 in CI4 attempt0. Full later steps executed. Both screenshots caught entrance translucency; settled visual capture remains pending.",
+      "execution_source": {
+        "remote_sha": "81dd62054e36b45c4c2f2c670d121ad3a7553b68",
+        "run_url": "https://github.com/isning/RouteWeaver/actions/runs/41351035317"
+      }
     },
     "backup": {
       "path": "internal/store/backup_test.go",
@@ -1951,10 +2014,14 @@
           "present_in_green_baseline": true
         }
       ],
-      "scope": "Real file download/select/wrong key/fresh inactive DB; exact restored DB CLI identity/config and unchanged source. Passed 47 baseline, new isolation harness pending CI2.",
+      "scope": "Real download/file selection/wrong password/fresh inactive database; exact restored-file CLI identity/config join and unchanged original service.",
       "gate": "browser",
       "test_file_identical_to_green_baseline": false,
-      "candidate_execution": "CI2 actual browser passed at exact eafb493 source; later d17c61b production composition still awaits full CI."
+      "candidate_execution": "PASSED1/1 in CI4 on isolated ordinary CLI, not mocked backend. No new secret-bearing screenshots.",
+      "execution_source": {
+        "remote_sha": "81dd62054e36b45c4c2f2c670d121ad3a7553b68",
+        "run_url": "https://github.com/isning/RouteWeaver/actions/runs/41351035317"
+      }
     },
     "account": {
       "path": "internal/httpapi/account_security_test.go",
@@ -1989,10 +2056,14 @@
           "present_in_green_baseline": true
         }
       ],
-      "scope": "Two actual browser account journeys passed47; new per-test CLI isolation must rerun.",
+      "scope": "Two real-backend password/session rotation and admin reset/forced-password journeys using per-test ordinary isolated CLI.",
       "gate": "browser",
       "test_file_identical_to_green_baseline": false,
-      "candidate_execution": "CI2 actual browser passed at exact eafb493 source; later d17c61b production composition still awaits full CI."
+      "candidate_execution": "PASSED2/2 in CI4; source-bound functional evidence, no secret screenshots.",
+      "execution_source": {
+        "remote_sha": "81dd62054e36b45c4c2f2c670d121ad3a7553b68",
+        "run_url": "https://github.com/isning/RouteWeaver/actions/runs/41351035317"
+      }
     },
     "mfa-browser": {
       "path": "web/tests/mfa-backend.ui.spec.ts",
@@ -2003,10 +2074,14 @@
           "present_in_green_baseline": false
         }
       ],
-      "scope": "Actual TOTP-time browser enrollment/login/admin recovery, no invented recovery codes; passed CI2 at eafb493, newer composition still pending.",
+      "scope": "Real TOTP enrollment/login/admin recovery using per-test ordinary isolated CLI; no invented recovery codes.",
       "gate": "browser new",
       "test_file_identical_to_green_baseline": false,
-      "candidate_execution": "CI2 actual browser passed at exact eafb493 source; later d17c61b production composition still awaits full CI."
+      "candidate_execution": "PASSED1/1 in CI4; no authenticator secret screenshots/traces.",
+      "execution_source": {
+        "remote_sha": "81dd62054e36b45c4c2f2c670d121ad3a7553b68",
+        "run_url": "https://github.com/isning/RouteWeaver/actions/runs/41351035317"
+      }
     },
     "invite-browser": {
       "path": "web/tests/session-recovery.ui.spec.ts",
@@ -2020,7 +2095,11 @@
       "scope": "Actual invitation identity switch clears prior owner workspace/cache; not full service expiry/renewal journey.",
       "gate": "browser",
       "test_file_identical_to_green_baseline": true,
-      "candidate_execution": "pending full CI; source presence is not a pass"
+      "candidate_execution": "PASSED 1/1 exact indexed selectors in CI4, attempt 0. Only the stated scope is established; full candidate integration remains pending.",
+      "execution_source": {
+        "remote_sha": "81dd62054e36b45c4c2f2c670d121ad3a7553b68",
+        "run_url": "https://github.com/isning/RouteWeaver/actions/runs/41351035317"
+      }
     },
     "origin": {
       "path": "internal/httpapi/subscription_origin_test.go",
@@ -2063,7 +2142,10 @@
       "scope": "DOM rejected/stale origin draft retention and explicit verified activation; fixture backend.",
       "gate": "web DOM",
       "test_file_identical_to_green_baseline": true,
-      "candidate_execution": "pending full CI; source presence is not a pass"
+      "candidate_execution": "pending full CI; source presence is not a pass",
+      "supplemental_local_evidence": [
+        "docs/verification/SETTINGS-ORIGIN-JOURNEY-2026-11-01.md"
+      ]
     },
     "service-ui": {
       "path": "web/src/subscription-overview-status.dom.test.tsx",
@@ -2082,7 +2164,10 @@
       "scope": "DOM policy availability independent of published feed and actual runtime.",
       "gate": "web DOM",
       "test_file_identical_to_green_baseline": false,
-      "candidate_execution": "pending full CI; source presence is not a pass"
+      "candidate_execution": "pending full CI; source presence is not a pass",
+      "supplemental_local_evidence": [
+        "docs/verification/SERVICE-CENTER-E09-2026-11-01.md"
+      ]
     },
     "first-feed-browser": {
       "path": "web/tests/first-subscription.ui.spec.ts",
@@ -2096,7 +2181,11 @@
       "scope": "Browser first subscription save/cancel/review/publish; not full ordinary invited account service/reset journey.",
       "gate": "browser",
       "test_file_identical_to_green_baseline": true,
-      "candidate_execution": "pending full CI; source presence is not a pass"
+      "candidate_execution": "PASSED 1/1 exact indexed selectors in CI4, attempt 0. Only the stated scope is established; full candidate integration remains pending.",
+      "execution_source": {
+        "remote_sha": "81dd62054e36b45c4c2f2c670d121ad3a7553b68",
+        "run_url": "https://github.com/isning/RouteWeaver/actions/runs/41351035317"
+      }
     },
     "collection-delete": {
       "path": "internal/httpapi/collection_delete_test.go",
@@ -2145,10 +2234,14 @@
           "present_in_green_baseline": false
         }
       ],
-      "scope": "Actual 320px browser candidate for dependency context and keyboard return; controlled HTTP fixture.",
+      "scope": "Controlled HTTP actual-App320 dependency context, disabled referenced deletion and repeated cancel/focus/geometry.",
       "gate": "browser new",
-      "candidate_execution": "UNRUN until next authorized CI; source/discovery is not geometry evidence.",
-      "test_file_identical_to_green_baseline": false
+      "candidate_execution": "PASSED1/1 in CI3 and CI4. Exact CI4 screenshot readable. This does not prove backend deletion authorization.",
+      "test_file_identical_to_green_baseline": false,
+      "execution_source": {
+        "remote_sha": "81dd62054e36b45c4c2f2c670d121ad3a7553b68",
+        "run_url": "https://github.com/isning/RouteWeaver/actions/runs/41351035317"
+      }
     },
     "endpoint-impact": {
       "path": "internal/httpapi/endpoint_impact_test.go",
@@ -2192,10 +2285,14 @@
           "present_in_green_baseline": false
         }
       ],
-      "scope": "Controlled HTTP actual-App 320px impact review and focus candidate.",
+      "scope": "Controlled HTTP actual-App320 named impact/consequences render; cancellation focus acceptance remains incomplete.",
       "gate": "browser new",
-      "candidate_execution": "UNRUN until next authorized CI.",
-      "test_file_identical_to_green_baseline": false
+      "candidate_execution": "FAILED in CI4 after readable impact screenshot: Escape did not restore editor Save focus. Product fix d5b4b3b is prepared in23650ca, not browser-verified.",
+      "test_file_identical_to_green_baseline": false,
+      "execution_source": {
+        "remote_sha": "81dd62054e36b45c4c2f2c670d121ad3a7553b68",
+        "run_url": "https://github.com/isning/RouteWeaver/actions/runs/41351035317"
+      }
     },
     "provider-policy": {
       "path": "internal/store/provider_admission_test.go",
@@ -2213,7 +2310,7 @@
       ],
       "scope": "Explicit suspend-managed policy checks exact immutable applied hops; denies unknown/exhausted selected evidence, preserves final settlement, recovers on available evidence; concurrent handles serialize.",
       "gate": "backend Store",
-      "candidate_execution": "Focused race and independent public-seam review passed; full next composition pending.",
+      "candidate_execution": "CI4 store race package passed on 81dd620; named non-opt-in policy tests are present in that source. Original focused race/public-seam review retained; no target enforcement inference.",
       "test_file_identical_to_green_baseline": false
     },
     "provider-lease": {
@@ -2251,7 +2348,7 @@
       ],
       "scope": "Semantic migration3 persists after disabling; unaware binary/restore cannot silently ignore enforcing records.",
       "gate": "backend Store",
-      "candidate_execution": "Focused race plus old-eafb493 physical DB/snapshot/encrypted archive refusal probe passed; full next composition pending.",
+      "candidate_execution": "CI4 store race package passed. Separate old-eafb493 physical/snapshot/encrypted refusal probe remains source-bound local evidence, not inferred from package success.",
       "test_file_identical_to_green_baseline": false
     },
     "provider-capacity": {
@@ -2265,7 +2362,7 @@
       ],
       "scope": "Capacity inventory recognizes semantic migration3; exact added record counts and monotonic marker retained.",
       "gate": "backend Store",
-      "candidate_execution": "Local focused composed regression passed at d17c61b; full next composition pending.",
+      "candidate_execution": "CI4 store race package passed with named semantic-fence inventory regression present. No production disk-capacity inference.",
       "test_file_identical_to_green_baseline": false
     },
     "provider-native": {
@@ -2279,7 +2376,7 @@
       ],
       "scope": "Actual owned managed flow closes after explicit provider exhaustion, new flow denied, restored current evidence permits new flow, second exhaustion and exact 142-byte native/CP settlement; identity unchanged.",
       "gate": "managed native",
-      "candidate_execution": "Local -race native run passed 46.49s, zero selected skips; first closure 3.041s. Not stock traffic/whole-provider enforcement or SLA. Mandatory CI case awaiting next run.",
+      "candidate_execution": "PASSED named actual managed native case at CI4 job 124981014121,47.68s; prior local 46.49s/142-byte evidence remains its own receipt. Not stock/whole-provider/SLA.",
       "test_file_identical_to_green_baseline": false
     },
     "provider-ui": {
@@ -2324,10 +2421,14 @@
           "present_in_green_baseline": false
         }
       ],
-      "scope": "Ordinary invited user actual editor authors source+aggregate recipe, compares stages, saves/reopens, cancels then publishes selected feed; sibling/source unchanged.",
+      "scope": "Real ordinary invited-user source+aggregate editor→stage comparison→save/reopen→selected feed publication; sibling/source unchanged.",
       "gate": "browser new",
-      "candidate_execution": "UNRUN until next authorized CI.",
-      "test_file_identical_to_green_baseline": false
+      "candidate_execution": "PASSED1/1 in CI3 and CI4 on ordinary isolated CLI. Named E02 joined scope met, not every processing permutation.",
+      "test_file_identical_to_green_baseline": false,
+      "execution_source": {
+        "remote_sha": "81dd62054e36b45c4c2f2c670d121ad3a7553b68",
+        "run_url": "https://github.com/isning/RouteWeaver/actions/runs/41351035317"
+      }
     },
     "cycle-api": {
       "path": "web/tests/cycle-renewal-backend.api.spec.ts",
@@ -2352,10 +2453,14 @@
           "present_in_green_baseline": false
         }
       ],
-      "scope": "Four real browser candidates: account policy editor, expiry renewal, cancelled/explicit reset, new ordinary-user login/reload and UTC+8 countdown/no reset.",
+      "scope": "Four real monthly/anniversary/fixed-days/none editor→renewal→cancelled/explicit reset→ordinary-user reload/countdown journeys.",
       "gate": "browser new",
-      "candidate_execution": "UNRUN until next authorized CI; synthetic public meter submission is not real payload.",
-      "test_file_identical_to_green_baseline": false
+      "candidate_execution": "PASSED4/4 in CI3 and CI4 on ordinary isolated CLI. Named E10 scope met; synthetic meter submission is not real payload or full historical export.",
+      "test_file_identical_to_green_baseline": false,
+      "execution_source": {
+        "remote_sha": "81dd62054e36b45c4c2f2c670d121ad3a7553b68",
+        "run_url": "https://github.com/isning/RouteWeaver/actions/runs/41351035317"
+      }
     },
     "client-delivery": {
       "path": "internal/httpapi/client_delivery_native_test.go",
@@ -2373,7 +2478,7 @@
       ],
       "scope": "Invited-user exact downloaded feed, actual Mihomo/sing-box, scoped SOCKS origin/domain delegation/reject rule/no fallback, selected link rotate/revoke; peer counts all refused attempts.",
       "gate": "native client process new",
-      "candidate_execution": "Bounded SOCKS fixture and reject-proof negative mutation review passed locally; actual clients UNRUN until CI. No local DNS/fake-IP/TUN/multi-hop-client claim.",
+      "candidate_execution": "PASSED actual Mihomo 1.19.32 and sing-box 1.14.3 client subtests at CI4 native job 124981014121; configured UDP DNS/NXDOMAIN subtests also passed separately. No device/TUN/IPv6/universal DNS claim. See NONBROWSER-EVIDENCE-RECONCILIATION-2026-11-01.json.",
       "test_file_identical_to_green_baseline": false
     },
     "operational-recovery": {
@@ -2387,7 +2492,7 @@
       ],
       "scope": "Native payload during complete encrypted backup, fresh inactive restore, exact accounting checkpoint, brief/long authority loss and explicit stopped-runtime reconciliation/new-generation recovery.",
       "gate": "managed native drill",
-      "candidate_execution": "Local -race actual managed drill and independent 14-case review passed; production eafb493 binding retained. Changed next full composition pending.",
+      "candidate_execution": "OPERATIONS-DRILLS-2026-11-01.md and its receipt bind 14 explicit local race cases to production eafb493: native payload during backup, inactive fresh restore, exact checkpoint accounting, authority loss, final obligation/replay and operator-assisted restart. CI4 independently passes ordinary backend packages and standard continuous/EOF native tests, but does not opt into TestNativeManagedOperationalRecovery. Preserve that distinction and local timings; target RPO/RTO and the later sample 410 long-reference failure remain open.",
       "test_file_identical_to_green_baseline": false
     },
     "notification-drill": {
@@ -2401,7 +2506,7 @@
       ],
       "scope": "Real authenticated outbox shows sanitized retry failure; reopened worker uses same event ID, eventual accepted event not resent.",
       "gate": "backend real HTTP/local sink",
-      "candidate_execution": "Local -race and independent 14-case review passed; logical backoff advance not wall-clock provider recovery.",
+      "candidate_execution": "Local source-bound 14-case race receipt passed. CI4 httpapi race package passed; this ordinary test has no opt-in skip. Does not establish external provider delivery or the separately opt-in complete native drill.",
       "test_file_identical_to_green_baseline": false
     },
     "lossless-history": {
@@ -2420,7 +2525,7 @@
       ],
       "scope": "Single-snapshot row-at-time historical Usage, exact totals/cancellation; restart still invalidates derived projections after possible offline bypass.",
       "gate": "backend Store",
-      "candidate_execution": "Focused race and full non-race Store on streaming composition passed; capacity/full current composition not inferred.",
+      "candidate_execution": "CI4 store race package passed. Resumable complete-only cold rebuild, owner-history index/trigger protection and lossless multipart logical backup are now integrated; see NONBROWSER-EVIDENCE-RECONCILIATION-2026-11-01.json. Legacy-reader/100k opt-in cases remain separate local evidence.",
       "test_file_identical_to_green_baseline": false
     },
     "history-capacity": {
@@ -2444,94 +2549,102 @@
       ],
       "scope": "Bounded read-only count/byte pressure and 80% warning without deleting history; unavailable/unknown schema fails closed.",
       "gate": "backend Store",
-      "candidate_execution": "Focused Store/HTTP race and21 DOM cases passed; this is explicit operator check, not retention or admission cutoff.",
+      "candidate_execution": "CI4 store race package passed. Bounded inventory/80% warnings remain explicit operator checks, not retention or admission cutoff; multipart backup and resumable rebuild are separate integrated paths, not removal of finite disk limits.",
       "test_file_identical_to_green_baseline": false
     }
   },
   "remaining_work": {
     "E01": {
       "kind": "integration_evidence",
-      "task": "Complete next-candidate CI. CI2 exact eafb493 browser had178 pass/3 strict-selector failures, not green; MFA/inbox passed. Fix66b6a27 is included. Confirm new/changed named cases and all required native jobs; do not infer new browser count without discovery."
+      "task": "Complete next exact-source integration. CI4 has195unique/191pass/4fail: endpoint focus and activity history geometry320/390/640. Prepared endpoint focus and settled-motion capture fixes in23650ca are not browser passes. Confirm all required non-browser gates separately."
     },
     "E02": {
       "kind": "joined_journey_evidence",
-      "task": "One actual processing API case passed. Execute the new ordinary-user processing browser editor→compare→save/reopen→selected publish case; assert sibling/source invariants. No missing editor implementation is claimed from pending execution.",
-      "status": "local API passed; joined browser authored/unrun"
+      "task": "Named ordinary-user processing editor→compare→save/reopen→selected publish and sibling/source invariants passed CI3/CI4. Other processing gaps E03/E05 and integrated candidate gate E01 remain.",
+      "status": "named joined browser scope satisfied at CI4; E01 integration gate remains"
     },
     "E03": {
       "kind": "targeted_test_gap",
-      "task": "Add explicit stable-sort equal-key/reorder/disabled-step fixtures and no-op publication assertion with precise stage change reasons; source implementation uses stable sort but current indexed pipeline tests do not prove those cells."
+      "task": "Stable-sort 12 equal-key/source-order combinations, ordered/disabled stages and exact changed/removed IDs passed local conversion race tests. The real HTTP no-op journey passed: explicit publication creates a new revision but preserves artifact bytes/access identity, sibling and source. No textual per-field explanation or revision-idempotence claim. See PROCESSING-STAGE-CONTRACTS-2026-11-01.md.",
+      "status": "named local conversion/HTTP race scope passed; final-source integration pending"
     },
     "E04": {
       "kind": "joined_journey_evidence",
-      "task": "Shared endpoint dependency impact, exact draft/set CAS and metadata stripping are now implemented. Execute new 320px review/focus browser candidate and preserve graph/ordered-view evidence boundary; no new deployment/exit rewrite is implied.",
-      "status": "shared endpoint implementation/local HTTP+DOM passed; native browser pending"
+      "task": "Retain named320 impact content and geometry, and verify Escape returns to exact Save opener after asynchronous review. CI4 failed this focus assertion. Real dependency/CAS backend evidence stays separate; no deployment or exit rewrite implied.",
+      "status": "impact rendering passed; CI4 Escape focus failed; prepared fix unverified in browser"
     },
     "E05": {
       "kind": "runtime_evidence",
-      "task": "Execute both new TestNativeInvitedUserDownloadedClientTraffic clients in authorized CI. Positive peer attempts/reject/no-fallback must pass. This closes stated downloaded-feed domain delegation/route behavior only, not local DNS/fake-IP/TUN/IPv6 or all protocols; claimed provider-resource loading remains its separately named scope.",
-      "status": "downloaded client process cases authored/unrun"
+      "task": "CI4 exact 81dd620 native job 124981014121 passed both TestNativeInvitedUserDownloadedClientTraffic and TestNativeDownloadedClientConfiguredDNS for Mihomo and sing-box, including refused-peer/no-fallback and owned UDP/NXDOMAIN assertions. This is actual loopback client execution, not TUN/fake-IP/IPv6/all-protocol/device integration or all provider-resource loading. See NONBROWSER-EVIDENCE-RECONCILIATION-2026-11-01.json.",
+      "status": "named native client and configured-DNS scope passed CI4; target device/network scope remains"
     },
     "E06": {
       "kind": "joined_journey_evidence",
-      "task": "Source update changes dynamic nested members; preview vs frozen prior output and explicit publication preserve chosen strategy/depth. Do not turn unsupported sing-box fallback into manual."
+      "task": "Four supported Mihomo strategies passed joined real HTTP source addition → three-level dynamic review → explicit selected publication, retaining frozen sibling, recipe, depth and strategy. Unsupported sing-box fallback/balance reject without substitution. Focused race run also includes three existing source/frozen-review regressions. This is not browser or native traffic execution. See NESTED-SOURCE-PUBLICATION-2026-11-01.md.",
+      "status": "four-strategy joined HTTP race scope passed locally; browser/native scopes separate"
     },
     "E07": {
       "kind": "joined_journey_evidence",
-      "task": "Map or add structured rule/DNS/sniff/TUN editors to positive native outputs and conflict/failed-save retention, including fixed/follow owned resource update."
+      "task": "DNS enable now binds final to the generated resolver ID (recorded DOM RED/GREEN). Local HTTP race matrix proves exact structured output and pinned/follow owned-resource publication, stale review and sibling isolation. Two corrected real-backend editor browser cases are authored UNRUN; publication in those cases is API-driven. Existing native parser evidence is separate, not a new native run. Mihomo TUN remains unsupported; sing-box TUN output is not host TUN activation. Real browser conflict-flow acceptance is not inferred from simulated DOM 409. See STRUCTURED-RULE-JOURNEY-2026-11-01.md and STRUCTURED-BROWSER-SOURCE-REVIEW-2026-11-01.md.",
+      "status": "DNS identity fix and local DOM/HTTP proofs; two browser cases UNRUN; native output scope separate"
     },
     "E08": {
       "kind": "operational_evidence",
-      "task": "The 14-case focused race drill set now joins actual managed payload, backup while active, exact checkpoint accounting, authority loss, final obligation/replay and operator-assisted restart. Reuse source-bound measurements; no need invent new failure dimensions or call it target RTO/SLA.",
-      "status": "bounded local operational reference verified; new full composition pending"
+      "task": "OPERATIONS-DRILLS-2026-11-01.md and its receipt bind 14 explicit local race cases to production eafb493: native payload during backup, inactive fresh restore, exact checkpoint accounting, authority loss, final obligation/replay and operator-assisted restart. CI4 independently passes ordinary backend packages and standard continuous/EOF native tests, but does not opt into TestNativeManagedOperationalRecovery. Preserve that distinction and local timings; target RPO/RTO and the later sample 410 long-reference failure remain open.",
+      "status": "14-case source-bound local race drill passed; standard CI4 is not complete-drill execution"
     },
     "E09": {
       "kind": "joined_journey_evidence",
-      "task": "Ordinary invited user real backend: own granted service→subscription→download/rotate→old-link denial with other user/feed unchanged; desktop/narrow keyboard service-center path."
+      "task": "Real invited-user legacy platform-entry service delivery/selected rotation API companion passed locally, preserving sibling/other-user feeds and rejecting old URL. Two browser journeys include keyboard/download/exact-write/focus/settled geometry assertions but remain UNRUN. Not managed forwarding, native execution or browser subscription creation. See SERVICE-CENTER-E09-2026-11-01.md and JOINED-BROWSER-SOURCE-REVIEW-2026-11-01.md.",
+      "status": "API companion passed locally; corrected two-width browser journey UNRUN"
     },
     "E10": {
       "kind": "joined_journey_evidence",
-      "task": "Execute four new real browser cycle/renewal/reset/user-view cases. Local API already proves monthly/anniversary/fixed-days/none,150 weighted synthetic usage, anchor/window preservation and replay/audit. Not actual metered payload or full historical export.",
-      "status": "four actual API cases passed; four joined browser cases authored/unrun"
+      "task": "Four named real cycle/renewal/reset/user-view browser cases passed CI3/CI4. Synthetic150weighted usage and countdown are not actual metered payload, historical export or all account lifecycle permutations.",
+      "status": "named joined browser scope satisfied at CI4; E01 integration gate remains"
     },
     "E11": {
       "kind": "bounded_matrix_evidence",
-      "task": "Declare finite event×audience×channel matrix and exercise failure/retry/expiry visibility with local sinks; real external destinations need their own permission, not a software feature prerequisite."
+      "task": "Local notification race receipt records 19 top-level / 38 total terminal test passes. Seven event/audience rows × automatic external delivery off/on, three explicit-channel retry cases, two terminal-failure channels and exact-expiry cancellation are bounded recording-sink evidence. Existing loopback TLS SMTP/HTTPS tests pass separately; not every matrix cell crosses every wire adapter. Transport acceptance is not human receipt. See NOTIFICATION-MATRIX-2026-11-01.md and evidence/notification-matrix/results.json.",
+      "status": "finite notification matrix passed local package race; external deployment gate remains"
     },
     "E12": {
       "kind": "targeted_runtime_evidence",
-      "task": "Second actually supported sing-box version transition and failure rollback if cross-version support is claimed for that adapter; current actual version transition evidence is Xray only."
+      "task": "CI4 native job 124981014121 passed both failed-new=false/true outcomes of TestNativeStockSingBoxUpgradeKeepsExactRuntimeAndLease, using verified historical 1.14.3 to current 1.14.4. Version 1.14.3 remains retired for install/upgrade; this is not evidence of two currently installable versions or authorization to roll back security fixes. See SINGBOX-HISTORICAL-UPGRADE-2026-11-01.md and NONBROWSER-EVIDENCE-RECONCILIATION-2026-11-01.json.",
+      "status": "historical sing-box transition and failed-new recovery passed CI4; supported-version scope remains explicit"
     },
     "E13": {
       "kind": "joined_journey_evidence",
-      "task": "Real backend UI settings/domain failed/stale draft and saved-vs-effective activation state; existing DOM fixture and separate HTTP tests do not alone establish joined browser behavior."
+      "task": "Isolated settings-origin API companion and prior HTTP/DOM checks passed locally. Two real backend browser cases for invalid/stale draft retention, saved/effective separation and explicit default activation remain UNRUN. Reserved custom-domain drafts do not prove external DNS/HTTPS verification or custom-domain activation. See SETTINGS-ORIGIN-JOURNEY-2026-11-01.md and JOINED-BROWSER-SOURCE-REVIEW-2026-11-01.md.",
+      "status": "API/DOM companions passed locally; two-width browser journey UNRUN"
     },
     "I01": {
       "kind": "implemented_pending_integrated_acceptance",
-      "task": "Configurable advisory/suspend-managed is implemented, including explicit UI consequence, exact-hop source freshness/cycle/expiry, settlement before denial, native closure/recovery and monotonic downgrade marker. Complete current mandatory native and browser/DOM integration. No claim of stock traffic enforcement or whole-provider billing cutoff.",
+      "task": "CI4 native job 124981014121 explicitly passed TestNativeManagedProviderSuspensionAndRecovery in 47.68s. Store race package also passed on that source; local source-bound 142-byte settlement/freshness/fence evidence remains separately recorded. Controlled320 consequence/opt-in cancellation browser passed CI4. No stock traffic enforcement, complete provider billing or target SLA is inferred. See NONBROWSER-EVIDENCE-RECONCILIATION-2026-11-01.json.",
       "source": [
         "docs/product/CAPABILITY-REGISTER.md#k04-供应商资源与额度运营",
         "internal/observability/model.go",
         "web/src/ObservationForms.tsx",
         "internal/observability/README.md"
       ],
-      "status": "implementation omission closed locally; current integration pending",
+      "status": "bounded managed native scope passed CI4 plus prior controlled320 browser; full newer composition pending",
       "previous_finding": "Confirmed absent behavior at eafb493; superseded by implementation in inspected d17c61b composition, not erased from history."
     },
     "I02": {
       "kind": "implemented_pending_integrated_acceptance",
-      "task": "Owner-scoped dependency preview and explicit collection deletion now exist. Local HTTP/DOM cover all named blockers, stale dependencies, failures/cancel and source preservation. Execute new narrow browser case; retain atomic backend race guards.",
+      "task": "Owner-scoped dependency/delete implementation remains separately HTTP/DOM-tested. Controlled320 browser dependency/no-delete/cancel/focus case passed CI3/CI4. Do not infer every backend deletion outcome from this fixture. Full integrated candidate acceptance remains E01.",
       "source": [
         "docs/tickets/catalog.json (RW-06 acceptance2)",
         "web/src/Sources.tsx (CollectionsPage)",
         "internal/httpapi/tenant.go (deleteTenant)"
       ],
-      "status": "implementation omission closed locally; browser pending",
+      "status": "implementation/local HTTP+DOM and controlled320 browser case passed; full integration E01 remains",
       "previous_finding": "Confirmed absent behavior at eafb493; superseded by implementation in inspected d17c61b composition, not erased from history."
     },
     "D01": {
       "kind": "contract_clarification",
-      "task": "Current importer rejects any unsupported/malformed member atomically; supported config extraction explicitly reports ignored non-node sections. This is a concrete safe contract, not absence of import. Decide whether mixed invalid members must allow reviewed partial acceptance before claiming that behavior; do not silently change safety semantics."
+      "task": "Importer package and 16 real HTTP mixed-import cases passed locally: URI/base64/Mihomo/sing-box × unsupported/malformed later member × auto/manual. Even acceptPartial:true cannot replace accepted snapshot/history/diagnostics or published feeds with partial input. Rejected private draft/revision intentionally persists for correction; atomicity is accepted connection state, not all source metadata. Supported connection extraction still reports ignored policy sections. See MIXED-IMPORT-ATOMICITY-2026-11-01.md.",
+      "status": "atomic accepted-state contract proved in 16 local HTTP race cases; no partial acceptance feature"
     },
     "R01": {
       "kind": "deployment_gate_not_ordinary_feature_prerequisite",
@@ -2539,8 +2652,8 @@
     },
     "R02": {
       "kind": "measured_operational_risk",
-      "task": "Historical Usage now streams; explicit bounded history inventory exposes 80% warnings and unknowns. Raw history remains and complete backup/cold-rebuild caps are unchanged. Operator manual check is not automatic cutoff/retention: long-run window and lossless archive/rebuild solution remain open production gates per HISTORY-CAPACITY.md; do not erase data or claim this risk solved.",
-      "status": "lossless memory fix and bounded warning passed locally; lifecycle capacity still open"
+      "task": "The fixed total-row notification reconstruction cliff now has a complete-only resumable usage rebuild; owner-history indexing reduces general usage scans; offline Linux backup-set create/restore spans encrypted parts under explicit finite budgets while preserving raw meter receipts, exact old retries and unresolved holds. CI4 store/backup/core race packages passed on the integrated source; opt-in legacy-reader/100k probes remain separate local evidence. HTTP v1/v2 single-file limits remain unchanged, and admission canonical fallback can still scan history. No pruning, automatic retention/cutoff or infinite disk guarantee. Target disk/headroom, full-set custody/restore time, representative long-run load and the unclassified sample 410 read/cleanup failure remain open. See docs/operations/BACKUP-SETS.md, RESUMABLE-USAGE-REVIEW-MILESTONE-2026-11-01.md, OWNER-HISTORY-INDEPENDENT-REVIEW-2026-11-01.md and NONBROWSER-EVIDENCE-RECONCILIATION-2026-11-01.json.",
+      "status": "resumable rebuild, owner index and bounded lossless backup sets integrated; lifecycle capacity/target acceptance open"
     },
     "R03": {
       "kind": "deployment_operation_gate",
@@ -2552,7 +2665,49 @@
     "url": "https://github.com/isning/RouteWeaver/actions/runs/41337032895",
     "as_of": "2026-11-01T18:44:00Z",
     "browser": "181 unique cases:178 passed,3 strict-selector failures; MFA and inbox passed; two template cases failed early. No all-green claim.",
-    "other_gates": "backend/web/native still running at latest parent observation; do not infer their outcome",
-    "followup": "Test-only scoped selector fix66b6a27 included in inspected next composition; affected browsers not yet rerun."
+    "other_gates": "Historical18:44 observation was still running; non-browser terminal outcomes are outside this browser-only reconciliation and are not inferred.",
+    "followup": "Historical CI2 failure retained. Superseded for named browser cases by CI3/CI4 below; template joined flow passes CI4, not merely a prepared selector fix."
+  },
+  "ci3_browser": {
+    "remote_sha": "aaabe51db132961186bfd704e6f16c8fbb37e724",
+    "run_id": 41348313792,
+    "passed": 183,
+    "failed": 12,
+    "skipped": 0,
+    "flaky": 0
+  },
+  "ci4_browser": {
+    "remote_sha": "81dd62054e36b45c4c2f2c670d121ad3a7553b68",
+    "tree": "b51789930b37bb00c3b31da9a573785acbbbb15a",
+    "url": "https://github.com/isning/RouteWeaver/actions/runs/41351035317",
+    "passed": 191,
+    "failed": 4,
+    "skipped": 0,
+    "flaky": 0,
+    "unique_cases": 195,
+    "files": 52,
+    "failures": [
+      "endpoint impact320 Escape does not restore Save focus",
+      "activity history320 immediate geometry",
+      "activity history390 immediate geometry",
+      "activity history640 immediate geometry"
+    ],
+    "receipt": "checklist-evidence-20261101/browser-41351035317/RECEIPT.md",
+    "receipt_sha256": "3358c85ecf697a9e625ff60daab7d19e1f8338232dc9fb9c211a2fbfc775bee8"
+  },
+  "ci4_nonbrowser": {
+    "run_id": 41351035317,
+    "head_sha": "81dd62054e36b45c4c2f2c670d121ad3a7553b68",
+    "tree": "b51789930b37bb00c3b31da9a573785acbbbb15a",
+    "receipt": "NONBROWSER-EVIDENCE-RECONCILIATION-2026-11-01.json",
+    "scope": "selected exact native terminal events; backend package-level race outcomes, not opt-in case execution or full workflow success"
+  },
+  "local_acceptance_reconciliation": {
+    "source": "97448847cbfab1a16df2fff5a6571ccca465beca",
+    "tree": "947ef73831ca42417098b9811ccf6c4d3fe2fd37",
+    "receipt": "docs/verification/FINAL-LOCAL-ACCEPTANCE-RECONCILIATION-2026-11-01.json",
+    "final_source_gates": "PASS at 2026-11-01 22:37 UTC: static 63 helpers/architecture/actionlint; API 31 (includes one pure TOTP vector); web 195 files/2108 tests, types/build; source/tree unchanged clean. 201 ordinary browser cases and one native bridge remain UNRUN; no full-CI promotion.",
+    "browser_native_identity_join": "One same-instance browser-created receipt → real owned native reconciler observation → CP/UI confirmed identity → API stop/stale rejection case authored UNRUN. API companion/compile/typecheck/discovery are not execution of this bridge. See BROWSER-NATIVE-IDENTITY-JOIN-2026-11-01.md.",
+    "limits": "All story/ticket statuses and prerequisite/full-CI/deployment gates unchanged. NET03 original sample 410 read/cleanup failure remains open."
   }
 }

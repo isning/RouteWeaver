@@ -888,6 +888,7 @@ function InventoryEditor({
             type="submit"
             form={formId}
             pending={mutation.isPending || impact.isPending}
+            keepFocusableWhilePending={impact.isPending}
             variant="default"
           >
             保存

@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import {
+  act,
   cleanup,
   render,
   screen,
@@ -51,7 +52,15 @@ afterEach(() => {
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
 });
-function setup({ failPreview = false, failSave = false } = {}) {
+function setup({
+  failPreview = false,
+  failSave = false,
+  previewGate,
+}: {
+  failPreview?: boolean;
+  failSave?: boolean;
+  previewGate?: Promise<void>;
+} = {}) {
   const reviews: Record<string, unknown>[] = [];
   const writes: { value: Record<string, unknown>; headers: Headers }[] = [];
   vi.stubGlobal(
@@ -66,6 +75,7 @@ function setup({ failPreview = false, failSave = false } = {}) {
         expect(value.revisionToken).toBeUndefined();
         expect(value.connection).toEqual(endpointImpactConnection);
         reviews.push(value);
+        await previewGate;
         if (failPreview && reviews.length === 1)
           return json({ detail: "影响清单暂时不可用" }, 503);
         return json({
@@ -212,4 +222,42 @@ it("requires a fresh review after dependency conflict and writes only the review
   await waitFor(() =>
     expect(screen.queryByRole("dialog", { name: "编辑监听端点" })).toBeNull(),
   );
+});
+
+it("keeps the preview opener focusable while blocking duplicate submissions and restores it after Escape", async () => {
+  let release!: () => void;
+  const previewGate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const { reviews, writes } = setup({ previewGate });
+  const { user, name, save } = await edit();
+  await user.click(save);
+  await waitFor(() => expect(reviews).toHaveLength(1));
+  expect(save.getAttribute("aria-busy")).toBe("true");
+  expect(save.getAttribute("aria-disabled")).toBe("true");
+  // Native disabling blurs this opener in browsers, unlike jsdom. Keep the
+  // logical task owner focusable while ActionButton/form guards block work.
+  expect((save as HTMLButtonElement).disabled).toBe(false);
+  expect(document.activeElement).toBe(save);
+  await user.click(save);
+  await user.keyboard("{Enter}");
+  expect(reviews).toHaveLength(1);
+  expect(writes).toHaveLength(0);
+  await act(async () => {
+    release();
+    await previewGate;
+  });
+  const review = await screen.findByRole("alertdialog", {
+    name: "保存端点「Shared entry」的修改？",
+  });
+  await waitFor(() =>
+    expect(document.activeElement).toBe(
+      within(review).getByRole("button", { name: "返回编辑" }),
+    ),
+  );
+  await user.keyboard("{Escape}");
+  await waitFor(() => expect(document.activeElement).toBe(save));
+  expect((name as HTMLInputElement).value).toBe("Reviewed name");
+  expect(reviews).toHaveLength(1);
+  expect(writes).toHaveLength(0);
 });

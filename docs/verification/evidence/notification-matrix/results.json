@@ -1,0 +1,280 @@
+{
+  "command": "go test ./internal/notifications -count=1 -race -json",
+  "base": "23650ca",
+  "production_changes": false,
+  "results": [
+    {
+      "Time": "2026-11-02T06:02:01.718445651+08:00",
+      "Action": "pass",
+      "Package": "routeweaver/internal/notifications",
+      "Test": "TestWebhookSignedHTTPSStableEventIDAndRejectedResponse",
+      "Elapsed": 0.02
+    },
+    {
+      "Time": "2026-11-02T06:02:01.747280561+08:00",
+      "Action": "pass",
+      "Package": "routeweaver/internal/notifications",
+      "Test": "TestSMTPVerifiedTLSAcceptanceStableMessageIDAndNoPlaintextFallback",
+      "Elapsed": 0.03
+    },
+    {
+      "Time": "2026-11-02T06:02:01.758574172+08:00",
+      "Action": "pass",
+      "Package": "routeweaver/internal/notifications",
+      "Test": "TestSMTPSTARTTLSAuthenticatesOnlyAfterVerifiedUpgrade",
+      "Elapsed": 0.01
+    },
+    {
+      "Time": "2026-11-02T06:02:02.361215209+08:00",
+      "Action": "pass",
+      "Package": "routeweaver/internal/notifications",
+      "Test": "TestNotificationEventAudienceChannelAcceptanceMatrix/announcement-all/automatic=false",
+      "Elapsed": 0.6
+    },
+    {
+      "Time": "2026-11-02T06:02:02.908662778+08:00",
+      "Action": "pass",
+      "Package": "routeweaver/internal/notifications",
+      "Test": "TestNotificationEventAudienceChannelAcceptanceMatrix/announcement-all/automatic=true",
+      "Elapsed": 0.55
+    },
+    {
+      "Time": "2026-11-02T06:02:03.182053695+08:00",
+      "Action": "pass",
+      "Package": "routeweaver/internal/notifications",
+      "Test": "TestNotificationEventAudienceChannelAcceptanceMatrix/announcement-selected/automatic=false",
+      "Elapsed": 0.27
+    },
+    {
+      "Time": "2026-11-02T06:02:03.458795892+08:00",
+      "Action": "pass",
+      "Package": "routeweaver/internal/notifications",
+      "Test": "TestNotificationEventAudienceChannelAcceptanceMatrix/announcement-selected/automatic=true",
+      "Elapsed": 0.27
+    },
+    {
+      "Time": "2026-11-02T06:02:03.70184886+08:00",
+      "Action": "pass",
+      "Package": "routeweaver/internal/notifications",
+      "Test": "TestNotificationEventAudienceChannelAcceptanceMatrix/announcement-admins/automatic=false",
+      "Elapsed": 0.25
+    },
+    {
+      "Time": "2026-11-02T06:02:03.994285843+08:00",
+      "Action": "pass",
+      "Package": "routeweaver/internal/notifications",
+      "Test": "TestNotificationEventAudienceChannelAcceptanceMatrix/announcement-admins/automatic=true",
+      "Elapsed": 0.29
+    },
+    {
+      "Time": "2026-11-02T06:02:04.237200558+08:00",
+      "Action": "pass",
+      "Package": "routeweaver/internal/notifications",
+      "Test": "TestNotificationEventAudienceChannelAcceptanceMatrix/account-quota/automatic=false",
+      "Elapsed": 0.24
+    },
+    {
+      "Time": "2026-11-02T06:02:04.465548894+08:00",
+      "Action": "pass",
+      "Package": "routeweaver/internal/notifications",
+      "Test": "TestNotificationEventAudienceChannelAcceptanceMatrix/account-quota/automatic=true",
+      "Elapsed": 0.23
+    },
+    {
+      "Time": "2026-11-02T06:02:04.726545791+08:00",
+      "Action": "pass",
+      "Package": "routeweaver/internal/notifications",
+      "Test": "TestNotificationEventAudienceChannelAcceptanceMatrix/account-expiry/automatic=false",
+      "Elapsed": 0.26
+    },
+    {
+      "Time": "2026-11-02T06:02:04.991343571+08:00",
+      "Action": "pass",
+      "Package": "routeweaver/internal/notifications",
+      "Test": "TestNotificationEventAudienceChannelAcceptanceMatrix/account-expiry/automatic=true",
+      "Elapsed": 0.26
+    },
+    {
+      "Time": "2026-11-02T06:02:05.346116729+08:00",
+      "Action": "pass",
+      "Package": "routeweaver/internal/notifications",
+      "Test": "TestNotificationEventAudienceChannelAcceptanceMatrix/provider-quota/automatic=false",
+      "Elapsed": 0.35
+    },
+    {
+      "Time": "2026-11-02T06:02:05.717520283+08:00",
+      "Action": "pass",
+      "Package": "routeweaver/internal/notifications",
+      "Test": "TestNotificationEventAudienceChannelAcceptanceMatrix/provider-quota/automatic=true",
+      "Elapsed": 0.37
+    },
+    {
+      "Time": "2026-11-02T06:02:06.038136144+08:00",
+      "Action": "pass",
+      "Package": "routeweaver/internal/notifications",
+      "Test": "TestNotificationEventAudienceChannelAcceptanceMatrix/provider-expiry/automatic=false",
+      "Elapsed": 0.32
+    },
+    {
+      "Time": "2026-11-02T06:02:06.488883992+08:00",
+      "Action": "pass",
+      "Package": "routeweaver/internal/notifications",
+      "Test": "TestNotificationEventAudienceChannelAcceptanceMatrix/provider-expiry/automatic=true",
+      "Elapsed": 0.45
+    },
+    {
+      "Time": "2026-11-02T06:02:06.488958122+08:00",
+      "Action": "pass",
+      "Package": "routeweaver/internal/notifications",
+      "Test": "TestNotificationEventAudienceChannelAcceptanceMatrix",
+      "Elapsed": 4.73
+    },
+    {
+      "Time": "2026-11-02T06:02:06.690537018+08:00",
+      "Action": "pass",
+      "Package": "routeweaver/internal/notifications",
+      "Test": "TestNotificationExplicitChannelFailureRetryMatrix/in-app",
+      "Elapsed": 0.2
+    },
+    {
+      "Time": "2026-11-02T06:02:07.066201242+08:00",
+      "Action": "pass",
+      "Package": "routeweaver/internal/notifications",
+      "Test": "TestNotificationExplicitChannelFailureRetryMatrix/email",
+      "Elapsed": 0.38
+    },
+    {
+      "Time": "2026-11-02T06:02:07.30497162+08:00",
+      "Action": "pass",
+      "Package": "routeweaver/internal/notifications",
+      "Test": "TestNotificationExplicitChannelFailureRetryMatrix/webhook",
+      "Elapsed": 0.24
+    },
+    {
+      "Time": "2026-11-02T06:02:07.305069588+08:00",
+      "Action": "pass",
+      "Package": "routeweaver/internal/notifications",
+      "Test": "TestNotificationExplicitChannelFailureRetryMatrix",
+      "Elapsed": 0.82
+    },
+    {
+      "Time": "2026-11-02T06:02:07.939414984+08:00",
+      "Action": "pass",
+      "Package": "routeweaver/internal/notifications",
+      "Test": "TestNotificationExternalTerminalFailureMatrix/email",
+      "Elapsed": 0.63
+    },
+    {
+      "Time": "2026-11-02T06:02:08.450961174+08:00",
+      "Action": "pass",
+      "Package": "routeweaver/internal/notifications",
+      "Test": "TestNotificationExternalTerminalFailureMatrix/webhook",
+      "Elapsed": 0.51
+    },
+    {
+      "Time": "2026-11-02T06:02:08.45112533+08:00",
+      "Action": "pass",
+      "Package": "routeweaver/internal/notifications",
+      "Test": "TestNotificationExternalTerminalFailureMatrix",
+      "Elapsed": 1.15
+    },
+    {
+      "Time": "2026-11-02T06:02:08.8219981+08:00",
+      "Action": "pass",
+      "Package": "routeweaver/internal/notifications",
+      "Test": "TestNotificationExpiredProviderDeliveryChannelMatrix",
+      "Elapsed": 0.37
+    },
+    {
+      "Time": "2026-11-02T06:02:09.563602983+08:00",
+      "Action": "pass",
+      "Package": "routeweaver/internal/notifications",
+      "Test": "TestBatchClaimsFreshLeaseAfterSlowEarlierSend",
+      "Elapsed": 0.74
+    },
+    {
+      "Time": "2026-11-02T06:02:09.815860795+08:00",
+      "Action": "pass",
+      "Package": "routeweaver/internal/notifications",
+      "Test": "TestRetryDelayStartsAfterTransportFailure",
+      "Elapsed": 0.25
+    },
+    {
+      "Time": "2026-11-02T06:02:10.090845386+08:00",
+      "Action": "pass",
+      "Package": "routeweaver/internal/notifications",
+      "Test": "TestQueuedExpiryRecheckedAfterEarlierSend",
+      "Elapsed": 0.27
+    },
+    {
+      "Time": "2026-11-02T06:02:10.433383436+08:00",
+      "Action": "pass",
+      "Package": "routeweaver/internal/notifications",
+      "Test": "TestAnnouncementAudienceExpiryAndPrivateReadReceipts",
+      "Elapsed": 0.34
+    },
+    {
+      "Time": "2026-11-02T06:02:10.96948797+08:00",
+      "Action": "pass",
+      "Package": "routeweaver/internal/notifications",
+      "Test": "TestThresholdDeduplicationAndNewCycles",
+      "Elapsed": 0.54
+    },
+    {
+      "Time": "2026-11-02T06:02:11.674136834+08:00",
+      "Action": "pass",
+      "Package": "routeweaver/internal/notifications",
+      "Test": "TestDurableOutboxRestartStableIdentityAndBoundedRetries",
+      "Elapsed": 0.7
+    },
+    {
+      "Time": "2026-11-02T06:02:11.961849339+08:00",
+      "Action": "pass",
+      "Package": "routeweaver/internal/notifications",
+      "Test": "TestCrashAfterAcceptanceReusesEventIDAndRechecksSettings",
+      "Elapsed": 0.29
+    },
+    {
+      "Time": "2026-11-02T06:02:12.165995237+08:00",
+      "Action": "pass",
+      "Package": "routeweaver/internal/notifications",
+      "Test": "TestProviderObservationFreshnessAndExplicitAutomaticPermission",
+      "Elapsed": 0.2
+    },
+    {
+      "Time": "2026-11-02T06:02:12.397042454+08:00",
+      "Action": "pass",
+      "Package": "routeweaver/internal/notifications",
+      "Test": "TestAnnouncementEditsRecheckCurrentValidityAndRetainReadReceipt",
+      "Elapsed": 0.23
+    },
+    {
+      "Time": "2026-11-02T06:02:12.742372485+08:00",
+      "Action": "pass",
+      "Package": "routeweaver/internal/notifications",
+      "Test": "TestAnnouncementAudienceIsRecheckedBeforeDeliveryAndCanBeRestored",
+      "Elapsed": 0.34
+    },
+    {
+      "Time": "2026-11-02T06:02:12.915502109+08:00",
+      "Action": "pass",
+      "Package": "routeweaver/internal/notifications",
+      "Test": "TestUnknownUsageCannotTriggerQuotaButRetainsExpiry",
+      "Elapsed": 0.17
+    },
+    {
+      "Time": "2026-11-02T06:02:18.30436424+08:00",
+      "Action": "pass",
+      "Package": "routeweaver/internal/notifications",
+      "Test": "TestBoundedWorkerSlowEmailDoesNotStarveInboxOrWebhook",
+      "Elapsed": 5.39
+    },
+    {
+      "Time": "2026-11-02T06:02:19.310847904+08:00",
+      "Action": "pass",
+      "Package": "routeweaver/internal/notifications",
+      "Elapsed": 17.642
+    }
+  ],
+  "raw_log_scope": "All terminal pass/fail/skip Go test JSON events; no output lines omitted from pass/fail classification."
+}

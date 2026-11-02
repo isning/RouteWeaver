@@ -1,0 +1,17 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> routeweaver-web@1.0.0 test
+> vitest run --maxWorkers=1 src/profile-content-hierarchy.dom.test.tsx src/rule-files.dom.test.tsx
+
+
+ RUN  v5.0.5 /workspace/scratch/d385eb428cee/structured-rule-journeys-20261101/web
+
+
+ Test Files  2 passed (2)
+      Tests  9 passed (9)
+   Start at  06:08:24
+   Duration  10.10s (tests 61%, environment 17%, import 14%, transform 5%, setup 3%)
+
+    Isolate  2 workers spawned · ~1.03s startup each (spawn + environment, per file)
+             at least ~1.03s faster with isolate: false — reuses workers across files instead of one per file
+

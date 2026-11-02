@@ -48,3 +48,30 @@ func TestJournalRejectsTrafficOrInconsistentZeroBeforeStartup(t *testing.T) {
 		})
 	}
 }
+
+// Fake filesystem crash image only: no runtime or native process is started.
+func TestJournalEmptyFinalCannotBeOverwrittenOrClearRunningMarker(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "journal")
+	s := entrypolicy.Snapshot{CounterEpoch: "epoch-partial", Counters: []entrypolicy.Counter{{CounterEpoch: "binding-partial"}}}
+	j, err := managed.BeginJournal(dir, s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	final := filepath.Join(dir, "epoch-partial.final.json")
+	if err := os.WriteFile(final, nil, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := j.Finish(s); err == nil {
+		t.Fatal("partial final silently replaced")
+	}
+	if info, err := os.Stat(final); err != nil || info.Size() != 0 {
+		t.Fatal("partial final evidence changed", err)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "running.json")); err != nil {
+		t.Fatal("uncertainty marker lost", err)
+	}
+	s.CounterEpoch = "epoch-new"
+	if _, err := managed.BeginJournal(dir, s); err == nil {
+		t.Fatal("uncertain prior epoch admitted restart")
+	}
+}

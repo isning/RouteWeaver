@@ -51,3 +51,25 @@ geometry, dependency visibility, repeated cancellation and exact-focus assertion
 and timeouts are unchanged. Web and standalone browser-source typechecks pass.
 The corrected browser case still requires coordinator CI execution; no local
 browser, native runtime, CI or push was performed for this correction.
+
+## CI4 asynchronous opener focus correction
+
+Run 41351035317 (remote 81dd620, local e58b54a) reached the complete 320px impact
+review. Its screenshot shows the named dependencies and both decision actions;
+the failure is the unchanged exact Save-focus assertion after Escape. No trace
+was recorded by this controlled case. The source disabled native Save while the
+impact request was pending, before the asynchronous confirmation captured its
+opener. Unlike a browser, jsdom does not automatically blur a disabled button;
+the immediate DOM fixture therefore did not exercise that eligibility gap.
+
+The inventory Save action now uses the existing `keepFocusableWhilePending`
+option **only while reading impact**. It remains aria-disabled/busy; the existing
+ActionButton click suppression and form pending/owner guards remain intact.
+Actual save mutation still disables the native button. No global focus manager,
+confirmation lifecycle, timeout or browser assertion was changed.
+
+A deferred HTTP DOM regression fails before the change (`Save.disabled` was
+true), then proves focus eligibility, suppression of repeated click/Enter
+submissions, one preview/no write, retained draft and exact Save focus after
+Escape. The two existing impact tests remain. Corrected real-browser focus must
+still be verified by coordinator CI; no local browser/CI/push was run.

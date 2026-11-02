@@ -3083,23 +3083,24 @@ function RuntimeEditor({
           <Switch
             checked={!!runtime.dns}
             aria-label="启用 DNS"
-            onCheckedChange={(enabled) =>
+            onCheckedChange={(enabled) => {
+              const id = newID("dns");
               update({
                 dns: enabled
                   ? {
                       servers: [
                         {
-                          id: newID("dns"),
+                          id,
                           type: "tls",
                           address: "1.1.1.1",
                           port: 853,
                         },
                       ],
-                      final: "primary-dns",
+                      final: id,
                     }
                   : undefined,
-              })
-            }
+              });
+            }}
           />
         </div>
         {runtime.dns && (

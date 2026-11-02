@@ -1,0 +1,28 @@
+{
+  "status": "PASS",
+  "sourceCommit": "97448847cbfab1a16df2fff5a6571ccca465beca",
+  "sourceTree": "947ef73831ca42417098b9811ccf6c4d3fe2fd37",
+  "headAndTreeUnchangedBeforeAfter": true,
+  "worktreeCleanAfter": true,
+  "scannerVersion": "8.24.3",
+  "scannerExecutableSHA256": "e18325d568268b6efb6cd0cc721f8bea5667f4cd1c8d03618ab61987f41269ad",
+  "scannerRulesSHA256": "8f393899dbdc67e4eae580909e496acab9cf3a75aacfb6fac56b6eb16bb9e051",
+  "scope": "source/index/all-ref history",
+  "distinctPathContentPairs": 2409,
+  "sourceEntries": 6153,
+  "reviewedExactMatches": 54,
+  "newExceptions": 0,
+  "scannerRegressionTests": 26,
+  "regressionsStatus": "PASS",
+  "regressionsElapsedSeconds": 31.59,
+  "regressionInvocation": "Loaded unchanged test_secrets.py via importlib; added --binary absolute verified shared executable to module COMMAND in memory; ran complete unittest module. Negative --binary tests still override this default. No checkout writes.",
+  "initialAttempt": "Vanilla unittest discovery failed because checkout bin/tools/gitleaks was absent. Not counted as a pass; rerun uses verified executable explicitly.",
+  "logs": {
+    "9744884-allrefs.log": {
+      "sha256": "5b47a072d4044cbfe10a665284570e02c289c6e52f0d1314cd6db8c7dca49e8d"
+    },
+    "9744884-regressions.log": {
+      "sha256": "5c6356e8b89f091b3fed457bc0373045c82eaee1180a7f0f148c473b2d276c29"
+    }
+  }
+}

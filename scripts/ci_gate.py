@@ -4,7 +4,7 @@ import json
 import os
 import sys
 
-REQUIRED_JOBS = {"static", "secrets", "backend", "web", "api", "browser", "native", "package"}
+REQUIRED_JOBS = {"static", "secrets", "backend", "web", "api", "browser", "browser_native", "native", "package"}
 
 
 BACKEND_JOBS = {"backend_core", "backend_backup", "backend_httpapi", "backend_store", "backend_managed"}

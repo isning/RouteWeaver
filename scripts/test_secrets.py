@@ -213,6 +213,34 @@ class SecretScannerTests(unittest.TestCase):
                 self.assertIn("jfrog-identity-token", self.scan(1))
                 (self.root / "other/drill-receipt.json").unlink()
 
+    def test_final_soak_binary_hash_exceptions_are_exact_lines_and_path(self):
+        path = "docs/verification/evidence/FINAL-MANAGED-REFERENCE-2026-11-01.json"
+        # Exact reviewed metadata bytes, not tokens. Numeric fixtures avoid
+        # introducing duplicate scanner matches at an unrelated source path.
+        fixtures = [('jfrog-identity-token',
+          [32, 32, 32, 32, 32, 32, 32, 32, 34, 98, 105, 110, 47, 102, 105, 110, 97, 108, 45, 114, 101, 102,
+           101, 114, 101, 110, 99, 101, 45, 109, 97, 110, 97, 103, 101, 100, 45, 120, 114, 97, 121, 34, 58,
+           32, 34, 51, 49, 102, 54, 97, 97, 48, 99, 100, 56, 51, 57, 50, 55, 54, 51, 97, 53, 50, 55, 50, 53,
+           55, 99, 100, 51, 98, 55, 102, 55, 102, 57, 53, 101, 99, 56, 99, 56, 101, 99, 100, 50, 48, 101,
+           52, 98, 97, 102, 99, 98, 100, 98, 54, 98, 56, 57, 54, 54, 51, 101, 97, 100, 98, 101, 34, 44]),
+         ('generic-api-key',
+          [32, 32, 32, 32, 32, 32, 32, 32, 34, 98, 105, 110, 47, 102, 105, 110, 97, 108, 45, 114, 101, 102,
+           101, 114, 101, 110, 99, 101, 45, 104, 116, 116, 112, 97, 112, 105, 46, 116, 101, 115, 116, 34,
+           58, 32, 34, 56, 50, 49, 101, 53, 48, 51, 53, 49, 100, 53, 52, 99, 51, 48, 54, 55, 102, 51, 53,
+           102, 49, 49, 49, 48, 100, 98, 49, 49, 56, 49, 99, 102, 101, 50, 102, 50, 97, 56, 97, 99, 54, 54,
+           51, 57, 53, 50, 56, 54, 50, 97, 98, 98, 98, 102, 53, 102, 49, 54, 50, 52, 56, 54, 50, 34])]
+        for rule, encoded in fixtures:
+            with self.subTest(rule=rule):
+                line = bytes(encoded)
+                self.write(path, line + b"\n")
+                self.assertIn("PASS", self.scan())
+                self.write(path, line + b" changed\n")
+                self.assertIn(rule, self.scan(1))
+                (self.root / path).unlink()
+                self.write("other/final-soak.json", line + b"\n")
+                self.assertIn(rule, self.scan(1))
+                (self.root / "other/final-soak.json").unlink()
+
     def test_secret_file_outside_repository_is_not_followed(self):
         with tempfile.TemporaryDirectory() as outside:
             target = Path(outside) / "outside.txt"

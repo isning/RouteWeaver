@@ -1,3 +1,4 @@
+import { settledTask } from "./ui-settled-task";
 import { test, expect, type Page } from "@playwright/test";
 
 // Synthetic HTTP / actual App geometry and keyboard checks, not backend proof.
@@ -22,6 +23,7 @@ async function setup(page: Page) {
   return unexpected;
 }
 async function fits(page: Page) {
+  await settledTask(page.getByRole("dialog"));
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
   const dialog = page.getByRole("dialog");
   const box = await dialog.boundingBox();

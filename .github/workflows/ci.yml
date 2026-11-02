@@ -245,6 +245,79 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+  browser_native:
+    name: Same-instance browser to managed native acceptance
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      ROUTEWEAVER_CHROMIUM: /opt/google/chrome/chrome
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          go: "true"
+          node: "true"
+      - name: Install browser OS dependencies and CJK fonts
+        working-directory: web
+        run: npx --no-install playwright install-deps chromium
+      - name: Verify installed Chrome Stable and sandboxed startup
+        working-directory: web
+        run: |
+          test "$(readlink -f "$ROUTEWEAVER_CHROMIUM")" = /opt/google/chrome/chrome
+          test -x "$ROUTEWEAVER_CHROMIUM"
+          test "$(dpkg-query -S "$ROUTEWEAVER_CHROMIUM")" = "google-chrome-stable: /opt/google/chrome/chrome"
+          expected=$(dpkg-query --control-show google-chrome-stable md5sums | awk '$2 == "opt/google/chrome/chrome" { print $1 }')
+          [[ "$expected" =~ ^[0-9a-f]{32}$ ]]
+          printf '%s  %s\n' "$expected" "$ROUTEWEAVER_CHROMIUM" | md5sum --check --strict
+          node --input-type=module <<'JS'
+          import { chromium } from 'playwright';
+          import { execFileSync } from 'node:child_process';
+          import { mkdirSync, writeFileSync } from 'node:fs';
+          const executablePath = process.env.ROUTEWEAVER_CHROMIUM;
+          const evidence = {
+            runnerImage: process.env.ImageOS,
+            runnerImageVersion: process.env.ImageVersion,
+            executablePath,
+            playwrightShard: process.env.ROUTEWEAVER_BROWSER_SHARD,
+            installedVersion: execFileSync(executablePath, ['--version'], { encoding: 'utf8' }).trim(),
+            packageVersion: execFileSync('dpkg-query', ['-W', '-f=${Version}', 'google-chrome-stable'], { encoding: 'utf8' }).trim(),
+            executableSHA256: execFileSync('sha256sum', [executablePath], { encoding: 'utf8' }).split(' ')[0],
+            chromiumSandbox: true,
+            startup: 'not-confirmed',
+          };
+          const record = () => {
+            mkdirSync('../bin/verification', { recursive: true });
+            writeFileSync('../bin/verification/browser-environment.json', JSON.stringify(evidence, null, 2) + '\n');
+            console.log(JSON.stringify(evidence));
+          };
+          record();
+          const browser = await chromium.launch({ executablePath, chromiumSandbox: true });
+          try {
+            evidence.browserVersion = browser.version();
+            const page = await browser.newPage();
+            await page.setContent('<title>Sandboxed browser startup</title>');
+            if (await page.title() !== 'Sandboxed browser startup') throw new Error('Browser startup page failed');
+            evidence.startup = 'passed';
+            record();
+          } finally {
+            await browser.close();
+          }
+          JS
+      - run: scripts/verify.sh browser_native
+      - name: Browser native diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: browser-native-diagnostics
+          path: |
+            bin/verification/browser-native-*.json
+            bin/verification/browser-environment.json
+            web/test-results-native/
+          if-no-files-found: ignore
+          retention-days: 7
+
   native:
     name: Pinned parsers, both stock processes and managed loopback
     runs-on: ubuntu-24.04
@@ -304,7 +377,7 @@ jobs:
   verify:
     name: Required repository gates
     if: ${{ always() }}
-    needs: [static, secrets, backend, web, api, browser, native, package]
+    needs: [static, secrets, backend, web, api, browser, browser_native, native, package]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:

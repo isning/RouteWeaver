@@ -4,8 +4,8 @@ set -euo pipefail
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 cd "$ROOT"
 MODE=${1:-quick}
-case "$MODE" in quick|full|static|secrets|backend|backend_core|backend_backup|backend_httpapi|backend_store|backend_managed|web|api|browser|native|runtime|managed|package) ;;
-  *) echo 'Usage: scripts/verify.sh [quick|full|static|secrets|backend|backend_core|backend_backup|backend_httpapi|backend_store|backend_managed|web|api|browser|native|runtime|managed|package]' >&2; exit 2 ;;
+case "$MODE" in quick|full|static|secrets|backend|backend_core|backend_backup|backend_httpapi|backend_store|backend_managed|web|api|browser|browser_native|native|runtime|managed|package) ;;
+  *) echo 'Usage: scripts/verify.sh [quick|full|static|secrets|backend|backend_core|backend_backup|backend_httpapi|backend_store|backend_managed|web|api|browser|browser_native|native|runtime|managed|package]' >&2; exit 2 ;;
 esac
 export GOMEMLIMIT=${GOMEMLIMIT:-768MiB}
 export npm_config_cache=${npm_config_cache:-"$ROOT/bin/cache/npm"}
@@ -72,6 +72,7 @@ browser_gate() {
   fi
   stage "$label" npm --prefix web run test:browser "${args[@]}"
 }
+browser_native_gate() { stage 'Same-instance browser/native acceptance' scripts/browser-native.sh; }
 native_gate() { stage 'Pinned native parser integration' scripts/native-cores.sh parsers; }
 runtime_gate() { stage 'Explicitly selected native process lifecycle' scripts/native-cores.sh runtime; }
 managed_gate() { stage 'Managed native runtime end-to-end' scripts/managed-runtime.sh; }
@@ -109,7 +110,7 @@ case "$MODE" in
       echo 'Full verification requires ROUTEWEAVER_NATIVE_PROCESS_TESTS=xray,sing-box on an authorized compatible host. Missing or denied targets are not passes.' >&2
       exit 2
     fi
-    static_gate; secrets_gate; backend_gate; web_gate; api_gate; browser_gate
+    static_gate; secrets_gate; backend_gate; web_gate; api_gate; browser_gate; browser_native_gate
     native_gate; runtime_gate; managed_gate; package_gate ;;
   *) "${MODE}_gate" ;;
 esac

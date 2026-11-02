@@ -256,3 +256,59 @@ it("keeps dirty input and error on failed save while pending actions stay busy",
   expect((save as HTMLButtonElement).disabled).toBe(false);
   expect(screen.queryByText("配置草稿已保存")).toBeNull();
 });
+
+it("new structured DNS selects its actual resolver and retains runtime intent after a rejected save", async () => {
+  const initial = fixture();
+  initial.ir.runtime.dns = undefined;
+  const { writes } = mount(initial, {
+    saveResponse: async () => json({ detail: "Synthetic stale draft" }, 409),
+  });
+  await screen.findByText("2 个有效连接");
+  await userEvent.click(screen.getByRole("tab", { name: "运行设置" }));
+  await userEvent.click(screen.getByRole("switch", { name: "启用 DNS" }));
+  await userEvent.click(screen.getByRole("switch", { name: "启用流量嗅探" }));
+  await userEvent.click(screen.getByRole("switch", { name: "启用 TUN" }));
+  fireEvent.change(screen.getByRole("textbox", { name: "DNS 服务器 1" }), {
+    target: { value: "192.0.2.53" },
+  });
+  await userEvent.click(screen.getByRole("button", { name: "保存草稿" }));
+  await screen.findByText("Synthetic stale draft");
+  const saved = writes.find((entry) =>
+    entry.path.endsWith("/intent-profile"),
+  )!.body;
+  expect(saved.ir.runtime.dns.final).toBe(saved.ir.runtime.dns.servers[0].id);
+  expect(saved.ir.runtime.dns.servers[0]).toMatchObject({
+    type: "tls",
+    address: "192.0.2.53",
+    port: 853,
+  });
+  expect(saved.ir.runtime.sniff).toBe(true);
+  expect(saved.ir.runtime.tun).toEqual({
+    enabled: true,
+    addresses: ["172.19.0.1/30"],
+    autoRoute: true,
+  });
+  expect(
+    (screen.getByRole("textbox", { name: "DNS 服务器 1" }) as HTMLInputElement)
+      .value,
+  ).toBe("192.0.2.53");
+  expect(
+    screen
+      .getByRole("switch", { name: "启用流量嗅探" })
+      .getAttribute("aria-checked"),
+  ).toBe("true");
+  expect(
+    screen
+      .getByRole("switch", { name: "启用 TUN" })
+      .getAttribute("aria-checked"),
+  ).toBe("true");
+  await userEvent.click(screen.getByRole("button", { name: "保存草稿" }));
+  await waitFor(() =>
+    expect(
+      writes.filter((entry) => entry.path.endsWith("/intent-profile")),
+    ).toHaveLength(2),
+  );
+  expect(
+    writes.filter((entry) => entry.path.endsWith("/intent-profile"))[1].body,
+  ).toEqual(saved);
+});

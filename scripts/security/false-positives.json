@@ -214,5 +214,17 @@
     "rule": "jfrog-identity-token",
     "lineSHA256": "08ce6ddd0d1af33d96830e6322815b6142dfdea38b716b601019c598b2abb075",
     "reason": "Operational drill source/executable SHA256 metadata; exact value recomputed against retained operations-drills-20261101/bin/drill-managed-xray bytes on 2026-11-01. Duplicate-free strict hash map and all eight hashes verified. Exact path/rule/line only; receipt unchanged."
+  },
+  {
+    "path": "docs/verification/evidence/FINAL-MANAGED-REFERENCE-2026-11-01.json",
+    "rule": "jfrog-identity-token",
+    "lineSHA256": "f64d1a0e7ac9be9c24f06bcde6b0673c2f84341c8d2ab327c4b565ce26139c6d",
+    "reason": "Final managed reference executable SHA256 metadata from d640f01; independently recomputed against retained operations-final-reference-20261101/bin/final-reference-managed-xray bytes on 2026-11-01. Strict duplicate-free receipt and exact binary binding keys verified. Exact path/rule/line only; immutable receipt unchanged."
+  },
+  {
+    "path": "docs/verification/evidence/FINAL-MANAGED-REFERENCE-2026-11-01.json",
+    "rule": "generic-api-key",
+    "lineSHA256": "8bd2542393c2086b4bcd9912d8d936393c65b0b5da1015b83f88aeb8c3cd8a68",
+    "reason": "Final managed reference executable SHA256 metadata from d640f01; independently recomputed against retained operations-final-reference-20261101/bin/final-reference-httpapi.test bytes on 2026-11-01. Strict duplicate-free receipt and exact binary binding keys verified. Exact path/rule/line only; immutable receipt unchanged."
   }
 ]

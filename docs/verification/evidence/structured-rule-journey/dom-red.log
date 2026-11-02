@@ -1,0 +1,35 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> routeweaver-web@1.0.0 test
+> vitest run --maxWorkers=1 src/profile-content-hierarchy.dom.test.tsx
+
+
+ RUN  v5.0.5 /workspace/scratch/d385eb428cee/structured-rule-journeys-20261101/web
+
+ ❯ src/profile-content-hierarchy.dom.test.tsx (6 tests | 1 failed) 2173ms
+   × new structured DNS selects its actual resolver and retains runtime intent after a rejected save 343ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/profile-content-hierarchy.dom.test.tsx > new structured DNS selects its actual resolver and retains runtime intent after a rejected save
+AssertionError: expected 'primary-dns' to be 'dns_f9ec98cd7a0d4cf9' // Object.is equality
+
+Expected: "dns_f9ec98cd7a0d4cf9"
+Received: "primary-dns"
+
+ ❯ src/profile-content-hierarchy.dom.test.tsx:277:38
+    275|   await screen.findByText("Synthetic stale draft");
+    276|   const saved = writes.find((entry) => entry.path.endsWith("/intent-pr…
+    277|   expect(saved.ir.runtime.dns.final).toBe(saved.ir.runtime.dns.servers…
+       |                                      ^
+    278|   expect(saved.ir.runtime.dns.servers[0]).toMatchObject({ type: "tls",…
+    279|   expect(saved.ir.runtime.sniff).toBe(true);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 5 passed (6)
+   Start at  06:06:10
+   Duration  4.00s (tests 57%, import 17%, environment 16%, transform 7%, setup 2%)
+

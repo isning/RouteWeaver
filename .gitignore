@@ -20,3 +20,5 @@ docs/verification/wip47/*.log
 docs/verification/wip47/frontend-suite-*.json
 docs/verification/wip47/frontend-failures-*.json
 docs/verification/wip47/browser-shadcn-smoke-*.json
+
+/web/test-results-native/

@@ -1,0 +1,194 @@
+{
+  "run_id": 41351035317,
+  "source_commit": "81dd62054e36b45c4c2f2c670d121ad3a7553b68",
+  "source_tree": "b51789930b37bb00c3b31da9a573785acbbbb15a",
+  "matching_local_commit": "e58b54a656c2368613ec1e475dcd0c386b857537",
+  "whole_workflow": "failure: four browser cases, not a full green release",
+  "native_job": {
+    "id": 124981014121,
+    "url": "https://github.com/isning/RouteWeaver/actions/runs/41351035317/job/124981014121",
+    "conclusion": "success",
+    "selected_terminal_events": [
+      {
+        "Time": "2026-11-01T21:17:14.370999851Z",
+        "Action": "pass",
+        "Package": "routeweaver/internal/agent",
+        "Test": "TestNativeStockSingBoxUpgradeKeepsExactRuntimeAndLease/failed-new=false",
+        "Elapsed": 2.65
+      },
+      {
+        "Time": "2026-11-01T21:17:17.216119857Z",
+        "Action": "pass",
+        "Package": "routeweaver/internal/agent",
+        "Test": "TestNativeStockSingBoxUpgradeKeepsExactRuntimeAndLease/failed-new=true",
+        "Elapsed": 2.85
+      },
+      {
+        "Time": "2026-11-01T21:17:17.216168167Z",
+        "Action": "pass",
+        "Package": "routeweaver/internal/agent",
+        "Test": "TestNativeStockSingBoxUpgradeKeepsExactRuntimeAndLease",
+        "Elapsed": 5.5
+      },
+      {
+        "Time": "2026-11-01T21:17:55.846211409Z",
+        "Action": "pass",
+        "Package": "routeweaver/internal/httpapi",
+        "Test": "TestNativeInvitedUserDownloadedClientTraffic/mihomo",
+        "Elapsed": 2.22
+      },
+      {
+        "Time": "2026-11-01T21:17:56.11249587Z",
+        "Action": "pass",
+        "Package": "routeweaver/internal/httpapi",
+        "Test": "TestNativeInvitedUserDownloadedClientTraffic/sing-box",
+        "Elapsed": 0.27
+      },
+      {
+        "Time": "2026-11-01T21:17:56.112516739Z",
+        "Action": "pass",
+        "Package": "routeweaver/internal/httpapi",
+        "Test": "TestNativeInvitedUserDownloadedClientTraffic",
+        "Elapsed": 2.49
+      },
+      {
+        "Time": "2026-11-01T21:17:56.253319213Z",
+        "Action": "pass",
+        "Package": "routeweaver/internal/httpapi",
+        "Test": "TestNativeDownloadedClientConfiguredDNS/mihomo",
+        "Elapsed": 0.14
+      },
+      {
+        "Time": "2026-11-01T21:17:56.426773027Z",
+        "Action": "pass",
+        "Package": "routeweaver/internal/httpapi",
+        "Test": "TestNativeDownloadedClientConfiguredDNS/sing-box",
+        "Elapsed": 0.17
+      },
+      {
+        "Time": "2026-11-01T21:17:56.426810327Z",
+        "Action": "pass",
+        "Package": "routeweaver/internal/httpapi",
+        "Test": "TestNativeDownloadedClientConfiguredDNS",
+        "Elapsed": 0.31
+      },
+      {
+        "Time": "2026-11-01T21:22:20.489702671Z",
+        "Action": "pass",
+        "Package": "routeweaver/internal/httpapi",
+        "Test": "TestNativeManagedProviderSuspensionAndRecovery",
+        "Elapsed": 47.68
+      }
+    ]
+  },
+  "backend_packages": [
+    {
+      "job_id": 124981014129,
+      "conclusion": "success",
+      "evidence_level": "package-level race result; opt-in skipped cases are not inferred passed",
+      "log_lines": [
+        "2026-11-01T21:15:31.6536473Z == Go behavior and race tests (store packages) ==",
+        "2026-11-01T21:31:26.0299853Z ok  \trouteweaver/internal/store\t868.948s",
+        "2026-11-01T21:31:26.1840883Z PASS: backend_store verification. This is the named gate only, not deployed acceptance or completion of all 35 stories."
+      ]
+    },
+    {
+      "job_id": 124981014086,
+      "conclusion": "success",
+      "evidence_level": "package-level race result; opt-in skipped cases are not inferred passed",
+      "log_lines": [
+        "2026-11-01T21:15:32.0169557Z == Go behavior and race tests (backup packages) ==",
+        "2026-11-01T21:31:45.2330452Z ok  \trouteweaver/internal/backup\t904.321s",
+        "2026-11-01T21:31:45.4415202Z PASS: backend_backup verification. This is the named gate only, not deployed acceptance or completion of all 35 stories."
+      ]
+    },
+    {
+      "job_id": 124981013921,
+      "conclusion": "success",
+      "evidence_level": "package-level race result; opt-in skipped cases are not inferred passed",
+      "log_lines": [
+        "2026-11-01T21:15:28.5981974Z == Go behavior and race tests (httpapi packages) ==",
+        "2026-11-01T21:32:19.2585587Z ok  \trouteweaver/internal/httpapi\t910.977s",
+        "2026-11-01T21:32:19.3886482Z PASS: backend_httpapi verification. This is the named gate only, not deployed acceptance or completion of all 35 stories."
+      ]
+    },
+    {
+      "job_id": 124981014122,
+      "conclusion": "success",
+      "evidence_level": "package-level race result; CLI tests are not deployment evidence",
+      "log_lines": [
+        "2026-11-01T21:18:37.8852962Z ok  \trouteweaver/cmd/control-plane\t28.662s",
+        "2026-11-01T21:21:01.8033753Z PASS: backend_core verification. This is the named gate only, not deployed acceptance or completion of all 35 stories."
+      ]
+    }
+  ],
+  "local_drills": {
+    "receipt": "evidence/OPERATIONS-DRILLS-2026-11-01.json",
+    "source_commit": "eafb493e79d2f789eca5c95ceb8eeeca5e500f40",
+    "scope": "14 explicit local race cases; not rerun as the complete set in CI4; no target RPO/RTO"
+  },
+  "limits": [
+    "Native client loopback does not establish device integration/TUN/IPv6/all DNS policy.",
+    "sing-box 1.14.3 is historical/retired; this is not two currently installable releases.",
+    "Long-reference first sample410 read/cleanup failure remains unclassified despite later pass.",
+    "Finite disk sizing, total retention growth and target recovery/rollout remain open."
+  ],
+  "inspected_local_candidate": "dcfbe274dfe311b979e0c1cd2134c7d9bd68ae6b",
+  "source_file_binding": [
+    {
+      "path": "internal/httpapi/client_delivery_native_test.go",
+      "sha256": "8d3301ddfec1d93d11c3829331f48ba5751bb963ba36bd1425ca143632b71754",
+      "unchanged_at_inspected_candidate": true
+    },
+    {
+      "path": "internal/httpapi/client_dns_native_test.go",
+      "sha256": "e9e6db15c28d99c37c9e8562dea9306316793bee1d32fc5ac376393a135e39df",
+      "unchanged_at_inspected_candidate": true
+    },
+    {
+      "path": "internal/agent/stock_upgrade_native_test.go",
+      "sha256": "303c4aa2e1a89d6e747dca9198c1a5fd7e3799d2acb6ee82bf4b3dc0bd68eace",
+      "unchanged_at_inspected_candidate": true
+    },
+    {
+      "path": "internal/httpapi/provider_native_test.go",
+      "sha256": "6d79c4198e3d6e45a25f483397e60e91ad6d81644357329020b3bf151450a121",
+      "unchanged_at_inspected_candidate": true
+    },
+    {
+      "path": "internal/store/usage_rebuild.go",
+      "sha256": "9d297bae0a9d97dd1a4a3c3606e9b685a1ff1dc4cbecaabe6b85cd306851e8de",
+      "unchanged_at_inspected_candidate": true
+    },
+    {
+      "path": "internal/store/usage_history.go",
+      "sha256": "3127be8f8542c4ceb8aff6fef7bebbed6696f9b2f854d59a0c25967e0f4681d5",
+      "unchanged_at_inspected_candidate": true
+    },
+    {
+      "path": "internal/store/usage_projection_trigger_test.go",
+      "sha256": "c0d7d0c7c230e2a42204859d664a039912e8ee7abb933ac17e8cece8c90f5ae9",
+      "unchanged_at_inspected_candidate": true
+    },
+    {
+      "path": "internal/backup/set.go",
+      "sha256": "e90ec8e3ef12d4b98e43d6515e224a5f17c1841698320c3ce5b631c86f84ab54",
+      "unchanged_at_inspected_candidate": true
+    },
+    {
+      "path": "internal/store/backup_set_meter_test.go",
+      "sha256": "c237957f35dc1cbbf395942559c6ba17082ac84ebddae55f379a584e73e3759d",
+      "unchanged_at_inspected_candidate": true
+    },
+    {
+      "path": "internal/store/backup_set_obligations_test.go",
+      "sha256": "7a653d84bec1e6bd86fa13e99d8bf1bed88e6d39d84196315245ba31c5d20544",
+      "unchanged_at_inspected_candidate": true
+    },
+    {
+      "path": "cmd/control-plane/backup_set.go",
+      "sha256": "8ad52079fc1889160f157d1c083c177f78c7b34032bbf42fbec3f5c305682795",
+      "unchanged_at_inspected_candidate": true
+    }
+  ]
+}

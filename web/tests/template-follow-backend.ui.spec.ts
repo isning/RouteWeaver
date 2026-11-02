@@ -1,3 +1,4 @@
+import { settledTask } from "./ui-settled-task";
 import { expect, test } from "./isolated-control-plane-fixture";
 import { requireLoopback } from "./account-security-backend";
 import { templateFollowFixture } from "./template-follow-backend";
@@ -160,6 +161,7 @@ for (const width of [1440, 390])
       expect(publications).toEqual([]);
       await f.unchanged();
       const checked = await checkOutput();
+      await settledTask(review);
       await page.screenshot({
         path: info.outputPath(`template-follow-review-${width}.png`),
         fullPage: false,

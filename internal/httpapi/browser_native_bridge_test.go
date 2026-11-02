@@ -1,0 +1,248 @@
+//go:build browser_native_acceptance
+
+package httpapi_test
+
+import (
+	"bufio"
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"os"
+	"os/signal"
+	"path/filepath"
+	"syscall"
+	"testing"
+	"time"
+
+	"routeweaver/internal/agent"
+	"routeweaver/internal/render"
+)
+
+// This opt-in test binary is a stdin/stdout bridge, never a production endpoint.
+// Positive observations come only from the owned native supervisor. No store
+// mutation or synthetic conformant state is available to the browser.
+func TestBrowserNativeBridge(t *testing.T) {
+	if os.Getenv("ROUTEWEAVER_BROWSER_NATIVE_BRIDGE") != "1" {
+		t.Fatal("explicit browser-native bridge opt-in required")
+	}
+	type command struct {
+		Action string      `json:"action"`
+		URL    string      `json:"url"`
+		Token  string      `json:"token"`
+		Scope  agent.Scope `json:"scope"`
+	}
+	emit := func(v any) {
+		b, e := json.Marshal(v)
+		if e != nil {
+			t.Fatal(e)
+		}
+		fmt.Printf("RW_BRIDGE %s\n", b)
+	}
+	signalContext, stopSignals := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stopSignals()
+	ctx, cancel := context.WithTimeout(signalContext, 120*time.Second)
+	defer cancel()
+	input := make(chan command)
+	readErr := make(chan error, 1)
+	go func() {
+		s := bufio.NewScanner(os.Stdin)
+		s.Buffer(make([]byte, 4096), 1<<20)
+		for s.Scan() {
+			var c command
+			if e := json.Unmarshal(s.Bytes(), &c); e != nil {
+				readErr <- e
+				return
+			}
+			select {
+			case input <- c:
+			case <-ctx.Done():
+				return
+			}
+		}
+		readErr <- s.Err()
+	}()
+	var init command
+	select {
+	case init = <-input:
+	case <-ctx.Done():
+		t.Fatal(ctx.Err())
+	case e := <-readErr:
+		t.Fatal("initialization absent", e)
+	}
+	if init.Action != "init" {
+		t.Fatal("initialization required")
+	}
+	binary := os.Getenv("ROUTEWEAVER_MANAGED_XRAY_BIN")
+	content, e := os.ReadFile(binary)
+	if e != nil {
+		t.Fatal(e)
+	}
+	sum := sha256.Sum256(content)
+	digest := hex.EncodeToString(sum[:])
+	if digest != os.Getenv("ROUTEWEAVER_MANAGED_XRAY_SHA256") || len(digest) != 64 {
+		t.Fatal("exact built executable digest required")
+	}
+	root, e := os.MkdirTemp("", "rw-browser-native-")
+	if e != nil {
+		t.Fatal(e)
+	}
+	fmt.Fprintln(os.Stderr, "native bridge private evidence root", root)
+	clean := false
+	defer func() {
+		if clean {
+			os.RemoveAll(root)
+		} else {
+			t.Log("retained native evidence", root)
+		}
+	}()
+	binary = filepath.Join(root, "managed-core")
+	if e = os.WriteFile(binary, content, 0700); e != nil {
+		t.Fatal(e)
+	}
+	tr, e := agent.NewHTTPTransport(agent.HTTPTransportOptions{BaseURL: init.URL, Scope: init.Scope, Token: init.Token, RequestTimeout: 2 * time.Second, MaxAttempts: 1, AllowLoopbackHTTP: true})
+	if e != nil {
+		t.Fatal(e)
+	}
+	defer tr.Close()
+	checker, e := agent.NewNativeChecker(render.ServerAdapterManagedXray, render.ManagedXrayVersion, binary, 5*time.Second)
+	if e != nil {
+		t.Fatal(e)
+	}
+	supervisor, e := agent.NewProcessSupervisor(checker, agent.SupervisorOptions{AllowLocalProcess: true, StartupGrace: 150 * time.Millisecond, StopTimeout: time.Second})
+	if e != nil {
+		t.Fatal(e)
+	}
+	r, e := agent.Open(root, init.Scope, agent.NewRegistry(supervisor), agent.Options{MaxLease: 10 * time.Minute})
+	if e != nil {
+		t.Fatal(e)
+	}
+	broker, e := agent.StartAdmissionBroker(root, tr)
+	if e != nil {
+		r.Close()
+		t.Fatal(e)
+	}
+	defer func() {
+		stopCtx, stopCancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer stopCancel()
+		_, stopErr := r.StopOwned(stopCtx)
+		broker.Close()
+		closeErr := r.Close()
+		if stopErr != nil || closeErr != nil {
+			t.Errorf("owned cleanup failed: stop=%v close=%v", stopErr, closeErr)
+			return
+		}
+		clean = true
+	}()
+	var state, first agent.State
+	emit(map[string]any{"ready": true, "binarySHA256": digest, "adapter": render.ServerAdapterManagedXray, "version": render.ManagedXrayVersion})
+	for {
+		var c command
+		select {
+		case c = <-input:
+		case <-ctx.Done():
+			t.Error("bridge lifecycle ended before explicit close", ctx.Err())
+			return
+		case e := <-readErr:
+			if e != nil {
+				t.Error(e)
+			}
+			return
+		}
+		opCtx, opCancel := context.WithTimeout(ctx, 10*time.Second)
+		var err error
+		switch c.Action {
+		case "apply":
+			d, receiveErr := tr.ReceiveDesired(opCtx, init.Scope, r.State().HighestAccepted)
+			err = receiveErr
+			if err == nil && d == nil {
+				err = fmt.Errorf("no fresh desired")
+			}
+			if err == nil {
+				state, err = r.Submit(opCtx, *d)
+				if d.Action == "stop" && bridgeConfirmedRestriction(state, err) {
+					err = nil
+				}
+				if err == nil && d.Action != "stop" && (state.Phase != agent.ObservedConformant || state.Observed == nil || state.Observed.Identity != d.Identity()) {
+					err = fmt.Errorf("native observation does not match desired")
+				}
+				if first.Observed == nil && state.Observed != nil {
+					first = state
+				}
+			}
+		case "report":
+			state, err = r.Recover(opCtx)
+			if bridgeConfirmedRestriction(state, err) {
+				err = nil
+			}
+			if err == nil {
+				err = tr.ReportObservation(opCtx, init.Scope, state)
+			}
+		case "mismatch":
+			b, _ := json.Marshal(state)
+			var bad agent.State
+			json.Unmarshal(b, &bad)
+			if bad.Observed == nil || bad.Desired == nil {
+				err = fmt.Errorf("actual observation required")
+			} else {
+				bad.Observed.OperationID = "wrong-browser-operation"
+				bad.Desired.OperationID = "wrong-browser-operation"
+				if !bridgeIdentityRejected(tr.ReportObservation(opCtx, init.Scope, bad)) {
+					err = fmt.Errorf("mismatched observation accepted")
+				}
+			}
+		case "stale":
+			if first.Observed == nil {
+				err = fmt.Errorf("first native observation absent")
+			} else if !bridgeIdentityRejected(tr.ReportObservation(opCtx, init.Scope, first)) {
+				err = fmt.Errorf("old native observation accepted")
+			}
+		case "close":
+			opCancel()
+			emit(map[string]any{"closing": true})
+			return
+		default:
+			err = fmt.Errorf("unknown bridge action")
+		}
+		opCancel()
+		if err != nil {
+			emit(map[string]any{"error": err.Error()})
+			continue
+		}
+		emit(map[string]any{"action": c.Action, "state": state})
+	}
+}
+
+func bridgeConfirmedRestriction(state agent.State, err error) bool {
+	return errors.Is(err, agent.ErrLeaseBlocked) && state.Phase == agent.Blocked && state.Code == "policy_restricted" && state.Observed == nil && !state.RecoveryRequired
+}
+func bridgeIdentityRejected(err error) bool {
+	var response *agent.TransportError
+	return errors.As(err, &response) && response.Status == 409 && response.Code == "request_rejected"
+}
+func TestBrowserNativeBridgeClassifiesOnlyExactOutcomes(t *testing.T) {
+	for _, err := range []error{nil, context.DeadlineExceeded, fmt.Errorf("network disconnected"), &agent.TransportError{Status: 500, Code: "request_rejected"}, &agent.TransportError{Status: 409, Code: "other"}} {
+		if bridgeIdentityRejected(err) {
+			t.Fatal("non-identity error accepted as rejection", err)
+		}
+	}
+	if !bridgeIdentityRejected(&agent.TransportError{Status: 409, Code: "request_rejected"}) {
+		t.Fatal("exact identity refusal missing")
+	}
+	state := agent.State{Phase: agent.Blocked, Code: "policy_restricted"}
+	if !bridgeConfirmedRestriction(state, agent.ErrLeaseBlocked) {
+		t.Fatal("verified restriction missing")
+	}
+	for _, err := range []error{nil, context.DeadlineExceeded, agent.ErrUnknownRuntime} {
+		if bridgeConfirmedRestriction(state, err) {
+			t.Fatal("unrelated stop result accepted")
+		}
+	}
+	for _, bad := range []agent.State{{Phase: agent.Unknown, Code: "policy_restricted"}, {Phase: agent.Blocked, Code: "policy_restriction_unobserved"}, {Phase: agent.Blocked, Code: "policy_restricted", RecoveryRequired: true}, {Phase: agent.Blocked, Code: "policy_restricted", Observed: &agent.Observation{}}} {
+		if bridgeConfirmedRestriction(bad, agent.ErrLeaseBlocked) {
+			t.Fatal("unverified stop accepted")
+		}
+	}
+}

@@ -1,0 +1,1072 @@
+{
+  "run_url": "https://github.com/isning/RouteWeaver/actions/runs/41351035317",
+  "remote_sha": "81dd62054e36b45c4c2f2c670d121ad3a7553b68",
+  "tree": "b51789930b37bb00c3b31da9a573785acbbbb15a",
+  "total": {
+    "unique": 195,
+    "passed": 191,
+    "failed": 4,
+    "skipped": 0,
+    "flaky": 0
+  },
+  "groups": {
+    "B1": {
+      "file": "account-security.ui.spec.ts",
+      "cases": [
+        {
+          "test_id": "d1b34b4ca6eaa842109a-983793018a8a487a32fa",
+          "title": "account security and recovery remain keyboard reachable at 320x360",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "test_id": "d1b34b4ca6eaa842109a-cedb6b805329b905c0a4",
+          "title": "account security and recovery remain keyboard reachable at 390x844",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "test_id": "d1b34b4ca6eaa842109a-f488fd5c47bd7f76b65e",
+          "title": "account security and recovery remain keyboard reachable at 640x400",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "test_id": "d1b34b4ca6eaa842109a-a9fa08b1de646a8e3444",
+          "title": "account security and recovery remain keyboard reachable at 1440x1000",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "test_id": "d1b34b4ca6eaa842109a-4f068460bf499ed42ad2",
+          "title": "required password change does not load ordinary workspace or administrator recovery",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        }
+      ]
+    },
+    "B2": {
+      "file": "workspace.ui.spec.ts",
+      "cases": [
+        {
+          "test_id": "838d38bcbd8e4d169ad0-02eebb014c75f40cab90",
+          "title": "imports directly into a configuration, retains a failed source, and saves only the draft",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "test_id": "838d38bcbd8e4d169ad0-ae3228b79e790884f00c",
+          "title": "mobile navigation and cancellation preserve a useful return path",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "test_id": "838d38bcbd8e4d169ad0-263faef3a80a15d06af1",
+          "title": "administrator edits an ordered route without dragging",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        }
+      ]
+    },
+    "B3": {
+      "file": "output-review-consequence.ui.spec.ts",
+      "cases": [
+        {
+          "test_id": "6ff5f2c61431388925f5-d3316ff8da8899ccf3a0",
+          "title": "a stale published list reviews the actual replacement link before explicit publication: unchanged",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "test_id": "6ff5f2c61431388925f5-2991806d7ed5e8e6f067",
+          "title": "a stale published list reviews the actual replacement link before explicit publication: changed-long-name",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        }
+      ]
+    },
+    "B4": {
+      "file": "action-context-and-template-layout.ui.spec.ts",
+      "cases": [
+        {
+          "test_id": "d9112268b317074d5dcc-1d0d231e197e8b0667bc",
+          "title": "sources actions retain full target context at 320",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "test_id": "d9112268b317074d5dcc-44dc81b27ef140afa67e",
+          "title": "users actions retain full target context at 320",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "test_id": "d9112268b317074d5dcc-76a97f43af6f90ffbb95",
+          "title": "resources actions retain full target context at 320",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "test_id": "d9112268b317074d5dcc-41b6a096a4c69df65af1",
+          "title": "sources actions retain full target context at 390",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "test_id": "d9112268b317074d5dcc-c0ebec7294417a795faa",
+          "title": "users actions retain full target context at 390",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "test_id": "d9112268b317074d5dcc-1f2229d7ddec3a945f0a",
+          "title": "resources actions retain full target context at 390",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "test_id": "d9112268b317074d5dcc-ae22a84b48fa41e378f3",
+          "title": "sources actions retain full target context at 900",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "test_id": "d9112268b317074d5dcc-1fea094e3f4c45ecfe13",
+          "title": "users actions retain full target context at 900",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "test_id": "d9112268b317074d5dcc-ce707211b3bfe29d9241",
+          "title": "resources actions retain full target context at 900",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "test_id": "d9112268b317074d5dcc-fdde71799c7351401ca3",
+          "title": "sources actions retain full target context at 1440",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "test_id": "d9112268b317074d5dcc-83f04b35e016998fccbf",
+          "title": "users actions retain full target context at 1440",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "test_id": "d9112268b317074d5dcc-aeeea620732f4292d562",
+          "title": "resources actions retain full target context at 1440",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "test_id": "d9112268b317074d5dcc-6906f198a7992e8a9d4c",
+          "title": "template library preserves full titles and consistent action placement at 1440",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "test_id": "d9112268b317074d5dcc-32a77495c9bce5dfbb2f",
+          "title": "template library preserves full titles and consistent action placement at 390",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "test_id": "d9112268b317074d5dcc-8eca88e9c72204521fe7",
+          "title": "users search toolbar contains task controls without filler copy",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "test_id": "d9112268b317074d5dcc-d4c9ca51028f45527ca8",
+          "title": "services search toolbar contains task controls without filler copy",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "test_id": "d9112268b317074d5dcc-95fd8c5c38ab1b47f750",
+          "title": "resource popup focus does not scroll its underlying row",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "test_id": "d9112268b317074d5dcc-55369acd86f63dd21b86",
+          "title": "overflow identity settles across the Users table width boundary",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        }
+      ]
+    },
+    "B5": {
+      "file": "confirmation.ui.spec.ts",
+      "cases": [
+        {
+          "test_id": "774ab985e5e876808bc2-8c2eb5fc0a92a39ff328",
+          "title": "collection cancellation has 44px targets at 390",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "test_id": "774ab985e5e876808bc2-9863ca16d3291c3f565b",
+          "title": "collection cancellation has 44px targets at 320",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "test_id": "774ab985e5e876808bc2-49e6d8d59b837f1f6eb7",
+          "title": "rule import visible label focuses and types into its own visible field",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        }
+      ]
+    },
+    "B6": {
+      "file": "notification-readability.ui.spec.ts",
+      "cases": [
+        {
+          "test_id": "bf9933aa2b2d44f4f48e-875c0da9596ea6419aea",
+          "title": "inbox read state and full-width narrow content at 1440",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "test_id": "bf9933aa2b2d44f4f48e-e685decf858cfefff951",
+          "title": "inbox read state and full-width narrow content at 390",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "test_id": "bf9933aa2b2d44f4f48e-dd990d28de5c098a69f4",
+          "title": "narrow announcement and delivery tables disclose scrolling and retain actions and failure reasons",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "test_id": "bf9933aa2b2d44f4f48e-e33c9d5c51ce61d60122",
+          "title": "default rate policy remains readable as active information, not disabled text",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "test_id": "bf9933aa2b2d44f4f48e-94c19166a8b97945bbc4",
+          "title": "inbox failure stays with its message across repeated keyboard close at 320px",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        }
+      ]
+    },
+    "B7": {
+      "file": "published-route-path.ui.spec.ts",
+      "cases": [
+        {
+          "test_id": "83da3d54dea7c2b141ca-e78b98a818766dd29a27",
+          "title": "shows confirmed old exit beside saved replacement using snapshot names, not inventory",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "test_id": "83da3d54dea7c2b141ca-f43532329198f79426dd",
+          "title": "unchanged endpoint order keeps one sequence without claiming all configuration is applied",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "test_id": "83da3d54dea7c2b141ca-6f91d604d7a8c18350ee",
+          "title": "missing effective result never invents a confirmed path",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "test_id": "83da3d54dea7c2b141ca-2f64298dce6e178aa46c",
+          "title": "same names retain distinct identities and unavailable metadata uses only its ID at 390px",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "test_id": "83da3d54dea7c2b141ca-9a2124ffeac08bacee99",
+          "title": "changed hop order is a path change even with the same endpoint set",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "test_id": "83da3d54dea7c2b141ca-20bdd7e17ff3f50e8d31",
+          "title": "different public port shows both addresses without conflating them",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "test_id": "83da3d54dea7c2b141ca-c41bfe931d467d8ab38f",
+          "title": "resolved nonpending route keeps ordinary check navigation, not a pending primary",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "test_id": "83da3d54dea7c2b141ca-bc17d93725de95b829a4",
+          "title": "resolution error does not promote stale paths or a pending primary action",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        }
+      ]
+    },
+    "B8": {
+      "file": "server-review-revision.ui.spec.ts",
+      "cases": [
+        {
+          "test_id": "92613929be08b6152503-60b2ab72defa3f51dcba",
+          "title": "a changed saved path requires visible reload and a new review at 1440",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "test_id": "92613929be08b6152503-f081b8c64f6e09bd7962",
+          "title": "a changed saved path requires visible reload and a new review at 390",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        }
+      ]
+    },
+    "B9": {
+      "file": "shadcn-endpoint-contract.ui.spec.ts",
+      "cases": [
+        {
+          "test_id": "8473793e87b69501417a-433990a9e2ff4b4d11d0",
+          "title": "retains hidden advanced fields while keeping long endpoint actions visible at desktop and mobile sizes",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "test_id": "8473793e87b69501417a-2262dc70f14234722121",
+          "title": "native Enter submits the associated pinned footer once and retains the draft after rejected save",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "test_id": "8473793e87b69501417a-77502e64ee3cecbbfcbb",
+          "title": "semantic token conversion agrees with real Chromium sRGB pixels",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        }
+      ]
+    },
+    "B10": {
+      "file": "fleet-continuous-service.ui.spec.ts",
+      "cases": [
+        {
+          "test_id": "55727ac0ab5bfecd98d2-d06abbcc0df999b18b09",
+          "title": "continuous service is explicit and review-bound at 320",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "test_id": "55727ac0ab5bfecd98d2-9b1c490b4cce7e3a7ade",
+          "title": "continuous service is explicit and review-bound at 390",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "test_id": "55727ac0ab5bfecd98d2-1de955add7f2fa9f20a2",
+          "title": "continuous service is explicit and review-bound at 1440",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        }
+      ]
+    },
+    "B11": {
+      "file": "backup-control-layout.ui.spec.ts",
+      "cases": [
+        {
+          "test_id": "a75759108710ac04f0db-1b152a21b2606a096527",
+          "title": "backup controls keep a readable rail at 1440px (controlled layout states)",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "test_id": "a75759108710ac04f0db-634becf27f286de6ba64",
+          "title": "backup controls keep a readable rail at 390px (controlled layout states)",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        }
+      ]
+    },
+    "B12": {
+      "file": "history-legacy-narrow.ui.spec.ts",
+      "cases": [
+        {
+          "test_id": "e6a8f35bee5f63677a9c-e09ce09266b4e1fc3d64",
+          "title": "activity historical detail repeated keyboard dismissal at 320",
+          "outcome": "unexpected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "failed"
+            }
+          ]
+        },
+        {
+          "test_id": "e6a8f35bee5f63677a9c-2dcafadd6501404b31f4",
+          "title": "legacy route retained draft and exact nested cancel focus at 320",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "test_id": "e6a8f35bee5f63677a9c-63f04b414c0575096b32",
+          "title": "activity historical detail repeated keyboard dismissal at 390",
+          "outcome": "unexpected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "failed"
+            }
+          ]
+        },
+        {
+          "test_id": "e6a8f35bee5f63677a9c-b2725e0b2cd94b83ff5a",
+          "title": "legacy route retained draft and exact nested cancel focus at 390",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "test_id": "e6a8f35bee5f63677a9c-089aa2e8eb799b9c655f",
+          "title": "activity historical detail repeated keyboard dismissal at 640",
+          "outcome": "unexpected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "failed"
+            }
+          ]
+        },
+        {
+          "test_id": "e6a8f35bee5f63677a9c-3c520bcdec38225e93ca",
+          "title": "legacy route retained draft and exact nested cancel focus at 640",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        }
+      ]
+    },
+    "B13": {
+      "file": "collection-delete.ui.spec.ts",
+      "cases": [
+        {
+          "test_id": "84ba6f61776e00ca7a06-5253aed773a719b6b7cb",
+          "title": "collection dependency decision remains readable and returns keyboard focus at 320",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        }
+      ]
+    },
+    "template-browser": {
+      "file": "template-follow-backend.ui.spec.ts",
+      "cases": [
+        {
+          "test_id": "3b092796abcb8e3d0de4-5db2ec97989dcf6439b3",
+          "title": "real template follow conflict → review → validate → selected publication at 1440",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "test_id": "3b092796abcb8e3d0de4-8e073660be1ba12bcdd1",
+          "title": "real template follow conflict → review → validate → selected publication at 390",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        }
+      ]
+    },
+    "processing-browser": {
+      "file": "processing-publication-backend.ui.spec.ts",
+      "cases": [
+        {
+          "test_id": "4bf5d5c96ef31ad4aea2-ed908aa6365b5e058c6a",
+          "title": "real processing editor → stage comparison → saved recipe → selected feed publication",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        }
+      ]
+    },
+    "cycle-browser": {
+      "file": "cycle-renewal-backend.ui.spec.ts",
+      "cases": [
+        {
+          "test_id": "d05bba78c9b62fd5a340-ac73af372ad32e4fca47",
+          "title": "real monthly cycle editor, renewal, explicit reset and user countdown",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "test_id": "d05bba78c9b62fd5a340-2ef9ac506c095d76e865",
+          "title": "real anniversary cycle editor, renewal, explicit reset and user countdown",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "test_id": "d05bba78c9b62fd5a340-3f2b0b6e2abedde80c67",
+          "title": "real fixed-days cycle editor, renewal, explicit reset and user countdown",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "test_id": "d05bba78c9b62fd5a340-b1caa5cfe264c6f92c2d",
+          "title": "real none cycle editor, renewal, explicit reset and user countdown",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        }
+      ]
+    },
+    "account-browser": {
+      "file": "account-security-backend.ui.spec.ts",
+      "cases": [
+        {
+          "test_id": "8990dc70610d97ac8c08-000b57fe4f70957a9686",
+          "title": "real password change preserves failed reauthentication draft, rotates credentials and invalidates older sessions",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "test_id": "8990dc70610d97ac8c08-9afdc16ef010d8d22a0e",
+          "title": "administrator resets a synthetic account through the UI and temporary login cannot bypass required password change",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        }
+      ]
+    },
+    "mfa-browser": {
+      "file": "mfa-backend.ui.spec.ts",
+      "cases": [
+        {
+          "test_id": "ae410c8f31197bd29f16-7c84495888f86a86f245",
+          "title": "synthetic administrator enrolls an authenticator, logs in with TOTP, and recovers through administrator reset",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        }
+      ]
+    },
+    "backup-browser": {
+      "file": "backup-restore-backend.ui.spec.ts",
+      "cases": [
+        {
+          "test_id": "16e4dee114cd65c58e72-7f7d3a662a0522f00cdc",
+          "title": "OPS01 downloaded backup file rejects a wrong password and restores without activating",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        }
+      ]
+    },
+    "collection-delete-browser": {
+      "file": "collection-delete.ui.spec.ts",
+      "cases": [
+        {
+          "test_id": "84ba6f61776e00ca7a06-5253aed773a719b6b7cb",
+          "title": "collection dependency decision remains readable and returns keyboard focus at 320",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        }
+      ]
+    },
+    "endpoint-impact-browser": {
+      "file": "endpoint-impact.ui.spec.ts",
+      "cases": [
+        {
+          "test_id": "31950723bd7d72a9301e-75e3ed374ac79bd6fa85",
+          "title": "shared endpoint impact review stays readable and cancel preserves exact draft at 320px",
+          "outcome": "unexpected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "failed"
+            }
+          ]
+        }
+      ]
+    },
+    "provider-confirmation-browser": {
+      "file": "provider-suspension-confirmation.ui.spec.ts",
+      "cases": [
+        {
+          "test_id": "07d4ad49142891d260b4-fca59c5076fce3db63de",
+          "title": "managed provider suspension opt-in preserves complete consequences and safe cancel focus at 320",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        }
+      ]
+    },
+    "ordered-route-browser": {
+      "file": "workspace.ui.spec.ts",
+      "cases": [
+        {
+          "test_id": "838d38bcbd8e4d169ad0-263faef3a80a15d06af1",
+          "title": "administrator edits an ordered route without dragging",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        }
+      ]
+    },
+    "route-exit-browser": {
+      "file": "route-exit-backend.ui.spec.ts",
+      "cases": [
+        {
+          "test_id": "493166722ef6d5ae79c0-fccfeefb3559270e1591",
+          "title": "existing managed route selects stored plain TCP endpoint absent from its programs and saves a real draft",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        }
+      ]
+    },
+    "collection-browser": {
+      "file": "collection-task.ui.spec.ts",
+      "cases": [
+        {
+          "test_id": "5d3dfcf4ca6e8ec28f4f-f485b7c6f9c4232bdbae",
+          "title": "source acquisition preserves ordered source and merged steps until explicit collection save and reopened summaries",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        }
+      ]
+    },
+    "dynamic-browser": {
+      "file": "group-membership.ui.spec.ts",
+      "cases": [
+        {
+          "test_id": "ec71091ba2dcacfcab03-83f2498cbf454262242f",
+          "title": "automatic members are an explicit additive choice over current source, collection and platform connections",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        }
+      ]
+    },
+    "rotation-browser": {
+      "file": "product-model.ui.spec.ts",
+      "cases": [
+        {
+          "test_id": "2edbdcf1763e273c20e4-1feb34ffb14a865b38ee",
+          "title": "existing strategy groups remain editable and revoked recovery replaces only the selected client link",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        },
+        {
+          "test_id": "2edbdcf1763e273c20e4-e673009002255102e4b1",
+          "title": "scoped configuration creates one independent second-client subscription and immediately exposes its new link",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        }
+      ]
+    },
+    "invite-browser": {
+      "file": "session-recovery.ui.spec.ts",
+      "cases": [
+        {
+          "test_id": "12baf48e623cd4f68faa-204d1ebbb03756845589",
+          "title": "real invite signup switches identity without inheriting old account draft or cache",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        }
+      ]
+    },
+    "first-feed-browser": {
+      "file": "first-subscription.ui.spec.ts",
+      "cases": [
+        {
+          "test_id": "f6667931baac0e3971ee-ad13e5ddb1b1ae1d9a86",
+          "title": "first subscription skips the empty target gate but preserves save, cancel, review, and explicit publication",
+          "outcome": "expected",
+          "attempts": [
+            {
+              "retry": 0,
+              "status": "passed"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

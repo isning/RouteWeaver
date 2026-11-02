@@ -1,0 +1,176 @@
+{
+  "schema_version": 1,
+  "frozen_source": "97448847cbfab1a16df2fff5a6571ccca465beca",
+  "frozen_tree": "947ef73831ca42417098b9811ccf6c4d3fe2fd37",
+  "method": "Read existing committed reports and local terminal logs; assert new test files byte-identical from author commit to frozen source. This does not bind every production dependency or rerun those tests on the frozen source. No application/browser/native test executed in this docs-only reconciliation.",
+  "local_passes": [
+    {
+      "id": "E03",
+      "author_commit": "8ea0ac2acb71f0f7160ca55d613b0335ca174e48",
+      "evidence_document": "docs/verification/PROCESSING-STAGE-CONTRACTS-2026-11-01.md",
+      "source_binding": [
+        {
+          "path": "internal/conversion/pipeline_contract_test.go",
+          "sha256": "66c54de2fa2b70a7203c8a9f3bdfc2dd5aebdc3a7cde704fecffa82949435b36",
+          "identical_author_to_frozen": true
+        },
+        {
+          "path": "internal/httpapi/processing_noop_publication_test.go",
+          "sha256": "02b2ae107a8ee20c551f17b723fdcd36321785362161c57ffc84c8f45811c90e",
+          "identical_author_to_frozen": true
+        }
+      ],
+      "inspected_existing_logs": [
+        {
+          "name": "processing-conversion-all.log",
+          "sha256": "1f8cf42e3cd25f113a3b1df83b737381c2b40f164eac413234457b723a5db011",
+          "terminal_lines": [
+            "ok  \trouteweaver/internal/conversion\t1.046s"
+          ]
+        },
+        {
+          "name": "processing-noop-test.log",
+          "sha256": "31bc91e20ccbfe4c63eaf5039d8d4cb76a8b1ad86520682fddccfd952515aeca",
+          "terminal_lines": [
+            "ok  \trouteweaver/internal/httpapi\t2.790s"
+          ]
+        }
+      ],
+      "status": "named local scope passed; not final-source integration execution"
+    },
+    {
+      "id": "E06",
+      "author_commit": "f75e12d65686f9ce4b8bb963a82d25ad97267cd9",
+      "evidence_document": "docs/verification/NESTED-SOURCE-PUBLICATION-2026-11-01.md",
+      "source_binding": [
+        {
+          "path": "internal/httpapi/nested_source_publication_test.go",
+          "sha256": "64ee985c91ea045f7be4245513bae12a0c97f58f90c8391650d023a4be7daddf",
+          "identical_author_to_frozen": true
+        }
+      ],
+      "inspected_existing_logs": [
+        {
+          "name": "race.log",
+          "sha256": "68c78830ff21faf3881a6880eaa2605810c184584b6cf1214c0c5ead6a4ab144",
+          "terminal_lines": [
+            "ok  \trouteweaver/internal/httpapi\t13.266s"
+          ]
+        }
+      ],
+      "status": "named local scope passed; not final-source integration execution"
+    },
+    {
+      "id": "E11",
+      "author_commit": "712b977f12bf3f3aa16a5cd2b059480fc4820447",
+      "evidence_document": "docs/verification/NOTIFICATION-MATRIX-2026-11-01.md",
+      "source_binding": [
+        {
+          "path": "internal/notifications/acceptance_matrix_test.go",
+          "sha256": "87b24b9ee4e92c2aad2170910c4b34ab914cb4a6a1f0ec0b3d18fca905c6f030",
+          "identical_author_to_frozen": true
+        }
+      ],
+      "inspected_existing_logs": [
+        {
+          "name": "notification-matrix-final.jsonl",
+          "sha256": "6dd1b3471695d9b68a0ba1e82a5af08d0a061215e6221200acf597dfe83487cd",
+          "terminal_lines": [
+            "{\"Time\":\"2026-11-02T06:02:19.31067278+08:00\",\"Action\":\"output\",\"Package\":\"routeweaver/internal/notifications\",\"Output\":\"ok  \\trouteweaver/internal/notifications\\t17.641s\\n\"}",
+            "{\"Time\":\"2026-11-02T06:02:19.310847904+08:00\",\"Action\":\"pass\",\"Package\":\"routeweaver/internal/notifications\",\"Elapsed\":17.642}"
+          ]
+        }
+      ],
+      "status": "named local scope passed; not final-source integration execution"
+    },
+    {
+      "id": "D01",
+      "author_commit": "1103f7ba125b86c72b2427da2fe72c1755b45ce7",
+      "evidence_document": "docs/verification/MIXED-IMPORT-ATOMICITY-2026-11-01.md",
+      "source_binding": [
+        {
+          "path": "internal/httpapi/source_mixed_atomic_test.go",
+          "sha256": "e82bcfe5837aebd0bd2f04095abfa582400c060835c978acd9f689ccaf62da18",
+          "identical_author_to_frozen": true
+        }
+      ],
+      "inspected_existing_logs": [
+        {
+          "name": "mixed-import-parser.log",
+          "sha256": "d4116759748983d9bb0acefa7973fd7f8eb3058b044d7ab94d09b18eecbd019d",
+          "terminal_lines": [
+            "ok  \trouteweaver/internal/importer\t1.238s"
+          ]
+        },
+        {
+          "name": "mixed-import-http-final.log",
+          "sha256": "034a658cd0691cbc2918e5c941a5b835bc6f1d61a0804803f36941d86af8dffc",
+          "terminal_lines": [
+            "ok  \trouteweaver/internal/httpapi\t4.550s"
+          ]
+        }
+      ],
+      "status": "named local scope passed; not final-source integration execution"
+    }
+  ],
+  "unrun": [
+    "E07 two corrected structured-editor browser cases; native/parser/runtime scope separate and no actual TUN",
+    "E09 two corrected service-center browser cases",
+    "E13 two settings-origin browser cases",
+    "Same-instance browser/native identity bridge required standalone gate"
+  ],
+  "final_source_static_api_web": "PASS, exact frozen source/tree unchanged and clean; terminal 2026-11-01 22:37 UTC",
+  "preserved_gates": [
+    "all story/ticket statuses and direct prerequisites",
+    "full integrated CI including actual browser/native bridge",
+    "NET03 original sample 410 read/cleanup failure",
+    "target capacity and Linux deployment authorization",
+    "real key custody and RPO/RTO"
+  ],
+  "final_source_results": {
+    "static": "63 helper regressions, architecture and actionlint PASS",
+    "api": "31 passed (1.5m), including one pure TOTP RFC vector; not 31 browser journeys",
+    "web": "195 files / 2108 tests passed in 708.43s; types and production build PASS",
+    "warning": "Existing 542.19 kB main chunk warning retained",
+    "security": "26 scanner regressions and source/index/all-ref history passed; exact security receipt copied separately",
+    "unrun": "201 ordinary browser cases plus one same-instance native bridge; no new remote CI"
+  },
+  "final_logs": [
+    {
+      "name": "joined-final-static.log",
+      "sha256": "23d82dbc73125198a8b9baff8c53e2c105f032b052fd46cbf6b2979d6536a160",
+      "terminal_lines": [
+        "== GitHub Actions workflow syntax and contracts (pinned actionlint) ==",
+        "",
+        "PASS: static verification. This is the named gate only, not deployed acceptance or completion of all 35 stories."
+      ]
+    },
+    {
+      "name": "joined-final-api.log",
+      "sha256": "cbd0e19e93c89016aab45174e8e0ff812c907f71c2db889b8adf72931a7cc2dd",
+      "terminal_lines": [
+        "  31 passed (1.5m)",
+        "",
+        "PASS: api verification. This is the named gate only, not deployed acceptance or completion of all 35 stories."
+      ]
+    },
+    {
+      "name": "joined-final-web.log",
+      "sha256": "039e62bdd282820df48577b160fbd4dbb5f3044049b51849f907769e65e06ace",
+      "terminal_lines": [
+        "✓ built in 936ms",
+        "",
+        "PASS: web verification. This is the named gate only, not deployed acceptance or completion of all 35 stories."
+      ]
+    },
+    {
+      "name": "joined-final-helper-classifier.log",
+      "sha256": "01904fe5ced6b34342a80ea8c3b14ea95ae2bd88ce19b25e7eee5253c9d0f9be",
+      "terminal_lines": [
+        "--- PASS: TestBrowserNativeBridgeClassifiesOnlyExactOutcomes (0.00s)",
+        "PASS",
+        "ok  \trouteweaver/internal/httpapi\t0.015s"
+      ]
+    }
+  ]
+}
