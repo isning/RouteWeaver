@@ -119,7 +119,7 @@ func (h *server) registerAgent(r chi.Router) {
 		if !decode(w, r, &batch) {
 			return
 		}
-		if batch.Scope != enrollment.Scope || batch.Sequence == 0 || len(batch.Samples) == 0 || len(batch.Samples) > 1000 || len(batch.StreamEpoch) > 128 || strings.ContainsAny(batch.StreamEpoch, ":/\\") || batch.StreamEpoch == "" {
+		if batch.Scope != enrollment.Scope || batch.Sequence == 0 || (len(batch.Samples) == 0 && batch.TerminalEvidence == nil) || len(batch.Samples) > 1000 || len(batch.StreamEpoch) > 128 || strings.ContainsAny(batch.StreamEpoch, ":/\\") || batch.StreamEpoch == "" {
 			fail(w, 400, "invalid meter envelope")
 			return
 		}
@@ -132,7 +132,7 @@ func (h *server) registerAgent(r chi.Router) {
 			fail(w, 400, "meter digest mismatch")
 			return
 		}
-		counterBatch := store.CounterBatch{InstanceID: batch.Scope.InstanceID, EnrollmentEpoch: batch.Scope.EnrollmentEpoch, StreamEpoch: batch.StreamEpoch, Sequence: batch.Sequence, Digest: batch.Digest}
+		counterBatch := store.CounterBatch{InstanceID: batch.Scope.InstanceID, EnrollmentEpoch: batch.Scope.EnrollmentEpoch, StreamEpoch: batch.StreamEpoch, Sequence: batch.Sequence, Digest: batch.Digest, TerminalEvidence: batch.TerminalEvidence}
 		for _, sample := range batch.Samples {
 			counterBatch.Samples = append(counterBatch.Samples, store.CounterSample{LedgerMode: sample.LedgerMode, SampleID: sample.SampleID, CounterEpoch: sample.CounterEpoch, SubjectID: sample.SubjectID, RouteID: sample.RouteID, PolicyRevision: sample.PolicyRevision, CycleID: sample.CycleID, MeasurementLayer: sample.MeasurementLayer, CumulativeBytes: sample.CumulativeBytes, ObservedAt: sample.ObservedAt})
 		}
@@ -140,12 +140,40 @@ func (h *server) registerAgent(r chi.Router) {
 			fail(w, 409, e.Error())
 			return
 		}
-		writeJSON(w, 200, controlprotocol.MeterReceipt{StreamEpoch: batch.StreamEpoch, Sequence: batch.Sequence, Digest: batch.Digest})
+		receipt := controlprotocol.MeterReceipt{StreamEpoch: batch.StreamEpoch, Sequence: batch.Sequence, Digest: batch.Digest}
+		if batch.TerminalEvidence != nil {
+			receipt.CustodyVersion = 1
+			receipt.TerminalEvidenceDigest = batch.TerminalEvidence.Digest
+		}
+		writeJSON(w, 200, receipt)
 	})
 }
 func (h *server) registerAgentAdmin(r chi.Router) {
 	h.registerDiagnosticAdmin(r)
 	h.registerAdmissionAdmin(r)
+	r.Get("/agent/instances/{instanceId}/meter-terminal-evidence/receipts", func(w http.ResponseWriter, r *http.Request) {
+		q := r.URL.Query()
+		page, err := h.s.DiscoverMeterTerminalEvidence(r.Context(), chi.URLParam(r, "instanceId"), q.Get("enrollmentEpoch"), q.Get("cursor"))
+		if err != nil {
+			storeError(w, err)
+			return
+		}
+		writeJSON(w, 200, page)
+	})
+	r.Get("/agent/instances/{instanceId}/meter-terminal-evidence", func(w http.ResponseWriter, r *http.Request) {
+		q := r.URL.Query()
+		sequence, err := strconv.ParseUint(q.Get("sequence"), 10, 64)
+		if err != nil {
+			fail(w, 400, "invalid terminal evidence sequence")
+			return
+		}
+		evidence, err := h.s.MeterTerminalEvidence(chi.URLParam(r, "instanceId"), q.Get("enrollmentEpoch"), q.Get("streamEpoch"), sequence)
+		if err != nil {
+			storeError(w, err)
+			return
+		}
+		writeJSON(w, 200, evidence)
+	})
 	r.Get("/agent/instances/{instanceId}/accounting-pending", func(w http.ResponseWriter, r *http.Request) {
 		pending, e := h.s.PendingCounterBatches(chi.URLParam(r, "instanceId"))
 		if e != nil {

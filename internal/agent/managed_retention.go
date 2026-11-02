@@ -20,12 +20,14 @@ import (
 // must disappear durably BEFORE deduplication cursors can disappear. No growing
 // list of tombstones is needed for the runtime's fresh random epoch contract.
 type managedRetirement struct {
-	Epoch          string   `json:"epoch"`
-	Directory      string   `json:"directory"`
-	Acked          uint64   `json:"acked,string"`
-	BaselineDigest string   `json:"baselineDigest"`
-	FinalDigest    string   `json:"finalDigest"`
-	Keys           []string `json:"keys"`
+	Scope          Scope           `json:"scope"`
+	Custody        terminalCustody `json:"custody"`
+	Epoch          string          `json:"epoch"`
+	Directory      string          `json:"directory"`
+	Acked          uint64          `json:"acked,string"`
+	BaselineDigest string          `json:"baselineDigest"`
+	FinalDigest    string          `json:"finalDigest"`
+	Keys           []string        `json:"keys"`
 }
 
 var journalEpoch = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$`)
@@ -76,9 +78,9 @@ func decodeRetirementSnapshot(raw []byte, epoch string) (entrypolicy.Snapshot, e
 	return s, nil
 }
 
-// compactManagedJournal does not settle admission reservations. The acknowledged
-// raw meter evidence is already durable at the control plane; unresolved per-flow
-// budget obligations remain there and are never inferred away from this final.
+// compactManagedJournal requires explicit CP custody of the exact closed proof,
+// not merely an ACK of equal live bytes. It never settles admission reservations;
+// unresolved per-flow obligations remain authoritative at the control plane.
 func (s *MeterSpool) compactManagedJournal(ctx context.Context, root string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -210,8 +212,15 @@ func (s *MeterSpool) compactManagedJournal(ctx context.Context, root string) err
 		if !ready {
 			continue
 		}
+		custody, accepted, err := s.ensureTerminalCustodyLocked(baseline, final)
+		if err != nil {
+			return err
+		}
+		if !accepted {
+			continue
+		}
 		sort.Strings(keys)
-		intent = &managedRetirement{Epoch: epoch, Directory: path, Acked: s.disk.Acked, BaselineDigest: journalDigest(baseRaw), FinalDigest: journalDigest(finalRaw), Keys: keys}
+		intent = &managedRetirement{Scope: s.disk.Scope, Custody: custody, Epoch: epoch, Directory: path, Acked: s.disk.Acked, BaselineDigest: journalDigest(baseRaw), FinalDigest: journalDigest(finalRaw), Keys: keys}
 		raw, err := json.Marshal(intent)
 		if err != nil {
 			return err
@@ -246,11 +255,32 @@ func (s *MeterSpool) resumeManagedRetirement(ctx context.Context, dir *os.Root, 
 	if intent == nil {
 		return nil
 	}
+	if intent.Scope != s.disk.Scope || intent.Custody.Receipt.CustodyVersion != entrypolicy.TerminalCustodyVersion || !validTerminalDigest(intent.Custody.EvidenceDigest) || intent.Custody.EvidenceDigest != intent.Custody.Receipt.TerminalEvidenceDigest || intent.Custody.Receipt.StreamEpoch != s.disk.Epoch || intent.Custody.Receipt.Sequence == 0 || !validTerminalDigest(intent.Custody.Receipt.Digest) || intent.Custody.Receipt.Sequence > intent.Acked {
+		return errors.New("retirement lacks scoped terminal custody; legacy recovery requires review")
+	}
 	if intent.Directory != dir.Name() || intent.Acked > s.disk.Acked {
 		return errors.New("managed retirement scope or receipt mismatch")
 	}
-	if !journalEpoch.MatchString(intent.Epoch) || len(intent.Keys) == 0 || len(intent.Keys) > 1000 || len(intent.BaselineDigest) != 64 || len(intent.FinalDigest) != 64 {
+	if !journalEpoch.MatchString(intent.Epoch) || len(intent.Keys) == 0 || len(intent.Keys) > 1000 || !validTerminalDigest(intent.BaselineDigest) || !validTerminalDigest(intent.FinalDigest) {
 		return errors.New("invalid managed retirement intent")
+	}
+	// A WAL is not itself permission to invent a receipt. The map may be
+	// absent only after both files AND source cursors were durably retired.
+	if custody, exists := s.disk.TerminalCustody[intent.Epoch]; exists {
+		if custody != intent.Custody {
+			return errors.New("retirement custody differs from durable ACK")
+		}
+	} else {
+		for _, key := range intent.Keys {
+			if _, exists := s.disk.ManagedSources[key]; exists {
+				return errors.New("retirement missing durable custody ACK")
+			}
+		}
+		for _, kind := range []string{"baseline", "final"} {
+			if _, err := readRetirementFile(dir, intent.Epoch+"."+kind+".json"); !errors.Is(err, os.ErrNotExist) {
+				return errors.New("retirement missing custody while evidence remains")
+			}
+		}
 	}
 	for _, key := range intent.Keys {
 		if !strings.HasPrefix(key, intent.Epoch+"-") {
@@ -262,6 +292,9 @@ func (s *MeterSpool) resumeManagedRetirement(ctx context.Context, dir *os.Root, 
 		retiring[key] = true
 	}
 	for _, batch := range s.disk.Pending {
+		if batch.TerminalEvidence != nil && batch.TerminalEvidence.RuntimeEpoch == intent.Epoch {
+			return errors.New("retirement has outstanding terminal receipt")
+		}
 		if err := ctx.Err(); err != nil {
 			return err
 		}
@@ -288,6 +321,35 @@ func (s *MeterSpool) resumeManagedRetirement(ctx context.Context, dir *os.Root, 
 		}
 		if journalDigest(raw) != file.digest {
 			return errors.New("managed retirement journal changed")
+		}
+	}
+	// When both originals remain, also bind the WAL's file fingerprints and
+	// cursor set to the exact canonical proof acknowledged by the CP.
+	baseRaw, baseErr := readRetirementFile(dir, intent.Epoch+".baseline.json")
+	finalRaw, finalErr := readRetirementFile(dir, intent.Epoch+".final.json")
+	if baseErr == nil && finalErr == nil {
+		baseline, err := decodeRetirementSnapshot(baseRaw, intent.Epoch)
+		if err != nil {
+			return err
+		}
+		final, err := decodeRetirementSnapshot(finalRaw, intent.Epoch)
+		if err != nil {
+			return err
+		}
+		evidence := entrypolicy.TerminalEvidence{Version: entrypolicy.TerminalCustodyVersion, NodeID: s.disk.Scope.NodeID, InstanceID: s.disk.Scope.InstanceID, EnrollmentEpoch: s.disk.Scope.EnrollmentEpoch, RuntimeEpoch: intent.Epoch, Baseline: baseline, Final: final}
+		evidence.Digest = evidence.ComputeDigest()
+		if evidence.Validate() != nil || evidence.Digest != intent.Custody.EvidenceDigest || len(intent.Keys) != len(final.Counters) {
+			return errors.New("retirement files differ from acknowledged terminal proof")
+		}
+		keys := map[string]bool{}
+		for _, c := range final.Counters {
+			keys[meterSourceKey(c)] = true
+		}
+		for _, key := range intent.Keys {
+			if !keys[key] {
+				return errors.New("retirement cursor set differs from terminal proof")
+			}
+			delete(keys, key)
 		}
 	}
 	for _, file := range files {
@@ -328,6 +390,12 @@ func (s *MeterSpool) resumeManagedRetirement(ctx context.Context, dir *os.Root, 
 		return closeErr
 	}
 	next := s.disk
+	next.TerminalCustody = make(map[string]terminalCustody, len(s.disk.TerminalCustody))
+	for k, v := range s.disk.TerminalCustody {
+		if k != intent.Epoch {
+			next.TerminalCustody[k] = v
+		}
+	}
 	next.ManagedSources = make(map[string]managedMeterCursor, len(s.disk.ManagedSources))
 	for key, cursor := range s.disk.ManagedSources {
 		next.ManagedSources[key] = cursor

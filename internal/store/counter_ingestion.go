@@ -1,6 +1,7 @@
 package store
 
 import (
+	"bytes"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -42,12 +43,13 @@ type CounterSample struct {
 	ObservedAt       time.Time `json:"observedAt"`
 }
 type CounterBatch struct {
-	InstanceID      string          `json:"instanceId"`
-	EnrollmentEpoch string          `json:"enrollmentEpoch"`
-	StreamEpoch     string          `json:"streamEpoch"`
-	Digest          string          `json:"digest"`
-	Sequence        uint64          `json:"sequence,string"`
-	Samples         []CounterSample `json:"samples"`
+	TerminalEvidence *entrypolicy.TerminalEvidence `json:"terminalEvidence,omitempty"`
+	InstanceID       string                        `json:"instanceId"`
+	EnrollmentEpoch  string                        `json:"enrollmentEpoch"`
+	StreamEpoch      string                        `json:"streamEpoch"`
+	Digest           string                        `json:"digest"`
+	Sequence         uint64                        `json:"sequence,string"`
+	Samples          []CounterSample               `json:"samples"`
 }
 
 // ErrPendingAttribution describes persisted legacy pending records. New valid
@@ -93,8 +95,12 @@ func (s *Store) SetMeterBinding(v MeterBinding) error {
 func (s *Store) AcceptCounterBatch(batch CounterBatch, original any) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if batch.Sequence == 0 || len(batch.Samples) == 0 || len(batch.Samples) > 1000 {
+	if batch.Sequence == 0 || (len(batch.Samples) == 0 && batch.TerminalEvidence == nil) || len(batch.Samples) > 1000 {
 		return fmt.Errorf("invalid counter batch")
+	}
+	terminalRaw, err := validateTerminalCounterBatch(batch, original)
+	if err != nil {
+		return err
 	}
 	tx, e := s.beginWriteTx()
 	if e != nil {
@@ -118,9 +124,23 @@ func (s *Store) AcceptCounterBatch(batch CounterBatch, original any) error {
 	stream := strings.Join([]string{batch.InstanceID, batch.EnrollmentEpoch, batch.StreamEpoch}, ":")
 	receiptID := fmt.Sprintf("%s:%d", stream, batch.Sequence)
 	var digest string
-	if e = get("meter-receipts", receiptID, &digest); e == nil {
+	if batch.TerminalEvidence != nil {
+		e = s.readBoundedTerminalReceipt(tx, receiptID, &digest)
+	} else {
+		e = get("meter-receipts", receiptID, &digest)
+	}
+	if e == nil {
 		if digest != batch.Digest {
 			return fmt.Errorf("conflicting meter replay")
+		}
+		if batch.TerminalEvidence != nil {
+			var retained json.RawMessage
+			if e = s.readBoundedTerminalInbox(tx, receiptID, &retained); e != nil {
+				return e
+			}
+			if !bytes.Equal(retained, terminalRaw) {
+				return fmt.Errorf("terminal replay differs from retained custody evidence")
+			}
 		}
 		return nil
 	} else if e != ErrNotFound {
@@ -140,6 +160,21 @@ func (s *Store) AcceptCounterBatch(batch CounterBatch, original any) error {
 	}
 	if batch.Sequence != sequence.Sequence+1 {
 		return fmt.Errorf("meter sequence gap; replay the oldest unacknowledged batch")
+	}
+	if batch.TerminalEvidence != nil {
+		if e = s.validateTerminalCustodyTx(tx, batch); e != nil {
+			return e
+		}
+		if e = put("meter-streams", stream, streamCursor{Sequence: batch.Sequence}); e != nil {
+			return e
+		}
+		if e = put("meter-inbox", receiptID, original); e != nil {
+			return e
+		}
+		if e = put("meter-receipts", receiptID, batch.Digest); e != nil {
+			return e
+		}
+		return tx.Commit()
 	}
 	rates := []service.Rate{}
 	rows, e := tx.Query(`SELECT id,data FROM records WHERE kind='rates'`)

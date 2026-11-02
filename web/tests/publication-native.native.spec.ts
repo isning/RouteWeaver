@@ -33,9 +33,27 @@ test("same browser publication is observed by the owned native instance and stop
     await page.goto(`/#routes?deployment=${draft.id}`);
     const detail = page.getByRole("dialog", { name: draft.name, exact: true });
     await expect(detail).toBeVisible();
-    await detail
-      .getByRole("button", { name: "查看修改并应用", exact: true })
-      .click();
+    // The fixture saves the managed draft before attaching principals. The saved
+    // diagnostic is intentionally stale until this explicit, real UI recheck.
+    await expect(
+      detail.getByText("草稿需要调整", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      detail.getByText(
+        "MANAGED_PRINCIPALS_REQUIRED: authenticated VLESS principals required",
+        { exact: true },
+      ),
+    ).toBeVisible();
+    const checked = page.waitForResponse(
+      (r) =>
+        new URL(r.url()).pathname ===
+          `/api/server-deployments/${draft.id}/validate` &&
+        r.request().method() === "POST",
+    );
+    await detail.getByRole("button", { name: "重新检查", exact: true }).click();
+    const validation = await checked;
+    expect(validation.status()).toBe(200);
+    expect((await validation.json()).valid).toBe(true);
     const review = page.getByRole("dialog", {
       name: "应用转发路径修改",
       exact: true,

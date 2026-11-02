@@ -250,5 +250,35 @@
     "rule": "jfrog-identity-token",
     "lineSHA256": "6e41bbbfc64e793bc279bb8f88550bcecd1b92dad8bdb5328c260c44262f9a1e",
     "reason": "Immutable operational refresh tests source manifest: every 297 safe path/SHA256 entry verified against declared Git db67b40c91098800aefe2eba36d5f03bf2198198; exact bytes match both receipt bindings. No non-hash data. Exact path/rule/line only; not a claim of current test-source identity."
+  },
+  {
+    "path": "docs/verification/evidence/TERMINAL-CUSTODY-OPERATIONS-REFRESH-2026-11-02-production-manifest.json",
+    "rule": "jfrog-identity-token",
+    "lineSHA256": "ddff69c096ed82988f6371394ae35caece0f8eaf8bbe24401a6670759cdd86c2",
+    "reason": "Immutable terminal-custody production source manifest: all 248 strict unique safe path/SHA256 entries recomputed from declared b38b12b7730a964cf3b3bf0273b8991617a2b586; receipt manifest byte hash and retained native executable verified. Exact path/rule/line only."
+  },
+  {
+    "path": "docs/verification/evidence/TERMINAL-CUSTODY-OPERATIONS-REFRESH-2026-11-02-production-manifest.json",
+    "rule": "generic-api-key",
+    "lineSHA256": "ddff69c096ed82988f6371394ae35caece0f8eaf8bbe24401a6670759cdd86c2",
+    "reason": "Immutable terminal-custody production source manifest: all 248 strict unique safe path/SHA256 entries recomputed from declared b38b12b7730a964cf3b3bf0273b8991617a2b586; receipt manifest byte hash and retained native executable verified. Exact path/rule/line only."
+  },
+  {
+    "path": "docs/verification/evidence/TERMINAL-CUSTODY-OPERATIONS-REFRESH-2026-11-02-tests-manifest.json",
+    "rule": "jfrog-identity-token",
+    "lineSHA256": "1ac63c3f1e88af54f8194bde6b01ea99c1dc08f13c197615989926151c2af40b",
+    "reason": "Immutable terminal-custody tests source manifest: all 302 strict unique safe path/SHA256 entries recomputed from declared b38b12b7730a964cf3b3bf0273b8991617a2b586; receipt manifest byte hash and retained native executable verified. Exact path/rule/line only."
+  },
+  {
+    "path": "docs/verification/evidence/TERMINAL-CUSTODY-OPERATIONS-REFRESH-2026-11-02-tests-manifest.json",
+    "rule": "generic-api-key",
+    "lineSHA256": "1ac63c3f1e88af54f8194bde6b01ea99c1dc08f13c197615989926151c2af40b",
+    "reason": "Immutable terminal-custody tests source manifest: all 302 strict unique safe path/SHA256 entries recomputed from declared b38b12b7730a964cf3b3bf0273b8991617a2b586; receipt manifest byte hash and retained native executable verified. Exact path/rule/line only."
+  },
+  {
+    "path": "docs/verification/evidence/OPERATIONAL-LEGAL-LIFECYCLE-2026-11-02.json",
+    "rule": "jfrog-identity-token",
+    "lineSHA256": "5cdad0a7962dc79116d1e3a65155c9af7c73efd379312f3ea490dada7df4aa48",
+    "reason": "Legal lifecycle fixture source SHA256 metadata; all four source hashes independently recomputed against retained operational-legal-lifecycle-20261102 files, including internal/agent/managed_xray_process_test.go. Exact path/rule/line only; receipt unchanged."
   }
 ]

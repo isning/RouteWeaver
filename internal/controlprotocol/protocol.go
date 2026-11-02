@@ -10,6 +10,7 @@ import (
 	"errors"
 	"path"
 	"routeweaver/internal/domain"
+	"routeweaver/internal/entrypolicy"
 	"sort"
 	"strings"
 	"time"
@@ -123,17 +124,26 @@ type MeterSample struct {
 	CumulativeBytes  uint64    `json:"cumulativeBytes,string"`
 	ObservedAt       time.Time `json:"observedAt"`
 }
+
+// MeterBatch carries either ordinary samples or a terminal-only custody proof.
+// A terminal proof has no samples and cannot debit or settle a budget.
 type MeterBatch struct {
-	Scope       Scope         `json:"scope"`
-	StreamEpoch string        `json:"streamEpoch"`
-	Sequence    uint64        `json:"sequence,string"`
-	Digest      string        `json:"digest"`
-	Samples     []MeterSample `json:"samples"`
+	TerminalEvidence *entrypolicy.TerminalEvidence `json:"terminalEvidence,omitempty"`
+	Scope            Scope                         `json:"scope"`
+	StreamEpoch      string                        `json:"streamEpoch"`
+	Sequence         uint64                        `json:"sequence,string"`
+	Digest           string                        `json:"digest"`
+	Samples          []MeterSample                 `json:"samples"`
 }
+
+// Terminal custody requires both explicit version and exact evidence digest;
+// an ordinary receipt never acquires terminal semantics from equal byte counts.
 type MeterReceipt struct {
-	StreamEpoch string `json:"streamEpoch"`
-	Sequence    uint64 `json:"sequence,string"`
-	Digest      string `json:"digest"`
+	CustodyVersion         int    `json:"custodyVersion,omitempty"`
+	TerminalEvidenceDigest string `json:"terminalEvidenceDigest,omitempty"`
+	StreamEpoch            string `json:"streamEpoch"`
+	Sequence               uint64 `json:"sequence,string"`
+	Digest                 string `json:"digest"`
 }
 
 func validArtifactPath(p string) bool {

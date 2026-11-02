@@ -59,6 +59,12 @@ reset/delete journals to work around unknown ownership or accounting backlog.
   report the final local observation. A failed remote report is not an ACK.
   Allow at least 20 seconds for orderly exit before an external stop deadline;
   unresponsive integrations or OS/storage faults can still prevent completion.
+- Managed final journals retire only after an explicit CP terminal-evidence
+  custody ACK, not an ACK of equal live bytes. Both CP and agent must be upgraded;
+  schema-2 meter state deliberately refuses older agent binaries. Unavailable
+  custody or legacy incomplete retirement keeps evidence and fails closed. See
+  `docs/operations/PRIVATE-LINUX-RECOVERY-DRILLS.md` for bounded proof retrieval
+  and compatibility/recovery requirements.
 - Restart first reopens and observes durable state. **It does not replay an old
   activation.** Manual/default deployments need a newer reviewed control-plane
   desired generation after clean stop or proven death. Explicitly reviewed Fleet

@@ -43,10 +43,18 @@ func retentionSnapshot(at time.Time, epoch string, n int, value uint64) entrypol
 	}
 	return s
 }
+
+// Synthetic exact custody receipts exercise local GC; joined store/HTTP tests
+// separately prove actual CP persistence, retrieval and unchanged obligations.
 func ackRetention(t *testing.T, spool *MeterSpool) {
 	t.Helper()
 	for _, b := range spool.Pending() {
-		if err := spool.Ack(MeterReceipt{StreamEpoch: b.StreamEpoch, Sequence: b.Sequence, Digest: b.Digest}); err != nil {
+		receipt := MeterReceipt{StreamEpoch: b.StreamEpoch, Sequence: b.Sequence, Digest: b.Digest}
+		if b.TerminalEvidence != nil {
+			receipt.CustodyVersion = entrypolicy.TerminalCustodyVersion
+			receipt.TerminalEvidenceDigest = b.TerminalEvidence.Digest
+		}
+		if err := spool.Ack(receipt); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -69,6 +77,10 @@ func TestManagedFinalReceiptCompactionBoundsLongRunningCollection(t *testing.T) 
 		batches := spool.Pending()
 		if len(batches) != 2 || batches[0].Samples[0].CumulativeBytes != 0 || batches[1].Samples[0].CumulativeBytes != 17 {
 			t.Fatalf("epoch %d lost baseline/final: %d", epoch, len(batches))
+		}
+		ackRetention(t, spool)
+		if err = CollectManagedCounters(context.Background(), root, spool, false); err != nil {
+			t.Fatal(err)
 		}
 		ackRetention(t, spool)
 		if err = CollectManagedCounters(context.Background(), root, spool, false); err != nil {
@@ -143,6 +155,8 @@ func TestManagedRetirementWaitsForFinalAndExactReceipt(t *testing.T) {
 	}
 	ackRetention(t, spool)
 	collect()
+	ackRetention(t, spool)
+	collect()
 	if _, err = os.Stat(filepath.Join(ManagedJournalDirectory(root), "epoch-one.final.json")); !os.IsNotExist(err) {
 		t.Fatal("settled final not retired", err)
 	}
@@ -196,6 +210,10 @@ func prepareRetirementCrash(t *testing.T, root string) (Scope, string) {
 		t.Fatal(err)
 	}
 	ackRetention(t, spool)
+	if err = CollectManagedCounters(context.Background(), root, spool, false); err != nil {
+		t.Fatal(err)
+	}
+	ackRetention(t, spool)
 	spool.Close()
 	path := filepath.Join(root, "spool", "meter.json")
 	raw, err := os.ReadFile(path)
@@ -209,7 +227,7 @@ func prepareRetirementCrash(t *testing.T, root string) (Scope, string) {
 	baseRaw, _ := json.Marshal(baseline)
 	finalRaw, _ := json.Marshal(final)
 	c := final.Counters[0]
-	intent := map[string]any{"epoch": "epoch-crash", "directory": ManagedJournalDirectory(root), "acked": state["acked"], "baselineDigest": journalDigest(baseRaw), "finalDigest": journalDigest(finalRaw), "keys": []string{c.CounterEpoch + "\x00" + c.SubjectID + "\x00" + c.RouteID + "\x00" + c.MeasurementLayer}}
+	intent := map[string]any{"scope": scope, "custody": state["terminalCustody"].(map[string]any)["epoch-crash"], "epoch": "epoch-crash", "directory": ManagedJournalDirectory(root), "acked": state["acked"], "baselineDigest": journalDigest(baseRaw), "finalDigest": journalDigest(finalRaw), "keys": []string{c.CounterEpoch + "\x00" + c.SubjectID + "\x00" + c.RouteID + "\x00" + c.MeasurementLayer}}
 	raw, err = json.Marshal(intent)
 	if err != nil {
 		t.Fatal(err)
@@ -239,6 +257,7 @@ func TestManagedRetirementCrashReopenNeverReplaysAcknowledgedEpoch(t *testing.T)
 					t.Fatal(err)
 				}
 				delete(state, "managedSources")
+				delete(state, "terminalCustody")
 				raw, err = json.Marshal(state)
 				if err != nil {
 					t.Fatal(err)
@@ -472,6 +491,10 @@ func TestManagedRetirementRejectsStaleLiveZeroSnapshot(t *testing.T) {
 	writeRetentionSnapshot(t, root, "baseline", retentionSnapshot(now, "epoch-final", 1, 0))
 	final := retentionSnapshot(now.Add(time.Second), "epoch-final", 1, 0)
 	writeRetentionSnapshot(t, root, "final", final)
+	if err = CollectManagedCounters(context.Background(), root, spool, false); err != nil {
+		t.Fatal(err)
+	}
+	ackRetention(t, spool)
 	if err = CollectManagedCounters(context.Background(), root, spool, false); err != nil {
 		t.Fatal(err)
 	}

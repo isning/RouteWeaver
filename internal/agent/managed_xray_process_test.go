@@ -12,6 +12,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 	"time"
 
@@ -241,10 +242,30 @@ func TestManagedNativeBrokerEOFStopsActivePayloadAndPersistsFinalJournal(t *test
 			t.Fatal(err)
 		}
 		defer closeOperationalSpool(t, spool)
-		if err = CollectManagedCounters(context.Background(), root, spool, false); err != nil || len(spool.Pending()) != 0 {
-			t.Fatal("acknowledged actual final replayed after restart", err)
+		if err = CollectManagedCounters(context.Background(), root, spool, false); err != nil {
+			t.Fatal(err)
 		}
-		t.Logf("operational real-native journal: exact %d bytes retained across spool reopen/replay; synthetic matching receipts suppress acknowledged replay; recovery=%s", 2*len(payload), time.Since(reopenStarted))
+		terminal := spool.Pending()
+		if len(terminal) != 1 || terminal[0].TerminalEvidence == nil || len(terminal[0].Samples) != 0 {
+			t.Fatal("closed native proof needs distinct terminal custody")
+		}
+		proof := terminal[0].TerminalEvidence
+		if proof.Validate() != nil || !reflect.DeepEqual(proof.Final, final) || proof.RuntimeEpoch != final.CounterEpoch || proof.Final.ActiveFlows != 0 || len(proof.Final.Counters) != 1 || proof.Final.Counters[0].CumulativeBytes != uint64(2*len(payload)) {
+			t.Fatal("terminal custody changed genuine native final")
+		}
+		batch := terminal[0]
+		// This is deliberately synthetic typed custody, not a CP-delivery assertion.
+		if err = spool.Ack(MeterReceipt{StreamEpoch: batch.StreamEpoch, Sequence: batch.Sequence, Digest: batch.Digest, CustodyVersion: entrypolicy.TerminalCustodyVersion, TerminalEvidenceDigest: proof.Digest}); err != nil {
+			t.Fatal(err)
+		}
+		if err = CollectManagedCounters(context.Background(), root, spool, false); err != nil || len(spool.Pending()) != 0 {
+			t.Fatal("typed custody did not retire exact native journal", err)
+		}
+		if remaining, err := ReadManagedJournal(root); err != nil || len(remaining) != 0 {
+			t.Fatal("custodied journals not retired", err)
+		}
+
+		t.Logf("operational real-native journal: exact %d bytes retained across spool reopen/replay; synthetic typed custody permits journal GC; not CP delivery; recovery=%s", 2*len(payload), time.Since(reopenStarted))
 	}
 	t.Logf("broker EOF stopped live payload and owned process, preserved %d-byte final in %s", final.Counters[0].CumulativeBytes, time.Since(began))
 }

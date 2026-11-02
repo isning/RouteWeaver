@@ -61,6 +61,65 @@ external destination, firewall, sysctl or host security setting is involved.
   available, and leaves the original live database unchanged. Counter replay and
   new-epoch anomaly tests run separately; they are not fabricated native traffic.
 
+### Closed-runtime evidence custody
+
+Both the control plane **and node agent** must support terminal custody. A live
+meter ACK, even with the same byte count as a later final, is not proof of closure.
+The agent sends a separate terminal-only meter envelope after prior counters are
+ACKed. It contains the genuine zero baseline and quiescent final, scope and native
+epoch, and a canonical SHA-256 evidence digest. The CP verifies historical meter
+bindings and already-durable cumulative values, then stores the original envelope
+and receipt atomically in the existing encrypted meter history. This operation
+changes neither usage counters nor admission budgets.
+
+Local journal GC requires the explicit version-1 custody ACK for that exact proof.
+Pending proof and acknowledged-but-not-yet-retired custody survive restart; the
+existing retirement WAL removes files durably before cursors and its bounded
+custody entry. No terminal tombstone history accumulates on the agent. Limits stay
+at 1 MiB per envelope, 1,000 counters per snapshot, 128 pending batches/custody
+entries and 8 MiB spool state. Oversized or undeliverable proof retains the local
+journals and backpressures collection; do not delete evidence to restore service.
+CP raw history remains subject to existing capacity monitoring and encrypted
+backup limits, not an automatic deletion policy. Orderly shutdown may first send
+new final raw samples; terminal custody can require a subsequent collection after
+restart. A successful stop is not a promise that custody was already delivered:
+check the explicit receipt or retained journal, never infer it from process exit.
+
+An administrator can retrieve one retained proof with
+`GET /api/agent/instances/{instanceId}/meter-terminal-evidence?enrollmentEpoch=...&streamEpoch=...&sequence=...`.
+If the stream or sequence is no longer in the local spool, discover locators with
+`GET /api/agent/instances/{instanceId}/meter-terminal-evidence/receipts?enrollmentEpoch=...&cursor=...`.
+Use the enrollment from the unresolved budget's scope; the stream need not be
+known. Pages follow lexicographic receipt-key order, not chronological order.
+Start without a cursor, then follow the returned signed `nextCursor` while
+`hasMore` is true, even when a page contains no terminal items. A page examines at
+most 16 indexed rows (including lookahead), decrypts at most 15 rows / 2 MiB,
+returns summaries only, and has a two-second deadline. Cursors cannot cross scopes.
+Malformed or oversized records fail closed rather than being silently skipped.
+The exact-proof response revalidates the stored scope, sequence, batch digest and
+receipt and is bounded to 1 MiB. The returned proof is agent-reported runtime evidence: account/subject/
+route/policy/cycle are checked against immutable meter bindings; entry/tag/
+credential context is not an independent per-flow settlement attestation.
+A runtime aggregate cannot assign final totals among several unresolved presence
+budgets. Review that attribution separately; custody never authorizes a refund.
+
+Compatibility and recovery boundaries:
+
+- New agent + old CP: unknown terminal fields are rejected, or a response lacking
+  the explicit custody ACK is refused. Journals remain; restore compatible CP
+  service instead of treating an old ACK as terminal custody.
+- New CP + old agent: legacy metering still works, but the old agent does not send
+  terminal evidence. CP upgrade alone does **not** fix its local retirement.
+- Spool schema 1 is durably upgraded to schema 2 before collection. Old agents
+  reject schema 2; do not manually reset it for a binary downgrade. Preserve a
+  compatible binary and state copy for reviewed recovery.
+- A legacy retirement WAL without terminal custody, including a partially deleted
+  journal pair, fails closed for explicit investigation. Already-erased legacy
+  final evidence cannot be reconstructed from equal live counters.
+- Canonical encrypted backups preserve the full original terminal envelope as raw
+  data. Fresh restore/reopen must still return the same scoped digest and proof;
+  never rewrite retained envelopes through a legacy typed meter projection.
+
 ## 4. Backup while service is running; restore safely
 
 - Keep normal traffic and authoritative state checks running during the reviewed

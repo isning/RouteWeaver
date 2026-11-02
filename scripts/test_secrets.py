@@ -260,6 +260,32 @@ class SecretScannerTests(unittest.TestCase):
                 self.assertIn("jfrog-identity-token", elsewhere)
                 (self.root / "other/refresh-manifest.json").unlink()
 
+    def test_terminal_custody_metadata_exceptions_are_exact(self):
+        prefix = "docs/verification/evidence/"
+        cases = [
+            ("TERMINAL-CUSTODY-OPERATIONS-REFRESH-2026-11-02-production-manifest.json", 1,
+             ["generic-api-key", "jfrog-identity-token"]),
+            ("TERMINAL-CUSTODY-OPERATIONS-REFRESH-2026-11-02-tests-manifest.json", 1,
+             ["generic-api-key", "jfrog-identity-token"]),
+            ("OPERATIONAL-LEGAL-LIFECYCLE-2026-11-02.json", 45, ["jfrog-identity-token"]),
+        ]
+        for name, number, rules in cases:
+            with self.subTest(metadata=name):
+                path = prefix + name
+                line = (ROOT / path).read_text().splitlines()[number - 1]
+                self.write(path, line + "\n")
+                self.assertIn("PASS", self.scan())
+                self.write(path, line + " \n")
+                changed = self.scan(1)
+                for rule in rules:
+                    self.assertIn(rule, changed)
+                (self.root / path).unlink()
+                self.write("other/custody-metadata.json", line + "\n")
+                elsewhere = self.scan(1)
+                for rule in rules:
+                    self.assertIn(rule, elsewhere)
+                (self.root / "other/custody-metadata.json").unlink()
+
     def test_secret_file_outside_repository_is_not_followed(self):
         with tempfile.TemporaryDirectory() as outside:
             target = Path(outside) / "outside.txt"

@@ -13,6 +13,9 @@ test("native browser fixture produces a real queued managed publication", async 
     const opened = await (
       await admin.get(`/api/server-deployments/${draft.id}`)
     ).json();
+    expect(opened.diagnostics).toEqual([
+      "MANAGED_PRINCIPALS_REQUIRED: authenticated VLESS principals required",
+    ]);
     const session = await (await admin.get("/api/auth/me")).json();
     const checked = await admin.post(
       `/api/server-deployments/${draft.id}/validate`,

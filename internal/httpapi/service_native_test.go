@@ -17,6 +17,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -125,41 +126,120 @@ func testNativeContinuousManagedService(t *testing.T, operationalDrill, provider
 	if err != nil {
 		t.Fatal(err)
 	}
+	diagnostics := newReferenceDiagnostics(t, f, referenceDiagnosticsEnabled(observationSeconds, operationalDrill, providerDrill))
+	t.Cleanup(func() {
+		if diagnostics.enabled && t.Failed() {
+			retain = true
+			if err := diagnostics.Preserve(root); err != nil {
+				t.Errorf("reference diagnostic preservation error_type=%s", referenceErrorType(err))
+			}
+			t.Logf("private failure evidence retained: %s", root)
+		}
+	})
 	transportURL, operationalGate := operationalTransport(t, f, operationalDrill)
+	if diagnostics.enabled {
+		transportURL = diagnostics.URL
+	}
 	transport, err := agent.NewHTTPTransport(agent.HTTPTransportOptions{BaseURL: transportURL, Scope: d.Scope, Token: token, RequestTimeout: time.Second, MaxAttempts: 1, Backoff: time.Millisecond, AllowLoopbackHTTP: true})
 	if err != nil {
 		t.Fatal(err)
 	}
-	ctx, cancel := context.WithCancel(context.Background())
-	done := make(chan error, 1)
-	go func() {
-		_, err := agent.RunDriver(ctx, reconciler, transport, spool, agent.DriverOptions{Continuous: true, PollInterval: 50 * time.Millisecond, LeaseInterval: 50 * time.Millisecond})
-		done <- err
-	}()
-	t.Cleanup(func() {
+	var cancel context.CancelFunc
+	var done chan error
+	var outageErrors atomic.Int64
+	var operationalEpoch string
+	var referenceEpoch string
+	startDriver := func() {
+		ctx, stop := context.WithCancel(context.Background())
+		cancel = stop
+		done = make(chan error, 1)
+		currentReconciler, currentSpool, result := reconciler, spool, done
+		go func() {
+			_, err := agent.RunDriver(ctx, currentReconciler, transport, currentSpool, agent.DriverOptions{Continuous: true, PollInterval: 50 * time.Millisecond, LeaseInterval: 50 * time.Millisecond, OnTransportError: func(err error) {
+				diagnostics.Record("driver_transport", err)
+				if operationalExpectedOutage(err) {
+					outageErrors.Add(1)
+				}
+			}})
+			diagnostics.Record("driver_exit", err)
+			result <- err
+		}()
+	}
+	stopForRecovery := func() {
+		before := outageErrors.Load()
 		cancel()
-		driverStopped := false
 		select {
 		case err := <-done:
-			driverStopped = true
+			done = nil
 			if err != nil {
-				retain = true
-				t.Errorf("native service cleanup: %v; evidence %s", err, root)
+				t.Fatalf("operator stop failed: %v", err)
 			}
 		case <-time.After(10 * time.Second):
-			retain = true
-			t.Errorf("native service shutdown timeout; evidence %s", root)
+			t.Fatal("operator stop did not drain owned driver")
 		}
-		if operationalDrill && driverStopped {
-			checkOperationalTerminal(t, f, supervisor, spool, root, d.InstanceID, user.id)
+		if outageErrors.Load() <= before {
+			t.Fatal("shutdown did not expose typed HTTP503 delivery failure")
+		}
+		if !operationalStoppedState(reconciler.State()) {
+			t.Fatalf("operator stop is not conclusive: %+v", reconciler.State())
+		}
+	}
+	restartAfterRecovery := func() *agent.Reconciler {
+		if done != nil {
+			t.Fatal("cannot reopen state while driver owns it")
 		}
 		if err := spool.Close(); err != nil {
-			retain = true
-			t.Errorf("meter spool close: %v; evidence %s", err, root)
+			t.Fatal(err)
 		}
 		if err := reconciler.Close(); err != nil {
-			retain = true
-			t.Errorf("reconciler close: %v; evidence %s", err, root)
+			t.Fatal(err)
+		}
+		reopenedReconciler, openErr := agent.Open(root, d.Scope, agent.NewRegistry(supervisor), agent.Options{MaxLease: 10 * time.Minute})
+		if openErr != nil {
+			t.Fatal(openErr)
+		}
+		reconciler = reopenedReconciler
+		reopenedSpool, openErr := agent.OpenMeterSpool(filepath.Join(root, "meters"), d.Scope, "native-service-test")
+		if openErr != nil {
+			t.Fatal(openErr)
+		}
+		spool = reopenedSpool
+		startDriver()
+		return reconciler
+	}
+	startDriver()
+	t.Cleanup(func() {
+		diagnostics.SetPhase("cleanup")
+		cancel()
+		driverStopped := done == nil
+		if done != nil {
+			select {
+			case err := <-done:
+				driverStopped = true
+				if err != nil {
+					retain = true
+					t.Errorf("native service cleanup: %v; evidence %s", err, root)
+				}
+			case <-time.After(10 * time.Second):
+				retain = true
+				t.Errorf("native service shutdown timeout; evidence %s", root)
+			}
+		}
+		if diagnostics.enabled && driverStopped {
+			checkReferenceTerminal(t, f, supervisor, reconciler, spool, root, d.Scope, referenceEpoch)
+		}
+		if operationalDrill && driverStopped {
+			checkOperationalTerminal(t, f, supervisor, spool, root, d.Scope, operationalEpoch, user.id)
+		}
+		if driverStopped {
+			if err := spool.Close(); err != nil {
+				retain = true
+				t.Errorf("meter spool close: %v; evidence %s", err, root)
+			}
+			if err := reconciler.Close(); err != nil {
+				retain = true
+				t.Errorf("reconciler close: %v; evidence %s", err, root)
+			}
 		}
 		transport.Close()
 		if t.Failed() {
@@ -169,7 +249,7 @@ func testNativeContinuousManagedService(t *testing.T, operationalDrill, provider
 			}
 		}
 		if operationalDrill {
-			t.Logf("operational cleanup: driver_returned=%t checked_spool_and_reconciler_close=true evidence_retained=%t", driverStopped, retain)
+			t.Logf("operational cleanup: driver_returned=%t checked_spool_and_reconciler_close=%t evidence_retained=%t", driverStopped, driverStopped, retain)
 		}
 	})
 	deadline := time.Now().Add(8 * time.Second)
@@ -266,8 +346,20 @@ func testNativeContinuousManagedService(t *testing.T, operationalDrill, provider
 		t.Fatal("instance renewal replaced native identity")
 	}
 	if operationalGate != nil {
-		conn, d = runManagedOperationalDrill(t, f, conn, operationalGate, d, user.id, supervisor, reconciler, root, dial)
+		snapshot, snapshotErr := agent.ReadManagedSnapshot(context.Background(), root)
+		if snapshotErr != nil {
+			t.Fatal(snapshotErr)
+		}
+		operationalEpoch = snapshot.CounterEpoch
+		conn, d, operationalEpoch = runManagedOperationalDrill(t, f, conn, operationalGate, d, user.id, supervisor, reconciler, root, dial, stopForRecovery, restartAfterRecovery)
 		defer conn.Close()
+	}
+	if diagnostics.enabled {
+		snapshot, snapshotErr := agent.ReadManagedSnapshot(context.Background(), root)
+		if snapshotErr != nil {
+			t.Fatal("reference epoch observation failed")
+		}
+		referenceEpoch = snapshot.CounterEpoch
 	}
 	if providerDrill {
 		conn = runNativeProviderSuspension(t, f, conn, d, user.id, supervisor, root, dial)
@@ -276,6 +368,7 @@ func testNativeContinuousManagedService(t *testing.T, operationalDrill, provider
 	// Explicit bounded reference observation; default CI retains the original test.
 	// This does not turn synthetic loopback traffic into a production capacity SLA.
 	if seconds := observationSeconds; seconds != 0 {
+		diagnostics.SetPhase("observation")
 		started := time.Now()
 		maxRTT := time.Duration(0)
 		var initialRootBytes int64
@@ -285,11 +378,21 @@ func testNativeContinuousManagedService(t *testing.T, operationalDrill, provider
 			}
 			tick := time.Now()
 			conn.SetDeadline(tick.Add(2 * time.Second))
-			if _, err = conn.Write(payload); err != nil {
-				t.Fatalf("reference payload write sample %d: %v", sample, err)
+			lag := tick.Sub(started.Add(time.Duration(sample) * time.Second))
+			if n, writeErr := conn.Write(payload); writeErr != nil {
+				diagnostics.Payload(sample, n, "write", lag, writeErr)
+				if stackErr := diagnostics.CaptureStacks(root); stackErr != nil {
+					t.Logf("private failure stacks unavailable error_type=%s", referenceErrorType(stackErr))
+				}
+				t.Fatalf("reference payload write sample=%d n=%d scheduler_lag=%s error_type=%s", sample, n, lag, referenceErrorType(writeErr))
 			}
-			if _, err = io.ReadFull(conn, got); err != nil || string(got) != string(payload) {
-				t.Fatalf("reference payload read sample %d: %q %v", sample, got, err)
+			n, readErr := io.ReadFull(conn, got)
+			diagnostics.Payload(sample, n, "read", lag, readErr)
+			if readErr != nil || string(got) != string(payload) {
+				if stackErr := diagnostics.CaptureStacks(root); stackErr != nil {
+					t.Logf("private failure stacks unavailable error_type=%s", referenceErrorType(stackErr))
+				}
+				t.Fatalf("reference payload read sample=%d n=%d scheduler_lag=%s elapsed=%s mismatch=%t error_type=%s", sample, n, lag, time.Since(tick), string(got[:n]) != string(payload), referenceErrorType(readErr))
 			}
 			if rtt := time.Since(tick); rtt > maxRTT {
 				maxRTT = rtt
@@ -365,6 +468,7 @@ func testNativeContinuousManagedService(t *testing.T, operationalDrill, provider
 		}
 		t.Logf("reference managed payload: samples=%d duration=%s max_RTT=%s; identity unchanged; synthetic single flow, not capacity SLA", seconds, time.Since(started), maxRTT)
 	}
+	diagnostics.SetPhase("revoke")
 	if code, _, raw := req(t, operatorClient(), "DELETE", f.srv.URL+"/api/users/"+user.id+"/entries/alice-entry", "", nil); code != 200 {
 		t.Fatal(code, raw)
 	}

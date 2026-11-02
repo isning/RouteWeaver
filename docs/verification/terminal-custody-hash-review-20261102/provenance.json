@@ -1,0 +1,22 @@
+[
+  {
+    "kind": "production",
+    "entries": 248,
+    "allDeclaredGitHashesMatch": true,
+    "currentDifferences": [],
+    "strictUniquePathHashMap": true,
+    "receiptByteBindingVerified": true
+  },
+  {
+    "kind": "tests",
+    "entries": 302,
+    "allDeclaredGitHashesMatch": true,
+    "currentDifferences": [],
+    "strictUniquePathHashMap": true,
+    "receiptByteBindingVerified": true
+  },
+  {
+    "legalFixtureAllFourSourceHashesMatchRetainedFiles": true,
+    "nativeExecutableBytesMatchReceipt": true
+  }
+]

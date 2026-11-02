@@ -8,18 +8,24 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"routeweaver/internal/entrypolicy"
 	"sync"
 )
 
+type terminalCustody struct {
+	EvidenceDigest string       `json:"evidenceDigest"`
+	Receipt        MeterReceipt `json:"receipt"`
+}
 type meterDisk struct {
-	Schema         int                           `json:"schema"`
-	Scope          Scope                         `json:"scope"`
-	Epoch          string                        `json:"epoch"`
-	Next           uint64                        `json:"next,string"`
-	Acked          uint64                        `json:"acked,string"`
-	Pending        []MeterBatch                  `json:"pending"`
-	LastReceipt    *MeterReceipt                 `json:"lastReceipt,omitempty"`
-	ManagedSources map[string]managedMeterCursor `json:"managedSources,omitempty"`
+	TerminalCustody map[string]terminalCustody    `json:"terminalCustody,omitempty"`
+	Schema          int                           `json:"schema"`
+	Scope           Scope                         `json:"scope"`
+	Epoch           string                        `json:"epoch"`
+	Next            uint64                        `json:"next,string"`
+	Acked           uint64                        `json:"acked,string"`
+	Pending         []MeterBatch                  `json:"pending"`
+	LastReceipt     *MeterReceipt                 `json:"lastReceipt,omitempty"`
+	ManagedSources  map[string]managedMeterCursor `json:"managedSources,omitempty"`
 }
 type MeterSpool struct {
 	collectMu sync.Mutex
@@ -47,15 +53,34 @@ func OpenMeterSpool(root string, scope Scope, epoch string) (*MeterSpool, error)
 	if err != nil {
 		return nil, err
 	}
-	s := &MeterSpool{root: root, lock: lock, disk: meterDisk{Schema: 1, Scope: scope, Epoch: epoch, Next: 1, Pending: []MeterBatch{}}}
+	s := &MeterSpool{root: root, lock: lock, disk: meterDisk{Schema: 2, Scope: scope, Epoch: epoch, Next: 1, Pending: []MeterBatch{}}}
+	if info, statErr := os.Stat(filepath.Join(root, "meter.json")); statErr == nil && info.Size() > 8<<20 {
+		s.Close()
+		return nil, errors.New("meter journal byte bound exceeded")
+	}
 	err = readJSON(filepath.Join(root, "meter.json"), &s.disk)
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		s.Close()
 		return nil, errors.New("meter journal unreadable")
 	}
-	if s.disk.Schema != 1 || s.disk.Scope != scope || s.disk.Epoch != epoch || s.disk.Next == 0 {
+	if (s.disk.Schema != 1 && s.disk.Schema != 2) || s.disk.Scope != scope || s.disk.Epoch != epoch || s.disk.Next == 0 {
 		s.Close()
 		return nil, errors.New("meter journal scope mismatch")
+	}
+	rawState, marshalErr := json.Marshal(s.disk)
+	if marshalErr != nil || len(rawState) > 8<<20 || len(s.disk.Pending) > 128 {
+		s.Close()
+		return nil, errors.New("meter journal bounds exceeded")
+	}
+	if len(s.disk.TerminalCustody) > 128 {
+		s.Close()
+		return nil, errors.New("terminal custody bound exceeded")
+	}
+	for epoch, c := range s.disk.TerminalCustody {
+		if !journalEpoch.MatchString(epoch) || !validTerminalDigest(c.EvidenceDigest) || c.Receipt.CustodyVersion != entrypolicy.TerminalCustodyVersion || c.Receipt.TerminalEvidenceDigest != c.EvidenceDigest || c.Receipt.Sequence == 0 || !validTerminalDigest(c.Receipt.Digest) || c.Receipt.Sequence > s.disk.Acked || c.Receipt.StreamEpoch != s.disk.Epoch {
+			s.Close()
+			return nil, errors.New("invalid terminal custody state")
+		}
 	}
 	expected := s.disk.Acked + 1
 	for _, b := range s.disk.Pending {
@@ -67,14 +92,29 @@ func OpenMeterSpool(root string, scope Scope, epoch string) (*MeterSpool, error)
 			s.Close()
 			return nil, errors.New("meter journal batch identity mismatch")
 		}
+		if b.TerminalEvidence != nil {
+			if err := validateTerminalBatch(b); err != nil {
+				s.Close()
+				return nil, err
+			}
+		}
 		expected++
 	}
 	if expected != s.disk.Next {
 		s.Close()
 		return nil, errors.New("meter journal sequence mismatch")
 	}
+	// Persist the downgrade fence before collection can retire any evidence.
+	if s.disk.Schema == 1 {
+		s.disk.Schema = 2
+		if err := writeJSON(filepath.Join(root, "meter.json"), s.disk); err != nil {
+			s.Close()
+			return nil, err
+		}
+	}
 	return s, nil
 }
+
 func (s *MeterSpool) Close() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -90,10 +130,13 @@ func (s *MeterSpool) Enqueue(samples []MeterSample) (MeterBatch, error) {
 	return s.enqueueLocked(samples, nil)
 }
 func (s *MeterSpool) enqueueLocked(samples []MeterSample, sources map[string]managedMeterCursor) (MeterBatch, error) {
+	return s.enqueueEvidenceLocked(samples, sources, nil)
+}
+func (s *MeterSpool) enqueueEvidenceLocked(samples []MeterSample, sources map[string]managedMeterCursor, evidence *entrypolicy.TerminalEvidence) (MeterBatch, error) {
 	if s.closed {
 		return MeterBatch{}, errors.New("meter spool closed")
 	}
-	if len(samples) == 0 || len(samples) > 1000 || len(s.disk.Pending) >= 128 || s.disk.Next == math.MaxUint64 {
+	if (len(samples) == 0 && evidence == nil) || len(samples) > 1000 || len(s.disk.Pending) >= 128 || s.disk.Next == math.MaxUint64 {
 		return MeterBatch{}, errors.New("meter spool bounds exceeded")
 	}
 	seen := map[string]bool{}
@@ -103,13 +146,22 @@ func (s *MeterSpool) enqueueLocked(samples []MeterSample, sources map[string]man
 		}
 		seen[v.SampleID] = true
 	}
-	b := MeterBatch{Scope: s.disk.Scope, StreamEpoch: s.disk.Epoch, Sequence: s.disk.Next, Samples: append([]MeterSample(nil), samples...)}
+	b := MeterBatch{TerminalEvidence: evidence, Scope: s.disk.Scope, StreamEpoch: s.disk.Epoch, Sequence: s.disk.Next, Samples: append([]MeterSample{}, samples...)}
+	if evidence != nil {
+		if err := validateTerminalBatch(b); err != nil {
+			return MeterBatch{}, err
+		}
+	}
 	raw, _ := json.Marshal(b)
 	if len(raw) > 1<<20 {
 		return MeterBatch{}, errors.New("meter batch too large")
 	}
 	sum := sha256.Sum256(raw)
 	b.Digest = hex.EncodeToString(sum[:])
+	finalRaw, _ := json.Marshal(b)
+	if len(finalRaw) > 1<<20 {
+		return MeterBatch{}, errors.New("meter batch too large")
+	}
 	next := s.disk
 	if sources != nil {
 		next.ManagedSources = sources
@@ -127,7 +179,12 @@ func (s *MeterSpool) enqueueLocked(samples []MeterSample, sources map[string]man
 	return cloneBatch(b), nil
 }
 func cloneBatch(b MeterBatch) MeterBatch {
-	b.Samples = append([]MeterSample(nil), b.Samples...)
+	if b.Samples != nil {
+		b.Samples = append([]MeterSample{}, b.Samples...)
+	}
+	if b.TerminalEvidence != nil {
+		b.TerminalEvidence = b.TerminalEvidence.Clone()
+	}
 	return b
 }
 func (s *MeterSpool) Pending() []MeterBatch {
@@ -158,11 +215,28 @@ func (s *MeterSpool) Ack(receipt MeterReceipt) error {
 	if receipt.StreamEpoch != b.StreamEpoch || receipt.Sequence != b.Sequence || receipt.Digest != b.Digest {
 		return errors.New("meter receipt mismatch or sequence gap")
 	}
+	if err := validateCustodyReceipt(b, receipt); err != nil {
+		return err
+	}
 	next := s.disk
+	if b.TerminalEvidence != nil {
+		next.TerminalCustody = make(map[string]terminalCustody, len(s.disk.TerminalCustody)+1)
+		for k, v := range s.disk.TerminalCustody {
+			next.TerminalCustody[k] = v
+		}
+		e := b.TerminalEvidence
+		if previous, exists := next.TerminalCustody[e.RuntimeEpoch]; exists && previous.EvidenceDigest != e.Digest {
+			return errors.New("conflicting terminal custody")
+		}
+		next.TerminalCustody[e.RuntimeEpoch] = terminalCustody{EvidenceDigest: e.Digest, Receipt: receipt}
+		if len(next.TerminalCustody) > 128 {
+			return errors.New("terminal custody count bound exceeded")
+		}
+	}
 	next.Acked = b.Sequence
 	next.LastReceipt = &receipt
 	next.Pending = append([]MeterBatch(nil), s.disk.Pending[1:]...)
-	if err := writeJSON(filepath.Join(s.root, "meter.json"), next); err != nil {
+	if err := s.persistRetirement(next); err != nil {
 		return err
 	}
 	s.disk = next

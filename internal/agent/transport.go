@@ -225,5 +225,8 @@ func (t *HTTPTransport) SendMeterBatch(ctx context.Context, batch MeterBatch) (M
 	if receipt.StreamEpoch != batch.StreamEpoch || receipt.Sequence != batch.Sequence || receipt.Digest != batch.Digest {
 		return MeterReceipt{}, errors.New("meter receipt scope or digest mismatch")
 	}
+	if err := validateCustodyReceipt(batch, receipt); err != nil {
+		return MeterReceipt{}, err
+	}
 	return receipt, nil
 }

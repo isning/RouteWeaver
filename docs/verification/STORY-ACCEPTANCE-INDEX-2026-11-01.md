@@ -4,6 +4,8 @@ Repository evidence index for the [production checklist](https://chatgpt.com/spa
 
 ## Source and execution binding
 
+- **Latest CI5 is terminal FAIL**, [run41379700309](https://github.com/isning/RouteWeaver/actions/runs/41379700309), exact remote `5f92e2c8f30258724e5cf75e12c9e1a412fdb818` / tree `0cbd4726293df2370823b7741bb501497fe4ba3c`. Ordinary browser **201/201 across55files,0skip/flake**; E07/E09/E13 six new cases and four prior failures passed actual Chrome. Separate native bridge failed before activation (missing testBackoff); backup tampered case failed; strict aggregate correctly failed. Other execution gates passed. All older pending-browser statements below describe their historical local snapshot, not current ordinary-browser status.
+
 - Historical CI4 mapping inspected `23650ca`; this docs-only local reconciliation inspects frozen `97448847cbfab1a16df2fff5a6571ccca465beca`. Final-source static/API/web gates passed at 22:37 UTC; this is not full CI. No new CI or application test execution by this reconciliation.
 - Recorded complete-green baseline remains `47c985ffc1b649b068903865fa2fd89225e0913d`, [CI41321049032](https://github.com/isning/RouteWeaver/actions/runs/41321049032). No blanket baseline promotion.
 - [CI3](https://github.com/isning/RouteWeaver/actions/runs/41348313792), remote `aaabe51db132961186bfd704e6f16c8fbb37e724`:195unique,183pass/12fail,0skip/flaky.
@@ -154,7 +156,9 @@ Execution notes bind only the stated source and test layer. Current full composi
 
 ### E01 — integration_evidence
 
-Complete next exact-source integration. CI4 has195unique/191pass/4fail: endpoint focus and activity history geometry320/390/640. Prepared endpoint focus and settled-motion capture fixes in23650ca are not browser passes. Confirm all required non-browser gates separately.
+**CI5 terminal FAIL; ordinary browser passed, two execution gates failed**
+
+CI5 run41379700309 exact remote5f92e2c8f30258724e5cf75e12c9e1a412fdb818/tree0cbd4726293df2370823b7741bb501497fe4ba3c: 201 unique ordinary browser cases across55files passed,0skip/flake. Separate browser_native failed missing testBackoff before activation; backend_backup tampered case failed. Other execution gates passed; strict aggregate correctly FAIL. Local constructor and guaranteed-byte-flip test fixes do not constitute corrected full CI.
 
 ### E02 — joined_journey_evidence
 
@@ -170,9 +174,9 @@ Stable-sort 12 equal-key/source-order combinations, ordered/disabled stages and 
 
 ### E04 — joined_journey_evidence
 
-**impact rendering passed; CI4 Escape focus failed; prepared fix unverified in browser**
+**named endpoint320 focus regression passed CI5; no broader visual claim**
 
-Retain named320 impact content and geometry, and verify Escape returns to exact Save opener after asynchronous review. CI4 failed this focus assertion. Real dependency/CAS backend evidence stays separate; no deployment or exit rewrite implied.
+Exact Save opener focus after Escape passed actual Chrome at CI5. Prior activity320/390/640 settled geometry failures also passed with unchanged bounds. No production deployment inference; template screenshots still have transient toast occlusion and prepared clean captures are UNRUN.
 
 ### E05 — runtime_evidence
 
@@ -188,21 +192,21 @@ Four supported Mihomo strategies passed joined real HTTP source addition → thr
 
 ### E07 — joined_journey_evidence
 
-**DNS identity fix and local DOM/HTTP proofs; two browser cases UNRUN; native output scope separate**
+**two corrected structured-editor browser cases passed CI5; native output scope separate**
 
-DNS enable now binds final to the generated resolver ID (recorded DOM RED/GREEN). Local HTTP race matrix proves exact structured output and pinned/follow owned-resource publication, stale review and sibling isolation. Two corrected real-backend editor browser cases are authored UNRUN; publication in those cases is API-driven. Existing native parser evidence is separate, not a new native run. Mihomo TUN remains unsupported; sing-box TUN output is not host TUN activation. Real browser conflict-flow acceptance is not inferred from simulated DOM 409. See STRUCTURED-RULE-JOURNEY-2026-11-01.md and STRUCTURED-BROWSER-SOURCE-REVIEW-2026-11-01.md.
+Both1440/390 real invited-account browser journeys passed: author rule/DNS/sniff/TUN intent, real API validation/publication and frozen output. This is not UI publication confirmation, native process/TUN activation or a continuous browser conflict-flow proof. Existing DOM/HTTP resource and DNS-identity evidence remains separately scoped.
 
 ### E08 — operational_evidence
 
-**14-case source-bound local race drill passed; standard CI4 is not complete-drill execution**
+**prior14-case local pass retained; final-source refresh13/14 failed**
 
-OPERATIONS-DRILLS-2026-11-01.md and its receipt bind 14 explicit local race cases to production eafb493: native payload during backup, inactive fresh restore, exact checkpoint accounting, authority loss, final obligation/replay and operator-assisted restart. CI4 independently passes ordinary backend packages and standard continuous/EOF native tests, but does not opt into TestNativeManagedOperationalRecovery. Preserve that distinction and local timings; target RPO/RTO and the later sample 410 long-reference failure remain open.
+Historical14-case source-bound local race receipt remains historical. Final-source operational refresh passed13/14 and revealed a terminal-evidence gap, reproduced by four failing fake regressions. CP custody protocol fix is in progress with no passing repaired result yet. This failure is separate from the original NET03 sample410 read/cleanup timeout; no target RPO/RTO claim.
 
 ### E09 — joined_journey_evidence
 
-**API companion passed locally; corrected two-width browser journey UNRUN**
+**two-width service-center browser journey passed CI5**
 
-Real invited-user legacy platform-entry service delivery/selected rotation API companion passed locally, preserving sibling/other-user feeds and rejecting old URL. Two browser journeys include keyboard/download/exact-write/focus/settled geometry assertions but remain UNRUN. Not managed forwarding, native execution or browser subscription creation. See SERVICE-CENTER-E09-2026-11-01.md and JOINED-BROWSER-SOURCE-REVIEW-2026-11-01.md.
+Both1440/390 actual keyboard/download cases passed with exact bytes, canceled rotation/no writes, exactly one selected rotation, old404, replacement equality and sibling/foreign preservation. Explicit legacy configured service grant is not managed applied runtime or target-device traffic.
 
 ### E10 — joined_journey_evidence
 
@@ -224,9 +228,9 @@ CI4 native job 124981014121 passed both failed-new=false/true outcomes of TestNa
 
 ### E13 — joined_journey_evidence
 
-**API/DOM companions passed locally; two-width browser journey UNRUN**
+**two-width settings-origin browser journey passed CI5**
 
-Isolated settings-origin API companion and prior HTTP/DOM checks passed locally. Two real backend browser cases for invalid/stale draft retention, saved/effective separation and explicit default activation remain UNRUN. Reserved custom-domain drafts do not prove external DNS/HTTPS verification or custom-domain activation. See SETTINGS-ORIGIN-JOURNEY-2026-11-01.md and JOINED-BROWSER-SOURCE-REVIEW-2026-11-01.md.
+Both1440/390 actual browser cases passed invalid/stale retained drafts, saved/effective separation, unverified activation refusal, default activation/cancel/stale review, exact mutation ledger and reload. Reserved custom-domain strings do not establish external DNS/HTTPS verification or real custom-domain activation.
 
 ### I01 — implemented_pending_integrated_acceptance
 
@@ -283,3 +287,7 @@ Historical pre-CI3 documentation verification (not rerun by this browser-only re
 ## Bounded local acceptance reconciliation
 
 [Source-bound local ledger](FINAL-LOCAL-ACCEPTANCE-RECONCILIATION-2026-11-01.json) records E03/E06/E11/D01 finite local passes, without upgrading any story or ticket. E07/E09/E13 corrected browser cases remain UNRUN. The [same-instance browser/native identity bridge](BROWSER-NATIVE-IDENTITY-JOIN-2026-11-01.md) is authored, not executed: API companion, compilation and discovery do not prove UI→CP→native→UI acceptance. Stop is API-driven, not a browser Fleet-stop journey. Final 974 static passed 63 helper regressions, architecture and actionlint; API passed 31 cases (including one pure TOTP vector); web passed 195 files/2,108 tests in 708.43s, types and build. Source/tree remained unchanged and clean. The existing 542.19 kB chunk warning remains. [Security receipt](FINAL-LOCAL-SECURITY-RECEIPT-2026-11-01.json) records 26 scanner regressions plus source/index/all-ref history passing. 201 ordinary browser cases and one native bridge remain UNRUN; the pending CI budget request does not authorize a new run. Full CI, target deployment/authorization, RPO/RTO/capacity and NET03 original sample 410 failure remain open.
+
+## CI5 limitations and next execution
+
+The exact ordinary-browser receipt is authored in separate commit `e5ead65` as `CI5-BROWSER-RECEIPT-2026-11-02.md`; do not invent a receipt in the CI5 remote tree. Template success toast temporarily occludes action labels in existing screenshots despite successful unforced interaction; prepared natural-dismissal clean captures are UNRUN. The pure native constructor fix has RED/GREEN evidence but not a successful bridge. Backup fixture mutation can write the same0xff byte: guaranteed flipping plus9cases/256-value helper proof passed locally95.676s without changing production crypto; the original CI preimage remains unknown. Final-source operational refresh13/14 exposes a separate terminal-evidence gap, custody fix pending. No overall-green/story promotion; NET03 original sample410, target capacity/recovery and deployment authorization remain open.

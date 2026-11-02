@@ -1,0 +1,181 @@
+{
+  "binding": {
+    "production_base": "b38b12b7730a964cf3b3bf0273b8991617a2b586",
+    "source_tree": "87555653cf140cc4405007eff73e972afa3cddf9",
+    "test_commit": "b38b12b7730a964cf3b3bf0273b8991617a2b586",
+    "production_entries": 248,
+    "production_manifest_sha256": "082022fa20d3f24dbc813bcb9828bb1fcb82ff0b35065e519f451e2176213bd1",
+    "test_entries": 302,
+    "tests_manifest_sha256": "e0edcfac6e0d967334c6b63d3f81738c2fa1f30559922598cbbcd5606175aef4",
+    "native_path": "/workspace/scratch/d385eb428cee/terminal-operational-refresh-20261102/bin/operational-managed-xray",
+    "native_sha256": "1ff4fc4ce1b5bcc4563d0aa97c0b841aad53d41bfdb7a9bbccff141bdb69be82",
+    "parent_GOMAXPROCS": "1",
+    "parent_GOMEMLIMIT": "256MiB soft Go target",
+    "native_limits": "not inherited; supervisor strips parent Go variables; hard CPU/RSS limits unknown",
+    "expected_tests": [
+      "TestOperationalNotificationFailureVisibleAndRetry",
+      "TestNativeManagedOperationalRecovery",
+      "TestManagedNativeBrokerEOFStopsActivePayloadAndPersistsFinalJournal",
+      "TestEncryptedBackupRestorePreservesOutstandingAdmissionObligation",
+      "TestBackupStreamingDoesNotBlockAdmissionOrConfigurationWrites",
+      "TestCounterExplicitRestartPreservesKnownUsageAndRejectsRegression",
+      "TestCounterIngestionIsAtomicReplaySafeAndSeparatesProvider",
+      "TestRetryDelayStartsAfterTransportFailure",
+      "TestDurableOutboxRestartStableIdentityAndBoundedRetries",
+      "TestCrashAfterAcceptanceReusesEventIDAndRechecksSettings",
+      "TestSlowControlPlaneCannotDelayLeaseRestriction",
+      "TestDriverRestartRetainsGenerationFenceUntilNewDesired",
+      "TestManagedRetirementCrashReopenNeverReplaysAcknowledgedEpoch",
+      "TestManagedMeterRequiresRealBaselineAndRecoversCollectionCursor"
+    ]
+  },
+  "runs": [
+    {
+      "label": "native-drills",
+      "command": [
+        "scripts/go.sh",
+        "test",
+        "-json",
+        "-race",
+        "-p=1",
+        "-count=1",
+        "-timeout=180s",
+        "-run",
+        "^(TestOperationalNotificationFailureVisibleAndRetry|TestNativeManagedOperationalRecovery|TestManagedNativeBrokerEOFStopsActivePayloadAndPersistsFinalJournal)$",
+        "./internal/httpapi",
+        "./internal/agent"
+      ],
+      "start_utc": "2026-11-02T03:44:19.478393+00:00",
+      "end_utc": "2026-11-02T03:46:12.598035+00:00",
+      "elapsed_seconds": 113.1200445469949,
+      "exit_code": 0,
+      "child_user_cpu_seconds": 70.71842,
+      "child_system_cpu_seconds": 9.728473000000001,
+      "cumulative_wait4_maxrss_kib": 1069224,
+      "raw_sha256": "59bf308a8102a7d4dac7101f6abf787cfa89f60e8f5c3cd5ff7eac9121c634ae"
+    },
+    {
+      "label": "recovery",
+      "command": [
+        "scripts/go.sh",
+        "test",
+        "-json",
+        "-race",
+        "-p=1",
+        "-count=1",
+        "-timeout=120s",
+        "-run",
+        "^(TestEncryptedBackupRestorePreservesOutstandingAdmissionObligation|TestBackupStreamingDoesNotBlockAdmissionOrConfigurationWrites|TestCounterExplicitRestartPreservesKnownUsageAndRejectsRegression|TestCounterIngestionIsAtomicReplaySafeAndSeparatesProvider|TestRetryDelayStartsAfterTransportFailure|TestDurableOutboxRestartStableIdentityAndBoundedRetries|TestCrashAfterAcceptanceReusesEventIDAndRechecksSettings|TestSlowControlPlaneCannotDelayLeaseRestriction|TestDriverRestartRetainsGenerationFenceUntilNewDesired|TestManagedRetirementCrashReopenNeverReplaysAcknowledgedEpoch|TestManagedMeterRequiresRealBaselineAndRecoversCollectionCursor)$",
+        "./internal/store",
+        "./internal/notifications",
+        "./internal/agent"
+      ],
+      "start_utc": "2026-11-02T03:46:12.601102+00:00",
+      "end_utc": "2026-11-02T03:46:53.304885+00:00",
+      "elapsed_seconds": 40.70394988400221,
+      "exit_code": 0,
+      "child_user_cpu_seconds": 33.37061800000001,
+      "child_system_cpu_seconds": 4.5675419999999995,
+      "cumulative_wait4_maxrss_kib": 1069224,
+      "raw_sha256": "38df65c58f176dc0700ca197a1147a7f50d2a9ca70fc1a06d972dc602c323d96"
+    }
+  ],
+  "after": {
+    "production_unchanged": true,
+    "tests_unchanged": true,
+    "native_unchanged": true
+  },
+  "tests": [
+    {
+      "test": "TestOperationalNotificationFailureVisibleAndRetry",
+      "seconds": 0.26
+    },
+    {
+      "test": "TestNativeManagedOperationalRecovery",
+      "seconds": 107.66
+    },
+    {
+      "test": "TestManagedNativeBrokerEOFStopsActivePayloadAndPersistsFinalJournal",
+      "seconds": 0.71
+    },
+    {
+      "test": "TestEncryptedBackupRestorePreservesOutstandingAdmissionObligation",
+      "seconds": 16.55
+    },
+    {
+      "test": "TestBackupStreamingDoesNotBlockAdmissionOrConfigurationWrites",
+      "seconds": 0.27
+    },
+    {
+      "test": "TestCounterExplicitRestartPreservesKnownUsageAndRejectsRegression",
+      "seconds": 0.35
+    },
+    {
+      "test": "TestCounterIngestionIsAtomicReplaySafeAndSeparatesProvider",
+      "seconds": 0.43
+    },
+    {
+      "test": "TestRetryDelayStartsAfterTransportFailure",
+      "seconds": 0.27
+    },
+    {
+      "test": "TestDurableOutboxRestartStableIdentityAndBoundedRetries",
+      "seconds": 0.76
+    },
+    {
+      "test": "TestCrashAfterAcceptanceReusesEventIDAndRechecksSettings",
+      "seconds": 0.29
+    },
+    {
+      "test": "TestSlowControlPlaneCannotDelayLeaseRestriction/expired_at_startup=false",
+      "seconds": 0.01
+    },
+    {
+      "test": "TestSlowControlPlaneCannotDelayLeaseRestriction/expired_at_startup=true",
+      "seconds": 0
+    },
+    {
+      "test": "TestSlowControlPlaneCannotDelayLeaseRestriction",
+      "seconds": 0.02
+    },
+    {
+      "test": "TestDriverRestartRetainsGenerationFenceUntilNewDesired",
+      "seconds": 0.1
+    },
+    {
+      "test": "TestManagedRetirementCrashReopenNeverReplaysAcknowledgedEpoch/0",
+      "seconds": 0.01
+    },
+    {
+      "test": "TestManagedRetirementCrashReopenNeverReplaysAcknowledgedEpoch/1",
+      "seconds": 0.01
+    },
+    {
+      "test": "TestManagedRetirementCrashReopenNeverReplaysAcknowledgedEpoch/2",
+      "seconds": 0.01
+    },
+    {
+      "test": "TestManagedRetirementCrashReopenNeverReplaysAcknowledgedEpoch/3",
+      "seconds": 0.01
+    },
+    {
+      "test": "TestManagedRetirementCrashReopenNeverReplaysAcknowledgedEpoch",
+      "seconds": 0.03
+    },
+    {
+      "test": "TestManagedMeterRequiresRealBaselineAndRecoversCollectionCursor",
+      "seconds": 0
+    }
+  ],
+  "required_top_level_passed": 14,
+  "pass_events_including_subtests": 20,
+  "failures": 0,
+  "skips": 0,
+  "retries": 0,
+  "native_window": "operational drills only; no 1800s observation",
+  "platform": "Linux 6.18.57 x86_64\n0::/\n87555653cf140cc4405007eff73e972afa3cddf9\n/sys/fs/cgroup/cpu.max /sys/fs/cgroup/memory.max ",
+  "resource_scope": "Parent GOMAXPROCS=1/GOMEMLIMIT=256MiB only. Cgroup cpu.max/memory.max not readable here. wait4 maxRSS is cumulative compiler/test-child maximum, not native RSS or aggregate memory. Native Go env stripped; no native hard limit measurement.",
+  "original_failures": "sample410 reference failure remains unclassified; earlier operational13/14 failure remains preserved separately",
+  "build_command": "GOMAXPROCS=1 GOMEMLIMIT=256MiB GOPROXY=off scripts/go.sh -C runtimes/xray build -trimpath -o \"$PWD/bin/operational-managed-xray\" ./cmd/routeweaver-xray",
+  "go_version": "go1.27.3"
+}

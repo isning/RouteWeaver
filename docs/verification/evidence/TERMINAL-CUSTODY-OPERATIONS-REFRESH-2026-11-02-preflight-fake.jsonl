@@ -1,0 +1,32 @@
+{"Time":"2026-11-02T11:43:52.549100995+08:00","Action":"start","Package":"routeweaver/internal/httpapi"}
+{"Time":"2026-11-02T11:43:52.615597256+08:00","Action":"run","Package":"routeweaver/internal/httpapi","Test":"TestOperationalLifecycleRejectsUnrelatedFailureAndUnknownStop"}
+{"Time":"2026-11-02T11:43:52.615722434+08:00","Action":"output","Package":"routeweaver/internal/httpapi","Test":"TestOperationalLifecycleRejectsUnrelatedFailureAndUnknownStop","Output":"=== RUN   TestOperationalLifecycleRejectsUnrelatedFailureAndUnknownStop\n","OutputType":"frame"}
+{"Time":"2026-11-02T11:43:52.616991899+08:00","Action":"output","Package":"routeweaver/internal/httpapi","Test":"TestOperationalLifecycleRejectsUnrelatedFailureAndUnknownStop","Output":"--- PASS: TestOperationalLifecycleRejectsUnrelatedFailureAndUnknownStop (0.00s)\n","OutputType":"frame"}
+{"Time":"2026-11-02T11:43:52.617055839+08:00","Action":"pass","Package":"routeweaver/internal/httpapi","Test":"TestOperationalLifecycleRejectsUnrelatedFailureAndUnknownStop","Elapsed":0}
+{"Time":"2026-11-02T11:43:52.617124673+08:00","Action":"run","Package":"routeweaver/internal/httpapi","Test":"TestOperationalFinalGuardRejectsCurrentBaselineWithOldFinal"}
+{"Time":"2026-11-02T11:43:52.61721551+08:00","Action":"output","Package":"routeweaver/internal/httpapi","Test":"TestOperationalFinalGuardRejectsCurrentBaselineWithOldFinal","Output":"=== RUN   TestOperationalFinalGuardRejectsCurrentBaselineWithOldFinal\n","OutputType":"frame"}
+{"Time":"2026-11-02T11:43:52.618994911+08:00","Action":"output","Package":"routeweaver/internal/httpapi","Test":"TestOperationalFinalGuardRejectsCurrentBaselineWithOldFinal","Output":"--- PASS: TestOperationalFinalGuardRejectsCurrentBaselineWithOldFinal (0.00s)\n","OutputType":"frame"}
+{"Time":"2026-11-02T11:43:52.619022095+08:00","Action":"pass","Package":"routeweaver/internal/httpapi","Test":"TestOperationalFinalGuardRejectsCurrentBaselineWithOldFinal","Elapsed":0}
+{"Time":"2026-11-02T11:43:52.61949334+08:00","Action":"run","Package":"routeweaver/internal/httpapi","Test":"TestManagedObservationWindowBounds"}
+{"Time":"2026-11-02T11:43:52.619503808+08:00","Action":"output","Package":"routeweaver/internal/httpapi","Test":"TestManagedObservationWindowBounds","Output":"=== RUN   TestManagedObservationWindowBounds\n","OutputType":"frame"}
+{"Time":"2026-11-02T11:43:52.619604468+08:00","Action":"output","Package":"routeweaver/internal/httpapi","Test":"TestManagedObservationWindowBounds","Output":"--- PASS: TestManagedObservationWindowBounds (0.00s)\n","OutputType":"frame"}
+{"Time":"2026-11-02T11:43:52.619613042+08:00","Action":"pass","Package":"routeweaver/internal/httpapi","Test":"TestManagedObservationWindowBounds","Elapsed":0}
+{"Time":"2026-11-02T11:43:52.619840305+08:00","Action":"output","Package":"routeweaver/internal/httpapi","Output":"PASS\n","OutputType":"frame"}
+{"Time":"2026-11-02T11:43:53.622776078+08:00","Action":"output","Package":"routeweaver/internal/httpapi","Output":"ok  \trouteweaver/internal/httpapi\t1.070s\n"}
+{"Time":"2026-11-02T11:43:53.622840447+08:00","Action":"pass","Package":"routeweaver/internal/httpapi","Elapsed":1.075}
+{"Time":"2026-11-02T11:43:59.737266443+08:00","Action":"start","Package":"routeweaver/internal/agent"}
+{"Time":"2026-11-02T11:43:59.754733014+08:00","Action":"run","Package":"routeweaver/internal/agent","Test":"TestManagedTerminalCustodyRequiresExplicitACKAndReopensBeforeGC"}
+{"Time":"2026-11-02T11:43:59.754800493+08:00","Action":"output","Package":"routeweaver/internal/agent","Test":"TestManagedTerminalCustodyRequiresExplicitACKAndReopensBeforeGC","Output":"=== RUN   TestManagedTerminalCustodyRequiresExplicitACKAndReopensBeforeGC\n","OutputType":"frame"}
+{"Time":"2026-11-02T11:43:59.754815325+08:00","Action":"run","Package":"routeweaver/internal/agent","Test":"TestManagedTerminalCustodyRequiresExplicitACKAndReopensBeforeGC/0"}
+{"Time":"2026-11-02T11:43:59.75481877+08:00","Action":"output","Package":"routeweaver/internal/agent","Test":"TestManagedTerminalCustodyRequiresExplicitACKAndReopensBeforeGC/0","Output":"=== RUN   TestManagedTerminalCustodyRequiresExplicitACKAndReopensBeforeGC/0\n","OutputType":"frame"}
+{"Time":"2026-11-02T11:43:59.769891336+08:00","Action":"output","Package":"routeweaver/internal/agent","Test":"TestManagedTerminalCustodyRequiresExplicitACKAndReopensBeforeGC/0","Output":"--- PASS: TestManagedTerminalCustodyRequiresExplicitACKAndReopensBeforeGC/0 (0.01s)\n","OutputType":"frame"}
+{"Time":"2026-11-02T11:43:59.770030178+08:00","Action":"pass","Package":"routeweaver/internal/agent","Test":"TestManagedTerminalCustodyRequiresExplicitACKAndReopensBeforeGC/0","Elapsed":0.01}
+{"Time":"2026-11-02T11:43:59.770043666+08:00","Action":"run","Package":"routeweaver/internal/agent","Test":"TestManagedTerminalCustodyRequiresExplicitACKAndReopensBeforeGC/37"}
+{"Time":"2026-11-02T11:43:59.770048497+08:00","Action":"output","Package":"routeweaver/internal/agent","Test":"TestManagedTerminalCustodyRequiresExplicitACKAndReopensBeforeGC/37","Output":"=== RUN   TestManagedTerminalCustodyRequiresExplicitACKAndReopensBeforeGC/37\n","OutputType":"frame"}
+{"Time":"2026-11-02T11:43:59.779251961+08:00","Action":"output","Package":"routeweaver/internal/agent","Test":"TestManagedTerminalCustodyRequiresExplicitACKAndReopensBeforeGC/37","Output":"--- PASS: TestManagedTerminalCustodyRequiresExplicitACKAndReopensBeforeGC/37 (0.01s)\n","OutputType":"frame"}
+{"Time":"2026-11-02T11:43:59.779286788+08:00","Action":"pass","Package":"routeweaver/internal/agent","Test":"TestManagedTerminalCustodyRequiresExplicitACKAndReopensBeforeGC/37","Elapsed":0.01}
+{"Time":"2026-11-02T11:43:59.779303449+08:00","Action":"output","Package":"routeweaver/internal/agent","Test":"TestManagedTerminalCustodyRequiresExplicitACKAndReopensBeforeGC","Output":"--- PASS: TestManagedTerminalCustodyRequiresExplicitACKAndReopensBeforeGC (0.02s)\n","OutputType":"frame"}
+{"Time":"2026-11-02T11:43:59.779308859+08:00","Action":"pass","Package":"routeweaver/internal/agent","Test":"TestManagedTerminalCustodyRequiresExplicitACKAndReopensBeforeGC","Elapsed":0.02}
+{"Time":"2026-11-02T11:43:59.779791889+08:00","Action":"output","Package":"routeweaver/internal/agent","Output":"PASS\n","OutputType":"frame"}
+{"Time":"2026-11-02T11:44:00.786349155+08:00","Action":"output","Package":"routeweaver/internal/agent","Output":"ok  \trouteweaver/internal/agent\t1.049s\n"}
+{"Time":"2026-11-02T11:44:00.786422589+08:00","Action":"pass","Package":"routeweaver/internal/agent","Elapsed":1.049}

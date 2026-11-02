@@ -1,0 +1,47 @@
+{
+  "production_base": "99f2277c9e9c59462a59c842586c869e00f67853",
+  "cleanup_baseline": "454cf01 (equivalent db67b40; do not integrate twice)",
+  "scope": "fake-only race tests; native lifecycle compiled but not activated",
+  "parent_env": {
+    "GOMAXPROCS": "1",
+    "GOMEMLIMIT": "256MiB"
+  },
+  "native_launched": false,
+  "raw_sha256": "307e99c67d0aa9c151c8dd0ce4d267cd0e6b0ffd1154c147998eefa60571898d",
+  "passes": [
+    {
+      "test": "TestOperationalNotificationFailureVisibleAndRetry",
+      "seconds": 0.27
+    },
+    {
+      "test": "TestOperationalLifecycleRejectsUnrelatedFailureAndUnknownStop",
+      "seconds": 0
+    },
+    {
+      "test": "TestOperationalFinalGuardRejectsCurrentBaselineWithOldFinal",
+      "seconds": 0
+    },
+    {
+      "test": "TestManagedObservationWindowBounds",
+      "seconds": 0
+    },
+    {
+      "test": "TestManagedTerminalCustodyRequiresExplicitACKAndReopensBeforeGC/0",
+      "seconds": 0.02
+    },
+    {
+      "test": "TestManagedTerminalCustodyRequiresExplicitACKAndReopensBeforeGC/37",
+      "seconds": 0.02
+    },
+    {
+      "test": "TestManagedTerminalCustodyRequiresExplicitACKAndReopensBeforeGC",
+      "seconds": 0.04
+    }
+  ],
+  "source_sha256": {
+    "internal/httpapi/service_native_test.go": "eb40690285402f41f37bf1b86e4f8d7274d615c5c53a4e45bb0dbcd631da38a2",
+    "internal/httpapi/operations_drill_test.go": "09af14c8875de73d3545cdd402fac648c7addc6fff96e0ed38278e4d30e3c28d",
+    "internal/httpapi/operations_lifecycle_test.go": "127170a94de6e5f1123420d5b5830d3f68b263f1dac99d12c28978c20e37740f",
+    "internal/agent/managed_xray_process_test.go": "7dab4a34fddc6797929ca383e668f6376bcdadd10891caf959e014eb76ecb237"
+  }
+}

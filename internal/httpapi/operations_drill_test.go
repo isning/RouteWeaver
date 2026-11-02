@@ -11,6 +11,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"reflect"
 	"routeweaver/internal/agent"
 	"routeweaver/internal/backup"
 	"routeweaver/internal/controlprotocol"
@@ -131,7 +132,7 @@ func operationalTransport(t *testing.T, f fleetFixture, enabled bool) (string, *
 	return proxy.URL, gate
 }
 
-func runManagedOperationalDrill(t *testing.T, f fleetFixture, conn net.Conn, gate *operationalConnectionGate, d controlprotocol.Desired, userID string, supervisor *agent.ProcessSupervisor, reconciler *agent.Reconciler, root string, dial func() (net.Conn, error)) (net.Conn, controlprotocol.Desired) {
+func runManagedOperationalDrill(t *testing.T, f fleetFixture, conn net.Conn, gate *operationalConnectionGate, d controlprotocol.Desired, userID string, supervisor *agent.ProcessSupervisor, reconciler *agent.Reconciler, root string, dial func() (net.Conn, error), stopDriver func(), restartDriver func() *agent.Reconciler) (net.Conn, controlprotocol.Desired, string) {
 	t.Helper()
 	roundTrip := func() error {
 		payload := []byte("operational-backup-payload")
@@ -307,26 +308,17 @@ func runManagedOperationalDrill(t *testing.T, f fleetFixture, conn net.Conn, gat
 	}
 	// Keep CP transport unavailable so the driver cannot authorize a replacement yet.
 	stopStarted := time.Now()
-	if err = supervisor.Stop(context.Background(), root); err != nil {
-		t.Fatal(err)
-	}
+	stopDriver()
 	stopped, err := supervisor.Observe(context.Background(), root)
 	if err != nil || !stopped.Known || !stopped.Quiescent || stopped.Identity != (controlprotocol.Identity{}) {
 		t.Fatal("cannot attest stopped runtime", err, stopped)
 	}
-	journal, err := agent.ReadManagedJournal(root)
-	if err != nil {
-		t.Fatal(err)
+	closedEpoch := snapshot.CounterEpoch
+	retainedProof, proofErr := operationalRetainedProof(root, d.Scope, closedEpoch)
+	if proofErr != nil || retainedProof == nil || len(retainedProof.Final.Counters) != 1 || retainedProof.Final.Counters[0].CumulativeBytes != expected {
+		t.Fatal("stopped runtime lacks exact native final measurement", proofErr)
 	}
-	finalFound := false
-	for _, snapshot := range journal {
-		if snapshot.ActiveFlows == 0 && len(snapshot.Counters) == 1 && snapshot.Counters[0].CumulativeBytes == expected {
-			finalFound = true
-		}
-	}
-	if !finalFound {
-		t.Fatal("stopped runtime lacks exact native final measurement")
-	}
+	retainedFinal := retainedProof.Final
 	command := store.AdmissionBudgetResolution{LeaseID: reviews[0].LeaseID, ExpectedDigest: reviews[0].Digest, AdmittedBytes: expected, RuntimeStopped: true, Reason: "Synthetic CP outage recovery", Evidence: "Owned runtime stopped; exact native final journal verified"}
 	endpoint := f.srv.URL + "/api/agent/instances/" + d.InstanceID + "/admission-budgets/finalize"
 	if code, _, raw := req(t, operatorClient(), "POST", endpoint, "", command); code != 200 {
@@ -342,6 +334,7 @@ func runManagedOperationalDrill(t *testing.T, f fleetFixture, conn net.Conn, gat
 	reconciledTime := time.Since(stopStarted)
 	gate.Store(false)
 	reconnectedAt := time.Now()
+	reconciler = restartDriver()
 	reconnectDeadline := reconnectedAt.Add(20 * time.Second)
 	var recovered controlprotocol.Desired
 	for {
@@ -357,6 +350,25 @@ func runManagedOperationalDrill(t *testing.T, f fleetFixture, conn net.Conn, gat
 		}
 		time.Sleep(20 * time.Millisecond)
 	}
+	// Reopened driver must deliver actual terminal custody for the previous epoch.
+	custodyCtx, custodyCancel := context.WithDeadline(context.Background(), reconnectDeadline)
+	defer custodyCancel()
+	for {
+		proof, custodyErr := operationalCustody(custodyCtx, f.s, d.Scope, closedEpoch)
+		if custodyErr != nil {
+			t.Fatal(custodyErr)
+		}
+		if proof != nil {
+			if !reflect.DeepEqual(proof.Final, retainedFinal) || len(proof.Final.Counters) != 1 || proof.Final.Counters[0].CumulativeBytes != expected {
+				t.Fatal("CP custody changed exact stopped measurement")
+			}
+			break
+		}
+		if time.Now().After(reconnectDeadline) {
+			t.Fatal("reopened driver did not transfer terminal evidence custody")
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
 	var renewed net.Conn
 	for {
 		renewed, err = dial()
@@ -368,14 +380,18 @@ func runManagedOperationalDrill(t *testing.T, f fleetFixture, conn net.Conn, gat
 		}
 		time.Sleep(25 * time.Millisecond)
 	}
-	t.Logf("operational long CP outage: existing flow restricted=%s (<=%s), native stayed live until explicit stop; stopped-final reconciliation=%s, fresh-generation restart/readmission=%s", expiryTime, entrypolicy.MaxLease+3*time.Second, reconciledTime, time.Since(reconnectedAt))
-	return renewed, recovered
+	t.Logf("operational long CP outage: existing flow restricted=%s (<=%s), native stayed live until driver cancel/drain; stopped-final reconciliation=%s, durable reopen/fresh-generation/readmission=%s", expiryTime, entrypolicy.MaxLease+3*time.Second, reconciledTime, time.Since(reconnectedAt))
+	newSnapshot, snapshotErr := agent.ReadManagedSnapshot(context.Background(), root)
+	if snapshotErr != nil || newSnapshot.CounterEpoch == closedEpoch || newSnapshot.CounterEpoch == "" {
+		t.Fatal("fresh runtime epoch missing after durable reopen", snapshotErr)
+	}
+	return renewed, recovered, newSnapshot.CounterEpoch
 
 }
 
 // Called only after the owned driver returns. No second stop or global PID scan:
 // the existing supervisor must establish absence from its stable ownership record.
-func checkOperationalTerminal(t *testing.T, f fleetFixture, supervisor *agent.ProcessSupervisor, spool *agent.MeterSpool, root, instance, user string) {
+func checkOperationalTerminal(t *testing.T, f fleetFixture, supervisor *agent.ProcessSupervisor, spool *agent.MeterSpool, root string, scope controlprotocol.Scope, epoch, user string) {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
@@ -389,6 +405,7 @@ func checkOperationalTerminal(t *testing.T, f fleetFixture, supervisor *agent.Pr
 		t.Errorf("terminal journal invalid: %v", journalErr)
 	}
 	finalFiles := 0
+	currentFinalFile := false
 	entries, readErr := os.ReadDir(agent.ManagedJournalDirectory(root))
 	if readErr != nil {
 		t.Errorf("terminal journal directory: %v", readErr)
@@ -396,6 +413,9 @@ func checkOperationalTerminal(t *testing.T, f fleetFixture, supervisor *agent.Pr
 	for _, entry := range entries {
 		if strings.HasSuffix(entry.Name(), ".final.json") {
 			finalFiles++
+			if entry.Name() == epoch+".final.json" {
+				currentFinalFile = true
+			}
 		}
 	}
 	_, markerErr := os.Lstat(filepath.Join(agent.ManagedJournalDirectory(root), "running.json"))
@@ -405,12 +425,17 @@ func checkOperationalTerminal(t *testing.T, f fleetFixture, supervisor *agent.Pr
 	pending := len(spool.Pending())
 	_, retirementErr := os.Lstat(filepath.Join(root, "meters", "managed-retirement.json"))
 	retired := finalFiles == 0 && len(journal) == 0 && journalErr == nil && pending == 0 && os.IsNotExist(markerErr) && os.IsNotExist(retirementErr)
-	// A final already represented by exact ACKed live counters may be retired
-	// by final collection. This same fixture proved the real running epoch;
-	// an empty journal with no pending batch/intent is consistent with ACKed
-	// retirement, not a separately preserved positive retirement receipt.
-	if finalFiles == 0 && !retired {
-		t.Errorf("terminal final neither retained nor consistent with completed retirement")
+	if finalFiles > 0 {
+		if _, proofErr := operationalRetainedProof(root, scope, epoch); proofErr != nil || !currentFinalFile {
+			t.Errorf("terminal current-epoch final proof invalid: %v", proofErr)
+		}
+	}
+	// Empty local files alone never prove terminal custody. Match the runtime epoch.
+	if finalFiles == 0 {
+		proof, custodyErr := operationalCustody(ctx, f.s, scope, epoch)
+		if !retired || custodyErr != nil || proof == nil {
+			t.Errorf("terminal final lacks exact CP custody: epoch=%s error=%v", epoch, custodyErr)
+		}
 	}
 	if !os.IsNotExist(retirementErr) {
 		t.Errorf("terminal retirement incomplete: %v", retirementErr)
@@ -418,7 +443,7 @@ func checkOperationalTerminal(t *testing.T, f fleetFixture, supervisor *agent.Pr
 	if pending != 0 {
 		t.Errorf("terminal CP transport obligations remain: batches=%d", pending)
 	}
-	reviews, reviewErr := f.s.AdmissionBudgetReviews(instance, time.Now())
+	reviews, reviewErr := f.s.AdmissionBudgetReviews(scope.InstanceID, time.Now())
 	if reviewErr != nil {
 		t.Errorf("terminal budget review unavailable: %v", reviewErr)
 	}
@@ -445,7 +470,7 @@ func checkOperationalTerminal(t *testing.T, f fleetFixture, supervisor *agent.Pr
 	if usageErr != nil || usage.RawBytes != int64(settledRaw) || usage.WeightedBytes != int64(settledRaw) {
 		t.Errorf("terminal settled budget/CP usage mismatch: settled=%d raw=%d weighted=%d error=%v", settledRaw, usage.RawBytes, usage.WeightedBytes, usageErr)
 	}
-	t.Logf("operational terminal: owned_absent=%t final_files=%d journal_snapshots=%d running_marker_absent=%t consistent_with_acked_retirement=%t pending_batches=%d budget_records=%d open_budgets=%d unresolved_budgets=%d retained_raw=%d settled_raw=%d", absent, finalFiles, len(journal), os.IsNotExist(markerErr), retired, pending, len(reviews), open, unresolved, retainedRaw, settledRaw)
+	t.Logf("operational terminal: owned_absent=%t final_files=%d journal_snapshots=%d running_marker_absent=%t local_retirement_complete=%t pending_batches=%d budget_records=%d open_budgets=%d unresolved_budgets=%d retained_raw=%d settled_raw=%d", absent, finalFiles, len(journal), os.IsNotExist(markerErr), retired, pending, len(reviews), open, unresolved, retainedRaw, settledRaw)
 }
 
 // Failure-only private forensic copies, never activated or claimed as an atomic
@@ -484,4 +509,95 @@ func preserveOperationalFailure(t *testing.T, database, root string) {
 		}
 	}
 	t.Logf("private operational failure evidence retained: %s", root)
+}
+
+func operationalExpectedOutage(err error) bool {
+	var transport *agent.TransportError
+	return errors.As(err, &transport) && transport.Status == http.StatusServiceUnavailable && transport.Code == "request_rejected"
+}
+func operationalStoppedState(state agent.State) bool {
+	return state.Phase == "stopped" && state.Code == "local_session_stopped" && state.Observed == nil && !state.RecoveryRequired
+}
+
+// Bounded read-only operator discovery, followed by exact proof revalidation.
+func operationalCustody(ctx context.Context, s *store.Store, scope controlprotocol.Scope, epoch string) (*entrypolicy.TerminalEvidence, error) {
+	return boundedOperationalCustody(ctx, s, scope, epoch, 16)
+}
+
+type operationalCustodyReader interface {
+	DiscoverMeterTerminalEvidence(context.Context, string, string, string) (store.TerminalEvidencePage, error)
+	MeterTerminalEvidence(string, string, string, uint64) (store.TerminalMeterEvidence, error)
+}
+
+func boundedOperationalCustody(ctx context.Context, s operationalCustodyReader, scope controlprotocol.Scope, epoch string, maxPages int) (*entrypolicy.TerminalEvidence, error) {
+	if epoch == "" {
+		return nil, errors.New("runtime epoch required for custody")
+	}
+	cursor := ""
+	for pageNumber := 0; pageNumber < maxPages; pageNumber++ {
+		page, err := s.DiscoverMeterTerminalEvidence(ctx, scope.InstanceID, scope.EnrollmentEpoch, cursor)
+		if err != nil {
+			return nil, err
+		}
+		for _, locator := range page.Items {
+			if locator.RuntimeEpoch != epoch {
+				continue
+			}
+			stored, err := s.MeterTerminalEvidence(scope.InstanceID, scope.EnrollmentEpoch, locator.StreamEpoch, locator.Sequence)
+			if err != nil {
+				return nil, err
+			}
+			proof := stored.TerminalEvidence
+			if proof == nil || proof.Validate() != nil || proof.NodeID != scope.NodeID || proof.InstanceID != scope.InstanceID || proof.EnrollmentEpoch != scope.EnrollmentEpoch || proof.RuntimeEpoch != epoch {
+				return nil, errors.New("terminal custody scope mismatch")
+			}
+			return proof, nil
+		}
+		if !page.HasMore {
+			return nil, nil
+		}
+		cursor = page.NextCursor
+	}
+	return nil, errors.New("custody discovery exceeded bounded pages")
+}
+
+// The filename, baseline and final must all bind the same tracked runtime epoch.
+func operationalRetainedProof(root string, scope controlprotocol.Scope, epoch string) (*entrypolicy.TerminalEvidence, error) {
+	if epoch == "" || strings.ContainsAny(epoch, "/\\") {
+		return nil, errors.New("invalid retained epoch")
+	}
+	proof := &entrypolicy.TerminalEvidence{Version: entrypolicy.TerminalCustodyVersion, NodeID: scope.NodeID, InstanceID: scope.InstanceID, EnrollmentEpoch: scope.EnrollmentEpoch, RuntimeEpoch: epoch}
+	for kind, target := range map[string]*entrypolicy.Snapshot{"baseline": &proof.Baseline, "final": &proof.Final} {
+		path := filepath.Join(agent.ManagedJournalDirectory(root), epoch+"."+kind+".json")
+		info, err := os.Lstat(path)
+		if err != nil {
+			return nil, err
+		}
+		if !info.Mode().IsRegular() || info.Mode().Perm()&0077 != 0 || info.Size() > 4<<20 {
+			return nil, errors.New("invalid private bounded native journal")
+		}
+		file, err := os.Open(path)
+		if err != nil {
+			return nil, err
+		}
+		raw, readErr := io.ReadAll(io.LimitReader(file, (4<<20)+1))
+		closeErr := file.Close()
+		if readErr != nil {
+			return nil, readErr
+		}
+		if closeErr != nil {
+			return nil, closeErr
+		}
+		if len(raw) > 4<<20 {
+			return nil, errors.New("native journal exceeds bound")
+		}
+		if err = json.Unmarshal(raw, target); err != nil {
+			return nil, err
+		}
+	}
+	proof.Digest = proof.ComputeDigest()
+	if err := proof.Validate(); err != nil {
+		return nil, err
+	}
+	return proof, nil
 }
