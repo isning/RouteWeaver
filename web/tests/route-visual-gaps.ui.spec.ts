@@ -253,7 +253,7 @@ for (const width of [1280, 390]) {
     await expect(settingsForm.getByRole("combobox")).toHaveCount(0);
     await expect(page.getByRole("heading", { name: "基本设置", exact: true })).toHaveCount(0);
     for (const policy of [
-      { term: /^平台名称$/, help: "用于记录此控制平面的名称。", value: "协作平台" },
+      { term: /^平台名称$/, help: null, value: "协作平台" },
       { term: /^账号注册$/, help: "新账号须由管理员生成邀请后创建。", value: "仅受邀用户" },
       { term: /^默认时区$/, help: "流量周期按 UTC+8 计算；具体重置方式在服务方案或用户授权中设置。", value: "UTC+8" },
     ]) {
@@ -266,6 +266,15 @@ for (const width of [1280, 390]) {
       await expect(value).toHaveCount(1);
       await expect(value).toBeVisible();
       await expect(value).toHaveText(policy.value);
+      const surface = settingsForm.locator("..");
+      const surfaceBox = (await surface.boundingBox())!;
+      const rowBox = (await row.boundingBox())!;
+      expect(rowBox.x).toBeCloseTo(surfaceBox.x + 1, 0);
+      expect(rowBox.width).toBeCloseTo(surfaceBox.width - 2, 0);
+      if (!policy.help) {
+        await expect(settingsForm.getByText("用于记录此控制平面的名称。", { exact: true })).toHaveCount(0);
+        continue;
+      }
       await expect(help).toHaveCount(1);
       await expect(help).toBeVisible();
       await expect(help).toHaveText(policy.help);
@@ -279,10 +288,20 @@ for (const width of [1280, 390]) {
         expect(helpBox.x).toBeCloseTo(termBox.x, 0);
       } else {
         expect(valueBox.y).toBeCloseTo(termBox.y, 0);
-        expect(helpBox.x).toBeCloseTo(termBox.x, 0);
-        expect(helpBox.y).toBeGreaterThanOrEqual(termBox.y + termBox.height);
+        expect(helpBox.x).toBeCloseTo(valueBox.x, 0);
+        expect(helpBox.y).toBeGreaterThanOrEqual(valueBox.y + valueBox.height);
       }
     }
+    const platform = page.getByRole("region", { name: "平台信息", exact: true });
+    const groupHeading = platform.getByRole("heading", { name: "平台信息", exact: true });
+    const groupSurface = platform.locator(".settings-surface");
+    expect((await groupHeading.boundingBox())!.y + (await groupHeading.boundingBox())!.height).toBeLessThan((await groupSurface.boundingBox())!.y);
+    const lines = await settingsForm.evaluate(form => {
+      const name = form.querySelector("dl[hidden]") ? form.querySelector("dl:not([hidden])") : form.querySelector("dl");
+      const registration = Array.from(form.querySelectorAll("dt")).find(node => node.textContent === "账号注册")!.parentElement!;
+      return [name!, registration].map(node => parseFloat(getComputedStyle(node).borderBottomWidth) + parseFloat(getComputedStyle(node).borderTopWidth));
+    });
+    expect(lines.every(width => width >= 1)).toBe(true);
     const originHelp = page.getByText(/请先由运维配置 DNS、有效 HTTPS/);
     const originSave = page.getByRole("button", { name: "保存域名草稿", exact: true });
     await expect(originHelp).toBeVisible();

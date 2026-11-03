@@ -465,7 +465,7 @@ it("navigates settings sections without leaving or saving either dirty draft", a
   expect((name as HTMLInputElement).value).toBe("Retained local name");
   expect((domain as HTMLInputElement).value).toBe("https://draft.example.test");
   expect(state.writes).toEqual([]);
-  expect(screen.getAllByText("用于记录此控制平面的名称。").filter(element => !element.closest("[hidden]"))).toHaveLength(1);
+  expect(screen.queryByText("用于记录此控制平面的名称。")).toBeNull();
   expect(screen.getByText("新账号须由管理员生成邀请后创建。")).toBeTruthy();
   expect(screen.getByText("流量周期按 UTC+8 计算；具体重置方式在服务方案或用户授权中设置。")).toBeTruthy();
 });

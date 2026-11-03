@@ -1,3 +1,4 @@
+import { SettingsGroup, SettingsRow } from "@/ui-patterns/settings-group";
 import { PlatformSettingsTabList } from "@/ui-patterns/platform-settings-navigation";
 import type { ReactNode } from "react";
 import { WorkspaceFrame } from "@/ui-patterns/workspace-frame";
@@ -262,7 +263,7 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
         <QueryState
           loading={query.isPending}
           paused={query.isPaused}
-          loadingLayout="form"
+          loadingLayout="settings"
           error={query.error}
           retry={() => query.refetch()}
         >
@@ -1730,7 +1731,7 @@ function PlatformSettingsTabs({
             value={tab.key}
             forceMount={tab.key === "basic" ? true : undefined}
             hidden={activeTab !== tab.key}
-            className="space-y-6"
+            className={tab.key === "basic" ? "space-y-10" : "space-y-6"}
           >
             {tab.children}
           </TabsContent>
@@ -1824,7 +1825,7 @@ function Settings({
   return (
     <>
       <PageSection id={`${sectionID}-platform-information`} label="平台信息">
-        <Section title="平台信息">
+        <SettingsGroup title="平台信息">
           <AppForm
             aria-label="平台基本设置"
             form={form}
@@ -1832,18 +1833,12 @@ function Settings({
             onFinish={(v) => {
               if (!save.isPending) save.mutate(structuredClone(v));
             }}
-            className="settings-form space-y-5"
+            className="settings-form"
           >
-            <dl hidden={editingName}>
-              <div className="grid items-start gap-x-4 gap-y-1.5 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_8rem]">
-                <dt className="font-medium">平台名称</dt>
-                <dd className="min-w-0 wrap-anywhere sm:col-start-2 sm:row-start-1">
-                  {String(baseline.name || "未设置")}
-                </dd>
-                <dd className="text-sm leading-relaxed text-muted-foreground sm:col-start-1 sm:row-start-2">
-                  用于记录此控制平面的名称。
-                </dd>
-                <dd className="mt-2 sm:col-start-3 sm:row-start-1 sm:row-span-2 sm:mt-0">
+            <dl hidden={editingName} className="border-b">
+              <SettingsRow
+                label="平台名称"
+                action={
                   <ActionButton
                     ref={editName}
                     type="button"
@@ -1855,17 +1850,18 @@ function Settings({
                   >
                     编辑平台名称
                   </ActionButton>
-                </dd>
-              </div>
-            </dl>
-            <div ref={nameEditor} hidden={!editingName} className="space-y-4">
-              <ErrorNotice error={save.error} />
-              <AppField
-                name="name"
-                label="平台名称"
-                description="用于记录此控制平面的名称。"
-                className="max-w-xl"
+                }
               >
+                {String(baseline.name || "未设置")}
+              </SettingsRow>
+            </dl>
+            <div
+              ref={nameEditor}
+              hidden={!editingName}
+              className="space-y-4 border-b px-4 py-5 sm:px-5"
+            >
+              <ErrorNotice error={save.error} />
+              <AppField name="name" label="平台名称" className="max-w-xl">
                 <Input ref={nameInput} />
               </AppField>
               <div className="flex flex-wrap gap-2">
@@ -1898,31 +1894,24 @@ function Settings({
             <AppField name="timezone" hidden>
               <input type="hidden" />
             </AppField>
-            <dl className="divide-y border-t">
-              <div className="grid items-start gap-x-4 gap-y-1.5 py-4 last:pb-0 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_8rem]">
-                <dt className="font-medium">账号注册</dt>
-                <dd className="min-w-0 wrap-anywhere sm:col-start-2 sm:row-start-1">
-                  {currentSettings.registration === "invite"
-                    ? "仅受邀用户"
-                    : String(currentSettings.registration || "未设置")}
-                </dd>
-                <dd className="text-sm leading-relaxed text-muted-foreground sm:col-start-1 sm:row-start-2">
-                  新账号须由管理员生成邀请后创建。
-                </dd>
-              </div>
-              <div className="grid items-start gap-x-4 gap-y-1.5 py-4 last:pb-0 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_8rem]">
-                <dt className="font-medium">默认时区</dt>
-                <dd className="min-w-0 wrap-anywhere sm:col-start-2 sm:row-start-1">
-                  {String(currentSettings.timezone || "未设置")}
-                </dd>
-                <dd className="text-sm leading-relaxed text-muted-foreground sm:col-start-1 sm:row-start-2">
-                  流量周期按 UTC+8
-                  计算；具体重置方式在服务方案或用户授权中设置。
-                </dd>
-              </div>
+            <dl className="divide-y">
+              <SettingsRow
+                label="账号注册"
+                description="新账号须由管理员生成邀请后创建。"
+              >
+                {currentSettings.registration === "invite"
+                  ? "仅受邀用户"
+                  : String(currentSettings.registration || "未设置")}
+              </SettingsRow>
+              <SettingsRow
+                label="默认时区"
+                description="流量周期按 UTC+8 计算；具体重置方式在服务方案或用户授权中设置。"
+              >
+                {String(currentSettings.timezone || "未设置")}
+              </SettingsRow>
             </dl>
           </AppForm>
-        </Section>
+        </SettingsGroup>
       </PageSection>
       <PageSection id={`${sectionID}-subscription-domain`} label="订阅域名设置">
         <SubscriptionOriginSettings />

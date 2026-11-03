@@ -4,9 +4,39 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { WorkspaceFrame } from "./workspace-frame";
 export type LoadingLayout =
-  "table" | "cards" | "form" | "field" | "subscriptions" | "summary";
+  | "table"
+  | "cards"
+  | "form"
+  | "settings"
+  | "field"
+  | "subscriptions"
+  | "summary";
 /** Placeholders describe layout, never counts, health, or successful reads. */
 function ContentSkeleton({ layout }: { layout: LoadingLayout }) {
+  if (layout === "settings")
+    return (
+      <div className="settings-skeleton space-y-10">
+        {[0, 1].map((group) => (
+          <div key={group} className="@container/settings space-y-3">
+            <Skeleton className="h-6 w-24" />
+            <div className="divide-y rounded-lg border bg-card">
+              {[0, 1, 2].map((row) => (
+                <div
+                  key={row}
+                  className="grid gap-3 px-4 py-4 @min-[40rem]/settings:grid-cols-[10rem_minmax(0,1fr)] @min-[40rem]/settings:gap-x-5 sm:px-5"
+                >
+                  <Skeleton className="h-6 w-24" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-6 w-40 max-w-full" />
+                    {row > 0 && <Skeleton className="h-4 w-3/4" />}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
   if (layout === "field")
     return (
       <div className="space-y-2">
@@ -142,11 +172,13 @@ export function PageSkeleton({ page }: { page: string }) {
     "outputs",
   ].includes(page)
     ? "subscriptions"
-    : ["settings", "account-security"].includes(page)
-      ? "form"
-      : page === "servers"
-        ? "cards"
-        : "table";
+    : page === "settings"
+      ? "settings"
+      : page === "account-security"
+        ? "form"
+        : page === "servers"
+          ? "cards"
+          : "table";
   if (page === "subscriptions" || page === "settings") {
     return (
       <div role="status" aria-label="正在打开页面" aria-busy="true">

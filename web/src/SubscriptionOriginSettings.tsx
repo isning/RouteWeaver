@@ -1,3 +1,4 @@
+import { SettingsGroup, SettingsRow } from "@/ui-patterns/settings-group";
 import { TaskDialog } from "@/ui-patterns/task-overlays";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -11,7 +12,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { APIError, post, put, request } from "./api";
 import { dateLabel } from "./model";
-import { ErrorNotice, KeyValue, QueryState, Section } from "./components";
+import { ErrorNotice, KeyValue, QueryState } from "./components";
 interface OriginState {
   revision: number;
   configuredRevision: number;
@@ -39,31 +40,37 @@ export function SubscriptionOriginSettings() {
     gcTime: 0,
   });
   return (
-    <Section
+    <SettingsGroup
       title="订阅域名"
       description="单独设置用户复制订阅链接时使用的地址，不改变控制台登录地址。"
     >
       {query.data && query.error && (
-        <Notice
-          tone="error"
-          title={query.error.message}
-          action={
-            <ActionButton onClick={() => query.refetch()} variant="outline">
-              重新读取设置
-            </ActionButton>
-          }
-        />
+        <div className="px-4 pt-4 sm:px-5">
+          <Notice
+            tone="error"
+            title={query.error.message}
+            action={
+              <ActionButton onClick={() => query.refetch()} variant="outline">
+                重新读取设置
+              </ActionButton>
+            }
+          />
+        </div>
       )}
-      <QueryState
-        loading={query.isPending} paused={query.isPaused} loadingLayout="form"
-        error={query.data ? null : query.error}
-        retry={() => query.refetch()}
-      >
-        {query.data && (
-          <OriginForm state={query.data} refresh={() => query.refetch()} />
-        )}
-      </QueryState>
-    </Section>
+      <div className={!query.data ? "p-4 sm:p-5" : undefined}>
+        <QueryState
+          loading={query.isPending}
+          paused={query.isPaused}
+          loadingLayout="field"
+          error={query.data ? null : query.error}
+          retry={() => query.refetch()}
+        >
+          {query.data && (
+            <OriginForm state={query.data} refresh={() => query.refetch()} />
+          )}
+        </QueryState>
+      </div>
+    </SettingsGroup>
   );
 }
 function OriginForm({
@@ -150,31 +157,31 @@ function OriginForm({
   }[state.verificationStatus];
   return (
     <>
-      <ErrorNotice error={error} />
-      <div className="space-y-3 border-b pb-5">
-        <dl className="subscription-origin-summary max-w-3xl space-y-3 text-sm">
-          <div className="grid gap-1 sm:grid-cols-[9rem_minmax(0,1fr)] sm:gap-x-4">
-            <dt className="text-muted-foreground">当前订阅地址</dt>
-            <dd className="min-w-0 wrap-anywhere">
-              <strong>
-                {state.effectiveOrigin || state.defaultOrigin || "跟随当前访问地址"}
-              </strong>
-              {state.activatedAt && (
-                <small className="block text-sm text-muted-foreground">
-                  启用于 {dateLabel(state.activatedAt)}
-                </small>
-              )}
-            </dd>
-          </div>
-          <div className="grid gap-1 sm:grid-cols-[9rem_minmax(0,1fr)] sm:gap-x-4">
-            <dt className="text-muted-foreground">当前链接示例</dt>
-            <dd className="min-w-0 font-mono text-xs leading-relaxed wrap-anywhere">
-              {state.currentLinkExample}
-            </dd>
-          </div>
-        </dl>
-      </div>
-      <div className="space-y-3">
+      {error && (
+        <div className="px-4 pt-4 sm:px-5">
+          <ErrorNotice error={error} />
+        </div>
+      )}
+      <dl className="subscription-origin-summary divide-y">
+        <SettingsRow
+          label="当前订阅地址"
+          description={
+            state.activatedAt
+              ? `启用于 ${dateLabel(state.activatedAt)}`
+              : undefined
+          }
+        >
+          <span className="font-medium">
+            {state.effectiveOrigin || state.defaultOrigin || "跟随当前访问地址"}
+          </span>
+        </SettingsRow>
+        <SettingsRow label="当前链接示例">
+          <span className="font-mono text-xs leading-relaxed">
+            {state.currentLinkExample}
+          </span>
+        </SettingsRow>
+      </dl>
+      <div className="space-y-3 border-t px-4 py-5 sm:px-5">
         <label className="grid max-w-2xl gap-2 text-sm font-medium">
           订阅域名草稿
           <Input
@@ -209,12 +216,14 @@ function OriginForm({
         </div>
       </div>
       {state.configuredRevision > 0 && (
-        <div className="space-y-4 border-t pt-5">
+        <div className="space-y-4 border-t px-4 py-5 sm:px-5">
           <h3 className="flex flex-wrap items-center gap-2 text-sm font-medium">
             已保存的草稿 {pending && <Badge variant="secondary">待启用</Badge>}
           </h3>
           <KeyValue label="拟用链接">
-            <span className="font-mono text-xs leading-relaxed wrap-anywhere">{state.proposedLinkExample}</span>
+            <span className="font-mono text-xs leading-relaxed wrap-anywhere">
+              {state.proposedLinkExample}
+            </span>
           </KeyValue>
           <p>
             {proofLabel}
@@ -235,7 +244,11 @@ function OriginForm({
                 {state.lastFailure}
               </Notice>
             )}
-          {state.draftOrigin && <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">验证结果有效 5 分钟；过期后需重新验证再启用。</p>}
+          {state.draftOrigin && (
+            <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
+              验证结果有效 5 分钟；过期后需重新验证再启用。
+            </p>
+          )}
           <div className={"flex flex-wrap items-center gap-2"}>
             {state.draftOrigin && (
               <ActionButton
@@ -269,10 +282,15 @@ function OriginForm({
       )}
       <TaskDialog
         title="启用订阅地址"
-        bodyProps={{ className: "space-y-5 text-sm leading-relaxed [overflow-wrap:anywhere]" }}
+        bodyProps={{
+          className:
+            "space-y-5 text-sm leading-relaxed [overflow-wrap:anywhere]",
+        }}
         open={!!review}
         contentProps={{ inert: !review }}
-        onClosed={() => { if (!review) reviewPresentation.current = null; }}
+        onClosed={() => {
+          if (!review) reviewPresentation.current = null;
+        }}
         footer={
           <div className={"flex flex-wrap items-center gap-2"}>
             <ActionButton
@@ -298,7 +316,9 @@ function OriginForm({
       >
         {displayedReview && (
           <>
-            <KeyValue label="当前链接">{displayedReview.currentLinkExample}</KeyValue>
+            <KeyValue label="当前链接">
+              {displayedReview.currentLinkExample}
+            </KeyValue>
             <KeyValue label="新复制的链接">
               {displayedReview.proposedLinkExample}
             </KeyValue>

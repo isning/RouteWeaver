@@ -97,7 +97,7 @@ it.each(["settings", "nodes"] as const)(
     expect(pending.getAttribute("aria-busy")).toBe("true");
     expect(
       pending.querySelector(
-        page === "settings" ? ".sm\\:grid-cols-2" : ".min-h-16",
+        page === "settings" ? ".settings-skeleton" : ".min-h-16",
       ),
     ).toBeTruthy();
     expect(
