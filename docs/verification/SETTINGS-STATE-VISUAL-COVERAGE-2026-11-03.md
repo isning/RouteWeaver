@@ -58,3 +58,19 @@ navigation geometry. Fixed navigation appearing discontinuous in a stitched
 full-page capture is not classified as a product defect from that image alone.
 Application and complete browser-spec typechecks passed; fresh browser evidence
 remains pending CI.
+
+## CI27 motion-helper false positive
+
+All three E13 widths timed out in the new settling boundary with opacity 1,
+no running animation, but `preparing: true`. The shared preparation regex had
+no left boundary: the `enter` suffix in permanent `items-center`, `text-center`
+and `justify-center` layout classes matched a preparation phase. This is a
+helper classification defect, not evidence that product animation was stuck.
+
+A focused DOM test calls the actual helper with static layout classes and no
+Web Animations: baseline 4 failures / 6 passes; after matching motion phase
+segments at a start, whitespace or hyphen boundary, all 10 pass. Real `enter`,
+`enter-active`, `appear-prepare`, prefixed rc motion phases, and the owning task
+overlay still block. Opacity checks and the actual animation/visible spinner
+logic are unchanged. HTTP and user-task assertions are untouched. Application
+and browser typechecks pass; real E13 screenshots still need CI re-execution.

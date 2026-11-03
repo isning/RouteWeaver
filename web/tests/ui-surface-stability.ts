@@ -40,7 +40,8 @@ export function surfaceMotionState(el: Element) {
   };
   return {
     opacity: getComputedStyle(motion).opacity,
-    preparing: /(?:appear|enter|prepare)(?:-|\s|$)/.test(
+    // Match a motion phase token/segment, not the suffix of static "center".
+    preparing: /(?:^|[\s-])(?:appear|enter|prepare)(?:-|\s|$)/.test(
       `${el.className} ${motion.className}`,
     ),
     running: motion
