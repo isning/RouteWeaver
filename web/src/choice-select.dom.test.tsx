@@ -4,7 +4,58 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ChoiceSelect, MultiChoice } from "./ui-patterns/choice-select";
 import { UIProviders } from "./ui-patterns/providers";
-afterEach(cleanup);
+import { useState } from "react";
+import { holdPopoverExit } from "./test-support/hold-popover-exit";
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
+
+it("conceals a multi-choice exit without losing selected chips or stealing newer focus", async () => {
+  const finishExit = holdPopoverExit();
+  const options = [{ value: "remote", label: "远程办公" }];
+  function Choices() {
+    const [value, setValue] = useState<string[]>([]);
+    return (
+      <UIProviders>
+        <MultiChoice
+          aria-label="标签"
+          value={value}
+          onValueChange={setValue}
+          options={options}
+        />
+        <ChoiceSelect aria-label="下一项" options={options} />
+      </UIProviders>
+    );
+  }
+  render(<Choices />);
+  const user = userEvent.setup();
+  const tags = screen.getByRole("combobox", { name: "标签" });
+  await user.click(tags);
+  const closing = document.getElementById(tags.getAttribute("aria-controls")!)!;
+  await user.click(screen.getByRole("option", { name: "远程办公" }));
+  await user.keyboard("{Escape}");
+  expect(closing.isConnected).toBe(true);
+  expect(closing.hasAttribute("inert")).toBe(true);
+  expect(screen.queryByRole("option", { name: "远程办公" })).toBeNull();
+  expect(screen.getByRole("button", { name: "移除 远程办公" })).toBeTruthy();
+  await user.click(screen.getByRole("combobox", { name: "下一项" }));
+  const search = screen.getByRole("combobox", { name: "搜索选项" });
+  await waitFor(() => expect(document.activeElement).toBe(search));
+  finishExit(closing);
+  await waitFor(() => expect(closing.isConnected).toBe(false));
+  expect(document.activeElement).toBe(search);
+  expect(screen.getAllByRole("option", { name: "远程办公" })).toHaveLength(1);
+  await user.keyboard("{Escape}");
+  await user.click(tags);
+  expect(
+    screen
+      .getByRole("option", { name: "远程办公" })
+      .getAttribute("aria-selected"),
+  ).toBe("true");
+  expect(screen.getByRole("button", { name: "移除 远程办公" })).toBeTruthy();
+});
 it("bounds rendering while searching every endpoint identity and preserving explicit option names", async () => {
   const changed = vi.fn();
   const options = Array.from({ length: 2000 }, (_, i) => ({

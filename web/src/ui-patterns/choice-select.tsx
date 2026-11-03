@@ -160,6 +160,8 @@ export function ChoiceSelect<V extends Value = string>({
       <PopoverContent
         className="w-(--radix-popover-trigger-width) p-0"
         align="start"
+        aria-hidden={!open || undefined}
+        inert={!open}
       >
         <Command label="搜索选项" shouldFilter={false}>
           {(searchable || flat(options).length > 40) && (
@@ -300,6 +302,8 @@ export function MultiChoice<V extends Value = string>({
         <PopoverContent
           className="w-(--radix-popover-trigger-width) p-0"
           align="start"
+          aria-hidden={!open || undefined}
+          inert={!open}
         >
           <Command label="搜索选项" shouldFilter={false}>
             {(searchable || creatable || choices.length > 40) && (

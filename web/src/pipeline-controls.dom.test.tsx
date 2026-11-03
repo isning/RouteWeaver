@@ -1,11 +1,18 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  within,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { UIProviders } from "./ui-patterns/providers";
 import { StepsEditor } from "./Pipeline";
 import type { PipelineStep } from "./types";
+import { holdPopoverExit } from "./test-support/hold-popover-exit";
 
 beforeEach(() => {
   Object.defineProperty(window, "matchMedia", {
@@ -29,7 +36,61 @@ beforeEach(() => {
 });
 afterEach(() => {
   cleanup();
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
+});
+
+it("exposes only the current stage choices while the previous choice popup exits", async () => {
+  const finishExit = holdPopoverExit();
+  function Stages() {
+    const [source, setSource] = useState<PipelineStep[]>([]);
+    const [merged, setMerged] = useState<PipelineStep[]>([]);
+    return (
+      <UIProviders>
+        <StepsEditor label="来源处理" value={source} onChange={setSource} />
+        <StepsEditor label="合并后处理" value={merged} onChange={setMerged} />
+        <output aria-label="stage choices">
+          {JSON.stringify({ source, merged })}
+        </output>
+      </UIProviders>
+    );
+  }
+  render(<Stages />);
+  const user = userEvent.setup();
+  const source = screen.getByRole("group", { name: "来源处理" });
+  const merged = screen.getByRole("group", { name: "合并后处理" });
+  const first = within(source).getByRole("combobox", { name: "添加处理步骤" });
+  await user.click(first);
+  const closing = document.getElementById(
+    first.getAttribute("aria-controls")!,
+  )!;
+  await user.click(screen.getByRole("option", { name: "字段覆盖" }));
+  expect(closing.isConnected).toBe(true);
+  expect(closing.getAttribute("data-state")).toBe("closed");
+  expect(closing.hasAttribute("inert")).toBe(true);
+  const second = within(merged).getByRole("combobox", { name: "添加处理步骤" });
+  await user.click(second);
+  expect(screen.getAllByRole("option", { name: "去除重复连接" })).toHaveLength(
+    1,
+  );
+  const current = document.getElementById(
+    second.getAttribute("aria-controls")!,
+  )!;
+  const search = within(current).getByRole("combobox", { name: "搜索选项" });
+  await waitFor(() => expect(document.activeElement).toBe(search));
+  finishExit(closing);
+  await waitFor(() => expect(closing.isConnected).toBe(false));
+  expect(document.activeElement).toBe(search);
+  await user.click(screen.getByRole("option", { name: "去除重复连接" }));
+  const authored = JSON.parse(
+    screen.getByLabelText("stage choices").textContent!,
+  );
+  expect(authored.source.map((step: PipelineStep) => step.kind)).toEqual([
+    "override",
+  ]);
+  expect(authored.merged.map((step: PipelineStep) => step.kind)).toEqual([
+    "deduplicate",
+  ]);
 });
 function Editor() {
   const [steps, setSteps] = useState<PipelineStep[]>([

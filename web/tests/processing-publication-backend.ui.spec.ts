@@ -28,10 +28,22 @@ test("real processing editor → stage comparison → saved recipe → selected 
       exact: true,
     });
     const add = async (stage: Locator, name: string) => {
-      await stage
-        .getByRole("combobox", { name: "添加处理步骤", exact: true })
-        .click();
-      await page.getByRole("option", { name, exact: true }).click();
+      const trigger = stage.getByRole("combobox", {
+        name: "添加处理步骤",
+        exact: true,
+      });
+      await trigger.click();
+      await expect(trigger).toHaveAttribute("aria-expanded", "true");
+      const popupID = await trigger.getAttribute("aria-controls");
+      expect(popupID).toBeTruthy();
+      const popup = page.locator(`[id=${JSON.stringify(popupID)}]`);
+      await expect(popup).toHaveAttribute("data-state", "open");
+      await popup.getByRole("option", { name, exact: true }).click();
+      await expect(trigger).toHaveAttribute("aria-expanded", "false");
+      // A visual exit may remain mounted, but its options are no longer choices.
+      await expect(
+        popup.getByRole("option", { name, exact: true }),
+      ).toHaveCount(0);
     };
     await add(source, "字段覆盖");
     await source.getByLabel("覆盖地区", { exact: true }).fill("DE");
