@@ -1833,7 +1833,7 @@ function Settings({
             onFinish={(v) => {
               if (!save.isPending) save.mutate(structuredClone(v));
             }}
-            className="settings-form"
+            className="settings-form space-y-0"
           >
             <dl hidden={editingName} className="border-b">
               <SettingsRow

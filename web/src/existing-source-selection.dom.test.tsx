@@ -13,6 +13,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { UIProviders } from "./ui-patterns/providers";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { TaskDialog } from "./ui-patterns/task-overlays";
 import { CollectionsPage } from "./Sources";
 import { ProfileEditor } from "./Profiles";
 import { emptyProfile } from "./model";
@@ -51,7 +52,7 @@ const recipe: Collection = {
   ],
   steps: [{ id: "merge", kind: "deduplicate", enabled: true }],
 };
-function mount(sources: Source[], profile?: Profile, catalogError = false) {
+function mount(sources: Source[], profile?: Profile, catalogError = false, beforeWriteResponse?: () => Promise<void>) {
   let inventory = structuredClone(sources);
   const writes: { path: string; body: any }[] = [];
   vi.stubGlobal(
@@ -65,6 +66,7 @@ function mount(sources: Source[], profile?: Profile, catalogError = false) {
         if (path.startsWith("/me/sources/")) {
           const saved = accepted(body.id, { ...body, revision: "r2" });
           inventory = inventory.map((s) => (s.id === saved.id ? saved : s));
+          await beforeWriteResponse?.();
           return json(saved);
         }
         if (path.endsWith("/preview"))
@@ -170,6 +172,26 @@ afterEach(async () => {
 it(
   "names an unavailable selected source and repairs it without saving or replacing the rich collection draft",
   async () => {
+    // Preserve the real Sheet Presence during its exit animation so a fast
+    // source correction can reopen the same DOM instead of remounting it.
+    const computedStyle = vi
+      .mocked(window.getComputedStyle)
+      .getMockImplementation()!;
+    vi.spyOn(window, "getComputedStyle").mockImplementation(
+      (element, pseudo) => {
+        const style = computedStyle(element, pseudo);
+        if (element.matches('[data-task-overlay="sheet"]')) {
+          Object.defineProperty(style, "animationName", {
+            configurable: true,
+            get: () =>
+              element.getAttribute("data-state") === "closed"
+                ? "sheet-exit"
+                : "none",
+          });
+        }
+        return style;
+      },
+    );
     const { writes } = mount([
       accepted("Paused", { enabled: false }),
       accepted("Available"),
@@ -662,4 +684,37 @@ it("returns focus to the Collection source selector after removing its unavailab
   )!.body;
   expect(saved.sources).toEqual([recipe.sources[1]]);
   expect(saved.steps).toEqual(recipe.steps);
+});
+
+
+it("does not take focus from a newer task when a retained Collection resumes", async () => {
+  const computedStyle = vi.mocked(window.getComputedStyle).getMockImplementation()!;
+  vi.spyOn(window, "getComputedStyle").mockImplementation((element, pseudo) => {
+    const style = computedStyle(element, pseudo);
+    if (element.matches('[data-task-overlay="sheet"]')) {
+      Object.defineProperty(style, "animationName", { configurable: true,
+        get: () => element.getAttribute("data-state") === "closed" ? "sheet-exit" : "none" });
+    }
+    return style;
+  });
+  let release!: () => void;
+  let started!: () => void;
+  const written = new Promise<void>(resolve => { started = resolve; });
+  const held = new Promise<void>(resolve => { release = resolve; });
+  mount([accepted("Paused", { enabled: false }), accepted("Available")], undefined, false,
+    async () => { started(); await held; });
+  await userEvent.click(await screen.findByRole("button", { name: /^Original collection.*编辑集合/ }));
+  await userEvent.click(await screen.findByRole("button", { name: "编辑来源 Paused" }));
+  const editor = within(await screen.findByRole("dialog", { name: "编辑来源" }));
+  await userEvent.click(await editor.findByRole("switch", { name: "启用来源" }));
+  await userEvent.click(editor.getByRole("button", { name: "导入来源" }));
+  await written;
+  const newer = render(<UIProviders><TaskDialog open title="Newer task" onOpenChange={() => {}}><input aria-label="Newer task input" /></TaskDialog></UIProviders>);
+  const input = await screen.findByRole("textbox", { name: "Newer task input" });
+  await userEvent.click(input);
+  expect(document.activeElement).toBe(input);
+  await act(async () => release());
+  await waitFor(() => expect(screen.queryByRole("dialog", { name: "编辑来源", hidden: true })).toBeNull());
+  expect(document.activeElement).toBe(input);
+  newer.unmount();
 });

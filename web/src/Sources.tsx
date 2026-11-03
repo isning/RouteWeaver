@@ -772,6 +772,33 @@ export function CollectionsPage() {
     );
   };
   const returnFocus = useRef<number | null>(null);
+  useLayoutEffect(() => {
+    if (sourceTask || returnFocus.current !== collectionSession.current) return;
+    const owner = collectionSession.current;
+    // Only repair focus lost by removing the subtask. A still-focused control
+    // already owns the next interaction, even if it predates this commit.
+    if (document.activeElement !== document.body) return;
+    // A fast subtask can return while the Sheet's exit animation still keeps
+    // its DOM mounted. Radix mount autofocus will not run again in that case.
+    queueMicrotask(() => {
+      if (
+        sourceOwner.current ||
+        returnFocus.current !== owner ||
+        collectionSession.current !== owner
+      )
+        return;
+      const current = document.activeElement;
+      if (current !== document.body) return;
+      const target = sourceReturnTarget();
+      if (
+        !target?.isConnected ||
+        target.closest("[hidden],[inert],[aria-hidden='true']")
+      )
+        return;
+      target.focus();
+      if (document.activeElement === target) returnFocus.current = null;
+    });
+  }, [sourceTask]);
   useLayoutEffect(
     () => () => {
       sourceOwner.current = null;

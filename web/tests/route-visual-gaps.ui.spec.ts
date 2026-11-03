@@ -302,6 +302,19 @@ for (const width of [1280, 390]) {
       return [name!, registration].map(node => parseFloat(getComputedStyle(node).borderBottomWidth) + parseFloat(getComputedStyle(node).borderTopWidth));
     });
     expect(lines.every(width => width >= 1)).toBe(true);
+    const platformRows = settingsForm.locator(".settings-row");
+    await expect(platformRows).toHaveCount(3);
+    const rowRects = await platformRows.evaluateAll(rows => rows.map(row => {
+      const box = row.getBoundingClientRect();
+      const term = row.querySelector("dt")!.getBoundingClientRect();
+      return { y: box.y, bottom: box.bottom, inset: term.y - box.y };
+    }));
+    // Only the separating 1px border may lie between consecutive setting rows.
+    for (let index = 1; index < rowRects.length; index++) {
+      expect(rowRects[index].y - rowRects[index - 1].bottom).toBeGreaterThanOrEqual(0);
+      expect(rowRects[index].y - rowRects[index - 1].bottom).toBeLessThanOrEqual(1);
+      expect(Math.abs(rowRects[index].inset - rowRects[0].inset)).toBeLessThanOrEqual(1);
+    }
     const originHelp = page.getByText(/请先由运维配置 DNS、有效 HTTPS/);
     const originSave = page.getByRole("button", { name: "保存域名草稿", exact: true });
     await expect(originHelp).toBeVisible();
@@ -604,16 +617,22 @@ for (const width of [3440, 2880, 2560, 2304, 1920, 1536, 1440, 1366, 1280, 1024,
     await expect(index).toBeVisible();
     await assertLayout(true);
     const originSummary = page.locator(".subscription-origin-summary");
-    expect((await originSummary.boundingBox())!.width).toBeLessThanOrEqual(768);
+    await expect(originSummary).toBeVisible();
+    const originSurface = page.getByRole("region", { name: "订阅域名设置", exact: true }).locator(".settings-surface");
+    const surfaceBox = (await originSurface.boundingBox())!;
+    const summaryBox = (await originSummary.boundingBox())!;
+    expect(surfaceBox.width).toBeLessThanOrEqual(832);
+    expect(summaryBox.x).toBeCloseTo(surfaceBox.x + 1, 0);
+    expect(summaryBox.width).toBeCloseTo(surfaceBox.width - 2, 0);
     for (const pair of await originSummary.locator(":scope > div").all()) {
       const term = (await pair.locator("dt").boundingBox())!;
-      const value = (await pair.locator("dd").boundingBox())!;
-      if (width >= 1024) {
-        expect(value.x - term.x - term.width).toBeCloseTo(16, 0);
+      const value = (await pair.locator(":scope > dt + dd").boundingBox())!;
+      if (surfaceBox.width >= 640) {
+        expect(value.x - term.x - term.width).toBeCloseTo(20, 0);
         expect(value.y).toBeCloseTo(term.y, 0);
-      } else if (width <= 390) {
+      } else {
         expect(value.x).toBeCloseTo(term.x, 0);
-        expect(value.y - term.y - term.height).toBeCloseTo(4, 0);
+        expect(value.y - term.y - term.height).toBeCloseTo(6, 0);
       }
       expect(await pair.evaluate(element => element.scrollWidth)).toBeLessThanOrEqual((await pair.boundingBox())!.width + 1);
     }
@@ -858,15 +877,35 @@ test("context rails yield space before their primary task becomes cramped", asyn
     { route: "subscriptions", navigation: false, widths: [1336, 1368], threshold: 1120 },
   ]) {
     await page.goto(`/#${task.route}`);
+    // A visible grid can still belong to the lazy or GET skeleton. Await the
+    // actual task before testing resize; loading transitions have a separate test.
+    if (task.navigation) {
+      await expect(page.getByRole("button", { name: "编辑平台名称", exact: true })).toBeVisible();
+      await expect(page.getByRole("form", { name: "平台基本设置", exact: true })).toBeVisible();
+    } else {
+      await expect(page.getByRole("button", { name: "新建分流配置", exact: true })).toBeVisible();
+      await expect(page.getByRole("textbox", { name: "搜索配置或客户端订阅", exact: true })).toBeVisible();
+    }
     await expect(page.locator(".workspace-grid:visible")).toHaveCount(1);
     const modes: boolean[] = [];
     for (const width of task.widths) {
       await page.setViewportSize({ width, height: 900 });
       await settleSectionNavigation(page);
       const layout = page.locator(".workspace-grid:visible");
-      const frame = (await layout.boundingBox())!;
-      const main = (await layout.locator(":scope > .workspace-canvas").boundingBox())!;
-      const rail = (await layout.locator(":scope > .workspace-context").boundingBox())!;
+      await expect(layout.locator(":scope > .workspace-canvas")).toBeVisible();
+      await expect(layout.locator(":scope > .workspace-context")).toBeVisible();
+      // Read one DOM generation atomically, not three locator resolutions that
+      // can span a render. Missing children remain an explicit test failure.
+      const { frame, main, rail } = await layout.evaluate(element => {
+        const canvas = element.querySelector(":scope > .workspace-canvas");
+        const context = element.querySelector(":scope > .workspace-context");
+        if (!canvas || !context) throw new Error("Ready workspace is missing its canvas or context pane");
+        const rect = (node: Element) => {
+          const box = node.getBoundingClientRect();
+          return { x: box.x, y: box.y, width: box.width, height: box.height };
+        };
+        return { frame: rect(element), main: rect(canvas), rail: rect(context) };
+      });
       const sideBySide = frame.width >= task.threshold;
       modes.push(sideBySide);
       if (sideBySide) {

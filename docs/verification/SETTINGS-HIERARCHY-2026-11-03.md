@@ -22,3 +22,11 @@ Baseline name-explanation regression: 1 failed, 29 passed before candidate. Init
 Final focused suite: 55/55 across six files; application and browser-spec type checks and production build passed. Settings row columns switch on the content container budget, not the window width.
 
 Browser execution and actual new pixels must be verified in CI; local browser execution is not attempted. DOM/type/build success is not visual acceptance and does not establish user acceptance or whole-console completion.
+
+## CI22 findings and follow-up
+
+CI22 was not accepted: twelve Origin geometry cases retained the old inset-summary contract (768px maximum, 16px desktop gap and 4px mobile gap). The new whole-row group is bounded by the 832px primary content cap, has no inner summary cap, and uses 20px/6px gaps. New assertions compare the summary with the enclosing surface's exact inner edges, retain the content upper bound and test both layout modes by the available surface width. No functional assertions were removed.
+
+Actual 1440px and 390px screenshots exposed a production rhythm defect beyond the failed tests: AppForm's default space-y-5 survived the removal of the local class, creating a 20px gap between the name and policy lists. The settings form now explicitly overrides it with space-y-0. Added browser checks require all adjacent row boundaries to be contiguous except the 1px separator, and equal term insets.
+
+The rail-budget test measured after observing only a visible grid, which can belong to the loading skeleton, then read three separate bounding boxes. CI22 returned a null canvas during those reads while the failure snapshot showed ready content. This supports a render-transition sampling race, not a demonstrated missing stable canvas; a unique historical cause is not proven without an intermediate DOM trace. The test now waits for the real task's public controls and reads frame/canvas/context geometry atomically. Missing children fail explicitly. The dedicated module/GET/ready test remains unchanged, so loading geometry is still covered.
