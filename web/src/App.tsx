@@ -855,7 +855,7 @@ function Workspace() {
         </header>
         <main
           id="main"
-          className="main-content w-full min-w-0 max-w-screen-2xl flex-1 space-y-6 p-4 outline-none sm:p-6"
+          className="main-content w-full min-w-0 flex-1 space-y-6 p-4 outline-none sm:p-6"
           tabIndex={-1}
         >
           <ErrorNotice error={authError} />

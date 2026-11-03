@@ -428,7 +428,7 @@ async function expectAlignedCards(cards: Locator[]) {
 
 // Real production composition with read-only fixtures: context is navigation or
 // existing account usage, never fabricated telemetry. Geometry awaits CI.
-for (const width of [1920, 1536, 1440, 1366, 1280, 1024, 390, 320]) {
+for (const width of [3440, 2880, 2560, 2304, 1920, 1536, 1440, 1366, 1280, 1024, 390, 320]) {
   test(`contextual page composition preserves local tasks at ${width}`, async ({ page }, info) => {
     await page.setViewportSize({ width, height: width === 320 ? 480 : 900 });
     await page.emulateMedia({ reducedMotion: "reduce" });
@@ -442,6 +442,9 @@ for (const width of [1920, 1536, 1440, 1366, 1280, 1024, 390, 320]) {
     const unexpected = await readOnlyInventory(page, {
       "/me/profiles": [populatedProfile],
       "/me/profiles/visual-draft/reveal": populatedProfile,
+      // Keep the overview sparse, like the reported page, rather than filling
+      // the screen with extra records that could conceal the outer-frame gap.
+      "/me/outputs": [outputs[0]],
       "/me/overview": {
       ...overview,
       quotaBytes: 100 * 1024 ** 3, remainingBytes: 75 * 1024 ** 3,
@@ -469,7 +472,30 @@ for (const width of [1920, 1536, 1440, 1366, 1280, 1024, 390, 320]) {
         expect(sideBySide).toBe(navigation);
       }
       const main = (await page.locator("#main").boundingBox())!;
-      expect(main.width).toBeLessThanOrEqual(1536);
+      const shell = (await page.locator(".main-shell").boundingBox())!;
+      const environment = await page.evaluate(() => ({
+        innerWidth: window.innerWidth,
+        clientWidth: document.documentElement.clientWidth,
+        devicePixelRatio: window.devicePixelRatio,
+        visualViewport: window.visualViewport && {
+          width: window.visualViewport.width, scale: window.visualViewport.scale,
+        },
+        rootFontSize: getComputedStyle(document.documentElement).fontSize,
+        mainMaxWidth: getComputedStyle(document.getElementById("main")!).maxWidth,
+        mainPaddingRight: getComputedStyle(document.getElementById("main")!).paddingRight,
+      }));
+      const viewport = environment.clientWidth;
+      // The task frame must use the available window, not strand the rail at
+      // an old max-width while the shell leaves a growing empty area beyond it.
+      expect(main.x + main.width).toBeCloseTo(viewport, 0);
+      expect(main.x + main.width).toBeCloseTo(shell.x + shell.width, 0);
+      const rightGutter = viewport - frame.x - frame.width;
+      expect(rightGutter).toBeCloseTo(width >= 640 ? 24 : 16, 0);
+      if (sideBySide) {
+        expect(rail.x + rail.width).toBeCloseTo(frame.x + frame.width, 0);
+        expect(viewport - rail.x - rail.width).toBeGreaterThanOrEqual(23);
+        expect(viewport - rail.x - rail.width).toBeLessThanOrEqual(25);
+      }
       if (width >= 1024) {
         const sidebar = (await page.locator('#workspace-navigation').boundingBox())!;
         expect(sidebar.width).toBeCloseTo(224, 0);
@@ -479,7 +505,7 @@ for (const width of [1920, 1536, 1440, 1366, 1280, 1024, 390, 320]) {
       }
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
       await info.attach(`proportions-${navigation ? "directory" : "data"}-${width}`, {
-        body: JSON.stringify({ main, frame, primary, rail, sideBySide }), contentType: "application/json",
+        body: JSON.stringify({ environment, shell, main, frame, primary, rail, sideBySide, rightGutter }), contentType: "application/json",
       });
       return primary;
     };
@@ -681,7 +707,7 @@ for (const width of [1920, 1536, 1440, 1366, 1280, 1024, 390, 320]) {
   });
 }
 
-for (const width of [1536, 1920]) {
+for (const width of [1536, 1920, 2560, 3440]) {
   test(`wide settings frame stays stable from loading to ready at ${width}`, async ({ page }, info) => {
     await page.setViewportSize({ width, height: 900 });
     const unexpected = await readOnlyInventory(page);
@@ -694,6 +720,7 @@ for (const width of [1536, 1920]) {
     await page.goto("/#settings");
     await expect(page.getByRole("status", { name: "正在加载", exact: true })).toBeVisible();
     const pending = (await page.locator("#main").boundingBox())!;
+    expect(pending.x + pending.width).toBeCloseTo(await page.evaluate(() => document.documentElement.clientWidth), 0);
     await page.screenshot({ path: info.outputPath(`proportions-settings-loading-${width}.png`) });
     release();
     await expect(page.getByRole("textbox", { name: "平台名称", exact: true })).toHaveValue("协作平台");
