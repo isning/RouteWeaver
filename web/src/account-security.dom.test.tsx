@@ -567,3 +567,50 @@ it("keeps account recovery Close focus after twice canceling a dirty reason", as
   }
   expect(vi.mocked(fetch).mock.calls.filter(([, init]) => init?.method && init.method !== "GET")).toEqual([]);
 });
+
+it("renders empty security records without empty list surfaces and refreshes real sessions", async () => {
+  let sessions: unknown[] = [];
+  const fetcher = vi.fn(async (url) =>
+    json(String(url).includes("/auth/sessions") ? sessions : []),
+  );
+  vi.stubGlobal("fetch", fetcher);
+  client = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <UIProviders>
+        <AccountSecurityPage
+          session={{
+            user: { id: "admin", name: "Admin", role: "admin" },
+            csrfToken: "csrf",
+          }}
+          onSessionChanged={() => {}}
+          onSignedOut={() => {}}
+        />
+      </UIProviders>
+    </QueryClientProvider>,
+  );
+  await screen.findByText("没有有效会话。");
+  await screen.findByText("没有账号记录。");
+  const region = screen.getByRole("region", { name: "登录会话设置" });
+  expect(within(region).queryByRole("list")).toBeNull();
+  expect(
+    screen.getByText("没有账号记录。").parentElement?.querySelector("ul"),
+  ).toBeNull();
+  expect(
+    within(region).getByRole("button", { name: "退出其他所有会话" }),
+  ).toBeTruthy();
+  sessions = [
+    { id: "current", current: true, expiresAt: "2027-01-01T00:00:00Z" },
+  ];
+  await userEvent.click(
+    within(region).getByRole("button", { name: "刷新会话" }),
+  );
+  await within(region).findByText("当前会话");
+  expect(within(region).getByRole("list")).toBeTruthy();
+  expect(
+    within(region).getByRole("button", { name: "退出当前会话" }),
+  ).toBeTruthy();
+  expect(within(region).queryByText("没有有效会话。")).toBeNull();
+});

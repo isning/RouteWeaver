@@ -237,6 +237,7 @@ export function BackupSettings() {
       >
       <PageSection id={`${sectionID}-backup-export`} label="完整加密备份设置">
       <Section title="完整加密备份" description="加密下载账号、配置、历史及恢复凭据。">
+        <BackupCapacity primaryAction={
           <ActionButton leadingIcon={<DownloadOutlined aria-hidden="true"/>} onClick={() => {
             create.reset();
             form.resetFields();
@@ -244,7 +245,7 @@ export function BackupSettings() {
         }} variant="default">
             创建加密备份
           </ActionButton>
-        <BackupCapacity />
+        } />
       </Section>
       </PageSection>
       <PageSection id={`${sectionID}-backup-restore`} label="恢复备份设置">

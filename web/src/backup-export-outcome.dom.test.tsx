@@ -130,3 +130,16 @@ it("retains the creation dialog and passwords after a pending export times out w
   expect(fetch).toHaveBeenCalledTimes(1);
   client.clear();
 });
+
+it("groups creation and capacity actions without starting a request", async () => {
+  const fetch = vi.fn();
+  vi.stubGlobal("fetch", fetch);
+  render(<QueryClientProvider client={new QueryClient()}><UIProviders><BackupSettings /></UIProviders></QueryClientProvider>);
+  const actions = screen.getByRole("group", { name: "备份操作" });
+  const create = within(actions).getByRole("button", { name: "创建加密备份" });
+  expect(within(actions).getByRole("button", { name: "检查历史容量" })).toBeTruthy();
+  expect(fetch).not.toHaveBeenCalled();
+  await userEvent.click(create);
+  expect(await screen.findByRole("dialog")).toBeTruthy();
+  expect(fetch).not.toHaveBeenCalled();
+});

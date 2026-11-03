@@ -311,7 +311,13 @@ export function SourcesPage({
           <ResourceToolbar label="查找订阅来源" search={
             <SearchField ref={searchInput} value={search} onValueChange={setSearch}
               placeholder="搜索来源" aria-label="搜索来源" />
-          } summary={<span>{query.data?.length || 0} 个私有来源</span>} />
+          } summary={
+            <span aria-live="polite" aria-atomic="true">
+              {search
+                ? `找到 ${filtered.length} 个，共 ${query.data?.length || 0} 个私有来源`
+                : `${query.data?.length || 0} 个私有来源`}
+            </span>
+          } />
           {!query.data?.length ? (
             <EmptyState
               title="暂无订阅来源"

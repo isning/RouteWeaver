@@ -518,3 +518,57 @@ it("does not let the early section index bypass the pending-save interaction gua
   finish(json(fixture()));
   await waitFor(() => expect((runtime as HTMLButtonElement).disabled).toBe(false));
 });
+
+it("groups runtime capabilities as equal rows with associated help and owned expanded parameters", async () => {
+  const initial = fixture();
+  initial.ir.runtime.dns = undefined;
+  mount(initial);
+  await screen.findByText("2 个有效连接");
+  await userEvent.click(screen.getByRole("tab", { name: "运行设置" }));
+  const group = screen.getByRole("group", { name: "客户端网络能力" });
+  const rows = Array.from(group.querySelectorAll(".runtime-setting-row"));
+  expect(rows).toHaveLength(3);
+  expect(rows.map(row => row.querySelector("h3")?.textContent)).toEqual(["DNS 解析", "流量嗅探", "TUN 虚拟网卡"]);
+  for (const row of rows) {
+    const toggle = within(row as HTMLElement).getByRole("switch");
+    const help = document.getElementById(toggle.getAttribute("aria-describedby")!);
+    expect(row.contains(help)).toBe(true);
+    expect(help?.className).toContain("text-muted-foreground");
+  }
+  const dns = within(group).getByRole("switch", { name: "启用 DNS" });
+  dns.focus();
+  await userEvent.keyboard(" ");
+  expect(document.activeElement).toBe(dns);
+  expect(rows[0].contains(screen.getByRole("textbox", { name: "DNS 服务器 1" }))).toBe(true);
+  const tun = within(group).getByRole("switch", { name: "启用 TUN" });
+  await userEvent.click(tun);
+  expect(rows[2].contains(screen.getByRole("checkbox", { name: "自动配置路由" }))).toBe(true);
+  await userEvent.click(tun);
+  expect(screen.queryByRole("checkbox", { name: "自动配置路由" })).toBeNull();
+  expect(document.activeElement).toBe(tun);
+  expect(screen.getByRole("group", { name: "保存与检查配置" }).textContent).toContain("草稿尚未保存");
+});
+
+it("keeps expanded runtime values through a pending save and reports the accepted draft", async () => {
+  let finish!: (response: Response) => void;
+  const initial = fixture();
+  initial.ir.runtime.dns = undefined;
+  const { writes } = mount(initial, { saveResponse: () => new Promise<Response>(resolve => { finish = resolve; }) });
+  await screen.findByText("2 个有效连接");
+  await userEvent.click(screen.getByRole("tab", { name: "运行设置" }));
+  await userEvent.click(screen.getByRole("switch", { name: "启用 DNS" }));
+  fireEvent.change(screen.getByRole("textbox", { name: "DNS 服务器 1" }), { target: { value: "192.0.2.54" } });
+  const save = screen.getByRole("button", { name: "保存草稿" });
+  await userEvent.click(save);
+  expect((save as HTMLButtonElement).disabled).toBe(true);
+  const body = writes.find(entry => entry.path.endsWith("/intent-profile"))!.body;
+  expect(body.ir.runtime.dns.servers[0].address).toBe("192.0.2.54");
+  expect(screen.getByRole("group", { name: "客户端网络能力" }).closest("[inert]")).not.toBeNull();
+  expect(screen.getByRole("textbox", { name: "DNS 服务器 1" })).toHaveProperty("value", "192.0.2.54");
+  finish(json(body));
+  await waitFor(() => expect((save as HTMLButtonElement).disabled).toBe(false));
+  expect(screen.getByRole("tab", { name: "运行设置" }).getAttribute("aria-selected")).toBe("true");
+  expect(screen.getByRole("group", { name: "保存与检查配置" }).textContent).toContain("草稿已保存");
+  expect(screen.getByRole("group", { name: "客户端网络能力" }).closest("[inert]")).toBeNull();
+  expect(screen.getByRole("textbox", { name: "DNS 服务器 1" })).toHaveProperty("value", "192.0.2.54");
+});

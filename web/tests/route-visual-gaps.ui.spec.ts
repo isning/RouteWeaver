@@ -179,12 +179,13 @@ for (const width of [1280, 390]) {
     const search = toolbar.getByRole("textbox", { name: "搜索来源", exact: true });
     await expect(page.getByRole("button", { name: "欧洲办公节点 文本导入", exact: true })).toBeVisible();
     await search.fill("欧洲");
+    await expect(toolbar.getByText("找到 1 个，共 2 个私有来源", { exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "亚太远程协作节点 订阅链接", exact: true })).toHaveCount(0);
     const clear = toolbar.getByRole("button", { name: "清除搜索输入", exact: true });
     for (const control of [search, clear]) expect((await control.boundingBox())?.height).toBeGreaterThanOrEqual(44);
     if (width >= 1280) {
       const searchBox = (await search.locator("..").boundingBox())!;
-      const summaryBox = (await toolbar.getByText("2 个私有来源", { exact: true }).boundingBox())!;
+      const summaryBox = (await toolbar.getByText("找到 1 个，共 2 个私有来源", { exact: true }).boundingBox())!;
       const gap = summaryBox.x - searchBox.x - searchBox.width;
       expect(gap).toBeGreaterThanOrEqual(0);
       expect(gap).toBeLessThanOrEqual(16);
@@ -195,6 +196,7 @@ for (const width of [1280, 390]) {
     await page.keyboard.press("Enter");
     await expect(search).toBeFocused();
     await expect(search).toHaveValue("");
+    await expect(toolbar.getByText("2 个私有来源", { exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "亚太远程协作节点 订阅链接", exact: true })).toBeVisible();
     await page.getByRole("button", { name: "添加来源", exact: true }).click();
     const sourceDialog = page.getByRole("dialog", { name: "添加订阅来源", exact: true });
@@ -689,6 +691,22 @@ for (const width of [3440, 2880, 2560, 2304, 1920, 1536, 1440, 1366, 1280, 1024,
     await domain.fill("");
     await page.getByRole("tab", { name: "备份与恢复", exact: true }).click();
     await assertLayout(true);
+    const backupActions = page.getByRole("group", { name: "备份操作", exact: true });
+    const createBackup = backupActions.getByRole("button", { name: "创建加密备份", exact: true });
+    const checkCapacity = backupActions.getByRole("button", { name: "检查历史容量", exact: true });
+    await expect(createBackup).toBeVisible();
+    await expect(checkCapacity).toBeVisible();
+    const backupCreateBox = (await createBackup.boundingBox())!;
+    const backupCheckBox = (await checkCapacity.boundingBox())!;
+    if (width >= 390) {
+      expect(backupCheckBox.y).toBeCloseTo(backupCreateBox.y, 0);
+      expect(backupCheckBox.x).toBeGreaterThanOrEqual(backupCreateBox.x + backupCreateBox.width);
+    } else {
+      expect(backupCheckBox.y).toBeGreaterThanOrEqual(backupCreateBox.y);
+    }
+    await createBackup.focus();
+    await page.keyboard.press("Tab");
+    await expect(checkCapacity).toBeFocused();
     const restoreLink = page.getByRole("navigation", { name: "本页备份任务", exact: true }).getByRole("button", { name: "前往恢复备份", exact: true });
     await restoreLink.focus();
     await page.keyboard.press("Enter");
@@ -728,6 +746,11 @@ for (const width of [3440, 2880, 2560, 2304, 1920, 1536, 1440, 1366, 1280, 1024,
     await expect(page.getByRole("region", { name: "登录会话设置", exact: true })).toBeFocused();
     await expect(sessionsLink).toHaveAttribute("aria-current", "location");
     await page.screenshot({ path: info.outputPath(`context-account-sessions-focus-${width}.png`) });
+    for (const label of ["登录会话设置", "账号恢复与退役设置"]) {
+      const region = page.getByRole("region", { name: label, exact: true });
+      await expect(region.getByText(label === "登录会话设置" ? "没有有效会话。" : "没有账号记录。", { exact: true })).toBeVisible();
+      await expect(region.getByRole("list")).toHaveCount(0);
+    }
     await page.screenshot({ path: info.outputPath(`context-account-security-${width}.png`), fullPage: true });
     const mfaLink = securityIndex.getByRole("button", { name: "前往管理员二次验证", exact: true });
     await mfaLink.focus();
@@ -812,7 +835,46 @@ for (const width of [3440, 2880, 2560, 2304, 1920, 1536, 1440, 1366, 1280, 1024,
     expect(stickySave.y).toBeGreaterThanOrEqual(0);
     expect(stickySave.y).toBeLessThanOrEqual(1);
     expect(strip.y).toBeGreaterThanOrEqual(stickySave.height);
+    const capabilities = page.getByRole("group", { name: "客户端网络能力", exact: true });
+    const rows = capabilities.locator(":scope > .runtime-setting-row");
+    await expect(rows).toHaveCount(3);
+    const rhythm = await rows.evaluateAll(elements => elements.map(el => {
+      const box = el.getBoundingClientRect();
+      const title = el.querySelector("h3")!;
+      const helper = el.querySelector("p")!;
+      return { x: box.x, y: box.y, width: box.width, height: box.height,
+        titleColor: getComputedStyle(title).color,
+        title: getComputedStyle(title).fontWeight, helper: getComputedStyle(helper).color };
+    }));
+    for (let i = 1; i < rhythm.length; i++) {
+      expect(rhythm[i].x).toBeCloseTo(rhythm[0].x, 0);
+      expect(rhythm[i].width).toBeCloseTo(rhythm[0].width, 0);
+      expect(rhythm[i].y).toBeCloseTo(rhythm[i - 1].y + rhythm[i - 1].height, 0);
+      expect(rhythm[i].title).toBe(rhythm[0].title);
+      expect(rhythm[i].helper).toBe(rhythm[0].helper);
+    }
+    for (const row of rhythm) expect(row.helper).not.toBe(row.titleColor);
+    // Tailwind divide-y uses each preceding row's bottom border.
+    await expect(rows.nth(0)).toHaveCSS("border-bottom-width", "1px");
+    await expect(rows.nth(1)).toHaveCSS("border-bottom-width", "1px");
     await page.screenshot({ path: info.outputPath(`context-profile-runtime-focus-${width}.png`) });
+    const dnsToggle = capabilities.getByRole("switch", { name: "启用 DNS", exact: true });
+    await dnsToggle.focus();
+    await page.keyboard.press("Space");
+    await expect(dnsToggle).toBeChecked();
+    await expect(dnsToggle).toBeFocused();
+    await expect(rows.nth(0).getByRole("textbox", { name: "DNS 服务器 1", exact: true })).toHaveValue("1.1.1.1");
+    const tunToggle = capabilities.getByRole("switch", { name: "启用 TUN", exact: true });
+    await tunToggle.click();
+    await expect(rows.nth(2).getByRole("checkbox", { name: "自动配置路由", exact: true })).toBeChecked();
+    await settledTask(capabilities);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+    await capabilities.screenshot({ path: info.outputPath(`context-profile-runtime-expanded-${width}.png`) });
+    await tunToggle.click();
+    await expect(rows.nth(2).getByRole("checkbox", { name: "自动配置路由", exact: true })).toHaveCount(0);
+    await expect(tunToggle).toBeFocused();
+    await dnsToggle.click();
+    await expect(rows.nth(0).getByRole("textbox", { name: "DNS 服务器 1", exact: true })).toHaveCount(0);
     await page.locator(".profile-intent-task").evaluate(el => el.scrollIntoView({ block: "start" }));
     await settleSectionNavigation(page);
     await expect(profileIndex.getByRole("button", { name: "前往连接与流量", exact: true })).toHaveAttribute("aria-current", "location");

@@ -3112,6 +3112,51 @@ function MatchEditor({
     </div>
   );
 }
+/** Runtime capabilities share a row rhythm; optional parameters belong to that row. */
+function RuntimeSetting({
+  title,
+  description,
+  label,
+  checked,
+  onCheckedChange,
+  children,
+}: {
+  title: string;
+  description: string;
+  label: string;
+  checked: boolean;
+  onCheckedChange: (checked: boolean) => void;
+  children?: ReactNode;
+}) {
+  const descriptionID = useId();
+  return (
+    <div className="runtime-setting-row min-w-0 p-4">
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0 space-y-1">
+          <h3 className="text-sm font-medium leading-6">{title}</h3>
+          <p
+            id={descriptionID}
+            className="text-sm leading-relaxed text-muted-foreground"
+          >
+            {description}
+          </p>
+        </div>
+        <Switch
+          className="mt-1 shrink-0"
+          aria-label={label}
+          aria-describedby={descriptionID}
+          checked={checked}
+          onCheckedChange={onCheckedChange}
+        />
+      </div>
+      {children && (
+        <div className="runtime-setting-fields mt-4 min-w-0 space-y-4 border-t pt-4">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
 function RuntimeEditor({
   value,
   onChange,
@@ -3135,173 +3180,173 @@ function RuntimeEditor({
           }
         />
       </label>
-      <div className="settings-section space-y-4">
-        <div className="section-heading mb-4 flex flex-wrap items-center justify-between gap-3 [&>h3]:font-semibold">
-          <div>
-            <h3>DNS 解析</h3>
-            <p>为客户端设置独立的 DNS 服务器。</p>
-          </div>
-          <Switch
-            checked={!!runtime.dns}
-            aria-label="启用 DNS"
-            onCheckedChange={(enabled) => {
-              const id = newID("dns");
-              update({
-                dns: enabled
-                  ? {
+      <div
+        role="group"
+        aria-label="客户端网络能力"
+        className="runtime-settings-group divide-y rounded-lg border"
+      >
+        <RuntimeSetting
+          title="DNS 解析"
+          description="为客户端设置独立的 DNS 服务器。"
+          checked={!!runtime.dns}
+          label="启用 DNS"
+          onCheckedChange={(enabled) => {
+            const id = newID("dns");
+            update({
+              dns: enabled
+                ? {
+                    servers: [
+                      {
+                        id,
+                        type: "tls",
+                        address: "1.1.1.1",
+                        port: 853,
+                      },
+                    ],
+                    final: id,
+                  }
+                : undefined,
+            });
+          }}
+        >
+          {runtime.dns && (
+            <>
+              {runtime.dns.servers.map((server, index) => (
+                <div
+                  className="dns-row grid gap-4 rounded-lg border p-4 sm:grid-cols-2"
+                  key={server.id}
+                >
+                  <label className="grid min-w-0 gap-2 text-sm font-medium">
+                    传输协议
+                    <ChoiceSelect
+                      aria-label={`DNS 传输协议 ${index + 1}`}
+                      value={server.type}
+                      options={["udp", "tcp", "tls"].map((value) => ({
+                        value,
+                        label: value.toUpperCase(),
+                      }))}
+                      onValueChange={(type) => {
+                        if (type === undefined) return;
+                        return update({
+                          dns: {
+                            ...runtime.dns!,
+                            servers: runtime.dns!.servers.map((s, i) =>
+                              i === index ? { ...s, type } : s,
+                            ),
+                          },
+                        });
+                      }}
+                    />
+                  </label>
+                  <label className="grid min-w-0 gap-2 text-sm font-medium">
+                    服务器地址
+                    <Input
+                      value={server.address}
+                      aria-label={`DNS 服务器 ${index + 1}`}
+                      placeholder="1.1.1.1"
+                      onChange={(e) =>
+                        update({
+                          dns: {
+                            ...runtime.dns!,
+                            servers: runtime.dns!.servers.map((s, i) =>
+                              i === index
+                                ? { ...s, address: e.target.value }
+                                : s,
+                            ),
+                          },
+                        })
+                      }
+                    />
+                  </label>
+                  <label className="grid min-w-0 gap-2 text-sm font-medium">
+                    端口
+                    <NumericInput
+                      aria-label={`DNS 端口 ${index + 1}`}
+                      value={server.port}
+                      min={1}
+                      max={65535}
+                      onValueChange={(port) =>
+                        update({
+                          dns: {
+                            ...runtime.dns!,
+                            servers: runtime.dns!.servers.map((s, i) =>
+                              i === index ? { ...s, port: port ?? 53 } : s,
+                            ),
+                          },
+                        })
+                      }
+                    />
+                  </label>
+                  <ActionButton
+                    className="justify-self-end self-end"
+                    aria-label={`删除 DNS ${index + 1}`}
+                    leadingIcon={<Trash2 aria-hidden="true" />}
+                    onClick={() =>
+                      update({
+                        dns: {
+                          ...runtime.dns!,
+                          servers: runtime.dns!.servers.filter(
+                            (_, i) => i !== index,
+                          ),
+                        },
+                      })
+                    }
+                    variant="ghost"
+                  />
+                </div>
+              ))}
+              <ActionButton
+                leadingIcon={<Plus aria-hidden="true" />}
+                onClick={() =>
+                  update({
+                    dns: {
+                      ...runtime.dns!,
                       servers: [
+                        ...runtime.dns!.servers,
                         {
-                          id,
+                          id: newID("dns"),
                           type: "tls",
-                          address: "1.1.1.1",
+                          address: "",
                           port: 853,
                         },
                       ],
-                      final: id,
-                    }
-                  : undefined,
-              });
-            }}
-          />
-        </div>
-        {runtime.dns && (
-          <>
-            {runtime.dns.servers.map((server, index) => (
-              <div
-                className="dns-row grid gap-4 rounded-lg border p-4 sm:grid-cols-2"
-                key={server.id}
+                    },
+                  })
+                }
+                variant="outline"
+                size="sm"
               >
-                <label className="grid min-w-0 gap-2 text-sm font-medium">
-                  传输协议
-                  <ChoiceSelect
-                    aria-label={`DNS 传输协议 ${index + 1}`}
-                    value={server.type}
-                    options={["udp", "tcp", "tls"].map((value) => ({
-                      value,
-                      label: value.toUpperCase(),
-                    }))}
-                    onValueChange={(type) => {
-                      if (type === undefined) return;
-                      return update({
-                        dns: {
-                          ...runtime.dns!,
-                          servers: runtime.dns!.servers.map((s, i) =>
-                            i === index ? { ...s, type } : s,
-                          ),
-                        },
-                      });
-                    }}
-                  />
-                </label>
-                <label className="grid min-w-0 gap-2 text-sm font-medium">
-                  服务器地址
-                  <Input
-                    value={server.address}
-                    aria-label={`DNS 服务器 ${index + 1}`}
-                    placeholder="1.1.1.1"
-                    onChange={(e) =>
-                      update({
-                        dns: {
-                          ...runtime.dns!,
-                          servers: runtime.dns!.servers.map((s, i) =>
-                            i === index ? { ...s, address: e.target.value } : s,
-                          ),
-                        },
-                      })
-                    }
-                  />
-                </label>
-                <label className="grid min-w-0 gap-2 text-sm font-medium">
-                  端口
-                  <NumericInput
-                    aria-label={`DNS 端口 ${index + 1}`}
-                    value={server.port}
-                    min={1}
-                    max={65535}
-                    onValueChange={(port) =>
-                      update({
-                        dns: {
-                          ...runtime.dns!,
-                          servers: runtime.dns!.servers.map((s, i) =>
-                            i === index ? { ...s, port: port ?? 53 } : s,
-                          ),
-                        },
-                      })
-                    }
-                  />
-                </label>
-                <ActionButton
-                  className="justify-self-end self-end"
-                  aria-label={`删除 DNS ${index + 1}`}
-                  leadingIcon={<Trash2 aria-hidden="true" />}
-                  onClick={() =>
-                    update({
-                      dns: {
-                        ...runtime.dns!,
-                        servers: runtime.dns!.servers.filter(
-                          (_, i) => i !== index,
-                        ),
-                      },
-                    })
-                  }
-                  variant="ghost"
+                添加 DNS
+              </ActionButton>
+              <label className="standalone-label grid min-w-0 gap-2 text-sm font-medium">
+                默认 DNS
+                <ChoiceSelect
+                  value={runtime.dns.final}
+                  options={runtime.dns.servers.map((s) => ({
+                    value: s.id,
+                    label: s.address || "未填写地址",
+                  }))}
+                  onValueChange={(final) => {
+                    if (final === undefined) return;
+                    return update({ dns: { ...runtime.dns!, final } });
+                  }}
                 />
-              </div>
-            ))}
-            <ActionButton
-              leadingIcon={<Plus aria-hidden="true" />}
-              onClick={() =>
-                update({
-                  dns: {
-                    ...runtime.dns!,
-                    servers: [
-                      ...runtime.dns!.servers,
-                      { id: newID("dns"), type: "tls", address: "", port: 853 },
-                    ],
-                  },
-                })
-              }
-              variant="outline"
-              size="sm"
-            >
-              添加 DNS
-            </ActionButton>
-            <label className="standalone-label grid min-w-0 gap-2 text-sm font-medium">
-              默认 DNS
-              <ChoiceSelect
-                value={runtime.dns.final}
-                options={runtime.dns.servers.map((s) => ({
-                  value: s.id,
-                  label: s.address || "未填写地址",
-                }))}
-                onValueChange={(final) => {
-                  if (final === undefined) return;
-                  return update({ dns: { ...runtime.dns!, final } });
-                }}
-              />
-            </label>
-          </>
-        )}
-      </div>
-      <div className="setting-toggle flex items-start justify-between gap-4 rounded-lg border p-4 [&_h3]:font-medium [&_p]:mt-1 [&_p]:text-sm [&_p]:text-muted-foreground">
-        <div>
-          <h3>流量嗅探</h3>
-          <p>识别流量中的域名，辅助分流匹配。</p>
-        </div>
-        <Switch
-          aria-label="启用流量嗅探"
-          checked={runtime.sniff}
+              </label>
+            </>
+          )}
+        </RuntimeSetting>
+        <RuntimeSetting
+          title="流量嗅探"
+          description="识别流量中的域名，辅助分流匹配。"
+          label="启用流量嗅探"
+          checked={!!runtime.sniff}
           onCheckedChange={(sniff) => update({ sniff })}
         />
-      </div>
-      <div className="setting-toggle flex items-start justify-between gap-4 rounded-lg border p-4 [&_h3]:font-medium [&_p]:mt-1 [&_p]:text-sm [&_p]:text-muted-foreground">
-        <div>
-          <h3>TUN 虚拟网卡</h3>
-          <p>生成 TUN 配置，客户端仍需获得设备系统权限。</p>
-        </div>
-        <Switch
-          aria-label="启用 TUN"
-          checked={runtime.tun?.enabled}
+        <RuntimeSetting
+          title="TUN 虚拟网卡"
+          description="生成 TUN 配置，客户端仍需获得设备系统权限。"
+          label="启用 TUN"
+          checked={!!runtime.tun?.enabled}
           onCheckedChange={(enabled) =>
             update({
               tun: {
@@ -3312,35 +3357,36 @@ function RuntimeEditor({
               },
             })
           }
-        />
+        >
+          {runtime.tun?.enabled && (
+            <>
+              <label className="standalone-label grid min-w-0 gap-2 text-sm font-medium">
+                网卡地址
+                <MultiChoice
+                  value={runtime.tun.addresses}
+                  onValueChange={(addresses) =>
+                    update({ tun: { ...runtime.tun!, addresses } })
+                  }
+                  creatable
+                  options={[]}
+                />
+              </label>
+              <Label className="inline-flex items-center gap-2 text-sm">
+                <Checkbox
+                  checked={runtime.tun.autoRoute}
+                  onCheckedChange={(checked) =>
+                    ((e) =>
+                      update({
+                        tun: { ...runtime.tun!, autoRoute: e.target.checked },
+                      }))({ target: { checked: checked === true } })
+                  }
+                />
+                自动配置路由
+              </Label>
+            </>
+          )}
+        </RuntimeSetting>
       </div>
-      {runtime.tun?.enabled && (
-        <>
-          <label className="standalone-label grid min-w-0 gap-2 text-sm font-medium">
-            网卡地址
-            <MultiChoice
-              value={runtime.tun.addresses}
-              onValueChange={(addresses) =>
-                update({ tun: { ...runtime.tun!, addresses } })
-              }
-              creatable
-              options={[]}
-            />
-          </label>
-          <Label className="inline-flex items-center gap-2 text-sm">
-            <Checkbox
-              checked={runtime.tun.autoRoute}
-              onCheckedChange={(checked) =>
-                ((e) =>
-                  update({
-                    tun: { ...runtime.tun!, autoRoute: e.target.checked },
-                  }))({ target: { checked: checked === true } })
-              }
-            />
-            自动配置路由
-          </Label>
-        </>
-      )}
     </>
   );
 }

@@ -115,7 +115,7 @@ it("distinguishes no matches and clears only the query to recover the same sourc
   expect(screen.queryByText("暂无订阅来源")).toBeNull();
   expect(screen.queryByText("向左右滚动查看完整表格")).toBeNull();
   expect(screen.getAllByRole("button", { name: "添加来源" })).toHaveLength(1);
-  expect(screen.getByText("2 个私有来源")).toBeTruthy();
+  expect(screen.getByText("找到 0 个，共 2 个私有来源")).toBeTruthy();
   expect(document.body.textContent).not.toMatch(
     /private-import-content|private\.example|token=secret/,
   );
@@ -218,6 +218,7 @@ it("clears a matching source query without losing source identities or focus", a
   const toolbar = screen.getByRole("search", { name: "查找订阅来源" });
   const search = within(toolbar).getByRole("textbox", { name: "搜索来源" });
   await userEvent.type(search, "Alpha");
+  expect(within(toolbar).getByText("找到 1 个，共 2 个私有来源")).toBeTruthy();
   expect(screen.queryByRole("button", { name: /^南区 Beta/ })).toBeNull();
   expect(screen.getByRole("button", { name: /^北区 Alpha/ })).toBeTruthy();
   const clear = within(toolbar).getByRole("button", { name: "清除搜索输入" });
@@ -225,6 +226,7 @@ it("clears a matching source query without losing source identities or focus", a
   await userEvent.keyboard("{Enter}");
   expect(document.activeElement).toBe(search);
   expect(search).toHaveProperty("value", "");
+  expect(within(toolbar).getByText("2 个私有来源")).toBeTruthy();
   expect(screen.getByRole("button", { name: /^南区 Beta/ })).toBeTruthy();
   expect(screen.getByRole("button", { name: /^北区 Alpha/ })).toBeTruthy();
   expect(fetcher).toHaveBeenCalledTimes(1);

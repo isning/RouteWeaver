@@ -277,7 +277,7 @@ function AccountSecurityTask({
           {sessions.data?.length === 0 && (
             <p className="text-sm text-muted-foreground">没有有效会话。</p>
           )}
-          <ul className="divide-y rounded-lg border">
+          {Boolean(sessions.data?.length) && <ul className="divide-y rounded-lg border">
             {sessions.data?.map((entry, index) => (
               <li
                 key={entry.id}
@@ -321,7 +321,7 @@ function AccountSecurityTask({
                 </ActionButton>
               </li>
             ))}
-          </ul>
+          </ul>}
         </QueryState>
         <AppForm
           form={revokeForm}
@@ -429,7 +429,7 @@ function AccountRecovery({ session }: { session: Session }) {
         {accounts.data?.length === 0 && (
           <p className="text-sm text-muted-foreground">没有账号记录。</p>
         )}
-        <ul className="divide-y rounded-lg border">
+        {Boolean(accounts.data?.length) && <ul className="divide-y rounded-lg border">
           {accounts.data?.map((account) => (
             <li
               key={account.id}
@@ -467,7 +467,7 @@ function AccountRecovery({ session }: { session: Session }) {
               </ActionButton>
             </li>
           ))}
-        </ul>
+        </ul>}
       </QueryState>
       {target && (
         <AccountRecoveryTask

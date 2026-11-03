@@ -10,7 +10,7 @@ const value = {
  databaseFileBytes: 4096, filesystemAvailableBytes: null, warningPercent: 80,
 };
 const json = (body: unknown, status=200) => new Response(JSON.stringify(body), {status,headers:{"Content-Type":"application/json"}});
-function mount() {return render(<QueryClientProvider client={new QueryClient({defaultOptions:{mutations:{retry:false}}})}><BackupCapacity /></QueryClientProvider>)}
+function mount(primaryAction?: React.ReactNode) {return render(<QueryClientProvider client={new QueryClient({defaultOptions:{mutations:{retry:false}}})}><BackupCapacity primaryAction={primaryAction} /></QueryClientProvider>)}
 afterEach(()=>{cleanup();vi.unstubAllGlobals()});
 it("checks on request, warns before cap and distinguishes unknown disk from zero",async()=>{
  const fetch=vi.fn().mockResolvedValue(json(value));vi.stubGlobal("fetch",fetch);mount();expect(fetch).not.toHaveBeenCalled();
@@ -26,4 +26,22 @@ it("failed refresh does not display stale headroom and can retry",async()=>{
  fireEvent.click(screen.getByRole("button",{name:"检查历史容量"}));
  await waitFor(()=>expect(fetch).toHaveBeenCalledTimes(2));await waitFor(()=>expect(screen.queryByText("历史容量已达到 80% 提醒线")).toBeNull());
  fireEvent.click(screen.getByRole("button",{name:"检查历史容量"}));expect(await screen.findByText("历史容量已达到 80% 提醒线")).toBeTruthy();
+});
+
+it("keeps primary action available while capacity is pending and presents results after actions",async()=>{
+ let finish!: (response: Response) => void;
+ const pending = new Promise<Response>(resolve => { finish = resolve; });
+ const fetch = vi.fn(() => pending); vi.stubGlobal("fetch", fetch);
+ const create = vi.fn(); mount(<button onClick={create}>创建加密备份</button>);
+ const primary = screen.getByRole("button", {name:"创建加密备份"});
+ const check = screen.getByRole("button", {name:"检查历史容量"});
+ fireEvent.click(check);
+ await waitFor(() => expect(check.getAttribute("aria-busy")).toBe("true"));
+ primary.focus(); fireEvent.click(primary); expect(create).toHaveBeenCalledTimes(1);
+ finish(json(value));
+ await screen.findByText("历史容量已达到 80% 提醒线");
+ expect(document.activeElement).toBe(primary);
+ const actions = screen.getByRole("group", {name:"备份操作"});
+ expect(actions.contains(screen.getByText("历史容量已达到 80% 提醒线"))).toBe(false);
+ expect(fetch).toHaveBeenCalledTimes(1);
 });

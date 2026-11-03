@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { ActionButton } from "@/ui-patterns/actions";
 import { Notice } from "@/ui-patterns/notice";
@@ -22,13 +23,16 @@ export type HistoryCapacity = {
   warningPercent: number;
 };
 
-export function BackupCapacity() {
+export function BackupCapacity({ primaryAction }: { primaryAction?: ReactNode }) {
   const check = useMutation({ mutationFn: () => request<HistoryCapacity>("/admin/backups/capacity") });
   const value = check.isSuccess ? check.data : undefined;
   const warning = value && [value.backupRows, value.backupRecordPlaintextBytes, value.backupLargestRecordBytes, value.notificationLedgerRows, value.notificationLargestLedgerCiphertextBytes, value.notificationLedgerCiphertextBytes].some(v => v.warning);
   const count = (v: Count) => `${v.atLeast ? "至少 " : ""}${v.count.toLocaleString()} / ${v.limit.toLocaleString()}`;
   return <div className="space-y-3">
-    <ActionButton variant="outline" onClick={() => check.mutate()} pending={check.isPending}>检查历史容量</ActionButton>
+    <div role="group" aria-label="备份操作" className="flex flex-wrap items-center gap-2">
+      {primaryAction}
+      <ActionButton variant="outline" onClick={() => check.mutate()} pending={check.isPending}>检查历史容量</ActionButton>
+    </div>
     {check.isError && <ErrorNotice error={check.error} />}
     {value && <div className="space-y-3 text-sm" aria-live="polite">
       <p className="text-muted-foreground">检查时间：{dateLabel(value.checkedAt)}</p>
