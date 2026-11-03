@@ -1,5 +1,7 @@
 import { ContextLayout, PageSection, SectionIndex } from "@/ui-patterns/page-layout";
-import { useEffect, useId, useRef, useState } from "react";
+import { Suspense, useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { PageBoundary } from "./PageBoundary";
+import { LoadingState } from "@/ui-patterns/loading-state";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { TaskDialog } from "@/ui-patterns/task-overlays";
@@ -22,6 +24,7 @@ type Props = {
   session: Session;
   onSessionChanged: (session: Session) => void;
   onSignedOut: () => void;
+  mfaSettings?: ReactNode;
 };
 function securityError(error: Error | null) {
   if (
@@ -95,6 +98,7 @@ function AccountSecurityTask({
   session,
   onSessionChanged,
   onSignedOut,
+  mfaSettings,
 }: Props) {
   const client = useQueryClient();
   const sectionID = useId();
@@ -187,6 +191,9 @@ function AccountSecurityTask({
               { id: `${sectionID}-account-sessions`, label: "登录会话" },
               ...(session.user.role === "admin" && !session.user.passwordChangeRequired
                 ? [{ id: `${sectionID}-account-recovery`, label: "账号恢复与退役" }]
+                : []),
+              ...(mfaSettings
+                ? [{ id: `${sectionID}-account-mfa`, label: "管理员二次验证" }]
                 : []),
             ]}
           />
@@ -349,6 +356,19 @@ function AccountSecurityTask({
             <AccountRecovery session={session} />
           </PageSection>
         )}
+      {mfaSettings && (
+        <PageSection id={`${sectionID}-account-mfa`} label="管理员二次验证设置">
+          <PageBoundary>
+            <Suspense
+              fallback={
+                <LoadingState layout="form" label="正在加载二次验证设置" />
+              }
+            >
+              {mfaSettings}
+            </Suspense>
+          </PageBoundary>
+        </PageSection>
+      )}
       </ContextLayout>
     </>
   );

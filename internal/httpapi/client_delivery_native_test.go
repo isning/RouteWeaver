@@ -2,6 +2,7 @@ package httpapi_test
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"io"
 	"net"
@@ -47,7 +48,11 @@ func TestNativeInvitedUserDownloadedClientTraffic(t *testing.T) {
 			if err != nil || !strings.Contains(string(version), target.Version) {
 				t.Fatalf("native version mismatch: %v %s", err, version)
 			}
-			origin := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { io.WriteString(w, "client-feed-loopback-proof") }))
+			var originRequests atomic.Int64
+			origin := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				originRequests.Add(1)
+				io.WriteString(w, "client-feed-loopback-proof")
+			}))
 			defer origin.Close()
 			originURL, _ := url.Parse(origin.URL)
 			relay := newDeliverySOCKS(t, originURL.Host)
@@ -80,12 +85,24 @@ func TestNativeInvitedUserDownloadedClientTraffic(t *testing.T) {
 			if err = os.WriteFile(config, []byte(feed), 0600); err != nil {
 				t.Fatal(err)
 			}
+			binaryBytes, err := os.ReadFile(binary)
+			if err != nil {
+				t.Fatal(err)
+			}
+			binarySHA, configSHA := sha256.Sum256(binaryBytes), sha256.Sum256([]byte(feed))
 			logFile, err := os.Create(filepath.Join(dir, "native.log"))
 			if err != nil {
 				t.Fatal(err)
 			}
 			defer logFile.Close()
 			args := []string{"-d", dir, "-f", config}
+			marker, hook, err := newClientReadyMarker(dir, target.AdapterID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if hook != "" {
+				args = append(args, "-post-up", hook)
+			}
 			if target.AdapterID == "sing-box" {
 				args = []string{"run", "-c", config, "-D", dir}
 			}
@@ -95,39 +112,43 @@ func TestNativeInvitedUserDownloadedClientTraffic(t *testing.T) {
 			cmd.Dir = dir
 			cmd.Stdout = logFile
 			cmd.Stderr = logFile
+			started := time.Now()
+			phase := "startup"
 			if err = cmd.Start(); err != nil {
 				t.Fatal(err)
 			}
-			done := make(chan error, 1)
-			go func() { done <- cmd.Wait() }()
+			done := make(chan struct{})
+			var exitErr error // Read only after done closes.
+			go func() { exitErr = cmd.Wait(); close(done) }()
 			t.Cleanup(func() {
 				cancel()
+				processStatus := "did not exit"
 				select {
 				case <-done:
+					processStatus = fmt.Sprint(exitErr)
 				case <-time.After(3 * time.Second):
 					t.Error("native child did not exit")
 				}
+				if t.Failed() {
+					log, readErr := os.ReadFile(logFile.Name())
+					markerBytes, markerErr := os.ReadFile(marker)
+					t.Logf("native delivery diagnostics: phase=%s elapsed=%s pid=%d exit=%s binarySHA256=%x configSHA256=%x origin=%s mixed=127.0.0.1:%d relay=%s marker=%q markerReadError=%v originRequests=%d connections=%d requests=%d accepted=%d domains=%d trace=%v nativeLogReadError=%v\nnative.log:\n%s", phase, time.Since(started), cmd.Process.Pid, processStatus, binarySHA, configSHA, origin.URL, p.IR.Runtime.MixedPort, relay.listener.Addr(), markerBytes, markerErr, originRequests.Load(), relay.connections.Load(), relay.requests.Load(), relay.accepted.Load(), relay.domains.Load(), relay.diagnostics(), readErr, log)
+				}
 			})
 			address := fmt.Sprintf("127.0.0.1:%d", p.IR.Runtime.MixedPort)
-			deadline := time.Now().Add(5 * time.Second)
-			for {
-				c, e := net.DialTimeout("tcp", address, 50*time.Millisecond)
-				if e == nil {
-					c.Close()
-					break
-				}
-				if time.Now().After(deadline) {
-					log, _ := os.ReadFile(logFile.Name())
-					t.Fatalf("native startup timeout: %s", log)
-				}
-				time.Sleep(20 * time.Millisecond)
+			startup, startupCancel := context.WithTimeout(ctx, 5*time.Second)
+			err = waitClientReady(startup, address, marker, done)
+			startupCancel()
+			if err != nil {
+				t.Fatal(err)
 			}
 			proxy, _ := url.Parse("http://" + address)
 			transport := &http.Transport{Proxy: http.ProxyURL(proxy), DisableKeepAlives: true}
 			defer transport.CloseIdleConnections()
 			client := &http.Client{Transport: transport, Timeout: 2 * time.Second}
-			fetch := func(destination string, want bool) {
+			fetch := func(label, destination string, want bool) {
 				t.Helper()
+				phase = label
 				r, e := client.Get(destination)
 				if e != nil {
 					if want {
@@ -142,8 +163,8 @@ func TestNativeInvitedUserDownloadedClientTraffic(t *testing.T) {
 					t.Fatalf("unexpected traffic result status=%d body=%q err=%v", r.StatusCode, body, e)
 				}
 			}
-			fetch(origin.URL, true)
-			fetch("http://route.example.invalid:"+originURL.Port()+"/", true)
+			fetch("initial-ip", origin.URL, true)
+			fetch("delegated-domain", "http://route.example.invalid:"+originURL.Port()+"/", true)
 			if relay.domains.Load() != 1 {
 				t.Fatal("domain destination was not delegated to the required peer")
 			}
@@ -155,7 +176,7 @@ func TestNativeInvitedUserDownloadedClientTraffic(t *testing.T) {
 			if beforeConnections != 2 || beforeRequests != 2 || relay.accepted.Load() != 2 {
 				t.Fatal("positive IP/domain requests did not each use exactly one required peer connection")
 			}
-			fetch("http://blocked.example.invalid:"+originURL.Port()+"/", false)
+			fetch("reject-rule", "http://blocked.example.invalid:"+originURL.Port()+"/", false)
 			if relay.connections.Load() != beforeConnections || relay.requests.Load() != beforeRequests {
 				t.Fatal("rejected rule reached upstream peer")
 			}
@@ -172,9 +193,9 @@ func TestNativeInvitedUserDownloadedClientTraffic(t *testing.T) {
 			if code != 200 || rotated != feed {
 				t.Fatal("rotation changed frozen configuration")
 			}
-			fetch(origin.URL, true)
+			fetch("after-rotation", origin.URL, true)
 			relay.close()
-			fetch(origin.URL, false) // The direct origin is still reachable; fallback is forbidden.
+			fetch("closed-peer", origin.URL, false) // The direct origin is still reachable; fallback is forbidden.
 			direct, err := http.Get(origin.URL)
 			if err != nil {
 				t.Fatal(err)
@@ -200,6 +221,22 @@ type deliverySOCKS struct {
 	stop                  sync.Once
 	workers               sync.WaitGroup
 	done                  chan struct{}
+	traceMu               sync.Mutex
+	trace                 []string
+}
+
+func (s *deliverySOCKS) record(event string) {
+	s.traceMu.Lock()
+	defer s.traceMu.Unlock()
+	if len(s.trace) < 32 {
+		s.trace = append(s.trace, event)
+	}
+}
+
+func (s *deliverySOCKS) diagnostics() []string {
+	s.traceMu.Lock()
+	defer s.traceMu.Unlock()
+	return append([]string(nil), s.trace...)
 }
 
 func (s *deliverySOCKS) close() { s.stop.Do(func() { s.listener.Close(); <-s.done; s.workers.Wait() }) }
@@ -220,6 +257,7 @@ func newDeliverySOCKS(t *testing.T, origin string) *deliverySOCKS {
 				return
 			}
 			s.connections.Add(1)
+			s.record("connected " + c.RemoteAddr().String())
 			s.workers.Add(1)
 			go func() {
 				defer s.workers.Done()
@@ -227,17 +265,21 @@ func newDeliverySOCKS(t *testing.T, origin string) *deliverySOCKS {
 				c.SetDeadline(time.Now().Add(3 * time.Second))
 				h := make([]byte, 2)
 				if _, e := io.ReadFull(c, h); e != nil || h[0] != 5 {
+					s.record(fmt.Sprintf("greeting rejected version=%d error=%v", h[0], e))
 					return
 				}
 				methods := make([]byte, int(h[1]))
 				if _, e := io.ReadFull(c, methods); e != nil {
+					s.record("methods read failed: " + e.Error())
 					return
 				}
 				if _, e := c.Write([]byte{5, 0}); e != nil {
+					s.record("method reply failed: " + e.Error())
 					return
 				}
 				head := make([]byte, 4)
 				if _, e := io.ReadFull(c, head); e != nil || head[0] != 5 || head[1] != 1 {
+					s.record(fmt.Sprintf("connect header rejected version=%d command=%d error=%v", head[0], head[1], e))
 					return
 				}
 				var requested string
@@ -259,6 +301,7 @@ func newDeliverySOCKS(t *testing.T, origin string) *deliverySOCKS {
 					}
 					requested = string(name)
 				default:
+					s.record(fmt.Sprintf("address type rejected: %d", head[3]))
 					return
 				}
 				pb := make([]byte, 2)
@@ -267,7 +310,9 @@ func newDeliverySOCKS(t *testing.T, origin string) *deliverySOCKS {
 				}
 				requestedPort := fmt.Sprint(int(pb[0])<<8 | int(pb[1]))
 				s.requests.Add(1)
+				s.record("requested " + net.JoinHostPort(requested, requestedPort))
 				if (requested != host && requested != "route.example.invalid") || requestedPort != port {
+					s.record("destination rejected")
 					return
 				}
 				s.accepted.Add(1)
@@ -276,13 +321,16 @@ func newDeliverySOCKS(t *testing.T, origin string) *deliverySOCKS {
 				}
 				up, e := net.DialTimeout("tcp", origin, time.Second)
 				if e != nil {
+					s.record("origin dial failed: " + e.Error())
 					return
 				}
 				defer up.Close()
 				up.SetDeadline(time.Now().Add(3 * time.Second))
 				if _, e = c.Write([]byte{5, 0, 0, 1, 127, 0, 0, 1, 0, 0}); e != nil {
+					s.record("connect reply failed: " + e.Error())
 					return
 				}
+				s.record("forwarding")
 				copied := make(chan struct{})
 				go func() { io.Copy(up, c); up.(*net.TCPConn).CloseWrite(); close(copied) }()
 				io.Copy(c, up)

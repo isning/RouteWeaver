@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import { settledTask } from "./ui-settled-task";
 import type {
   Collection,
@@ -413,6 +413,19 @@ async function settleSectionNavigation(page: Page) {
   }));
 }
 
+async function expectAlignedCards(cards: Locator[]) {
+  const edges = [];
+  for (const card of cards) {
+    await expect(card).toBeVisible();
+    const box = (await card.boundingBox())!;
+    edges.push({ left: box.x, right: box.x + box.width });
+  }
+  for (const edge of edges.slice(1)) {
+    expect(Math.abs(edge.left - edges[0].left)).toBeLessThanOrEqual(1);
+    expect(Math.abs(edge.right - edges[0].right)).toBeLessThanOrEqual(1);
+  }
+}
+
 // Real production composition with read-only fixtures: context is navigation or
 // existing account usage, never fabricated telemetry. Geometry awaits CI.
 for (const width of [1440, 1280, 1024, 390, 320]) {
@@ -445,6 +458,13 @@ for (const width of [1440, 1280, 1024, 390, 320]) {
     const index = page.getByRole("navigation", { name: "本页设置", exact: true });
     await expect(index).toBeVisible();
     await assertLayout(true);
+    const cardWithHeading = (heading: string) => page.locator('[data-slot="card"]').filter({
+      has: page.getByRole("heading", { name: heading, exact: true }),
+    });
+    await expectAlignedCards([
+      page.locator('[data-slot="card"]').filter({ has: name }),
+      cardWithHeading("订阅域名"),
+    ]);
     await page.screenshot({ path: info.outputPath(`context-settings-${width}.png`), fullPage: true });
     await name.fill("未保存的平台信息");
     const domain = page.getByRole("textbox", { name: "订阅域名草稿", exact: true });
@@ -457,6 +477,7 @@ for (const width of [1440, 1280, 1024, 390, 320]) {
     await settleSectionNavigation(page);
     await expect(domainSection).toBeFocused();
     await expect(goDomain).toHaveAttribute("aria-current", "location");
+    await page.screenshot({ path: info.outputPath(`context-settings-domain-focus-${width}.png`) });
     await expect(page.getByRole("alertdialog")).toHaveCount(0);
     expect(await page.evaluate(() => ({ hash: location.hash, length: history.length }))).toEqual(historyBefore);
     await expect(name).toHaveValue("未保存的平台信息");
@@ -472,14 +493,35 @@ for (const width of [1440, 1280, 1024, 390, 320]) {
     await settleSectionNavigation(page);
     await expect(page.getByRole("region", { name: "恢复备份设置", exact: true })).toBeFocused();
     await expect(restoreLink).toHaveAttribute("aria-current", "location");
+    await page.screenshot({ path: info.outputPath(`context-backup-restore-focus-${width}.png`) });
     await page.screenshot({ path: info.outputPath(`context-backup-${width}.png`), fullPage: true });
     await page.goto("/#account-security");
     const securityIndex = page.getByRole("navigation", { name: "本页账号设置", exact: true });
     await expect(securityIndex).toBeVisible();
     await assertLayout(true);
-    await securityIndex.getByRole("button", { name: "前往登录会话", exact: true }).click();
+    await expectAlignedCards([
+      cardWithHeading("修改密码"),
+      cardWithHeading("登录会话"),
+      cardWithHeading("账号恢复与退役"),
+      cardWithHeading("管理员二次验证"),
+    ]);
+    const sessionsLink = securityIndex.getByRole("button", { name: "前往登录会话", exact: true });
+    await sessionsLink.focus();
+    await page.keyboard.press("Enter");
+    await settleSectionNavigation(page);
     await expect(page.getByRole("region", { name: "登录会话设置", exact: true })).toBeFocused();
+    await expect(sessionsLink).toHaveAttribute("aria-current", "location");
+    await page.screenshot({ path: info.outputPath(`context-account-sessions-focus-${width}.png`) });
     await page.screenshot({ path: info.outputPath(`context-account-security-${width}.png`), fullPage: true });
+    const mfaLink = securityIndex.getByRole("button", { name: "前往管理员二次验证", exact: true });
+    await mfaLink.focus();
+    await page.keyboard.press("Enter");
+    await settleSectionNavigation(page);
+    const mfa = page.getByRole("region", { name: "管理员二次验证设置", exact: true });
+    await expect(mfa).toBeFocused();
+    await expect(mfa.getByLabel("验证当前账号密码", { exact: true })).toBeVisible();
+    await expect(mfaLink).toHaveAttribute("aria-current", "location");
+    await page.screenshot({ path: info.outputPath(`context-account-mfa-focus-${width}.png`) });
     await page.goto("/#subscriptions");
     await expect(page.getByRole("heading", { name: "平台服务用量", exact: true })).toHaveCount(1);
     await assertLayout(false);
@@ -516,6 +558,7 @@ for (const width of [1440, 1280, 1024, 390, 320]) {
     expect(panel.y - strip.y - strip.height).toBeGreaterThanOrEqual(0);
     expect(panel.y - strip.y - strip.height).toBeLessThanOrEqual(32);
     expect(strip.y).toBeGreaterThanOrEqual((await page.locator(".profile-publish-action").boundingBox())!.height);
+    await page.screenshot({ path: info.outputPath(`context-profile-runtime-focus-${width}.png`) });
     await page.locator(".profile-intent-task").evaluate(el => el.scrollIntoView({ block: "start" }));
     await settleSectionNavigation(page);
     await expect(profileIndex.getByRole("button", { name: "前往连接与流量", exact: true })).toHaveAttribute("aria-current", "location");

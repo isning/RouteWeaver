@@ -2,6 +2,7 @@ package httpapi_test
 
 import (
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -68,6 +69,13 @@ func TestNativeDownloadedClientConfiguredDNS(t *testing.T) {
 			}
 			defer log.Close()
 			args = []string{"-d", dir, "-f", config}
+			marker, hook, err := newClientReadyMarker(dir, target.AdapterID)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if hook != "" {
+				args = append(args, "-post-up", hook)
+			}
 			if target.AdapterID == "sing-box" {
 				args = []string{"run", "-c", config, "-D", dir}
 			}
@@ -77,32 +85,39 @@ func TestNativeDownloadedClientConfiguredDNS(t *testing.T) {
 			cmd.Dir = dir
 			cmd.Stdout = log
 			cmd.Stderr = log
+			binaryBytes, err := os.ReadFile(binary)
+			if err != nil {
+				t.Fatal(err)
+			}
+			binarySHA, configSHA := sha256.Sum256(binaryBytes), sha256.Sum256([]byte(feed))
+			started := time.Now()
 			if err = cmd.Start(); err != nil {
 				t.Fatal(err)
 			}
-			done := make(chan error, 1)
-			go func() { done <- cmd.Wait() }()
+			done := make(chan struct{})
+			var exitErr error // Read only after done closes.
+			go func() { exitErr = cmd.Wait(); close(done) }()
 			t.Cleanup(func() {
 				cancel()
+				processStatus := "did not exit"
 				select {
 				case <-done:
+					processStatus = fmt.Sprint(exitErr)
 				case <-time.After(3 * time.Second):
 					t.Error("native DNS child did not exit")
 				}
+				if t.Failed() {
+					body, readErr := os.ReadFile(log.Name())
+					markerBytes, markerErr := os.ReadFile(marker)
+					t.Logf("native DNS diagnostics: elapsed=%s pid=%d exit=%s binarySHA256=%x configSHA256=%x origin=%s mixed=127.0.0.1:%d dns=%s marker=%q markerReadError=%v reached=%d positiveQueries=%d negativeQueries=%d nativeLogReadError=%v\nnative.log:\n%s", time.Since(started), cmd.Process.Pid, processStatus, binarySHA, configSHA, origin.URL, port, dns.conn.LocalAddr(), markerBytes, markerErr, reached.Load(), dns.positive.Load(), dns.negative.Load(), readErr, body)
+				}
 			})
 			address := fmt.Sprintf("127.0.0.1:%d", port)
-			deadline := time.Now().Add(5 * time.Second)
-			for {
-				conn, e := net.DialTimeout("tcp", address, 50*time.Millisecond)
-				if e == nil {
-					conn.Close()
-					break
-				}
-				if time.Now().After(deadline) {
-					body, _ := os.ReadFile(log.Name())
-					t.Fatalf("native DNS startup timeout: %s", body)
-				}
-				time.Sleep(20 * time.Millisecond)
+			startup, startupCancel := context.WithTimeout(ctx, 5*time.Second)
+			err = waitClientReady(startup, address, marker, done)
+			startupCancel()
+			if err != nil {
+				t.Fatal(err)
 			}
 			proxy, _ := url.Parse("http://" + address)
 			transport := &http.Transport{Proxy: http.ProxyURL(proxy), DisableKeepAlives: true}

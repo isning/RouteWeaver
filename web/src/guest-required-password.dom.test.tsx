@@ -7,6 +7,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -310,17 +311,22 @@ it("forced-password administrator cannot load admin work or recovery until a suc
   );
   const restricted = () => {
     expect(screen.getByText("请先更换临时密码")).toBeTruthy();
-    expect(screen.queryByText("账号恢复与退役")).toBeNull();
-    expect(screen.queryByText("管理员二次验证")).toBeNull();
+    expect(
+      screen.queryByRole("region", { name: "账号恢复与退役设置" }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("heading", { name: "管理员二次验证" }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "前往管理员二次验证" }),
+    ).toBeNull();
     expect(calls.every((c) => c.path.startsWith("/api/auth/"))).toBe(true);
   };
   restricted();
   fill("当前密码", "synthetic-old-password");
   fill("新密码", "synthetic-new-password");
   fill("确认新密码", "synthetic-new-password");
-  await userEvent.click(
-    screen.getByRole("button", { name: "修改密码" }),
-  );
+  await userEvent.click(screen.getByRole("button", { name: "修改密码" }));
   await screen.findByText("当前密码或验证码不正确，请核对后重试。");
   restricted();
   expect(screen.getByLabelText("新密码", { exact: true })).toHaveProperty(
@@ -328,19 +334,41 @@ it("forced-password administrator cannot load admin work or recovery until a suc
     "synthetic-new-password",
   );
   fill("当前密码", "synthetic-correct-password");
-  await userEvent.click(
-    screen.getByRole("button", { name: "修改密码" }),
-  );
+  await userEvent.click(screen.getByRole("button", { name: "修改密码" }));
   await waitFor(() =>
     expect(calls.some((c) => c.path === "/api/state")).toBe(true),
   );
   await screen.findByRole("heading", { name: "连接端点", level: 1 });
   expect(screen.queryByText("请先更换临时密码")).toBeNull();
-  await userEvent.click(
-    screen.getByRole("button", { name: "账号安全" }),
+  await userEvent.click(screen.getByRole("button", { name: "账号安全" }));
+  await screen.findByRole("heading", { name: "账号恢复与退役" });
+  await screen.findByRole("heading", { name: "管理员二次验证" });
+  const mfaRegion = screen.getByRole("region", {
+    name: "管理员二次验证设置",
+  });
+  const mfaPassword = within(mfaRegion).getByLabelText("验证当前账号密码", {
+    exact: true,
+  });
+  fireEvent.change(mfaPassword, { target: { value: "synthetic-mfa-draft" } });
+  const beforeNavigation = calls.slice();
+  const beforeHistory = { hash: location.hash, length: history.length };
+  const mfaLink = screen.getByRole("button", {
+    name: "前往管理员二次验证",
+  });
+  mfaLink.focus();
+  await userEvent.keyboard("{Enter}");
+  expect(document.activeElement).toBe(mfaRegion);
+  await userEvent.click(screen.getByRole("button", { name: "前往修改密码" }));
+  await userEvent.click(mfaLink);
+  expect(document.activeElement).toBe(mfaRegion);
+  expect(
+    within(mfaRegion).getByLabelText("验证当前账号密码", { exact: true }),
+  ).toBe(mfaPassword);
+  expect(mfaPassword).toHaveProperty("value", "synthetic-mfa-draft");
+  expect({ hash: location.hash, length: history.length }).toEqual(
+    beforeHistory,
   );
-  await screen.findByText("账号恢复与退役");
-  await screen.findByText("管理员二次验证");
+  expect(calls).toEqual(beforeNavigation);
   expect(screen.getByLabelText("新密码", { exact: true })).toHaveProperty(
     "value",
     "",
@@ -349,5 +377,34 @@ it("forced-password administrator cannot load admin work or recovery until a suc
     { path: "/api/auth/password", method: "POST", csrf: "restricted-csrf" },
     { path: "/api/auth/password", method: "POST", csrf: "restricted-csrf" },
   ]);
+  expect(unexpected).toEqual([]);
+});
+
+it("keeps administrator MFA content and its directory entry absent for an ordinary account", async () => {
+  const unexpected: string[] = [];
+  const session = {
+    user: { id: "ordinary-security", name: "Ordinary", role: "user" },
+    csrfToken: "ordinary-csrf",
+  };
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string, init?: RequestInit) => {
+      const method = init?.method || "GET";
+      if (method === "GET" && url === "/api/auth/me") return json(session);
+      if (method === "GET" && url === "/api/auth/sessions") return json([]);
+      unexpected.push(`${method} ${url}`);
+      throw new Error(`Unexpected request: ${method} ${url}`);
+    }),
+  );
+  mount();
+  await screen.findByRole("heading", { name: "账号安全", level: 1 });
+  await screen.findByText("没有有效会话。");
+  expect(screen.queryByRole("heading", { name: "管理员二次验证" })).toBeNull();
+  expect(
+    screen.queryByRole("region", { name: "管理员二次验证设置" }),
+  ).toBeNull();
+  expect(
+    screen.queryByRole("button", { name: "前往管理员二次验证" }),
+  ).toBeNull();
   expect(unexpected).toEqual([]);
 });

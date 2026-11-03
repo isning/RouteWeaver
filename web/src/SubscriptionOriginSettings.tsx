@@ -41,7 +41,6 @@ export function SubscriptionOriginSettings() {
   return (
     <Section
       title="订阅域名"
-      className="max-w-3xl"
       description="单独设置用户复制订阅链接时使用的地址，不改变控制台登录地址。"
     >
       {query.data && query.error && (
@@ -181,11 +180,11 @@ function OriginForm({
             }}
           />
         </label>
-        <p className="text-sm leading-relaxed text-muted-foreground">
+        <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
           只填写公开 HTTPS 域名与可选端口，不含路径。留空并启用后使用默认地址：
           {state.defaultOrigin || "当前访问地址"}。
         </p>
-        <p className="text-sm leading-relaxed text-muted-foreground">
+        <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
           请先由运维配置 DNS、有效 HTTPS
           证书与反向代理。这里仅保存并验证链接地址，不修改 DNS 或证书。
         </p>
@@ -228,7 +227,7 @@ function OriginForm({
                 {state.lastFailure}
               </Notice>
             )}
-          {state.draftOrigin && <p className="text-sm leading-relaxed text-muted-foreground">验证结果有效 5 分钟；过期后需重新验证再启用。</p>}
+          {state.draftOrigin && <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">验证结果有效 5 分钟；过期后需重新验证再启用。</p>}
           <div className={"flex flex-wrap items-center gap-2"}>
             {state.draftOrigin && (
               <ActionButton

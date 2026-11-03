@@ -868,19 +868,19 @@ function Workspace() {
                   fallback={<PageSkeleton page={page} />}
                 >
                   {page === "account-security" ? (
-                    <>
-                      <AccountSecurityPage
-                        session={session}
-                        onSessionChanged={(next) => {
-                          lifecycle.accept(next);
-                          lifecycle.changed();
-                        }}
-                        onSignedOut={() => {
-                          lifecycle.forget();
-                        }}
-                      />
-                      {isAdmin && !passwordRequired && <AccountMFA />}
-                    </>
+                    <AccountSecurityPage
+                      session={session}
+                      onSessionChanged={(next) => {
+                        lifecycle.accept(next);
+                        lifecycle.changed();
+                      }}
+                      onSignedOut={() => {
+                        lifecycle.forget();
+                      }}
+                      mfaSettings={
+                        isAdmin && !passwordRequired ? <AccountMFA /> : undefined
+                      }
+                    />
                   ) : adminMode ? (
                     isAdmin ? (
                       page === "notifications" ? (

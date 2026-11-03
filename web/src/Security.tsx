@@ -50,7 +50,7 @@ export function SecuritySettings() {
             message.success("二次验证已启用");
         },
     });
-    return (<Section title="管理员二次验证" className="max-w-3xl" description="保护当前登录账号：登录时在密码之外验证一次性验证码。">
+    return (<Section title="管理员二次验证" description="保护当前登录账号：登录时在密码之外验证一次性验证码。">
       <QueryState loading={session.isLoading} error={session.error} retry={() => session.refetch()}>
         {session.data?.user.mfaEnabled ? (<div className="security-enabled flex flex-wrap items-center gap-3 rounded-lg border p-4">
             <SafetyCertificateOutlined aria-hidden="true"/>
