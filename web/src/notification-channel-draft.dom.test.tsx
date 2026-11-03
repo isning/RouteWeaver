@@ -7,6 +7,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { UIProviders } from "./ui-patterns/providers";
@@ -83,6 +84,8 @@ async function mount(failFirst = false) {
         }
         return json(initial);
       }
+      if (String(url).endsWith("/notifications/test"))
+        return json({ status: "queued" });
       return json(String(url).endsWith("/state") ? { users: [] } : []);
     }),
   );
@@ -114,6 +117,122 @@ function toggle(name: string) {
 function save() {
   fireEvent.click(screen.getByRole("button", { name: "保存通知设置" }));
 }
+function describedBy(element: HTMLElement) {
+  return (element.getAttribute("aria-describedby") || "")
+    .split(" ")
+    .map((id) => document.getElementById(id)?.textContent || "")
+    .join(" ");
+}
+it("explains expiry reminder time buckets without promising a minimum interval or changing quota thresholds", async () => {
+  const sent = await mount();
+  const repeat = screen.getByLabelText("到期提醒重复周期（小时）");
+  expect(describedBy(repeat)).toContain(
+    "按距到期时间划分时段，同一提醒阈值每段最多生成一次；不影响额度提醒。",
+  );
+  expect(screen.queryByLabelText("同类提醒最短间隔（小时）")).toBeNull();
+  fireEvent.change(repeat, { target: { value: "12" } });
+  save();
+  await waitFor(() => expect(sent).toHaveLength(1));
+  expect(sent[0].repeatHours).toBe(12);
+  expect(sent[0].quotaPercent).toEqual(initial.quotaPercent);
+  expect(sent[0].providerRemainingPercent).toEqual(
+    initial.providerRemainingPercent,
+  );
+});
+it("keeps threshold audiences and the in-app reminder scope beside their controls", async () => {
+  const sent = await mount();
+  expect(describedBy(screen.getByLabelText("已用额度提醒阈值（%）"))).toContain(
+    "账号已用流量达到任一比例时提醒本人；每个计费周期、每个阈值生成一次。",
+  );
+  expect(describedBy(screen.getByLabelText("到期前提醒（小时）"))).toContain(
+    "账号服务和供应商资源共用这些提前量；剩余时间进入范围后生成提醒。",
+  );
+  expect(describedBy(screen.getByLabelText("供应商剩余配额提醒（%）"))).toContain(
+    "供应商剩余额度降至任一比例时提醒管理员。",
+  );
+  expect(screen.getByText("每类可设置多个阈值；清空即不生成该类提醒。")).toBeTruthy();
+  const inApp = screen.getByRole("switch", { name: "站内提醒" });
+  expect(describedBy(inApp)).toContain(
+    "控制新生成的账号和供应商站内提醒；公告与测试不受影响。",
+  );
+  fireEvent.click(inApp);
+  save();
+  await waitFor(() => expect(sent).toHaveLength(1));
+  expect(sent[0].inApp).toBe(false);
+  expect(sent[0].email).toEqual(initial.email);
+  expect(sent[0].webhook).toEqual(initial.webhook);
+});
+it("explains channel activation and destination requirements without exposing stored secrets", async () => {
+  const sent = await mount();
+  toggle("邮件通知");
+  expect(describedBy(screen.getByLabelText("启用邮件渠道"))).toContain(
+    "启用并保存后可发送测试；自动提醒由下方选项控制。",
+  );
+  expect(describedBy(screen.getByLabelText("允许自动发送管理员供应商提醒邮件"))).toContain(
+    "勾选并保存后，供应商配额和到期提醒将自动发送至配置的收件地址。",
+  );
+  expect(describedBy(screen.getByLabelText("SMTP 主机"))).toContain(
+    "填写邮件服务商提供的公网 SMTP 主机，不含协议或端口。",
+  );
+  expect(describedBy(screen.getByLabelText("用户名"))).toContain(
+    "需要登录时填写；启用渠道时，填写用户名还须提供密码。",
+  );
+  expect(describedBy(screen.getByLabelText("收件地址"))).toContain(
+    "管理员提醒与邮件测试发送到这些地址，最多 10 个。",
+  );
+  expect(
+    (screen.getByLabelText("更新 SMTP 密码（已保存，留空不变）") as HTMLInputElement).value,
+  ).toBe("");
+  toggle("Webhook 通知");
+  expect(describedBy(screen.getByLabelText("启用 Webhook 渠道"))).toContain(
+    "启用并保存后可发送测试；自动提醒由下方选项控制。",
+  );
+  expect(describedBy(screen.getByLabelText("允许自动发送管理员供应商提醒 Webhook"))).toContain(
+    "勾选并保存后，供应商配额和到期提醒将自动发送至配置的 Webhook。",
+  );
+  expect(describedBy(screen.getByLabelText("HTTPS Webhook 地址"))).toContain(
+    "填写公网 HTTPS 接收地址，不含查询参数、片段或登录信息。",
+  );
+  const secret = screen.getByLabelText(
+    "更新签名密钥（已保存，留空不变）",
+  ) as HTMLInputElement;
+  expect(describedBy(secret)).toContain("启用时至少 32 字节，用于接收方验证通知签名。");
+  expect(secret.value).toBe("");
+  expect(sent).toHaveLength(0);
+});
+it("discloses queued-send cancellation at Save while test confirmation uses the saved destination", async () => {
+  const sent = await mount();
+  const saveButton = screen.getByRole("button", { name: "保存通知设置" });
+  expect(describedBy(saveButton)).toContain(
+    "保存会取消此前排队或等待重试的外部发送；已开始发送的请求仍可能完成。",
+  );
+  toggle("Webhook 通知");
+  change("HTTPS Webhook 地址", "https://draft.example");
+  const testsSent = () =>
+    vi.mocked(fetch).mock.calls.filter(([url, init]) =>
+      String(url).endsWith("/notifications/test") && init?.method === "POST",
+    );
+  fireEvent.click(screen.getByRole("button", { name: "发送 Webhook 测试" }));
+  let confirmation = screen.getByRole("alertdialog", {
+    name: "发送一条测试通知？",
+  });
+  expect(within(confirmation).getByText(
+    "将向已保存的 Webhook https://old.example 发送测试内容。",
+  )).toBeTruthy();
+  expect(testsSent()).toHaveLength(0);
+  fireEvent.click(within(confirmation).getByRole("button", { name: "取消" }));
+  expect(testsSent()).toHaveLength(0);
+  fireEvent.click(screen.getByRole("button", { name: "发送 Webhook 测试" }));
+  confirmation = screen.getByRole("alertdialog", { name: "发送一条测试通知？" });
+  fireEvent.click(within(confirmation).getByRole("button", { name: "发送测试" }));
+  await waitFor(() => expect(testsSent()).toHaveLength(1));
+  expect(JSON.parse(String(testsSent()[0][1]?.body))).toEqual({ channel: "webhook" });
+  await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+  save();
+  await waitFor(() => expect(sent).toHaveLength(1));
+  expect(sent[0].webhook.url).toBe("https://draft.example");
+  expect(testsSent()).toHaveLength(1);
+});
 it("collapsing edited notification channel retains its submitted values", async () => {
   const sent = await mount();
   toggle("Webhook 通知");

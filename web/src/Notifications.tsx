@@ -590,6 +590,7 @@ function NotificationSettings() {
 }
 function SettingsForm({ initial }: { initial: Settings }) {
   const [form] = useForm();
+  const saveConsequenceId = useId();
   const [baseline, setBaseline] = useState(initial);
   const [dirty, setDirty] = useState(false);
   useUnsavedChanges(dirty);
@@ -695,10 +696,14 @@ function SettingsForm({ initial }: { initial: Settings }) {
         onFinish={(values) => save.mutate(values)}
       >
         <ErrorNotice error={save.error || test.error} />
+        <p className="text-sm text-muted-foreground">
+          每类可设置多个阈值；清空即不生成该类提醒。
+        </p>
         <div className="grid gap-4 sm:grid-cols-2">
           <AppField
             name="quotaPercent"
             label="已用额度提醒阈值（%）"
+            description="账号已用流量达到任一比例时提醒本人；每个计费周期、每个阈值生成一次。"
             trigger="onValueChange"
           >
             <MultiChoice
@@ -712,6 +717,7 @@ function SettingsForm({ initial }: { initial: Settings }) {
           <AppField
             name="expiryHours"
             label="到期前提醒（小时）"
+            description="账号服务和供应商资源共用这些提前量；剩余时间进入范围后生成提醒。"
             trigger="onValueChange"
           >
             <MultiChoice
@@ -725,6 +731,7 @@ function SettingsForm({ initial }: { initial: Settings }) {
           <AppField
             name="providerRemainingPercent"
             label="供应商剩余配额提醒（%）"
+            description="供应商剩余额度降至任一比例时提醒管理员。"
             trigger="onValueChange"
           >
             <MultiChoice
@@ -737,7 +744,8 @@ function SettingsForm({ initial }: { initial: Settings }) {
           </AppField>
           <AppField
             name="repeatHours"
-            label="同类提醒最短间隔（小时）"
+            label="到期提醒重复周期（小时）"
+            description="按距到期时间划分时段，同一提醒阈值每段最多生成一次；不影响额度提醒。"
             trigger="onValueChange"
           >
             <NumericInput min={1} />
@@ -745,7 +753,8 @@ function SettingsForm({ initial }: { initial: Settings }) {
         </div>
         <AppField
           name="inApp"
-          label="站内消息"
+          label="站内提醒"
+          description="控制新生成的账号和供应商站内提醒；公告与测试不受影响。"
           valuePropName="checked"
           trigger="onCheckedChange"
         >
@@ -761,6 +770,7 @@ function SettingsForm({ initial }: { initial: Settings }) {
                   <AppField
                     name={["email", "enabled"]}
                     label="启用邮件渠道"
+                    description="启用并保存后可发送测试；自动提醒由下方选项控制。"
                     valuePropName="checked"
                     trigger="onCheckedChange"
                   >
@@ -771,11 +781,16 @@ function SettingsForm({ initial }: { initial: Settings }) {
                     valuePropName="checked"
                     trigger="onCheckedChange"
                     label="允许自动发送管理员供应商提醒邮件"
+                    description="勾选并保存后，供应商配额和到期提醒将自动发送至配置的收件地址。"
                   >
                     <Checkbox />
                   </AppField>
                   <div className="grid gap-4 sm:grid-cols-2">
-                    <AppField name={["email", "host"]} label="SMTP 主机">
+                    <AppField
+                      name={["email", "host"]}
+                      label="SMTP 主机"
+                      description="填写邮件服务商提供的公网 SMTP 主机，不含协议或端口。"
+                    >
                       <Input />
                     </AppField>
                     <AppField
@@ -798,7 +813,11 @@ function SettingsForm({ initial }: { initial: Settings }) {
                         ]}
                       />
                     </AppField>
-                    <AppField name={["email", "username"]} label="用户名">
+                    <AppField
+                      name={["email", "username"]}
+                      label="用户名"
+                      description="需要登录时填写；启用渠道时，填写用户名还须提供密码。"
+                    >
                       <Input autoComplete="off" />
                     </AppField>
                   </div>
@@ -828,6 +847,7 @@ function SettingsForm({ initial }: { initial: Settings }) {
                   <AppField
                     name={["email", "to"]}
                     label="收件地址"
+                    description="管理员提醒与邮件测试发送到这些地址，最多 10 个。"
                     trigger="onValueChange"
                   >
                     <MultiChoice creatable options={[]} />
@@ -850,6 +870,7 @@ function SettingsForm({ initial }: { initial: Settings }) {
                   <AppField
                     name={["webhook", "enabled"]}
                     label="启用 Webhook 渠道"
+                    description="启用并保存后可发送测试；自动提醒由下方选项控制。"
                     valuePropName="checked"
                     trigger="onCheckedChange"
                   >
@@ -860,17 +881,20 @@ function SettingsForm({ initial }: { initial: Settings }) {
                     valuePropName="checked"
                     trigger="onCheckedChange"
                     label="允许自动发送管理员供应商提醒 Webhook"
+                    description="勾选并保存后，供应商配额和到期提醒将自动发送至配置的 Webhook。"
                   >
                     <Checkbox />
                   </AppField>
                   <AppField
                     name={["webhook", "url"]}
                     label="HTTPS Webhook 地址"
+                    description="填写公网 HTTPS 接收地址，不含查询参数、片段或登录信息。"
                   >
                     <Input />
                   </AppField>
                   <AppField
                     name="webhookSecret"
+                    description="启用时至少 32 字节，用于接收方验证通知签名。"
                     label={
                       baseline.webhookSecretSet
                         ? "\u66F4\u65B0\u7B7E\u540D\u5BC6\u94A5\uFF08\u5DF2\u4FDD\u5B58\uFF0C\u7559\u7A7A\u4E0D\u53D8\uFF09"
@@ -913,11 +937,15 @@ function SettingsForm({ initial }: { initial: Settings }) {
           ))}
         </Accordion>
         <div className="flex flex-wrap items-center justify-end gap-2 border-t pt-4">
+          <p id={saveConsequenceId} className="w-full text-sm text-muted-foreground">
+            保存会取消此前排队或等待重试的外部发送；已开始发送的请求仍可能完成。
+          </p>
           <ActionButton onClick={() => sendTest("in-app")} variant="outline">
             发送站内测试
           </ActionButton>
           <ActionButton
             type="submit"
+            aria-describedby={saveConsequenceId}
             pending={save.isPending}
             variant="default"
           >

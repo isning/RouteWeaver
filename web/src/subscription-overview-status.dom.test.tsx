@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { act, cleanup, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import App from "./App";
 import { UIProviders } from "./ui-patterns/providers";
@@ -250,3 +250,19 @@ for (const role of ["user", "admin"]) {
     expect(reads).toBe(2);
   });
 }
+
+it("keeps one platform usage context and its open details when the layout width changes", async () => {
+  mountWorkspace("paused");
+  const heading = await screen.findByRole("heading", { name: "平台服务用量" });
+  const context = heading.closest("aside");
+  expect(context).not.toBeNull();
+  const toggle = within(context!).getByRole("button", { name: "用量与周期明细" });
+  await userEvent.click(toggle);
+  expect(toggle.getAttribute("aria-expanded")).toBe("true");
+  fireEvent(window, new Event("resize"));
+  expect(screen.getAllByRole("heading", { name: "平台服务用量" })).toHaveLength(1);
+  expect(screen.getByRole("heading", { name: "平台服务用量" })).toBe(heading);
+  expect(toggle.getAttribute("aria-expanded")).toBe("true");
+  expect(within(context!).getByText("如需恢复平台服务，请联系管理员检查服务授权。")).toBeTruthy();
+  expect(unexpectedRequests).toEqual([]);
+});

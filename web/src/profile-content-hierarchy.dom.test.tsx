@@ -481,3 +481,40 @@ it("finishes confirmed discard without leaving an editable form waiting on catal
     unsubscribe();
   }
 });
+
+it("opens detailed profile settings from the early index without saving or losing connection choices", async () => {
+  const { writes } = mount();
+  const name = await screen.findByRole("textbox", { name: "配置名称" });
+  fireEvent.change(name, { target: { value: "Retained indexed draft" } });
+  const before = { hash: location.hash, length: history.length };
+  const index = screen.getByRole("navigation", { name: "配置内容" });
+  const runtime = within(index).getByRole("button", { name: "前往运行设置" });
+  runtime.focus();
+  await userEvent.keyboard("{Enter}");
+  const tab = screen.getByRole("tab", { name: "运行设置" });
+  await waitFor(() => expect(document.activeElement).toBe(tab));
+  expect(tab.getAttribute("aria-selected")).toBe("true");
+  expect((name as HTMLInputElement).value).toBe("Retained indexed draft");
+  expect(location.hash).toBe(before.hash);
+  expect(history.length).toBe(before.length);
+  expect(screen.queryByRole("alertdialog")).toBeNull();
+  expect(writes).toEqual([]);
+  await userEvent.click(within(index).getByRole("button", { name: "前往连接与流量" }));
+  expect(document.activeElement).toBe(screen.getByRole("region", { name: "连接与流量" }));
+  expect(screen.getByRole("region", { name: "连接与流量" }).querySelector(".profile-source-identity")?.textContent).toContain("Travel source");
+  expect(writes).toEqual([]);
+});
+
+it("does not let the early section index bypass the pending-save interaction guard", async () => {
+  let finish!: (response: Response) => void;
+  mount(fixture(), { saveResponse: () => new Promise<Response>(resolve => { finish = resolve; }) });
+  await screen.findByText("2 个有效连接");
+  await userEvent.click(screen.getByRole("button", { name: "保存草稿" }));
+  const index = screen.getByRole("navigation", { name: "配置内容" });
+  const runtime = within(index).getByRole("button", { name: "前往运行设置" });
+  await waitFor(() => expect((runtime as HTMLButtonElement).disabled).toBe(true));
+  await userEvent.click(runtime);
+  expect(screen.getByRole("tab", { name: "分流规则" }).getAttribute("aria-selected")).toBe("true");
+  finish(json(fixture()));
+  await waitFor(() => expect((runtime as HTMLButtonElement).disabled).toBe(false));
+});

@@ -74,12 +74,12 @@ it("does not offer invented notification settings during loading or failure and 
   await userEvent.click(await within(main).findByRole("tab", { name: "提醒与渠道" }));
   const panel = await within(main).findByRole("tabpanel", { name: "提醒与渠道" });
   expect(within(panel).getByLabelText("正在加载").getAttribute("aria-busy")).toBe("true");
-  expect(within(panel).queryByLabelText("同类提醒最短间隔（小时）")).toBeNull();
+  expect(within(panel).queryByLabelText("到期提醒重复周期（小时）")).toBeNull();
   await task.fail();
   await within(panel).findByText("所选列表暂不可用");
-  expect(within(panel).queryByLabelText("同类提醒最短间隔（小时）")).toBeNull();
+  expect(within(panel).queryByLabelText("到期提醒重复周期（小时）")).toBeNull();
   await userEvent.click(within(panel).getByRole("button", { name: "重试" }));
-  const interval = await within(panel).findByLabelText("同类提醒最短间隔（小时）");
+  const interval = await within(panel).findByLabelText("到期提醒重复周期（小时）");
   expect((interval as HTMLInputElement).value).toBe("24");
   expect(task.state.reads).toBe(2);
   expect(task.state.unexpected).toEqual([]);

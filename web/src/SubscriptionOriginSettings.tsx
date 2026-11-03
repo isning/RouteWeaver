@@ -182,7 +182,7 @@ function OriginForm({
           />
         </label>
         <p className="text-sm leading-relaxed text-muted-foreground">
-          只填写公开 HTTPS 域名与可选端口，不含路径。留空恢复默认地址：
+          只填写公开 HTTPS 域名与可选端口，不含路径。留空并启用后使用默认地址：
           {state.defaultOrigin || "当前访问地址"}。
         </p>
         <p className="text-sm leading-relaxed text-muted-foreground">
@@ -228,6 +228,7 @@ function OriginForm({
                 {state.lastFailure}
               </Notice>
             )}
+          {state.draftOrigin && <p className="text-sm leading-relaxed text-muted-foreground">验证结果有效 5 分钟；过期后需重新验证再启用。</p>}
           <div className={"flex flex-wrap items-center gap-2"}>
             {state.draftOrigin && (
               <ActionButton

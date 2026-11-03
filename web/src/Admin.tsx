@@ -1,3 +1,4 @@
+import { ContextLayout, PageSection, SectionIndex } from "@/ui-patterns/page-layout";
 import { ResourceToolbar, SearchField } from "@/ui-patterns/resource-toolbar";
 import { Button } from "@/components/ui/button";
 import {
@@ -1681,6 +1682,7 @@ function PlatformSettingsTabs({
 }
 
 function Settings({ initial }: { initial: Record<string, unknown> }) {
+  const sectionID = useId();
   const [form] = useForm();
   const message = toast;
   const client = useQueryClient();
@@ -1734,8 +1736,20 @@ function Settings({ initial }: { initial: Record<string, unknown> }) {
     !sameSettings(values || initial, baseline) || save.isPending,
   );
   return (
-    <div className="max-w-3xl space-y-6">
-      <Section className="max-w-3xl">
+    <ContextLayout
+      navigation
+      rail={
+        <SectionIndex
+          label="本页设置"
+          sections={[
+            { id: `${sectionID}-platform-information`, label: "平台信息" },
+            { id: `${sectionID}-subscription-domain`, label: "订阅域名" },
+          ]}
+        />
+      }
+    >
+      <PageSection id={`${sectionID}-platform-information`} label="平台信息">
+      <Section>
         <AppForm
           aria-label="平台基本设置"
           form={form}
@@ -1746,7 +1760,7 @@ function Settings({ initial }: { initial: Record<string, unknown> }) {
           className="settings-form space-y-5"
         >
           <ErrorNotice error={save.error} />
-          <AppField name="name" label="平台名称">
+          <AppField name="name" label="平台名称" description="用于记录此控制平面的名称。">
             <Input />
           </AppField>
           {/* Keep fixed policies registered in the complete settings payload. */}
@@ -1757,17 +1771,19 @@ function Settings({ initial }: { initial: Record<string, unknown> }) {
             <input type="hidden" />
           </AppField>
           <dl className="divide-y border-y">
-            <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-4 py-3 sm:grid-cols-[10rem_minmax(0,1fr)]">
-              <dt className="text-muted-foreground">账号注册</dt>
+            <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-x-4 gap-y-1.5 py-4 sm:grid-cols-[10rem_minmax(0,1fr)]">
+              <dt className="font-medium">账号注册</dt>
               <dd className="min-w-0 wrap-anywhere">
                 {currentSettings.registration === "invite"
                   ? "仅受邀用户"
                   : String(currentSettings.registration || "未设置")}
               </dd>
+              <dd className="col-span-2 text-sm leading-relaxed text-muted-foreground sm:col-start-2 sm:col-span-1">新账号须由管理员生成邀请后创建。</dd>
             </div>
-            <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-4 py-3 sm:grid-cols-[10rem_minmax(0,1fr)]">
-              <dt className="text-muted-foreground">默认时区</dt>
+            <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-x-4 gap-y-1.5 py-4 sm:grid-cols-[10rem_minmax(0,1fr)]">
+              <dt className="font-medium">默认时区</dt>
               <dd className="min-w-0 wrap-anywhere">{String(currentSettings.timezone || "未设置")}</dd>
+              <dd className="col-span-2 text-sm leading-relaxed text-muted-foreground sm:col-start-2 sm:col-span-1">流量周期按 UTC+8 计算；具体重置方式在服务方案或用户授权中设置。</dd>
             </div>
           </dl>
           <ActionButton
@@ -1779,8 +1795,11 @@ function Settings({ initial }: { initial: Record<string, unknown> }) {
           </ActionButton>
         </AppForm>
       </Section>
-      <SubscriptionOriginSettings />
-    </div>
+      </PageSection>
+      <PageSection id={`${sectionID}-subscription-domain`} label="订阅域名设置">
+        <SubscriptionOriginSettings />
+      </PageSection>
+    </ContextLayout>
   );
 }
 function AuditLog() {

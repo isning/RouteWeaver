@@ -1,3 +1,4 @@
+import { ContextLayout, SectionIndex } from "@/ui-patterns/page-layout";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -67,6 +68,7 @@ import {
 import {
   useId,
   useLayoutEffect,
+  useEffect,
   useRef,
   useState,
   type ReactNode,
@@ -310,15 +312,21 @@ export function ProfileEditor({
     setGroupTask(task);
   };
   const detailTabs = useRef<HTMLDivElement>(null);
+  const detailNavigationFrame = useRef<number | null>(null);
+  useEffect(() => () => {
+    if (detailNavigationFrame.current !== null) cancelAnimationFrame(detailNavigationFrame.current);
+  }, []);
   const showDetails = (key: string) => {
     setPendingRepair(null);
     setTab(key);
     // The shortcut changes only the visible editor section, never the draft.
-    requestAnimationFrame(() => {
-      detailTabs.current?.scrollIntoView?.({ block: "start" });
-      detailTabs.current
-        ?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')
-        ?.focus();
+    if (detailNavigationFrame.current !== null) cancelAnimationFrame(detailNavigationFrame.current);
+    detailNavigationFrame.current = requestAnimationFrame(() => {
+      detailNavigationFrame.current = null;
+      const target = detailTabs.current?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]');
+      if (!target?.isConnected || target.dataset.section !== key || target.closest("[inert]")) return;
+      detailTabs.current?.scrollIntoView?.({ block: "start", behavior: "instant" });
+      target.focus({ preventScroll: true });
     });
   };
   const [preview, setPreview] = useState<Preview | null>(null);
@@ -1475,6 +1483,24 @@ export function ProfileEditor({
           </ActionButton>
         </div>
       </div>
+      <ContextLayout
+        navigation
+        rail={
+          <SectionIndex
+            label="配置内容"
+            disabled={save.isPending}
+            sections={[
+              { id: `${editorID}-connections`, label: "连接与流量" },
+              ...editorTabs.map((section) => ({
+                id: `${editorID}-section-${section.key}`,
+                label: section.label,
+                startId: `${editorID}-details`,
+                onSelect: () => showDetails(section.key),
+              })),
+            ]}
+          />
+        }
+      >
       <div
         className="profile-state-strip flex flex-wrap items-end gap-4"
         inert={save.isPending}
@@ -1543,10 +1569,12 @@ export function ProfileEditor({
       <div className="profile-editor-layout space-y-6" inert={save.isPending}>
         <div className="profile-editor space-y-6">
           <section
-            className="surface profile-intent-task rounded-lg border bg-card p-5"
+            className="surface profile-intent-task scroll-mt-32 rounded-lg border bg-card p-5 outline-none focus-visible:ring-2 focus-visible:ring-ring"
             aria-label="连接与流量"
+            id={`${editorID}-connections`}
+            tabIndex={-1}
           >
-            <div className="profile-intent-grid grid gap-6 lg:grid-cols-2 [&>div]:min-w-0 [&_h2]:mb-4 [&_h2]:font-semibold">
+            <div className="profile-intent-grid grid gap-6 @min-[64rem]/context:grid-cols-2 [&>div]:min-w-0 [&_h2]:mb-4 [&_h2]:font-semibold">
               <div className="profile-input-task space-y-4">
                 <div className="profile-source-summary flex flex-wrap items-center justify-between gap-3 [&>h2]:mb-0 [&>span]:w-full">
                   <h2>可用连接</h2>
@@ -1780,7 +1808,7 @@ export function ProfileEditor({
                   </Accordion>
                 </div>
               </div>
-              <div className="profile-traffic-task space-y-4 lg:border-l lg:pl-6">
+              <div className="profile-traffic-task space-y-4 @min-[64rem]/context:border-l @min-[64rem]/context:pl-6">
                 <h2>流量去向</h2>
                 <label
                   className="standalone-label default-route grid min-w-0 gap-2 text-sm font-medium"
@@ -2087,7 +2115,7 @@ export function ProfileEditor({
               </Notice>
             )}
           </section>
-          <div ref={detailTabs} className="profile-editor-tools space-y-4">
+          <div ref={detailTabs} id={`${editorID}-details`} className="profile-editor-tools scroll-mt-32 space-y-4">
             <Tabs
               className="profile-editor-tabs space-y-4"
               value={tab}
@@ -2103,6 +2131,7 @@ export function ProfileEditor({
                       className="h-auto min-h-11 whitespace-nowrap"
                       key={section.key}
                       value={String(section.key)}
+                      data-section={section.key}
                       disabled={"disabled" in section && !!section.disabled}
                     >
                       {section.label}
@@ -2112,13 +2141,16 @@ export function ProfileEditor({
               }
               {editorTabs.map((section) => (
                 <TabsContent key={section.key} value={String(section.key)}>
-                  {section.children}
+                  <div id={`${editorID}-section-${section.key}`} className="scroll-mt-32">
+                    {section.children}
+                  </div>
                 </TabsContent>
               ))}
             </Tabs>
           </div>
         </div>
       </div>
+      </ContextLayout>
       <TaskDialog
         title="创建并使用策略组"
         className="profile-candidate-modal"

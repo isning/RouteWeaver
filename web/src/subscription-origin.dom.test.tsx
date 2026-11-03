@@ -78,6 +78,15 @@ describe("subscription domain tasks", () => {
     expect((screen.getByLabelText("订阅域名草稿") as HTMLInputElement).value).toBe(initial.draftOrigin);
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
+  it("explains when an empty domain takes effect and the verification lifetime before enable", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => json(initial)));
+    mount();
+    await screen.findByRole("button", { name: "保存域名草稿" });
+    expect(screen.getByText(/留空并启用后使用默认地址/)).toBeTruthy();
+    const lifetime = screen.getByText("验证结果有效 5 分钟；过期后需重新验证再启用。");
+    const activate = screen.getByRole("button", { name: "启用已保存草稿" });
+    expect(lifetime.compareDocumentPosition(activate) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
   it("retains a rejected draft, then requires verification before explicitly activating a saved replacement", async () => {
     let state = { ...initial };
     const writes: any[] = [];

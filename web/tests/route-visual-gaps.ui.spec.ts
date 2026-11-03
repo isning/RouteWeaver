@@ -130,10 +130,15 @@ const fixtures: Record<string, unknown> = {
   "/me/collections": collections,
   "/me/overview": overview,
   "/me/profiles": [profile],
+  "/me/profiles/visual-draft/reveal": profile,
+  "/me/resources": [],
+  "/me/platform-entries": [],
+  "/auth/sessions": [],
+  "/admin/accounts": [],
   "/me/outputs": outputs,
 };
 
-async function readOnlyInventory(page: Page) {
+async function readOnlyInventory(page: Page, overrides: Record<string, unknown> = {}) {
   const baseURL = test.info().project.use.baseURL;
   if (
     !baseURL ||
@@ -151,14 +156,14 @@ async function readOnlyInventory(page: Page) {
     }
     if (!url.pathname.startsWith("/api/")) return route.continue();
     const path = url.pathname.slice(4);
-    if (request.method() !== "GET" || !(path in fixtures)) {
+    if (request.method() !== "GET" || !(path in fixtures || path in overrides)) {
       unexpected.push(`${request.method()} ${path}`);
       return route.fulfill({
         status: 503,
         json: { detail: "Unsupported read-only visual fixture request" },
       });
     }
-    return route.fulfill({ json: fixtures[path] });
+    return route.fulfill({ json: overrides[path] ?? fixtures[path] });
   });
   return unexpected;
 }
@@ -399,5 +404,121 @@ for (const width of [1440, 390]) {
       ),
       contentType: "application/json",
     });
+  });
+}
+
+async function settleSectionNavigation(page: Page) {
+  await page.evaluate(() => new Promise<void>(resolve => {
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+  }));
+}
+
+// Real production composition with read-only fixtures: context is navigation or
+// existing account usage, never fabricated telemetry. Geometry awaits CI.
+for (const width of [1440, 1280, 1024, 390, 320]) {
+  test(`contextual page composition preserves local tasks at ${width}`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: width === 320 ? 480 : 900 });
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    const unexpected = await readOnlyInventory(page, { "/me/overview": {
+      ...overview,
+      quotaBytes: 100 * 1024 ** 3, remainingBytes: 75 * 1024 ** 3,
+      service: { id: "visual-service", name: "跨区域协作与远程办公服务 International-Remote-Workspace", quotaBytes: 100 * 1024 ** 3, routeIds: ["visual-route"], cycle: { mode: "monthly", timezone: "UTC+8" } },
+      usage: { rawBytes: 20 * 1024 ** 3, weightedBytes: 25 * 1024 ** 3 },
+      cycle: { nextReset: "2026-12-01T00:00:00+08:00", timezone: "UTC+8" },
+      routes: [{ id: "visual-route", name: "欧洲与亚太协作线路 LongRemoteWorkspaceConnection", rateMicros: 1500000 }],
+    } });
+    const assertLayout = async (navigation: boolean) => {
+      const layout = page.locator(".context-layout:visible").first();
+      const primary = (await layout.locator(":scope > .page-primary").boundingBox())!;
+      const rail = (await layout.locator(":scope > .page-context").boundingBox())!;
+      if (width >= 1280) {
+        expect(primary.width).toBeGreaterThanOrEqual(640);
+        expect(rail.x).toBeGreaterThanOrEqual(primary.x + primary.width);
+        expect(rail.x + rail.width).toBeLessThanOrEqual(width);
+      } else if (navigation) expect(rail.y + rail.height).toBeLessThanOrEqual(primary.y);
+      else expect(primary.y + primary.height).toBeLessThanOrEqual(rail.y);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+    };
+    await page.goto("/#settings");
+    const name = page.getByRole("textbox", { name: "平台名称", exact: true });
+    await expect(name).toHaveValue("协作平台");
+    const index = page.getByRole("navigation", { name: "本页设置", exact: true });
+    await expect(index).toBeVisible();
+    await assertLayout(true);
+    await page.screenshot({ path: info.outputPath(`context-settings-${width}.png`), fullPage: true });
+    await name.fill("未保存的平台信息");
+    const domain = page.getByRole("textbox", { name: "订阅域名草稿", exact: true });
+    await domain.fill("https://draft.example.test");
+    const historyBefore = await page.evaluate(() => ({ hash: location.hash, length: history.length }));
+    const goDomain = index.getByRole("button", { name: "前往订阅域名", exact: true });
+    await goDomain.focus();
+    await page.keyboard.press("Enter");
+    const domainSection = page.getByRole("region", { name: "订阅域名设置", exact: true });
+    await settleSectionNavigation(page);
+    await expect(domainSection).toBeFocused();
+    await expect(goDomain).toHaveAttribute("aria-current", "location");
+    await expect(page.getByRole("alertdialog")).toHaveCount(0);
+    expect(await page.evaluate(() => ({ hash: location.hash, length: history.length }))).toEqual(historyBefore);
+    await expect(name).toHaveValue("未保存的平台信息");
+    await expect(domain).toHaveValue("https://draft.example.test");
+    // Restore only the two edited inputs before a real workspace navigation.
+    await name.fill("协作平台");
+    await domain.fill("");
+    await page.getByRole("tab", { name: "备份与恢复", exact: true }).click();
+    await assertLayout(true);
+    const restoreLink = page.getByRole("navigation", { name: "本页备份任务", exact: true }).getByRole("button", { name: "前往恢复备份", exact: true });
+    await restoreLink.focus();
+    await page.keyboard.press("Enter");
+    await settleSectionNavigation(page);
+    await expect(page.getByRole("region", { name: "恢复备份设置", exact: true })).toBeFocused();
+    await expect(restoreLink).toHaveAttribute("aria-current", "location");
+    await page.screenshot({ path: info.outputPath(`context-backup-${width}.png`), fullPage: true });
+    await page.goto("/#account-security");
+    const securityIndex = page.getByRole("navigation", { name: "本页账号设置", exact: true });
+    await expect(securityIndex).toBeVisible();
+    await assertLayout(true);
+    await securityIndex.getByRole("button", { name: "前往登录会话", exact: true }).click();
+    await expect(page.getByRole("region", { name: "登录会话设置", exact: true })).toBeFocused();
+    await page.screenshot({ path: info.outputPath(`context-account-security-${width}.png`), fullPage: true });
+    await page.goto("/#subscriptions");
+    await expect(page.getByRole("heading", { name: "平台服务用量", exact: true })).toHaveCount(1);
+    await assertLayout(false);
+    await page.screenshot({ path: info.outputPath(`context-subscriptions-${width}.png`), fullPage: true });
+    const usage = page.locator(".page-context");
+    const details = usage.getByRole("button", { name: "用量与周期明细", exact: true });
+    await details.click();
+    await expect(details).toHaveAttribute("aria-expanded", "true");
+    await usage.getByRole("button", { name: "平台提供的线路 · 1", exact: true }).click();
+    await expect(usage.getByText("欧洲与亚太协作线路 LongRemoteWorkspaceConnection", { exact: true })).toBeVisible();
+    for (const inner of await usage.locator('[data-slot="card-header"], [data-slot="card-content"], .route-option').all()) {
+      expect(await inner.evaluate(el => el.scrollWidth)).toBeLessThanOrEqual((await inner.boundingBox())!.width + 1);
+    }
+    await page.screenshot({ path: info.outputPath(`context-usage-expanded-${width}.png`), fullPage: true });
+    await page.setViewportSize({ width: width >= 1280 ? 390 : 1280, height: 900 });
+    await expect(details).toHaveAttribute("aria-expanded", "true");
+    await expect(page.getByRole("heading", { name: "平台服务用量", exact: true })).toHaveCount(1);
+    await page.setViewportSize({ width, height: width === 320 ? 480 : 900 });
+    await page.getByRole("button", { name: "编辑配置", exact: true }).click();
+    const profileIndex = page.getByRole("navigation", { name: "配置内容", exact: true });
+    await expect(profileIndex).toBeVisible();
+    await assertLayout(true);
+    await page.screenshot({ path: info.outputPath(`context-profile-${width}.png`), fullPage: true });
+    const runtimeLink = profileIndex.getByRole("button", { name: "前往运行设置", exact: true });
+    await runtimeLink.focus();
+    await page.keyboard.press("Enter");
+    const runtime = page.getByRole("tab", { name: "运行设置", exact: true });
+    await settleSectionNavigation(page);
+    await expect(runtime).toBeFocused();
+    await expect(runtime).toHaveAttribute("aria-selected", "true");
+    await expect(runtimeLink).toHaveAttribute("aria-current", "location");
+    const strip = (await page.locator(".profile-editor-tools [role=tablist]").boundingBox())!;
+    const panel = (await page.getByRole("tabpanel", { name: "运行设置", exact: true }).boundingBox())!;
+    expect(panel.y - strip.y - strip.height).toBeGreaterThanOrEqual(0);
+    expect(panel.y - strip.y - strip.height).toBeLessThanOrEqual(32);
+    expect(strip.y).toBeGreaterThanOrEqual((await page.locator(".profile-publish-action").boundingBox())!.height);
+    await page.locator(".profile-intent-task").evaluate(el => el.scrollIntoView({ block: "start" }));
+    await settleSectionNavigation(page);
+    await expect(profileIndex.getByRole("button", { name: "前往连接与流量", exact: true })).toHaveAttribute("aria-current", "location");
+    expect(unexpected).toEqual([]);
   });
 }

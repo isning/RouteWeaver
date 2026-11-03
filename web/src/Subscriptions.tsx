@@ -1,3 +1,4 @@
+import { ContextLayout } from "@/ui-patterns/page-layout";
 import { groupSubscriptionInventory } from "./subscription-inventory";
 import { ResourceToolbar, SearchField } from "@/ui-patterns/resource-toolbar";
 import type { ReactNode } from "react";
@@ -829,6 +830,187 @@ export function SubscriptionsPage({
         />
       </Suspense>
     );
+  const serviceContext = (
+      <div className="subscription-service-context space-y-3">
+        <QueryState
+          loading={query.isPending}
+          paused={query.isPaused}
+          loadingLayout="summary"
+          error={query.error}
+          retry={() => query.refetch()}
+        >
+          {data && (
+            <Card className="subscription-usage gap-3 py-4">
+              <CardHeader className="flex min-w-0 flex-col gap-2">
+                <CardTitle
+                  className="text-sm font-medium"
+                  role="heading"
+                  aria-level={2}
+                >
+                  平台服务用量
+                </CardTitle>
+                {data.service?.name && (
+                  <CardDescription className="min-w-0 wrap-anywhere">{data.service.name}</CardDescription>
+                )}
+                <CardAction>
+                  <OverviewPolicyStatus value={data.status} />
+                </CardAction>
+              </CardHeader>
+              <CardContent className="min-w-0 space-y-3 wrap-anywhere">
+                {data.status === "paused" && (
+                  <p className="muted text-sm text-muted-foreground">
+                    如需恢复平台服务，请联系管理员检查服务授权。
+                  </p>
+                )}
+                <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+                  <dl className="space-y-1">
+                    <dt className="text-xs text-muted-foreground">剩余额度</dt>
+                    <dd className="text-xl font-semibold tracking-tight tabular-nums">
+                      {quota === 0 ? "不限额" : bytesLabel(remaining)}
+                    </dd>
+                  </dl>
+                  <dl className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
+                    <div className="flex items-baseline gap-2">
+                      <dt className="text-muted-foreground">已用额度</dt>
+                      <dd className="font-medium tabular-nums">
+                        {bytesLabel(used)}
+                      </dd>
+                    </div>
+                    <div className="flex items-baseline gap-2">
+                      <dt className="text-muted-foreground">总额度</dt>
+                      <dd className="font-medium tabular-nums">
+                        {quota === 0 ? "不限额" : bytesLabel(quota)}
+                      </dd>
+                    </div>
+                  </dl>
+                </div>
+                {percent !== undefined && (
+                  <Progress value={percent} aria-label="本周期额度使用比例" />
+                )}
+                {data.accountingPending && (
+                  <p
+                    className="muted text-sm text-muted-foreground"
+                    role="status"
+                  >
+                    额度正在核对，稍后更新。
+                  </p>
+                )}
+                <Accordion type="multiple">
+                  {[
+                    {
+                      key: "usage-details",
+                      label: "用量与周期明细",
+                      children: (
+                        <>
+                          <KeyValue label="本周期实际流量">
+                            {bytesLabel(data.usage?.rawBytes)}
+                          </KeyValue>
+                          <KeyValue label="下次重置">
+                            {data.cycle?.nextReset
+                              ? dateLabel(
+                                  data.cycle.nextReset,
+                                  data.cycle.timezone,
+                                )
+                              : data.cycle
+                                ? "不自动重置"
+                                : "尚未设置"}
+                            {reset && `（还有 ${reset}）`}
+                          </KeyValue>
+                          <KeyValue label="周期时区">
+                            {data.cycle?.timezone || "\u2014"}
+                          </KeyValue>
+                          <KeyValue label="服务到期">
+                            {dateLabel(
+                              data.entitlement?.expiresAt ||
+                                data.user?.expiresAt,
+                            )}
+                          </KeyValue>
+                          <p className="muted text-sm text-muted-foreground">
+                            实际流量按所用线路的倍率扣除额度。
+                          </p>
+                        </>
+                      ),
+                    },
+                  ].map((section) => (
+                    <AccordionItem
+                      key={section.key}
+                      value={String(section.key)}
+                      disabled={
+                        "collapsible" in section &&
+                        section.collapsible === "disabled"
+                      }
+                    >
+                      <AccordionTrigger className="py-2">
+                        {section.label}
+                      </AccordionTrigger>
+                      <AccordionContent
+                        forceMount
+                        className="data-[state=closed]:hidden"
+                      >
+                        {section.children}
+                      </AccordionContent>
+                    </AccordionItem>
+                  ))}
+                </Accordion>
+              </CardContent>
+            </Card>
+          )}
+        </QueryState>
+        {!!data?.routes?.length && (
+          <Accordion className="available-routes space-y-4" type="multiple">
+            {[
+              {
+                key: "routes",
+                label: `平台提供的线路 · ${data.routes.length}`,
+                children: (
+                  <div className="route-options grid gap-3">
+                    {data.routes.map((route) => (
+                      <div
+                        className="route-option grid grid-cols-[auto_minmax(0,1fr)] items-start gap-3 rounded-lg border p-3"
+                        key={route.id}
+                      >
+                        <span
+                          className="route-symbol rounded-md bg-muted p-2"
+                          aria-hidden="true"
+                        >
+                          ↗
+                        </span>
+                        <div className="min-w-0 wrap-anywhere">
+                          <h3>{route.name}</h3>
+                          <p>已为你的账号开通</p>
+                        </div>
+                        <Badge variant="secondary" className="col-start-2 justify-self-start">
+                          {(
+                            (route.rateMicros ?? 1000000) / 1000000
+                          ).toLocaleString()}
+                          ×
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                ),
+              },
+            ].map((section) => (
+              <AccordionItem
+                key={section.key}
+                value={String(section.key)}
+                disabled={
+                  "collapsible" in section && section.collapsible === "disabled"
+                }
+              >
+                <AccordionTrigger>{section.label}</AccordionTrigger>
+                <AccordionContent
+                  forceMount
+                  className="data-[state=closed]:hidden"
+                >
+                  {section.children}
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+        )}
+      </div>
+  );
   return (
     <div
       className="subscription-workspace space-y-6"
@@ -860,6 +1042,7 @@ export function SubscriptionsPage({
           </ActionButton>
         }
       />
+      <ContextLayout rail={serviceContext}>
       <ErrorNotice error={detailOutput ? null : editError || actionError} />
       {profileScope && (
         <div className="subscription-scope space-y-4" role="status">
@@ -1530,185 +1713,8 @@ export function SubscriptionsPage({
           setCompletedAccess(null);
         }}
       />
-      <div className="subscription-service-context space-y-3">
-        <QueryState
-          loading={query.isPending}
-          paused={query.isPaused}
-          loadingLayout="summary"
-          error={query.error}
-          retry={() => query.refetch()}
-        >
-          {data && (
-            <Card className="subscription-usage gap-3 py-4">
-              <CardHeader>
-                <CardTitle
-                  className="text-sm font-medium"
-                  role="heading"
-                  aria-level={2}
-                >
-                  平台服务用量
-                </CardTitle>
-                {data.service?.name && (
-                  <CardDescription>{data.service.name}</CardDescription>
-                )}
-                <CardAction>
-                  <OverviewPolicyStatus value={data.status} />
-                </CardAction>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {data.status === "paused" && (
-                  <p className="muted text-sm text-muted-foreground">
-                    如需恢复平台服务，请联系管理员检查服务授权。
-                  </p>
-                )}
-                <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
-                  <dl className="space-y-1">
-                    <dt className="text-xs text-muted-foreground">剩余额度</dt>
-                    <dd className="text-xl font-semibold tracking-tight tabular-nums">
-                      {quota === 0 ? "不限额" : bytesLabel(remaining)}
-                    </dd>
-                  </dl>
-                  <dl className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
-                    <div className="flex items-baseline gap-2">
-                      <dt className="text-muted-foreground">已用额度</dt>
-                      <dd className="font-medium tabular-nums">
-                        {bytesLabel(used)}
-                      </dd>
-                    </div>
-                    <div className="flex items-baseline gap-2">
-                      <dt className="text-muted-foreground">总额度</dt>
-                      <dd className="font-medium tabular-nums">
-                        {quota === 0 ? "不限额" : bytesLabel(quota)}
-                      </dd>
-                    </div>
-                  </dl>
-                </div>
-                {percent !== undefined && (
-                  <Progress value={percent} aria-label="本周期额度使用比例" />
-                )}
-                {data.accountingPending && (
-                  <p
-                    className="muted text-sm text-muted-foreground"
-                    role="status"
-                  >
-                    额度正在核对，稍后更新。
-                  </p>
-                )}
-                <Accordion type="multiple">
-                  {[
-                    {
-                      key: "usage-details",
-                      label: "用量与周期明细",
-                      children: (
-                        <>
-                          <KeyValue label="本周期实际流量">
-                            {bytesLabel(data.usage?.rawBytes)}
-                          </KeyValue>
-                          <KeyValue label="下次重置">
-                            {data.cycle?.nextReset
-                              ? dateLabel(
-                                  data.cycle.nextReset,
-                                  data.cycle.timezone,
-                                )
-                              : data.cycle
-                                ? "不自动重置"
-                                : "尚未设置"}
-                            {reset && `（还有 ${reset}）`}
-                          </KeyValue>
-                          <KeyValue label="周期时区">
-                            {data.cycle?.timezone || "\u2014"}
-                          </KeyValue>
-                          <KeyValue label="服务到期">
-                            {dateLabel(
-                              data.entitlement?.expiresAt ||
-                                data.user?.expiresAt,
-                            )}
-                          </KeyValue>
-                          <p className="muted text-sm text-muted-foreground">
-                            实际流量按所用线路的倍率扣除额度。
-                          </p>
-                        </>
-                      ),
-                    },
-                  ].map((section) => (
-                    <AccordionItem
-                      key={section.key}
-                      value={String(section.key)}
-                      disabled={
-                        "collapsible" in section &&
-                        section.collapsible === "disabled"
-                      }
-                    >
-                      <AccordionTrigger className="py-2">
-                        {section.label}
-                      </AccordionTrigger>
-                      <AccordionContent
-                        forceMount
-                        className="data-[state=closed]:hidden"
-                      >
-                        {section.children}
-                      </AccordionContent>
-                    </AccordionItem>
-                  ))}
-                </Accordion>
-              </CardContent>
-            </Card>
-          )}
-        </QueryState>
-        {!!data?.routes?.length && (
-          <Accordion className="available-routes space-y-4" type="multiple">
-            {[
-              {
-                key: "routes",
-                label: `平台提供的线路 · ${data.routes.length}`,
-                children: (
-                  <div className="route-options grid gap-3 sm:grid-cols-2">
-                    {data.routes.map((route) => (
-                      <div
-                        className="route-option flex items-center gap-3 rounded-lg border p-4"
-                        key={route.id}
-                      >
-                        <span
-                          className="route-symbol rounded-md bg-muted p-2"
-                          aria-hidden="true"
-                        >
-                          ↗
-                        </span>
-                        <div>
-                          <h3>{route.name}</h3>
-                          <p>已为你的账号开通</p>
-                        </div>
-                        <Badge variant="secondary">
-                          {(
-                            (route.rateMicros ?? 1000000) / 1000000
-                          ).toLocaleString()}
-                          ×
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                ),
-              },
-            ].map((section) => (
-              <AccordionItem
-                key={section.key}
-                value={String(section.key)}
-                disabled={
-                  "collapsible" in section && section.collapsible === "disabled"
-                }
-              >
-                <AccordionTrigger>{section.label}</AccordionTrigger>
-                <AccordionContent
-                  forceMount
-                  className="data-[state=closed]:hidden"
-                >
-                  {section.children}
-                </AccordionContent>
-              </AccordionItem>
-            ))}
-          </Accordion>
-        )}
-      </div>
+
+      </ContextLayout>
     </div>
   );
 }

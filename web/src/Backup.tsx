@@ -1,3 +1,4 @@
+import { ContextLayout, PageSection, SectionIndex } from "@/ui-patterns/page-layout";
 import { BackupCapacity } from "./BackupCapacity";
 import { PasswordInput } from "@/ui-patterns/password-input";
 import { TaskDialog } from "@/ui-patterns/task-overlays";
@@ -47,6 +48,7 @@ const backupKindLabels = new Map<string, string>([
 ]);
 const restoreConfirmationPhrase = "恢复到新数据库";
 export function BackupSettings() {
+  const sectionID = useId();
     const fileInputID = useId();
     const fileDescriptionID = useId();
     const uploadDescriptionID = useId();
@@ -221,7 +223,20 @@ export function BackupSettings() {
         }
     };
     return (<div className="grid gap-6" role="region" aria-label="备份与恢复">
-      <Section title="完整加密备份" className="max-w-3xl" description="加密下载账号、配置、历史及恢复凭据。">
+      <ContextLayout
+        navigation
+        rail={
+          <SectionIndex
+            label="本页备份任务"
+            sections={[
+              { id: `${sectionID}-backup-export`, label: "完整加密备份" },
+              { id: `${sectionID}-backup-restore`, label: "恢复备份" },
+            ]}
+          />
+        }
+      >
+      <PageSection id={`${sectionID}-backup-export`} label="完整加密备份设置">
+      <Section title="完整加密备份" description="加密下载账号、配置、历史及恢复凭据。">
           <ActionButton leadingIcon={<DownloadOutlined aria-hidden="true"/>} onClick={() => {
             create.reset();
             form.resetFields();
@@ -231,7 +246,9 @@ export function BackupSettings() {
           </ActionButton>
         <BackupCapacity />
       </Section>
-      <Section title="恢复备份" className="max-w-3xl" description="恢复到新数据库，不覆盖当前数据，也不会自动切换服务。">
+      </PageSection>
+      <PageSection id={`${sectionID}-backup-restore`} label="恢复备份设置">
+      <Section title="恢复备份" description="恢复到新数据库，不覆盖当前数据，也不会自动切换服务。">
         <div className="settings-form backup-restore-form max-w-[38.75rem] space-y-5">
           <ErrorNotice error={fileError || inspect.error}/>
           <ErrorNotice error={restoreError}/>
@@ -363,6 +380,8 @@ export function BackupSettings() {
             </div>)}
         </div>
       </Section>
+      </PageSection>
+      </ContextLayout>
       <TaskDialog title="创建加密备份" open={createOpen} footer={null} onOpenChange={open => {
             if (!open)
                 (() => {

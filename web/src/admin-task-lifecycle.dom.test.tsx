@@ -429,6 +429,31 @@ it("shows fixed platform policies as values and saves their complete payload wit
   expect(within(settings).getByText("UTC+8")).toBeTruthy();
 });
 
+it("navigates settings sections without leaving or saving either dirty draft", async () => {
+  const state = fixture();
+  history.replaceState(null, "", "#settings");
+  mount();
+  const name = await screen.findByRole("textbox", { name: "平台名称" });
+  fireEvent.change(name, { target: { value: "Retained local name" } });
+  const domain = await screen.findByRole("textbox", { name: "订阅域名草稿" });
+  fireEvent.change(domain, { target: { value: "https://draft.example.test" } });
+  const before = { hash: location.hash, length: history.length };
+  const index = screen.getByRole("navigation", { name: "本页设置" });
+  const go = within(index).getByRole("button", { name: "前往订阅域名" });
+  go.focus();
+  await userEvent.keyboard("{Enter}");
+  expect(document.activeElement?.getAttribute("aria-label")).toBe("订阅域名设置");
+  expect(location.hash).toBe(before.hash);
+  expect(history.length).toBe(before.length);
+  expect(screen.queryByRole("alertdialog")).toBeNull();
+  expect((name as HTMLInputElement).value).toBe("Retained local name");
+  expect((domain as HTMLInputElement).value).toBe("https://draft.example.test");
+  expect(state.writes).toEqual([]);
+  expect(screen.getByText("用于记录此控制平面的名称。")).toBeTruthy();
+  expect(screen.getByText("新账号须由管理员生成邀请后创建。")).toBeTruthy();
+  expect(screen.getByText("流量周期按 UTC+8 计算；具体重置方式在服务方案或用户授权中设置。")).toBeTruthy();
+});
+
 it("protects unsaved basic settings through real workspace navigation", async () => {
   fixture();
   history.replaceState(null, "", "#settings");

@@ -1,3 +1,4 @@
+import { ContextLayout, PageSection, SectionIndex } from "@/ui-patterns/page-layout";
 import { useEffect, useId, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -96,6 +97,7 @@ function AccountSecurityTask({
   onSignedOut,
 }: Props) {
   const client = useQueryClient();
+  const sectionID = useId();
   const confirm = useConfirm();
   const active = useRef(true);
   useEffect(() => {
@@ -175,7 +177,23 @@ function AccountSecurityTask({
           管理员已重置你的密码。更换后才能继续访问订阅和其他工作区内容。
         </Notice>
       )}
-      <Section title="修改密码" className="max-w-3xl">
+      <ContextLayout
+        navigation
+        rail={
+          <SectionIndex
+            label="本页账号设置"
+            sections={[
+              { id: `${sectionID}-account-password`, label: "修改密码" },
+              { id: `${sectionID}-account-sessions`, label: "登录会话" },
+              ...(session.user.role === "admin" && !session.user.passwordChangeRequired
+                ? [{ id: `${sectionID}-account-recovery`, label: "账号恢复与退役" }]
+                : []),
+            ]}
+          />
+        }
+      >
+      <PageSection id={`${sectionID}-account-password`} label="修改密码设置">
+      <Section title="修改密码">
         <AppForm
           form={form}
           disabled={pending}
@@ -228,9 +246,10 @@ function AccountSecurityTask({
           </ActionButton>
         </AppForm>
       </Section>
+      </PageSection>
+      <PageSection id={`${sectionID}-account-sessions`} label="登录会话设置">
       <Section
         title="登录会话"
-        className="max-w-3xl"
         extra={
           <ActionButton
             variant="outline"
@@ -323,10 +342,14 @@ function AccountSecurityTask({
           </ActionButton>
         </AppForm>
       </Section>
+      </PageSection>
       {session.user.role === "admin" &&
         !session.user.passwordChangeRequired && (
-          <AccountRecovery session={session} />
+          <PageSection id={`${sectionID}-account-recovery`} label="账号恢复与退役设置">
+            <AccountRecovery session={session} />
+          </PageSection>
         )}
+      </ContextLayout>
     </>
   );
 }
