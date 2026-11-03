@@ -247,7 +247,8 @@ for (const width of [1280, 390]) {
     await expect(plan).toHaveCount(0);
 
     await page.goto("/#settings");
-    await expect(page.getByRole("textbox", { name: "平台名称", exact: true })).toHaveValue("协作平台");
+    await expect(page.getByRole("button", { name: "编辑平台名称", exact: true })).toBeVisible();
+    await expect(page.getByRole("form", { name: "平台基本设置" }).getByText("协作平台", { exact: true })).toBeVisible();
     const settingsForm = page.getByRole("form", { name: "平台基本设置", exact: true });
     await expect(settingsForm.getByRole("combobox")).toHaveCount(0);
     await expect(page.getByRole("heading", { name: "基本设置", exact: true })).toHaveCount(0);
@@ -355,9 +356,8 @@ for (const width of [1440, 390]) {
           await expect(
             main.getByRole("tab", { name: "基本设置", exact: true }),
           ).toHaveAttribute("aria-selected", "true");
-          await expect(
-            main.getByRole("textbox", { name: "平台名称", exact: true }),
-          ).toHaveValue("协作平台");
+          await expect(main.getByRole("button", { name: "编辑平台名称", exact: true })).toBeVisible();
+          await expect(main.getByRole("form", { name: "平台基本设置" }).getByText("协作平台", { exact: true })).toBeVisible();
         }
         if (surface.route === "subscriptions") {
           await expect(
@@ -454,6 +454,46 @@ for (const width of [3440, 2880, 2560, 2304, 1920, 1536, 1440, 1366, 1280, 1024,
       routes: [{ id: "visual-route", name: "欧洲与亚太协作线路 LongRemoteWorkspaceConnection", rateMicros: 1500000 }],
     } });
     const assertLayout = async (navigation: boolean) => {
+      const workspace = page.locator('.workspace-frame[data-presentation="workspace"]');
+      if (await workspace.count()) {
+        const frame = (await workspace.boundingBox())!;
+        const canvas = (await workspace.locator('.workspace-canvas').boundingBox())!;
+        const content = (await workspace.locator('.workspace-canvas > .workspace-content').boundingBox())!;
+        const header = (await workspace.locator('.workspace-header > .workspace-content').boundingBox())!;
+        const pane = (await workspace.locator('.workspace-context').boundingBox())!;
+        const grid = (await workspace.locator('.workspace-grid').boundingBox())!;
+        const main = (await page.locator('#main').boundingBox())!;
+        const viewport = await page.evaluate(() => document.documentElement.clientWidth);
+        const sideBySide = frame.width >= (navigation ? 864 : 1120);
+        expect(frame.x).toBeCloseTo(main.x, 0);
+        expect(frame.x + frame.width).toBeCloseTo(viewport, 0);
+        expect(content.width).toBeLessThanOrEqual(navigation ? 832 : 1152);
+        expect(content.x - canvas.x).toBeCloseTo(canvas.x + canvas.width - content.x - content.width, 0);
+        expect(header.x).toBeCloseTo(content.x, 0);
+        expect(header.width).toBeCloseTo(content.width, 0);
+        if (sideBySide) {
+          expect(pane.width).toBeCloseTo(navigation ? 224 : 352, 0);
+          expect(canvas.width).toBeGreaterThanOrEqual(navigation ? 640 : 768);
+          expect(pane.x).toBeCloseTo(canvas.x + canvas.width, 0);
+          expect(pane.x + pane.width).toBeCloseTo(viewport, 0);
+          expect(pane.y).toBeCloseTo(grid.y, 0);
+          expect(pane.height).toBeCloseTo(grid.height, 0);
+          const paneStyle = await workspace.locator('.workspace-context').evaluate(element => ({
+            border: getComputedStyle(element).borderLeftWidth,
+            position: getComputedStyle(element).position,
+          }));
+          expect(paneStyle.border).toBe("1px");
+          expect(paneStyle.position).not.toBe("fixed");
+        } else if (navigation) {
+          expect(header.y + header.height).toBeLessThanOrEqual(pane.y);
+          expect(pane.y + pane.height).toBeLessThanOrEqual(canvas.y);
+        } else expect(canvas.y + canvas.height).toBeLessThanOrEqual(pane.y);
+        expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+        await info.attach(`pilot-${navigation ? "settings" : "subscriptions"}-${width}`, {
+          body: JSON.stringify({ frame, canvas, content, header, pane, grid, main, viewport, sideBySide }), contentType: "application/json",
+        });
+        return content;
+      }
       const layout = page.locator(".context-layout:visible").first();
       const primary = (await layout.locator(":scope > .page-primary").boundingBox())!;
       const rail = (await layout.locator(":scope > .page-context").boundingBox())!;
@@ -510,8 +550,10 @@ for (const width of [3440, 2880, 2560, 2304, 1920, 1536, 1440, 1366, 1280, 1024,
       return primary;
     };
     await page.goto("/#settings");
+    const editName = page.getByRole("button", { name: "编辑平台名称", exact: true });
+    await expect(editName).toBeVisible();
     const name = page.getByRole("textbox", { name: "平台名称", exact: true });
-    await expect(name).toHaveValue("协作平台");
+    await expect(name).toHaveCount(0);
     const index = page.getByRole("navigation", { name: "本页设置", exact: true });
     await expect(index).toBeVisible();
     await assertLayout(true);
@@ -529,7 +571,7 @@ for (const width of [3440, 2880, 2560, 2304, 1920, 1536, 1440, 1366, 1280, 1024,
       }
       expect(await pair.evaluate(element => element.scrollWidth)).toBeLessThanOrEqual((await pair.boundingBox())!.width + 1);
     }
-    if ((await page.locator(".context-layout:visible").boundingBox())!.width >= 976) {
+    if ((await page.locator(".workspace-frame").boundingBox())!.width >= 864) {
       const currentSection = index.locator('[aria-current="location"]');
       await expect(currentSection).not.toBeFocused();
       const marker = await currentSection.evaluate(element => {
@@ -546,16 +588,19 @@ for (const width of [3440, 2880, 2560, 2304, 1920, 1536, 1440, 1366, 1280, 1024,
       expect(marker.left).not.toBe("rgba(0, 0, 0, 0)");
       expect(marker.leftWidth).toBe("2px");
     }
-    expect((await name.boundingBox())!.width).toBeLessThanOrEqual(576);
     const cardWithHeading = (heading: string) => page.locator('[data-slot="card"]').filter({
       has: page.getByRole("heading", { name: heading, exact: true }),
     });
     await expectAlignedCards([
-      page.locator('[data-slot="card"]').filter({ has: name }),
+      page.locator('[data-slot="card"]').filter({ has: page.getByRole("form", { name: "平台基本设置" }) }),
       cardWithHeading("订阅域名"),
     ]);
     await page.screenshot({ path: info.outputPath(`context-settings-${width}.png`), fullPage: true });
+    await editName.click();
+    await expect(name).toBeFocused();
+    expect((await name.boundingBox())!.width).toBeLessThanOrEqual(576);
     await name.fill("未保存的平台信息");
+    await page.screenshot({ path: info.outputPath(`pilot-settings-name-edit-${width}.png`) });
     const domain = page.getByRole("textbox", { name: "订阅域名草稿", exact: true });
     await domain.fill("https://draft.example.test");
     const historyBefore = await page.evaluate(() => ({ hash: location.hash, length: history.length }));
@@ -633,7 +678,7 @@ for (const width of [3440, 2880, 2560, 2304, 1920, 1536, 1440, 1366, 1280, 1024,
     expect(titleBox.x).toBeCloseTo(subscriptionPrimary.x, 0);
     if (width >= 1024) expect(createBox.x + createBox.width).toBeCloseTo(subscriptionPrimary.x + subscriptionPrimary.width, 0);
     await page.screenshot({ path: info.outputPath(`context-subscriptions-${width}.png`), fullPage: true });
-    const usage = page.locator(".page-context");
+    const usage = page.getByRole("complementary", { name: "平台服务概览", exact: true });
     const details = usage.getByRole("button", { name: "用量与周期明细", exact: true });
     await details.click();
     await expect(details).toHaveAttribute("aria-expanded", "true");
@@ -641,7 +686,7 @@ for (const width of [3440, 2880, 2560, 2304, 1920, 1536, 1440, 1366, 1280, 1024,
     await expect(usage.getByText("欧洲与亚太协作线路 LongRemoteWorkspaceConnection", { exact: true })).toBeVisible();
     const dataRailIsSideBySide = (await usage.boundingBox())!.width < 400;
     if (width >= 1024 && dataRailIsSideBySide) {
-      expect((await usage.locator('[data-slot="card-content"]').boundingBox())!.width - 32).toBeGreaterThanOrEqual(250);
+      expect((await usage.locator('[data-slot="card-content"]').boundingBox())!.width).toBeGreaterThanOrEqual(300);
     }
     for (const inner of await usage.locator('[data-slot="card-header"], [data-slot="card-content"], .route-option').all()) {
       expect(await inner.evaluate(el => el.scrollWidth)).toBeLessThanOrEqual((await inner.boundingBox())!.width + 1);
@@ -711,24 +756,51 @@ for (const width of [1536, 1920, 2560, 3440]) {
   test(`wide settings frame stays stable from loading to ready at ${width}`, async ({ page }, info) => {
     await page.setViewportSize({ width, height: 900 });
     const unexpected = await readOnlyInventory(page);
+    let releaseModule!: () => void;
+    const moduleGate = new Promise<void>(resolve => { releaseModule = resolve; });
+    await page.route(/\/src\/Admin\.tsx(?:\?.*)?$/, async route => { await moduleGate; await route.continue(); });
     let release!: () => void;
     const gate = new Promise<void>(resolve => { release = resolve; });
     await page.route("**/api/settings", async route => {
       await gate;
       await route.fulfill({ json: fixtures["/settings"] });
     });
-    await page.goto("/#settings");
-    await expect(page.getByRole("status", { name: "正在加载", exact: true })).toBeVisible();
-    const pending = (await page.locator("#main").boundingBox())!;
-    expect(pending.x + pending.width).toBeCloseTo(await page.evaluate(() => document.documentElement.clientWidth), 0);
-    await page.screenshot({ path: info.outputPath(`proportions-settings-loading-${width}.png`) });
-    release();
-    await expect(page.getByRole("textbox", { name: "平台名称", exact: true })).toHaveValue("协作平台");
-    await settleSectionNavigation(page);
-    const ready = (await page.locator("#main").boundingBox())!;
-    expect(ready.x).toBe(pending.x);
-    expect(ready.width).toBe(pending.width);
-    expect(unexpected).toEqual([]);
+    try {
+      await page.goto("/#settings", { waitUntil: "domcontentloaded" });
+      await expect(page.getByRole("status", { name: "正在打开页面", exact: true })).toBeVisible();
+      const moduleRects = await Promise.all([".workspace-frame", ".workspace-header", ".workspace-canvas", ".workspace-context"].map(selector => page.locator(selector).boundingBox()));
+      releaseModule();
+      await expect(page.getByRole("status", { name: "正在加载", exact: true })).toBeVisible();
+      for (const [index, selector] of [".workspace-frame", ".workspace-header", ".workspace-canvas", ".workspace-context"].entries()) {
+        const box = (await page.locator(selector).boundingBox())!;
+        expect(box.x).toBeCloseTo(moduleRects[index]!.x, 0);
+        expect(box.y).toBeCloseTo(moduleRects[index]!.y, 0);
+        expect(box.width).toBeCloseTo(moduleRects[index]!.width, 0);
+      }
+      const pending = (await page.locator("#main").boundingBox())!;
+      const pendingFrame = (await page.locator(".workspace-frame").boundingBox())!;
+      const pendingCanvas = (await page.locator(".workspace-canvas").boundingBox())!;
+      const pendingPane = (await page.locator(".workspace-context").boundingBox())!;
+      expect(pending.x + pending.width).toBeCloseTo(await page.evaluate(() => document.documentElement.clientWidth), 0);
+      await page.screenshot({ path: info.outputPath(`proportions-settings-loading-${width}.png`) });
+      release();
+      await expect(page.getByRole("button", { name: "编辑平台名称", exact: true })).toBeVisible();
+      await expect(page.getByRole("form", { name: "平台基本设置" }).getByText("协作平台", { exact: true })).toBeVisible();
+      await settleSectionNavigation(page);
+      const ready = (await page.locator("#main").boundingBox())!;
+      expect(ready.x).toBe(pending.x);
+      expect(ready.width).toBe(pending.width);
+      for (const [selector, before] of [[".workspace-frame", pendingFrame], [".workspace-canvas", pendingCanvas], [".workspace-context", pendingPane]] as const) {
+        const after = (await page.locator(selector).boundingBox())!;
+        expect(after.x).toBeCloseTo(before.x, 0);
+        expect(after.y).toBeCloseTo(before.y, 0);
+        expect(after.width).toBeCloseTo(before.width, 0);
+      }
+      expect(unexpected).toEqual([]);
+    } finally {
+      releaseModule();
+      release();
+    }
   });
 }
 
@@ -736,23 +808,23 @@ for (const width of [1536, 1920, 2560, 3440]) {
 test("context rails yield space before their primary task becomes cramped", async ({ page }) => {
   const unexpected = await readOnlyInventory(page);
   for (const task of [
-    { route: "settings", navigation: true, widths: [1240, 1260], threshold: 976 },
-    { route: "subscriptions", navigation: false, widths: [1352, 1376], threshold: 1088 },
+    { route: "settings", navigation: true, widths: [1072, 1104], threshold: 864 },
+    { route: "subscriptions", navigation: false, widths: [1336, 1368], threshold: 1120 },
   ]) {
     await page.goto(`/#${task.route}`);
-    await expect(page.locator(".context-layout:visible")).toHaveCount(1);
+    await expect(page.locator(".workspace-grid:visible")).toHaveCount(1);
     const modes: boolean[] = [];
     for (const width of task.widths) {
       await page.setViewportSize({ width, height: 900 });
       await settleSectionNavigation(page);
-      const layout = page.locator(".context-layout:visible");
+      const layout = page.locator(".workspace-grid:visible");
       const frame = (await layout.boundingBox())!;
-      const main = (await layout.locator(":scope > .page-primary").boundingBox())!;
-      const rail = (await layout.locator(":scope > .page-context").boundingBox())!;
+      const main = (await layout.locator(":scope > .workspace-canvas").boundingBox())!;
+      const rail = (await layout.locator(":scope > .workspace-context").boundingBox())!;
       const sideBySide = frame.width >= task.threshold;
       modes.push(sideBySide);
       if (sideBySide) {
-        expect(main.width).toBeGreaterThanOrEqual(776);
+        expect(main.width).toBeGreaterThanOrEqual(task.navigation ? 640 : 768);
         expect(rail.x).toBeGreaterThanOrEqual(main.x + main.width);
       } else if (task.navigation) expect(rail.y + rail.height).toBeLessThanOrEqual(main.y);
       else expect(main.y + main.height).toBeLessThanOrEqual(rail.y);
@@ -761,3 +833,63 @@ test("context rails yield space before their primary task becomes cramped", asyn
   }
   expect(unexpected).toEqual([]);
 });
+
+for (const width of [1440, 390]) {
+  test(`pilot name editing retains pending drafts and owns only its focus at ${width}`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    const unexpected = await readOnlyInventory(page);
+    const writes: unknown[] = [];
+    let release!: () => void;
+    let pending = new Promise<void>(resolve => { release = resolve; });
+    await page.route("**/api/settings", async route => {
+      if (route.request().method() === "GET") return route.fulfill({ json: fixtures["/settings"] });
+      expect(route.request().method()).toBe("PUT");
+      const submitted = route.request().postDataJSON();
+      writes.push(submitted);
+      await pending;
+      return route.fulfill({ json: submitted });
+    });
+    try {
+      await page.goto("/#settings");
+      const edit = page.getByRole("button", { name: "编辑平台名称", exact: true });
+      await edit.click();
+      const name = page.getByRole("textbox", { name: "平台名称", exact: true });
+      await expect(name).toBeFocused();
+      await name.fill("第一次提交");
+      const save = page.getByRole("button", { name: "保存设置", exact: true });
+      await save.click();
+      await expect(save).toHaveAttribute("aria-busy", "true");
+      await expect(save).toBeFocused();
+      await page.keyboard.press("Enter");
+      await name.fill("保存中的新草稿");
+      release();
+      await expect(save).not.toHaveAttribute("aria-busy", "true");
+      await expect(name).toHaveValue("保存中的新草稿");
+      await expect(name).toBeFocused();
+      expect(writes).toEqual([{ name: "第一次提交", registration: "invite", timezone: "UTC+8" }]);
+      await page.getByRole("button", { name: "取消名称修改", exact: true }).click();
+      await expect(edit).toBeFocused();
+      await expect(page.getByRole("form", { name: "平台基本设置" }).getByText("第一次提交", { exact: true })).toBeVisible();
+      await edit.click();
+      pending = new Promise<void>(resolve => { release = resolve; });
+      await name.fill("第二次提交");
+      await save.click();
+      await expect(save).toHaveAttribute("aria-busy", "true");
+      const backup = page.getByRole("tab", { name: "备份与恢复", exact: true });
+      await backup.click();
+      release();
+      await expect(page.getByText("平台设置已保存", { exact: true })).toBeVisible();
+      await expect(backup).toBeFocused();
+      await page.getByRole("tab", { name: "基本设置", exact: true }).click();
+      await expect(name).toHaveCount(0);
+      await expect(page.getByRole("form", { name: "平台基本设置" }).getByText("第二次提交", { exact: true })).toBeVisible();
+      expect(writes).toEqual([
+        { name: "第一次提交", registration: "invite", timezone: "UTC+8" },
+        { name: "第二次提交", registration: "invite", timezone: "UTC+8" },
+      ]);
+      expect(unexpected).toEqual([]);
+    } finally {
+      release();
+    }
+  });
+}

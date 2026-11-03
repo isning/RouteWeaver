@@ -1,5 +1,8 @@
+import { Tabs } from "@/components/ui/tabs";
+import { PlatformSettingsTabList } from "./platform-settings-navigation";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { WorkspaceFrame } from "./workspace-frame";
 export type LoadingLayout =
   "table" | "cards" | "form" | "field" | "subscriptions" | "summary";
 /** Placeholders describe layout, never counts, health, or successful reads. */
@@ -144,6 +147,44 @@ export function PageSkeleton({ page }: { page: string }) {
       : page === "servers"
         ? "cards"
         : "table";
+  if (page === "subscriptions" || page === "settings") {
+    return (
+      <div role="status" aria-label="正在打开页面" aria-busy="true">
+        <span className="sr-only">正在打开页面</span>
+        <WorkspaceFrame
+          contentKind={page === "settings" ? "settings" : "list"}
+          contextKind={page === "settings" ? "navigation" : "data"}
+          header={
+            <div
+              aria-hidden="true"
+              className="flex items-center justify-between gap-4"
+            >
+              <Skeleton className="h-7 w-40 sm:h-8" />
+              {page === "subscriptions" && <Skeleton className="h-11 w-28" />}
+            </div>
+          }
+          localNavigation={
+            page === "settings" ? (
+              <Tabs defaultValue="basic">
+                <PlatformSettingsTabList disabled />
+              </Tabs>
+            ) : undefined
+          }
+          context={
+            <div aria-hidden="true">
+              <ContentSkeleton
+                layout={page === "settings" ? "field" : "summary"}
+              />
+            </div>
+          }
+        >
+          <div aria-hidden="true">
+            <ContentSkeleton layout={layout} />
+          </div>
+        </WorkspaceFrame>
+      </div>
+    );
+  }
   return (
     <div
       role="status"

@@ -1,4 +1,7 @@
-import { ContextLayout, PageSection, SectionIndex } from "@/ui-patterns/page-layout";
+import { PlatformSettingsTabList } from "@/ui-patterns/platform-settings-navigation";
+import type { ReactNode } from "react";
+import { WorkspaceFrame } from "@/ui-patterns/workspace-frame";
+import { PageSection, SectionIndex } from "@/ui-patterns/page-layout";
 import { ResourceToolbar, SearchField } from "@/ui-patterns/resource-toolbar";
 import { Button } from "@/components/ui/button";
 import {
@@ -222,6 +225,52 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
   const routes = data?.routes || [];
   const match = (name: string) =>
     name.toLowerCase().includes(search.toLowerCase());
+  if (page === "settings") {
+    const readNotice =
+      query.error && data ? (
+        <Notice
+          tone="error"
+          title="暂时无法刷新设置"
+          action={
+            <ActionButton
+              variant="outline"
+              pending={query.isFetching}
+              onClick={() => query.refetch()}
+            >
+              重新读取设置
+            </ActionButton>
+          }
+        >
+          {query.error.message}
+        </Notice>
+      ) : null;
+    return data ? (
+      <PlatformSettingsTabs
+        initial={data.settings || {}}
+        readNotice={readNotice}
+      />
+    ) : (
+      <WorkspaceFrame
+        contentKind="settings"
+        contextKind="navigation"
+        header={<PageHeader title={meta.title} />}
+        localNavigation={<Tabs defaultValue="basic"><PlatformSettingsTabList disabled /></Tabs>}
+        context={
+          <span className="text-sm text-muted-foreground">本页设置</span>
+        }
+      >
+        <QueryState
+          loading={query.isPending}
+          paused={query.isPaused}
+          loadingLayout="form"
+          error={query.error}
+          retry={() => query.refetch()}
+        >
+          {null}
+        </QueryState>
+      </WorkspaceFrame>
+    );
+  }
   return (
     <>
       <PageHeader
@@ -251,14 +300,9 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
         }
       />
       <ErrorNotice error={error} />
-      {page === "settings" && data && query.error && (
-        <Notice tone="error" title="暂时无法刷新设置" action={
-          <ActionButton variant="outline" pending={query.isFetching} onClick={() => query.refetch()}>重新读取设置</ActionButton>
-        }>{query.error.message}</Notice>
-      )}
       <QueryState
-        loading={query.isPending} paused={query.isPaused} loadingLayout={page === "settings" ? "form" : "table"}
-        error={page === "settings" && data ? null : query.error}
+        loading={query.isPending} paused={query.isPaused} loadingLayout="table"
+        error={query.error}
         retry={() => query.refetch()}
       >
         {data && (
@@ -718,9 +762,6 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
                   )}
                 </Section>
               </>
-            )}
-            {page === "settings" && (
-              <PlatformSettingsTabs initial={data.settings || {}} />
             )}
           </>
         )}
@@ -1645,48 +1686,90 @@ function InviteUser({ open, onClose }: { open: boolean; onClose: () => void }) {
 }
 function PlatformSettingsTabs({
   initial,
+  readNotice,
 }: {
   initial: Record<string, unknown>;
+  readNotice?: ReactNode;
 }) {
   const [activeTab, setActiveTab] = useState("basic");
+  const sectionID = useId();
   const tabs = [
     {
       key: "basic",
       label: "基本设置",
-      children: <Settings initial={initial} />,
+      children: <Settings initial={initial} sectionID={sectionID} />,
     },
     { key: "security", label: "账号安全", children: <SecuritySettings /> },
     { key: "backup", label: "备份与恢复", children: <BackupSettings /> },
   ];
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab}>
-      <TabsList className="flex h-auto max-w-full flex-wrap">
+      <WorkspaceFrame
+        contentKind="settings"
+        contextKind="navigation"
+        contained={activeTab !== "basic"}
+        header={<PageHeader title="平台设置" />}
+        localNavigation={<PlatformSettingsTabList />}
+        context={
+          activeTab === "basic" ? (
+            <SectionIndex
+              presentation="workspace"
+              label="本页设置"
+              sections={[
+                { id: `${sectionID}-platform-information`, label: "平台信息" },
+                { id: `${sectionID}-subscription-domain`, label: "订阅域名" },
+              ]}
+            />
+          ) : undefined
+        }
+      >
+        {readNotice}
         {tabs.map((tab) => (
-          <TabsTrigger key={tab.key} value={tab.key}>
-            {tab.label}
-          </TabsTrigger>
+          <TabsContent
+            key={tab.key}
+            value={tab.key}
+            forceMount={tab.key === "basic" ? true : undefined}
+            hidden={activeTab !== tab.key}
+            className="space-y-6"
+          >
+            {tab.children}
+          </TabsContent>
         ))}
-      </TabsList>
-      {tabs.map((tab) => (
-        <TabsContent
-          key={tab.key}
-          value={tab.key}
-          forceMount={tab.key === "basic" ? true : undefined}
-          hidden={activeTab !== tab.key}
-        >
-          {tab.children}
-        </TabsContent>
-      ))}
+      </WorkspaceFrame>
     </Tabs>
   );
 }
 
-function Settings({ initial }: { initial: Record<string, unknown> }) {
-  const sectionID = useId();
+function Settings({
+  initial,
+  sectionID,
+}: {
+  initial: Record<string, unknown>;
+  sectionID: string;
+}) {
   const [form] = useForm();
   const message = toast;
   const client = useQueryClient();
   const [baseline, setBaseline] = useState(initial);
+  const [editingName, setEditingName] = useState(false);
+  const nameInput = useRef<HTMLInputElement>(null);
+  const nameEditor = useRef<HTMLDivElement>(null);
+  const editName = useRef<HTMLButtonElement>(null);
+  const restoreNameFocus = useRef(false);
+  useLayoutEffect(() => {
+    if (editingName) nameInput.current?.focus();
+    else if (restoreNameFocus.current) {
+      restoreNameFocus.current = false;
+      if (!editName.current?.closest("[hidden], [inert]"))
+        editName.current?.focus();
+    }
+  }, [editingName]);
+  const finishNameEdit = () => {
+    restoreNameFocus.current = !!nameEditor.current?.contains(
+      document.activeElement,
+    );
+    setEditingName(false);
+  };
   const values = useWatch([], { form, preserve: true });
   const currentSettings = values || initial;
   const sameSettings = (
@@ -1724,7 +1807,10 @@ function Settings({ initial }: { initial: Record<string, unknown> }) {
         form.getFieldsValue(true),
         submitted,
       );
-      if (currentMatchesSubmission) form.setFieldsValue(saved);
+      if (currentMatchesSubmission) {
+        form.setFieldsValue(saved);
+        finishNameEdit();
+      }
       message.success(
         currentMatchesSubmission
           ? "平台设置已保存"
@@ -1736,70 +1822,118 @@ function Settings({ initial }: { initial: Record<string, unknown> }) {
     !sameSettings(values || initial, baseline) || save.isPending,
   );
   return (
-    <ContextLayout
-      navigation
-      rail={
-        <SectionIndex
-          label="本页设置"
-          sections={[
-            { id: `${sectionID}-platform-information`, label: "平台信息" },
-            { id: `${sectionID}-subscription-domain`, label: "订阅域名" },
-          ]}
-        />
-      }
-    >
+    <>
       <PageSection id={`${sectionID}-platform-information`} label="平台信息">
-      <Section>
-        <AppForm
-          aria-label="平台基本设置"
-          form={form}
-          initialValues={initial}
-          onFinish={(v) => {
-            if (!save.isPending) save.mutate(structuredClone(v));
-          }}
-          className="settings-form space-y-5"
-        >
-          <ErrorNotice error={save.error} />
-          <AppField name="name" label="平台名称" description="用于记录此控制平面的名称。" className="max-w-xl">
-            <Input />
-          </AppField>
-          {/* Keep fixed policies registered in the complete settings payload. */}
-          <AppField name="registration" hidden>
-            <input type="hidden" />
-          </AppField>
-          <AppField name="timezone" hidden>
-            <input type="hidden" />
-          </AppField>
-          <dl className="divide-y border-y">
-            <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-x-4 gap-y-1.5 py-4 sm:grid-cols-[10rem_minmax(0,1fr)]">
-              <dt className="font-medium">账号注册</dt>
-              <dd className="min-w-0 wrap-anywhere">
-                {currentSettings.registration === "invite"
-                  ? "仅受邀用户"
-                  : String(currentSettings.registration || "未设置")}
-              </dd>
-              <dd className="col-span-2 text-sm leading-relaxed text-muted-foreground sm:col-start-2 sm:col-span-1">新账号须由管理员生成邀请后创建。</dd>
-            </div>
-            <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-x-4 gap-y-1.5 py-4 sm:grid-cols-[10rem_minmax(0,1fr)]">
-              <dt className="font-medium">默认时区</dt>
-              <dd className="min-w-0 wrap-anywhere">{String(currentSettings.timezone || "未设置")}</dd>
-              <dd className="col-span-2 text-sm leading-relaxed text-muted-foreground sm:col-start-2 sm:col-span-1">流量周期按 UTC+8 计算；具体重置方式在服务方案或用户授权中设置。</dd>
-            </div>
-          </dl>
-          <ActionButton
-            type="submit"
-            pending={save.isPending}
-            variant="default"
+        <Section title="平台信息">
+          <AppForm
+            aria-label="平台基本设置"
+            form={form}
+            initialValues={initial}
+            onFinish={(v) => {
+              if (!save.isPending) save.mutate(structuredClone(v));
+            }}
+            className="settings-form space-y-5"
           >
-            保存设置
-          </ActionButton>
-        </AppForm>
-      </Section>
+            <dl hidden={editingName}>
+              <div className="grid items-start gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_8rem]">
+                <dt className="font-medium">
+                  平台名称
+                  <p className="mt-1 text-sm font-normal leading-relaxed text-muted-foreground">
+                    用于记录此控制平面的名称。
+                  </p>
+                </dt>
+                <dd className="min-w-0 wrap-anywhere">
+                  {String(baseline.name || "未设置")}
+                </dd>
+                <dd>
+                  <ActionButton
+                    ref={editName}
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      save.reset();
+                      setEditingName(true);
+                    }}
+                  >
+                    编辑平台名称
+                  </ActionButton>
+                </dd>
+              </div>
+            </dl>
+            <div ref={nameEditor} hidden={!editingName} className="space-y-4">
+              <ErrorNotice error={save.error} />
+              <AppField
+                name="name"
+                label="平台名称"
+                description="用于记录此控制平面的名称。"
+                className="max-w-xl"
+              >
+                <Input ref={nameInput} />
+              </AppField>
+              <div className="flex flex-wrap gap-2">
+                <ActionButton
+                  type="submit"
+                  pending={save.isPending}
+                  keepFocusableWhilePending
+                  variant="default"
+                >
+                  保存设置
+                </ActionButton>
+                <ActionButton
+                  type="button"
+                  disabled={save.isPending}
+                  variant="outline"
+                  onClick={() => {
+                    form.setFieldValue("name", baseline.name);
+                    save.reset();
+                    finishNameEdit();
+                  }}
+                >
+                  取消名称修改
+                </ActionButton>
+              </div>
+            </div>
+            {/* Keep fixed policies registered in the complete settings payload. */}
+            <AppField name="registration" hidden>
+              <input type="hidden" />
+            </AppField>
+            <AppField name="timezone" hidden>
+              <input type="hidden" />
+            </AppField>
+            <dl className="divide-y border-t">
+              <div className="grid items-start gap-4 py-4 last:pb-0 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_8rem]">
+                <dt className="font-medium">
+                  账号注册
+                  <p className="mt-1 text-sm font-normal leading-relaxed text-muted-foreground">
+                    新账号须由管理员生成邀请后创建。
+                  </p>
+                </dt>
+                <dd className="min-w-0 wrap-anywhere">
+                  {currentSettings.registration === "invite"
+                    ? "仅受邀用户"
+                    : String(currentSettings.registration || "未设置")}
+                </dd>
+              </div>
+              <div className="grid items-start gap-4 py-4 last:pb-0 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_8rem]">
+                <dt className="font-medium">
+                  默认时区
+                  <p className="mt-1 text-sm font-normal leading-relaxed text-muted-foreground">
+                    流量周期按 UTC+8
+                    计算；具体重置方式在服务方案或用户授权中设置。
+                  </p>
+                </dt>
+                <dd className="min-w-0 wrap-anywhere">
+                  {String(currentSettings.timezone || "未设置")}
+                </dd>
+              </div>
+            </dl>
+          </AppForm>
+        </Section>
       </PageSection>
       <PageSection id={`${sectionID}-subscription-domain`} label="订阅域名设置">
         <SubscriptionOriginSettings />
       </PageSection>
-    </ContextLayout>
+    </>
   );
 }
 function AuditLog() {

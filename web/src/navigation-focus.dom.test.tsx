@@ -211,6 +211,7 @@ it.each([false, true])(
   "preserves dirty-navigation confirmation ownership when accepted=%s",
   async (accept) => {
     const task = await mobileTask("settings");
+    await userEvent.click(await screen.findByRole("button", { name: "编辑平台名称" }));
     const field = await screen.findByLabelText("平台名称");
     fireEvent.change(field, { target: { value: "Retained settings draft" } });
     const nav = await task.open();

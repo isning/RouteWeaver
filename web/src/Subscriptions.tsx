@@ -1,4 +1,4 @@
-import { ContextHeader, ContextLayout } from "@/ui-patterns/page-layout";
+import { WorkspaceFrame } from "@/ui-patterns/workspace-frame";
 import { groupSubscriptionInventory } from "./subscription-inventory";
 import { ResourceToolbar, SearchField } from "@/ui-patterns/resource-toolbar";
 import type { ReactNode } from "react";
@@ -840,8 +840,8 @@ export function SubscriptionsPage({
           retry={() => query.refetch()}
         >
           {data && (
-            <Card className="subscription-usage gap-3 py-4">
-              <CardHeader className="flex min-w-0 flex-col gap-2 @min-[42rem]/rail:grid">
+            <Card className={view === "overview" ? "subscription-usage gap-3 rounded-none bg-transparent py-0 ring-0" : "subscription-usage gap-3 py-4"}>
+              <CardHeader className={`flex min-w-0 flex-col gap-2 @min-[42rem]/rail:grid ${view === "overview" ? "px-0" : ""}`}>
                 <CardTitle
                   className="text-sm font-medium"
                   role="heading"
@@ -856,7 +856,7 @@ export function SubscriptionsPage({
                   <OverviewPolicyStatus value={data.status} />
                 </CardAction>
               </CardHeader>
-              <CardContent className="min-w-0 space-y-3 wrap-anywhere">
+              <CardContent className={`min-w-0 space-y-3 wrap-anywhere ${view === "overview" ? "px-0" : ""}`}>
                 {data.status === "paused" && (
                   <p className="muted text-sm text-muted-foreground">
                     如需恢复平台服务，请联系管理员检查服务授权。
@@ -1028,8 +1028,12 @@ export function SubscriptionsPage({
           });
       }}
     >
-      <ContextHeader>
-        <PageHeader
+      <WorkspaceFrame
+        contentKind="list"
+        contextKind="data"
+        contained={view !== "overview"}
+        context={serviceContext}
+        header={<PageHeader
           title="我的订阅"
           action={
             <ActionButton
@@ -1042,9 +1046,8 @@ export function SubscriptionsPage({
               新建分流配置
             </ActionButton>
           }
-        />
-      </ContextHeader>
-      <ContextLayout rail={serviceContext}>
+        />}
+      >
       <ErrorNotice error={detailOutput ? null : editError || actionError} />
       {profileScope && (
         <div className="subscription-scope space-y-4" role="status">
@@ -1716,7 +1719,7 @@ export function SubscriptionsPage({
         }}
       />
 
-      </ContextLayout>
+      </WorkspaceFrame>
     </div>
   );
 }

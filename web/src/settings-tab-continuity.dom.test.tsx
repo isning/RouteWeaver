@@ -135,6 +135,7 @@ it("keeps platform and subscription-domain drafts while visiting the backup sect
     </QueryClientProvider>,
   );
   const user = userEvent.setup();
+  await user.click(await screen.findByRole("button", { name: "编辑平台名称" }));
   fireEvent.change(await screen.findByLabelText("平台名称"), {
     target: { value: "未保存的平台名称" },
   });
@@ -217,6 +218,7 @@ it.each(["notification", "platform"] as const)(
       await user.click(screen.getByRole("tab", { name: "提醒与渠道" }));
       await user.click(await screen.findByRole("button", { name: "邮件通知" }));
     }
+    if (kind === "platform") await user.click(await screen.findByRole("button", { name: "编辑平台名称" }));
     const label = kind === "notification" ? "SMTP 主机" : "平台名称";
     fireEvent.change(await screen.findByRole("textbox", { name: label }), {
       target: { value: "unsaved-draft" },

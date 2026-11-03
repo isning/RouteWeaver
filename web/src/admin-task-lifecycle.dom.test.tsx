@@ -408,6 +408,7 @@ it("does not let an older endpoint save dismiss a new editor after explicit navi
 it("shows fixed platform policies as values and saves their complete payload with the edited name", async () => {
   const state = fixture();
   mount(<AdminPage page="settings" />);
+  await userEvent.click(await screen.findByRole("button", { name: "编辑平台名称" }));
   const name = await screen.findByRole("textbox", { name: "平台名称" });
   expect(screen.queryByRole("combobox", { name: "账号注册" })).toBeNull();
   expect(screen.queryByRole("combobox", { name: "默认时区" })).toBeNull();
@@ -433,6 +434,7 @@ it("navigates settings sections without leaving or saving either dirty draft", a
   const state = fixture();
   history.replaceState(null, "", "#settings");
   mount();
+  await userEvent.click(await screen.findByRole("button", { name: "编辑平台名称" }));
   const name = await screen.findByRole("textbox", { name: "平台名称" });
   fireEvent.change(name, { target: { value: "Retained local name" } });
   const domain = await screen.findByRole("textbox", { name: "订阅域名草稿" });
@@ -449,7 +451,7 @@ it("navigates settings sections without leaving or saving either dirty draft", a
   expect((name as HTMLInputElement).value).toBe("Retained local name");
   expect((domain as HTMLInputElement).value).toBe("https://draft.example.test");
   expect(state.writes).toEqual([]);
-  expect(screen.getByText("用于记录此控制平面的名称。")).toBeTruthy();
+  expect(screen.getAllByText("用于记录此控制平面的名称。").filter(element => !element.closest("[hidden]"))).toHaveLength(1);
   expect(screen.getByText("新账号须由管理员生成邀请后创建。")).toBeTruthy();
   expect(screen.getByText("流量周期按 UTC+8 计算；具体重置方式在服务方案或用户授权中设置。")).toBeTruthy();
 });
@@ -458,6 +460,7 @@ it("protects unsaved basic settings through real workspace navigation", async ()
   fixture();
   history.replaceState(null, "", "#settings");
   mount();
+  await userEvent.click(await screen.findByRole("button", { name: "编辑平台名称" }));
   const field = await screen.findByRole("textbox", { name: "平台名称" });
   fireEvent.change(field, { target: { value: "Unsaved platform" } });
   await nav("用户与权限", "用户");
@@ -477,6 +480,7 @@ it("returns to the authoritative saved settings without a stale cached name", as
   const state = fixture();
   history.replaceState(null, "", "#settings");
   mount();
+  await userEvent.click(await screen.findByRole("button", { name: "编辑平台名称" }));
   fireEvent.change(await screen.findByRole("textbox", { name: "平台名称" }), {
     target: { value: "Accepted platform" },
   });
@@ -488,6 +492,7 @@ it("returns to the authoritative saved settings without a stale cached name", as
     screen.queryByRole("alertdialog", { name: "放弃未保存的修改？" }),
   ).toBeNull();
   await nav("运维与设置", "平台设置");
+  await userEvent.click(await screen.findByRole("button", { name: "编辑平台名称" }));
   expect(
     (
       (await screen.findByRole("textbox", {
@@ -506,6 +511,7 @@ it("keeps newer settings edits dirty when an older save succeeds", async () => {
   const state = fixture(() => pending);
   history.replaceState(null, "", "#settings");
   mount();
+  await userEvent.click(await screen.findByRole("button", { name: "编辑平台名称" }));
   const field = await screen.findByRole("textbox", { name: "平台名称" });
   fireEvent.change(field, { target: { value: "Saved platform" } });
   await userEvent.click(screen.getByRole("button", { name: "保存设置" }));
@@ -552,6 +558,7 @@ it("fences a pre-save settings read so its late result cannot replace accepted s
   );
   history.replaceState(null, "", "#settings");
   mount();
+  await userEvent.click(await screen.findByRole("button", { name: "编辑平台名称" }));
   const field = await screen.findByRole("textbox", { name: "平台名称" });
   await act(async () => {
     window.dispatchEvent(new Event("focus"));
@@ -569,6 +576,7 @@ it("fences a pre-save settings read so its late result cannot replace accepted s
   await nav("用户与权限", "用户");
   await screen.findByRole("heading", { name: "用户" });
   await nav("运维与设置", "平台设置");
+  await userEvent.click(await screen.findByRole("button", { name: "编辑平台名称" }));
   expect(
     (
       (await screen.findByRole("textbox", {
@@ -975,6 +983,7 @@ it("does not expose editable default settings during initial loading or failure 
   await within(main).findByText("尚未读到平台设置");
   expect(within(main).queryByLabelText("平台名称")).toBeNull();
   await userEvent.click(within(main).getByRole("button", { name: "重试" }));
+  await userEvent.click(await within(main).findByRole("button", { name: "编辑平台名称" }));
   const name = await within(main).findByLabelText("平台名称");
   expect((name as HTMLInputElement).value).toBe("RouteWeaver");
   expect(within(main).queryByText("尚未读到平台设置")).toBeNull();
@@ -1058,6 +1067,7 @@ it("keeps settings edits and exact navigation focus through two canceled departu
   fixture();
   history.replaceState(null, "", "#settings");
   mount();
+  await userEvent.click(await screen.findByRole("button", { name: "编辑平台名称" }));
   const field = await screen.findByRole("textbox", { name: "平台名称" }) as HTMLInputElement;
   fireEvent.change(field, { target: { value: "Retained settings" } });
   const group = screen.getByRole("button", { name: "用户与权限" });

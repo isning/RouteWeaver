@@ -117,8 +117,10 @@ export function SectionIndex({
   label,
   sections,
   disabled = false,
+  presentation = "context",
 }: {
   label: string;
+  presentation?: "context" | "workspace";
   sections: SectionLink[];
   disabled?: boolean;
 }) {
@@ -164,14 +166,26 @@ export function SectionIndex({
   return (
     <nav aria-label={label} className="section-index space-y-2">
       <p className="text-xs font-medium text-muted-foreground">{label}</p>
-      <div className="flex flex-wrap gap-1 @min-[61rem]/context:flex-col">
+      <div
+        className={cn(
+          "flex flex-wrap gap-1",
+          presentation === "workspace"
+            ? "@min-[54rem]/workspace:flex-col"
+            : "@min-[61rem]/context:flex-col",
+        )}
+      >
         {sections.map((section) => (
           <Button
             key={section.id}
             type="button"
             variant="ghost"
             disabled={disabled}
-            className="h-auto min-h-11 justify-start whitespace-normal text-left font-normal leading-relaxed text-muted-foreground aria-[current=location]:bg-accent aria-[current=location]:font-medium aria-[current=location]:text-foreground @min-[61rem]/context:rounded-none @min-[61rem]/context:border-l-2 @min-[61rem]/context:border-transparent @min-[61rem]/context:aria-[current=location]:border-l-foreground @min-[61rem]/context:aria-[current=location]:bg-transparent"
+            className={cn(
+              "h-auto min-h-11 justify-start whitespace-normal text-left font-normal leading-relaxed text-muted-foreground aria-[current=location]:bg-accent aria-[current=location]:font-medium aria-[current=location]:text-foreground",
+              presentation === "workspace"
+                ? "@min-[54rem]/workspace:rounded-none @min-[54rem]/workspace:border-l-2 @min-[54rem]/workspace:border-transparent @min-[54rem]/workspace:aria-[current=location]:border-l-foreground @min-[54rem]/workspace:aria-[current=location]:bg-transparent"
+                : "@min-[61rem]/context:rounded-none @min-[61rem]/context:border-l-2 @min-[61rem]/context:border-transparent @min-[61rem]/context:aria-[current=location]:border-l-foreground @min-[61rem]/context:aria-[current=location]:bg-transparent",
+            )}
             aria-label={`前往${section.label}`}
             aria-current={current === section.id ? "location" : undefined}
             onClick={() => {

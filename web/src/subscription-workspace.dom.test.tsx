@@ -1324,3 +1324,39 @@ it.each(["create", "update"])(
     expect(technical.getAttribute("aria-expanded")).toBe("true");
   },
 );
+
+it("keeps the actual overview task and expanded usage while moving through legacy aliases", async () => {
+  const writes: string[] = [];
+  const saved = { ...emptyProfile(), id: "layout-shared", name: "Layout routing" };
+  const link = { id: "layout-link", name: "Layout phone", profileId: saved.id, target: saved.target, mode: saved.mode, status: "draft" };
+  vi.stubGlobal("fetch", vi.fn(async (url, init) => {
+    const path = String(url);
+    if (init?.method && init.method !== "GET") writes.push(path);
+    if (path.endsWith("/overview")) return json({ ...overview, status: "active", quotaBytes: 100, usage: { weightedBytes: 20, rawBytes: 20 } });
+    if (path.endsWith("/outputs")) return json([link]);
+    if (path.endsWith("/profiles")) return json([saved]);
+    if (path.endsWith("/reveal")) return json(saved);
+    return json([]);
+  }));
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } });
+  clients.push(client);
+  const task = (view: "overview" | "profiles" | "outputs") => <QueryClientProvider client={client}><UIProviders><SubscriptionsPage view={view} /></UIProviders></QueryClientProvider>;
+  const { rerender } = render(task("overview"));
+  const details = await screen.findByRole("button", { name: "用量与周期明细" });
+  await userEvent.click(details);
+  for (const view of ["profiles", "outputs", "overview"] as const) {
+    rerender(task(view));
+    expect(screen.getByRole("button", { name: "用量与周期明细" })).toBe(details);
+    expect(details).toHaveProperty("ariaExpanded", "true");
+    expect(screen.getAllByRole("heading", { name: "平台服务用量" })).toHaveLength(1);
+  }
+  await userEvent.click(screen.getByRole("button", { name: "编辑配置" }));
+  const name = await screen.findByRole("textbox", { name: "配置名称" });
+  fireEvent.change(name, { target: { value: "Unsubmitted layout draft" } });
+  for (const view of ["profiles", "outputs", "overview"] as const) {
+    rerender(task(view));
+    expect(screen.getByRole("textbox", { name: "配置名称" })).toBe(name);
+    expect(name).toHaveProperty("value", "Unsubmitted layout draft");
+  }
+  expect(writes).toEqual([]);
+});
