@@ -472,11 +472,12 @@ async function settleSectionNavigation(page: Page) {
   }));
 }
 
-async function expectAlignedCards(cards: Locator[]) {
+async function expectAlignedSurfaces(surfaces: Locator[]) {
   const edges = [];
-  for (const card of cards) {
-    await expect(card).toBeVisible();
-    const box = (await card.boundingBox())!;
+  for (const surface of surfaces) {
+    await expect(surface).toHaveCount(1);
+    await expect(surface).toBeVisible();
+    const box = (await surface.boundingBox())!;
     edges.push({ left: box.x, right: box.x + box.width });
   }
   for (const edge of edges.slice(1)) {
@@ -656,9 +657,11 @@ for (const width of [3440, 2880, 2560, 2304, 1920, 1536, 1440, 1366, 1280, 1024,
     const cardWithHeading = (heading: string) => page.locator('[data-slot="card"]').filter({
       has: page.getByRole("heading", { name: heading, exact: true }),
     });
-    await expectAlignedCards([
-      page.locator('[data-slot="card"]').filter({ has: page.getByRole("form", { name: "平台基本设置" }) }),
-      cardWithHeading("订阅域名"),
+    await expectAlignedSurfaces([
+      page.getByRole("region", { name: "平台信息", exact: true }).locator(".settings-surface").filter({
+        has: page.getByRole("form", { name: "平台基本设置", exact: true }),
+      }),
+      page.getByRole("region", { name: "订阅域名设置", exact: true }).locator(".settings-surface"),
     ]);
     await page.screenshot({ path: info.outputPath(`context-settings-${width}.png`), fullPage: true });
     await editName.click();
@@ -698,7 +701,7 @@ for (const width of [3440, 2880, 2560, 2304, 1920, 1536, 1440, 1366, 1280, 1024,
     const securityIndex = page.getByRole("navigation", { name: "本页账号设置", exact: true });
     await expect(securityIndex).toBeVisible();
     await assertLayout(true);
-    await expectAlignedCards([
+    await expectAlignedSurfaces([
       cardWithHeading("修改密码"),
       cardWithHeading("登录会话"),
       cardWithHeading("账号恢复与退役"),
