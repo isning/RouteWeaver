@@ -659,7 +659,7 @@ function Workspace() {
     <Sidebar
       collapsible="none"
       id="workspace-navigation"
-      className={narrow ? "h-full w-full bg-sidebar" : "h-full w-64 bg-sidebar"}
+      className={narrow ? "h-full w-full bg-sidebar" : "h-full w-56 bg-sidebar"}
     >
       <SidebarHeader className="h-16 justify-center px-4">
         <a
@@ -812,7 +812,7 @@ function Workspace() {
       <div className="main-shell flex min-w-0 flex-1 flex-col">
         <header
           aria-label="工作空间"
-          className="topbar flex h-14 shrink-0 items-center border-b px-4 sm:px-6 lg:px-8"
+          className="topbar flex h-14 shrink-0 items-center border-b px-4 sm:px-6"
         >
           <div className={"flex flex-wrap items-center gap-2"}>
             <ActionButton
@@ -855,7 +855,7 @@ function Workspace() {
         </header>
         <main
           id="main"
-          className="main-content mx-auto w-full min-w-0 max-w-screen-2xl flex-1 space-y-6 p-4 outline-none sm:p-6 lg:p-8"
+          className="main-content w-full min-w-0 max-w-screen-2xl flex-1 space-y-6 p-4 outline-none sm:p-6"
           tabIndex={-1}
         >
           <ErrorNotice error={authError} />
@@ -951,7 +951,7 @@ function Workspace() {
             </SubscriptionContextProvider>
           </WorkspaceHistoryContext.Provider>
         </main>
-        <footer className="app-footer border-t px-4 py-4 sm:px-6 lg:px-8 text-xs text-muted-foreground">
+        <footer className="app-footer border-t px-4 py-4 sm:px-6 text-xs text-muted-foreground">
           RouteWeaver
         </footer>
       </div>

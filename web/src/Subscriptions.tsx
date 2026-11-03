@@ -1,4 +1,4 @@
-import { ContextLayout } from "@/ui-patterns/page-layout";
+import { ContextHeader, ContextLayout } from "@/ui-patterns/page-layout";
 import { groupSubscriptionInventory } from "./subscription-inventory";
 import { ResourceToolbar, SearchField } from "@/ui-patterns/resource-toolbar";
 import type { ReactNode } from "react";
@@ -831,7 +831,7 @@ export function SubscriptionsPage({
       </Suspense>
     );
   const serviceContext = (
-      <div className="subscription-service-context space-y-3">
+      <div className="subscription-service-context grid items-start gap-4 @min-[42rem]/rail:has-[.available-routes]:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <QueryState
           loading={query.isPending}
           paused={query.isPaused}
@@ -841,7 +841,7 @@ export function SubscriptionsPage({
         >
           {data && (
             <Card className="subscription-usage gap-3 py-4">
-              <CardHeader className="flex min-w-0 flex-col gap-2">
+              <CardHeader className="flex min-w-0 flex-col gap-2 @min-[42rem]/rail:grid">
                 <CardTitle
                   className="text-sm font-medium"
                   role="heading"
@@ -1028,20 +1028,22 @@ export function SubscriptionsPage({
           });
       }}
     >
-      <PageHeader
-        title="我的订阅"
-        action={
-          <ActionButton
-            className="subscription-create-action"
-            leadingIcon={<Plus aria-hidden="true" />}
-            onClick={() => edit()}
-            variant="default"
-            pending={!!opening}
-          >
-            新建分流配置
-          </ActionButton>
-        }
-      />
+      <ContextHeader>
+        <PageHeader
+          title="我的订阅"
+          action={
+            <ActionButton
+              className="subscription-create-action"
+              leadingIcon={<Plus aria-hidden="true" />}
+              onClick={() => edit()}
+              variant="default"
+              pending={!!opening}
+            >
+              新建分流配置
+            </ActionButton>
+          }
+        />
+      </ContextHeader>
       <ContextLayout rail={serviceContext}>
       <ErrorNotice error={detailOutput ? null : editError || actionError} />
       {profileScope && (

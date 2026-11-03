@@ -167,7 +167,7 @@ function OriginForm({
         </KeyValue>
       </div>
       <div className="space-y-3">
-        <label className="grid gap-2 text-sm font-medium">
+        <label className="grid max-w-2xl gap-2 text-sm font-medium">
           订阅域名草稿
           <Input
             aria-label="订阅域名草稿"

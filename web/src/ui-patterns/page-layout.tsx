@@ -1,10 +1,43 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ComponentProps,
+  type ReactNode,
+} from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-// Primary work retains at least 40rem before a secondary 14rem rail is added.
-// Navigation precedes the task on small screens; supporting context follows it.
-// Keep one mounted subtree across sizes so drafts, focus and read states survive.
+// Budget for the content, not a fixed three-column silhouette: a light 11rem
+// index opens at 61rem; an 18rem data rail needs 68rem. With a 1.5rem gutter,
+// either leaves at least 48.5rem for the primary task. Keep one mounted subtree
+// across sizes so drafts, focus and read states survive.
+const contextColumns = {
+  navigation: "@min-[61rem]/context:grid-cols-[minmax(0,1fr)_11rem]",
+  data: "@min-[68rem]/context:grid-cols-[minmax(0,1fr)_18rem]",
+};
+
+/** Task titles/actions share the primary edge, while the rail has its own context. */
+export function ContextHeader({
+  navigation = false,
+  children,
+  className,
+  ...props
+}: ComponentProps<"div"> & { navigation?: boolean }) {
+  return (
+    <div className={cn("@container/context min-w-0", className)} {...props}>
+      <div
+        className={cn(
+          "grid min-w-0 gap-6",
+          contextColumns[navigation ? "navigation" : "data"],
+        )}
+      >
+        <div className="min-w-0">{children}</div>
+      </div>
+    </div>
+  );
+}
+
 export function ContextLayout({
   children,
   rail,
@@ -17,9 +50,10 @@ export function ContextLayout({
   const aside = (
     <aside
       className={cn(
-        "page-context min-w-0 @min-[58rem]/context:col-start-2 @min-[58rem]/context:row-start-1 @min-[58rem]/context:border-l @min-[58rem]/context:pl-6",
-        navigation &&
-          "self-start @min-[58rem]/context:[@media(min-height:40rem)]:sticky @min-[58rem]/context:top-24",
+        "page-context @container/rail min-w-0",
+        navigation
+          ? "self-start @min-[61rem]/context:col-start-2 @min-[61rem]/context:row-start-1 @min-[61rem]/context:[@media(min-height:40rem)]:sticky @min-[61rem]/context:top-24"
+          : "@min-[68rem]/context:col-start-2 @min-[68rem]/context:row-start-1",
       )}
     >
       {rail}
@@ -27,9 +61,21 @@ export function ContextLayout({
   );
   return (
     <div className="@container/context min-w-0">
-      <div className="context-layout grid min-w-0 items-start gap-6 @min-[58rem]/context:grid-cols-[minmax(0,1fr)_14rem] @min-[58rem]/context:gap-8">
+      <div
+        className={cn(
+          "context-layout grid min-w-0 items-start gap-6",
+          contextColumns[navigation ? "navigation" : "data"],
+        )}
+      >
         {navigation && aside}
-        <div className="page-primary min-w-0 space-y-6 @min-[58rem]/context:col-start-1 @min-[58rem]/context:row-start-1">
+        <div
+          className={cn(
+            "page-primary min-w-0 space-y-6",
+            navigation
+              ? "@min-[61rem]/context:col-start-1 @min-[61rem]/context:row-start-1"
+              : "@min-[68rem]/context:col-start-1 @min-[68rem]/context:row-start-1",
+          )}
+        >
           {children}
         </div>
         {!navigation && aside}
@@ -118,14 +164,14 @@ export function SectionIndex({
   return (
     <nav aria-label={label} className="section-index space-y-2">
       <p className="text-xs font-medium text-muted-foreground">{label}</p>
-      <div className="flex flex-wrap gap-1 @min-[58rem]/context:flex-col">
+      <div className="flex flex-wrap gap-1 @min-[61rem]/context:flex-col">
         {sections.map((section) => (
           <Button
             key={section.id}
             type="button"
             variant="ghost"
             disabled={disabled}
-            className="h-auto min-h-11 justify-start whitespace-normal text-left leading-relaxed aria-[current=location]:bg-accent aria-[current=location]:font-semibold"
+            className="h-auto min-h-11 justify-start whitespace-normal text-left font-normal leading-relaxed text-muted-foreground aria-[current=location]:bg-accent aria-[current=location]:font-medium aria-[current=location]:text-foreground @min-[61rem]/context:rounded-none @min-[61rem]/context:border-l-2 @min-[61rem]/context:border-transparent @min-[61rem]/context:aria-[current=location]:border-foreground @min-[61rem]/context:aria-[current=location]:bg-transparent"
             aria-label={`前往${section.label}`}
             aria-current={current === section.id ? "location" : undefined}
             onClick={() => {

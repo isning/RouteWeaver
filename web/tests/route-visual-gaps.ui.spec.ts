@@ -428,11 +428,21 @@ async function expectAlignedCards(cards: Locator[]) {
 
 // Real production composition with read-only fixtures: context is navigation or
 // existing account usage, never fabricated telemetry. Geometry awaits CI.
-for (const width of [1440, 1280, 1024, 390, 320]) {
+for (const width of [1920, 1536, 1440, 1366, 1280, 1024, 390, 320]) {
   test(`contextual page composition preserves local tasks at ${width}`, async ({ page }, info) => {
     await page.setViewportSize({ width, height: width === 320 ? 480 : 900 });
     await page.emulateMedia({ reducedMotion: "reduce" });
-    const unexpected = await readOnlyInventory(page, { "/me/overview": {
+    const populatedProfile: Profile = {
+      ...profile,
+      ir: { ...profile.ir, endpoints: [
+        { id: "visual-tokyo", name: "东京远程办公连接 Tokyo workspace", origin: "imported", connection: { protocol: "socks", host: "tokyo.example.test", port: 1080 } },
+        { id: "visual-london", name: "伦敦跨区域协作备用连接 London workspace", origin: "imported", connection: { protocol: "socks", host: "london.example.test", port: 1080 } },
+      ] },
+    };
+    const unexpected = await readOnlyInventory(page, {
+      "/me/profiles": [populatedProfile],
+      "/me/profiles/visual-draft/reveal": populatedProfile,
+      "/me/overview": {
       ...overview,
       quotaBytes: 100 * 1024 ** 3, remainingBytes: 75 * 1024 ** 3,
       service: { id: "visual-service", name: "跨区域协作与远程办公服务 International-Remote-Workspace", quotaBytes: 100 * 1024 ** 3, routeIds: ["visual-route"], cycle: { mode: "monthly", timezone: "UTC+8" } },
@@ -444,13 +454,34 @@ for (const width of [1440, 1280, 1024, 390, 320]) {
       const layout = page.locator(".context-layout:visible").first();
       const primary = (await layout.locator(":scope > .page-primary").boundingBox())!;
       const rail = (await layout.locator(":scope > .page-context").boundingBox())!;
-      if (width >= 1280) {
-        expect(primary.width).toBeGreaterThanOrEqual(640);
-        expect(rail.x).toBeGreaterThanOrEqual(primary.x + primary.width);
+      const frame = (await layout.boundingBox())!;
+      const sideBySide = frame.width >= (navigation ? 976 : 1088);
+      if (sideBySide) {
+        expect(primary.width).toBeGreaterThanOrEqual(776);
+        expect(rail.width).toBeCloseTo(navigation ? 176 : 288, 0);
+        expect(rail.x - primary.x - primary.width).toBeCloseTo(24, 0);
         expect(rail.x + rail.width).toBeLessThanOrEqual(width);
       } else if (navigation) expect(rail.y + rail.height).toBeLessThanOrEqual(primary.y);
       else expect(primary.y + primary.height).toBeLessThanOrEqual(rail.y);
+      if (width === 1280) {
+        // v10 gave either task only ~704px. Directory and data now differ.
+        expect(primary.width).toBeGreaterThanOrEqual(navigation ? 800 : 1000);
+        expect(sideBySide).toBe(navigation);
+      }
+      const main = (await page.locator("#main").boundingBox())!;
+      expect(main.width).toBeLessThanOrEqual(1536);
+      if (width >= 1024) {
+        const sidebar = (await page.locator('#workspace-navigation').boundingBox())!;
+        expect(sidebar.width).toBeCloseTo(224, 0);
+        // Keep the task beside navigation, including at 1920, not centered far away.
+        expect(primary.x - sidebar.x - sidebar.width).toBeGreaterThanOrEqual(24);
+        expect(primary.x - sidebar.x - sidebar.width).toBeLessThanOrEqual(26);
+      }
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+      await info.attach(`proportions-${navigation ? "directory" : "data"}-${width}`, {
+        body: JSON.stringify({ main, frame, primary, rail, sideBySide }), contentType: "application/json",
+      });
+      return primary;
     };
     await page.goto("/#settings");
     const name = page.getByRole("textbox", { name: "平台名称", exact: true });
@@ -458,6 +489,7 @@ for (const width of [1440, 1280, 1024, 390, 320]) {
     const index = page.getByRole("navigation", { name: "本页设置", exact: true });
     await expect(index).toBeVisible();
     await assertLayout(true);
+    expect((await name.boundingBox())!.width).toBeLessThanOrEqual(576);
     const cardWithHeading = (heading: string) => page.locator('[data-slot="card"]').filter({
       has: page.getByRole("heading", { name: heading, exact: true }),
     });
@@ -524,7 +556,11 @@ for (const width of [1440, 1280, 1024, 390, 320]) {
     await page.screenshot({ path: info.outputPath(`context-account-mfa-focus-${width}.png`) });
     await page.goto("/#subscriptions");
     await expect(page.getByRole("heading", { name: "平台服务用量", exact: true })).toHaveCount(1);
-    await assertLayout(false);
+    const subscriptionPrimary = await assertLayout(false);
+    const createBox = (await page.getByRole("button", { name: "新建分流配置", exact: true }).boundingBox())!;
+    const titleBox = (await page.getByRole("heading", { name: "我的订阅", exact: true }).boundingBox())!;
+    expect(titleBox.x).toBeCloseTo(subscriptionPrimary.x, 0);
+    if (width >= 1024) expect(createBox.x + createBox.width).toBeCloseTo(subscriptionPrimary.x + subscriptionPrimary.width, 0);
     await page.screenshot({ path: info.outputPath(`context-subscriptions-${width}.png`), fullPage: true });
     const usage = page.locator(".page-context");
     const details = usage.getByRole("button", { name: "用量与周期明细", exact: true });
@@ -532,6 +568,10 @@ for (const width of [1440, 1280, 1024, 390, 320]) {
     await expect(details).toHaveAttribute("aria-expanded", "true");
     await usage.getByRole("button", { name: "平台提供的线路 · 1", exact: true }).click();
     await expect(usage.getByText("欧洲与亚太协作线路 LongRemoteWorkspaceConnection", { exact: true })).toBeVisible();
+    const dataRailIsSideBySide = (await usage.boundingBox())!.width < 400;
+    if (width >= 1024 && dataRailIsSideBySide) {
+      expect((await usage.locator('[data-slot="card-content"]').boundingBox())!.width - 32).toBeGreaterThanOrEqual(250);
+    }
     for (const inner of await usage.locator('[data-slot="card-header"], [data-slot="card-content"], .route-option').all()) {
       expect(await inner.evaluate(el => el.scrollWidth)).toBeLessThanOrEqual((await inner.boundingBox())!.width + 1);
     }
@@ -543,7 +583,21 @@ for (const width of [1440, 1280, 1024, 390, 320]) {
     await page.getByRole("button", { name: "编辑配置", exact: true }).click();
     const profileIndex = page.getByRole("navigation", { name: "配置内容", exact: true });
     await expect(profileIndex).toBeVisible();
-    await assertLayout(true);
+    const profilePrimary = await assertLayout(true);
+    const profileTitle = (await page.getByRole("heading", { name: profile.name, exact: true }).boundingBox())!;
+    expect(profileTitle.x).toBeCloseTo(profilePrimary.x, 0);
+    const inspect = (await page.getByRole("button", { name: "检查发布", exact: true }).boundingBox())!;
+    if (width >= 1024) expect(inspect.x + inspect.width).toBeCloseTo(profilePrimary.x + profilePrimary.width, 0);
+    await expect(page.getByText("2 个有效连接", { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "编辑来源", exact: true }).click();
+    const inputTask = (await page.locator(".profile-input-task").boundingBox())!;
+    const trafficTask = (await page.locator(".profile-traffic-task").boundingBox())!;
+    if (width >= 1024) {
+      expect(inputTask.y).toBeCloseTo(trafficTask.y, 0);
+      expect(trafficTask.x).toBeGreaterThan(inputTask.x + inputTask.width);
+      expect(inputTask.width).toBeGreaterThanOrEqual(340);
+      expect(trafficTask.width).toBeGreaterThanOrEqual(340);
+    } else expect(trafficTask.y).toBeGreaterThanOrEqual(inputTask.y + inputTask.height);
     await page.screenshot({ path: info.outputPath(`context-profile-${width}.png`), fullPage: true });
     const runtimeLink = profileIndex.getByRole("button", { name: "前往运行设置", exact: true });
     await runtimeLink.focus();
@@ -557,7 +611,10 @@ for (const width of [1440, 1280, 1024, 390, 320]) {
     const panel = (await page.getByRole("tabpanel", { name: "运行设置", exact: true }).boundingBox())!;
     expect(panel.y - strip.y - strip.height).toBeGreaterThanOrEqual(0);
     expect(panel.y - strip.y - strip.height).toBeLessThanOrEqual(32);
-    expect(strip.y).toBeGreaterThanOrEqual((await page.locator(".profile-publish-action").boundingBox())!.height);
+    const stickySave = (await page.locator(".profile-publish-action").boundingBox())!;
+    expect(stickySave.y).toBeGreaterThanOrEqual(0);
+    expect(stickySave.y).toBeLessThanOrEqual(1);
+    expect(strip.y).toBeGreaterThanOrEqual(stickySave.height);
     await page.screenshot({ path: info.outputPath(`context-profile-runtime-focus-${width}.png`) });
     await page.locator(".profile-intent-task").evaluate(el => el.scrollIntoView({ block: "start" }));
     await settleSectionNavigation(page);
@@ -565,3 +622,57 @@ for (const width of [1440, 1280, 1024, 390, 320]) {
     expect(unexpected).toEqual([]);
   });
 }
+
+for (const width of [1536, 1920]) {
+  test(`wide settings frame stays stable from loading to ready at ${width}`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: 900 });
+    const unexpected = await readOnlyInventory(page);
+    let release!: () => void;
+    const gate = new Promise<void>(resolve => { release = resolve; });
+    await page.route("**/api/settings", async route => {
+      await gate;
+      await route.fulfill({ json: fixtures["/settings"] });
+    });
+    await page.goto("/#settings");
+    await expect(page.getByRole("status", { name: "正在加载", exact: true })).toBeVisible();
+    const pending = (await page.locator("#main").boundingBox())!;
+    await page.screenshot({ path: info.outputPath(`proportions-settings-loading-${width}.png`) });
+    release();
+    await expect(page.getByRole("textbox", { name: "平台名称", exact: true })).toHaveValue("协作平台");
+    await settleSectionNavigation(page);
+    const ready = (await page.locator("#main").boundingBox())!;
+    expect(ready.x).toBe(pending.x);
+    expect(ready.width).toBe(pending.width);
+    expect(unexpected).toEqual([]);
+  });
+}
+
+// Sample both sides of each content budget rather than hard-coding a device name.
+test("context rails yield space before their primary task becomes cramped", async ({ page }) => {
+  const unexpected = await readOnlyInventory(page);
+  for (const task of [
+    { route: "settings", navigation: true, widths: [1240, 1260], threshold: 976 },
+    { route: "subscriptions", navigation: false, widths: [1352, 1376], threshold: 1088 },
+  ]) {
+    await page.goto(`/#${task.route}`);
+    await expect(page.locator(".context-layout:visible")).toHaveCount(1);
+    const modes: boolean[] = [];
+    for (const width of task.widths) {
+      await page.setViewportSize({ width, height: 900 });
+      await settleSectionNavigation(page);
+      const layout = page.locator(".context-layout:visible");
+      const frame = (await layout.boundingBox())!;
+      const main = (await layout.locator(":scope > .page-primary").boundingBox())!;
+      const rail = (await layout.locator(":scope > .page-context").boundingBox())!;
+      const sideBySide = frame.width >= task.threshold;
+      modes.push(sideBySide);
+      if (sideBySide) {
+        expect(main.width).toBeGreaterThanOrEqual(776);
+        expect(rail.x).toBeGreaterThanOrEqual(main.x + main.width);
+      } else if (task.navigation) expect(rail.y + rail.height).toBeLessThanOrEqual(main.y);
+      else expect(main.y + main.height).toBeLessThanOrEqual(rail.y);
+    }
+    expect(modes).toEqual([false, true]);
+  }
+  expect(unexpected).toEqual([]);
+});

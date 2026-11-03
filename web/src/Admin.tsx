@@ -1760,7 +1760,7 @@ function Settings({ initial }: { initial: Record<string, unknown> }) {
           className="settings-form space-y-5"
         >
           <ErrorNotice error={save.error} />
-          <AppField name="name" label="平台名称" description="用于记录此控制平面的名称。">
+          <AppField name="name" label="平台名称" description="用于记录此控制平面的名称。" className="max-w-xl">
             <Input />
           </AppField>
           {/* Keep fixed policies registered in the complete settings payload. */}

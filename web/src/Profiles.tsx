@@ -1,4 +1,4 @@
-import { ContextLayout, SectionIndex } from "@/ui-patterns/page-layout";
+import { ContextHeader, ContextLayout, SectionIndex } from "@/ui-patterns/page-layout";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -1400,89 +1400,94 @@ export function ProfileEditor({
       className="profile-intent-editor space-y-6 [&_[data-slot=input]]:h-auto [&_[data-slot=input]]:min-h-11 [&_input]:scroll-mt-32 [&_textarea]:scroll-mt-32 [&_[role=combobox]]:scroll-mt-32"
       inert={!!sourceTask}
     >
-      <div className="profile-editor-heading flex flex-wrap items-end justify-between gap-4">
-        <PageHeader
-          title={persisted ? draft.name : "新建分流配置"}
-          back={close}
-        />
-      </div>
-      <div
-        className="profile-publish-action sticky top-0 z-20 flex flex-wrap items-center justify-end gap-3 border-b bg-background py-3"
+      <ContextHeader navigation>
+        <div className="profile-editor-heading flex flex-wrap items-end justify-between gap-4">
+          <PageHeader
+            title={persisted ? draft.name : "新建分流配置"}
+            back={close}
+          />
+        </div>
+      </ContextHeader>
+      <ContextHeader
+        navigation
+        className="profile-publish-action sticky top-0 z-20 border-b bg-background py-3"
         role="group"
         aria-label="保存与检查配置"
       >
-        <span
-          className="profile-save-state mr-auto text-sm text-muted-foreground"
-          role="status"
-          aria-live="polite"
-          aria-atomic="true"
-        >
-          {saved && !codeDirty
-            ? "草稿已保存"
-            : codeDirty
-              ? "JSON 修改尚未应用"
-              : !persisted || changed
-                ? "草稿尚未保存"
-                : "已保存草稿"}
-        </span>
-        <div className={"flex flex-wrap items-center gap-2"}>
-          <ActionButton
-            leadingIcon={<SaveOutlined aria-hidden="true" />}
-            aria-label="保存草稿"
-            aria-busy={save.isPending}
-            onClick={() => {
-              if (sourceOwner.current || draftConflict) return;
-              setError(null);
-              if (!checkDestinations()) return;
-              save.mutate();
-            }}
-            disabled={
-              !draft.name.trim() ||
-              codeDirty ||
-              save.isPending ||
-              draftConflict ||
-              !!sourceTask ||
-              unavailableSources.length > 0
-            }
-            variant="outline"
-            pending={!!save.isPending}
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          <span
+            className="profile-save-state mr-auto text-sm text-muted-foreground"
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
           >
-            保存草稿
-          </ActionButton>
-          <ActionButton
-            aria-label={!persisted || changed ? "保存并检查" : "检查发布"}
-            aria-busy={save.isPending}
-            disabled={
-              !draft.name.trim() ||
-              codeDirty ||
-              save.isPending ||
-              draftConflict ||
-              !!sourceTask ||
-              unavailableSources.length > 0
-            }
-            onClick={async () => {
-              if (sourceOwner.current || draftConflict) return;
-              setError(null);
-              if (!checkDestinations()) return;
-              const handoffRevision = revision.current;
-              try {
-                if (!persisted || changed) await save.mutateAsync();
-                if (revision.current !== handoffRevision) return;
-                setPublicationProfile(payload());
-                setRepairingReview(false);
-                setReviewRevision(handoffRevision);
-                setReviewOpen(true);
-              } catch {
-                /* The mutation keeps the editable draft and reports the failure. */
+            {saved && !codeDirty
+              ? "草稿已保存"
+              : codeDirty
+                ? "JSON 修改尚未应用"
+                : !persisted || changed
+                  ? "草稿尚未保存"
+                  : "已保存草稿"}
+          </span>
+          <div className={"flex flex-wrap items-center gap-2"}>
+            <ActionButton
+              leadingIcon={<SaveOutlined aria-hidden="true" />}
+              aria-label="保存草稿"
+              aria-busy={save.isPending}
+              onClick={() => {
+                if (sourceOwner.current || draftConflict) return;
+                setError(null);
+                if (!checkDestinations()) return;
+                save.mutate();
+              }}
+              disabled={
+                !draft.name.trim() ||
+                codeDirty ||
+                save.isPending ||
+                draftConflict ||
+                !!sourceTask ||
+                unavailableSources.length > 0
               }
-            }}
-            variant="default"
-            pending={!!save.isPending}
-          >
-            {!persisted || changed ? "保存并检查" : "检查发布"}
-          </ActionButton>
+              variant="outline"
+              pending={!!save.isPending}
+            >
+              保存草稿
+            </ActionButton>
+            <ActionButton
+              aria-label={!persisted || changed ? "保存并检查" : "检查发布"}
+              aria-busy={save.isPending}
+              disabled={
+                !draft.name.trim() ||
+                codeDirty ||
+                save.isPending ||
+                draftConflict ||
+                !!sourceTask ||
+                unavailableSources.length > 0
+              }
+              onClick={async () => {
+                if (sourceOwner.current || draftConflict) return;
+                setError(null);
+                if (!checkDestinations()) return;
+                const handoffRevision = revision.current;
+                try {
+                  if (!persisted || changed) await save.mutateAsync();
+                  if (revision.current !== handoffRevision) return;
+                  setPublicationProfile(payload());
+                  setRepairingReview(false);
+                  setReviewRevision(handoffRevision);
+                  setReviewOpen(true);
+                } catch {
+                  /* The mutation keeps the editable draft and reports the failure. */
+                }
+              }}
+              variant="default"
+              pending={!!save.isPending}
+            >
+              {!persisted || changed ? "保存并检查" : "检查发布"}
+            </ActionButton>
+          </div>
         </div>
-      </div>
+      </ContextHeader>
       <ContextLayout
         navigation
         rail={
@@ -1569,12 +1574,12 @@ export function ProfileEditor({
       <div className="profile-editor-layout space-y-6" inert={save.isPending}>
         <div className="profile-editor space-y-6">
           <section
-            className="surface profile-intent-task scroll-mt-32 rounded-lg border bg-card p-5 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="surface profile-intent-task @container/profile-task scroll-mt-32 rounded-lg border bg-card p-5 outline-none focus-visible:ring-2 focus-visible:ring-ring"
             aria-label="连接与流量"
             id={`${editorID}-connections`}
             tabIndex={-1}
           >
-            <div className="profile-intent-grid grid gap-6 @min-[64rem]/context:grid-cols-2 [&>div]:min-w-0 [&_h2]:mb-4 [&_h2]:font-semibold">
+            <div className="profile-intent-grid grid gap-6 @min-[44rem]/profile-task:grid-cols-2 [&>div]:min-w-0 [&_h2]:mb-4 [&_h2]:font-semibold">
               <div className="profile-input-task space-y-4">
                 <div className="profile-source-summary flex flex-wrap items-center justify-between gap-3 [&>h2]:mb-0 [&>span]:w-full">
                   <h2>可用连接</h2>
@@ -1808,7 +1813,7 @@ export function ProfileEditor({
                   </Accordion>
                 </div>
               </div>
-              <div className="profile-traffic-task space-y-4 @min-[64rem]/context:border-l @min-[64rem]/context:pl-6">
+              <div className="profile-traffic-task space-y-4 @min-[44rem]/profile-task:border-l @min-[44rem]/profile-task:pl-6">
                 <h2>流量去向</h2>
                 <label
                   className="standalone-label default-route grid min-w-0 gap-2 text-sm font-medium"
