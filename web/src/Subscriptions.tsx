@@ -1,3 +1,4 @@
+import { groupSubscriptionInventory } from "./subscription-inventory";
 import { ResourceToolbar, SearchField } from "@/ui-patterns/resource-toolbar";
 import type { ReactNode } from "react";
 import {
@@ -688,48 +689,12 @@ export function SubscriptionsPage({
     (profile) => profile.id === profileScope,
   );
   const needle = search.trim().toLocaleLowerCase();
-  const matches = (value: string) => value.toLocaleLowerCase().includes(needle);
-  const linkMatches = (output: Output) =>
-    matches(
-      `${output.name} ${output.target.adapterId} ${output.mode === "nodes-only" ? "纯节点" : "完整配置"}`,
-    );
-  const groups: {
-    id: string;
-    profile?: Profile;
-    links: Output[];
-    totalLinks: number;
-  }[] = [];
-  for (const profile of allProfiles) {
-    if (profileScope && profile.id !== profileScope) continue;
-    const links = allOutputs.filter(
-      (output) => output.profileId === profile.id,
-    );
-    const visible =
-      !needle || matches(profile.name) ? links : links.filter(linkMatches);
-    if (
-      profile.id === profileScope ||
-      !needle ||
-      matches(profile.name) ||
-      visible.length
-    )
-      groups.push({
-        id: profile.id,
-        profile,
-        links: visible,
-        totalLinks: links.length,
-      });
-  }
-  const orphanLinks = allOutputs.filter(
-    (output) =>
-      (!profileScope || output.profileId === profileScope) &&
-      !allProfiles.some((profile) => profile.id === output.profileId),
+  const groups = groupSubscriptionInventory(
+    allProfiles,
+    allOutputs,
+    profileScope,
+    search,
   );
-  for (const id of new Set(orphanLinks.map((output) => output.profileId))) {
-    const links = orphanLinks.filter((output) => output.profileId === id);
-    const visible = links.filter(linkMatches);
-    if (visible.length || id === profileScope)
-      groups.push({ id, links: visible, totalLinks: links.length });
-  }
   const pageCount = Math.max(1, Math.ceil(groups.length / 10));
   const currentPage = Math.min(page, pageCount);
   const visibleGroups = groups.slice((currentPage - 1) * 10, currentPage * 10);

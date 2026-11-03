@@ -163,6 +163,14 @@ for (const width of [1280, 390]) {
         range.selectNodeContents(el);
         return new Set([...range.getClientRects()].map(rect => Math.round(rect.top))).size;
       })).toBe(1);
+      const tabListBox = (await page.getByRole("tablist").boundingBox())!;
+      const activePanelBox = (await page.getByRole("tabpanel", { name: "运行设置", exact: true }).boundingBox())!;
+      // Local navigation remains next to its panels, not above a long shared editor.
+      expect(activePanelBox.y - tabListBox.y - tabListBox.height).toBeGreaterThanOrEqual(0);
+      expect(activePanelBox.y - tabListBox.y - tabListBox.height).toBeLessThanOrEqual(32);
+      const nameBox = (await name.boundingBox())!;
+      const linkedBox = (await page.getByText("关联订阅（1）", { exact: true }).boundingBox())!;
+      expect(nameBox.x + nameBox.width <= linkedBox.x || nameBox.y + nameBox.height <= linkedBox.y).toBe(true);
       await page.screenshot({
         path: info.outputPath(`profile-conflict-${width}.png`),
       });

@@ -185,6 +185,10 @@ function OriginForm({
           只填写公开 HTTPS 域名与可选端口，不含路径。留空恢复默认地址：
           {state.defaultOrigin || "当前访问地址"}。
         </p>
+        <p className="text-sm leading-relaxed text-muted-foreground">
+          请先由运维配置 DNS、有效 HTTPS
+          证书与反向代理。这里仅保存并验证链接地址，不修改 DNS 或证书。
+        </p>
         <div className={"flex flex-wrap items-center gap-2"}>
           <ActionButton
             pending={save.isPending}
@@ -255,10 +259,6 @@ function OriginForm({
           </div>
         </div>
       )}
-      <p className="text-sm text-muted-foreground">
-        请先由运维配置 DNS、有效 HTTPS
-        证书与反向代理。这里仅保存并验证链接地址，不修改 DNS 或证书。
-      </p>
       <TaskDialog
         title="启用订阅地址"
         bodyProps={{ className: "space-y-5 text-sm leading-relaxed [overflow-wrap:anywhere]" }}

@@ -1348,7 +1348,10 @@ for (const entry of ["workspace", "legacy-profile"] as const) {
       exact: true,
     });
     await expect(target).toBeVisible();
-    await expect(target.getByRole("status")).toHaveText("草稿已保存");
+    // Target loading is a separate live status; the save confirmation must remain exact.
+    await expect(
+      target.getByRole("status").filter({ hasText: /^草稿已保存$/ }),
+    ).toHaveText("草稿已保存");
     await expect(target).toContainText(profile.name);
     if (entry === "workspace") {
       await expect(page.locator("[data-sonner-toast]")).toHaveCount(0);

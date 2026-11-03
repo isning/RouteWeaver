@@ -405,6 +405,30 @@ it("does not let an older endpoint save dismiss a new editor after explicit navi
   );
 });
 
+it("shows fixed platform policies as values and saves their complete payload with the edited name", async () => {
+  const state = fixture();
+  mount(<AdminPage page="settings" />);
+  const name = await screen.findByRole("textbox", { name: "平台名称" });
+  expect(screen.queryByRole("combobox", { name: "账号注册" })).toBeNull();
+  expect(screen.queryByRole("combobox", { name: "默认时区" })).toBeNull();
+  expect(screen.queryByRole("heading", { name: "基本设置" })).toBeNull();
+  const settings = screen.getByRole("form", { name: "平台基本设置" });
+  expect(within(settings).getByText("账号注册").tagName).toBe("DT");
+  expect(within(settings).getByText("仅受邀用户").tagName).toBe("DD");
+  expect(within(settings).getByText("默认时区").tagName).toBe("DT");
+  expect(within(settings).getByText("UTC+8").tagName).toBe("DD");
+  expect(state.writes).toEqual([]);
+  fireEvent.change(name, { target: { value: "Clear platform" } });
+  await userEvent.click(within(settings).getByRole("button", { name: "保存设置" }));
+  await screen.findAllByText("平台设置已保存");
+  expect(state.writes).toEqual([{ url: "/api/settings", values: {
+    name: "Clear platform", registration: "invite", timezone: "UTC+8",
+  } }]);
+  expect((name as HTMLInputElement).value).toBe("Clear platform");
+  expect(within(settings).getByText("仅受邀用户")).toBeTruthy();
+  expect(within(settings).getByText("UTC+8")).toBeTruthy();
+});
+
 it("protects unsaved basic settings through real workspace navigation", async () => {
   fixture();
   history.replaceState(null, "", "#settings");

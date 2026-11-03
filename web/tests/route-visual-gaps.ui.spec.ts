@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { settledTask } from "./ui-settled-task";
 import type {
   Collection,
   HostRecord,
@@ -193,6 +194,7 @@ for (const width of [1280, 390]) {
     await page.getByRole("button", { name: "添加来源", exact: true }).click();
     const sourceDialog = page.getByRole("dialog", { name: "添加订阅来源", exact: true });
     await expect(sourceDialog.getByRole("textbox", { name: "来源名称", exact: true })).toBeVisible();
+    await settledTask(sourceDialog);
     await page.screenshot({ path: info.outputPath(`refined-source-dialog-${width}.png`) });
     await sourceDialog.getByRole("button", { name: "取消", exact: true }).click();
     await expect(sourceDialog).toHaveCount(0);
@@ -241,6 +243,19 @@ for (const width of [1280, 390]) {
 
     await page.goto("/#settings");
     await expect(page.getByRole("textbox", { name: "平台名称", exact: true })).toHaveValue("协作平台");
+    const settingsForm = page.getByRole("form", { name: "平台基本设置", exact: true });
+    await expect(settingsForm.getByRole("combobox")).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "基本设置", exact: true })).toHaveCount(0);
+    await expect(settingsForm.getByText("账号注册", { exact: true })).toBeVisible();
+    await expect(settingsForm.getByText("仅受邀用户", { exact: true })).toBeVisible();
+    await expect(settingsForm.getByText("默认时区", { exact: true })).toBeVisible();
+    await expect(settingsForm.getByText("UTC+8", { exact: true })).toBeVisible();
+    const originHelp = page.getByText(/请先由运维配置 DNS、有效 HTTPS/);
+    const originSave = page.getByRole("button", { name: "保存域名草稿", exact: true });
+    await expect(originHelp).toBeVisible();
+    const originHelpBox = (await originHelp.boundingBox())!;
+    const originSaveBox = (await originSave.boundingBox())!;
+    expect(originHelpBox.y + originHelpBox.height).toBeLessThanOrEqual(originSaveBox.y);
     for (const tab of await page.getByRole("tab").all()) expect((await tab.boundingBox())?.height).toBeGreaterThanOrEqual(44);
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width + 1);
     await page.screenshot({ path: info.outputPath(`refined-settings-${width}.png`), fullPage: true });

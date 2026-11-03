@@ -66,6 +66,18 @@ const initial = {
   tokensUnchanged: true,
 };
 describe("subscription domain tasks", () => {
+  it("shows DNS and TLS prerequisites before the draft-save decision", async () => {
+    const fetcher = vi.fn(async () => json(initial));
+    vi.stubGlobal("fetch", fetcher);
+    mount();
+    const save = await screen.findByRole("button", { name: "保存域名草稿" });
+    const prerequisite = screen.getByText(/请先由运维配置 DNS、有效 HTTPS/);
+    expect(prerequisite.textContent).toContain("证书与反向代理。这里仅保存并验证链接地址，不修改 DNS 或证书。");
+    expect(prerequisite.compareDocumentPosition(save) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getAllByText(/请先由运维配置 DNS、有效 HTTPS/)).toHaveLength(1);
+    expect((screen.getByLabelText("订阅域名草稿") as HTMLInputElement).value).toBe(initial.draftOrigin);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
   it("retains a rejected draft, then requires verification before explicitly activating a saved replacement", async () => {
     let state = { ...initial };
     const writes: any[] = [];

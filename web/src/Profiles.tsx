@@ -1476,7 +1476,7 @@ export function ProfileEditor({
         </div>
       </div>
       <div
-        className="profile-state-strip flex flex-wrap items-end gap-6 rounded-lg border bg-card p-4"
+        className="profile-state-strip flex flex-wrap items-end gap-4"
         inert={save.isPending}
       >
         <label className="profile-name-field grid min-w-0 flex-1 gap-2 text-sm font-medium">

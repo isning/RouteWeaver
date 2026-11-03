@@ -1,0 +1,30 @@
+{
+  "condition": "Local Node synthetic arrays; 5 warmups and 15 alternating samples per size. Grouping only: excludes React rendering, DOM, network, auth, module startup and hosted latency. No absolute timing acceptance threshold.",
+  "runtime": "v24.22.1",
+  "benchmarks": [
+    {
+      "profiles": 10,
+      "outputs": 50,
+      "samples": 15,
+      "oldMedianMs": 0.0189189999999968,
+      "indexedMedianMs": 0.013549999999995066,
+      "digest": 450
+    },
+    {
+      "profiles": 200,
+      "outputs": 2000,
+      "samples": 15,
+      "oldMedianMs": 4.478895999999992,
+      "indexedMedianMs": 0.1966859999999997,
+      "digest": 6150
+    },
+    {
+      "profiles": 1000,
+      "outputs": 10000,
+      "samples": 15,
+      "oldMedianMs": 140.54313999999977,
+      "indexedMedianMs": 0.8570399999998699,
+      "digest": 30150
+    }
+  ]
+}

@@ -1686,6 +1686,7 @@ function Settings({ initial }: { initial: Record<string, unknown> }) {
   const client = useQueryClient();
   const [baseline, setBaseline] = useState(initial);
   const values = useWatch([], { form, preserve: true });
+  const currentSettings = values || initial;
   const sameSettings = (
     left: Record<string, unknown>,
     right: Record<string, unknown>,
@@ -1734,8 +1735,9 @@ function Settings({ initial }: { initial: Record<string, unknown> }) {
   );
   return (
     <div className="max-w-3xl space-y-6">
-      <Section title="基本设置" className="max-w-3xl">
+      <Section className="max-w-3xl">
         <AppForm
+          aria-label="平台基本设置"
           form={form}
           initialValues={initial}
           onFinish={(v) => {
@@ -1744,23 +1746,30 @@ function Settings({ initial }: { initial: Record<string, unknown> }) {
           className="settings-form space-y-5"
         >
           <ErrorNotice error={save.error} />
-          <div className="grid gap-5 sm:grid-cols-2">
-            <AppField name="name" label="平台名称" className="sm:col-span-2">
-              <Input />
-            </AppField>
-            <AppField
-              name="registration"
-              label="账号注册"
-              trigger="onValueChange"
-            >
-              <ChoiceSelect
-                options={[{ value: "invite", label: "仅受邀用户" }]}
-              />
-            </AppField>
-            <AppField name="timezone" label="默认时区" trigger="onValueChange">
-              <ChoiceSelect options={[{ value: "UTC+8", label: "UTC+8" }]} />
-            </AppField>
-          </div>
+          <AppField name="name" label="平台名称">
+            <Input />
+          </AppField>
+          {/* Keep fixed policies registered in the complete settings payload. */}
+          <AppField name="registration" hidden>
+            <input type="hidden" />
+          </AppField>
+          <AppField name="timezone" hidden>
+            <input type="hidden" />
+          </AppField>
+          <dl className="divide-y border-y">
+            <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-4 py-3 sm:grid-cols-[10rem_minmax(0,1fr)]">
+              <dt className="text-muted-foreground">账号注册</dt>
+              <dd className="min-w-0 wrap-anywhere">
+                {currentSettings.registration === "invite"
+                  ? "仅受邀用户"
+                  : String(currentSettings.registration || "未设置")}
+              </dd>
+            </div>
+            <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-4 py-3 sm:grid-cols-[10rem_minmax(0,1fr)]">
+              <dt className="text-muted-foreground">默认时区</dt>
+              <dd className="min-w-0 wrap-anywhere">{String(currentSettings.timezone || "未设置")}</dd>
+            </div>
+          </dl>
           <ActionButton
             type="submit"
             pending={save.isPending}
