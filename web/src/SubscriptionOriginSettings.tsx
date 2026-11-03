@@ -8,11 +8,86 @@ import { toast } from "sonner";
 import { Notice } from "@/ui-patterns/notice";
 import { ActionButton } from "@/ui-patterns/actions";
 import { useUnsavedChanges } from "./navigation";
-import { useLayoutEffect, useRef, useState } from "react";
+import { useId, useLayoutEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { APIError, post, put, request } from "./api";
 import { dateLabel } from "./model";
-import { ErrorNotice, KeyValue, QueryState } from "./components";
+import { KeyValue, QueryState } from "./components";
+type OriginTask = "save" | "verify" | "activate";
+const originErrorMessages: Record<
+  string,
+  { title: string; repair: string; field?: boolean }
+> = {
+  "400:subscription origin must be HTTPS without credentials, path, query or fragment":
+    {
+      title: "订阅地址格式不正确",
+      repair:
+        "请使用 HTTPS 域名，可带端口；移除用户名、密码、路径、查询参数和片段。",
+      field: true,
+    },
+  "400:subscription origin must use a public HTTPS address": {
+    title: "订阅地址不能使用私有网络",
+    repair: "请填写公开可访问的 HTTPS 域名，不要使用本机或私有网络地址。",
+    field: true,
+  },
+  "400:subscription origin is too long": {
+    title: "订阅地址过长",
+    repair: "地址过长，请缩短域名或移除多余内容后重试。",
+    field: true,
+  },
+  "409:settings changed; reload before saving": {
+    title: "域名设置已被更新",
+    repair: "当前输入已保留。请核对重新读取的设置后再保存。",
+  },
+  "409:settings changed or no draft exists; reload before continuing": {
+    title: "已保存草稿发生变化",
+    repair: "请核对重新读取的草稿，再继续验证或启用。",
+  },
+  "409:verify the saved draft again before activating; verification expires after five minutes":
+    {
+      title: "需要重新验证草稿",
+      repair:
+        "验证结果仅在通过后的 5 分钟内有效。请重新验证 HTTPS 与实例后再启用。",
+    },
+  "422:Could not verify this instance. Check public DNS, the HTTPS certificate and /feed routing, then verify again.":
+    {
+      title: "无法确认此地址指向当前实例",
+      repair: "请检查公开 DNS、HTTPS 证书和 /feed 路由，然后重新验证。",
+    },
+};
+function originErrorCopy(error: Error) {
+  return error instanceof APIError
+    ? originErrorMessages[`${error.status}:${error.message}`]
+    : undefined;
+}
+function OriginError({ error, task }: { error: Error; task: OriginTask }) {
+  const copy = originErrorCopy(error);
+  return (
+    <Notice
+      tone="error"
+      title={
+        copy?.title ||
+        {
+          save: "保存域名草稿失败",
+          verify: "验证域名失败",
+          activate: "启用域名失败",
+        }[task]
+      }
+    >
+      {copy ? (
+        <>
+          <p>{copy.repair}</p>
+          <details className="mt-2 text-sm">
+            <summary className="cursor-pointer">技术详情</summary>
+            <p className="mt-2 break-words">{error.message}</p>
+          </details>
+        </>
+      ) : (
+        <p>{error.message}</p>
+      )}
+    </Notice>
+  );
+}
 interface OriginState {
   revision: number;
   configuredRevision: number;
@@ -84,6 +159,8 @@ function OriginForm({
     [review, setReview] = useState<OriginState | null>(null),
     [confirmed, setConfirmed] = useState(false),
     [error, setError] = useState<Error | null>(null);
+  const [errorTask, setErrorTask] = useState<OriginTask>("save");
+  const inputErrorID = useId();
   const reviewPresentation = useRef<OriginState | null>(null);
   useLayoutEffect(() => {
     if (review) reviewPresentation.current = review;
@@ -95,8 +172,9 @@ function OriginForm({
     client.setQueryData(key, next);
     setError(null);
   };
-  const onError = (error: Error) => {
+  const onError = (error: Error, task: OriginTask) => {
     setError(error);
+    setErrorTask(task);
     if (
       error instanceof APIError &&
       (error.status === 409 || error.status === 422)
@@ -117,7 +195,7 @@ function OriginForm({
       setOrigin(next.draftOrigin);
       message.success("域名草稿已保存，当前订阅地址未改变");
     },
-    onError,
+    onError: (error) => onError(error, "save"),
   });
   const verify = useMutation({
     mutationFn: () =>
@@ -126,7 +204,7 @@ function OriginForm({
       accept(next);
       message.success("已验证 HTTPS 地址属于当前实例");
     },
-    onError,
+    onError: (error) => onError(error, "verify"),
   });
   const activate = useMutation({
     mutationFn: () =>
@@ -139,7 +217,7 @@ function OriginForm({
       client.invalidateQueries({ queryKey: ["outputs"] });
       message.success("新复制的订阅链接将使用所选地址");
     },
-    onError,
+    onError: (error) => onError(error, "activate"),
   });
   const busy = save.isPending || verify.isPending || activate.isPending,
     dirty = origin.trim() !== state.draftOrigin,
@@ -157,11 +235,6 @@ function OriginForm({
   }[state.verificationStatus];
   return (
     <>
-      {error && (
-        <div className="px-4 pt-4 sm:px-5">
-          <ErrorNotice error={error} />
-        </div>
-      )}
       <dl className="subscription-origin-summary divide-y">
         <SettingsRow
           label="当前订阅地址"
@@ -186,6 +259,15 @@ function OriginForm({
           订阅域名草稿
           <Input
             aria-label="订阅域名草稿"
+            aria-invalid={
+              (errorTask === "save" &&
+                !!error &&
+                !!originErrorCopy(error)?.field) ||
+              undefined
+            }
+            aria-describedby={
+              errorTask === "save" && error ? inputErrorID : undefined
+            }
             value={origin}
             disabled={busy}
             placeholder="https://subscribe.example.com"
@@ -195,6 +277,11 @@ function OriginForm({
             }}
           />
         </label>
+        {error && errorTask === "save" && (
+          <div id={inputErrorID}>
+            <OriginError error={error} task="save" />
+          </div>
+        )}
         <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
           只填写公开 HTTPS 域名与可选端口，不含路径。留空并启用后使用默认地址：
           {state.defaultOrigin || "当前访问地址"}。
@@ -220,35 +307,50 @@ function OriginForm({
           <h3 className="flex flex-wrap items-center gap-2 text-sm font-medium">
             已保存的草稿 {pending && <Badge variant="secondary">待启用</Badge>}
           </h3>
-          <KeyValue label="拟用链接">
-            <span className="font-mono text-xs leading-relaxed wrap-anywhere">
-              {state.proposedLinkExample}
-            </span>
-          </KeyValue>
-          <p>
-            {proofLabel}
-            {state.verifiedAt && (
-              <small className="block text-sm text-muted-foreground">
-                上次验证 {dateLabel(state.verifiedAt)}
-                ；验证仅用于这次启用，不代表持续可用性。
-              </small>
-            )}
-          </p>
+          <dl className="-mx-4 divide-y border-y sm:-mx-5">
+            <SettingsRow label="拟用链接">
+              <span className="font-mono text-xs leading-relaxed wrap-anywhere">
+                {state.proposedLinkExample}
+              </span>
+            </SettingsRow>
+            <SettingsRow
+              label="验证状态"
+              description={
+                state.verificationStatus === "verified"
+                  ? state.verificationExpiresAt
+                    ? `本次验证有效至 ${dateLabel(state.verificationExpiresAt)}；过期后需重新验证再启用。`
+                    : "本次验证通过后 5 分钟内有效；过期后需重新验证再启用。"
+                  : state.verificationStatus === "expired"
+                    ? state.verificationExpiresAt
+                      ? `验证已于 ${dateLabel(state.verificationExpiresAt)} 过期，请重新验证后再启用。`
+                      : "验证已超过 5 分钟有效期，请重新验证后再启用。"
+                    : state.verificationStatus === "unverified"
+                      ? "验证 HTTPS 与实例后才能启用；验证结果在通过后的 5 分钟内有效。"
+                      : undefined
+              }
+            >
+              {proofLabel}
+            </SettingsRow>
+          </dl>
+          {error && errorTask !== "save" && (
+            <OriginError error={error} task={errorTask} />
+          )}
           {state.verificationStatus === "failed" &&
             state.lastFailure &&
-            !error && (
+            (!error || errorTask === "save") &&
+            (originErrorCopy(new APIError(state.lastFailure, 422)) ? (
+              <OriginError
+                error={new APIError(state.lastFailure, 422)}
+                task="verify"
+              />
+            ) : (
               <Notice
                 tone="error"
                 title="检查域名解析、HTTPS 证书与 /feed 路由后重试"
               >
                 {state.lastFailure}
               </Notice>
-            )}
-          {state.draftOrigin && (
-            <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
-              验证结果有效 5 分钟；过期后需重新验证再启用。
-            </p>
-          )}
+            ))}
           <div className={"flex flex-wrap items-center gap-2"}>
             {state.draftOrigin && (
               <ActionButton

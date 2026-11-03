@@ -1,4 +1,5 @@
 import type { Page } from "@playwright/test";
+import { settledTask } from "./ui-settled-task";
 import { test, expect } from "./isolated-control-plane-fixture";
 import {
   demoPassword,
@@ -64,6 +65,23 @@ for (const width of [1440, 768, 390]) {
       await input.fill("http://invalid.example/path");
       await save(page, 400);
       await expect(input).toHaveValue("http://invalid.example/path");
+      await expect(input).toHaveAttribute("aria-invalid", "true");
+      const describedBy = await input.getAttribute("aria-describedby");
+      expect(describedBy).toBeTruthy();
+      const inputError = page.locator(`[id="${describedBy}"]`);
+      await expect(inputError).toContainText("请使用 HTTPS 域名，可带端口；移除用户名、密码、路径、查询参数和片段。");
+      const technical = inputError.getByText("subscription origin must be HTTPS without credentials, path, query or fragment", { exact: true });
+      await expect(technical).toBeHidden();
+      await inputError.getByText("技术详情", { exact: true }).click();
+      await expect(technical).toBeVisible();
+      await inputError.getByText("技术详情", { exact: true }).click();
+      await expect(technical).toBeHidden();
+      const inputBox = await input.boundingBox();
+      const errorBox = await inputError.boundingBox();
+      expect(inputBox).not.toBeNull();
+      expect(errorBox).not.toBeNull();
+      expect(errorBox!.y - (inputBox!.y + inputBox!.height)).toBeGreaterThanOrEqual(0);
+      expect(errorBox!.y - (inputBox!.y + inputBox!.height)).toBeLessThanOrEqual(24);
       expect(await originState(other)).toEqual(initial);
       await page.screenshot({ path: info.outputPath(`origin-real-invalid-${width}.png`), fullPage: true });
 
@@ -130,6 +148,10 @@ for (const width of [1440, 768, 390]) {
         exact: true,
       });
       await expect(dialog).toBeVisible();
+      await settledTask(dialog);
+      const backdrop = page.locator('[data-slot="dialog-overlay"][data-state="open"]');
+      await expect(backdrop).toHaveCount(1);
+      await settledTask(backdrop);
       await page.screenshot({ path: info.outputPath(`origin-real-default-review-${width}.png`) });
       await expect(
         dialog.getByRole("button", { name: "确认启用", exact: true }),

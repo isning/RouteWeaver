@@ -27,3 +27,15 @@ Local application and browser-spec TypeScript checks passed. No local browser
 was launched. Screenshots and runtime results remain pending CI; no production
 code was changed and no visual defect is asserted before inspecting the new
 pixels.
+
+## CI25 screenshot correction
+
+The 390px review screenshot visibly captured translucent content over the page.
+DialogContent has a 200ms entrance fade/zoom; the screenshot previously followed
+only `toBeVisible`, which does not establish opacity 1 or completed motion.
+Reuse the existing `settledTask` boundary for the real dialog and its unique
+open backdrop before both synthetic and real-backend review screenshots. This
+records before/after motion snapshots and waits for actual completed motion and
+opacity 1. No animation is disabled and no arbitrary delay is added. The image
+alone does not establish the exact historical animation elapsed time. All task
+and HTTP assertions remain in place; new pixels remain pending CI.

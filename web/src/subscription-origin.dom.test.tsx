@@ -67,20 +67,29 @@ const initial = {
 };
 describe("subscription domain tasks", () => {
   it("pairs current-address labels with their values without substituting the pending draft", async () => {
-    const fetcher = vi.fn(async () => json({ ...initial, configuredRevision: 3, draftOrigin: "https://draft.example" }));
+    const fetcher = vi.fn(async () =>
+      json({
+        ...initial,
+        configuredRevision: 3,
+        draftOrigin: "https://draft.example",
+      }),
+    );
     vi.stubGlobal("fetch", fetcher);
     mount();
     const label = await screen.findByText("当前订阅地址");
     const summary = label.closest("dl");
     expect(summary).not.toBeNull();
-    const pairs = Array.from(summary!.querySelectorAll("dt")).map(term => [
-      term.textContent, term.nextElementSibling?.textContent,
+    const pairs = Array.from(summary!.querySelectorAll("dt")).map((term) => [
+      term.textContent,
+      term.nextElementSibling?.textContent,
     ]);
     expect(pairs).toEqual([
       ["当前订阅地址", initial.effectiveOrigin],
       ["当前链接示例", initial.currentLinkExample],
     ]);
-    expect((screen.getByLabelText("订阅域名草稿") as HTMLInputElement).value).toBe("https://draft.example");
+    expect(
+      (screen.getByLabelText("订阅域名草稿") as HTMLInputElement).value,
+    ).toBe("https://draft.example");
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
   it("shows DNS and TLS prerequisites before the draft-save decision", async () => {
@@ -89,20 +98,37 @@ describe("subscription domain tasks", () => {
     mount();
     const save = await screen.findByRole("button", { name: "保存域名草稿" });
     const prerequisite = screen.getByText(/请先由运维配置 DNS、有效 HTTPS/);
-    expect(prerequisite.textContent).toContain("证书与反向代理。这里仅保存并验证链接地址，不修改 DNS 或证书。");
-    expect(prerequisite.compareDocumentPosition(save) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(screen.getAllByText(/请先由运维配置 DNS、有效 HTTPS/)).toHaveLength(1);
-    expect((screen.getByLabelText("订阅域名草稿") as HTMLInputElement).value).toBe(initial.draftOrigin);
+    expect(prerequisite.textContent).toContain(
+      "证书与反向代理。这里仅保存并验证链接地址，不修改 DNS 或证书。",
+    );
+    expect(
+      prerequisite.compareDocumentPosition(save) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(screen.getAllByText(/请先由运维配置 DNS、有效 HTTPS/)).toHaveLength(
+      1,
+    );
+    expect(
+      (screen.getByLabelText("订阅域名草稿") as HTMLInputElement).value,
+    ).toBe(initial.draftOrigin);
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
   it("explains when an empty domain takes effect and the verification lifetime before enable", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => json(initial)));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => json(initial)),
+    );
     mount();
     await screen.findByRole("button", { name: "保存域名草稿" });
     expect(screen.getByText(/留空并启用后使用默认地址/)).toBeTruthy();
-    const lifetime = screen.getByText("验证结果有效 5 分钟；过期后需重新验证再启用。");
+    const lifetime = screen.getByText(
+      "验证已超过 5 分钟有效期，请重新验证后再启用。",
+    );
     const activate = screen.getByRole("button", { name: "启用已保存草稿" });
-    expect(lifetime.compareDocumentPosition(activate) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(
+      lifetime.compareDocumentPosition(activate) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
   it("retains a rejected draft, then requires verification before explicitly activating a saved replacement", async () => {
     let state = { ...initial };
@@ -293,3 +319,148 @@ it("keeps unsaved domain text when a stale write is followed by a failed state r
     (screen.getByLabelText("订阅域名草稿") as HTMLInputElement).value,
   ).toBe("https://keep-this.example");
 });
+
+it.each([
+  [
+    "subscription origin must be HTTPS without credentials, path, query or fragment",
+    "请使用 HTTPS 域名，可带端口；移除用户名、密码、路径、查询参数和片段。",
+  ],
+  [
+    "subscription origin must use a public HTTPS address",
+    "请填写公开可访问的 HTTPS 域名，不要使用本机或私有网络地址。",
+  ],
+  [
+    "subscription origin is too long",
+    "地址过长，请缩短域名或移除多余内容后重试。",
+  ],
+])(
+  "explains rejected input locally without discarding technical evidence: %s",
+  async (detail, repair) => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_url, init) =>
+        init?.method ? json({ detail }, 400) : json(initial),
+      ),
+    );
+    mount();
+    const input = await screen.findByLabelText("订阅域名草稿");
+    fireEvent.change(input, {
+      target: { value: "http://invalid.example/path" },
+    });
+    await userEvent.click(screen.getByRole("button", { name: "保存域名草稿" }));
+    const message = await screen.findByText(repair);
+    expect(input.getAttribute("aria-invalid")).toBe("true");
+    const error = document.getElementById(
+      input.getAttribute("aria-describedby")!,
+    )!;
+    expect(error.contains(message)).toBe(true);
+    expect(
+      input.compareDocumentPosition(error) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      (screen.getByText(detail).closest("details") as HTMLDetailsElement).open,
+    ).toBe(false);
+    await userEvent.click(screen.getByText("技术详情"));
+    expect(
+      (screen.getByText(detail).closest("details") as HTMLDetailsElement).open,
+    ).toBe(true);
+    expect(input).toHaveProperty("value", "http://invalid.example/path");
+  },
+);
+it("keeps unknown server errors visible and does not classify them as invalid input", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (_url, init) =>
+      init?.method
+        ? json({ detail: "Unknown storage fault ABC" }, 503)
+        : json(initial),
+    ),
+  );
+  mount();
+  const input = await screen.findByLabelText("订阅域名草稿");
+  await userEvent.click(screen.getByRole("button", { name: "保存域名草稿" }));
+  const message = await screen.findByText("Unknown storage fault ABC");
+  expect(message.closest("details")).toBeNull();
+  expect(input.getAttribute("aria-invalid")).not.toBe("true");
+});
+
+it.each(["verified", "expired", "unverified", "failed", "not-required"])(
+  "provides state-specific guidance and paired proposed-link semantics: %s",
+  async (status) => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        json({
+          ...initial,
+          verificationStatus: status,
+          verificationExpiresAt: ["verified", "expired"].includes(status)
+            ? "2026-11-03T12:05:00Z"
+            : undefined,
+          lastFailure: status === "failed" ? "probe detail" : undefined,
+        }),
+      ),
+    );
+    mount();
+    const term = await screen.findByText("拟用链接");
+    expect(term.tagName).toBe("DT");
+    expect(term.nextElementSibling?.textContent).toBe(
+      initial.proposedLinkExample,
+    );
+    if (status === "verified")
+      expect(
+        screen.getByText(/^本次验证有效至 .*过期后需重新验证再启用。$/),
+      ).toBeTruthy();
+    if (status === "expired")
+      expect(
+        screen.getByText(/^验证已于 .*过期，请重新验证后再启用。$/),
+      ).toBeTruthy();
+    if (status === "unverified")
+      expect(
+        screen.getByText(
+          "验证 HTTPS 与实例后才能启用；验证结果在通过后的 5 分钟内有效。",
+        ),
+      ).toBeTruthy();
+    if (status === "failed") {
+      expect(screen.getByText("probe detail")).toBeTruthy();
+      expect(
+        screen.getByText("检查域名解析、HTTPS 证书与 /feed 路由后重试"),
+      ).toBeTruthy();
+    }
+    if (["failed", "not-required"].includes(status))
+      expect(screen.queryByText(/5 分钟/)).toBeNull();
+    expect(screen.queryByText(/上次验证|不代表持续可用性/)).toBeNull();
+  },
+);
+
+it.each([
+  [
+    409,
+    "settings changed or no draft exists; reload before continuing",
+    "请核对重新读取的草稿，再继续验证或启用。",
+  ],
+  [
+    422,
+    "Could not verify this instance. Check public DNS, the HTTPS certificate and /feed routing, then verify again.",
+    "请检查公开 DNS、HTTPS 证书和 /feed 路由，然后重新验证。",
+  ],
+])(
+  "keeps verification recovery explicit for known HTTP %s responses",
+  async (status, detail, repair) => {
+    const fetcher = vi.fn(async (_url, init) =>
+      init?.method ? json({ detail }, Number(status)) : json(initial),
+    );
+    vi.stubGlobal("fetch", fetcher);
+    mount();
+    await userEvent.click(
+      await screen.findByRole("button", { name: "验证 HTTPS 与实例" }),
+    );
+    await screen.findByText(repair);
+    expect(screen.getByText(detail).closest("details")).not.toBeNull();
+    await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(3));
+    expect(screen.getByLabelText("订阅域名草稿")).toHaveProperty(
+      "value",
+      initial.draftOrigin,
+    );
+    expect(screen.getByText(initial.effectiveOrigin)).toBeTruthy();
+  },
+);

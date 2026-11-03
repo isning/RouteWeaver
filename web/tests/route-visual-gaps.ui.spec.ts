@@ -1022,7 +1022,26 @@ for (const width of [390, 768, 1440]) {
       }[status];
       await expect(region.getByText(proof, { exact: false })).toBeVisible();
       await expect(region.getByText("待启用", { exact: true })).toBeVisible();
-      await expect(region.getByText("验证结果有效 5 分钟；过期后需重新验证再启用。", { exact: true })).toBeVisible();
+      if (status === "verified") await expect(region.getByText(/^本次验证有效至 .*过期后需重新验证再启用。$/)).toBeVisible();
+      if (status === "expired") await expect(region.getByText(/^验证已于 .*过期，请重新验证后再启用。$/)).toBeVisible();
+      if (status === "failed") await expect(region.getByText(/5 分钟/)).toHaveCount(0);
+      await expect(region.getByText(/上次验证|不代表持续可用性/)).toHaveCount(0);
+      // Both summaries use the same row grid and container breakpoint, including 768px.
+      const linkRows = await region.locator(".settings-row").evaluateAll(rows => rows
+        .filter(row => ["当前链接示例", "拟用链接"].includes(row.querySelector("dt")?.textContent ?? ""))
+        .map(row => {
+          const label = row.querySelector("dt")!.getBoundingClientRect();
+          const value = row.querySelector("dd")!.getBoundingClientRect();
+          return { labelX: label.x, labelY: label.y, valueX: value.x, valueY: value.y };
+        }));
+      expect(linkRows).toHaveLength(2);
+      expect(Math.abs(linkRows[0].labelX - linkRows[1].labelX)).toBeLessThanOrEqual(1);
+      expect(Math.abs(linkRows[0].valueX - linkRows[1].valueX)).toBeLessThanOrEqual(1);
+      const groupWidth = await region.locator(".settings-group").evaluate(el => el.getBoundingClientRect().width);
+      for (const row of linkRows) {
+        if (groupWidth >= 640) expect(Math.abs(row.valueY - row.labelY)).toBeLessThanOrEqual(1);
+        else expect(row.valueY - row.labelY).toBeGreaterThanOrEqual(24);
+      }
       const enable = region.getByRole("button", { name: "启用已保存草稿", exact: true });
       await expect(region.getByRole("button", { name: "验证 HTTPS 与实例", exact: true })).toBeEnabled();
       if (status === "verified") await expect(enable).toBeEnabled();
@@ -1041,6 +1060,10 @@ for (const width of [390, 768, 1440]) {
         await expect(dialog.getByText(proposed, { exact: true })).toBeVisible();
         await expect(dialog.getByText(/旧链接只有在旧域名的 DNS/)).toBeVisible();
         await expect(dialog.getByRole("button", { name: "确认启用", exact: true })).toBeDisabled();
+        await settledTask(dialog);
+        const backdrop = page.locator('[data-slot="dialog-overlay"][data-state="open"]');
+        await expect(backdrop).toHaveCount(1);
+        await settledTask(backdrop);
         await page.screenshot({ path: info.outputPath(`origin-review-verified-${width}.png`) });
         await page.keyboard.press("Escape");
         await expect(dialog).toBeHidden();
