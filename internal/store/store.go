@@ -95,9 +95,9 @@ func openStoreWithNotificationLimit(path string, key []byte, limit int64) (*Stor
 		db.Close()
 		return nil, e
 	}
-	if _, e = db.Exec(`PRAGMA journal_mode=WAL`); e != nil {
+	if e = enableWAL(context.Background(), db); e != nil {
 		db.Close()
-		return nil, e
+		return nil, fmt.Errorf("enable SQLite WAL: %w", e)
 	}
 	if e = s.migrate(); e != nil {
 		db.Close()

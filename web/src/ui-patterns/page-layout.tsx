@@ -171,7 +171,7 @@ export function SectionIndex({
             type="button"
             variant="ghost"
             disabled={disabled}
-            className="h-auto min-h-11 justify-start whitespace-normal text-left font-normal leading-relaxed text-muted-foreground aria-[current=location]:bg-accent aria-[current=location]:font-medium aria-[current=location]:text-foreground @min-[61rem]/context:rounded-none @min-[61rem]/context:border-l-2 @min-[61rem]/context:border-transparent @min-[61rem]/context:aria-[current=location]:border-foreground @min-[61rem]/context:aria-[current=location]:bg-transparent"
+            className="h-auto min-h-11 justify-start whitespace-normal text-left font-normal leading-relaxed text-muted-foreground aria-[current=location]:bg-accent aria-[current=location]:font-medium aria-[current=location]:text-foreground @min-[61rem]/context:rounded-none @min-[61rem]/context:border-l-2 @min-[61rem]/context:border-transparent @min-[61rem]/context:aria-[current=location]:border-l-foreground @min-[61rem]/context:aria-[current=location]:bg-transparent"
             aria-label={`前往${section.label}`}
             aria-current={current === section.id ? "location" : undefined}
             onClick={() => {

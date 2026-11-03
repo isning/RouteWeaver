@@ -126,6 +126,70 @@ const json = (data: unknown, status = 200) =>
     headers: { "Content-Type": "application/json" },
   });
 const overview = { user: {}, routes: [] };
+
+it("returns a canceled link decision to its persistent menu trigger and supports keyboard reopening", async () => {
+  const profile = { ...emptyProfile(), id: "shared", name: "Shared routing" };
+  const output = {
+    id: "phone",
+    name: "Phone",
+    profileId: profile.id,
+    target: profile.target,
+    mode: "full",
+    status: "published",
+  };
+  const writes: string[] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url, init) => {
+      const path = String(url);
+      if (init?.method && init.method !== "GET") writes.push(path);
+      if (path.endsWith("/overview")) return json(overview);
+      if (path.endsWith("/outputs")) return json([output]);
+      if (path.endsWith("/profiles")) return json([profile]);
+      return json([]);
+    }),
+  );
+  mount(<SubscriptionsPage view="outputs" />);
+  const trigger = await screen.findByRole("button", {
+    name: "管理 Phone",
+  });
+  const user = userEvent.setup();
+  trigger.focus();
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await user.keyboard("{Enter}");
+    const first = await screen.findByRole("menuitem", {
+      name: "查看已发布内容",
+    });
+    await waitFor(() => expect(document.activeElement).toBe(first));
+    await user.keyboard("{ArrowDown}");
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        screen.getByRole("menuitem", { name: "编辑关联分流配置" }),
+      ),
+    );
+    await user.keyboard("{ArrowDown}");
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        screen.getByRole("menuitem", { name: "更换订阅链接" }),
+      ),
+    );
+    await user.keyboard("{Enter}");
+    const decision = await screen.findByRole("alertdialog", {
+      name: "更换「Phone」的订阅链接？",
+    });
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        within(decision).getByRole("button", {
+          name: "保留旧链接",
+        }),
+      ),
+    );
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+    await waitFor(() => expect(document.activeElement).toBe(trigger));
+  }
+  expect(writes).toEqual([]);
+});
 it.each([false, true])(
   "updates only the chosen link regardless of entry binding (%s)",
   async (bound) => {

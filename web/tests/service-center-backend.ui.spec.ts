@@ -255,18 +255,26 @@ for (const width of [1440, 390]) {
       });
       const openRotation = async () => {
         await activate(page, menu);
+        await expect(
+          page.getByRole("menuitem", {
+            name: "查看已发布内容",
+            exact: true,
+          }),
+        ).toBeFocused();
+        await page.keyboard.press("ArrowDown");
+        await expect(
+          page.getByRole("menuitem", {
+            name: "编辑关联分流配置",
+            exact: true,
+          }),
+        ).toBeFocused();
+        await page.keyboard.press("ArrowDown");
         const item = page.getByRole("menuitem", {
           name: "更换订阅链接",
           exact: true,
         });
-        // Menus use roving keyboard focus, not Tab traversal.
-        for (let i = 0; i < 8; i++) {
-          if (
-            await item.evaluate((element) => element === document.activeElement)
-          )
-            break;
-          await page.keyboard.press("ArrowDown");
-        }
+        // Radix defers roving focus. Observe each keyboard destination rather
+        // than queueing more ArrowDown events before the previous one lands.
         await expect(item).toBeFocused();
         await page.keyboard.press("Enter");
       };
@@ -284,6 +292,7 @@ for (const width of [1440, 390]) {
       await fits(page, confirmation);
       await page.keyboard.press("Escape");
       await expect(confirmation).toBeHidden();
+      await expect(menu).toBeFocused();
       expect((await f.feed(f.outputs[0].feedPath)).equals(f.ownBefore)).toBe(
         true,
       );

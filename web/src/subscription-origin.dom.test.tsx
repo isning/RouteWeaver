@@ -66,6 +66,23 @@ const initial = {
   tokensUnchanged: true,
 };
 describe("subscription domain tasks", () => {
+  it("pairs current-address labels with their values without substituting the pending draft", async () => {
+    const fetcher = vi.fn(async () => json({ ...initial, configuredRevision: 3, draftOrigin: "https://draft.example" }));
+    vi.stubGlobal("fetch", fetcher);
+    mount();
+    const label = await screen.findByText("当前订阅地址");
+    const summary = label.closest("dl");
+    expect(summary).not.toBeNull();
+    const pairs = Array.from(summary!.querySelectorAll("dt")).map(term => [
+      term.textContent, term.nextElementSibling?.textContent,
+    ]);
+    expect(pairs).toEqual([
+      ["当前订阅地址", initial.effectiveOrigin],
+      ["当前链接示例", initial.currentLinkExample],
+    ]);
+    expect((screen.getByLabelText("订阅域名草稿") as HTMLInputElement).value).toBe("https://draft.example");
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
   it("shows DNS and TLS prerequisites before the draft-save decision", async () => {
     const fetcher = vi.fn(async () => json(initial));
     vi.stubGlobal("fetch", fetcher);

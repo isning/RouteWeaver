@@ -152,19 +152,27 @@ function OriginForm({
     <>
       <ErrorNotice error={error} />
       <div className="space-y-3 border-b pb-5">
-        <KeyValue label="当前订阅地址">
-          <strong>
-            {state.effectiveOrigin || state.defaultOrigin || "跟随当前访问地址"}
-          </strong>
-          {state.activatedAt && (
-            <small className="block text-sm text-muted-foreground">
-              启用于 {dateLabel(state.activatedAt)}
-            </small>
-          )}
-        </KeyValue>
-        <KeyValue label="当前链接示例">
-          <span className="font-mono text-xs leading-relaxed wrap-anywhere">{state.currentLinkExample}</span>
-        </KeyValue>
+        <dl className="subscription-origin-summary max-w-3xl space-y-3 text-sm">
+          <div className="grid gap-1 sm:grid-cols-[9rem_minmax(0,1fr)] sm:gap-x-4">
+            <dt className="text-muted-foreground">当前订阅地址</dt>
+            <dd className="min-w-0 wrap-anywhere">
+              <strong>
+                {state.effectiveOrigin || state.defaultOrigin || "跟随当前访问地址"}
+              </strong>
+              {state.activatedAt && (
+                <small className="block text-sm text-muted-foreground">
+                  启用于 {dateLabel(state.activatedAt)}
+                </small>
+              )}
+            </dd>
+          </div>
+          <div className="grid gap-1 sm:grid-cols-[9rem_minmax(0,1fr)] sm:gap-x-4">
+            <dt className="text-muted-foreground">当前链接示例</dt>
+            <dd className="min-w-0 font-mono text-xs leading-relaxed wrap-anywhere">
+              {state.currentLinkExample}
+            </dd>
+          </div>
+        </dl>
       </div>
       <div className="space-y-3">
         <label className="grid max-w-2xl gap-2 text-sm font-medium">

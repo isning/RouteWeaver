@@ -71,11 +71,24 @@ export function useTaskOverlayFocus(
   const latest = useRef(props);
   latest.current = props;
   if (props.open && !previouslyOpen.current) {
-    opener.current =
+    const active =
       typeof document !== "undefined" &&
       document.activeElement instanceof HTMLElement
         ? document.activeElement
         : null;
+    // A selected menu item disappears as this task opens. Retain the menu's
+    // persistent trigger instead, using its explicit accessible relationship.
+    const menu = active?.closest<HTMLElement>('[role="menu"]');
+    const trigger = menu
+      ?.getAttribute("aria-labelledby")
+      ?.split(/\s+/)
+      .map((id) => document.getElementById(id))
+      .find(
+        (element) =>
+          element?.getAttribute("aria-haspopup") === "menu" &&
+          element.getAttribute("aria-controls") === menu.id,
+      );
+    opener.current = trigger ?? active;
   }
   previouslyOpen.current = props.open;
   const onOpenAutoFocus = useCallback((event: FocusEvent) => {

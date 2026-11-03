@@ -489,6 +489,37 @@ for (const width of [1920, 1536, 1440, 1366, 1280, 1024, 390, 320]) {
     const index = page.getByRole("navigation", { name: "本页设置", exact: true });
     await expect(index).toBeVisible();
     await assertLayout(true);
+    const originSummary = page.locator(".subscription-origin-summary");
+    expect((await originSummary.boundingBox())!.width).toBeLessThanOrEqual(768);
+    for (const pair of await originSummary.locator(":scope > div").all()) {
+      const term = (await pair.locator("dt").boundingBox())!;
+      const value = (await pair.locator("dd").boundingBox())!;
+      if (width >= 1024) {
+        expect(value.x - term.x - term.width).toBeCloseTo(16, 0);
+        expect(value.y).toBeCloseTo(term.y, 0);
+      } else if (width <= 390) {
+        expect(value.x).toBeCloseTo(term.x, 0);
+        expect(value.y - term.y - term.height).toBeCloseTo(4, 0);
+      }
+      expect(await pair.evaluate(element => element.scrollWidth)).toBeLessThanOrEqual((await pair.boundingBox())!.width + 1);
+    }
+    if ((await page.locator(".context-layout:visible").boundingBox())!.width >= 976) {
+      const currentSection = index.locator('[aria-current="location"]');
+      await expect(currentSection).not.toBeFocused();
+      const marker = await currentSection.evaluate(element => {
+        const style = getComputedStyle(element);
+        return {
+          top: style.borderTopColor, right: style.borderRightColor,
+          bottom: style.borderBottomColor, left: style.borderLeftColor,
+          leftWidth: style.borderLeftWidth,
+        };
+      });
+      expect(marker.top).toBe("rgba(0, 0, 0, 0)");
+      expect(marker.right).toBe("rgba(0, 0, 0, 0)");
+      expect(marker.bottom).toBe("rgba(0, 0, 0, 0)");
+      expect(marker.left).not.toBe("rgba(0, 0, 0, 0)");
+      expect(marker.leftWidth).toBe("2px");
+    }
     expect((await name.boundingBox())!.width).toBeLessThanOrEqual(576);
     const cardWithHeading = (heading: string) => page.locator('[data-slot="card"]').filter({
       has: page.getByRole("heading", { name: heading, exact: true }),
@@ -537,6 +568,20 @@ for (const width of [1920, 1536, 1440, 1366, 1280, 1024, 390, 320]) {
       cardWithHeading("账号恢复与退役"),
       cardWithHeading("管理员二次验证"),
     ]);
+    for (const label of ["当前密码", "新密码", "确认新密码", "验证当前密码"]) {
+      const field = page.getByLabel(label, { exact: true });
+      const measure = await field.evaluate(element => {
+        const content = element.closest('[data-slot="card-content"]')!;
+        const control = element.closest('[data-slot="input-group"]')!;
+        const style = getComputedStyle(content);
+        return {
+          width: control.getBoundingClientRect().width,
+          available: content.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight),
+        };
+      });
+      expect(measure.width).toBeLessThanOrEqual(576);
+      if (width <= 390) expect(measure.width).toBeCloseTo(measure.available, 0);
+    }
     const sessionsLink = securityIndex.getByRole("button", { name: "前往登录会话", exact: true });
     await sessionsLink.focus();
     await page.keyboard.press("Enter");
@@ -599,6 +644,19 @@ for (const width of [1920, 1536, 1440, 1366, 1280, 1024, 390, 320]) {
       expect(trafficTask.width).toBeGreaterThanOrEqual(340);
     } else expect(trafficTask.y).toBeGreaterThanOrEqual(inputTask.y + inputTask.height);
     await page.screenshot({ path: info.outputPath(`context-profile-${width}.png`), fullPage: true });
+    if (width <= 390) {
+      // A full-page capture after focusing a low control can stitch the sticky
+      // actions across the index. Record the real initial viewport separately.
+      await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
+      await settleSectionNavigation(page);
+      expect(await page.evaluate(() => window.scrollY)).toBe(0);
+      const title = (await page.getByRole("heading", { name: profile.name, exact: true }).boundingBox())!;
+      const actions = (await page.locator(".profile-publish-action").boundingBox())!;
+      const directory = (await profileIndex.boundingBox())!;
+      expect(title.y + title.height).toBeLessThanOrEqual(actions.y);
+      expect(actions.y + actions.height).toBeLessThanOrEqual(directory.y);
+      await page.screenshot({ path: info.outputPath(`context-profile-initial-viewport-${width}.png`) });
+    }
     const runtimeLink = profileIndex.getByRole("button", { name: "前往运行设置", exact: true });
     await runtimeLink.focus();
     await page.keyboard.press("Enter");

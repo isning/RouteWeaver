@@ -203,6 +203,7 @@ function AccountSecurityTask({
       <Section title="修改密码">
         <AppForm
           form={form}
+          className="max-w-xl"
           disabled={pending}
           onValuesChange={() => setDirty(true)}
           onFinish={(values) => {
@@ -325,7 +326,7 @@ function AccountSecurityTask({
         <AppForm
           form={revokeForm}
           disabled={pending}
-          className="mt-6 space-y-5 border-t pt-5"
+          className="mt-6 max-w-xl space-y-5 border-t pt-5"
           onValuesChange={() => setRevokeDirty(true)}
           onFinish={(values) => {
             if (pending || submitting.current) return;
