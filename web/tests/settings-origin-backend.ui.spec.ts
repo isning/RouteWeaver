@@ -54,10 +54,13 @@ for (const width of [1440, 390]) {
       const input = page.getByLabel("订阅域名草稿", { exact: true });
       await expect(input).toBeVisible();
       const initial = await originState(page.request);
-      const currentLink = page.locator(".key-value").filter({
-        has: page.getByText("当前链接示例", { exact: true }),
-      });
-      await expect(currentLink).toContainText(initial.currentLinkExample);
+      const currentLink = page
+        .getByRole("region", { name: "订阅域名设置", exact: true })
+        .getByRole("term")
+        .filter({ hasText: /^当前链接示例$/ })
+        .locator("xpath=following-sibling::dd");
+      await expect(currentLink).toHaveCount(1);
+      await expect(currentLink).toHaveText(initial.currentLinkExample);
       await input.fill("http://invalid.example/path");
       await save(page, 400);
       await expect(input).toHaveValue("http://invalid.example/path");
@@ -74,7 +77,7 @@ for (const width of [1440, 390]) {
       });
       await expect(enable).toBeDisabled();
       sameEffective(await originState(other), initial);
-      await expect(currentLink).toContainText(initial.currentLinkExample);
+      await expect(currentLink).toHaveText(initial.currentLinkExample);
       expect(
         (
           await other.post(`${originPath}/activate`, {
@@ -171,7 +174,7 @@ for (const width of [1440, 390]) {
       ).toBeVisible();
       expect(await originState(other)).toEqual(replacement);
       sameEffective(replacement, initial);
-      await expect(currentLink).toContainText(initial.currentLinkExample);
+      await expect(currentLink).toHaveText(initial.currentLinkExample);
 
       const reviewed = await (await save(page)).json();
       await expect(enable).toBeEnabled();
@@ -198,7 +201,7 @@ for (const width of [1440, 390]) {
       expect(effective.effectiveOrigin).toBe("");
       expect(effective.currentLinkExample).toBe(initial.currentLinkExample);
       expect(effective.tokensUnchanged).toBe(true);
-      await expect(currentLink).toContainText(effective.currentLinkExample);
+      await expect(currentLink).toHaveText(effective.currentLinkExample);
       await page.reload();
       await expect(input).toHaveValue("");
       await expect(enable).toBeDisabled();
