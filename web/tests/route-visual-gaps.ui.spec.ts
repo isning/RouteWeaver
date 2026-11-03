@@ -252,10 +252,37 @@ for (const width of [1280, 390]) {
     const settingsForm = page.getByRole("form", { name: "平台基本设置", exact: true });
     await expect(settingsForm.getByRole("combobox")).toHaveCount(0);
     await expect(page.getByRole("heading", { name: "基本设置", exact: true })).toHaveCount(0);
-    await expect(settingsForm.getByText("账号注册", { exact: true })).toBeVisible();
-    await expect(settingsForm.getByText("仅受邀用户", { exact: true })).toBeVisible();
-    await expect(settingsForm.getByText("默认时区", { exact: true })).toBeVisible();
-    await expect(settingsForm.getByText("UTC+8", { exact: true })).toBeVisible();
+    for (const policy of [
+      { term: /^平台名称$/, help: "用于记录此控制平面的名称。", value: "协作平台" },
+      { term: /^账号注册$/, help: "新账号须由管理员生成邀请后创建。", value: "仅受邀用户" },
+      { term: /^默认时区$/, help: "流量周期按 UTC+8 计算；具体重置方式在服务方案或用户授权中设置。", value: "UTC+8" },
+    ]) {
+      const term = settingsForm.getByRole("term").filter({ hasText: policy.term });
+      await expect(term).toHaveCount(1);
+      await expect(term).toBeVisible();
+      const row = term.locator("..");
+      const value = row.locator(":scope > dt + dd");
+      const help = row.locator(":scope > dt + dd + dd");
+      await expect(value).toHaveCount(1);
+      await expect(value).toBeVisible();
+      await expect(value).toHaveText(policy.value);
+      await expect(help).toHaveCount(1);
+      await expect(help).toBeVisible();
+      await expect(help).toHaveText(policy.help);
+      const termBox = (await term.boundingBox())!;
+      const valueBox = (await value.boundingBox())!;
+      const helpBox = (await help.boundingBox())!;
+      if (width <= 390) {
+        expect(valueBox.y).toBeGreaterThanOrEqual(termBox.y + termBox.height);
+        expect(helpBox.y).toBeGreaterThanOrEqual(valueBox.y + valueBox.height);
+        expect(valueBox.x).toBeCloseTo(termBox.x, 0);
+        expect(helpBox.x).toBeCloseTo(termBox.x, 0);
+      } else {
+        expect(valueBox.y).toBeCloseTo(termBox.y, 0);
+        expect(helpBox.x).toBeCloseTo(termBox.x, 0);
+        expect(helpBox.y).toBeGreaterThanOrEqual(termBox.y + termBox.height);
+      }
+    }
     const originHelp = page.getByText(/请先由运维配置 DNS、有效 HTTPS/);
     const originSave = page.getByRole("button", { name: "保存域名草稿", exact: true });
     await expect(originHelp).toBeVisible();

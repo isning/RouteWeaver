@@ -24,3 +24,9 @@ Origin revision, draft, verification, expiry, activation and confirmation workfl
 - Browser checks also cover module loading → GET loading → ready and a held save with further input. Desktop/ultrawide and narrow captures must be reviewed before claiming visual acceptance. No local browser was launched.
 
 Route/capture matrix: `#settings` default read rows, name edit, dirty name+domain navigation, Backup return; `#subscriptions` sparse one-profile/one-link overview and expanded real usage/routes; current widths 320,390,1024,1280,1366,1440,1536,1920,2304,2560,2880,3440. The 320 case uses a short 480px viewport. Existing Profile/Backup/security checks remain as non-pilot regression coverage.
+
+## CI20 follow-up
+
+CI20's 1280/390 refined-resource cases stopped at the old standalone-label text locator. Both error-context accessibility trees and the actual settings image contained the policy and its current value; the term now included its explanation, so Playwright's exact complete-text match did not apply. The replacement binds a unique semantic term to its adjacent value and separately verifies the associated explanation, without dropping the later behavior or geometry assertions.
+
+Independent pixel review also identified a concrete mobile reading-order issue: the explanation preceded the current value. The three read-first rows now have DOM order label → value → explanation → optional edit action. Desktop grid placement keeps the explanation under the label and the value/action in their existing columns. A focused DOM test failed on the previous combined term, then passed; browser assertions cover actual 390 ordering and 1280 column placement. This is a narrow production layout correction, separate from the selector repair. State, payload, workflow, overall frame widths and type scale are unchanged. New pixels remain required.

@@ -418,6 +418,20 @@ it("shows fixed platform policies as values and saves their complete payload wit
   expect(within(settings).getByText("仅受邀用户").tagName).toBe("DD");
   expect(within(settings).getByText("默认时区").tagName).toBe("DT");
   expect(within(settings).getByText("UTC+8").tagName).toBe("DD");
+  for (const policy of [
+    { label: "账号注册", help: "新账号须由管理员生成邀请后创建。", value: "仅受邀用户" },
+    { label: "默认时区", help: "流量周期按 UTC+8 计算；具体重置方式在服务方案或用户授权中设置。", value: "UTC+8" },
+  ]) {
+    const term = within(settings).getByText(policy.label, { exact: true });
+    expect(term.tagName).toBe("DT");
+    expect(term.textContent?.trim()).toBe(policy.label);
+    const value = term.nextElementSibling!;
+    const help = value.nextElementSibling!;
+    expect(value.tagName).toBe("DD");
+    expect(value.textContent?.trim()).toBe(policy.value);
+    expect(help.tagName).toBe("DD");
+    expect(help.textContent?.trim().replace(/\s+/g, " ")).toBe(policy.help);
+  }
   expect(state.writes).toEqual([]);
   fireEvent.change(name, { target: { value: "Clear platform" } });
   await userEvent.click(within(settings).getByRole("button", { name: "保存设置" }));

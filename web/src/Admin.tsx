@@ -1835,17 +1835,15 @@ function Settings({
             className="settings-form space-y-5"
           >
             <dl hidden={editingName}>
-              <div className="grid items-start gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_8rem]">
-                <dt className="font-medium">
-                  平台名称
-                  <p className="mt-1 text-sm font-normal leading-relaxed text-muted-foreground">
-                    用于记录此控制平面的名称。
-                  </p>
-                </dt>
-                <dd className="min-w-0 wrap-anywhere">
+              <div className="grid items-start gap-x-4 gap-y-1.5 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_8rem]">
+                <dt className="font-medium">平台名称</dt>
+                <dd className="min-w-0 wrap-anywhere sm:col-start-2 sm:row-start-1">
                   {String(baseline.name || "未设置")}
                 </dd>
-                <dd>
+                <dd className="text-sm leading-relaxed text-muted-foreground sm:col-start-1 sm:row-start-2">
+                  用于记录此控制平面的名称。
+                </dd>
+                <dd className="mt-2 sm:col-start-3 sm:row-start-1 sm:row-span-2 sm:mt-0">
                   <ActionButton
                     ref={editName}
                     type="button"
@@ -1901,29 +1899,25 @@ function Settings({
               <input type="hidden" />
             </AppField>
             <dl className="divide-y border-t">
-              <div className="grid items-start gap-4 py-4 last:pb-0 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_8rem]">
-                <dt className="font-medium">
-                  账号注册
-                  <p className="mt-1 text-sm font-normal leading-relaxed text-muted-foreground">
-                    新账号须由管理员生成邀请后创建。
-                  </p>
-                </dt>
-                <dd className="min-w-0 wrap-anywhere">
+              <div className="grid items-start gap-x-4 gap-y-1.5 py-4 last:pb-0 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_8rem]">
+                <dt className="font-medium">账号注册</dt>
+                <dd className="min-w-0 wrap-anywhere sm:col-start-2 sm:row-start-1">
                   {currentSettings.registration === "invite"
                     ? "仅受邀用户"
                     : String(currentSettings.registration || "未设置")}
                 </dd>
+                <dd className="text-sm leading-relaxed text-muted-foreground sm:col-start-1 sm:row-start-2">
+                  新账号须由管理员生成邀请后创建。
+                </dd>
               </div>
-              <div className="grid items-start gap-4 py-4 last:pb-0 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_8rem]">
-                <dt className="font-medium">
-                  默认时区
-                  <p className="mt-1 text-sm font-normal leading-relaxed text-muted-foreground">
-                    流量周期按 UTC+8
-                    计算；具体重置方式在服务方案或用户授权中设置。
-                  </p>
-                </dt>
-                <dd className="min-w-0 wrap-anywhere">
+              <div className="grid items-start gap-x-4 gap-y-1.5 py-4 last:pb-0 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_8rem]">
+                <dt className="font-medium">默认时区</dt>
+                <dd className="min-w-0 wrap-anywhere sm:col-start-2 sm:row-start-1">
                   {String(currentSettings.timezone || "未设置")}
+                </dd>
+                <dd className="text-sm leading-relaxed text-muted-foreground sm:col-start-1 sm:row-start-2">
+                  流量周期按 UTC+8
+                  计算；具体重置方式在服务方案或用户授权中设置。
                 </dd>
               </div>
             </dl>
