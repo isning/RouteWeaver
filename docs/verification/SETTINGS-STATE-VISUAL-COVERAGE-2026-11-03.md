@@ -39,3 +39,22 @@ records before/after motion snapshots and waits for actual completed motion and
 opacity 1. No animation is disabled and no arbitrary delay is added. The image
 alone does not establish the exact historical animation elapsed time. All task
 and HTTP assertions remain in place; new pixels remain pending CI.
+
+## CI26 saved-state capture correction
+
+The real E13 unverified screenshots retained an input color transition and a
+translucent success toast; the 390px save action also appeared pending. Waiting
+for an HTTP response and status text did not establish completed client-side
+mutation presentation. Before capture, explicitly require the save button to be
+enabled and not aria-busy, input enabled and aria-invalid cleared, and the former
+field error removed. Then wait for the actual input/button transitions and the
+specific success toast via the existing settledTask boundary. Invalid and
+post-reload active-state captures also wait for their truthful control state and
+completed motion. No sleeps, forced colors, animation disabling, or production
+changes are used. The original HTTP/mutation transcript remains unchanged.
+
+Full-page screenshots are accompanied by separate viewport captures and viewport
+navigation geometry. Fixed navigation appearing discontinuous in a stitched
+full-page capture is not classified as a product defect from that image alone.
+Application and complete browser-spec typechecks passed; fresh browser evidence
+remains pending CI.

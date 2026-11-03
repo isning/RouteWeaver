@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { Page, TestInfo } from "@playwright/test";
 import { settledTask } from "./ui-settled-task";
 import { test, expect } from "./isolated-control-plane-fixture";
 import {
@@ -26,6 +26,23 @@ async function save(page: Page, status = 200) {
   const result = await response;
   expect(result.status()).toBe(status);
   return result;
+}
+// Keep a viewport capture beside stitched full-page evidence: fixed navigation
+// is evaluated in its real viewport, not inferred from stitching at scrollY.
+async function captureOrigin(page: Page, info: TestInfo, name: string) {
+  const geometry = await page.evaluate(() => {
+    const navigation = document.getElementById("workspace-navigation");
+    const rect = navigation?.getBoundingClientRect();
+    return {
+      scrollY: window.scrollY, viewport: { width: innerWidth, height: innerHeight },
+      navigation: rect && { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+    };
+  });
+  await info.attach(`${name}-viewport-geometry`, {
+    contentType: "application/json", body: JSON.stringify(geometry),
+  });
+  await page.screenshot({ path: info.outputPath(`${name}-viewport.png`) });
+  await page.screenshot({ path: info.outputPath(`${name}.png`), fullPage: true });
 }
 for (const width of [1440, 768, 390]) {
   test(`E13 real domain draft recovery and reviewed default activation at ${width}px`, async ({
@@ -83,7 +100,14 @@ for (const width of [1440, 768, 390]) {
       expect(errorBox!.y - (inputBox!.y + inputBox!.height)).toBeGreaterThanOrEqual(0);
       expect(errorBox!.y - (inputBox!.y + inputBox!.height)).toBeLessThanOrEqual(24);
       expect(await originState(other)).toEqual(initial);
-      await page.screenshot({ path: info.outputPath(`origin-real-invalid-${width}.png`), fullPage: true });
+      const saveButton = page.getByRole("button", { name: "保存域名草稿", exact: true });
+      await expect(saveButton).not.toHaveAttribute("aria-busy", "true");
+      await expect(saveButton).toBeEnabled();
+      await expect(input).toBeEnabled();
+      await expect(input).toHaveAttribute("aria-invalid", "true");
+      await settledTask(input);
+      await settledTask(saveButton);
+      await captureOrigin(page, info, `origin-real-invalid-${width}`);
 
       await input.fill("https://draft.example");
       const staged = await (await save(page)).json();
@@ -95,7 +119,19 @@ for (const width of [1440, 768, 390]) {
         exact: true,
       });
       await expect(enable).toBeDisabled();
-      await page.screenshot({ path: info.outputPath(`origin-real-unverified-${width}.png`), fullPage: true });
+      await expect(saveButton).not.toHaveAttribute("aria-busy", "true");
+      await expect(saveButton).toBeEnabled();
+      await expect(input).toBeEnabled();
+      await expect(input).not.toHaveAttribute("aria-invalid", "true");
+      await expect(inputError).toHaveCount(0);
+      await settledTask(input);
+      await settledTask(saveButton);
+      const savedToast = page.locator("[data-sonner-toast]").filter({
+        hasText: "域名草稿已保存，当前订阅地址未改变",
+      });
+      await expect(savedToast).toHaveCount(1);
+      await settledTask(savedToast);
+      await captureOrigin(page, info, `origin-real-unverified-${width}`);
       sameEffective(await originState(other), initial);
       await expect(currentLink).toHaveText(initial.currentLinkExample);
       expect(
@@ -231,7 +267,12 @@ for (const width of [1440, 768, 390]) {
       await expect(input).toHaveValue("");
       await expect(enable).toBeDisabled();
       expect(await originState(other)).toEqual(effective);
-      await page.screenshot({ path: info.outputPath(`origin-real-default-active-${width}.png`), fullPage: true });
+      await expect(input).toBeEnabled();
+      await expect(input).not.toHaveAttribute("aria-invalid", "true");
+      await expect(saveButton).not.toHaveAttribute("aria-busy", "true");
+      await settledTask(input);
+      await settledTask(saveButton);
+      await captureOrigin(page, info, `origin-real-default-active-${width}`);
       expect(mutations).toEqual([
         { path: originPath, status: 400 },
         { path: originPath, status: 200 },
