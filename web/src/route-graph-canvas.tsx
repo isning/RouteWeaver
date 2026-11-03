@@ -1,0 +1,15 @@
+import {
+  ReactFlow,
+  Background,
+  Controls,
+  type ReactFlowProps,
+} from "@xyflow/react";
+import "@xyflow/react/dist/style.css";
+export default function RouteGraphCanvas(props: ReactFlowProps) {
+  return (
+    <ReactFlow {...props}>
+      <Background color="#d5dfd9" gap={22} />
+      <Controls showInteractive={false} />
+    </ReactFlow>
+  );
+}

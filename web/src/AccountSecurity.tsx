@@ -195,6 +195,7 @@ function AccountSecurityTask({
           <AppField
             name="newPassword"
             label="新密码"
+            description="使用 12–72 个 UTF-8 字节；中文通常每字占 3 字节。"
             rules={[{ required: true }, passwordRule]}
           >
             <PasswordInput autoComplete="new-password" />
@@ -242,7 +243,7 @@ function AccountSecurityTask({
       >
         <ErrorNotice error={revoke.error} />
         <QueryState
-          loading={sessions.isLoading}
+          loading={sessions.isPending} paused={sessions.isPaused} loadingLayout="table"
           error={securityError(sessions.error)}
           retry={() => sessions.refetch()}
         >
@@ -377,7 +378,7 @@ function AccountRecovery({ session }: { session: Session }) {
       description="账号身份与用户的服务授权是两套设置。停用或退役会阻止登录和订阅交付，不会删除历史数据。"
     >
       <QueryState
-        loading={accounts.isLoading}
+        loading={accounts.isPending} paused={accounts.isPaused} loadingLayout="table"
         error={securityError(accounts.error)}
         retry={() => accounts.refetch()}
       >
@@ -569,6 +570,7 @@ function AccountRecoveryTask({
           <AppField
             name="newPassword"
             label="临时密码"
+            description="使用 12–72 个 UTF-8 字节；中文通常每字占 3 字节。"
             rules={[{ required: true }, passwordRule]}
           >
             <PasswordInput autoComplete="new-password" />

@@ -27,10 +27,14 @@ class TicketGraphTests(unittest.TestCase):
         self.assertTrue(any("cycle" in error for error in validate(self.data, self.source)))
 
     def test_fake_completion_is_rejected(self):
-        self.data["tickets"][-1]["status"] = "verified"
-        # Construct missing evidence explicitly; catalog progress may add links.
-        self.data["tickets"][-1]["evidence"] = []
-        errors = validate(self.data, self.source)
+        changed = copy.deepcopy(self.data)
+        dependent = changed["tickets"][-1]
+        # Construct both defects explicitly; catalog progress may complete blockers.
+        by_id = {ticket["id"]: ticket for ticket in changed["tickets"]}
+        by_id[dependent["blocked_by"][-1]]["status"] = "in_progress"
+        dependent["status"] = "verified"
+        dependent["evidence"] = []
+        errors = validate(changed, self.source)
         self.assertTrue(any("positive evidence" in error for error in errors))
         self.assertTrue(any("before blocker" in error for error in errors))
 

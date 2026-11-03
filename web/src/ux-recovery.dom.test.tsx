@@ -268,7 +268,7 @@ it("does not classify profiles as unpublished while outputs are loading or faile
   );
   mount(<SubscriptionsPage navigate={vi.fn()} />);
   await waitFor(() => expect(finishOutputs).toBeTruthy());
-  expect(screen.getByText("正在加载配置与客户端订阅…")).toBeTruthy();
+  expect(screen.getByRole("status", { name: "正在加载配置与客户端订阅" })).toBeTruthy();
   expect(
     screen.getByRole("region", { name: "分流配置与客户端订阅" }),
   ).toBeTruthy();

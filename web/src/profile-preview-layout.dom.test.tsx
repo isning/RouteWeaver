@@ -127,7 +127,7 @@ it.each(["failure", "success"])(
     const name = screen.getByRole("textbox", { name: "配置名称" });
     fireEvent.change(name, { target: { value: "Newer draft" } });
     await userEvent.click(
-      screen.getByRole("combobox", { name: "草稿检查与新订阅默认客户端" }),
+      screen.getByRole("combobox", { name: "预览客户端" }),
     );
     await userEvent.click(screen.getByRole("option", { name: "sing-box" }));
     finish(
@@ -160,7 +160,7 @@ it.each(["failure", "success"])(
     expect((name as HTMLInputElement).value).toBe("Newer draft");
     expect(
       screen
-        .getByRole("combobox", { name: "草稿检查与新订阅默认客户端" })
+        .getByRole("combobox", { name: "预览客户端" })
         .closest('[role="combobox"]')?.textContent,
     ).toContain("sing-box");
     expect(requests).toHaveLength(1);
@@ -682,6 +682,7 @@ it("allows profile inputs and wrapped tab rows to grow with enlarged text", asyn
     expect(getComputedStyle(name).minHeight).toBe("calc(var(--spacing) * 11)");
     expect(getComputedStyle(tabs).height).toBe("auto");
     for (const tab of screen.getAllByRole("tab")) {
+      expect(getComputedStyle(tab).whiteSpace).toBe("nowrap");
       expect(getComputedStyle(tab).height).toBe("auto");
       expect(getComputedStyle(tab).minHeight).toBe("calc(var(--spacing) * 11)");
     }

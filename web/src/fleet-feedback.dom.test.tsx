@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+import userEvent from "@testing-library/user-event";
+import { compile } from "tailwindcss";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import {
@@ -103,6 +105,42 @@ afterEach(async () => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
+});
+it("labels and aligns populated filters while retaining selected targets and keyboard controls", async () => {
+  const fetcher = vi.fn(async () => json([]));
+  vi.stubGlobal("fetch", fetcher);
+  mount(<FleetPlanForm
+    inventory={{ ...inventory, hosts: inventory.hosts.map(host => ({ ...host, group: "团队", tags: ["办公"] })) }}
+    history={[]} initialDeploymentId="path" initialTargetIds={["core"]}
+    onClose={() => {}} onCreated={() => {}} />);
+  const toolbar = screen.getByRole("search", { name: "筛选执行范围" });
+  const tags = within(toolbar).getByRole("combobox", { name: "筛选服务器标签" }) as HTMLButtonElement;
+  await userEvent.click(tags);
+  await userEvent.click(screen.getByRole("option", { name: "办公" }));
+  await userEvent.keyboard("{Escape}");
+  await waitFor(() => expect(document.activeElement).toBe(tags));
+  const remove = within(toolbar).getByRole("button", { name: "移除 办公" });
+  expect(tags.closest("label")).toBeNull();
+  expect(remove.closest("label")).toBeNull();
+  expect(tags.labels).toHaveLength(1);
+  expect(tags.labels?.[0].textContent).toBe("服务器标签");
+  const stylesheet = document.createElement("style");
+  stylesheet.textContent = (await compile("@theme { --spacing: 0.25rem; --breakpoint-sm: 40rem; } @tailwind utilities;"))
+    .build([toolbar, ...toolbar.querySelectorAll<HTMLElement>("[class]")].flatMap(node => [...node.classList]));
+  document.head.append(stylesheet);
+  try { expect(getComputedStyle(toolbar).alignItems).toBe("flex-start"); }
+  finally { stylesheet.remove(); }
+  remove.focus();
+  await userEvent.keyboard("{Enter}");
+  expect(within(toolbar).queryByRole("button", { name: "移除 办公" })).toBeNull();
+  expect(within(toolbar).getByRole("combobox", { name: "筛选服务器标签" })).toBe(tags);
+  const search = within(toolbar).getByRole("textbox", { name: "筛选批量变更实例" });
+  await userEvent.type(search, "Office");
+  await userEvent.click(within(toolbar).getByRole("button", { name: "清除搜索输入" }));
+  expect(document.activeElement).toBe(search);
+  expect(search).toHaveProperty("value", "");
+  expect(screen.getByRole("checkbox", { name: "选择实例 Office core" }).getAttribute("data-state")).toBe("checked");
+  expect(fetcher).not.toHaveBeenCalled();
 });
 it.for([
   { status: 409, code: "FLEET_REVIEW_CHANGED", expected: changed },

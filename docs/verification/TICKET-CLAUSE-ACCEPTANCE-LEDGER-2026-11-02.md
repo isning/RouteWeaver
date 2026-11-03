@@ -1,23 +1,22 @@
-# Ticket-clause ledger and CI9 disposition — 2026-11-02
+# Ticket-clause ledger and final bounded software acceptance — 2026-11-02
 
-**95 supported clauses; RW-07.3 unresolved; RW-24.1 and RW-24.4 dependency-conditional.**
-All 98 original clauses, 24 tickets, 35 stories and 82 evidence groups are retained.
-[Final review and execution boundaries](CI9-FORWARD-ACCEPTANCE-2026-11-02.md) and
-[machine-readable selectors, hashes and receipts](CI9-FORWARD-ACCEPTANCE-2026-11-02.json)
-bind this adjudication to local `7a101032f55c1bde5ff308ffa1ddfcdd97b8d79e`,
-remote `30906420acc235d4285be27857fd416383914483`, tree
-`9a848d8631aa3c0bd2f355311040483a93db9428`, CI9 run41406226333.
+**98/98 original clauses supported; 24/24 tickets and 35/35 software stories accepted.**
+Production readiness remains 24/32: actual-target acceptance, NET-03 risk decision
+and merge/deploy authority remain open. No new criterion or dependency was introduced.
 
-13 tickets verified; RW-07 in progress; 10 held by the original forward dependency graph.
-CI9 all18 green does not resolve RW-07.3 or validate a later fix. NET-03 unknown-cause
-residual risk and actual deployment inputs/authority remain open. No application code,
-test execution, GitHub publication, main merge or deployment is performed by this ledger.
+[Final source-bound CI10 adjudication](CI10-FINAL-SOFTWARE-ACCEPTANCE-2026-11-02.md)
+records local `87bfac541c4be43d9b307234a3ac84db1feab207`, remote
+`76c82e41c7e83893c6fea040052ce163bd024dcb`, tree
+`67502bb487043bd53e151ba7cff7cee6dd61781f`, all18 CI10 gates success.
+[CI9 snapshot](CI9-FORWARD-ACCEPTANCE-2026-11-02.json) preserves the complete prior
+95 supported + RW-07.3 + RW-24.1/24.4 audit. Only those three affected dispositions
+were subsequently closed; this is not a fresh broad audit or green-aggregate shortcut.
 
 ## Original literal clauses and current adjudication
 
 ### RW-01 — Create and validate direct or multi-hop routes
 
-Stories: F01, F02, K02. Direct prerequisites: none. Forward status: `verified`.
+Stories: F01, F02, K02. Direct prerequisites: none. Forward software status: `verified`.
 
 1. **A one-endpoint direct route and a path with more than two distinct endpoints round-trip through storage and UI without a hard-coded engine or hop enum.**
    - Disposition: `supported`.
@@ -74,7 +73,7 @@ Stories: F01, F02, K02. Direct prerequisites: none. Forward status: `verified`.
 
 ### RW-02 — Invite and manage local accounts securely
 
-Stories: A01, M03. Direct prerequisites: none. Forward status: `verified`.
+Stories: A01, M03. Direct prerequisites: none. Forward software status: `verified`.
 
 1. **Invitation claim, sign-in, sign-out and expired/revoked sessions have positive and negative tests; passwords are salted and secrets never returned in normal listings.**
    - Disposition: `supported`.
@@ -125,7 +124,7 @@ Stories: A01, M03. Direct prerequisites: none. Forward status: `verified`.
 
 ### RW-03 — Grant services and inspect effective access
 
-Stories: A02, S01. Direct prerequisites: RW-01, RW-02. Forward status: `verified`.
+Stories: A02, S01. Direct prerequisites: RW-01, RW-02. Forward software status: `verified`.
 
 1. **Group membership plus an explicit individual override produces a deterministic documented effective grant; multiple groups cannot silently add quota or routes.**
    - Disposition: `supported`.
@@ -171,7 +170,7 @@ Stories: A02, S01. Direct prerequisites: RW-01, RW-02. Forward status: `verified
 
 ### RW-04 — Import private sources without unsafe fetching
 
-Stories: C101, F04. Direct prerequisites: RW-02. Forward status: `verified`.
+Stories: C101, F04. Direct prerequisites: RW-02. Forward software status: `verified`.
 
 1. **At least one explicit supported input fixture for each exposed input mode imports successfully and retains source provenance; configuration extraction reports ignored sections.**
    - Disposition: `supported`.
@@ -226,7 +225,7 @@ Stories: C101, F04. Direct prerequisites: RW-02. Forward status: `verified`.
 
 ### RW-05 — Preview ordered source processing stages
 
-Stories: C201, C202, C203. Direct prerequisites: RW-04. Forward status: `verified`.
+Stories: C201, C202, C203. Direct prerequisites: RW-04. Forward software status: `verified`.
 
 1. **Filter, rename, stable sort, explicit connection-identity deduplication and allowlisted field override each have positive fixtures and precise invalid-step diagnostics.**
    - Disposition: `supported`.
@@ -276,7 +275,7 @@ Stories: C201, C202, C203. Direct prerequisites: RW-04. Forward status: `verifie
 
 ### RW-06 — Compose reusable ordered collections
 
-Stories: C102, C201, C202, C203. Direct prerequisites: RW-05. Forward status: `verified`.
+Stories: C102, C201, C202, C203. Direct prerequisites: RW-05. Forward software status: `verified`.
 
 1. **Source processing runs before ordered merge and aggregate processing; a golden scenario exercises all three layers.**
    - Disposition: `supported`.
@@ -329,7 +328,7 @@ Stories: C102, C201, C202, C203. Direct prerequisites: RW-05. Forward status: `v
 
 ### RW-07 — Save independent full client profiles
 
-Stories: C501, F03. Direct prerequisites: RW-06. Forward status: `in_progress`.
+Stories: C501, F03. Direct prerequisites: RW-06. Forward software status: `verified`.
 
 1. **Two profiles with different targets and settings persist independently; copying a template records provenance but future edits remain independent.**
    - Disposition: `supported`.
@@ -358,19 +357,22 @@ Stories: C501, F03. Direct prerequisites: RW-06. Forward status: `in_progress`.
      - `internal/httpapi/tenant.go :: materializeProfileWithReader, saveProfile`
      - `internal/httpapi/legacy_endpoint_options_test.go :: TestLegacyEndpointEditorPreservesTypedOptionsAndRouteIdentity`
 3. **Draft and published revision are separate and stale writes fail without losing the submitted draft.**
-   - Disposition: `unresolved`.
+   - Disposition: `supported`.
    - Evidence groups: `frozen-routing`, `native-overrides`.
-   - Bounded scope: Published revisions remain frozen until explicit reviewed publication, and rejected-save DOM retains submitted draft; however stale profile-editor save denial is not established and source permits overwrite after an earlier editor commits.
-   - Remaining condition: Stale draft editor overwrite is not rejected: saveProfile has no submitted/opened revision precondition; expectRecord reads the latest record when the request begins. If editor A commits before stale B submits, B can replace A. Current stale reviewed-publication409 and synthetic DOM409 tests are different seams. Minimal closure is guarded profile draft saves plus actual A/B stale public-seam denial and retained-draft UI evidence; no deployment requirement.
+   - Bounded scope: Opened-editor private-record HMAC token supplied as If-Match and included in atomic CAS. Real HTTP stale editors and two independent store handles reject stale writes; missing/wildcard/upsert bypass denied. Full/basic editors retain rejected inputs, disallow silent overwrite, require explicit discard recovery and advance only accepted-save tokens. CI10 actual browser1280/390 passed once4904/5205ms, exactly3 UI writes, unchanged published bytes, visible warning/actions. This satisfies draft/published separation plus stale-write preservation without claiming native deployment.
+   - Execution limit: Three unconditional source tests, no Skip calls, included by the uncached unfiltered full-package race command. Nonverbose output does not emit individual named RUN/PASS or per-test no-skip telemetry. Actual browser409 and successor-token assertions have detailed results.
    - Exact selectors/retained receipt paths:
-     - `internal/httpapi/output_routing_summary_test.go :: TestPublishedRoutingSummaryStaysFrozenUntilReviewedPublication`
-     - `internal/httpapi/output_routing_summary_test.go :: TestPublishedRoutingSummarySourceRenameChangesCandidateOnly`
-     - `internal/httpapi/native_overrides_test.go :: TestNativeDraftContentIsOwnerPrivateAndSurvivesInvalidSave`
-     - `internal/httpapi/native_overrides_test.go :: TestNativePreviewAndPublishedOutputUseSameFinalComposition`
-     - `internal/httpapi/native_overrides_test.go :: TestNativeOverrideSurvivesTemplateFollowAndKeepsPublicationSeparate`
-     - `internal/httpapi/tenant.go:54-68,382-416 :: Profile and saveProfile have no opened revision comparison`
-     - `internal/httpapi/template_inputs.go:79-93 :: expectRecord reads current record during request, not submitted baseline`
-     - `web/src/profile-content-hierarchy.dom.test.tsx :: new structured DNS selects its actual resolver and retains runtime intent after a rejected save`
+     - `internal/httpapi/profile_revision_test.go :: TestProfileOpenedRevisionRejectsStaleWriteAndPreservesPublishedFeed`
+     - `internal/httpapi/profile_revision_test.go :: TestProfileWritesRequireOpenedRevisionWithoutLegacyUpsertBypass`
+     - `internal/httpapi/profile_revision_test.go :: TestProfileRevisionWorksForLegacyStoredDraftAndConcurrentStoreHandles`
+     - `internal/httpapi/profile_revision.go :: tenantRecordView / profileSaveError`
+     - `internal/httpapi/tenant.go :: saveProfile uses expectedRecord and CompareAndPutRecords`
+     - `web/tests/profile-revision.ui.spec.ts :: stale profile keeps its submitted draft and explicitly reopens the accepted version at 1280 / 390`
+     - `web/src/profile-content-hierarchy.dom.test.tsx :: retained form, successful revision advancement, explicit discard lifecycle regressions`
+     - `web/src/basic-routing.dom.test.tsx :: accepted revision advancement and conflict retention`
+     - `docs/verification/PROFILE-DRAFT-REVISION-2026-11-02.md :: genuine RED/GREEN and focused scope`
+     - `checklist-evidence-20261101/browser-41417857984/RECEIPT.md :: real competing200/stale409, retained name/DNS/sniff, unchanged server/feed, explicit recovery and two successor-token saves`
+     - `ci10-publication-20261102/monitor/named-profile-receipt.json :: uncached unfiltered full HTTPAPI -race package1039.765s PASS; nonverbose, no individual RUN/PASS events`
 4. **Default-template values and explicit overrides are visible and deterministic; the profile is not reduced to a node-only list.**
    - Disposition: `supported`.
    - Evidence groups: `templates`, `native-overrides`.
@@ -387,7 +389,7 @@ Stories: C501, F03. Direct prerequisites: RW-06. Forward status: `in_progress`.
 
 ### RW-08 — Configure nested client strategy groups
 
-Stories: C301, C302. Direct prerequisites: RW-07. Forward status: `blocked`.
+Stories: C301, C302. Direct prerequisites: RW-07. Forward software status: `verified`.
 
 1. **Valid nesting deeper than two levels works; self-reference, indirect cycles and empty effective membership are rejected with exact group diagnostics.**
    - Disposition: `supported`.
@@ -432,7 +434,7 @@ Stories: C301, C302. Direct prerequisites: RW-07. Forward status: `blocked`.
 
 ### RW-09 — Edit ordered rules and resource references
 
-Stories: C401, C402. Direct prerequisites: RW-07. Forward status: `blocked`.
+Stories: C401, C402. Direct prerequisites: RW-07. Forward software status: `verified`.
 
 1. **A positive fixture covers ordered matching, a combined predicate and explicit final action; native validation confirms each claimed supported target.**
    - Disposition: `supported`.
@@ -483,7 +485,7 @@ Stories: C401, C402. Direct prerequisites: RW-07. Forward status: `blocked`.
 
 ### RW-10 — Manage runtime settings and native overrides
 
-Stories: C502, C503. Direct prerequisites: RW-07, RW-08, RW-09. Forward status: `blocked`.
+Stories: C502, C503. Direct prerequisites: RW-07, RW-08, RW-09. Forward software status: `verified`.
 
 1. **DNS, sniffing and TUN each have at least one positive supported-target fixture and a visible structured UI, without changing host OS permissions.**
    - Disposition: `supported`.
@@ -534,7 +536,7 @@ Stories: C502, C503. Direct prerequisites: RW-07, RW-08, RW-09. Forward status: 
 
 ### RW-11 — Render and verify actual client outputs
 
-Stories: C601, F03. Direct prerequisites: RW-08, RW-09, RW-10. Forward status: `blocked`.
+Stories: C601, F03. Direct prerequisites: RW-08, RW-09, RW-10. Forward software status: `verified`.
 
 1. **Node-only and complete modes produce structurally different correct outputs, each parsed and validated rather than renamed file extensions.**
    - Disposition: `supported`.
@@ -587,7 +589,7 @@ Stories: C601, F03. Direct prerequisites: RW-08, RW-09, RW-10. Forward status: `
 
 ### RW-12 — Publish and rotate multiple subscriptions
 
-Stories: C602. Direct prerequisites: RW-03, RW-11. Forward status: `blocked`.
+Stories: C602. Direct prerequisites: RW-03, RW-11. Forward software status: `verified`.
 
 1. **Draft edits do not remove access to an existing published revision; failed compilation or compatibility checks retain the previous valid output.**
    - Disposition: `supported`.
@@ -641,7 +643,7 @@ Stories: C602. Direct prerequisites: RW-03, RW-11. Forward status: `blocked`.
 
 ### RW-13 — Account route usage and reset periods
 
-Stories: F05, S02, A03. Direct prerequisites: RW-03. Forward status: `verified`.
+Stories: F05, S02, A03. Direct prerequisites: RW-03. Forward software status: `verified`.
 
 1. **A 1 GB whole-route measurement at 2× debits 2 GB once, never once per hop; duplicate/reordered measurements do not double-charge.**
    - Disposition: `supported`.
@@ -710,7 +712,7 @@ Stories: F05, S02, A03. Direct prerequisites: RW-03. Forward status: `verified`.
 
 ### RW-14 — Enforce online-IP and entry limits
 
-Stories: A04. Direct prerequisites: RW-03, RW-13, RW-15. Forward status: `verified`.
+Stories: A04. Direct prerequisites: RW-03, RW-13, RW-15. Forward software status: `verified`.
 
 1. **The same client IP at multiple public entries counts once; transit VPS IPs and private-airport direct traffic are excluded; freshness/window is explicit.**
    - Disposition: `supported`.
@@ -758,7 +760,7 @@ Stories: A04. Direct prerequisites: RW-03, RW-13, RW-15. Forward status: `verifi
 
 ### RW-15 — Apply and recover staged local revisions
 
-Stories: F01, K03. Direct prerequisites: RW-01. Forward status: `verified`.
+Stories: F01, K03. Direct prerequisites: RW-01. Forward software status: `verified`.
 
 1. **Pinned Xray and sing-box configurations are natively validated and applied in an isolated local harness; generated is never reported as applied.**
    - Disposition: `supported`.
@@ -812,7 +814,7 @@ Stories: F01, K03. Direct prerequisites: RW-01. Forward status: `verified`.
 
 ### RW-16 — Operate scoped fleet batches
 
-Stories: K01. Direct prerequisites: RW-15. Forward status: `verified`.
+Stories: K01. Direct prerequisites: RW-15. Forward software status: `verified`.
 
 1. **A batch names exact targets, core versions and expected disruption before execution; each target outcome and retry attempt is visible.**
    - Disposition: `supported`.
@@ -861,7 +863,7 @@ Stories: K01. Direct prerequisites: RW-15. Forward status: `verified`.
 
 ### RW-17 — Track provider resources separately
 
-Stories: K04. Direct prerequisites: RW-13, RW-15. Forward status: `verified`.
+Stories: K04. Direct prerequisites: RW-13, RW-15. Forward software status: `verified`.
 
 1. **Provider cumulative IN+OUT, bandwidth rate, capacity and user weighted debit have distinct units and ledgers.**
    - Disposition: `supported`.
@@ -899,7 +901,7 @@ Stories: K04. Direct prerequisites: RW-13, RW-15. Forward status: `verified`.
 
 ### RW-18 — Diagnose connectivity and notify operators
 
-Stories: K05. Direct prerequisites: RW-15, RW-17, RW-19. Forward status: `verified`.
+Stories: K05. Direct prerequisites: RW-15, RW-17, RW-19. Forward software status: `verified`.
 
 1. **Target, direction, timestamp and estimated/actual traffic cost are shown; timeouts and error details point to an actionable failure.**
    - Disposition: `supported`.
@@ -934,7 +936,7 @@ Stories: K05. Direct prerequisites: RW-15, RW-17, RW-19. Forward status: `verifi
 
 ### RW-19 — Publish announcements and audit reminders
 
-Stories: A05. Direct prerequisites: RW-02, RW-03, RW-13. Forward status: `verified`.
+Stories: A05. Direct prerequisites: RW-02, RW-03, RW-13. Forward software status: `verified`.
 
 1. **Announcements have audience and validity bounds; users see only messages intended for them.**
    - Disposition: `supported`.
@@ -973,7 +975,7 @@ Stories: A05. Direct prerequisites: RW-02, RW-03, RW-13. Forward status: `verifi
 
 ### RW-20 — Reuse versioned templates and presets
 
-Stories: M01. Direct prerequisites: RW-05, RW-09, RW-11. Forward status: `blocked`.
+Stories: M01. Direct prerequisites: RW-05, RW-09, RW-11. Forward software status: `verified`.
 
 1. **Independent copies never change when upstream updates; fixed references stay pinned and following references produce a reviewable candidate.**
    - Disposition: `supported`.
@@ -1005,7 +1007,7 @@ Stories: M01. Direct prerequisites: RW-05, RW-09, RW-11. Forward status: `blocke
 
 ### RW-21 — Restore encrypted backups safely
 
-Stories: M02. Direct prerequisites: RW-02, RW-12, RW-13, RW-20. Forward status: `blocked`.
+Stories: M02. Direct prerequisites: RW-02, RW-12, RW-13, RW-20. Forward software status: `verified`.
 
 1. **Complete backups contain recovery-required secrets only in authenticated encryption; template sharing remains redacted and ordinary subscriptions retain only needed connection credentials.**
    - Disposition: `supported`.
@@ -1043,7 +1045,7 @@ Stories: M02. Direct prerequisites: RW-02, RW-12, RW-13, RW-20. Forward status: 
 
 ### RW-22 — Configure and maintain the platform
 
-Stories: M04. Direct prerequisites: RW-02, RW-12, RW-19. Forward status: `blocked`.
+Stories: M04. Direct prerequisites: RW-02, RW-12, RW-19. Forward software status: `verified`.
 
 1. **Domain changes preview existing-link consequences and require valid explicit values; rejected edits preserve the submitted form and previous effective settings.**
    - Disposition: `supported`.
@@ -1078,7 +1080,7 @@ Stories: M04. Direct prerequisites: RW-02, RW-12, RW-19. Forward status: `blocke
 
 ### RW-23 — Use the complete service subscription center
 
-Stories: S01, S02. Direct prerequisites: RW-12, RW-13. Forward status: `blocked`.
+Stories: S01, S02. Direct prerequisites: RW-12, RW-13. Forward software status: `verified`.
 
 1. **The main action gets a subscription; service, authorized routes, expiry, actual/weighted usage and next reset are clear without technical IDs dominating the page.**
    - Disposition: `supported`.
@@ -1113,17 +1115,16 @@ Stories: S01, S02. Direct prerequisites: RW-12, RW-13. Forward status: `blocked`
 
 ### RW-24 — Verify complete integration and recovery
 
-Stories: F01, F02, F03, F04, F05, C101, C102, C201, C202, C203, C301, C302, C401, C402, C501, C502, C503, C601, C602, S01, S02, A01, A02, A03, A04, A05, K01, K02, K03, K04, K05, M01, M02, M03, M04. Direct prerequisites: RW-01, RW-02, RW-03, RW-04, RW-05, RW-06, RW-07, RW-08, RW-09, RW-10, RW-11, RW-12, RW-13, RW-14, RW-15, RW-16, RW-17, RW-18, RW-19, RW-20, RW-21, RW-22, RW-23. Forward status: `blocked`.
+Stories: F01, F02, F03, F04, F05, C101, C102, C201, C202, C203, C301, C302, C401, C402, C501, C502, C503, C601, C602, S01, S02, A01, A02, A03, A04, A05, K01, K02, K03, K04, K05, M01, M02, M03, M04. Direct prerequisites: RW-01, RW-02, RW-03, RW-04, RW-05, RW-06, RW-07, RW-08, RW-09, RW-10, RW-11, RW-12, RW-13, RW-14, RW-15, RW-16, RW-17, RW-18, RW-19, RW-20, RW-21, RW-22, RW-23. Forward software status: `verified`.
 
 1. **Every confirmed story has positive end-to-end evidence, not just a type, document, disabled button or unsupported diagnostic; evidence is attached to its local ticket.**
-   - Disposition: `conditional_on_feature_prerequisites`.
+   - Disposition: `supported`.
    - Evidence groups: `ALL_STORIES`.
-   - Bounded scope: Must be closed only after coordinator accepts every feature clause and attaches source-bound evidence to each local ticket. Green aggregate cannot reverse-close feature prerequisites.
-   - Remaining condition: Coordinator forward RW-01–RW-23 adjudications and final ticket evidence attachment are outside this RW-17–RW-24 review. No newly discovered feature defect.
+   - Bounded scope: All original98 clauses now supported through prior complete finite audit plus targeted RW-07.3 repair evidence; all24 original tickets accepted in forward prerequisite order. All35 original software stories have positive feature evidence and completed integration prerequisites. Actual-target acceptance and NET-03 owner risk decision remain distinct open production checklist items.
    - Exact selectors/retained receipt paths:
-     - `docs/tickets/catalog.json :: unchanged literal acceptance and 35 confirmed story mappings`
-     - `docs/verification/TICKET-CLAUSE-ACCEPTANCE-LEDGER-2026-11-02.json :: forward prerequisite layers and per-clause evidence mapping`
-     - `/workspace/scratch/d385eb428cee/ci9-publication-20261102/final-receipt.json :: exact source all18 successful jobs`
+     - `docs/verification/CI9-FORWARD-ACCEPTANCE-2026-11-02.json :: complete original98 clause mapping and95 supported prior decisions`
+     - `docs/verification/CI10-FINAL-SOFTWARE-ACCEPTANCE-2026-11-02.json :: targeted remaining3 decisions and original11-layer forward traversal`
+     - `docs/tickets/catalog.json :: all24 software tickets verified after direct prerequisites; all35 confirmed story mappings unchanged`
 2. **Quick, full and native checks report their exact scope and fail on missing requested prerequisites; architecture checker rejects its intentional forbidden fixture.**
    - Disposition: `supported`.
    - Evidence groups: `render-extension`.
@@ -1145,15 +1146,15 @@ Stories: F01, F02, F03, F04, F05, C101, C102, C201, C202, C203, C301, C302, C401
      - `internal/store/counter_ingestion_test.go :: TestCounterIngestionIsAtomicReplaySafeAndSeparatesProvider; TestCounterCursorDoesNotResetOnBillingCycleChange; TestCounterCalendarAndManualBoundaryNeedExactObservation`
      - `internal/store/backup_test.go :: TestBackupImportRollsBackPartialDatabaseFailure`
 4. **Standards and specification reviews are recorded separately; all blocking findings are resolved and affected final checks rerun.**
-   - Disposition: `conditional_on_feature_prerequisites`.
+   - Disposition: `supported`.
    - Evidence groups: `REVIEW_RECEIPTS`.
-   - Bounded scope: Separate Standards/Spec delta reviews and CI9 affected-check evidence remain valid for source7a10103, but cannot establish global closure after the subsequently identified RW-07.3 blocker. Any later fix requires its own review and affected final source-bound check evidence; no retroactive clearance from CI9. NET-03 remains a distinct unknown-cause risk disposition.
-   - Remaining condition: Coordinator final audit confirmed an existing blocking specification gap in RW-07.3: missing stale profile-save baseline. Therefore the literal all blocking findings resolved and affected final checks rerun condition is not fulfilled until that feature finding is fixed, reviewed and its affected exact-source final checks pass. This is a dependent consequence of RW-07.3, not a second software defect.
+   - Bounded scope: The sole blocking software finding RW-07.3 and the repair review delayed-discard finding are fixed, separately reviewed and covered by affected final source-bound CI10 checks. Prior independent reviews remain retained historical scopes. This is software-contract closure, not resolution of the separately documented original sample410 unknown-cause residual risk or production rollout.
    - Exact selectors/retained receipt paths:
-     - `/workspace/scratch/d385eb428cee/literal-final-independent-review-20261102/REVIEW.md :: separate Standards and Spec sections`
-     - `/workspace/scratch/d385eb428cee/literal-final-independent-review-20261102/receipt.json :: four production blob equality current7a10103, zero concrete findings per axis`
-     - `/workspace/scratch/d385eb428cee/ci9-publication-20261102/monitor/named-native-web-receipt.json :: final2115 web tests and named native rate pass`
-     - `/workspace/scratch/d385eb428cee/checklist-evidence-20261101/browser-41406226333/RECEIPT.md :: final diagnostic320, template and clipboard/QR cases`
+     - `profile-final-independent-review-20261102/review.json :: Standards0/Spec0;20 reviewed production/context blobs identical to exact final87bfac5`
+     - `docs/verification/PROFILE-DRAFT-REVISION-2026-11-02.md :: delayed-discard finding fixed and focused RED/GREEN evidence`
+     - `ci10-publication-20261102/monitor/terminal-jobs.json :: all18 exact76c82 final-source jobs success including strict repository summary`
+     - `checklist-evidence-20261101/browser-41417857984/RECEIPT.md :: affected two real stale-profile journeys pass with actual pixels`
+     - `profile-final-local-20261102/receipt.json :: fullweb2120/type/build and31HTTPAPI pass; final87 differs from938 only Python harness literal`
 5. **No claim of GitHub publication, native CI execution, real VPS deployment or production readiness is made without corresponding verified evidence.**
    - Disposition: `supported`.
    - Evidence groups: `SOURCE_BOUND_RECEIPTS`.
@@ -1164,57 +1165,53 @@ Stories: F01, F02, F03, F04, F05, C101, C102, C201, C202, C203, C301, C302, C401
      - `docs/verification/FINAL-CAPACITY-REFERENCE-2026-11-02.md :: qualified674 runtime reference and scope`
      - `/workspace/scratch/d385eb428cee/literal-final-soak-risk-20261102/ :: sample410 cause UNKNOWN residual-risk receipt`
 
-## Story-to-feature prerequisite decisions
+## Story-to-feature acceptance
 
-These are software feature outcomes, not global story completion; RW-24 remains held.
+All feature prerequisites and RW-24 passed in original forward order; actual rollout is separate.
 
-| Story | Feature tickets | Current feature prerequisite status |
+| Story | Feature tickets | Software acceptance |
 |---|---|---|
-| F01 | RW-01, RW-15 | Verified |
-| F02 | RW-01 | Verified |
-| F03 | RW-07, RW-11 | Held: RW-07, RW-11 |
-| F04 | RW-04 | Verified |
-| F05 | RW-13 | Verified |
-| C101 | RW-04 | Verified |
-| C102 | RW-06 | Verified |
-| C201 | RW-05, RW-06 | Verified |
-| C202 | RW-05, RW-06 | Verified |
-| C203 | RW-05, RW-06 | Verified |
-| C301 | RW-08 | Held: RW-08 |
-| C302 | RW-08 | Held: RW-08 |
-| C401 | RW-09 | Held: RW-09 |
-| C402 | RW-09 | Held: RW-09 |
-| C501 | RW-07 | Held: RW-07 |
-| C502 | RW-10 | Held: RW-10 |
-| C503 | RW-10 | Held: RW-10 |
-| C601 | RW-11 | Held: RW-11 |
-| C602 | RW-12 | Held: RW-12 |
-| S01 | RW-03, RW-23 | Held: RW-23 |
-| S02 | RW-13, RW-23 | Held: RW-23 |
-| A01 | RW-02 | Verified |
-| A02 | RW-03 | Verified |
-| A03 | RW-13 | Verified |
-| A04 | RW-14 | Verified |
-| A05 | RW-19 | Verified |
-| K01 | RW-16 | Verified |
-| K02 | RW-01 | Verified |
-| K03 | RW-15 | Verified |
-| K04 | RW-17 | Verified |
-| K05 | RW-18 | Verified |
-| M01 | RW-20 | Held: RW-20 |
-| M02 | RW-21 | Held: RW-21 |
-| M03 | RW-02 | Verified |
-| M04 | RW-22 | Held: RW-22 |
+| F01 | RW-01, RW-15 | Verified within recorded scope |
+| F02 | RW-01 | Verified within recorded scope |
+| F03 | RW-07, RW-11 | Verified within recorded scope |
+| F04 | RW-04 | Verified within recorded scope |
+| F05 | RW-13 | Verified within recorded scope |
+| C101 | RW-04 | Verified within recorded scope |
+| C102 | RW-06 | Verified within recorded scope |
+| C201 | RW-05, RW-06 | Verified within recorded scope |
+| C202 | RW-05, RW-06 | Verified within recorded scope |
+| C203 | RW-05, RW-06 | Verified within recorded scope |
+| C301 | RW-08 | Verified within recorded scope |
+| C302 | RW-08 | Verified within recorded scope |
+| C401 | RW-09 | Verified within recorded scope |
+| C402 | RW-09 | Verified within recorded scope |
+| C501 | RW-07 | Verified within recorded scope |
+| C502 | RW-10 | Verified within recorded scope |
+| C503 | RW-10 | Verified within recorded scope |
+| C601 | RW-11 | Verified within recorded scope |
+| C602 | RW-12 | Verified within recorded scope |
+| S01 | RW-03, RW-23 | Verified within recorded scope |
+| S02 | RW-13, RW-23 | Verified within recorded scope |
+| A01 | RW-02 | Verified within recorded scope |
+| A02 | RW-03 | Verified within recorded scope |
+| A03 | RW-13 | Verified within recorded scope |
+| A04 | RW-14 | Verified within recorded scope |
+| A05 | RW-19 | Verified within recorded scope |
+| K01 | RW-16 | Verified within recorded scope |
+| K02 | RW-01 | Verified within recorded scope |
+| K03 | RW-15 | Verified within recorded scope |
+| K04 | RW-17 | Verified within recorded scope |
+| K05 | RW-18 | Verified within recorded scope |
+| M01 | RW-20 | Verified within recorded scope |
+| M02 | RW-21 | Verified within recorded scope |
+| M03 | RW-02 | Verified within recorded scope |
+| M04 | RW-22 | Verified within recorded scope |
 
-## Historical mapping and actual rollout boundary
+## Retained history and boundaries
 
-The JSON retains earlier CI7/CI8, preparation snapshots, historical work IDs and
-supplemental source hashes as history. Historical pending labels do not schedule
-already completed work again. Current dispositions are `final_clause_review` and
-the source-bound CI9 record. No original criterion, dependency or failure is erased.
-
-Actual one-CP/Linux/private-invitation target selection, client/network/workload
-envelope, key/backup custody, RPO/RTO, TLS/notification destinations and explicit
-main/deploy authorization are external acceptance inputs, not new software features.
-The original sample410 timeout remains UNKNOWN. A later passing reference window
-does not determine its cause; NET-03 owner risk disposition remains pending.
+The JSON retains earlier CI7/CI8/CI9 source hashes, preparation history and exact
+evidence selectors. Earlier pending labels are historical, not new work to repeat.
+Current decisions are source-bound to CI10; later application changes require
+affected verification. The source/catalog documentation update is separate from
+the tested application commit. Actual target selection and authorization remain
+pending. Original sample410 remains UNKNOWN; NET-03 is not closed.

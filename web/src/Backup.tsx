@@ -7,7 +7,7 @@ import { Notice } from "@/ui-patterns/notice";
 import { ActionButton } from "@/ui-patterns/actions";
 import { toast } from "sonner";
 import { useForm, AppField, AppForm } from "@/ui-patterns/form";
-import { Download as DownloadOutlined, Lock as LockOutlined, LoaderCircle as LoadingOutlined, Upload as UploadOutlined } from "lucide-react";
+import { Download as DownloadOutlined, LoaderCircle as LoadingOutlined, Upload as UploadOutlined } from "lucide-react";
 import { wrapPublicationModalTab } from "./publication-modal-focus";
 import { revealFocusedPolicyModalControl } from "./drawer-control-visibility";
 import { useEffect, useId, useRef, useState } from "react";
@@ -49,6 +49,7 @@ const restoreConfirmationPhrase = "恢复到新数据库";
 export function BackupSettings() {
     const fileInputID = useId();
     const fileDescriptionID = useId();
+    const uploadDescriptionID = useId();
     const fileInput = useRef<HTMLInputElement | null>(null);
     const revision = useRef(0);
     const activeInspection = useRef<number | null>(null);
@@ -219,15 +220,8 @@ export function BackupSettings() {
             setFileError(new Error("备份文件超过 1 GiB，无法在当前上传上限内校验。"));
         }
     };
-    return (<>
+    return (<div className="grid gap-6" role="region" aria-label="备份与恢复">
       <Section title="完整加密备份" className="max-w-3xl" description="加密下载账号、配置、历史及恢复凭据。">
-        <div className="subtle-callout space-y-4 rounded-lg border bg-muted/50 p-4 text-sm leading-relaxed">
-          <div>
-            <p>
-              <LockOutlined aria-hidden="true" className="inline size-4"/>{" "}
-              备份含敏感凭据。请将文件和密码分开保管；忘记密码将无法恢复。
-            </p>
-          </div>
           <ActionButton leadingIcon={<DownloadOutlined aria-hidden="true"/>} onClick={() => {
             create.reset();
             form.resetFields();
@@ -235,7 +229,6 @@ export function BackupSettings() {
         }} variant="default">
             创建加密备份
           </ActionButton>
-        </div>
         <BackupCapacity />
       </Section>
       <Section title="恢复备份" className="max-w-3xl" description="恢复到新数据库，不覆盖当前数据，也不会自动切换服务。">
@@ -292,7 +285,10 @@ export function BackupSettings() {
             setConfirmation("");
         }}/>
           </label>
-          <ActionButton leadingIcon={<UploadOutlined aria-hidden="true"/>} aria-label="校验备份并查看影响" aria-busy={inspect.isPending} pending={inspect.isPending} disabled={!file || !!fileError || !password || restore.isPending} onClick={() => {
+          <p id={uploadDescriptionID} className="text-sm text-muted-foreground">
+            选择文件不会上传；校验时会将备份文件和密码发送到当前控制平面。
+          </p>
+          <ActionButton leadingIcon={<UploadOutlined aria-hidden="true"/>} aria-describedby={uploadDescriptionID} aria-label="校验备份并查看影响" aria-busy={inspect.isPending} pending={inspect.isPending} disabled={!file || !!fileError || !password || restore.isPending} onClick={() => {
             if (activeAttempt.current !== null ||
                 activeInspection.current !== null ||
                 !file ||
@@ -398,7 +394,7 @@ export function BackupSettings() {
             <PasswordInput autoComplete="new-password"/>
           </AppField>
           <p className="muted text-sm text-muted-foreground">
-            此文件包含完整恢复所需秘密。创建后仅下载到你的设备，不发送到第三方。
+            备份包含账号与订阅凭据，仅下载到你的设备，不发送到第三方。请将文件与密码分开保管；忘记密码无法恢复。
           </p>
           <div className="form-footer flex flex-wrap items-center justify-end gap-2 border-t pt-4">
             <ActionButton disabled={create.isPending} onClick={() => {
@@ -413,5 +409,5 @@ export function BackupSettings() {
           </div>
         </AppForm>
       </TaskDialog>
-    </>);
+    </div>);
 }

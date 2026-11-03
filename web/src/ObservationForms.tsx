@@ -144,7 +144,7 @@ export function ObservationConfigForm({
           <p className="text-sm leading-relaxed text-muted-foreground">
             更换采集实例、计费网卡或周期会重建估算基线；更换周期会清除原周期的账单引用，不修改用户流量账单。
             {providerEnabled &&
-              "供应商用量单独记录；所选耗尽行为不修改用户账单，也不自动更换线路。"}
+              "供应商用量单独记录，所选耗尽行为不自动更换线路。"}
           </p>
           <div className="flex flex-wrap justify-end gap-2">
             <ActionButton

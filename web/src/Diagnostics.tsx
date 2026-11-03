@@ -65,7 +65,7 @@ export function DiagnosticsPanel({
       <Section
         className="embedded-section space-y-4"
         title="节点连接诊断"
-        description="选择服务器直连或已应用线路的中转与出口，按次测试授权目标，不自动改动线路。"
+        description="测试服务器直连或已应用线路的连通性、下载与上传性能。"
         extra={
           <ActionButton
             onClick={() => setCreating(true)}
@@ -77,7 +77,7 @@ export function DiagnosticsPanel({
         }
       >
         <QueryState
-          loading={jobs.isLoading || targets.isLoading}
+          loading={jobs.isPending || targets.isPending} paused={jobs.isPaused || targets.isPaused} loadingLayout="table"
           error={jobs.error || targets.error}
           retry={() => {
             jobs.refetch();
@@ -633,7 +633,7 @@ export function DiagnosticStartForm({
           ) : (
             <>
               <QueryState
-                loading={paths.isLoading}
+                loading={pathMode === "managed_route" && paths.isPending} paused={paths.isPaused} loadingLayout="form"
                 error={paths.error}
                 retry={() => paths.refetch()}
               >

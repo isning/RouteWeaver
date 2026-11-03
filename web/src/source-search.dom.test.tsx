@@ -209,3 +209,23 @@ it("separates source identity and secondary kind visually and in its accessible 
   expect(icon.classList.contains("shrink-0")).toBe(true);
   expect(icon.classList.contains("[&_svg]:size-4")).toBe(true);
 });
+
+it("clears a matching source query without losing source identities or focus", async () => {
+  const fetcher = vi.fn(async () => json(sources));
+  vi.stubGlobal("fetch", fetcher);
+  mount();
+  await screen.findByRole("button", { name: /^南区 Beta\s*文本导入$/ });
+  const toolbar = screen.getByRole("search", { name: "查找订阅来源" });
+  const search = within(toolbar).getByRole("textbox", { name: "搜索来源" });
+  await userEvent.type(search, "Alpha");
+  expect(screen.queryByRole("button", { name: /^南区 Beta/ })).toBeNull();
+  expect(screen.getByRole("button", { name: /^北区 Alpha/ })).toBeTruthy();
+  const clear = within(toolbar).getByRole("button", { name: "清除搜索输入" });
+  clear.focus();
+  await userEvent.keyboard("{Enter}");
+  expect(document.activeElement).toBe(search);
+  expect(search).toHaveProperty("value", "");
+  expect(screen.getByRole("button", { name: /^南区 Beta/ })).toBeTruthy();
+  expect(screen.getByRole("button", { name: /^北区 Alpha/ })).toBeTruthy();
+  expect(fetcher).toHaveBeenCalledTimes(1);
+});

@@ -385,7 +385,7 @@ it("keeps unknown checks distinct from confirmed path and credentials, including
   await within(detail).findByText("入口凭据已确认生效");
   expect(within(detail).getByText("已确认生效")).toBeTruthy();
   expect(within(detail).getByText("授权来源：方案：office")).toBeTruthy();
-  expect(within(detail).getByText(/订阅交付：尚未在此核验/)).toBeTruthy();
+  expect(within(detail).getByText(/获取订阅时，会按当时的授权、额度与入口状态重新检查是否可交付。/)).toBeTruthy();
   failed = true;
   await userEvent.click(
     within(detail).getByRole("button", { name: "重新核对进度" }),

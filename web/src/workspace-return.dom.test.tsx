@@ -772,7 +772,7 @@ it("keeps the remembered page while an uncached inventory loads on return", asyn
       <SubscriptionsPage />
     </SubscriptionContextProvider>,
   );
-  await screen.findByText("正在加载配置与客户端订阅…");
+  await screen.findByRole("status", { name: "正在加载配置与客户端订阅" });
   await waitFor(() => expect(complete).toBeTypeOf("function"));
   holding = false;
   await act(async () => {

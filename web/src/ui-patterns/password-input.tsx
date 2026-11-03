@@ -7,6 +7,6 @@ export function PasswordInput({ className, disabled, revealLabel = "密码", ...
  const [visible,setVisible]=useState(false);
  return <InputGroup className={className}>
   <InputGroupInput {...props} disabled={disabled} type={visible?"text":"password"}/>
-  <InputGroupAddon align="inline-end"><InputGroupButton type="button" size="icon-xs" disabled={disabled} aria-label={`${visible?"隐藏":"显示"}${revealLabel}`} aria-pressed={visible} onClick={()=>setVisible(value=>!value)}>{visible?<EyeOff aria-hidden="true"/>:<Eye aria-hidden="true"/>}</InputGroupButton></InputGroupAddon>
+  <InputGroupAddon align="inline-end" className="py-0"><InputGroupButton type="button" size="icon-xs" className="min-h-11 min-w-11" disabled={disabled} aria-label={`${visible?"隐藏":"显示"}${revealLabel}`} aria-pressed={visible} onClick={()=>setVisible(value=>!value)}>{visible?<EyeOff aria-hidden="true"/>:<Eye aria-hidden="true"/>}</InputGroupButton></InputGroupAddon>
  </InputGroup>;
 }

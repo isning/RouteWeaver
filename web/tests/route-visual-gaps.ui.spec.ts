@@ -56,6 +56,8 @@ const hosts: HostRecord[] = [
     id: "visual-host",
     name: "远程协作服务器",
     address: "inventory.example.test",
+    group: "协作团队",
+    tags: ["办公", "远程"],
   },
 ];
 const state: State = {
@@ -120,7 +122,10 @@ const fixtures: Record<string, unknown> = {
   "/managed-endpoints": [],
   "/links": [],
   "/server-deployments": [],
-  "/me/sources": [],
+  "/me/sources": [
+    { id: "visual-source-eu", name: "欧洲办公节点", kind: "text", enabled: true },
+    { id: "visual-source-ap", name: "亚太远程协作节点", kind: "url", enabled: true },
+  ],
   "/me/collections": collections,
   "/me/overview": overview,
   "/me/profiles": [profile],
@@ -155,6 +160,104 @@ async function readOnlyInventory(page: Page) {
     return route.fulfill({ json: fixtures[path] });
   });
   return unexpected;
+}
+
+// Reconstructed acceptance for shared console controls. Synthetic GET fixtures
+// establish task behavior/pixels only, not deployment or production health.
+for (const width of [1280, 390]) {
+  test(`refined resource controls and task spacing at ${width}`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: 900 });
+    const unexpected = await readOnlyInventory(page);
+    await page.goto("/#sources");
+    const toolbar = page.getByRole("search", { name: "查找订阅来源", exact: true });
+    const search = toolbar.getByRole("textbox", { name: "搜索来源", exact: true });
+    await expect(page.getByRole("button", { name: "欧洲办公节点 文本导入", exact: true })).toBeVisible();
+    await search.fill("欧洲");
+    await expect(page.getByRole("button", { name: "亚太远程协作节点 订阅链接", exact: true })).toHaveCount(0);
+    const clear = toolbar.getByRole("button", { name: "清除搜索输入", exact: true });
+    for (const control of [search, clear]) expect((await control.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+    if (width >= 1280) {
+      const searchBox = (await search.locator("..").boundingBox())!;
+      const summaryBox = (await toolbar.getByText("2 个私有来源", { exact: true }).boundingBox())!;
+      const gap = summaryBox.x - searchBox.x - searchBox.width;
+      expect(gap).toBeGreaterThanOrEqual(0);
+      expect(gap).toBeLessThanOrEqual(16);
+      expect(Math.abs(searchBox.y + searchBox.height / 2 - summaryBox.y - summaryBox.height / 2)).toBeLessThanOrEqual(2);
+    }
+    await page.screenshot({ path: info.outputPath(`refined-source-toolbar-${width}.png`), fullPage: true });
+    await clear.focus();
+    await page.keyboard.press("Enter");
+    await expect(search).toBeFocused();
+    await expect(search).toHaveValue("");
+    await expect(page.getByRole("button", { name: "亚太远程协作节点 订阅链接", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "添加来源", exact: true }).click();
+    const sourceDialog = page.getByRole("dialog", { name: "添加订阅来源", exact: true });
+    await expect(sourceDialog.getByRole("textbox", { name: "来源名称", exact: true })).toBeVisible();
+    await page.screenshot({ path: info.outputPath(`refined-source-dialog-${width}.png`) });
+    await sourceDialog.getByRole("button", { name: "取消", exact: true }).click();
+    await expect(sourceDialog).toHaveCount(0);
+
+    await page.goto("/#fleet");
+    await page.getByRole("button", { name: "计划变更", exact: true }).click();
+    const plan = page.getByRole("dialog", { name: "计划批量变更", exact: true });
+    const range = plan.getByRole("search", { name: "筛选执行范围", exact: true });
+    await range.scrollIntoViewIfNeeded();
+    const groupFilter = range.getByRole("combobox", { name: "筛选服务器分组", exact: true });
+    const tagFilter = range.getByRole("combobox", { name: "筛选服务器标签", exact: true });
+    const rangeSearch = range.getByRole("textbox", { name: "筛选批量变更实例", exact: true });
+    await groupFilter.click();
+    await page.getByRole("option", { name: "协作团队", exact: true }).click();
+    await tagFilter.click();
+    await page.getByRole("option", { name: "办公", exact: true }).click();
+    await page.keyboard.press("Escape");
+    await expect(tagFilter).toBeFocused();
+    await expect(groupFilter).toHaveText("协作团队");
+    const removeTag = range.getByRole("button", { name: "移除 办公", exact: true });
+    await expect(removeTag).toBeVisible();
+    await range.scrollIntoViewIfNeeded();
+    const groupBox = (await groupFilter.boundingBox())!;
+    const tagBox = (await tagFilter.boundingBox())!;
+    const searchBox = (await rangeSearch.boundingBox())!;
+    for (const box of [groupBox, tagBox, searchBox]) expect(box.height).toBeGreaterThanOrEqual(44);
+    const labelBox = (await range.getByText("服务器标签", { exact: true }).boundingBox())!;
+    if (width >= 1280) {
+      expect(Math.abs(groupBox.y - tagBox.y)).toBeLessThanOrEqual(2);
+      expect(Math.abs(searchBox.y - tagBox.y)).toBeLessThanOrEqual(2);
+      expect(labelBox.x + labelBox.width).toBeLessThanOrEqual(tagBox.x);
+      expect(Math.abs(labelBox.y + labelBox.height / 2 - tagBox.y - tagBox.height / 2)).toBeLessThanOrEqual(2);
+    } else expect(labelBox.y + labelBox.height).toBeLessThanOrEqual(tagBox.y);
+    expect(await range.evaluate(el => el.scrollWidth)).toBeLessThanOrEqual((await range.boundingBox())!.width + 1);
+    await page.screenshot({ path: info.outputPath(`refined-fleet-filters-${width}.png`) });
+    await removeTag.focus();
+    await page.keyboard.press("Enter");
+    await expect(removeTag).toHaveCount(0);
+    await expect(groupFilter).toHaveText("协作团队");
+    await rangeSearch.fill("远程");
+    await range.getByRole("button", { name: "清除搜索输入", exact: true }).click();
+    await expect(rangeSearch).toBeFocused();
+    await expect(rangeSearch).toHaveValue("");
+    await plan.getByRole("button", { name: "关闭", exact: true }).click();
+    await expect(plan).toHaveCount(0);
+
+    await page.goto("/#settings");
+    await expect(page.getByRole("textbox", { name: "平台名称", exact: true })).toHaveValue("协作平台");
+    for (const tab of await page.getByRole("tab").all()) expect((await tab.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width + 1);
+    await page.screenshot({ path: info.outputPath(`refined-settings-${width}.png`), fullPage: true });
+    await page.route("**/api/auth/me", route => route.fulfill({ status: 401, json: { detail: "Sign in required for the synthetic login view" } }));
+    await page.goto("/");
+    await expect(page.getByRole("heading", { name: "登录 RouteWeaver", exact: true })).toBeVisible();
+    const password = page.getByLabel("密码", { exact: true });
+    const inputBox = (await password.boundingBox())!;
+    const outlineBox = (await password.locator("..").boundingBox())!;
+    const revealBox = (await page.getByRole("button", { name: "显示密码", exact: true }).boundingBox())!;
+    expect(inputBox.height).toBeGreaterThanOrEqual(44);
+    expect(revealBox.height).toBeGreaterThanOrEqual(44);
+    expect(outlineBox.y).toBeLessThanOrEqual(inputBox.y);
+    expect(outlineBox.y + outlineBox.height).toBeGreaterThanOrEqual(inputBox.y + inputBox.height);
+    await page.screenshot({ path: info.outputPath(`refined-login-controls-${width}.png`) });
+    expect(unexpected, "No writes or unmodelled fixture requests").toEqual([]);
+  });
 }
 
 const surfaces = [

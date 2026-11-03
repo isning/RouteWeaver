@@ -56,7 +56,7 @@ export function SubscriptionOriginSettings() {
         />
       )}
       <QueryState
-        loading={query.isLoading}
+        loading={query.isPending} paused={query.isPaused} loadingLayout="form"
         error={query.data ? null : query.error}
         retry={() => query.refetch()}
       >

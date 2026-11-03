@@ -1,3 +1,4 @@
+import { ResourceToolbar, SearchField } from "@/ui-patterns/resource-toolbar";
 import type { ReactNode } from "react";
 import {
   DropdownMenu,
@@ -7,7 +8,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { QRCodeSVG } from "qrcode.react";
+import { SubscriptionQRCode } from "./ui-patterns/qr-code";
+import { LoadingState } from "./ui-patterns/loading-state";
 import {
   Accordion,
   AccordionItem,
@@ -847,7 +849,7 @@ export function SubscriptionsPage({
   ];
   if (editor)
     return (
-      <Suspense fallback={<div aria-busy="true">正在打开配置…</div>}>
+      <Suspense fallback={<LoadingState layout="form" label="正在打开配置" />}>
         <SubscriptionEditor
           initial={editor.profile}
           isNew={editor.isNew}
@@ -900,7 +902,7 @@ export function SubscriptionsPage({
             当前配置：
             <strong>
               {scopedProfile?.name ||
-                (profiles.isLoading ? "正在核对…" : "不可用的分流配置")}
+                (profiles.isPending ? "正在核对…" : "不可用的分流配置")}
             </strong>
           </span>
           <ActionButton
@@ -912,7 +914,7 @@ export function SubscriptionsPage({
         </div>
       )}
       {profileScope &&
-        !profiles.isLoading &&
+        !profiles.isPending &&
         !profiles.isError &&
         !scopedProfile && (
           <Notice tone="warning" title="此分流配置不可用">
@@ -920,7 +922,7 @@ export function SubscriptionsPage({
           </Notice>
         )}
       {selectedID &&
-        !outputs.isLoading &&
+        !outputs.isPending &&
         !outputs.isError &&
         !currentOutput && (
           <Notice
@@ -975,26 +977,30 @@ export function SubscriptionsPage({
         </div>
       )}
       {hasInventory && (
-        <div className="subscription-inventory-tools flex flex-wrap items-center justify-between gap-3">
-          <Input
+        <ResourceToolbar className="subscription-inventory-tools" label="查找配置与订阅" search={
+          <SearchField
             data-return-focus="search"
-            className="w-full sm:w-80"
             aria-label="搜索配置或客户端订阅"
             placeholder="搜索配置或客户端订阅"
             value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            onValueChange={setSearch}
           />
-          <span className="muted text-sm text-muted-foreground" role="status">
+          } summary={<span role="status">
             {groups.length} 组配置 ·{" "}
-            {outputs.isLoading || outputs.isError
+            {outputs.isPending || outputs.isError
               ? "订阅待核对"
               : `${groups.reduce((total, group) => total + group.links.length, 0)} 个客户端订阅`}
-          </span>
-        </div>
+          </span>} />
       )}
-      {profiles.isLoading || outputs.isLoading ? (
-        <p role="status">正在加载配置与客户端订阅…</p>
-      ) : null}
+      {(profiles.isPending || outputs.isPending) && (
+        profiles.isPaused || outputs.isPaused ? (
+          <Notice tone="info" title="等待网络连接">连接恢复后将继续核对配置与客户端订阅。</Notice>
+        ) : hasInventory ? (
+          <p role="status" aria-label="正在加载配置与客户端订阅" className="text-sm text-muted-foreground">正在核对尚未返回的配置与客户端订阅…</p>
+        ) : (
+          <LoadingState layout="subscriptions" label="正在加载配置与客户端订阅" />
+        )
+      )}
       <section
         aria-label={
           view === "outputs" ? "客户端订阅清单" : "分流配置与客户端订阅"
@@ -1023,7 +1029,7 @@ export function SubscriptionsPage({
                 <div className="subscription-info min-w-0 space-y-1">
                   <h2 className="text-base font-semibold tracking-tight text-foreground wrap-anywhere">
                     {profile?.name ||
-                      (profiles.isLoading
+                      (profiles.isPending
                         ? "正在核对关联配置…"
                         : "关联配置不可用")}
                   </h2>
@@ -1032,7 +1038,7 @@ export function SubscriptionsPage({
                       ? "已保存的分流配置"
                       : "配置暂不可编辑；保留独立订阅的访问与管理"}
                     {" · "}
-                    {outputs.isLoading || outputs.isError
+                    {outputs.isPending || outputs.isError
                       ? "关联订阅待核对"
                       : `${group.totalLinks} 个客户端订阅`}
                   </p>
@@ -1044,7 +1050,7 @@ export function SubscriptionsPage({
                       variant="outline"
                       pending={!!opening}
                     >
-                      {!outputs.isLoading &&
+                      {!outputs.isPending &&
                       !outputs.isError &&
                       group.totalLinks === 0
                         ? "继续配置"
@@ -1219,7 +1225,7 @@ export function SubscriptionsPage({
                     </div>
                   </div>
                 ))}
-                {!links.length && !outputs.isLoading && !outputs.isError && (
+                {!links.length && !outputs.isPending && !outputs.isError && (
                   <p className="subscription-no-links p-4 text-sm text-muted-foreground">
                     {group.totalLinks
                       ? "没有匹配的客户端订阅。"
@@ -1280,8 +1286,8 @@ export function SubscriptionsPage({
           );
         })}
         {!groups.length &&
-          !profiles.isLoading &&
-          !outputs.isLoading &&
+          !profiles.isPending &&
+          !outputs.isPending &&
           !profiles.isError &&
           !outputs.isError && (
             <Section>
@@ -1561,7 +1567,9 @@ export function SubscriptionsPage({
       />
       <div className="subscription-service-context space-y-3">
         <QueryState
-          loading={query.isLoading}
+          loading={query.isPending}
+          paused={query.isPaused}
+          loadingLayout="summary"
           error={query.error}
           retry={() => query.refetch()}
         >
@@ -2838,7 +2846,7 @@ function OutputAccessTask({
                   </div>
                   <div className="grid items-start gap-5 sm:grid-cols-[auto_minmax(0,1fr)]">
                     <div className="qr-container mx-auto flex justify-center rounded-lg border bg-white p-4 sm:mx-0">
-                      <QRCodeSVG value={url} size={180} color="#224e43" />
+                      <SubscriptionQRCode value={url} />
                     </div>
                     <div className="min-w-0 space-y-4">
                       <label className="standalone-label grid min-w-0 gap-2 text-sm font-medium">

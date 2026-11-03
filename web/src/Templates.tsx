@@ -534,7 +534,7 @@ export function TemplatesPage({ admin = false }: { admin?: boolean }) {
       label: "模板库",
       children: (
         <QueryState
-          loading={query.isLoading}
+          loading={query.isPending} paused={query.isPaused} loadingLayout="cards"
           error={query.error}
           retry={() => query.refetch()}
         >
@@ -593,7 +593,7 @@ export function TemplatesPage({ admin = false }: { admin?: boolean }) {
       label: "我的引用",
       children: (
         <QueryState
-          loading={bindings.isLoading}
+          loading={bindings.isPending} paused={bindings.isPaused} loadingLayout="table"
           error={bindings.error}
           retry={() => bindings.refetch()}
         >

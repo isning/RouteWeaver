@@ -560,7 +560,7 @@ export function UserGroups({ users, services, routes, }: {
     return (<Section variant="plain" title="用户组" description="以组分配服务方案；个人指定方案优先，多组按优先级选择，不叠加额度。" extra={<ActionButton onClick={() => setEditing({ initial: null })} variant="outline">
           新建用户组
         </ActionButton>}>
-      <QueryState loading={query.isLoading} error={query.error} retry={() => query.refetch()}>
+      <QueryState loading={query.isPending} paused={query.isPaused} loadingLayout="table" error={query.error} retry={() => query.refetch()}>
         {query.data?.length ? (<DataTable rowKey="id" rows={query.data} columns={[
                 { title: "用户组", accessor: "name" },
                 {

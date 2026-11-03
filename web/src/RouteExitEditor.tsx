@@ -12,7 +12,7 @@ import {
 } from "react";
 import { APIError, post, request } from "./api";
 import { ErrorNotice, Section } from "./components";
-import { loadInfrastructure } from "./Infrastructure";
+import { loadInfrastructure } from "./infrastructure-data";
 import { newID } from "./model";
 import { useUnsavedChanges } from "./navigation";
 import type { PublishedRoute } from "./PublishedRoutes";

@@ -85,7 +85,7 @@ export function TLSMaterial({
       </label>
       <div className="section-heading flex flex-wrap items-center justify-between gap-3 text-sm">
         <span>
-          {value.privateKeyPem ? "已填入私钥，默认隐藏" : "尚未填入 TLS 私钥"}
+          {value.privateKeyPem ? "已填入 TLS 私钥" : "尚未填入 TLS 私钥"}
         </span>
         <ActionButton onClick={() => setShowKey(!showKey)} variant="ghost">
           {showKey ? "隐藏私钥" : "编辑私钥 PEM"}

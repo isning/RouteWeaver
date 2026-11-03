@@ -1278,9 +1278,9 @@ export function ProfileEditor({
           description="技术预览只检查当前草稿，不保存或发布。正式发布会按所选客户端订阅重新检查。"
         >
           <label className="standalone-label profile-diagnostic-target grid min-w-0 gap-2 text-sm font-medium">
-            草稿检查客户端 / 新订阅默认客户端
+            预览客户端
             <ChoiceSelect
-              aria-label="草稿检查与新订阅默认客户端"
+              aria-label="预览客户端"
               value={draft.target.adapterId}
               options={targets}
               onValueChange={(adapterId) => {
@@ -1296,7 +1296,7 @@ export function ProfileEditor({
               }}
             />
             <small>
-              用于此处预览、原生覆盖绑定和新增订阅的初始值。已有订阅保留各自的客户端与输出方式；正式发布时再次明确选择。
+              用于此处预览、原生覆盖绑定和新订阅的默认客户端。已有订阅保留各自的客户端与输出方式。
             </small>
           </label>
           <ActionButton
@@ -1348,7 +1348,7 @@ export function ProfileEditor({
                       </strong>
                     </div>
                     <p className="muted text-sm text-muted-foreground">
-                      查看并编辑完整配置意图。未支持的目标原生选项不会被悄悄忽略。
+                      查看并编辑完整配置意图。
                     </p>
                     <ActionButton
                       leadingIcon={<Code aria-hidden="true" />}
@@ -1404,7 +1404,7 @@ export function ProfileEditor({
         aria-label="保存与检查配置"
       >
         <span
-          className="profile-save-state text-sm text-muted-foreground"
+          className="profile-save-state mr-auto text-sm text-muted-foreground"
           role="status"
           aria-live="polite"
           aria-atomic="true"
@@ -1497,13 +1497,15 @@ export function ProfileEditor({
         <div className="profile-state grid gap-2 text-xs text-muted-foreground">
           <details className="profile-linked-details text-sm [&>summary]:cursor-pointer [&>p]:mt-2 [&>ul]:mt-2">
             <summary>
-              {outputs.isLoading
-                ? "正在核对此配置的订阅…"
+              {outputs.isPending
+                ? outputs.isPaused
+                  ? "等待核对关联订阅…"
+                  : "正在核对此配置的订阅…"
                 : outputs.isError
                   ? "关联订阅暂无法核对"
                   : `关联订阅（${linkedOutputs.length}）`}
             </summary>
-            {!outputs.isLoading &&
+            {!outputs.isPending &&
               !outputs.isError &&
               (linkedOutputs.length ? (
                 <ul>
@@ -2098,7 +2100,7 @@ export function ProfileEditor({
                 <TabsList className="max-w-full flex-wrap justify-start group-data-horizontal/tabs:h-auto">
                   {editorTabs.map((section) => (
                     <TabsTrigger
-                      className="h-auto min-h-11 whitespace-normal"
+                      className="h-auto min-h-11 whitespace-nowrap"
                       key={section.key}
                       value={String(section.key)}
                       disabled={"disabled" in section && !!section.disabled}

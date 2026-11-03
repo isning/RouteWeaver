@@ -21,7 +21,7 @@ import {
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { DataTable, TableRowActions } from "./DataTable";
-import { loadInfrastructure } from "./Infrastructure";
+import { loadInfrastructure } from "./infrastructure-data";
 import { RouteExitEditor } from "./RouteExitEditor";
 import { ServerEndpointSelect } from "./ServerEndpointSelect";
 import { UserEntries } from "./UserEntries";
@@ -349,7 +349,7 @@ export function PublishedRoutesPage() {
         />
       )}
       <QueryState
-        loading={query.isLoading || infrastructure.isLoading}
+        loading={query.isPending || infrastructure.isPending} paused={query.isPaused || infrastructure.isPaused} loadingLayout="table"
         error={query.error || infrastructure.error}
         retry={() => {
           query.refetch();
@@ -1098,7 +1098,8 @@ function PrincipalEditor({
           >
             <ErrorNotice
               error={
-                (authorizationError ? null : mutation.error) || users.error
+                (authorizationError ? null : mutation.error) ||
+                (users.data ? users.error : null)
               }
             />
             {authorizationError && (
@@ -1107,7 +1108,7 @@ function PrincipalEditor({
                 title={authorizationError}
               >{`请在用户授权中检查服务状态、有效期与额度，并确认「${route.name}」的使用权限，再返回创建入口。`}</Notice>
             )}
-            {!users.isLoading &&
+            {!users.isPending &&
               !users.error &&
               users.data?.users.length === 0 && (
                 <Notice tone="info" title="先创建用户">
@@ -1117,6 +1118,7 @@ function PrincipalEditor({
             {route && !supportsPublicUsers(route, deployment) && (
               <EntryPrerequisite deployment={deployment} />
             )}
+            <QueryState loading={!!route && users.isPending} paused={users.isPaused} loadingLayout="field" error={users.data ? null : users.error} retry={() => users.refetch()}>
             <AppField
               name="accountId"
               label="用户"
@@ -1131,6 +1133,7 @@ function PrincipalEditor({
                 }))}
               />
             </AppField>
+            </QueryState>
             <p className="muted text-sm text-muted-foreground">
               先为用户授权这条线路，再创建独立入口。
             </p>
@@ -1191,7 +1194,7 @@ function PrincipalEditor({
                 disabled={
                   !route ||
                   !supportsPublicUsers(route, deployment) ||
-                  users.isLoading ||
+                  users.isPending ||
                   !users.data?.users.length ||
                   !!users.error
                 }
@@ -1366,7 +1369,7 @@ function PublicRouteDetail({
             <RoutePublicAddress route={{ ...current, effective: undefined }} />
           )}
           <QueryState
-            loading={detail.isLoading}
+            loading={detail.isPending} paused={detail.isPaused} loadingLayout="summary"
             error={detail.error}
             retry={() => detail.refetch()}
           >
@@ -1427,7 +1430,7 @@ function PublicRouteDetail({
         </Section>
         <Section title="为用户继续开通">
           <QueryState
-            loading={state.isLoading}
+            loading={state.isPending} paused={state.isPaused} loadingLayout="form"
             error={state.error}
             retry={() => state.refetch()}
           >
@@ -1458,7 +1461,7 @@ function PublicRouteDetail({
             <>
               <Section title="用户授权">
                 <QueryState
-                  loading={policy.isLoading}
+                  loading={!!userId && policy.isPending} paused={policy.isPaused} loadingLayout="summary"
                   error={policy.error}
                   retry={() => policy.refetch()}
                 >
@@ -1489,7 +1492,7 @@ function PublicRouteDetail({
               </Section>
               <Section title="独立入口与运行确认">
                 <QueryState
-                  loading={entries.isLoading}
+                  loading={!!userId && entries.isPending} paused={entries.isPaused} loadingLayout="table"
                   error={entries.error}
                   retry={() => entries.refetch()}
                 >
@@ -1558,7 +1561,7 @@ function PublicRouteDetail({
                 )}
               </Section>
               <p className="muted text-sm text-muted-foreground">
-                订阅交付：尚未在此核验。用户获取订阅时，服务端会再次检查当时的授权、额度与入口状态。
+                获取订阅时，会按当时的授权、额度与入口状态重新检查是否可交付。
               </p>
             </>
           )}

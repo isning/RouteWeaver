@@ -15,7 +15,6 @@ import {
   CardHeader,
   CardTitle,
   CardDescription,
-  CardAction,
 } from "@/components/ui/card";
 import {
   Empty,
@@ -25,7 +24,7 @@ import {
   EmptyDescription,
   EmptyContent,
 } from "@/components/ui/empty";
-import { Skeleton } from "@/components/ui/skeleton";
+import { LoadingState, type LoadingLayout } from "@/ui-patterns/loading-state";
 import { Notice } from "@/ui-patterns/notice";
 import { cn } from "@/lib/utils";
 
@@ -41,8 +40,8 @@ export function PageHeader({
   back?: () => void;
 }) {
   return (
-    <header className="page-heading flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
-      <div className="min-w-0 space-y-1.5">
+    <header className="page-heading flex w-full flex-wrap items-center justify-between gap-4">
+      <div className="min-w-0 flex-1 basis-48 space-y-1.5">
         {back && (
           <ActionButton
             type="button"
@@ -57,13 +56,13 @@ export function PageHeader({
         )}
         <h1 className="text-xl font-semibold tracking-tight [overflow-wrap:anywhere] sm:text-2xl">{title}</h1>
         {description && (
-          <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
+          <p className="max-w-prose text-sm leading-relaxed text-muted-foreground">
             {description}
           </p>
         )}
       </div>
       {action && (
-        <div className="heading-action flex flex-wrap items-center gap-2">
+        <div className="heading-action flex max-w-full flex-wrap items-center gap-2">
           {action}
         </div>
       )}
@@ -90,9 +89,9 @@ export function Section({
       <section className={cn("surface min-w-0 space-y-4", className)}>
         {(title || description || extra) && (
           <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="min-w-0 space-y-1 [overflow-wrap:anywhere]">
+            <div className="min-w-0 flex-1 basis-48 space-y-1 [overflow-wrap:anywhere]">
               {title && <h2 className="text-base font-medium">{title}</h2>}
-              {description && <p className="text-sm text-muted-foreground">{description}</p>}
+              {description && <p className="max-w-prose text-sm leading-relaxed text-muted-foreground">{description}</p>}
             </div>
             {extra}
           </div>
@@ -103,58 +102,29 @@ export function Section({
   return (
     <Card className={cn("surface min-w-0", className)}>
       {(title || description || extra) && (
-        <CardHeader className="min-w-0 [overflow-wrap:anywhere]">
-          {title && (
-            <CardTitle role="heading" aria-level={2}>
-              {title}
-            </CardTitle>
-          )}
-          {description && <CardDescription>{description}</CardDescription>}
-          {extra && <CardAction>{extra}</CardAction>}
+        <CardHeader className="flex min-w-0 flex-wrap items-start justify-between gap-3 [overflow-wrap:anywhere]">
+          <div className="min-w-0 flex-1 basis-48 space-y-1">
+            {title && <CardTitle role="heading" aria-level={2}>{title}</CardTitle>}
+            {description && <CardDescription className="max-w-prose leading-relaxed">{description}</CardDescription>}
+          </div>
+          {extra && <div className="flex max-w-full flex-wrap items-center gap-2">{extra}</div>}
         </CardHeader>
       )}
       <CardContent className="min-w-0 space-y-4">{children}</CardContent>
     </Card>
   );
 }
-export function QueryState({
-  loading,
-  error,
-  retry,
-  children,
-}: {
+export function QueryState({ loading, paused, loadingLayout = "summary", error, retry, children }: {
   loading?: boolean;
+  paused?: boolean;
+  loadingLayout?: LoadingLayout;
   error?: Error | null;
   retry?: () => void;
   children: ReactNode;
 }) {
-  if (loading)
-    return (
-      <div
-        className="space-y-3 rounded-xl border p-6"
-        aria-label="正在加载"
-        aria-busy="true"
-      >
-        {[1, 2, 3, 4, 5].map((i) => (
-          <Skeleton key={i} className="h-5 w-full" />
-        ))}
-      </div>
-    );
-  if (error)
-    return (
-      <Notice
-        tone="error"
-        title="暂时无法加载"
-        action={retry && (
-          <Button type="button" variant="outline" onClick={retry}>
-            <RotateCw aria-hidden="true" />
-            重试
-          </Button>
-        )}
-      >
-        {error.message}
-      </Notice>
-    );
+  if (error) return <Notice tone="error" title="暂时无法加载" action={retry && <Button type="button" variant="outline" onClick={retry}><RotateCw aria-hidden="true" />重试</Button>}>{error.message}</Notice>;
+  if (loading && paused) return <Notice tone="info" title="等待网络连接">连接恢复后将继续加载。</Notice>;
+  if (loading) return <LoadingState layout={loadingLayout} />;
   return <>{children}</>;
 }
 export function EmptyState({

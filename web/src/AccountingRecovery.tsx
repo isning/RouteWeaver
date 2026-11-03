@@ -41,7 +41,6 @@ export function AccountingRecovery({ instanceId }: { instanceId: string }) {
     <Section title="流量统计">
       {failedRead ? (
         <Notice tone="warning" title="流量统计状态暂不可用">
-          <p>暂时无法读取统计状态，请稍后重试。</p>
           <ActionButton
             className="mt-3"
             variant="outline"

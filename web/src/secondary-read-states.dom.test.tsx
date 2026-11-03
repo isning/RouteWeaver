@@ -49,7 +49,9 @@ it.each([
   const main = await screen.findByRole("main");
   if (tab) await userEvent.click(await within(main).findByRole("tab", { name: tab }));
   const heading = await within(main).findByRole("heading", { name: section });
-  const region = within(heading.closest<HTMLElement>('[data-slot="card"]')!);
+  const container = heading.closest<HTMLElement>('section, [data-slot="card"]');
+  expect(container).not.toBeNull();
+  const region = within(container!);
   expect(region.getByLabelText("正在加载").getAttribute("aria-busy")).toBe("true");
   expect(region.queryByText(empty)).toBeNull();
   await task.fail();

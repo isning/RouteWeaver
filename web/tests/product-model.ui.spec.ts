@@ -1325,7 +1325,7 @@ for (const entry of ["workspace", "legacy-profile"] as const) {
       // Existing Output target must win over the Profile's new-output default.
       await page.getByRole("tab", { name: "检查与预览", exact: true }).click();
       await page
-        .getByLabel("草稿检查与新订阅默认客户端", { exact: true })
+        .getByLabel("预览客户端", { exact: true })
         .click();
       await page.getByRole("option", { name: "sing-box", exact: true }).click();
     }
@@ -1895,7 +1895,7 @@ test("operator keeps line and user context through authorization, entry preparat
     detail.getByText("尚未准备此用户的独立入口", { exact: true }),
   ).toBeVisible();
   await expect(detail).toContainText("尚未确认应用");
-  await expect(detail).toContainText("订阅交付：尚未在此核验");
+  await expect(detail).toContainText("获取订阅时，会按当时的授权、额度与入口状态重新检查是否可交付。");
   await detail
     .getByRole("button", { name: "检查或调整用户授权", exact: true })
     .click();

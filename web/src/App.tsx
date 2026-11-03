@@ -75,7 +75,8 @@ import { APIError, loginWithToken, post, setToken } from "./api";
 import type { Session } from "./types";
 import type { SourceAcceptanceReceipt } from "./SourceUpdateContinuation";
 import { ErrorNotice } from "./components";
-import { SubscriptionsPage } from "./Subscriptions";
+import { PageSkeleton } from "./ui-patterns/loading-state";
+const SubscriptionsPage = lazyPage(() => import("./Subscriptions").then(m => ({ default: m.SubscriptionsPage })));
 const AccountMFA = lazyPage(() =>
   import("./Security").then((m) => ({ default: m.SecuritySettings })),
 );
@@ -811,7 +812,7 @@ function Workspace() {
       <div className="main-shell flex min-w-0 flex-1 flex-col">
         <header
           aria-label="工作空间"
-          className="topbar flex h-14 shrink-0 items-center border-b px-4 sm:px-6"
+          className="topbar flex h-14 shrink-0 items-center border-b px-4 sm:px-6 lg:px-8"
         >
           <div className={"flex flex-wrap items-center gap-2"}>
             <ActionButton
@@ -864,14 +865,7 @@ function Workspace() {
                 key={`${["subscriptions", "profiles", "outputs"].includes(page) ? "subscriptions" : page}:${discardGeneration}`}
               >
                 <Suspense
-                  fallback={
-                    <div className="space-y-3 rounded-xl border bg-card p-6">
-                      <Spinner />
-                      <p className="text-sm text-muted-foreground">
-                        正在打开页面
-                      </p>
-                    </div>
-                  }
+                  fallback={<PageSkeleton page={page} />}
                 >
                   {page === "account-security" ? (
                     <>
@@ -957,7 +951,7 @@ function Workspace() {
             </SubscriptionContextProvider>
           </WorkspaceHistoryContext.Provider>
         </main>
-        <footer className="app-footer border-t px-6 py-4 text-xs text-muted-foreground">
+        <footer className="app-footer border-t px-4 py-4 sm:px-6 lg:px-8 text-xs text-muted-foreground">
           RouteWeaver
         </footer>
       </div>

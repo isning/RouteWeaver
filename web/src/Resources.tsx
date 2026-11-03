@@ -218,7 +218,7 @@ export function ResourcesPage() {
       />
       <ErrorNotice error={refresh.error} />
       <QueryState
-        loading={query.isLoading}
+        loading={query.isPending} paused={query.isPaused} loadingLayout="table"
         error={query.error}
         retry={() => query.refetch()}
       >

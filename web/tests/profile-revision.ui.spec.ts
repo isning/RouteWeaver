@@ -156,6 +156,13 @@ for (const width of [1280, 390]) {
       expect(
         await page.evaluate(() => document.documentElement.scrollWidth),
       ).toBe(width);
+      const inspectionTab = page.getByRole("tab", { name: "检查与预览", exact: true });
+      await expect(inspectionTab).toHaveCSS("white-space", "nowrap");
+      expect(await inspectionTab.evaluate(el => {
+        const range = document.createRange();
+        range.selectNodeContents(el);
+        return new Set([...range.getClientRects()].map(rect => Math.round(rect.top))).size;
+      })).toBe(1);
       await page.screenshot({
         path: info.outputPath(`profile-conflict-${width}.png`),
       });

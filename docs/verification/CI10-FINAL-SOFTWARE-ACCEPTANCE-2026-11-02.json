@@ -1,0 +1,2194 @@
+{
+  "schema_version": 1,
+  "source_binding": {
+    "tested_local": "87bfac541c4be43d9b307234a3ac84db1feab207",
+    "tested_remote": "76c82e41c7e83893c6fea040052ce163bd024dcb",
+    "tested_tree": "67502bb487043bd53e151ba7cff7cee6dd61781f",
+    "ci10_run": 41417857984,
+    "url": "https://github.com/isning/RouteWeaver/actions/runs/41417857984",
+    "all18": "success",
+    "documentation_only_after_execution": true
+  },
+  "scope": "Original finite software acceptance only. No production-readiness, main merge or deployment acceptance.",
+  "prior_complete_audit": {
+    "path": "CI9-FORWARD-ACCEPTANCE-2026-11-02.json",
+    "sha256": "34a37d4d399ae83a9df05085d0718f434a428ffb7f5dab6f89cee80d86f96567",
+    "supported_carried_forward": 95,
+    "broad_audit_repeated": false
+  },
+  "targeted_clauses_updated": [
+    "RW-07.3",
+    "RW-24.1",
+    "RW-24.4"
+  ],
+  "clause_counts": {
+    "supported": 98
+  },
+  "ticket_counts": {
+    "verified": 24
+  },
+  "decisions": {
+    "RW-01": {
+      "status": "verified",
+      "direct_prerequisites": [],
+      "reason": "Original literal clauses supported; every direct prerequisite was accepted earlier in the existing graph. Software/harness scope only."
+    },
+    "RW-02": {
+      "status": "verified",
+      "direct_prerequisites": [],
+      "reason": "Original literal clauses supported; every direct prerequisite was accepted earlier in the existing graph. Software/harness scope only."
+    },
+    "RW-03": {
+      "status": "verified",
+      "direct_prerequisites": [
+        "RW-01",
+        "RW-02"
+      ],
+      "reason": "Original literal clauses supported; every direct prerequisite was accepted earlier in the existing graph. Software/harness scope only."
+    },
+    "RW-04": {
+      "status": "verified",
+      "direct_prerequisites": [
+        "RW-02"
+      ],
+      "reason": "Original literal clauses supported; every direct prerequisite was accepted earlier in the existing graph. Software/harness scope only."
+    },
+    "RW-15": {
+      "status": "verified",
+      "direct_prerequisites": [
+        "RW-01"
+      ],
+      "reason": "Original literal clauses supported; every direct prerequisite was accepted earlier in the existing graph. Software/harness scope only."
+    },
+    "RW-05": {
+      "status": "verified",
+      "direct_prerequisites": [
+        "RW-04"
+      ],
+      "reason": "Original literal clauses supported; every direct prerequisite was accepted earlier in the existing graph. Software/harness scope only."
+    },
+    "RW-13": {
+      "status": "verified",
+      "direct_prerequisites": [
+        "RW-03"
+      ],
+      "reason": "Original literal clauses supported; every direct prerequisite was accepted earlier in the existing graph. Software/harness scope only."
+    },
+    "RW-16": {
+      "status": "verified",
+      "direct_prerequisites": [
+        "RW-15"
+      ],
+      "reason": "Original literal clauses supported; every direct prerequisite was accepted earlier in the existing graph. Software/harness scope only."
+    },
+    "RW-06": {
+      "status": "verified",
+      "direct_prerequisites": [
+        "RW-05"
+      ],
+      "reason": "Original literal clauses supported; every direct prerequisite was accepted earlier in the existing graph. Software/harness scope only."
+    },
+    "RW-14": {
+      "status": "verified",
+      "direct_prerequisites": [
+        "RW-03",
+        "RW-13",
+        "RW-15"
+      ],
+      "reason": "Original literal clauses supported; every direct prerequisite was accepted earlier in the existing graph. Software/harness scope only."
+    },
+    "RW-17": {
+      "status": "verified",
+      "direct_prerequisites": [
+        "RW-13",
+        "RW-15"
+      ],
+      "reason": "Original literal clauses supported; every direct prerequisite was accepted earlier in the existing graph. Software/harness scope only."
+    },
+    "RW-19": {
+      "status": "verified",
+      "direct_prerequisites": [
+        "RW-02",
+        "RW-03",
+        "RW-13"
+      ],
+      "reason": "Original literal clauses supported; every direct prerequisite was accepted earlier in the existing graph. Software/harness scope only."
+    },
+    "RW-07": {
+      "status": "verified",
+      "direct_prerequisites": [
+        "RW-06"
+      ],
+      "reason": "Original literal clauses supported; every direct prerequisite was accepted earlier in the existing graph. Software/harness scope only."
+    },
+    "RW-18": {
+      "status": "verified",
+      "direct_prerequisites": [
+        "RW-15",
+        "RW-17",
+        "RW-19"
+      ],
+      "reason": "Original literal clauses supported; every direct prerequisite was accepted earlier in the existing graph. Software/harness scope only."
+    },
+    "RW-08": {
+      "status": "verified",
+      "direct_prerequisites": [
+        "RW-07"
+      ],
+      "reason": "Original literal clauses supported; every direct prerequisite was accepted earlier in the existing graph. Software/harness scope only."
+    },
+    "RW-09": {
+      "status": "verified",
+      "direct_prerequisites": [
+        "RW-07"
+      ],
+      "reason": "Original literal clauses supported; every direct prerequisite was accepted earlier in the existing graph. Software/harness scope only."
+    },
+    "RW-10": {
+      "status": "verified",
+      "direct_prerequisites": [
+        "RW-07",
+        "RW-08",
+        "RW-09"
+      ],
+      "reason": "Original literal clauses supported; every direct prerequisite was accepted earlier in the existing graph. Software/harness scope only."
+    },
+    "RW-11": {
+      "status": "verified",
+      "direct_prerequisites": [
+        "RW-08",
+        "RW-09",
+        "RW-10"
+      ],
+      "reason": "Original literal clauses supported; every direct prerequisite was accepted earlier in the existing graph. Software/harness scope only."
+    },
+    "RW-12": {
+      "status": "verified",
+      "direct_prerequisites": [
+        "RW-03",
+        "RW-11"
+      ],
+      "reason": "Original literal clauses supported; every direct prerequisite was accepted earlier in the existing graph. Software/harness scope only."
+    },
+    "RW-20": {
+      "status": "verified",
+      "direct_prerequisites": [
+        "RW-05",
+        "RW-09",
+        "RW-11"
+      ],
+      "reason": "Original literal clauses supported; every direct prerequisite was accepted earlier in the existing graph. Software/harness scope only."
+    },
+    "RW-21": {
+      "status": "verified",
+      "direct_prerequisites": [
+        "RW-02",
+        "RW-12",
+        "RW-13",
+        "RW-20"
+      ],
+      "reason": "Original literal clauses supported; every direct prerequisite was accepted earlier in the existing graph. Software/harness scope only."
+    },
+    "RW-22": {
+      "status": "verified",
+      "direct_prerequisites": [
+        "RW-02",
+        "RW-12",
+        "RW-19"
+      ],
+      "reason": "Original literal clauses supported; every direct prerequisite was accepted earlier in the existing graph. Software/harness scope only."
+    },
+    "RW-23": {
+      "status": "verified",
+      "direct_prerequisites": [
+        "RW-12",
+        "RW-13"
+      ],
+      "reason": "Original literal clauses supported; every direct prerequisite was accepted earlier in the existing graph. Software/harness scope only."
+    },
+    "RW-24": {
+      "status": "verified",
+      "direct_prerequisites": [
+        "RW-01",
+        "RW-02",
+        "RW-03",
+        "RW-04",
+        "RW-05",
+        "RW-06",
+        "RW-07",
+        "RW-08",
+        "RW-09",
+        "RW-10",
+        "RW-11",
+        "RW-12",
+        "RW-13",
+        "RW-14",
+        "RW-15",
+        "RW-16",
+        "RW-17",
+        "RW-18",
+        "RW-19",
+        "RW-20",
+        "RW-21",
+        "RW-22",
+        "RW-23"
+      ],
+      "reason": "Original literal clauses supported; every direct prerequisite was accepted earlier in the existing graph. Software/harness scope only."
+    }
+  },
+  "prerequisite_layers": [
+    [
+      "RW-01",
+      "RW-02"
+    ],
+    [
+      "RW-03",
+      "RW-04",
+      "RW-15"
+    ],
+    [
+      "RW-05",
+      "RW-13",
+      "RW-16"
+    ],
+    [
+      "RW-06",
+      "RW-14",
+      "RW-17",
+      "RW-19"
+    ],
+    [
+      "RW-07",
+      "RW-18"
+    ],
+    [
+      "RW-08",
+      "RW-09"
+    ],
+    [
+      "RW-10"
+    ],
+    [
+      "RW-11"
+    ],
+    [
+      "RW-12",
+      "RW-20"
+    ],
+    [
+      "RW-21",
+      "RW-22",
+      "RW-23"
+    ],
+    [
+      "RW-24"
+    ]
+  ],
+  "story_statuses": [
+    {
+      "story": "F01",
+      "feature_tickets": [
+        "RW-01",
+        "RW-15"
+      ],
+      "status": "verified in bounded software acceptance",
+      "unverified_feature_tickets": []
+    },
+    {
+      "story": "F02",
+      "feature_tickets": [
+        "RW-01"
+      ],
+      "status": "verified in bounded software acceptance",
+      "unverified_feature_tickets": []
+    },
+    {
+      "story": "F03",
+      "feature_tickets": [
+        "RW-07",
+        "RW-11"
+      ],
+      "status": "verified in bounded software acceptance",
+      "unverified_feature_tickets": []
+    },
+    {
+      "story": "F04",
+      "feature_tickets": [
+        "RW-04"
+      ],
+      "status": "verified in bounded software acceptance",
+      "unverified_feature_tickets": []
+    },
+    {
+      "story": "F05",
+      "feature_tickets": [
+        "RW-13"
+      ],
+      "status": "verified in bounded software acceptance",
+      "unverified_feature_tickets": []
+    },
+    {
+      "story": "C101",
+      "feature_tickets": [
+        "RW-04"
+      ],
+      "status": "verified in bounded software acceptance",
+      "unverified_feature_tickets": []
+    },
+    {
+      "story": "C102",
+      "feature_tickets": [
+        "RW-06"
+      ],
+      "status": "verified in bounded software acceptance",
+      "unverified_feature_tickets": []
+    },
+    {
+      "story": "C201",
+      "feature_tickets": [
+        "RW-05",
+        "RW-06"
+      ],
+      "status": "verified in bounded software acceptance",
+      "unverified_feature_tickets": []
+    },
+    {
+      "story": "C202",
+      "feature_tickets": [
+        "RW-05",
+        "RW-06"
+      ],
+      "status": "verified in bounded software acceptance",
+      "unverified_feature_tickets": []
+    },
+    {
+      "story": "C203",
+      "feature_tickets": [
+        "RW-05",
+        "RW-06"
+      ],
+      "status": "verified in bounded software acceptance",
+      "unverified_feature_tickets": []
+    },
+    {
+      "story": "C301",
+      "feature_tickets": [
+        "RW-08"
+      ],
+      "status": "verified in bounded software acceptance",
+      "unverified_feature_tickets": []
+    },
+    {
+      "story": "C302",
+      "feature_tickets": [
+        "RW-08"
+      ],
+      "status": "verified in bounded software acceptance",
+      "unverified_feature_tickets": []
+    },
+    {
+      "story": "C401",
+      "feature_tickets": [
+        "RW-09"
+      ],
+      "status": "verified in bounded software acceptance",
+      "unverified_feature_tickets": []
+    },
+    {
+      "story": "C402",
+      "feature_tickets": [
+        "RW-09"
+      ],
+      "status": "verified in bounded software acceptance",
+      "unverified_feature_tickets": []
+    },
+    {
+      "story": "C501",
+      "feature_tickets": [
+        "RW-07"
+      ],
+      "status": "verified in bounded software acceptance",
+      "unverified_feature_tickets": []
+    },
+    {
+      "story": "C502",
+      "feature_tickets": [
+        "RW-10"
+      ],
+      "status": "verified in bounded software acceptance",
+      "unverified_feature_tickets": []
+    },
+    {
+      "story": "C503",
+      "feature_tickets": [
+        "RW-10"
+      ],
+      "status": "verified in bounded software acceptance",
+      "unverified_feature_tickets": []
+    },
+    {
+      "story": "C601",
+      "feature_tickets": [
+        "RW-11"
+      ],
+      "status": "verified in bounded software acceptance",
+      "unverified_feature_tickets": []
+    },
+    {
+      "story": "C602",
+      "feature_tickets": [
+        "RW-12"
+      ],
+      "status": "verified in bounded software acceptance",
+      "unverified_feature_tickets": []
+    },
+    {
+      "story": "S01",
+      "feature_tickets": [
+        "RW-03",
+        "RW-23"
+      ],
+      "status": "verified in bounded software acceptance",
+      "unverified_feature_tickets": []
+    },
+    {
+      "story": "S02",
+      "feature_tickets": [
+        "RW-13",
+        "RW-23"
+      ],
+      "status": "verified in bounded software acceptance",
+      "unverified_feature_tickets": []
+    },
+    {
+      "story": "A01",
+      "feature_tickets": [
+        "RW-02"
+      ],
+      "status": "verified in bounded software acceptance",
+      "unverified_feature_tickets": []
+    },
+    {
+      "story": "A02",
+      "feature_tickets": [
+        "RW-03"
+      ],
+      "status": "verified in bounded software acceptance",
+      "unverified_feature_tickets": []
+    },
+    {
+      "story": "A03",
+      "feature_tickets": [
+        "RW-13"
+      ],
+      "status": "verified in bounded software acceptance",
+      "unverified_feature_tickets": []
+    },
+    {
+      "story": "A04",
+      "feature_tickets": [
+        "RW-14"
+      ],
+      "status": "verified in bounded software acceptance",
+      "unverified_feature_tickets": []
+    },
+    {
+      "story": "A05",
+      "feature_tickets": [
+        "RW-19"
+      ],
+      "status": "verified in bounded software acceptance",
+      "unverified_feature_tickets": []
+    },
+    {
+      "story": "K01",
+      "feature_tickets": [
+        "RW-16"
+      ],
+      "status": "verified in bounded software acceptance",
+      "unverified_feature_tickets": []
+    },
+    {
+      "story": "K02",
+      "feature_tickets": [
+        "RW-01"
+      ],
+      "status": "verified in bounded software acceptance",
+      "unverified_feature_tickets": []
+    },
+    {
+      "story": "K03",
+      "feature_tickets": [
+        "RW-15"
+      ],
+      "status": "verified in bounded software acceptance",
+      "unverified_feature_tickets": []
+    },
+    {
+      "story": "K04",
+      "feature_tickets": [
+        "RW-17"
+      ],
+      "status": "verified in bounded software acceptance",
+      "unverified_feature_tickets": []
+    },
+    {
+      "story": "K05",
+      "feature_tickets": [
+        "RW-18"
+      ],
+      "status": "verified in bounded software acceptance",
+      "unverified_feature_tickets": []
+    },
+    {
+      "story": "M01",
+      "feature_tickets": [
+        "RW-20"
+      ],
+      "status": "verified in bounded software acceptance",
+      "unverified_feature_tickets": []
+    },
+    {
+      "story": "M02",
+      "feature_tickets": [
+        "RW-21"
+      ],
+      "status": "verified in bounded software acceptance",
+      "unverified_feature_tickets": []
+    },
+    {
+      "story": "M03",
+      "feature_tickets": [
+        "RW-02"
+      ],
+      "status": "verified in bounded software acceptance",
+      "unverified_feature_tickets": []
+    },
+    {
+      "story": "M04",
+      "feature_tickets": [
+        "RW-22"
+      ],
+      "status": "verified in bounded software acceptance",
+      "unverified_feature_tickets": []
+    }
+  ],
+  "clause_reviews": [
+    {
+      "ticket": "RW-01",
+      "clause": 1,
+      "disposition": "supported",
+      "evidence": [
+        "internal/domain/profile_test.go :: TestTopologyAllowsThreeHopsSameHostAndDirect",
+        "internal/domain/profile_test.go :: TestProfileAcceptsDeepNestingAndRejectsCycle",
+        "internal/domain/profile_test.go :: TestRenamingDoesNotChangeStableReferences",
+        "web/tests/workspace.ui.spec.ts :: administrator edits an ordered route without dragging",
+        "web/tests/route-exit-backend.ui.spec.ts :: existing managed route selects stored plain TCP endpoint absent from its programs and saves a real draft",
+        "internal/httpapi/legacy_endpoint_options_test.go :: TestLegacyEndpointEditorPreservesTypedOptionsAndRouteIdentity",
+        "internal/render/registry_test.go :: TestLegacyAdapterDoesNotImposeTwoHopLimit",
+        "web/src/route-graph.dom.test.tsx :: retains measured geometry and dragging across path updates and view switches, without storing geometry in routing intent",
+        "web/src/infrastructure-model.test.ts :: allows a one-endpoint direct server route",
+        "docs/verification/GRAPH-NODE-MEASUREMENT-2026-10-20.md :: Integrated browser confirmation"
+      ],
+      "scope": "Composed bounded software evidence: endpoint-based direct/three-hop path model, generic ID-keyed storage/API, arbitrary ordered path/graph serialization, API direct-route round trip, actual browser ordered/graph editing and persisted two-hop graph historical confirmation. Does not claim a new single browser journey separately saving every hop count or live deployment.",
+      "literal_acceptance": "A one-endpoint direct route and a path with more than two distinct endpoints round-trip through storage and UI without a hard-coded engine or hop enum."
+    },
+    {
+      "ticket": "RW-01",
+      "clause": 2,
+      "disposition": "supported",
+      "evidence": [
+        "internal/domain/profile_test.go :: TestTopologyAllowsThreeHopsSameHostAndDirect",
+        "internal/domain/profile_test.go :: TestProfileAcceptsDeepNestingAndRejectsCycle",
+        "internal/domain/profile_test.go :: TestRenamingDoesNotChangeStableReferences",
+        "web/src/endpoint-impact.dom.test.tsx :: retains draft on failed impact read and twice canceled review, without writing or exposing secrets",
+        "web/src/endpoint-impact.dom.test.tsx :: requires a fresh review after dependency conflict and writes only the reviewed draft",
+        "internal/httpapi/legacy_endpoint_options_test.go :: TestLegacyEndpointEditorPreservesTypedOptionsAndRouteIdentity",
+        "internal/render/rename_references_test.go :: TestExplicitEndpointAndGroupRenamePreservesRenderedReferences"
+      ],
+      "scope": "Endpoint IDs, not labels/host IDs, govern graph traversal and references; source/DOM/backend evidence covers rename and retained rejected draft.",
+      "literal_acceptance": "Endpoint identity, not display name or VPS identity, governs cycle detection; rename preserves references; invalid draft preserves form values."
+    },
+    {
+      "ticket": "RW-01",
+      "clause": 3,
+      "disposition": "supported",
+      "evidence": [
+        "internal/render/reality_pair_test.go :: TestServerRealityClientParametersMatchServerMaterial",
+        "internal/httpapi/endpoint_impact_test.go :: TestEndpointImpactReviewBindsDraftAndDependencies",
+        "web/tests/endpoint-impact.ui.spec.ts :: shared endpoint impact review stays readable and cancel preserves exact draft at 320px",
+        "internal/render/endpoint_target_parity_test.go :: TestEndpointOutboundTargetParity"
+      ],
+      "scope": "Exact-target capability rejection and identity-located endpoint diagnostics; impact review binds edited endpoint and names dependent routes/deployments without applying them.",
+      "literal_acceptance": "Protocol/TLS capability errors name the offending endpoint and exact target; shared connection edits preview dependent routes."
+    },
+    {
+      "ticket": "RW-01",
+      "clause": 4,
+      "disposition": "supported",
+      "evidence": [
+        "internal/render/client_test.go :: TestClientRegistryAcceptsThirdNamespacedAdapterAndGatesVersions",
+        "internal/render/client_test.go :: TestClientFullAndNodesOnlyAreDifferentOutputs",
+        "internal/render/client_test.go :: TestMihomoPreservesFourStrategiesAndResourceFile",
+        "internal/httpapi/tenant_test.go :: TestTenantIsolationAndCSRFAtHTTPSeam",
+        "internal/httpapi/tenant_test.go :: TestSourceSummariesRedactAndExplicitRevealIsOwnerScoped",
+        "internal/httpapi/tenant_test.go :: TestFeedRotationAndRevocation",
+        "internal/domain/profile_test.go :: TestTopologyAllowsThreeHopsSameHostAndDirect",
+        "internal/domain/profile_test.go :: TestProfileAcceptsDeepNestingAndRejectsCycle",
+        "internal/domain/profile_test.go :: TestRenamingDoesNotChangeStableReferences",
+        "scripts/check-architecture/main_test.go :: TestGuardRejectsForbiddenImportAtPublicCommandSeam",
+        "scripts/verify.sh :: static/backend/web harness"
+      ],
+      "scope": "Common scripts/verify.sh harness plus final exact-tree CI9/static and web evidence. Architecture negative fixture is explicit; API auth, persistence, form/graph selectors are not inferred from aggregate green alone.",
+      "literal_acceptance": "The architecture negative fixture, API authorization, persistence and graph/form tests pass using the same local and CI harness."
+    },
+    {
+      "ticket": "RW-02",
+      "clause": 1,
+      "disposition": "supported",
+      "evidence": [
+        "web/tests/session-recovery.ui.spec.ts :: real invite signup switches identity without inheriting old account draft or cache",
+        "internal/httpapi/account_security_test.go :: TestAccountSecurityHTTPRotationCSRFAndOwnership",
+        "internal/httpapi/account_security_test.go :: TestAdminAccountDisableResetAndRetirementHTTP",
+        "web/tests/account-security-backend.ui.spec.ts :: real password change preserves failed reauthentication draft, rotates credentials and invalidates older sessions",
+        "web/tests/account-security-backend.ui.spec.ts :: administrator resets a synthetic account through the UI and temporary login cannot bypass required password change",
+        "internal/store/identity_test.go :: TestInviteIsSingleUseAndUsernameUnique; TestEncryptedStateAndSessionSurviveReopen",
+        "internal/auth/security.go :: HashPassword"
+      ],
+      "scope": "Real isolated invitation/sign-in/sign-out/session lifecycle, bounded expired/revoked sessions and redacted listings; HashPassword calls salted bcrypt.GenerateFromPassword. No external identity-provider claim.",
+      "literal_acceptance": "Invitation claim, sign-in, sign-out and expired/revoked sessions have positive and negative tests; passwords are salted and secrets never returned in normal listings."
+    },
+    {
+      "ticket": "RW-02",
+      "clause": 2,
+      "disposition": "supported",
+      "evidence": [
+        "internal/httpapi/account_security_test.go :: TestAccountSecurityHTTPRotationCSRFAndOwnership",
+        "internal/httpapi/account_security_test.go :: TestAdminAccountDisableResetAndRetirementHTTP",
+        "web/tests/cycle-renewal-backend.api.spec.ts :: isolated ${mode} cycle renewal and reset preserve meter identity and boundary",
+        "web/tests/cycle-renewal-backend.ui.spec.ts :: real ${mode} cycle editor, renewal, explicit reset and user countdown",
+        "internal/httpapi/access_policy_test.go :: TestAccessPolicyHTTPPreviewApplyAndTenantIsolation",
+        "web/tests/cycle-renewal-backend.ts :: verifyReplayAndAudit"
+      ],
+      "scope": "Separate account/policy pause, expiry extension and explicit reset commands; real API/browser show state/usage distinction and audit. Normal-user admin mutation denied.",
+      "literal_acceptance": "Pause/expiry/renewal are separate commands with visible effect and audit records; a normal user cannot perform administrator commands."
+    },
+    {
+      "ticket": "RW-02",
+      "clause": 3,
+      "disposition": "supported",
+      "evidence": [
+        "web/tests/mfa-backend.ui.spec.ts :: synthetic administrator enrolls an authenticator, logs in with TOTP, and recovers through administrator reset",
+        "internal/httpapi/account_security_test.go :: TestAccountSecurityHTTPRotationCSRFAndOwnership",
+        "internal/httpapi/account_security_test.go :: TestAdminAccountDisableResetAndRetirementHTTP",
+        "internal/store/identity_test.go :: TestTOTPActualStepReplayRejected; TestMFAEnableRevokesSessionsAndCannotRepeat",
+        "internal/store/identity_lifecycle_test.go :: TestOfflineRecoveryIsScopedAuditedAndRetainsMFAUnlessExplicit",
+        "internal/store/identity_concurrency_test.go :: TestMFAEnrollmentCannotBeBypassedWithAnEarlierAccountSnapshot"
+      ],
+      "scope": "Real browser TOTP setup, wrong password/code/replay denial, new-step login and administrator recovery; store concurrent enrollment/session revocation and scoped audited recovery. No recovery bypass.",
+      "literal_acceptance": "Administrator second-factor enrollment/verification and recovery behavior have explicit bounded tests and do not bypass authorization."
+    },
+    {
+      "ticket": "RW-02",
+      "clause": 4,
+      "disposition": "supported",
+      "evidence": [
+        "internal/httpapi/tenant_test.go :: TestTenantIsolationAndCSRFAtHTTPSeam",
+        "internal/httpapi/tenant_test.go :: TestSourceSummariesRedactAndExplicitRevealIsOwnerScoped",
+        "internal/httpapi/tenant_test.go :: TestFeedRotationAndRevocation",
+        "internal/httpapi/account_security_test.go :: TestAccountSecurityHTTPRotationCSRFAndOwnership",
+        "internal/httpapi/account_security_test.go :: TestAdminAccountDisableResetAndRetirementHTTP",
+        "internal/httpapi/collection_delete_test.go :: TestCollectionDeleteDependenciesAndOwnerBoundaryAtHTTPSeam",
+        "internal/httpapi/tenant.go :: registerTenant, sameOwner and tenant owner-keyed operations"
+      ],
+      "scope": "Owner-keyed tenant repository and authenticated API guard cover reads/writes/reveal/export; positive owner operations and explicit foreign/unauthenticated/CSRF denial at public seams.",
+      "literal_acceptance": "Tenant ownership is enforced on every read/write/export, with another-user and unauthenticated denial tests."
+    },
+    {
+      "ticket": "RW-03",
+      "clause": 1,
+      "disposition": "supported",
+      "evidence": [
+        "internal/httpapi/access_policy_test.go :: TestAccessPolicyHTTPPreviewApplyAndTenantIsolation",
+        "internal/httpapi/access_policy_test.go :: TestAccessPolicyPreviewRejectsUnknownReferencesAndShowsAmbiguity",
+        "internal/service/effective_test.go :: TestEffectiveAccessSelectsOneGroupAndIndividualOverrides",
+        "internal/service/effective_test.go :: TestEffectiveAccessSameServiceTiesDoNotStackAndOverridesCanDenyAll"
+      ],
+      "scope": "Deterministic one-service priority/tie handling and explicit individual override; quota is not stacked, ambiguous distinct services fail closed, explicit same-service route union follows documented evaluator.",
+      "literal_acceptance": "Group membership plus an explicit individual override produces a deterministic documented effective grant; multiple groups cannot silently add quota or routes."
+    },
+    {
+      "ticket": "RW-03",
+      "clause": 2,
+      "disposition": "supported",
+      "evidence": [
+        "internal/service/effective_test.go :: TestEffectiveAccessSelectsOneGroupAndIndividualOverrides",
+        "internal/service/effective_test.go :: TestEffectiveAccessSameServiceTiesDoNotStackAndOverridesCanDenyAll",
+        "web/src/policy-confirmation-content.dom.test.tsx :: shows the authoritative affected count and preserves exact comparisons, provenance and full authorization",
+        "internal/httpapi/access_policy_test.go :: TestAccessPolicyHTTPPreviewApplyAndTenantIsolation",
+        "internal/httpapi/external_feed_policy_test.go :: TestPrivateExternalFeedDoesNotConsumePlatformServiceEligibility",
+        "internal/httpapi/account_security_test.go :: TestAdminAccountDisableResetAndRetirementHTTP"
+      ],
+      "scope": "Authoritative affected-user preview and stored application agree. Feed retrieval rechecks current platform eligibility; expired/exhausted/disabled platform dependency is denied while independent private source conversion remains separate.",
+      "literal_acceptance": "The affected-user preview and stored result agree; a revoked or expired grant is rechecked when a subscription is obtained."
+    },
+    {
+      "ticket": "RW-03",
+      "clause": 3,
+      "disposition": "supported",
+      "evidence": [
+        "web/src/subscription-overview-status.dom.test.tsx :: names active authorization without presenting unlimited quota as available routes",
+        "web/src/subscription-overview-status.dom.test.tsx :: gives paused platform service a next step without granting restoration or changing personal subscriptions",
+        "web/tests/cycle-renewal-backend.ui.spec.ts :: real ${mode} cycle editor, renewal, explicit reset and user countdown",
+        "web/src/subscription-overview-status.dom.test.tsx :: names the ordinary account's %s policy state"
+      ],
+      "scope": "Actual UI state table covers not-started, active, paused and expired; active says authorization effective, not deployed or live. Real cycle browser covers countdown/renewal.",
+      "literal_acceptance": "Not-started, active, paused and expired services display correctly without inferring runtime deployment."
+    },
+    {
+      "ticket": "RW-03",
+      "clause": 4,
+      "disposition": "supported",
+      "evidence": [
+        "internal/httpapi/tenant_test.go :: TestTenantIsolationAndCSRFAtHTTPSeam",
+        "internal/httpapi/tenant_test.go :: TestSourceSummariesRedactAndExplicitRevealIsOwnerScoped",
+        "internal/httpapi/tenant_test.go :: TestFeedRotationAndRevocation",
+        "internal/httpapi/published_native_test.go :: TestNativePublishedManagedPrincipalEndToEnd",
+        "web/src/subscription-overview-status.dom.test.tsx :: names active authorization without presenting unlimited quota as available routes",
+        "web/src/subscription-overview-status.dom.test.tsx :: gives paused platform service a next step without granting restoration or changing personal subscriptions",
+        "internal/httpapi/published_routes_test.go :: TestPublishedRoutePrincipalsRequireExactAppliedManifest"
+      ],
+      "scope": "Invited tenant sees own overview/platform entry; real published-principal API/native contract emits only granted public credential after exact applied manifest, never internal transit credential.",
+      "literal_acceptance": "An invited user sees only their authorized service and public entry connectivity, not transit credentials."
+    },
+    {
+      "ticket": "RW-04",
+      "clause": 1,
+      "disposition": "supported",
+      "evidence": [
+        "internal/importer/import_test.go :: TestParseMihomoExtractsNodesAndReportsOtherConfig",
+        "internal/importer/import_test.go :: TestParseSingBoxExtractsNodesNotInternalGroups",
+        "internal/importer/import_test.go :: TestParseNoAuthSOCKSAndBase64SS",
+        "internal/importer/import_test.go :: TestParseRejectsUnsupportedSecurityWithoutPartialSnapshot",
+        "internal/httpapi/source_refresh_test.go :: TestSourceRefreshMaterialCandidateRequiresExactAcceptance",
+        "internal/httpapi/source_refresh_test.go :: TestSourceRefreshUnchangedKeepsSnapshotAndHarmlessRenamePreservesIdentity",
+        "internal/httpapi/source_refresh_test.go :: TestSourceCandidateRevealStaleEditDeletionAndInvalidPartial",
+        "internal/httpapi/source_mixed_atomic_test.go :: TestMixedSourceImportNeverStoresPartialAcceptedSnapshot",
+        "web/src/source-controls.dom.test.tsx :: offers a localized keyboard file picker, preserves cancellation and retries the same local file without uploading"
+      ],
+      "scope": "URI/plain/base64, native Mihomo/sing-box config extraction and source refresh inputs have positive fixtures with immutable source/snapshot provenance; ignored non-node configuration is diagnosed. File UI is local acquisition into these same parser modes.",
+      "literal_acceptance": "At least one explicit supported input fixture for each exposed input mode imports successfully and retains source provenance; configuration extraction reports ignored sections."
+    },
+    {
+      "ticket": "RW-04",
+      "clause": 2,
+      "disposition": "supported",
+      "evidence": [
+        "internal/importer/import_test.go :: TestParseMihomoExtractsNodesAndReportsOtherConfig",
+        "internal/importer/import_test.go :: TestParseSingBoxExtractsNodesNotInternalGroups",
+        "internal/importer/import_test.go :: TestParseNoAuthSOCKSAndBase64SS",
+        "internal/importer/import_test.go :: TestParseRejectsUnsupportedSecurityWithoutPartialSnapshot",
+        "internal/httpapi/source_refresh_test.go :: TestSourceRefreshMaterialCandidateRequiresExactAcceptance",
+        "internal/httpapi/source_refresh_test.go :: TestSourceRefreshUnchangedKeepsSnapshotAndHarmlessRenamePreservesIdentity",
+        "internal/httpapi/source_refresh_test.go :: TestSourceCandidateRevealStaleEditDeletionAndInvalidPartial",
+        "internal/httpapi/source_mixed_atomic_test.go :: TestMixedSourceImportNeverStoresPartialAcceptedSnapshot",
+        "internal/httpapi/source_refresh_test.go :: TestSourceValidEmptyRequiresReviewAndFailedEditedInputRemainsSaved",
+        "internal/resources/fetch_test.go :: TestBodySizeAndHTTPError"
+      ],
+      "scope": "Mixed supported/unsupported/malformed imports are atomic and diagnostics bounded; failed edited input remains private/recoverable while last accepted snapshot and published feeds remain byte-identical. Fetch size bounds are explicit.",
+      "literal_acceptance": "Malformed, partially supported and oversized input has bounded diagnostics; failed refresh leaves the prior accepted snapshot and edited input intact."
+    },
+    {
+      "ticket": "RW-04",
+      "clause": 3,
+      "disposition": "supported",
+      "evidence": [
+        "internal/resources/fetch_test.go :: TestFetchRejectsSpecialAddressesBeforeDial",
+        "internal/resources/fetch_test.go :: TestMixedDNSAnswersDeniedBeforeDial",
+        "internal/resources/fetch_test.go :: TestRedirectCannotReachPrivate",
+        "internal/resources/fetch_test.go :: TestTransportErrorRedactsSecret",
+        "internal/resources/fetch_test.go :: TestFetchPublicPinnedAndDigest; TestRedirectLoopIsBounded"
+      ],
+      "scope": "Fetcher rejects private/loopback/link-local and mixed DNS answers before dialing, pins resolved public address, revalidates redirects and suppresses secrets. Test loopback transport is explicitly constructed, not production global bypass.",
+      "literal_acceptance": "Private/loopback/link-local destinations, redirects and DNS rebinding protections are tested at the fetcher seam; only an explicit loopback test transport bypass exists in tests."
+    },
+    {
+      "ticket": "RW-04",
+      "clause": 4,
+      "disposition": "supported",
+      "evidence": [
+        "internal/httpapi/tenant_test.go :: TestTenantIsolationAndCSRFAtHTTPSeam",
+        "internal/httpapi/tenant_test.go :: TestSourceSummariesRedactAndExplicitRevealIsOwnerScoped",
+        "internal/httpapi/tenant_test.go :: TestFeedRotationAndRevocation",
+        "internal/httpapi/external_feed_policy_test.go :: TestPrivateExternalFeedDoesNotConsumePlatformServiceEligibility",
+        "web/src/source-task-layout.dom.test.tsx :: groups the four privacy facts with the actual submit action and retains a failed import",
+        "internal/resources/fetch_test.go :: TestTransportErrorRedactsSecret"
+      ],
+      "scope": "Import UI visibly states operator visibility and account scope at submit. Normal source summaries/errors redact bearer material, owner-only reveal is explicit, foreign access denied.",
+      "literal_acceptance": "Operator visibility is disclosed at import; logs, ordinary errors and source listings do not expose bearer URLs or credentials; cross-user access is denied."
+    },
+    {
+      "ticket": "RW-05",
+      "clause": 1,
+      "disposition": "supported",
+      "evidence": [
+        "internal/conversion/pipeline_test.go :: TestSourceProcessingThenOrderedMergeThenAggregate",
+        "internal/conversion/pipeline_test.go :: TestDedupUsesConnectionNotDisplayNameAndKeepsProvenance",
+        "internal/conversion/pipeline_test.go :: TestPreviewRedactsSecretsWithoutMutatingAcceptedSnapshot",
+        "internal/conversion/pipeline_test.go :: TestCollectionOwnershipAndInvalidStepFailClosed",
+        "internal/conversion/override_test.go :: TestProcessCollectionOverrideSourceThenAggregatePreservesIdentityAndPreviews",
+        "internal/conversion/override_test.go :: TestProcessCollectionOverrideNilTagsPreservesAndEmptyTagsClears",
+        "internal/conversion/override_test.go :: TestProcessCollectionInvalidOverrideRejectsWithoutMutatingAcceptedInput",
+        "internal/conversion/pipeline_contract_test.go :: TestProcessingStableSortPreservesEqualKeySourceOrder",
+        "internal/conversion/pipeline.go :: applySteps"
+      ],
+      "scope": "All supported processing operators have positive fixtures; precise scope/step errors and allowlisted region/tags/host/port override prevent hidden ownership/topology mutation.",
+      "literal_acceptance": "Filter, rename, stable sort, explicit connection-identity deduplication and allowlisted field override each have positive fixtures and precise invalid-step diagnostics."
+    },
+    {
+      "ticket": "RW-05",
+      "clause": 2,
+      "disposition": "supported",
+      "evidence": [
+        "internal/conversion/pipeline_test.go :: TestSourceProcessingThenOrderedMergeThenAggregate",
+        "internal/conversion/pipeline_test.go :: TestDedupUsesConnectionNotDisplayNameAndKeepsProvenance",
+        "internal/conversion/pipeline_test.go :: TestPreviewRedactsSecretsWithoutMutatingAcceptedSnapshot",
+        "internal/conversion/pipeline_test.go :: TestCollectionOwnershipAndInvalidStepFailClosed",
+        "internal/conversion/pipeline_contract_test.go :: TestProcessingStepOrderAndDisabledStepsAreExplicit"
+      ],
+      "scope": "Contract tables assert source order, stable ascending/descending sorts, disable/reorder effects and exact stable IDs through rename/override.",
+      "literal_acceptance": "Disabling or reordering a step changes the preview deterministically; renaming never changes connection identity."
+    },
+    {
+      "ticket": "RW-05",
+      "clause": 3,
+      "disposition": "supported",
+      "evidence": [
+        "internal/conversion/pipeline_test.go :: TestSourceProcessingThenOrderedMergeThenAggregate",
+        "internal/conversion/pipeline_test.go :: TestDedupUsesConnectionNotDisplayNameAndKeepsProvenance",
+        "internal/conversion/pipeline_test.go :: TestPreviewRedactsSecretsWithoutMutatingAcceptedSnapshot",
+        "internal/conversion/pipeline_test.go :: TestCollectionOwnershipAndInvalidStepFailClosed",
+        "web/tests/workspace.api.spec.ts :: private source → ordered collection → profile → published feed → revocation",
+        "internal/conversion/pipeline_contract_test.go :: TestProcessingAdditionsUseStepInputNotSnapshotSummary",
+        "internal/httpapi/processing_noop_publication_test.go :: TestNoOpProcessingRecipePreservesPublishedContentAndSibling"
+      ],
+      "scope": "Stage deltas use step input, not empty snapshot baseline; explicit addedIds/removedIds/changedIds and corresponding operation content/provenance explain changes. Secret-redacted preview does not persist or republish.",
+      "literal_acceptance": "Every stage reports added/removed/changed options and reasons while redacting secrets; preview does not persist or publish."
+    },
+    {
+      "ticket": "RW-05",
+      "clause": 4,
+      "disposition": "supported",
+      "evidence": [
+        "web/tests/processing-publication-backend.api.spec.ts :: isolated processing recipe preserves stages, source and sibling feed through exact publication",
+        "web/tests/workspace.api.spec.ts :: private source → ordered collection → profile → published feed → revocation",
+        "internal/httpapi/processing_noop_publication_test.go :: TestNoOpProcessingRecipePreservesPublishedContentAndSibling",
+        "internal/domain/profile.go :: EndpointOverride allowlist"
+      ],
+      "scope": "Real HTTP no-op preview/save reports no false pending output change; rejected overrides preserve accepted source and frozen selected/sibling feeds. Conversion only owns tenant endpoint transformations.",
+      "literal_acceptance": "No-op changes do not create a false pending publication; an invalid override cannot change owner or administrator topology."
+    },
+    {
+      "ticket": "RW-06",
+      "clause": 1,
+      "disposition": "supported",
+      "evidence": [
+        "internal/conversion/pipeline_test.go :: TestSourceProcessingThenOrderedMergeThenAggregate",
+        "internal/conversion/pipeline_test.go :: TestDedupUsesConnectionNotDisplayNameAndKeepsProvenance",
+        "internal/conversion/pipeline_test.go :: TestPreviewRedactsSecretsWithoutMutatingAcceptedSnapshot",
+        "internal/conversion/pipeline_test.go :: TestCollectionOwnershipAndInvalidStepFailClosed",
+        "web/tests/workspace.api.spec.ts :: private source → ordered collection → profile → published feed → revocation"
+      ],
+      "scope": "Golden source filter/rename -> ordered merge -> aggregate rename asserts three layers and exact resulting order/names; real API includes source/aggregate override and dedup provenance.",
+      "literal_acceptance": "Source processing runs before ordered merge and aggregate processing; a golden scenario exercises all three layers."
+    },
+    {
+      "ticket": "RW-06",
+      "clause": 2,
+      "disposition": "supported",
+      "evidence": [
+        "internal/httpapi/tenant_relationship_race_test.go :: TestDeleteSourceCreateCollectionRacePreservesReferences",
+        "internal/httpapi/tenant_relationship_race_test.go :: TestDeleteDependencyCreateProfileRacePreservesReferences",
+        "internal/httpapi/collection_delete_test.go :: TestCollectionDeleteDependenciesAndOwnerBoundaryAtHTTPSeam",
+        "web/src/collection-delete.dom.test.tsx :: does not enable collection deletion before an authoritative dependency read and names every blocking profile",
+        "web/src/collection-delete.dom.test.tsx :: cancels collection deletion twice safely, then preserves failed deletion context and retries without cascading",
+        "web/src/collection-delete.dom.test.tsx :: keeps the selected collection after a newly added dependency rejects deletion and disables further deletion",
+        "internal/httpapi/tenant.go :: saveCollection, materializeProfileWithReader, collectionDependencies",
+        "internal/conversion/pipeline.go :: ProcessCollection identity checks"
+      ],
+      "scope": "Composed source + public seam support: collection Name is label only; saveCollection writes the same owner/ID key and profile materialization resolves CollectionID, so rename cannot rewrite references. Explicit dependency API names both dependents, prevents delete, and conversion diagnoses missing/duplicate identities. No new standalone collection-rename test claimed.",
+      "literal_acceptance": "Collection rename preserves references; delete previews dependents; missing or ambiguous identities produce diagnostics rather than silent substitution."
+    },
+    {
+      "ticket": "RW-06",
+      "clause": 3,
+      "disposition": "supported",
+      "evidence": [
+        "web/tests/workspace.api.spec.ts :: private source → ordered collection → profile → published feed → revocation",
+        "internal/httpapi/tenant_test.go :: TestTenantIsolationAndCSRFAtHTTPSeam",
+        "internal/httpapi/tenant_test.go :: TestSourceSummariesRedactAndExplicitRevealIsOwnerScoped",
+        "internal/httpapi/tenant_test.go :: TestFeedRotationAndRevocation",
+        "internal/httpapi/collection_delete_test.go :: TestCollectionDeleteDependenciesAndOwnerBoundaryAtHTTPSeam",
+        "internal/httpapi/tenant.go :: materializeProfileWithReader, saveProfile",
+        "internal/httpapi/nested_source_publication_test.go :: TestNestedDynamicSourceUpdateRequiresExplicitScopedPublication"
+      ],
+      "scope": "Two real stored profiles reuse one owner-scoped collection; independent ID-keyed profile writes do not mutate sibling profile/collection, foreign lookup fails. Output scoping independently demonstrates selected publication leaves sibling frozen.",
+      "literal_acceptance": "Multiple configurations can reuse a collection without sharing ownership or changing one another."
+    },
+    {
+      "ticket": "RW-06",
+      "clause": 4,
+      "disposition": "supported",
+      "evidence": [
+        "internal/httpapi/source_refresh_test.go :: TestSourceRefreshMaterialCandidateRequiresExactAcceptance",
+        "internal/httpapi/source_refresh_test.go :: TestSourceRefreshUnchangedKeepsSnapshotAndHarmlessRenamePreservesIdentity",
+        "internal/httpapi/source_refresh_test.go :: TestSourceCandidateRevealStaleEditDeletionAndInvalidPartial",
+        "internal/httpapi/output_routing_summary_test.go :: TestPublishedRoutingSummaryStaysFrozenUntilReviewedPublication",
+        "internal/httpapi/output_routing_summary_test.go :: TestPublishedRoutingSummarySourceRenameChangesCandidateOnly",
+        "internal/httpapi/template_inputs.go :: TenantGet, expectRecord, compares",
+        "internal/httpapi/source_apply_mode_test.go :: TestSourceConcurrentManualApplyCommitsExactlyOneHistoryEvent",
+        "internal/httpapi/source_mixed_atomic_test.go :: TestMixedSourceImportNeverStoresPartialAcceptedSnapshot"
+      ],
+      "scope": "Snapshot/source IDs are retained in provenance; templateInputs reads each exact record once and CompareAndPutRecords fences concurrent changes. Source candidate tests preserve accepted snapshots/collection materialization and published outputs on failure.",
+      "literal_acceptance": "Concurrent source update has a frozen snapshot identity; failed candidate preserves the last accepted collection."
+    },
+    {
+      "ticket": "RW-07",
+      "clause": 1,
+      "disposition": "supported",
+      "evidence": [
+        "internal/httpapi/templates_test.go :: TestTemplatePresetCopyIsIsolatedAndVersionsImmutable",
+        "internal/httpapi/templates_test.go :: TestSharedTemplateRejectsPrivateShapesAndCrossTenantBindings",
+        "internal/httpapi/templates_test.go :: TestProfileTemplatePreservesPersonalOverridesAndPublishedFallback",
+        "internal/httpapi/templates_test.go :: TestSwitchingTemplateReferenceModeKeepsPersonalRuntimeAndPrivateBindings",
+        "internal/httpapi/native_overrides_test.go :: TestNativeDraftContentIsOwnerPrivateAndSurvivesInvalidSave",
+        "internal/httpapi/native_overrides_test.go :: TestNativePreviewAndPublishedOutputUseSameFinalComposition",
+        "internal/httpapi/native_overrides_test.go :: TestNativeOverrideSurvivesTemplateFollowAndKeepsPublicationSeparate",
+        "internal/httpapi/collection_delete_test.go :: TestCollectionDeleteDependenciesAndOwnerBoundaryAtHTTPSeam",
+        "internal/httpapi/tenant.go :: Profile, saveProfile (owner/ID-scoped target/settings)"
+      ],
+      "scope": "Composed bounded source/API evidence: independent profile ID/target/mode/runtime records plus two-profile reuse and both-target render/save contracts. Template copy stores binding provenance and remains independent of later template versions; local overrides survive reviewed follow updates. No new same-test two-target permutation claimed.",
+      "literal_acceptance": "Two profiles with different targets and settings persist independently; copying a template records provenance but future edits remain independent."
+    },
+    {
+      "ticket": "RW-07",
+      "clause": 2,
+      "disposition": "supported",
+      "evidence": [
+        "internal/domain/profile_test.go :: TestProfileDoesNotExportTransitOrAnotherOwner",
+        "internal/domain/profile_test.go :: TestReadableNamesPersistAcrossCollisionChanges",
+        "internal/httpapi/tenant_test.go :: TestTenantIsolationAndCSRFAtHTTPSeam",
+        "internal/httpapi/tenant_test.go :: TestSourceSummariesRedactAndExplicitRevealIsOwnerScoped",
+        "internal/httpapi/tenant_test.go :: TestFeedRotationAndRevocation",
+        "internal/httpapi/tenant.go :: materializeProfileWithReader, saveProfile",
+        "internal/httpapi/legacy_endpoint_options_test.go :: TestLegacyEndpointEditorPreservesTypedOptionsAndRouteIdentity"
+      ],
+      "scope": "Separate ClientProfileIR/ServerDeploymentIR contracts, tenant materialization rejects internal origins/foreign ownership, user admin endpoints deny access; client save writes only tenant profiles and cannot publish server deployment.",
+      "literal_acceptance": "Server deployment intent and client profile intent are distinct contracts; client operations cannot create deployments or retrieve transit secrets."
+    },
+    {
+      "ticket": "RW-07",
+      "clause": 3,
+      "disposition": "supported",
+      "evidence": [
+        "internal/httpapi/profile_revision_test.go :: TestProfileOpenedRevisionRejectsStaleWriteAndPreservesPublishedFeed",
+        "internal/httpapi/profile_revision_test.go :: TestProfileWritesRequireOpenedRevisionWithoutLegacyUpsertBypass",
+        "internal/httpapi/profile_revision_test.go :: TestProfileRevisionWorksForLegacyStoredDraftAndConcurrentStoreHandles",
+        "internal/httpapi/profile_revision.go :: tenantRecordView / profileSaveError",
+        "internal/httpapi/tenant.go :: saveProfile uses expectedRecord and CompareAndPutRecords",
+        "web/tests/profile-revision.ui.spec.ts :: stale profile keeps its submitted draft and explicitly reopens the accepted version at 1280 / 390",
+        "web/src/profile-content-hierarchy.dom.test.tsx :: retained form, successful revision advancement, explicit discard lifecycle regressions",
+        "web/src/basic-routing.dom.test.tsx :: accepted revision advancement and conflict retention",
+        "docs/verification/PROFILE-DRAFT-REVISION-2026-11-02.md :: genuine RED/GREEN and focused scope",
+        "checklist-evidence-20261101/browser-41417857984/RECEIPT.md :: real competing200/stale409, retained name/DNS/sniff, unchanged server/feed, explicit recovery and two successor-token saves",
+        "ci10-publication-20261102/monitor/named-profile-receipt.json :: uncached unfiltered full HTTPAPI -race package1039.765s PASS; nonverbose, no individual RUN/PASS events"
+      ],
+      "scope": "Opened-editor private-record HMAC token supplied as If-Match and included in atomic CAS. Real HTTP stale editors and two independent store handles reject stale writes; missing/wildcard/upsert bypass denied. Full/basic editors retain rejected inputs, disallow silent overwrite, require explicit discard recovery and advance only accepted-save tokens. CI10 actual browser1280/390 passed once4904/5205ms, exactly3 UI writes, unchanged published bytes, visible warning/actions. This satisfies draft/published separation plus stale-write preservation without claiming native deployment.",
+      "reason_if_unresolved": null,
+      "literal_acceptance": "Draft and published revision are separate and stale writes fail without losing the submitted draft.",
+      "prior_CI9_disposition": "unresolved",
+      "closure_source": "87bfac541c4be43d9b307234a3ac84db1feab207",
+      "closure_run": 41417857984,
+      "execution_limit": "Three unconditional source tests, no Skip calls, included by the uncached unfiltered full-package race command. Nonverbose output does not emit individual named RUN/PASS or per-test no-skip telemetry. Actual browser409 and successor-token assertions have detailed results."
+    },
+    {
+      "ticket": "RW-07",
+      "clause": 4,
+      "disposition": "supported",
+      "evidence": [
+        "internal/httpapi/templates_test.go :: TestTemplatePresetCopyIsIsolatedAndVersionsImmutable",
+        "internal/httpapi/templates_test.go :: TestSharedTemplateRejectsPrivateShapesAndCrossTenantBindings",
+        "internal/httpapi/templates_test.go :: TestProfileTemplatePreservesPersonalOverridesAndPublishedFallback",
+        "internal/httpapi/templates_test.go :: TestSwitchingTemplateReferenceModeKeepsPersonalRuntimeAndPrivateBindings",
+        "internal/httpapi/native_overrides_test.go :: TestNativeDraftContentIsOwnerPrivateAndSurvivesInvalidSave",
+        "internal/httpapi/native_overrides_test.go :: TestNativePreviewAndPublishedOutputUseSameFinalComposition",
+        "internal/httpapi/native_overrides_test.go :: TestNativeOverrideSurvivesTemplateFollowAndKeepsPublicationSeparate",
+        "internal/render/client_test.go :: TestClientFullAndNodesOnlyAreDifferentOutputs"
+      ],
+      "scope": "Template defaults merge deterministically with explicit personal runtime/policy overrides, visible editor controls retain them; full rendering includes rules/groups/runtime and is explicitly distinct from nodes-only output.",
+      "literal_acceptance": "Default-template values and explicit overrides are visible and deterministic; the profile is not reduced to a node-only list."
+    },
+    {
+      "ticket": "RW-08",
+      "clause": 1,
+      "disposition": "supported",
+      "evidence": [
+        "internal/domain/profile_test.go :: TestTopologyAllowsThreeHopsSameHostAndDirect",
+        "internal/domain/profile_test.go :: TestProfileAcceptsDeepNestingAndRejectsCycle",
+        "internal/domain/profile_test.go :: TestRenamingDoesNotChangeStableReferences",
+        "web/tests/group-membership.ui.spec.ts :: automatic members are an explicit additive choice over current source, collection and platform connections",
+        "internal/domain/profile_validation.go :: ValidateClientProfile (effective membership and identity DFS)",
+        "web/src/group-membership.dom.test.tsx :: keeps the real empty-group error when automatic membership is explicitly disabled",
+        "internal/httpapi/nested_source_publication_test.go :: TestNestedDynamicSourceUpdateRequiresExplicitScopedPublication"
+      ],
+      "scope": "Three-level profile and real saved dynamic nested group policy work; identity DFS rejects self/indirect cycle at exact group ID, effective-empty membership reports groups[index], missing action metadata names exact stable group. Explicit UI empty-group regression is retained.",
+      "literal_acceptance": "Valid nesting deeper than two levels works; self-reference, indirect cycles and empty effective membership are rejected with exact group diagnostics."
+    },
+    {
+      "ticket": "RW-08",
+      "clause": 2,
+      "disposition": "supported",
+      "evidence": [
+        "internal/render/native_test.go :: TestNativeClientFixtures",
+        "internal/render/client_test.go :: TestClientRegistryAcceptsThirdNamespacedAdapterAndGatesVersions",
+        "internal/render/client_test.go :: TestClientFullAndNodesOnlyAreDifferentOutputs",
+        "internal/render/client_test.go :: TestMihomoPreservesFourStrategiesAndResourceFile"
+      ],
+      "scope": "Native checker invokes pinned actual Mihomo for manual/url-test/fallback/load-balance with exact emitted semantics, and sing-box for its supported cases. Requires CI9 native gate execution receipt, not ordinary skipped unit invocation; parent owns exact receipt binding.",
+      "literal_acceptance": "Manual, URL-test, fallback and load-balance each have positive native-validated output on at least one pinned target, not just an unsupported response."
+    },
+    {
+      "ticket": "RW-08",
+      "clause": 3,
+      "disposition": "supported",
+      "evidence": [
+        "internal/httpapi/output_routing_summary_test.go :: TestPublishedRoutingSummaryStaysFrozenUntilReviewedPublication",
+        "internal/httpapi/output_routing_summary_test.go :: TestPublishedRoutingSummarySourceRenameChangesCandidateOnly",
+        "web/tests/group-membership.ui.spec.ts :: automatic members are an explicit additive choice over current source, collection and platform connections",
+        "internal/httpapi/nested_source_publication_test.go :: TestNestedDynamicSourceUpdateRequiresExplicitScopedPublication"
+      ],
+      "scope": "Real HTTP nested dynamic refresh asserts frozen saved/source identities, added member and group change preview, unchanged strategy; existing delivered feeds remain frozen until selected explicit publication, sibling unchanged.",
+      "literal_acceptance": "Dynamic predicates resolve against the frozen source snapshot and preview member changes after refresh."
+    },
+    {
+      "ticket": "RW-08",
+      "clause": 4,
+      "disposition": "supported",
+      "evidence": [
+        "internal/render/client_test.go :: TestClientRegistryAcceptsThirdNamespacedAdapterAndGatesVersions",
+        "internal/render/client_test.go :: TestClientFullAndNodesOnlyAreDifferentOutputs",
+        "internal/render/client_test.go :: TestMihomoPreservesFourStrategiesAndResourceFile",
+        "internal/render/native_test.go :: TestNativeClientFixtures",
+        "internal/httpapi/nested_source_publication_test.go :: TestNestedDynamicSourceUpdateRequiresExplicitScopedPublication"
+      ],
+      "scope": "Target registry rejects unknown versions/adapters and unsupported sing-box fallback/load-balance with exact group location; retains intended strategy/default routing and rejects publication rather than coercing. No unsupported numeric depth limit is invented where target has none.",
+      "literal_acceptance": "Unsupported target strategy or depth is diagnosed without coercing the group to manual or changing the intended server exit."
+    },
+    {
+      "ticket": "RW-09",
+      "clause": 1,
+      "literal_acceptance": "A positive fixture covers ordered matching, a combined predicate and explicit final action; native validation confirms each claimed supported target.",
+      "disposition": "supported",
+      "evidence": [
+        "internal/render/native_test.go :: TestNativeClientFixtures",
+        "internal/render/native_override_test.go :: TestNativeOverrideRejectsUnsupportedConflictsAndForeignReferences",
+        "internal/render/native_override_test.go :: TestNativeSingBoxRejectsCredentialMaterialOutsideConnections",
+        "internal/render/native_override_test.go :: TestNativeDNSResolverCyclesAndDanglingMihomoSelectorsAreRejected",
+        "internal/httpapi/structured_rule_journey_test.go :: TestStructuredRuntimeAndOwnedRuleVersionPublication"
+      ],
+      "scope": "Source + public HTTP + exact pinned native parser evidence; owner-private resources and frozen publication. No universal SRS compatibility or live external-resource service claim."
+    },
+    {
+      "ticket": "RW-09",
+      "clause": 2,
+      "literal_acceptance": "Rule resources support fixed/following versions with digest, provenance and explicit cache/fetch errors; resource failures preserve previous valid publication.",
+      "disposition": "supported",
+      "evidence": [
+        "internal/httpapi/resource_bundle_test.go :: TestOwnedRuleFilesPublishAsExactFrozenBundle",
+        "internal/httpapi/resource_bundle_test.go :: TestRuleFileImportRejectsUnownedPathsAndMismatchedPins",
+        "internal/httpapi/resource_bundle_native_test.go :: TestNativeOwnedRuleFileBundles",
+        "internal/httpapi/resource_bundle_test.go :: TestRuleRefreshFailureRetainsAcceptedBytesWithoutPretendingFreshness",
+        "internal/httpapi/structured_rule_journey_test.go :: TestStructuredRuntimeAndOwnedRuleVersionPublication"
+      ],
+      "scope": "Source + public HTTP + exact pinned native parser evidence; owner-private resources and frozen publication. No universal SRS compatibility or live external-resource service claim."
+    },
+    {
+      "ticket": "RW-09",
+      "clause": 3,
+      "literal_acceptance": "Target-specific resource formats are respected; SRS is not treated as universally compatible and mandatory semantics are not silently omitted or expanded.",
+      "disposition": "supported",
+      "evidence": [
+        "internal/httpapi/resource_bundle_native_test.go :: TestNativeOwnedRuleFileBundles",
+        "internal/render/client_test.go :: TestClientRegistryAcceptsThirdNamespacedAdapterAndGatesVersions",
+        "internal/render/client_test.go :: TestClientFullAndNodesOnlyAreDifferentOutputs",
+        "internal/render/client_test.go :: TestMihomoPreservesFourStrategiesAndResourceFile",
+        "internal/httpapi/resource_bundle_native_test.go :: TestNativeOwnedRuleFileBundles (mihomo-yaml/mrs/sing-box-source/srs target-specific native consumption and corruption rejection)"
+      ],
+      "scope": "Source + public HTTP + exact pinned native parser evidence; owner-private resources and frozen publication. No universal SRS compatibility or live external-resource service claim."
+    },
+    {
+      "ticket": "RW-09",
+      "clause": 4,
+      "literal_acceptance": "Private resource access is owner-scoped at retrieval and does not leak its bearer URL into ordinary previews or logs.",
+      "disposition": "supported",
+      "evidence": [
+        "internal/httpapi/resource_bundle_test.go :: TestOwnedRuleFilesPublishAsExactFrozenBundle",
+        "internal/httpapi/resource_bundle_test.go :: TestRuleFileImportRejectsUnownedPathsAndMismatchedPins",
+        "internal/resources/fetch_test.go :: TestFetchRejectsSpecialAddressesBeforeDial",
+        "internal/resources/fetch_test.go :: TestMixedDNSAnswersDeniedBeforeDial",
+        "internal/resources/fetch_test.go :: TestRedirectCannotReachPrivate",
+        "internal/resources/fetch_test.go :: TestTransportErrorRedactsSecret",
+        "internal/httpapi/tenant_test.go :: TestTenantIsolationAndCSRFAtHTTPSeam",
+        "internal/httpapi/tenant_test.go :: TestSourceSummariesRedactAndExplicitRevealIsOwnerScoped",
+        "internal/httpapi/tenant_test.go :: TestFeedRotationAndRevocation",
+        "internal/httpapi/resource_bundle_test.go :: TestRuleRefreshFailureRetainsAcceptedBytesWithoutPretendingFreshness",
+        "internal/httpapi/resource_bundle_test.go :: TestRuleBundleRejectsTamperedFileAndForeignAcceptedVersion"
+      ],
+      "scope": "Source + public HTTP + exact pinned native parser evidence; owner-private resources and frozen publication. No universal SRS compatibility or live external-resource service claim."
+    },
+    {
+      "ticket": "RW-10",
+      "clause": 1,
+      "literal_acceptance": "DNS, sniffing and TUN each have at least one positive supported-target fixture and a visible structured UI, without changing host OS permissions.",
+      "disposition": "supported",
+      "evidence": [
+        "internal/render/native_test.go :: TestNativeClientFixtures",
+        "internal/httpapi/native_overrides_native_test.go :: TestNativeOverridePublishedArtifactsPassPinnedNativeParsers",
+        "web/tests/structured-runtime-backend.ui.spec.ts :: structured runtime editor → real saved preview → frozen output at ${width}",
+        "internal/httpapi/structured_rule_journey_test.go :: TestStructuredRuntimeAndOwnedRuleVersionPublication"
+      ],
+      "scope": "Structured UI and HTTP plus target-specific native validation. TUN configuration validation does not claim host TUN activation or change OS permissions."
+    },
+    {
+      "ticket": "RW-10",
+      "clause": 2,
+      "literal_acceptance": "Overlay precedence and conflicts are deterministic, namespace-scoped and target-bound; unsupported mandatory fields are rejected, not dropped.",
+      "disposition": "supported",
+      "evidence": [
+        "internal/render/native_override_test.go :: TestNativeOverrideRejectsUnsupportedConflictsAndForeignReferences",
+        "internal/render/native_override_test.go :: TestNativeSingBoxRejectsCredentialMaterialOutsideConnections",
+        "internal/render/native_override_test.go :: TestNativeDNSResolverCyclesAndDanglingMihomoSelectorsAreRejected",
+        "internal/httpapi/native_overrides_test.go :: TestNativeDraftContentIsOwnerPrivateAndSurvivesInvalidSave",
+        "internal/httpapi/native_overrides_test.go :: TestNativePreviewAndPublishedOutputUseSameFinalComposition",
+        "internal/httpapi/native_overrides_test.go :: TestNativeOverrideSurvivesTemplateFollowAndKeepsPublicationSeparate"
+      ],
+      "scope": "Structured UI and HTTP plus target-specific native validation. TUN configuration validation does not claim host TUN activation or change OS permissions."
+    },
+    {
+      "ticket": "RW-10",
+      "clause": 3,
+      "literal_acceptance": "Native edits survive save/reopen/regeneration; malformed advanced input preserves the text and points to the conflicting field.",
+      "disposition": "supported",
+      "evidence": [
+        "internal/httpapi/native_overrides_test.go :: TestNativeDraftContentIsOwnerPrivateAndSurvivesInvalidSave",
+        "internal/httpapi/native_overrides_test.go :: TestNativePreviewAndPublishedOutputUseSameFinalComposition",
+        "internal/httpapi/native_overrides_test.go :: TestNativeOverrideSurvivesTemplateFollowAndKeepsPublicationSeparate",
+        "internal/httpapi/native_overrides_native_test.go :: TestNativeOverridePublishedArtifactsPassPinnedNativeParsers",
+        "web/src/workspace.dom.test.tsx :: keeps malformed native client text after a rejected preview and saves the exact draft",
+        "internal/render/native_override.go :: nativeError(PROTECTED_FIELD/DELETE_CONFLICT, field path) and schema diagnostics"
+      ],
+      "scope": "Structured UI and HTTP plus target-specific native validation. TUN configuration validation does not claim host TUN activation or change OS permissions."
+    },
+    {
+      "ticket": "RW-10",
+      "clause": 4,
+      "literal_acceptance": "Portable and target-only fields are distinguished in preview; unknown credentials or cross-tenant references cannot be introduced through overlays.",
+      "disposition": "supported",
+      "evidence": [
+        "internal/httpapi/native_overrides_test.go :: TestNativeDraftContentIsOwnerPrivateAndSurvivesInvalidSave",
+        "internal/httpapi/native_overrides_test.go :: TestNativePreviewAndPublishedOutputUseSameFinalComposition",
+        "internal/httpapi/native_overrides_test.go :: TestNativeOverrideSurvivesTemplateFollowAndKeepsPublicationSeparate",
+        "internal/httpapi/tenant_test.go :: TestTenantIsolationAndCSRFAtHTTPSeam",
+        "internal/httpapi/tenant_test.go :: TestSourceSummariesRedactAndExplicitRevealIsOwnerScoped",
+        "internal/httpapi/tenant_test.go :: TestFeedRotationAndRevocation",
+        "internal/render/native_override_test.go :: TestNativeOverrideRejectsForeignDNSDetour",
+        "internal/render/native_override_test.go :: TestNativeSingBoxRejectsCredentialMaterialOutsideConnections",
+        "internal/render/native_override_test.go :: TestNativeSingBoxRejectsUnmanagedServiceAndNamespaceReferences",
+        "internal/render/client_semantics_test.go :: TestClientSemanticSnapshotHasNoPortableClaimsForNativeOrNodesOnly"
+      ],
+      "scope": "Structured UI and HTTP plus target-specific native validation. TUN configuration validation does not claim host TUN activation or change OS permissions."
+    },
+    {
+      "ticket": "RW-11",
+      "clause": 1,
+      "literal_acceptance": "Node-only and complete modes produce structurally different correct outputs, each parsed and validated rather than renamed file extensions.",
+      "disposition": "supported",
+      "evidence": [
+        "internal/render/nodes_native_test.go :: TestNativeClientNodesOnlyConsumption",
+        "internal/render/native_test.go :: TestNativeClientFixtures",
+        "internal/render/client_test.go :: TestClientFullAndNodesOnlyAreDifferentOutputs"
+      ],
+      "scope": "Pinned Mihomo 1.19.32 and sing-box client 1.14.3 parsing; real downloaded client traffic where explicitly named. Nodes-only is consumed in a minimal receiving config, not a physical-device import claim."
+    },
+    {
+      "ticket": "RW-11",
+      "clause": 2,
+      "literal_acceptance": "Mihomo and sing-box are separately described with exact pinned version, supported/unsupported/unverified capabilities and positive native validator evidence.",
+      "disposition": "supported",
+      "evidence": [
+        "internal/render/native_test.go :: TestNativeClientFixtures",
+        "internal/render/client_test.go :: TestClientRegistryAcceptsThirdNamespacedAdapterAndGatesVersions",
+        "internal/render/client_test.go :: TestClientFullAndNodesOnlyAreDifferentOutputs",
+        "internal/render/client_test.go :: TestMihomoPreservesFourStrategiesAndResourceFile",
+        "internal/render/client_registry.go :: MihomoVersion=1.19.32; SingBoxVersion=1.14.3; exact-version registry gate",
+        "internal/render/stock_versions_test.go :: TestStockSecurityVersionsPreserveHistoricalAndIndependentTargets"
+      ],
+      "scope": "Pinned Mihomo 1.19.32 and sing-box client 1.14.3 parsing; real downloaded client traffic where explicitly named. Nodes-only is consumed in a minimal receiving config, not a physical-device import claim."
+    },
+    {
+      "ticket": "RW-11",
+      "clause": 3,
+      "literal_acceptance": "Output is deterministic from a frozen manifest, preserves stable output references and includes only necessary user-owned or granted entry credentials.",
+      "disposition": "supported",
+      "evidence": [
+        "internal/httpapi/output_routing_summary_test.go :: TestPublishedRoutingSummaryStaysFrozenUntilReviewedPublication",
+        "internal/httpapi/output_routing_summary_test.go :: TestPublishedRoutingSummarySourceRenameChangesCandidateOnly",
+        "internal/httpapi/tenant_test.go :: TestTenantIsolationAndCSRFAtHTTPSeam",
+        "internal/httpapi/tenant_test.go :: TestSourceSummariesRedactAndExplicitRevealIsOwnerScoped",
+        "internal/httpapi/tenant_test.go :: TestFeedRotationAndRevocation",
+        "internal/httpapi/client_delivery_native_test.go :: TestNativeInvitedUserDownloadedClientTraffic",
+        "internal/httpapi/client_delivery_native_test.go :: TestClientDeliverySOCKSFixtureIsDestinationBounded",
+        "internal/httpapi/client_delivery_native_test.go :: TestNativeInvitedUserDownloadedClientTraffic/{mihomo,sing-box}",
+        "internal/render/client_semantics_test.go :: TestFullConfigSecretInspectionUsesOnlyVerifiedFrozenObjects"
+      ],
+      "scope": "Pinned Mihomo 1.19.32 and sing-box client 1.14.3 parsing; real downloaded client traffic where explicitly named. Nodes-only is consumed in a minimal receiving config, not a physical-device import claim."
+    },
+    {
+      "ticket": "RW-11",
+      "clause": 4,
+      "literal_acceptance": "No output exports administrator topology, transit credentials, owner/source identifiers or hidden unresolved references; redacted preview is not labeled importable.",
+      "disposition": "supported",
+      "evidence": [
+        "internal/domain/profile_test.go :: TestProfileDoesNotExportTransitOrAnotherOwner",
+        "internal/domain/profile_test.go :: TestReadableNamesPersistAcrossCollisionChanges",
+        "internal/httpapi/tenant_test.go :: TestTenantIsolationAndCSRFAtHTTPSeam",
+        "internal/httpapi/tenant_test.go :: TestSourceSummariesRedactAndExplicitRevealIsOwnerScoped",
+        "internal/httpapi/tenant_test.go :: TestFeedRotationAndRevocation",
+        "internal/httpapi/native_overrides_test.go :: TestNativeDraftContentIsOwnerPrivateAndSurvivesInvalidSave",
+        "internal/httpapi/native_overrides_test.go :: TestNativePreviewAndPublishedOutputUseSameFinalComposition",
+        "internal/httpapi/native_overrides_test.go :: TestNativeOverrideSurvivesTemplateFollowAndKeepsPublicationSeparate",
+        "internal/httpapi/native_overrides_test.go :: TestNativePreviewRedactsURLAuthenticationButExportRetainsExactData",
+        "internal/render/client_semantics_test.go :: TestFullConfigSecretInspectionUsesOnlyVerifiedFrozenObjects"
+      ],
+      "scope": "Pinned Mihomo 1.19.32 and sing-box client 1.14.3 parsing; real downloaded client traffic where explicitly named. Nodes-only is consumed in a minimal receiving config, not a physical-device import claim."
+    },
+    {
+      "ticket": "RW-12",
+      "clause": 1,
+      "literal_acceptance": "Draft edits do not remove access to an existing published revision; failed compilation or compatibility checks retain the previous valid output.",
+      "disposition": "supported",
+      "evidence": [
+        "internal/httpapi/output_routing_summary_test.go :: TestPublishedRoutingSummaryStaysFrozenUntilReviewedPublication",
+        "internal/httpapi/output_routing_summary_test.go :: TestPublishedRoutingSummarySourceRenameChangesCandidateOnly",
+        "internal/httpapi/native_overrides_test.go :: TestNativeDraftContentIsOwnerPrivateAndSurvivesInvalidSave",
+        "internal/httpapi/native_overrides_test.go :: TestNativePreviewAndPublishedOutputUseSameFinalComposition",
+        "internal/httpapi/native_overrides_test.go :: TestNativeOverrideSurvivesTemplateFollowAndKeepsPublicationSeparate",
+        "internal/httpapi/structured_rule_journey_test.go :: TestStructuredRuntimeAndOwnedRuleVersionPublication"
+      ],
+      "scope": "Actual UI/HTTP publication, fetch, download, selected rotation, trusted clipboard and decoded rendered QR. No unexposed import integration or mobile-device import claimed."
+    },
+    {
+      "ticket": "RW-12",
+      "clause": 2,
+      "literal_acceptance": "Rotation invalidates only the selected old link; revoke and grant expiry are checked at every fetch; cross-user listing and retrieval fail.",
+      "disposition": "supported",
+      "evidence": [
+        "internal/httpapi/tenant_test.go :: TestTenantIsolationAndCSRFAtHTTPSeam",
+        "internal/httpapi/tenant_test.go :: TestSourceSummariesRedactAndExplicitRevealIsOwnerScoped",
+        "internal/httpapi/tenant_test.go :: TestFeedRotationAndRevocation",
+        "web/tests/product-model.ui.spec.ts :: existing strategy groups remain editable and revoked recovery replaces only the selected client link",
+        "web/tests/product-model.ui.spec.ts :: scoped configuration creates one independent second-client subscription and immediately exposes its new link",
+        "internal/httpapi/client_delivery_native_test.go :: TestNativeInvitedUserDownloadedClientTraffic",
+        "internal/httpapi/client_delivery_native_test.go :: TestClientDeliverySOCKSFixtureIsDestinationBounded",
+        "internal/httpapi/output_rotation_recovery_test.go :: TestOutputRotationRecoveryPreservesKnownMissingProofAsUnconfirmed",
+        "internal/httpapi/output_rotation_recovery_test.go :: TestOutputRotationRecoveryDoesNotMisclassifyRevocationOrPlatformSuspension",
+        "internal/httpapi/external_feed_policy_test.go :: TestPrivateExternalFeedDoesNotConsumePlatformServiceEligibility/{expired,exhausted}",
+        "internal/httpapi/outputs.go :: feed invokes authorizeOutputDelivery on every fetch"
+      ],
+      "scope": "Actual UI/HTTP publication, fetch, download, selected rotation, trusted clipboard and decoded rendered QR. No unexposed import integration or mobile-device import claimed."
+    },
+    {
+      "ticket": "RW-12",
+      "clause": 3,
+      "literal_acceptance": "Names and collision disambiguation are stable under input reordering and all group/rule references follow a deliberate rename.",
+      "disposition": "supported",
+      "evidence": [
+        "web/tests/workspace.api.spec.ts :: private source → ordered collection → profile → published feed → revocation",
+        "internal/httpapi/output_routing_summary_test.go :: TestPublishedRoutingSummaryStaysFrozenUntilReviewedPublication",
+        "internal/httpapi/output_routing_summary_test.go :: TestPublishedRoutingSummarySourceRenameChangesCandidateOnly",
+        "internal/render/rename_references_test.go :: TestExplicitEndpointAndGroupRenamePreservesRenderedReferences",
+        "internal/domain/profile_test.go :: TestStableNamesDoNotDependOnInputOrder",
+        "internal/domain/profile_test.go :: TestReadableNamesPersistAcrossCollisionChanges",
+        "internal/domain/profile_test.go :: TestRenamingDoesNotChangeStableReferences"
+      ],
+      "scope": "Actual UI/HTTP publication, fetch, download, selected rotation, trusted clipboard and decoded rendered QR. No unexposed import integration or mobile-device import claimed."
+    },
+    {
+      "ticket": "RW-12",
+      "clause": 4,
+      "literal_acceptance": "At least copied links and file download work end-to-end; any additional QR/import button only appears when its supported target integration actually works.",
+      "disposition": "supported",
+      "evidence": [
+        "web/tests/product-model.ui.spec.ts :: existing strategy groups remain editable and revoked recovery replaces only the selected client link",
+        "web/tests/product-model.ui.spec.ts :: scoped configuration creates one independent second-client subscription and immediately exposes its new link",
+        "web/tests/first-subscription.ui.spec.ts :: first subscription skips the empty target gate but preserves save, cancel, review, and explicit publication",
+        "web/tests/service-center-backend.ui.spec.ts :: E09 invited service center keyboard delivery and selected-link rotation at ${width}px",
+        "/workspace/scratch/d385eb428cee/checklist-evidence-20261101/browser-41406226333/RECEIPT.md :: six real clipboard + rendered QR decoding checks at 1440/390"
+      ],
+      "scope": "Actual UI/HTTP publication, fetch, download, selected rotation, trusted clipboard and decoded rendered QR. No unexposed import integration or mobile-device import claimed."
+    },
+    {
+      "ticket": "RW-13",
+      "clause": 1,
+      "literal_acceptance": "A 1 GB whole-route measurement at 2× debits 2 GB once, never once per hop; duplicate/reordered measurements do not double-charge.",
+      "disposition": "supported",
+      "evidence": [
+        "internal/store/billing_test.go :: TestMeterRecordsOverQuotaAndKeepsHistoricalRate",
+        "internal/store/billing_test.go :: TestFractionalRateRoundsAfterAggregation",
+        "internal/store/counter_ingestion_test.go :: TestCounterIngestionIsAtomicReplaySafeAndSeparatesProvider",
+        "internal/store/counter_ingestion_test.go :: TestCounterCursorDoesNotResetOnBillingCycleChange",
+        "internal/store/counter_ingestion_test.go :: TestCounterCalendarAndManualBoundaryNeedExactObservation",
+        "internal/httpapi/published_native_test.go :: TestNativePublishedManagedPrincipalEndToEnd",
+        "internal/store/billing_test.go :: TestMeterGigabyteAtDoubleRateDebitsOnceAndKeepsHistoricalRate",
+        "internal/store/admission_budget_test.go :: TestManagedAggregateSnapshotsDoNotDoubleDebitAdmissionLedger"
+      ],
+      "scope": "Exact synthetic accounting measurements and public seams joined to existing native whole-route settlement, calendar/source/history and real browser evidence. 1 GB accounting input is not a claim of 1 GB physically transferred traffic."
+    },
+    {
+      "ticket": "RW-13",
+      "clause": 2,
+      "literal_acceptance": "Every debit retains its applicable multiplier/policy and period; provider IN+OUT is separate; late-data attribution and rounding rules are documented and tested.",
+      "disposition": "supported",
+      "evidence": [
+        "internal/store/billing_test.go :: TestMeterRecordsOverQuotaAndKeepsHistoricalRate",
+        "internal/store/billing_test.go :: TestFractionalRateRoundsAfterAggregation",
+        "internal/store/counter_ingestion_test.go :: TestCounterIngestionIsAtomicReplaySafeAndSeparatesProvider",
+        "internal/store/counter_ingestion_test.go :: TestCounterCursorDoesNotResetOnBillingCycleChange",
+        "internal/store/counter_ingestion_test.go :: TestCounterCalendarAndManualBoundaryNeedExactObservation",
+        "internal/store/admission_budget_test.go :: TestBudgetPinsRateBoundaryAndPreservesLateHistoricalCharge",
+        "internal/store/admission_budget_test.go :: TestManagedAggregateSnapshotsDoNotDoubleDebitAdmissionLedger",
+        "internal/store/admission_budget_test.go :: TestIssuedBudgetsFenceQuotaReductionAndCycleChange",
+        "internal/store/counter_ingestion_test.go :: TestCounterPolicyBoundaryAutomaticallyContinuesWithoutGuessing"
+      ],
+      "scope": "Exact synthetic accounting measurements and public seams joined to existing native whole-route settlement, calendar/source/history and real browser evidence. 1 GB accounting input is not a claim of 1 GB physically transferred traffic."
+    },
+    {
+      "ticket": "RW-13",
+      "clause": 3,
+      "literal_acceptance": "Fixed monthly day, activation calendar-month anniversary, fixed-day interval and no-auto-reset work in UTC+8; missing dates clamp to month-end then recover the original anchor.",
+      "disposition": "supported",
+      "evidence": [
+        "internal/service/cycle_test.go :: TestCalendarClampingRestoresDay",
+        "internal/service/cycle_test.go :: TestWeightedUsesIntegerCeiling",
+        "web/tests/cycle-renewal-backend.api.spec.ts :: isolated ${mode} cycle renewal and reset preserve meter identity and boundary",
+        "web/tests/cycle-renewal-backend.ui.spec.ts :: real ${mode} cycle editor, renewal, explicit reset and user countdown",
+        "web/tests/cycle-renewal-backend.ts :: cycleModes and assertCycleWindow"
+      ],
+      "scope": "Exact synthetic accounting measurements and public seams joined to existing native whole-route settlement, calendar/source/history and real browser evidence. 1 GB accounting input is not a claim of 1 GB physically transferred traffic."
+    },
+    {
+      "ticket": "RW-13",
+      "clause": 4,
+      "literal_acceptance": "Manual reset keeps the next automatic reset anchor; renewal does not reset usage and unused quota does not roll over; history remains queryable.",
+      "disposition": "supported",
+      "evidence": [
+        "internal/service/cycle_test.go :: TestCalendarClampingRestoresDay",
+        "internal/service/cycle_test.go :: TestWeightedUsesIntegerCeiling",
+        "web/tests/cycle-renewal-backend.api.spec.ts :: isolated ${mode} cycle renewal and reset preserve meter identity and boundary",
+        "internal/store/history_read_recovery_test.go :: TestHistoricalUsageContextStreamsCanonicalWindowAndCancels",
+        "internal/store/history_read_recovery_test.go :: TestReopenDoesNotTrustRestoredTriggerAfterOfflineBypass",
+        "web/tests/cycle-renewal-backend.ui.spec.ts :: real ${mode} cycle editor, renewal, explicit reset and user countdown",
+        "internal/store/usage_history_test.go :: TestUsageHistoryOwnerIndexKeepsExactWindowsAndMutations",
+        "internal/store/admission_budget.go :: immutable CycleStart window; available = policy.Quota - usage.WeightedBytes - reserved (no previous-cycle quota addition)",
+        "internal/service/effective.go :: ResolvePolicy uses declared plan/individual quota, not prior-cycle remainder"
+      ],
+      "scope": "Exact synthetic accounting measurements and public seams joined to existing native whole-route settlement, calendar/source/history and real browser evidence. 1 GB accounting input is not a claim of 1 GB physically transferred traffic."
+    },
+    {
+      "ticket": "RW-13",
+      "clause": 5,
+      "literal_acceptance": "Displayed next reset/timezone/countdown matches the persisted policy; no-reset and unconfigured states never fabricate a countdown.",
+      "disposition": "supported",
+      "evidence": [
+        "web/src/service-cycle-defaults.dom.test.tsx :: retains the complete $name cycle through an unrelated edit, preview and explicit apply",
+        "web/src/service-cycle-defaults.dom.test.tsx :: leaves the account's no-reset anchor, timezone control and implicit start unchanged",
+        "web/src/service-cycle-defaults.dom.test.tsx :: preserves hidden precise cycles across stale preview, explicit latest acceptance and a failed apply",
+        "web/tests/cycle-renewal-backend.ui.spec.ts :: real ${mode} cycle editor, renewal, explicit reset and user countdown",
+        "web/src/subscription-overview-status.dom.test.tsx :: names active authorization without presenting unlimited quota as available routes",
+        "web/src/subscription-overview-status.dom.test.tsx :: gives paused platform service a next step without granting restoration or changing personal subscriptions",
+        "web/src/model.test.ts :: counts down from the actual reset instant and does not invent a date",
+        "web/src/model.test.ts :: shows a configured UTC+8 reset without browser timezone ambiguity"
+      ],
+      "scope": "Exact synthetic accounting measurements and public seams joined to existing native whole-route settlement, calendar/source/history and real browser evidence. 1 GB accounting input is not a claim of 1 GB physically transferred traffic."
+    },
+    {
+      "ticket": "RW-14",
+      "clause": 1,
+      "literal_acceptance": "The same client IP at multiple public entries counts once; transit VPS IPs and private-airport direct traffic are excluded; freshness/window is explicit.",
+      "disposition": "supported",
+      "evidence": [
+        "internal/store/admission_test.go :: TestAdmissionUnionCountsNormalizedIPsAcrossEntriesAndDurablyRenews",
+        "internal/store/admission_test.go :: TestAdmissionRenewalRespectsRevocationQuotaAndHolds",
+        "internal/store/admission_test.go :: TestConnectionLimitCountsIndependentStreamsOnSameIPAndRenewsAtCap",
+        "internal/store/admission_test.go :: TestAdmissionScopesPresenceAndExpiresStaleIPs",
+        "internal/store/admission.go :: SetEntryAdmissionBinding requires current owned platform-entries grant and public principal; imported subscriptions/transit cannot create binding",
+        "internal/store/admission_manifest_test.go :: TestManagedBindingCannotUseLegacyGrantBypass",
+        "internal/httpapi/published_principals.go :: binding created only for public entry principal",
+        "internal/httpapi/external_feed_policy_test.go :: TestPrivateExternalFeedDoesNotConsumePlatformServiceEligibility"
+      ],
+      "scope": "One-user × logical public-entry bounded leases/rate; public-ingress binding excludes transit/private external subscriptions by ownership boundary. Native local executable timing, not WAN/global-rate/SLA evidence."
+    },
+    {
+      "ticket": "RW-14",
+      "clause": 2,
+      "literal_acceptance": "An over-limit new IP is rejected; expired/paused/exhausted access stops under a documented bounded lease policy; unknown quota cannot grant unbounded access.",
+      "disposition": "supported",
+      "evidence": [
+        "internal/store/admission_test.go :: TestAdmissionUnionCountsNormalizedIPsAcrossEntriesAndDurablyRenews",
+        "internal/store/admission_test.go :: TestAdmissionRenewalRespectsRevocationQuotaAndHolds",
+        "internal/store/admission_test.go :: TestConnectionLimitCountsIndependentStreamsOnSameIPAndRenewsAtCap",
+        "internal/httpapi/service_native_test.go :: TestNativeContinuousManagedServicePreservesPayloadAndRevocation",
+        "internal/httpapi/provider_native_test.go :: TestNativeManagedProviderSuspensionAndRecovery",
+        "internal/store/admission_budget_test.go :: TestExpiredBudgetCannotBeReissuedUntilFinalEvidence"
+      ],
+      "scope": "One-user × logical public-entry bounded leases/rate; public-ingress binding excludes transit/private external subscriptions by ownership boundary. Native local executable timing, not WAN/global-rate/SLA evidence."
+    },
+    {
+      "ticket": "RW-14",
+      "clause": 3,
+      "literal_acceptance": "Rate limit is shared by upload/download and all connections for one user × logical entry, independent across entries; no strict global-rate claim.",
+      "disposition": "supported",
+      "evidence": [
+        "internal/httpapi/published_native_test.go :: TestNativePublishedManagedPrincipalEndToEnd",
+        "internal/httpapi/service_native_test.go :: TestNativeContinuousManagedServicePreservesPayloadAndRevocation",
+        "internal/agent/managed_entry_rate_native_test.go :: TestManagedNativeEntryRateSharesDuplexAcrossConnectionsAndIsolatesEntries",
+        "/workspace/scratch/d385eb428cee/ci9-publication-20261102/monitor/named-native-web-receipt.json :: rate case PASS once, 8.58s, job125148744066, exact3090642"
+      ],
+      "scope": "One-user × logical public-entry bounded leases/rate; public-ingress binding excludes transit/private external subscriptions by ownership boundary. Native local executable timing, not WAN/global-rate/SLA evidence."
+    },
+    {
+      "ticket": "RW-14",
+      "clause": 4,
+      "literal_acceptance": "At least one pinned executable runtime has positive limit enforcement evidence with latency and existing-connection behavior measured; simulation alone cannot close this ticket.",
+      "disposition": "supported",
+      "evidence": [
+        "internal/httpapi/published_native_test.go :: TestNativePublishedManagedPrincipalEndToEnd",
+        "internal/httpapi/service_native_test.go :: TestNativeContinuousManagedServicePreservesPayloadAndRevocation",
+        "internal/httpapi/service_native_test.go :: TestNativeManagedOperationalRecovery",
+        "internal/agent/managed_entry_rate_native_test.go :: TestManagedNativeEntryRateSharesDuplexAcrossConnectionsAndIsolatesEntries",
+        "internal/httpapi/service_native_test.go :: TestNativeContinuousManagedServicePreservesPayloadAndRevocation (existing flow closes within MaxLease+3s; process remains alive)"
+      ],
+      "scope": "One-user × logical public-entry bounded leases/rate; public-ingress binding excludes transit/private external subscriptions by ownership boundary. Native local executable timing, not WAN/global-rate/SLA evidence."
+    },
+    {
+      "ticket": "RW-15",
+      "clause": 1,
+      "literal_acceptance": "Pinned Xray and sing-box configurations are natively validated and applied in an isolated local harness; generated is never reported as applied.",
+      "disposition": "supported",
+      "evidence": [
+        "internal/httpapi/fleet_native_test.go :: TestNativeFleetConfigureStopStartAndRollback",
+        "internal/render/native_test.go :: TestNativeClientFixtures",
+        "internal/agent/supervisor_test.go :: TestNativeSupervisorLifecycleAndRestart/{xray,sing-box}",
+        "scripts/native-cores.sh :: strict required runtime subtests reject missing/skipped xray/sing-box lifecycle results"
+      ],
+      "scope": "Isolated Linux local harness with pinned stock Xray 26.10.31/sing-box 1.14.4 and managed runtime as applicable; exact observed revision/fences, not a real VPS rollout."
+    },
+    {
+      "ticket": "RW-15",
+      "clause": 2,
+      "literal_acceptance": "Stale generations, duplicate requests, partial failures, disconnect and restart are exercised; observed active artifact identifies the validated revision.",
+      "disposition": "supported",
+      "evidence": [
+        "internal/agent/reconciler_test.go :: TestRestartRetainsFenceAndDoesNotReplay",
+        "internal/agent/reconciler_test.go :: TestUnknownOutcomeBlocksNewerMutationUntilObserved",
+        "internal/agent/reconciler_test.go :: TestLostAcknowledgementRecoveredByIdentityNotReplayed",
+        "internal/httpapi/fleet_native_test.go :: TestNativeFleetConfigureStopStartAndRollback",
+        "internal/httpapi/service_native_test.go :: TestNativeContinuousManagedServicePreservesPayloadAndRevocation",
+        "internal/agent/reconciler_test.go :: TestValidateBeforeActivationAndGenerationFence",
+        "internal/agent/reconciler_test.go :: TestDelayedOldOperationCannotOvertakeCompletedNewGeneration",
+        "internal/agent/supervisor_test.go :: TestNativeSupervisorLifecycleAndRestart/{xray,sing-box}",
+        "web/tests/publication-native.native.spec.ts :: same browser publication is observed by the owned native instance and stopped (exact nine identity fields, stale409 and stop cleanup)"
+      ],
+      "scope": "Isolated Linux local harness with pinned stock Xray 26.10.31/sing-box 1.14.4 and managed runtime as applicable; exact observed revision/fences, not a real VPS rollout."
+    },
+    {
+      "ticket": "RW-15",
+      "clause": 3,
+      "literal_acceptance": "Rollback is a new fenced operation with verified result; failure preserves last known valid state and the attempted draft; no implicit exit substitution.",
+      "disposition": "supported",
+      "evidence": [
+        "internal/httpapi/fleet_native_test.go :: TestNativeFleetConfigureStopStartAndRollback",
+        "internal/agent/reconciler_test.go :: TestRestartRetainsFenceAndDoesNotReplay",
+        "internal/agent/reconciler_test.go :: TestUnknownOutcomeBlocksNewerMutationUntilObserved",
+        "internal/agent/reconciler_test.go :: TestLostAcknowledgementRecoveredByIdentityNotReplayed",
+        "internal/agent/reconciler_test.go :: TestKnownFailedActivationRestoresOnlyUncommittedPointer",
+        "internal/httpapi/fleet_test.go :: TestFleetRollbackRefreshesCredentialsAndDoesNotResurrectRevokedGrants"
+      ],
+      "scope": "Isolated Linux local harness with pinned stock Xray 26.10.31/sing-box 1.14.4 and managed runtime as applicable; exact observed revision/fences, not a real VPS rollout."
+    },
+    {
+      "ticket": "RW-15",
+      "clause": 4,
+      "literal_acceptance": "The scoped agent cannot run arbitrary shell or access unrelated tenant sources; live VPS enrollment/credentials are not performed by the development harness.",
+      "disposition": "supported",
+      "evidence": [
+        "internal/httpapi/tenant_test.go :: TestTenantIsolationAndCSRFAtHTTPSeam",
+        "internal/httpapi/tenant_test.go :: TestSourceSummariesRedactAndExplicitRevealIsOwnerScoped",
+        "internal/httpapi/tenant_test.go :: TestFeedRotationAndRevocation",
+        "internal/agent/reconciler_test.go :: TestRestartRetainsFenceAndDoesNotReplay",
+        "internal/agent/reconciler_test.go :: TestUnknownOutcomeBlocksNewerMutationUntilObserved",
+        "internal/agent/reconciler_test.go :: TestLostAcknowledgementRecoveredByIdentityNotReplayed",
+        "internal/agent/contracts.go :: scoped Adapter Validate/Activate/Observe contract, no arbitrary remote command",
+        "internal/agent/reconciler_test.go :: TestInvalidArtifactScopeAndDriftAreRejected",
+        "internal/agent/reconciler_test.go :: TestStateDoesNotExposePrivateArtifactsAndRootHasOneWriter",
+        "internal/httpapi/fleet_test.go :: TestFleetStalePreviewConcurrentExecutionAndAuthorization"
+      ],
+      "scope": "Isolated Linux local harness with pinned stock Xray 26.10.31/sing-box 1.14.4 and managed runtime as applicable; exact observed revision/fences, not a real VPS rollout."
+    },
+    {
+      "ticket": "RW-16",
+      "clause": 1,
+      "literal_acceptance": "A batch names exact targets, core versions and expected disruption before execution; each target outcome and retry attempt is visible.",
+      "disposition": "supported",
+      "evidence": [
+        "internal/httpapi/fleet_test.go :: TestFleetPhasesKeepSuccessAndRetryOnlyFailedTargets",
+        "internal/httpapi/fleet_test.go :: TestFleetStalePreviewConcurrentExecutionAndAuthorization",
+        "internal/httpapi/fleet_test.go :: TestFleetUpgradeNamesExactOldNewIdentityAndRejectsUnknownRuntime"
+      ],
+      "scope": "Scoped batch planning/execution/install/retry software contract plus opt-in local native official-artifact evidence. Actual VPS target, credentials, rollout and authorization remain external prerequisites."
+    },
+    {
+      "ticket": "RW-16",
+      "clause": 2,
+      "literal_acceptance": "Only declared official release artifacts with integrity checks can be installed in an isolated sandbox; no arbitrary remote-shell endpoint is introduced.",
+      "disposition": "supported",
+      "evidence": [
+        "internal/agent/stock_upgrade_native_test.go :: TestNativeStockXrayUpgradeKeepsExactRuntimeAndLease",
+        "internal/httpapi/fleet_native_test.go :: TestNativeFleetConfigureStopStartAndRollback",
+        "internal/agent/core_install_test.go :: TestCoreInstallerRejectsUnpinnedReleaseAndCorruptArchive",
+        "internal/agent/core_install_test.go :: TestNativeCoreInstallerPreparesImmutableOfficialExecutables",
+        "internal/httpapi/fleet_test.go :: TestFleetInstallRequiresCatalogAndExactInstalledEvidenceNotRunning",
+        "internal/agent/contracts.go :: scoped Adapter methods, no arbitrary command field"
+      ],
+      "scope": "Scoped batch planning/execution/install/retry software contract plus opt-in local native official-artifact evidence. Actual VPS target, credentials, rollout and authorization remain external prerequisites."
+    },
+    {
+      "ticket": "RW-16",
+      "clause": 3,
+      "literal_acceptance": "A failed target does not turn the whole batch green or overwrite successful observations; retries are idempotent and generation-fenced.",
+      "disposition": "supported",
+      "evidence": [
+        "internal/httpapi/fleet_test.go :: TestFleetPhasesKeepSuccessAndRetryOnlyFailedTargets",
+        "internal/httpapi/fleet_test.go :: TestFleetStalePreviewConcurrentExecutionAndAuthorization",
+        "internal/httpapi/fleet_test.go :: TestFleetUpgradeNamesExactOldNewIdentityAndRejectsUnknownRuntime",
+        "internal/agent/reconciler_test.go :: TestRestartRetainsFenceAndDoesNotReplay",
+        "internal/agent/reconciler_test.go :: TestUnknownOutcomeBlocksNewerMutationUntilObserved",
+        "internal/agent/reconciler_test.go :: TestLostAcknowledgementRecoveredByIdentityNotReplayed",
+        "internal/httpapi/fleet_test.go :: TestFleetPartialEnrollmentFailureRetainsInputAndSuccessHistory",
+        "internal/agent/reconciler_test.go :: TestDelayedOldOperationCannotOvertakeCompletedNewGeneration"
+      ],
+      "scope": "Scoped batch planning/execution/install/retry software contract plus opt-in local native official-artifact evidence. Actual VPS target, credentials, rollout and authorization remain external prerequisites."
+    },
+    {
+      "ticket": "RW-16",
+      "clause": 4,
+      "literal_acceptance": "Local tests establish planning and execution contracts; real VPS rollout remains separately authorized and is not required to run ordinary CI.",
+      "disposition": "supported",
+      "evidence": [
+        "internal/httpapi/fleet_test.go :: TestFleetPhasesKeepSuccessAndRetryOnlyFailedTargets",
+        "internal/httpapi/fleet_test.go :: TestFleetStalePreviewConcurrentExecutionAndAuthorization",
+        "internal/httpapi/fleet_test.go :: TestFleetUpgradeNamesExactOldNewIdentityAndRejectsUnknownRuntime",
+        "internal/httpapi/fleet_native_test.go :: TestNativeFleetConfigureStopStartAndRollback",
+        "internal/httpapi/fleet_native_test.go :: TestNativeFleetConfigureStopStartAndRollback (opt-in isolated local process harness)",
+        "internal/agent/core_install_test.go :: TestNativeCoreInstallerPreparesImmutableOfficialExecutables (explicit official archive input)",
+        "AGENTS.md :: no live rollout implied by local/native verification"
+      ],
+      "scope": "Scoped batch planning/execution/install/retry software contract plus opt-in local native official-artifact evidence. Actual VPS target, credentials, rollout and authorization remain external prerequisites."
+    },
+    {
+      "ticket": "RW-17",
+      "clause": 1,
+      "literal_acceptance": "Provider cumulative IN+OUT, bandwidth rate, capacity and user weighted debit have distinct units and ledgers.",
+      "disposition": "supported",
+      "evidence": [
+        "internal/httpapi/node_observations_test.go :: TestNodeResourcesAndProviderAllowanceHaveAuthenticatedEndToEndDataPath",
+        "internal/observability/observability_test.go :: TestProviderEstimateRequiresOperatorBaselineAndCountsSelectedINPlusOUTOnly",
+        "internal/store/counter_ingestion_test.go :: TestCounterIngestionIsAtomicReplaySafeAndSeparatesProvider"
+      ],
+      "scope": "Real authenticated observation HTTP path and deterministic accounting fixtures distinguish host IN+OUT, rates, quota and weighted user ledger; not provider-invoice reconciliation.",
+      "reason_if_unresolved": null
+    },
+    {
+      "ticket": "RW-17",
+      "clause": 2,
+      "literal_acceptance": "Provider cycles and alert/exhaustion thresholds persist with explicit timezone and source; missing samples appear unknown rather than zero.",
+      "disposition": "supported",
+      "evidence": [
+        "internal/observability/observability_test.go :: TestConfigRequiresLabeledUnitsCycleAndExplicitProviderInterfaces; TestInitialObservationNeverInventsCPUOrProviderConsumption; TestProviderStatementIsIndependentOfNICAndOldOrFutureInputsCannotAlert",
+        "internal/notifications/acceptance_matrix_test.go :: TestNotificationEventAudienceChannelAcceptanceMatrix",
+        "web/src/ObservationForms.tsx :: explicit browser-local cycle labels",
+        "web/src/observability-model.ts :: providerTimestamp",
+        "web/src/observation-footer.dom.test.tsx :: explicit provider cycle retains original ISO start/end"
+      ],
+      "scope": "Persisted time.Time instants and source, explicit local-time entry labels and UTC serialization, saved notification thresholds, unknown rather than fabricated zero; no new timezone-enum requirement.",
+      "reason_if_unresolved": null
+    },
+    {
+      "ticket": "RW-17",
+      "clause": 3,
+      "literal_acceptance": "Exhaustion behavior follows explicit policy and does not silently switch the route exit.",
+      "disposition": "supported",
+      "evidence": [
+        "internal/store/provider_admission_test.go :: TestProviderSuspensionFollowsExactAppliedHopsAndKeepsSettlement",
+        "internal/httpapi/provider_native_test.go :: TestNativeManagedProviderSuspensionAndRecovery"
+      ],
+      "scope": "Explicit advisory/suspend policy; same managed native runtime identity survives denial/recovery; exact applied-hop policy and stale/unknown observations fail closed without exit substitution.",
+      "reason_if_unresolved": null
+    },
+    {
+      "ticket": "RW-17",
+      "clause": 4,
+      "literal_acceptance": "Counter epoch, duplicate sample, cycle boundary and stale-observation fixtures verify resource calculations and their presentation.",
+      "disposition": "supported",
+      "evidence": [
+        "internal/observability/observability_test.go :: TestReplayConflictGapResetAndCycleCrossingCannotFabricateCoverage; TestCycleBoundaryAndBaselineRaceStayExplicit; TestProviderStatementIsIndependentOfNICAndOldOrFutureInputsCannotAlert",
+        "internal/httpapi/node_observations_test.go :: TestNodeResourcesAndProviderAllowanceHaveAuthenticatedEndToEndDataPath",
+        "web/src/observation-footer.dom.test.tsx :: provider observation presentation"
+      ],
+      "scope": "Counter reset/epoch/gap/replay/cycle/staleness calculation fixtures plus authenticated API and unknown/explicit-source UI presentation; no physical-host telemetry claim.",
+      "reason_if_unresolved": null
+    },
+    {
+      "ticket": "RW-18",
+      "clause": 1,
+      "literal_acceptance": "Target, direction, timestamp and estimated/actual traffic cost are shown; timeouts and error details point to an actionable failure.",
+      "disposition": "supported",
+      "evidence": [
+        "internal/httpapi/diagnostics_test.go :: TestDiagnosticAdminRequestRunsThroughRealAgentAndDurableResult; TestDiagnosticDriverCancellationStopsActualTransfer",
+        "internal/agent/diagnostics_test.go :: TestDiagnosticBoundsRedirectSizeDeadlineAndCancellation",
+        "web/src/Diagnostics.tsx :: job timestamp, target, direction, cost and actionable result rendering",
+        "web/tests/diagnostic-cancel-context.ui.spec.ts :: server diagnostic cancellation retains its target and exact opener at 320px"
+      ],
+      "scope": "Bounded locally authorized real-agent transfer and synthetic-HTTP real-browser cancellation context; estimated/actual/unknown costs remain distinct. CI9 verifies actual narrow pixels and two Escape/focus returns.",
+      "reason_if_unresolved": null
+    },
+    {
+      "ticket": "RW-18",
+      "clause": 2,
+      "literal_acceptance": "Diagnostics cannot target arbitrary internal metadata services or silently send traffic beyond the authorized target.",
+      "disposition": "supported",
+      "evidence": [
+        "internal/agent/diagnostics_test.go :: TestDiagnosticRejectsMetadataCredentialsPrivateAndReboundFixtureTargets; TestBoundedDiagnosticExecutesOnlyLocallyAuthorizedFixture; TestDiagnosticBoundsRedirectSizeDeadlineAndCancellation"
+      ],
+      "scope": "Metadata/private/credential/query/rebound targets rejected, exact authorized local target only, no redirect following; no arbitrary external probe authorization inferred.",
+      "reason_if_unresolved": null
+    },
+    {
+      "ticket": "RW-18",
+      "clause": 3,
+      "literal_acceptance": "Monitoring thresholds, audience and deduplication are configurable and tested using local sinks.",
+      "disposition": "supported",
+      "evidence": [
+        "internal/notifications/acceptance_matrix_test.go :: TestNotificationEventAudienceChannelAcceptanceMatrix; TestNotificationExplicitChannelFailureRetryMatrix",
+        "internal/notifications/service_test.go :: TestThresholdDeduplicationAndNewCycles; TestProviderObservationFreshnessAndExplicitAutomaticPermission",
+        "internal/notifications/transport_test.go :: TestWebhookSignedHTTPSStableEventIDAndRejectedResponse; TestSMTPVerifiedTLSAcceptanceStableMessageIDAndNoPlaintextFallback"
+      ],
+      "scope": "Persisted thresholds/audiences/automatic permission and dedup are exercised against local verified TLS mail/webhook contracts, not live third-party delivery.",
+      "reason_if_unresolved": null
+    },
+    {
+      "ticket": "RW-18",
+      "clause": 4,
+      "literal_acceptance": "No automatic server failover is added; manual alternate route selection names its changed exit and follows the ordinary revision workflow.",
+      "disposition": "supported",
+      "evidence": [
+        "web/tests/route-exit-backend.ui.spec.ts :: existing managed route selects stored plain TCP endpoint absent from its programs and saves a real draft",
+        "internal/httpapi/published_route_retarget_test.go :: TestManagedRouteRetargetAddsInventoryExitPreservesFallbackAndReplaysReceipt"
+      ],
+      "scope": "Browser names Alternative UK and changed endpoint; preview/retarget only, separate apply required. HTTP test proves review/revision/receipt replay/409 and unchanged credentials/accounting/fallback; no automatic failover or invented import button.",
+      "reason_if_unresolved": null
+    },
+    {
+      "ticket": "RW-19",
+      "clause": 1,
+      "literal_acceptance": "Announcements have audience and validity bounds; users see only messages intended for them.",
+      "disposition": "supported",
+      "evidence": [
+        "internal/notifications/service_test.go :: TestAnnouncementAudienceExpiryAndPrivateReadReceipts",
+        "internal/httpapi/notifications_test.go :: TestNotificationHTTPAudienceReadAndSettingsIsolation"
+      ],
+      "scope": "Audience and validity bounds, private read receipts, cross-user isolation through notification service and authorized HTTP.",
+      "reason_if_unresolved": null
+    },
+    {
+      "ticket": "RW-19",
+      "clause": 2,
+      "literal_acceptance": "In-app, email and Webhook adapters have bounded local contract tests; explicit configured destinations and permission are required before real external sends.",
+      "disposition": "supported",
+      "evidence": [
+        "internal/notifications/transport_test.go :: TestWebhookSignedHTTPSStableEventIDAndRejectedResponse; TestSMTPVerifiedTLSAcceptanceStableMessageIDAndNoPlaintextFallback; TestSMTPSTARTTLSAuthenticatesOnlyAfterVerifiedUpgrade",
+        "internal/notifications/acceptance_matrix_test.go :: TestNotificationEventAudienceChannelAcceptanceMatrix",
+        "internal/httpapi/notifications_test.go :: TestNotificationHTTPAudienceReadAndSettingsIsolation"
+      ],
+      "scope": "Local in-app/verified TLS adapters and explicit permission; saving channel configuration alone queues no external send. Real destinations require operator configuration/permission and are not claimed exercised.",
+      "reason_if_unresolved": null
+    },
+    {
+      "ticket": "RW-19",
+      "clause": 3,
+      "literal_acceptance": "Reminder retries do not duplicate the same threshold/cycle notification; changed audience and expiry are rechecked at delivery.",
+      "disposition": "supported",
+      "evidence": [
+        "internal/notifications/service_test.go :: TestThresholdDeduplicationAndNewCycles; TestDurableOutboxRestartStableIdentityAndBoundedRetries; TestAnnouncementAudienceIsRecheckedBeforeDeliveryAndCanBeRestored; TestAnnouncementEditsRecheckCurrentValidityAndRetainReadReceipt",
+        "internal/notifications/acceptance_matrix_test.go :: TestNotificationExpiredProviderDeliveryChannelMatrix; TestNotificationExternalTerminalFailureMatrix"
+      ],
+      "scope": "Durable event identity, cycle/threshold dedup, bounded restart retries and current audience/expiry rechecks; local sinks only.",
+      "reason_if_unresolved": null
+    },
+    {
+      "ticket": "RW-19",
+      "clause": 4,
+      "literal_acceptance": "Audit covers actor, object, action and effect but excludes passwords, tokens and full private-source URLs.",
+      "disposition": "supported",
+      "evidence": [
+        "internal/store/records.go :: AuditEvent and Store.Audit",
+        "internal/httpapi/required_audit_test.go :: TestSecretRevealRequiresDurableAudit",
+        "internal/httpapi/notifications_test.go :: TestNotificationHTTPAudienceReadAndSettingsIsolation",
+        "internal/store/identity_lifecycle_test.go :: TestSecurityAuditFailureRollsBackPasswordAndSessionChanges",
+        "internal/store/counter_ingestion_test.go :: TestOperatorBaselineIsAuditedAndDoesNotChargeUnknownInterval",
+        "internal/store/counter_mixed_recovery_test.go :: TestCounterAutomaticRecoveryPreservesPartialOperatorResolution",
+        "internal/httpapi/source_refresh.go :: source-candidate.secret-revealed audit uses source/candidate IDs only"
+      ],
+      "scope": "Actor/object IDs and outcome-named actions express effect, linked to durable target/receipt; no separate effect-column requirement. Secret reveal is withheld on audit failure; audit and ordinary state omit credentials/private source URLs.",
+      "reason_if_unresolved": null
+    },
+    {
+      "ticket": "RW-20",
+      "clause": 1,
+      "literal_acceptance": "Independent copies never change when upstream updates; fixed references stay pinned and following references produce a reviewable candidate.",
+      "disposition": "supported",
+      "evidence": [
+        "internal/httpapi/templates_test.go :: TestTemplatePresetCopyIsIsolatedAndVersionsImmutable; TestPinnedPresetStaysPinnedAndFollowRequiresReviewedCandidate; TestPinnedVersionAdvancesOnlyByExplicitReviewedUpgrade"
+      ],
+      "scope": "Copy remains independent, fixed version pinned, follow update requires exact reviewed candidate; no silent update.",
+      "reason_if_unresolved": null
+    },
+    {
+      "ticket": "RW-20",
+      "clause": 2,
+      "literal_acceptance": "Personal edits are preserved under documented conflict precedence; failed compatibility checks retain the previous valid output.",
+      "disposition": "supported",
+      "evidence": [
+        "internal/httpapi/templates_test.go :: TestProfileTemplatePreservesPersonalOverridesAndPublishedFallback; TestSwitchingTemplateReferenceModeKeepsPersonalRuntimeAndPrivateBindings",
+        "web/tests/template-follow-backend.ui.spec.ts :: real template follow conflict → review → validate → selected publication at 1440/390"
+      ],
+      "scope": "Real local HTTP/browser stale 409 → refreshed review → apply preserves personal overrides and current published feeds until selected publication; incompatible update retains valid fallback.",
+      "reason_if_unresolved": null
+    },
+    {
+      "ticket": "RW-20",
+      "clause": 3,
+      "literal_acceptance": "Shared resources carry provenance and versions but cannot contain owner-private subscription credentials.",
+      "disposition": "supported",
+      "evidence": [
+        "internal/httpapi/templates_test.go :: TestSharedTemplateRejectsPrivateShapesAndCrossTenantBindings; TestFollowedProfileCanReviewNewPrivateBindingWithoutPublishingSecrets; TestTemplatePresetCopyIsIsolatedAndVersionsImmutable"
+      ],
+      "scope": "Immutable version/provenance and owner binding isolation; shared template rejects private URL/token/endpoints and public template views omit owner secrets.",
+      "reason_if_unresolved": null
+    },
+    {
+      "ticket": "RW-20",
+      "clause": 4,
+      "literal_acceptance": "A positive update scenario crosses template/preset selection, candidate preview, native validation and publication without silently changing unrelated profiles.",
+      "disposition": "supported",
+      "evidence": [
+        "internal/httpapi/templates_native_test.go :: TestNativeTemplateFollowedProfileUpdate",
+        "web/tests/template-follow-backend.api.spec.ts :: real mihomo/sing-box template conflict review preserves local overrides and publishes only the selected output",
+        "web/tests/template-follow-backend.ui.spec.ts :: real template follow conflict → review → validate → selected publication at 1440/390"
+      ],
+      "scope": "Positive actual pinned Mihomo/sing-box parser validates selected rendered artifact and published bytes; real-browser reviewed update and sibling output unchanged. No unrelated profile or unselected feed mutation.",
+      "reason_if_unresolved": null
+    },
+    {
+      "ticket": "RW-21",
+      "clause": 1,
+      "literal_acceptance": "Complete backups contain recovery-required secrets only in authenticated encryption; template sharing remains redacted and ordinary subscriptions retain only needed connection credentials.",
+      "disposition": "supported",
+      "evidence": [
+        "internal/backup/backup_test.go :: TestAuthenticatedBackupRejectsWrongPasswordTruncationAndTampering",
+        "internal/store/backup_test.go :: TestBackupFreshRestorePreservesSecretsIdentitiesIndexesCountersAndHistory",
+        "internal/httpapi/templates_test.go :: TestSharedTemplateRejectsPrivateShapesAndCrossTenantBindings",
+        "internal/store/backup_admission_obligations_test.go :: TestEncryptedBackupRestorePreservesOutstandingAdmissionObligation"
+      ],
+      "scope": "Complete authenticated encrypted recovery container includes required private state; sharing is redacted, ordinary feed retains connection credentials only. No automatic transfer or secret sharing.",
+      "reason_if_unresolved": null
+    },
+    {
+      "ticket": "RW-21",
+      "clause": 2,
+      "literal_acceptance": "Wrong key, truncated data, tampered ciphertext and unsupported schema are rejected before mutation.",
+      "disposition": "supported",
+      "evidence": [
+        "internal/backup/backup_test.go :: TestAuthenticatedBackupRejectsWrongPasswordTruncationAndTampering; TestBackupValidatesCompleteAuthenticatedPayloadAndBounds",
+        "internal/backup/stream_test.go :: TestStreamingBackupRejectsUnauthenticatedOrMalformedFramesAndCleansStaging",
+        "internal/store/backup_test.go :: TestBackupRejectsInvalidOrOccupiedTargetBeforeMutation"
+      ],
+      "scope": "Wrong key/truncated/tampered/authenticated unsupported schema rejected before publishing restore; bounds and cleanup verified. Uses current guaranteed-corruption fixture, not erased historical flaky mutation.",
+      "reason_if_unresolved": null
+    },
+    {
+      "ticket": "RW-21",
+      "clause": 3,
+      "literal_acceptance": "Restore preserves users, grants, profile revisions, publication links and ledger history; conflict and target overwrite behavior are explicit.",
+      "disposition": "supported",
+      "evidence": [
+        "internal/store/backup_test.go :: TestBackupFreshRestorePreservesSecretsIdentitiesIndexesCountersAndHistory; TestBackupRejectsInvalidOrOccupiedTargetBeforeMutation",
+        "internal/store/backup_admission_obligations_test.go :: TestEncryptedBackupRestorePreservesOutstandingAdmissionObligation",
+        "internal/backup/stream_test.go :: TestStreamingBackupLedgerGrowthAndCompleteRecovery"
+      ],
+      "scope": "Users/grants/profile revisions/feed-token indexes/usage/audit retained; occupied/symlink target rejects, source unchanged, outstanding admission obligation preserved and replay does not double charge.",
+      "reason_if_unresolved": null
+    },
+    {
+      "ticket": "RW-21",
+      "clause": 4,
+      "literal_acceptance": "Migration/restore fault injection proves a recoverable prior state and reports verified completion; no automatic third-party upload or secret sharing occurs.",
+      "disposition": "supported",
+      "evidence": [
+        "internal/store/backup_test.go :: TestBackupImportRollsBackPartialDatabaseFailure",
+        "internal/store/notification_migration_test.go :: TestLegacyNotificationMigrationFailurePreservesOriginal",
+        "internal/store/notification_migrate_fresh_test.go :: TestOfflineNotificationMigrationPublishesFreshVerifiedCopy; TestOfflineNotificationMigrationFailuresDoNotPublishOrChangeSource"
+      ],
+      "scope": "Injected SQLite insert/migration failure rolls back or leaves original source unchanged; explicit retry or verified fresh copy succeeds. Local restore only, no third-party upload or activation inferred.",
+      "reason_if_unresolved": null
+    },
+    {
+      "ticket": "RW-22",
+      "clause": 1,
+      "literal_acceptance": "Domain changes preview existing-link consequences and require valid explicit values; rejected edits preserve the submitted form and previous effective settings.",
+      "disposition": "supported",
+      "evidence": [
+        "internal/httpapi/subscription_origin_test.go :: TestSubscriptionOriginStageIsAdminOnlyAndNeverActivates; TestSubscriptionOriginVerifiedActivationRetainsTokensAndSurvivesFailedReplacement",
+        "web/tests/settings-origin-backend.ui.spec.ts :: E13 real domain draft recovery and reviewed default activation at 1440px/390px"
+      ],
+      "scope": "Real backend UI rejects invalid/stale edits without discarding form; shows existing-token consequences and explicit activation review. Local verified TLS fixture only, no DNS/TLS infrastructure changes.",
+      "reason_if_unresolved": null
+    },
+    {
+      "ticket": "RW-22",
+      "clause": 2,
+      "literal_acceptance": "Notification configuration is separate from send permission; secrets are write-only/explicitly revealable under authorization, not ordinary state fields.",
+      "disposition": "supported",
+      "evidence": [
+        "internal/httpapi/notifications_test.go :: TestNotificationHTTPAudienceReadAndSettingsIsolation",
+        "internal/httpapi/required_audit_test.go :: TestSecretRevealRequiresDurableAudit",
+        "internal/notifications/service_test.go :: TestProviderObservationFreshnessAndExplicitAutomaticPermission"
+      ],
+      "scope": "Channel save != send permission; response/state/audit/outbox omit secrets and explicit privileged reveal needs durable audit. No live-send claim.",
+      "reason_if_unresolved": null
+    },
+    {
+      "ticket": "RW-22",
+      "clause": 3,
+      "literal_acceptance": "Saved and effective revision are distinct when activation fails; the visible result reflects observed activation rather than a generic success banner.",
+      "disposition": "supported",
+      "evidence": [
+        "internal/httpapi/subscription_origin_test.go :: TestSubscriptionOriginVerifiedActivationRetainsTokensAndSurvivesFailedReplacement; TestSubscriptionOriginProofExpiresAndConcurrentEditFencesVerification",
+        "web/tests/settings-origin-backend.ui.spec.ts :: E13 real domain draft recovery and reviewed default activation at 1440px/390px"
+      ],
+      "scope": "Configured/effective revisions separate; failed replacement preserves previous effective origin, failed status observed; unverified/stale activation denied409 and UI retains draft.",
+      "reason_if_unresolved": null
+    },
+    {
+      "ticket": "RW-22",
+      "clause": 4,
+      "literal_acceptance": "Settings maintenance works through authorized API/UI without raw database editing or implicit external domain/TLS changes.",
+      "disposition": "supported",
+      "evidence": [
+        "web/tests/settings-origin-backend.api.spec.ts :: E13 real settings revisions reject invalid/stale drafts and fence activation until explicit default approval",
+        "web/tests/settings-origin-backend.ui.spec.ts :: E13 real domain draft recovery and reviewed default activation at 1440px/390px",
+        "internal/httpapi/subscription_origin_test.go :: TestSubscriptionOriginStageIsAdminOnlyAndNeverActivates; TestSubscriptionOriginVerificationRejectsRedirectsAndInvalidTLS"
+      ],
+      "scope": "Authorized production API/UI maintenance, no raw DB intervention; example domains are strings in browser harness and actual TLS contract is isolated net.Pipe, not external DNS/certificate deployment.",
+      "reason_if_unresolved": null
+    },
+    {
+      "ticket": "RW-23",
+      "clause": 1,
+      "literal_acceptance": "The main action gets a subscription; service, authorized routes, expiry, actual/weighted usage and next reset are clear without technical IDs dominating the page.",
+      "disposition": "supported",
+      "evidence": [
+        "web/tests/service-center-backend.ui.spec.ts :: E09 invited service center keyboard delivery and selected-link rotation at 1440px/390px",
+        "web/src/service-cycle-defaults.dom.test.tsx :: service cycle defaults",
+        "web/tests/cycle-renewal-backend.ui.spec.ts :: real service cycle renewal modes"
+      ],
+      "scope": "Invited own-service browser shows service/routes/expiry/raw+weighted usage/reset and subscription main action; no technical-ID-dominant delivery path.",
+      "reason_if_unresolved": null
+    },
+    {
+      "ticket": "RW-23",
+      "clause": 2,
+      "literal_acceptance": "Loading, empty, expired, paused, offline and failed states are distinguished and preserve retry/navigation behavior.",
+      "disposition": "supported",
+      "evidence": [
+        "web/src/subscription-overview-status.dom.test.tsx :: status table; allows user/admin inventory entry without converting a failed read into empty; gives paused platform service a next step without granting restoration or changing personal subscriptions",
+        "web/src/subscription-relational.dom.test.tsx :: keeps first-use empty, saved draft and search no-match as different states",
+        "web/src/subscription-creation-readiness.dom.test.tsx :: keeps an ordinary checked draft through pending and failed profile reads without repeating inspection; preserves this publication through same-account resume read failure but discards it on account replacement"
+      ],
+      "scope": "Actual App DOM state fixtures distinguish loading/empty/expired/paused/offline/failed and preserve retry/navigation/draft ownership; not every negative state required in same browser journey.",
+      "reason_if_unresolved": null
+    },
+    {
+      "ticket": "RW-23",
+      "clause": 3,
+      "literal_acceptance": "A full browser journey uses the real local backend, not only intercepted fixtures: login, view own service, get a subscription, rotate and deny old link.",
+      "disposition": "supported",
+      "evidence": [
+        "web/tests/service-center-backend.ui.spec.ts :: E09 invited service center keyboard delivery and selected-link rotation at 1440px/390px",
+        "web/tests/service-center-backend.api.spec.ts :: E09 invited own service and configured grant deliver isolated feeds; rotation denies only old selected URL"
+      ],
+      "scope": "Real isolated CLI/backend login → own service → actual feed download → selected rotation → old URL404; siblings/other tenant unchanged, not intercepted-only fixtures.",
+      "reason_if_unresolved": null
+    },
+    {
+      "ticket": "RW-23",
+      "clause": 4,
+      "literal_acceptance": "Keyboard-only and narrow mobile layouts complete the main task; no external-provider billing or physical-device identity is inferred.",
+      "disposition": "supported",
+      "evidence": [
+        "web/tests/service-center-backend.ui.spec.ts :: E09 invited service center keyboard delivery and selected-link rotation at 1440px/390px",
+        "/workspace/scratch/d385eb428cee/checklist-evidence-20261101/browser-41406226333/RECEIPT.md :: all six trusted clipboard and rendered QR checks"
+      ],
+      "scope": "Keyboard-only main task at desktop/narrow390; actual trusted clipboard sentinel/copy/paste bytes and screenshot-pixel jsQR equality initial/rotated/reopened URLs. No phone OS, external-provider bill or physical-device identity inferred.",
+      "reason_if_unresolved": null
+    },
+    {
+      "ticket": "RW-24",
+      "clause": 1,
+      "literal_acceptance": "Every confirmed story has positive end-to-end evidence, not just a type, document, disabled button or unsupported diagnostic; evidence is attached to its local ticket.",
+      "disposition": "supported",
+      "evidence": [
+        "docs/verification/CI9-FORWARD-ACCEPTANCE-2026-11-02.json :: complete original98 clause mapping and95 supported prior decisions",
+        "docs/verification/CI10-FINAL-SOFTWARE-ACCEPTANCE-2026-11-02.json :: targeted remaining3 decisions and original11-layer forward traversal",
+        "docs/tickets/catalog.json :: all24 software tickets verified after direct prerequisites; all35 confirmed story mappings unchanged"
+      ],
+      "scope": "All original98 clauses now supported through prior complete finite audit plus targeted RW-07.3 repair evidence; all24 original tickets accepted in forward prerequisite order. All35 original software stories have positive feature evidence and completed integration prerequisites. Actual-target acceptance and NET-03 owner risk decision remain distinct open production checklist items.",
+      "reason_if_unresolved": null,
+      "prior_CI9_disposition": "conditional_on_feature_prerequisites",
+      "closure_source": "87bfac541c4be43d9b307234a3ac84db1feab207",
+      "closure_run": 41417857984
+    },
+    {
+      "ticket": "RW-24",
+      "clause": 2,
+      "literal_acceptance": "Quick, full and native checks report their exact scope and fail on missing requested prerequisites; architecture checker rejects its intentional forbidden fixture.",
+      "disposition": "supported",
+      "evidence": [
+        "scripts/verify.sh :: named gate dispatch, full prerequisite refusal and explicit scope output",
+        "scripts/native-cores.sh :: pinned prerequisite check and required-passed/skipped rejection",
+        "scripts/test_client_native_gate.py :: test_selected_dns_cases_missing_skipped_or_failed_reject",
+        "scripts/check-architecture/main_test.go :: TestGuardRejectsForbiddenImportAtPublicCommandSeam; TestGuardRejectsUnclassifiedProductionModules",
+        "/workspace/scratch/d385eb428cee/ci9-publication-20261102/final-receipt.json :: final static/native gates"
+      ],
+      "scope": "Quick/full/native names reflect exact scope; requested prerequisites missing fail. Intentional forbidden import fixtures execute in mandatory static gate. CI9 native execution verified, not merely source presence.",
+      "reason_if_unresolved": null
+    },
+    {
+      "ticket": "RW-24",
+      "clause": 3,
+      "literal_acceptance": "Fault cases cover generation fencing/restart, tenant revocation, stale source/template updates, ledger dedup/cycles and backup recovery.",
+      "disposition": "supported",
+      "evidence": [
+        "internal/agent/reconciler_test.go :: TestRestartRetainsFenceAndDoesNotReplay; TestDelayedOldOperationCannotOvertakeCompletedNewGeneration; TestAcceptedRevokedPolicyStopsOldRuntimeInsteadOfReusingLease",
+        "internal/httpapi/source_refresh_test.go :: TestSourceRefreshMaterialCandidateRequiresExactAcceptance; TestSourceCandidateRevealStaleEditDeletionAndInvalidPartial",
+        "internal/httpapi/templates_test.go :: TestPinnedPresetStaysPinnedAndFollowRequiresReviewedCandidate",
+        "internal/store/counter_ingestion_test.go :: TestCounterIngestionIsAtomicReplaySafeAndSeparatesProvider; TestCounterCursorDoesNotResetOnBillingCycleChange; TestCounterCalendarAndManualBoundaryNeedExactObservation",
+        "internal/store/backup_test.go :: TestBackupImportRollsBackPartialDatabaseFailure"
+      ],
+      "scope": "Named generation/restart/revocation/stale update/dedup/cycle/restore faults executed under exact-source final backend gates; bounded local fault evidence, not WAN or live-VPS resilience.",
+      "reason_if_unresolved": null
+    },
+    {
+      "ticket": "RW-24",
+      "clause": 4,
+      "literal_acceptance": "Standards and specification reviews are recorded separately; all blocking findings are resolved and affected final checks rerun.",
+      "disposition": "supported",
+      "evidence": [
+        "profile-final-independent-review-20261102/review.json :: Standards0/Spec0;20 reviewed production/context blobs identical to exact final87bfac5",
+        "docs/verification/PROFILE-DRAFT-REVISION-2026-11-02.md :: delayed-discard finding fixed and focused RED/GREEN evidence",
+        "ci10-publication-20261102/monitor/terminal-jobs.json :: all18 exact76c82 final-source jobs success including strict repository summary",
+        "checklist-evidence-20261101/browser-41417857984/RECEIPT.md :: affected two real stale-profile journeys pass with actual pixels",
+        "profile-final-local-20261102/receipt.json :: fullweb2120/type/build and31HTTPAPI pass; final87 differs from938 only Python harness literal"
+      ],
+      "scope": "The sole blocking software finding RW-07.3 and the repair review delayed-discard finding are fixed, separately reviewed and covered by affected final source-bound CI10 checks. Prior independent reviews remain retained historical scopes. This is software-contract closure, not resolution of the separately documented original sample410 unknown-cause residual risk or production rollout.",
+      "reason_if_unresolved": null,
+      "prior_CI9_disposition": "conditional_on_feature_prerequisites",
+      "closure_source": "87bfac541c4be43d9b307234a3ac84db1feab207",
+      "closure_run": 41417857984
+    },
+    {
+      "ticket": "RW-24",
+      "clause": 5,
+      "literal_acceptance": "No claim of GitHub publication, native CI execution, real VPS deployment or production readiness is made without corresponding verified evidence.",
+      "disposition": "supported",
+      "evidence": [
+        "/workspace/scratch/d385eb428cee/ci9-publication-20261102/final-receipt.json :: remote30906420 and tree9a848d86 terminalall18",
+        "/workspace/scratch/d385eb428cee/ci9-publication-20261102/monitor/named-native-web-receipt.json :: actual named native execution",
+        "docs/verification/FINAL-CAPACITY-REFERENCE-2026-11-02.md :: qualified674 runtime reference and scope",
+        "/workspace/scratch/d385eb428cee/literal-final-soak-risk-20261102/ :: sample410 cause UNKNOWN residual-risk receipt"
+      ],
+      "scope": "Supported claim discipline: exact remote CI evidence and preserved runtime reference only. No main merge, actual deployment target, external trial or production-readiness clearance. NET-03 unknown cause requires release-owner risk disposition, not erased by later passes.",
+      "reason_if_unresolved": null
+    }
+  ],
+  "receipts": [
+    {
+      "path": "/workspace/scratch/d385eb428cee/ci10-publication-20261102/final-receipt.json",
+      "sha256": "4b6fa85e9ef770a979c3d4a7074429f55f8c8cb515596b12db60876f0034abf3"
+    },
+    {
+      "path": "/workspace/scratch/d385eb428cee/ci10-publication-20261102/monitor/terminal-jobs.json",
+      "sha256": "0a802938846bea3688d7baa2fb00f4cfac2d6544cc366dc8e0fb8b0bf7aec928"
+    },
+    {
+      "path": "/workspace/scratch/d385eb428cee/ci10-publication-20261102/monitor/terminal-run.json",
+      "sha256": "de5da7986259a5af33224adee8cc405992ab6e7e449efde139db40e5ee424865"
+    },
+    {
+      "path": "/workspace/scratch/d385eb428cee/ci10-publication-20261102/monitor/cost.json",
+      "sha256": "ece84465dc9af8e2c81eccaeae4d7db5c67cacbce87eb6804b36181c8943e74f"
+    },
+    {
+      "path": "/workspace/scratch/d385eb428cee/ci10-publication-20261102/package/INSPECTION.md",
+      "sha256": "c9866b9b3ae3341098e71034c9179299c65c936595640daa8d074dedc08dea2e"
+    },
+    {
+      "path": "/workspace/scratch/d385eb428cee/checklist-evidence-20261101/browser-41417857984/RECEIPT.md",
+      "sha256": "31dc112edab8be75d34976b153502a52cd0d1031933b96caaa99a1f877dc902b"
+    },
+    {
+      "path": "/workspace/scratch/d385eb428cee/ci10-browser-native-evidence-20261102/INSPECTION.md",
+      "sha256": "b1f91a633894f09fa0693cbba7e5db7faae243c319ea1b604872578a9f293089"
+    },
+    {
+      "path": "/workspace/scratch/d385eb428cee/profile-final-local-20261102/receipt.json",
+      "sha256": "1dc15f5b8264da4125917960da7bf0b5bacbca701464e4d52742adee0e925f8a"
+    },
+    {
+      "path": "/workspace/scratch/d385eb428cee/profile-final-independent-review-20261102/review.json",
+      "sha256": "79c6e2969b595dac01186c1571dd90f12f4cc0ccc1a73c0a5761389c416a498f"
+    },
+    {
+      "path": "/workspace/scratch/d385eb428cee/literal-final-gates-87bfac5-20261102/receipt.json",
+      "sha256": "d1b624147716bb0d8fe6b220abfe973177f8a9afe503809f679780c63dc734ed"
+    },
+    {
+      "path": "/workspace/scratch/d385eb428cee/literal-final-soak-risk-20261102/receipt.json",
+      "sha256": "e1ba370ff7992f69ca1e8d044b97cdc627791d593fbc15ecf5398b4944b42573"
+    },
+    {
+      "path": "/workspace/scratch/d385eb428cee/ci10-publication-20261102/monitor/named-profile-receipt.json",
+      "sha256": "080a018a8c7c754d2354269fc92b828af05c59ac1b1749f0573c86865de04338"
+    },
+    {
+      "path": "/workspace/scratch/d385eb428cee/ci10-pages-readback-20261102.json",
+      "sha256": "990cf074797b81ec00a472be08bb287e48ec02786a930982a5ab573321b6ab7b"
+    }
+  ],
+  "final_review_blobs_match": 20,
+  "catalog_source_sha256_at_ci10": "abe6342e36587842d93e54185f76da8e552a584a353d099a0bd559711f23a483",
+  "catalog_sha256_after_documentation_adjudication": "9d30ae20f73a38c2f18c8830498eae74e76983e90d9e909450ea3b270c885314",
+  "remaining_checklist": [
+    "PRD-02",
+    "RUN-04",
+    "NET-01",
+    "NET-03",
+    "NET-04",
+    "OPS-02",
+    "OPS-03",
+    "OPS-04"
+  ],
+  "net03": {
+    "status": "OPEN",
+    "cause": "UNKNOWN",
+    "owner_decision": "pending"
+  },
+  "new_execution": "No application tests/CI/native/browser by reconciliation; read source/retained receipts and generate/check documentation only.",
+  "backend_execution_scope": {
+    "remote_head": "76c82e41c7e83893c6fea040052ce163bd024dcb",
+    "local_commit": "87bfac541c4be43d9b307234a3ac84db1feab207",
+    "tree": "67502bb487043bd53e151ba7cff7cee6dd61781f",
+    "run_id": 41417857984,
+    "job_id": 125185991043,
+    "test_names": [
+      "TestProfileOpenedRevisionRejectsStaleWriteAndPreservesPublishedFeed",
+      "TestProfileWritesRequireOpenedRevisionWithoutLegacyUpsertBypass",
+      "TestProfileRevisionWorksForLegacyStoredDraftAndConcurrentStoreHandles"
+    ],
+    "source_path": "internal/httpapi/profile_revision_test.go",
+    "source_blob": "86f0b66d5b419503c600cc81426a25e2a36f80b7",
+    "source_sha256": "99b8c1be363c3cae06cdd481508a15fa4b3d79d3c2e81e2098ec8e70d5a095ad",
+    "log_path": "/workspace/scratch/d385eb428cee/ci10-publication-20261102/monitor/httpapi.log",
+    "log_sha256": "a74d85863ee021cfe8b03da3c108317cfa1bfcb27fcc896139d38ba9bbeb9475",
+    "package_result": "PASS routeweaver/internal/httpapi 1039.765s",
+    "command_from_exact_source": "scripts/go.sh test -race -p=1 -count=1 -timeout=20m routeweaver/internal/httpapi",
+    "per_test_events_available": false,
+    "per_test_skip_telemetry_available": false,
+    "source_has_skip_calls": false,
+    "source_cross_store_assertion": "same opening token, two servers/store handles, exactly one200 and one409",
+    "interpretation": "Full package uncached race pass includes three unconditional named tests by source/command evidence; per-test RUN/PASS and no-skip telemetry are not emitted by nonverbose CI command. Do not represent as extracted named events.",
+    "rerun": false
+  },
+  "page_updates": {
+    "main": {
+      "url": "https://chatgpt.com/space/page_3061f8987e588191b79a495a69a5995b",
+      "sequence": 14,
+      "blocks": 130,
+      "changed": 24,
+      "exact_changed_text": true,
+      "unrelated_unchanged": true,
+      "ids_order_preserved": true,
+      "checked": 24,
+      "open": [
+        "- [ ] **PRD-02 普通用户完整订阅旅程｜部分验证**",
+        "- [ ] **RUN-04 Linux 目标部署行为｜部分验证**",
+        "- [ ] **NET-01 真实客户端与路由｜待验证**",
+        "- [ ] **NET-03 长时间运行｜部分验证**",
+        "- [ ] **NET-04 私有服务容量｜部分验证**",
+        "- [ ] **OPS-02 操作恢复与升级｜部分验证**",
+        "- [ ] **OPS-03 可观测性与故障处理｜部分验证**",
+        "- [ ] **OPS-04 小范围上线放行｜待验证**"
+      ],
+      "stories": 0
+    },
+    "evidence": {
+      "url": "https://chatgpt.com/space/page_cf4eab5740c08191aab5caf2895263b8",
+      "sequence": 10,
+      "blocks": 161,
+      "changed": 47,
+      "exact_changed_text": true,
+      "unrelated_unchanged": true,
+      "ids_order_preserved": true,
+      "checked": 0,
+      "open": [],
+      "stories": 35
+    }
+  },
+  "documentation_checks": {
+    "original_literals_stories_edges_unchanged": true,
+    "catalog_and_ledger_match": true,
+    "all_verified_prerequisites_forward": true,
+    "ticket_check": "passed",
+    "diff_check": "passed",
+    "new_application_tests": false,
+    "new_ci": false,
+    "main_or_deployment_changed": false
+  },
+  "targeted_documentation_consistency_review": {
+    "reviewer": "adjudicate_rw01_08",
+    "axis": "Spec/documentation consistency only",
+    "concrete_findings": 0,
+    "scope": "Original criteria/dependencies/story mappings unchanged; prior95 identical, only3closure rows changed; forward24;13receipt hashes; exact source/tree; nonverbose limits and24/32 production boundary. Not a new broad clause or implementation audit.",
+    "new_tests_or_edits": false
+  }
+}

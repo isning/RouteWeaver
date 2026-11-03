@@ -181,7 +181,7 @@ it("offers saved draft targets without repeated selection teaching", async () =>
   } as Profile;
   mount(<ProfilePublicationDialog profile={profile} onClose={() => {}} />);
   expect(screen.getByRole("dialog", { name: "选择客户端订阅" })).toBeTruthy();
-  expect(screen.getByRole("status").textContent).toBe("草稿已保存");
+  expect(screen.getByText("草稿已保存", { exact: true, selector: '[role="status"]' })).toBeTruthy();
   expect(
     await screen.findByRole("radio", { name: /更新「日常」/ }),
   ).toBeTruthy();

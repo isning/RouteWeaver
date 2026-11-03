@@ -381,7 +381,7 @@ export function DataTable<T extends object>({
         <Table
           style={minWidth ? { minWidth } : undefined}
           className={cn(
-            "[&_th]:px-4 [&_th]:text-xs [&_th]:text-muted-foreground [&_td]:px-4",
+            "[&_th]:px-4 [&_th]:text-sm [&_th]:font-medium [&_th]:text-muted-foreground [&_td]:px-4",
             compact ? "text-xs" : "[&_td]:py-3",
           )}
         >

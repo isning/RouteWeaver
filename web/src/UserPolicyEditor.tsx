@@ -467,7 +467,7 @@ function AdmissionStatus({ user }: {
               <ActionButton onClick={() => query.refetch()} pending={query.isFetching} variant="outline">
                 刷新在线情况
               </ActionButton>
-              <QueryState loading={query.isLoading} error={query.error} retry={() => query.refetch()}>
+              <QueryState loading={query.isPending} paused={query.isPaused} loadingLayout="summary" error={query.error} retry={() => query.refetch()}>
                 {query.data && (<>
                     <p className="muted text-sm text-muted-foreground">
                       截至 {dateLabel(query.data.asOf)} ·

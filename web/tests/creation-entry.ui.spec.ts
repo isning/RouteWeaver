@@ -35,7 +35,7 @@ for (const width of [1280, 390])
     try {
       await openWorkspace(page);
       await expect(
-        page.getByText("正在加载配置与客户端订阅…", { exact: true }),
+        page.getByRole("status", { name: "正在加载配置与客户端订阅", exact: true }),
       ).toBeVisible();
       await expect(page.getByText("暂无订阅", { exact: true })).toHaveCount(0);
       const create = page.getByRole("button", {

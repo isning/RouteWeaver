@@ -88,7 +88,7 @@ it.each(["pending", "error", "profiles-error", "outputs-error"])(
     );
     mount();
     if (state === "pending")
-      await screen.findByText("正在加载配置与客户端订阅…");
+      await screen.findByRole("status", { name: "正在加载配置与客户端订阅" });
     else
       await screen.findByText(
         state === "outputs-error"
@@ -143,7 +143,7 @@ it("keeps one focused creation button across pending, error, empty and nonempty 
     }),
   );
   mount();
-  await screen.findByText("正在加载配置与客户端订阅…");
+  await screen.findByRole("status", { name: "正在加载配置与客户端订阅" });
   const create = screen.getByRole("button", {
     name: "新建分流配置",
   });

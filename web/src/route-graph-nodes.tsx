@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Position, type Node } from "@xyflow/react";
 import type { ReactNode } from "react";
-import { coreName } from "./Infrastructure";
+import { coreName } from "./infrastructure-data";
 import type { Infrastructure } from "./types";
 export type RouteGraphNode = Node<{
   label: ReactNode;

@@ -238,7 +238,7 @@ for (const role of ["user", "admin"]) {
     render(<QueryClientProvider client={client}><UIProviders><App /></UIProviders></QueryClientProvider>);
     const main = await screen.findByRole("main");
     await within(main).findByRole("heading", { name: "我的订阅", level: 1 });
-    await within(main).findByText("正在加载配置与客户端订阅…");
+    await within(main).findByRole("status", { name: "正在加载配置与客户端订阅" });
     expect(within(main).queryByText("暂无订阅")).toBeNull();
     await act(async () => { release(new Response(JSON.stringify({ message: "Inventory unavailable" }), { status: 503, headers: { "Content-Type": "application/json" } })); });
     await within(main).findByText(failure);

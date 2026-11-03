@@ -1,3 +1,4 @@
+import { ResourceToolbar, SearchField } from "@/ui-patterns/resource-toolbar";
 import {
   Accordion,
   AccordionContent,
@@ -59,11 +60,8 @@ import {
   type FleetAction,
   type FleetBatch,
 } from "./fleet-model";
-import {
-  coreName,
-  InstanceObservation,
-  loadInfrastructure,
-} from "./Infrastructure";
+import { InstanceObservation } from "./Infrastructure";
+import { coreName, loadInfrastructure } from "./infrastructure-data";
 import {
   canEditLegacyPath,
   compilePath,
@@ -261,25 +259,16 @@ export function ServerRoutesPage({
         </p>
       )}
       <QueryState
-        loading={query.isLoading}
+        loading={query.isPending} paused={query.isPaused} loadingLayout="table"
         error={query.error}
         retry={() => query.refetch()}
       >
         {inventory && (
           <Section variant="plain">
-            <div className="list-toolbar flex flex-wrap items-center justify-between gap-3">
-              <Input
-                className="w-full sm:w-72"
-                placeholder="搜索转发路径"
-                aria-label="搜索转发路径"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                type="search"
-              />
-              <span className="muted list-count text-sm text-muted-foreground">
-                共 {inventory.deployments.length} 条
-              </span>
-            </div>
+            <ResourceToolbar label="查找转发路径" search={
+              <SearchField placeholder="搜索转发路径" aria-label="搜索转发路径"
+                value={search} onValueChange={setSearch} type="search" />
+            } summary={<span>共 {inventory.deployments.length} 条</span>} />
             {inventory.deployments.length ? (
               <DataTable
                 rowKey="id"
@@ -410,7 +399,7 @@ export function ServerRoutesPage({
       )}
       {inventory && planning && (
         <QueryState
-          loading={tasks.isLoading}
+          loading={!!planning && tasks.isPending} paused={tasks.isPaused} loadingLayout="table"
           error={tasks.error}
           retry={() => tasks.refetch()}
         >

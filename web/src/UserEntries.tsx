@@ -365,7 +365,7 @@ function UserEntryTask({
           </Notice>
         )}
         <QueryState
-          loading={query.isLoading || entitlement.isLoading}
+          loading={open && (query.isPending || entitlement.isPending)} paused={query.isPaused || entitlement.isPaused} loadingLayout="table"
           error={query.error || entitlement.error}
           retry={() => {
             if (!active.current) return;

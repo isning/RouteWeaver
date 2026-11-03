@@ -1,3 +1,4 @@
+import { ResourceToolbar, SearchField, ToolbarFilter } from "@/ui-patterns/resource-toolbar";
 import {
   Accordion,
   AccordionContent,
@@ -38,7 +39,7 @@ import {
   type FleetStrategy,
   type FleetTarget,
 } from "./fleet-model";
-import { coreName, loadInfrastructure } from "./Infrastructure";
+import { coreName, loadInfrastructure } from "./infrastructure-data";
 import { dateLabel, newID } from "./model";
 import { useUnsavedChanges } from "./navigation";
 import type { Infrastructure } from "./types";
@@ -115,21 +116,21 @@ export function FleetPage({
           <ActionButton
             disabled={!infrastructure.data}
             onClick={() => setCreating(true)}
-            variant="outline"
+            variant="default"
           >
             计划变更
           </ActionButton>
         }
       />
       <QueryState
-        loading={history.isLoading || infrastructure.isLoading}
+        loading={history.isPending || infrastructure.isPending} paused={history.isPaused || infrastructure.isPaused} loadingLayout="table"
         error={history.error || infrastructure.error}
         retry={() => {
           history.refetch();
           infrastructure.refetch();
         }}
       >
-        <Section title="变更历史">
+        <Section title="变更历史" variant="plain">
           {history.data?.length ? (
             <DataTable
               rowKey="id"
@@ -250,6 +251,7 @@ export function FleetPlanForm({
   const [group, setGroup] = useState<string>(),
     [tags, setTags] = useState<string[]>([]),
     [search, setSearch] = useState("");
+  const filterId = useId();
   const [review, setReview] = useState<{
       plan: FleetPlan;
       input: FleetInput;
@@ -492,7 +494,7 @@ export function FleetPlanForm({
         </div>
         {lifecycle && (
           <QueryState
-            loading={releases.isLoading}
+            loading={lifecycle && releases.isPending} paused={releases.isPaused} loadingLayout="form"
             error={releases.error}
             retry={() => releases.refetch()}
           >
@@ -644,14 +646,17 @@ export function FleetPlanForm({
             执行顺序按勾选顺序生成；下方显示每个实例所在阶段。创建计划后仍需确认执行。
           </p>
           {strategyIssue && <Notice tone="warning" title={strategyIssue} />}
-          <div className="form-grid grid gap-4 sm:grid-cols-2">
-            <Input
+          <ResourceToolbar label="筛选执行范围" search={
+            <SearchField
               aria-label="筛选批量变更实例"
               placeholder="按服务器或实例名称筛选"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onValueChange={setSearch}
             />
+          } filters={<>
+            <ToolbarFilter label="服务器分组" controlId={`${filterId}-group`}>
             <ChoiceSelect
+              id={`${filterId}-group`}
               clearable
               aria-label="筛选服务器分组"
               placeholder="所有分组"
@@ -665,7 +670,10 @@ export function FleetPlanForm({
               ].map((value) => ({ value, label: value }))}
               onValueChange={setGroup}
             />
+            </ToolbarFilter>
+            <ToolbarFilter label="服务器标签" controlId={`${filterId}-tags`}>
             <MultiChoice
+              id={`${filterId}-tags`}
               aria-label="筛选服务器标签"
               placeholder="所有标签"
               value={tags}
@@ -674,7 +682,8 @@ export function FleetPlanForm({
               ].map((value) => ({ value, label: value }))}
               onValueChange={setTags}
             />
-          </div>
+            </ToolbarFilter>
+          </>} />
           <div className={"flex flex-wrap items-center gap-2"}>
             <span>已选择 {targetIds.length} 个实例</span>
             <ActionButton
@@ -1167,7 +1176,7 @@ export function FleetBatchDetail({
     >
       <ErrorNotice error={execute.error} />
       <QueryState
-        loading={query.isLoading}
+        loading={query.isPending} paused={query.isPaused} loadingLayout="summary"
         error={query.error}
         retry={() => query.refetch()}
       >

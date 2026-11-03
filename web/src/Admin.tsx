@@ -1,3 +1,4 @@
+import { ResourceToolbar, SearchField } from "@/ui-patterns/resource-toolbar";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -50,14 +51,8 @@ import { useId, useLayoutEffect, useRef, useState } from "react";
 import { useUnsavedChanges } from "./navigation";
 import { useDiscardConfirmation } from "./useDiscardConfirmation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  Background,
-  Controls,
-  ReactFlow,
-  MarkerType,
-  type Connection as FlowConnection,
-} from "@xyflow/react";
-import "@xyflow/react/dist/style.css";
+import type { Connection as FlowConnection, MarkerType } from "@xyflow/react";
+import { RouteGraph } from "./route-graph";
 import {
   deleteRecord,
   list,
@@ -104,7 +99,7 @@ const pageMeta: Record<
   },
   nodes: {
     title: "连接端点",
-    description: "维护连接端点及其核心实例信息。",
+    description: "管理可复用的连接参数，供链路配置引用。",
     action: "添加端点",
   },
   users: {
@@ -114,17 +109,17 @@ const pageMeta: Record<
   },
   services: {
     title: "服务方案",
-    description: "管理可分配给用户的线路、额度与重置规则。",
+    description: "集中配置线路、额度与重置规则，再分配给用户或用户组。",
     action: "新建方案",
   },
   activity: {
     title: "变更记录",
-    description: "查看管理操作与链路配置的生成记录。",
+    description: "",
     action: "",
   },
   settings: {
     title: "平台设置",
-    description: "管理平台、订阅域名、账号安全与备份。",
+    description: "",
     action: "",
   },
 };
@@ -261,7 +256,7 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
         }>{query.error.message}</Notice>
       )}
       <QueryState
-        loading={query.isLoading}
+        loading={query.isPending} paused={query.isPaused} loadingLayout={page === "settings" ? "form" : "table"}
         error={page === "settings" && data ? null : query.error}
         retry={() => query.refetch()}
       >
@@ -269,15 +264,10 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
           <>
             {["routes", "nodes", "users", "services"].includes(page) && (
               <Section variant="plain">
-                <div className="list-toolbar flex flex-wrap items-center justify-between gap-3">
-                  <Input
-                    className="w-full sm:w-72"
-                    placeholder={`搜索${meta.title}`}
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    aria-label={`搜索${meta.title}`}
-                  />
-                </div>
+                <ResourceToolbar label={`查找${meta.title}`} search={
+                  <SearchField placeholder={`搜索${meta.title}`} value={search}
+                    onValueChange={setSearch} aria-label={`搜索${meta.title}`} />
+                } />
                 {page === "routes" &&
                   (routes.length ? (
                     <DataTable<RouteRecord>
@@ -672,7 +662,7 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
             {page === "activity" && (
               <>
                 <AuditLog />
-                <Section title="链路配置生成记录">
+                <Section title="链路配置生成记录" variant="plain">
                   {data.revisions.length ? (
                     <DataTable
                       rowKey="id"
@@ -984,7 +974,7 @@ function RouteEditor({
     id: `${draft.hops[i]}-${id}`,
     source: draft.hops[i],
     target: id,
-    markerEnd: { type: MarkerType.ArrowClosed, color: "#167565" },
+    markerEnd: { type: "arrowclosed" as MarkerType, color: "#167565" },
     style: { stroke: "#167565", strokeWidth: 2.5 },
   }));
   return (
@@ -1061,7 +1051,7 @@ function RouteEditor({
         {view === "graph" && (
           <>
             <div className="graph-canvas h-96 overflow-hidden rounded-lg border">
-              <ReactFlow
+              <RouteGraph
                 ariaLabelConfig={{ "controls.zoomIn.ariaLabel": "放大", "controls.zoomOut.ariaLabel": "缩小", "controls.fitView.ariaLabel": "适应画布" }}
                 nodes={graphNodes}
                 edges={edges}
@@ -1084,9 +1074,7 @@ function RouteEditor({
                 deleteKeyCode={null}
                 aria-label="链路拓扑编辑"
               >
-                <Background color="#d5dfd9" gap={22} />
-                <Controls showInteractive={false} />
-              </ReactFlow>
+              </RouteGraph>
             </div>
             <p className="muted text-sm text-muted-foreground">
               点击端点选择入口，从当前末端连向下一跳。拖动仅调整视图位置。也可以切换到顺序编辑。
@@ -1809,9 +1797,9 @@ function AuditLog() {
     "entry.granted": "分配用户入口",
   };
   return (
-    <Section title="操作审计">
+    <Section title="操作审计" variant="plain">
       <QueryState
-        loading={query.isLoading}
+        loading={query.isPending} paused={query.isPaused} loadingLayout="table"
         error={query.error}
         retry={() => query.refetch()}
       >

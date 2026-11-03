@@ -113,7 +113,7 @@ export function RateSettings({ routes }: { routes: RouteRecord[] }) {
       }
     >
       <QueryState
-        loading={query.isLoading}
+        loading={query.isPending} paused={query.isPaused} loadingLayout="table"
         error={query.error}
         retry={() => query.refetch()}
       >

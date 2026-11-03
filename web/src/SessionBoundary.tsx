@@ -1,5 +1,5 @@
 import { UIProviders } from "./ui-patterns/providers";
-import { Spinner } from "@/components/ui/spinner";
+import { LoadingState } from "./ui-patterns/loading-state";
 import { ActionButton } from "@/ui-patterns/actions";
 import { Notice } from "@/ui-patterns/notice";
 import {
@@ -334,10 +334,7 @@ export function SessionBoundary({
         >
           {(snapshot.phase === "checking" ||
             snapshot.phase === "accepting") && (
-            <div className="flex min-h-48 items-center justify-center gap-3 text-sm text-muted-foreground">
-              <Spinner />
-              <p>正在确认登录状态</p>
-            </div>
+            <LoadingState layout="form" label="正在确认登录状态" />
           )}
           {snapshot.phase === "offline" && (
             <div className="space-y-4 rounded-xl border bg-card p-6 text-card-foreground">

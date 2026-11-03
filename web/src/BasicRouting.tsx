@@ -68,7 +68,7 @@ export function BasicRouting(props: Props) {
   const initial = props.initial || profile.data;
   return (
     <QueryState
-      loading={profile.isLoading}
+      loading={!!props.output && !props.initial && profile.isPending} paused={profile.isPaused} loadingLayout="form"
       error={profile.error}
       retry={() => profile.refetch()}
     >
@@ -431,7 +431,7 @@ function BasicRoutingEditor({
         }}
       />
       <QueryState
-        loading={entries.isLoading || sources.isLoading}
+        loading={entries.isPending || sources.isPending} paused={entries.isPaused || sources.isPaused} loadingLayout="form"
         error={entries.error || sources.error}
         retry={() => {
           entries.refetch();

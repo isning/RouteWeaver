@@ -124,7 +124,6 @@ export function InboxPage() {
     <>
       <PageHeader
         title="消息"
-        description="查看服务公告与账号提醒。"
         action={
           <ActionButton
             leadingIcon={<ReloadOutlined aria-hidden="true" />}
@@ -136,11 +135,11 @@ export function InboxPage() {
         }
       />
       <QueryState
-        loading={query.isLoading}
+        loading={query.isPending} paused={query.isPaused} loadingLayout="table"
         error={query.error}
         retry={() => query.refetch()}
       >
-        <Section>
+        <Section variant="plain">
           {!query.data?.length ? (
             <EmptyState
               title="暂无消息"
@@ -221,7 +220,6 @@ export function NotificationsAdminPage() {
     <>
       <PageHeader
         title="公告与通知"
-        description="管理公告、提醒渠道与发送记录。"
       />
       <Tabs
         value={activeSection}
@@ -368,7 +366,7 @@ function Announcements() {
         }
       >
         <QueryState
-          loading={query.isLoading}
+          loading={query.isPending} paused={query.isPaused} loadingLayout="table"
           error={query.error}
           retry={() => query.refetch()}
         >
@@ -581,7 +579,7 @@ function NotificationSettings() {
         </Notice>
       )}
       <QueryState
-        loading={query.isLoading}
+        loading={query.isPending} paused={query.isPaused} loadingLayout="form"
         error={query.data ? null : query.error}
         retry={() => query.refetch()}
       >
@@ -790,6 +788,7 @@ function SettingsForm({ initial }: { initial: Settings }) {
                     <AppField
                       name={["email", "tlsMode"]}
                       label="传输安全"
+                      description="STARTTLS 在连接后升级为加密；TLS 从连接开始加密。请按邮件服务商要求选择。"
                       trigger="onValueChange"
                     >
                       <ChoiceSelect
@@ -949,7 +948,7 @@ function Outbox() {
   return (
     <Section title="通知发送记录" description="渠道接收不等于收件人已经阅读。">
       <QueryState
-        loading={query.isLoading}
+        loading={query.isPending} paused={query.isPaused} loadingLayout="table"
         error={query.error}
         retry={() => query.refetch()}
       >

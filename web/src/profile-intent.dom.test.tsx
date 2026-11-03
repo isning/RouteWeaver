@@ -232,7 +232,7 @@ it("uses the chosen existing subscription client even after changing the new-sub
   const user = userEvent.setup();
   await user.click(screen.getByRole("tab", { name: "检查与预览" }));
   await user.click(
-    screen.getByRole("combobox", { name: "草稿检查与新订阅默认客户端" }),
+    screen.getByRole("combobox", { name: "预览客户端" }),
   );
   await user.click(await screen.findByRole("option", { name: "sing-box" }));
   await user.click(

@@ -28,7 +28,7 @@ export function BackupCapacity() {
   const warning = value && [value.backupRows, value.backupRecordPlaintextBytes, value.backupLargestRecordBytes, value.notificationLedgerRows, value.notificationLargestLedgerCiphertextBytes, value.notificationLedgerCiphertextBytes].some(v => v.warning);
   const count = (v: Count) => `${v.atLeast ? "至少 " : ""}${v.count.toLocaleString()} / ${v.limit.toLocaleString()}`;
   return <div className="space-y-3">
-    <ActionButton onClick={() => check.mutate()} pending={check.isPending}>检查历史容量</ActionButton>
+    <ActionButton variant="outline" onClick={() => check.mutate()} pending={check.isPending}>检查历史容量</ActionButton>
     {check.isError && <ErrorNotice error={check.error} />}
     {value && <div className="space-y-3 text-sm" aria-live="polite">
       <p className="text-muted-foreground">检查时间：{dateLabel(value.checkedAt)}</p>

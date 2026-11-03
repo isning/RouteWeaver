@@ -89,7 +89,7 @@ export function NodeObservation({
         }
       >
         <QueryState
-          loading={query.isLoading}
+          loading={query.isPending} paused={query.isPaused} loadingLayout="summary"
           error={query.error}
           retry={() => query.refetch()}
         >

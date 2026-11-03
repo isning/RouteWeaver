@@ -1086,7 +1086,7 @@ it("keeps native text and its original binding when the profile client changes",
   });
   await user.click(screen.getByRole("tab", { name: "检查与预览" }));
   await user.click(
-    screen.getByRole("combobox", { name: "草稿检查与新订阅默认客户端" }),
+    screen.getByRole("combobox", { name: "预览客户端" }),
   );
   await user.click(
     await screen.findByText("sing-box", {

@@ -1,3 +1,5 @@
+import { loadInfrastructure, coreName } from "./infrastructure-data";
+export { loadInfrastructure, coreName } from "./infrastructure-data";
 import {
   Card,
   CardHeader,
@@ -47,7 +49,6 @@ import { DataTable, TableRowActions } from "./DataTable";
 import { DiagnosticsPanel } from "./Diagnostics";
 import { revealFocusedPolicyModalControl } from "./drawer-control-visibility";
 import {
-  normalizeDeployment,
   phaseLabel,
   isUnchangedEndpointDraft,
 } from "./infrastructure-model";
@@ -63,22 +64,6 @@ import type {
   ManagedLink,
   ServerDeployment,
 } from "./types";
-export const loadInfrastructure = async (): Promise<Infrastructure> => {
-  const [hosts, instances, endpoints, links, deployments] = await Promise.all([
-    list<HostRecord>("/hosts"),
-    list<CoreInstance>("/core-instances"),
-    list<ManagedEndpoint>("/managed-endpoints"),
-    list<ManagedLink>("/links"),
-    list<ServerDeployment>("/server-deployments"),
-  ]);
-  return {
-    hosts,
-    instances,
-    endpoints,
-    links,
-    deployments: deployments.map(normalizeDeployment),
-  };
-};
 // New instance defaults only; editing preserves the saved version. Client render
 // targets and the managed embedded core have independent version contracts.
 const coreVersions: Record<string, string> = {
@@ -91,10 +76,6 @@ const coreVersions: Record<string, string> = {
 const usesManagedEntryPreset = (instance?: CoreInstance) =>
   instance?.adapterId === "routeweaver/managed-xray" &&
   instance.version === coreVersions["routeweaver/managed-xray"];
-export const coreName = (instance?: CoreInstance) =>
-  instance?.name ||
-  instance?.adapterId.replace("routeweaver/", "") ||
-  "核心实例";
 export function ServersPage() {
   const query = useQuery({
     queryKey: ["infrastructure"],
@@ -184,7 +165,7 @@ export function ServersPage() {
       />
       <ErrorNotice error={editError} />
       <QueryState
-        loading={query.isLoading}
+        loading={query.isPending} paused={query.isPaused} loadingLayout="cards"
         error={query.error}
         retry={() => query.refetch()}
       >
@@ -455,6 +436,7 @@ export function ServersPage() {
             </div>
             <Section
               title="核心实例"
+              variant="plain"
               description={
                 data.instances.some((i) => i.hostId === host.id)
                   ? "为核心配置监听端点，或查看接入与运行状态。"
@@ -1185,7 +1167,7 @@ export function InstanceObservation({ instanceId }: { instanceId: string }) {
   const data = query.data;
   return (
     <QueryState
-      loading={query.isLoading}
+      loading={query.isPending} paused={query.isPaused} loadingLayout="summary"
       error={query.error}
       retry={() => query.refetch()}
     >
@@ -1321,7 +1303,7 @@ function InstanceDetail({
             <InstanceObservation instanceId={instance.id} />
           </Section>
           <AccountingRecovery instanceId={instance.id} />
-          <Section title="监听端点">
+          <Section title="监听端点" variant="plain">
             {inventory &&
               !inventory.endpoints.some(
                 (e) => e.instanceId === instance.id,

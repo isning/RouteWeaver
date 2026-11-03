@@ -1,3 +1,4 @@
+import { ResourceToolbar, SearchField } from "@/ui-patterns/resource-toolbar";
 import { TaskDialog, TaskSheet } from "@/ui-patterns/task-overlays";
 import { MultiChoice } from "@/ui-patterns/choice-select";
 import { Notice } from "@/ui-patterns/notice";
@@ -288,6 +289,7 @@ export function SourcesPage({
     <>
       <PageHeader
         title="订阅来源"
+        description="导入外部订阅或节点文本，供分流配置与节点集合使用。"
         action={
           <ActionButton
             leadingIcon={<Plus aria-hidden="true" />}
@@ -301,24 +303,15 @@ export function SourcesPage({
       />
       <ErrorNotice error={actionError} />
       <QueryState
-        loading={query.isLoading}
+        loading={query.isPending} paused={query.isPaused} loadingLayout="table"
         error={query.error}
         retry={() => query.refetch()}
       >
         <Section variant="plain">
-          <div className="list-toolbar mb-4 flex flex-wrap items-center justify-between gap-3">
-            <Input
-              ref={searchInput}
-              className="w-full sm:w-72"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="搜索来源"
-              aria-label="搜索来源"
-            />
-            <span className="muted text-sm text-muted-foreground">
-              {query.data?.length || 0} 个私有来源
-            </span>
-          </div>
+          <ResourceToolbar label="查找订阅来源" search={
+            <SearchField ref={searchInput} value={search} onValueChange={setSearch}
+              placeholder="搜索来源" aria-label="搜索来源" />
+          } summary={<span>{query.data?.length || 0} 个私有来源</span>} />
           {!query.data?.length ? (
             <EmptyState
               title="暂无订阅来源"
@@ -892,6 +885,7 @@ export function CollectionsPage() {
     <>
       <PageHeader
         title="节点集合"
+        description="组合多个来源，按顺序处理节点，再复用到分流配置。"
         action={
           <ActionButton
             ref={createTrigger}
@@ -904,7 +898,7 @@ export function CollectionsPage() {
         }
       />
       <QueryState
-        loading={query.isLoading}
+        loading={query.isPending} paused={query.isPaused} loadingLayout="table"
         error={query.error}
         retry={() => query.refetch()}
       >
@@ -1411,7 +1405,7 @@ function CollectionDelete({
       </p>
       <ErrorNotice error={remove.error} />
       <QueryState
-        loading={dependencies.isLoading || dependencies.isFetching}
+        loading={dependencies.isPending || dependencies.isFetching} paused={dependencies.isPaused} loadingLayout="summary"
         error={dependencies.error}
         retry={() => dependencies.refetch()}
       >
