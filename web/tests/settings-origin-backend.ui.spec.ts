@@ -26,12 +26,12 @@ async function save(page: Page, status = 200) {
   expect(result.status()).toBe(status);
   return result;
 }
-for (const width of [1440, 390]) {
+for (const width of [1440, 768, 390]) {
   test(`E13 real domain draft recovery and reviewed default activation at ${width}px`, async ({
     page,
     playwright,
     baseURL,
-  }) => {
+  }, info) => {
     requireLoopback(baseURL);
     await page.setViewportSize({ width, height: 900 });
     const mutations: { path: string; status: number }[] = [];
@@ -65,6 +65,7 @@ for (const width of [1440, 390]) {
       await save(page, 400);
       await expect(input).toHaveValue("http://invalid.example/path");
       expect(await originState(other)).toEqual(initial);
+      await page.screenshot({ path: info.outputPath(`origin-real-invalid-${width}.png`), fullPage: true });
 
       await input.fill("https://draft.example");
       const staged = await (await save(page)).json();
@@ -76,6 +77,7 @@ for (const width of [1440, 390]) {
         exact: true,
       });
       await expect(enable).toBeDisabled();
+      await page.screenshot({ path: info.outputPath(`origin-real-unverified-${width}.png`), fullPage: true });
       sameEffective(await originState(other), initial);
       await expect(currentLink).toHaveText(initial.currentLinkExample);
       expect(
@@ -128,6 +130,7 @@ for (const width of [1440, 390]) {
         exact: true,
       });
       await expect(dialog).toBeVisible();
+      await page.screenshot({ path: info.outputPath(`origin-real-default-review-${width}.png`) });
       await expect(
         dialog.getByRole("button", { name: "确认启用", exact: true }),
       ).toBeDisabled();
@@ -206,6 +209,7 @@ for (const width of [1440, 390]) {
       await expect(input).toHaveValue("");
       await expect(enable).toBeDisabled();
       expect(await originState(other)).toEqual(effective);
+      await page.screenshot({ path: info.outputPath(`origin-real-default-active-${width}.png`), fullPage: true });
       expect(mutations).toEqual([
         { path: originPath, status: 400 },
         { path: originPath, status: 200 },

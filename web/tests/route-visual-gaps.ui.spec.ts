@@ -488,7 +488,7 @@ async function expectAlignedSurfaces(surfaces: Locator[]) {
 
 // Real production composition with read-only fixtures: context is navigation or
 // existing account usage, never fabricated telemetry. Geometry awaits CI.
-for (const width of [3440, 2880, 2560, 2304, 1920, 1536, 1440, 1366, 1280, 1024, 390, 320]) {
+for (const width of [3440, 2880, 2560, 2304, 1920, 1536, 1440, 1366, 1280, 1024, 768, 390, 320]) {
   test(`contextual page composition preserves local tasks at ${width}`, async ({ page }, info) => {
     await page.setViewportSize({ width, height: width === 320 ? 480 : 900 });
     await page.emulateMedia({ reducedMotion: "reduce" });
@@ -980,4 +980,74 @@ for (const width of [1440, 390]) {
       release();
     }
   });
+}
+
+// Explicit synthetic GET-state visual coverage. These screenshots prove rendering
+// and action eligibility only, NOT DNS/TLS verification or deployed availability.
+// The real HTTP E13 suite separately covers draft/error/default activation tasks.
+for (const width of [390, 768, 1440]) {
+  for (const status of ["verified", "expired", "failed"] as const) {
+    test(`saved origin ${status} remains distinguishable at ${width}`, async ({ page }, info) => {
+      await page.setViewportSize({ width, height: 900 });
+      // Freeze Date only: rendering timers and transitions still run normally.
+      await page.clock.setFixedTime(new Date("2026-11-03T12:03:00Z"));
+      const current = "https://current.example.test/feed/{订阅标识}";
+      const proposed = "https://proposed.example.test/feed/{订阅标识}";
+      const failure = "HTTPS 证书校验失败，无法确认该地址属于当前实例。";
+      const unexpected = await readOnlyInventory(page, {
+        "/admin/subscription-origin": {
+          revision: 7, configuredRevision: 6, effectiveRevision: 2,
+          draftOrigin: "https://proposed.example.test",
+          effectiveOrigin: "https://current.example.test",
+          defaultOrigin: "https://default.example.test",
+          verificationStatus: status,
+          verifiedAt: status === "failed" ? undefined : status === "expired"
+            ? "2026-11-03T11:55:00Z" : "2026-11-03T12:00:00Z",
+          verificationExpiresAt: status === "failed" ? undefined : status === "expired"
+            ? "2026-11-03T12:00:00Z" : "2026-11-03T12:05:00Z",
+          lastFailure: status === "failed" ? failure : undefined,
+          currentLinkExample: current, proposedLinkExample: proposed,
+          tokensUnchanged: true,
+        },
+      });
+      await page.goto("/#settings");
+      const region = page.getByRole("region", { name: "订阅域名设置", exact: true });
+      await expect(region.getByRole("textbox", { name: "订阅域名草稿", exact: true })).toHaveValue("https://proposed.example.test");
+      await expect(region.getByText(current, { exact: true })).toBeVisible();
+      await expect(region.getByText(proposed, { exact: true })).toBeVisible();
+      const proof = {
+        verified: "草稿已验证",
+        expired: "再次启用前需要重新验证",
+        failed: "草稿验证未通过",
+      }[status];
+      await expect(region.getByText(proof, { exact: false })).toBeVisible();
+      await expect(region.getByText("待启用", { exact: true })).toBeVisible();
+      await expect(region.getByText("验证结果有效 5 分钟；过期后需重新验证再启用。", { exact: true })).toBeVisible();
+      const enable = region.getByRole("button", { name: "启用已保存草稿", exact: true });
+      await expect(region.getByRole("button", { name: "验证 HTTPS 与实例", exact: true })).toBeEnabled();
+      if (status === "verified") await expect(enable).toBeEnabled();
+      else await expect(enable).toBeDisabled();
+      if (status === "failed") {
+        await expect(region.getByText(failure, { exact: true })).toBeVisible();
+        await expect(region.getByText("检查域名解析、HTTPS 证书与 /feed 路由后重试", { exact: true })).toBeVisible();
+      }
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
+      await page.screenshot({ path: info.outputPath(`origin-state-${status}-${width}.png`), fullPage: true });
+      if (status === "verified") {
+        await enable.click();
+        const dialog = page.getByRole("dialog", { name: "启用订阅地址", exact: true });
+        await expect(dialog).toBeVisible();
+        await expect(dialog.getByText(current, { exact: true })).toBeVisible();
+        await expect(dialog.getByText(proposed, { exact: true })).toBeVisible();
+        await expect(dialog.getByText(/旧链接只有在旧域名的 DNS/)).toBeVisible();
+        await expect(dialog.getByRole("button", { name: "确认启用", exact: true })).toBeDisabled();
+        await page.screenshot({ path: info.outputPath(`origin-review-verified-${width}.png`) });
+        await page.keyboard.press("Escape");
+        await expect(dialog).toBeHidden();
+        await expect(enable).toBeFocused();
+        await expect(region.getByText(current, { exact: true })).toBeVisible();
+      }
+      expect(unexpected).toEqual([]);
+    });
+  }
 }
