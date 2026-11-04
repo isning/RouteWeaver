@@ -1,0 +1,31 @@
+name: Isolated gofmt diagnostic
+on:
+  push:
+    branches: [validation-gofmt-diagnostic-20261104]
+permissions:
+  contents: read
+jobs:
+  gofmt-diff:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          ref: 018b88e184ae0b64c7e2e3595c0c2320365f92c1
+          persist-credentials: false
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16
+        with:
+          go-version-file: go.mod
+          cache: false
+      - name: Exact source formatting diff
+        shell: bash
+        run: |
+          test "$(git rev-parse HEAD)" = 018b88e184ae0b64c7e2e3595c0c2320365f92c1
+          test "$(git rev-parse HEAD^{tree})" = 45242747ce94b9fb81464c92770ec8963d778992
+          go version
+          gofmt -d internal/agent/driver_heartbeat_test.go | tee /tmp/driver-heartbeat-gofmt.diff
+          sha256sum /tmp/driver-heartbeat-gofmt.diff
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: exact-source-gofmt-diff
+          path: /tmp/driver-heartbeat-gofmt.diff
+          retention-days: 7
