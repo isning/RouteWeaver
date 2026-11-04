@@ -261,6 +261,28 @@ for (const width of [1440, 2048] as const) {
   });
 }
 
+test("narrow source table supports horizontal arrow-key scrolling", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const { unexpected } = await setup(page, true);
+  const viewport = page.getByRole("region", {
+    name: "表格滚动区域",
+    exact: true,
+  });
+  await expect(viewport).toHaveAccessibleDescription("向左右滚动查看完整表格");
+  await expect
+    .poll(() => viewport.evaluate((element) => element.scrollLeft))
+    .toBe(0);
+  await viewport.focus();
+  await page.keyboard.press("ArrowRight");
+  await expect
+    .poll(() => viewport.evaluate((element) => element.scrollLeft))
+    .toBeGreaterThan(0);
+  await expect(viewport).toBeFocused();
+  expect(unexpected).toEqual([]);
+});
+
 test("narrow source rows keep long target names and all actions reachable by keyboard", async ({
   page,
 }, info) => {
@@ -271,23 +293,36 @@ test("narrow source rows keep long target names and all actions reachable by key
     exact: true,
   });
   await expect(viewport).toHaveAccessibleDescription("向左右滚动查看完整表格");
-  await viewport.focus();
-  await page.keyboard.press("ArrowRight");
-  await expect
-    .poll(() => viewport.evaluate((element) => element.scrollLeft))
-    .toBeGreaterThan(0);
   const buttons = groups[1].getByRole("button");
   for (const [index, group] of groups.entries()) {
     const row = page.getByRole("row").filter({ has: group });
-    await row.getByRole("button").first().focus();
+    const source = row.getByRole("button").first();
+    await source.focus();
+    await expect(source).toBeFocused();
     // Start at the left edge, so native keyboard focus must reveal the actions
     // and their entire focus rings rather than inheriting a favorable scroll.
+    // Arrow-key scrolling has its own test: observing its first movement does
+    // not mean Chromium's native scroll animation has finished.
     await viewport.evaluate((element) => {
-      element.scrollLeft = 0;
+      element.scrollTo({ left: 0, behavior: "instant" });
     });
-    await expect
-      .poll(() => viewport.evaluate((element) => element.scrollLeft))
-      .toBe(0);
+    const leftEdgeSamples = await viewport.evaluate(
+      (element) =>
+        new Promise<number[]>((resolve) => {
+          const samples: number[] = [];
+          const sample = () => {
+            samples.push(element.scrollLeft);
+            if (samples.length === 4) resolve(samples);
+            else requestAnimationFrame(sample);
+          };
+          requestAnimationFrame(sample);
+        }),
+    );
+    await info.attach(`source-list-390-keyboard-start-${index}`, {
+      body: JSON.stringify({ leftEdgeSamples }),
+      contentType: "application/json",
+    });
+    expect(leftEdgeSamples).toEqual([0, 0, 0, 0]);
     const rowButtons = group.getByRole("button");
     await expect(rowButtons).toHaveCount(index === 0 ? 1 : 3);
     const identity = group.getByText(names[index], { exact: true });
