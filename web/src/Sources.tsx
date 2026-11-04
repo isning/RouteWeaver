@@ -949,37 +949,49 @@ export function CollectionsPage() {
         ) : (
           <div className="card-grid grid gap-4 md:grid-cols-2 xl:grid-cols-3">
             {query.data.map((item) => (
-              <article key={item.id} className="flex min-w-0 flex-col gap-2">
-                <ActionButton
-                  variant="outline"
-                  className="collection-card surface h-auto min-w-0 flex-col items-start justify-start gap-4 rounded-xl p-5 text-left whitespace-normal"
-                  onClick={() => edit(item)}
-                >
-                  <span className="flex w-full min-w-0 items-start gap-3">
-                    <span className="tile-icon flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-                      <Link className="size-4" aria-hidden="true" />
-                    </span>
-                    <span className="min-w-0 space-y-1">
-                      <span className="block text-base font-semibold tracking-tight wrap-anywhere">
-                        {item.name}
-                      </span>
-                      <span className="block text-sm font-normal leading-relaxed text-muted-foreground">
-                        {item.sources.length} 个来源 · {item.steps.length}{" "}
-                        个聚合步骤
-                      </span>
-                    </span>
+              <article
+                key={item.id}
+                aria-labelledby={`collection-${encodeURIComponent(item.id)}-name`}
+                className="collection-card surface flex min-w-0 flex-col rounded-xl border bg-card p-5"
+              >
+                <div className="flex min-w-0 flex-1 items-start gap-3 pb-4">
+                  <span className="tile-icon flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                    <Link className="size-4" aria-hidden="true" />
                   </span>
-                  <span className="card-action mt-auto flex w-full items-center justify-between border-t pt-3 text-sm font-medium">
-                    编辑集合 <span aria-hidden="true">→</span>
-                  </span>
-                </ActionButton>
-                <ActionButton
-                  variant="ghost"
-                  aria-label={`删除集合 ${item.name}`}
-                  onClick={() => setDeleting(item)}
-                >
-                  删除集合
-                </ActionButton>
+                  <div className="min-w-0 space-y-1">
+                    <h2
+                      id={`collection-${encodeURIComponent(item.id)}-name`}
+                      className="text-base font-semibold tracking-tight wrap-anywhere"
+                    >
+                      {item.name}
+                    </h2>
+                    <p
+                      id={`collection-${encodeURIComponent(item.id)}-summary`}
+                      className="text-sm leading-relaxed text-muted-foreground"
+                    >
+                      {item.sources.length} 个来源 · {item.steps.length} 个聚合步骤
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between gap-2 border-t pt-2">
+                  <ActionButton
+                    variant="ghost"
+                    className="justify-start px-2 font-medium"
+                    aria-labelledby={`collection-${encodeURIComponent(item.id)}-name collection-${encodeURIComponent(item.id)}-summary collection-${encodeURIComponent(item.id)}-edit`}
+                    onClick={() => edit(item)}
+                  >
+                    <span id={`collection-${encodeURIComponent(item.id)}-edit`}>编辑集合</span>
+                    <span aria-hidden="true">→</span>
+                  </ActionButton>
+                  <ActionButton
+                    variant="ghost"
+                    className="px-2 text-muted-foreground hover:text-destructive"
+                    aria-label={`删除集合 ${item.name}`}
+                    onClick={() => setDeleting(item)}
+                  >
+                    删除
+                  </ActionButton>
+                </div>
               </article>
             ))}
           </div>

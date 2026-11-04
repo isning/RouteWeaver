@@ -60,6 +60,24 @@ function mount() {
     </QueryClientProvider>,
   );
 }
+it("groups a collection's edit and secondary delete actions inside its named card", async () => {
+  vi.stubGlobal("fetch", vi.fn(async (url) => json(
+    String(url).endsWith("/collections") ? [collection] : [],
+  )));
+  mount();
+  const card = await screen.findByRole("article", { name: collection.name });
+  const edit = within(card).getByRole("button", { name: /Shared collection.*编辑集合/ });
+  const remove = within(card).getByRole("button", { name: "删除集合 Shared collection" });
+  expect(edit.contains(remove)).toBe(false);
+  expect(within(card).getByRole("heading", { name: collection.name })).toBeTruthy();
+  expect(remove.textContent).toBe("删除");
+  edit.focus();
+  await userEvent.keyboard("{Tab}");
+  expect(document.activeElement).toBe(remove);
+  await userEvent.keyboard("{Shift>}{Tab}{/Shift}{Enter}");
+  expect(await screen.findByRole("dialog", { name: collection.name })).toBeTruthy();
+});
+
 it("does not enable collection deletion before an authoritative dependency read and names every blocking profile", async () => {
   let release!: (r: Response) => void;
   let reads = 0;

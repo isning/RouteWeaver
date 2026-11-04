@@ -901,9 +901,9 @@ export function SubscriptionsPage({
                   <dl className="mt-2 divide-y divide-border text-sm">
                     {[
                       ["本周期实际流量", bytesLabel(data.usage?.rawBytes)],
-                      ["下次重置", <>{data.cycle?.nextReset
+                      ["下次重置", <><span className="usage-reset-date block wrap-normal">{data.cycle?.nextReset
                         ? dateLabel(data.cycle.nextReset, data.cycle.timezone)
-                        : data.cycle ? "不自动重置" : "尚未设置"}{reset && `（还有 ${reset}）`}</>],
+                        : data.cycle ? "不自动重置" : "尚未设置"}</span>{reset && <span className="usage-reset-countdown mt-1 block text-xs leading-relaxed text-muted-foreground wrap-normal">{`（还有 ${reset}）`}</span>}</>],
                       ["周期时区", data.cycle?.timezone || "\u2014"],
                       ["服务到期", dateLabel(data.entitlement?.expiresAt || data.user?.expiresAt)],
                     ].map(([label, value]) => (
@@ -927,9 +927,14 @@ export function SubscriptionsPage({
             <p className="mt-1 text-xs leading-relaxed text-muted-foreground">已为你的账号开通</p>
             <ul className="route-options mt-2 divide-y divide-border">
               {data.routes.map((route) => (
-                <li className="route-option grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-3 py-3" key={route.id}>
-                  <h3 className="min-w-0 text-sm leading-relaxed wrap-anywhere">{route.name}</h3>
-                  <Badge variant="secondary" className="shrink-0 tabular-nums" aria-label={`额度倍率 ${((route.rateMicros ?? 1000000) / 1000000).toLocaleString()} 倍`}>
+                <li className="route-option grid min-w-0 gap-2 py-3" key={route.id}>
+                  <h3 className="min-w-0 text-sm leading-relaxed wrap-anywhere">
+                    {/* Keep the original name intact while allowing long compound names to wrap at word boundaries. */}
+                    {route.name.split(/(?<=[a-z0-9])(?=[A-Z])/).flatMap((part, index) =>
+                      index === 0 ? [part] : [<wbr key={index} />, part],
+                    )}
+                  </h3>
+                  <Badge variant="secondary" className="justify-self-start tabular-nums" aria-label={`额度倍率 ${((route.rateMicros ?? 1000000) / 1000000).toLocaleString()} 倍`}>
                     {((route.rateMicros ?? 1000000) / 1000000).toLocaleString()}×
                   </Badge>
                 </li>

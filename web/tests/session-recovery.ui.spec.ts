@@ -1,5 +1,5 @@
 import { test } from "./native-browser";
-import { expect, type Page, type TestInfo } from "@playwright/test";
+import { expect, type BrowserContext, type Page, type TestInfo } from "@playwright/test";
 import { randomBytes } from "node:crypto";
 async function windowRoundTrip(page: Page) {
   const cdp = await page.context().newCDPSession(page);
@@ -64,8 +64,24 @@ async function realCollections(page: Page) {
 }
 const account = (page: Page) =>
   page
-    .getByRole("complementary")
+    .locator("#workspace-navigation")
     .getByRole("button", { name: /(?:管理员|个人账号)$/ });
+// Native CDP targets inherit browser-window defaults, not the first page's
+// emulated viewport. These cross-tab identity journeys intentionally use a
+// desktop sidebar in both tabs; responsive navigation is covered below.
+async function newWorkspaceTab(context: BrowserContext) {
+  const page = await context.newPage();
+  await page.setViewportSize({ width: 1280, height: 900 });
+  return page;
+}
+async function openAccountNavigation(page: Page) {
+  const trigger = page.getByRole("button", { name: "打开导航", exact: true });
+  if (await trigger.isVisible()) {
+    await trigger.click();
+    await expect(page.getByRole("dialog", { name: "导航", exact: true })).toBeVisible();
+  }
+  await expect(account(page)).toBeVisible();
+}
 const workspace = (page: Page) => page.locator("[data-session-workspace]");
 const me = (r: any) =>
   r.url().endsWith("/api/auth/me") && r.request().method() === "GET";
@@ -137,6 +153,7 @@ async function activateWorkspace(page: Page, purpose: string) {
 }
 async function logout(page: Page) {
   await activateWorkspace(page, "logout");
+  await openAccountNavigation(page);
   await account(page).click();
   await page.getByRole("menuitem", { name: "退出登录", exact: true }).click();
   await expect(
@@ -273,7 +290,7 @@ test("real cross-tab same-account renewal retains concealed Drawer draft and nev
   page.on("request", (r) => {
     if (collectionWrite(r)) writes.push(r.method());
   });
-  const other = await context.newPage();
+  const other = await newWorkspaceTab(context);
   await other.goto("http://127.0.0.1:4173/");
   await expect(account(other)).toBeVisible();
   await logout(other);
@@ -341,7 +358,7 @@ test("real invite signup switches identity without inheriting old account draft 
   page.on("request", (r) => {
     if (collectionWrite(r)) writes++;
   });
-  const other = await context.newPage();
+  const other = await newWorkspaceTab(context);
   await other.goto("http://127.0.0.1:4173/");
   await expect(account(other)).toBeVisible();
   await logout(other);
@@ -449,7 +466,7 @@ test("real file chooser and ordinary focus preserve a Modal draft without concea
     observer.observe(el, { attributes: true, attributeFilter: ["hidden"] });
     (window as any).__concealObserver = observer;
   });
-  const other = await context.newPage();
+  const other = await newWorkspaceTab(context);
   await other.goto("about:blank");
   await other.bringToFront();
   await windowRoundTrip(page);
@@ -530,7 +547,7 @@ test("already committed save survives same-session routine recheck and is not re
   try {
     await page.getByRole("button", { name: "保存集合", exact: true }).click();
     await didCommit;
-    const other = await context.newPage();
+    const other = await newWorkspaceTab(context);
     await other.goto("about:blank");
     await other.bringToFront();
     await windowRoundTrip(page);
@@ -588,4 +605,24 @@ test("offline interruption retains draft without queued write and reconnect requ
     noAutomaticWrite: true,
     explicitSaves: 1,
   });
+});
+
+
+test("tablet navigation exposes account actions and returns focus before real logout", async ({ page }, info) => {
+  await signIn(page);
+  const identity = await account(page).innerText();
+  await page.setViewportSize({ width: 900, height: 900 });
+  const trigger = page.getByRole("button", { name: "打开导航", exact: true });
+  await expect(trigger).toBeVisible();
+  await expect(account(page)).toHaveCount(0);
+  await openAccountNavigation(page);
+  await expect(account(page)).toHaveText(identity, { useInnerText: true });
+  await account(page).focus();
+  await expect(account(page)).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog", { name: "导航", exact: true })).toHaveCount(0);
+  await expect(trigger).toBeFocused();
+  await expect(workspace(page)).not.toHaveAttribute("inert", "");
+  await page.screenshot({ path: info.outputPath("tablet-account-navigation-restored.png") });
+  await logout(page);
 });

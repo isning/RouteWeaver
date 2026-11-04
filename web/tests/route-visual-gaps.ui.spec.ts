@@ -474,6 +474,24 @@ async function settleSectionNavigation(page: Page) {
   }));
 }
 
+async function focusedControlGeometry(target: Locator) {
+  await expect(target).toBeFocused();
+  const geometry = await target.evaluate(element => {
+    const box = element.getBoundingClientRect();
+    const x = box.x + box.width / 2, y = box.y + box.height / 2;
+    const hit = document.elementFromPoint(x, y);
+    const sticky = document.querySelector(".profile-publish-action")!.getBoundingClientRect();
+    return { scrollY: window.scrollY, x, y, top: box.top, bottom: box.bottom,
+      viewportHeight: innerHeight, stickyBottom: sticky.bottom,
+      receivesPointer: !!hit && (hit === element || element.contains(hit)) };
+  });
+  expect(geometry.y).toBeGreaterThanOrEqual(0);
+  expect(geometry.y).toBeLessThan(geometry.viewportHeight);
+  expect(geometry.top).toBeGreaterThanOrEqual(geometry.stickyBottom);
+  expect(geometry.receivesPointer).toBe(true);
+  return geometry;
+}
+
 async function expectAlignedSurfaces(surfaces: Locator[]) {
   const edges = [];
   for (const surface of surfaces) {
@@ -790,8 +808,45 @@ for (const width of [3440, 2880, 2560, 2304, 1920, 1536, 1440, 1366, 1280, 1024,
     await expect(routes).toBeVisible();
     await expect(routes.getByRole("listitem")).toHaveCount(3);
     for (const [index, multiplier] of ["1.5×", "1×", "0.5×"].entries()) {
-      await expect(routes.getByRole("listitem").nth(index).getByText(multiplier, { exact: true })).toBeVisible();
+      const row = routes.getByRole("listitem").nth(index);
+      const rate = row.getByText(multiplier, { exact: true });
+      const name = row.getByRole("heading");
+      await expect(rate).toBeVisible();
+      const nameBox = (await name.boundingBox())!;
+      const rateBox = (await rate.boundingBox())!;
+      const rowBox = (await row.boundingBox())!;
+      expect(nameBox.width).toBeCloseTo(rowBox.width, 0);
+      expect(rateBox.y).toBeGreaterThanOrEqual(nameBox.y + nameBox.height);
+      // Measure actual rendered characters rather than assuming text-wrap can
+      // balance a single unspaced word. Camel-case break opportunities preserve
+      // the full name and avoid isolated final letters in narrow context rails.
+      const latinLineLengths = await name.evaluate(element => {
+        const lines = new Map<number, string>();
+        const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+        let node: Node | null;
+        while ((node = walker.nextNode())) {
+          for (let offset = 0; offset < (node.textContent?.length ?? 0); offset++) {
+            const char = node.textContent![offset];
+            if (!/[a-zA-Z]/.test(char)) continue;
+            const range = document.createRange();
+            range.setStart(node, offset);
+            range.setEnd(node, offset + 1);
+            const top = Math.round(range.getBoundingClientRect().top);
+            lines.set(top, (lines.get(top) ?? "") + char);
+          }
+        }
+        return [...lines.values()].map(line => line.length);
+      });
+      for (const count of latinLineLengths) expect(count).toBeGreaterThan(1);
     }
+    const resetDate = details.locator(".usage-reset-date");
+    const resetCountdown = details.locator(".usage-reset-countdown");
+    await expect(resetDate).toBeVisible();
+    await expect(resetCountdown).toBeVisible();
+    const dateBox = (await resetDate.boundingBox())!;
+    const countdownBox = (await resetCountdown.boundingBox())!;
+    expect(countdownBox.y).toBeGreaterThanOrEqual(dateBox.y + dateBox.height);
+    expect(countdownBox.x + countdownBox.width).toBeCloseTo(dateBox.x + dateBox.width, 0);
     for (const group of [details, routes]) {
       expect(await group.evaluate(el => getComputedStyle(el).borderTopWidth)).toBe("1px");
     }
@@ -842,6 +897,17 @@ for (const width of [3440, 2880, 2560, 2304, 1920, 1536, 1440, 1366, 1280, 1024,
       expect(title.y + title.height).toBeLessThanOrEqual(actions.y);
       expect(actions.y + actions.height).toBeLessThanOrEqual(directory.y);
       await page.screenshot({ path: info.outputPath(`context-profile-initial-viewport-${width}.png`) });
+      const controls = profileIndex.getByRole("button");
+      const keyboardGeometry = [];
+      await controls.first().focus();
+      for (let index = 0; index < await controls.count(); index++) {
+        if (index) await page.keyboard.press("Tab");
+        keyboardGeometry.push(await focusedControlGeometry(controls.nth(index)));
+      }
+      await info.attach(`profile-index-keyboard-hit-testing-${width}`, {
+        body: JSON.stringify(keyboardGeometry), contentType: "application/json",
+      });
+      await page.screenshot({ path: info.outputPath(`context-profile-index-keyboard-${width}.png`) });
     }
     const runtimeLink = profileIndex.getByRole("button", { name: "前往运行设置", exact: true });
     await runtimeLink.focus();
@@ -851,6 +917,9 @@ for (const width of [3440, 2880, 2560, 2304, 1920, 1536, 1440, 1366, 1280, 1024,
     await expect(runtime).toBeFocused();
     await expect(runtime).toHaveAttribute("aria-selected", "true");
     await expect(runtimeLink).toHaveAttribute("aria-current", "location");
+    if (width <= 390) await info.attach(`profile-runtime-focus-hit-testing-${width}`, {
+      body: JSON.stringify(await focusedControlGeometry(runtime)), contentType: "application/json",
+    });
     const strip = (await page.locator(".profile-editor-tools [role=tablist]").boundingBox())!;
     const panel = (await page.getByRole("tabpanel", { name: "运行设置", exact: true }).boundingBox())!;
     expect(panel.y - strip.y - strip.height).toBeGreaterThanOrEqual(0);

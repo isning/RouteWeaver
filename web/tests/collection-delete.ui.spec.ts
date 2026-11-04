@@ -26,7 +26,20 @@ test("collection dependency decision remains readable and returns keyboard focus
   });
   await page.setViewportSize({ width: 320, height: 844 });
   await page.goto("/#collections");
-  const opener = page.getByRole("button", { name: `删除集合 ${name}` });
+  const card = page.getByRole("article", { name, exact: true });
+  const opener = card.getByRole("button", { name: `删除集合 ${name}` });
+  const edit = card.getByRole("button", { name: new RegExp(`${name}.*编辑集合`) });
+  await expect(edit).toBeVisible();
+  await expect(opener).toHaveText("删除");
+  const cardBox = await card.boundingBox(), editBox = await edit.boundingBox(), deleteBox = await opener.boundingBox();
+  expect(cardBox).not.toBeNull();
+  expect(editBox).not.toBeNull();
+  expect(deleteBox).not.toBeNull();
+  expect(deleteBox!.y).toBeGreaterThanOrEqual(cardBox!.y);
+  expect(deleteBox!.y + deleteBox!.height).toBeLessThanOrEqual(cardBox!.y + cardBox!.height);
+  expect(Math.abs(editBox!.y - deleteBox!.y)).toBeLessThanOrEqual(1);
+  expect(editBox!.x + editBox!.width).toBeLessThanOrEqual(deleteBox!.x);
+  await page.screenshot({ path: info.outputPath("collection-card-actions-320.png") });
   for (let attempt = 0; attempt < 2; attempt++) {
     await opener.click();
     const dialog = page.getByRole("dialog", { name: `删除集合「${name}」？` });

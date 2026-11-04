@@ -136,11 +136,22 @@ for (const width of [320, 390, 900, 1440])
       const overflowing = await viewport.evaluate(
         (el) => el.scrollWidth > el.clientWidth + 1,
       );
-      if (width === 1440) expect(overflowing).toBe(false);
-      else expect(overflowing).toBe(true);
+      // At 900 the drawer frees the sidebar's 256px: the 700px user
+      // table fits. The 320/390 cases still require real horizontal scrolling.
+      // Retain explicit overflow/no-overflow expectations, not a tautology
+      // against the table's own scrollWidth.
+      const shouldOverflow = width !== 1440 && !(width === 900 && route === "users");
+      expect(overflowing).toBe(shouldOverflow);
+      if (route === "users") {
+        const available = await viewport.evaluate(el => el.clientWidth);
+        expect(available >= 700).toBe(width >= 900);
+      }
+      await expect(page.getByRole("button", { name: "打开导航", exact: true })).toHaveCount(width < 1024 ? 1 : 0);
       await viewport.evaluate((el) => {
         el.scrollLeft = el.scrollWidth;
       });
+      if (overflowing) expect(await viewport.evaluate(el => el.scrollLeft)).toBeGreaterThan(0);
+      else expect(await viewport.evaluate(el => el.scrollLeft)).toBe(0);
       for (const [index, row] of rows.entries()) {
         const group = row.getByRole("group", {
           name: `${targetNames[index]} 的操作`,

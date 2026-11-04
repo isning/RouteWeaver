@@ -369,6 +369,7 @@ it("labels route grants as authorization rather than claiming runtime availabili
         status: "active",
         user: { id: "user", name: "User" },
         usage: { rawBytes: 0, weightedBytes: 0 },
+        cycle: { nextReset: "2099-12-01T00:00:00+08:00", timezone: "UTC+8" },
         routes: [
           { id: "draft-route", name: "Draft route", rateMicros: 1500000 },
           { id: "long-route", name: "跨区域协作线路 LongRemoteWorkspaceConnection", rateMicros: 1000000 },
@@ -389,6 +390,9 @@ it("labels route grants as authorization rather than claiming runtime availabili
   for (const multiplier of ["1.5×", "1×", "0.5×"]) {
     expect(screen.getByText(multiplier, { exact: true })).toBeTruthy();
   }
+  const resetValue = screen.getByText("下次重置", { exact: true }).nextElementSibling!;
+  expect(resetValue.querySelector(".usage-reset-date")?.textContent).toContain("2099");
+  expect(resetValue.querySelector(".usage-reset-countdown")?.textContent).toMatch(/（还有 .+）/);
   expect(screen.getByText("已为你的账号开通", { exact: true })).toBeTruthy();
   expect(screen.queryByText(/当前使用|当前已选|线路在线/)).toBeNull();
 });
@@ -535,7 +539,7 @@ it("does not label platform administration as a private workspace", async () => 
   expect(screen.getByRole("navigation", { name: "工作空间导航" })).toBeTruthy();
 });
 
-it("keeps collection title, counts and edit task in one keyboard-operable tile", async () => {
+it("keeps collection identity associated with its keyboard-operable edit task", async () => {
   vi.stubGlobal("fetch", vi.fn(async (url) =>
     String(url).endsWith("/collections")
       ? json([{ id: "daily", name: "Daily long collection name", sources: [], steps: [] }])
@@ -544,7 +548,7 @@ it("keeps collection title, counts and edit task in one keyboard-operable tile",
   mount(<CollectionsPage />);
   const tile = await screen.findByRole("button", { name: /Daily long collection name.*0 个来源.*0 个聚合步骤.*编辑集合/ });
   expect(tile.querySelector("button, a, input")).toBeNull();
-  expect(within(tile).getByText("Daily long collection name")).toBeTruthy();
+  expect(within(screen.getByRole("article", { name: "Daily long collection name" })).getByRole("heading", { name: "Daily long collection name" })).toBeTruthy();
   tile.focus();
   await userEvent.keyboard("{Enter}");
   const dialog = await screen.findByRole("dialog", { name: "Daily long collection name" });
