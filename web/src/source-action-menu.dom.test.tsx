@@ -175,3 +175,66 @@ it("keeps the pending review opener focusable without allowing another menu acti
   await waitFor(() => expect(document.activeElement).toBe(trigger));
   expect(onConfirm).not.toHaveBeenCalled();
 });
+
+it("keeps refresh and edit in the same source menu without invoking deletion", async () => {
+  const onRefresh = vi.fn(),
+    onEdit = vi.fn(),
+    onDelete = vi.fn();
+  render(
+    <UIProviders>
+      <SourceActionMenu
+        sourceName="Work source"
+        loading={false}
+        deleteDisabled={false}
+        onDelete={onDelete}
+        onRefresh={onRefresh}
+        onEdit={onEdit}
+      />
+    </UIProviders>,
+  );
+  const user = userEvent.setup();
+  const trigger = screen.getByRole("button", { name: "更多操作 Work source" });
+  await user.click(trigger);
+  await user.click(screen.getByRole("menuitem", { name: "刷新 Work source" }));
+  await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
+  expect(onRefresh).toHaveBeenCalledOnce();
+  expect(onEdit).not.toHaveBeenCalled();
+  expect(onDelete).not.toHaveBeenCalled();
+  expect(document.activeElement).toBe(trigger);
+  await user.click(trigger);
+  await user.click(screen.getByRole("menuitem", { name: "编辑 Work source" }));
+  await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
+  expect(onEdit).toHaveBeenCalledOnce();
+  expect(onDelete).not.toHaveBeenCalled();
+});
+
+it("keeps a paused source editable without allowing refresh", async () => {
+  const onRefresh = vi.fn(),
+    onEdit = vi.fn();
+  render(
+    <UIProviders>
+      <SourceActionMenu
+        sourceName="Paused source"
+        loading={false}
+        deleteDisabled={false}
+        onDelete={() => {}}
+        onRefresh={onRefresh}
+        refreshDisabled
+        onEdit={onEdit}
+      />
+    </UIProviders>,
+  );
+  const user = userEvent.setup();
+  await user.click(
+    screen.getByRole("button", { name: "更多操作 Paused source" }),
+  );
+  const refresh = screen.getByRole("menuitem", { name: "刷新 Paused source" });
+  expect(refresh.getAttribute("aria-disabled")).toBe("true");
+  expect(
+    screen
+      .getByRole("menuitem", { name: "编辑 Paused source" })
+      .getAttribute("aria-disabled"),
+  ).not.toBe("true");
+  await user.click(refresh);
+  expect(onRefresh).not.toHaveBeenCalled();
+});

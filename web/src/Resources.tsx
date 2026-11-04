@@ -249,9 +249,10 @@ export function ResourcesPage() {
                 },
                 {
                   title: "文件交付",
+                  className: "min-w-56",
                   render: (_, r) =>
                     r.acceptedVersion ? (
-                      <>
+                      <div className="max-w-80 whitespace-normal wrap-anywhere">
                         <Badge variant="secondary">随配置打包</Badge>
                         <small className="ml-2 text-xs text-muted-foreground">
                           {bytesLabel(r.sizeBytes)}
@@ -261,7 +262,7 @@ export function ResourcesPage() {
                             刷新失败，保留已接纳文件。新发布前请重试或替换。
                           </p>
                         )}
-                      </>
+                      </div>
                     ) : (
                       <Badge variant="secondary">公开远程引用</Badge>
                     ),

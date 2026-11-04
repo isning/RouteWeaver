@@ -73,11 +73,9 @@ test("first import is immediately usable and manual updates explain one warning 
     await expect(page.getByRole("dialog")).toHaveCount(0);
     expect(writes).toEqual([]);
     await page.getByRole("textbox", { name: "搜索来源" }).fill(name);
-    const row = page
-      .getByRole("row")
-      .filter({
-        has: page.getByRole("button", { name: `编辑 ${name}`, exact: true }),
-      });
+    const row = page.getByRole("row").filter({
+      has: page.getByRole("button", { name: `更多操作 ${name}`, exact: true }),
+    });
     await expect(row).toContainText("已导入");
     await expect(
       row.getByRole("button", { name: `应用更新 ${name}`, exact: true }),

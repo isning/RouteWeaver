@@ -1,3 +1,4 @@
+import { sourceRowAction } from "./source-row-actions";
 import { createHash } from "node:crypto";
 import {
   expect,
@@ -158,9 +159,7 @@ test("source replacement recovery preserves selected Output and sibling publicat
     await page.reload();
     await page.getByText("订阅素材", { exact: true }).click();
     await navigateWorkspace(page, "订阅来源");
-    await page
-      .getByRole("button", { name: `编辑 ${sourceName}`, exact: true })
-      .click();
+    await (await sourceRowAction(page, "编辑", sourceName)).click();
     await page
       .getByLabel("节点链接或配置内容", { exact: true })
       .fill(

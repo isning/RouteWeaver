@@ -1,3 +1,4 @@
+import { sourceRowAction } from "./source-row-actions";
 import { openWorkspace, navigateWorkspace } from "./ui-session";
 import { test, expect, type Page, type Route } from "@playwright/test";
 import type { Preview, Profile } from "../src/types";
@@ -103,9 +104,7 @@ async function fixture(page: Page, repeated = false) {
   await page
     .getByRole("textbox", { name: "搜索来源", exact: true })
     .fill(source.name);
-  await page
-    .getByRole("button", { name: "编辑 " + source.name, exact: true })
-    .click();
+  await (await sourceRowAction(page, "编辑", source.name)).click();
   await page
     .getByLabel("节点链接或配置内容")
     .fill("socks5://one.example:1080#London");

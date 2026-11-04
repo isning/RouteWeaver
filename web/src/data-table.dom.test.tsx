@@ -468,10 +468,83 @@ it("detects natural content overflow without a caller-provided minimum width", (
 });
 
 it("preserves the exact action element and focused owner when inline columns are rebuilt", async () => {
- const rows=[{id:"one",name:"Existing row"}];
- const viewFor=(label:string)=><DataTable rows={rows} rowKey="id" columns={[{accessor:"name",title:"Name"},{key:"actions",title:"Actions",render:()=> <button>{label}</button>}]} />;
- const view=render(viewFor("Edit"));const action=screen.getByRole("button",{name:"Edit"});action.focus();
- view.rerender(viewFor("Edit retained"));
- expect(screen.getByRole("button",{name:"Edit retained"})).toBe(action);
- expect(action.isConnected).toBe(true);expect(document.activeElement).toBe(action);
+  const rows = [{ id: "one", name: "Existing row" }];
+  const viewFor = (label: string) => (
+    <DataTable
+      rows={rows}
+      rowKey="id"
+      columns={[
+        { accessor: "name", title: "Name" },
+        {
+          key: "actions",
+          title: "Actions",
+          render: () => <button>{label}</button>,
+        },
+      ]}
+    />
+  );
+  const view = render(viewFor("Edit"));
+  const action = screen.getByRole("button", { name: "Edit" });
+  action.focus();
+  view.rerender(viewFor("Edit retained"));
+  expect(screen.getByRole("button", { name: "Edit retained" })).toBe(action);
+  expect(action.isConnected).toBe(true);
+  expect(document.activeElement).toBe(action);
+});
+
+it("keeps a table summary associated with its rows through filtering", () => {
+  const view = render(
+    <DataTable
+      rows={[{ id: "a", name: "来源 A" }]}
+      rowKey="id"
+      columns={[{ title: "来源", accessor: "name" }]}
+      summary="1 个私有来源"
+    />,
+  );
+  const table = screen.getByRole("table");
+  const summary = screen.getByText("1 个私有来源");
+  expect(table.getAttribute("aria-describedby")).toBe(summary.id);
+  expect(
+    summary.compareDocumentPosition(table) & Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+  view.rerender(
+    <DataTable
+      rows={[]}
+      rowKey="id"
+      columns={[{ title: "来源", accessor: "name" }]}
+      summary="没有匹配的来源 · 共 1 个私有来源"
+      empty="清除搜索以查看来源"
+    />,
+  );
+  expect(screen.getByText("没有匹配的来源 · 共 1 个私有来源")).toBeTruthy();
+  expect(screen.getByText("清除搜索以查看来源")).toBeTruthy();
+  expect(screen.getByRole("table")).toBe(table);
+});
+
+it("offers a keyboard scroll region only for populated overflowing tables", async () => {
+  const viewFor = (rows = [{ id: "a", name: "来源 A" }]) => (
+    <DataTable
+      rows={rows}
+      rowKey="id"
+      columns={[{ title: "来源", accessor: "name" }]}
+      minWidth={720}
+    />
+  );
+  const view = render(viewFor());
+  expect(screen.queryByRole("region", { name: "表格滚动区域" })).toBeNull();
+  resize(254);
+  const viewport = screen.getByRole("region", { name: "表格滚动区域" });
+  expect(viewport.tabIndex).toBe(0);
+  expect(
+    screen.getByRole("region", { name: "表格滚动区域", description: hint }),
+  ).toBe(viewport);
+  await userEvent.tab();
+  expect(document.activeElement).toBe(viewport);
+  resize(900);
+  expect(screen.queryByRole("region", { name: "表格滚动区域" })).toBeNull();
+  expect(document.activeElement).toBe(viewport);
+  resize(254);
+  view.rerender(viewFor([]));
+  expect(screen.queryByRole("region", { name: "表格滚动区域" })).toBeNull();
+  expect(screen.queryByText(hint)).toBeNull();
 });

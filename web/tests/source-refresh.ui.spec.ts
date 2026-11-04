@@ -1,3 +1,4 @@
+import { sourceRowAction } from "./source-row-actions";
 import { openWorkspace, navigateWorkspace } from "./ui-session";
 import { test as base, expect, type Page } from "@playwright/test";
 import { createHash } from "node:crypto";
@@ -181,7 +182,7 @@ test("reviews material source changes and preserves accepted options until an ex
     outputs.map((output) => frozenSourceOutput(page, output.id)),
   );
   await page.getByRole("textbox", { name: "搜索来源", exact: true }).fill(name);
-  await page.getByRole("button", { name: `编辑 ${name}`, exact: true }).click();
+  await (await sourceRowAction(page, "编辑", name)).click();
   await page
     .getByLabel("节点链接或配置内容")
     .fill("socks5://synthetic:after-fixture@one.example:1080#London");
@@ -205,7 +206,7 @@ test("reviews material source changes and preserves accepted options until an ex
   await page.keyboard.press("Escape");
   await expect(review).not.toBeVisible();
   const sourceRow = page.getByRole("row").filter({
-    has: page.getByRole("button", { name: `编辑 ${name}`, exact: true }),
+    has: page.getByRole("button", { name: `更多操作 ${name}`, exact: true }),
   });
   await expect(sourceRow).toHaveCount(1);
   await sourceRow
@@ -385,10 +386,10 @@ test("reviews material source changes and preserves accepted options until an ex
   expect(accepted.snapshot.endpoints[0].id).toBe(
     original.snapshot.endpoints[0].id,
   );
-  await page.getByRole("button", { name: `刷新 ${name}`, exact: true }).click();
+  await (await sourceRowAction(page, "刷新", name)).click();
   await expect(page.getByText("已是最新内容", { exact: true })).toBeVisible();
   await expect(review).not.toBeVisible();
-  await page.getByRole("button", { name: `编辑 ${name}`, exact: true }).click();
+  await (await sourceRowAction(page, "编辑", name)).click();
   await page.getByLabel("节点链接或配置内容").fill('{"proxies":[]}');
   await page.getByRole("button", { name: "保存修改", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);

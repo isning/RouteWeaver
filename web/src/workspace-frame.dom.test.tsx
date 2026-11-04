@@ -68,7 +68,8 @@ it("keeps a focused draft mounted when route width policies change", () => {
 it("gives every route a task width without capping independent context panes", () => {
   for (const route of ["subscriptions", "profiles", "outputs", "settings", "account-security"]) expect(routeContentKind(route)).toBe("frame");
   for (const route of ["fleet", "routes", "legacy-routes"]) expect(routeContentKind(route)).toBe("workspace");
-  for (const route of ["published-routes", "notifications", "inbox", "templates", "sources", "collections", "resources", "nodes", "users", "services", "activity", "servers"]) expect(routeContentKind(route)).toBe("list");
+  for (const route of ["sources", "resources", "nodes", "users", "services", "activity", "published-routes", "notifications"]) expect(routeContentKind(route)).toBe("table");
+  for (const route of ["inbox", "templates", "collections", "servers"]) expect(routeContentKind(route)).toBe("list");
 });
 
 it("uses the same workspace presentation while alias routes are loading", () => {
@@ -93,4 +94,18 @@ it("leaves nested context canvases fluid while preserving the existing draft own
   expect(field).toHaveProperty("value", "Unsaved");
   expect(container.querySelector(".workspace-canvas > .workspace-content")?.className).not.toContain("max-w-");
   expect(container.querySelector(".workspace-header .context-heading")?.className).toContain("max-w-[52rem]");
+});
+
+it("retains the task owner and focus when moving between wide tables and reading lists", () => {
+  const host = (route: string) => <RouteContent page={route}><input aria-label="List draft" defaultValue="" /></RouteContent>;
+  const { rerender } = render(host("sources"));
+  const field = screen.getByRole("textbox", { name: "List draft" });
+  fireEvent.change(field, { target: { value: "Keep this source" } });
+  field.focus();
+  for (const route of ["collections", "resources", "inbox", "sources"]) {
+    rerender(host(route));
+    expect(screen.getByRole("textbox", { name: "List draft" })).toBe(field);
+    expect(field).toHaveProperty("value", "Keep this source");
+    expect(document.activeElement).toBe(field);
+  }
 });

@@ -1230,7 +1230,7 @@ for (const width of [390, 768, 1440]) {
   }
 }
 
-for (const width of [320, 768, 1440, 1920, 3440]) {
+for (const width of [320, 390, 768, 1440, 1920, 2048, 3440]) {
   test(`ordinary route content stays centered and bounded at ${width}`, async ({ page }, info) => {
     await page.setViewportSize({ width, height: 900 });
     await page.emulateMedia({ reducedMotion: "reduce" });
@@ -1242,7 +1242,11 @@ for (const width of [320, 768, 1440, 1920, 3440]) {
       const host = page.locator(".route-content");
       const content = (await host.boundingBox())!;
       const main = (await page.locator("#main").boundingBox())!;
-      expect(content.width).toBeLessThanOrEqual(route === "fleet" ? 1280 : 1152);
+      const wideTable = ["sources", "resources", "activity", "published-routes"].includes(route);
+      const maximum = route === "fleet" ? 1280 : wideTable ? 1600 : 1152;
+      const gutter = width < 640 ? 16 : 24;
+      expect(content.width).toBeCloseTo(Math.min(maximum, main.width - gutter * 2), 0);
+      expect(content.x - main.x).toBeGreaterThanOrEqual(gutter - 1);
       expect(content.x - main.x).toBeCloseTo(main.x + main.width - content.x - content.width, 0);
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
       if (width >= 1024) expect((await page.locator("#workspace-navigation").boundingBox())!.width).toBeCloseTo(256, 0);

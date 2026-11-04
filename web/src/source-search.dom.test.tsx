@@ -217,8 +217,10 @@ it("clears a matching source query without losing source identities or focus", a
   await screen.findByRole("button", { name: /^南区 Beta\s*文本导入$/ });
   const toolbar = screen.getByRole("search", { name: "查找订阅来源" });
   const search = within(toolbar).getByRole("textbox", { name: "搜索来源" });
+  expect(within(toolbar).queryByText("2 个私有来源")).toBeNull();
+  expect(screen.getByRole("columnheader", { name: "操作" })).toBeTruthy();
   await userEvent.type(search, "Alpha");
-  expect(within(toolbar).getByText("找到 1 个，共 2 个私有来源")).toBeTruthy();
+  expect(screen.getByText("找到 1 个，共 2 个私有来源")).toBeTruthy();
   expect(screen.queryByRole("button", { name: /^南区 Beta/ })).toBeNull();
   expect(screen.getByRole("button", { name: /^北区 Alpha/ })).toBeTruthy();
   const clear = within(toolbar).getByRole("button", { name: "清除搜索输入" });
@@ -226,7 +228,7 @@ it("clears a matching source query without losing source identities or focus", a
   await userEvent.keyboard("{Enter}");
   expect(document.activeElement).toBe(search);
   expect(search).toHaveProperty("value", "");
-  expect(within(toolbar).getByText("2 个私有来源")).toBeTruthy();
+  expect(screen.getByText("2 个私有来源")).toBeTruthy();
   expect(screen.getByRole("button", { name: /^南区 Beta/ })).toBeTruthy();
   expect(screen.getByRole("button", { name: /^北区 Alpha/ })).toBeTruthy();
   expect(fetcher).toHaveBeenCalledTimes(1);

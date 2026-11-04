@@ -1,3 +1,4 @@
+import { sourceRowAction } from "./source-row-actions";
 import { test, expect, type Page, type Locator } from "@playwright/test";
 import { openWorkspace } from "./ui-session";
 import { surfaceMotionState } from "./ui-surface-stability";
@@ -873,9 +874,7 @@ async function missingReferenceFixture(page: Page) {
   await page
     .getByRole("textbox", { name: "搜索来源", exact: true })
     .fill(source.name);
-  await page
-    .getByRole("button", { name: "编辑 " + source.name, exact: true })
-    .click();
+  await (await sourceRowAction(page, "编辑", source.name)).click();
   await page
     .getByLabel("节点链接或配置内容")
     .fill("socks5://one.example:1080#London");

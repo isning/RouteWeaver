@@ -1,3 +1,4 @@
+import { sourceRowAction } from "./source-row-actions";
 import { expect, test } from "@playwright/test";
 import { openWorkspace } from "./ui-session";
 
@@ -72,9 +73,7 @@ test("saved parse failures give one Chinese recovery state before and after an a
     expect(stored.content).toBe("invalid synthetic first input");
     expect(stored.revision).toBe(firstBody.source.revision);
     await page.getByRole("textbox", { name: "搜索来源" }).fill(name);
-    await page
-      .getByRole("button", { name: `编辑 ${name}`, exact: true })
-      .click();
+    await (await sourceRowAction(page, "编辑", name)).click();
     editor = page.getByRole("dialog", { name: "编辑来源", exact: true });
     await expect(editor.getByLabel("节点链接或配置内容")).toHaveValue(
       "invalid synthetic first input",
@@ -94,9 +93,7 @@ test("saved parse failures give one Chinese recovery state before and after an a
     expect(accepted.snapshot.endpoints).toHaveLength(1);
     await expect(editor).toHaveCount(0);
     await expect(page.getByText("来源已更新", { exact: true })).toHaveCount(0);
-    await page
-      .getByRole("button", { name: `编辑 ${name}`, exact: true })
-      .click();
+    await (await sourceRowAction(page, "编辑", name)).click();
     editor = page.getByRole("dialog", { name: "编辑来源", exact: true });
     await expect(editor.getByLabel("节点链接或配置内容")).toHaveValue(
       "socks5://synthetic.example:1080#Earlier",

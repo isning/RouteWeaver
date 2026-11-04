@@ -84,8 +84,7 @@ for (const width of [1280, 390]) {
         name: new RegExp(`^${nextName}\\s*文本导入$`),
       });
       const previousAction = page.getByRole("button", {
-        name: `编辑 ${firstName}`,
-        exact: true,
+        name: new RegExp(`^${firstName}\\s*文本导入$`),
       });
       const menu = page.getByRole("menu");
       const sourceMenu = page.getByRole("menu", {
@@ -142,6 +141,14 @@ for (const width of [1280, 390]) {
           record("keydown-bubble", event),
         );
       });
+      const firstItem = page.getByRole("menuitem", {
+        name: `刷新 ${firstName}`,
+        exact: true,
+      });
+      const editItem = page.getByRole("menuitem", {
+        name: `编辑 ${firstName}`,
+        exact: true,
+      });
       const item = page.getByRole("menuitem", {
         name: "删除来源",
         exact: true,
@@ -150,8 +157,8 @@ for (const width of [1280, 390]) {
         await page.keyboard.press(key);
         await settledMenu(menu);
         await expect(
-          item,
-          "Opening by keyboard enters the actionable menu",
+          firstItem,
+          "Opening by keyboard enters the first source action",
         ).toBeFocused();
         await expect(trigger).toHaveAttribute("aria-haspopup", "menu");
         await expect(trigger).toHaveAttribute("aria-expanded", "true");
@@ -172,9 +179,9 @@ for (const width of [1280, 390]) {
             path: info.outputPath(`source-menu-${width}-focused.png`),
           });
         await page.keyboard.press("ArrowDown");
-        await expect(item).toBeFocused();
+        await expect(editItem).toBeFocused();
         await page.keyboard.press("ArrowUp");
-        await expect(item).toBeFocused();
+        await expect(firstItem).toBeFocused();
         await page.keyboard.press("Escape");
         await expect(menu).not.toBeVisible();
         await expect(
@@ -222,7 +229,7 @@ for (const width of [1280, 390]) {
       ).toHaveCount(0);
       await expect(
         previousAction,
-        "Shift+Tab returns to the preceding row action",
+        "Shift+Tab returns to the source identity",
       ).toBeFocused();
 
       await trigger.click();
@@ -244,6 +251,8 @@ for (const width of [1280, 390]) {
 
       await tabTo(page, trigger);
       await open("Enter");
+      await page.keyboard.press("End");
+      await expect(item).toBeFocused();
       await page.keyboard.press("Enter");
       const confirm = page.getByRole("alertdialog", {
         name: `删除「${firstName}」？`,
@@ -284,6 +293,22 @@ for (const width of [1280, 390]) {
         "Closed source menu is removed, not merely hidden",
       ).toHaveCount(0);
       expect(deletionRequests).toBe(0);
+      await open("Enter");
+      await page.keyboard.press("ArrowDown");
+      await expect(editItem).toBeFocused();
+      await page.keyboard.press("Enter");
+      const editor = page.getByRole("dialog", {
+        name: "编辑来源",
+        exact: true,
+      });
+      await expect(editor).toBeVisible();
+      await expect(menu).not.toBeVisible();
+      await page.keyboard.press("Escape");
+      await expect(editor).not.toBeVisible();
+      await expect(
+        trigger,
+        "Closing source editing returns to its row menu opener",
+      ).toBeFocused();
       const sources = await page.request.get("/api/me/sources");
       expect(sources.ok()).toBe(true);
       const retained = (await sources.json()).map(

@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { UIProviders } from "./ui-patterns/providers";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SourcesPage } from "./Sources";
+import { sourceRowAction } from "./test-support/source-row-actions";
 import { SourceUpdateReview } from "./SourceUpdateReview";
 import type { Source } from "./types";
 import { hasUnsavedChanges } from "./navigation";
@@ -133,9 +134,7 @@ it("offers optional change details and applies the exact manual update without a
   vi.stubGlobal("fetch", fetcher);
   mount();
   const user = userEvent.setup();
-  await user.click(
-    await screen.findByRole("button", { name: "刷新 My airport" }),
-  );
+  await user.click(await sourceRowAction("刷新", "My airport"));
   expect(screen.queryByRole("dialog")).toBeNull();
   await user.click(await screen.findByRole("button", { name: "查看变化" }));
   const dialog = await screen.findByRole("dialog");
@@ -191,9 +190,7 @@ it("does not interrupt an unchanged refresh with a review dialog", async () => {
     ),
   );
   mount();
-  await userEvent
-    .setup()
-    .click(await screen.findByRole("button", { name: "刷新 My airport" }));
+  await userEvent.setup().click(await sourceRowAction("刷新", "My airport"));
   await screen.findByText("已是最新内容");
   expect(screen.queryByRole("dialog")).toBeNull();
 });
@@ -229,9 +226,7 @@ it("retains failed edited text and uses the saved revision when retrying", async
   vi.stubGlobal("fetch", fetcher);
   mount();
   const user = userEvent.setup();
-  await user.click(
-    await screen.findByRole("button", { name: "编辑 My airport" }),
-  );
+  await user.click(await sourceRowAction("编辑", "My airport"));
   const input = await screen.findByRole("textbox", {
     name: "节点链接或配置内容",
   });
@@ -365,9 +360,7 @@ it("distinguishes removed and added same-name connections with safe address summ
     }),
   );
   mount();
-  await userEvent.click(
-    await screen.findByRole("button", { name: "刷新 My airport" }),
-  );
+  await userEvent.click(await sourceRowAction("刷新", "My airport"));
   await userEvent.click(
     await screen.findByRole("button", { name: "查看变化" }),
   );

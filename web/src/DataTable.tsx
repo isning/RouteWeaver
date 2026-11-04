@@ -1,6 +1,14 @@
-import { Columns3, ChevronDown, ChevronRight, ArrowUpDown } from "lucide-react";
+import {
+  Columns3,
+  ChevronDown,
+  ChevronRight,
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+} from "lucide-react";
 import {
   useLayoutEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -53,13 +61,23 @@ const features = tableFeatures({
 export function TableRowActions({
   name,
   children,
+  className,
 }: {
   name: string;
   children: ReactNode;
+  className?: string;
 }) {
   return (
     <div
-      className="table-row-actions flex w-48 max-w-[calc(var(--table-viewport-width,100vw)-2rem)] flex-col items-end gap-1"
+      // Size actions to their content, bounded by the viewport (§3.3 / §3.6).
+      // Wrapping must not depend on measured overflow: changing width in
+      // response to overflow can make ResizeObserver alternate both layouts.
+      // Only the additional target label depends on overflow; it can grow the
+      // content, but cannot make the action group narrower.
+      className={cn(
+        "table-row-actions ml-auto flex w-max max-w-[calc(var(--table-viewport-width,100vw)-2rem)] flex-col items-end gap-1.5",
+        className,
+      )}
       role="group"
       aria-label={`${name} 的操作`}
       onFocusCapture={(event) => {
@@ -80,7 +98,7 @@ export function TableRowActions({
       <span className="table-row-action-target hidden w-full whitespace-normal text-right text-xs text-muted-foreground [overflow-wrap:anywhere] group-data-[overflow=true]/table:block">
         {name}
       </span>
-      <div className="flex flex-wrap items-center justify-end gap-1">
+      <div className="flex max-w-full flex-wrap items-center justify-end gap-1">
         {children}
       </div>
     </div>
@@ -106,6 +124,7 @@ export type DataTableProps<T extends object> = {
   columns?: Column<T>[];
   rowKey?: keyof T | ((record: T) => string);
   empty?: ReactNode;
+  summary?: ReactNode;
   minWidth?: number | "max-content";
   maxHeight?: number;
   sticky?: boolean;
@@ -137,6 +156,7 @@ export function DataTable<T extends object>({
   columns = EMPTY_ROWS,
   rowKey,
   empty = "暂无数据",
+  summary,
   minWidth,
   maxHeight,
   sticky,
@@ -153,6 +173,8 @@ export function DataTable<T extends object>({
   ref,
 }: DataTableProps<T>) {
   const container = useRef<HTMLDivElement>(null);
+  const summaryId = useId();
+  const scrollHintId = useId();
   const [overflows, setOverflows] = useState(false);
   const [page, setPage] = useState(1);
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -293,10 +315,24 @@ export function DataTable<T extends object>({
         "--table-viewport-width",
         `${viewport.clientWidth}px`,
       );
-      setOverflows(
+      const overflows =
         viewport.clientWidth > 0 &&
-          viewport.scrollWidth > viewport.clientWidth + 1,
-      );
+        viewport.scrollWidth > viewport.clientWidth + 1;
+      setOverflows(overflows);
+      // The native scroll viewport, rather than a second wrapper, must be
+      // reachable by keyboard. Leave ordinary and empty tables out of the tab
+      // order. Attribute changes preserve the viewport and any current focus.
+      if (overflows && rows.length) {
+        viewport.tabIndex = 0;
+        viewport.setAttribute("role", "region");
+        viewport.setAttribute("aria-label", "表格滚动区域");
+        viewport.setAttribute("aria-describedby", scrollHintId);
+      } else {
+        viewport.removeAttribute("tabindex");
+        viewport.removeAttribute("role");
+        viewport.removeAttribute("aria-label");
+        viewport.removeAttribute("aria-describedby");
+      }
     };
     measure();
     if (typeof ResizeObserver === "undefined") {
@@ -360,7 +396,10 @@ export function DataTable<T extends object>({
       aria-busy={loading || undefined}
     >
       {!!rows.length && overflows && (
-        <p className="flex items-center gap-2 text-xs text-muted-foreground">
+        <p
+          id={scrollHintId}
+          className="flex items-center gap-2 text-xs text-muted-foreground"
+        >
           <Columns3 className="size-3.5" aria-hidden="true" />
           <span>向左右滚动查看完整表格</span>
         </p>
@@ -371,18 +410,29 @@ export function DataTable<T extends object>({
         </p>
       )}
       <div
-        className="overflow-hidden rounded-lg border [&>[data-slot=table-container]]:max-h-[var(--table-max-height)]"
+        className="overflow-hidden rounded-lg border [&>[data-slot=table-container]]:max-h-[var(--table-max-height)] [&>[data-slot=table-container]]:focus-visible:outline-2 [&>[data-slot=table-container]]:focus-visible:-outline-offset-2 [&>[data-slot=table-container]]:focus-visible:outline-ring"
         style={
           maxHeight
             ? ({ "--table-max-height": `${maxHeight}px` } as CSSProperties)
             : undefined
         }
       >
+        {summary != null && (
+          <div
+            id={summaryId}
+            className="border-b px-4 py-2.5 text-xs text-muted-foreground"
+          >
+            {summary}
+          </div>
+        )}
         <Table
           style={minWidth ? { minWidth } : undefined}
+          aria-describedby={summary != null ? summaryId : undefined}
           className={cn(
-            "[&_th]:px-4 [&_th]:text-sm [&_th]:font-medium [&_th]:text-muted-foreground [&_td]:px-4",
-            compact ? "text-xs" : "[&_td]:py-3",
+            // Headers are quiet labels; data and actions carry the hierarchy.
+            // Padding sets a steady rhythm without fixing row height (§2.6 / §3.1.2).
+            "[&_th]:px-4 [&_th]:text-xs [&_th]:font-medium [&_th]:text-muted-foreground [&_td]:px-4",
+            compact ? "text-xs" : "[&_td]:py-2.5",
           )}
         >
           <TableHeader
@@ -429,6 +479,7 @@ export function DataTable<T extends object>({
                 {group.headers.map((header) => (
                   <TableHead
                     key={header.id}
+                    scope="col"
                     style={columnStyles(header.id)}
                     className={columnClass(header.id)}
                     aria-sort={
@@ -446,6 +497,7 @@ export function DataTable<T extends object>({
                         type="button"
                         variant="ghost"
                         size="sm"
+                        className="-mx-2 h-8 px-2 text-xs font-medium text-muted-foreground hover:text-foreground"
                         onClick={header.column.getToggleSortingHandler()}
                       >
                         {
@@ -454,7 +506,22 @@ export function DataTable<T extends object>({
                               columnId(column, index) === header.column.id,
                           )?.title
                         }
-                        <ArrowUpDown className="size-3.5" aria-hidden="true" />
+                        {header.column.getIsSorted() === "asc" ? (
+                          <ArrowUp
+                            className="size-3.5 text-foreground"
+                            aria-hidden="true"
+                          />
+                        ) : header.column.getIsSorted() === "desc" ? (
+                          <ArrowDown
+                            className="size-3.5 text-foreground"
+                            aria-hidden="true"
+                          />
+                        ) : (
+                          <ArrowUpDown
+                            className="size-3.5"
+                            aria-hidden="true"
+                          />
+                        )}
                       </Button>
                     ) : (
                       columns.find(
@@ -472,6 +539,7 @@ export function DataTable<T extends object>({
               table.getRowModel().rows.map((row) => (
                 <Fragment key={row.id}>
                   <TableRow
+                    className="focus-within:bg-muted/50"
                     data-row-key={row.id}
                     data-state={row.getIsSelected() ? "selected" : undefined}
                   >

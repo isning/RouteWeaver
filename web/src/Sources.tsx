@@ -11,11 +11,9 @@ import {
   ArrowUp,
   ArrowDown,
   Trash2,
-  Pencil,
   FileText,
   Link,
   Plus,
-  RotateCw,
   Search,
 } from "lucide-react";
 import {
@@ -303,21 +301,25 @@ export function SourcesPage({
       />
       <ErrorNotice error={actionError} />
       <QueryState
-        loading={query.isPending} paused={query.isPaused} loadingLayout="table"
+        loading={query.isPending}
+        paused={query.isPaused}
+        loadingLayout="table"
         error={query.error}
         retry={() => query.refetch()}
       >
         <Section variant="plain">
-          <ResourceToolbar label="查找订阅来源" search={
-            <SearchField ref={searchInput} value={search} onValueChange={setSearch}
-              placeholder="搜索来源" aria-label="搜索来源" />
-          } summary={
-            <span aria-live="polite" aria-atomic="true">
-              {search
-                ? `找到 ${filtered.length} 个，共 ${query.data?.length || 0} 个私有来源`
-                : `${query.data?.length || 0} 个私有来源`}
-            </span>
-          } />
+          <ResourceToolbar
+            label="查找订阅来源"
+            search={
+              <SearchField
+                ref={searchInput}
+                value={search}
+                onValueChange={setSearch}
+                placeholder="搜索来源"
+                aria-label="搜索来源"
+              />
+            }
+          />
           {!query.data?.length ? (
             <EmptyState
               title="暂无订阅来源"
@@ -336,10 +338,18 @@ export function SourcesPage({
             <DataTable<Source>
               rowKey="id"
               rows={filtered}
+              summary={
+                <span aria-live="polite" aria-atomic="true">
+                  {search
+                    ? `找到 ${filtered.length} 个，共 ${query.data?.length || 0} 个私有来源`
+                    : `${query.data?.length || 0} 个私有来源`}
+                </span>
+              }
               columns={[
                 {
                   title: "来源",
                   accessor: "name",
+                  className: "min-w-52 whitespace-normal",
                   render: (_, source) => (
                     <button
                       className="table-name inline-flex min-w-0 items-center gap-2 rounded-sm text-left text-sm font-medium text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -366,6 +376,9 @@ export function SourcesPage({
                 },
                 {
                   title: "节点",
+                  width: 80,
+                  align: "right",
+                  className: "tabular-nums",
                   render: (_, s) =>
                     s.snapshot?.endpoints?.length ??
                     s.endpoints?.length ??
@@ -374,8 +387,23 @@ export function SourcesPage({
                 },
                 {
                   title: "状态",
+                  width: 124,
                   render: (_, s) => (
-                    <Badge variant="secondary">
+                    <Badge
+                      variant={
+                        s.enabled && sourceHasFailure(s)
+                          ? "destructive"
+                          : "secondary"
+                      }
+                      className={
+                        s.enabled &&
+                        !sourceStatusUnknown(s) &&
+                        !sourceHasFailure(s) &&
+                        s.candidate
+                          ? "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200"
+                          : undefined
+                      }
+                    >
                       {!s.enabled
                         ? "已暂停"
                         : sourceStatusUnknown(s)
@@ -390,15 +418,17 @@ export function SourcesPage({
                 },
                 {
                   title: "最近更新",
+                  width: 184,
                   render: (_, s) => (
-                    <span className="muted text-sm text-muted-foreground">
+                    <span className="muted whitespace-nowrap text-sm tabular-nums text-muted-foreground">
                       {dateLabel(s.updatedAt)}
                     </span>
                   ),
                 },
                 {
-                  title: "",
-                  width: 180,
+                  title: "操作",
+                  width: 280,
+                  align: "right",
                   render: (_, s) => (
                     <TableRowActions name={s.name}>
                       {s.candidate && (
@@ -435,13 +465,23 @@ export function SourcesPage({
                           上次应用结果
                         </ActionButton>
                       )}
-                      <ActionButton
-                        disabled={
+                      <SourceActionMenu
+                        sourceName={s.name}
+                        loading={
+                          application.pendingId === s.id ||
+                          deleteReview === s.id ||
+                          (refresh.isPending && refresh.variables === s.id) ||
+                          (remove.isPending && remove.variables === s.id)
+                        }
+                        disabled={application.pending || otherWritePending}
+                        deleteDisabled={
+                          application.pending || otherWritePending
+                        }
+                        onDelete={() => reviewDelete(s)}
+                        refreshDisabled={
                           !s.enabled || application.pending || otherWritePending
                         }
-                        leadingIcon={<RotateCw aria-hidden="true" />}
-                        aria-label={`刷新 ${s.name}`}
-                        onClick={() => {
+                        onRefresh={() => {
                           if (
                             application.isRunning() ||
                             refreshStarted.current ||
@@ -452,38 +492,15 @@ export function SourcesPage({
                           refreshStarted.current = true;
                           refresh.mutate(s.id);
                         }}
-                        variant="ghost"
-                        pending={
-                          !!(refresh.isPending && refresh.variables === s.id)
-                        }
-                      />
-                      <ActionButton
-                        leadingIcon={<Pencil aria-hidden="true" />}
-                        aria-label={`编辑 ${s.name}`}
-                        disabled={application.pending || otherWritePending}
-                        onClick={() => edit(s)}
-                        variant="ghost"
-                      />
-                      <SourceActionMenu
-                        sourceName={s.name}
-                        loading={
-                          application.pending ||
-                          deleteReview === s.id ||
-                          (remove.isPending && remove.variables === s.id)
-                        }
-                        deleteDisabled={
-                          application.pending ||
-                          !!deleteReview ||
-                          remove.isPending
-                        }
-                        onDelete={() => reviewDelete(s)}
+                        editDisabled={application.pending || otherWritePending}
+                        onEdit={() => edit(s)}
                       />
                     </TableRowActions>
                   ),
                 },
               ]}
               pageSize={10}
-              minWidth={{ x: 680 }.x}
+              minWidth={880}
               empty={
                 {
                   emptyText: (

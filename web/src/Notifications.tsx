@@ -984,7 +984,16 @@ function Outbox() {
           rowKey={(r) => `${r.eventId}-${r.channel}`}
           rows={query.data || []}
           columns={[
-            { title: "通知", accessor: "title" },
+            {
+              title: "通知",
+              accessor: "title",
+              className: "min-w-48",
+              render: (title) => (
+                <span className="block max-w-72 whitespace-normal wrap-anywhere">
+                  {title}
+                </span>
+              ),
+            },
             {
               title: "渠道",
               render: (_, r) =>
@@ -1004,7 +1013,16 @@ function Outbox() {
             },
             { title: "尝试次数", accessor: "attempts" },
             { title: "创建时间", render: (_, r) => dateLabel(r.createdAt) },
-            { title: "原因", accessor: "lastError" },
+            {
+              title: "原因",
+              accessor: "lastError",
+              className: "min-w-56",
+              render: (reason) => (
+                <p className="max-w-80 whitespace-normal wrap-anywhere">
+                  {reason}
+                </p>
+              ),
+            },
           ]}
           empty="暂无发送记录"
           minWidth={760}

@@ -1,35 +1,53 @@
 import { useRef, useState } from "react";
-import { Ellipsis, LoaderCircle, Trash2 } from "lucide-react";
+import { Ellipsis, LoaderCircle, Pencil, RotateCw, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
 interface SourceActionMenuProps {
   sourceName: string;
   loading: boolean;
+  disabled?: boolean;
   deleteDisabled: boolean;
   onDelete: () => void;
+  onRefresh?: () => void;
+  refreshDisabled?: boolean;
+  onEdit?: () => void;
+  editDisabled?: boolean;
 }
 
 export function SourceActionMenu({
   sourceName,
   loading,
+  disabled = false,
   deleteDisabled,
   onDelete,
+  onRefresh,
+  refreshDisabled = false,
+  onEdit,
+  editDisabled = false,
 }: SourceActionMenuProps) {
   const [open, setOpen] = useState(false);
   const trigger = useRef<HTMLButtonElement>(null);
   const releaseFocus = useRef(false);
+  const select = (action: () => void) => {
+    setOpen(false);
+    // Dialogs and async review capture the durable row opener, never a menu item.
+    releaseFocus.current = true;
+    trigger.current?.focus();
+    action();
+  };
   return (
     <DropdownMenu
       modal={false}
       open={open}
       onOpenChange={(next) => {
-        if (!next || !loading) setOpen(next);
+        if (!next || (!loading && !disabled)) setOpen(next);
       }}
     >
       <DropdownMenuTrigger asChild>
@@ -37,16 +55,20 @@ export function SourceActionMenu({
           ref={trigger}
           variant="ghost"
           size="icon"
+          className="size-11"
           aria-label={`更多操作 ${sourceName}`}
           // Keep the durable opener focused while deletion references are read;
           // native disabled would blur it before the confirmation captures focus.
-          aria-disabled={loading || undefined}
+          aria-disabled={loading || disabled || undefined}
           aria-busy={loading || undefined}
           onPointerDown={(event) => {
-            if (loading) event.preventDefault();
+            if (loading || disabled) event.preventDefault();
           }}
           onKeyDown={(event) => {
-            if (loading && ["Enter", " ", "ArrowDown"].includes(event.key))
+            if (
+              (loading || disabled) &&
+              ["Enter", " ", "ArrowDown"].includes(event.key)
+            )
               event.preventDefault();
           }}
         >
@@ -62,6 +84,7 @@ export function SourceActionMenu({
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
+        className="min-w-44 [&_[role=menuitem]]:min-h-10"
         onKeyDownCapture={(event) => {
           if (event.key !== "Tab") return;
           // Continue the browser's native tab order from this row's opener.
@@ -77,16 +100,31 @@ export function SourceActionMenu({
           event.preventDefault();
         }}
       >
+        {onRefresh && (
+          <DropdownMenuItem
+            aria-label={`刷新 ${sourceName}`}
+            disabled={refreshDisabled}
+            onSelect={() => select(onRefresh)}
+          >
+            <RotateCw aria-hidden="true" />
+            刷新来源
+          </DropdownMenuItem>
+        )}
+        {onEdit && (
+          <DropdownMenuItem
+            aria-label={`编辑 ${sourceName}`}
+            disabled={editDisabled}
+            onSelect={() => select(onEdit)}
+          >
+            <Pencil aria-hidden="true" />
+            编辑来源
+          </DropdownMenuItem>
+        )}
+        {(onRefresh || onEdit) && <DropdownMenuSeparator />}
         <DropdownMenuItem
           variant="destructive"
           disabled={deleteDisabled}
-          onSelect={() => {
-            setOpen(false);
-            // The review owns the durable opener rather than an unmounted item.
-            releaseFocus.current = true;
-            trigger.current?.focus();
-            onDelete();
-          }}
+          onSelect={() => select(onDelete)}
         >
           <Trash2 aria-hidden="true" />
           删除来源

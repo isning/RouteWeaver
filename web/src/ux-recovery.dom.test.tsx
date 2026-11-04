@@ -13,6 +13,7 @@ import { UIProviders } from "./ui-patterns/providers";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { SourcesPage } from "./Sources";
+import { sourceRowAction } from "./test-support/source-row-actions";
 import { SubscriptionsPage } from "./Subscriptions";
 
 const json = (data: unknown, status = 200) =>
@@ -127,9 +128,7 @@ it("keeps changed source values and identity when dismissal is canceled, and blo
   vi.stubGlobal("fetch", fetcher);
   const editingChanged = vi.fn();
   mount(<SourcesPage onEditingChange={editingChanged} />);
-  await userEvent.click(
-    await screen.findByRole("button", { name: "编辑 My source" }),
-  );
+  await userEvent.click(await sourceRowAction("编辑", "My source"));
   const dialog = await screen.findByRole("dialog", { name: "编辑来源" });
   fireEvent.change(within(dialog).getByLabelText("来源名称"), {
     target: { value: "Renamed source" },
@@ -268,7 +267,9 @@ it("does not classify profiles as unpublished while outputs are loading or faile
   );
   mount(<SubscriptionsPage navigate={vi.fn()} />);
   await waitFor(() => expect(finishOutputs).toBeTruthy());
-  expect(screen.getByRole("status", { name: "正在加载配置与客户端订阅" })).toBeTruthy();
+  expect(
+    screen.getByRole("status", { name: "正在加载配置与客户端订阅" }),
+  ).toBeTruthy();
   expect(
     screen.getByRole("region", { name: "分流配置与客户端订阅" }),
   ).toBeTruthy();

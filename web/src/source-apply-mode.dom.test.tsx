@@ -13,6 +13,7 @@ import userEvent from "@testing-library/user-event";
 import { UIProviders } from "./ui-patterns/providers";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SourcesPage } from "./Sources";
+import { sourceRowAction } from "./test-support/source-row-actions";
 import type { Source } from "./types";
 import { hasUnsavedChanges } from "./navigation";
 
@@ -113,7 +114,7 @@ afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
-it("keeps manual refresh inline and applies the exact pending version without a review or completion step", async () => {
+it("keeps manual refresh in the row menu and applies the exact pending version without a review or completion step", async () => {
   const user = userEvent.setup();
   let current: Source = { ...source, applyMode: "manual" };
   const writes: { path: string; body: unknown }[] = [];
@@ -139,9 +140,7 @@ it("keeps manual refresh inline and applies the exact pending version without a 
     }),
   );
   mount();
-  await user.click(
-    await screen.findByRole("button", { name: "刷新 My airport" }),
-  );
+  await user.click(await sourceRowAction("刷新", "My airport"));
   const apply = await screen.findByRole("button", {
     name: "应用更新 My airport",
   });
@@ -193,19 +192,17 @@ it("retains pending application and read-only recovery after its row is filtered
   expect(
     screen.getByRole("button", { name: "查看变化" }).hasAttribute("disabled"),
   ).toBe(true);
-  expect(
-    screen
-      .getByRole("button", { name: "刷新 My airport" })
-      .hasAttribute("disabled"),
-  ).toBe(true);
-  expect(
-    screen
-      .getByRole("button", { name: "编辑 My airport" })
-      .hasAttribute("disabled"),
-  ).toBe(true);
-  const otherEditor = screen.getByRole("button", { name: "编辑 Other source" });
-  expect(otherEditor.hasAttribute("disabled")).toBe(true);
-  await userEvent.click(otherEditor);
+  const sourceMenu = screen.getByRole("button", {
+    name: "更多操作 My airport",
+  });
+  expect(sourceMenu.getAttribute("aria-disabled")).toBe("true");
+  await userEvent.click(sourceMenu);
+  const otherMenu = screen.getByRole("button", {
+    name: "更多操作 Other source",
+  });
+  expect(otherMenu.getAttribute("aria-disabled")).toBe("true");
+  await userEvent.click(otherMenu);
+  expect(screen.queryByRole("menu")).toBeNull();
   await userEvent.click(screen.getByRole("button", { name: "查看变化" }));
   expect(screen.queryByRole("dialog")).toBeNull();
   expect(writes).toEqual(["/api/me/sources/airport/apply"]);
@@ -282,9 +279,7 @@ it("applies an automatic refresh in one request without opening a review or publ
     }),
   );
   mount();
-  await userEvent.click(
-    await screen.findByRole("button", { name: "刷新 My airport" }),
-  );
+  await userEvent.click(await sourceRowAction("刷新", "My airport"));
   await waitFor(() =>
     expect(writes).toEqual(["/api/me/sources/airport/refresh"]),
   );
@@ -348,9 +343,7 @@ it("does not apply an older candidate while a refresh is still running", async (
     }),
   );
   mount();
-  await userEvent.click(
-    await screen.findByRole("button", { name: "刷新 My airport" }),
-  );
+  await userEvent.click(await sourceRowAction("刷新", "My airport"));
   await waitFor(() => expect(complete).toBeTypeOf("function"));
   const apply = screen.getByRole("button", { name: "应用更新 My airport" });
   expect(apply.hasAttribute("disabled")).toBe(true);

@@ -23,6 +23,7 @@ import Workspace from "./App";
 import { StepsEditor } from "./Pipeline";
 import type { PipelineStep } from "./types";
 import { SourcesPage } from "./Sources";
+import { sourceRowAction } from "./test-support/source-row-actions";
 import { ProfilesPage } from "./Profiles";
 import { BackupSettings } from "./Backup";
 import { serviceEditFixture } from "./test-support/service-edit-fixture";
@@ -146,9 +147,7 @@ describe("real component user tasks (DOM, not browser rendering)", () => {
     );
     mount(<SourcesPage />);
     const user = userEvent.setup();
-    await user.click(
-      await screen.findByRole("button", { name: "编辑 Existing source" }),
-    );
+    await user.click(await sourceRowAction("编辑", "Existing source"));
     expect(calls).toContain("/api/me/sources/src-edit/reveal");
     expect(calls).toContain("/api/me/sources/src-edit");
     expect(
@@ -275,7 +274,9 @@ it("protects unsaved profile changes when navigating by keyboard", async () => {
     await waitFor(() => expect(document.activeElement).toBe(keep));
     await user.keyboard("{Escape}");
     await waitFor(() => expect(document.activeElement).toBe(target));
-    expect((screen.getByLabelText("配置名称") as HTMLInputElement).value).toBe("Keep this draft");
+    expect((screen.getByLabelText("配置名称") as HTMLInputElement).value).toBe(
+      "Keep this draft",
+    );
     expect(location.hash).toBe("#profiles");
   }
 });
@@ -1085,9 +1086,7 @@ it("keeps native text and its original binding when the profile client changes",
     target: { value: content },
   });
   await user.click(screen.getByRole("tab", { name: "检查与预览" }));
-  await user.click(
-    screen.getByRole("combobox", { name: "预览客户端" }),
-  );
+  await user.click(screen.getByRole("combobox", { name: "预览客户端" }));
   await user.click(
     await screen.findByText("sing-box", {
       selector: "[cmdk-item] span",
