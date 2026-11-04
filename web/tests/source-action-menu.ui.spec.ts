@@ -142,11 +142,11 @@ for (const width of [1280, 390]) {
         );
       });
       const firstItem = page.getByRole("menuitem", {
-        name: `刷新 ${firstName}`,
+        name: `刷新来源 ${firstName}`,
         exact: true,
       });
       const editItem = page.getByRole("menuitem", {
-        name: `编辑 ${firstName}`,
+        name: `编辑来源 ${firstName}`,
         exact: true,
       });
       const item = page.getByRole("menuitem", {

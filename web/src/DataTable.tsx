@@ -72,8 +72,9 @@ export function TableRowActions({
       // Size actions to their content, bounded by the viewport (§3.3 / §3.6).
       // Wrapping must not depend on measured overflow: changing width in
       // response to overflow can make ResizeObserver alternate both layouts.
-      // Only the additional target label depends on overflow; it can grow the
-      // content, but cannot make the action group narrower.
+      // The repeated target uses inline-size containment so revealing a long
+      // name cannot widen the table and keep overflow stuck after a resize.
+      // Its block size remains natural, so the full name can wrap without clipping.
       className={cn(
         "table-row-actions ml-auto flex w-max max-w-[calc(var(--table-viewport-width,100vw)-2rem)] flex-col items-end gap-1.5",
         className,
@@ -95,7 +96,7 @@ export function TableRowActions({
           context.scrollIntoView({ block: "nearest", inline: "nearest" });
       }}
     >
-      <span className="table-row-action-target hidden w-full whitespace-normal text-right text-xs text-muted-foreground [overflow-wrap:anywhere] group-data-[overflow=true]/table:block">
+      <span className="table-row-action-target hidden w-full whitespace-normal text-right text-xs text-muted-foreground [contain:inline-size] [overflow-wrap:anywhere] group-data-[overflow=true]/table:block">
         {name}
       </span>
       <div className="flex max-w-full flex-wrap items-center justify-end gap-1">

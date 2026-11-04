@@ -195,14 +195,25 @@ it("keeps refresh and edit in the same source menu without invoking deletion", a
   const user = userEvent.setup();
   const trigger = screen.getByRole("button", { name: "更多操作 Work source" });
   await user.click(trigger);
-  await user.click(screen.getByRole("menuitem", { name: "刷新 Work source" }));
+  const refresh = screen.getByRole("menuitem", {
+    name: "刷新来源 Work source",
+  });
+  expect(refresh.textContent?.trim()).toBe("刷新来源");
+  expect(
+    screen
+      .getByRole("menuitem", { name: "编辑来源 Work source" })
+      .textContent?.trim(),
+  ).toBe("编辑来源");
+  await user.click(refresh);
   await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
   expect(onRefresh).toHaveBeenCalledOnce();
   expect(onEdit).not.toHaveBeenCalled();
   expect(onDelete).not.toHaveBeenCalled();
   expect(document.activeElement).toBe(trigger);
   await user.click(trigger);
-  await user.click(screen.getByRole("menuitem", { name: "编辑 Work source" }));
+  await user.click(
+    screen.getByRole("menuitem", { name: "编辑来源 Work source" }),
+  );
   await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
   expect(onEdit).toHaveBeenCalledOnce();
   expect(onDelete).not.toHaveBeenCalled();
@@ -228,11 +239,13 @@ it("keeps a paused source editable without allowing refresh", async () => {
   await user.click(
     screen.getByRole("button", { name: "更多操作 Paused source" }),
   );
-  const refresh = screen.getByRole("menuitem", { name: "刷新 Paused source" });
+  const refresh = screen.getByRole("menuitem", {
+    name: "刷新来源 Paused source",
+  });
   expect(refresh.getAttribute("aria-disabled")).toBe("true");
   expect(
     screen
-      .getByRole("menuitem", { name: "编辑 Paused source" })
+      .getByRole("menuitem", { name: "编辑来源 Paused source" })
       .getAttribute("aria-disabled"),
   ).not.toBe("true");
   await user.click(refresh);

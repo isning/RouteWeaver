@@ -179,10 +179,10 @@ test("narrow source rows keep long target names and all actions reachable by key
   const menuTrigger = buttons.last();
   await page.keyboard.press("Enter");
   await expect(
-    page.getByRole("menuitem", { name: `刷新 ${names[1]}`, exact: true }),
+    page.getByRole("menuitem", { name: `刷新来源 ${names[1]}`, exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("menuitem", { name: `编辑 ${names[1]}`, exact: true }),
+    page.getByRole("menuitem", { name: `编辑来源 ${names[1]}`, exact: true }),
   ).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(page.getByRole("menu")).toHaveCount(0);
@@ -197,5 +197,145 @@ test("narrow source rows keep long target names and all actions reachable by key
     body: await page.screenshot({ animations: "disabled" }),
     contentType: "image/png",
   });
+  expect(unexpected).toEqual([]);
+});
+
+test("source target identity does not keep overflow stuck after repeated narrow-to-wide resizing", async ({
+  page,
+}, info) => {
+  const pageErrors: string[] = [];
+  const resizeErrors: string[] = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  page.on("console", (message) => {
+    if (/ResizeObserver/i.test(message.text()))
+      resizeErrors.push(message.text());
+  });
+  await page.addInitScript(() => {
+    Object.assign(window, { __tableResizeErrors: [] as string[] });
+    window.addEventListener("error", (event) => {
+      if (/ResizeObserver/i.test(event.message))
+        (
+          window as unknown as { __tableResizeErrors: string[] }
+        ).__tableResizeErrors.push(event.message);
+    });
+  });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  const { names, groups, unexpected } = await setup(page, true);
+  const viewport = page.locator('[data-slot="table-container"]').first();
+  const tableRoot = viewport.locator(
+    "xpath=ancestor::*[contains(@class, 'data-table')][1]",
+  );
+  const identity = groups[1].getByText(names[1], { exact: true });
+  const action = groups[1].getByRole("button", {
+    name: `应用更新 ${names[1]}`,
+    exact: true,
+  });
+  // Resizing must neither remount nor replace the focused action owner.
+  const originalAction = await action.elementHandle();
+  const dimensions: Array<{
+    width: number;
+    clientWidth: number;
+    scrollWidth: number;
+  }> = [];
+  for (const width of [1440, 390, 1440, 390, 1440]) {
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
+    await expect(tableRoot).toHaveAttribute(
+      "data-overflow",
+      width === 390 ? "true" : "false",
+    );
+    await expect
+      .poll(() =>
+        viewport.evaluate(
+          (element) => element.scrollWidth > element.clientWidth + 1,
+        ),
+      )
+      .toBe(width === 390);
+    const settledOverflow = await viewport.evaluate(
+      (element) =>
+        new Promise<boolean[]>((resolve) => {
+          const samples: boolean[] = [];
+          const sample = () => {
+            samples.push(element.scrollWidth > element.clientWidth + 1);
+            if (samples.length === 4) resolve(samples);
+            else requestAnimationFrame(sample);
+          };
+          requestAnimationFrame(sample);
+        }),
+    );
+    expect(settledOverflow).toEqual(Array(4).fill(width === 390));
+    if (width === 390) {
+      await action.focus();
+      await expect(action).toBeFocused();
+      await expect(identity).toBeVisible();
+      await expect(identity).toHaveText(longSourceName);
+      await contained(identity, viewport);
+      await contained(action, viewport);
+      // Inline-size containment must preserve natural block layout, not crop or
+      // ellipsize the identity to achieve the desired table width.
+      const textBounds = await identity.evaluate((element) => {
+        const range = document.createRange();
+        range.selectNodeContents(element);
+        const bounds = element.getBoundingClientRect();
+        return {
+          width: element.clientWidth,
+          height: element.clientHeight,
+          scrollWidth: element.scrollWidth,
+          scrollHeight: element.scrollHeight,
+          fragmentsFit: [...range.getClientRects()].every(
+            (fragment) =>
+              fragment.x >= bounds.x - 1 &&
+              fragment.right <= bounds.right + 1 &&
+              fragment.y >= bounds.y - 1 &&
+              fragment.bottom <= bounds.bottom + 1,
+          ),
+          textOverflow: getComputedStyle(element).textOverflow,
+        };
+      });
+      expect(textBounds.width).toBeGreaterThan(0);
+      expect(textBounds.height).toBeGreaterThan(0);
+      expect(textBounds.scrollWidth).toBeLessThanOrEqual(textBounds.width + 1);
+      expect(textBounds.scrollHeight).toBeLessThanOrEqual(
+        textBounds.height + 1,
+      );
+      expect(textBounds.fragmentsFit).toBe(true);
+      expect(textBounds.textOverflow).not.toBe("ellipsis");
+    } else {
+      await expect(identity).not.toBeVisible();
+      await expect(page.getByText("向左右滚动查看完整表格")).toHaveCount(0);
+      await expect(viewport).not.toHaveAttribute("tabindex", "0");
+    }
+    expect(
+      await action.evaluate(
+        (element, original) => element === original,
+        originalAction,
+      ),
+    ).toBe(true);
+    dimensions.push({
+      width,
+      ...(await viewport.evaluate((element) => ({
+        clientWidth: element.clientWidth,
+        scrollWidth: element.scrollWidth,
+      }))),
+    });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth + 1,
+      ),
+    ).toBe(true);
+  }
+  await expect(action).toBeFocused();
+  await info.attach("source-list-repeated-resize", {
+    body: JSON.stringify(dimensions),
+    contentType: "application/json",
+  });
+  expect(pageErrors).toEqual([]);
+  expect(resizeErrors).toEqual([]);
+  expect(
+    await page.evaluate(
+      () =>
+        (window as unknown as { __tableResizeErrors: string[] })
+          .__tableResizeErrors,
+    ),
+  ).toEqual([]);
   expect(unexpected).toEqual([]);
 });

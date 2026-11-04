@@ -179,24 +179,36 @@ for (const width of [1280, 390]) {
     const search = toolbar.getByRole("textbox", { name: "搜索来源", exact: true });
     await expect(page.getByRole("button", { name: "欧洲办公节点 文本导入", exact: true })).toBeVisible();
     await search.fill("欧洲");
-    await expect(toolbar.getByText("找到 1 个，共 2 个私有来源", { exact: true })).toBeVisible();
+    const table = page.getByRole("table");
+    await expect(table).toHaveAccessibleDescription("找到 1 个，共 2 个私有来源");
+    const summaryId = await table.getAttribute("aria-describedby");
+    expect(summaryId).toBeTruthy();
+    const summary = page.locator(`[id="${summaryId}"]`);
+    await expect(summary).toHaveText("找到 1 个，共 2 个私有来源");
+    await expect(summary).toBeVisible();
+    await expect(toolbar.getByText("找到 1 个，共 2 个私有来源", { exact: true })).toHaveCount(0);
+    await expect(table.locator("tbody tr")).toHaveCount(1);
     await expect(page.getByRole("button", { name: "亚太远程协作节点 订阅链接", exact: true })).toHaveCount(0);
     const clear = toolbar.getByRole("button", { name: "清除搜索输入", exact: true });
     for (const control of [search, clear]) expect((await control.boundingBox())?.height).toBeGreaterThanOrEqual(44);
-    if (width >= 1280) {
-      const searchBox = (await search.locator("..").boundingBox())!;
-      const summaryBox = (await toolbar.getByText("找到 1 个，共 2 个私有来源", { exact: true }).boundingBox())!;
-      const gap = summaryBox.x - searchBox.x - searchBox.width;
-      expect(gap).toBeGreaterThanOrEqual(0);
-      expect(gap).toBeLessThanOrEqual(16);
-      expect(Math.abs(searchBox.y + searchBox.height / 2 - summaryBox.y - summaryBox.height / 2)).toBeLessThanOrEqual(2);
-    }
+    // Inventory feedback belongs to the table, including at narrow widths;
+    // it no longer competes with the compact search control for row space.
+    const sourceSearchBox = (await search.locator("..").boundingBox())!;
+    const summaryBox = (await summary.boundingBox())!;
+    const tableViewport = (await table.locator("..").boundingBox())!;
+    expect(summaryBox.y).toBeGreaterThanOrEqual(sourceSearchBox.y + sourceSearchBox.height);
+    expect(Math.abs(summaryBox.x - sourceSearchBox.x)).toBeLessThanOrEqual(1);
+    expect(summaryBox.x).toBeCloseTo(tableViewport.x, 0);
+    expect(summaryBox.width).toBeCloseTo(tableViewport.width, 0);
+    expect(summaryBox.y + summaryBox.height).toBeCloseTo(tableViewport.y, 0);
     await page.screenshot({ path: info.outputPath(`refined-source-toolbar-${width}.png`), fullPage: true });
     await clear.focus();
     await page.keyboard.press("Enter");
     await expect(search).toBeFocused();
     await expect(search).toHaveValue("");
-    await expect(toolbar.getByText("2 个私有来源", { exact: true })).toBeVisible();
+    await expect(summary).toHaveText("2 个私有来源");
+    await expect(table).toHaveAccessibleDescription("2 个私有来源");
+    await expect(table.locator("tbody tr")).toHaveCount(2);
     await expect(page.getByRole("button", { name: "亚太远程协作节点 订阅链接", exact: true })).toBeVisible();
     await page.getByRole("button", { name: "添加来源", exact: true }).click();
     const sourceDialog = page.getByRole("dialog", { name: "添加订阅来源", exact: true });

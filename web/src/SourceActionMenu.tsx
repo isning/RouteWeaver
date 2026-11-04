@@ -102,7 +102,7 @@ export function SourceActionMenu({
       >
         {onRefresh && (
           <DropdownMenuItem
-            aria-label={`刷新 ${sourceName}`}
+            aria-label={`刷新来源 ${sourceName}`}
             disabled={refreshDisabled}
             onSelect={() => select(onRefresh)}
           >
@@ -112,7 +112,7 @@ export function SourceActionMenu({
         )}
         {onEdit && (
           <DropdownMenuItem
-            aria-label={`编辑 ${sourceName}`}
+            aria-label={`编辑来源 ${sourceName}`}
             disabled={editDisabled}
             onSelect={() => select(onEdit)}
           >

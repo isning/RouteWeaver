@@ -123,8 +123,9 @@ async function setup(page: Page) {
   return unexpected;
 }
 
-// Both clicks use actual pointer events at the intersection of the button,
-// clipping table and viewport. No forced dispatch or outside-clip coordinate.
+// Each row-menu opener uses actual pointer events at the intersection of the
+// button, clipping table and viewport. Editing then uses its native menu item.
+// No forced dispatch, forced click or outside-clip coordinate.
 for (const mode of ["visible-clipped", "fully-right"] as const) {
   test(`source edit opens from ${mode} native pointer at short viewport`, async ({
     page,
@@ -132,14 +133,14 @@ for (const mode of ["visible-clipped", "fully-right"] as const) {
     await page.setViewportSize({ width: 640, height: 320 });
     const unexpected = await setup(page);
     await page.goto("/#sources");
-    const edit = page.getByRole("button", {
-      name: `编辑 ${names[0]}`,
+    const opener = page.getByRole("button", {
+      name: `更多操作 ${names[0]}`,
       exact: true,
     });
-    await expect(edit).toBeVisible();
+    await expect(opener).toBeVisible();
     // Vertical wheel setup does not focus or activate the row action.
     for (let i = 0; i < 8; i++) {
-      const r = await edit.boundingBox();
+      const r = await opener.boundingBox();
       expect(r).not.toBeNull();
       if (r!.y >= 60 && r!.y + r!.height <= 300) break;
       await page.mouse.move(320, 250);
@@ -170,19 +171,19 @@ for (const mode of ["visible-clipped", "fully-right"] as const) {
       // Column widths need not leave an unscrolled action partly visible.
       // Reach that deliberate test state using the same horizontal wheel a
       // user would use; do not focus, force-click or mutate scrollLeft.
-      const action = await edit.boundingBox();
+      const action = await opener.boundingBox();
       expect(action).not.toBeNull();
       const rightEdge = Math.min(640, table!.x + table!.width - 1);
       const visibleWidth = Math.min(24, action!.width / 2);
       await page.mouse.wheel(action!.x - (rightEdge - visibleWidth), 0);
       await expect
         .poll(async () => {
-          const box = await edit.boundingBox();
+          const box = await opener.boundingBox();
           return !!box && box.x < rightEdge && box.x + box.width > rightEdge;
         })
         .toBe(true);
     }
-    const before = await edit.boundingBox(),
+    const before = await opener.boundingBox(),
       clip = await viewport.boundingBox();
     expect(before).not.toBeNull();
     expect(clip).not.toBeNull();
@@ -202,7 +203,7 @@ for (const mode of ["visible-clipped", "fully-right"] as const) {
     expect(bottom).toBeGreaterThan(top);
     const point = { x: (left + right) / 2, y: (top + bottom) / 2 };
     expect(
-      await edit.evaluate((el, point) => {
+      await opener.evaluate((el, point) => {
         const hit = document.elementFromPoint(point.x, point.y);
         return hit === el || (!!hit && el.contains(hit));
       }, point),
@@ -212,7 +213,7 @@ for (const mode of ["visible-clipped", "fully-right"] as const) {
     const startScroll = await viewport.evaluate((el) => el.scrollLeft);
     await page.mouse.move(point.x, point.y);
     await page.mouse.down();
-    const afterDown = await edit.boundingBox(),
+    const afterDown = await opener.boundingBox(),
       afterScroll = await viewport.evaluate((el) => el.scrollLeft);
     await page.mouse.up();
     await info.attach("pointer-geometry", {
@@ -227,7 +228,21 @@ for (const mode of ["visible-clipped", "fully-right"] as const) {
       }),
       contentType: "application/json",
     });
-    await expect(page.getByRole("dialog")).toBeVisible();
+    const menu = page.getByRole("menu", {
+      name: `更多操作 ${names[0]}`,
+      exact: true,
+    });
+    await expect(menu).toBeVisible();
+    const edit = menu.getByRole("menuitem", {
+      name: `编辑来源 ${names[0]}`,
+      exact: true,
+    });
+    await expect(edit).toBeVisible();
+    await edit.click();
+    await expect(menu).not.toBeVisible();
+    await expect(
+      page.getByRole("dialog", { name: "编辑来源", exact: true }),
+    ).toBeVisible();
     await expect(
       page.getByRole("textbox", { name: "来源名称", exact: true }),
     ).toHaveValue(names[0]);

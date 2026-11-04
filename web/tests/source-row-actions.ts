@@ -9,5 +9,8 @@ export async function sourceRowAction(
   await page
     .getByRole("button", { name: `更多操作 ${name}`, exact: true })
     .click();
-  return page.getByRole("menuitem", { name: `${action} ${name}`, exact: true });
+  return page.getByRole("menuitem", {
+    name: `${action}来源 ${name}`,
+    exact: true,
+  });
 }

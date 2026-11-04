@@ -6,5 +6,5 @@ export async function sourceRowAction(action: "刷新" | "编辑", name: string)
   await userEvent.click(
     await screen.findByRole("button", { name: `更多操作 ${name}` }),
   );
-  return screen.findByRole("menuitem", { name: `${action} ${name}` });
+  return screen.findByRole("menuitem", { name: `${action}来源 ${name}` });
 }
