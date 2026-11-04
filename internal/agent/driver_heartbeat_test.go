@@ -107,7 +107,7 @@ func testHeartbeatCompletionCadence(t *testing.T, outcome string) {
 	}
 	fixture := &heartbeatApplicationFixture{
 		signalledLeaseFixture: signalledLeaseFixture{restricted: make(chan struct{})},
-		entered: make(chan struct{}), proceed: make(chan struct{}),
+		entered:               make(chan struct{}), proceed: make(chan struct{}),
 	}
 	r, err := Open(root, d.Scope, NewRegistry(fixture), Options{MaxLease: time.Hour, Now: now})
 	if err != nil {
