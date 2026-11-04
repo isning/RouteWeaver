@@ -187,7 +187,7 @@ export function StepsEditor({
                 />
                 <small className="font-normal leading-relaxed text-muted-foreground">
                   原名称 {"{name}"} · 来源名称 {"{source}"} · 地区 {"{region}"}{" "}
-                  · 节点标识 {"{id}"}。改名不会改变节点身份。
+                  · 节点标识 {"{id}"}。改名后保留节点身份。
                 </small>
               </label>
             )}
@@ -226,7 +226,7 @@ export function StepsEditor({
             )}
             {step.kind === "deduplicate" && (
               <p className="muted field-full text-sm text-muted-foreground sm:col-span-2">
-                按连接内容识别重复项，不会把同名的不同连接合并。来源信息会保留。
+                按连接内容合并重复项，保留同名的不同连接及来源信息。
               </p>
             )}
             {step.kind === "override" && (

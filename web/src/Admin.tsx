@@ -849,9 +849,9 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
               title={displayedValidation.historical ? "历史配置记录" : displayedValidation.valid ? "配置结构校验完成" : "配置需要调整"}
             >
               {displayedValidation.historical
-                ? "这是当时保存的配置，不是本次校验；不代表服务器已经应用。"
+                ? "此处展示当时保存的配置记录。检查当前配置请重新校验；服务器应用情况请查看节点确认状态。"
                 : displayedValidation.valid
-                ? "此结果是配置生成与结构检查，不代表服务器已经应用。"
+                ? "配置已生成并通过结构检查。服务器应用情况请查看节点确认状态。"
                 : displayedValidation.diagnostics.join(" ")}
             </Notice>
             {displayedValidation.historical && displayedValidation.revision && (
@@ -1239,7 +1239,7 @@ function RouteEditor({
                   />
                   <small>
                     可用 {"{route}"}、{"{region}"}、{"{engine}"}、{"{id}"}
-                    。名称修改不会改变授权引用。
+                    。修改名称后保留现有授权引用。
                   </small>
                 </label>
               ),

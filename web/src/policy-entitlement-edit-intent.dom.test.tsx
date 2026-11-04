@@ -428,7 +428,7 @@ it("discloses absent-row calendar adoption despite unchanged effective values an
   expect(review.getByText("新建个人授权设置")).toBeTruthy();
   expect(
     review.getByText(
-      "保存后将使用此账号周期；之后加入用户组不会按方案默认规则自动初始化该周期。",
+      "保存后将使用此账号周期；之后加入用户组时，继续沿用此周期。",
     ),
   ).toBeTruthy();
   expect(writes).toHaveLength(1);

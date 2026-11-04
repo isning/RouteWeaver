@@ -80,7 +80,7 @@ it("makes rechecking secondary after a compatible review without repeating the p
     ),
   );
   mount(<UpdateOutput output={output} onClose={() => {}} />);
-  expect(screen.queryByText(/链接不变，其他订阅不受影响。/)).toBeNull();
+  expect(screen.queryByText(/沿用当前链接，其他订阅保留原状。/)).toBeNull();
   expect(screen.getByText("mihomo 1.19.32 · 完整配置")).toBeTruthy();
   await userEvent.click(screen.getByRole("button", { name: "预览此订阅更新" }));
   expect(await screen.findByRole("status")).toHaveProperty(
@@ -88,7 +88,7 @@ it("makes rechecking secondary after a compatible review without repeating the p
     "兼容检查通过。",
   );
   const decision = within(screen.getByRole("group", { name: "更新确认" }));
-  expect(decision.getByText("链接不变，其他订阅不受影响。")).toBeTruthy();
+  expect(decision.getByText("沿用当前链接，其他订阅保留原状。")).toBeTruthy();
   expect(
     screen.queryByRole("heading", { name: "此订阅的更新预览" }),
   ).toBeNull();
@@ -124,11 +124,11 @@ it("keeps an incompatible revoked-output review blocked without an unapproved li
   expect(
     screen.getByRole("button", { name: "确认更新「Daily」" }),
   ).toHaveProperty("disabled", true);
-  expect(screen.queryByText(/链接不变/)).toBeNull();
+  expect(screen.queryByText(/沿用当前链接/)).toBeNull();
   await userEvent.click(screen.getByRole("button", { name: "预览此订阅更新" }));
   expect(await screen.findByRole("status")).toHaveProperty(
     "textContent",
-    "兼容检查未通过，已发布内容保持不变。",
+    "兼容检查未通过，已发布内容保留原版本。",
   );
   expect(screen.getByText("Unsupported routing option")).toBeTruthy();
   expect(screen.getByRole("button", { name: "重新检查" })).toBeTruthy();

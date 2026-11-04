@@ -109,7 +109,7 @@ it("explains an uncertain subscription publication once and identifies recovery 
   );
   await userEvent.clear(ui.getByRole("textbox", { name: "订阅名称" }));
   await userEvent.type(ui.getByRole("textbox", { name: "订阅名称" }), "Phone");
-  expect(ui.getByText("创建新的客户端订阅，其他订阅不变。")).toBeTruthy();
+  expect(ui.getByText("创建独立的客户端订阅，其他订阅保留原版本。")).toBeTruthy();
   await userEvent.click(ui.getByRole("button", { name: "检查发布内容" }));
   await ui.findByText("兼容检查通过。");
   await userEvent.click(
@@ -152,10 +152,10 @@ it("explains an uncertain subscription publication once and identifies recovery 
     rawTransportMessageVisible:
       ui.queryByText("Controlled creation response unavailable") !== null,
     sameSubmissionConsequenceVisible:
-      ui.queryByText("核对或重试上次发布，不会另建订阅。") !== null,
+      ui.queryByText("核对或重试均沿用上次发布请求。") !== null,
     freshCreationConsequenceVisible:
       ui.queryByText(
-        /新建独立链接，其他订阅不变。|创建新的客户端订阅，其他订阅不变。/,
+        /新建独立链接，其他订阅保留原版本。|创建独立的客户端订阅，其他订阅保留原版本。/,
       ) !== null,
   }).toEqual({
     pendingAnnouncements: 1,

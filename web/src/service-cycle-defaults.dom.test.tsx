@@ -237,7 +237,7 @@ it("shows only monthly plan-default choices, with fixed timezone context instead
   ).toBe(true);
   expect(
     within(traffic).getByText(
-      "用户组首次设置账号周期时使用；已有周期和用量保留，额度不叠加。",
+      "用户组首次设置账号周期时使用；已有周期和用量继续保留，方案额度按优先级选用一份，个人覆盖优先。",
     ),
   ).toBeTruthy();
 });

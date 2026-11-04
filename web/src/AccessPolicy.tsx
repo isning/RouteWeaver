@@ -476,7 +476,7 @@ export function usePolicyChange({ mode, retainedDrafts, users, services, routes,
           {review.preview.resource?.target.kind === "service" && <ServicePolicyComparison resource={review.preview.resource as ServicePolicyResource}/>}
           {review.preview.resource?.target.kind === "group" && <GroupPolicyComparison resource={review.preview.resource as GroupPolicyResource}/>}
           {review.preview.resource?.target.kind === "entitlement" && <EntitlementPolicyComparison resource={review.preview.resource as EntitlementPolicyResource}/>}
-          {review.preview.resource?.target.kind === "entitlement" && review.preview.resource.before === null && <p>保存后将使用此账号周期；之后加入用户组不会按方案默认规则自动初始化该周期。</p>}
+          {review.preview.resource?.target.kind === "entitlement" && review.preview.resource.before === null && <p>保存后将使用此账号周期；之后加入用户组时，继续沿用此周期。</p>}
           {review.preview.resource && <h3 className="border-t pt-5 text-base font-medium">现有账号影响</h3>}
           {review.preview.blockers?.length > 0 && (<Notice tone="error" title="暂时无法更新授权">{<ul className="list-disc space-y-2 pl-5">
                   {review.preview.blockers.map((b, i) => (<li key={i}>{b}</li>))}
@@ -492,20 +492,20 @@ export function usePolicyChange({ mode, retainedDrafts, users, services, routes,
               </label>
               <ul className="policy-review-users divide-y rounded-lg border">{review.preview.affected.slice((reviewPage - 1) * 5, reviewPage * 5).map(effect => <li key={effect.userId} className="p-4"><PolicyComparison effect={effect} userName={users.find(user => user.id === effect.userId)?.name || effect.userId} services={services} routes={routes} showFull={showFull}/></li>)}</ul>
               {review.preview.affected.length > 5 && <PageNavigation page={reviewPage} pageSize={5} total={review.preview.affected.length} onPageChange={setReviewPage}/>}
-              <p className="muted text-sm text-muted-foreground">已有用量不会因方案或续期变化而清零。</p>
+              <p className="muted text-sm text-muted-foreground">切换方案或续期后，保留已有用量。</p>
             </>)}
           <Accordion value={showRules ? ["rules"] : []} onValueChange={(keys) => setShowRules(keys.includes("rules"))} type="multiple">{([
                 {
                     key: "rules",
                     label: "\u6388\u6743\u89C4\u5219",
                     children: (<>
-                    <p>多个用户组不会叠加额度。</p>
-                    {review.preview.affected.length === 0 && (<p>已有用量不会因方案或续期变化而清零。</p>)}
+                    <p>多个用户组按优先级选用一份方案额度，个人覆盖优先。</p>
+                    {review.preview.affected.length === 0 && (<p>切换方案或续期后，保留已有用量。</p>)}
                   </>),
                 },
             ]).map(section => <AccordionItem key={section.key} value={String(section.key)}><AccordionTrigger>{section.label}</AccordionTrigger><AccordionContent className="space-y-3">{section.children}</AccordionContent></AccordionItem>)}</Accordion>
           <p className="muted text-sm text-muted-foreground">
-            受管入口配置不会自动应用。
+            受管入口配置需单独应用。
           </p>
           <label className="flex items-start gap-2 text-sm leading-relaxed"><Checkbox checked={confirmed} onCheckedChange={checked => (e => setConfirmed(e.target.checked))({ target: { checked: checked === true } })}/>
             {hasRetainedDraft ? "我已核对本次授权变更，并同意更新成功后关闭编辑器、丢弃保留的未保存草稿副本" : "我已核对本次授权变更"}
@@ -557,7 +557,7 @@ export function UserGroups({ users, services, routes, }: {
     const [editing, setEditing] = useState<{
         initial: UserGroup | null;
     } | null>(null);
-    return (<Section variant="plain" title="用户组" description="以组分配服务方案；个人指定方案优先，多组按优先级选择，不叠加额度。" extra={<ActionButton onClick={() => setEditing({ initial: null })} variant="outline">
+    return (<Section variant="plain" title="用户组" description="以组分配服务方案；个人指定方案优先，多组按优先级选定一个方案及其额度。" extra={<ActionButton onClick={() => setEditing({ initial: null })} variant="outline">
           新建用户组
         </ActionButton>}>
       <QueryState loading={query.isPending} paused={query.isPaused} loadingLayout="table" error={query.error} retry={() => query.refetch()}>

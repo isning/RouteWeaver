@@ -116,7 +116,7 @@ it("keeps reset consequences with the external submit footer and retains native 
   const footer = submit.closest('[data-slot="dialog-footer"]')!;
   expect(footer).toBeTruthy();
   expect(footer.textContent).toContain(
-    "更换周期会清除原周期的账单引用，不修改用户流量账单",
+    "更换周期会清除原周期的账单引用，保留用户流量账单",
   );
   expect(footer.textContent).toContain("不自动更换线路");
   expect(submit.form).toBe(name.closest("form"));

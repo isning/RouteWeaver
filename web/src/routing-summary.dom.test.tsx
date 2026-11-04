@@ -30,7 +30,7 @@ it("reads frozen advanced intent without fetching a feed or offering an editor",
   render(<RoutingSummaryView summary={advanced("group", "已发布策略组")} />);
   expect(screen.getByText("由策略组「已发布策略组」决定")).toBeTruthy();
   expect(screen.getByText("4 条分流规则 · 2 个策略组 · 3 个节点")).toBeTruthy();
-  expect(screen.getByText(/不表示客户端当前选中的节点/)).toBeTruthy();
+  expect(screen.getByText(/当前选中的节点请在客户端查看/)).toBeTruthy();
   expect(screen.queryByRole("button")).toBeNull();
   expect(screen.queryByRole("link")).toBeNull();
   expect(screen.queryByText(/在完整配置中查看/)).toBeNull();
@@ -46,12 +46,12 @@ it("keeps all scope caveats in one initially closed, keyboard-focusable disclosu
   expect(details.open).toBe(false);
   expect(
     within(details).getByText(
-      "规则数不含默认处理及规则文件内条目；节点数是配置包含数量，不代表在线状态。",
+      "规则数仅统计配置中的显式规则；默认处理与规则文件内条目单独查看。节点数统计配置所含节点，在线状态需另行查询。",
     ),
   ).toBeTruthy();
   expect(
     within(details).getByText(
-      "策略组按其配置决定流量去向，不表示客户端当前选中的节点。",
+      "策略组展示配置中的流量去向；当前选中的节点请在客户端查看。",
     ),
   ).toBeTruthy();
   await user.tab();
@@ -120,7 +120,7 @@ it("does not substitute current candidate details for the frozen published summa
 
 it.each([
   ["native-override", "使用原生配置覆盖，无法提供可靠的分流摘要。"],
-  ["nodes-only", "纯节点订阅，不包含分流规则。"],
+  ["nodes-only", "纯节点订阅，仅交付连接。"],
 ] as const)(
   "keeps %s routing opaque even when extraneous advanced details exist",
   (kind, text) => {

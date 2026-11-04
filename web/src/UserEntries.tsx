@@ -543,7 +543,7 @@ function UserEntryTask({
         open={open && !!editing}
         footer={
           <div className="w-full space-y-3">
-            <Notice tone="info" title="登记公开连接不会自动配置节点">
+            <Notice tone="info" title="登记已准备好的公开连接">
               {
                 "\u8BF7\u4F7F\u7528\u5DF2\u4E3A\u8BE5\u7528\u6237\u51C6\u5907\u7684\u5165\u53E3\u51ED\u636E\u3002\u8FD0\u884C\u72B6\u6001\u9700\u5728\u5BF9\u5E94\u5B9E\u4F8B\u5355\u72EC\u6838\u5B9E\u3002"
               }

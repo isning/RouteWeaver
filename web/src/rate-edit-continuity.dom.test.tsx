@@ -57,9 +57,11 @@ afterEach(() => {
 it("preserves changed rates when Escape is canceled, guards navigation, and discards only explicitly", async () => {
   mount();
   const user = userEvent.setup();
+  expect(screen.getByText("整条线路统一计算一次倍率。历史账期沿用当时的倍率。")).toBeTruthy();
   const opener = screen.getByRole("button", { name: "调整倍率" });
   await user.click(opener);
   const dialog = screen.getByRole("dialog", { name: "调整线路扣量倍率" });
+  expect(within(dialog).getByText("每次保存创建独立倍率版本，保存后锁定；历史记录沿用原版本。")).toBeTruthy();
   fireEvent.change(within(dialog).getByLabelText("整条线路倍率（×）"), {
     target: { value: "2.5" },
   });

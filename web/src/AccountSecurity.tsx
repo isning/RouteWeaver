@@ -306,7 +306,7 @@ function AccountSecurityTask({
                         : "退出所选会话？",
                       description: entry.current
                         ? "当前页面将返回登录。未保存的输入将丢失。"
-                        : `此会话将立即失效，其他会话不受影响。到期时间：${dateLabel(entry.expiresAt)}。会话标识：${entry.id}`,
+                        : `此会话将立即失效，保留其他会话。到期时间：${dateLabel(entry.expiresAt)}。会话标识：${entry.id}`,
                       confirmLabel: "退出会话",
                       cancelLabel: "保留",
                       destructive: true,
@@ -393,7 +393,7 @@ const actions: Record<SecurityAction, { label: string; consequence: string }> =
     enable: {
       label: "恢复账号",
       consequence:
-        "解除账号停用限制。服务授权仍按原配置判断，不会自动开启已停用的服务或恢复旧会话。",
+        "解除账号停用限制。服务授权沿用原配置，已停用的服务保持停用；账号需重新登录。",
     },
     retire: {
       label: "永久退役账号",
@@ -420,7 +420,7 @@ function AccountRecovery({ session }: { session: Session }) {
   return (
     <Section
       title="账号恢复与退役"
-      description="账号身份与用户的服务授权是两套设置。停用或退役会阻止登录和订阅交付，不会删除历史数据。"
+      description="账号身份与用户的服务授权是两套设置。停用或退役会阻止登录和订阅交付，并保留历史数据。"
     >
       <QueryState
         loading={accounts.isPending} paused={accounts.isPaused} loadingLayout="table"

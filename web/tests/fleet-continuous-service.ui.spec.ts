@@ -175,7 +175,7 @@ for (const width of [320, 390, 1440]) {
       await page.keyboard.press("Tab");
       await expect(create).toBeFocused();
       await visibleControl(create, body);
-      await expect(dialog.getByText("创建计划不会执行。下一步逐阶段确认开始。", { exact: true })).toBeInViewport({ ratio: 1 });
+      await expect(dialog.getByText("创建计划后，需逐阶段确认开始执行。", { exact: true })).toBeInViewport({ ratio: 1 });
       await info.attach("fleet-drawer-390-review-bottom-keyboard", {
         body: await page.screenshot({ animations: "disabled" }), contentType: "image/png",
       });

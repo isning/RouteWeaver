@@ -142,7 +142,7 @@ export function ObservationConfigForm({
       footer={
         <div className="w-full space-y-3">
           <p className="text-sm leading-relaxed text-muted-foreground">
-            更换采集实例、计费网卡或周期会重建估算基线；更换周期会清除原周期的账单引用，不修改用户流量账单。
+            更换采集实例、计费网卡或周期会重建估算基线；更换周期会清除原周期的账单引用，保留用户流量账单。
             {providerEnabled &&
               "供应商用量单独记录，所选耗尽行为不自动更换线路。"}
           </p>
@@ -221,7 +221,7 @@ export function ObservationConfigForm({
           <AppField
             name="observerInstanceId"
             label="主机采集实例"
-            description="一台服务器只选一个采集实例。节点 Agent 需显式启用主机采集；保存选择不会自动执行远程命令。"
+            description="一台服务器只选一个采集实例。保存后记录采集选择；主机采集需在节点 Agent 上另行启用。"
             trigger="onValueChange"
           >
             <ChoiceSelect
@@ -364,7 +364,7 @@ export function ObservationConfigForm({
                   <AppField
                     name={["provider", "notificationSource"]}
                     label="供应商额度提醒依据"
-                    description="托管连接暂停策略也使用此依据；不会自动改用其他来源。"
+                    description="托管连接暂停策略固定使用此依据；切换来源需手动选择。"
                     trigger="onValueChange"
                   >
                     <ChoiceSelect

@@ -1,0 +1,437 @@
+file	baseline_line	decision	category	source_excerpt
+internal/httpapi/access_policy.go	134	retained	保留：真实错误/约束/不可用状态	"writeJSON(w, http.StatusUnprocessableEntity, map[string]string{""code"": ""POLICY_EDIT_UNSUPPORTED_RECORD"", ""detail"": ""已保存的"" + object + ""包含当前编辑器不支持的字段或格式，无法安全编辑。""})"
+internal/httpapi/published_route_retarget.go	108	retained	保留：真实错误/约束/不可用状态	"return exitBlocked(""EXIT_UNSUPPORTED_INTENT"", ""已保存设置包含此操作不支持的字段，原设置保持不变。"")"
+internal/httpapi/published_route_retarget.go	173	retained	保留：真实错误/约束/不可用状态	"detail = ""线路或相关设置已不存在，本次未保存。请刷新后重新选择。"""
+internal/httpapi/published_route_retarget.go	275	rephrased	正向表达适用条件与恢复步骤	"return out, exitBlocked(""EXIT_PATH_AMBIGUOUS"", ""当前线路的实际转发不能证明为固定两段路径，请先核对转发设置。"")"
+internal/httpapi/published_route_retarget.go	284	retained	保留：真实错误/约束/不可用状态	"return out, exitBlocked(""EXIT_PRINCIPAL_MISMATCH"", ""线路的用户入口与已保存路径不一致，请先核对用户入口。"")"
+internal/httpapi/published_route_retarget.go	306	retained	保留：真实错误/约束/不可用状态	"return out, exitBlocked(""EXIT_TRANSIT_PRINCIPAL_REQUIRED"", ""所选端点需要独立的中转用户绑定，不能直接作为出口。请选择已有连接凭据的端点。"")"
+internal/httpapi/published_route_retarget.go	320	retained	保留：真实错误/约束/不可用状态	"return out, exitBlocked(""EXIT_TARGET_ALREADY_PREPARED"", ""所选出口已包含服务端设置；此操作不替换它的安全参数。"")"
+internal/httpapi/published_route_retarget.go	330	retained	保留：真实错误/约束/不可用状态	"return out, exitBlocked(""EXIT_CONNECTION_INVALID"", ""所选端点的连接参数不完整，请先在服务器中修正该端点。"")"
+internal/httpapi/published_route_retarget.go	344	retained	保留：真实错误/约束/不可用状态	"return out, exitBlocked(""EXIT_CONFIG_INVALID"", ""所选出口与当前核心或 TLS 设置不兼容，请核对所选端点的协议和服务端安全参数。"")"
+internal/httpapi/published_route_retarget.go	359	retained	保留：真实错误/约束/不可用状态	"return out, exitBlocked(""EXIT_UNSUPPORTED_INTENT"", ""线路归属无法确认，原设置保持不变。"")"
+internal/httpapi/published_route_retarget.go	366	retained	保留：真实错误/约束/不可用状态	"return out, exitBlocked(""EXIT_UNSUPPORTED_INTENT"", ""相关线路包含不支持的字段，原设置保持不变。"")"
+internal/httpapi/published_route_retarget.go	391	retained	保留：真实错误/约束/不可用状态	"return out, exitBlocked(""EXIT_RELATED_ROUTE_INVALID"", ""变更不能保留同一路径中其他线路的转发，请核对相关线路。"")"
+internal/httpapi/published_route_retarget.go	397	retained	保留：真实错误/约束/不可用状态	"return out, exitBlocked(""EXIT_RELATED_PRINCIPAL_INVALID"", ""变更不能保留相关线路的用户入口，请先核对。"")"
+internal/httpapi/published_route_retarget.go	421	retained	保留：真实错误/约束/不可用状态	"return out, exitBlocked(""EXIT_UNSUPPORTED_INTENT"", ""相关连接包含不支持的字段，原设置保持不变。"")"
+web/src/AccessPolicy.tsx	51	retained	保留：选项含义/额度与周期	"policy.quotaBytes ? bytesLabel(policy.quotaBytes) : ""不限额"","
+web/src/AccessPolicy.tsx	56	retained	保留：选项含义/额度与周期	"policy.onlineIpLimit ? `${policy.onlineIpLimit} 个` : ""不限制"","
+web/src/AccessPolicy.tsx	61	retained	保留：选项含义/额度与周期	"policy.connectionLimit ? `${policy.connectionLimit} 条` : ""不限制"","
+web/src/AccessPolicy.tsx	66	retained	保留：选项含义/额度与周期	"policy.entryRateBps ? bitrateLabel(policy.entryRateBps) : ""不限制"","
+web/src/AccessPolicy.tsx	93	retained	保留：选项含义/额度与周期	"value: `${dateLabel(policy.entitlement.startsAt)} / ${policy.entitlement.expiresAt ? dateLabel(policy.entitlement.expiresAt) : ""不过期""}`,"
+web/src/AccessPolicy.tsx	102	retained	保留：选项含义/额度与周期	"none: ""不自动重置"","
+web/src/AccessPolicy.tsx	130	retained	保留：真实比较状态	"return <p className=""muted text-sm text-muted-foreground"">当前生效授权保持不变</p>;"
+web/src/AccessPolicy.tsx	275	retained	保留：真实比较状态	"</Table>) : (<p className=""muted text-sm text-muted-foreground"">当前生效授权保持不变</p>)}"
+web/src/AccessPolicy.tsx	479	rephrased	正向表达保护、作用范围或下一步	"{review.preview.resource?.target.kind === ""entitlement"" && review.preview.resource.before === null && <p>保存后将使用此账号周期；之后加入用户组不会按方案默认规则自动初始化该周期。</p>}"
+web/src/AccessPolicy.tsx	487	retained	保留：操作后果/权限/安全/输入格式	": ""现有用户授权不变。""}"
+web/src/AccessPolicy.tsx	495	rephrased	正向表达保护、作用范围或下一步	"<p className=""muted text-sm text-muted-foreground"">已有用量不会因方案或续期变化而清零。</p>"
+web/src/AccessPolicy.tsx	502	rephrased	正向表达保护、作用范围或下一步	<p>多个用户组不会叠加额度。</p>
+web/src/AccessPolicy.tsx	503	rephrased	正向表达保护、作用范围或下一步	{review.preview.affected.length === 0 && (<p>已有用量不会因方案或续期变化而清零。</p>)}
+web/src/AccessPolicy.tsx	508	rephrased	正向表达保护、作用范围或下一步	受管入口配置不会自动应用。
+web/src/AccessPolicy.tsx	560	rephrased	正向表达保护、作用范围或下一步	"return (<Section variant=""plain"" title=""用户组"" description=""以组分配服务方案；个人指定方案优先，多组按优先级选择，不叠加额度。"" extra={<ActionButton onClick={() => setEditing({ initial: null })} variant=""outline"">"
+web/src/AccountSecurity.tsx	35	retained	保留：真实错误/约束/不可用状态	"return new Error(""当前密码或验证码不正确，请核对后重试。"");"
+web/src/AccountSecurity.tsx	41	retained	保留：真实错误/约束/不可用状态	"""请使用账号密码登录后管理账号安全；管理员令牌不能执行此操作。"","
+web/src/AccountSecurity.tsx	240	retained	保留：真实错误/约束/不可用状态	": Promise.reject(new Error(""两次输入的新密码不一致"")),"
+web/src/AccountSecurity.tsx	247	retained	保留：操作后果/权限/安全/输入格式	修改后保留当前会话，其他会话立即失效。已下载的连接凭据不会因此从节点撤销。
+web/src/AccountSecurity.tsx	309	rephrased	正向表达保护、作用范围或下一步	: `此会话将立即失效，其他会话不受影响。到期时间：${dateLabel(entry.expiresAt)}。会话标识：${entry.id}`,
+web/src/AccountSecurity.tsx	342	retained	保留：操作后果/权限/安全/输入格式	其他浏览器会话将立即失效，当前会话保留；不会撤销已下载的连接凭据。
+web/src/AccountSecurity.tsx	391	retained	保留：操作后果/权限/安全/输入格式	"""立即阻止登录和订阅链接交付，并退出目标账号的所有会话。保留数据和服务授权配置；已下载的节点凭据不会从节点撤销。"","
+web/src/AccountSecurity.tsx	396	rephrased	正向表达保护、作用范围或下一步	"""解除账号停用限制。服务授权仍按原配置判断，不会自动开启已停用的服务或恢复旧会话。"","
+web/src/AccountSecurity.tsx	401	retained	保留：真实错误/约束/不可用状态	"""永久阻止登录和订阅链接交付，并退出所有会话。账号不能重新启用；历史数据保留，已下载的节点凭据仍需在节点另行撤销。"","
+web/src/AccountSecurity.tsx	406	retained	保留：操作后果/权限/安全/输入格式	"""退出目标账号的所有会话。对方下次登录必须更换临时密码；请通过你确认安全的渠道单独交付临时密码。此操作不会发送消息，也不会解除账号停用或二次验证。"","
+web/src/AccountSecurity.tsx	411	retained	保留：真实比较状态	"""移除目标账号的二次验证并退出所有会话。密码保持不变；请先核实账号持有人的身份，再让对方重新设置验证器。"","
+web/src/AccountSecurity.tsx	423	rephrased	正向表达保护、作用范围或下一步	"description=""账号身份与用户的服务授权是两套设置。停用或退役会阻止登录和订阅交付，不会删除历史数据。"""
+web/src/AccountSecurity.tsx	634	retained	保留：真实错误/约束/不可用状态	": Promise.reject(new Error(""登录名不匹配"")),"
+web/src/AccountingRecovery.tsx	43	retained	保留：真实错误/约束/不可用状态	"<Notice tone=""warning"" title=""流量统计状态暂不可用"">"
+web/src/AccountingRecovery.tsx	57	retained	保留：操作后果/权限/安全/输入格式	收到有效上报后会自动继续统计，无法确定归属的历史流量不会补扣。
+web/src/Admin.tsx	408	retained	保留：真实错误/约束/不可用状态	"""已分配用户将不能从此链路配置获取新配置。"","
+web/src/Admin.tsx	511	retained	保留：真实错误/约束/不可用状态	"""仍被链路配置引用的端点不能删除。请先从相关链路配置中移除引用。"","
+web/src/Admin.tsx	574	retained	保留：选项含义/额度与周期	"u.quotaBytes ? bytesLabel(u.quotaBytes) : ""不限额"","
+web/src/Admin.tsx	646	retained	保留：选项含义/额度与周期	"s.quotaBytes ? bytesLabel(s.quotaBytes) : ""不限额"","
+web/src/Admin.tsx	659	retained	保留：选项含义/额度与周期	": ""IP 不限""}{"" ""}"
+web/src/Admin.tsx	663	retained	保留：选项含义/额度与周期	": ""并发不限""}"
+web/src/Admin.tsx	680	retained	保留：选项含义/额度与周期	"none: ""不自动重置"","
+web/src/Admin.tsx	852	rephrased	正向表达保护、作用范围或下一步	"? ""这是当时保存的配置，不是本次校验；不代表服务器已经应用。"""
+web/src/Admin.tsx	854	rephrased	正向表达保护、作用范围或下一步	"? ""此结果是配置生成与结构检查，不代表服务器已经应用。"""
+web/src/Admin.tsx	971	retained	保留：真实错误/约束/不可用状态	"setError(new Error(""链路配置不能重复使用同一端点。""));"
+web/src/Admin.tsx	1242	rephrased	正向表达保护、作用范围或下一步	。名称修改不会改变授权引用。
+web/src/Admin.tsx	1497	retained	保留：选项含义/额度与周期	"label=""账号基础额度（GiB，0 为不限额）"""
+web/src/Backup.tsx	253	rephrased	正向表达保护、作用范围或下一步	"<Section title=""恢复备份"" description=""恢复到新数据库，不覆盖当前数据，也不会自动切换服务。"">"
+web/src/Backup.tsx	308	retained	保留：操作后果/权限/安全/输入格式	选择文件不会上传；校验时会将备份文件和密码发送到当前控制平面。
+web/src/Backup.tsx	412	retained	保留：真实错误/约束/不可用状态	": Promise.reject(new Error(""两次输入的密码不一致"")),"
+web/src/Backup.tsx	418	retained	保留：操作后果/权限/安全/输入格式	备份包含账号与订阅凭据，仅下载到你的设备，不发送到第三方。请将文件与密码分开保管；忘记密码无法恢复。
+web/src/BackupCapacity.tsx	52	rephrased	正向表达保护、作用范围或下一步	暂停扩容，尽快创建并验证完整备份，核对磁盘余量与历史保存方案。超过归档或单条记录上限会阻止备份或重建；通知账本总量则分步处理。备份不会删除或缩减当前数据库。
+web/src/BackupCapacity.tsx	54	rephrased	正向表达保护、作用范围或下一步	"<p className=""text-muted-foreground"">记录数与正文大小不保证归档可创建。请另查备份临时目录与恢复目标的空间；本检查不会停止服务或删除历史。</p>"
+web/src/BasicRouting.tsx	185	retained	保留：真实错误/约束/不可用状态	"`${initial.ir.endpoints.find((endpoint) => endpoint.id === id)?.name || ""原选线路""}（当前不可选）`;"
+web/src/BasicRouting.tsx	229	retained	保留：真实错误/约束/不可用状态	"throw new Error(""原选线路当前不可用，请明确选择替代线路后再保存。"");"
+web/src/BasicRouting.tsx	408	rephrased	正向表达保护、作用范围或下一步	"description: ""已经发布的订阅不会改变。"","
+web/src/BasicRouting.tsx	529	retained	保留：真实错误/约束/不可用状态	"title=""原选线路当前不可选。已保留原选择，请明确替换后再保存。"""
+web/src/BasicRouting.tsx	636	rephrased	正向表达保护、作用范围或下一步	"? ""确认后更新当前订阅，订阅链接保持不变。"""
+web/src/BasicRouting.tsx	698	rephrased	正向表达保护、作用范围或下一步	」，不会使用之后变化的配置。
+web/src/ConnectionFields.tsx	263	retained	保留：真实错误/约束/不可用状态	"title=""当前托管监听协议不受支持"""
+web/src/ConnectionFields.tsx	266	retained	保留：事实与观测范围	"? ""此托管核心的监听端点仅支持 VLESS。当前仅允许保持连接、认证和核心不变时保存元数据；这不代表此监听端点可部署。"""
+web/src/ConnectionFields.tsx	373	retained	保留：操作后果/权限/安全/输入格式	": ""仅支持 AEAD（alterId = 0），不接受旧版认证。"""
+web/src/ConnectionFields.tsx	402	retained	保留：操作后果/权限/安全/输入格式	"title=""VMess 载荷不加密"""
+web/src/ConnectionFields.tsx	404	retained	保留：操作后果/权限/安全/输入格式	此设置不提供 VMess 载荷加密；TLS 是独立的连接保护设置。
+web/src/ConnectionFields.tsx	413	retained	保留：真实错误/约束/不可用状态	"title=""此核心仅支持普通 TLS 与 TCP，不支持 REALITY、Vision 或数据包封装。"""
+web/src/ConnectionFields.tsx	415	retained	保留：真实错误/约束/不可用状态	已有参数会保留，直到你明确修改；不支持的组合无法发布。
+web/src/ConnectionFields.tsx	421	retained	保留：真实错误/约束/不可用状态	"<Notice tone=""warning"" title=""当前 Xray REALITY 传输组合不受支持"">"
+web/src/ConnectionFields.tsx	456	retained	保留：真实错误/约束/不可用状态	label: `${transportOptions.find((o) => o.value === transport)?.label || transport}（此核心不支持）`,
+web/src/ConnectionFields.tsx	474	retained	保留：操作后果/权限/安全/输入格式	"? ""填写不含查询参数、片段或百分号编码的路径；WebSocket 使用 URI 安全字符。"""
+web/src/ConnectionFields.tsx	484	retained	保留：操作后果/权限/安全/输入格式	"? ""客户端请求 Host（该监听核心不校验 Host）"""
+web/src/ConnectionFields.tsx	489	retained	保留：操作后果/权限/安全/输入格式	"? ""保留为客户端拨号模板参数，不作为 sing-box WebSocket 服务端访问校验。"""
+web/src/ConnectionFields.tsx	506	retained	保留：真实错误/约束/不可用状态	"""监听端不支持自定义请求头，请先移除。"","
+web/src/ConnectionFields.tsx	550	retained	保留：真实错误/约束/不可用状态	"""此目标不支持 gRPC Authority，请清除此值。"","
+web/src/ConnectionFields.tsx	560	retained	保留：真实错误/约束/不可用状态	"? ""已有参数仅供 Xray 出站连接使用，当前目标不支持；请清除此值后保存。"""
+web/src/ConnectionFields.tsx	561	retained	保留：操作后果/权限/安全/输入格式	": ""仅普通 Xray 的出站连接支持；其他目标会阻止生成，不会忽略该值。"""
+web/src/ConnectionFields.tsx	580	retained	保留：操作后果/权限/安全/输入格式	"? ""REALITY 的兼容性取决于目标核心；Xray 仅支持 TCP / gRPC，且不接受显式 ALPN。"""
+web/src/ConnectionFields.tsx	634	retained	保留：真实错误/约束/不可用状态	"? ""当前目标不支持现有指纹；值仍保留，请选择支持的指纹或清除。"""
+web/src/ConnectionFields.tsx	645	retained	保留：真实错误/约束/不可用状态	"new Error(""当前目标不支持此客户端指纹。""),"
+web/src/ConnectionFields.tsx	668	retained	保留：真实错误/约束/不可用状态	"? ""Xray REALITY 不支持显式 ALPN；已有值仍保留，请移除后保存。"""
+web/src/ConnectionFields.tsx	679	retained	保留：真实错误/约束/不可用状态	"""Xray REALITY 不支持显式 ALPN。"","
+web/src/ConnectionFields.tsx	705	retained	保留：操作后果/权限/安全/输入格式	Xray REALITY 不使用显式 ALPN。
+web/src/ConnectionFields.tsx	731	retained	保留：真实错误/约束/不可用状态	移除不支持的 REALITY 设置
+web/src/ConnectionFields.tsx	767	retained	保留：真实错误/约束/不可用状态	label: `${flow}（此核心不支持）`,
+web/src/ConnectionFields.tsx	783	retained	保留：真实错误/约束/不可用状态	<ClearValueButton>移除不支持的 Flow</ClearValueButton>
+web/src/ConnectionFields.tsx	790	retained	保留：真实错误/约束/不可用状态	"limited ? ""数据包封装（此核心不支持）"" : ""数据包封装"""
+web/src/ConnectionFields.tsx	793	retained	保留：真实错误/约束/不可用状态	"description=""按客户端目标选择；不支持的目标会明确拒绝生成。"""
+web/src/ConnectionFields.tsx	856	retained	保留：真实错误/约束/不可用状态	Host 请使用上方专用字段。请求头名称不可重复，不支持换行。
+web/src/ConnectionFields.tsx	890	retained	保留：真实错误/约束/不可用状态	"new Error(""此请求头由传输核心管理，不能覆盖""),"
+web/src/ConnectionFields.tsx	897	retained	保留：真实错误/约束/不可用状态	"? Promise.reject(new Error(""请求头名称不能重复""))"
+web/src/ConnectionFields.tsx	915	retained	保留：真实错误/约束/不可用状态	"{ pattern: /^[^\r\n]*$/, message: ""请求头值不能包含换行"" },"
+web/src/ConnectionFields.tsx	1048	retained	保留：真实错误/约束/不可用状态	"<Notice tone=""warning"" title=""监听端不支持自定义请求头"">"
+web/src/ConnectionFields.tsx	1050	retained	保留：操作后果/权限/安全/输入格式	这些参数仅用于客户端出站请求，不会转换成服务端响应头。已有参数仍保留，请明确移除后保存。
+web/src/ConnectionFields.tsx	1061	retained	保留：真实错误/约束/不可用状态	移除不支持的请求头
+web/src/Diagnostics.tsx	181	rephrased	正向表达保护、作用范围或下一步	目标地址固定保存。更换地址请登记新目标，不会改写既有测试记录。
+web/src/Diagnostics.tsx	258	retained	保留：操作后果/权限/安全/输入格式	测试的是已应用连接路径，不测试公开入口 TLS
+web/src/Diagnostics.tsx	259	retained	保留：操作后果/权限/安全/输入格式	或客户端接入认证。测试载荷不扣租户额度；每一跳的网卡与供应商流量仍会增加。
+web/src/Diagnostics.tsx	284	retained	保留：真实错误/约束/不可用状态	": ""未收到完整计量，不能认定没有产生流量。""}"
+web/src/Diagnostics.tsx	289	retained	保留：事实与观测范围	上传结果确认本地请求发送和目标响应完成，不代表接收端已持久保存内容。
+web/src/Diagnostics.tsx	300	retained	保留：操作后果/权限/安全/输入格式	"? ""连通性仅发送 HEAD 请求，不下载测试正文。"""
+web/src/Diagnostics.tsx	302	retained	保留：事实与观测范围	载荷只计一次，不是各跳合计流量。协议与加密开销另计，这些数值不是供应商账单流量。
+web/src/Diagnostics.tsx	315	retained	保留：事实与观测范围	"""节点收到后停止剩余测试。已经产生的流量不会撤销，取消请求不等于已停止。"","
+web/src/Diagnostics.tsx	466	retained	保留：操作后果/权限/安全/输入格式	"new Error(""使用不含凭据、查询参数或片段的 HTTPS 地址""),"
+web/src/Diagnostics.tsx	485	retained	保留：操作后果/权限/安全/输入格式	可能覆盖该地址的内容，不应填写文件或业务资源地址。不会发送账号凭据。
+web/src/Diagnostics.tsx	684	retained	保留：操作后果/权限/安全/输入格式	从入口核心经过已配置中转与出口访问目标，不测试公开入口 TLS
+web/src/Diagnostics.tsx	685	retained	保留：操作后果/权限/安全/输入格式	或客户端接入认证。任务按提交时的已应用路径固定，途中变化不会认定测试成功。
+web/src/Diagnostics.tsx	761	retained	保留：操作后果/权限/安全/输入格式	"? ""仅发送 HEAD 请求，不下载测试正文，仍会产生协议流量。"""
+web/src/Diagnostics.tsx	763	retained	保留：事实与观测范围	载荷上限只计一次，不含各跳的协议与加密开销，不等于供应商账单流量。
+web/src/Diagnostics.tsx	765	retained	保留：操作后果/权限/安全/输入格式	"""测试载荷不扣租户额度，但各跳的网卡与供应商流量仍会增加。""}"
+web/src/Diagnostics.tsx	770	retained	保留：事实与观测范围	"""PUT 可能替换目标内容。请确认这是授权的专用诊断上传端点，不是文件或业务资源地址。"""
+web/src/EntitlementPolicyComparison.tsx	12	retained	保留：选项含义/额度与周期	"const limit = (value: number | null | undefined, format: (value: number) => string) => value == null ? ""继承"" : value === 0 ? ""明确不限制（0）"" : format(value);"
+web/src/EntitlementPolicyComparison.tsx	26	retained	保留：选项含义/额度与周期	"{ key: ""expiresAt"", label: ""到期时间"", raw: ent.expiresAt, text: ent.expiresAt || ""不过期"" },"
+web/src/EntitlementPolicyComparison.tsx	27	retained	保留：操作后果/权限/安全/输入格式	"{ key: ""paused"", label: ""暂停平台服务"", raw: ent.paused, text: ent.paused ? ""暂停"" : ""不暂停"" },"
+web/src/EntitlementPolicyComparison.tsx	28	retained	保留：选项含义/额度与周期	"{ key: ""mode"", label: ""账号流量周期"", raw: cycle.mode, text: ({ monthly: ""每月固定日"", anniversary: ""按周期起点日每月重置"", ""fixed-days"": ""固定天数周期"", none: ""不自动重置"" } as Record<string, string>)[cycle.mode] ?? `未支持的规则：${cycle.mode}` },"
+web/src/EntitlementPolicyComparison.tsx	71	retained	保留：真实比较状态	"</Table> : <p className=""muted text-sm text-muted-foreground"">个人设置保持不变。</p>}"
+web/src/Fleet.tsx	52	retained	保留：事实与观测范围	"return ""授权与配置有效时继续续期；确认核心退出后，最多自动恢复 3 次，依次等待 5、10、20 秒。达到上限、结果未确认或权限变化时暂停，必须重新检查；不会自动恢复已撤销的权限。停止核心或提交未勾选持续运行的替代操作，会关闭原持续授权。仅退出 Agent 进程不等于关闭授权。"";"
+web/src/Fleet.tsx	54	retained	保留：操作后果/权限/安全/输入格式	"? ""执行停止时会关闭所选实例的持续授权，不会再自动恢复。"""
+web/src/Fleet.tsx	55	retained	保留：操作后果/权限/安全/输入格式	": ""本次不授予持续运行权限；执行时会关闭原有持续授权。现有核心仅保留当前有时限的运行授权，到期后停止。"";"
+web/src/Fleet.tsx	330	retained	保留：真实错误/约束/不可用状态	"throw new Error(""所选实例已不属于此转发路径，请重新选择执行范围。"");"
+web/src/Fleet.tsx	471	rephrased	正向表达保护、作用范围或下一步	仅对这条路径中的所选实例计划变更，不会切换或合并其他路径。
+web/src/Fleet.tsx	519	rephrased	正向表达保护、作用范围或下一步	"? ""准备固定版本文件，不启动或替换当前运行的核心。"""
+web/src/Fleet.tsx	520	retained	保留：操作后果/权限/安全/输入格式	": ""升级到不同的明确版本，当前连接可能中断。预览会检查实例当前版本与兼容性。""}"
+web/src/Fleet.tsx	527	retained	保留：真实错误/约束/不可用状态	依赖内网服务的旧路径可能中断，需先评审目标版本配置与迁移方案；旧版本不能直接保存网段例外。
+web/src/Fleet.tsx	528	retained	保留：真实错误/约束/不可用状态	它使用内置 CA，不能直接沿用自定义系统 CA 信任。
+web/src/Fleet.tsx	596	retained	保留：操作后果/权限/安全/输入格式	回退历史配置，不恢复历史账号授权、凭据或过期策略；当前权限会重新检查。
+web/src/Fleet.tsx	620	retained	保留：真实错误/约束/不可用状态	"""停止操作会关闭这些实例的持续运行授权；线路在重新检查、执行启动并确认完成前不可用。"""
+web/src/Fleet.tsx	815	rephrased	正向表达保护、作用范围或下一步	这是节点执行策略的短期授权，不改变用户服务到期时间。
+web/src/Fleet.tsx	873	rephrased	正向表达保护、作用范围或下一步	"? ""只准备目标版本文件，不启动或替换当前运行的核心。"""
+web/src/Fleet.tsx	875	retained	保留：真实错误/约束/不可用状态	"? ""所选核心将停止，经过它们的线路暂时不可用。"""
+web/src/Fleet.tsx	932	rephrased	正向表达保护、作用范围或下一步	创建计划不会执行。下一步逐阶段确认开始。
+web/src/Fleet.tsx	1044	retained	保留：真实错误/约束/不可用状态	"{t.supported ? fleetStatus(t.status) : ""不支持此操作""}"
+web/src/Fleet.tsx	1063	retained	保留：真实错误/约束/不可用状态	"messages.push(""有实例不支持此操作，请查看目标详情。"");"
+web/src/Fleet.tsx	1152	rephrased	正向表达保护、作用范围或下一步	"? ""只准备目标版本文件，不启动或替换当前核心。"""
+web/src/Fleet.tsx	1155	retained	保留：操作后果/权限/安全/输入格式	": ""所选实例将重启并应用已检查的配置，当前连接可能中断。成功实例不会重复执行。"") +"
+web/src/Fleet.tsx	1201	retained	保留：操作后果/权限/安全/输入格式	": ""本批次不授予持续运行权限。""}"
+web/src/Fleet.tsx	1285	retained	保留：操作后果/权限/安全/输入格式	等待确认或结果不明的实例不会自动重试。请先查看对应实例的实际运行状态。
+web/src/GroupPolicyComparison.tsx	77	retained	保留：真实比较状态	"</Table> : <p className=""muted text-sm text-muted-foreground"">用户组设置保持不变。</p>}"
+web/src/GroupPolicyComparison.tsx	80	retained	保留：真实比较状态	{representationOnly && <p>成员不变，保存格式调整</p>}
+web/src/GroupPolicyEditor.tsx	79	retained	保留：真实错误/约束/不可用状态	"setError(new APIError(props.initial ? ""此用户组已不存在，不能将旧编辑内容当作新用户组保存。"" : ""此用户组标识已存在，请使用新标识重新新建。"", 409));"
+web/src/GroupPolicyEditor.tsx	148	retained	保留：操作后果/权限/安全/输入格式	"title: ""使用最新版本重新编辑？"", description: ""编辑区将换成最新保存的用户组。本次草稿会保留为未保存副本，不会自动合并。"", confirmLabel: ""使用最新版本"", cancelLabel: ""保留当前编辑"","
+web/src/GroupPolicyEditor.tsx	169	retained	保留：真实错误/约束/不可用状态	"{latest.record ? <GroupPolicyComparison resource={{ target: latest.target, before: context.record, after: latest.record, references: { before: referencesFor(context.record?.group ?? null, context.references), after: referencesFor(latest.record.group, latest.references) } }} title=""已保存的用户组变化"" beforeLabel=""打开时保存"" afterLabel=""最新保存""/> : <p>{context.precondition.exists ? ""用户组已不存在，当前草稿不会自动新建同名用户组。"" : ""用户组仍未创建，可用当前草稿重新预览。""}</p>}"
+web/src/GroupPolicyEditor.tsx	177	retained	保留：真实错误/约束/不可用状态	"<AppField name=""priority"" label=""用户组优先级"" description=""数值越大越优先。同一优先级不能给同一用户分配不同方案。"" rules={[{ required: true }, { type: ""integer"", min: -2147483648, max: 2147483647, message: ""请输入有效的 32 位整数优先级"" }]} trigger=""onValueChange""><NumericInput precision={0} min={-2147483648} max={2147483647}/></AppField>"
+web/src/Infrastructure.tsx	767	rephrased	正向表达保护、作用范围或下一步	只更新端点清单，不会修改已保存的转发配置、切换出口或下发到节点。引用此端点的配置需另行更新、校验并确认发布。
+web/src/Infrastructure.tsx	1138	rephrased	正向表达保护、作用范围或下一步	仅登记服务器，不会连接或改动服务器。
+web/src/Infrastructure.tsx	1220	retained	保留：操作后果/权限/安全/输入格式	请核对当前配置、权限与节点状态，再重新检查并明确创建新的持续运行计划。结果未确认时不会自动重放。
+web/src/Infrastructure.tsx	1224	rephrased	正向表达保护、作用范围或下一步	授权状态不等于核心正在运行；运行结果以上方节点确认状态为准。
+web/src/Infrastructure.tsx	1421	retained	保留：操作后果/权限/安全/输入格式	"""只将它配置到此服务器的对应核心实例。不要分享给其他人。"""
+web/src/ListenerRefreshReview.tsx	59	retained	保留：真实错误/约束/不可用状态	"? ""该监听端点已不存在。草稿中的设置已保留。"""
+web/src/ListenerRefreshReview.tsx	196	rephrased	正向表达保护、作用范围或下一步	"<h4 className=""text-sm font-medium"">转发去向保持不变</h4>"
+web/src/ListenerRefreshReview.tsx	205	rephrased	正向表达保护、作用范围或下一步	更新后仍需保存并检查草稿；此操作不会应用到服务器。
+web/src/NativeOverride.tsx	31	rephrased	正向表达保护、作用范围或下一步	DNS、分流或策略。原生覆盖与当前客户端版本绑定，不会自动转换为其他客户端格式。
+web/src/NativeOverride.tsx	63	rephrased	正向表达保护、作用范围或下一步	目标专用 · 不自动转换
+web/src/NativeOverride.tsx	70	rephrased	正向表达保护、作用范围或下一步	"description: ""只从当前草稿移除。已发布订阅不会随之改变。"","
+web/src/NativeOverride.tsx	83	retained	保留：真实错误/约束/不可用状态	"<Notice tone=""warning"" title=""原生覆盖与当前客户端版本不一致"">"
+web/src/NativeOverride.tsx	89	rephrased	正向表达保护、作用范围或下一步	的格式调整内容，再确认改绑；不会自动改写或丢弃原文。
+web/src/NativeOverride.tsx	96	rephrased	正向表达保护、作用范围或下一步	"""此操作只改变目标声明，不转换语法。需要重新预览检查后才能发布。"","
+web/src/NativeOverride.tsx	154	rephrased	正向表达保护、作用范围或下一步	生成结果不再使用结构化规则列表；默认流量行为仍保留。结构化规则仍保存在草稿中。
+web/src/NativeOverride.tsx	170	rephrased	正向表达保护、作用范围或下一步	连接凭据、生成的连接身份与规则文件由结构化配置管理，不能在这里覆盖。引用已有策略或连接时，使用生成预览中的原生名称；预览会检查可用字段和引用。文本有误也可以保存草稿。
+web/src/NodeObservation.tsx	151	retained	保留：事实与观测范围	网卡累计计数不等于本周期供应商已用额度，也不参与用户倍率计费。
+web/src/NodeObservation.tsx	202	retained	保留：选项含义/额度与周期	": ""不设额度周期""}"
+web/src/NodeObservation.tsx	207	retained	保留：选项含义/额度与周期	"? ""供应商不限量"""
+web/src/NodeObservation.tsx	235	retained	保留：选项含义/额度与周期	"? ""不限量"""
+web/src/NodeObservation.tsx	265	retained	保留：事实与观测范围	"? `截至 ${dateLabel(provider.observedAt)}${provider.fresh ? """" : "" · 不是实时余额""}`"
+web/src/NodeObservation.tsx	337	retained	保留：选项含义/额度与周期	"? ""不发送额度提醒"""
+web/src/NodeObservation.tsx	343	retained	保留：操作后果/权限/安全/输入格式	"? ""托管连接暂停策略已配置：额度耗尽、依据缺失或过期时拒绝新连接与续期；现有连接按短租约结束。stock 内核不受控，不自动更换出口。"""
+web/src/NodeObservation.tsx	344	rephrased	正向表达保护、作用范围或下一步	": ""配额耗尽仅提醒，不自动更换出口或修改线路。""}"
+web/src/Notifications.tsx	434	rephrased	正向表达保护、作用范围或下一步	公告仅在站内向所选受众展示，按开始和结束时间安排，不发送邮件或
+web/src/Notifications.tsx	683	rephrased	正向表达保护、作用范围或下一步	"description=""账号额度与到期提醒仅在站内展示。外部渠道用于管理员的供应商提醒与显式测试；保存设置不会发送测试消息。"""
+web/src/Notifications.tsx	700	rephrased	正向表达保护、作用范围或下一步	每类可设置多个阈值；清空即不生成该类提醒。
+web/src/Notifications.tsx	748	rephrased	正向表达保护、作用范围或下一步	"description=""按距到期时间划分时段，同一提醒阈值每段最多生成一次；不影响额度提醒。"""
+web/src/Notifications.tsx	757	rephrased	正向表达保护、作用范围或下一步	"description=""控制新生成的账号和供应商站内提醒；公告与测试不受影响。"""
+web/src/Notifications.tsx	792	retained	保留：操作后果/权限/安全/输入格式	"description=""填写邮件服务商提供的公网 SMTP 主机，不含协议或端口。"""
+web/src/Notifications.tsx	828	rephrased	正向表达保护、作用范围或下一步	"? ""更新 SMTP 密码（已保存，留空不变）"""
+web/src/Notifications.tsx	891	retained	保留：操作后果/权限/安全/输入格式	"description=""填写公网 HTTPS 接收地址，不含查询参数、片段或登录信息。"""
+web/src/Notifications.tsx	900	rephrased	正向表达保护、作用范围或下一步	"? ""更新签名密钥（已保存，留空不变）"""
+web/src/Notifications.tsx	977	retained	保留：事实与观测范围	"<Section title=""通知发送记录"" description=""渠道接收不等于收件人已经阅读。"">"
+web/src/ObservationForms.tsx	145	rephrased	正向表达保护、作用范围或下一步	更换采集实例、计费网卡或周期会重建估算基线；更换周期会清除原周期的账单引用，不修改用户流量账单。
+web/src/ObservationForms.tsx	147	retained	保留：操作后果/权限/安全/输入格式	"""供应商用量单独记录，所选耗尽行为不自动更换线路。""}"
+web/src/ObservationForms.tsx	190	retained	保留：操作后果/权限/安全/输入格式	"""该主机参与的托管线路在额度耗尽、所选依据缺失或超过 15 分钟、周期失效时拒绝新连接及续期；现有连接按短租约结束。手工账单记录不会自动刷新。stock 内核和已导出的外部代理凭据不受此策略控制，不自动切换出口。更新有效用量或改回仅提醒可恢复后续准入。启用后数据需支持此策略的控制平面版本；回退旧版本需启用前备份，关闭策略不会降级数据。"","
+web/src/ObservationForms.tsx	224	rephrased	正向表达保护、作用范围或下一步	"description=""一台服务器只选一个采集实例。节点 Agent 需显式启用主机采集；保存选择不会自动执行远程命令。"""
+web/src/ObservationForms.tsx	239	retained	保留：操作后果/权限/安全/输入格式	"description=""只选择供应商统计的物理或公网网卡，不选择回环、容器或重复转发接口。"""
+web/src/ObservationForms.tsx	279	retained	保留：选项含义/额度与周期	"{ value: ""unlimited"", label: ""不限量"" },"
+web/src/ObservationForms.tsx	367	rephrased	正向表达保护、作用范围或下一步	"description=""托管连接暂停策略也使用此依据；不会自动改用其他来源。"""
+web/src/ObservationForms.tsx	372	retained	保留：选项含义/额度与周期	"{ value: ""none"", label: ""不提醒"" },"
+web/src/ObservationForms.tsx	390	retained	保留：事实与观测范围	"description=""暂停仅对通过控制平面准入的托管连接生效；缺失或过期用量也暂停，不把未知用量当作零。"""
+web/src/ObservationForms.tsx	564	retained	保留：事实与观测范围	的网卡计数对齐。之后只累加连续采样，不推测接入前或缺失期间的流量。
+web/src/ObservationForms.tsx	583	retained	保留：操作后果/权限/安全/输入格式	"<Input inputMode=""decimal"" placeholder=""不自动填入网卡增量或额度"" />"
+web/src/PageBoundary.tsx	79	retained	保留：选项含义/额度与周期	"cancelLabel: ""暂不操作"","
+web/src/Pipeline.tsx	190	rephrased	正向表达保护、作用范围或下一步	"· 节点标识 {""{id}""}。改名不会改变节点身份。"
+web/src/Pipeline.tsx	229	rephrased	正向表达保护、作用范围或下一步	按连接内容识别重复项，不会把同名的不同连接合并。来源信息会保留。
+web/src/PolicyFields.tsx	17	retained	保留：操作后果/权限/安全/输入格式	"nonnegativeIntegerRule(""请输入可精确换算为整数字节的非负数值，且不超过安全范围""),"
+web/src/PolicyFields.tsx	72	retained	保留：选项含义/额度与周期	"{ value: ""none"", label: ""不自动重置"" },"
+web/src/PolicyFields.tsx	89	retained	保留：操作后果/权限/安全/输入格式	"? ""原有时间格式无效，请明确修正；不会自动替换为当前时间。"""
+web/src/PolicyFields.tsx	102	retained	保留：真实错误/约束/不可用状态	"{planDefaults && repair.timezone && (<AppField name={[""cycle"", ""timezone""]} label=""修正周期时区"" description=""原有时区不受支持。请输入 UTC+8 或 Asia/Shanghai；留空使用 UTC+8。"" rules={[{"
+web/src/PolicyFields.tsx	114	retained	保留：操作后果/权限/安全/输入格式	"<AppField name=""onlineIpLimit"" label=""账号在线 IP 数上限"" description=""跨入口合并去重，不按设备计数。"" rules={wholeNumberRules} trigger=""onValueChange"">"
+web/src/PolicyFields.tsx	125	retained	保留：选项含义/额度与周期	0 为不限制。这些均不是设备数量限制。
+web/src/ProfileDraftConflict.tsx	29	retained	保留：真实错误/约束/不可用状态	"title=""配置或引用内容已变化。当前输入已保留，不能覆盖新版本。"""
+web/src/ProfileDraftConflict.tsx	38	rephrased	正向表达保护、作用范围或下一步	"""这会放弃当前未保存的输入，不会改变最新草稿或已发布的订阅。"","
+web/src/ProfileDraftConflict.tsx	56	rephrased	正向表达保护、作用范围或下一步	已发布的订阅不受影响。重新打开编辑时会读取最新草稿。
+web/src/Profiles.tsx	415	retained	保留：真实错误/约束/不可用状态	": ""倍率暂不可用"";"
+web/src/Profiles.tsx	632	rephrased	正向表达保护、作用范围或下一步	"description: ""仅放弃 JSON 文本修改，之前的配置草稿保持不变。"","
+web/src/Profiles.tsx	719	retained	保留：真实错误/约束/不可用状态	"? ""不可用"""
+web/src/Profiles.tsx	808	retained	保留：真实错误/约束/不可用状态	label: savedSourceNames.get(id) || `${id}（来源暂不可用，已保留）`,
+web/src/Profiles.tsx	821	retained	保留：真实错误/约束/不可用状态	label: `${draft.collectionId}（集合暂不可用，已保留）`,
+web/src/Profiles.tsx	832	retained	保留：真实错误/约束/不可用状态	label: `${id}（入口暂不可用，已保留）`,
+web/src/Profiles.tsx	851	retained	保留：真实错误/约束/不可用状态	"? ""所选集合暂不可用，原选择已保留"""
+web/src/Profiles.tsx	856	retained	保留：真实错误/约束/不可用状态	? `${selectedSourceIds.length} 个来源，${missingSourceCount} 个暂不可用，原选择已保留`
+web/src/Profiles.tsx	881	retained	保留：真实错误/约束/不可用状态	"label: ""候选连接暂不可用"","
+web/src/Profiles.tsx	1076	retained	保留：真实错误/约束/不可用状态	"`规则 ${index + 1}${rule.match.value ? ` · ${rule.match.op === ""resource"" ? draft.ir.resources.find((resource) => resource.id === rule.match.value)?.name || resources.data?.find((resource) => resource.id === rule.match.value)?.name || ""规则文件暂不可用"" : rule.match.value}` : """"}`,"
+web/src/Profiles.tsx	1257	rephrased	正向表达保护、作用范围或下一步	这些引用将变为不可用，需要重新选择去向。不会自动改为直连。
+web/src/Profiles.tsx	1286	rephrased	正向表达保护、作用范围或下一步	"description=""技术预览只检查当前草稿，不保存或发布。正式发布会按所选客户端订阅重新检查。"""
+web/src/Profiles.tsx	1618	retained	保留：真实错误/约束/不可用状态	<strong>有效连接暂不可用</strong>
+web/src/Profiles.tsx	1636	retained	保留：真实错误/约束/不可用状态	{missingEntryCount} 个平台入口暂不可用，原选择已保留。
+web/src/Profiles.tsx	1888	rephrased	正向表达保护、作用范围或下一步	纯节点订阅不包含分流；上方行为仍保存在共享配置中，仅完整配置使用。
+web/src/Profiles.tsx	2041	retained	保留：真实错误/约束/不可用状态	"title=""部分流量去向当前不可用"""
+web/src/Profiles.tsx	2042	retained	保留：真实错误/约束/不可用状态	"aria-label=""部分流量去向当前不可用"""
+web/src/Profiles.tsx	2047	rephrased	正向表达保护、作用范围或下一步	<p>原选择已保留，不会自动改用其他连接。</p>
+web/src/Profiles.tsx	2113	retained	保留：真实错误/约束/不可用状态	"""原文和原绑定已保留；到运行设置中检查，不能按当前草稿客户端直接发布。"""
+web/src/Profiles.tsx	2118	retained	保留：真实错误/约束/不可用状态	"<Notice tone=""warning"" title=""原生覆盖不能用于纯节点默认输出"">"
+web/src/Profiles.tsx	2201	retained	保留：真实错误/约束/不可用状态	"""所选候选连接已不可用，原选择已保留，请重新选择。"","
+web/src/Profiles.tsx	2573	retained	保留：选项含义/额度与周期	"placeholder=""不限来源"""
+web/src/Profiles.tsx	2871	retained	保留：逻辑否定条件	? `当前不匹配的内容将替换为“${label}”的空条件，保留不匹配关系。`
+web/src/Profiles.tsx	2881	retained	保留：逻辑否定条件	"""取消不匹配将保留内部条件，并移除外层条件及其附加字段。"","
+web/src/Profiles.tsx	2896	retained	保留：逻辑否定条件	"label: composite ? ""不匹配此组"" : ""不匹配此条件"","
+web/src/Profiles.tsx	2905	retained	保留：逻辑否定条件	"? [{ key: ""unwrap"", label: ""取消不匹配"", onClick: unwrap }]"
+web/src/Profiles.tsx	2937	retained	保留：逻辑否定条件	不匹配以下条件
+web/src/Profiles.tsx	2969	retained	保留：真实错误/约束/不可用状态	": ""条件结构暂不支持，原内容已保留""}"
+web/src/Profiles.tsx	2979	retained	保留：逻辑否定条件	"{ value: ""negative"", label: ""不匹配"" },"
+web/src/PublishedRoutes.tsx	194	retained	保留：真实错误/约束/不可用状态	"<Notice tone=""warning"" title=""此入口暂不能分配独立用户"">"
+web/src/PublishedRoutes.tsx	280	retained	保留：真实错误/约束/不可用状态	"} else setContextError(new Error(""找不到指定线路，请从列表中重新选择。""));"
+web/src/PublishedRoutes.tsx	694	retained	保留：真实错误/约束/不可用状态	"title=""线路已被其他修改更新。当前输入保留，但不能覆盖新版本。"""
+web/src/PublishedRoutes.tsx	730	rephrased	正向表达保护、作用范围或下一步	": ""先检查线路，再核对结果并保存。保存不会授权用户或应用服务器配置。"""
+web/src/PublishedRoutes.tsx	1044	retained	保留：真实错误/约束/不可用状态	"? `${failedUser?.name || ""所选用户""} 的服务当前不可用`"
+web/src/PublishedRoutes.tsx	1457	rephrased	正向表达保护、作用范围或下一步	选择用户，核对这条线路的授权与独立入口；不会自动授予权限或创建凭据。
+web/src/Rates.tsx	90	rephrased	正向表达保护、作用范围或下一步	"description=""整条线路计算一次，不按中转跳数叠加。历史账期保留当时的倍率。"""
+web/src/Rates.tsx	208	rephrased	正向表达保护、作用范围或下一步	保存后新增倍率版本，不可修改；已经归属的历史记录保持不变。
+web/src/Resources.tsx	298	retained	保留：操作后果/权限/安全/输入格式	"""固定版本会核对原校验值；失败保留原文件，并阻止基于失败刷新状态的新发布。已发布配置包不改变。"","
+web/src/Resources.tsx	481	retained	保留：操作后果/权限/安全/输入格式	"message: ""请使用不含凭据的 HTTPS 地址"","
+web/src/Resources.tsx	494	retained	保留：操作后果/权限/安全/输入格式	"{ value: ""public"", label: ""公开且不含个人信息的规则文件"" },"
+web/src/Resources.tsx	614	retained	保留：操作后果/权限/安全/输入格式	"<Input placeholder=""从可信文件计算；不填占位值"" />"
+web/src/RouteExitEditor.tsx	229	retained	保留：真实错误/约束/不可用状态	"throw new Error(""转发路径暂不可用。请重新核对线路。"");"
+web/src/RouteExitEditor.tsx	244	retained	保留：真实错误/约束/不可用状态	"throw new Error(""所选出口已不可用。选择已保留，请选择其他端点。"");"
+web/src/RouteExitEditor.tsx	296	retained	保留：真实错误/约束/不可用状态	"throw new Error(""检查结果与所选线路或出口不一致，请重新检查。"");"
+web/src/RouteExitEditor.tsx	394	rephrased	正向表达保护、作用范围或下一步	"description: ""已保存的线路和服务器配置不受影响。"","
+web/src/RouteExitEditor.tsx	463	rephrased	正向表达保护、作用范围或下一步	"""关闭不会取消已发送的请求；返回后可继续核对同一次保存。"""
+web/src/RouteExitEditor.tsx	484	retained	保留：真实错误/约束/不可用状态	"unavailableReason=""入口和当前出口不在本次替换范围内。"""
+web/src/RouteExitEditor.tsx	491	rephrased	正向表达保护、作用范围或下一步	此端点尚未加入转发路径，请提供它的服务端证书设置。不会关闭端点的
+web/src/RouteExitEditor.tsx	571	rephrased	正向表达保护、作用范围或下一步	<li>其他线路和默认转发不变</li>
+web/src/RouteExitEditor.tsx	572	rephrased	正向表达保护、作用范围或下一步	<li>入口和用户凭据不变</li>
+web/src/RouteExitEditor.tsx	577	retained	保留：真实错误/约束/不可用状态	"title=""仅保存证书路径，尚不能应用。请补充证书和私钥 PEM。"""
+web/src/RouteExitEditor.tsx	624	rephrased	正向表达保护、作用范围或下一步	保存后需单独应用，不会重新发布订阅；应用生效后，使用此入口的已有客户端也会改用新出口。
+web/src/RoutingSummary.tsx	24	retained	保留：逻辑否定条件	"return `不匹配（${children.map((child) => matchLabel(child, resources)).join(""、"")}）`;"
+web/src/RoutingSummary.tsx	52	rephrased	正向表达保护、作用范围或下一步	"if (intent.kind === ""nodes-only"") return <p>纯节点订阅，不包含分流规则。</p>;"
+web/src/RoutingSummary.tsx	96	rephrased	正向表达保护、作用范围或下一步	<p>规则文件只列出引用，不展开文件内条目。</p>
+web/src/RoutingSummary.tsx	112	rephrased	正向表达保护、作用范围或下一步	<p>策略组按其配置决定流量去向，不表示客户端当前选中的节点。</p>
+web/src/RoutingSummary.tsx	560	rephrased	正向表达保护、作用范围或下一步	"? ""纯节点订阅不包含分流规则。"""
+web/src/RoutingSummary.tsx	561	rephrased	正向表达保护、作用范围或下一步	": ""纯节点订阅不包含分流规则；节点及连接设置的变化不在此摘要中。""}"
+web/src/RoutingSummary.tsx	599	rephrased	正向表达保护、作用范围或下一步	规则数不含默认处理及规则文件内条目；节点数是配置包含数量，不代表在线状态。
+web/src/RoutingSummary.tsx	603	rephrased	正向表达保护、作用范围或下一步	策略组按其配置决定流量去向，不表示客户端当前选中的节点。
+web/src/RoutingSummary.tsx	670	rephrased	正向表达保护、作用范围或下一步	<p>摘要字段相同，不代表配置未变化。</p>
+web/src/RoutingSummary.tsx	727	rephrased	正向表达保护、作用范围或下一步	"""nodes-only"": ""纯节点订阅，不包含分流规则。"","
+web/src/RoutingSummary.tsx	803	rephrased	正向表达保护、作用范围或下一步	"? ""纯节点订阅不包含分流规则。"""
+web/src/RoutingSummary.tsx	804	rephrased	正向表达保护、作用范围或下一步	": ""纯节点订阅不包含分流规则；节点及连接设置的变化不在此摘要中。""}"
+web/src/RuleFileImport.tsx	213	rephrased	正向表达保护、作用范围或下一步	。失败不会替换已接纳文件，已发布订阅保留原文件版本。
+web/src/RuleFileImport.tsx	239	rephrased	正向表达保护、作用范围或下一步	改用本地文件后，不再从原远程地址刷新。若只需更新原地址内容，请返回资源列表选择“刷新文件”。
+web/src/RuleFileImport.tsx	283	rephrased	正向表达保护、作用范围或下一步	保存时由平台读取一次文件并保存私有副本。地址不会写入客户端配置，文件内容将随配置包交付。
+web/src/RuleFileImport.tsx	339	rephrased	正向表达保护、作用范围或下一步	MiB，先检查文件封装与完整性。客户端兼容性仍需在配置预览中核对；引用此文件的输出将交付配置包，不是单文件订阅。
+web/src/RuleFileImport.tsx	357	retained	保留：真实错误/约束/不可用状态	"<Input placeholder=""留空由服务器计算；填写后不一致会拒绝导入"" />"
+web/src/SemanticOutputChanges.tsx	34	retained	保留：真实错误/约束/不可用状态	"unsupported: ""此配置不支持这项比较。"","
+web/src/SemanticOutputChanges.tsx	36	retained	保留：真实错误/约束/不可用状态	"""invalid-snapshot"": ""比较快照不可用。"","
+web/src/SemanticOutputChanges.tsx	187	retained	保留：真实错误/约束/不可用状态	"if (value.state === ""unavailable"") return <span>直接引用信息不可用。</span>;"
+web/src/SemanticOutputChanges.tsx	210	retained	保留：事实与观测范围	"{value.state === ""partial"" && <span>直接引用信息不完整。</span>}"
+web/src/SemanticOutputChanges.tsx	227	retained	保留：真实错误/约束/不可用状态	"{unavailable ? ""（部分不可用）"" : partial ? ""（部分未展示）"" : """"}"
+web/src/SemanticOutputChanges.tsx	229	rephrased	正向表达保护、作用范围或下一步	<p>仅列直接引用，不包含全部间接依赖，也不代表实际流量。</p>
+web/src/ServerEndpointSelect.tsx	86	retained	保留：真实错误/约束/不可用状态	"hosts.push({ value: server, label: ""原服务器（当前不可用）"" });"
+web/src/ServerEndpointSelect.tsx	116	retained	保留：真实错误/约束/不可用状态	"label: `${endpointLabel(entry)}${entry.id === value && !available ? ""（当前不可选）"" : """"}`,"
+web/src/ServerEndpointSelect.tsx	123	retained	保留：真实错误/约束/不可用状态	"label: `${current?.endpoint.name || ""原端点""}（当前不可用）`,"
+web/src/ServerForwarding.tsx	48	retained	保留：真实错误/约束/不可用状态	")?.name || ""服务器不可用""}"
+web/src/ServerForwarding.tsx	145	retained	保留：真实错误/约束/不可用状态	"if (!connector) return `连接器不可用：${id || ""未指定""}`;"
+web/src/ServerForwarding.tsx	197	retained	保留：逻辑否定条件	"return `不匹配 (${childLabels().join(""，"")})`;"
+web/src/ServerRoutes.tsx	216	retained	保留：真实错误/约束/不可用状态	"else setEditError(new Error(""找不到指定的转发路径，请从列表中选择。""));"
+web/src/ServerRoutes.tsx	609	rephrased	正向表达保护、作用范围或下一步	"description: ""仅放弃 JSON 文本修改，之前的转发路径草稿保持不变。"","
+web/src/ServerRoutes.tsx	620	rephrased	正向表达保护、作用范围或下一步	"description: ""已保存的配置不受影响。"","
+web/src/ServerRoutes.tsx	692	retained	保留：真实错误/约束/不可用状态	"title=""转发路径已被其他修改更新。当前输入保留，但不能覆盖新版本。"""
+web/src/ServerRoutes.tsx	815	retained	保留：真实错误/约束/不可用状态	"unavailableReason=""不可选端点的核心已在路径中使用；请选择其他核心的端点。"""
+web/src/ServerRoutes.tsx	871	retained	保留：真实错误/约束/不可用状态	"unavailableReason=""不可选端点的核心已在路径中使用；请选择其他核心的端点。"""
+web/src/ServerRoutes.tsx	964	rephrased	正向表达保护、作用范围或下一步	文件路径相对于此次配置包，不会读取服务器上的现有文件。
+web/src/ServerRoutes.tsx	1027	rephrased	正向表达保护、作用范围或下一步	"? ""用于 Xray 直接出站的目标；不更改中转连接。"""
+web/src/ServerRoutes.tsx	1028	rephrased	正向表达保护、作用范围或下一步	": ""用于受管入口的用户目标；不更改中转连接。""}"
+web/src/ServerRoutes.tsx	1034	retained	保留：操作后果/权限/安全/输入格式	"placeholder=""例如 10.20.0.0/16，默认不允许"""
+web/src/ServerRoutes.tsx	1160	retained	保留：真实错误/约束/不可用状态	<p>当前草稿不能应用。请先修复问题，再重新检查。</p>
+web/src/ServerRoutes.tsx	1269	rephrased	正向表达保护、作用范围或下一步	"""请先核对核心实例；更新监听不会替换实例设置。"""
+web/src/ServerRoutes.tsx	1343	rephrased	正向表达保护、作用范围或下一步	"? ""接收记录不代表当前实例已应用。"""
+web/src/ServerRoutes.tsx	1345	rephrased	正向表达保护、作用范围或下一步	": ""关闭页面不会取消已发送的请求。""}"
+web/src/ServerRoutes.tsx	1379	rephrased	正向表达保护、作用范围或下一步	<span>将使用原请求再次提交，不会创建新请求。</span>
+web/src/ServerRoutes.tsx	1843	rephrased	正向表达保护、作用范围或下一步	权限有效期 {lease} 秒；超时需重新确认权限，不能无限离线运行。
+web/src/ServerRoutes.tsx	1923	retained	保留：真实错误/约束/不可用状态	"title=""当前管理员身份尚未确认，暂不能提交修改。"""
+web/src/ServicePolicyComparison.tsx	25	retained	保留：选项含义/额度与周期	"? value === 0 ? ""不限额（0 GiB）"" : `${value} GiB（${value * 1024 ** 3} 字节）`"
+web/src/ServicePolicyComparison.tsx	31	retained	保留：选项含义/额度与周期	"{ key: ""quota"", label: ""周期额度"", raw: plan.quotaBytes, value: quantity(plan.quotaBytes, ""不限额"", bytesLabel) },"
+web/src/ServicePolicyComparison.tsx	33	retained	保留：选项含义/额度与周期	"{ key: ""ips"", label: ""在线 IP 上限"", raw: plan.onlineIpLimit, value: quantity(plan.onlineIpLimit, ""不限制"", (value) => `${value} 个`) },"
+web/src/ServicePolicyComparison.tsx	34	retained	保留：选项含义/额度与周期	"{ key: ""connections"", label: ""并发逻辑流上限"", raw: plan.connectionLimit, value: quantity(plan.connectionLimit, ""不限制"", (value) => `${value} 条`) },"
+web/src/ServicePolicyComparison.tsx	35	retained	保留：选项含义/额度与周期	"{ key: ""rate"", label: ""每个逻辑入口速率"", raw: plan.entryRateBps, value: quantity(plan.entryRateBps, ""不限制"", bitrateLabel) },"
+web/src/ServicePolicyComparison.tsx	36	retained	保留：选项含义/额度与周期	"{ key: ""mode"", label: ""账号周期默认规则"", raw: cycle.mode, value: ({ monthly: ""每月固定日"", anniversary: ""按周期起点日每月重置"", ""fixed-days"": ""固定天数周期"", none: ""不自动重置"" } as Record<string, string>)[cycle.mode] || `未支持的规则：${cycle.mode}` },"
+web/src/ServicePolicyComparison.tsx	80	retained	保留：真实比较状态	"</Table> : <p className=""muted text-sm text-muted-foreground"">方案设置保持不变。</p>}"
+web/src/ServicePolicyComparison.tsx	81	rephrased	正向表达保护、作用范围或下一步	"{rows.some((field) => [""mode"", ""day"", ""days""].includes(field.key)) && <p className=""muted text-sm text-muted-foreground"">首次设置账号周期时的默认规则；已有账号周期不变。</p>}"
+web/src/ServicePolicyComparison.tsx	82	rephrased	正向表达保护、作用范围或下一步	"{rows.some((field) => [""anchor"", ""timezone""].includes(field.key)) && <p className=""muted text-sm text-muted-foreground"">起点与时区为方案保存值，不会改写已有账号周期。</p>}"
+web/src/ServicePolicyEditor.tsx	78	retained	保留：真实错误/约束/不可用状态	"setError(new APIError(props.initial ? ""此方案已不存在，不能将旧编辑内容当作新方案保存。"" : ""此方案标识已存在，请使用新标识重新新建。"", 409));"
+web/src/ServicePolicyEditor.tsx	161	retained	保留：操作后果/权限/安全/输入格式	"title: ""使用最新版本重新编辑？"", description: ""编辑区将换成最新保存的方案。本次草稿会保留为未保存副本，不会自动合并。"", confirmLabel: ""使用最新版本"", cancelLabel: ""保留当前编辑"","
+web/src/ServicePolicyEditor.tsx	183	retained	保留：真实错误/约束/不可用状态	"{latest.record ? <ServicePolicyComparison resource={{ target: latest.target, before: context.record, after: latest.record }} title=""已保存的方案变化"" beforeLabel=""打开时保存"" afterLabel=""最新保存""/> : <p>{context.precondition.exists ? ""方案已不存在，当前草稿不会自动新建同名方案。"" : ""方案仍未创建，可用当前草稿重新预览。""}</p>}"
+web/src/ServicePolicyEditor.tsx	193	retained	保留：选项含义/额度与周期	"<AppField name=""quotaGiB"" label=""周期额度（GiB，0 为不限额）"" rules={["
+web/src/ServicePolicyEditor.tsx	205	rephrased	正向表达保护、作用范围或下一步	用户组首次设置账号周期时使用；已有周期和用量保留，额度不叠加。
+web/src/SourceEditorDialog.tsx	381	retained	保留：操作后果/权限/安全/输入格式	"? ""尚未确认上次提交是否已保存。关闭不会撤销已提交的来源输入；当前窗口中的输入将不再保留。"""
+web/src/SourceEditorDialog.tsx	420	rephrased	正向表达保护、作用范围或下一步	订阅及连接信息由平台服务器处理。来源不向其他用户公开，也不会自动加入共享线路。
+web/src/SourceEditorDialog.tsx	549	retained	保留：操作后果/权限/安全/输入格式	"""关闭不会撤销已保存的输入。""}"
+web/src/SourceEditorDialog.tsx	558	retained	保留：操作后果/权限/安全/输入格式	"{""当前输入仍在此窗口中。关闭编辑不会撤销可能已保存的来源输入。""}"
+web/src/SourceEditorDialog.tsx	580	retained	保留：真实错误/约束/不可用状态	"<Notice tone=""warning"" title=""当前内容格式不受支持"">"
+web/src/SourceEditorDialog.tsx	720	retained	保留：操作后果/权限/安全/输入格式	首次导入立即可用。后续更新按此方式应用到来源，不会自动发布订阅。
+web/src/SourceEditorDialog.tsx	738	retained	保留：真实错误/约束/不可用状态	? `${format}（不支持）`
+web/src/SourceUpdateReview.tsx	36	rephrased	正向表达保护、作用范围或下一步	"text: ""分流、DNS、分组等其他配置不会导入。"","
+web/src/SourceUpdateReview.tsx	40	rephrased	正向表达保护、作用范围或下一步	"text: ""内置直连、拦截或策略分组不会作为连接选项导入。"","
+web/src/SourceUpdateReview.tsx	229	retained	保留：事实与观测范围	"throw new Error(""来源返回的状态不完整，请核对当前状态。"");"
+web/src/SourceUpdateReview.tsx	521	rephrased	正向表达保护、作用范围或下一步	"{""先核对已保存的来源状态，再决定下一步。核对不会重新获取订阅内容。""}"
+web/src/SourceUpdateReview.tsx	563	rephrased	正向表达保护、作用范围或下一步	<p>之前的节点仍可使用，不会应用失败的输入。</p>
+web/src/SourceUpdateReview.tsx	577	retained	保留：操作后果/权限/安全/输入格式	"<Notice tone=""warning"" title=""此来源现在不含连接选项"">"
+web/src/SourceUpdateReview.tsx	628	rephrased	正向表达保护、作用范围或下一步	<p>现有草稿中的选择不自动替换，已发布订阅不更新。</p>
+web/src/SourceUpdateReview.tsx	629	rephrased	正向表达保护、作用范围或下一步	{firstImport && <p>来源输入已保存；不导入或稍后处理也会保留。</p>}
+web/src/Sources.tsx	261	retained	保留：操作后果/权限/安全/输入格式	"""删除后不再从此来源更新节点。已经下载到客户端的配置不会被收回。"","
+web/src/Sources.tsx	1466	retained	保留：操作后果/权限/安全/输入格式	只删除此集合及其处理步骤，不会删除订阅来源、配置或客户端订阅。此操作无法撤销。
+web/src/SubscriptionOriginSettings.tsx	23	retained	保留：真实错误/约束/不可用状态	"title: ""订阅地址格式不正确"","
+web/src/SubscriptionOriginSettings.tsx	29	retained	保留：真实错误/约束/不可用状态	"title: ""订阅地址不能使用私有网络"","
+web/src/SubscriptionOriginSettings.tsx	30	retained	保留：操作后果/权限/安全/输入格式	"repair: ""请填写公开可访问的 HTTPS 域名，不要使用本机或私有网络地址。"","
+web/src/SubscriptionOriginSettings.tsx	120	rephrased	正向表达保护、作用范围或下一步	"description=""单独设置用户复制订阅链接时使用的地址，不改变控制台登录地址。"""
+web/src/SubscriptionOriginSettings.tsx	286	retained	保留：操作后果/权限/安全/输入格式	只填写公开 HTTPS 域名与可选端口，不含路径。留空并启用后使用默认地址：
+web/src/SubscriptionOriginSettings.tsx	291	rephrased	正向表达保护、作用范围或下一步	证书与反向代理。这里仅保存并验证链接地址，不修改 DNS 或证书。
+web/src/SubscriptionOriginSettings.tsx	428	rephrased	正向表达保护、作用范围或下一步	订阅令牌不会更换。旧链接只有在旧域名的 DNS
+web/src/SubscriptionOriginSettings.tsx	429	retained	保留：操作后果/权限/安全/输入格式	与代理仍指向此实例时才继续可用，不会自动跳转。若需撤销旧令牌，请另外轮换对应订阅。
+web/src/Subscriptions.tsx	557	rephrased	正向表达保护、作用范围或下一步	"? ""此链接将停止获取更新。已下载的配置不会被收回，其他订阅不受影响。"""
+web/src/Subscriptions.tsx	649	retained	保留：真实错误/约束/不可用状态	"? ""已保存配置的默认流量去向不可用"""
+web/src/Subscriptions.tsx	651	retained	保留：真实错误/约束/不可用状态	"? ""已保存配置的策略组成员不可用"""
+web/src/Subscriptions.tsx	653	retained	保留：真实错误/约束/不可用状态	"? ""已保存配置的规则流量去向不可用"""
+web/src/Subscriptions.tsx	748	retained	保留：真实错误/约束/不可用状态	`「${requested.name}」已不在当前可访问范围。未检查、发布或切换到其他订阅。`,
+web/src/Subscriptions.tsx	870	retained	保留：选项含义/额度与周期	"{quota === 0 ? ""不限额"" : bytesLabel(remaining)}"
+web/src/Subscriptions.tsx	883	retained	保留：选项含义/额度与周期	"{quota === 0 ? ""不限额"" : bytesLabel(quota)}"
+web/src/Subscriptions.tsx	906	retained	保留：选项含义/额度与周期	": data.cycle ? ""不自动重置"" : ""尚未设置""}</span>{reset && <span className=""usage-reset-countdown mt-1 block text-xs leading-relaxed text-muted-foreground wrap-normal"">{`（还有 ${reset}）`}</span>}</>],"
+web/src/Subscriptions.tsx	991	retained	保留：真实错误/约束/不可用状态	"(profiles.isPending ? ""正在核对…"" : ""不可用的分流配置"")}"
+web/src/Subscriptions.tsx	1006	retained	保留：真实错误/约束/不可用状态	"<Notice tone=""warning"" title=""此分流配置不可用"">"
+web/src/Subscriptions.tsx	1018	retained	保留：真实错误/约束/不可用状态	"? ""客户端订阅不属于当前分流配置"""
+web/src/Subscriptions.tsx	1019	retained	保留：真实错误/约束/不可用状态	": ""所选客户端订阅不在当前可访问范围"""
+web/src/Subscriptions.tsx	1111	retained	保留：真实错误/约束/不可用状态	profile ? `分流配置 ${profile.name}` : `关联配置不可用 ${id}`
+web/src/Subscriptions.tsx	1120	retained	保留：真实错误/约束/不可用状态	": ""关联配置不可用"")}"
+web/src/Subscriptions.tsx	1125	retained	保留：操作后果/权限/安全/输入格式	": ""配置暂不可编辑；保留独立订阅的访问与管理""}"
+web/src/Subscriptions.tsx	1323	retained	保留：真实错误/约束/不可用状态	"aria-label={`${profile?.name || ""关联配置不可用""}的客户端订阅分页`}"
+web/src/Subscriptions.tsx	1453	retained	保留：真实错误/约束/不可用状态	")?.name || ""关联配置不可用""}"
+web/src/Subscriptions.tsx	2115	retained	保留：真实错误/约束/不可用状态	": ""此分流配置已不在当前可访问范围。""}"
+web/src/Subscriptions.tsx	2147	rephrased	正向表达保护、作用范围或下一步	"? ""核对或重试上次发布，不会另建订阅。"""
+web/src/Subscriptions.tsx	2149	rephrased	正向表达保护、作用范围或下一步	"? ""创建新的客户端订阅，其他订阅不变。"""
+web/src/Subscriptions.tsx	2151	rephrased	正向表达保护、作用范围或下一步	"? ""新建独立订阅，其他订阅不变。"""
+web/src/Subscriptions.tsx	2152	rephrased	正向表达保护、作用范围或下一步	": ""新建独立链接，其他订阅不变。""}"
+web/src/Subscriptions.tsx	2156	rephrased	正向表达保护、作用范围或下一步	发布后需下载配置与规则文件包，不提供普通订阅链接或二维码。
+web/src/Subscriptions.tsx	2296	rephrased	正向表达保护、作用范围或下一步	? `正在核对「${pendingCreation.name}」的发布结果，不会重新提交。`
+web/src/Subscriptions.tsx	2364	rephrased	正向表达保护、作用范围或下一步	"? ""不包含策略组、分流规则或运行设置。"""
+web/src/Subscriptions.tsx	2643	rephrased	正向表达保护、作用范围或下一步	"? ""旧下载链接已失效，请重新下载配置包并导入客户端。其他订阅不受影响。"""
+web/src/Subscriptions.tsx	2645	rephrased	正向表达保护、作用范围或下一步	"? ""旧链接已失效，请将新链接重新添加到客户端。其他订阅不受影响。"""
+web/src/Subscriptions.tsx	2646	rephrased	正向表达保护、作用范围或下一步	": ""旧链接已失效，请获取最新订阅内容并更新客户端。其他订阅不受影响。""}"
+web/src/Subscriptions.tsx	2899	retained	保留：真实错误/约束/不可用状态	"setError(new Error(""检查结果与此订阅不匹配，请重新检查。""));"
+web/src/Subscriptions.tsx	2933	rephrased	正向表达保护、作用范围或下一步	message.success(`「${approved.name}」已更新，其他客户端订阅保持不变`);
+web/src/Subscriptions.tsx	3060	rephrased	正向表达保护、作用范围或下一步	"? `${review.link === ""replace"" ? ""重新发布将更换访问凭据。"" : """"}发布后请下载配置与规则文件包并导入客户端，不提供普通订阅链接或二维码。其他订阅不受影响。`"
+web/src/Subscriptions.tsx	3062	rephrased	正向表达保护、作用范围或下一步	"? ""发布后请在客户端换用新链接，其他订阅不受影响。"""
+web/src/Subscriptions.tsx	3063	rephrased	正向表达保护、作用范围或下一步	": ""链接不变，其他订阅不受影响。""}"
+web/src/Subscriptions.tsx	3153	rephrased	正向表达保护、作用范围或下一步	": ""兼容检查未通过，已发布内容保持不变。""}"
+web/src/Subscriptions.tsx	3172	rephrased	正向表达保护、作用范围或下一步	"? ""比较使用当前已应用的来源内容；手动模式下尚未应用的更新不计入本次比较。"""
+web/src/Subscriptions.tsx	3405	retained	保留：真实错误/约束/不可用状态	title={`「${preferredOutput.name}」已不在此配置的订阅列表中`}
+web/src/TLSMaterial.tsx	39	retained	保留：真实错误/约束/不可用状态	"setError(new Error(""证书和私钥文件分别不能超过 128 KB。""));"
+web/src/TLSMaterial.tsx	112	retained	保留：操作后果/权限/安全/输入格式	校验时检查证书与私钥是否匹配，应用时随该实例配置一起交付。私钥不会进入客户端订阅。
+web/src/Templates.tsx	460	retained	保留：真实错误/约束/不可用状态	"if (!target) throw new Error(""所选模板版本不可用，请重新选择。"");"
+web/src/Templates.tsx	505	rephrased	正向表达保护、作用范围或下一步	"message.success(""更新已应用到草稿，已发布订阅保持不变"");"
+web/src/Templates.tsx	1123	retained	保留：真实错误/约束/不可用状态	"label: `${name || value} · ${unresolved ? ""暂不可用"" : ""已不可用""}`,"
+web/src/Templates.tsx	1149	rephrased	正向表达保护、作用范围或下一步	"message.success(""模板已用于草稿，已发布订阅保持不变"");"
+web/src/Templates.tsx	1205	retained	保留：真实错误/约束/不可用状态	"error={new Error(""所选模板版本已不可用，请重新选择。"")}"
+web/src/Templates.tsx	1223	retained	保留：真实错误/约束/不可用状态	"label: `v${version} · ${catalogReady(versions) ? ""已不可用"" : ""暂不可用""}`,"
+web/src/Templates.tsx	1311	retained	保留：真实错误/约束/不可用状态	"<ErrorNotice error={new Error(""所选草稿已不可用，请重新选择。"")} />"
+web/src/Templates.tsx	1357	rephrased	正向表达保护、作用范围或下一步	"? ""应用后独立维护，不再接收模板更新。"""
+web/src/Templates.tsx	1359	rephrased	正向表达保护、作用范围或下一步	"? ""始终使用选中的版本，上游发布不自动改变它。"""
+web/src/Templates.tsx	1369	retained	保留：真实错误/约束/不可用状态	"new Error(""配置引用的节点集合已不可用，无法读取其中的连接。"")"
+web/src/Templates.tsx	1461	rephrased	正向表达保护、作用范围或下一步	"""来源与凭据保持不变。首次选择或更换另一模板会采用它的结构与默认设置；同一模板的版本更新会保留可合并的本地修改。发布订阅仍需单独确认。"""
+web/src/Templates.tsx	1585	retained	保留：真实错误/约束/不可用状态	"throw new Error(""模板结构不是有效的 JSON，请先修正。"");"
+web/src/Templates.tsx	1722	retained	保留：操作后果/权限/安全/输入格式	地址，不要公开私人信息。
+web/src/UserEntries.tsx	467	retained	保留：真实错误/约束/不可用状态	"""会准备新的凭据版本；需要重新检查并应用服务器路径，确认后才能再次交付。旧订阅中的凭据不能继续使用。"","
+web/src/UserEntries.tsx	502	retained	保留：操作后果/权限/安全/输入格式	"""将阻止相关平台订阅继续交付。已下载的凭据不会因此从节点撤销。"","
+web/src/UserEntries.tsx	546	rephrased	正向表达保护、作用范围或下一步	"<Notice tone=""info"" title=""登记公开连接不会自动配置节点"">"
+web/src/UserEntries.tsx	597	retained	保留：真实错误/约束/不可用状态	已撤销的凭据不会重新读取。请填写为此用户新准备的连接；保存将使用新凭据版本，旧版本仍不可用于订阅交付。
+web/src/UserEntries.tsx	632	retained	保留：真实错误/约束/不可用状态	更换连接凭据时必须使用新版本。撤销过的版本不能恢复旧订阅。
+web/src/UserPolicyEditor.tsx	194	retained	保留：操作后果/权限/安全/输入格式	"title: ""使用最新版本重新编辑？"", description: ""编辑区将换成最新保存的个人授权。本次草稿会保留为未保存副本，不会自动合并。"", confirmLabel: ""使用最新版本"", cancelLabel: ""保留当前编辑"","
+web/src/UserPolicyEditor.tsx	262	retained	保留：操作后果/权限/安全/输入格式	"{latest.record ? <EntitlementPolicyComparison resource={{ target: latest.target, before: context.record, after: latest.record }} title=""已保存的个人授权变化"" beforeLabel=""打开时保存"" afterLabel=""最新保存""/> : <p>目前尚无个人授权设置。重新编辑将采用最新生效值，不会自动保存。</p>}"
+web/src/UserPolicyEditor.tsx	297	rephrased	正向表达保护、作用范围或下一步	"{({ getFieldValue }) => getFieldValue(""routeMode"") === ""custom"" ? (<AppField name=""routeIdsOverride"" label=""个人授权线路"" description=""仅允许所选线路，替换方案与直接授权的线路，不进行叠加。"" rules={["
+web/src/UserPolicyEditor.tsx	318	rephrased	正向表达保护、作用范围或下一步	": ""选择日期和时间；其他授权设置不受影响。""} rules={["
+web/src/UserPolicyEditor.tsx	328	retained	保留：选项含义/额度与周期	"<AppField name=""expiresAt"" label=""到期时间（留空为不过期）"">"
+web/src/UserPolicyEditor.tsx	329	retained	保留：选项含义/额度与周期	"<PolicyDateInput {...dateCallbacks(""expiresAt"")} placeholder=""不过期""/>"
+web/src/UserPolicyEditor.tsx	336	rephrased	正向表达保护、作用范围或下一步	续期不清零流量。切换方案或用户组不改变这个账号已有的周期。
+web/src/UserPolicyEditor.tsx	345	rephrased	正向表达保护、作用范围或下一步	开启即替换继承值，不与组方案叠加。关闭恢复继承；数字 0
+web/src/UserPolicyEditor.tsx	346	retained	保留：选项含义/额度与周期	表示明确不限制。
+web/src/UserPolicyEditor.tsx	361	retained	保留：事实与观测范围	跨入口去重；并发逻辑流跨入口累加，并不是设备数量。每个逻辑入口的速率由上下行与所有流共用。
+web/src/UserPolicyEditor.tsx	411	retained	保留：操作后果/权限/安全/输入格式	"return <section aria-label=""保留的个人授权草稿"" className=""space-y-4 text-sm [overflow-wrap:anywhere]""><p>未保存的表单设置；未启用的输入也保留在此，不会自动合并。</p><dl className=""divide-y"">{rows.map(([label, value]) => <div key={label} className=""grid gap-1 py-3 sm:grid-cols-2 sm:gap-4""><dt className=""text-muted-foreground"">{label}</dt><dd>{value === undefined ? ""未设置"" : value === """" ? ""留空"" : JSON.stringify(value)}</dd></div>)}</dl>"
+web/src/api.ts	271	retained	保留：操作后果/权限/安全/输入格式	"""恢复结果尚未确认。新数据库可能已创建。本次恢复不会自动切换服务。请确认操作已结束并检查恢复目录，再决定是否再次恢复。"";"
+web/src/fleet-model.ts	70	retained	保留：真实错误/约束/不可用状态	"unsupported: ""不支持此操作"","
+web/src/fleet-model.ts	84	retained	保留：真实错误/约束/不可用状态	"throw new Error(""阶段不能留空，请使用从 1 开始的连续阶段。"");"
+web/src/infrastructure-model.ts	89	retained	保留：真实错误/约束/不可用状态	"""当前监听有独立转发设置，不能按端点顺序改写。请编辑转发设置。"";"
+web/src/infrastructure-model.ts	99	retained	保留：真实错误/约束/不可用状态	"throw new Error(""线路不能重复经过同一端点。"");"
+web/src/infrastructure-model.ts	120	retained	保留：真实错误/约束/不可用状态	"if (!instance) throw new Error(""端点所属的核心实例不存在。"");"
+web/src/model.ts	96	retained	保留：真实错误/约束/不可用状态	"errors.push(""策略组不能循环引用。"");"
+web/src/observability-model.ts	135	retained	保留：选项含义/额度与周期	"operator_configured_unlimited: ""管理员已将供应商额度设为不限量。"","
+web/src/profile-inputs.ts	70	retained	保留：真实错误/约束/不可用状态	"? new Error(""所选连接集合已不可用，请重新选择或重试。"")"
+web/src/profile-validation.tsx	67	retained	保留：真实错误/约束/不可用状态	"? { title: ""默认流量去向已不可用"", action: ""调整默认流量去向"", tab: null }"
+web/src/profile-validation.tsx	75	retained	保留：真实错误/约束/不可用状态	title: `策略组「${groups[0].name}」有不可用成员`,
+web/src/profile-validation.tsx	85	retained	保留：真实错误/约束/不可用状态	title: `规则 ${number} 的流量去向已不可用`,
+web/src/publication-request.ts	178	retained	保留：真实错误/约束/不可用状态	"""该转发路径已不存在，请选择现有转发路径并重新检查。"","
+web/src/publication-request.ts	188	retained	保留：真实错误/约束/不可用状态	"""TLS 证书与私钥不匹配或无效，请修正服务端 TLS 材料。"","
+web/src/publication-request.ts	196	retained	保留：操作后果/权限/安全/输入格式	"""TLS 证书不涵盖目标服务名，请修正证书或端点并重新检查。"","
+web/src/publication-request.ts	204	retained	保留：真实错误/约束/不可用状态	"""公开线路已与转发路径不一致，请核对线路和转发路径。"","
+web/src/publication-request.ts	210	retained	保留：真实错误/约束/不可用状态	"""用户转发策略与公开线路不一致，请修正线路并重新检查。"","
+web/src/publication-request.ts	212	retained	保留：真实错误/约束/不可用状态	"""目标实例已不在此转发路径中，请重新载入并检查。"","
+web/src/route-model.ts	8	retained	保留：真实错误/约束/不可用状态	"throw new Error(""线路不能形成循环，也不能重复使用同一节点。"");"
+web/src/route-model.ts	10	retained	保留：真实错误/约束/不可用状态	"throw new Error(""请从当前线路末端连接，首版暂不支持分支线路。"");"
+web/src/server-listener-refresh.ts	58	retained	保留：真实错误/约束/不可用状态	"""核心实例设置已变化，不能仅更新监听。请先核对核心实例；此操作不会替换实例设置。"","
+web/src/server-listener-refresh.ts	65	retained	保留：真实错误/约束/不可用状态	"""监听端点已移至其他核心实例，不能仅更新监听。草稿中的设置已保留。"","
+web/src/server-listener-refresh.ts	68	retained	保留：真实错误/约束/不可用状态	"return blocked(""监听所属服务器已不可用。草稿中的设置已保留。"");"
+web/src/server-listener-refresh.ts	71	retained	保留：真实错误/约束/不可用状态	"""监听的认证方式已变化，不能直接更新。请核对用户入口与认证设置。"","
+web/src/server-listener-refresh.ts	75	retained	保留：真实错误/约束/不可用状态	"""监听协议已变化，不能直接更新。请核对协议及服务端安全设置。"","

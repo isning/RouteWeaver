@@ -46,10 +46,9 @@ async function decision(dialog: Locator) {
   });
   const privacy = region.locator(".privacy-note");
   for (const fact of [
-    "平台服务器解析",
-    "平台运营者可处理其中的连接信息",
-    "仅对你的账号可见",
-    "不会自动加入共享服务器线路",
+    "订阅信息由平台解析",
+    "加密保存",
+    "仅供你的账号使用",
   ])
     await expect(privacy).toContainText(fact);
   await expect(privacy).toBeInViewport({ ratio: 1 });
@@ -106,7 +105,7 @@ for (const [width, height] of [
   [390, 844],
   [320, 844],
 ]) {
-  test(`source completion and four privacy facts are together on initial open at ${width}`, async ({
+  test(`source completion and privacy disclosure are together on initial open at ${width}`, async ({
     page,
   }, info) => {
     await page.setViewportSize({ width, height });
@@ -545,7 +544,7 @@ for (const gesture of ["double click", "held Enter"] as const) {
     await expect(check).toBeEnabled();
     await expect(publish).toHaveCount(0);
     await expect(
-      dialog.getByText("创建新的客户端订阅，其他订阅不变。", { exact: true }),
+      dialog.getByText("创建独立的客户端订阅，其他订阅保留原版本。", { exact: true }),
     ).toHaveCount(1);
     if (gesture === "double click") {
       // Exercise an ordinary native double-click first. The guarded second-stage
@@ -568,12 +567,12 @@ for (const gesture of ["double click", "held Enter"] as const) {
     expect(writes).toBe(0);
     expect(await json(page, "/me/outputs")).toEqual(before);
     await expect(
-      dialog.getByText("纯节点订阅，不包含分流规则。", { exact: true }),
+      dialog.getByText("纯节点订阅，仅交付连接。", { exact: true }),
     ).toHaveCount(0);
     await expect(
       dialog.getByText(
         mode === "nodes-only"
-          ? "不包含策略组、分流规则或运行设置。"
+          ? "仅包含节点连接。"
           : "包含连接、策略组、分流规则和运行设置。",
         { exact: true },
       ),
@@ -583,7 +582,7 @@ for (const gesture of ["double click", "held Enter"] as const) {
       await page.setViewportSize({ width, height: width < 600 ? 844 : 900 });
       await expect(publish).toBeInViewport({ ratio: 1 });
       await expect(
-        dialog.getByText("新建独立链接，其他订阅不变。", { exact: true }),
+        dialog.getByText("新建独立链接，其他订阅保留原版本。", { exact: true }),
       ).toBeInViewport({ ratio: 1 });
       await noOverflow(page);
       await page.screenshot({

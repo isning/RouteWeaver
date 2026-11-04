@@ -101,7 +101,7 @@ it("opens the historical record from the real App and returns focus after repeat
     });
     expect(
       within(detail).getByText(
-        "这是当时保存的配置，不是本次校验；不代表服务器已经应用。",
+        "此处展示当时保存的配置记录。检查当前配置请重新校验；服务器应用情况请查看节点确认状态。",
       ),
     ).toBeTruthy();
     await user.keyboard("{Escape}");

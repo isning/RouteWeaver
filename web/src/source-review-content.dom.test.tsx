@@ -98,10 +98,10 @@ it("groups only known extraction limits, keeps repeated omissions and other warn
   expect(within(dialog).getAllByText("仅导入连接选项")).toHaveLength(1);
   expect(within(dialog).getAllByRole("alert")).toHaveLength(3);
   expect(
-    within(dialog).getByText("分流、DNS、分组等其他配置不会导入。"),
+    within(dialog).getByText("已跳过分流、DNS、分组等其他配置。"),
   ).toBeTruthy();
   expect(
-    within(dialog).getByText("内置直连、拦截或策略分组不会作为连接选项导入。"),
+    within(dialog).getByText("已跳过内置直连、拦截和策略分组，仅提取连接选项。"),
   ).toBeTruthy();
   expect(within(dialog).getByText("（2 条提示）")).toBeTruthy();
   expect(within(dialog).getByText("原始条目：第 2、3 项")).toBeTruthy();
@@ -114,10 +114,10 @@ it("groups only known extraction limits, keeps repeated omissions and other warn
     within(dialog).getByText("应用后，这些选项可用于配置和预览。"),
   ).toBeTruthy();
   expect(
-    within(dialog).getByText("现有草稿中的选择不自动替换，已发布订阅不更新。"),
+    within(dialog).getByText("现有草稿保留当前选择，已发布订阅保留原版本。"),
   ).toBeTruthy();
   expect(
-    within(dialog).getByText("来源输入已保存；不导入或稍后处理也会保留。"),
+    within(dialog).getByText("忽略更新或稍后处理时，已保存的来源输入仍会保留。"),
   ).toBeTruthy();
   expect(within(dialog).getByRole("button", { name: "应用更新" })).toBeTruthy();
   expect(
@@ -178,7 +178,7 @@ it("keeps diagnostic locations without exposing known-code raw input, and treats
     within(dialog).getByText("应用后，配置和预览将使用新选项。"),
   ).toBeTruthy();
   expect(
-    within(dialog).queryByText("来源输入已保存；不导入或稍后处理也会保留。"),
+    within(dialog).queryByText("忽略更新或稍后处理时，已保存的来源输入仍会保留。"),
   ).toBeNull();
   expect(within(dialog).getByRole("button", { name: "应用更新" })).toBeTruthy();
   expect(

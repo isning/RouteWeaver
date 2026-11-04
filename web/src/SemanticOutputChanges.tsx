@@ -226,7 +226,7 @@ function UsesDetails({ before, after }: { before: Uses; after: Uses }) {
         查看直接引用
         {unavailable ? "（部分不可用）" : partial ? "（部分未展示）" : ""}
       </summary>
-      <p>仅列直接引用，不包含全部间接依赖，也不代表实际流量。</p>
+      <p>此处仅展示配置中的直接引用；完整间接依赖与实际流量需另行核对。</p>
       <Versions
         before={<DirectUses value={before} />}
         after={<DirectUses value={after} />}

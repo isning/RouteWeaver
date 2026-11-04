@@ -337,7 +337,7 @@ it("keeps revoked Output details and explicit recovery while disabling link acce
   const review = await screen.findByRole("dialog", {
     name: "检查订阅更新「Retired phone」",
   });
-  expect(within(review).queryByText(/在客户端换用新链接|链接不变/)).toBeNull();
+  expect(within(review).queryByText(/在客户端换用新链接|沿用当前链接/)).toBeNull();
   expect(
     (
       within(review).getByRole("button", {
@@ -540,9 +540,9 @@ it.each(["revoked", "missing"])(
       });
       await within(review).findByText("兼容检查通过。");
       expect(review.textContent).toContain(
-        "发布后请在客户端换用新链接，其他订阅不受影响。",
+        "发布后请在客户端换用新链接，其他订阅保留原状。",
       );
-      expect(review.textContent).not.toContain("原订阅链接保持不变");
+      expect(review.textContent).not.toContain("沿用当前链接");
       expect(writes).toEqual([
         {
           path: "/api/me/profiles/shared/preview",

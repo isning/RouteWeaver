@@ -757,10 +757,9 @@ for (const intent of ["endpoint", "direct"] as const) {
     }
     // Necessary privacy facts stay visible at the real commit decision, outside optional help.
     const privacy = sourceDialog.locator(".privacy-note");
-    await expect(privacy).toContainText("平台服务器解析");
-    await expect(privacy).toContainText("平台运营者可处理其中的连接信息");
-    await expect(privacy).toContainText("仅对你的账号可见");
-    await expect(privacy).toContainText("不会自动加入共享服务器线路");
+    await expect(privacy).toContainText("订阅信息由平台解析");
+    await expect(privacy).toContainText("加密保存");
+    await expect(privacy).toContainText("仅供你的账号使用");
     await expect(
       sourceDialog.getByRole("button", { name: "导入选项", exact: true }),
     ).toHaveAttribute("aria-expanded", "false");
@@ -1170,12 +1169,12 @@ test("existing strategy groups remain editable and revoked recovery replaces onl
   ).toBeVisible();
   const consequence = review
     .getByRole("group", { name: "更新确认", exact: true })
-    .getByText("发布后请在客户端换用新链接，其他订阅不受影响。", {
+    .getByText("发布后请在客户端换用新链接，其他订阅保留原状。", {
       exact: true,
     });
   await expect(consequence).toBeVisible();
   await expect(
-    review.getByText("链接不变，其他订阅不受影响。", { exact: true }),
+    review.getByText("沿用当前链接，其他订阅保留原状。", { exact: true }),
   ).toHaveCount(0);
   const confirm = review.getByRole("button", {
     name: `重新发布并生成新链接「${selected.name}」`,
@@ -1443,7 +1442,7 @@ for (const entry of ["workspace", "legacy-profile"] as const) {
     await expect(review).toContainText(
       `${selected.target.adapterId} ${selected.target.version}`,
     );
-    await expect(review).toContainText("链接不变，其他订阅不受影响。");
+    await expect(review).toContainText("沿用当前链接，其他订阅保留原状。");
     const confirm = review.getByRole("button", {
       name: `确认更新「${selected.name}」`,
       exact: true,
@@ -2338,7 +2337,7 @@ test("same rule counts are not represented as identical routing when rule conten
   await expect(decision).toBeInViewport({ ratio: 1 });
   await expect(decision).toContainText(`更新订阅：${selected.name}`);
   await expect(
-    decision.getByText("链接不变，其他订阅不受影响。", { exact: true }),
+    decision.getByText("沿用当前链接，其他订阅保留原状。", { exact: true }),
   ).toBeInViewport({ ratio: 1 });
   const technical = review.getByRole("button", {
     name: "查看待发布技术配置",
@@ -2361,7 +2360,7 @@ test("same rule counts are not represented as identical routing when rule conten
   });
   await expect(decision).toBeInViewport({ ratio: 1 });
   await expect(
-    decision.getByText("链接不变，其他订阅不受影响。", { exact: true }),
+    decision.getByText("沿用当前链接，其他订阅保留原状。", { exact: true }),
   ).toBeInViewport({ ratio: 1 });
   await expect(confirm).toBeInViewport({ ratio: 1 });
   await expect(

@@ -49,9 +49,9 @@ export function BackupCapacity({ primaryAction }: { primaryAction?: ReactNode })
       </dl>
       {value.notificationRebuildChunkRows != null && <p className="text-muted-foreground">通知用量按每步最多 {value.notificationRebuildChunkRows.toLocaleString()} 条重建。账本总量超出单步预算会增加所需步骤，完成前用量仍未知。</p>}
       {warning && <Notice tone="warning" title={`历史容量已达到 ${value.warningPercent}% 提醒线`}>
-        暂停扩容，尽快创建并验证完整备份，核对磁盘余量与历史保存方案。超过归档或单条记录上限会阻止备份或重建；通知账本总量则分步处理。备份不会删除或缩减当前数据库。
+        暂停扩容，尽快创建并验证完整备份，核对磁盘余量与历史保存方案。超过归档或单条记录上限会阻止备份或重建；通知账本总量则分步处理。备份仅创建副本，当前数据库保持原样。
       </Notice>}
-      <p className="text-muted-foreground">记录数与正文大小不保证归档可创建。请另查备份临时目录与恢复目标的空间；本检查不会停止服务或删除历史。</p>
+      <p className="text-muted-foreground">记录数与正文大小不保证归档可创建。请另查备份临时目录与恢复目标的空间；本检查仅查看容量，保留现有服务状态与历史数据。</p>
     </div>}
   </div>;
 }

@@ -123,7 +123,7 @@ test("URL safe-fetch denial retains masked input and the rich parent draft", asy
     ).toHaveAttribute("type", "password");
     await expect(
       editor.getByText(
-        "订阅由平台服务器解析，平台运营者可处理其中的连接信息。来源仅对你的账号可见，不会自动加入共享服务器线路。",
+        "订阅信息由平台解析并加密保存，仅供你的账号使用。",
         { exact: true },
       ),
     ).toBeVisible();

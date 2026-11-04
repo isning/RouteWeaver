@@ -764,7 +764,7 @@ function InventoryEditor({
                 </div>
               ))}
               <p>
-                只更新端点清单，不会修改已保存的转发配置、切换出口或下发到节点。引用此端点的配置需另行更新、校验并确认发布。
+                本次仅更新端点清单，保留已保存的转发配置、当前出口与节点配置。引用此端点的配置需另行更新、校验并确认发布。
               </p>
             </div>
           ),
@@ -1135,7 +1135,7 @@ function InventoryEditor({
         )}
         {displayEntity?.kind === "hosts" && !displayEntity.value && (
           <p className="rounded-lg border bg-muted/40 p-3 text-sm text-muted-foreground">
-            仅登记服务器，不会连接或改动服务器。
+            将服务器信息登记到控制平面；服务器连接与配置需另行操作。
           </p>
         )}
       </AppForm>
@@ -1221,7 +1221,7 @@ export function InstanceObservation({ instanceId }: { instanceId: string }) {
                 </p>
               )}
               <p className="text-xs text-muted-foreground">
-                授权状态不等于核心正在运行；运行结果以上方节点确认状态为准。
+                授权状态表示持续运行权限；核心运行结果以上方节点确认状态为准。
               </p>
             </div>
           ) : (

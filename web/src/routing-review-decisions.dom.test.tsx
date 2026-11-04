@@ -83,7 +83,7 @@ describe.each([false, true])(
       );
       expect(
         screen.getByText(
-          "纯节点订阅不包含分流规则；节点及连接设置的变化不在此摘要中。",
+          "纯节点订阅仅交付连接；本摘要未比较节点及连接设置。",
         ),
       ).toBeTruthy();
       expect(screen.queryByText("直连")).toBeNull();
@@ -109,7 +109,7 @@ describe.each([false, true])(
       expect(disclosure.closest("details")!.open).toBe(true);
       expect(
         screen.getByText(
-          "策略组按其配置决定流量去向，不表示客户端当前选中的节点。",
+          "策略组展示配置中的流量去向；当前选中的节点请在客户端查看。",
         ),
       ).toBeTruthy();
     });
@@ -137,7 +137,7 @@ describe.each([false, true])(
       expect(screen.queryByText("未匹配规则的流量")).toBeNull();
       expect(
         screen.getByText(
-          "规则数不含默认处理及规则文件内条目；节点数是配置包含数量，不代表在线状态。",
+          "规则数仅统计配置中的显式规则；默认处理与规则文件内条目单独查看。节点数统计配置所含节点，在线状态需另行查询。",
         ),
       ).toBeTruthy();
     });
@@ -152,7 +152,7 @@ describe.each([false, true])(
           />,
         );
         expect(
-          screen.getByText("摘要字段相同，不代表配置未变化。"),
+          screen.getByText("本次比较的摘要字段相同；完整配置仍可能有变化。"),
         ).toBeTruthy();
         expect(
           screen.getByText("未比较具体规则、策略组内容和节点设置。"),

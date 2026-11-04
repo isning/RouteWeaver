@@ -629,7 +629,7 @@ export function ProfileEditor({
     if (!codeDirty) return discard();
     confirm({
       title: "放弃尚未应用的 JSON 修改？",
-      description: "仅放弃 JSON 文本修改，之前的配置草稿保持不变。",
+      description: "仅放弃 JSON 文本修改，保留之前的配置草稿。",
       confirmLabel: "放弃 JSON 修改",
       cancelLabel: "继续编辑",
       destructive: true,
@@ -1254,7 +1254,7 @@ export function ProfileEditor({
                         ))}
                       </ul>
                       <p>
-                        这些引用将变为不可用，需要重新选择去向。不会自动改为直连。
+                        这些引用将变为不可用，需要明确选择新的流量去向后才能发布。
                       </p>
                     </>
                   ),
@@ -1283,7 +1283,7 @@ export function ProfileEditor({
       children: (
         <Section
           title="检查配置草稿"
-          description="技术预览只检查当前草稿，不保存或发布。正式发布会按所选客户端订阅重新检查。"
+          description="技术预览用于检查当前草稿；保存与发布需单独操作。正式发布会按所选客户端订阅重新检查。"
         >
           <label className="standalone-label profile-diagnostic-target grid min-w-0 gap-2 text-sm font-medium">
             预览客户端
@@ -1885,7 +1885,7 @@ export function ProfileEditor({
                   {(draft.mode === "nodes-only" ||
                     boundOutput?.mode === "nodes-only") && (
                     <p>
-                      纯节点订阅不包含分流；上方行为仍保存在共享配置中，仅完整配置使用。
+                      纯节点订阅仅交付连接；上方分流行为保存在共享配置中，供完整配置使用。
                     </p>
                   )}
                 </div>
@@ -2044,7 +2044,7 @@ export function ProfileEditor({
               >
                 {
                   <>
-                    <p>原选择已保留，不会自动改用其他连接。</p>
+                    <p>原选择已保留，请明确选择替代连接后再发布。</p>
                     <ul className="profile-missing-actions flex flex-wrap gap-2">
                       {missingControls.map((issue) => {
                         const repair = actionRepair(draft.ir, issue);

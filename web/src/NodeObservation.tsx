@@ -341,7 +341,7 @@ export function NodeObservation({
                         <p>
                           {plan.exhaustionAction === "suspend-managed"
                             ? "托管连接暂停策略已配置：额度耗尽、依据缺失或过期时拒绝新连接与续期；现有连接按短租约结束。stock 内核不受控，不自动更换出口。"
-                            : "配额耗尽仅提醒，不自动更换出口或修改线路。"}
+                            : "耗尽处理设为“仅提醒”，保留当前出口与线路配置。"}
                         </p>
                       </>
                     ),

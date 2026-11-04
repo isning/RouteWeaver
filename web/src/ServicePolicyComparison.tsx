@@ -78,8 +78,8 @@ export function ServicePolicyComparison({ resource, title = "方案变更", show
                 return <TableRow role="row" key={field.key}><TableHead scope="row" role="rowheader" id={`${id}-${field.key}`}>{field.label}</TableHead><TableCell className="whitespace-normal [overflow-wrap:anywhere]" role="cell" headers={`${id}-${field.key} ${id}-before`}>{prior ? text(prior, field) : "尚未创建"}</TableCell><TableCell className="whitespace-normal [overflow-wrap:anywhere]" role="cell" headers={`${id}-${field.key} ${id}-after`}>{text(field, prior)}</TableCell></TableRow>;
             })}</TableBody>
     </Table> : <p className="muted text-sm text-muted-foreground">方案设置保持不变。</p>}
-    {rows.some((field) => ["mode", "day", "days"].includes(field.key)) && <p className="muted text-sm text-muted-foreground">首次设置账号周期时的默认规则；已有账号周期不变。</p>}
-    {rows.some((field) => ["anchor", "timezone"].includes(field.key)) && <p className="muted text-sm text-muted-foreground">起点与时区为方案保存值，不会改写已有账号周期。</p>}
+    {rows.some((field) => ["mode", "day", "days"].includes(field.key)) && <p className="muted text-sm text-muted-foreground">首次设置账号周期时使用的默认规则；已有账号继续沿用各自的周期。</p>}
+    {rows.some((field) => ["anchor", "timezone"].includes(field.key)) && <p className="muted text-sm text-muted-foreground">起点与时区为方案保存值；已有账号继续沿用各自的周期。</p>}
     <details className="space-y-3 rounded-lg border p-3 text-sm"><summary className="cursor-pointer font-medium">方案标识</summary><code>{resource.target.id}</code></details>
   </section>;
 }

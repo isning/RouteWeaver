@@ -216,7 +216,7 @@ it("keeps certificate paths and PEM editing together for ordinary TLS", async ()
   expect(within(drawer).getByLabelText("读取 TLS 私钥")).toBeTruthy();
   expect(
     within(drawer).getByText(
-      "文件路径相对于此次配置包，不会读取服务器上的现有文件。",
+      "文件路径相对于此次配置包，仅使用包内文件。",
     ),
   ).toBeTruthy();
   await user.type(

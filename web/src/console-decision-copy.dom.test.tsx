@@ -46,7 +46,7 @@ it("discloses backup upload at inspection and credential loss at creation, witho
   expect(fetch).not.toHaveBeenCalled();
   expect(describedBy(screen.getByRole("button", { name: "校验备份并查看影响" })))
     .toContain("选择文件不会上传；校验时会将备份文件和密码发送到当前控制平面。");
-  expect(screen.getByText("恢复到新数据库，不覆盖当前数据，也不会自动切换服务。")).toBeTruthy();
+  expect(screen.getByText("恢复到独立的新数据库，保留当前数据；服务切换需另行操作。")).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "创建加密备份" }));
   const dialog = screen.getByRole("dialog", { name: "创建加密备份" });
   expect(within(dialog).getByText("备份包含账号与订阅凭据，仅下载到你的设备，不发送到第三方。请将文件与密码分开保管；忘记密码无法恢复。")).toBeTruthy();

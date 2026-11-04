@@ -188,7 +188,7 @@ it("explains the check dependency, expires a checked draft on edit, then returns
   });
   expect(
     within(editor).getByText(
-      "先检查线路，再核对结果并保存。保存不会授权用户或应用服务器配置。",
+      "先检查线路，再核对结果并保存；用户授权与服务器配置应用需分别确认。",
     ),
   ).toBeTruthy();
   expect(

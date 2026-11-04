@@ -76,13 +76,13 @@ it("keeps the reviewed unchanged URL and other-subscription scope visible before
     ),
   );
   mount(<UpdateOutput output={output} onClose={() => {}} />);
-  expect(screen.queryByText("链接不变，其他订阅不受影响。")).toBeNull();
+  expect(screen.queryByText("沿用当前链接，其他订阅保留原状。")).toBeNull();
   expect(screen.getByText(/mihomo 1.19.32/)).toBeTruthy();
   expect(
     screen.getByRole("button", { name: "确认更新「日常」" }),
   ).toHaveProperty("disabled", true);
   await userEvent.click(screen.getByRole("button", { name: "预览此订阅更新" }));
-  const consequence = await screen.findByText("链接不变，其他订阅不受影响。");
+  const consequence = await screen.findByText("沿用当前链接，其他订阅保留原状。");
   expect(
     screen.getByRole("group", { name: "更新确认" }).contains(consequence),
   ).toBe(true);
@@ -126,7 +126,7 @@ it("discloses the reviewed replacement access link before publishing a revoked s
   ).toHaveProperty("disabled", true);
   await userEvent.click(screen.getByRole("button", { name: "预览此订阅更新" }));
   const consequence = await screen.findByText(
-    "发布后请在客户端换用新链接，其他订阅不受影响。",
+    "发布后请在客户端换用新链接，其他订阅保留原状。",
   );
   expect(
     screen.getByRole("group", { name: "更新确认" }).contains(consequence),
@@ -141,7 +141,7 @@ it("discloses the reviewed replacement access link before publishing a revoked s
   expect(
     screen.getByRole("button", { name: "重新发布并生成新链接「日常」" }),
   ).toHaveProperty("disabled", false);
-  expect(screen.queryByText("链接不变，其他订阅不受影响。")).toBeNull();
+  expect(screen.queryByText("沿用当前链接，其他订阅保留原状。")).toBeNull();
 });
 it("does not present equal summary fields as a complete content comparison", () => {
   const summary: RoutingSummary = {
@@ -156,7 +156,7 @@ it("does not present equal summary fields as a complete content comparison", () 
   };
   render(<RoutingReview published={summary} candidate={summary} />);
   expect(screen.getByRole("heading", { name: "分流摘要" })).toBeTruthy();
-  expect(screen.getByText("摘要字段相同，不代表配置未变化。")).toBeTruthy();
+  expect(screen.getByText("本次比较的摘要字段相同；完整配置仍可能有变化。")).toBeTruthy();
   expect(
     screen
       .getByText("未比较具体规则、策略组内容和节点设置。")

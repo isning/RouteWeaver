@@ -150,7 +150,7 @@ it.each([500, 599])(
     ).toHaveLength(1);
     expect(f.ui.queryByRole("alert")).toBeNull();
     expect(f.ui.queryByText("Raw transport failure")).toBeNull();
-    expect(f.ui.getByText("核对或重试上次发布，不会另建订阅。")).toBeTruthy();
+    expect(f.ui.getByText("核对或重试均沿用上次发布请求。")).toBeTruthy();
     expect(f.creates).toEqual([{ ...f.previews[0], previewDigest: "review" }]);
     expect(f.close).not.toHaveBeenCalled();
     // The single footer retry stays a same-attempt write, never a fresh review.
@@ -174,7 +174,7 @@ it("retains status0 connectivity and actual offline before-send explanations whi
     "无法连接服务。请检查网络后重试，当前输入已保留。",
   );
   expect(f.ui.getByRole("status", { name: "上次发布待确认" })).toBeTruthy();
-  expect(f.ui.getByText("核对或重试上次发布，不会另建订阅。")).toBeTruthy();
+  expect(f.ui.getByText("核对或重试均沿用上次发布请求。")).toBeTruthy();
 
   // Actual public SessionLifecycle transport, not a fabricated Error or private state setter.
   const lifecycle = new SessionLifecycle();
@@ -307,7 +307,7 @@ it.each([400, 422])(
       "默认流量去向已不可用",
     );
     expect(f.ui.queryByRole("status", { name: "上次发布待确认" })).toBeNull();
-    expect(f.ui.getByText("新建独立链接，其他订阅不变。")).toBeTruthy();
+    expect(f.ui.getByText("新建独立链接，其他订阅保留原版本。")).toBeTruthy();
     await userEvent.click(f.ui.getByText("技术信息"));
     expect(f.ui.getByText("Original validation detail")).toBeTruthy();
     await userEvent.click(repair);
@@ -330,6 +330,6 @@ it("does not hide a review503 without a pending creation or change the ordinary 
     "Review service unavailable",
   );
   expect(f.ui.queryByRole("status", { name: "上次发布待确认" })).toBeNull();
-  expect(f.ui.getByText("创建新的客户端订阅，其他订阅不变。")).toBeTruthy();
+  expect(f.ui.getByText("创建独立的客户端订阅，其他订阅保留原版本。")).toBeTruthy();
   expect(f.creates).toHaveLength(0);
 });

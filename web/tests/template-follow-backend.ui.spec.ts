@@ -123,7 +123,7 @@ for (const width of [1440, 390])
         .click();
       expect((await applied).status()).toBe(200);
       const appliedNotice = page.getByText(
-        "更新已应用到草稿，已发布订阅保持不变",
+        "更新已应用到草稿，已发布订阅保留原版本",
         { exact: true },
       );
       await expect(appliedNotice).toBeVisible();
@@ -161,7 +161,7 @@ for (const width of [1440, 390])
           outputId: f.outputs[0].id,
         });
         await expect(
-          review.getByText("链接不变，其他订阅不受影响。", { exact: true }),
+          review.getByText("沿用当前链接，其他订阅保留原状。", { exact: true }),
         ).toBeVisible();
         await expect(
           review.getByRole("list", { name: "分流规则变更", exact: true }),

@@ -127,7 +127,7 @@ it("explains expiry reminder time buckets without promising a minimum interval o
   const sent = await mount();
   const repeat = screen.getByLabelText("到期提醒重复周期（小时）");
   expect(describedBy(repeat)).toContain(
-    "按距到期时间划分时段，同一提醒阈值每段最多生成一次；不影响额度提醒。",
+    "按距到期时间划分时段，同一提醒阈值每段最多生成一次；额度提醒沿用原设置。",
   );
   expect(screen.queryByLabelText("同类提醒最短间隔（小时）")).toBeNull();
   fireEvent.change(repeat, { target: { value: "12" } });
@@ -150,10 +150,10 @@ it("keeps threshold audiences and the in-app reminder scope beside their control
   expect(describedBy(screen.getByLabelText("供应商剩余配额提醒（%）"))).toContain(
     "供应商剩余额度降至任一比例时提醒管理员。",
   );
-  expect(screen.getByText("每类可设置多个阈值；清空即不生成该类提醒。")).toBeTruthy();
+  expect(screen.getByText("每类可设置多个阈值；清空即关闭该类提醒。")).toBeTruthy();
   const inApp = screen.getByRole("switch", { name: "站内提醒" });
   expect(describedBy(inApp)).toContain(
-    "控制新生成的账号和供应商站内提醒；公告与测试不受影响。",
+    "控制新生成的账号和供应商站内提醒；公告展示与手动测试照常可用。",
   );
   fireEvent.click(inApp);
   save();
@@ -181,7 +181,7 @@ it("explains channel activation and destination requirements without exposing st
     "管理员提醒与邮件测试发送到这些地址，最多 10 个。",
   );
   expect(
-    (screen.getByLabelText("更新 SMTP 密码（已保存，留空不变）") as HTMLInputElement).value,
+    (screen.getByLabelText("更新 SMTP 密码（留空保留已保存值）") as HTMLInputElement).value,
   ).toBe("");
   toggle("Webhook 通知");
   expect(describedBy(screen.getByLabelText("启用 Webhook 渠道"))).toContain(
@@ -194,7 +194,7 @@ it("explains channel activation and destination requirements without exposing st
     "填写公网 HTTPS 接收地址，不含查询参数、片段或登录信息。",
   );
   const secret = screen.getByLabelText(
-    "更新签名密钥（已保存，留空不变）",
+    "更新签名密钥（留空保留已保存值）",
   ) as HTMLInputElement;
   expect(describedBy(secret)).toContain("启用时至少 32 字节，用于接收方验证通知签名。");
   expect(secret.value).toBe("");
@@ -264,13 +264,13 @@ it("retains SMTP and webhook drafts, toggles and replacement secrets across coll
   change("SMTP 主机", "new.smtp.example");
   change("用户名", "new-user");
   change("发件地址", "new@example.test");
-  change("更新 SMTP 密码（已保存，留空不变）", "synthetic-new-smtp-secret");
+  change("更新 SMTP 密码（留空保留已保存值）", "synthetic-new-smtp-secret");
   fireEvent.click(screen.getByLabelText("启用邮件渠道"));
   fireEvent.click(screen.getByLabelText("允许自动发送管理员供应商提醒邮件"));
   toggle("邮件通知");
   toggle("Webhook 通知");
   change("HTTPS Webhook 地址", "https://new.example");
-  change("更新签名密钥（已保存，留空不变）", "synthetic-new-hook-secret");
+  change("更新签名密钥（留空保留已保存值）", "synthetic-new-hook-secret");
   fireEvent.click(
     screen.getByLabelText("允许自动发送管理员供应商提醒 Webhook"),
   );
@@ -307,7 +307,7 @@ it("retains SMTP and webhook drafts, toggles and replacement secrets across coll
   expect(
     (
       screen.getByLabelText(
-        "更新 SMTP 密码（已保存，留空不变）",
+        "更新 SMTP 密码（留空保留已保存值）",
       ) as HTMLInputElement
     ).value,
   ).toBe("");

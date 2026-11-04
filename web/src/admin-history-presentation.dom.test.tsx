@@ -29,7 +29,7 @@ for (const status of ["rendered", "unknown-future-status"]) {
     const dialog = await screen.findByRole("dialog", { name: "历史线路 · 生成记录" });
     expect(within(dialog).getByText("历史配置记录")).toBeTruthy();
     expect(within(dialog).queryByText("配置结构校验完成")).toBeNull();
-    expect(within(dialog).getByText("这是当时保存的配置，不是本次校验；不代表服务器已经应用。" )).toBeTruthy();
+    expect(within(dialog).getByText("此处展示当时保存的配置记录。检查当前配置请重新校验；服务器应用情况请查看节点确认状态。" )).toBeTruthy();
     if (status !== "rendered") expect(within(dialog).getByText(status)).toBeTruthy();
     for (let attempt = 0; attempt < 2; attempt++) {
       await userEvent.keyboard("{Escape}");

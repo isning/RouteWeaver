@@ -87,7 +87,7 @@ export function RateSettings({ routes }: { routes: RouteRecord[] }) {
   return (
     <Section
       title="线路扣量倍率"
-      description="整条线路计算一次，不按中转跳数叠加。历史账期保留当时的倍率。"
+      description="整条线路统一计算一次倍率。历史账期沿用当时的倍率。"
       extra={
         <ActionButton
           onClick={() => {
@@ -205,7 +205,7 @@ export function RateSettings({ routes }: { routes: RouteRecord[] }) {
             <Input type="datetime-local" />
           </AppField>
           <p className="muted text-sm text-muted-foreground">
-            保存后新增倍率版本，不可修改；已经归属的历史记录保持不变。
+            每次保存创建独立倍率版本，保存后锁定；历史记录沿用原版本。
           </p>
           <div className="form-footer flex flex-wrap items-center justify-end gap-2 border-t pt-4">
             <ActionButton

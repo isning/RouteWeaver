@@ -341,12 +341,12 @@ it("preserves operator focus and distinct GET and retry feedback after the first
       name: "正在核对发布结果",
     });
     expect(checking.textContent).toBe(
-      "正在核对「Daily」的发布结果，不会重新提交。",
+      "正在查询「Daily」上次提交的发布结果。",
     );
     expectRecoveryDescription(
       ui,
       "正在核对发布结果",
-      "正在核对「Daily」的发布结果，不会重新提交。",
+      "正在查询「Daily」上次提交的发布结果。",
     );
     expect(ui.getByRole("button", { name: "核对上次发布结果" })).toBe(check);
     expect(check.getAttribute("aria-busy")).toBe("true");
@@ -651,7 +651,7 @@ it.each([400, 422])(
     await ui.findByText("Rejected publication detail");
     expect(ui.queryByRole("region", { name: "发布结果与恢复" })).toBeNull();
     expect(ui.queryByRole("button", { name: "重试上次发布" })).toBeNull();
-    expect(ui.getByText("新建独立链接，其他订阅不变。")).toBeTruthy();
+    expect(ui.getByText("新建独立链接，其他订阅保留原版本。")).toBeTruthy();
     expect(ui.getByText("兼容检查通过。")).toBeTruthy();
     expect(f.creates).toHaveLength(1);
     expect(f.reads()).toBe(0);

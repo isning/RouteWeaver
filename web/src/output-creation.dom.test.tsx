@@ -144,7 +144,7 @@ it("requires review of the exact new subscription identity and publishes only th
     within(dialog).queryByRole("button", { name: "预览此输出" }),
   ).toBeNull();
   const consequence =
-    within(dialog).getByText("创建新的客户端订阅，其他订阅不变。");
+    within(dialog).getByText("创建独立的客户端订阅，其他订阅保留原版本。");
   expect(consequence.closest('[data-slot="dialog-footer"]')).toBe(
     check.closest('[data-slot="dialog-footer"]'),
   );
@@ -685,7 +685,7 @@ it("keeps the pending check separate from publication and states the pure-node c
   );
   const dialog = screen.getByRole("dialog", { name: "新增客户端订阅" });
   expect(
-    within(dialog).getAllByText("不包含策略组、分流规则或运行设置。"),
+    within(dialog).getAllByText("仅包含节点连接。"),
   ).toHaveLength(1);
   await userEvent.click(
     within(dialog).getByRole("button", { name: "检查发布内容" }),
@@ -720,9 +720,9 @@ it("keeps the pending check separate from publication and states the pure-node c
   );
   await screen.findByText("兼容检查通过。");
   expect(
-    within(dialog).getAllByText("不包含策略组、分流规则或运行设置。"),
+    within(dialog).getAllByText("仅包含节点连接。"),
   ).toHaveLength(1);
-  expect(within(dialog).queryByText("纯节点订阅，不包含分流规则。")).toBeNull();
+  expect(within(dialog).queryByText("纯节点订阅，仅交付连接。")).toBeNull();
   expect(within(dialog).getByText("所选客户端的节点格式已检查。")).toBeTruthy();
   const technicalPanel = within(dialog)
     .getByText("checked-nodes")
@@ -735,11 +735,11 @@ it("keeps the pending check separate from publication and states the pure-node c
   await expandTechnicalPreview();
   expect(within(dialog).getByText("checked-nodes")).toBeTruthy();
   expect(
-    within(dialog).getAllByText("新建独立链接，其他订阅不变。"),
+    within(dialog).getAllByText("新建独立链接，其他订阅保留原版本。"),
   ).toHaveLength(1);
   expect(
     within(dialog)
-      .getByText("新建独立链接，其他订阅不变。")
+      .getByText("新建独立链接，其他订阅保留原版本。")
       .closest('[data-slot="dialog-footer"]'),
   ).not.toBeNull();
   expect(
@@ -775,7 +775,7 @@ it("keeps the pending check separate from publication and states the pure-node c
 
 it("retains the pure-node explanation in standalone summaries without a mode field", () => {
   render(<RoutingSummaryView summary={{ version: 1, kind: "nodes-only" }} />);
-  expect(screen.getByText("纯节点订阅，不包含分流规则。")).toBeTruthy();
+  expect(screen.getByText("纯节点订阅，仅交付连接。")).toBeTruthy();
 });
 
 it.each([

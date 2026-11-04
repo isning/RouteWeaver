@@ -468,7 +468,7 @@ export function FleetPlanForm({
             <div className="standalone-label grid gap-2 text-sm font-medium">
               转发路径<strong>{deployment?.name || initialDeploymentId}</strong>
               <p className="muted text-sm text-muted-foreground">
-                仅对这条路径中的所选实例计划变更，不会切换或合并其他路径。
+                变更计划仅包含这条路径中的所选实例，保留其他路径。
               </p>
             </div>
           ) : (
@@ -516,7 +516,7 @@ export function FleetPlanForm({
             </label>
             <p className="muted text-sm text-muted-foreground">
               {action === "install"
-                ? "准备固定版本文件，不启动或替换当前运行的核心。"
+                ? "仅准备固定版本文件，保留核心当前的运行状态与版本。"
                 : "升级到不同的明确版本，当前连接可能中断。预览会检查实例当前版本与兼容性。"}
             </p>
             {selectedRelease?.adapterId === "routeweaver/xray" &&
@@ -812,7 +812,7 @@ export function FleetPlanForm({
                     }
                   />
                   <span className="muted text-sm text-muted-foreground">
-                    这是节点执行策略的短期授权，不改变用户服务到期时间。
+                    这是节点执行策略的短期授权；用户服务沿用原到期时间。
                   </span>
                 </label>
               ),
@@ -870,7 +870,7 @@ export function FleetPlanForm({
             </p>
             <p>
               {action === "install"
-                ? "只准备目标版本文件，不启动或替换当前运行的核心。"
+                ? "仅准备目标版本文件，保留核心当前的运行状态与版本。"
                 : action === "stop"
                   ? "所选核心将停止，经过它们的线路暂时不可用。"
                   : "所选核心将重启，现有连接可能中断；后续阶段等待前序成功。"}
@@ -929,7 +929,7 @@ export function FleetPlanForm({
               </div>
             )}
             <p className="muted text-sm text-muted-foreground">
-              创建计划不会执行。下一步逐阶段确认开始。
+              创建计划后，需逐阶段确认开始执行。
             </p>
           </Section>
         )}
@@ -1149,7 +1149,7 @@ export function FleetBatchDetail({
         : `执行第 ${stage! + 1} 阶段？`,
       description:
         (batch?.action === "install"
-          ? "只准备目标版本文件，不启动或替换当前核心。"
+          ? "仅准备目标版本文件，保留核心当前的运行状态与版本。"
           : batch?.action === "stop"
             ? "所选实例将停止，相关连接会中断。"
             : "所选实例将重启并应用已检查的配置，当前连接可能中断。成功实例不会重复执行。") +

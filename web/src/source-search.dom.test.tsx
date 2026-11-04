@@ -93,6 +93,18 @@ afterEach(async () => {
   vi.unstubAllGlobals();
 });
 
+it("explains imported subscriptions and nodes can be combined with platform nodes", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => json([])),
+  );
+  mount();
+  await screen.findByText("暂无订阅来源");
+  expect(
+    screen.getByText("导入外部订阅和节点，与平台节点组合使用。"),
+  ).toBeTruthy();
+});
+
 it("distinguishes no matches and clears only the query to recover the same source identities and order", async () => {
   const fetcher = vi.fn(async () => json(sources));
   vi.stubGlobal("fetch", fetcher);

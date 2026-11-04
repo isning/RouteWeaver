@@ -296,10 +296,9 @@ async function privacyAndNativeForm(dialog: Locator) {
   });
   const privacy = region.locator(".privacy-note");
   for (const fact of [
-    "平台服务器解析",
-    "平台运营者可处理其中的连接信息",
-    "仅对你的账号可见",
-    "不会自动加入共享服务器线路",
+    "订阅信息由平台解析",
+    "加密保存",
+    "仅供你的账号使用",
   ])
     await expect(privacy).toContainText(fact);
   await expect(privacy).toBeInViewport({ ratio: 1 });

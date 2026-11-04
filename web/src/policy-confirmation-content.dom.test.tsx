@@ -87,8 +87,8 @@ const after: EffectivePolicy = {
 const entitlementFixture = entitlementEditFixture(before);
 const effect = { userId: "u1", before, after };
 const consent = "我已核对本次授权变更";
-const boundary = "受管入口配置不会自动应用。";
-const noReset = "已有用量不会因方案或续期变化而清零。";
+const boundary = "受管入口配置需单独应用。";
+const noReset = "切换方案或续期后，保留已有用量。";
 
 beforeEach((context) => {
   currentOwner = ownedClickScenario(context);
@@ -254,7 +254,7 @@ it.each(["service", "group", "entitlement"] as const)(
     const rules = review.getByRole("button", { name: "授权规则" });
     expect(rules.getAttribute("aria-expanded")).toBe("false");
     await owner.click(() => rules);
-    expect(review.getByText("多个用户组不会叠加额度。")).toBeTruthy();
+    expect(review.getByText("多个用户组按优先级选用一份方案额度，个人覆盖优先。")).toBeTruthy();
     expect(review.getByText(noReset)).toBeTruthy();
     const apply = review.getByRole("button", {
       name: "更新授权",
@@ -323,7 +323,7 @@ it("shows the authoritative affected count and preserves exact comparisons, prov
   expect(table.getAllByText("不限制").length).toBeGreaterThan(0);
   expect(review.getAllByText(noReset)).toHaveLength(1);
   await owner.click(() => review.getByRole("button", { name: "授权规则" }));
-  expect(review.getByText("多个用户组不会叠加额度。")).toBeTruthy();
+  expect(review.getByText("多个用户组按优先级选用一份方案额度，个人覆盖优先。")).toBeTruthy();
   expect(review.getAllByText(noReset)).toHaveLength(1);
 });
 

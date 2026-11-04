@@ -109,7 +109,7 @@ it("keeps processing editable before sources without describing an empty merge",
   expect(screen.getByRole("button", { name: "预览处理结果" })).toBeTruthy();
 });
 
-it("groups the four privacy facts with the actual submit action and retains a failed import", async () => {
+it("groups server processing and source privacy with the actual submit action and retains a failed import", async () => {
   const fetcher = vi.fn(async () =>
     json({ detail: "Import failed; try again" }, 503),
   );
@@ -119,12 +119,8 @@ it("groups the four privacy facts with the actual submit action and retains a fa
     await screen.findByRole("dialog", { name: "添加订阅来源" }),
   );
   const decision = within(dialog.getByRole("group", { name: "来源导入确认" }));
-  const privacy = decision.getByText(/平台服务器解析/);
-  for (const fact of [
-    "平台运营者可处理其中的连接信息",
-    "仅对你的账号可见",
-    "不会自动加入共享服务器线路",
-  ]) {
+  const privacy = decision.getByText(/订阅信息由平台解析/);
+  for (const fact of ["加密保存", "仅供你的账号使用"]) {
     expect(privacy.textContent).toContain(fact);
   }
   expect(decision.getByRole("button", { name: /取\s*消/ })).toBeTruthy();

@@ -256,6 +256,6 @@ it("offers a localized keyboard file picker, preserves cancellation and retries 
       "文件先在本地读取，提交后才上传。仅提取受支持的连接内容。",
     ),
   ).toBeTruthy();
-  expect(dialog.getByText(/平台运营者可处理其中的连接信息/)).toBeTruthy();
+  expect(dialog.getByText(/订阅信息由平台解析并加密保存/)).toBeTruthy();
   expect(fetcher).not.toHaveBeenCalled();
 });

@@ -272,7 +272,7 @@ func (h *server) prepareExitChange(actor, routeID string, in exitChangeInput) (p
 		if !errors.As(e, &refusal) {
 			return out, e
 		}
-		return out, exitBlocked("EXIT_PATH_AMBIGUOUS", "当前线路的实际转发不能证明为固定两段路径，请先核对转发设置。")
+		return out, exitBlocked("EXIT_PATH_AMBIGUOUS", "此操作仅适用于固定两段转发路径，请先核对当前转发设置。")
 	}
 	principalCount := 0
 	for _, p := range out.deployment.IR.Programs {

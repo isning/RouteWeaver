@@ -193,7 +193,7 @@ export function ListenerRefreshReview({
             )}
             {plan.independent && (
               <section>
-                <h4 className="text-sm font-medium">转发去向保持不变</h4>
+                <h4 className="text-sm font-medium">保留转发去向</h4>
                 <ServerForwarding
                   programs={draft.ir.programs}
                   inventory={inventory}
@@ -202,7 +202,7 @@ export function ListenerRefreshReview({
               </section>
             )}
             <p className="muted text-sm text-muted-foreground">
-              更新后仍需保存并检查草稿；此操作不会应用到服务器。
+              本次更新草稿中的监听设置，之后需保存、检查并单独应用到服务器。
             </p>
           </>
         )}

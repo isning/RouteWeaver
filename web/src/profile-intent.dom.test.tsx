@@ -228,7 +228,7 @@ it("uses the chosen existing subscription client even after changing the new-sub
   };
   const { writes } = mount(profile, { output });
   await screen.findByText("2 个有效连接");
-  expect(screen.getByText(/纯节点订阅不包含分流/)).toBeTruthy();
+  expect(screen.getByText(/纯节点订阅仅交付连接/)).toBeTruthy();
   const user = userEvent.setup();
   await user.click(screen.getByRole("tab", { name: "检查与预览" }));
   await user.click(
@@ -1531,7 +1531,7 @@ it.each(["native", "nodes-only"] as const)(
     const copy =
       kind === "native"
         ? "上方保留结构化默认行为；原生规则或设置可能改变最终行为，请按具体客户端检查。"
-        : "纯节点订阅不包含分流；上方行为仍保存在共享配置中，仅完整配置使用。";
+        : "纯节点订阅仅交付连接；上方分流行为保存在共享配置中，供完整配置使用。";
     const message = await screen.findByText(copy);
     const live = message.parentElement!;
     expect(live.getAttribute("aria-live")).toBe("polite");

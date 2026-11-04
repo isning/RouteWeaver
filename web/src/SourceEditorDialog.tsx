@@ -417,7 +417,7 @@ function SourceEditorSession({
             <div className="privacy-note mb-3 flex items-start gap-3 rounded-lg border bg-muted/40 p-3 text-sm leading-relaxed text-muted-foreground [&>svg]:mt-0.5 [&>svg]:size-4 [&>svg]:shrink-0">
               <FileText aria-hidden="true" />
               <span>
-                订阅由平台服务器解析，平台运营者可处理其中的连接信息。来源仅对你的账号可见，不会自动加入共享服务器线路。
+                订阅信息由平台解析并加密保存，仅供你的账号使用。
               </span>
             </div>
             <div className="form-footer flex flex-wrap items-center justify-end gap-2">

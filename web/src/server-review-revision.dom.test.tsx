@@ -606,7 +606,7 @@ it("keeps apply consequences and both consent gates beside the footer action whi
   const footer = apply.closest('[data-slot="dialog-footer"]') as HTMLElement;
   expect(footer).toBeTruthy();
   expect(footer.textContent).toContain("已有连接可能中断");
-  expect(footer.textContent).toContain("不能无限离线运行");
+  expect(footer.textContent).toContain("到期后需重新确认权限才能继续运行");
   const checks = within(footer).getAllByRole("checkbox");
   expect(checks).toHaveLength(2);
   expect(apply.disabled).toBe(true);

@@ -247,7 +247,7 @@ it("keeps ordinary invalid fresh-form validation and the delivery-neutral fresh-
     "请输入订阅名称",
   );
   expect(input.getAttribute("aria-invalid")).toBe("true");
-  expect(ui.getByText("创建新的客户端订阅，其他订阅不变。")).toBeTruthy();
+  expect(ui.getByText("创建独立的客户端订阅，其他订阅保留原版本。")).toBeTruthy();
   expect(ui.queryByRole("button", { name: "重试上次发布" })).toBeNull();
   expect(f.previews).toEqual([]);
   expect(f.creates).toEqual([]);

@@ -473,7 +473,7 @@ it("shows localized failed-source review without hiding the accepted snapshot", 
     "无法使用此订阅地址。请使用公网可访问的 HTTPS 订阅链接。",
   );
   expect(
-    screen.getByText("之前的节点仍可使用，不会应用失败的输入。"),
+    screen.getByText("导入失败时保留之前的节点，可修正输入后重试。"),
   ).toBeTruthy();
   expect(screen.queryByText("private-detail-token")).toBeNull();
 });

@@ -142,7 +142,7 @@ it("opens the first subscription form after a fresh empty read without a target 
     "value",
     "Daily",
   );
-  expect(screen.getByText("创建新的客户端订阅，其他订阅不变。")).toBeTruthy();
+  expect(screen.getByText("创建独立的客户端订阅，其他订阅保留原版本。")).toBeTruthy();
   expect(screen.getByRole("button", { name: "检查发布内容" })).toBeTruthy();
   expect(screen.queryByRole("button", { name: /创建并发布/ })).toBeNull();
   expect(requests).toEqual([
@@ -323,7 +323,7 @@ it("preserves an in-progress independent subscription through pending, failed, a
     "Tablet",
   );
   expect(screen.getByRole("dialog", { name: "新增客户端订阅" })).toBeTruthy();
-  expect(screen.getByText("创建新的客户端订阅，其他订阅不变。")).toBeTruthy();
+  expect(screen.getByText("创建独立的客户端订阅，其他订阅保留原版本。")).toBeTruthy();
   expect(screen.queryByRole("radio")).toBeNull();
   await userEvent.click(screen.getByRole("button", { name: "检查发布内容" }));
   expect(

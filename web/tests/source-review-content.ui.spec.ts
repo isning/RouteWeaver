@@ -128,7 +128,7 @@ test("first import is immediately usable and manual updates explain one warning 
       });
       await expect(consequence).toBeVisible();
       await expect(
-        review.getByText("现有草稿中的选择不自动替换，已发布订阅不更新。", {
+        review.getByText("现有草稿保留当前选择，已发布订阅保留原版本。", {
           exact: true,
         }),
       ).toBeVisible();

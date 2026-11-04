@@ -883,7 +883,7 @@ it("keeps a completed publication from notifying or reopening a departed access 
       ),
     );
     expect(
-      screen.queryByText("「Phone」已更新，其他客户端订阅保持不变"),
+      screen.queryByText("「Phone」已更新，其他客户端订阅保留原版本"),
     ).toBeNull();
     expect(screen.queryByRole("dialog", { name: "获取「Phone」" })).toBeNull();
     expect(f.accessReads).toHaveLength(1);

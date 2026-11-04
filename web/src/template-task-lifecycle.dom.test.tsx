@@ -525,7 +525,7 @@ it("keeps template B intact when A completes after an explicitly confirmed works
   expect(
     within(second).getByRole("combobox", { name: "模板目标" }).textContent,
   ).toContain("My collection");
-  expect(screen.queryByText("模板已用于草稿，已发布订阅保持不变")).toBeNull();
+  expect(screen.queryByText("模板已用于草稿，已发布订阅保留原版本")).toBeNull();
   expect(state.writes).toHaveLength(1);
 });
 

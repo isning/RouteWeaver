@@ -49,7 +49,7 @@ function FrozenRoutingIntentView({
 }) {
   if (intent.kind === "native-override")
     return <p>使用原生配置覆盖，无法提供可靠的分流摘要。</p>;
-  if (intent.kind === "nodes-only") return <p>纯节点订阅，不包含分流规则。</p>;
+  if (intent.kind === "nodes-only") return <p>纯节点订阅，仅交付连接。</p>;
   const rules = intent.rules || [];
   const hasGroup =
     intent.defaultAction?.kind === "group" ||
@@ -93,7 +93,7 @@ function FrozenRoutingIntentView({
         </dd>
       </dl>
       {!!intent.resources?.length && (
-        <p>规则文件只列出引用，不展开文件内条目。</p>
+        <p>规则文件仅显示引用，具体条目请查看文件内容。</p>
       )}
       {(summary?.advanced || hasGroup || rules.length > 1) && (
         <details className="routing-intent-overview muted text-sm text-muted-foreground">
@@ -109,7 +109,7 @@ function FrozenRoutingIntentView({
             </p>
           )}
           {hasGroup && (
-            <p>策略组按其配置决定流量去向，不表示客户端当前选中的节点。</p>
+            <p>策略组展示配置中的流量去向；当前选中的节点请在客户端查看。</p>
           )}
         </details>
       )}
@@ -557,8 +557,8 @@ export function FrozenRoutingComparison({
       return (
         <p>
           {companionCategories?.nodes
-            ? "纯节点订阅不包含分流规则。"
-            : "纯节点订阅不包含分流规则；节点及连接设置的变化不在此摘要中。"}
+            ? "纯节点订阅仅交付连接。"
+            : "纯节点订阅仅交付连接；本摘要未比较节点及连接设置。"}
         </p>
       );
   }
@@ -596,11 +596,11 @@ function AdvancedSummaryNotes({ hasGroup }: { hasGroup: boolean }) {
         摘要说明
       </summary>
       <p className="muted text-sm text-muted-foreground">
-        规则数不含默认处理及规则文件内条目；节点数是配置包含数量，不代表在线状态。
+        规则数仅统计配置中的显式规则；默认处理与规则文件内条目单独查看。节点数统计配置所含节点，在线状态需另行查询。
       </p>
       {hasGroup && (
         <p className="muted text-sm text-muted-foreground">
-          策略组按其配置决定流量去向，不表示客户端当前选中的节点。
+          策略组展示配置中的流量去向；当前选中的节点请在客户端查看。
         </p>
       )}
     </details>
@@ -667,7 +667,7 @@ function AdvancedRoutingChanges({
           ))}
         </dl>
       ) : (
-        <p>摘要字段相同，不代表配置未变化。</p>
+        <p>本次比较的摘要字段相同；完整配置仍可能有变化。</p>
       )}
       <p>
         {companionCategories
@@ -724,7 +724,7 @@ export function RoutingSummaryView({
   if (summary.kind !== "basic") {
     const descriptions = {
       "native-override": "使用原生配置覆盖，无法提供可靠的分流摘要。",
-      "nodes-only": "纯节点订阅，不包含分流规则。",
+      "nodes-only": "纯节点订阅，仅交付连接。",
     };
     return <p>{descriptions[summary.kind]}</p>;
   }
@@ -800,8 +800,8 @@ export function RoutingReview({
       ) : matchingKind && candidate?.kind === "nodes-only" ? (
         <p className="routing-comparison-limit text-sm text-muted-foreground">
           {companionCategories?.nodes
-            ? "纯节点订阅不包含分流规则。"
-            : "纯节点订阅不包含分流规则；节点及连接设置的变化不在此摘要中。"}
+            ? "纯节点订阅仅交付连接。"
+            : "纯节点订阅仅交付连接；本摘要未比较节点及连接设置。"}
         </p>
       ) : advancedComparison ? (
         <AdvancedRoutingChanges

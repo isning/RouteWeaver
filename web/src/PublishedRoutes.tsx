@@ -727,7 +727,7 @@ function PublicRouteEditor({
             ? "检查结果 · 核对后保存"
             : checkedBefore
               ? "内容已变更，请重新检查线路。"
-              : "先检查线路，再核对结果并保存。保存不会授权用户或应用服务器配置。"
+              : "先检查线路，再核对结果并保存；用户授权与服务器配置应用需分别确认。"
         }
       />
       <div inert={save.isPending} className="space-y-5">
@@ -1454,7 +1454,7 @@ function PublicRouteDetail({
           </QueryState>
           {!userId && (
             <p className="muted text-sm text-muted-foreground">
-              选择用户，核对这条线路的授权与独立入口；不会自动授予权限或创建凭据。
+              选择用户后查看这条线路的授权与独立入口；授权和凭据分配需单独操作。
             </p>
           )}
           {userId && (

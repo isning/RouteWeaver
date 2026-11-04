@@ -287,7 +287,7 @@ export function SourcesPage({
     <>
       <PageHeader
         title="订阅来源"
-        description="导入外部订阅或节点文本，供分流配置与节点集合使用。"
+        description="导入外部订阅和节点，与平台节点组合使用。"
         action={
           <ActionButton
             leadingIcon={<Plus aria-hidden="true" />}

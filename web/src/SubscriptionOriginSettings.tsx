@@ -117,7 +117,7 @@ export function SubscriptionOriginSettings() {
   return (
     <SettingsGroup
       title="订阅域名"
-      description="单独设置用户复制订阅链接时使用的地址，不改变控制台登录地址。"
+      description="设置用户复制订阅链接时使用的地址，保留控制台登录地址。"
     >
       {query.data && query.error && (
         <div className="px-4 pt-4 sm:px-5">
@@ -288,7 +288,7 @@ function OriginForm({
         </p>
         <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
           请先由运维配置 DNS、有效 HTTPS
-          证书与反向代理。这里仅保存并验证链接地址，不修改 DNS 或证书。
+          证书与反向代理。这里仅保存并验证链接地址，DNS 与证书由运维管理。
         </p>
         <div className={"flex flex-wrap items-center gap-2"}>
           <ActionButton
@@ -425,7 +425,7 @@ function OriginForm({
               {displayedReview.proposedLinkExample}
             </KeyValue>
             <p>
-              订阅令牌不会更换。旧链接只有在旧域名的 DNS
+              保留当前订阅令牌。旧链接只有在旧域名的 DNS
               与代理仍指向此实例时才继续可用，不会自动跳转。若需撤销旧令牌，请另外轮换对应订阅。
             </p>
             <Label className="inline-flex items-start gap-2 text-sm leading-relaxed">

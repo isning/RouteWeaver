@@ -294,7 +294,7 @@ function UserPolicyFields({ user, context, services, routes, onClose, retained, 
     ]).map(option => <label key={option.value} className="flex items-center gap-2 text-sm"><RadioGroupItem value={option.value}/>{option.label}</label>)}</RadioGroup>
           </AppField>
           <AppField noStyle shouldUpdate={(a, b) => a.routeMode !== b.routeMode}>
-            {({ getFieldValue }) => getFieldValue("routeMode") === "custom" ? (<AppField name="routeIdsOverride" label="个人授权线路" description="仅允许所选线路，替换方案与直接授权的线路，不进行叠加。" rules={[
+            {({ getFieldValue }) => getFieldValue("routeMode") === "custom" ? (<AppField name="routeIdsOverride" label="个人授权线路" description="仅允许所选线路，替换方案与直接授权的线路。" rules={[
                 {
                     required: true,
                     type: "array",
@@ -315,7 +315,7 @@ function UserPolicyFields({ user, context, services, routes, onClose, retained, 
           <div className="form-grid grid gap-5 sm:grid-cols-2">
             <AppField name="startsAt" label="开通时间" required={!implicitStart} description={implicitStart
             ? "留空保留现有开通时间。"
-            : "选择日期和时间；其他授权设置不受影响。"} rules={[
+            : "选择日期和时间；保留其他授权设置。"} rules={[
             {
                 validator: (_, value) => (implicitStart && !value) ||
                     (typeof value === "string" && isPolicyTimestamp(value))
@@ -333,7 +333,7 @@ function UserPolicyFields({ user, context, services, routes, onClose, retained, 
             <Switch />
           </AppField>
           <p className="muted text-sm text-muted-foreground">
-            续期不清零流量。切换方案或用户组不改变这个账号已有的周期。
+            续期后保留已有用量；切换方案或用户组时，账号继续沿用已有周期。
           </p>
         </Section>
         <Accordion type="multiple">{([
@@ -342,7 +342,7 @@ function UserPolicyFields({ user, context, services, routes, onClose, retained, 
                 label: "\u4E2A\u4EBA\u989D\u5EA6\u4E0E\u9650\u5236",
                 children: (<>
                   <p className="muted text-sm text-muted-foreground">
-                    开启即替换继承值，不与组方案叠加。关闭恢复继承；数字 0
+                    开启后以个人设置替换继承值。关闭恢复继承；数字 0
                     表示明确不限制。
                   </p>
                   {overrideFields.map(field => (<div key={field.key} className="space-y-3 rounded-lg border p-4">

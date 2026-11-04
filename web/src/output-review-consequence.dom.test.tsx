@@ -120,9 +120,9 @@ it("opens one authoritative automatic inspection in StrictMode and explicitly re
   await userEvent.click(screen.getByRole("button", { name: "重新检查" }));
   await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
   await screen.findByRole("button", { name: "确认更新「Daily」" });
-  expect(screen.getByText("链接不变，其他订阅不受影响。")).toBeTruthy();
+  expect(screen.getByText("沿用当前链接，其他订阅保留原状。")).toBeTruthy();
   expect(
-    screen.queryByText("发布后请在客户端换用新链接，其他订阅不受影响。"),
+    screen.queryByText("发布后请在客户端换用新链接，其他订阅保留原状。"),
   ).toBeNull();
 });
 it("reopens the same output with a fresh review and ignores the closed opening's late response", async () => {
@@ -174,7 +174,7 @@ it("reopens the same output with a fresh review and ignores the closed opening's
   expect(
     screen.getByRole("button", { name: "重新发布并生成新链接「Daily」" }),
   ).toHaveProperty("disabled", false);
-  expect(screen.queryByText(/链接不变/)).toBeNull();
+  expect(screen.queryByText(/沿用当前链接/)).toBeNull();
   expect(fetch).toHaveBeenCalledTimes(2);
 });
 it("does not dispatch an automatic inspection after its opening is synchronously unmounted", async () => {
@@ -207,7 +207,7 @@ it.each(["preserve", "replace"] as const)(
         onPublished={onPublished}
       />,
     );
-    expect(screen.queryByText(/链接不变/)).toBeNull();
+    expect(screen.queryByText(/沿用当前链接/)).toBeNull();
     await check();
     const label = link === "replace" ? "重新发布并生成新链接" : "确认更新";
     const confirm = screen.getByRole("button", { name: `${label}「Daily」` });
@@ -252,7 +252,7 @@ it.each([
     expect(
       screen.getByRole("button", { name: "确认更新「Daily」" }),
     ).toHaveProperty("disabled", true);
-    expect(screen.queryByText(/链接不变/)).toBeNull();
+    expect(screen.queryByText(/沿用当前链接/)).toBeNull();
     await userEvent.click(
       screen.getByRole("button", {
         name: unbound ? "预览此订阅更新" : "重新检查",
@@ -381,7 +381,7 @@ it("clears stale approval on 409 and rechecks before an intentional retry", asyn
   expect(
     screen.getByRole("button", { name: "确认更新「Daily」" }),
   ).toHaveProperty("disabled", true);
-  expect(screen.queryByText(/链接不变/)).toBeNull();
+  expect(screen.queryByText(/沿用当前链接/)).toBeNull();
   expect(writes).toBe(1);
   await check();
   expect(
@@ -470,7 +470,7 @@ it("rechecking discards the former effect and requires the latest explicit appro
   );
   await check();
   await userEvent.click(screen.getByRole("button", { name: "重新检查" }));
-  expect(screen.queryByText(/链接不变/)).toBeNull();
+  expect(screen.queryByText(/沿用当前链接/)).toBeNull();
   expect(
     screen.getByRole("button", { name: "确认更新「Daily」" }),
   ).toHaveProperty("disabled", true);
@@ -549,7 +549,7 @@ it("groups the bounded comparison conclusion before evidence and keeps a named d
   });
   expect(confirm.textContent).toBe("重新发布并生成新链接");
   expect(
-    screen.getByText("发布后请在客户端换用新链接，其他订阅不受影响。"),
+    screen.getByText("发布后请在客户端换用新链接，其他订阅保留原状。"),
   ).toBeTruthy();
 });
 
@@ -587,7 +587,7 @@ it.each([
     await check();
     expect(
       screen.getByText(
-        "纯节点订阅不包含分流规则；节点及连接设置的变化不在此摘要中。",
+        "纯节点订阅仅交付连接；本摘要未比较节点及连接设置。",
       ),
     ).toBeTruthy();
     expect(!!screen.queryByText("将采用 2 个平台入口的最新连接信息。")).toBe(
@@ -614,7 +614,7 @@ it("does not offer platform-input reassurance or approval on an invalid review",
   );
   mount(<UpdateOutput output={output} onClose={() => {}} />);
   await userEvent.click(screen.getByRole("button", { name: "预览此订阅更新" }));
-  await screen.findByText("兼容检查未通过，已发布内容保持不变。");
+  await screen.findByText("兼容检查未通过，已发布内容保留原版本。");
   expect(screen.queryByText(/将采用/)).toBeNull();
   expect(
     screen.getByRole("button", { name: "确认更新「Daily」" }),
@@ -657,7 +657,7 @@ it("expires a cancelled inspection before dismissal and leaves newer focus alone
     await act(async () => pending.resolve(json(checked("replace"))));
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(
-      screen.queryByText("发布后请在客户端换用新链接，其他订阅不受影响。"),
+      screen.queryByText("发布后请在客户端换用新链接，其他订阅保留原状。"),
     ).toBeNull();
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(document.activeElement).toBe(next);
@@ -735,10 +735,10 @@ it("replays the actual captured owner preview without replacing its comparison o
   await screen.findByText("将采用 1 个平台入口的最新连接信息。");
   expect(
     screen.getByText(
-      "纯节点订阅不包含分流规则；节点及连接设置的变化不在此摘要中。",
+      "纯节点订阅仅交付连接；本摘要未比较节点及连接设置。",
     ),
   ).toBeTruthy();
-  const consequence = screen.getByText("链接不变，其他订阅不受影响。");
+  const consequence = screen.getByText("沿用当前链接，其他订阅保留原状。");
   expect(
     screen.getByRole("group", { name: "更新确认" }).contains(consequence),
   ).toBe(true);
@@ -825,8 +825,8 @@ it.each(["preserve", "replace"] as const)(
     const decision = screen.getByRole("group", { name: "更新确认" });
     const consequence = within(decision).getByText(
       link === "replace"
-        ? "发布后请在客户端换用新链接，其他订阅不受影响。"
-        : "链接不变，其他订阅不受影响。",
+        ? "发布后请在客户端换用新链接，其他订阅保留原状。"
+        : "沿用当前链接，其他订阅保留原状。",
     );
     const footer = decision.closest("[data-task-overlay-footer]");
     expect(footer).not.toBeNull();

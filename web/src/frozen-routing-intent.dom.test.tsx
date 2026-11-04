@@ -206,7 +206,7 @@ describe.each([false, true])(
 
     it.each([
       ["native-override", "使用原生配置覆盖，无法提供可靠的分流摘要。"],
-      ["nodes-only", "纯节点订阅，不包含分流规则。"],
+      ["nodes-only", "纯节点订阅，仅交付连接。"],
     ] as const)(
       "does not render portable rules for %s",
       (kind, explanation) => {

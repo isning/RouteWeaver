@@ -172,7 +172,7 @@ it.each([
     { version: 1, kind: "native-override" },
     "使用原生配置覆盖，无法提供可靠的分流摘要。",
   ],
-  [{ version: 1, kind: "nodes-only" }, "纯节点订阅，不包含分流规则。"],
+  [{ version: 1, kind: "nodes-only" }, "纯节点订阅，仅交付连接。"],
 ])(
   "does not invent basic selections for an unavailable or non-basic summary",
   async (routingSummary, message) => {

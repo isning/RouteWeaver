@@ -72,7 +72,7 @@ it("discloses registration-only scope at server creation, without saving on open
   await user.click(within(panel).getByRole("button", { name: "添加服务器" }));
   const dialog = await screen.findByRole("dialog", { name: "添加服务器" });
   expect(
-    within(dialog).getByText("仅登记服务器，不会连接或改动服务器。"),
+    within(dialog).getByText("将服务器信息登记到控制平面；服务器连接与配置需另行操作。"),
   ).toBeTruthy();
   expect(within(dialog).getByRole("button", { name: /保\s*存/ })).toBeTruthy();
   expect(

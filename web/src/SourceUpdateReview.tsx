@@ -33,11 +33,11 @@ const kinds: Record<string, string> = {
 const extractionLimits = [
   {
     code: "connection-extraction",
-    text: "分流、DNS、分组等其他配置不会导入。",
+    text: "已跳过分流、DNS、分组等其他配置。",
   },
   {
     code: "non-connection-outbound",
-    text: "内置直连、拦截或策略分组不会作为连接选项导入。",
+    text: "已跳过内置直连、拦截和策略分组，仅提取连接选项。",
   },
 ];
 function ImportDiagnostics({
@@ -518,7 +518,7 @@ function SourceReviewSession({
             </ActionButton>
           }
         >
-          {"先核对已保存的来源状态，再决定下一步。核对不会重新获取订阅内容。"}
+          {"本次仅核对已保存的来源状态。获取最新订阅内容需另行刷新来源。"}
         </Notice>
       )}
       {needsRefresh && (
@@ -560,7 +560,7 @@ function SourceReviewSession({
             <>
               {sourceIssueText(source)}
               {source.snapshot && sourceHasFailure(source) && (
-                <p>之前的节点仍可使用，不会应用失败的输入。</p>
+                <p>导入失败时保留之前的节点，可修正输入后重试。</p>
               )}
             </>
           }
@@ -625,8 +625,8 @@ function SourceReviewSession({
                 ? "应用后，这些选项可用于配置和预览。"
                 : "应用后，配置和预览将使用新选项。"}
             </p>
-            <p>现有草稿中的选择不自动替换，已发布订阅不更新。</p>
-            {firstImport && <p>来源输入已保存；不导入或稍后处理也会保留。</p>}
+            <p>现有草稿保留当前选择，已发布订阅保留原版本。</p>
+            {firstImport && <p>忽略更新或稍后处理时，已保存的来源输入仍会保留。</p>}
           </div>
           <div className={"flex flex-wrap items-center gap-2"}>
             <ActionButton

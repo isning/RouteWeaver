@@ -40,7 +40,7 @@ it.each([
   expect(values(table, "周期天数")).toEqual(days);
   expect(within(table).queryByRole("rowheader", { name: "每月重置日（方案保存值）" })).toBeNull();
   expect(within(table).queryByRole("rowheader", { name: "周期天数（方案保存值）" })).toBeNull();
-  expect(screen.getByText("首次设置账号周期时的默认规则；已有账号周期不变。")).toBeTruthy();
+  expect(screen.getByText("首次设置账号周期时使用的默认规则；已有账号继续沿用各自的周期。")).toBeTruthy();
 });
 
 it("still exposes changed stored parameters when neither side uses them", () => {

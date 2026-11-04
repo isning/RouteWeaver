@@ -302,7 +302,7 @@ it("makes direct group uses navigable and preserves their actions when removal i
   });
   expect(
     within(confirm).getByText(
-      "这些引用将变为不可用，需要重新选择去向。不会自动改为直连。",
+      "这些引用将变为不可用，需要明确选择新的流量去向后才能发布。",
     ),
   ).toBeTruthy();
   await user.click(within(confirm).getByRole("button", { name: "保留策略组" }));

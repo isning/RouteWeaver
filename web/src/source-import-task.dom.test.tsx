@@ -203,7 +203,7 @@ it.each(["double click", "held Enter"])(
     ).toBeTruthy();
     expect(review.queryByText("Newer input could not be imported")).toBeNull();
     expect(
-      review.getByText("之前的节点仍可使用，不会应用失败的输入。"),
+      review.getByText("导入失败时保留之前的节点，可修正输入后重试。"),
     ).toBeTruthy();
     expect(requests).toEqual([
       "POST /api/me/sources/source-one/apply",

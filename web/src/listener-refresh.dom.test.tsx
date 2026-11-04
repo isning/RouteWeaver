@@ -426,7 +426,7 @@ it("refreshes an independent listener without silently changing its connector po
   const review = await screen.findByRole("dialog", {
     name: "更新 UK listener 的监听设置",
   });
-  expect(await within(review).findByText("转发去向保持不变")).toBeTruthy();
+  expect(await within(review).findByText("保留转发去向")).toBeTruthy();
   expect(
     within(review).getByText(/转发至 uk.example.invalid:1080/),
   ).toBeTruthy();

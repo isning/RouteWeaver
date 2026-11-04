@@ -99,7 +99,7 @@ describe("subscription domain tasks", () => {
     const save = await screen.findByRole("button", { name: "保存域名草稿" });
     const prerequisite = screen.getByText(/请先由运维配置 DNS、有效 HTTPS/);
     expect(prerequisite.textContent).toContain(
-      "证书与反向代理。这里仅保存并验证链接地址，不修改 DNS 或证书。",
+      "证书与反向代理。这里仅保存并验证链接地址，DNS 与证书由运维管理。",
     );
     expect(
       prerequisite.compareDocumentPosition(save) &

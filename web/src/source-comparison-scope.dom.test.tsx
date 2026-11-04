@@ -9,7 +9,7 @@ import { emptyProfile } from "./model";
 import type { Profile } from "./types";
 
 const scopeNote =
-  "比较使用当前已应用的来源内容；手动模式下尚未应用的更新不计入本次比较。";
+  "比较使用当前已应用的来源内容；手动模式的更新需先应用到来源，再重新比较。";
 const profile: Profile = {
   ...emptyProfile(),
   id: "profile",

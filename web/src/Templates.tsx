@@ -502,7 +502,7 @@ export function TemplatesPage({ admin = false }: { admin?: boolean }) {
       setChecking(null);
       setPreview(null);
       setUpdateEdited(false);
-      message.success("更新已应用到草稿，已发布订阅保持不变");
+      message.success("更新已应用到草稿，已发布订阅保留原版本");
     },
   });
   useUnsavedChanges(!!checking && (updateEdited || apply.isPending));
@@ -1146,7 +1146,7 @@ function SelectTemplate({
       client.invalidateQueries();
       if (!active.current) return;
       setOpen(false);
-      message.success("模板已用于草稿，已发布订阅保持不变");
+      message.success("模板已用于草稿，已发布订阅保留原版本");
     },
   });
   const complete =
@@ -1354,9 +1354,9 @@ function SelectTemplate({
           </label>
           <p className="muted text-sm text-muted-foreground">
             {mode === "copy"
-              ? "应用后独立维护，不再接收模板更新。"
+              ? "创建独立副本，后续由你单独维护。"
               : mode === "pinned"
-                ? "始终使用选中的版本，上游发布不自动改变它。"
+                ? "固定使用所选版本，后续由你决定是否更换版本。"
                 : "有新版本时先查看差异与兼容性，再决定是否更新。"}
           </p>
           {needsCollection && (
@@ -1458,7 +1458,7 @@ function SelectTemplate({
           ))}
           <Notice tone="info" title="只更新选中的草稿">
             {
-              "来源与凭据保持不变。首次选择或更换另一模板会采用它的结构与默认设置；同一模板的版本更新会保留可合并的本地修改。发布订阅仍需单独确认。"
+              "保留来源与凭据。首次选择或更换另一模板会采用它的结构与默认设置；同一模板的版本更新会保留可合并的本地修改。发布订阅仍需单独确认。"
             }
           </Notice>
         </div>

@@ -35,7 +35,7 @@ export function ProfileDraftConflict({
               {
                 title: "放弃当前修改并返回？",
                 description:
-                  "这会放弃当前未保存的输入，不会改变最新草稿或已发布的订阅。",
+                  "这会放弃当前未保存的输入，保留最新草稿与已发布的订阅。",
                 confirmLabel: "放弃修改并返回",
                 cancelLabel: "保留当前输入",
               },
@@ -53,7 +53,7 @@ export function ProfileDraftConflict({
         </ActionButton>
       }
     >
-      已发布的订阅不受影响。重新打开编辑时会读取最新草稿。
+      已发布的订阅保留原版本。重新打开编辑时会读取最新草稿。
     </Notice>
   );
 }

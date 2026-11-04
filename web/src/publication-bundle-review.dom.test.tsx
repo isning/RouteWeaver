@@ -15,7 +15,7 @@ import { PublishOutput, UpdateOutput } from "./Subscriptions";
 import { emptyProfile } from "./model";
 
 const profile = { ...emptyProfile(), id: "rules-profile", name: "Rule files" };
-const notice = "发布后需下载配置与规则文件包，不提供普通订阅链接或二维码。";
+const notice = "发布后仅提供配置与规则文件包，请下载并导入客户端。";
 const clients: QueryClient[] = [];
 beforeEach(() => {
   Object.defineProperty(window, "matchMedia", {
@@ -119,21 +119,21 @@ it.each([
       ),
     );
     expect(screen.queryByText(notice)).toBeNull();
-    expect(screen.getByText("创建新的客户端订阅，其他订阅不变。")).toBeTruthy();
-    expect(screen.queryByText("新建独立链接，其他订阅不变。")).toBeNull();
+    expect(screen.getByText("创建独立的客户端订阅，其他订阅保留原版本。")).toBeTruthy();
+    expect(screen.queryByText("新建独立链接，其他订阅保留原版本。")).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "检查发布内容" }));
     await screen.findByText("兼容检查通过。");
     if (shown) {
       const disclosure = screen.getByText(notice);
-      const consequence = screen.getByText("新建独立订阅，其他订阅不变。");
+      const consequence = screen.getByText("新建独立订阅，其他订阅保留原版本。");
       expect(disclosure.closest("[data-slot=dialog-footer]")).toBe(
         consequence.closest("[data-slot=dialog-footer]"),
       );
       expect(disclosure.closest("[data-slot=dialog-footer]")).not.toBeNull();
-      expect(screen.queryByText("新建独立链接，其他订阅不变。")).toBeNull();
+      expect(screen.queryByText("新建独立链接，其他订阅保留原版本。")).toBeNull();
     } else {
       expect(screen.queryByText(notice)).toBeNull();
-      expect(screen.getByText("新建独立链接，其他订阅不变。")).toBeTruthy();
+      expect(screen.getByText("新建独立链接，其他订阅保留原版本。")).toBeTruthy();
     }
     expect(
       screen.getByRole("button", { name: "创建并发布「Rule files」" }),
@@ -141,9 +141,9 @@ it.each([
     expect(writes).toHaveLength(0);
     await userEvent.clear(screen.getByRole("textbox", { name: "订阅名称" }));
     expect(screen.queryByText(notice)).toBeNull();
-    expect(screen.queryByText("新建独立订阅，其他订阅不变。")).toBeNull();
-    expect(screen.queryByText("新建独立链接，其他订阅不变。")).toBeNull();
-    expect(screen.getByText("创建新的客户端订阅，其他订阅不变。")).toBeTruthy();
+    expect(screen.queryByText("新建独立订阅，其他订阅保留原版本。")).toBeNull();
+    expect(screen.queryByText("新建独立链接，其他订阅保留原版本。")).toBeNull();
+    expect(screen.getByText("创建独立的客户端订阅，其他订阅保留原版本。")).toBeTruthy();
   },
 );
 
@@ -217,12 +217,12 @@ it.each(["preserve", "replace"] as const)(
     const decision = within(screen.getByRole("group", { name: "更新确认" }));
     expect(
       decision.getByText(
-        /发布后请下载配置与规则文件包并导入客户端，不提供普通订阅链接或二维码。其他订阅不受影响。/,
+        /发布后仅提供配置与规则文件包，请下载并导入客户端。其他订阅保留原状。/,
       ),
     ).toBeTruthy();
-    expect(decision.queryByText("链接不变，其他订阅不受影响。")).toBeNull();
+    expect(decision.queryByText("沿用当前链接，其他订阅保留原状。")).toBeNull();
     expect(
-      decision.queryByText("发布后请在客户端换用新链接，其他订阅不受影响。"),
+      decision.queryByText("发布后请在客户端换用新链接，其他订阅保留原状。"),
     ).toBeNull();
     expect(
       screen.queryByRole("button", { name: "重新发布并生成新链接「Phone」" }),
@@ -319,7 +319,7 @@ it("expires bundle consequences during recheck and uses the next checked deliver
       }),
     ),
   );
-  expect(await screen.findByText("链接不变，其他订阅不受影响。")).toBeTruthy();
+  expect(await screen.findByText("沿用当前链接，其他订阅保留原状。")).toBeTruthy();
   expect(
     screen.getByRole("button", { name: "确认更新「Phone」" }),
   ).toHaveProperty("disabled", false);

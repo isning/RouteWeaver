@@ -250,7 +250,7 @@ export function BackupSettings() {
       </Section>
       </PageSection>
       <PageSection id={`${sectionID}-backup-restore`} label="恢复备份设置">
-      <Section title="恢复备份" description="恢复到新数据库，不覆盖当前数据，也不会自动切换服务。">
+      <Section title="恢复备份" description="恢复到独立的新数据库，保留当前数据；服务切换需另行操作。">
         <div className="settings-form backup-restore-form max-w-[38.75rem] space-y-5">
           <ErrorNotice error={fileError || inspect.error}/>
           <ErrorNotice error={restoreError}/>

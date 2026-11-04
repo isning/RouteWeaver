@@ -210,7 +210,7 @@ export function RuleFileImport({
         {initial?.acceptedVersion && (
           <p className="muted text-sm text-muted-foreground">
             当前文件 {bytesLabel(initial.sizeBytes)}
-            。失败不会替换已接纳文件，已发布订阅保留原文件版本。
+            。导入失败时保留已接纳文件，已发布订阅继续使用原文件版本。
           </p>
         )}
         <AppField
@@ -236,7 +236,7 @@ export function RuleFileImport({
         </label>
         {initial?.canRefresh && mode === "upload" && (
           <p className="muted text-sm text-muted-foreground">
-            改用本地文件后，不再从原远程地址刷新。若只需更新原地址内容，请返回资源列表选择“刷新文件”。
+            改用本地文件后，后续通过上传文件更新。若需继续从原地址更新，请返回资源列表选择“刷新文件”。
           </p>
         )}
         {mode === "upload" ? (
@@ -280,7 +280,7 @@ export function RuleFileImport({
               <Input autoComplete="off" placeholder="https://…" />
             </AppField>
             <p className="muted text-sm text-muted-foreground">
-              保存时由平台读取一次文件并保存私有副本。地址不会写入客户端配置，文件内容将随配置包交付。
+              保存时由平台读取一次文件并保存私有副本。读取地址仅保存在平台，文件内容随客户端配置包交付。
             </p>
           </>
         )}
@@ -336,7 +336,7 @@ export function RuleFileImport({
         </div>
         <p className="muted text-sm text-muted-foreground">
           文件最多 8
-          MiB，先检查文件封装与完整性。客户端兼容性仍需在配置预览中核对；引用此文件的输出将交付配置包，不是单文件订阅。
+          MiB，先检查文件封装与完整性。客户端兼容性仍需在配置预览中核对；引用此文件的输出以配置包交付。
         </p>
         <Accordion ref={disclosure} type="multiple">
           {[

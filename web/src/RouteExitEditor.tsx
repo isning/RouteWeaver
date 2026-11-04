@@ -391,7 +391,7 @@ export function RouteExitEditor({
     confirmDiscard(
       {
         title: "放弃尚未保存的出口变更？",
-        description: "已保存的线路和服务器配置不受影响。",
+        description: "保留已保存的线路和服务器配置。",
         confirmLabel: "放弃修改",
         cancelLabel: "继续编辑",
       },
@@ -460,7 +460,7 @@ export function RouteExitEditor({
           }
         >
           {
-            "\u5173\u95ED\u4E0D\u4F1A\u53D6\u6D88\u5DF2\u53D1\u9001\u7684\u8BF7\u6C42\uFF1B\u8FD4\u56DE\u540E\u53EF\u7EE7\u7EED\u6838\u5BF9\u540C\u4E00\u6B21\u4FDD\u5B58\u3002"
+            "关闭仅退出当前页面；返回后可继续核对同一次保存的结果。"
           }
         </Notice>
       )}
@@ -488,8 +488,8 @@ export function RouteExitEditor({
             {needsTLS && !selectionPending && (
               <Section title={`${selected?.name || "新出口"}的 TLS 设置`}>
                 <p>
-                  此端点尚未加入转发路径，请提供它的服务端证书设置。不会关闭端点的
-                  TLS。
+                  此端点尚未加入转发路径，请提供服务端证书设置以保留端点的
+                  TLS 保护。
                 </p>
                 <div className="form-grid grid gap-4 sm:grid-cols-2">
                   <label className="standalone-label grid gap-2 text-sm font-medium">
@@ -568,8 +568,8 @@ export function RouteExitEditor({
           )}
           <ul className="route-exit-impact my-5 list-disc space-y-2 pl-5">
             <li>影响此线路的 {reviewed.review.affectedUsers} 位关联用户</li>
-            <li>其他线路和默认转发不变</li>
-            <li>入口和用户凭据不变</li>
+            <li>保留其他线路和默认转发</li>
+            <li>保留入口和用户凭据</li>
           </ul>
           {reviewed.review.applicationReadiness.state === "blocked" && (
             <Notice
@@ -621,7 +621,7 @@ export function RouteExitEditor({
             </Notice>
           )}
           <p>
-            保存后需单独应用，不会重新发布订阅；应用生效后，使用此入口的已有客户端也会改用新出口。
+            保存后需单独应用，订阅保留原发布版本；应用生效后，使用此入口的已有客户端也会改用新出口。
           </p>
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <ActionButton

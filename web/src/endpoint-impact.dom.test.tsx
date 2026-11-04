@@ -182,7 +182,7 @@ it("retains draft on failed impact read and twice canceled review, without writi
     ).toBeTruthy();
     expect(
       within(review).getByText(
-        /不会修改已保存的转发配置、切换出口或下发到节点/,
+        /本次仅更新端点清单，保留已保存的转发配置、当前出口与节点配置/,
       ),
     ).toBeTruthy();
     const keep = within(review).getByRole("button", { name: "返回编辑" });

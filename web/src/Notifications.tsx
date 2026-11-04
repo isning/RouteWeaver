@@ -431,8 +431,7 @@ function Announcements() {
         open={!!editing}
         footer={<div className="w-full space-y-3">
           <p className="text-sm text-muted-foreground">
-            公告仅在站内向所选受众展示，按开始和结束时间安排，不发送邮件或
-            Webhook。
+            公告仅在站内向所选受众展示，按开始和结束时间安排。
           </p>
           <div className="flex flex-wrap items-center justify-end gap-2">
             <ActionButton onClick={close} variant="outline">
@@ -680,7 +679,7 @@ function SettingsForm({ initial }: { initial: Settings }) {
     <Section
       title="提醒与发送渠道"
       className="max-w-4xl"
-      description="账号额度与到期提醒仅在站内展示。外部渠道用于管理员的供应商提醒与显式测试；保存设置不会发送测试消息。"
+      description="账号额度与到期提醒仅在站内展示。外部渠道用于管理员的供应商提醒与显式测试；测试消息需单独发送。"
     >
       <AppForm
         form={form}
@@ -697,7 +696,7 @@ function SettingsForm({ initial }: { initial: Settings }) {
       >
         <ErrorNotice error={save.error || test.error} />
         <p className="text-sm text-muted-foreground">
-          每类可设置多个阈值；清空即不生成该类提醒。
+          每类可设置多个阈值；清空即关闭该类提醒。
         </p>
         <div className="grid gap-4 sm:grid-cols-2">
           <AppField
@@ -745,7 +744,7 @@ function SettingsForm({ initial }: { initial: Settings }) {
           <AppField
             name="repeatHours"
             label="到期提醒重复周期（小时）"
-            description="按距到期时间划分时段，同一提醒阈值每段最多生成一次；不影响额度提醒。"
+            description="按距到期时间划分时段，同一提醒阈值每段最多生成一次；额度提醒沿用原设置。"
             trigger="onValueChange"
           >
             <NumericInput min={1} />
@@ -754,7 +753,7 @@ function SettingsForm({ initial }: { initial: Settings }) {
         <AppField
           name="inApp"
           label="站内提醒"
-          description="控制新生成的账号和供应商站内提醒；公告与测试不受影响。"
+          description="控制新生成的账号和供应商站内提醒；公告展示与手动测试照常可用。"
           valuePropName="checked"
           trigger="onCheckedChange"
         >
@@ -825,7 +824,7 @@ function SettingsForm({ initial }: { initial: Settings }) {
                     name="smtpPassword"
                     label={
                       baseline.smtpPasswordSet
-                        ? "\u66F4\u65B0 SMTP \u5BC6\u7801\uFF08\u5DF2\u4FDD\u5B58\uFF0C\u7559\u7A7A\u4E0D\u53D8\uFF09"
+                        ? "\u66F4\u65B0 SMTP \u5BC6\u7801\uFF08\u7559\u7A7A\u4FDD\u7559\u5DF2\u4FDD\u5B58\u503C\uFF09"
                         : "SMTP \u5BC6\u7801"
                     }
                   >
@@ -897,7 +896,7 @@ function SettingsForm({ initial }: { initial: Settings }) {
                     description="启用时至少 32 字节，用于接收方验证通知签名。"
                     label={
                       baseline.webhookSecretSet
-                        ? "\u66F4\u65B0\u7B7E\u540D\u5BC6\u94A5\uFF08\u5DF2\u4FDD\u5B58\uFF0C\u7559\u7A7A\u4E0D\u53D8\uFF09"
+                        ? "\u66F4\u65B0\u7B7E\u540D\u5BC6\u94A5\uFF08\u7559\u7A7A\u4FDD\u7559\u5DF2\u4FDD\u5B58\u503C\uFF09"
                         : "\u7B7E\u540D\u5BC6\u94A5"
                     }
                   >

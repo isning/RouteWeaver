@@ -17,7 +17,7 @@ it("checks on request, warns before cap and distinguishes unknown disk from zero
  fireEvent.click(screen.getByRole("button",{name:"检查历史容量"}));
  expect(await screen.findByText("历史容量已达到 80% 提醒线")).toBeTruthy();expect(screen.getByText("未知")).toBeTruthy();
  expect(screen.getByText(/通知用量按每步最多 1,024 条重建/)).toBeTruthy();
- expect(screen.getByText(/备份不会删除或缩减当前数据库/)).toBeTruthy();expect(screen.getByText(/尚未生成；上限/)).toBeTruthy();
+ expect(screen.getByText(/备份仅创建副本，当前数据库保持原样/)).toBeTruthy();expect(screen.getByText(/尚未生成；上限/)).toBeTruthy();
  expect(fetch.mock.calls[0][0]).toBe("/api/admin/backups/capacity");
 });
 it("failed refresh does not display stale headroom and can retry",async()=>{

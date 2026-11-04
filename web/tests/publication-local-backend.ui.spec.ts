@@ -256,7 +256,7 @@ for (const width of [1440, 390])
       expect(state.phase).toBe("queued");
     }
     await expect(
-      detail.getByText("接收记录不代表当前实例已应用。", { exact: true }),
+      detail.getByText("提交已接收，实际应用结果请查看实例状态。", { exact: true }),
     ).toBeVisible();
     await expect(
       detail.getByRole("button", { name: "再次检查并应用", exact: true }),

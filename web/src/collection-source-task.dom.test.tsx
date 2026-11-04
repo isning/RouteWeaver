@@ -1110,7 +1110,7 @@ it(
       await screen.findByRole("dialog", { name: "查看导入变化" }),
     );
     expect(
-      review.getByText("分流、DNS、分组等其他配置不会导入。"),
+      review.getByText("已跳过分流、DNS、分组等其他配置。"),
     ).toBeTruthy();
     expect(
       screen.queryByRole("dialog", { name: "Unsaved review task" }),

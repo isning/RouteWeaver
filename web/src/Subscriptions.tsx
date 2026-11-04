@@ -554,7 +554,7 @@ export function SubscriptionsPage({
           : `更换「${output.name}」的订阅链接？`,
       description:
         operation === "revoke"
-          ? "此链接将停止获取更新。已下载的配置不会被收回，其他订阅不受影响。"
+          ? "此链接将停止获取更新。已下载的配置不会被收回，其他订阅保留原状。"
           : "旧链接将停止获取更新，需要在客户端替换链接。已经下载的配置无法收回。",
       confirmLabel: operation === "revoke" ? "撤销订阅" : "更换链接",
       cancelLabel: operation === "revoke" ? "保留" : "保留旧链接",
@@ -2144,16 +2144,16 @@ export function PublishOutput({
           <div className="w-full space-y-3">
             <p className="text-left text-sm text-muted-foreground">
               {pendingCreation
-                ? "核对或重试上次发布，不会另建订阅。"
+                ? "核对或重试均沿用上次发布请求。"
                 : !preview
-                  ? "创建新的客户端订阅，其他订阅不变。"
+                  ? "创建独立的客户端订阅，其他订阅保留原版本。"
                   : bundlePreview
-                    ? "新建独立订阅，其他订阅不变。"
-                    : "新建独立链接，其他订阅不变。"}
+                    ? "新建独立订阅，其他订阅保留原版本。"
+                    : "新建独立链接，其他订阅保留原版本。"}
             </p>
             {bundlePreview && (
               <p className="text-left text-sm text-muted-foreground">
-                发布后需下载配置与规则文件包，不提供普通订阅链接或二维码。
+                发布后仅提供配置与规则文件包，请下载并导入客户端。
               </p>
             )}
             <div className="flex flex-wrap justify-end gap-2">
@@ -2293,7 +2293,7 @@ export function PublishOutput({
               <p role="status" aria-label={recoveryTitle}>
                 <span id={recoveryOutcomeId}>
                   {recover.isPending
-                    ? `正在核对「${pendingCreation.name}」的发布结果，不会重新提交。`
+                    ? `正在查询「${pendingCreation.name}」上次提交的发布结果。`
                     : mutation.isPending
                       ? `正在处理「${pendingCreation.name}」的发布，结果尚未确认。`
                       : `尚未确认「${pendingCreation.name}」是否已发布。核对或重试只使用上次提交的内容。`}
@@ -2361,7 +2361,7 @@ export function PublishOutput({
           </AppField>
           <p className="muted text-sm text-muted-foreground">
             {mode === "nodes-only"
-              ? "不包含策略组、分流规则或运行设置。"
+              ? "仅包含节点连接。"
               : "包含连接、策略组、分流规则和运行设置。"}
           </p>
           {preview && (
@@ -2640,10 +2640,10 @@ function OutputAccessTask({
               }
             >
               {accessDelivery === "bundle"
-                ? "旧下载链接已失效，请重新下载配置包并导入客户端。其他订阅不受影响。"
+                ? "旧下载链接已失效，请重新下载配置包并导入客户端。其他订阅保留原状。"
                 : accessDelivery === "feed"
-                  ? "旧链接已失效，请将新链接重新添加到客户端。其他订阅不受影响。"
-                  : "旧链接已失效，请获取最新订阅内容并更新客户端。其他订阅不受影响。"}
+                  ? "旧链接已失效，请将新链接重新添加到客户端。其他订阅保留原状。"
+                  : "旧链接已失效，请获取最新订阅内容并更新客户端。其他订阅保留原状。"}
             </Notice>
           )}
           {paused && (
@@ -2930,7 +2930,7 @@ export function UpdateOutput({
       }),
     onSuccess: (result, approved) => {
       if (!current(approved)) return;
-      message.success(`「${approved.name}」已更新，其他客户端订阅保持不变`);
+      message.success(`「${approved.name}」已更新，其他客户端订阅保留原版本`);
       active.current = false;
       generation.current++;
       onPublished?.(result, approved.link === "replace");
@@ -3057,10 +3057,10 @@ export function UpdateOutput({
           {review?.link && preview?.valid === true && (
             <p>
               {bundlePreview
-                ? `${review.link === "replace" ? "重新发布将更换访问凭据。" : ""}发布后请下载配置与规则文件包并导入客户端，不提供普通订阅链接或二维码。其他订阅不受影响。`
+                ? `${review.link === "replace" ? "重新发布将更换访问凭据。" : ""}发布后仅提供配置与规则文件包，请下载并导入客户端。其他订阅保留原状。`
                 : review.link === "replace"
-                  ? "发布后请在客户端换用新链接，其他订阅不受影响。"
-                  : "链接不变，其他订阅不受影响。"}
+                  ? "发布后请在客户端换用新链接，其他订阅保留原状。"
+                  : "沿用当前链接，其他订阅保留原状。"}
             </p>
           )}
           <div className="flex flex-wrap justify-end gap-2">
@@ -3150,7 +3150,7 @@ export function UpdateOutput({
           <p role="status">
             {preview.valid === true
               ? "兼容检查通过。"
-              : "兼容检查未通过，已发布内容保持不变。"}
+              : "兼容检查未通过，已发布内容保留原版本。"}
           </p>
         )}
         <ActionButton
@@ -3169,7 +3169,7 @@ export function UpdateOutput({
               value={preview.semanticChanges}
               unchangedContext={
                 usesAcceptedSources
-                  ? "比较使用当前已应用的来源内容；手动模式下尚未应用的更新不计入本次比较。"
+                  ? "比较使用当前已应用的来源内容；手动模式的更新需先应用到来源，再重新比较。"
                   : undefined
               }
             />

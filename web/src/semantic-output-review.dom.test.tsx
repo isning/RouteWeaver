@@ -169,7 +169,7 @@ it("explains a member-only group change before unchanged rules without opening t
     screen.queryByText(/未比较规则文件内容、策略组内容和节点设置/),
   ).toBeNull();
   expect(screen.getByText("未比较规则文件内容和客户端运行设置。")).toBeTruthy();
-  expect(screen.getByText("链接不变，其他订阅不受影响。")).toBeTruthy();
+  expect(screen.getByText("沿用当前链接，其他订阅保留原状。")).toBeTruthy();
   expect(
     screen.getByRole("button", { name: "确认更新「Phone」" }),
   ).toHaveProperty("disabled", false);
@@ -374,7 +374,7 @@ it("labels bounded member and direct-reference lists without turning unknown use
   expect(changes.getByText("另有 2 个策略组引用未列出。")).toBeTruthy();
   expect(changes.getByText("直接引用信息不完整。")).toBeTruthy();
   expect(
-    changes.getByText("仅列直接引用，不包含全部间接依赖，也不代表实际流量。"),
+    changes.getByText("此处仅展示配置中的直接引用；完整间接依赖与实际流量需另行核对。"),
   ).toBeTruthy();
   expect(changes.queryByText("无直接引用。")).toBeNull();
 });
@@ -532,7 +532,7 @@ it.each(["partial", "redacted", "coarse"])(
     const limit = screen.getByText(
       kind !== "coarse"
         ? "部分规则明细未展示，无法完整比较分流规则。"
-        : "摘要字段相同，不代表配置未变化。",
+        : "本次比较的摘要字段相同；完整配置仍可能有变化。",
     );
     expect(limit.closest("details")).toBeNull();
     if (kind !== "coarse")

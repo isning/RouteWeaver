@@ -267,7 +267,7 @@ it("keeps full-view status, routes, validity, calendar and all zero-limit values
     "不限制 方案：新方案",
   );
   expect(
-    dialog.getAllByText("已有用量不会因方案或续期变化而清零。"),
+    dialog.getAllByText("切换方案或续期后，保留已有用量。"),
   ).toHaveLength(1);
 });
 

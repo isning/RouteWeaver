@@ -156,7 +156,7 @@ for (const scenario of ["unchanged", "changed-long-name"] as const) {
         name: `检查订阅更新「${name}」`,
         exact: true,
       });
-      await expect(review.getByText(/链接不变/)).toHaveCount(0);
+      await expect(review.getByText(/沿用当前链接/)).toHaveCount(0);
       const publish = review.getByRole("button", {
         name: `重新发布并生成新链接「${name}」`,
         exact: true,
@@ -164,7 +164,7 @@ for (const scenario of ["unchanged", "changed-long-name"] as const) {
       await expect(publish).toBeEnabled();
       expect(publications).toBe(0);
       const consequence = review.getByText(
-        "发布后请在客户端换用新链接，其他订阅不受影响。",
+        "发布后请在客户端换用新链接，其他订阅保留原状。",
         { exact: true },
       );
       const scope = review.getByRole("group", {

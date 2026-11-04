@@ -28,7 +28,7 @@ export function NativeOverrideEditor({
       <div className="space-y-3">
         <p className="muted text-sm text-muted-foreground">
           用目标客户端的原生字段补充
-          DNS、分流或策略。原生覆盖与当前客户端版本绑定，不会自动转换为其他客户端格式。
+          DNS、分流或策略。原生覆盖与当前客户端版本绑定；更换客户端时需按目标格式调整内容。
         </p>
         <ActionButton
           onClick={() =>
@@ -60,14 +60,14 @@ export function NativeOverrideEditor({
             {value.target.adapterId} {value.target.version}
           </Badge>
           <span className="muted text-sm text-muted-foreground">
-            目标专用 · 不自动转换
+            目标客户端专用
           </span>
         </div>
         <ActionButton
           onClick={() =>
             confirm({
               title: "移除这段原生覆盖？",
-              description: "只从当前草稿移除。已发布订阅不会随之改变。",
+              description: "只从当前草稿移除，已发布订阅保留原版本。",
               confirmLabel: "移除覆盖",
               cancelLabel: "保留",
               destructive: true,
@@ -86,14 +86,14 @@ export function NativeOverrideEditor({
               <p>
                 文本仍绑定 {value.target.adapterId} {value.target.version}。请按{" "}
                 {target.adapterId} {target.version}{" "}
-                的格式调整内容，再确认改绑；不会自动改写或丢弃原文。
+                的格式调整内容，再确认改绑；编辑区保留原文供你修改。
               </p>
               <ActionButton
                 onClick={() =>
                   confirm({
                     title: "将原生覆盖绑定到当前客户端？",
                     description:
-                      "此操作只改变目标声明，不转换语法。需要重新预览检查后才能发布。",
+                      "此操作仅更新目标声明，原文保持原样。请自行调整语法，重新预览检查后再发布。",
                     confirmLabel: "确认改绑",
                     cancelLabel: "继续编辑",
                     onConfirm: () => update({ target: { ...target } }),
@@ -151,7 +151,7 @@ export function NativeOverrideEditor({
       </div>
       {value.ruleMode === "replace" && (
         <p className="inline-note space-y-2 rounded-lg border bg-muted/30 p-4 text-sm text-muted-foreground">
-          生成结果不再使用结构化规则列表；默认流量行为仍保留。结构化规则仍保存在草稿中。
+          生成结果使用原生规则替换结构化规则列表，并保留默认流量行为。原结构化规则保存在草稿中。
         </p>
       )}
       <label className="standalone-label grid min-w-0 gap-2 text-sm font-medium">
@@ -167,7 +167,7 @@ export function NativeOverrideEditor({
         />
       </label>
       <p className="muted text-sm text-muted-foreground">
-        连接凭据、生成的连接身份与规则文件由结构化配置管理，不能在这里覆盖。引用已有策略或连接时，使用生成预览中的原生名称；预览会检查可用字段和引用。文本有误也可以保存草稿。
+        连接凭据、生成的连接身份与规则文件统一由结构化配置管理。引用已有策略或连接时，使用生成预览中的原生名称；预览会检查可用字段和引用。文本有误也可以保存草稿。
       </p>
     </div>
   );

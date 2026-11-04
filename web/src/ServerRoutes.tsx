@@ -606,7 +606,7 @@ function ServerRouteEditor({
     if (!jsonDirty) return discard();
     confirm({
       title: "放弃尚未应用的 JSON 修改？",
-      description: "仅放弃 JSON 文本修改，之前的转发路径草稿保持不变。",
+      description: "仅放弃 JSON 文本修改，保留之前的转发路径草稿。",
       confirmLabel: "放弃 JSON 修改",
       cancelLabel: "继续编辑",
       destructive: true,
@@ -617,7 +617,7 @@ function ServerRouteEditor({
     dirty || selectionPending || jsonDirty
       ? confirm({
           title: "放弃尚未保存的转发路径修改？",
-          description: "已保存的配置不受影响。",
+          description: "保留已保存的配置。",
           confirmLabel: "放弃修改",
           cancelLabel: "继续编辑",
           destructive: true,
@@ -961,7 +961,7 @@ function ServerRouteEditor({
                               onChange={(tls) => updateProgram(index, { tls })}
                             />
                             <p className="muted text-sm text-muted-foreground">
-                              文件路径相对于此次配置包，不会读取服务器上的现有文件。
+                              文件路径相对于此次配置包，仅使用包内文件。
                             </p>
                           </>
                         )}
@@ -1024,8 +1024,8 @@ function ServerRouteEditor({
                             {p.listener.name} · 允许访问的内部网段
                             <span className="text-muted-foreground text-xs font-normal">
                               {p.instance.adapterId === "routeweaver/xray"
-                                ? "用于 Xray 直接出站的目标；不更改中转连接。"
-                                : "用于受管入口的用户目标；不更改中转连接。"}
+                                ? "用于 Xray 直接出站的目标；中转连接保留原设置。"
+                                : "用于受管入口的用户目标；中转连接保留原设置。"}
                             </span>
                             <MultiChoice
                               aria-label={`${p.listener.name} · 允许访问的内部网段`}
@@ -1266,7 +1266,7 @@ function ServerInventoryNotice({
         }
       >
         {
-          "\u8BF7\u5148\u6838\u5BF9\u6838\u5FC3\u5B9E\u4F8B\uFF1B\u66F4\u65B0\u76D1\u542C\u4E0D\u4F1A\u66FF\u6362\u5B9E\u4F8B\u8BBE\u7F6E\u3002"
+          "请先核对核心实例；更新监听时保留实例设置。"
         }
       </Notice>
     );
@@ -1340,9 +1340,9 @@ function PublicationNotice({
       >
         {result
           ? accepted
-            ? "接收记录不代表当前实例已应用。"
+            ? "提交已接收，实际应用结果请查看实例状态。"
             : publicationRejectionMessage(result.detail)
-          : "关闭页面不会取消已发送的请求。"}
+          : "关闭仅退出当前页面；返回后可继续核对本次提交的结果。"}
       </Notice>
       {owner.error &&
         owner.error !== "提交结果尚未确认，请核对该次提交记录。" && (
@@ -1376,7 +1376,7 @@ function PublicationNotice({
           </ActionButton>
         )}
         {!result && owner.absent && (
-          <span>将使用原请求再次提交，不会创建新请求。</span>
+          <span>使用原请求及其标识恢复本次提交。</span>
         )}
         {result?.status === "definitively-rejected" && onReload && (
           <ActionButton
@@ -1840,7 +1840,7 @@ function ServerRouteDetail({
                   。已有连接可能中断；应用后会分别核对实际状态。
                 </p>
                 <p className="text-muted-foreground">
-                  权限有效期 {lease} 秒；超时需重新确认权限，不能无限离线运行。
+                  权限有效期 {lease} 秒；到期后需重新确认权限才能继续运行。
                 </p>
               </div>
               <div className="grid gap-2 sm:grid-cols-2">

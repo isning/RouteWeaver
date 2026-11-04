@@ -208,7 +208,7 @@ test("keyboard selects a real endpoint and reviews a draft, then safely returns 
   await expect(page.getByText("影响此线路的 2 位关联用户")).toBeVisible();
   await expect(
     page.getByText(
-      "保存后需单独应用，不会重新发布订阅；应用生效后，使用此入口的已有客户端也会改用新出口。",
+      "保存后需单独应用，订阅保留原发布版本；应用生效后，使用此入口的已有客户端也会改用新出口。",
     ),
   ).toBeVisible();
   await page.screenshot({

@@ -202,7 +202,7 @@ function ServicePolicyDraft({ context, seed, retained, discardRetained, acceptLa
           </AppField>
           <CycleFields planDefaults/>
           <p className="muted text-sm text-muted-foreground">
-            用户组首次设置账号周期时使用；已有周期和用量保留，额度不叠加。
+            用户组首次设置账号周期时使用；已有周期和用量继续保留，方案额度按优先级选用一份，个人覆盖优先。
           </p>
         </fieldset>
         <fieldset className="policy-field-group space-y-4 rounded-lg border p-4">

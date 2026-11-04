@@ -405,7 +405,7 @@ function BasicRoutingEditor({
     dirty
       ? confirm({
           title: "放弃尚未保存的分流修改？",
-          description: "已经发布的订阅不会改变。",
+          description: "已发布的订阅保留原版本。",
           confirmLabel: "放弃修改",
           cancelLabel: "继续编辑",
           onConfirm: action,
@@ -633,7 +633,7 @@ function BasicRoutingEditor({
                 </dl>
                 <p>
                   {output
-                    ? "确认后更新当前订阅，订阅链接保持不变。"
+                    ? "确认后更新当前订阅，沿用当前订阅链接。"
                     : "确认后创建这份订阅，随后可以获取链接。"}
                 </p>
                 <Accordion type="multiple">
@@ -694,8 +694,8 @@ function BasicRoutingEditor({
       {pendingCreation && (
         <Section title="上次发布待确认">
           <p>
-            仅核对或重试上次提交的「{pendingCreation.name}
-            」，不会使用之后变化的配置。
+            核对或重试均使用上次提交的「{pendingCreation.name}
+            」及其固定配置。
           </p>
           <ErrorNotice error={recover.error} />
           <ActionButton

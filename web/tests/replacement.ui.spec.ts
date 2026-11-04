@@ -454,7 +454,7 @@ test("normal private-rule bundle update immediately offers a real configuration-
     .getByRole("group", { name: "更新确认", exact: true })
     .getByText(output.name, { exact: true });
   const consequence = review.getByText(
-    "发布后请下载配置与规则文件包并导入客户端，不提供普通订阅链接或二维码。其他订阅不受影响。",
+    "发布后仅提供配置与规则文件包，请下载并导入客户端。其他订阅保留原状。",
     { exact: true },
   );
   // Review is read-only even when resizing, scrolling and enlarging its text.

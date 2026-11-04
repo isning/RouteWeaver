@@ -669,7 +669,7 @@ it("uses fresh target and mode for a preselected output, including revoked acces
   );
   await within(review).findByText("fresh candidate");
   expect(review.textContent).toContain(
-    "发布后请在客户端换用新链接，其他订阅不受影响。",
+    "发布后请在客户端换用新链接，其他订阅保留原状。",
   );
   expect(
     within(review).getByRole("button", {
@@ -1144,9 +1144,9 @@ it.each(["revoked", "missing"])(
         }),
       ).toBeTruthy();
       expect(review.textContent).toContain(
-        "发布后请在客户端换用新链接，其他订阅不受影响。",
+        "发布后请在客户端换用新链接，其他订阅保留原状。",
       );
-      expect(review.textContent).not.toContain("原订阅链接保持不变");
+      expect(review.textContent).not.toContain("沿用当前链接");
     }
   },
 );
@@ -1277,7 +1277,7 @@ it.each(["create", "update"])(
       const decision = screen.getByRole("group", { name: "更新确认" });
       expect(decision.contains(final)).toBe(true);
       expect(
-        within(decision).getByText("链接不变，其他订阅不受影响。"),
+        within(decision).getByText("沿用当前链接，其他订阅保留原状。"),
       ).toBeTruthy();
       // Consequence and approval remain one decision outside the independently
       // scrolling evidence body; constrained viewports use the whole-task flow.

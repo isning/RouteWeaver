@@ -45,7 +45,7 @@ const after: EffectivePolicy = {
 };
 const effect = { userId: "u1", before, after };
 const consent = "我已核对本次授权变更";
-const boundary = "受管入口配置不会自动应用。";
+const boundary = "受管入口配置需单独应用。";
 
 beforeEach((context) => {
   currentOwner = ownedClickScenario(context);
@@ -120,7 +120,7 @@ it("shows one paired source change for the bounded limits group while keeping ea
     }
   }
   expect(dialog.getByText(boundary)).toBeTruthy();
-  expect(dialog.getByText("已有用量不会因方案或续期变化而清零。")).toBeTruthy();
+  expect(dialog.getByText("切换方案或续期后，保留已有用量。")).toBeTruthy();
   expect((dialog.getByRole("button", { name: "更新授权" }) as HTMLButtonElement).disabled).toBe(true);
 });
 

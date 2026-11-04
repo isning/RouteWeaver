@@ -178,7 +178,7 @@ export function DiagnosticsPanel({
                       登记测试目标
                     </ActionButton>
                     <p className="muted text-sm text-muted-foreground">
-                      目标地址固定保存。更换地址请登记新目标，不会改写既有测试记录。
+                      目标地址固定保存。更换地址请登记新目标，既有测试记录保留。
                     </p>
                   </>
                 ),
