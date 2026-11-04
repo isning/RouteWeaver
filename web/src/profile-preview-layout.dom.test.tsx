@@ -560,10 +560,12 @@ it("reorders collection sources without losing source processing steps", async (
     }),
   );
   mount(<CollectionsPage />);
-  await userEvent.click(await screen.findByText("Daily nodes"));
-  await userEvent.click(screen.getByRole("button", { name: "下移来源 1" }));
-  expect(screen.getByText("1. Beta")).toBeTruthy();
-  await userEvent.click(screen.getByRole("button", { name: "保存集合" }));
+  const card = await screen.findByRole("article", { name: "Daily nodes" });
+  await userEvent.click(within(card).getByRole("button", { name: /编辑集合$/ }));
+  const editor = await screen.findByRole("dialog", { name: "Daily nodes" });
+  await userEvent.click(within(editor).getByRole("button", { name: "下移来源 1" }));
+  expect(within(editor).getByText("1. Beta")).toBeTruthy();
+  await userEvent.click(within(editor).getByRole("button", { name: "保存集合" }));
   await screen.findByText("集合已保存");
   expect(saved?.sources).toEqual([sources[1], sources[0]]);
 });
