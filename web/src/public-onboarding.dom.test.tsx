@@ -634,21 +634,20 @@ it.each([false, true])(
     mount(<Workspace />);
     if (hasPath) {
       await userEvent.click(
-        (await screen.findAllByRole("button", { name: "配置公开线路" }))[0],
+        await screen.findByRole("button", { name: "配置公开线路" }),
       );
       expect(
         await screen.findByRole("dialog", { name: "配置公开线路" }),
       ).toBeTruthy();
     } else {
-      const actions = await screen.findAllByRole("link", {
+      const action = await screen.findByRole("link", {
         name: "创建转发路径",
       });
-      expect(actions).toHaveLength(2);
-      expect(
-        actions.every((action) => action.getAttribute("href") === "#routes"),
-      ).toBe(true);
+      expect(action.getAttribute("href")).toBe("#routes");
+      expect(screen.getByText("需先建立服务器转发路径。")).toBeTruthy();
       expect(screen.queryByRole("button", { name: "配置公开线路" })).toBeNull();
-      await userEvent.click(actions[0]);
+      action.focus();
+      await userEvent.keyboard("{Enter}");
       await userEvent.click(
         (await screen.findAllByRole("button", { name: "新建转发路径" }))[0],
       );
@@ -659,6 +658,42 @@ it.each([false, true])(
     }
   },
 );
+
+it("keeps public-route creation disabled until infrastructure is known, including failure and retry", async () => {
+  setup("routeweaver/managed-xray", "26.3.27-rw1", false);
+  const inventoryFetch = globalThis.fetch;
+  let finish: (response: Response) => void = () => {};
+  let recovering = false;
+  vi.stubGlobal("fetch", vi.fn((url, init) => {
+    const path = String(url);
+    if (path.endsWith("/published-routes")) return Promise.resolve(json([]));
+    if (path.endsWith("/server-deployments")) {
+      if (recovering) return Promise.resolve(json([]));
+      return new Promise<Response>(resolve => { finish = resolve; });
+    }
+    return inventoryFetch(url, init);
+  }));
+  mount(<PublishedRoutesPage />);
+  const action = screen.getByRole("button", { name: "配置公开线路" });
+  expect((action as HTMLButtonElement).disabled).toBe(true);
+  expect(screen.queryByText("暂无线路")).toBeNull();
+  expect(screen.queryByRole("link", { name: "创建转发路径" })).toBeNull();
+  await userEvent.click(action);
+  expect(screen.queryByRole("dialog", { name: "配置公开线路" })).toBeNull();
+  await act(async () => finish(new Response(JSON.stringify({message: "Infrastructure unavailable"}), {
+    status: 503, headers: {"Content-Type": "application/json"},
+  })));
+  await screen.findByText("暂时无法加载");
+  expect((action as HTMLButtonElement).disabled).toBe(true);
+  expect(screen.queryByText("暂无线路")).toBeNull();
+  expect(screen.queryByRole("link", { name: "创建转发路径" })).toBeNull();
+  recovering = true;
+  await userEvent.click(screen.getByRole("button", { name: "重试" }));
+  const next = await screen.findByRole("link", { name: "创建转发路径" });
+  expect(next.getAttribute("href")).toBe("#routes");
+  expect(next.getAttribute("aria-disabled")).toBeNull();
+  expect(screen.getByText("需先建立服务器转发路径。")).toBeTruthy();
+});
 
 it.each([
   [

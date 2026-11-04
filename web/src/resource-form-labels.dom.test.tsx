@@ -74,7 +74,7 @@ it("associates the visible import label with its own field while the resource ed
   });
   const user = userEvent.setup();
   await user.click(
-    (await screen.findAllByRole("button", { name: "导入规则文件" }))[0],
+    await screen.findByRole("button", { name: "导入规则文件" }),
   );
   const dialog = await screen.findByRole("dialog", { name: "导入规则文件" });
   const visibleInput = within(dialog).getByRole("textbox", {
