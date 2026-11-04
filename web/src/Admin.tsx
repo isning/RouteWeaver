@@ -2025,6 +2025,7 @@ function AdminRowMenu({
         {actions.map((action) => (
           <DropdownMenuItem
             key={action.label}
+            className="min-h-11"
             variant={action.destructive ? "destructive" : "default"}
             aria-label={action.accessibleLabel}
             onSelect={() => {

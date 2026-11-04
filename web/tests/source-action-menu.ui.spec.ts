@@ -96,8 +96,10 @@ for (const width of [1280, 390]) {
         const state = window as unknown as {
           sourceMenuEvents: unknown[];
           sourceMenuPhase: string;
+          menusAtEditorFocus: number[];
         };
         state.sourceMenuEvents = [];
+        state.menusAtEditorFocus = [];
         state.sourceMenuPhase = "initial tab traversal";
         const describe = (element: Element | null) =>
           element && {
@@ -108,6 +110,14 @@ for (const width of [1280, 390]) {
             connected: element.isConnected,
           };
         const record = (kind: string, event: Event) => {
+          if (
+            kind === "focusin" &&
+            event.target instanceof Element &&
+            event.target.closest('[role="dialog"]')
+          )
+            state.menusAtEditorFocus.push(
+              document.querySelectorAll('[role="menu"]').length,
+            );
           state.sourceMenuEvents.push({
             kind,
             phase: state.sourceMenuPhase,
@@ -302,7 +312,20 @@ for (const width of [1280, 390]) {
         exact: true,
       });
       await expect(editor).toBeVisible();
-      await expect(menu).not.toBeVisible();
+      // A modal hides old menus from role queries before their exit animation
+      // necessarily unmounts them. Inspect the first editor-focus event instead
+      // of waiting out that overlap and concealing a lost Escape key.
+      const menusAtEditorFocus = await page.evaluate(
+        () =>
+          (window as unknown as { menusAtEditorFocus: number[] })
+            .menusAtEditorFocus,
+      );
+      expect(menusAtEditorFocus.length).toBeGreaterThan(0);
+      expect(menusAtEditorFocus.every((count) => count === 0)).toBe(true);
+      expect(
+        await sourceMenu.count(),
+        "Selection removes the old menu before the editor takes input",
+      ).toBe(0);
       await page.keyboard.press("Escape");
       await expect(editor).not.toBeVisible();
       await expect(
@@ -334,6 +357,9 @@ for (const width of [1280, 390]) {
               id: document.activeElement?.id,
             },
             remainingMenus: document.querySelectorAll('[role="menu"]').length,
+            menusAtEditorFocus:
+              (window as unknown as { menusAtEditorFocus?: number[] })
+                .menusAtEditorFocus || [],
           })),
           null,
           2,

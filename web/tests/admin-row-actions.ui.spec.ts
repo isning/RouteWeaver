@@ -56,10 +56,26 @@ for (const width of [1440, 390]) {
       const remove = page.getByRole("menuitem", { name: `删除链路配置 ${name}`, exact: true });
       await expect(remove).toBeFocused();
       await expect(remove).toHaveText("删除链路配置");
+      await expect.poll(async () => (await remove.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44);
+      const hitArea = await remove.evaluate((element) => {
+        const rect = element.getBoundingClientRect();
+        return {
+          width: rect.width,
+          height: rect.height,
+          edgesReachable: [rect.top + 3, rect.bottom - 3].every((y) => {
+            const hit = document.elementFromPoint(rect.left + rect.width / 2, y);
+            return hit === element || (hit !== null && element.contains(hit));
+          }),
+        };
+      });
+      expect(hitArea.width).toBeGreaterThanOrEqual(44);
+      expect(hitArea.height).toBeGreaterThanOrEqual(44);
+      expect(hitArea.edgesReachable).toBe(true);
       if (attempt === 0) await info.attach(`legacy-route-menu-open-${width}`, {
         body: await page.screenshot({ animations: "disabled" }), contentType: "image/png",
       });
-      await page.keyboard.press("Enter");
+      if (attempt === 0) await page.keyboard.press("Enter");
+      else await remove.click({ position: { x: hitArea.width / 2, y: hitArea.height - 3 } });
       const confirmation = page.getByRole("alertdialog", { name: `删除链路配置「${name}」？`, exact: true });
       await expect(confirmation).toBeVisible();
       await expect(page.getByRole("menu")).toHaveCount(0);
