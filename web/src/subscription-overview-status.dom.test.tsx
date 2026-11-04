@@ -251,18 +251,18 @@ for (const role of ["user", "admin"]) {
   });
 }
 
-it("keeps one platform usage context and its open details when the layout width changes", async () => {
+it("keeps one platform usage context and its visible details when the layout width changes", async () => {
   mountWorkspace("paused");
   const heading = await screen.findByRole("heading", { name: "平台服务用量" });
   const context = heading.closest("aside");
   expect(context).not.toBeNull();
-  const toggle = within(context!).getByRole("button", { name: "用量与周期明细" });
-  await userEvent.click(toggle);
-  expect(toggle.getAttribute("aria-expanded")).toBe("true");
+  expect(within(context!).queryByRole("button", { name: "用量与周期明细" })).toBeNull();
+  const details = within(context!).getByRole("region", { name: "用量与周期明细" });
+  expect(within(details).getByText("本周期实际流量")).toBeTruthy();
   fireEvent(window, new Event("resize"));
   expect(screen.getAllByRole("heading", { name: "平台服务用量" })).toHaveLength(1);
   expect(screen.getByRole("heading", { name: "平台服务用量" })).toBe(heading);
-  expect(toggle.getAttribute("aria-expanded")).toBe("true");
+  expect(within(context!).getByRole("region", { name: "用量与周期明细" })).toBe(details);
   expect(within(context!).getByText("如需恢复平台服务，请联系管理员检查服务授权。")).toBeTruthy();
   expect(unexpectedRequests).toEqual([]);
 });

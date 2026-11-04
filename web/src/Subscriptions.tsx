@@ -104,7 +104,6 @@ import {
   CodePreview,
   EmptyState,
   ErrorNotice,
-  KeyValue,
   PageHeader,
   QueryState,
   Section,
@@ -213,6 +212,8 @@ export function SubscriptionsPage({
   sourceDraft?: SourceProfileEntry;
   onSourceDraftConsumed?: (token: string) => void;
 }) {
+  const usageDetailsId = useId();
+  const availableRoutesId = useId();
   const workspaceHistory = useContext(WorkspaceHistoryContext);
   const scope = new URLSearchParams(location.hash.split("?")[1] || "");
   const sourceDraftToken = scope.get("sourceDraft");
@@ -895,119 +896,46 @@ export function SubscriptionsPage({
                     额度正在核对，稍后更新。
                   </p>
                 )}
-                <Accordion type="multiple">
-                  {[
-                    {
-                      key: "usage-details",
-                      label: "用量与周期明细",
-                      children: (
-                        <>
-                          <KeyValue label="本周期实际流量">
-                            {bytesLabel(data.usage?.rawBytes)}
-                          </KeyValue>
-                          <KeyValue label="下次重置">
-                            {data.cycle?.nextReset
-                              ? dateLabel(
-                                  data.cycle.nextReset,
-                                  data.cycle.timezone,
-                                )
-                              : data.cycle
-                                ? "不自动重置"
-                                : "尚未设置"}
-                            {reset && `（还有 ${reset}）`}
-                          </KeyValue>
-                          <KeyValue label="周期时区">
-                            {data.cycle?.timezone || "\u2014"}
-                          </KeyValue>
-                          <KeyValue label="服务到期">
-                            {dateLabel(
-                              data.entitlement?.expiresAt ||
-                                data.user?.expiresAt,
-                            )}
-                          </KeyValue>
-                          <p className="muted text-sm text-muted-foreground">
-                            实际流量按所用线路的倍率扣除额度。
-                          </p>
-                        </>
-                      ),
-                    },
-                  ].map((section) => (
-                    <AccordionItem
-                      key={section.key}
-                      value={String(section.key)}
-                      disabled={
-                        "collapsible" in section &&
-                        section.collapsible === "disabled"
-                      }
-                    >
-                      <AccordionTrigger className="py-2">
-                        {section.label}
-                      </AccordionTrigger>
-                      <AccordionContent
-                        forceMount
-                        className="data-[state=closed]:hidden"
-                      >
-                        {section.children}
-                      </AccordionContent>
-                    </AccordionItem>
-                  ))}
-                </Accordion>
+                <section aria-labelledby={usageDetailsId} className="usage-details border-t border-border pt-4">
+                  <h3 id={usageDetailsId} className="text-sm font-medium">用量与周期明细</h3>
+                  <dl className="mt-2 divide-y divide-border text-sm">
+                    {[
+                      ["本周期实际流量", bytesLabel(data.usage?.rawBytes)],
+                      ["下次重置", <>{data.cycle?.nextReset
+                        ? dateLabel(data.cycle.nextReset, data.cycle.timezone)
+                        : data.cycle ? "不自动重置" : "尚未设置"}{reset && `（还有 ${reset}）`}</>],
+                      ["周期时区", data.cycle?.timezone || "\u2014"],
+                      ["服务到期", dateLabel(data.entitlement?.expiresAt || data.user?.expiresAt)],
+                    ].map(([label, value]) => (
+                      <div key={String(label)} className="usage-detail-row grid min-w-0 grid-cols-[minmax(0,2fr)_minmax(0,3fr)] items-baseline gap-3 py-3">
+                        <dt className="text-muted-foreground">{label}</dt>
+                        <dd className="min-w-0 text-right tabular-nums wrap-anywhere">{value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                  <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                    实际流量按所用线路的倍率扣除额度。
+                  </p>
+                </section>
               </CardContent>
             </Card>
           )}
         </QueryState>
         {!!data?.routes?.length && (
-          <Accordion className="available-routes space-y-4" type="multiple">
-            {[
-              {
-                key: "routes",
-                label: `平台提供的线路 · ${data.routes.length}`,
-                children: (
-                  <div className="route-options grid gap-3">
-                    {data.routes.map((route) => (
-                      <div
-                        className="route-option grid grid-cols-[auto_minmax(0,1fr)] items-start gap-3 rounded-lg border p-3"
-                        key={route.id}
-                      >
-                        <span
-                          className="route-symbol rounded-md bg-muted p-2"
-                          aria-hidden="true"
-                        >
-                          ↗
-                        </span>
-                        <div className="min-w-0 wrap-anywhere">
-                          <h3>{route.name}</h3>
-                          <p>已为你的账号开通</p>
-                        </div>
-                        <Badge variant="secondary" className="col-start-2 justify-self-start">
-                          {(
-                            (route.rateMicros ?? 1000000) / 1000000
-                          ).toLocaleString()}
-                          ×
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                ),
-              },
-            ].map((section) => (
-              <AccordionItem
-                key={section.key}
-                value={String(section.key)}
-                disabled={
-                  "collapsible" in section && section.collapsible === "disabled"
-                }
-              >
-                <AccordionTrigger>{section.label}</AccordionTrigger>
-                <AccordionContent
-                  forceMount
-                  className="data-[state=closed]:hidden"
-                >
-                  {section.children}
-                </AccordionContent>
-              </AccordionItem>
-            ))}
-          </Accordion>
+          <section aria-labelledby={availableRoutesId} className="available-routes min-w-0 border-t border-border pt-4">
+            <h2 id={availableRoutesId} className="text-sm font-medium">平台提供的线路 · {data.routes.length}</h2>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">已为你的账号开通</p>
+            <ul className="route-options mt-2 divide-y divide-border">
+              {data.routes.map((route) => (
+                <li className="route-option grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-3 py-3" key={route.id}>
+                  <h3 className="min-w-0 text-sm leading-relaxed wrap-anywhere">{route.name}</h3>
+                  <Badge variant="secondary" className="shrink-0 tabular-nums" aria-label={`额度倍率 ${((route.rateMicros ?? 1000000) / 1000000).toLocaleString()} 倍`}>
+                    {((route.rateMicros ?? 1000000) / 1000000).toLocaleString()}×
+                  </Badge>
+                </li>
+              ))}
+            </ul>
+          </section>
         )}
       </div>
   );

@@ -44,6 +44,7 @@ type referenceDiagnostics struct {
 	URL          string
 	t            *testing.T
 	enabled      bool
+	recording    bool // Redacted timeline only; never authorizes private evidence.
 	databasePath string
 	mu           sync.Mutex
 	phase        string
@@ -51,10 +52,11 @@ type referenceDiagnostics struct {
 	admissions   []map[string]any
 }
 
-func newReferenceDiagnostics(t *testing.T, f fleetFixture, enabled bool) *referenceDiagnostics {
+func newReferenceDiagnostics(t *testing.T, f fleetFixture, enabled bool, recordOnly ...bool) *referenceDiagnostics {
 	t.Helper()
 	d := &referenceDiagnostics{URL: f.srv.URL, t: t, enabled: enabled, databasePath: f.databasePath, phase: "warmup"}
-	if enabled {
+	d.recording = enabled || (len(recordOnly) > 0 && recordOnly[0])
+	if d.recording {
 		server := httptest.NewServer(d.wrap(f.srv.Config.Handler))
 		d.URL = server.URL
 		t.Cleanup(server.Close)
@@ -75,7 +77,7 @@ func (d *referenceDiagnostics) SetPhase(phase string) {
 }
 
 func (d *referenceDiagnostics) add(event map[string]any) {
-	if !d.enabled {
+	if !d.enabled && !d.recording {
 		return
 	}
 	event["at"] = time.Now().UTC()
@@ -237,7 +239,7 @@ func (d *referenceDiagnostics) wrap(next http.Handler) http.Handler {
 		start := time.Now()
 		route := referenceRoute(r.URL.Path)
 		request := &referenceCapture{}
-		if route == "admission-leases" && r.Body != nil {
+		if (route == "admission-leases" || route == "service-heartbeat") && r.Body != nil {
 			r.Body = &referenceBody{Reader: io.TeeReader(r.Body, request), Closer: r.Body}
 		}
 		response := &referenceResponse{ResponseWriter: w}
@@ -251,8 +253,56 @@ func (d *referenceDiagnostics) wrap(next http.Handler) http.Handler {
 			event["request"] = referenceScalars(request, true)
 			event["response"] = referenceScalars(&response.capture, false)
 		}
+		if route == "service-heartbeat" {
+			event["request"] = referenceHeartbeatScalars(request, true)
+			event["response"] = referenceHeartbeatScalars(&response.capture, false)
+		}
 		d.add(event)
 	})
+}
+
+// Only typed lease timestamps are admissible. Never serialize protocol identities,
+// credentials, arbitrary error text, database contents or process output to CI.
+func referenceHeartbeatScalars(b *referenceCapture, request bool) map[string]any {
+	out := map[string]any{}
+	if b.overflow {
+		return out
+	}
+	var v struct {
+		PolicyIssuedAt *time.Time `json:"policyIssuedAt"`
+		PolicyRefresh  *struct {
+			Lease struct {
+				IssuedAt  *time.Time `json:"issuedAt"`
+				ExpiresAt *time.Time `json:"expiresAt"`
+			} `json:"policyLease"`
+		} `json:"policyRefresh"`
+	}
+	if json.Unmarshal(b.Bytes(), &v) != nil {
+		return out
+	}
+	if request && v.PolicyIssuedAt != nil {
+		out["policyIssuedAt"] = v.PolicyIssuedAt
+	}
+	if !request && v.PolicyRefresh != nil {
+		if v.PolicyRefresh.Lease.IssuedAt != nil {
+			out["issuedAt"] = v.PolicyRefresh.Lease.IssuedAt
+		}
+		if v.PolicyRefresh.Lease.ExpiresAt != nil {
+			out["expiresAt"] = v.PolicyRefresh.Lease.ExpiresAt
+		}
+	}
+	return out
+}
+
+// The existing rings bound CI output. Private evidence remains separately gated.
+func (d *referenceDiagnostics) failureTimeline(failed bool) []byte {
+	if !failed || (!d.enabled && !d.recording) {
+		return nil
+	}
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	data, _ := json.Marshal(map[string]any{"events": d.events, "admissions": d.admissions})
+	return data
 }
 
 // Preserve only after failed tests, into a private retained fixture root. Copies
@@ -535,5 +585,67 @@ func TestReferenceDiagnosticsCustodyPaginationRemainsBounded(t *testing.T) {
 	reader = &referenceCustodyPages{target: 20}
 	if _, err := boundedOperationalCustody(ctx, reader, scope, "tracked", 256); !errors.Is(err, context.Canceled) || reader.pages != 0 {
 		t.Fatal("discovery ignored caller deadline")
+	}
+}
+
+func TestNativeFailureTimelineRedactsHeartbeatAndPreservesHTTP(t *testing.T) {
+	d := &referenceDiagnostics{recording: true, phase: "warmup"}
+	request := `{"policyIssuedAt":"2026-11-03T14:39:03Z","desired":{"instanceId":"secret-instance"},"token":"secret-token"}`
+	response := `{"policyRefresh":{"intentId":"secret-intent","policyLease":{"issuedAt":"2026-11-03T14:39:10Z","expiresAt":"2026-11-03T14:39:25Z"}},"error":"secret-error"}`
+	handler := d.wrap(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		if err != nil || string(body) != request {
+			t.Fatalf("request changed: %v", err)
+		}
+		w.WriteHeader(http.StatusOK)
+		_, _ = io.WriteString(w, response)
+	}))
+	recorder := httptest.NewRecorder()
+	handler.ServeHTTP(recorder, httptest.NewRequest(http.MethodPost, "/api/agent/instances/secret-instance/service-heartbeat", strings.NewReader(request)))
+	if recorder.Code != http.StatusOK || recorder.Body.String() != response {
+		t.Fatal("response changed")
+	}
+	if d.failureTimeline(false) != nil {
+		t.Fatal("successful tests must not emit timeline")
+	}
+	timeline := string(d.failureTimeline(true))
+	for _, required := range []string{"policyIssuedAt", "issuedAt", "expiresAt", "2026-11-03T14:39:25Z"} {
+		if !strings.Contains(timeline, required) {
+			t.Fatalf("missing %s: %s", required, timeline)
+		}
+	}
+	if strings.Contains(timeline, "secret") {
+		t.Fatalf("secret leaked: %s", timeline)
+	}
+	if d.enabled {
+		t.Fatal("recording must not enable private evidence")
+	}
+	root := t.TempDir()
+	d.t = t
+	if err := d.Preserve(root); err != nil {
+		t.Fatal(err)
+	}
+	entries, err := os.ReadDir(root)
+	if err != nil || len(entries) != 0 {
+		t.Fatalf("record-only mode preserved files: %v", err)
+	}
+}
+
+func TestNativeFailureTimelineHeartbeatRejectsMalformedAndOversized(t *testing.T) {
+	for _, body := range []string{`{"policyIssuedAt":"secret"}`, `{"policyRefresh":{"policyLease":{"expiresAt":"secret"}}}`, `{`, strings.Repeat("x", 8193)} {
+		var captured referenceCapture
+		_, _ = captured.Write([]byte(body))
+		for _, request := range []bool{false, true} {
+			if got := referenceHeartbeatScalars(&captured, request); len(got) != 0 {
+				t.Fatalf("untrusted fields recorded: %v", got)
+			}
+		}
+	}
+	d := &referenceDiagnostics{recording: true}
+	for i := 0; i < 1200; i++ {
+		d.Record("driver_transport", io.EOF)
+	}
+	if len(d.events) != 1024 {
+		t.Fatalf("unbounded timeline: %d", len(d.events))
 	}
 }

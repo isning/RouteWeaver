@@ -126,8 +126,11 @@ func testNativeContinuousManagedService(t *testing.T, operationalDrill, provider
 	if err != nil {
 		t.Fatal(err)
 	}
-	diagnostics := newReferenceDiagnostics(t, f, referenceDiagnosticsEnabled(observationSeconds, operationalDrill, providerDrill))
+	diagnostics := newReferenceDiagnostics(t, f, referenceDiagnosticsEnabled(observationSeconds, operationalDrill, providerDrill), !operationalDrill)
 	t.Cleanup(func() {
+		if timeline := diagnostics.failureTimeline(t.Failed()); len(timeline) > 0 {
+			t.Logf("redacted native failure timeline initial_issued_at=%s initial_expires_at=%s: %s", d.Lease.IssuedAt.Format(time.RFC3339Nano), d.Lease.ExpiresAt.Format(time.RFC3339Nano), timeline)
+		}
 		if diagnostics.enabled && t.Failed() {
 			retain = true
 			if err := diagnostics.Preserve(root); err != nil {
@@ -137,7 +140,7 @@ func testNativeContinuousManagedService(t *testing.T, operationalDrill, provider
 		}
 	})
 	transportURL, operationalGate := operationalTransport(t, f, operationalDrill)
-	if diagnostics.enabled {
+	if diagnostics.recording {
 		transportURL = diagnostics.URL
 	}
 	transport, err := agent.NewHTTPTransport(agent.HTTPTransportOptions{BaseURL: transportURL, Scope: d.Scope, Token: token, RequestTimeout: time.Second, MaxAttempts: 1, Backoff: time.Millisecond, AllowLoopbackHTTP: true})
@@ -338,8 +341,9 @@ func testNativeContinuousManagedService(t *testing.T, operationalDrill, provider
 		t.Fatal(err)
 	}
 	got := make([]byte, len(payload))
-	if _, err = io.ReadFull(conn, got); err != nil || string(got) != string(payload) {
-		t.Fatalf("payload did not cross original instance expiry: %q %v", got, err)
+	if n, readErr := io.ReadFull(conn, got); readErr != nil || string(got) != string(payload) {
+		diagnostics.Payload(0, n, "read", 0, readErr)
+		t.Fatalf("payload did not cross original instance expiry: %q %v", got, readErr)
 	}
 	obs, err := supervisor.Observe(context.Background(), root)
 	if err != nil || obs.Identity != d.Identity() {

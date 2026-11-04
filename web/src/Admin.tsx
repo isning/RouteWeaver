@@ -1709,6 +1709,7 @@ function PlatformSettingsTabs({
         contentKind="settings"
         contextKind="navigation"
         contained={activeTab !== "basic"}
+        nestedContext={activeTab === "backup" ? "navigation" : undefined}
         header={<PageHeader title="平台设置" />}
         localNavigation={<PlatformSettingsTabList />}
         context={

@@ -61,7 +61,7 @@ function viewport(narrow: boolean) {
     configurable: true,
     writable: true,
     value: vi.fn((query: string) => ({
-      matches: narrow && query === "(max-width: 760px)",
+      matches: narrow && query === "(max-width: 1023px)",
       media: query,
       onchange: null,
       addListener: vi.fn(),

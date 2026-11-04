@@ -1,3 +1,4 @@
+import { ContextHeader, ContextLayout } from "./page-layout";
 import { Tabs } from "@/components/ui/tabs";
 import { PlatformSettingsTabList } from "./platform-settings-navigation";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -179,11 +180,21 @@ export function PageSkeleton({ page }: { page: string }) {
         : page === "servers"
           ? "cards"
           : "table";
-  if (page === "subscriptions" || page === "settings") {
+  if (page === "account-security") {
+    return <div role="status" aria-label="正在打开页面" aria-busy="true" className="space-y-6">
+      <span className="sr-only">正在打开页面</span>
+      <ContextHeader navigation contentKind="settings"><Skeleton className="h-8 w-40" /></ContextHeader>
+      <ContextLayout navigation contentKind="settings" rail={<div aria-hidden="true"><ContentSkeleton layout="field" /></div>}>
+        <div aria-hidden="true"><ContentSkeleton layout="form" /></div>
+      </ContextLayout>
+    </div>;
+  }
+  if (["subscriptions", "profiles", "outputs", "settings"].includes(page)) {
     return (
       <div role="status" aria-label="正在打开页面" aria-busy="true">
         <span className="sr-only">正在打开页面</span>
         <WorkspaceFrame
+          contained={page === "profiles" || page === "outputs"}
           contentKind={page === "settings" ? "settings" : "list"}
           contextKind={page === "settings" ? "navigation" : "data"}
           header={
@@ -192,7 +203,7 @@ export function PageSkeleton({ page }: { page: string }) {
               className="flex items-center justify-between gap-4"
             >
               <Skeleton className="h-7 w-40 sm:h-8" />
-              {page === "subscriptions" && <Skeleton className="h-11 w-28" />}
+              {page !== "settings" && <Skeleton className="h-11 w-28" />}
             </div>
           }
           localNavigation={

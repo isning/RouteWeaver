@@ -1342,12 +1342,11 @@ it("keeps the actual overview task and expanded usage while moving through legac
   clients.push(client);
   const task = (view: "overview" | "profiles" | "outputs") => <QueryClientProvider client={client}><UIProviders><SubscriptionsPage view={view} /></UIProviders></QueryClientProvider>;
   const { rerender } = render(task("overview"));
-  const details = await screen.findByRole("button", { name: "用量与周期明细" });
-  await userEvent.click(details);
+  const details = await screen.findByRole("region", { name: "用量与周期明细" });
   for (const view of ["profiles", "outputs", "overview"] as const) {
     rerender(task(view));
-    expect(screen.getByRole("button", { name: "用量与周期明细" })).toBe(details);
-    expect(details).toHaveProperty("ariaExpanded", "true");
+    expect(screen.getByRole("region", { name: "用量与周期明细" })).toBe(details);
+    expect(screen.queryByRole("button", { name: "用量与周期明细" })).toBeNull();
     expect(screen.getAllByRole("heading", { name: "平台服务用量" })).toHaveLength(1);
   }
   await userEvent.click(screen.getByRole("button", { name: "编辑配置" }));

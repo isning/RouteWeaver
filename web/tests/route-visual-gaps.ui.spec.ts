@@ -510,10 +510,14 @@ for (const width of [3440, 2880, 2560, 2304, 1920, 1536, 1440, 1366, 1280, 1024,
       "/me/overview": {
       ...overview,
       quotaBytes: 100 * 1024 ** 3, remainingBytes: 75 * 1024 ** 3,
-      service: { id: "visual-service", name: "跨区域协作与远程办公服务 International-Remote-Workspace", quotaBytes: 100 * 1024 ** 3, routeIds: ["visual-route"], cycle: { mode: "monthly", timezone: "UTC+8" } },
+      service: { id: "visual-service", name: "跨区域协作与远程办公服务 International-Remote-Workspace", quotaBytes: 100 * 1024 ** 3, routeIds: ["visual-route", "visual-route-two", "visual-route-three"], cycle: { mode: "monthly", timezone: "UTC+8" } },
       usage: { rawBytes: 20 * 1024 ** 3, weightedBytes: 25 * 1024 ** 3 },
       cycle: { nextReset: "2026-12-01T00:00:00+08:00", timezone: "UTC+8" },
-      routes: [{ id: "visual-route", name: "欧洲与亚太协作线路 LongRemoteWorkspaceConnection", rateMicros: 1500000 }],
+      routes: [
+        { id: "visual-route", name: "欧洲与亚太协作线路 LongRemoteWorkspaceConnection", rateMicros: 1500000 },
+        { id: "visual-route-two", name: "北美与跨区域工作线路 AnotherLongRemoteWorkspaceConnection", rateMicros: 1000000 },
+        { id: "visual-route-three", name: "备用协作线路 BackupInternationalRemoteWorkspaceConnection", rateMicros: 500000 },
+      ],
     } });
     const assertLayout = async (navigation: boolean) => {
       const workspace = page.locator('.workspace-frame[data-presentation="workspace"]');
@@ -526,7 +530,7 @@ for (const width of [3440, 2880, 2560, 2304, 1920, 1536, 1440, 1366, 1280, 1024,
         const grid = (await workspace.locator('.workspace-grid').boundingBox())!;
         const main = (await page.locator('#main').boundingBox())!;
         const viewport = await page.evaluate(() => document.documentElement.clientWidth);
-        const sideBySide = frame.width >= (navigation ? 864 : 1120);
+        const sideBySide = frame.width >= (navigation ? 896 : 992);
         expect(frame.x).toBeCloseTo(main.x, 0);
         expect(frame.x + frame.width).toBeCloseTo(viewport, 0);
         expect(content.width).toBeLessThanOrEqual(navigation ? 832 : 1152);
@@ -534,8 +538,8 @@ for (const width of [3440, 2880, 2560, 2304, 1920, 1536, 1440, 1366, 1280, 1024,
         expect(header.x).toBeCloseTo(content.x, 0);
         expect(header.width).toBeCloseTo(content.width, 0);
         if (sideBySide) {
-          expect(pane.width).toBeCloseTo(navigation ? 224 : 352, 0);
-          expect(canvas.width).toBeGreaterThanOrEqual(navigation ? 640 : 768);
+          expect(pane.width).toBeCloseTo(navigation ? 224 : 320, 0);
+          expect(canvas.width).toBeGreaterThanOrEqual(672);
           expect(pane.x).toBeCloseTo(canvas.x + canvas.width, 0);
           expect(pane.x + pane.width).toBeCloseTo(viewport, 0);
           expect(pane.y).toBeCloseTo(grid.y, 0);
@@ -560,19 +564,15 @@ for (const width of [3440, 2880, 2560, 2304, 1920, 1536, 1440, 1366, 1280, 1024,
       const primary = (await layout.locator(":scope > .page-primary").boundingBox())!;
       const rail = (await layout.locator(":scope > .page-context").boundingBox())!;
       const frame = (await layout.boundingBox())!;
-      const sideBySide = frame.width >= (navigation ? 976 : 1088);
+      const sideBySide = frame.width >= (navigation ? 896 : 992);
       if (sideBySide) {
-        expect(primary.width).toBeGreaterThanOrEqual(776);
-        expect(rail.width).toBeCloseTo(navigation ? 176 : 288, 0);
-        expect(rail.x - primary.x - primary.width).toBeCloseTo(24, 0);
+        expect(primary.width).toBeGreaterThanOrEqual(648);
+        expect(rail.width).toBeCloseTo(navigation ? 224 : 320, 0);
+        expect(primary.x - frame.x).toBeCloseTo(rail.x - 24 - primary.x - primary.width, 0);
+        expect(primary.width).toBeLessThanOrEqual(1280);
         expect(rail.x + rail.width).toBeLessThanOrEqual(width);
       } else if (navigation) expect(rail.y + rail.height).toBeLessThanOrEqual(primary.y);
       else expect(primary.y + primary.height).toBeLessThanOrEqual(rail.y);
-      if (width === 1280) {
-        // v10 gave either task only ~704px. Directory and data now differ.
-        expect(primary.width).toBeGreaterThanOrEqual(navigation ? 800 : 1000);
-        expect(sideBySide).toBe(navigation);
-      }
       const main = (await page.locator("#main").boundingBox())!;
       const shell = (await page.locator(".main-shell").boundingBox())!;
       const environment = await page.evaluate(() => ({
@@ -600,10 +600,11 @@ for (const width of [3440, 2880, 2560, 2304, 1920, 1536, 1440, 1366, 1280, 1024,
       }
       if (width >= 1024) {
         const sidebar = (await page.locator('#workspace-navigation').boundingBox())!;
-        expect(sidebar.width).toBeCloseTo(224, 0);
-        // Keep the task beside navigation, including at 1920, not centered far away.
+        expect(sidebar.width).toBeCloseTo(256, 0);
+        // Center only the primary task inside its allocated canvas.
         expect(primary.x - sidebar.x - sidebar.width).toBeGreaterThanOrEqual(24);
-        expect(primary.x - sidebar.x - sidebar.width).toBeLessThanOrEqual(26);
+        const primaryCanvasEnd = sideBySide ? rail.x - 24 : frame.x + frame.width;
+        expect(primary.x - frame.x).toBeCloseTo(primaryCanvasEnd - primary.x - primary.width, 0);
       }
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
       await info.attach(`proportions-${navigation ? "directory" : "data"}-${width}`, {
@@ -639,7 +640,7 @@ for (const width of [3440, 2880, 2560, 2304, 1920, 1536, 1440, 1366, 1280, 1024,
       }
       expect(await pair.evaluate(element => element.scrollWidth)).toBeLessThanOrEqual((await pair.boundingBox())!.width + 1);
     }
-    if ((await page.locator(".workspace-frame").boundingBox())!.width >= 864) {
+    if ((await page.locator(".workspace-frame").boundingBox())!.width >= 896) {
       const currentSection = index.locator('[aria-current="location"]');
       await expect(currentSection).not.toBeFocused();
       const marker = await currentSection.evaluate(element => {
@@ -690,7 +691,19 @@ for (const width of [3440, 2880, 2560, 2304, 1920, 1536, 1440, 1366, 1280, 1024,
     await name.fill("协作平台");
     await domain.fill("");
     await page.getByRole("tab", { name: "备份与恢复", exact: true }).click();
-    await assertLayout(true);
+    const backupPrimary = await assertLayout(true);
+    const backupCanvas = (await page.locator(".workspace-canvas").boundingBox())!;
+    const backupLayout = (await page.locator(".context-layout:visible").boundingBox())!;
+    const backupHeader = (await page.locator(".workspace-header .context-heading").boundingBox())!;
+    expect(backupLayout.width).toBeCloseTo(backupCanvas.width, 0);
+    expect(backupPrimary.width).toBeLessThanOrEqual(832);
+    expect(backupHeader.x).toBeCloseTo(backupPrimary.x, 0);
+    expect(backupHeader.width).toBeCloseTo(backupPrimary.width, 0);
+    if (width >= 1440) {
+      const backupRail = (await page.locator(".context-layout:visible > .page-context").boundingBox())!;
+      expect(backupRail.width).toBeCloseTo(224, 0);
+      expect(backupRail.x).toBeGreaterThanOrEqual(backupPrimary.x + backupPrimary.width + 24);
+    }
     const backupActions = page.getByRole("group", { name: "备份操作", exact: true });
     const createBackup = backupActions.getByRole("button", { name: "创建加密备份", exact: true });
     const checkCapacity = backupActions.getByRole("button", { name: "检查历史容量", exact: true });
@@ -770,21 +783,31 @@ for (const width of [3440, 2880, 2560, 2304, 1920, 1536, 1440, 1366, 1280, 1024,
     if (width >= 1024) expect(createBox.x + createBox.width).toBeCloseTo(subscriptionPrimary.x + subscriptionPrimary.width, 0);
     await page.screenshot({ path: info.outputPath(`context-subscriptions-${width}.png`), fullPage: true });
     const usage = page.getByRole("complementary", { name: "平台服务概览", exact: true });
-    const details = usage.getByRole("button", { name: "用量与周期明细", exact: true });
-    await details.click();
-    await expect(details).toHaveAttribute("aria-expanded", "true");
-    await usage.getByRole("button", { name: "平台提供的线路 · 1", exact: true }).click();
-    await expect(usage.getByText("欧洲与亚太协作线路 LongRemoteWorkspaceConnection", { exact: true })).toBeVisible();
-    const dataRailIsSideBySide = (await usage.boundingBox())!.width < 400;
-    if (width >= 1024 && dataRailIsSideBySide) {
-      expect((await usage.locator('[data-slot="card-content"]').boundingBox())!.width).toBeGreaterThanOrEqual(300);
+    const details = usage.getByRole("region", { name: "用量与周期明细", exact: true });
+    await expect(details).toBeVisible();
+    await expect(usage.getByRole("button", { name: "用量与周期明细", exact: true })).toHaveCount(0);
+    const routes = usage.getByRole("region", { name: "平台提供的线路 · 3", exact: true });
+    await expect(routes).toBeVisible();
+    await expect(routes.getByRole("listitem")).toHaveCount(3);
+    for (const [index, multiplier] of ["1.5×", "1×", "0.5×"].entries()) {
+      await expect(routes.getByRole("listitem").nth(index).getByText(multiplier, { exact: true })).toBeVisible();
     }
+    for (const group of [details, routes]) {
+      expect(await group.evaluate(el => getComputedStyle(el).borderTopWidth)).toBe("1px");
+    }
+    for (const selector of [".usage-detail-row", ".route-option"]) {
+      const rows = usage.locator(selector);
+      for (let i = 0; i < await rows.count(); i++) {
+        expect(await rows.nth(i).evaluate(el => getComputedStyle(el).borderBottomWidth)).toBe(i === await rows.count() - 1 ? "0px" : "1px");
+      }
+    }
+    await expect(usage.getByText("欧洲与亚太协作线路 LongRemoteWorkspaceConnection", { exact: true })).toBeVisible();
     for (const inner of await usage.locator('[data-slot="card-header"], [data-slot="card-content"], .route-option').all()) {
       expect(await inner.evaluate(el => el.scrollWidth)).toBeLessThanOrEqual((await inner.boundingBox())!.width + 1);
     }
-    await page.screenshot({ path: info.outputPath(`context-usage-expanded-${width}.png`), fullPage: true });
+    await page.screenshot({ path: info.outputPath(`context-usage-visible-${width}.png`), fullPage: true });
     await page.setViewportSize({ width: width >= 1280 ? 390 : 1280, height: 900 });
-    await expect(details).toHaveAttribute("aria-expanded", "true");
+    await expect(details).toBeVisible();
     await expect(page.getByRole("heading", { name: "平台服务用量", exact: true })).toHaveCount(1);
     await page.setViewportSize({ width, height: width === 320 ? 480 : 900 });
     await page.getByRole("button", { name: "编辑配置", exact: true }).click();
@@ -799,7 +822,8 @@ for (const width of [3440, 2880, 2560, 2304, 1920, 1536, 1440, 1366, 1280, 1024,
     await page.getByRole("button", { name: "编辑来源", exact: true }).click();
     const inputTask = (await page.locator(".profile-input-task").boundingBox())!;
     const trafficTask = (await page.locator(".profile-traffic-task").boundingBox())!;
-    if (width >= 1024) {
+    const profileTaskWidth = (await page.locator(".profile-intent-grid").boundingBox())!.width;
+    if (profileTaskWidth >= 704) {
       expect(inputTask.y).toBeCloseTo(trafficTask.y, 0);
       expect(trafficTask.x).toBeGreaterThan(inputTask.x + inputTask.width);
       expect(inputTask.width).toBeGreaterThanOrEqual(340);
@@ -938,8 +962,8 @@ for (const width of [1536, 1920, 2560, 3440]) {
 test("context rails yield space before their primary task becomes cramped", async ({ page }) => {
   const unexpected = await readOnlyInventory(page);
   for (const task of [
-    { route: "settings", navigation: true, widths: [1072, 1104], threshold: 864 },
-    { route: "subscriptions", navigation: false, widths: [1336, 1368], threshold: 1120 },
+    { route: "settings", navigation: true, widths: [1136, 1184], threshold: 896 },
+    { route: "subscriptions", navigation: false, widths: [1232, 1280], threshold: 992 },
   ]) {
     await page.goto(`/#${task.route}`);
     // A visible grid can still belong to the lazy or GET skeleton. Await the
@@ -974,7 +998,7 @@ test("context rails yield space before their primary task becomes cramped", asyn
       const sideBySide = frame.width >= task.threshold;
       modes.push(sideBySide);
       if (sideBySide) {
-        expect(main.width).toBeGreaterThanOrEqual(task.navigation ? 640 : 768);
+        expect(main.width).toBeGreaterThanOrEqual(672);
         expect(rail.x).toBeGreaterThanOrEqual(main.x + main.width);
       } else if (task.navigation) expect(rail.y + rail.height).toBeLessThanOrEqual(main.y);
       else expect(main.y + main.height).toBeLessThanOrEqual(rail.y);
@@ -1135,4 +1159,27 @@ for (const width of [390, 768, 1440]) {
       expect(unexpected).toEqual([]);
     });
   }
+}
+
+for (const width of [320, 768, 1440, 1920, 3440]) {
+  test(`ordinary route content stays centered and bounded at ${width}`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    const unexpected = await readOnlyInventory(page);
+    for (const route of ["sources", "collections", "resources", "servers", "fleet", "activity", "published-routes"]) {
+      await page.goto(`/#${route}`);
+      await expect(page.locator("#main h1")).toBeVisible();
+      await expect(page.locator('#main [aria-busy="true"]')).toHaveCount(0);
+      const host = page.locator(".route-content");
+      const content = (await host.boundingBox())!;
+      const main = (await page.locator("#main").boundingBox())!;
+      expect(content.width).toBeLessThanOrEqual(route === "fleet" ? 1280 : 1152);
+      expect(content.x - main.x).toBeCloseTo(main.x + main.width - content.x - content.width, 0);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+      if (width >= 1024) expect((await page.locator("#workspace-navigation").boundingBox())!.width).toBeCloseTo(256, 0);
+      else await expect(page.getByRole("button", { name: "打开导航", exact: true })).toBeVisible();
+      await page.screenshot({ path: info.outputPath(`route-width-${route}-${width}.png`), fullPage: true });
+    }
+    expect(unexpected).toEqual([]);
+  });
 }

@@ -1,4 +1,4 @@
-import { ContextLayout, PageSection, SectionIndex } from "@/ui-patterns/page-layout";
+import { ContextHeader, ContextLayout, PageSection, SectionIndex } from "@/ui-patterns/page-layout";
 import { Suspense, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { PageBoundary } from "./PageBoundary";
 import { LoadingState } from "@/ui-patterns/loading-state";
@@ -175,13 +175,14 @@ function AccountSecurityTask({
   useUnsavedChanges(dirty || revokeDirty || pending);
   return (
     <>
-      <PageHeader title="账号安全" />
+      <ContextHeader navigation contentKind="settings"><PageHeader title="账号安全" /></ContextHeader>
       {session.user.passwordChangeRequired && (
         <Notice tone="warning" title="请先更换临时密码">
           管理员已重置你的密码。更换后才能继续访问订阅和其他工作区内容。
         </Notice>
       )}
       <ContextLayout
+        contentKind="settings"
         navigation
         rail={
           <SectionIndex

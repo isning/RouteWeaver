@@ -191,20 +191,14 @@ for (const width of [1440, 390]) {
       await expect(
         page.getByText("100 MiB", { exact: true }).first(),
       ).toBeVisible();
-      await activate(
-        page,
-        page.getByRole("button", { name: "用量与周期明细", exact: true }),
-      );
+      await expect(page.getByRole("region", { name: "用量与周期明细", exact: true })).toBeVisible();
       await expect(page.getByText("UTC+8", { exact: true })).toBeVisible();
       await expect(page.getByText(/（还有 .+）/)).toBeVisible();
       await expect(
         page.getByText("本周期实际流量", { exact: true }),
       ).toBeVisible();
       await expect(page.getByText("服务到期", { exact: true })).toBeVisible();
-      await activate(
-        page,
-        page.getByRole("button", { name: "平台提供的线路 · 1", exact: true }),
-      );
+      await expect(page.getByRole("region", { name: "平台提供的线路 · 1", exact: true })).toBeVisible();
       await expect(
         page.getByRole("heading", { name: routeName, exact: true }),
       ).toBeVisible();

@@ -224,6 +224,7 @@ export function BackupSettings() {
     };
     return (<div className="grid gap-6" role="region" aria-label="备份与恢复">
       <ContextLayout
+        contentKind="settings"
         navigation
         rail={
           <SectionIndex

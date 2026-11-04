@@ -6,24 +6,24 @@ import {
   type ReactNode,
 } from "react";
 import { Button } from "@/components/ui/button";
+import { contentWidth, type ContentKind } from "./content-width";
 import { cn } from "@/lib/utils";
 
-// Budget for the content, not a fixed three-column silhouette: a light 11rem
-// index opens at 61rem; an 18rem data rail needs 68rem. With a 1.5rem gutter,
-// either leaves at least 48.5rem for the primary task. Keep one mounted subtree
-// across sizes so drafts, focus and read states survive.
+// The primary task has its own centered width cap; context keeps its edge.
+// Container breakpoints respond to actual available space, not viewport size.
 const contextColumns = {
-  navigation: "@min-[61rem]/context:grid-cols-[minmax(0,1fr)_11rem]",
-  data: "@min-[68rem]/context:grid-cols-[minmax(0,1fr)_18rem]",
+  navigation: "@min-[56rem]/context:grid-cols-[minmax(0,1fr)_14rem]",
+  data: "@min-[62rem]/context:grid-cols-[minmax(0,1fr)_20rem]",
 };
 
 /** Task titles/actions share the primary edge, while the rail has its own context. */
 export function ContextHeader({
   navigation = false,
+  contentKind = "workspace",
   children,
   className,
   ...props
-}: ComponentProps<"div"> & { navigation?: boolean }) {
+}: ComponentProps<"div"> & { navigation?: boolean; contentKind?: ContentKind }) {
   return (
     <div className={cn("@container/context min-w-0", className)} {...props}>
       <div
@@ -32,7 +32,7 @@ export function ContextHeader({
           contextColumns[navigation ? "navigation" : "data"],
         )}
       >
-        <div className="min-w-0">{children}</div>
+        <div className={cn("context-heading mx-auto w-full min-w-0", contentWidth[contentKind])}>{children}</div>
       </div>
     </div>
   );
@@ -42,18 +42,20 @@ export function ContextLayout({
   children,
   rail,
   navigation = false,
+  contentKind = "workspace",
 }: {
   children: ReactNode;
   rail: ReactNode;
   navigation?: boolean;
+  contentKind?: ContentKind;
 }) {
   const aside = (
     <aside
       className={cn(
         "page-context @container/rail min-w-0",
         navigation
-          ? "self-start @min-[61rem]/context:col-start-2 @min-[61rem]/context:row-start-1 @min-[61rem]/context:[@media(min-height:40rem)]:sticky @min-[61rem]/context:top-24"
-          : "@min-[68rem]/context:col-start-2 @min-[68rem]/context:row-start-1",
+          ? "self-start @min-[56rem]/context:col-start-2 @min-[56rem]/context:row-start-1 @min-[56rem]/context:[@media(min-height:40rem)]:sticky @min-[56rem]/context:top-24"
+          : "@min-[62rem]/context:col-start-2 @min-[62rem]/context:row-start-1",
       )}
     >
       {rail}
@@ -70,10 +72,11 @@ export function ContextLayout({
         {navigation && aside}
         <div
           className={cn(
-            "page-primary min-w-0 space-y-6",
+            "page-primary mx-auto w-full min-w-0 space-y-6",
+            contentWidth[contentKind],
             navigation
-              ? "@min-[61rem]/context:col-start-1 @min-[61rem]/context:row-start-1"
-              : "@min-[68rem]/context:col-start-1 @min-[68rem]/context:row-start-1",
+              ? "@min-[56rem]/context:col-start-1 @min-[56rem]/context:row-start-1"
+              : "@min-[62rem]/context:col-start-1 @min-[62rem]/context:row-start-1",
           )}
         >
           {children}
@@ -170,8 +173,8 @@ export function SectionIndex({
         className={cn(
           "flex flex-wrap gap-1",
           presentation === "workspace"
-            ? "@min-[54rem]/workspace:flex-col"
-            : "@min-[61rem]/context:flex-col",
+            ? "@min-[56rem]/workspace:flex-col"
+            : "@min-[56rem]/context:flex-col",
         )}
       >
         {sections.map((section) => (
@@ -183,8 +186,8 @@ export function SectionIndex({
             className={cn(
               "h-auto min-h-11 justify-start whitespace-normal text-left font-normal leading-relaxed text-muted-foreground aria-[current=location]:bg-accent aria-[current=location]:font-medium aria-[current=location]:text-foreground",
               presentation === "workspace"
-                ? "@min-[54rem]/workspace:rounded-none @min-[54rem]/workspace:border-l-2 @min-[54rem]/workspace:border-transparent @min-[54rem]/workspace:aria-[current=location]:border-l-foreground @min-[54rem]/workspace:aria-[current=location]:bg-transparent"
-                : "@min-[61rem]/context:rounded-none @min-[61rem]/context:border-l-2 @min-[61rem]/context:border-transparent @min-[61rem]/context:aria-[current=location]:border-l-foreground @min-[61rem]/context:aria-[current=location]:bg-transparent",
+                ? "@min-[56rem]/workspace:rounded-none @min-[56rem]/workspace:border-l-2 @min-[56rem]/workspace:border-transparent @min-[56rem]/workspace:aria-[current=location]:border-l-foreground @min-[56rem]/workspace:aria-[current=location]:bg-transparent"
+                : "@min-[56rem]/context:rounded-none @min-[56rem]/context:border-l-2 @min-[56rem]/context:border-transparent @min-[56rem]/context:aria-[current=location]:border-l-foreground @min-[56rem]/context:aria-[current=location]:bg-transparent",
             )}
             aria-label={`前往${section.label}`}
             aria-current={current === section.id ? "location" : undefined}

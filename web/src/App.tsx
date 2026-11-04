@@ -1,3 +1,4 @@
+import { RouteContent } from "@/ui-patterns/route-content";
 import { PasswordInput } from "@/ui-patterns/password-input";
 import {
   SidebarProvider,
@@ -403,7 +404,7 @@ function Workspace() {
     if (
       mobileOpenRef.current ||
       intent.cycle !== mobileCycle.current ||
-      !window.matchMedia("(max-width: 760px)").matches ||
+      !window.matchMedia("(max-width: 1023px)").matches ||
       current.phase !== "active" ||
       current.concealed ||
       current.generation !== intent.generation ||
@@ -460,10 +461,10 @@ function Workspace() {
     setMobileOpen(false);
   };
   const [narrow, setNarrow] = useState(
-    () => window.matchMedia("(max-width: 760px)").matches,
+    () => window.matchMedia("(max-width: 1023px)").matches,
   );
   useEffect(() => {
-    const media = window.matchMedia("(max-width: 760px)");
+    const media = window.matchMedia("(max-width: 1023px)");
     const update = () => {
       setNarrow(media.matches);
       if (!media.matches) {
@@ -659,7 +660,7 @@ function Workspace() {
     <Sidebar
       collapsible="none"
       id="workspace-navigation"
-      className={narrow ? "h-full w-full bg-sidebar" : "h-full w-56 bg-sidebar"}
+      className={narrow ? "h-full w-full bg-sidebar" : "h-full w-64 bg-sidebar"}
     >
       <SidebarHeader className="h-16 justify-center px-4">
         <a
@@ -864,6 +865,7 @@ function Workspace() {
               <PageBoundary
                 key={`${["subscriptions", "profiles", "outputs"].includes(page) ? "subscriptions" : page}:${discardGeneration}`}
               >
+                <RouteContent page={page}>
                 <Suspense
                   fallback={<PageSkeleton page={page} />}
                 >
@@ -947,6 +949,7 @@ function Workspace() {
                     <SubscriptionsPage navigate={navigate} />
                   )}
                 </Suspense>
+                </RouteContent>
               </PageBoundary>
             </SubscriptionContextProvider>
           </WorkspaceHistoryContext.Provider>

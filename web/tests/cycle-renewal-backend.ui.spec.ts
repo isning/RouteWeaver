@@ -134,9 +134,7 @@ for (const [mode, label] of cycleModes)
       await signInAPI(page.request, f.account.username, initialPassword);
       await page.goto("/#subscriptions");
       await page.reload();
-      await page
-        .getByRole("button", { name: "用量与周期明细", exact: true })
-        .click();
+      await expect(page.getByRole("region", { name: "用量与周期明细", exact: true })).toBeVisible();
       await expect(
         page.getByText("UTC+8", { exact: true }).first(),
       ).toBeVisible();

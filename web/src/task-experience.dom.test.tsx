@@ -45,7 +45,7 @@ function viewport(narrow: boolean) {
     configurable: true,
     writable: true,
     value: vi.fn((query: string) => ({
-      matches: narrow && query === "(max-width: 760px)",
+      matches: narrow && query === "(max-width: 1023px)",
       media: query,
       onchange: null,
       addListener: vi.fn(),
@@ -370,18 +370,25 @@ it("labels route grants as authorization rather than claiming runtime availabili
         user: { id: "user", name: "User" },
         usage: { rawBytes: 0, weightedBytes: 0 },
         routes: [
-          { id: "draft-route", name: "Draft route", rateMicros: 1000000 },
+          { id: "draft-route", name: "Draft route", rateMicros: 1500000 },
+          { id: "long-route", name: "跨区域协作线路 LongRemoteWorkspaceConnection", rateMicros: 1000000 },
+          { id: "backup-route", name: "备用线路 BackupInternationalRemoteWorkspaceConnection", rateMicros: 500000 },
         ],
       });
     }),
   );
   mount(<SubscriptionsPage navigate={vi.fn()} />);
-  const grants = await screen.findByRole("button", {
-    name: "平台提供的线路 · 1",
+  await screen.findByRole("region", {
+    name: "平台提供的线路 · 3",
   });
   expect(screen.queryByRole("button", { name: "可用平台线路 · 1" })).toBeNull();
-  await userEvent.click(grants);
-  expect(screen.getByRole("heading", { name: "Draft route" })).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "平台提供的线路 · 3" })).toBeNull();
+  for (const name of ["Draft route", "跨区域协作线路 LongRemoteWorkspaceConnection", "备用线路 BackupInternationalRemoteWorkspaceConnection"]) {
+    expect(screen.getByRole("heading", { name })).toBeTruthy();
+  }
+  for (const multiplier of ["1.5×", "1×", "0.5×"]) {
+    expect(screen.getByText(multiplier, { exact: true })).toBeTruthy();
+  }
   expect(screen.getByText("已为你的账号开通", { exact: true })).toBeTruthy();
   expect(screen.queryByText(/当前使用|当前已选|线路在线/)).toBeNull();
 });
