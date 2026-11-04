@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { ActionButton } from "@/ui-patterns/actions";
 import { ChoiceSelect } from "@/ui-patterns/choice-select";
+import { Metadata, MetadataItem } from "@/ui-patterns/metadata";
 import { useConfirm } from "@/ui-patterns/confirmations";
 import { AppField, AppForm, useForm, useWatch } from "@/ui-patterns/form";
 import { Notice } from "@/ui-patterns/notice";
@@ -695,8 +696,14 @@ export function DiagnosticStartForm({
                   <ChoiceSelect
                     options={availablePaths.map((path) => ({
                       value: path.publishedRouteId,
-                      label: path.name,
-                      description: `${path.managedPath.hops.length} 跳`,
+                      label: (
+                        <Metadata>
+                          <MetadataItem>{path.name}</MetadataItem>
+                          <MetadataItem className="text-muted-foreground">
+                            {path.managedPath.hops.length} 跳
+                          </MetadataItem>
+                        </Metadata>
+                      ),
                     }))}
                   />
                 </AppField>

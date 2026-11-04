@@ -6,6 +6,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { UIProviders } from "./ui-patterns/providers";
@@ -124,12 +125,21 @@ it("selects only an observed managed path and queues its route identity without 
       }),
     );
   }
+  const selectedPath = screen.getByRole("combobox", { name: "已应用线路" });
+  expect(selectedPath.getAttribute("aria-expanded")).toBe("false");
+  expect(within(selectedPath).getByText("Three-hop route")).toBeTruthy();
+  expect(within(selectedPath).getByText("3 跳")).toBeTruthy();
+  await user.click(selectedPath);
+  await user.click(await screen.findByRole("option", { name: "Three-hop route 3 跳" }));
+  expect(within(selectedPath).getByText("3 跳")).toBeTruthy();
   expect(screen.getByText(/不测试公开入口 TLS 或客户端接入认证/)).toBeTruthy();
   await user.click(
     screen.getByLabelText("我确认目标与测试上限，提交后由节点执行"),
   );
   await user.click(screen.getByRole("button", { name: "提交测试" }));
   await screen.findByText("path_changed; refresh the applied path");
+  expect(within(selectedPath).getByText("Three-hop route")).toBeTruthy();
+  expect(within(selectedPath).getByText("3 跳")).toBeTruthy();
   expect(bodies[0]).toMatchObject({
     pathMode: "managed_route",
     publishedRouteId: "route1",
