@@ -77,7 +77,7 @@ export function TableRowActions({
       // name cannot widen the table and keep overflow stuck after a resize.
       // Its block size remains natural, so the full name can wrap without clipping.
       className={cn(
-        "table-row-actions ml-auto flex w-max min-w-[min(10rem,calc(var(--table-viewport-width,100vw)-2rem))] max-w-[calc(var(--table-viewport-width,100vw)-2rem)] flex-col items-end gap-1.5",
+        "table-row-actions ml-auto flex w-max scroll-m-1 min-w-[min(10rem,calc(var(--table-viewport-width,100vw)-2rem))] max-w-[calc(var(--table-viewport-width,100vw)-2rem)] flex-col items-end gap-1.5",
         className,
       )}
       role="group"
@@ -351,7 +351,13 @@ export function DataTable<T extends object>({
           const bounds = actions.getBoundingClientRect();
           const left =
             viewport.getBoundingClientRect().left + viewport.clientLeft;
-          if (bounds.left < left - 1 || bounds.right > left + width + 1)
+          // Match scroll-m-1: the official ring-3 must fit outside the
+          // button's border box, including when it is otherwise just visible.
+          const focusMargin = 4;
+          if (
+            bounds.left - focusMargin < left ||
+            bounds.right + focusMargin > left + width
+          )
             actions.scrollIntoView({ block: "nearest", inline: "nearest" });
         }
       } else {

@@ -103,6 +103,24 @@ async function contained(target: Locator, viewport: Locator) {
   expect(box.x + box.width).toBeLessThanOrEqual(bounds.x + bounds.width + 1);
 }
 
+async function focusRingContained(button: Locator, viewport: Locator) {
+  await expect(button).toBeFocused();
+  const focus = await button.evaluate((element) => ({
+    visible: element.matches(":focus-visible"),
+    shadow: getComputedStyle(element).boxShadow,
+  }));
+  expect(focus.visible).toBe(true);
+  expect(focus.shadow).not.toBe("none");
+  const box = (await button.boundingBox())!;
+  const bounds = (await viewport.boundingBox())!;
+  // The official Button uses ring-3 outside its border box. Test its painted
+  // extent, not merely the click target. Half a pixel accommodates rasterization.
+  expect(box.x - 3).toBeGreaterThanOrEqual(bounds.x - 0.5);
+  expect(box.x + box.width + 3).toBeLessThanOrEqual(
+    bounds.x + bounds.width + 0.5,
+  );
+}
+
 for (const width of [1280, 1440, 2048]) {
   test(`source rows keep a single aligned action line at ${width}px`, async ({
     page,
@@ -258,17 +276,29 @@ test("narrow source rows keep long target names and all actions reachable by key
   await expect
     .poll(() => viewport.evaluate((element) => element.scrollLeft))
     .toBeGreaterThan(0);
-  const row = page.getByRole("row").filter({ has: groups[1] });
-  await row.getByRole("button").first().focus();
   const buttons = groups[1].getByRole("button");
-  await expect(buttons).toHaveCount(3);
-  const identity = groups[1].getByText(names[1], { exact: true });
-  for (const button of await buttons.all()) {
-    await page.keyboard.press("Tab");
-    await expect(button).toBeFocused();
-    await contained(button, viewport);
-    await expect(identity).toBeVisible();
-    await contained(identity, viewport);
+  for (const [index, group] of groups.entries()) {
+    const row = page.getByRole("row").filter({ has: group });
+    await row.getByRole("button").first().focus();
+    // Start at the left edge, so native keyboard focus must reveal the actions
+    // and their entire focus rings rather than inheriting a favorable scroll.
+    await viewport.evaluate((element) => {
+      element.scrollLeft = 0;
+    });
+    await expect
+      .poll(() => viewport.evaluate((element) => element.scrollLeft))
+      .toBe(0);
+    const rowButtons = group.getByRole("button");
+    await expect(rowButtons).toHaveCount(index === 0 ? 1 : 3);
+    const identity = group.getByText(names[index], { exact: true });
+    for (const button of await rowButtons.all()) {
+      await page.keyboard.press("Tab");
+      await expect(button).toBeFocused();
+      await contained(button, viewport);
+      await focusRingContained(button, viewport);
+      await expect(identity).toBeVisible();
+      await contained(identity, viewport);
+    }
   }
   const menuTrigger = buttons.last();
   await page.keyboard.press("Enter");
@@ -282,6 +312,7 @@ test("narrow source rows keep long target names and all actions reachable by key
   await expect(page.getByRole("menu")).toHaveCount(0);
   await expect(menuTrigger).toBeFocused();
   await contained(menuTrigger, viewport);
+  await focusRingContained(menuTrigger, viewport);
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth + 1,
@@ -321,14 +352,16 @@ test("source target identity does not keep overflow stuck after repeated narrow-
   );
   const identity = groups[1].getByText(names[1], { exact: true });
   const action = groups[1].getByRole("button", {
-    name: `应用更新 ${names[1]}`,
+    name: `更多操作 ${names[1]}`,
     exact: true,
   });
   // Establish real keyboard-visible focus once. Re-focusing on each resize
   // would hide regressions where a still-focused offscreen action is stranded.
   const row = page.getByRole("row").filter({ has: groups[1] });
   await row.getByRole("button").first().focus();
-  await page.keyboard.press("Tab");
+  const actionCount = await groups[1].getByRole("button").count();
+  for (let index = 0; index < actionCount; index++)
+    await page.keyboard.press("Tab");
   await expect(action).toBeFocused();
   // Resizing must neither remount nor replace the focused action owner.
   const originalAction = await action.elementHandle();
@@ -382,6 +415,7 @@ test("source target identity does not keep overflow stuck after repeated narrow-
       await expect(identity).toHaveText(longSourceName);
       await contained(identity, viewport);
       await contained(action, viewport);
+      await focusRingContained(action, viewport);
       for (const group of groups) {
         const label = group.locator(".table-row-action-target");
         await expect(label).toBeVisible();

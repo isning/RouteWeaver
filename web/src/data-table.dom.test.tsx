@@ -703,3 +703,86 @@ it("does not scroll after a real size change when the focused action context rem
   );
   expect(reveal).not.toHaveBeenCalled();
 });
+
+it.each([
+  ["left", 1],
+  ["right", 93],
+] as const)(
+  "reveals the %s focus-ring edge after narrowing even when the action box fits",
+  async (_edge, left) => {
+    render(
+      <DataTable
+        rows={[{ id: "a", name: "来源 A" }]}
+        rowKey="id"
+        minWidth={720}
+        columns={[
+          {
+            title: "操作",
+            render: (_, row) => (
+              <TableRowActions name={row.name}>
+                <button>编辑来源</button>
+              </TableRowActions>
+            ),
+          },
+        ]}
+      />,
+    );
+    const group = screen.getByRole("group", { name: "来源 A 的操作" });
+    // The 160px action group itself fits in the 254px viewport, but leaves only
+    // 1px at one edge. The official button's 3px focus ring still needs clearance.
+    vi.spyOn(group, "getBoundingClientRect").mockImplementation(
+      () => new DOMRect(left, 0, 160, 44),
+    );
+    const reveal = vi.spyOn(group, "scrollIntoView");
+    await userEvent.tab();
+    expect(reveal).not.toHaveBeenCalled();
+    resize(254);
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: "编辑来源" }),
+    );
+    expect(reveal).toHaveBeenCalledWith({
+      block: "nearest",
+      inline: "nearest",
+    });
+  },
+);
+
+it("reveals the complete action context when tabbing from the left side of an overflowing table", async () => {
+  viewportWidth = 254;
+  render(
+    <DataTable
+      rows={[{ id: "a", name: "来源 A" }]}
+      rowKey="id"
+      minWidth={720}
+      columns={[
+        { title: "来源", render: (_, row) => <button>查看 {row.name}</button> },
+        {
+          title: "操作",
+          render: (_, row) => (
+            <TableRowActions name={row.name}>
+              <button>编辑来源</button>
+            </TableRowActions>
+          ),
+        },
+      ]}
+    />,
+  );
+  const viewport = screen.getByRole("region", { name: "表格滚动区域" });
+  const group = screen.getByRole("group", { name: "来源 A 的操作" });
+  const reveal = vi.spyOn(group, "scrollIntoView");
+  const action = screen.getByRole("button", { name: "编辑来源" });
+  // jsdom does not settle keyboard focus-visible matching during focus capture;
+  // model only that browser boundary. Real Tab geometry is covered in Playwright.
+  const matches = action.matches.bind(action);
+  vi.spyOn(action, "matches").mockImplementation((selector) =>
+    selector === ":focus-visible" ? true : matches(selector),
+  );
+  viewport.scrollLeft = 0;
+  screen.getByRole("button", { name: "查看 来源 A" }).focus();
+  expect(reveal).not.toHaveBeenCalled();
+  await userEvent.tab();
+  expect(document.activeElement).toBe(
+    screen.getByRole("button", { name: "编辑来源" }),
+  );
+  expect(reveal).toHaveBeenCalledWith({ block: "nearest", inline: "nearest" });
+});
