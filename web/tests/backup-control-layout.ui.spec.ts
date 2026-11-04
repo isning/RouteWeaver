@@ -72,7 +72,7 @@ for (const width of [1440, 390]) {
     const restore = page.getByRole("button", { name: "恢复到新数据库", exact: true });
     const disclosure = page.getByText(warning, { exact: true });
     await expect(disclosure).toBeVisible();
-    await expect(page.getByText("恢复到新数据库，不覆盖当前数据，也不会自动切换服务。", { exact: true })).toBeVisible();
+    await expect(page.getByText("恢复到独立的新数据库，保留当前数据；服务切换需另行操作。", { exact: true })).toBeVisible();
     expect((await box(disclosure)).y + (await box(disclosure)).height).toBeLessThan((await box(guard)).y);
     const guardBox = await box(guard);
     expect.soft(guardBox.width, "layout-width: confirmation rail").toBeLessThanOrEqual(width === 1440 ? 621 : 326);

@@ -575,7 +575,7 @@ test("controlled empty inventories name the task and server registration does no
     exact: true,
   });
   const consequence = registration.getByText(
-    "仅登记服务器，不会连接或改动服务器。",
+    "将服务器信息登记到控制平面；服务器连接与配置需另行操作。",
     { exact: true },
   );
   const save = registration.getByRole("button", { name: /^保\s*存$/ });

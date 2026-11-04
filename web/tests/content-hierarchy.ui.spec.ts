@@ -184,11 +184,63 @@ test("short source task and doubled text retain native keyboard access without a
   const before = await json(page, "/me/sources");
   const dialog = await openSource(page);
   const container = dialog;
-  await expect(container).toHaveCSS("overflow-y", "auto");
+  // Shorter disclosure text can leave enough room for a separately scrolling
+  // body. Verify the actual scroll owner and usable layout, not one CSS mode.
+  const mode = await dialog.getAttribute("data-task-scroll");
+  expect(["body", "task"]).toContain(mode);
+  const body = dialog.locator("[data-task-overlay-body]");
+  const scroller = mode === "task" ? dialog : body;
+  await expect(scroller).toHaveCSS("overflow-y", "auto");
+  const initialLayout = await dialog.evaluate((el) => {
+    const body = el.querySelector<HTMLElement>("[data-task-overlay-body]")!;
+    const header = el.querySelector<HTMLElement>("[data-task-overlay-header]")!;
+    const footer = el.querySelector<HTMLElement>("[data-task-overlay-footer]")!;
+    return {
+      mode: el.getAttribute("data-task-scroll"),
+      dialog: el.getBoundingClientRect().toJSON(),
+      body: body.getBoundingClientRect().toJSON(),
+      header: header.getBoundingClientRect().toJSON(),
+      footer: footer.getBoundingClientRect().toJSON(),
+      bodyClientHeight: body.clientHeight,
+      viewportHeight: innerHeight,
+    };
+  });
+  await info.attach("source-short-initial-scroll-layout", {
+    body: JSON.stringify(initialLayout),
+    contentType: "application/json",
+  });
+  expect(initialLayout.dialog.top).toBeGreaterThanOrEqual(0);
+  expect(initialLayout.dialog.bottom).toBeLessThanOrEqual(
+    initialLayout.viewportHeight,
+  );
+  expect(initialLayout.body.top).toBeGreaterThanOrEqual(
+    initialLayout.header.bottom,
+  );
+  expect(initialLayout.footer.top).toBeGreaterThanOrEqual(
+    initialLayout.body.bottom,
+  );
+  if (mode === "body") {
+    expect(initialLayout.bodyClientHeight).toBeGreaterThanOrEqual(200);
+    expect(initialLayout.footer.bottom).toBeLessThanOrEqual(
+      initialLayout.dialog.bottom,
+    );
+  }
+  // Reaching the last body control must genuinely move the selected scroller;
+  // a clipped dialog with an inert or covered body cannot satisfy this check.
+  const options = dialog.getByRole("button", { name: "导入选项", exact: true });
+  await options.scrollIntoViewIfNeeded();
+  await expect(options).toBeInViewport({ ratio: 1 });
+  await expect
+    .poll(() => scroller.evaluate((el) => el.scrollTop))
+    .toBeGreaterThan(0);
   const submit = dialog.getByRole("button", { name: "导入来源", exact: true });
   // The short-layout contract is sequential reachability, not permanently fixed completion.
   await submit.scrollIntoViewIfNeeded();
   await decision(dialog);
+  await page.screenshot({
+    path: info.outputPath("source-short-initial-decision.png"),
+    animations: "disabled",
+  });
   await submit.click();
   const name = dialog.getByLabel("来源名称", { exact: true });
   await name.scrollIntoViewIfNeeded();
@@ -210,7 +262,9 @@ test("short source task and doubled text retain native keyboard access without a
       node.style.fontSize = `${sizes[i] * 2}px`;
     });
   });
+  await expect(container).toHaveAttribute("data-task-scroll", "task");
   await expect(container).toHaveCSS("overflow-y", "auto");
+  await expect(body).toHaveCSS("overflow-y", "visible");
   await name.click();
   await page.keyboard.press("Tab");
   await page.keyboard.press("Tab");
