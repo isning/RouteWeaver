@@ -364,7 +364,6 @@ export function PublishedRoutesPage() {
               description={
                 needsTransferPath ? "需先建立服务器转发路径。" : undefined
               }
-              action={creationAction}
             />
           ) : (
             <DataTable

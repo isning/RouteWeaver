@@ -71,6 +71,14 @@ for (const width of [1440, 390])
         ).toContainText("blocked.example");
         return value;
       };
+      // Real isolated backend list, before opening the task surface.
+      await expect(entry()).toBeVisible();
+      await expect(
+        page.getByRole("tab", { name: "我的引用", exact: true }),
+      ).toHaveAttribute("aria-selected", "true");
+      await page.screenshot({
+        path: info.outputPath(`template-references-real-backend-${width}.png`),
+      });
       await inspect();
       // Dismissed comparison grants no write authority.
       await closeComparison.click();

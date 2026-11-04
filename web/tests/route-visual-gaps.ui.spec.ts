@@ -1247,6 +1247,24 @@ for (const width of [320, 768, 1440, 1920, 3440]) {
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
       if (width >= 1024) expect((await page.locator("#workspace-navigation").boundingBox())!.width).toBeCloseTo(256, 0);
       else await expect(page.getByRole("button", { name: "打开导航", exact: true })).toBeVisible();
+      if (route === "resources") {
+        for (const [label, title] of [["导入规则文件", "导入规则文件"], ["添加公开引用", "添加公开规则引用"]]) {
+          const action = page.getByRole("button", { name: label, exact: true });
+          await expect(action).toHaveCount(1);
+          await action.focus();
+          await page.keyboard.press("Enter");
+          await expect(page.getByRole("dialog", { name: title, exact: true })).toBeVisible();
+          await page.keyboard.press("Escape");
+          await expect(page.getByRole("dialog", { name: title, exact: true })).toHaveCount(0);
+          await expect(action).toBeFocused();
+        }
+      }
+      if (route === "published-routes") {
+        const action = page.getByRole("link", { name: "创建转发路径", exact: true });
+        await expect(action).toHaveCount(1);
+        await expect(action).toHaveAttribute("href", "#routes");
+        await expect(page.getByText("需先建立服务器转发路径。", { exact: true })).toBeVisible();
+      }
       await page.screenshot({ path: info.outputPath(`route-width-${route}-${width}.png`), fullPage: true });
     }
     expect(unexpected).toEqual([]);

@@ -36,6 +36,27 @@ const fixtures: Record<string, unknown> = {
       createdAt: "2026-10-26T09:00:00Z",
     },
   ],
+  "/admin/notification-settings": {
+    revision: 1,
+    inApp: true,
+    quotaPercent: [80, 95],
+    expiryHours: [24, 72],
+    providerRemainingPercent: [10],
+    repeatHours: 24,
+    email: {
+      enabled: false,
+      automatic: false,
+      host: "",
+      port: 587,
+      tlsMode: "starttls",
+      username: "",
+      from: "",
+      to: [],
+    },
+    webhook: { enabled: false, automatic: false, url: "" },
+    smtpPasswordSet: false,
+    webhookSecretSet: false,
+  },
   "/admin/announcements": [
     {
       id: "announcement",
@@ -87,6 +108,13 @@ async function setup(page: Page) {
     return route.fulfill({ json: fixtures[path] });
   });
   return unexpected;
+}
+// An exact origin-qualified URL prevents a later route handler from shadowing
+// setup's external-origin denial for the same pathname on another host.
+function announcementURL() {
+  const baseURL = test.info().project.use.baseURL;
+  if (!baseURL) throw new Error("Controlled notification QA requires baseURL");
+  return new URL("/api/admin/announcements", baseURL).href;
 }
 async function noOverflow(page: Page) {
   expect(
@@ -296,4 +324,165 @@ test("inbox failure stays with its message across repeated keyboard close at 320
     await expect(read).toBeFocused();
   }
   expect(unexpected).toEqual([]);
+});
+
+// Rendering evidence only: every API read is fulfilled with the bounded fixture
+// above. No save, send, delivery or backend persistence is inferred from pixels.
+for (const width of [1440, 390]) {
+  test(`notification settings and delivery hierarchy at ${width}`, async ({
+    page,
+  }, info) => {
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
+    const unexpected = await setup(page);
+    await page.goto("/#notifications");
+    await page.getByRole("tab", { name: "提醒与渠道", exact: true }).click();
+    await expect(
+      page.getByRole("button", { name: "保存通知设置", exact: true }),
+    ).toBeVisible();
+    await noOverflow(page);
+    await page.screenshot({
+      path: info.outputPath(`notification-reminders-fixture-${width}.png`),
+      fullPage: true,
+    });
+    await page.getByRole("button", { name: "邮件通知", exact: true }).click();
+    await expect(
+      page.getByRole("button", { name: "发送邮件测试", exact: true }),
+    ).toBeDisabled();
+    await page
+      .getByRole("button", { name: "Webhook 通知", exact: true })
+      .click();
+    await expect(
+      page.getByRole("button", { name: "发送 Webhook 测试", exact: true }),
+    ).toBeDisabled();
+    await expect(
+      page.getByLabel("HTTPS Webhook 地址", { exact: true }),
+    ).toHaveValue("");
+    // Wait for finite accordion expansion before recording its final layout.
+    await expect
+      .poll(() =>
+        page
+          .locator('[data-slot="accordion-content"]')
+          .evaluateAll((elements) =>
+            elements.every((element) =>
+              element.getAnimations().every((a) => a.playState !== "running"),
+            ),
+          ),
+      )
+      .toBe(true);
+    await noOverflow(page);
+    await page.screenshot({
+      path: info.outputPath(
+        `notification-channels-expanded-fixture-${width}.png`,
+      ),
+      fullPage: true,
+    });
+    await page.getByRole("tab", { name: "发送记录", exact: true }).click();
+    await expect(
+      page.getByRole("cell", { name: "无法连接邮件服务器", exact: true }),
+    ).toBeVisible();
+    await noOverflow(page);
+    await page.screenshot({
+      path: info.outputPath(
+        `notification-delivery-failed-fixture-${width}.png`,
+      ),
+    });
+    expect(unexpected).toEqual([]);
+  });
+
+  test(`notification list loading failure and retry at ${width}`, async ({
+    page,
+  }, info) => {
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
+    const unexpected = await setup(page);
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let failed = true;
+    let reads = 0;
+    await page.route(announcementURL(), async (route) => {
+      if (route.request().method() !== "GET") {
+        unexpected.push("unexpected announcement write");
+        return route.abort();
+      }
+      reads++;
+      await gate;
+      return route.fulfill(
+        failed
+          ? { status: 503, json: { message: "公告暂时无法读取，请重试" } }
+          : { json: fixtures["/admin/announcements"] },
+      );
+    });
+    try {
+      await page.goto("/#notifications");
+      await expect.poll(() => reads).toBeGreaterThan(0);
+      const loading = page.getByRole("status", {
+        name: "正在加载",
+        exact: true,
+      });
+      await expect(loading).toBeVisible();
+      await expect(loading).toHaveAttribute("aria-busy", "true");
+      await expect(page.getByText("服务维护通知", { exact: true })).toHaveCount(
+        0,
+      );
+      await noOverflow(page);
+      await page.screenshot({
+        path: info.outputPath(`announcements-loading-controlled-${width}.png`),
+      });
+      release();
+      await expect(
+        page.getByText("公告暂时无法读取，请重试", { exact: true }),
+      ).toBeVisible();
+      await expect(loading).toHaveCount(0);
+      await page.screenshot({
+        path: info.outputPath(
+          `announcements-read-error-controlled-${width}.png`,
+        ),
+      });
+      failed = false;
+      const priorReads = reads;
+      await page.getByRole("button", { name: "重试", exact: true }).click();
+      await expect(
+        page.getByRole("cell", { name: "服务维护通知", exact: true }),
+      ).toBeVisible();
+      expect(reads).toBeGreaterThan(priorReads);
+      await expect(
+        page.getByText("公告暂时无法读取，请重试", { exact: true }),
+      ).toHaveCount(0);
+      await noOverflow(page);
+      await page.screenshot({
+        path: info.outputPath(
+          `announcements-recovered-controlled-${width}.png`,
+        ),
+      });
+      expect(unexpected).toEqual([]);
+    } finally {
+      release();
+    }
+  });
+}
+
+
+test("announcement override cannot bypass external-origin denial", async ({ page }) => {
+  const unexpected = await setup(page);
+  let overriddenReads = 0;
+  await page.route(announcementURL(), route => {
+    overriddenReads++;
+    return route.fulfill({ json: fixtures["/admin/announcements"] });
+  });
+  await page.goto("/#notifications");
+  await expect(page.getByRole("cell", { name: "服务维护通知", exact: true })).toBeVisible();
+  expect(overriddenReads).toBeGreaterThan(0);
+  expect(unexpected).toEqual([]);
+  const before = overriddenReads;
+  // Deliberate blocked negative probe: setup aborts before network transmission.
+  const result = await page.evaluate(async () => {
+    try {
+      await fetch("https://external-fixture.invalid/api/admin/announcements");
+      return "fulfilled";
+    } catch { return "blocked"; }
+  });
+  expect(result).toBe("blocked");
+  expect(overriddenReads).toBe(before);
+  expect(unexpected).toEqual(["external fetch"]);
 });

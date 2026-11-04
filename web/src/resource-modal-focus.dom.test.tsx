@@ -75,9 +75,9 @@ async function task(kind: "file" | "reference") {
     </QueryClientProvider>,
   );
   await screen.findByText("暂无规则资源");
-  const opener = screen.getAllByRole("button", {
+  const opener = screen.getByRole("button", {
     name: kind === "file" ? "导入规则文件" : "添加公开引用",
-  })[0];
+  });
   await userEvent.click(opener);
   const title = kind === "file" ? "导入规则文件" : "添加公开规则引用";
   const dialog = await screen.findByRole("dialog", { name: title });

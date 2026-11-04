@@ -242,6 +242,18 @@ for (const width of [320, 390, 1440])
         .locator('[data-slot="table-container"]')
         .filter({ has: rows[0] });
       expect(await viewport.count()).toBe(1);
+      // Capture the initial information hierarchy before horizontally scrolling
+      // to action controls. These records are synthetic inventory, not health.
+      if (surface.name === "core-instances") {
+        await expect(
+          page.getByRole("tab", { name: surface.tab!, exact: true }),
+        ).toHaveAttribute("aria-selected", "true");
+        await page.screenshot({
+          path: info.outputPath(
+            `core-instances-${width}-initial-inventory.png`,
+          ),
+        });
+      }
       await viewport.scrollIntoViewIfNeeded();
       const overflowing = await viewport.evaluate(
         (el) => el.scrollWidth > el.clientWidth + 1,

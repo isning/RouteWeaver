@@ -365,6 +365,18 @@ test("real invite signup switches identity without inheriting old account draft 
   await expect(workspace(page)).toHaveAttribute("hidden", "");
   await expect(field).not.toBeVisible();
   await other.goto(invitation);
+  // Capture only the blank invitation form. Never include the invitation URL,
+  // token, generated account name or password in a screenshot/attachment.
+  const signup = other.getByRole("button", {
+    name: "创建账号并继续",
+    exact: true,
+  });
+  await expect(signup).toBeVisible();
+  await expect(other.getByLabel("密码", { exact: true })).toHaveValue("");
+  await other.screenshot({
+    path: info.outputPath("invite-registration-blank-real-backend.png"),
+    mask: [other.getByLabel("邀请码", { exact: true })],
+  });
   await other
     .getByLabel("账号", { exact: true })
     .fill(`session-b-${Date.now()}.test`);

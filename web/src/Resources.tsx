@@ -224,14 +224,7 @@ export function ResourcesPage() {
       >
         <Section variant="plain">
           {!query.data?.length ? (
-            <EmptyState
-              title="暂无规则资源"
-              action={
-                <ActionButton onClick={() => startImport()} variant="default">
-                  导入规则文件
-                </ActionButton>
-              }
-            />
+            <EmptyState title="暂无规则资源" />
           ) : (
             <DataTable
               rowKey="id"
