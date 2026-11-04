@@ -14,6 +14,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { UIProviders } from "./ui-patterns/providers";
@@ -1627,7 +1628,10 @@ it("shows a neutral empty state and keeps add-step selection ready for another a
   expect(
     screen.getByText("添加处理步骤", { selector: "[role=combobox] span" }),
   ).toBeTruthy();
-  expect(screen.getByText(/来源名称.*\{source\}/)).toBeTruthy();
+  const sourceNameHelp = screen.getByText("来源名称");
+  expect(
+    within(sourceNameHelp).getByText("{source}", { selector: "code" }),
+  ).toBeTruthy();
   await user.click(screen.getByRole("combobox", { name: "添加处理步骤" }));
   await user.click(
     await screen.findByText("重新命名", {

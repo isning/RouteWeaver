@@ -27,11 +27,21 @@ const fixtures: Record<string, unknown> = {
   "/admin/fleet-batches": [],
 };
 
-async function setup(page: Page) {
+async function setup(page: Page, withRoute = false) {
   const baseURL = test.info().project.use.baseURL;
   if (!baseURL || !["127.0.0.1", "localhost", "[::1]"].includes(new URL(baseURL).hostname))
     throw new Error("Toolbar layout QA requires loopback");
   const origin = new URL(baseURL).origin;
+  const pageFixtures: Record<string, unknown> = {
+    ...fixtures,
+    ...(withRoute ? {
+      "/server-deployments": [{
+        id: "toolbar-route", name: "远程协作转发路径", status: "draft",
+        diagnostics: [], updatedAt: "2026-11-04T08:00:00Z",
+        ir: { schemaVersion: "1.0", id: "toolbar-route", topologyRevision: "1", programs: [] },
+      }],
+    } : {}),
+  };
   const unexpected: string[] = [];
   await page.route("**/*", (route) => {
     const request = route.request();
@@ -42,11 +52,11 @@ async function setup(page: Page) {
     }
     if (!url.pathname.startsWith("/api/")) return route.continue();
     const path = url.pathname.slice(4);
-    if (request.method() !== "GET" || !(path in fixtures)) {
+    if (request.method() !== "GET" || !(path in pageFixtures)) {
       unexpected.push(`${request.method()} ${path}`);
       return route.fulfill({ status: 503, json: { detail: "Unsupported toolbar fixture request" } });
     }
-    return route.fulfill({ json: fixtures[path] });
+    return route.fulfill({ json: pageFixtures[path] });
   });
   return unexpected;
 }
@@ -120,7 +130,7 @@ for (const width of [320, 390, 900, 1440]) {
     test(`${pageName} keeps list search compact and usable at ${width}px`, async ({ page }, info) => {
       await page.setViewportSize({ width, height: 900 });
       await page.emulateMedia({ reducedMotion: "reduce" });
-      const unexpected = await setup(page);
+      const unexpected = await setup(page, pageName === "routes");
       await page.goto(`/#${pageName}`);
       const toolbar = page.getByRole("search", {
         name: pageName === "users" ? "查找用户" : "查找转发路径",
@@ -141,17 +151,28 @@ for (const width of [320, 390, 900, 1440]) {
         expect(Math.abs(searchBox.width - bounds.width)).toBeLessThanOrEqual(1);
       }
       if (pageName === "routes") {
-        const count = toolbar.getByText("共 0 条", { exact: true });
+        const table = page.getByRole("table");
+        await expect(table).toHaveAccessibleDescription("共 1 条转发路径");
+        const summaryID = await table.getAttribute("aria-describedby");
+        expect(summaryID).toBeTruthy();
+        const count = page.locator(`[id="${summaryID}"]`);
         await expect(count).toBeVisible();
+        await expect(count).toHaveText("共 1 条转发路径");
+        await expect(toolbar.getByText("共 1 条转发路径", { exact: true })).toHaveCount(0);
         const countBox = (await count.boundingBox())!;
-        if (width >= 640) {
-          expect(countBox.x - (searchBox.x + searchBox.width)).toBeGreaterThanOrEqual(8);
-          expect(countBox.x - (searchBox.x + searchBox.width)).toBeLessThanOrEqual(24);
-        } else {
-          expect(countBox.y).toBeGreaterThanOrEqual(searchBox.y + searchBox.height);
-        }
+        const headingBox = (await table.getByRole("row").first().boundingBox())!;
+        // The total belongs to the table's header strip, independent of search width.
+        expect(countBox.x).toBeGreaterThanOrEqual(bounds.x - 1);
+        expect(countBox.x + countBox.width).toBeLessThanOrEqual(bounds.x + bounds.width + 1);
+        expect(countBox.y).toBeGreaterThanOrEqual(bounds.y + bounds.height - 1);
+        expect(countBox.y + countBox.height).toBeLessThanOrEqual(headingBox.y + 1);
       }
       await search.fill("待查名称");
+      if (pageName === "routes") {
+        const table = page.getByRole("table");
+        await expect(table).toHaveAccessibleDescription(/找到 0 条转发路径\s*共 1 条转发路径/);
+        await expect(table.getByRole("button", { name: "远程协作转发路径", exact: true })).toHaveCount(0);
+      }
       await search.press("Tab");
       const clear = toolbar.getByRole("button", { name: "清除搜索输入", exact: true });
       await expect(clear).toBeFocused();
@@ -161,6 +182,11 @@ for (const width of [320, 390, 900, 1440]) {
       await clear.press("Enter");
       await expect(search).toHaveValue("");
       await expect(search).toBeFocused();
+      if (pageName === "routes") {
+        const table = page.getByRole("table");
+        await expect(table).toHaveAccessibleDescription("共 1 条转发路径");
+        await expect(table.getByRole("button", { name: "远程协作转发路径", exact: true })).toBeVisible();
+      }
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
       await info.attach(`${pageName}-toolbar-${width}`, {
         body: await page.screenshot(), contentType: "image/png",
@@ -169,3 +195,23 @@ for (const width of [320, 390, 900, 1440]) {
     });
   }
 }
+
+test("an empty route inventory keeps its neutral state and search keyboard flow", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 900 });
+  const unexpected = await setup(page);
+  await page.goto("/#routes");
+  await expect(page.getByText("暂无服务器转发路径", { exact: true })).toBeVisible();
+  await expect(page.getByRole("table")).toHaveCount(0);
+  const toolbar = page.getByRole("search", { name: "查找转发路径", exact: true });
+  const search = toolbar.getByLabel("搜索转发路径", { exact: true });
+  await search.fill("待查名称");
+  await search.press("Tab");
+  const clear = toolbar.getByRole("button", { name: "清除搜索输入", exact: true });
+  await expect(clear).toBeFocused();
+  await clear.press("Enter");
+  await expect(search).toBeFocused();
+  await expect(search).toHaveValue("");
+  await expect(page.getByText("暂无服务器转发路径", { exact: true })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  expect(unexpected).toEqual([]);
+});

@@ -14,6 +14,9 @@ type DriverOptions struct {
 	NodeObserver  *NodeObserver
 	PollInterval  time.Duration
 	LeaseInterval time.Duration
+	// HeartbeatNow controls only heartbeat cadence, not policy time or tickers.
+	// Defaults to time.Now; injected clocks must be safe for concurrent use.
+	HeartbeatNow func() time.Time
 	// Continuous explicitly opts into a foreground service until parent cancellation.
 	// Otherwise MaxRuntime must bound the session. These modes are exclusive.
 	Continuous       bool
@@ -49,6 +52,10 @@ func RunDriver(parent context.Context, r *Reconciler, tr ControlPlaneTransport, 
 		ctx, cancel = context.WithTimeout(parent, o.MaxRuntime)
 	}
 	defer cancel()
+	heartbeatNow := o.HeartbeatNow
+	if heartbeatNow == nil {
+		heartbeatNow = time.Now
+	}
 	scope := r.scope()
 	managed := false
 	for _, descriptor := range r.registry.Descriptors() {
@@ -154,8 +161,7 @@ func RunDriver(parent context.Context, r *Reconciler, tr ControlPlaneTransport, 
 			case <-ctx.Done():
 				return
 			}
-			if service, ok := tr.(ServiceHeartbeatTransport); ok && o.Continuous && !time.Now().Before(nextHeartbeat) {
-				nextHeartbeat = time.Now().Add(5 * time.Second)
+			if service, ok := tr.(ServiceHeartbeatTransport); ok && o.Continuous && !heartbeatNow().Before(nextHeartbeat) {
 				reply := make(chan heartbeatDelivery, 1)
 				select {
 				case heartbeatRequests <- reply:
@@ -188,6 +194,10 @@ func RunDriver(parent context.Context, r *Reconciler, tr ControlPlaneTransport, 
 				} else {
 					reportError(fact.err)
 				}
+				// The control plane rate-limits from receipt, not request start.
+				// Wait the full interval after every response/application, rather
+				// than spending part of it in transport or validation work.
+				nextHeartbeat = heartbeatNow().Add(5 * time.Second)
 			}
 			if meter != nil {
 				for _, batch := range meter.Pending() {
