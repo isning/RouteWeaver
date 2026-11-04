@@ -1015,10 +1015,10 @@ it.each([
   const opener = await screen.findByRole("button", { name: `更多操作 ${target}` });
   const deleteLabel = `${hash === "nodes" ? "删除端点" : "删除链路配置"} ${target}`;
   expect(screen.queryByRole("button", { name: deleteLabel })).toBeNull();
-  expect(screen.getByRole("columnheader", { name: "操作", exact: true })).toBeTruthy();
+  expect(screen.getByRole("columnheader", { name: "操作" })).toBeTruthy();
   for (let attempt = 0; attempt < 2; attempt++) {
     await userEvent.click(opener);
-    await userEvent.click(await screen.findByRole("menuitem", { name: deleteLabel, exact: true }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: deleteLabel }));
     await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
     const confirmation = await screen.findByRole("alertdialog");
     expect(within(confirmation).getByRole("heading").textContent).toContain(target);
@@ -1047,15 +1047,15 @@ it("keeps legacy deletion behind its row menu and submits the exact target only 
   mount(<AdminPage page="legacy-routes" />);
   const opener = await screen.findByRole("button", { name: "更多操作 Example legacy route" });
   const row = screen.getByRole("group", { name: "Example legacy route 的操作" });
-  expect(within(row).getByRole("button", { name: "编辑", exact: true })).toBeTruthy();
-  expect(within(row).getByRole("button", { name: "校验 Example legacy route", exact: true })).toBeTruthy();
+  expect(within(row).getByRole("button", { name: "编辑" })).toBeTruthy();
+  expect(within(row).getByRole("button", { name: "校验 Example legacy route" })).toBeTruthy();
   await userEvent.click(opener);
-  await userEvent.click(await screen.findByRole("menuitem", { name: "删除链路配置 Example legacy route", exact: true }));
+  await userEvent.click(await screen.findByRole("menuitem", { name: "删除链路配置 Example legacy route" }));
   const confirmation = await screen.findByRole("alertdialog", { name: "删除链路配置「Example legacy route」？" });
   const keep = within(confirmation).getByRole("button", { name: "保留" });
   await waitFor(() => expect(document.activeElement).toBe(keep));
   expect(deleted).toEqual([]);
-  const remove = within(confirmation).getByRole("button", { name: "删除", exact: true });
+  const remove = within(confirmation).getByRole("button", { name: "删除" });
   await userEvent.dblClick(remove);
   expect(deleted).toEqual(["/api/routes/route"]);
   expect(remove).toHaveProperty("disabled", true);

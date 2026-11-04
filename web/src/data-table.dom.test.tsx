@@ -4,7 +4,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import { createRef } from "react";
 import userEvent from "@testing-library/user-event";
-import { DataTable, type DataTableHandle } from "./DataTable";
+import { DataTable, TableRowActions, type DataTableHandle } from "./DataTable";
 
 const hint = "向左右滚动查看完整表格";
 const observers = new Set<{
@@ -547,4 +547,159 @@ it("offers a keyboard scroll region only for populated overflowing tables", asyn
   view.rerender(viewFor([]));
   expect(screen.queryByRole("region", { name: "表格滚动区域" })).toBeNull();
   expect(screen.queryByText(hint)).toBeNull();
+});
+
+it("reveals an already keyboard-focused action and its target when the table becomes narrower", async () => {
+  render(
+    <DataTable
+      rows={[{ id: "a", name: "完整来源名称" }]}
+      rowKey="id"
+      columns={[
+        { title: "来源", accessor: "name" },
+        {
+          title: "操作",
+          render: (_, row) => (
+            <TableRowActions name={row.name}>
+              <button>应用更新 {row.name}</button>
+            </TableRowActions>
+          ),
+        },
+      ]}
+      minWidth={720}
+    />,
+  );
+  const action = screen.getByRole("button", { name: "应用更新 完整来源名称" });
+  const group = screen.getByRole("group", { name: "完整来源名称 的操作" });
+  const reveal = vi.spyOn(group, "scrollIntoView");
+  vi.spyOn(group, "getBoundingClientRect").mockImplementation(
+    () => new DOMRect(560, 0, 160, 44),
+  );
+  await userEvent.tab();
+  expect(document.activeElement).toBe(action);
+  expect(reveal).not.toHaveBeenCalled();
+  for (const width of [254, 900, 375]) {
+    reveal.mockClear();
+    resize(width);
+    expect(document.activeElement).toBe(action);
+    if (width < 720)
+      expect(reveal).toHaveBeenCalledWith({
+        block: "nearest",
+        inline: "nearest",
+      });
+    else expect(reveal).not.toHaveBeenCalled();
+  }
+});
+
+it("does not move pointer-focused row actions or another region's focused control on resize", () => {
+  render(
+    <>
+      <button>其他区域操作</button>
+      <DataTable
+        rows={[{ id: "a", name: "来源 A" }]}
+        rowKey="id"
+        columns={[
+          {
+            title: "操作",
+            render: (_, row) => (
+              <TableRowActions name={row.name}>
+                <button>编辑来源</button>
+              </TableRowActions>
+            ),
+          },
+        ]}
+        minWidth={720}
+      />
+    </>,
+  );
+  const action = screen.getByRole("button", { name: "编辑来源" });
+  const outside = screen.getByRole("button", { name: "其他区域操作" });
+  const group = screen.getByRole("group", { name: "来源 A 的操作" });
+  const reveal = vi.spyOn(group, "scrollIntoView");
+  // Browser focus modality is a layout boundary absent from jsdom. Preserve
+  // every other selector while representing pointer focus without a focus ring.
+  const matches = action.matches.bind(action);
+  vi.spyOn(action, "matches").mockImplementation((selector) =>
+    selector === ":focus-visible" ? false : matches(selector),
+  );
+  action.focus();
+  resize(254);
+  expect(document.activeElement).toBe(action);
+  expect(reveal).not.toHaveBeenCalled();
+  resize(900);
+  outside.focus();
+  resize(254);
+  expect(document.activeElement).toBe(outside);
+  expect(reveal).not.toHaveBeenCalled();
+});
+
+it("preserves a user's horizontal scroll on rerenders and unchanged resize notifications", async () => {
+  const table = (summary: string) => (
+    <DataTable
+      rows={[{ id: "a", name: "来源 A" }]}
+      rowKey="id"
+      summary={summary}
+      minWidth={720}
+      columns={[
+        {
+          title: "操作",
+          render: (_, row) => (
+            <TableRowActions name={row.name}>
+              <button>编辑来源</button>
+            </TableRowActions>
+          ),
+        },
+      ]}
+    />
+  );
+  const view = render(table("首次读取"));
+  const action = screen.getByRole("button", { name: "编辑来源" });
+  const group = screen.getByRole("group", { name: "来源 A 的操作" });
+  const viewport = screen.getByRole("table").parentElement!;
+  vi.spyOn(group, "getBoundingClientRect").mockImplementation(
+    () => new DOMRect(560, 0, 160, 44),
+  );
+  const reveal = vi.spyOn(group, "scrollIntoView");
+  await userEvent.tab();
+  resize(254);
+  expect(reveal).toHaveBeenCalled();
+  reveal.mockClear();
+  // Scrolling changes position, not size. A retained focused action must not
+  // override the user's choice to inspect a different part of the same row.
+  viewport.scrollLeft = 0;
+  view.rerender(table("后台已重新读取"));
+  notifyResize(viewport);
+  expect(document.activeElement).toBe(action);
+  expect(viewport.scrollLeft).toBe(0);
+  expect(reveal).not.toHaveBeenCalled();
+});
+
+it("does not scroll after a real size change when the focused action context remains visible", async () => {
+  render(
+    <DataTable
+      rows={[{ id: "a", name: "来源 A" }]}
+      rowKey="id"
+      minWidth={720}
+      columns={[
+        {
+          title: "操作",
+          render: (_, row) => (
+            <TableRowActions name={row.name}>
+              <button>编辑来源</button>
+            </TableRowActions>
+          ),
+        },
+      ]}
+    />,
+  );
+  const group = screen.getByRole("group", { name: "来源 A 的操作" });
+  vi.spyOn(group, "getBoundingClientRect").mockImplementation(
+    () => new DOMRect(20, 0, 160, 44),
+  );
+  const reveal = vi.spyOn(group, "scrollIntoView");
+  await userEvent.tab();
+  resize(254);
+  expect(document.activeElement).toBe(
+    screen.getByRole("button", { name: "编辑来源" }),
+  );
+  expect(reveal).not.toHaveBeenCalled();
 });

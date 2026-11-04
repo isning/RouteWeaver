@@ -56,12 +56,18 @@ for (const width of [1440, 390]) {
       const remove = page.getByRole("menuitem", { name: `删除链路配置 ${name}`, exact: true });
       await expect(remove).toBeFocused();
       await expect(remove).toHaveText("删除链路配置");
+      if (attempt === 0) await info.attach(`legacy-route-menu-open-${width}`, {
+        body: await page.screenshot({ animations: "disabled" }), contentType: "image/png",
+      });
       await page.keyboard.press("Enter");
       const confirmation = page.getByRole("alertdialog", { name: `删除链路配置「${name}」？`, exact: true });
       await expect(confirmation).toBeVisible();
       await expect(page.getByRole("menu")).toHaveCount(0);
       await expect(confirmation.getByText("已分配用户将不能从此链路配置获取新配置。", { exact: true })).toBeVisible();
       await expect(confirmation.getByRole("button", { name: "保留", exact: true })).toBeFocused();
+      if (attempt === 0) await info.attach(`legacy-route-delete-confirmation-${width}`, {
+        body: await page.screenshot({ animations: "disabled" }), contentType: "image/png",
+      });
       await page.keyboard.press("Escape");
       await expect(confirmation).toHaveCount(0);
       await expect(opener).toBeFocused();

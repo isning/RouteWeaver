@@ -69,14 +69,15 @@ export function TableRowActions({
 }) {
   return (
     <div
-      // Size actions to their content, bounded by the viewport (§3.3 / §3.6).
+      // Keep a readable 10rem identity measure even for a single icon action,
+      // bounded by the viewport. This minimum applies at every size (§3.3 / §3.6).
       // Wrapping must not depend on measured overflow: changing width in
       // response to overflow can make ResizeObserver alternate both layouts.
       // The repeated target uses inline-size containment so revealing a long
       // name cannot widen the table and keep overflow stuck after a resize.
       // Its block size remains natural, so the full name can wrap without clipping.
       className={cn(
-        "table-row-actions ml-auto flex w-max max-w-[calc(var(--table-viewport-width,100vw)-2rem)] flex-col items-end gap-1.5",
+        "table-row-actions ml-auto flex w-max min-w-[min(10rem,calc(var(--table-viewport-width,100vw)-2rem))] max-w-[calc(var(--table-viewport-width,100vw)-2rem)] flex-col items-end gap-1.5",
         className,
       )}
       role="group"
@@ -174,6 +175,11 @@ export function DataTable<T extends object>({
   ref,
 }: DataTableProps<T>) {
   const container = useRef<HTMLDivElement>(null);
+  const lastMeasurement = useRef<{
+    viewport: HTMLElement;
+    width: number;
+    contentWidth: number;
+  } | null>(null);
   const summaryId = useId();
   const scrollHintId = useId();
   const [overflows, setOverflows] = useState(false);
@@ -312,13 +318,15 @@ export function DataTable<T extends object>({
     // The official Table always owns horizontal scrolling; content can overflow
     // even without a caller-provided minimum width.
     const measure = () => {
-      root.style.setProperty(
-        "--table-viewport-width",
-        `${viewport.clientWidth}px`,
-      );
-      const overflows =
-        viewport.clientWidth > 0 &&
-        viewport.scrollWidth > viewport.clientWidth + 1;
+      const width = viewport.clientWidth;
+      root.style.setProperty("--table-viewport-width", `${width}px`);
+      const contentWidth = viewport.scrollWidth;
+      const previous = lastMeasurement.current;
+      const resized =
+        previous?.viewport === viewport &&
+        (previous.width !== width || previous.contentWidth !== contentWidth);
+      lastMeasurement.current = { viewport, width, contentWidth };
+      const overflows = width > 0 && contentWidth > width + 1;
       setOverflows(overflows);
       // The native scroll viewport, rather than a second wrapper, must be
       // reachable by keyboard. Leave ordinary and empty tables out of the tab
@@ -328,6 +336,24 @@ export function DataTable<T extends object>({
         viewport.setAttribute("role", "region");
         viewport.setAttribute("aria-label", "表格滚动区域");
         viewport.setAttribute("aria-describedby", scrollHintId);
+        // A focused action emits no new focus event after a resize. Reveal it
+        // only for a genuine horizontal size change that leaves its bounded
+        // context outside this viewport. Rerenders and user scrolling must not
+        // pull an intentionally scrolled-away row back into view.
+        const focused = root.ownerDocument.activeElement;
+        const actions = focused?.closest<HTMLElement>(".table-row-actions");
+        if (
+          resized &&
+          focused?.matches(":focus-visible") &&
+          root.contains(focused) &&
+          actions?.closest(".data-table") === root
+        ) {
+          const bounds = actions.getBoundingClientRect();
+          const left =
+            viewport.getBoundingClientRect().left + viewport.clientLeft;
+          if (bounds.left < left - 1 || bounds.right > left + width + 1)
+            actions.scrollIntoView({ block: "nearest", inline: "nearest" });
+        }
       } else {
         viewport.removeAttribute("tabindex");
         viewport.removeAttribute("role");

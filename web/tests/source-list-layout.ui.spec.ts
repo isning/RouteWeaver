@@ -324,6 +324,12 @@ test("source target identity does not keep overflow stuck after repeated narrow-
     name: `应用更新 ${names[1]}`,
     exact: true,
   });
+  // Establish real keyboard-visible focus once. Re-focusing on each resize
+  // would hide regressions where a still-focused offscreen action is stranded.
+  const row = page.getByRole("row").filter({ has: groups[1] });
+  await row.getByRole("button").first().focus();
+  await page.keyboard.press("Tab");
+  await expect(action).toBeFocused();
   // Resizing must neither remount nor replace the focused action owner.
   const originalAction = await action.elementHandle();
   const dimensions: Array<{
@@ -357,13 +363,33 @@ test("source target identity does not keep overflow stuck after repeated narrow-
         }),
     );
     expect(settledOverflow).toEqual(Array(4).fill(width === 390));
+    await info.attach(`source-list-resize-${dimensions.length}-${width}`, {
+      body: JSON.stringify({
+        width,
+        viewport: await viewport.boundingBox(),
+        identity: await identity.boundingBox(),
+        action: await action.boundingBox(),
+        scrollLeft: await viewport.evaluate((element) => element.scrollLeft),
+        keyboardFocus: await action.evaluate((element) =>
+          element.matches(":focus-visible"),
+        ),
+      }),
+      contentType: "application/json",
+    });
+    await expect(action).toBeFocused();
     if (width === 390) {
-      await action.focus();
-      await expect(action).toBeFocused();
       await expect(identity).toBeVisible();
       await expect(identity).toHaveText(longSourceName);
       await contained(identity, viewport);
       await contained(action, viewport);
+      for (const group of groups) {
+        const label = group.locator(".table-row-action-target");
+        await expect(label).toBeVisible();
+        const bounds = (await label.boundingBox())!;
+        // Single-icon rows need a readable target measure too, not a 44px strip.
+        expect(bounds.width).toBeGreaterThanOrEqual(160);
+        await contained(label, viewport);
+      }
       // Inline-size containment must preserve natural block layout, not crop or
       // ellipsize the identity to achieve the desired table width.
       const textBounds = await identity.evaluate((element) => {
