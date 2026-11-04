@@ -6,6 +6,7 @@ import type {
   CoreInstance,
   ManagedEndpoint,
   ServerDeployment,
+  Service,
 } from "../src/types";
 import type { UserGroup } from "../src/access-policy-model";
 import type { PublishedRoute } from "../src/PublishedRoutes";
@@ -118,6 +119,10 @@ const published: PublishedRoute[] = deployments.map((deployment, i) => ({
   status: "draft",
   diagnostics: [],
 }));
+const services: Service[] = [
+  { id: "standard", name: "日常协作服务方案", quotaBytes: 107374182400, routeIds: [], cycle: { mode: "monthly" }, onlineIpLimit: 3, connectionLimit: 20 },
+  { id: "extended", name: "欧洲与亚太团队长期协作服务方案", quotaBytes: 536870912000, routeIds: [], cycle: { mode: "anniversary" }, onlineIpLimit: 8, connectionLimit: 60 },
+];
 const fixtures: Record<string, unknown> = {
   "/auth/me": {
     user: { id: "admin", name: "审查管理员", role: "admin" },
@@ -138,15 +143,7 @@ const fixtures: Record<string, unknown> = {
   "/managed-endpoints": endpoints,
   "/links": [],
   "/server-deployments": deployments,
-  "/services": [
-    {
-      id: "standard",
-      name: "日常协作服务方案",
-      quotaBytes: 0,
-      routeIds: [],
-      cycle: { mode: "none" },
-    },
-  ],
+  "/services": services,
   "/published-routes": published,
   "/settings": {},
   "/rates": [],
@@ -314,3 +311,63 @@ for (const width of [320, 390, 1440])
       expect(unexpected).toEqual([]);
     });
   }
+
+// The tablet breakpoint frees the sidebar but retains real populated tables.
+// Verify usable rows rather than assuming every table must fit without scrolling.
+for (const surface of [
+  { route: "services", name: "services", names: services.map((service) => service.name) },
+  { route: "users", name: "user-groups", names: groups.map((group) => group.name) },
+  { route: "nodes", name: "endpoints", names: nodes.map((node) => node.name) },
+]) {
+  test(`${surface.name} populated tablet controls do not overlap and remain reachable at 900`, async ({ page }, info) => {
+    await page.setViewportSize({ width: 900, height: 1000 });
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    const errors: string[] = [];
+    page.on("pageerror", (error) => errors.push(error.message));
+    const unexpected = await setup(page);
+    await page.goto(`/#${surface.route}`);
+    const groups = surface.names.map((name) => page.getByRole("group", { name: `${name} 的操作`, exact: true }));
+    await expect(groups[1]).toBeVisible();
+    const viewport = page.locator('[data-slot="table-container"]').filter({ has: groups[0] });
+    await expect(viewport).toHaveCount(1);
+    await viewport.scrollIntoViewIfNeeded();
+    await info.attach(`${surface.name}-900-populated-inventory`, {
+      body: await page.screenshot({ fullPage: true, animations: "disabled" }), contentType: "image/png",
+    });
+    for (const group of groups) {
+      const buttons = group.getByRole("button");
+      expect(await buttons.count()).toBeGreaterThan(0);
+      const boxes = await Promise.all((await buttons.all()).map((button) => button.boundingBox()));
+      for (let i = 0; i < boxes.length; i++) {
+        expect(boxes[i]).not.toBeNull();
+        expect(boxes[i]!.height).toBeGreaterThanOrEqual(44);
+        expect(boxes[i]!.width).toBeGreaterThanOrEqual(44);
+        for (let j = i + 1; j < boxes.length; j++) {
+          const a = boxes[i]!, b = boxes[j]!;
+          const overlapWidth = Math.min(a.x + a.width, b.x + b.width) - Math.max(a.x, b.x);
+          const overlapHeight = Math.min(a.y + a.height, b.y + b.height) - Math.max(a.y, b.y);
+          expect(overlapWidth <= 1 || overlapHeight <= 1).toBe(true);
+        }
+      }
+      await buttons.first().focus();
+      await page.keyboard.press("Shift+Tab");
+      for (const button of await buttons.all()) {
+        await page.keyboard.press("Tab");
+        await expect(button).toBeFocused();
+        await expect(button).toBeInViewport({ ratio: 1 });
+        await contained(button, viewport);
+        expect(await button.evaluate((element) => {
+          const rect = element.getBoundingClientRect();
+          const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+          return hit === element || (hit !== null && element.contains(hit));
+        })).toBe(true);
+      }
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+    await info.attach(`${surface.name}-900-keyboard-action-context`, {
+      body: await page.screenshot({ animations: "disabled" }), contentType: "image/png",
+    });
+    expect(unexpected).toEqual([]);
+    expect(errors).toEqual([]);
+  });
+}

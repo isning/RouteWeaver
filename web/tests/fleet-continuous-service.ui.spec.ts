@@ -1,4 +1,29 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
+
+async function scrollSheetToBottom(page: Page, dialog: Locator) {
+  const body = dialog.locator("[data-task-overlay-body]");
+  await expect(body).toBeVisible();
+  expect(await body.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(true);
+  await body.hover();
+  await page.mouse.wheel(0, 10000);
+  await expect.poll(() => body.evaluate((element) => element.scrollHeight - element.clientHeight - element.scrollTop)).toBeLessThanOrEqual(1);
+  return body;
+}
+
+async function visibleControl(control: Locator, body: Locator) {
+  await expect(control).toBeInViewport({ ratio: 1 });
+  const box = (await control.boundingBox())!, bounds = (await body.boundingBox())!;
+  expect(box.height).toBeGreaterThanOrEqual(44);
+  expect(box.x).toBeGreaterThanOrEqual(bounds.x - 1);
+  expect(box.x + box.width).toBeLessThanOrEqual(bounds.x + bounds.width + 1);
+  expect(box.y).toBeGreaterThanOrEqual(bounds.y - 1);
+  expect(box.y + box.height).toBeLessThanOrEqual(bounds.y + bounds.height + 1);
+  expect(await control.evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+    return hit === element || (hit !== null && element.contains(hit));
+  })).toBe(true);
+}
 
 // Controlled preview only; no batch creation, node execution or real service mutation.
 for (const width of [320, 390, 1440]) {
@@ -112,9 +137,22 @@ for (const width of [320, 390, 1440]) {
       .getByRole("button", { name: "选择筛选结果", exact: true })
       .click();
     await continuing.check();
-    await dialog
-      .getByRole("button", { name: "预览影响与差异", exact: true })
-      .click();
+    const preview = dialog.getByRole("button", { name: "预览影响与差异", exact: true });
+    if (width === 390) {
+      const body = await scrollSheetToBottom(page, dialog);
+      const cancel = dialog.getByRole("button", { name: "取消", exact: true });
+      await visibleControl(cancel, body);
+      await cancel.focus();
+      await page.keyboard.press("Tab");
+      await expect(preview).toBeFocused();
+      await visibleControl(preview, body);
+      const cancelBox = (await cancel.boundingBox())!, previewBox = (await preview.boundingBox())!;
+      expect(cancelBox.x + cancelBox.width <= previewBox.x + 1 || cancelBox.y + cancelBox.height <= previewBox.y + 1).toBe(true);
+      await info.attach("fleet-drawer-390-plan-bottom-keyboard", {
+        body: await page.screenshot({ animations: "disabled" }), contentType: "image/png",
+      });
+    }
+    await preview.click();
     await expect(dialog.getByText(/最多自动恢复 3 次/)).toBeVisible();
     const consequence = dialog.getByText(/最多自动恢复 3 次/);
     await consequence.scrollIntoViewIfNeeded();
@@ -131,7 +169,17 @@ for (const width of [320, 390, 1440]) {
       name: "创建待执行批次",
       exact: true,
     });
-    await create.focus();
+    if (width === 390) {
+      const body = await scrollSheetToBottom(page, dialog);
+      await reviewed.focus();
+      await page.keyboard.press("Tab");
+      await expect(create).toBeFocused();
+      await visibleControl(create, body);
+      await expect(dialog.getByText("创建计划不会执行。下一步逐阶段确认开始。", { exact: true })).toBeInViewport({ ratio: 1 });
+      await info.attach("fleet-drawer-390-review-bottom-keyboard", {
+        body: await page.screenshot({ animations: "disabled" }), contentType: "image/png",
+      });
+    } else await create.focus();
     await expect(create).toBeInViewport();
     await page.screenshot({
       path: info.outputPath(`continuous-service-review-${width}.png`),
