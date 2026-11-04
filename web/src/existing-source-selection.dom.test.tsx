@@ -215,7 +215,7 @@ it(
     const issues = within(
       await parent.findByRole("region", { name: "需要处理的来源" }),
     );
-    expect(issues.getByText("Paused · 已暂停")).toBeTruthy();
+    expect(issues.getByText("已暂停")).toBeTruthy();
     expect(
       (parent.getByRole("button", { name: "保存集合" }) as HTMLButtonElement)
         .disabled,
@@ -594,7 +594,7 @@ it("does not diagnose a paused Source when its inventory read failed", async () 
   mount([accepted("Paused", { enabled: false })], profile, true);
   await screen.findByRole("button", { name: "重新加载来源" });
   expect(screen.queryByRole("region", { name: "需要处理的来源" })).toBeNull();
-  expect(screen.queryByText(/Paused · 已暂停/)).toBeNull();
+  expect(screen.queryByText("已暂停")).toBeNull();
   await userEvent.click(screen.getByRole("button", { name: "编辑来源" }));
   expect(screen.getByRole("combobox", { name: "使用的订阅来源" })).toBeTruthy();
 });
@@ -655,7 +655,8 @@ it("labels an incomplete Source summary as awaiting verification rather than pau
     [{ id: "Unknown", name: "Unknown provider", kind: "text" } as Source],
     profile,
   );
-  await screen.findByText("Unknown provider · 状态待核对");
+  const state = await screen.findByText("状态待核对");
+  expect(within(state.parentElement!).getByText("Unknown provider")).toBeTruthy();
   expect(screen.queryByRole("region", { name: "需要处理的来源" })).toBeNull();
 });
 

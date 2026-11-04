@@ -381,10 +381,10 @@ it("labels route grants as authorization rather than claiming runtime availabili
   );
   mount(<SubscriptionsPage navigate={vi.fn()} />);
   await screen.findByRole("region", {
-    name: "平台提供的线路 · 3",
+    name: "平台提供的线路 3 条",
   });
   expect(screen.queryByRole("button", { name: "可用平台线路 · 1" })).toBeNull();
-  expect(screen.queryByRole("button", { name: "平台提供的线路 · 3" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "平台提供的线路 3 条" })).toBeNull();
   for (const name of ["Draft route", "跨区域协作线路 LongRemoteWorkspaceConnection", "备用线路 BackupInternationalRemoteWorkspaceConnection"]) {
     expect(screen.getByRole("heading", { name })).toBeTruthy();
   }
@@ -451,7 +451,7 @@ it("shows the converted collection result first and keeps original stages availa
   expect(
     screen.getByRole("cell", { name: "Airport · Original UK" }),
   ).toBeTruthy();
-  await user.click(screen.getByRole("tab", { name: "原始输入 · Airport" }));
+  await user.click(screen.getByRole("tab", { name: "原始输入 Airport" }));
   expect(screen.getByRole("cell", { name: "Original UK" })).toBeTruthy();
 });
 
@@ -512,10 +512,10 @@ it("distinguishes same-name connections and identifies each processing stage", a
     screen.getByRole("cell", { name: "[2001:db8::51]:1081" }),
   ).toBeTruthy();
   expect(
-    screen.getByRole("tab", { name: "合并后 · 1. 重新命名" }),
+    screen.getByRole("tab", { name: "合并后 第 1 步：重新命名" }),
   ).toBeTruthy();
   expect(
-    screen.getByRole("tab", { name: "合并后 · 2. 去除重复连接" }),
+    screen.getByRole("tab", { name: "合并后 第 2 步：去除重复连接" }),
   ).toBeTruthy();
 });
 

@@ -430,13 +430,13 @@ it("returns from authorization, credentials and the path planner to the same lin
     within(detail).getByRole("button", { name: "检查或调整用户授权" }),
   );
   const policy = await screen.findByRole("dialog", {
-    name: "Alice · 服务授权",
+    name: "Alice 的服务授权",
   });
   await within(policy).findByText("当前生效授权");
   await userEvent.click(within(policy).getByRole("button", { name: "关闭" }));
   await waitFor(() =>
     expect(
-      screen.queryByRole("dialog", { name: "Alice · 服务授权" }),
+      screen.queryByRole("dialog", { name: "Alice 的服务授权" }),
     ).toBeNull(),
   );
   expect(location.hash).toBe("#published-routes?line=line&user=alice");
@@ -462,7 +462,7 @@ it("returns from authorization, credentials and the path planner to the same lin
     within(principal).getByRole("button", { name: "检查此用户授权" }),
   );
   const nestedPolicy = await screen.findByRole("dialog", {
-    name: "Alice · 服务授权",
+    name: "Alice 的服务授权",
   });
   await userEvent.click(
     within(nestedPolicy).getByRole("button", { name: "关闭" }),
@@ -484,7 +484,7 @@ it("returns from authorization, credentials and the path planner to the same lin
     within(path).getByRole("button", { name: "分阶段应用修改" }),
   );
   const planner = await screen.findByRole("dialog", {
-    name: "Office path · 应用配置",
+    name: "Office path的应用配置",
   });
   expect(
     within(planner).queryByRole("combobox", { name: "批量操作" }),
@@ -584,7 +584,7 @@ it.each([
       within(detail).getByRole("button", { name: "管理此用户入口" }),
     );
     const entries = await screen.findByRole("dialog", {
-      name: "Alice · 平台入口",
+      name: "Alice 的平台入口",
     });
     const allocate = within(entries).getByRole("link", {
       name: "从公开线路分配",
@@ -595,7 +595,7 @@ it.each([
     await userEvent.click(allocate);
     await waitFor(() =>
       expect(
-        screen.queryByRole("dialog", { name: "Alice · 平台入口" }),
+        screen.queryByRole("dialog", { name: "Alice 的平台入口" }),
       ).toBeNull(),
     );
     expect(location.hash).toBe("#published-routes?line=line&user=alice");

@@ -65,7 +65,7 @@ func sourceDiff(before, after *domain.SourceSnapshot) SourceDiff {
 	diff := SourceDiff{Added: []SourceChange{}, Removed: []SourceChange{}, ConnectionChanged: []SourceChange{}, Renamed: []SourceChange{}}
 	redactLabel := sourceLabelRedactor(before, after)
 	connectionLabel := func(e domain.ClientEndpoint) string {
-		return redactLabel(e.Connection.Protocol + " · " + net.JoinHostPort(e.Connection.Host, strconv.Itoa(e.Connection.Port)))
+		return redactLabel(e.Connection.Protocol + " " + net.JoinHostPort(e.Connection.Host, strconv.Itoa(e.Connection.Port)))
 	}
 	old := map[string]domain.ClientEndpoint{}
 	next := map[string]domain.ClientEndpoint{}

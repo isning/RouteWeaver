@@ -10,6 +10,7 @@ export const chatGPTDomains = [
 export interface BasicChoice {
   id: string;
   label: string;
+  detail?: string;
   section: "平台线路" | "我的机场";
   sourceId?: string;
   platformEntryId?: string;
@@ -30,7 +31,8 @@ export function basicChoices(
     const rate = routes.find((route) => route.id === entry.routeId)?.rateMicros;
     return {
       id: entry.id,
-      label: `${entry.name}${rate === undefined ? " · 倍率未提供" : ` · ${rate / 1000000}×`}`,
+      label: entry.name,
+      detail: rate === undefined ? "倍率未提供" : `额度倍率 ${rate / 1000000}×`,
       section: "平台线路",
       platformEntryId: entry.id,
       rateMicros: rate,
@@ -43,7 +45,8 @@ export function basicChoices(
       []) {
       choices.push({
         id: endpoint.id,
-        label: `${source.name} · ${endpoint.name}`,
+        label: endpoint.name,
+        detail: `来源 ${source.name}`,
         section: "我的机场",
         sourceId: source.id,
       });

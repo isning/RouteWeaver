@@ -264,7 +264,7 @@ it("keeps non-limit fields outside the shared source and leaves standalone summa
   }
   expect(row(table, "授权线路").getAllByRole("cell").map((cell) => cell.textContent)).toEqual(["东京线路直接授权", "东京线路方案：标准方案 + 直接授权"]);
   expect(row(table, "开通 / 到期").getAllByRole("cell")[1].textContent).toBe("2026/01/01 08:00 / 不过期");
-  expect(row(table, "账号周期").getAllByRole("cell")[1].textContent).toBe("不自动重置起点 2026/01/01 08:00 · UTC+8");
+  expect(row(table, "账号周期").getAllByRole("cell")[1].textContent).toBe("不自动重置起点 2026/01/01 08:00 时区 UTC+8");
   await owner.click(() => dialog.getByRole("button", { name: "返回编辑" }));
   const summary = within(screen.getByRole("region", { name: "独立授权摘要" }));
   expect(summary.getAllByText("方案：标准方案")).toHaveLength(4);

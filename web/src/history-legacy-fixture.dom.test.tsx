@@ -97,7 +97,7 @@ it("opens the historical record from the real App and returns focus after repeat
   for (let n = 0; n < 2; n++) {
     await user.click(opener);
     const detail = await screen.findByRole("dialog", {
-      name: `${name} · 生成记录`,
+      name: `${name}的生成记录`,
     });
     expect(
       within(detail).getByText(

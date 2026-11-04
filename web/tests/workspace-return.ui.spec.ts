@@ -196,7 +196,7 @@ test("Output owned Back Forward restores exact trigger and position; direct link
   const list = await proof(page);
   await trigger.click();
   const detail = page.getByRole("dialog", {
-    name: "订阅详情 · " + f.output.name,
+    name: f.output.name + " 的订阅详情",
     exact: true,
   });
   await expect(detail).toBeVisible();
@@ -287,7 +287,7 @@ test("Output owned Back Forward restores exact trigger and position; direct link
       encodeURIComponent(f.output.id),
   );
   const directDetail = direct.getByRole("dialog", {
-    name: "订阅详情 · " + f.output.name,
+    name: f.output.name + " 的订阅详情",
     exact: true,
   });
   await expect(directDetail).toBeVisible();

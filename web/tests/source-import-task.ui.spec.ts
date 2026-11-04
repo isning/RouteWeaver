@@ -129,7 +129,7 @@ test("full sing-box import returns directly to the rich collection draft without
     await page.goto("/#collections");
     await page
       .getByRole("button", {
-        name: `Original ${suffix} 2 个来源 · 1 个聚合步骤 编辑集合`,
+        name: `Original ${suffix} 2 个来源 1 个聚合步骤 编辑集合`,
         exact: true,
       })
       .click();

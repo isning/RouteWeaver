@@ -62,7 +62,7 @@ for (const width of [1440, 390]) {
     await choose.press("Space");
     await (await chooserEvent).setFiles({ name: filename, mimeType: "application/octet-stream", buffer: Buffer.from("layout-only") });
     await expect(choose).toBeFocused();
-    const selected = page.getByText(`${filename} · 11 B`, { exact: true });
+    const selected = page.getByText(filename, { exact: true }).locator("..");
     await expect(selected).toBeVisible();
     await noClipping(selected);
     await password.fill("layout-only-password");

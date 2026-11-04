@@ -252,7 +252,7 @@ it.each(cases)(
         ? screen.findByText(empty)
         : kind === "settings"
           ? screen.findByRole("button", { name: "保存通知设置" })
-          : screen.findByRole("dialog", { name: "备用路径 · 计划变更" });
+          : screen.findByRole("dialog", { name: "备用路径的计划变更" });
     await loaded();
     expect(screen.queryByText("本次读取失败")).toBeNull();
     expect(reads).toBe(2);

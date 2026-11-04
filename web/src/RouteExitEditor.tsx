@@ -90,8 +90,13 @@ type CommitResult = {
       detail: string;
     }
 );
-const securityLabel = (endpoint: EndpointReview) =>
-  `${endpoint.protocol.toUpperCase()} · ${endpoint.transport.toUpperCase()} · ${endpoint.security === "tls" ? "TLS" : "未启用 TLS"}`;
+const securityLabel = (endpoint: EndpointReview) => (
+  <span className="flex flex-wrap gap-x-3 gap-y-1">
+    <span>{endpoint.protocol.toUpperCase()}</span>{" "}
+    <span>{endpoint.transport.toUpperCase()}</span>{" "}
+    <span>{endpoint.security === "tls" ? "TLS" : "未启用 TLS"}</span>
+  </span>
+);
 const address = (endpoint: EndpointReview) =>
   `${endpoint.host.includes(":") ? `[${endpoint.host}]` : endpoint.host}:${endpoint.port}`;
 /** A route-scoped reviewed draft mutation. The browser never reconstructs server IR. */
@@ -459,9 +464,7 @@ export function RouteExitEditor({
             </ActionButton>
           }
         >
-          {
-            "关闭仅退出当前页面；返回后可继续核对同一次保存的结果。"
-          }
+          {"关闭仅退出当前页面；返回后可继续核对同一次保存的结果。"}
         </Notice>
       )}
       {!reviewed && (
@@ -488,8 +491,8 @@ export function RouteExitEditor({
             {needsTLS && !selectionPending && (
               <Section title={`${selected?.name || "新出口"}的 TLS 设置`}>
                 <p>
-                  此端点尚未加入转发路径，请提供服务端证书设置以保留端点的
-                  TLS 保护。
+                  此端点尚未加入转发路径，请提供服务端证书设置以保留端点的 TLS
+                  保护。
                 </p>
                 <div className="form-grid grid gap-4 sm:grid-cols-2">
                   <label className="standalone-label grid gap-2 text-sm font-medium">
@@ -546,15 +549,16 @@ export function RouteExitEditor({
             <div>
               <dt>已保存出口</dt>
               <dd>
-                {reviewed.review.before.name} ·{" "}
-                {address(reviewed.review.before)}
+                {reviewed.review.before.name}
+                <small>{address(reviewed.review.before)}</small>
                 <small>{securityLabel(reviewed.review.before)}</small>
               </dd>
             </div>
             <div>
               <dt>新出口</dt>
               <dd>
-                {reviewed.review.after.name} · {address(reviewed.review.after)}
+                {reviewed.review.after.name}
+                <small>{address(reviewed.review.after)}</small>
                 <small>{securityLabel(reviewed.review.after)}</small>
               </dd>
             </div>

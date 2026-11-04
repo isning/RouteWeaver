@@ -161,7 +161,16 @@ function refLabel(ref: SafeRef) {
     : `${ref.kind === "group" ? "策略组" : "连接"}「${ref.label || "未提供名称"}」`;
 }
 function strategy(value: GroupValue) {
-  return `${selectionLabels[value.selection]}${value.strategy ? ` · ${strategyLabels[value.strategy]}` : ""}`;
+  return (
+    <span className="grid gap-1">
+      <span>{selectionLabels[value.selection]}</span>
+      {value.strategy && (
+        <span className="text-muted-foreground">
+          {strategyLabels[value.strategy]}
+        </span>
+      )}
+    </span>
+  );
 }
 function Versions({ before, after }: { before: ReactNode; after: ReactNode }) {
   return (
@@ -377,10 +386,14 @@ function CategoryReview<T extends { id: string }>({
               )}
               <details className="muted text-sm text-muted-foreground">
                 <summary>数量明细</summary>
-                <p>
-                  {value.changedCount} 个{noun}变化 · 已发布 {value.beforeCount}{" "}
-                  个 → 待发布 {value.afterCount} 个
-                </p>
+                <div className="grid gap-1">
+                  <p>
+                    {value.changedCount} 个{noun}变化
+                  </p>
+                  <p>
+                    已发布 {value.beforeCount} 个 → 待发布 {value.afterCount} 个
+                  </p>
+                </div>
               </details>
             </>
           )}

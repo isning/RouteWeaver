@@ -202,7 +202,7 @@ it.for([
       expect(
         dialog.queryByRole("button", { name: "创建待执行批次" }),
       ).toBeNull();
-    else expect(dialog.getByText("1 个实例 · 7 位用户受影响")).toBeTruthy();
+    else { expect(dialog.getByText("1 个实例")).toBeTruthy(); expect(dialog.getByText("7 位用户受影响")).toBeTruthy(); }
     expect(writes).toEqual([
       expect.objectContaining({
         deploymentId: "path",
@@ -290,7 +290,7 @@ it("explains known attempt codes before raw detail without implying superseded w
   await scenario.click(() => row.getByRole("button", { name: "展开详情" }));
   for (const [code, copy] of known) {
     const text = dialog.getByText(
-      (content, element) => element?.tagName === "P" && content.includes(copy),
+      (_content, element) => element?.tagName === "P" && !!element.textContent?.includes(copy),
     );
     expect(text.textContent).toContain(
       code === "desired_superseded_review_required"
@@ -299,8 +299,8 @@ it("explains known attempt codes before raw detail without implying superseded w
     );
   }
   expect(dialog.queryByText(/Raw backend detail/)).toBeNull();
-  expect(dialog.getByText(/第 7 次.*Future safe detail/)).toBeTruthy();
-  expect(dialog.getByText(/第 8 次.*future_without_detail/)).toBeTruthy();
+  expect(dialog.getByText((_content, element) => element?.tagName === "P" && /第 7 次.*Future safe detail/.test(element.textContent || ""))).toBeTruthy();
+  expect(dialog.getByText((_content, element) => element?.tagName === "P" && /第 8 次.*future_without_detail/.test(element.textContent || ""))).toBeTruthy();
   expect(dialog.queryByText(/尚未创建批次|未提交|安全重试/)).toBeNull();
   await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(1));
   expect(fetcher.mock.calls[0]).toEqual([
@@ -442,7 +442,7 @@ it("shows stock security migration consequences only for the selected Xray relea
     dialog.findByRole("combobox", { name: "目标核心版本" }),
   );
   await scenario.click(() =>
-    screen.findByRole("option", { name: "xray 26.10.31 · linux-amd64" }),
+    screen.findByRole("option", { name: "xray 26.10.31 linux-amd64" }),
   );
   await dialog.findByText(/不能直接沿用自定义系统 CA/);
   expect(dialog.getByText(/旧版本不能直接保存网段例外/)).toBeTruthy();
@@ -450,7 +450,7 @@ it("shows stock security migration consequences only for the selected Xray relea
     dialog.findByRole("combobox", { name: "目标核心版本" }),
   );
   await scenario.click(() =>
-    screen.findByRole("option", { name: "sing-box 1.14.4 · linux-amd64" }),
+    screen.findByRole("option", { name: "sing-box 1.14.4 linux-amd64" }),
   );
   expect(dialog.queryByText(/不能直接沿用自定义系统 CA/)).toBeNull();
   expect(writes).toEqual([]);

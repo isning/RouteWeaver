@@ -100,7 +100,7 @@ test("URL safe-fetch denial retains masked input and the rich parent draft", asy
     await page.goto("/#collections");
     await page
       .getByRole("button", {
-        name: `${originalName} 2 个来源 · 1 个聚合步骤 编辑集合`,
+        name: `${originalName} 2 个来源 1 个聚合步骤 编辑集合`,
         exact: true,
       })
       .click();

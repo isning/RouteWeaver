@@ -1,3 +1,4 @@
+import { Metadata, MetadataItem } from "@/ui-patterns/metadata";
 import { ContextHeader, ContextLayout, SectionIndex } from "@/ui-patterns/page-layout";
 import {
   DropdownMenu,
@@ -182,7 +183,7 @@ function ActionReferenceDetails({
       <ul>
         {options.map((option) => (
           <li key={option.value}>
-            {option.label} · <code>{option.referenceID}</code>
+            <Metadata><MetadataItem>{option.label}</MetadataItem><code>{option.referenceID}</code></Metadata>
           </li>
         ))}
       </ul>
@@ -413,7 +414,7 @@ export function ProfileEditor({
       rate <= 1000000000
         ? `额度倍率 ${(rate / 1000000).toLocaleString("zh-CN", { maximumFractionDigits: 6 })}×`
         : "倍率暂不可用";
-    return `${route?.name ? `${route.name} · ` : ""}${multiplier}${(entries.data || []).filter((other) => other.name === entry.name).length > 1 ? ` · 入口 ${entry.id}` : ""}`;
+    return `${route?.name ? `${route.name} 的` : ""}${multiplier}${(entries.data || []).filter((other) => other.name === entry.name).length > 1 ? `，入口 ${entry.id}` : ""}`;
   };
   const includeChosenEntries = (references: ActionRef[]) => {
     const ids = references
@@ -657,13 +658,13 @@ export function ProfileEditor({
     { value: "reject", label: "拒绝连接" },
     ...draft.ir.groups.map((g) => ({
       value: `group:${g.id}`,
-      label: `策略组 · ${g.name}`,
+      label: `策略组 ${g.name}`,
     })),
     ...(entries.data || [])
       .filter((e) => !endpoints.some((n) => n.id === e.id))
       .map((e) => ({
         value: `endpoint:${e.id}`,
-        label: `平台入口 · ${e.name}`,
+        label: `平台入口 ${e.name}`,
         detail: platformDetail(e),
         entryID: e.id,
       })),
@@ -743,7 +744,7 @@ export function ProfileEditor({
       const missing = {
         value,
         label: retainedName
-          ? `${unresolvedLabel} · ${retainedName}`
+          ? `${unresolvedLabel}：${retainedName}`
           : `${reference.kind === "endpoint" ? "连接" : "策略组"}${unresolvedLabel}`,
         referenceID: reference.ref,
       };
@@ -1073,7 +1074,7 @@ export function ProfileEditor({
                         id: rule.id,
                         expected: rule.action,
                       },
-                      `规则 ${index + 1}${rule.match.value ? ` · ${rule.match.op === "resource" ? draft.ir.resources.find((resource) => resource.id === rule.match.value)?.name || resources.data?.find((resource) => resource.id === rule.match.value)?.name || "规则文件暂不可用" : rule.match.value}` : ""}`,
+                      `规则 ${index + 1}${rule.match.value ? ` 匹配 ${rule.match.op === "resource" ? draft.ir.resources.find((resource) => resource.id === rule.match.value)?.name || resources.data?.find((resource) => resource.id === rule.match.value)?.name || "规则文件暂不可用" : rule.match.value}` : ""}`,
                     )
                   }
                   variant="outline"
@@ -1542,9 +1543,12 @@ export function ProfileEditor({
                 <ul>
                   {linkedOutputs.map((item) => (
                     <li key={item.id}>
-                      {item.name} · {item.target.adapterId} ·{" "}
-                      {item.mode === "nodes-only" ? "纯节点" : "完整配置"}
-                      {item.status === "revoked" ? " · 已撤销" : ""}
+                      <span className="block font-medium">{item.name}</span>{" "}
+                      <Metadata className="text-muted-foreground">
+                        <MetadataItem>{item.target.adapterId}</MetadataItem>
+                        <MetadataItem>{item.mode === "nodes-only" ? "纯节点" : "完整配置"}</MetadataItem>
+                        {item.status === "revoked" && <MetadataItem>已撤销</MetadataItem>}
+                      </Metadata>
                     </li>
                   ))}
                 </ul>
@@ -2997,14 +3001,18 @@ function MatchEditor({
               options={resources
                 .map((r) => ({
                   value: r.id,
-                  label: r.name || r.id,
-                  detail: r.acceptedVersion
-                    ? `已接纳文件${r.location === "local" ? " \u00B7 随完整配置打包" : ""} · ${r.format}${r.refreshStatus === "failed" ? " \u00B7 刷新失败" : ""}`
-                    : `远程引用 · ${r.format}`,
-                }))
-                .map((option) => ({
-                  ...option,
-                  description: "detail" in option ? option.detail : undefined,
+                  label: (
+                    <span className="block min-w-0 space-y-1">
+                      <span className="block">{r.name || r.id}</span>{" "}
+                      <Metadata className="text-xs text-muted-foreground">
+                        <MetadataItem>{r.acceptedVersion ? "已接纳文件" : "远程引用"}</MetadataItem>
+                        <MetadataItem>{r.format}</MetadataItem>
+                        {r.acceptedVersion && r.location === "local" && <MetadataItem>随完整配置打包</MetadataItem>}
+                        {r.acceptedVersion && r.refreshStatus === "failed" && <MetadataItem>刷新失败</MetadataItem>}
+                      </Metadata>
+                    </span>
+                  ),
+                  searchText: `${r.name || r.id} ${r.format}`,
                 }))}
               onValueChange={(v) => {
                 if (v === undefined) return;

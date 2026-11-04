@@ -23,7 +23,7 @@ for (const [mode, label] of cycleModes)
       const f = await cycleFixture(page.request, recipient, mode);
       await page.goto("/#users");
       const editor = page.getByRole("dialog", {
-        name: `${f.account.name} · 服务授权`,
+        name: `${f.account.name} 的服务授权`,
         exact: true,
       });
       const open = async () => {

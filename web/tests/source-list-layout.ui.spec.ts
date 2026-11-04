@@ -128,7 +128,7 @@ for (const width of [1280, 1440, 2048]) {
     await page.setViewportSize({ width, height: 1000 });
     const { groups, unexpected } = await setup(page);
     const table = page.getByRole("table");
-    await expect(table).toHaveAccessibleDescription("2 个私有来源");
+    await expect(table).toHaveAccessibleDescription("共 2 个私有来源");
     await expect(
       page.getByRole("columnheader", { name: "操作", exact: true }),
     ).toBeVisible();

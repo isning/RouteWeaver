@@ -378,18 +378,18 @@ it("visibly distinguishes duplicate names using read-only client metadata and pr
     />,
   );
   const dialog = await screen.findByRole("dialog", { name: "上次应用详情" });
-  await within(dialog).findByText("sing-box · 完整配置");
-  expect(within(dialog).getByText("xray · 纯节点")).toBeTruthy();
+  await within(dialog).findByText("sing-box 完整配置");
+  expect(within(dialog).getByText("xray 纯节点")).toBeTruthy();
   expect(
-    within(dialog).getByText("关联订阅：同名订阅（sing-box · 完整配置）"),
+    within(dialog).getByText("关联订阅：同名订阅（sing-box 完整配置）"),
   ).toBeTruthy();
   expect(
-    within(dialog).getByText("关联订阅：同名订阅（xray · 纯节点）"),
+    within(dialog).getByText("关联订阅：同名订阅（xray 纯节点）"),
   ).toBeTruthy();
   expect(within(dialog).queryByText("配置标识：profile/one")).toBeNull();
   expect(
     within(dialog)
-      .getByRole("link", { name: "查看订阅 同名订阅 · sing-box · 完整配置" })
+      .getByRole("link", { name: "查看订阅 同名订阅 sing-box 完整配置" })
       .getAttribute("href"),
   ).toBe("#subscriptions?output=output%2Fone");
   expect(fetcher).toHaveBeenCalledTimes(1);
@@ -440,7 +440,7 @@ it("keeps full differing ID tails visible while metadata loads and when duplicat
     ),
   );
   await within(dialog).findAllByText(
-    /关联订阅：同名订阅（sing-box · 完整配置）/,
+    /关联订阅：同名订阅（sing-box 完整配置）/,
   );
   for (const id of Object.values(identities)) {
     const detail = within(dialog).getByText(new RegExp(`标识：${id}$`));

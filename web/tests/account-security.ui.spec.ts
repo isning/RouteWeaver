@@ -85,7 +85,7 @@ for (const size of [
     await manage.focus();
     await page.keyboard.press("Enter");
     const dialog = page.getByRole("dialog", {
-      name: "管理账号 · 需要恢复访问的测试账号",
+      name: "管理 需要恢复访问的测试账号 的账号",
       exact: true,
     });
     await expect(dialog).toBeVisible();

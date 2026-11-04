@@ -110,8 +110,9 @@ function Changes({ title, items }: { title: string; items: SourceChange[] }) {
   if (!items.length) return null;
   return (
     <section className="source-change-section my-6 space-y-3 [&>h3]:text-sm [&>h3]:font-medium">
-      <h3>
-        {title} · {items.length}
+      <h3 className="flex flex-wrap items-baseline gap-2">
+        <span>{title}</span>{" "}
+        <span className="text-muted-foreground">{items.length}</span>
       </h3>
       <ul className="source-change-list divide-y overflow-hidden rounded-lg border [&>li]:flex [&>li]:flex-wrap [&>li]:items-center [&>li]:justify-between [&>li]:gap-2 [&>li]:px-4 [&>li]:py-3 [&>li]:wrap-anywhere">
         {items.slice((currentPage - 1) * 12, currentPage * 12).map((item) => (
@@ -605,9 +606,8 @@ function SourceReviewSession({
                     <span>
                       {item.name}
                       {item.profileName && (
-                        <small className="muted text-sm text-muted-foreground">
-                          {" "}
-                          · {item.profileName}
+                        <small className="muted block text-sm text-muted-foreground">
+                          {item.profileName}
                         </small>
                       )}
                     </span>
@@ -626,7 +626,9 @@ function SourceReviewSession({
                 : "应用后，配置和预览将使用新选项。"}
             </p>
             <p>现有草稿保留当前选择，已发布订阅保留原版本。</p>
-            {firstImport && <p>忽略更新或稍后处理时，已保存的来源输入仍会保留。</p>}
+            {firstImport && (
+              <p>忽略更新或稍后处理时，已保存的来源输入仍会保留。</p>
+            )}
           </div>
           <div className={"flex flex-wrap items-center gap-2"}>
             <ActionButton

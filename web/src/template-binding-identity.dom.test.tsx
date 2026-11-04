@@ -163,17 +163,17 @@ it.each(cases)(
       });
     await screen.findByText(selected.name);
     expect(action(other).getAttribute("aria-label")).toBe(
-      `${other.mode === "follow" ? "检查更新" : "查看固定版本"} · ${other.name}`,
+      `${other.mode === "follow" ? "检查更新" : "查看固定版本"} ${other.name}`,
     );
     await user.click(action(other));
     await screen.findByText(
       other.mode === "follow" ? "可以更新到 v2" : "当前引用无需更新",
     );
     expect(
-      screen.getByRole("dialog", { name: `模板更新 · ${other.name}` }),
+      screen.getByRole("dialog", { name: `模板更新 ${other.name}` }),
     ).toBeTruthy();
     const comparison = screen.getByRole("dialog", {
-      name: `模板更新 · ${other.name}`,
+      name: `模板更新 ${other.name}`,
     });
     // Reproduce the browser selector against the real rendered template task.
     const namedCloseActions = within(comparison).getAllByRole("button", {
@@ -187,11 +187,11 @@ it.each(cases)(
     await user.click(closeActions[0] as HTMLElement);
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(action(selected).getAttribute("aria-label")).toBe(
-      `${mode === "follow" ? "检查更新" : "查看固定版本"} · ${selected.name}`,
+      `${mode === "follow" ? "检查更新" : "查看固定版本"} ${selected.name}`,
     );
     await user.click(action(selected));
     const dialog = await screen.findByRole("dialog", {
-      name: `模板更新 · ${selected.name}`,
+      name: `模板更新 ${selected.name}`,
     });
     await screen.findByText(
       mode === "follow" ? "可以更新到 v2" : "当前引用无需更新",

@@ -1,3 +1,4 @@
+import { Metadata } from "@/ui-patterns/metadata";
 import { ContextHeader, ContextLayout, PageSection, SectionIndex } from "@/ui-patterns/page-layout";
 import { Suspense, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { PageBoundary } from "./PageBoundary";
@@ -439,10 +440,10 @@ function AccountRecovery({ session }: { session: Session }) {
             >
               <div className="min-w-0 space-y-1">
                 <strong className="break-words text-sm">{account.name}</strong>
-                <p className="break-all text-sm text-muted-foreground">
-                  {account.username} ·{" "}
-                  {account.role === "admin" ? "管理员" : "个人账号"}
-                </p>
+                <Metadata className="break-all text-sm text-muted-foreground">
+                  <span>{account.username}</span>
+                  <span>{account.role === "admin" ? "管理员" : "个人账号"}</span>
+                </Metadata>
                 <Badge variant="secondary">
                   {account.retired
                     ? "已永久退役"
@@ -555,7 +556,7 @@ function AccountRecoveryTask({
     <TaskDialog
       scrollMode="auto"
       open
-      title={`管理账号 · ${target.name}`}
+      title={`管理 ${target.name} 的账号`}
       description={`登录名：${target.username}`}
       onOpenChange={(open) => {
         if (!open) close();

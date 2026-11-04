@@ -306,10 +306,10 @@ it("keeps an update review open until the pending draft application settles", as
   );
   await userEvent.click(await screen.findByRole("tab", { name: "我的引用" }));
   await userEvent.click(
-    await screen.findByRole("button", { name: "查看固定版本 · My collection" }),
+    await screen.findByRole("button", { name: "查看固定版本 My collection" }),
   );
   const dialog = await screen.findByRole("dialog", {
-    name: "模板更新 · My collection",
+    name: "模板更新 My collection",
   });
   await userEvent.click(
     await within(dialog).findByRole("button", { name: "应用到草稿" }),
@@ -326,7 +326,7 @@ it("keeps an update review open until the pending draft application settles", as
   ).toBe(true);
   fireEvent.keyDown(dialog, { key: "Escape", code: "Escape" });
   expect(
-    screen.getByRole("dialog", { name: "模板更新 · My collection" }),
+    screen.getByRole("dialog", { name: "模板更新 My collection" }),
   ).toBeTruthy();
   await act(async () => {
     release(json({}));
@@ -334,7 +334,7 @@ it("keeps an update review open until the pending draft application settles", as
   });
   await waitFor(() =>
     expect(
-      screen.queryByRole("dialog", { name: "模板更新 · My collection" }),
+      screen.queryByRole("dialog", { name: "模板更新 My collection" }),
     ).toBeNull(),
   );
   expect(writes.find((w) => w.url.endsWith("/apply"))?.body).toEqual({
@@ -556,8 +556,8 @@ it.each(["select", "publish"] as const)("restores template %s Close focus after 
 it("keeps template update Close focus after twice canceling an unapplied version selection", async () => {
   const { writes } = mount(async () => json({ compatible: true, hasUpdate: true, currentVersion: 1, candidateVersion: 2, previewDigest: "review", diagnostics: [], changes: [], preservedLocalEdits: [], artifacts: [] }));
   await userEvent.click(await screen.findByRole("tab", { name: "我的引用" }));
-  await userEvent.click(await screen.findByRole("button", { name: "查看固定版本 · My collection" }));
-  const dialog = await screen.findByRole("dialog", { name: "模板更新 · My collection" });
+  await userEvent.click(await screen.findByRole("button", { name: "查看固定版本 My collection" }));
+  const dialog = await screen.findByRole("dialog", { name: "模板更新 My collection" });
   const version = await within(dialog).findByLabelText("检查的模板版本");
   await userEvent.click(version);
   await userEvent.click(await screen.findByText("v2", { selector: "[cmdk-item] span" }));

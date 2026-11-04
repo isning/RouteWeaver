@@ -1,3 +1,4 @@
+import { Metadata } from "./ui-patterns/metadata";
 import { ActionButton } from "@/ui-patterns/actions";
 import type { ReactNode } from "react";
 import type { Source } from "./types";
@@ -17,7 +18,12 @@ export function sourceSelectionLabel(source: Source, checked: boolean) {
     !checked || typeof source.enabled !== "boolean"
       ? "状态待核对"
       : sourceSelectionIssue(source);
-  return state ? `${source.name} · ${state}` : source.name;
+  return state ? (
+    <Metadata className="flex-col items-start">
+      <span>{source.name}</span>
+      <span className="text-muted-foreground">{state}</span>
+    </Metadata>
+  ) : source.name;
 }
 export function SourceSelectionIssues({
   sources,
@@ -48,8 +54,11 @@ export function SourceSelectionIssues({
             key={source.id}
             className="flex min-w-0 flex-col items-start justify-between gap-3 text-sm sm:flex-row sm:items-center"
           >
-            <span className="min-w-0 wrap-anywhere">
-              {source.name} · {sourceSelectionIssue(source)}
+            <span className="grid min-w-0 gap-1 wrap-anywhere">
+              <span>{source.name}</span>{" "}
+              <span className="text-muted-foreground">
+                {sourceSelectionIssue(source)}
+              </span>
             </span>
             <div className="flex shrink-0 flex-wrap items-center gap-2">
               <ActionButton

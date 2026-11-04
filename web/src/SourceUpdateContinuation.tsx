@@ -108,7 +108,7 @@ function relatedDescriptions(
       !["full", "nodes-only"].includes(output.mode)
     )
       return undefined;
-    return `${output.target.adapterId} · ${output.mode === "nodes-only" ? "纯节点" : "完整配置"}`;
+    return `${output.target.adapterId} ${output.mode === "nodes-only" ? "纯节点" : "完整配置"}`;
   };
   const basic = new Map<string, string | undefined>(
     items.map((item) => {
@@ -161,7 +161,7 @@ function relatedDescriptions(
       );
       return [
         item.id,
-        profile ? `${base} · 所属配置：${visibleName(profile.name)}` : base,
+        profile ? `${base} 所属配置：${visibleName(profile.name)}` : base,
       ];
     }),
   );
@@ -181,9 +181,7 @@ function relatedDescriptions(
         const identity = `${target === "profile" ? "配置" : "订阅"}标识：${item.id}`;
         return [
           item.id,
-          ambiguous
-            ? [summary, identity].filter(Boolean).join(" · ")
-            : summary!,
+          ambiguous ? [summary, identity].filter(Boolean).join(" ") : summary!,
         ];
       }),
   );
@@ -204,8 +202,9 @@ function RelatedObjects({
   if (!items.length) return null;
   return (
     <section className="source-change-section my-6 space-y-3 [&>h3]:text-sm [&>h3]:font-medium">
-      <h3>
-        {title} · {items.length}
+      <h3 className="flex flex-wrap items-baseline gap-2">
+        <span>{title}</span>{" "}
+        <span className="text-muted-foreground">{items.length}</span>
       </h3>
       <ul className="source-change-list divide-y overflow-hidden rounded-lg border [&>li]:flex [&>li]:flex-wrap [&>li]:items-center [&>li]:justify-between [&>li]:gap-2 [&>li]:px-4 [&>li]:py-3 [&>li]:wrap-anywhere">
         {items.slice((current - 1) * 8, current * 8).map((item) => (
@@ -219,13 +218,13 @@ function RelatedObjects({
               )}
             </span>
             <ActionButton
-              aria-label={`${target === "profile" ? "查看配置" : "查看订阅"} ${item.name}${descriptions.get(item.id) ? ` · ${descriptions.get(item.id)}` : ""}`}
+              aria-label={`${target === "profile" ? "查看配置" : "查看订阅"} ${item.name}${descriptions.get(item.id) ? ` ${descriptions.get(item.id)}` : ""}`}
               variant="link"
               asChild={true}
             >
               <a
                 href={`#subscriptions?${target}=${encodeURIComponent(item.id)}`}
-                aria-label={`${target === "profile" ? "查看配置" : "查看订阅"} ${item.name}${descriptions.get(item.id) ? ` · ${descriptions.get(item.id)}` : ""}`}
+                aria-label={`${target === "profile" ? "查看配置" : "查看订阅"} ${item.name}${descriptions.get(item.id) ? ` ${descriptions.get(item.id)}` : ""}`}
               >
                 {target === "profile" ? "查看配置" : "查看订阅"}
               </a>
@@ -256,8 +255,9 @@ function AcceptedChanges({
   if (!items.length) return null;
   return (
     <section className="source-change-section my-6 space-y-3 [&>h3]:text-sm [&>h3]:font-medium">
-      <h3>
-        {title} · {items.length}
+      <h3 className="flex flex-wrap items-baseline gap-2">
+        <span>{title}</span>{" "}
+        <span className="text-muted-foreground">{items.length}</span>
       </h3>
       <ul className="source-change-list divide-y overflow-hidden rounded-lg border [&>li]:flex [&>li]:flex-wrap [&>li]:items-center [&>li]:justify-between [&>li]:gap-2 [&>li]:px-4 [&>li]:py-3 [&>li]:wrap-anywhere">
         {items.slice((current - 1) * 12, current * 12).map((item) => (
@@ -425,7 +425,9 @@ export function SourceUpdateContinuation({
                             <span>
                               {item.name}
                               {item.profileName && (
-                                <small> · {item.profileName}</small>
+                                <small className="block text-muted-foreground">
+                                  {item.profileName}
+                                </small>
                               )}
                             </span>
                             <Badge variant="secondary">

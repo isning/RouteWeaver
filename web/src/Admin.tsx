@@ -165,9 +165,13 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
     null,
   );
   const [error, setError] = useState<Error | null>(null);
-  const [validation, setValidation] = useState<(Validation & { historical?: boolean }) | null>(null);
+  const [validation, setValidation] = useState<
+    (Validation & { historical?: boolean }) | null
+  >(null);
   const [validationName, setValidationName] = useState("");
-  const validationPresentation = useRef<(Validation & { historical?: boolean }) | null>(null);
+  const validationPresentation = useRef<
+    (Validation & { historical?: boolean }) | null
+  >(null);
   useLayoutEffect(() => {
     if (validation) validationPresentation.current = validation;
   }, [validation]);
@@ -216,9 +220,14 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
             value: null,
           });
   const searchEmpty = search ? (
-    <EmptyState title={`没有匹配的${meta.title}`} action={
-      <ActionButton onClick={() => setSearch("")} variant="outline">清除搜索</ActionButton>
-    } />
+    <EmptyState
+      title={`没有匹配的${meta.title}`}
+      action={
+        <ActionButton onClick={() => setSearch("")} variant="outline">
+          清除搜索
+        </ActionButton>
+      }
+    />
   ) : undefined;
   const data = query.data;
   const nodes = data?.nodes || [];
@@ -255,7 +264,11 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
         contentKind="settings"
         contextKind="navigation"
         header={<PageHeader title={meta.title} />}
-        localNavigation={<Tabs defaultValue="basic"><PlatformSettingsTabList disabled /></Tabs>}
+        localNavigation={
+          <Tabs defaultValue="basic">
+            <PlatformSettingsTabList disabled />
+          </Tabs>
+        }
         context={
           <span className="text-sm text-muted-foreground">本页设置</span>
         }
@@ -283,7 +296,9 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
               {page === "users" && (
                 <ActionButton
                   leadingIcon={<UserAddOutlined aria-hidden="true" />}
-                  onClick={() => setInvite((task) => ({ key: task.key + 1, open: true }))}
+                  onClick={() =>
+                    setInvite((task) => ({ key: task.key + 1, open: true }))
+                  }
                   variant="outline"
                 >
                   邀请用户
@@ -302,7 +317,9 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
       />
       <ErrorNotice error={error} />
       <QueryState
-        loading={query.isPending} paused={query.isPaused} loadingLayout="table"
+        loading={query.isPending}
+        paused={query.isPaused}
+        loadingLayout="table"
         error={query.error}
         retry={() => query.refetch()}
       >
@@ -310,15 +327,23 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
           <>
             {["routes", "nodes", "users", "services"].includes(page) && (
               <Section variant="plain">
-                <ResourceToolbar label={`查找${meta.title}`} search={
-                  <SearchField placeholder={`搜索${meta.title}`} value={search}
-                    onValueChange={setSearch} aria-label={`搜索${meta.title}`} />
-                } />
+                <ResourceToolbar
+                  label={`查找${meta.title}`}
+                  search={
+                    <SearchField
+                      placeholder={`搜索${meta.title}`}
+                      value={search}
+                      onValueChange={setSearch}
+                      aria-label={`搜索${meta.title}`}
+                    />
+                  }
+                />
                 {page === "routes" &&
                   (routes.length ? (
                     <DataTable<RouteRecord>
                       rowKey="id"
                       rows={routes.filter((r) => match(r.name))}
+                      count={{ total: routes.length, unit: "条链路配置", filtered: !!search }}
                       columns={[
                         {
                           title: "链路配置",
@@ -444,6 +469,7 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
                     <DataTable<NodeRecord>
                       rowKey="id"
                       rows={nodes.filter((n) => match(n.name))}
+                      count={{ total: nodes.length, unit: "个连接节点", filtered: !!search }}
                       columns={[
                         {
                           title: "端点",
@@ -545,6 +571,7 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
                     <DataTable<UserRecord>
                       rowKey="id"
                       rows={users.filter((u) => match(u.name))}
+                      count={{ total: users.length, unit: "位用户", filtered: !!search }}
                       columns={[
                         {
                           title: "用户",
@@ -625,7 +652,12 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
                       description="邀请用户注册，或直接添加账号。"
                       action={
                         <ActionButton
-                          onClick={() => setInvite((task) => ({ key: task.key + 1, open: true }))}
+                          onClick={() =>
+                            setInvite((task) => ({
+                              key: task.key + 1,
+                              open: true,
+                            }))
+                          }
                           variant="default"
                         >
                           邀请用户
@@ -638,6 +670,7 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
                     <DataTable<Service>
                       rowKey="id"
                       rows={(data.services || []).filter((s) => match(s.name))}
+                      count={{ total: data.services.length, unit: "个服务方案", filtered: !!search }}
                       columns={[
                         { title: "服务方案", accessor: "name" },
                         {
@@ -653,14 +686,17 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
                           title: "接入限制",
                           render: (_, s) => (
                             <>
-                              <span>
-                                {s.onlineIpLimit
-                                  ? `${s.onlineIpLimit} 个在线 IP`
-                                  : "IP 不限"}{" "}
-                                ·{" "}
-                                {s.connectionLimit
-                                  ? `${s.connectionLimit} 条并发流`
-                                  : "并发不限"}
+                              <span className="grid gap-1">
+                                <span>
+                                  {s.onlineIpLimit
+                                    ? `${s.onlineIpLimit} 个在线 IP`
+                                    : "IP 不限"}
+                                </span>
+                                <span>
+                                  {s.connectionLimit
+                                    ? `${s.connectionLimit} 条并发流`
+                                    : "并发不限"}
+                                </span>
                               </span>
                               {!!s.entryRateBps && (
                                 <small className="muted block text-sm text-muted-foreground">
@@ -830,13 +866,19 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
         />
       )}
 
-      <InviteUser key={invite.key} open={invite.open} onClose={() => setInvite((task) => ({ ...task, open: false }))} />
+      <InviteUser
+        key={invite.key}
+        open={invite.open}
+        onClose={() => setInvite((task) => ({ ...task, open: false }))}
+      />
       <TaskSheet
-        title={`${validationName} · ${displayedValidation?.historical ? "生成记录" : "配置检查"}`}
+        title={`${validationName}的${displayedValidation?.historical ? "生成记录" : "配置检查"}`}
         open={!!validation}
         contentProps={{ inert: !validation }}
         bodyProps={{ className: "space-y-5" }}
-        onClosed={() => { if (!validation) validationPresentation.current = null; }}
+        onClosed={() => {
+          if (!validation) validationPresentation.current = null;
+        }}
         onOpenChange={(open) => {
           if (!open) (() => setValidation(null))();
         }}
@@ -845,19 +887,35 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
         {displayedValidation && (
           <>
             <Notice
-              tone={displayedValidation.historical ? "info" : displayedValidation.valid ? "success" : "error"}
-              title={displayedValidation.historical ? "历史配置记录" : displayedValidation.valid ? "配置结构校验完成" : "配置需要调整"}
+              tone={
+                displayedValidation.historical
+                  ? "info"
+                  : displayedValidation.valid
+                    ? "success"
+                    : "error"
+              }
+              title={
+                displayedValidation.historical
+                  ? "历史配置记录"
+                  : displayedValidation.valid
+                    ? "配置结构校验完成"
+                    : "配置需要调整"
+              }
             >
               {displayedValidation.historical
                 ? "此处展示当时保存的配置记录。检查当前配置请重新校验；服务器应用情况请查看节点确认状态。"
                 : displayedValidation.valid
-                ? "配置已生成并通过结构检查。服务器应用情况请查看节点确认状态。"
-                : displayedValidation.diagnostics.join(" ")}
+                  ? "配置已生成并通过结构检查。服务器应用情况请查看节点确认状态。"
+                  : displayedValidation.diagnostics.join(" ")}
             </Notice>
             {displayedValidation.historical && displayedValidation.revision && (
               <div className="grid gap-3 sm:grid-cols-2">
-                <KeyValue label="记录状态"><Status value={displayedValidation.revision.status} /></KeyValue>
-                <KeyValue label="生成时间">{dateLabel(displayedValidation.revision.createdAt)}</KeyValue>
+                <KeyValue label="记录状态">
+                  <Status value={displayedValidation.revision.status} />
+                </KeyValue>
+                <KeyValue label="生成时间">
+                  {dateLabel(displayedValidation.revision.createdAt)}
+                </KeyValue>
               </div>
             )}
             <Accordion type="multiple">
@@ -878,7 +936,9 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
                       ))}
                       {displayedValidation.artifacts.map((a) => (
                         <div key={a.path} className="space-y-2">
-                          <h3 className="font-mono text-xs [overflow-wrap:anywhere]">{a.path}</h3>
+                          <h3 className="font-mono text-xs [overflow-wrap:anywhere]">
+                            {a.path}
+                          </h3>
                           <CodePreview content={redact(a.content)} />
                         </div>
                       ))}
@@ -1102,7 +1162,11 @@ function RouteEditor({
           <>
             <div className="graph-canvas h-96 overflow-hidden rounded-lg border">
               <RouteGraph
-                ariaLabelConfig={{ "controls.zoomIn.ariaLabel": "放大", "controls.zoomOut.ariaLabel": "缩小", "controls.fitView.ariaLabel": "适应画布" }}
+                ariaLabelConfig={{
+                  "controls.zoomIn.ariaLabel": "放大",
+                  "controls.zoomOut.ariaLabel": "缩小",
+                  "controls.fitView.ariaLabel": "适应画布",
+                }}
                 nodes={graphNodes}
                 edges={edges}
                 onNodesChange={(changes) =>
@@ -1123,8 +1187,7 @@ function RouteEditor({
                 maxZoom={1.5}
                 deleteKeyCode={null}
                 aria-label="链路拓扑编辑"
-              >
-              </RouteGraph>
+              ></RouteGraph>
             </div>
             <p className="muted text-sm text-muted-foreground">
               点击端点选择入口，从当前末端连向下一跳。拖动仅调整视图位置。也可以切换到顺序编辑。
@@ -1150,7 +1213,19 @@ function RouteEditor({
                   value={id}
                   options={state.nodes.map((n) => ({
                     value: n.id,
-                    label: `${n.name}${n.region ? ` · ${n.region}` : ""}`,
+                    label: (
+                      <span className="grid gap-1">
+                        <span>{n.name}</span>
+                        {n.region && (
+                          <>
+                            {" "}
+                            <span className="text-xs font-normal text-muted-foreground">
+                              {n.region}
+                            </span>
+                          </>
+                        )}
+                      </span>
+                    ),
                     disabled: draft.hops.includes(n.id) && n.id !== id,
                   }))}
                   onValueChange={(next) => {
@@ -1198,7 +1273,19 @@ function RouteEditor({
                 .filter((n) => !draft.hops.includes(n.id))
                 .map((n) => ({
                   value: n.id,
-                  label: `${n.name}${n.region ? ` · ${n.region}` : ""}`,
+                  label: (
+                    <span className="grid gap-1">
+                      <span>{n.name}</span>
+                      {n.region && (
+                        <>
+                          {" "}
+                          <span className="text-xs font-normal text-muted-foreground">
+                            {n.region}
+                          </span>
+                        </>
+                      )}
+                    </span>
+                  ),
                 }))}
               onValueChange={(id) => {
                 if (id) updateHops([...draft.hops, id]);
@@ -1232,7 +1319,7 @@ function RouteEditor({
                   订阅显示名称模板
                   <Input
                     value={draft.nameTemplate}
-                    placeholder="{route} · {region}"
+                    placeholder="{route} {region}"
                     onChange={(e) =>
                       setDraft({ ...draft, nameTemplate: e.target.value })
                     }
@@ -1373,7 +1460,10 @@ function EntityEditor({
     confirm(
       {
         title: "放弃未保存的修改？",
-        description: entity?.kind === "nodes" ? "当前端点修改尚未保存。" : "当前用户修改尚未保存。",
+        description:
+          entity?.kind === "nodes"
+            ? "当前端点修改尚未保存。"
+            : "当前用户修改尚未保存。",
         confirmLabel: "放弃修改",
         cancelLabel: "继续编辑",
       },
@@ -1598,7 +1688,10 @@ function InviteUser({ open, onClose }: { open: boolean; onClose: () => void }) {
       {result ? (
         <>
           <Notice tone="success" title="邀请已创建">
-            {result.name} · {result.role === "admin" ? "管理员" : "普通用户"}
+            <span className="block font-medium">{result.name}</span>{" "}
+            <span className="block text-muted-foreground">
+              {result.role === "admin" ? "管理员" : "普通用户"}
+            </span>
           </Notice>
           <label className="standalone-label grid gap-2 text-sm font-medium">
             邀请链接
@@ -1952,7 +2045,9 @@ function AuditLog() {
   return (
     <Section title="操作审计" variant="plain">
       <QueryState
-        loading={query.isPending} paused={query.isPaused} loadingLayout="table"
+        loading={query.isPending}
+        paused={query.isPaused}
+        loadingLayout="table"
         error={query.error}
         retry={() => query.refetch()}
       >
@@ -1968,7 +2063,8 @@ function AuditLog() {
           ]}
           expandedRow={(value) => (
             <p className="text-sm leading-relaxed text-muted-foreground [overflow-wrap:anywhere]">
-              操作者账号：{value.actorId} · 审计标识：{value.id}
+              <span className="block">操作者账号：{value.actorId}</span>{" "}
+              <span className="block">审计标识：{value.id}</span>
             </p>
           )}
           pageSize={10}

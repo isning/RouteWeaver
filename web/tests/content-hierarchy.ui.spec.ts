@@ -973,7 +973,7 @@ test("missing destinations remain readable with full identities available at des
   const namedDefault = page
     .getByRole("combobox", { name: "默认流量行为", exact: true })
     .locator("xpath=ancestor::label");
-  await expect(namedDefault).toContainText("不可用 · Tokyo");
+  await expect(namedDefault).toContainText("不可用：Tokyo");
   await page.screenshot({
     path: info.outputPath("1280-named-default.png"),
     animations: "disabled",

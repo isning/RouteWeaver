@@ -106,7 +106,7 @@ async function fixture(
     await page.goto("/#collections");
     await page
       .getByRole("button", {
-        name: `${collection.name} 4 个来源 · 3 个聚合步骤 编辑集合`,
+        name: `${collection.name} 4 个来源 3 个聚合步骤 编辑集合`,
         exact: true,
       })
       .click();

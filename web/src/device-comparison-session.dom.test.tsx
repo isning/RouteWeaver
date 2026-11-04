@@ -117,7 +117,7 @@ it("keeps as-of evidence after same-account revalidation but clears it and fence
   );
   await userEvent.click(
     await screen.findByRole("menuitem", {
-      name: "检查 1 个订阅的更新 · Shared profile",
+      name: "检查 Shared profile 的 1 个订阅更新",
     }),
   );
   await screen.findByText(comparisonText(/与保存草稿一致.*上次核对/));
@@ -134,7 +134,7 @@ it("keeps as-of evidence after same-account revalidation but clears it and fence
   );
   await userEvent.click(
     await screen.findByRole("menuitem", {
-      name: "检查 1 个订阅的更新 · Shared profile",
+      name: "检查 Shared profile 的 1 个订阅更新",
     }),
   );
   await waitFor(() => expect(late).toHaveLength(1));

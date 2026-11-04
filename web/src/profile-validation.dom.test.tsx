@@ -1073,9 +1073,9 @@ it("distinguishes multiple unknown members and rule destinations while repairing
       .getAllByRole("listitem")
       .map((item) => item.textContent),
   ).toEqual([
-    `连接不可用 1 · ${first}`,
-    `连接不可用 2 · ${second}`,
-    "策略组不可用 · group_missing",
+    `连接不可用 1 ${first}`,
+    `连接不可用 2 ${second}`,
+    "策略组不可用 group_missing",
   ]);
   await user.click(members);
   // Reach this virtualized option by its identity, as a keyboard user can.
@@ -1137,7 +1137,7 @@ it("keeps a reliable retained connection name after the unavailable status witho
   await screen.findByRole("alert", { name: "部分流量去向当前不可用" });
   const control = screen.getByRole("combobox", { name: "默认流量行为" });
   expect(
-    within(control.closest("label")!).getByText("不可用 · 东京 · 工作连接"),
+    within(control.closest("label")!).getByText("不可用：东京 · 工作连接"),
   ).toBeTruthy();
   expect(writes).toHaveLength(0);
 });

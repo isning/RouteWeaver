@@ -159,7 +159,7 @@ async function startConfiguration(page: Page) {
 
 async function editSelectedOutputConfiguration(page: Page, name: string) {
   const detail = page.getByRole("dialog", {
-    name: `订阅详情 · ${name}`,
+    name: `${name} 的订阅详情`,
     exact: true,
   });
   await expect(detail).toBeVisible();
@@ -516,9 +516,9 @@ test("controlled empty inventories name the task and server registration does no
   ).toBeVisible();
   const login = page.getByRole("region", { name: "恢复登录", exact: true });
   await expect(login.getByRole("heading")).toHaveCount(1);
-  await expect(login.locator("p")).toHaveText(
-    "邀请制工作空间 · 你的来源仅由你管理",
-  );
+  await expect(login.locator("p")).toHaveText([
+    "邀请制工作空间", "你的来源仅由你管理",
+  ]);
   await expect(page.getByLabel("账号", { exact: true })).toHaveValue("");
   await expect(page.getByLabel("密码", { exact: true })).toHaveValue("");
   await page.screenshot({
@@ -1549,7 +1549,7 @@ test("saving a draft leaves frozen advanced published summary and delivery uncha
   await page.getByRole("button", { name: "返回", exact: true }).click();
   await expect(
     page
-      .getByRole("dialog", { name: `订阅详情 · ${output.name}`, exact: true })
+      .getByRole("dialog", { name: `${output.name} 的订阅详情`, exact: true })
       .getByText("已保存的修改尚未发布", { exact: true }),
   ).toBeVisible();
   await expect(summary.getByText("直连", { exact: true })).toBeVisible();
@@ -1751,7 +1751,7 @@ test("invalid and mismatched deep-link scope never silently selects a different 
   ).toHaveCount(0);
   await expect(
     page.getByRole("dialog", {
-      name: `订阅详情 · ${other.outputs[0].name}`,
+      name: `${other.outputs[0].name} 的订阅详情`,
       exact: true,
     }),
   ).toHaveCount(0);
@@ -1902,7 +1902,7 @@ test("operator keeps line and user context through authorization, entry preparat
     .getByRole("button", { name: "检查或调整用户授权", exact: true })
     .click();
   const policy = page.getByRole("dialog", {
-    name: `${user.name} · 服务授权`,
+    name: `${user.name} 的服务授权`,
     exact: true,
   });
   await expect(policy).toBeVisible();
@@ -1944,7 +1944,7 @@ test("operator keeps line and user context through authorization, entry preparat
     .getByRole("button", { name: "分阶段应用修改", exact: true })
     .click();
   const plan = page.getByRole("dialog", {
-    name: `${deployment.name} · 应用配置`,
+    name: `${deployment.name}的应用配置`,
     exact: true,
   });
   await expect(plan).toBeVisible();
@@ -2579,7 +2579,7 @@ test("25 synthetic configurations and 100 independent links remain searchable, b
   });
   await search.fill(prefix);
   await expect(
-    page.getByText("26 组配置 · 100 个客户端订阅", { exact: true }),
+    page.getByText("26 组配置 100 个客户端订阅", { exact: true }),
   ).toBeVisible();
   const inventory = page.getByRole("region", {
     name: "分流配置与客户端订阅",
@@ -2621,7 +2621,7 @@ test("25 synthetic configurations and 100 independent links remain searchable, b
       exact: true,
     }),
   ).toBeVisible();
-  await expect(page.getByRole("dialog", { name: /^订阅详情 ·/ })).toHaveCount(
+  await expect(page.getByRole("dialog", { name: / 的订阅详情$/ })).toHaveCount(
     0,
   );
   await page.screenshot({
@@ -2651,7 +2651,7 @@ test("25 synthetic configurations and 100 independent links remain searchable, b
     .click();
   expect((await detailLoaded).ok()).toBe(true);
   const detail = page.getByRole("dialog", {
-    name: `订阅详情 · ${target.name}`,
+    name: `${target.name} 的订阅详情`,
     exact: true,
   });
   await expect(detail).toContainText(profiles[18].name);
@@ -2668,7 +2668,7 @@ test("25 synthetic configurations and 100 independent links remain searchable, b
   await expect(
     page.getByText("没有匹配的配置或客户端订阅", { exact: true }),
   ).toBeVisible();
-  await expect(page.getByRole("dialog", { name: /^订阅详情 ·/ })).toHaveCount(
+  await expect(page.getByRole("dialog", { name: / 的订阅详情$/ })).toHaveCount(
     0,
   );
   // Duplicate display names are independent identities, not guaranteed to share
@@ -2688,7 +2688,7 @@ test("25 synthetic configurations and 100 independent links remain searchable, b
       exact: true,
     }),
   ).toHaveCount(2);
-  await expect(page.getByRole("dialog", { name: /^订阅详情 ·/ })).toHaveCount(
+  await expect(page.getByRole("dialog", { name: / 的订阅详情$/ })).toHaveCount(
     0,
   );
   await search.fill(`${prefix} Long named`);
@@ -2793,7 +2793,7 @@ test("25 synthetic configurations and 100 independent links remain searchable, b
     .click();
   await orphanStatus;
   const orphanDetail = page.getByRole("dialog", {
-    name: `订阅详情 · ${orphan.name}`,
+    name: `${orphan.name} 的订阅详情`,
     exact: true,
   });
   await expect(orphanDetail).toContainText("关联配置不可用");

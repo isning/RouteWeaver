@@ -295,8 +295,9 @@ it("recovers a typed listener mismatch through reviewed local refresh, preservin
     within(editor).getByText(/转发至 uk.example.invalid:1080/),
   ).toBeTruthy();
   expect(
-    within(editor).getByText("UK listener · socks:1080 · xray（草稿）"),
+    within(editor).getByText("UK listener（草稿）"),
   ).toBeTruthy();
+  expect(within(editor).getByText("UK listener（草稿）").closest("[role=combobox]")?.textContent).toContain("socks:1080 xray");
   await user.click(
     within(editor).getByRole("button", { name: "检查监听更新 UK listener" }),
   );
@@ -314,7 +315,7 @@ it("recovers a typed listener mismatch through reviewed local refresh, preservin
   owner.assertActive();
   expect(refreshedForward).toBeTruthy();
   expect(
-    within(editor).getByText("UK listener · socks:2080 · xray"),
+    within(editor).getByText("socks:2080 xray"),
   ).toBeTruthy();
   await user.click(within(editor).getByRole("button", { name: "保存草稿" }));
   owner.assertActive();

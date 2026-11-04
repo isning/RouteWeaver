@@ -218,7 +218,9 @@ export function ResourcesPage() {
       />
       <ErrorNotice error={refresh.error} />
       <QueryState
-        loading={query.isPending} paused={query.isPaused} loadingLayout="table"
+        loading={query.isPending}
+        paused={query.isPaused}
+        loadingLayout="table"
         error={query.error}
         retry={() => query.refetch()}
       >
@@ -593,8 +595,8 @@ export function ResourcesPage() {
             )}
           {inspection && (
             <p role="status">
-              已读取 {bytesLabel(inspection.bytes)} · {inspection.entries}{" "}
-              条记录。发布时仍会校验目标兼容性。
+              已读取 {inspection.entries} 条记录，共{" "}
+              {bytesLabel(inspection.bytes)}。发布时仍会校验目标兼容性。
             </p>
           )}
           <AppField

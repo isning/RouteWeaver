@@ -20,5 +20,5 @@ export function displayRouteName(
   const path = route.hops
     .map((id) => nodes.find((n) => n.id === id)?.name || "未知节点")
     .join(" → ");
-  return `${route.name || "未命名线路"} · ${path || "未选择节点"} · ${route.engine}`;
+  return `${route.name || "未命名线路"}（${path || "未选择节点"}，${route.engine}）`;
 }

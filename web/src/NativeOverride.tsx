@@ -180,15 +180,19 @@ export function NativeOverrideResult({
   return (
     <div className="inline-note space-y-2 rounded-lg border bg-muted/30 p-4 text-sm text-muted-foreground">
       <strong>已合并目标原生覆盖</strong>
-      <p>
-        {value.target.adapterId} {value.target.version} ·{" "}
-        {
+      <p className="flex flex-wrap gap-x-3 gap-y-1">
+        <span>
+          {value.target.adapterId} {value.target.version}
+        </span>
+        <span>
           {
-            prepend: "规则前置",
-            append: "规则后置",
-            replace: "替换结构化规则",
-          }[value.ruleMode]
-        }
+            {
+              prepend: "规则前置",
+              append: "规则后置",
+              replace: "替换结构化规则",
+            }[value.ruleMode]
+          }
+        </span>
       </p>
       <details>
         <summary className="min-h-11 cursor-pointer rounded-sm py-3 outline-none focus-visible:ring-2 focus-visible:ring-ring">

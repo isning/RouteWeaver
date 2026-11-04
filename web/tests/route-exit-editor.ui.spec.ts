@@ -242,7 +242,7 @@ test.describe("390px touch", () => {
     await page.getByText("英国二号", { exact: true }).last().tap();
     await page.getByRole("combobox", { name: "新出口端点" }).tap();
     await page
-      .getByText("英国二号 · vless:443 · xray", { exact: true })
+      .getByText("英国二号", { exact: true })
       .last()
       .tap();
     const check = page.getByRole("button", { name: "检查变更", exact: true });

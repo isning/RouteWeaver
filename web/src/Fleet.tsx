@@ -1,4 +1,8 @@
-import { ResourceToolbar, SearchField, ToolbarFilter } from "@/ui-patterns/resource-toolbar";
+import {
+  ResourceToolbar,
+  SearchField,
+  ToolbarFilter,
+} from "@/ui-patterns/resource-toolbar";
 import {
   Accordion,
   AccordionContent,
@@ -123,7 +127,9 @@ export function FleetPage({
         }
       />
       <QueryState
-        loading={history.isPending || infrastructure.isPending} paused={history.isPaused || infrastructure.isPaused} loadingLayout="table"
+        loading={history.isPending || infrastructure.isPending}
+        paused={history.isPaused || infrastructure.isPaused}
+        loadingLayout="table"
         error={history.error || infrastructure.error}
         retry={() => {
           history.refetch();
@@ -157,8 +163,12 @@ export function FleetPage({
                 },
                 {
                   title: "范围",
-                  render: (_, b) =>
-                    `${b.targets.length} 个实例 · ${b.affectedUsers} 位用户`,
+                  render: (_, b) => (
+                    <span className="grid gap-1">
+                      <span>{b.targets.length} 个实例</span>{" "}
+                      <span>{b.affectedUsers} 位用户</span>
+                    </span>
+                  ),
                 },
                 {
                   title: "状态",
@@ -412,7 +422,7 @@ export function FleetPlanForm({
       bodyProps={{ className: "space-y-5" }}
       title={
         initialDeploymentId
-          ? `${deployment?.name || initialDeploymentId} · ${initialAction ? fleetActionLabel[initialAction] : "计划变更"}`
+          ? `${deployment?.name || initialDeploymentId}的${initialAction ? fleetActionLabel[initialAction] : "计划变更"}`
           : "计划批量变更"
       }
       open
@@ -495,7 +505,9 @@ export function FleetPlanForm({
         </div>
         {lifecycle && (
           <QueryState
-            loading={lifecycle && releases.isPending} paused={releases.isPaused} loadingLayout="form"
+            loading={lifecycle && releases.isPending}
+            paused={releases.isPaused}
+            loadingLayout="form"
             error={releases.error}
             retry={() => releases.refetch()}
           >
@@ -506,7 +518,16 @@ export function FleetPlanForm({
                 value={targetReleaseId}
                 options={(releases.data || []).map((r) => ({
                   value: r.id,
-                  label: `${r.adapterId.replace("routeweaver/", "")} ${r.version} · ${r.platform}`,
+                  label: (
+                    <span className="grid gap-1">
+                      <span>
+                        {r.adapterId.replace("routeweaver/", "")} {r.version}
+                      </span>{" "}
+                      <span className="text-xs text-muted-foreground">
+                        {r.platform}
+                      </span>
+                    </span>
+                  ),
                 }))}
                 onValueChange={(value) => {
                   touch();
@@ -584,7 +605,14 @@ export function FleetPlanForm({
                   )
                   .map((b) => ({
                     value: b.id,
-                    label: `${dateLabel(b.createdAt)} · ${fleetActionLabel[b.action]}`,
+                    label: (
+                      <span className="grid gap-1">
+                        <span>{fleetActionLabel[b.action]}</span>{" "}
+                        <span className="text-xs font-normal text-muted-foreground">
+                          {dateLabel(b.createdAt)}
+                        </span>
+                      </span>
+                    ),
                   }))}
                 onValueChange={(value) => {
                   touch();
@@ -631,10 +659,26 @@ export function FleetPlanForm({
               aria-label="执行顺序"
               value={strategy}
               options={[
-                { value: "together", label: "一起执行 · 同时提交所选实例" },
-                { value: "sequential", label: "逐个执行 · 每次确认一个实例" },
-                { value: "canary", label: "先试一个 · 成功后执行其余实例" },
-                { value: "custom", label: "自定义分组 · 为实例指定阶段" },
+                {
+                  value: "together",
+                  label: "一起执行",
+                  description: "同时提交所选实例",
+                },
+                {
+                  value: "sequential",
+                  label: "逐个执行",
+                  description: "每次确认一个实例",
+                },
+                {
+                  value: "canary",
+                  label: "先试一个",
+                  description: "成功后执行其余实例",
+                },
+                {
+                  value: "custom",
+                  label: "自定义分组",
+                  description: "为实例指定阶段",
+                },
               ]}
               onValueChange={(value) => {
                 touch();
@@ -647,44 +691,56 @@ export function FleetPlanForm({
             执行顺序按勾选顺序生成；下方显示每个实例所在阶段。创建计划后仍需确认执行。
           </p>
           {strategyIssue && <Notice tone="warning" title={strategyIssue} />}
-          <ResourceToolbar label="筛选执行范围" search={
-            <SearchField
-              aria-label="筛选批量变更实例"
-              placeholder="按服务器或实例名称筛选"
-              value={search}
-              onValueChange={setSearch}
-            />
-          } filters={<>
-            <ToolbarFilter label="服务器分组" controlId={`${filterId}-group`}>
-            <ChoiceSelect
-              id={`${filterId}-group`}
-              clearable
-              aria-label="筛选服务器分组"
-              placeholder="所有分组"
-              value={group}
-              options={[
-                ...new Set(
-                  inventory.hosts
-                    .map((h) => h.group)
-                    .filter((value): value is string => Boolean(value)),
-                ),
-              ].map((value) => ({ value, label: value }))}
-              onValueChange={setGroup}
-            />
-            </ToolbarFilter>
-            <ToolbarFilter label="服务器标签" controlId={`${filterId}-tags`}>
-            <MultiChoice
-              id={`${filterId}-tags`}
-              aria-label="筛选服务器标签"
-              placeholder="所有标签"
-              value={tags}
-              options={[
-                ...new Set(inventory.hosts.flatMap((h) => h.tags || [])),
-              ].map((value) => ({ value, label: value }))}
-              onValueChange={setTags}
-            />
-            </ToolbarFilter>
-          </>} />
+          <ResourceToolbar
+            label="筛选执行范围"
+            search={
+              <SearchField
+                aria-label="筛选批量变更实例"
+                placeholder="按服务器或实例名称筛选"
+                value={search}
+                onValueChange={setSearch}
+              />
+            }
+            filters={
+              <>
+                <ToolbarFilter
+                  label="服务器分组"
+                  controlId={`${filterId}-group`}
+                >
+                  <ChoiceSelect
+                    id={`${filterId}-group`}
+                    clearable
+                    aria-label="筛选服务器分组"
+                    placeholder="所有分组"
+                    value={group}
+                    options={[
+                      ...new Set(
+                        inventory.hosts
+                          .map((h) => h.group)
+                          .filter((value): value is string => Boolean(value)),
+                      ),
+                    ].map((value) => ({ value, label: value }))}
+                    onValueChange={setGroup}
+                  />
+                </ToolbarFilter>
+                <ToolbarFilter
+                  label="服务器标签"
+                  controlId={`${filterId}-tags`}
+                >
+                  <MultiChoice
+                    id={`${filterId}-tags`}
+                    aria-label="筛选服务器标签"
+                    placeholder="所有标签"
+                    value={tags}
+                    options={[
+                      ...new Set(inventory.hosts.flatMap((h) => h.tags || [])),
+                    ].map((value) => ({ value, label: value }))}
+                    onValueChange={setTags}
+                  />
+                </ToolbarFilter>
+              </>
+            }
+          />
           <div className={"flex flex-wrap items-center gap-2"}>
             <span>已选择 {targetIds.length} 个实例</span>
             <ActionButton
@@ -715,6 +771,7 @@ export function FleetPlanForm({
           <DataTable
             rowKey="id"
             rows={visible}
+            count={{ total: instances.length, unit: "个可选实例", filtered: !!search || !!group || tags.length > 0 }}
             minWidth={520}
             pageSize={8}
             columns={[
@@ -744,8 +801,10 @@ export function FleetPlanForm({
                   <>
                     <strong>{coreName(i)}</strong>
                     <p className="muted text-sm text-muted-foreground">
-                      {inventory.hosts.find((h) => h.id === i.hostId)?.name} ·{" "}
-                      {i.version}
+                      <span className="block">
+                        {inventory.hosts.find((h) => h.id === i.hostId)?.name}
+                      </span>{" "}
+                      <span className="block">版本 {i.version}</span>
                     </p>
                   </>
                 ),
@@ -861,12 +920,18 @@ export function FleetPlanForm({
         {review && (
           <Section title="变更检查">
             <p>
-              转发路径：{deployment?.name || review.input.deploymentId} ·{" "}
-              {fleetActionLabel[review.input.action]}
+              <span className="block">
+                转发路径：{deployment?.name || review.input.deploymentId}
+              </span>{" "}
+              <span className="block">
+                {fleetActionLabel[review.input.action]}
+              </span>
             </p>
             <p>
-              {review.plan.targets.length} 个实例 · {review.plan.affectedUsers}{" "}
-              位用户受影响
+              <span className="block">{review.plan.targets.length} 个实例</span>{" "}
+              <span className="block">
+                {review.plan.affectedUsers} 位用户受影响
+              </span>
             </p>
             <p>
               {action === "install"
@@ -988,9 +1053,13 @@ function FleetTargets({
           ))}
           {t.attempts?.map((a) => (
             <p key={a.number}>
-              第 {a.number} 次 · {fleetStatus(a.status)} ·{" "}
-              {fleetAttemptFeedback(a)} ·{" "}
-              {dateLabel(a.observedAt || a.queuedAt)}
+              <span className="block font-medium">
+                第 {a.number} 次 {fleetStatus(a.status)}
+              </span>{" "}
+              <span className="block">{fleetAttemptFeedback(a)}</span>{" "}
+              <span className="block text-muted-foreground">
+                {dateLabel(a.observedAt || a.queuedAt)}
+              </span>
             </p>
           ))}
         </div>
@@ -1177,7 +1246,9 @@ export function FleetBatchDetail({
     >
       <ErrorNotice error={execute.error} />
       <QueryState
-        loading={query.isPending} paused={query.isPaused} loadingLayout="summary"
+        loading={query.isPending}
+        paused={query.isPaused}
+        loadingLayout="summary"
         error={query.error}
         retry={() => query.refetch()}
       >
@@ -1189,8 +1260,10 @@ export function FleetBatchDetail({
                   {fleetActionLabel[batch.action]}
                 </h2>
                 <p>
-                  {dateLabel(batch.createdAt)} · {batch.affectedUsers}{" "}
-                  位用户受影响
+                  <span className="block">{dateLabel(batch.createdAt)}</span>{" "}
+                  <span className="block">
+                    {batch.affectedUsers} 位用户受影响
+                  </span>
                 </p>
               </div>
               <Badge variant="secondary">{fleetStatus(batch.status)}</Badge>
@@ -1254,7 +1327,10 @@ export function FleetBatchDetail({
                       >
                         <div>
                           <strong>
-                            第 {stage + 1} 阶段 · {targets.length} 个实例
+                            第 {stage + 1} 阶段
+                            <span className="ml-3 font-normal text-muted-foreground">
+                              {targets.length} 个实例
+                            </span>
                           </strong>
                           <p className="muted text-sm text-muted-foreground">
                             {

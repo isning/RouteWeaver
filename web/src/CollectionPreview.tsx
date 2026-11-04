@@ -21,7 +21,7 @@ function stageLabel(
   const stepIndex = steps?.findIndex((step) => step.id === stage.stepId) ?? -1;
   if (steps && stepIndex >= 0) {
     const context = stage.scope === "source" ? sourceName || "来源" : "合并后";
-    return `${context} · ${stepIndex + 1}. ${processingStepLabel(steps[stepIndex].kind)}`;
+    return `${context} 第 ${stepIndex + 1} 步：${processingStepLabel(steps[stepIndex].kind)}`;
   }
   const scope =
     {
@@ -31,7 +31,7 @@ function stageLabel(
       merged: "有序合并",
       aggregate: "聚合处理",
     }[stage.scope || ""] || "处理阶段";
-  return scope + (sourceName ? ` · ${sourceName}` : "");
+  return scope + (sourceName ? ` ${sourceName}` : "");
 }
 export function CollectionPreview({
   value,
@@ -100,21 +100,23 @@ export function CollectionPreview({
             label: stageLabel(stage, collection, sources),
             children: (
               <>
-                <p className="muted text-sm text-muted-foreground">
-                  {stage.endpoints?.length || 0} 个节点
+                <div className="muted grid gap-1 text-sm text-muted-foreground">
+                  <p>{stage.endpoints?.length || 0} 个节点</p>
                   {(stage.comparison === "step-input" ||
                     (!stage.comparison &&
                       !!stage.stepId &&
                       (stage.scope === "source" ||
                         stage.scope === "aggregate"))) && (
-                    <>
-                      {" "}
-                      · 相对此步骤输入：新增 {stage.addedIds?.length || 0} 个 ·
-                      移除 {stage.removedIds?.length || 0} 个 · 修改{" "}
-                      {stage.changedIds?.length || 0} 个
-                    </>
+                    <div className="space-y-1">
+                      <p>相对此步骤输入</p>
+                      <p className="flex flex-wrap gap-x-3 gap-y-1">
+                        <span>新增 {stage.addedIds?.length || 0} 个</span>
+                        <span>移除 {stage.removedIds?.length || 0} 个</span>
+                        <span>修改 {stage.changedIds?.length || 0} 个</span>
+                      </p>
+                    </div>
                   )}
-                </p>
+                </div>
                 {table(stage.endpoints)}
               </>
             ),

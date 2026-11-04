@@ -1,3 +1,4 @@
+import { Metadata, MetadataItem } from "@/ui-patterns/metadata";
 import { WorkspaceFrame } from "@/ui-patterns/workspace-frame";
 import { groupSubscriptionInventory } from "./subscription-inventory";
 import { ResourceToolbar, SearchField } from "@/ui-patterns/resource-toolbar";
@@ -923,7 +924,7 @@ export function SubscriptionsPage({
         </QueryState>
         {!!data?.routes?.length && (
           <section aria-labelledby={availableRoutesId} className="available-routes min-w-0 border-t border-border pt-4">
-            <h2 id={availableRoutesId} className="text-sm font-medium">平台提供的线路 · {data.routes.length}</h2>
+            <h2 id={availableRoutesId} className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm font-medium">平台提供的线路 <span className="font-normal tabular-nums text-muted-foreground">{data.routes.length} 条</span></h2>
             <p className="mt-1 text-xs leading-relaxed text-muted-foreground">已为你的账号开通</p>
             <ul className="route-options mt-2 divide-y divide-border">
               {data.routes.map((route) => (
@@ -1072,10 +1073,12 @@ export function SubscriptionsPage({
             onValueChange={setSearch}
           />
           } summary={<span role="status">
-            {groups.length} 组配置 ·{" "}
-            {outputs.isPending || outputs.isError
-              ? "订阅待核对"
-              : `${groups.reduce((total, group) => total + group.links.length, 0)} 个客户端订阅`}
+            <Metadata>
+              <MetadataItem>{groups.length} 组配置</MetadataItem>
+              <MetadataItem>{outputs.isPending || outputs.isError
+                ? "订阅待核对"
+                : `${groups.reduce((total, group) => total + group.links.length, 0)} 个客户端订阅`}</MetadataItem>
+            </Metadata>
           </span>} />
       )}
       {(profiles.isPending || outputs.isPending) && (
@@ -1120,13 +1123,14 @@ export function SubscriptionsPage({
                         : "关联配置不可用")}
                   </h2>
                   <p className="text-xs text-muted-foreground">
-                    {profile
-                      ? "已保存的分流配置"
-                      : "配置暂不可编辑；保留独立订阅的访问与管理"}
-                    {" · "}
-                    {outputs.isPending || outputs.isError
-                      ? "关联订阅待核对"
-                      : `${group.totalLinks} 个客户端订阅`}
+                    <Metadata>
+                      <MetadataItem>{profile
+                        ? "已保存的分流配置"
+                        : "配置暂不可编辑；保留独立订阅的访问与管理"}</MetadataItem>
+                      <MetadataItem>{outputs.isPending || outputs.isError
+                        ? "关联订阅待核对"
+                        : `${group.totalLinks} 个客户端订阅`}</MetadataItem>
+                    </Metadata>
                   </p>
                 </div>
                 {profile && (
@@ -1169,7 +1173,7 @@ export function SubscriptionsPage({
                               !!checkingID ||
                               !!opening
                             }
-                            aria-label={`检查 1 个订阅的更新 · ${profile.name}`}
+                            aria-label={`检查 ${profile.name} 的 1 个订阅更新`}
                             onSelect={() =>
                               void checkVisibleOutputs(checkableLinks)
                             }
@@ -1238,12 +1242,13 @@ export function SubscriptionsPage({
                           <Status value={output.status} />
                         )}
                         <p>
-                          {output.target.adapterId} ·{" "}
-                          {output.mode === "nodes-only" ? "纯节点" : "完整配置"}{" "}
-                          ·{" "}
-                          {output.publishedAt
-                            ? `最近发布 ${dateLabel(output.publishedAt)}`
-                            : "尚未发布"}
+                          <Metadata>
+                            <MetadataItem>{output.target.adapterId}</MetadataItem>
+                            <MetadataItem>{output.mode === "nodes-only" ? "纯节点" : "完整配置"}</MetadataItem>
+                            <MetadataItem>{output.publishedAt
+                              ? `最近发布 ${dateLabel(output.publishedAt)}`
+                              : "尚未发布"}</MetadataItem>
+                          </Metadata>
                         </p>
                       </div>
                     </div>
@@ -1345,7 +1350,7 @@ export function SubscriptionsPage({
                         !!checkingID ||
                         opening
                       }
-                      aria-label={`检查 ${checkableLinks.length} 个订阅的更新 · ${profile.name}`}
+                      aria-label={`检查 ${profile.name} 的 ${checkableLinks.length} 个订阅更新`}
                       aria-busy={checkableLinks.some((output) =>
                         comparisons.pendingIds.has(output.id),
                       )}
@@ -1422,7 +1427,7 @@ export function SubscriptionsPage({
       )}
       {detailOutput && !updating && !access && !completedAccess && (
         <TaskDialog
-          title={`订阅详情 · ${detailOutput.name}`}
+          title={`${detailOutput.name} 的订阅详情`}
           open
           footer={null}
           className="subscription-detail"
@@ -1454,8 +1459,10 @@ export function SubscriptionsPage({
             </p>
             <div className="subscription-detail-meta flex flex-wrap gap-2 text-sm text-muted-foreground">
               <span>
-                {detailOutput.target.adapterId} ·{" "}
-                {detailOutput.mode === "nodes-only" ? "纯节点" : "完整配置"}
+                <Metadata>
+                  <MetadataItem>{detailOutput.target.adapterId}</MetadataItem>
+                  <MetadataItem>{detailOutput.mode === "nodes-only" ? "纯节点" : "完整配置"}</MetadataItem>
+                </Metadata>
               </span>
               {detailOutput.status === "published" ? (
                 <span className="subscription-publication-state text-xs text-muted-foreground">
@@ -3138,8 +3145,10 @@ export function UpdateOutput({
         </p>
         {profileName && <p>分流配置：{profileName}</p>}
         <p>
-          {output.target.adapterId} {output.target.version} ·{" "}
-          {output.mode === "nodes-only" ? "纯节点" : "完整配置"}
+          <Metadata>
+            <MetadataItem>{output.target.adapterId} {output.target.version}</MetadataItem>
+            <MetadataItem>{output.mode === "nodes-only" ? "纯节点" : "完整配置"}</MetadataItem>
+          </Metadata>
         </p>
       </div>
       {unknownEffect && (
@@ -3431,9 +3440,14 @@ export function ProfilePublicationDialog({
                   className="flex min-w-0 cursor-pointer items-start gap-3 rounded-lg border p-4 leading-relaxed wrap-anywhere has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-accent/50"
                 >
                   <RadioGroupItem value={output.id} />
-                  更新「{output.name}」 · {output.target.adapterId} ·{" "}
-                  {output.mode === "nodes-only" ? "纯节点" : "完整配置"}
-                  {output.status === "revoked" ? " · 已撤销（需重新发布）" : ""}
+                  <span className="min-w-0 space-y-1">
+                    <span className="block font-medium">更新「{output.name}」</span>{" "}
+                    <Metadata className="text-sm font-normal text-muted-foreground">
+                      <MetadataItem>{output.target.adapterId}</MetadataItem>
+                      <MetadataItem>{output.mode === "nodes-only" ? "纯节点" : "完整配置"}</MetadataItem>
+                      {output.status === "revoked" && <MetadataItem>已撤销（需重新发布）</MetadataItem>}
+                    </Metadata>
+                  </span>
                 </Label>
               ))}
               <Label className="flex cursor-pointer items-start gap-3 rounded-lg border p-4 leading-relaxed has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-accent/50">

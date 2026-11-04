@@ -186,7 +186,7 @@ for (const { width, origin } of [
         });
         await trigger.click();
         let surface = page.getByRole("dialog", {
-          name: "小林 · 平台入口",
+          name: "小林 的平台入口",
           exact: true,
         });
         await expect
@@ -218,7 +218,7 @@ for (const { width, origin } of [
       }
       phase = "open named entry";
       const drawer = page.getByRole("dialog", {
-        name: "小林 · 平台入口",
+        name: "小林 的平台入口",
         exact: true,
       });
       await expect

@@ -29,7 +29,7 @@ it("reads frozen advanced intent without fetching a feed or offering an editor",
   vi.stubGlobal("fetch", fetch);
   render(<RoutingSummaryView summary={advanced("group", "已发布策略组")} />);
   expect(screen.getByText("由策略组「已发布策略组」决定")).toBeTruthy();
-  expect(screen.getByText("4 条分流规则 · 2 个策略组 · 3 个节点")).toBeTruthy();
+  for (const fact of ["4 条分流规则", "2 个策略组", "3 个节点"]) expect(screen.getByText(fact)).toBeTruthy();
   expect(screen.getByText(/当前选中的节点请在客户端查看/)).toBeTruthy();
   expect(screen.queryByRole("button")).toBeNull();
   expect(screen.queryByRole("link")).toBeNull();
@@ -61,7 +61,7 @@ it("keeps all scope caveats in one initially closed, keyboard-focusable disclosu
   await user.click(trigger);
   expect(details.open).toBe(false);
   expect(screen.getByText("由策略组「已发布策略组」决定")).toBeTruthy();
-  expect(screen.getByText("4 条分流规则 · 2 个策略组 · 3 个节点")).toBeTruthy();
+  for (const fact of ["4 条分流规则", "2 个策略组", "3 个节点"]) expect(screen.getByText(fact)).toBeTruthy();
 });
 
 it.each([
@@ -150,4 +150,13 @@ it("preserves basic frozen labels and the unavailable fallback", () => {
   expect(screen.getByText("其他线路")).toBeTruthy();
   rerender(<RoutingSummaryView />);
   expect(screen.getByText("这份订阅暂无可用的分流摘要。")).toBeTruthy();
+});
+
+it("groups generated statistics without rewriting a user-authored middle dot", () => {
+  const { container } = render(<RoutingSummaryView summary={advanced("endpoint", "Office · Tokyo")} />);
+  expect(screen.getByText("节点「Office · Tokyo」")).toBeTruthy();
+  for (const fact of ["4 条分流规则", "2 个策略组", "3 个节点"]) {
+    expect(screen.getByText(fact)).toBeTruthy();
+  }
+  expect(container.textContent?.match(/·/g)).toHaveLength(1);
 });

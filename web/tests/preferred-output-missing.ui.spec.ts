@@ -121,7 +121,7 @@ test("fault contract: a missing preferred Output does not become first creation 
       .getByRole("button", { name: `查看订阅 ${preferred.name}`, exact: true })
       .click();
     const detail = page.getByRole("dialog", {
-      name: `订阅详情 · ${preferred.name}`,
+      name: `${preferred.name} 的订阅详情`,
       exact: true,
     });
     await detail.getByRole("button", { name: "更多操作", exact: true }).click();

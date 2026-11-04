@@ -168,7 +168,8 @@ it.for(["preview", "create"] as const)(
       await waitFor(() =>
         expect(preview.getAttribute("aria-busy")).not.toBe("true"),
       );
-      expect(dialog.getByText("1 个实例 · 7 位用户受影响")).toBeTruthy();
+      expect(dialog.getByText("1 个实例")).toBeTruthy();
+      expect(dialog.getByText("7 位用户受影响")).toBeTruthy();
       expect(
         (
           dialog.getByRole("button", {
@@ -206,7 +207,8 @@ it.for(["preview", "create"] as const)(
         expect(create.getAttribute("aria-busy")).not.toBe("true"),
       );
       expect(create.disabled).toBe(false);
-      expect(dialog.getByText("1 个实例 · 7 位用户受影响")).toBeTruthy();
+      expect(dialog.getByText("1 个实例")).toBeTruthy();
+      expect(dialog.getByText("7 位用户受影响")).toBeTruthy();
       expect(requests[1].body).toMatchObject({
         deploymentId: "path",
         targetIds: ["core"],
@@ -537,7 +539,7 @@ it.for(["row", "detail", "revoked-row", "revoked-detail"] as const)(
         screen.getByRole("button", { name: "查看订阅 Laptop" }),
       );
       scope = within(
-        await screen.findByRole("dialog", { name: "订阅详情 · Laptop" }),
+        await screen.findByRole("dialog", { name: "Laptop 的订阅详情" }),
       );
       if (!surface.startsWith("revoked"))
         await scope.findByText("与已保存草稿一致");

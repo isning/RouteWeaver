@@ -250,7 +250,7 @@ async function selectVisibleOption(
 }
 async function choose(user: ReturnType<typeof userEvent.setup>) {
   await selectVisibleOption(user, "新出口服务器", "英国二号");
-  await selectVisibleOption(user, "新出口端点", "英国二号 · vless:443 · xray");
+  await selectVisibleOption(user, "新出口端点", "英国二号");
   await waitFor(() =>
     expect(
       (screen.getByRole("button", { name: "检查变更" }) as HTMLButtonElement)
@@ -475,7 +475,7 @@ it("keeps TLS material scoped to its selected endpoint without copying it when a
     "tls/second.key",
   );
   await selectVisibleOption(user, "新出口服务器", "英国三号");
-  await selectVisibleOption(user, "新出口端点", "英国三号 · vless:443 · xray");
+  await selectVisibleOption(user, "新出口端点", "英国三号");
   await waitFor(() =>
     expect(
       (screen.getByRole("textbox", { name: "证书路径" }) as HTMLInputElement)

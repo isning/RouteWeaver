@@ -190,7 +190,7 @@ it.for([
       expect(
         dialog.queryByRole("button", { name: "创建待执行批次" }),
       ).toBeNull();
-    else expect(dialog.getByText("1 个实例 · 7 位用户受影响")).toBeTruthy();
+    else { expect(dialog.getByText("1 个实例")).toBeTruthy(); expect(dialog.getByText("7 位用户受影响")).toBeTruthy(); }
     expect(writes[0]).toMatchObject({
       deploymentId: "path",
       targetIds: ["core"],

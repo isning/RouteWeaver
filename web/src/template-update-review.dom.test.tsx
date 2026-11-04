@@ -213,7 +213,7 @@ it("reviews equal-count route and default changes before explicit digest-bound d
   const user = userEvent.setup();
   await user.click(await screen.findByRole("tab", { name: "我的引用" }));
   await user.click(
-    await screen.findByRole("button", { name: "检查更新 · 家庭配置" }),
+    await screen.findByRole("button", { name: "检查更新 家庭配置" }),
   );
   // Establish successful inspection first, so RED is missing decision review,
   // not a failed setup selector or incompatible mock candidate.
@@ -363,7 +363,7 @@ async function openTemplateUpdateContract(
   await user.click(await screen.findByRole("tab", { name: "我的引用" }));
   await user.click(
     await screen.findByRole("button", {
-      name: `检查更新 · ${collection ? "家庭集合" : "家庭配置"}`,
+      name: `检查更新 ${collection ? "家庭集合" : "家庭配置"}`,
     }),
   );
   expect(await screen.findByText("可以更新到 v2")).toBeTruthy();

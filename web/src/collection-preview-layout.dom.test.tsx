@@ -54,16 +54,16 @@ it("bounds long stage labels to a one-line scrolling rail while preserving the s
   const rail = screen.getByRole("tablist", { name: "处理阶段" });
   expect(rail.closest('[data-slot="scroll-area"]')).toBeTruthy();
   expect(rail.classList.contains("flex-nowrap")).toBe(true);
-  const tab = within(rail).getByRole("tab", { name: `原始输入 · ${longName}` });
+  const tab = within(rail).getByRole("tab", { name: `原始输入 ${longName}` });
   expect(tab.classList.contains("whitespace-nowrap")).toBe(true);
   expect(tab.classList.contains("max-w-64")).toBe(true);
-  expect(tab.getAttribute("title")).toBe(`原始输入 · ${longName}`);
+  expect(tab.getAttribute("title")).toBe(`原始输入 ${longName}`);
   await userEvent.click(tab);
   const panel = screen.getByRole("tabpanel", {
-    name: `原始输入 · ${longName}`,
+    name: `原始输入 ${longName}`,
   });
   expect(
-    within(panel).getByRole("heading", { name: `原始输入 · ${longName}` }),
+    within(panel).getByRole("heading", { name: `原始输入 ${longName}` }),
   ).toBeTruthy();
   expect(within(panel).getByText("0 个节点")).toBeTruthy();
   expect(panel.closest('[data-slot="scroll-area"]')).toBeNull();
@@ -82,7 +82,7 @@ it("keeps keyboard traversal and stage identity after additional preview stages 
   await user.keyboard("{ArrowRight}");
   expect(
     screen
-      .getByRole("tab", { name: `原始输入 · ${longName}` })
+      .getByRole("tab", { name: `原始输入 ${longName}` })
       .getAttribute("aria-selected"),
   ).toBe("true");
   const more: Preview = {
@@ -114,11 +114,11 @@ it("keeps keyboard traversal and stage identity after additional preview stages 
   );
   expect(screen.getAllByRole("tab")).toHaveLength(29);
   expect(
-    screen.getByRole("tabpanel", { name: `原始输入 · ${longName}` }),
+    screen.getByRole("tabpanel", { name: `原始输入 ${longName}` }),
   ).toBeTruthy();
   await user.keyboard("{End}");
   expect(
-    screen.getByRole("tabpanel", { name: "来源处理 · 来源 24" }),
+    screen.getByRole("tabpanel", { name: "来源处理 来源 24" }),
   ).toBeTruthy();
   await user.keyboard("{Home}");
   expect(screen.getByRole("tabpanel", { name: "最终结果" })).toBeTruthy();
@@ -177,16 +177,8 @@ it("reports step-input deltas but never treats snapshot summaries as additions, 
     expect(panel.getByText("0 个节点")).toBeTruthy();
     expect(panel.queryByText(/新增|移除|修改|相对此步骤输入/)).toBeNull();
   }
-  await user.click(screen.getByRole("tab", { name: /1\. 重新命名/ }));
-  expect(
-    within(screen.getByRole("tabpanel")).getByText(
-      "0 个节点 · 相对此步骤输入：新增 0 个 · 移除 0 个 · 修改 1 个",
-    ),
-  ).toBeTruthy();
-  await user.click(screen.getByRole("tab", { name: /合并后 · 1\./ }));
-  expect(
-    within(screen.getByRole("tabpanel")).getByText(
-      "0 个节点 · 相对此步骤输入：新增 0 个 · 移除 1 个 · 修改 0 个",
-    ),
-  ).toBeTruthy();
+  await user.click(screen.getByRole("tab", { name: /第 1 步：重新命名/ }));
+  for (const fact of ["0 个节点", "相对此步骤输入", "新增 0 个", "移除 0 个", "修改 1 个"]) expect(within(screen.getByRole("tabpanel")).getByText(fact)).toBeTruthy();
+  await user.click(screen.getByRole("tab", { name: /合并后 第 1 步/ }));
+  for (const fact of ["0 个节点", "相对此步骤输入", "新增 0 个", "移除 1 个", "修改 0 个"]) expect(within(screen.getByRole("tabpanel")).getByText(fact)).toBeTruthy();
 });

@@ -127,7 +127,11 @@ it("distinguishes no matches and clears only the query to recover the same sourc
   expect(screen.queryByText("暂无订阅来源")).toBeNull();
   expect(screen.queryByText("向左右滚动查看完整表格")).toBeNull();
   expect(screen.getAllByRole("button", { name: "添加来源" })).toHaveLength(1);
-  expect(screen.getByText("找到 0 个，共 2 个私有来源")).toBeTruthy();
+  expect(
+    document.getElementById(
+      screen.getByRole("table").getAttribute("aria-describedby")!,
+    )?.textContent,
+  ).toBe("找到 0 个私有来源共 2 个私有来源");
   expect(document.body.textContent).not.toMatch(
     /private-import-content|private\.example|token=secret/,
   );
@@ -232,7 +236,11 @@ it("clears a matching source query without losing source identities or focus", a
   expect(within(toolbar).queryByText("2 个私有来源")).toBeNull();
   expect(screen.getByRole("columnheader", { name: "操作" })).toBeTruthy();
   await userEvent.type(search, "Alpha");
-  expect(screen.getByText("找到 1 个，共 2 个私有来源")).toBeTruthy();
+  expect(
+    document.getElementById(
+      screen.getByRole("table").getAttribute("aria-describedby")!,
+    )?.textContent,
+  ).toBe("找到 1 个私有来源共 2 个私有来源");
   expect(screen.queryByRole("button", { name: /^南区 Beta/ })).toBeNull();
   expect(screen.getByRole("button", { name: /^北区 Alpha/ })).toBeTruthy();
   const clear = within(toolbar).getByRole("button", { name: "清除搜索输入" });
@@ -240,7 +248,11 @@ it("clears a matching source query without losing source identities or focus", a
   await userEvent.keyboard("{Enter}");
   expect(document.activeElement).toBe(search);
   expect(search).toHaveProperty("value", "");
-  expect(screen.getByText("2 个私有来源")).toBeTruthy();
+  expect(
+    document.getElementById(
+      screen.getByRole("table").getAttribute("aria-describedby")!,
+    )?.textContent,
+  ).toBe("共 2 个私有来源");
   expect(screen.getByRole("button", { name: /^南区 Beta/ })).toBeTruthy();
   expect(screen.getByRole("button", { name: /^北区 Alpha/ })).toBeTruthy();
   expect(fetcher).toHaveBeenCalledTimes(1);

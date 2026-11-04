@@ -663,7 +663,7 @@ for (const status of [200, 503])
       f = mountEntries(2);
     try {
       const drawer = await screen.findByRole("dialog", {
-        name: "小林 · 平台入口",
+        name: "小林 的平台入口",
       });
       const row = await within(drawer).findByRole("listitem", {
         name: "入口 1",
@@ -703,7 +703,7 @@ for (const status of [200, 503])
       expect(pathAction.getAttribute("href")).toBeNull();
       f.setUser({ ...member, id: "other-owner", name: "小周" });
       const other = await screen.findByRole("dialog", {
-        name: "小周 · 平台入口",
+        name: "小周 的平台入口",
       });
       await within(other).findByRole("listitem", { name: "入口 1" });
       const before = f.reads.filter(
@@ -735,7 +735,7 @@ it("does not restore a dismissed entry task when its pending rotation finishes",
     f = mountEntries();
   try {
     const drawer = await screen.findByRole("dialog", {
-      name: "小林 · 平台入口",
+      name: "小林 的平台入口",
     });
     const row = await within(drawer).findByRole("listitem", { name: "入口 1" });
     await scenario.click(() =>
@@ -752,7 +752,7 @@ it("does not restore a dismissed entry task when its pending rotation finishes",
       f.finish(json({ status: "pending-deployment" }));
     });
     expect(
-      screen.queryByRole("dialog", { name: "小林 · 平台入口" }),
+      screen.queryByRole("dialog", { name: "小林 的平台入口" }),
     ).toBeNull();
     expect(screen.queryByText("新凭据已准备")).toBeNull();
   } finally {
@@ -763,7 +763,7 @@ it("does not restore a dismissed entry task when its pending rotation finishes",
 it("keeps large entry lists paginated and resets ownership on another user", async (context) => {
   const scenario = ownedClickScenario(context),
     f = mountEntries(11);
-  const drawer = await screen.findByRole("dialog", { name: "小林 · 平台入口" });
+  const drawer = await screen.findByRole("dialog", { name: "小林 的平台入口" });
   await within(drawer).findByRole("listitem", { name: "入口 1" });
   expect(
     within(drawer).queryByRole("listitem", { name: "入口 11" }),
@@ -774,14 +774,14 @@ it("keeps large entry lists paginated and resets ownership on another user", asy
   await within(drawer).findByRole("listitem", { name: "入口 11" });
   expect(within(drawer).queryByRole("listitem", { name: "入口 1" })).toBeNull();
   f.setUser({ ...member, id: "other-owner", name: "小周" });
-  const other = await screen.findByRole("dialog", { name: "小周 · 平台入口" });
+  const other = await screen.findByRole("dialog", { name: "小周 的平台入口" });
   await within(other).findByRole("listitem", { name: "入口 1" });
   expect(within(other).queryByRole("listitem", { name: "入口 11" })).toBeNull();
 });
 
 it("uses the managed namespace for an entry name when a legacy route shares its ID", async () => {
   mountEntries();
-  const drawer = await screen.findByRole("dialog", { name: "小林 · 平台入口" });
+  const drawer = await screen.findByRole("dialog", { name: "小林 的平台入口" });
   const row = await within(drawer).findByRole("listitem", { name: "入口 1" });
   expect(within(row).getByText("伦敦线路")).toBeTruthy();
   expect(within(row).queryByText("同 ID 的旧线路")).toBeNull();
@@ -817,7 +817,7 @@ it("keeps a delayed revocation failure with its original owner after switching u
     f = mountEntries();
   try {
     const drawer = await screen.findByRole("dialog", {
-      name: "小林 · 平台入口",
+      name: "小林 的平台入口",
     });
     const row = await within(drawer).findByRole("listitem", { name: "入口 1" });
     await scenario.click(() =>
@@ -835,7 +835,7 @@ it("keeps a delayed revocation failure with its original owner after switching u
     ).toBe(true);
     f.setUser({ ...member, id: "other-owner", name: "小周" });
     const other = await screen.findByRole("dialog", {
-      name: "小周 · 平台入口",
+      name: "小周 的平台入口",
     });
     await within(other).findByRole("listitem", { name: "入口 1" });
     await act(async () => {

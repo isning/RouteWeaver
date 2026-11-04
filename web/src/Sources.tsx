@@ -1,3 +1,4 @@
+import { Metadata, MetadataItem } from "@/ui-patterns/metadata";
 import { ResourceToolbar, SearchField } from "@/ui-patterns/resource-toolbar";
 import { TaskDialog, TaskSheet } from "@/ui-patterns/task-overlays";
 import { MultiChoice } from "@/ui-patterns/choice-select";
@@ -339,13 +340,7 @@ export function SourcesPage({
               className="@container/source-table"
               rowKey="id"
               rows={filtered}
-              summary={
-                <span aria-live="polite" aria-atomic="true">
-                  {search
-                    ? `找到 ${filtered.length} 个，共 ${query.data?.length || 0} 个私有来源`
-                    : `${query.data?.length || 0} 个私有来源`}
-                </span>
-              }
+              count={{ total: query.data.length, unit: "个私有来源", filtered: !!search }}
               columns={[
                 {
                   title: "来源",
@@ -630,13 +625,15 @@ export function SourcesPage({
               />
             )}
             <p className="muted text-sm text-muted-foreground">
-              最近更新 {dateLabel(detail.updatedAt)} ·{" "}
-              {(detail.snapshot?.endpoints || detail.endpoints || []).length}{" "}
-              个节点
+              <Metadata>
+                <MetadataItem>最近更新 {dateLabel(detail.updatedAt)}</MetadataItem>
+                <MetadataItem>{(detail.snapshot?.endpoints || detail.endpoints || []).length} 个节点</MetadataItem>
+              </Metadata>
             </p>
             <DataTable
               rowKey="id"
               rows={detail.snapshot?.endpoints || detail.endpoints || []}
+              summary={false}
               columns={[
                 { title: "名称", accessor: "name" },
                 {
@@ -655,14 +652,20 @@ export function SourcesPage({
                   {detail.applyHistory.map((event) => (
                     <li key={event.id} className="space-y-1 py-3 text-sm">
                       <p>
-                        {dateLabel(event.appliedAt)} ·{" "}
-                        {event.mode === "manual" ? "手动应用" : "自动应用"}
+                        <Metadata>
+                          <MetadataItem>{dateLabel(event.appliedAt)}</MetadataItem>
+                          <MetadataItem>{event.mode === "manual" ? "手动应用" : "自动应用"}</MetadataItem>
+                        </Metadata>
                       </p>
                       <p className="text-muted-foreground">
-                        {event.beforeCount} → {event.afterCount} 个节点 · 新增{" "}
-                        {event.added} · 移除 {event.removed} · 连接变化{" "}
-                        {event.connectionChanged} · 改名 {event.renamed}
-                        {event.reordered ? " · 顺序已调整" : ""}
+                        <Metadata>
+                          <MetadataItem>{event.beforeCount} → {event.afterCount} 个节点</MetadataItem>
+                          <MetadataItem>新增 {event.added}</MetadataItem>
+                          <MetadataItem>移除 {event.removed}</MetadataItem>
+                          <MetadataItem>连接变化 {event.connectionChanged}</MetadataItem>
+                          <MetadataItem>改名 {event.renamed}</MetadataItem>
+                          {event.reordered && <MetadataItem>顺序已调整</MetadataItem>}
+                        </Metadata>
                       </p>
                     </li>
                   ))}
@@ -986,7 +989,10 @@ export function CollectionsPage() {
                       id={`collection-${encodeURIComponent(item.id)}-summary`}
                       className="text-sm leading-relaxed text-muted-foreground"
                     >
-                      {item.sources.length} 个来源 · {item.steps.length} 个聚合步骤
+                      <Metadata>
+                        <MetadataItem>{item.sources.length} 个来源</MetadataItem>
+                        <MetadataItem>{item.steps.length} 个聚合步骤</MetadataItem>
+                      </Metadata>
                     </p>
                   </div>
                 </div>
@@ -1241,10 +1247,10 @@ export function CollectionsPage() {
                       <span className="collection-source-summary flex min-w-0 flex-col gap-1 text-sm wrap-anywhere [&>span:first-child]:font-medium [&>span:first-child]:text-foreground">
                         <span>{`${index + 1}. ${sourceNames.get(source.sourceId) || source.sourceId}`}</span>
                         <span className="muted text-sm text-muted-foreground">
-                          来源处理
-                          {source.steps.length > 0
-                            ? ` · 已配置 ${source.steps.length} 步`
-                            : ""}
+                          <Metadata>
+                            <MetadataItem>来源处理</MetadataItem>
+                            {source.steps.length > 0 && <MetadataItem>已配置 {source.steps.length} 步</MetadataItem>}
+                          </Metadata>
                         </span>
                       </span>
                     }

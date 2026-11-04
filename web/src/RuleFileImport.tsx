@@ -262,8 +262,9 @@ export function RuleFileImport({
               }}
             />
             {file && (
-              <small className="font-normal text-muted-foreground wrap-anywhere">
-                {file.name} · {bytesLabel(file.size)}
+              <small className="grid gap-1 font-normal text-muted-foreground wrap-anywhere">
+                <span>{file.name}</span>{" "}
+                <span>{bytesLabel(file.size)}</span>
               </small>
             )}
           </label>

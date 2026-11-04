@@ -187,7 +187,7 @@ test("source replacement recovery preserves selected Output and sibling publicat
       .getByRole("link", { name: `查看订阅 ${selected.name}`, exact: true })
       .click();
     const detail = page.getByRole("dialog", {
-      name: `订阅详情 · ${selected.name}`,
+      name: `${selected.name} 的订阅详情`,
       exact: true,
     });
     const cause = "已保存配置的默认流量去向不可用。已发布内容未因此改变。";
@@ -277,7 +277,7 @@ test("source replacement recovery preserves selected Output and sibling publicat
     });
     await expect(
       chooser.getByRole("radio", {
-        name: `更新「${selected.name}」 · mihomo · 完整配置`,
+        name: `更新「${selected.name}」 mihomo 完整配置`,
         exact: true,
       }),
     ).toBeChecked();
@@ -465,7 +465,7 @@ test("update-check copy and neutral detail remain readable at desktop and 390px 
     });
     await expect(group.getByText("未检查更新", { exact: true })).toHaveCount(5);
     const batch = group.getByRole("button", {
-      name: `检查 5 个订阅的更新 · ${profileName}`,
+      name: `检查 ${profileName} 的 5 个订阅更新`,
       exact: true,
     });
     for (const width of [1440, 390]) {
@@ -491,7 +491,7 @@ test("update-check copy and neutral detail remain readable at desktop and 390px 
       });
       await trigger.click();
       const detail = page.getByRole("dialog", {
-        name: `订阅详情 · ${outputs[0].name}`,
+        name: `${outputs[0].name} 的订阅详情`,
         exact: true,
       });
       await expect(detail.getByText("已发布", { exact: true })).toHaveClass(

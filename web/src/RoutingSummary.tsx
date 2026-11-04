@@ -102,11 +102,11 @@ function FrozenRoutingIntentView({
           </summary>
           {rules.length > 1 && <p>按顺序匹配，首个匹配的规则决定去向。</p>}
           {summary?.advanced && (
-            <p>
-              {summary.advanced.ruleCount} 条分流规则 ·{" "}
-              {summary.advanced.groupCount} 个策略组 ·{" "}
-              {summary.advanced.nodeCount} 个节点
-            </p>
+            <div className="flex flex-wrap gap-x-3 gap-y-1">
+              <span>{summary.advanced.ruleCount} 条分流规则</span>
+              <span>{summary.advanced.groupCount} 个策略组</span>
+              <span>{summary.advanced.nodeCount} 个节点</span>
+            </div>
           )}
           {hasGroup && (
             <p>策略组展示配置中的流量去向；当前选中的节点请在客户端查看。</p>
@@ -353,9 +353,11 @@ function FrozenRoutingChanges({
                 </h4>
                 <p className="routing-intent-change-state flex items-center gap-2">
                   {status}
-                  {moved
-                    ? ` · 顺序 ${change.beforeIndex + 1} → ${change.afterIndex + 1}`
-                    : ""}
+                  {moved && (
+                    <span>
+                      顺序 {change.beforeIndex + 1} → {change.afterIndex + 1}
+                    </span>
+                  )}
                 </p>
                 <div className="routing-intent-versions grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] [&>div]:min-w-0 [&>div]:space-y-1 [&>div]:break-words">
                   <div>
@@ -713,8 +715,10 @@ export function RoutingSummaryView({
           <dt>未匹配规则的流量</dt>
           <dd>{defaultActionLabel(defaultAction)}</dd>
           <dt>配置内容</dt>
-          <dd>
-            {ruleCount} 条分流规则 · {groupCount} 个策略组 · {nodeCount} 个节点
+          <dd className="flex flex-wrap gap-x-3 gap-y-1">
+            <span>{ruleCount} 条分流规则</span>
+            <span>{groupCount} 个策略组</span>
+            <span>{nodeCount} 个节点</span>
           </dd>
         </dl>
         <AdvancedSummaryNotes hasGroup={defaultAction.kind === "group"} />

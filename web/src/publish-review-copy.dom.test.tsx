@@ -81,7 +81,8 @@ it("makes rechecking secondary after a compatible review without repeating the p
   );
   mount(<UpdateOutput output={output} onClose={() => {}} />);
   expect(screen.queryByText(/沿用当前链接，其他订阅保留原状。/)).toBeNull();
-  expect(screen.getByText("mihomo 1.19.32 · 完整配置")).toBeTruthy();
+  expect(screen.getByText("mihomo 1.19.32")).toBeTruthy();
+  expect(screen.getByText("完整配置")).toBeTruthy();
   await userEvent.click(screen.getByRole("button", { name: "预览此订阅更新" }));
   expect(await screen.findByRole("status")).toHaveProperty(
     "textContent",

@@ -47,6 +47,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { PageNavigation } from "@/ui-patterns/page-navigation";
+import { ItemCount } from "@/ui-patterns/item-count";
 
 const features = tableFeatures({
   rowSortingFeature,
@@ -127,6 +128,8 @@ export type DataTableProps<T extends object> = {
   rowKey?: keyof T | ((record: T) => string);
   empty?: ReactNode;
   summary?: ReactNode;
+  /** Only pass total for a confirmed complete collection, before local filters. */
+  count?: { total: number; unit?: string; filtered?: boolean };
   minWidth?: number | "max-content";
   maxHeight?: number;
   sticky?: boolean;
@@ -159,6 +162,7 @@ export function DataTable<T extends object>({
   rowKey,
   empty = "暂无数据",
   summary,
+  count,
   minWidth,
   maxHeight,
   sticky,
@@ -400,7 +404,7 @@ export function DataTable<T extends object>({
         : {}),
     };
   };
-  const columnClass = (id: string) => {
+  const columnClass = (id: string, header = false) => {
     const index = columns.findIndex(
         (column, index) => columnId(column, index) === id,
       ),
@@ -408,7 +412,10 @@ export function DataTable<T extends object>({
     return cn(
       column?.align === "right" && "text-right",
       column?.align === "center" && "text-center",
-      column?.pin && "bg-background",
+      column?.pin &&
+        (header
+          ? "bg-muted"
+          : "bg-background group-hover/row:bg-muted group-focus-within/row:bg-muted group-data-[state=selected]/row:bg-muted"),
       column?.className,
     );
   };
@@ -421,6 +428,20 @@ export function DataTable<T extends object>({
       : (value as ReactNode);
   };
   const span = columns.length + (expandedRow ? 1 : 0) + (selection ? 1 : 0);
+  const tableSummary =
+    summary === undefined ? (
+      loading ? null : (
+        <ItemCount
+          total={count?.total ?? rows.length}
+          matched={count?.filtered ? rows.length : undefined}
+          unit={count?.unit}
+          scope={count ? "total" : "loaded"}
+        />
+      )
+    ) : (
+      summary
+    );
+  const hasSummary = tableSummary != null && tableSummary !== false;
   return (
     <div
       className={cn("data-table group/table min-w-0 space-y-3", className)}
@@ -443,24 +464,24 @@ export function DataTable<T extends object>({
         </p>
       )}
       <div
-        className="overflow-hidden rounded-lg border [&>[data-slot=table-container]]:max-h-[var(--table-max-height)] [&>[data-slot=table-container]]:focus-visible:outline-2 [&>[data-slot=table-container]]:focus-visible:-outline-offset-2 [&>[data-slot=table-container]]:focus-visible:outline-ring"
+        className="overflow-hidden rounded-lg border bg-background [&>[data-slot=table-container]]:max-h-[var(--table-max-height)] [&>[data-slot=table-container]]:focus-visible:outline-2 [&>[data-slot=table-container]]:focus-visible:-outline-offset-2 [&>[data-slot=table-container]]:focus-visible:outline-ring"
         style={
           maxHeight
             ? ({ "--table-max-height": `${maxHeight}px` } as CSSProperties)
             : undefined
         }
       >
-        {summary != null && (
+        {hasSummary && (
           <div
             id={summaryId}
-            className="border-b px-4 py-2.5 text-xs text-muted-foreground"
+            className="border-b px-4 py-2.5 text-sm text-muted-foreground"
           >
-            {summary}
+            {tableSummary}
           </div>
         )}
         <Table
           style={minWidth ? { minWidth } : undefined}
-          aria-describedby={summary != null ? summaryId : undefined}
+          aria-describedby={hasSummary ? summaryId : undefined}
           className={cn(
             // Headers are quiet labels; data and actions carry the hierarchy.
             // Padding sets a steady rhythm without fixing row height (§2.6 / §3.1.2).
@@ -470,18 +491,16 @@ export function DataTable<T extends object>({
         >
           <TableHeader
             className={
-              sticky || maxHeight
-                ? "sticky top-0 z-20 bg-muted/50"
-                : "bg-muted/40"
+              sticky || maxHeight ? "sticky top-0 z-20 bg-muted" : "bg-muted"
             }
           >
             {table.getHeaderGroups().map((group) => (
-              <TableRow key={group.id}>
+              <TableRow key={group.id} className="hover:bg-transparent">
                 {selection && (
                   <TableHead
                     className={cn(
                       "w-10",
-                      selection.pinned && "sticky left-0 z-10 bg-background",
+                      selection.pinned && "sticky left-0 z-10 bg-muted",
                     )}
                   >
                     <Checkbox
@@ -514,7 +533,7 @@ export function DataTable<T extends object>({
                     key={header.id}
                     scope="col"
                     style={columnStyles(header.id)}
-                    className={columnClass(header.id)}
+                    className={columnClass(header.id, true)}
                     aria-sort={
                       header.column.getCanSort()
                         ? header.column.getIsSorted() === "asc"
@@ -572,7 +591,7 @@ export function DataTable<T extends object>({
               table.getRowModel().rows.map((row) => (
                 <Fragment key={row.id}>
                   <TableRow
-                    className="focus-within:bg-muted/50"
+                    className="group/row hover:bg-muted focus-within:bg-muted"
                     data-row-key={row.id}
                     data-state={row.getIsSelected() ? "selected" : undefined}
                   >
@@ -580,7 +599,7 @@ export function DataTable<T extends object>({
                       <TableCell
                         className={
                           selection.pinned
-                            ? "sticky left-0 z-10 bg-background"
+                            ? "sticky left-0 z-10 bg-background group-hover/row:bg-muted group-focus-within/row:bg-muted group-data-[state=selected]/row:bg-muted"
                             : undefined
                         }
                       >
@@ -667,6 +686,7 @@ export function DataTable<T extends object>({
           page={currentPage}
           pageSize={pageSize}
           total={rows.length}
+          showTotal={false}
           onPageChange={changePage}
         />
       )}

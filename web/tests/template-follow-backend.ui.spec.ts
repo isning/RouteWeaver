@@ -31,11 +31,11 @@ for (const width of [1440, 390])
       await page.getByRole("tab", { name: "我的引用", exact: true }).click();
       const entry = () =>
         page.getByRole("button", {
-          name: "检查更新 · 模板跟随草稿",
+          name: "检查更新 模板跟随草稿",
           exact: true,
         });
       const sheet = page.getByRole("dialog", {
-        name: "模板更新 · 模板跟随草稿",
+        name: "模板更新 模板跟随草稿",
         exact: true,
       });
       // The real template task has an icon Close and a visible text Close in

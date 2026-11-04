@@ -46,8 +46,12 @@ export function ServerForwarding({
               {inventory.hosts.find(
                 (host) => host.id === program.instance.hostId,
               )?.name || "服务器不可用"}
-              {!compact &&
-                ` · ${program.instance.name || program.instance.adapterId.replace("routeweaver/", "")}`}
+              {!compact && (
+                <span className="block">
+                  {program.instance.name ||
+                    program.instance.adapterId.replace("routeweaver/", "")}
+                </span>
+              )}
             </small>
             {onRefreshListener && (
               <ActionButton
@@ -64,7 +68,8 @@ export function ServerForwarding({
             {(program.principals || []).map((principal, index) => (
               <div key={`${principal.accountId}:${principal.routeId}:${index}`}>
                 <dt>
-                  用户入口 {principal.accountId} · {principal.routeId}
+                  <span className="block">用户入口 {principal.accountId}</span>{" "}
+                  <span className="block">线路 {principal.routeId}</span>
                 </dt>
                 <dd>{actionLabel(program, principal.action)}</dd>
               </div>
@@ -72,7 +77,8 @@ export function ServerForwarding({
             {(program.rules || []).map((rule, index) => (
               <div key={rule.id}>
                 <dt>
-                  规则 {index + 1} · {matchLabel(rule.match)}
+                  <span className="block">规则 {index + 1}</span>{" "}
+                  <span className="block">{matchLabel(rule.match)}</span>
                 </dt>
                 <dd>{actionLabel(program, rule.action)}</dd>
               </div>
@@ -96,7 +102,12 @@ export function ServerForwarding({
           </dl>
           {!compact && !!program.connectors?.length && (
             <details className="server-forwarding-connectors mt-4 rounded-lg border bg-muted/20 p-3 text-sm [&_summary]:cursor-pointer [&_summary]:font-medium [&_summary]:text-muted-foreground [&_dl]:mt-3">
-              <summary>连接器设置 · {program.connectors.length} 个</summary>
+              <summary>
+                连接器设置
+                <span className="ml-3 text-muted-foreground">
+                  {program.connectors.length} 个
+                </span>
+              </summary>
               <dl>
                 {program.connectors.map((connector) => (
                   <div key={connector.id}>

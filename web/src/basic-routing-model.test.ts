@@ -72,7 +72,7 @@ it("builds actual platform ChatGPT and private-airport default choices without c
     chatEndpointId: "entry",
     defaultEndpointId: "tokyo",
   });
-  expect(choices.find((c) => c.id === "entry")?.label).toContain("2×");
+  expect(choices.find((c) => c.id === "entry")?.detail).toBe("额度倍率 2×");
 });
 it("never reduces an arbitrary advanced profile into basic routing", () => {
   const profile = basicProfile(

@@ -191,8 +191,8 @@ test("reviews material source changes and preserves accepted options until an ex
   await page.getByRole("button", { name: "查看变化", exact: true }).click();
   const review = page.getByRole("dialog", { name: "查看变化", exact: true });
   await expect(review).toBeVisible();
-  await expect(review.getByText("移除 · 1", { exact: true })).toBeVisible();
-  await expect(review.getByText("连接变更 · 1", { exact: true })).toBeVisible();
+  await expect(review.getByRole("heading", { name: "移除 1", exact: true })).toBeVisible();
+  await expect(review.getByRole("heading", { name: "连接变更 1", exact: true })).toBeVisible();
   await expect(review.getByText("登录密码", { exact: true })).toBeVisible();
   await expect(review).not.toContainText("after-fixture");
   list = await (await page.request.get("/api/me/sources")).json();
@@ -227,12 +227,12 @@ test("reviews material source changes and preserves accepted options until an ex
   await expect(receipt).toContainText("来源已更新，已发布订阅未改变。");
   await expect(
     receipt.getByRole("link", {
-      name: new RegExp(`^查看配置 ${sharedProfileName}(?: ·|$)`),
+      name: new RegExp(`^查看配置 ${sharedProfileName}(?: |$)`),
     }),
   ).toHaveCount(2);
   await expect(
     receipt.getByRole("link", {
-      name: new RegExp(`^查看订阅 ${sharedOutputName}(?: ·|$)`),
+      name: new RegExp(`^查看订阅 ${sharedOutputName}(?: |$)`),
     }),
   ).toHaveCount(2);
   await expect(receipt).not.toContainText("after-fixture");
@@ -253,7 +253,7 @@ test("reviews material source changes and preserves accepted options until an ex
   );
   for (const row of [...profileRows, ...outputRows]) {
     await expect(row).toHaveCount(1);
-    await expect(row).toContainText("mihomo · 完整配置");
+    await expect(row).toContainText("mihomo 完整配置");
   }
   const profileLink = profileRows[0].getByRole("link", {
     name: /^查看配置 /,
@@ -356,7 +356,7 @@ test("reviews material source changes and preserves accepted options until an ex
   );
   await expect(
     page.getByRole("dialog", {
-      name: `订阅详情 · ${sharedOutputName}`,
+      name: `${sharedOutputName} 的订阅详情`,
       exact: true,
     }),
   ).toBeVisible();

@@ -94,7 +94,7 @@ test("an existing failed first import is selected explicitly and corrected in th
   await page.goto("/#collections");
   await page
     .getByRole("button", {
-      name: "Original selection collection 2 个来源 · 1 个聚合步骤 编辑集合",
+      name: "Original selection collection 2 个来源 1 个聚合步骤 编辑集合",
       exact: true,
     })
     .click();
@@ -108,8 +108,7 @@ test("an existing failed first import is selected explicitly and corrected in th
     .fill("unsaved-{name}");
   await page.getByRole("combobox", { name: "订阅来源", exact: true }).click();
   await page
-    .getByText("Pending provider · 导入未完成，尚无可用节点", { exact: true })
-    .last()
+    .getByRole("option", { name: "Pending provider 导入未完成，尚无可用节点", exact: true })
     .click();
   await page.getByLabel("集合名称", { exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(1);
@@ -121,10 +120,9 @@ test("an existing failed first import is selected explicitly and corrected in th
   ).toBeDisabled();
   const issues = page.getByRole("region", { name: "需要处理的来源" });
   await expect(
-    issues.getByText("Pending provider · 导入未完成，尚无可用节点", {
-      exact: true,
-    }),
+    issues.getByText("Pending provider", { exact: true }),
   ).toBeVisible();
+  await expect(issues.getByText("导入未完成，尚无可用节点", { exact: true })).toBeVisible();
   for (const width of [1440, 390, 320]) {
     await page.setViewportSize({ width, height: 900 });
     if (width <= 390) {

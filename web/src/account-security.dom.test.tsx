@@ -164,7 +164,7 @@ it("shows the exact target and consequence before an administrator disables an a
         writes.push({ url, body: JSON.parse(init.body) });
         return json({
           id: "target",
-          name: "Target",
+          name: "Target · Personal",
           username: "target",
           role: "user",
           disabled: true,
@@ -175,7 +175,7 @@ it("shows the exact target and consequence before an administrator disables an a
           ? [
               {
                 id: "target",
-                name: "Target",
+                name: "Target · Personal",
                 username: "target",
                 role: "user",
                 disabled: false,
@@ -201,7 +201,9 @@ it("shows the exact target and consequence before an administrator disables an a
       </UIProviders>
     </QueryClientProvider>,
   );
-  fireEvent.click(await screen.findByRole("button", { name: "管理 Target" }));
+  fireEvent.click(await screen.findByRole("button", { name: "管理 Target · Personal" }));
+  const dialog = screen.getByRole("dialog", { name: "管理 Target · Personal 的账号" });
+  expect(within(dialog).getByText("登录名：target")).toBeTruthy();
   expect(screen.getByText(/立即阻止登录和订阅链接交付/)).toBeTruthy();
   fireEvent.change(screen.getByLabelText("操作原因"), {
     target: { value: "Owner requested disable" },

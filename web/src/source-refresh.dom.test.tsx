@@ -139,11 +139,11 @@ it("offers optional change details and applies the exact manual update without a
   await user.click(await screen.findByRole("button", { name: "查看变化" }));
   const dialog = await screen.findByRole("dialog");
   expect(within(dialog).getByText("查看变化")).toBeTruthy();
-  expect(within(dialog).getByText("连接变更 · 1")).toBeTruthy();
+  expect(within(dialog).getByRole("heading", { name: "连接变更 1" })).toBeTruthy();
   expect(within(dialog).getByText("登录密码")).toBeTruthy();
   expect(within(dialog).getByText("ChatGPT")).toBeTruthy();
   expect(within(dialog).getByText("Work feed")).toBeTruthy();
-  expect(within(dialog).queryByText("新增 · 0")).toBeNull();
+  expect(within(dialog).queryByRole("heading", { name: "新增 0" })).toBeNull();
   await user.click(within(dialog).getByRole("button", { name: "应用更新" }));
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   expect(
@@ -334,14 +334,14 @@ it("distinguishes removed and added same-name connections with safe address summ
           {
             id: "old",
             name: "Same UK",
-            beforeConnection: "socks · [2001:db8::50]:1080",
+            beforeConnection: "socks [2001:db8::50]:1080",
           },
         ],
         added: [
           {
             id: "new",
             name: "Same UK",
-            afterConnection: "socks · [2001:db8::50]:1081",
+            afterConnection: "socks [2001:db8::50]:1081",
           },
         ],
         connectionChanged: [],
@@ -365,8 +365,8 @@ it("distinguishes removed and added same-name connections with safe address summ
     await screen.findByRole("button", { name: "查看变化" }),
   );
   const review = within(await screen.findByRole("dialog"));
-  expect(review.getByText("socks · [2001:db8::50]:1080")).toBeTruthy();
-  expect(review.getByText("socks · [2001:db8::50]:1081")).toBeTruthy();
+  expect(review.getByText("socks [2001:db8::50]:1080")).toBeTruthy();
+  expect(review.getByText("socks [2001:db8::50]:1081")).toBeTruthy();
   expect(review.getAllByText("Same UK")).toHaveLength(2);
   expect(review.getByRole("button", { name: "忽略本次更新" })).toBeTruthy();
 });

@@ -119,7 +119,7 @@ it("opens named missing-reference recovery, keeps reveal failure in its detail, 
   mount();
   const user = userEvent.setup();
   let detail = await screen.findByRole("dialog", {
-    name: "订阅详情 · MacBook",
+    name: "MacBook 的订阅详情",
   });
   expect(
     await within(detail).findByText(
@@ -148,7 +148,7 @@ it("opens named missing-reference recovery, keeps reveal failure in its detail, 
       .value,
   ).toBe("日常分流");
   await user.click(screen.getByRole("button", { name: "返回" }));
-  detail = await screen.findByRole("dialog", { name: "订阅详情 · MacBook" });
+  detail = await screen.findByRole("dialog", { name: "MacBook 的订阅详情" });
   await waitFor(() =>
     expect(document.activeElement).toBe(
       within(detail).getByRole("button", { name: "修复「日常分流」配置" }),
@@ -194,7 +194,7 @@ it("returns after a saved repair to the stable same-Output update action when th
   mount();
   const user = userEvent.setup();
   const detail = await screen.findByRole("dialog", {
-    name: "订阅详情 · MacBook",
+    name: "MacBook 的订阅详情",
   });
   await user.click(
     await within(detail).findByRole("button", { name: "修复「日常分流」配置" }),
@@ -213,7 +213,7 @@ it("returns after a saved repair to the stable same-Output update action when th
   );
   await user.click(screen.getByRole("button", { name: "返回" }));
   const returned = await screen.findByRole("dialog", {
-    name: "订阅详情 · MacBook",
+    name: "MacBook 的订阅详情",
   });
   await within(returned).findByText("已保存的修改尚未发布");
   await waitFor(() =>
@@ -253,7 +253,7 @@ it("does not reopen a canceled recovery or retarget it when its delayed reveal f
   mount();
   const user = userEvent.setup();
   const detail = await screen.findByRole("dialog", {
-    name: "订阅详情 · MacBook",
+    name: "MacBook 的订阅详情",
   });
   await user.click(
     await within(detail).findByRole("button", { name: "修复「日常分流」配置" }),
@@ -271,11 +271,11 @@ it("does not reopen a canceled recovery or retarget it when its delayed reveal f
   }
   await user.click(within(detail).getByRole("button", { name: "关闭" }));
   await user.click(screen.getByRole("button", { name: "查看订阅 Android" }));
-  await screen.findByRole("dialog", { name: "订阅详情 · Android" });
+  await screen.findByRole("dialog", { name: "Android 的订阅详情" });
   await act(async () => finish(json(profile)));
   expect(screen.queryByRole("textbox", { name: "配置名称" })).toBeNull();
   expect(
-    screen.getByRole("dialog", { name: "订阅详情 · Android" }),
+    screen.getByRole("dialog", { name: "Android 的订阅详情" }),
   ).toBeTruthy();
   expect(location.hash).toBe("#subscriptions?output=android");
 });

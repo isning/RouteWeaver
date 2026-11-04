@@ -1,3 +1,4 @@
+import { Metadata } from "@/ui-patterns/metadata";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { PageNavigation } from "@/ui-patterns/page-navigation";
 import { TaskDialog } from "@/ui-patterns/task-overlays";
@@ -28,7 +29,7 @@ type PolicyDisplayField = {
     key: PolicySummaryField;
     label: string;
     value: string;
-    detail?: string;
+    detail?: string | string[];
     statusColor?: "green" | "orange";
 };
 // Display formatting is shared by the saved summary and the paired review.
@@ -102,7 +103,7 @@ function policyDisplayFields(policy: EffectivePolicy, services: NamedRecord[], r
                 none: "不自动重置",
             }[policy.entitlement.cycle.mode] || policy.entitlement.cycle.mode,
             detail: policy.entitlement.cycle.anchor
-                ? `起点 ${dateLabel(policy.entitlement.cycle.anchor)} · ${policy.entitlement.cycle.timezone || "UTC+8"}`
+                ? [`起点 ${dateLabel(policy.entitlement.cycle.anchor)}`, `时区 ${policy.entitlement.cycle.timezone || "UTC+8"}`]
                 : undefined,
         },
     ];
@@ -115,7 +116,7 @@ function PolicyFieldValue({ field }: {
     return (<>
       <span>{field.value}</span>
       {field.detail && field.detail !== field.value && (<small className="muted block text-sm text-muted-foreground" >
-          {field.detail}
+          {Array.isArray(field.detail) ? <Metadata>{field.detail.map((item) => <span key={item}>{item}</span>)}</Metadata> : field.detail}
         </small>)}
     </>);
 }
@@ -229,7 +230,7 @@ function PolicyComparison({ effect, userName, services, routes, showFull, }: {
         <TableHead scope="row" role="rowheader" id={`${id}-${field.key}`}>{field.label}</TableHead>
         {pair(field).map((value, index) => {
                 const column = index === 0 ? "before" : "after";
-                return (<TableCell className="whitespace-normal [overflow-wrap:anywhere]" key={column} role="cell" aria-label={!shared && value.detail && value.detail !== value.value ? `${value.value} ${value.detail}` : undefined} headers={`${id}-${field.key} ${id}-${column}`} aria-describedby={shared ? `${id}-source-${column}` : undefined}>
+                return (<TableCell className="whitespace-normal [overflow-wrap:anywhere]" key={column} role="cell" aria-label={!shared && value.detail && value.detail !== value.value ? `${value.value} ${Array.isArray(value.detail) ? value.detail.join(" ") : value.detail}` : undefined} headers={`${id}-${field.key} ${id}-${column}`} aria-describedby={shared ? `${id}-source-${column}` : undefined}>
               <PolicyFieldValue field={shared ? { ...value, detail: undefined } : value}/>
             </TableCell>);
             })}

@@ -195,7 +195,7 @@ it("keeps the contextual group dialog boundaries without editing or creating a g
 it("keeps subscription details boundaries without opening or activating the actions menu", async () => {
   history.replaceState(null, "", "#subscriptions?output=matrix-output");
   mount(<SubscriptionsPage />);
-  await boundary("订阅详情 · Matrix subscription", "更多操作", true);
+  await boundary("Matrix subscription 的订阅详情", "更多操作", true);
 });
 it("keeps the reviewed update boundaries without confirming a publication", async () => {
   mount(<UpdateOutput output={output} onClose={() => {}} autoInspect />);

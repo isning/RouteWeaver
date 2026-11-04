@@ -125,9 +125,8 @@ export function NodeChanges({ value }: { value: NodeChangesValue }) {
               ) : null}
               <strong>{row.label}</strong>
               {row.kind === "modified" && (
-                <span>
-                  {" "}
-                  · {row.nameChanged && "名称变化"}
+                <span className="block text-sm text-muted-foreground">
+                  {row.nameChanged && "名称变化"}
                   {row.nameChanged && row.settingsChanged && "、"}
                   {row.settingsChanged && <span>连接设置变化</span>}
                 </span>

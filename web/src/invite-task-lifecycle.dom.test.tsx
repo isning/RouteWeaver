@@ -99,7 +99,8 @@ it("keeps one pending invite bound to its recipient and starts the next invitati
     ),
   );
   await screen.findByLabelText("邀请链接");
-  expect(within(dialog).getByText("Alice · 普通用户")).toBeTruthy();
+  expect(within(dialog).getByText("Alice")).toBeTruthy();
+  expect(within(dialog).getByText("普通用户")).toBeTruthy();
   expect(hasUnsavedChanges()).toBe(false);
   await user.click(within(dialog).getByRole("button", { name: "关闭" }));
   const next = await open();

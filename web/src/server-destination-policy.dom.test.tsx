@@ -149,7 +149,7 @@ it.each(["vless", "vmess", "trojan", "shadowsocks"])(
     );
     await user.click(
       within(drawer).getByRole("combobox", {
-        name: "Entry · 允许访问的内部网段",
+        name: "Entry允许访问的内部网段",
       }),
     );
     await user.type(
@@ -174,7 +174,7 @@ it.each([
     const { drawer } = await openDestinationEditor(adapter, version, protocol);
     expect(
       within(drawer).queryByRole("combobox", {
-        name: "Entry · 允许访问的内部网段",
+        name: "Entry允许访问的内部网段",
       }),
     ).toBeNull();
     expect(within(drawer).queryByText(/留空保留默认限制/)).toBeNull();

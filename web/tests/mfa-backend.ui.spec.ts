@@ -148,7 +148,7 @@ test("synthetic administrator enrolls an authenticator, logs in with TOTP, and r
       .getByRole("button", { name: `管理 ${account.name}`, exact: true })
       .click();
     const dialog = recovery.getByRole("dialog", {
-      name: `管理账号 · ${account.name}`,
+      name: `管理 ${account.name} 的账号`,
       exact: true,
     });
     await dialog

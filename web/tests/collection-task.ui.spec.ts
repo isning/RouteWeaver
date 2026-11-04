@@ -456,7 +456,7 @@ for (const width of [1280, 390, 320]) {
     );
     await expect(
       drawer.getByRole("button", {
-        name: /^\d+\. .+ 来源处理(?: · 已配置 \d+ 步)?$/,
+        name: /^\d+\. .+ 来源处理(?: 已配置 \d+ 步)?$/,
       }),
     ).toHaveCount(0);
     await drawer.getByRole("button", { name: "关闭", exact: true }).click();
@@ -529,7 +529,7 @@ test("source acquisition preserves ordered source and merged steps until explici
   );
   await drawer.getByRole("button", { name: "下移来源 1", exact: true }).click();
   await expect(row(drawer, page, 2, sources[0].name)).toContainText(
-    "来源处理 · 已配置 2 步",
+    "来源处理 已配置 2 步",
   );
   const observed = writes(page);
   const dialog = await sourceTask(drawer, page);
@@ -545,7 +545,7 @@ test("source acquisition preserves ordered source and merged steps until explici
   );
   await expect(row(drawer, page, 1, sources[1].name)).toBeVisible();
   await expect(row(drawer, page, 2, sources[0].name)).toContainText(
-    "来源处理 · 已配置 2 步",
+    "来源处理 已配置 2 步",
   );
   await expect(row(drawer, page, 3, addedName)).toBeVisible();
   expect(observed).toEqual(["POST /api/me/sources"]);
@@ -556,7 +556,7 @@ test("source acquisition preserves ordered source and merged steps until explici
   for (const width of [1280, 390, 320]) {
     await page.setViewportSize({ width, height: 844 });
     await expect(row(drawer, page, 2, sources[0].name)).toContainText(
-      "来源处理 · 已配置 2 步",
+      "来源处理 已配置 2 步",
     );
     await shot(page, info, `collection-context-return-rich-${width}.png`);
   }
@@ -604,7 +604,7 @@ test("source acquisition preserves ordered source and merged steps until explici
   expect(await read(page, "outputs")).toEqual(before.outputs);
   await page
     .getByRole("button", {
-      name: `${name} ${saved.sources.length} 个来源 · ${saved.steps.length} 个聚合步骤 编辑集合`,
+      name: `${name} ${saved.sources.length} 个来源 ${saved.steps.length} 个聚合步骤 编辑集合`,
       exact: true,
     })
     .click();
@@ -620,9 +620,9 @@ test("source acquisition preserves ordered source and merged steps until explici
     await page.setViewportSize({ width, height: 844 });
     const summary = row(reopened, page, 2, sources[0].name);
     await expect(summary).toHaveAttribute("aria-expanded", "false");
-    await expect(summary).toContainText("来源处理 · 已配置 2 步");
+    await expect(summary).toContainText("来源处理 已配置 2 步");
     await expect(
-      summary.getByText("来源处理 · 已配置 2 步", { exact: true }),
+      summary.getByText("来源处理 已配置 2 步", { exact: true }),
     ).toBeInViewport({ ratio: 1 });
     await expect(
       reopened.getByRole("button", { name: "上移来源 2", exact: true }),
@@ -835,7 +835,7 @@ for (const abnormal of ["candidate", "failed"] as const) {
     }
     await expect(
       drawer.getByRole("button", {
-        name: /^\d+\. .+ 来源处理(?: · 已配置 \d+ 步)?$/,
+        name: /^\d+\. .+ 来源处理(?: 已配置 \d+ 步)?$/,
       }),
     ).toHaveCount(0);
     const recovery = notice.getByRole("button", {
@@ -922,7 +922,7 @@ for (const abnormal of ["candidate", "failed"] as const) {
       await expect(notice).toContainText(recoveryMessage);
     await expect(
       drawer.getByRole("button", {
-        name: /^\d+\. .+ 来源处理(?: · 已配置 \d+ 步)?$/,
+        name: /^\d+\. .+ 来源处理(?: 已配置 \d+ 步)?$/,
       }),
     ).toHaveCount(0);
     // The retained parent recipe remains empty; only the original Source POST
@@ -1003,7 +1003,7 @@ test("synthetic informational diagnostic does not misclassify an accepted source
   await expect(row(drawer, page, 1, sourceName)).toBeVisible();
   await expect(
     drawer.getByRole("button", {
-      name: /^\d+\. .+ 来源处理(?: · 已配置 \d+ 步)?$/,
+      name: /^\d+\. .+ 来源处理(?: 已配置 \d+ 步)?$/,
     }),
   ).toHaveCount(1);
   await expect(

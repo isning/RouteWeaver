@@ -109,7 +109,7 @@ it("preserves the exact existing endpoint and clears incompatible selection when
   ).toBe(true);
   expect(screen.getByLabelText("saved endpoint").textContent).toBe("a2");
   await user.click(screen.getByRole("combobox", { name: "入口端点" }));
-  await user.click(screen.getByText(/Exit · socks:1081 · xray/));
+  await user.click(screen.getByRole("option", { name: /Exit socks:1081 xray/ }));
   expect(screen.getByLabelText("saved endpoint").textContent).toBe("b1");
   expect(
     (screen.getByRole("button", { name: "Save" }) as HTMLButtonElement)
@@ -138,7 +138,8 @@ it("keeps two same-core endpoints distinct and does not remap when cancelling a 
 it("retains an unavailable current endpoint visibly without bypassing the caller's role filter", async () => {
   const user = userEvent.setup();
   render(<Editor allowed={["a1"]} />);
-  expect(screen.getByText(/Secondary.*当前不可选/)).toBeTruthy();
+  expect(screen.getByRole("combobox", { name: "入口端点" }).textContent).toContain("当前不可选");
+  expect(screen.getByRole("combobox", { name: "入口端点" }).textContent).toContain("Secondary");
   expect(
     (screen.getByRole("button", { name: "Save" }) as HTMLButtonElement)
       .disabled,
@@ -257,7 +258,7 @@ it("blocks saving an unfinished server change and saves the explicitly selected 
   await user.click(
     within(drawer).getByRole("combobox", { name: "第 1 跳端点" }),
   );
-  await user.click(screen.getByText(/Exit · socks:1081 · xray/));
+  await user.click(screen.getByRole("option", { name: /Exit socks:1081 xray/ }));
   await waitFor(() =>
     expect(
       (
@@ -389,7 +390,7 @@ it("limits public-path selection to its deployment and blocks an unfinished serv
     within(drawer).getByRole("combobox", { name: "公开路径第 1 跳端点" }),
   );
   expect(await screen.findByText("此服务器暂无可选端点")).toBeTruthy();
-  expect(screen.queryByText(/Exit · socks/)).toBeNull();
+  expect(screen.queryByRole("option", { name: /Exit socks/ })).toBeNull();
 });
 
 it("does not silently rebind an edited route when its inventory endpoint owner changed", () => {
@@ -437,11 +438,12 @@ it("uses retained labels only in opted-in saved route editors while choices and 
     onPendingChange: vi.fn(),
   };
   const view = render(<ServerEndpointSelect {...props} />);
-  expect(screen.getByText("Exit · socks:1081 · xray")).toBeTruthy();
+  expect(screen.getByText("socks:1081 xray")).toBeTruthy();
   expect(screen.queryByText(/1080.*草稿/)).toBeNull();
   view.rerender(<ServerEndpointSelect {...props} displayCurrentSnapshot />);
-  expect(screen.getByText("Exit · socks:1080 · xray（草稿）")).toBeTruthy();
+  expect(screen.getByText("Exit（草稿）")).toBeTruthy();
+  expect(screen.getByText("socks:1080 xray")).toBeTruthy();
   await user.click(screen.getByRole("combobox", { name: "入口端点" }));
-  expect(screen.getByText("Exit · socks:1081 · xray")).toBeTruthy();
+  expect(screen.getByText("socks:1081 xray")).toBeTruthy();
   expect(props.onChange).not.toHaveBeenCalled();
 });

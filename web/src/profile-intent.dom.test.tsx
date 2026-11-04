@@ -184,7 +184,7 @@ it("puts authoritative imported connections and explicit traffic intent together
 it.each([
   ["直连", { kind: "direct" }],
   ["London accepted", { kind: "endpoint", ref: "london" }],
-  ["策略组 · Travel choice", { kind: "group", ref: "travel-choice" }],
+  ["策略组 Travel choice", { kind: "group", ref: "travel-choice" }],
 ] as const)(
   "saves deliberate %s intent without rewriting imported input or creating policies",
   async (label, action) => {
@@ -1489,7 +1489,7 @@ it("removes empty traffic-outcome chrome while retaining the same polite live re
     const user = userEvent.setup();
     await user.click(screen.getByRole("combobox", { name: "默认流量行为" }));
     await user.click(
-      await screen.findByRole("option", { name: "策略组 · Travel choice" }),
+      await screen.findByRole("option", { name: "策略组 Travel choice" }),
     );
     expect(live.isConnected).toBe(true);
     expect(live.textContent).toBe("");

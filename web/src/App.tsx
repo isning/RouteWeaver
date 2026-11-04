@@ -1127,9 +1127,10 @@ function Login({
               </ActionButton>
             )}
           </div>
-          <p className="text-xs text-muted-foreground">
-            邀请制工作空间 · 你的来源仅由你管理
-          </p>
+          <div className="space-y-1 text-xs text-muted-foreground">
+            <p>邀请制工作空间</p>
+            <p>你的来源仅由你管理</p>
+          </div>
         </div>
       </div>
     </div>

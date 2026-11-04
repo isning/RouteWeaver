@@ -241,13 +241,13 @@ it("shows entitled route and current quota multiplier when choosing a platform e
   const user = userEvent.setup();
   const control = editor.getByRole("combobox", { name: "默认流量行为" });
   await user.click(control);
-  expect(await screen.findByText("Work line · 额度倍率 1.5×")).toBeTruthy();
+  expect(await screen.findByText("Work line 的额度倍率 1.5×")).toBeTruthy();
   expect(screen.queryByText(/Wrong route/)).toBeNull();
   const popup = document
     .getElementById(control.getAttribute("aria-controls")!)!
     .closest("[data-slot=popover-content]")!;
   await user.click(
-    within(popup as HTMLElement).getByText("平台入口 · Personal entry"),
+    within(popup as HTMLElement).getByText("平台入口 Personal entry"),
   );
   await user.click(editor.getByRole("button", { name: "保存草稿" }));
   await waitFor(() => expect(writes).toHaveLength(1));
@@ -412,7 +412,7 @@ it("keeps platform choices explicit when the current multiplier cannot be read",
     .getElementById(control.getAttribute("aria-controls")!)!
     .closest("[data-slot=popover-content]")!;
   await user.click(
-    within(popup as HTMLElement).getByText("平台入口 · Personal entry"),
+    within(popup as HTMLElement).getByText("平台入口 Personal entry"),
   );
   await user.click(editor.getByRole("button", { name: "保存草稿" }));
   await waitFor(() => expect(writes).toHaveLength(1));
@@ -474,7 +474,7 @@ it("binds a new group only to the chosen incomplete rule and prevents repeated c
     name: "创建并使用策略组",
   });
   expect(
-    within(dialog).getByText("用于当前草稿：规则 1 · example.com"),
+    within(dialog).getByText("用于当前草稿：规则 1 匹配 example.com"),
   ).toBeTruthy();
   fireEvent.change(
     within(dialog).getByRole("textbox", { name: "策略组名称" }),

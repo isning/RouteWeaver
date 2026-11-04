@@ -268,7 +268,7 @@ it("restores remembered search and its explicit Profile after closing a same-doc
     location.hash = "#subscriptions?profile=shared&output=phone";
   });
   const dialog = await screen.findByRole("dialog", {
-    name: "订阅详情 · Phone",
+    name: "Phone 的订阅详情",
   });
   expect(
     within(dialog).getByText("分流配置：Travel configuration"),
@@ -423,22 +423,22 @@ it("opens a detail as history, Back closes it, and Forward restores the exact Ou
   await userEvent.click(
     await screen.findByRole("button", { name: "查看订阅 Laptop" }),
   );
-  await screen.findByRole("dialog", { name: "订阅详情 · Laptop" });
+  await screen.findByRole("dialog", { name: "Laptop 的订阅详情" });
   await act(async () => {
     history.back();
   });
   await waitFor(() =>
     expect(
-      screen.queryByRole("dialog", { name: "订阅详情 · Laptop" }),
+      screen.queryByRole("dialog", { name: "Laptop 的订阅详情" }),
     ).toBeNull(),
   );
   expect(location.hash).toBe("#subscriptions");
   await act(async () => {
     history.forward();
   });
-  await screen.findByRole("dialog", { name: "订阅详情 · Laptop" });
+  await screen.findByRole("dialog", { name: "Laptop 的订阅详情" });
   expect(location.hash).toContain("output=laptop");
-  expect(screen.queryByRole("dialog", { name: "订阅详情 · Phone" })).toBeNull();
+  expect(screen.queryByRole("dialog", { name: "Phone 的订阅详情" })).toBeNull();
 });
 
 it("keeps a dirty source on Back cancel and discards only once before later Back and Forward", async (context) => {
@@ -706,7 +706,7 @@ it("keeps the client-link page through detail Back and a materials detour", asyn
   await userEvent.click(
     screen.getByRole("button", { name: "查看订阅 Client 5" }),
   );
-  await screen.findByRole("dialog", { name: "订阅详情 · Client 5" });
+  await screen.findByRole("dialog", { name: "Client 5 的订阅详情" });
   await act(async () => {
     history.back();
   });
@@ -799,7 +799,7 @@ it.each(["close", "back"])(
     });
     await userEvent.click(trigger);
     const dialog = await screen.findByRole("dialog", {
-      name: "订阅详情 · Laptop",
+      name: "Laptop 的订阅详情",
     });
     const close = within(dialog).getByRole("button", { name: "关闭" });
     close.focus();

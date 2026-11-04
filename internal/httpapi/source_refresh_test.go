@@ -45,7 +45,7 @@ func TestSourceRefreshMaterialCandidateRequiresExactAcceptance(t *testing.T) {
 		t.Fatalf("missing credential-change row: %s", raw)
 	}
 	connection := changes[0].(map[string]any)
-	if connection["beforeConnection"] != "socks · one.example:1080" || connection["afterConnection"] != "socks · one.example:1080" {
+	if connection["beforeConnection"] != "socks one.example:1080" || connection["afterConnection"] != "socks one.example:1080" {
 		t.Fatalf("credential-only change must keep safe endpoint context: %s", raw)
 	}
 	decision := map[string]any{"candidateId": candidate["id"], "sourceRevision": pending["revision"]}
@@ -310,7 +310,7 @@ func TestSourceCandidateDistinguishesSameNameConnectionReplacementWithoutCredent
 	diff := candidate["diff"].(map[string]any)
 	removed := diff["removed"].([]any)[0].(map[string]any)
 	added := diff["added"].([]any)[0].(map[string]any)
-	if removed["beforeConnection"] != "socks · [2001:db8::50]:1080" || added["afterConnection"] != "socks · [2001:db8::50]:1081" {
+	if removed["beforeConnection"] != "socks [2001:db8::50]:1080" || added["afterConnection"] != "socks [2001:db8::50]:1081" {
 		t.Fatalf("missing distinguishable summaries: %s", raw)
 	}
 	if strings.Contains(raw, "fixture-user") || strings.Contains(raw, "fixture-secret") {

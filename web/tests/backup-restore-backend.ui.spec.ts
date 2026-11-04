@@ -86,7 +86,7 @@ test("OPS01 downloaded backup file rejects a wrong password and restores without
       page.getByRole("button", { name: "恢复到新数据库", exact: true }),
     ).not.toBeVisible();
     await expect(password).toHaveValue("wrong-synthetic-passphrase");
-    await expect(page.getByText(/downloaded\.age ·/)).toBeVisible();
+    await expect(page.getByText(/downloaded\.age$/)).toBeVisible();
     await password.fill(backupPassword);
     await inspect.click();
     await expect(page.getByText("文件校验通过", { exact: true })).toBeVisible();

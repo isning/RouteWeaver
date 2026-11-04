@@ -169,7 +169,7 @@ async function openLoadedMine() {
   expect(screen.queryByRole("table")).toBeNull();
   await userEvent.click(screen.getByRole("tab", { name: "我的引用" }));
   const action = await screen.findByRole("button", {
-    name: "查看固定版本 · 家庭配置",
+    name: "查看固定版本 家庭配置",
   });
   const viewport = action.closest<HTMLElement>(
     '[data-slot="table-container"]',
@@ -213,7 +213,7 @@ it("keeps the same focused action and outline visible after lazy-table resize wi
   expect(view.viewport.scrollTop).toBe(27);
   expect(focus).not.toHaveBeenCalled();
   expect(pageScroll).not.toHaveBeenCalled();
-  expect(screen.getByRole("button", { name: "查看固定版本 · 家庭配置" })).toBe(
+  expect(screen.getByRole("button", { name: "查看固定版本 家庭配置" })).toBe(
     view.action,
   );
   resize(view.viewport, 254);

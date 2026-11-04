@@ -320,9 +320,10 @@ it("shows persisted count-only application history on demand after a new mount",
   );
   const detail = within(await screen.findByRole("dialog"));
   expect(detail.getByRole("heading", { name: "应用记录" })).toBeTruthy();
-  expect(
-    detail.getByText(/3 → 4 个节点 · 新增 2 · 移除 1 · 连接变化 1 · 改名 0/),
-  ).toBeTruthy();
+  const historyEntry = detail.getByText("3 → 4 个节点").closest("li")!;
+  for (const fact of ["新增 2", "移除 1", "连接变化 1", "改名 0"]) {
+    expect(within(historyEntry).getByText(fact)).toBeTruthy();
+  }
   expect(detail.queryByText(/已发布成功|服务器已应用/)).toBeNull();
 });
 

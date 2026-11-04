@@ -23,5 +23,5 @@ describe("ordered path editing", () => {
           { id: "uk", name: "UK" },
         ],
       ),
-    ).toBe("英国专线 · FRA → UK · sing-box"));
+    ).toBe("英国专线（FRA → UK，sing-box）"));
 });

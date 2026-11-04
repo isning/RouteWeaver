@@ -89,7 +89,9 @@ export function NodeObservation({
         }
       >
         <QueryState
-          loading={query.isPending} paused={query.isPaused} loadingLayout="summary"
+          loading={query.isPending}
+          paused={query.isPaused}
+          loadingLayout="summary"
           error={query.error}
           retry={() => query.refetch()}
         >
@@ -122,7 +124,7 @@ export function NodeObservation({
                   detail={`共 ${exactBytes(sample.metrics.memoryTotalBytes)}`}
                 />
                 <Metric
-                  label="负载 · 1 / 5 / 15 分钟"
+                  label="负载（1 / 5 / 15 分钟）"
                   value={[
                     sample.metrics.load1,
                     sample.metrics.load5,
@@ -132,7 +134,7 @@ export function NodeObservation({
                     .join(" / ")}
                 />
                 <Metric
-                  label="计费网卡 · 接收 / 发送"
+                  label="计费网卡接收 / 发送"
                   value={`${rate(sample.receiveBytesPerSecond)} / ${rate(sample.transmitBytesPerSecond)}`}
                   detail={
                     data!.config.billedInterfaces?.join("、") ||
@@ -262,7 +264,7 @@ export function NodeObservation({
                   )}
                   <span>
                     {provider.observedAt
-                      ? `截至 ${dateLabel(provider.observedAt)}${provider.fresh ? "" : " · 不是实时余额"}`
+                      ? `截至 ${dateLabel(provider.observedAt)}${provider.fresh ? "" : "，不是实时余额"}`
                       : "尚未取得可核对的周期用量"}
                   </span>
                 </p>
@@ -316,19 +318,27 @@ export function NodeObservation({
                           已采集网卡增量：
                           {exactBytes(provider.observedNicBytes)}
                           {provider.observedSince
-                            ? ` · 自 ${dateLabel(provider.observedSince)}`
-                            : " \u00B7 \u5C1A\u65E0\u8FDE\u7EED\u589E\u91CF"}
+                            ? `，自 ${dateLabel(provider.observedSince)}`
+                            : "，尚无连续增量"}
                         </p>
                         {data?.statement && (
                           <p>
-                            供应商记录：{data.statement.reference} ·{" "}
-                            {dateLabel(data.statement.observedAt)}
+                            <span className="block">
+                              供应商记录：{data.statement.reference}
+                            </span>{" "}
+                            <span className="block text-muted-foreground">
+                              {dateLabel(data.statement.observedAt)}
+                            </span>
                           </p>
                         )}
                         {data?.baseline && (
                           <p>
-                            基线说明：{data.baseline.reason} ·{" "}
-                            {dateLabel(data.baseline.observedAt)}
+                            <span className="block">
+                              基线说明：{data.baseline.reason}
+                            </span>{" "}
+                            <span className="block text-muted-foreground">
+                              {dateLabel(data.baseline.observedAt)}
+                            </span>
                           </p>
                         )}
                         <p>

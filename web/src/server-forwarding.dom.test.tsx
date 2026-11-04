@@ -344,7 +344,8 @@ it("shows principal branches, connector via order and unresolved references with
     name: "Reject draft",
   });
   const row = within(name.closest("tr")!);
-  expect(row.getByText("用户入口 alice · private-route", {})).toBeTruthy();
+  expect(row.getByText("用户入口 alice")).toBeTruthy();
+  expect(row.getByText("线路 private-route")).toBeTruthy();
   expect(
     row.getByText(
       "转发至 transit.example.invalid:1081 → uk.example.invalid:1080",
@@ -402,7 +403,7 @@ it("keeps route editing direct and offers batch operations from the route's cont
   );
   await user.click(await screen.findByRole("menuitem", { name: "批量操作" }));
   expect(
-    await screen.findByRole("dialog", { name: "Reject draft · 计划变更" }),
+    await screen.findByRole("dialog", { name: "Reject draft的计划变更" }),
   ).toBeTruthy();
   expect(requests.some((path) => path.endsWith("/publish"))).toBe(false);
 });

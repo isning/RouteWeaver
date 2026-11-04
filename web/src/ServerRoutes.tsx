@@ -254,27 +254,40 @@ export function ServerRoutesPage({
       )}
       {returnHref && (
         <p>
-          <a href={returnHref}>返回原线路开通进度</a> ·
-          当前处理转发路径，线路与所选用户会保留。
+          <a href={returnHref}>返回原线路开通进度</a>
+          <span className="mt-1 block">
+            当前处理转发路径，线路与所选用户会保留。
+          </span>
         </p>
       )}
       <QueryState
-        loading={query.isPending} paused={query.isPaused} loadingLayout="table"
+        loading={query.isPending}
+        paused={query.isPaused}
+        loadingLayout="table"
         error={query.error}
         retry={() => query.refetch()}
       >
         {inventory && (
           <Section variant="plain">
-            <ResourceToolbar label="查找转发路径" search={
-              <SearchField placeholder="搜索转发路径" aria-label="搜索转发路径"
-                value={search} onValueChange={setSearch} type="search" />
-            } summary={<span>共 {inventory.deployments.length} 条</span>} />
+            <ResourceToolbar
+              label="查找转发路径"
+              search={
+                <SearchField
+                  placeholder="搜索转发路径"
+                  aria-label="搜索转发路径"
+                  value={search}
+                  onValueChange={setSearch}
+                  type="search"
+                />
+              }
+            />
             {inventory.deployments.length ? (
               <DataTable
                 rowKey="id"
                 rows={inventory.deployments.filter((d) =>
                   d.name.toLowerCase().includes(search.toLowerCase()),
                 )}
+                count={{ total: inventory.deployments.length, unit: "条转发路径", filtered: !!search }}
                 minWidth={690}
                 columns={[
                   {
@@ -400,7 +413,9 @@ export function ServerRoutesPage({
       )}
       {inventory && planning && (
         <QueryState
-          loading={!!planning && tasks.isPending} paused={tasks.isPaused} loadingLayout="table"
+          loading={!!planning && tasks.isPending}
+          paused={tasks.isPaused}
+          loadingLayout="table"
           error={tasks.error}
           retry={() => tasks.refetch()}
         >
@@ -1021,14 +1036,14 @@ function ServerRouteEditor({
                             key={p.listener.id}
                             className="standalone-label grid gap-2 text-sm font-medium"
                           >
-                            {p.listener.name} · 允许访问的内部网段
+                            {p.listener.name}允许访问的内部网段
                             <span className="text-muted-foreground text-xs font-normal">
                               {p.instance.adapterId === "routeweaver/xray"
                                 ? "用于 Xray 直接出站的目标；中转连接保留原设置。"
                                 : "用于受管入口的用户目标；中转连接保留原设置。"}
                             </span>
                             <MultiChoice
-                              aria-label={`${p.listener.name} · 允许访问的内部网段`}
+                              aria-label={`${p.listener.name}允许访问的内部网段`}
                               options={[]}
                               value={p.destinationPolicy?.allowCidrs || []}
                               placeholder="例如 10.20.0.0/16，默认不允许"
@@ -1265,9 +1280,7 @@ function ServerInventoryNotice({
           </ActionButton>
         }
       >
-        {
-          "请先核对核心实例；更新监听时保留实例设置。"
-        }
+        {"请先核对核心实例；更新监听时保留实例设置。"}
       </Notice>
     );
   return <ErrorNotice error={error} />;
@@ -1805,8 +1818,15 @@ function ServerRouteDetail({
           >
             <div className="section-heading flex flex-wrap items-start justify-between gap-3 mb-4">
               <h3 className="text-sm font-semibold">
-                {inventory.hosts.find((h) => h.id === p.instance.hostId)?.name}{" "}
-                · {coreName(p.instance)}
+                <span className="block">
+                  {
+                    inventory.hosts.find((h) => h.id === p.instance.hostId)
+                      ?.name
+                  }
+                </span>
+                <span className="mt-1 block text-muted-foreground font-normal">
+                  {coreName(p.instance)}
+                </span>
               </h3>
               <span className="muted text-sm text-muted-foreground">
                 {p.listener.name}

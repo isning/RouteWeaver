@@ -116,7 +116,7 @@ export function groupErrors(groups: Group[]): string[] {
 export function stableNodeLabel(node: ClientNode, nodes: ClientNode[]) {
   const duplicates = nodes.filter((n) => n.name === node.name);
   return duplicates.length > 1
-    ? `${node.name} · ${node.provenance?.[0]?.sourceId || node.region || node.id.slice(-6)}`
+    ? `${node.name}（${node.provenance?.[0]?.sourceId ? `来源 ${node.provenance[0].sourceId}` : node.region ? `地区 ${node.region}` : `标识 ${node.id.slice(-6)}`}）`
     : node.name;
 }
 export function redact(content: string) {

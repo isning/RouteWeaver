@@ -395,7 +395,7 @@ export function MultiChoice<V extends Value = string>({
                 <button
                   type="button"
                   className="rounded-sm p-0.5 outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  aria-label={`移除 ${typeof choices.find((o) => o.value === v)?.label === "string" ? choices.find((o) => o.value === v)?.label : String(v)}`}
+                  aria-label={`移除 ${choices.find((o) => o.value === v)?.["aria-label"] || optionText(choices.find((o) => o.value === v)?.label) || String(v)}`}
                   onClick={() => toggle(v)}
                 >
                   <X className="size-3" aria-hidden="true" />

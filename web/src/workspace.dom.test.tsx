@@ -696,7 +696,7 @@ async function templateUpdateFixture(
   await user.click(screen.getByRole("tab", { name: "我的引用" }));
   await user.click(
     await screen.findByRole("button", {
-      name: `${mode === "pinned" ? "查看固定版本" : "检查更新"} · My profile`,
+      name: `${mode === "pinned" ? "查看固定版本" : "检查更新"} My profile`,
     }),
   );
   return { requests, user };

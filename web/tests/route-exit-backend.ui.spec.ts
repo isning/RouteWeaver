@@ -68,7 +68,7 @@ test("existing managed route selects stored plain TCP endpoint absent from its p
   await page.getByText("Alternative UK", { exact: true }).last().click();
   await page.getByRole("combobox", { name: "新出口端点" }).click();
   await page
-    .getByText("Alternative UK · vless:1080 · xray", { exact: true })
+    .getByText("Alternative UK", { exact: true })
     .last()
     .click();
   await page.getByRole("button", { name: "检查变更", exact: true }).click();

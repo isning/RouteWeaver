@@ -820,7 +820,7 @@ for (const width of [3440, 2880, 2560, 2304, 1920, 1536, 1440, 1366, 1280, 1024,
     const details = usage.getByRole("region", { name: "用量与周期明细", exact: true });
     await expect(details).toBeVisible();
     await expect(usage.getByRole("button", { name: "用量与周期明细", exact: true })).toHaveCount(0);
-    const routes = usage.getByRole("region", { name: "平台提供的线路 · 3", exact: true });
+    const routes = usage.getByRole("region", { name: "平台提供的线路 3 条", exact: true });
     await expect(routes).toBeVisible();
     await expect(routes.getByRole("listitem")).toHaveCount(3);
     for (const [index, multiplier] of ["1.5×", "1×", "0.5×"].entries()) {

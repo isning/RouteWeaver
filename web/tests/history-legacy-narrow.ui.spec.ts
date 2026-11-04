@@ -39,7 +39,7 @@ for (const width of [320, 390, 640]) {
     const opener = page.getByRole("button", { name: "查看", exact: true });
     for (let attempt = 0; attempt < 2; attempt++) {
       await opener.click();
-      const detail = page.getByRole("dialog", { name: `${name} · 生成记录` });
+      const detail = page.getByRole("dialog", { name: `${name}的生成记录` });
       await expect(detail.getByText("此处展示当时保存的配置记录。检查当前配置请重新校验；服务器应用情况请查看节点确认状态。")).toBeVisible();
       await fits(page);
       if (attempt === 0) await page.screenshot({ path: info.outputPath(`activity-${width}.png`) });

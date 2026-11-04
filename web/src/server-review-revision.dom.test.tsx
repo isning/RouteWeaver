@@ -550,7 +550,7 @@ it("retains a late receipt behind an allowed Stop planner until the result is ac
   await user.click(within(detail).getByRole("button", { name: "实例操作" }));
   await user.click(await screen.findByRole("menuitem", { name: "停止核心" }));
   const planner = await screen.findByRole("dialog", {
-    name: "Office path · 停止核心",
+    name: "Office path的停止核心",
   });
   await act(async () =>
     finish({

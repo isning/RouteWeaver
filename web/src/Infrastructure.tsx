@@ -48,10 +48,7 @@ import { ConnectionFields, normalizeConnection } from "./ConnectionFields";
 import { DataTable, TableRowActions } from "./DataTable";
 import { DiagnosticsPanel } from "./Diagnostics";
 import { revealFocusedPolicyModalControl } from "./drawer-control-visibility";
-import {
-  phaseLabel,
-  isUnchangedEndpointDraft,
-} from "./infrastructure-model";
+import { phaseLabel, isUnchangedEndpointDraft } from "./infrastructure-model";
 import { dateLabel, newID } from "./model";
 import { useUnsavedChanges } from "./navigation";
 import { NodeObservation } from "./NodeObservation";
@@ -165,7 +162,9 @@ export function ServersPage() {
       />
       <ErrorNotice error={editError} />
       <QueryState
-        loading={query.isPending} paused={query.isPaused} loadingLayout="cards"
+        loading={query.isPending}
+        paused={query.isPaused}
+        loadingLayout="cards"
         error={query.error}
         retry={() => query.refetch()}
       >
@@ -250,6 +249,7 @@ export function ServersPage() {
                   <DataTable
                     rowKey="id"
                     rows={data.instances}
+                    count={{ total: data.instances.length, unit: "个核心实例" }}
                     minWidth={650}
                     columns={[
                       {
@@ -320,6 +320,7 @@ export function ServersPage() {
                   <DataTable
                     rowKey="id"
                     rows={data.endpoints}
+                    count={{ total: data.endpoints.length, unit: "个端点" }}
                     minWidth={680}
                     columns={[
                       { title: "\u7AEF\u70B9", accessor: "name" },
@@ -329,7 +330,17 @@ export function ServersPage() {
                           const i = data.instances.find(
                             (i) => i.id === e.instanceId,
                           );
-                          return `${data.hosts.find((h) => h.id === i?.hostId)?.name || "\u2014"} · ${coreName(i)}`;
+                          return (
+                            <span className="grid gap-1">
+                              <span>
+                                {data.hosts.find((h) => h.id === i?.hostId)
+                                  ?.name || "\u2014"}
+                              </span>{" "}
+                              <span className="text-muted-foreground">
+                                {coreName(i)}
+                              </span>
+                            </span>
+                          );
                         },
                       },
                       {
@@ -470,7 +481,7 @@ export function ServersPage() {
                     <div className="subscription-info min-w-0 space-y-1">
                       <h3 className="text-sm font-semibold">{coreName(i)}</h3>
                       <p>
-                        版本 {i.version} ·{" "}
+                        <span className="block">版本 {i.version}</span>
                         {
                           data.endpoints.filter((e) => e.instanceId === i.id)
                             .length
@@ -732,10 +743,17 @@ function InventoryEditor({
             <div className="space-y-3">
               <p>修改项目：{review.changedFields.join("、") || "无变化"}。</p>
               <p>
-                保存为：{review.proposed.name} ·{" "}
-                {review.proposed.instanceName || review.proposed.instanceId} ·{" "}
-                {review.proposed.protocol} · {review.proposed.host}:
-                {review.proposed.port}
+                <span className="block font-medium">
+                  保存为：{review.proposed.name}
+                </span>
+                <span className="block">
+                  核心：
+                  {review.proposed.instanceName || review.proposed.instanceId}
+                </span>
+                <span className="block">
+                  {review.proposed.protocol} {review.proposed.host}:
+                  {review.proposed.port}
+                </span>
               </p>
               {(
                 [
@@ -976,7 +994,8 @@ function InventoryEditor({
                   { value: "routeweaver/xray", label: "Xray" },
                   {
                     value: "routeweaver/managed-xray",
-                    label: "受管 Xray · 平台服务入口",
+                    label: "受管 Xray",
+                    description: "平台服务入口",
                   },
                 ]}
                 onValueChange={(v) => {
@@ -1030,7 +1049,7 @@ function InventoryEditor({
                     ? [
                         {
                           value: currentEndpointInstance.hostId,
-                          label: `服务器已移除 · ${currentEndpointInstance.hostId}`,
+                          label: `服务器已移除（${currentEndpointInstance.hostId}）`,
                           disabled: true,
                         },
                       ]
@@ -1057,7 +1076,7 @@ function InventoryEditor({
                       endpointInstances.filter(
                         (other) => coreName(other) === coreName(i),
                       ).length > 1
-                        ? `${coreName(i)} · ${i.id}`
+                        ? `${coreName(i)}（${i.id}）`
                         : coreName(i),
                   })),
                   ...(currentEndpoint &&
@@ -1066,7 +1085,7 @@ function InventoryEditor({
                     ? [
                         {
                           value: currentEndpoint.instanceId,
-                          label: `核心已移除 · ${currentEndpoint.instanceId}`,
+                          label: `核心已移除（${currentEndpoint.instanceId}）`,
                           disabled: true,
                         },
                       ]
@@ -1169,7 +1188,9 @@ export function InstanceObservation({ instanceId }: { instanceId: string }) {
   const data = query.data;
   return (
     <QueryState
-      loading={query.isPending} paused={query.isPaused} loadingLayout="summary"
+      loading={query.isPending}
+      paused={query.isPaused}
+      loadingLayout="summary"
       error={query.error}
       retry={() => query.refetch()}
     >
@@ -1275,7 +1296,7 @@ function InstanceDetail({
       bodyProps={{ className: "space-y-5" }}
       title={
         instance
-          ? `${inventory?.hosts.find((h) => h.id === instance.hostId)?.name || ""} · ${coreName(instance)}`
+          ? `${inventory?.hosts.find((h) => h.id === instance.hostId)?.name || ""}的${coreName(instance)}`
           : ""
       }
       open={!!instance}
@@ -1324,8 +1345,12 @@ function InstanceDetail({
                   <div className="subscription-info min-w-0 space-y-1">
                     <h3 className="text-sm font-semibold">{e.name}</h3>
                     <p>
-                      {e.connection.host}:{e.connection.port} ·{" "}
-                      {e.connection.protocol}
+                      <span className="block">
+                        {e.connection.host}:{e.connection.port}
+                      </span>
+                      <span className="block text-muted-foreground">
+                        {e.connection.protocol}
+                      </span>
                     </p>
                   </div>
                 </div>

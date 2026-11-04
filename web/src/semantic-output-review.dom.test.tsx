@@ -468,7 +468,7 @@ it("prioritizes the named member delta and keeps inventory and unchanged routing
   expect(changes.getByRole("heading", { name: "Primary" })).toBeTruthy();
   expect(changes.queryByText("修改策略组")).toBeNull();
   const counts = changes
-    .getByText("1 个策略组变化 · 已发布 1 个 → 待发布 1 个")
+    .getByText("1 个策略组变化")
     .closest("details");
   expect(counts).not.toBeNull();
   expect(counts).toHaveProperty("open", false);

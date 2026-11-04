@@ -26,7 +26,7 @@ for (const status of ["rendered", "unknown-future-status"]) {
     render(<QueryClientProvider client={client}><UIProviders><AdminPage page="activity" /></UIProviders></QueryClientProvider>);
     const opener = await screen.findByRole("button", { name: "查看" });
     await userEvent.click(opener);
-    const dialog = await screen.findByRole("dialog", { name: "历史线路 · 生成记录" });
+    const dialog = await screen.findByRole("dialog", { name: "历史线路的生成记录" });
     expect(within(dialog).getByText("历史配置记录")).toBeTruthy();
     expect(within(dialog).queryByText("配置结构校验完成")).toBeNull();
     expect(within(dialog).getByText("此处展示当时保存的配置记录。检查当前配置请重新校验；服务器应用情况请查看节点确认状态。" )).toBeTruthy();
@@ -37,7 +37,7 @@ for (const status of ["rendered", "unknown-future-status"]) {
       await waitFor(() => expect(document.activeElement).toBe(opener));
       if (attempt === 0) {
         await userEvent.click(opener);
-        await screen.findByRole("dialog", { name: "历史线路 · 生成记录" });
+        await screen.findByRole("dialog", { name: "历史线路的生成记录" });
       }
     }
     expect(requests.every(request => request.startsWith("GET "))).toBe(true);

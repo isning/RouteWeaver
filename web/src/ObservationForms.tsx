@@ -229,7 +229,7 @@ export function ObservationConfigForm({
               placeholder="选择这台服务器上的一个实例"
               options={instances.map((i) => ({
                 value: i.id,
-                label: i.name || `${i.adapterId} · ${i.id}`,
+                label: i.name || `${i.adapterId}（${i.id}）`,
               }))}
             />
           </AppField>
@@ -540,9 +540,13 @@ export function ProviderMeasurementForm({
       size="lg"
     >
       <p>
-        {initial.config.provider!.name} ·{" "}
-        {dateLabel(initial.config.provider!.cycleStart)} 至{" "}
-        {dateLabel(initial.config.provider!.cycleEnd)}
+        <span className="block font-medium">
+          {initial.config.provider!.name}
+        </span>
+        <span className="block text-muted-foreground">
+          {dateLabel(initial.config.provider!.cycleStart)} 至{" "}
+          {dateLabel(initial.config.provider!.cycleEnd)}
+        </span>
       </p>
       <AppForm
         form={form}

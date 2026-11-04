@@ -60,7 +60,7 @@ export function ServerEndpointSelect({
     !!unavailableReason &&
     entries.some((entry) => !allowedIds.includes(entry.id));
   const baseLabel = (entry: ManagedEndpoint) =>
-    `${entry.name} · ${entry.connection.protocol}:${entry.connection.port} · ${owner(entry)?.adapterId.replace("routeweaver/", "") || "未知核心"}`;
+    `${entry.name} ${entry.connection.protocol}:${entry.connection.port} ${owner(entry)?.adapterId.replace("routeweaver/", "") || "未知核心"}`;
   const endpointLabel = (entry: ManagedEndpoint) => {
     const duplicates = entries.filter(
       (other) => baseLabel(other) === baseLabel(entry),
@@ -70,8 +70,19 @@ export function ServerEndpointSelect({
     const name = instance?.name;
     const sameName =
       duplicates.filter((other) => owner(other)?.name === name).length > 1;
-    return `${baseLabel(entry)} · ${name || "核心"}${sameName || !name ? ` (${instance?.id || entry.instanceId} / ${entry.id})` : ""}`;
+    return `${baseLabel(entry)} ${name || "核心"}${sameName || !name ? ` (${instance?.id || entry.instanceId} / ${entry.id})` : ""}`;
   };
+  const endpointPresentation = (entry: ManagedEndpoint, status = "") => (
+    <span className="grid min-w-0 gap-1">
+      <span>
+        {entry.name}
+        {status}
+      </span>{" "}
+      <span className="text-xs font-normal text-muted-foreground">
+        {endpointLabel(entry).slice(entry.name.length).trim()}
+      </span>
+    </span>
+  );
   const selected = compatible
     ? value
     : currentHost === server
@@ -89,7 +100,13 @@ export function ServerEndpointSelect({
     available &&
     current &&
     current.endpoint.id === selected
-      ? `${endpointLabel(current.endpoint)}${endpoint && endpointLabel(current.endpoint) !== endpointLabel(endpoint) ? "（草稿）" : ""}`
+      ? endpointPresentation(
+          current.endpoint,
+          endpoint &&
+            endpointLabel(current.endpoint) !== endpointLabel(endpoint)
+            ? "（草稿）"
+            : "",
+        )
       : undefined;
   return (
     <div className="server-endpoint-select grid min-w-0 flex-1 gap-2 sm:grid-cols-2 [&>p]:col-span-full">
@@ -113,7 +130,11 @@ export function ServerEndpointSelect({
         options={[
           ...entries.map((entry) => ({
             value: entry.id,
-            label: `${endpointLabel(entry)}${entry.id === value && !available ? "（当前不可选）" : ""}`,
+            label: endpointPresentation(
+              entry,
+              entry.id === value && !available ? "（当前不可选）" : "",
+            ),
+            searchText: endpointLabel(entry),
             disabled: !allowedIds.includes(entry.id),
           })),
           ...(missing

@@ -270,7 +270,7 @@ it.each(["feed", "bundle"])(
     const access = await screen.findByRole("dialog", { name: "获取「Phone」" });
     expect(within(access).getByText(/旧链接已失效/)).toBeTruthy();
     expect(
-      screen.queryByRole("dialog", { name: "订阅详情 · Phone" }),
+      screen.queryByRole("dialog", { name: "Phone 的订阅详情" }),
     ).toBeNull();
     await userEvent.click(
       await within(access).findByRole("button", { name: /重试/ }),
@@ -306,7 +306,7 @@ it.each(["feed", "bundle"])(
     expect(writes).toEqual(["/api/me/outputs/link-1/rotate"]);
     await userEvent.click(within(access).getByRole("button", { name: "关闭" }));
     expect(
-      await screen.findByRole("dialog", { name: "订阅详情 · Phone" }),
+      await screen.findByRole("dialog", { name: "Phone 的订阅详情" }),
     ).toBeTruthy();
     expect(screen.queryByRole("dialog", { name: "获取「Phone」" })).toBeNull();
   },
@@ -361,7 +361,7 @@ it("does not reopen replacement access after accepted navigation while rotation 
   location.hash = "#subscriptions?profile=shared";
   await waitFor(() =>
     expect(
-      screen.queryByRole("dialog", { name: "订阅详情 · Phone" }),
+      screen.queryByRole("dialog", { name: "Phone 的订阅详情" }),
     ).toBeNull(),
   );
   finishRotation(json(output));
@@ -548,7 +548,7 @@ it.each(
         await screen.findByRole("button", { name: "查看订阅 Phone" }),
       );
       const detail = await screen.findByRole("dialog", {
-        name: "订阅详情 · Phone",
+        name: "Phone 的订阅详情",
       });
       await userEvent.click(
         within(detail).getByRole("button", { name: "检查更新" }),

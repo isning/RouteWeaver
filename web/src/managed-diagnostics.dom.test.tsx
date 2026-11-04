@@ -113,7 +113,7 @@ it("selects only an observed managed path and queues its route identity without 
   const user = userEvent.setup();
   for (const [label, option] of [
     ["测试路径方式", "已应用线路的中转与出口"],
-    ["已应用线路", "Three-hop route · 3 跳"],
+    ["已应用线路", "Three-hop route"],
     ["授权目标", "Authorized target"],
     ["测试方式", "连通性"],
   ]) {

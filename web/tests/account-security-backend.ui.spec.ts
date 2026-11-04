@@ -171,7 +171,7 @@ test("administrator resets a synthetic account through the UI and temporary logi
       .getByRole("button", { name: `管理 ${account.name}`, exact: true })
       .click();
     const dialog = page.getByRole("dialog", {
-      name: `管理账号 · ${account.name}`,
+      name: `管理 ${account.name} 的账号`,
       exact: true,
     });
     await dialog

@@ -159,7 +159,7 @@ async function startConfiguration(page: Page) {
 
 async function editSelectedOutputConfiguration(page: Page, name: string) {
   const detail = page.getByRole("dialog", {
-    name: `订阅详情 · ${name}`,
+    name: `${name} 的订阅详情`,
     exact: true,
   });
   await expect(detail).toBeVisible();

@@ -104,7 +104,7 @@ test("same browser publication is observed by the owned native instance and stop
       .getByRole("button", { name: "查看状态", exact: true })
       .click();
     const status = page.getByRole("dialog", {
-      name: `${host.name} · ${instance.name}`,
+      name: `${host.name}的${instance.name}`,
       exact: true,
     });
     await expect(

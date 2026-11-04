@@ -156,7 +156,7 @@ it("names the selected diagnostic target and returns exact cancel focus after tw
     );
     await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
     await waitFor(() => expect(document.activeElement).toBe(opener));
-    expect(detail.getByText("下载测试 · Tokyo owned probe")).toBeTruthy();
+    expect(detail.getByRole("heading", { name: "下载测试 Tokyo owned probe" })).toBeTruthy();
     expect(detail.getByText("正在测试", { exact: true })).toBeTruthy();
     expect(f.writes).toEqual([]);
   }
@@ -181,7 +181,7 @@ for (const scenario of [
     expect(
       await detail.findByText(scenario.label, { exact: true }),
     ).toBeTruthy();
-    expect(detail.getByText("下载测试 · Tokyo owned probe")).toBeTruthy();
+    expect(detail.getByRole("heading", { name: "下载测试 Tokyo owned probe" })).toBeTruthy();
     expect(detail.queryByRole("button", { name: "取消测试" })).toBeNull();
     expect(detail.queryByText("测试完成", { exact: true })).toBeNull();
     if (scenario.accepted === "cancel_requested")
@@ -209,7 +209,7 @@ it("retains the selected running job after rejected cancellation and explicitly 
   expect(
     await detail.findByText("Cancellation temporarily unavailable"),
   ).toBeTruthy();
-  expect(detail.getByText("下载测试 · Tokyo owned probe")).toBeTruthy();
+  expect(detail.getByRole("heading", { name: "下载测试 Tokyo owned probe" })).toBeTruthy();
   expect(detail.getByText("正在测试", { exact: true })).toBeTruthy();
   expect(detail.queryByText("已取消", { exact: true })).toBeNull();
   await requestCancel();

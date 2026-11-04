@@ -77,7 +77,9 @@ export function DiagnosticsPanel({
         }
       >
         <QueryState
-          loading={jobs.isPending || targets.isPending} paused={jobs.isPaused || targets.isPaused} loadingLayout="table"
+          loading={jobs.isPending || targets.isPending}
+          paused={jobs.isPaused || targets.isPaused}
+          loadingLayout="table"
           error={jobs.error || targets.error}
           retry={() => {
             jobs.refetch();
@@ -108,13 +110,20 @@ export function DiagnosticsPanel({
                   render: (_, j) => (
                     <>
                       <strong>
-                        {diagnosticKindLabel[j.kind]} · {j.target.name}
+                        <span className="block">
+                          {diagnosticKindLabel[j.kind]}
+                        </span>{" "}
+                        <span className="block font-normal">
+                          {j.target.name}
+                        </span>
                       </strong>
                       <p className="muted text-sm text-muted-foreground">
                         {j.pathMode === "managed_route"
                           ? "已应用线路路径"
-                          : "服务器直连"}{" "}
-                        · {dateLabel(j.requestedAt)}
+                          : "服务器直连"}
+                        <span className="block">
+                          {dateLabel(j.requestedAt)}
+                        </span>
                       </p>
                     </>
                   ),
@@ -153,7 +162,14 @@ export function DiagnosticsPanel({
             {[
               {
                 key: "targets",
-                label: `授权测试目标 · ${availableTargets.length}`,
+                label: (
+                  <span className="flex flex-wrap gap-3">
+                    <span>授权测试目标</span>{" "}
+                    <span className="text-muted-foreground">
+                      {availableTargets.length}
+                    </span>
+                  </span>
+                ),
                 children: (
                   <>
                     <ul className="simple-list space-y-2 text-sm">
@@ -164,9 +180,11 @@ export function DiagnosticsPanel({
                             {t.url}
                           </p>
                           <small>
-                            {t.methods
-                              .map((m) => diagnosticKindLabel[m])
-                              .join(" \u00B7 ")}
+                            <span className="flex flex-wrap gap-x-3 gap-y-1">
+                              {t.methods.map((m) => (
+                                <span key={m}>{diagnosticKindLabel[m]}</span>
+                              ))}
+                            </span>
                           </small>
                         </li>
                       ))}
@@ -243,7 +261,10 @@ export function DiagnosticResult({
       <ErrorNotice error={cancel.error} />
       <div className="section-heading flex flex-wrap items-start justify-between gap-3 mb-4">
         <h3 className="text-sm font-semibold">
-          {diagnosticKindLabel[job.kind]} · {job.target.name}
+          <span className="block">{diagnosticKindLabel[job.kind]}</span>{" "}
+          <span className="mt-1 block font-normal text-muted-foreground">
+            {job.target.name}
+          </span>
         </h3>
         <Badge variant="secondary">{diagnosticStatus(job.status)}</Badge>
       </div>
@@ -260,11 +281,15 @@ export function DiagnosticResult({
         </p>
       )}
       <p className="break-all text-sm">
-        载荷方向：{job.kind === "download" ? "目标 → 服务器" : "服务器 → 目标"}{" "}
-        · {job.target.url}
+        <span className="block">
+          载荷方向：
+          {job.kind === "download" ? "目标 → 服务器" : "服务器 → 目标"}
+        </span>{" "}
+        <span className="block">{job.target.url}</span>
       </p>
       <p>
-        提交于 {dateLabel(job.requestedAt)} · 最长 {job.timeoutSeconds} 秒
+        <span className="block">提交于 {dateLabel(job.requestedAt)}</span>{" "}
+        <span className="block">最长 {job.timeoutSeconds} 秒</span>
       </p>
       {result?.status === "succeeded" && result.bytesPerSecond != null && (
         <div className="observation-metric space-y-1 [&_strong]:block [&_strong]:text-xl">
@@ -349,19 +374,28 @@ export function DiagnosticResult({
                 {result && (
                   <>
                     <p>
-                      阶段：{result.phase} · 结果代码：{result.code}
+                      <span className="block">阶段：{result.phase}</span>{" "}
+                      <span className="block">结果代码：{result.code}</span>
                     </p>
                     {!["dispatch", "recovery"].includes(result.phase) && (
                       <>
                         <p>
-                          开始 {dateLabel(result.startedAt)} · 结束{" "}
-                          {dateLabel(result.finishedAt)}
+                          <span className="block">
+                            开始 {dateLabel(result.startedAt)}
+                          </span>{" "}
+                          <span className="block">
+                            结束 {dateLabel(result.finishedAt)}
+                          </span>
                         </p>
                         <p>
                           持续 {result.durationMs} 毫秒
-                          {result.httpStatus
-                            ? ` · HTTP ${result.httpStatus}`
-                            : ""}
+                          {result.httpStatus ? (
+                            <span className="block">
+                              HTTP {result.httpStatus}
+                            </span>
+                          ) : (
+                            ""
+                          )}
                         </p>
                       </>
                     )}
@@ -634,7 +668,9 @@ export function DiagnosticStartForm({
           ) : (
             <>
               <QueryState
-                loading={pathMode === "managed_route" && paths.isPending} paused={paths.isPaused} loadingLayout="form"
+                loading={pathMode === "managed_route" && paths.isPending}
+                paused={paths.isPaused}
+                loadingLayout="form"
                 error={paths.error}
                 retry={() => paths.refetch()}
               >
@@ -659,7 +695,8 @@ export function DiagnosticStartForm({
                   <ChoiceSelect
                     options={availablePaths.map((path) => ({
                       value: path.publishedRouteId,
-                      label: `${path.name} · ${path.managedPath.hops.length} 跳`,
+                      label: path.name,
+                      description: `${path.managedPath.hops.length} 跳`,
                     }))}
                   />
                 </AppField>

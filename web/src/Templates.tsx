@@ -1,3 +1,4 @@
+import { Metadata } from "./ui-patterns/metadata";
 import type { DataTableProps, DataTableHandle } from "./DataTable";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -534,7 +535,9 @@ export function TemplatesPage({ admin = false }: { admin?: boolean }) {
       label: "模板库",
       children: (
         <QueryState
-          loading={query.isPending} paused={query.isPaused} loadingLayout="cards"
+          loading={query.isPending}
+          paused={query.isPaused}
+          loadingLayout="cards"
           error={query.error}
           retry={() => query.refetch()}
         >
@@ -564,12 +567,17 @@ export function TemplatesPage({ admin = false }: { admin?: boolean }) {
                     </div>
                     <Badge variant="secondary">v{t.version}</Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    {kindLabel(t.kind)} ·{" "}
-                    {t.kind === "processing-preset"
-                      ? `${t.spec.steps?.length || 0} 个步骤`
-                      : `${t.spec.groups?.length || 0} 个策略组 · ${t.spec.rules?.length || 0} 条规则`}
-                  </p>
+                  <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-muted-foreground">
+                    <span>{kindLabel(t.kind)}</span>
+                    {t.kind === "processing-preset" ? (
+                      <span>{t.spec.steps?.length || 0} 个步骤</span>
+                    ) : (
+                      <>
+                        <span>{t.spec.groups?.length || 0} 个策略组</span>
+                        <span>{t.spec.rules?.length || 0} 条规则</span>
+                      </>
+                    )}
+                  </div>
                   <footer className="template-library-footer mt-auto flex flex-wrap items-center justify-between gap-2 border-t pt-4">
                     <div className="profile-meta flex flex-wrap gap-2 text-sm text-muted-foreground">
                       发布于 {dateLabel(t.publishedAt)}
@@ -593,7 +601,9 @@ export function TemplatesPage({ admin = false }: { admin?: boolean }) {
       label: "我的引用",
       children: (
         <QueryState
-          loading={bindings.isPending} paused={bindings.isPaused} loadingLayout="table"
+          loading={bindings.isPending}
+          paused={bindings.isPaused}
+          loadingLayout="table"
           error={bindings.error}
           retry={() => bindings.refetch()}
         >
@@ -655,7 +665,7 @@ export function TemplatesPage({ admin = false }: { admin?: boolean }) {
                         </span>
                       ) : (
                         <ActionButton
-                          aria-label={`${b.mode === "follow" ? "检查更新" : "查看固定版本"} · ${targetName(b)}`}
+                          aria-label={`${b.mode === "follow" ? "检查更新" : "查看固定版本"} ${targetName(b)}`}
                           leadingIcon={<RotateCw aria-hidden="true" />}
                           onClick={() => {
                             revision.current++;
@@ -745,7 +755,7 @@ export function TemplatesPage({ admin = false }: { admin?: boolean }) {
         />
       )}
       <TaskSheet
-        title={checking ? `模板更新 · ${targetName(checking)}` : "模板更新"}
+        title={checking ? `模板更新 ${targetName(checking)}` : "模板更新"}
         open={!!checking}
         onOpenChange={(nextOpen) => {
           if (!nextOpen) closeUpdate();
@@ -770,7 +780,14 @@ export function TemplatesPage({ admin = false }: { admin?: boolean }) {
                 value={effectiveVersion}
                 options={(updateVersions.data || []).map((t) => ({
                   value: t.version,
-                  label: `v${t.version}${t.version === checking.appliedVersion ? " · 当前固定" : ""}`,
+                  label: (
+                    <Metadata className="flex-col items-start">
+                      <span>v{t.version}</span>
+                      {t.version === checking.appliedVersion && (
+                        <span className="text-muted-foreground">当前固定</span>
+                      )}
+                    </Metadata>
+                  ),
                 }))}
                 onValueChange={(value) => {
                   if (value === undefined) return;
@@ -1120,7 +1137,14 @@ function SelectTemplate({
       ? [
           {
             value,
-            label: `${name || value} · ${unresolved ? "暂不可用" : "已不可用"}`,
+            label: (
+              <Metadata className="flex-col items-start">
+                <span>{name || value}</span>
+                <span className="text-muted-foreground">
+                  {unresolved ? "暂不可用" : "已不可用"}
+                </span>
+              </Metadata>
+            ),
             disabled: true,
           },
         ]
@@ -1213,14 +1237,28 @@ function SelectTemplate({
               options={[
                 ...(versions.data || []).map((v) => ({
                   value: v.version,
-                  label: `v${v.version} · ${dateLabel(v.publishedAt)}`,
+                  label: (
+                    <Metadata className="flex-col items-start">
+                      <span>v{v.version}</span>
+                      <span className="text-muted-foreground">
+                        {dateLabel(v.publishedAt)}
+                      </span>
+                    </Metadata>
+                  ),
                 })),
                 ...(version &&
                 !versions.data?.some((v) => v.version === version)
                   ? [
                       {
                         value: version,
-                        label: `v${version} · ${catalogReady(versions) ? "已不可用" : "暂不可用"}`,
+                        label: (
+                          <Metadata className="flex-col items-start">
+                            <span>v{version}</span>
+                            <span className="text-muted-foreground">
+                              {catalogReady(versions) ? "已不可用" : "暂不可用"}
+                            </span>
+                          </Metadata>
+                        ),
                         disabled: true,
                       },
                     ]
@@ -1643,7 +1681,12 @@ function PublishTemplate({
               placeholder="创建新模板"
               options={templates.map((t) => ({
                 value: t.id,
-                label: `${t.name} · v${t.version}`,
+                label: (
+                  <Metadata className="flex-col items-start">
+                    <span>{t.name}</span>
+                    <span className="text-muted-foreground">v{t.version}</span>
+                  </Metadata>
+                ),
               }))}
               onValueChange={(id) => {
                 revision.current++;

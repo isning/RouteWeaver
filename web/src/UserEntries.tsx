@@ -308,7 +308,7 @@ function UserEntryTask({
   };
   return (
     <TaskSheet
-      title={`${user?.name || ""} · 平台入口`}
+      title={user ? `${user.name} 的平台入口` : "平台入口"}
       open={open}
       onOpenChange={(next) => {
         if (!next) closeSheet();

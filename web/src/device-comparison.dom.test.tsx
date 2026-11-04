@@ -29,7 +29,7 @@ async function singleCheckAction(
     screen.findByRole("button", { name: "管理配置 日常分流" }),
   );
   return screen.findByRole("menuitem", {
-    name: "检查 1 个订阅的更新 · 日常分流",
+    name: "检查 日常分流 的 1 个订阅更新",
   });
 }
 
@@ -101,7 +101,7 @@ it("bounds an explicit visible page to five checks with two in flight and never 
   expect(pending).toHaveLength(0);
   await scenario.click(() =>
     within(group).getByRole("button", {
-      name: "检查 5 个订阅的更新 · 日常分流",
+      name: "检查 日常分流 的 5 个订阅更新",
     }),
   );
   await waitFor(() => expect(pending).toHaveLength(2));
@@ -177,7 +177,7 @@ it("keeps known invalid intent, unknown failures and never-checked rows distinct
   );
   mount();
   await scenario.click(() =>
-    screen.findByRole("button", { name: "检查 3 个订阅的更新 · 日常分流" }),
+    screen.findByRole("button", { name: "检查 日常分流 的 3 个订阅更新" }),
   );
   await screen.findByText(comparisonText(/默认流量需修复.*上次核对/));
   const failed = screen.getByRole("group", { name: "客户端订阅 Android" });
@@ -221,7 +221,7 @@ it("fences a second known input mutation even when the input query stayed invali
   const { client } = mount();
   await screen.findByRole("button", { name: "检查更新" });
   expect(
-    screen.queryByRole("button", { name: "检查 1 个订阅的更新 · 日常分流" }),
+    screen.queryByRole("button", { name: "检查 日常分流 的 1 个订阅更新" }),
   ).toBeNull();
   const check = await singleCheckAction(scenario);
   await scenario.click(() => check);
@@ -293,7 +293,7 @@ it("discards late results after search changes and never checks a replacement sc
   );
   mount();
   await scenario.click(() =>
-    screen.findByRole("button", { name: "检查 2 个订阅的更新 · 日常分流" }),
+    screen.findByRole("button", { name: "检查 日常分流 的 2 个订阅更新" }),
   );
   await waitFor(() => expect(late).toHaveLength(2));
   scenario.change(
@@ -334,7 +334,7 @@ it("never records a late private detail as fresh evidence after a known input mu
   );
   const { client } = mount();
   await scenario.click(() =>
-    screen.findByRole("button", { name: "检查 2 个订阅的更新 · 日常分流" }),
+    screen.findByRole("button", { name: "检查 日常分流 的 2 个订阅更新" }),
   );
   await waitFor(() =>
     expect(
@@ -360,7 +360,7 @@ it("never records a late private detail as fresh evidence after a known input mu
       }),
     );
   });
-  const dialog = screen.getByRole("dialog", { name: "订阅详情 · MacBook" });
+  const dialog = screen.getByRole("dialog", { name: "MacBook 的订阅详情" });
   await within(dialog).findByText(
     "暂时无法比较已保存的修改。已发布内容未因此改变。",
   );
@@ -425,7 +425,7 @@ it("projects a successful private detail without private rules and preserves it 
   await scenario.click(() =>
     screen.findByRole("button", { name: "查看订阅 MacBook" }),
   );
-  const dialog = screen.getByRole("dialog", { name: "订阅详情 · MacBook" });
+  const dialog = screen.getByRole("dialog", { name: "MacBook 的订阅详情" });
   await within(dialog).findByText("已保存的修改尚未发布");
   await scenario.click(() =>
     within(dialog).getByRole("button", { name: "关闭" }),
@@ -536,7 +536,7 @@ it("checks only after an explicit scoped action and keeps publication separate f
   expect(comparisons).toEqual([]);
   await scenario.click(() =>
     within(group).getByRole("button", {
-      name: "检查 2 个订阅的更新 · 日常分流",
+      name: "检查 日常分流 的 2 个订阅更新",
     }),
   );
   const macbook = within(group).getByRole("group", {
@@ -599,7 +599,7 @@ it("replaces an older unchanged receipt when a newer private recheck fails", asy
   );
   mount();
   await scenario.click(() =>
-    screen.findByRole("button", { name: "检查 2 个订阅的更新 · 日常分流" }),
+    screen.findByRole("button", { name: "检查 日常分流 的 2 个订阅更新" }),
   );
   await waitFor(() =>
     expect(
@@ -609,7 +609,7 @@ it("replaces an older unchanged receipt when a newer private recheck fails", asy
   await scenario.click(() =>
     screen.getByRole("button", { name: "查看订阅 MacBook" }),
   );
-  const dialog = screen.getByRole("dialog", { name: "订阅详情 · MacBook" });
+  const dialog = screen.getByRole("dialog", { name: "MacBook 的订阅详情" });
   await within(dialog).findByText(
     "暂时无法比较已保存的修改。已发布内容未因此改变。",
   );
@@ -676,7 +676,7 @@ it.for([false, true])(
     mount();
     await scenario.click(() =>
       screen.findByRole("button", {
-        name: "检查 2 个订阅的更新 · 日常分流",
+        name: "检查 日常分流 的 2 个订阅更新",
       }),
     );
     await waitFor(() =>
@@ -757,7 +757,7 @@ it("does not request deleted or reassigned devices and rejects mismatched compar
   );
   mount();
   await scenario.click(() =>
-    screen.findByRole("button", { name: "检查 2 个订阅的更新 · 日常分流" }),
+    screen.findByRole("button", { name: "检查 日常分流 的 2 个订阅更新" }),
   );
   await screen.findByText("暂时无法比较");
   expect(calls).toEqual(["/api/me/outputs/android/comparison"]);
@@ -829,7 +829,7 @@ it("invalidates accepted-input evidence for recovery refresh but not read-only s
   }
   const { client } = mount(<ReviewEntry />);
   await scenario.click(() =>
-    screen.findByRole("button", { name: "检查 2 个订阅的更新 · 日常分流" }),
+    screen.findByRole("button", { name: "检查 日常分流 的 2 个订阅更新" }),
   );
   await waitFor(() =>
     expect(

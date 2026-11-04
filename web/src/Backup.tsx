@@ -289,8 +289,8 @@ export function BackupSettings() {
             <ActionButton className="backup-file-trigger w-full sm:w-auto sm:justify-self-start" disabled={restore.isPending} aria-controls={fileInputID} aria-describedby={fileDescriptionID} onClick={() => fileInput.current?.click()} variant="outline">
               选择备份文件
             </ActionButton>
-            <span id={fileDescriptionID} className="[overflow-wrap:anywhere]">
-              {file ? `${file.name} · ${bytesLabel(file.size)}` : "未选择文件"}
+            <span id={fileDescriptionID} className="grid min-w-0 gap-1 [overflow-wrap:anywhere]">
+              {file ? <><span>{file.name}</span>{" "}<span className="text-sm text-muted-foreground">{bytesLabel(file.size)}</span></> : "未选择文件"}
             </span>
           </div>
           <label className="standalone-label grid gap-2 text-sm font-medium">

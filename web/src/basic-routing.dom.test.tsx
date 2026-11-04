@@ -167,8 +167,8 @@ async function select(label: string, choice: string) {
 it("sets ChatGPT to an actual entitled route and other traffic to an owned endpoint, reviews before explicit publication", async () => {
   const { published } = mount();
   await screen.findByRole("combobox", { name: "ChatGPT 使用的线路" });
-  await select("ChatGPT 使用的线路", "FRA → UK · 2×");
-  await select("其他流量使用的线路", "My airport · Tokyo");
+  await select("ChatGPT 使用的线路", "FRA → UK 额度倍率 2×");
+  await select("其他流量使用的线路", "Tokyo 来源 My airport");
   await userEvent.click(screen.getByRole("button", { name: "保存并查看修改" }));
   const review = await screen.findByRole("region", { name: "发布前确认" });
   expect(within(review).getByText("FRA → UK · 2×")).toBeTruthy();
@@ -209,12 +209,12 @@ it("keeps selected values after a failed preview and never publishes or shows an
   previewFails = true;
   mount();
   await screen.findByRole("combobox", { name: "ChatGPT 使用的线路" });
-  await select("ChatGPT 使用的线路", "FRA → UK · 2×");
-  await select("其他流量使用的线路", "My airport · Tokyo");
+  await select("ChatGPT 使用的线路", "FRA → UK 额度倍率 2×");
+  await select("其他流量使用的线路", "Tokyo 来源 My airport");
   await userEvent.click(screen.getByRole("button", { name: "保存并查看修改" }));
   await screen.findByText("所选入口已停用，请重新选择。");
   expect(screen.queryByRole("region", { name: "发布前确认" })).toBeNull();
-  expect(screen.getAllByText("My airport · Tokyo").length).toBeGreaterThan(0);
+  expect(screen.getByRole("combobox", { name: "其他流量使用的线路" }).textContent).toContain("Tokyo 来源 My airport");
   expect(requests.some((r) => r.path.endsWith("/outputs"))).toBe(false);
 });
 it("hands arbitrary advanced profiles to the full editor without rebuilding them", async () => {
@@ -247,8 +247,8 @@ it("does not require a private airport when a platform route is available", asyn
   );
   mount();
   await screen.findByRole("combobox", { name: "ChatGPT 使用的线路" });
-  await select("ChatGPT 使用的线路", "FRA → UK · 2×");
-  await select("其他流量使用的线路", "FRA → UK · 2×");
+  await select("ChatGPT 使用的线路", "FRA → UK 额度倍率 2×");
+  await select("其他流量使用的线路", "FRA → UK 额度倍率 2×");
   await userEvent.click(screen.getByRole("button", { name: "保存并查看修改" }));
   await screen.findByRole("region", { name: "发布前确认" });
   expect(
@@ -268,8 +268,8 @@ it("allows a private-airport-only draft without platform entitlement", async () 
   );
   mount();
   await screen.findByRole("combobox", { name: "ChatGPT 使用的线路" });
-  await select("ChatGPT 使用的线路", "My airport · Tokyo");
-  await select("其他流量使用的线路", "My airport · Tokyo");
+  await select("ChatGPT 使用的线路", "Tokyo 来源 My airport");
+  await select("其他流量使用的线路", "Tokyo 来源 My airport");
   await userEvent.click(screen.getByRole("button", { name: "保存并查看修改" }));
   await screen.findByRole("region", { name: "发布前确认" });
   expect(
@@ -280,11 +280,11 @@ it("allows a private-airport-only draft without platform entitlement", async () 
 it("invalidates a review after selection changes and retains edits when closing is canceled", async () => {
   mount();
   await screen.findByRole("combobox", { name: "ChatGPT 使用的线路" });
-  await select("ChatGPT 使用的线路", "FRA → UK · 2×");
-  await select("其他流量使用的线路", "My airport · Tokyo");
+  await select("ChatGPT 使用的线路", "FRA → UK 额度倍率 2×");
+  await select("其他流量使用的线路", "Tokyo 来源 My airport");
   await userEvent.click(screen.getByRole("button", { name: "保存并查看修改" }));
   await screen.findByRole("region", { name: "发布前确认" });
-  await select("ChatGPT 使用的线路", "My airport · Tokyo");
+  await select("ChatGPT 使用的线路", "Tokyo 来源 My airport");
   expect(screen.queryByRole("region", { name: "发布前确认" })).toBeNull();
   await userEvent.click(screen.getByRole("button", { name: "返回" }));
   await screen.findAllByText("放弃尚未保存的分流修改？");
@@ -293,7 +293,7 @@ it("invalidates a review after selection changes and retains edits when closing 
     screen
       .getByRole("combobox", { name: "ChatGPT 使用的线路" })
       .closest('[role="combobox"]')?.textContent,
-  ).toContain("My airport · Tokyo");
+  ).toContain("Tokyo 来源 My airport");
   expect(requests.some((r) => r.path.endsWith("/outputs"))).toBe(false);
 });
 it("keeps an unavailable saved choice visible instead of substituting another route", async () => {
@@ -386,7 +386,7 @@ it("fences an existing subscription update with its preview digest and keeps edi
     screen
       .getByRole("combobox", { name: "其他流量使用的线路" })
       .closest('[role="combobox"]')?.textContent,
-  ).toContain("My airport · Tokyo");
+  ).toContain("Tokyo 来源 My airport");
 });
 it("keeps an existing output with a different pinned target in the full editor", async () => {
   const profile = basicProfile(
@@ -450,8 +450,8 @@ it("reconciles a lost creation response using the authoritative output without c
   );
   const { published } = mount();
   await screen.findByRole("combobox", { name: "ChatGPT 使用的线路" });
-  await select("ChatGPT 使用的线路", "FRA → UK · 2×");
-  await select("其他流量使用的线路", "My airport · Tokyo");
+  await select("ChatGPT 使用的线路", "FRA → UK 额度倍率 2×");
+  await select("其他流量使用的线路", "Tokyo 来源 My airport");
   await userEvent.click(screen.getByRole("button", { name: "保存并查看修改" }));
   await screen.findByRole("region", { name: "发布前确认" });
   await userEvent.click(screen.getByRole("button", { name: "发布并获取订阅" }));
@@ -491,8 +491,8 @@ it("retains basic creation choices after a stale review and reviews the same ide
   );
   const { published } = mount();
   await screen.findByRole("combobox", { name: "ChatGPT 使用的线路" });
-  await select("ChatGPT 使用的线路", "FRA → UK · 2×");
-  await select("其他流量使用的线路", "My airport · Tokyo");
+  await select("ChatGPT 使用的线路", "FRA → UK 额度倍率 2×");
+  await select("其他流量使用的线路", "Tokyo 来源 My airport");
   await userEvent.click(screen.getByRole("button", { name: "保存并查看修改" }));
   await screen.findByRole("region", { name: "发布前确认" });
   await userEvent.click(screen.getByRole("button", { name: "发布并获取订阅" }));
@@ -506,12 +506,12 @@ it("retains basic creation choices after a stale review and reviews the same ide
     screen
       .getByRole("combobox", { name: "ChatGPT 使用的线路" })
       .closest('[role="combobox"]')?.textContent,
-  ).toContain("FRA → UK · 2×");
+  ).toContain("FRA → UK 额度倍率 2×");
   expect(
     screen
       .getByRole("combobox", { name: "其他流量使用的线路" })
       .closest('[role="combobox"]')?.textContent,
-  ).toContain("My airport · Tokyo");
+  ).toContain("Tokyo 来源 My airport");
   await userEvent.click(screen.getByRole("button", { name: "保存并查看修改" }));
   await screen.findByRole("region", { name: "发布前确认" });
   const reviews = requests.filter(
@@ -571,8 +571,8 @@ it.each([
     );
     const { published } = mount();
     await screen.findByRole("combobox", { name: "ChatGPT 使用的线路" });
-    await select("ChatGPT 使用的线路", "FRA → UK · 2×");
-    await select("其他流量使用的线路", "My airport · Tokyo");
+    await select("ChatGPT 使用的线路", "FRA → UK 额度倍率 2×");
+    await select("其他流量使用的线路", "Tokyo 来源 My airport");
     await userEvent.click(
       screen.getByRole("button", { name: "保存并查看修改" }),
     );
@@ -587,7 +587,7 @@ it.each([
       screen
         .getByRole("combobox", { name: "其他流量使用的线路" })
         .closest('[role="combobox"]')?.textContent,
-    ).toContain("My airport · Tokyo");
+    ).toContain("Tokyo 来源 My airport");
     expect(
       requests.filter(
         (request) =>
@@ -625,8 +625,8 @@ it("keeps a basic creation review retryable after its response and first lookup 
   );
   const { published } = mount();
   await screen.findByRole("combobox", { name: "ChatGPT 使用的线路" });
-  await select("ChatGPT 使用的线路", "FRA → UK · 2×");
-  await select("其他流量使用的线路", "My airport · Tokyo");
+  await select("ChatGPT 使用的线路", "FRA → UK 额度倍率 2×");
+  await select("其他流量使用的线路", "Tokyo 来源 My airport");
   await userEvent.click(screen.getByRole("button", { name: "保存并查看修改" }));
   await screen.findByRole("region", { name: "发布前确认" });
   await userEvent.click(screen.getByRole("button", { name: "发布并获取订阅" }));
@@ -662,8 +662,8 @@ it("keeps a definite basic stale-review rejection distinct from an unavailable o
   );
   const { published } = mount();
   await screen.findByRole("combobox", { name: "ChatGPT 使用的线路" });
-  await select("ChatGPT 使用的线路", "FRA → UK · 2×");
-  await select("其他流量使用的线路", "My airport · Tokyo");
+  await select("ChatGPT 使用的线路", "FRA → UK 额度倍率 2×");
+  await select("其他流量使用的线路", "Tokyo 来源 My airport");
   await userEvent.click(screen.getByRole("button", { name: "保存并查看修改" }));
   await screen.findByRole("region", { name: "发布前确认" });
   await userEvent.click(screen.getByRole("button", { name: "发布并获取订阅" }));
@@ -711,8 +711,8 @@ it("preserves reconciliation after source data changes during an unresolved acce
   );
   const { published } = mount();
   await screen.findByRole("combobox", { name: "ChatGPT 使用的线路" });
-  await select("ChatGPT 使用的线路", "FRA → UK · 2×");
-  await select("其他流量使用的线路", "My airport · Tokyo");
+  await select("ChatGPT 使用的线路", "FRA → UK 额度倍率 2×");
+  await select("其他流量使用的线路", "Tokyo 来源 My airport");
   await userEvent.click(screen.getByRole("button", { name: "保存并查看修改" }));
   await screen.findByRole("region", { name: "发布前确认" });
   await userEvent.click(screen.getByRole("button", { name: "发布并获取订阅" }));
@@ -769,8 +769,8 @@ it("retries only the frozen basic creation after request loss, empty lookup and 
   );
   const { published } = mount();
   await screen.findByRole("combobox", { name: "ChatGPT 使用的线路" });
-  await select("ChatGPT 使用的线路", "FRA → UK · 2×");
-  await select("其他流量使用的线路", "My airport · Tokyo");
+  await select("ChatGPT 使用的线路", "FRA → UK 额度倍率 2×");
+  await select("其他流量使用的线路", "Tokyo 来源 My airport");
   await userEvent.click(screen.getByRole("button", { name: "保存并查看修改" }));
   await screen.findByRole("region", { name: "发布前确认" });
   await userEvent.click(screen.getByRole("button", { name: "发布并获取订阅" }));
@@ -838,8 +838,8 @@ it("releases a rejected unresolved creation but never reconciles its late origin
   );
   const { published } = mount();
   await screen.findByRole("combobox", { name: "ChatGPT 使用的线路" });
-  await select("ChatGPT 使用的线路", "FRA → UK · 2×");
-  await select("其他流量使用的线路", "My airport · Tokyo");
+  await select("ChatGPT 使用的线路", "FRA → UK 额度倍率 2×");
+  await select("其他流量使用的线路", "Tokyo 来源 My airport");
   await userEvent.click(screen.getByRole("button", { name: "保存并查看修改" }));
   await screen.findByRole("region", { name: "发布前确认" });
   await userEvent.click(screen.getByRole("button", { name: "发布并获取订阅" }));
@@ -958,8 +958,8 @@ it("does not infer a missing creation summary from selected source labels", asyn
   );
   mount();
   await screen.findByRole("combobox", { name: "ChatGPT 使用的线路" });
-  await select("ChatGPT 使用的线路", "FRA → UK · 2×");
-  await select("其他流量使用的线路", "My airport · Tokyo");
+  await select("ChatGPT 使用的线路", "FRA → UK 额度倍率 2×");
+  await select("其他流量使用的线路", "Tokyo 来源 My airport");
   await userEvent.click(screen.getByRole("button", { name: "保存并查看修改" }));
   const review = await screen.findByRole("region", { name: "发布前确认" });
   expect(within(review).getByText("这份订阅暂无可用的分流摘要。")).toBeTruthy();
@@ -1004,8 +1004,8 @@ it("carries each accepted basic draft revision into its next save and keeps stal
   const onClose = vi.fn();
   mount({ onClose });
   await screen.findByRole("combobox", { name: "ChatGPT 使用的线路" });
-  await select("ChatGPT 使用的线路", "FRA → UK · 2×");
-  await select("其他流量使用的线路", "My airport · Tokyo");
+  await select("ChatGPT 使用的线路", "FRA → UK 额度倍率 2×");
+  await select("其他流量使用的线路", "Tokyo 来源 My airport");
   const save = screen.getByRole("button", { name: "保存草稿" });
   await userEvent.click(save);
   await waitFor(() => expect(writes).toHaveLength(1));

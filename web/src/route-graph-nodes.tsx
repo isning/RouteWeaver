@@ -34,7 +34,8 @@ export function routeGraphNodes(
           <div className="managed-graph-node min-w-48 max-w-72 rounded-lg border bg-card p-4 shadow-sm">
             <strong>{endpoint.name}</strong>
             <small className="block text-xs text-muted-foreground my-2">
-              {host?.name} · {coreName(instance)}
+              <span className="block">{host?.name}</span>{" "}
+              <span className="block">{coreName(instance)}</span>
             </small>
             {selected && (
               <Badge variant="secondary">

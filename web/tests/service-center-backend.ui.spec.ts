@@ -198,7 +198,7 @@ for (const width of [1440, 390]) {
         page.getByText("本周期实际流量", { exact: true }),
       ).toBeVisible();
       await expect(page.getByText("服务到期", { exact: true })).toBeVisible();
-      await expect(page.getByRole("region", { name: "平台提供的线路 · 1", exact: true })).toBeVisible();
+      await expect(page.getByRole("region", { name: "平台提供的线路 1 条", exact: true })).toBeVisible();
       await expect(
         page.getByRole("heading", { name: routeName, exact: true }),
       ).toBeVisible();

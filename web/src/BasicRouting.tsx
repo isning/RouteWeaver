@@ -1,3 +1,4 @@
+import { Metadata, MetadataItem } from "@/ui-patterns/metadata";
 import {
   Accordion,
   AccordionItem,
@@ -195,7 +196,11 @@ function BasicRoutingEditor({
       label: section,
       options: choices
         .filter((c) => c.section === section)
-        .map((c) => ({ value: c.id, label: c.label })),
+        .map((c) => ({
+          value: c.id,
+          label: <Metadata><MetadataItem>{c.label}</MetadataItem><MetadataItem className="text-muted-foreground">{c.detail}</MetadataItem></Metadata>,
+          searchText: `${c.label} ${c.detail}`,
+        })),
     })),
     ...(missing.length
       ? [

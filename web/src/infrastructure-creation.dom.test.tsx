@@ -160,7 +160,7 @@ describe("infrastructure creation user tasks", () => {
     { adapterId: "routeweaver/xray", label: "Xray", version: "26.10.31" },
     {
       adapterId: "routeweaver/managed-xray",
-      label: "受管 Xray · 平台服务入口",
+      label: "受管 Xray",
       version: "26.3.27-rw1",
     },
   ])(
@@ -955,12 +955,12 @@ describe("infrastructure creation user tasks", () => {
     );
     fireEvent.click(screen.getByLabelText("所属核心"));
     expect(
-      await screen.findByText("Tokyo Xray · core-tyo-1", {
+      await screen.findByText("Tokyo Xray（core-tyo-1）", {
         selector: "[cmdk-item] span",
       }),
     ).toBeTruthy();
     expect(
-      screen.getByText("Tokyo Xray · core-tyo-2", {
+      screen.getByText("Tokyo Xray（core-tyo-2）", {
         selector: "[cmdk-item] span",
       }),
     ).toBeTruthy();
@@ -1010,7 +1010,7 @@ describe("infrastructure creation user tasks", () => {
       await screen.findByText("原核心已移除，请重新选择服务器和核心。"),
     ).toBeTruthy();
     expect(
-      screen.getByText("核心已移除 · core-removed", {
+      screen.getByText("核心已移除（core-removed）", {
         selector: "[role=combobox] span",
       }),
     ).toBeTruthy();

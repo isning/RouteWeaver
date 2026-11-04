@@ -417,7 +417,7 @@ for (const page of ["profiles", "outputs"]) {
       await scenario.click(() => screen.getByRole("button", { name: "查看订阅 Link one" }));
       mark("detail-click-completed");
       const detail = await screen.findByRole("dialog", {
-        name: "订阅详情 · Link one",
+        name: "Link one 的订阅详情",
       });
       scenario.assertActive();
       expect(location.hash).toContain("profile=one");
@@ -862,7 +862,7 @@ it.each([
     expect(screen.queryByText("Link two", { exact: true })).toBeNull();
     expect(location.hash).toBe(original);
     expect(
-      screen.getByRole("dialog", { name: "订阅详情 · Link one" }),
+      screen.getByRole("dialog", { name: "Link one 的订阅详情" }),
     ).toBeTruthy();
   },
 );
@@ -1092,9 +1092,9 @@ it.each(["revoked", "missing"])(
     const linked = (await screen.findByText("关联订阅（1）")).closest(
       "details",
     )!;
-    expect(
-      within(linked).getByText("Cached link · mihomo · 完整配置"),
-    ).toBeTruthy();
+    const cachedLink = within(linked).getByText("Cached link").closest("li")!;
+    expect(within(cachedLink).getByText("mihomo")).toBeTruthy();
+    expect(within(cachedLink).getByText("完整配置")).toBeTruthy();
     await userEvent.click(
       screen.getByRole("button", { name: /^(保存并检查|检查发布)$/ }),
     );

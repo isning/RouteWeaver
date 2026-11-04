@@ -72,7 +72,7 @@ export function UserPolicyEditor(props: EditorProps) {
         return () => { current = false; controller.abort(); };
     }, [props.user.id, attempt]);
     if (!context || context.target.id !== props.user.id)
-        return <TaskSheet title={`${props.user.name} · 服务授权`} open onOpenChange={open => {
+        return <TaskSheet title={`${props.user.name} 的服务授权`} open onOpenChange={open => {
                 if (!open)
                     (props.onClose)();
             }} size="lg" bodyProps={{ className: "space-y-6" }}>
@@ -388,7 +388,7 @@ function UserPolicyFields({ user, context, services, routes, onClose, retained, 
       </AppForm>
       {policy.dialog}
     </>);
-    return drawer ? <TaskSheet title={`${user.name} · 服务授权`} open onOpenChange={open => {
+    return drawer ? <TaskSheet title={`${user.name} 的服务授权`} open onOpenChange={open => {
             if (!open)
                 (policy.requestClose)();
         }} pending={!(!policy.closingBlocked)} size="lg" bodyProps={{ className: "space-y-6" }}>
@@ -469,11 +469,13 @@ function AdmissionStatus({ user }: {
               </ActionButton>
               <QueryState loading={query.isPending} paused={query.isPaused} loadingLayout="summary" error={query.error} retry={() => query.refetch()}>
                 {query.data && (<>
-                    <p className="muted text-sm text-muted-foreground">
-                      截至 {dateLabel(query.data.asOf)} ·
-                      按有效接入租约统计；断开但尚未回报的流最多保留{" "}
-                      {query.data.maxLeaseSeconds} 秒。
-                    </p>
+                    <div className="space-y-1 text-sm text-muted-foreground">
+                      <p>截至 {dateLabel(query.data.asOf)}</p>
+                      <p>
+                        按有效接入租约统计；断开但尚未回报的流最多保留{" "}
+                        {query.data.maxLeaseSeconds} 秒。
+                      </p>
+                    </div>
                     <KeyValue label="在线 IP">
                       {query.data.onlineIps.length ? query.data.onlineIps.join("\u3001") : "\u65E0\u6709\u6548\u5728\u7EBF IP"}
                     </KeyValue>

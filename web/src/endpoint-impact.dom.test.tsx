@@ -175,9 +175,11 @@ it("retains draft on failed impact read and twice canceled review, without writi
       within(review).getByText("Shared public route", { exact: false }),
     ).toBeTruthy();
     expect(review.textContent).not.toContain("fixture-private");
+    expect(within(review).getByText("核心：Reference core")).toBeTruthy();
+    expect(within(review).getByText("socks 127.0.0.1:1080")).toBeTruthy();
     expect(
       within(review).getByText(
-        /保存为：Reviewed name · Reference core · socks · 127.0.0.1:1080/,
+        /保存为：Reviewed name/,
       ),
     ).toBeTruthy();
     expect(

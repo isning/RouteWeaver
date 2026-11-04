@@ -1,3 +1,4 @@
+import { Metadata } from "@/ui-patterns/metadata";
 import {
   Accordion,
   AccordionContent,
@@ -724,7 +725,7 @@ function PublicRouteEditor({
         tone="info"
         title={
           preview
-            ? "检查结果 · 核对后保存"
+            ? "核对检查结果后保存"
             : checkedBefore
               ? "内容已变更，请重新检查线路。"
               : "先检查线路，再核对结果并保存；用户授权与服务器配置应用需分别确认。"
@@ -1467,13 +1468,12 @@ function PublicRouteDetail({
                 >
                   {policy.data && !policy.error && (
                     <>
-                      <p>
-                        {policy.data.routeIds.includes(route.id)
+                      <Metadata>
+                        <span>{policy.data.routeIds.includes(route.id)
                           ? "已获准使用此线路"
-                          : "尚未获准使用此线路"}{" "}
-                        ·{" "}
-                        {policyStatus[policy.data.status] || policy.data.status}
-                      </p>
+                          : "尚未获准使用此线路"}</span>
+                        <Badge variant="secondary">{policyStatus[policy.data.status] || policy.data.status}</Badge>
+                      </Metadata>
                       <p className="muted text-sm text-muted-foreground">
                         授权来源：
                         {policySource(policy.data.provenance.routes, services)}

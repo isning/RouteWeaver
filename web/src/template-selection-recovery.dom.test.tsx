@@ -124,7 +124,7 @@ it("explains a source directory failure and retries reads without losing the tem
     }),
   ).toBeTruthy();
   await user.click(screen.getByRole("combobox", { name: "模板版本" }));
-  await user.click(await screen.findByText(/^v1 ·/));
+  await user.click(await screen.findByRole("option", { name: /^v1 / }));
   await user.click(screen.getByRole("radio", { name: "固定此版本" }));
   expect(
     screen
@@ -256,7 +256,7 @@ async function selectionFixture({
   await user.click(await screen.findByRole("button", { name: "查看并使用" }));
   const choose = async (label: string, option: string | RegExp) => {
     await user.click(screen.getByRole("combobox", { name: label }));
-    await user.click(await screen.findByText(option));
+    await user.click(await screen.findByRole("option", { name: option }));
   };
   return { state, writes, client, user, choose };
 }
@@ -327,8 +327,8 @@ it("retains a selected connection through failed reload and blocks it after conf
   expect(
     within(
       screen.getByRole("combobox", { name: "出口连接" }).closest("label")!,
-    ).getByText("家庭出口 · 暂不可用").textContent,
-  ).toBe("家庭出口 · 暂不可用");
+    ).getByText("暂不可用").parentElement!.textContent,
+  ).toBe("家庭出口 暂不可用");
   expect(
     screen
       .getByRole("button", { name: "应用模板到草稿" })
@@ -337,7 +337,7 @@ it("retains a selected connection through failed reload and blocks it after conf
   state.sourceFailure = false;
   state.sources = [];
   await user.click(screen.getByRole("button", { name: "重新加载来源" }));
-  expect(await screen.findByText("家庭出口 · 已不可用")).toBeTruthy();
+  expect(await screen.findByText("已不可用")).toBeTruthy();
   expect(
     screen
       .getByRole("radio", { name: "跟随版本" })
@@ -365,8 +365,8 @@ it("does not silently replace a deleted selected target", async () => {
   expect(
     within(
       screen.getByRole("combobox", { name: "模板目标" }).closest("label")!,
-    ).getByText("家庭配置 · 已不可用").textContent,
-  ).toBe("家庭配置 · 已不可用");
+    ).getByText("已不可用").parentElement!.textContent,
+  ).toBe("家庭配置 已不可用");
   expect(
     screen
       .getByRole("button", { name: "应用模板到草稿" })
@@ -483,8 +483,8 @@ it("recovers collection-backed connection candidates in place", async () => {
   expect(
     within(
       screen.getByRole("combobox", { name: "出口连接" }).closest("label")!,
-    ).getByText("家庭出口 · 暂不可用").textContent,
-  ).toBe("家庭出口 · 暂不可用");
+    ).getByText("暂不可用").parentElement!.textContent,
+  ).toBe("家庭出口 暂不可用");
   expect(
     screen
       .getByRole("button", { name: "应用模板到草稿" })
@@ -535,7 +535,7 @@ it("keeps a removed selected version visible instead of applying the newest vers
     slots: false,
   });
   await choose("模板目标", "家庭配置");
-  await choose("模板版本", /^v1 ·/);
+  await choose("模板版本", /^v1 /);
   state.versions = state.versions.filter((v) => v.version !== 1);
   await act(async () => {
     await client.refetchQueries({ queryKey: ["template-versions", "routing"] });
@@ -546,8 +546,8 @@ it("keeps a removed selected version visible instead of applying the newest vers
   expect(
     within(
       screen.getByRole("combobox", { name: "模板版本" }).closest("label")!,
-    ).getByText("v1 · 已不可用").textContent,
-  ).toBe("v1 · 已不可用");
+    ).getByText("已不可用").parentElement!.textContent,
+  ).toBe("v1 已不可用");
   expect(
     screen
       .getByRole("button", { name: "应用模板到草稿" })
@@ -559,7 +559,7 @@ it("keeps a removed selected version visible instead of applying the newest vers
 it("preserves the selected target, pinned version and binding through a held source reload, failure, and explicit recovery", async () => {
   const { choose, state, client, user, writes } = await selectionFixture();
   await choose("模板目标", "家庭配置");
-  await choose("模板版本", /^v1 ·/);
+  await choose("模板版本", /^v1 /);
   await choose("出口连接", "家庭出口");
   await user.click(screen.getByRole("radio", { name: "固定此版本" }));
   let release!: () => void;
@@ -573,7 +573,7 @@ it("preserves the selected target, pinned version and binding through a held sou
   await act(async () => { release(); await refresh; });
   await screen.findByText("暂时无法加载来源");
   expect(screen.queryByText("暂无可用连接")).toBeNull();
-  expect(screen.getByRole("combobox", { name: "出口连接" }).textContent).toContain("家庭出口 · 暂不可用");
+  expect(screen.getByRole("combobox", { name: "出口连接" }).textContent).toContain("家庭出口 暂不可用");
   expect(screen.getByRole("combobox", { name: "模板目标" }).textContent).toContain("家庭配置");
   expect(screen.getByRole("combobox", { name: "模板版本" }).textContent).toContain("v1");
   expect(screen.getByRole("radio", { name: "固定此版本" }).getAttribute("aria-checked")).toBe("true");

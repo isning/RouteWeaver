@@ -232,7 +232,7 @@ it("shows a current inspection failure and allows successful retry with the same
   await userEvent.click(button);
   await waitFor(() => expect(requests.length).toBe(2));
   await settle(requests[1], json(inspected));
-  await within(dialog).findByText(/已读取 27 B · 3 条记录/);
+  await within(dialog).findByText(/已读取 3 条记录，共 27 B/);
   expect(
     (
       within(dialog).getByRole("textbox", {
@@ -264,7 +264,7 @@ it.each(["success", "error"] as const)(
       requests[1],
       json({ ...inspected, digest: "b".repeat(64), entries: 7 }),
     );
-    await within(dialog).findByText(/已读取 27 B · 7 条记录/);
+    await within(dialog).findByText(/已读取 7 条记录，共 27 B/);
     await settle(
       requests[0],
       outcome === "success"
@@ -278,7 +278,7 @@ it.each(["success", "error"] as const)(
         }) as HTMLInputElement
       ).value,
     ).toBe("b".repeat(64));
-    expect(within(dialog).getByText(/已读取 27 B · 7 条记录/)).toBeTruthy();
+    expect(within(dialog).getByText(/已读取 7 条记录，共 27 B/)).toBeTruthy();
     expect(within(dialog).queryByText("Stale A inspection failed")).toBeNull();
     expect(button.hasAttribute("disabled")).toBe(false);
   },

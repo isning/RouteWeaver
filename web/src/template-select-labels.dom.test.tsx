@@ -175,7 +175,7 @@ it("keeps exact visible field names independent of selected template values and 
   await userEvent.click(await screen.findByText("客户端配置模板"));
   expect(within(dialog).getByRole("combobox", { name: "模板类型" })).toBe(kind);
   await userEvent.click(position);
-  await userEvent.click(await screen.findByText("Template Alpha · v2"));
+  await userEvent.click(await screen.findByRole("option", { name: "Template Alpha v2" }));
   expect(within(dialog).getByRole("combobox", { name: "发布位置" })).toBe(
     position,
   );

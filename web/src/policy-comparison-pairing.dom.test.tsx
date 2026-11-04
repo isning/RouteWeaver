@@ -258,7 +258,7 @@ it("keeps full-view status, routes, validity, calendar and all zero-limit values
     table,
     "账号周期",
     "变更后",
-    "每月 1 日 起点 2026/01/01 08:00 · UTC+8",
+    "每月 1 日 起点 2026/01/01 08:00 时区 UTC+8",
   );
   expectCellAssociation(
     table,
@@ -308,7 +308,7 @@ it("includes changed status, validity and calendar without requiring full author
     table,
     "账号周期",
     "变更后",
-    "每 7 天 起点 2026/01/01 08:00 · UTC+8",
+    "每 7 天 起点 2026/01/01 08:00 时区 UTC+8",
   );
 });
 
@@ -630,3 +630,15 @@ it.each([
     expect(screen.queryByText("Wrong name")).toBeNull();
   },
 );
+
+
+it("keeps cycle start and timezone independently readable in the saved policy summary", () => {
+  mount(
+    currentOwner,
+    <PolicySummary policy={before} services={[]} routes={[]} visibleFields={["cycle"]} />,
+  );
+  expect(screen.getByText("每月 1 日")).toBeTruthy();
+  expect(screen.getByText("起点 2026/01/01 08:00")).toBeTruthy();
+  expect(screen.getByText("时区 UTC+8")).toBeTruthy();
+  expect(document.body.textContent).not.toContain("·");
+});

@@ -106,7 +106,7 @@ export const observationPath = (nodeId: string) =>
   `/admin/nodes/${nodeId}/observability`;
 export const sourceLabel = (source: string) =>
   ({
-    provider_statement: "供应商账单 · 手工录入",
+    provider_statement: "手工录入的供应商账单",
     nic_estimate: "网卡 IN + OUT 估算",
     none: "未选择",
   })[source] || source;

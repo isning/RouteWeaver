@@ -185,9 +185,22 @@ export function StepsEditor({
                   aria-label={`步骤 ${index + 1} 命名模板`}
                   onChange={(e) => update(index, { template: e.target.value })}
                 />
-                <small className="font-normal leading-relaxed text-muted-foreground">
-                  原名称 {"{name}"} · 来源名称 {"{source}"} · 地区 {"{region}"}{" "}
-                  · 节点标识 {"{id}"}。改名后保留节点身份。
+                <small className="grid gap-2 font-normal leading-relaxed text-muted-foreground">
+                  <span className="grid gap-x-4 gap-y-1 sm:grid-cols-2">
+                    <span>
+                      原名称 <code>{"{name}"}</code>
+                    </span>
+                    <span>
+                      来源名称 <code>{"{source}"}</code>
+                    </span>
+                    <span>
+                      地区 <code>{"{region}"}</code>
+                    </span>
+                    <span>
+                      节点标识 <code>{"{id}"}</code>
+                    </span>
+                  </span>
+                  <span>改名后保留节点身份。</span>
                 </small>
               </label>
             )}

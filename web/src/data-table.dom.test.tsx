@@ -512,13 +512,85 @@ it("keeps a table summary associated with its rows through filtering", () => {
       rows={[]}
       rowKey="id"
       columns={[{ title: "来源", accessor: "name" }]}
-      summary="没有匹配的来源 · 共 1 个私有来源"
+      summary="没有匹配的来源，共 1 个私有来源"
       empty="清除搜索以查看来源"
     />,
   );
-  expect(screen.getByText("没有匹配的来源 · 共 1 个私有来源")).toBeTruthy();
+  expect(screen.getByText("没有匹配的来源，共 1 个私有来源")).toBeTruthy();
   expect(screen.getByText("清除搜索以查看来源")).toBeTruthy();
   expect(screen.getByRole("table")).toBe(table);
+});
+
+function tableSummary() {
+  const id = screen.getByRole("table").getAttribute("aria-describedby");
+  return id ? document.getElementById(id) : null;
+}
+
+it("counts loaded rows before client pagination without claiming a server total", async () => {
+  render(
+    <DataTable
+      rows={Array.from({ length: 12 }, (_, index) => ({ id: String(index) }))}
+      rowKey="id"
+      columns={[{ title: "标识", accessor: "id" }]}
+      pageSize={5}
+    />,
+  );
+  expect(tableSummary()?.textContent).toBe("已加载 12 项");
+  expect(screen.getAllByRole("row")).toHaveLength(6);
+  expect(screen.queryByText("共 12 项")).toBeNull();
+  await userEvent.click(screen.getByRole("button", { name: "下一页" }));
+  expect(tableSummary()?.textContent).toBe("已加载 12 项");
+  expect(screen.getByText("第 2 / 3 页")).toBeTruthy();
+});
+
+it("separates confirmed total and filtered results, including no matches", () => {
+  const table = (rows: { id: string }[]) => (
+    <DataTable
+      rows={rows}
+      rowKey="id"
+      columns={[{ title: "标识", accessor: "id" }]}
+      count={{ total: 25, unit: "个来源", filtered: true }}
+      empty="没有匹配的来源"
+    />
+  );
+  const view = render(table([{ id: "a" }, { id: "b" }]));
+  expect(tableSummary()?.textContent).toBe("找到 2 个来源共 25 个来源");
+  expect(tableSummary()?.textContent).not.toMatch(/[·•]/);
+  view.rerender(table([]));
+  expect(tableSummary()?.textContent).toBe("找到 0 个来源共 25 个来源");
+  expect(screen.getByText("没有匹配的来源")).toBeTruthy();
+});
+
+it("does not turn loading into a zero total and permits contextual summaries", () => {
+  const view = render(
+    <DataTable
+      rows={[]}
+      columns={[{ title: "标识", accessor: "id" }]}
+      loading
+    />,
+  );
+  expect(tableSummary()).toBeNull();
+  expect(screen.getByRole("status").textContent).toBe("正在加载…");
+  view.rerender(
+    <DataTable rows={[]} columns={[{ title: "标识", accessor: "id" }]} />,
+  );
+  expect(tableSummary()?.textContent).toBe("已加载 0 项");
+  view.rerender(
+    <DataTable
+      rows={[]}
+      columns={[{ title: "标识", accessor: "id" }]}
+      summary="本次预览的内容类型"
+    />,
+  );
+  expect(tableSummary()?.textContent).toBe("本次预览的内容类型");
+  view.rerender(
+    <DataTable
+      rows={[]}
+      columns={[{ title: "标识", accessor: "id" }]}
+      summary={false}
+    />,
+  );
+  expect(tableSummary()).toBeNull();
 });
 
 it("offers a keyboard scroll region only for populated overflowing tables", async () => {

@@ -132,7 +132,7 @@ it("opens the requested frozen link only and closing returns to its configuratio
     await screen.findByRole("button", { name: "查看订阅 Laptop" }),
   );
   const dialog = await screen.findByRole("dialog", {
-    name: "订阅详情 · Laptop",
+    name: "Laptop 的订阅详情",
   });
   expect(within(dialog).getByText("Laptop frozen route")).toBeTruthy();
   await within(dialog).findByText("与已保存草稿一致");
@@ -178,7 +178,7 @@ it("keeps same-prefix long names complete and opens the chosen identity by keybo
     .focus();
   await userEvent.keyboard("{Enter}");
   const dialog = await screen.findByRole("dialog", {
-    name: `订阅详情 · ${laptop.name}`,
+    name: `${laptop.name} 的订阅详情`,
   });
   expect(
     within(dialog).getByText(`分流配置：${longProfile.name}`),
@@ -277,7 +277,7 @@ it.each(["profiles", "outputs"])(
     );
     mount();
     const dialog = await screen.findByRole("dialog", {
-      name: "订阅详情 · Phone",
+      name: "Phone 的订阅详情",
     });
     await within(dialog).findByText("与已保存草稿一致");
     expect(calls.filter((path) => path.endsWith("/status"))).toEqual([
@@ -321,7 +321,7 @@ it("keeps revoked Output details and explicit recovery while disabling link acce
   );
   mount();
   const dialog = await screen.findByRole("dialog", {
-    name: "订阅详情 · Retired phone",
+    name: "Retired phone 的订阅详情",
   });
   expect(within(dialog).getByText("Retired phone frozen route")).toBeTruthy();
   expect(
@@ -381,7 +381,7 @@ it("retains readable orphan delivery and frozen detail when configurations fail 
     within(row).getByRole("button", { name: "查看订阅 Orphan laptop" }),
   );
   const detail = await screen.findByRole("dialog", {
-    name: "订阅详情 · Orphan laptop",
+    name: "Orphan laptop 的订阅详情",
   });
   expect(within(detail).getByText("Orphan laptop frozen route")).toBeTruthy();
   await userEvent.click(
@@ -440,10 +440,10 @@ it("checks only the explicitly requested link using its fresh target metadata wi
     screen.getByRole("button", { name: "查看订阅 Laptop" }),
   );
   const detail = await screen.findByRole("dialog", {
-    name: "订阅详情 · Laptop",
+    name: "Laptop 的订阅详情",
   });
   await within(detail).findByText("已保存的修改尚未发布");
-  expect(detail.textContent).toContain("sing-box · 纯节点");
+  expect(detail.textContent).toContain("sing-box 纯节点");
   expect(writes).toEqual([]);
   await userEvent.click(
     within(detail).getByRole("button", { name: "检查更新" }),
@@ -468,7 +468,7 @@ it("checks only the explicitly requested link using its fresh target metadata wi
   await userEvent.click(
     within(review).getByRole("button", { name: /取\s*消/ }),
   );
-  await screen.findByRole("dialog", { name: "订阅详情 · Laptop" });
+  await screen.findByRole("dialog", { name: "Laptop 的订阅详情" });
   expect(writes).toHaveLength(1);
 });
 

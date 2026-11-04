@@ -102,7 +102,7 @@ it.each(["overview", "outputs"] as const)("shows only the selected publication i
     await screen.findByRole("button", { name: "查看订阅 Daily" }),
   );
   const region = await screen.findByRole("region", { name: "已发布分流" });
-  const detail = screen.getByRole("dialog", { name: "订阅详情 · Daily" });
+  const detail = screen.getByRole("dialog", { name: "Daily 的订阅详情" });
   const publicationState = within(detail).getByText("已发布", { exact: true });
   expect(
     publicationState.classList.contains("subscription-publication-state"),
@@ -123,7 +123,7 @@ it.each(["overview", "outputs"] as const)("shows only the selected publication i
     await waitFor(() => expect(document.activeElement).toBe(dailyOpener));
     if (attempt === 0) {
       await userEvent.click(dailyOpener);
-      await screen.findByRole("dialog", { name: "订阅详情 · Daily" });
+      await screen.findByRole("dialog", { name: "Daily 的订阅详情" });
     }
   }
   await userEvent.click(
