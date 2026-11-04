@@ -312,6 +312,45 @@ for (const width of [320, 390, 1440])
     });
   }
 
+type FocusVisibility = {
+  bounds: { x: number; y: number; width: number; height: number };
+  intersection: { x: number; y: number; width: number; height: number };
+  ratio: number;
+  clipped: { left: number; top: number; right: number; bottom: number };
+  hits: { point: string; target: boolean }[];
+};
+async function focusVisibility(target: Locator): Promise<FocusVisibility> {
+  return target.evaluate((element) => new Promise<FocusVisibility>((resolve) => {
+    const observer = new IntersectionObserver(([entry]) => {
+      observer.disconnect();
+      const bounds = entry.boundingClientRect, intersection = entry.intersectionRect;
+      const points = [
+        { point: "center", x: bounds.left + bounds.width / 2, y: bounds.top + bounds.height / 2 },
+        { point: "left", x: bounds.left + 1, y: bounds.top + bounds.height / 2 },
+        { point: "right", x: bounds.right - 1, y: bounds.top + bounds.height / 2 },
+        { point: "top", x: bounds.left + bounds.width / 2, y: bounds.top + 1 },
+        { point: "bottom", x: bounds.left + bounds.width / 2, y: bounds.bottom - 1 },
+      ];
+      resolve({
+        bounds: { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height },
+        intersection: { x: intersection.x, y: intersection.y, width: intersection.width, height: intersection.height },
+        ratio: entry.intersectionRatio,
+        clipped: {
+          left: Math.max(0, intersection.left - bounds.left),
+          top: Math.max(0, intersection.top - bounds.top),
+          right: Math.max(0, bounds.right - intersection.right),
+          bottom: Math.max(0, bounds.bottom - intersection.bottom),
+        },
+        hits: points.map(({ point, x, y }) => {
+          const hit = document.elementFromPoint(x, y);
+          return { point, target: hit === element || (hit !== null && element.contains(hit)) };
+        }),
+      });
+    });
+    observer.observe(element);
+  }));
+}
+
 // The tablet breakpoint frees the sidebar but retains real populated tables.
 // Verify usable rows rather than assuming every table must fit without scrolling.
 for (const surface of [
@@ -334,7 +373,7 @@ for (const surface of [
     await info.attach(`${surface.name}-900-populated-inventory`, {
       body: await page.screenshot({ fullPage: true, animations: "disabled" }), contentType: "image/png",
     });
-    for (const group of groups) {
+    for (const [rowIndex, group] of groups.entries()) {
       const buttons = group.getByRole("button");
       expect(await buttons.count()).toBeGreaterThan(0);
       const boxes = await Promise.all((await buttons.all()).map((button) => button.boundingBox()));
@@ -351,16 +390,25 @@ for (const surface of [
       }
       await buttons.first().focus();
       await page.keyboard.press("Shift+Tab");
-      for (const button of await buttons.all()) {
+      for (const [actionIndex, button] of (await buttons.all()).entries()) {
         await page.keyboard.press("Tab");
         await expect(button).toBeFocused();
-        await expect(button).toBeInViewport({ ratio: 1 });
+        const geometry = await focusVisibility(button);
+        const evidenceName = `${surface.name}-900-row-${rowIndex + 1}-action-${actionIndex + 1}`;
+        await info.attach(`${evidenceName}-visibility`, {
+          body: Buffer.from(JSON.stringify(geometry, null, 2)), contentType: "application/json",
+        });
+        await info.attach(`${evidenceName}-focused`, {
+          body: await page.screenshot({ animations: "disabled" }), contentType: "image/png",
+        });
+        // Native scroll/intersection rounding can leave a 1/32 CSS px sliver.
+        // Bound each clipped edge to 1/8 px instead of accepting an arbitrary
+        // area ratio; a whole pixel of clipping or any blocked hit still fails.
+        expect(Math.max(...Object.values(geometry.clipped))).toBeLessThanOrEqual(0.125);
+        expect(geometry.bounds.width).toBeGreaterThanOrEqual(44);
+        expect(geometry.bounds.height).toBeGreaterThanOrEqual(44);
         await contained(button, viewport);
-        expect(await button.evaluate((element) => {
-          const rect = element.getBoundingClientRect();
-          const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
-          return hit === element || (hit !== null && element.contains(hit));
-        })).toBe(true);
+        expect(geometry.hits.every((hit) => hit.target)).toBe(true);
       }
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
