@@ -277,7 +277,8 @@ export function ServersPage() {
                             .length,
                       },
                       {
-                        title: "",
+                        title: "操作",
+                        align: "right",
                         render: (_, i) => (
                           <TableRowActions name={coreName(i)}>
                             <ActionButton
@@ -345,7 +346,8 @@ export function ServersPage() {
                         ),
                       },
                       {
-                        title: "",
+                        title: "操作",
+                        align: "right",
                         render: (_, e) => (
                           <TableRowActions name={e.name}>
                             <ActionButton

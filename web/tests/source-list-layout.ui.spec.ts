@@ -149,6 +149,100 @@ for (const width of [1280, 1440, 2048]) {
   });
 }
 
+async function expectSourceColumnRhythm(page: Page, width: 1440 | 2048) {
+  const table = page.getByRole("table");
+  const bounds = (await table.boundingBox())!;
+  const columns = await Promise.all(
+    ["来源", "节点", "状态", "最近更新", "操作"].map((name) =>
+      table.getByRole("columnheader", { name, exact: true }).boundingBox(),
+    ),
+  );
+  const [source, nodes, status, updated, actions] = columns.map(
+    (column) => column!,
+  );
+  // Wider inventories distribute space across fields instead of leaving all
+  // spare room before the first count. Compact tables keep their existing widths.
+  if (width === 2048) {
+    expect(source.width / bounds.width).toBeCloseTo(0.36, 2);
+    expect(nodes.width / bounds.width).toBeCloseTo(0.08, 2);
+    expect(status.width / bounds.width).toBeCloseTo(0.16, 2);
+    expect(updated.width).toBeGreaterThanOrEqual(184);
+  } else {
+    expect(source.width / bounds.width).toBeGreaterThanOrEqual(0.39);
+    expect(source.width / bounds.width).toBeLessThanOrEqual(0.44);
+    expect(nodes.width).toBeCloseTo(80, 0);
+    expect(status.width).toBeCloseTo(124, 0);
+    expect(updated.width).toBeCloseTo(184, 0);
+  }
+  expect(actions.width).toBeCloseTo(280, 0);
+  for (let index = 1; index < columns.length; index++)
+    expect(columns[index]!.x).toBeCloseTo(
+      columns[index - 1]!.x + columns[index - 1]!.width,
+      0,
+    );
+  await expect(page.getByText("向左右滚动查看完整表格")).toHaveCount(0);
+}
+
+for (const width of [1440, 2048] as const) {
+  test(`source columns preserve scanning rhythm and wrap complete long names at ${width}px`, async ({
+    page,
+  }, info) => {
+    await page.setViewportSize({ width, height: 1000 });
+    const { names, groups, unexpected } = await setup(page, true);
+    await expectSourceColumnRhythm(page, width);
+    const row = page.getByRole("row").filter({ has: groups[1] });
+    const source = row.getByRole("button", {
+      name: `${names[1]} 文本导入`,
+      exact: true,
+    });
+    await expect(source).toBeVisible();
+    await expect(source).toHaveAccessibleName(`${names[1]} 文本导入`);
+    const text = await source.evaluate((element) => {
+      const kind = element.querySelector("small")!;
+      const label = kind.parentElement!;
+      const cell = element.closest("td")!;
+      const range = document.createRange();
+      range.setStart(label, 0);
+      range.setEndBefore(kind);
+      const fragments = [...range.getClientRects()];
+      const bounds = cell.getBoundingClientRect();
+      return {
+        lineCount: new Set(fragments.map((fragment) => Math.round(fragment.y)))
+          .size,
+        fragmentsFit: fragments.every(
+          (fragment) =>
+            fragment.x >= bounds.x && fragment.right <= bounds.right,
+        ),
+        width: cell.clientWidth,
+        scrollWidth: cell.scrollWidth,
+        textOverflow: getComputedStyle(label).textOverflow,
+      };
+    });
+    expect(text.lineCount).toBeGreaterThan(1);
+    expect(text.fragmentsFit).toBe(true);
+    expect(text.scrollWidth).toBeLessThanOrEqual(text.width + 1);
+    expect(text.textOverflow).not.toBe("ellipsis");
+    await expect(row.getByText("有更新", { exact: true })).toBeVisible();
+    const buttons = await groups[1].getByRole("button").all();
+    expect(buttons).toHaveLength(3);
+    const centers = await Promise.all(
+      buttons.map(async (button) => {
+        const bounds = (await button.boundingBox())!;
+        return bounds.y + bounds.height / 2;
+      }),
+    );
+    expect(Math.max(...centers) - Math.min(...centers)).toBeLessThanOrEqual(1);
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth),
+    ).toBeLessThanOrEqual(width);
+    await info.attach(`source-column-rhythm-${width}`, {
+      body: await page.screenshot({ animations: "disabled" }),
+      contentType: "image/png",
+    });
+    expect(unexpected).toEqual([]);
+  });
+}
+
 test("narrow source rows keep long target names and all actions reachable by keyboard", async ({
   page,
 }, info) => {
@@ -237,7 +331,7 @@ test("source target identity does not keep overflow stuck after repeated narrow-
     clientWidth: number;
     scrollWidth: number;
   }> = [];
-  for (const width of [1440, 390, 1440, 390, 1440]) {
+  for (const width of [1440, 390, 2048, 390, 1440]) {
     await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
     await expect(tableRoot).toHaveAttribute(
       "data-overflow",

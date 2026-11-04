@@ -135,7 +135,7 @@ export function RateSettings({ routes }: { routes: RouteRecord[] }) {
               render: (_, r) => dateLabel(r.effectiveAt, "UTC+8"),
             },
             {
-              title: "",
+              title: "状态",
               render: (_, r) =>
                 Date.parse(r.effectiveAt) > Date.now() ? (
                   <Badge variant="secondary">待生效</Badge>

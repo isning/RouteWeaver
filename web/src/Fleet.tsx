@@ -138,7 +138,7 @@ export function FleetPage({
               minWidth={650}
               columns={[
                 {
-                  title: "操作",
+                  title: "任务",
                   render: (_, b) => (
                     <button
                       className="table-name inline-flex min-w-0 items-center gap-2 rounded-sm text-left text-sm font-medium text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -168,7 +168,8 @@ export function FleetPage({
                 },
                 { title: "创建时间", render: (_, b) => dateLabel(b.createdAt) },
                 {
-                  title: "",
+                  title: "操作",
+                  align: "right",
                   render: (_, b) => (
                     <ActionButton
                       onClick={() => setSelected(b.id)}

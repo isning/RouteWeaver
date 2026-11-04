@@ -571,7 +571,8 @@ export function UserGroups({ users, services, routes, }: {
                 { title: "成员", render: (_, g) => `${g.memberIds?.length || 0} 位` },
                 { title: "优先级", accessor: "priority" },
                 {
-                    title: "",
+                    title: "操作",
+                    align: "right",
                     render: (_, g) => (<TableRowActions name={g.name}>
                     <ActionButton aria-label={`编辑 ${g.name}`} onClick={() => setEditing({ initial: g })} variant="outline">
                       编辑

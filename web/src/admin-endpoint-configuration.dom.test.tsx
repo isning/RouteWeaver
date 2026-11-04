@@ -126,11 +126,11 @@ it("keeps destructive endpoint actions in a row menu and restores focus after ca
     name: "更多操作 London endpoint",
   });
   expect(
-    screen.queryByRole("button", { name: "删除 London endpoint" }),
+    screen.queryByRole("button", { name: "删除端点 London endpoint" }),
   ).toBeNull();
   await userEvent.click(more);
   await userEvent.click(
-    await screen.findByRole("menuitem", { name: "删除 London endpoint" }),
+    await screen.findByRole("menuitem", { name: "删除端点 London endpoint" }),
   );
   const confirmation = await screen.findByRole("alertdialog", {
     name: "删除端点「London endpoint」？",

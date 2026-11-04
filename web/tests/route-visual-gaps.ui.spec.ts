@@ -239,6 +239,11 @@ for (const width of [1280, 390]) {
     const groupBox = (await groupFilter.boundingBox())!;
     const tagBox = (await tagFilter.boundingBox())!;
     const searchBox = (await rangeSearch.boundingBox())!;
+    await page.screenshot({ path: info.outputPath(`refined-fleet-filters-${width}.png`) });
+    await info.attach(`fleet-filter-geometry-${width}`, {
+      body: JSON.stringify({ search: searchBox, group: groupBox, tags: tagBox, toolbar: await range.boundingBox() }),
+      contentType: "application/json",
+    });
     for (const box of [groupBox, tagBox, searchBox]) expect(box.height).toBeGreaterThanOrEqual(44);
     const labelBox = (await range.getByText("服务器标签", { exact: true }).boundingBox())!;
     if (width >= 1280) {
@@ -248,7 +253,6 @@ for (const width of [1280, 390]) {
       expect(Math.abs(labelBox.y + labelBox.height / 2 - tagBox.y - tagBox.height / 2)).toBeLessThanOrEqual(2);
     } else expect(labelBox.y + labelBox.height).toBeLessThanOrEqual(tagBox.y);
     expect(await range.evaluate(el => el.scrollWidth)).toBeLessThanOrEqual((await range.boundingBox())!.width + 1);
-    await page.screenshot({ path: info.outputPath(`refined-fleet-filters-${width}.png`) });
     await removeTag.focus();
     await page.keyboard.press("Enter");
     await expect(removeTag).toHaveCount(0);

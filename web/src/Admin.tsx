@@ -373,7 +373,8 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
                           ),
                         },
                         {
-                          title: "",
+                          title: "操作",
+                          align: "right",
                           width: 200,
                           render: (_, r) => (
                             <TableRowActions name={r.name}>
@@ -393,27 +394,29 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
                                 onClick={() => validate.mutate(r)}
                                 variant="ghost"
                               />
-                              <ActionButton
-                                onClick={() =>
-                                  confirmRemoval({
-                                    title: `删除链路配置「${r.name}」？`,
-                                    description:
-                                      "已分配用户将不能从此链路配置获取新配置。",
-                                    confirmLabel: "删除",
-                                    cancelLabel: "保留",
+                              <AdminRowMenu
+                                name={r.name}
+                                actions={[
+                                  {
+                                    label: "删除链路配置",
+                                    accessibleLabel: `删除链路配置 ${r.name}`,
                                     destructive: true,
-                                    onConfirm: () =>
-                                      remove.mutateAsync({
-                                        kind: "routes",
-                                        id: r.id,
+                                    run: () =>
+                                      confirmRemoval({
+                                        title: `删除链路配置「${r.name}」？`,
+                                        description:
+                                          "已分配用户将不能从此链路配置获取新配置。",
+                                        confirmLabel: "删除",
+                                        cancelLabel: "保留",
+                                        destructive: true,
+                                        onConfirm: () =>
+                                          remove.mutateAsync({
+                                            kind: "routes",
+                                            id: r.id,
+                                          }),
                                       }),
-                                  })
-                                }
-                                aria-label={`删除 ${r.name}`}
-                                leadingIcon={
-                                  <DeleteOutlined aria-hidden="true" />
-                                }
-                                variant="destructive"
+                                  },
+                                ]}
                               />
                             </TableRowActions>
                           ),
@@ -483,7 +486,8 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
                           ),
                         },
                         {
-                          title: "",
+                          title: "操作",
+                          align: "right",
                           render: (_, n) => (
                             <TableRowActions name={n.name}>
                               <ActionButton
@@ -498,7 +502,7 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
                                 actions={[
                                   {
                                     label: "删除端点",
-                                    accessibleLabel: `删除 ${n.name}`,
+                                    accessibleLabel: `删除端点 ${n.name}`,
                                     destructive: true,
                                     run: () =>
                                       confirmRemoval({
@@ -570,7 +574,8 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
                             u.quotaBytes ? bytesLabel(u.quotaBytes) : "不限额",
                         },
                         {
-                          title: "",
+                          title: "操作",
+                          align: "right",
                           render: (_, u) => (
                             <TableRowActions name={u.name}>
                               <ActionButton
@@ -676,7 +681,8 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
                             })[s.cycle?.mode || "none"],
                         },
                         {
-                          title: "",
+                          title: "操作",
+                          align: "right",
                           render: (_, s) => (
                             <TableRowActions name={s.name}>
                               <ActionButton
@@ -730,7 +736,8 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
                           render: (_, v) => dateLabel(v.createdAt),
                         },
                         {
-                          title: "",
+                          title: "操作",
+                          align: "right",
                           render: (_, v) => (
                             <ActionButton
                               onClick={() => {
@@ -1996,6 +2003,7 @@ function AdminRowMenu({
           ref={trigger}
           variant="ghost"
           size="icon"
+          className="size-11"
           aria-label={`更多操作 ${name}`}
         >
           <Ellipsis aria-hidden="true" />

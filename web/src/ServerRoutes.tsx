@@ -315,7 +315,8 @@ export function ServerRoutesPage({
                     render: (_, d) => dateLabel(d.updatedAt),
                   },
                   {
-                    title: "",
+                    title: "操作",
+                    align: "right",
                     render: (_, d) => (
                       <TableRowActions name={d.name}>
                         <ActionButton

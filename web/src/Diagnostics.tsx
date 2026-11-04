@@ -128,7 +128,8 @@ export function DiagnosticsPanel({
                   ),
                 },
                 {
-                  title: "",
+                  title: "操作",
+                  align: "right",
                   render: (_, j) => (
                     <ActionButton
                       onClick={() => setSelected(j.id)}

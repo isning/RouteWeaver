@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 
-// Read-only application fixtures measure the shared toolbar in two consumers.
+// Read-only application fixtures measure plain-list and filtered task toolbars.
 // They establish responsive layout and keyboard behavior, not backend behavior.
 const fixtures: Record<string, unknown> = {
   "/auth/me": {
@@ -16,11 +16,15 @@ const fixtures: Record<string, unknown> = {
   "/settings": {},
   "/rates": [],
   "/user-groups": [],
-  "/hosts": [],
+  "/hosts": [{
+    id: "toolbar-host", name: "远程协作服务器", address: "inventory.example.test",
+    group: "协作团队", tags: ["办公", "远程协作"],
+  }],
   "/core-instances": [],
   "/managed-endpoints": [],
   "/links": [],
   "/server-deployments": [],
+  "/admin/fleet-batches": [],
 };
 
 async function setup(page: Page) {
@@ -45,6 +49,70 @@ async function setup(page: Page) {
     return route.fulfill({ json: fixtures[path] });
   });
   return unexpected;
+}
+
+for (const width of [390, 900, 1280]) {
+  test(`Fleet keeps search and filters usable as selected tags grow at ${width}px`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    const unexpected = await setup(page);
+    await page.goto("/#fleet");
+    await page.getByRole("button", { name: "计划变更", exact: true }).click();
+    const plan = page.getByRole("dialog", { name: "计划批量变更", exact: true });
+    const toolbar = plan.getByRole("search", { name: "筛选执行范围", exact: true });
+    const search = toolbar.getByRole("textbox", { name: "筛选批量变更实例", exact: true });
+    const group = toolbar.getByRole("combobox", { name: "筛选服务器分组", exact: true });
+    const tags = toolbar.getByRole("combobox", { name: "筛选服务器标签", exact: true });
+    await group.click();
+    await page.getByRole("option", { name: "协作团队", exact: true }).click();
+
+    for (const selected of [0, 1, 2]) {
+      if (selected > 0) {
+        await tags.click();
+        await page.getByRole("option", { name: selected === 1 ? "办公" : "远程协作", exact: true }).click();
+        await page.keyboard.press("Escape");
+        await expect(tags).toBeFocused();
+      }
+      await toolbar.scrollIntoViewIfNeeded();
+      const searchBox = (await search.boundingBox())!;
+      const groupBox = (await group.boundingBox())!;
+      const tagBox = (await tags.boundingBox())!;
+      const fieldBox = (await toolbar.locator('[data-slot="input-group"]').boundingBox())!;
+      const toolbarBox = (await toolbar.boundingBox())!;
+      // Capture before assertions so a layout regression retains useful pixels.
+      await info.attach(`fleet-toolbar-${width}-${selected}-tags`, {
+        body: await page.screenshot(), contentType: "image/png",
+      });
+      for (const box of [searchBox, groupBox, tagBox]) {
+        expect(box.height).toBeGreaterThanOrEqual(44);
+        expect(box.x).toBeGreaterThanOrEqual(toolbarBox.x - 1);
+        expect(box.x + box.width).toBeLessThanOrEqual(toolbarBox.x + toolbarBox.width + 1);
+      }
+      if (width >= 900) {
+        expect(Math.abs(searchBox.y - groupBox.y)).toBeLessThanOrEqual(2);
+        expect(Math.abs(searchBox.y - tagBox.y)).toBeLessThanOrEqual(2);
+        expect(fieldBox.width).toBeGreaterThanOrEqual(256);
+        expect(fieldBox.width).toBeLessThanOrEqual(320);
+        expect(groupBox.width).toBeGreaterThanOrEqual(140);
+        expect(tagBox.width).toBeGreaterThanOrEqual(140);
+      } else {
+        expect(Math.abs(fieldBox.width - toolbarBox.width)).toBeLessThanOrEqual(1);
+        expect(groupBox.y).toBeGreaterThanOrEqual(searchBox.y + searchBox.height);
+      }
+      expect(await toolbar.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
+    }
+    await toolbar.getByRole("button", { name: "移除 办公", exact: true }).click();
+    await toolbar.getByRole("button", { name: "移除 远程协作", exact: true }).click();
+    await expect(group).toHaveText("协作团队");
+    await search.fill("远程");
+    await search.press("Tab");
+    const clear = toolbar.getByRole("button", { name: "清除搜索输入", exact: true });
+    await expect(clear).toBeFocused();
+    await clear.press("Enter");
+    await expect(search).toBeFocused();
+    await expect(search).toHaveValue("");
+    expect(unexpected).toEqual([]);
+  });
 }
 
 for (const width of [320, 390, 900, 1440]) {

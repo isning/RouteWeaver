@@ -229,6 +229,7 @@ export function ResourcesPage() {
             <DataTable
               rowKey="id"
               rows={query.data}
+              className="[&_tbody_td]:align-top"
               columns={[
                 {
                   title: "资源",
@@ -258,8 +259,9 @@ export function ResourcesPage() {
                           {bytesLabel(r.sizeBytes)}
                         </small>
                         {r.refreshStatus === "failed" && (
-                          <p role="alert">
-                            刷新失败，保留已接纳文件。新发布前请重试或替换。
+                          <p role="alert" className="mt-1.5 text-destructive">
+                            <span className="font-medium">刷新失败</span>
+                            ，保留已接纳文件。新发布前请重试或替换。
                           </p>
                         )}
                       </div>
@@ -276,7 +278,8 @@ export function ResourcesPage() {
                   ),
                 },
                 {
-                  title: "",
+                  title: "操作",
+                  align: "right",
                   render: (_, r) => (
                     <TableRowActions name={r.name || r.id}>
                       <ActionButton onClick={() => edit(r)} variant="outline">

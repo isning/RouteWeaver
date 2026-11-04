@@ -257,10 +257,11 @@ it("keeps source deletion under More and names references that must be removed f
   );
   mount(<SourcesPage />);
   const user = userEvent.setup();
-  await screen.findByRole("button", { name: "刷新 My airport" });
-  expect(screen.getByRole("button", { name: "编辑 My airport" })).toBeTruthy();
+  const sourceMenu = await screen.findByRole("button", { name: "更多操作 My airport" });
   expect(screen.queryByRole("button", { name: "删除 My airport" })).toBeNull();
-  await user.click(screen.getByRole("button", { name: "更多操作 My airport" }));
+  await user.click(sourceMenu);
+  expect(screen.getByRole("menuitem", { name: "刷新来源 My airport" })).toBeTruthy();
+  expect(screen.getByRole("menuitem", { name: "编辑来源 My airport" })).toBeTruthy();
   await user.click(await screen.findByRole("menuitem", { name: "删除来源" }));
   const dialog = await screen.findByRole("alertdialog");
   expect(dialog.textContent).toContain("「My airport」仍在使用");

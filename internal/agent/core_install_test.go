@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -213,6 +214,11 @@ func TestNativeInstallDownloadCannotDelayActiveLeaseExpiry(t *testing.T) {
 	if cache == "" {
 		t.Skip("official archive cache not configured")
 	}
+	first := testDesired(t, 1)
+	var clock atomic.Int64
+	clock.Store(time.Now().UnixNano())
+	now := func() time.Time { return time.Unix(0, clock.Load()) }
+	first.Lease.ExpiresAt = now().Add(80 * time.Millisecond)
 	fetching := make(chan struct{})
 	releaseFetch := make(chan struct{})
 	installer, err := NewCoreInstaller(filepath.Join(t.TempDir(), "cores"), CoreInstallerOptions{OpenArchive: func(ctx context.Context, r controlprotocol.CoreRelease) (io.ReadCloser, error) {
@@ -230,13 +236,11 @@ func TestNativeInstallDownloadCannotDelayActiveLeaseExpiry(t *testing.T) {
 	root := t.TempDir()
 	os.Chmod(root, 0700)
 	runtime := LocalFixture{}
-	r, err := Open(root, testDesired(t, 1).Scope, NewRegistry(runtime), Options{MaxLease: 2 * time.Hour, CoreInstaller: installer})
+	r, err := Open(root, first.Scope, NewRegistry(runtime), Options{MaxLease: 2 * time.Hour, CoreInstaller: installer, Now: now})
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer r.Close()
-	first := testDesired(t, 1)
-	first.Lease.ExpiresAt = time.Now().Add(80 * time.Millisecond)
 	if _, err = r.Submit(context.Background(), first); err != nil {
 		t.Fatal(err)
 	}
@@ -247,25 +251,60 @@ func TestNativeInstallDownloadCannotDelayActiveLeaseExpiry(t *testing.T) {
 	install.CoreReleaseID = "xray-26.10.31-linux-amd64"
 	install.Artifacts[0].Content = `{"inbounds":[],"outbounds":[{"protocol":"freedom","tag":"direct"}]}`
 	install.Digest, _ = ArtifactDigest(install.Artifacts)
+	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
-	go func() { _, err := r.Submit(context.Background(), install); done <- err }()
-	<-fetching
+	go func() { _, err := r.Submit(ctx, install); done <- err }()
+	joined := false
+	// Unblock archive retrieval and join Submit before closing the reconciler,
+	// including assertion failures while the download holds the mutation lane.
+	defer func() {
+		cancel()
+		if !joined {
+			<-done
+		}
+	}()
+	select {
+	case <-fetching:
+	case err := <-done:
+		joined = true
+		t.Fatalf("installation returned before entering archive retrieval: %v", err)
+	case <-time.After(5 * time.Second):
+		t.Fatal("installation never entered archive retrieval")
+	}
+	if observation, err := runtime.Observe(context.Background(), root); err != nil || !observation.Known || !observation.Quiescent || observation.Identity != first.Identity() {
+		t.Fatalf("original runtime was not active before lease expiry: %+v %v", observation, err)
+	}
+	// Policy time stays fixed through durable setup and the download barrier.
+	// Expire the original 80 ms lease exactly at its boundary; the production
+	// preparation ticker and the 300 ms restriction bound still use real time.
 	deadline := time.Now().Add(300 * time.Millisecond)
+	clock.Store(first.Lease.ExpiresAt.UnixNano())
 	expired := false
 	for time.Now().Before(deadline) {
 		observation, err := runtime.Observe(context.Background(), root)
-		if err == nil && observation.Generation == 0 {
+		if err == nil && observation.Known && observation.Quiescent && observation.Generation == 0 {
 			expired = true
 			break
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
+	select {
+	case err := <-done:
+		joined = true
+		t.Fatalf("installation returned while archive retrieval was blocked: %v", err)
+	default:
+	}
 	close(releaseFetch)
-	if err = <-done; err != nil {
+	err = <-done
+	joined = true
+	if err != nil {
 		t.Fatal(err)
 	}
 	if !expired {
 		t.Fatal("slow archive retrieval kept old runtime alive beyond its original lease")
+	}
+	if state := r.State(); state.Phase != "installed" || state.Installation == nil || state.Observed != nil || state.AccessDecision != "lease_expired" {
+		t.Fatalf("installation did not preserve the expired active-runtime policy: %+v", state)
 	}
 }
 

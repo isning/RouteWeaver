@@ -80,12 +80,54 @@ async function completeWrappedText(element: Locator, text: string) {
   expect(layout.ellipsis).not.toBe("ellipsis");
 }
 
+async function startsNearRowTop(row: Locator) {
+  await expect(row).toBeVisible();
+  await expect(row.getByRole("cell")).toHaveCount(6);
+  const offsets = await row.getByRole("cell").evaluateAll((cells) =>
+    cells.map((cell) => {
+      const walker = document.createTreeWalker(cell, NodeFilter.SHOW_TEXT);
+      let text: Node | null;
+      while ((text = walker.nextNode())) {
+        if (!text.textContent?.trim()) continue;
+        const range = document.createRange();
+        range.selectNodeContents(text);
+        const bounds = range.getBoundingClientRect();
+        if (!bounds.height) continue;
+        return bounds.top - cell.getBoundingClientRect().top;
+      }
+      return 0;
+    }),
+  );
+  // First-line metadata must not sink to the middle of a multi-line row.
+  // This also allows the centered label inside a normal 44px action button.
+  for (const offset of offsets) expect(offset).toBeLessThanOrEqual(32);
+}
+
+async function hasErrorTone(element: Locator) {
+  const [red, green, blue] = await element.evaluate((node) => {
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = 1;
+    const context = canvas.getContext("2d")!;
+    context.fillStyle = getComputedStyle(node).color;
+    context.fillRect(0, 0, 1, 1);
+    return Array.from(context.getImageData(0, 0, 1, 1).data);
+  });
+  // The failure must read as an error, not another neutral gray state.
+  expect(red).toBeGreaterThan(green * 1.4);
+  expect(red).toBeGreaterThan(blue * 1.4);
+}
+
 for (const width of [1440, 390]) {
   test(`delivery title and failure reason stay readable without widening the list at ${width}`, async ({ page }, info) => {
     await page.setViewportSize({ width, height: 1000 });
     const unexpected = await setup(page);
     await page.goto("/#notifications");
     await page.getByRole("tab", { name: "发送记录", exact: true }).click();
+    const row = page.getByRole("row").filter({ has: page.getByText(deliveryTitle, { exact: true }) });
+    await startsNearRowTop(row);
+    const failure = row.getByText("发送失败", { exact: true });
+    await expect(failure).toBeVisible();
+    await hasErrorTone(failure);
     await completeWrappedText(page.getByText(deliveryTitle, { exact: true }), deliveryTitle);
     await page.screenshot({ path: info.outputPath(`delivery-long-title-${width}.png`), fullPage: true });
     await completeWrappedText(page.getByText(deliveryReason, { exact: true }), deliveryReason);
@@ -100,8 +142,11 @@ for (const width of [1440, 390]) {
     const unexpected = await setup(page);
     await page.goto("/#resources");
     await completeWrappedText(page.getByRole("alert"), resourceFailure);
+    await hasErrorTone(page.getByRole("alert"));
     await expect(page.getByText("随配置打包", { exact: true })).toBeVisible();
     const row = page.getByRole("row").filter({ has: page.getByText("已接纳的规则文件", { exact: true }) });
+    await startsNearRowTop(row);
+    await expect(page.getByRole("columnheader", { name: "操作", exact: true })).toBeVisible();
     const refresh = row.getByRole("button", { name: "刷新文件", exact: true });
     await refresh.focus();
     await expect(refresh).toBeFocused();

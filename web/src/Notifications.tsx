@@ -983,6 +983,7 @@ function Outbox() {
         <DataTable
           rowKey={(r) => `${r.eventId}-${r.channel}`}
           rows={query.data || []}
+          className="[&_tbody_td]:align-top"
           columns={[
             {
               title: "通知",
@@ -1006,7 +1007,7 @@ function Outbox() {
             {
               title: "状态",
               render: (_, r) => (
-                <Badge variant="secondary">
+                <Badge variant={r.status === "failed" ? "destructive" : "secondary"}>
                   {labels[r.status] || r.status}
                 </Badge>
               ),

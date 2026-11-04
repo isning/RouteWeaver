@@ -644,7 +644,8 @@ export function TemplatesPage({ admin = false }: { admin?: boolean }) {
                     render: (_, b) => `v${b.appliedVersion}`,
                   },
                   {
-                    title: "",
+                    title: "操作",
+                    align: "right",
                     width: 144,
                     className: "template-binding-action",
                     render: (_, b) =>

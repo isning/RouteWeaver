@@ -1012,10 +1012,14 @@ it.each([
   history.replaceState(null, "", `#${hash}`);
   fixture();
   mount();
-  const opener = await screen.findByRole("button", { name: hash === "nodes" ? `更多操作 ${target}` : `删除 ${target}` });
+  const opener = await screen.findByRole("button", { name: `更多操作 ${target}` });
+  const deleteLabel = `${hash === "nodes" ? "删除端点" : "删除链路配置"} ${target}`;
+  expect(screen.queryByRole("button", { name: deleteLabel })).toBeNull();
+  expect(screen.getByRole("columnheader", { name: "操作", exact: true })).toBeTruthy();
   for (let attempt = 0; attempt < 2; attempt++) {
     await userEvent.click(opener);
-    if (hash === "nodes") await userEvent.click(await screen.findByRole("menuitem", { name: `删除 ${target}` }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: deleteLabel, exact: true }));
+    await waitFor(() => expect(screen.queryByRole("menu")).toBeNull());
     const confirmation = await screen.findByRole("alertdialog");
     expect(within(confirmation).getByRole("heading").textContent).toContain(target);
     expect(within(confirmation).getByText(consequence)).toBeTruthy();
@@ -1026,6 +1030,37 @@ it.each([
     expect(screen.queryByRole("alertdialog")).toBeNull();
   }
   expect(vi.mocked(fetch).mock.calls.filter(([, init]) => init?.method && init.method !== "GET")).toEqual([]);
+});
+
+it("keeps legacy deletion behind its row menu and submits the exact target only after confirmation", async () => {
+  fixture();
+  const read = vi.mocked(fetch).getMockImplementation()!;
+  const deleted: string[] = [];
+  let release!: (response: Response) => void;
+  vi.mocked(fetch).mockImplementation(async (input, init) => {
+    if (init?.method === "DELETE") {
+      deleted.push(String(input));
+      return new Promise<Response>((resolve) => { release = resolve; });
+    }
+    return read(input, init);
+  });
+  mount(<AdminPage page="legacy-routes" />);
+  const opener = await screen.findByRole("button", { name: "更多操作 Example legacy route" });
+  const row = screen.getByRole("group", { name: "Example legacy route 的操作" });
+  expect(within(row).getByRole("button", { name: "编辑", exact: true })).toBeTruthy();
+  expect(within(row).getByRole("button", { name: "校验 Example legacy route", exact: true })).toBeTruthy();
+  await userEvent.click(opener);
+  await userEvent.click(await screen.findByRole("menuitem", { name: "删除链路配置 Example legacy route", exact: true }));
+  const confirmation = await screen.findByRole("alertdialog", { name: "删除链路配置「Example legacy route」？" });
+  const keep = within(confirmation).getByRole("button", { name: "保留" });
+  await waitFor(() => expect(document.activeElement).toBe(keep));
+  expect(deleted).toEqual([]);
+  const remove = within(confirmation).getByRole("button", { name: "删除", exact: true });
+  await userEvent.dblClick(remove);
+  expect(deleted).toEqual(["/api/routes/route"]);
+  expect(remove).toHaveProperty("disabled", true);
+  await act(async () => { release(new Response(null, { status: 204 })); });
+  await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
 });
 
 it("preserves the exact legacy route draft after failed save, canceled discard, and explicit retry", async () => {

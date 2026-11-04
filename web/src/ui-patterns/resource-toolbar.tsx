@@ -32,7 +32,8 @@ export function SearchField({ value, onValueChange, className, ref, disabled, ..
 /** A search landmark, not an ARIA toolbar: inputs retain native Tab behavior.
  * Keep search at a readable desktop measure, with its count nearby rather
  * than stranded at the far edge (§3.3/§3.6). Narrow layouts use the whole row;
- * bounded filters wrap independently. Targets retain the shared touch sizing.
+ * search yields some width to filters before either needs another row. Selected
+ * chips stay below their filter without moving peers. Touch sizing is preserved.
  */
 export function ResourceToolbar({ label, search, filters, summary, className }: {
   label: string;
@@ -42,7 +43,7 @@ export function ResourceToolbar({ label, search, filters, summary, className }: 
   className?: string;
 }) {
   return <div role="search" aria-label={label} className={cn("list-toolbar flex min-w-0 flex-wrap items-start gap-3", className)}>
-    <div className="w-full min-w-0 sm:w-80 sm:max-w-full sm:flex-none">{search}</div>
+    <div className="w-full min-w-0 sm:max-w-80 sm:flex-[1_1_16rem]">{search}</div>
     {filters && <div className="flex min-w-0 max-w-full flex-[0_1_32rem] flex-wrap items-start gap-3">{filters}</div>}
     {summary && <div className="min-w-0 text-sm leading-relaxed text-muted-foreground sm:self-center">{summary}</div>}
   </div>;

@@ -336,6 +336,7 @@ export function SourcesPage({
             />
           ) : (
             <DataTable<Source>
+              className="@container/source-table"
               rowKey="id"
               rows={filtered}
               summary={
@@ -349,7 +350,7 @@ export function SourcesPage({
                 {
                   title: "来源",
                   accessor: "name",
-                  className: "min-w-52 whitespace-normal",
+                  className: "min-w-52 whitespace-normal @min-[80rem]/source-table:w-[36%]",
                   render: (_, source) => (
                     <button
                       className="table-name inline-flex min-w-0 items-center gap-2 rounded-sm text-left text-sm font-medium text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -376,9 +377,8 @@ export function SourcesPage({
                 },
                 {
                   title: "节点",
-                  width: 80,
                   align: "right",
-                  className: "tabular-nums",
+                  className: "w-20 tabular-nums @min-[80rem]/source-table:w-[8%]",
                   render: (_, s) =>
                     s.snapshot?.endpoints?.length ??
                     s.endpoints?.length ??
@@ -387,7 +387,7 @@ export function SourcesPage({
                 },
                 {
                   title: "状态",
-                  width: 124,
+                  className: "w-[7.75rem] @min-[80rem]/source-table:w-[16%]",
                   render: (_, s) => (
                     <Badge
                       variant={
@@ -418,7 +418,7 @@ export function SourcesPage({
                 },
                 {
                   title: "最近更新",
-                  width: 184,
+                  className: "w-[11.5rem] @min-[80rem]/source-table:w-auto",
                   render: (_, s) => (
                     <span className="muted whitespace-nowrap text-sm tabular-nums text-muted-foreground">
                       {dateLabel(s.updatedAt)}

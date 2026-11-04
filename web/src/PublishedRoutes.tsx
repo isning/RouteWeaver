@@ -410,7 +410,8 @@ export function PublishedRoutesPage() {
                   ),
                 },
                 {
-                  title: "",
+                  title: "操作",
+                  align: "right",
                   render: (_, r) => (
                     <TableRowActions name={r.name}>
                       <ActionButton
