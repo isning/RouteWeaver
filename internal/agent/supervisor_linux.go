@@ -31,12 +31,20 @@ func bootID() (string, error) {
 	b, e := os.ReadFile("/proc/sys/kernel/random/boot_id")
 	return strings.TrimSpace(string(b)), e
 }
+
+// A task can disappear after /proc lookup/open but before read, which reports
+// ESRCH rather than ENOENT. Neither result proves that its process group is
+// empty: matches must still perform the independent group-disappearance check.
+func processLookupAbsent(err error) bool {
+	return errors.Is(err, os.ErrNotExist) || errors.Is(err, syscall.ESRCH)
+}
+
 func processIdentity(pid int) (start, executable string, alive bool, err error) {
 	if pid <= 1 {
 		return "", "", false, errors.New("invalid owned PID")
 	}
 	b, err := os.ReadFile("/proc/" + strconv.Itoa(pid) + "/stat")
-	if errors.Is(err, os.ErrNotExist) {
+	if processLookupAbsent(err) {
 		return "", "", false, nil
 	}
 	if err != nil {
@@ -55,7 +63,7 @@ func processIdentity(pid int) (start, executable string, alive bool, err error) 
 		return "", "", false, nil
 	}
 	executable, err = os.Readlink("/proc/" + strconv.Itoa(pid) + "/exe")
-	if errors.Is(err, os.ErrNotExist) {
+	if processLookupAbsent(err) {
 		return "", "", false, nil
 	}
 	if err != nil {
