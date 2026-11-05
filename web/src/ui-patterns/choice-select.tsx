@@ -272,6 +272,9 @@ export function MultiChoice<V extends Value = string>({
       onBlur?.();
     }
   };
+  // Retained/imported drafts can contain repeated references. Each chip owns
+  // its occurrence; ordinary distinct values keep their identity on reorder.
+  const selectedOccurrences = new Map<V, number>();
   const toggle = (v: V) =>
     onValueChange?.(
       value.includes(v) ? value.filter((x) => x !== v) : [...value, v],
@@ -382,27 +385,37 @@ export function MultiChoice<V extends Value = string>({
       </Popover>
       {value.length > 0 && (
         <div className="flex flex-wrap gap-1.5" aria-label="已选项目">
-          {value.map((v) => (
-            <Badge
-              variant="secondary"
-              key={String(v)}
-              className="h-auto min-h-6 max-w-full gap-1 whitespace-normal"
-            >
-              <span className="min-w-0 whitespace-normal wrap-anywhere">
-                {choices.find((o) => o.value === v)?.label ?? String(v)}
-              </span>
-              {!disabled && (
-                <button
-                  type="button"
-                  className="rounded-sm p-0.5 outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  aria-label={`移除 ${choices.find((o) => o.value === v)?.["aria-label"] || optionText(choices.find((o) => o.value === v)?.label) || String(v)}`}
-                  onClick={() => toggle(v)}
-                >
-                  <X className="size-3" aria-hidden="true" />
-                </button>
-              )}
-            </Badge>
-          ))}
+          {value.map((v, index) => {
+            const occurrence = selectedOccurrences.get(v) ?? 0;
+            selectedOccurrences.set(v, occurrence + 1);
+            return (
+              <Badge
+                variant="secondary"
+                key={JSON.stringify([v, occurrence])}
+                className="h-auto min-h-6 max-w-full gap-1 whitespace-normal"
+              >
+                <span className="min-w-0 whitespace-normal wrap-anywhere">
+                  {choices.find((o) => o.value === v)?.label ?? String(v)}
+                </span>
+                {!disabled && (
+                  <button
+                    type="button"
+                    className="rounded-sm p-0.5 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    aria-label={`移除 ${choices.find((o) => o.value === v)?.["aria-label"] || optionText(choices.find((o) => o.value === v)?.label) || String(v)}`}
+                    onClick={() =>
+                      onValueChange?.(
+                        value.filter(
+                          (_, selectedIndex) => selectedIndex !== index,
+                        ),
+                      )
+                    }
+                  >
+                    <X className="size-3" aria-hidden="true" />
+                  </button>
+                )}
+              </Badge>
+            );
+          })}
           {clearable && !disabled && (
             <Button
               type="button"

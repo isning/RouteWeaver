@@ -123,3 +123,46 @@ it("searches multi-choice without truncating inventory and retains freeform crea
   await user.click(screen.getByRole("option", { name: "添加“custom-tag”" }));
   await waitFor(() => expect(changed).toHaveBeenCalledWith(["custom-tag"]));
 });
+
+it("preserves repeated selected references and removes only the chosen occurrence", async () => {
+  const errors = vi.spyOn(console, "error");
+  const changed = vi.fn();
+  function Choices() {
+    const [value, setValue] = useState(["north", "south", "north"]);
+    return (
+      <UIProviders>
+        <MultiChoice
+          aria-label="Fixed members"
+          value={value}
+          options={[
+            { value: "north", label: "North Gate" },
+            { value: "south", label: "South Gate" },
+          ]}
+          onValueChange={(next) => {
+            changed(next);
+            setValue(next);
+          }}
+        />
+      </UIProviders>
+    );
+  }
+  render(<Choices />);
+  expect(
+    screen.getByRole("combobox", { name: "Fixed members" }).textContent,
+  ).toContain("已选择 3 项");
+  expect(
+    screen.getAllByRole("button", { name: "移除 North Gate" }),
+  ).toHaveLength(2);
+  const user = userEvent.setup();
+  await user.click(
+    screen.getAllByRole("button", { name: "移除 North Gate" })[1],
+  );
+  expect(changed).toHaveBeenLastCalledWith(["north", "south"]);
+  expect(
+    screen.getAllByRole("button", { name: "移除 North Gate" }),
+  ).toHaveLength(1);
+  expect(
+    screen.getAllByRole("button", { name: "移除 South Gate" }),
+  ).toHaveLength(1);
+  expect(errors.mock.calls.flat().join(" ")).not.toContain("same key");
+});

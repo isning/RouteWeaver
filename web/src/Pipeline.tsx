@@ -34,7 +34,7 @@ export function FilterFields({
       <label>
         名称正则
         <Input
-          value={value.namePattern}
+          value={value.namePattern ?? ""}
           placeholder="例如 HK|香港"
           onChange={(e) => onChange({ ...value, namePattern: e.target.value })}
         />
@@ -42,7 +42,7 @@ export function FilterFields({
       <label>
         地区
         <Input
-          value={value.region}
+          value={value.region ?? ""}
           placeholder="全部地区"
           onChange={(e) => onChange({ ...value, region: e.target.value })}
         />

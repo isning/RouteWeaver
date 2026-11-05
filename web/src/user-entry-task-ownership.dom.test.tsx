@@ -42,6 +42,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   client.clear();
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
 it("late A reveal must not overwrite current B editing task", async () => {
@@ -248,6 +249,7 @@ async function editRow(name: string) {
   );
 }
 it("cancelled reveal cannot reopen the editor or show a late failure", async () => {
+  const errors = vi.spyOn(console, "error");
   const a = deferred();
   mountTask({ a });
   await editRow("Entry A");
@@ -263,6 +265,9 @@ it("cancelled reveal cannot reopen the editor or show a late failure", async () 
   });
   expect(screen.queryByRole("textbox", { name: "入口名称" })).toBeNull();
   expect(screen.queryByText("obsolete failure")).toBeNull();
+  expect(errors.mock.calls.flat().join(" ")).not.toContain(
+    "not connected to any Form element",
+  );
 });
 it.each(["close", "account"] as const)(
   "invalidates a reveal across %s and a new editing task",
@@ -341,4 +346,51 @@ it("keeps user-entry Close focus after twice canceling a dirty draft", async () 
     expect((name as HTMLInputElement).value).toBe("Retained entry");
   }
   expect(task.writes).toEqual([]);
+});
+
+it("does not carry populated credentials into another entry after closing its editor", async () => {
+  const a = deferred(),
+    b = deferred();
+  const task = mountTask({ a, b });
+  await editRow("Entry A");
+  await act(async () => {
+    a.resolve(
+      json({
+        ...entries[0],
+        connection: {
+          ...entries[0].connection,
+          username: "entry-a-user",
+          password: "fixture-only-secret-a",
+        },
+      }),
+    );
+    await a.promise;
+  });
+  expect(await screen.findByLabelText("用户名")).toHaveProperty(
+    "value",
+    "entry-a-user",
+  );
+  expect(screen.getByLabelText("密码", { exact: true })).toHaveProperty(
+    "value",
+    "fixture-only-secret-a",
+  );
+  await userEvent.click(screen.getByRole("button", { name: "取消" }));
+  await editRow("Entry B");
+  await act(async () => {
+    b.resolve(json(entries[1]));
+    await b.promise;
+  });
+  expect(
+    await screen.findByRole("textbox", { name: "入口名称" }),
+  ).toHaveProperty("value", "Entry B");
+  expect(screen.getByLabelText("用户名")).toHaveProperty("value", "");
+  expect(screen.getByLabelText("密码", { exact: true })).toHaveProperty(
+    "value",
+    "",
+  );
+  await userEvent.click(screen.getByRole("button", { name: "保存入口" }));
+  await waitFor(() => expect(task.writes).toHaveLength(1));
+  expect(task.writes[0].body.connection).toMatchObject({ host: "b.example" });
+  expect(task.writes[0].body.connection.username).toBeFalsy();
+  expect(task.writes[0].body.connection.password).toBeFalsy();
 });

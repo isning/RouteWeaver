@@ -10,8 +10,8 @@ import {
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { UIProviders } from "./ui-patterns/providers";
-import { StepsEditor } from "./Pipeline";
-import type { PipelineStep } from "./types";
+import { FilterFields, StepsEditor } from "./Pipeline";
+import type { EndpointFilter, PipelineStep } from "./types";
 import { holdPopoverExit } from "./test-support/hold-popover-exit";
 
 beforeEach(() => {
@@ -163,4 +163,41 @@ it("keeps each processing identity, execution state, fields and focus with its r
     "sort",
   ]);
   expect(steps[1].enabled).toBe(false);
+});
+
+it("clears visible optional filters when current selection is reset to all connections", async () => {
+  const errors = vi.spyOn(console, "error");
+  function Filters() {
+    const [filter, setFilter] = useState<EndpointFilter>({
+      namePattern: "North",
+      region: "HK",
+    });
+    return (
+      <UIProviders>
+        <FilterFields value={filter} onChange={setFilter} />
+        <button onClick={() => setFilter({})}>Reset filters</button>
+      </UIProviders>
+    );
+  }
+  render(<Filters />);
+  expect(screen.getByRole("textbox", { name: "名称正则" })).toHaveProperty(
+    "value",
+    "North",
+  );
+  expect(screen.getByRole("textbox", { name: "地区" })).toHaveProperty(
+    "value",
+    "HK",
+  );
+  await userEvent.click(screen.getByRole("button", { name: "Reset filters" }));
+  expect(screen.getByRole("textbox", { name: "名称正则" })).toHaveProperty(
+    "value",
+    "",
+  );
+  expect(screen.getByRole("textbox", { name: "地区" })).toHaveProperty(
+    "value",
+    "",
+  );
+  expect(errors.mock.calls.flat().join(" ")).not.toMatch(
+    /uncontrolled input|controlled input/,
+  );
 });

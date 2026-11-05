@@ -178,6 +178,7 @@ it("gives first-time users an actionable setup instead of a disabled subscriptio
 });
 
 it("does not offer a cached subscription link when the current access check rejects it", async () => {
+  const errors = vi.spyOn(console, "error");
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url) => {
@@ -196,6 +197,7 @@ it("does not offer a cached subscription link when the current access check reje
         return json([
           {
             id: "out",
+            profileId: "unavailable-profile",
             name: "Work",
             status: "published",
             target: { adapterId: "mihomo", version: "1.19.32" },
@@ -229,6 +231,9 @@ it("does not offer a cached subscription link when the current access check reje
   expect(within(dialog).queryByLabelText("订阅链接")).toBeNull();
   expect(within(dialog).getByRole("button", { name: /重\s*试/ })).toBeTruthy();
   expect(dialog.textContent).not.toContain("stale-credential");
+  expect(errors.mock.calls.flat().join(" ")).not.toContain(
+    'unique "key" prop',
+  );
 });
 
 it("keeps source deletion under More and names references that must be removed first", async () => {
@@ -284,6 +289,7 @@ it("puts published subscriptions before usage and retrieves the explicitly selec
         return json([
           {
             id: "work",
+            profileId: "unavailable-profile",
             name: "Work",
             status: "published",
             target: { adapterId: "mihomo" },
@@ -291,6 +297,7 @@ it("puts published subscriptions before usage and retrieves the explicitly selec
           },
           {
             id: "travel",
+            profileId: "unavailable-profile",
             name: "Travel",
             status: "published",
             target: { adapterId: "sing-box" },

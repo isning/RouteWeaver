@@ -229,7 +229,7 @@ function UserEntryTask({
     setRevealing(null);
     setEditing(null);
     setDirty(false);
-    form.resetFields();
+    if (editing) form.resetFields();
     save.reset();
   };
   const discardThen = (next: () => void) => {
@@ -262,7 +262,7 @@ function UserEntryTask({
     revealController.current = controller;
     setError(null);
     setEditing(null);
-    form.resetFields();
+    if (editing) form.resetFields();
     save.reset();
     setDirty(false);
     setRevealing(value && !value.revoked ? value : null);
