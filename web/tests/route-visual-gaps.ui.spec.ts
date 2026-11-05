@@ -221,9 +221,48 @@ for (const width of [1280, 390]) {
     await sourceDialog.getByRole("button", { name: "取消", exact: true }).click();
     await expect(sourceDialog).toHaveCount(0);
 
+    // The range tools belong to a selected path, not the initial empty plan.
+    const fleetInstance = {
+      id: "visual-core",
+      hostId: "visual-host",
+      name: "协作核心",
+      adapterId: "routeweaver/xray",
+      version: "26.3.27",
+    };
+    const origin = new URL(test.info().project.use.baseURL!).origin;
+    await page.route(`${origin}/api/core-instances`, (route) =>
+      route.request().method() === "GET"
+        ? route.fulfill({ json: [fleetInstance] })
+        : route.fallback(),
+    );
+    await page.route(`${origin}/api/server-deployments`, (route) =>
+      route.request().method() === "GET"
+        ? route.fulfill({
+            json: [
+              {
+                id: "visual-path",
+                name: "协作转发路径",
+                ir: { programs: [{ instance: fleetInstance }] },
+              },
+            ],
+          })
+        : route.fallback(),
+    );
     await page.goto("/#fleet");
     await page.getByRole("button", { name: "计划变更", exact: true }).click();
-    const plan = page.getByRole("dialog", { name: "计划批量变更", exact: true });
+    const plan = page.getByRole("dialog", {
+      name: "计划批量变更",
+      exact: true,
+    });
+    await expect(
+      plan.getByRole("search", { name: "筛选执行范围", exact: true }),
+    ).toHaveCount(0);
+    await plan
+      .getByRole("combobox", { name: "批量变更转发路径", exact: true })
+      .click();
+    await page
+      .getByRole("option", { name: "协作转发路径", exact: true })
+      .click();
     const range = plan.getByRole("search", { name: "筛选执行范围", exact: true });
     await range.scrollIntoViewIfNeeded();
     const groupFilter = range.getByRole("combobox", { name: "筛选服务器分组", exact: true });
@@ -265,6 +304,7 @@ for (const width of [1280, 390]) {
     await expect(rangeSearch).toBeFocused();
     await expect(rangeSearch).toHaveValue("");
     await plan.getByRole("button", { name: "关闭", exact: true }).click();
+    await page.getByRole("alertdialog", { name: "放弃未创建的批量变更计划？", exact: true }).getByRole("button", { name: "放弃计划", exact: true }).click();
     await expect(plan).toHaveCount(0);
 
     await page.goto("/#settings");

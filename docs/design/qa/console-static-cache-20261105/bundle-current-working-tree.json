@@ -1,0 +1,310 @@
+{
+  "methodology": "Production static import closure; shell plus named route. Dynamic imports/fonts/network/CPU excluded. Per-file gzip, no latency estimate.",
+  "entries": {
+    "shell": {
+      "roots": [
+        "index.html"
+      ],
+      "jsFiles": [
+        "assets/index-K3vILTJD.js",
+        "assets/react-sySUN5R7.js",
+        "assets/jsx-runtime-DC8arF-C.js",
+        "assets/components-CSgEm2iS.js"
+      ],
+      "cssFiles": [
+        "assets/index-a-XCMNPm.css"
+      ],
+      "js": {
+        "rawBytes": 606674,
+        "gzipBytes": 190812
+      },
+      "css": {
+        "rawBytes": 155325,
+        "gzipBytes": 24242
+      }
+    },
+    "Subscriptions": {
+      "roots": [
+        "index.html",
+        "src/Subscriptions.tsx"
+      ],
+      "jsFiles": [
+        "assets/index-K3vILTJD.js",
+        "assets/react-sySUN5R7.js",
+        "assets/jsx-runtime-DC8arF-C.js",
+        "assets/components-CSgEm2iS.js",
+        "assets/Subscriptions-DGOOmBwj.js",
+        "assets/choice-select-BjBwEm-Z.js",
+        "assets/useMutation-CCZl-tT1.js",
+        "assets/page-navigation-ri-AzOIG.js",
+        "assets/download-D9iOa_MC.js",
+        "assets/ellipsis-CLdMvXo5.js",
+        "assets/plus-DyTttEHH.js",
+        "assets/progress-Qr2qdiZN.js",
+        "assets/radio-group-r2pI8Q9J.js",
+        "assets/resource-toolbar-CUvc17_0.js",
+        "assets/output-comparison-DMeFk_RY.js",
+        "assets/access-policy-model-yRgIUnCi.js",
+        "assets/useWorkspaceViewEntry-gbBk2Jao.js",
+        "assets/RoutingSummary-BofmUTCr.js"
+      ],
+      "cssFiles": [
+        "assets/index-a-XCMNPm.css"
+      ],
+      "js": {
+        "rawBytes": 764892,
+        "gzipBytes": 242487
+      },
+      "css": {
+        "rawBytes": 155325,
+        "gzipBytes": 24242
+      }
+    },
+    "Sources": {
+      "roots": [
+        "index.html",
+        "src/Sources.tsx"
+      ],
+      "jsFiles": [
+        "assets/index-K3vILTJD.js",
+        "assets/react-sySUN5R7.js",
+        "assets/jsx-runtime-DC8arF-C.js",
+        "assets/components-CSgEm2iS.js",
+        "assets/Sources-xx0qAXF8.js",
+        "assets/choice-select-BjBwEm-Z.js",
+        "assets/useMutation-CCZl-tT1.js",
+        "assets/DataTable-Zdske_N1.js",
+        "assets/page-navigation-ri-AzOIG.js",
+        "assets/ellipsis-CLdMvXo5.js",
+        "assets/Pipeline-BwNT_PnQ.js",
+        "assets/trash-B5I7Ebu1.js",
+        "assets/radio-group-r2pI8Q9J.js",
+        "assets/switch-Q-N3MHzE.js",
+        "assets/drawer-control-visibility-BgzF_VVJ.js",
+        "assets/output-comparison-DMeFk_RY.js",
+        "assets/pencil-DRgYQbVy.js",
+        "assets/plus-DyTttEHH.js",
+        "assets/useDiscardConfirmation-Bi1Y66di.js",
+        "assets/resource-toolbar-CUvc17_0.js"
+      ],
+      "cssFiles": [
+        "assets/index-a-XCMNPm.css"
+      ],
+      "js": {
+        "rawBytes": 859617,
+        "gzipBytes": 272886
+      },
+      "css": {
+        "rawBytes": 155325,
+        "gzipBytes": 24242
+      }
+    },
+    "Fleet": {
+      "roots": [
+        "index.html",
+        "src/Fleet.tsx"
+      ],
+      "jsFiles": [
+        "assets/index-K3vILTJD.js",
+        "assets/react-sySUN5R7.js",
+        "assets/jsx-runtime-DC8arF-C.js",
+        "assets/components-CSgEm2iS.js",
+        "assets/Fleet-BJ6ZEsMI.js",
+        "assets/choice-select-BjBwEm-Z.js",
+        "assets/useMutation-CCZl-tT1.js",
+        "assets/DataTable-Zdske_N1.js",
+        "assets/page-navigation-ri-AzOIG.js",
+        "assets/useDiscardConfirmation-Bi1Y66di.js",
+        "assets/resource-toolbar-CUvc17_0.js",
+        "assets/infrastructure-data-ChLnSr5y.js"
+      ],
+      "cssFiles": [
+        "assets/index-a-XCMNPm.css"
+      ],
+      "js": {
+        "rawBytes": 761483,
+        "gzipBytes": 241175
+      },
+      "css": {
+        "rawBytes": 155325,
+        "gzipBytes": 24242
+      }
+    },
+    "PublishedRoutes": {
+      "roots": [
+        "index.html",
+        "src/PublishedRoutes.tsx"
+      ],
+      "jsFiles": [
+        "assets/index-K3vILTJD.js",
+        "assets/react-sySUN5R7.js",
+        "assets/jsx-runtime-DC8arF-C.js",
+        "assets/components-CSgEm2iS.js",
+        "assets/PublishedRoutes-BVX-kERq.js",
+        "assets/choice-select-BjBwEm-Z.js",
+        "assets/useMutation-CCZl-tT1.js",
+        "assets/DataTable-Zdske_N1.js",
+        "assets/page-navigation-ri-AzOIG.js",
+        "assets/plus-DyTttEHH.js",
+        "assets/trash-B5I7Ebu1.js",
+        "assets/useDiscardConfirmation-Bi1Y66di.js",
+        "assets/UserEntries-BZjR25zI.js",
+        "assets/PolicyDateInput-BITDdrjY.js",
+        "assets/radio-group-r2pI8Q9J.js",
+        "assets/switch-Q-N3MHzE.js",
+        "assets/drawer-control-visibility-BgzF_VVJ.js",
+        "assets/output-comparison-DMeFk_RY.js",
+        "assets/access-policy-model-yRgIUnCi.js",
+        "assets/infrastructure-data-ChLnSr5y.js",
+        "assets/useWorkspaceViewEntry-gbBk2Jao.js",
+        "assets/TLSMaterial-DpGiCmMW.js"
+      ],
+      "cssFiles": [
+        "assets/index-a-XCMNPm.css"
+      ],
+      "js": {
+        "rawBytes": 977692,
+        "gzipBytes": 308100
+      },
+      "css": {
+        "rawBytes": 155325,
+        "gzipBytes": 24242
+      }
+    },
+    "Admin": {
+      "roots": [
+        "index.html",
+        "src/Admin.tsx"
+      ],
+      "jsFiles": [
+        "assets/index-K3vILTJD.js",
+        "assets/react-sySUN5R7.js",
+        "assets/jsx-runtime-DC8arF-C.js",
+        "assets/components-CSgEm2iS.js",
+        "assets/Admin-vMJeSJOX.js",
+        "assets/choice-select-BjBwEm-Z.js",
+        "assets/useMutation-CCZl-tT1.js",
+        "assets/DataTable-Zdske_N1.js",
+        "assets/page-navigation-ri-AzOIG.js",
+        "assets/PolicyDateInput-BITDdrjY.js",
+        "assets/plus-DyTttEHH.js",
+        "assets/trash-B5I7Ebu1.js",
+        "assets/radio-group-r2pI8Q9J.js",
+        "assets/switch-Q-N3MHzE.js",
+        "assets/download-D9iOa_MC.js",
+        "assets/ellipsis-CLdMvXo5.js",
+        "assets/useDiscardConfirmation-Bi1Y66di.js",
+        "assets/resource-toolbar-CUvc17_0.js",
+        "assets/drawer-control-visibility-BgzF_VVJ.js",
+        "assets/UserEntries-BZjR25zI.js",
+        "assets/output-comparison-DMeFk_RY.js",
+        "assets/access-policy-model-yRgIUnCi.js",
+        "assets/Security-2s4B43DF.js",
+        "assets/esm-DgE5wfT6.js"
+      ],
+      "cssFiles": [
+        "assets/index-a-XCMNPm.css"
+      ],
+      "js": {
+        "rawBytes": 1024960,
+        "gzipBytes": 323396
+      },
+      "css": {
+        "rawBytes": 155325,
+        "gzipBytes": 24242
+      }
+    },
+    "ServerRoutes": {
+      "roots": [
+        "index.html",
+        "src/ServerRoutes.tsx"
+      ],
+      "jsFiles": [
+        "assets/index-K3vILTJD.js",
+        "assets/react-sySUN5R7.js",
+        "assets/jsx-runtime-DC8arF-C.js",
+        "assets/components-CSgEm2iS.js",
+        "assets/ServerRoutes-CNNBHymi.js",
+        "assets/choice-select-BjBwEm-Z.js",
+        "assets/useMutation-CCZl-tT1.js",
+        "assets/DataTable-Zdske_N1.js",
+        "assets/page-navigation-ri-AzOIG.js",
+        "assets/ellipsis-CLdMvXo5.js",
+        "assets/pencil-DRgYQbVy.js",
+        "assets/plus-DyTttEHH.js",
+        "assets/save-B9f0mcfZ.js",
+        "assets/trash-B5I7Ebu1.js",
+        "assets/useDiscardConfirmation-Bi1Y66di.js",
+        "assets/resource-toolbar-CUvc17_0.js",
+        "assets/drawer-control-visibility-BgzF_VVJ.js",
+        "assets/infrastructure-data-ChLnSr5y.js",
+        "assets/Fleet-BJ6ZEsMI.js",
+        "assets/Infrastructure-CiT_60dx.js",
+        "assets/PolicyDateInput-BITDdrjY.js",
+        "assets/radio-group-r2pI8Q9J.js",
+        "assets/switch-Q-N3MHzE.js",
+        "assets/progress-Qr2qdiZN.js",
+        "assets/useWorkspaceViewEntry-gbBk2Jao.js",
+        "assets/TLSMaterial-DpGiCmMW.js",
+        "assets/style-DUkvBAbr.js"
+      ],
+      "cssFiles": [
+        "assets/index-a-XCMNPm.css",
+        "assets/style-DLioOiRN.css"
+      ],
+      "js": {
+        "rawBytes": 1182103,
+        "gzipBytes": 374626
+      },
+      "css": {
+        "rawBytes": 170738,
+        "gzipBytes": 26790
+      }
+    },
+    "Profiles": {
+      "roots": [
+        "index.html",
+        "src/Profiles.tsx"
+      ],
+      "jsFiles": [
+        "assets/index-K3vILTJD.js",
+        "assets/react-sySUN5R7.js",
+        "assets/jsx-runtime-DC8arF-C.js",
+        "assets/components-CSgEm2iS.js",
+        "assets/Profiles-D-7aYtLy.js",
+        "assets/choice-select-BjBwEm-Z.js",
+        "assets/useMutation-CCZl-tT1.js",
+        "assets/DataTable-Zdske_N1.js",
+        "assets/page-navigation-ri-AzOIG.js",
+        "assets/Pipeline-BwNT_PnQ.js",
+        "assets/trash-B5I7Ebu1.js",
+        "assets/radio-group-r2pI8Q9J.js",
+        "assets/switch-Q-N3MHzE.js",
+        "assets/drawer-control-visibility-BgzF_VVJ.js",
+        "assets/output-comparison-DMeFk_RY.js",
+        "assets/plus-DyTttEHH.js",
+        "assets/save-B9f0mcfZ.js",
+        "assets/useDiscardConfirmation-Bi1Y66di.js",
+        "assets/Subscriptions-DGOOmBwj.js",
+        "assets/download-D9iOa_MC.js",
+        "assets/ellipsis-CLdMvXo5.js",
+        "assets/progress-Qr2qdiZN.js",
+        "assets/resource-toolbar-CUvc17_0.js",
+        "assets/access-policy-model-yRgIUnCi.js",
+        "assets/useWorkspaceViewEntry-gbBk2Jao.js",
+        "assets/RoutingSummary-BofmUTCr.js"
+      ],
+      "cssFiles": [
+        "assets/index-a-XCMNPm.css"
+      ],
+      "js": {
+        "rawBytes": 964685,
+        "gzipBytes": 304101
+      },
+      "css": {
+        "rawBytes": 155325,
+        "gzipBytes": 24242
+      }
+    }
+  }
+}

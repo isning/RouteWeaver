@@ -234,6 +234,8 @@ export function FleetPlanForm({
   onClose: () => void;
   onCreated: (batch: FleetBatch) => void;
 }) {
+  const confirmPathChange = useConfirm();
+  const pathSelect = useRef<HTMLButtonElement>(null);
   const [action, setAction] = useState<FleetAction>(
       initialAction || "configure",
     ),
@@ -263,6 +265,7 @@ export function FleetPlanForm({
     [tags, setTags] = useState<string[]>([]),
     [search, setSearch] = useState("");
   const filterId = useId();
+  const instanceSearch = useRef<HTMLInputElement>(null);
   const [review, setReview] = useState<{
       plan: FleetPlan;
       input: FleetInput;
@@ -486,18 +489,60 @@ export function FleetPlanForm({
               已保存的转发路径
               <ChoiceSelect
                 aria-label="批量变更转发路径"
+                ref={pathSelect}
                 value={deploymentId || undefined}
                 options={inventory.deployments.map((d) => ({
                   value: d.id,
                   label: d.name,
                 }))}
                 onValueChange={(value) => {
-                  touch();
-                  setContinuousService(false);
-                  setDeployment(value ?? "");
-                  setTargets([]);
-                  setAssignments({});
-                  setSource(undefined);
+                  const nextPath = value ?? "";
+                  if (nextPath === deploymentId) return;
+                  const replacePath = () => {
+                    touch();
+                    setContinuousService(false);
+                    setDeployment(nextPath);
+                    setTargets([]);
+                    setAssignments({});
+                    setSource(undefined);
+                  };
+                  if (
+                    targetIds.length ||
+                    Object.keys(assignments).length ||
+                    sourceBatchId ||
+                    continuousService ||
+                    review
+                  ) {
+                    confirmPathChange({
+                      title: "更换转发路径？",
+                      description: (
+                        <div className="space-y-2">
+                          <p>
+                            更换后将重新选择实例与执行阶段，并重新核对持续运行设置。
+                          </p>
+                          {sourceBatchId && <p>历史配置将重新选择。</p>}
+                          {review && <p>更换后需重新预览影响与差异。</p>}
+                          <p>
+                            当前：
+                            {deployment?.name || deploymentId || "尚未选择"}
+                          </p>
+                          <p>
+                            更换为：
+                            {inventory.deployments.find(
+                              (item) => item.id === nextPath,
+                            )?.name ||
+                              nextPath ||
+                              "尚未选择"}
+                          </p>
+                        </div>
+                      ),
+                      confirmLabel: "更换路径",
+                      cancelLabel: "保留当前路径",
+                      restoreFocus: false,
+                      onConfirm: replacePath,
+                      onClosed: () => pathSelect.current?.focus(),
+                    });
+                  } else replacePath();
                 }}
               />
             </label>
@@ -651,199 +696,248 @@ export function FleetPlanForm({
         )}
         <Section
           title="选择执行范围"
-          description="同一阶段一起提交，后续阶段必须等待前一阶段全部确认成功。"
+          description={
+            deployment && instances.length
+              ? "同一阶段一起提交，后续阶段必须等待前一阶段全部确认成功。"
+              : undefined
+          }
         >
-          <label className="standalone-label grid gap-2 text-sm font-medium">
-            执行顺序
-            <ChoiceSelect
-              aria-label="执行顺序"
-              value={strategy}
-              options={[
-                {
-                  value: "together",
-                  label: "一起执行",
-                  description: "同时提交所选实例",
-                },
-                {
-                  value: "sequential",
-                  label: "逐个执行",
-                  description: "每次确认一个实例",
-                },
-                {
-                  value: "canary",
-                  label: "先试一个",
-                  description: "成功后执行其余实例",
-                },
-                {
-                  value: "custom",
-                  label: "自定义分组",
-                  description: "为实例指定阶段",
-                },
-              ]}
-              onValueChange={(value) => {
-                touch();
-                if (value === "custom") setAssignments(effectiveAssignments);
-                if (value) setStrategy(value);
-              }}
-            />
-          </label>
-          <p className="muted text-sm text-muted-foreground">
-            执行顺序按勾选顺序生成；下方显示每个实例所在阶段。创建计划后仍需确认执行。
-          </p>
-          {strategyIssue && <Notice tone="warning" title={strategyIssue} />}
-          <ResourceToolbar
-            label="筛选执行范围"
-            search={
-              <SearchField
-                aria-label="筛选批量变更实例"
-                placeholder="按服务器或实例名称筛选"
-                value={search}
-                onValueChange={setSearch}
-              />
-            }
-            filters={
-              <>
-                <ToolbarFilter
-                  label="服务器分组"
-                  controlId={`${filterId}-group`}
-                >
-                  <ChoiceSelect
-                    id={`${filterId}-group`}
-                    clearable
-                    aria-label="筛选服务器分组"
-                    placeholder="所有分组"
-                    value={group}
-                    options={[
-                      ...new Set(
-                        inventory.hosts
-                          .map((h) => h.group)
-                          .filter((value): value is string => Boolean(value)),
-                      ),
-                    ].map((value) => ({ value, label: value }))}
-                    onValueChange={setGroup}
+          {!deployment ? (
+            <p className="text-sm text-muted-foreground">
+              {deploymentId
+                ? "所选转发路径已不在当前列表中，请重新核对路径。"
+                : inventory.deployments.length
+                  ? "先选择已保存的转发路径。"
+                  : "暂无已保存的转发路径。在转发路径中保存配置后，可在此安排实例变更。"}
+            </p>
+          ) : !instances.length ? (
+            <p className="text-sm text-muted-foreground">
+              此转发路径暂无可选实例。核对路径中的实例配置后，可在此安排变更。
+            </p>
+          ) : (
+            <>
+              <label className="standalone-label grid gap-2 text-sm font-medium">
+                执行顺序
+                <ChoiceSelect
+                  aria-label="执行顺序"
+                  value={strategy}
+                  options={[
+                    {
+                      value: "together",
+                      label: "一起执行",
+                      description: "同时提交所选实例",
+                    },
+                    {
+                      value: "sequential",
+                      label: "逐个执行",
+                      description: "每次确认一个实例",
+                    },
+                    {
+                      value: "canary",
+                      label: "先试一个",
+                      description: "成功后执行其余实例",
+                    },
+                    {
+                      value: "custom",
+                      label: "自定义分组",
+                      description: "为实例指定阶段",
+                    },
+                  ]}
+                  onValueChange={(value) => {
+                    touch();
+                    if (value === "custom")
+                      setAssignments(effectiveAssignments);
+                    if (value) setStrategy(value);
+                  }}
+                />
+              </label>
+              <p className="muted text-sm text-muted-foreground">
+                执行顺序按勾选顺序生成；下方显示每个实例所在阶段。创建计划后仍需确认执行。
+              </p>
+              {strategyIssue && <Notice tone="warning" title={strategyIssue} />}
+              <ResourceToolbar
+                label="筛选执行范围"
+                search={
+                  <SearchField
+                    aria-label="筛选批量变更实例"
+                    ref={instanceSearch}
+                    placeholder="按服务器或实例名称筛选"
+                    value={search}
+                    onValueChange={setSearch}
                   />
-                </ToolbarFilter>
-                <ToolbarFilter
-                  label="服务器标签"
-                  controlId={`${filterId}-tags`}
-                >
-                  <MultiChoice
-                    id={`${filterId}-tags`}
-                    aria-label="筛选服务器标签"
-                    placeholder="所有标签"
-                    value={tags}
-                    options={[
-                      ...new Set(inventory.hosts.flatMap((h) => h.tags || [])),
-                    ].map((value) => ({ value, label: value }))}
-                    onValueChange={setTags}
-                  />
-                </ToolbarFilter>
-              </>
-            }
-          />
-          <div className={"flex flex-wrap items-center gap-2"}>
-            <span>已选择 {targetIds.length} 个实例</span>
-            <ActionButton
-              disabled={!visible.length}
-              onClick={() => {
-                touch();
-                setTargets([
-                  ...new Set([...targetIds, ...visible.map((i) => i.id)]),
-                ]);
-              }}
-              variant="outline"
-              size="sm"
-            >
-              选择筛选结果
-            </ActionButton>
-            <ActionButton
-              disabled={!targetIds.length}
-              onClick={() => {
-                touch();
-                setTargets([]);
-              }}
-              variant="outline"
-              size="sm"
-            >
-              清空选择
-            </ActionButton>
-          </div>
-          <DataTable
-            rowKey="id"
-            rows={visible}
-            count={{ total: instances.length, unit: "个可选实例", filtered: !!search || !!group || tags.length > 0 }}
-            minWidth={520}
-            pageSize={8}
-            columns={[
-              {
-                title: "选择",
-                width: 60,
-                render: (_, i) => (
-                  <Checkbox
-                    aria-label={`选择实例 ${coreName(i)}`}
-                    checked={targetIds.includes(i.id)}
-                    onCheckedChange={(checked) =>
-                      ((e) => {
-                        touch();
-                        setTargets(
-                          e.target.checked
-                            ? [...targetIds, i.id]
-                            : targetIds.filter((id) => id !== i.id),
-                        );
-                      })({ target: { checked: checked === true } })
-                    }
-                  />
-                ),
-              },
-              {
-                title: "实例 / 服务器",
-                render: (_, i) => (
+                }
+                filters={
                   <>
-                    <strong>{coreName(i)}</strong>
-                    <p className="muted text-sm text-muted-foreground">
-                      <span className="block">
-                        {inventory.hosts.find((h) => h.id === i.hostId)?.name}
-                      </span>{" "}
-                      <span className="block">版本 {i.version}</span>
-                    </p>
+                    <ToolbarFilter
+                      label="服务器分组"
+                      controlId={`${filterId}-group`}
+                    >
+                      <ChoiceSelect
+                        id={`${filterId}-group`}
+                        clearable
+                        aria-label="筛选服务器分组"
+                        placeholder="所有分组"
+                        value={group}
+                        options={[
+                          ...new Set(
+                            inventory.hosts
+                              .map((h) => h.group)
+                              .filter((value): value is string =>
+                                Boolean(value),
+                              ),
+                          ),
+                        ].map((value) => ({ value, label: value }))}
+                        onValueChange={setGroup}
+                      />
+                    </ToolbarFilter>
+                    <ToolbarFilter
+                      label="服务器标签"
+                      controlId={`${filterId}-tags`}
+                    >
+                      <MultiChoice
+                        id={`${filterId}-tags`}
+                        aria-label="筛选服务器标签"
+                        placeholder="所有标签"
+                        value={tags}
+                        options={[
+                          ...new Set(
+                            inventory.hosts.flatMap((h) => h.tags || []),
+                          ),
+                        ].map((value) => ({ value, label: value }))}
+                        onValueChange={setTags}
+                      />
+                    </ToolbarFilter>
                   </>
-                ),
-              },
-              {
-                title: "阶段",
-                render: (_, i) =>
-                  strategy !== "custom" ? (
-                    targetIds.includes(i.id) ? (
-                      `第 ${effectiveAssignments[i.id]} 阶段`
-                    ) : (
-                      "未选择"
-                    )
-                  ) : (
-                    <Input
-                      aria-label={`${coreName(i)} 的执行阶段`}
-                      min={1}
-                      max={20}
-                      disabled={!targetIds.includes(i.id)}
-                      value={assignments[i.id] || 1}
-                      type="number"
-                      onChange={(event) =>
-                        ((value) => {
-                          touch();
-                          setAssignments({
-                            ...assignments,
-                            [i.id]: value || 1,
-                          });
-                        })(
-                          event.target.value === ""
-                            ? null
-                            : Number(event.target.value),
+                }
+              />
+              <div className={"flex flex-wrap items-center gap-2"}>
+                <span>已选择 {targetIds.length} 个实例</span>
+                <ActionButton
+                  disabled={!visible.length}
+                  onClick={() => {
+                    touch();
+                    setTargets([
+                      ...new Set([...targetIds, ...visible.map((i) => i.id)]),
+                    ]);
+                  }}
+                  variant="outline"
+                  size="sm"
+                >
+                  选择筛选结果
+                </ActionButton>
+                <ActionButton
+                  disabled={!targetIds.length}
+                  onClick={() => {
+                    touch();
+                    setTargets([]);
+                  }}
+                  variant="outline"
+                  size="sm"
+                >
+                  清空选择
+                </ActionButton>
+              </div>
+              <DataTable
+                rowKey="id"
+                rows={visible}
+                empty={
+                  <div className="space-y-3 py-2">
+                    <p>没有匹配的实例</p>
+                    <ActionButton
+                      variant="outline"
+                      onClick={() => {
+                        setSearch("");
+                        setGroup(undefined);
+                        setTags([]);
+                        instanceSearch.current?.focus();
+                      }}
+                    >
+                      清除筛选
+                    </ActionButton>
+                  </div>
+                }
+                count={{
+                  total: instances.length,
+                  unit: "个可选实例",
+                  filtered: !!search || !!group || tags.length > 0,
+                }}
+                minWidth={520}
+                pageSize={8}
+                columns={[
+                  {
+                    title: "选择",
+                    width: 60,
+                    render: (_, i) => (
+                      <Checkbox
+                        aria-label={`选择实例 ${coreName(i)}`}
+                        checked={targetIds.includes(i.id)}
+                        onCheckedChange={(checked) =>
+                          ((e) => {
+                            touch();
+                            setTargets(
+                              e.target.checked
+                                ? [...targetIds, i.id]
+                                : targetIds.filter((id) => id !== i.id),
+                            );
+                          })({ target: { checked: checked === true } })
+                        }
+                      />
+                    ),
+                  },
+                  {
+                    title: "实例 / 服务器",
+                    render: (_, i) => (
+                      <>
+                        <strong>{coreName(i)}</strong>
+                        <p className="muted text-sm text-muted-foreground">
+                          <span className="block">
+                            {
+                              inventory.hosts.find((h) => h.id === i.hostId)
+                                ?.name
+                            }
+                          </span>{" "}
+                          <span className="block">版本 {i.version}</span>
+                        </p>
+                      </>
+                    ),
+                  },
+                  {
+                    title: "阶段",
+                    render: (_, i) =>
+                      strategy !== "custom" ? (
+                        targetIds.includes(i.id) ? (
+                          `第 ${effectiveAssignments[i.id]} 阶段`
+                        ) : (
+                          "未选择"
                         )
-                      }
-                    />
-                  ),
-              },
-            ]}
-          />
+                      ) : (
+                        <Input
+                          aria-label={`${coreName(i)} 的执行阶段`}
+                          min={1}
+                          max={20}
+                          disabled={!targetIds.includes(i.id)}
+                          value={assignments[i.id] || 1}
+                          type="number"
+                          onChange={(event) =>
+                            ((value) => {
+                              touch();
+                              setAssignments({
+                                ...assignments,
+                                [i.id]: value || 1,
+                              });
+                            })(
+                              event.target.value === ""
+                                ? null
+                                : Number(event.target.value),
+                            )
+                          }
+                        />
+                      ),
+                  },
+                ]}
+              />
+            </>
+          )}
         </Section>
         <Accordion type="multiple" defaultValue={[]} className="w-full">
           {[

@@ -13,8 +13,6 @@ import (
 	"io"
 	"net/http"
 	"net/netip"
-	"os"
-	"path/filepath"
 	"routeweaver/internal/backup"
 	"routeweaver/internal/domain"
 	"routeweaver/internal/render"
@@ -158,19 +156,7 @@ func newWithOptions(s *store.Store, registry *render.Registry, opts Options, ver
 		})
 	})
 	if opts.UIDir != "" {
-		root.Get("/*", func(w http.ResponseWriter, r *http.Request) {
-			if strings.HasPrefix(r.URL.Path, "/api/") || strings.HasPrefix(r.URL.Path, "/feed/") {
-				fail(w, 404, "not found")
-				return
-			}
-			rel := filepath.Clean("/" + r.URL.Path)
-			path := filepath.Join(opts.UIDir, rel)
-			if info, e := os.Stat(path); e == nil && !info.IsDir() {
-				http.ServeFile(w, r, path)
-				return
-			}
-			http.ServeFile(w, r, filepath.Join(opts.UIDir, "index.html"))
-		})
+		root.Get("/*", serveUI(opts.UIDir))
 	}
 	return root
 }

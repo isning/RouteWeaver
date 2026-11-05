@@ -12,5 +12,5 @@ export default defineConfig({
       "/feed": { target: "http://127.0.0.1:8080", changeOrigin: false },
     },
   },
-  build: { sourcemap: false },
+  build: { sourcemap: false, manifest: true },
 });

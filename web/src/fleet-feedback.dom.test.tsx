@@ -6,6 +6,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import {
   act,
   cleanup,
+  fireEvent,
   render,
   screen,
   waitFor,
@@ -106,15 +107,244 @@ afterEach(async () => {
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
 });
+it("asks for a saved path before exposing instance filters and execution stages", async () => {
+  const fetcher = vi.fn(async () => json([]));
+  vi.stubGlobal("fetch", fetcher);
+  mount(
+    <FleetPlanForm
+      inventory={inventory}
+      history={[]}
+      onClose={() => {}}
+      onCreated={() => {}}
+    />,
+  );
+  expect(
+    screen.getByText("先选择已保存的转发路径。", { exact: true }),
+  ).toBeTruthy();
+  expect(screen.queryByRole("search", { name: "筛选执行范围" })).toBeNull();
+  expect(screen.queryByRole("combobox", { name: "执行顺序" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "选择筛选结果" })).toBeNull();
+  const path = screen.getByRole("combobox", { name: "批量变更转发路径" });
+  await userEvent.click(path);
+  await userEvent.click(screen.getByRole("option", { name: "Office path" }));
+  expect(screen.getByRole("search", { name: "筛选执行范围" })).toBeTruthy();
+  expect(
+    screen.getByRole("checkbox", { name: "选择实例 Office core" }),
+  ).toBeTruthy();
+  expect(
+    screen.queryByText("先选择已保存的转发路径。", { exact: true }),
+  ).toBeNull();
+  expect(fetcher).not.toHaveBeenCalled();
+});
+it("recovers an empty filter result without changing selected instances or stages", async () => {
+  const fetcher = vi.fn(async () => json([]));
+  vi.stubGlobal("fetch", fetcher);
+  mount(
+    <FleetPlanForm
+      inventory={{
+        ...inventory,
+        hosts: inventory.hosts.map((host) => ({
+          ...host,
+          group: "团队",
+          tags: ["办公"],
+        })),
+      }}
+      history={[]}
+      initialDeploymentId="path"
+      initialTargetIds={["core"]}
+      onClose={() => {}}
+      onCreated={() => {}}
+    />,
+  );
+  await userEvent.click(screen.getByRole("combobox", { name: "执行顺序" }));
+  await userEvent.click(
+    screen.getByRole("option", { name: "自定义分组为实例指定阶段" }),
+  );
+  const stage = screen.getByRole("spinbutton", {
+    name: "Office core 的执行阶段",
+  });
+  fireEvent.change(stage, { target: { value: "3" } });
+  await userEvent.click(
+    screen.getByRole("combobox", { name: "筛选服务器分组" }),
+  );
+  await userEvent.click(screen.getByRole("option", { name: "团队" }));
+  await userEvent.click(
+    screen.getByRole("combobox", { name: "筛选服务器标签" }),
+  );
+  await userEvent.click(screen.getByRole("option", { name: "办公" }));
+  await userEvent.keyboard("{Escape}");
+  const search = screen.getByRole("textbox", { name: "筛选批量变更实例" });
+  await userEvent.type(search, "no match");
+  expect(screen.getByText("没有匹配的实例", { exact: true })).toBeTruthy();
+  expect(screen.getByText("已选择 1 个实例", { exact: true })).toBeTruthy();
+  await userEvent.click(screen.getByRole("button", { name: "清除筛选" }));
+  expect(document.activeElement).toBe(search);
+  expect(search).toHaveProperty("value", "");
+  expect(
+    screen.getByRole("combobox", { name: "筛选服务器分组" }).textContent,
+  ).toBe("所有分组");
+  expect(screen.queryByRole("button", { name: "移除 办公" })).toBeNull();
+  expect(
+    screen
+      .getByRole("checkbox", { name: "选择实例 Office core" })
+      .getAttribute("data-state"),
+  ).toBe("checked");
+  expect(
+    screen.getByRole("spinbutton", { name: "Office core 的执行阶段" }),
+  ).toHaveProperty("value", "3");
+  expect(fetcher).not.toHaveBeenCalled();
+});
+it("confirms path replacement and keeps targets, stages and service choice when canceled", async () => {
+  const fetcher = vi.fn(async () => json([]));
+  vi.stubGlobal("fetch", fetcher);
+  mount(
+    <FleetPlanForm
+      inventory={{
+        ...inventory,
+        deployments: [
+          ...inventory.deployments,
+          { ...inventory.deployments[0], id: "other", name: "Other path" },
+        ],
+      }}
+      history={[]}
+      onClose={() => {}}
+      onCreated={() => {}}
+    />,
+  );
+  const path = screen.getByRole("combobox", { name: "批量变更转发路径" });
+  await userEvent.click(path);
+  await userEvent.click(screen.getByRole("option", { name: "Office path" }));
+  await userEvent.click(screen.getByRole("button", { name: "选择筛选结果" }));
+  await userEvent.click(screen.getByRole("combobox", { name: "执行顺序" }));
+  await userEvent.click(
+    screen.getByRole("option", { name: "自定义分组为实例指定阶段" }),
+  );
+  fireEvent.change(
+    screen.getByRole("spinbutton", { name: "Office core 的执行阶段" }),
+    { target: { value: "3" } },
+  );
+  await userEvent.click(
+    screen.getByRole("checkbox", { name: "持续运行并有限自动恢复" }),
+  );
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await userEvent.click(path);
+    await userEvent.click(screen.getByRole("option", { name: "Other path" }));
+    const decision = await screen.findByRole("alertdialog", {
+      name: "更换转发路径？",
+    });
+    expect(
+      within(decision).getByText(
+        "更换后将重新选择实例与执行阶段，并重新核对持续运行设置。",
+        { exact: true },
+      ),
+    ).toBeTruthy();
+    const keep = within(decision).getByRole("button", { name: "保留当前路径" });
+    await waitFor(() => expect(document.activeElement).toBe(keep));
+    await userEvent.click(keep);
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+    await waitFor(() => expect(document.activeElement).toBe(path));
+    expect(path.textContent).toBe("Office path");
+    expect(
+      screen
+        .getByRole("checkbox", { name: "选择实例 Office core" })
+        .getAttribute("data-state"),
+    ).toBe("checked");
+    expect(
+      screen.getByRole("spinbutton", { name: "Office core 的执行阶段" }),
+    ).toHaveProperty("value", "3");
+    expect(
+      screen
+        .getByRole("checkbox", { name: "持续运行并有限自动恢复" })
+        .getAttribute("data-state"),
+    ).toBe("checked");
+  }
+  await userEvent.click(path);
+  await userEvent.click(screen.getByRole("option", { name: "Other path" }));
+  await userEvent.click(
+    within(await screen.findByRole("alertdialog")).getByRole("button", {
+      name: "更换路径",
+    }),
+  );
+  await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+  expect(path.textContent).toBe("Other path");
+  expect(screen.getByText("已选择 0 个实例", { exact: true })).toBeTruthy();
+  expect(
+    screen.getByRole("spinbutton", { name: "Office core 的执行阶段" }),
+  ).toHaveProperty("value", "1");
+  expect(
+    screen
+      .getByRole("checkbox", { name: "持续运行并有限自动恢复" })
+      .getAttribute("data-state"),
+  ).toBe("unchecked");
+  expect(fetcher).not.toHaveBeenCalled();
+});
+it.for([
+  {
+    name: "no saved paths",
+    deployments: [],
+    initialDeploymentId: "",
+    message:
+      "暂无已保存的转发路径。在转发路径中保存配置后，可在此安排实例变更。",
+  },
+  {
+    name: "missing selected path",
+    deployments: [],
+    initialDeploymentId: "missing",
+    message: "所选转发路径已不在当前列表中，请重新核对路径。",
+  },
+  {
+    name: "saved path without instances",
+    deployments: [{ ...inventory.deployments[0], ir: { ...inventory.deployments[0].ir, programs: [] } }],
+    initialDeploymentId: "path",
+    message: "此转发路径暂无可选实例。核对路径中的实例配置后，可在此安排变更。",
+  },
+])(
+  "distinguishes $name from a filter miss",
+  async ({ deployments, initialDeploymentId, message }) => {
+    const fetcher = vi.fn(async () => json([]));
+    vi.stubGlobal("fetch", fetcher);
+    mount(
+      <FleetPlanForm
+        inventory={{ ...inventory, deployments } as Infrastructure}
+        history={[]}
+        initialDeploymentId={initialDeploymentId}
+        onClose={() => {}}
+        onCreated={() => {}}
+      />,
+    );
+    expect(screen.getByText(message, { exact: true })).toBeTruthy();
+    expect(screen.queryByRole("search", { name: "筛选执行范围" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "清除筛选" })).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "预览影响与差异" }),
+    ).toHaveProperty("disabled", true);
+    expect(fetcher).not.toHaveBeenCalled();
+  },
+);
 it("labels and aligns populated filters while retaining selected targets and keyboard controls", async () => {
   const fetcher = vi.fn(async () => json([]));
   vi.stubGlobal("fetch", fetcher);
-  mount(<FleetPlanForm
-    inventory={{ ...inventory, hosts: inventory.hosts.map(host => ({ ...host, group: "团队", tags: ["办公"] })) }}
-    history={[]} initialDeploymentId="path" initialTargetIds={["core"]}
-    onClose={() => {}} onCreated={() => {}} />);
+  mount(
+    <FleetPlanForm
+      inventory={{
+        ...inventory,
+        hosts: inventory.hosts.map((host) => ({
+          ...host,
+          group: "团队",
+          tags: ["办公"],
+        })),
+      }}
+      history={[]}
+      initialDeploymentId="path"
+      initialTargetIds={["core"]}
+      onClose={() => {}}
+      onCreated={() => {}}
+    />,
+  );
   const toolbar = screen.getByRole("search", { name: "筛选执行范围" });
-  const tags = within(toolbar).getByRole("combobox", { name: "筛选服务器标签" }) as HTMLButtonElement;
+  const tags = within(toolbar).getByRole("combobox", {
+    name: "筛选服务器标签",
+  }) as HTMLButtonElement;
   await userEvent.click(tags);
   await userEvent.click(screen.getByRole("option", { name: "办公" }));
   await userEvent.keyboard("{Escape}");
@@ -125,21 +355,43 @@ it("labels and aligns populated filters while retaining selected targets and key
   expect(tags.labels).toHaveLength(1);
   expect(tags.labels?.[0].textContent).toBe("服务器标签");
   const stylesheet = document.createElement("style");
-  stylesheet.textContent = (await compile("@theme { --spacing: 0.25rem; --breakpoint-sm: 40rem; } @tailwind utilities;"))
-    .build([toolbar, ...toolbar.querySelectorAll<HTMLElement>("[class]")].flatMap(node => [...node.classList]));
+  stylesheet.textContent = (
+    await compile(
+      "@theme { --spacing: 0.25rem; --breakpoint-sm: 40rem; } @tailwind utilities;",
+    )
+  ).build(
+    [toolbar, ...toolbar.querySelectorAll<HTMLElement>("[class]")].flatMap(
+      (node) => [...node.classList],
+    ),
+  );
   document.head.append(stylesheet);
-  try { expect(getComputedStyle(toolbar).alignItems).toBe("flex-start"); }
-  finally { stylesheet.remove(); }
+  try {
+    expect(getComputedStyle(toolbar).alignItems).toBe("flex-start");
+  } finally {
+    stylesheet.remove();
+  }
   remove.focus();
   await userEvent.keyboard("{Enter}");
-  expect(within(toolbar).queryByRole("button", { name: "移除 办公" })).toBeNull();
-  expect(within(toolbar).getByRole("combobox", { name: "筛选服务器标签" })).toBe(tags);
-  const search = within(toolbar).getByRole("textbox", { name: "筛选批量变更实例" });
+  expect(
+    within(toolbar).queryByRole("button", { name: "移除 办公" }),
+  ).toBeNull();
+  expect(
+    within(toolbar).getByRole("combobox", { name: "筛选服务器标签" }),
+  ).toBe(tags);
+  const search = within(toolbar).getByRole("textbox", {
+    name: "筛选批量变更实例",
+  });
   await userEvent.type(search, "Office");
-  await userEvent.click(within(toolbar).getByRole("button", { name: "清除搜索输入" }));
+  await userEvent.click(
+    within(toolbar).getByRole("button", { name: "清除搜索输入" }),
+  );
   expect(document.activeElement).toBe(search);
   expect(search).toHaveProperty("value", "");
-  expect(screen.getByRole("checkbox", { name: "选择实例 Office core" }).getAttribute("data-state")).toBe("checked");
+  expect(
+    screen
+      .getByRole("checkbox", { name: "选择实例 Office core" })
+      .getAttribute("data-state"),
+  ).toBe("checked");
   expect(fetcher).not.toHaveBeenCalled();
 });
 it.for([
@@ -202,7 +454,10 @@ it.for([
       expect(
         dialog.queryByRole("button", { name: "创建待执行批次" }),
       ).toBeNull();
-    else { expect(dialog.getByText("1 个实例")).toBeTruthy(); expect(dialog.getByText("7 位用户受影响")).toBeTruthy(); }
+    else {
+      expect(dialog.getByText("1 个实例")).toBeTruthy();
+      expect(dialog.getByText("7 位用户受影响")).toBeTruthy();
+    }
     expect(writes).toEqual([
       expect.objectContaining({
         deploymentId: "path",
@@ -290,7 +545,8 @@ it("explains known attempt codes before raw detail without implying superseded w
   await scenario.click(() => row.getByRole("button", { name: "展开详情" }));
   for (const [code, copy] of known) {
     const text = dialog.getByText(
-      (_content, element) => element?.tagName === "P" && !!element.textContent?.includes(copy),
+      (_content, element) =>
+        element?.tagName === "P" && !!element.textContent?.includes(copy),
     );
     expect(text.textContent).toContain(
       code === "desired_superseded_review_required"
@@ -299,8 +555,20 @@ it("explains known attempt codes before raw detail without implying superseded w
     );
   }
   expect(dialog.queryByText(/Raw backend detail/)).toBeNull();
-  expect(dialog.getByText((_content, element) => element?.tagName === "P" && /第 7 次.*Future safe detail/.test(element.textContent || ""))).toBeTruthy();
-  expect(dialog.getByText((_content, element) => element?.tagName === "P" && /第 8 次.*future_without_detail/.test(element.textContent || ""))).toBeTruthy();
+  expect(
+    dialog.getByText(
+      (_content, element) =>
+        element?.tagName === "P" &&
+        /第 7 次.*Future safe detail/.test(element.textContent || ""),
+    ),
+  ).toBeTruthy();
+  expect(
+    dialog.getByText(
+      (_content, element) =>
+        element?.tagName === "P" &&
+        /第 8 次.*future_without_detail/.test(element.textContent || ""),
+    ),
+  ).toBeTruthy();
   expect(dialog.queryByText(/尚未创建批次|未提交|安全重试/)).toBeNull();
   await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(1));
   expect(fetcher.mock.calls[0]).toEqual([
