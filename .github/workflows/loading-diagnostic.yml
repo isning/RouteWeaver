@@ -1,0 +1,87 @@
+name: Isolated console loading diagnostic
+on:
+  push:
+    branches: [diagnostic-loading-ab-20261105]
+  workflow_dispatch:
+permissions:
+  contents: read
+env:
+  CI: "true"
+  GOTOOLCHAIN: local
+  GOCACHE: ${{ github.workspace }}/bin/cache/go-build
+  GOMODCACHE: ${{ github.workspace }}/bin/cache/go-mod
+  npm_config_cache: ${{ github.workspace }}/bin/cache/npm
+  ROUTEWEAVER_CHROMIUM: /opt/google/chrome/chrome
+  ROUTEWEAVER_EXPERIMENT_BASE: 0a1280661bd4548d7b711e86e9e9f3defe163791
+jobs:
+  loading:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          go: "true"
+          node: "true"
+      - name: Install browser OS dependencies and CJK fonts
+        working-directory: web
+        run: npx --no-install playwright install-deps chromium
+      - name: Verify installed Chrome Stable and sandboxed startup
+        working-directory: web
+        run: |
+          test "$(readlink -f "$ROUTEWEAVER_CHROMIUM")" = /opt/google/chrome/chrome
+          test -x "$ROUTEWEAVER_CHROMIUM"
+          test "$(dpkg-query -S "$ROUTEWEAVER_CHROMIUM")" = "google-chrome-stable: /opt/google/chrome/chrome"
+          expected=$(dpkg-query --control-show google-chrome-stable md5sums | awk '$2 == "opt/google/chrome/chrome" { print $1 }')
+          [[ "$expected" =~ ^[0-9a-f]{32}$ ]]
+          printf '%s  %s\n' "$expected" "$ROUTEWEAVER_CHROMIUM" | md5sum --check --strict
+          node --input-type=module <<'JS'
+          import { chromium } from 'playwright';
+          import { execFileSync } from 'node:child_process';
+          import { mkdirSync, writeFileSync } from 'node:fs';
+          const executablePath = process.env.ROUTEWEAVER_CHROMIUM;
+          const evidence = {
+            runnerImage: process.env.ImageOS,
+            runnerImageVersion: process.env.ImageVersion,
+            executablePath,
+            playwrightShard: process.env.ROUTEWEAVER_BROWSER_SHARD,
+            installedVersion: execFileSync(executablePath, ['--version'], { encoding: 'utf8' }).trim(),
+            packageVersion: execFileSync('dpkg-query', ['-W', '-f=${Version}', 'google-chrome-stable'], { encoding: 'utf8' }).trim(),
+            executableSHA256: execFileSync('sha256sum', [executablePath], { encoding: 'utf8' }).split(' ')[0],
+            chromiumSandbox: true,
+            startup: 'not-confirmed',
+          };
+          const record = () => {
+            mkdirSync('../bin/verification', { recursive: true });
+            writeFileSync('../bin/verification/browser-environment.json', JSON.stringify(evidence, null, 2) + '\n');
+            console.log(JSON.stringify(evidence));
+          };
+          record();
+          const browser = await chromium.launch({ executablePath, chromiumSandbox: true });
+          try {
+            evidence.browserVersion = browser.version();
+            const page = await browser.newPage();
+            await page.setContent('<title>Sandboxed browser startup</title>');
+            if (await page.title() !== 'Sandboxed browser startup') throw new Error('Browser startup page failed');
+            evidence.startup = 'passed';
+            record();
+          } finally {
+            await browser.close();
+          }
+          JS
+      - name: Run isolated synthetic loading A/B
+        working-directory: web
+        run: node_modules/.bin/playwright test --config playwright.loading-experiment.config.ts
+      - name: Diagnostic evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: loading-ab-diagnostic
+          path: |
+            bin/verification/loading-experiment-report/
+            bin/verification/loading-experiment-results/
+            bin/verification/browser-environment.json
+          if-no-files-found: error
+          retention-days: 7
