@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "src",
+    "vite.config.ts",
+    "playwright.resource-layout-experiment.config.ts",
+    "tests/resource-layout-experiment.vite.ts",
+    "tests/resource-layout-proposal.tsx",
+    "tests/resource-layout-experiment.spec.ts"
+  ]
+}
