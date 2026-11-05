@@ -1,7 +1,7 @@
 name: Isolated console loading diagnostic
 on:
   push:
-    branches: [diagnostic-loading-ab-20261105]
+    branches: [diagnostic-loading-candidate-run-20261105]
   workflow_dispatch:
 permissions:
   contents: read
