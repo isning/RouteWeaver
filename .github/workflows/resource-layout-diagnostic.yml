@@ -1,7 +1,7 @@
 name: Isolated resource layout diagnostic
 on:
   push:
-    branches: [diagnostic-resource-layout-20261105]
+    branches: [diagnostic-resource-v2-run-20261105]
   workflow_dispatch:
 permissions:
   contents: read
