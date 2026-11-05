@@ -77,7 +77,7 @@ import type { Session } from "./types";
 import type { SourceAcceptanceReceipt } from "./SourceUpdateContinuation";
 import { ErrorNotice } from "./components";
 import { PageSkeleton } from "./ui-patterns/loading-state";
-const SubscriptionsPage = lazyPage(() => import("./Subscriptions").then(m => ({ default: m.SubscriptionsPage })));
+import { SubscriptionPageLoader as SubscriptionsPage } from "./SubscriptionPageLoader";
 const AccountMFA = lazyPage(() =>
   import("./Security").then((m) => ({ default: m.SecuritySettings })),
 );

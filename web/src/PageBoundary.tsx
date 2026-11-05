@@ -7,20 +7,20 @@ class PageLoadError extends Error {
     super("Page resources could not be loaded", { cause });
   }
 }
-/** Tag import failures rather than guessing from browser-specific error text. */
-export function lazyPage<T extends ComponentType<any>>(
-  load: () => Promise<{
-    default: T;
-  }>,
-) {
-  return lazy(async () => {
-    try {
-      return await load();
-    } catch (error) {
-      throw new PageLoadError(error);
-    }
-  });
+/** Tag only module failures, retaining the same recovery for every route loader. */
+export async function loadPageModule<T>(load: () => Promise<T>): Promise<T> {
+  try {
+    return await load();
+  } catch (error) {
+    throw new PageLoadError(error);
+  }
 }
+export function lazyPage<T extends ComponentType<any>>(
+  load: () => Promise<{ default: T }>,
+) {
+  return lazy(() => loadPageModule(load));
+}
+
 type Props = {
   children: ReactNode;
   reload?: () => void;

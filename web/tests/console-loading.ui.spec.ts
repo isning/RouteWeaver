@@ -196,6 +196,106 @@ test("a held optional route import cannot replace newer navigation", async ({
     gate.release();
   }
 });
+test("an inactive subscription import cannot mount or read account inventory", async ({
+  page,
+}) => {
+  await openWorkspace(page);
+  await navigateWorkspace(page, "订阅来源");
+  // A fresh document on another route has no subscription module or query cache.
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: "订阅来源", level: 1, exact: true }),
+  ).toBeVisible();
+  await inventories(page);
+  const gate = barrier();
+  let moduleURL = "";
+  const reads: string[] = [];
+  page.on("request", (request) => {
+    const path = new URL(request.url()).pathname;
+    if (/^\/api\/me\/(overview|profiles|outputs)$/.test(path)) reads.push(path);
+  });
+  await page.route(/\/src\/Subscriptions\.tsx(?:\?.*)?$/, async (route) => {
+    moduleURL = route.request().url();
+    await gate.promise;
+    await route.continue();
+  });
+  try {
+    await navigateWorkspace(page, "我的订阅");
+    await expect.poll(() => moduleURL).not.toBe("");
+    await expect(
+      page.getByRole("status", { name: "正在打开页面", exact: true }),
+    ).toBeVisible();
+    expect(reads).toEqual([]);
+    await navigateWorkspace(page, "订阅来源");
+    gate.release();
+    // Join the already requested native module evaluation without mounting it.
+    // This proves the negative after completion, not before a network race ends.
+    await page.evaluate((url) => import(url).then(() => undefined), moduleURL);
+    await expect(
+      page.getByRole("heading", { name: "订阅来源", level: 1, exact: true }),
+    ).toBeVisible();
+    expect(reads).toEqual([]);
+    expect(new URL(page.url()).hash).toBe("#sources");
+    await navigateWorkspace(page, "我的订阅");
+    await expect(
+      page.getByRole("article", {
+        name: `分流配置 ${profile.name}`,
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect
+      .poll(() => reads.slice().sort())
+      .toEqual(["/api/me/outputs", "/api/me/overview", "/api/me/profiles"]);
+  } finally {
+    gate.release();
+  }
+});
+test("a failed subscription module keeps navigation and recovers only on explicit refresh", async ({
+  page,
+}) => {
+  await openWorkspace(page);
+  await navigateWorkspace(page, "订阅来源");
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: "订阅来源", level: 1, exact: true }),
+  ).toBeVisible();
+  await inventories(page);
+  const pattern = /\/src\/Subscriptions\.tsx(?:\?.*)?$/;
+  let requests = 0;
+  await page.route(pattern, (route) => {
+    requests++;
+    return route.abort("failed");
+  });
+  await navigateWorkspace(page, "我的订阅");
+  await expect(
+    page.getByRole("heading", { name: "页面资源未能加载", exact: true }),
+  ).toBeVisible();
+  expect(requests).toBe(1);
+  await expect(
+    page.getByRole("button", { name: "重新打开页面", exact: true }),
+  ).toHaveCount(0);
+  await navigateWorkspace(page, "订阅来源");
+  await expect(
+    page.getByRole("heading", { name: "订阅来源", level: 1, exact: true }),
+  ).toBeVisible();
+  await navigateWorkspace(page, "我的订阅");
+  await expect(
+    page.getByRole("heading", { name: "页面资源未能加载", exact: true }),
+  ).toBeVisible();
+  expect(requests).toBe(1);
+  await page.unroute(pattern);
+  await Promise.all([
+    page.waitForEvent("domcontentloaded"),
+    page.getByRole("button", { name: "刷新工作空间", exact: true }).click(),
+  ]);
+  await expect(
+    page.getByRole("article", {
+      name: `分流配置 ${profile.name}`,
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(page.getByRole("alert")).toHaveCount(0);
+});
 test("an interrupted QR module preserves the link, copy and Close", async ({
   page,
   context,
