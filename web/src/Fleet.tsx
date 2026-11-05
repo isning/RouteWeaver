@@ -328,12 +328,11 @@ export function FleetPlanForm({
     ...(lifecycle ? { targetReleaseId } : {}),
   });
   const inspect = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (version: number) => {
       if (blocksConfigure(input()))
         throw new Error("此转发路径有提交结果待处理，请先确认该次提交结果。");
       if (strategyIssue) throw new Error(strategyIssue);
-      const version = revision.current,
-        body = input();
+      const body = input();
       if (!deploymentId) throw new Error("请选择保存的转发路径。");
       if (
         targetIds.some(
@@ -359,7 +358,7 @@ export function FleetPlanForm({
     },
   });
   const create = useMutation({
-    mutationFn: () => {
+    mutationFn: (_version: number) => {
       if (!review || blocksConfigure(review.input))
         throw new Error("此转发路径有提交结果待处理，请先确认该次提交结果。");
       return post<FleetBatch>(base, {
@@ -369,8 +368,12 @@ export function FleetPlanForm({
       });
     },
     onSuccess: onCreated,
-    onError: (error) => {
-      if (error instanceof APIError && error.status === 409) {
+    onError: (error, version) => {
+      if (
+        version === revision.current &&
+        error instanceof APIError &&
+        error.status === 409
+      ) {
         setReview(null);
         setConfirmed(false);
       }
@@ -418,8 +421,19 @@ export function FleetPlanForm({
       () => onClose(),
     );
   };
-  const createError = fleetCreateFeedback(create.error);
-  const previewError = inspect.error || (!review ? createError : null);
+  // A request belongs to the input revision that started it. Changing paths or
+  // editing the plan does not make an old response feedback for the new task.
+  // Creation still locks the form until the request settles, even if a live
+  // permission change invalidates the reviewed input in the meantime.
+  const currentInspection = inspect.variables === revision.current;
+  const previewPending = currentInspection && inspect.isPending;
+  const createError =
+    create.variables === revision.current
+      ? fleetCreateFeedback(create.error)
+      : null;
+  const previewError =
+    (currentInspection ? inspect.error : null) ||
+    (!review ? createError : null);
   return (
     <TaskSheet
       bodyProps={{ className: "space-y-5" }}
@@ -989,8 +1003,8 @@ export function FleetPlanForm({
             aria-describedby={
               previewError ? `${feedbackId}-preview` : undefined
             }
-            aria-busy={inspect.isPending}
-            pending={inspect.isPending}
+            aria-busy={previewPending}
+            pending={previewPending}
             disabled={
               directPending ||
               !deploymentId ||
@@ -999,7 +1013,7 @@ export function FleetPlanForm({
             }
             onClick={() => {
               create.reset();
-              inspect.mutate();
+              inspect.mutate(revision.current);
             }}
             variant="default"
           >
@@ -1075,7 +1089,7 @@ export function FleetPlanForm({
                     form.current?.contains(focused)
                       ? focused
                       : null;
-                  create.mutate();
+                  create.mutate(revision.current);
                 }}
                 variant="default"
               >

@@ -294,7 +294,12 @@ it.for([
   },
   {
     name: "saved path without instances",
-    deployments: [{ ...inventory.deployments[0], ir: { ...inventory.deployments[0].ir, programs: [] } }],
+    deployments: [
+      {
+        ...inventory.deployments[0],
+        ir: { ...inventory.deployments[0].ir, programs: [] },
+      },
+    ],
     initialDeploymentId: "path",
     message: "此转发路径暂无可选实例。核对路径中的实例配置后，可在此安排变更。",
   },
@@ -321,6 +326,249 @@ it.for([
     expect(fetcher).not.toHaveBeenCalled();
   },
 );
+it.for(["success", "failure"])(
+  "keeps a late path A preview $0 out of path B and retains B errors",
+  async (outcome) => {
+    let completeA!: (response: Response) => void;
+    const pendingA = new Promise<Response>((resolve) => {
+      completeA = resolve;
+    });
+    const fetcher = vi.fn(async (_url, init) => {
+      const body = JSON.parse(String(init?.body));
+      return body.deploymentId === "path"
+        ? pendingA
+        : json({ detail: "Current path B preview failed" }, 503);
+    });
+    vi.stubGlobal("fetch", fetcher);
+    mount(
+      <FleetPlanForm
+        inventory={{
+          ...inventory,
+          deployments: [
+            ...inventory.deployments,
+            { ...inventory.deployments[0], id: "other", name: "Other path" },
+          ],
+        }}
+        history={[]}
+        onClose={() => {}}
+        onCreated={() => {}}
+      />,
+    );
+    const path = screen.getByRole("combobox", { name: "批量变更转发路径" });
+    await userEvent.click(path);
+    await userEvent.click(screen.getByRole("option", { name: "Office path" }));
+    await userEvent.click(screen.getByRole("button", { name: "选择筛选结果" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "预览影响与差异" }),
+    );
+    await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(1));
+    await userEvent.click(path);
+    await userEvent.click(screen.getByRole("option", { name: "Other path" }));
+    await userEvent.click(
+      within(await screen.findByRole("alertdialog")).getByRole("button", {
+        name: "更换路径",
+      }),
+    );
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+    await userEvent.click(screen.getByRole("button", { name: "选择筛选结果" }));
+    expect(
+      screen.getByRole("button", { name: "预览影响与差异" }),
+    ).toHaveProperty("disabled", false);
+    await act(async () => {
+      completeA(
+        outcome === "success"
+          ? json(plan)
+          : json({ detail: "Obsolete path A preview failed" }, 503),
+      );
+      await pendingA;
+    });
+    await waitFor(() =>
+      expect(
+        screen
+          .getByRole("button", { name: "预览影响与差异" })
+          .getAttribute("aria-busy"),
+      ).toBeNull(),
+    );
+    expect(screen.queryByText("Obsolete path A preview failed")).toBeNull();
+    expect(
+      screen.queryByRole("checkbox", { name: "我已核对实例、阶段与影响范围" }),
+    ).toBeNull();
+    expect(screen.queryByRole("button", { name: "创建待执行批次" })).toBeNull();
+    await userEvent.click(
+      screen.getByRole("button", { name: "预览影响与差异" }),
+    );
+    await screen.findByText("Current path B preview failed");
+    expect(fetcher).toHaveBeenCalledTimes(2);
+    expect(
+      screen
+        .getByRole("checkbox", { name: "选择实例 Office core" })
+        .getAttribute("data-state"),
+    ).toBe("checked");
+  },
+);
+it.for([
+  { outcome: "success", bState: "pending" },
+  { outcome: "failure", bState: "pending" },
+  { outcome: "success", bState: "failed" },
+  { outcome: "failure", bState: "failed" },
+])(
+  "keeps path B $bState feedback when overlapping path A returns $outcome",
+  async ({ outcome, bState }) => {
+    let completeA!: (response: Response) => void;
+    let completeB!: (response: Response) => void;
+    const pendingA = new Promise<Response>((resolve) => {
+      completeA = resolve;
+    });
+    const pendingB = new Promise<Response>((resolve) => {
+      completeB = resolve;
+    });
+    const requests: string[] = [];
+    const fetcher = vi.fn(async (_url, init) => {
+      const body = JSON.parse(String(init?.body));
+      requests.push(body.deploymentId);
+      return body.deploymentId === "path" ? pendingA : pendingB;
+    });
+    vi.stubGlobal("fetch", fetcher);
+    mount(
+      <FleetPlanForm
+        inventory={{
+          ...inventory,
+          deployments: [
+            ...inventory.deployments,
+            { ...inventory.deployments[0], id: "other", name: "Other path" },
+          ],
+        }}
+        history={[]}
+        onClose={() => {}}
+        onCreated={() => {}}
+      />,
+    );
+    const path = screen.getByRole("combobox", { name: "批量变更转发路径" });
+    const preview = screen.getByRole("button", { name: "预览影响与差异" });
+    await userEvent.click(path);
+    await userEvent.click(screen.getByRole("option", { name: "Office path" }));
+    await userEvent.click(screen.getByRole("button", { name: "选择筛选结果" }));
+    await userEvent.click(preview);
+    await waitFor(() => expect(requests).toEqual(["path"]));
+    await userEvent.click(path);
+    await userEvent.click(screen.getByRole("option", { name: "Other path" }));
+    await userEvent.click(
+      within(await screen.findByRole("alertdialog")).getByRole("button", {
+        name: "更换路径",
+      }),
+    );
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+    await userEvent.click(screen.getByRole("button", { name: "选择筛选结果" }));
+    await userEvent.click(preview);
+    await waitFor(() => expect(requests).toEqual(["path", "other"]));
+    expect(preview.getAttribute("aria-busy")).toBe("true");
+    expect(preview).toHaveProperty("disabled", true);
+    const finishB = async () => {
+      await act(async () => {
+        completeB(json({ detail: "Current path B preview failed" }, 503));
+        await pendingB;
+      });
+      await screen.findByText("Current path B preview failed");
+    };
+    if (bState === "failed") await finishB();
+    // A is released only after B's request exists (and, in two cases, B's
+    // error is already visible). Both responses are owned by the HTTP seam.
+    await act(async () => {
+      completeA(
+        outcome === "success"
+          ? json(plan)
+          : json({ detail: "Obsolete path A preview failed" }, 503),
+      );
+      await pendingA;
+    });
+    if (bState === "pending") {
+      expect(preview.getAttribute("aria-busy")).toBe("true");
+      expect(preview).toHaveProperty("disabled", true);
+      expect(screen.queryByText("Current path B preview failed")).toBeNull();
+      await finishB();
+    }
+    expect(
+      screen.getByText("Current path B preview failed", { exact: true }),
+    ).toBeTruthy();
+    expect(preview.getAttribute("aria-busy")).toBeNull();
+    expect(preview).toHaveProperty("disabled", false);
+    expect(screen.queryByText("Obsolete path A preview failed")).toBeNull();
+    expect(
+      screen.queryByRole("checkbox", { name: "我已核对实例、阶段与影响范围" }),
+    ).toBeNull();
+    expect(screen.queryByRole("button", { name: "创建待执行批次" })).toBeNull();
+    expect(path.textContent).toBe("Other path");
+    expect(
+      screen
+        .getByRole("checkbox", { name: "选择实例 Office core" })
+        .getAttribute("data-state"),
+    ).toBe("checked");
+    expect(fetcher).toHaveBeenCalledTimes(2);
+  },
+);
+it("keeps a failed create tied to its path and retains a new path's own failure", async () => {
+  const fetcher = vi.fn(async (url, init) => {
+    if (String(url).endsWith("/preview")) return json(plan);
+    const body = JSON.parse(String(init?.body));
+    return json(
+      {
+        detail:
+          body.deploymentId === "path"
+            ? "Path A creation result needs checking"
+            : "Path B creation result needs checking",
+      },
+      503,
+    );
+  });
+  vi.stubGlobal("fetch", fetcher);
+  mount(
+    <FleetPlanForm
+      inventory={{
+        ...inventory,
+        deployments: [
+          ...inventory.deployments,
+          { ...inventory.deployments[0], id: "other", name: "Other path" },
+        ],
+      }}
+      history={[]}
+      onClose={() => {}}
+      onCreated={() => {}}
+    />,
+  );
+  const path = screen.getByRole("combobox", { name: "批量变更转发路径" });
+  for (const [name, error] of [
+    ["Office path", "Path A creation result needs checking"],
+    ["Other path", "Path B creation result needs checking"],
+  ]) {
+    await userEvent.click(path);
+    await userEvent.click(screen.getByRole("option", { name }));
+    if (name === "Other path") {
+      await userEvent.click(
+        within(await screen.findByRole("alertdialog")).getByRole("button", {
+          name: "更换路径",
+        }),
+      );
+      await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+      expect(
+        screen.queryByText("Path A creation result needs checking"),
+      ).toBeNull();
+    }
+    await userEvent.click(screen.getByRole("button", { name: "选择筛选结果" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "预览影响与差异" }),
+    );
+    await userEvent.click(
+      await screen.findByRole("checkbox", {
+        name: "我已核对实例、阶段与影响范围",
+      }),
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: "创建待执行批次" }),
+    );
+    await screen.findByText(error);
+  }
+  expect(fetcher).toHaveBeenCalledTimes(4);
+});
 it("labels and aligns populated filters while retaining selected targets and keyboard controls", async () => {
   const fetcher = vi.fn(async () => json([]));
   vi.stubGlobal("fetch", fetcher);
