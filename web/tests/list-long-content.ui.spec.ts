@@ -1,8 +1,10 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
+import { settledTask } from "./ui-settled-task";
 
-// Production lists with read-only API fixtures. Geometry and complete text are
-// checked in the browser; this does not claim delivery or persistence evidence.
-test.use({ trace: "off", screenshot: "off", video: "off" });
+// Production lists with isolated synthetic API fixtures. Every write is either
+// explicitly fulfilled here or refused; none reaches a backend. This verifies
+// browser task behavior and layout, not resource delivery or persistence.
+test.use({ serviceWorkers: "block", trace: "off", screenshot: "off", video: "off" });
 const deliveryTitle =
   "跨区域线路维护与恢复安排：请核对东京、伦敦及法兰克福入口的当前状态。" +
   "MaintenanceNoticeWithoutWordSeparators".repeat(3);
@@ -12,12 +14,15 @@ const deliveryReason =
 const resourceFailure =
   "刷新失败，保留已接纳文件。新发布前请重试或替换。";
 
-async function setup(page: Page) {
+const refreshRequestFailure = "远程文件暂时无法读取，请稍后重试。";
+
+async function setup(page: Page, refreshJourney = false) {
   const baseURL = test.info().project.use.baseURL;
   if (!baseURL || !["127.0.0.1", "localhost", "[::1]"].includes(new URL(baseURL).hostname))
     throw new Error("Controlled list layout review requires loopback");
   const origin = new URL(baseURL).origin;
   const unexpected: string[] = [];
+  const refreshRequests: string[] = [];
   const responses: Record<string, unknown> = {
     "/api/auth/me": {
       user: { id: "list-review", name: "列表审查管理员", role: "admin" },
@@ -34,7 +39,7 @@ async function setup(page: Page) {
       id: "retained-rules", name: "已接纳的规则文件", revision: "1",
       format: "mihomo-yaml", behavior: "domain", location: "inline",
       updatePolicy: "pinned", acceptedVersion: "accepted-1",
-      sizeBytes: 2450, canRefresh: true, refreshStatus: "failed",
+      sizeBytes: 2450, canRefresh: true, refreshStatus: refreshJourney ? "accepted" : "failed",
       visibility: "private",
     }],
   };
@@ -45,13 +50,20 @@ async function setup(page: Page) {
       return route.abort();
     }
     if (!url.pathname.startsWith("/api/")) return route.continue();
+    if (refreshJourney && request.method() === "POST" && url.pathname === "/api/me/resources/retained-rules/refresh") {
+      refreshRequests.push(url.pathname);
+      const failed = refreshRequests.length === 1;
+      const resources = responses["/api/me/resources"] as { refreshStatus: string }[];
+      resources[0].refreshStatus = failed ? "failed" : "accepted";
+      return route.fulfill({ status: failed ? 503 : 200, json: failed ? { error: refreshRequestFailure } : {} });
+    }
     if (request.method() !== "GET" || !(url.pathname in responses)) {
       unexpected.push(`${request.method()} ${url.pathname}`);
       return route.fulfill({ status: 503, json: { message: "Unexpected controlled list request" } });
     }
     return route.fulfill({ json: responses[url.pathname] });
   });
-  return unexpected;
+  return { unexpected, refreshRequests };
 }
 
 async function completeWrappedText(element: Locator, text: string) {
@@ -120,7 +132,7 @@ async function hasErrorTone(element: Locator) {
 for (const width of [1440, 390]) {
   test(`delivery title and failure reason stay readable without widening the list at ${width}`, async ({ page }, info) => {
     await page.setViewportSize({ width, height: 1000 });
-    const unexpected = await setup(page);
+    const { unexpected } = await setup(page);
     await page.goto("/#notifications");
     await page.getByRole("tab", { name: "发送记录", exact: true }).click();
     const row = page.getByRole("row").filter({ has: page.getByText(deliveryTitle, { exact: true }) });
@@ -139,10 +151,11 @@ for (const width of [1440, 390]) {
 
   test(`resource refresh failure remains complete beside usable row actions at ${width}`, async ({ page }, info) => {
     await page.setViewportSize({ width, height: 1000 });
-    const unexpected = await setup(page);
+    const { unexpected } = await setup(page);
     await page.goto("/#resources");
-    await completeWrappedText(page.getByRole("alert"), resourceFailure);
-    await hasErrorTone(page.getByRole("alert"));
+    const fullReason = page.getByText(resourceFailure, { exact: true });
+    await completeWrappedText(fullReason, resourceFailure);
+    await hasErrorTone(fullReason);
     await expect(page.getByText("随配置打包", { exact: true })).toBeVisible();
     const row = page.getByRole("row").filter({ has: page.getByText("已接纳的规则文件", { exact: true }) });
     await startsNearRowTop(row);
@@ -151,8 +164,96 @@ for (const width of [1440, 390]) {
     await refresh.focus();
     await expect(refresh).toBeFocused();
     await expect(refresh).toBeInViewport();
+    const actions = row.getByRole("group", { name: "已接纳的规则文件 的操作", exact: true });
+    const shortStatus = actions.getByText("刷新失败", { exact: true });
+    // Persisted row state is read in context, not as a fresh live alert. The
+    // visual reminder is hidden from speech; actions describe the full reason.
+    await expect(page.getByRole("alert")).toHaveCount(0);
+    await expect(fullReason).toHaveText(resourceFailure);
+    await expect(refresh).toHaveAccessibleDescription(resourceFailure);
+    await expect(actions.getByRole("button", { name: "替换文件", exact: true })).toHaveAccessibleDescription(resourceFailure);
+    await expect(shortStatus).toHaveAttribute("aria-hidden", "true");
+    if (width === 390) {
+      await expect(shortStatus).toBeInViewport({ ratio: 1 });
+      await hasErrorTone(shortStatus);
+      await page.setViewportSize({ width: 1440, height: 1000 });
+      await expect(shortStatus).not.toBeVisible();
+      await expect(fullReason).toBeVisible();
+      await page.setViewportSize({ width: 390, height: 1000 });
+      await actions.getByRole("button", { name: "替换文件", exact: true }).focus();
+      await page.keyboard.press("Tab");
+      await expect(shortStatus).toBeInViewport({ ratio: 1 });
+      await expect(refresh).toBeFocused();
+    } else await expect(shortStatus).not.toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
     await page.screenshot({ path: info.outputPath(`resource-refresh-failure-${width}.png`), fullPage: true });
     expect(unexpected).toEqual([]);
   });
+
+  test(`resource refresh hands failure back to its actions and recovers after retry at ${width}`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: 1000 });
+    const { unexpected, refreshRequests } = await setup(page, true);
+    await page.goto("/#resources");
+    const actions = page.getByRole("group", { name: "已接纳的规则文件 的操作", exact: true });
+    const refresh = actions.getByRole("button", { name: "刷新文件", exact: true });
+    await expect(actions.getByText("刷新失败", { exact: true })).toHaveCount(0);
+    await refresh.focus();
+    await refresh.press("Enter");
+    const decision = page.getByRole("alertdialog");
+    await settledTask(decision);
+    await decision.getByRole("button", { name: "读取并接纳", exact: true }).click();
+    await expect(decision.getByRole("alert")).toHaveText(refreshRequestFailure);
+    // Includes hidden background DOM: only the current decision owns a live error.
+    await expect(page.locator('[role="alert"]')).toHaveCount(1);
+    await page.screenshot({ path: info.outputPath(`resource-refresh-request-failure-${width}.png`), fullPage: true });
+    await decision.press("Escape");
+    await expect(decision).toHaveCount(0);
+    await expect(refresh).toBeFocused();
+    await expect(refresh).toHaveAccessibleDescription(resourceFailure);
+    await expect(page.getByRole("alert")).toHaveCount(1);
+    await expect(page.getByRole("alert")).toContainText(refreshRequestFailure);
+    const shortStatus = actions.getByText("刷新失败", { exact: true });
+    const fullReason = page.getByText(resourceFailure, { exact: true });
+    await expect(fullReason).toHaveAttribute("id", await refresh.getAttribute("aria-describedby") || "missing-description");
+    await expect(fullReason).not.toHaveAttribute("role", "alert");
+    if (width === 390) await expect(shortStatus).toBeInViewport({ ratio: 1 });
+    else await expect(shortStatus).not.toBeVisible();
+    await page.screenshot({ path: info.outputPath(`resource-refresh-recovery-actions-${width}.png`), fullPage: true });
+    await refresh.press("Enter");
+    await settledTask(decision);
+    await expect(page.locator('[role="alert"]')).toHaveCount(0);
+    await decision.getByRole("button", { name: "取消", exact: true }).click();
+    await expect(decision).toHaveCount(0);
+    await expect(refresh).toBeFocused();
+    await expect(page.getByRole("alert")).toHaveCount(1);
+    await expect(page.getByRole("alert")).toContainText(refreshRequestFailure);
+    expect(refreshRequests).toHaveLength(1);
+    const replace = actions.getByRole("button", { name: "替换文件", exact: true });
+    await expect(replace).toHaveAccessibleDescription(resourceFailure);
+    await replace.click();
+    const replacement = page.getByRole("dialog", { name: "替换 已接纳的规则文件", exact: true });
+    await settledTask(replacement);
+    await replacement.getByRole("button", { name: "取消", exact: true }).click();
+    await expect(replacement).toHaveCount(0);
+    await expect(replace).toBeFocused();
+    await expect(page.getByRole("alert")).toContainText(refreshRequestFailure);
+    await refresh.focus();
+    await refresh.press("Enter");
+    await settledTask(decision);
+    await expect(page.locator('[role="alert"]')).toHaveCount(0);
+    await decision.getByRole("button", { name: "读取并接纳", exact: true }).click();
+    await expect(decision).toHaveCount(0);
+    await expect(refresh).toBeFocused();
+    await expect(shortStatus).toHaveCount(0);
+    await expect(fullReason).toHaveCount(0);
+    await expect(page.getByText(refreshRequestFailure, { exact: true })).toHaveCount(0);
+    await expect(refresh).not.toHaveAttribute("aria-describedby");
+    await expect(replace).not.toHaveAttribute("aria-describedby");
+    expect(refreshRequests).toEqual([
+      "/api/me/resources/retained-rules/refresh",
+      "/api/me/resources/retained-rules/refresh",
+    ]);
+    expect(unexpected).toEqual([]);
+  });
+
 }

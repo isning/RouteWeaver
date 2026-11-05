@@ -52,7 +52,12 @@ const draftSnapshot = (values: object) =>
   );
 export function ResourcesPage() {
   const formId = useId();
+  const refreshFailureId = (resource: RuleResource) =>
+    resource.acceptedVersion && resource.refreshStatus === "failed"
+      ? `${formId}-refresh-${encodeURIComponent(resource.id)}`
+      : undefined;
   const confirmRefresh = useConfirm();
+  const [refreshDecisionOpen, setRefreshDecisionOpen] = useState(false);
   const client = useQueryClient();
   const message = toast;
   const query = useQuery({
@@ -216,7 +221,7 @@ export function ResourcesPage() {
           </div>
         }
       />
-      <ErrorNotice error={refresh.error} />
+      <ErrorNotice error={refreshDecisionOpen ? null : refresh.error} />
       <QueryState
         loading={query.isPending}
         paused={query.isPaused}
@@ -261,7 +266,10 @@ export function ResourcesPage() {
                           {bytesLabel(r.sizeBytes)}
                         </small>
                         {r.refreshStatus === "failed" && (
-                          <p role="alert" className="mt-1.5 text-destructive">
+                          <p
+                            id={refreshFailureId(r)}
+                            className="mt-1.5 text-destructive"
+                          >
                             <span className="font-medium">刷新失败</span>
                             ，保留已接纳文件。新发布前请重试或替换。
                           </p>
@@ -284,16 +292,30 @@ export function ResourcesPage() {
                   align: "right",
                   render: (_, r) => (
                     <TableRowActions name={r.name || r.id}>
-                      <ActionButton onClick={() => edit(r)} variant="outline">
+                      {refreshFailureId(r) && (
+                        <span
+                          aria-hidden="true"
+                          className="hidden basis-full text-right text-xs font-medium text-destructive group-data-[overflow=true]/table:block"
+                        >
+                          刷新失败
+                        </span>
+                      )}
+                      <ActionButton
+                        onClick={() => edit(r)}
+                        variant="outline"
+                        aria-describedby={refreshFailureId(r)}
+                      >
                         {r.acceptedVersion ? "替换文件" : "编辑"}
                       </ActionButton>
                       {r.canRefresh && (
                         <ActionButton
+                          aria-describedby={refreshFailureId(r)}
                           variant="outline"
                           pending={
                             !!(refresh.isPending && refresh.variables === r.id)
                           }
-                          onClick={() =>
+                          onClick={() => {
+                            setRefreshDecisionOpen(true);
                             confirmRefresh({
                               title: `重新读取并接纳「${r.name || r.id}」的远程规则文件？`,
                               description:
@@ -301,8 +323,9 @@ export function ResourcesPage() {
                               confirmLabel: "读取并接纳",
                               cancelLabel: "取消",
                               onConfirm: () => refresh.mutateAsync(r.id),
-                            })
-                          }
+                              onClosed: () => setRefreshDecisionOpen(false),
+                            });
+                          }}
                         >
                           刷新文件
                         </ActionButton>
