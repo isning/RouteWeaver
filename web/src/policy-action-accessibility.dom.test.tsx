@@ -3,6 +3,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import {
   act,
   cleanup,
+  fireEvent,
   render,
   screen,
   waitFor,
@@ -164,6 +165,14 @@ it("keeps the group preview action name stable and exposes busy state while its 
       observed,
       "POLICY_ACTION_HELD_CONTRACT: group-preview stable name and busy state",
     ).toEqual({ stableName: true, busy: "true" });
+    expect((button as HTMLButtonElement).disabled).toBe(false);
+    expect(button.getAttribute("aria-disabled")).toBe("true");
+    expect(document.activeElement).toBe(button);
+    await user.click(button);
+    await user.keyboard("{Enter} ");
+    await act(async () => { fireEvent.submit(button.closest("form")!); });
+    expect(vi.mocked(fetch).mock.calls.filter(([url]) => String(url).endsWith("/access-policy/preview"))).toHaveLength(1);
+    expect(document.activeElement).toBe(button);
   } finally {
     responseReleased = true;
     await act(async () => {
@@ -179,7 +188,10 @@ it("keeps the group preview action name stable and exposes busy state while its 
     });
   }
   owner.assertActive();
-  await screen.findByRole("dialog", { name: "确认授权变更" });
+  const review = await screen.findByRole("dialog", { name: "确认授权变更" });
+  owner.assertActive();
+  await user.click(within(review).getByRole("button", { name: "返回编辑" }));
+  await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("button", { name: "预览影响" })));
   owner.assertActive();
 });
 
@@ -277,6 +289,14 @@ it("keeps the user preview action name stable and clears busy state after its he
     });
     owner.assertActive();
     expectNamedAction(button, "预览影响", true);
+    expect((button as HTMLButtonElement).disabled).toBe(false);
+    expect(button.getAttribute("aria-disabled")).toBe("true");
+    expect(document.activeElement).toBe(button);
+    await user.click(button);
+    await user.keyboard("{Enter} ");
+    await act(async () => { fireEvent.submit(button.closest("form")!); });
+    expect(vi.mocked(fetch).mock.calls.filter(([url]) => String(url).endsWith("/access-policy/preview"))).toHaveLength(1);
+    expect(document.activeElement).toBe(button);
     responseReleased = true;
     await act(async () => {
       release(
@@ -290,6 +310,9 @@ it("keeps the user preview action name stable and clears busy state after its he
       expect(button.querySelector('[data-slot="spinner"]')).toBeNull();
       expectNamedAction(button, "预览影响", false);
     });
+    owner.assertActive();
+    await user.click(within(screen.getByRole("dialog", { name: "确认授权变更" })).getByRole("button", { name: "返回编辑" }));
+    await waitFor(() => expect(document.activeElement).toBe(button));
     owner.assertActive();
   } finally {
     responseReleased = true;
@@ -362,6 +385,14 @@ it("keeps the service preview action name stable and clears busy state after its
     });
     owner.assertActive();
     expectNamedAction(button, "预览影响", true);
+    expect((button as HTMLButtonElement).disabled).toBe(false);
+    expect(button.getAttribute("aria-disabled")).toBe("true");
+    expect(document.activeElement).toBe(button);
+    await user.click(button);
+    await user.keyboard("{Enter} ");
+    await act(async () => { fireEvent.submit(button.closest("form")!); });
+    expect(vi.mocked(fetch).mock.calls.filter(([url]) => String(url).endsWith("/access-policy/preview"))).toHaveLength(1);
+    expect(document.activeElement).toBe(button);
     responseReleased = true;
     await act(async () => {
       release(heldReview());
@@ -373,6 +404,9 @@ it("keeps the service preview action name stable and clears busy state after its
       expect(button.querySelector('[data-slot="spinner"]')).toBeNull();
       expectNamedAction(button, "预览影响", false);
     });
+    owner.assertActive();
+    await user.click(within(screen.getByRole("dialog", { name: "确认授权变更" })).getByRole("button", { name: "返回编辑" }));
+    await waitFor(() => expect(document.activeElement).toBe(button));
     owner.assertActive();
   } finally {
     responseReleased = true;

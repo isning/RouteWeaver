@@ -381,7 +381,7 @@ function UserPolicyFields({ user, context, services, routes, onClose, retained, 
           <ActionButton {...commandProps} type="button" aria-disabled={blocked() || policy.closingBlocked} onClick={() => {
             if (commandAllowed())
                 form.submit();
-        }} aria-label="预览影响" aria-busy={policy.pending} pending={policy.pending} variant="default">
+        }} aria-label="预览影响" aria-busy={policy.pending} keepFocusableWhilePending pending={policy.pending} variant="default">
             预览影响
           </ActionButton>
         </div>

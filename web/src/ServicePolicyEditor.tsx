@@ -173,7 +173,7 @@ function ServicePolicyDraft({ context, seed, retained, discardRetained, acceptLa
       <ServicePolicyComparison resource={{ target: { kind: "service", id: saved.service.id }, before: saved.baseline, after: { service: saved.service } }} title="保留的草稿" showAll draftQuota={{ value: saved.quotaGiB }} beforeLabel="当时打开的版本" afterLabel="保留的草稿"/>
       <ActionButton onClick={() => discardRetained(index)} variant="destructive">丢弃此草稿副本</ActionButton>
     </> }))).map(section => <AccordionItem key={section.key} value={String(section.key)}><AccordionTrigger>{section.label}</AccordionTrigger><AccordionContent className="space-y-4">{section.children}</AccordionContent></AccordionItem>)}</Accordion>}
-    <AppForm form={form} onFocusCapture={revealFocusedDrawerControl} initialValues={{ ...value, onlineIpLimit: value.onlineIpLimit || 0, connectionLimit: value.connectionLimit || 0, entryRateBps: value.entryRateBps || 0, quotaGiB: !context.record && seed ? seed.quotaGiB : value.quotaBytes / 1024 ** 3 }} onValuesChange={() => { invalidateLatest(); policy.clearError(); }} onFinish={() => policy.propose({ service: draft() }, context.precondition)}>
+    <AppForm form={form} onFocusCapture={revealFocusedDrawerControl} initialValues={{ ...value, onlineIpLimit: value.onlineIpLimit || 0, connectionLimit: value.connectionLimit || 0, entryRateBps: value.entryRateBps || 0, quotaGiB: !context.record && seed ? seed.quotaGiB : value.quotaBytes / 1024 ** 3 }} onValuesChange={() => { invalidateLatest(); policy.clearError(); }} onFinish={() => { if (!policy.closingBlocked) policy.propose({ service: draft() }, context.precondition); }}>
       <ErrorNotice error={policy.error} focusRef={policy.errorFocusRef}/>
       {conflicted && <section className="space-y-4 rounded-lg border bg-muted/30 p-4" aria-label="处理方案版本变化">
         {!baselineConflictVisible && <p>草稿尚未保存，请核对最新版本。</p>}
@@ -221,7 +221,7 @@ function ServicePolicyDraft({ context, seed, retained, discardRetained, acceptLa
 
       <div className="form-footer flex flex-wrap items-center justify-end gap-2 border-t pt-4">
         <ActionButton disabled={policy.closingBlocked} onClick={policy.requestClose} variant="outline">取消</ActionButton>
-        <ActionButton type="submit" aria-label="预览影响" aria-busy={policy.pending} pending={policy.pending} variant="default">预览影响</ActionButton>
+        <ActionButton type="submit" aria-label="预览影响" aria-busy={policy.pending} keepFocusableWhilePending pending={policy.pending} variant="default">预览影响</ActionButton>
       </div>
     </AppForm>
     {policy.dialog}

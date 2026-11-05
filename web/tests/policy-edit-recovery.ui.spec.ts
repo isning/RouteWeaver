@@ -136,6 +136,8 @@ async function installFixture(page: Page, info: TestInfo, kind: Kind) {
   const previews: PreviewRequest[] = [];
   const applies: ApplyRequest[] = [];
   const reads: string[] = [];
+  let releasePreview!: () => void;
+  const firstPreview = new Promise<void>((resolve) => { releasePreview = resolve; });
   page.on("pageerror", (error) => errors.push(error.message));
   await page.context().route("**/*", async (route) => {
     const request = route.request(),
@@ -165,6 +167,7 @@ async function installFixture(page: Page, info: TestInfo, kind: Kind) {
         kind === "service" ? "service" : "entitlement",
       ]);
       previews.push(structuredClone(body));
+      if (previews.length === 1) await firstPreview;
       const revision = `synthetic-${kind}-review-${previews.length}`;
       if (kind === "service") {
         expect(body.change.service?.id).toBe(service.id);
@@ -227,7 +230,7 @@ async function installFixture(page: Page, info: TestInfo, kind: Kind) {
     }
     return refuse();
   });
-  return { previews, applies, reads, unexpected, errors };
+  return { previews, applies, reads, unexpected, errors, releasePreview };
 }
 
 async function contained(surface: Locator, page: Page) {
@@ -328,7 +331,23 @@ for (const width of [1440, 390]) {
         name: "预览影响",
         exact: true,
       });
-      await preview.click();
+      try {
+        await preview.click();
+        await expect.poll(() => fixture.previews.length).toBe(1);
+        await expect(preview).toHaveAttribute("aria-busy", "true");
+        await expect(preview).toHaveAttribute("aria-disabled", "true");
+        // Native disabled would drop Chromium focus before review captures its
+        // return owner. Keep focus without permitting another activation.
+        await expect(preview).not.toHaveAttribute("disabled");
+        await expect(preview).toBeFocused();
+        await page.keyboard.press("Enter");
+        await page.keyboard.press("Space");
+        expect(fixture.previews).toHaveLength(1);
+        await expect(preview).toBeFocused();
+      } finally {
+        // Release the test-owned response even if a pending-state assertion fails.
+        fixture.releasePreview();
+      }
       const review = page.getByRole("dialog", {
         name: "确认授权变更",
         exact: true,

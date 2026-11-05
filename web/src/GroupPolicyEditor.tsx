@@ -160,7 +160,7 @@ function GroupPolicyDraft({ context, seed, retained, discardRetained, acceptLate
       <GroupPolicyComparison resource={{ target: { kind: "group", id: saved.group.id }, before: saved.baseline, after: { group: saved.group }, references: { before: referencesFor(saved.baseline?.group ?? null, saved.references), after: referencesFor(saved.group, saved.references) } }} title="保留的草稿" showAll beforeLabel="当时打开的版本" afterLabel="保留的草稿"/>
       <ActionButton onClick={() => discardRetained(index)} variant="destructive">丢弃此草稿副本</ActionButton>
     </> }))).map(section => <AccordionItem key={section.key} value={String(section.key)}><AccordionTrigger>{section.label}</AccordionTrigger><AccordionContent className="space-y-4">{section.children}</AccordionContent></AccordionItem>)}</Accordion>}
-    <AppForm form={form} initialValues={value} onValuesChange={() => { invalidateLatest(); policy.clearError(); }} onFinish={() => policy.propose({ group: draft() }, context.precondition)}>
+    <AppForm form={form} initialValues={value} onValuesChange={() => { invalidateLatest(); policy.clearError(); }} onFinish={() => { if (!policy.closingBlocked) policy.propose({ group: draft() }, context.precondition); }}>
       <ErrorNotice error={policy.error} focusRef={policy.errorFocusRef}/>
       {conflicted && <section className="space-y-4 rounded-lg border bg-muted/30 p-4" aria-label="处理用户组版本变化">
         {!baselineConflictVisible && <p>草稿尚未保存，请核对最新版本。</p>}
@@ -175,7 +175,7 @@ function GroupPolicyDraft({ context, seed, retained, discardRetained, acceptLate
       <AppField name="serviceId" label="组服务方案" rules={[{ required: true, message: "请选择服务方案" }]} trigger="onValueChange"><ChoiceSelect options={options(props.services)}/></AppField>
       <AppField name="memberIds" label="组成员" trigger="onValueChange"><MultiChoice options={options(props.users)}/></AppField>
       <AppField name="priority" label="用户组优先级" description="数值越大越优先。同一优先级不能给同一用户分配不同方案。" rules={[{ required: true }, { type: "integer", min: -2147483648, max: 2147483647, message: "请输入有效的 32 位整数优先级" }]} trigger="onValueChange"><NumericInput precision={0} min={-2147483648} max={2147483647}/></AppField>
-      <div className="form-footer flex flex-wrap items-center justify-end gap-2 border-t pt-4"><ActionButton disabled={policy.closingBlocked} onClick={policy.requestClose} variant="outline">取消</ActionButton><ActionButton type="submit" aria-label="预览影响" aria-busy={policy.pending} pending={policy.pending} variant="default">预览影响</ActionButton></div>
+      <div className="form-footer flex flex-wrap items-center justify-end gap-2 border-t pt-4"><ActionButton disabled={policy.closingBlocked} onClick={policy.requestClose} variant="outline">取消</ActionButton><ActionButton type="submit" aria-label="预览影响" aria-busy={policy.pending} keepFocusableWhilePending pending={policy.pending} variant="default">预览影响</ActionButton></div>
     </AppForm>
     {policy.dialog}
   </TaskSheet>;
