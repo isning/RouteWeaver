@@ -57,6 +57,9 @@ func TestNativeManagedOperationalRecovery(t *testing.T) {
 	testNativeContinuousManagedService(t, true, false)
 }
 func testNativeContinuousManagedService(t *testing.T, operationalDrill, providerDrill bool) {
+	testNativeContinuousManagedServiceWithHeartbeatDelay(t, operationalDrill, providerDrill, 0)
+}
+func testNativeContinuousManagedServiceWithHeartbeatDelay(t *testing.T, operationalDrill, providerDrill bool, heartbeatDelay time.Duration) {
 	observationSeconds, err := managedObservationSeconds(os.Getenv("ROUTEWEAVER_MANAGED_OBSERVATION_SECONDS"))
 	if err != nil {
 		t.Fatal(err)
@@ -142,6 +145,11 @@ func testNativeContinuousManagedService(t *testing.T, operationalDrill, provider
 	transportURL, operationalGate := operationalTransport(t, f, operationalDrill)
 	if diagnostics.recording {
 		transportURL = diagnostics.URL
+	}
+	var heartbeatProbe *delayedServiceHeartbeatProbe
+	if heartbeatDelay != 0 {
+		heartbeatProbe = newDelayedServiceHeartbeatProbe(t, f, d, diagnostics.wrap(f.srv.Config.Handler), heartbeatDelay)
+		transportURL = heartbeatProbe.server.URL
 	}
 	transport, err := agent.NewHTTPTransport(agent.HTTPTransportOptions{BaseURL: transportURL, Scope: d.Scope, Token: token, RequestTimeout: time.Second, MaxAttempts: 1, Backoff: time.Millisecond, AllowLoopbackHTTP: true})
 	if err != nil {
@@ -331,6 +339,12 @@ func testNativeContinuousManagedService(t *testing.T, operationalDrill, provider
 			t.Fatal("native continuous driver did not apply refresh")
 		}
 		time.Sleep(20 * time.Millisecond)
+	}
+	if heartbeatProbe != nil {
+		// A 204 alone is ambiguous: first prove the early ACK was throttled,
+		// then require the driver's own later ACK to advance durable authority.
+		heartbeatProbe.assertEarlyAckThrottled(t, token, fact)
+		heartbeatProbe.requireDriverAcknowledgement(t, fact.PolicyIssuedAt)
 	}
 	if wait := time.Until(d.Lease.ExpiresAt.Add(200 * time.Millisecond)); wait > 0 {
 		time.Sleep(wait)

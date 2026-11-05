@@ -14,12 +14,13 @@ REQUIRED = {
     "httpapi": "TestNativePublishedManagedPrincipalEndToEnd",
 }
 CONTINUOUS = "TestNativeContinuousManagedServicePreservesPayloadAndRevocation"
+DELAYED_HEARTBEAT = "TestNativeDelayedHeartbeatAcknowledgementPreservesExistingFlow"
 RATE = "TestManagedNativeEntryRateSharesDuplexAcrossConnectionsAndIsolatesEntries"
 PROVIDER = "TestNativeManagedProviderSuspensionAndRecovery"
 
 
 class ManagedGateTests(unittest.TestCase):
-    def run_gate(self, action="pass", omit=False, fail_go=False, provider_action="pass", provider_omit=False, rate_action="pass", rate_omit=False):
+    def run_gate(self, action="pass", omit=False, fail_go=False, provider_action="pass", provider_omit=False, rate_action="pass", rate_omit=False, heartbeat_action="pass", heartbeat_omit=False):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "scripts").mkdir()
@@ -28,6 +29,8 @@ class ManagedGateTests(unittest.TestCase):
                       for pkg, name in REQUIRED.items()]
             if not omit:
                 events.append({"Package": "routeweaver/internal/httpapi", "Test": CONTINUOUS, "Action": action})
+            if not heartbeat_omit:
+                events.append({"Package": "routeweaver/internal/httpapi", "Test": DELAYED_HEARTBEAT, "Action": heartbeat_action})
             if not provider_omit:
                 events.append({"Package": "routeweaver/internal/httpapi", "Test": PROVIDER, "Action": provider_action})
             if not rate_omit:
@@ -54,6 +57,7 @@ if "test" in args:
             args = calls[1]["args"]
             self.assertIn("-race", args)
             self.assertIn(CONTINUOUS, args[args.index("-run") + 1])
+            self.assertIn(DELAYED_HEARTBEAT, args[args.index("-run") + 1])
             self.assertIn(PROVIDER, args[args.index("-run") + 1])
             self.assertIn(RATE, args[args.index("-run") + 1])
             self.assertIn("./internal/httpapi", args)
@@ -74,6 +78,13 @@ if "test" in args:
 
     def test_go_failure_not_hidden_by_tee_or_positive_events(self):
         self.assertNotEqual(self.run_gate(fail_go=True).returncode, 0)
+
+    def test_delayed_heartbeat_missing_skipped_or_failed_never_passes(self):
+        for action, omit in (("pass", True), ("skip", False), ("fail", False)):
+            with self.subTest(action=action, omit=omit):
+                result = self.run_gate(heartbeat_action=action, heartbeat_omit=omit)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("Managed native gate incomplete", result.stderr)
 
     def test_provider_missing_skipped_or_failed_never_passes(self):
         for action, omit in (("pass", True), ("skip", False), ("fail", False)):
