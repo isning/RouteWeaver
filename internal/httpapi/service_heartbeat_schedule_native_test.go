@@ -35,6 +35,10 @@ type heartbeatScheduleEvent struct {
 	StartedAt            time.Time `json:"startedAt"`
 	HandledAt            time.Time `json:"handledAt"`
 	CompletedAt          time.Time `json:"completedAt"`
+	FlowReadyAt          time.Time `json:"flowReadyAt"`
+	DelayStartedAt       time.Time `json:"delayStartedAt"`
+	DelayApplied         bool      `json:"delayApplied"`
+	NegativeProbe        bool      `json:"negativeProbe"`
 	ValidationNotBefore  time.Time `json:"validationNotBefore"`
 	RequestPolicyIssued  time.Time `json:"requestPolicyIssued"`
 	BeforePendingIssued  time.Time `json:"beforePendingIssued"`
@@ -47,18 +51,23 @@ type heartbeatScheduleEvent struct {
 }
 
 type delayedServiceHeartbeatProbe struct {
-	f       fleetFixture
-	desired controlprotocol.Desired
-	server  *httptest.Server
-	delay   time.Duration
-	calls   atomic.Int32
-	mu      sync.Mutex
-	events  []heartbeatScheduleEvent
+	f            fleetFixture
+	desired      controlprotocol.Desired
+	server       *httptest.Server
+	delay        time.Duration
+	calls        atomic.Int32
+	mu           sync.Mutex
+	events       []heartbeatScheduleEvent
+	flowReady    chan struct{}
+	flowReadyAt  time.Time
+	delayStarted chan struct{}
 }
+
+const heartbeatNegativeProbeHeader = "X-RouteWeaver-Test-Early-Ack"
 
 func newDelayedServiceHeartbeatProbe(t *testing.T, f fleetFixture, desired controlprotocol.Desired, next http.Handler, delay time.Duration) *delayedServiceHeartbeatProbe {
 	t.Helper()
-	p := &delayedServiceHeartbeatProbe{f: f, desired: desired, delay: delay}
+	p := &delayedServiceHeartbeatProbe{f: f, desired: desired, delay: delay, flowReady: make(chan struct{}), delayStarted: make(chan struct{}, 1)}
 	p.server = httptest.NewServer(p.wrap(next))
 	t.Cleanup(p.server.Close)
 	t.Cleanup(func() {
@@ -72,6 +81,13 @@ func newDelayedServiceHeartbeatProbe(t *testing.T, f fleetFixture, desired contr
 		t.Logf("controlled heartbeat receipt/ACK evidence: %s", raw)
 	})
 	return p
+}
+
+func (p *delayedServiceHeartbeatProbe) noteFlowEstablished() {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.flowReadyAt = time.Now().UTC()
+	close(p.flowReady)
 }
 
 func (p *delayedServiceHeartbeatProbe) snapshot() (heartbeatPolicySnapshot, domain.PublishedManifest, error) {
@@ -90,7 +106,7 @@ func (p *delayedServiceHeartbeatProbe) wrap(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
-		event := heartbeatScheduleEvent{Index: p.calls.Add(1), StartedAt: time.Now().UTC()}
+		event := heartbeatScheduleEvent{Index: p.calls.Add(1), StartedAt: time.Now().UTC(), NegativeProbe: r.Header.Get(heartbeatNegativeProbeHeader) == "1"}
 		defer func() {
 			p.mu.Lock()
 			defer p.mu.Unlock()
@@ -98,11 +114,33 @@ func (p *delayedServiceHeartbeatProbe) wrap(next http.Handler) http.Handler {
 				p.events = append(p.events, event)
 			}
 		}()
-		if event.Index == 2 {
-			// Delay the request before CP receipt, not the response afterward.
-			// The unchanged one-second client deadline includes this interval.
+		before, manifest, err := p.snapshot()
+		if err != nil {
+			event.ErrorType = referenceErrorType(err)
+		}
+		if err == nil && before.PendingRefresh == nil && before.Lease.IssuedAt == p.desired.Lease.IssuedAt {
+			// Gate by authority state, never a request ordinal: slow startup can
+			// make the very first heartbeat eligible to issue the refresh.
+			// Both flow establishment and this delay consume the unchanged
+			// one-second client deadline, without clearing the real CP throttle.
+			select {
+			case <-p.flowReady:
+				p.mu.Lock()
+				event.FlowReadyAt = p.flowReadyAt
+				p.mu.Unlock()
+			case <-r.Context().Done():
+				event.CompletedAt = time.Now().UTC()
+				event.ErrorType = referenceErrorType(r.Context().Err())
+				return
+			}
+			event.DelayStartedAt = time.Now().UTC()
+			event.DelayApplied = true
 			timer := time.NewTimer(p.delay)
 			defer timer.Stop()
+			select {
+			case p.delayStarted <- struct{}{}:
+			default:
+			}
 			select {
 			case <-timer.C:
 			case <-r.Context().Done():
@@ -110,10 +148,15 @@ func (p *delayedServiceHeartbeatProbe) wrap(next http.Handler) http.Handler {
 				event.ErrorType = referenceErrorType(r.Context().Err())
 				return
 			}
+			before, manifest, err = p.snapshot()
+			if err != nil {
+				event.ErrorType = referenceErrorType(err)
+			}
 		}
-		before, manifest, err := p.snapshot()
-		if err != nil {
+		if err := r.Context().Err(); err != nil {
+			event.CompletedAt = time.Now().UTC()
 			event.ErrorType = referenceErrorType(err)
+			return
 		}
 		event.ValidationNotBefore = before.ValidationNotBefore
 		event.BeforeManifestExpiry = manifest.PolicyExpiresAt
@@ -171,6 +214,7 @@ func (p *delayedServiceHeartbeatProbe) assertEarlyAckThrottled(t *testing.T, tok
 	r.Header.Set("Authorization", "Bearer "+token)
 	r.Header.Set("X-RouteWeaver-Node", fact.Desired.NodeID)
 	r.Header.Set("X-RouteWeaver-Enrollment", fact.Desired.EnrollmentEpoch)
+	r.Header.Set(heartbeatNegativeProbeHeader, "1")
 	response, err := http.DefaultClient.Do(r)
 	if err != nil {
 		t.Fatalf("early ACK request error_type=%s", referenceErrorType(err))
@@ -200,29 +244,49 @@ func (p *delayedServiceHeartbeatProbe) requireDriverAcknowledgement(t *testing.T
 		if err != nil {
 			t.Fatalf("heartbeat probe error_type=%s", referenceErrorType(err))
 		}
+		p.mu.Lock()
+		events := append([]heartbeatScheduleEvent(nil), p.events...)
+		p.mu.Unlock()
+		for _, event := range events {
+			if event.ErrorType != "" {
+				t.Fatal("heartbeat evidence snapshot failed: " + event.ErrorType)
+			}
+		}
+		seenACK, committedACK := checkFirstDriverACK(events, issued, p.desired.Lease.ExpiresAt)
+		if seenACK && !committedACK {
+			t.Fatal("first Driver ACK did not advance authority; later ACKs cannot conceal a throttle-window miss")
+		}
 		if policy.PendingRefresh == nil && policy.Lease.IssuedAt == issued && policy.Lease.ExpiresAt.After(p.desired.Lease.ExpiresAt) && manifest.PolicyExpiresAt == policy.Lease.ExpiresAt {
-			p.mu.Lock()
-			events := append([]heartbeatScheduleEvent(nil), p.events...)
-			p.mu.Unlock()
 			delayedRefresh := false
 			for _, event := range events {
-				if event.Index == 2 && event.Status == http.StatusOK && event.HandledAt.Sub(event.StartedAt) >= p.delay && event.AfterPendingIssued == issued && event.BeforeManifestExpiry == p.desired.Lease.ExpiresAt && event.AfterManifestExpiry == p.desired.Lease.ExpiresAt {
+				if event.DelayApplied && !event.FlowReadyAt.IsZero() && !event.DelayStartedAt.IsZero() && !event.DelayStartedAt.Before(event.FlowReadyAt) && event.Status == http.StatusOK && event.HandledAt.Sub(event.DelayStartedAt) >= p.delay && event.RequestPolicyIssued == p.desired.Lease.IssuedAt && event.BeforePendingIssued.IsZero() && event.AfterPendingIssued == issued && event.BeforeManifestExpiry == p.desired.Lease.ExpiresAt && event.AfterManifestExpiry == p.desired.Lease.ExpiresAt {
 					delayedRefresh = true
 				}
 			}
 			if !delayedRefresh {
 				t.Fatal("controlled request delay did not issue the pending refresh")
 			}
-			for _, event := range events {
-				if event.ErrorType != "" {
-					t.Fatal("heartbeat evidence snapshot failed: " + event.ErrorType)
-				}
-				if event.Status == http.StatusNoContent && event.RequestPolicyIssued == issued && event.BeforePendingIssued == issued && event.AfterPendingIssued.IsZero() && event.AfterLeaseIssued == issued && event.AfterManifestExpiry == policy.Lease.ExpiresAt && !event.HandledAt.Before(event.ValidationNotBefore) && event.CompletedAt.Before(p.desired.Lease.ExpiresAt) {
-					return
-				}
+			if seenACK && committedACK {
+				return
 			}
 		}
 		time.Sleep(20 * time.Millisecond)
 	}
 	t.Fatal("driver did not acknowledge the issued refresh and advance the manifest before original lease expiry")
+}
+
+// A refresh issued on the first heartbeat leaves enough lease time for a second
+// ACK attempt. Do not let that later success hide a first-ACK cadence regression.
+func checkFirstDriverACK(events []heartbeatScheduleEvent, issued, oldExpiry time.Time) (seen, committed bool) {
+	var first heartbeatScheduleEvent
+	for _, event := range events {
+		if event.NegativeProbe || event.RequestPolicyIssued != issued {
+			continue
+		}
+		if !seen || event.Index < first.Index {
+			first, seen = event, true
+		}
+	}
+	committed = seen && !first.DelayApplied && first.Status == http.StatusNoContent && first.BeforePendingIssued == issued && first.AfterPendingIssued.IsZero() && first.AfterLeaseIssued == issued && first.BeforeManifestExpiry == oldExpiry && first.AfterManifestExpiry.After(oldExpiry) && !first.HandledAt.Before(first.ValidationNotBefore) && first.CompletedAt.Before(oldExpiry)
+	return seen, committed
 }

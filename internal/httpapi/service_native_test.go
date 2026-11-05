@@ -329,6 +329,9 @@ func testNativeContinuousManagedServiceWithHeartbeatDelay(t *testing.T, operatio
 	if err != nil || fact.PolicyIssuedAt != d.Lease.IssuedAt {
 		t.Fatal("flow was not opened before instance refresh", err)
 	}
+	if heartbeatProbe != nil {
+		heartbeatProbe.noteFlowEstablished()
+	}
 	deadline = time.Now().Add(8 * time.Second)
 	for {
 		fact, err = reconciler.ServiceHeartbeat(context.Background())

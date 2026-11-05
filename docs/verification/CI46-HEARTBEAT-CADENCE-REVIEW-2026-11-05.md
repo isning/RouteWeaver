@@ -48,18 +48,25 @@ comparison and must not be conflated with CI46.
 `TestNativeDelayedHeartbeatAcknowledgementPreservesExistingFlow` joins the
 real HTTP CP, Driver, persisted intent/publication, and managed native stream:
 
-- Delay only the second heartbeat by 500 ms **before** the real CP handler.
-  Assert this request actually returns 200, creates the pending refresh, and
-  leaves the original publication expiry unchanged.
+- For heartbeats whose durable intent still has the original lease and no
+  pending refresh, wait for the actual first payload on the existing stream,
+  then delay 500 ms **before** the real CP handler. Both waits consume the
+  existing request deadline. Match the refresh by the actual HTTP 200 and
+  pending-grant transition, never by a fixed request number. The publication
+  expiry must remain unchanged at issuance. ACKs with pending authority receive
+  no artificial delay.
 - After the Agent applies that refresh, send a separate negative ACK probe
   within the persisted `ValidationNotBefore` window. Require HTTP 204, unchanged
   pending grant/lease/throttle, and unchanged publication expiry. This supplies
   observable evidence for the controlled early-ACK case without adding a
-  production endpoint or branch tag.
-- Wait for the **Driver's own** later heartbeat carrying the issued timestamp.
-  Require that it reaches the CP handler at or after the throttle boundary, returns 204, clears the pending
-  grant, and advances persisted policy and manifest expiry before the original
-  lease deadline. The negative probe cannot satisfy these conditions.
+  production endpoint or branch tag. A test-only request header marks this
+  deliberate negative probe in the bounded diagnostic events.
+- Require the **Driver's own first** heartbeat carrying the issued timestamp to
+  reach the CP handler at or after the throttle boundary, return 204, clear the
+  pending grant, and advance persisted policy and manifest expiry before the
+  original lease deadline. The marked negative probe cannot satisfy these
+  conditions. A later successful ACK cannot conceal an earlier Driver ACK that
+  missed the throttle window, even when both arrive before the old expiry.
 - Reuse the existing TCP connection across the original expiry, verify unchanged
   native identity, then revoke the entry and require bounded closure. No retry
   is added to actual payload assertions.
@@ -67,14 +74,39 @@ real HTTP CP, Driver, persisted intent/publication, and managed native stream:
   deadlines, original approximately 15-second remaining lease, and the native
   gate's 240-second package timeout. The negative probe also has a one-second
   deadline. No throttle clearing or lease extension is used to force acceptance.
-- Log at most eight heartbeat events containing typed timestamps, status, and
-  error type. Do not log credentials, identities, raw HTTP bodies, or DB records.
+- Log at most eight heartbeat events containing typed timestamps, status, error
+  type, and fixture delay/probe booleans. Do not log credentials, identities,
+  raw HTTP bodies, or DB records.
 
 The production fix that schedules the next heartbeat after response/application
 already exists in the recovered candidate. This change adds regression coverage
 and diagnostics only. The old request-start scheduler is expected to miss the
 controlled throttle window, but a red/green mutation run has **not** been executed
 in this recovered workspace.
+
+## CI59 fixture correction
+
+CI59 remote commit `3c509557ea9e0c5f8d4477e588510e06b62cb0f7`, corresponding
+to canonical `ebc114d55ae3488fc0137bfdf2b6e66ee4c941ac`, exposed the original
+fixture's fixed-second-request assumption. Its first heartbeat reached the CP
+after the initial throttle had elapsed and correctly issued the refresh. The
+second request was the intentional negative ACK and the third was the Driver's
+successful ACK. The fixture rejected that valid ordering because the artificial
+delay had been attached to the negative probe, not the refresh issuance.
+
+The extracted `native-delayed-heartbeat.txt` SHA256 is
+`38829e389114ca12c678d9b5dc16beb0432870b993efbad8e03e50f70ce8b3b8`.
+This is a fixture preparation failure, distinct from CI46's expiry EOF and
+CI55's process-exit cleanup failure. It does not excuse any failed native gate.
+
+The correction is test-only. Additional HTTP-handler fixture contracts cover a
+first-request refresh, a synthetic warmup 204 followed by real-CP refresh, a
+real-CP early ACK without artificial delay, cancellation before flow readiness
+and during the controlled delay, and rejection of an early Driver ACK even if
+a later ACK succeeds. The synthetic warmup and synthetic ACK-event cases are
+fixture-contract evidence, not native or production acceptance. Native traffic
+still uses the real CP for every request and retains the existing-stream and
+revocation assertions. No lease, timeout, or throttle was relaxed.
 
 ## Verification state
 
@@ -90,5 +122,7 @@ in this recovered workspace.
 - Not run locally: Go formatting, compilation, focused/race/native execution.
   Go 1.27.3 and the managed executable are absent in the recovered environment;
   the unrelated `/usr/bin/go` was not used. Exact integrated CI remains required.
+  This includes the CI59 event-driven fixture correction and its new contracts;
+  source review and whitespace checks are not reported as executed Go tests.
 - Still separate: production network/client behavior, selected-host capacity,
   operator key custody, restore/RPO/RTO, alert delivery, and authorized rollout.
