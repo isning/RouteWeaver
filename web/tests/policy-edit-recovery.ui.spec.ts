@@ -136,6 +136,8 @@ async function installFixture(page: Page, info: TestInfo, kind: Kind) {
   const previews: PreviewRequest[] = [];
   const applies: ApplyRequest[] = [];
   const reads: string[] = [];
+  let releaseContext!: () => void;
+  const openingContext = new Promise<void>((resolve) => { releaseContext = resolve; });
   let releasePreview!: () => void;
   const firstPreview = new Promise<void>((resolve) => { releasePreview = resolve; });
   page.on("pageerror", (error) => errors.push(error.message));
@@ -154,6 +156,7 @@ async function installFixture(page: Page, info: TestInfo, kind: Kind) {
     if (url.search) return refuse();
     if (request.method() === "GET" && Object.hasOwn(fixtures, url.pathname)) {
       reads.push(url.pathname);
+      if (url.pathname === contextPath) await openingContext;
       return route.fulfill({ json: fixtures[url.pathname] });
     }
     if (
@@ -230,7 +233,7 @@ async function installFixture(page: Page, info: TestInfo, kind: Kind) {
     }
     return refuse();
   });
-  return { previews, applies, reads, unexpected, errors, releasePreview };
+  return { previews, applies, reads, unexpected, errors, releasePreview, releaseContext };
 }
 
 async function contained(surface: Locator, page: Page) {
@@ -261,7 +264,7 @@ async function capture(
   await info.attach(name, { path, contentType: "image/png" });
 }
 
-async function openEditor(page: Page, kind: Kind) {
+async function openEditor(page: Page, kind: Kind, releaseContext: () => void) {
   await page.goto(kind === "service" ? "/#services" : "/#users");
   const actions = page.getByRole("group", {
     name: `${kind === "service" ? service.name : user.name} 的操作`,
@@ -271,16 +274,21 @@ async function openEditor(page: Page, kind: Kind) {
     name: kind === "service" ? "编辑" : `更多操作 ${user.name}`,
     exact: true,
   });
-  await opener.click();
-  if (kind === "user")
-    await page
-      .getByRole("menuitem", { name: "授权与续期", exact: true })
-      .click();
   const editor = page.getByRole("dialog", {
     name:
       kind === "service" ? `编辑 ${service.name}` : `${user.name} 的服务授权`,
     exact: true,
   });
+  try {
+    await opener.click();
+    if (kind === "user")
+      await page.getByRole("menuitem", { name: "授权与续期", exact: true }).click();
+    // Establish the actual loading surface and its focus before allowing the
+    // loaded editor to replace it. Fast fixtures must not skip this boundary.
+    await expect(editor).toBeVisible();
+    await expect(editor.getByLabel("正在加载", { exact: true })).toBeVisible();
+    await expect.poll(() => editor.evaluate((node) => node.contains(document.activeElement))).toBe(true);
+  } finally { releaseContext(); }
   await settledTask(editor);
   // The context response, not the loading Sheet, owns the editable controls.
   await expect(
@@ -296,7 +304,7 @@ for (const width of [1440, 390]) {
     }, info) => {
       await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
       const fixture = await installFixture(page, info, kind);
-      const { editor, opener } = await openEditor(page, kind);
+      const { editor, opener } = await openEditor(page, kind, fixture.releaseContext);
       const editedName = "日常协作扩展方案";
       const quotaLabel =
         kind === "service"
@@ -554,7 +562,18 @@ for (const width of [1440, 390]) {
         .getByRole("button", { name: "放弃修改", exact: true })
         .click();
       await expect(editor).toHaveCount(0);
-      await expect(opener).toBeFocused();
+      try {
+        await expect(opener).toBeFocused();
+      } catch (error) {
+        await info.attach("final-focus-owner", {
+          contentType: "application/json",
+          body: JSON.stringify(await page.evaluate(() => {
+            const active = document.activeElement;
+            return { tag: active?.tagName, role: active?.getAttribute("role"), label: active?.getAttribute("aria-label"), text: active?.textContent?.slice(0, 160), dialog: active?.closest('[role="dialog"],[role="alertdialog"]')?.getAttribute("aria-labelledby") };
+          })),
+        });
+        throw error;
+      }
       await expect(
         page.getByText("平台授权已更新", { exact: true }),
       ).toHaveCount(0);

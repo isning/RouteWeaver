@@ -6,7 +6,7 @@ import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/
 import { Checkbox } from "@/components/ui/checkbox";
 import { Notice } from "@/ui-patterns/notice";
 import { ActionButton } from "@/ui-patterns/actions";
-import { useConfirm } from "@/ui-patterns/confirmations";
+import { useDiscardConfirmation } from "./useDiscardConfirmation";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { DataTable, TableRowActions } from "./DataTable";
@@ -289,13 +289,15 @@ export function usePolicyChange({ mode, retainedDrafts, users, services, routes,
         id: string;
         name: string;
     };
-    const client = useQueryClient(), message = toast, confirm = useConfirm();
+    const client = useQueryClient(), message = toast;
+    const { confirm: confirmDiscard, confirming } = useDiscardConfirmation(useId());
     const [review, setReview] = useState<{
         change: PolicyChange;
         preview: PolicyPreview;
         target: ReviewTarget | null;
     } | null>(null), [confirmed, setConfirmed] = useState(false), [showFull, setShowFull] = useState(false), [showRules, setShowRules] = useState(false), [reviewPage, setReviewPage] = useState(1), [error, setError] = useState<Error | null>(null);
     const [reviewClosed, setReviewClosed] = useState(true);
+    const appliedReview = useRef<number | null>(null);
     const hasRetainedDraft = !!retainedDrafts?.length;
     // Disposal consent belongs to this exact local copy set, not merely its count.
     useLayoutEffect(() => setConfirmed(false), [retainedDrafts]);
@@ -380,10 +382,10 @@ export function usePolicyChange({ mode, retainedDrafts, users, services, routes,
             if (!mounted.current || owner?.version !== draftRevision.current)
                 return;
             setFailureFocus(null);
+            appliedReview.current = owner.version;
             setReview(null);
             setError(null);
             message.success("平台授权已更新");
-            onApplied();
         },
         onError: (e, _variables, owner) => {
             if (!mounted.current || owner?.version !== draftRevision.current)
@@ -466,7 +468,14 @@ export function usePolicyChange({ mode, retainedDrafts, users, services, routes,
         </div>} onOpenChange={open => {
             if (!open)
                 (() => !apply.isPending && dismissReview())();
-        }} pending={!(!apply.isPending)} size="xl" onReady={() => (open => setReviewClosed(!open))(true)} onClosed={() => (open => setReviewClosed(!open))(false)} contentProps={review ? { onFocusCapture: revealFocusedPolicyModalControl, onKeyDown: wrapPolicyModalTab } : undefined}>
+        }} pending={!(!apply.isPending)} size="xl" onReady={() => (open => setReviewClosed(!open))(true)} onClosed={() => {
+            setReviewClosed(true);
+            const version = appliedReview.current;
+            appliedReview.current = null;
+            // Release review focus before removing its owning editor.
+            if (version !== null && mounted.current && version === draftRevision.current)
+                onApplied();
+        }} contentProps={review ? { onFocusCapture: revealFocusedPolicyModalControl, onKeyDown: wrapPolicyModalTab } : undefined}>
       {review && (<>
           <ErrorNotice error={error} focusRef={reviewErrorFocus}/>
           {review.target && (<p>
@@ -515,22 +524,20 @@ export function usePolicyChange({ mode, retainedDrafts, users, services, routes,
     </TaskDialog>);
     return {
         propose,
-        closingBlocked: preview.isPending || apply.isPending,
+        closingBlocked: preview.isPending || apply.isPending || appliedReview.current !== null,
         requestClose: () => {
-            if (preview.isPending || apply.isPending)
+            if (preview.isPending || apply.isPending || appliedReview.current !== null || confirming)
                 return;
             if (!dirty && !hasRetainedDraft) {
                 onApplied();
                 return;
             }
-            confirm({
+            confirmDiscard({
                 title: "放弃尚未保存的授权修改？",
                 description: "当前修改尚未保存。放弃后将无法恢复。",
                 confirmLabel: "放弃修改",
                 cancelLabel: "继续编辑",
-                destructive: true,
-                onConfirm: onApplied
-            });
+            }, onApplied);
         },
         pending: preview.isPending,
         error: review ? null : error,

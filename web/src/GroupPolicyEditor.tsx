@@ -1,6 +1,6 @@
 import { NumericInput } from "@/ui-patterns/numeric-input";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
-import { TaskSheet } from "@/ui-patterns/task-overlays";
+import { TaskSheet, useTaskReturnFocus } from "@/ui-patterns/task-overlays";
 import { ChoiceSelect, MultiChoice } from "@/ui-patterns/choice-select";
 import { Input } from "@/components/ui/input";
 import { useForm, AppField, AppForm } from "@/ui-patterns/form";
@@ -16,6 +16,7 @@ import { usePolicyChange } from "./AccessPolicy";
 import { loadGroupPolicyEditContext } from "./service-policy-edit";
 import { GroupPolicyComparison } from "./GroupPolicyComparison";
 import { useUnsavedChanges } from "./navigation";
+import { useDiscardConfirmation } from "./useDiscardConfirmation";
 type DraftCopy = {
     group: UserGroup;
     baseline: GroupPolicyEditContext["record"];
@@ -31,6 +32,7 @@ type Props = {
     services: Service[];
     routes: NamedRecord[];
     onClose: () => void;
+    returnFocus?: HTMLElement | null;
 };
 const newGroup = (id: string): UserGroup => ({ id, name: "", serviceId: "", priority: 0, memberIds: [] });
 const options = (records: NamedRecord[]) => records.map((record) => ({ value: record.id,
@@ -38,13 +40,14 @@ const options = (records: NamedRecord[]) => records.map((record) => ({ value: re
 // Local ownership deliberately mirrors ServicePolicyEditor. The transport guard
 // and preview/apply state machine are shared; no independent token/session exists.
 export function GroupPolicyEditor(props: Props) {
+    const returnFocus = useTaskReturnFocus(props.returnFocus);
     const [creation, setCreation] = useState<{
         id: string;
         seed?: DraftCopy;
         retained: DraftCopy[];
     }>(() => ({ id: newID("group"), retained: [] }));
     const id = props.initial?.id || creation.id;
-    return <GroupEditSession key={`${props.initial ? "edit" : "create"}:${id}`} {...props} id={id} seed={props.initial ? undefined : creation.seed} retained={props.initial ? [] : creation.retained} restartCreation={(draft, retained) => setCreation({ id: newID("group"), seed: draft, retained })}/>;
+    return <GroupEditSession key={`${props.initial ? "edit" : "create"}:${id}`} {...props} returnFocus={returnFocus} id={id} seed={props.initial ? undefined : creation.seed} retained={props.initial ? [] : creation.retained} restartCreation={(draft, retained) => setCreation({ id: newID("group"), seed: draft, retained })}/>;
 }
 function GroupEditSession({ id, seed, retained: initialRetained, restartCreation, ...props }: Props & {
     id: string;
@@ -55,18 +58,17 @@ function GroupEditSession({ id, seed, retained: initialRetained, restartCreation
     const [context, setContext] = useState<GroupPolicyEditContext | null>(null);
     const [error, setError] = useState<Error | null>(null), [attempt, setAttempt] = useState(0), [generation, setGeneration] = useState(0);
     const [retained, setRetained] = useState(initialRetained);
-    const confirm = useConfirm();
+    const { confirm: confirmDiscard, confirming } = useDiscardConfirmation(id);
     useUnsavedChanges(!context && retained.length > 0);
     const closeLoading = () => {
+        if (confirming) return;
         if (!retained.length) {
             props.onClose();
             return;
         }
-        confirm({
+        confirmDiscard({
             title: "放弃保留的未保存草稿？", description: "关闭后将无法恢复这些草稿副本。", confirmLabel: "放弃草稿并关闭", cancelLabel: "继续编辑",
-            destructive: true,
-            onConfirm: props.onClose
-        });
+        }, props.onClose);
     };
     useEffect(() => {
         let current = true;
@@ -87,7 +89,7 @@ function GroupEditSession({ id, seed, retained: initialRetained, restartCreation
         return () => { current = false; controller.abort(); };
     }, [id, attempt]);
     if (!context)
-        return <TaskSheet title={props.initial ? `编辑 ${props.initial.name}` : "新建用户组"} open onOpenChange={open => {
+        return <TaskSheet returnFocus={props.returnFocus} title={props.initial ? `编辑 ${props.initial.name}` : "新建用户组"} open onOpenChange={open => {
                 if (!open)
                     (closeLoading)();
             }} size="lg" bodyProps={{ className: "space-y-6" }}>
@@ -152,7 +154,7 @@ function GroupPolicyDraft({ context, seed, retained, discardRetained, acceptLate
             }
         });
     };
-    return <TaskSheet title={context.precondition.exists ? `编辑 ${value.name}` : "新建用户组"} open onOpenChange={open => {
+    return <TaskSheet returnFocus={props.returnFocus} title={context.precondition.exists ? `编辑 ${value.name}` : "新建用户组"} open onOpenChange={open => {
             if (!open)
                 (policy.requestClose)();
         }} pending={!(!policy.closingBlocked)} size="lg" bodyProps={{ className: "space-y-6" }}>

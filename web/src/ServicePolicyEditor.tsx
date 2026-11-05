@@ -1,6 +1,6 @@
 import { NumericInput } from "@/ui-patterns/numeric-input";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
-import { TaskSheet } from "@/ui-patterns/task-overlays";
+import { TaskSheet, useTaskReturnFocus } from "@/ui-patterns/task-overlays";
 import { MultiChoice } from "@/ui-patterns/choice-select";
 import { Input } from "@/components/ui/input";
 import { useForm, AppField, AppForm } from "@/ui-patterns/form";
@@ -17,6 +17,7 @@ import { CycleFields, LimitFields } from "./PolicyFields";
 import { loadServicePolicyEditContext } from "./service-policy-edit";
 import { ServicePolicyComparison } from "./ServicePolicyComparison";
 import { useUnsavedChanges } from "./navigation";
+import { useDiscardConfirmation } from "./useDiscardConfirmation";
 import { revealFocusedDrawerControl } from "./drawer-control-visibility";
 type DraftCopy = {
     service: Service;
@@ -29,19 +30,21 @@ type Props = {
     services: Service[];
     routes: NamedRecord[];
     onClose: () => void;
+    returnFocus?: HTMLElement | null;
 };
 function newPlan(id: string): Service {
     return { id, name: "", quotaBytes: 100 * 1024 ** 3, routeIds: [], onlineIpLimit: 0, connectionLimit: 0, entryRateBps: 0,
         cycle: { mode: "monthly", day: 1, timezone: "UTC+8", anchor: new Date().toISOString() } };
 }
 export function ServicePolicyEditor(props: Props) {
+    const returnFocus = useTaskReturnFocus(props.returnFocus);
     const [creation, setCreation] = useState<{
         id: string;
         seed?: DraftCopy;
         retained: DraftCopy[];
     }>(() => ({ id: newID("service"), retained: [] }));
     const id = props.initial?.id || creation.id;
-    return <ServiceEditSession key={`${props.initial ? "edit" : "create"}:${id}`} {...props} id={id} seed={props.initial ? undefined : creation.seed} retained={props.initial ? [] : creation.retained} restartCreation={(draft, retained) => setCreation({ id: newID("service"), seed: draft, retained })}/>;
+    return <ServiceEditSession key={`${props.initial ? "edit" : "create"}:${id}`} {...props} returnFocus={returnFocus} id={id} seed={props.initial ? undefined : creation.seed} retained={props.initial ? [] : creation.retained} restartCreation={(draft, retained) => setCreation({ id: newID("service"), seed: draft, retained })}/>;
 }
 function ServiceEditSession({ id, seed, retained: initialRetained, restartCreation, ...props }: Props & {
     id: string;
@@ -54,18 +57,17 @@ function ServiceEditSession({ id, seed, retained: initialRetained, restartCreati
     const [attempt, setAttempt] = useState(0);
     const [generation, setGeneration] = useState(0);
     const [retained, setRetained] = useState(initialRetained);
-    const confirm = useConfirm();
+    const { confirm: confirmDiscard, confirming } = useDiscardConfirmation(id);
     useUnsavedChanges(!context && retained.length > 0);
     const closeLoading = () => {
+        if (confirming) return;
         if (!retained.length) {
             props.onClose();
             return;
         }
-        confirm({
+        confirmDiscard({
             title: "放弃保留的未保存草稿？", description: "关闭后将无法恢复这些草稿副本。", confirmLabel: "放弃草稿并关闭", cancelLabel: "继续编辑",
-            destructive: true,
-            onConfirm: props.onClose
-        });
+        }, props.onClose);
     };
     useEffect(() => {
         let current = true;
@@ -86,7 +88,7 @@ function ServiceEditSession({ id, seed, retained: initialRetained, restartCreati
         return () => { current = false; controller.abort(); };
     }, [id, attempt]);
     if (!context)
-        return <TaskSheet title={props.initial ? `编辑 ${props.initial.name}` : "新建服务方案"} open onOpenChange={open => {
+        return <TaskSheet returnFocus={props.returnFocus} title={props.initial ? `编辑 ${props.initial.name}` : "新建服务方案"} open onOpenChange={open => {
                 if (!open)
                     (closeLoading)();
             }} size="lg" bodyProps={{ className: "space-y-6" }}>
@@ -165,7 +167,7 @@ function ServicePolicyDraft({ context, seed, retained, discardRetained, acceptLa
             }
         });
     };
-    return <TaskSheet title={context.precondition.exists ? `编辑 ${value.name}` : "新建服务方案"} open onOpenChange={open => {
+    return <TaskSheet returnFocus={props.returnFocus} title={context.precondition.exists ? `编辑 ${value.name}` : "新建服务方案"} open onOpenChange={open => {
             if (!open)
                 (policy.requestClose)();
         }} pending={!(!policy.closingBlocked)} size="lg" bodyProps={{ className: "space-y-6" }}>

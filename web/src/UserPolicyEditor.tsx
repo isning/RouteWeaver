@@ -2,7 +2,7 @@ import { NumericInput } from "@/ui-patterns/numeric-input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { DataTable } from "./DataTable";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
-import { TaskSheet } from "@/ui-patterns/task-overlays";
+import { TaskSheet, useTaskReturnFocus } from "@/ui-patterns/task-overlays";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
@@ -49,12 +49,14 @@ type EditorProps = {
     services: Service[];
     routes: NamedRecord[];
     onClose: () => void;
+    returnFocus?: HTMLElement | null;
 };
 type DraftCopy = {
     values: Record<string, any>;
     context: EntitlementPolicyEditContext;
 };
 export function UserPolicyEditor(props: EditorProps) {
+    const returnFocus = useTaskReturnFocus(props.returnFocus);
     const [context, setContext] = useState<EntitlementPolicyEditContext | null>(null);
     const [error, setError] = useState<Error | null>(null), [attempt, setAttempt] = useState(0);
     useEffect(() => {
@@ -72,23 +74,24 @@ export function UserPolicyEditor(props: EditorProps) {
         return () => { current = false; controller.abort(); };
     }, [props.user.id, attempt]);
     if (!context || context.target.id !== props.user.id)
-        return <TaskSheet title={`${props.user.name} 的服务授权`} open onOpenChange={open => {
+        return <TaskSheet returnFocus={returnFocus} title={`${props.user.name} 的服务授权`} open onOpenChange={open => {
                 if (!open)
                     (props.onClose)();
             }} size="lg" bodyProps={{ className: "space-y-6" }}>
     <QueryState loading={!error} error={error} retry={() => setAttempt((value) => value + 1)}><></></QueryState>
   </TaskSheet>;
-    return <UserPolicyForm key={props.user.id} {...props} initial={context} drawer/>;
+    return <UserPolicyForm key={props.user.id} {...props} returnFocus={returnFocus} initial={context} drawer/>;
 }
 // This entry accepts a coherent context, never an effective-policy-only seed.
 export function UserPolicyForm({ initial, drawer = false, ...props }: EditorProps & {
     initial: EntitlementPolicyEditContext;
     drawer?: boolean;
 }) {
+    const returnFocus = useTaskReturnFocus(props.returnFocus);
     const [context, setContext] = useState(initial), [generation, setGeneration] = useState(0), [retained, setRetained] = useState<DraftCopy[]>([]);
-    return <UserPolicyFields key={generation} {...props} drawer={drawer} context={context} retained={retained} acceptLatest={(latest, draft) => { setRetained((values) => [...values, draft]); setContext(latest); setGeneration((value) => value + 1); }}/>;
+    return <UserPolicyFields key={generation} {...props} returnFocus={returnFocus} drawer={drawer} context={context} retained={retained} acceptLatest={(latest, draft) => { setRetained((values) => [...values, draft]); setContext(latest); setGeneration((value) => value + 1); }}/>;
 }
-function UserPolicyFields({ user, context, services, routes, onClose, retained, acceptLatest, drawer }: EditorProps & {
+function UserPolicyFields({ user, context, services, routes, onClose, retained, acceptLatest, drawer, returnFocus }: EditorProps & {
     drawer: boolean;
     context: EntitlementPolicyEditContext;
     retained: DraftCopy[];
@@ -388,7 +391,7 @@ function UserPolicyFields({ user, context, services, routes, onClose, retained, 
       </AppForm>
       {policy.dialog}
     </>);
-    return drawer ? <TaskSheet title={`${user.name} 的服务授权`} open onOpenChange={open => {
+    return drawer ? <TaskSheet returnFocus={returnFocus} title={`${user.name} 的服务授权`} open onOpenChange={open => {
             if (!open)
                 (policy.requestClose)();
         }} pending={!(!policy.closingBlocked)} size="lg" bodyProps={{ className: "space-y-6" }}>

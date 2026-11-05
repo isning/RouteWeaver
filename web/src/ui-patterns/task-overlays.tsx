@@ -51,6 +51,8 @@ export interface TaskOverlayProps {
   scrollMode?: "body" | "task" | "auto";
   className?: string;
   initialFocus?: () => HTMLElement | null;
+  /** Stable owner for a task whose loading/editing surfaces may be replaced. */
+  returnFocus?: HTMLElement | null;
   onReady?(): void;
   onClosed?(): void;
   onCloseAutoFocus?(event: FocusEvent): void;
@@ -59,11 +61,45 @@ export interface TaskOverlayProps {
   bodyProps?: ComponentProps<"div">;
 }
 
+/** Capture once at the editing-session boundary, not each loading surface. */
+export function useTaskReturnFocus(owner?: HTMLElement | null) {
+  const [target] = useState(() =>
+    owner === undefined ? captureTaskReturnFocus() : owner,
+  );
+  return target;
+}
+
+function captureTaskReturnFocus() {
+  const active =
+    typeof document !== "undefined" &&
+    document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+  // A selected menu item disappears as this task opens. Retain the menu's
+  // persistent trigger instead, using its explicit accessible relationship.
+  const menu = active?.closest<HTMLElement>('[role="menu"]');
+  const trigger = menu
+    ?.getAttribute("aria-labelledby")
+    ?.split(/\s+/)
+    .map((id) => document.getElementById(id))
+    .find(
+      (element) =>
+        element?.getAttribute("aria-haspopup") === "menu" &&
+        element.getAttribute("aria-controls") === menu.id,
+    );
+  return trigger ?? active;
+}
+
 /** Triggerless task dialogs capture an eligible opener; Radix owns the focus scope. */
 export function useTaskOverlayFocus(
   props: Pick<
     TaskOverlayProps,
-    "open" | "initialFocus" | "onReady" | "onClosed" | "onCloseAutoFocus"
+    | "open"
+    | "initialFocus"
+    | "returnFocus"
+    | "onReady"
+    | "onClosed"
+    | "onCloseAutoFocus"
   >,
 ) {
   const opener = useRef<HTMLElement | null>(null);
@@ -71,24 +107,10 @@ export function useTaskOverlayFocus(
   const latest = useRef(props);
   latest.current = props;
   if (props.open && !previouslyOpen.current) {
-    const active =
-      typeof document !== "undefined" &&
-      document.activeElement instanceof HTMLElement
-        ? document.activeElement
-        : null;
-    // A selected menu item disappears as this task opens. Retain the menu's
-    // persistent trigger instead, using its explicit accessible relationship.
-    const menu = active?.closest<HTMLElement>('[role="menu"]');
-    const trigger = menu
-      ?.getAttribute("aria-labelledby")
-      ?.split(/\s+/)
-      .map((id) => document.getElementById(id))
-      .find(
-        (element) =>
-          element?.getAttribute("aria-haspopup") === "menu" &&
-          element.getAttribute("aria-controls") === menu.id,
-      );
-    opener.current = trigger ?? active;
+    opener.current =
+      props.returnFocus === undefined
+        ? captureTaskReturnFocus()
+        : props.returnFocus;
   }
   previouslyOpen.current = props.open;
   const onOpenAutoFocus = useCallback((event: FocusEvent) => {
