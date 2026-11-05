@@ -153,14 +153,27 @@ for (const width of [390, 1440]) {
         decision.getByRole("button", { name: "更换路径", exact: true }),
       ]) {
         await expect(action).toBeInViewport({ ratio: 1 });
-        expect((await action.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+        const bounds = (await action.boundingBox())!;
+        // Shared confirmations intentionally use 44px narrow targets and
+        // 36px desktop actions (confirmations.tsx). Verify both that contract
+        // and actual pointer reachability, not just an arbitrary rectangle.
+        expect(bounds.height).toBeGreaterThanOrEqual(width < 640 ? 44 : 36);
+        expect(bounds.width).toBeGreaterThanOrEqual(44);
+        await action.click({ trial: true });
+        expect(await action.evaluate((element) => {
+          const box = element.getBoundingClientRect();
+          return element.contains(document.elementFromPoint(
+            box.x + box.width / 2, box.y + box.height / 2,
+          ));
+        })).toBe(true);
       }
       if (attempt === 0)
         await page.screenshot({
           path: info.outputPath(`fleet-change-path-confirmation-${width}.png`),
           animations: "disabled",
         });
-      await page.keyboard.press("Escape");
+      if (attempt === 0) await keep.click();
+      else await page.keyboard.press("Escape");
       await expect(decision).toHaveCount(0);
       await expect(path).toBeFocused();
       await expect(path).toHaveText("办公路径");

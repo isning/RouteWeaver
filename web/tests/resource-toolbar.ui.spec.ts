@@ -27,20 +27,28 @@ const fixtures: Record<string, unknown> = {
   "/admin/fleet-batches": [],
 };
 
-async function setup(page: Page, withRoute = false) {
+async function setup(page: Page, inventory: "empty" | "route" | "fleet" = "empty") {
   const baseURL = test.info().project.use.baseURL;
   if (!baseURL || !["127.0.0.1", "localhost", "[::1]"].includes(new URL(baseURL).hostname))
     throw new Error("Toolbar layout QA requires loopback");
   const origin = new URL(baseURL).origin;
+  const instance = {
+    id: "toolbar-core", hostId: "toolbar-host", name: "远程协作核心",
+    adapterId: "routeweaver/xray", version: "26.3.27",
+  };
   const pageFixtures: Record<string, unknown> = {
     ...fixtures,
-    ...(withRoute ? {
+    ...(inventory !== "empty" ? {
       "/server-deployments": [{
         id: "toolbar-route", name: "远程协作转发路径", status: "draft",
         diagnostics: [], updatedAt: "2026-11-04T08:00:00Z",
-        ir: { schemaVersion: "1.0", id: "toolbar-route", topologyRevision: "1", programs: [] },
+        ir: {
+          schemaVersion: "1.0", id: "toolbar-route", topologyRevision: "1",
+          programs: inventory === "fleet" ? [{ instance }] : [],
+        },
       }],
     } : {}),
+    ...(inventory === "fleet" ? { "/core-instances": [instance] } : {}),
   };
   const unexpected: string[] = [];
   await page.route("**/*", (route) => {
@@ -65,11 +73,18 @@ for (const width of [390, 900, 1280]) {
   test(`Fleet keeps search and filters usable as selected tags grow at ${width}px`, async ({ page }, info) => {
     await page.setViewportSize({ width, height: 900 });
     await page.emulateMedia({ reducedMotion: "reduce" });
-    const unexpected = await setup(page);
+    const unexpected = await setup(page, "fleet");
     await page.goto("/#fleet");
     await page.getByRole("button", { name: "计划变更", exact: true }).click();
     const plan = page.getByRole("dialog", { name: "计划批量变更", exact: true });
     const toolbar = plan.getByRole("search", { name: "筛选执行范围", exact: true });
+    // Range controls belong to a selected, populated path. An empty inventory
+    // deliberately has no instance filters, so establish that task prerequisite.
+    await expect(plan.getByText("先选择已保存的转发路径。", { exact: true })).toBeVisible();
+    await expect(toolbar).toHaveCount(0);
+    await plan.getByRole("combobox", { name: "批量变更转发路径", exact: true }).click();
+    await page.getByRole("option", { name: "远程协作转发路径", exact: true }).click();
+    await expect(toolbar).toBeVisible();
     const search = toolbar.getByRole("textbox", { name: "筛选批量变更实例", exact: true });
     const group = toolbar.getByRole("combobox", { name: "筛选服务器分组", exact: true });
     const tags = toolbar.getByRole("combobox", { name: "筛选服务器标签", exact: true });
@@ -130,7 +145,7 @@ for (const width of [320, 390, 900, 1440]) {
     test(`${pageName} keeps list search compact and usable at ${width}px`, async ({ page }, info) => {
       await page.setViewportSize({ width, height: 900 });
       await page.emulateMedia({ reducedMotion: "reduce" });
-      const unexpected = await setup(page, pageName === "routes");
+      const unexpected = await setup(page, pageName === "routes" ? "route" : "empty");
       await page.goto(`/#${pageName}`);
       const toolbar = page.getByRole("search", {
         name: pageName === "users" ? "查找用户" : "查找转发路径",
