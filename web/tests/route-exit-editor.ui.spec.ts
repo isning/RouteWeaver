@@ -250,15 +250,22 @@ test.describe("390px touch", () => {
     await expect(server).toHaveAttribute("aria-expanded", "false");
     await expect(choices).toHaveCount(0);
     await expect(endpoint).toBeEnabled();
+    // Tap immediately after selection, including while the server popover's
+    // exit animation is finishing. Its delayed autofocus must not steal focus.
     await endpoint.tap();
     await expect(endpoint).toHaveAttribute("aria-expanded", "true");
     await expect(choices).toHaveCount(1);
+    await expect(
+      page.getByRole("combobox", { name: "搜索选项", exact: true }),
+    ).toBeFocused();
     // The server trigger has the same short name. Select the endpoint option,
     // never an arbitrary matching label while its popover is opening.
     await choices.getByRole("option", { name: "英国二号 vless:443 xray", exact: true }).tap();
     await expect(endpoint).toHaveText("英国二号 vless:443 xray");
     await expect(endpoint).toHaveAttribute("aria-expanded", "false");
     await expect(choices).toHaveCount(0);
+    // With no newer interaction, normal selection still returns to its trigger.
+    await expect(endpoint).toBeFocused();
     const check = editor.getByRole("button", { name: "检查变更", exact: true });
     await expect(check).toBeEnabled();
     expect((await check.boundingBox())!.height).toBeGreaterThanOrEqual(44);

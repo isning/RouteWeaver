@@ -162,6 +162,20 @@ export function ChoiceSelect<V extends Value = string>({
         align="start"
         aria-hidden={!open || undefined}
         inert={!open}
+        onCloseAutoFocus={(event) => {
+          // Exit motion can outlive the next tap. Do not let this picker
+          // reclaim focus and dismiss a newer picker that has already opened.
+          const closingContent = event.target;
+          const active = document.activeElement;
+          if (
+            closingContent instanceof HTMLElement &&
+            active &&
+            active !== document.body &&
+            active.isConnected &&
+            !closingContent.contains(active)
+          )
+            event.preventDefault();
+        }}
       >
         <Command label="搜索选项" shouldFilter={false}>
           {(searchable || flat(options).length > 40) && (
