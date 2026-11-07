@@ -21,9 +21,75 @@ async function visibleControl(control: Locator) {
   })).toBe(true);
 }
 
-async function capture(page: Page, surface: Locator, info: TestInfo, name: string) {
+async function capture(page: Page, surface: Locator, info: TestInfo, name: string, controls: Locator[] = []) {
   await settledTask(surface);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  const visibility = [];
+  for (const control of controls) {
+    // Pointer hit-testing alone misses painted Sonner cards with pointer-events:
+    // none. Check all nine interior sample points against their visible bounds,
+    // immediately before the screenshot. No polling for a toast to expire.
+    const observed = await control.evaluate((element) => {
+      const box = element.getBoundingClientRect();
+      const paintChain = [];
+      for (let node: Element | null = element; node; node = node.parentElement) {
+        const style = getComputedStyle(node);
+        paintChain.push({
+          element: node.tagName.toLowerCase(),
+          display: style.display,
+          visibility: style.visibility,
+          opacity: Number(style.opacity),
+        });
+      }
+      const effectiveOpacity = paintChain.reduce((opacity, item) => opacity * item.opacity, 1);
+      const paintedToasts = [...document.querySelectorAll("[data-sonner-toast]")].filter((toast) => {
+        if (!toast.getClientRects().length) return false;
+        for (let node: Element | null = toast; node; node = node.parentElement) {
+          const style = getComputedStyle(node);
+          if (style.display === "none" || style.visibility !== "visible" || Number(style.opacity) <= 0.01) return false;
+        }
+        return true;
+      });
+      const points = [0.1, 0.5, 0.9].flatMap((x) => [0.1, 0.5, 0.9].map((y) => {
+        const point = { x: box.x + box.width * x, y: box.y + box.height * y };
+        const hit = document.elementFromPoint(point.x, point.y);
+        return {
+          ...point,
+          controlHit: hit === element || element.contains(hit),
+          paintedToastOverlap: paintedToasts.some((toast) => {
+            const rect = toast.getBoundingClientRect();
+            return point.x >= rect.left && point.x <= rect.right && point.y >= rect.top && point.y <= rect.bottom;
+          }),
+        };
+      }));
+      return {
+        control: element.getAttribute("aria-label") || element.textContent?.trim(),
+        focused: element === document.activeElement,
+        interactive: !element.matches(":disabled,[aria-disabled='true']"),
+        positiveArea: box.width > 0 && box.height > 0 && element.getClientRects().length > 0,
+        paintChain,
+        effectiveOpacity,
+        bounds: { x: box.x, y: box.y, width: box.width, height: box.height },
+        inViewport: box.x >= 0 && box.y >= 0 && box.right <= innerWidth && box.bottom <= innerHeight,
+        points,
+      };
+    });
+    visibility.push(observed);
+  }
+  if (visibility.length) {
+    await writeFile(info.outputPath(`settings-edit-journey-visibility-${name}.json`), `${JSON.stringify(visibility, null, 2)}\n`);
+    for (const observed of visibility) {
+      expect(observed.positiveArea, `${observed.control} has positive rendered area`).toBe(true);
+      expect(observed.paintChain.every((item) =>
+        item.display !== "none" && item.visibility === "visible" && item.opacity > 0),
+      `${observed.control} and its ancestors are painted`).toBe(true);
+      expect(observed.effectiveOpacity, `${observed.control} has visible effective opacity`).toBeGreaterThan(0.01);
+      expect(observed.inViewport, `${observed.control} fully in viewport`).toBe(true);
+      if (observed.interactive)
+        expect(observed.points.every((point) => point.controlHit), `${observed.control} has nine clear hit points`).toBe(true);
+      expect(observed.points.some((point) => point.paintedToastOverlap), `${observed.control} has no painted toast overlap`).toBe(false);
+    }
+  }
   const path = info.outputPath(`settings-edit-journey-${name}.png`);
   await page.screenshot({ path, fullPage: false });
   await info.attach(`settings-edit-journey-${name}`, { path, contentType: "image/png" });
@@ -216,13 +282,14 @@ for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844
     await expect(review).toContainText("不会自动跳转");
     const consent = review.getByRole("checkbox", { name: "我已确认域名配置与旧链接的访问安排", exact: true });
     const activate = review.getByRole("button", { name: "确认启用", exact: true });
+    const cancelActivation = review.getByRole("button", { name: "取消", exact: true });
     await expect(activate).toBeDisabled();
-    await capture(page, review, info, `activation-identity-${suffix}`);
+    await capture(page, review, info, `activation-identity-${suffix}`, [cancelActivation, activate]);
     await tabTo(page, consent);
     await visibleControl(consent);
     await page.keyboard.press("Space");
     await expect(consent).toBeChecked();
-    await capture(page, review, info, `activation-consent-${suffix}`);
+    await capture(page, review, info, `activation-consent-${suffix}`, [consent, cancelActivation, activate]);
     await page.keyboard.press("Escape");
     await expect(review).toBeHidden();
     await expect(enableDraft).toBeFocused();
@@ -236,7 +303,7 @@ for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844
     await page.keyboard.press("Space");
     await tabTo(page, activate);
     await visibleControl(activate);
-    await capture(page, review, info, `activation-decision-${suffix}`);
+    await capture(page, review, info, `activation-decision-${suffix}`, [cancelActivation, activate]);
     const activated = page.waitForResponse((response) =>
       new URL(response.url()).pathname === `${originPath}/activate` && response.request().method() === "POST");
     await page.keyboard.press("Enter");
