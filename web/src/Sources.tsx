@@ -110,6 +110,7 @@ export function SourcesPage({
   const openChanges = (source: Source) => {
     if (application.isRunning() || refreshStarted.current || otherWritePending)
       return;
+    message.dismiss(sourceApplicationNoticeID(source.id));
     setReviewRecovery(undefined);
     setReview(source);
   };
@@ -129,6 +130,7 @@ export function SourcesPage({
     source: Source,
     recovery: SourceApplyRecovery,
   ) => {
+    message.dismiss(sourceApplicationNoticeID(source.id));
     setDetail(null);
     setReviewRecovery(recovery);
     setReview(source);
@@ -179,6 +181,7 @@ export function SourcesPage({
           : result.refreshStatus === "unchanged"
             ? "已是最新内容"
             : "来源已更新",
+        { id: sourceApplicationNoticeID(result.id) },
       );
     },
     onError: (error) => {
@@ -530,7 +533,10 @@ export function SourcesPage({
           setEditing(null);
         }}
         onSaved={(result) => {
-          if (result.candidate) message.info("来源已保存，有更新可手动应用");
+          if (result.candidate)
+            message.info("来源已保存，有更新可手动应用", {
+              id: sourceApplicationNoticeID(result.id),
+            });
           else if (!editing && result.snapshot) onAdded?.(result);
         }}
       />

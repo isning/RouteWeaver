@@ -21,6 +21,41 @@ function responseFor(page: Page, path: string, method = "POST") {
   );
 }
 
+async function expectUncovered(target: Locator) {
+  await expect(target).toBeInViewport({ ratio: 1 });
+  // Check the settled frame once. Polling until a covering toast expires would
+  // conceal a broken transition rather than prove usable foreground copy.
+  expect(
+    await target.evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      const hit = document.elementFromPoint(
+        rect.left + rect.width / 2,
+        rect.top + rect.height / 2,
+      );
+      return hit === element || (hit !== null && element.contains(hit));
+    }),
+    "Foreground consequence or action receives the center hit",
+  ).toBe(true);
+}
+
+async function expectSourceNoticeRetired(page: Page) {
+  for (const text of [
+    "来源已保存，有更新可手动应用",
+    "发现更新，可手动应用",
+    `「${names.source}」已应用，已发布订阅未改变`,
+  ]) {
+    // Dismissed notices may finish their finite exit animation. Require their
+    // retirement now, not absence after the normal display duration expires.
+    expect(
+      await page
+        .locator('[data-sonner-toast]:not([data-removed="true"])')
+        .filter({ hasText: text })
+        .count(),
+      "The foreground source task retires its preceding source notice",
+    ).toBe(0);
+  }
+}
+
 async function capture(
   page: Page,
   info: TestInfo,
@@ -45,13 +80,14 @@ async function capture(
     }),
     "Task surface fits the viewport without horizontal overflow",
   ).toBe(true);
-  // Explicit screenshots only; source input, rendered configuration, access
-  // links and QR images stay masked if any becomes visible on these surfaces.
+  // Mask only sensitive descendants of the foreground task. Page-wide masks
+  // paint even obscured background inputs over readable foreground copy.
+  // Source input, rendered configuration, access links and QR remain masked.
   await page.screenshot({
     path: info.outputPath(`${name}.png`),
     fullPage: false,
     mask: [
-      page.locator(
+      surface.locator(
         'input, textarea, pre, code, canvas, svg[role="img"], svg[width="180"][height="180"], a[href*="/feed/"], [aria-label="订阅链接"]',
       ),
     ],
@@ -149,6 +185,11 @@ for (const width of [1440, 390])
         pending.candidate!.affected.some((item) => item.id === f.lateId),
       ).toBe(false);
       await expect(page.getByRole("dialog")).toHaveCount(0);
+      await expect(
+        page.locator("[data-sonner-toast]").filter({
+          hasText: "来源已保存，有更新可手动应用",
+        }),
+      ).toBeVisible();
       await page.getByRole("button", { name: "查看变化", exact: true }).click();
       const changes = page.getByRole("dialog", {
         name: "查看变化",
@@ -161,6 +202,8 @@ for (const width of [1440, 390])
         changes.getByText("登录密码", { exact: true }),
       ).toBeVisible();
       await expect(changes).not.toContainText("synthetic-source-");
+      await settledTask(changes);
+      await expectSourceNoticeRetired(page);
       await f.publicationsUnchanged();
       await capture(page, info, `source-credential-pending-${width}`, changes);
       await page.keyboard.press("Escape");
@@ -292,6 +335,15 @@ for (const width of [1440, 390])
       );
       await chosenLink.scrollIntoViewIfNeeded();
       await expect(chosenLink).toBeInViewport();
+      await settledTask(receipt);
+      await expectSourceNoticeRetired(page);
+      await expectUncovered(
+        receipt.getByText("来源已更新，已发布订阅未改变。", { exact: true }),
+      );
+      await expectUncovered(chosenLink);
+      await expectUncovered(
+        receipt.getByRole("button", { name: "完成", exact: true }),
+      );
       await capture(
         page,
         info,
@@ -375,6 +427,15 @@ for (const width of [1440, 390])
       });
       await confirm.scrollIntoViewIfNeeded();
       await expect(confirm).toBeInViewport();
+      await settledTask(review);
+      await expectSourceNoticeRetired(page);
+      await expectUncovered(
+        review.getByText("沿用当前链接，其他订阅保留原状。", { exact: true }),
+      );
+      await expectUncovered(
+        review.getByRole("button", { name: "取消", exact: true }),
+      );
+      await expectUncovered(confirm);
       await capture(
         page,
         info,
@@ -446,6 +507,12 @@ for (const width of [1440, 390])
             interruptions: {
               sourceReviewDismissedWithoutApplying: true,
               outputReviewCancelledWithoutPublishing: true,
+            },
+            foreground: {
+              sourceNoticeRetiredOnTaskTransition: true,
+              appliedConsequenceAndActionsUncovered: true,
+              publicationConsequenceAndConfirmUncovered: true,
+              sensitiveMasksScopedToActiveTask: true,
             },
             publication: {
               explicitWrites: publications.length,

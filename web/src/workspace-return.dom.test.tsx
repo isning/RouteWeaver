@@ -657,9 +657,29 @@ it("routes a source acceptance link through the same history lineage and returns
           ]),
         );
       if (String(url).endsWith("/apply")) {
+        expect(JSON.parse(String(init?.body))).toEqual({
+          candidateId: "candidate",
+          sourceRevision: "r1",
+        });
         applied = true;
         return Promise.resolve(
-          json({ ...source, candidate: undefined, revision: "r2" }),
+          json({
+            ...source,
+            candidate: undefined,
+            revision: "r2",
+            application: {
+              candidateId: "candidate",
+              sourceRevision: "r2",
+              affected: [
+                {
+                  kind: "profile",
+                  id: "shared",
+                  name: profile.name,
+                  reason: "draft-inputs-changed",
+                },
+              ],
+            },
+          }),
         );
       }
       return baseFetch(url, init);
