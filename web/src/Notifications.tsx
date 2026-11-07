@@ -781,6 +781,10 @@ function SettingsForm({ initial }: { initial: Settings }) {
   const saveConsequenceId = useId();
   const senderInput = useRef<HTMLInputElement>(null);
   const saveButton = useRef<HTMLButtonElement>(null);
+  const saveDecision = useRef<HTMLDivElement>(null);
+  const saving = useRef<object | null>(null);
+  const saveFocusOwner = useRef<object | null>(null);
+  const failedSave = useRef<object | null>(null);
   const clearSMTPInput = useRef<HTMLButtonElement>(null);
   const clearWebhookInput = useRef<HTMLButtonElement>(null);
   const invalidSecretFocus = useRef<HTMLButtonElement | null>(null);
@@ -853,7 +857,10 @@ function SettingsForm({ initial }: { initial: Settings }) {
         }),
       });
     },
+    onError: () => { failedSave.current = saving.current; },
+    onSettled: () => { saving.current = null; },
     onSuccess: (saved) => {
+      saveFocusOwner.current = null;
       setBaseline(saved);
       setDirty(false);
       form.setFieldsValue({
@@ -866,6 +873,17 @@ function SettingsForm({ initial }: { initial: Settings }) {
       message.success("通知设置已保存");
     },
   });
+  useLayoutEffect(() => {
+    const task = failedSave.current;
+    failedSave.current = null;
+    const decision = saveDecision.current;
+    if (!save.error || !task || saveFocusOwner.current !== task ||
+      document.activeElement !== saveButton.current || !decision?.isConnected ||
+      decision.closest('[hidden], [inert]')) return;
+    saveFocusOwner.current = null;
+    // Reveal failure and retry together without changing the user's focus.
+    decision.scrollIntoView?.({ block: "center", inline: "nearest" });
+  }, [save.error]);
   const test = useMutation({
     mutationFn: (channel: string) =>
       post<Delivery>("/admin/notifications/test", { channel }),
@@ -931,9 +949,19 @@ function SettingsForm({ initial }: { initial: Settings }) {
           providerRemainingPercent:
             baseline.providerRemainingPercent.map(String),
         }}
-        onFinish={(values) => save.mutate(values)}
+        onBlurCapture={(event) => {
+          if (event.target === saveButton.current) saveFocusOwner.current = null;
+        }}
+        onFinish={(values) => {
+          if (saving.current) return;
+          const task = {};
+          saving.current = task;
+          failedSave.current = null;
+          saveFocusOwner.current = document.activeElement === saveButton.current ? task : null;
+          save.mutate(values);
+        }}
       >
-        <ErrorNotice error={save.error || test.error} />
+        <ErrorNotice error={test.error} />
         <p className="text-sm text-muted-foreground">
           每类可设置多个阈值；清空即关闭该类提醒。
         </p>
@@ -1198,7 +1226,8 @@ function SettingsForm({ initial }: { initial: Settings }) {
             </AccordionItem>
           ))}
         </Accordion>
-        <div className="flex flex-wrap items-center justify-end gap-2 border-t pt-4">
+        <div ref={saveDecision} role="group" aria-label="保存通知设置" className="flex flex-wrap items-center justify-end gap-2 border-t pt-4">
+          {save.error && <div className="w-full"><ErrorNotice error={save.error} /></div>}
           <p id={saveConsequenceId} className="w-full text-sm text-muted-foreground">
             保存会取消此前排队或等待重试的外部发送；已开始发送的请求仍可能完成。
           </p>
@@ -1207,6 +1236,7 @@ function SettingsForm({ initial }: { initial: Settings }) {
           </ActionButton>
           <ActionButton
             ref={saveButton}
+            keepFocusableWhilePending
             type="submit"
             aria-describedby={saveConsequenceId}
             pending={save.isPending}

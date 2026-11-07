@@ -233,16 +233,24 @@ for (const width of [1440, 390]) {
       for (const channel of channels) await retained(page.getByLabel(channel.replacement, { exact: true }), channel.secret);
       await save.click();
       await expect.poll(() => writes.length).toBe(1);
-      await expect(save).toBeDisabled();
+      await expect(save).toHaveAttribute("aria-disabled", "true");
+      await expect(save).toBeFocused();
       await expect(page.getByLabel("SMTP 主机", { exact: true })).toBeDisabled();
       await page.keyboard.press("Enter");
       expect(writes.length).toBe(1);
       releaseFirst!();
-      const saveError = page.getByText("通知设置暂时未保存，请重试。", { exact: true });
+      const saveDecision = page.getByRole("group", { name: "保存通知设置", exact: true });
+      const saveError = saveDecision.getByText("通知设置暂时未保存，请重试。", { exact: true });
       await expect(saveError).toBeVisible();
-      // Diagnostic evidence, not a viewport-visibility pass. Capture the user's
-      // actual failure view before any test scroll or full-document screenshot.
-      const saveFailureViewport = { error: await visibility(saveError), save: await visibility(save) };
+      await expect(save).not.toHaveAttribute("aria-disabled", "true");
+      // Capture production's actual current failure view before assertions, test
+      // scrolling or a full-document image. Failure and retry must be together.
+      const saveFailureViewport = {
+        decision: await visibility(saveDecision),
+        notice: await visibility(saveError.locator('xpath=ancestor::*[@role="alert"][1]')),
+        error: await visibility(saveError),
+        save: await visibility(save, 3),
+      };
       await capture(page, info, "save-error-current-viewport", width, false);
       await writeFile(info.outputPath(`notification-channel-journey-save-error-current-viewport-${width}.json`), JSON.stringify({
         sampled: "Immediately after held failure rendered; no test scrolling",
@@ -250,19 +258,22 @@ for (const width of [1440, 390]) {
         noticeFullyVisible: saveFailureViewport.error.fullyInside && saveFailureViewport.error.unobscured,
         requiresPixelReview: true,
       }, null, 2));
+      expect(Object.values(saveFailureViewport).every(target => target.fullyInside && target.unobscured)).toBe(true);
+      expect(saveFailureViewport.save.focused).toBe(true);
+      expect(writes.length).toBe(1);
       for (const channel of channels) await retained(page.getByLabel(channel.replacement, { exact: true }), channel.secret);
       expect((await readSettings()).revision).toBe(baseline.revision);
       await capture(page, info, "save-error", width);
       await save.click();
       await expect.poll(() => writes.length).toBe(2);
-      await expect(save).toBeEnabled();
+      await expect(save).not.toHaveAttribute("aria-busy", "true");
       expect(JSON.stringify(writes[1]) === JSON.stringify(writes[0])).toBe(true);
       expect((await readSettings()).revision).toBe(baseline.revision);
       for (const channel of channels) await retained(page.getByLabel(channel.replacement, { exact: true }), channel.secret);
       const saved = page.waitForResponse(r => new URL(r.url()).pathname === "/api/admin/notification-settings" && r.request().method() === "PUT" && r.status() === 200);
       await save.click();
       expect((await saved).status()).toBe(200);
-      await expect(save).toBeEnabled();
+      await expect(save).not.toHaveAttribute("aria-busy", "true");
       expect(writes.length).toBe(3);
       expect(writes.every(payload => JSON.stringify(payload) === JSON.stringify(writes[0]))).toBe(true);
       expect(writes[2].smtpPassword === nextSMTP && writes[2].webhookSecret === nextWebhook).toBe(true);
@@ -290,7 +301,7 @@ for (const width of [1440, 390]) {
       const clearedResponse = page.waitForResponse(r => new URL(r.url()).pathname === "/api/admin/notification-settings" && r.request().method() === "PUT");
       await save.click();
       expect((await clearedResponse).status()).toBe(200);
-      await expect(save).toBeEnabled();
+      await expect(save).not.toHaveAttribute("aria-busy", "true");
       const cleared = await readSettings();
       expect(cleared.smtpPasswordSet || cleared.webhookSecretSet || cleared.email.enabled || cleared.webhook.enabled).toBe(false);
       expect(cleared.revision).toBe(replaced.revision + 1);

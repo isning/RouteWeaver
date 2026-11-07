@@ -70,7 +70,7 @@ const initial = {
   smtpPasswordSet: true,
   webhookSecretSet: true,
 };
-async function mount(failFirst = false) {
+async function mount(failFirst = false, firstSave?: Promise<void>, testFailure?: string) {
   const sent: any[] = [];
   vi.stubGlobal(
     "fetch",
@@ -79,6 +79,7 @@ async function mount(failFirst = false) {
         if (init?.method === "PUT") {
           const value = JSON.parse(init.body);
           sent.push(value);
+          if (firstSave && sent.length === 1) await firstSave;
           if (failFirst && sent.length === 1)
             return json({ detail: "设置未保存，请重试" }, 503);
           return json({ ...initial, ...value, revision: 2 });
@@ -86,7 +87,7 @@ async function mount(failFirst = false) {
         return json(initial);
       }
       if (String(url).endsWith("/notifications/test"))
-        return json({ status: "queued" });
+        return testFailure ? json({ detail: testFailure }, 503) : json({ status: "queued" });
       return json(String(url).endsWith("/state") ? { users: [] } : []);
     }),
   );
@@ -429,6 +430,67 @@ it.each([false, true])("reveals a conflicting choice after expansion only if sub
   } finally {
     finish();
   }
+});
+
+it.each(["owned", "newer-focus", "away-and-back"] as const)("keeps a held save failure at the Save decision without taking newer focus (%s)", async (ownership) => {
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => { release = resolve; });
+  const sent = await mount(true, gate);
+  toggle("邮件通知");
+  change("更新 SMTP 密码（留空保留已保存值）", "synthetic-retained-failure-secret");
+  change("到期提醒重复周期（小时）", "12");
+  const decision = screen.getByRole("group", { name: "保存通知设置" });
+  const reveal = vi.fn();
+  Object.defineProperty(decision, "scrollIntoView", { configurable: true, value: reveal });
+  const submit = screen.getByRole("button", { name: "保存通知设置" });
+  const newer = screen.getByRole("button", { name: "发送站内测试" });
+  try {
+    submit.focus();
+    save();
+    await waitFor(() => expect(sent.length).toBe(1));
+    await waitFor(() => expect(submit.getAttribute("aria-disabled")).toBe("true"));
+    expect(submit.hasAttribute("disabled")).toBe(false);
+    expect(document.activeElement === submit).toBe(true);
+    // Both repeated activation and an in-flight form submission stay one write.
+    fireEvent.click(submit);
+    fireEvent.submit(submit.closest("form")!);
+    await act(async () => {});
+    expect(sent.length).toBe(1);
+    if (ownership !== "owned") newer.focus();
+    if (ownership === "away-and-back") submit.focus();
+    await act(async () => { release(); await gate; });
+    await within(decision).findByText("设置未保存，请重试");
+    expect(screen.getAllByText("设置未保存，请重试").length).toBe(1);
+    expect(document.activeElement === (ownership === "newer-focus" ? newer : submit)).toBe(true);
+    expect(reveal).toHaveBeenCalledTimes(ownership === "owned" ? 1 : 0);
+    expect((screen.getByLabelText("更新 SMTP 密码（留空保留已保存值）") as HTMLInputElement).value === "synthetic-retained-failure-secret").toBe(true);
+    expect(hasUnsavedChanges()).toBe(true);
+    expect(vi.mocked(fetch).mock.calls.filter(([url]) => String(url).endsWith("/notifications/test")).length).toBe(0);
+    submit.focus();
+    save();
+    await waitFor(() => expect(sent.length).toBe(2));
+    expect(JSON.stringify(sent[1]) === JSON.stringify(sent[0])).toBe(true);
+    await waitFor(() => expect(within(decision).queryByText("设置未保存，请重试")).toBeNull());
+    await waitFor(() => expect(hasUnsavedChanges()).toBe(false));
+  } finally {
+    release();
+  }
+});
+
+it("keeps a separate test-delivery failure when a settings save also fails", async () => {
+  await mount(true, undefined, "站内测试未完成，请查看发送记录");
+  fireEvent.click(screen.getByRole("button", { name: "发送站内测试" }));
+  const review = screen.getByRole("alertdialog", { name: "发送一条测试通知？" });
+  fireEvent.click(within(review).getByRole("button", { name: "发送测试" }));
+  await within(review).findByText("站内测试未完成，请查看发送记录");
+  fireEvent.click(within(review).getByRole("button", { name: "取消" }));
+  await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+  change("到期提醒重复周期（小时）", "12");
+  save();
+  const decision = screen.getByRole("group", { name: "保存通知设置" });
+  await within(decision).findByText("设置未保存，请重试");
+  expect(screen.getByText("站内测试未完成，请查看发送记录")).toBeTruthy();
+  expect(within(decision).queryByText("站内测试未完成，请查看发送记录")).toBeNull();
 });
 
 it("keeps announcement fields in the sequential task scroll when viewport capacity is insufficient", async () => {
