@@ -420,16 +420,31 @@ test("collection zero one and multiple source states retain preparation ordering
   await expect(chevron).toHaveCSS("rotate", "0deg");
   await firstSource.click();
   await expect(chevron).toHaveCSS("rotate", "90deg");
-  // State remains apparent without animation for reduced-motion users.
+  // The global reduced-motion rule uses a 0.01 ms accessibility floor.
+  // Normalize browser serialization (for example 1e-05s) without allowing
+  // any transition longer than that existing bound.
+  const expectReducedMotionDuration = async () => {
+    const durations = await chevron.evaluate((element) =>
+      getComputedStyle(element).transitionDuration.split(",").map((part) => {
+        const duration = part.trim();
+        return Number.parseFloat(duration) * (duration.endsWith("ms") ? 1 : 1000);
+      }),
+    );
+    expect(durations.length).toBeGreaterThan(0);
+    for (const duration of durations) {
+      expect(duration).toBeGreaterThanOrEqual(0);
+      expect(duration).toBeLessThanOrEqual(0.01);
+    }
+  };
   await page.emulateMedia({ reducedMotion: "reduce" });
   await firstSource.click();
   await expect(firstSource).toHaveAttribute("aria-expanded", "false");
   await expect(chevron).toHaveCSS("rotate", "0deg");
-  await expect(chevron).toHaveCSS("transition-duration", "0s");
+  await expectReducedMotionDuration();
   await firstSource.click();
   await expect(firstSource).toHaveAttribute("aria-expanded", "true");
   await expect(chevron).toHaveCSS("rotate", "90deg");
-  await expect(chevron).toHaveCSS("transition-duration", "0s");
+  await expectReducedMotionDuration();
   await page.emulateMedia({ reducedMotion: null });
   await expect(
     drawer.getByText("未添加处理步骤", { exact: true }),
