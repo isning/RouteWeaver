@@ -754,7 +754,7 @@ it("keeps a lost body-read result uncertain even after a retry conflicts", async
   await editor.findByText("尚未确认输入是否保存");
   fireEvent.click(editor.getByRole("button", { name: "添加并使用" }));
   await waitFor(() => expect(writes).toBe(2));
-  await editor.findByRole("button", { name: "读取最新来源", exact: true });
+  await editor.findByRole("button", { name: "读取最新来源" });
   expect(editor.queryByText("Source revision changed")).toBeNull();
   expect(editor.getByText("尚未确认输入是否保存")).toBeTruthy();
   await userEvent.click(editor.getByRole("button", { name: /取\s*消/ }));

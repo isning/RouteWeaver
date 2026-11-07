@@ -45,18 +45,18 @@ afterEach(async () => {
   vi.restoreAllMocks(); vi.unstubAllEnvs(); vi.unstubAllGlobals();
 });
 async function editAndConflict() {
-  const editor = within(await screen.findByRole("dialog", { name: "编辑来源", exact: true }));
+  const editor = within(await screen.findByRole("dialog", { name: "编辑来源" }));
   await waitFor(() => expect((editor.getByLabelText("来源名称") as HTMLInputElement).value).toBe(source.name));
   fireEvent.change(editor.getByLabelText("来源名称"), { target: { value: "Unsaved name" } });
   fireEvent.change(editor.getByLabelText("节点链接或配置内容"), { target: { value: "socks5://local.example:1080#Local" } });
-  await userEvent.click(editor.getByRole("button", { name: "保存修改", exact: true }));
-  await editor.findByRole("button", { name: "读取最新来源", exact: true });
+  await userEvent.click(editor.getByRole("button", { name: "保存修改" }));
+  await editor.findByRole("button", { name: "读取最新来源" });
   return editor;
 }
 async function confirmReload(editor: ReturnType<typeof within>) {
-  await userEvent.click(editor.getByRole("button", { name: "读取最新来源", exact: true }));
+  await userEvent.click(editor.getByRole("button", { name: "读取最新来源" }));
   const review = within(await screen.findByRole("alertdialog", { name: "放弃当前修改并读取最新来源？" }));
-  await userEvent.click(review.getByRole("button", { name: "放弃修改并读取", exact: true }));
+  await userEvent.click(review.getByRole("button", { name: "放弃修改并读取" }));
 }
 
 it("keeps a conflicted draft until explicit discard-and-read, then saves only a fresh complete version", async () => {
@@ -73,10 +73,10 @@ it("keeps a conflicted draft until explicit discard-and-read, then saves only a 
   const host = mount(source);
   const editor = await editAndConflict();
   expect(hasUnsavedChanges()).toBe(true);
-  await userEvent.click(editor.getByRole("button", { name: "读取最新来源", exact: true }));
+  await userEvent.click(editor.getByRole("button", { name: "读取最新来源" }));
   const review = within(await screen.findByRole("alertdialog", { name: "放弃当前修改并读取最新来源？" }));
   expect(review.getByText("这会替换当前窗口中的未保存输入。已保存的来源和已发布订阅不会改变。")).toBeTruthy();
-  await userEvent.click(review.getByRole("button", { name: "保留当前输入", exact: true }));
+  await userEvent.click(review.getByRole("button", { name: "保留当前输入" }));
   await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
   expect((editor.getByLabelText("来源名称") as HTMLInputElement).value).toBe("Unsaved name");
   expect((editor.getByLabelText("节点链接或配置内容") as HTMLTextAreaElement).value).toBe("socks5://local.example:1080#Local");
@@ -96,7 +96,7 @@ it("keeps a conflicted draft until explicit discard-and-read, then saves only a 
   expect(fireEvent.keyDown(nameInput, { key: "Enter", repeat: false })).toBe(true);
   expect(writes).toHaveLength(1);
   fireEvent.change(editor.getByLabelText("来源名称"), { target: { value: "Fresh edit" } });
-  await userEvent.click(editor.getByRole("button", { name: "保存修改", exact: true }));
+  await userEvent.click(editor.getByRole("button", { name: "保存修改" }));
   await waitFor(() => expect(host.onSaved).toHaveBeenCalledTimes(1));
   expect(writes[1].value).toMatchObject({ revision: "current-r2", name: "Fresh edit", kind: "url", url: current.url, applyMode: "manual" });
   expect(writes[1].value.content).toBeUndefined();
@@ -133,9 +133,9 @@ it.each(["failed", "mismatched", "foreign", "missing-revision"])(
     let editor = within(await screen.findByRole("dialog", { name: "添加订阅来源" }));
     fireEvent.change(editor.getByLabelText("来源名称"), { target: { value: "Local new source" } });
     fireEvent.change(editor.getByLabelText("节点链接或配置内容"), { target: { value: "socks5://local.example:1080#Local" } });
-    await userEvent.click(editor.getByRole("button", { name: "导入来源", exact: true }));
+    await userEvent.click(editor.getByRole("button", { name: "导入来源" }));
     await editor.findByText("尚未确认输入是否保存");
-    await userEvent.click(editor.getByRole("button", { name: "导入来源", exact: true }));
+    await userEvent.click(editor.getByRole("button", { name: "导入来源" }));
     await waitFor(() => expect(writes).toHaveLength(2));
     expect(editor.queryByText("Source already exists")).toBeNull();
     for (const write of writes) {
@@ -156,7 +156,7 @@ it.each(["failed", "mismatched", "foreign", "missing-revision"])(
     expect(writes).toHaveLength(2);
     validRead = true;
     await confirmReload(editor);
-    editor = within(await screen.findByRole("dialog", { name: "编辑来源", exact: true }));
+    editor = within(await screen.findByRole("dialog", { name: "编辑来源" }));
     await waitFor(() => expect((editor.getByLabelText("来源名称") as HTMLInputElement).value).toBe("Saved in another tab"));
     expect(editor.queryByText("尚未确认输入是否保存")).toBeNull();
     expect(hasUnsavedChanges()).toBe(false);
@@ -165,7 +165,7 @@ it.each(["failed", "mismatched", "foreign", "missing-revision"])(
       `/api/me/sources/${writes[0].value.id}/reveal`, `/api/me/sources/${writes[0].value.id}`,
     ]);
     fireEvent.change(editor.getByLabelText("来源名称"), { target: { value: "Fresh recovered edit" } });
-    await userEvent.click(editor.getByRole("button", { name: "保存修改", exact: true }));
+    await userEvent.click(editor.getByRole("button", { name: "保存修改" }));
     await waitFor(() => expect(host.onSaved).toHaveBeenCalledTimes(1));
     expect(writes[2].method).toBe("PUT");
     expect(writes[2].headers.has("If-None-Match")).toBe(false);
@@ -189,18 +189,18 @@ it("owns one confirmed read, blocks saving and closing while pending, and ignore
   }));
   const host = mount(source);
   const editor = await editAndConflict();
-  await userEvent.dblClick(editor.getByRole("button", { name: "读取最新来源", exact: true }));
+  await userEvent.dblClick(editor.getByRole("button", { name: "读取最新来源" }));
   expect(screen.getAllByRole("alertdialog")).toHaveLength(1);
   const review = within(screen.getByRole("alertdialog"));
-  await userEvent.dblClick(review.getByRole("button", { name: "放弃修改并读取", exact: true }));
+  await userEvent.dblClick(review.getByRole("button", { name: "放弃修改并读取" }));
   await waitFor(() => expect(pending).toHaveLength(2));
   expect((editor.getByLabelText("来源名称") as HTMLInputElement).disabled).toBe(true);
   fireEvent.submit(editor.getByLabelText("来源名称").closest("form")!);
-  fireEvent.click(editor.getByRole("button", { name: "关闭", exact: true }));
+  fireEvent.click(editor.getByRole("button", { name: "关闭" }));
   expect(host.onClose).not.toHaveBeenCalled();
   expect(writes).toHaveLength(1);
   host.replace(next);
-  const replacement = within(await screen.findByRole("dialog", { name: "编辑来源", exact: true }));
+  const replacement = within(await screen.findByRole("dialog", { name: "编辑来源" }));
   await waitFor(() => expect((replacement.getByLabelText("来源名称") as HTMLInputElement).value).toBe("New owner"));
   fireEvent.change(replacement.getByLabelText("来源名称"), { target: { value: "New owner local draft" } });
   await act(async () => pending.forEach((resolve) => resolve(json(current))));
