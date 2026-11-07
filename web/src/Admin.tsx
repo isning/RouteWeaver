@@ -471,7 +471,7 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
                     <DataTable<NodeRecord>
                       rowKey="id"
                       rows={nodes.filter((n) => match(n.name))}
-                      count={{ total: nodes.length, unit: "个连接节点", filtered: !!search }}
+                      count={{ total: nodes.length, unit: "个连接端点", filtered: !!search }}
                       columns={[
                         {
                           title: "端点",

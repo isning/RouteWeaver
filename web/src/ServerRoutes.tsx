@@ -307,6 +307,7 @@ export function ServerRoutesPage({
                   },
                   {
                     title: "监听与转发",
+                    className: "min-w-48",
                     render: (_, d) => (
                       <ServerForwarding
                         programs={d.ir.programs}
