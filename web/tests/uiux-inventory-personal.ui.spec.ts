@@ -43,7 +43,44 @@ for (const width of [1440, 390]) for (const [route, title] of routes) {
           expect(await read(page.request, "/me/sources")).toHaveLength(1);
           await expect(content.getByRole("button", { name: `${names.source} 文本导入`, exact: true })).toBeVisible();
           await inventory.capture("list", "populated", "One accepted text source with two credential-free documentation-address endpoints");
-          await inventory.task(page.locator(".page-heading").getByRole("button", { name: "添加来源", exact: true }), "添加订阅来源", "add-source");
+          const evidence = inventory;
+          await inventory.task(page.locator(".page-heading").getByRole("button", { name: "添加来源", exact: true }), "添加订阅来源", "add-source", async (dialog) => {
+            if (width !== 390) return;
+            const mode = dialog.getByRole("combobox", { name: "更新应用方式", exact: true });
+            const enabled = dialog.getByRole("switch", { name: "启用来源", exact: true });
+            await evidence.tabTo(dialog, mode);
+            await expect(mode).toHaveText("自动应用");
+            await evidence.tabTo(dialog, enabled);
+            await expect(enabled).toBeChecked();
+            await expect(dialog.getByRole("textbox", { name: "来源名称", exact: true })).toHaveValue("");
+            await expect(dialog.getByRole("textbox", { name: "节点链接或配置内容", exact: true })).toHaveValue("");
+            const completion = dialog.getByRole("group", { name: "来源导入确认", exact: true });
+            for (const target of [mode, enabled,
+              dialog.getByText("首次导入立即可用。后续更新按此方式应用到来源，不会自动发布订阅。", { exact: true }),
+              completion,
+              completion.getByText("订阅信息由平台解析并加密保存，仅供你的账号使用。", { exact: true }),
+              completion.getByRole("button", { name: "取消", exact: true }),
+              completion.getByRole("button", { name: "导入来源", exact: true }),
+            ]) await evidence.inView(target);
+            await evidence.capture("add-source-lower", "unsubmitted-task", "Native Tab reached unchanged auto-update mode and enabled switch; complete update/publication consequence and privacy/Cancel/Import region visible inside their actual clips; source name/content remain empty", dialog);
+            evidence.interactions.push("Source lower frame: native Tab to update mode and enabled switch, unchanged values, full consequence/privacy/completion geometry; no file selection, edits or import");
+          });
+          if (width === 390) {
+            const viewport = content.getByRole("region", { name: "表格滚动区域", exact: true });
+            const row = content.getByRole("row").filter({ has: page.getByRole("group", { name: `${names.source} 的操作`, exact: true }) });
+            const updated = viewport.getByRole("columnheader", { name: "最近更新", exact: true });
+            // Resolve the cell from its real semantic column, not an arbitrary row index.
+            const updatedCell = row.getByRole("cell").nth(await updated.evaluate((element) => (element as HTMLTableCellElement).cellIndex));
+            await expect(updatedCell).not.toHaveText("");
+            await inventory.wheelColumns(viewport, [updated, updatedCell, row.getByRole("cell", { name: "已导入", exact: true })]);
+            await inventory.capture("list-updated", "populated", "Real horizontal wheel reveals the accepted source status and full last-update column/cell; original left-side identity capture retained");
+            const actions = row.getByRole("group", { name: `${names.source} 的操作`, exact: true });
+            await inventory.wheelColumns(viewport, [actions]);
+            await inventory.inView(actions.getByText(names.source, { exact: true }));
+            await inventory.inView(actions.getByRole("button", { name: `更多操作 ${names.source}`, exact: true }));
+            await inventory.capture("list-actions", "populated", "Real horizontal wheel reveals the named source action group and More action without opening the menu or refreshing the source");
+            inventory.interactions.push("Source table: real horizontal wheel, settled native scroll, full status/update and named action geometry in separate frames; no action activated");
+          }
           break;
         }
         case "collections": {
@@ -61,6 +98,19 @@ for (const width of [1440, 390]) for (const [route, title] of routes) {
           await expect(resourceRow.getByRole("button", { name: names.resource, exact: true })).toBeVisible();
           await inventory.capture("list", "populated", "One real accepted synthetic rule-file import; raw rule content not displayed");
           await inventory.task(page.getByRole("button", { name: "导入规则文件", exact: true }), "导入规则文件", "import-file");
+          if (width === 390) {
+            const viewport = content.getByRole("region", { name: "表格滚动区域", exact: true });
+            const delivery = resourceRow.getByRole("cell").filter({ has: page.getByText("随配置打包", { exact: true }) });
+            const visibility = resourceRow.getByRole("cell", { name: "私有", exact: true });
+            await inventory.wheelColumns(viewport, [viewport.getByRole("columnheader", { name: "文件交付", exact: true }), delivery, visibility]);
+            await inventory.capture("list-delivery", "populated", "Real horizontal wheel reveals the complete accepted-file delivery/size and private visibility cells; no file bytes or download URL exposed");
+            const actions = resourceRow.getByRole("group", { name: `${names.resource} 的操作`, exact: true });
+            await inventory.wheelColumns(viewport, [actions]);
+            await inventory.inView(actions.getByText(names.resource, { exact: true }));
+            await inventory.inView(actions.getByRole("button", { name: "替换文件", exact: true }));
+            await inventory.capture("list-actions", "populated", "Real horizontal wheel reveals the exact resource identity and Replace File action; replacement is not opened or submitted");
+            inventory.interactions.push("Resource table: real horizontal wheel, settled native scroll, full delivery/visibility and named replacement action geometry in separate frames");
+          }
           break;
         }
         case "templates": {
@@ -73,6 +123,17 @@ for (const width of [1440, 390]) for (const [route, title] of routes) {
           expect(await read(page.request, "/me/template-bindings")).toHaveLength(1);
           await expect(content.getByText(names.template, { exact: true })).toBeVisible();
           await inventory.capture("my-bindings", "populated", "One real follow-mode binding on the owned collection; no update or publication performed");
+          if (width === 390) {
+            const viewport = content.getByRole("region", { name: "表格滚动区域", exact: true });
+            const row = content.getByRole("row").filter({ has: page.getByRole("button", { name: `检查更新 ${names.collection}`, exact: true }) });
+            const action = row.getByRole("button", { name: `检查更新 ${names.collection}`, exact: true });
+            const mode = row.getByRole("cell", { name: "跟随版本", exact: true });
+            const version = row.getByRole("cell", { name: "v1", exact: true });
+            await inventory.wheelColumns(viewport, [mode, version, action]);
+            await inventory.inView(viewport.getByRole("columnheader", { name: "当前版本", exact: true }));
+            await inventory.capture("my-bindings-actions", "populated", "Real horizontal wheel reveals unchanged follow mode, applied v1 and named Check Update action; no inspection/update request activated");
+            inventory.interactions.push("Template reference table: real horizontal wheel and full mode/version/action geometry; no check-update request or mutation");
+          }
           break;
         }
         case "inbox": {

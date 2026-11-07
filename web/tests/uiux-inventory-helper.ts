@@ -217,13 +217,85 @@ export class Inventory {
     await expect(tab).toHaveAttribute("aria-selected", "true");
     this.interactions.push(`keyboard-selected tab: ${String(name)}`);
   }
-  async task(trigger: Locator, title: string, state: string) {
+  async inView(target: Locator) {
+    await expect(target).toBeVisible();
+    // A viewport-only assertion misses a field underneath a task footer or a
+    // table column clipped by its own rail. Intersect every actual clip owner.
+    await expect.poll(() => target.evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      let left = 0, top = 0, right = innerWidth, bottom = innerHeight;
+      for (let node = element.parentElement; node; node = node.parentElement) {
+        const style = getComputedStyle(node), box = node.getBoundingClientRect();
+        if (/(auto|scroll|hidden|clip)/.test(style.overflowX)) {
+          left = Math.max(left, box.left + node.clientLeft);
+          right = Math.min(right, box.left + node.clientLeft + node.clientWidth);
+        }
+        if (/(auto|scroll|hidden|clip)/.test(style.overflowY)) {
+          top = Math.max(top, box.top + node.clientTop);
+          bottom = Math.min(bottom, box.top + node.clientTop + node.clientHeight);
+        }
+      }
+      return rect.width > 0 && rect.height > 0 && rect.left >= left - 1 &&
+        rect.right <= right + 1 && rect.top >= top - 1 && rect.bottom <= bottom + 1;
+    }), "The complete named field, consequence or action fits inside its actual visible clip").toBe(true);
+  }
+  async tabTo(surface: Locator, target: Locator) {
+    // Bound traversal by this surface's controls, rather than sleeping or
+    // programmatically focusing the destination and calling it keyboard access.
+    const stops = await surface.locator('a[href],button,input,select,textarea,[tabindex]').count();
+    for (let step = 0; step <= stops; step++) {
+      if (await target.evaluate((element) => element === document.activeElement)) break;
+      expect(await surface.evaluate((element) => element.contains(document.activeElement)), "Tab remains in the current task").toBe(true);
+      await this.page.keyboard.press("Tab");
+    }
+    await expect(target).toBeFocused();
+    await this.stable(surface);
+    await this.inView(target);
+  }
+  async wheelColumns(viewport: Locator, targets: Locator[]) {
+    await expect(viewport).toHaveCount(1);
+    await expect(viewport).toHaveAccessibleName("表格滚动区域");
+    await expect(viewport).toHaveAccessibleDescription("向左右滚动查看完整表格");
+    await this.inView(viewport);
+    const rail = await viewport.evaluate((element) => {
+      const box = element.getBoundingClientRect();
+      return { left: box.left + element.clientLeft, top: box.top + element.clientTop,
+        width: element.clientWidth, height: element.clientHeight,
+        offset: element.scrollLeft, max: element.scrollWidth - element.clientWidth };
+    });
+    expect(rail.max, "This supplemental capture exercises real table overflow").toBeGreaterThan(0);
+    const boxes = await Promise.all(targets.map(async (target) => {
+      await expect(target).toBeVisible();
+      const box = await target.boundingBox();
+      expect(box).not.toBeNull();
+      return box!;
+    }));
+    const left = Math.min(...boxes.map((box) => box.x));
+    const right = Math.max(...boxes.map((box) => box.x + box.width));
+    expect(right - left, "The chosen semantic columns fit together in this frame").toBeLessThanOrEqual(rail.width + 1);
+    const desired = Math.max(0, Math.min(rail.max,
+      rail.offset + (left + right) / 2 - (rail.left + rail.width / 2)));
+    await this.page.mouse.move(rail.left + rail.width / 2, rail.top + rail.height / 2);
+    await this.page.mouse.wheel(desired - rail.offset, 0);
+    await expect.poll(async () => Math.abs(await viewport.evaluate((element) => element.scrollLeft) - desired)).toBeLessThanOrEqual(1);
+    // Wheel dispatch is asynchronous. Observe actual scroll settling across
+    // rendered frames; never assign scrollLeft or disable native motion.
+    await expect.poll(() => viewport.evaluate(async (element) => {
+      const before = element.scrollLeft;
+      await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+      return element.scrollLeft === before;
+    })).toBe(true);
+    await this.stable();
+    for (const target of targets) await this.inView(target);
+  }
+  async task(trigger: Locator, title: string, state: string, afterCapture?: (dialog: Locator) => Promise<void>) {
     await activate(this.page, trigger);
     const dialog = this.page.getByRole("dialog", { name: title, exact: true });
     await expect(dialog).toBeVisible();
     await this.stable(dialog);
     expect(await dialog.evaluate((element) => element.contains(document.activeElement)), "Focus entered the actual task").toBe(true);
     await this.capture(state, "unsubmitted-task", `${title}; opened with Enter, no edits or submission`, dialog);
+    await afterCapture?.(dialog);
     await activate(this.page, dialog.getByRole("button", { name: "关闭", exact: true }));
     await expect(dialog).toBeHidden();
     await this.stable();

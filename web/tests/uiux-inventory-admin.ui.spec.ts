@@ -60,7 +60,26 @@ for (const width of [1440, 390]) for (const [route, title] of routes) {
           expect(await read(page.request, "/managed-endpoints")).toHaveLength(1);
           await expect(objectRow(names.listener).getByRole("cell", { name: names.listener, exact: true })).toBeVisible();
           await inventory.capture("managed-listeners", "populated", "One configured VLESS listener, masked by production presentation; no reveal endpoint or live listening socket");
-          await inventory.task(primary("添加监听端点"), "添加监听端点", "add-listener");
+          const evidence = inventory;
+          await inventory.task(primary("添加监听端点"), "添加监听端点", "add-listener", async (dialog) => {
+            if (width !== 390) return;
+            const username = dialog.getByRole("textbox", { name: "用户名", exact: true });
+            const password = dialog.getByLabel("密码", { exact: true });
+            await expect(username).toHaveValue("");
+            await expect(password).toHaveValue("");
+            await expect(password).toHaveAttribute("type", "password");
+            await evidence.tabTo(dialog, username);
+            await evidence.tabTo(dialog, password);
+            await expect(username).toHaveValue("");
+            await expect(password).toHaveValue("");
+            await expect(dialog.getByRole("combobox", { name: "协议", exact: true })).toHaveText("SOCKS5");
+            for (const target of [username, password,
+              dialog.getByRole("button", { name: "取消", exact: true }),
+              dialog.getByRole("button", { name: "保存", exact: true }),
+            ]) await evidence.inView(target);
+            await evidence.capture("add-listener-lower", "unsubmitted-task", "Native Tab reached the blank username and password; both authentication fields and fixed Cancel/Save controls are fully inside their visible clips; default SOCKS5 unchanged, no secret reveal or submission", dialog);
+            evidence.interactions.push("Listener lower frame: native Tab to username/password, both values asserted empty, password remains concealed, full lower-field/footer geometry; no edits, reveal or save");
+          });
           break;
         }
         case "fleet": {
@@ -89,7 +108,20 @@ for (const width of [1440, 390]) for (const [route, title] of routes) {
           await expect(page.getByRole("heading", { name: "线路扣量倍率", exact: true })).toBeVisible();
           expect(await read(page.request, "/rates")).toHaveLength(0);
           await inventory.capture("plans-and-rates", "populated", "One real service plan; authoritative empty rate history, no grant or renewal submitted");
-          await inventory.task(primary("新建方案"), "新建服务方案", "new-plan");
+          const evidence = inventory;
+          await inventory.task(primary("新建方案"), "新建服务方案", "new-plan", async (dialog) => {
+            if (width !== 390) return;
+            const cancel = dialog.getByRole("button", { name: "取消", exact: true });
+            const preview = dialog.getByRole("button", { name: "预览影响", exact: true });
+            await evidence.tabTo(dialog, cancel);
+            await evidence.tabTo(dialog, preview);
+            await expect(dialog.getByRole("textbox", { name: "服务方案名称", exact: true })).toHaveValue("");
+            for (const target of [cancel, preview,
+              dialog.getByText("用户组首次设置账号周期时使用；已有周期和用量继续保留，方案额度按优先级选用一份，个人覆盖优先。", { exact: true }),
+            ]) await evidence.inView(target);
+            await evidence.capture("new-plan-lower", "unsubmitted-task", "Native Tab reached Cancel then Preview Impact, both fully visible together with the plan quota/reset precedence consequence; name remains empty, no preview/apply request", dialog);
+            evidence.interactions.push("Service lower frame: native Tab to Cancel/Preview, complete action and quota/reset consequence geometry; no field edits, preview or apply");
+          });
           break;
         }
         case "activity": {
