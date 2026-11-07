@@ -552,6 +552,14 @@ export function PublishedRoutesPage() {
     </>
   );
 }
+function isPublicTLSRefusal(error: unknown): error is APIError {
+  return (
+    error instanceof APIError &&
+    error.status === 422 &&
+    error.message ===
+      "public VLESS entries require TLS; unencrypted entries are restricted to explicit private or loopback IPs"
+  );
+}
 function PublicRouteEditor({
   initial,
   isNew,
@@ -588,6 +596,21 @@ function PublicRouteEditor({
   const [preview, setPreview] = useState<PublishedRoute | null>(null);
   const [checkedBefore, setCheckedBefore] = useState(false);
   const version = useRef(0);
+  const attempt = useRef(0);
+  const tlsFailureOwners = useRef(
+    new WeakMap<Error, { revision: number; attempt: number }>(),
+  );
+  // Only the known TLS refusal describes the current draft. Keep other errors,
+  // including unknown outcomes and conflicts, under their existing lifecycle.
+  const withTLSFailureOwner = async <T,>(request: () => Promise<T>): Promise<T> => {
+    const owner = { revision: version.current, attempt: ++attempt.current };
+    try {
+      return await request();
+    } catch (error) {
+      if (isPublicTLSRefusal(error)) tlsFailureOwners.current.set(error, owner);
+      throw error;
+    }
+  };
   const client = useQueryClient();
   const message = toast;
   const deployment = inventory.deployments.find(
@@ -620,9 +643,8 @@ function PublicRouteEditor({
     mutationFn: async () => {
       const revision = version.current;
       return {
-        value: await post<PublishedRoute>(
-          "/published-routes/preview",
-          payload(),
+        value: await withTLSFailureOwner(() =>
+          post<PublishedRoute>("/published-routes/preview", payload()),
         ),
         revision,
       };
@@ -639,10 +661,12 @@ function PublicRouteEditor({
     onSettled: () => invalidateOutputInputs(client),
     // Carry the originating view completion through the request; options may rerender.
     mutationFn: (_complete: typeof onSaved) =>
-      saveRecord<PublishedRoute>(
-        "published-routes",
-        { ...payload(), revisionToken: initial.revisionToken },
-        isNew,
+      withTLSFailureOwner(() =>
+        saveRecord<PublishedRoute>(
+          "published-routes",
+          { ...payload(), revisionToken: initial.revisionToken },
+          isNew,
+        ),
       ),
     onSuccess: (value, complete) => {
       // The save is a committed account fact even if its originating view has left.
@@ -652,6 +676,12 @@ function PublicRouteEditor({
       });
       if (complete(value)) message.success("线路已保存");
     },
+  });
+  const error = [inspect.error, save.error].find((error) => {
+    if (!isPublicTLSRefusal(error)) return !!error;
+    const owner = tlsFailureOwners.current.get(error);
+    return !!owner &&
+      owner.revision === version.current && owner.attempt === attempt.current;
   });
   const chooseDeployment = (id: string) => {
     const d = inventory.deployments.find((d) => d.id === id);
@@ -699,7 +729,19 @@ function PublicRouteEditor({
       size="lg"
       pending={save.isPending}
     >
-      <ErrorNotice error={inspect.error || save.error} />
+      <ErrorNotice
+        error={error}
+        presentation={
+          isPublicTLSRefusal(error)
+            ? {
+                title: "公网入口需要启用 TLS",
+                recovery:
+                  "此公开线路尚不能保存，当前输入已保留。请在「服务器 → 监听端点」为入口启用 TLS 并保存，再编辑所选转发路径，通过「检查监听更新」同步入口，并补全「TLS 证书与安全参数」。保存路径后重新检查公开线路。",
+                detailsLabel: "技术详情",
+              }
+            : undefined
+        }
+      />
       {save.error instanceof APIError && save.error.status === 409 && (
         <Notice
           tone="warning"
