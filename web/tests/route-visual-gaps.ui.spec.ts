@@ -1196,12 +1196,25 @@ for (const width of [1440, 390]) {
       await expect(save).toHaveAttribute("aria-busy", "true");
       const backup = page.getByRole("tab", { name: "备份与恢复", exact: true });
       await backup.click();
+      const completed = page.waitForResponse(response =>
+        new URL(response.url()).pathname === "/api/settings" && response.request().method() === "PUT");
       release();
-      await expect(page.getByText("平台设置已保存", { exact: true })).toBeVisible();
+      expect((await completed).status()).toBe(200);
+      // Completion belongs to the hidden Basic section, not an overlay over
+      // the user's newer Backup task. Read state without moving their focus.
+      const savedFeedback = page.getByRole("form", { name: "平台基本设置", includeHidden: true })
+        .getByRole("status", { includeHidden: true });
+      await expect(savedFeedback).toHaveText("平台设置已保存");
+      await expect(savedFeedback).toBeHidden();
+      await expect(backup).toHaveAttribute("aria-selected", "true");
       await expect(backup).toBeFocused();
+      await expect(page.locator("[data-sonner-toast]").filter({
+        hasText: /平台设置已保存|提交的设置已保存/,
+      })).toHaveCount(0);
       await page.getByRole("tab", { name: "基本设置", exact: true }).click();
       await expect(name).toHaveCount(0);
       await expect(page.getByRole("form", { name: "平台基本设置" }).getByText("第二次提交", { exact: true })).toBeVisible();
+      await expect(savedFeedback).toBeVisible();
       expect(writes).toEqual([
         { name: "第一次提交", registration: "invite", timezone: "UTC+8" },
         { name: "第二次提交", registration: "invite", timezone: "UTC+8" },

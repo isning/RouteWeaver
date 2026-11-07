@@ -31,8 +31,10 @@ async function setup(page: Page, refreshJourney = false) {
     "/api/state": { users: [], nodes: [], routes: [], revisions: [], capabilities: [] },
     "/api/admin/announcements": [],
     "/api/admin/notifications/outbox": [{
+      // Defensive long summary, not an error emitted by the current worker.
+      // Unknown persisted reasons remain available through technical detail.
       eventId: "long-delivery", title: deliveryTitle, channel: "email",
-      status: "failed", attempts: 3, lastError: deliveryReason,
+      status: "failed", attempts: 5, lastError: deliveryReason,
       createdAt: "2026-11-04T10:00:00Z",
     }],
     "/api/me/resources": [{
@@ -94,9 +96,9 @@ async function completeWrappedText(element: Locator, text: string) {
   expect(layout.ellipsis).not.toBe("ellipsis");
 }
 
-async function startsNearRowTop(row: Locator) {
+async function startsNearRowTop(row: Locator, expectedCells = 6) {
   await expect(row).toBeVisible();
-  await expect(row.getByRole("cell")).toHaveCount(6);
+  await expect(row.getByRole("cell")).toHaveCount(expectedCells);
   const offsets = await row.getByRole("cell").evaluateAll((cells) =>
     cells.map((cell) => {
       const walker = document.createTreeWalker(cell, NodeFilter.SHOW_TEXT);
@@ -138,16 +140,59 @@ for (const width of [1440, 390]) {
     await page.goto("/#notifications");
     await page.getByRole("tab", { name: "发送记录", exact: true }).click();
     const row = page.getByRole("row").filter({ has: page.getByText(deliveryTitle, { exact: true }) });
-    await startsNearRowTop(row);
-    const failure = row.getByText("发送失败", { exact: true });
+    await expect(page.getByRole("columnheader")).toHaveText(["通知", "尝试次数", "创建时间（北京时间）"]);
+    await startsNearRowTop(row, 3);
+    const context = row.getByRole("cell").filter({ has: page.getByText(deliveryTitle, { exact: true }) });
+    await expect(context).toHaveCount(1);
+    const title = context.getByText(deliveryTitle, { exact: true });
+    const channel = context.getByText("邮件", { exact: true });
+    const failure = context.getByText("发送失败", { exact: true });
+    const consequence = context.getByText("已停止自动重试。接收方是否已接收尚未确认。", { exact: true });
+    const recovery = context.getByText("原因尚未识别，请查看技术详情。", { exact: true });
+    await expect(channel).toBeVisible();
     await expect(failure).toBeVisible();
+    await expect(consequence).toBeVisible();
+    await expect(recovery).toBeVisible();
+    await expect(row.getByRole("cell", { name: "5", exact: true })).toBeVisible();
+    await expect(row.getByRole("cell", { name: "2026/11/04 18:00", exact: true })).toBeVisible();
     await hasErrorTone(failure);
-    await completeWrappedText(page.getByText(deliveryTitle, { exact: true }), deliveryTitle);
-    await page.screenshot({ path: info.outputPath(`delivery-long-title-${width}.png`), fullPage: true });
-    await completeWrappedText(page.getByText(deliveryReason, { exact: true }), deliveryReason);
-    await expect(page.getByRole("cell", { name: "发送失败", exact: true })).toBeVisible();
+    await completeWrappedText(title, deliveryTitle);
+    const fullReason = context.getByText(deliveryReason, { exact: true });
+    await expect(fullReason).not.toBeVisible();
+    const tableWidthBefore = await page.getByRole("table").evaluate((table) => table.getBoundingClientRect().width);
+    const viewport = page.locator('[data-slot="table-container"]');
+    if (width === 390) {
+      await expect(page.getByRole("region", { name: "表格滚动区域", exact: true })).toHaveAttribute("tabindex", "0");
+      await expect(page.getByText("向左右滚动查看完整表格", { exact: true })).toBeVisible();
+    }
+    await page.screenshot({ path: info.outputPath(`outbox-history-journey-long-title-${width}.png`), fullPage: true });
+    const disclosure = context.locator("summary");
+    await expect(disclosure).toHaveAccessibleName(`${deliveryTitle} 的邮件发送技术详情`);
+    await disclosure.focus();
+    await page.keyboard.press("Enter");
+    await expect(fullReason).toBeVisible();
+    await completeWrappedText(fullReason, deliveryReason);
+    await startsNearRowTop(row, 3);
+    // The long original reason must not push other metadata down or widen the
+    // table. Target, channel, state and recovery remain in one visible column.
+    const tableWidthAfter = await page.getByRole("table").evaluate((table) => table.getBoundingClientRect().width);
+    expect(tableWidthAfter).toBeLessThanOrEqual(tableWidthBefore + 1);
+    const frame = await viewport.boundingBox();
+    expect(frame).not.toBeNull();
+    for (const element of [title, channel, failure, consequence, recovery, fullReason]) {
+      const bounds = await element.boundingBox();
+      expect(bounds).not.toBeNull();
+      expect(bounds!.x).toBeGreaterThanOrEqual(frame!.x - 1);
+      expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(frame!.x + frame!.width + 1);
+    }
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
-    await page.screenshot({ path: info.outputPath(`delivery-long-content-${width}.png`), fullPage: true });
+    await page.screenshot({ path: info.outputPath(`outbox-history-journey-long-content-${width}.png`), fullPage: true });
+    await expect(disclosure).toBeFocused();
+    await page.keyboard.press("Space");
+    await expect(fullReason).not.toBeVisible();
+    await expect(disclosure).toBeFocused();
+    await expect(failure).toBeVisible();
+    await expect(recovery).toBeVisible();
     expect(unexpected).toEqual([]);
   });
 
