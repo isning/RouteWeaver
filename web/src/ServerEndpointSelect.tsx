@@ -1,5 +1,5 @@
 import { ChoiceSelect } from "@/ui-patterns/choice-select";
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useState, type Ref } from "react";
 import type { Infrastructure, ManagedEndpoint } from "./types";
 /** Presentation only: callers supply the authoritative role/capability/path filter. */
 export function ServerEndpointSelect({
@@ -10,6 +10,7 @@ export function ServerEndpointSelect({
   current,
   displayCurrentSnapshot = false,
   unavailableReason,
+  endpointRef,
   onChange,
   onPendingChange,
 }: {
@@ -24,6 +25,7 @@ export function ServerEndpointSelect({
   /** Saved route editors show their retained snapshot, not an unadopted catalog change. */
   displayCurrentSnapshot?: boolean;
   unavailableReason?: string;
+  endpointRef?: Ref<HTMLButtonElement>;
   onChange: (id: string) => void;
   onPendingChange: (pending: boolean) => void;
 }) {
@@ -119,6 +121,7 @@ export function ServerEndpointSelect({
         onValueChange={setServer}
       />
       <ChoiceSelect
+        ref={endpointRef}
         aria-label={`${label}端点`}
         aria-describedby={showUnavailableReason ? noteId : undefined}
         placeholder={server ? "选择该服务器的端点" : "先选择服务器"}

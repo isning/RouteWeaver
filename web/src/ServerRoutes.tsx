@@ -45,7 +45,7 @@ import {
   Plus as PlusOutlined,
   Save as SaveOutlined,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type Ref } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type Ref } from "react";
 import { toast } from "sonner";
 import { APIError, list, request, saveRecord } from "./api";
 import {
@@ -528,6 +528,25 @@ function ServerRouteEditor({
     () => draft.ir.programs.map((p) => p.listener.id),
     [draft.ir.programs],
   );
+  const entryEndpointRef = useRef<HTMLButtonElement>(null);
+  const firstHopEndpointRef = useRef<HTMLButtonElement>(null);
+  const firstEntryFocus = useRef<{
+    trigger: HTMLButtonElement;
+    popup: HTMLElement | null;
+    dialog: Element | null;
+  } | null>(null);
+  useLayoutEffect(() => {
+    const owner = firstEntryFocus.current;
+    firstEntryFocus.current = null;
+    const target = firstHopEndpointRef.current;
+    if (!owner || !target?.isConnected || target.disabled ||
+      target.closest("[hidden],[inert],[aria-hidden='true']")) return;
+    const active = document.activeElement;
+    // The empty entry picker is replaced by the selected first hop. Restore
+    // only its own focus or removal fallback, never a newer field/task owner.
+    if (active === owner.trigger || active === owner.dialog || active === document.body ||
+      (active && owner.popup?.contains(active))) target.focus();
+  }, [draft.ir.programs]);
   useEffect(() => {
     setGraphNodes((previous) => routeGraphNodes(inventory, path, previous));
   }, [inventory, path, setGraphNodes]);
@@ -561,6 +580,13 @@ function ServerRouteEditor({
       setError(new Error(pathRewriteUnavailable));
       return;
     }
+    const trigger = path.length === 0 && ids.length === 1 ? entryEndpointRef.current : null;
+    const popupId = trigger?.getAttribute("aria-controls");
+    const popup = popupId ? document.getElementById(popupId) : null;
+    const active = document.activeElement;
+    const focusOwner = trigger && (active === trigger || (active && popup?.contains(active)))
+      ? { trigger, popup, dialog: trigger.closest('[role="dialog"]') }
+      : null;
     const revision = ++draftRevision.current;
     setPathLoading(true);
     setError(null);
@@ -582,6 +608,8 @@ function ServerRouteEditor({
         ),
       });
       next.ir.topologyRevision = newID("topology");
+      // Only a current successful reveal may hand focus to the new row.
+      firstEntryFocus.current = focusOwner;
       update(next);
       setAnnouncement(
         `路径已更新：${next.ir.programs.map((p) => p.listener.name).join("，然后到")}`,
@@ -850,6 +878,7 @@ function ServerRouteEditor({
                 </span>
                 <ServerEndpointSelect
                   inventory={inventory}
+                  endpointRef={index === 0 ? firstHopEndpointRef : undefined}
                   label={`第 ${index + 1} 跳`}
                   unavailableReason="不可选端点的核心已在路径中使用；请选择其他核心的端点。"
                   value={p.listener.id}
@@ -906,6 +935,7 @@ function ServerRouteEditor({
               <ServerEndpointSelect
                 key={path.join("/")}
                 inventory={inventory}
+                endpointRef={entryEndpointRef}
                 label={path.length ? "下一跳" : "入口"}
                 unavailableReason="不可选端点的核心已在路径中使用；请选择其他核心的端点。"
                 allowedIds={inventory.endpoints
