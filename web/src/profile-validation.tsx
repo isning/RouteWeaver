@@ -2,7 +2,7 @@ import { Notice } from "@/ui-patterns/notice";
 import { ActionButton } from "@/ui-patterns/actions";
 import { APIError } from "./api";
 import { ErrorNotice } from "./components";
-import type { ActionRef } from "./types";
+import type { ActionRef, Profile } from "./types";
 import type { DraftIR } from "./profile-draft";
 export type ActionLocation = {
     kind: "default";
@@ -112,13 +112,29 @@ export function missingActionOccurrences(ir: DraftIR, available: ReadonlySet<str
     ir.rules.forEach((rule) => append(rule.action, { kind: "rule", id: rule.id }));
     return occurrences;
 }
-export function ProfileValidationNotice({ error, ir, onRepair, }: {
+export function ProfileValidationNotice({ error, ir, onRepair, publicationTarget, }: {
     error: Error | null | undefined;
-    ir: DraftIR;
+    ir?: DraftIR;
     onRepair?: (issue: MissingActionReference) => void;
+    publicationTarget?: Profile["target"];
 }) {
+    // This exact renderer rejection belongs to the selected existing output,
+    // not the profile's preview preference. Unknown errors retain their normal
+    // presentation; no capability, option or target is changed here.
+    if (publicationTarget?.adapterId === "mihomo" && publicationTarget.version &&
+        error instanceof APIError && error.status === 422 && record(error.details) &&
+        error.details.detail === "RUNTIME_OPTION_UNSUPPORTED: runtime.tun" &&
+        error.message === error.details.detail) {
+        return <ErrorNotice error={error} presentation={{
+            title: `无法为 Mihomo ${publicationTarget.version} 生成 TUN 配置`,
+            recovery: ir
+                ? "请取消检查，回到“运行设置”关闭 TUN 后重新检查。草稿内容已保留，已发布内容未改变。"
+                : "此订阅暂不支持发布 TUN 配置。已发布内容未改变。请取消检查，确认关联配置的 TUN 设置，或另选支持生成 TUN 配置的客户端订阅。",
+            detailsLabel: "查看检查详情",
+        }}/>;
+    }
     const issue = missingActionReference(error);
-    const repair = issue && onRepair ? actionRepair(ir, issue) : null;
+    const repair = issue && ir && onRepair ? actionRepair(ir, issue) : null;
     if (!issue || !repair)
         return <ErrorNotice error={error}/>;
     const title = `无法检查：${repair.title}`;

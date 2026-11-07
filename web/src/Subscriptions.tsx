@@ -3363,15 +3363,12 @@ export function UpdateOutput({
       size="lg"
       contentRef={surfaceContent}
     >
-      {repairProfile ? (
-        <ProfileValidationNotice
-          error={error}
-          ir={repairProfile.ir}
-          onRepair={onRepair}
-        />
-      ) : (
-        <ErrorNotice error={error} />
-      )}
+      <ProfileValidationNotice
+        error={error}
+        ir={repairProfile?.ir}
+        onRepair={onRepair}
+        publicationTarget={output.target}
+      />
       <div className="update-output-identity space-y-2 rounded-lg border bg-muted/30 p-4 wrap-anywhere">
         <p className="update-output-name text-lg font-semibold">
           订阅：<strong>{review?.name || output.name}</strong>
