@@ -260,6 +260,7 @@ function fixture(
     if (path === `/api/users/${member.id}/entitlement`) return json({});
     if (path === `/api/users/${member.id}/effective-policy`)
       return json({
+        userId: member.id,
         routeIds: [line.id],
         status: "active",
         provenance: { routes: "direct" },

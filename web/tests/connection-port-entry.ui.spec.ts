@@ -22,7 +22,7 @@ test("user entry rejects rounded and incomplete ports and resets only after disc
     "/users/port-owner/entries": [entry],
     "/users/port-owner/entries/port-entry/reveal": entry,
     "/users/port-owner/entitlement": {},
-    "/users/port-owner/effective-policy": { routeIds: ["port-route"], status: "active", provenance: { routes: "direct" }, entitlement: { cycle: { mode: "none" } } },
+    "/users/port-owner/effective-policy": { userId: member.id, routeIds: ["port-route"], status: "active", provenance: { routes: "direct" }, entitlement: { cycle: { mode: "none" } } },
   };
   const writes: unknown[] = [];
   const unexpected: string[] = [];

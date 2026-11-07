@@ -430,7 +430,7 @@ const surfaces = [
     route: "settings",
     title: "平台设置",
     state: "default-basic-settings",
-    ready: "跟随当前访问地址",
+    ready: "当前订阅地址",
   },
   // Existing API journeys cover desktop subscriptions and inbox. Capture the
   // missing narrow inventory here without opening access or publication views.
@@ -473,6 +473,14 @@ for (const width of [1440, 390]) {
             main.getByRole("tab", { name: "服务器 1", exact: true }),
           ).toHaveAttribute("aria-selected", "true");
         if (surface.route === "settings") {
+          // This fixture supplies an explicit default origin. Verify each
+          // displayed value remains paired with its actual settings label.
+          const origin = main.getByRole("region", { name: "订阅域名设置", exact: true });
+          await expect(origin.getByRole("term").filter({ hasText: /^当前订阅地址$/ })
+            .locator("xpath=following-sibling::dd")).toHaveText("https://subscriptions.example.test");
+          await expect(origin.getByRole("term").filter({ hasText: /^当前链接示例$/ })
+            .locator("xpath=following-sibling::dd")).toHaveText("https://subscriptions.example.test/feed/{existing-token}");
+          await expect(origin.getByText("跟随当前访问地址", { exact: true })).toHaveCount(0);
           await expect(
             main.getByRole("tab", { name: "基本设置", exact: true }),
           ).toHaveAttribute("aria-selected", "true");

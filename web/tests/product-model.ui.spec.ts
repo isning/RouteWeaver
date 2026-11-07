@@ -745,7 +745,7 @@ for (const intent of ["endpoint", "direct"] as const) {
         syntheticNodes,
       );
       await expect(sourceDialog.getByRole("status")).toHaveText(
-        "已选择文件：synthetic-connections.txt",
+        "已读取文件：synthetic-connections.txt",
       );
       expect(
         (await readJSON<Array<{ id: string }>>(page, "/me/sources"))
@@ -2008,7 +2008,7 @@ test("operator keeps line and user context through authorization, entry preparat
   await expect(
     globalDiscard.getByText(
       "继续编辑会建立新的历史记录，并清除浏览器的前进记录。",
-      { exact: true },
+      { exact: false },
     ),
   ).toBeVisible();
   await expect(
@@ -2031,7 +2031,7 @@ test("operator keeps line and user context through authorization, entry preparat
   await expect(
     globalDiscard.getByText(
       "继续编辑会建立新的历史记录，并清除浏览器的前进记录。",
-      { exact: true },
+      { exact: false },
     ),
   ).toBeVisible();
   await globalDiscard

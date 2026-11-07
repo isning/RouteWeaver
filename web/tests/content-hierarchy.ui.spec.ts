@@ -136,7 +136,7 @@ for (const [width, height] of [
       dialog.getByLabel("节点链接或配置内容", { exact: true }),
     ).toHaveValue("socks5://layout.example:1080#Layout");
     await expect(dialog.getByRole("status")).toHaveText(
-      "已选择文件：synthetic-layout.txt",
+      "已读取文件：synthetic-layout.txt",
     );
     await expect(
       dialog.getByText(

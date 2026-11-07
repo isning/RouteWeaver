@@ -150,6 +150,7 @@ for (const { width, origin } of [
           ],
           "/api/users/rotation-owner/entitlement": {},
           "/api/users/rotation-owner/effective-policy": {
+            userId: member.id,
             routeIds: [line.id],
             status: "active",
             provenance: { routes: "direct" },

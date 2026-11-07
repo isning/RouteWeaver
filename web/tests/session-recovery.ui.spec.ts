@@ -449,7 +449,7 @@ test("real file chooser and ordinary focus preserve a Modal draft without concea
     modal.getByLabel("节点链接或配置内容", { exact: true }),
   ).toHaveValue('{"proxies":[]}');
   await expect(
-    modal.getByText("已选择文件：synthetic-empty.json", { exact: true }),
+    modal.getByText("已读取文件：synthetic-empty.json", { exact: true }),
   ).toBeVisible();
   const repeatedChooser = page.waitForEvent("filechooser");
   await modal
@@ -508,7 +508,7 @@ test("real file chooser and ordinary focus preserve a Modal draft without concea
   ).toHaveValue('{"proxies": []}');
   await expect(nativeInput).toBeHidden();
   await expect(
-    modal.getByText("已选择文件：synthetic-empty.json", { exact: true }),
+    modal.getByText("已读取文件：synthetic-empty.json", { exact: true }),
   ).toBeVisible();
   await page.bringToFront();
   await expect(name).toBeFocused();
