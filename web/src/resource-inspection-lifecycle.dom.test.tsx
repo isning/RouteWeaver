@@ -111,9 +111,11 @@ it("does not attribute a late inspection failure to a different current URL", as
 });
 const inspected = {
   digest: "a".repeat(64),
+  format: "mihomo-yaml",
+  formatVersion: 0,
   bytes: 27,
   entries: 3,
-  inspection: "synthetic-public-rules",
+  inspection: "bounded-yaml-envelope",
   nativeChecked: false,
 };
 async function settle(

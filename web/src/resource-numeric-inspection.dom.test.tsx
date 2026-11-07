@@ -20,6 +20,15 @@ const json = (value: unknown, status = 200) =>
     status,
     headers: { "Content-Type": "application/json" },
   });
+const inspected = {
+  digest: "a".repeat(64),
+  format: "mihomo-yaml",
+  formatVersion: 0,
+  entries: 3,
+  bytes: 27,
+  inspection: "bounded-yaml-envelope",
+  nativeChecked: false,
+};
 const clients: QueryClient[] = [];
 beforeEach(() => {
   vi.stubEnv("NODE_ENV", "development");
@@ -142,7 +151,7 @@ it("blocks explicit and form submission while inspection owns the current draft"
   fireEvent.submit(dialog.querySelector("form")!);
   await act(async () => { await Promise.resolve(); });
   expect(writes).toEqual([]);
-  await act(async () => requests[0].release(json({ digest: "a".repeat(64), entries: 3, bytes: 27 })));
+  await act(async () => requests[0].release(json(inspected)));
   await within(dialog).findByText(/已读取 3 条记录/);
   fireEvent.submit(dialog.querySelector("form")!);
   await waitFor(() => expect(writes).toHaveLength(1));
@@ -155,7 +164,7 @@ it.each(["success", "error"])("aborts inspection and ignores stale %s after a ma
   await inspect(dialog, requests);
   fireEvent.change(within(dialog).getByRole("textbox", { name: "SHA-256 校验值" }), { target: { value: "c".repeat(64) } });
   expect(requests[0].signal?.aborted).toBe(true);
-  await act(async () => requests[0].release(outcome === "success" ? json({ digest: "a".repeat(64), entries: 3, bytes: 27 }) : json({ detail: "Stale inspection" }, 422)));
+  await act(async () => requests[0].release(outcome === "success" ? json(inspected) : json({ detail: "Stale inspection" }, 422)));
   expect((within(dialog).getByRole("textbox", { name: "SHA-256 校验值" }) as HTMLInputElement).value).toBe("c".repeat(64));
   expect(within(dialog).queryByText(/已读取|Stale inspection/)).toBeNull();
 });
@@ -186,7 +195,7 @@ it("accepts a current inspection after unrelated resource name and interval edit
   fireEvent.change(within(dialog).getByRole("textbox", { name: "资源名称" }), { target: { value: "Renamed" } });
   fireEvent.change(within(dialog).getByRole("spinbutton", { name: "客户端更新间隔（秒）" }), { target: { value: "120" } });
   expect(requests[0].signal?.aborted).toBe(false);
-  await act(async () => requests[0].release(json({ digest: "a".repeat(64), entries: 3, bytes: 27 })));
+  await act(async () => requests[0].release(json(inspected)));
   await within(dialog).findByText(/已读取 3 条记录/);
 });
 it("aborts active inspection when the page unmounts", async () => {

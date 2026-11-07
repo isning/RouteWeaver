@@ -34,11 +34,38 @@ import {
 } from "./components";
 interface Inspection {
   digest: string;
-  formatVersion?: number;
+  format: "mihomo-yaml" | "sing-box-source";
+  formatVersion: number;
   bytes: number;
   entries: number;
   inspection: string;
-  nativeChecked: boolean;
+  nativeChecked: false;
+}
+function validInspection(value: unknown, format: unknown): value is Inspection {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const result = value as Partial<Inspection>;
+  // Match the inspect endpoint's source format and bounded envelope contract
+  // before either rendering its summary or replacing the user's trusted input.
+  return (
+    (format === "mihomo-yaml" || format === "sing-box-source") &&
+    result.format === format &&
+    typeof result.digest === "string" &&
+    [64, 71].includes(result.digest.length) &&
+    /^(sha256:)?[a-fA-F0-9]{64}$/.test(result.digest) &&
+    typeof result.formatVersion === "number" &&
+    Number.isSafeInteger(result.formatVersion) &&
+    (format === "sing-box-source"
+      ? result.formatVersion >= 1 && result.formatVersion <= 5
+      : result.formatVersion === 0) &&
+    typeof result.bytes === "number" &&
+    Number.isSafeInteger(result.bytes) &&
+    result.bytes > 0 && result.bytes <= 8 * 1024 * 1024 &&
+    typeof result.entries === "number" &&
+    Number.isSafeInteger(result.entries) &&
+    result.entries >= 0 && result.entries <= 100000 &&
+    typeof result.inspection === "string" && result.inspection.trim() !== "" &&
+    result.nativeChecked === false
+  );
 }
 type ResourceDraft = Omit<RuleResource, "intervalSeconds" | "formatVersion"> & {
   intervalSeconds?: number | string;
@@ -223,12 +250,14 @@ export function ResourcesPage() {
     try {
       await form.validateFields(["url", "format"]);
       if (!ownsRequest()) return;
-      const value = await request<Inspection>("/me/resources/inspect", {
+      const value = await request<unknown>("/me/resources/inspect", {
         method: "POST",
         body: JSON.stringify(source),
         signal: controller.signal,
       });
       if (!ownsRequest()) return;
+      if (!validInspection(value, source.format))
+        throw new Error("无法确认规则文件检查结果。原有输入已保留，请重新读取文件。");
       setInspection(value);
       form.setFieldsValue({ digest: value.digest, formatVersion: value.formatVersion });
     } catch (error) {
