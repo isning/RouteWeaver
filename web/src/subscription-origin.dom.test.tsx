@@ -502,17 +502,23 @@ it.each(["lost response", "server error", "invalid JSON", "incomplete JSON", "wr
     await user.click(screen.getByRole("button", { name: "确认启用" }));
     const dialog = screen.getByRole("dialog");
     await within(dialog).findByText("域名启用结果尚未确认");
+    if (failure === "incomplete JSON")
+      expect(within(dialog).getByText("启用请求：域名设置响应不完整，请重新读取设置。")).toBeTruthy();
+    expect(within(dialog).queryByText(/^重新读取失败：/)).toBeNull();
     expect(within(dialog).getByRole("button", { name: "确认启用" })).toHaveProperty("disabled", true);
     expect(save).toHaveProperty("isConnected", true);
     expect(save).toHaveProperty("disabled", true);
     expect(verify).toHaveProperty("isConnected", true);
     expect(verify).toHaveProperty("disabled", true);
     await user.click(within(dialog).getByRole("button", { name: "重新读取设置" }));
-    await within(dialog).findByText("Read unavailable");
+    await within(dialog).findByText("重新读取失败：Read unavailable");
     expect(writes).toBe(1);
     readMode = "malformed";
     await user.click(within(dialog).getByRole("button", { name: "重新读取设置" }));
-    await within(dialog).findByText("域名设置响应不完整，请重新读取设置。");
+    await within(dialog).findByText("重新读取失败：域名设置响应不完整，请重新读取设置。");
+    expect(within(dialog).queryByText("重新读取失败：Read unavailable")).toBeNull();
+    expect(reads).toBe(3);
+    expect(writes).toBe(1);
     expect(within(dialog).getByRole("button", { name: "确认启用" })).toHaveProperty("disabled", true);
     readMode = "valid";
     await user.click(within(dialog).getByRole("button", { name: "重新读取设置" }));

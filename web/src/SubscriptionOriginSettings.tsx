@@ -344,8 +344,8 @@ function OriginForm({
       </ActionButton>
     }>
       <p>请先读取当前设置，再核对是否仍需启用。读取不会重复提交。</p>
-      {error && <p>{error.message}</p>}
-      {recoveryError && <p>{recoveryError.message}</p>}
+      {error && <p>启用请求：{error.message}</p>}
+      {recoveryError && <p>重新读取失败：{recoveryError.message}</p>}
     </Notice>
   );
   return (
