@@ -1161,6 +1161,85 @@ function InventoryEditor({
     </TaskDialog>
   );
 }
+// Interpret only the reconciler's explicit outcomes. An old observation is not
+// evidence that its configuration is still running, even after pointer recovery.
+function instanceApplyFeedback(data: AgentState) {
+  const state = data.state;
+  if (!state) return null;
+  const failedPhase = [
+    "validation_failed",
+    "apply_failed",
+    "unknown",
+    "blocked",
+  ].includes(state.phase);
+  const inFlight = [
+    "accepted",
+    "native_validated",
+    "applying",
+    "applied_unobserved",
+  ].includes(state.phase);
+  if (!state.code && !failedPhase && (!state.recoveryRequired || inFlight))
+    return null;
+  if (
+    !state.recoveryRequired &&
+    ["artifact_installed", "local_session_stopped"].includes(state.code || "")
+  )
+    return null;
+
+  let title = "实例结果需要核对";
+  let explanation = "节点返回了尚未识别的处理结果，无法确认本次配置是否应用。";
+  let nextStep =
+    "请刷新实例状态并查看实例技术详情，核对节点记录后再决定是否重新检查并应用。";
+  if (state.recoveryRequired || state.phase === "unknown") {
+    title = "应用结果尚未确认";
+    explanation = "尚不能确认本次配置是否应用，也不能确认旧配置仍在运行。";
+    nextStep = "请先刷新实例状态并核对节点运行情况；结果明确前不要重复应用。";
+  } else if (state.phase === "blocked" && state.code === "policy_restricted") {
+    title = "节点已执行访问限制";
+    explanation = "节点上次核对已确认该实例停止运行，访问限制已执行。";
+    nextStep =
+      "如需恢复运行，请先核对访问授权，再通过「实例操作」检查并确认新的启动计划。";
+  } else if (state.phase === "validation_failed") {
+    title = "配置未通过节点检查";
+    explanation = "本次配置未通过节点校验，未进入应用步骤。";
+    nextStep =
+      "请查看实例技术详情并核对节点校验记录，编辑转发路径修复问题，再重新检查并确认应用。";
+  } else if (
+    state.phase === "apply_failed" &&
+    ["recovered_not_applied", "activation_not_applied"].includes(
+      state.code || "",
+    )
+  ) {
+    title = "本次配置未应用";
+    explanation =
+      state.code === "recovered_not_applied"
+        ? "节点核对后确认，本次配置未应用。"
+        : "节点确认，本次配置未应用。";
+    nextStep =
+      "请核对转发路径与节点状态，再通过「查看修改并应用」或「再次检查并应用」重新检查并确认应用。";
+  } else if (
+    state.phase === "apply_failed" &&
+    state.code === "runtime_not_running"
+  ) {
+    title = "节点报告核心未运行";
+    explanation = "最近一次节点核对未发现该实例的运行进程。";
+    nextStep =
+      "请核对节点与转发路径，再通过「实例操作」检查并确认新的启动计划。";
+  }
+  if (data.phase === "pending-new-generation") {
+    return {
+      title:
+        state.code === "policy_restricted"
+          ? "上次节点处理记录"
+          : "上次尝试需要处理",
+      explanation: `上次记录：${explanation.replaceAll("本次", "上次")}`,
+      nextStep:
+        "新的配置正在等待节点确认；以上是上次尝试的记录，不代表这次应用失败。请先刷新实例状态，等待本次结果。",
+    };
+  }
+  return { title, explanation, nextStep };
+}
+
 export function InstanceObservation({ instanceId }: { instanceId: string }) {
   const query = useQuery({
     queryKey: ["instance-state", instanceId],
@@ -1188,6 +1267,7 @@ export function InstanceObservation({ instanceId }: { instanceId: string }) {
         : 30000,
   });
   const data = query.data;
+  const feedback = data ? instanceApplyFeedback(data) : null;
   return (
     <QueryState
       loading={query.isPending}
@@ -1264,9 +1344,10 @@ export function InstanceObservation({ instanceId }: { instanceId: string }) {
               最近节点上报 {dateLabel(data.state.observed.observedAt)}
             </p>
           )}
-          {data.state?.code && (
-            <Notice tone="warning" title="实例需要处理">
-              {data.state.code}
+          {feedback && (
+            <Notice tone="warning" title={feedback.title} aria-label="实例处理建议">
+              <p>{feedback.explanation}</p>
+              <p>{feedback.nextStep}</p>
             </Notice>
           )}
           <Accordion type="multiple" defaultValue={[]} className="w-full">
