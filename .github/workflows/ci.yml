@@ -275,6 +275,8 @@ jobs:
             web/test-results/*/notification-channel-journey-*.json
             web/test-results/*/outbox-history-journey-*.png
             web/test-results/*/outbox-history-journey-*.json
+            web/test-results/*/structured-publication-journey-*.png
+            web/test-results/*/structured-publication-journey-*.json
           if-no-files-found: ignore
           retention-days: 7
 
