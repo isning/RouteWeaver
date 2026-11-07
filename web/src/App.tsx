@@ -968,6 +968,42 @@ function Workspace() {
     </SidebarProvider>
   );
 }
+// Validate the ASCII account contract after Go strings.TrimSpace/ToLower.
+// JS trim removes BOM but not NEL; JS lowercase expands İ to i + combining dot.
+// İ and K are the only non-ASCII runes whose Go lowercase lands in ASCII.
+// This projection is for validation only: preserve the original posted value.
+const inviteUsernameRule = {
+  validator: (_rule: unknown, value: string) => {
+    if (!value) return Promise.resolve(); // The required rule handles empty input.
+    const normalized = value
+      .replace(
+        /^[\u0009-\u000d\u0020\u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]+|[\u0009-\u000d\u0020\u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]+$/g,
+        "",
+      )
+      .replace(/[A-ZİK]/g, (letter) =>
+        letter === "İ" ? "i" : letter.toLowerCase(),
+      );
+    return /^[a-z0-9][a-z0-9_.@+-]{2,127}$/.test(normalized)
+      ? Promise.resolve()
+      : Promise.reject(
+          new Error(
+            "账号须为 3–128 位，以英文字母或数字开头，仅使用英文字母、数字和 _ . @ + -。",
+          ),
+        );
+  },
+};
+const invitePasswordRule = {
+  validator: (_rule: unknown, value: string) => {
+    if (!value) return Promise.resolve();
+    const bytes = new TextEncoder().encode(value).length;
+    return bytes >= 12 && bytes <= 72
+      ? Promise.resolve()
+      : Promise.reject(
+          new Error("密码须为 12–72 个 UTF-8 字节（中文通常每字 3 字节）。"),
+        );
+  },
+};
+
 type LoginMode = "login" | "invite" | "admin";
 function Login(props: {
   onSuccess: (s: Session) => void;
@@ -1143,14 +1179,30 @@ function LoginForm({
                 <AppField
                   name="username"
                   label="账号"
-                  rules={[{ required: true, message: "请输入账号" }]}
+                  description={
+                    mode === "invite"
+                      ? "3–128 位，以英文字母或数字开头，可用 _ . @ + -；忽略首尾空白，字母按小写保存。"
+                      : undefined
+                  }
+                  rules={[
+                    { required: true, message: "请输入账号" },
+                    ...(mode === "invite" ? [inviteUsernameRule] : []),
+                  ]}
                 >
                   <Input autoComplete="username" placeholder="你的账号" />
                 </AppField>
                 <AppField
                   name="password"
                   label="密码"
-                  rules={[{ required: true, message: "请输入密码" }]}
+                  description={
+                    mode === "invite"
+                      ? "使用 12–72 个 UTF-8 字节；中文通常每字占 3 字节。"
+                      : undefined
+                  }
+                  rules={[
+                    { required: true, message: "请输入密码" },
+                    ...(mode === "invite" ? [invitePasswordRule] : []),
+                  ]}
                 >
                   <PasswordInput
                     autoComplete={
