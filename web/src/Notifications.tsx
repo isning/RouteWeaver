@@ -1232,6 +1232,16 @@ function Outbox() {
     failed: "发送失败",
     suppressed: "未发送",
   };
+  const reasons: Record<string, string> = {
+    "channel delivery failed; verify destination, credentials and TLS, then test again":
+      "请在“提醒与渠道”检查该渠道的目标地址、凭据和 TLS 设置。",
+    "delivery attempts exhausted; receiver acceptance may be unknown":
+      "请先核对接收方记录，再决定是否在“提醒与渠道”发送新的测试。",
+    "recipient or validity is no longer eligible":
+      "接收对象或有效期已不符合发送条件。请核对通知的接收对象与有效期。",
+    "channel settings or authorization changed; create a new explicit test":
+      "渠道设置或发送许可已变更。请在“提醒与渠道”核对设置，需要验证时另行发送测试。",
+  };
   return (
     <Section title="通知发送记录" description="渠道接收不等于收件人已经阅读。">
       <QueryState
@@ -1247,41 +1257,65 @@ function Outbox() {
             {
               title: "通知",
               accessor: "title",
-              className: "min-w-48",
-              render: (title) => (
-                <span className="block max-w-72 whitespace-normal wrap-anywhere">
-                  {title}
-                </span>
-              ),
-            },
-            {
-              title: "渠道",
-              render: (_, r) =>
-                r.channel === "in-app"
+              render: (title, r) => {
+                const channel = r.channel === "in-app"
                   ? "站内"
                   : r.channel === "email"
                     ? "邮件"
-                    : "Webhook",
-            },
-            {
-              title: "状态",
-              render: (_, r) => (
-                <Badge variant={r.status === "failed" ? "destructive" : "secondary"}>
-                  {labels[r.status] || r.status}
-                </Badge>
-              ),
+                    : r.channel === "webhook" ? "Webhook" : r.channel || "未知渠道";
+                const knownStatus = Object.hasOwn(labels, r.status);
+                const retrying = r.status === "retrying" || r.status === "retry";
+                const waiting = r.status === "queued" || retrying;
+                // Terminal rows retain their last deadline; it is not a new retry.
+                const nextAttempt = waiting ? inboxDateLabel(r.nextAttemptAt) : "未设置";
+                const showReason = retrying || r.status === "failed" || r.status === "cancelled" || !knownStatus;
+                const recovery = showReason && r.lastError
+                  ? Object.hasOwn(reasons, r.lastError)
+                    ? reasons[r.lastError]
+                    : "原因尚未识别，请查看技术详情。"
+                  : showReason && knownStatus ? "服务端未提供原因，请核对该通知与渠道的记录。" : undefined;
+                return (
+                  <div className="w-[min(24rem,calc(var(--table-viewport-width,100vw)-2rem))] space-y-2 whitespace-normal wrap-anywhere">
+                    <strong className="block font-medium">{title}</strong>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-muted-foreground">{channel}</span>
+                      <Badge variant={r.status === "failed" ? "destructive" : "secondary"}>
+                        {knownStatus ? labels[r.status] : "未知状态"}
+                      </Badge>
+                    </div>
+                    {waiting && (
+                      <p>
+                        {nextAttempt === "未设置"
+                          ? "下次尝试时间未提供。"
+                          : <>下次尝试不早于 <time dateTime={r.nextAttemptAt}>{nextAttempt}</time></>}
+                      </p>
+                    )}
+                    {r.status === "failed" && <p>已停止自动重试。接收方是否已接收尚未确认。</p>}
+                    {retrying && <p>接收方是否已接收尚未确认。</p>}
+                    {r.status === "sending" && <p>接收结果尚未确认。</p>}
+                    {r.status === "cancelled" && <p>已停止后续发送。</p>}
+                    {!knownStatus && <p>请刷新记录并查看技术详情。</p>}
+                    {recovery && <p>{recovery}</p>}
+                    {(r.lastError || !knownStatus) && (
+                      <details className="text-muted-foreground">
+                        <summary
+                          aria-label={`${title} 的${channel}发送技术详情`}
+                          className="w-fit min-h-11 cursor-pointer rounded-sm py-3 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >技术详情</summary>
+                        <dl className="space-y-2">
+                          <div><dt className="font-medium">服务端状态</dt><dd>{r.status || "未提供"}</dd></div>
+                          {r.lastError && <div><dt className="font-medium">服务端原因</dt><dd>{r.lastError}</dd></div>}
+                        </dl>
+                      </details>
+                    )}
+                  </div>
+                );
+              },
             },
             { title: "尝试次数", accessor: "attempts" },
-            { title: "创建时间", render: (_, r) => dateLabel(r.createdAt) },
             {
-              title: "原因",
-              accessor: "lastError",
-              className: "min-w-56",
-              render: (reason) => (
-                <p className="max-w-80 whitespace-normal wrap-anywhere">
-                  {reason}
-                </p>
-              ),
+              title: "创建时间（北京时间）",
+              render: (_, r) => dateLabel(r.createdAt),
             },
           ]}
           empty="暂无发送记录"
