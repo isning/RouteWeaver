@@ -2659,19 +2659,26 @@ function OutputAccessTask({
     : undefined;
   const tokenDownload = usesTokenAuthentication();
   const [downloading, setDownloading] = useState(false);
-  const downloadPending = useRef(false);
+  const downloadPending = useRef<AbortController | null>(null);
   const downloadLifetime = useRef({ active: false, epoch: 0 });
+  // A harmless background refetch does not revoke an already authorized read.
+  // A rejected read or changed delivery does, even without opening recovery.
+  const downloadUnavailable = query.isError ||
+    (query.isSuccess && query.data?.delivery !== "bundle");
   useLayoutEffect(() => {
     const lifetime = downloadLifetime.current;
-    lifetime.active = open && !review;
-    if (lifetime.active) setDownloading(downloadPending.current);
+    lifetime.active = open && !review && !downloadUnavailable;
+    if (lifetime.active) setDownloading(!!downloadPending.current);
     return () => {
       // Revoke during commit, before passive cleanup or promise continuations.
       // A return to the same inputs never revives an earlier download.
       lifetime.active = false;
       lifetime.epoch++;
+      const pending = downloadPending.current;
+      downloadPending.current = null;
+      pending?.abort();
     };
-  }, [open, review, inputIdentity, readGeneration]);
+  }, [open, review, inputIdentity, readGeneration, downloadUnavailable]);
   const downloadBundle = async () => {
     if (!active.current || review || !bundle || downloadPending.current) return;
     const owner = downloadLifetime.current.epoch;
@@ -2679,10 +2686,11 @@ function OutputAccessTask({
       active.current && downloadLifetime.current.active &&
       downloadLifetime.current.epoch === owner;
     if (!ownsDownload()) return;
-    downloadPending.current = true;
+    const controller = new AbortController();
+    downloadPending.current = controller;
     setDownloading(true);
     try {
-      const result = await requestOutputBundle(output.id);
+      const result = await requestOutputBundle(output.id, controller.signal);
       if (!ownsDownload()) return;
       result.assertCurrent();
       const objectURL = URL.createObjectURL(result.blob);
@@ -2699,8 +2707,11 @@ function OutputAccessTask({
     } catch {
       if (ownsDownload()) message.error("无法下载配置包，请确认登录状态后重试。");
     } finally {
-      downloadPending.current = false;
-      if (active.current && downloadLifetime.current.active) setDownloading(false);
+      // An obsolete completion must not release a newer request's busy state.
+      if (downloadPending.current === controller) {
+        downloadPending.current = null;
+        if (ownsDownload()) setDownloading(false);
+      }
     }
   };
   const accessDelivery = accessReady

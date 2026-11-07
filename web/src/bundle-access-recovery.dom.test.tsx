@@ -216,6 +216,51 @@ it.each(["token ABA", "account", "close", "revision", "direct unmount"])(
     } finally { remove(); }
   },
 );
+it.each(["revision", "close and reopen"])(
+  "downloads the current bundle after %s without waiting for obsolete bytes", async (change) => {
+    setToken("synthetic-operator");
+    const finishes: ((value: Blob) => void)[] = [];
+    // Deliberately ignore abort: late transport completions must also be harmless.
+    const f = fixture(() => new Promise<Blob>((resolve) => { finishes.push(resolve); }));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const view = (value: Output | null) => <QueryClientProvider client={client}>
+      <UIProviders><AccessSubscription output={value} onClose={() => {}} /></UIProviders>
+    </QueryClientProvider>;
+    const ui = render(view(output));
+    try {
+      await userEvent.click(await screen.findByRole("button", { name: "下载配置与规则文件" }));
+      await waitFor(() => expect(finishes).toHaveLength(1));
+      if (change === "close and reopen") {
+        ui.rerender(view(null));
+        await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+        ui.rerender(view(output));
+      } else {
+        ui.rerender(view({ ...output, revision: "current-revision" }));
+      }
+      const button = await screen.findByRole("button", { name: "下载配置与规则文件" });
+      await waitFor(() => expect(button.hasAttribute("disabled")).toBe(false));
+      expect(f.downloads[0].init?.signal?.aborted).toBe(true);
+      await userEvent.click(button);
+      await waitFor(() => expect(finishes).toHaveLength(2));
+      expect(button.hasAttribute("disabled")).toBe(true);
+      await act(async () => { finishes[0](new Blob(["obsolete bytes"])); });
+      expect(f.saves).toEqual([]);
+      expect(button.hasAttribute("disabled")).toBe(true);
+      await userEvent.click(button);
+      expect(f.downloads).toHaveLength(2);
+      expect(f.downloads[1].path).toBe("/api/me/outputs/phone/bundle");
+      expect(new Headers(f.downloads[1].init?.headers).get("Authorization")).toBe("Bearer synthetic-operator");
+      const current = new Blob(["current bytes"]);
+      await act(async () => { finishes[1](current); });
+      await waitFor(() => expect(f.saves).toEqual(["blob:synthetic-bundle"]));
+      expect(f.create).toHaveBeenCalledExactlyOnceWith(current);
+      expect(button.hasAttribute("disabled")).toBe(false);
+    } finally {
+      ui.unmount();
+      client.clear();
+    }
+  },
+);
 it("keeps uncertain rotation distinct from confirmed rotation for bundles", async () => {
   setToken("");
   fixture();
@@ -272,4 +317,71 @@ it("does not revive a pending download after entering and cancelling nested revi
   expect(f.create).not.toHaveBeenCalled();
   expect(f.saves).toEqual([]);
   expect(f.downloads).toHaveLength(1);
+});
+
+it("keeps an authorized bundle download pending through a successful reconnect access check", async () => {
+  setToken("synthetic-operator");
+  let finishBody!: (value: Blob) => void;
+  const f = fixture(() => new Promise<Blob>((resolve) => { finishBody = resolve; }));
+  const bundleFetch = globalThis.fetch;
+  let finishAccess: ((value: Response) => void) | undefined;
+  let rechecking = false;
+  vi.stubGlobal("fetch", vi.fn(async (url, init) => {
+    if (String(url).endsWith("/access") && rechecking)
+      return new Promise<Response>((resolve) => { finishAccess = resolve; });
+    return bundleFetch(url, init);
+  }));
+  mount(<AccessSubscription output={output} onClose={() => {}} />);
+  await userEvent.click(await screen.findByRole("button", { name: "下载配置与规则文件" }));
+  await waitFor(() => expect(finishBody).toBeTypeOf("function"));
+  rechecking = true;
+  act(() => onlineManager.setOnline(false));
+  act(() => onlineManager.setOnline(true));
+  await waitFor(() => expect(finishAccess).toBeTypeOf("function"));
+  expect(f.downloads[0].init?.signal?.aborted).toBe(false);
+  await act(async () => {
+    finishAccess!(json({ delivery: "bundle", downloadPath: "/ignored" }));
+  });
+  const button = await screen.findByRole("button", { name: "下载配置与规则文件" });
+  expect(button.hasAttribute("disabled")).toBe(true);
+  expect(f.downloads[0].init?.signal?.aborted).toBe(false);
+  const current = new Blob(["current bytes"]);
+  await act(async () => { finishBody(current); });
+  await waitFor(() => expect(f.saves).toEqual(["blob:synthetic-bundle"]));
+  expect(f.create).toHaveBeenCalledExactlyOnceWith(current);
+});
+
+it("discards pending bytes on access rejection and permits a fresh download after recovery without opening review", async () => {
+  setToken("synthetic-operator");
+  const finishes: ((value: Blob) => void)[] = [];
+  const f = fixture(() => new Promise<Blob>((resolve) => { finishes.push(resolve); }));
+  const bundleFetch = globalThis.fetch;
+  let republishRequired = false;
+  vi.stubGlobal("fetch", vi.fn(async (url, init) => {
+    if (String(url).endsWith("/access") && republishRequired)
+      return json({ code: "OUTPUT_REPUBLISH_REQUIRED" }, 409);
+    return bundleFetch(url, init);
+  }));
+  mount(<AccessSubscription output={output} onClose={() => {}} />);
+  await userEvent.click(await screen.findByRole("button", { name: "下载配置与规则文件" }));
+  await waitFor(() => expect(finishes).toHaveLength(1));
+  republishRequired = true;
+  act(() => onlineManager.setOnline(false));
+  act(() => onlineManager.setOnline(true));
+  await screen.findByRole("button", { name: "检查更新" });
+  expect(f.downloads[0].init?.signal?.aborted).toBe(true);
+  await act(async () => { finishes[0](new Blob(["obsolete bytes"])); });
+  expect(f.create).not.toHaveBeenCalled();
+  expect(f.saves).toEqual([]);
+  republishRequired = false;
+  act(() => onlineManager.setOnline(false));
+  act(() => onlineManager.setOnline(true));
+  const button = await screen.findByRole("button", { name: "下载配置与规则文件" });
+  await waitFor(() => expect(button.hasAttribute("disabled")).toBe(false));
+  await userEvent.click(button);
+  await waitFor(() => expect(finishes).toHaveLength(2));
+  const current = new Blob(["current bytes"]);
+  await act(async () => { finishes[1](current); });
+  await waitFor(() => expect(f.saves).toEqual(["blob:synthetic-bundle"]));
+  expect(f.create).toHaveBeenCalledExactlyOnceWith(current);
 });

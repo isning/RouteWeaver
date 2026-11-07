@@ -146,7 +146,7 @@ export async function requestFile(path: string, value: unknown): Promise<Blob> {
 }
 // Token-only operators cannot authenticate an ordinary browser download link.
 export const usesTokenAuthentication = () => !!adminToken;
-export async function requestOutputBundle(id: string) {
+export async function requestOutputBundle(id: string, signal?: AbortSignal) {
   const owner = tokenRevision;
   const transport = sessionTransport;
   const guard = transport?.beforeRequest();
@@ -159,6 +159,7 @@ export async function requestOutputBundle(id: string) {
   // Never follow a URL supplied in access metadata with operator credentials.
   const response = await send(`/me/outputs/${encodeURIComponent(id)}/bundle`, {
     redirect: "error",
+    signal,
   });
   if (!response.ok) await readResponse<never>(response);
   if (
