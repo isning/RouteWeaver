@@ -780,7 +780,34 @@ function SettingsForm({ initial }: { initial: Settings }) {
   const [form] = useForm();
   const saveConsequenceId = useId();
   const senderInput = useRef<HTMLInputElement>(null);
+  const saveButton = useRef<HTMLButtonElement>(null);
+  const clearSMTPInput = useRef<HTMLButtonElement>(null);
+  const clearWebhookInput = useRef<HTMLButtonElement>(null);
+  const invalidSecretFocus = useRef<HTMLButtonElement | null>(null);
   const [openChannels, setOpenChannels] = useState<string[]>([]);
+  useLayoutEffect(() => {
+    const target = invalidSecretFocus.current;
+    invalidSecretFocus.current = null;
+    if (!target) return;
+    const owner = saveButton.current;
+    let current = true;
+    const cancelOnNewFocus = (event: FocusEvent) => {
+      if (event.target !== owner) current = false;
+    };
+    document.addEventListener("focusin", cancelOnNewFocus);
+    const content = target.closest('[data-slot="accordion-content"]');
+    const animations = content?.getAnimations?.() || [];
+    // Reveal after expansion, only while the submission still owns focus.
+    void Promise.all(animations.map((animation) => animation.finished.catch(() => {}))).then(() => {
+      if (!current || document.activeElement !== owner || !target.isConnected || target.closest('[hidden], [inert]')) return;
+      target.focus();
+      target.scrollIntoView?.({ block: "nearest" });
+    });
+    return () => {
+      current = false;
+      document.removeEventListener("focusin", cancelOnNewFocus);
+    };
+  }, [openChannels]);
   const [baseline, setBaseline] = useState(initial);
   const [dirty, setDirty] = useState(false);
   useUnsavedChanges(dirty);
@@ -878,8 +905,19 @@ function SettingsForm({ initial }: { initial: Settings }) {
         disabled={save.isPending}
         noValidate
         onFinishFailed={({ errorFields }) => {
-          if (errorFields.some(({ name }) => name[0] === "email"))
-            setOpenChannels((current) => current.includes("email") ? current : [...current, "email"]);
+          const first = errorFields[0]?.name[0];
+          invalidSecretFocus.current = document.activeElement === saveButton.current
+            ? first === "clearSMTP" ? clearSMTPInput.current
+              : first === "clearWebhook" ? clearWebhookInput.current : null
+            : null;
+          const invalidChannels = errorFields.flatMap(({ name }) =>
+            ["email", "smtpPassword", "clearSMTP"].includes(String(name[0]))
+              ? ["email"]
+              : ["webhook", "webhookSecret", "clearWebhook"].includes(String(name[0]))
+                ? ["webhook"]
+                : [],
+          );
+          setOpenChannels((current) => [...new Set([...current, ...invalidChannels])]);
         }}
         onValuesChange={() => setDirty(true)}
         initialValues={{
@@ -1035,11 +1073,17 @@ function SettingsForm({ initial }: { initial: Settings }) {
                   {baseline.smtpPasswordSet && (
                     <AppField
                       name="clearSMTP"
+                      dependencies={["smtpPassword"]}
+                      rules={[{ validator: (_rule, clear: boolean) =>
+                        clear && form.getFieldValue("smtpPassword")
+                          ? Promise.reject(new Error("请选择更新或清除 SMTP 密码，不能同时操作。"))
+                          : Promise.resolve(),
+                      }]}
                       valuePropName="checked"
                       trigger="onCheckedChange"
                       label="清除已保存的 SMTP 密码"
                     >
-                      <Checkbox />
+                      <Checkbox ref={clearSMTPInput} />
                     </AppField>
                   )}
                   <AppField
@@ -1114,11 +1158,17 @@ function SettingsForm({ initial }: { initial: Settings }) {
                   {baseline.webhookSecretSet && (
                     <AppField
                       name="clearWebhook"
+                      dependencies={["webhookSecret"]}
+                      rules={[{ validator: (_rule, clear: boolean) =>
+                        clear && form.getFieldValue("webhookSecret")
+                          ? Promise.reject(new Error("请选择更新或清除签名密钥，不能同时操作。"))
+                          : Promise.resolve(),
+                      }]}
                       valuePropName="checked"
                       trigger="onCheckedChange"
                       label="清除已保存的签名密钥"
                     >
-                      <Checkbox />
+                      <Checkbox ref={clearWebhookInput} />
                     </AppField>
                   )}
                   <ActionButton
@@ -1152,6 +1202,7 @@ function SettingsForm({ initial }: { initial: Settings }) {
             发送站内测试
           </ActionButton>
           <ActionButton
+            ref={saveButton}
             type="submit"
             aria-describedby={saveConsequenceId}
             pending={save.isPending}

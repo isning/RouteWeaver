@@ -2,6 +2,7 @@
 // Public form task -> HTTP payload. External delivery is intentionally not exercised.
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -324,6 +325,100 @@ it("retains explicit secret removal after collapsing both channels", async () =>
   await waitFor(() => expect(sent).toHaveLength(1));
   expect(sent[0].smtpPassword).toBe("");
   expect(sent[0].webhookSecret).toBe("");
+});
+
+it.each([
+  ["邮件通知", "更新 SMTP 密码（留空保留已保存值）", "清除已保存的 SMTP 密码", "smtpPassword", "请选择更新或清除 SMTP 密码，不能同时操作。"],
+  ["Webhook 通知", "更新签名密钥（留空保留已保存值）", "清除已保存的签名密钥", "webhookSecret", "请选择更新或清除签名密钥，不能同时操作。"],
+] as const)("requires an explicit replace-or-clear choice for %s without losing the draft", async (channel, label, clearLabel, field, error) => {
+  const sent = await mount();
+  toggle(channel);
+  change(label, "synthetic-replacement-secret-for-choice");
+  fireEvent.click(screen.getByLabelText(clearLabel));
+  toggle(channel);
+  screen.getByRole("button", { name: "保存通知设置" }).focus();
+  save();
+  await screen.findByText(error);
+  await waitFor(() => expect(document.activeElement === screen.getByLabelText(clearLabel)).toBe(true));
+  expect(sent).toHaveLength(0);
+  expect(hasUnsavedChanges()).toBe(true);
+  expect(screen.getByRole("button", { name: channel }).getAttribute("aria-expanded")).toBe("true");
+  expect((screen.getByLabelText(label) as HTMLInputElement).value === "synthetic-replacement-secret-for-choice").toBe(true);
+  expect(screen.getByLabelText(clearLabel).getAttribute("aria-checked")).toBe("true");
+  expect(describedBy(screen.getByLabelText(clearLabel))).toContain(error);
+  fireEvent.click(screen.getByLabelText(clearLabel));
+  save();
+  await waitFor(() => expect(sent).toHaveLength(1));
+  expect(sent[0][field] === "synthetic-replacement-secret-for-choice").toBe(true);
+});
+
+it.each([
+  ["邮件通知", "更新 SMTP 密码（留空保留已保存值）", "清除已保存的 SMTP 密码", "smtpPassword", "请选择更新或清除 SMTP 密码，不能同时操作。"],
+  ["Webhook 通知", "更新签名密钥（留空保留已保存值）", "清除已保存的签名密钥", "webhookSecret", "请选择更新或清除签名密钥，不能同时操作。"],
+] as const)("can choose explicit removal after correcting conflicting %s replacement", async (channel, label, clearLabel, field, error) => {
+  const sent = await mount();
+  toggle(channel);
+  change(label, "synthetic-replacement-secret-for-choice");
+  fireEvent.click(screen.getByLabelText(clearLabel));
+  save();
+  await screen.findByText(error);
+  expect(sent).toHaveLength(0);
+  change(label, "");
+  save();
+  await waitFor(() => expect(sent).toHaveLength(1));
+  expect(sent[0][field]).toBe("");
+});
+
+it("does not steal newer focus when secret-choice validation settles", async () => {
+  const sent = await mount();
+  toggle("邮件通知");
+  change("更新 SMTP 密码（留空保留已保存值）", "synthetic-replacement-secret-for-choice");
+  fireEvent.click(screen.getByLabelText("清除已保存的 SMTP 密码"));
+  toggle("邮件通知");
+  screen.getByRole("button", { name: "保存通知设置" }).focus();
+  save();
+  const newer = screen.getByRole("tab", { name: "发送记录" });
+  newer.focus();
+  await screen.findByText("请选择更新或清除 SMTP 密码，不能同时操作。");
+  expect(document.activeElement === newer).toBe(true);
+  expect(sent).toHaveLength(0);
+});
+
+it.each([false, true])("reveals a conflicting choice after expansion only if submission focus is still owned (interrupted: %s)", async (interrupted) => {
+  const sent = await mount();
+  toggle("Webhook 通知");
+  change("更新签名密钥（留空保留已保存值）", "synthetic-replacement-secret-for-choice");
+  const clear = screen.getByLabelText("清除已保存的签名密钥");
+  fireEvent.click(clear);
+  toggle("Webhook 通知");
+  let finish!: () => void;
+  const animation = new Promise<void>((resolve) => { finish = resolve; });
+  const content = clear.closest('[data-slot="accordion-content"]')!;
+  let observed = false;
+  // Control only the browser animation boundary; form validation remains real.
+  Object.defineProperty(content, "getAnimations", { configurable: true, value: () => {
+    observed = true;
+    return [{ finished: animation }];
+  } });
+  const submit = screen.getByRole("button", { name: "保存通知设置" });
+  try {
+    submit.focus();
+    save();
+    await waitFor(() => expect(observed).toBe(true));
+    expect(document.activeElement === submit).toBe(true);
+    if (interrupted) {
+      // Focus only: do not change tabs or initiate a test notification.
+      screen.getByRole("button", { name: "发送站内测试" }).focus();
+      submit.focus();
+    }
+    expect(screen.getByRole("tab", { name: "提醒与渠道" }).getAttribute("aria-selected")).toBe("true");
+    expect(screen.getByRole("tabpanel", { name: "提醒与渠道" }).hidden).toBe(false);
+    await act(async () => { finish(); await animation; });
+    expect(document.activeElement === (interrupted ? submit : clear)).toBe(true);
+    expect(sent).toHaveLength(0);
+  } finally {
+    finish();
+  }
 });
 
 it("keeps announcement fields in the sequential task scroll when viewport capacity is insufficient", async () => {
