@@ -75,6 +75,11 @@ describe.each([false, true])(
       expect(within(rule).getByText("节点「东京-ChatGPT」")).toBeTruthy();
       expect(within(rule).getByText("待发布")).toBeTruthy();
       expect(within(rule).getByText("节点「伦敦-工作」")).toBeTruthy();
+      for (const label of ["已发布", "待发布"]) {
+        const version = within(rule).getByText(label).parentElement!;
+        expect(version.classList.contains("flex")).toBe(true);
+        expect(version.classList.contains("flex-col")).toBe(true);
+      }
       expect(screen.queryByText(/摘要字段相同/)).toBeNull();
       expect(
         screen.getByText(/规则文件内容、策略组内容和节点设置/),

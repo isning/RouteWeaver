@@ -359,8 +359,8 @@ function FrozenRoutingChanges({
                     </span>
                   )}
                 </p>
-                <div className="routing-intent-versions grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] [&>div]:min-w-0 [&>div]:space-y-1 [&>div]:break-words">
-                  <div>
+                <div className="routing-intent-versions grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] [&>div]:min-w-0 [&>div]:break-words">
+                  <div className="flex flex-col gap-1">
                     <span className="muted text-sm text-muted-foreground">
                       {labels.before}
                     </span>
@@ -383,7 +383,7 @@ function FrozenRoutingChanges({
                   >
                     →
                   </span>
-                  <div>
+                  <div className="flex flex-col gap-1">
                     <span className="muted text-sm text-muted-foreground">
                       {labels.after}
                     </span>
@@ -432,8 +432,8 @@ function FrozenRoutingChanges({
               ? "默认去向名称已更新"
               : "默认去向已更换"}
           </p>
-          <div className="routing-intent-versions grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] [&>div]:min-w-0 [&>div]:space-y-1 [&>div]:break-words">
-            <div>
+          <div className="routing-intent-versions grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] [&>div]:min-w-0 [&>div]:break-words">
+            <div className="flex flex-col gap-1">
               <span className="muted text-sm text-muted-foreground">
                 {labels.before}
               </span>
@@ -449,7 +449,7 @@ function FrozenRoutingChanges({
             >
               →
             </span>
-            <div>
+            <div className="flex flex-col gap-1">
               <span className="muted text-sm text-muted-foreground">
                 {labels.after}
               </span>

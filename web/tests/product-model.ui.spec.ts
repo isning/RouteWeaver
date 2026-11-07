@@ -31,6 +31,28 @@ type PublishedOutput = {
 const digest = (value: string) =>
   createHash("sha256").update(value).digest("hex");
 
+/** State, condition and destination must be separate facts, not one fused sentence. */
+async function expectStackedRoutingFacts(scope: Locator) {
+  const versions = scope.locator(".routing-intent-versions > div");
+  await expect(versions).not.toHaveCount(0);
+  for (const version of await versions.all()) {
+    await expect(version).toBeVisible();
+    const rows = await version.locator(":scope > span, :scope > strong").evaluateAll(
+      (elements) => elements.map((element) => {
+        const box = element.getBoundingClientRect();
+        return { top: box.top, bottom: box.bottom, height: box.height, width: box.width };
+      }),
+    );
+    expect(rows.length).toBeGreaterThanOrEqual(2);
+    for (const row of rows) {
+      expect(row.height).toBeGreaterThan(0);
+      expect(row.width).toBeGreaterThan(0);
+    }
+    for (let index = 1; index < rows.length; index++)
+      expect(rows[index].top).toBeGreaterThanOrEqual(rows[index - 1].bottom - 0.5);
+  }
+}
+
 async function readJSON<T>(page: Page, path: string): Promise<T> {
   const response = await page.request.get(`/api${path}`);
   expect(response.ok(), `Read ${path} succeeds`).toBe(true);
@@ -1443,6 +1465,7 @@ for (const entry of ["workspace", "legacy-profile"] as const) {
       `${selected.target.adapterId} ${selected.target.version}`,
     );
     await expect(review).toContainText("沿用当前链接，其他订阅保留原状。");
+    await expectStackedRoutingFacts(review.getByRole("region", { name: "分流比较", exact: true }));
     const confirm = review.getByRole("button", {
       name: `确认更新「${selected.name}」`,
       exact: true,
@@ -1477,6 +1500,7 @@ for (const entry of ["workspace", "legacy-profile"] as const) {
         testInfo.outputPath("workspace-explicit-target-review-mobile.png"),
         "update",
       );
+      await expectStackedRoutingFacts(review.getByRole("region", { name: "分流比较", exact: true }));
     }
     if (entry === "workspace")
       await auditReflowAndTextScale(
@@ -2319,6 +2343,7 @@ test("same rule counts are not represented as identical routing when rule conten
     "拒绝连接",
   ]);
   await expect(changes.getByRole("definition")).toHaveText("直连");
+  await expectStackedRoutingFacts(changes);
   await expect(
     review.getByRole("button", { name: "查看待发布技术配置", exact: true }),
   ).toHaveAttribute("aria-expanded", "false");
@@ -2332,6 +2357,11 @@ test("same rule counts are not represented as identical routing when rule conten
   await changes.scrollIntoViewIfNeeded();
   await expect(scope).toBeInViewport({ ratio: 1 });
   await expect(changedRule).toBeInViewport({ ratio: 1 });
+  await expectStackedRoutingFacts(changes);
+  await page.screenshot({
+    path: testInfo.outputPath("routing-rule-facts-390.png"),
+    animations: "disabled",
+  });
   const decision = review.getByRole("group", { name: "更新确认", exact: true });
   await decision.scrollIntoViewIfNeeded();
   await expect(decision).toBeInViewport({ ratio: 1 });
