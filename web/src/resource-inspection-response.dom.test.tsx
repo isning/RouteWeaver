@@ -193,7 +193,13 @@ it("does not attribute a stale malformed response to a newer pending source insp
   expect(within(dialog).queryByText(invalidInspection)).toBeNull();
   expect(within(dialog).queryByText(/已读取/)).toBeNull();
   expect(digestInput(dialog).value).toBe("");
-  expect(inspectButton(dialog).hasAttribute("disabled")).toBe(true);
+  const busyInspect = inspectButton(dialog);
+  expect(busyInspect.hasAttribute("disabled")).toBe(false);
+  expect(busyInspect.getAttribute("aria-disabled")).toBe("true");
+  expect(busyInspect.getAttribute("aria-busy")).toBe("true");
+  await userEvent.click(busyInspect);
+  await userEvent.keyboard("{Enter}");
+  expect(requests).toHaveLength(2);
   expect(within(dialog).getByRole("button", { name: "保存公开引用" }).hasAttribute("disabled")).toBe(true);
   expect(writes).toEqual([]);
   await settle(current, { ...inspected, digest: "c".repeat(64) });

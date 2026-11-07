@@ -89,7 +89,7 @@ async function task(kind: "file" | "reference") {
   return { opener, dialog, field, title };
 }
 it.each(["file", "reference"] as const)(
-  "retains one busy submit focus owner for the pending %s request and failure",
+  "retains busy submit focus for the pending %s request and hands its failure to the summary",
   async (kind) => {
     let finish: (response: Response) => void = () => {};
     const requests: string[] = [];
@@ -248,22 +248,19 @@ it.each(["file", "reference"] as const)(
         headers: { "Content-Type": "application/json" },
       }),
     );
-    await within(t.dialog).findByRole("alert");
-    await waitFor(() =>
-      expect(submit.getAttribute("aria-busy")).not.toBe("true"),
-    );
+    const summary = await within(t.dialog).findByRole("group", {
+      name: "操作未完成", description: "Synthetic save failure",
+    });
+    await waitFor(() => expect(document.activeElement).toBe(summary));
+    expect(submit.getAttribute("aria-busy")).not.toBe("true");
+    // A late accordion transition cannot drag focus or scroll back to submit
+    // after the current failure has handed ownership to its readable summary.
     wrap.scrollTop = 0;
     submitFocus.mockClear();
     transition(content);
-    if (kind === "reference") {
-      // Its fixed footer is outside the scrolling field area; expanding fields
-      // must not scroll the body to chase a control it cannot reveal.
-      expect(wrap.contains(submit)).toBe(false);
-      expect((submit as HTMLButtonElement).form).toBe(t.field.closest("form"));
-      expect(wrap.scrollTop).toBe(0);
-    } else expect(wrap.scrollTop).toBe(118);
+    expect(wrap.scrollTop).toBe(0);
     expect(submitFocus).not.toHaveBeenCalled();
-    expect(document.activeElement).toBe(submit);
+    expect(document.activeElement).toBe(summary);
     expect((t.field as HTMLInputElement).value).toBe("Keep this draft");
   },
 );

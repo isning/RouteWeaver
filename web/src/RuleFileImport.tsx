@@ -13,10 +13,11 @@ import { useForm, useWatch, AppField, AppForm } from "@/ui-patterns/form";
 import { invalidateOutputInputs } from "./output-comparison";
 import { useId, useLayoutEffect, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { prepareFilePost } from "./api";
+import { APIError, prepareFilePost } from "./api";
 import { bytesLabel, newID } from "./model";
 import type { RuleResource } from "./types";
-import { ErrorNotice } from "./components";
+import { ErrorNotice, type ErrorNoticeFocusHandle } from "./components";
+import { Notice } from "@/ui-patterns/notice";
 import { useDiscardConfirmation } from "./useDiscardConfirmation";
 import { useUnsavedChanges } from "./navigation";
 import { revealFocusedPolicyModalControl as revealFocusedModalAction } from "./drawer-control-visibility";
@@ -91,6 +92,10 @@ export function RuleFileImport({
   const lifetime = useRef(0);
   const reading = useRef<AbortController | null>(null);
   const submitButton = useRef<HTMLButtonElement>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const errorFocus = useRef<ErrorNoticeFocusHandle>(null);
+  const envelopeSummary = useRef<HTMLDivElement>(null);
+  const failureFocus = useRef<{ error: Error; owner: number } | null>(null);
   const disclosure = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     active.current = true;
@@ -172,9 +177,47 @@ export function RuleFileImport({
     },
     onError: (error, { owner }) => {
       client.invalidateQueries({ queryKey: ["resources"] });
-      if (active.current && lifetime.current === owner) setError(error);
+      if (active.current && lifetime.current === owner) {
+        failureFocus.current = { error, owner };
+        setError(error);
+      }
     },
   });
+  // Local recovery copy applies only to this submitted file format's known
+  // envelope rejection, never to URL fetches, auth, pins or unknown failures.
+  const submittedFormat = save.variables?.values.format;
+  const envelopeFailure = error instanceof APIError && error.status === 422 &&
+    save.variables?.mode === "upload" && typeof submittedFormat === "string" &&
+    ["mihomo-yaml", "mihomo-text", "mrs", "sing-box-source", "srs"].includes(submittedFormat) &&
+    error.message === `invalid or excessive ${submittedFormat} rule file envelope`;
+  useLayoutEffect(() => {
+    const failure = failureFocus.current;
+    if (!failure || save.isPending) return;
+    // Consume once: inactive/newer tasks must not replay focus on a later render.
+    failureFocus.current = null;
+    if (!active.current || !open || failure.owner !== lifetime.current ||
+        failure.error !== error ||
+        (error instanceof APIError && [401, 403].includes(error.status))) return;
+    const dialog = submitButton.current?.closest('[role="dialog"]');
+    if (!document.hasFocus() || document.visibilityState !== "visible" ||
+        document.activeElement !== submitButton.current ||
+        !dialog || document.activeElement?.closest('[role="dialog"],[role="alertdialog"]') !== dialog) return;
+    if (!envelopeFailure) {
+      errorFocus.current?.focus();
+      return;
+    }
+    const summary = envelopeSummary.current;
+    if (!summary?.isConnected || !document.hasFocus() || document.visibilityState !== "visible" ||
+        summary.closest('[hidden],[inert],[aria-hidden="true"],[data-session-workspace][aria-busy="true"]')) return;
+    for (let node: HTMLElement | null = summary; node; node = node.parentElement) {
+      const style = getComputedStyle(node);
+      if (style.display === "none" || style.visibility === "hidden") return;
+    }
+    summary.tabIndex = -1;
+    summary.focus({ preventScroll: true });
+    if (document.activeElement === summary)
+      summary.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+  }, [error, envelopeFailure, open, save.isPending]);
   useUnsavedChanges(open && (dirty || save.isPending));
   const close = () => {
     if (!open || submitting.current || save.isPending || confirming) return;
@@ -258,7 +301,23 @@ export function RuleFileImport({
           });
         }}
       >
-        <ErrorNotice error={error} />
+        {envelopeFailure ? (
+          <div
+            ref={envelopeSummary}
+            className="form-error"
+            role="group"
+            aria-labelledby={`${formId}-error-title`}
+            aria-describedby={`${formId}-error-recovery`}
+          >
+            <Notice tone="error" title={<span id={`${formId}-error-title`}>规则文件未通过格式检查</span>}>
+              <p id={`${formId}-error-recovery`}>已保留所选文件和填写内容。请核对文件格式，或修正文件后重新选择，再导入。</p>
+              <details>
+                <summary className="cursor-pointer">查看检查详情</summary>
+                <p>{error.message}</p>
+              </details>
+            </Notice>
+          </div>
+        ) : <ErrorNotice error={error} focusRef={errorFocus} />}
         {initial?.acceptedVersion && (
           <p className="muted text-sm text-muted-foreground">
             当前文件 {bytesLabel(initial.sizeBytes)}
@@ -296,9 +355,21 @@ export function RuleFileImport({
           </p>
         )}
         {mode === "upload" ? (
-          <label className="standalone-label grid min-w-0 gap-2 text-sm font-medium">
-            选择规则文件
-            <Input
+          <div className="grid min-w-0 gap-2">
+            <ActionButton
+              className="justify-self-start"
+              variant="outline"
+              aria-controls={`${formId}-file`}
+              aria-describedby={`${formId}-selection`}
+              disabled={save.isPending || !open}
+              onClick={() => fileInput.current?.click()}
+            >
+              选择规则文件
+            </ActionButton>
+            <input
+              ref={fileInput}
+              id={`${formId}-file`}
+              hidden
               type="file"
               aria-label="选择规则文件"
               disabled={save.isPending || !open}
@@ -318,13 +389,10 @@ export function RuleFileImport({
                 setError(null);
               }}
             />
-            {file && (
-              <small className="grid gap-1 font-normal text-muted-foreground wrap-anywhere">
-                <span>{file.name}</span>{" "}
-                <span>{bytesLabel(file.size)}</span>
-              </small>
-            )}
-          </label>
+            <div id={`${formId}-selection`} role="status" className="grid gap-1 text-sm text-muted-foreground wrap-anywhere">
+              {file ? <><span>{file.name}</span><span>{bytesLabel(file.size)}</span></> : "尚未选择文件"}
+            </div>
+          </div>
         ) : (
           <>
             <AppField

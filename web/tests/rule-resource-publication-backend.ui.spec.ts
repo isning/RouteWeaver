@@ -84,7 +84,10 @@ for (const width of [1440, 390]) {
       await page.getByRole("button", { name: "导入规则文件", exact: true }).click();
       const importing = page.getByRole("dialog", { name: "导入规则文件", exact: true });
       await importing.getByLabel("导入资源名称", { exact: true }).fill(names.resource);
-      await importing.getByLabel("选择规则文件", { exact: true }).setInputFiles({
+      const filePicker = page.waitForEvent("filechooser");
+      await importing.getByRole("button", { name: "选择规则文件", exact: true }).focus();
+      await page.keyboard.press("Enter");
+      await (await filePicker).setFiles({
         name: "work-rules-invalid.yaml", mimeType: "application/yaml",
         buffer: Buffer.from("not-a-rule-payload: true\n"),
       });
@@ -92,14 +95,27 @@ for (const width of [1440, 390]) {
       const rejected = responseFor(page, "/api/me/resources/import");
       await importing.getByRole("button", { name: "导入并保存文件", exact: true }).click();
       expect((await rejected).status()).toBe(422);
-      await expect(importing.getByText("invalid or excessive mihomo-yaml rule file envelope", { exact: true })).toBeVisible();
+      const recovery = importing.getByRole("group", { name: "规则文件未通过格式检查", exact: true });
+      await settledTask(importing);
+      await expect(recovery).toBeFocused();
+      await expect(recovery).toContainText("已保留所选文件和填写内容。请核对文件格式，或修正文件后重新选择，再导入。");
+      await expect(recovery.getByText("invalid or excessive mihomo-yaml rule file envelope", { exact: true })).toBeHidden();
+      await expect(recovery.getByText("查看检查详情", { exact: true })).toBeVisible();
+      // Assert the product's native failure handoff, never scroll a broken error
+      // into the screenshot from the test or let a DOM-only assertion pass.
+      await uncovered(recovery);
+      await uncovered(recovery.getByRole("alert"));
       await expect(importing.getByLabel("导入资源名称", { exact: true })).toHaveValue(names.resource);
       await expect(importing.getByText("work-rules-invalid.yaml", { exact: true })).toBeVisible();
       expect(await f.resources()).toEqual([]);
       await capture(page, info, `rule-file-rejected-retained-${width}`, importing);
       await upload(importing, 1);
+      await expect(importing.getByLabel("选择规则文件", { exact: true })).toBeHidden();
+      await expect(importing.getByRole("status")).toContainText("work-rules-v1.yaml");
+      await uncovered(importing.getByRole("status"));
       await expect(importing.getByRole("combobox", { name: "配置引用策略", exact: true })).toHaveText("固定这次接纳的版本");
       expect(imports).toBe(1);
+      await uncovered(importing.getByRole("combobox", { name: "配置引用策略", exact: true }));
       await capture(page, info, `rule-file-corrected-pin-choice-${width}`, importing);
       const imported = responseFor(page, "/api/me/resources/import");
       await importing.getByRole("button", { name: "导入并保存文件", exact: true }).click();
@@ -311,11 +327,29 @@ for (const width of [1440, 390]) {
       const reference = page.getByRole("dialog", { name: "添加公开规则引用", exact: true });
       await reference.getByLabel("资源名称", { exact: true }).fill("待修正规则引用");
       await reference.getByLabel("规则文件 URL", { exact: true }).fill(privateURL);
-      await expect(reference).toContainText("客户端会直接访问此地址");
+      const disclosure = reference.getByText("远程文件随配置交付时，客户端会直接访问此地址。只有明确公开的规则文件可用于这种方式。", { exact: true });
+      const saveReference = reference.getByRole("button", { name: "保存公开引用", exact: true });
+      await expect(saveReference).toHaveAccessibleDescription(await disclosure.innerText());
+      expect(await saveReference.evaluate((button: HTMLButtonElement) => button.form === button.closest('[role="dialog"]')?.querySelector("form")),
+        "Footer Save remains associated with the real form").toBe(true);
+      await expect(reference.getByRole("combobox", { name: "文件格式", exact: true })).toHaveText("Mihomo YAML");
+      await expect(reference.getByRole("combobox", { name: "更新策略", exact: true })).toHaveText("跟随远程更新");
+      await expect(reference.getByLabel("版本标识", { exact: true })).toHaveValue("1");
+      await expect(reference.getByLabel("客户端更新间隔（秒）", { exact: true })).toHaveValue("86400");
+      await uncovered(disclosure);
+      await uncovered(saveReference);
+      await capture(page, info, `rule-public-reference-disclosure-choice-${width}`, reference);
       const inspected = responseFor(page, "/api/me/resources/inspect");
       await reference.getByRole("button", { name: "读取文件并计算校验值", exact: true }).click();
       expect((await inspected).status()).toBe(422);
-      await expect(reference.getByText("resource address is not public", { exact: true })).toBeVisible();
+      const referenceFailure = reference.getByRole("group", { name: "操作未完成", exact: true });
+      await settledTask(reference);
+      await expect(referenceFailure).toBeFocused();
+      await expect(referenceFailure).toContainText("resource address is not public");
+      await uncovered(referenceFailure);
+      await uncovered(referenceFailure.getByRole("alert"));
+      await uncovered(disclosure);
+      await uncovered(saveReference);
       await expect(reference.getByLabel("规则文件 URL", { exact: true })).toHaveValue(privateURL);
       await expect(reference.getByLabel("资源名称", { exact: true })).toHaveValue("待修正规则引用");
       await expect(reference.getByLabel("SHA-256 校验值", { exact: true })).toHaveValue("");
@@ -335,7 +369,12 @@ for (const width of [1440, 390]) {
       const rejected = responseFor(page, "/api/me/resources/import");
       await imported.getByRole("button", { name: "读取并接纳文件", exact: true }).click();
       expect((await rejected).status()).toBe(422);
-      await expect(imported.getByText("resource address is not public", { exact: true })).toBeVisible();
+      const importFailure = imported.getByRole("group", { name: "操作未完成", exact: true });
+      await settledTask(imported);
+      await expect(importFailure).toBeFocused();
+      await expect(importFailure).toContainText("resource address is not public");
+      await uncovered(importFailure);
+      await uncovered(importFailure.getByRole("alert"));
       await expect(imported.getByLabel("导入文件 HTTPS 地址", { exact: true })).toHaveValue(privateURL);
       await expect(imported.getByLabel("导入资源名称", { exact: true })).toHaveValue(names.resource);
       expect(await f.resources()).toEqual([]);

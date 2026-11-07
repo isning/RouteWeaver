@@ -22,12 +22,13 @@ import { useDiscardConfirmation } from "./useDiscardConfirmation";
 import { revealFocusedPolicyModalControl as revealFocusedModalAction } from "./drawer-control-visibility";
 import { useId, useLayoutEffect, useRef, useState, type ComponentProps } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { list, post, request, saveRecord } from "./api";
+import { APIError, list, post, request, saveRecord } from "./api";
 import type { RuleResource } from "./types";
 import { bytesLabel, newID } from "./model";
 import {
   EmptyState,
   ErrorNotice,
+  type ErrorNoticeFocusHandle,
   PageHeader,
   QueryState,
   Section,
@@ -187,6 +188,8 @@ export function ResourcesPage() {
   const submitting = useRef<object | null>(null);
   const submitButton = useRef<HTMLButtonElement>(null);
   const disclosure = useRef<HTMLDivElement>(null);
+  const errorFocus = useRef<ErrorNoticeFocusHandle>(null);
+  const failureFocus = useRef<{ error: Error; task: object; focusOwner: Element | null } | null>(null);
   const active = useRef(true);
   useLayoutEffect(() => {
     active.current = true;
@@ -226,6 +229,10 @@ export function ResourcesPage() {
       isNew: boolean;
       task: object;
     }) => saveRecord("me/resources", value, isNew),
+    onError: (error, { task }) => {
+      if (active.current && editorTask.current === task)
+        failureFocus.current = { error, task, focusOwner: submitButton.current };
+    },
     onSuccess: (_saved, { task }) => {
       client.invalidateQueries({ queryKey: ["resources"] });
       if (!active.current || editorTask.current !== task) return;
@@ -236,11 +243,25 @@ export function ResourcesPage() {
       message.success("规则资源已保存");
     },
   });
+  useLayoutEffect(() => {
+    const failure = failureFocus.current;
+    if (!failure || mutation.isPending || inspecting) return;
+    failureFocus.current = null;
+    if (!active.current || !open || editorTask.current !== failure.task ||
+        failure.error !== (mutation.error || inspectionError) ||
+        (failure.error instanceof APIError && [401, 403].includes(failure.error.status))) return;
+    const dialog = submitButton.current?.closest('[role="dialog"]');
+    if (!document.hasFocus() || document.visibilityState !== "visible" ||
+        document.activeElement !== failure.focusOwner ||
+        !dialog || document.activeElement?.closest('[role="dialog"],[role="alertdialog"]') !== dialog) return;
+    errorFocus.current?.focus();
+  }, [mutation.error, mutation.isPending, inspectionError, inspecting, open]);
   useUnsavedChanges(changed || (open && mutation.isPending));
   const inspect = async () => {
     const task = editorTask.current;
     if (!active.current || !task || inspectionRequest.current || submitting.current) return;
     const controller = new AbortController();
+    const focusOwner = document.activeElement;
     inspectionRequest.current = controller;
     setInspecting(true);
     setInspectionError(null);
@@ -263,7 +284,10 @@ export function ResourcesPage() {
     } catch (error) {
       // Form validation already reports field errors. Only the current request
       // may report a transport failure, even if a transport ignores abort.
-      if (ownsRequest() && error instanceof Error) setInspectionError(error);
+      if (ownsRequest() && error instanceof Error) {
+        failureFocus.current = { error, task, focusOwner };
+        setInspectionError(error);
+      }
     } finally {
       if (ownsRequest()) {
         inspectionRequest.current = null;
@@ -471,27 +495,33 @@ export function ResourcesPage() {
         title={current ? "编辑公开规则引用" : "添加公开规则引用"}
         open={open}
         footer={
-          <div className="form-footer flex flex-wrap items-center justify-end gap-2">
-            <ActionButton
-              onClick={close}
-              disabled={mutation.isPending || !open}
-              variant="outline"
-            >
-              取消
-            </ActionButton>
-            <ActionButton
-              ref={submitButton}
-              keepFocusableWhilePending
-              type="submit"
-              form={formId}
-              disabled={!open || inspecting}
-              aria-label="保存公开引用"
-              aria-busy={mutation.isPending}
-              variant="default"
-              pending={!!mutation.isPending}
-            >
-              保存公开引用
-            </ActionButton>
+          <div className="space-y-3">
+            <p id={`${formId}-delivery-disclosure`} className="text-sm text-muted-foreground">
+              远程文件随配置交付时，客户端会直接访问此地址。只有明确公开的规则文件可用于这种方式。
+            </p>
+            <div className="form-footer flex flex-wrap items-center justify-end gap-2">
+              <ActionButton
+                onClick={close}
+                disabled={mutation.isPending || !open}
+                variant="outline"
+              >
+                取消
+              </ActionButton>
+              <ActionButton
+                ref={submitButton}
+                keepFocusableWhilePending
+                type="submit"
+                form={formId}
+                disabled={!open || inspecting}
+                aria-label="保存公开引用"
+                aria-describedby={`${formId}-delivery-disclosure`}
+                aria-busy={mutation.isPending}
+                variant="default"
+                pending={!!mutation.isPending}
+              >
+                保存公开引用
+              </ActionButton>
+            </div>
           </div>
         }
         onOpenChange={(nextOpen) => {
@@ -594,7 +624,7 @@ export function ResourcesPage() {
             aria-hidden="true"
             disabled={mutation.isPending || inspecting || !open}
           />
-          <ErrorNotice error={mutation.error || inspectionError} />
+          <ErrorNotice error={mutation.error || inspectionError} focusRef={errorFocus} />
           <AppField
             name="name"
             label="资源名称"
@@ -643,9 +673,6 @@ export function ResourcesPage() {
                   ]}
                 />
               </AppField>
-              <p className="muted text-sm text-muted-foreground">
-                远程文件随配置交付时，客户端会直接访问此地址。只有明确公开的规则文件可用于这种方式。
-              </p>
             </>
           }
           <div className="form-grid grid gap-4 sm:grid-cols-2 [&>label]:grid [&>label]:gap-2 [&>label]:text-sm">
@@ -735,6 +762,7 @@ export function ResourcesPage() {
                 onClick={() => void inspect()}
                 variant="outline"
                 pending={inspecting}
+                keepFocusableWhilePending
               >
                 读取文件并计算校验值
               </ActionButton>
