@@ -153,6 +153,20 @@ for (const width of [1440, 390]) {
         { kind: "override", enabled: true, override: { region: "GB", port: 2500 } },
         { kind: "deduplicate", enabled: false },
       ]);
+      // domain.ProcessingStep stores Filter and Override as Go value structs,
+      // so encoding/json emits {} for these fields even when the browser omitted
+      // them. Build the expected server representation, preserving every supplied
+      // field. Do not normalize responses or the original local/retry payload.
+      const wireStep = (step: PipelineStep): PipelineStep => ({
+        ...step, filter: step.filter ?? {}, override: step.override ?? {},
+      });
+      const persisted: Collection = {
+        ...local,
+        sources: local.sources.map((source) => ({
+          ...source, steps: source.steps.map(wireStep),
+        })),
+        steps: local.steps.map(wireStep),
+      };
       path = `${collectionPath}/${local.id}`;
       const read = async () => {
         const response = await concurrent.get(path);
@@ -171,7 +185,7 @@ for (const width of [1440, 390]) {
         const actual = await route.fetch();
         expect(actual.status()).toBe(200);
         committed = await actual.json() as CollectionRevision;
-        expect(recipe(committed)).toEqual(local);
+        expect(recipe(committed)).toEqual(persisted);
         expect(committed.revisionToken).toBeTruthy();
         expect(await read()).toEqual(committed);
         await route.abort("failed");
@@ -191,7 +205,7 @@ for (const width of [1440, 390]) {
 
       // Preserve step identities while changing values/order so stale numeric
       // input buffers and partial adoption cannot satisfy the recovery assertions.
-      const latest = structuredClone(local);
+      const latest = structuredClone(persisted);
       latest.name = "其他会话更新的新集合";
       latest.sources.reverse();
       for (const [index, source] of latest.sources.entries()) {
