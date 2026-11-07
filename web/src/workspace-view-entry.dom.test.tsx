@@ -77,6 +77,12 @@ function Workspace() {
   }, []);
   return (
     <WorkspaceHistoryContext.Provider value={controller}>
+      <button onClick={() => controller.current?.navigate("#published-routes?scope=fresh")}>
+        Navigate within page
+      </button>
+      <button onClick={() => controller.current?.navigate("#published-routes")}>
+        Return within page
+      </button>
       <button onClick={() => controller.current?.navigate("#sources")}>
         Leave page
       </button>
@@ -215,4 +221,24 @@ it("a same-hash completion consumes its original lease once without creating his
   } finally {
     controller.dispose();
   }
+});
+
+it.each([false, true])("renews current actions after same-page navigation while rejecting old callbacks (return to original hash: %s)", async (returnToOriginal) => {
+  history.replaceState(null, "", "#published-routes");
+  render(<Workspace />);
+  await userEvent.click(screen.getByRole("button", { name: "Start delayed result" }));
+  const oldCompletion = complete;
+  await userEvent.click(screen.getByRole("button", { name: "Navigate within page" }));
+  expect(location.hash).toBe("#published-routes?scope=fresh");
+  if (returnToOriginal)
+    await userEvent.click(screen.getByRole("button", { name: "Return within page" }));
+  const expectedHash = returnToOriginal ? "#published-routes" : "#published-routes?scope=fresh";
+  expect(location.hash).toBe(expectedHash);
+  await act(async () => oldCompletion?.());
+  expect(location.hash).toBe(expectedHash);
+  expect(screen.getByText("none", { selector: "output" })).toBeTruthy();
+  await userEvent.click(screen.getByRole("button", { name: "Start delayed result" }));
+  await act(async () => complete?.());
+  expect(location.hash).toBe("#published-routes?line=late");
+  expect(screen.getByText("late", { selector: "output" })).toBeTruthy();
 });

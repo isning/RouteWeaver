@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import type { Output } from "../src/types";
 import { navigateWorkspace, openWorkspace } from "./ui-session";
+import { waitForConfirmedWorkspace } from "./ui-workspace-confirmation";
 
 // Real UI and backend, synthetic data only. Access credentials stay in memory:
 // no recordings, screenshots, response dumps, or token-bearing assertions.
@@ -57,6 +58,7 @@ for (const operation of ["rotate", "revoke"] as const) {
     const name = `Sample phone ${suffix}`;
     let profileCreated = false;
     let outputCreated = false;
+    let primaryFailure = false;
     try {
       const saved = await page.request.post("/api/me/profiles", {
         headers,
@@ -98,6 +100,9 @@ for (const operation of ["rotate", "revoke"] as const) {
       const opened = await metadata(page, outputID);
       expect(!!opened.accessRevision, "Publication has an access revision").toBe(true);
       await page.reload();
+      await waitForConfirmedWorkspace(page);
+      // Keep the real sidebar navigation: default subscriptions may have an
+      // empty hash, and accepting #subscriptions must renew new action leases.
       await navigateWorkspace(page, "我的订阅");
       const openDecision = async () => {
         await page.getByRole("button", { name: `管理 ${name}`, exact: true }).click();
@@ -143,20 +148,21 @@ for (const operation of ["rotate", "revoke"] as const) {
       const newerFeed = await feedStatus(newerPath);
       expect(newerFeed, "Newer link retrieves before stale confirmation").toBe(200);
       const actionPath = `/api/me/outputs/${outputID}/${operation}`;
-      const staleResponse = page.waitForResponse((response) =>
-        new URL(response.url()).pathname === actionPath && response.request().method() === "POST");
-      const refreshed = page.waitForResponse((response) =>
-        new URL(response.url()).pathname === "/api/me/outputs" && response.request().method() === "GET");
-      await decision.getByRole("button", {
-        name: operation === "rotate" ? "更换链接" : "撤销订阅", exact: true,
-      }).click();
-      const stale = await staleResponse;
+      const [stale, refreshed] = await Promise.all([
+        page.waitForResponse((response) =>
+          new URL(response.url()).pathname === actionPath && response.request().method() === "POST"),
+        page.waitForResponse((response) =>
+          new URL(response.url()).pathname === "/api/me/outputs" && response.request().method() === "GET"),
+        decision.getByRole("button", {
+          name: operation === "rotate" ? "更换链接" : "撤销订阅", exact: true,
+        }).click(),
+      ]);
       expect(stale.request().headers()["if-match"] === opened.accessRevision,
         "UI sends the revision captured by the old confirmation").toBe(true);
       expect(stale.status()).toBe(409);
       const conflict: { code?: string } = await stale.json();
       expect(conflict.code === "OUTPUT_ACCESS_CHANGED", "Stale operation is explicitly rejected").toBe(true);
-      await (await refreshed).finished();
+      await refreshed.finished();
       await expect(decision).not.toBeVisible();
       await expect(page.getByText(/订阅访问方式已变化/)).toBeVisible();
       await expect(page.getByText(/链接更换结果尚未确认/)).toHaveCount(0);
@@ -184,28 +190,39 @@ for (const operation of ["rotate", "revoke"] as const) {
         exact: true,
       });
       await expect(freshDecision).toBeVisible();
-      const freshResponse = page.waitForResponse((response) =>
-        new URL(response.url()).pathname === actionPath && response.request().method() === "POST");
-      await freshDecision.getByRole("button", {
-        name: operation === "rotate" ? "更换链接" : "撤销订阅", exact: true,
-      }).click();
-      const fresh = await freshResponse;
+      const [fresh] = await Promise.all([
+        page.waitForResponse((response) =>
+          new URL(response.url()).pathname === actionPath && response.request().method() === "POST"),
+        freshDecision.getByRole("button", {
+          name: operation === "rotate" ? "更换链接" : "撤销订阅", exact: true,
+        }).click(),
+      ]);
       expect(fresh.request().headers()["if-match"] === newer.accessRevision,
         "New explicit confirmation uses current access metadata").toBe(true);
       expect(fresh.ok(), "Deliberately reopened action succeeds").toBe(true);
       await expect(freshDecision).not.toBeVisible();
       const invalidated = await feedStatus(newerPath);
       expect(invalidated, "Only the new explicit decision invalidates that link").toBe(404);
+    } catch (error) {
+      primaryFailure = true;
+      throw error;
     } finally {
-      // Clear any access surface before failure diagnostics or fixture teardown.
-      await page.goto("about:blank");
-      if (outputCreated) {
-        const revoked = await page.request.post(`/api/me/outputs/${outputID}/revoke`, { headers, data: {} });
-        expect(revoked.ok(), "Revoke owned synthetic publication during cleanup").toBe(true);
-      }
-      if (profileCreated) {
-        const removed = await page.request.delete(`/api/me/profiles/${profileID}`, { headers });
-        expect(removed.ok(), "Remove owned synthetic routing configuration").toBe(true);
+      // A timed-out test may already have lost its context. Preserve its real
+      // failing step rather than replacing it with a teardown navigation error.
+      if (!page.isClosed()) {
+        try {
+          await page.goto("about:blank");
+          if (outputCreated) {
+            const revoked = await page.request.post(`/api/me/outputs/${outputID}/revoke`, { headers, data: {} });
+            expect(revoked.ok(), "Revoke owned synthetic publication during cleanup").toBe(true);
+          }
+          if (profileCreated) {
+            const removed = await page.request.delete(`/api/me/profiles/${profileID}`, { headers });
+            expect(removed.ok(), "Remove owned synthetic routing configuration").toBe(true);
+          }
+        } catch {
+          if (!primaryFailure) throw new Error("Synthetic publication cleanup failed.");
+        }
       }
     }
   });
