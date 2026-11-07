@@ -56,9 +56,11 @@ test("template follow updates preserve local steps and require a current review 
   expect(select.ok(), await select.text()).toBeTruthy();
   const selected = await select.json();
   const bindingId = selected.binding.id;
-  let current = await (
+  const { revisionToken: openedRevision, ...current } = await (
     await request.get(`/api/me/collections/${collectionId}`)
   ).json();
+  expect(openedRevision).toEqual(expect.any(String));
+  expect(openedRevision.length).toBeGreaterThan(0);
   current.steps.push({
     id: "local-sort",
     enabled: true,
@@ -68,7 +70,7 @@ test("template follow updates preserve local steps and require a current review 
   expect(
     (
       await request.put(`/api/me/collections/${collectionId}`, {
-        headers,
+        headers: { ...headers, "If-Match": openedRevision },
         data: current,
       })
     ).ok(),
@@ -94,15 +96,17 @@ test("template follow updates preserve local steps and require a current review 
   expect(first.hasUpdate).toBe(true);
   expect(first.nativeChecked).toBe(false);
   expect(first.preservedLocalEdits.length).toBeGreaterThan(0);
-  current = await (
+  const { revisionToken: reviewedRevision, ...renamed } = await (
     await request.get(`/api/me/collections/${collectionId}`)
   ).json();
-  current.name = "Locally renamed after review";
+  expect(reviewedRevision).toEqual(expect.any(String));
+  expect(reviewedRevision.length).toBeGreaterThan(0);
+  renamed.name = "Locally renamed after review";
   expect(
     (
       await request.put(`/api/me/collections/${collectionId}`, {
-        headers,
-        data: current,
+        headers: { ...headers, "If-Match": reviewedRevision },
+        data: renamed,
       })
     ).ok(),
   ).toBeTruthy();

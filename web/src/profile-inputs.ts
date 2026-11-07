@@ -78,7 +78,7 @@ export function useEffectiveProfileInputs(
       {
         mode,
         collectionId: profile.collectionId || null,
-        // Collection has no revision field: its ordered recipe is its identity.
+        // Track the complete ordered recipe and its server-owned revision.
         collection: mode === "collection" ? collection : null,
         collectionsUpdatedAt:
           mode === "collection" ? collections.dataUpdatedAt : null,

@@ -36,7 +36,7 @@ import {
   type ReactNode,
 } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { deleteRecord, list, post, request, saveRecord } from "./api";
+import { APIError, deleteRecord, list, post, request, saveRecord } from "./api";
 import type {
   Collection,
   Preview,
@@ -747,6 +747,23 @@ function CollectionSourceStage({
     </div>
   );
 }
+/** Go's present null slices are empty recipes, not missing response fields. */
+function collectionRecipe(value: unknown): Collection | null {
+  if (!value || typeof value !== "object") return null;
+  const collection = value as Collection;
+  const steps = (value: unknown) => value === null || (Array.isArray(value) &&
+    value.every((step) => step && typeof step.id === "string" && typeof step.kind === "string" && typeof step.enabled === "boolean"));
+  if (typeof collection.id !== "string" || typeof collection.name !== "string" ||
+    !steps(collection.steps) || (collection.sources !== null && !Array.isArray(collection.sources)) ||
+    (collection.sources ?? []).some((source) => !source || typeof source.sourceId !== "string" || !steps(source.steps)))
+    return null;
+  return {
+    ...collection,
+    sources: (collection.sources ?? []).map((source) => ({ ...source, steps: source.steps ?? [] })),
+    steps: collection.steps ?? [],
+  };
+}
+
 export function CollectionsPage() {
   const client = useQueryClient();
   const message = toast,
@@ -754,6 +771,12 @@ export function CollectionsPage() {
   const query = useQuery({
     queryKey: ["collections"],
     queryFn: () => list<Collection>("/me/collections"),
+    // Other pages populate this shared cache. Normalize before any cached render.
+    select: (items) => items.map((item) => {
+      const value = collectionRecipe(item);
+      if (!value) throw new Error("未能读取完整的集合，请重试。");
+      return value;
+    }),
   });
   const sources = useQuery({
     queryKey: ["sources"],
@@ -795,11 +818,18 @@ export function CollectionsPage() {
   );
   const [baseline, setBaseline] = useState("");
   const changed = !!draft && (JSON.stringify(draft) !== baseline || !!invalidPort);
-  useUnsavedChanges(changed);
   const [isNew, setIsNew] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+  const [conflicted, setConflicted] = useState(false);
   const [preview, setPreview] = useState<Preview | null>(null);
   const collectionSession = useRef(0);
+  const saving = useRef<number | null>(null);
+  const reloading = useRef<number | null>(null);
+  const discardReview = useRef<ReturnType<typeof confirm> | null>(null);
+  const collectionName = useRef<HTMLInputElement>(null);
+  const [reloadFocus, setReloadFocus] = useState(0);
+  const focusedReload = useRef(0);
+  const busy = () => saving.current !== null || reloading.current !== null || !!discardReview.current;
   const [sourceTask, setSourceTask] = useState<{
     owner: number;
     source?: Source;
@@ -866,6 +896,9 @@ export function CollectionsPage() {
       sourceOwner.current = null;
       returnFocus.current = null;
       collectionSession.current++;
+      const review = discardReview.current;
+      discardReview.current = null;
+      review?.close();
     },
     [],
   );
@@ -894,35 +927,107 @@ export function CollectionsPage() {
     setDraft(value);
     setPreview(null);
   };
+  type DraftTask = { owner: number; version: number };
+  const ownsDraft = ({ owner, version }: DraftTask) =>
+    owner === collectionSession.current && version === revision.current;
   const save = useMutation({
     onMutate: () => invalidateOutputInputs(client),
-    onSettled: () => invalidateOutputInputs(client),
-    mutationFn: (value: Collection) => {
-      if (invalidPort) throw new Error("请完成覆盖端口输入，范围为 1–65535 的整数。");
-      return saveRecord("me/collections", value, isNew);
+    onSettled: (_result, _error, { owner }) => {
+      if (saving.current === owner) saving.current = null;
+      invalidateOutputInputs(client);
     },
-    onSuccess: () => {
+    mutationFn: ({ value, creating }: DraftTask & { value: Collection; creating: boolean }) =>
+      saveRecord<Collection>("me/collections", value, creating),
+    onSuccess: (_result, task) => {
       client.invalidateQueries({ queryKey: ["collections"] });
+      if (!ownsDraft(task)) return;
       changeDraft(null);
       message.success("集合已保存");
     },
-    onError: setError,
+    onError: (error, task) => {
+      if (!ownsDraft(task)) return;
+      if (!task.creating && error instanceof APIError && error.status === 409 &&
+        (error.details as { code?: string } | undefined)?.code === "COLLECTION_DRAFT_CHANGED") {
+        setConflicted(true);
+        setError(null);
+      } else setError(error);
+    },
   });
   const inspect = useMutation({
-    mutationFn: ({ value }: { value: Collection; version: number }) => {
+    mutationFn: ({ value }: DraftTask & { value: Collection }) => {
       if (invalidPort) throw new Error("请完成覆盖端口输入，范围为 1–65535 的整数。");
       const { revisionToken: _revisionToken, ...recipe } = value;
       return post<Preview>("/me/collections/preview", recipe);
     },
-    onSuccess: (result, { version }) => {
-      if (version === revision.current) setPreview(result);
+    onSuccess: (result, task) => {
+      if (ownsDraft(task) && !busy()) setPreview(result);
     },
-    onError: (error, { version }) => {
-      if (version === revision.current) setError(error);
+    onError: (error, task) => {
+      if (ownsDraft(task) && !busy()) setError(error);
     },
   });
+  const reload = useMutation({
+    mutationFn: async ({ id }: DraftTask & { id: string }) => {
+      const value = collectionRecipe(await request<unknown>(`/me/collections/${encodeURIComponent(id)}`));
+      // A partial read must never enable an unguarded save or discard local input.
+      if (!value || value.id !== id || typeof value.revisionToken !== "string" || !value.revisionToken.trim())
+        throw new Error("未能读取完整的最新集合，当前输入已保留。请重试。");
+      return value;
+    },
+    onSuccess: (value, task) => {
+      if (!ownsDraft(task)) return;
+      // Permission is to replace the whole recipe, never just its revision.
+      setPortDrafts({});
+      setPortFocus({ source: null, id: "", request: 0 });
+      stageDisclosures.current.clear();
+      setSourceNotice(null);
+      setSavedSourceNames(new Map());
+      setBaseline(JSON.stringify(value));
+      changeDraft(value);
+      setConflicted(false);
+      setError(null);
+      setReloadFocus((version) => version + 1);
+      client.invalidateQueries({ queryKey: ["collections"] });
+    },
+    onError: (error, task) => { if (ownsDraft(task)) setError(error); },
+    onSettled: (_result, _error, { owner }) => {
+      if (reloading.current === owner) reloading.current = null;
+    },
+  });
+  const pending = save.isPending || reload.isPending;
+  useUnsavedChanges(changed || pending);
+  useLayoutEffect(() => {
+    if (reloadFocus === focusedReload.current || pending) return;
+    focusedReload.current = reloadFocus;
+    collectionName.current?.focus();
+  }, [reloadFocus, pending]);
+  const reviewReload = () => {
+    if (!draft || isNew || !conflicted || sourceOwner.current || busy()) return;
+    const task = { id: draft.id, owner: collectionSession.current, version: revision.current };
+    let confirmed = false;
+    const review = confirm({
+      title: "放弃当前修改并读取最新集合？",
+      description: "这会替换集合名称、来源选择、顺序和处理步骤。已保存的来源和已发布订阅不会改变。",
+      confirmLabel: "放弃修改并读取",
+      cancelLabel: "保留当前输入",
+      destructive: true,
+      onConfirm: () => { if (discardReview.current === review && ownsDraft(task)) confirmed = true; },
+      onCancel: () => { confirmed = false; },
+      onClosed: () => {
+        if (discardReview.current !== review) return;
+        discardReview.current = null;
+        if (!confirmed || !ownsDraft(task)) return;
+        reloading.current = task.owner;
+        setError(null);
+        // Invalidate a preview already in flight without changing the retained recipe.
+        revision.current++;
+        reload.mutate({ ...task, version: revision.current });
+      },
+    });
+    discardReview.current = review;
+  };
   const edit = (item?: Collection) => {
-    if (sourceOwner.current || save.isPending) return;
+    if (sourceOwner.current || busy()) return;
     collectionSession.current++;
     setPortDrafts({});
     setPortFocus({ source: null, id: "", request: 0 });
@@ -933,22 +1038,32 @@ export function CollectionsPage() {
     changeDraft(value);
     setIsNew(!item);
     setError(null);
+    setConflicted(false);
     setPreview(null);
     setSourceNotice(null);
     setSavedSourceNames(new Map());
   };
   const close = () => {
-    if (sourceOwner.current || save.isPending) return;
+    if (sourceOwner.current || busy()) return;
     if (!changed) return changeDraft(null);
-    confirm({
+    const task = { owner: collectionSession.current, version: revision.current };
+    let confirmed = false;
+    const review = confirm({
       title: "放弃尚未保存的集合修改？",
       description:
         "集合名称、来源选择、顺序和处理步骤尚未保存。已保存的来源会保留。",
       confirmLabel: "放弃修改",
       cancelLabel: "继续编辑",
       destructive: true,
-      onConfirm: () => changeDraft(null),
+      onConfirm: () => { if (discardReview.current === review && ownsDraft(task)) confirmed = true; },
+      onCancel: () => { confirmed = false; },
+      onClosed: () => {
+        if (discardReview.current !== review) return;
+        discardReview.current = null;
+        if (confirmed && ownsDraft(task)) changeDraft(null);
+      },
     });
+    discardReview.current = review;
   };
   // A saved source can precede its list refresh. Keep only its name in this
   // opening; actual list names take precedence and read errors stay visible.
@@ -969,7 +1084,7 @@ export function CollectionsPage() {
       })
     : [];
   const openSelectedSource = (source: Source, trigger: HTMLElement) => {
-    if (sourceOwner.current || save.isPending) return;
+    if (sourceOwner.current || busy()) return;
     sourceReturnTrigger.current = trigger;
     sourceReturnNotice.current = false;
     sourceReturnSelectedID.current = source.id;
@@ -1075,6 +1190,7 @@ export function CollectionsPage() {
       <TaskSheet
         title={isNew ? "新建集合" : draft?.name}
         open={!!draft && !sourceTask}
+        pending={pending}
         onOpenChange={(nextOpen) => {
           if (!nextOpen) close();
         }}
@@ -1100,10 +1216,21 @@ export function CollectionsPage() {
             className="collection-save-action"
             aria-label="保存集合"
             aria-busy={save.isPending}
-            onClick={() => !sourceOwner.current && draft && checkPorts() && save.mutate(draft)}
+            onKeyDown={(event) => {
+              if (event.repeat && (event.key === "Enter" || event.key === " ")) event.preventDefault();
+            }}
+            onClick={() => {
+              if (!draft || sourceOwner.current || busy() || conflicted || !checkPorts()) return;
+              setError(null);
+              const owner = collectionSession.current;
+              saving.current = owner;
+              save.mutate({ value: draft, creating: isNew, owner, version: revision.current });
+            }}
             disabled={
               !draft?.name.trim() ||
               !!sourceTask ||
+              conflicted ||
+              reload.isPending ||
               unavailableSources.length > 0
             }
             variant="default"
@@ -1114,11 +1241,25 @@ export function CollectionsPage() {
         }
       >
         {draft && (
-          <div className="space-y-6" inert={save.isPending || !!sourceTask}>
+          <fieldset className="min-w-0 space-y-6" disabled={pending || !!sourceTask} inert={pending || !!sourceTask}>
             <ErrorNotice error={error} />
+            {conflicted && (
+              <Notice tone="warning" title="集合或来源已变化" action={
+                <ActionButton variant="outline" onClick={reviewReload}
+                  pending={reload.isPending}
+                  onKeyDown={(event) => {
+                    if (event.repeat && (event.key === "Enter" || event.key === " ")) event.preventDefault();
+                  }}>
+                  读取最新集合
+                </ActionButton>
+              }>
+                当前输入已保留，不能覆盖新版本。
+              </Notice>
+            )}
             <label className="standalone-label grid min-w-0 gap-2 text-sm font-medium">
               集合名称
               <Input
+                ref={collectionName}
                 value={draft.name}
                 onChange={(e) =>
                   changeDraft({ ...draft, name: e.target.value })
@@ -1188,7 +1329,7 @@ export function CollectionsPage() {
               className="collection-source-action"
               leadingIcon={<Plus aria-hidden="true" />}
               onClick={(event) => {
-                if (sourceOwner.current || save.isPending) return;
+                if (sourceOwner.current || busy()) return;
                 sourceReturnTrigger.current = event.currentTarget;
                 sourceReturnNotice.current = false;
                 sourceReturnSelectedID.current = null;
@@ -1220,7 +1361,7 @@ export function CollectionsPage() {
                         event.preventDefault();
                     }}
                     onClick={(event) => {
-                      if (sourceOwner.current || save.isPending) return;
+                      if (sourceOwner.current || busy()) return;
                       sourceReturnTrigger.current = event.currentTarget;
                       sourceReturnNotice.current = true;
                       sourceReturnSelectedID.current = null;
@@ -1279,7 +1420,7 @@ export function CollectionsPage() {
               <div className="collection-source-stages space-y-4">
                 {draft.sources.map((source, index) => (
                   <CollectionSourceStage
-                    key={source.sourceId}
+                    key={`${reloadFocus}:${source.sourceId}`}
                     recoveryRequest={portFocus.source === source.sourceId ? portFocus.request : 0}
                     disclosure={(() => {
                       let state = stageDisclosures.current.get(source.sourceId);
@@ -1387,9 +1528,10 @@ export function CollectionsPage() {
               aria-label="预览处理结果"
               aria-busy={inspect.isPending}
               onClick={() => {
+                if (busy() || inspect.isPending) return;
                 setError(null);
                 if (draft && checkPorts())
-                  inspect.mutate({ value: draft, version: revision.current });
+                  inspect.mutate({ value: draft, owner: collectionSession.current, version: revision.current });
               }}
               variant="outline"
               pending={!!inspect.isPending}
@@ -1403,7 +1545,7 @@ export function CollectionsPage() {
                 collection={draft}
               />
             )}
-          </div>
+          </fieldset>
         )}
       </TaskSheet>
       <SourceImportTask
