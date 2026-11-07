@@ -415,14 +415,14 @@ it("owns a fresh access read when the same output is closed and reopened before 
   }
 });
 
-it("discards an old access response when the same ID has a newer visible publication revision", async () => {
+it.each(["publication", "access"])("discards an old access response when the same ID has a newer %s revision", async (revision) => {
   const f = fixture();
   const complete = f.holdNextAccess();
   try {
     const view = mountAccess(phone);
     await waitFor(() => expect(f.accessReads).toHaveLength(1));
     f.setReadiness("ready");
-    view.setOutput({ ...phone, revision: "phone-new-publication" });
+    view.setOutput({ ...phone, ...(revision === "publication" ? { revision: "phone-new-publication" } : { accessRevision: "phone-new-access" }) });
     await waitFor(() => expect(f.accessReads).toHaveLength(2));
     const access = await screen.findByRole("dialog", { name: "获取「Phone」" });
     await within(access).findByRole("textbox", { name: "订阅链接" });

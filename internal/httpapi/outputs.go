@@ -45,7 +45,7 @@ type Output struct {
 	Artifacts            []domain.Artifact                `json:"artifacts,omitempty"`
 }
 
-func outputView(o Output) map[string]any {
+func (h *server) outputView(owner string, o Output) map[string]any {
 	view := map[string]any{"id": o.ID, "name": o.Name, "profileId": o.ProfileID, "target": o.Target, "mode": o.Mode, "status": o.Status, "publishedAt": o.PublishedAt, "revision": o.Revision}
 	if o.CreationReviewDigest != "" {
 		view["creationReviewDigest"] = o.CreationReviewDigest
@@ -53,6 +53,7 @@ func outputView(o Output) map[string]any {
 	if o.RoutingSummary != nil {
 		view["routingSummary"] = o.RoutingSummary
 	}
+	view["accessRevision"] = h.outputAccessRevision(owner, o)
 	view["delivery"] = "feed"
 	view["downloadPath"] = "/api/me/outputs/" + o.ID + "/bundle"
 	if len(o.ResourceFiles) > 0 {
@@ -78,7 +79,7 @@ func (h *server) registerOutputs(r chi.Router) {
 				fail(w, 500, "cannot read output")
 				return
 			}
-			out = append(out, outputView(v))
+			out = append(out, h.outputView(current(r).Account.ID, v))
 		}
 		writeJSON(w, 200, out)
 	})
@@ -163,7 +164,7 @@ func (h *server) registerOutputs(r chi.Router) {
 			storeError(w, e)
 			return
 		}
-		out := outputView(v)
+		out := h.outputView(current(r).Account.ID, v)
 		out["feedPath"] = "/feed/" + v.Token
 		out["bundlePath"] = "/feed/" + v.Token + "/bundle"
 		writeJSON(w, 201, out)
@@ -213,7 +214,7 @@ func (h *server) registerOutputs(r chi.Router) {
 			storeError(w, e)
 			return
 		}
-		writeJSON(w, 200, outputView(v))
+		writeJSON(w, 200, h.outputView(current(r).Account.ID, v))
 	})
 	r.Post("/outputs/{id}/rotate", func(w http.ResponseWriter, r *http.Request) {
 		owner := current(r).Account.ID
@@ -222,16 +223,19 @@ func (h *server) registerOutputs(r chi.Router) {
 			storeError(w, e)
 			return
 		}
+		if !h.checkOutputAccessRevision(w, r, owner, v) {
+			return
+		}
 		if v.Status != "published" {
 			fail(w, 409, "publish the output first")
 			return
 		}
 		expected := v
 		if e := h.rotate(owner, &v, &expected); e != nil {
-			storeError(w, e)
+			outputAccessMutationError(w, e)
 			return
 		}
-		out := outputView(v)
+		out := h.outputView(current(r).Account.ID, v)
 		out["feedPath"] = "/feed/" + v.Token
 		out["bundlePath"] = "/feed/" + v.Token + "/bundle"
 		writeJSON(w, 200, out)
@@ -243,16 +247,19 @@ func (h *server) registerOutputs(r chi.Router) {
 			storeError(w, e)
 			return
 		}
+		if !h.checkOutputAccessRevision(w, r, owner, v) {
+			return
+		}
 		expected := v
 		old := v.TokenDigest
 		v.Status = "revoked"
 		v.Token = ""
 		v.TokenDigest = ""
 		if e := h.s.CompareAndPutWithToken(store.TenantKind(owner, "outputs"), v.ID, expected, v, "feeds", old, "", ""); e != nil {
-			storeError(w, e)
+			outputAccessMutationError(w, e)
 			return
 		}
-		writeJSON(w, 200, outputView(v))
+		writeJSON(w, 200, h.outputView(current(r).Account.ID, v))
 	})
 }
 func (h *server) publish(owner string, v *Output) error {

@@ -178,7 +178,7 @@ func (h *server) outputStatus(w http.ResponseWriter, r *http.Request) {
 		storeError(w, err)
 		return
 	}
-	view := outputView(published)
+	view := h.outputView(owner, published)
 	// Selected owner detail may read the private frozen policy snapshot. Ordinary
 	// list/access/share DTOs remain limited to outputView's coarse metadata.
 	if published.RoutingIntent != nil {

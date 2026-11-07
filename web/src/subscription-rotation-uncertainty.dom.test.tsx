@@ -22,11 +22,12 @@ function mount(node: ReactNode, staleTime = 0) {
       mutations: { retry: false },
     },
   });
-  return render(
+  const view = render(
     <QueryClientProvider client={client}>
       <UIProviders>{node}</UIProviders>
     </QueryClientProvider>,
   );
+  return { ...view, client };
 }
 beforeEach(() => {
   history.replaceState(null, "", "#subscriptions");
@@ -68,13 +69,13 @@ const json = (data: unknown, status = 200) =>
     headers: { "Content-Type": "application/json" },
   });
 // Source-authored regression; execution intentionally UNRUN in recovery workspace.
-it.each(["lost response", "malformed JSON", "wrong target", "empty success", "conflict", "body read failure"])(
+it.each(["lost response", "malformed JSON", "wrong target", "empty success", "conflict", "body read failure", "missing access revision", "unchanged access revision"])(
   "keeps %s rotation uncertain while explicit current-access reads never replay it",
   async (failure) => {
     const profile = { ...emptyProfile(), id: "shared", name: "Shared" };
     const output: Output = {
       id: "phone", name: "Phone", profileId: profile.id,
-      target: profile.target, mode: "full", status: "published",
+      target: profile.target, mode: "full", status: "published", accessRevision: "synthetic-before",
     };
     const writes: string[] = [], reads: string[] = [];
     vi.stubGlobal("fetch", vi.fn(async (url, init) => {
@@ -82,6 +83,8 @@ it.each(["lost response", "malformed JSON", "wrong target", "empty success", "co
       if (init?.method === "POST") {
         writes.push(path);
         if (failure === "conflict") return json({ error: "conflict" }, 409);
+        if (failure === "missing access revision") return json({ ...output, accessRevision: undefined });
+        if (failure === "unchanged access revision") return json(output);
         if (failure === "body read failure") {
           const response = json(output);
           response.text = async () => { throw new Error("body interrupted"); };
@@ -131,7 +134,7 @@ function rotationFixture() {
   const profile = { ...emptyProfile(), id: "shared", name: "Shared" };
   const output: Output = {
     id: "phone", name: "Phone", profileId: profile.id,
-    target: profile.target, mode: "full", status: "published",
+    target: profile.target, mode: "full", status: "published", accessRevision: "synthetic-before",
   };
   const writes: string[] = [];
   let finish!: (response: Response) => void;
@@ -195,4 +198,69 @@ it("retains uncertainty across page remounts but isolates another actor's query 
   await screen.findByRole("dialog", { name: "Phone 的订阅详情" });
   expect(screen.queryByText("链接更换结果尚未确认")).toBeNull();
   expect(fixture.writes).toEqual(["/api/me/outputs/phone/rotate"]);
+});
+
+it.each(["rotate", "revoke"] as const)("captures the opened %s revision through refresh and permits fresh confirmation after a known conflict", async (operation) => {
+  const profile = { ...emptyProfile(), id: "shared", name: "Shared" };
+  let output: Output = { id: "phone", name: "Phone", profileId: profile.id, target: profile.target, mode: "full", status: "published", accessRevision: "opened-revision" };
+  const headers: (string | null)[] = [];
+  vi.stubGlobal("fetch", vi.fn(async (url, init) => {
+    const path = String(url);
+    if (init?.method === "POST") {
+      headers.push(new Headers(init.headers).get("If-Match"));
+      if (headers.length === 1) return json({ code: "OUTPUT_ACCESS_CHANGED", detail: "untrusted conflict detail" }, 409);
+      output = { ...output, accessRevision: "completed-revision", status: operation === "revoke" ? "revoked" : "published" };
+      return json({ ...output, feedPath: "/feed/never-retain-response-path" });
+    }
+    if (path.endsWith("/outputs")) return json([output]);
+    if (path.endsWith("/profiles")) return json([profile]);
+    if (path.endsWith("/overview")) return json({ user: {}, routes: [] });
+    if (path.endsWith("/status")) return json(output);
+    if (path.endsWith("/access")) return json({ feedPath: "/feed/current-phone", delivery: "feed" });
+    return json([]);
+  }));
+  const view = mount(<SubscriptionsPage />);
+  await userEvent.click(await screen.findByRole("button", { name: "查看订阅 Phone" }));
+  const open = async () => {
+    await userEvent.click(screen.getByRole("button", { name: "更多操作" }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: operation === "rotate" ? "更换订阅链接" : "撤销订阅" }));
+    return screen.findByRole("alertdialog");
+  };
+  const first = await open();
+  output = { ...output, accessRevision: "newer-revision" };
+  await act(async () => { await view.client.invalidateQueries({ queryKey: ["outputs"] }); });
+  await userEvent.click(within(first).getByRole("button", { name: operation === "rotate" ? "更换链接" : "撤销订阅" }));
+  await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+  expect(await screen.findByText(/订阅访问方式已变化/)).toBeTruthy();
+  expect(screen.queryByText("链接更换结果尚未确认")).toBeNull();
+  expect(screen.queryByText("untrusted conflict detail")).toBeNull();
+  expect(headers).toEqual(["opened-revision"]);
+  const second = await open();
+  await userEvent.click(within(second).getByRole("button", { name: operation === "rotate" ? "更换链接" : "撤销订阅" }));
+  await waitFor(() => expect(headers).toEqual(["opened-revision", "newer-revision"]));
+  await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+  expect(document.body.textContent).not.toContain("never-retain-response-path");
+  expect(screen.queryByText("链接更换结果尚未确认")).toBeNull();
+});
+
+it.each(["更换订阅链接", "撤销订阅"])("does not send %s without a revision and offers refresh and reopening", async (label) => {
+  const profile = { ...emptyProfile(), id: "shared", name: "Shared" };
+  const output = { id: "phone", name: "Phone", profileId: profile.id, target: profile.target, mode: "full", status: "published" };
+  const writes: string[] = [];
+  vi.stubGlobal("fetch", vi.fn(async (url, init) => {
+    const path = String(url);
+    if (init?.method === "POST") writes.push(path);
+    if (path.endsWith("/outputs")) return json([output]);
+    if (path.endsWith("/profiles")) return json([profile]);
+    if (path.endsWith("/overview")) return json({ user: {}, routes: [] });
+    if (path.endsWith("/status")) return json(output);
+    return json([]);
+  }));
+  mount(<SubscriptionsPage />);
+  await userEvent.click(await screen.findByRole("button", { name: "查看订阅 Phone" }));
+  await userEvent.click(screen.getByRole("button", { name: "更多操作" }));
+  await userEvent.click(await screen.findByRole("menuitem", { name: label }));
+  expect(await screen.findByText(/无法确认当前订阅访问版本/)).toBeTruthy();
+  expect(screen.queryByRole("alertdialog")).toBeNull();
+  expect(writes).toEqual([]);
 });

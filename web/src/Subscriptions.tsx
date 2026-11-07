@@ -537,24 +537,31 @@ export function SubscriptionsPage({
       id,
       operation,
       output,
+      accessRevision,
       own,
     }: {
       id: string;
       operation: "rotate" | "revoke";
       output: Output;
+      accessRevision: string;
       sequence: number;
       own: (complete?: () => void) => boolean;
     }) => {
       // Recheck the captured view/account lease AFTER onMutate's async boundary.
       if (!own())
         throw new Error("此操作已离开当前订阅，请重新打开订阅。");
-      if (operation !== "rotate")
-        return post<Output>(`/me/outputs/${id}/${operation}`);
+      if (!hasAccessRevision(accessRevision))
+        throw new Error("无法确认当前订阅访问版本。请刷新订阅后重新打开确认。");
+      const init = { method: "POST", headers: { "If-Match": accessRevision } };
+      if (operation !== "rotate") {
+        const result = await request<Output>(`/me/outputs/${id}/${operation}`, init);
+        return accessMetadata(result);
+      }
       if (rotation.scope.snapshot().has(id))
         throw new Error("链接更换结果尚未确认。");
       rotation.scope.set(id, "pending");
       try {
-        const result = await post<Output>(`/me/outputs/${id}/rotate`);
+        const result = await request<Output>(`/me/outputs/${id}/rotate`, init);
         if (
           !result ||
           result.id !== id ||
@@ -562,13 +569,19 @@ export function SubscriptionsPage({
           result.target?.adapterId !== output.target.adapterId ||
           result.target?.version !== output.target.version ||
           result.mode !== output.mode ||
-          result.status !== "published"
+          result.status !== "published" ||
+          !hasAccessRevision(result.accessRevision) ||
+          result.accessRevision === accessRevision
         )
           throw new Error("无法确认更换结果。");
         rotation.scope.set(id);
         // Rotation only changes credentials. Do not retain returned secret paths.
-        return output;
-      } catch {
+        return accessMetadata(result);
+      } catch (error) {
+        if (accessChanged(error)) {
+          rotation.scope.set(id);
+          throw error;
+        }
         rotation.scope.set(id, "unknown");
         throw new Error(
           "链接更换结果尚未确认，旧链接可能已失效。请查看当前访问方式，不要重复更换。",
@@ -590,13 +603,29 @@ export function SubscriptionsPage({
       });
     },
     onError: (error, variables) => {
-      if (variables.operation !== "rotate")
+      if (accessChanged(error)) {
+        client.removeQueries({ queryKey: ["output-access", variables.id] });
+        variables.own(() =>
+          setActionError(new Error(
+            "订阅访问方式已变化，本次操作未执行。请刷新订阅后重新打开确认。",
+          )),
+        );
+      } else if (variables.operation !== "rotate")
         variables.own(() => setActionError(error));
     },
   });
   const manage = (output: Output, operation: "rotate" | "revoke") => {
     if (operation === "rotate" && rotation.scope.snapshot().has(output.id))
       return;
+    // Capture a primitive at opening, never substitute background-refreshed consent.
+    const accessRevision = output.accessRevision;
+    if (!hasAccessRevision(accessRevision)) {
+      setActionError(new Error("无法确认当前订阅访问版本。请刷新订阅后重新打开确认。"));
+      void client.invalidateQueries({ queryKey: ["outputs"], exact: true });
+      void client.invalidateQueries({ queryKey: ["outputs", output.id, "status"], exact: true });
+      return;
+    }
+    const approvedOutput = accessMetadata(output);
     const origin = location.hash;
     const sequence = checkSequence.current;
     const own = (complete?: () => void) =>
@@ -616,15 +645,16 @@ export function SubscriptionsPage({
         try {
           await action.mutateAsync({
             id: output.id,
-            output,
+            output: approvedOutput,
+            accessRevision,
             operation,
             sequence,
             own,
           });
         } catch (error) {
-          // Close the rotation decision: its old-link cancel text and submit
-          // action are no longer safe after a possibly committed request.
-          if (operation !== "rotate") throw error;
+          // A known conflict expires consent; an unknown rotation cannot be
+          // replayed. Both close this decision, for different reasons.
+          if (operation !== "rotate" && !accessChanged(error)) throw error;
         }
       },
     });
@@ -2485,10 +2515,41 @@ export function PublishOutput({
     </>
   );
 }
+function accessChanged(error: unknown) {
+  return (
+    error instanceof APIError &&
+    error.status === 409 &&
+    typeof error.details === "object" &&
+    error.details !== null &&
+    "code" in error.details &&
+    error.details.code === "OUTPUT_ACCESS_CHANGED"
+  );
+}
+function hasAccessRevision(value: unknown): value is string {
+  return typeof value === "string" && value.length > 0 && !/[\s\x00-\x1f\x7f]/.test(value);
+}
+// Allowlist metadata: mutation responses must never retain bearer access paths.
+function accessMetadata(output: Output): Output {
+  return {
+    id: output.id,
+    name: output.name,
+    profileId: output.profileId,
+    target: { adapterId: output.target.adapterId, version: output.target.version },
+    mode: output.mode,
+    status: output.status,
+    revision: output.revision,
+    accessRevision: output.accessRevision,
+    delivery: output.delivery,
+    createdAt: output.createdAt,
+    updatedAt: output.updatedAt,
+    publishedAt: output.publishedAt,
+  };
+}
 function accessOutputIdentity(output: Output) {
   return JSON.stringify([
     output.id,
     output.revision,
+    output.accessRevision,
     output.profileId,
     output.target.adapterId,
     output.target.version,
@@ -2607,6 +2668,7 @@ function OutputAccessTask({
       "output-access",
       output.id,
       output.revision,
+      output.accessRevision,
       readOwner,
       readGeneration,
     ],

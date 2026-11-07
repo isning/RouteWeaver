@@ -544,6 +544,7 @@ export interface FrozenRoutingIntent {
   resources?: { id: string; label: string }[];
 }
 export interface Output {
+  accessRevision?: string;
   revision?: string;
   routingSummary?: RoutingSummary;
   creationReviewDigest?: string;

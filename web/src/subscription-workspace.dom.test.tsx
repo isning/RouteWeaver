@@ -136,6 +136,7 @@ it("returns a canceled link decision to its persistent menu trigger and supports
     target: profile.target,
     mode: "full",
     status: "published",
+    accessRevision: "synthetic-opened-revision",
   };
   const writes: string[] = [];
   vi.stubGlobal(

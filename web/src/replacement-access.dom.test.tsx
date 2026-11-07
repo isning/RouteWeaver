@@ -213,6 +213,7 @@ it.each(["feed", "bundle"])(
       target: profile.target,
       mode: "full",
       status: "published",
+      accessRevision: "synthetic-before",
     }));
     const writes: string[] = [],
       reads: string[] = [];
@@ -222,7 +223,7 @@ it.each(["feed", "bundle"])(
         const path = String(url);
         if (init?.method === "POST") {
           writes.push(path);
-          if (path.endsWith("/link-1/rotate")) return json(links[1]);
+          if (path.endsWith("/link-1/rotate")) return json({ ...links[1], accessRevision: "synthetic-after" });
           throw new Error(`Unexpected write ${path}`);
         }
         if (path.endsWith("/access")) {
@@ -322,6 +323,7 @@ it("does not reopen replacement access after accepted navigation while rotation 
     target: profile.target,
     mode: "full",
     status: "published",
+    accessRevision: "synthetic-before",
   };
   let finishRotation!: (response: Response) => void;
   const accessReads: string[] = [];
@@ -365,7 +367,7 @@ it("does not reopen replacement access after accepted navigation while rotation 
       screen.queryByRole("dialog", { name: "Phone 的订阅详情" }),
     ).toBeNull(),
   );
-  finishRotation(json(output));
+  finishRotation(json({ ...output, accessRevision: "synthetic-after" }));
   await waitFor(() =>
     expect(
       screen.queryByRole("alertdialog", { name: "更换「Phone」的订阅链接？" }),
