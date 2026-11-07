@@ -236,6 +236,9 @@ export function saveRecord<T>(kind: string, value: object, isNew = false) {
       ...(guarded && !isNew && id && revisionToken
         ? { headers: { "If-Match": revisionToken } }
         : {}),
+      ...(kind === "me/sources" && isNew
+        ? { headers: { "If-None-Match": "*" } }
+        : {}),
       body: JSON.stringify(guarded ? record : value),
     },
   );

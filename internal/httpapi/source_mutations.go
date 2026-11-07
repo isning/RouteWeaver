@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -52,6 +53,16 @@ func knownSourceFailureCode(code string) bool {
 }
 
 func (h *server) saveSource(w http.ResponseWriter, r *http.Request) {
+	createOnly := false
+	if r.Method == http.MethodPost {
+		if conditions, supplied := r.Header["If-None-Match"]; supplied {
+			if len(conditions) != 1 || strings.Trim(conditions[0], " \t") != "*" {
+				writeJSON(w, http.StatusBadRequest, map[string]string{"code": "SOURCE_CREATION_PRECONDITION_INVALID", "detail": "source creation requires a single If-None-Match: * precondition"})
+				return
+			}
+			createOnly = true
+		}
+	}
 	owner := current(r).Account.ID
 	var v Source
 	if !decode(w, r, &v) {
@@ -74,6 +85,12 @@ func (h *server) saveSource(w http.ResponseWriter, r *http.Request) {
 	err := h.s.TenantGet(owner, "sources", v.ID, &raw)
 	if err != nil && err != store.ErrNotFound {
 		storeError(w, err)
+		return
+	}
+	// A guarded stable-ID retry must not replace a newer source or fetch its
+	// submitted URL. A missing record remains fenced as expected-absent at commit.
+	if createOnly && err == nil {
+		writeJSON(w, http.StatusPreconditionFailed, map[string]string{"code": "SOURCE_CREATION_CONFLICT", "detail": "source already exists; reopen it before saving"})
 		return
 	}
 	if err == nil && json.Unmarshal(raw, &old) != nil {
