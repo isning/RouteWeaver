@@ -61,6 +61,14 @@ type SourceImpact struct {
 	Reason      string `json:"reason"`
 }
 
+// Application detail describes only this successful response. It is not part
+// of Source or its count-only history, and cannot be reconstructed by a read.
+type sourceApplicationResult struct {
+	CandidateID    string         `json:"candidateId"`
+	SourceRevision string         `json:"sourceRevision"`
+	Affected       []SourceImpact `json:"affected"`
+}
+
 func sourceDiff(before, after *domain.SourceSnapshot) SourceDiff {
 	diff := SourceDiff{Added: []SourceChange{}, Removed: []SourceChange{}, ConnectionChanged: []SourceChange{}, Renamed: []SourceChange{}}
 	redactLabel := sourceLabelRedactor(before, after)
@@ -559,6 +567,7 @@ func (h *server) decideSourceCandidate(w http.ResponseWriter, r *http.Request) {
 	sourceKind := store.TenantKind(owner, "sources")
 	inputs.records[sourceKind+"\x00"+id] = store.RecordCompare{Kind: sourceKind, ID: id, Expected: raw}
 	applying := strings.HasSuffix(r.URL.Path, "/accept") || strings.HasSuffix(r.URL.Path, "/apply")
+	var affected []SourceImpact
 	if applying {
 		if !source.Enabled {
 			fail(w, 409, "source is paused; refresh after enabling it")
@@ -573,9 +582,18 @@ func (h *server) decideSourceCandidate(w http.ResponseWriter, r *http.Request) {
 		// Recompute current dependencies rather than requiring the former review's
 		// frozen impact list. Source and current dependency reads still commit via
 		// one CAS transaction, and no profile or published output is rewritten.
-		if _, _, err := h.sourceImpacts(source, proposed, inputs, sourceDiff(source.Snapshot, candidate.Snapshot)); err != nil {
+		var err error
+		affected, _, err = h.sourceImpacts(source, proposed, inputs, sourceDiff(source.Snapshot, candidate.Snapshot))
+		if err != nil {
 			storeError(w, err)
 			return
+		}
+		// Current dependency labels may repeat credentials from either snapshot.
+		// Only sanitized labels and stable target identities enter the response.
+		redactLabel := sourceLabelRedactor(source.Snapshot, candidate.Snapshot)
+		for i := range affected {
+			affected[i].Name = redactLabel(affected[i].Name)
+			affected[i].ProfileName = redactLabel(affected[i].ProfileName)
 		}
 	}
 	revision, err := auth.Token()
@@ -599,6 +617,13 @@ func (h *server) decideSourceCandidate(w http.ResponseWriter, r *http.Request) {
 		} else {
 			storeError(w, err)
 		}
+		return
+	}
+	if applying {
+		writeJSON(w, 200, struct {
+			Source
+			Application sourceApplicationResult `json:"application"`
+		}{sourceView(source, false), sourceApplicationResult{CandidateID: candidate.ID, SourceRevision: source.Revision, Affected: affected}})
 		return
 	}
 	writeJSON(w, 200, sourceView(source, false))
