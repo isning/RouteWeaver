@@ -821,6 +821,8 @@ export function CollectionsPage() {
   const [isNew, setIsNew] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [conflicted, setConflicted] = useState(false);
+  const [creationConflict, setCreationConflict] = useState(false);
+  const [creationUncertain, setCreationUncertain] = useState(false);
   const [preview, setPreview] = useState<Preview | null>(null);
   const collectionSession = useRef(0);
   const saving = useRef<number | null>(null);
@@ -946,7 +948,14 @@ export function CollectionsPage() {
     },
     onError: (error, task) => {
       if (!ownsDraft(task)) return;
-      if (!task.creating && error instanceof APIError && error.status === 409 &&
+      // A rejected retry cannot resolve an earlier response lost after commit.
+      if (task.creating && (!(error instanceof APIError) || error.status === 0 ||
+        error.status >= 500 || error.status === 200)) setCreationUncertain(true);
+      if (task.creating && error instanceof APIError && error.status === 412 &&
+        (error.details as { code?: string } | undefined)?.code === "COLLECTION_CREATION_CONFLICT") {
+        setCreationConflict(true);
+        setError(null);
+      } else if (error instanceof APIError && error.status === 409 &&
         (error.details as { code?: string } | undefined)?.code === "COLLECTION_DRAFT_CHANGED") {
         setConflicted(true);
         setError(null);
@@ -983,8 +992,11 @@ export function CollectionsPage() {
       setSourceNotice(null);
       setSavedSourceNames(new Map());
       setBaseline(JSON.stringify(value));
+      setIsNew(false);
       changeDraft(value);
       setConflicted(false);
+      setCreationConflict(false);
+      setCreationUncertain(false);
       setError(null);
       setReloadFocus((version) => version + 1);
       client.invalidateQueries({ queryKey: ["collections"] });
@@ -995,14 +1007,14 @@ export function CollectionsPage() {
     },
   });
   const pending = save.isPending || reload.isPending;
-  useUnsavedChanges(changed || pending);
+  useUnsavedChanges(changed || pending || (!!draft && creationUncertain));
   useLayoutEffect(() => {
     if (reloadFocus === focusedReload.current || pending) return;
     focusedReload.current = reloadFocus;
     collectionName.current?.focus();
   }, [reloadFocus, pending]);
   const reviewReload = () => {
-    if (!draft || isNew || !conflicted || sourceOwner.current || busy()) return;
+    if (!draft || !(conflicted || creationConflict || creationUncertain) || sourceOwner.current || busy()) return;
     const task = { id: draft.id, owner: collectionSession.current, version: revision.current };
     let confirmed = false;
     const review = confirm({
@@ -1039,19 +1051,23 @@ export function CollectionsPage() {
     setIsNew(!item);
     setError(null);
     setConflicted(false);
+    setCreationConflict(false);
+    setCreationUncertain(false);
     setPreview(null);
     setSourceNotice(null);
     setSavedSourceNames(new Map());
   };
   const close = () => {
     if (sourceOwner.current || busy()) return;
-    if (!changed) return changeDraft(null);
+    if (!changed && !creationUncertain) return changeDraft(null);
     const task = { owner: collectionSession.current, version: revision.current };
     let confirmed = false;
     const review = confirm({
       title: "放弃尚未保存的集合修改？",
       description:
-        "集合名称、来源选择、顺序和处理步骤尚未保存。已保存的来源会保留。",
+        creationUncertain
+          ? "此前保存结果尚未确认。关闭会丢弃当前输入，不会删除可能已保存的集合或已保存的来源。"
+          : "集合名称、来源选择、顺序和处理步骤尚未保存。已保存的来源会保留。",
       confirmLabel: "放弃修改",
       cancelLabel: "继续编辑",
       destructive: true,
@@ -1220,7 +1236,7 @@ export function CollectionsPage() {
               if (event.repeat && (event.key === "Enter" || event.key === " ")) event.preventDefault();
             }}
             onClick={() => {
-              if (!draft || sourceOwner.current || busy() || conflicted || !checkPorts()) return;
+              if (!draft || sourceOwner.current || busy() || (conflicted && !isNew) || !checkPorts()) return;
               setError(null);
               const owner = collectionSession.current;
               saving.current = owner;
@@ -1229,7 +1245,7 @@ export function CollectionsPage() {
             disabled={
               !draft?.name.trim() ||
               !!sourceTask ||
-              conflicted ||
+              (conflicted && !isNew) ||
               reload.isPending ||
               unavailableSources.length > 0
             }
@@ -1243,8 +1259,8 @@ export function CollectionsPage() {
         {draft && (
           <fieldset className="min-w-0 space-y-6" disabled={pending || !!sourceTask} inert={pending || !!sourceTask}>
             <ErrorNotice error={error} />
-            {conflicted && (
-              <Notice tone="warning" title="集合或来源已变化" action={
+            {(conflicted || creationConflict || creationUncertain) && (
+              <Notice tone="warning" title={creationConflict ? "集合创建发生冲突" : creationUncertain ? "集合保存结果尚未确认" : "集合或来源已变化"} action={
                 <ActionButton variant="outline" onClick={reviewReload}
                   pending={reload.isPending}
                   onKeyDown={(event) => {
@@ -1253,7 +1269,11 @@ export function CollectionsPage() {
                   读取最新集合
                 </ActionButton>
               }>
-                当前输入已保留，不能覆盖新版本。
+                {creationConflict
+                  ? creationUncertain ? "此前保存结果尚未确认。当前输入已保留，不能覆盖已保存的集合。" : "当前输入已保留，不能覆盖已保存的集合。"
+                  : creationUncertain ? "当前输入已保留。重试不会覆盖已保存的集合。"
+                  : isNew ? "当前输入已保留。可重试创建，或读取已保存的集合。"
+                  : "当前输入已保留，不能覆盖新版本。"}
               </Notice>
             )}
             <label className="standalone-label grid min-w-0 gap-2 text-sm font-medium">

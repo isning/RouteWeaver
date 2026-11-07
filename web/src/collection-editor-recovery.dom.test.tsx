@@ -286,7 +286,7 @@ it("does not treat an unknown conflict as a proven collection draft conflict", a
   expect(f.writes).toHaveLength(1);
 });
 
-it.each(["typed conflict", "lost response"] as const)("retains new collection input on %s without offering existing-record recovery", async (problem) => {
+it.each(["typed conflict", "lost response"] as const)("retains new collection input on %s with guarded creation and explicit recovery", async (problem) => {
   const f = api({ save: async () => {
     if (problem === "lost response") throw new TypeError("Synthetic lost response");
     return conflict();
@@ -296,12 +296,13 @@ it.each(["typed conflict", "lost response"] as const)("retains new collection in
   const editor = within(await screen.findByRole("dialog", { name: "新建集合" }));
   fireEvent.change(editor.getByLabelText("集合名称"), { target: { value: "New local recipe" } });
   await userEvent.click(editor.getByRole("button", { name: "保存集合" }));
-  await editor.findByText(problem === "lost response" ? "无法连接服务。请检查网络后重试，当前输入已保留。" : "Untrusted conflict detail");
+  await editor.findByText(problem === "lost response" ? "集合保存结果尚未确认" : "集合或来源已变化");
   expect((editor.getByLabelText("集合名称") as HTMLInputElement).value).toBe("New local recipe");
-  expect(editor.queryByRole("button", { name: "读取最新集合" })).toBeNull();
+  expect(editor.getByRole("button", { name: "读取最新集合" })).toBeTruthy();
   expect(f.writes).toHaveLength(1);
   expect(f.writes[0].method).toBe("POST");
   expect(f.writes[0].headers.has("If-Match")).toBe(false);
+  expect(f.writes[0].headers.get("If-None-Match")).toBe("*");
   expect(hasUnsavedChanges()).toBe(true);
 });
 
