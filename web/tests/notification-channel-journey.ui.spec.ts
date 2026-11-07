@@ -39,6 +39,70 @@ async function capture(page: Page, info: TestInfo, stage: string, width: number,
     mask: [page.locator('input[autocomplete="new-password"], input[type="password"]')],
   });
 }
+// Read-only geometry at the current scroll position. Never focuses, scrolls or
+// serializes input values/HTML. Five hit tests detect foreground obstruction.
+async function visibility(target: Locator, outset = 0) {
+  return target.evaluate((element, margin) => {
+    const rect = element.getBoundingClientRect();
+    let left = 0, top = 0, right = innerWidth, bottom = innerHeight;
+    for (let node = element.parentElement; node; node = node.parentElement) {
+      const style = getComputedStyle(node), box = node.getBoundingClientRect();
+      if (/(auto|scroll|hidden|clip)/.test(style.overflowX)) {
+        left = Math.max(left, box.left + node.clientLeft);
+        right = Math.min(right, box.left + node.clientLeft + node.clientWidth);
+      }
+      if (/(auto|scroll|hidden|clip)/.test(style.overflowY)) {
+        top = Math.max(top, box.top + node.clientTop);
+        bottom = Math.min(bottom, box.top + node.clientTop + node.clientHeight);
+      }
+    }
+    const points = [[0.5, 0.5], [0.18, 0.18], [0.82, 0.18], [0.18, 0.82], [0.82, 0.82]].map(([x, y]) => {
+      const hit = document.elementFromPoint(rect.left + rect.width * x, rect.top + rect.height * y);
+      return !!hit && element.contains(hit);
+    });
+    return {
+      box: { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom },
+      clip: { left, top, right, bottom }, viewport: { width: innerWidth, height: innerHeight },
+      fullyInside: rect.width > 0 && rect.height > 0 &&
+        rect.left - margin >= left - 0.5 && rect.right + margin <= right + 0.5 &&
+        rect.top - margin >= top - 0.5 && rect.bottom + margin <= bottom + 0.5,
+      unobscured: points.every(Boolean), points,
+      focused: element === document.activeElement,
+      focusVisible: element.matches(":focus-visible"), shadow: getComputedStyle(element).boxShadow,
+    };
+  }, outset);
+}
+async function captureTestConfirmation(dialog: Locator, info: TestInfo, width: number) {
+  // A dialog-only original excludes masked background inputs that otherwise
+  // paint magenta over the footer. Verify the entire cropped surface is safe.
+  expect(await dialog.locator("input, textarea").count()).toBe(0);
+  const text = await dialog.innerText();
+  expect([firstSMTP, firstWebhook, nextSMTP, nextWebhook].some(secret => text.includes(secret))).toBe(false);
+  await expect.poll(() => dialog.evaluate(element => element.getAnimations().every(animation => animation.playState !== "running"))).toBe(true);
+  const geometry = {
+    dialog: await visibility(dialog),
+    cancel: await visibility(dialog.getByRole("button", { name: "取消", exact: true })),
+    send: await visibility(dialog.getByRole("button", { name: "发送测试", exact: true })),
+  };
+  expect(Object.values(geometry).every(target => target.fullyInside && target.unobscured)).toBe(true);
+  await dialog.screenshot({ path: info.outputPath(`notification-channel-journey-cancel-test-dialog-${width}.png`), animations: "disabled" });
+  await writeFile(info.outputPath(`notification-channel-journey-cancel-test-dialog-${width}.json`), JSON.stringify({ geometry, containsSecretInputs: false, savedDestination: true }, null, 2));
+}
+async function captureRecovery(page: Page, info: TestInfo, clear: Locator, error: Locator, index: number, width: number) {
+  await expect.poll(() => clear.evaluate(element => element.getAnimations().every(animation => animation.playState !== "running"))).toBe(true);
+  const geometry = {
+    field: await visibility(clear.locator('xpath=ancestor::*[@role="group"][1]')),
+    // Independent official-checkbox contract: a three-pixel outer focus ring.
+    control: await visibility(clear, 3),
+    error: await visibility(error),
+  };
+  // Save the actual current viewport even if the geometric acceptance fails.
+  await capture(page, info, `conflict-${index}`, width, false);
+  await writeFile(info.outputPath(`notification-channel-journey-conflict-${index}-${width}.json`), JSON.stringify({ geometry, sampled: "After production-owned focus and expansion; no test scrolling" }, null, 2));
+  expect(geometry.control.focused && geometry.control.focusVisible).toBe(true);
+  expect(geometry.control.shadow).toMatch(/(?:^|\s)0px 0px 0px 3px(?:\s|,|$)/);
+  expect(Object.values(geometry).every(target => target.fullyInside && target.unobscured)).toBe(true);
+}
 async function expand(page: Page, name: string) {
   const trigger = page.getByRole("button", { name, exact: true });
   if ((await trigger.getAttribute("aria-expanded")) !== "true") await trigger.click();
@@ -137,7 +201,7 @@ for (const width of [1440, 390]) {
       await testWebhook.click();
       const confirmation = page.getByRole("alertdialog", { name: "发送一条测试通知？", exact: true });
       await expect(confirmation.getByText("将向已保存的 Webhook https://notifications.example.com/original 发送测试内容。", { exact: true })).toBeVisible();
-      await capture(page, info, "cancel-test", width, false);
+      await captureTestConfirmation(confirmation, info, width);
       await confirmation.getByRole("button", { name: "取消", exact: true }).click();
       await expect(confirmation).toBeHidden();
       await expect(testWebhook).toBeFocused();
@@ -152,13 +216,14 @@ for (const width of [1440, 390]) {
         await save.focus();
         await page.keyboard.press("Enter");
         const clear = page.getByRole("checkbox", { name: channel.clear, exact: true });
-        await expect(page.getByText(channel.error, { exact: true })).toBeVisible();
+        const recoveryError = page.getByText(channel.error, { exact: true });
+        await expect(recoveryError).toBeVisible();
         await expect(clear).toBeFocused();
         await expect(clear).toHaveAttribute("aria-invalid", "true");
         await expect(clear).toBeInViewport();
         await retained(page.getByLabel(channel.replacement, { exact: true }), channel.secret);
         expect(writes.length).toBe(0);
-        await capture(page, info, `conflict-${index}`, width, false);
+        await captureRecovery(page, info, clear, recoveryError, index, width);
         // Retain the replacement by removing only the competing clear decision.
         await page.keyboard.press("Space");
         await expect(clear).not.toBeChecked();
@@ -173,7 +238,18 @@ for (const width of [1440, 390]) {
       await page.keyboard.press("Enter");
       expect(writes.length).toBe(1);
       releaseFirst!();
-      await expect(page.getByText("通知设置暂时未保存，请重试。", { exact: true })).toBeVisible();
+      const saveError = page.getByText("通知设置暂时未保存，请重试。", { exact: true });
+      await expect(saveError).toBeVisible();
+      // Diagnostic evidence, not a viewport-visibility pass. Capture the user's
+      // actual failure view before any test scroll or full-document screenshot.
+      const saveFailureViewport = { error: await visibility(saveError), save: await visibility(save) };
+      await capture(page, info, "save-error-current-viewport", width, false);
+      await writeFile(info.outputPath(`notification-channel-journey-save-error-current-viewport-${width}.json`), JSON.stringify({
+        sampled: "Immediately after held failure rendered; no test scrolling",
+        geometry: saveFailureViewport,
+        noticeFullyVisible: saveFailureViewport.error.fullyInside && saveFailureViewport.error.unobscured,
+        requiresPixelReview: true,
+      }, null, 2));
       for (const channel of channels) await retained(page.getByLabel(channel.replacement, { exact: true }), channel.secret);
       expect((await readSettings()).revision).toBe(baseline.revision);
       await capture(page, info, "save-error", width);
@@ -237,6 +313,7 @@ for (const width of [1440, 390]) {
         width, screenshotsMasked: true, isolatedRepository: true,
         conflictChoicesBlocked: 2, cancelledTestRequests: 0, externalRequests: 0,
         heldFailure: true, repeatedFailure: true, exactRetryPayload: true,
+        saveFailureNoticeInViewport: saveFailureViewport.error.fullyInside && saveFailureViewport.error.unobscured,
         successfulBrowserWrites: 2, replacementPresenceReloaded: true,
         clearPresenceReloaded: true, finalOutboxCount: 0,
         limits: ["No external delivery", "No decrypted-secret inspection", "No process restart", "Populated outbox belongs to a separate fixture review"],
