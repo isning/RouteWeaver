@@ -328,5 +328,23 @@
     "rule": "jfrog-identity-token",
     "lineSHA256": "942ee3f5d50a038f7c93044e7fbe4b1af70434cb33fc3b60fc13421c072352c3",
     "reason": "Immutable final-capacity tests manifest bound to historical 6742d04b7e1c036de8fcc3551d0c49390f562b75: all 309 strict unique safe-path/SHA256 entries verified against Git; both receipt bindings, retained binaries and qualification raw log verified. Exact path/rule/line only, not current-test equivalence."
+  },
+  {
+    "path": "docs/verification/RECONSTRUCTION-STATUS-2026-11-06.md",
+    "rule": "generic-api-key",
+    "lineSHA256": "5bc2d37a70ee058a66d45218334edeab758fe43224694ed11185b45c05878b60",
+    "reason": "Documentation cites the Bundle access source candidate and its two composed Git commits. The high-entropy literal is a Git source identity, not a token or credential; identical historical lines were reviewed."
+  },
+  {
+    "path": "docs/verification/reconstruction-coverage-6c6f2a3/AUDIT-RECEIPT.json",
+    "rule": "generic-api-key",
+    "lineSHA256": "05c3ada69ed222e23e12265d0c8e569b301b8d12554e4ec83cfb787ead824c7d",
+    "reason": "SHA-256 source-file digest for web/src/api.ts, independently recomputed from the audited Git commit 6c6f2a33a6381e0badbfb8eeab9ba6a191cf3314; not an API key or credential."
+  },
+  {
+    "path": "docs/verification/reconstruction-coverage-6c6f2a3/AUDIT-RECEIPT.json",
+    "rule": "generic-api-key",
+    "lineSHA256": "e2cc092057e0e68bd7aa28612333d3b5348fce06539eba1b0dfee0d010f41781",
+    "reason": "SHA-256 source-file digest for web/src/AccessPolicy.tsx, independently recomputed from the audited Git commit 6c6f2a33a6381e0badbfb8eeab9ba6a191cf3314; not an API key or credential."
   }
 ]
