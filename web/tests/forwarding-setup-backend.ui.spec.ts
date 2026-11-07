@@ -45,6 +45,17 @@ async function choose(page: Page, control: Locator, query: string) {
   await expect(page.getByRole("listbox")).toHaveCount(0);
 }
 
+async function navigateAfterClose(page: Page, width: number, name: string) {
+  // A closing sheet can already be visually hidden while Radix still excludes
+  // the workspace from the accessible tree. Wait for this case's known viewport
+  // entry before the shared helper decides between desktop and mobile controls.
+  const entry = width === 390
+    ? page.getByRole("button", { name: "打开导航", exact: true })
+    : page.getByRole("navigation", { name: "工作空间导航", exact: true });
+  await expect(entry).toBeVisible();
+  await navigateWorkspace(page, name);
+}
+
 async function capture(page: Page, info: TestInfo, name: string, surface: Locator) {
   await settledTask(surface);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
@@ -158,7 +169,7 @@ for (const width of [1440, 390]) {
     await hostDetail.getByRole("button", { name: "关闭", exact: true }).click();
     await expect(hostDetail).not.toBeVisible();
 
-    await navigateWorkspace(page, "转发路径");
+    await navigateAfterClose(page, width, "转发路径");
     await page.locator(".page-heading").getByRole("button", { name: "新建转发路径", exact: true }).click();
     const pathEditor = page.getByRole("dialog", { name: "新建转发路径", exact: true });
     await pathEditor.getByLabel("转发路径名称", { exact: true }).fill(names.path);
@@ -193,11 +204,14 @@ for (const width of [1440, 390]) {
     await pathDetail.getByRole("button", { name: "关闭", exact: true }).click();
     await expect(pathDetail).not.toBeVisible();
 
-    await navigateWorkspace(page, "线路");
+    await navigateAfterClose(page, width, "线路");
     await page.locator(".page-heading").getByRole("button", { name: "配置公开线路", exact: true }).click();
     const lineEditor = page.getByRole("dialog", { name: "配置公开线路", exact: true });
     await lineEditor.getByLabel("线路名称", { exact: true }).fill(names.line);
-    await choose(page, lineEditor.getByLabel("服务器转发路径", { exact: true }), names.path);
+    // The runtime accessibility snapshot names this button-backed combobox
+    // exactly. Its wrapping label is not an exact getByLabel match.
+    const pathChoice = lineEditor.getByRole("combobox", { name: "服务器转发路径", exact: true });
+    await choose(page, pathChoice, names.path);
     await expect(lineEditor.getByLabel("公开线路转发路径", { exact: true })).toHaveText(names.listener);
     const publicHost = lineEditor.getByLabel("对外域名或 IP", { exact: true });
     const publicPortField = lineEditor.getByLabel("对外端口", { exact: true });
@@ -214,7 +228,7 @@ for (const width of [1440, 390]) {
     await expect(lineEditor.getByText(publicTLSRefusal, { exact: true })).toBeVisible();
     await expect(saveLine).toHaveCount(0);
     await expect(lineEditor.getByLabel("线路名称", { exact: true })).toHaveValue(names.line);
-    await expect(lineEditor.getByLabel("服务器转发路径", { exact: true })).toHaveText(names.path);
+    await expect(pathChoice).toHaveText(names.path);
     await expect(publicHost).toHaveValue("public-entry.example.test");
     await expect(publicPortField).toHaveValue(String(listenerPort));
     expect(await read(page.request, "/published-routes")).toEqual([]);
