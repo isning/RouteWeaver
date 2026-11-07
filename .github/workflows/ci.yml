@@ -277,6 +277,8 @@ jobs:
             web/test-results/*/outbox-history-journey-*.json
             web/test-results/*/structured-publication-journey-*.png
             web/test-results/*/structured-publication-journey-*.json
+            web/test-results/*/processing-preview-*.png
+            web/test-results/*/processing-preview-*.json
           if-no-files-found: ignore
           retention-days: 7
 

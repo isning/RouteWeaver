@@ -1,18 +1,26 @@
 import { test, expect } from "./isolated-control-plane-fixture";
 import { requireLoopback } from "./account-security-backend";
 import { processingPublicationFixture } from "./processing-publication-backend";
-import type { Locator } from "@playwright/test";
+import { reviewProcessingStages } from "./processing-preview-stage-journey";
+import type { Locator, Request } from "@playwright/test";
 
 test.use({ trace: "off", screenshot: "off", video: "off" });
 test("real processing editor → stage comparison → saved recipe → selected feed publication", async ({
   page,
   playwright,
   baseURL,
-}) => {
+}, info) => {
   requireLoopback(baseURL);
   const admin = await playwright.request.newContext({ baseURL });
   try {
     const f = await processingPublicationFixture(admin, page.request);
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    const readCollection = async () => {
+      const response = await page.request.get(`/api/me/collections/${f.id}`);
+      expect(response.status()).toBe(200);
+      return response.json();
+    };
+    const savedBeforePreview = await readCollection();
     await page.goto("/#collections");
     await page.getByRole("button", { name: /处理旅程集合.*编辑集合/ }).click();
     const sheet = page.getByRole("dialog", {
@@ -84,6 +92,21 @@ test("real processing editor → stage comparison → saved recipe → selected 
       ).removedIds,
     ).toEqual([f.accepted.snapshot.endpoints[1].id]);
     await expect(sheet.getByText("逐阶段预览", { exact: true })).toBeVisible();
+    const unexpectedWrites: string[] = [];
+    const observeWrite = (request: Request) => {
+      const path = new URL(request.url()).pathname;
+      if (path.startsWith("/api/") && !["GET", "HEAD"].includes(request.method())) {
+        unexpectedWrites.push(`${request.method()} ${path}`);
+      }
+    };
+    page.on("request", observeWrite);
+    try {
+      await reviewProcessingStages(page, sheet, info);
+      expect(unexpectedWrites).toEqual([]);
+      expect(await readCollection()).toEqual(savedBeforePreview);
+    } finally {
+      page.off("request", observeWrite);
+    }
     await f.unchanged();
     const savedResponse = page.waitForResponse(
       (r) =>
