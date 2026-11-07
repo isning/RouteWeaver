@@ -493,14 +493,20 @@ it.each(["lost response", "server error", "invalid JSON", "incomplete JSON", "wr
     }));
     mount();
     const user = userEvent.setup();
-    await user.click(await screen.findByRole("button", { name: "启用已保存草稿" }));
+    const activate = await screen.findByRole("button", { name: "启用已保存草稿" });
+    // Modal review correctly hides the background from accessible-role queries.
+    const save = screen.getByRole("button", { name: "保存域名草稿" });
+    const verify = screen.getByRole("button", { name: "验证 HTTPS 与实例" });
+    await user.click(activate);
     await user.click(screen.getByRole("checkbox", { name: /我已确认域名/ }));
     await user.click(screen.getByRole("button", { name: "确认启用" }));
     const dialog = screen.getByRole("dialog");
     await within(dialog).findByText("域名启用结果尚未确认");
     expect(within(dialog).getByRole("button", { name: "确认启用" })).toHaveProperty("disabled", true);
-    expect(screen.getByRole("button", { name: "保存域名草稿" })).toHaveProperty("disabled", true);
-    expect(screen.getByRole("button", { name: "验证 HTTPS 与实例" })).toHaveProperty("disabled", true);
+    expect(save).toHaveProperty("isConnected", true);
+    expect(save).toHaveProperty("disabled", true);
+    expect(verify).toHaveProperty("isConnected", true);
+    expect(verify).toHaveProperty("disabled", true);
     await user.click(within(dialog).getByRole("button", { name: "重新读取设置" }));
     await within(dialog).findByText("Read unavailable");
     expect(writes).toBe(1);

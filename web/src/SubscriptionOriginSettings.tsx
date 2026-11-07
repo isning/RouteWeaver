@@ -288,7 +288,16 @@ function OriginForm({
     retry: false,
     mutationFn: async ({ reviewed, owner }: { reviewed: Readonly<OriginState>; owner: OriginState }) => {
       const source = currentSource.current;
-      if (!source || source.review !== owner || source.state.revision !== reviewed.revision)
+      // A paused mutation can resume before React renders a newer cache value.
+      // Check the authoritative snapshot as well as the mounted review owner.
+      let currentRevision: number | undefined;
+      try {
+        currentRevision = validatedOriginState(client.getQueryData(key)).revision;
+      } catch {
+        // Missing or malformed state cannot authorize a write; none was sent.
+      }
+      if (!source || source.review !== owner || source.state.revision !== reviewed.revision ||
+          currentRevision !== reviewed.revision)
         throw new APIError("settings changed or no draft exists; reload before continuing", 409);
       const next = validatedOriginState(await post<unknown>(`${path}/activate`, {
         expectedRevision: reviewed.revision,
