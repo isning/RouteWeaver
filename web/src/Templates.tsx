@@ -749,8 +749,8 @@ export function TemplatesPage({ admin = false }: { admin?: boolean }) {
             inspect.error ||
             apply.error ||
             updateVersions.error ||
-            sourceQuery.error ||
-            updateEntries.error
+            profiles.error ||
+            updateEndpoints.error
           }
         />
         <div className="space-y-5" inert={apply.isPending || updateConfirming}>

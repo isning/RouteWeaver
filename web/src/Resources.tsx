@@ -176,7 +176,7 @@ export function ResourcesPage() {
   const [inspection, setInspection] = useState<Inspection | null>(null);
   const inspectionRequest = useRef<AbortController | null>(null);
   const [inspecting, setInspecting] = useState(false);
-  const [inspectionError, setInspectionError] = useState<unknown>(null);
+  const [inspectionError, setInspectionError] = useState<Error | null>(null);
   const cancelInspection = () => {
     inspectionRequest.current?.abort();
     inspectionRequest.current = null;
