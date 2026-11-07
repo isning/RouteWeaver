@@ -239,6 +239,11 @@ it.each([
       await dialog.findByText(/导入未完成。请检查来源设置和内容后重试。/);
       expect(dialog.queryByText(detail)).toBeNull();
       expect(dialog.queryByText("操作未完成")).toBeNull();
+    } else if (testCase.status === 409) {
+      await dialog.findByText("来源已变化，当前输入已保留。");
+      expect(dialog.getByRole("button", { name: "读取最新来源", exact: true })).toBeTruthy();
+      expect(dialog.queryByText(detail)).toBeNull();
+      expect(dialog.queryByText("操作未完成")).toBeNull();
     } else {
       await dialog.findByText(detail);
       expect(dialog.getByText("操作未完成")).toBeTruthy();

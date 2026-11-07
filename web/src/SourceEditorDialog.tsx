@@ -33,6 +33,23 @@ import {
   sourceIssueText,
   sourceStatusUnknown,
 } from "./source-failure";
+
+async function readSourceEditor(id: string) {
+  const path = `/me/sources/${encodeURIComponent(id)}`;
+  const [full, summary] = await Promise.all([
+    request<Source>(`${path}/reveal`),
+    request<Source>(path),
+  ]);
+  // Both absent revisions support legacy records. A partial or mismatched pair
+  // cannot authorize replacing local input or establish a new version fence.
+  if (
+    full?.id !== id ||
+    summary?.id !== id ||
+    (full.revision || undefined) !== (summary.revision || undefined)
+  )
+    throw new Error("来源在读取时发生变化，请重试。");
+  return { full, summary };
+}
 /**
  * A source-only editor shared by management and contextual creation.
  * `onSaved` reports a successful source write before `onClose`; the caller decides
@@ -107,6 +124,10 @@ function SourceEditorSession({
   const fileInput = useRef<HTMLInputElement>(null);
   const [selectedFileName, setSelectedFileName] = useState("");
   const saving = useRef(false);
+  const reloading = useRef(false);
+  const sourceNameInput = useRef<HTMLInputElement>(null);
+  const [reloadFocus, setReloadFocus] = useState(0);
+  const focusedReload = useRef(0);
   const submitButton = useRef<HTMLButtonElement>(null);
   const modalBody = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(true);
@@ -232,18 +253,9 @@ function SourceEditorSession({
     let current = true;
     setLoading(true);
     setLoadError(null);
-    const path = `/me/sources/${encodeURIComponent(initialSource.id)}`;
-    Promise.all([request<Source>(`${path}/reveal`), request<Source>(path)])
-      .then(([full, summary]) => {
+    readSourceEditor(initialSource.id)
+      .then(({ full, summary }) => {
         if (!current) return;
-        // Both absent revisions are supported legacy records, not a version
-        // fence. One missing or unequal revision cannot establish a shared read.
-        if (
-          full?.id !== initialSource.id ||
-          summary?.id !== initialSource.id ||
-          (full.revision || undefined) !== (summary.revision || undefined)
-        )
-          throw new Error("来源在读取时发生变化，请重试。");
         setEditing(full);
         // Never derive a public summary from credential-bearing reveal data.
         setSavedSummary(summary);
@@ -363,13 +375,77 @@ function SourceEditorSession({
     (sourceHasFailure(rejectedSource) || !rejectedSource.refreshStatus) &&
     (sourceHasFailure(savedFailure) || !savedFailure?.refreshStatus);
   const unresolvedFile = fileState === "reading" || fileState === "failed";
-  useUnsavedChanges(open && (editorDirty || unresolvedFile || mutation.isPending));
+  const reload = useMutation({
+    mutationFn: () => readSourceEditor(editorID),
+    onSuccess: ({ full, summary }) => {
+      if (!active.current || closing.current) return;
+      // Discard permission covers the complete input, never just its revision.
+      // Read failures leave this exact form and its uncertainty untouched.
+      clearFileSelection();
+      form.resetFields();
+      form.setFieldsValue({ ...full, applyMode: full.applyMode ?? "auto" });
+      editorBaseline.current = snapshot({ ...full, applyMode: full.applyMode ?? "auto" });
+      setEditing(full);
+      setRetainedDraft(null);
+      setSavedSummary(summary);
+      setSavedFailure(sourceHasFailure(summary) ? summary : null);
+      setSaveUncertain(false);
+      setEditorDirty(false);
+      mutation.reset();
+      setReloadFocus((version) => version + 1);
+      client.invalidateQueries({ queryKey: ["sources"] });
+    },
+    onSettled: () => { reloading.current = false; },
+  });
+  useLayoutEffect(() => {
+    if (reloadFocus === focusedReload.current || reload.isPending || !active.current) return;
+    focusedReload.current = reloadFocus;
+    const focused = document.activeElement;
+    if (focused === document.body || (focused instanceof Node && modalBody.current?.contains(focused)))
+      sourceNameInput.current?.focus();
+  }, [reloadFocus, reload.isPending]);
+  const sourceConflict = (
+    mutation.error instanceof APIError && (
+      mutation.error.status === 409 ||
+      (mutation.error.status === 412 &&
+        (mutation.error.details as { code?: string } | undefined)?.code === "SOURCE_CREATION_CONFLICT")
+    )
+  );
+  const canReload = saveUncertain || sourceConflict;
+  const reviewReload = () => {
+    if (!active.current || !open || closing.current || saving.current || reloading.current || discardReview.current)
+      return;
+    let confirmed = false;
+    const review = confirm({
+      contentProps: { onFocusCapture: revealFocusedModalAction },
+      title: "放弃当前修改并读取最新来源？",
+      description: "这会替换当前窗口中的未保存输入。已保存的来源和已发布订阅不会改变。",
+      confirmLabel: "放弃修改并读取",
+      cancelLabel: "保留当前输入",
+      destructive: true,
+      onConfirm: () => {
+        if (active.current && discardReview.current === review) confirmed = true;
+      },
+      onCancel: () => { confirmed = false; },
+      onClosed: () => {
+        if (discardReview.current !== review) return;
+        discardReview.current = null;
+        if (!confirmed || !active.current || closing.current) return;
+        reloading.current = true;
+        reload.mutate();
+      },
+    });
+    discardReview.current = review;
+  };
+  const pending = mutation.isPending || reload.isPending;
+  useUnsavedChanges(open && (editorDirty || unresolvedFile || pending));
   const closeEditor = () => {
     if (
       !active.current ||
       !open ||
       closing.current ||
       saving.current ||
+      reloading.current ||
       mutation.isPending ||
       discardReview.current
     )
@@ -437,7 +513,7 @@ function SourceEditorSession({
             <div className="form-footer flex flex-wrap items-center justify-end gap-2">
               <ActionButton
                 onClick={closeEditor}
-                disabled={mutation.isPending || !open}
+                disabled={pending || !open}
                 variant="outline"
               >
                 取消
@@ -451,7 +527,7 @@ function SourceEditorSession({
                   primaryActionText || (editing ? "保存修改" : "导入来源")
                 }
                 aria-busy={mutation.isPending}
-                disabled={!open || unresolvedFile}
+                disabled={!open || unresolvedFile || reload.isPending}
                 variant="default"
                 pending={!!mutation.isPending}
               >
@@ -464,7 +540,7 @@ function SourceEditorSession({
       onOpenChange={(nextOpen) => {
         if (!nextOpen) closeEditor();
       }}
-      pending={!!mutation.isPending}
+      pending={pending}
       onClosed={() => {
         const task = closing.current;
         if (!active.current || !task) return;
@@ -497,6 +573,12 @@ function SourceEditorSession({
         id={formID}
         name={formID}
         form={form}
+        onKeyDownCapture={(event) => {
+          // A held confirmation key must not submit the freshly loaded form.
+          // Keep ordinary Enter submission and textarea editing available.
+          if (event.repeat && event.key === "Enter" && !(event.target instanceof HTMLTextAreaElement))
+            event.preventDefault();
+        }}
         initialValues={
           initialSource
             ? undefined
@@ -508,6 +590,7 @@ function SourceEditorSession({
             closing.current ||
             !open ||
             saving.current ||
+            reloading.current ||
             fileBlocked.current ||
             mutation.isPending ||
             discardReview.current ||
@@ -531,7 +614,7 @@ function SourceEditorSession({
           if ("kind" in changed || "content" in changed) clearFileSelection();
           updateEditorDirty();
         }}
-        disabled={mutation.isPending || !open}
+        disabled={pending || !open}
       >
         <QueryState
           loading={loading}
@@ -567,18 +650,31 @@ function SourceEditorSession({
                 "关闭不会撤销已保存的输入。"}
             </Notice>
           )}
-          {saveUncertain && (
+          {canReload && (
             <Notice
               className="form-error my-3"
               tone="warning"
-              title="尚未确认输入是否保存"
+              title={saveUncertain ? "尚未确认输入是否保存" : "来源已变化，当前输入已保留。"}
+              action={
+                <ActionButton
+                  variant="outline"
+                  disabled={mutation.isPending}
+                  pending={reload.isPending}
+                  onClick={reviewReload}
+                >
+                  读取最新来源
+                </ActionButton>
+              }
             >
-              {"当前输入仍在此窗口中。关闭编辑不会撤销可能已保存的来源输入。"}
+              {saveUncertain
+                ? "当前输入仍在此窗口中。关闭编辑不会撤销可能已保存的来源输入。"
+                : "读取最新来源前会先确认是否放弃当前输入。"}
             </Notice>
           )}
+          <ErrorNotice error={reload.error} />
           <ErrorNotice
             error={
-              savedRetainedFailure ? fileError : mutation.error || fileError
+              savedRetainedFailure || sourceConflict ? fileError : mutation.error || fileError
             }
           />
           {mutation.error instanceof APIError &&
@@ -605,7 +701,7 @@ function SourceEditorSession({
             label="来源名称"
             rules={[{ required: true, message: "给来源取一个名称" }]}
           >
-            <Input placeholder="例如：我的机场" maxLength={80} />
+            <Input ref={sourceNameInput} placeholder="例如：我的机场" maxLength={80} />
           </AppField>
           <fieldset className="source-input-fieldset mb-6 min-w-0 space-y-2 [&>legend]:mb-2 [&>legend]:text-sm">
             <legend>导入方式</legend>
@@ -665,7 +761,7 @@ function SourceEditorSession({
             <div className="source-file-control my-3 grid justify-items-start gap-2">
               <ActionButton
                 leadingIcon={<FileText aria-hidden="true" />}
-                disabled={mutation.isPending || !open}
+                disabled={pending || !open}
                 onClick={() => fileInput.current?.click()}
                 variant="outline"
               >
@@ -684,7 +780,7 @@ function SourceEditorSession({
                       : "尚未选择文件"}
               </span>
               {unresolvedFile && (
-                <ActionButton variant="outline" onClick={clearFileSelection}>
+                <ActionButton variant="outline" disabled={pending} onClick={clearFileSelection}>
                   取消文件选择
                 </ActionButton>
               )}
@@ -694,10 +790,10 @@ function SourceEditorSession({
                 aria-label="读取配置文件"
                 type="file"
                 accept=".txt,.yaml,.yml,.json,.conf"
-                disabled={mutation.isPending || !open}
+                disabled={pending || !open}
                 onChange={async (event) => {
                   const file = event.target.files?.[0];
-                  if (!file || !active.current || closing.current || saving.current)
+                  if (!file || !active.current || closing.current || saving.current || reloading.current)
                     return;
                   // Clear the native value so choosing the same file retries a failed read.
                   event.target.value = "";
@@ -787,7 +883,7 @@ function SourceEditorSession({
                 key={section.key}
                 value={String(section.key)}
                 disabled={
-                  (mutation.isPending || !open ? "disabled" : undefined) ===
+                  (pending || !open ? "disabled" : undefined) ===
                     "disabled" ||
                   ("collapsible" in section &&
                     section.collapsible === "disabled")
