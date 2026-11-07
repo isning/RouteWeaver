@@ -193,18 +193,36 @@ for (const width of [1440, 390]) {
     expect(deployment.ir.programs[0]).toMatchObject({ instance: { id: core.id, hostId: host.id }, listener: { id: listener.id, instanceId: core.id, authentication: "principals", connection: { protocol: "vless", host: "0.0.0.0", port: listenerPort } } });
     expect(deployment.ir.programs[0].principals ?? []).toEqual([]);
 
-    // Save is real even though this managed path cannot yet be applied. Capture
-    // current missing-principals guidance for review; do not manufacture users
-    // or weaken the renderer just to turn the first-use state into success.
+    // Saving is real while application remains blocked. Recovery is read-only:
+    // inspect the matching line and its user authorization/entry state, without
+    // manufacturing users or weakening the renderer to manufacture success.
     const pathDetail = page.getByRole("dialog", { name: names.path, exact: true });
-    await expect(pathDetail.getByText("草稿需要调整", { exact: true })).toBeVisible();
-    await expect(pathDetail.getByText(missingPrincipals, { exact: true })).toBeVisible();
-    await pathDetail.getByText("草稿需要调整", { exact: true }).scrollIntoViewIfNeeded();
+    const entryGap = pathDetail.getByText("草稿缺少可用用户入口", { exact: true });
+    const blockedDraft = pathDetail.getByText("草稿已保存，当前不能应用。", { exact: true });
+    await expect(entryGap).toBeVisible();
+    await expect(blockedDraft).toBeVisible();
+    await expect(pathDetail.getByText(`在线路页选择使用「${names.path}」的公开线路；若还没有，先配置公开线路。`, { exact: true })).toBeVisible();
+    await expect(pathDetail.getByText("在线路详情中选择用户，核对「用户授权」和「独立入口与运行确认」。按需准备入口后，返回重新检查。", { exact: true })).toBeVisible();
+    await expect(pathDetail.getByRole("button", { name: "编辑并修复", exact: true })).toHaveCount(0);
+    await expect(pathDetail.getByRole("button", { name: "确认并应用", exact: true })).toHaveCount(0);
+    const rawDiagnostic = pathDetail.getByText(missingPrincipals, { exact: true });
+    const technicalDetails = pathDetail.getByRole("button", { name: "技术详情", exact: true });
+    await expect(rawDiagnostic).toHaveCount(0);
+    await technicalDetails.click();
+    await expect(rawDiagnostic).toBeVisible();
+    await technicalDetails.click();
+    await expect(rawDiagnostic).toHaveCount(0);
+    const continueToLines = pathDetail.getByRole("link", { name: "前往线路", exact: true });
+    await expect(continueToLines).toHaveAttribute("href", "#published-routes");
+    await continueToLines.scrollIntoViewIfNeeded();
+    await expect(continueToLines).toBeInViewport({ ratio: 1 });
+    await expect(entryGap).toBeInViewport({ ratio: 1 });
+    await expect(blockedDraft).toBeInViewport({ ratio: 1 });
     await capture(page, info, `setup-path-awaiting-principals-${width}`, pathDetail);
-    await pathDetail.getByRole("button", { name: "关闭", exact: true }).click();
+    await continueToLines.click();
+    await expect(page).toHaveURL(/#published-routes$/);
     await expect(pathDetail).not.toBeVisible();
-
-    await navigateAfterClose(page, width, "线路");
+    await expect(page.getByRole("heading", { name: "线路", exact: true })).toBeVisible();
     await page.locator(".page-heading").getByRole("button", { name: "配置公开线路", exact: true }).click();
     const lineEditor = page.getByRole("dialog", { name: "配置公开线路", exact: true });
     await lineEditor.getByLabel("线路名称", { exact: true }).fill(names.line);

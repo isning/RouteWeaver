@@ -1200,35 +1200,87 @@ function ServerRouteEditor({
     </TaskSheet>
   );
 }
+const managedPrincipalsRequired =
+  "MANAGED_PRINCIPALS_REQUIRED: authenticated VLESS principals required";
+
+function hasManagedEntrySetupGap(
+  diagnostics: string[],
+  programs: ServerProgram[],
+) {
+  // This exact diagnostic can also mean a non-VLESS listener. Limit recovery to
+  // the verified first-use shape; it says nothing about existing account grants
+  // or whether this saved snapshot is still current.
+  const program = programs.length === 1 ? programs[0] : undefined;
+  return (
+    diagnostics.includes(managedPrincipalsRequired) &&
+    program?.instance.adapterId === "routeweaver/managed-xray" &&
+    program.instance.version === "26.3.27-rw1" &&
+    program.listener.authentication === "principals" &&
+    program.listener.connection.protocol === "vless" &&
+    !program.principals?.length
+  );
+}
+
 function ServerRouteDiagnostics({
   diagnostics,
   programs,
+  managedEntry,
   type = "warning",
 }: {
   diagnostics: string[];
   programs: ServerProgram[];
+  managedEntry?: { deploymentName: string; href: string };
   type?: "warning" | "error";
 }) {
+  const onlyEntrySetup =
+    !!managedEntry &&
+    diagnostics.every((item) => item === managedPrincipalsRequired);
   return (
-    <Notice tone={type} title="草稿需要调整">
+    <Notice
+      tone={type}
+      title={onlyEntrySetup ? "草稿缺少可用用户入口" : "草稿需要调整"}
+    >
       {
         <>
-          <p>当前草稿不能应用。请先修复问题，再重新检查。</p>
-          <ul>
-            {diagnostics.map((diagnostic, index) => {
-              // The API exposes string diagnostics, not structured issues. Use
-              // only its field-path prefix; never infer a cause from English text.
-              const tls = /^programs\[(\d+)\]\.tls:/.exec(diagnostic);
-              const program = tls ? programs[Number(tls[1])] : undefined;
-              return (
-                <li key={index}>
-                  {program && tls
-                    ? `第 ${Number(tls[1]) + 1} 段（${program.listener.name}）的 TLS 设置未通过检查。请编辑转发路径，检查「TLS 证书与安全参数」。`
-                    : diagnostic}
-                </li>
-              );
-            })}
-          </ul>
+          <p>
+            {onlyEntrySetup
+              ? "草稿已保存，当前不能应用。"
+              : "当前草稿不能应用。请先修复问题，再重新检查。"}
+          </p>
+          {!onlyEntrySetup && (
+            <ul>
+              {diagnostics.map((diagnostic, index) => {
+                if (managedEntry && diagnostic === managedPrincipalsRequired)
+                  return <li key={index}>草稿缺少可用用户入口。</li>;
+                // Other diagnostics retain their existing field-path handling;
+                // never infer a cause from similar English text or a code prefix.
+                const tls = /^programs\[(\d+)\]\.tls:/.exec(diagnostic);
+                const program = tls ? programs[Number(tls[1])] : undefined;
+                return (
+                  <li key={index}>
+                    {program && tls
+                      ? `第 ${Number(tls[1]) + 1} 段（${program.listener.name}）的 TLS 设置未通过检查。请编辑转发路径，检查「TLS 证书与安全参数」。`
+                      : diagnostic}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+          {managedEntry && (
+            <div className="space-y-2">
+              <p>
+                在线路页选择使用「{managedEntry.deploymentName}」的公开线路；若还没有，先配置公开线路。
+              </p>
+              <p>
+                在线路详情中选择用户，核对「用户授权」和「独立入口与运行确认」。按需准备入口后，返回重新检查。
+              </p>
+              {!onlyEntrySetup && (
+                <ActionButton variant="outline" asChild>
+                  <a href={managedEntry.href}>前往线路</a>
+                </ActionButton>
+              )}
+            </div>
+          )}
           {diagnostics.length > 0 && (
             <Accordion type="multiple" defaultValue={[]} className="w-full">
               {[
@@ -1590,6 +1642,15 @@ function ServerRouteDetail({
   const [quota, setQuota] = useState(false);
   const diagnostics = check?.diagnostics ?? deployment.diagnostics ?? [];
   const needsAdjustment = check ? !check.valid : diagnostics.length > 0;
+  const managedEntry = hasManagedEntrySetupGap(
+    diagnostics,
+    deployment.ir.programs,
+  )
+    ? { deploymentName: deployment.name, href: returnHref || "#published-routes" }
+    : undefined;
+  const onlyEntrySetup =
+    !!managedEntry &&
+    diagnostics.every((item) => item === managedPrincipalsRequired);
   const client = useQueryClient();
   const draftChanged = (error: unknown) =>
     error instanceof APIError &&
@@ -1788,11 +1849,16 @@ function ServerRouteDetail({
                 ? "再次检查并应用"
                 : "查看修改并应用"}
           </ActionButton>
-          {needsAdjustment && (
-            <ActionButton onClick={() => onEdit()} variant="default">
-              编辑并修复
-            </ActionButton>
-          )}
+          {needsAdjustment &&
+            (onlyEntrySetup && managedEntry ? (
+              <ActionButton variant="default" asChild>
+                <a href={managedEntry.href}>前往线路</a>
+              </ActionButton>
+            ) : (
+              <ActionButton onClick={() => onEdit()} variant="default">
+                编辑并修复
+              </ActionButton>
+            ))}
           <ActionButton
             disabled={
               publicationRequests?.pendingDeploymentId === deployment.id
@@ -1852,6 +1918,7 @@ function ServerRouteDetail({
         <ServerRouteDiagnostics
           diagnostics={diagnostics}
           programs={deployment.ir.programs}
+          managedEntry={managedEntry}
         />
       )}
       <Section title="目标实例" description="运行结果由对应 Agent 回传。">
@@ -1890,9 +1957,15 @@ function ServerRouteDetail({
               <ActionButton onClick={() => setReview(false)} variant="outline">
                 返回
               </ActionButton>
-              <ActionButton onClick={() => onEdit()} variant="default">
-                编辑并修复
-              </ActionButton>
+              {onlyEntrySetup && managedEntry ? (
+                <ActionButton variant="default" asChild>
+                  <a href={managedEntry.href}>前往线路</a>
+                </ActionButton>
+              ) : (
+                <ActionButton onClick={() => onEdit()} variant="default">
+                  编辑并修复
+                </ActionButton>
+              )}
             </div>
           ) : check?.valid && !publicationRequests?.blocked ? (
             <div className="w-full space-y-3">
@@ -2019,6 +2092,7 @@ function ServerRouteDetail({
             <ServerRouteDiagnostics
               diagnostics={check.diagnostics}
               programs={deployment.ir.programs}
+              managedEntry={managedEntry}
               type="error"
             />
           </>
