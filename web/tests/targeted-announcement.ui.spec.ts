@@ -12,7 +12,8 @@ import {
 // No persisted credentials, storageState, traces, videos or automatic screenshots.
 // The sole network fault is a recipient-catalog read interruption. Every success,
 // write, delivery, receipt and authorization response comes from the real daemon.
-test.use({ trace: "off", screenshot: "off", video: "off" });
+// Keep local authoring distinct from the explicitly named Beijing display zone.
+test.use({ trace: "off", screenshot: "off", video: "off", timezoneId: "UTC" });
 async function login(page: Page, username: string, password: string, hash: string) {
   await page.goto(`/#${hash}`);
   await page.getByLabel("账号", { exact: true }).fill(username);
@@ -45,8 +46,8 @@ for (const width of [1440, 390]) {
     await page.setViewportSize({ width, height: 900 });
     const intended = await playwright.request.newContext({ baseURL });
     const excluded = await playwright.request.newContext({ baseURL });
-    const recipientContext = await browser.newContext({ baseURL, viewport: { width, height: 900 } });
-    const excludedContext = await browser.newContext({ baseURL, viewport: { width, height: 900 } });
+    const recipientContext = await browser.newContext({ baseURL, timezoneId: "UTC", viewport: { width, height: 900 } });
+    const excludedContext = await browser.newContext({ baseURL, timezoneId: "UTC", viewport: { width, height: 900 } });
     let releaseCatalog: (() => void) | undefined;
     try {
       const f = await targetedAnnouncementFixture(request, intended, excluded);
@@ -119,6 +120,11 @@ for (const width of [1440, 390]) {
       await editor.getByLabel("公告正文", { exact: true }).fill(announcementBody);
       await expect(editor.getByLabel("公告标题", { exact: true })).not.toHaveAttribute("aria-invalid", "true");
       await expect(editor.getByLabel("公告正文", { exact: true })).not.toHaveAttribute("aria-invalid", "true");
+      const localStart = await editor.getByLabel("开始时间（本机时区）", { exact: true }).inputValue();
+      const localEnd = await editor.getByLabel("结束时间（本机时区）", { exact: true }).inputValue();
+      const startInstant = Date.parse(`${localStart}:00Z`);
+      const endInstant = Date.parse(`${localEnd}:00Z`);
+      expect(Number.isFinite(startInstant) && Number.isFinite(endInstant)).toBe(true);
       await screenshot(page, info, `targeted-review-${width}`);
       const saved = page.waitForResponse(r => new URL(r.url()).pathname === "/api/admin/announcements" && r.request().method() === "POST");
       await save.click();
@@ -126,10 +132,14 @@ for (const width of [1440, 390]) {
       expect(response.status()).toBe(200);
       const announcement = await response.json();
       expect(announcement.id.length).toBeLessThanOrEqual(64);
+      expect(Date.parse(announcement.startsAt)).toBe(startInstant);
+      expect(Date.parse(announcement.expiresAt)).toBe(endInstant);
       expect(announcement.audience).toBe("users");
       expect(announcement.userIds).toEqual([f.intended.id]);
       await expect(editor).toBeHidden();
       await expect(page.getByRole("cell", { name: announcementTitle, exact: true })).toBeVisible();
+      await expect(page.getByRole("columnheader", { name: "开始时间（北京时间）", exact: true })).toBeVisible();
+      await expect(page.getByRole("columnheader", { name: "结束时间（北京时间）", exact: true })).toBeVisible();
       await screenshot(page, info, `targeted-saved-${width}`);
 
       await expect.poll(async () => (await f.inbox(intended)).filter(item => item.announcementId === announcement.id).length, {
@@ -138,6 +148,8 @@ for (const width of [1440, 390]) {
       }).toBe(1);
       const delivered = (await f.inbox(intended)).find(item => item.announcementId === announcement.id)!;
       expect(delivered.readAt).toBeUndefined();
+      expect(Date.parse(delivered.createdAt)).toBe(startInstant);
+      expect(Date.parse(delivered.expiresAt!)).toBe(endInstant);
       expect(await f.inbox(excluded)).toEqual([]);
       const outsiderSession = await (await excluded.get("/api/auth/me")).json();
       expect((await excluded.post(`/api/me/notifications/${delivered.eventId}/read`, {
@@ -148,6 +160,8 @@ for (const width of [1440, 390]) {
       await login(reader, f.intended.username, initialPassword, "inbox");
       const unread = reader.getByRole("button", { name: new RegExp(`${announcementTitle}.*未读`) });
       await expect(unread).toBeVisible();
+      await expect(unread.locator("time")).toHaveAttribute("datetime", delivered.createdAt);
+      await expect(unread.locator("time")).toContainText("（北京时间）");
       await screenshot(reader, info, `targeted-unread-${width}`);
       const acknowledged = reader.waitForResponse(r => new URL(r.url()).pathname === `/api/me/notifications/${delivered.eventId}/read` && r.request().method() === "POST");
       await unread.click();
@@ -155,8 +169,13 @@ for (const width of [1440, 390]) {
       const opened = reader.getByRole("dialog", { name: announcementTitle, exact: true });
       await settledTask(opened);
       await expect(opened.getByText(announcementBody, { exact: true })).toBeVisible();
+      await expect(opened.getByText(/（北京时间）$/, { exact: false })).toHaveCount(2);
+      await expect(opened.getByText(/^有效至 .*（北京时间）$/)).toBeVisible();
       await expect.poll(async () => (await f.inbox(intended))[0].readAt).toBeTruthy();
-      const receipt = (await f.inbox(intended))[0].readAt;
+      const readItem = (await f.inbox(intended))[0];
+      const receipt = readItem.readAt;
+      expect(Date.parse(readItem.createdAt)).toBe(startInstant);
+      expect(Date.parse(readItem.expiresAt!)).toBe(endInstant);
       await screenshot(reader, info, `targeted-open-read-${width}`);
       await reader.keyboard.press("Escape");
       const read = reader.getByRole("button", { name: new RegExp(`${announcementTitle}.*已读`) });
@@ -178,16 +197,24 @@ for (const width of [1440, 390]) {
       await page.getByRole("row").filter({ has: page.getByRole("cell", { name: announcementTitle, exact: true }) }).getByRole("button", { name: "编辑", exact: true }).click();
       const edit = page.getByRole("dialog", { name: "编辑公告", exact: true });
       await settledTask(edit);
+      await expect(edit.getByLabel("开始时间（本机时区）", { exact: true })).toHaveValue(localStart);
+      await expect(edit.getByLabel("结束时间（本机时区）", { exact: true })).toHaveValue(localEnd);
       await expect(edit.getByRole("button", { name: `移除 ${intendedLabel}`, exact: true })).toBeVisible();
       const updatedBody = "维护时间已更新，请在稍后检查连接。接收账号不变。";
       await edit.getByLabel("公告正文", { exact: true }).fill(updatedBody);
       const updated = page.waitForResponse(r => new URL(r.url()).pathname === `/api/admin/announcements/${announcement.id}` && r.request().method() === "PUT");
       await edit.getByRole("button", { name: "保存并安排发布", exact: true }).click();
-      expect((await updated).status()).toBe(200);
+      const updateResponse = await updated;
+      expect(updateResponse.status()).toBe(200);
+      const updatedAnnouncement = await updateResponse.json();
+      expect(Date.parse(updatedAnnouncement.startsAt)).toBe(startInstant);
+      expect(Date.parse(updatedAnnouncement.expiresAt)).toBe(endInstant);
       await expect(edit).toBeHidden();
       expect(writes).toEqual(["POST", "PUT"]);
       const stored = await f.announcements();
       expect(stored).toHaveLength(1);
+      expect(Date.parse(stored[0].startsAt)).toBe(startInstant);
+      expect(Date.parse(stored[0].expiresAt)).toBe(endInstant);
       expect(stored[0].audience).toBe("users");
       expect(stored[0].userIds).toEqual([f.intended.id]);
       await reader.reload();
@@ -197,6 +224,9 @@ for (const width of [1440, 390]) {
       const afterEdit = await f.inbox(intended);
       expect(afterEdit).toHaveLength(1);
       expect(afterEdit[0]).toMatchObject({ eventId: delivered.eventId, readAt: receipt, body: updatedBody });
+      expect(Date.parse(afterEdit[0].createdAt)).toBe(startInstant);
+      expect(Date.parse(afterEdit[0].expiresAt!)).toBe(endInstant);
+      await expect(opened.getByText(/^有效至 .*（北京时间）$/)).toBeVisible();
       await screenshot(reader, info, `targeted-edited-read-${width}`);
       const outsider = await excludedContext.newPage();
       await login(outsider, f.excluded.username, initialPassword, "inbox");

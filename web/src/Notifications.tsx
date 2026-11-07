@@ -102,6 +102,11 @@ const localDate = (iso: string) => {
     .toISOString()
     .slice(0, 16);
 };
+// Read views use the existing Asia/Shanghai formatter; editor fields remain local.
+const inboxDateLabel = (value?: string) => {
+  const label = dateLabel(value);
+  return label === "未设置" ? label : `${label}（北京时间）`;
+};
 export function InboxPage() {
   const query = useQuery({
     queryKey: ["inbox"],
@@ -207,7 +212,7 @@ export function InboxPage() {
                   <small className="flex shrink-0 flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground sm:flex-col sm:items-end">
                     <span>{item.readAt ? "已读" : "未读"}</span>
                     <time dateTime={item.createdAt}>
-                      {dateLabel(item.createdAt)}
+                      {inboxDateLabel(item.createdAt)}
                     </time>
                   </small>
                 </button>
@@ -247,14 +252,14 @@ export function InboxPage() {
           </ActionButton>
         )}
         <p className="text-sm text-muted-foreground">
-          {dateLabel(displayed?.createdAt)}
+          {inboxDateLabel(displayed?.createdAt)}
         </p>
         <div className="whitespace-pre-wrap break-words text-sm leading-relaxed">
           {displayed?.body}
         </div>
         {displayed?.expiresAt && (
           <p className="text-sm text-muted-foreground">
-            有效至 {dateLabel(displayed.expiresAt)}
+            有效至 {inboxDateLabel(displayed.expiresAt)}
           </p>
         )}
       </TaskSheet>
@@ -481,8 +486,8 @@ function Announcements() {
                         ? "管理员"
                         : `${a.userIds.length} 位指定用户`,
                 },
-                { title: "开始时间", render: (_, a) => dateLabel(a.startsAt) },
-                { title: "结束时间", render: (_, a) => dateLabel(a.expiresAt) },
+                { title: "开始时间（北京时间）", render: (_, a) => dateLabel(a.startsAt) },
+                { title: "结束时间（北京时间）", render: (_, a) => dateLabel(a.expiresAt) },
                 {
                   title: "状态",
                   render: (_, a) => (

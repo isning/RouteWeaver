@@ -11,6 +11,8 @@ export interface AnnouncementInboxItem {
   title: string;
   body: string;
   readAt?: string;
+  createdAt: string;
+  expiresAt?: string;
 }
 
 // Provision only synthetic identities through normal public invitations. The
