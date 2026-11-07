@@ -10,6 +10,14 @@ import {
 
 export type CollectionRevision = Collection & { revisionToken: string };
 
+function fixtureID(value: string) {
+  // Match the public resource-ID contract before sending fixture data. Report
+  // only the length, never source input, credentials or a private request URL.
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$/.test(value))
+    throw new Error(`Synthetic resource ID violates the 1–64 character contract (length ${value.length}).`);
+  return value;
+}
+
 // The public recipe, excluding transport metadata and server-owned identity.
 export function recipe(value: Collection) {
   return {
@@ -32,20 +40,21 @@ export async function collectionEditorRecoveryFixture(
   // borrows a browser cookie, mutates a database or fabricates a revision.
   const otherSession = await signInAPI(concurrent, account.username, initialPassword);
   const otherHeaders = { "X-CSRF-Token": otherSession.csrfToken };
-  const id = `collection-recovery-${randomUUID()}`;
+  const id = fixtureID(`col-recovery-${randomUUID()}`);
   const sources: Array<{ id: string; name: string; endpointId: string }> = [];
   for (const [index, name] of ["北区合成来源", "南区合成来源"].entries()) {
+    const sourceID = fixtureID(`${id}-source-${index}`);
     const response = await owner.post("/api/me/sources", {
       headers,
       data: {
-        id: `${id}-source-${index}`,
+        id: sourceID,
         name,
         kind: "text",
         enabled: true,
         content: `socks5://synthetic-${index}.example.test:1080#Connection ${index}`,
       },
     });
-    expect(response.status(), "Create owned synthetic source").toBe(200);
+    expect(response.status(), `Create owned synthetic source (ID length ${sourceID.length})`).toBe(200);
     const source = await response.json();
     expect(source.snapshot.endpoints).toHaveLength(1);
     sources.push({ id: source.id, name, endpointId: source.snapshot.endpoints[0].id });
@@ -189,22 +198,24 @@ export async function legacyCollectionEditorFixture(
   const headers = { "X-CSRF-Token": session.csrfToken };
   const otherSession = await signInAPI(concurrent, account.username, initialPassword);
   const otherHeaders = { "X-CSRF-Token": otherSession.csrfToken };
-  const id = `collection-legacy-${randomUUID()}`;
-  const source = { id: `${id}-source`, name: "旧版合成来源" };
+  const id = fixtureID(`col-legacy-${randomUUID()}`);
+  const source = { id: fixtureID(`${id}-source`), name: "旧版合成来源" };
   const sourceResponse = await owner.post("/api/me/sources", {
     headers,
     data: { ...source, kind: "text", enabled: true,
       content: "socks5://legacy.example.test:1080#Legacy connection" },
   });
-  expect(sourceResponse.status()).toBe(200);
+  expect(sourceResponse.status(), `Create legacy synthetic source (ID length ${source.id.length})`).toBe(200);
+  const emptyID = fixtureID(`${id}-empty`);
+  const sourceStepsID = fixtureID(`${id}-source-steps`);
   const cases = [
     {
-      initial: { id: `${id}-empty`, name: "旧版空集合", sources: null, steps: null },
-      normalized: { id: `${id}-empty`, name: "旧版空集合", sources: [], steps: [] } satisfies Collection,
+      initial: { id: emptyID, name: "旧版空集合", sources: null, steps: null },
+      normalized: { id: emptyID, name: "旧版空集合", sources: [], steps: [] } satisfies Collection,
     },
     {
-      initial: { id: `${id}-source-steps`, name: "旧版来源集合", sources: [{ sourceId: source.id, steps: null }], steps: null },
-      normalized: { id: `${id}-source-steps`, name: "旧版来源集合", sources: [{ sourceId: source.id, steps: [] }], steps: [] } satisfies Collection,
+      initial: { id: sourceStepsID, name: "旧版来源集合", sources: [{ sourceId: source.id, steps: null }], steps: null },
+      normalized: { id: sourceStepsID, name: "旧版来源集合", sources: [{ sourceId: source.id, steps: [] }], steps: [] } satisfies Collection,
     },
   ];
   const records: Array<(typeof cases)[number] & { revisionToken: string }> = [];
@@ -212,7 +223,7 @@ export async function legacyCollectionEditorFixture(
     // Legacy callers send no revision precondition. Nil slices really persist
     // and return JSON null, rather than a fabricated malformed browser response.
     const response = await owner.post("/api/me/collections", { headers, data: value.initial });
-    expect(response.status()).toBe(200);
+    expect(response.status(), `Create legacy synthetic collection (ID length ${value.initial.id.length})`).toBe(200);
     const opened = await response.json();
     expect(opened).toMatchObject(value.initial);
     expect(typeof opened.revisionToken).toBe("string");
