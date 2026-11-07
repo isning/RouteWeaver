@@ -120,6 +120,13 @@ function GroupPolicyDraft({ context, seed, retained, discardRetained, acceptLate
     }, [policy.error]);
     const baselineConflictVisible = policy.error instanceof APIError && policy.error.status === 409 &&
         typeof policy.error.details === "object" && policy.error.details !== null && "code" in policy.error.details && policy.error.details.code === "POLICY_EDIT_BASELINE_CHANGED";
+    // The guarded group task owns this exact store-conflict response. Other
+    // statuses/envelopes and latest-version read errors keep their own message.
+    const stalePolicyConflict = policy.error instanceof APIError && policy.error.status === 409 &&
+        policy.error.message === "resource changed; reload and retry" &&
+        typeof policy.error.details === "object" && policy.error.details !== null &&
+        Object.keys(policy.error.details).length === 1 && "detail" in policy.error.details &&
+        policy.error.details.detail === policy.error.message;
     const draft = (): UserGroup => ({ ...value, ...form.getFieldsValue(true), id: value.id });
     const draftCopy = (): DraftCopy => structuredClone({ group: draft(), baseline: context.record, references: context.references });
     const invalidateLatest = () => { latestGeneration.current++; latestController.current?.abort(); setLatest(null); setLatestError(null); setLatestPending(false); };
@@ -163,9 +170,11 @@ function GroupPolicyDraft({ context, seed, retained, discardRetained, acceptLate
       <ActionButton onClick={() => discardRetained(index)} variant="destructive">丢弃此草稿副本</ActionButton>
     </> }))).map(section => <AccordionItem key={section.key} value={String(section.key)}><AccordionTrigger>{section.label}</AccordionTrigger><AccordionContent className="space-y-4">{section.children}</AccordionContent></AccordionItem>)}</Accordion>}
     <AppForm form={form} initialValues={value} onValuesChange={() => { invalidateLatest(); policy.clearError(); }} onFinish={() => { if (!policy.closingBlocked) policy.propose({ group: draft() }, context.precondition); }}>
-      <ErrorNotice error={policy.error} focusRef={policy.errorFocusRef}/>
+      <ErrorNotice error={policy.error} focusRef={policy.errorFocusRef} presentation={stalePolicyConflict ? {
+          title: "操作未完成", recovery: "草稿尚未保存，请核对最新版本。", detailsLabel: "查看技术详情",
+      } : undefined}/>
       {conflicted && <section className="space-y-4 rounded-lg border bg-muted/30 p-4" aria-label="处理用户组版本变化">
-        {!baselineConflictVisible && <p>草稿尚未保存，请核对最新版本。</p>}
+        {!baselineConflictVisible && !stalePolicyConflict && <p>草稿尚未保存，请核对最新版本。</p>}
         <ActionButton onClick={readLatest} pending={latestPending} disabled={policy.closingBlocked} variant="outline">查看最新版本</ActionButton><ErrorNotice error={latestError}/>
         {latest && <>
           {latest.record ? <GroupPolicyComparison resource={{ target: latest.target, before: context.record, after: latest.record, references: { before: referencesFor(context.record?.group ?? null, context.references), after: referencesFor(latest.record.group, latest.references) } }} title="已保存的用户组变化" beforeLabel="打开时保存" afterLabel="最新保存"/> : <p>{context.precondition.exists ? "用户组已不存在，当前草稿不会自动新建同名用户组。" : "用户组仍未创建，可用当前草稿重新预览。"}</p>}
