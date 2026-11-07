@@ -126,8 +126,28 @@ for (const width of [1440, 390]) for (const [route, title] of routes) {
         case "nodes": {
           expect((await read(page.request, "/state")).nodes).toHaveLength(1);
           await expect(content.getByRole("button", { name: `${names.node} 未设置地区`, exact: true })).toBeVisible();
+          await expect(content.getByRole("columnheader", { name: "被链路配置引用", exact: true })).toHaveCount(1);
+          await expect(page.locator(".page-heading").getByText("管理可复用的连接参数，供链路配置引用。", { exact: true })).toHaveCount(0);
+          const add = primary("添加端点");
+          await expect(add).toBeInViewport({ ratio: 1 });
           await inventory.capture("list", "populated", "One credential-free documentation-address endpoint; no probe/connection, health unknown");
-          await inventory.task(primary("添加端点"), "添加端点", "add-endpoint");
+          await activate(page, add);
+          const dialog = page.getByRole("dialog", { name: "添加端点", exact: true });
+          await expect(dialog).toBeVisible();
+          await inventory.stable(dialog);
+          expect(await dialog.evaluate((element) => element.contains(document.activeElement)), "Focus entered the endpoint task").toBe(true);
+          const address = dialog.getByRole("group", { name: "连接地址", exact: true });
+          await expect(address.getByText("连接地址", { exact: true })).toHaveCount(1);
+          await expect(address.getByRole("textbox", { name: "连接地址", exact: true })).toBeVisible();
+          await expect(address.getByRole("spinbutton", { name: "端口", exact: true })).toHaveValue("1080");
+          await expect(dialog.getByRole("group", { name: "协议与认证", exact: true })).toBeVisible();
+          await expect(dialog.getByRole("button", { name: "保存", exact: true })).toBeInViewport({ ratio: 1 });
+          await inventory.capture("add-endpoint", "unsubmitted-task", "添加端点; Enter open, one visible address label in its named address/port group, separate protocol/authentication group and visible Save; no edits or submission", dialog);
+          await activate(page, dialog.getByRole("button", { name: "关闭", exact: true }));
+          await expect(dialog).toBeHidden();
+          await inventory.stable();
+          await expect(add).toBeFocused();
+          inventory.interactions.push("Endpoint task: Enter open, focus inside, one address label with accessible host/port, protocol group retained, settled capture, keyboard Close and opener focus restored");
           break;
         }
         case "legacy-routes": {

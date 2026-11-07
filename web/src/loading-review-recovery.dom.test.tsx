@@ -54,7 +54,7 @@ const state = {
   settings: {},
   publishedRoutes: [],
 };
-it("describes legacy connection endpoints by the chain configurations that consume them", () => {
+it("explains an empty endpoint list through the chain configurations that consume it", () => {
   const client = createClient();
   client.setQueryData(["admin-state"], state);
   render(
@@ -68,8 +68,12 @@ it("describes legacy connection endpoints by the chain configurations that consu
     screen.getByRole("heading", { name: "连接端点", level: 1 }),
   ).toBeTruthy();
   expect(
-    screen.getByText("管理可复用的连接参数，供链路配置引用。"),
+    screen.getByText("维护连接端点，供链路配置引用。"),
   ).toBeTruthy();
+  expect(screen.getByRole("heading", { name: "暂无连接端点" })).toBeTruthy();
+  expect(
+    screen.queryByText("管理可复用的连接参数，供链路配置引用。"),
+  ).toBeNull();
   expect(
     screen.queryByText("管理可复用的连接参数，供转发路径引用。"),
   ).toBeNull();

@@ -44,7 +44,7 @@ function mount(node: NodeRecord) {
     "fetch",
     vi.fn(async (url, init) => {
       const data =
-        init?.method === "PUT"
+        ["POST", "PUT"].includes(init?.method || "")
           ? (writes.push(JSON.parse(init.body)), writes.at(-1))
           : String(url) === "/api/state"
             ? {
@@ -73,6 +73,31 @@ function mount(node: NodeRecord) {
   );
   return writes;
 }
+it("keeps one visible address label with its port and preserves the endpoint relationship and primary action", async () => {
+  const writes = mount({
+    id: "n1",
+    name: "Existing endpoint",
+    host: "edge.example.test",
+    port: 1080,
+    protocol: "socks",
+  });
+  await screen.findByRole("button", { name: /^Existing endpoint/ });
+  expect(screen.getByRole("columnheader", { name: "被链路配置引用" })).toBeTruthy();
+  const add = screen.getByRole("button", { name: "添加端点" });
+  expect(screen.queryByText("管理可复用的连接参数，供链路配置引用。")).toBeNull();
+  await userEvent.click(add);
+  const dialog = within(await screen.findByRole("dialog", { name: "添加端点" }));
+  const address = within(dialog.getByRole("group", { name: "连接地址" }));
+  expect(address.getAllByText("连接地址", { exact: true })).toHaveLength(1);
+  expect(address.getByRole("textbox", { name: "连接地址" })).toBeTruthy();
+  expect(address.getByRole("spinbutton", { name: "端口" })).toHaveProperty("value", "1080");
+  expect(dialog.getByRole("group", { name: "协议与认证" })).toBeTruthy();
+  expect(dialog.getByRole("button", { name: "保存" })).toBeTruthy();
+  await userEvent.click(dialog.getByRole("button", { name: "取消" }));
+  await waitFor(() => expect(screen.queryByRole("dialog", { name: "添加端点" })).toBeNull());
+  await waitFor(() => expect(document.activeElement).toBe(add));
+  expect(writes).toHaveLength(0);
+});
 it("edits the primary endpoint with the complete client connection fields and preserves unopened metadata", async () => {
   const node: NodeRecord = {
     id: "n1",
@@ -100,7 +125,11 @@ it("edits the primary endpoint with the complete client connection fields and pr
   const dialog = within(
     await screen.findByRole("dialog", { name: "编辑端点" }),
   );
+  expect(dialog.getAllByText("连接地址", { exact: true })).toHaveLength(1);
+  expect(dialog.getByRole("textbox", { name: "连接地址" })).toHaveProperty("value", node.host);
   expect(dialog.getByRole("group", { name: "协议与认证" })).toBeTruthy();
+  expect(dialog.getByRole("group", { name: "传输设置" })).toBeTruthy();
+  expect(dialog.getByRole("group", { name: "连接安全" })).toBeTruthy();
   fireEvent.change(dialog.getByLabelText("端点名称"), {
     target: { value: "Renamed endpoint" },
   });

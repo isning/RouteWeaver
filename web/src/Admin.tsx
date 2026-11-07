@@ -106,7 +106,7 @@ const pageMeta: Record<
   },
   nodes: {
     title: "连接端点",
-    description: "管理可复用的连接参数，供链路配置引用。",
+    description: "",
     action: "添加端点",
   },
   users: {
@@ -1599,7 +1599,7 @@ function EntityEditor({
         </div>
         {displayEntity?.kind === "nodes" ? (
           <>
-            <ConnectionFields prefix={[]} />
+            <ConnectionFields prefix={[]} showAddressLegend={false} />
             <Accordion type="multiple">
               <AccordionItem value="metadata">
                 <AccordionTrigger>核心与标签</AccordionTrigger>

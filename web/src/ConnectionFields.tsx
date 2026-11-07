@@ -156,6 +156,7 @@ export function normalizeConnection(connection: Connection): Connection {
 export function ConnectionFields({
   prefix = ["connection"],
   server = false,
+  showAddressLegend = true,
   authentication,
   managedEntryTarget = false,
   targetCore,
@@ -163,6 +164,7 @@ export function ConnectionFields({
 }: {
   prefix?: string[];
   server?: boolean;
+  showAddressLegend?: boolean;
   authentication?: string;
   managedEntryTarget?: boolean;
   targetCore?: string;
@@ -243,9 +245,11 @@ export function ConnectionFields({
         className="min-w-0"
         aria-label={server ? "监听地址" : "连接地址"}
       >
-        <FieldLegend variant="label">
-          {server ? "监听地址" : "连接地址"}
-        </FieldLegend>
+        {showAddressLegend && (
+          <FieldLegend variant="label">
+            {server ? "监听地址" : "连接地址"}
+          </FieldLegend>
+        )}
         <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_8rem]">
           <AppField
             name={field("host")}
