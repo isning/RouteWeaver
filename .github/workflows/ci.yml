@@ -273,6 +273,8 @@ jobs:
             web/test-results/*/settings-edit-journey-*.json
             web/test-results/*/notification-channel-journey-*.png
             web/test-results/*/notification-channel-journey-*.json
+            web/test-results/*/outbox-history-journey-*.png
+            web/test-results/*/outbox-history-journey-*.json
           if-no-files-found: ignore
           retention-days: 7
 

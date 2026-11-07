@@ -72,11 +72,13 @@ const fixtures: Record<string, unknown> = {
   "/admin/notifications/outbox": [
     {
       eventId: "delivery",
-      title: "额度提醒",
+      kind: "test",
+      title: "RouteWeaver notification test",
       channel: "email",
       status: "failed",
-      attempts: 3,
-      lastError: "无法连接邮件服务器",
+      attempts: 5,
+      nextAttemptAt: "2026-10-26T09:31:00Z",
+      lastError: "channel delivery failed; verify destination, credentials and TLS, then test again",
       createdAt: "2026-10-26T09:00:00Z",
     },
   ],
@@ -209,8 +211,7 @@ test("narrow announcement and delivery tables disclose scrolling and retain acti
   await expect(viewport).toBeFocused();
   await page.keyboard.press("ArrowRight");
   await expect.poll(() => viewport.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
-  const reason = page.getByRole("cell", {
-    name: "无法连接邮件服务器",
+  const reason = page.getByText("已停止自动重试。接收方是否已接收尚未确认。", {
     exact: true,
   });
   await reason.scrollIntoViewIfNeeded();
@@ -479,7 +480,7 @@ for (const width of [1440, 390]) {
     });
     await page.getByRole("tab", { name: "发送记录", exact: true }).click();
     await expect(
-      page.getByRole("cell", { name: "无法连接邮件服务器", exact: true }),
+      page.getByText("已停止自动重试。接收方是否已接收尚未确认。", { exact: true }),
     ).toBeVisible();
     await noOverflow(page);
     await page.screenshot({
