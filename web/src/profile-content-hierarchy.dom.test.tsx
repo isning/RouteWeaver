@@ -482,41 +482,71 @@ it("finishes confirmed discard without leaving an editable form waiting on catal
   }
 });
 
-it("opens detailed profile settings from the early index without saving or losing connection choices", async () => {
+it("uses one keyboard tab control without losing the visible connection context or draft", async () => {
   const { writes } = mount();
   const name = await screen.findByRole("textbox", { name: "配置名称" });
-  fireEvent.change(name, { target: { value: "Retained indexed draft" } });
+  fireEvent.change(name, { target: { value: "Retained tabbed draft" } });
   const before = { hash: location.hash, length: history.length };
-  const index = screen.getByRole("navigation", { name: "配置内容" });
-  const runtime = within(index).getByRole("button", { name: "前往运行设置" });
-  runtime.focus();
-  await userEvent.keyboard("{Enter}");
-  const tab = screen.getByRole("tab", { name: "运行设置" });
-  await waitFor(() => expect(document.activeElement).toBe(tab));
-  expect(tab.getAttribute("aria-selected")).toBe("true");
-  expect((name as HTMLInputElement).value).toBe("Retained indexed draft");
+  expect(screen.queryByRole("navigation", { name: "配置内容" })).toBeNull();
+  expect(screen.getAllByRole("tablist")).toHaveLength(1);
+  const tabs = screen.getByRole("tablist", { name: "配置内容" });
+  const rules = within(tabs).getByRole("tab", { name: "分流规则" });
+  rules.focus();
+  await userEvent.keyboard("{ArrowRight}");
+  const groups = within(tabs).getByRole("tab", { name: "策略组" });
+  await waitFor(() => expect(document.activeElement).toBe(groups));
+  expect(groups.getAttribute("aria-selected")).toBe("true");
+  await userEvent.keyboard("{End}");
+  const runtime = within(tabs).getByRole("tab", { name: "运行设置" });
+  await waitFor(() => expect(document.activeElement).toBe(runtime));
+  expect(runtime.getAttribute("aria-selected")).toBe("true");
+  expect(screen.getAllByRole("tab", { selected: true })).toHaveLength(1);
+  expect((name as HTMLInputElement).value).toBe("Retained tabbed draft");
   expect(location.hash).toBe(before.hash);
   expect(history.length).toBe(before.length);
+  const connections = screen.getByRole("region", { name: "连接与流量" });
+  expect(connections.textContent).toContain("Travel source");
+  expect(within(connections).getByRole("combobox", { name: "默认流量行为" }).textContent).toContain("直连");
   expect(screen.queryByRole("alertdialog")).toBeNull();
   expect(writes).toEqual([]);
-  await userEvent.click(within(index).getByRole("button", { name: "前往连接与流量" }));
-  expect(document.activeElement).toBe(screen.getByRole("region", { name: "连接与流量" }));
-  expect(screen.getByRole("region", { name: "连接与流量" }).querySelector(".profile-source-identity")?.textContent).toContain("Travel source");
-  expect(writes).toEqual([]);
+  await userEvent.keyboard("{Home}");
+  await waitFor(() => expect(document.activeElement).toBe(rules));
+  expect(rules.getAttribute("aria-selected")).toBe("true");
 });
 
-it("does not let the early section index bypass the pending-save interaction guard", async () => {
+it("does not let the editor tabs bypass the pending-save interaction guard", async () => {
   let finish!: (response: Response) => void;
   mount(fixture(), { saveResponse: () => new Promise<Response>(resolve => { finish = resolve; }) });
   await screen.findByText("2 个有效连接");
   await userEvent.click(screen.getByRole("button", { name: "保存草稿" }));
-  const index = screen.getByRole("navigation", { name: "配置内容" });
-  const runtime = within(index).getByRole("button", { name: "前往运行设置" });
+  const runtime = screen.getByRole("tab", { name: "运行设置" });
   await waitFor(() => expect((runtime as HTMLButtonElement).disabled).toBe(true));
   await userEvent.click(runtime);
   expect(screen.getByRole("tab", { name: "分流规则" }).getAttribute("aria-selected")).toBe("true");
   finish(json(fixture()));
   await waitFor(() => expect((runtime as HTMLButtonElement).disabled).toBe(false));
+});
+
+it("associates neutral name guidance with an untouched new draft while preserving save prerequisites", async () => {
+  const { writes } = mount(emptyProfile(), { isNew: true });
+  const name = await screen.findByRole("textbox", { name: "配置名称" });
+  const guidance = screen.getByText("填写配置名称后可保存或检查。");
+  expect(name.getAttribute("aria-describedby")).toBe(guidance.id);
+  expect(name.getAttribute("aria-invalid")).not.toBe("true");
+  const save = screen.getByRole("button", { name: "保存草稿" }) as HTMLButtonElement;
+  const check = screen.getByRole("button", { name: "保存并检查" }) as HTMLButtonElement;
+  expect(save.disabled).toBe(true);
+  expect(check.disabled).toBe(true);
+  fireEvent.change(name, { target: { value: "Daily routing" } });
+  expect(screen.queryByText("填写配置名称后可保存或检查。")).toBeNull();
+  expect(name.hasAttribute("aria-describedby")).toBe(false);
+  await waitFor(() => expect(save.disabled).toBe(false));
+  expect(check.disabled).toBe(false);
+  fireEvent.change(name, { target: { value: "   " } });
+  expect(name.getAttribute("aria-describedby")).toBe(screen.getByText("填写配置名称后可保存或检查。").id);
+  expect(save.disabled).toBe(true);
+  expect(check.disabled).toBe(true);
+  expect(writes).toEqual([]);
 });
 
 it("groups runtime capabilities as equal rows with associated help and owned expanded parameters", async () => {

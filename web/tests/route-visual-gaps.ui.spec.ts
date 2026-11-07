@@ -933,9 +933,16 @@ for (const width of [3440, 2880, 2560, 2304, 1920, 1536, 1440, 1366, 1280, 1024,
     await expect(page.getByRole("heading", { name: "平台服务用量", exact: true })).toHaveCount(1);
     await page.setViewportSize({ width, height: width === 320 ? 480 : 900 });
     await page.getByRole("button", { name: "编辑配置", exact: true }).click();
-    const profileIndex = page.getByRole("navigation", { name: "配置内容", exact: true });
-    await expect(profileIndex).toBeVisible();
-    const profilePrimary = await assertLayout(true);
+    await expect(page.getByRole("navigation", { name: "配置内容", exact: true })).toHaveCount(0);
+    const profileTabs = page.getByRole("tablist", { name: "配置内容", exact: true });
+    await expect(profileTabs).toBeVisible();
+    await expect(page.getByRole("tablist")).toHaveCount(1);
+    const editor = page.locator(".profile-intent-editor");
+    const profilePrimary = (await editor.boundingBox())!;
+    expect(profilePrimary.width).toBeLessThanOrEqual(1280);
+    const editorCanvas = (await editor.locator("..").boundingBox())!;
+    expect(profilePrimary.x - editorCanvas.x).toBeCloseTo(editorCanvas.x + editorCanvas.width - profilePrimary.x - profilePrimary.width, 0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
     const profileTitle = (await page.getByRole("heading", { name: profile.name, exact: true }).boundingBox())!;
     expect(profileTitle.x).toBeCloseTo(profilePrimary.x, 0);
     const inspect = (await page.getByRole("button", { name: "检查发布", exact: true }).boundingBox())!;
@@ -953,40 +960,41 @@ for (const width of [3440, 2880, 2560, 2304, 1920, 1536, 1440, 1366, 1280, 1024,
     } else expect(trafficTask.y).toBeGreaterThanOrEqual(inputTask.y + inputTask.height);
     await page.screenshot({ path: info.outputPath(`context-profile-${width}.png`), fullPage: true });
     if (width <= 390) {
-      // A full-page capture after focusing a low control can stitch the sticky
-      // actions across the index. Record the real initial viewport separately.
+      // Record the real initial viewport separately from the full-page capture.
       await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
       await settleSectionNavigation(page);
       expect(await page.evaluate(() => window.scrollY)).toBe(0);
       const title = (await page.getByRole("heading", { name: profile.name, exact: true }).boundingBox())!;
       const actions = (await page.locator(".profile-publish-action").boundingBox())!;
-      const directory = (await profileIndex.boundingBox())!;
+      const name = (await page.getByRole("textbox", { name: "配置名称", exact: true }).boundingBox())!;
       expect(title.y + title.height).toBeLessThanOrEqual(actions.y);
-      expect(actions.y + actions.height).toBeLessThanOrEqual(directory.y);
+      expect(actions.y + actions.height).toBeLessThanOrEqual(name.y);
       await page.screenshot({ path: info.outputPath(`context-profile-initial-viewport-${width}.png`) });
-      const controls = profileIndex.getByRole("button");
-      const keyboardGeometry = [];
-      await controls.first().focus();
-      for (let index = 0; index < await controls.count(); index++) {
-        if (index) await page.keyboard.press("Tab");
-        keyboardGeometry.push(await focusedControlGeometry(controls.nth(index)));
-      }
-      await info.attach(`profile-index-keyboard-hit-testing-${width}`, {
-        body: JSON.stringify(keyboardGeometry), contentType: "application/json",
-      });
-      await page.screenshot({ path: info.outputPath(`context-profile-index-keyboard-${width}.png`) });
     }
-    const runtimeLink = profileIndex.getByRole("button", { name: "前往运行设置", exact: true });
-    await runtimeLink.focus();
-    await page.keyboard.press("Enter");
+    const profileHistory = await page.evaluate(() => ({ hash: location.hash, length: history.length }));
+    const controls = profileTabs.getByRole("tab");
+    const keyboardGeometry = [];
+    await controls.first().focus();
+    for (let index = 0; index < await controls.count(); index++) {
+      if (index) await page.keyboard.press("ArrowRight");
+      await expect(controls.nth(index)).toHaveAttribute("aria-selected", "true");
+      await expect(profileTabs.getByRole("tab", { selected: true })).toHaveCount(1);
+      if (width <= 390) keyboardGeometry.push(await focusedControlGeometry(controls.nth(index)));
+    }
     const runtime = page.getByRole("tab", { name: "运行设置", exact: true });
     await settleSectionNavigation(page);
     await expect(runtime).toBeFocused();
     await expect(runtime).toHaveAttribute("aria-selected", "true");
-    await expect(runtimeLink).toHaveAttribute("aria-current", "location");
-    if (width <= 390) await info.attach(`profile-runtime-focus-hit-testing-${width}`, {
-      body: JSON.stringify(await focusedControlGeometry(runtime)), contentType: "application/json",
-    });
+    expect(await page.evaluate(() => ({ hash: location.hash, length: history.length }))).toEqual(profileHistory);
+    await expect(page.getByRole("textbox", { name: "配置名称", exact: true })).toHaveValue(profile.name);
+    await expect(page.getByRole("region", { name: "连接与流量", exact: true })).toBeVisible();
+    await expect(page.getByRole("combobox", { name: "默认流量行为", exact: true })).toContainText("直连");
+    if (width <= 390) {
+      await info.attach(`profile-tabs-keyboard-hit-testing-${width}`, {
+        body: JSON.stringify(keyboardGeometry), contentType: "application/json",
+      });
+      await page.screenshot({ path: info.outputPath(`context-profile-tabs-keyboard-${width}.png`) });
+    }
     const strip = (await page.locator(".profile-editor-tools [role=tablist]").boundingBox())!;
     const panel = (await page.getByRole("tabpanel", { name: "运行设置", exact: true }).boundingBox())!;
     expect(panel.y - strip.y - strip.height).toBeGreaterThanOrEqual(0);
@@ -1037,7 +1045,8 @@ for (const width of [3440, 2880, 2560, 2304, 1920, 1536, 1440, 1366, 1280, 1024,
     await expect(rows.nth(0).getByRole("textbox", { name: "DNS 服务器 1", exact: true })).toHaveCount(0);
     await page.locator(".profile-intent-task").evaluate(el => el.scrollIntoView({ block: "start" }));
     await settleSectionNavigation(page);
-    await expect(profileIndex.getByRole("button", { name: "前往连接与流量", exact: true })).toHaveAttribute("aria-current", "location");
+    await expect(page.getByRole("region", { name: "连接与流量", exact: true })).toBeVisible();
+    await expect(profileTabs.getByRole("tab", { selected: true })).toHaveCount(1);
     expect(unexpected).toEqual([]);
   });
 }
@@ -1338,6 +1347,56 @@ for (const width of [320, 390, 768, 1440, 1920, 2048, 3440]) {
       }
       await page.screenshot({ path: info.outputPath(`route-width-${route}-${width}.png`), fullPage: true });
     }
+    expect(unexpected).toEqual([]);
+  });
+}
+
+
+for (const width of [1440, 390]) {
+  test(`new profile has one navigation model and neutral name guidance at ${width}`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: 900 });
+    const unexpected = await readOnlyInventory(page);
+    await page.goto("/#subscriptions");
+    await page.getByRole("button", { name: "新建分流配置", exact: true }).click();
+    const name = page.getByRole("textbox", { name: "配置名称", exact: true });
+    await expect(name).toHaveValue("");
+    await expect(name).toHaveAccessibleDescription("填写配置名称后可保存或检查。");
+    await expect(name).not.toHaveAttribute("aria-invalid", "true");
+    const helper = page.getByText("填写配置名称后可保存或检查。", { exact: true });
+    const helperColor = await helper.evaluate(element => getComputedStyle(element).color);
+    const neutralColor = await page.locator(".profile-save-state").evaluate(element => getComputedStyle(element).color);
+    expect(helperColor).toBe(neutralColor);
+    await expect(page.getByRole("button", { name: "保存草稿", exact: true })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "保存并检查", exact: true })).toBeDisabled();
+    await expect(page.getByRole("navigation", { name: "配置内容", exact: true })).toHaveCount(0);
+    const tabs = page.getByRole("tablist", { name: "配置内容", exact: true });
+    await expect(page.getByRole("tablist")).toHaveCount(1);
+    await expect(tabs.getByRole("tab")).toHaveCount(4);
+    await expect(tabs.getByRole("tab", { selected: true })).toHaveCount(1);
+    const connections = page.getByRole("region", { name: "连接与流量", exact: true });
+    await expect(connections.getByRole("combobox", { name: "使用的订阅来源", exact: true })).toBeVisible();
+    await expect(connections.getByRole("combobox", { name: "默认流量行为", exact: true })).toContainText("直连");
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+    await page.evaluate(() => window.scrollTo({ top: 0, behavior: "instant" }));
+    await page.screenshot({ path: info.outputPath(`new-profile-single-navigation-${width}.png`), fullPage: true });
+    await name.fill("日常分流配置");
+    await expect(helper).toHaveCount(0);
+    await expect(name).not.toHaveAttribute("aria-describedby", /.+/);
+    await expect(page.getByRole("button", { name: "保存草稿", exact: true })).toBeEnabled();
+    await expect(page.getByRole("button", { name: "保存并检查", exact: true })).toBeEnabled();
+    const historyBefore = await page.evaluate(() => ({ hash: location.hash, length: history.length }));
+    const rules = tabs.getByRole("tab", { name: "分流规则", exact: true });
+    await rules.focus();
+    await page.keyboard.press("End");
+    const runtime = tabs.getByRole("tab", { name: "运行设置", exact: true });
+    await expect(runtime).toBeFocused();
+    await expect(runtime).toHaveAttribute("aria-selected", "true");
+    await page.keyboard.press("Home");
+    await expect(rules).toBeFocused();
+    await expect(rules).toHaveAttribute("aria-selected", "true");
+    await expect(name).toHaveValue("日常分流配置");
+    await expect(connections).toBeVisible();
+    expect(await page.evaluate(() => ({ hash: location.hash, length: history.length }))).toEqual(historyBefore);
     expect(unexpected).toEqual([]);
   });
 }

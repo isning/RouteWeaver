@@ -1,6 +1,6 @@
 import { DraftIntegerInput, exactDraftInteger } from "./draft-integer";
 import { Metadata, MetadataItem } from "@/ui-patterns/metadata";
-import { ContextHeader, ContextLayout, SectionIndex } from "@/ui-patterns/page-layout";
+import { contentWidth } from "@/ui-patterns/content-width";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -1485,19 +1485,16 @@ export function ProfileEditor({
   ];
   return (
     <div
-      className="profile-intent-editor space-y-6 [&_[data-slot=input]]:h-auto [&_[data-slot=input]]:min-h-11 [&_input]:scroll-mt-32 [&_textarea]:scroll-mt-32 [&_[role=combobox]]:scroll-mt-32"
+      className={`profile-intent-editor mx-auto w-full min-w-0 space-y-6 ${contentWidth.workspace} [&_[data-slot=input]]:h-auto [&_[data-slot=input]]:min-h-11 [&_input]:scroll-mt-32 [&_textarea]:scroll-mt-32 [&_[role=combobox]]:scroll-mt-32`}
       inert={!!sourceTask}
     >
-      <ContextHeader navigation>
-        <div className="profile-editor-heading flex flex-wrap items-end justify-between gap-4">
-          <PageHeader
-            title={persisted ? draft.name : "新建分流配置"}
-            back={close}
-          />
-        </div>
-      </ContextHeader>
-      <ContextHeader
-        navigation
+      <div className="profile-editor-heading flex flex-wrap items-end justify-between gap-4">
+        <PageHeader
+          title={persisted ? draft.name : "新建分流配置"}
+          back={close}
+        />
+      </div>
+      <div
         className="profile-publish-action sticky top-0 z-20 border-b bg-background py-3"
         role="group"
         aria-label="保存与检查配置"
@@ -1575,25 +1572,7 @@ export function ProfileEditor({
             </ActionButton>
           </div>
         </div>
-      </ContextHeader>
-      <ContextLayout
-        navigation
-        rail={
-          <SectionIndex
-            label="配置内容"
-            disabled={save.isPending}
-            sections={[
-              { id: `${editorID}-connections`, label: "连接与流量" },
-              ...editorTabs.map((section) => ({
-                id: `${editorID}-section-${section.key}`,
-                label: section.label,
-                startId: `${editorID}-details`,
-                onSelect: () => showDetails(section.key),
-              })),
-            ]}
-          />
-        }
-      >
+      </div>
       <div
         className="profile-state-strip flex flex-wrap items-end gap-4"
         inert={save.isPending}
@@ -1604,11 +1583,12 @@ export function ProfileEditor({
             value={draft.name}
             placeholder="例如：日常使用"
             aria-label="配置名称"
+            aria-describedby={!draft.name.trim() ? `${editorID}-name-guidance` : undefined}
             autoFocus={focusNameOnOpen}
             onChange={(event) => update({ name: event.target.value })}
           />
           {!draft.name.trim() && (
-            <span className="profile-field-error text-sm text-destructive">
+            <span id={`${editorID}-name-guidance`} className="text-sm font-normal text-muted-foreground">
               填写配置名称后可保存或检查。
             </span>
           )}
@@ -2221,14 +2201,14 @@ export function ProfileEditor({
               }}
             >
               {
-                <TabsList className="max-w-full flex-wrap justify-start group-data-horizontal/tabs:h-auto">
+                <TabsList aria-label="配置内容" className="max-w-full flex-wrap justify-start group-data-horizontal/tabs:h-auto">
                   {editorTabs.map((section) => (
                     <TabsTrigger
                       className="h-auto min-h-11 whitespace-nowrap"
                       key={section.key}
                       value={String(section.key)}
                       data-section={section.key}
-                      disabled={"disabled" in section && !!section.disabled}
+                      disabled={save.isPending || ("disabled" in section && !!section.disabled)}
                     >
                       {section.label}
                     </TabsTrigger>
@@ -2248,7 +2228,6 @@ export function ProfileEditor({
           </div>
         </div>
       </div>
-      </ContextLayout>
       <TaskDialog
         title="创建并使用策略组"
         className="profile-candidate-modal"
