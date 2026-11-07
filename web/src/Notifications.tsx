@@ -308,6 +308,19 @@ export function NotificationsAdminPage() {
     </>
   );
 }
+// Match notifications.validText: Go counts UTF-8 bytes and rejects NUL and
+// Unicode White_Space-only strings (not JavaScript trim's extra BOM character).
+const announcementTextRule = (label: string, max: number) => ({
+  validator: (_rule: unknown, value: string | undefined) => {
+    if (!value || /^\p{White_Space}*$/u.test(value))
+      return Promise.reject(new Error(`请填写${label}，不能只包含空白。`));
+    if (value.includes("\0"))
+      return Promise.reject(new Error(`${label}包含空字符，请删除后重试。`));
+    if (new TextEncoder().encode(value).length > max)
+      return Promise.reject(new Error(`${label}最多 ${max} 字节（UTF-8），请缩短${label}。`));
+    return Promise.resolve();
+  },
+});
 function Announcements() {
   const formId = useId();
   const query = useQuery({
@@ -336,6 +349,24 @@ function Announcements() {
   const { confirm, confirming } = useDiscardConfirmation(String(editorKey));
   const [form] = useForm();
   const audience = useWatch("audience", form);
+  const selectedUsers: string[] = useWatch("userIds", form) ?? [];
+  const knownNames = useRef(new Map<string, string>());
+  useLayoutEffect(() => {
+    for (const user of users.data?.users ?? []) knownNames.current.set(user.id, user.name);
+  }, [users.data]);
+  const recipientsReady = users.isSuccess && !users.isFetching && !users.isPaused;
+  const currentUsers = users.data?.users ?? [];
+  const missingUsers = selectedUsers.filter((id) => !currentUsers.some((u) => u.id === id));
+  const recipientOptions = [
+    ...currentUsers.map((u) => ({ id: u.id, name: u.name })),
+    ...missingUsers.map((id) => ({ id, name: knownNames.current.get(id) ?? "未知用户" })),
+  ].map((u) => ({
+    value: u.id,
+    label: <span className="grid gap-0.5"><span>{u.name}</span><span className="text-xs text-muted-foreground">用户标识 {u.id}</span>{recipientsReady && missingUsers.includes(u.id) && <span>当前用户列表中不存在</span>}</span>,
+    "aria-label": `${u.name}，用户标识 ${u.id}`,
+    searchText: `${u.name} ${u.id}`,
+    disabled: !recipientsReady || missingUsers.includes(u.id),
+  }));
   const client = useQueryClient();
   const message = toast;
   const save = useMutation({
@@ -499,7 +530,7 @@ function Announcements() {
               keepFocusableWhilePending
               type="submit"
               form={formId}
-              disabled={!editing}
+              disabled={!editing || (audience === "users" && (!recipientsReady || missingUsers.length > 0))}
               aria-label="保存并安排发布"
               aria-busy={save.isPending}
               pending={save.isPending}
@@ -528,7 +559,8 @@ function Announcements() {
               !task ||
               submitting.current ||
               save.isPending ||
-              confirming
+              confirming ||
+              (v.audience === "users" && (!recipientsReady || missingUsers.length > 0))
             )
               return;
             const value = structuredClone({
@@ -550,11 +582,11 @@ function Announcements() {
         >
           <ErrorNotice error={save.error} />
           {!isNew && <p className="rounded-lg border bg-muted/30 p-3 text-sm text-muted-foreground">修改此公告保留已读记录；需要重新通知时请创建新公告。</p>}
-          <AppField name="title" label="公告标题" rules={[{ required: true }]}>
-            <Input maxLength={160} />
+          <AppField name="title" label="公告标题" required rules={[announcementTextRule("标题", 160)]}>
+            <Input />
           </AppField>
-          <AppField name="body" label="公告正文" rules={[{ required: true }]}>
-            <Textarea rows={6} maxLength={10000} />
+          <AppField name="body" label="公告正文" required rules={[announcementTextRule("正文", 8000)]}>
+            <Textarea rows={6} />
           </AppField>
           <AppField name="audience" label="通知谁" trigger="onValueChange">
             <ChoiceSelect
@@ -566,19 +598,35 @@ function Announcements() {
             />
           </AppField>
           {audience === "users" && (
-            <AppField
-              name="userIds"
-              label="选择用户"
-              rules={[{ required: true }]}
-              trigger="onValueChange"
-            >
-              <MultiChoice
-                options={(users.data?.users || []).map((u) => ({
-                  value: u.id,
-                  label: u.name,
-                }))}
-              />
-            </AppField>
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p role="status" className="text-sm text-muted-foreground">
+                  {users.isPaused ? "等待网络连接，暂时无法核对公告接收用户。"
+                    : users.isFetching || users.isPending ? "正在读取公告接收用户，请稍候。"
+                    : users.isError ? "无法读取公告接收用户，请重试。草稿和已选用户已保留。"
+                    : !currentUsers.length ? "暂无可选用户。"
+                    : "按姓名或用户标识选择接收公告的用户。"}
+                </p>
+                <ActionButton type="button" variant="outline" pending={users.isFetching} onClick={() => users.refetch()}>
+                  {users.isError || users.isPaused ? "重试读取用户" : "刷新用户列表"}
+                </ActionButton>
+              </div>
+              {recipientsReady && missingUsers.length > 0 && <Notice tone="error">部分已选用户不在当前列表中。请移除这些用户或刷新列表后再保存。</Notice>}
+              <AppField
+                name="userIds"
+                label="选择用户"
+                required
+                rules={[{ validator: (_rule, ids: string[] | undefined) => {
+                  if (!recipientsReady) return Promise.reject(new Error("请等用户列表读取成功后再保存。"));
+                  if (!ids?.length || ids.length > 500) return Promise.reject(new Error("请选择 1 至 500 位用户。"));
+                  if (ids.some((id) => !currentUsers.some((u) => u.id === id))) return Promise.reject(new Error("请移除当前列表中不存在的用户后再保存。"));
+                  return Promise.resolve();
+                } }]}
+                trigger="onValueChange"
+              >
+                <MultiChoice options={recipientOptions} />
+              </AppField>
+            </div>
           )}
           <div className="grid gap-4 sm:grid-cols-2">
             <AppField
