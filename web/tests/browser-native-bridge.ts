@@ -28,6 +28,8 @@ export async function nativeBridge(init: {
   );
   type Reply = {
     error?: string;
+    action?: string;
+    managedEpochMarker?: "present" | "absent" | "unreadable";
     ready?: boolean;
     state?: any;
     startupFailure?: any;
@@ -52,7 +54,18 @@ export async function nativeBridge(init: {
       if (!waiter) return;
       const w = waiter;
       waiter = undefined;
-      v.error ? w.reject(new Error(v.error)) : w.resolve(v);
+      v.error
+        ? w.reject(
+            new Error(
+              `Native bridge ${v.action || "initialization"}: ${v.error}; ${JSON.stringify(
+                {
+                  state: v.state,
+                  managedEpochMarker: v.managedEpochMarker,
+                },
+              )}`,
+            ),
+          )
+        : w.resolve(v);
     } else diagnostic = (diagnostic + line + "\n").slice(-4096);
   });
   child.stderr.on("data", (b) => {

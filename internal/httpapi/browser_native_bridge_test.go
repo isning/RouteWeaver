@@ -230,7 +230,17 @@ func TestBrowserNativeBridge(t *testing.T) {
 		}
 		opCancel()
 		if err != nil {
-			emit(map[string]any{"error": err.Error()})
+			// Read-only, bounded fixture diagnostics. State contains identities,
+			// never artifacts, enrollment tokens, or counter/credential contents.
+			// A retained meter marker is not cleared merely because a process
+			// exited: native absence and accounting reconciliation are distinct.
+			marker := "unreadable"
+			if info, statErr := os.Lstat(filepath.Join(agent.ManagedJournalDirectory(root), "running.json")); errors.Is(statErr, os.ErrNotExist) {
+				marker = "absent"
+			} else if statErr == nil && info.Mode().IsRegular() {
+				marker = "present"
+			}
+			emit(map[string]any{"error": err.Error(), "action": c.Action, "state": r.State(), "managedEpochMarker": marker})
 			continue
 		}
 		emit(map[string]any{"action": c.Action, "state": state, "startupFailure": startupFailure})
