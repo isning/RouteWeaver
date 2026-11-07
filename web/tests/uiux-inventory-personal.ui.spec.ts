@@ -55,7 +55,10 @@ for (const width of [1440, 390]) for (const [route, title] of routes) {
         }
         case "resources": {
           expect(await read(page.request, "/me/resources")).toHaveLength(1);
-          await expect(content.getByText(names.resource, { exact: true })).toBeVisible();
+          const resourceRow = content.getByRole("row").filter({
+            has: page.getByRole("group", { name: `${names.resource} 的操作`, exact: true }),
+          });
+          await expect(resourceRow.getByRole("button", { name: names.resource, exact: true })).toBeVisible();
           await inventory.capture("list", "populated", "One real accepted synthetic rule-file import; raw rule content not displayed");
           await inventory.task(page.getByRole("button", { name: "导入规则文件", exact: true }), "导入规则文件", "import-file");
           break;

@@ -25,18 +25,23 @@ for (const width of [1440, 390]) for (const [route, title] of routes) {
       await page.goto(`/#${route}`);
       await inventory.heading(title);
       const content = page.locator(".route-content");
+      // Responsive action targets repeat the object name. Assert the identity
+      // control/cell in its named row, not either occurrence of visible text.
+      const objectRow = (name: string) => content.getByRole("row").filter({
+        has: page.getByRole("group", { name: `${name} 的操作`, exact: true }),
+      });
       const primary = (name: string) => page.locator(".page-heading").getByRole("button", { name, exact: true });
       switch (route) {
         case "published-routes": {
           expect(await read(page.request, "/published-routes")).toHaveLength(1);
-          await expect(content.getByText(names.line, { exact: true })).toBeVisible();
+          await expect(objectRow(names.line).getByRole("button", { name: names.line, exact: true })).toBeVisible();
           await inventory.capture("draft-list", "populated", "One saved published-route draft on a real managed-Xray path; no registered Agent, applied state, user provisioning or live traffic");
           await inventory.task(primary("配置公开线路"), "配置公开线路", "new-line");
           break;
         }
         case "routes": {
           expect(await read(page.request, "/server-deployments")).toHaveLength(1);
-          await expect(content.getByText(names.deployment, { exact: true })).toBeVisible();
+          await expect(objectRow(names.deployment).getByRole("button", { name: names.deployment, exact: true })).toBeVisible();
           await inventory.capture("draft-list", "populated", "One saved real server-deployment draft; unregistered runtime, no validation/application");
           await inventory.task(primary("新建转发路径"), "新建转发路径", "new-path");
           break;
@@ -53,7 +58,7 @@ for (const width of [1440, 390]) for (const [route, title] of routes) {
           await inventory.task(primary("添加核心实例"), "添加核心实例", "add-core");
           await inventory.tab("监听端点 1");
           expect(await read(page.request, "/managed-endpoints")).toHaveLength(1);
-          await expect(content.getByText(names.listener, { exact: true })).toBeVisible();
+          await expect(objectRow(names.listener).getByRole("cell", { name: names.listener, exact: true })).toBeVisible();
           await inventory.capture("managed-listeners", "populated", "One configured VLESS listener, masked by production presentation; no reveal endpoint or live listening socket");
           await inventory.task(primary("添加监听端点"), "添加监听端点", "add-listener");
           break;
@@ -69,8 +74,8 @@ for (const width of [1440, 390]) for (const [route, title] of routes) {
           const state = await read(page.request, "/state");
           expect(state.users.some((user: { id: string }) => user.id === userId)).toBe(true);
           expect(await read(page.request, "/user-groups")).toHaveLength(1);
-          await expect(content.getByText(names.account, { exact: true })).toBeVisible();
-          await expect(content.getByText(names.group, { exact: true })).toBeVisible();
+          await expect(objectRow(names.account).getByRole("button", { name: names.account, exact: true })).toBeVisible();
+          await expect(objectRow(names.group).getByRole("cell", { name: names.group, exact: true })).toBeVisible();
           await expect(page.getByRole("heading", { name: "用户组", exact: true })).toBeVisible();
           await inventory.capture("users-and-groups", "populated", "Real invited user plus one group applied through real policy preview/revision; user groups are a section, not a tab");
           await inventory.task(primary("添加用户"), "添加用户", "add-user");
@@ -80,7 +85,7 @@ for (const width of [1440, 390]) for (const [route, title] of routes) {
         }
         case "services": {
           expect(await read(page.request, "/services")).toHaveLength(1);
-          await expect(content.getByText(names.service, { exact: true })).toBeVisible();
+          await expect(objectRow(names.service).getByRole("cell", { name: names.service, exact: true })).toBeVisible();
           await expect(page.getByRole("heading", { name: "线路扣量倍率", exact: true })).toBeVisible();
           expect(await read(page.request, "/rates")).toHaveLength(0);
           await inventory.capture("plans-and-rates", "populated", "One real service plan; authoritative empty rate history, no grant or renewal submitted");
@@ -134,7 +139,7 @@ for (const width of [1440, 390]) for (const [route, title] of routes) {
         }
         case "notifications": {
           expect(await read(page.request, "/admin/announcements")).toHaveLength(1);
-          await expect(content.getByText(names.announcement, { exact: true })).toBeVisible();
+          await expect(objectRow(names.announcement).getByRole("cell", { name: names.announcement, exact: true })).toBeVisible();
           await inventory.capture("announcements", "populated", "One real disabled future announcement; no notification scheduled for sending");
           await inventory.task(page.getByRole("button", { name: "创建公告", exact: true }), "创建公告", "new-announcement");
           await inventory.tab("提醒与渠道");
