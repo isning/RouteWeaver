@@ -192,7 +192,15 @@ for (const width of [1440, 390]) {
         await expect(apply).toBeDisabled();
         if (choice.version === 1) await choose(owner, selection.getByRole("combobox", { name: "模板版本", exact: true }), "v1");
         await choose(owner, selection.getByRole("combobox", { name: "模板目标", exact: true }), names[choice.mode]);
-        await selection.getByRole("radio", { name: choice.label, exact: true }).check();
+        // Record this real user's semantic state before an assertion can fail
+        // and finally closes its context. The default page belongs to the admin.
+        const semantics = await selection.ariaSnapshot();
+        f.assertNoPrivateSource(semantics);
+        await info.attach(`template-user-${choice.mode}-selection-semantics-${width}`, { contentType: "text/plain", body: semantics });
+        const radio = selection.getByRole("radiogroup", { name: "引用方式", exact: true })
+          .getByRole("radio", { name: choice.label, exact: true });
+        await expect(radio).toBeVisible();
+        await radio.check();
         await expect(selection.getByText(choice.consequence, { exact: true })).toBeVisible();
         await expect(apply).toBeDisabled();
         await choose(owner, selection.getByRole("combobox", { name: "Endpoint 1", exact: true }), "我的日常连接");

@@ -1435,9 +1435,10 @@ function SelectTemplate({
               。
             </p>
           )}
-          <label className="standalone-label grid min-w-0 gap-2 text-sm font-medium">
-            引用方式
+          <div className="standalone-label grid min-w-0 gap-2 text-sm font-medium">
+            <span>引用方式</span>
             <RadioGroup
+              aria-label="引用方式"
               className="grid gap-2 sm:grid-cols-3"
               value={mode}
               onValueChange={(value) => {
@@ -1467,7 +1468,7 @@ function SelectTemplate({
                 </Label>
               ))}
             </RadioGroup>
-          </label>
+          </div>
           <p className="muted text-sm text-muted-foreground">
             {mode === "copy"
               ? "创建独立副本，后续由你单独维护。"
