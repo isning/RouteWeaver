@@ -126,8 +126,12 @@ it("preserves an edited draft when refreshed policy removes its selected route a
   fireEvent.change(field, { target: { value: "Retained draft" } });
   task.respond(policy(["group"]));
   await act(async () => { await client.invalidateQueries({ queryKey: ["effective-policy", "u"] }); });
+  // Refetch completion precedes the scheduled observer render. Wait until
+  // the revoked choice is retained only as its raw ID, not its old grant label.
+  await waitFor(() =>
+    expect(screen.getByRole("combobox", { name: "授权线路" }).textContent).toBe("direct"),
+  );
   expect(field).toHaveProperty("value", "Retained draft");
-  expect(screen.getByRole("combobox", { name: "授权线路" }).textContent).toContain("direct");
   fireEvent.click(screen.getByRole("button", { name: "保存入口" }));
   await screen.findByText("此线路不在当前授权中，请重新选择授权线路。");
   expect(task.writes).toEqual([]);
