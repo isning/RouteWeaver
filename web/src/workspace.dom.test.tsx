@@ -478,7 +478,7 @@ it("rotates a managed entry through its public route without opening the legacy 
             credentialVersion: "v1",
           },
         ]);
-      return json({});
+      return json({ userId: "u", routeIds: [] });
     }),
   );
   mount(
@@ -1171,18 +1171,22 @@ it("shows an unconfirmed diagnostic outcome without inventing zero traffic or th
   expect(screen.queryByText("0 B")).toBeNull();
 });
 
-it("requires explicit diagnostic confirmation and preserves the same request identity after a rejected submission", async () => {
+it("requires explicit diagnostic confirmation and keeps a rejected submission unknown until its exact record is read", async () => {
+  const { SessionBoundary } = await import("./SessionBoundary");
+  sessionStorage.clear();
   const { DiagnosticStartForm } = await import("./Diagnostics");
   const bodies: any[] = [];
   vi.stubGlobal(
     "fetch",
-    vi.fn(async (_url, init) => {
+    vi.fn(async (url, init) => {
+      if (String(url) === "/api/auth/me") return json({ user: { id: "admin-workspace", name: "Admin", role: "admin" }, csrfToken: "synthetic" });
+      if (!init?.method || init.method === "GET") return json({ error: "missing" }, 404);
       bodies.push(JSON.parse(init.body));
       return json({ error: "Node enrollment is unavailable" }, 422);
     }),
   );
   mount(
-    <DiagnosticStartForm
+    <SessionBoundary login={() => null}><DiagnosticStartForm
       targets={[
         {
           id: "target",
@@ -1204,7 +1208,7 @@ it("requires explicit diagnostic confirmation and preserves the same request ide
       ]}
       onClose={() => {}}
       onCreated={() => {}}
-    />,
+    /></SessionBoundary>,
   );
   const user = userEvent.setup();
   for (const [label, option] of [
@@ -1212,7 +1216,7 @@ it("requires explicit diagnostic confirmation and preserves the same request ide
     ["授权目标", "Owned test target"],
     ["测试方式", "连通性"],
   ]) {
-    fireEvent.click(screen.getByLabelText(label));
+    fireEvent.click(await screen.findByLabelText(label));
     await user.click(
       await screen.findByText(option, {
         selector: "[cmdk-item] span",
@@ -1226,10 +1230,10 @@ it("requires explicit diagnostic confirmation and preserves the same request ide
     screen.getByLabelText("我确认目标与测试上限，提交后由节点执行"),
   );
   await user.click(screen.getByRole("button", { name: "提交测试" }));
-  await screen.findByText("Node enrollment is unavailable");
-  await user.click(screen.getByRole("button", { name: "提交测试" }));
-  await waitFor(() => expect(bodies).toHaveLength(2));
-  expect(bodies[1]).toEqual(bodies[0]);
+  await user.click(await screen.findByRole("button", { name: "核对上次测试提交" }));
+  await screen.findByText("尚未查到该次测试，提交结果仍未确认。");
+  expect(screen.queryByRole("button", { name: "提交测试" })).toBeNull();
+  expect(bodies).toHaveLength(1);
   expect(bodies[0]).toMatchObject({
     targetId: "target",
     instanceId: "core",
@@ -1237,6 +1241,7 @@ it("requires explicit diagnostic confirmation and preserves the same request ide
     maxBytes: 0,
     timeoutSeconds: 10,
   });
+  sessionStorage.clear();
 });
 
 it("shows the last effective public address separately from pending draft changes", async () => {

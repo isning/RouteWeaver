@@ -1,0 +1,9 @@
+# Provider allowance source reconstruction
+
+Reconstructs missing v123 intent described in recovery-inventory.json, not the missing historical commit bytes. Raw form text is validated as exact positive integer units before numeric conversion. The existing measuredBytes guard retains the safe-byte cap; unit changes revalidate. Unlimited mode still emits zero and advisory/no notification semantics. Managed suspension confirmation remains in place. Backend provider revision WIP and contract are untouched and unresolved.
+
+Public seam: ObservationConfigForm DOM actions and mocked HTTP boundary. Added source cases cover rounded fractional tails, fractions, incomplete and blank edits, zero/negative values, safe-byte boundary, integer decimal/exponent spellings and unlimited hiding invalid input. Existing managed-confirmation cases remain.
+
+All behavior, TypeScript, build, browser, backend and aggregate checks are UNRUN. Only source review and git diff --check are permitted here. No historical pass is current evidence. No Node/npm/Go/gofmt, browser, server, installation, network, push or deployment ran. The local raw-value adapter retains spinbutton role, min/max/step attributes, ARIA bounds/current integer, and explicit ArrowUp/Down correction while avoiding number-input sanitization. Backend enforcement is not proved.
+
+Follow-up source coverage checks keyboard defaults, blank input correction, min/max clamping and long fractional tails for each field. Exact decimal floor/ceil determines directional stepping before conversion; explicit keyboard correction changes the raw form value and follows existing dirty/consent handling. Generic NumericInput and diagnostic recovery hooks remain unchanged. Browser-specific wheel behavior, locale parsing, visual spinner rendering, native assistive-technology increments and actual browser key behavior remain UNRUN; no equivalence claim is made for those surfaces.

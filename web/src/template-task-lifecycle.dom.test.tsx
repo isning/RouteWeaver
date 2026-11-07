@@ -75,7 +75,7 @@ function mount(
           templates.find((t) => url.includes(t.id)),
           { ...templates.find((t) => url.includes(t.id)), version: 1 },
         ]);
-      if (url === "/api/me/collections") return json([collection]);
+      if (url === "/api/me/collections") return json([collection, { ...collection, id: "second-collection", name: "Other collection" }]);
       if (url === "/api/me/template-bindings")
         return json([
           {
@@ -571,4 +571,84 @@ it("keeps template update Close focus after twice canceling an unapplied version
     expect(version.textContent).toContain("v2");
   }
   expect(writes.filter((write) => write.url.endsWith("/apply"))).toEqual([]);
+});
+
+async function openExtractionDraft() {
+  await userEvent.click(await screen.findByRole("button", { name: "发布模板" }));
+  const dialog = await screen.findByRole("dialog", { name: "发布共享模板" });
+  fireEvent.change(within(dialog).getByRole("textbox", { name: "模板名称" }), { target: { value: "Synthetic reusable plan" } });
+  await userEvent.click(within(dialog).getByRole("combobox", { name: "从自己的已保存配置提取" }));
+  await userEvent.click(await screen.findByText("My collection"));
+  return dialog;
+}
+
+// Synthetic HTTP boundaries, real template dialog and user controls.
+it("requires review again after re-extraction and excludes publication while extraction is pending", async () => {
+  let extractions = 0;
+  let finish!: (response: Response) => void;
+  const { writes } = mount(async url => {
+    if (!url.endsWith("/sanitize")) return json({});
+    if (++extractions === 1) return json({ spec: { steps: [] } });
+    return new Promise<Response>(resolve => { finish = resolve; });
+  }, true);
+  const dialog = await openExtractionDraft();
+  await userEvent.click(within(dialog).getByRole("button", { name: "提取可共享结构" }));
+  const review = await within(dialog).findByRole("checkbox");
+  await userEvent.click(review);
+  const publish = within(dialog).getByRole("button", { name: "发布 v1" });
+  const extract = within(dialog).getByRole("button", { name: "提取可共享结构" });
+  act(() => { fireEvent.click(extract); fireEvent.click(publish); fireEvent.click(extract); });
+  await waitFor(() => expect(finish).toBeTypeOf("function"));
+  expect(extractions).toBe(2);
+  expect(writes.filter(w => w.url === "/api/admin/templates")).toHaveLength(0);
+  expect((publish as HTMLButtonElement).disabled).toBe(true);
+  expect((review as HTMLButtonElement).disabled).toBe(true);
+  await act(async () => { finish(json({ spec: { steps: [] } })); });
+  await waitFor(() => expect((review as HTMLButtonElement).disabled).toBe(false));
+  expect(review.getAttribute("aria-checked")).toBe("false");
+  expect((publish as HTMLButtonElement).disabled).toBe(true);
+  await userEvent.click(review);
+  await userEvent.click(publish);
+  await waitFor(() => expect(writes.filter(w => w.url === "/api/admin/templates")).toHaveLength(1));
+});
+
+it.each([
+  ["settled", "type"], ["pending", "type"],
+  ["settled", "source"], ["pending", "source"],
+  ["settled", "position"], ["pending", "position"],
+] as const)("retires %s extraction errors when the template %s changes", async (timing, change) => {
+  let finish!: (response: Response) => void;
+  mount(async () => timing === "settled" ? json({ detail: "Old extraction failure" }, 422)
+    : new Promise<Response>(resolve => { finish = resolve; }), true);
+  const dialog = await openExtractionDraft();
+  await userEvent.click(within(dialog).getByRole("button", { name: "提取可共享结构" }));
+  if (timing === "settled") await within(dialog).findByText("Old extraction failure");
+  else await waitFor(() => expect(finish).toBeTypeOf("function"));
+  const label = change === "type" ? "模板类型" : change === "source" ? "从自己的已保存配置提取" : "发布位置";
+  const option = change === "type" ? "客户端配置模板" : change === "source" ? "Other collection" : /Template Alpha/;
+  await userEvent.click(within(dialog).getByRole("combobox", { name: label }));
+  await userEvent.click(await screen.findByRole("option", { name: option }));
+  if (timing === "pending") await act(async () => { finish(json({ detail: "Old extraction failure" }, 422)); });
+  await waitFor(() => expect(within(dialog).getByRole("button", { name: "提取可共享结构" }).getAttribute("aria-busy")).not.toBe("true"));
+  expect(within(dialog).queryByText("Old extraction failure")).toBeNull();
+  expect(within(dialog).queryByRole("textbox", { name: "共享结构" })).toBeNull();
+});
+
+it("blocks extraction after publication has started in the same turn", async () => {
+  let finish!: (response: Response) => void;
+  const { writes } = mount(async url => url.endsWith("/sanitize") ? json({ spec: { steps: [] } })
+    : new Promise<Response>(resolve => { finish = resolve; }), true);
+  const dialog = await openExtractionDraft();
+  await userEvent.click(within(dialog).getByRole("button", { name: "提取可共享结构" }));
+  await userEvent.click(await within(dialog).findByRole("checkbox"));
+  const extract = within(dialog).getByRole("button", { name: "提取可共享结构" });
+  act(() => {
+    fireEvent.click(within(dialog).getByRole("button", { name: "发布 v1" }));
+    fireEvent.click(extract);
+  });
+  await waitFor(() => expect(finish).toBeTypeOf("function"));
+  expect(writes.filter(w => w.url.endsWith("/sanitize"))).toHaveLength(1);
+  await act(async () => { finish(json({ detail: "Synthetic publication rejection" }, 422)); });
+  await within(dialog).findByText("Synthetic publication rejection");
+  expect((within(dialog).getByRole("textbox", { name: "共享结构" }) as HTMLTextAreaElement).value).toContain('"steps": []');
 });

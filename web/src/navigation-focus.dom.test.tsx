@@ -118,7 +118,9 @@ beforeEach(() => {
                 effectiveOrigin: "https://example.test",
                 defaultOrigin: "https://example.test",
                 verificationStatus: "not-required",
-                currentLinkExample: "https://example.test/feed/example",
+                currentLinkExample: "https://example.test/feed/{existing-token}",
+                proposedLinkExample: "https://example.test/feed/{existing-token}",
+                tokensUnchanged: true,
               })
             : String(url).endsWith("/settings")
               ? json({

@@ -10,7 +10,7 @@ function serviceRecord(value: unknown, id: string, complete = true): value is { 
   const plan = value.service;
   const keys = ["id", "name", "quotaBytes", "routeIds", "cycle", "onlineIpLimit", "connectionLimit", "entryRateBps"];
   if (!onlyKeys(plan, keys) || (complete && !keys.every((key) => Object.hasOwn(plan, key))) ||
-      plan.id !== id || typeof plan.name !== "string" || !Number.isSafeInteger(plan.quotaBytes) ||
+      plan.id !== id || typeof plan.name !== "string" || !Number.isSafeInteger(plan.quotaBytes) || (plan.quotaBytes as number) < 0 ||
       !(plan.routeIds === null || (Array.isArray(plan.routeIds) && plan.routeIds.every((route) => typeof route === "string"))) ||
       ![plan.onlineIpLimit, plan.connectionLimit, plan.entryRateBps].every(optionalInteger) || !object(plan.cycle)) return false;
   const cycle = plan.cycle;

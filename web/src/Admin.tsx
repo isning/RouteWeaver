@@ -1,6 +1,6 @@
 import { SettingsGroup, SettingsRow } from "@/ui-patterns/settings-group";
 import { PlatformSettingsTabList } from "@/ui-patterns/platform-settings-navigation";
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { WorkspaceFrame } from "@/ui-patterns/workspace-frame";
 import { PageSection, SectionIndex } from "@/ui-patterns/page-layout";
 import { ResourceToolbar, SearchField } from "@/ui-patterns/resource-toolbar";
@@ -13,7 +13,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ConnectionFields, normalizeConnection } from "./ConnectionFields";
 import { useConfirm } from "@/ui-patterns/confirmations";
+import { measuredBytes } from "./observability-model";
 import { NumericInput } from "@/ui-patterns/numeric-input";
+import { exactDraftInteger } from "./draft-integer";
 import { TaskSheet, TaskDialog } from "@/ui-patterns/task-overlays";
 import {
   Accordion,
@@ -1347,6 +1349,11 @@ function RouteEditor({
     </TaskSheet>
   );
 }
+const quotaInputError =
+  "请输入可精确换算为整数字节的非负十进制数，且不超过安全范围；0 为不限额。";
+const unsafeQuotaError =
+  "当前账号额度超出网页可精确保存的范围。为避免改写额度，名称和启用状态也暂不能保存；请取消编辑。";
+
 function EntityEditor({
   entity,
   state: _state,
@@ -1372,8 +1379,18 @@ function EntityEditor({
     message = toast;
   const values = useWatch([], { form, preserve: true });
   const [baseline, setBaseline] = useState("");
+  // NumericInput's Number value is display-only: keep decimal intent before rounding.
+  const quotaText = useRef("100");
+  const [quotaEdited, setQuotaEdited] = useState(false);
+  const unsafeQuota =
+    entity?.kind === "users" &&
+    !!entity.value &&
+    (!Number.isSafeInteger((entity.value as UserRecord).quotaBytes) ||
+      (entity.value as UserRecord).quotaBytes < 0);
   const changed =
-    !!entity && baseline !== "" && JSON.stringify(values || {}) !== baseline;
+    !!entity &&
+    baseline !== "" &&
+    (quotaEdited || JSON.stringify(values || {}) !== baseline);
   const submitButton = useRef<HTMLButtonElement>(null);
   const submitting = useRef<typeof entity>(null);
   const owner = useRef(entity);
@@ -1392,19 +1409,26 @@ function EntityEditor({
     mutationFn: ({
       values,
       task,
+      quotaBytes,
     }: {
       values: Record<string, unknown>;
       task: NonNullable<typeof entity>;
+      quotaBytes?: number;
     }) => {
       const value = {
         ...task.value,
         ...values,
         id: task.value?.id || newID(task.kind.slice(0, -1)),
       } as Record<string, any>;
-      if ("quotaGiB" in value) {
-        value.quotaBytes = Math.round(Number(value.quotaGiB) * 1024 ** 3);
-        delete value.quotaGiB;
+      if (task.kind === "users") {
+        const bytes = task.value
+          ? (task.value as UserRecord).quotaBytes
+          : quotaBytes;
+        if (!Number.isSafeInteger(bytes) || Number(bytes) < 0)
+          throw new Error(task.value ? unsafeQuotaError : quotaInputError);
+        value.quotaBytes = bytes;
       }
+      delete value.quotaGiB;
       return saveRecord(
         task.kind,
         task.kind === "users"
@@ -1440,6 +1464,8 @@ function EntityEditor({
     }
     mutation.reset();
     form.resetFields();
+    quotaText.current = "100";
+    setQuotaEdited(false);
     const value = entity.value;
     form.setFieldsValue(
       value
@@ -1494,7 +1520,7 @@ function EntityEditor({
             type="submit"
             keepFocusableWhilePending
             pending={pending}
-            disabled={confirming}
+            disabled={confirming || unsafeQuota}
             aria-label="保存"
             aria-busy={pending}
             variant="default"
@@ -1523,18 +1549,33 @@ function EntityEditor({
             !active.current ||
             owner.current !== entity ||
             confirming ||
+            unsafeQuota ||
             pending ||
             submitting.current === entity
           )
             return;
           const values = structuredClone(v);
+          let quotaBytes: number | undefined;
+          if (entity.kind === "users" && !entity.value) {
+            try {
+              quotaBytes = measuredBytes(quotaText.current, "GiB");
+            } catch {
+              form.setFields([{ name: "quotaGiB", errors: [quotaInputError] }]);
+              return;
+            }
+          }
           submitting.current = entity;
           const submit = submitButton.current;
           if (submit?.form?.contains(document.activeElement)) submit.focus();
-          mutation.mutate({ values, task: entity });
+          mutation.mutate({ values, task: entity, quotaBytes });
         }}
       >
         <ErrorNotice error={mutation.error} />
+        {unsafeQuota && (
+          <Notice tone="warning" title="暂不能保存此账号">
+            {unsafeQuotaError}
+          </Notice>
+        )}
         <div
           className={
             displayEntity?.kind === "nodes"
@@ -1585,11 +1626,28 @@ function EntityEditor({
             <AppField
               name="quotaGiB"
               label="账号基础额度（GiB，0 为不限额）"
-              rules={[{ required: true }]}
+              rules={[
+                {
+                  validator: () => {
+                    if (entity?.value) return Promise.resolve();
+                    try {
+                      measuredBytes(quotaText.current, "GiB");
+                      return Promise.resolve();
+                    } catch {
+                      return Promise.reject(new Error(quotaInputError));
+                    }
+                  },
+                },
+              ]}
               trigger="onValueChange"
+              validateTrigger="onInputText"
             >
               <NumericInput
                 min={0}
+                onInputText={(text) => {
+                  quotaText.current = text;
+                  setQuotaEdited(text !== "100");
+                }}
                 disabled={!!displayEntity?.value || pending || confirming}
               />
             </AppField>
@@ -1615,7 +1673,30 @@ function EntityEditor({
     </TaskDialog>
   );
 }
-const inviteDefaults = { name: "", role: "user", expiresInHours: 72 };
+// Keep the task's exact raw text while retaining integer keyboard stepping.
+// Other numeric adapters normalize invalid drafts when stepped; invitations must
+// not turn a partial/fractional expiry into a different valid request silently.
+function InvitationExpiryInput({ value = "", onValueChange, onKeyDown, ...props }: Omit<
+  ComponentProps<typeof Input>, "value" | "onChange"
+> & { value?: string; onValueChange?: (raw: string) => void }) {
+  const integer = exactDraftInteger(value, 168);
+  return <Input {...props} type="text" role="spinbutton" inputMode="numeric"
+    value={value} aria-valuemin={1} aria-valuemax={168} aria-valuenow={integer}
+    aria-invalid={props["aria-invalid"] || (value !== "" && integer === undefined) || undefined}
+    onChange={(event) => onValueChange?.(event.target.value)}
+    onKeyDown={(event) => {
+      onKeyDown?.(event);
+      if (props.disabled || props.readOnly || event.defaultPrevented ||
+        (event.key !== "ArrowUp" && event.key !== "ArrowDown")) return;
+      event.preventDefault();
+      if (value !== "" && integer === undefined) return;
+      const next = Math.max(1, Math.min(168,
+        (integer ?? 0) + (event.key === "ArrowUp" ? 1 : -1)));
+      onValueChange?.(String(next));
+    }} />;
+}
+
+const inviteDefaults = { name: "", role: "user", expiresInHours: "72" };
 
 function InviteUser({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [form] = useForm();
@@ -1640,12 +1721,19 @@ function InviteUser({ open, onClose }: { open: boolean; onClose: () => void }) {
     mutationFn: (values: {
       name: string;
       role: string;
-      expiresInHours: number;
-    }) =>
-      post<{ token?: string; url?: string; expiresAt?: string }>(
+      expiresInHours: string;
+    }) => {
+      // Validate raw decimal intent at the request boundary as well as the field.
+      const expiry = values.expiresInHours === ""
+        ? undefined
+        : exactDraftInteger(values.expiresInHours, 168);
+      if (values.expiresInHours !== "" && expiry === undefined)
+        throw new Error("有效时长为 1–168 整数小时");
+      return post<{ token?: string; url?: string; expiresAt?: string }>(
         "/invites",
-        values,
-      ),
+        { ...values, expiresInHours: expiry },
+      );
+    },
     onSettled: () => {
       submitting.current = false;
     },
@@ -1752,17 +1840,18 @@ function InviteUser({ open, onClose }: { open: boolean; onClose: () => void }) {
           <AppField
             name="expiresInHours"
             label="有效时长（小时）"
+            description="留空使用默认 24 小时。"
+            trigger="onValueChange"
             rules={[
               {
-                type: "integer",
-                min: 1,
-                max: 168,
-                message: "有效时长为 1–168 小时",
+                validator: (_: unknown, value: string) =>
+                  value === "" || exactDraftInteger(value, 168) !== undefined
+                    ? Promise.resolve()
+                    : Promise.reject(new Error("有效时长为 1–168 整数小时")),
               },
             ]}
-            trigger="onValueChange"
           >
-            <NumericInput min={1} max={168} />
+            <InvitationExpiryInput />
           </AppField>
           <div className="form-footer flex flex-wrap items-center justify-end gap-2 border-t pt-4">
             <ActionButton

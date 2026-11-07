@@ -117,6 +117,8 @@ it("keeps platform and subscription-domain drafts while visiting the backup sect
           effectiveRevision: 1,
           effectiveOrigin: "",
           defaultOrigin: "",
+          currentLinkExample: "/feed/{existing-token}",
+          proposedLinkExample: "/feed/{existing-token}",
           verificationStatus: "not-required",
           tokensUnchanged: true,
         });
@@ -189,6 +191,8 @@ it.each(["notification", "platform"] as const)(
             effectiveRevision: 1,
             effectiveOrigin: "",
             defaultOrigin: "",
+            currentLinkExample: "/feed/{existing-token}",
+            proposedLinkExample: "/feed/{existing-token}",
             verificationStatus: "not-required",
             tokensUnchanged: true,
           });

@@ -44,6 +44,42 @@ const overrideFields = [
     },
     { key: "entryRateBpsOverride", label: "个人入口限速（Mbps）", unit: "Mbps" },
 ] as const;
+// Only edited decimal text is checked here. Stored values must never be
+// reconstructed from the rounded GiB/Mbps display when another field changes.
+function exactEditedInteger(text: string, scale: number): number | undefined {
+    // A paste-size resource guard, not a quota/rate maximum. Keep oversized
+    // edits pending rather than spending unbounded work on BigInt parsing.
+    if (text.length > 4096)
+        return undefined;
+    const match = /^([+-]?)(?:(\d+)(?:\.(\d*))?|\.(\d+))(?:e([+-]?\d+))?$/i.exec(text.trim());
+    if (!match)
+        return undefined;
+    const fraction = match[3] ?? match[4] ?? "";
+    const digits = ((match[2] ?? "") + fraction).replace(/^0+/, "");
+    if (!digits)
+        return 0;
+    if (match[1] === "-")
+        return undefined;
+    // Normalize and bound the exponent lexically before numeric conversion.
+    // A nonzero coefficient of <=4096 digits cannot yield a safe integer with
+    // an exponent outside this range. Zero was handled without conversion.
+    const exponentText = (match[5] ?? "0").replace(/^([+-]?)0+/, "$1") || "0";
+    if (exponentText.replace(/^[+-]/, "").length > 6)
+        return undefined;
+    const exponent = Number(exponentText === "+" || exponentText === "-" ? "0" : exponentText);
+    try {
+        const product = (BigInt(digits) * BigInt(scale)).toString();
+        const significant = product.replace(/0+$/, "");
+        const shift = exponent - fraction.length + product.length - significant.length;
+        if (shift < 0 || significant.length + shift > 16)
+            return undefined;
+        const integer = BigInt(significant + "0".repeat(shift));
+        return integer <= BigInt(Number.MAX_SAFE_INTEGER) ? Number(integer) : undefined;
+    }
+    catch {
+        return undefined;
+    }
+}
 type EditorProps = {
     user: UserRecord;
     services: Service[];
@@ -131,8 +167,13 @@ function UserPolicyFields({ user, context, services, routes, onClose, retained, 
     const inputNumber = (key: string, text: string, scale = 1) => {
         invalidate();
         const accepted = form.getFieldValue(fieldPath(key));
-        const complete = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i.test(text.trim());
-        const represented = text.trim() === "" ? accepted == null : complete && Number.isFinite(Number(text)) && Number(text) * scale === accepted;
+        const exact = exactEditedInteger(text, scale);
+        const represented = text.trim() === "" ? accepted == null : exact !== undefined;
+        // Controls emit Number(raw) first. Correct a representable decimal's
+        // floating multiplication residue before validation/preview; invalid
+        // raw text remains pending until correction or explicit discard.
+        if (exact !== undefined && exact !== accepted)
+            form.setFieldValue(fieldPath(key), exact);
         const next = { ...unfinishedRef.current };
         if (represented)
             delete next[key];

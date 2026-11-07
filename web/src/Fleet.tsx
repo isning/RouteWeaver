@@ -1,4 +1,8 @@
 import {
+  OperationalIntegerInput,
+  operationalInteger,
+} from "./OperationalIntegerInput";
+import {
   ResourceToolbar,
   SearchField,
   ToolbarFilter,
@@ -241,7 +245,7 @@ export function FleetPlanForm({
     ),
     [deploymentId, setDeployment] = useState(initialDeploymentId);
   const [targetIds, setTargets] = useState<string[]>(initialTargetIds),
-    [assignments, setAssignments] = useState<Record<string, number>>({});
+    [assignments, setAssignments] = useState<Record<string, number | string>>({});
   const [strategy, setStrategy] = useState<FleetStrategy>("together");
   // A new review never inherits an earlier batch's continuing authorization.
   const [continuousService, setContinuousService] = useState(false);
@@ -260,7 +264,7 @@ export function FleetPlanForm({
   });
   const selectedRelease = releases.data?.find((r) => r.id === targetReleaseId);
   const [sourceBatchId, setSource] = useState<string>(),
-    [leaseSeconds, setLease] = useState(300);
+    [leaseSeconds, setLease] = useState<number | string>(300);
   const [group, setGroup] = useState<string>(),
     [tags, setTags] = useState<string[]>([]),
     [search, setSearch] = useState("");
@@ -322,7 +326,11 @@ export function FleetPlanForm({
     action,
     deploymentId,
     targetIds,
-    stages: stagesFor(targetIds, effectiveAssignments),
+    stages: stagesFor(targetIds, Object.fromEntries(targetIds.map((id) => {
+      const stage = operationalInteger(effectiveAssignments[id] ?? 1, 1, 20);
+      if (stage === undefined) throw new Error("执行阶段须为 1–20 的整数，且不能留空。");
+      return [id, stage];
+    }))),
     ...(canContinue ? { continuousService } : {}),
     ...(action === "rollback" ? { sourceBatchId } : {}),
     ...(lifecycle ? { targetReleaseId } : {}),
@@ -332,6 +340,8 @@ export function FleetPlanForm({
       if (blocksConfigure(input()))
         throw new Error("此转发路径有提交结果待处理，请先确认该次提交结果。");
       if (strategyIssue) throw new Error(strategyIssue);
+      const parsedLease = operationalInteger(leaseSeconds, 30, 3600);
+      if (parsedLease === undefined) throw new Error("策略有效秒数须为 30–3600 的整数，且不能留空。");
       const body = input();
       if (!deploymentId) throw new Error("请选择保存的转发路径。");
       if (
@@ -350,7 +360,7 @@ export function FleetPlanForm({
         (body.continuousService === true)
       )
         throw new Error("服务未确认所选的持续运行模式，请刷新后重新预览。");
-      return { version, input: body, leaseSeconds, plan };
+      return { version, input: body, leaseSeconds: parsedLease, plan };
     },
     onSuccess: (value) => {
       if (value.version === revision.current && !blocksConfigure(value.input))
@@ -925,26 +935,16 @@ export function FleetPlanForm({
                           "未选择"
                         )
                       ) : (
-                        <Input
+                        <OperationalIntegerInput
                           aria-label={`${coreName(i)} 的执行阶段`}
                           min={1}
                           max={20}
                           disabled={!targetIds.includes(i.id)}
-                          value={assignments[i.id] || 1}
-                          type="number"
-                          onChange={(event) =>
-                            ((value) => {
-                              touch();
-                              setAssignments({
-                                ...assignments,
-                                [i.id]: value || 1,
-                              });
-                            })(
-                              event.target.value === ""
-                                ? null
-                                : Number(event.target.value),
-                            )
-                          }
+                          value={assignments[i.id] ?? 1}
+                          onInputText={(raw) => {
+                            touch();
+                            setAssignments({ ...assignments, [i.id]: raw });
+                          }}
                         />
                       ),
                   },
@@ -961,22 +961,15 @@ export function FleetPlanForm({
               children: (
                 <label className="standalone-label grid gap-2 text-sm font-medium">
                   有效秒数
-                  <Input
+                  <OperationalIntegerInput
                     aria-label="批量变更策略有效秒数"
                     min={30}
                     max={3600}
                     value={leaseSeconds}
-                    type="number"
-                    onChange={(event) =>
-                      ((value) => {
-                        touch();
-                        setLease(value || 300);
-                      })(
-                        event.target.value === ""
-                          ? null
-                          : Number(event.target.value),
-                      )
-                    }
+                    onInputText={(raw) => {
+                      touch();
+                      setLease(raw);
+                    }}
                   />
                   <span className="muted text-sm text-muted-foreground">
                     这是节点执行策略的短期授权；用户服务沿用原到期时间。

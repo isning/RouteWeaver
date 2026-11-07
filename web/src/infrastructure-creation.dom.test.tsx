@@ -9,6 +9,7 @@ import {
   vi,
 } from "vitest";
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -20,6 +21,7 @@ import userEvent from "@testing-library/user-event";
 import { ConfirmationProvider } from "@/ui-patterns/confirmations";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ServersPage } from "./Infrastructure";
+import { getNavigationWarning, hasUnsavedChanges } from "./navigation";
 import type { CoreInstance, HostRecord, ManagedEndpoint } from "./types";
 import { ownedClickScenario } from "./test-support/owned-click-scenario";
 
@@ -1216,4 +1218,113 @@ it("keeps inventory Close focus after twice canceling a dirty server draft", asy
     expect((name as HTMLInputElement).value).toBe("Retained server");
   }
   expect(writes).toEqual([]);
+});
+
+
+// Public UI + HTTP seam: a deferred response models departure during issuance.
+async function openAgentEnrollment() {
+  await userEvent.click(await screen.findByRole("tab", { name: /核心实例/ }));
+  await userEvent.click(await screen.findByRole("button", { name: /^FRA primary/ }));
+  await userEvent.click(await screen.findByRole("button", { name: "接入 Agent" }));
+  const dialog = await screen.findByRole("dialog", { name: "接入核心实例" });
+  await waitFor(() => expect(
+    (within(dialog).getByLabelText("凭据到期时间") as HTMLInputElement).value,
+  ).not.toBe(""));
+  return within(dialog);
+}
+
+function deferAgentEnrollment() {
+  inventoryAPI();
+  const read = globalThis.fetch;
+  const requests: unknown[] = [];
+  let complete!: (response: Response) => void;
+  const response = new Promise<Response>((resolve) => { complete = resolve; });
+  vi.stubGlobal("fetch", vi.fn((url, init) => {
+    if (String(url) === "/api/agent/enrollments") {
+      requests.push(JSON.parse(String(init?.body)));
+      return response.then((value) => value.clone());
+    }
+    return read(url, init);
+  }));
+  return { requests, complete };
+}
+
+it("keeps pending enrollment open and suppresses repeated submission", async () => {
+  const deferred = deferAgentEnrollment();
+  mount();
+  const dialog = await openAgentEnrollment();
+  const form = dialog.getByLabelText("凭据到期时间").closest("form")!;
+  fireEvent.submit(form);
+  fireEvent.submit(form);
+  await waitFor(() => expect(deferred.requests).toHaveLength(1));
+  expect(deferred.requests[0]).toMatchObject({
+    nodeId: "host-fra", instanceId: "core-fra-1",
+  });
+  expect((dialog.getByRole("button", { name: "取消" }) as HTMLButtonElement).disabled).toBe(true);
+  await userEvent.click(dialog.getByRole("button", { name: "取消" }));
+  await userEvent.keyboard("{Escape}");
+  expect(screen.getByRole("dialog", { name: "接入核心实例" })).toBeTruthy();
+  expect(hasUnsavedChanges()).toBe(true);
+  expect(getNavigationWarning()).toContain("离开不会取消操作");
+  expect(getNavigationWarning()).toContain("旧凭据可能已失效");
+  const unload = new Event("beforeunload", { cancelable: true });
+  window.dispatchEvent(unload);
+  expect(unload.defaultPrevented).toBe(true);
+  await act(async () => deferred.complete(json({
+    scope: { nodeId: "host-fra", instanceId: "core-fra-1", enrollmentEpoch: "new" },
+    token: "fixture-issued-token",
+  })));
+  expect(await screen.findByDisplayValue("fixture-issued-token")).toBeTruthy();
+  expect(hasUnsavedChanges()).toBe(true);
+  expect(getNavigationWarning()).toContain("离开将清除此页显示的接入令牌");
+  expect(getNavigationWarning()).not.toContain("正在创建");
+});
+
+it.each(["success", "failure"] as const)(
+  "does not deliver departed enrollment %s into a reopened task",
+  async (outcome) => {
+    const deferred = deferAgentEnrollment();
+    const first = mount();
+    const oldDialog = await openAgentEnrollment();
+    await userEvent.click(oldDialog.getByRole("button", { name: "创建接入凭据" }));
+    await waitFor(() => expect(deferred.requests).toHaveLength(1));
+    first.unmount();
+    expect(hasUnsavedChanges()).toBe(false);
+    mount();
+    const current = await openAgentEnrollment();
+    await act(async () => deferred.complete(outcome === "success" ? json({
+      scope: { nodeId: "host-fra", instanceId: "core-fra-1", enrollmentEpoch: "old" },
+      token: "departed-secret-token",
+    }) : json({ error: "departed enrollment error" }, 503)));
+    expect(current.queryByDisplayValue("departed-secret-token")).toBeNull();
+    expect(current.queryByText("departed enrollment error")).toBeNull();
+    expect(current.getByRole("button", { name: "创建接入凭据" })).toBeTruthy();
+    expect(hasUnsavedChanges()).toBe(false);
+  },
+);
+
+
+it("releases the pending enrollment guard after rejection and retains expiry for manual retry", async () => {
+  const deferred = deferAgentEnrollment();
+  mount();
+  const dialog = await openAgentEnrollment();
+  const expiry = dialog.getByLabelText("凭据到期时间") as HTMLInputElement;
+  const originalExpiry = expiry.value;
+  await userEvent.click(dialog.getByRole("button", { name: "创建接入凭据" }));
+  await waitFor(() => expect(deferred.requests).toHaveLength(1));
+  expect(hasUnsavedChanges()).toBe(true);
+  await act(async () => deferred.complete(json({
+    error: "valid scope and expiry within one year required",
+  }, 400)));
+  expect(await screen.findByText("valid scope and expiry within one year required")).toBeTruthy();
+  await waitFor(() => expect(hasUnsavedChanges()).toBe(false));
+  expect(getNavigationWarning()).toBe("");
+  expect(expiry.value).toBe(originalExpiry);
+  expect((dialog.getByRole("button", { name: "取消" }) as HTMLButtonElement).disabled).toBe(false);
+  expect((dialog.getByRole("button", { name: "创建接入凭据" }) as HTMLButtonElement).disabled).toBe(false);
+  await userEvent.click(dialog.getByRole("button", { name: "创建接入凭据" }));
+  await waitFor(() => expect(deferred.requests).toHaveLength(2));
+  expect(deferred.requests[1]).toEqual(deferred.requests[0]);
+  await screen.findByText("valid scope and expiry within one year required");
+  await waitFor(() => expect(hasUnsavedChanges()).toBe(false));
 });

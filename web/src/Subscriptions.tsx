@@ -1,5 +1,6 @@
 import { Metadata, MetadataItem } from "@/ui-patterns/metadata";
 import { WorkspaceFrame } from "@/ui-patterns/workspace-frame";
+import { useSubscriptionRotationState } from "./subscription-rotation-state";
 import { groupSubscriptionInventory } from "./subscription-inventory";
 import { ResourceToolbar, SearchField } from "@/ui-patterns/resource-toolbar";
 import type { ReactNode } from "react";
@@ -83,7 +84,14 @@ import { RoutingReview, RoutingSummaryView } from "./RoutingSummary";
 import { NodeChanges } from "./NodeChanges";
 import { SemanticOutputChanges } from "./SemanticOutputChanges";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { APIError, list, post, request } from "./api";
+import {
+  APIError,
+  list,
+  post,
+  request,
+  requestOutputBundle,
+  usesTokenAuthentication,
+} from "./api";
 import type {
   Output,
   OutputCreation,
@@ -296,6 +304,7 @@ export function SubscriptionsPage({
     focusName?: boolean;
   } | null>(null);
   const client = useQueryClient();
+  const rotation = useSubscriptionRotationState(client);
   const message = toast,
     confirm = useConfirm();
   useEffect(() => {
@@ -516,57 +525,110 @@ export function SubscriptionsPage({
     }
   };
   const action = useMutation({
+    retry: false,
+    networkMode: "always",
     onMutate: ({ id }) => invalidateOutputPublication(client, id),
     onSettled: (_result, _error, { id }) => {
       invalidateOutputPublication(client, id);
       client.invalidateQueries({ queryKey: ["outputs"], exact: true });
-      client.invalidateQueries({
-        queryKey: ["outputs", id, "status"],
-        exact: true,
-      });
+      client.invalidateQueries({ queryKey: ["outputs", id, "status"], exact: true });
     },
-    mutationFn: ({
+    mutationFn: async ({
       id,
       operation,
+      output,
+      own,
     }: {
       id: string;
       operation: "rotate" | "revoke";
+      output: Output;
       sequence: number;
-    }) => post<Output>(`/me/outputs/${id}/${operation}`),
-    onSuccess: (result, variables) => {
-      client.invalidateQueries({ queryKey: ["output-access", variables.id] });
-      setActionError(null);
-      if (
-        variables.operation === "rotate" &&
-        variables.sequence === checkSequence.current
-      )
-        setCompletedAccess({ output: result, replacement: true });
-      message.success(
-        variables.operation === "revoke" ? "订阅已撤销" : "订阅链接已更新",
-      );
+      own: (complete?: () => void) => boolean;
+    }) => {
+      // Recheck the captured view/account lease AFTER onMutate's async boundary.
+      if (!own())
+        throw new Error("此操作已离开当前订阅，请重新打开订阅。");
+      if (operation !== "rotate")
+        return post<Output>(`/me/outputs/${id}/${operation}`);
+      if (rotation.scope.snapshot().has(id))
+        throw new Error("链接更换结果尚未确认。");
+      rotation.scope.set(id, "pending");
+      try {
+        const result = await post<Output>(`/me/outputs/${id}/rotate`);
+        if (
+          !result ||
+          result.id !== id ||
+          result.profileId !== output.profileId ||
+          result.target?.adapterId !== output.target.adapterId ||
+          result.target?.version !== output.target.version ||
+          result.mode !== output.mode ||
+          result.status !== "published"
+        )
+          throw new Error("无法确认更换结果。");
+        rotation.scope.set(id);
+        // Rotation only changes credentials. Do not retain returned secret paths.
+        return output;
+      } catch {
+        rotation.scope.set(id, "unknown");
+        throw new Error(
+          "链接更换结果尚未确认，旧链接可能已失效。请查看当前访问方式，不要重复更换。",
+        );
+      }
     },
-    onError: setActionError,
+    onSuccess: (result, variables) => {
+      client.removeQueries({ queryKey: ["output-access", variables.id] });
+      variables.own(() => {
+        setActionError(null);
+        if (
+          variables.operation === "rotate" &&
+          variables.sequence === checkSequence.current
+        )
+          setCompletedAccess({ output: result, replacement: true });
+        message.success(
+          variables.operation === "revoke" ? "订阅已撤销" : "订阅链接已更新",
+        );
+      });
+    },
+    onError: (error, variables) => {
+      if (variables.operation !== "rotate")
+        variables.own(() => setActionError(error));
+    },
   });
-  const manage = (output: Output, operation: "rotate" | "revoke") =>
+  const manage = (output: Output, operation: "rotate" | "revoke") => {
+    if (operation === "rotate" && rotation.scope.snapshot().has(output.id))
+      return;
+    const origin = location.hash;
+    const sequence = checkSequence.current;
+    const own = (complete?: () => void) =>
+      sequence === checkSequence.current && replaceView(origin, complete);
     confirm({
-      title:
-        operation === "revoke"
-          ? `撤销「${output.name}」？`
-          : `更换「${output.name}」的订阅链接？`,
-      description:
-        operation === "revoke"
-          ? "此链接将停止获取更新。已下载的配置不会被收回，其他订阅保留原状。"
+      title: operation === "revoke" ? `撤销「${output.name}」？` : `更换「${output.name}」的订阅链接？`,
+      description: operation === "revoke"
+        ? "此链接将停止获取更新。已下载的配置不会被收回，其他订阅保留原状。"
+        : output.delivery === "bundle"
+          ? "旧下载链接将失效。配置包内容不变，无需因此重新导入；已下载的配置无法收回。"
           : "旧链接将停止获取更新，需要在客户端替换链接。已经下载的配置无法收回。",
       confirmLabel: operation === "revoke" ? "撤销订阅" : "更换链接",
       cancelLabel: operation === "revoke" ? "保留" : "保留旧链接",
       destructive: true,
-      onConfirm: () =>
-        action.mutateAsync({
-          id: output.id,
-          operation,
-          sequence: checkSequence.current,
-        }),
+      onConfirm: async () => {
+        if (!own()) return;
+        try {
+          await action.mutateAsync({
+            id: output.id,
+            output,
+            operation,
+            sequence,
+            own,
+          });
+        } catch (error) {
+          // Close the rotation decision: its old-link cancel text and submit
+          // action are no longer safe after a possibly committed request.
+          if (operation !== "rotate") throw error;
+        }
+      },
     });
+  };
   const allOutputs = Array.isArray(outputs.data) ? outputs.data : [];
   const allProfiles =
     !profiles.isError && Array.isArray(profiles.data) ? profiles.data : [];
@@ -804,7 +866,10 @@ export function SubscriptionsPage({
     {
       key: "rotate",
       label: "更换订阅链接",
-      disabled: output.status === "revoked" || !!checkingID,
+      disabled:
+        output.status === "revoked" ||
+        !!checkingID ||
+        rotation.states.has(output.id),
       onClick: () => manage(output, "rotate"),
     },
     {
@@ -1450,6 +1515,12 @@ export function SubscriptionsPage({
           size="lg"
         >
           <ErrorNotice error={editError || actionError} />
+          {rotation.states.has(detailOutput.id) && (
+            <Notice tone="warning" title={rotation.states.get(detailOutput.id) === "pending"
+              ? "正在更换订阅链接" : "链接更换结果尚未确认"}>
+              旧链接可能已失效。查看当前访问方式只能获取当前订阅，不能确认上次更换是否完成；请勿重复更换。
+            </Notice>
+          )}
           <div className="space-y-3 rounded-lg bg-muted/50 p-4">
             <p className="text-sm text-muted-foreground">
               分流配置：
@@ -1543,12 +1614,15 @@ export function SubscriptionsPage({
           <div className="flex flex-wrap items-center gap-2 border-t pt-5">
             <ActionButton
               disabled={
-                detailOutput.status === "revoked" || !!checkingID || opening
+                detailOutput.status === "revoked" ||
+                !!checkingID ||
+                opening ||
+                rotation.states.get(detailOutput.id) === "pending"
               }
               onClick={() => setAccessID(detailOutput.id)}
               variant="default"
             >
-              获取订阅
+              {rotation.states.has(detailOutput.id) ? "查看当前访问方式" : "获取订阅"}
             </ActionButton>
             <ActionButton
               ref={updateButton}
@@ -1652,6 +1726,7 @@ export function SubscriptionsPage({
       )}
       <AccessSubscription
         output={completedAccess?.output || access || null}
+        rotationUncertain={rotation.states.get((completedAccess?.output || access)?.id || "") === "unknown"}
         replacement={completedAccess?.replacement}
         onClose={() => {
           setAccessID(null);
@@ -2425,6 +2500,7 @@ export function AccessSubscription(props: {
   output: Output | null;
   onClose: () => void;
   replacement?: boolean;
+  rotationUncertain?: boolean;
 }) {
   // Task ownership ends immediately, while AntD retains its supported exit
   // lifecycle to restore the trigger. A reopened task gets fresh read ownership.
@@ -2474,12 +2550,14 @@ function OutputAccessTask({
   onExited,
   onClose,
   replacement = false,
+  rotationUncertain = false,
 }: {
   output: Output;
   open: boolean;
   onExited: () => void;
   onClose: () => void;
   replacement?: boolean;
+  rotationUncertain?: boolean;
 }) {
   const [output, setOutput] = useState(initialOutput);
   const [readOwner] = useState(() => newID("output-access"));
@@ -2574,7 +2652,55 @@ function OutputAccessTask({
     : undefined;
   const url = path ? new URL(path, location.origin).href : undefined;
   const bundle = accessReady && query.data?.delivery === "bundle";
-  const bundleDownload = bundle ? query.data?.downloadPath : undefined;
+  const bundleDownload = bundle
+    ? `/api/me/outputs/${encodeURIComponent(output.id)}/bundle`
+    : undefined;
+  const tokenDownload = usesTokenAuthentication();
+  const [downloading, setDownloading] = useState(false);
+  const downloadPending = useRef(false);
+  const downloadLifetime = useRef({ active: false, epoch: 0 });
+  useLayoutEffect(() => {
+    const lifetime = downloadLifetime.current;
+    lifetime.active = open && !review;
+    if (lifetime.active) setDownloading(downloadPending.current);
+    return () => {
+      // Revoke during commit, before passive cleanup or promise continuations.
+      // A return to the same inputs never revives an earlier download.
+      lifetime.active = false;
+      lifetime.epoch++;
+    };
+  }, [open, review, inputIdentity, readGeneration]);
+  const downloadBundle = async () => {
+    if (!active.current || review || !bundle || downloadPending.current) return;
+    const owner = downloadLifetime.current.epoch;
+    const ownsDownload = () =>
+      active.current && downloadLifetime.current.active &&
+      downloadLifetime.current.epoch === owner;
+    if (!ownsDownload()) return;
+    downloadPending.current = true;
+    setDownloading(true);
+    try {
+      const result = await requestOutputBundle(output.id);
+      if (!ownsDownload()) return;
+      result.assertCurrent();
+      const objectURL = URL.createObjectURL(result.blob);
+      const link = document.createElement("a");
+      try {
+        link.href = objectURL;
+        link.download = `${output.name || "config"}.zip`;
+        document.body.appendChild(link);
+        link.click();
+      } finally {
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(objectURL), 1000);
+      }
+    } catch {
+      if (ownsDownload()) message.error("无法下载配置包，请确认登录状态后重试。");
+    } finally {
+      downloadPending.current = false;
+      if (active.current && downloadLifetime.current.active) setDownloading(false);
+    }
+  };
   const accessDelivery = accessReady
     ? query.data?.delivery || output?.delivery
     : output?.delivery;
@@ -2639,7 +2765,12 @@ function OutputAccessTask({
         }}
       >
         <div inert={!open} className="space-y-4">
-          {replacement && (
+          {rotationUncertain && (
+            <Notice tone="warning" title="链接更换结果尚未确认">
+              此处只显示当前可获取的访问方式，不能确认上次更换是否完成，也不能确认旧链接仍有效。请勿重复更换。
+            </Notice>
+          )}
+          {replacement && !rotationUncertain && (
             <Notice
               tone="success"
               title={
@@ -2647,7 +2778,7 @@ function OutputAccessTask({
               }
             >
               {accessDelivery === "bundle"
-                ? "旧下载链接已失效，请重新下载配置包并导入客户端。其他订阅保留原状。"
+                ? "旧下载链接已失效。配置包内容不变，无需因此重新导入。其他订阅保留原状。"
                 : accessDelivery === "feed"
                   ? "旧链接已失效，请将新链接重新添加到客户端。其他订阅保留原状。"
                   : "旧链接已失效，请获取最新订阅内容并更新客户端。其他订阅保留原状。"}
@@ -2725,17 +2856,29 @@ function OutputAccessTask({
                     这份配置引用私有规则文件，需要一起下载。解压后保留文件夹结构，将配置与
                     rules 文件夹放在客户端配置目录。
                   </p>
-                  <ActionButton variant="default" asChild={true}>
-                    <a
-                      href={bundleDownload}
-                      download={`${output?.name || "config"}.zip`}
+                  {tokenDownload ? (
+                    <ActionButton
+                      variant="default"
+                      disabled={downloading}
+                      aria-busy={downloading}
+                      onClick={() => void downloadBundle()}
                     >
-                      {<Download aria-hidden="true" />}
+                      <Download aria-hidden="true" />
                       下载配置与规则文件
-                    </a>
-                  </ActionButton>
+                    </ActionButton>
+                  ) : (
+                    <ActionButton variant="default" asChild={true}>
+                      <a
+                        href={bundleDownload}
+                        download={`${output?.name || "config"}.zip`}
+                      >
+                        <Download aria-hidden="true" />
+                        下载配置与规则文件
+                      </a>
+                    </ActionButton>
+                  )}
                   <p className="access-note text-sm text-muted-foreground">
-                    配置包包含连接凭据与私有规则，请仅导入可信客户端。更新后需重新下载整个配置包。
+                    配置包包含连接凭据与私有规则，请仅导入可信客户端。配置内容更新后需重新下载整个配置包。
                   </p>
                 </div>
               )}

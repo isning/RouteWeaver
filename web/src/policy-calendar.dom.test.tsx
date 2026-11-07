@@ -135,3 +135,64 @@ it("bounds the picker to Radix available height without changing the stored date
   await userEvent.click(screen.getByRole("button", { name: "取消" }));
   expect(change).not.toHaveBeenCalled();
 });
+
+// Run this public-control seam in separate processes with TZ=America/New_York,
+// TZ=Australia/Lord_Howe and TZ=UTC. Changing TZ inside jsdom is not reliable.
+it.each([
+  ["2026-03-08T02:30:19.123456789+08:00", "2026-03-08 02:30:19"],
+  ["2026-11-01T01:30:19.123456789+08:00", "2026-11-01 01:30:19"],
+  ["2026-10-04T02:15:19.123456789+08:00", "2026-10-04 02:15:19"],
+  ["2026-04-05T01:45:19.123456789+08:00", "2026-04-05 01:45:19"],
+])("preserves fixed UTC+8 wall time and unchanged precision for %s", async (value, display) => {
+  const change = vi.fn();
+  render(<PolicyDateInput value={value} onChange={change} />);
+  const field = screen.getByRole("textbox") as HTMLInputElement;
+  expect(field.value).toBe(display);
+  await userEvent.click(field);
+  expect((screen.getByLabelText("时间（UTC+8）") as HTMLInputElement).value).toBe(display.slice(11));
+  await userEvent.click(screen.getByRole("button", { name: "确定" }));
+  expect(change).toHaveBeenCalledWith(value);
+});
+
+it.each([
+  ["2026-03-07T02:30:19.123456789+08:00", "2026年3月8日", "2026-03-07T18:30:19.123Z"],
+  ["2026-10-03T02:15:19.123456789+08:00", "2026年10月4日", "2026-10-03T18:15:19.123Z"],
+  ["2026-10-31T01:30:19.123456789+08:00", "2026年11月1日", "2026-10-31T17:30:19.123Z"],
+  ["2026-04-04T01:45:19.123456789+08:00", "2026年4月5日", "2026-04-04T17:45:19.123Z"],
+])("selects a day without local DST normalization from %s", async (value, day, expected) => {
+  const change = vi.fn();
+  const pending = vi.fn();
+  render(<PolicyDateInput value={value} onChange={change} onPendingChange={pending} />);
+  await userEvent.click(screen.getByRole("textbox"));
+  await userEvent.click(screen.getByRole("button", { name: day }));
+  expect(pending).toHaveBeenLastCalledWith(true);
+  expect(change).not.toHaveBeenCalled();
+  await userEvent.click(screen.getByRole("button", { name: "确定" }));
+  expect(change).toHaveBeenCalledWith(expected);
+  expect(pending).toHaveBeenLastCalledWith(false);
+});
+
+it("edits a DST-gap wall time, reverts exactly, and discards canceled edits", async () => {
+  const value = "2026-03-08T01:30:19.123456789+08:00";
+  const change = vi.fn();
+  const pending = vi.fn();
+  render(<PolicyDateInput value={value} onChange={change} onPendingChange={pending} />);
+  await userEvent.click(screen.getByRole("textbox"));
+  fireEvent.change(screen.getByLabelText("时间（UTC+8）"), { target: { value: "02:30:19" } });
+  expect(pending).toHaveBeenLastCalledWith(true);
+  fireEvent.change(screen.getByLabelText("时间（UTC+8）"), { target: { value: "01:30:19" } });
+  expect(pending).toHaveBeenLastCalledWith(false);
+  await userEvent.click(screen.getByRole("button", { name: "确定" }));
+  expect(change).toHaveBeenCalledWith(value);
+  change.mockClear();
+  await userEvent.click(screen.getByRole("textbox"));
+  fireEvent.change(screen.getByLabelText("时间（UTC+8）"), { target: { value: "02:30:19" } });
+  await userEvent.click(screen.getByRole("button", { name: "取消" }));
+  expect(change).not.toHaveBeenCalled();
+  expect(pending).toHaveBeenLastCalledWith(false);
+  await userEvent.click(screen.getByRole("textbox"));
+  expect((screen.getByLabelText("时间（UTC+8）") as HTMLInputElement).value).toBe("01:30:19");
+  fireEvent.change(screen.getByLabelText("时间（UTC+8）"), { target: { value: "02:30:19" } });
+  await userEvent.click(screen.getByRole("button", { name: "确定" }));
+  expect(change).toHaveBeenCalledWith("2026-03-07T18:30:19.123Z");
+});

@@ -1,3 +1,5 @@
+import { DiagnosticProviderInteger } from "./diagnostic-provider-integer";
+import { exactDraftInteger } from "./draft-integer";
 import { FieldSet, FieldLegend } from "@/components/ui/field";
 import {
   Accordion,
@@ -16,7 +18,7 @@ import { AppField, AppForm, useForm, useWatch } from "@/ui-patterns/form";
 import { Notice } from "@/ui-patterns/notice";
 import { TaskDialog, TaskSheet } from "@/ui-patterns/task-overlays";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { list, post } from "./api";
 import { EmptyState, ErrorNotice, QueryState, Section } from "./components";
 import { DataTable } from "./DataTable";
@@ -32,6 +34,7 @@ import {
 import { bytesLabel, dateLabel, newID } from "./model";
 import { useUnsavedChanges } from "./navigation";
 import type { CoreInstance, HostRecord } from "./types";
+import { useDiagnosticRequest } from "./useDiagnosticRequest";
 import { useDiscardConfirmation } from "./useDiscardConfirmation";
 const base = "/admin/diagnostic-jobs";
 export function DiagnosticsPanel({
@@ -70,7 +73,6 @@ export function DiagnosticsPanel({
         extra={
           <ActionButton
             onClick={() => setCreating(true)}
-            disabled={!availableTargets.length || !availableInstances.length}
             variant="outline"
           >
             新建测试
@@ -535,21 +537,39 @@ function DiagnosticTargetForm({
     </TaskDialog>
   );
 }
-export function DiagnosticStartForm({
-  targets,
-  instances,
-  onClose,
-  onCreated,
-}: {
+type DiagnosticStartProps = {
   targets: DiagnosticTarget[];
   instances: CoreInstance[];
   onClose: () => void;
   onCreated: (job: DiagnosticJob) => void;
-}) {
+};
+export function DiagnosticStartForm(props: DiagnosticStartProps) {
+  const [task, setTask] = useState(0);
+  return <DiagnosticStartEditor key={task} {...props} onAbandoned={() => setTask((value) => value + 1)} />;
+}
+function DiagnosticStartEditor({
+  targets,
+  instances,
+  onClose,
+  onCreated,
+  onAbandoned,
+}: DiagnosticStartProps & { onAbandoned: () => void }) {
+  const retired = useRef(false);
   const [form] = useForm();
+  const confirm = useConfirm();
+  const recovery = useDiagnosticRequest(onCreated);
   const [id, setId] = useState(() => newID("probe"));
+  const currentRequestId = useRef(id);
+  const replaceRequestId = () => {
+    const next = newID("probe");
+    // Revoke captured callbacks before React commits the replacement form.
+    currentRequestId.current = next;
+    form.setFieldValue("diagnosticRequestId", next);
+    form.setFieldValue("confirmed", false);
+    setId(next);
+  };
   const [dirty, setDirty] = useState(false);
-  useUnsavedChanges(dirty);
+  useUnsavedChanges(dirty && !recovery.envelope);
   const targetId = useWatch("targetId", form),
     kind = useWatch("kind", form) as DiagnosticKind | undefined;
   const pathMode = useWatch("pathMode", form) || "node_direct";
@@ -571,9 +591,17 @@ export function DiagnosticStartForm({
     (path) => path.publishedRouteId === routeId,
   );
   const target = targets.find((t) => t.id === targetId);
-  const save = useMutation({
-    mutationFn: (values: any) =>
-      post<DiagnosticJob>(base, {
+  const submit = (values: any) => {
+    // Validation can finish after a local abandonment or another edit. Check
+    // both the callback owner and the values owner, including fresh consent.
+    if (retired.current || id !== currentRequestId.current ||
+      values.diagnosticRequestId !== currentRequestId.current ||
+      values.confirmed !== true || form.getFieldValue("confirmed") !== true) return;
+    const timeoutSeconds = exactDraftInteger(String(values.timeoutSeconds ?? ""), 30);
+    const maxKiB = values.kind === "connectivity" ? 0
+      : exactDraftInteger(String(values.maxKiB ?? ""), 16384);
+    if (timeoutSeconds === undefined || maxKiB === undefined) return;
+    return recovery.start({
         id,
         targetId: values.targetId,
         instanceId:
@@ -585,16 +613,15 @@ export function DiagnosticStartForm({
           ? { publishedRouteId: values.publishedRouteId }
           : {}),
         kind: values.kind,
-        maxBytes: values.kind === "connectivity" ? 0 : values.maxKiB * 1024,
-        timeoutSeconds: values.timeoutSeconds,
-      }),
-    onSuccess: onCreated,
-  });
+        maxBytes: maxKiB * 1024,
+        timeoutSeconds,
+      });
+  };
   const { confirm: confirmDiscard } =
     useDiscardConfirmation("Diagnostics-editor");
   const close = () => {
-    if (save.isPending) return;
-    if (!dirty) return onClose();
+    if (recovery.busy) return;
+    if (recovery.envelope || recovery.corrupt || !dirty) return onClose();
     confirmDiscard(
       {
         title: "放弃当前测试设置？",
@@ -605,13 +632,58 @@ export function DiagnosticStartForm({
       () => onClose(),
     );
   };
+  const confirmRecordDiscard = () => {
+    const discard = recovery.prepareDiscard();
+    const pending = recovery.envelope?.request;
+    const targetName = pending
+      ? targets.find((item) => item.id === pending.targetId)?.name
+      : undefined;
+    confirm({
+      title: pending ? "清除测试提交记录？" : "清除无法读取的测试提交记录？",
+      description: pending
+        ? `测试请求 ${pending.id}，目标 ${targetName ? `${targetName}（${pending.targetId}）` : pending.targetId}。原测试可能仍在运行或已产生流量。清除本页记录不会取消原测试，并会失去本页核对记录、重置此窗口的测试设置；重新提交可能重复产生流量。`
+        : "这不会取消原测试，但会重置此窗口的测试设置。原测试可能已产生流量，重新提交可能重复产生流量。请先检查节点测试记录。",
+      confirmLabel: "清除本页记录",
+      cancelLabel: "保留记录",
+      destructive: true,
+      onConfirm: () => {
+        if (!discard()) return;
+        // Retire synchronously, then replace the entire form instance. Old
+        // validation cannot obtain a newer callback from the replacement form.
+        retired.current = true;
+        onAbandoned();
+      },
+    });
+  };
+  if (recovery.envelope || recovery.corrupt || recovery.unavailable) return (
+    <TaskDialog title="核对测试提交" open pending={recovery.busy} footer={null}
+      onOpenChange={(next) => { if (!next) close(); }} bodyProps={{ className: "space-y-5" }}>
+      <Notice tone="warning" title={recovery.corrupt || recovery.unavailable ? "本页测试提交记录无法读取" : "测试提交结果未确认"}>
+        {recovery.unavailable ? "恢复浏览器会话存储后重新读取本页记录，再决定是否提交。" : recovery.corrupt
+          ? "原测试可能已提交并产生流量。清除本页记录不会取消原测试，重新提交可能重复产生流量。"
+          : "原测试可能已提交并产生流量。关闭此窗口不会取消测试；核对提交只读取原测试记录。"}
+      </Notice>
+      {recovery.error && <Notice tone="error" title={recovery.error} />}
+      {recovery.envelope && <>
+        <p className="break-all text-sm">测试请求：{recovery.envelope.request.id}</p>
+        <ActionButton disabled={!recovery.available} pending={recovery.busy} onClick={recovery.reconcile}>核对上次测试提交</ActionButton>
+      </>}
+      {recovery.unavailable && <ActionButton disabled={!recovery.available} onClick={recovery.retryStorage}>重新读取本页记录</ActionButton>}
+      {(recovery.corrupt || recovery.envelope) && (
+        <ActionButton variant="destructive" disabled={!recovery.available || recovery.busy} onClick={confirmRecordDiscard}>
+          {recovery.corrupt ? "清除无法读取的记录" : "清除本页提交记录"}
+        </ActionButton>
+      )}
+      <ActionButton variant="outline" disabled={recovery.busy} onClick={close}>关闭</ActionButton>
+    </TaskDialog>
+  );
   return (
     <TaskDialog
       bodyProps={{ className: "space-y-5" }}
       title="新建连接测试"
       size="lg"
       open
-      pending={save.isPending}
+      pending={recovery.busy}
       footer={null}
       onOpenChange={(next) => {
         if (!next) close();
@@ -619,8 +691,9 @@ export function DiagnosticStartForm({
     >
       <AppForm
         form={form}
-        disabled={save.isPending}
+        disabled={recovery.busy}
         initialValues={{
+          diagnosticRequestId: id,
           pathMode: "node_direct",
           timeoutSeconds: 10,
           maxKiB: 1024,
@@ -628,16 +701,19 @@ export function DiagnosticStartForm({
         onValuesChange={(changed) => {
           setDirty(true);
           if (!("confirmed" in changed)) {
-            setId(newID("probe"));
+            replaceRequestId();
             if ("targetId" in changed) form.setFieldValue("kind", undefined);
             if ("pathMode" in changed)
               form.setFieldValue("publishedRouteId", undefined);
             form.setFieldValue("confirmed", false);
           }
         }}
-        onFinish={(values) => save.mutate(values)}
+        onFinish={submit}
       >
-        <ErrorNotice error={save.error} />
+        <AppField name="diagnosticRequestId" hidden>
+          <Input type="hidden" />
+        </AppField>
+        {recovery.error && <Notice tone="error" title={recovery.error} />}
         <FieldSet className="min-w-0">
           <FieldLegend variant="label">执行路径</FieldLegend>
           <AppField
@@ -771,31 +847,27 @@ export function DiagnosticStartForm({
             <AppField
               name="timeoutSeconds"
               label="最长持续秒数"
-              rules={[{ required: true }]}
-              getValueFromEvent={(
-                event: React.ChangeEvent<HTMLInputElement>,
-              ) =>
-                event.target.value === ""
-                  ? undefined
-                  : Number(event.target.value)
-              }
+              trigger="onRawChange"
+              rules={[{ validator: (_, value) =>
+                exactDraftInteger(String(value ?? ""), 30) === undefined
+                  ? Promise.reject(new Error("请输入 1–30 之间的整数"))
+                  : Promise.resolve(),
+              }]}
             >
-              <Input min={1} max={30} type="number" />
+              <DiagnosticProviderInteger max={30} />
             </AppField>
             {kind && kind !== "connectivity" && (
               <AppField
                 name="maxKiB"
                 label="最大载荷（KiB）"
-                rules={[{ required: true }]}
-                getValueFromEvent={(
-                  event: React.ChangeEvent<HTMLInputElement>,
-                ) =>
-                  event.target.value === ""
-                    ? undefined
-                    : Number(event.target.value)
-                }
+                trigger="onRawChange"
+                rules={[{ validator: (_, value) =>
+                  exactDraftInteger(String(value ?? ""), 16384) === undefined
+                    ? Promise.reject(new Error("请输入 1–16384 之间的整数"))
+                    : Promise.resolve(),
+                }]}
               >
-                <Input min={1} max={16384} type="number" />
+                <DiagnosticProviderInteger max={16384} />
               </AppField>
             )}
           </div>
@@ -837,10 +909,10 @@ export function DiagnosticStartForm({
           </ActionButton>
           <ActionButton
             type="submit"
-            pending={save.isPending}
+            pending={recovery.busy}
             disabled={
-              pathMode === "managed_route" &&
-              (paths.isFetching || !!paths.error || !selectedPath)
+              !recovery.available || (pathMode === "managed_route" &&
+              (paths.isFetching || !!paths.error || !selectedPath))
             }
             variant="default"
           >

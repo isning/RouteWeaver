@@ -1,3 +1,5 @@
+import { DiagnosticProviderInteger } from "./diagnostic-provider-integer";
+import { exactDraftInteger } from "./draft-integer";
 import { FieldSet, FieldLegend } from "@/components/ui/field";
 import {
   Accordion,
@@ -80,10 +82,11 @@ export function ObservationConfigForm({
     mutationFn: async () => {
       const values = form.getFieldsValue(true);
       const p = values.provider;
+      const allowance = exactDraftInteger(String(p.allowance ?? ""));
       if (values.providerEnabled && p.mode === "limited") {
-        if (!Number.isSafeInteger(p.allowance) || p.allowance < 1)
+        if (allowance === undefined)
           throw new Error("供应商额度请输入正整数，2.5 TB 可写为 2500 GB。");
-        measuredBytes(String(p.allowance), p.unit);
+        measuredBytes(String(allowance), p.unit);
       }
       const config: ObservationConfig = {
         revision: initial.config.revision,
@@ -93,7 +96,7 @@ export function ObservationConfigForm({
           ? {
               name: p.name,
               mode: p.mode,
-              allowance: p.mode === "limited" ? p.allowance : 0,
+              allowance: p.mode === "limited" ? allowance! : 0,
               unit: p.unit,
               ...(p.mode !== "unlimited" || values.providerCycleEnabled
                 ? {
@@ -285,20 +288,21 @@ export function ObservationConfigForm({
                   <AppField
                     name={["provider", "allowance"]}
                     label="周期额度"
-                    rules={[{ required: true }]}
-                    getValueFromEvent={(
-                      event: React.ChangeEvent<HTMLInputElement>,
-                    ) =>
-                      event.target.value === ""
-                        ? undefined
-                        : Number(event.target.value)
-                    }
+                    trigger="onRawChange"
+                    dependencies={[["provider", "unit"]]}
+                    rules={[({ getFieldValue }) => ({
+                      validator: (_, value) => {
+                        const allowance = exactDraftInteger(String(value ?? ""));
+                        if (allowance === undefined)
+                          return Promise.reject(new Error("供应商额度请输入正整数，2.5 TB 可写为 2500 GB。"));
+                        try {
+                          measuredBytes(String(allowance), getFieldValue(["provider", "unit"]));
+                          return Promise.resolve();
+                        } catch (error) { return Promise.reject(error); }
+                      },
+                    })]}
                   >
-                    <Input
-                      min={1}
-                      max={Number.MAX_SAFE_INTEGER}
-                      type="number"
-                    />
+                    <DiagnosticProviderInteger max={Number.MAX_SAFE_INTEGER} />
                   </AppField>
                   <AppField
                     name={["provider", "unit"]}

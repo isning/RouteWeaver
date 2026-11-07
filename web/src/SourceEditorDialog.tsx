@@ -92,6 +92,18 @@ function SourceEditorSession({
   const [loading, setLoading] = useState(!!source);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const fileRead = useRef(0);
+  // A local selection owns the next content value until read, cancelled, or replaced.
+  const fileBlocked = useRef(false);
+  const [fileState, setFileState] = useState<
+    "idle" | "reading" | "failed" | "ready"
+  >("idle");
+  const clearFileSelection = () => {
+    fileRead.current++;
+    fileBlocked.current = false;
+    setFileState("idle");
+    setSelectedFileName("");
+    setFileError(null);
+  };
   const fileInput = useRef<HTMLInputElement>(null);
   const [selectedFileName, setSelectedFileName] = useState("");
   const saving = useRef(false);
@@ -350,7 +362,8 @@ function SourceEditorSession({
     rejectedSource.revision === savedFailure?.revision &&
     (sourceHasFailure(rejectedSource) || !rejectedSource.refreshStatus) &&
     (sourceHasFailure(savedFailure) || !savedFailure?.refreshStatus);
-  useUnsavedChanges(open && (editorDirty || mutation.isPending));
+  const unresolvedFile = fileState === "reading" || fileState === "failed";
+  useUnsavedChanges(open && (editorDirty || unresolvedFile || mutation.isPending));
   const closeEditor = () => {
     if (
       !active.current ||
@@ -372,7 +385,8 @@ function SourceEditorSession({
       };
       setOpen(false);
     };
-    if (editorSnapshot() === editorBaseline.current) return discard();
+    if (!fileBlocked.current && editorSnapshot() === editorBaseline.current)
+      return discard();
     let confirmed = false;
     const review = confirm({
       contentProps: { onFocusCapture: revealFocusedModalAction },
@@ -437,7 +451,7 @@ function SourceEditorSession({
                   primaryActionText || (editing ? "保存修改" : "导入来源")
                 }
                 aria-busy={mutation.isPending}
-                disabled={!open}
+                disabled={!open || unresolvedFile}
                 variant="default"
                 pending={!!mutation.isPending}
               >
@@ -494,6 +508,7 @@ function SourceEditorSession({
             closing.current ||
             !open ||
             saving.current ||
+            fileBlocked.current ||
             mutation.isPending ||
             discardReview.current ||
             loading ||
@@ -512,7 +527,10 @@ function SourceEditorSession({
           // revealed values when saving without visiting that optional section.
           mutation.mutate(form.getFieldsValue(true));
         }}
-        onValuesChange={updateEditorDirty}
+        onValuesChange={(changed) => {
+          if ("kind" in changed || "content" in changed) clearFileSelection();
+          updateEditorDirty();
+        }}
         disabled={mutation.isPending || !open}
       >
         <QueryState
@@ -536,7 +554,7 @@ function SourceEditorSession({
               className="form-error my-3"
               tone="warning"
               title={
-                editorDirty
+                editorDirty || unresolvedFile
                   ? "上次提交已保存，导入未完成"
                   : "输入已保存，导入未完成"
               }
@@ -638,9 +656,6 @@ function SourceEditorSession({
               <Textarea
                 className="min-h-40 font-mono text-sm"
                 rows={7}
-                onChange={() => {
-                  fileRead.current++;
-                }}
                 placeholder="粘贴 SOCKS / Shadowsocks / VLESS 节点 URI，或 Mihomo、sing-box 配置内容"
                 spellCheck={false}
               />
@@ -660,10 +675,19 @@ function SourceEditorSession({
                 className="source-file-status max-w-full text-sm text-muted-foreground wrap-anywhere"
                 role="status"
               >
-                {selectedFileName
-                  ? `已选择文件：${selectedFileName}`
-                  : "尚未选择文件"}
+                {fileState === "reading"
+                  ? `正在读取文件：${selectedFileName}`
+                  : fileState === "failed"
+                    ? `文件未读取：${selectedFileName}`
+                    : selectedFileName
+                      ? `已读取文件：${selectedFileName}`
+                      : "尚未选择文件"}
               </span>
+              {unresolvedFile && (
+                <ActionButton variant="outline" onClick={clearFileSelection}>
+                  取消文件选择
+                </ActionButton>
+              )}
               <input
                 ref={fileInput}
                 hidden
@@ -673,13 +697,17 @@ function SourceEditorSession({
                 disabled={mutation.isPending || !open}
                 onChange={async (event) => {
                   const file = event.target.files?.[0];
-                  if (!file) return;
+                  if (!file || !active.current || closing.current || saving.current)
+                    return;
                   // Clear the native value so choosing the same file retries a failed read.
                   event.target.value = "";
                   setSelectedFileName(file.name);
                   const revision = ++fileRead.current;
+                  fileBlocked.current = true;
+                  setFileState("reading");
                   setFileError(null);
                   if (file.size > 1024 * 1024) {
+                    setFileState("failed");
                     setFileError(
                       new Error(
                         "配置文件最大 1 MB。更大的订阅请使用 URL 导入。",
@@ -689,13 +717,17 @@ function SourceEditorSession({
                   }
                   try {
                     const content = await file.text();
-                    if (revision === fileRead.current) {
+                    if (active.current && revision === fileRead.current) {
+                      fileBlocked.current = false;
+                      setFileState("ready");
                       form.setFieldValue("content", content);
                       updateEditorDirty();
                     }
                   } catch {
-                    if (revision === fileRead.current)
+                    if (active.current && revision === fileRead.current) {
+                      setFileState("failed");
                       setFileError(new Error("无法读取文件，请重新选择。"));
+                    }
                   }
                 }}
               />

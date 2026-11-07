@@ -182,3 +182,59 @@ it("reports step-input deltas but never treats snapshot summaries as additions, 
   await user.click(screen.getByRole("tab", { name: /合并后 第 1 步/ }));
   for (const fact of ["0 个节点", "相对此步骤输入", "新增 0 个", "移除 1 个", "修改 0 个"]) expect(within(screen.getByRole("tabpanel")).getByText(fact)).toBeTruthy();
 });
+
+it("keeps selected source-step identity through reorder, label changes and an earlier stage removal", async () => {
+  const recipe: Collection = {
+    ...collection,
+    sources: ["alpha", "beta"].map((sourceId) => ({
+      sourceId,
+      steps: [{ id: "rename", kind: "rename", enabled: true, template: "{name}" }],
+    })),
+  };
+  const feeds: Source[] = ["alpha", "beta"].map((id) => ({ id, name: id, enabled: true, kind: "text" }));
+  const alpha = { scope: "source", sourceId: "alpha", stepId: "rename", endpoints: [], changedIds: ["a"] };
+  const beta = { scope: "source", sourceId: "beta", stepId: "rename", endpoints: [], changedIds: ["b", "c"] };
+  const view = render(<CollectionPreview value={{ stages: [alpha, beta] }} sources={feeds} collection={recipe} />);
+  await userEvent.click(screen.getByRole("tab", { name: "beta 第 1 步：重新命名" }));
+  const selectedTab = document.activeElement;
+  view.rerender(<CollectionPreview value={{ stages: [beta, alpha] }} sources={feeds.map((source) => ({ ...source, name: source.id.toUpperCase() }))} collection={recipe} />);
+  expect(screen.getByRole("tab", { name: "BETA 第 1 步：重新命名" })).toBe(selectedTab);
+  expect(document.activeElement).toBe(selectedTab);
+  expect(within(screen.getByRole("tabpanel")).getByText("修改 2 个")).toBeTruthy();
+  view.rerender(<CollectionPreview value={{ stages: [beta] }} sources={feeds} collection={recipe} />);
+  expect(screen.getByRole("tab", { name: "beta 第 1 步：重新命名" }).getAttribute("aria-selected")).toBe("true");
+  expect(document.activeElement).toBe(selectedTab);
+});
+
+it("returns a removed focused stage to final results and scrolls only to its nearest edges", async () => {
+  const scroll = vi.fn();
+  const view = render(<CollectionPreview value={preview} sources={sources} collection={collection} />);
+  await userEvent.click(screen.getByRole("tab", { name: `原始输入 ${longName}` }));
+  const final = screen.getByRole("tab", { name: "最终结果" });
+  Object.defineProperty(final, "scrollIntoView", { configurable: true, value: scroll });
+  view.rerender(<CollectionPreview value={{ ...preview, stages: preview.stages!.slice(1) }} sources={sources} collection={collection} />);
+  expect(screen.getByRole("tabpanel", { name: "最终结果" })).toBeTruthy();
+  expect(document.activeElement).toBe(final);
+  expect(scroll).toHaveBeenCalledExactlyOnceWith({ block: "nearest", inline: "nearest" });
+  view.rerender(<CollectionPreview value={preview} sources={sources} collection={collection} />);
+  expect(final.getAttribute("aria-selected")).toBe("true");
+  expect(scroll).toHaveBeenCalledTimes(1);
+});
+
+it("resets a removed selection without stealing editor focus or scrolling, even if the stage returns", async () => {
+  const scroll = vi.fn();
+  const content = (value: Preview) => <><input aria-label="集合名称" /><CollectionPreview value={value} sources={sources} collection={collection} /></>;
+  const view = render(content(preview));
+  await userEvent.click(screen.getByRole("tab", { name: `原始输入 ${longName}` }));
+  const field = screen.getByRole("textbox", { name: "集合名称" });
+  await userEvent.click(field);
+  Object.defineProperty(screen.getByRole("tab", { name: "最终结果" }), "scrollIntoView", { configurable: true, value: scroll });
+  view.rerender(content({ endpoints: [], stages: [] }));
+  expect(screen.getByRole("tabpanel", { name: "最终结果" })).toBeTruthy();
+  expect(document.activeElement).toBe(field);
+  expect(scroll).not.toHaveBeenCalled();
+  view.rerender(content(preview));
+  expect(screen.getByRole("tab", { name: "最终结果" }).getAttribute("aria-selected")).toBe("true");
+  expect(document.activeElement).toBe(field);
+  expect(scroll).not.toHaveBeenCalled();
+});

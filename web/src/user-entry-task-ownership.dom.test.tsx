@@ -68,8 +68,8 @@ it("late A reveal must not overwrite current B editing task", async () => {
         ? delayed
         : String(url).endsWith("/b/reveal")
           ? json(b)
-          : String(url).endsWith("/entitlement")
-            ? json({})
+          : String(url).endsWith("/effective-policy")
+            ? json({ userId: "u", routeIds: ["route"] })
             : json([a, b]),
     ),
   );
@@ -133,7 +133,7 @@ it("reallocates a revoked legacy entry with a fresh empty credential draft, neve
         sent = JSON.parse(init.body);
         return json({ ...revoked, ...sent, revoked: false });
       }
-      return json(String(url).endsWith("/entitlement") ? {} : [revoked]);
+      return json(String(url).endsWith("/effective-policy") ? { userId: "u", routeIds: ["route"] } : [revoked]);
     }),
   );
   client = new QueryClient({
@@ -209,7 +209,7 @@ function mountTask(
       }
       for (const [id, held] of Object.entries(reveals))
         if (path.endsWith(`/${id}/reveal`)) return held.promise;
-      return json(path.endsWith("/entitlement") ? {} : entries);
+      return json(path.endsWith("/effective-policy") ? { userId: path.split("/")[3], routeIds: ["route"] } : entries);
     }),
   );
   client = new QueryClient({

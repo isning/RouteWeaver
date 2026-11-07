@@ -358,6 +358,17 @@ export function usePolicyChange({ mode, retainedDrafts, users, services, routes,
             }
         },
     });
+    const refreshPolicyData = () => {
+        for (const queryKey of [
+            ["admin-state"],
+            ["user-groups"],
+            ["effective-policy"],
+            ["entitlement"],
+            ["overview"],
+            ["platform-entries"],
+        ])
+            client.invalidateQueries({ queryKey });
+    };
     const apply = useMutation({
         onMutate: () => {
             const version = draftRevision.current;
@@ -370,15 +381,7 @@ export function usePolicyChange({ mode, retainedDrafts, users, services, routes,
             revision: review!.preview.revision,
         }),
         onSuccess: (_result, _variables, owner) => {
-            for (const queryKey of [
-                ["admin-state"],
-                ["user-groups"],
-                ["effective-policy"],
-                ["entitlement"],
-                ["overview"],
-                ["platform-entries"],
-            ])
-                client.invalidateQueries({ queryKey });
+            refreshPolicyData();
             if (!mounted.current || owner?.version !== draftRevision.current)
                 return;
             setFailureFocus(null);
@@ -388,8 +391,27 @@ export function usePolicyChange({ mode, retainedDrafts, users, services, routes,
             message.success("平台授权已更新");
         },
         onError: (e, _variables, owner) => {
+            // This exact server contract is emitted only after the policy commit.
+            // Generic 500s, transport failures and message-only matches are not
+            // evidence of a committed policy.
+            const auditMissing = e instanceof APIError && e.status === 500 &&
+                typeof e.details === "object" && e.details !== null &&
+                "detail" in e.details && e.details.detail === "policy applied; audit could not be recorded";
+            if (auditMissing)
+                refreshPolicyData();
             if (!mounted.current || owner?.version !== draftRevision.current)
                 return;
+            if (auditMissing) {
+                const warning = new Error("平台授权已更新，但审计记录未能保存。请核对最新授权和审计记录，不要重复提交本次变更。当前输入和保留的草稿未清除。");
+                // Retire the consumed review without invoking onApplied: that
+                // callback closes editors and discards their retained drafts.
+                appliedReview.current = null;
+                setReview(null);
+                setConfirmed(false);
+                setError(warning);
+                requestFailureFocus(warning, owner.version, "editor");
+                return;
+            }
             setError(e);
             if (e instanceof APIError && e.status === 409) {
                 setReview(null);

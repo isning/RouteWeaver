@@ -1165,6 +1165,8 @@ export function InstanceObservation({ instanceId }: { instanceId: string }) {
   const query = useQuery({
     queryKey: ["instance-state", instanceId],
     queryFn: () => request<AgentState>(`/agent/instances/${instanceId}/state`),
+    // Terminal observations and failed reads can change without a local mutation.
+    // Keep observing while mounted; fetching is not evidence of node liveness.
     refetchInterval: (q) =>
       [
         "queued",
@@ -1183,7 +1185,7 @@ export function InstanceObservation({ instanceId }: { instanceId: string }) {
           "recovery_queued",
         ].includes(q.state.data.serviceIntent.status))
         ? 5000
-        : false,
+        : 30000,
   });
   const data = query.data;
   return (
@@ -1191,16 +1193,25 @@ export function InstanceObservation({ instanceId }: { instanceId: string }) {
       loading={query.isPending}
       paused={query.isPaused}
       loadingLayout="summary"
-      error={query.error}
+      error={data ? null : query.error}
       retry={() => query.refetch()}
     >
       {data && (
         <>
+          {(query.isFetching || query.isPaused || query.isError) && (
+            <Notice tone={query.isError ? "warning" : "info"}>
+              {query.isPaused ? "等待网络连接，以下为上次读取的实例记录。"
+                : query.isFetching ? "正在刷新，以下为上次读取的实例记录。"
+                : "刷新失败，以下为上次读取的实例记录。"}
+              {query.isError && <p>{query.error.message}</p>}
+            </Notice>
+          )}
           <div className="instance-phase flex flex-wrap items-center justify-between gap-3">
-            <Badge variant="secondary">{phaseLabel(data.phase)}</Badge>
+            <div className="space-y-1"><p className="text-xs text-muted-foreground">平台最近记录的实例状态</p><Badge variant="secondary">{phaseLabel(data.phase)}</Badge></div>
             <ActionButton
               leadingIcon={<ReloadOutlined aria-hidden="true" />}
               aria-label="刷新实例状态"
+              keepFocusableWhilePending
               pending={query.isFetching}
               onClick={() => query.refetch()}
               variant="ghost"
@@ -1242,7 +1253,7 @@ export function InstanceObservation({ instanceId }: { instanceId: string }) {
                 </p>
               )}
               <p className="text-xs text-muted-foreground">
-                授权状态表示持续运行权限；核心运行结果以上方节点确认状态为准。
+                此处为平台保存的授权记录，不代表核心当前在线；请结合节点上报时间核对运行结果。
               </p>
             </div>
           ) : (
@@ -1250,7 +1261,7 @@ export function InstanceObservation({ instanceId }: { instanceId: string }) {
           )}
           {data.state?.observed && (
             <p className="muted text-sm text-muted-foreground">
-              最近确认 {dateLabel(data.state.observed.observedAt)}
+              最近节点上报 {dateLabel(data.state.observed.observedAt)}
             </p>
           )}
           {data.state?.code && (
@@ -1301,7 +1312,10 @@ function InstanceDetail({
       }
       open={!!instance}
       onOpenChange={(next) => {
-        if (!next) onClose();
+        if (!next) {
+          setEnrollmentOpen(false);
+          onClose();
+        }
       }}
       size="lg"
     >
@@ -1356,11 +1370,13 @@ function InstanceDetail({
                 </div>
               ))}
           </Section>
-          <Enrollment
-            instance={instance}
-            open={enrollmentOpen}
-            onClose={() => setEnrollmentOpen(false)}
-          />
+          {enrollmentOpen && (
+            <Enrollment
+              key={`${instance.hostId}:${instance.id}`}
+              instance={instance}
+              onClose={() => setEnrollmentOpen(false)}
+            />
+          )}
         </>
       )}
     </TaskSheet>
@@ -1368,11 +1384,9 @@ function InstanceDetail({
 }
 function Enrollment({
   instance,
-  open,
   onClose,
 }: {
   instance: CoreInstance;
-  open: boolean;
   onClose: () => void;
 }) {
   const [form] = useForm();
@@ -1386,57 +1400,59 @@ function Enrollment({
     };
     token: string;
   } | null>(null);
+  const active = useRef(true);
+  const submitting = useRef(false);
+  useLayoutEffect(() => {
+    active.current = true;
+    form.setFieldsValue({
+      expiresAt: new Date(Date.now() + 7 * 86400000).toISOString(),
+    });
+    return () => {
+      active.current = false;
+    };
+  }, [form]);
   const mutation = useMutation({
-    mutationFn: (values: { expiresAt: string }) =>
-      post<{
-        scope: {
-          nodeId: string;
-          instanceId: string;
-          enrollmentEpoch: string;
-        };
-        token: string;
-      }>("/agent/enrollments", {
-        ...values,
-        nodeId: instance.hostId,
-        instanceId: instance.id,
-      }),
-    onSuccess: setResult,
+    mutationFn: async (values: {
+      expiresAt: string;
+      nodeId: string;
+      instanceId: string;
+    }) => {
+      if (!active.current) return;
+      const issued = await post<NonNullable<typeof result>>(
+        "/agent/enrollments",
+        values,
+      );
+      // Token material belongs only to this mounted task, never the mutation
+      // cache or a later task opened for the same instance.
+      if (active.current) setResult(issued);
+    },
+    retry: false,
+    networkMode: "always",
+    gcTime: 0,
+    onSettled: () => {
+      if (active.current) submitting.current = false;
+    },
   });
+  useUnsavedChanges(
+    mutation.isPending || !!result,
+    mutation.isPending
+      ? "接入凭据正在创建。离开不会取消操作，旧凭据可能已失效；新令牌返回后将无法在此页查看。"
+      : "离开将清除此页显示的接入令牌，请先保存到对应服务器。旧凭据已失效。",
+  );
+  const close = () => {
+    if (!active.current || submitting.current) return;
+    active.current = false;
+    onClose();
+  };
   return (
     <TaskDialog
       bodyProps={{ className: "space-y-5" }}
       title="接入核心实例"
-      open={open}
+      open
       pending={mutation.isPending}
       footer={null}
       onOpenChange={(next) => {
-        if (!next) onClose();
-      }}
-      onReady={() =>
-        ((show) => {
-          if (show) {
-            setResult(null);
-            setDateOpen(false);
-            setDatePending(false);
-            mutation.reset();
-            form.setFieldsValue({
-              expiresAt: new Date(Date.now() + 7 * 86400000).toISOString(),
-            });
-          }
-        })(true)
-      }
-      onClosed={() => {
-        ((show) => {
-          if (show) {
-            setResult(null);
-            setDateOpen(false);
-            setDatePending(false);
-            mutation.reset();
-            form.setFieldsValue({
-              expiresAt: new Date(Date.now() + 7 * 86400000).toISOString(),
-            });
-          }
-        })(false);
+        if (!next) close();
       }}
     >
       {result ? (
@@ -1477,12 +1493,20 @@ function Enrollment({
           </Accordion>
         </>
       ) : (
-        <AppForm
+        <AppForm<{ expiresAt: string }>
           form={form}
           disabled={mutation.isPending}
           onFinish={(v) => {
-            if (!dateOpen && !datePending && !mutation.isPending)
-              mutation.mutate(v);
+            if (
+              !active.current || submitting.current || result ||
+              dateOpen || datePending
+            ) return;
+            submitting.current = true;
+            mutation.mutate({
+              expiresAt: v.expiresAt,
+              nodeId: instance.hostId,
+              instanceId: instance.id,
+            });
           }}
         >
           <ErrorNotice error={mutation.error} />
@@ -1501,7 +1525,11 @@ function Enrollment({
             />
           </AppField>
           <div className="form-footer flex flex-wrap items-center justify-end gap-2 border-t pt-4 mt-6">
-            <ActionButton onClick={onClose} variant="outline">
+            <ActionButton
+              onClick={close}
+              disabled={mutation.isPending}
+              variant="outline"
+            >
               取消
             </ActionButton>
             <ActionButton

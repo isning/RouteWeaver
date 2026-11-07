@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import {
+  act,
   cleanup,
   render,
   screen,
@@ -47,7 +48,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-async function openSecurityEditor(tls?: ServerTLS, reality = true) {
+async function openSecurityEditor(tls?: ServerTLS, reality = true, twoListeners = false, refreshedPort?: number) {
   const instance = {
     id: "core",
     hostId: "host",
@@ -99,6 +100,13 @@ async function openSecurityEditor(tls?: ServerTLS, reality = true) {
       ],
     },
   };
+  const secondInstance = { ...instance, id: "second-core" };
+  const secondListener = { ...listener, id: "second-entry", name: "Second", instanceId: secondInstance.id };
+  if (twoListeners) {
+    deployment.ir.programs.push({
+      ...deployment.ir.programs[0], instance: secondInstance, listener: secondListener,
+    });
+  }
   const saved: ServerDeployment[] = [];
   vi.stubGlobal(
     "fetch",
@@ -109,10 +117,15 @@ async function openSecurityEditor(tls?: ServerTLS, reality = true) {
         const value = JSON.parse(init.body as string) as ServerDeployment;
         saved.push(value);
         result = value;
-      } else if (path.endsWith("/hosts"))
+      } else if (path.endsWith("/managed-endpoints/entry/reveal"))
+        result = {
+          ...listener,
+          connection: { ...listener.connection, port: refreshedPort ?? listener.connection.port },
+        };
+      else if (path.endsWith("/hosts"))
         result = [{ id: "host", name: "Tokyo", address: "host.example" }];
-      else if (path.endsWith("/core-instances")) result = [instance];
-      else if (path.endsWith("/managed-endpoints")) result = [listener];
+      else if (path.endsWith("/core-instances")) result = twoListeners ? [instance, secondInstance] : [instance];
+      else if (path.endsWith("/managed-endpoints")) result = twoListeners ? [listener, secondListener] : [listener];
       else if (path.endsWith("/server-deployments")) result = [deployment];
       else if (path.endsWith("/server-deployments/deployment/reveal"))
         result = deployment;
@@ -143,7 +156,7 @@ async function openSecurityEditor(tls?: ServerTLS, reality = true) {
     await waitFor(() => expect(saved).toHaveLength(1));
     return saved[0].ir.programs[0].tls;
   };
-  return { user, drawer, save };
+  return { user, drawer, save, saved };
 }
 
 it.each(["target-first", "key-first"])(
@@ -264,4 +277,144 @@ it("recovers missing REALITY lists from the endpoint when editing an earlier inc
       serverNames: ["entry.example"],
     },
   });
+});
+
+
+function delayedPEM(name = "certificate.pem") {
+  let resolve!: (text: string) => void;
+  let reject!: (error: Error) => void;
+  const pending = new Promise<string>((done, fail) => { resolve = done; reject = fail; });
+  const file = new File(["synthetic fixture"], name, { type: "application/x-pem-file" });
+  Object.defineProperty(file, "text", { value: () => pending });
+  return { file, resolve, reject };
+}
+
+it("waits for both PEM imports and preserves newer name and path edits in the saved request", async () => {
+  const { user, drawer, save, saved } = await openSecurityEditor(undefined, false);
+  const certificate = delayedPEM();
+  const key = delayedPEM("key.pem");
+  await user.upload(within(drawer).getByLabelText("读取 TLS 证书"), certificate.file);
+  await user.upload(within(drawer).getByLabelText("读取 TLS 私钥"), key.file);
+  const saveButton = within(drawer).getByRole("button", { name: "保存草稿" });
+  expect(saveButton.hasAttribute("disabled")).toBe(true);
+  await user.clear(within(drawer).getByLabelText("转发路径名称"));
+  await user.type(within(drawer).getByLabelText("转发路径名称"), "New path name");
+  await user.type(within(drawer).getByLabelText("证书文件路径"), "custom/cert.pem");
+  await user.type(within(drawer).getByLabelText("私钥文件路径"), "custom/key.pem");
+  await act(async () => certificate.resolve("synthetic certificate"));
+  expect(saveButton.hasAttribute("disabled")).toBe(true);
+  await user.click(saveButton);
+  expect(saved).toHaveLength(0);
+  await act(async () => key.resolve("synthetic private key"));
+  expect(await save()).toEqual({
+    certificatePath: "custom/cert.pem", keyPath: "custom/key.pem",
+    certificatePem: "synthetic certificate", privateKeyPem: "synthetic private key",
+  });
+  expect(saved[0].name).toBe("New path name");
+});
+
+it("manual PEM editing supersedes a pending file and suppresses its stale failure", async () => {
+  const { user, drawer, save } = await openSecurityEditor(undefined, false);
+  const old = delayedPEM();
+  await user.upload(within(drawer).getByLabelText("读取 TLS 证书"), old.file);
+  await user.type(within(drawer).getByLabelText("证书 PEM"), "newer manual certificate");
+  await act(async () => old.reject(new Error("old read failed")));
+  expect(within(drawer).queryByText("读取失败，请重新选择 PEM 文件。")).toBeNull();
+  expect((await save())?.certificatePem).toBe("newer manual certificate");
+});
+
+it("cancels pending reads without replacing material or reporting a late failure", async () => {
+  const { user, drawer, save } = await openSecurityEditor({ certificatePem: "kept certificate" }, false);
+  const old = delayedPEM();
+  await user.upload(within(drawer).getByLabelText("读取 TLS 证书"), old.file);
+  await user.click(within(drawer).getByRole("button", { name: "取消读取" }));
+  await act(async () => old.reject(new Error("cancelled read failed")));
+  expect(within(drawer).queryByText("读取失败，请重新选择 PEM 文件。")).toBeNull();
+  expect((await save())?.certificatePem).toBe("kept certificate");
+});
+
+it("does not resurrect a removed listener when its file finishes reading", async () => {
+  const { user, drawer, saved } = await openSecurityEditor(undefined, false);
+  const old = delayedPEM();
+  await user.upload(within(drawer).getByLabelText("读取 TLS 证书"), old.file);
+  await user.click(within(drawer).getByRole("button", { name: "移除第 1 跳" }));
+  await waitFor(() => expect(within(drawer).queryByLabelText("读取 TLS 证书")).toBeNull());
+  await act(async () => old.resolve("obsolete certificate"));
+  await user.click(within(drawer).getByRole("button", { name: "保存草稿" }));
+  await waitFor(() => expect(saved).toHaveLength(1));
+  expect(saved[0].ir.programs).toEqual([]);
+});
+
+
+it("keeps imports for different listeners independent while other draft fields change", async () => {
+  const { user, drawer, save, saved } = await openSecurityEditor(undefined, false, true);
+  const first = delayedPEM();
+  const second = delayedPEM();
+  const inputs = within(drawer).getAllByLabelText("读取 TLS 证书");
+  await user.upload(inputs[0], first.file);
+  await user.upload(inputs[1], second.file);
+  await user.clear(within(drawer).getByLabelText("转发路径名称"));
+  await user.type(within(drawer).getByLabelText("转发路径名称"), "Both listeners");
+  await act(async () => first.resolve("first listener certificate"));
+  expect(within(drawer).getByRole("button", { name: "保存草稿" }).hasAttribute("disabled")).toBe(true);
+  await act(async () => second.resolve("second listener certificate"));
+  await save();
+  expect(saved[0].name).toBe("Both listeners");
+  expect(saved[0].ir.programs.map((program) => program.tls?.certificatePem)).toEqual([
+    "first listener certificate", "second listener certificate",
+  ]);
+});
+
+it("ignores failure from an older selected file without clearing the newer pending read", async () => {
+  const { user, drawer, save } = await openSecurityEditor(undefined, false);
+  const old = delayedPEM("old.pem");
+  const newer = delayedPEM("new.pem");
+  await user.upload(within(drawer).getByLabelText("读取 TLS 证书"), old.file);
+  await user.upload(within(drawer).getByLabelText("读取 TLS 证书"), newer.file);
+  await act(async () => old.reject(new Error("old selection failed")));
+  expect(within(drawer).queryByText("读取失败，请重新选择 PEM 文件。")).toBeNull();
+  expect(within(drawer).getByRole("button", { name: "保存草稿" }).hasAttribute("disabled")).toBe(true);
+  await act(async () => newer.resolve("new selection certificate"));
+  expect((await save())?.certificatePem).toBe("new selection certificate");
+});
+
+
+it("revokes a pending reader when the same listener is refreshed and keeps other imports pending", async () => {
+  const { user, drawer, save, saved } = await openSecurityEditor(
+    { certificatePem: "kept certificate" }, false, true, 8443,
+  );
+  const obsolete = delayedPEM();
+  const other = delayedPEM();
+  const inputs = within(drawer).getAllByLabelText("读取 TLS 证书");
+  await user.upload(inputs[0], obsolete.file);
+  await user.upload(inputs[1], other.file);
+  await user.click(within(drawer).getByRole("button", { name: "检查监听更新 Entry" }));
+  const review = await screen.findByRole("dialog", { name: "更新 Entry 的监听设置" });
+  await waitFor(() => expect(within(review).getByRole("button", { name: "更新到草稿" }).hasAttribute("disabled")).toBe(false));
+  await user.click(within(review).getByRole("button", { name: "更新到草稿" }));
+  await waitFor(() => expect(screen.queryByRole("dialog", { name: "更新 Entry 的监听设置" })).toBeNull());
+  await act(async () => obsolete.resolve("obsolete replacement certificate"));
+  expect(within(drawer).getByRole("button", { name: "保存草稿" }).hasAttribute("disabled")).toBe(true);
+  await act(async () => other.resolve("second listener certificate"));
+  await save();
+  expect(saved[0].ir.programs[0].listener.connection.port).toBe(8443);
+  expect(saved[0].ir.programs[0].tls?.certificatePem).toBe("kept certificate");
+  expect(saved[0].ir.programs[1].tls?.certificatePem).toBe("second listener certificate");
+});
+
+it("can select the same file again after cancelling its first read", async () => {
+  const { user, drawer, save } = await openSecurityEditor(undefined, false);
+  let finishOld!: (text: string) => void;
+  const oldRead = new Promise<string>((done) => { finishOld = done; });
+  const file = new File(["synthetic fixture"], "same.pem");
+  Object.defineProperty(file, "text", {
+    value: vi.fn().mockReturnValueOnce(oldRead).mockResolvedValueOnce("retry certificate"),
+  });
+  const input = within(drawer).getByLabelText("读取 TLS 证书");
+  await user.upload(input, file);
+  await user.click(within(drawer).getByRole("button", { name: "取消读取" }));
+  await user.upload(input, file);
+  await waitFor(() => expect((within(drawer).getByLabelText("证书 PEM") as HTMLTextAreaElement).value).toBe("retry certificate"));
+  await act(async () => finishOld("obsolete first read"));
+  expect((await save())?.certificatePem).toBe("retry certificate");
 });

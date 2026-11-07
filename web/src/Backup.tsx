@@ -66,6 +66,7 @@ export function BackupSettings() {
     const [password, setPassword] = useState("");
     const [confirmation, setConfirmation] = useState("");
     const [preview, setPreview] = useState<BackupPreview | null>(null);
+    const [inspectionError, setInspectionError] = useState<Error | null>(null);
     const [fileError, setFileError] = useState<Error | null>(null);
     const [result, setResult] = useState<BackupRestoreResult | null>(null);
     const nextAttempt = useRef(0);
@@ -133,6 +134,11 @@ export function BackupSettings() {
                 return;
             setPreview(value);
             setResult(null);
+        },
+        onError: (error, { version }) => {
+            if (version !== revision.current || activeInspection.current !== version)
+                return;
+            setInspectionError(error);
         },
         onSettled: (_value, _error, { version }) => {
             if (activeInspection.current === version)
@@ -213,6 +219,7 @@ export function BackupSettings() {
         if (activeAttempt.current !== null)
             return;
         revision.current++;
+        setInspectionError(null);
         setPreview(null);
         setResult(null);
         setConfirmation("");
@@ -252,7 +259,7 @@ export function BackupSettings() {
       <PageSection id={`${sectionID}-backup-restore`} label="恢复备份设置">
       <Section title="恢复备份" description="恢复到独立的新数据库，保留当前数据；服务切换需另行操作。">
         <div className="settings-form backup-restore-form max-w-[38.75rem] space-y-5">
-          <ErrorNotice error={fileError || inspect.error}/>
+          <ErrorNotice error={fileError || inspectionError}/>
           <ErrorNotice error={restoreError}/>
           {unresolved && (<Notice tone="warning" title="恢复结果尚未确认">{<>
                   <p>
@@ -265,6 +272,7 @@ export function BackupSettings() {
                     if (activeAttempt.current !== null)
                         return;
                     revision.current++;
+                    setInspectionError(null);
                     setReviewed(unresolved);
                     setUnresolved(null);
                     setPreview(null);
@@ -299,6 +307,7 @@ export function BackupSettings() {
             if (activeAttempt.current !== null)
                 return;
             revision.current++;
+            setInspectionError(null);
             setPassword(e.target.value);
             setPreview(null);
             setConfirmation("");
@@ -314,6 +323,9 @@ export function BackupSettings() {
                 !password ||
                 fileError)
                 return;
+            setInspectionError(null);
+            setPreview(null);
+            setConfirmation("");
             const version = ++revision.current;
             activeInspection.current = version;
             inspectionSubmission.current = { version, password, file };
@@ -327,6 +339,7 @@ export function BackupSettings() {
                 if (activeAttempt.current !== null)
                     return;
                 revision.current++;
+                setInspectionError(null);
                 setPassword("");
                 setFile(null);
                 setPreview(null);

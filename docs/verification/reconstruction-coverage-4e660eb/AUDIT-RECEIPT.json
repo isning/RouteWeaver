@@ -1,0 +1,17 @@
+{
+  "date": "2026-11-06",
+  "audited_commit": "4e660eb0e0395a9ae0a0705408cbb56028f0d5d0",
+  "baseline_commit": "a1fbbc301378e47489660791e68f8c50fcf2b93f",
+  "application_verification": "UNRUN",
+  "audit_method": "Read-only Git/Python/text source inspection; wrote only coverage-audit deliverables. No upload.",
+  "input_sha256": {
+    "recovery-inventory.json": "cf0ac665470de8b3d517028926ce1cf29255e5a49c8adeac0b1d77c8e3ebc8a3",
+    "RECONSTRUCTION-SAVE-RECEIPT.json": "7d4be205745478c4c1a2be40993477ea3cb6721677176a4b89b04a621b53e47d",
+    "integration-source/docs/verification/RECONSTRUCTION-STATUS-2026-11-06.md": "2419892ca18c74b4ce22fad4cb82a62d2aa07caa73fd1169ad8a42a56a787cc2",
+    "integration-source/docs/verification/RECONSTRUCTION-EXECUTION-PLAN-2026-11-06.md": "20139f3cca15a04de02286a17437a0f6005a5e4335925ae8870ac6cde00ce553"
+  },
+  "output_sha256": {
+    "checkpoint-coverage.json": "d160deb4003e979ce58116b5f1988019c671ca39d930a58dd599219d9fd4be9c",
+    "COVERAGE-AUDIT-2026-11-06.md": "fd1b6c7dca5e37c0773c130f7d90af85cdfd0162e204aba2b855f246a1189a3e"
+  }
+}

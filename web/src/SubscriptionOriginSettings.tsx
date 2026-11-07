@@ -105,12 +105,34 @@ interface OriginState {
   proposedLinkExample: string;
   tokensUnchanged: boolean;
 }
+// Validate transport data before it can authorize a revision-fenced write.
+function validatedOriginState(value: unknown): OriginState {
+  const v = value as OriginState | null;
+  if (
+    !v || typeof v !== "object" ||
+    ![v.revision, v.configuredRevision, v.effectiveRevision].every(
+      (n) => Number.isSafeInteger(n) && n >= 0,
+    ) ||
+    v.configuredRevision > v.revision || v.effectiveRevision > v.configuredRevision ||
+    ![v.draftOrigin, v.effectiveOrigin, v.defaultOrigin,
+      v.currentLinkExample, v.proposedLinkExample].every((s) => typeof s === "string") ||
+    !["unverified", "verified", "expired", "failed", "not-required"].includes(v.verificationStatus) ||
+    v.tokensUnchanged !== true ||
+    v.currentLinkExample !== `${v.effectiveOrigin || v.defaultOrigin}/feed/{existing-token}` ||
+    v.proposedLinkExample !== `${v.draftOrigin || v.defaultOrigin}/feed/{existing-token}` ||
+    [v.verifiedAt, v.verificationExpiresAt, v.activatedAt].some(
+      (s) => s !== undefined && (typeof s !== "string" || !Number.isFinite(Date.parse(s))),
+    ) || (v.lastFailure !== undefined && typeof v.lastFailure !== "string")
+  ) throw new Error("域名设置响应不完整，请重新读取设置。");
+  return v;
+}
 const path = "/admin/subscription-origin",
   key = ["subscription-origin"];
 export function SubscriptionOriginSettings() {
   const query = useQuery({
     queryKey: key,
-    queryFn: () => request<OriginState>(path),
+    queryFn: async () => validatedOriginState(await request<unknown>(path)),
+    select: validatedOriginState,
     refetchOnWindowFocus: false,
     gcTime: 0,
   });
@@ -141,7 +163,7 @@ export function SubscriptionOriginSettings() {
           retry={() => query.refetch()}
         >
           {query.data && (
-            <OriginForm state={query.data} refresh={() => query.refetch()} />
+            <OriginForm state={query.data} readBlocked={!!query.error} refresh={() => query.refetch()} />
           )}
         </QueryState>
       </div>
@@ -150,31 +172,85 @@ export function SubscriptionOriginSettings() {
 }
 function OriginForm({
   state,
+  readBlocked,
   refresh,
 }: {
   state: OriginState;
-  refresh: () => unknown;
+  readBlocked: boolean;
+  refresh: () => Promise<{ data?: OriginState; error: Error | null }>;
 }) {
   const [origin, setOrigin] = useState(state.draftOrigin),
     [review, setReview] = useState<OriginState | null>(null),
     [confirmed, setConfirmed] = useState(false),
     [error, setError] = useState<Error | null>(null);
   const [errorTask, setErrorTask] = useState<OriginTask>("save");
+  const [uncertain, setUncertain] = useState(false);
+  const [reconciling, setReconciling] = useState(false);
+  const [recoveryError, setRecoveryError] = useState<Error | null>(null);
+  const writeLock = useRef(false);
+  const uncertainLock = useRef(false);
+  const recoveryRevision = useRef(state.revision);
+  const readLock = useRef(false);
+  const runWrite = (write: () => void) => {
+    if (writeLock.current || uncertainLock.current || readLock.current || readBlocked) return;
+    writeLock.current = true;
+    write();
+  };
+  const reconcile = async () => {
+    if (readLock.current || writeLock.current) return;
+    readLock.current = true;
+    setReconciling(true);
+    setRecoveryError(null);
+    try {
+      const result = await refresh();
+      if (result.error) throw result.error;
+      const next = validatedOriginState(result.data);
+      if (next.revision < recoveryRevision.current)
+        throw new Error("读取的域名设置已过时，请重新读取设置。");
+      // A read reports current state, not whether this particular request committed.
+      // Never replay activation or retain consent to the previous review.
+      setReview(null);
+      setConfirmed(false);
+      setError(null);
+      setUncertain(false);
+      uncertainLock.current = false;
+      client.invalidateQueries({ queryKey: ["outputs"] });
+    } catch (error) {
+      setRecoveryError(error instanceof Error ? error : new Error("无法读取域名设置。"));
+    } finally {
+      readLock.current = false;
+      setReconciling(false);
+    }
+  };
   const inputErrorID = useId();
   const reviewPresentation = useRef<OriginState | null>(null);
   useLayoutEffect(() => {
     if (review) reviewPresentation.current = review;
   }, [review]);
   const displayedReview = review || reviewPresentation.current;
+  const currentSource = useRef<{ review: OriginState | null; state: OriginState } | null>(null);
+  useLayoutEffect(() => {
+    currentSource.current = { review, state };
+    return () => { currentSource.current = null; };
+  }, [review, state]);
   const client = useQueryClient(),
     message = toast;
   const accept = (next: OriginState) => {
     client.setQueryData(key, next);
     setError(null);
   };
-  const onError = (error: Error, task: OriginTask) => {
+  const onError = (error: Error, task: OriginTask, reviewed?: OriginState) => {
     setError(error);
     setErrorTask(task);
+    if (task === "activate" && (!(error instanceof APIError) ||
+        error.status === 0 || error.status >= 500 ||
+        (error.status >= 200 && error.status < 300))) {
+      uncertainLock.current = true;
+      recoveryRevision.current = Math.max(state.revision, reviewed?.revision || 0);
+      setUncertain(true);
+      setConfirmed(false);
+      return;
+    }
     if (
       error instanceof APIError &&
       (error.status === 409 || error.status === 422)
@@ -185,41 +261,60 @@ function OriginForm({
     }
   };
   const save = useMutation({
-    mutationFn: () =>
-      put<OriginState>(path, {
+    mutationFn: async () =>
+      validatedOriginState(await put<unknown>(path, {
         origin: origin.trim(),
         expectedRevision: state.revision,
-      }),
+      })),
     onSuccess: (next) => {
       accept(next);
       setOrigin(next.draftOrigin);
       message.success("域名草稿已保存，当前订阅地址未改变");
     },
     onError: (error) => onError(error, "save"),
+    onSettled: () => { writeLock.current = false; },
   });
   const verify = useMutation({
-    mutationFn: () =>
-      post<OriginState>(`${path}/verify`, { expectedRevision: state.revision }),
+    mutationFn: async () =>
+      validatedOriginState(await post<unknown>(`${path}/verify`, { expectedRevision: state.revision })),
     onSuccess: (next) => {
       accept(next);
       message.success("已验证 HTTPS 地址属于当前实例");
     },
     onError: (error) => onError(error, "verify"),
+    onSettled: () => { writeLock.current = false; },
   });
   const activate = useMutation({
-    mutationFn: () =>
-      post<OriginState>(`${path}/activate`, {
-        expectedRevision: review!.revision,
-      }),
-    onSuccess: (next) => {
+    retry: false,
+    mutationFn: async ({ reviewed, owner }: { reviewed: Readonly<OriginState>; owner: OriginState }) => {
+      const source = currentSource.current;
+      if (!source || source.review !== owner || source.state.revision !== reviewed.revision)
+        throw new APIError("settings changed or no draft exists; reload before continuing", 409);
+      const next = validatedOriginState(await post<unknown>(`${path}/activate`, {
+        expectedRevision: reviewed.revision,
+      }));
+      if (next.revision !== reviewed.revision + 1 ||
+          next.configuredRevision !== reviewed.configuredRevision ||
+          next.draftOrigin !== reviewed.draftOrigin ||
+          next.effectiveRevision !== reviewed.configuredRevision ||
+          next.effectiveOrigin !== reviewed.draftOrigin || !next.activatedAt)
+        throw new Error("无法确认域名启用结果，请重新读取设置。");
+      return next;
+    },
+    onSuccess: (next, { owner }) => {
+      if (currentSource.current?.review !== owner) return;
       accept(next);
       setReview(null);
       client.invalidateQueries({ queryKey: ["outputs"] });
       message.success("新复制的订阅链接将使用所选地址");
     },
-    onError: (error) => onError(error, "activate"),
+    onError: (error, { reviewed, owner }) => {
+      if (currentSource.current?.review !== owner) return;
+      onError(error, "activate", reviewed);
+    },
+    onSettled: () => { writeLock.current = false; },
   });
-  const busy = save.isPending || verify.isPending || activate.isPending,
+  const busy = save.isPending || verify.isPending || activate.isPending || uncertain || reconciling || readBlocked,
     dirty = origin.trim() !== state.draftOrigin,
     pending = state.configuredRevision !== state.effectiveRevision;
   useUnsavedChanges(dirty || busy);
@@ -233,8 +328,20 @@ function OriginForm({
     failed: "草稿验证未通过",
     "not-required": "默认地址无需验证",
   }[state.verificationStatus];
+  const recoveryNotice = () => (
+    <Notice tone="error" title="域名启用结果尚未确认" action={
+      <ActionButton pending={reconciling} onClick={() => void reconcile()} variant="outline">
+        重新读取设置
+      </ActionButton>
+    }>
+      <p>请先读取当前设置，再核对是否仍需启用。读取不会重复提交。</p>
+      {error && <p>{error.message}</p>}
+      {recoveryError && <p>{recoveryError.message}</p>}
+    </Notice>
+  );
   return (
     <>
+      {uncertain && !review && recoveryNotice()}
       <dl className="subscription-origin-summary divide-y">
         <SettingsRow
           label="当前订阅地址"
@@ -294,7 +401,7 @@ function OriginForm({
           <ActionButton
             pending={save.isPending}
             disabled={busy && !save.isPending}
-            onClick={() => save.mutate()}
+            onClick={() => runWrite(() => save.mutate())}
             variant="outline"
           >
             保存域名草稿
@@ -332,7 +439,7 @@ function OriginForm({
               {proofLabel}
             </SettingsRow>
           </dl>
-          {error && errorTask !== "save" && (
+          {error && errorTask !== "save" && !review && !uncertain && (
             <OriginError error={error} task={errorTask} />
           )}
           {state.verificationStatus === "failed" &&
@@ -356,7 +463,7 @@ function OriginForm({
               <ActionButton
                 disabled={dirty || busy}
                 pending={verify.isPending}
-                onClick={() => verify.mutate()}
+                onClick={() => runWrite(() => verify.mutate())}
                 variant="outline"
               >
                 验证 HTTPS 与实例
@@ -373,7 +480,7 @@ function OriginForm({
               启用已保存草稿
             </ActionButton>
             <ActionButton
-              disabled={busy}
+              disabled={save.isPending || verify.isPending || activate.isPending || uncertain || reconciling}
               onClick={() => refresh()}
               variant="ghost"
             >
@@ -403,9 +510,13 @@ function OriginForm({
               取消
             </ActionButton>
             <ActionButton
-              disabled={!confirmed}
+              disabled={!confirmed || uncertain || reconciling || readBlocked}
               pending={activate.isPending}
-              onClick={() => activate.mutate()}
+              onClick={() => {
+                if (!confirmed || !review) return;
+                const reviewed = Object.freeze(structuredClone(review));
+                runWrite(() => activate.mutate({ reviewed, owner: review }));
+              }}
               variant="default"
             >
               确认启用
@@ -416,6 +527,9 @@ function OriginForm({
           if (!nextOpen) (() => !activate.isPending && setReview(null))();
         }}
       >
+        {uncertain ? recoveryNotice() : error && errorTask === "activate" && (
+          <OriginError error={error} task="activate" />
+        )}
         {displayedReview && (
           <>
             <KeyValue label="当前链接">
@@ -430,6 +544,7 @@ function OriginForm({
             </p>
             <Label className="inline-flex items-start gap-2 text-sm leading-relaxed">
               <Checkbox
+                disabled={uncertain || activate.isPending || reconciling}
                 checked={confirmed}
                 onCheckedChange={(checked) =>
                   ((e) => setConfirmed(e.target.checked))({

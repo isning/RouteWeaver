@@ -10,6 +10,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { flushSync } from "react-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { UIProviders } from "./ui-patterns/providers";
 import { AccountSecurityPage } from "./AccountSecurity";
@@ -47,6 +48,8 @@ afterEach(() => {
   cleanup();
   client.clear();
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+  sessionStorage.clear();
 });
 it("lets an ordinary user change their password with fresh credentials and accepts the rotated session", async () => {
   const before = {
@@ -204,7 +207,11 @@ it("shows the exact target and consequence before an administrator disables an a
   fireEvent.click(await screen.findByRole("button", { name: "管理 Target · Personal" }));
   const dialog = screen.getByRole("dialog", { name: "管理 Target · Personal 的账号" });
   expect(within(dialog).getByText("登录名：target")).toBeTruthy();
-  expect(screen.getByText(/立即阻止登录和订阅链接交付/)).toBeTruthy();
+  const warning = within(dialog).getByText(/立即阻止登录和订阅链接交付/);
+  expect(warning.textContent).toContain("托管入口将拒绝新连接与续期");
+  expect(warning.textContent).toContain("已有连接可能在续期被拒绝或租约到期时结束");
+  expect(warning.textContent).toContain("非托管节点");
+  expect(warning.textContent).not.toContain("立即断开");
   fireEvent.change(screen.getByLabelText("操作原因"), {
     target: { value: "Owner requested disable" },
   });
@@ -449,7 +456,17 @@ it.each(["reset-password", "reset-mfa", "retire", "enable"] as const)(
     }
     if (action === "reset-password")
       fill("临时密码", "temporary-password-example");
-    if (action === "retire") fill("输入登录名以确认永久退役", "target-login");
+    if (action === "retire") {
+      const warning = within(screen.getByRole("dialog")).getByText(
+        /永久阻止登录和订阅链接交付/,
+      );
+      expect(warning.textContent).toContain("账号不能重新启用");
+      expect(warning.textContent).toContain("托管入口将拒绝新连接与续期");
+      expect(warning.textContent).toContain("已有连接可能在续期被拒绝或租约到期时结束");
+      expect(warning.textContent).toContain("非托管节点");
+      expect(warning.textContent).not.toContain("立即断开");
+      fill("输入登录名以确认永久退役", "target-login");
+    }
     fill("操作原因", "Verified owner recovery");
     fill("管理员当前密码", "admin-current-password");
     fill("管理员验证器验证码", "123456");
@@ -466,7 +483,7 @@ it.each(["reset-password", "reset-mfa", "retire", "enable"] as const)(
     });
   },
 );
-it("preserves an administrator recovery draft after failure and requires confirmation before discarding it", async () => {
+it("preserves the reason but clears credentials after uncertain administrator recovery and requires confirmation before discarding it", async () => {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url, init) =>
@@ -497,7 +514,9 @@ it("preserves an administrator recovery draft after failure and requires confirm
   fill("管理员当前密码", "admin-current-password");
   fill("管理员验证器验证码", "123456");
   fireEvent.click(screen.getByRole("button", { name: "停用账号" }));
-  await screen.findByText("required audit unavailable");
+  await screen.findByText("安全操作结果尚未确认。请查看当前状态，不要直接重复提交。");
+  expect((screen.getByLabelText("管理员当前密码") as HTMLInputElement).value).toBe("");
+  expect((screen.getByLabelText("管理员验证器验证码") as HTMLInputElement).value).toBe("");
   expect((screen.getByLabelText("操作原因") as HTMLInputElement).value).toBe(
     "Keep this recovery reason",
   );
@@ -615,4 +634,206 @@ it("renders empty security records without empty list surfaces and refreshes rea
     within(region).getByRole("button", { name: "退出当前会话" }),
   ).toBeTruthy();
   expect(within(region).queryByText("没有有效会话。")).toBeNull();
+});
+
+
+// SOURCE-ONLY reconstruction: these new public UI cases have not been executed.
+function fillPasswordAttempt() {
+  fill("当前密码", "current-secret-example");
+  fill("新密码", "new-secret-example");
+  fill("确认新密码", "new-secret-example");
+  fill("验证器验证码", "123456");
+}
+it.each([0, 409, 500, 200])("keeps an uncertain password outcome (%s) across remount, reads only and never silently unlocks resubmission", async (status) => {
+  let writes = 0;
+  let persistedAtDispatch = "";
+  vi.stubGlobal("fetch", vi.fn(async (_url, init) => {
+    if (init?.method === "POST") {
+      writes++;
+      persistedAtDispatch = sessionStorage.getItem("routeweaver.security-recovery.v1:person") || "";
+      if (!status) throw new TypeError("response lost");
+      return json({ detail: "response ownership changed" }, status);
+    }
+    return json([{ id: "current", current: true, expiresAt: "2027-01-01" }]);
+  }));
+  const first = mountSecurity();
+  fillPasswordAttempt();
+  fireEvent.click(screen.getByRole("button", { name: "修改密码" }));
+  await screen.findByText("安全操作结果尚未确认。请查看当前状态，不要直接重复提交。");
+  expect(first.changed).not.toHaveBeenCalled();
+  expect((screen.getByLabelText("当前密码") as HTMLInputElement).value).toBe("");
+  expect((screen.getByLabelText("新密码") as HTMLInputElement).value).toBe("");
+  expect((screen.getByLabelText("验证器验证码") as HTMLInputElement).value).toBe("");
+  const metadata = JSON.parse(persistedAtDispatch);
+  expect(Object.keys(metadata).sort()).toEqual(["action", "actor", "startedAt", "target"]);
+  expect(metadata).toMatchObject({ action: "password", actor: "person", target: "person" });
+  expect(persistedAtDispatch).not.toMatch(/current-secret|new-secret|123456|csrf|old/);
+  cleanup(); client.clear();
+  mountSecurity();
+  await screen.findByText("安全操作结果尚未确认");
+  fireEvent.click(screen.getByRole("button", { name: "查看当前状态" }));
+  await screen.findByText("当前可见有效会话：1。");
+  expect(writes).toBe(1);
+  expect((screen.getByRole("button", { name: "修改密码" }) as HTMLButtonElement).disabled).toBe(true);
+  expect(screen.getByText(/关闭提醒不会取消原操作/)).toBeTruthy();
+  expect(sessionStorage.getItem("routeweaver.security-recovery.v1:person")).toBe(persistedAtDispatch);
+});
+it("does not dispatch when recovery metadata cannot be saved", async () => {
+  let writes = 0;
+  vi.stubGlobal("fetch", vi.fn(async (_url, init) => {
+    if (init?.method === "POST") writes++;
+    return json([]);
+  }));
+  mountSecurity();
+  vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => { throw new Error("storage denied"); });
+  fillPasswordAttempt();
+  fireEvent.click(screen.getByRole("button", { name: "修改密码" }));
+  await waitFor(() => expect(screen.getAllByText("无法保存安全操作记录，本次尚未提交。请检查浏览器会话存储。").length).toBeGreaterThan(0));
+  expect(writes).toBe(0);
+});
+it("keeps an old actor's reminder private when switching accounts and ignores late success", async () => {
+  let release!: (value: Response) => void;
+  let writes = 0;
+  const held = new Promise<Response>((resolve) => { release = resolve; });
+  vi.stubGlobal("fetch", vi.fn(async (_url, init) => {
+    if (init?.method === "POST") { writes++; return held; }
+    return json([]);
+  }));
+  const task = mountSecurity();
+  fillPasswordAttempt();
+  fireEvent.click(screen.getByRole("button", { name: "修改密码" }));
+  await waitFor(() => expect(writes).toBe(1));
+  task.rerender({ ...person, user: { ...person.user, id: "other-person" } });
+  await act(async () => { release(json({ ...person, csrfToken: "rotated" })); await held; });
+  expect(task.changed).not.toHaveBeenCalled();
+  expect(screen.queryByText("安全操作结果尚未确认")).toBeNull();
+  task.rerender(person);
+  await screen.findByText("安全操作结果尚未确认");
+  expect(writes).toBe(1);
+});
+it("treats a failed current-state read as inconclusive and keeps the write blocked", async () => {
+  sessionStorage.setItem("routeweaver.security-recovery.v1:person", JSON.stringify({ actor: "person", target: "person", action: "password", startedAt: "2026-11-06T00:00:00Z" }));
+  let writes = 0;
+  vi.stubGlobal("fetch", vi.fn(async (_url, init) => {
+    if (init?.method === "POST") writes++;
+    return json({ detail: "not found" }, 404);
+  }));
+  mountSecurity();
+  fireEvent.click(screen.getByRole("button", { name: "查看当前状态" }));
+  await screen.findByText("无法读取当前状态。请确认登录和网络后再次查看；原操作仍未确认。");
+  expect(screen.queryByRole("button", { name: "已查看状态，关闭提醒" })).toBeNull();
+  expect((screen.getByRole("button", { name: "修改密码" }) as HTMLButtonElement).disabled).toBe(true);
+  expect(writes).toBe(0);
+});
+
+it("does not interpret incomplete account state as disabled or MFA being off", async () => {
+  sessionStorage.setItem("routeweaver.security-recovery.v1:admin", JSON.stringify({ actor: "admin", target: "target", action: "reset-mfa", startedAt: "2026-11-06T00:00:00Z" }));
+  vi.stubGlobal("fetch", vi.fn(async (url) => json(String(url).endsWith("/admin/accounts") ? [{ id: "target", name: "Target", username: "target" }] : [])));
+  mountSecurity({ ...person, user: { ...person.user, id: "admin", role: "admin" } });
+  fireEvent.click(screen.getByRole("button", { name: "查看当前状态" }));
+  await screen.findByText("无法读取当前状态。请确认登录和网络后再次查看；原操作仍未确认。");
+  expect(screen.queryByText(/目标账号当前状态/)).toBeNull();
+  expect(screen.queryByRole("button", { name: "已查看状态，关闭提醒" })).toBeNull();
+});
+it("requires explicit duplicate-action confirmation before dismissing a recovery reminder", async () => {
+  sessionStorage.setItem("routeweaver.security-recovery.v1:person", JSON.stringify({ actor: "person", target: "person", action: "password", startedAt: "2026-11-06T00:00:00Z" }));
+  vi.stubGlobal("fetch", vi.fn(async () => json([])));
+  mountSecurity();
+  fireEvent.click(screen.getByRole("button", { name: "查看当前状态" }));
+  await screen.findByText("当前可见有效会话：0。");
+  fireEvent.click(screen.getByRole("button", { name: "已查看状态，关闭提醒" }));
+  const review = await screen.findByRole("alertdialog");
+  expect(review.textContent).toContain("再次提交可能重复执行");
+  fireEvent.click(within(review).getByRole("button", { name: "保留提醒" }));
+  await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+  expect((screen.getByRole("button", { name: "修改密码" }) as HTMLButtonElement).disabled).toBe(true);
+});
+it("blocks writes when persisted metadata belongs to another actor", async () => {
+  sessionStorage.setItem("routeweaver.security-recovery.v1:person", JSON.stringify({ actor: "other", target: "other", action: "password", startedAt: "2026-11-06T00:00:00Z" }));
+  vi.stubGlobal("fetch", vi.fn(async () => json([])));
+  mountSecurity();
+  await screen.findByText("无法读取安全操作记录。请恢复浏览器会话存储后重新打开此页；暂不提交新的安全操作。");
+  expect((screen.getByRole("button", { name: "修改密码" }) as HTMLButtonElement).disabled).toBe(true);
+  expect(screen.queryByText(/目标标识：other/)).toBeNull();
+});
+
+
+it.each([
+  ["password", "switch"], ["password", "unmount"],
+  ["revoke-others", "switch"], ["revoke-others", "unmount"],
+] as const)("does not dispatch %s when its form is removed during validation (%s)", async (operation, departure) => {
+  const writes: string[] = [];
+  vi.stubGlobal("fetch", vi.fn(async (url, init) => {
+    if (init?.method && init.method !== "GET") writes.push(String(url));
+    return json([]);
+  }));
+  const task = mountSecurity();
+  if (operation === "password") fillPasswordAttempt();
+  else {
+    fill("验证当前密码", "current-secret-example");
+    fill("退出其他会话的验证码", "123456");
+  }
+  const button = screen.getByRole("button", { name: operation === "password" ? "修改密码" : "退出其他所有会话" });
+  const form = button.closest("form");
+  expect(form).not.toBeNull();
+  // Native form submit starts asynchronous validation. Remove the owning task
+  // in the same event turn, before promise-based validation can finish.
+  await act(async () => {
+    fireEvent.submit(form!);
+    if (departure === "switch") flushSync(() => task.rerender({ ...person, user: { ...person.user, id: "next-person" } }));
+    else cleanup();
+  });
+  expect(writes).toEqual([]);
+  expect(sessionStorage.getItem("routeweaver.security-recovery.v1:person")).toBeNull();
+  expect(sessionStorage.getItem("routeweaver.security-recovery.v1:next-person")).toBeNull();
+  if (departure === "switch") {
+    expect((screen.getByLabelText("当前密码") as HTMLInputElement).value).toBe("");
+    expect(screen.queryByText("安全操作结果尚未确认")).toBeNull();
+  }
+});
+it("keeps unknown revoke-other outcome across remount without repeating the write", async () => {
+  let writes = 0;
+  vi.stubGlobal("fetch", vi.fn(async (_url, init) => {
+    if (init?.method === "POST") { writes++; throw new TypeError("lost response"); }
+    return json([]);
+  }));
+  mountSecurity();
+  fill("验证当前密码", "current-secret-example");
+  fill("退出其他会话的验证码", "123456");
+  fireEvent.click(screen.getByRole("button", { name: "退出其他所有会话" }));
+  await screen.findByText("安全操作结果尚未确认。请查看当前状态，不要直接重复提交。");
+  expect((screen.getByLabelText("验证当前密码") as HTMLInputElement).value).toBe("");
+  expect((screen.getByLabelText("退出其他会话的验证码") as HTMLInputElement).value).toBe("");
+  cleanup(); client.clear();
+  mountSecurity();
+  await screen.findByText("安全操作结果尚未确认");
+  fireEvent.click(screen.getByRole("button", { name: "查看当前状态" }));
+  await screen.findByText("当前可见有效会话：0。");
+  expect((screen.getByRole("button", { name: "退出其他所有会话" }) as HTMLButtonElement).disabled).toBe(true);
+  expect(writes).toBe(1);
+});
+it("retains an unknown administrator operation after closing its task and remounting without treating current state as completion", async () => {
+  const admin = { ...person, user: { ...person.user, id: "admin", role: "admin" } };
+  let writes = 0;
+  const target = { id: "target", name: "Target", username: "target", role: "user", disabled: false, retired: false, mfaEnabled: false, passwordChangeRequired: false };
+  vi.stubGlobal("fetch", vi.fn(async (url, init) => {
+    if (init?.method === "POST") { writes++; target.disabled = true; throw new TypeError("lost response"); }
+    return json(String(url).endsWith("/admin/accounts") ? [target] : []);
+  }));
+  mountSecurity(admin);
+  fireEvent.click(await screen.findByRole("button", { name: "管理 Target" }));
+  fill("操作原因", "Owner requested disable");
+  fill("管理员当前密码", "admin-secret-example");
+  fill("管理员验证器验证码", "123456");
+  fireEvent.click(screen.getByRole("button", { name: "停用账号" }));
+  await screen.findByText("安全操作结果尚未确认。请查看当前状态，不要直接重复提交。");
+  expect((screen.getByLabelText("管理员当前密码") as HTMLInputElement).value).toBe("");
+  cleanup(); client.clear();
+  mountSecurity(admin);
+  await screen.findByText("安全操作结果尚未确认");
+  fireEvent.click(screen.getByRole("button", { name: "查看当前状态" }));
+  await screen.findByText("目标账号当前状态：已停用；未启用二次验证；未要求更换密码。");
+  expect(screen.getByText(/当前状态不能证明上次操作是否完成/)).toBeTruthy();
+  expect((screen.getByRole("button", { name: "管理 Target" }) as HTMLButtonElement).disabled).toBe(true);
+  expect(writes).toBe(1);
 });

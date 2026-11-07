@@ -25,8 +25,11 @@ const Context = createContext<{
   lifecycle: SessionLifecycle;
   snapshot: SessionSnapshot;
 } | null>(null);
+export function useOptionalSessionAccess() {
+  return useContext(Context);
+}
 export function useSessionAccess() {
-  const value = useContext(Context);
+  const value = useOptionalSessionAccess();
   if (!value) throw new Error("Session boundary required");
   return value;
 }

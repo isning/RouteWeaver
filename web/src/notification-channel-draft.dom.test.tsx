@@ -343,3 +343,129 @@ it("keeps announcement fields in the sequential task scroll when viewport capaci
     ),
   );
 });
+
+// Recovery source regressions: these have not been executed in the source-only workspace.
+it.each([
+  ["到期提醒重复周期（小时）", "1e"],
+  ["到期提醒重复周期（小时）", ""],
+  ["到期提醒重复周期（小时）", "24.00000000000000000001"],
+  ["到期提醒重复周期（小时）", "0"],
+  ["到期提醒重复周期（小时）", "721"],
+  ["到期提醒重复周期（小时）", "0x18"],
+  ["到期提醒重复周期（小时）", " 24 "],
+  ["端口", "1e"],
+  ["端口", ""],
+  ["端口", "587.00000000000000001"],
+  ["端口", "65536"],
+  ["端口", "0"],
+])("retains and blocks invalid exact %s draft %s before HTTP", async (label, raw) => {
+  const sent = await mount();
+  if (label === "端口") toggle("邮件通知");
+  change(label, raw);
+  expect(hasUnsavedChanges()).toBe(true);
+  fireEvent.blur(screen.getByLabelText(label));
+  if (label === "端口") toggle("邮件通知");
+  tab("发送记录");
+  tab("提醒与渠道");
+  save();
+  await screen.findByText(label === "端口" ? "请输入 1–65535 之间的整数" : "请输入 1–720 之间的整数");
+  if (label === "端口")
+    expect(screen.getByRole("button", { name: "邮件通知" }).getAttribute("aria-expanded")).toBe("true");
+  expect(screen.getByLabelText(label)).toHaveProperty("value", raw);
+  expect(sent).toHaveLength(0);
+  change(label, label === "端口" ? "5.87e2" : "7.2e2");
+  save();
+  await waitFor(() => expect(sent).toHaveLength(1));
+  expect(label === "端口" ? sent[0].email.port : sent[0].repeatHours).toBe(label === "端口" ? 587 : 720);
+  expect(sent[0].revision).toBe(1);
+  expect(sent[0]).not.toHaveProperty("smtpPassword");
+});
+
+it("retries exact scalar payloads without losing secrets, revision or raw spelling", async () => {
+  const sent = await mount(true);
+  toggle("邮件通知");
+  change("端口", "000587.0");
+  change("到期提醒重复周期（小时）", "+2.4e1");
+  change("更新 SMTP 密码（留空保留已保存值）", "synthetic-secret");
+  toggle("邮件通知");
+  save();
+  await screen.findByText("设置未保存，请重试");
+  toggle("邮件通知");
+  expect(screen.getByLabelText("端口")).toHaveProperty("value", "000587.0");
+  expect(screen.getByLabelText("到期提醒重复周期（小时）")).toHaveProperty("value", "+2.4e1");
+  expect(hasUnsavedChanges()).toBe(true);
+  save();
+  await waitFor(() => expect(sent).toHaveLength(2));
+  expect(sent[1]).toEqual(sent[0]);
+  expect(sent[1]).toMatchObject({ repeatHours: 24, email: { port: 587 }, revision: 1, smtpPassword: "synthetic-secret" });
+});
+
+async function addThreshold(label: string, token: string) {
+  fireEvent.click(screen.getByRole("combobox", { name: label }));
+  fireEvent.change(await screen.findByRole("combobox", { name: "搜索选项" }), { target: { value: token } });
+  fireEvent.click(await screen.findByRole("option", { name: `添加“${token}”` }));
+  fireEvent.keyDown(screen.getByRole("combobox", { name: "搜索选项" }), { key: "Escape" });
+  await waitFor(() => expect(screen.getByRole("combobox", { name: label }).getAttribute("aria-expanded")).toBe("false"));
+}
+it.each([
+  ["已用额度提醒阈值（%）", "80.000000000000000001", 100],
+  ["已用额度提醒阈值（%）", "8e1", 100],
+  ["已用额度提醒阈值（%）", "0x10", 100],
+  ["已用额度提醒阈值（%）", "1e", 100],
+  ["已用额度提醒阈值（%）", "0", 100],
+  ["已用额度提醒阈值（%）", "101", 100],
+  ["到期前提醒（小时）", "8785", 8784],
+  ["到期前提醒（小时）", "24.000000000000000001", 8784],
+  ["供应商剩余配额提醒（%）", "2e1", 100],
+  ["供应商剩余配额提醒（%）", "100.00000000000000001", 100],
+] as const)("blocks invalid or numerically duplicate %s token %s", async (label, token, max) => {
+  const sent = await mount();
+  await addThreshold(label, token);
+  save();
+  await screen.findByText(`最多设置 10 个不重复的 1–${max} 整数阈值`);
+  expect(sent).toHaveLength(0);
+  expect(hasUnsavedChanges()).toBe(true);
+  fireEvent.click(screen.getByRole("button", { name: `移除 ${token}` }));
+  save();
+  await waitFor(() => expect(sent).toHaveLength(1));
+  expect(sent[0].quotaPercent).toEqual([80]);
+  expect(sent[0].expiryHours).toEqual([24]);
+  expect(sent[0].providerRemainingPercent).toEqual([20]);
+});
+it("preserves selected order, exact integer spellings and empty-list disable semantics", async () => {
+  const sent = await mount();
+  await addThreshold("已用额度提醒阈值（%）", "1e2");
+  await addThreshold("已用额度提醒阈值（%）", "01.0");
+  await addThreshold("到期前提醒（小时）", "8784");
+  fireEvent.click(screen.getByRole("button", { name: "移除 20" }));
+  save();
+  await waitFor(() => expect(sent).toHaveLength(1));
+  expect(sent[0].quotaPercent).toEqual([80, 100, 1]);
+  expect(sent[0].expiryHours).toEqual([24, 8784]);
+  expect(sent[0].providerRemainingPercent).toEqual([]);
+});
+it("allows ten thresholds and blocks an eleventh without dropping any chip", async () => {
+  const sent = await mount();
+  for (let n = 1; n <= 10; n++) await addThreshold("已用额度提醒阈值（%）", String(n));
+  save();
+  await screen.findByText("最多设置 10 个不重复的 1–100 整数阈值");
+  expect(sent).toHaveLength(0);
+  fireEvent.click(screen.getByRole("button", { name: "移除 10" }));
+  save();
+  await waitFor(() => expect(sent).toHaveLength(1));
+  expect(sent[0].quotaPercent).toEqual([80, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+});
+it("reveals a collapsed sender address error and preserves optional native email semantics", async () => {
+  const sent = await mount();
+  toggle("邮件通知");
+  change("发件地址", "not-an-email");
+  toggle("邮件通知");
+  save();
+  await screen.findByText("请输入有效的发件地址");
+  expect(screen.getByRole("button", { name: "邮件通知" }).getAttribute("aria-expanded")).toBe("true");
+  expect(sent).toHaveLength(0);
+  change("发件地址", "");
+  save();
+  await waitFor(() => expect(sent).toHaveLength(1));
+  expect(sent[0].email.from).toBe("");
+});

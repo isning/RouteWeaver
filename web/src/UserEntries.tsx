@@ -25,7 +25,6 @@ import { useDiscardConfirmation } from "./useDiscardConfirmation";
 import { invalidateOutputInputs } from "./output-comparison";
 import type {
   Connection,
-  Entitlement,
   PlatformEntry,
   RouteRecord,
   Service,
@@ -94,7 +93,6 @@ function UserEntryTask({
   onExited,
   routes,
   publishedRoutes = [],
-  services,
   onClose,
   allocationHref = "#published-routes",
 }: {
@@ -155,18 +153,25 @@ function UserEntryTask({
     () => setPage((current) => Math.min(current, pageCount)),
     [pageCount],
   );
-  const entitlement = useQuery({
-    queryKey: ["entitlement", user?.id],
-    queryFn: () => request<Entitlement>(`/users/${user!.id}/entitlement`),
+  const policy = useQuery({
+    queryKey: ["effective-policy", user.id],
+    queryFn: () => request<unknown>(`/users/${user.id}/effective-policy`),
+    // Validate every observed value, including data seeded by other cache observers.
+    select: (value: unknown): string[] => {
+      if (!value || typeof value !== "object" || Array.isArray(value))
+        throw new Error("无法读取此用户的授权线路，请重试。");
+      const record = value as Record<string, unknown>;
+      if (
+        record.userId !== user.id ||
+        !Array.isArray(record.routeIds) ||
+        !record.routeIds.every((id) => typeof id === "string" && id.trim() !== "")
+      )
+        throw new Error("无法读取此用户的授权线路，请重试。");
+      return record.routeIds;
+    },
     enabled: open,
   });
-  const permitted = new Set([
-    ...(services.find((s) => s.id === entitlement.data?.serviceId)?.routeIds ||
-      []),
-    ...routes
-      .filter((r) => r.userIds.includes(user?.id || ""))
-      .map((r) => r.id),
-  ]);
+  const permitted = new Set(policy.isError ? [] : policy.data || []);
   const save = useMutation({
     onMutate: () => invalidateOutputInputs(client),
     onSettled: (_data, _error, { task }) => {
@@ -349,7 +354,7 @@ function UserEntryTask({
       }
     >
       <div inert={!open}>
-        <ErrorNotice error={error} />
+        {!editing && <ErrorNotice error={error} />}
         {revealing && (
           <Notice tone="info" title={`正在读取「${revealing.name}」的入口凭据`}>
             <ActionButton
@@ -365,12 +370,12 @@ function UserEntryTask({
           </Notice>
         )}
         <QueryState
-          loading={open && (query.isPending || entitlement.isPending)} paused={query.isPaused || entitlement.isPaused} loadingLayout="table"
-          error={query.error || entitlement.error}
+          loading={open && (query.isPending || policy.isPending)} paused={query.isPaused || policy.isPaused} loadingLayout="table"
+          error={query.error || policy.error}
           retry={() => {
             if (!active.current) return;
             query.refetch();
-            entitlement.refetch();
+            policy.refetch();
           }}
         >
           {!query.data?.length ? (
@@ -499,7 +504,9 @@ function UserEntryTask({
                                 confirm({
                                   title: `停止交付「${g.name}」？`,
                                   description:
-                                    "\u5C06\u963B\u6B62\u76F8\u5173\u5E73\u53F0\u8BA2\u9605\u7EE7\u7EED\u4EA4\u4ED8\u3002\u5DF2\u4E0B\u8F7D\u7684\u51ED\u636E\u4E0D\u4F1A\u56E0\u6B64\u4ECE\u8282\u70B9\u64A4\u9500\u3002",
+                                    g.publishedRouteId
+                                      ? "将阻止相关平台订阅继续交付。此托管入口将拒绝新连接与续期，已有连接可能在续期被拒绝或租约到期时结束，无需重新发布订阅或重启核心。"
+                                      : "将阻止相关平台订阅继续交付。已下载的凭据不会因此从节点撤销。",
                                   confirmLabel: "\u505C\u6B62\u4EA4\u4ED8",
                                   cancelLabel: "\u4FDD\u7559",
                                   destructive: true,
@@ -578,6 +585,19 @@ function UserEntryTask({
             const task = owner.current;
             if (!active.current || !editing || !task || submitting.current)
               return;
+            if (policy.isPending || policy.isError) {
+              setError(new Error("授权线路尚未读取成功，请重试后保存。"));
+              return;
+            }
+            if (!permitted.has(v.routeId)) {
+              setError(new Error("此线路不在当前授权中，请重新选择授权线路。"));
+              return;
+            }
+            if (!routes.some((route) => route.id === v.routeId)) {
+              setError(new Error("当前线路列表中没有此线路，请刷新列表后重试。"));
+              return;
+            }
+            setError(null);
             submitting.current = task;
             save.mutate({
               value: {
@@ -591,7 +611,7 @@ function UserEntryTask({
             });
           }}
         >
-          <ErrorNotice error={save.error} />
+          <ErrorNotice error={save.error || error} />
           {editing?.revoked && (
             <Notice tone="info" title="填写新连接凭据">
               已撤销的凭据不会重新读取。请填写为此用户新准备的连接；保存将使用新凭据版本，旧版本仍不可用于订阅交付。
@@ -600,6 +620,21 @@ function UserEntryTask({
           <AppField name="name" label="入口名称" rules={[{ required: true }]}>
             <Input placeholder="例如：伦敦入口" />
           </AppField>
+          {policy.isError ? (
+            <Notice
+              tone="error"
+              title="无法读取授权线路"
+              action={
+                <ActionButton variant="outline" onClick={() => void policy.refetch()}>
+                  重试
+                </ActionButton>
+              }
+            >
+              {policy.error.message}
+            </Notice>
+          ) : policy.data?.length === 0 ? (
+            <Notice tone="info" title="此用户当前没有授权线路。" />
+          ) : null}
           <AppField
             name="routeId"
             label="授权线路"

@@ -124,6 +124,12 @@ export function RouteExitEditor({
   const [baseline, setBaseline] = useState({ route, deployment, inventory });
   const [endpointId, setEndpointId] = useState<string>();
   const [tls, setTLS] = useState<ServerTLS>({});
+  const [materialPending, setMaterialPending] = useState(false);
+  const materialPendingRef = useRef(false);
+  const pendingMaterial = useCallback((pending: boolean) => {
+    materialPendingRef.current = pending;
+    setMaterialPending(pending);
+  }, []);
   const [selectionPending, setSelectionPending] = useState(false);
   const [reviewed, setReviewed] = useState<{
     input: RetargetInput;
@@ -168,7 +174,14 @@ export function RouteExitEditor({
       sequence.current++;
     };
   }, []);
-  useUnsavedChanges(open && (!!endpointId || selectionPending || uncertain));
+  const unresolvedSave = busy === "save" || uncertain;
+  useUnsavedChanges(
+    unresolvedSave ||
+      (open && (!!endpointId || selectionPending || materialPending)),
+    unresolvedSave
+      ? "出口变更可能已保存。离开不会取消保存，并会丢失本页保留的核对信息；请先核对保存结果。"
+      : undefined,
+  );
   const selected = baseline.inventory.endpoints.find(
     (entry) => entry.id === endpointId,
   );
@@ -182,7 +195,6 @@ export function RouteExitEditor({
   const missingRevision =
     !baseline.route.revisionToken || !baseline.deployment.revisionToken;
   const locked = busy !== null || uncertain;
-  const materialGeneration = sequence.current;
   const formEditable = useRef(false);
   formEditable.current = open && !reviewed && !locked && !selectionPending;
   const resetReview = () => {
@@ -211,7 +223,10 @@ export function RouteExitEditor({
     }
   }, []);
   const inspect = async (refresh = false) => {
-    if (!endpointId || selectionPending || running.current || uncertain) return;
+    if (
+      !endpointId || selectionPending || materialPendingRef.current ||
+      running.current || uncertain
+    ) return;
     running.current = true;
     const currentSequence = ++sequence.current;
     setBusy("check");
@@ -315,7 +330,9 @@ export function RouteExitEditor({
     }
   };
   const save = async () => {
-    if (!reviewed || running.current || selectionPending) return;
+    if (
+      !reviewed || running.current || selectionPending || materialPendingRef.current
+    ) return;
     running.current = true;
     const input = commit || {
       ...reviewed.input,
@@ -432,7 +449,7 @@ export function RouteExitEditor({
           <ActionButton
             aria-label={uncertain ? "核对保存结果" : "保存出口草稿"}
             pending={busy === "save"}
-            disabled={busy === "check" || selectionPending}
+            disabled={busy === "check" || selectionPending || materialPending}
             onClick={save}
             variant="default"
           >
@@ -444,7 +461,7 @@ export function RouteExitEditor({
               conflict || missingRevision ? "检查最新变更" : "检查变更"
             }
             pending={busy === "check"}
-            disabled={!endpointId || selectionPending || busy === "save"}
+            disabled={!endpointId || selectionPending || materialPending || busy === "save"}
             onClick={() => inspect(conflict)}
             variant="default"
           >
@@ -519,10 +536,10 @@ export function RouteExitEditor({
                 <TLSMaterial
                   key={endpointId}
                   value={tls}
+                  onPendingChange={pendingMaterial}
                   onChange={(next) => {
                     if (
                       selectedIdentity.current !== endpointId ||
-                      sequence.current !== materialGeneration ||
                       running.current ||
                       !formEditable.current
                     )

@@ -2,14 +2,16 @@
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   cleanup,
+  act,
   fireEvent,
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { UIProviders } from "./ui-patterns/providers";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { onlineManager, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SubscriptionOriginSettings } from "./SubscriptionOriginSettings";
 const json = (value: unknown, status = 200) =>
   new Response(JSON.stringify(value), {
@@ -33,19 +35,13 @@ beforeAll(() => {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  onlineManager.setOnline(true);
 });
-function mount() {
+function mount(client = new QueryClient({
+  defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+})) {
   return render(
-    <QueryClientProvider
-      client={
-        new QueryClient({
-          defaultOptions: {
-            queries: { retry: false },
-            mutations: { retry: false },
-          },
-        })
-      }
-    >
+    <QueryClientProvider client={client}>
       <UIProviders>
         <SubscriptionOriginSettings />
       </UIProviders>
@@ -72,6 +68,7 @@ describe("subscription domain tasks", () => {
         ...initial,
         configuredRevision: 3,
         draftOrigin: "https://draft.example",
+        proposedLinkExample: "https://draft.example/feed/{existing-token}",
       }),
     );
     vi.stubGlobal("fetch", fetcher);
@@ -161,6 +158,7 @@ describe("subscription domain tasks", () => {
           revision: 7,
           effectiveRevision: 5,
           effectiveOrigin: state.draftOrigin,
+          activatedAt: "2026-11-06T00:00:00Z",
           currentLinkExample: state.proposedLinkExample,
         };
         return json(state);
@@ -254,6 +252,7 @@ it("refreshes a failed verification without replacing the active domain or losin
         ...state,
         revision: 20,
         draftOrigin: "https://other.example",
+        proposedLinkExample: "https://other.example/feed/{existing-token}",
         configuredRevision: 20,
         verificationStatus: "unverified",
       };
@@ -464,3 +463,137 @@ it.each([
     expect(screen.getByText(initial.effectiveOrigin)).toBeTruthy();
   },
 );
+
+// Candidate reconstruction: behavioral verification UNRUN.
+it.each(["lost response", "server error", "invalid JSON", "incomplete JSON", "wrong target"])(
+  "reconciles %s activation with a read and requires fresh review without replay",
+  async (failure) => {
+    const staged = {
+      ...initial, configuredRevision: 4, draftOrigin: "https://new.example",
+      verificationStatus: "verified",
+      proposedLinkExample: "https://new.example/feed/{existing-token}",
+    };
+    let reads = 0;
+    let writes = 0;
+    let readMode = "failed";
+    vi.stubGlobal("fetch", vi.fn(async (_url, init) => {
+      if (!init?.method) {
+        reads++;
+        if (reads === 1) return json(staged);
+        if (readMode === "failed") return json({ detail: "Read unavailable" }, 503);
+        if (readMode === "malformed") return json({ revision: 99 });
+        return json(staged);
+      }
+      writes++;
+      if (failure === "lost response") throw new TypeError("connection lost");
+      if (failure === "server error") return json({ detail: "Write unavailable" }, 503);
+      if (failure === "invalid JSON") return new Response("{", { status: 200 });
+      if (failure === "incomplete JSON") return json({ revision: 5 });
+      return json({ ...staged, revision: 5 });
+    }));
+    mount();
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "启用已保存草稿" }));
+    await user.click(screen.getByRole("checkbox", { name: /我已确认域名/ }));
+    await user.click(screen.getByRole("button", { name: "确认启用" }));
+    const dialog = screen.getByRole("dialog");
+    await within(dialog).findByText("域名启用结果尚未确认");
+    expect(within(dialog).getByRole("button", { name: "确认启用" })).toHaveProperty("disabled", true);
+    expect(screen.getByRole("button", { name: "保存域名草稿" })).toHaveProperty("disabled", true);
+    expect(screen.getByRole("button", { name: "验证 HTTPS 与实例" })).toHaveProperty("disabled", true);
+    await user.click(within(dialog).getByRole("button", { name: "重新读取设置" }));
+    await within(dialog).findByText("Read unavailable");
+    expect(writes).toBe(1);
+    readMode = "malformed";
+    await user.click(within(dialog).getByRole("button", { name: "重新读取设置" }));
+    await within(dialog).findByText("域名设置响应不完整，请重新读取设置。");
+    expect(within(dialog).getByRole("button", { name: "确认启用" })).toHaveProperty("disabled", true);
+    readMode = "valid";
+    await user.click(within(dialog).getByRole("button", { name: "重新读取设置" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(writes).toBe(1);
+    expect(reads).toBe(4);
+    await user.click(screen.getByRole("button", { name: "启用已保存草稿" }));
+    expect(screen.getByRole("button", { name: "确认启用" })).toHaveProperty("disabled", true);
+    expect(screen.getByLabelText("订阅域名草稿")).toHaveProperty("value", staged.draftOrigin);
+  },
+);
+
+it("keeps uncertain activation blocked after dismissal and reads an already-applied domain without replay", async () => {
+  const staged = { ...initial, configuredRevision: 4, draftOrigin: "https://new.example",
+    verificationStatus: "verified", proposedLinkExample: "https://new.example/feed/{existing-token}" };
+  let writes = 0;
+  vi.stubGlobal("fetch", vi.fn(async (_url, init) => {
+    if (init?.method) { writes++; throw new TypeError("lost"); }
+    return json(writes ? { ...staged, revision: 5, effectiveRevision: 4,
+      effectiveOrigin: staged.draftOrigin, currentLinkExample: staged.proposedLinkExample,
+      activatedAt: "2026-11-06T00:00:00Z" } : staged);
+  }));
+  mount();
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole("button", { name: "启用已保存草稿" }));
+  await user.click(screen.getByRole("checkbox", { name: /我已确认域名/ }));
+  await user.click(screen.getByRole("button", { name: "确认启用" }));
+  await screen.findByText("域名启用结果尚未确认");
+  await user.click(screen.getByRole("button", { name: "取消" }));
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  expect(screen.getByRole("button", { name: "启用已保存草稿" })).toHaveProperty("disabled", true);
+  await user.click(screen.getByRole("button", { name: "重新读取设置" }));
+  await waitFor(() => expect(screen.queryByText("域名启用结果尚未确认")).toBeNull());
+  expect(screen.getByText("https://new.example")).toBeTruthy();
+  expect(screen.getByRole("button", { name: "启用已保存草稿" })).toHaveProperty("disabled", true);
+  expect(writes).toBe(1);
+});
+
+it.each(["保存域名草稿", "验证 HTTPS 与实例"])(
+  "rejects malformed %s acknowledgments without replacing displayed settings or input",
+  async (action) => {
+    vi.stubGlobal("fetch", vi.fn(async (_url, init) =>
+      init?.method ? json({ revision: 5 }) : json(initial),
+    ));
+    mount();
+    const input = await screen.findByLabelText("订阅域名草稿");
+    await userEvent.click(screen.getByRole("button", { name: action }));
+    await screen.findByText("域名设置响应不完整，请重新读取设置。");
+    expect(input).toHaveProperty("value", initial.draftOrigin);
+    expect(screen.getByText(initial.effectiveOrigin)).toBeTruthy();
+    expect(screen.queryByText("新复制的订阅链接将使用所选地址")).toBeNull();
+  },
+);
+
+it("rejects malformed shared-cache views at the consumer boundary", async () => {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  vi.stubGlobal("fetch", vi.fn(async () => json(initial)));
+  mount(client);
+  await screen.findByLabelText("订阅域名草稿");
+  act(() => { client.setQueryData(["subscription-origin"], { revision: 99, draftOrigin: "poison" }); });
+  await screen.findByText("域名设置响应不完整，请重新读取设置。");
+  expect(screen.queryByDisplayValue("poison")).toBeNull();
+  const save = screen.queryByRole("button", { name: "保存域名草稿" });
+  if (save) expect(save).toHaveProperty("disabled", true);
+});
+
+it("does not dispatch a paused activation after the authoritative source revision changes", async () => {
+  const staged = { ...initial, configuredRevision: 4, draftOrigin: "https://new.example",
+    verificationStatus: "verified", proposedLinkExample: "https://new.example/feed/{existing-token}" };
+  let state = staged;
+  let writes = 0;
+  const client = new QueryClient({ defaultOptions: {
+    queries: { retry: false }, mutations: { retry: false },
+  } });
+  vi.stubGlobal("fetch", vi.fn(async (_url, init) => {
+    if (init?.method) writes++;
+    return json(state);
+  }));
+  mount(client);
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole("button", { name: "启用已保存草稿" }));
+  await user.click(screen.getByRole("checkbox", { name: /我已确认域名/ }));
+  onlineManager.setOnline(false);
+  await user.click(screen.getByRole("button", { name: "确认启用" }));
+  state = { ...staged, revision: 5 };
+  act(() => { client.setQueryData(["subscription-origin"], state); });
+  onlineManager.setOnline(true);
+  await screen.findByText("请核对重新读取的草稿，再继续验证或启用。");
+  expect(writes).toBe(0);
+});

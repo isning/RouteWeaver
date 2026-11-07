@@ -81,6 +81,16 @@ it("explains a source directory failure and retries reads without losing the tem
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url, init) => {
+      if (url === "/api/me/collections/preview") {
+        sourceReads++;
+        expect(JSON.parse(init.body)).toEqual({
+          id: "profile-sources", name: "Profile sources",
+          sources: [{ sourceId: "feed" }],
+        });
+        return sourceReads === 1
+          ? json({ error: "temporarily unavailable" }, 503)
+          : json({ endpoints: [{ id: "owned", name: "家庭出口", origin: "imported" }] });
+      }
       if (init?.method === "POST") {
         writes.push(JSON.parse(init.body));
         return json({});
@@ -97,17 +107,6 @@ it("explains a source directory failure and retries reads without losing the tem
             ir: { endpoints: [], resources: [], groups: [], rules: [] },
           },
         ]);
-      if (url === "/api/me/sources") {
-        sourceReads++;
-        return sourceReads === 1
-          ? json({ error: "temporarily unavailable" }, 503)
-          : json([
-              {
-                id: "feed",
-                snapshot: { endpoints: [{ id: "owned", name: "家庭出口" }] },
-              },
-            ]);
-      }
       return json([]);
     }),
   );
@@ -116,11 +115,11 @@ it("explains a source directory failure and retries reads without losing the tem
   await user.click(await screen.findByRole("button", { name: "查看并使用" }));
   await user.click(screen.getByRole("combobox", { name: "模板目标" }));
   await user.click(await screen.findByText("家庭配置"));
-  expect(await screen.findByText("暂时无法加载来源")).toBeTruthy();
+  expect(await screen.findByText("暂时无法加载可用连接")).toBeTruthy();
   expect(screen.queryByText("操作未完成")).toBeNull();
   expect(
     within(screen.getByRole("status")).getByRole("button", {
-      name: "重新加载来源",
+      name: "重新加载可用连接",
     }),
   ).toBeTruthy();
   await user.click(screen.getByRole("combobox", { name: "模板版本" }));
@@ -131,7 +130,7 @@ it("explains a source directory failure and retries reads without losing the tem
       .getByRole("button", { name: "应用模板到草稿" })
       .hasAttribute("disabled"),
   ).toBe(true);
-  await user.click(screen.getByRole("button", { name: "重新加载来源" }));
+  await user.click(screen.getByRole("button", { name: "重新加载可用连接" }));
   await waitFor(() => expect(sourceReads).toBe(2));
   expect(
     screen
@@ -187,24 +186,20 @@ async function selectionFixture({
         id: "home",
         name: "家庭配置",
         collectionId: collectionReference ? "set" : "",
-        sourceIds: collectionReference ? [] : ["feed"],
+        sourceIds: ["feed"],
         platformEntryIds: ["platform"],
         ir: {
-          endpoints: local ? [{ id: "internal", name: "本地连接" }] : [],
+          endpoints: local ? [{ id: "internal", name: "本地连接", origin: "imported" }] : [],
           resources: [],
           groups: [],
           rules: [],
         },
       },
     ],
-    sources: [
-      {
-        id: "feed",
-        snapshot: { endpoints: [{ id: "owned", name: "家庭出口" }] },
-      },
-    ],
+    processedEndpoints: [{ id: "owned", name: "家庭出口", origin: "imported" }],
     sourceFailure,
     platformFailure,
+    platformMissing: false,
     collectionFailure,
     profileFailure,
     versionFailure,
@@ -214,6 +209,12 @@ async function selectionFixture({
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url, init) => {
+      if (url === "/api/me/collections/preview" || url === "/api/me/collections/set/preview") {
+        await state.sourceWait;
+        return state.sourceFailure || (collectionReference && state.collectionFailure)
+          ? json({ error: "unavailable" }, 503)
+          : json({ endpoints: state.processedEndpoints });
+      }
       if (init?.method === "POST") {
         writes.push(JSON.parse(init.body));
         return json({});
@@ -238,16 +239,10 @@ async function selectionFixture({
                 steps: [],
               },
             ]);
-      if (url === "/api/me/sources") {
-        await state.sourceWait;
-        return state.sourceFailure
-          ? json({ error: "unavailable" }, 503)
-          : json(state.sources);
-      }
       if (url === "/api/me/platform-entries")
         return state.platformFailure
           ? json({ error: "unavailable" }, 503)
-          : json([]);
+          : json(state.platformMissing ? [] : [{ id: "platform", name: "平台出口" }]);
       return json([]);
     }),
   );
@@ -293,25 +288,16 @@ it("does not require connection directories for a no-slot client template", asyn
         .hasAttribute("disabled"),
     ).toBe(false),
   );
-  expect(screen.queryByText("暂时无法加载来源")).toBeNull();
+  expect(screen.queryByText("暂时无法加载可用连接")).toBeNull();
   expect(writes).toEqual([]);
 });
-it("allows a known internal binding while explaining unavailable remote candidates", async () => {
-  const { choose, writes } = await selectionFixture({
-    local: true,
-    collectionFailure: true,
-    sourceFailure: true,
-    platformFailure: true,
-  });
+it("does not fall back to inline endpoints when processed inputs are unavailable", async () => {
+  const { choose, writes } = await selectionFixture({ local: true, sourceFailure: true });
   await choose("模板目标", "家庭配置");
-  expect(await screen.findByText("暂时无法加载来源")).toBeTruthy();
-  expect(await screen.findByText("暂时无法加载平台连接")).toBeTruthy();
-  await choose("出口连接", "本地连接");
-  expect(
-    screen
-      .getByRole("button", { name: "应用模板到草稿" })
-      .hasAttribute("disabled"),
-  ).toBe(false);
+  expect(await screen.findByText("暂时无法加载可用连接")).toBeTruthy();
+  await userEvent.setup().click(screen.getByRole("combobox", { name: "出口连接" }));
+  expect(screen.queryByRole("option", { name: "本地连接" })).toBeNull();
+  expect(screen.getByRole("button", { name: "应用模板到草稿" }).hasAttribute("disabled")).toBe(true);
   expect(writes).toEqual([]);
 });
 it("retains a selected connection through failed reload and blocks it after confirmed removal", async () => {
@@ -321,9 +307,9 @@ it("retains a selected connection through failed reload and blocks it after conf
   await user.click(screen.getByRole("radio", { name: "跟随版本" }));
   state.sourceFailure = true;
   await act(async () => {
-    await client.refetchQueries({ queryKey: ["sources"] });
+    await client.refetchQueries({ queryKey: ["template-endpoints"] });
   });
-  expect(await screen.findByText("暂时无法加载来源")).toBeTruthy();
+  expect(await screen.findByText("暂时无法加载可用连接")).toBeTruthy();
   expect(
     within(
       screen.getByRole("combobox", { name: "出口连接" }).closest("label")!,
@@ -335,8 +321,8 @@ it("retains a selected connection through failed reload and blocks it after conf
       .hasAttribute("disabled"),
   ).toBe(true);
   state.sourceFailure = false;
-  state.sources = [];
-  await user.click(screen.getByRole("button", { name: "重新加载来源" }));
+  state.processedEndpoints = [];
+  await user.click(screen.getByRole("button", { name: "重新加载可用连接" }));
   expect(await screen.findByText("已不可用")).toBeTruthy();
   expect(
     screen
@@ -397,9 +383,9 @@ it("preserves a selected binding during a delayed reload and restores it without
   });
   let refresh!: Promise<void>;
   act(() => {
-    refresh = client.refetchQueries({ queryKey: ["sources"] });
+    refresh = client.refetchQueries({ queryKey: ["template-endpoints"] });
   });
-  expect(await screen.findByText("正在读取来源列表…")).toBeTruthy();
+  expect(await screen.findByText("正在读取可用连接列表…")).toBeTruthy();
   expect(screen.queryByText("暂无可用连接")).toBeNull();
   expect(
     screen
@@ -424,10 +410,10 @@ it("keeps paused directory reads distinct from empty and resumes without replayi
   await choose("出口连接", "家庭出口");
   act(() => {
     onlineManager.setOnline(false);
-    void client.refetchQueries({ queryKey: ["sources"] });
+    void client.refetchQueries({ queryKey: ["template-endpoints"] });
   });
   expect(
-    await screen.findByText("来源列表读取已暂停，恢复网络后重试。"),
+    await screen.findByText("可用连接列表读取已暂停，恢复网络后重试。"),
   ).toBeTruthy();
   expect(
     screen
@@ -477,9 +463,9 @@ it("recovers collection-backed connection candidates in place", async () => {
   await choose("出口连接", "家庭出口");
   state.collectionFailure = true;
   await act(async () => {
-    await client.refetchQueries({ queryKey: ["collections"] });
+    await client.refetchQueries({ queryKey: ["template-endpoints"] });
   });
-  expect(await screen.findByText("暂时无法加载节点集合")).toBeTruthy();
+  expect(await screen.findByText("暂时无法加载可用连接")).toBeTruthy();
   expect(
     within(
       screen.getByRole("combobox", { name: "出口连接" }).closest("label")!,
@@ -491,7 +477,7 @@ it("recovers collection-backed connection candidates in place", async () => {
       .hasAttribute("disabled"),
   ).toBe(true);
   state.collectionFailure = false;
-  await user.click(screen.getByRole("button", { name: "重新加载节点集合" }));
+  await user.click(screen.getByRole("button", { name: "重新加载可用连接" }));
   await waitFor(() =>
     expect(
       screen
@@ -566,22 +552,140 @@ it("preserves the selected target, pinned version and binding through a held sou
   state.sourceWait = new Promise<void>((resolve) => { release = resolve; });
   state.sourceFailure = true;
   let refresh!: Promise<void>;
-  act(() => { refresh = client.refetchQueries({ queryKey: ["sources"] }); });
-  await screen.findByText("正在读取来源列表…");
+  act(() => { refresh = client.refetchQueries({ queryKey: ["template-endpoints"] }); });
+  await screen.findByText("正在读取可用连接列表…");
   expect(screen.queryByText("暂无可用连接")).toBeNull();
   expect(screen.getByRole("button", { name: "应用模板到草稿" }).hasAttribute("disabled")).toBe(true);
   await act(async () => { release(); await refresh; });
-  await screen.findByText("暂时无法加载来源");
+  await screen.findByText("暂时无法加载可用连接");
   expect(screen.queryByText("暂无可用连接")).toBeNull();
   expect(screen.getByRole("combobox", { name: "出口连接" }).textContent).toContain("家庭出口 暂不可用");
   expect(screen.getByRole("combobox", { name: "模板目标" }).textContent).toContain("家庭配置");
   expect(screen.getByRole("combobox", { name: "模板版本" }).textContent).toContain("v1");
   expect(screen.getByRole("radio", { name: "固定此版本" }).getAttribute("aria-checked")).toBe("true");
   state.sourceFailure = false;
-  await user.click(screen.getByRole("button", { name: "重新加载来源" }));
-  await waitFor(() => expect(screen.queryByText("暂时无法加载来源")).toBeNull());
+  await user.click(screen.getByRole("button", { name: "重新加载可用连接" }));
+  await waitFor(() => expect(screen.queryByText("暂时无法加载可用连接")).toBeNull());
   expect(screen.getByRole("combobox", { name: "出口连接" }).textContent).toContain("家庭出口");
   expect(screen.getByRole("combobox", { name: "出口连接" }).textContent).not.toContain("不可用");
   expect(screen.getByRole("button", { name: "应用模板到草稿" }).hasAttribute("disabled")).toBe(false);
+  expect(writes).toEqual([]);
+});
+
+it("uses processed collection choices instead of inline endpoints and raw source choices", async () => {
+  const { choose, state, user, writes } = await selectionFixture({ collectionReference: true, local: true });
+  // A collection must win even when a profile also references direct sources.
+  state.processedEndpoints = [{ id: "renamed", name: "处理后的出口", origin: "imported" }];
+  await choose("模板目标", "家庭配置");
+  await choose("出口连接", "处理后的出口");
+  await user.click(screen.getByRole("combobox", { name: "出口连接" }));
+  expect(screen.queryByRole("option", { name: "本地连接" })).toBeNull();
+  expect(screen.queryByRole("option", { name: "家庭出口" })).toBeNull();
+  expect(await screen.findByRole("option", { name: "平台出口" })).toBeTruthy();
+  const requests = vi.mocked(fetch).mock.calls.map(([url]) => url);
+  expect(requests).toContain("/api/me/collections/set/preview");
+  expect(requests).not.toContain("/api/me/collections/preview");
+  expect(requests).not.toContain("/api/me/sources");
+  expect(writes).toEqual([]);
+});
+
+it("does not retain processed choices when a referenced platform grant becomes unreadable", async () => {
+  const { choose, state, client, writes } = await selectionFixture();
+  await choose("模板目标", "家庭配置");
+  await choose("出口连接", "家庭出口");
+  state.platformFailure = true;
+  await act(async () => { await client.refetchQueries({ queryKey: ["template-endpoints"] }); });
+  expect(await screen.findByText("暂时无法加载可用连接")).toBeTruthy();
+  expect(screen.getByRole("button", { name: "应用模板到草稿" }).hasAttribute("disabled")).toBe(true);
+  expect(writes).toEqual([]);
+});
+
+it("rejects a missing grant rather than trusting a formerly selected platform endpoint", async () => {
+  const { choose, state, client, writes } = await selectionFixture();
+  await choose("模板目标", "家庭配置");
+  await choose("出口连接", "平台出口");
+  state.platformMissing = true;
+  await act(async () => { await client.refetchQueries({ queryKey: ["template-endpoints"] }); });
+  expect(await screen.findByText("暂时无法加载可用连接")).toBeTruthy();
+  expect(screen.getByRole("combobox", { name: "出口连接" }).textContent).toContain("平台出口 暂不可用");
+  expect(screen.getByRole("button", { name: "应用模板到草稿" }).hasAttribute("disabled")).toBe(true);
+  expect(writes).toEqual([]);
+});
+
+it("offers processed endpoints for replacement bindings without changing the accepted binding", async () => {
+  const template = {
+    id: "routing", name: "日常分流", kind: "client-profile", version: 2,
+    spec: { endpointSlots: [{ id: "exit", name: "出口连接" }] },
+  };
+  const binding = {
+    id: "profiles_home", templateId: "routing", targetKind: "profiles",
+    targetId: "home", mode: "follow", appliedVersion: 1,
+    bindings: { endpoints: { exit: "old" }, resources: {} },
+  };
+  const inspections: unknown[] = [];
+  const applies: unknown[] = [];
+  vi.stubGlobal("fetch", vi.fn(async (input, init) => {
+    const url = String(input);
+    if (url === "/api/templates" || url === "/api/templates/routing/versions") return json([template]);
+    if (url === "/api/me/template-bindings") return json([binding]);
+    if (url === "/api/me/profiles") return json([{
+      id: "home", name: "家庭配置", collectionId: "set", sourceIds: ["ignored"],
+      ir: { endpoints: [{ id: "raw", name: "原始连接", origin: "imported" }], resources: [] },
+    }]);
+    if (url === "/api/me/collections/set/preview")
+      return json({ endpoints: [{ id: "processed", name: "处理后的连接", origin: "imported" }] });
+    if (url === "/api/me/template-bindings/profiles_home/preview") {
+      inspections.push(JSON.parse(init.body));
+      return json({ compatible: false, hasUpdate: true, candidateVersion: 2,
+        diagnostics: [], changes: [], preservedLocalEdits: [] });
+    }
+    if (url === "/api/me/template-bindings/profiles_home/apply") {
+      applies.push(JSON.parse(init.body));
+      return json({});
+    }
+    return json([]);
+  }));
+  mount(<TemplatesPage />);
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole("tab", { name: "我的引用" }));
+  await user.click(await screen.findByRole("button", { name: "检查更新 家庭配置" }));
+  const slot = await screen.findByText("出口连接");
+  const picker = within(slot.closest("label")!).getByRole("combobox");
+  await waitFor(() => expect(picker.hasAttribute("disabled")).toBe(false));
+  await user.click(picker);
+  expect(screen.queryByRole("option", { name: "原始连接" })).toBeNull();
+  await user.click(await screen.findByRole("option", { name: "处理后的连接" }));
+  await user.click(screen.getByRole("button", { name: "检查此绑定的更新" }));
+  await waitFor(() => expect(inspections).toHaveLength(2));
+  expect(inspections[1]).toEqual({ version: 2, bindings: { endpoints: { exit: "processed" }, resources: {} } });
+  expect(binding.bindings.endpoints.exit).toBe("old");
+  expect(applies).toEqual([]);
+});
+
+it("refreshes a visible catalog after its source cache is invalidated", async () => {
+  const { choose, state, client, writes } = await selectionFixture();
+  await choose("模板目标", "家庭配置");
+  await choose("出口连接", "家庭出口");
+  await act(async () => { client.setQueryData(["sources"], []); });
+  await waitFor(() => expect(screen.getByRole("button", { name: "应用模板到草稿" }).hasAttribute("disabled")).toBe(false));
+  state.sourceFailure = true;
+  await act(async () => { await client.invalidateQueries({ queryKey: ["sources"] }); });
+  expect(await screen.findByText("暂时无法加载可用连接")).toBeTruthy();
+  expect(screen.getByRole("button", { name: "应用模板到草稿" }).hasAttribute("disabled")).toBe(true);
+  expect(writes).toEqual([]);
+});
+
+it("fails closed on malformed processed endpoints and malformed cached options", async () => {
+  const { choose, state, client, writes } = await selectionFixture();
+  state.processedEndpoints = [{ id: "bad", name: "伪造平台连接", origin: "platform-entry" }];
+  await choose("模板目标", "家庭配置");
+  expect(await screen.findByText("暂时无法加载可用连接")).toBeTruthy();
+  await act(async () => {
+    client.setQueriesData({ queryKey: ["template-endpoints"] }, [{ id: 42, name: "无效标识" }]);
+  });
+  expect(screen.getByRole("button", { name: "应用模板到草稿" }).hasAttribute("disabled")).toBe(true);
+  await userEvent.setup().click(screen.getByRole("combobox", { name: "出口连接" }));
+  expect(screen.queryByRole("option", { name: "无效标识" })).toBeNull();
+  expect(screen.queryByRole("option", { name: "伪造平台连接" })).toBeNull();
   expect(writes).toEqual([]);
 });

@@ -95,6 +95,7 @@ function fixture(
     count: number,
     values: Record<string, unknown>,
   ) => Promise<Response>,
+  quotaBytes = 0,
 ) {
   let settings = {
     name: "RouteWeaver",
@@ -127,7 +128,7 @@ function fixture(
               id: "user",
               name: "Example user",
               enabled: true,
-              quotaBytes: 0,
+              quotaBytes,
               usedBytes: 0,
             },
           ],
@@ -157,6 +158,8 @@ function fixture(
           effectiveRevision: 1,
           effectiveOrigin: "",
           defaultOrigin: "",
+          currentLinkExample: "/feed/{existing-token}",
+          proposedLinkExample: "/feed/{existing-token}",
           verificationStatus: "not-required",
           tokensUnchanged: true,
         });
@@ -1132,4 +1135,114 @@ it("keeps settings edits and exact navigation focus through two canceled departu
     expect(field.value).toBe("Retained settings");
     expect(location.hash).toBe("#settings");
   }
+});
+
+
+// Source-only reconstruction regressions: these have not been executed.
+it.each([
+  ["0", 0],
+  ["0.5", 536870912],
+  ["0.000000000931322574615478515625", 1],
+  ["8388607.999999999068677425384521484375", 9007199254740991],
+])("creates a user with exact quota %s GiB", async (raw, expected) => {
+  const api = fixture();
+  mount(<AdminPage page="users" />);
+  await userEvent.click(await screen.findByRole("button", { name: "添加用户" }));
+  const dialog = await screen.findByRole("dialog", { name: "添加用户" });
+  fireEvent.change(within(dialog).getByRole("textbox", { name: "用户名称" }), {
+    target: { value: "Exact quota user" },
+  });
+  fireEvent.change(within(dialog).getByRole("spinbutton"), {
+    target: { value: raw },
+  });
+  await userEvent.click(save(dialog));
+  await waitFor(() => expect(api.writes).toHaveLength(1));
+  expect(api.writes[0].url).toBe("/api/users");
+  expect(api.writes[0].values.quotaBytes).toBe(expected);
+  expect(api.writes[0].values).not.toHaveProperty("quotaGiB");
+});
+
+it.each([
+  "0.0000000001",
+  "0.1",
+  "0.50000000000000000001",
+  "0.00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001",
+  "8388608",
+  "",
+  "1e",
+  "1e-400",
+  "-1",
+])("does not submit an inexact or incomplete new quota %s", async (raw) => {
+  const api = fixture();
+  mount(<AdminPage page="users" />);
+  await userEvent.click(await screen.findByRole("button", { name: "添加用户" }));
+  const dialog = await screen.findByRole("dialog", { name: "添加用户" });
+  fireEvent.change(within(dialog).getByRole("textbox", { name: "用户名称" }), {
+    target: { value: "Keep this draft" },
+  });
+  const quota = within(dialog).getByRole("spinbutton") as HTMLInputElement;
+  fireEvent.change(quota, { target: { value: raw } });
+  // Submit the public form even if native NumericInput validity would stop a click.
+  fireEvent.submit(quota.closest("form")!);
+  await within(dialog).findByText(
+    "请输入可精确换算为整数字节的非负十进制数，且不超过安全范围；0 为不限额。",
+  );
+  expect(api.writes).toHaveLength(0);
+  expect(quota.value).toBe(raw);
+  expect((within(dialog).getByRole("textbox", { name: "用户名称" }) as HTMLInputElement).value).toBe("Keep this draft");
+  // A deliberate correction must still allow the same draft to be saved.
+  fireEvent.change(quota, { target: { value: "0.5" } });
+  await userEvent.click(save(dialog));
+  await waitFor(() => expect(api.writes).toHaveLength(1));
+  expect(api.writes[0].values.quotaBytes).toBe(536870912);
+});
+
+it.each([0, 1, 9007199254740991])(
+  "preserves existing %s-byte quota on rename and enable edits",
+  async (quotaBytes) => {
+    const api = fixture(undefined, undefined, quotaBytes);
+    mount(<AdminPage page="users" />);
+    await userEvent.click(await screen.findByRole("button", { name: "Example user" }));
+    const dialog = await screen.findByRole("dialog", { name: "编辑用户" });
+    fireEvent.change(within(dialog).getByRole("textbox", { name: "用户名称" }), {
+      target: { value: "Renamed user" },
+    });
+    await userEvent.click(within(dialog).getByRole("switch", { name: "启用账号" }));
+    await userEvent.click(save(dialog));
+    await waitFor(() => expect(api.writes).toHaveLength(1));
+    expect(api.writes[0]).toEqual({
+      url: "/api/users/user",
+      values: { id: "user", name: "Renamed user", enabled: false, quotaBytes, usedBytes: 0 },
+    });
+  },
+);
+
+it("blocks all existing-account writes when its quota is not a safe integer", async () => {
+  const api = fixture(undefined, undefined, 9007199254740992);
+  mount(<AdminPage page="users" />);
+  await userEvent.click(await screen.findByRole("button", { name: "Example user" }));
+  const dialog = await screen.findByRole("dialog", { name: "编辑用户" });
+  expect(within(dialog).getByText(/为避免改写额度，名称和启用状态也暂不能保存/)).toBeTruthy();
+  const name = within(dialog).getByRole("textbox", { name: "用户名称" });
+  fireEvent.change(name, { target: { value: "Do not send" } });
+  await userEvent.click(within(dialog).getByRole("switch", { name: "启用账号" }));
+  expect((save(dialog) as HTMLButtonElement).disabled).toBe(true);
+  await act(async () => { fireEvent.submit(name.closest("form")!); });
+  expect(api.writes).toHaveLength(0);
+  expect(screen.getByRole("dialog", { name: "编辑用户" })).toBe(dialog);
+});
+
+
+it("protects a raw quota edit even when Number conversion equals the default", async () => {
+  const api = fixture();
+  mount(<AdminPage page="users" />);
+  await userEvent.click(await screen.findByRole("button", { name: "添加用户" }));
+  const dialog = await screen.findByRole("dialog", { name: "添加用户" });
+  const quota = within(dialog).getByRole("spinbutton") as HTMLInputElement;
+  fireEvent.change(quota, { target: { value: "100.00000000000000000001" } });
+  await userEvent.click(cancel(dialog));
+  const confirmation = await screen.findByRole("alertdialog", { name: "放弃未保存的修改？" });
+  await userEvent.click(within(confirmation).getByRole("button", { name: "继续编辑" }));
+  expect(quota.value).toBe("100.00000000000000000001");
+  expect(api.writes).toHaveLength(0);
 });

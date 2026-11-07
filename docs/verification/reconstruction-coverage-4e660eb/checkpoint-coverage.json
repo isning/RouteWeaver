@@ -1,0 +1,753 @@
+{
+  "date": "2026-11-06",
+  "audited_commit": "4e660eb0e0395a9ae0a0705408cbb56028f0d5d0",
+  "baseline_commit": "a1fbbc301378e47489660791e68f8c50fcf2b93f",
+  "scope": "Semantic source coverage only; all application verification UNRUN. Pending candidates excluded.",
+  "counts": {
+    "partial": 3,
+    "source-reconstructed": 35,
+    "missing-pending": 3,
+    "uncertain": 1,
+    "aggregate-only": 3,
+    "partial-pending": 1,
+    "missing": 3
+  },
+  "checkpoints": [
+    {
+      "version": 89,
+      "classification": "partial",
+      "reconstructed_scope": "Inbox retry ownership",
+      "source_refs": [
+        "web/src/Notifications.tsx",
+        "web/src/inbox-read-state.dom.test.tsx"
+      ],
+      "document_ref": "docs/verification/INBOX-INSTANCE-SOURCE-RECOVERY-2026-11-06.md",
+      "remaining_gap": "Inbox retry has a bounded replacement. The separately reported Fleet uncertain-create WIP/backend contract is absent and must not be inferred from Fleet numeric work.",
+      "historical_commit": "efff8d332921972785ba03463cb1ed5375981939",
+      "historical_description": "local fixes and two pending decisions \u2014 November 5, 2026 06:05 UTC",
+      "verification": "UNRUN",
+      "original_object": "NOT_RECOVERED"
+    },
+    {
+      "version": 90,
+      "classification": "source-reconstructed",
+      "reconstructed_scope": "Rate partial numeric drafts",
+      "source_refs": [
+        "web/src/Rates.tsx",
+        "web/src/rate-factor-precision.dom.test.tsx"
+      ],
+      "document_ref": "docs/verification/RATE-FACTOR-PRECISION-2026-11-06.md",
+      "remaining_gap": "No historical source equivalence; focus and actual browser input remain unverified.",
+      "historical_commit": "0542c3d153b6d3a66ebecb1083bacc1e89217ea3",
+      "historical_description": "rate draft fix preserved locally \u2014 November 5, 2026 06:12 UTC",
+      "verification": "UNRUN",
+      "original_object": "NOT_RECOVERED"
+    },
+    {
+      "version": 91,
+      "classification": "source-reconstructed",
+      "reconstructed_scope": "Backup inspection revision ownership and stale preview retirement",
+      "source_refs": [
+        "web/src/Backup.tsx",
+        "web/src/backup-restore-outcomes.dom.test.tsx"
+      ],
+      "document_ref": "docs/verification/BACKUP-INSPECTION-RECONSTRUCTION-2026-11-06.md",
+      "remaining_gap": "Restore uncertainty, real archives and native file selection remain outside this bounded change.",
+      "historical_commit": "f46f657a923c71db50152563f7689a2a7e3cdbee",
+      "historical_description": "backup inspection fixes preserved locally \u2014 November 5, 2026 06:15 UTC",
+      "verification": "UNRUN",
+      "original_object": "NOT_RECOVERED"
+    },
+    {
+      "version": 92,
+      "classification": "source-reconstructed",
+      "reconstructed_scope": "Template extraction/publication exclusion and error retirement",
+      "source_refs": [
+        "web/src/Templates.tsx",
+        "web/src/template-task-lifecycle.dom.test.tsx"
+      ],
+      "document_ref": "docs/verification/TEMPLATE-LIFECYCLE-RECONSTRUCTION-2026-11-06.md",
+      "remaining_gap": "Publication unknown outcome is not repaired.",
+      "historical_commit": "a9d248736b9ff25738eeefad7ba17d1c1e75ed1e",
+      "historical_description": "template lifecycle fixes preserved locally \u2014 November 5, 2026 06:21 UTC",
+      "verification": "UNRUN",
+      "original_object": "NOT_RECOVERED"
+    },
+    {
+      "version": 93,
+      "classification": "source-reconstructed",
+      "reconstructed_scope": "Local MFA setup dismissal cleanup",
+      "source_refs": [
+        "web/src/Security.tsx",
+        "web/src/mfa-setup-dismissal.dom.test.tsx"
+      ],
+      "document_ref": "docs/verification/MFA-SETUP-DISMISSAL-SOURCE-2026-11-06.md",
+      "remaining_gap": "Does not cover unknown MFA enable, shared write ownership, validated success or real authentication.",
+      "historical_commit": "08f9e5c434a18eb14a109d4cad43f51a4093a992",
+      "historical_description": "MFA cancellation fix preserved locally \u2014 November 5, 2026 06:24 UTC",
+      "verification": "UNRUN",
+      "original_object": "NOT_RECOVERED"
+    },
+    {
+      "version": 94,
+      "classification": "missing-pending",
+      "reconstructed_scope": "Collection preview stable selection/reorder/removal",
+      "source_refs": [
+        "web/src/Pipeline.tsx"
+      ],
+      "document_ref": "",
+      "remaining_gap": "Separate candidate is pending; absent from the pinned saved reconstruction. Pipeline numeric edits do not implement stable selected-stage identity.",
+      "historical_commit": "8159df2bd164e7c76e099b4366c5f92b2c8be7b6",
+      "historical_description": "collection preview selection fix preserved locally \u2014 November 5, 2026 06:30 UTC",
+      "verification": "UNRUN",
+      "original_object": "NOT_RECOVERED"
+    },
+    {
+      "version": 95,
+      "classification": "missing-pending",
+      "reconstructed_scope": "Owned removed-tab focus and nearest reveal",
+      "source_refs": [
+        "web/src/Pipeline.tsx"
+      ],
+      "document_ref": "",
+      "remaining_gap": "Separate collection-preview candidate is pending; no accepted nearest-scroll reconstruction at this pinned checkpoint.",
+      "historical_commit": "ecbde0b3e9cdc7e0dafca1cb1c83fc5060d360ad",
+      "historical_description": "collection focus reveal follow-up preserved \u2014 November 5, 2026 06:31 UTC",
+      "verification": "UNRUN",
+      "original_object": "NOT_RECOVERED"
+    },
+    {
+      "version": 96,
+      "classification": "source-reconstructed",
+      "reconstructed_scope": "Unknown domain activation with validated read and renewed review",
+      "source_refs": [
+        "web/src/SubscriptionOriginSettings.tsx",
+        "web/src/subscription-origin.dom.test.tsx"
+      ],
+      "document_ref": "docs/verification/DOMAIN-ACTIVATION-RECOVERY-RECONSTRUCTION-2026-11-06.md",
+      "remaining_gap": "Save/verify uncertainty remains ordinary handling. Reads do not establish historical operation receipts or DNS/TLS uptime.",
+      "historical_commit": "0000e88d640f8a8566da289f75e0f328ee7d15f2",
+      "historical_description": "uncertain domain activation recovery preserved \u2014 November 5, 2026 06:39 UTC",
+      "verification": "UNRUN",
+      "original_object": "NOT_RECOVERED"
+    },
+    {
+      "version": 97,
+      "classification": "uncertain",
+      "reconstructed_scope": "Unspecified route-check fixes; profile draft investigation",
+      "source_refs": [
+        "web/src/Diagnostics.tsx",
+        "web/src/Profiles.tsx"
+      ],
+      "document_ref": "docs/verification/RECONSTRUCTION-STATUS-2026-11-06.md",
+      "remaining_gap": "Historical summary gives no route-check acceptance contract or file identity. Later diagnostic request recovery, effective-route selection and profile numeric work cannot prove these opaque fixes were recreated. Aggregate was initially in progress; its historical later result does not transfer.",
+      "historical_commit": "315858e7a3cfdec835b4e8f1fb7e0b2946c16bf6",
+      "historical_description": "serialized aggregate and profile draft investigation \u2014 November 5, 2026 06:56 UTC",
+      "verification": "UNRUN",
+      "original_object": "NOT_RECOVERED"
+    },
+    {
+      "version": 98,
+      "classification": "source-reconstructed",
+      "reconstructed_scope": "Profile mixed/DNS port draft intent",
+      "source_refs": [
+        "web/src/Profiles.tsx",
+        "web/src/profile-runtime-numeric.dom.test.tsx"
+      ],
+      "document_ref": "docs/verification/PROFILE-RUNTIME-NUMERIC-RECONSTRUCTION-2026-11-06.md",
+      "remaining_gap": "Only bounded mixed/DNS numeric behavior; group and pipeline are independently mapped below.",
+      "historical_commit": "d2001d7f359f79ef4fd45fa9915e1701cf87f313",
+      "historical_description": "proxy/DNS numeric draft fix reproduced and preserved \u2014 November 5, 2026 07:04 UTC",
+      "verification": "UNRUN",
+      "original_object": "NOT_RECOVERED"
+    },
+    {
+      "version": 99,
+      "classification": "source-reconstructed",
+      "reconstructed_scope": "Existing and create/use group interval intent",
+      "source_refs": [
+        "web/src/Profiles.tsx",
+        "web/src/group-interval-intent.dom.test.tsx"
+      ],
+      "document_ref": "docs/verification/GROUP-INTERVAL-RECONSTRUCTION-2026-11-06.md",
+      "remaining_gap": "Repeated focus, discard and JSON replacement are authored regression source, not observed behavior.",
+      "historical_commit": "388e443709d311d84f8e7eefb01f0a062c38364e",
+      "historical_description": "group interval draft fix preserved \u2014 November 5, 2026 07:13 UTC",
+      "verification": "UNRUN",
+      "original_object": "NOT_RECOVERED"
+    },
+    {
+      "version": 100,
+      "classification": "source-reconstructed",
+      "reconstructed_scope": "Collection per-source/aggregate processing ports",
+      "source_refs": [
+        "web/src/Pipeline.tsx",
+        "web/src/pipeline-port-intent.dom.test.tsx"
+      ],
+      "document_ref": "docs/verification/PIPELINE-PORT-RECONSTRUCTION-2026-11-06.md",
+      "remaining_gap": "Historical inventory also includes v98/v99; this is not a third recovery of those commits or evidence of all numeric editors.",
+      "historical_commit": "4c6752400d6b866e4ee150e21a966beaea38d072",
+      "historical_description": "original numeric inventory locally addressed \u2014 November 5, 2026 07:16 UTC",
+      "verification": "UNRUN",
+      "original_object": "NOT_RECOVERED"
+    },
+    {
+      "version": 101,
+      "classification": "source-reconstructed",
+      "reconstructed_scope": "Actor-bound diagnostic request recovery",
+      "source_refs": [
+        "web/src/useDiagnosticRequest.ts",
+        "web/src/Diagnostics.tsx",
+        "web/src/diagnostic-request-recovery.dom.test.tsx"
+      ],
+      "document_ref": "docs/verification/DIAGNOSTIC-REQUEST-RECOVERY-RECONSTRUCTION-2026-11-06.md",
+      "remaining_gap": "404 stays unknown. New valid-record abandonment is an explicit design addition, not proven historical parity; can allow duplicate traffic. Same-tab reload and real request receipt behavior unverified.",
+      "historical_commit": "d1dae3d3c7f54b5b3183dc5815661dc0dd32437b",
+      "historical_description": "diagnostic recovery integrated; aggregate underway \u2014 November 5, 2026 08:08 UTC",
+      "verification": "UNRUN",
+      "original_object": "NOT_RECOVERED"
+    },
+    {
+      "version": 102,
+      "classification": "partial",
+      "reconstructed_scope": "Account-security nonsecret reminder and read-only recovery",
+      "source_refs": [
+        "web/src/AccountSecurity.tsx",
+        "web/src/account-security.dom.test.tsx"
+      ],
+      "document_ref": "docs/verification/ACCOUNT-SECURITY-UNCERTAINTY-RECONSTRUCTION-2026-11-06.md",
+      "remaining_gap": "No MFA enrollment recovery/shared owner, historical operation receipt, invalid-store repair or full same-actor transport rotation verification. Lost cookie response can still require manual login.",
+      "historical_commit": "3fb249de1815f7e9a1f3e7f9841eb271dbbdaaa6",
+      "historical_description": "account-security uncertainty recovery preserved \u2014 November 5, 2026 08:42 UTC",
+      "verification": "UNRUN",
+      "original_object": "NOT_RECOVERED"
+    },
+    {
+      "version": 103,
+      "classification": "aggregate-only",
+      "reconstructed_scope": "Historical service-policy aggregate and TLS investigation",
+      "source_refs": [
+        "web/src/ServicePolicyEditor.tsx",
+        "web/src/service-quota-input.ts"
+      ],
+      "document_ref": "docs/verification/SERVICE-QUOTA-PRECISION-RECONSTRUCTION-2026-11-06.md",
+      "remaining_gap": "Summary reports aggregate plus unfixed TLS investigation, not an exact service-policy patch contract. Current service-quota scope is independently new; 2,484 historical tests and missing receipt are not recovered.",
+      "historical_commit": "e206c0341f7add5d14a8a4be93027175550b1142",
+      "historical_description": "service-policy aggregate passed; TLS draft investigation \u2014 November 5, 2026 09:23 UTC",
+      "verification": "UNRUN",
+      "original_object": "NOT_RECOVERED"
+    },
+    {
+      "version": 104,
+      "classification": "source-reconstructed",
+      "reconstructed_scope": "TLS delayed-read ownership and pending-save guard",
+      "source_refs": [
+        "web/src/TLSMaterial.tsx",
+        "web/src/server-tls-editor.dom.test.tsx"
+      ],
+      "document_ref": "docs/verification/TLS-READ-OWNERSHIP-RECONSTRUCTION-2026-11-06.md",
+      "remaining_gap": "Native PEM picker, actual TLS and durable backend receipt recovery remain unverified/absent.",
+      "historical_commit": "977c3e3e167997b12329f0406b303168f75c5de0",
+      "historical_description": "TLS import fix integrated; aggregate running \u2014 November 5, 2026 09:37 UTC",
+      "verification": "UNRUN",
+      "original_object": "NOT_RECOVERED"
+    },
+    {
+      "version": 105,
+      "classification": "source-reconstructed",
+      "reconstructed_scope": "Source file pending/failed draft ownership",
+      "source_refs": [
+        "web/src/SourceEditorDialog.tsx",
+        "web/src/source-editor.dom.test.tsx"
+      ],
+      "document_ref": "docs/verification/SOURCE-FILE-RECOVERY-2026-11-06.md",
+      "remaining_gap": "Cancellation retires UI read ownership, not physical disk IO. Actual native file retry remains unrun.",
+      "historical_commit": "868e7d1b2c8d0bf6c47f86046e9286145d7ba8cc",
+      "historical_description": "source-file import fix integrated; aggregate underway \u2014 November 5, 2026 10:09 UTC",
+      "verification": "UNRUN",
+      "original_object": "NOT_RECOVERED"
+    },
+    {
+      "version": 106,
+      "classification": "aggregate-only",
+      "reconstructed_scope": "Historical repaired source-import aggregate",
+      "source_refs": [
+        "web/src/source-editor.dom.test.tsx"
+      ],
+      "document_ref": "docs/verification/SOURCE-FILE-RECOVERY-2026-11-06.md",
+      "remaining_gap": "Exact historical failure/repair diff and 2,520-test receipt are unavailable. Current source-file scope is mapped at v105, not a recovered aggregate.",
+      "historical_commit": "11c762d2468c7d7ca32c9257a2adc2b89bdf8579",
+      "historical_description": "repaired source-import aggregate passed \u2014 November 5, 2026 10:37 UTC",
+      "verification": "UNRUN",
+      "original_object": "NOT_RECOVERED"
+    },
+    {
+      "version": 107,
+      "classification": "source-reconstructed",
+      "reconstructed_scope": "Fixed UTC+8 date carriers and unchanged timestamp",
+      "source_refs": [
+        "web/src/PolicyDateInput.tsx",
+        "web/src/policy-calendar.dom.test.tsx"
+      ],
+      "document_ref": "docs/recovery/POLICY-DATE-RECONSTRUCTION-20261106.md",
+      "remaining_gap": "Locked DayPicker timezone integration and New York/Lord Howe/UTC execution remain unrun.",
+      "historical_commit": "e7f0714fcc0695df9417e0c495b1c4b76e2741dd",
+      "historical_description": "fixed-UTC+8 policy date repair integrated \u2014 November 5, 2026 10:42 UTC",
+      "verification": "UNRUN",
+      "original_object": "NOT_RECOVERED"
+    },
+    {
+      "version": 108,
+      "classification": "source-reconstructed",
+      "reconstructed_scope": "Validated effective-policy route choices",
+      "source_refs": [
+        "web/src/UserEntries.tsx",
+        "web/src/user-entry-effective-routes.dom.test.tsx"
+      ],
+      "document_ref": "docs/verification/EFFECTIVE-ROUTE-CHOICE-RECONSTRUCTION-2026-11-06.md",
+      "remaining_gap": "Catalog omission/read failure/deny-all distinctions have source coverage only; backend authorization remains separate.",
+      "historical_commit": "dc1ca855e49f4391d3adba72c8ae371cccb8976a",
+      "historical_description": "effective-policy route fix integrated \u2014 November 5, 2026 10:51 UTC",
+      "verification": "UNRUN",
+      "original_object": "NOT_RECOVERED"
+    },
+    {
+      "version": 109,
+      "classification": "source-reconstructed",
+      "reconstructed_scope": "Rate factor and six scaled UserPolicy callbacks",
+      "source_refs": [
+        "web/src/Rates.tsx",
+        "web/src/UserPolicyEditor.tsx",
+        "web/src/policy-entitlement-edit-intent.dom.test.tsx"
+      ],
+      "document_ref": "docs/verification/USER-POLICY-PRECISION-RECONSTRUCTION-2026-11-06.md",
+      "remaining_gap": "Not all 19 NumericInput/two ByteQuantityInput inventory entries. Billing arithmetic unchanged; unsafe Admin/full-write contract remains separate.",
+      "historical_commit": "23e8eb918f75c09fdff2354e71cef7096f7924f8",
+      "historical_description": "rate and user-policy precision fixes preserved \u2014 November 5, 2026 11:14 UTC",
+      "verification": "UNRUN",
+      "original_object": "NOT_RECOVERED"
+    },
+    {
+      "version": 110,
+      "classification": "source-reconstructed",
+      "reconstructed_scope": "Resource exact numeric drafts and inspection ownership",
+      "source_refs": [
+        "web/src/Resources.tsx",
+        "web/src/resource-numeric-inspection.dom.test.tsx"
+      ],
+      "document_ref": "docs/verification/resource-inspection-reconstruction-2026-11-06/README.md",
+      "remaining_gap": "Malformed inspection response schema remains unvalidated; browser/real backend unrun.",
+      "historical_commit": "940693bf23fa58d56b41b9e51d8d21af60636f05",
+      "historical_description": "resource numeric/inspection intent fix integrated \u2014 November 5, 2026 11:26 UTC",
+      "verification": "UNRUN",
+      "original_object": "NOT_RECOVERED"
+    },
+    {
+      "version": 111,
+      "classification": "source-reconstructed",
+      "reconstructed_scope": "Admin exact quota and unsafe full-PUT guard",
+      "source_refs": [
+        "web/src/Admin.tsx",
+        "web/src/admin-task-lifecycle.dom.test.tsx"
+      ],
+      "document_ref": "docs/verification/ADMIN-QUOTA-RECONSTRUCTION-2026-11-06.md",
+      "remaining_gap": "Protective block, not exact-int64 transport or concurrent full-write solution; unrelated changes with unsafe quota are blocked.",
+      "historical_commit": "09b9ef578c6c6d144584cfc40b9db4615461cc1c",
+      "historical_description": "Admin quota protection integrated; contract gap remains \u2014 November 5, 2026 11:44 UTC",
+      "verification": "UNRUN",
+      "original_object": "NOT_RECOVERED"
+    },
+    {
+      "version": 112,
+      "classification": "source-reconstructed",
+      "reconstructed_scope": "Exact raw profile/pipeline numeric tails",
+      "source_refs": [
+        "web/src/Profiles.tsx",
+        "web/src/Pipeline.tsx",
+        "web/src/profile-runtime-numeric.dom.test.tsx",
+        "web/src/pipeline-port-intent.dom.test.tsx"
+      ],
+      "document_ref": "docs/verification/PROFILE-RUNTIME-NUMERIC-RECONSTRUCTION-2026-11-06.md",
+      "remaining_gap": "Overlaps v98\u2013100, not independent feature count. Optional empty/unchanged zero preservation and model retention require fresh execution.",
+      "historical_commit": "08289e07c09cb490902fd5edf6f80159454a1f77",
+      "historical_description": "Profile/Pipeline exact raw numeric fix integrated \u2014 November 5, 2026 12:04 UTC",
+      "verification": "UNRUN",
+      "original_object": "NOT_RECOVERED"
+    },
+    {
+      "version": 113,
+      "classification": "source-reconstructed",
+      "reconstructed_scope": "Shared connection-port raw intent",
+      "source_refs": [
+        "web/src/ConnectionFields.tsx",
+        "web/src/connection-fields.dom.test.tsx",
+        "web/tests/connection-port-entry.ui.spec.ts"
+      ],
+      "document_ref": "docs/recovery/CONNECTION-PORT-RECONSTRUCTION-2026-11-06.md",
+      "remaining_gap": "Three-host dirty/reset/impact-review journeys are unrun; test source is not browser evidence.",
+      "historical_commit": "f3c9a671c86f1f872ad70d9982c1be6122395f8e",
+      "historical_description": "connection port intent fix integrated; aggregate running \u2014 November 5, 2026 12:27 UTC",
+      "verification": "UNRUN",
+      "original_object": "NOT_RECOVERED"
+    },
+    {
+      "version": 114,
+      "classification": "partial-pending",
+      "reconstructed_scope": "Notification repeat/SMTP exact raw fields",
+      "source_refs": [
+        "web/src/Notifications.tsx",
+        "web/src/notification-channel-draft.dom.test.tsx"
+      ],
+      "document_ref": "docs/verification/NOTIFICATION-NUMERIC-RECONSTRUCTION-2026-11-06.md",
+      "remaining_gap": "Invitation expiry initial 72 hours versus blank backend 24-hour default is explicitly excluded at pinned HEAD; separate candidate pending.",
+      "historical_commit": "0b4c5e054f69b51eabe9c7517ec04391cfb37ada",
+      "historical_description": "notification/invitation scalar fix preserved \u2014 November 5, 2026 12:48 UTC",
+      "verification": "UNRUN",
+      "original_object": "NOT_RECOVERED"
+    },
+    {
+      "version": 115,
+      "classification": "source-reconstructed",
+      "reconstructed_scope": "Notification exact threshold tokens/count/order",
+      "source_refs": [
+        "web/src/Notifications.tsx",
+        "web/src/notification-channel-draft.dom.test.tsx"
+      ],
+      "document_ref": "docs/verification/NOTIFICATION-NUMERIC-RECONSTRUCTION-2026-11-06.md",
+      "remaining_gap": "Uncommitted combobox search text is excluded. Full aggregate and browser editing remain unrun.",
+      "historical_commit": "11c8d7930d1435e4f6d9567bc527aa1ca8f89551",
+      "historical_description": "threshold token validation integrated; aggregate underway \u2014 November 5, 2026 13:07 UTC",
+      "verification": "UNRUN",
+      "original_object": "NOT_RECOVERED"
+    },
+    {
+      "version": 116,
+      "classification": "source-reconstructed",
+      "reconstructed_scope": "Token bundle downloads and rotation wording",
+      "source_refs": [
+        "web/src/Subscriptions.tsx",
+        "web/src/bundle-access-recovery.dom.test.tsx"
+      ],
+      "document_ref": "docs/verification/BUNDLE-ACCESS-RECONSTRUCTION-2026-11-06.md",
+      "remaining_gap": "Actual ZIP save, live auth and native client import unverified; unchanged output need not be reimported solely for token rotation.",
+      "historical_commit": "93a0f73bc2456fba3234b37ad1e1a0efd93bc20b",
+      "historical_description": "bundle access/rotation fix integrated locally \u2014 November 5, 2026 13:40 UTC",
+      "verification": "UNRUN",
+      "original_object": "NOT_RECOVERED"
+    },
+    {
+      "version": 117,
+      "classification": "missing-pending",
+      "reconstructed_scope": "Rule-import recovery",
+      "source_refs": [
+        "web/src/Profiles.tsx"
+      ],
+      "document_ref": "",
+      "remaining_gap": "Separate rule-import reconstruction pending; source-file import is not this feature. Historical summary has limited detail; backend opened-revision contract remains unresolved.",
+      "historical_commit": "7b12232fabf5eff0bb9e7825a6767b89ece00ce6",
+      "historical_description": "rule-import recovery integrated; aggregate running \u2014 November 5, 2026 14:15 UTC",
+      "verification": "UNRUN",
+      "original_object": "NOT_RECOVERED"
+    },
+    {
+      "version": 118,
+      "classification": "source-reconstructed",
+      "reconstructed_scope": "Processed template endpoint catalog and grant observations",
+      "source_refs": [
+        "web/src/Templates.tsx",
+        "web/src/template-selection-recovery.dom.test.tsx"
+      ],
+      "document_ref": "docs/verification/TEMPLATE-ENDPOINT-CATALOG-RECONSTRUCTION-2026-11-06.md",
+      "remaining_gap": "Separate reads are not atomic permission proof. No raw-candidate fallback; exact historical fixtures unavailable.",
+      "historical_commit": "52e287641ec0687408b371324b7b13766b28f50f",
+      "historical_description": "template endpoint catalog fix integrated \u2014 November 5, 2026 14:51 UTC",
+      "verification": "UNRUN",
+      "original_object": "NOT_RECOVERED"
+    },
+    {
+      "version": 119,
+      "classification": "aggregate-only",
+      "reconstructed_scope": "Historical corrected template fixture aggregate",
+      "source_refs": [
+        "web/src/template-selection-recovery.dom.test.tsx"
+      ],
+      "document_ref": "docs/verification/TEMPLATE-ENDPOINT-CATALOG-RECONSTRUCTION-2026-11-06.md",
+      "remaining_gap": "Original failed result and 2,847-test corrected receipt are historical only. Fleet tests then had no reported result; do not mark Fleet complete from this checkpoint.",
+      "historical_commit": "772dae15d060c09b4861dddcac58ebc86c7c08a6",
+      "historical_description": "corrected template aggregate passed; Fleet baseline active \u2014 November 5, 2026 15:22 UTC",
+      "verification": "UNRUN",
+      "original_object": "NOT_RECOVERED"
+    },
+    {
+      "version": 120,
+      "classification": "source-reconstructed",
+      "reconstructed_scope": "Fleet lease/stage numeric intent",
+      "source_refs": [
+        "web/src/Fleet.tsx",
+        "web/src/fleet-numeric-intent.dom.test.tsx"
+      ],
+      "document_ref": "docs/recovery/FLEET-NUMERIC-INTENT-2026-11-06.md",
+      "remaining_gap": "Does not repair Fleet uncertain creation or its missing backend contract.",
+      "historical_commit": "592fee4ecc33a7d9c0ea65b7672fdedcf594175c",
+      "historical_description": "Fleet numeric intent fix integrated; aggregate underway \u2014 November 5, 2026 15:33 UTC",
+      "verification": "UNRUN",
+      "original_object": "NOT_RECOVERED"
+    },
+    {
+      "version": 121,
+      "classification": "source-reconstructed",
+      "reconstructed_scope": "Direct-publication lease intent",
+      "source_refs": [
+        "web/src/ServerRoutes.tsx",
+        "web/src/publication-lease-intent.dom.test.tsx"
+      ],
+      "document_ref": "docs/recovery/PUBLICATION-LEASE-INTENT-2026-11-06.md",
+      "remaining_gap": "Does not repair backend publication/lease contracts. Historical 2,894 belongs to its original commit, not this branch.",
+      "historical_commit": "7d4157791f77e98393fbe2ec0a60234a9ce18ac7",
+      "historical_description": "publication lease intent fix integrated; aggregate underway \u2014 November 5, 2026 15:54 UTC",
+      "verification": "UNRUN",
+      "original_object": "NOT_RECOVERED"
+    },
+    {
+      "version": 122,
+      "classification": "source-reconstructed",
+      "reconstructed_scope": "Published route client-port intent",
+      "source_refs": [
+        "web/src/PublishedRoutes.tsx",
+        "web/src/published-route-port-intent.dom.test.tsx"
+      ],
+      "document_ref": "docs/recovery/PUBLISHED-ROUTE-PORT-INTENT-2026-11-06.md",
+      "remaining_gap": "Backend publication enforcement and actual client output unverified; no historical aggregate count carries forward.",
+      "historical_commit": "073df2fe9eb37af5580226fff12cd5d4bb0d87c8",
+      "historical_description": "public-route port intent fix integrated; aggregate running \u2014 November 5, 2026 16:13 UTC",
+      "verification": "UNRUN",
+      "original_object": "NOT_RECOVERED"
+    },
+    {
+      "version": 123,
+      "classification": "source-reconstructed",
+      "reconstructed_scope": "Provider exact allowance units and safe-byte cap",
+      "source_refs": [
+        "web/src/ObservationForms.tsx",
+        "web/src/observation-footer.dom.test.tsx"
+      ],
+      "document_ref": "docs/verification/PROVIDER-ALLOWANCE-RECONSTRUCTION-2026-11-06.md",
+      "remaining_gap": "Provider revision backend WIP is not implemented. Native wheel/locale/spinner parity is unverified.",
+      "historical_commit": "c2754865dd24983c00648e912c16488c96d17f82",
+      "historical_description": "provider allowance unit-intent fix integrated \u2014 November 5, 2026 16:32 UTC",
+      "verification": "UNRUN",
+      "original_object": "NOT_RECOVERED"
+    },
+    {
+      "version": 124,
+      "classification": "source-reconstructed",
+      "reconstructed_scope": "Diagnostic exact numeric limits",
+      "source_refs": [
+        "web/src/Diagnostics.tsx",
+        "web/src/diagnostic-numeric-intent.dom.test.tsx"
+      ],
+      "document_ref": "docs/verification/DIAGNOSTIC-NUMERIC-RECONSTRUCTION-2026-11-06.md",
+      "remaining_gap": "Does not prove live traffic or server enforcement. Must compose with request recovery, ownership and abandonment checks.",
+      "historical_commit": "a8f8e0562ddab32452b889fbf8f04a464a9af658",
+      "historical_description": "diagnostic numeric intent fix integrated \u2014 November 5, 2026 16:50 UTC",
+      "verification": "UNRUN",
+      "original_object": "NOT_RECOVERED"
+    },
+    {
+      "version": 125,
+      "classification": "missing",
+      "reconstructed_scope": "Pending agent enrollment lifecycle",
+      "source_refs": [
+        "web/src/Infrastructure.tsx:1380",
+        "web/src/Infrastructure.tsx:1400"
+      ],
+      "document_ref": "",
+      "remaining_gap": "Enrollment function remains unchanged from v88: onSuccess directly calls setResult; no reconstructed task-owned callback/cancel/navigation contract. Infrastructure changes cover polling and connection inputs, not this scope. Lost-token/idempotency remains a separate backend gap even after a UI repair.",
+      "historical_commit": "ec2baea5dec5fb553f8050963a2d5e0293d7f283",
+      "historical_description": "pending enrollment lifecycle fix integrated \u2014 November 5, 2026 17:16 UTC",
+      "verification": "UNRUN",
+      "original_object": "NOT_RECOVERED"
+    },
+    {
+      "version": 126,
+      "classification": "source-reconstructed",
+      "reconstructed_scope": "Exit TLS pending preview and paired material preservation",
+      "source_refs": [
+        "web/src/RouteExitEditor.tsx",
+        "web/src/TLSMaterial.tsx",
+        "web/src/route-exit-editor.dom.test.tsx"
+      ],
+      "document_ref": "docs/verification/TLS-READ-OWNERSHIP-RECONSTRUCTION-2026-11-06.md",
+      "remaining_gap": "Frozen uncertain retry remains in-memory; TLS-bearing requests must not be persisted. Hidden unresolved exit navigation is v127, not this fix.",
+      "historical_commit": "a341c1430d43883a6d79390082b8f8b2333c9280",
+      "historical_description": "exit TLS pending-review fix integrated \u2014 November 5, 2026 17:36 UTC",
+      "verification": "UNRUN",
+      "original_object": "NOT_RECOVERED"
+    },
+    {
+      "version": 127,
+      "classification": "missing",
+      "reconstructed_scope": "Hidden uncertain-exit navigation and combined warnings",
+      "source_refs": [
+        "web/src/RouteExitEditor.tsx:177",
+        "web/src/navigation.ts"
+      ],
+      "document_ref": "",
+      "remaining_gap": "useUnsavedChanges still requires open && (... || uncertain), so hidden uncertain state is outside this guard. navigation.ts is unchanged from v88. Warning aggregation/source work is absent; durable metadata GET receipt recovery also remains absent.",
+      "historical_commit": "7b1e02422e920207f8bb09cda9cc18a64929957a",
+      "historical_description": "uncertain-exit navigation warning integrated \u2014 November 5, 2026 18:00 UTC",
+      "verification": "UNRUN",
+      "original_object": "NOT_RECOVERED"
+    },
+    {
+      "version": 128,
+      "classification": "missing",
+      "reconstructed_scope": "Native-client optional frozen new-output review clarification",
+      "source_refs": [
+        "docs/design/native-client-overrides.md:34"
+      ],
+      "document_ref": "docs/design/native-client-overrides.md",
+      "remaining_gap": "Document is unchanged from v88 and still says new-output creation publishes current draft immediately rather than frozen earlier review. Historical optional-review versus legacy omission distinction is not reconstructed. Recheck actual API before rewriting; no reservation/idempotency promise is justified.",
+      "historical_commit": "6d3db6a1c994f792a44952bdb75c17ae4403f923",
+      "historical_description": "native-client review contract documentation clarified \u2014 November 5, 2026 18:20 UTC",
+      "verification": "UNRUN",
+      "original_object": "NOT_RECOVERED"
+    },
+    {
+      "version": 129,
+      "classification": "source-reconstructed",
+      "reconstructed_scope": "Subscription rotation unknown-outcome guard",
+      "source_refs": [
+        "web/src/Subscriptions.tsx",
+        "web/src/subscription-rotation-state.ts",
+        "web/src/subscription-rotation-uncertainty.dom.test.tsx"
+      ],
+      "document_ref": "docs/verification/SUBSCRIPTION-ROTATION-UNCERTAINTY-RECONSTRUCTION-2026-11-06.md",
+      "remaining_gap": "Same-account remount memory only; full reload/new epoch loses reminder. Matching metadata and current access GET are not durable historical receipt.",
+      "historical_commit": "e250a9623a86d1de8661dc065e474a1dae1ace5d",
+      "historical_description": "subscription rotation uncertainty guard integrated \u2014 November 5, 2026 18:39 UTC",
+      "verification": "UNRUN",
+      "original_object": "NOT_RECOVERED"
+    },
+    {
+      "version": 130,
+      "classification": "source-reconstructed",
+      "reconstructed_scope": "Exact policy-committed/audit-missing response handling",
+      "source_refs": [
+        "web/src/AccessPolicy.tsx",
+        "web/src/policy-partial-audit.dom.test.tsx"
+      ],
+      "document_ref": "docs/verification/POLICY-PARTIAL-AUDIT-RECONSTRUCTION-2026-11-06.md",
+      "remaining_gap": "Only exact structured HTTP 500 detail classifies commit. Generic uncertainty, guarded editor conflict/rebase acceptance and backend atomicity unresolved.",
+      "historical_commit": "f9729fcf77f61dc891fd254750c457e0b46fbcf4",
+      "historical_description": "policy partial-audit UI fix integrated \u2014 November 5, 2026 19:02 UTC",
+      "verification": "UNRUN",
+      "original_object": "NOT_RECOVERED"
+    },
+    {
+      "version": 131,
+      "classification": "source-reconstructed",
+      "reconstructed_scope": "Inbox freshness and explicit refreshed acknowledgment",
+      "source_refs": [
+        "web/src/Notifications.tsx",
+        "web/src/inbox-read-state.dom.test.tsx"
+      ],
+      "document_ref": "docs/verification/INBOX-INSTANCE-SOURCE-RECOVERY-2026-11-06.md",
+      "remaining_gap": "Per-event concurrent failure ownership is new source only. Actual fresh server reads and acknowledgment must be verified.",
+      "historical_commit": "4a7d4b1a91c4f2b5ec06be35b7b0badd5884d379",
+      "historical_description": "inbox freshness fix integrated; aggregate underway \u2014 November 5, 2026 19:35 UTC",
+      "verification": "UNRUN",
+      "original_object": "NOT_RECOVERED"
+    },
+    {
+      "version": 132,
+      "classification": "source-reconstructed",
+      "reconstructed_scope": "Continued instance observation polling",
+      "source_refs": [
+        "web/src/Infrastructure.tsx",
+        "web/src/fleet-continuous-service.dom.test.tsx"
+      ],
+      "document_ref": "docs/verification/INBOX-INSTANCE-SOURCE-RECOVERY-2026-11-06.md",
+      "remaining_gap": "Cached platform record is not node online status or current enforcement. Browser focus and polling timing unrun.",
+      "historical_commit": "9d814da1fed4c1f6477edb03fcedadb4655b3fac",
+      "historical_description": "instance observation polling fix integrated \u2014 November 5, 2026 19:54 UTC",
+      "verification": "UNRUN",
+      "original_object": "NOT_RECOVERED"
+    },
+    {
+      "version": 133,
+      "classification": "source-reconstructed",
+      "reconstructed_scope": "Invite onboarding unknown creation warning",
+      "source_refs": [
+        "web/src/App.tsx",
+        "web/src/invite-uncertainty.dom.test.tsx"
+      ],
+      "document_ref": "docs/verification/INVITE-UNCERTAINTY-SOURCE-2026-11-06.md",
+      "remaining_gap": "Mode-local reminder only; no durable operation receipt or prohibition on manual resubmission. Fresh login/auth-me and transport/session integration unverified.",
+      "historical_commit": "579cdbd3f6d629296d0fc9be6fdcb0d786d72a39",
+      "historical_description": "invite onboarding uncertainty safeguard integrated \u2014 November 5, 2026 20:16 UTC",
+      "verification": "UNRUN",
+      "original_object": "NOT_RECOVERED"
+    },
+    {
+      "version": 134,
+      "classification": "partial",
+      "reconstructed_scope": "Rate pending-boundary timer plus historical aggregate",
+      "source_refs": [
+        "web/src/Rates.tsx",
+        "web/src/rate-pending-boundary.dom.test.tsx"
+      ],
+      "document_ref": "docs/verification/RATE-BOUNDARY-RECONSTRUCTION-2026-11-06.md",
+      "remaining_gap": "Timer has a new source reconstruction; 3,100-test historical recovered aggregate has not been recreated. Local clock label is not enforcement; wall-clock jumps/browser throttling remain unverified.",
+      "historical_commit": "c6f41f644349af9ffaded4b22868ed88d7cd1499",
+      "historical_description": "recovered full frontend aggregate passed \u2014 November 5, 2026 21:14 UTC",
+      "verification": "UNRUN",
+      "original_object": "NOT_RECOVERED"
+    },
+    {
+      "version": 135,
+      "classification": "source-reconstructed",
+      "reconstructed_scope": "Managed-entry stop consequences",
+      "source_refs": [
+        "web/src/UserEntries.tsx",
+        "web/src/rotation-recovery.dom.test.tsx"
+      ],
+      "document_ref": "docs/verification/LIFECYCLE-WARNINGS-SOURCE-2026-11-06.md",
+      "remaining_gap": "Warning source is present. Historical summary is terse; scope inferred with current reconstruction note. Admission/renewal/expiry runtime consequences still need independent execution.",
+      "historical_commit": "6d76dd3ad693885283243cebcfa89f71ce9d0546",
+      "historical_description": "managed-entry stop warning fix integrated \u2014 November 5, 2026 21:22 UTC",
+      "verification": "UNRUN",
+      "original_object": "NOT_RECOVERED"
+    },
+    {
+      "version": 136,
+      "classification": "source-reconstructed",
+      "reconstructed_scope": "Missing DNS resolver explicit repair and malformed rows",
+      "source_refs": [
+        "web/src/Profiles.tsx",
+        "web/src/profile-content-hierarchy.dom.test.tsx"
+      ],
+      "document_ref": "docs/verification/DNS-DEFAULT-RECONSTRUCTION-2026-11-06.md",
+      "remaining_gap": "Allows invalid draft without silent fallback. Real DNS, malformed rows, focus and composed numeric-editor journeys unrun; 3,122 historical tests are not current evidence.",
+      "historical_commit": "b7f3aa9bd04cbd1765178af86234a5cd09b4aff6",
+      "historical_description": "DNS recovery",
+      "verification": "UNRUN",
+      "original_object": "NOT_RECOVERED"
+    },
+    {
+      "version": 137,
+      "classification": "source-reconstructed",
+      "reconstructed_scope": "Account disable/retire managed-flow warning",
+      "source_refs": [
+        "web/src/AccountSecurity.tsx",
+        "web/src/account-security.dom.test.tsx"
+      ],
+      "document_ref": "docs/verification/LIFECYCLE-WARNINGS-SOURCE-2026-11-06.md",
+      "remaining_gap": "No instant-disconnection claim. Target ad1577e and 3,127-test receipt remain unavailable; source warning does not establish deployed enforcement or product acceptance.",
+      "historical_commit": "ad1577e4a4d23f16e02c16daa2ac2cc75c140e55",
+      "historical_description": "Account lifecycle warning",
+      "verification": "UNRUN",
+      "original_object": "NOT_RECOVERED"
+    }
+  ]
+}

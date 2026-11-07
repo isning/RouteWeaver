@@ -353,9 +353,10 @@ it("blocks a same-turn restore while a new inspection owns the inputs", async ()
   );
   mount();
   await prepare();
+  const restoreButton = screen.getByRole("button", { name: "恢复到新数据库" });
   act(() => {
     fireEvent.click(screen.getByRole("button", { name: "校验备份并查看影响" }));
-    fireEvent.click(screen.getByRole("button", { name: "恢复到新数据库" }));
+    fireEvent.click(restoreButton);
   });
   await waitFor(() => expect(complete).toBeTypeOf("function"));
   await act(async () => {
@@ -597,4 +598,55 @@ it("requires a separate restore gesture after Chinese composition and Enter, the
     confirmation: "RESTORE TO NEW STORE",
   });
   expect((sent[0].get("archive") as File).name).toBe("backup.age");
+});
+
+// Synthetic archive/API boundaries; these cases do not validate encryption or restore writes.
+it.each(["file", "password", "clear"])("retires an inspection error after %s changes", async (change) => {
+  vi.stubGlobal("fetch", vi.fn(async () => json({ detail: "Archive inspection failed" }, 422)));
+  mount();
+  fireEvent.change(screen.getByLabelText("选择加密备份"), { target: { files: [new File(["fixture"], "backup.age")] } });
+  fireEvent.change(screen.getByLabelText("备份密码"), { target: { value: "fixture-password" } });
+  fireEvent.click(screen.getByRole("button", { name: "校验备份并查看影响" }));
+  await screen.findByText("Archive inspection failed");
+  if (change === "file") fireEvent.change(screen.getByLabelText("选择加密备份"), { target: { files: [new File(["next"], "next.age")] } });
+  else if (change === "password") fireEvent.change(screen.getByLabelText("备份密码"), { target: { value: "next-password" } });
+  else fireEvent.click(screen.getByRole("button", { name: "清空备份输入" }));
+  expect(screen.queryByText("Archive inspection failed")).toBeNull();
+});
+
+it.each(["file", "password", "clear"])("ignores late inspection failure after %s changes", async (change) => {
+  let finish!: (response: Response) => void;
+  vi.stubGlobal("fetch", vi.fn(async () => new Promise<Response>(resolve => { finish = resolve; })));
+  mount();
+  fireEvent.change(screen.getByLabelText("选择加密备份"), { target: { files: [new File(["fixture"], "backup.age")] } });
+  fireEvent.change(screen.getByLabelText("备份密码"), { target: { value: "fixture-password" } });
+  fireEvent.click(screen.getByRole("button", { name: "校验备份并查看影响" }));
+  await waitFor(() => expect(finish).toBeTypeOf("function"));
+  if (change === "file") fireEvent.change(screen.getByLabelText("选择加密备份"), { target: { files: [new File(["next"], "next.age")] } });
+  else if (change === "password") fireEvent.change(screen.getByLabelText("备份密码"), { target: { value: "next-password" } });
+  else fireEvent.click(screen.getByRole("button", { name: "清空备份输入" }));
+  await act(async () => { finish(json({ detail: "Obsolete archive failure" }, 422)); });
+  await waitFor(() => expect(screen.getByRole("button", { name: "校验备份并查看影响" }).getAttribute("aria-busy")).not.toBe("true"));
+  expect(screen.queryByText("Obsolete archive failure")).toBeNull();
+});
+
+it("retires a valid preview and confirmation before reinspection, including failure and retry", async () => {
+  let inspections = 0;
+  let finish!: (response: Response) => void;
+  vi.stubGlobal("fetch", vi.fn(async () => ++inspections === 2
+    ? new Promise<Response>(resolve => { finish = resolve; }) : json(preview)));
+  mount();
+  await prepare();
+  fireEvent.click(screen.getByRole("button", { name: "校验备份并查看影响" }));
+  await waitFor(() => expect(finish).toBeTypeOf("function"));
+  expect(screen.queryByText("文件校验通过")).toBeNull();
+  expect(screen.queryByRole("button", { name: "恢复到新数据库" })).toBeNull();
+  await act(async () => { finish(json({ detail: "Reinspection failed" }, 422)); });
+  await screen.findByText("Reinspection failed");
+  expect(screen.queryByText("文件校验通过")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "校验备份并查看影响" }));
+  await screen.findByText("文件校验通过");
+  expect(screen.queryByText("Reinspection failed")).toBeNull();
+  expect((screen.getByLabelText("输入“恢复到新数据库”以确认") as HTMLInputElement).value).toBe("");
+  expect((screen.getByRole("button", { name: "恢复到新数据库" }) as HTMLButtonElement).disabled).toBe(true);
 });

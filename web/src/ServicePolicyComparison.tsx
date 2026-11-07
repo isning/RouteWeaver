@@ -1,3 +1,4 @@
+import { serviceQuotaBytes } from "./service-quota-input";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { useId } from "react";
 import { bitrateLabel, bytesLabel } from "./model";
@@ -20,10 +21,12 @@ const cycleParameter = (mode: string, activeMode: "monthly" | "fixed-days", valu
 const quantity = (value: unknown, zero: string, format: (value: number) => string) => value === null || value === ""
     ? "尚未填写" : value === undefined ? zero : typeof value !== "number" || !Number.isFinite(value) || value < 0
     ? `待修正：${String(value)}` : value === 0 ? zero : format(value);
-const retainedQuota = (value: unknown) => value === undefined || value === null || value === "" ? "尚未填写"
-    : typeof value === "number" && value >= 0 && Number.isSafeInteger(value * 1024 ** 3)
-        ? value === 0 ? "不限额（0 GiB）" : `${value} GiB（${value * 1024 ** 3} 字节）`
-        : `${String(value)} GiB（待修正）`;
+const retainedQuota = (value: unknown) => {
+    if (value === undefined || value === null || value === "") return "尚未填写";
+    const bytes = typeof value === "number" || typeof value === "string" ? serviceQuotaBytes(String(value)) : undefined;
+    return bytes === undefined ? `${String(value)} GiB（待修正）`
+        : bytes === 0 ? "不限额（0 GiB）" : `${String(value)} GiB（${bytes} 字节）`;
+};
 function fields(plan: Service): Field[] {
     const cycle = plan.cycle;
     return [

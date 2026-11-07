@@ -248,3 +248,53 @@ test("semantic token conversion agrees with real Chromium sRGB pixels", async ({
     );
   }
 });
+
+// Source-only reconstruction: runtime execution is recorded separately.
+test("connection port preserves exact invalid intent, discard reset and numeric payloads", async ({ page }) => {
+  const writes: unknown[] = [];
+  await page.route("**/api/nodes", async (route) => {
+    if (route.request().method() !== "POST") return route.continue();
+    writes.push(route.request().postDataJSON());
+    await route.fulfill({ status: 503, json: { error: "port fixture rejected" } });
+  });
+  let dialog = await editor(page);
+  let port = dialog.getByRole("spinbutton", { name: "端口", exact: true });
+  await port.fill("1e");
+  await dialog.getByRole("button", { name: "取消", exact: true }).click();
+  const discard = page.getByRole("alertdialog", { name: "放弃未保存的修改？", exact: true });
+  await expect(discard).toBeVisible();
+  await discard.getByRole("button", { name: "继续编辑", exact: true }).click();
+  await expect(port).toHaveValue("1e");
+  await dialog.getByRole("button", { name: "取消", exact: true }).click();
+  await discard.getByRole("button", { name: "放弃修改", exact: true }).click();
+  await expect(dialog).toBeHidden();
+  await page.getByRole("button", { name: "添加端点", exact: true }).first().click();
+  dialog = page.getByRole("dialog", { name: "添加端点", exact: true });
+  port = dialog.getByRole("spinbutton", { name: "端口", exact: true });
+  await expect(port).toHaveValue("1080");
+  await dialog.getByLabel("端点名称", { exact: true }).fill("port fixture");
+  await dialog.getByRole("textbox", { name: "连接地址", exact: true }).fill("endpoint.test");
+  for (const raw of ["1e", "-", " ", "0x10", "", "0", "65536", "443.0000000000000000001", "65535.0000000000000000001", "4.430000000000000001e2"]) {
+    await port.fill(raw);
+    await dialog.getByRole("button", { name: "保存", exact: true }).click();
+    await expect(port).toHaveAttribute("aria-invalid", "true");
+    await expect(port).toHaveValue(raw);
+    expect(writes).toEqual([]);
+  }
+  await port.fill("");
+  await port.press("ArrowUp");
+  await expect(port).toHaveValue("1");
+  await port.fill("1e");
+  await port.press("ArrowUp");
+  await expect(port).toHaveValue("1");
+  await port.fill("4.43e2");
+  await port.press("ArrowUp");
+  await expect(port).toHaveValue("444");
+  await port.press("ArrowDown");
+  await expect(port).toHaveValue("443");
+  await port.fill("443.000");
+  await dialog.getByRole("button", { name: "保存", exact: true }).click();
+  await expect(dialog.getByText("port fixture rejected", { exact: true })).toBeVisible();
+  expect(writes).toEqual([expect.objectContaining({ port: 443 })]);
+  await expect(port).toHaveValue("443.000");
+});

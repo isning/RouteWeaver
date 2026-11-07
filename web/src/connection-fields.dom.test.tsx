@@ -10,7 +10,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { Button } from "@/components/ui/button";
 import { UIProviders } from "@/ui-patterns/providers";
-import { AppForm as Form } from "@/ui-patterns/form";
+import { AppForm as Form, useForm } from "@/ui-patterns/form";
 import { ConnectionFields, normalizeConnection } from "./ConnectionFields";
 
 beforeAll(() => {
@@ -887,4 +887,53 @@ it("shows REALITY compatibility guidance only while that security mode is select
   expect(screen.queryByText(/REALITY 的兼容性取决于目标核心/)).toBeNull();
   await userEvent.click(screen.getByRole("radio", { name: /^无$/ }));
   expect(screen.queryByText(/REALITY 的兼容性取决于目标核心/)).toBeNull();
+});
+
+
+it("keeps every port edit in the form, rejects exact fractions, and resets through the public form lifecycle", async () => {
+  const submitted: unknown[] = [];
+  const changed = vi.fn();
+  const rejected = vi.fn();
+  function Editor() {
+    const [form] = useForm();
+    return <UIProviders>
+      <Form
+        form={form}
+        initialValues={{ connection: { protocol: "socks", host: "endpoint.test", port: 1080 } }}
+        onValuesChange={changed}
+        onFinishFailed={rejected}
+        onFinish={values => submitted.push(normalizeConnection(values.connection))}
+      >
+        <ConnectionFields />
+        <Button type="submit">Save port</Button>
+        <Button type="button" onClick={() => form.resetFields()}>Reset port</Button>
+      </Form>
+    </UIProviders>;
+  }
+  render(<Editor />);
+  const port = () => screen.getByRole("spinbutton", { name: "端口" }) as HTMLInputElement;
+  const submit = () => fireEvent.submit(screen.getByRole("button", { name: "Save port" }).closest("form")!);
+  const invalid = ["1e", "-", "", " ", "0x10", "0", "65536", "443.0000000000000000001", "4.430000000000000001e2", "65535.0000000000000000001", "1e999999", "1".repeat(257)];
+  for (const [index, raw] of invalid.entries()) {
+    fireEvent.change(port(), { target: { value: raw } });
+    expect(changed.mock.calls.at(-1)?.[0]).toEqual({ connection: { port: raw } });
+    submit();
+    await waitFor(() => expect(rejected).toHaveBeenCalledTimes(index + 1));
+    expect(port().value).toBe(raw);
+    expect(submitted).toEqual([]);
+  }
+  fireEvent.click(screen.getByRole("button", { name: "Reset port" }));
+  await waitFor(() => expect(port().value).toBe("1080"));
+  submit();
+  await waitFor(() => expect(submitted).toEqual([{ protocol: "socks", host: "endpoint.test", port: 1080 }]));
+  for (const [index, [raw, expected]] of [
+    ["1", 1], ["65535", 65535], ["443.000", 443], ["4.43e2", 443], ["+000443", 443], [".443e3", 443],
+  ].entries()) {
+    fireEvent.change(port(), { target: { value: raw } });
+    submit();
+    await waitFor(() => expect(submitted).toHaveLength(index + 2));
+    expect(submitted.at(-1)).toEqual({ protocol: "socks", host: "endpoint.test", port: expected });
+    expect(port().value).toBe(raw);
+    expect(port().getAttribute("aria-invalid")).not.toBe("true");
+  }
 });

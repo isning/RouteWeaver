@@ -299,7 +299,7 @@ it("keeps a later FileError visible alongside the trusted saved parse state", as
   });
   await dialog.findByText("配置文件最大 1 MB。更大的订阅请使用 URL 导入。");
   expect(dialog.getByText("操作未完成")).toBeTruthy();
-  expect(dialog.getByText("输入已保存，导入未完成")).toBeTruthy();
+  expect(dialog.getByText("上次提交已保存，导入未完成")).toBeTruthy();
   expect(dialog.queryByText(parseFailure)).toBeNull();
   expect(
     (dialog.getByLabelText("节点链接或配置内容") as HTMLTextAreaElement).value,

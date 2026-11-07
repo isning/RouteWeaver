@@ -52,6 +52,8 @@ function mountSettings() {
           effectiveRevision: 1,
           effectiveOrigin: "",
           defaultOrigin: "https://default.example.test",
+          currentLinkExample: "https://default.example.test/feed/{existing-token}",
+          proposedLinkExample: "https://default.example.test/feed/{existing-token}",
           verificationStatus: "not-required",
           tokensUnchanged: true,
         });

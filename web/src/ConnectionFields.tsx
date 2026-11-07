@@ -1,5 +1,5 @@
 import { PasswordInput } from "@/ui-patterns/password-input";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type ComponentProps } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -32,8 +32,73 @@ type HeaderRow = { name: string; value: string };
 type DraftTransport = NonNullable<Connection["transport"]> & {
   headerRows?: HeaderRow[];
 };
+// Validate the decimal spelling before Number can round a fractional port into
+// an integer. Decimal/exponent spellings accepted by NumericInput stay supported.
+function connectionPort(value: unknown): number | undefined {
+  if (typeof value === "number")
+    return Number.isInteger(value) && value >= 1 && value <= 65535
+      ? value
+      : undefined;
+  if (typeof value !== "string" || value.length > 256) return undefined;
+  const match = /^\+?(?:(\d+)(?:\.(\d*))?|\.(\d+))(?:[eE]([+-]?\d+))?$/.exec(value);
+  if (!match || match[0] !== value) return undefined;
+  const fraction = match[2] ?? match[3] ?? "";
+  const digits = ((match[1] || "") + fraction).replace(/^0+/, "");
+  if (!digits) return undefined;
+  const significant = digits.replace(/0+$/, "");
+  const scale = Number(match[4] || 0) - fraction.length + digits.length - significant.length;
+  if (!Number.isSafeInteger(scale) || scale < 0 || significant.length + scale > 5)
+    return undefined;
+  const port = Number(significant) * 10 ** scale;
+  return port >= 1 && port <= 65535 ? port : undefined;
+}
+
+// Keep raw edits in the form, including incomplete input. This makes the host
+// editors' existing dirty guards and resetFields lifecycle cover every edit.
+function ConnectionPortInput({
+  value,
+  onPortChange,
+  ...props
+}: Omit<
+  ComponentProps<typeof NumericInput>,
+  "value" | "onValueChange" | "onInputText"
+> & {
+  value?: number | string | null;
+  onPortChange?: (raw: string) => void;
+}) {
+  const numeric = useRef<number | null>(null);
+  if (value == null || value === "") numeric.current = null;
+  else if (
+    (typeof value === "number" ||
+      /^[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$/.test(value)) &&
+    Number.isFinite(Number(value))
+  ) numeric.current = Number(value);
+  // Incomplete text must not change NumericInput's numeric prop: it would
+  // overwrite the user's local spelling with the previous accepted value.
+  return (
+    <NumericInput
+      {...props}
+      value={numeric.current}
+      min={1}
+      max={65535}
+      step={1}
+      precision={0}
+      aria-invalid={
+        props["aria-invalid"] ||
+        (value != null && value !== "" && connectionPort(value) === undefined) ||
+        undefined
+      }
+      onInputText={onPortChange}
+    />
+  );
+}
+
 export function normalizeConnection(connection: Connection): Connection {
   const copy = { ...connection };
+  const port = connectionPort(copy.port);
+  // This normalizer is also used for render-time comparisons. Invalid drafts
+  // stay invalid here; the field validator prevents submitting them.
+  if (port !== undefined) copy.port = port;
   const secured = ["vless", "trojan", "vmess"].includes(copy.protocol);
   if (!secured) {
     delete copy.uuid;
@@ -197,18 +262,17 @@ export function ConnectionFields({
           <AppField
             name={field("port")}
             label="端口"
-            trigger="onValueChange"
+            trigger="onPortChange"
             rules={[
               { required: true, message: "填写端口" },
               {
-                type: "integer",
-                min: 1,
-                max: 65535,
-                message: "端口范围为 1–65535",
+                validator: (_, value) => connectionPort(value) !== undefined
+                  ? Promise.resolve()
+                  : Promise.reject(new Error("端口范围为 1–65535，且必须是整数")),
               },
             ]}
           >
-            <NumericInput min={1} max={65535} step={1} />
+            <ConnectionPortInput />
           </AppField>
         </div>
         {server && (

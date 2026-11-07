@@ -189,8 +189,8 @@ it("reviews equal-count route and default changes before explicit digest-bound d
             platformEntryIds: [],
             ir: {
               endpoints: [
-                { id: "tokyo", name: "目录名称不是比较权威" },
-                { id: "london", name: "另一目录名称" },
+                { id: "tokyo", name: "目录名称不是比较权威", origin: "imported" },
+                { id: "london", name: "另一目录名称", origin: "imported" },
               ],
               resources: [],
               groups: [],

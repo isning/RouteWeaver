@@ -9,6 +9,7 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { SessionBoundary } from "./SessionBoundary";
 import { UIProviders } from "./ui-patterns/providers";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { DiagnosticStartForm, DiagnosticResult } from "./Diagnostics";
@@ -60,6 +61,7 @@ beforeEach(() =>
 );
 afterEach(() => {
   cleanup();
+  sessionStorage.clear();
   vi.unstubAllGlobals();
 });
 it("selects only an observed managed path and queues its route identity without sending native connectors", async () => {
@@ -74,6 +76,7 @@ it("selects only an observed managed path and queues its route identity without 
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url, init) => {
+      if (String(url) === "/api/auth/me") return json({ user: { id: "admin-managed", name: "Admin", role: "admin" }, csrfToken: "synthetic" });
       if (String(url).endsWith("/diagnostic-paths"))
         return json([
           {
@@ -96,7 +99,7 @@ it("selects only an observed managed path and queues its route identity without 
     }),
   );
   mount(
-    <DiagnosticStartForm
+    <SessionBoundary login={() => null}><DiagnosticStartForm
       targets={[{ ...target, methods: ["connectivity"] }]}
       instances={[
         {
@@ -109,7 +112,7 @@ it("selects only an observed managed path and queues its route identity without 
       ]}
       onClose={() => {}}
       onCreated={() => {}}
-    />,
+    /></SessionBoundary>,
   );
   const user = userEvent.setup();
   for (const [label, option] of [
@@ -118,7 +121,7 @@ it("selects only an observed managed path and queues its route identity without 
     ["授权目标", "Authorized target"],
     ["测试方式", "连通性"],
   ]) {
-    fireEvent.click(screen.getByLabelText(label));
+    fireEvent.click(await screen.findByLabelText(label));
     await user.click(
       await screen.findByText(option, {
         selector: "[cmdk-item] span",
@@ -137,9 +140,8 @@ it("selects only an observed managed path and queues its route identity without 
     screen.getByLabelText("我确认目标与测试上限，提交后由节点执行"),
   );
   await user.click(screen.getByRole("button", { name: "提交测试" }));
-  await screen.findByText("path_changed; refresh the applied path");
-  expect(within(selectedPath).getByText("Three-hop route")).toBeTruthy();
-  expect(within(selectedPath).getByText("3 跳")).toBeTruthy();
+  await screen.findByRole("button", { name: "核对上次测试提交" });
+  expect(screen.queryByRole("button", { name: "提交测试" })).toBeNull();
   expect(bodies[0]).toMatchObject({
     pathMode: "managed_route",
     publishedRouteId: "route1",

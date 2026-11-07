@@ -581,7 +581,7 @@ it("does not steal newer Close focus when a background access recheck finishes a
   }
 });
 
-function mountEntries(count = 1) {
+function mountEntries(count = 1, managed = true) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -604,15 +604,15 @@ function mountEntries(count = 1) {
         return pending;
       }
       reads.push(path);
-      if (path.endsWith("/entitlement")) return json({});
+      if (path.endsWith("/effective-policy")) return json({ userId: member.id, routeIds: [line.id] });
       if (path.endsWith("/entries"))
         return json(
           Array.from({ length: count }, (_, i) => ({
             id: `grant-${i}`,
             name: `入口 ${i + 1}`,
             routeId: line.id,
-            publishedRouteId: line.id,
-            deploymentId: line.deploymentId,
+            publishedRouteId: managed ? line.id : undefined,
+            deploymentId: managed ? line.deploymentId : undefined,
             status: "pending-deployment",
           })),
         );
@@ -974,3 +974,38 @@ it("keeps explicit recheck focus inside its persistent status without stealing a
     finish(json({ code: "OUTPUT_ENTRY_UNCONFIRMED" }, 409));
   }
 });
+
+it.each([true, false])(
+  "explains managed=%s entry stop consequences before confirmation and leaves cancel harmless",
+  async (managed, context) => {
+    const scenario = ownedClickScenario(context),
+      f = mountEntries(1, managed);
+    const drawer = await screen.findByRole("dialog", {
+      name: "小林 的平台入口",
+    });
+    const row = await within(drawer).findByRole("listitem", { name: "入口 1" });
+    await scenario.click(() =>
+      within(row).getByRole("button", { name: "停止交付" }),
+    );
+    const decision = await screen.findByRole("alertdialog", {
+      name: "停止交付「入口 1」？",
+    });
+    expect(decision.textContent).toContain("阻止相关平台订阅继续交付");
+    if (managed) {
+      expect(decision.textContent).toContain("此托管入口将拒绝新连接与续期");
+      expect(decision.textContent).toContain("已有连接可能在续期被拒绝或租约到期时结束");
+      expect(decision.textContent).toContain("无需重新发布订阅或重启核心");
+      expect(decision.textContent).not.toContain("立即断开");
+      expect(decision.textContent).not.toContain("已下载的凭据不会因此从节点撤销");
+    } else {
+      expect(decision.textContent).toContain("已下载的凭据不会因此从节点撤销");
+      expect(decision.textContent).not.toContain("拒绝新连接与续期");
+    }
+    expect(f.writes).toHaveLength(0);
+    await scenario.click(() =>
+      within(decision).getByRole("button", { name: "保留" }),
+    );
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+    expect(f.writes).toHaveLength(0);
+  },
+);

@@ -28,12 +28,31 @@ const draftSnapshot = (values: object) =>
       )
       .sort(([left], [right]) => left.localeCompare(right)),
   );
-function readFile(file: File): Promise<string> {
+function readFile(file: File, signal: AbortSignal): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result).split(",", 2)[1]);
-    reader.onerror = () => reject(new Error("文件读取失败，请重新选择。"));
-    reader.readAsDataURL(file);
+    const finish = (error?: Error) => {
+      signal.removeEventListener("abort", cancel);
+      reader.onload = reader.onerror = reader.onabort = null;
+      if (error) reject(error);
+      else resolve(String(reader.result).split(",", 2)[1]);
+    };
+    const cancel = () => {
+      finish(new Error("文件读取已取消，请重新选择。"));
+      reader.abort();
+    };
+    reader.onload = () => finish();
+    reader.onerror = () => finish(new Error("文件读取失败，请重新选择。"));
+    reader.onabort = () => finish(new Error("文件读取已取消，请重新选择。"));
+    signal.addEventListener("abort", cancel, { once: true });
+    if (signal.aborted) cancel();
+    else {
+      try {
+        reader.readAsDataURL(file);
+      } catch {
+        finish(new Error("文件读取失败，请重新选择。"));
+      }
+    }
   });
 }
 export function RuleFileImport({
@@ -48,6 +67,7 @@ export function RuleFileImport({
     [open, setOpen] = useState(true),
     [mode, setMode] = useState("upload"),
     [file, setFile] = useState<File | null>(null),
+    [fileSelected, setFileSelected] = useState(false),
     [error, setError] = useState<Error | null>(null),
     [form] = useForm();
   const [initialValues] = useState(() => ({
@@ -58,18 +78,23 @@ export function RuleFileImport({
   }));
   const values = useWatch([], { form, preserve: true });
   const dirty =
-    !!file ||
+    fileSelected ||
     mode !== "upload" ||
     (values !== undefined &&
       draftSnapshot(values) !== draftSnapshot(initialValues));
   const active = useRef(true);
   const submitting = useRef(false);
+  const lifetime = useRef(0);
+  const reading = useRef<AbortController | null>(null);
   const submitButton = useRef<HTMLButtonElement>(null);
   const disclosure = useRef<HTMLDivElement>(null);
   useLayoutEffect(() => {
     active.current = true;
     return () => {
       active.current = false;
+      lifetime.current++;
+      reading.current?.abort();
+      reading.current = null;
     };
   }, []);
   const { confirm, confirming } = useDiscardConfirmation(id);
@@ -85,12 +110,16 @@ export function RuleFileImport({
       values,
       mode,
       file,
+      owner,
     }: {
       values: Record<string, any>;
       mode: string;
       file: File | null;
+      owner: number;
     }) => {
-      const postFile = prepareFilePost();
+      const stillCurrent = () => active.current && lifetime.current === owner;
+      if (!stillCurrent()) throw new Error("文件导入已取消。");
+      const postFile = prepareFilePost(stillCurrent);
       const resource = {
         id,
         name: values.name,
@@ -107,21 +136,32 @@ export function RuleFileImport({
       };
       if (mode === "upload" && !file)
         throw new Error("请选择要导入的规则文件。");
+      let contentBase64: string | undefined;
+      if (mode === "upload") {
+        const controller = new AbortController();
+        reading.current = controller;
+        try {
+          contentBase64 = await readFile(file!, controller.signal);
+        } finally {
+          if (reading.current === controller) reading.current = null;
+        }
+      }
+      if (!stillCurrent()) throw new Error("文件导入已取消。");
       return postFile<RuleResource>("/me/resources/import", {
         resource,
         ...(mode === "fetch"
           ? { fetch: true }
-          : { contentBase64: await readFile(file!) }),
+          : { contentBase64 }),
       });
     },
-    onSuccess: () => {
+    onSuccess: (_result, { owner }) => {
       client.invalidateQueries({ queryKey: ["resources"] });
-      if (!active.current) return;
+      if (!active.current || lifetime.current !== owner) return;
       message.success("规则文件已接纳，发布配置时会一并打包");
       setOpen(false);
     },
-    onError: (error) => {
-      if (active.current) setError(error);
+    onError: (error, { owner }) => {
+      if (active.current && lifetime.current === owner) setError(error);
     },
   });
   useUnsavedChanges(open && (dirty || save.isPending));
@@ -203,6 +243,7 @@ export function RuleFileImport({
             values: structuredClone({ ...form.getFieldsValue(true), ...v }),
             mode,
             file,
+            owner: lifetime.current,
           });
         }}
       >
@@ -225,12 +266,16 @@ export function RuleFileImport({
           <ChoiceSelect
             aria-label="规则文件导入方式"
             value={mode}
+            disabled={save.isPending || !open}
             options={[
               { value: "upload", label: "上传本地文件" },
               { value: "fetch", label: "读取 HTTPS 文件并接纳" },
             ]}
             onValueChange={(value) => {
-              if (value !== undefined) setMode(value);
+              if (value !== undefined && !submitting.current && open) {
+                setMode(value);
+                setError(null);
+              }
             }}
           />
         </label>
@@ -247,14 +292,15 @@ export function RuleFileImport({
               aria-label="选择规则文件"
               disabled={save.isPending || !open}
               onChange={(e) => {
-                const selected = e.target.files?.[0] || null;
-                if (
-                  selected &&
-                  (selected.size === 0 || selected.size > 8 * 1024 ** 2)
-                ) {
+                if (submitting.current || !active.current || !open) return;
+                const selected = e.target.files?.[0];
+                // A canceled picker is not a request to discard the prior choice.
+                if (!selected) return;
+                e.target.value = "";
+                setFileSelected(true);
+                if (selected.size === 0 || selected.size > 8 * 1024 ** 2) {
                   setError(new Error("规则文件必须为 1 字节至 8 MiB。"));
                   setFile(null);
-                  e.target.value = "";
                   return;
                 }
                 setFile(selected);
@@ -284,6 +330,20 @@ export function RuleFileImport({
               保存时由平台读取一次文件并保存私有副本。读取地址仅保存在平台，文件内容随客户端配置包交付。
             </p>
           </>
+        )}
+        {mode === "upload" && fileSelected && (
+          <ActionButton
+            variant="outline"
+            disabled={save.isPending || !open}
+            onClick={() => {
+              if (submitting.current || !active.current || !open) return;
+              setFile(null);
+              setFileSelected(false);
+              setError(null);
+            }}
+          >
+            清除文件选择
+          </ActionButton>
         )}
         <div className="form-grid grid gap-4 sm:grid-cols-2 [&>label]:grid [&>label]:gap-2 [&>label]:text-sm">
           <AppField

@@ -4,7 +4,8 @@ import {
   TooltipTrigger,
   TooltipContent,
 } from "@/components/ui/tooltip";
-import { NumericInput } from "@/ui-patterns/numeric-input";
+import { useState } from "react";
+import { DraftIntegerInput, exactDraftInteger } from "./draft-integer";
 import { ActionButton } from "@/ui-patterns/actions";
 import { ChoiceSelect, MultiChoice } from "@/ui-patterns/choice-select";
 import { Input } from "@/components/ui/input";
@@ -78,13 +79,23 @@ export function StepsEditor({
   onChange,
   label = "处理步骤",
   emptyText = "未添加处理步骤",
+  portDrafts,
+  onPortInput,
+  portFocus,
+  onPortFocused,
 }: {
+  portDrafts?: Record<string, string>;
+  onPortInput?: (id: string, raw: string) => void;
+  portFocus?: { id: string; request: number };
+  onPortFocused?: () => void;
   value: PipelineStep[];
   onChange: (v: PipelineStep[]) => void;
   label?: string;
   /** Context-specific empty state; null keeps the step controls without prose. */
   emptyText?: string | null;
 }) {
+  const [localPortDrafts, setLocalPortDrafts] = useState<Record<string, string>>({});
+  const rawPorts = portDrafts ?? localPortDrafts;
   const update = (index: number, patch: Partial<PipelineStep>) =>
     onChange(
       value.map((step, i) => (i === index ? { ...step, ...patch } : step)),
@@ -257,15 +268,20 @@ export function StepsEditor({
                 </label>
                 <label>
                   覆盖端口
-                  <NumericInput
-                    min={1}
+                  <DraftIntegerInput
                     max={65535}
                     value={step.override?.port}
-                    onValueChange={(port) =>
-                      update(index, {
-                        override: { ...step.override, port: port ?? undefined },
-                      })
-                    }
+                    raw={rawPorts[step.id]}
+                    focusRequest={portFocus?.id === step.id ? portFocus.request : 0}
+                    onFocusHandled={onPortFocused}
+                    onInput={(raw) => {
+                      if (onPortInput) onPortInput(step.id, raw);
+                      else setLocalPortDrafts((previous) => ({ ...previous, [step.id]: raw }));
+                      const port = raw === "" ? undefined : exactDraftInteger(raw, 65535);
+                      if (raw === "" || port !== undefined) update(index, {
+                        override: { ...step.override, port },
+                      });
+                    }}
                   />
                 </label>
               </>

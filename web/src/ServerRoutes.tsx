@@ -1,3 +1,7 @@
+import {
+  OperationalIntegerInput,
+  operationalInteger,
+} from "./OperationalIntegerInput";
 import { ResourceToolbar, SearchField } from "@/ui-patterns/resource-toolbar";
 import {
   Accordion,
@@ -477,6 +481,20 @@ function ServerRouteEditor({
   onSaved: (d: ServerDeployment) => boolean;
 }) {
   const [draft, setDraft] = useState(initial);
+  const latestDraft = useRef(draft);
+  latestDraft.current = draft;
+  const materialGenerations = useRef<Record<string, number>>({});
+  const pendingMaterials = useRef(new Set<string>());
+  const [materialPending, setMaterialPending] = useState(false);
+  const markMaterialPending = (id: string, pending: boolean) => {
+    if (pending) pendingMaterials.current.add(id);
+    else pendingMaterials.current.delete(id);
+    setMaterialPending(pendingMaterials.current.size > 0);
+  };
+  const invalidateMaterial = (id: string) => {
+    materialGenerations.current[id] = (materialGenerations.current[id] || 0) + 1;
+    markMaterialPending(id, false);
+  };
   const { confirm: confirmDiscard, confirming: discardConfirming } =
     useDiscardConfirmation(initial.id);
   const [discardClosing, setDiscardClosing] = useState(false);
@@ -515,10 +533,13 @@ function ServerRouteEditor({
   const selectionPending =
     path.some((id) => pendingEndpoints[id]) ||
     pendingEndpoints[`add-${path.join("/")}`];
-  useUnsavedChanges(dirty || selectionPending || jsonDirty);
+  useUnsavedChanges(dirty || selectionPending || materialPending || jsonDirty);
   const save = useMutation({
-    mutationFn: (_complete: typeof onSaved) =>
-      saveRecord<ServerDeployment>("server-deployments", draft, isNew),
+    mutationFn: (_complete: typeof onSaved) => {
+      if (pendingMaterials.current.size)
+        throw new Error("请等待 TLS 文件读取完成，或取消读取后再保存。");
+      return saveRecord<ServerDeployment>("server-deployments", latestDraft.current, isNew);
+    },
     onSuccess: (value, complete) => {
       client.invalidateQueries({ queryKey: ["infrastructure"] });
       if (complete(value)) message.success("转发路径草稿已保存");
@@ -528,6 +549,7 @@ function ServerRouteEditor({
   const update = (next: ServerDeployment) => {
     draftRevision.current++;
     setPathLoading(false);
+    latestDraft.current = next;
     setDraft(next);
     setDirty(true);
     setError(null);
@@ -629,7 +651,7 @@ function ServerRouteEditor({
     });
   };
   const close = () =>
-    dirty || selectionPending || jsonDirty
+    dirty || selectionPending || materialPending || jsonDirty
       ? confirm({
           title: "放弃尚未保存的转发路径修改？",
           description: "保留已保存的配置。",
@@ -689,6 +711,7 @@ function ServerRouteEditor({
             !draft.name.trim() ||
             pathLoading ||
             selectionPending ||
+            materialPending ||
             jsonDirty ||
             (save.error instanceof APIError && save.error.status === 409)
           }
@@ -972,8 +995,23 @@ function ServerRouteEditor({
                               </label>
                             </div>
                             <TLSMaterial
+                              key={`${p.listener.id}:${materialGenerations.current[p.listener.id] || 0}`}
                               value={p.tls || {}}
-                              onChange={(tls) => updateProgram(index, { tls })}
+                              onPendingChange={(pending) => markMaterialPending(p.listener.id, pending)}
+                              onChange={(tls) => {
+                                const current = latestDraft.current;
+                                if (!current.ir.programs.some((program) => program.listener.id === p.listener.id)) return;
+                                update({
+                                  ...current,
+                                  ir: {
+                                    ...current.ir,
+                                    topologyRevision: newID("topology"),
+                                    programs: current.ir.programs.map((program) =>
+                                      program.listener.id === p.listener.id ? { ...program, tls } : program,
+                                    ),
+                                  },
+                                });
+                              }}
                             />
                             <p className="muted text-sm text-muted-foreground">
                               文件路径相对于此次配置包，仅使用包内文件。
@@ -1101,6 +1139,7 @@ function ServerRouteEditor({
           onClose={() => setRefreshingListener(undefined)}
           onApply={(next, revision) => {
             if (revision !== draftRevision.current) return false;
+            invalidateMaterial(refreshingListener);
             update({
               ...next,
               ir: { ...next.ir, topologyRevision: newID("topology") },
@@ -1131,6 +1170,7 @@ function ServerRouteEditor({
                   const ir = JSON.parse(json);
                   if (!Array.isArray(ir.programs))
                     throw new Error("\u7F3A\u5C11 programs \u6570\u7EC4");
+                  draft.ir.programs.forEach((program) => invalidateMaterial(program.listener.id));
                   update({ ...draft, ir });
                   setJSONBaseline(json);
                   setJSONOpen(false);
@@ -1544,7 +1584,7 @@ function ServerRouteDetail({
     value.id === opened.current.id &&
     value.revisionToken === opened.current.revisionToken;
   const check = checked && isCurrent(checked) ? checked : null;
-  const [lease, setLease] = useState(300);
+  const [lease, setLease] = useState<number | string>(300);
   const [allow, setAllow] = useState(false);
   const [quota, setQuota] = useState(false);
   const diagnostics = check?.diagnostics ?? deployment.diagnostics ?? [];
@@ -1602,8 +1642,11 @@ function ServerRouteDetail({
       if (!check || !isCurrent(check)) throw staleError();
       if (!publicationRequests?.available)
         throw new Error("请先确认当前管理员身份，再提交修改。");
+      const parsedLease = operationalInteger(lease, 30, 3600);
+      if (parsedLease === undefined)
+        throw new Error("权限有效期须为 30–3600 的整数秒，且不能留空。");
       await publicationRequests.start(deployment.id, {
-        leaseSeconds: lease,
+        leaseSeconds: parsedLease,
         accessAllowed: allow,
         quotaCertain: quota,
         expectedFingerprint: check.fingerprint || "",
@@ -1998,18 +2041,15 @@ function ServerRouteDetail({
                     <>
                       <label className="standalone-label grid gap-2 text-sm font-medium">
                         权限有效期（秒）
-                        <Input
+                        <OperationalIntegerInput
                           min={30}
                           max={3600}
                           value={lease}
-                          type="number"
-                          onChange={(event) =>
-                            ((v) => setLease(v || 300))(
-                              event.target.value === ""
-                                ? null
-                                : Number(event.target.value),
-                            )
-                          }
+                          onInputText={(raw) => {
+                            setLease(raw);
+                            setAllow(false);
+                            setQuota(false);
+                          }}
                         />
                       </label>
                       {check.artifacts.map((a) => (

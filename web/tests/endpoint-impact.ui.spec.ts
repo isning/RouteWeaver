@@ -107,6 +107,24 @@ test("shared endpoint impact review stays readable and cancel preserves exact dr
   await page.getByRole("tab", { name: "监听端点 1" }).click();
   await page.getByRole("button", { name: "编辑", exact: true }).click();
   const editor = page.getByRole("dialog", { name: "编辑监听端点" });
+  const port = editor.getByRole("spinbutton", { name: "端口", exact: true });
+  for (const raw of ["1e", "443.0000000000000000001"]) {
+    await port.fill(raw);
+    await editor.getByRole("button", { name: "保存", exact: true }).click();
+    await expect(port).toHaveAttribute("aria-invalid", "true");
+    await expect(port).toHaveValue(raw);
+    expect(reviews).toBe(0);
+  }
+  await editor.getByRole("button", { name: "取消", exact: true }).click();
+  const discard = page.getByRole("alertdialog", { name: "放弃尚未保存的配置修改？", exact: true });
+  await expect(discard).toBeVisible();
+  await discard.getByRole("button", { name: "继续编辑", exact: true }).click();
+  await expect(port).toHaveValue("443.0000000000000000001");
+  await editor.getByRole("button", { name: "取消", exact: true }).click();
+  await discard.getByRole("button", { name: "放弃修改", exact: true }).click();
+  await expect(editor).toBeHidden();
+  await page.getByRole("button", { name: "编辑", exact: true }).click();
+  await expect(port).toHaveValue(String(endpointImpactConnection.port));
   const name = editor.getByLabel("端点名称", { exact: true });
   await name.fill("保留的共享入口修改");
   const save = editor.getByRole("button", { name: "保存", exact: true });

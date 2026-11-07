@@ -144,6 +144,33 @@ export async function requestFile(path: string, value: unknown): Promise<Blob> {
   await responseGuards.get(response)?.();
   return blob;
 }
+// Token-only operators cannot authenticate an ordinary browser download link.
+export const usesTokenAuthentication = () => !!adminToken;
+export async function requestOutputBundle(id: string) {
+  const owner = tokenRevision;
+  const transport = sessionTransport;
+  const guard = transport?.beforeRequest();
+  const assertCurrent = () => {
+    if (owner !== tokenRevision || transport !== sessionTransport)
+      throw new APIError("登录状态已变化，请重新获取配置包。", 409);
+    guard?.beforeSend();
+  };
+  assertCurrent();
+  // Never follow a URL supplied in access metadata with operator credentials.
+  const response = await send(`/me/outputs/${encodeURIComponent(id)}/bundle`, {
+    redirect: "error",
+  });
+  if (!response.ok) await readResponse<never>(response);
+  if (
+    response.headers.get("content-type")?.split(";")[0].trim() !== "application/zip"
+  )
+    throw new APIError("服务器没有返回配置包，请重试。", response.status);
+  const blob = await response.blob();
+  await guard?.waitForResponse();
+  assertCurrent();
+  // The caller checks again immediately before handing bytes to the browser.
+  return { blob, assertCurrent };
+}
 export const loadState = () => request<State>("/state");
 async function validateLegacyToken(signal?: AbortSignal): Promise<Session> {
   if (!adminToken) throw new APIError("请输入管理员令牌。", 401);
@@ -231,7 +258,7 @@ export function postArchive<T>(
 }
 
 /** Keep an asynchronous file preparation tied to the authority that began it. */
-export function prepareFilePost() {
+export function prepareFilePost(isCurrent?: () => boolean) {
   const guard = sessionTransport?.beforeRequest();
   return async <T>(path: string, value: unknown): Promise<T> => {
     try {
@@ -244,6 +271,9 @@ export function prepareFilePost() {
         409,
       );
     }
+    // Recheck dialog ownership after the session wait, immediately before dispatch.
+    if (isCurrent && !isCurrent())
+      throw new APIError("文件导入已取消，请重新选择文件。", 409);
     return post<T>(path, value);
   };
 }

@@ -246,3 +246,79 @@ it("does not offer managed suspension based on another host's instance", async (
   });
   expect(option.getAttribute("aria-disabled")).toBe("true");
 });
+
+// Source-only reconstructed v123 cases: UNRUN.
+it.each(["1.0000000000000000001", "2.5", "1e", "", "0", "-1", "9007200"])(
+  "retains invalid provider unit intent %s without submitting rounded bytes", async (raw) => {
+    const fetcher = vi.fn();
+    vi.stubGlobal("fetch", fetcher);
+    mount();
+    const input = screen.getByLabelText("周期额度") as HTMLInputElement;
+    fireEvent.change(input, { target: { value: raw } });
+    fireEvent.submit(input.closest("form")!);
+    await screen.findByText(raw === "9007200"
+      ? "用量超出网页可精确提交的整数范围，请缩小数值。"
+      : "供应商额度请输入正整数，2.5 TB 可写为 2500 GB。");
+    expect(input.value).toBe(raw);
+    expect(fetcher).not.toHaveBeenCalled();
+  },
+);
+it.each([["2.000", 2], ["2e3", 2000], ["9007199", 9007199]])(
+  "submits exact provider units %s", async (raw, expected) => {
+    const fetcher = vi.fn(async () => new Response(JSON.stringify(initial), {
+      headers: { "Content-Type": "application/json" },
+    }));
+    vi.stubGlobal("fetch", fetcher);
+    const close = mount();
+    const input = screen.getByLabelText("周期额度");
+    fireEvent.change(input, { target: { value: raw } });
+    fireEvent.submit(input.closest("form")!);
+    await waitFor(() => expect(close).toHaveBeenCalledOnce());
+    const body = JSON.parse((fetcher.mock.calls[0] as unknown as [string, RequestInit])[1].body as string);
+    expect(body.provider.allowance).toBe(expected);
+    expect(body.provider.unit).toBe("GB");
+  },
+);
+it("does not let hidden invalid allowance block unlimited service", async () => {
+  const fetcher = vi.fn(async () => new Response(JSON.stringify(initial), {
+    headers: { "Content-Type": "application/json" },
+  }));
+  vi.stubGlobal("fetch", fetcher);
+  const close = mount();
+  fireEvent.change(screen.getByLabelText("周期额度"), { target: { value: "1e" } });
+  await userEvent.click(screen.getByLabelText("额度类型"));
+  await userEvent.click(await screen.findByRole("option", { name: "不限量" }));
+  fireEvent.submit(screen.getByLabelText("供应商或服务名称").closest("form")!);
+  await waitFor(() => expect(close).toHaveBeenCalledOnce());
+  const body = JSON.parse((fetcher.mock.calls[0] as unknown as [string, RequestInit])[1].body as string);
+  expect(body.provider).toMatchObject({ allowance: 0, mode: "unlimited", notificationSource: "none", exhaustionAction: "advisory" });
+});
+
+// Keyboard controls are source-only coverage; actual browser wheel/locale UNRUN.
+it("preserves provider spinbutton defaults, bounds and explicit exact-tail correction", async () => {
+  vi.stubGlobal("fetch", vi.fn());
+  mount();
+  const input = screen.getByRole("spinbutton", { name: "周期额度" }) as HTMLInputElement;
+  expect(input.value).toBe("100");
+  expect(input.getAttribute("min")).toBe("1");
+  expect(input.getAttribute("max")).toBe("9007199254740991");
+  expect(input.getAttribute("step")).toBe("1");
+  expect(input.getAttribute("aria-valuenow")).toBe("100");
+  fireEvent.keyDown(input, { key: "ArrowUp" });
+  expect(input.value).toBe("101");
+  fireEvent.keyDown(input, { key: "ArrowDown" });
+  expect(input.value).toBe("100");
+  for (const [raw, key, expected] of [
+    ["", "ArrowUp", "1"], ["", "ArrowDown", "1"],
+    ["1", "ArrowDown", "1"],
+    ["9007199254740991", "ArrowUp", "9007199254740991"],
+    ["100.00000000000000000001", "ArrowDown", "100"],
+    ["99.99999999999999999999", "ArrowUp", "100"],
+  ]) {
+    fireEvent.change(input, { target: { value: raw } });
+    expect(input.value).toBe(raw);
+    fireEvent.keyDown(input, { key });
+    expect(input.value).toBe(expected);
+    expect(input.getAttribute("aria-valuenow")).toBe(expected);
+  }
+});

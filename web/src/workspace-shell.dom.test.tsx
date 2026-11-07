@@ -5,6 +5,8 @@ import userEvent from "@testing-library/user-event";
 import { UIProviders } from "./ui-patterns/providers";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import App from "./App";
+import type { ReactNode } from "react";
+import { useUnsavedChanges } from "./navigation";
 beforeAll(async () => {
   // This shell-navigation case does not measure Vite cold compilation. Keep
   // module preparation outside RTL’s user-visible heading deadline; controlled
@@ -30,7 +32,7 @@ afterEach(() => {
   vi.restoreAllMocks();
   history.replaceState(null, "", "#profiles");
 });
-function mount(role = "admin", hash = "#profiles") {
+function mount(role = "admin", hash = "#profiles", owners?: ReactNode) {
   history.replaceState(null, "", hash);
   vi.spyOn(window, "scrollTo").mockImplementation(() => {});
   vi.stubGlobal(
@@ -69,6 +71,7 @@ function mount(role = "admin", hash = "#profiles") {
       <UIProviders>
         
           <App />
+          {owners}
         
       </UIProviders>
     </QueryClientProvider>,
@@ -154,4 +157,28 @@ it("keeps category groups compact without reducing their control height", async 
   const category = within(nav).getByRole("button", { name: "网络资源" });
   expect(category.classList.contains("h-8")).toBe(true);
   expect(category.closest('[data-sidebar="group"]')?.classList.contains("py-1")).toBe(true);
+});
+
+it("shows every active departure consequence and keeps navigation cancelable", async () => {
+  function Owners() {
+    useUnsavedChanges(true, "出口变更可能已保存。离开会丢失核对信息。");
+    useUnsavedChanges(true, "离开不会取消接入凭据操作。");
+    useUnsavedChanges(true);
+    return null;
+  }
+  mount("admin", "#profiles", <Owners />);
+  const user = userEvent.setup();
+  const nav = await screen.findByRole("navigation", { name: "工作空间导航" });
+  await user.click(within(nav).getByRole("button", { name: "服务器" }));
+  const dialog = await screen.findByRole("alertdialog", { name: "离开当前页面？" });
+  expect(dialog.textContent).toContain("出口变更可能已保存。离开会丢失核对信息。");
+  expect(dialog.textContent).toContain("离开不会取消接入凭据操作。");
+  expect(dialog.textContent).toContain("离开会放弃尚未保存的内容。");
+  await user.click(within(dialog).getByRole("button", { name: "留在当前页面" }));
+  expect(location.hash).toBe("#profiles");
+  await user.click(within(nav).getByRole("button", { name: "服务器" }));
+  const confirmed = await screen.findByRole("alertdialog", { name: "离开当前页面？" });
+  await user.click(within(confirmed).getByRole("button", { name: "仍然离开" }));
+  await screen.findByRole("heading", { name: "服务器", level: 1 });
+  expect(location.hash).toBe("#servers");
 });

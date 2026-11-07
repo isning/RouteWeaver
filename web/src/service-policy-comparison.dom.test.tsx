@@ -122,3 +122,11 @@ it("keeps a narrow comparison width-bounded with wrapping headings without losin
   expect(within(table).getByRole("columnheader", { name: "当前保存" })).toBeTruthy();
   expect(within(table).getByRole("columnheader", { name: "本次保存" })).toBeTruthy();
 });
+
+
+it("labels retained raw sub-byte intent as needing correction instead of unlimited", () => {
+  const saved = plan(cycle("none"));
+  render(<ServicePolicyComparison resource={{ target: { kind: "service", id: saved.id }, before: { service: saved }, after: { service: saved } }} showAll draftQuota={{ value: "1e-999" }} />);
+  const table = screen.getByRole("table", { name: "方案变更" });
+  expect(values(table, "周期额度")[1]).toBe("1e-999 GiB（待修正）");
+});

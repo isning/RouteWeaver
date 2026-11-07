@@ -101,12 +101,12 @@ const fixtures: Record<string, unknown> = {
     effectiveRevision: 0,
     draftOrigin: "",
     effectiveOrigin: "",
-    defaultOrigin: "",
+    defaultOrigin: "https://subscriptions.example.test",
     verificationStatus: "not-required",
     tokensUnchanged: true,
     // A literal public placeholder, never a token, credential or usable feed.
-    currentLinkExample: "https://subscriptions.example.test/feed/{订阅标识}",
-    proposedLinkExample: "",
+    currentLinkExample: "https://subscriptions.example.test/feed/{existing-token}",
+    proposedLinkExample: "https://subscriptions.example.test/feed/{existing-token}",
   },
   "/audit": [
     {
@@ -1205,8 +1205,8 @@ for (const width of [390, 768, 1440]) {
       await page.setViewportSize({ width, height: 900 });
       // Freeze Date only: rendering timers and transitions still run normally.
       await page.clock.setFixedTime(new Date("2026-11-03T12:03:00Z"));
-      const current = "https://current.example.test/feed/{订阅标识}";
-      const proposed = "https://proposed.example.test/feed/{订阅标识}";
+      const current = "https://current.example.test/feed/{existing-token}";
+      const proposed = "https://proposed.example.test/feed/{existing-token}";
       const failure = "HTTPS 证书校验失败，无法确认该地址属于当前实例。";
       const unexpected = await readOnlyInventory(page, {
         "/admin/subscription-origin": {

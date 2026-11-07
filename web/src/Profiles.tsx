@@ -1,3 +1,4 @@
+import { DraftIntegerInput, exactDraftInteger } from "./draft-integer";
 import { Metadata, MetadataItem } from "@/ui-patterns/metadata";
 import { ContextHeader, ContextLayout, SectionIndex } from "@/ui-patterns/page-layout";
 import {
@@ -294,6 +295,10 @@ export function ProfileEditor({
   const retainedSources = useRef(initial.sourceIds || []);
   const retainedCollection = useRef(initial.collectionId);
   const [tab, setTab] = useState("rules");
+  const [runtimeVisited, setRuntimeVisited] = useState(false);
+  useEffect(() => {
+    if (tab === "runtime") setRuntimeVisited(true);
+  }, [tab]);
   const [groupTask, setGroupTask] = useState<{
     target: RoutingTarget;
     group: Group;
@@ -310,6 +315,7 @@ export function ProfileEditor({
     };
     groupTaskOwner.current = task;
     setGroupTaskError(null);
+    setNewGroupInterval(undefined);
     setGroupTask(task);
   };
   const detailTabs = useRef<HTMLDivElement>(null);
@@ -353,6 +359,32 @@ export function ProfileEditor({
     revision: number;
   } | null>(null);
   const [changed, setChanged] = useState(initialDirty);
+  const [groupIntervalDrafts, setGroupIntervalDrafts] = useState<Record<string, string>>({});
+  const [newGroupInterval, setNewGroupInterval] = useState<string | undefined>();
+  const [groupIntervalFocus, setGroupIntervalFocus] = useState({ id: "", request: 0 });
+  const invalidGroup = draft.ir.groups.find((group) => group.kind !== "manual" &&
+    groupIntervalDrafts[group.id] !== undefined && groupIntervalDrafts[group.id] !== "" &&
+    exactDraftInteger(groupIntervalDrafts[group.id]) === undefined);
+  const [runtimeNumericLifetime, setRuntimeNumericLifetime] = useState(0);
+  const [runtimeNumericErrors, setRuntimeNumericErrors] = useState<Record<string, boolean>>({});
+  const runtimeNumericKeys = [
+    "mixed-port",
+    ...(readableRuntimeDNS(draft.ir.runtime.dns)
+      ? draft.ir.runtime.dns!.servers.map((server) => `dns-${server.id}`)
+      : []),
+  ];
+  const invalidRuntimeKey = runtimeNumericKeys.find((key) => runtimeNumericErrors[key]);
+  const [runtimeNumericFocus, setRuntimeNumericFocus] = useState<string | null>(null);
+  useLayoutEffect(() => {
+    if (!runtimeNumericFocus) return;
+    const frame = requestAnimationFrame(() => {
+      const input = document.getElementById(`${editorID}-runtime-${runtimeNumericFocus}`);
+      input?.scrollIntoView?.({ block: "center" });
+      input?.focus({ preventScroll: true });
+      setRuntimeNumericFocus(null);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [runtimeNumericFocus, tab]);
   // Validation visibility only; action:null remains the sole incomplete intent.
   const [destinationErrors, setDestinationErrors] = useState<
     ReadonlySet<string>
@@ -511,6 +543,18 @@ export function ProfileEditor({
     return () => cancelAnimationFrame(frame);
   }, [destinationFocus, tab, draft]);
   const checkDestinations = () => {
+    if (invalidGroup) {
+      setTab("groups");
+      setGroupIntervalFocus((previous) => ({ id: invalidGroup.id, request: previous.request + 1 }));
+      setError(new Error("请完成测试间隔输入，使用大于零的整数秒数。"));
+      return false;
+    }
+    if (invalidRuntimeKey) {
+      setTab("runtime");
+      setRuntimeNumericFocus(invalidRuntimeKey);
+      setError(new Error("请完成端口输入，范围为 1–65535 的整数。"));
+      return false;
+    }
     const result = toPersistableProfile(draft);
     if (result.ok) return true;
     setDestinationErrors(
@@ -527,6 +571,8 @@ export function ProfileEditor({
     return false;
   };
   const payload = (): Profile => {
+    if (invalidGroup) throw new Error("请完成测试间隔输入，使用大于零的整数秒数。");
+    if (invalidRuntimeKey) throw new Error("请完成端口输入，范围为 1–65535 的整数。");
     const result = toPersistableProfile(draft);
     if (!result.ok) throw new Error(result.issues[0].message);
     // Existing request normalization: the editable profile name owns ir.name.
@@ -1189,6 +1235,18 @@ export function ProfileEditor({
             <GroupEditor
               key={group.id}
               value={group}
+              onIntervalFocused={() => setGroupIntervalFocus((previous) => ({ ...previous, id: "" }))}
+              intervalRaw={groupIntervalDrafts[group.id]}
+              onIntervalReset={() => setGroupIntervalDrafts((previous) => {
+                const next = { ...previous };
+                delete next[group.id];
+                return next;
+              })}
+              intervalFocus={groupIntervalFocus.id === group.id ? groupIntervalFocus.request : 0}
+              onIntervalInput={(raw) => {
+                setGroupIntervalDrafts((previous) => ({ ...previous, [group.id]: raw }));
+                update({});
+              }}
               actionControlID={actionControlID({
                 kind: "group",
                 id: group.id,
@@ -1329,7 +1387,23 @@ export function ProfileEditor({
       label: "运行设置",
       children: (
         <Section title="客户端运行设置">
-          <RuntimeEditor value={draft.ir} onChange={updateIR} />
+          <RuntimeEditor
+            value={draft.ir}
+            onChange={updateIR}
+            numericResetKey={runtimeNumericLifetime}
+            numericIDPrefix={`${editorID}-runtime-`}
+            numericErrors={runtimeNumericErrors}
+            onNumericEdit={(key, raw) => {
+              setRuntimeNumericErrors((previous) => ({ ...previous, [key]: exactRuntimePort(raw) === undefined }));
+              update({});
+            }}
+            onRepairDNS={() => {
+              const text = JSON.stringify(draft.ir, null, 2);
+              setCode(text);
+              setCodeBaseline(text);
+              setCodeOpen(true);
+            }}
+          />
           <Accordion type="multiple">
             {[
               {
@@ -2149,7 +2223,9 @@ export function ProfileEditor({
                 </TabsList>
               }
               {editorTabs.map((section) => (
-                <TabsContent key={section.key} value={String(section.key)}>
+                <TabsContent key={section.key} value={String(section.key)}
+                  forceMount={section.key === "runtime" && runtimeVisited ? true : undefined}
+                  className="data-[state=inactive]:hidden">
                   <div id={`${editorID}-section-${section.key}`} className="scroll-mt-32">
                     {section.children}
                   </div>
@@ -2191,6 +2267,11 @@ export function ProfileEditor({
               disabled={!groupTask || groupErrors([groupTask.group]).length > 0}
               onClick={() => {
                 if (!groupTask || groupTaskOwner.current !== groupTask) return;
+                if (groupTask.group.kind !== "manual" && newGroupInterval !== undefined && newGroupInterval !== "" && exactDraftInteger(newGroupInterval) === undefined) {
+                  setGroupTaskError("请完成测试间隔输入，使用大于零的整数秒数。");
+                  setGroupIntervalFocus((previous) => ({ id: groupTask.group.id, request: previous.request + 1 }));
+                  return;
+                }
                 if (
                   groupTask.group.members.some(
                     (member) =>
@@ -2244,6 +2325,11 @@ export function ProfileEditor({
           <>
             <GroupEditor
               value={groupTask.group}
+              onIntervalFocused={() => setGroupIntervalFocus((previous) => ({ ...previous, id: "" }))}
+              intervalRaw={newGroupInterval}
+              onIntervalReset={() => setNewGroupInterval(undefined)}
+              onIntervalInput={setNewGroupInterval}
+              intervalFocus={groupIntervalFocus.id === groupTask.group.id ? groupIntervalFocus.request : 0}
               actionControlID={`${editorID}-new-group`}
               actions={groupTaskActions}
               sources={sources.data || []}
@@ -2318,6 +2404,12 @@ export function ProfileEditor({
               try {
                 const ir = parseDraftIR(JSON.parse(code));
                 update({ ir });
+                // Applying JSON explicitly replaces the form intent, including
+                // raw numeric edits whose accepted value did not change.
+                setGroupIntervalDrafts({});
+                setRuntimeNumericErrors({});
+                setRuntimeNumericFocus(null);
+                setRuntimeNumericLifetime((lifetime) => lifetime + 1);
                 setCodeBaseline(code);
                 setCodeOpen(false);
               } catch (e) {
@@ -2409,6 +2501,11 @@ export function ProfileEditor({
   );
 }
 function GroupEditor({
+  onIntervalFocused,
+  onIntervalReset,
+  intervalRaw,
+  onIntervalInput,
+  intervalFocus,
   value,
   onChange,
   onRemove,
@@ -2417,6 +2514,11 @@ function GroupEditor({
   actionControlID,
   usage,
 }: {
+  onIntervalFocused: () => void;
+  onIntervalReset: () => void;
+  intervalRaw?: string;
+  onIntervalInput: (raw: string) => void;
+  intervalFocus: number;
   value: Group;
   actionControlID: string;
   onChange: (g: Group, chosenMembers?: ActionRef[]) => void;
@@ -2425,6 +2527,10 @@ function GroupEditor({
   sources: Source[];
   usage?: ReactNode;
 }) {
+  const [testSections, setTestSections] = useState<string[]>([]);
+  useLayoutEffect(() => {
+    if (intervalFocus) setTestSections((previous) => previous.includes("policy") ? previous : [...previous, "policy"]);
+  }, [intervalFocus]);
   const dynamicEnabled = value.dynamic != null;
   const hasConditions = Object.values(value.dynamic || {}).some((condition) =>
     Array.isArray(condition) ? condition.length > 0 : !!condition,
@@ -2467,6 +2573,7 @@ function GroupEditor({
             ]}
             onValueChange={(kind) => {
               if (kind === undefined) return;
+              if (kind === "manual") onIntervalReset();
               return onChange({
                 ...value,
                 kind,
@@ -2608,7 +2715,7 @@ function GroupEditor({
         )}
       </div>
       {value.kind !== "manual" && (
-        <Accordion type="multiple">
+        <Accordion type="multiple" value={testSections} onValueChange={setTestSections}>
           {[
             {
               key: "policy",
@@ -2628,12 +2735,16 @@ function GroupEditor({
                     </label>
                     <label>
                       测试间隔（秒）
-                      <NumericInput
-                        min={1}
+                      <DraftIntegerInput
                         value={value.intervalSeconds}
-                        onValueChange={(v) =>
-                          onChange({ ...value, intervalSeconds: v ?? 300 })
-                        }
+                        raw={intervalRaw}
+                        focusRequest={intervalFocus}
+                        onFocusHandled={onIntervalFocused}
+                        onInput={(raw) => {
+                          onIntervalInput(raw);
+                          const interval = raw === "" ? 300 : exactDraftInteger(raw);
+                          if (interval !== undefined) onChange({ ...value, intervalSeconds: interval });
+                        }}
                       />
                     </label>
                   </div>
@@ -3165,14 +3276,71 @@ function RuntimeSetting({
     </div>
   );
 }
+// Check the decimal spelling before Number can round away fractional intent.
+// Bounded input and exponent work prevent oversized text from growing integers.
+function exactRuntimePort(raw: string): number | undefined {
+  if (raw.length > 256) return undefined;
+  const match = /^\+?(?:(\d+)(?:\.(\d*))?|\.(\d+))(?:[eE]([+-]?\d{1,3}))?$/.exec(raw);
+  if (!match || match[0] !== raw) return undefined;
+  const fraction = match[2] ?? match[3] ?? "";
+  let digits = ((match[1] || "0") + fraction).replace(/^0+/, "") || "0";
+  const shift = Number(match[4] || "0") - fraction.length;
+  if (shift < 0) {
+    const removed = -shift;
+    if (removed >= digits.length || !/^0*$/.test(digits.slice(-removed))) return undefined;
+    digits = digits.slice(0, -removed);
+  } else {
+    if (digits.length + shift > 5) return undefined;
+    digits += "0".repeat(shift);
+  }
+  if (digits.length > 5) return undefined;
+  const port = Number(digits);
+  return port >= 1 && port <= 65535 ? port : undefined;
+}
+function readableRuntimeDNS(dns: ProfileIR["runtime"]["dns"]): boolean {
+  return !!dns &&
+    typeof dns === "object" &&
+    !Array.isArray(dns) &&
+    Array.isArray(dns.servers) &&
+    (dns.final === undefined || typeof dns.final === "string") &&
+    dns.servers.every((server) =>
+      !!server &&
+      typeof server === "object" &&
+      !Array.isArray(server) &&
+      typeof server.id === "string" &&
+      server.id.length > 0 &&
+      typeof server.type === "string" &&
+      typeof server.address === "string" &&
+      (server.port === undefined || typeof server.port === "number"),
+    );
+}
 function RuntimeEditor({
   value,
   onChange,
+  onRepairDNS,
+  numericIDPrefix,
+  numericResetKey,
+  numericErrors,
+  onNumericEdit,
 }: {
   value: Pick<ProfileIR, "runtime">;
   onChange: (value: Pick<ProfileIR, "runtime">) => void;
+  onRepairDNS: () => void;
+  numericIDPrefix: string;
+  numericResetKey: number;
+  numericErrors: Record<string, boolean>;
+  onNumericEdit: (key: string, raw: string) => void;
 }) {
   const runtime = value.runtime;
+  const defaultDNS = useRef<HTMLButtonElement>(null);
+  const dnsIssueID = useId();
+  // JSON drafts may violate the static IR type. Interpret only representable
+  // shapes; never filter bad rows, coerce values, or replace the saved intent.
+  const dns = runtime.dns;
+  const readableDNS = readableRuntimeDNS(dns);
+  const missingDefaultDNS =
+    readableDNS &&
+    (!dns!.final || !dns!.servers.some((server) => server.id === dns!.final));
   const update = (patch: Partial<ProfileIR["runtime"]>) =>
     onChange({ runtime: { ...runtime, ...patch } });
   return (
@@ -3183,9 +3351,14 @@ function RuntimeEditor({
           value={runtime.mixedPort}
           min={1}
           max={65535}
-          onValueChange={(mixedPort) =>
-            update({ mixedPort: mixedPort ?? 7890 })
-          }
+          resetKey={numericResetKey}
+          id={`${numericIDPrefix}mixed-port`}
+          aria-invalid={numericErrors["mixed-port"] || undefined}
+          onInputText={(raw) => {
+            onNumericEdit("mixed-port", raw);
+            const mixedPort = exactRuntimePort(raw);
+            if (mixedPort !== undefined) update({ mixedPort });
+          }}
         />
       </label>
       <div
@@ -3196,7 +3369,7 @@ function RuntimeEditor({
         <RuntimeSetting
           title="DNS 解析"
           description="为客户端设置独立的 DNS 服务器。"
-          checked={!!runtime.dns}
+          checked={runtime.dns !== undefined}
           label="启用 DNS"
           onCheckedChange={(enabled) => {
             const id = newID("dns");
@@ -3217,7 +3390,20 @@ function RuntimeEditor({
             });
           }}
         >
-          {runtime.dns && (
+          {runtime.dns !== undefined && !readableDNS && (
+            <Notice
+              tone="warning"
+              title="DNS 结构无法读取"
+              action={
+                <ActionButton variant="outline" onClick={onRepairDNS}>
+                  修复 DNS JSON
+                </ActionButton>
+              }
+            >
+              原始内容保留在当前草稿中，请在配置意图 JSON 中修复后再保存。
+            </Notice>
+          )}
+          {readableDNS && runtime.dns && (
             <>
               {runtime.dns.servers.map((server, index) => (
                 <div
@@ -3273,16 +3459,22 @@ function RuntimeEditor({
                       value={server.port}
                       min={1}
                       max={65535}
-                      onValueChange={(port) =>
+                      resetKey={numericResetKey}
+                      id={`${numericIDPrefix}dns-${server.id}`}
+                      aria-invalid={numericErrors[`dns-${server.id}`] || undefined}
+                      onInputText={(raw) => {
+                        onNumericEdit(`dns-${server.id}`, raw);
+                        const port = exactRuntimePort(raw);
+                        if (port === undefined) return;
                         update({
                           dns: {
                             ...runtime.dns!,
                             servers: runtime.dns!.servers.map((s, i) =>
-                              i === index ? { ...s, port: port ?? 53 } : s,
+                              i === index ? { ...s, port } : s,
                             ),
                           },
-                        })
-                      }
+                        });
+                      }}
                     />
                   </label>
                   <ActionButton
@@ -3329,6 +3521,15 @@ function RuntimeEditor({
               <label className="standalone-label grid min-w-0 gap-2 text-sm font-medium">
                 默认 DNS
                 <ChoiceSelect
+                  ref={defaultDNS}
+                  aria-label="默认 DNS"
+                  aria-invalid={missingDefaultDNS || undefined}
+                  aria-describedby={missingDefaultDNS ? dnsIssueID : undefined}
+                  selectedLabel={missingDefaultDNS
+                    ? runtime.dns.final
+                      ? `已缺失：${runtime.dns.final}`
+                      : "尚未选择默认 DNS"
+                    : undefined}
                   value={runtime.dns.final}
                   options={runtime.dns.servers.map((s) => ({
                     value: s.id,
@@ -3340,6 +3541,25 @@ function RuntimeEditor({
                   }}
                 />
               </label>
+              {missingDefaultDNS && (
+                <Notice
+                  id={dnsIssueID}
+                  tone="warning"
+                  title="默认 DNS 不可用"
+                  action={
+                    <ActionButton
+                      variant="outline"
+                      onClick={() => defaultDNS.current?.focus()}
+                    >
+                      重新选择默认 DNS
+                    </ActionButton>
+                  }
+                >
+                  {runtime.dns.servers.length
+                    ? "请选择现有服务器。可先保存草稿，检查通过后才能发布。"
+                    : "请先添加 DNS 服务器，再选择默认 DNS。可先保存草稿，检查通过后才能发布。"}
+                </Notice>
+              )}
             </>
           )}
         </RuntimeSetting>

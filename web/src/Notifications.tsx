@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 import { useUnsavedChanges } from "./navigation";
 import { DataTable, TableRowActions } from "./DataTable";
-import { useId, useLayoutEffect, useRef, useState } from "react";
+import { useId, useLayoutEffect, useRef, useState, type ComponentProps } from "react";
 import { useDiscardConfirmation } from "./useDiscardConfirmation";
 import { wrapPublicationModalTab as wrapAnnouncementModalTab } from "./publication-modal-focus";
 import { revealFocusedPolicyModalControl as revealFocusedModalAction } from "./drawer-control-visibility";
@@ -109,17 +109,53 @@ export function InboxPage() {
     refetchInterval: 60000,
   });
   const [selected, setSelected] = useState<InboxItem | null>(null);
+  const currentSelected = selected
+    ? query.data?.find((item) => item.eventId === selected.eventId)
+    : undefined;
   // Keep only presentation alive while the dismissed sheet animates out.
   const presentation = useRef<InboxItem | null>(null);
+  const selectedSnapshot = selected
+    ? currentSelected || (presentation.current?.eventId === selected.eventId ? presentation.current : selected)
+    : null;
   useLayoutEffect(() => {
-    if (selected) presentation.current = selected;
-  }, [selected]);
-  const displayed = selected || presentation.current;
+    if (selectedSnapshot) presentation.current = selectedSnapshot;
+  }, [selectedSnapshot]);
+  const displayed = selectedSnapshot || presentation.current;
   const client = useQueryClient();
+  const acknowledgements = useRef(new Set<string>());
+  // Mutation observers follow only the latest call; outcomes belong to each event.
+  const [readErrors, setReadErrors] = useState<Map<string, Error>>(new Map());
+  const [pendingReads, setPendingReads] = useState<Set<string>>(new Set());
   const read = useMutation({
     mutationFn: (id: string) => post(`/me/notifications/${id}/read`),
     onSuccess: () => client.invalidateQueries({ queryKey: ["inbox"] }),
+    onError: (error, id) => {
+      setReadErrors((previous) => new Map(previous).set(id, error));
+    },
+    onSettled: (_data, _error, id) => {
+      acknowledgements.current.delete(id);
+      setPendingReads((previous) => {
+        const next = new Set(previous);
+        next.delete(id);
+        return next;
+      });
+    },
   });
+  const canAcknowledge = (id: string) =>
+    query.isSuccess && !query.isFetching && !query.isPaused &&
+    !!query.data?.some((item) => item.eventId === id && !item.readAt);
+  const acknowledge = (id: string) => {
+    if (!canAcknowledge(id) || acknowledgements.current.has(id)) return;
+    acknowledgements.current.add(id);
+    setPendingReads((previous) => new Set(previous).add(id));
+    setReadErrors((previous) => {
+      const next = new Map(previous);
+      next.delete(id);
+      return next;
+    });
+    read.mutate(id);
+  };
+  const selectedError = selected ? readErrors.get(selected.eventId) : undefined;
   return (
     <>
       <PageHeader
@@ -128,12 +164,16 @@ export function InboxPage() {
           <ActionButton
             leadingIcon={<ReloadOutlined aria-hidden="true" />}
             onClick={() => query.refetch()}
+            pending={query.isFetching}
             variant="outline"
           >
             刷新
           </ActionButton>
         }
       />
+      {query.data && (query.isFetching || query.isPaused) && (
+        <Notice tone="info">{query.isPaused ? "等待网络连接，消息列表尚未更新。" : "正在刷新消息，列表仍为上次读取结果。"}</Notice>
+      )}
       <QueryState
         loading={query.isPending} paused={query.isPaused} loadingLayout="table"
         error={query.error}
@@ -152,9 +192,8 @@ export function InboxPage() {
                   key={item.eventId}
                   className="flex w-full flex-wrap items-start gap-3 p-4 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   onClick={() => {
-                    read.reset();
                     setSelected(item);
-                    if (!item.readAt) read.mutate(item.eventId);
+                    if (!item.readAt) acknowledge(item.eventId);
                   }}
                 >
                   <span
@@ -188,7 +227,25 @@ export function InboxPage() {
         }}
         size="lg"
       >
-        <ErrorNotice error={read.error} />
+        {selected && (query.isFetching || query.isPaused || query.isError || !currentSelected) && (
+          <Notice tone="warning">
+            {query.isFetching ? "正在核对消息，当前显示上次读取内容。"
+              : query.isPaused ? "等待网络连接，当前显示上次读取内容。"
+              : query.isError ? "消息刷新失败，当前显示上次读取内容。"
+              : "此消息已不在当前列表中，以下为之前读取的内容。"}
+          </Notice>
+        )}
+        <ErrorNotice error={selectedError} />
+        {selected && !displayed?.readAt && (
+          <ActionButton
+            pending={pendingReads.has(selected.eventId)}
+            keepFocusableWhilePending
+            disabled={!canAcknowledge(selected.eventId) && !pendingReads.has(selected.eventId)}
+            onClick={() => { if (selected && currentSelected?.eventId === selected.eventId) acknowledge(selected.eventId); }}
+          >
+            {selectedError ? "重试标记已读" : "标记已读"}
+          </ActionButton>
+        )}
         <p className="text-sm text-muted-foreground">
           {dateLabel(displayed?.createdAt)}
         </p>
@@ -587,9 +644,90 @@ function NotificationSettings() {
     </>
   );
 }
+// Validate the decimal spelling before Number can round a fractional input into
+// an integer. Decimal/exponent spellings accepted by NumericInput stay supported.
+function notificationInteger(value: unknown, max: number): number | undefined {
+  if (typeof value === "number")
+    return Number.isInteger(value) && value >= 1 && value <= max
+      ? value
+      : undefined;
+  if (typeof value !== "string" || value.length > 4096) return undefined;
+  const match = /^\+?(?:(\d+)(?:\.(\d*))?|\.(\d+))(?:[eE]([+-]?\d+))?$/.exec(value);
+  if (!match || match[0] !== value) return undefined;
+  const fraction = match[2] ?? match[3] ?? "";
+  const digits = ((match[1] || "") + fraction).replace(/^0+/, "");
+  if (!digits) return undefined;
+  const significant = digits.replace(/0+$/, "");
+  const scale = Number(match[4] || 0) - fraction.length + digits.length - significant.length;
+  if (!Number.isSafeInteger(scale) || scale < 0 || significant.length + scale > String(max).length)
+    return undefined;
+  const integer = Number(significant) * 10 ** scale;
+  return integer >= 1 && integer <= max ? integer : undefined;
+}
+
+// Keep partial edits in the form so dirty tracking and validation see them.
+function NotificationIntegerInput({
+  value,
+  max,
+  onRawChange,
+  ...props
+}: Omit<
+  ComponentProps<typeof NumericInput>,
+  "value" | "onValueChange" | "onInputText"
+> & {
+  max: number;
+  value?: number | string | null;
+  onRawChange?: (raw: string) => void;
+}) {
+  const numeric = useRef<number | null>(null);
+  if (value == null || value === "") numeric.current = null;
+  else if (
+    (typeof value === "number" ||
+      /^[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$/.test(value)) &&
+    Number.isFinite(Number(value))
+  ) numeric.current = Number(value);
+  // Incomplete text must not change NumericInput's numeric prop: it would
+  // overwrite the user's local spelling with the previous accepted value.
+  return (
+    <NumericInput
+      {...props}
+      value={numeric.current}
+      min={1}
+      max={max}
+      step={1}
+      precision={0}
+      aria-invalid={
+        props["aria-invalid"] ||
+        (value != null && value !== "" && notificationInteger(value, max) === undefined) ||
+        undefined
+      }
+      onInputText={onRawChange}
+    />
+  );
+}
+
+function notificationIntegerRules(max: number) {
+  return [{ validator: (_: unknown, value: unknown) =>
+    notificationInteger(value, max) === undefined
+      ? Promise.reject(new Error(`请输入 1–${max} 之间的整数`))
+      : Promise.resolve(),
+  }];
+}
+function notificationThresholdRules(max: number) {
+  return [{ validator: (_: unknown, value: unknown) => {
+    if (!Array.isArray(value)) return Promise.reject(new Error("请选择提醒阈值"));
+    const parsed = value.map((token) => notificationInteger(token, max));
+    return value.length > 10 || parsed.some((n) => n === undefined) || new Set(parsed).size !== parsed.length
+      ? Promise.reject(new Error(`最多设置 10 个不重复的 1–${max} 整数阈值`))
+      : Promise.resolve();
+  } }];
+}
+
 function SettingsForm({ initial }: { initial: Settings }) {
   const [form] = useForm();
   const saveConsequenceId = useId();
+  const senderInput = useRef<HTMLInputElement>(null);
+  const [openChannels, setOpenChannels] = useState<string[]>([]);
   const [baseline, setBaseline] = useState(initial);
   const [dirty, setDirty] = useState(false);
   useUnsavedChanges(dirty);
@@ -617,14 +755,15 @@ function SettingsForm({ initial }: { initial: Settings }) {
         body: JSON.stringify({
           ...baseline,
           ...v,
-          email: { ...baseline.email, ...v.email },
+          email: { ...baseline.email, ...v.email, port: notificationInteger(v.email.port, 65535) },
+          repeatHours: notificationInteger(v.repeatHours, 720),
           webhook: { ...baseline.webhook, ...v.webhook },
           smtpPasswordSet: undefined,
           webhookSecretSet: undefined,
           revision: baseline.revision,
-          quotaPercent: v.quotaPercent.map(Number),
-          expiryHours: v.expiryHours.map(Number),
-          providerRemainingPercent: v.providerRemainingPercent.map(Number),
+          quotaPercent: v.quotaPercent.map((token) => notificationInteger(token, 100)),
+          expiryHours: v.expiryHours.map((token) => notificationInteger(token, 8784)),
+          providerRemainingPercent: v.providerRemainingPercent.map((token) => notificationInteger(token, 100)),
           smtpPassword: clearSMTP ? "" : v.smtpPassword || undefined,
           webhookSecret: clearWebhook ? "" : v.webhookSecret || undefined,
         }),
@@ -684,6 +823,11 @@ function SettingsForm({ initial }: { initial: Settings }) {
       <AppForm
         form={form}
         disabled={save.isPending}
+        noValidate
+        onFinishFailed={({ errorFields }) => {
+          if (errorFields.some(({ name }) => name[0] === "email"))
+            setOpenChannels((current) => current.includes("email") ? current : [...current, "email"]);
+        }}
         onValuesChange={() => setDirty(true)}
         initialValues={{
           ...baseline,
@@ -701,6 +845,7 @@ function SettingsForm({ initial }: { initial: Settings }) {
         <div className="grid gap-4 sm:grid-cols-2">
           <AppField
             name="quotaPercent"
+            rules={notificationThresholdRules(100)}
             label="已用额度提醒阈值（%）"
             description="账号已用流量达到任一比例时提醒本人；每个计费周期、每个阈值生成一次。"
             trigger="onValueChange"
@@ -715,6 +860,7 @@ function SettingsForm({ initial }: { initial: Settings }) {
           </AppField>
           <AppField
             name="expiryHours"
+            rules={notificationThresholdRules(8784)}
             label="到期前提醒（小时）"
             description="账号服务和供应商资源共用这些提前量；剩余时间进入范围后生成提醒。"
             trigger="onValueChange"
@@ -729,6 +875,7 @@ function SettingsForm({ initial }: { initial: Settings }) {
           </AppField>
           <AppField
             name="providerRemainingPercent"
+            rules={notificationThresholdRules(100)}
             label="供应商剩余配额提醒（%）"
             description="供应商剩余额度降至任一比例时提醒管理员。"
             trigger="onValueChange"
@@ -743,11 +890,12 @@ function SettingsForm({ initial }: { initial: Settings }) {
           </AppField>
           <AppField
             name="repeatHours"
+            rules={notificationIntegerRules(720)}
             label="到期提醒重复周期（小时）"
             description="按距到期时间划分时段，同一提醒阈值每段最多生成一次；额度提醒沿用原设置。"
-            trigger="onValueChange"
+            trigger="onRawChange"
           >
-            <NumericInput min={1} />
+            <NotificationIntegerInput max={720} />
           </AppField>
         </div>
         <AppField
@@ -759,7 +907,7 @@ function SettingsForm({ initial }: { initial: Settings }) {
         >
           <Switch />
         </AppField>
-        <Accordion type="multiple">
+        <Accordion type="multiple" value={openChannels} onValueChange={setOpenChannels}>
           {[
             {
               key: "email",
@@ -795,9 +943,10 @@ function SettingsForm({ initial }: { initial: Settings }) {
                     <AppField
                       name={["email", "port"]}
                       label="端口"
-                      trigger="onValueChange"
+                      rules={notificationIntegerRules(65535)}
+                      trigger="onRawChange"
                     >
-                      <NumericInput min={1} max={65535} />
+                      <NotificationIntegerInput max={65535} />
                     </AppField>
                     <AppField
                       name={["email", "tlsMode"]}
@@ -840,8 +989,15 @@ function SettingsForm({ initial }: { initial: Settings }) {
                       <Checkbox />
                     </AppField>
                   )}
-                  <AppField name={["email", "from"]} label="发件地址">
-                    <Input type="email" />
+                  <AppField
+                    name={["email", "from"]}
+                    label="发件地址"
+                    rules={[{ validator: () => senderInput.current?.validity.typeMismatch
+                      ? Promise.reject(new Error("请输入有效的发件地址"))
+                      : Promise.resolve(),
+                    }]}
+                  >
+                    <Input ref={senderInput} type="email" />
                   </AppField>
                   <AppField
                     name={["email", "to"]}

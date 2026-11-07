@@ -24,7 +24,7 @@ import { DataTable } from "./DataTable";
 import { useUnsavedChanges } from "./navigation";
 import { useDiscardConfirmation } from "./useDiscardConfirmation";
 import { invalidateOutputInputs } from "./output-comparison";
-import { useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   useMutation,
   useQuery,
@@ -40,7 +40,6 @@ import type {
   Rule,
   Profile,
   Runtime,
-  Source,
   PlatformEntry,
   TemplateRoutingReview,
   FrozenRoutingIntent,
@@ -381,34 +380,9 @@ export function TemplatesPage({ admin = false }: { admin?: boolean }) {
     enabled: !!checking,
   });
   const [updateBindings, setUpdateBindings] = useState<SlotBindings>({});
-  const sourceQuery = useQuery({
-    queryKey: ["sources"],
-    queryFn: () => list<Source>("/me/sources"),
-    enabled: !!checking,
-  });
-  const updateEntries = useQuery({
-    queryKey: ["platform-entries"],
-    queryFn: () => list<PlatformEntry>("/me/platform-entries"),
-    enabled: !!checking,
-  });
   const currentProfile = profiles.data?.find(
     (p) => p.id === checking?.targetId,
   );
-  const selectedSourceIds = new Set([
-    ...(currentProfile?.sourceIds || []),
-    ...(collections.data
-      ?.find((c) => c.id === currentProfile?.collectionId)
-      ?.sources.map((s) => s.sourceId) || []),
-  ]);
-  const availableEndpoints = [
-    ...(currentProfile?.ir.endpoints || []),
-    ...(sourceQuery.data || [])
-      .filter((s) => selectedSourceIds.has(s.id))
-      .flatMap((s) => s.snapshot?.endpoints || []),
-    ...(updateEntries.data || []).filter((entry) =>
-      currentProfile?.platformEntryIds?.includes(entry.id),
-    ),
-  ].filter((e, i, all) => all.findIndex((x) => x.id === e.id) === i);
   const effectiveVersion =
     updateVersion ??
     (checking?.mode === "pinned"
@@ -420,6 +394,13 @@ export function TemplatesPage({ admin = false }: { admin?: boolean }) {
       (t) => t.id === checking?.templateId && t.version === effectiveVersion,
     )
   )?.spec;
+  const updateEndpoints = useTemplateEndpoints(
+    currentProfile,
+    !!checking && !!updateSpec?.endpointSlots?.length && catalogReady(profiles),
+  );
+  const availableEndpoints = catalogReady(profiles) && catalogReady(updateEndpoints)
+    ? updateEndpoints.data || []
+    : [];
   const [reviewInput, setReviewInput] = useState<{
     version: number;
     bindings: SlotBindings;
@@ -806,6 +787,9 @@ export function TemplatesPage({ admin = false }: { admin?: boolean }) {
           )}
           {checking && checking.targetKind === "profiles" && (
             <div className="space-y-5">
+              {!!updateSpec?.endpointSlots?.length && (
+                <TemplateCatalogNotice<{ id: string; name: string }> query={catalogReady(profiles) ? updateEndpoints : profiles} label="可用连接列表" />
+              )}
               {updateSpec?.endpointSlots?.map((slot) => (
                 <label
                   className="standalone-label grid min-w-0 gap-2 text-sm font-medium"
@@ -816,6 +800,7 @@ export function TemplatesPage({ admin = false }: { admin?: boolean }) {
                     clearable
                     value={updateBindings.endpoints?.[slot.id]}
                     placeholder="为模板选择自己的连接"
+                    disabled={!catalogReady(profiles) || !catalogReady(updateEndpoints)}
                     options={availableEndpoints.map((e) => ({
                       value: e.id,
                       label: e.name,
@@ -1030,6 +1015,75 @@ function TemplateCatalogNotice<T>({
     </div>
   );
 }
+// Match materializeProfileWithReader: collection replaces sources and inline
+// endpoints; source processing replaces inline endpoints; grants are resolved
+// separately. Raw snapshots and embedded platform endpoints are not authority.
+function endpointChoices(value: unknown): { id: string; name: string }[] {
+  if (!Array.isArray(value)) throw new Error("无法读取可用连接，请重试");
+  const ids = new Set<string>();
+  return value.map((entry) => {
+    if (!entry || typeof entry.id !== "string" || !entry.id.trim() ||
+        typeof entry.name !== "string" || !entry.name.trim() || ids.has(entry.id))
+      throw new Error("无法读取可用连接，请重试");
+    ids.add(entry.id);
+    return { id: entry.id, name: entry.name };
+  });
+}
+function useTemplateEndpoints(profile: Profile | undefined, enabled: boolean) {
+  const client = useQueryClient();
+  useEffect(() => client.getQueryCache().subscribe((event) => {
+    if (event.type !== "updated" ||
+        !["sources", "collections", "platform-entries"].includes(String(event.query.queryKey[0]))) return;
+    if (event.action.type === "invalidate" || event.action.type === "success")
+      void client.invalidateQueries({ queryKey: ["template-endpoints"] });
+  }), [client]);
+  return useQuery({
+    queryKey: ["template-endpoints", profile],
+    enabled: enabled && !!profile,
+    select: endpointChoices,
+    queryFn: async () => {
+      if (!profile) throw new Error("请选择客户端配置");
+      let endpoints: { id: string; name: string }[];
+      if (profile.collectionId || profile.sourceIds?.length) {
+        const result = await post<{ endpoints: { id: string; name: string }[] }>(
+          profile.collectionId
+            ? `/me/collections/${encodeURIComponent(profile.collectionId)}/preview`
+            : "/me/collections/preview",
+          profile.collectionId
+            ? {}
+            : {
+                id: "profile-sources",
+                name: "Profile sources",
+                sources: profile.sourceIds!.map((sourceId) => ({ sourceId })),
+              },
+        );
+        if (!Array.isArray(result.endpoints))
+          throw new Error("无法读取处理后的连接，请重试");
+        if (result.endpoints.some((endpoint) =>
+          !endpoint || (endpoint as { origin?: unknown }).origin !== "imported"))
+          throw new Error("无法读取处理后的连接，请重试");
+        endpoints = endpointChoices(result.endpoints);
+      } else {
+        const local = profile.ir.endpoints || [];
+        if (local.some((endpoint) =>
+          endpoint.origin !== "imported" &&
+          !(endpoint.origin === "platform-entry" && profile.platformEntryIds?.includes(endpoint.id))))
+          throw new Error("配置中的连接类型不可用");
+        endpoints = endpointChoices(local.filter((endpoint) => endpoint.origin === "imported"));
+      }
+      if (profile.platformEntryIds?.length) {
+        const entries = endpointChoices(await list<PlatformEntry>("/me/platform-entries"));
+        const granted = profile.platformEntryIds.map((id) => {
+          const entry = entries.find((item) => item.id === id);
+          if (!entry) throw new Error("配置中的平台连接已不可用");
+          return entry;
+        });
+        endpoints = [...endpoints, ...granted];
+      }
+      return endpointChoices(endpoints);
+    },
+  });
+}
 function SelectTemplate({
   template,
   profiles,
@@ -1082,43 +1136,15 @@ function SelectTemplate({
       : undefined;
   const hasEndpointSlots =
     template?.kind === "client-profile" && !!chosen?.spec.endpointSlots?.length;
-  const needsCollection = hasEndpointSlots && !!target?.collectionId;
-  const collection = collections.data?.find(
-    (c) => c.id === target?.collectionId,
+  const endpointCatalog = useTemplateEndpoints(
+    target,
+    hasEndpointSlots && catalogReady(profiles),
   );
-  const sourceIds = new Set([
-    ...(target?.sourceIds || []),
-    ...(needsCollection && catalogReady(collections)
-      ? collection?.sources.map((s) => s.sourceId) || []
-      : []),
-  ]);
-  const needsSources = hasEndpointSlots && sourceIds.size > 0;
-  const needsEntries = hasEndpointSlots && !!target?.platformEntryIds?.length;
-  const sources = useQuery({
-    queryKey: ["sources"],
-    queryFn: () => list<Source>("/me/sources"),
-    enabled: !!template && needsSources,
-  });
-  const entries = useQuery({
-    queryKey: ["platform-entries"],
-    queryFn: () => list<PlatformEntry>("/me/platform-entries"),
-    enabled: !!template && needsEntries,
-  });
-  // An incomplete candidate directory does not invalidate an independently
-  // known local connection. Only fresh directories contribute remote options.
-  const endpoints = [
-    ...(target?.ir.endpoints || []),
-    ...(needsSources && catalogReady(sources) ? sources.data || [] : [])
-      .filter((s) => sourceIds.has(s.id))
-      .flatMap((s) => s.snapshot?.endpoints || []),
-    ...(needsEntries && catalogReady(entries) ? entries.data || [] : []).filter(
-      (e) => target?.platformEntryIds?.includes(e.id),
-    ),
-  ].filter((n, i, all) => all.findIndex((other) => other.id === n.id) === i);
+  const endpoints = catalogReady(profiles) && catalogReady(endpointCatalog)
+    ? endpointCatalog.data || []
+    : [];
   const candidatesUnresolved =
-    (needsCollection && (!catalogReady(collections) || !collection)) ||
-    (needsSources && !catalogReady(sources)) ||
-    (needsEntries && !catalogReady(entries));
+    !catalogReady(profiles) || !catalogReady(endpointCatalog);
   const missingTarget =
     !!targetId &&
     catalogReady(targets) &&
@@ -1397,29 +1423,8 @@ function SelectTemplate({
                 ? "固定使用所选版本，后续由你决定是否更换版本。"
                 : "有新版本时先查看差异与兼容性，再决定是否更新。"}
           </p>
-          {needsCollection && (
-            <TemplateCatalogNotice query={collections} label="节点集合列表" />
-          )}
-          {needsCollection && catalogReady(collections) && !collection && (
-            <>
-              <ErrorNotice
-                error={
-                  new Error("配置引用的节点集合已不可用，无法读取其中的连接。")
-                }
-              />
-              <ActionButton
-                onClick={() => void collections.refetch()}
-                variant="outline"
-              >
-                重试读取节点集合列表
-              </ActionButton>
-            </>
-          )}
-          {needsSources && (
-            <TemplateCatalogNotice query={sources} label="来源列表" />
-          )}
-          {needsEntries && (
-            <TemplateCatalogNotice query={entries} label="平台连接列表" />
+          {hasEndpointSlots && target && (
+            <TemplateCatalogNotice query={endpointCatalog} label="可用连接列表" />
           )}
           {chosen?.spec.endpointSlots?.map((slot) => (
             <label
@@ -1571,6 +1576,8 @@ function PublishTemplate({
   const [reviewed, setReviewed] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const revision = useRef(0);
+  const extracting = useRef<number | null>(null);
+  const [extractionError, setExtractionError] = useState<Error | null>(null);
   const [open, setOpen] = useState(true);
   const submitting = useRef(false);
   const submitButton = useRef<HTMLButtonElement>(null);
@@ -1587,8 +1594,11 @@ function PublishTemplate({
   const message = toast;
   const selected = templates.find((t) => t.id === existing);
   const sanitize = useMutation({
-    mutationFn: async () => {
-      const version = revision.current;
+    mutationFn: async ({ version, kind, targetId }: {
+      version: number;
+      kind: Kind;
+      targetId: string;
+    }) => {
       return {
         value: await post<{
           spec: Spec;
@@ -1600,9 +1610,16 @@ function PublishTemplate({
       };
     },
     onSuccess: ({ value, version }) => {
-      if (!active.current || version !== revision.current) return;
+      if (!active.current || version !== revision.current || extracting.current !== version) return;
       setSpec(JSON.stringify(value.spec, null, 2));
       setReviewed(false);
+    },
+    onError: (error, { version }) => {
+      if (!active.current || version !== revision.current || extracting.current !== version) return;
+      setExtractionError(error);
+    },
+    onSettled: (_value, _error, { version }) => {
+      if (extracting.current === version) extracting.current = null;
     },
   });
   const publish = useMutation({
@@ -1669,7 +1686,7 @@ function PublishTemplate({
       }}
       size="lg"
     >
-      <ErrorNotice error={error || sanitize.error || publish.error} />
+      <ErrorNotice error={error || extractionError || publish.error} />
       <>
         <div className="space-y-5">
           <label className="standalone-label grid min-w-0 gap-2 text-sm font-medium">
@@ -1689,7 +1706,9 @@ function PublishTemplate({
                 ),
               }))}
               onValueChange={(id) => {
+                if (submitting.current) return;
                 revision.current++;
+                setExtractionError(null);
                 setExisting(id);
                 const t = templates.find((t) => t.id === id);
                 setKind(t?.kind || "processing-preset");
@@ -1721,8 +1740,9 @@ function PublishTemplate({
                   { value: "client-profile", label: "客户端配置模板" },
                 ]}
                 onValueChange={(value) => {
-                  if (value === undefined) return;
+                  if (value === undefined || submitting.current) return;
                   revision.current++;
+                  setExtractionError(null);
                   setKind(value);
                   setTargetId(undefined);
                   setSpec("");
@@ -1741,8 +1761,9 @@ function PublishTemplate({
                 : profiles
               ).map((t) => ({ value: t.id, label: t.name }))}
               onValueChange={(v) => {
-                if (v === undefined) return;
+                if (v === undefined || submitting.current) return;
                 revision.current++;
+                setExtractionError(null);
                 setTargetId(v);
                 setSpec("");
                 setReviewed(false);
@@ -1752,7 +1773,14 @@ function PublishTemplate({
           </label>
           <ActionButton
             disabled={!targetId || publish.isPending || !open}
-            onClick={() => sanitize.mutate()}
+            onClick={() => {
+              if (!active.current || !open || submitting.current || extracting.current !== null || !targetId) return;
+              const version = ++revision.current;
+              extracting.current = version;
+              setExtractionError(null);
+              setReviewed(false);
+              sanitize.mutate({ version, kind, targetId });
+            }}
             variant="outline"
             pending={!!sanitize.isPending}
           >
@@ -1771,7 +1799,9 @@ function PublishTemplate({
                   className="json-editor min-h-48 font-mono text-xs"
                   value={spec}
                   onChange={(e) => {
+                    if (submitting.current) return;
                     revision.current++;
+                    setExtractionError(null);
                     setSpec(e.target.value);
                     setReviewed(false);
                   }}
@@ -1781,12 +1811,11 @@ function PublishTemplate({
               <Label className="flex items-start gap-3 rounded-lg border bg-muted/30 p-4 text-sm leading-relaxed">
                 <Checkbox
                   checked={reviewed}
-                  onCheckedChange={(checked) =>
-                    ((e) => setReviewed(e.target.checked))({
-                      target: { checked: checked === true },
-                    })
-                  }
-                  disabled={publish.isPending || !open}
+                  onCheckedChange={(checked) => {
+                    if (submitting.current || extracting.current !== null) return;
+                    setReviewed(checked === true);
+                  }}
+                  disabled={publish.isPending || sanitize.isPending || !open}
                 />
                 我已检查内容，确认可以供工作空间用户使用
               </Label>
@@ -1807,7 +1836,7 @@ function PublishTemplate({
           aria-label={`发布 v${(selected?.version || 0) + 1}`}
           aria-busy={publish.isPending}
           disabled={
-            !open ||
+            !open || sanitize.isPending ||
             (!publish.isPending && (!reviewed || !name.trim() || !spec))
           }
           onClick={() => {
@@ -1815,6 +1844,7 @@ function PublishTemplate({
               !active.current ||
               !open ||
               submitting.current ||
+              extracting.current !== null ||
               publish.isPending ||
               confirming ||
               !reviewed ||

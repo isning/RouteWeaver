@@ -1,0 +1,11 @@
+# Diagnostic numeric source reconstruction
+
+Reconstructs v124 intent from recovery-inventory.json, not historical commit bytes. Timeout seconds require exact integers 1–30; transfer KiB require exact integers 1–16384 before multiplication. Raw form strings retain incomplete edits and fractional tails. Connectivity ignores its hidden payload and emits zero. Existing form changes revoke consent and replace request identity for every raw edit. Submission rechecks bounds after the existing owner/consent fences.
+
+DiagnosticStartForm full editor remount on abandonment, DiagnosticRequestRecovery actor/session ownership, immutable envelope, storage-before-send, reconciliation, and stale callback fencing are retained. useDiagnosticRequest.ts is unchanged. This work makes no backend claim or provider revision contract change.
+
+Public DOM regression source covers incomplete/blank/out-of-range/rounded fractions, consent invalidation and repair, exact exponent and decimal input, hidden payload restoration and connectivity zero. Existing diagnostic-request-recovery.dom.test.tsx remains required for session/abandonment regression coverage.
+
+All behavior tests, TypeScript, build, real browser, backend, native and aggregate checks are UNRUN. Source inspection and git diff --check alone do not prove behavior. No historical pass applies. No Node/npm/Go/gofmt/browser/server/install/network/push/deploy ran. A local raw-value adapter retains spinbutton role, min/max/step attributes, ARIA bounds/current integer, and explicit ArrowUp/Down correction while avoiding number-input sanitization. Backend diagnostics/model.go was read only for existing bounds and integer contracts.
+
+Follow-up source coverage checks keyboard defaults, blank input correction, min/max clamping and long fractional tails for each field. Exact decimal floor/ceil determines directional stepping before conversion; explicit keyboard correction changes the raw form value and follows existing dirty/consent handling. Generic NumericInput and diagnostic recovery hooks remain unchanged. Browser-specific wheel behavior, locale parsing, visual spinner rendering, native assistive-technology increments and actual browser key behavior remain UNRUN; no equivalence claim is made for those surfaces.

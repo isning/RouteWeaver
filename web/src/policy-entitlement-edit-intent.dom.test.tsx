@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, onTestFinished, vi } from "vitest";
 import {
   act,
   cleanup,
@@ -435,12 +435,12 @@ it("discloses absent-row calendar adoption despite unchanged effective values an
   expect(writes[0].precondition.exists).toBe(false);
 });
 
-it("does not install a late latest context over newer control-only input", async (test) => {
+it.each(["-", "17.0000000000000001"])("does not install a late latest context over newer raw input %s", async (raw) => {
   let release!: () => void;
   const held = new Promise<void>((resolve) => {
     release = resolve;
   });
-  test.onTestFinished(release);
+  onTestFinished(release);
   let latestRead = false;
   vi.stubGlobal(
     "fetch",
@@ -473,13 +473,13 @@ it("does not install a late latest context over newer control-only input", async
   await preview();
   await screen.findByText("个人授权已更新。当前草稿尚未保存，请查看最新版本。");
   await owner.click(() => screen.getByRole("button", { name: "查看最新版本" }));
-  change("个人在线 IP 数上限", "-");
+  change("个人在线 IP 数上限", raw);
   await act(async () => release());
   expect(
     screen.queryByRole("button", { name: "使用最新版本重新编辑" }),
   ).toBeNull();
   expect(
-    screen.getByText(/个人在线 IP 数上限的输入「-」尚未完成/),
+    screen.getByText(`个人在线 IP 数上限的输入「${raw}」尚未完成；当前数值为 17。`),
   ).toBeTruthy();
 });
 
@@ -864,4 +864,174 @@ it("reveals the owned reset reason without taking portal focus or resetting usag
   expect(document.activeElement).toBe(reason);
   expect(body.scrollTop).toBe(0);
   expect(writes).toEqual([]);
+});
+
+
+it("blocks hidden fractional IP precision until corrected before the preview fetch", async () => {
+  const writes: any[] = [];
+  vi.stubGlobal("fetch", vi.fn(async (url, init) => {
+    if (String(url).includes("/admission-status")) return json({ asOf: original.startsAt, maxLeaseSeconds: 30, onlineIps: [], activeStreams: 0, entries: [] });
+    if (String(url).includes("/edit-context/")) return json(context(original));
+    const body = JSON.parse(init!.body as string);
+    writes.push(body);
+    return json(reviewed(original, body.change.entitlement));
+  }));
+  mount();
+  await openLimits();
+  change("个人在线 IP 数上限", "17.0000000000000001");
+  await preview();
+  expect(writes).toHaveLength(0);
+  expect((screen.getByLabelText("个人在线 IP 数上限") as HTMLInputElement).value).toBe("17.0000000000000001");
+  change("个人在线 IP 数上限", "18");
+  await preview();
+  await screen.findByRole("dialog", { name: "确认授权变更" });
+  expect(writes[0].change.entitlement.onlineIpLimitOverride).toBe(18);
+});
+
+
+// Public seam: real editor/controls/validation/review, fake HTTP only.
+function captureNumericPreview(seed: Entitlement = original) {
+  const writes: any[] = [];
+  vi.stubGlobal("fetch", vi.fn(async (url, init) => {
+    if (String(url).includes("/admission-status")) return json({ asOf: seed.startsAt, maxLeaseSeconds: 30, onlineIps: [], activeStreams: 0, entries: [] });
+    if (String(url).includes("/edit-context/")) return json(context(seed));
+    const body = JSON.parse(init!.body as string);
+    writes.push(body);
+    return json(reviewed(seed, body.change.entitlement));
+  }));
+  return writes;
+}
+
+it.each([
+  ["个人周期额度（GiB）", "50.000000000000000001", "1", "quotaOverride", 1073741824],
+  ["个人周期额度（GiB）", "0.0000000001", "0.000000000931322574615478515625", "quotaOverride", 1],
+  ["个人入口限速（Mbps）", "1.000000000000000001", "0.000232", "entryRateBpsOverride", 29],
+  ["个人入口限速（Mbps）", "0.00000001", "0.000008", "entryRateBpsOverride", 1],
+  ["个人并发逻辑流数上限", "3.0000000000000001", "4e0", "connectionLimitOverride", 4],
+  ["个人在线 IP 数上限", "9007199254740993", "9007199254740991", "onlineIpLimitOverride", 9007199254740991],
+  ["个人周期额度（GiB）", "1e999999999999999999999999", "0e999999999999999999999999", "quotaOverride", 0],
+] as const)("preserves %s raw %s until exact correction", async (label, raw, correction, key, expected) => {
+  const writes = captureNumericPreview({ ...original, entryRateBpsOverride: 125000, connectionLimitOverride: 3 });
+  mount();
+  await openLimits();
+  change(label, raw);
+  await preview();
+  expect(writes).toHaveLength(0);
+  expect((screen.getByLabelText(label) as HTMLInputElement).value).toBe(raw);
+  expect(screen.getByRole("button", { name: "预览影响" }).getAttribute("aria-disabled")).toBe("true");
+  change(label, correction);
+  await preview();
+  await screen.findByRole("dialog", { name: "确认授权变更" });
+  expect(writes[0].change.entitlement[key]).toBe(expected);
+});
+
+it.each([
+  ["monthly", "每月几号", "1.0000000000000001", "2", "day", 2],
+  ["fixed-days", "每周期天数", "23.0000000000000001", "24", "days", 24],
+] as const)("blocks hidden precision in %s cycle without discarding other cycle fields", async (mode, label, raw, correction, key, expected) => {
+  const writes = captureNumericPreview({ ...original, cycle: { ...original.cycle, mode } });
+  mount();
+  await screen.findByLabelText("开通时间");
+  await owner.click(() => screen.getByRole("button", { name: "高级：账号流量周期" }));
+  change(label, raw);
+  await preview();
+  expect(writes).toHaveLength(0);
+  expect((screen.getByLabelText(label) as HTMLInputElement).value).toBe(raw);
+  change(label, correction);
+  await preview();
+  await screen.findByRole("dialog", { name: "确认授权变更" });
+  expect(writes[0].change.entitlement.cycle).toEqual({ ...original.cycle, mode, [key]: expected });
+});
+
+it("keeps hidden precision after canceling discard, then explicitly discards only that raw edit", async () => {
+  const writes = captureNumericPreview();
+  const close = vi.fn();
+  mount(close);
+  await openLimits();
+  change("个人在线 IP 数上限", "17.0000000000000001");
+  await owner.click(() => screen.getByRole("button", { name: "取消", exact: true }));
+  const discard = within(await screen.findByRole("alertdialog", { name: "放弃尚未保存的授权修改？" }));
+  await owner.click(() => discard.getByRole("button", { name: "继续编辑" }));
+  expect(close).not.toHaveBeenCalled();
+  expect((screen.getByLabelText("个人在线 IP 数上限") as HTMLInputElement).value).toBe("17.0000000000000001");
+  await preview();
+  expect(writes).toHaveLength(0);
+  await owner.click(() => screen.getByRole("button", { name: "放弃未完成输入，保留当前数值" }));
+  expect((screen.getByLabelText("个人在线 IP 数上限") as HTMLInputElement).value).toBe("17");
+  await preview();
+  await screen.findByRole("dialog", { name: "确认授权变更" });
+  expect(writes[0].change.entitlement.onlineIpLimitOverride).toBe(17);
+});
+
+it("preserves untouched stored bytes even when the Mbps display cannot reproduce them exactly", async () => {
+  const seed = { ...original, quotaOverride: 9007199254740991, entryRateBpsOverride: 9007199254740991 };
+  const writes = captureNumericPreview(seed);
+  mount();
+  await openLimits();
+  change("个人在线 IP 数上限", "18");
+  await preview();
+  await screen.findByRole("dialog", { name: "确认授权变更" });
+  expect(writes[0].change.entitlement).toMatchObject({ quotaOverride: 9007199254740991, entryRateBpsOverride: 9007199254740991, onlineIpLimitOverride: 18 });
+});
+
+it("keeps clear, stepping, zero as unlimited and disabled inheritance distinct", async () => {
+  const writes = captureNumericPreview({ ...original, entryRateBpsOverride: 125000, connectionLimitOverride: 3 });
+  mount();
+  await openLimits();
+  change("个人入口限速（Mbps）", "");
+  await preview();
+  expect(writes).toHaveLength(0);
+  change("个人入口限速（Mbps）", "0");
+  change("个人在线 IP 数上限", "0");
+  await owner.click(() => screen.getByLabelText("个人并发逻辑流数上限"));
+  await userEvent.keyboard("{ArrowUp}");
+  owner.assertActive();
+  expect((screen.getByLabelText("个人并发逻辑流数上限") as HTMLInputElement).value).toBe("4");
+  await owner.click(() => screen.getByRole("checkbox", { name: "覆盖个人周期额度（GiB）" }));
+  await preview();
+  await screen.findByRole("dialog", { name: "确认授权变更" });
+  expect(writes[0].change.entitlement).toMatchObject({ quotaOverride: null, entryRateBpsOverride: 0, onlineIpLimitOverride: 0, connectionLimitOverride: 4 });
+});
+
+
+it("settles exact Mbps residue and allows its displayed spelling to normalize", async () => {
+  const writes = captureNumericPreview({ ...original, entryRateBpsOverride: 125000 });
+  mount();
+  await openLimits();
+  change("个人入口限速（Mbps）", "0.00098400");
+  // The exact form value differs from the control's float emission, so the
+  // existing controlled effect renders 123 / 125000, not the original zeros.
+  await waitFor(() => expect((screen.getByLabelText("个人入口限速（Mbps）") as HTMLInputElement).value).toBe("0.000984"));
+  await preview();
+  await screen.findByRole("dialog", { name: "确认授权变更" });
+  expect(writes[0].change.entitlement.entryRateBpsOverride).toBe(123);
+});
+
+it("keeps oversized pasted input pending without losing the editor", async () => {
+  const writes = captureNumericPreview();
+  mount();
+  await openLimits();
+  const raw = "1".repeat(4097);
+  change("个人在线 IP 数上限", raw);
+  await preview();
+  expect(writes).toHaveLength(0);
+  expect((screen.getByLabelText("个人在线 IP 数上限") as HTMLInputElement).value).toBe(raw);
+  change("个人在线 IP 数上限", "18");
+  await preview();
+  await screen.findByRole("dialog", { name: "确认授权变更" });
+  expect(writes[0].change.entitlement.onlineIpLimitOverride).toBe(18);
+});
+
+it("explicit raw discard keeps the visibly reported current value, not necessarily the opening value", async () => {
+  const writes = captureNumericPreview();
+  mount();
+  await openLimits();
+  change("个人在线 IP 数上限", "18.0000000000000001");
+  expect(screen.getByText("个人在线 IP 数上限的输入「18.0000000000000001」尚未完成；当前数值为 18。")).toBeTruthy();
+  await preview();
+  expect(writes).toHaveLength(0);
+  await owner.click(() => screen.getByRole("button", { name: "放弃未完成输入，保留当前数值" }));
+  await preview();
+  await screen.findByRole("dialog", { name: "确认授权变更" });
+  expect(writes[0].change.entitlement.onlineIpLimitOverride).toBe(18);
 });

@@ -1,3 +1,4 @@
+import { exactDraftInteger } from "./draft-integer";
 import { Metadata, MetadataItem } from "@/ui-patterns/metadata";
 import { ResourceToolbar, SearchField } from "@/ui-patterns/resource-toolbar";
 import { TaskDialog, TaskSheet } from "@/ui-patterns/task-overlays";
@@ -689,14 +690,23 @@ function CollectionSourceStage({
   actions,
   children,
   disclosure,
+  recoveryRequest = 0,
 }: {
   summary: ReactNode;
   actions: ReactNode;
   children: ReactNode;
   disclosure: { expanded: boolean; hasOpened: boolean };
+  recoveryRequest?: number;
 }) {
   const [expanded, setExpanded] = useState(disclosure.expanded);
   const [hasOpened, setHasOpened] = useState(disclosure.hasOpened);
+  useLayoutEffect(() => {
+    if (!recoveryRequest) return;
+    disclosure.expanded = true;
+    disclosure.hasOpened = true;
+    setExpanded(true);
+    setHasOpened(true);
+  }, [recoveryRequest, disclosure]);
   const panelId = `collection-source-${useId()}`;
   return (
     <div
@@ -753,12 +763,39 @@ export function CollectionsPage() {
   const [deleting, setDeleting] = useState<Collection | null>(null);
   const createTrigger = useRef<HTMLButtonElement>(null);
   const [draft, setDraft] = useState<Collection | null>(null);
+  const [portDrafts, setPortDrafts] = useState<Record<string, string>>({});
+  const [portFocus, setPortFocus] = useState({ source: null as string | null, id: "", request: 0 });
+  const portKey = (source: string | null, id: string) => JSON.stringify([source, id]);
+  const portLocations = (value: Collection | null) => [
+    ...(value?.sources.flatMap((source) => source.steps.filter((step) => step.kind === "override").map((step) => ({ source: source.sourceId, id: step.id }))) ?? []),
+    ...(value?.steps.filter((step) => step.kind === "override").map((step) => ({ source: null, id: step.id })) ?? []),
+  ];
+  const invalidPort = portLocations(draft).find(({ source, id }) => {
+    const raw = portDrafts[portKey(source, id)];
+    return raw !== undefined && raw !== "" && exactDraftInteger(raw, 65535) === undefined;
+  });
+  const checkPorts = () => {
+    if (!invalidPort) return true;
+    setError(new Error("请完成覆盖端口输入，范围为 1–65535 的整数。"));
+    setPortFocus((previous) => ({ ...invalidPort, request: previous.request + 1 }));
+    return false;
+  };
+  const editPort = (source: string | null, id: string, raw: string) => {
+    setPortDrafts((previous) => ({ ...previous, [portKey(source, id)]: raw }));
+    revision.current++;
+    setPreview(null);
+  };
+  const stagePorts = (source: string | null, steps: Collection["steps"]) =>
+    Object.fromEntries(steps.flatMap((step) => {
+      const raw = portDrafts[portKey(source, step.id)];
+      return raw === undefined ? [] : [[step.id, raw]];
+    }));
   // Disclosure belongs to the collection task, not the temporarily hidden sheet.
   const stageDisclosures = useRef(
     new Map<string, { expanded: boolean; hasOpened: boolean }>(),
   );
   const [baseline, setBaseline] = useState("");
-  const changed = !!draft && JSON.stringify(draft) !== baseline;
+  const changed = !!draft && (JSON.stringify(draft) !== baseline || !!invalidPort);
   useUnsavedChanges(changed);
   const [isNew, setIsNew] = useState(false);
   const [error, setError] = useState<Error | null>(null);
@@ -853,14 +890,18 @@ export function CollectionsPage() {
         if (!value.sources.some((source) => source.sourceId === sourceId))
           stageDisclosures.current.delete(sourceId);
       }
+    const liveKeys = new Set(portLocations(value).map(({ source, id }) => portKey(source, id)));
+    setPortDrafts((previous) => !value || value.id !== draft?.id ? {} : Object.fromEntries(Object.entries(previous).filter(([key]) => liveKeys.has(key))));
     setDraft(value);
     setPreview(null);
   };
   const save = useMutation({
     onMutate: () => invalidateOutputInputs(client),
     onSettled: () => invalidateOutputInputs(client),
-    mutationFn: (value: Collection) =>
-      saveRecord("me/collections", value, isNew),
+    mutationFn: (value: Collection) => {
+      if (invalidPort) throw new Error("请完成覆盖端口输入，范围为 1–65535 的整数。");
+      return saveRecord("me/collections", value, isNew);
+    },
     onSuccess: () => {
       client.invalidateQueries({ queryKey: ["collections"] });
       changeDraft(null);
@@ -869,8 +910,10 @@ export function CollectionsPage() {
     onError: setError,
   });
   const inspect = useMutation({
-    mutationFn: ({ value }: { value: Collection; version: number }) =>
-      post<Preview>("/me/collections/preview", value),
+    mutationFn: ({ value }: { value: Collection; version: number }) => {
+      if (invalidPort) throw new Error("请完成覆盖端口输入，范围为 1–65535 的整数。");
+      return post<Preview>("/me/collections/preview", value);
+    },
     onSuccess: (result, { version }) => {
       if (version === revision.current) setPreview(result);
     },
@@ -881,6 +924,8 @@ export function CollectionsPage() {
   const edit = (item?: Collection) => {
     if (sourceOwner.current || save.isPending) return;
     collectionSession.current++;
+    setPortDrafts({});
+    setPortFocus({ source: null, id: "", request: 0 });
     const value = item
       ? structuredClone(item)
       : { id: newID("collection"), name: "", sources: [], steps: [] };
@@ -1055,7 +1100,7 @@ export function CollectionsPage() {
             className="collection-save-action"
             aria-label="保存集合"
             aria-busy={save.isPending}
-            onClick={() => !sourceOwner.current && draft && save.mutate(draft)}
+            onClick={() => !sourceOwner.current && draft && checkPorts() && save.mutate(draft)}
             disabled={
               !draft?.name.trim() ||
               !!sourceTask ||
@@ -1235,6 +1280,7 @@ export function CollectionsPage() {
                 {draft.sources.map((source, index) => (
                   <CollectionSourceStage
                     key={source.sourceId}
+                    recoveryRequest={portFocus.source === source.sourceId ? portFocus.request : 0}
                     disclosure={(() => {
                       let state = stageDisclosures.current.get(source.sourceId);
                       if (!state) {
@@ -1301,6 +1347,10 @@ export function CollectionsPage() {
                   >
                     <StepsEditor
                       value={source.steps}
+                      onPortFocused={() => setPortFocus((previous) => ({ ...previous, id: "" }))}
+                      portDrafts={stagePorts(source.sourceId, source.steps)}
+                      onPortInput={(id, raw) => editPort(source.sourceId, id, raw)}
+                      portFocus={portFocus.source === source.sourceId ? portFocus : undefined}
                       label="来源处理"
                       emptyText="未添加处理步骤"
                       onChange={(steps) =>
@@ -1323,6 +1373,10 @@ export function CollectionsPage() {
             )}
             <StepsEditor
               value={draft.steps}
+              onPortFocused={() => setPortFocus((previous) => ({ ...previous, id: "" }))}
+              portDrafts={stagePorts(null, draft.steps)}
+              onPortInput={(id, raw) => editPort(null, id, raw)}
+              portFocus={portFocus.source === null ? portFocus : undefined}
               label="合并后处理"
               emptyText={draft.sources.length ? "未添加处理步骤" : null}
               onChange={(steps) => changeDraft({ ...draft, steps })}
@@ -1334,7 +1388,7 @@ export function CollectionsPage() {
               aria-busy={inspect.isPending}
               onClick={() => {
                 setError(null);
-                if (draft)
+                if (draft && checkPorts())
                   inspect.mutate({ value: draft, version: revision.current });
               }}
               variant="outline"

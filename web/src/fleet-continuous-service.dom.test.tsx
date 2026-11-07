@@ -78,6 +78,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   client.clear();
+  vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 function mount(node: React.ReactNode) {
@@ -330,4 +331,74 @@ it("discloses continuing authorization again at the actual stage-execution decis
   const confirm = await screen.findByRole("alertdialog");
   expect(confirm.textContent).toContain("最多自动恢复 3 次");
   expect(confirm.textContent).toContain("权限变化");
+});
+
+
+it.each(["observed_conformant", "stopped", "unregistered"])("continues reading after terminal instance state %s and labels previous records during refresh", async (phase) => {
+  let settle!: (response: Response) => void;
+  let reads = 0;
+  vi.stubGlobal("fetch", vi.fn(async () => {
+    reads++;
+    if (reads === 1) return json({ instanceId: "core", phase });
+    return new Promise<Response>((resolve) => { settle = resolve; });
+  }));
+  mount(<InstanceObservation instanceId="core" />);
+  await screen.findByText("平台最近记录的实例状态");
+  vi.useFakeTimers();
+  // Existing polling timers were scheduled before fake timers; a successful
+  // public query refresh installs the interval under this clock.
+  let firstRefresh!: Promise<unknown>;
+  act(() => { firstRefresh = client.invalidateQueries({ queryKey: ["instance-state", "core"] }); });
+  await act(async () => { settle(json({ instanceId: "core", phase })); await firstRefresh; await vi.advanceTimersByTimeAsync(1); });
+  await act(async () => { await vi.advanceTimersByTimeAsync(30000); });
+  expect(screen.getByText("平台最近记录的实例状态")).toBeTruthy();
+  expect(screen.getByText("正在刷新，以下为上次读取的实例记录。")).toBeTruthy();
+  await act(async () => { settle(json({ instanceId: "core", phase: "apply_failed" })); await vi.advanceTimersByTimeAsync(1); });
+  expect(screen.getByText("应用失败")).toBeTruthy();
+  expect(screen.queryByText("核心当前在线")).toBeNull();
+});
+
+
+it("recovers an initial instance read failure through the next observation poll", async () => {
+  let healthy = false;
+  vi.stubGlobal("fetch", vi.fn(async () => healthy
+    ? json({ instanceId: "core", phase: "stopped" })
+    : new Response(JSON.stringify({ message: "实例读取失败" }), { status: 503, headers: { "Content-Type": "application/json" } })));
+  vi.useFakeTimers();
+  mount(<InstanceObservation instanceId="core" />);
+  await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+  expect(screen.getByText("实例读取失败")).toBeTruthy();
+  healthy = true;
+  await act(async () => { await vi.advanceTimersByTimeAsync(30000); });
+  expect(screen.getByText("已停止")).toBeTruthy();
+  expect(screen.queryByText("实例读取失败")).toBeNull();
+});
+
+
+it.each(["刷新实例状态", "实例技术详情"])("keeps focused %s mounted through background refresh and failure", async (control) => {
+  let refreshing = false;
+  let settle!: (response: Response) => void;
+  vi.stubGlobal("fetch", vi.fn(async () => refreshing
+    ? new Promise<Response>((resolve) => { settle = resolve; })
+    : json({ instanceId: "core", phase: "stopped" })));
+  mount(<InstanceObservation instanceId="core" />);
+  await screen.findByText("平台最近记录的实例状态");
+  const focused = screen.getByRole("button", { name: control });
+  if (control === "实例技术详情") fireEvent.click(focused);
+  focused.focus();
+  refreshing = true;
+  let refresh!: Promise<void>;
+  act(() => { refresh = client.invalidateQueries({ queryKey: ["instance-state", "core"] }); });
+  await screen.findByText("正在刷新，以下为上次读取的实例记录。");
+  expect(document.activeElement).toBe(focused);
+  expect(focused.isConnected).toBe(true);
+  expect((focused as HTMLButtonElement).disabled).toBe(false);
+  await act(async () => {
+    settle(new Response(JSON.stringify({ message: "节点记录读取失败" }), { status: 503, headers: { "Content-Type": "application/json" } }));
+    await refresh;
+  });
+  await screen.findByText("刷新失败，以下为上次读取的实例记录。");
+  expect(document.activeElement).toBe(focused);
+  expect(focused.isConnected).toBe(true);
+  expect(screen.getByText("已停止")).toBeTruthy();
 });

@@ -54,6 +54,7 @@ function mountInbox() {
       </UIProviders>
     </QueryClientProvider>,
   );
+  return client;
 }
 
 it("names read state without color and keeps an unread message unread until its acknowledgement succeeds", async () => {
@@ -288,4 +289,173 @@ it.each([200, 503])("keeps message B active when message A acknowledgement settl
   // Closing a presentation does not cancel the legitimate acknowledgement.
   await screen.findByRole("button", { name: status === 200 ? /待确认提醒.*已读/ : /待确认提醒.*未读/ });
   expect(writes).toEqual(["/api/me/notifications/first/read"]);
+});
+
+
+it("retries acknowledgement in the open message without losing its body", async () => {
+  let attempts = 0;
+  vi.stubGlobal("fetch", vi.fn(async (_url: string, init?: RequestInit) => {
+    if (init?.method === "POST") {
+      attempts++;
+      return json(attempts === 1 ? { message: "已读更新失败" } : {}, attempts === 1 ? 503 : 200);
+    }
+    return json([{ eventId: "retry", title: "需要重试的消息", body: "保留完整正文", createdAt: "2026-11-01T10:00:00Z", ...(attempts > 1 ? { readAt: "2026-11-01T11:00:00Z" } : {}) }]);
+  }));
+  mountInbox();
+  await userEvent.click(await screen.findByRole("button", { name: /需要重试的消息.*未读/ }));
+  const dialog = await screen.findByRole("dialog", { name: "需要重试的消息" });
+  await userEvent.click(await within(dialog).findByRole("button", { name: "重试标记已读" }));
+  await waitFor(() => expect(within(dialog).queryByText("已读更新失败")).toBeNull());
+  expect(within(dialog).getByText("保留完整正文")).toBeTruthy();
+  await userEvent.keyboard("{Escape}");
+  await screen.findByRole("button", { name: /需要重试的消息.*已读/ });
+  expect(attempts).toBe(2);
+});
+
+
+it("updates an open message from the latest list and labels a removed message as previous content", async () => {
+  let body = "之前正文";
+  let removed = false;
+  vi.stubGlobal("fetch", vi.fn(async () => json(removed ? [] : [{ eventId: "fresh", title: "更新公告", body, createdAt: "2026-11-01T10:00:00Z", readAt: "2026-11-01T11:00:00Z" }])));
+  const client = mountInbox();
+  await userEvent.click(await screen.findByRole("button", { name: /更新公告.*已读/ }));
+  const dialog = await screen.findByRole("dialog", { name: "更新公告" });
+  body = "修订正文";
+  await act(async () => { await client.invalidateQueries({ queryKey: ["inbox"] }); });
+  expect(within(dialog).getByText("修订正文")).toBeTruthy();
+  removed = true;
+  await act(async () => { await client.invalidateQueries({ queryKey: ["inbox"] }); });
+  expect(within(dialog).getByText("此消息已不在当前列表中，以下为之前读取的内容。")).toBeTruthy();
+  expect(within(dialog).getByText("修订正文")).toBeTruthy();
+});
+
+it("labels cached inbox contents while a refresh is pending and does not call them empty on failure", async () => {
+  let refresh = false;
+  let settle!: (response: Response) => void;
+  vi.stubGlobal("fetch", vi.fn(async () => refresh
+    ? new Promise<Response>((resolve) => { settle = resolve; })
+    : json([{ eventId: "cache", title: "缓存消息", body: "正文", createdAt: "2026-11-01T10:00:00Z", readAt: "2026-11-01T11:00:00Z" }])));
+  mountInbox();
+  await screen.findByRole("button", { name: /缓存消息.*已读/ });
+  refresh = true;
+  await userEvent.click(screen.getByRole("button", { name: "刷新" }));
+  await screen.findByText("正在刷新消息，列表仍为上次读取结果。");
+  await act(async () => { settle(json({ message: "刷新不可用" }, 503)); });
+  await screen.findByText("刷新不可用");
+  expect(screen.queryByText("暂无消息")).toBeNull();
+});
+
+
+it.each([false, true])("retains A acknowledgement failure after reopening it with another pending message: %s", async (openB) => {
+  const pending = new Map<string, (response: Response) => void>();
+  const writes: string[] = [];
+  vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
+    if (init?.method === "POST") {
+      writes.push(url);
+      return new Promise<Response>((resolve) => { pending.set(url, resolve); });
+    }
+    return json([
+      { eventId: "a", title: "消息A", body: "A完整正文", createdAt: "2026-11-01T10:00:00Z" },
+      { eventId: "b", title: "消息B", body: "B完整正文", createdAt: "2026-11-01T11:00:00Z" },
+    ]);
+  }));
+  mountInbox();
+  const a = await screen.findByRole("button", { name: /消息A.*未读/ });
+  await userEvent.click(a);
+  await screen.findByRole("dialog", { name: "消息A" });
+  await userEvent.keyboard("{Escape}");
+  await waitFor(() => expect(document.activeElement).toBe(a));
+  if (openB) {
+    const b = screen.getByRole("button", { name: /消息B.*未读/ });
+    await userEvent.click(b);
+    await screen.findByRole("dialog", { name: "消息B" });
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(document.activeElement).toBe(b));
+  }
+  await userEvent.click(a);
+  const dialog = await screen.findByRole("dialog", { name: "消息A" });
+  expect(writes.filter((url) => url.endsWith("/a/read"))).toHaveLength(1);
+  await act(async () => { pending.get("/api/me/notifications/a/read")!(json({ message: "A已读更新失败" }, 503)); });
+  expect(await within(dialog).findByText("A已读更新失败")).toBeTruthy();
+  if (openB) {
+    await act(async () => { pending.get("/api/me/notifications/b/read")!(json({ message: "B已读更新失败" }, 503)); });
+    expect(within(dialog).queryByText("B已读更新失败")).toBeNull();
+  }
+  expect(within(dialog).getByText("A完整正文")).toBeTruthy();
+  await userEvent.click(within(dialog).getByRole("button", { name: "重试标记已读" }));
+  expect(writes.filter((url) => url.endsWith("/a/read"))).toHaveLength(2);
+  await act(async () => { pending.get("/api/me/notifications/a/read")!(json({ message: "A再次失败" }, 503)); });
+  expect(await within(dialog).findByText("A再次失败")).toBeTruthy();
+});
+
+it.each(["removed", "failed"])("blocks acknowledgement retry while list refresh is pending and after it is %s", async (outcome) => {
+  let refreshing = false;
+  let settle!: (response: Response) => void;
+  let writes = 0;
+  vi.stubGlobal("fetch", vi.fn(async (_url: string, init?: RequestInit) => {
+    if (init?.method === "POST") {
+      writes++;
+      return json({ message: "已读确认失败" }, 503);
+    }
+    if (refreshing) return new Promise<Response>((resolve) => { settle = resolve; });
+    return json([{ eventId: "guard", title: "保留消息", body: "仍可查看正文", createdAt: "2026-11-01T10:00:00Z" }]);
+  }));
+  const client = mountInbox();
+  await userEvent.click(await screen.findByRole("button", { name: /保留消息.*未读/ }));
+  const dialog = await screen.findByRole("dialog", { name: "保留消息" });
+  const retry = await within(dialog).findByRole("button", { name: "重试标记已读" });
+  refreshing = true;
+  let refresh!: Promise<void>;
+  act(() => { refresh = client.invalidateQueries({ queryKey: ["inbox"] }); });
+  await waitFor(() => expect((retry as HTMLButtonElement).disabled).toBe(true));
+  await userEvent.click(retry);
+  expect(writes).toBe(1);
+  await act(async () => {
+    settle(outcome === "removed" ? json([]) : json({ message: "刷新失败" }, 503));
+    await refresh;
+  });
+  expect((retry as HTMLButtonElement).disabled).toBe(true);
+  await userEvent.click(retry);
+  expect(writes).toBe(1);
+  expect(within(dialog).getByText("仍可查看正文")).toBeTruthy();
+});
+
+
+it("offers explicit mark-read after opening an unread message during a background refresh without writing before freshness", async () => {
+  let refresh = false;
+  let acknowledged = false;
+  let settle!: (response: Response) => void;
+  let writes = 0;
+  const item = () => ({ eventId: "fresh-action", title: "等待更新的消息", body: "完整消息仍可阅读", createdAt: "2026-11-01T10:00:00Z", ...(acknowledged ? { readAt: "2026-11-01T11:00:00Z" } : {}) });
+  vi.stubGlobal("fetch", vi.fn(async (_url: string, init?: RequestInit) => {
+    if (init?.method === "POST") {
+      writes++;
+      acknowledged = true;
+      return json({});
+    }
+    if (refresh) return new Promise<Response>((resolve) => { settle = resolve; });
+    return json([item()]);
+  }));
+  const client = mountInbox();
+  const opener = await screen.findByRole("button", { name: /等待更新的消息.*未读/ });
+  refresh = true;
+  let readback!: Promise<void>;
+  act(() => { readback = client.invalidateQueries({ queryKey: ["inbox"] }); });
+  await screen.findByText("正在刷新消息，列表仍为上次读取结果。");
+  await userEvent.click(opener);
+  const dialog = await screen.findByRole("dialog", { name: "等待更新的消息" });
+  const mark = within(dialog).getByRole("button", { name: "标记已读" });
+  expect((mark as HTMLButtonElement).disabled).toBe(true);
+  await userEvent.click(mark);
+  expect(writes).toBe(0);
+  refresh = false;
+  await act(async () => { settle(json([item()])); await readback; });
+  await waitFor(() => expect((mark as HTMLButtonElement).disabled).toBe(false));
+  expect(writes).toBe(0);
+  expect(within(dialog).getByText("完整消息仍可阅读")).toBeTruthy();
+  await userEvent.click(mark);
+  await waitFor(() => expect(within(dialog).queryByRole("button", { name: "标记已读" })).toBeNull());
+  expect(writes).toBe(1);
+  await userEvent.keyboard("{Escape}");
+  await screen.findByRole("button", { name: /等待更新的消息.*已读/ });
 });

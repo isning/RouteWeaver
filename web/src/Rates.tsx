@@ -10,7 +10,7 @@ import { useForm, useWatch, AppField, AppForm } from "@/ui-patterns/form";
 import { useUnsavedChanges } from "./navigation";
 import { useDiscardConfirmation } from "./useDiscardConfirmation";
 import { revealFocusedPolicyModalControl } from "./drawer-control-visibility";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { list, post } from "./api";
 import { ErrorNotice, QueryState, Section } from "./components";
@@ -22,16 +22,62 @@ interface Rate {
   micros: number;
   effectiveAt: string;
 }
+// Keep decimal intent until it is proven to be an integer number of micros.
+// The existing API contract is 0–1000×, with 1,000,000 micros per unit.
+function rateMicros(raw: string): number {
+  const match = /^([+-]?)(?:(\d+)(?:\.(\d*))?|\.(\d+))(?:[eE]([+-]?\d+))?$/.exec(raw);
+  if (!match) throw new Error("请输入有效倍率");
+  const fraction = match[3] ?? match[4] ?? "";
+  const digits = ((match[2] ?? "") + fraction).replace(/^0+/, "");
+  if (!digits) return 0;
+  if (match[1] === "-") throw new Error("倍率范围为 0–1000");
+  const significant = digits.replace(/0+$/, "");
+  const shift = Number(match[5] ?? 0) - fraction.length + 6 + digits.length - significant.length;
+  if (shift < 0) {
+    throw new Error("倍率须为 0.000001 的整数倍，请调整后保存");
+  }
+  // Bound expansion before constructing or converting the integer. Huge
+  // exponents cannot allocate huge strings or silently underflow to zero.
+  if (!Number.isSafeInteger(shift) || significant.length + shift > 10) {
+    throw new Error("倍率范围为 0–1000");
+  }
+  const micros = Number(significant + "0".repeat(shift));
+  if (micros > 1_000_000_000) throw new Error("倍率范围为 0–1000");
+  return micros;
+}
+
 export function RateSettings({ routes }: { routes: RouteRecord[] }) {
   const query = useQuery({
     queryKey: ["rates"],
     queryFn: () => list<Rate>("/rates"),
   });
+  const [boundaryRevision, setBoundaryRevision] = useState(0);
+  const renderedAt = Date.now();
+  const nextBoundary = (query.data || []).reduce((nearest, rate) => {
+    const at = Date.parse(rate.effectiveAt);
+    return Number.isFinite(at) && at > renderedAt ? Math.min(nearest, at) : nearest;
+  }, Infinity);
+  useEffect(() => {
+    if (!Number.isFinite(nextBoundary)) return;
+    // Select from the same clock snapshot as the labels. If a boundary passes
+    // before this effect, queue an immediate refresh rather than dropping it.
+    // This only refreshes local labels, without observing backend enforcement.
+    const timer = setTimeout(() => setBoundaryRevision((value) => value + 1),
+      Math.min(Math.max(0, nextBoundary - Date.now()), 2_147_483_647));
+    return () => clearTimeout(timer);
+  }, [nextBoundary, boundaryRevision]);
   const [open, setOpen] = useState(false);
   const [form] = useForm();
   const client = useQueryClient();
   const message = toast;
-  const factor = useWatch("factor", form);
+  const factorText = useRef("1");
+  const [factor, setFactor] = useState("1");
+  let exampleFactor: number | null = null;
+  try {
+    exampleFactor = rateMicros(factor) / 1_000_000;
+  } catch {
+    // Invalid drafts have no billable example; field validation gives the reason.
+  }
   const values = useWatch([], { form, preserve: true });
   const [baseline, setBaseline] = useState<Record<string, unknown> | null>(
     null,
@@ -42,19 +88,20 @@ export function RateSettings({ routes }: { routes: RouteRecord[] }) {
   const changed =
     open &&
     baseline !== null &&
-    ["routeId", "factor", "effectiveAt"].some(
-      (key) => draft[key] !== baseline[key],
-    );
+    (factor !== String(baseline.factor) ||
+      ["routeId", "factor", "effectiveAt"].some(
+        (key) => draft[key] !== baseline[key],
+      ));
   const mutation = useMutation({
     mutationFn: (values: {
       routeId: string;
-      factor: number;
+      factor: string;
       effectiveAt: string;
     }) =>
       post("/rates", {
         id: newID("rate"),
         routeId: values.routeId,
-        micros: Math.round(values.factor * 1000000),
+        micros: rateMicros(values.factor),
         effectiveAt: new Date(values.effectiveAt).toISOString(),
       }),
     onSuccess: () => {
@@ -94,6 +141,8 @@ export function RateSettings({ routes }: { routes: RouteRecord[] }) {
             if (mutation.isPending || confirming) return;
             setEditorKey((key) => key + 1);
             form.resetFields();
+            factorText.current = "1";
+            setFactor("1");
             form.setFieldsValue({
               factor: 1,
               effectiveAt: new Date(
@@ -137,7 +186,7 @@ export function RateSettings({ routes }: { routes: RouteRecord[] }) {
             {
               title: "状态",
               render: (_, r) =>
-                Date.parse(r.effectiveAt) > Date.now() ? (
+                Date.parse(r.effectiveAt) > renderedAt ? (
                   <Badge variant="secondary">待生效</Badge>
                 ) : null,
             },
@@ -164,7 +213,9 @@ export function RateSettings({ routes }: { routes: RouteRecord[] }) {
           form={form}
           disabled={mutation.isPending}
           onFinish={(values) => {
-            if (!mutation.isPending && !confirming) mutation.mutate(values);
+            if (!mutation.isPending && !confirming) {
+              mutation.mutate({ ...values, factor: factorText.current });
+            }
           }}
         >
           <ErrorNotice error={mutation.error} />
@@ -184,18 +235,27 @@ export function RateSettings({ routes }: { routes: RouteRecord[] }) {
             rules={[
               { required: true },
               {
-                type: "number",
-                min: 0,
-                max: 1000,
-                message: "倍率范围为 0–1000",
+                validator: async () => {
+                  if (factorText.current) rateMicros(factorText.current);
+                },
               },
             ]}
             trigger="onValueChange"
+            validateTrigger="onInputText"
           >
-            <NumericInput min={0} max={1000} />
+            <NumericInput
+              min={0}
+              max={1000}
+              onInputText={(raw) => {
+                factorText.current = raw;
+                setFactor(raw);
+              }}
+            />
           </AppField>
           <p className="rounded-lg border bg-muted/50 p-3 text-sm">
-            使用 1 GB 实际流量，扣除 {factor ?? 1} GB 额度。
+            {exampleFactor === null
+              ? "请填写有效倍率后查看扣量示例。"
+              : `使用 1 GB 实际流量，扣除 ${exampleFactor} GB 额度。`}
           </p>
           <AppField
             name="effectiveAt"

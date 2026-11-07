@@ -1,5 +1,4 @@
 import { useConfirm } from "@/ui-patterns/confirmations";
-import { NumericInput } from "@/ui-patterns/numeric-input";
 import { TaskDialog } from "@/ui-patterns/task-overlays";
 import {
   Accordion,
@@ -21,9 +20,9 @@ import { RuleFileImport } from "./RuleFileImport";
 import { useUnsavedChanges } from "./navigation";
 import { useDiscardConfirmation } from "./useDiscardConfirmation";
 import { revealFocusedPolicyModalControl as revealFocusedModalAction } from "./drawer-control-visibility";
-import { useId, useLayoutEffect, useRef, useState } from "react";
+import { useId, useLayoutEffect, useRef, useState, type ComponentProps } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { list, post, saveRecord } from "./api";
+import { list, post, request, saveRecord } from "./api";
 import type { RuleResource } from "./types";
 import { bytesLabel, newID } from "./model";
 import {
@@ -41,6 +40,78 @@ interface Inspection {
   inspection: string;
   nativeChecked: boolean;
 }
+type ResourceDraft = Omit<RuleResource, "intervalSeconds" | "formatVersion"> & {
+  intervalSeconds?: number | string;
+  formatVersion?: number | string;
+};
+// Check decimal text before Number conversion: a fractional tail must not round
+// into an integer. Bounds are the existing resource editor bounds.
+function resourceInteger(value: unknown, min: number, max: number): number | undefined {
+  if (typeof value === "number")
+    return Number.isSafeInteger(value) && value >= min && value <= max ? value : undefined;
+  if (typeof value !== "string" || value.length > 1024) return undefined;
+  const match = /^[+-]?(?:(\d+)(?:\.(\d*))?|\.(\d+))(?:[eE]([+-]?\d+))?$/.exec(value);
+  if (!match || match[0] !== value || value.startsWith("-")) return undefined;
+  const fraction = match[2] ?? match[3] ?? "";
+  let digits = ((match[1] ?? "") + fraction).replace(/^0+/, "");
+  if (!digits) return undefined;
+  const exponentText = (match[4] ?? "0").replace(/^[+-]?0*/, "");
+  if (exponentText.length > 4) return undefined;
+  const exponent = Number(match[4] ?? 0);
+  if (Math.abs(exponent) > 1024) return undefined;
+  const shift = exponent - fraction.length;
+  if (!Number.isSafeInteger(shift)) return undefined;
+  if (shift < 0) {
+    const cut = digits.length + shift;
+    if (cut <= 0 || /[^0]/.test(digits.slice(cut))) return undefined;
+    digits = digits.slice(0, cut);
+  } else {
+    if (digits.length + shift > String(max).length) return undefined;
+    digits += "0".repeat(shift);
+  }
+  const parsed = Number(digits);
+  return Number.isSafeInteger(parsed) && parsed >= min && parsed <= max ? parsed : undefined;
+}
+function ResourceIntegerInput({ value, onValueChange, min, max, ...props }: Omit<ComponentProps<typeof Input>, "value" | "onChange" | "min" | "max"> & {
+  value?: number | string;
+  onValueChange?: (raw: string) => void;
+  min: number;
+  max: number;
+}) {
+  // Arrow keys are an explicit normalization action, unlike submission. Keep
+  // NumericInput's finite numeric stepping even for fractional/out-of-range
+  // edits, and start incomplete text at zero before clamping to the bounds.
+  const text = String(value ?? "");
+  const numeric = text.length <= 1024 && /^[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$/.test(text)
+    ? Number(text)
+    : undefined;
+  const stepValue = Number.isFinite(numeric) ? numeric : undefined;
+  return (
+    <Input
+      {...props}
+      type="text"
+      role="spinbutton"
+      inputMode="numeric"
+      value={value ?? ""}
+      aria-valuemin={min}
+      aria-valuemax={max}
+      aria-valuenow={stepValue}
+      onChange={(event) => onValueChange?.(event.target.value)}
+      onKeyDown={(event) => {
+        props.onKeyDown?.(event);
+        if (event.defaultPrevented || props.disabled || props.readOnly || (event.key !== "ArrowUp" && event.key !== "ArrowDown")) return;
+        event.preventDefault();
+        onValueChange?.(String(Math.max(min, Math.min(max, (stepValue ?? 0) + (event.key === "ArrowUp" ? 1 : -1)))));
+      }}
+    />
+  );
+}
+const integerRule = (min: number, max: number) => ({
+  validator: (_rule: unknown, value: unknown) =>
+    resourceInteger(value, min, max) === undefined
+      ? Promise.reject(new Error(`请输入 ${min} 到 ${max} 之间的整数`))
+      : Promise.resolve(),
+});
 // Empty optional controls and absent initial values paint the same draft.
 const draftSnapshot = (values: object) =>
   JSON.stringify(
@@ -81,7 +152,7 @@ export function ResourcesPage() {
     },
     onSuccess: () => message.success("已重新读取并接纳规则文件"),
   });
-  const [form] = useForm<RuleResource>();
+  const [form] = useForm<ResourceDraft>();
   const values = useWatch([], { form, preserve: true });
   const [baseline, setBaseline] = useState("");
   const [editorIdentity, setEditorIdentity] = useState("closed");
@@ -95,16 +166,25 @@ export function ResourcesPage() {
     return () => {
       active.current = false;
       editorTask.current = null;
+      inspectionRequest.current?.abort();
+      inspectionRequest.current = null;
     };
   }, []);
   const changed =
     open && baseline !== "" && draftSnapshot(values || {}) !== baseline;
   const { confirm, confirming } = useDiscardConfirmation(editorIdentity);
   const [inspection, setInspection] = useState<Inspection | null>(null);
-  const revision = useRef(0);
+  const inspectionRequest = useRef<AbortController | null>(null);
+  const [inspecting, setInspecting] = useState(false);
+  const [inspectionError, setInspectionError] = useState<unknown>(null);
+  const cancelInspection = () => {
+    inspectionRequest.current?.abort();
+    inspectionRequest.current = null;
+    setInspecting(false);
+    setInspectionError(null);
+  };
   const location = useWatch("location", form);
   const format = useWatch("format", form);
-  const digest = useWatch("digest", form);
   const mutation = useMutation({
     onMutate: () => invalidateOutputInputs(client),
     onSettled: (_saved, _error, { task }) => {
@@ -130,27 +210,38 @@ export function ResourcesPage() {
     },
   });
   useUnsavedChanges(changed || (open && mutation.isPending));
-  const inspect = useMutation({
-    mutationFn: async () => {
+  const inspect = async () => {
+    const task = editorTask.current;
+    if (!active.current || !task || inspectionRequest.current || submitting.current) return;
+    const controller = new AbortController();
+    inspectionRequest.current = controller;
+    setInspecting(true);
+    setInspectionError(null);
+    setInspection(null);
+    const source = { url: form.getFieldValue("url"), format: form.getFieldValue("format") };
+    const ownsRequest = () => active.current && editorTask.current === task && inspectionRequest.current === controller;
+    try {
       await form.validateFields(["url", "format"]);
-      const version = revision.current;
-      return {
-        value: await post<Inspection>("/me/resources/inspect", {
-          url: form.getFieldValue("url"),
-          format: form.getFieldValue("format"),
-        }),
-        version,
-      };
-    },
-    onSuccess: ({ value, version }) => {
-      if (version !== revision.current) return;
-      setInspection(value);
-      form.setFieldsValue({
-        digest: value.digest,
-        formatVersion: value.formatVersion,
+      if (!ownsRequest()) return;
+      const value = await request<Inspection>("/me/resources/inspect", {
+        method: "POST",
+        body: JSON.stringify(source),
+        signal: controller.signal,
       });
-    },
-  });
+      if (!ownsRequest()) return;
+      setInspection(value);
+      form.setFieldsValue({ digest: value.digest, formatVersion: value.formatVersion });
+    } catch (error) {
+      // Form validation already reports field errors. Only the current request
+      // may report a transport failure, even if a transport ignores abort.
+      if (ownsRequest() && error instanceof Error) setInspectionError(error);
+    } finally {
+      if (ownsRequest()) {
+        inspectionRequest.current = null;
+        setInspecting(false);
+      }
+    }
+  };
   const edit = (resource?: RuleResource) => {
     if (resource?.acceptedVersion || resource?.location === "local") {
       startImport(resource);
@@ -158,7 +249,7 @@ export function ResourcesPage() {
     }
     editorTask.current = {};
     setEditorIdentity(newID("resource-task"));
-    revision.current++;
+    cancelInspection();
     setCurrent(resource || null);
     form.resetFields();
     form.setFieldsValue(
@@ -176,7 +267,6 @@ export function ResourcesPage() {
     setBaseline(draftSnapshot(form.getFieldsValue(true)));
     setInspection(null);
     mutation.reset();
-    inspect.reset();
     setOpen(true);
   };
   const close = () => {
@@ -184,7 +274,7 @@ export function ResourcesPage() {
     const task = editorTask.current;
     const finish = () => {
       if (!active.current || !task || editorTask.current !== task) return;
-      revision.current++;
+      cancelInspection();
       editorTask.current = null;
       setOpen(false);
       setBaseline("");
@@ -365,7 +455,7 @@ export function ResourcesPage() {
               keepFocusableWhilePending
               type="submit"
               form={formId}
-              disabled={!open}
+              disabled={!open || inspecting}
               aria-label="保存公开引用"
               aria-busy={mutation.isPending}
               variant="default"
@@ -424,9 +514,15 @@ export function ResourcesPage() {
               !task ||
               submitting.current ||
               mutation.isPending ||
-              confirming
+              confirming ||
+              inspectionRequest.current
             )
               return;
+            const intervalSeconds = resourceInteger(v.intervalSeconds, 60, 2592000);
+            const formatVersion = resourceInteger(v.formatVersion, 1, 5);
+            const needsVersion = v.format.startsWith("sing-box") || v.format === "srs";
+            // Never turn invalid numeric intent into an omitted/defaulted payload.
+            if ((v.location === "remote" && intervalSeconds === undefined) || (needsVersion && formatVersion === undefined)) return;
             const value = ruleResourceReference({
               ...current,
               ...v,
@@ -434,11 +530,8 @@ export function ResourcesPage() {
               url: v.location === "remote" ? v.url : undefined,
               path: v.location === "local" ? v.path : undefined,
               intervalSeconds:
-                v.location === "remote" ? v.intervalSeconds : undefined,
-              formatVersion:
-                v.format.startsWith("sing-box") || v.format === "srs"
-                  ? v.formatVersion
-                  : undefined,
+                v.location === "remote" ? intervalSeconds : undefined,
+              formatVersion: needsVersion ? formatVersion : undefined,
             });
             submitting.current = task;
             const submit = submitButton.current;
@@ -454,10 +547,11 @@ export function ResourcesPage() {
             });
           }}
           onValuesChange={(changed) => {
-            revision.current++;
-            if ("url" in changed || "format" in changed) {
-              inspect.reset();
+            if (["url", "format", "location", "digest", "formatVersion"].some((field) => field in changed)) {
+              cancelInspection();
               setInspection(null);
+            }
+            if ("url" in changed || "format" in changed || "location" in changed) {
               form.setFieldsValue({ digest: "" });
             }
           }}
@@ -469,9 +563,9 @@ export function ResourcesPage() {
             hidden
             tabIndex={-1}
             aria-hidden="true"
-            disabled={mutation.isPending || !open}
+            disabled={mutation.isPending || inspecting || !open}
           />
-          <ErrorNotice error={mutation.error || inspect.error} />
+          <ErrorNotice error={mutation.error || inspectionError} />
           <AppField
             name="name"
             label="资源名称"
@@ -586,22 +680,22 @@ export function ResourcesPage() {
               <AppField
                 name="intervalSeconds"
                 label="客户端更新间隔（秒）"
-                rules={[{ required: true }]}
+                required
+                rules={[integerRule(60, 2592000)]}
                 trigger="onValueChange"
               >
-                <NumericInput min={60} max={2592000} />
+                <ResourceIntegerInput min={60} max={2592000} />
               </AppField>
             )}
             {(format === "sing-box-source" || format === "srs") && (
               <AppField
                 name="formatVersion"
                 label="sing-box 规则格式版本"
-                rules={[
-                  { required: true, message: "检查远程文件或填写规则格式版本" },
-                ]}
+                required
+                rules={[integerRule(1, 5)]}
                 trigger="onValueChange"
               >
-                <NumericInput min={1} max={5} />
+                <ResourceIntegerInput min={1} max={5} />
               </AppField>
             )}
           </div>
@@ -609,9 +703,9 @@ export function ResourcesPage() {
             ["mihomo-yaml", "sing-box-source"].includes(format) && (
               <ActionButton
                 leadingIcon={<Search aria-hidden="true" />}
-                onClick={() => inspect.mutate()}
+                onClick={() => void inspect()}
                 variant="outline"
-                pending={!!inspect.isPending}
+                pending={inspecting}
               >
                 读取文件并计算校验值
               </ActionButton>

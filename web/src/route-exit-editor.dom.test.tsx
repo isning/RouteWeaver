@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -18,6 +19,7 @@ import type {
   ServerDeployment,
 } from "./types";
 import { PublishedRoutesPage, type PublishedRoute } from "./PublishedRoutes";
+import { getNavigationWarning, hasUnsavedChanges } from "./navigation";
 import { saveRecord } from "./api";
 import { ServerRoutesPage } from "./ServerRoutes";
 import { useDiscardConfirmation } from "./useDiscardConfirmation";
@@ -604,6 +606,14 @@ it("dismisses an unresolved save and reopens the same page-owned operation after
   await screen.findByRole("button", { name: "核对保存结果" });
   await user.click(screen.getByRole("button", { name: "返回线路" }));
   await screen.findByText("「英国线路」的出口变更保存结果尚未确认");
+  // The sheet is closed, but the page still owns the unresolved operation.
+  expect(hasUnsavedChanges()).toBe(true);
+  expect(getNavigationWarning()).toContain("出口变更可能已保存");
+  expect(getNavigationWarning()).toContain("离开不会取消保存");
+  expect(getNavigationWarning()).toContain("核对信息");
+  const unload = new Event("beforeunload", { cancelable: true });
+  window.dispatchEvent(unload);
+  expect(unload.defaultPrevented).toBe(true);
   await user.click(
     screen.getByRole("button", { name: "继续「英国线路」出口变更" }),
   );
@@ -617,6 +627,7 @@ it("dismisses an unresolved save and reopens the same page-owned operation after
   expect(commits[1]).toEqual(commits[0]);
   expect(commits[1].expectedRouteRevision).toBe("route-before");
   expect(previews).toBe(1);
+  await waitFor(() => expect(hasUnsavedChanges()).toBe(false));
 });
 
 it("shows TLS removal explicitly and does not display raw security values", async () => {
@@ -832,10 +843,14 @@ it("does not let a late TLS file read replace an unresolved reviewed operation",
   });
   Object.defineProperty(file, "text", { value: () => pendingRead });
   await user.upload(screen.getByLabelText("读取 TLS 证书"), file);
+  expect(screen.getByRole("button", { name: "检查变更" }).hasAttribute("disabled")).toBe(true);
+  await user.click(screen.getByRole("button", { name: "检查变更" }));
+  expect(calls).toHaveLength(0);
+  await user.click(screen.getByRole("button", { name: "取消读取" }));
   await user.click(screen.getByRole("button", { name: "检查变更" }));
   await user.click(await screen.findByRole("button", { name: "保存出口草稿" }));
   await screen.findByRole("button", { name: "核对保存结果" });
-  finishRead("late synthetic PEM");
+  await act(async () => finishRead("late synthetic PEM"));
   await waitFor(() =>
     expect(screen.getByRole("button", { name: "核对保存结果" })).toBeTruthy(),
   );
@@ -951,4 +966,31 @@ it("same-turn repeated save activation sends one owned operation", async () => {
   expect(calls.filter((call) => call.path.endsWith("/retarget"))).toHaveLength(
     1,
   );
+});
+
+
+it("includes both completed PEM reads and newer paths in the exit preview", async () => {
+  const { user, calls } = mount({ tls: true });
+  await choose(user);
+  let certificateDone!: (text: string) => void;
+  let keyDone!: (text: string) => void;
+  const certificate = new File(["fixture"], "cert.pem");
+  const key = new File(["fixture"], "key.pem");
+  const certificateRead = new Promise<string>((done) => { certificateDone = done; });
+  const keyRead = new Promise<string>((done) => { keyDone = done; });
+  Object.defineProperty(certificate, "text", { value: () => certificateRead });
+  Object.defineProperty(key, "text", { value: () => keyRead });
+  await user.upload(screen.getByLabelText("读取 TLS 证书"), certificate);
+  await user.upload(screen.getByLabelText("读取 TLS 私钥"), key);
+  await user.type(screen.getByRole("textbox", { name: "证书路径" }), "custom/cert.pem");
+  await user.type(screen.getByRole("textbox", { name: "私钥路径" }), "custom/key.pem");
+  await act(async () => certificateDone("synthetic certificate"));
+  expect(screen.getByRole("button", { name: "检查变更" }).hasAttribute("disabled")).toBe(true);
+  await act(async () => keyDone("synthetic private key"));
+  await user.click(screen.getByRole("button", { name: "检查变更" }));
+  await screen.findByRole("button", { name: "保存出口草稿" });
+  expect(calls[0].body.tls).toEqual({
+    certificatePath: "custom/cert.pem", keyPath: "custom/key.pem",
+    certificatePem: "synthetic certificate", privateKeyPem: "synthetic private key",
+  });
 });

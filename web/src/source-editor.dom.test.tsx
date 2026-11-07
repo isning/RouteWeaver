@@ -1046,3 +1046,98 @@ it.each(["url", "legacy-kind"])(
     expect(writes).toEqual([]);
   },
 );
+
+
+it("treats a delayed file as an unsaved choice and blocks stale form submission until cancelled", async () => {
+  const source: Source = {
+    id: "file-owner", name: "Saved source", kind: "text", enabled: true,
+    revision: "r1", content: "socks5://saved.example:1080", refreshStatus: "accepted",
+  };
+  const fetcher = vi.fn(async (_url: unknown, _init?: RequestInit) => json(source));
+  vi.stubGlobal("fetch", fetcher);
+  mount({ source });
+  const dialog = within(await screen.findByRole("dialog", { name: "编辑来源" }));
+  await waitFor(() => expect((dialog.getByLabelText("节点链接或配置内容") as HTMLTextAreaElement).value).toBe(source.content));
+  let finish!: (text: string) => void;
+  const file = new File(["fixture"], "delayed.conf");
+  Object.defineProperty(file, "text", { value: () => new Promise<string>((resolve) => { finish = resolve; }) });
+  fireEvent.change(dialog.getByLabelText("读取配置文件"), { target: { files: [file] } });
+  expect(hasUnsavedChanges()).toBe(true);
+  expect(dialog.getByRole("status").textContent).toContain("正在读取");
+  expect((dialog.getByRole("button", { name: "保存修改" }) as HTMLButtonElement).disabled).toBe(true);
+  fireEvent.submit(dialog.getByLabelText("来源名称").closest("form")!);
+  await act(async () => {});
+  expect(fetcher.mock.calls.filter(([, init]) => init?.method === "PUT")).toHaveLength(0);
+  await userEvent.click(dialog.getByRole("button", { name: "取消", exact: true }));
+  const confirmation = within(await screen.findByRole("alertdialog"));
+  await userEvent.click(confirmation.getByRole("button", { name: "继续编辑" }));
+  await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+  await userEvent.click(dialog.getByRole("button", { name: "取消文件选择" }));
+  expect(hasUnsavedChanges()).toBe(false);
+  await act(async () => { finish("late content"); });
+  expect((dialog.getByLabelText("节点链接或配置内容") as HTMLTextAreaElement).value).toBe(source.content);
+  expect(dialog.getByRole("status").textContent).toBe("尚未选择文件");
+  await userEvent.click(dialog.getByRole("button", { name: "保存修改" }));
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+});
+
+
+it("clears file status on mode changes and ignores an obsolete read failure", async () => {
+  vi.stubGlobal("fetch", vi.fn());
+  mount();
+  const dialog = within(await screen.findByRole("dialog", { name: "添加订阅来源" }));
+  let reject!: (error: Error) => void;
+  const delayed = new File(["fixture"], "obsolete.yaml");
+  Object.defineProperty(delayed, "text", { value: () => new Promise<string>((_resolve, fail) => { reject = fail; }) });
+  fireEvent.change(dialog.getByLabelText("读取配置文件"), { target: { files: [delayed] } });
+  await userEvent.click(dialog.getByRole("radio", { name: "订阅 URL" }));
+  await userEvent.click(dialog.getByRole("radio", { name: "节点 URI / 配置文本" }));
+  await act(async () => { reject(new Error("obsolete failure")); });
+  expect(dialog.queryByText("无法读取文件，请重新选择。")).toBeNull();
+  expect(dialog.getByRole("status").textContent).toBe("尚未选择文件");
+  expect(hasUnsavedChanges()).toBe(false);
+});
+
+it("keeps a failed file choice blocked until the same file is successfully retried", async () => {
+  const fetcher = vi.fn(async (_url: unknown, init?: RequestInit) => json({ ...JSON.parse(String(init?.body)), revision: "r2" }));
+  vi.stubGlobal("fetch", fetcher);
+  mount();
+  const dialog = within(await screen.findByRole("dialog", { name: "添加订阅来源" }));
+  fireEvent.change(dialog.getByLabelText("来源名称"), { target: { value: "Retry file" } });
+  fireEvent.change(dialog.getByLabelText("节点链接或配置内容"), { target: { value: "old content" } });
+  const file = new File(["fixture"], "retry.yml");
+  Object.defineProperty(file, "text", { value: vi.fn().mockRejectedValueOnce(new Error("unreadable")).mockResolvedValue("socks5://retry.example:1080") });
+  const input = dialog.getByLabelText("读取配置文件");
+  fireEvent.change(input, { target: { files: [file] } });
+  await dialog.findByText("无法读取文件，请重新选择。");
+  fireEvent.submit(dialog.getByLabelText("来源名称").closest("form")!);
+  await act(async () => {});
+  expect(fetcher).not.toHaveBeenCalled();
+  fireEvent.change(input, { target: { files: [file] } });
+  await waitFor(() => expect((dialog.getByLabelText("节点链接或配置内容") as HTMLTextAreaElement).value).toBe("socks5://retry.example:1080"));
+  expect(dialog.queryByText("无法读取文件，请重新选择。")).toBeNull();
+  await userEvent.click(dialog.getByRole("button", { name: "添加并使用" }));
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  expect(JSON.parse(String(fetcher.mock.calls[0][1]?.body))).toMatchObject({ name: "Retry file", kind: "text", content: "socks5://retry.example:1080" });
+});
+
+
+it("lets a newer file own the content when the older read finishes last", async () => {
+  const fetcher = vi.fn();
+  vi.stubGlobal("fetch", fetcher);
+  mount();
+  const dialog = within(await screen.findByRole("dialog", { name: "添加订阅来源" }));
+  const input = dialog.getByLabelText("读取配置文件");
+  let finish!: (text: string) => void;
+  const old = new File(["fixture"], "old.txt");
+  Object.defineProperty(old, "text", { value: () => new Promise<string>((resolve) => { finish = resolve; }) });
+  const next = new File(["fixture"], "next.json");
+  Object.defineProperty(next, "text", { value: async () => "newer content" });
+  fireEvent.change(input, { target: { files: [old] } });
+  fireEvent.change(input, { target: { files: [next] } });
+  await waitFor(() => expect((dialog.getByLabelText("节点链接或配置内容") as HTMLTextAreaElement).value).toBe("newer content"));
+  await act(async () => { finish("obsolete content"); });
+  expect((dialog.getByLabelText("节点链接或配置内容") as HTMLTextAreaElement).value).toBe("newer content");
+  expect(dialog.getByRole("status").textContent).toBe("已读取文件：next.json");
+  expect(fetcher).not.toHaveBeenCalled();
+});

@@ -1,3 +1,7 @@
+import {
+  OperationalIntegerInput,
+  operationalInteger,
+} from "./OperationalIntegerInput";
 import { Metadata } from "@/ui-patterns/metadata";
 import {
   Accordion,
@@ -562,6 +566,8 @@ function PublicRouteEditor({
   onSaved: (route: PublishedRoute) => boolean;
 }) {
   const [draft, setDraft] = useState(initial);
+  const [publicPort, setPublicPort] = useState<number | string>(initial.publicPort);
+  const portDirty = String(publicPort) !== String(initial.publicPort);
   const { confirm: confirmDiscard, confirming: discardConfirming } =
     useDiscardConfirmation(initial.id);
   const [discardClosing, setDiscardClosing] = useState(false);
@@ -577,7 +583,7 @@ function PublicRouteEditor({
     draft.endpointIds.some((id) => pendingEndpoints[id]) ||
     pendingEndpoints[addKey];
   useUnsavedChanges(
-    JSON.stringify(draft) !== JSON.stringify(initial) || selectionPending,
+    JSON.stringify(draft) !== JSON.stringify(initial) || portDirty || selectionPending,
   );
   const [preview, setPreview] = useState<PublishedRoute | null>(null);
   const [checkedBefore, setCheckedBefore] = useState(false);
@@ -592,15 +598,20 @@ function PublicRouteEditor({
     endpoints: (deployment?.ir.programs || []).map((p) => p.listener),
     instances: (deployment?.ir.programs || []).map((p) => p.instance),
   };
-  const payload = () => ({
-    id: draft.id,
-    name: draft.name,
-    deploymentId: draft.deploymentId,
-    endpointIds: draft.endpointIds,
-    publicHost: draft.publicHost,
-    publicPort: draft.publicPort,
-  });
+  const payload = () => {
+    const port = operationalInteger(publicPort, 1, 65535);
+    if (port === undefined) throw new Error("对外端口须为 1–65535 的整数，且不能留空。");
+    return {
+      id: draft.id,
+      name: draft.name,
+      deploymentId: draft.deploymentId,
+      endpointIds: draft.endpointIds,
+      publicHost: draft.publicHost,
+      publicPort: port,
+    };
+  };
   const update = (patch: Partial<PublishedRoute>) => {
+    if (patch.publicPort !== undefined) setPublicPort(patch.publicPort);
     version.current++;
     setDraft({ ...draft, ...patch });
     setPreview(null);
@@ -655,7 +666,7 @@ function PublicRouteEditor({
   };
   const close = () => {
     if (save.isPending) return;
-    if (!selectionPending && JSON.stringify(draft) === JSON.stringify(initial))
+    if (!selectionPending && !portDirty && JSON.stringify(draft) === JSON.stringify(initial))
       return onClose();
     confirmDiscard(
       {
@@ -909,16 +920,15 @@ function PublicRouteEditor({
           </label>
           <label className="grid gap-2 text-sm font-medium">
             对外端口
-            <Input
+            <OperationalIntegerInput
+              key={draft.deploymentId}
               min={1}
               max={65535}
-              value={draft.publicPort}
-              type="number"
-              onChange={(event) =>
-                ((v) => update({ publicPort: v || 443 }))(
-                  event.target.value === "" ? null : Number(event.target.value),
-                )
-              }
+              value={publicPort}
+              onInputText={(raw) => {
+                setPublicPort(raw);
+                update({});
+              }}
             />
           </label>
         </div>

@@ -61,7 +61,11 @@ import {
   SubscriptionContextProvider,
   WorkspaceHistoryContext,
 } from "./SubscriptionContext";
-import { hasUnsavedChanges } from "./navigation";
+import {
+  getNavigationWarning,
+  hasNavigationWarning,
+  hasUnsavedChanges,
+} from "./navigation";
 import {
   Suspense,
   useEffect,
@@ -527,12 +531,15 @@ function Workspace() {
           : null;
         if (review) mobileReview.current = review;
         const handle = navigationCallbacks.current.confirm({
-          title: "放弃未保存的修改？",
-          description: context?.unowned
-            ? "继续编辑会建立新的历史记录，并清除浏览器的前进记录。"
-            : "当前编辑尚未保存。离开会放弃尚未保存的内容。",
-          confirmLabel: "放弃修改并离开",
-          cancelLabel: "继续编辑",
+          title: hasNavigationWarning() ? "离开当前页面？" : "放弃未保存的修改？",
+          description: [
+            getNavigationWarning(),
+            context?.unowned
+              ? "继续编辑会建立新的历史记录，并清除浏览器的前进记录。"
+              : "",
+          ].filter(Boolean).join(" "),
+          confirmLabel: hasNavigationWarning() ? "仍然离开" : "放弃修改并离开",
+          cancelLabel: hasNavigationWarning() ? "留在当前页面" : "继续编辑",
           destructive: true,
           onConfirm: proceed,
           onCancel: cancel,
@@ -961,28 +968,66 @@ function Workspace() {
     </SidebarProvider>
   );
 }
-function Login({
-  onSuccess,
-  initialError,
-}: {
+type LoginMode = "login" | "invite" | "admin";
+function Login(props: {
   onSuccess: (s: Session) => void;
   initialError: Error | null;
 }) {
-  const [mode, setMode] = useState<"login" | "invite" | "admin">(
+  const [mode, setMode] = useState<LoginMode>(
     new URLSearchParams(location.search).has("invite") ? "invite" : "login",
   );
+  return (
+    <LoginForm
+      key={mode}
+      {...props}
+      mode={mode}
+      changeMode={(next) => {
+        setToken("");
+        setMode(next);
+      }}
+    />
+  );
+}
+function LoginForm({
+  onSuccess,
+  initialError,
+  mode,
+  changeMode,
+}: {
+  onSuccess: (s: Session) => void;
+  initialError: Error | null;
+  mode: LoginMode;
+  changeMode: (mode: LoginMode) => void;
+}) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<Error | null>(initialError);
   const [form] = useForm();
-  const submission = useRef(0);
-  useEffect(() => {
-    setBusy(false);
+  const { lifecycle } = useSessionAccess();
+  const [inviteUncertain, setInviteUncertain] = useState(false);
+  const mounted = useRef(true);
+  const submitting = useRef(false);
+  useLayoutEffect(() => {
+    mounted.current = true;
     return () => {
-      submission.current++;
+      mounted.current = false;
     };
-  }, [mode]);
+  }, []);
   const submit = async (values: Record<string, string>) => {
-    const owner = ++submission.current;
+    // Validation can settle after mode exit or while session checks hide this form.
+    // Lock before dispatch, not after React commits a disabled button.
+    if (
+      !mounted.current ||
+      submitting.current ||
+      lifecycle.getSnapshot().phase !== "recovery"
+    )
+      return;
+    if (!navigator.onLine) {
+      setError(
+        new Error("网络已断开，本次操作未发送。连接恢复后请重新提交。"),
+      );
+      return;
+    }
+    submitting.current = true;
     setBusy(true);
     setError(null);
     try {
@@ -993,15 +1038,52 @@ function Login({
         setToken("");
         const result = await post<Session>(
           mode === "invite" ? "/auth/accept-invite" : "/auth/login",
-          values,
+          mode === "invite"
+            ? {
+                token: values.token,
+                username: values.username,
+                password: values.password,
+              }
+            : {
+                username: values.username,
+                password: values.password,
+                totp: values.totp,
+              },
         );
+        if (
+          typeof result?.user?.id !== "string" ||
+          !result.user.id ||
+          typeof result.user.name !== "string" ||
+          !["admin", "user"].includes(result.user.role) ||
+          typeof result.csrfToken !== "string" ||
+          !result.csrfToken
+        ) {
+          throw new APIError("登录响应无法确认，请使用账号登录。", 200);
+        }
+        // Even stale successes may have set the cookie. SessionBoundary checks
+        // /auth/me; this payload never directly selects the workspace identity.
         onSuccess(result);
       }
     } catch (e) {
-      // Token-login cleanup belongs to its API attempt, not an old form.
-      if (owner === submission.current) setError(e as Error);
+      const uncertainInvite =
+        mode === "invite" &&
+        !(e instanceof APIError &&
+          [400, 401, 403, 404, 413, 429].includes(e.status));
+      if (mounted.current) {
+        setError(e as Error);
+        if (uncertainInvite) setInviteUncertain(true);
+      }
+      // A cookie may have changed even when the body was lost or unreadable.
+      // Reconcile read-only, including obsolete attempts; never replay credentials.
+      if (uncertainInvite) {
+        void lifecycle.check();
+        lifecycle.changed();
+      }
     } finally {
-      if (owner === submission.current) setBusy(false);
+      if (mounted.current) {
+        submitting.current = false;
+        setBusy(false);
+      }
     }
   };
   return (
@@ -1022,12 +1104,20 @@ function Login({
                 : "使用平台管理员提供的令牌登录。"}
             </p>
           )}
+          {inviteUncertain && (
+            <Notice tone="warning" title="账号创建结果尚未确认">
+              账号可能已创建。请返回账号登录，使用刚才设置的账号和密码登录；不要仅凭错误提示判断账号未创建。
+            </Notice>
+          )}
           <ErrorNotice error={error} />
           <AppForm
             form={form}
             onFinish={submit}
             initialValues={{
-              token: new URLSearchParams(location.search).get("invite") || "",
+              token:
+                mode === "invite"
+                  ? new URLSearchParams(location.search).get("invite") || ""
+                  : "",
             }}
           >
             {mode === "admin" ? (
@@ -1098,7 +1188,7 @@ function Login({
               <>
                 <ActionButton
                   onClick={() => {
-                    setMode("invite");
+                    changeMode("invite");
                     setError(null);
                   }}
                   variant="link"
@@ -1107,7 +1197,7 @@ function Login({
                 </ActionButton>
                 <ActionButton
                   onClick={() => {
-                    setMode("admin");
+                    changeMode("admin");
                     setError(null);
                   }}
                   variant="ghost"
@@ -1118,7 +1208,7 @@ function Login({
             ) : (
               <ActionButton
                 onClick={() => {
-                  setMode("login");
+                  changeMode("login");
                   setError(null);
                 }}
                 variant="link"

@@ -572,3 +572,111 @@ it("keeps expanded runtime values through a pending save and reports the accepte
   expect(screen.getByRole("group", { name: "客户端网络能力" }).closest("[inert]")).toBeNull();
   expect(screen.getByRole("textbox", { name: "DNS 服务器 1" })).toHaveProperty("value", "192.0.2.54");
 });
+
+// DNS reconstruction contracts: authored at the public ProfileEditor seam;
+// source-only and unrun in the 2026-11-06 recovery workspace.
+it("retains a deleted default DNS identity until an explicit replacement is selected", async () => {
+  const initial = fixture();
+  initial.ir.runtime.dns = {
+    servers: [
+      { id: "dns-original", type: "tls", address: "192.0.2.53", port: 853 },
+      { id: "dns-replacement", type: "tls", address: "192.0.2.54", port: 853 },
+    ],
+    final: "dns-original",
+  };
+  const { writes } = mount(initial);
+  await screen.findByText("2 个有效连接");
+  await userEvent.click(screen.getByRole("tab", { name: "运行设置" }));
+  await userEvent.click(screen.getByRole("button", { name: "删除 DNS 1" }));
+  const selection = screen.getByRole("combobox", { name: "默认 DNS", exact: true });
+  expect(selection.textContent).toContain("已缺失：dns-original");
+  expect(selection.getAttribute("aria-invalid")).toBe("true");
+  await userEvent.click(screen.getByRole("button", { name: "重新选择默认 DNS" }));
+  expect(document.activeElement).toBe(selection);
+  expect(writes).toHaveLength(0);
+  await userEvent.click(screen.getByRole("button", { name: "保存草稿" }));
+  await waitFor(() => expect(writes.some(entry => entry.path.endsWith("/intent-profile"))).toBe(true));
+  expect(writes.find(entry => entry.path.endsWith("/intent-profile"))!.body.ir.runtime.dns).toEqual({
+    servers: [{ id: "dns-replacement", type: "tls", address: "192.0.2.54", port: 853 }],
+    final: "dns-original",
+  });
+  await userEvent.click(selection);
+  await userEvent.click(screen.getByRole("option", { name: "192.0.2.54" }));
+  expect(selection.getAttribute("aria-invalid")).not.toBe("true");
+  expect(screen.queryByRole("button", { name: "重新选择默认 DNS" })).toBeNull();
+  await userEvent.click(screen.getByRole("button", { name: "保存草稿" }));
+  await waitFor(() => expect(writes.filter(entry => entry.path.endsWith("/intent-profile"))).toHaveLength(2));
+  expect(writes.filter(entry => entry.path.endsWith("/intent-profile"))[1].body.ir.runtime.dns.final).toBe("dns-replacement");
+});
+
+it.each([
+  ["null DNS", null],
+  ["scalar DNS", "unreadable"],
+  ["zero DNS", 0],
+  ["false DNS", false],
+  ["array DNS", []],
+  ["missing servers", { final: "dns-missing" }],
+  ["object servers", { servers: {}, final: "dns-missing" }],
+  ["null row", { servers: [null], final: "dns-missing" }],
+  ["scalar row", { servers: [false], final: "dns-missing" }],
+  ["array row", { servers: [[]], final: "dns-missing" }],
+  ["missing row identity", { servers: [{ type: "tls", address: "192.0.2.53" }], final: "dns-missing" }],
+  ["mixed valid and invalid rows", { servers: [{ id: "dns-a", type: "tls", address: "192.0.2.53" }, null], final: "dns-missing" }],
+  ["object address", { servers: [{ id: "dns-a", type: "tls", address: {} }], final: "dns-missing" }],
+  ["object port", { servers: [{ id: "dns-a", type: "tls", address: "192.0.2.53", port: {} }], final: "dns-missing" }],
+  ["object final", { servers: [], final: {} }],
+])("keeps %s JSON-repairable and retains raw DNS after a rejected save", async (_name, dns) => {
+  const { writes } = mount(fixture(), {
+    saveResponse: async () => json({ detail: "Synthetic invalid DNS shape" }, 400),
+  });
+  await screen.findByText("2 个有效连接");
+  await userEvent.click(screen.getByRole("tab", { name: "运行设置" }));
+  await userEvent.click(screen.getByText("高级：配置意图与目标版本"));
+  await userEvent.click(screen.getByRole("button", { name: "编辑配置意图 JSON" }));
+  const dialog = screen.getByRole("dialog", { name: "配置意图 JSON", exact: true });
+  const input = within(dialog).getByRole("textbox") as HTMLTextAreaElement;
+  const ir = JSON.parse(input.value);
+  ir.runtime.dns = dns;
+  fireEvent.change(input, { target: { value: JSON.stringify(ir) } });
+  await userEvent.click(within(dialog).getByRole("button", { name: "应用到草稿" }));
+  await screen.findByText("DNS 结构无法读取");
+  expect(screen.queryByRole("combobox", { name: "默认 DNS", exact: true })).toBeNull();
+  await userEvent.click(screen.getByRole("button", { name: "修复 DNS JSON" }));
+  const repair = screen.getByRole("dialog", { name: "配置意图 JSON", exact: true });
+  expect(JSON.parse((within(repair).getByRole("textbox") as HTMLTextAreaElement).value).runtime.dns).toEqual(dns);
+  await userEvent.click(within(repair).getByRole("button", { name: "关闭", exact: true }));
+  await userEvent.click(screen.getByRole("button", { name: "保存草稿" }));
+  await waitFor(() => expect(writes.some(entry => entry.path.endsWith("/intent-profile"))).toBe(true));
+  expect(writes.find(entry => entry.path.endsWith("/intent-profile"))!.body.ir.runtime.dns).toEqual(dns);
+  await screen.findByText("Synthetic invalid DNS shape");
+  expect(screen.getByText("DNS 结构无法读取")).toBeTruthy();
+  await userEvent.click(screen.getByRole("button", { name: "修复 DNS JSON" }));
+  const retained = screen.getByRole("dialog", { name: "配置意图 JSON", exact: true });
+  expect(JSON.parse((within(retained).getByRole("textbox") as HTMLTextAreaElement).value).runtime.dns).toEqual(dns);
+});
+
+it.each(["dns-removed", ""])("keeps an empty DNS inventory with final %s through a rejected draft save and explicit addition", async (final) => {
+  const initial = fixture();
+  initial.ir.runtime.dns = { servers: [], final };
+  const { writes } = mount(initial, {
+    saveResponse: async () => json({ detail: "Synthetic stale DNS draft" }, 409),
+  });
+  await screen.findByText("2 个有效连接");
+  await userEvent.click(screen.getByRole("tab", { name: "运行设置" }));
+  const selection = screen.getByRole("combobox", { name: "默认 DNS", exact: true });
+  expect(selection.textContent).toContain(final ? "已缺失：dns-removed" : "尚未选择默认 DNS");
+  expect(screen.getByText("请先添加 DNS 服务器，再选择默认 DNS。可先保存草稿，检查通过后才能发布。")).toBeTruthy();
+  await userEvent.click(screen.getByRole("button", { name: "保存草稿" }));
+  await screen.findByText("Synthetic stale DNS draft");
+  expect(writes.find(entry => entry.path.endsWith("/intent-profile"))!.body.ir.runtime.dns).toEqual({ servers: [], final });
+  await userEvent.click(screen.getByRole("button", { name: "添加 DNS", exact: true }));
+  expect(selection.textContent).toContain(final ? "已缺失：dns-removed" : "尚未选择默认 DNS");
+  expect(selection.getAttribute("aria-invalid")).toBe("true");
+  await userEvent.click(screen.getByRole("button", { name: "重新选择默认 DNS" }));
+  expect(document.activeElement).toBe(selection);
+  await userEvent.click(screen.getByRole("button", { name: "保存草稿" }));
+  await waitFor(() => expect(writes.filter(entry => entry.path.endsWith("/intent-profile"))).toHaveLength(2));
+  const saved = writes.filter(entry => entry.path.endsWith("/intent-profile"))[1].body.ir.runtime.dns;
+  expect(saved.final).toBe(final);
+  expect(saved.servers).toHaveLength(1);
+});

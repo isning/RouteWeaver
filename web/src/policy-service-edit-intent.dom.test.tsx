@@ -848,3 +848,141 @@ it("retains service-plan fields and exact Close focus after two canceled discard
   }
   expect(requests.every((request) => request.startsWith("GET "))).toBe(true);
 });
+
+// Source-only reconstruction regression coverage; runtime execution is pending.
+it.each(["", " 1 ", "1e", "-1", "0.0000000000000000000001", "1.0000000000000000000001", "9007199254740993", "1e-999999999", "1".repeat(4097)])("blocks unrepresentable edited quota %s before fetch", async (raw) => {
+  const previews: unknown[] = [];
+  vi.stubGlobal("fetch", vi.fn(async (url, init) => {
+    if (String(url).includes("/edit-context/")) return json(context(plan));
+    previews.push(JSON.parse(init!.body as string));
+    return json({}, 500);
+  }));
+  mount();
+  await quota(raw);
+  await act(async () => { fireEvent.submit(screen.getByLabelText("周期额度（GiB，0 为不限额）").closest("form")!); });
+  await waitFor(() => expect(screen.getByRole("button", { name: "放弃未完成输入，保留当前额度" })).toBeTruthy());
+  expect(previews).toEqual([]);
+  expect((screen.getByLabelText("周期额度（GiB，0 为不限额）") as HTMLInputElement).value).toBe(raw);
+});
+
+it.each([
+  { raw: undefined, bytes: 9007199254740991 },
+  { raw: "0.000000000931322574615478515625", bytes: 1 },
+  { raw: "0", bytes: 0 },
+  { raw: "1e0", bytes: 1073741824 },
+])("previews exact quota bytes $bytes without reconstructing untouched display", async ({ raw, bytes }) => {
+  const saved = { ...plan, quotaBytes: 9007199254740991 };
+  const previews: any[] = [];
+  vi.stubGlobal("fetch", vi.fn(async (url, init) => {
+    if (String(url).includes("/edit-context/")) return json(context(saved));
+    const body = JSON.parse(init!.body as string);
+    previews.push(body);
+    return json(reviewed(saved, body.change.service));
+  }));
+  mount(saved);
+  const name = await screen.findByLabelText("服务方案名称");
+  fireEvent.change(name, { target: { value: "Renamed" } });
+  if (raw !== undefined) await quota(raw);
+  await preview();
+  await waitFor(() => expect(previews).toHaveLength(1));
+  expect(previews[0].change.service.quotaBytes).toBe(bytes);
+});
+
+it("explicit discard retains the last accepted quota rather than the original quota", async () => {
+  const previews: any[] = [];
+  vi.stubGlobal("fetch", vi.fn(async (url, init) => {
+    if (String(url).includes("/edit-context/")) return json(context(plan));
+    const body = JSON.parse(init!.body as string);
+    previews.push(body);
+    return json(reviewed(plan, body.change.service));
+  }));
+  mount();
+  await quota("2");
+  await quota("2.000000000000000000001");
+  expect(screen.getByText(/当前额度为 2147483648 字节/)).toBeTruthy();
+  await owner.click(() => screen.getByRole("button", { name: "放弃未完成输入，保留当前额度" }));
+  await preview();
+  await waitFor(() => expect(previews).toHaveLength(1));
+  expect(previews[0].change.service.quotaBytes).toBe(2147483648);
+});
+
+it("keeps quota keyboard stepping and sends the newly chosen whole GiB value", async () => {
+  const previews: any[] = [];
+  vi.stubGlobal("fetch", vi.fn(async (url, init) => {
+    if (String(url).includes("/edit-context/")) return json(context(plan));
+    const body = JSON.parse(init!.body as string);
+    previews.push(body);
+    return json(reviewed(plan, body.change.service));
+  }));
+  mount();
+  const input = await screen.findByLabelText("周期额度（GiB，0 为不限额）");
+  fireEvent.keyDown(input, { key: "ArrowUp" });
+  await preview();
+  await waitFor(() => expect(previews).toHaveLength(1));
+  expect(previews[0].change.service.quotaBytes).toBe(54760833024);
+});
+
+it("an incomplete raw-only quota edit invalidates a pending latest read and still protects closing", async () => {
+  let resolveLatest!: (value: Response) => void;
+  let reads = 0;
+  const close = vi.fn();
+  vi.stubGlobal("fetch", vi.fn(async (url) => {
+    if (String(url).includes("/edit-context/")) {
+      reads++;
+      // StrictMode may repeat the opening read; gate only after the explicit latest action.
+      if (reads > openingReads) return new Promise<Response>((resolve) => { resolveLatest = resolve; });
+      return json(context(plan));
+    }
+    return json({ code: "POLICY_EDIT_BASELINE_CHANGED", detail: "方案已改变" }, 409);
+  }));
+  let openingReads = Infinity;
+  mount(plan, close);
+  await quota("2");
+  await preview();
+  await screen.findByText("方案已改变");
+  openingReads = reads;
+  await owner.click(() => screen.getByRole("button", { name: "查看最新版本" }));
+  await quota("2e");
+  await act(async () => resolveLatest(json(context({ ...plan, name: "New saved name" }, "new"))));
+  expect(screen.queryByRole("button", { name: "使用最新版本重新编辑" })).toBeNull();
+  await owner.click(() => screen.getByRole("button", { name: "取消", exact: true }));
+  expect(await screen.findByRole("button", { name: "放弃修改" })).toBeTruthy();
+  expect(close).not.toHaveBeenCalled();
+});
+
+it("rejects a preview response that changes the exact proposed quota bytes", async () => {
+  vi.stubGlobal("fetch", vi.fn(async (url, init) => {
+    if (String(url).includes("/edit-context/")) return json(context(plan));
+    const body = JSON.parse(init!.body as string);
+    return json(reviewed(plan, { ...body.change.service, quotaBytes: 0 }));
+  }));
+  mount();
+  await quota("0.000000000931322574615478515625");
+  await preview();
+  expect(await screen.findByText("服务未返回完整的方案变更核对结果。当前草稿已保留，请重试。")).toBeTruthy();
+  expect(screen.queryByRole("dialog", { name: "确认授权变更" })).toBeNull();
+});
+
+
+it("clears quota validation feedback immediately after correcting raw decimal intent", async () => {
+  const previews: any[] = [];
+  vi.stubGlobal("fetch", vi.fn(async (url, init) => {
+    if (String(url).includes("/edit-context/")) return json(context(plan));
+    const body = JSON.parse(init!.body as string);
+    previews.push(body);
+    return json(reviewed(plan, body.change.service));
+  }));
+  mount();
+  await quota("1.000000000000000000001");
+  expect(await screen.findByText("额度必须能表示为安全范围内的整数字节")).toBeTruthy();
+  await quota("2");
+  await waitFor(() => {
+    expect(screen.queryByText("额度必须能表示为安全范围内的整数字节")).toBeNull();
+    expect(screen.queryByRole("button", { name: "放弃未完成输入，保留当前额度" })).toBeNull();
+    expect(screen.getByLabelText("周期额度（GiB，0 为不限额）").getAttribute("aria-invalid")).not.toBe("true");
+  });
+  expect(previews).toEqual([]);
+  await preview();
+  await waitFor(() => expect(previews).toHaveLength(1));
+  expect(previews[0].change.service.quotaBytes).toBe(2147483648);
+});

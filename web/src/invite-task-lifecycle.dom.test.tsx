@@ -239,3 +239,110 @@ it("returns the invitation to its stable Close control after canceled discard", 
   }
   expect(state.requests).toEqual([]);
 });
+
+
+it.each(["-", "1e", "72.00000000000000001", "168.00000000000000001", "0.99999999999999999", "0", "169", " "])(
+  "retains invalid invitation expiry %s and blocks submission",
+  async (raw) => {
+    const state = mount();
+    const dialog = await open();
+    fireEvent.change(within(dialog).getByLabelText("受邀人名称"), { target: { value: "Alice" } });
+    const duration = within(dialog).getByLabelText("有效时长（小时）") as HTMLInputElement;
+    fireEvent.change(duration, { target: { value: raw } });
+    fireEvent.blur(duration);
+    fireEvent.submit(dialog.querySelector("form")!);
+    await within(dialog).findByText("有效时长为 1–168 整数小时");
+    expect(duration.value).toBe(raw);
+    expect(state.requests).toEqual([]);
+    expect(hasUnsavedChanges()).toBe(true);
+  },
+);
+
+it.each([["72", 72], ["", undefined], ["1", 1], ["168", 168], ["7.2e1", 72], ["+024.0", 24]] as const)(
+  "submits invitation expiry %s without changing its draft spelling",
+  async (raw, expected) => {
+    const state = mount();
+    const dialog = await open();
+    const duration = within(dialog).getByLabelText("有效时长（小时）") as HTMLInputElement;
+    expect(duration.value).toBe("72");
+    expect(within(dialog).getByText("留空使用默认 24 小时。")).toBeTruthy();
+    fireEvent.change(within(dialog).getByLabelText("受邀人名称"), { target: { value: "Alice" } });
+    fireEvent.change(duration, { target: { value: raw } });
+    await userEvent.click(within(dialog).getByRole("button", { name: "生成邀请" }));
+    await waitFor(() => expect(state.requests).toHaveLength(1));
+    expect(state.requests[0]).toEqual({ name: "Alice", role: "user", ...(expected === undefined ? {} : { expiresInHours: expected }) });
+    await act(async () => state.responses[0](json({ error: "Invitation rejected" }, 400)));
+    await within(dialog).findByText("Invitation rejected");
+    expect(duration.value).toBe(raw);
+    expect(hasUnsavedChanges()).toBe(true);
+  },
+);
+
+it("protects a partial expiry edit even when the other invitation fields are untouched", async () => {
+  const state = mount();
+  const dialog = await open();
+  const duration = within(dialog).getByLabelText("有效时长（小时）") as HTMLInputElement;
+  fireEvent.change(duration, { target: { value: "7e" } });
+  expect(hasUnsavedChanges()).toBe(true);
+  await userEvent.click(within(dialog).getByRole("button", { name: "取消" }));
+  await userEvent.click(within(screen.getByRole("alertdialog")).getByRole("button", { name: "继续编辑" }));
+  await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+  expect(duration.value).toBe("7e");
+  fireEvent.change(duration, { target: { value: "72" } });
+  expect(hasUnsavedChanges()).toBe(false);
+  await userEvent.click(within(dialog).getByRole("button", { name: "取消" }));
+  await waitFor(() => expect(screen.queryByRole("dialog", { name: "邀请用户" })).toBeNull());
+  expect(state.requests).toEqual([]);
+});
+
+
+it("retains expiry spinbutton semantics and bounded arrow stepping", async () => {
+  const state = mount();
+  const dialog = await open();
+  const duration = within(dialog).getByRole("spinbutton", { name: "有效时长（小时）" }) as HTMLInputElement;
+  expect(duration.getAttribute("aria-valuemin")).toBe("1");
+  expect(duration.getAttribute("aria-valuemax")).toBe("168");
+  expect(duration.getAttribute("aria-valuenow")).toBe("72");
+  fireEvent.keyDown(duration, { key: "ArrowUp" });
+  expect(duration.value).toBe("73");
+  expect(hasUnsavedChanges()).toBe(true);
+  fireEvent.keyDown(duration, { key: "ArrowDown" });
+  expect(duration.value).toBe("72");
+  expect(hasUnsavedChanges()).toBe(false);
+  for (const [raw, key, expected] of [
+    ["168", "ArrowUp", "168"],
+    ["1", "ArrowDown", "1"],
+    ["7.2e1", "ArrowUp", "73"],
+    ["", "ArrowUp", "1"],
+    ["", "ArrowDown", "1"],
+  ]) {
+    fireEvent.change(duration, { target: { value: raw } });
+    fireEvent.keyDown(duration, { key });
+    expect(duration.value).toBe(expected);
+    expect(duration.getAttribute("aria-valuenow")).toBe(expected);
+  }
+  fireEvent.change(within(dialog).getByLabelText("受邀人名称"), { target: { value: "Alice" } });
+  await userEvent.click(within(dialog).getByRole("button", { name: "生成邀请" }));
+  await waitFor(() => expect(state.requests).toHaveLength(1));
+  expect(state.requests[0].expiresInHours).toBe(1);
+  fireEvent.keyDown(duration, { key: "ArrowUp" });
+  expect(duration.value).toBe("1");
+});
+
+it.each(["1e", "72.00000000000000001", "169", "0", " "])(
+  "does not coerce invalid expiry %s through arrow stepping",
+  async (raw) => {
+    const state = mount();
+    const dialog = await open();
+    const duration = within(dialog).getByRole("spinbutton", { name: "有效时长（小时）" }) as HTMLInputElement;
+    fireEvent.change(duration, { target: { value: raw } });
+    for (const key of ["ArrowUp", "ArrowDown"]) {
+      fireEvent.keyDown(duration, { key });
+      expect(duration.value).toBe(raw);
+      expect(duration.getAttribute("aria-valuenow")).toBeNull();
+      expect(duration.getAttribute("aria-invalid")).toBe("true");
+    }
+    expect(hasUnsavedChanges()).toBe(true);
+    expect(state.requests).toEqual([]);
+  },
+);
