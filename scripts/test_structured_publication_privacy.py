@@ -55,22 +55,28 @@ class ExpectedFailureTests(unittest.TestCase):
     def report(self, timed_out=False):
         error = {"message": "Test timeout of 12000ms exceeded." if timed_out else probe.MARKER,
                  "stack": "Error\n  at disposable.privacy-probe.ts:350:7"}
+        # Playwright 1.64.1 JSONReporter keeps the raw error separately. Its
+        # formatted errors entries contain message/location, never a stack key.
+        formatted = {"message": error["message"] + "\n" + error["stack"],
+                     "location": {"file": "disposable.privacy-probe.ts", "line": 350, "column": 7}}
         return {"errors": [], "stats": {"expected": 0, "unexpected": 1, "skipped": 0, "flaky": 0},
                 "suites": [{"specs": [{"title": "structured editor at 1440", "tests": [{
                     "expectedStatus": "passed", "status": "unexpected", "results": [{
-                        "status": "timedOut" if timed_out else "failed", "retry": 0, "errors": [error]}]}]}]}]}
+                        "status": "timedOut" if timed_out else "failed", "retry": 0,
+                        "error": error, "errors": [formatted]}]}]}]}]}
 
     def test_only_one_deliberate_failure_with_useful_diagnostics_qualifies(self):
         for timed_out in (False, True):
             proof = probe.expected_failure(self.report(timed_out), timed_out)
             self.assertTrue(proof["expectedErrorIdentified"])
             self.assertTrue(proof["errorStackPreserved"])
-        for kind in ("wrong-error", "missing-stack", "retry", "skip", "pass", "duplicate", "cleanup-error", "runner-error"):
+        for kind in ("wrong-error", "wrong-primary-error", "missing-stack", "retry", "skip", "pass", "duplicate", "cleanup-error", "runner-error"):
             data = self.report()
             test = data["suites"][0]["specs"][0]["tests"][0]
             result = test["results"][0]
             if kind == "wrong-error": result["errors"][0]["message"] = "unrelated failure"
-            if kind == "missing-stack": result["errors"][0]["stack"] = ""
+            if kind == "wrong-primary-error": result["error"]["message"] = "unrelated failure"
+            if kind == "missing-stack": result["error"]["stack"] = ""
             if kind == "retry": result["retry"] = 1
             if kind == "skip": result["status"] = "skipped"
             if kind == "pass": result["status"] = "passed"
@@ -150,6 +156,34 @@ class ExpectedFailureTests(unittest.TestCase):
             self.assertFalse(receipt["runnerAttempted"])
             self.assertTrue(receipt["privateFilesRemoved"])
             self.assertEqual(receipt["failedStage"], "preflight")
+
+    def test_failure_details_are_allowlisted_scalars_never_raw_diagnostics(self):
+        secret = "synthetic-bearer-must-not-escape"
+        details = {"step": "checkpoint-validate", "check": "checkpoint-mask", "runnerExitCode": 1,
+                   "checkpointPresent": True, "reportPresent": True, "checkpointMasked": False,
+                   "checkpointRecovered": True, "cleanupCompleted": True,
+                   "rawError": secret, "url": secret, "path": secret, "message": secret}
+        safe = probe.safe_failure_details(details)
+        self.assertEqual(safe["check"], "checkpoint-mask")
+        self.assertFalse(safe["checkpointMasked"])
+        self.assertNotIn(secret, json.dumps(safe))
+        for key in tuple(safe):
+            unsafe = {**details, key: secret}
+            self.assertNotIn(secret, json.dumps(probe.safe_failure_details(unsafe)))
+        with self.assertRaises(probe.ProbeContractError) as failure:
+            probe.require(False, secret)
+        self.assertEqual(failure.exception.check, "contract")
+        self.assertNotIn(secret, str(failure.exception))
+
+    def test_real_reporter_failures_identify_subcheck_without_error_text(self):
+        for kind, expected in (("stack", "failure-stack"), ("identity", "failure-identity")):
+            data = self.report()
+            raw = data["suites"][0]["specs"][0]["tests"][0]["results"][0]["error"]
+            raw[kind if kind == "stack" else "message"] = "" if kind == "stack" else "sensitive-error-value"
+            with self.assertRaises(probe.ProbeContractError) as failure:
+                probe.expected_failure(data, False)
+            self.assertEqual(failure.exception.check, expected)
+            self.assertNotIn("sensitive-error-value", str(failure.exception))
 
 
 class ProcessCleanupTests(unittest.TestCase):

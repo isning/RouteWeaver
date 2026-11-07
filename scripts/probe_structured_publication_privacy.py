@@ -26,11 +26,42 @@ RECEIPT = ROOT / "bin/verification/structured-publication-privacy.json"
 MARKER = "STRUCTURED_PUBLICATION_EXPECTED_PRIVACY_FAILURE"
 CASES = ("control-assertion", "fixed-assertion", "fixed-timeout")
 MAX_BYTES = 128 * 1024 * 1024
+CHECKS = frozenset({"contract", "operation", "source-anchor", "report-shape", "report-single-test",
+                   "report-status", "report-single-result", "report-single-error", "failure-identity",
+                   "failure-stack", "report-outcomes", "checkpoint-url", "checkpoint-mask",
+                   "checkpoint-recovery", "checkpoint-access", "runner-exit", "artifact-scan",
+                   "control-aria-leak", "fixed-bearer-leak"})
+STEPS = frozenset({"prepare", "runner", "checkpoint-read", "checkpoint-validate", "artifact-scan",
+                  "report-read", "case-validation"})
 
 
-def require(condition):
+class ProbeContractError(ValueError):
+    def __init__(self, check):
+        self.check = check if check in CHECKS else "contract"
+        super().__init__("privacy probe contract failed")
+
+
+def require(condition, check="contract"):
     if not condition:
-        raise ValueError("privacy probe contract failed")
+        raise ProbeContractError(check)
+
+
+def safe_failure_details(details):
+    """Only fixed identifiers, strict booleans and bounded counters may escape."""
+    safe = {}
+    for key, allowed in (("step", STEPS), ("check", CHECKS)):
+        if isinstance(details.get(key), str) and details[key] in allowed:
+            safe[key] = details[key]
+    for key in ("checkpointPresent", "reportPresent", "checkpointMasked", "checkpointRecovered",
+                "accessReadCountOK", "accessReadStatusOK", "cleanupCompleted",
+                "bearerFound", "automaticAriaBearerFound"):
+        if type(details.get(key)) is bool:
+            safe[key] = details[key]
+    for key, low, high in (("runnerExitCode", -128, 255), ("filesScanned", 0, 1000000),
+                           ("embeddedReportEntries", 0, 1000000)):
+        if type(details.get(key)) is int and low <= details[key] <= high:
+            safe[key] = details[key]
+    return safe
 
 
 def scan_artifacts(root, bearer):
@@ -78,22 +109,27 @@ def expected_failure(report, timed_out):
 
     for suite in report.get("suites", []):
         walk(suite)
-    require(not report.get("errors") and len(specs) == 1)
+    require(not report.get("errors") and len(specs) == 1, "report-shape")
     tests = specs[0].get("tests", [])
-    require(len(tests) == 1)
+    require(len(tests) == 1, "report-single-test")
     test = tests[0]
-    require(test.get("expectedStatus") == "passed" and test.get("status") == "unexpected")
+    require(test.get("expectedStatus") == "passed" and test.get("status") == "unexpected", "report-status")
     results = test.get("results", [])
-    require(len(results) == 1)
+    require(len(results) == 1, "report-single-result")
     result = results[0]
-    require(result.get("status") == ("timedOut" if timed_out else "failed") and result.get("retry") == 0)
+    require(result.get("status") == ("timedOut" if timed_out else "failed") and result.get("retry") == 0, "report-status")
     errors = result.get("errors", [])
-    require(len(errors) == 1)
-    message = errors[0].get("message", "")
-    identified = bool(re.search(r"Test timeout of \d+ms exceeded", message)) if timed_out else MARKER in message
-    require(identified and bool(errors[0].get("stack")))
+    require(len(errors) == 1, "report-single-error")
+    # JSONReporter formats errors[] as message/location and retains the raw
+    # primary error (including its stack) in result.error, not errors[0].
+    primary = result.get("error", {})
+    messages = (errors[0].get("message", ""), primary.get("message", ""))
+    identified = all(bool(re.search(r"Test timeout of \d+ms exceeded", message)) if timed_out else MARKER in message
+                     for message in messages)
+    require(identified, "failure-identity")
+    require(bool(primary.get("stack")), "failure-stack")
     stats = report.get("stats", {})
-    require(stats.get("unexpected") == 1 and all(stats.get(key) == 0 for key in ("expected", "skipped", "flaky")))
+    require(stats.get("unexpected") == 1 and all(stats.get(key) == 0 for key in ("expected", "skipped", "flaky")), "report-outcomes")
     return {"expectedErrorIdentified": True, "errorStackPreserved": True,
             "exactlyOneUnretriedFailure": True, "testTimedOut": timed_out}
 
@@ -148,7 +184,7 @@ CHECKPOINT = r'''
 
 
 def replace_once(source, old, new):
-    require(source.count(old) == 1)
+    require(source.count(old) == 1, "source-anchor")
     return source.replace(old, new, 1)
 
 
@@ -174,22 +210,23 @@ def probe_source(source, case):
 
 def checkpoint_bearer(checkpoint):
     match = re.fullmatch(r"http://127\.0\.0\.1:\d+/feed/([A-Za-z0-9_-]{43})", checkpoint.get("url", ""))
-    require(match is not None)
-    require(checkpoint.get("maskedPixels") is True and checkpoint.get("recovered") is True)
-    require(checkpoint.get("accessReadAttempts") == 2 and checkpoint.get("interruptedAccessStatus") == 200)
+    require(match is not None, "checkpoint-url")
+    require(checkpoint.get("maskedPixels") is True, "checkpoint-mask")
+    require(checkpoint.get("recovered") is True, "checkpoint-recovery")
+    require(checkpoint.get("accessReadAttempts") == 2 and checkpoint.get("interruptedAccessStatus") == 200, "checkpoint-access")
     # The URL-safe token catches full URLs, paths and JSON/HTML-escaped URLs too.
     return match[1].encode()
 
 
 def case_receipt(case, report, checkpoint, scan, exit_code):
-    require(case in CASES and exit_code == 1)
+    require(case in CASES and exit_code == 1, "runner-exit")
     checkpoint_bearer(checkpoint)
     diagnostics = expected_failure(report, case == "fixed-timeout")
-    require(scan["filesScanned"] > 0 and scan["embeddedReportEntries"] > 0)
+    require(scan["filesScanned"] > 0 and scan["embeddedReportEntries"] > 0, "artifact-scan")
     if case == "control-assertion":
-        require(scan["bearerFound"] and scan["automaticAriaBearerFound"])
+        require(scan["bearerFound"] and scan["automaticAriaBearerFound"], "control-aria-leak")
     else:
-        require(not scan["bearerFound"])
+        require(not scan["bearerFound"], "fixed-bearer-leak")
     return {"case": case, "passed": True, "recoveredAccessVerified": True,
             "maskedPixelsVerified": True, "interruptedAccessStatus": 200,
             "accessReadAttempts": 2, "runnerExitCode": exit_code, **diagnostics, **scan}
@@ -256,7 +293,8 @@ def drain_process_group(process, grace=20, kill_grace=10):
     process.wait(timeout=kill_grace)
 
 
-def run_case(case, source, private):
+def run_case(case, source, private, details):
+    details.update(step="prepare", cleanupCompleted=False)
     case_dir = private / case
     raw = case_dir / "raw"
     raw.mkdir(parents=True, mode=0o700)
@@ -274,16 +312,28 @@ def run_case(case, source, private):
         env = {key: value for key, value in os.environ.items()
                if not key.startswith(("PLAYWRIGHT_HTML_", "PLAYWRIGHT_JSON_"))}
         env["ROUTEWEAVER_PRIVACY_CHECKPOINT"] = str(checkpoint)
+        details["step"] = "runner"
         with (raw / "runner.log").open("wb") as output:
             process = subprocess.Popen(
                 ["node", str(WEB / "node_modules/playwright/cli.js"), "test", "--config", str(config)],
                 cwd=WEB, env=env, stdout=output, stderr=subprocess.STDOUT, start_new_session=True)
             code = process.wait(timeout=300)
+        details.update(runnerExitCode=code, checkpointPresent=checkpoint.is_file(),
+                       reportPresent=(raw / "report.json").is_file())
         # No subprocess output is printed, even for an early or unexpected failure.
+        details["step"] = "checkpoint-read"
         state = json.loads(checkpoint.read_text())
+        details.update(step="checkpoint-validate", checkpointMasked=state.get("maskedPixels") is True,
+                       checkpointRecovered=state.get("recovered") is True,
+                       accessReadCountOK=state.get("accessReadAttempts") == 2,
+                       accessReadStatusOK=state.get("interruptedAccessStatus") == 200)
         bearer = checkpoint_bearer(state)
+        details["step"] = "artifact-scan"
         scan = scan_artifacts(raw, bearer)
+        details.update(scan)
+        details["step"] = "report-read"
         report = json.loads((raw / "report.json").read_text())
+        details["step"] = "case-validation"
         return case_receipt(case, report, state, scan, code)
     finally:
         try:
@@ -292,12 +342,14 @@ def run_case(case, source, private):
         finally:
             for path in generated:
                 path.unlink(missing_ok=True)
+        details["cleanupCompleted"] = True
 
 
 def main():
     receipt = {"passed": False, "cases": [], "runnerAttempted": False,
                "rawArtifactsPublished": False, "privateFilesRemoved": False}
     stage = "preflight"
+    details = {}
     private_path = None
     try:
         # Refuse an inherited snapshot suppression flag: the positive control
@@ -318,15 +370,18 @@ def main():
             require(private_path.stat().st_mode & 0o777 == 0o700)
             for case in CASES:
                 stage = case
+                details = {}
                 receipt["runnerAttempted"] = True
-                receipt["cases"].append(run_case(case, source, private_path))
+                receipt["cases"].append(run_case(case, source, private_path, details))
             stage = "source-unchanged"
             require(before == {path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in (JOURNEY, HELPER)})
         receipt["passed"] = True
-    except (Exception, KeyboardInterrupt):
+    except (Exception, KeyboardInterrupt) as error:
         # Deliberately omit exception strings/tracebacks and all child output.
         # They may contain the comparison bearer or a reporter preview.
         receipt["failedStage"] = stage
+        details["check"] = error.check if isinstance(error, ProbeContractError) else "operation"
+        receipt["failureDetails"] = safe_failure_details(details)
     finally:
         receipt["privateFilesRemoved"] = private_path is None or not private_path.exists()
         receipt["passed"] = receipt["passed"] and receipt["privateFilesRemoved"]
