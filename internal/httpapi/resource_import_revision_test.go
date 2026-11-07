@@ -49,7 +49,7 @@ func importOpenedRuleFile(t *testing.T, owner sessionClient, base string, revisi
 
 func ruleImportInput(id, name, body, policy string) map[string]any {
 	return map[string]any{
-		"resource": map[string]any{"id": id, "name": name, "format": "mihomo-yaml", "behavior": "domain", "updatePolicy": policy},
+		"resource":      map[string]any{"id": id, "name": name, "format": "mihomo-yaml", "behavior": "domain", "updatePolicy": policy},
 		"contentBase64": base64.StdEncoding.EncodeToString([]byte(body)),
 	}
 }
