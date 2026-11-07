@@ -1042,14 +1042,25 @@ it.each(["A", "B"])(
       },
     );
     let finishFile!: () => void;
+    let abortedReads = 0;
     vi.stubGlobal(
       "FileReader",
       class {
-        result = "";
+        result: string | null = null;
         onload: (() => void) | null = null;
         onerror: (() => void) | null = null;
+        onabort: (() => void) | null = null;
+        aborted = false;
+        abort() {
+          if (this.aborted) return;
+          this.aborted = true;
+          this.result = null;
+          abortedReads++;
+          this.onabort?.();
+        }
         readAsDataURL() {
           finishFile = () => {
+            if (this.aborted) return;
             this.result = "data:application/octet-stream;base64,YQ==";
             this.onload?.();
           };
@@ -1106,11 +1117,13 @@ it.each(["A", "B"])(
     await act(async () => {
       fireEvent(window, new Event("focus"));
     });
+    if (nextAccount === "B") await screen.findByText("Account B");
     await act(async () => {
       finishFile();
     });
     if (nextAccount === "A") {
       await screen.findByText("规则文件已接纳，发布配置时会一并打包");
+      expect(abortedReads).toBe(0);
       expect(writes).toEqual([
         expect.objectContaining({
           contentBase64: "YQ==",
@@ -1119,6 +1132,7 @@ it.each(["A", "B"])(
       ]);
     } else {
       await screen.findByText("Account B");
+      expect(abortedReads).toBe(1);
       expect(writes).toEqual([]);
       expect(screen.queryByRole("dialog", { name: "导入规则文件" })).toBeNull();
     }

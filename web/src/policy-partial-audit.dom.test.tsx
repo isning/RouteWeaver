@@ -190,8 +190,10 @@ it("does not infer a commit from a network exception containing the same words",
   transport(() => { throw new Error(detail); });
   mount(owner, <Editor />);
   await apply(owner);
-  await screen.findByText(detail);
+  await screen.findByText("无法连接服务。请检查网络后重试，当前输入已保留。");
+  expect(screen.queryByText(detail)).toBeNull();
   expect(screen.queryByText(warning)).toBeNull();
+  expect(screen.queryByText("Editor closed")).toBeNull();
   expectVisible(screen.getByRole("dialog", { name: "确认授权变更" }));
 });
 

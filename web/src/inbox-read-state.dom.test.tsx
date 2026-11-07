@@ -322,10 +322,12 @@ it("updates an open message from the latest list and labels a removed message as
   const dialog = await screen.findByRole("dialog", { name: "更新公告" });
   body = "修订正文";
   await act(async () => { await client.invalidateQueries({ queryKey: ["inbox"] }); });
-  expect(within(dialog).getByText("修订正文")).toBeTruthy();
+  // Query completion precedes its scheduled observer render. Wait for the
+  // visible revision before removing the message from the next response.
+  expect(await within(dialog).findByText("修订正文")).toBeTruthy();
   removed = true;
   await act(async () => { await client.invalidateQueries({ queryKey: ["inbox"] }); });
-  expect(within(dialog).getByText("此消息已不在当前列表中，以下为之前读取的内容。")).toBeTruthy();
+  expect(await within(dialog).findByText("此消息已不在当前列表中，以下为之前读取的内容。")).toBeTruthy();
   expect(within(dialog).getByText("修订正文")).toBeTruthy();
 });
 

@@ -90,7 +90,7 @@ it("preserves corrupt bytes until explicit consequence-aware confirmation, witho
   }));
   mount();
   await userEvent.click(await screen.findByRole("button", { name: "清除无法读取的记录" }));
-  await screen.findByText("这不会取消原测试。原测试可能已产生流量，重新提交可能重复产生流量。请先检查节点测试记录。");
+  await screen.findByText("这不会取消原测试，但会重置此窗口的测试设置。原测试可能已产生流量，重新提交可能重复产生流量。请先检查节点测试记录。");
   expect(sessionStorage.getItem(key)).toBe("broken record");
   await userEvent.click(screen.getByRole("button", { name: "保留记录" }));
   expect(sessionStorage.getItem(key)).toBe("broken record");

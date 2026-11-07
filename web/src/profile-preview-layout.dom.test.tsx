@@ -257,6 +257,16 @@ it("associates each editor tab with its actual controls", async (context) => {
   owner.assertActive();
   phase = "mount";
   mount(<ProfileEditor initial={emptyProfile()} isNew onClose={() => {}} />);
+  phase = "visibility-styles";
+  // The visited runtime panel stays mounted to preserve edits. Load its real
+  // Tailwind visibility rule, as the browser does, before querying accessibility.
+  const style = document.createElement("style");
+  style.textContent = (await compile("@tailwind utilities;")).build([
+    "data-[state=inactive]:hidden",
+  ]);
+  owner.assertActive();
+  document.head.append(style);
+  context.onTestFinished(() => style.remove());
   phase = "user-setup";
   const user = userEvent.setup();
   phase = "connection-region-query";
