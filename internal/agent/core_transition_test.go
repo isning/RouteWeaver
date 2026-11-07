@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -134,36 +135,83 @@ func (a *slowValidationFixture) Validate(ctx context.Context, staged Staged) err
 func TestCoreTransitionValidationCannotExtendOldLease(t *testing.T) {
 	old := &transitionFixture{version: "1"}
 	next := &slowValidationFixture{transitionFixture: transitionFixture{version: "2"}, started: make(chan struct{}), release: make(chan struct{})}
-	r := openTransitionTest(t, old, next)
-	ctx := context.Background()
 	first := testDesired(t, 1)
-	first.Lease.ExpiresAt = time.Now().Add(80 * time.Millisecond)
+	var clock atomic.Int64
+	clock.Store(time.Now().UnixNano())
+	now := func() time.Time { return time.Unix(0, clock.Load()) }
+	first.Lease.ExpiresAt = now().Add(80 * time.Millisecond)
+	root := t.TempDir()
+	if err := os.Chmod(root, 0700); err != nil {
+		t.Fatal(err)
+	}
+	r, err := Open(root, first.Scope, NewRegistry(old, next), Options{MaxLease: 2 * time.Hour, Now: now})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer r.Close()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	if _, err := r.Submit(ctx, first); err != nil {
 		t.Fatal(err)
 	}
 	candidate := testDesired(t, 2)
 	candidate.CoreVersion = "2"
 	candidate.Transition = &controlprotocol.CoreTransition{From: first.Identity()}
+	candidate.Lease.IssuedAt = now()
+	candidate.Lease.ExpiresAt = now().Add(time.Hour)
 	done := make(chan error, 1)
 	go func() { _, err := r.Submit(ctx, candidate); done <- err }()
-	<-next.started
+	joined := false
+	// Cancel blocked validation and join Submit before closing the reconciler,
+	// including assertion failures while validation holds the mutation lane.
+	defer func() {
+		cancel()
+		if !joined {
+			<-done
+		}
+	}()
+	select {
+	case <-next.started:
+	case err := <-done:
+		joined = true
+		t.Fatalf("transition returned before entering candidate validation: %v", err)
+	case <-time.After(5 * time.Second):
+		t.Fatal("transition never entered candidate validation")
+	}
+	if observation, err := old.Observe(ctx, root); err != nil || !observation.Known || !observation.Quiescent || observation.Identity != first.Identity() {
+		t.Fatalf("original runtime was not active before lease expiry: %+v %v", observation, err)
+	}
+	// Freeze policy time through initial activation and the validation barrier.
+	// Only now expire the old lease; keep the production ticker and the 300 ms
+	// restriction bound on real time so slow validation cannot defer enforcement.
 	deadline := time.Now().Add(300 * time.Millisecond)
+	clock.Store(first.Lease.ExpiresAt.UnixNano())
 	restricted := false
 	for time.Now().Before(deadline) {
-		observation, err := old.Observe(ctx, r.Root())
-		if err == nil && observation.Generation == 0 {
+		observation, err := old.Observe(ctx, root)
+		if err == nil && observation.Known && observation.Quiescent && observation.Generation == 0 {
 			restricted = true
 			break
 		}
 		time.Sleep(10 * time.Millisecond)
 	}
+	select {
+	case err := <-done:
+		joined = true
+		t.Fatalf("transition returned while candidate validation was blocked: %v", err)
+	default:
+	}
 	close(next.release)
-	err := <-done
+	err = <-done
+	joined = true
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !restricted {
 		t.Fatal("native validation extended the old runtime lease")
+	}
+	if state := r.State(); state.Phase != ObservedConformant || state.Observed == nil || state.Observed.Identity != candidate.Identity() {
+		t.Fatalf("valid candidate did not activate after validation: %+v", state)
 	}
 }
 
