@@ -819,7 +819,7 @@ export function TemplatesPage({ admin = false }: { admin?: boolean }) {
                   value: t.version,
                   label: (
                     <Metadata className="flex-col items-start">
-                      <span>v{t.version}</span>
+                      <span>{`v${t.version}`}</span>
                       {t.version === checking.appliedVersion && (
                         <span className="text-muted-foreground">当前固定</span>
                       )}
@@ -1317,7 +1317,7 @@ function SelectTemplate({
                   value: v.version,
                   label: (
                     <Metadata className="flex-col items-start">
-                      <span>v{v.version}</span>
+                      <span>{`v${v.version}`}</span>
                       <span className="text-muted-foreground">
                         {dateLabel(v.publishedAt)}
                       </span>
@@ -1331,7 +1331,7 @@ function SelectTemplate({
                         value: version,
                         label: (
                           <Metadata className="flex-col items-start">
-                            <span>v{version}</span>
+                            <span>{`v${version}`}</span>
                             <span className="text-muted-foreground">
                               {catalogReady(versions) ? "已不可用" : "暂不可用"}
                             </span>
@@ -1753,7 +1753,7 @@ function PublishTemplate({
                 label: (
                   <Metadata className="flex-col items-start">
                     <span>{t.name}</span>
-                    <span className="text-muted-foreground">v{t.version}</span>
+                    <span className="text-muted-foreground">{`v${t.version}`}</span>
                   </Metadata>
                 ),
               }))}

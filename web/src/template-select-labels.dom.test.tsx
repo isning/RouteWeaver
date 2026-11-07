@@ -187,3 +187,39 @@ it("keeps exact visible field names independent of selected template values and 
   ).toBe(target);
   expect(writes).toEqual([]);
 });
+
+it.each(["selection", "pinned", "publication"] as const)("finds the displayed template version in the %s picker", async (task) => {
+  const { writes } = mount(async () => json({
+    compatible: true, hasUpdate: false, currentVersion: 1, candidateVersion: 1,
+    previewDigest: "synthetic-review", diagnostics: [], changes: [], preservedLocalEdits: [], artifacts: [],
+  }), task === "publication");
+  let picker: HTMLElement;
+  let query: string;
+  if (task === "selection") {
+    const dialog = await openTemplate();
+    picker = within(dialog).getByRole("combobox", { name: "模板版本" });
+    query = "v1";
+  } else if (task === "pinned") {
+    await userEvent.click(await screen.findByRole("tab", { name: "我的引用" }));
+    await userEvent.click(await screen.findByRole("button", { name: "查看固定版本 My collection" }));
+    const dialog = await screen.findByRole("dialog", { name: "模板更新 My collection" });
+    picker = within(dialog).getByLabelText("检查的模板版本");
+    query = "v2";
+  } else {
+    await userEvent.click(await screen.findByRole("button", { name: "发布模板" }));
+    const dialog = await screen.findByRole("dialog", { name: "发布共享模板" });
+    picker = within(dialog).getByRole("combobox", { name: "发布位置" });
+    query = "Template Alpha v2";
+  }
+  await userEvent.click(picker);
+  // Confirm the actual choice exists before searching. Search its rendered text,
+  // not a hidden numeric value or the spaced React-child representation.
+  await screen.findByRole("option", { name: new RegExp(`^${query}(?:\\s|$)`) });
+  await userEvent.type(screen.getByRole("combobox", { name: "搜索选项" }), query);
+  const match = await screen.findByRole("option", { name: new RegExp(`^${query}(?:\\s|$)`) });
+  expect(screen.getAllByRole("option")).toHaveLength(1);
+  await userEvent.click(match);
+  await waitFor(() => expect(picker.getAttribute("aria-expanded")).toBe("false"));
+  expect(picker.textContent).toContain(query);
+  expect(writes.filter(write => !write.url.endsWith("/preview"))).toEqual([]);
+});
