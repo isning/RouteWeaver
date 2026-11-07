@@ -528,3 +528,53 @@ test("source target identity does not keep overflow stuck after repeated narrow-
   ).toEqual([]);
   expect(unexpected).toEqual([]);
 });
+
+
+for (const width of [390, 320, 1440]) {
+  test(`source no-match message and recovery stay visible after horizontal scrolling at ${width}px`, async ({
+    page,
+  }, info) => {
+    await page.setViewportSize({ width, height: 900 });
+    const { unexpected } = await setup(page);
+    const viewport = page.locator('[data-slot="table-container"]');
+    const search = page.getByRole("textbox", { name: "搜索来源", exact: true });
+    // Move a populated table before filtering to exercise retained scrollLeft.
+    await viewport.evaluate((element) => { element.scrollLeft = element.scrollWidth; });
+    if (width < 1440) {
+      expect(await viewport.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+    }
+    await search.fill("does-not-match-any-source");
+    const empty = page.getByRole("heading", { name: "没有匹配的来源", exact: true });
+    const clear = page.getByRole("button", { name: "清除搜索", exact: true });
+    await expect(empty).toBeInViewport({ ratio: 1 });
+    await expect(clear).toBeInViewport({ ratio: 1 });
+    await expect(page.getByRole("table")).toHaveAccessibleDescription("找到 0 个私有来源 共 2 个私有来源");
+    await expect(page.getByRole("region", { name: "表格滚动区域", exact: true })).toHaveCount(0);
+    // Assert the custom EmptyState and its action at the end of the empty table,
+    // even if filtering or focus changes caused the browser to reset scrollLeft.
+    await viewport.evaluate((element) => { element.scrollLeft = element.scrollWidth; });
+    await expect(empty).toBeInViewport({ ratio: 1 });
+    await expect(clear).toBeInViewport({ ratio: 1 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+    await page.screenshot({
+      path: info.outputPath(`source-no-match-scrolled-${width}.png`),
+      fullPage: true,
+    });
+    await clear.focus();
+    await expect(clear).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(search).toBeFocused();
+    await expect(search).toHaveValue("");
+    await expect(empty).toHaveCount(0);
+    await expect(page.getByRole("table")).toHaveAccessibleDescription("共 2 个私有来源");
+    if (width < 1440) {
+      const region = page.getByRole("region", { name: "表格滚动区域", exact: true });
+      await expect(region).toHaveAttribute("tabindex", "0");
+      await expect(page.getByText("向左右滚动查看完整表格", { exact: true })).toBeVisible();
+      expect(await region.evaluate((element) => element.scrollWidth)).toBeGreaterThanOrEqual(880);
+    } else {
+      expect(await viewport.evaluate((element) => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+    }
+    expect(unexpected).toEqual([]);
+  });
+}

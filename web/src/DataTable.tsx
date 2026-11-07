@@ -674,7 +674,14 @@ export function DataTable<T extends object>({
                   colSpan={span || 1}
                   className="h-24 text-center text-muted-foreground"
                 >
-                  {loading ? null : empty}
+                  {loading ? null : (
+                    // Empty content belongs to the visible viewport, not the
+                    // columns' minimum width. Match the cell's px-4 padding;
+                    // keep it visible even if a filtered table stays scrolled.
+                    <div className="sticky left-4 w-[calc(var(--table-viewport-width,100%)-2rem)] max-w-full whitespace-normal [overflow-wrap:anywhere]">
+                      {empty}
+                    </div>
+                  )}
                 </TableCell>
               </TableRow>
             )}

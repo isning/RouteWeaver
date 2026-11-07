@@ -199,6 +199,16 @@ test("narrow announcement and delivery tables disclose scrolling and retain acti
   await expect(
     page.getByText("向左右滚动查看完整表格", { exact: true }),
   ).toBeVisible();
+  const viewport = page.getByRole("region", {
+    name: "表格滚动区域",
+    exact: true,
+  });
+  await expect(viewport).toHaveAttribute("tabindex", "0");
+  expect(await viewport.evaluate((element) => element.scrollWidth)).toBeGreaterThanOrEqual(760);
+  await viewport.focus();
+  await expect(viewport).toBeFocused();
+  await page.keyboard.press("ArrowRight");
+  await expect.poll(() => viewport.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
   const reason = page.getByRole("cell", {
     name: "无法连接邮件服务器",
     exact: true,
@@ -213,6 +223,97 @@ test("narrow announcement and delivery tables disclose scrolling and retain acti
   });
   expect(unexpected).toEqual([]);
 });
+
+// Public UI/API boundary regression. This complements the real, unmapped empty
+// outbox in the route inventory; fixture responses do not establish delivery.
+for (const width of [1440, 390, 320])
+  test(`outbox loading and failure stay distinct from a viewport-visible empty result at ${width}`, async ({
+    page,
+  }, info) => {
+    await page.setViewportSize({ width, height: 900 });
+    const pageErrors: string[] = [];
+    page.on("pageerror", (error) => pageErrors.push(error.message));
+    const unexpected = await setup(page);
+    const outboxURL = new URL(
+      "/api/admin/notifications/outbox",
+      test.info().project.use.baseURL,
+    ).href;
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    let failed = true;
+    let reads = 0;
+    await page.route(outboxURL, async (route) => {
+      if (route.request().method() !== "GET") {
+        unexpected.push("unexpected outbox write");
+        return route.abort();
+      }
+      reads++;
+      await gate;
+      return route.fulfill(failed
+        ? { status: 503, json: { message: "发送记录暂时无法读取，请重试" } }
+        : { json: [] });
+    });
+    const empty = page.getByText("暂无发送记录", { exact: true });
+    const count = page.getByText("已加载 0 项", { exact: true });
+    try {
+      await page.goto("/#notifications");
+      await page.getByRole("tab", { name: "发送记录", exact: true }).click();
+      await expect.poll(() => reads).toBeGreaterThan(0);
+      const loading = page.getByRole("status", { name: "正在加载", exact: true });
+      await expect(loading).toBeVisible();
+      await expect(empty).toHaveCount(0);
+      await expect(count).toHaveCount(0);
+      release();
+      await expect(page.getByText("发送记录暂时无法读取，请重试", { exact: true })).toBeInViewport({ ratio: 1 });
+      await expect(loading).toHaveCount(0);
+      await expect(empty).toHaveCount(0);
+      await expect(count).toHaveCount(0);
+      failed = false;
+      const priorReads = reads;
+      await page.getByRole("button", { name: "重试", exact: true }).click();
+      await expect(empty).toBeInViewport({ ratio: 1 });
+      await expect(count).toBeInViewport({ ratio: 1 });
+      expect(reads).toBeGreaterThan(priorReads);
+      await expect(page.getByText("发送记录暂时无法读取，请重试", { exact: true })).toHaveCount(0);
+      await expect(page.getByText("向左右滚动查看完整表格", { exact: true })).toHaveCount(0);
+      await expect(page.getByRole("region", { name: "表格滚动区域", exact: true })).toHaveCount(0);
+      await noOverflow(page);
+      await page.screenshot({
+        path: info.outputPath(`outbox-authoritative-empty-fixture-${width}.png`),
+        fullPage: true,
+      });
+      // Touch/trackpad scrolling is possible without a keyboard scroll region.
+      // The empty fact must remain visible at the right edge too.
+      const viewport = page.locator('[data-slot="table-container"]');
+      if (width === 1440) {
+        expect(await viewport.evaluate((element) => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+      }
+      await viewport.evaluate((element) => { element.scrollLeft = element.scrollWidth; });
+      if (width < 1440) {
+        expect(await viewport.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+      }
+      await expect(empty).toBeInViewport({ ratio: 1 });
+      await expect(count).toBeInViewport({ ratio: 1 });
+      await page.screenshot({
+        path: info.outputPath(`outbox-authoritative-empty-scrolled-fixture-${width}.png`),
+        fullPage: true,
+      });
+      // Keep the authoritative message visible after both narrow and wide resizes.
+      for (const resizedWidth of [width < 1440 ? 1440 : 390, width]) {
+        await page.setViewportSize({ width: resizedWidth, height: 900 });
+        await expect(empty).toBeInViewport({ ratio: 1 });
+        await expect(count).toBeInViewport({ ratio: 1 });
+        if (resizedWidth === 1440) {
+          expect(await viewport.evaluate((element) => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+        }
+        await noOverflow(page);
+      }
+      expect(pageErrors, "Empty-state resizes must not trigger rendering or ResizeObserver errors").toEqual([]);
+      expect(unexpected).toEqual([]);
+    } finally {
+      release();
+    }
+  });
 
 test("default rate policy remains readable as active information, not disabled text", async ({
   page,
