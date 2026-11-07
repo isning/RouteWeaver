@@ -72,14 +72,14 @@ it("keeps a rejected selection dirty until explicit discard or clearing the sele
   const { onClose } = mount();
   await userEvent.upload(screen.getByLabelText("选择规则文件"), new File([], "empty.yaml"));
   await screen.findByText("规则文件必须为 1 字节至 8 MiB。");
-  await userEvent.click(screen.getByRole("button", { name: "取消", exact: true }));
+  await userEvent.click(screen.getByRole("button", { name: "取消" }));
   await screen.findByRole("alertdialog", { name: "放弃未保存的规则文件修改？" });
   await userEvent.click(screen.getByRole("button", { name: "继续编辑" }));
   await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
   expect(onClose).not.toHaveBeenCalled();
   await userEvent.click(screen.getByRole("button", { name: "清除文件选择" }));
   expect(screen.queryByText("规则文件必须为 1 字节至 8 MiB。")).toBeNull();
-  await userEvent.click(screen.getByRole("button", { name: "取消", exact: true }));
+  await userEvent.click(screen.getByRole("button", { name: "取消" }));
   await waitFor(() => expect(onClose).toHaveBeenCalledOnce());
   expect(fetcher).not.toHaveBeenCalled();
 });
@@ -89,7 +89,7 @@ it("can explicitly discard a rejected file selection without uploading", async (
   vi.stubGlobal("fetch", fetcher);
   const { onClose } = mount();
   await userEvent.upload(screen.getByLabelText("选择规则文件"), new File([], "empty.yaml"));
-  await userEvent.click(screen.getByRole("button", { name: "取消", exact: true }));
+  await userEvent.click(screen.getByRole("button", { name: "取消" }));
   await screen.findByRole("alertdialog");
   await userEvent.click(screen.getByRole("button", { name: "放弃修改" }));
   await waitFor(() => expect(onClose).toHaveBeenCalledOnce());
@@ -109,7 +109,7 @@ it("retries the same file after a read error and keeps the draft while reading",
   await userEvent.click(saveButton());
   await waitFor(() => expect(reads).toHaveLength(1));
   expect((screen.getByLabelText("选择规则文件") as HTMLInputElement).disabled).toBe(true);
-  expect((screen.getByRole("button", { name: "取消", exact: true }) as HTMLButtonElement).disabled).toBe(true);
+  expect((screen.getByRole("button", { name: "取消" }) as HTMLButtonElement).disabled).toBe(true);
   await userEvent.click(saveButton());
   expect(reads).toHaveLength(1);
   expect(writes).toEqual([]);

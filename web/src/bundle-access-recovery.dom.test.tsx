@@ -92,7 +92,7 @@ function fixture(body?: () => Promise<Blob>, failure?: string) {
     static revokeObjectURL = vi.fn();
   });
   const saves: string[] = [];
-  vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function () {
+  vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (this: HTMLAnchorElement) {
     saves.push(this.href);
   });
   const downloads: { path: string; init?: RequestInit }[] = [];

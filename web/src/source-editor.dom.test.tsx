@@ -1068,7 +1068,7 @@ it("treats a delayed file as an unsaved choice and blocks stale form submission 
   fireEvent.submit(dialog.getByLabelText("来源名称").closest("form")!);
   await act(async () => {});
   expect(fetcher.mock.calls.filter(([, init]) => init?.method === "PUT")).toHaveLength(0);
-  await userEvent.click(dialog.getByRole("button", { name: "取消", exact: true }));
+  await userEvent.click(dialog.getByRole("button", { name: "取消" }));
   const confirmation = within(await screen.findByRole("alertdialog"));
   await userEvent.click(confirmation.getByRole("button", { name: "继续编辑" }));
   await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());

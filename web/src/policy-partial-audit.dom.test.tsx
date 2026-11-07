@@ -106,6 +106,22 @@ function Editor({ change = changes[0] }: { change?: PolicyChange }) {
 function Observations() {
   return <>{policyKeys.map(name => <Observation key={name} name={name} />)}</>;
 }
+// Preserve visibility assertions without an undeclared jest-dom matcher.
+// jsdom observes these DOM/CSS states, not rendered pixels or layout.
+function expectVisible(element: HTMLElement) {
+  expect(element.ownerDocument.documentElement.contains(element)).toBe(true);
+  for (let node: HTMLElement | null = element; node; node = node.parentElement) {
+    const style = getComputedStyle(node);
+    expect(style.display).not.toBe("none");
+    expect(["hidden", "collapse"]).not.toContain(style.visibility);
+    expect(style.opacity).not.toBe("0");
+    expect(node.hidden).toBe(false);
+    if (node instanceof HTMLDetailsElement && !node.open) {
+      const summary = node.querySelector(":scope > summary");
+      expect(summary?.contains(element)).toBe(true);
+    }
+  }
+}
 async function apply(owner: Owner) {
   await owner.click(() => screen.findByRole("button", { name: "预览影响" }));
   const dialog = within(await screen.findByRole("dialog", { name: "确认授权变更" }));
@@ -139,17 +155,17 @@ it.each(changes)("retires the committed review and preserves drafts after audit 
   owner.change(() => screen.getByRole("textbox", { name: "Draft" }), { target: { value: "Edited draft" } });
   await apply(owner);
   await screen.findByText(warning);
-  await waitFor(() => expect(screen.queryByRole("dialog", { name: "确认授权变更" })).not.toBeInTheDocument());
-  expect(screen.getByRole("textbox", { name: "Draft" })).toHaveValue("Edited draft");
-  expect(screen.getByText("Earlier draft")).toBeVisible();
-  expect(screen.queryByText("Editor closed")).not.toBeInTheDocument();
-  expect(screen.queryByRole("button", { name: "更新授权" })).not.toBeInTheDocument();
+  await waitFor(() => expect(screen.queryByRole("dialog", { name: "确认授权变更" })).toBeNull());
+  expect((screen.getByRole("textbox", { name: "Draft" }) as HTMLInputElement).value).toBe("Edited draft");
+  expectVisible(screen.getByText("Earlier draft"));
+  expect(screen.queryByText("Editor closed")).toBeNull();
+  expect(screen.queryByRole("button", { name: "更新授权" })).toBeNull();
   for (const key of policyKeys) await screen.findByText(`${key}: updated`);
   expect(writes).toEqual([JSON.stringify({ change, revision: "review-v1" })]);
   // A deliberate new review needs fresh consent; the consumed apply is gone.
   await owner.click(() => screen.getByRole("button", { name: "预览影响" }));
   const dialog = within(await screen.findByRole("dialog", { name: "确认授权变更" }));
-  expect(dialog.getByRole("button", { name: "更新授权" })).toBeDisabled();
+  expect(dialog.getByRole("button", { name: "更新授权" }).matches(":disabled")).toBe(true);
   expect(writes).toHaveLength(1);
 });
 
@@ -165,8 +181,8 @@ it.each([
   mount(owner, <Editor />);
   await apply(owner);
   await waitFor(() => expect(screen.getByRole("dialog", { name: "确认授权变更" }).querySelector('[role="alert"]')).not.toBeNull());
-  expect(screen.queryByText(warning)).not.toBeInTheDocument();
-  expect(screen.queryByText("Editor closed")).not.toBeInTheDocument();
+  expect(screen.queryByText(warning)).toBeNull();
+  expect(screen.queryByText("Editor closed")).toBeNull();
 });
 
 it("does not infer a commit from a network exception containing the same words", async () => {
@@ -175,8 +191,8 @@ it("does not infer a commit from a network exception containing the same words",
   mount(owner, <Editor />);
   await apply(owner);
   await screen.findByText(detail);
-  expect(screen.queryByText(warning)).not.toBeInTheDocument();
-  expect(screen.getByRole("dialog", { name: "确认授权变更" })).toBeVisible();
+  expect(screen.queryByText(warning)).toBeNull();
+  expectVisible(screen.getByRole("dialog", { name: "确认授权变更" }));
 });
 
 it("refreshes committed policy without disturbing a replacement editor after the old owner unmounts", async () => {
@@ -190,9 +206,9 @@ it("refreshes committed policy without disturbing a replacement editor after the
   view.rerender(<><Editor key="new" /><Observations /></>);
   await act(async () => { settle(json({ detail }, 500)); await pending; });
   for (const key of policyKeys) await screen.findByText(`${key}: updated`);
-  expect(screen.queryByText(warning)).not.toBeInTheDocument();
-  expect(screen.queryByText("Editor closed")).not.toBeInTheDocument();
-  expect(screen.getByRole("textbox", { name: "Draft" })).toHaveValue("Current draft");
+  expect(screen.queryByText(warning)).toBeNull();
+  expect(screen.queryByText("Editor closed")).toBeNull();
+  expect((screen.getByRole("textbox", { name: "Draft" }) as HTMLInputElement).value).toBe("Current draft");
   expect(writes).toHaveLength(1);
 });
 
@@ -202,7 +218,7 @@ it("still closes the editor after a complete successful apply", async () => {
   mount(owner, <Editor />);
   await apply(owner);
   await screen.findByText("Editor closed");
-  expect(screen.queryByText(warning)).not.toBeInTheDocument();
+  expect(screen.queryByText(warning)).toBeNull();
 });
 
 
@@ -229,8 +245,8 @@ it("returns the guarded service editor to its audit warning without clearing inp
   await owner.click(() => review.getByRole("checkbox", { name: "我已核对本次授权变更" }));
   await owner.click(() => review.getByRole("button", { name: "更新授权" }));
   await screen.findByText(warning);
-  await waitFor(() => expect(screen.queryByRole("dialog", { name: "确认授权变更" })).not.toBeInTheDocument());
-  expect(screen.getByRole("textbox", { name: "服务方案名称" })).toHaveValue("Preserved service name");
+  await waitFor(() => expect(screen.queryByRole("dialog", { name: "确认授权变更" })).toBeNull());
+  expect((screen.getByRole("textbox", { name: "服务方案名称" }) as HTMLInputElement).value).toBe("Preserved service name");
   expect(closed).toBe(false);
   const summary = screen.getByRole("group", { name: "操作未完成", description: warning });
   await waitFor(() => expect(document.activeElement).toBe(summary));
@@ -250,8 +266,8 @@ it("refreshes policy without overwriting a newer draft owned by the same mounted
   owner.change(() => screen.getByLabelText("Draft"), { target: { value: "Newer local draft" } });
   await act(async () => { settle(json({ detail }, 500)); await pending; });
   for (const key of policyKeys) await screen.findByText(`${key}: updated`);
-  expect(screen.queryByText(warning)).not.toBeInTheDocument();
-  expect(screen.queryByText("Editor closed")).not.toBeInTheDocument();
-  expect(screen.getByRole("textbox", { name: "Draft" })).toHaveValue("Newer local draft");
+  expect(screen.queryByText(warning)).toBeNull();
+  expect(screen.queryByText("Editor closed")).toBeNull();
+  expect((screen.getByRole("textbox", { name: "Draft" }) as HTMLInputElement).value).toBe("Newer local draft");
   expect(writes).toHaveLength(1);
 });

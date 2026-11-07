@@ -949,7 +949,7 @@ it("keeps hidden precision after canceling discard, then explicitly discards onl
   mount(close);
   await openLimits();
   change("个人在线 IP 数上限", "17.0000000000000001");
-  await owner.click(() => screen.getByRole("button", { name: "取消", exact: true }));
+  await owner.click(() => screen.getByRole("button", { name: "取消" }));
   const discard = within(await screen.findByRole("alertdialog", { name: "放弃尚未保存的授权修改？" }));
   await owner.click(() => discard.getByRole("button", { name: "继续编辑" }));
   expect(close).not.toHaveBeenCalled();

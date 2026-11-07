@@ -128,7 +128,7 @@ describe("subscription domain tasks", () => {
     ).toBeTruthy();
   });
   it("retains a rejected draft, then requires verification before explicitly activating a saved replacement", async () => {
-    let state = { ...initial };
+    let state: typeof initial & { activatedAt?: string } = { ...initial };
     const writes: any[] = [];
     vi.stubGlobal(
       "fetch",

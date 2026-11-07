@@ -945,7 +945,7 @@ it("an incomplete raw-only quota edit invalidates a pending latest read and stil
   await quota("2e");
   await act(async () => resolveLatest(json(context({ ...plan, name: "New saved name" }, "new"))));
   expect(screen.queryByRole("button", { name: "使用最新版本重新编辑" })).toBeNull();
-  await owner.click(() => screen.getByRole("button", { name: "取消", exact: true }));
+  await owner.click(() => screen.getByRole("button", { name: "取消" }));
   expect(await screen.findByRole("button", { name: "放弃修改" })).toBeTruthy();
   expect(close).not.toHaveBeenCalled();
 });
