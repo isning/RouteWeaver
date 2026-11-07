@@ -12,7 +12,13 @@ import { ActionButton } from "@/ui-patterns/actions";
 import { useId, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { list } from "./api";
-import type { Output, Source, SourceCandidate, SourceChange } from "./types";
+import type {
+  Output,
+  Source,
+  SourceApplicationResult,
+  SourceCandidate,
+  SourceChange,
+} from "./types";
 export const sourceChangeFields: Record<string, string> = {
   host: "服务器地址",
   port: "端口",
@@ -54,11 +60,51 @@ export interface SourceAcceptanceReceipt {
     reordered: boolean;
   };
   affected: SourceCandidate["affected"];
+  affectedVerified: boolean;
+}
+
+function appliedImpacts(source: Source, result: SourceApplicationResult) {
+  const application = result.application;
+  if (
+    result.id !== source.id ||
+    typeof result.revision !== "string" ||
+    !result.revision ||
+    result.revision === source.revision ||
+    !application ||
+    typeof application.candidateId !== "string" ||
+    !application.candidateId ||
+    application.candidateId !== source.candidate?.id ||
+    application.sourceRevision !== result.revision ||
+    !Array.isArray(application.affected) ||
+    !application.affected.every(
+      (item) =>
+        item !== null &&
+        typeof item === "object" &&
+        [
+          "collection",
+          "profile",
+          "group",
+          "default",
+          "rule",
+          "subscription",
+        ].includes(item.kind) &&
+        typeof item.id === "string" &&
+        item.id.length > 0 &&
+        typeof item.name === "string" &&
+        typeof item.reason === "string" &&
+        (item.profileName === undefined ||
+          typeof item.profileName === "string"),
+    )
+  )
+    return null;
+  return application.affected;
 }
 export function sourceAcceptanceReceipt(
   source: Source,
+  result: SourceApplicationResult,
 ): SourceAcceptanceReceipt {
   const candidate = source.candidate!;
+  const affected = appliedImpacts(source, result);
   const changes = (items: SourceChange[]): AcceptedChange[] =>
     items.map((item) => ({
       id: item.id,
@@ -68,7 +114,7 @@ export function sourceAcceptanceReceipt(
   return {
     sourceId: source.id,
     sourceName: source.name,
-    acceptedAt: "",
+    acceptedAt: result.applyHistory?.[0]?.appliedAt || result.updatedAt || "",
     diff: {
       beforeCount: candidate.diff.beforeCount,
       afterCount: candidate.diff.afterCount,
@@ -78,7 +124,10 @@ export function sourceAcceptanceReceipt(
       renamed: changes(candidate.diff.renamed),
       reordered: !!candidate.diff.reordered,
     },
-    affected: candidate.affected.map((item) => ({
+    // The candidate's impact list can predate new, renamed or removed dependents.
+    // A legacy/incomplete response still confirms the source write, not its links.
+    affectedVerified: affected !== null,
+    affected: (affected || []).map((item) => ({
       kind: item.kind,
       id: item.id,
       name: item.name,
@@ -352,6 +401,17 @@ export function SourceUpdateContinuation({
             </span>
           </p>
           <p>来源已更新，已发布订阅未改变。</p>
+          {!receipt.affectedVerified && (
+            <Notice
+              tone="warning"
+              title="相关配置暂无法核对"
+              action={
+                <ActionButton variant="outline" asChild>
+                  <a href="#subscriptions">查看我的订阅</a>
+                </ActionButton>
+              }
+            />
+          )}
           {needsMetadata && metadata.isError && (
             <Notice
               tone="warning"

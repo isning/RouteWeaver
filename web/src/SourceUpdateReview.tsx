@@ -16,7 +16,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { APIError, post, request } from "./api";
 import { diagnosticText } from "./model";
 import { useUnsavedChanges } from "./navigation";
-import type { Source, SourceChange } from "./types";
+import type { Source, SourceApplicationResult, SourceChange } from "./types";
 import {
   sourceAcceptanceReceipt,
   sourceChangeFields,
@@ -225,7 +225,7 @@ function SourceReviewSession({
     ])
       client.invalidateQueries({ queryKey: [key] });
   };
-  const validResult = (value: Source) => {
+  const validResult = <T extends Source>(value: T) => {
     if (!value || value.id !== initial.id || !value.revision)
       throw new Error("来源返回的状态不完整，请核对当前状态。");
     return value;
@@ -241,10 +241,8 @@ function SourceReviewSession({
         revision: reviewed.revision,
         conflict: false,
       };
-      const receipt =
-        action === "accept" ? sourceAcceptanceReceipt(reviewed) : null;
       const result = validResult(
-        await post<Source>(
+        await post<SourceApplicationResult>(
           action === "accept"
             ? `/me/sources/${encodeURIComponent(reviewed.id)}/apply`
             : `/me/sources/${encodeURIComponent(reviewed.id)}/candidate/reject`,
@@ -261,12 +259,10 @@ function SourceReviewSession({
         throw new Error("来源的当前状态需要核对。");
       return {
         source: result,
-        receipt: receipt
-          ? {
-              ...receipt,
-              acceptedAt: result.updatedAt || new Date().toISOString(),
-            }
-          : null,
+        receipt:
+          action === "accept"
+            ? sourceAcceptanceReceipt(reviewed, result)
+            : null,
       };
     },
     onSuccess: ({ source: result, receipt }, action) => {

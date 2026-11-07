@@ -127,7 +127,14 @@ it("offers optional change details and applies the exact manual update without a
         sourceRevision: "source-2",
       });
       listed = { ...source, revision: "source-3" };
-      return json(listed);
+      return json({
+        ...listed,
+        application: {
+          candidateId: "candidate-1",
+          sourceRevision: "source-3",
+          affected: candidate.candidate.affected,
+        },
+      });
     }
     return json([listed]);
   });
@@ -139,7 +146,9 @@ it("offers optional change details and applies the exact manual update without a
   await user.click(await screen.findByRole("button", { name: "查看变化" }));
   const dialog = await screen.findByRole("dialog");
   expect(within(dialog).getByText("查看变化")).toBeTruthy();
-  expect(within(dialog).getByRole("heading", { name: "连接变更 1" })).toBeTruthy();
+  expect(
+    within(dialog).getByRole("heading", { name: "连接变更 1" }),
+  ).toBeTruthy();
   expect(within(dialog).getByText("登录密码")).toBeTruthy();
   expect(within(dialog).getByText("ChatGPT")).toBeTruthy();
   expect(within(dialog).getByText("Work feed")).toBeTruthy();

@@ -20,7 +20,7 @@ import {
   SourceUpdateContinuation,
   sourceAcceptanceReceipt,
 } from "./SourceUpdateContinuation";
-import type { Source } from "./types";
+import type { Source, SourceApplicationResult } from "./types";
 
 const source: Source = {
   id: "private-source",
@@ -99,6 +99,20 @@ const source: Source = {
     ],
   },
 };
+const appliedSource: Source = {
+  ...source,
+  revision: "applied-source-revision",
+  candidate: undefined,
+  updatedAt: "2026-11-07T10:00:00Z",
+};
+const appliedResult: SourceApplicationResult = {
+  ...appliedSource,
+  application: {
+    candidateId: "candidate-1",
+    sourceRevision: "applied-source-revision",
+    affected: source.candidate!.affected,
+  },
+};
 const json = (value: unknown) =>
   new Response(JSON.stringify(value), {
     headers: { "Content-Type": "application/json" },
@@ -149,10 +163,11 @@ function mount(children: React.ReactNode) {
   return client;
 }
 it("retains only allowlisted acceptance evidence, never connection descriptions or private input", () => {
-  const receipt = sourceAcceptanceReceipt(source);
+  const receipt = sourceAcceptanceReceipt(source, appliedResult);
   expect(Object.keys(receipt).sort()).toEqual([
     "acceptedAt",
     "affected",
+    "affectedVerified",
     "diff",
     "sourceId",
     "sourceName",
@@ -183,7 +198,7 @@ it("routes duplicate names by exact object IDs and keeps unresolved group and ru
   );
   mount(
     <SourceUpdateContinuation
-      receipt={sourceAcceptanceReceipt(source)}
+      receipt={sourceAcceptanceReceipt(source, appliedResult)}
       onClose={() => {}}
     />,
   );
@@ -224,8 +239,8 @@ it("retains accepted evidence across page navigation only in the current authent
       const path = String(url);
       if (path.endsWith("/auth/me")) return json(identity);
       if (path.endsWith("/apply")) {
-        current = { ...source, candidate: undefined };
-        return json(current);
+        current = appliedSource;
+        return json(appliedResult);
       }
       if (path.endsWith("/me/sources")) return json([current]);
       return json([]);
@@ -319,7 +334,7 @@ it("does not restore an old-session receipt when acceptance finishes after ident
     }),
   );
   await waitFor(() => expect(complete).toBeTypeOf("function"));
-  current = { ...source, candidate: undefined };
+  current = appliedSource;
   await act(async () => {
     identity = {
       user: { id: "second", name: "Second", role: "member" },
@@ -329,7 +344,7 @@ it("does not restore an old-session receipt when acceptance finishes after ident
   });
   await screen.findByText("Second");
   await act(async () => {
-    complete(json(current));
+    complete(json(appliedResult));
   });
   await screen.findByRole("heading", { name: "订阅来源", level: 1 });
   expect(screen.queryByRole("dialog", { name: "上次应用详情" })).toBeNull();
@@ -373,7 +388,7 @@ it("visibly distinguishes duplicate names using read-only client metadata and pr
   vi.stubGlobal("fetch", fetcher);
   mount(
     <SourceUpdateContinuation
-      receipt={sourceAcceptanceReceipt(source)}
+      receipt={sourceAcceptanceReceipt(source, appliedResult)}
       onClose={() => {}}
     />,
   );
@@ -406,7 +421,7 @@ it("keeps full differing ID tails visible while metadata loads and when duplicat
         }),
     ),
   );
-  const receipt = sourceAcceptanceReceipt(source);
+  const receipt = sourceAcceptanceReceipt(source, appliedResult);
   const identities: Record<string, string> = {
     "profile/one": "shared-profile-prefix-000000000000-A",
     "profile/two": "shared-profile-prefix-000000000000-B",
@@ -439,9 +454,7 @@ it("keeps full differing ID tails visible while metadata loads and when duplicat
       ),
     ),
   );
-  await within(dialog).findAllByText(
-    /关联订阅：同名订阅（sing-box 完整配置）/,
-  );
+  await within(dialog).findAllByText(/关联订阅：同名订阅（sing-box 完整配置）/);
   for (const id of Object.values(identities)) {
     const detail = within(dialog).getByText(new RegExp(`标识：${id}$`));
     expect(detail.textContent).toContain(id);
@@ -467,7 +480,7 @@ it("falls back to visible exact identities on metadata error and retries only th
   vi.stubGlobal("fetch", fetcher);
   mount(
     <SourceUpdateContinuation
-      receipt={sourceAcceptanceReceipt(source)}
+      receipt={sourceAcceptanceReceipt(source, appliedResult)}
       onClose={() => {}}
     />,
   );
@@ -493,7 +506,7 @@ it("falls back to visible exact identities on metadata error and retries only th
 it("adds no metadata request or disambiguation text to uniquely named related objects", async () => {
   const fetcher = vi.fn();
   vi.stubGlobal("fetch", fetcher);
-  const receipt = sourceAcceptanceReceipt(source);
+  const receipt = sourceAcceptanceReceipt(source, appliedResult);
   receipt.affected = receipt.affected.filter((item) =>
     ["profile/one", "output/one"].includes(item.id),
   );

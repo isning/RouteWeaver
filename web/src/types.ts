@@ -234,6 +234,15 @@ export interface Source {
   format?: string;
   acceptPartial?: boolean;
 }
+/** Present only in a successful explicit application response, never source storage. */
+export interface SourceApplicationResult extends Source {
+  application?: {
+    candidateId: string;
+    /** The newly committed source revision, not the submitted pending revision. */
+    sourceRevision: string;
+    affected: SourceCandidate["affected"];
+  };
+}
 export interface Collection {
   revisionToken?: string;
   id: string;

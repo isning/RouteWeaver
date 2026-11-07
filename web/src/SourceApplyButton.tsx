@@ -8,7 +8,7 @@ import {
   sourceAcceptanceReceipt,
   type SourceAcceptanceReceipt,
 } from "./SourceUpdateContinuation";
-import type { Source } from "./types";
+import type { Source, SourceApplicationResult } from "./types";
 
 export interface SourceApplyRecovery {
   candidateId: string;
@@ -43,7 +43,7 @@ export function useSourceApplication({
   const mutation = useMutation({
     onMutate: () => invalidateOutputInputs(client),
     mutationFn: async ({ pending }: Command) => {
-      const result = await post<Source>(
+      const result = await post<SourceApplicationResult>(
         `/me/sources/${encodeURIComponent(pending.id)}/apply`,
         {
           candidateId: pending.candidate!.id,
@@ -60,11 +60,7 @@ export function useSourceApplication({
         throw new Error("应用结果需要核对，请先读取来源当前状态。");
       return {
         source: result,
-        receipt: {
-          ...sourceAcceptanceReceipt(pending),
-          acceptedAt:
-            result.applyHistory?.[0]?.appliedAt || result.updatedAt || "",
-        },
+        receipt: sourceAcceptanceReceipt(pending, result),
       };
     },
     onSuccess: (result, command) => {
