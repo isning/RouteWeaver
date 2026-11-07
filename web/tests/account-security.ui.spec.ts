@@ -3,8 +3,14 @@ import { settledTask } from "./ui-settled-task";
 
 // Match the inventory's public keyboard/geometry checks without coupling this
 // controlled read-only fixture to its real-backend setup.
-async function visibleClip(target: Locator) {
-  return target.evaluate((element) => {
+async function visibleClip(target: Locator, focusPaint = false) {
+  return target.evaluate((focusedElement, inspectFocusPaint) => {
+    // Password fields paint the official InputGroup's halo, not the inner input.
+    const element =
+      inspectFocusPaint &&
+      focusedElement.matches('[data-slot="input-group-control"]')
+        ? focusedElement.closest('[data-slot="input-group"]') ?? focusedElement
+        : focusedElement;
     const rect = element.getBoundingClientRect();
     let left = 0,
       top = 0,
@@ -23,6 +29,10 @@ async function visibleClip(target: Locator) {
       }
     }
     return {
+      focused: focusedElement === document.activeElement,
+      focusVisible: focusedElement.matches(":focus-visible"),
+      shadow: getComputedStyle(element).boxShadow,
+      paintOwner: element.getAttribute("data-slot"),
       bounds: {
         left: rect.left,
         top: rect.top,
@@ -38,7 +48,7 @@ async function visibleClip(target: Locator) {
         rect.top >= top - 1 &&
         rect.bottom <= bottom + 1,
     };
-  });
+  }, focusPaint);
 }
 
 async function inView(target: Locator) {
@@ -49,6 +59,103 @@ async function inView(target: Locator) {
         "The complete identity, field, consequence or action fits inside its visible clip",
     })
     .toBe(true);
+}
+
+async function focusedRingInView(target: Locator) {
+  await expect(target).toBeFocused();
+  await settledTask(target);
+  const paint = await visibleClip(target, true);
+  await test.info().attach("focused-ring-paint", {
+    contentType: "application/json",
+    body: JSON.stringify(paint, null, 2),
+  });
+  try {
+    expect(paint.focused).toBe(true);
+    expect(paint.focusVisible).toBe(true);
+    // Independent shadcn design contract: the settled painted halo is 3px.
+    // Do not derive its expected extent from production reveal/scroll logic.
+    expect(paint.shadow).toMatch(/(?:^|\s)0px 0px 0px 3px(?:\s|,|$)/);
+    expect(paint.bounds.left - 3).toBeGreaterThanOrEqual(paint.clip.left - 0.5);
+    expect(paint.bounds.right + 3).toBeLessThanOrEqual(paint.clip.right + 0.5);
+    expect(paint.bounds.top - 3).toBeGreaterThanOrEqual(paint.clip.top - 0.5);
+    expect(paint.bounds.bottom + 3).toBeLessThanOrEqual(paint.clip.bottom + 0.5);
+  } catch (error) {
+    await test.info().attach("failed-focused-ring.png", {
+      contentType: "image/png",
+      body: await target.page().screenshot(),
+    });
+    throw error;
+  }
+}
+
+async function titleClearOfClose(dialog: Locator) {
+  const close = dialog.getByRole("button", { name: "关闭", exact: true });
+  await focusedRingInView(close);
+  const geometry = await dialog.evaluate((element) => {
+    const heading = element.querySelector('[data-slot="dialog-title"]')!;
+    const close = element.querySelector('button[aria-label="关闭"]')!;
+    const box = close.getBoundingClientRect();
+    const closePaint = {
+      left: box.left - 3,
+      top: box.top - 3,
+      right: box.right + 3,
+      bottom: box.bottom + 3,
+    };
+    // Character ranges catch a single trailing glyph that the heading's overall
+    // box or an overflow-width check can miss. Skip whitespace, not visible copy.
+    const glyphs: {
+      text: string;
+      left: number;
+      top: number;
+      right: number;
+      bottom: number;
+    }[] = [];
+    const walker = document.createTreeWalker(heading, NodeFilter.SHOW_TEXT);
+    for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+      let offset = 0;
+      for (const text of node.textContent ?? "") {
+        const range = document.createRange();
+        range.setStart(node, offset);
+        offset += text.length;
+        range.setEnd(node, offset);
+        if (!text.trim()) continue;
+        for (const rect of range.getClientRects())
+          glyphs.push({
+            text,
+            left: rect.left,
+            top: rect.top,
+            right: rect.right,
+            bottom: rect.bottom,
+          });
+      }
+    }
+    const besideClose = glyphs.filter(
+      (glyph) => glyph.bottom > closePaint.top && glyph.top < closePaint.bottom,
+    );
+    return {
+      closePaint,
+      glyphs,
+      minimumGap: besideClose.length
+        ? Math.min(...besideClose.map((glyph) => closePaint.left - glyph.right))
+        : null,
+    };
+  });
+  await test.info().attach("title-close-paint", {
+    contentType: "application/json",
+    body: JSON.stringify(geometry, null, 2),
+  });
+  try {
+    expect(geometry.glyphs.length).toBeGreaterThan(0);
+    // Preserve a visible gap as well as avoiding intersection with the halo.
+    if (geometry.minimumGap !== null)
+      expect(geometry.minimumGap).toBeGreaterThanOrEqual(4);
+  } catch (error) {
+    await test.info().attach("failed-title-close-paint.png", {
+      contentType: "image/png",
+      body: await dialog.page().screenshot(),
+    });
+    throw error;
+  }
 }
 
 async function tabTo(page: Page, target: Locator, dialog?: Locator) {
@@ -72,6 +179,7 @@ async function tabTo(page: Page, target: Locator, dialog?: Locator) {
   await expect(target).toBeFocused();
   if (dialog) await settledTask(dialog);
   await inView(target);
+  if (dialog) await focusedRingInView(target);
 }
 
 // Production UI, read-only synthetic API seam. No real account changes.
@@ -211,6 +319,7 @@ for (const size of [
             username: await visibleClip(username),
             consequence: await visibleClip(consequence),
             action: await visibleClip(disable),
+            focusedPaint: await visibleClip(page.locator(":focus"), true),
             actionFocused: await disable.evaluate(
               (element) => element === document.activeElement,
             ),
@@ -223,6 +332,7 @@ for (const size of [
 
     await inView(identity);
     await inView(username);
+    await titleClearOfClose(dialog);
     if (size.height <= 400)
       await expect(dialog).toHaveAttribute("data-task-scroll", "task");
     await capture(
@@ -273,6 +383,7 @@ for (const size of [
     await page.keyboard.press("Shift+Tab");
     await expect(cancel).toBeFocused();
     await inView(cancel);
+    await focusedRingInView(cancel);
     await page.keyboard.press("Enter");
     await expect(dialog).toBeHidden();
     await settledTask(page.locator(".route-content"));

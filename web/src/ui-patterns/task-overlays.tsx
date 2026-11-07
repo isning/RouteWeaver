@@ -300,7 +300,7 @@ export function TaskDialog({
         aria-describedby={description ? descriptionId : undefined}
         className={cn(
           "flex min-h-0 max-h-[calc(100dvh-2rem)] flex-col gap-0 overflow-clip p-0 motion-reduce:animate-none",
-          mode === "task" && "overflow-y-auto",
+          mode === "task" && "overflow-y-auto scroll-py-1",
           dialogSizes[size],
           className,
           contentProps?.className,
@@ -315,7 +315,7 @@ export function TaskDialog({
         <DialogHeader
           ref={scrollMode === "auto" ? headerRef : undefined}
           data-task-overlay-header
-          className="min-w-0 shrink-0 border-b px-4 py-4 pr-14 text-left sm:px-6 sm:pr-14"
+          className="min-w-0 shrink-0 border-b px-4 py-4 pr-16 text-left sm:px-6 sm:pr-16"
         >
           <DialogTitle className="min-w-0 text-lg leading-snug font-semibold tracking-tight [overflow-wrap:anywhere]">
             {title}
