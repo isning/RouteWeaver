@@ -103,7 +103,7 @@ it("keeps settings successes inline through the next edit and activation decisio
   const review = within(await screen.findByRole("dialog", { name: "启用订阅地址" }));
   expect(section.queryByRole("status", { hidden: true })).toBeNull();
   expect(review.getByRole("button", { name: "确认启用" }).hasAttribute("disabled")).toBe(true);
-  await user.click(review.getByRole("button", { name: "取消", exact: true }));
+  await user.click(review.getByRole("button", { name: "取消" }));
   expect(writes.filter((operation) => operation.endsWith("/activate"))).toEqual([]);
   await user.click(section.getByRole("button", { name: "启用已保存草稿" }));
   const reopened = within(await screen.findByRole("dialog", { name: "启用订阅地址" }));

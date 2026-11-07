@@ -45,8 +45,8 @@ async function openHistory(records: unknown[]) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   clients.push(client);
   render(<QueryClientProvider client={client}><UIProviders><NotificationsAdminPage /></UIProviders></QueryClientProvider>);
-  await userEvent.click(screen.getByRole("tab", { name: "发送记录", exact: true }));
-  await screen.findByRole("columnheader", { name: "通知", exact: true });
+  await userEvent.click(screen.getByRole("tab", { name: "发送记录" }));
+  await screen.findByRole("columnheader", { name: "通知" });
   return unexpected;
 }
 function item(title: string) {
