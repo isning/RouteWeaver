@@ -911,7 +911,8 @@ export function CollectionsPage() {
   const inspect = useMutation({
     mutationFn: ({ value }: { value: Collection; version: number }) => {
       if (invalidPort) throw new Error("请完成覆盖端口输入，范围为 1–65535 的整数。");
-      return post<Preview>("/me/collections/preview", value);
+      const { revisionToken: _revisionToken, ...recipe } = value;
+      return post<Preview>("/me/collections/preview", recipe);
     },
     onSuccess: (result, { version }) => {
       if (version === revision.current) setPreview(result);

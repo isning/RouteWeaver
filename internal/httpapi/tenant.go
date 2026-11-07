@@ -249,20 +249,23 @@ func (h *server) saveCollection(w http.ResponseWriter, r *http.Request) {
 		fail(w, 400, "id mismatch")
 		return
 	}
-	inputs := newTemplateInputs(h.s)
-	if e := inputs.expectRecord(v.OwnerID, "collections", v.ID); e != nil {
-		storeError(w, e)
+	expected, e := h.expectedCollectionRecord(r, v.OwnerID, v.ID)
+	if e != nil {
+		collectionSaveError(w, e)
 		return
 	}
+	inputs := newTemplateInputs(h.s)
+	inputs.records[expected.Kind+"\x00"+v.ID] = *expected
 	if _, e := h.resolveCollectionWithReader(current(r).Account.ID, v, inputs); e != nil {
 		storeError(w, e)
 		return
 	}
 	if e := h.s.CompareAndPutRecords(inputs.compares(), []store.RecordWrite{{Kind: store.TenantKind(v.OwnerID, "collections"), ID: v.ID, Value: v}}); e != nil {
-		storeError(w, e)
+		collectionSaveError(w, e)
 		return
 	}
-	writeJSON(w, 200, v)
+	raw, _ := json.Marshal(v)
+	writeJSON(w, 200, h.tenantRecordView(v.OwnerID, "collections", raw, false))
 }
 func (h *server) previewCollection(w http.ResponseWriter, r *http.Request) {
 	v, ok := h.collectionInput(w, r)

@@ -16,7 +16,7 @@ func (h *server) tenantRecordView(owner, kind string, raw json.RawMessage, revea
 	if !reveal {
 		view = redactTenantRecord(kind, raw)
 	}
-	if kind != "profiles" && kind != "resources" {
+	if kind != "profiles" && kind != "resources" && kind != "collections" {
 		return view
 	}
 	var value map[string]any

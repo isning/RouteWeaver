@@ -235,6 +235,7 @@ export interface Source {
   acceptPartial?: boolean;
 }
 export interface Collection {
+  revisionToken?: string;
   id: string;
   name: string;
   ownerId?: string;

@@ -228,7 +228,8 @@ export function saveRecord<T>(kind: string, value: object, isNew = false) {
   const guarded =
     kind === "server-deployments" ||
     kind === "published-routes" ||
-    kind === "me/profiles";
+    kind === "me/profiles" ||
+    kind === "me/collections";
   return request<T>(
     `/${kind}${!isNew && id ? `/${encodeURIComponent(id)}` : ""}`,
     {
