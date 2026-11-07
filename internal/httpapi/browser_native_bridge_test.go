@@ -153,6 +153,7 @@ func TestBrowserNativeBridge(t *testing.T) {
 		}
 		opCtx, opCancel := context.WithTimeout(ctx, 10*time.Second)
 		var err error
+		var startupFailure *agent.State
 		switch c.Action {
 		case "apply":
 			d, receiveErr := tr.ReceiveDesired(opCtx, init.Scope, r.State().HighestAccepted)
@@ -170,6 +171,27 @@ func TestBrowserNativeBridge(t *testing.T) {
 				}
 				if first.Observed == nil && state.Observed != nil {
 					first = state
+				}
+			}
+		case "apply-port-conflict":
+			// This command verifies one expected failure, never accepts arbitrary
+			// errors, and never reports a guessed outcome to the control plane.
+			d, receiveErr := tr.ReceiveDesired(opCtx, init.Scope, r.State().HighestAccepted)
+			err = receiveErr
+			if err == nil && (d == nil || d.Action != "") {
+				err = fmt.Errorf("fresh publication desired required for port conflict")
+			}
+			if err == nil {
+				state, err = r.Submit(opCtx, *d)
+				if state.Desired == nil || *state.Desired != d.Identity() || !bridgeStartupUnknown(state, err) {
+					err = fmt.Errorf("unexpected startup failure: phase=%s code=%s error=%v", state.Phase, state.Code, err)
+				} else {
+					initial := state
+					startupFailure = &initial
+					state, err = r.Recover(opCtx)
+					if err == nil && (state.Desired == nil || *state.Desired != d.Identity() || !bridgeRecoveredAbsence(state)) {
+						err = fmt.Errorf("startup absence unconfirmed: phase=%s code=%s", state.Phase, state.Code)
+					}
 				}
 			}
 		case "report":
@@ -211,7 +233,7 @@ func TestBrowserNativeBridge(t *testing.T) {
 			emit(map[string]any{"error": err.Error()})
 			continue
 		}
-		emit(map[string]any{"action": c.Action, "state": state})
+		emit(map[string]any{"action": c.Action, "state": state, "startupFailure": startupFailure})
 	}
 }
 
@@ -227,6 +249,32 @@ func bridgeIdentityRejected(err error) bool {
 	return errors.As(err, &response) && response.Status == 409 && response.Code == "request_rejected"
 }
 func TestBrowserNativeBridgeClassifiesOnlyExactOutcomes(t *testing.T) {
+	t.Run("startup-failure-requires-confirmed-absence", func(t *testing.T) {
+		unknown := agent.State{Phase: agent.Unknown, Code: "activation_outcome_unknown", NativeChecked: true, RecoveryRequired: true}
+		absent := agent.State{Phase: agent.ApplyFailed, Code: "recovered_not_applied", NativeChecked: true}
+		if !bridgeStartupUnknown(unknown, agent.ErrUnknownRuntime) || !bridgeRecoveredAbsence(absent) {
+			t.Fatal("exact startup classifications rejected")
+		}
+		for _, err := range []error{nil, context.DeadlineExceeded, agent.ErrLeaseBlocked, errors.New("startup failed")} {
+			if bridgeStartupUnknown(unknown, err) {
+				t.Fatal("unrelated failure accepted", err)
+			}
+		}
+		for _, change := range []func(*agent.State){
+			func(s *agent.State) { s.Phase = agent.ObservedConformant },
+			func(s *agent.State) { s.Code = "runtime_observation_unknown" },
+			func(s *agent.State) { s.NativeChecked = false },
+			func(s *agent.State) { s.Observed = &agent.Observation{} },
+			func(s *agent.State) { s.RecoveryRequired = !s.RecoveryRequired },
+		} {
+			u, a := unknown, absent
+			change(&u)
+			change(&a)
+			if bridgeStartupUnknown(u, agent.ErrUnknownRuntime) || bridgeRecoveredAbsence(a) {
+				t.Fatal("inexact startup classification accepted")
+			}
+		}
+	})
 	t.Run("exact-transport-constructor", func(t *testing.T) {
 		options := bridgeTransportOptions("http://127.0.0.1:1", "synthetic-private-fixture", agent.Scope{NodeID: "node", InstanceID: "instance", EnrollmentEpoch: "enrollment"})
 		transport, err := agent.NewHTTPTransport(options)
@@ -262,4 +310,14 @@ func TestBrowserNativeBridgeClassifiesOnlyExactOutcomes(t *testing.T) {
 			t.Fatal("unverified stop accepted")
 		}
 	}
+}
+
+// Only the native supervisor's uncertain activation followed by a successful
+// Recover with confirmed absence qualifies. Unknown, stale or still-running
+// outcomes fail this test command rather than being relabeled as apply failure.
+func bridgeStartupUnknown(state agent.State, err error) bool {
+	return errors.Is(err, agent.ErrUnknownRuntime) && state.Phase == agent.Unknown && state.Code == "activation_outcome_unknown" && state.NativeChecked && state.Observed == nil && state.RecoveryRequired
+}
+func bridgeRecoveredAbsence(state agent.State) bool {
+	return state.Phase == agent.ApplyFailed && state.Code == "recovered_not_applied" && state.NativeChecked && state.Observed == nil && !state.RecoveryRequired
 }

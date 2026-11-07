@@ -10,7 +10,7 @@ spec.loader.exec_module(module)
 
 class BrowserNativeGateTests(unittest.TestCase):
     def good(self):
-        return {"suites": [{"specs": [{"title": module.REQUIRED, "tests": [{"status": "expected", "results": [{"status": "passed"}]}]}]}]}
+        return {"suites": [{"specs": [{"title": title, "tests": [{"status": "expected", "results": [{"status": "passed"}]}]} for title in module.REQUIRED]}]}
     def test_exact_named_pass(self):
         module.verify(self.good())
     def test_missing_skipped_flaky_and_duplicate_fail(self):
@@ -28,6 +28,16 @@ class BrowserNativeGateTests(unittest.TestCase):
             if kind == "error": report["errors"] = [{"message": "failure"}]
             if kind == "flaky": s[0]["tests"][0]["status"] = "flaky"
             with self.assertRaises(ValueError): module.verify(report)
+    def test_each_required_journey_is_independently_mandatory(self):
+        for index in range(len(module.REQUIRED)):
+            for kind in ("missing", "skipped", "retry", "duplicate"):
+                report = self.good()
+                specs = report["suites"][0]["specs"]
+                if kind == "missing": specs.pop(index)
+                if kind == "skipped": specs[index]["tests"][0]["results"][0]["status"] = "skipped"
+                if kind == "retry": specs[index]["tests"][0]["results"].append({"status": "passed"})
+                if kind == "duplicate": specs.append(copy.deepcopy(specs[index]))
+                with self.assertRaises(ValueError): module.verify(report)
     def test_explicit_separate_job_and_gate(self):
         workflow = (ROOT / ".github/workflows/ci.yml").read_text()
         block = workflow.split("\n  browser_native:\n", 1)[1].split("\n  native:\n", 1)[0]

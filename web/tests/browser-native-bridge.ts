@@ -30,6 +30,7 @@ export async function nativeBridge(init: {
     error?: string;
     ready?: boolean;
     state?: any;
+    startupFailure?: any;
     binarySHA256?: string;
     closing?: boolean;
   };

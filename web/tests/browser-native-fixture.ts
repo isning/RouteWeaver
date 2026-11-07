@@ -4,6 +4,7 @@ import { inviteSyntheticAccount } from "./account-security-backend";
 export async function seedNativePublication(
   admin: APIRequestContext,
   owner: APIRequestContext,
+  occupiedPort?: number,
 ) {
   const account = await inviteSyntheticAccount(admin, owner);
   const me = await (await admin.get("/api/auth/me")).json();
@@ -13,10 +14,18 @@ export async function seedNativePublication(
     expect(r.status(), path).toBe(status);
     return r.json();
   };
-  const listener = createServer();
-  await new Promise<void>((r) => listener.listen(0, "127.0.0.1", r));
-  const port = (listener.address() as { port: number }).port;
-  await new Promise<void>((r, j) => listener.close((e) => (e ? j(e) : r())));
+  let port = occupiedPort;
+  if (port === undefined) {
+    const listener = createServer();
+    await new Promise<void>((resolve, reject) => {
+      listener.once("error", reject);
+      listener.listen(0, "127.0.0.1", resolve);
+    });
+    port = (listener.address() as { port: number }).port;
+    await new Promise<void>((resolve, reject) =>
+      listener.close((error) => (error ? reject(error) : resolve())),
+    );
+  }
   const host = {
     id: "bridge-host",
     name: "原生验收主机",
