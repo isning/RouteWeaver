@@ -6,10 +6,107 @@ import { ChoiceSelect, MultiChoice } from "./ui-patterns/choice-select";
 import { UIProviders } from "./ui-patterns/providers";
 import { useState } from "react";
 import { holdPopoverExit } from "./test-support/hold-popover-exit";
+import { TaskSheet } from "./ui-patterns/task-overlays";
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
+});
+
+it.each([false, true])("returns an ordinary selection to its trigger inside a sheet (searchable=%s)", async (searchable) => {
+  function Choices() {
+    const [value, setValue] = useState<string>();
+    return (
+      <UIProviders>
+        <TaskSheet open onOpenChange={() => {}} title="模板版本">
+          <ChoiceSelect
+            aria-label="检查的模板版本"
+            value={value}
+            onValueChange={setValue}
+            searchable={searchable}
+            options={[{ value: "2", label: "v2" }]}
+          />
+        </TaskSheet>
+      </UIProviders>
+    );
+  }
+  render(<Choices />);
+  const user = userEvent.setup();
+  const trigger = screen.getByRole("combobox", { name: "检查的模板版本" });
+  await user.click(trigger);
+  await user.click(screen.getByRole("option", { name: "v2" }));
+  expect(trigger.textContent).toContain("v2");
+  expect(trigger.getAttribute("aria-expanded")).toBe("false");
+  await waitFor(() => expect(document.activeElement).toBe(trigger));
+  expect(screen.getByRole("dialog", { name: "模板版本" })).toBeTruthy();
+});
+
+it("preserves a newer picker through delayed single-choice exit and restores its trigger on selection", async () => {
+  const finishExit = holdPopoverExit();
+  const options = [{ value: "remote", label: "远程办公" }];
+  render(
+    <UIProviders>
+      <ChoiceSelect aria-label="第一项" options={options} />
+      <ChoiceSelect aria-label="下一项" options={options} />
+    </UIProviders>,
+  );
+  const user = userEvent.setup();
+  const first = screen.getByRole("combobox", { name: "第一项" });
+  await user.click(first);
+  const closing = document.getElementById(first.getAttribute("aria-controls")!)!;
+  await user.click(screen.getByRole("option", { name: "远程办公" }));
+  expect(closing.isConnected).toBe(true);
+  expect(closing.hasAttribute("inert")).toBe(true);
+  const next = screen.getByRole("combobox", { name: "下一项" });
+  await user.click(next);
+  const search = screen.getByRole("combobox", { name: "搜索选项" });
+  await waitFor(() => expect(document.activeElement).toBe(search));
+  finishExit(closing);
+  await waitFor(() => expect(closing.isConnected).toBe(false));
+  // Keyboard input crosses the deferred autofocus turn without refocusing the input.
+  await user.keyboard("远程");
+  expect(document.activeElement).toBe(search);
+  expect(search).toHaveProperty("value", "远程");
+  expect(next.getAttribute("aria-expanded")).toBe("true");
+  const nextContent = document.getElementById(next.getAttribute("aria-controls")!)!;
+  await user.click(screen.getByRole("option", { name: "远程办公" }));
+  finishExit(nextContent);
+  await waitFor(() => expect(document.activeElement).toBe(next));
+});
+
+it.each([false, true])("does not steal newer field focus during delayed exit (different dialog=%s)", async (differentDialog) => {
+  const finishExit = holdPopoverExit();
+  function Choices() {
+    const [open, setOpen] = useState(false);
+    return (
+      <UIProviders>
+        <ChoiceSelect aria-label="选项" options={[{ value: "2", label: "v2" }]} />
+        {differentDialog ? (
+          <>
+            <button onClick={() => setOpen(true)}>打开新任务</button>
+            <TaskSheet open={open} onOpenChange={setOpen} title="新任务">
+              <input aria-label="新名称" />
+            </TaskSheet>
+          </>
+        ) : <input aria-label="新名称" />}
+      </UIProviders>
+    );
+  }
+  render(<Choices />);
+  const user = userEvent.setup();
+  const trigger = screen.getByRole("combobox", { name: "选项" });
+  await user.click(trigger);
+  const closing = document.getElementById(trigger.getAttribute("aria-controls")!)!;
+  await user.click(screen.getByRole("option", { name: "v2" }));
+  expect(closing.isConnected).toBe(true);
+  if (differentDialog) await user.click(screen.getByRole("button", { name: "打开新任务" }));
+  const field = screen.getByRole("textbox", { name: "新名称" });
+  await user.click(field);
+  finishExit(closing);
+  await waitFor(() => expect(closing.isConnected).toBe(false));
+  await user.keyboard("new name");
+  expect(document.activeElement).toBe(field);
+  expect(field).toHaveProperty("value", "new name");
 });
 
 it("conceals a multi-choice exit without losing selected chips or stealing newer focus", async () => {

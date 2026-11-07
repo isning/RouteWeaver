@@ -1,4 +1,11 @@
-import { useState, isValidElement, type ReactNode, type Ref } from "react";
+import {
+  useState,
+  useRef,
+  useImperativeHandle,
+  isValidElement,
+  type ReactNode,
+  type Ref,
+} from "react";
 import { Check, ChevronsUpDown, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -114,6 +121,8 @@ export function ChoiceSelect<V extends Value = string>({
   emptyMessage?: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  useImperativeHandle(ref, () => triggerRef.current!, []);
   const [query, setQuery] = useState("");
   const { visible, total } = boundedOptions(options, query);
   const selected = flat(options).find((o) => o.value === value);
@@ -134,7 +143,7 @@ export function ChoiceSelect<V extends Value = string>({
           role="combobox"
           aria-expanded={open}
           disabled={disabled}
-          ref={ref}
+          ref={triggerRef}
           className={cn(
             "h-auto min-h-11 w-full justify-between whitespace-normal font-normal",
             className,
@@ -165,12 +174,18 @@ export function ChoiceSelect<V extends Value = string>({
         onCloseAutoFocus={(event) => {
           // Exit motion can outlive the next tap. Do not let this picker
           // reclaim focus and dismiss a newer picker that has already opened.
+          // A parent sheet may receive fallback focus as this content unmounts;
+          // that is not a newer interaction and must still restore the trigger.
           const closingContent = event.target;
           const active = document.activeElement;
+          const enclosingDialog = triggerRef.current?.closest(
+            '[role="dialog"], [role="alertdialog"]',
+          );
           if (
             closingContent instanceof HTMLElement &&
             active &&
             active !== document.body &&
+            active !== enclosingDialog &&
             active.isConnected &&
             !closingContent.contains(active)
           )
