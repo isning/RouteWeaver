@@ -1179,18 +1179,21 @@ export function ProfileEditor({
                       updateIR({
                         resources: draft.ir.resources.map((ref) =>
                           ref.id === r.id
-                            ? ruleResourceReference(
-                                resources.data!.find(
-                                  (current) => current.id === r.id,
-                                )!,
-                              )
+                            ? {
+                                ...ruleResourceReference(
+                                  resources.data!.find(
+                                    (current) => current.id === r.id,
+                                  )!,
+                                ),
+                                updatePolicy: "pinned",
+                              }
                             : ref,
                         ),
                       })
                     }
                     variant="outline"
                   >
-                    改用最新接纳版本
+                    固定到最新接纳版本
                   </ActionButton>
                 </div>
               ))}

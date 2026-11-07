@@ -360,6 +360,38 @@ it("preserves an existing accepted pin when a nested resource condition is selec
   ]);
 });
 
+it("advances an accepted file pin without adopting the resource library's following policy", async () => {
+  const profile = fixture();
+  const previous = {
+    ...acceptedResource,
+    revision: "v1",
+    acceptedVersion: "accepted-v1",
+    digest: `sha256:${"b".repeat(64)}`,
+  };
+  const latest = { ...acceptedResource, updatePolicy: "follow" as const };
+  profile.ir.resources = [previous];
+  profile.ir.rules = [{
+    id: "work",
+    match: { op: "resource", value: previous.id },
+    action: { kind: "reject" },
+  }];
+  const { writes, editor } = mount(profile, { resources: [latest] });
+  const user = userEvent.setup();
+  await user.click(await editor.findByRole("button", {
+    name: "固定到最新接纳版本",
+  }));
+  // Advancing the chosen immutable version edits only the draft. It neither
+  // publishes nor grants permission to follow future resource replacements.
+  expect(writes).toEqual([]);
+  await user.click(editor.getByRole("button", { name: "保存草稿" }));
+  await waitFor(() => expect(writes).toHaveLength(1));
+  expect(writes[0].ir.resources).toEqual([
+    { ...acceptedResource, updatePolicy: "pinned" },
+  ]);
+  expect(writes[0].ir.rules).toEqual(profile.ir.rules);
+  expect(writes[0].ir.defaultAction).toEqual(profile.ir.defaultAction);
+});
+
 it("makes a rule-file task directly discoverable without selecting resource references separately", async () => {
   const { writes, editor } = mount(fixture(), {
     resources: [acceptedResource],
