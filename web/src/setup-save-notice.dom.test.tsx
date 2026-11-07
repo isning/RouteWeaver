@@ -215,10 +215,16 @@ it.each(["server", "public"] as const)("keeps the %s save result in its detail, 
     await user.click(editor.getByRole("button", { name: saveLabel }));
     const savedDialog = await screen.findByRole("dialog", { name: title });
     const saved = within(savedDialog);
-    expect(saved.getByText(acknowledgment, { exact: true })).toBeTruthy();
-    const description = savedDialog.getAttribute("aria-describedby");
-    expect(description).toBeTruthy();
-    expect(document.getElementById(description!)?.textContent).toBe(acknowledgment);
+    const savedAcknowledgment = saved.getByText(acknowledgment, { exact: true });
+    // A dialog can reference several descriptions. Resolve its IDREFS list,
+    // rather than treating the whole attribute as one implementation ID.
+    const descriptions = (savedDialog.getAttribute("aria-describedby") || "")
+      .trim().split(/\s+/).filter(Boolean)
+      .map((id) => document.getElementById(id));
+    expect(descriptions).toContain(savedAcknowledgment);
+    expect(screen.getByRole("dialog", {
+      name: title, description: new RegExp(acknowledgment),
+    })).toBe(savedDialog);
     expect(screen.getAllByText(acknowledgment, { exact: true })).toHaveLength(1);
     if (saveNumber === 0) {
       await user.click(saved.getByRole("button", { name: editLabel }));
