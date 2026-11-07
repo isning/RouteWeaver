@@ -415,7 +415,22 @@ test("collection zero one and multiple source states retain preparation ordering
     name: `1. ${sources[0].name} 来源处理`,
     exact: true,
   });
+  const chevron = firstSource.locator(".collection-source-chevron");
+  await expect(chevron).toHaveAttribute("aria-hidden", "true");
+  await expect(chevron).toHaveCSS("rotate", "0deg");
   await firstSource.click();
+  await expect(chevron).toHaveCSS("rotate", "90deg");
+  // State remains apparent without animation for reduced-motion users.
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await firstSource.click();
+  await expect(firstSource).toHaveAttribute("aria-expanded", "false");
+  await expect(chevron).toHaveCSS("rotate", "0deg");
+  await expect(chevron).toHaveCSS("transition-duration", "0s");
+  await firstSource.click();
+  await expect(firstSource).toHaveAttribute("aria-expanded", "true");
+  await expect(chevron).toHaveCSS("rotate", "90deg");
+  await expect(chevron).toHaveCSS("transition-duration", "0s");
+  await page.emulateMedia({ reducedMotion: null });
   await expect(
     drawer.getByText("未添加处理步骤", { exact: true }),
   ).toBeVisible();

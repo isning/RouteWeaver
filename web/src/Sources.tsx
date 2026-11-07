@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import {
   ArrowUp,
   ArrowDown,
+  ChevronRight,
   Trash2,
   FileText,
   Link,
@@ -728,12 +729,10 @@ function CollectionSourceStage({
             setExpanded(disclosure.expanded);
           }}
         >
-          <span
-            className="collection-source-chevron order-last ml-auto size-4 shrink-0"
+          <ChevronRight
+            className={`collection-source-chevron order-last ml-auto size-4 shrink-0 ${expanded ? "rotate-90" : "rotate-0"}`}
             aria-hidden="true"
-          >
-            ›
-          </span>
+          />
           {summary}
         </button>
         {actions}

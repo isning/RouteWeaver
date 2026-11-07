@@ -382,12 +382,17 @@ it(
     });
     expect(one.getAttribute("aria-expanded")).toBe("false");
     expect(two.getAttribute("aria-expanded")).toBe("false");
+    const chevron = two.querySelector(".collection-source-chevron")!;
+    expect(chevron.getAttribute("aria-hidden")).toBe("true");
+    expect(chevron.classList.contains("rotate-0")).toBe(true);
     scenario.assertActive();
     two.focus();
     scenario.assertActive();
     await userEvent.keyboard("{Enter}");
     scenario.assertActive();
     expect(two.getAttribute("aria-expanded")).toBe("true");
+    expect(chevron.classList.contains("rotate-90")).toBe(true);
+    expect(chevron.classList.contains("rotate-0")).toBe(false);
     const region = document.getElementById(two.getAttribute("aria-controls")!)!;
     expect(
       within(region)
