@@ -134,6 +134,27 @@ for (const width of [1440, 390]) {
       const sibling = await f.createOutput("rule-sibling", names.sibling, profile.id);
       const originalChosen = await f.bundleState(chosen, v1);
       const originalSibling = await f.bundleState(sibling, v1);
+      const reloadSeededInventory = async (groups: Array<{ name: string; outputs: Output[] }>) => {
+        // Supporting API setup does not invalidate the live UI's query cache.
+        // Hash navigation alone keeps that document. Re-enter once with a fresh
+        // document after each completed setup batch, then verify its real list.
+        await page.goto("/#subscriptions");
+        const listed = responseFor(page, "/api/me/outputs", "GET");
+        await page.reload();
+        const result = await listed;
+        expect(result.status()).toBe(200);
+        const outputs = await result.json() as Output[];
+        expect(outputs.map((output) => output.id).sort()).toEqual(
+          groups.flatMap((group) => group.outputs.map((output) => output.id)).sort(),
+        );
+        for (const group of groups) {
+          const card = page.getByRole("article", { name: `分流配置 ${group.name}`, exact: true });
+          await expect(card.getByRole("group", { name: /^客户端订阅 / })).toHaveCount(group.outputs.length);
+          for (const output of group.outputs)
+            await expect(card.getByRole("group", { name: `客户端订阅 ${output.name}`, exact: true })).toBeVisible();
+        }
+      };
+      await reloadSeededInventory([{ name: names.profile, outputs: [chosen, sibling] }]);
 
       const replace = async (version: 2 | 3) => {
         await page.goto("/#resources");
@@ -158,8 +179,9 @@ for (const width of [1440, 390]) {
       expect(await f.bundleState(chosen, v1)).toEqual(originalChosen);
       expect(await f.bundleState(sibling, v1)).toEqual(originalSibling);
       await page.goto(`/#subscriptions?profile=${profile.id}`);
-      await page.getByRole("article", { name: `分流配置 ${names.profile}`, exact: true })
-        .getByRole("button", { name: "编辑配置", exact: true }).click();
+      const pinnedCard = page.getByRole("article", { name: `分流配置 ${names.profile}`, exact: true });
+      await expect(pinnedCard.getByRole("group", { name: /^客户端订阅 / })).toHaveCount(2);
+      await pinnedCard.getByRole("button", { name: "编辑配置", exact: true }).click();
       const pin = editor.getByRole("button", { name: "固定到最新接纳版本", exact: true });
       await expect(editor.getByText(`${names.resource}：当前配置固定较早的文件版本。`, { exact: false })).toBeVisible();
       await pin.scrollIntoViewIfNeeded();
@@ -176,6 +198,10 @@ for (const width of [1440, 390]) {
       expect(following.ir.resources[0]).toMatchObject({ acceptedVersion: v2.acceptedVersion, updatePolicy: "follow" });
       const followOutput = await f.createOutput("rule-follow-output", names.followOutput, following.id);
       const originalFollow = await f.bundleState(followOutput, v2);
+      await reloadSeededInventory([
+        { name: names.profile, outputs: [chosen, sibling] },
+        { name: names.followProfile, outputs: [followOutput] },
+      ]);
       const v3 = await replace(3);
       expect(await f.bundleState(chosen, v1)).toEqual(originalChosen);
       expect(await f.bundleState(sibling, v1)).toEqual(originalSibling);
