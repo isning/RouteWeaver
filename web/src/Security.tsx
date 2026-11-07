@@ -3,12 +3,12 @@ import { QRCodeSVG as QRCode } from "qrcode.react";
 import { ActionButton } from "@/ui-patterns/actions";
 import { Input } from "@/components/ui/input";
 import { Notice } from "@/ui-patterns/notice";
-import { toast } from "sonner";
 import { useForm, AppField, AppForm } from "@/ui-patterns/form";
 import { ShieldCheck as SafetyCertificateOutlined } from "lucide-react";
 import { useLayoutEffect, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { post } from "./api";
+import { APIError, post } from "./api";
+import type { Session } from "./types";
 import { useSessionAccess } from "./SessionBoundary";
 import { ErrorNotice, QueryState, Section } from "./components";
 export function SecuritySettings() {
@@ -33,9 +33,10 @@ function MFASetupTask() {
         secret: string;
         uri: string;
     } | null>(null);
+    const [enableUncertain, setEnableUncertain] = useState(false);
+    const uncertainEnable = useRef(false);
     const [passwordForm] = useForm();
     const [codeForm] = useForm();
-    const message = toast;
     const prepare = useMutation({
         // Return no setup material to the mutation cache. It belongs only to
         // this mounted enrollment task, not a settled mutation result.
@@ -43,6 +44,10 @@ function MFASetupTask() {
             try {
                 if (!active.current) throw new Error("设置页面已关闭，本次尚未提交。");
                 const value = await post<{ secret: string; uri: string }>("/auth/mfa/setup", values);
+                if (typeof value?.secret !== "string" || !value.secret.trim() ||
+                    typeof value?.uri !== "string" || !value.uri.trim()) {
+                    throw new Error("未收到完整的验证器设置，请重新设置二次验证。");
+                }
                 if (active.current) {
                     setSetup({ secret: value.secret, uri: value.uri });
                     passwordForm.resetFields();
@@ -60,7 +65,29 @@ function MFASetupTask() {
         mutationFn: async (values: { code: string }) => {
             try {
                 if (!active.current) throw new Error("设置页面已关闭，本次尚未提交。");
-                await post("/auth/mfa/enable", values);
+                try {
+                    const value = await post<Session>("/auth/mfa/enable", values);
+                    if (typeof value?.user?.id !== "string" || !value.user.id ||
+                        value.user.id !== snapshot.session?.user.id ||
+                        value?.user?.role !== "admin" || value?.user?.mfaEnabled !== true ||
+                        typeof value?.csrfToken !== "string" || !value.csrfToken.trim()) {
+                        throw new Error("Incomplete MFA enable response");
+                    }
+                } catch (error) {
+                    // A lost or malformed response can follow a committed enrollment
+                    // and rotated cookie. Recheck authority without replaying the write.
+                    if (!(error instanceof APIError && [400, 401, 403, 429].includes(error.status))) {
+                        if (active.current) {
+                            uncertainEnable.current = true;
+                            setEnableUncertain(true);
+                            codeForm.resetFields();
+                        }
+                        lifecycle.changed();
+                        void lifecycle.check();
+                        throw new Error("启用结果尚未确认。请先核对当前登录状态，不要重复提交。");
+                    }
+                    throw error;
+                }
             } finally {
                 values.code = "";
             }
@@ -77,7 +104,7 @@ function MFASetupTask() {
             setSetup(null);
             codeForm.resetFields();
             prepare.reset();
-            message.success("二次验证已启用");
+            // Only the reconciled session below may show enrollment as enabled.
         },
         onSettled: () => { submitting.current = false; },
     });
@@ -88,10 +115,12 @@ function MFASetupTask() {
         passwordForm.resetFields();
         prepare.reset();
         enable.reset();
+        uncertainEnable.current = false;
+        setEnableUncertain(false);
     };
     return (<Section title="管理员二次验证" description="保护当前登录账号：登录时在密码之外验证一次性验证码。">
       <QueryState loading={session.isLoading} error={session.error} retry={() => session.refetch()}>
-        {session.data?.user.mfaEnabled ? (<div className="security-enabled flex flex-wrap items-center gap-3 rounded-lg border p-4">
+        {session.data?.user.mfaEnabled === true ? (<div className="security-enabled flex flex-wrap items-center gap-3 rounded-lg border p-4">
             <SafetyCertificateOutlined aria-hidden="true"/>
             <div>
               <h3 className="text-sm font-medium">二次验证已启用</h3>
@@ -107,8 +136,8 @@ function MFASetupTask() {
               <PasswordInput aria-label="验证器设置密钥" revealLabel="验证器设置密钥" value={setup.secret} readOnly autoComplete="off" className="mt-3"/>
             </details>
             <p className="mt-4 text-sm text-muted-foreground">关闭只清除此页的设置密钥和输入，不会撤销已提交的启用操作。</p>
-            <AppForm disabled={enable.isPending} form={codeForm} className="mt-6 max-w-sm" onFinish={(v) => {
-                if (!active.current || submitting.current) return;
+            <AppForm disabled={enable.isPending || enableUncertain} form={codeForm} className="mt-6 max-w-sm" onFinish={(v) => {
+                if (!active.current || submitting.current || uncertainEnable.current) return;
                 submitting.current = true;
                 enable.mutate({ code: v.code });
             }}>
@@ -119,7 +148,7 @@ function MFASetupTask() {
             ]}>
                 <Input inputMode="numeric" autoComplete="one-time-code" maxLength={6}/>
               </AppField>
-              <ActionButton type="submit" pending={enable.isPending} variant="default">
+              <ActionButton type="submit" pending={enable.isPending} disabled={enableUncertain} variant="default">
                 验证并启用
               </ActionButton>
               <ActionButton disabled={enable.isPending} onClick={dismissSetup} variant="ghost">
