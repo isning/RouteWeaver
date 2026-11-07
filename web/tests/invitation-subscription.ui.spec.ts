@@ -57,21 +57,28 @@ async function login(page: Page, username: string, password: string) {
   await page.getByRole("button", { name: "进入工作空间", exact: true }).click();
   expect((await response).status()).toBe(200);
 }
-async function logout(page: Page) {
-  const navigation = page.getByRole("button", {
-    name: "打开导航",
-    exact: true,
-  });
-  if (await navigation.isVisible()) await navigation.click();
-  await page
-    .locator("#workspace-navigation")
-    .getByRole("button", { name: /(?:管理员|个人账号)$/ })
-    .click();
+async function logout(page: Page, narrow: boolean) {
+  let scope = page.locator("#workspace-navigation");
+  if (narrow) {
+    // The preceding dialog may still be restoring the workspace's accessible
+    // tree. A one-shot isVisible() can miss the trigger and skip opening the
+    // mobile-only sidebar entirely; wait for the known viewport's UI instead.
+    const navigation = page.getByRole("button", {
+      name: "打开导航",
+      exact: true,
+    });
+    await expect(navigation).toBeVisible();
+    await navigation.click();
+    scope = page.getByRole("dialog", { name: "导航", exact: true });
+    await expect(scope).toBeVisible();
+  }
+  await scope.getByRole("button", { name: /(?:管理员|个人账号)$/ }).click();
   await page.getByRole("menuitem", { name: "退出登录", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "登录 RouteWeaver", exact: true }),
   ).toBeVisible();
 }
+
 for (const width of [1440, 390]) {
   test(`invitation to first subscription through real grant and publication at ${width}px`, async ({
     page: admin,
@@ -389,7 +396,8 @@ for (const width of [1440, 390]) {
         access.getByRole("textbox", { name: "订阅链接", exact: true }),
       ]);
       await recipient.keyboard.press("Escape");
-      await logout(recipient);
+      await expect(access).toBeHidden();
+      await logout(recipient, width === 390);
       expect((await recipient.request.get("/api/me/profiles")).status()).toBe(
         401,
       );
