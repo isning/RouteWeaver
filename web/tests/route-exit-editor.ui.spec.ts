@@ -234,23 +234,42 @@ test.describe("390px touch", () => {
     page,
   }, info) => {
     await openWorkspace(page);
-    const { commits } = await installFixture(page, true);
+    const { writes, commits } = await installFixture(page, true);
     await page.goto("/#published-routes");
     await page.getByRole("button", { name: "英国线路", exact: true }).tap();
     await page.getByRole("button", { name: "更换出口", exact: true }).tap();
-    await page.getByRole("combobox", { name: "新出口服务器" }).tap();
-    await page.getByText("英国二号", { exact: true }).last().tap();
-    await page.getByRole("combobox", { name: "新出口端点" }).tap();
-    await page
-      .getByText("英国二号", { exact: true })
-      .last()
-      .tap();
-    const check = page.getByRole("button", { name: "检查变更", exact: true });
+    const editor = page.getByRole("dialog", { name: "更换「英国线路」的出口", exact: true });
+    const server = editor.getByRole("combobox", { name: "新出口服务器", exact: true });
+    const endpoint = editor.getByRole("combobox", { name: "新出口端点", exact: true });
+    const choices = page.getByRole("listbox", { name: "候选项", exact: true });
+    await server.tap();
+    await expect(server).toHaveAttribute("aria-expanded", "true");
+    await expect(choices).toHaveCount(1);
+    await choices.getByRole("option", { name: "英国二号", exact: true }).tap();
+    await expect(server).toHaveText("英国二号");
+    await expect(server).toHaveAttribute("aria-expanded", "false");
+    await expect(choices).toHaveCount(0);
+    await expect(endpoint).toBeEnabled();
+    await endpoint.tap();
+    await expect(endpoint).toHaveAttribute("aria-expanded", "true");
+    await expect(choices).toHaveCount(1);
+    // The server trigger has the same short name. Select the endpoint option,
+    // never an arbitrary matching label while its popover is opening.
+    await choices.getByRole("option", { name: "英国二号 vless:443 xray", exact: true }).tap();
+    await expect(endpoint).toHaveText("英国二号 vless:443 xray");
+    await expect(endpoint).toHaveAttribute("aria-expanded", "false");
+    await expect(choices).toHaveCount(0);
+    const check = editor.getByRole("button", { name: "检查变更", exact: true });
+    await expect(check).toBeEnabled();
     expect((await check.boundingBox())!.height).toBeGreaterThanOrEqual(44);
     await check.tap();
     await expect(
       page.getByRole("heading", { name: "核对草稿变更" }),
     ).toBeVisible();
+    expect(writes).toEqual([{
+      path: "/published-routes/exit-ui-line/retarget/preview",
+      body: expect.objectContaining({ replacementEndpointId: "new-endpoint" }),
+    }]);
     await page.screenshot({
       path: info.outputPath("synthetic-draft-review-touch.png"),
     });
