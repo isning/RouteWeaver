@@ -136,6 +136,10 @@ class ExpectedFailureTests(unittest.TestCase):
         self.assertIn('outputDir: "/tmp/private-probe/raw/results"', config)
         self.assertIn('outputFolder: "/tmp/private-probe/raw/html"', config)
         self.assertIn('retries: 0', config)
+        # One deliberately failing case must finish normally, not trigger the
+        # runner's global "maximum allowed failures" error on that same failure.
+        self.assertIn('maxFailures: 0', config)
+        self.assertNotIn('maxFailures: 1', config)
         self.assertNotIn("PLAYWRIGHT_NO_COPY_PROMPT", config)
 
     def test_public_driver_preflight_failure_publishes_only_sanitized_receipt(self):
@@ -176,7 +180,7 @@ class ExpectedFailureTests(unittest.TestCase):
         self.assertNotIn(secret, str(failure.exception))
 
     def test_real_reporter_failures_identify_subcheck_without_error_text(self):
-        for kind, expected in (("stack", "failure-stack"), ("identity", "failure-identity")):
+        for kind, expected in (("stack", "failure-stack"), ("identity", "failure-primary-identity")):
             data = self.report()
             raw = data["suites"][0]["specs"][0]["tests"][0]["results"][0]["error"]
             raw[kind if kind == "stack" else "message"] = "" if kind == "stack" else "sensitive-error-value"
@@ -184,6 +188,38 @@ class ExpectedFailureTests(unittest.TestCase):
                 probe.expected_failure(data, False)
             self.assertEqual(failure.exception.check, expected)
             self.assertNotIn("sensitive-error-value", str(failure.exception))
+
+    def test_each_report_predicate_has_a_distinct_safe_failure_check(self):
+        cases = {"global": "report-global-errors", "spec": "report-single-spec",
+                 "test": "report-single-test", "expected": "report-expected-status",
+                 "outcome": "report-outcome", "result": "report-single-result",
+                 "status": "report-result-status", "retry": "report-retry",
+                 "error": "report-single-error", "formatted": "failure-formatted-identity",
+                 "primary": "failure-primary-identity", "stack": "failure-stack",
+                 **{f"stat-{key}": f"report-stat-{key}" for key in ("unexpected", "expected", "skipped", "flaky")}}
+        for mutation, expected in cases.items():
+            data = self.report()
+            specs = data["suites"][0]["specs"]
+            tests = specs[0]["tests"]
+            test = tests[0]
+            result = test["results"][0]
+            if mutation == "global": data["errors"] = [{"message": "Testing stopped early after 1 maximum allowed failures."}]
+            if mutation == "spec": specs.clear()
+            if mutation == "test": tests.clear()
+            if mutation == "expected": test["expectedStatus"] = "failed"
+            if mutation == "outcome": test["status"] = "expected"
+            if mutation == "result": test["results"].append(copy.deepcopy(result))
+            if mutation == "status": result["status"] = "passed"
+            if mutation == "retry": result["retry"] = 1
+            if mutation == "error": result["errors"].append({"message": "cleanup failed"})
+            if mutation == "formatted": result["errors"][0]["message"] = "unrelated failure"
+            if mutation == "primary": result["error"]["message"] = "unrelated failure"
+            if mutation == "stack": result["error"]["stack"] = ""
+            if mutation.startswith("stat-"): data["stats"][mutation[5:]] += 1
+            with self.subTest(mutation=mutation), self.assertRaises(probe.ProbeContractError) as failure:
+                probe.expected_failure(data, False)
+            self.assertEqual(failure.exception.check, expected)
+            self.assertEqual(probe.safe_failure_details({"check": failure.exception.check}), {"check": expected})
 
 
 class ProcessCleanupTests(unittest.TestCase):

@@ -26,9 +26,11 @@ RECEIPT = ROOT / "bin/verification/structured-publication-privacy.json"
 MARKER = "STRUCTURED_PUBLICATION_EXPECTED_PRIVACY_FAILURE"
 CASES = ("control-assertion", "fixed-assertion", "fixed-timeout")
 MAX_BYTES = 128 * 1024 * 1024
-CHECKS = frozenset({"contract", "operation", "source-anchor", "report-shape", "report-single-test",
-                   "report-status", "report-single-result", "report-single-error", "failure-identity",
-                   "failure-stack", "report-outcomes", "checkpoint-url", "checkpoint-mask",
+CHECKS = frozenset({"contract", "operation", "source-anchor", "report-global-errors", "report-single-spec",
+                   "report-single-test", "report-expected-status", "report-outcome", "report-single-result",
+                   "report-result-status", "report-retry", "report-single-error", "failure-formatted-identity",
+                   "failure-primary-identity", "failure-stack", "report-stat-unexpected", "report-stat-expected",
+                   "report-stat-skipped", "report-stat-flaky", "checkpoint-url", "checkpoint-mask",
                    "checkpoint-recovery", "checkpoint-access", "runner-exit", "artifact-scan",
                    "control-aria-leak", "fixed-bearer-leak"})
 STEPS = frozenset({"prepare", "runner", "checkpoint-read", "checkpoint-validate", "artifact-scan",
@@ -109,27 +111,32 @@ def expected_failure(report, timed_out):
 
     for suite in report.get("suites", []):
         walk(suite)
-    require(not report.get("errors") and len(specs) == 1, "report-shape")
+    require(not report.get("errors"), "report-global-errors")
+    require(len(specs) == 1, "report-single-spec")
     tests = specs[0].get("tests", [])
     require(len(tests) == 1, "report-single-test")
     test = tests[0]
-    require(test.get("expectedStatus") == "passed" and test.get("status") == "unexpected", "report-status")
+    require(test.get("expectedStatus") == "passed", "report-expected-status")
+    require(test.get("status") == "unexpected", "report-outcome")
     results = test.get("results", [])
     require(len(results) == 1, "report-single-result")
     result = results[0]
-    require(result.get("status") == ("timedOut" if timed_out else "failed") and result.get("retry") == 0, "report-status")
+    require(result.get("status") == ("timedOut" if timed_out else "failed"), "report-result-status")
+    require(result.get("retry") == 0, "report-retry")
     errors = result.get("errors", [])
     require(len(errors) == 1, "report-single-error")
     # JSONReporter formats errors[] as message/location and retains the raw
     # primary error (including its stack) in result.error, not errors[0].
     primary = result.get("error", {})
-    messages = (errors[0].get("message", ""), primary.get("message", ""))
-    identified = all(bool(re.search(r"Test timeout of \d+ms exceeded", message)) if timed_out else MARKER in message
-                     for message in messages)
-    require(identified, "failure-identity")
+    for message, check in ((errors[0].get("message", ""), "failure-formatted-identity"),
+                           (primary.get("message", ""), "failure-primary-identity")):
+        identified = bool(re.search(r"Test timeout of \d+ms exceeded", message)) if timed_out else MARKER in message
+        require(identified, check)
     require(bool(primary.get("stack")), "failure-stack")
     stats = report.get("stats", {})
-    require(stats.get("unexpected") == 1 and all(stats.get(key) == 0 for key in ("expected", "skipped", "flaky")), "report-outcomes")
+    require(stats.get("unexpected") == 1, "report-stat-unexpected")
+    for key in ("expected", "skipped", "flaky"):
+        require(stats.get(key) == 0, f"report-stat-{key}")
     return {"expectedErrorIdentified": True, "errorStackPreserved": True,
             "exactlyOneUnretriedFailure": True, "testTimedOut": timed_out}
 
@@ -242,7 +249,10 @@ const chromium = base.projects?.find((project) => project.name === "chromium");
 if (!chromium) throw new Error("Chromium project is required for privacy probe");
 export default defineConfig({{
   ...base, testDir: "./tests", webServer: undefined,
-  workers: 1, retries: 0, repeatEach: 1, maxFailures: 1,
+  // One deliberately failing test must complete without the runner creating a
+  // separate max-failure onError. The driver still requires exactly one failed
+  // result, zero retries and zero top-level errors; it never accepts a skip.
+  workers: 1, retries: 0, repeatEach: 1, maxFailures: 0,
   outputDir: {json.dumps(str(raw / 'results'))},
   projects: [{{ ...chromium, testMatch: {json.dumps(filename)} }}],
   reporter: [
