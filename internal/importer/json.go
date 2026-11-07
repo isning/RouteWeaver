@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	"reflect"
+	"strings"
 )
 
 // JSON permits duplicate member spelling syntactically but import semantics
@@ -65,6 +67,61 @@ func validateJSON(data []byte) error {
 	}
 	if _, err := d.Token(); err != io.EOF {
 		return ErrInput
+	}
+	return nil
+}
+
+// The connection DTOs use named JSON fields without embedded structs. Go's
+// decoder also accepts case-folded spellings, which must not let two different
+// keys overwrite the same typed setting. Map keys remain case-sensitive.
+func rejectAliasedJSONFields(data []byte, target reflect.Type) error {
+	for target.Kind() == reflect.Pointer {
+		target = target.Elem()
+	}
+	if target.Kind() != reflect.Struct {
+		return nil
+	}
+	var object map[string]json.RawMessage
+	if json.Unmarshal(data, &object) != nil {
+		return ErrInput
+	}
+	names := make([]string, target.NumField())
+	for i := range names {
+		field := target.Field(i)
+		name, _, _ := strings.Cut(field.Tag.Get("json"), ",")
+		if field.PkgPath != "" || name == "-" {
+			continue
+		}
+		if name == "" {
+			name = field.Name
+		}
+		names[i] = name
+	}
+	seen := map[int]bool{}
+	for key, value := range object {
+		matched := -1
+		for i, name := range names {
+			if name == "" {
+				continue
+			}
+			if key == name {
+				matched = i
+				break
+			}
+			if matched < 0 && strings.EqualFold(key, name) {
+				matched = i
+			}
+		}
+		if matched < 0 {
+			continue // The strict decoder reports unknown connection fields.
+		}
+		if seen[matched] {
+			return ErrInput
+		}
+		seen[matched] = true
+		if err := rejectAliasedJSONFields(value, target.Field(matched).Type); err != nil {
+			return err
+		}
 	}
 	return nil
 }

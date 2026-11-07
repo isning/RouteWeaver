@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"reflect"
 	"sort"
 	"strings"
 
@@ -85,6 +86,9 @@ func strictDecode(data []byte, out any) error {
 	if err := validateJSON(data); err != nil {
 		return err
 	}
+	if err := rejectAliasedJSONFields(data, reflect.TypeOf(out)); err != nil {
+		return err
+	}
 	d := json.NewDecoder(bytes.NewReader(data))
 	d.DisallowUnknownFields()
 	if err := d.Decode(out); err != nil {
@@ -152,7 +156,9 @@ func parseNative(data []byte, format string) ([]candidate, []Diagnostic, error) 
 			var meta struct {
 				Type string `json:"type"`
 			}
-			if json.Unmarshal(row, &meta) != nil {
+			// Resolve the discriminator only after checking its typed aliases;
+			// otherwise a shadowed type can omit a connection as a built-in policy.
+			if rejectAliasedJSONFields(row, reflect.TypeOf(meta)) != nil || json.Unmarshal(row, &meta) != nil {
 				return nil, nil, ErrInput
 			}
 			switch meta.Type {
