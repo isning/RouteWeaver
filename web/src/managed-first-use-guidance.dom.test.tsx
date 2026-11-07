@@ -95,7 +95,7 @@ function setup({
 it("guides a saved empty managed entry to public lines without editing or applying it", async (context) => {
   const owner = ownedClickScenario(context);
   const mutations = setup();
-  await owner.click(() => screen.findByRole("button", { name: "首次配置转发路径", exact: true }));
+  await owner.click(() => screen.findByRole("button", { name: "首次配置转发路径" }));
   const detail = within(screen.getByRole("dialog", { name: "首次配置转发路径" }));
   expect(detail.getByText("草稿缺少可用用户入口", { exact: true })).toBeTruthy();
   expect(detail.getByText("草稿已保存，当前不能应用。", { exact: true })).toBeTruthy();
@@ -107,7 +107,7 @@ it("guides a saved empty managed entry to public lines without editing or applyi
   expect(detail.queryByText(missingPrincipals)).toBeNull();
   await owner.click(() => detail.getByRole("button", { name: "技术详情" }));
   expect(detail.getByText(missingPrincipals)).toBeTruthy();
-  const next = detail.getByRole("link", { name: "前往线路", exact: true });
+  const next = detail.getByRole("link", { name: "前往线路" });
   expect(next.getAttribute("href")).toBe("#published-routes");
   await owner.click(() => next);
   await waitFor(() => expect(location.hash).toBe("#published-routes"));
@@ -122,9 +122,9 @@ it("keeps a known line and user context when returning to inspect existing entri
   const mutations = setup();
   const detail = within(await screen.findByRole("dialog", { name: "首次配置转发路径" }));
   owner.assertActive();
-  expect(detail.getByRole("link", { name: "前往线路", exact: true }).getAttribute("href")).toBe(href);
+  expect(detail.getByRole("link", { name: "前往线路" }).getAttribute("href")).toBe(href);
   expect(detail.queryByRole("button", { name: "创建用户入口" })).toBeNull();
-  await owner.click(() => detail.getByRole("link", { name: "前往线路", exact: true }));
+  await owner.click(() => detail.getByRole("link", { name: "前往线路" }));
   await waitFor(() => expect(location.hash).toBe(href));
   owner.assertActive();
   expect(mutations).toEqual([]);
@@ -136,22 +136,22 @@ it("offers the same recovery after a fresh failed check without application cons
     diagnostics: [],
     validation: { valid: false, diagnostics: [missingPrincipals], artifacts: [] },
   });
-  await owner.click(() => screen.findByRole("button", { name: "首次配置转发路径", exact: true }));
-  await owner.click(() => screen.getByRole("button", { name: "查看修改并应用", exact: true }));
+  await owner.click(() => screen.findByRole("button", { name: "首次配置转发路径" }));
+  await owner.click(() => screen.getByRole("button", { name: "查看修改并应用" }));
   const review = within(await screen.findByRole("dialog", { name: "应用转发路径修改" }));
   owner.assertActive();
   expect(review.getByText("草稿缺少可用用户入口", { exact: true })).toBeTruthy();
-  expect(review.getByRole("link", { name: "前往线路", exact: true }).getAttribute("href")).toBe("#published-routes");
+  expect(review.getByRole("link", { name: "前往线路" }).getAttribute("href")).toBe("#published-routes");
   expect(review.queryByRole("button", { name: "编辑并修复" })).toBeNull();
   expect(review.queryByRole("checkbox")).toBeNull();
   expect(review.queryByRole("button", { name: "确认并应用" })).toBeNull();
   expect(review.queryByText(missingPrincipals)).toBeNull();
   await owner.click(() => review.getByRole("button", { name: "技术详情" }));
   expect(review.getByText(missingPrincipals)).toBeTruthy();
-  await owner.click(() => review.getByRole("button", { name: "返回", exact: true }));
+  await owner.click(() => review.getByRole("button", { name: "返回" }));
   const detail = within(await screen.findByRole("dialog", { name: "首次配置转发路径" }));
   owner.assertActive();
-  expect(detail.getByRole("link", { name: "前往线路", exact: true })).toBeTruthy();
+  expect(detail.getByRole("link", { name: "前往线路" })).toBeTruthy();
   expect(mutations).toEqual(["POST /api/server-deployments/first-path/validate"]);
 });
 
@@ -160,14 +160,14 @@ it("keeps repair priority and distinct failures when the missing entry is not th
   const tls = "programs[0].tls: TLS certificate and private key do not form a valid matching pair";
   const unknown = "SERVER_NEW_POLICY: additional configuration required";
   const mutations = setup({ diagnostics: [missingPrincipals, tls, unknown] });
-  await owner.click(() => screen.findByRole("button", { name: "首次配置转发路径", exact: true }));
+  await owner.click(() => screen.findByRole("button", { name: "首次配置转发路径" }));
   const detail = within(screen.getByRole("dialog", { name: "首次配置转发路径" }));
   expect(detail.getByText("草稿需要调整", { exact: true })).toBeTruthy();
   expect(detail.getByText("草稿缺少可用用户入口。", { exact: true })).toBeTruthy();
   expect(detail.getByText(/的 TLS 设置未通过检查/)).toBeTruthy();
   expect(detail.getByText(unknown)).toBeTruthy();
-  expect(detail.getByRole("button", { name: "编辑并修复", exact: true })).toBeTruthy();
-  expect(detail.getByRole("link", { name: "前往线路", exact: true })).toBeTruthy();
+  expect(detail.getByRole("button", { name: "编辑并修复" })).toBeTruthy();
+  expect(detail.getByRole("link", { name: "前往线路" })).toBeTruthy();
   expect(detail.queryByText(missingPrincipals)).toBeNull();
   await owner.click(() => detail.getByRole("button", { name: "技术详情" }));
   expect(detail.getByText(missingPrincipals)).toBeTruthy();
@@ -206,26 +206,26 @@ it.for(unknownCases)("does not guess entry setup for $name", async ({ diagnostic
   const owner = ownedClickScenario(context);
   const expected = diagnostics || [missingPrincipals];
   const mutations = setup({ diagnostics: expected, change });
-  await owner.click(() => screen.findByRole("button", { name: "首次配置转发路径", exact: true }));
+  await owner.click(() => screen.findByRole("button", { name: "首次配置转发路径" }));
   const detail = within(screen.getByRole("dialog", { name: "首次配置转发路径" }));
   expect(detail.getByText("草稿需要调整", { exact: true })).toBeTruthy();
   for (const diagnostic of expected) expect(detail.getByText(diagnostic)).toBeTruthy();
   expect(detail.queryByText("草稿缺少可用用户入口", { exact: true })).toBeNull();
-  expect(detail.queryByRole("link", { name: "前往线路", exact: true })).toBeNull();
-  expect(detail.getByRole("button", { name: "编辑并修复", exact: true })).toBeTruthy();
+  expect(detail.queryByRole("link", { name: "前往线路" })).toBeNull();
+  expect(detail.getByRole("button", { name: "编辑并修复" })).toBeTruthy();
   expect(mutations).toEqual([]);
 });
 
 it("clears old entry guidance after a successful server recheck without applying", async (context) => {
   const owner = ownedClickScenario(context);
   const mutations = setup({ validation: { valid: true, diagnostics: [], artifacts: [], fingerprint: "checked-first-path" } });
-  await owner.click(() => screen.findByRole("button", { name: "首次配置转发路径", exact: true }));
-  await owner.click(() => screen.getByRole("button", { name: "重新检查", exact: true }));
+  await owner.click(() => screen.findByRole("button", { name: "首次配置转发路径" }));
+  await owner.click(() => screen.getByRole("button", { name: "重新检查" }));
   const review = within(await screen.findByRole("dialog", { name: "应用转发路径修改" }));
   owner.assertActive();
   expect(review.queryByText("草稿缺少可用用户入口", { exact: true })).toBeNull();
-  expect(review.queryByRole("link", { name: "前往线路", exact: true })).toBeNull();
+  expect(review.queryByRole("link", { name: "前往线路" })).toBeNull();
   expect(review.getByRole("checkbox", { name: "确认允许此转发路径提供访问" }).getAttribute("aria-checked")).toBe("false");
-  expect((review.getByRole("button", { name: "确认并应用", exact: true }) as HTMLButtonElement).disabled).toBe(true);
+  expect((review.getByRole("button", { name: "确认并应用" }) as HTMLButtonElement).disabled).toBe(true);
   expect(mutations).toEqual(["POST /api/server-deployments/first-path/validate"]);
 });
