@@ -39,10 +39,16 @@ func (h *server) registerFleetAdmin(r chi.Router) {
 	r.Post("/admin/fleet-batches", func(w http.ResponseWriter, r *http.Request) {
 		var in struct {
 			fleet.Input
-			ExpectedFingerprint string `json:"expectedFingerprint"`
-			LeaseSeconds        int    `json:"leaseSeconds"`
+			ID                  json.RawMessage `json:"id"`
+			ExpectedFingerprint string          `json:"expectedFingerprint"`
+			LeaseSeconds        int             `json:"leaseSeconds"`
 		}
 		if !decode(w, r, &in) {
+			return
+		}
+		id, e := h.fleetCreationID(r, in.ID)
+		if e != nil {
+			fleetCreationError(w, e)
 			return
 		}
 		if in.LeaseSeconds < 30 || in.LeaseSeconds > 3600 {
@@ -70,19 +76,29 @@ func (h *server) registerFleetAdmin(r chi.Router) {
 			writeJSON(w, 422, map[string]any{"detail": "one or more targets cannot perform this action", "plan": p.Plan})
 			return
 		}
-		token, e := auth.Token()
-		if e != nil {
-			storeError(w, e)
-			return
+		if id == "" {
+			token, err := auth.Token()
+			if err != nil {
+				storeError(w, err)
+				return
+			}
+			id = "batch_" + token
 		}
-		record := fleetRecord{Transitions: p.Transitions, Batch: fleet.Batch{ID: "batch_" + token, Plan: p.Plan, ActorID: current(r).Account.ID, CreatedAt: time.Now().UTC(), LeaseSeconds: in.LeaseSeconds, Status: "planned"}, Deployment: p.Deployment, Baselines: map[string]*controlprotocol.Identity{}, Enrollments: p.Enrollments, AuthorizationHash: p.AuthorizationHash, ContinuousAuthorityHash: p.ContinuousAuthorityHash, Requests: map[string]string{}}
+		record := fleetRecord{Transitions: p.Transitions, Batch: fleet.Batch{ID: id, Plan: p.Plan, ActorID: current(r).Account.ID, CreatedAt: time.Now().UTC(), LeaseSeconds: in.LeaseSeconds, Status: "planned"}, Deployment: p.Deployment, Baselines: map[string]*controlprotocol.Identity{}, Enrollments: p.Enrollments, AuthorizationHash: p.AuthorizationHash, ContinuousAuthorityHash: p.ContinuousAuthorityHash, Requests: map[string]string{}}
 		for id, d := range p.Baselines {
 			identity := d.Identity()
 			record.Baselines[id] = &identity
 		}
 		p.Compares = append(p.Compares, store.RecordCompare{Kind: "fleet-batches", ID: record.Batch.ID})
 		if e = h.s.CompareSetsAndPutRecords(p.Compares, p.Sets, []store.RecordWrite{{Kind: "fleet-batches", ID: record.Batch.ID, Value: record}}); e != nil {
-			storeError(w, e)
+			// A competing create can win after the initial absence check. Classify
+			// that occupied ID without treating it as this request's success.
+			if errors.Is(e, store.ErrConflict) && in.ID != nil {
+				if occupied := h.fleetCreationAvailable(id); occupied != nil {
+					e = occupied
+				}
+			}
+			fleetCreationError(w, e)
 			return
 		}
 		writeJSON(w, 201, record.Batch)

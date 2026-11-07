@@ -18,6 +18,20 @@ server-side automatic failover.
 - `POST /api/admin/fleet-batches`: same input, expectedFingerprint and an explicit
   leaseSeconds in 30–3600. Input and secrets are retained in encrypted storage;
   the response/listing contains only the safe plan and attempts, not raw IR.
+  A caller may supply a stable `id` together with exactly one `If-None-Match: *`
+  header for create-only submission. Either both must be supplied or both omitted;
+  omission retains legacy server-generated IDs. Partial/malformed conditions and
+  `If-Match` are rejected with `FLEET_CREATION_PRECONDITION_INVALID` (400).
+  The insert atomically requires an absent ID as well as unchanged reviewed inputs.
+  An occupied ID returns `FLEET_CREATION_CONFLICT` (412), including concurrent
+  creation, without overwriting or treating the existing batch as this request's
+  success. It is checked before fresh planning so changed dependencies do not hide
+  the recovery path. The presence check does not decrypt the record: an unreadable
+  occupied slot still conflicts, while an actual database read error stays an error.
+  After a lost response, GET the exact ID and verify the actor,
+  immutable request, fingerprint and lease. Retry only that same guarded ID/body;
+  a failed lookup or later rejected retry does not prove the first request failed.
+  Creating, looking up or conflicting with a batch never executes a stage.
 - `GET /api/admin/fleet-batches` and `/{id}` return historical operations and
   per-target observations. A successful action is not a permanent health claim.
 - `POST /{id}/execute` with stage and stable requestId explicitly advances one
@@ -66,6 +80,13 @@ automatic inventory or binary-version rollback.
 stage order, exact identity, no-report expiry, CAS races, authorization, stale
 review, per-target enrollment failures, successful-result retention, credential
 rotation/revocation, upgrade transition envelopes and catalog evidence.
+`fleet_creation_precondition_test.go` covers real commit followed by a deliberately
+lost HTTP response, guarded retry, changed dependencies, malformed conditions,
+legacy compatibility, unreadable occupied slots and actual store read failures,
+and one durable winner across concurrent store handles. The concurrent-start
+test does not force both requests past preflight, so it does not independently
+prove execution of the post-CAS conflict-classification branch.
+These are public HTTP/storage contract tests, not browser or runtime evidence.
 
 `TestNativeFleetConfigureStopStartAndRollback` additionally runs two real pinned
 Xray instances in private temporary directories. It verifies official cached
