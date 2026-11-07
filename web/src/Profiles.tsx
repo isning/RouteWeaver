@@ -63,6 +63,7 @@ import {
   type RoutingTarget,
 } from "./routing-task";
 import { useUnsavedChanges } from "./navigation";
+import { useWorkspaceViewEntry } from "./useWorkspaceViewEntry";
 import {
   ProfileDraftConflict,
   profileDraftChanged,
@@ -214,6 +215,7 @@ export function ProfileEditor({
   output?: Output;
   onClose: () => void;
 }) {
+  const replaceView = useWorkspaceViewEntry();
   const [draft, setDraft] = useState<DraftProfile>(initial);
   const [boundOutput, setBoundOutput] = useState(output);
   const [publishedAccess, setPublishedAccess] = useState<{
@@ -688,16 +690,24 @@ export function ProfileEditor({
       message.info("请先完成或关闭来源编辑，当前输入会保留。");
       return;
     }
-    return changed || codeDirty
-      ? confirm({
-          title: "放弃未保存的修改？",
-          description: "当前编辑尚未保存。你可以继续编辑，或放弃这次修改。",
-          confirmLabel: "放弃修改",
-          cancelLabel: "继续编辑",
-          destructive: true,
-          onConfirm: onClose,
-        })
-      : onClose();
+    if (!changed && !codeDirty) return onClose();
+    const origin = location.hash;
+    let confirmed = false;
+    return confirm({
+      title: "放弃未保存的修改？",
+      description: "当前编辑尚未保存。你可以继续编辑，或放弃这次修改。",
+      confirmLabel: "放弃修改",
+      cancelLabel: "继续编辑",
+      destructive: true,
+      onConfirm: () => {
+        confirmed = replaceView(origin);
+      },
+      onClosed: () => {
+        // Release the confirmation's focus scope before replacing the editor.
+        // A departed view/session cannot complete this deferred dismissal.
+        if (confirmed) replaceView(origin, onClose);
+      },
+    });
   };
   const actions: ActionOption[] = [
     { value: "direct", label: "直连" },

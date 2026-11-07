@@ -245,6 +245,7 @@ export function SubscriptionsPage({
   const inventoryRoot = useRef<HTMLDivElement>(null);
   const previousDetail = useRef(selectedID);
   const restoredScope = useRef<string | null>(null);
+  const editorReturnPending = useRef(false);
   const focusLabel = (element: HTMLElement) =>
     element.getAttribute("aria-label") ||
     element.getAttribute("title") ||
@@ -394,8 +395,9 @@ export function SubscriptionsPage({
   useLayoutEffect(() => {
     const scopeKey =
       profileScope === undefined ? "all" : `profile:${profileScope}`;
+    const restoringScope = restoredScope.current !== scopeKey;
     if (
-      restoredScope.current === scopeKey ||
+      (!restoringScope && !editorReturnPending.current) ||
       editor ||
       sourceDraftToken ||
       !profiles.isSuccess ||
@@ -403,6 +405,7 @@ export function SubscriptionsPage({
     )
       return;
     restoredScope.current = scopeKey;
+    editorReturnPending.current = false;
     // Detail dialogs own focus; restoring the underlying list must not steal it.
     if (!selectedID && listContext.focus) {
       const { anchor, label, tag } = listContext.focus;
@@ -428,7 +431,8 @@ export function SubscriptionsPage({
         )
         ?.focus({ preventScroll: true });
     }
-    window.scrollTo({ top: listContext.scrollY, behavior: "instant" });
+    if (restoringScope)
+      window.scrollTo({ top: listContext.scrollY, behavior: "instant" });
   });
   const updateScope = (key: "profile" | "output", value?: string) => {
     editSequence.current++;
@@ -493,6 +497,11 @@ export function SubscriptionsPage({
     copy = false,
     recovery = false,
   ) => {
+    const trigger = document.activeElement;
+    const returnToInventory =
+      trigger instanceof HTMLElement &&
+      !!inventoryRoot.current?.contains(trigger) &&
+      !!trigger.closest("[data-return-focus]");
     checkSequence.current++;
     setCheckingID(null);
     const sequence = ++editSequence.current;
@@ -510,6 +519,8 @@ export function SubscriptionsPage({
           profile.name += " 副本";
         }
         detailReady.current = false;
+        // Only an explicit inventory opener owns this same-scope return.
+        editorReturnPending.current = returnToInventory;
         setEditor({
           profile,
           isNew: !profileId || copy,
@@ -1067,6 +1078,7 @@ export function SubscriptionsPage({
           action={
             <ActionButton
               className="subscription-create-action"
+              data-return-focus="new-profile"
               leadingIcon={<Plus aria-hidden="true" />}
               onClick={() => edit()}
               variant="default"

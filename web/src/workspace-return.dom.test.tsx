@@ -806,6 +806,146 @@ it("keeps the remembered page while an uncached inventory loads on return", asyn
   ).toBeNull();
 });
 
+it.each(["#subscriptions", "#subscriptions?profile=shared"])(
+  "returns keyboard focus to New Profile after repeated local editor returns in %s",
+  async (hash) => {
+    history.replaceState(null, "", hash);
+    inventory([profile], []);
+    mount();
+    await screen.findByRole("article", { name: `分流配置 ${profile.name}` });
+    const state = { ...history.state };
+    const length = history.length;
+    const user = userEvent.setup();
+    screen.getByRole("button", { name: "新建分流配置" }).focus();
+    for (let attempt = 0; attempt < 2; attempt++) {
+      await user.keyboard("{Enter}");
+      await screen.findByRole("textbox", { name: "配置名称" });
+      screen.getByRole("button", { name: "返回" }).focus();
+      await user.keyboard("{Enter}");
+      const trigger = await screen.findByRole("button", {
+        name: "新建分流配置",
+      });
+      await waitFor(() => expect(document.activeElement).toBe(trigger));
+      expect(location.hash).toBe(hash);
+      expect(history.state).toEqual(state);
+      expect(history.length).toBe(length);
+    }
+    expect(
+      vi.mocked(fetch).mock.calls.filter(([, init]) =>
+        init?.method && init.method !== "GET",
+      ),
+    ).toEqual([]);
+  },
+);
+
+it.each(["#subscriptions", "#subscriptions?profile=shared"])(
+  "returns keyboard focus after confirmed local Profile discard in %s",
+  async (hash) => {
+    history.replaceState(null, "", hash);
+    inventory([profile], []);
+    mount();
+    await screen.findByRole("article", { name: `分流配置 ${profile.name}` });
+    const state = { ...history.state };
+    const length = history.length;
+    const user = userEvent.setup();
+    screen.getByRole("button", { name: "新建分流配置" }).focus();
+    for (let attempt = 0; attempt < 2; attempt++) {
+      await user.keyboard("{Enter}");
+      const name = await screen.findByRole("textbox", { name: "配置名称" });
+      expect((name as HTMLInputElement).value).not.toBe("Discard this local draft");
+      fireEvent.change(name, { target: { value: "Discard this local draft" } });
+      screen.getByRole("button", { name: "返回" }).focus();
+      await user.keyboard("{Enter}");
+      const decision = await screen.findByRole("alertdialog", {
+        name: "放弃未保存的修改？",
+      });
+      await waitFor(() =>
+        expect(document.activeElement).toBe(
+          within(decision).getByRole("button", { name: "继续编辑" }),
+        ),
+      );
+      await user.tab();
+      expect(document.activeElement).toBe(
+        within(decision).getByRole("button", { name: "放弃修改" }),
+      );
+      await user.keyboard("{Enter}");
+      await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+      const trigger = await screen.findByRole("button", { name: "新建分流配置" });
+      await waitFor(() => expect(document.activeElement).toBe(trigger));
+      expect(screen.queryByRole("textbox", { name: "配置名称" })).toBeNull();
+      expect(location.hash).toBe(hash);
+      expect(history.state).toEqual(state);
+      expect(history.length).toBe(length);
+    }
+    expect(
+      vi.mocked(fetch).mock.calls.filter(([, init]) =>
+        init?.method && init.method !== "GET",
+      ),
+    ).toEqual([]);
+  },
+);
+
+it.each(["return", "back"])(
+  "keeps keyboard focus in the dirty local Profile when %s is canceled",
+  async (action) => {
+    history.replaceState(null, "", "#sources");
+    inventory([profile], []);
+    mount();
+    await screen.findByRole("heading", { name: "订阅来源", level: 1 });
+    await userEvent.click(screen.getByRole("button", { name: "我的订阅" }));
+    await screen.findByRole("article", { name: `分流配置 ${profile.name}` });
+    const user = userEvent.setup();
+    screen.getByRole("button", { name: "新建分流配置" }).focus();
+    await user.keyboard("{Enter}");
+    const name = await screen.findByRole("textbox", { name: "配置名称" });
+    fireEvent.change(name, { target: { value: "Keep my local draft" } });
+    const owner = action === "return"
+      ? screen.getByRole("button", { name: "返回" })
+      : name;
+    owner.focus();
+    if (action === "return") await user.keyboard("{Enter}");
+    else await act(async () => history.back());
+    const decision = await screen.findByRole("alertdialog", {
+      name: "放弃未保存的修改？",
+    });
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        within(decision).getByRole("button", { name: "继续编辑" }),
+      ),
+    );
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+    await waitFor(() => expect(document.activeElement).toBe(owner));
+    expect((name as HTMLInputElement).value).toBe("Keep my local draft");
+    expect(location.hash).toBe("#subscriptions");
+    expect(screen.queryByRole("button", { name: "新建分流配置" })).toBeNull();
+    expect(location.href + JSON.stringify(history.state)).not.toContain(
+      "Keep my local draft",
+    );
+  },
+);
+
+it("returns to the New Profile trigger on Forward without reopening the abandoned local editor", async () => {
+  history.replaceState(null, "", "#sources");
+  inventory([profile], []);
+  mount();
+  await screen.findByRole("heading", { name: "订阅来源", level: 1 });
+  await userEvent.click(screen.getByRole("button", { name: "我的订阅" }));
+  await screen.findByRole("article", { name: `分流配置 ${profile.name}` });
+  const user = userEvent.setup();
+  screen.getByRole("button", { name: "新建分流配置" }).focus();
+  await user.keyboard("{Enter}");
+  await screen.findByRole("textbox", { name: "配置名称" });
+  await act(async () => history.back());
+  await screen.findByRole("heading", { name: "订阅来源", level: 1 });
+  expect(screen.queryByRole("textbox", { name: "配置名称" })).toBeNull();
+  await act(async () => history.forward());
+  const trigger = await screen.findByRole("button", { name: "新建分流配置" });
+  await waitFor(() => expect(document.activeElement).toBe(trigger));
+  expect(location.hash).toBe("#subscriptions");
+  expect(screen.queryByRole("textbox", { name: "配置名称" })).toBeNull();
+});
+
 it.each(["close", "back"])(
   "returns focus to the exact list trigger after detail %s",
   async (action) => {
