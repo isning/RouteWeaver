@@ -61,13 +61,18 @@ web_gate() {
 }
 api_gate() { stage 'Real HTTP API integration (no browser/Vite)' npm --prefix web run test:api; }
 browser_gate() {
-  local args=() label='Browser user tasks (Chromium)'
+  local args=() selectors=() inventory label='Browser user tasks (Chromium)'
   if [[ -n "${ROUTEWEAVER_BROWSER_SHARD:-}" ]]; then
     if [[ ! "$ROUTEWEAVER_BROWSER_SHARD" =~ ^([1-9][0-9]{0,2})/([1-9][0-9]{0,2})$ ]] || (( BASH_REMATCH[1] > BASH_REMATCH[2] )); then
       echo 'Browser shard must be a one-based index/total (index <= total, each <= 999).' >&2
       return 2
     fi
-    args=(-- "--shard=$ROUTEWEAVER_BROWSER_SHARD")
+    # Use Playwright's complete Chromium inventory, not native count-based
+    # sharding (which packs slow shared-fixture journeys into the first job).
+    # Command substitution preserves discovery/metadata/selector-check failures.
+    inventory=$(python3 scripts/browser_distribution.py "$ROUTEWEAVER_BROWSER_SHARD")
+    mapfile -t selectors <<< "$inventory"
+    args=(-- "${selectors[@]}")
     label="Browser user tasks (Chromium, shard $ROUTEWEAVER_BROWSER_SHARD only)"
   fi
   stage "$label" npm --prefix web run test:browser "${args[@]}"
