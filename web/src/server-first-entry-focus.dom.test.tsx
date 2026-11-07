@@ -78,27 +78,29 @@ async function startSelection(context: TestContext) {
   return { owner, user, editor, entry, closing, finishExit, deliver, mutations };
 }
 
-it.each(["before", "after"] as const)("keeps first-entry keyboard continuation when reveal arrives %s picker exit", async (timing, context) => {
-  const task = await startSelection(context);
-  if (timing === "after") {
-    task.finishExit(task.closing);
-    await waitFor(() => expect(document.activeElement).toBe(task.entry));
-  }
-  task.owner.assertActive();
-  await act(async () => task.deliver(json(endpoint)));
-  task.owner.assertActive();
-  const selected = task.editor.getByRole("combobox", { name: "第 1 跳端点" });
-  expect(selected.textContent).toContain("用户入口");
-  expect(task.editor.getByRole("combobox", { name: "第 1 跳服务器" }).textContent).toBe(host.name);
-  expect(task.entry.isConnected).toBe(false);
-  expect(screen.queryByRole("listbox", { hidden: true })).toBeNull();
-  await waitFor(() => expect(document.activeElement).toBe(selected));
-  task.owner.assertActive();
-  await task.user.tab();
-  task.owner.assertActive();
-  expect(document.activeElement).toBe(task.editor.getByRole("button", { name: "移除第 1 跳" }));
-  expect(task.mutations).toEqual([]);
-});
+for (const timing of ["before", "after"] as const) {
+  it(`keeps first-entry keyboard continuation when reveal arrives ${timing} picker exit`, async (context) => {
+    const task = await startSelection(context);
+    if (timing === "after") {
+      task.finishExit(task.closing);
+      await waitFor(() => expect(document.activeElement).toBe(task.entry));
+    }
+    task.owner.assertActive();
+    await act(async () => task.deliver(json(endpoint)));
+    task.owner.assertActive();
+    const selected = task.editor.getByRole("combobox", { name: "第 1 跳端点" });
+    expect(selected.textContent).toContain("用户入口");
+    expect(task.editor.getByRole("combobox", { name: "第 1 跳服务器" }).textContent).toBe(host.name);
+    expect(task.entry.isConnected).toBe(false);
+    expect(screen.queryByRole("listbox", { hidden: true })).toBeNull();
+    await waitFor(() => expect(document.activeElement).toBe(selected));
+    task.owner.assertActive();
+    await task.user.tab();
+    task.owner.assertActive();
+    expect(document.activeElement).toBe(task.editor.getByRole("button", { name: "移除第 1 跳" }));
+    expect(task.mutations).toEqual([]);
+  });
+}
 
 it("does not reclaim a newer field focus when the first-entry reveal finishes", async (context) => {
   const task = await startSelection(context);
