@@ -226,6 +226,7 @@ it.each(["selection", "pinned", "publication"] as const)("finds the displayed te
 
 it("names each reference choice independently and supports keyboard mode selection", async () => {
   const { writes } = mount();
+  const user = userEvent.setup();
   const dialog = await openTemplate();
   const group = within(dialog).getByRole("radiogroup", { name: "引用方式" });
   const copy = within(group).getByRole("radio", { name: "独立副本" });
@@ -233,16 +234,25 @@ it("names each reference choice independently and supports keyboard mode selecti
   const follow = within(group).getByRole("radio", { name: "跟随版本" });
   expect(within(group).getAllByRole("radio")).toHaveLength(3);
   expect(copy.getAttribute("aria-checked")).toBe("true");
-  await userEvent.click(copy);
-  await userEvent.keyboard("{ArrowRight}");
-  await waitFor(() => expect(document.activeElement).toBe(pinned));
-  expect(pinned.getAttribute("aria-checked")).toBe("true");
-  expect(copy.getAttribute("aria-checked")).toBe("false");
-  expect(within(dialog).getByText("固定使用所选版本，后续由你决定是否更换版本。")).toBeTruthy();
-  await userEvent.keyboard("{ArrowRight}");
-  await waitFor(() => expect(document.activeElement).toBe(follow));
-  expect(follow.getAttribute("aria-checked")).toBe("true");
-  expect(pinned.getAttribute("aria-checked")).toBe("false");
-  expect(within(dialog).getByText("有新版本时先查看差异与兼容性，再决定是否更新。")).toBeTruthy();
+  await user.click(copy);
+  async function advanceTo(next: HTMLElement, previous: HTMLElement, consequence: string) {
+    // Radix defers arrow navigation's focus. Keep the same keyboard session and
+    // release only after focus, selection and its consequence have all settled.
+    await user.keyboard("{ArrowRight>}");
+    try {
+      await waitFor(() => {
+        expect(document.activeElement).toBe(next);
+        expect(next.getAttribute("aria-checked")).toBe("true");
+        expect(previous.getAttribute("aria-checked")).toBe("false");
+        expect(within(group).getByRole("radio", { checked: true })).toBe(next);
+        expect(within(dialog).getByText(consequence)).toBeTruthy();
+      });
+    } finally {
+      await user.keyboard("{/ArrowRight}");
+    }
+    expect(next.getAttribute("aria-checked")).toBe("true");
+  }
+  await advanceTo(pinned, copy, "固定使用所选版本，后续由你决定是否更换版本。");
+  await advanceTo(follow, pinned, "有新版本时先查看差异与兼容性，再决定是否更新。");
   expect(writes).toEqual([]);
 });
