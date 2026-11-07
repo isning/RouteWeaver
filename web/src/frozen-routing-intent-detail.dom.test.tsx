@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { UIProviders } from "./ui-patterns/providers";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -10,6 +10,7 @@ import type { FrozenRoutingIntent } from "./types";
 
 beforeEach(() => {
   history.replaceState(null, "", "#subscriptions");
+  vi.spyOn(window, "scrollTo").mockImplementation(() => {});
   Object.defineProperty(window, "matchMedia", {
     configurable: true,
     value: vi.fn(() => ({
@@ -131,9 +132,8 @@ it("reads frozen rules only from the selected owner status, never from a saved d
       </UIProviders>
     </QueryClientProvider>,
   );
-  await userEvent.click(
-    await screen.findByRole("button", { name: "查看订阅 我的 MacBook" }),
-  );
+  const opener = await screen.findByRole("button", { name: "查看订阅 我的 MacBook" });
+  await userEvent.click(opener);
   const detail = await screen.findByRole("region", { name: "已发布分流" });
   expect(await within(detail).findByText("域名后缀 chatgpt.com")).toBeTruthy();
   expect(within(detail).getByText("节点「东京-已发布」")).toBeTruthy();
@@ -146,4 +146,10 @@ it("reads frozen rules only from the selected owner status, never from a saved d
   expect(paths.some((path) => /\/reveal|\/access|\/feed\//.test(path))).toBe(
     false,
   );
+  // Finish the real dismissal, including Radix's deferred focus handoff,
+  // before this suite tears down its document.
+  const dialog = screen.getByRole("dialog", { name: "我的 MacBook 的订阅详情" });
+  await userEvent.click(within(dialog).getByRole("button", { name: "关闭" }));
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  await waitFor(() => expect(document.activeElement).toBe(opener));
 });
