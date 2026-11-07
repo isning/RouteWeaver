@@ -31,7 +31,7 @@ import {
   useQueryClient,
   type UseQueryResult,
 } from "@tanstack/react-query";
-import { list, post } from "./api";
+import { APIError, list, post } from "./api";
 import type {
   ActionRef,
   Artifact,
@@ -405,7 +405,9 @@ export function TemplatesPage({ admin = false }: { admin?: boolean }) {
     version: number;
     bindings: SlotBindings;
   } | null>(null);
+  const [updateError, setUpdateError] = useState<Error | null>(null);
   const revision = useRef(0);
+  const applying = useRef<number | null>(null);
   const active = useRef(true);
   const [updateEdited, setUpdateEdited] = useState(false);
   const { confirm: confirmUpdateDiscard, confirming: updateConfirming } =
@@ -422,12 +424,13 @@ export function TemplatesPage({ admin = false }: { admin?: boolean }) {
       binding,
       slots,
       requestedVersion,
+      revisionAtRequest,
     }: {
       binding: Binding;
       slots?: SlotBindings;
       requestedVersion?: number;
+      revisionAtRequest: number;
     }) => {
-      const revisionAtRequest = revision.current;
       const versions = await client.fetchQuery({
         queryKey: ["template-versions", binding.templateId],
         queryFn: () =>
@@ -454,16 +457,23 @@ export function TemplatesPage({ admin = false }: { admin?: boolean }) {
       };
     },
     onSuccess: ({ value, revisionAtRequest, input }) => {
-      if (revisionAtRequest !== revision.current) return;
+      if (!active.current || revisionAtRequest !== revision.current) return;
       setUpdateVersion(input.version);
       setUpdateBindings(input.bindings);
       setReviewInput(input);
       setPreview(value);
     },
+    onError: (failure, request) => {
+      if (active.current && request.revisionAtRequest === revision.current)
+        setUpdateError(failure);
+    },
   });
   const apply = useMutation({
     onMutate: () => invalidateOutputInputs(client),
-    onSettled: () => invalidateOutputInputs(client),
+    onSettled: (_value, _failure, submission) => {
+      if (applying.current === submission.revision) applying.current = null;
+      invalidateOutputInputs(client);
+    },
     mutationFn: (submission: {
       bindingId: string;
       revision: number;
@@ -486,10 +496,52 @@ export function TemplatesPage({ admin = false }: { admin?: boolean }) {
       setUpdateEdited(false);
       message.success("更新已应用到草稿，已发布订阅保留原版本");
     },
+    onError: (failure, submission) => {
+      if (!active.current || submission.revision !== revision.current) return;
+      const conflict = failure instanceof APIError && failure.status === 409;
+      setUpdateError(
+        conflict &&
+          failure.message ===
+          "template or personal configuration changed; preview again before applying"
+          ? new Error(
+              "模板或草稿已变化，本次更新未应用。请重新检查后再应用。",
+            )
+          : failure,
+      );
+      if (conflict) {
+        revision.current++;
+        setPreview(null);
+        setReviewInput(null);
+      }
+    },
   });
+  const inspectUpdate = (
+    binding: Binding,
+    slots?: SlotBindings,
+    requestedVersion?: number,
+  ) => {
+    if (!active.current || applying.current !== null || updateConfirming) return;
+    revision.current++;
+    setPreview(null);
+    setReviewInput(null);
+    setUpdateError(null);
+    inspect.mutate({
+      binding,
+      slots,
+      requestedVersion,
+      revisionAtRequest: revision.current,
+    });
+  };
+  const editUpdate = () => {
+    revision.current++;
+    setUpdateEdited(true);
+    setPreview(null);
+    setReviewInput(null);
+    setUpdateError(null);
+  };
   useUnsavedChanges(!!checking && (updateEdited || apply.isPending));
   const closeUpdate = () => {
-    if (apply.isPending || updateConfirming) return;
+    if (applying.current !== null || apply.isPending || updateConfirming) return;
     const close = () => {
       revision.current++;
       setChecking(null);
@@ -649,19 +701,13 @@ export function TemplatesPage({ admin = false }: { admin?: boolean }) {
                           aria-label={`${b.mode === "follow" ? "检查更新" : "查看固定版本"} ${targetName(b)}`}
                           leadingIcon={<RotateCw aria-hidden="true" />}
                           onClick={() => {
-                            revision.current++;
                             setChecking(b);
                             setUpdateEdited(false);
                             setUpdateVersion(undefined);
                             setUpdateBindings(b.bindings || {});
-                            setPreview(null);
-                            setReviewInput(null);
                             inspect.reset();
                             apply.reset();
-                            inspect.mutate({
-                              binding: b,
-                              slots: b.bindings,
-                            });
+                            inspectUpdate(b, b.bindings);
                           }}
                           variant="outline"
                           size="sm"
@@ -742,12 +788,22 @@ export function TemplatesPage({ admin = false }: { admin?: boolean }) {
           if (!nextOpen) closeUpdate();
         }}
         pending={apply.isPending}
+        contentProps={{
+          onKeyDownCapture: (event) => {
+            if (
+              event.repeat &&
+              (event.key === "Enter" || event.key === " ") &&
+              event.target instanceof HTMLElement &&
+              event.target.closest("button")
+            )
+              event.preventDefault();
+          },
+        }}
         size="lg"
       >
         <ErrorNotice
           error={
-            inspect.error ||
-            apply.error ||
+            updateError ||
             updateVersions.error ||
             profiles.error ||
             updateEndpoints.error
@@ -772,9 +828,7 @@ export function TemplatesPage({ admin = false }: { admin?: boolean }) {
                 }))}
                 onValueChange={(value) => {
                   if (value === undefined) return;
-                  revision.current++;
-                  setUpdateEdited(true);
-                  setPreview(null);
+                  editUpdate();
                   setUpdateVersion(value);
                   const spec = updateVersions.data?.find(
                     (t) => t.version === value,
@@ -806,9 +860,7 @@ export function TemplatesPage({ admin = false }: { admin?: boolean }) {
                       label: e.name,
                     }))}
                     onValueChange={(value) => {
-                      revision.current++;
-                      setUpdateEdited(true);
-                      setPreview(null);
+                      editUpdate();
                       const next = { ...updateBindings.endpoints };
                       if (value === undefined) delete next[slot.id];
                       else next[slot.id] = value;
@@ -831,9 +883,7 @@ export function TemplatesPage({ admin = false }: { admin?: boolean }) {
                       label: r.name || r.id,
                     }))}
                     onValueChange={(value) => {
-                      revision.current++;
-                      setUpdateEdited(true);
-                      setPreview(null);
+                      editUpdate();
                       const next = { ...updateBindings.resources };
                       if (value === undefined) delete next[slot.id];
                       else next[slot.id] = value;
@@ -844,17 +894,15 @@ export function TemplatesPage({ admin = false }: { admin?: boolean }) {
               ))}
             </div>
           )}
-          {checking && !preview && (
+          {checking && (
             <ActionButton
-              onClick={() =>
-                inspect.mutate({
-                  binding: checking,
-                  slots: updateBindings,
-                  requestedVersion: updateVersion,
-                })
-              }
+              onClick={(event) => {
+                if (event.detail <= 1 && !inspect.isPending)
+                  inspectUpdate(checking, updateBindings, updateVersion);
+              }}
               variant="outline"
               pending={!!inspect.isPending}
+              disabled={apply.isPending || updateConfirming}
             >
               检查此绑定的更新
             </ActionButton>
@@ -940,8 +988,11 @@ export function TemplatesPage({ admin = false }: { admin?: boolean }) {
                     !preview.hasUpdate ||
                     !preview.previewDigest
                   }
-                  onClick={() => {
+                  onClick={(event) => {
                     if (
+                      event.detail > 1 ||
+                      !active.current ||
+                      applying.current !== null ||
                       !checking ||
                       !reviewInput ||
                       !preview.previewDigest ||
@@ -949,6 +1000,7 @@ export function TemplatesPage({ admin = false }: { admin?: boolean }) {
                       updateConfirming
                     )
                       return;
+                    applying.current = revision.current;
                     apply.mutate({
                       bindingId: checking.id,
                       revision: revision.current,

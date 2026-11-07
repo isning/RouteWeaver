@@ -3,6 +3,7 @@ import { expect, type APIRequestContext } from "@playwright/test";
 import {
   initialPassword,
   inviteSyntheticAccount,
+  requireLoopback,
   signInAPI,
 } from "./account-security-backend";
 
@@ -32,7 +33,20 @@ export async function templateFollowFixture(
       schemaVersion: "1.0",
       id,
       name: "Template follow",
-      endpoints: [],
+      endpoints: [
+        {
+          id: "primary",
+          name: "个人常用连接",
+          origin: "imported",
+          connection: { protocol: "socks", host: "192.0.2.20", port: 1080 },
+        },
+        {
+          id: "alternate",
+          name: "个人备用连接",
+          origin: "imported",
+          connection: { protocol: "socks", host: "192.0.2.30", port: 1080 },
+        },
+      ],
       groups: [],
       rules: [],
       resources: [],
@@ -45,7 +59,12 @@ export async function templateFollowFixture(
     data: profile,
   });
   expect(saved.status()).toBe(200);
+  // Derive the allowed origin from a successful non-secret fixture request.
+  // Neither a caller-supplied feed URL nor a redirect may choose a destination.
+  const origin = new URL(saved.url()).origin;
+  requireLoopback(origin);
   const spec = {
+    endpointSlots: [{ id: "exit", name: "模板连接" }],
     groups: [
       {
         id: "proxy",
@@ -74,7 +93,12 @@ export async function templateFollowFixture(
   await publishTemplate(0);
   const selected = await owner.post(`/api/me/templates/${id}/select`, {
     headers,
-    data: { mode: "follow", version: 1, targetId: id },
+    data: {
+      mode: "follow",
+      version: 1,
+      targetId: id,
+      bindings: { endpoints: { exit: "primary" }, resources: {} },
+    },
   });
   expect(selected.status()).toBe(200);
   const bindingId = (await selected.json()).binding.id;
@@ -91,9 +115,27 @@ export async function templateFollowFixture(
     outputs.push(await response.json());
   }
   async function feed(output: { feedPath: string }) {
-    const response = await owner.get(output.feedPath);
-    expect(response.status()).toBe(200);
-    return response.text();
+    // Playwright can include bearer URLs in transport diagnostics even with
+    // traces off. Keep delivery reads uninstrumented and never retain the URL,
+    // body, or original transport error in a failure message or error cause.
+    let result: { status: number; body: string };
+    try {
+      const url = new URL(output.feedPath, origin);
+      if (
+        url.origin !== origin ||
+        url.protocol !== "http:" ||
+        url.username ||
+        url.password ||
+        !url.pathname.startsWith("/feed/")
+      )
+        throw new Error();
+      const response = await globalThis.fetch(url, { redirect: "manual" });
+      result = { status: response.status, body: await response.text() };
+    } catch {
+      throw new Error("Cannot retrieve synthetic subscription delivery.");
+    }
+    expect(result.status, "Synthetic subscription delivery status").toBe(200);
+    return result.body;
   }
   const before = await Promise.all(outputs.map(feed));
   async function draft() {
@@ -124,6 +166,11 @@ export async function templateFollowFixture(
       id: "block",
       match: { op: "domain-suffix", value: "blocked.example" },
       action: { kind: "reject" },
+    },
+    {
+      id: "bound",
+      match: { op: "domain-suffix", value: "bound.example" },
+      action: { kind: "endpoint", ref: "exit" },
     },
   ];
   await publishTemplate(1);
