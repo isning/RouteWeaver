@@ -614,5 +614,18 @@ func (h *server) deleteTenant(owner, kind, id string) error {
 			}
 		}
 	}
-	return h.s.CompareSetsAndRemoveRecord(store.TenantKind(owner, kind), id, inputs.compares(), inputs.sets)
+	removals := []store.RecordDelete{{Kind: store.TenantKind(owner, kind), ID: id}}
+	if kind == "profiles" || kind == "collections" {
+		bindingID := kind + "_" + id
+		bindingKind := store.TenantKind(owner, "template-bindings")
+		// Fence absence too: a concurrent selection must not leave a relationship
+		// behind after its target is deleted, even if the draft itself is unchanged.
+		if e := inputs.expectRecord(owner, "template-bindings", bindingID); e != nil {
+			return e
+		}
+		if inputs.records[bindingKind+"\x00"+bindingID].Expected != nil {
+			removals = append(removals, store.RecordDelete{Kind: bindingKind, ID: bindingID})
+		}
+	}
+	return h.s.CompareSetsAndRemoveRecords(removals, inputs.compares(), inputs.sets)
 }
