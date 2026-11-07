@@ -56,6 +56,14 @@ func (h *server) importRuleResource(w http.ResponseWriter, r *http.Request) {
 		storeError(w, err)
 		return
 	}
+	// An explicitly supplied precondition must name this owner's complete opened
+	// record. Reject it before any fetch; the same snapshot is fenced at commit.
+	if matches, supplied := r.Header["If-Match"]; supplied {
+		if len(matches) != 1 || len(previous) == 0 || !sameReviewToken(matches[0], h.recordRevision(store.TenantKind(owner, "resources"), in.Resource.ID, previous)) {
+			ruleResourceSaveError(w, store.ErrConflict)
+			return
+		}
+	}
 	var body []byte
 	var sourceURL string
 	if in.Fetch {
@@ -89,10 +97,26 @@ func (h *server) importRuleResource(w http.ResponseWriter, r *http.Request) {
 	}
 	record := ownedRuleResource{RuleResource: file.Resource, SourceURL: sourceURL, AcceptedAt: time.Now().UTC(), Inspection: file.Inspection, RefreshStatus: "accepted"}
 	if err = h.putAcceptedResource(owner, previous, record, file); err != nil {
-		storeError(w, err)
+		ruleResourceSaveError(w, err)
 		return
 	}
-	writeJSON(w, 201, resourceMetadata(record))
+	writeJSON(w, 201, h.acceptedResourceView(owner, record))
+}
+
+func ruleResourceSaveError(w http.ResponseWriter, err error) {
+	if errors.Is(err, store.ErrConflict) {
+		writeJSON(w, http.StatusConflict, map[string]string{
+			"code":    "RULE_RESOURCE_CHANGED",
+			"message": "规则文件已变化，当前输入和所选文件未保存。请保留当前输入，或放弃修改后重新打开最新版本。",
+		})
+		return
+	}
+	storeError(w, err)
+}
+
+func (h *server) acceptedResourceView(owner string, record ownedRuleResource) json.RawMessage {
+	raw, _ := json.Marshal(record)
+	return h.tenantRecordView(owner, "resources", raw, false)
 }
 
 func resourceMetadata(v ownedRuleResource) any {
@@ -173,10 +197,10 @@ func (h *server) refreshRuleResource(w http.ResponseWriter, r *http.Request) {
 	record.LastRefreshError = ""
 	record.Inspection = file.Inspection
 	if err = h.putAcceptedResource(owner, previous, record, file); err != nil {
-		storeError(w, err)
+		ruleResourceSaveError(w, err)
 		return
 	}
-	writeJSON(w, 200, resourceMetadata(record))
+	writeJSON(w, 200, h.acceptedResourceView(owner, record))
 }
 
 func resolveAcceptedRuleFile(owner string, r domain.RuleResource, reader tenantRecordReader) (resources.RuleFile, error) {

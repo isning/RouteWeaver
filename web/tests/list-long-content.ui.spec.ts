@@ -39,6 +39,7 @@ async function setup(page: Page, refreshJourney = false) {
       id: "retained-rules", name: "已接纳的规则文件", revision: "1",
       format: "mihomo-yaml", behavior: "domain", location: "inline",
       updatePolicy: "pinned", acceptedVersion: "accepted-1",
+      revisionToken: "rw1_retained_initial",
       sizeBytes: 2450, canRefresh: true, refreshStatus: refreshJourney ? "accepted" : "failed",
       visibility: "private",
     }],
@@ -53,8 +54,9 @@ async function setup(page: Page, refreshJourney = false) {
     if (refreshJourney && request.method() === "POST" && url.pathname === "/api/me/resources/retained-rules/refresh") {
       refreshRequests.push(url.pathname);
       const failed = refreshRequests.length === 1;
-      const resources = responses["/api/me/resources"] as { refreshStatus: string }[];
+      const resources = responses["/api/me/resources"] as { refreshStatus: string; revisionToken: string }[];
       resources[0].refreshStatus = failed ? "failed" : "accepted";
+      resources[0].revisionToken = `rw1_retained_refresh_${refreshRequests.length}`;
       return route.fulfill({ status: failed ? 503 : 200, json: failed ? { error: refreshRequestFailure } : {} });
     }
     if (request.method() !== "GET" || !(url.pathname in responses)) {

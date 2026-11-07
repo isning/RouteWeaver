@@ -129,10 +129,12 @@ it("offers an authorized ZIP bundle download instead of a broken config subscrip
 });
 it("lets the server detect the replacement file version instead of resubmitting hidden prior format metadata", async () => {
   let body: any;
+  let revision: string | null = null;
   vi.stubGlobal(
     "fetch",
     vi.fn(async (_url, init) => {
       body = JSON.parse(init.body);
+      revision = new Headers(init.headers).get("If-Match");
       return json(
         { ...body.resource, formatVersion: 5, acceptedVersion: "new-version" },
         201,
@@ -150,6 +152,7 @@ it("lets the server detect the replacement file version instead of resubmitting 
         revision: "old",
         digest: "sha256:old",
         acceptedVersion: "old-version",
+        revisionToken: "rw1_opened",
         sizeBytes: 30,
         updatePolicy: "pinned",
       }}
@@ -166,4 +169,5 @@ it("lets the server detect the replacement file version instead of resubmitting 
   expect(body.resource.formatVersion).toBeUndefined();
   expect(body.resource.acceptedVersion).toBeUndefined();
   expect(body.resource.id).toBe("r1");
+  expect(revision).toBe("rw1_opened");
 });

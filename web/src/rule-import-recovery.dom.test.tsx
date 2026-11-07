@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { UIProviders } from "./ui-patterns/providers";
 import { RuleFileImport } from "./RuleFileImport";
 import { installSessionTransport } from "./api";
+import type { RuleResource } from "./types";
 
 const json = (value: unknown, status = 200) => new Response(JSON.stringify(value), {
   status, headers: { "Content-Type": "application/json" },
@@ -49,14 +50,14 @@ afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
 });
-function mount(onClose = vi.fn()) {
+function mount(onClose = vi.fn(), initial?: RuleResource) {
   const client = new QueryClient({ defaultOptions: {
     queries: { retry: false }, mutations: { retry: false },
   } });
   clients.push(client);
   return { ...render(
     <QueryClientProvider client={client}>
-      <UIProviders><RuleFileImport onClose={onClose} /></UIProviders>
+      <UIProviders><RuleFileImport initial={initial} onClose={onClose} /></UIProviders>
     </QueryClientProvider>,
   ), onClose };
 }
@@ -252,4 +253,49 @@ it("recovers from a synchronous browser read failure without losing the selected
   await waitFor(() => expect(onClose).toHaveBeenCalledOnce());
   expect(writes).toHaveLength(1);
   expect(atob(writes[0].contentBase64)).toBe("retried bytes");
+});
+
+const openedResource: RuleResource = {
+  id: "rules", name: "Opened rules", format: "mihomo-yaml", behavior: "domain",
+  location: "local", revision: "1", digest: "sha256:opened", updatePolicy: "pinned",
+  acceptedVersion: "accepted-old", revisionToken: "rw1_opened",
+};
+
+it("keeps the opened revision and draft on repeated stale replacement attempts", async () => {
+  const writes: { headers: Headers; value: any }[] = [];
+  vi.stubGlobal("fetch", vi.fn(async (_url, init) => {
+    writes.push({ headers: new Headers(init.headers), value: JSON.parse(init.body) });
+    return json({ code: "RULE_RESOURCE_CHANGED", message: "规则文件已变化，请重新打开最新版本。" }, 409);
+  }));
+  const { onClose } = mount(vi.fn(), openedResource);
+  await choose("replacement.yaml");
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await userEvent.click(saveButton());
+    await waitFor(() => expect(reads).toHaveLength(attempt + 1));
+    await act(async () => reads[attempt].succeed("payload:\n  - replacement.example\n"));
+    await screen.findByText("规则文件已变化，请重新打开最新版本。");
+    expect((screen.getByLabelText("导入资源名称") as HTMLInputElement).value).toBe("Private rules");
+    expect(screen.getByText("replacement.yaml")).toBeTruthy();
+  }
+  expect(writes).toHaveLength(2);
+  for (const write of writes) {
+    expect(write.headers.get("If-Match")).toBe("rw1_opened");
+    expect(write.value.resource.revisionToken).toBeUndefined();
+    expect(write.value.resource.acceptedVersion).toBeUndefined();
+  }
+  expect(writes[1].value).toEqual(writes[0].value);
+  expect(onClose).not.toHaveBeenCalled();
+});
+
+it("fails closed when an existing rule file has no opened revision", async () => {
+  const fetcher = vi.fn();
+  vi.stubGlobal("fetch", fetcher);
+  const { onClose } = mount(vi.fn(), { ...openedResource, revisionToken: undefined });
+  await choose("replacement.yaml");
+  await userEvent.click(saveButton());
+  await screen.findByText("无法确认已打开的规则文件版本。当前输入已保留，请关闭后重新打开规则文件。");
+  expect(reads).toHaveLength(0);
+  expect(fetcher).not.toHaveBeenCalled();
+  expect(screen.getByText("replacement.yaml")).toBeTruthy();
+  expect(onClose).not.toHaveBeenCalled();
 });

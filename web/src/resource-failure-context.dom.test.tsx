@@ -63,6 +63,7 @@ it("keeps one current refresh error, restores row context, and clears failure af
               location: "remote",
               updatePolicy: "pinned",
               acceptedVersion: "accepted-1",
+              revisionToken: `rw1_retained_refresh_${refreshes}`,
               sizeBytes: 2450,
               canRefresh: true,
               refreshStatus: state,

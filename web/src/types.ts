@@ -267,6 +267,7 @@ export interface Rule {
   action: ActionRef;
 }
 export interface RuleResource {
+  revisionToken?: string;
   acceptedVersion?: string;
   sizeBytes?: number;
   canRefresh?: boolean;

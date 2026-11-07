@@ -70,6 +70,10 @@ export function RuleFileImport({
     [fileSelected, setFileSelected] = useState(false),
     [error, setError] = useState<Error | null>(null),
     [form] = useForm();
+  // Keep the opened record's precondition for this dialog's entire lifetime.
+  const [openedRevision] = useState(() =>
+    initial ? initial.revisionToken ?? "" : undefined,
+  );
   const [initialValues] = useState(() => ({
     name: initial?.name || "",
     format: initial?.format || "mihomo-yaml",
@@ -119,6 +123,10 @@ export function RuleFileImport({
     }) => {
       const stillCurrent = () => active.current && lifetime.current === owner;
       if (!stillCurrent()) throw new Error("文件导入已取消。");
+      if (openedRevision === "")
+        throw new Error(
+          "无法确认已打开的规则文件版本。当前输入已保留，请关闭后重新打开规则文件。",
+        );
       const postFile = prepareFilePost(stillCurrent);
       const resource = {
         id,
@@ -147,12 +155,14 @@ export function RuleFileImport({
         }
       }
       if (!stillCurrent()) throw new Error("文件导入已取消。");
-      return postFile<RuleResource>("/me/resources/import", {
-        resource,
-        ...(mode === "fetch"
-          ? { fetch: true }
-          : { contentBase64 }),
-      });
+      return postFile<RuleResource>(
+        "/me/resources/import",
+        {
+          resource,
+          ...(mode === "fetch" ? { fetch: true } : { contentBase64 }),
+        },
+        openedRevision === undefined ? undefined : { "If-Match": openedRevision },
+      );
     },
     onSuccess: (_result, { owner }) => {
       client.invalidateQueries({ queryKey: ["resources"] });
@@ -161,6 +171,7 @@ export function RuleFileImport({
       setOpen(false);
     },
     onError: (error, { owner }) => {
+      client.invalidateQueries({ queryKey: ["resources"] });
       if (active.current && lifetime.current === owner) setError(error);
     },
   });

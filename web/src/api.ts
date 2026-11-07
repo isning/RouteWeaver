@@ -260,7 +260,7 @@ export function postArchive<T>(
 /** Keep an asynchronous file preparation tied to the authority that began it. */
 export function prepareFilePost(isCurrent?: () => boolean) {
   const guard = sessionTransport?.beforeRequest();
-  return async <T>(path: string, value: unknown): Promise<T> => {
+  return async <T>(path: string, value: unknown, headers?: HeadersInit): Promise<T> => {
     try {
       await guard?.waitForResponse();
       // No await between this final scope check and dispatching the POST.
@@ -274,7 +274,7 @@ export function prepareFilePost(isCurrent?: () => boolean) {
     // Recheck dialog ownership after the session wait, immediately before dispatch.
     if (isCurrent && !isCurrent())
       throw new APIError("文件导入已取消，请重新选择文件。", 409);
-    return post<T>(path, value);
+    return request<T>(path, { method: "POST", body: JSON.stringify(value), headers });
   };
 }
 
