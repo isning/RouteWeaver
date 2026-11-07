@@ -158,7 +158,7 @@ for (const width of [1440, 390]) {
     await editor.getByRole("button", { name: "读取最新来源", exact: true }).click();
     await page.getByRole("alertdialog", { name: "放弃当前修改并读取最新来源？", exact: true })
       .getByRole("button", { name: "放弃修改并读取", exact: true }).click();
-    await expect(editor.getByLabel("订阅地址")).toHaveValue(current.url);
+    await expect(editor.getByLabel("订阅地址", { exact: true })).toHaveValue(current.url);
     await expect(editor.getByLabel("来源名称")).toBeFocused();
     await expect(editor.getByRole("combobox", { name: "更新应用方式", exact: true })).toHaveText("手动应用");
     await editor.getByLabel("来源名称").fill(`${name} fresh`);
