@@ -101,9 +101,10 @@ for (const operation of ["rotate", "revoke"] as const) {
       expect(!!opened.accessRevision, "Publication has an access revision").toBe(true);
       await page.reload();
       await waitForConfirmedWorkspace(page);
-      // Keep the real sidebar navigation: default subscriptions may have an
-      // empty hash, and accepting #subscriptions must renew new action leases.
+      // The current-page sidebar action preserves the default empty hash.
+      // Confirmations must work on this accepted entry without normalizing it.
       await navigateWorkspace(page, "我的订阅");
+      expect(new URL(page.url()).hash === "", "Default subscription entry remains hashless").toBe(true);
       const openDecision = async () => {
         await page.getByRole("button", { name: `管理 ${name}`, exact: true }).click();
         await page.getByRole("menuitem", {

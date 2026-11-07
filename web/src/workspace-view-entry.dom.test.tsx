@@ -18,6 +18,9 @@ function View() {
   return (
     <section aria-label="Local view">
       <output>{selection}</output>
+      <button onClick={() => replace(location.hash, () => setSelection("completed"))}>
+        Complete current entry
+      </button>
       <button
         onClick={() => {
           setSelection("one");
@@ -58,7 +61,7 @@ function View() {
 }
 function Workspace() {
   const controller = useRef<WorkspaceHistory | null>(null);
-  const [route, setRoute] = useState(location.hash.split("?")[0]);
+  const [route, setRoute] = useState(location.hash.split("?")[0] || "#published-routes");
   const [active, setActive] = useState(true);
   const activeRef = useRef(active);
   activeRef.current = active;
@@ -193,8 +196,8 @@ it("an active originating view accepts its complete asynchronous result", async 
   expect(screen.getByText("late", { selector: "output" })).toBeTruthy();
 });
 
-it("a same-hash completion consumes its original lease once without creating history", () => {
-  history.replaceState(null, "", "#published-routes?line=one");
+it.each(["", "#published-routes?line=one"])("a same-hash completion consumes its original lease once without creating history (%s)", (hash) => {
+  history.replaceState(null, "", `${location.pathname}${location.search}${hash}`);
   const controller = createWorkspaceHistory({
     isDirty: () => false,
     confirm: () => {},
@@ -205,6 +208,8 @@ it("a same-hash completion consumes its original lease once without creating his
     const originalState = history.state;
     const finish = controller.bindView(location.hash);
     let completions = 0;
+    expect(finish(location.hash)).toBe(true);
+    expect(finish(location.hash)).toBe(true);
     expect(
       finish(location.hash, () => {
         completions++;
@@ -241,4 +246,45 @@ it.each([false, true])("renews current actions after same-page navigation while 
   await act(async () => complete?.());
   expect(location.hash).toBe("#published-routes?line=late");
   expect(screen.getByText("late", { selector: "output" })).toBeTruthy();
+});
+
+
+it("completes a new action on the default empty-hash workspace entry under StrictMode", async () => {
+  history.replaceState(null, "", location.pathname + location.search);
+  render(<StrictMode><Workspace /></StrictMode>);
+  const length = history.length;
+  const state = history.state;
+  await userEvent.click(screen.getByRole("button", { name: "Complete current entry" }));
+  expect(screen.getByText("completed", { selector: "output" })).toBeTruthy();
+  expect(location.hash).toBe("");
+  expect(history.length).toBe(length);
+  expect(history.state).toEqual(state);
+});
+
+it("empty-entry ownership rejects foreign routes, suspension and stale callbacks after returning", () => {
+  history.replaceState(null, "", location.pathname + location.search);
+  let active = true;
+  const controller = createWorkspaceHistory({ isDirty: () => false, isActive: () => active, confirm: () => {}, accept: () => {} });
+  try {
+    const old = controller.bindView("");
+    let completions = 0;
+    expect(old("#sources", () => { completions++; })).toBe(false);
+    expect(old("https://example.invalid", () => { completions++; })).toBe(false);
+    controller.navigate("#sources");
+    controller.navigate("");
+    expect(location.hash).toBe("");
+    expect(old("", () => { completions++; })).toBe(false);
+    expect(controller.bindView("")("", () => { completions++; })).toBe(true);
+    const beforePause = controller.bindView("");
+    active = false;
+    expect(beforePause("", () => { completions++; })).toBe(false);
+    controller.suspend();
+    active = true;
+    controller.resume();
+    expect(beforePause("", () => { completions++; })).toBe(false);
+    expect(controller.bindView("")("", () => { completions++; })).toBe(true);
+    expect(completions).toBe(2);
+  } finally {
+    controller.dispose();
+  }
 });

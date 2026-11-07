@@ -359,8 +359,10 @@ export function createWorkspaceHistory(
         )
           return false;
         // This is local view synchronization, not a new route or a second discard decision.
+        // The default workspace at / owns the empty hash. It may complete an
+        // action in that same entry, but cannot replace a different route.
         if (
-          !hash.startsWith("#") ||
+          (hash !== "" && !hash.startsWith("#")) ||
           hash.split("?")[0] !== expectedHash.split("?")[0]
         )
           return false;
