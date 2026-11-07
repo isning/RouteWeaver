@@ -605,7 +605,8 @@ function mountEntries(count = 1, managed = true) {
         return pending;
       }
       reads.push(path);
-      if (path.endsWith("/effective-policy")) return json({ userId: member.id, routeIds: [line.id] });
+      const policyOwner = /^\/api\/users\/([^/]+)\/effective-policy$/.exec(path);
+      if (policyOwner) return json({ userId: decodeURIComponent(policyOwner[1]), routeIds: [line.id] });
       if (path.endsWith("/entries"))
         return json(
           Array.from({ length: count }, (_, i) => ({

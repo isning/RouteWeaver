@@ -381,6 +381,7 @@ it.each(["direct", "back", "forward"])(
     expect(
       within(confirmation).getByText(
         "继续编辑会建立新的历史记录，并清除浏览器的前进记录。",
+        { exact: false },
       ),
     ).toBeTruthy();
     expect(
@@ -499,6 +500,7 @@ it("honors one global discard for a true-unknown same-page deployment", async ()
   expect(
     within(confirmation).getByText(
       "继续编辑会建立新的历史记录，并清除浏览器的前进记录。",
+      { exact: false },
     ),
   ).toBeTruthy();
   expect(

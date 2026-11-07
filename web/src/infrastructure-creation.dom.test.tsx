@@ -21,6 +21,7 @@ import userEvent from "@testing-library/user-event";
 import { ConfirmationProvider } from "@/ui-patterns/confirmations";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ServersPage } from "./Infrastructure";
+import { SessionBoundary } from "./SessionBoundary";
 import { getNavigationWarning, hasUnsavedChanges } from "./navigation";
 import type { CoreInstance, HostRecord, ManagedEndpoint } from "./types";
 import { ownedClickScenario } from "./test-support/owned-click-scenario";
@@ -74,6 +75,10 @@ function inventoryAPI({
     "fetch",
     vi.fn(async (url, init) => {
       const path = String(url);
+      if (path === "/api/auth/me") return json({
+        user: { id: "fixture-admin", name: "Fixture admin", role: "admin" },
+        csrfToken: "synthetic-session",
+      });
       if (path.endsWith("/impact"))
         return json({
           endpoint: JSON.parse(init.body),
@@ -110,14 +115,16 @@ function inventoryAPI({
   );
   return writes;
 }
-function mount() {
+function mount(withSession = false) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   return render(
     <QueryClientProvider client={client}>
       <ConfirmationProvider>
-        <ServersPage />
+        {withSession
+          ? <SessionBoundary login={() => <p>Login required</p>}><ServersPage /></SessionBoundary>
+          : <ServersPage />}
       </ConfirmationProvider>
     </QueryClientProvider>,
   );
@@ -681,8 +688,8 @@ describe("infrastructure creation user tasks", () => {
   });
 
   it("keeps resource configuration and connection diagnostics reachable below setup", async () => {
-    inventoryAPI();
-    mount();
+    const writes = inventoryAPI();
+    mount(true);
     const user = userEvent.setup();
     await user.click(await screen.findByRole("button", { name: "Tokyo" }));
     const drawer = within(screen.getByRole("dialog", { name: "Tokyo" }));
@@ -699,9 +706,17 @@ describe("infrastructure creation user tasks", () => {
     expect(
       await drawer.findByRole("button", { name: "登记测试目标" }),
     ).toBeTruthy();
-    expect(
-      drawer.getByRole("button", { name: "新建测试" }).hasAttribute("disabled"),
-    ).toBe(true);
+    // The launcher stays available for recovery, but a new test still needs
+    // a registered target. Exercise validation under an active admin session.
+    await user.click(drawer.getByRole("button", { name: "新建测试" }));
+    const testDialog = await screen.findByRole("dialog", { name: "新建连接测试" });
+    const testForm = within(testDialog);
+    await user.click(testForm.getByRole("button", { name: "提交测试" }));
+    await waitFor(() => expect(testForm.getByRole("combobox", { name: "授权目标" }).getAttribute("aria-invalid")).toBe("true"));
+    expect(writes).toEqual([]);
+    await user.click(testForm.getByRole("button", { name: "取消" }));
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "新建连接测试" })).toBeNull());
+    expect(writes).toEqual([]);
     await user.click(drawer.getByRole("button", { name: "技术标识" }));
     expect(drawer.getByText("服务器 ID：host-tyo")).toBeTruthy();
   });

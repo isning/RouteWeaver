@@ -67,7 +67,7 @@ function inventory(profiles: Profile[], outputs: Output[]) {
       calls.push(path);
       if (path.endsWith("/auth/me"))
         return json({
-          user: { id: "account-a", name: "A", role: "member" },
+          user: { id: "account-a", name: "A", role: "user" },
           csrfToken: "a",
         });
       if (path.endsWith("/overview"))
@@ -597,7 +597,7 @@ it("defers native Back while the same account is checked, then asks before aband
   await act(async () => {
     complete!(
       json({
-        user: { id: "account-a", name: "A", role: "member" },
+        user: { id: "account-a", name: "A", role: "user" },
         csrfToken: "a",
       }),
     );
@@ -868,7 +868,7 @@ it("retains only nonprivate history proof through logout and B login, not A's li
     user: {
       id: `account-${account}`,
       name: account.toUpperCase(),
-      role: "member",
+      role: "user",
     },
     csrfToken: account,
   });
