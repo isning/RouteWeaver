@@ -269,6 +269,8 @@ jobs:
             web/test-results/*/group-access-evidence-*.json
             web/test-results/*/fleet-creation-recovery-*.png
             web/test-results/*/fleet-creation-recovery-*.json
+            web/test-results/*/settings-edit-journey-*.png
+            web/test-results/*/settings-edit-journey-*.json
           if-no-files-found: ignore
           retention-days: 7
 
