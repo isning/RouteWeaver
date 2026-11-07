@@ -98,6 +98,20 @@ func TestBackupAdminPreviewConfirmAndFreshRestoreAtHTTPSeam(t *testing.T) {
 	if status != 400 {
 		t.Fatalf("wrong password: %d %s", status, raw)
 	}
+	var rejected map[string]string
+	if err = json.Unmarshal(raw, &rejected); err != nil || rejected["reason"] != "backup_archive_unverified" || rejected["detail"] != "backup cannot be authenticated or is incomplete; check the passphrase and file" {
+		t.Fatalf("wrong-password recovery reason: %s (%v)", raw, err)
+	}
+	status, raw, _ = send("/api/admin/backups/preview", map[string]string{"password": pass, "archive": base64.StdEncoding.EncodeToString([]byte("incomplete archive"))}, token)
+	rejected = nil
+	if err = json.Unmarshal(raw, &rejected); status != 400 || err != nil || rejected["reason"] != "backup_archive_unverified" {
+		t.Fatalf("unverified file has the same recovery reason: %d %s (%v)", status, raw, err)
+	}
+	status, raw, _ = send("/api/admin/backups/preview", map[string]string{"password": "short", "archive": archive}, token)
+	rejected = nil
+	if err = json.Unmarshal(raw, &rejected); status != 400 || err != nil || rejected["reason"] != "" || rejected["detail"] != "backup passphrase must contain at least 12 characters and at most 1024 bytes" {
+		t.Fatalf("different validation failure keeps its detail: %d %s (%v)", status, raw, err)
+	}
 	if _, err = os.Stat(restoreDir); !os.IsNotExist(err) {
 		t.Fatal("failed preview mutated filesystem")
 	}

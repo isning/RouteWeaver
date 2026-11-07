@@ -251,7 +251,7 @@ export const list = <T>(path: string) =>
     Array.isArray(result) ? result : (result?.items ?? []),
   );
 
-export function postArchive<T>(
+export async function postArchive<T>(
   path: string,
   metadata: object,
   archive: File,
@@ -259,7 +259,26 @@ export function postArchive<T>(
   const body = new FormData();
   body.append("metadata", JSON.stringify(metadata));
   body.append("archive", archive);
-  return request<T>(path, { method: "POST", body });
+  try {
+    return await request<T>(path, { method: "POST", body });
+  } catch (error) {
+    if (
+      path === "/admin/backups/preview" &&
+      error instanceof APIError &&
+      error.status === 400 &&
+      typeof error.details === "object" &&
+      error.details !== null &&
+      "reason" in error.details &&
+      error.details.reason === "backup_archive_unverified"
+    ) {
+      throw new APIError(
+        "备份无法验证。请核对密码，并确认文件完整后重试。",
+        error.status,
+        error.details,
+      );
+    }
+    throw error;
+  }
 }
 
 /** Keep an asynchronous file preparation tied to the authority that began it. */

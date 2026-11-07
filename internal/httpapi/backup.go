@@ -178,6 +178,13 @@ func (h *server) registerBackupWithOperations(r chi.Router, create func(context.
 		prepared, err := backup.PreviewStream(r.Context(), archive, in.Password, limits)
 		in.Password = ""
 		if err != nil {
+			if errors.Is(err, backup.ErrInvalid) {
+				writeJSON(w, http.StatusBadRequest, map[string]string{
+					"reason": "backup_archive_unverified",
+					"detail": err.Error(),
+				})
+				return
+			}
 			fail(w, 400, err.Error())
 			return
 		}
