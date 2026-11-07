@@ -2052,7 +2052,12 @@ function Settings({
               className="space-y-4 border-b px-4 py-5 sm:px-5"
             >
               <ErrorNotice error={save.error} />
-              <AppField name="name" label="平台名称" className="max-w-xl">
+              <AppField
+                name="name"
+                label="平台名称"
+                rules={[{ required: true, message: "请填写平台名称" }]}
+                className="max-w-xl"
+              >
                 <Input ref={nameInput} />
               </AppField>
               <div className="flex flex-wrap gap-2">

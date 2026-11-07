@@ -108,6 +108,31 @@ it("reads accepted platform settings first, edits one name, and cancels without 
   expect(writes).toEqual([]);
 });
 
+it("keeps an empty platform name in its field until corrected without submitting fixed policies", async () => {
+  const task = mountSettings();
+  await userEvent.click(
+    await screen.findByRole("button", { name: "编辑平台名称" }),
+  );
+  const field = screen.getByRole("textbox", { name: "平台名称" });
+  await userEvent.clear(field);
+  await userEvent.click(screen.getByRole("button", { name: "保存设置" }));
+  const error = await screen.findByText("请填写平台名称");
+  expect(field.getAttribute("aria-invalid")).toBe("true");
+  expect(field.getAttribute("aria-describedby")?.split(/\s+/)).toContain(error.id);
+  expect(task.writes).toEqual([]);
+  expect(hasUnsavedChanges()).toBe(true);
+
+  await userEvent.type(field, "Corrected platform");
+  await userEvent.click(screen.getByRole("button", { name: "保存设置" }));
+  expect(task.writes).toEqual([
+    { name: "Corrected platform", registration: "invite", timezone: "UTC+8" },
+  ]);
+  await task.finish(task.writes[0]);
+  expect(screen.getByText("Corrected platform")).toBeTruthy();
+  expect(screen.queryByText("请填写平台名称")).toBeNull();
+  expect(hasUnsavedChanges()).toBe(false);
+});
+
 it("retains a newer in-flight name draft and cancels to the newly accepted baseline", async () => {
   const task = mountSettings();
   await userEvent.click(
