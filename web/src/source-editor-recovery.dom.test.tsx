@@ -195,8 +195,18 @@ it("owns one confirmed read, blocks saving and closing while pending, and ignore
   await userEvent.dblClick(review.getByRole("button", { name: "放弃修改并读取" }));
   await waitFor(() => expect(pending).toHaveLength(2));
   expect((editor.getByLabelText("来源名称") as HTMLInputElement).disabled).toBe(true);
+  // Pending tasks remove header dismissal and disable their footer actions.
+  expect(editor.queryByRole("button", { name: "关闭" })).toBeNull();
+  const cancel = editor.getByRole("button", { name: "取消" }) as HTMLButtonElement;
+  const save = editor.getByRole("button", { name: "保存修改" }) as HTMLButtonElement;
+  expect(cancel.disabled).toBe(true);
+  expect(save.disabled).toBe(true);
+  fireEvent.click(cancel);
+  fireEvent.click(save);
   fireEvent.submit(editor.getByLabelText("来源名称").closest("form")!);
-  fireEvent.click(editor.getByRole("button", { name: "关闭" }));
+  await userEvent.keyboard("{Escape}");
+  expect(screen.getByRole("dialog", { name: "编辑来源" })).toBeTruthy();
+  expect(hasUnsavedChanges()).toBe(true);
   expect(host.onClose).not.toHaveBeenCalled();
   expect(writes).toHaveLength(1);
   host.replace(next);
