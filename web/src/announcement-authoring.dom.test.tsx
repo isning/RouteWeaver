@@ -9,16 +9,24 @@ import { NotificationsAdminPage } from "./Notifications";
 const clients: QueryClient[] = [];
 const json = (value: unknown, status = 200) => new Response(JSON.stringify(value), { status, headers: { "Content-Type": "application/json" } });
 afterEach(() => { cleanup(); clients.splice(0).forEach(c => c.clear()); onlineManager.setOnline(true); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
-function mount(catalog: () => Promise<Response> = async () => json({ users: [] })) {
+function mount(catalog: () => Promise<Response> = async () => json({ users: [] }), announcements: { id: string }[] = []) {
   const writes: any[] = [];
+  const methods: string[] = [];
   vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
-    if (init?.method === "POST") { writes.push(JSON.parse(String(init.body))); return json({}); }
-    if (url === "/api/state") return catalog();
-    return json([]);
+    const method = init?.method ?? "GET";
+    if ((method === "POST" && url === "/api/admin/announcements") ||
+        (method === "PUT" && announcements.some(a => url === `/api/admin/announcements/${a.id}`))) {
+      methods.push(method);
+      writes.push(JSON.parse(String(init?.body)));
+      return json({});
+    }
+    if (method === "GET" && url === "/api/state") return catalog();
+    if (method === "GET" && url === "/api/admin/announcements") return json(announcements);
+    throw new Error(`Unexpected announcement request: ${method} ${url}`);
   }));
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } }); clients.push(client);
   render(<QueryClientProvider client={client}><UIProviders><NotificationsAdminPage /></UIProviders></QueryClientProvider>);
-  return { writes, client };
+  return { writes, methods, client };
 }
 async function create() {
   await userEvent.click(await screen.findByRole("button", { name: "创建公告" }));
@@ -150,4 +158,53 @@ it("keeps the chosen duplicate identity while refreshing and saves it after reco
   expect((within(dialog).getByLabelText("公告标题") as HTMLInputElement).value).toBe("维护通知");
   submit(dialog); await waitFor(() => expect(state.writes).toHaveLength(1));
   expect(state.writes[0].userIds).toEqual(["user-b"]);
+});
+
+// Begin with a legitimate saved announcement, rather than hundreds of clicks.
+// Only the boundary-crossing choices are made through the visible picker.
+async function editLargeAudience() {
+  const users = Array.from({ length: 501 }, (_, index) => ({
+    id: `recipient-${index + 1}`,
+    name: `接收者 ${index + 1}`,
+  }));
+  const announcement = {
+    id: "notice-large-audience", title: "已有指定用户公告", body: "保留已有接收用户。",
+    audience: "users", userIds: users.slice(0, 499).map(user => user.id),
+    startsAt: "2026-11-07T10:00:00.000Z", expiresAt: "2026-11-08T10:00:00.000Z", enabled: true,
+  };
+  const state = mount(async () => json({ users }), [announcement]);
+  await userEvent.click(await screen.findByRole("button", { name: "编辑" }));
+  const dialog = await screen.findByRole("dialog", { name: "编辑公告" });
+  await within(dialog).findByText("按姓名或用户标识选择接收公告的用户。");
+  expect(within(dialog).getByText("已选择 499 项")).toBeTruthy();
+  return { ...state, dialog, originalIds: announcement.userIds };
+}
+async function addRecipient(dialog: HTMLElement, number: number) {
+  await userEvent.click(within(dialog).getByRole("combobox", { name: "选择用户" }));
+  fireEvent.change(screen.getByRole("combobox", { name: "搜索选项" }), { target: { value: `recipient-${number}` } });
+  await userEvent.click(await screen.findByRole("option", { name: `接收者 ${number}，用户标识 recipient-${number}` }));
+  await userEvent.keyboard("{Escape}");
+}
+it("saves an edited announcement with exactly 500 chosen recipients", async () => {
+  const state = await editLargeAudience();
+  await addRecipient(state.dialog, 500);
+  expect(within(state.dialog).getByText("已选择 500 项")).toBeTruthy();
+  submit(state.dialog);
+  await waitFor(() => expect(state.writes).toHaveLength(1));
+  expect(state.methods).toEqual(["PUT"]);
+  expect(state.writes[0].userIds).toHaveLength(500);
+  expect(state.writes[0].userIds).toEqual([...state.originalIds, "recipient-500"]);
+});
+it("blocks 501 recipients without silently dropping any selected identity", async () => {
+  const state = await editLargeAudience();
+  await addRecipient(state.dialog, 500);
+  await addRecipient(state.dialog, 501);
+  submit(state.dialog);
+  await within(state.dialog).findByText("请选择 1 至 500 位用户。");
+  expect(state.writes).toHaveLength(0);
+  expect(within(state.dialog).getByText("已选择 501 项")).toBeTruthy();
+  expect(within(state.dialog).getAllByRole("button", { name: /^移除 接收者 / })).toHaveLength(501);
+  expect(within(state.dialog).getByRole("button", { name: "移除 接收者 500，用户标识 recipient-500" })).toBeTruthy();
+  expect(within(state.dialog).getByRole("button", { name: "移除 接收者 501，用户标识 recipient-501" })).toBeTruthy();
+  expect((within(state.dialog).getByLabelText("公告正文") as HTMLTextAreaElement).value).toBe("保留已有接收用户。");
 });
