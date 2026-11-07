@@ -1,3 +1,4 @@
+import { writeFile } from "node:fs/promises";
 import type { Locator, Page, TestInfo } from "@playwright/test";
 import { test, expect } from "./isolated-control-plane-fixture";
 import { requireLoopback } from "./account-security-backend";
@@ -99,7 +100,10 @@ async function verifyEntryFocus(page: Page, info: TestInfo, surface: Locator) {
     expect(evidence.moved, "Native Tab advances to another form control").toBe(true);
   } finally {
     evidence.atEnd = await snapshot().catch(() => null);
-    await info.attach("first-entry-keyboard-focus", { contentType: "application/json", body: JSON.stringify(evidence) });
+    const width = page.viewportSize()!.width;
+    const path = info.outputPath(`setup-entry-focus-${width}.json`);
+    await writeFile(path, JSON.stringify(evidence));
+    await info.attach("first-entry-keyboard-focus", { contentType: "application/json", path });
   }
 }
 

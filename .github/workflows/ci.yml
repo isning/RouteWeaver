@@ -254,6 +254,24 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
+      - name: Journey review evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: journey-review-${{ matrix.shard }}-of-4
+          # Named synthetic originals only; no attachment copies, reports or traces.
+          path: |
+            web/test-results/*/setup-*.png
+            web/test-results/*/setup-*.json
+            web/test-results/*/template-authoring-*.png
+            web/test-results/*/template-user-*.png
+            web/test-results/*/group-access-*.png
+            web/test-results/*/group-access-evidence-*.json
+            web/test-results/*/fleet-creation-recovery-*.png
+            web/test-results/*/fleet-creation-recovery-*.json
+          if-no-files-found: ignore
+          retention-days: 7
+
   browser_native:
     name: Same-instance browser to managed native acceptance
     runs-on: ubuntu-24.04

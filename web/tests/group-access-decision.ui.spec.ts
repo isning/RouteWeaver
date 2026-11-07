@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { writeFile } from "node:fs/promises";
 import type { APIRequestContext, Locator, Page } from "@playwright/test";
 import type {
   EffectivePolicy,
@@ -129,8 +130,10 @@ for (const width of [1440, 390]) {
         expect(box).not.toBeNull();
         expect(box!.x).toBeGreaterThanOrEqual(-1);
         expect(box!.x + box!.width).toBeLessThanOrEqual(width + 1);
-        const pixels = await page.screenshot();
-        await info.attach(`group-access-${width}-${state}.png`, { body: pixels, contentType: "image/png" });
+        const name = `group-access-${width}-${state}.png`;
+        const path = info.outputPath(name);
+        const pixels = await page.screenshot({ path });
+        await info.attach(name, { path, contentType: "image/png" });
         captures.push({ state, sha256: createHash("sha256").update(pixels).digest("hex"), scope });
       };
       await page.goto("/#users");
@@ -294,14 +297,13 @@ for (const width of [1440, 390]) {
       expect(errors).toEqual([]);
       completed = true;
     } finally {
-      await info.attach("group-access-evidence", {
-        contentType: "application/json",
-        body: JSON.stringify({ completed, viewport: page.viewportSize(), captures,
+      const path = info.outputPath(`group-access-evidence-${width}.json`);
+      await writeFile(path, JSON.stringify({ completed, viewport: page.viewportSize(), captures,
           browserWrites: writes.map(({ path }) => path), browserFailures, errors,
           scope: "Isolated real backend; synthetic group membership and service access decisions only. No live enforcement, quota policy, client delivery or full accessibility acceptance.",
           pixels: "Naturally settled viewport positions for independent review; screenshot creation is not visual acceptance.",
-        }, null, 2),
-      });
+        }, null, 2));
+      await info.attach("group-access-evidence", { path, contentType: "application/json" });
       await Promise.all([oldAccount.dispose(), newAccount.dispose(), anonymous.dispose()]);
     }
   });
