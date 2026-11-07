@@ -238,12 +238,73 @@ for (const width of [1440, 390]) {
       });
       await expect(apply).toBeDisabled();
       await expect(
+        review
+          .getByRole("table", { name: "个人授权变更", exact: true })
+          .getByRole("row")
+          .filter({
+            has: admin.getByRole("rowheader", {
+              name: "个人指定方案",
+              exact: true,
+            }),
+          })
+          .getByText(invitationServiceName, { exact: true }),
+      ).toBeVisible();
+      await expect(
         review.getByText("受管入口配置需单独应用。", { exact: true }),
       ).toBeVisible();
       expect(await readOnboarding(recipient.request, "/me/overview")).toEqual(
         beforeGrant,
       );
       await capture(admin, info, `grant-review-${width}`);
+      const impact = review.getByRole("table", { name, exact: true });
+      const serviceImpact = impact.getByRole("row").filter({
+        has: admin.getByRole("rowheader", { name: "服务方案", exact: true }),
+      });
+      const routeImpact = impact.getByRole("row").filter({
+        has: admin.getByRole("rowheader", { name: "授权线路", exact: true }),
+      });
+      await expect(serviceImpact).toHaveCount(1);
+      await expect(routeImpact).toHaveCount(1);
+      await expect(
+        serviceImpact
+          .getByRole("cell")
+          .nth(0)
+          .getByText("无方案", { exact: true }),
+      ).toBeVisible();
+      await expect(
+        serviceImpact
+          .getByRole("cell")
+          .nth(1)
+          .getByText(invitationServiceName, { exact: true }),
+      ).toBeVisible();
+      await expect(
+        routeImpact.getByRole("cell").nth(0).getByText("无", { exact: true }),
+      ).toBeVisible();
+      await expect(
+        routeImpact
+          .getByRole("cell")
+          .nth(1)
+          .getByText(invitationRouteName, { exact: true }),
+      ).toBeVisible();
+      const beforeColumn = impact.getByRole("columnheader", {
+        name: "变更前",
+        exact: true,
+      });
+      const afterColumn = impact.getByRole("columnheader", {
+        name: "变更后",
+        exact: true,
+      });
+      await serviceImpact.scrollIntoViewIfNeeded();
+      await beforeColumn.scrollIntoViewIfNeeded();
+      await expect(beforeColumn).toBeInViewport({ ratio: 1 });
+      await expect(afterColumn).toBeInViewport({ ratio: 1 });
+      await expect(serviceImpact).toBeInViewport({ ratio: 1 });
+      await capture(admin, info, `grant-impact-${width}`);
+      // Keep the route consequence legible even when the whole table cannot
+      // fit in the narrow dialog's scrollable body at once.
+      await routeImpact.scrollIntoViewIfNeeded();
+      await expect(routeImpact).toBeInViewport({ ratio: 1 });
+      await capture(admin, info, `grant-impact-routes-${width}`);
       await review
         .getByRole("button", { name: "返回编辑", exact: true })
         .click();
@@ -253,9 +314,23 @@ for (const width of [1440, 390]) {
       await grant
         .getByRole("button", { name: "预览影响", exact: true })
         .click();
-      await review
-        .getByRole("checkbox", { name: "我已核对本次授权变更", exact: true })
-        .check();
+      const consent = review.getByRole("checkbox", {
+        name: "我已核对本次授权变更",
+        exact: true,
+      });
+      await consent.scrollIntoViewIfNeeded();
+      await consent.check();
+      await expect(consent).toBeChecked();
+      await expect(consent).toBeInViewport({ ratio: 1 });
+      await expect(apply).toBeEnabled();
+      await expect(apply).toBeInViewport({ ratio: 1 });
+      await expect(
+        review.getByText("受管入口配置需单独应用。", { exact: true }),
+      ).toBeInViewport({ ratio: 1 });
+      expect(await readOnboarding(recipient.request, "/me/overview")).toEqual(
+        beforeGrant,
+      );
+      await capture(admin, info, `grant-confirmed-${width}`);
       const applied = admin.waitForResponse(
         (r) =>
           new URL(r.url()).pathname === "/api/access-policy/apply" &&

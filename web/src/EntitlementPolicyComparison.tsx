@@ -2,7 +2,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { useId } from "react";
 import { bytesLabel, bitrateLabel, dateLabel } from "./model";
 import type { Entitlement } from "./types";
-import type { EntitlementPolicyResource } from "./access-policy-model";
+import type { EntitlementPolicyResource, NamedRecord } from "./access-policy-model";
 type Field = {
     key: string;
     label: string;
@@ -16,7 +16,7 @@ const parameter = (mode: string, active: string, value: unknown) => mode === act
 function fields(ent: Entitlement): Field[] {
     const cycle = ent.cycle;
     return [
-        { key: "service", label: "个人指定方案（ID）", raw: ent.serviceId, text: ent.serviceId || "继承用户组方案" },
+        { key: "service", label: "个人指定方案", raw: ent.serviceId, text: ent.serviceId || "继承用户组方案" },
         { key: "routes", label: "个人线路授权（ID）", raw: ent.routeIdsOverride, text: ent.routeIdsOverride == null ? "继承线路授权" : ent.routeIdsOverride.length ? ent.routeIdsOverride.join("、") : "禁止所有线路" },
         { key: "quota", label: "个人周期额度", raw: ent.quotaOverride, text: limit(ent.quotaOverride, bytesLabel) },
         { key: "ips", label: "个人在线 IP 上限", raw: ent.onlineIpLimitOverride, text: limit(ent.onlineIpLimitOverride, (v) => `${v} 个`) },
@@ -48,8 +48,9 @@ function creationFields(ent: Entitlement): Field[] {
         ...(showAnchor ? [pick("anchor"), pick("timezone")] : [])];
 }
 // These are stored personal settings, not a second effective-policy projection.
-export function EntitlementPolicyComparison({ resource, title = "个人授权变更", beforeLabel = "当前保存", afterLabel = "本次保存", showAll = false }: {
+export function EntitlementPolicyComparison({ resource, services = [], title = "个人授权变更", beforeLabel = "当前保存", afterLabel = "本次保存", showAll = false }: {
     resource: EntitlementPolicyResource;
+    services?: NamedRecord[];
     title?: string;
     beforeLabel?: string;
     afterLabel?: string;
@@ -61,8 +62,17 @@ export function EntitlementPolicyComparison({ resource, title = "个人授权变
         (modeChanged && ["day", "days"].includes(field.key) &&
             (!knownMode(after.cycle.mode) || !knownMode(before.cycle.mode) ||
                 [before.cycle.mode, after.cycle.mode].includes(field.key === "day" ? "monthly" : "fixed-days"))));
-    const text = (field: Field, other?: Field) => other && field.text === other.text && JSON.stringify(field.raw) !== JSON.stringify(other.raw)
-        ? `${field.text}（保存值：${JSON.stringify(field.raw) ?? "未设置"}${field.key === "quota" ? " 字节" : field.key === "rate" ? " 字节/秒" : ""}）` : field.text;
+    const text = (field: Field, other?: Field) => {
+        // Resolve only the stored personal selection by stable ID. An effective
+        // group plan must never become a stored personal override in this view.
+        if (field.key === "service" && typeof field.raw === "string" && field.raw) {
+            const matches = services.filter((service) => service.id === field.raw);
+            const name = matches.length === 1 && matches[0].name?.trim() ? matches[0].name : "方案名称不可用";
+            return <div className="space-y-1"><span>{name}</span><details className="text-xs text-muted-foreground"><summary className="cursor-pointer">方案标识</summary><code>{field.raw}</code></details></div>;
+        }
+        return other && field.text === other.text && JSON.stringify(field.raw) !== JSON.stringify(other.raw)
+            ? `${field.text}（保存值：${JSON.stringify(field.raw) ?? "未设置"}${field.key === "quota" ? " 字节" : field.key === "rate" ? " 字节/秒" : ""}）` : field.text;
+    };
     return <section aria-labelledby={`${id}-title`} className="space-y-3 text-sm [overflow-wrap:anywhere]"><h3 className="text-base font-medium" id={`${id}-title`}>{title}</h3>
     {!before && <p>新建个人授权设置</p>}
     {rows.length ? <Table className={`policy-comparison-table w-full table-fixed text-sm [&_th]:p-2 [&_td]:p-2 sm:[&_th]:p-3 sm:[&_td]:p-3 [&_th]:whitespace-normal [&_td]:whitespace-normal [&_th]:[overflow-wrap:anywhere] [&_td]:[overflow-wrap:anywhere] [&_th]:text-left [&_th]:font-medium [&_tr]:border-b [&_thead]:bg-muted/50${before ? "" : " policy-creation-summary"}`} role="table" aria-labelledby={`${id}-title`}>

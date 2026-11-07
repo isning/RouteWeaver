@@ -683,7 +683,7 @@ it("summarizes creation once while preserving explicit zero, operative cycle and
       .getAllByRole("rowheader")
       .map((node) => node.textContent),
   ).toEqual([
-    "个人指定方案（ID）",
+    "个人指定方案",
     "个人线路授权（ID）",
     "个人额度与限制",
     "开通时间",

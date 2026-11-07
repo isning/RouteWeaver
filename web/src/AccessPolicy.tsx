@@ -507,7 +507,7 @@ export function usePolicyChange({ mode, retainedDrafts, users, services, routes,
             </p>)}
           {review.preview.resource?.target.kind === "service" && <ServicePolicyComparison resource={review.preview.resource as ServicePolicyResource}/>}
           {review.preview.resource?.target.kind === "group" && <GroupPolicyComparison resource={review.preview.resource as GroupPolicyResource}/>}
-          {review.preview.resource?.target.kind === "entitlement" && <EntitlementPolicyComparison resource={review.preview.resource as EntitlementPolicyResource}/>}
+          {review.preview.resource?.target.kind === "entitlement" && <EntitlementPolicyComparison resource={review.preview.resource as EntitlementPolicyResource} services={services}/>}
           {review.preview.resource?.target.kind === "entitlement" && review.preview.resource.before === null && <p>保存后将使用此账号周期；之后加入用户组时，继续沿用此周期。</p>}
           {review.preview.resource && <h3 className="border-t pt-5 text-base font-medium">现有账号影响</h3>}
           {review.preview.blockers?.length > 0 && (<Notice tone="error" title="暂时无法更新授权">{<ul className="list-disc space-y-2 pl-5">

@@ -303,7 +303,7 @@ function UserPolicyFields({ user, context, services, routes, onClose, retained, 
           {!baselineConflictVisible && <p>草稿尚未保存，请核对最新版本。</p>}
           <ActionButton onClick={readLatest} pending={latestPending} disabled={policy.closingBlocked} variant="outline">查看最新版本</ActionButton><ErrorNotice error={latestError}/>
           {latest && <>
-            {latest.record ? <EntitlementPolicyComparison resource={{ target: latest.target, before: context.record, after: latest.record }} title="已保存的个人授权变化" beforeLabel="打开时保存" afterLabel="最新保存"/> : <p>目前尚无个人授权设置。重新编辑将采用最新生效值，不会自动保存。</p>}
+            {latest.record ? <EntitlementPolicyComparison services={services} resource={{ target: latest.target, before: context.record, after: latest.record }} title="已保存的个人授权变化" beforeLabel="打开时保存" afterLabel="最新保存"/> : <p>目前尚无个人授权设置。重新编辑将采用最新生效值，不会自动保存。</p>}
             <ActionButton {...commandProps} aria-disabled={blocked() || policy.closingBlocked} onClick={useLatest} variant="outline">使用最新版本重新编辑</ActionButton>
           </>}
         </section>}
