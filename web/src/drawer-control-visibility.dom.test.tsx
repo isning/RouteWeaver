@@ -34,8 +34,8 @@ const rect = (x: number, y: number, width: number, height: number) => ({
     return {};
   },
 });
-// jsdom has no layout. Only explicit box/client geometry is supplied here;
-// natural focus wrapping and actual scrolling remain the unchanged browser diagnostic's job.
+// jsdom has no layout. Explicit box/client geometry and focus-paint values are
+// supplied here; native Tab and actual ring paint are covered in the browser.
 function geometry(
   body: HTMLElement,
   target: HTMLElement,
@@ -96,6 +96,97 @@ it("leaves an already-visible focused control and its body position unchanged", 
   expect(body.scrollTop).toBe(10);
   expect(body.scrollLeft).toBe(5);
 });
+
+it.each([
+  "0 0 0 3px rgba(180, 180, 180, 0.5)",
+  "0 0 0 calc(3px + 0px) color-mix(in oklab, oklch(0.708 0 0) 50%, transparent)",
+])(
+  "reveals the 3px Tailwind ring target before its box-shadow transition finishes: %s",
+  (ring) => {
+    const { body, container } = surface();
+    const target = screen.getByRole("button", { name: "Preview" });
+    geometry(body, target, rect(50, 460, 100, 38));
+    target.style.setProperty("--tw-ring-shadow", ring);
+    // The animated shadow may still be at its start during focus capture.
+    target.style.boxShadow = "none";
+    container.scrollTop = 25;
+    const focus = vi.spyOn(target, "focus");
+    target.focus({ preventScroll: true });
+    expect(document.activeElement).toBe(target);
+    expect(focus).toHaveBeenCalledTimes(1);
+    expect(body.scrollTop).toBe(13); // Border ends at 498; only the ring's 3px were clipped.
+    expect(body.scrollLeft).toBe(5);
+    expect(container.scrollTop).toBe(25);
+  },
+);
+
+it("does not move again once the focused ring fits the current clip", () => {
+  const { body } = surface();
+  const target = screen.getByRole("button", { name: "Preview" });
+  const box = geometry(body, target, rect(50, 460, 100, 38));
+  target.style.setProperty(
+    "--tw-ring-shadow",
+    "0 0 0 calc(3px + 0px) rgb(180, 180, 180)",
+  );
+  target.focus({ preventScroll: true });
+  expect(body.scrollTop).toBe(13);
+  box.mockReturnValue(rect(50, 457, 100, 38)); // The 3px move leaves the whole ring visible.
+  fireEvent.focusIn(target);
+  expect(document.activeElement).toBe(target);
+  expect(body.scrollTop).toBe(13);
+  expect(body.scrollLeft).toBe(5);
+});
+
+it.each([
+  {
+    outline: "0px",
+    ring: "0 0 0 calc(3px + 2px) rgb(180, 180, 180)",
+    scroll: 15,
+  },
+  {
+    outline: "4px",
+    ring: "0 0 0 calc(3px + 0px) rgb(180, 180, 180)",
+    scroll: 17,
+  },
+])(
+  "uses the outermost ring or outline without adding their extents: $scroll",
+  ({ outline, ring, scroll }) => {
+    const { body } = surface();
+    const target = screen.getByRole("button", { name: "Preview" });
+    geometry(body, target, rect(50, 460, 100, 38));
+    Object.assign(target.style, {
+      outlineStyle: "solid",
+      outlineWidth: "3px",
+      outlineOffset: outline,
+      outlineColor: "rgb(22, 117, 101)",
+    });
+    target.style.setProperty("--tw-ring-shadow", ring);
+    target.focus({ preventScroll: true });
+    expect(body.scrollTop).toBe(scroll);
+  },
+);
+
+it.each([
+  "",
+  "0 0 #0000",
+  "0 0 0 3px transparent",
+  "0 0 0 3px #0000",
+  "0 0 0 3px rgba(0, 0, 0, 0)",
+  "inset 0 0 0 3px rgb(180, 180, 180)",
+  "2px 0 0 3px rgb(180, 180, 180)",
+  "0 0 4px 3px rgb(180, 180, 180)",
+])(
+  "does not invent an outer focus ring for unsupported or unpainted shadow %s",
+  (ring) => {
+    const { body } = surface();
+    const target = screen.getByRole("button", { name: "Preview" });
+    geometry(body, target, rect(50, 460, 100, 38));
+    target.style.setProperty("--tw-ring-shadow", ring);
+    target.focus({ preventScroll: true });
+    expect(body.scrollTop).toBe(10);
+    expect(body.scrollLeft).toBe(5);
+  },
+);
 
 it.each([
   { offset: "4px", scroll: 17 },
@@ -229,6 +320,10 @@ it.each([
 ] as const)("does not reveal through a %s owner", (_name, hide) => {
   const { body, form } = surface();
   const target = screen.getByRole("button", { name: "Preview" });
+  target.style.setProperty(
+    "--tw-ring-shadow",
+    "0 0 0 calc(3px + 0px) rgb(180, 180, 180)",
+  );
   const box = geometry(body, target, rect(50, 150, 100, 38));
   target.focus();
   box.mockReturnValue(rect(50, 550, 100, 38));
@@ -272,6 +367,10 @@ it.each(["alert", "group"])(
 it("ignores a synthetic focus event whose target is not actually focused", () => {
   const { body } = surface();
   const target = screen.getByRole("button", { name: "Preview" });
+  target.style.setProperty(
+    "--tw-ring-shadow",
+    "0 0 0 calc(3px + 0px) rgb(180, 180, 180)",
+  );
   geometry(body, target);
   fireEvent.focusIn(target);
   expect(document.activeElement).not.toBe(target);
@@ -405,7 +504,7 @@ it("wires visibility reveal to the actual guarded service form without submittin
   const target = screen.getByRole("button", { name: "预览影响" });
   const body = target.closest<HTMLElement>("[data-task-overlay-body]")!;
   geometry(body, target);
-  // Explicit public paint seam: the wiring assertion must not assume Ant's computed outline is absent.
+  // Explicit public paint seam: this wiring assertion does not depend on theme CSS.
   Object.assign(target.style, {
     outlineStyle: "solid",
     outlineWidth: "3px",

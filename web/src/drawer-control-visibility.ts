@@ -42,6 +42,27 @@ function disabledForReveal(target: HTMLElement) {
   );
 }
 
+const transparentColor = (color: string) =>
+  color === "transparent" ||
+  /^#(?:[\da-f]{3}0|[\da-f]{6}00)$/i.test(color) ||
+  /^rgba\([^)]*,\s*0(?:\.0+)?%?\s*\)$/.test(color) ||
+  /\/\s*0(?:\.0+)?%?\s*\)$/.test(color);
+
+function tailwindRingOutset(style: CSSStyleDeclaration) {
+  // Official shadcn focus rings use Tailwind's centered, zero-blur outer ring.
+  // Read its unanimated target: transition-all can leave boxShadow at zero
+  // during native focus capture. This is not a general CSS shadow parser.
+  const ring = style
+    .getPropertyValue("--tw-ring-shadow")
+    .trim()
+    .match(
+      /^0(?:px)?\s+0(?:px)?\s+0(?:px)?\s+(?:(-?\d*\.?\d+)px|calc\(\s*(-?\d*\.?\d+)px\s*\+\s*(-?\d*\.?\d+)px\s*\))\s+(.+)$/,
+    );
+  return ring && !transparentColor(ring[4].trim())
+    ? Math.max(0, Number(ring[1] ?? ring[2]) + Number(ring[3] ?? 0))
+    : 0;
+}
+
 // Shared paint geometry only: callers establish their distinct physical owner.
 function revealInScroller(
   target: HTMLElement,
@@ -55,17 +76,14 @@ function revealInScroller(
   if (box.width <= 0 || box.height <= 0) return;
   const outline = view.getComputedStyle(target),
     width = Number.parseFloat(outline.outlineWidth);
-  const transparent =
-    outline.outlineColor === "transparent" ||
-    /^rgba\([^)]*,\s*0(?:\.0+)?%?\s*\)$/.test(outline.outlineColor) ||
-    /\/\s*0(?:\.0+)?%?\s*\)$/.test(outline.outlineColor);
-  const outset =
+  const outlineOutset =
     !["none", "hidden"].includes(outline.outlineStyle) &&
-    !transparent &&
+    !transparentColor(outline.outlineColor) &&
     Number.isFinite(width) &&
     width > 0
       ? Math.max(0, width + (Number.parseFloat(outline.outlineOffset) || 0))
       : 0;
+  const outset = Math.max(outlineOutset, tailwindRingOutset(outline));
   const left = Math.max(0, outer.left + body.clientLeft);
   const top = Math.max(0, outer.top + body.clientTop);
   const right = Math.min(
