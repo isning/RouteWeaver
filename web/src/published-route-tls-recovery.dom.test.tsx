@@ -272,7 +272,7 @@ it.each(["address", "path"] as const)("invalidates TLS recovery after a draft %s
     expect((editor.getByRole("textbox", { name: "对外域名或 IP" }) as HTMLInputElement).value).toBe("updated-office.example");
   } else {
     await user.click(editor.getByRole("combobox", { name: "服务器转发路径" }));
-    await user.click(await screen.findByRole("option", { name: "Other path", exact: true }));
+    await user.click(await screen.findByRole("option", { name: "Other path" }));
     expect(editor.getByRole("combobox", { name: "服务器转发路径" }).textContent).toBe("Other path");
   }
   expect(editor.queryByText(tlsTitle)).toBeNull();
