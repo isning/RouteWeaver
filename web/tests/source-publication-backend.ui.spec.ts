@@ -36,10 +36,35 @@ async function expectUncovered(target: Locator) {
     }),
     "Foreground consequence or action receives the center hit",
   ).toBe(true);
+  expect(
+    await target.evaluate((element) => {
+      const target = element.getBoundingClientRect();
+      return Array.from(document.querySelectorAll("[data-sonner-toast]")).some(
+        (notice) => {
+          const style = getComputedStyle(notice);
+          const rect = notice.getBoundingClientRect();
+          return (
+            style.display !== "none" &&
+            style.visibility !== "hidden" &&
+            Number(style.opacity) > 0 &&
+            rect.width > 0 &&
+            rect.height > 0 &&
+            rect.left < target.right &&
+            rect.right > target.left &&
+            rect.top < target.bottom &&
+            rect.bottom > target.top
+          );
+        },
+      );
+    }),
+    "No visible notice rectangle overlaps the foreground consequence or action",
+  ).toBe(false);
 }
 
 async function expectSourceNoticeRetired(page: Page) {
   for (const text of [
+    "来源已添加",
+    "来源已更新",
     "来源已保存，有更新可手动应用",
     "发现更新，可手动应用",
     `「${names.source}」已应用，已发布订阅未改变`,
@@ -54,6 +79,21 @@ async function expectSourceNoticeRetired(page: Page) {
       "The foreground source task retires its preceding source notice",
     ).toBe(0);
   }
+  // Retirement is asserted above before settling. Await only finite exit motion
+  // of notices already dismissed by the product, never their display timeout.
+  await page
+    .locator('[data-sonner-toast][data-removed="true"]')
+    .evaluateAll(async (notices) => {
+      for (const notice of notices) getComputedStyle(notice).opacity;
+      const exits = notices
+        .flatMap((notice) => notice.getAnimations({ subtree: true }))
+        .filter((animation) =>
+          Number.isFinite(animation.effect?.getComputedTiming().endTime),
+        );
+      await Promise.all(
+        exits.map((animation) => animation.finished.catch(() => {})),
+      );
+    });
 }
 
 async function capture(
@@ -61,8 +101,11 @@ async function capture(
   info: TestInfo,
   name: string,
   surface: Locator,
+  protectedTargets: Locator[] = [],
 ) {
   await settledTask(surface);
+  await expectSourceNoticeRetired(page);
+  for (const target of protectedTargets) await expectUncovered(target);
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,
@@ -205,7 +248,10 @@ for (const width of [1440, 390])
       await settledTask(changes);
       await expectSourceNoticeRetired(page);
       await f.publicationsUnchanged();
-      await capture(page, info, `source-credential-pending-${width}`, changes);
+      await capture(page, info, `source-credential-pending-${width}`, changes, [
+        changes.getByRole("button", { name: "忽略本次更新", exact: true }),
+        changes.getByRole("button", { name: "应用更新", exact: true }),
+      ]);
       await page.keyboard.press("Escape");
       await expect(changes).toHaveCount(0);
       expect(applications).toHaveLength(0);
@@ -349,6 +395,11 @@ for (const width of [1440, 390])
         info,
         `source-applied-current-targets-${width}`,
         receipt,
+        [
+          receipt.getByText("来源已更新，已发布订阅未改变。", { exact: true }),
+          chosenLink,
+          receipt.getByRole("button", { name: "完成", exact: true }),
+        ],
       );
       await chosenLink.click();
       await expect(page).toHaveURL(
@@ -441,6 +492,11 @@ for (const width of [1440, 390])
         info,
         `source-selected-publication-review-${width}`,
         review,
+        [
+          review.getByText("沿用当前链接，其他订阅保留原状。", { exact: true }),
+          review.getByRole("button", { name: "取消", exact: true }),
+          confirm,
+        ],
       );
       const published = responseFor(
         page,

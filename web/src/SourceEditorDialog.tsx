@@ -27,6 +27,7 @@ import { newID, diagnosticText } from "./model";
 import { ErrorNotice, QueryState } from "./components";
 import { useUnsavedChanges } from "./navigation";
 import type { Source } from "./types";
+import { sourceApplicationNoticeID } from "./source-notice";
 import {
   sourceFailureText,
   sourceHasFailure,
@@ -310,7 +311,9 @@ function SourceEditorSession({
       setSaveUncertain(false);
       setEditorDirty(false);
       if (!result.candidate && successFeedback === "toast")
-        message.success(editing ? "来源已更新" : "来源已添加");
+        message.success(editing ? "来源已更新" : "来源已添加", {
+          id: sourceApplicationNoticeID(result.id),
+        });
       onSaved(result);
       onClose();
     },

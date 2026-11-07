@@ -72,18 +72,25 @@ const activeNotices = () =>
     .getToasts()
     .map((notice) => ("title" in notice ? notice.title : undefined));
 
-for (const origin of ["save", "refresh"] as const) {
+for (const origin of ["create-and-save", "save", "refresh"] as const) {
   for (const path of ["row", "review", "recovery"] as const) {
     it(`${origin} pending notice follows ${path} application without clearing unrelated notices`, async () => {
-      let current = initial;
+      let current: Source | undefined =
+        origin === "create-and-save" ? undefined : initial;
       const writes: string[] = [];
       vi.stubGlobal(
         "fetch",
         vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
           const url = String(input);
+          if (init?.method === "POST" && url.endsWith("/me/sources")) {
+            writes.push(url);
+            const input = JSON.parse(String(init.body));
+            current = { ...initial, ...input, revision: "initial" };
+            return json(current);
+          }
           if (init?.method === "PUT" || url.endsWith("/refresh")) {
             writes.push(url);
-            current = pending;
+            current = { ...pending, id: current!.id };
             return json(current);
           }
           if (url.endsWith("/apply")) {
@@ -92,6 +99,7 @@ for (const origin of ["save", "refresh"] as const) {
               throw new TypeError("Response unavailable");
             current = {
               ...initial,
+              id: current!.id,
               revision: "applied",
               refreshStatus: "accepted",
             };
@@ -104,7 +112,9 @@ for (const origin of ["save", "refresh"] as const) {
               },
             });
           }
-          return json(url.endsWith("/me/sources") ? [current] : current);
+          return json(
+            url.endsWith("/me/sources") ? (current ? [current] : []) : current,
+          );
         }),
       );
       const client = new QueryClient({
@@ -122,7 +132,44 @@ for (const origin of ["save", "refresh"] as const) {
         </QueryClientProvider>,
       );
       const user = userEvent.setup();
-      if (origin === "save") {
+      if (origin === "create-and-save") {
+        await user.click(
+          (await screen.findAllByRole("button", { name: "添加来源" }))[0],
+        );
+        const editor = within(
+          await screen.findByRole("dialog", { name: "添加订阅来源" }),
+        );
+        await user.type(editor.getByLabelText("来源名称"), initial.name);
+        await user.type(
+          editor.getByLabelText("节点链接或配置内容"),
+          initial.content!,
+        );
+        await user.click(
+          editor.getByRole("combobox", { name: "更新应用方式" }),
+        );
+        await user.click(
+          await screen.findByRole("option", { name: "手动应用" }),
+        );
+        await user.click(editor.getByRole("button", { name: "导入来源" }));
+        await screen.findByText("来源已添加", { exact: true });
+        expect(current!.id).not.toBe(initial.id);
+        expect(
+          toast
+            .getToasts()
+            .find(
+              (notice) => notice.id === `source-application:${current!.id}`,
+            ),
+        ).toMatchObject({ title: "来源已添加" });
+      }
+      const sourceID = current!.id;
+      await act(async () => {
+        // Identical success copy from a different source must not be cleared.
+        toast.success("来源已添加", {
+          id: "source-application:another-created",
+          duration: Infinity,
+        });
+      });
+      if (origin !== "refresh") {
         await user.click(await sourceRowAction("编辑", "Travel source"));
         const editor = within(
           await screen.findByRole("dialog", { name: "编辑来源" }),
@@ -135,7 +182,7 @@ for (const origin of ["save", "refresh"] as const) {
         await user.click(await sourceRowAction("刷新", "Travel source"));
       }
       const pendingNotice =
-        origin === "save"
+        origin !== "refresh"
           ? "来源已保存，有更新可手动应用"
           : "发现更新，可手动应用";
       await screen.findByText(pendingNotice, { exact: true });
@@ -153,7 +200,16 @@ for (const origin of ["save", "refresh"] as const) {
       const unrelatedRemain = () => {
         expect(activeNotices()).toContain("Other source awaits application");
         expect(activeNotices()).toContain("Unrelated request failed");
+        expect(
+          toast
+            .getToasts()
+            .filter(
+              (notice) => "title" in notice && notice.title === "来源已添加",
+            )
+            .map((notice) => notice.id),
+        ).toEqual(["source-application:another-created"]);
       };
+      unrelatedRemain();
       if (path === "review") {
         await user.click(
           await screen.findByRole("button", { name: "查看变化" }),
@@ -179,10 +235,11 @@ for (const origin of ["save", "refresh"] as const) {
         expect(activeNotices()).not.toContain(pendingNotice);
         unrelatedRemain();
         expect(writes).toEqual([
-          origin === "save"
-            ? "/api/me/sources/travel"
-            : "/api/me/sources/travel/refresh",
-          "/api/me/sources/travel/apply",
+          ...(origin === "create-and-save" ? ["/api/me/sources"] : []),
+          origin !== "refresh"
+            ? `/api/me/sources/${sourceID}`
+            : `/api/me/sources/${sourceID}/refresh`,
+          `/api/me/sources/${sourceID}/apply`,
         ]);
         return;
       }
@@ -206,10 +263,11 @@ for (const origin of ["save", "refresh"] as const) {
       expect(activeNotices()).not.toContain(pendingNotice);
       unrelatedRemain();
       expect(writes).toEqual([
-        origin === "save"
-          ? "/api/me/sources/travel"
-          : "/api/me/sources/travel/refresh",
-        "/api/me/sources/travel/apply",
+        ...(origin === "create-and-save" ? ["/api/me/sources"] : []),
+        origin !== "refresh"
+          ? `/api/me/sources/${sourceID}`
+          : `/api/me/sources/${sourceID}/refresh`,
+        `/api/me/sources/${sourceID}/apply`,
       ]);
     });
   }

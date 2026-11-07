@@ -66,6 +66,7 @@ import {
   type SourceAcceptanceReceipt,
 } from "./SourceUpdateContinuation";
 import { SourceEditorDialog } from "./SourceEditorDialog";
+import { sourceApplicationNoticeID } from "./source-notice";
 import { SourceImportTask, canResumeSourceReview } from "./SourceImportTask";
 import {
   SourceSelectionIssues,
@@ -74,9 +75,6 @@ import {
 } from "./SourceSelectionIssues";
 export { SourceEditorDialog } from "./SourceEditorDialog";
 export type { SourceEditorDialogProps } from "./SourceEditorDialog";
-const sourceApplicationNoticeID = (sourceID: string) =>
-  `source-application:${sourceID}`;
-
 export function SourcesPage({
   onAdded,
   onEditingChange,
