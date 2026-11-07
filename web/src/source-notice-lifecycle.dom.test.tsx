@@ -67,7 +67,10 @@ afterEach(() => {
 });
 // Sonner's public active-notification API excludes dismissed notices immediately.
 // Do not wait for expiry or exit animation to hide stale task feedback.
-const activeNotices = () => toast.getToasts().map((notice) => notice.title);
+const activeNotices = () =>
+  toast
+    .getToasts()
+    .map((notice) => ("title" in notice ? notice.title : undefined));
 
 for (const origin of ["save", "refresh"] as const) {
   for (const path of ["row", "review", "recovery"] as const) {
