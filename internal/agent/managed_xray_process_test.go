@@ -119,7 +119,11 @@ func TestManagedNativeBrokerEOFStopsActivePayloadAndPersistsFinalJournal(t *test
 		c.SetDeadline(time.Now().Add(5 * time.Second))
 		io.Copy(c, c)
 	}()
-	client, err := net.DialTimeout("tcp", fmt.Sprintf("127.0.0.1:%d", port), time.Second)
+	// Submit proves owned-process liveness, not listener readiness. Keep the
+	// original connection budget; only a refused pre-payload dial may retry.
+	connectContext, connectCancel := context.WithTimeout(context.Background(), time.Second)
+	client, err := dialManagedEOFListener(connectContext, fmt.Sprintf("127.0.0.1:%d", port), supervisor, root, desired.Identity())
+	connectCancel()
 	if err != nil {
 		t.Fatal(err)
 	}
