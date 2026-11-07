@@ -1940,7 +1940,7 @@ function Settings({
   sectionID: string;
 }) {
   const [form] = useForm();
-  const message = toast;
+  const [saveFeedback, setSaveFeedback] = useState<string | null>(null);
   const client = useQueryClient();
   const [baseline, setBaseline] = useState(initial);
   const [editingName, setEditingName] = useState(false);
@@ -2003,7 +2003,7 @@ function Settings({
         form.setFieldsValue(saved);
         finishNameEdit();
       }
-      message.success(
+      setSaveFeedback(
         currentMatchesSubmission
           ? "平台设置已保存"
           : "提交的设置已保存，当前修改尚未保存",
@@ -2021,6 +2021,7 @@ function Settings({
             aria-label="平台基本设置"
             form={form}
             initialValues={initial}
+            onValuesChange={() => setSaveFeedback(null)}
             onFinish={(v) => {
               if (!save.isPending) save.mutate(structuredClone(v));
             }}
@@ -2036,6 +2037,7 @@ function Settings({
                     variant="outline"
                     onClick={() => {
                       save.reset();
+                      setSaveFeedback(null);
                       setEditingName(true);
                     }}
                   >
@@ -2046,6 +2048,11 @@ function Settings({
                 {String(baseline.name || "未设置")}
               </SettingsRow>
             </dl>
+            {saveFeedback && (
+              <p role="status" className="px-4 py-3 text-sm text-muted-foreground sm:px-5">
+                {saveFeedback}
+              </p>
+            )}
             <div
               ref={nameEditor}
               hidden={!editingName}
@@ -2076,6 +2083,7 @@ function Settings({
                   onClick={() => {
                     form.setFieldValue("name", baseline.name);
                     save.reset();
+                    setSaveFeedback(null);
                     finishNameEdit();
                   }}
                 >

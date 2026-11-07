@@ -4,7 +4,6 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { toast } from "sonner";
 import { Notice } from "@/ui-patterns/notice";
 import { ActionButton } from "@/ui-patterns/actions";
 import { useUnsavedChanges } from "./navigation";
@@ -184,6 +183,7 @@ function OriginForm({
     [confirmed, setConfirmed] = useState(false),
     [error, setError] = useState<Error | null>(null);
   const [errorTask, setErrorTask] = useState<OriginTask>("save");
+  const [feedback, setFeedback] = useState<{ revision: number; message: string } | null>(null);
   const [uncertain, setUncertain] = useState(false);
   const [reconciling, setReconciling] = useState(false);
   const [recoveryError, setRecoveryError] = useState<Error | null>(null);
@@ -194,6 +194,7 @@ function OriginForm({
   const runWrite = (write: () => void) => {
     if (writeLock.current || uncertainLock.current || readLock.current || readBlocked) return;
     writeLock.current = true;
+    setFeedback(null);
     write();
   };
   const reconcile = async () => {
@@ -212,6 +213,7 @@ function OriginForm({
       setReview(null);
       setConfirmed(false);
       setError(null);
+      setFeedback(null);
       setUncertain(false);
       uncertainLock.current = false;
       client.invalidateQueries({ queryKey: ["outputs"] });
@@ -233,8 +235,7 @@ function OriginForm({
     currentSource.current = { review, state };
     return () => { currentSource.current = null; };
   }, [review, state]);
-  const client = useQueryClient(),
-    message = toast;
+  const client = useQueryClient();
   const accept = (next: OriginState) => {
     client.setQueryData(key, next);
     setError(null);
@@ -269,7 +270,7 @@ function OriginForm({
     onSuccess: (next) => {
       accept(next);
       setOrigin(next.draftOrigin);
-      message.success("域名草稿已保存，当前订阅地址未改变");
+      setFeedback({ revision: next.revision, message: "域名草稿已保存，当前订阅地址未改变" });
     },
     onError: (error) => onError(error, "save"),
     onSettled: () => { writeLock.current = false; },
@@ -279,7 +280,7 @@ function OriginForm({
       validatedOriginState(await post<unknown>(`${path}/verify`, { expectedRevision: state.revision })),
     onSuccess: (next) => {
       accept(next);
-      message.success("已验证 HTTPS 地址属于当前实例");
+      setFeedback({ revision: next.revision, message: "已验证 HTTPS 地址属于当前实例" });
     },
     onError: (error) => onError(error, "verify"),
     onSettled: () => { writeLock.current = false; },
@@ -315,7 +316,7 @@ function OriginForm({
       accept(next);
       setReview(null);
       client.invalidateQueries({ queryKey: ["outputs"] });
-      message.success("新复制的订阅链接将使用所选地址");
+      setFeedback({ revision: next.revision, message: "新复制的订阅链接将使用所选地址" });
     },
     onError: (error, { reviewed, owner }) => {
       if (currentSource.current?.review !== owner) return;
@@ -390,6 +391,7 @@ function OriginForm({
             onChange={(e) => {
               setOrigin(e.target.value);
               setError(null);
+              setFeedback(null);
             }}
           />
         </label>
@@ -420,6 +422,9 @@ function OriginForm({
       </div>
       {state.configuredRevision > 0 && (
         <div className="space-y-4 border-t px-4 py-5 sm:px-5">
+          {feedback && feedback.revision === state.revision && !readBlocked && (
+            <p role="status" className="text-sm text-muted-foreground">{feedback.message}</p>
+          )}
           <h3 className="flex flex-wrap items-center gap-2 text-sm font-medium">
             已保存的草稿 {pending && <Badge variant="secondary">待启用</Badge>}
           </h3>
@@ -481,6 +486,7 @@ function OriginForm({
             <ActionButton
               disabled={dirty || busy || !ready || !pending}
               onClick={() => {
+                setFeedback(null);
                 setReview(structuredClone(state));
                 setConfirmed(false);
               }}
@@ -490,7 +496,10 @@ function OriginForm({
             </ActionButton>
             <ActionButton
               disabled={save.isPending || verify.isPending || activate.isPending || uncertain || reconciling}
-              onClick={() => refresh()}
+              onClick={() => {
+                setFeedback(null);
+                refresh();
+              }}
               variant="ghost"
             >
               刷新状态

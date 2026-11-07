@@ -126,11 +126,14 @@ for (const width of [1440, 768, 390]) {
       await expect(inputError).toHaveCount(0);
       await settledTask(input);
       await settledTask(saveButton);
-      const savedToast = page.locator("[data-sonner-toast]").filter({
+      const savedFeedback = page.getByRole("status").filter({
         hasText: "域名草稿已保存，当前订阅地址未改变",
       });
-      await expect(savedToast).toHaveCount(1);
-      await settledTask(savedToast);
+      await expect(savedFeedback).toHaveCount(1);
+      await expect(page.locator("[data-sonner-toast]").filter({
+        hasText: "域名草稿已保存，当前订阅地址未改变",
+      })).toHaveCount(0);
+      await settledTask(savedFeedback);
       await captureOrigin(page, info, `origin-real-unverified-${width}`);
       sameEffective(await originState(other), initial);
       await expect(currentLink).toHaveText(initial.currentLinkExample);
