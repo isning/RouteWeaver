@@ -1216,7 +1216,7 @@ function instanceApplyFeedback(data: AgentState) {
         ? "节点核对后确认，本次配置未应用。"
         : "节点确认，本次配置未应用。";
     nextStep =
-      "请核对转发路径与节点状态，再通过「查看修改并应用」或「再次检查并应用」重新检查并确认应用。";
+      "请返回对应的转发路径，核对配置与节点状态，重新检查并明确确认应用。";
   } else if (
     state.phase === "apply_failed" &&
     state.code === "runtime_not_running"

@@ -59,13 +59,31 @@ for (const width of [1440, 390]) {
         expect(response.status()).toBe(200);
         return response.json();
       };
-      const publish = async (first: boolean) => {
+      const publish = async () => {
+        // The fixture saved this diagnostic before attaching principals. A
+        // successful read-only validation does not rewrite the saved draft,
+        // and publication clears the transient review. Reopening therefore
+        // requires the same explicit recheck, including after native failure.
+        const savedResponse = await admin.get(
+          `/api/server-deployments/${draft.id}`,
+        );
+        expect(savedResponse.status()).toBe(200);
+        const saved = await savedResponse.json();
+        const savedDiagnostic =
+          "MANAGED_PRINCIPALS_REQUIRED: authenticated VLESS principals required";
+        expect(saved.diagnostics).toEqual([savedDiagnostic]);
         await page.goto(`/#routes?deployment=${draft.id}`);
         const detail = page.getByRole("dialog", {
           name: draft.name,
           exact: true,
         });
         await expect(detail).toBeVisible();
+        await expect(
+          detail.getByText("草稿需要调整", { exact: true }),
+        ).toBeVisible();
+        await expect(
+          detail.getByText(savedDiagnostic, { exact: true }),
+        ).toBeVisible();
         const checked = page.waitForResponse(
           (r) =>
             new URL(r.url()).pathname ===
@@ -74,7 +92,7 @@ for (const width of [1440, 390]) {
         );
         await detail
           .getByRole("button", {
-            name: first ? "重新检查" : /^(再次检查并应用|查看修改并应用)$/,
+            name: "重新检查",
             exact: true,
           })
           .click();
@@ -162,7 +180,7 @@ for (const width of [1440, 390]) {
           contentType: "image/png",
         });
       };
-      const firstReceipt = await publish(true);
+      const firstReceipt = await publish();
       const queued = await readState();
       expect(queued.phase).toBe("queued");
       expect(firstReceipt.instances[0].instanceId).toBe(instance.id);
@@ -215,7 +233,7 @@ for (const width of [1440, 390]) {
       expect(blocker.listening).toBe(false);
       // Fixing the port conflict alone does not retry or claim success.
       expect(await readState()).toEqual(reportedFailure);
-      const correctionReceipt = await publish(false);
+      const correctionReceipt = await publish();
       const correction = await readState();
       expect(correction.phase).toBe("pending-new-generation");
       expect(correctionReceipt.instances[0].instanceId).toBe(instance.id);

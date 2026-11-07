@@ -94,7 +94,11 @@ it.each(["recovered_not_applied", "activation_not_applied"])(
     mount(data);
     const notice = await screen.findByLabelText("实例处理建议");
     expect(within(notice).getByText("本次配置未应用")).toBeTruthy();
-    expect(within(notice).getByText(/重新检查并确认应用/)).toBeTruthy();
+    expect(
+      within(notice).getByText(
+        "请返回对应的转发路径，核对配置与节点状态，重新检查并明确确认应用。",
+      ),
+    ).toBeTruthy();
     expect(notice.textContent).not.toMatch(/旧配置.*运行|回滚成功/);
   },
 );
@@ -120,7 +124,7 @@ it("labels an older failure as historical while a newer configuration waits, the
     within(notice).getByText("上次记录：节点核对后确认，上次配置未应用。"),
   ).toBeTruthy();
   expect(within(notice).getByText(/不代表这次应用失败/)).toBeTruthy();
-  expect(within(notice).queryByText(/重新检查并确认应用/)).toBeNull();
+  expect(within(notice).queryByText(/重新检查并明确确认应用/)).toBeNull();
   expect(screen.getByText("等待最新配置")).toBeTruthy();
   const fresh = response("observed_conformant");
   fresh.state!.observed = {
