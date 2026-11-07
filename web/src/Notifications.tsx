@@ -800,8 +800,12 @@ function SettingsForm({ initial }: { initial: Settings }) {
     // Reveal after expansion, only while the submission still owns focus.
     void Promise.all(animations.map((animation) => animation.finished.catch(() => {}))).then(() => {
       if (!current || document.activeElement !== owner || !target.isConnected || target.closest('[hidden], [inert]')) return;
-      target.focus();
-      target.scrollIntoView?.({ block: "nearest" });
+      target.focus({ preventScroll: true });
+      // Keep the label, clear choice and recovery instruction together instead
+      // of aligning only the checkbox against the bottom of a narrow viewport.
+      if (document.activeElement === target && !target.closest('[hidden], [inert]'))
+        (target.closest<HTMLElement>('[data-slot="field"]') || target)
+          .scrollIntoView?.({ block: "center", inline: "nearest" });
     });
     return () => {
       current = false;

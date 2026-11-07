@@ -394,8 +394,11 @@ it.each([false, true])("reveals a conflicting choice after expansion only if sub
   let finish!: () => void;
   const animation = new Promise<void>((resolve) => { finish = resolve; });
   const content = clear.closest('[data-slot="accordion-content"]')!;
+  const field = clear.closest('[role="group"]')!;
+  const revealField = vi.fn();
+  Object.defineProperty(field, "scrollIntoView", { configurable: true, value: revealField });
   let observed = false;
-  // Control only the browser animation boundary; form validation remains real.
+  // Control only browser animation/scroll boundaries; form validation remains real.
   Object.defineProperty(content, "getAnimations", { configurable: true, value: () => {
     observed = true;
     return [{ finished: animation }];
@@ -406,6 +409,7 @@ it.each([false, true])("reveals a conflicting choice after expansion only if sub
     save();
     await waitFor(() => expect(observed).toBe(true));
     expect(document.activeElement === submit).toBe(true);
+    expect(revealField).not.toHaveBeenCalled();
     if (interrupted) {
       // Focus only: do not change tabs or initiate a test notification.
       screen.getByRole("button", { name: "发送站内测试" }).focus();
@@ -415,6 +419,12 @@ it.each([false, true])("reveals a conflicting choice after expansion only if sub
     expect(screen.getByRole("tabpanel", { name: "提醒与渠道" }).hidden).toBe(false);
     await act(async () => { finish(); await animation; });
     expect(document.activeElement === (interrupted ? submit : clear)).toBe(true);
+    expect(revealField).toHaveBeenCalledTimes(interrupted ? 0 : 1);
+    if (!interrupted) {
+      expect(revealField).toHaveBeenCalledWith({ block: "center", inline: "nearest" });
+      expect(field.contains(screen.getByText("请选择更新或清除签名密钥，不能同时操作。"))).toBe(true);
+      expect(field.contains(screen.getByText("清除已保存的签名密钥"))).toBe(true);
+    }
     expect(sent).toHaveLength(0);
   } finally {
     finish();
