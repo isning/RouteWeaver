@@ -165,6 +165,7 @@ it.each(
       expect(
         within(access).getByText(/重新下载配置包并导入客户端/),
       ).toBeTruthy();
+      expect(within(access).queryByText(/配置包内容不变/)).toBeNull();
       expect(within(access).queryByText(/将新链接重新添加/)).toBeNull();
     } else expect(within(access).getByText(/旧链接已失效/)).toBeTruthy();
     await userEvent.click(
@@ -177,7 +178,7 @@ it.each(
             name: "下载配置与规则文件",
           })
         ).getAttribute("href"),
-      ).toBe("/bundles/replacement-phone.zip");
+      ).toBe("/api/me/outputs/link-1/bundle");
       expect(
         within(access).queryByRole("textbox", { name: "订阅链接" }),
       ).toBeNull();
@@ -282,9 +283,9 @@ it.each(["feed", "bundle"])(
             name: "下载配置与规则文件",
           })
         ).getAttribute("href"),
-      ).toBe("/bundles/rotated-phone.zip");
+      ).toBe("/api/me/outputs/link-1/bundle");
       expect(
-        within(access).getByText(/重新下载配置包并导入客户端/),
+        within(access).getByText(/配置包内容不变，无需因此重新导入/),
       ).toBeTruthy();
       expect(within(access).queryByText(/将新链接重新添加/)).toBeNull();
       expect(
@@ -595,7 +596,7 @@ it.each(
             name: "下载配置与规则文件",
           })
         ).getAttribute("href"),
-      ).toBe("/bundles/replacement-phone.zip");
+      ).toBe("/api/me/outputs/link-1/bundle");
       expect(
         within(access).queryByRole("textbox", { name: "订阅链接" }),
       ).toBeNull();

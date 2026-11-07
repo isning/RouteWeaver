@@ -116,11 +116,52 @@ function fixture(body?: () => Promise<Blob>, failure?: string) {
 it("keeps cookie downloads as fixed same-origin links and explains unchanged rotation contents", async () => {
   setToken("");
   const f = fixture();
-  mount(<AccessSubscription output={output} onClose={() => {}} replacement />);
+  mount(<AccessSubscription output={output} onClose={() => {}} replacement="rotation" />);
   const link = await screen.findByRole("link", { name: "下载配置与规则文件" });
   expect(link.getAttribute("href")).toBe("/api/me/outputs/phone/bundle");
   expect(screen.getByText(/配置包内容不变，无需因此重新导入/)).toBeTruthy();
   expect(f.downloads).toEqual([]);
+});
+it("requires the newly published bundle to be imported rather than claiming unchanged contents", async () => {
+  setToken("");
+  fixture();
+  mount(<AccessSubscription output={output} onClose={() => {}} replacement="publication" />);
+  await screen.findByRole("link", { name: "下载配置与规则文件" });
+  expect(screen.getByText(/重新下载配置包并导入客户端/)).toBeTruthy();
+  expect(screen.queryByText(/配置包内容不变/)).toBeNull();
+});
+it("retires the rotation-only unchanged notice after a publication from nested access recovery", async () => {
+  setToken("");
+  let published = false;
+  const writes: string[] = [];
+  vi.stubGlobal("fetch", vi.fn(async (url, init) => {
+    const path = String(url);
+    if (init?.method === "POST") {
+      writes.push(path);
+      if (path === "/api/me/profiles/shared/preview") return json({
+        valid: true, previewDigest: "a".repeat(64), outputId: "phone",
+        previewScope: "output-update", publicationEffect: { version: 1, link: "preserve" }, artifacts: [],
+      });
+      if (path === "/api/me/outputs/phone/publish") {
+        published = true;
+        return json({ ...output, revision: "after-publication" });
+      }
+    }
+    if (path === "/api/me/outputs/phone/access") return published
+      ? json({ delivery: "bundle", downloadPath: "/untrusted-metadata-path" })
+      : json({ code: "OUTPUT_REPUBLISH_REQUIRED", detail: "Update required" }, 409);
+    throw new Error(`Unexpected request: ${path}`);
+  }));
+  mount(<AccessSubscription output={output} onClose={() => {}} replacement="rotation" />);
+  await userEvent.click(await screen.findByRole("button", { name: "检查更新" }));
+  const review = await screen.findByRole("dialog", { name: "检查订阅更新「Phone」" });
+  const publish = await within(review).findByRole("button", { name: "确认更新「Phone」" });
+  await waitFor(() => expect(publish.hasAttribute("disabled")).toBe(false));
+  await userEvent.click(publish);
+  await screen.findByRole("link", { name: "下载配置与规则文件" });
+  expect(screen.getByText(/重新下载配置包并导入客户端/)).toBeTruthy();
+  expect(screen.queryByText(/配置包内容不变/)).toBeNull();
+  expect(writes).toEqual(["/api/me/profiles/shared/preview", "/api/me/outputs/phone/publish"]);
 });
 it("downloads for a token operator through authenticated fixed GET without trusting metadata", async () => {
   setToken("synthetic-operator");
@@ -178,7 +219,7 @@ it.each(["token ABA", "account", "close", "revision", "direct unmount"])(
 it("keeps uncertain rotation distinct from confirmed rotation for bundles", async () => {
   setToken("");
   fixture();
-  mount(<AccessSubscription output={output} onClose={() => {}} replacement rotationUncertain />);
+  mount(<AccessSubscription output={output} onClose={() => {}} replacement="rotation" rotationUncertain />);
   await screen.findByRole("link", { name: "下载配置与规则文件" });
   expect(screen.getByText(/不能确认上次更换是否完成/)).toBeTruthy();
   expect(screen.queryByText(/配置包内容不变，无需因此重新导入/)).toBeNull();

@@ -110,7 +110,7 @@ it.each(
           <button onClick={() => setOpen(true)}>获取订阅</button>
           <AccessSubscription
             output={open ? output : null}
-            replacement
+            replacement="publication"
             onClose={() => setOpen(false)}
           />
         </>
@@ -177,7 +177,7 @@ it.each(
             name: "下载配置与规则文件",
           })
         ).getAttribute("href"),
-      ).toBe("/bundles/current.zip");
+      ).toBe("/api/me/outputs/phone/bundle");
     else
       expect(
         (

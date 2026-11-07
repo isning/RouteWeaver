@@ -218,7 +218,7 @@ export function ProfileEditor({
   const [boundOutput, setBoundOutput] = useState(output);
   const [publishedAccess, setPublishedAccess] = useState<{
     output: Output;
-    replacement: boolean;
+    replacement?: "publication";
   } | null>(null);
   const [persisted, setPersisted] = useState(!isNew);
   const [saved, setSaved] = useState(false);
@@ -2492,7 +2492,7 @@ export function ProfileEditor({
           onPublished={(value, created, replaced) => {
             setBoundOutput(value);
             if (created || replaced || value.delivery === "bundle")
-              setPublishedAccess({ output: value, replacement: !!replaced });
+              setPublishedAccess({ output: value, replacement: replaced ? "publication" : undefined });
           }}
           onClose={() => setReviewOpen(false)}
         />

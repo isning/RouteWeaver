@@ -271,7 +271,7 @@ export function SubscriptionsPage({
   const [accessID, setAccessID] = useState<string | null>(null);
   const [completedAccess, setCompletedAccess] = useState<{
     output: Output;
-    replacement: boolean;
+    replacement?: "rotation" | "publication";
   } | null>(null);
   const [publication, setPublication] = useState<{
     id: string;
@@ -583,7 +583,7 @@ export function SubscriptionsPage({
           variables.operation === "rotate" &&
           variables.sequence === checkSequence.current
         )
-          setCompletedAccess({ output: result, replacement: true });
+          setCompletedAccess({ output: result, replacement: "rotation" });
         message.success(
           variables.operation === "revoke" ? "订阅已撤销" : "订阅链接已更新",
         );
@@ -1719,7 +1719,7 @@ export function SubscriptionsPage({
           }
           onPublished={(result, replaced) => {
             if (replaced || result.delivery === "bundle")
-              setCompletedAccess({ output: result, replacement: replaced });
+              setCompletedAccess({ output: result, replacement: replaced ? "publication" : undefined });
           }}
           onClose={() => setUpdating(null)}
         />
@@ -2499,7 +2499,7 @@ function accessOutputIdentity(output: Output) {
 export function AccessSubscription(props: {
   output: Output | null;
   onClose: () => void;
-  replacement?: boolean;
+  replacement?: "rotation" | "publication";
   rotationUncertain?: boolean;
 }) {
   // Task ownership ends immediately, while AntD retains its supported exit
@@ -2549,14 +2549,14 @@ function OutputAccessTask({
   open,
   onExited,
   onClose,
-  replacement = false,
+  replacement,
   rotationUncertain = false,
 }: {
   output: Output;
   open: boolean;
   onExited: () => void;
   onClose: () => void;
-  replacement?: boolean;
+  replacement?: "rotation" | "publication";
   rotationUncertain?: boolean;
 }) {
   const [output, setOutput] = useState(initialOutput);
@@ -2576,6 +2576,7 @@ function OutputAccessTask({
   const accessState = useRef<HTMLDivElement>(null);
   const returnToRecovery = useRef(false);
   const published = useRef(false);
+  const [contentPublished, setContentPublished] = useState(false);
   const active = useRef(open);
   active.current = open;
   const surfaceShown = useRef(false);
@@ -2586,6 +2587,7 @@ function OutputAccessTask({
   if (seenIdentity !== inputIdentity) {
     setSeenIdentity(inputIdentity);
     setOutput(initialOutput);
+    setContentPublished(false);
     setReview(false);
     setReadGeneration((generation) => generation + 1);
     returnToRecovery.current = false;
@@ -2778,7 +2780,9 @@ function OutputAccessTask({
               }
             >
               {accessDelivery === "bundle"
-                ? "旧下载链接已失效。配置包内容不变，无需因此重新导入。其他订阅保留原状。"
+                ? replacement === "rotation" && !contentPublished
+                  ? "旧下载链接已失效。配置包内容不变，无需因此重新导入。其他订阅保留原状。"
+                  : "旧下载链接已失效，请重新下载配置包并导入客户端。其他订阅保留原状。"
                 : accessDelivery === "feed"
                   ? "旧链接已失效，请将新链接重新添加到客户端。其他订阅保留原状。"
                   : "旧链接已失效，请获取最新订阅内容并更新客户端。其他订阅保留原状。"}
@@ -2955,6 +2959,7 @@ function OutputAccessTask({
             if (!active.current || latestIdentity.current !== seenIdentity)
               return;
             published.current = true;
+            setContentPublished(true);
             returnToRecovery.current = false;
             setOutput(result);
             setReadGeneration((generation) => generation + 1);
