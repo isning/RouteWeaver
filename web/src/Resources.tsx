@@ -243,6 +243,10 @@ export function ResourcesPage() {
       message.success("规则资源已保存");
     },
   });
+  // Only the actual inspection failure qualifies, never a resource-save error
+  // with coincidentally matching text or a different status.
+  const privateAddressFailure = !mutation.error && inspectionError instanceof APIError &&
+    inspectionError.status === 422 && inspectionError.message === "resource address is not public";
   useLayoutEffect(() => {
     const failure = failureFocus.current;
     if (!failure || mutation.isPending || inspecting) return;
@@ -624,7 +628,15 @@ export function ResourcesPage() {
             aria-hidden="true"
             disabled={mutation.isPending || inspecting || !open}
           />
-          <ErrorNotice error={mutation.error || inspectionError} focusRef={errorFocus} />
+          <ErrorNotice
+            error={mutation.error || inspectionError}
+            focusRef={errorFocus}
+            presentation={privateAddressFailure ? {
+              title: "无法读取此规则文件地址",
+              recovery: "该地址不是允许读取的公开地址。当前输入已保留。请改用公开 HTTPS 地址，或取消后选择“导入规则文件”上传本地文件。",
+              detailsLabel: "查看检查详情",
+            } : undefined}
+          />
           <AppField
             name="name"
             label="资源名称"

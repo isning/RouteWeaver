@@ -153,9 +153,13 @@ export type ErrorNoticeFocusHandle = { focus: () => boolean };
 export function ErrorNotice({
   error,
   focusRef,
+  presentation,
 }: {
   error: Error | null | undefined;
   focusRef?: Ref<ErrorNoticeFocusHandle>;
+  // Opt-in task recovery changes presentation only. Preserve the original
+  // error and its exact diagnostic; callers own narrow status/origin matching.
+  presentation?: { title: string; recovery: string; detailsLabel: string };
 }) {
   const summary = useRef<HTMLDivElement>(null);
   const summaryId = useId();
@@ -197,6 +201,14 @@ export function ErrorNotice({
     [],
   );
   if (!error) return null;
+  const title = presentation?.title ?? "操作未完成";
+  const message = presentation?.recovery ?? error.message;
+  const diagnostic = presentation && (
+    <details>
+      <summary className="cursor-pointer">{presentation.detailsLabel}</summary>
+      <p>{error.message}</p>
+    </details>
+  );
   if (focusRef)
     return (
       <div
@@ -208,15 +220,17 @@ export function ErrorNotice({
       >
         <Notice
           tone="error"
-          title={<span id={`${summaryId}-title`}>操作未完成</span>}
+          title={<span id={`${summaryId}-title`}>{title}</span>}
         >
-          <span id={`${summaryId}-message`}>{error.message}</span>
+          <span id={`${summaryId}-message`}>{message}</span>
+          {diagnostic}
         </Notice>
       </div>
     );
   return (
-    <Notice className="form-error" tone="error" title="操作未完成">
-      {error.message}
+    <Notice className="form-error" tone="error" title={title}>
+      {message}
+      {diagnostic}
     </Notice>
   );
 }

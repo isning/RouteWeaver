@@ -172,7 +172,10 @@ it("reveals the current public-reference inspection failure without rewriting it
   fireEvent.change(screen.getByLabelText("资源名称"), { target: { value: "Retained public reference" } });
   fireEvent.change(screen.getByLabelText("规则文件 URL"), { target: { value: "https://127.0.0.1/rules.yaml" } });
   await userEvent.click(screen.getByRole("button", { name: "读取文件并计算校验值" }));
-  const summary = await screen.findByRole("group", { name: "操作未完成", description: "resource address is not public" });
+  const summary = await screen.findByRole("group", {
+    name: "无法读取此规则文件地址",
+    description: "该地址不是允许读取的公开地址。当前输入已保留。请改用公开 HTTPS 地址，或取消后选择“导入规则文件”上传本地文件。",
+  });
   await waitFor(() => expect(document.activeElement).toBe(summary));
   expect((screen.getByLabelText("规则文件 URL") as HTMLInputElement).value).toBe("https://127.0.0.1/rules.yaml");
   expect((screen.getByLabelText("资源名称") as HTMLInputElement).value).toBe("Retained public reference");

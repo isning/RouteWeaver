@@ -190,6 +190,8 @@ export function RuleFileImport({
     save.variables?.mode === "upload" && typeof submittedFormat === "string" &&
     ["mihomo-yaml", "mihomo-text", "mrs", "sing-box-source", "srs"].includes(submittedFormat) &&
     error.message === `invalid or excessive ${submittedFormat} rule file envelope`;
+  const privateAddressFailure = error instanceof APIError && error.status === 422 &&
+    save.variables?.mode === "fetch" && error.message === "resource address is not public";
   useLayoutEffect(() => {
     const failure = failureFocus.current;
     if (!failure || save.isPending) return;
@@ -317,7 +319,15 @@ export function RuleFileImport({
               </details>
             </Notice>
           </div>
-        ) : <ErrorNotice error={error} focusRef={errorFocus} />}
+        ) : <ErrorNotice
+          error={error}
+          focusRef={errorFocus}
+          presentation={privateAddressFailure ? {
+            title: "无法读取此规则文件地址",
+            recovery: "该地址不是允许读取的公开地址。当前输入已保留。请改用公开 HTTPS 地址，或将导入方式切换为“上传本地文件”。",
+            detailsLabel: "查看检查详情",
+          } : undefined}
+        />}
         {initial?.acceptedVersion && (
           <p className="muted text-sm text-muted-foreground">
             当前文件 {bytesLabel(initial.sizeBytes)}
