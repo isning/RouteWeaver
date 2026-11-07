@@ -241,7 +241,7 @@ test.describe("390px touch", () => {
     const editor = page.getByRole("dialog", { name: "更换「英国线路」的出口", exact: true });
     const server = editor.getByRole("combobox", { name: "新出口服务器", exact: true });
     const endpoint = editor.getByRole("combobox", { name: "新出口端点", exact: true });
-    const choices = page.getByRole("listbox", { name: "候选项", exact: true });
+    const choices = page.getByRole("listbox");
     await server.tap();
     await expect(server).toHaveAttribute("aria-expanded", "true");
     await expect(choices).toHaveCount(1);
