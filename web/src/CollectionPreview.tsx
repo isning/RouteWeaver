@@ -76,7 +76,6 @@ export function CollectionPreview({
       (document.activeElement === document.body || document.activeElement === null)
     ) {
       fallback.focus({ preventScroll: true });
-      fallback.scrollIntoView?.({ block: "nearest", inline: "nearest" });
     }
   });
   const table = (nodes: Preview["endpoints"]) => (
@@ -119,10 +118,16 @@ export function CollectionPreview({
               })),
             ].map((section) => (
               <TabsTrigger
-                className="max-w-64 flex-none whitespace-nowrap"
+                className="max-w-64 flex-none scroll-mx-1 whitespace-nowrap"
                 key={section.key}
                 value={section.key}
                 title={section.label}
+                onFocus={(event) => {
+                  // Native focus can leave a partly visible tab clipped. Reveal
+                  // the complete target on focus, not on every preview render,
+                  // so manual rail scrolling and editor focus remain untouched.
+                  event.currentTarget.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+                }}
                 ref={(node) => {
                   const previous = tabs.current.get(section.key);
                   if (!node && previous === document.activeElement) {

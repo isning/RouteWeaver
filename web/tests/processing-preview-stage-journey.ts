@@ -48,6 +48,18 @@ async function resultPanel(sheet: Locator, stage: Stage) {
 
 async function captureStage(page: Page, sheet: Locator, stage: Stage, width: number, info: TestInfo) {
   const { panel, tab } = await resultPanel(sheet, stage);
+  const tabGeometry = () => tab.evaluate(element => {
+    const rect = element.getBoundingClientRect();
+    const viewport = element.closest<HTMLElement>('[data-slot="scroll-area-viewport"]')!;
+    const rail = viewport.getBoundingClientRect();
+    return {
+      left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom,
+      railLeft: rail.left + viewport.clientLeft,
+      railRight: rail.left + viewport.clientLeft + viewport.clientWidth,
+      scrollLeft: viewport.scrollLeft,
+    };
+  });
+  const beforePositioning = await tabGeometry();
   await expect(page.locator("[data-sonner-toast]")).toHaveCount(0);
   // Bring the actual preview into view without changing its layout, styles or
   // motion. Screenshots remain original viewport pixels, including the editor.
@@ -72,19 +84,28 @@ async function captureStage(page: Page, sheet: Locator, stage: Stage, width: num
   // generated feed, connection editor or authentication screen is captured.
   await page.screenshot({ path, fullPage: false });
   await info.attach(name, { path, contentType: "image/png" });
+  const evidence = {
+    stage: await panel.getByRole("heading").innerText(),
+    rows: await panel.getByRole("row").allTextContents(),
+    text: await panel.innerText(),
+    comparison: stage.changed === undefined ? "snapshot" : "step-input",
+    geometry,
+    tab: { beforePositioning, afterPositioning: await tabGeometry() },
+  };
+  // Keep the measured failing state as well as successful summaries. Neither
+  // the diagnostic nor capture positioning scrolls the horizontal tab rail.
+  const proofPath = info.outputPath(`${name}.json`);
+  await writeFile(proofPath, JSON.stringify(evidence, null, 2));
+  await info.attach(`${name}-geometry`, { path: proofPath, contentType: "application/json" });
+  expect(beforePositioning.left).toBeGreaterThanOrEqual(beforePositioning.railLeft - 1);
+  expect(beforePositioning.right).toBeLessThanOrEqual(beforePositioning.railRight + 1);
   expect(geometry.documentWidth).toBeLessThanOrEqual(width + 1);
   expect(geometry.panel.x).toBeGreaterThanOrEqual(-1);
   expect(geometry.panel.right).toBeLessThanOrEqual(width + 1);
   await expect(tab).toBeInViewport({ ratio: 1 });
   await expect(panel.getByRole("heading", { name: stage.label, exact: true })).toBeInViewport({ ratio: 1 });
   await expect(panel.getByRole("cell", { name: `proxy.example.test:${stage.port}`, exact: true }).first()).toBeInViewport({ ratio: 1 });
-  return {
-    stage: await panel.getByRole("heading").innerText(),
-    rows: await panel.getByRole("row").allTextContents(),
-    text: await panel.innerText(),
-    comparison: stage.changed === undefined ? "snapshot" : "step-input",
-    geometry,
-  };
+  return evidence;
 }
 
 export async function reviewProcessingStages(page: Page, sheet: Locator, info: TestInfo) {
