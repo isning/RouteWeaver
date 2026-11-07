@@ -29,7 +29,7 @@ function responseFor(page: Page, path: string) {
   );
 }
 
-async function choose(page: Page, control: Locator, query: string) {
+async function choose(page: Page, control: Locator, query: string, selectedControl = control) {
   await control.focus();
   await expect(control).toBeFocused();
   await page.keyboard.press("Enter");
@@ -41,8 +41,66 @@ async function choose(page: Page, control: Locator, query: string) {
   await expect(option).toHaveCount(1);
   await expect(option).toContainText(query);
   await search.press("Enter");
-  await expect(control).toHaveAttribute("aria-expanded", "false");
+  await expect(selectedControl).toHaveAttribute("aria-expanded", "false");
   await expect(page.getByRole("listbox")).toHaveCount(0);
+}
+
+async function verifyEntryFocus(page: Page, info: TestInfo, surface: Locator) {
+  const snapshot = () => surface.evaluate((editor) => {
+    const active = document.activeElement;
+    const inside = !!active && editor.contains(active);
+    const control = active instanceof HTMLElement &&
+      active.matches("button,input:not([type=hidden]),select,textarea,a[href],[role=tab]");
+    const inForm = inside && !!active?.closest("[data-task-overlay-body],[data-task-overlay-footer]");
+    const disabled = !!active?.matches(":disabled,[aria-disabled=true]");
+    let hidden = !!active?.closest("[hidden],[inert],[aria-hidden=true]");
+    for (let ancestor = active; ancestor; ancestor = ancestor.parentElement) {
+      const style = getComputedStyle(ancestor);
+      hidden ||= style.display === "none" || style.visibility === "hidden" || Number(style.opacity) === 0;
+    }
+    const rect = active?.getBoundingClientRect();
+    const visible = !!rect && rect.width > 0 && rect.height > 0 &&
+      rect.right > 0 && rect.bottom > 0 && rect.left < innerWidth && rect.top < innerHeight;
+    const tabIndex = active instanceof HTMLElement ? active.tabIndex : -1;
+    // No input values, HTML, URL, or outside-task text enters this diagnostic.
+    const label = inside && control
+      ? active.getAttribute("aria-label") || (active.matches("button,a") ? active.textContent : "")
+      : "";
+    return {
+      meaningful: !!active?.isConnected && inForm && control && !disabled && !hidden && visible && tabIndex >= 0,
+      tag: active?.tagName ?? null, role: active?.getAttribute("role") ?? null,
+      label: (label || "").replace(/\s+/g, " ").trim().slice(0, 160),
+      inside, inForm, disabled, hidden, visible, tabIndex,
+      rect: rect ? { x: rect.x, y: rect.y, width: rect.width, height: rect.height } : null,
+      viewport: { width: innerWidth, height: innerHeight },
+    };
+  });
+  type FocusSnapshot = Awaited<ReturnType<typeof snapshot>>;
+  const evidence: { before?: FocusSnapshot; after?: FocusSnapshot; atEnd?: FocusSnapshot | null; moved?: boolean } = {};
+  try {
+    // A hidden exit is not yet a completed focus handoff. Wait for the popup
+    // to unmount and real task motion to finish, without refocusing anything.
+    await expect(page.getByRole("listbox", { includeHidden: true })).toHaveCount(0);
+    await settledTask(surface);
+    evidence.before = await snapshot();
+    const owner = await page.evaluateHandle(() => document.activeElement);
+    try {
+      // Record Tab even if initial focus is lost, but never accept that loss
+      // just because Tab subsequently recovers a valid field.
+      await page.keyboard.press("Tab");
+      await settledTask(surface);
+      evidence.after = await snapshot();
+      evidence.moved = await owner.evaluate((previous) => document.activeElement !== previous);
+    } finally {
+      await owner.dispose();
+    }
+    expect(evidence.before, "Selection leaves meaningful focus in the path form").toMatchObject({ meaningful: true });
+    expect(evidence.after, "Native Tab continues within the path form").toMatchObject({ meaningful: true });
+    expect(evidence.moved, "Native Tab advances to another form control").toBe(true);
+  } finally {
+    evidence.atEnd = await snapshot().catch(() => null);
+    await info.attach("first-entry-keyboard-focus", { contentType: "application/json", body: JSON.stringify(evidence) });
+  }
 }
 
 async function navigateAfterClose(page: Page, width: number, name: string) {
@@ -174,9 +232,22 @@ for (const width of [1440, 390]) {
     const pathEditor = page.getByRole("dialog", { name: "新建转发路径", exact: true });
     await pathEditor.getByLabel("转发路径名称", { exact: true }).fill(names.path);
     await choose(page, pathEditor.getByRole("combobox", { name: "入口服务器", exact: true }), names.host);
-    await choose(page, pathEditor.getByRole("combobox", { name: "入口端点", exact: true }), names.listener);
+    const entryListener = pathEditor.getByRole("combobox", { name: "入口端点", exact: true });
     const selectedListener = pathEditor.getByRole("combobox", { name: "第 1 跳端点", exact: true });
-    await expect(selectedListener).toContainText(names.listener);
+    const revealedSelection = page.waitForResponse((response) =>
+      response.request().method() === "GET" &&
+      new URL(response.url()).pathname === `/api/managed-endpoints/${encodeURIComponent(listener.id)}/reveal`,
+    );
+    // Only this choice replaces its trigger: the empty entry becomes an exact
+    // selected hop after the real endpoint reveal, plus a fresh next-hop picker.
+    await choose(page, entryListener, names.listener, selectedListener);
+    await expect(entryListener).toHaveCount(0);
+    await expect(pathEditor.getByRole("combobox", { name: "第 1 跳服务器", exact: true })).toHaveText(names.host);
+    await expect(selectedListener).toHaveText(`${names.listener} vless:${listenerPort} managed-xray`);
+    const selectedResponse = await revealedSelection;
+    expect(selectedResponse.status()).toBe(200);
+    expect(await selectedResponse.json()).toMatchObject({ id: listener.id, instanceId: core.id, name: names.listener });
+    await verifyEntryFocus(page, info, pathEditor);
     await pathEditor.getByRole("tab", { name: "图形编辑", exact: true }).click();
     await pathEditor.getByRole("tab", { name: "顺序编辑", exact: true }).click();
     await expect(selectedListener).toContainText(names.listener);
