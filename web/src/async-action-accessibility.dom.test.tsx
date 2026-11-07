@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { renderFleetSession } from "./test-support/fleet-session";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import {
   act,
@@ -11,7 +12,6 @@ import {
 import userEvent from "@testing-library/user-event";
 import { UIProviders } from "./ui-patterns/providers";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import type { ReactNode } from "react";
 import { FleetPlanForm } from "./Fleet";
 import { RuleFileImport } from "./RuleFileImport";
 import { ProfileEditor } from "./Profiles";
@@ -37,16 +37,16 @@ function deferred() {
   });
   return { promise, resolve };
 }
-function mount(node: ReactNode) {
+async function mount(node: React.ReactElement) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   clients.push(client);
-  return render(
+  return renderFleetSession(node, (content) => render(
     <QueryClientProvider client={client}>
-      <UIProviders>{node}</UIProviders>
+      <UIProviders>{content}</UIProviders>
     </QueryClientProvider>,
-  );
+  ));
 }
 beforeEach(() => {
   vi.stubEnv("NODE_ENV", "development");
@@ -104,7 +104,7 @@ const inventory = {
   ],
 } as unknown as Infrastructure;
 const plan = {
-  fingerprint: "reviewed-scope",
+  fingerprint: "a".repeat(64),
   supported: true,
   affectedUsers: 7,
   diagnostics: [],
@@ -135,7 +135,7 @@ it.for(["preview", "create"] as const)(
         return pending.promise;
       }),
     );
-    mount(
+    await mount(
       <FleetPlanForm
         inventory={inventory}
         history={[]}
@@ -199,20 +199,17 @@ it.for(["preview", "create"] as const)(
       await act(async () =>
         pending.resolve(json({ error: "Plan rejected" }, 422)),
       );
-      await dialog.findByText("Plan rejected");
-      expect(dialog.getByRole("button", { name: "创建待执行批次" })).toBe(
-        create,
-      );
-      await waitFor(() =>
-        expect(create.getAttribute("aria-busy")).not.toBe("true"),
-      );
-      expect(create.disabled).toBe(false);
-      expect(dialog.getByText("1 个实例")).toBeTruthy();
-      expect(dialog.getByText("7 位用户受影响")).toBeTruthy();
+      await dialog.findByText("创建结果尚未确认，批次可能已创建。请先查询该次结果。");
+      expect(dialog.queryByRole("button", { name: "创建待执行批次" })).toBeNull();
+      expect(create.isConnected).toBe(true);
+      expect(create.closest("[hidden][inert]")).not.toBeNull();
+      expect(dialog.getByRole("button", { name: "查询该次结果" })).toBeTruthy();
+      expect(dialog.getByRole("button", { name: "用同一计划重试创建" })).toBeTruthy();
+      expect(dialog.queryByText("Plan rejected")).toBeNull();
       expect(requests[1].body).toMatchObject({
         deploymentId: "path",
         targetIds: ["core"],
-        expectedFingerprint: "reviewed-scope",
+        expectedFingerprint: "a".repeat(64),
       });
     }
     expect(requests[0].body).toMatchObject({
@@ -240,7 +237,7 @@ it.for(["upload", "fetch"] as const)(
           : json({ ...body.resource, acceptedVersion: "accepted" });
       }),
     );
-    mount(<RuleFileImport onClose={close} />);
+    await mount(<RuleFileImport onClose={close} />);
     const dialog = within(screen.getByRole("dialog", { name: "导入规则文件" }));
     scenario.change(() => dialog.getByLabelText("导入资源名称"), {
       target: { value: "Private rules" },
@@ -315,7 +312,7 @@ it("keeps standalone Profile Save named and busy while preserving a rejected dra
     }),
   );
   const profile = { ...emptyProfile(), name: "Work draft" };
-  const view = mount(
+  const view = await mount(
     <ProfileEditor initial={profile} isNew onClose={() => {}} />,
   );
   const editor = within(view.container);
@@ -367,7 +364,7 @@ it("keeps new subscription confirmation tied to its reviewed name while publishi
       return pending.promise;
     }),
   );
-  mount(
+  await mount(
     <PublishOutput
       profile={{ ...emptyProfile(), id: "profile", name: "Phone" }}
       onClose={() => {}}
@@ -452,7 +449,7 @@ it.for(["published", "revoked"] as const)(
           : pending.promise;
       }),
     );
-    mount(<UpdateOutput output={output} onClose={() => {}} />);
+    await mount(<UpdateOutput output={output} onClose={() => {}} />);
     const dialog = within(
       screen.getByRole("dialog", { name: "检查订阅更新「Android travel」" }),
     );
@@ -530,7 +527,7 @@ it.for(["row", "detail", "revoked-row", "revoked-detail"] as const)(
         return json([]);
       }),
     );
-    mount(<SubscriptionsPage />);
+    await mount(<SubscriptionsPage />);
     const row = await screen.findByRole("group", { name: "客户端订阅 Laptop" });
     let scope = within(row);
     const name = surface.startsWith("revoked") ? "检查重新发布" : "检查更新";

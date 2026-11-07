@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { renderFleetSession } from "./test-support/fleet-session";
 import { beforeEach, afterEach, it, expect, vi } from "vitest";
 import { render, cleanup, screen, fireEvent, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -81,7 +82,7 @@ beforeEach(() => {
       });
       if (url.endsWith("/preview"))
         return json({
-          fingerprint: "preview",
+          fingerprint: "a".repeat(64),
           supported: true,
           targets: [],
           diagnostics: [],
@@ -104,18 +105,18 @@ afterEach(() => {
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
 });
-function mount(node: React.ReactNode) {
+async function mount(node: React.ReactElement) {
   client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  return render(
+  return renderFleetSession(node, (content) => render(
     <QueryClientProvider client={client}>
-      <UIProviders>{node}</UIProviders>
+      <UIProviders>{content}</UIProviders>
     </QueryClientProvider>,
-  );
+  ));
 }
-function planner() {
-  mount(<FleetPlanForm inventory={inventory} history={[]} initialDeploymentId="office"
+async function planner() {
+  await mount(<FleetPlanForm inventory={inventory} history={[]} initialDeploymentId="office"
     initialTargetIds={["core"]} onClose={() => {}} onCreated={() => {}} />);
 }
 async function leaseField() {
@@ -124,7 +125,7 @@ async function leaseField() {
   return screen.getByRole("spinbutton", { name: "批量变更策略有效秒数" });
 }
 it.each(["", "0", "29", "3601", "30.5", "30.000000000000000001", "3599.999999999999999999", "1e", "-", "0x12c"])("retains invalid Fleet lease %s without requesting preview", async raw => {
-  planner();
+  await planner();
   const field = await leaseField();
   fireEvent.change(field, { target: { value: raw } });
   fireEvent.blur(field);
@@ -135,7 +136,7 @@ it.each(["", "0", "29", "3601", "30.5", "30.000000000000000001", "3599.999999999
   expect(screen.queryByRole("button", { name: "创建待执行批次" })).toBeNull();
 });
 it.each([["30", 30], ["3600", 3600], ["3e2", 300], ["300.0", 300]])("creates Fleet batch with reviewed exact lease %s", async (raw, expected) => {
-  planner();
+  await planner();
   const field = await leaseField();
   fireEvent.change(field, { target: { value: raw } });
   const user = userEvent.setup();
@@ -145,7 +146,7 @@ it.each([["30", 30], ["3600", 3600], ["3e2", 300], ["300.0", 300]])("creates Fle
   await waitFor(() => expect(calls.find(c => c.url.endsWith("/fleet-batches"))?.body).toMatchObject({ leaseSeconds: expected, stages: [["core"]] }));
 });
 it.each(["", "0", "21", "1.5", "1.000000000000000001", "1e", "-"])("retains invalid selected custom stage %s without preview", async raw => {
-  planner();
+  await planner();
   const user = userEvent.setup();
   await user.click(screen.getByRole("combobox", { name: "执行顺序" }));
   await user.click(await screen.findByText("自定义分组", { selector: "[cmdk-item] span" }));
@@ -158,7 +159,7 @@ it.each(["", "0", "21", "1.5", "1.000000000000000001", "1e", "-"])("retains inva
   expect(calls.filter(c => c.url.endsWith("/preview"))).toHaveLength(0);
 });
 it("invalidates a reviewed Fleet plan on an incomplete lease edit and requires a fresh review after repair", async () => {
-  planner();
+  await planner();
   const field = await leaseField();
   const user = userEvent.setup();
   await user.click(screen.getByRole("button", { name: "预览影响与差异" }));
@@ -174,7 +175,7 @@ it("invalidates a reviewed Fleet plan on an incomplete lease edit and requires a
 });
 
 it("keeps untouched Fleet defaults at 300 seconds and stage one", async () => {
-  planner();
+  await planner();
   const user = userEvent.setup();
   await user.click(screen.getByRole("button", { name: "预览影响与差异" }));
   await user.click(await screen.findByRole("checkbox", { name: "我已核对实例、阶段与影响范围" }));
@@ -182,7 +183,7 @@ it("keeps untouched Fleet defaults at 300 seconds and stage one", async () => {
   await waitFor(() => expect(calls.find(c => c.url.endsWith("/fleet-batches"))?.body).toMatchObject({ leaseSeconds: 300, stages: [["core"]] }));
 });
 it("repairs a fractional custom stage but still rejects a gap before exact stage one", async () => {
-  planner();
+  await planner();
   const user = userEvent.setup();
   await user.click(screen.getByRole("combobox", { name: "执行顺序" }));
   await user.click(await screen.findByText("自定义分组", { selector: "[cmdk-item] span" }));
@@ -200,12 +201,13 @@ it("repairs a fractional custom stage but still rejects a gap before exact stage
 it("does not restore Fleet review from an older in-flight preview after a lease edit", async () => {
   let complete!: (response: Response) => void;
   const pending = new Promise<Response>(resolve => { complete = resolve; });
-  vi.mocked(fetch).mockImplementation(async () => pending);
-  planner();
+  const businessFetch = vi.mocked(fetch);
+  businessFetch.mockImplementation(async () => pending);
+  await planner();
   const field = await leaseField();
   const user = userEvent.setup();
   await user.click(screen.getByRole("button", { name: "预览影响与差异" }));
-  await waitFor(() => expect(fetch).toHaveBeenCalled());
+  await waitFor(() => expect(businessFetch).toHaveBeenCalled());
   fireEvent.change(field, { target: { value: "3e" } });
   complete(json({ fingerprint: "older", supported: true, targets: [], diagnostics: [], affectedUsers: 0 }));
   await waitFor(() => expect(screen.getByRole("button", { name: "预览影响与差异" }).getAttribute("aria-busy")).not.toBe("true"));

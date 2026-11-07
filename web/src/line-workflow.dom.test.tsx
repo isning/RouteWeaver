@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { renderFleetSession } from "./test-support/fleet-session";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import {
   cleanup,
@@ -15,7 +16,6 @@ import { PublishedRoutesPage } from "./PublishedRoutes";
 import { FleetPlanForm } from "./Fleet";
 import { ServerRoutesPage } from "./ServerRoutes";
 import type { Infrastructure } from "./types";
-import type { ReactNode } from "react";
 
 const json = (value: unknown, status = 200) =>
   new Response(JSON.stringify(value), {
@@ -91,16 +91,16 @@ const effectivePolicy = {
     routeIdsOverride: null,
   },
 };
-function mount(node: ReactNode) {
+async function mount(node: React.ReactElement) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   clients.push(client);
-  return render(
+  return renderFleetSession(node, (content) => render(
     <QueryClientProvider client={client}>
-      <UIProviders>{node}</UIProviders>
+      <UIProviders>{content}</UIProviders>
     </QueryClientProvider>,
-  );
+  ));
 }
 function mockInventory(
   extra?: (
@@ -181,7 +181,7 @@ afterEach(() => {
 
 it("explains the check dependency, expires a checked draft on edit, then returns the saved line to its next step", async () => {
   const requests = mockInventory();
-  mount(<PublishedRoutesPage />);
+  await mount(<PublishedRoutesPage />);
   await userEvent.click(await screen.findByRole("button", { name: "编辑" }));
   const editor = await screen.findByRole("dialog", {
     name: "编辑 Office line",
@@ -225,17 +225,17 @@ it("locks a contextual path, keeps targets deliberate, and retains scope after a
   const requests = mockInventory((path) =>
     path.endsWith("/preview")
       ? json({
-          fingerprint: "f1",
+          fingerprint: "a".repeat(64),
           supported: true,
           targets: [],
           diagnostics: [],
           affectedUsers: 0,
         })
       : path.endsWith("/admin/fleet-batches")
-        ? json({ error: "Scope changed; check again" }, 409)
+        ? json({ error: "Scope changed; check again", code: "FLEET_REVIEW_CHANGED" }, 409)
         : undefined,
   );
-  mount(
+  await mount(
     <FleetPlanForm
       inventory={inventory}
       history={[]}
@@ -273,7 +273,7 @@ it("locks a contextual path, keeps targets deliberate, and retains scope after a
     }),
   );
   await userEvent.click(screen.getByRole("button", { name: "创建待执行批次" }));
-  await screen.findByText("Scope changed; check again");
+  await screen.findByText("计划需要重新核对，尚未创建批次。请重新预览后再创建。");
   expect(
     (
       screen.getByRole("checkbox", {
@@ -309,7 +309,7 @@ it("discards a late line check after the address changes", async () => {
         })
       : undefined,
   );
-  mount(<PublishedRoutesPage />);
+  await mount(<PublishedRoutesPage />);
   await userEvent.click(await screen.findByRole("button", { name: "编辑" }));
   const editor = screen.getByRole("dialog", { name: "编辑 Office line" });
   await userEvent.click(
@@ -370,7 +370,7 @@ it("keeps unknown checks distinct from confirmed path and credentials, including
       ]);
     return undefined;
   });
-  mount(<PublishedRoutesPage />);
+  await mount(<PublishedRoutesPage />);
   const detail = await screen.findByRole("dialog", { name: "Office line" });
   await within(detail).findByText("用户授权：未知，请重新核对。");
   expect(
@@ -423,7 +423,7 @@ it("returns from authorization, credentials and the path planner to the same lin
     if (path.includes("/agent/instances/")) return json({ phase: "unknown" });
     return undefined;
   });
-  let page = mount(<PublishedRoutesPage />);
+  let page = await mount(<PublishedRoutesPage />);
   let detail = await screen.findByRole("dialog", { name: "Office line" });
   await within(detail).findByText(/已获准使用此线路/);
   await userEvent.click(
@@ -478,7 +478,7 @@ it("returns from authorization, credentials and the path planner to the same lin
     expect(location.hash).toBe("#routes?deployment=path&line=line&user=alice"),
   );
   page.unmount();
-  page = mount(<ServerRoutesPage />);
+  page = await mount(<ServerRoutesPage />);
   const path = await screen.findByRole("dialog", { name: "Office path" });
   await userEvent.click(
     within(path).getByRole("button", { name: "分阶段应用修改" }),
@@ -512,7 +512,7 @@ it("returns from authorization, credentials and the path planner to the same lin
     expect(location.hash).toBe("#published-routes?line=line&user=alice"),
   );
   page.unmount();
-  mount(<PublishedRoutesPage />);
+  await mount(<PublishedRoutesPage />);
   detail = await screen.findByRole("dialog", { name: "Office line" });
   await within(detail).findByText(/已获准使用此线路/);
   expect(within(detail).getByText("Alice")).toBeTruthy();
@@ -569,7 +569,7 @@ it.each([
         ]);
       return undefined;
     });
-    mount(<PublishedRoutesPage />);
+    await mount(<PublishedRoutesPage />);
     const detail = await screen.findByRole("dialog", { name: "Office line" });
     await within(detail).findByText("入口已准备，尚未确认应用");
     expect(within(detail).getByText(`授权来源：${sourceLabel}`)).toBeTruthy();

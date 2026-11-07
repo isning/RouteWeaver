@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
+import { renderFleetSession } from "./test-support/fleet-session";
 import userEvent from "@testing-library/user-event";
 import { compile } from "tailwindcss";
-import type { ReactNode } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import {
   act,
@@ -46,7 +46,7 @@ const inventory = {
   ],
 } as unknown as Infrastructure;
 const plan = {
-  fingerprint: "reviewed-scope",
+  fingerprint: "a".repeat(64),
   supported: true,
   affectedUsers: 7,
   diagnostics: [],
@@ -61,17 +61,18 @@ const plan = {
   ],
 };
 const changed = "计划需要重新核对，尚未创建批次。请重新预览后再创建。";
+const uncertain = "创建结果尚未确认，批次可能已创建。请先查询该次结果。";
 const legacy = "plan inputs changed; preview again before creating the batch";
-function mount(ui: ReactNode) {
+async function mount(ui: React.ReactElement) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   clients.push(client);
-  return render(
+  return renderFleetSession(ui, (content) => render(
     <QueryClientProvider client={client}>
-      <UIProviders>{ui}</UIProviders>
+      <UIProviders>{content}</UIProviders>
     </QueryClientProvider>,
-  );
+  ));
 }
 beforeEach(() => {
   vi.stubEnv("NODE_ENV", "development");
@@ -110,7 +111,7 @@ afterEach(async () => {
 it("asks for a saved path before exposing instance filters and execution stages", async () => {
   const fetcher = vi.fn(async () => json([]));
   vi.stubGlobal("fetch", fetcher);
-  mount(
+  await mount(
     <FleetPlanForm
       inventory={inventory}
       history={[]}
@@ -139,7 +140,7 @@ it("asks for a saved path before exposing instance filters and execution stages"
 it("recovers an empty filter result without changing selected instances or stages", async () => {
   const fetcher = vi.fn(async () => json([]));
   vi.stubGlobal("fetch", fetcher);
-  mount(
+  await mount(
     <FleetPlanForm
       inventory={{
         ...inventory,
@@ -197,7 +198,7 @@ it("recovers an empty filter result without changing selected instances or stage
 it("confirms path replacement and keeps targets, stages and service choice when canceled", async () => {
   const fetcher = vi.fn(async () => json([]));
   vi.stubGlobal("fetch", fetcher);
-  mount(
+  await mount(
     <FleetPlanForm
       inventory={{
         ...inventory,
@@ -308,7 +309,7 @@ it.for([
   async ({ deployments, initialDeploymentId, message }) => {
     const fetcher = vi.fn(async () => json([]));
     vi.stubGlobal("fetch", fetcher);
-    mount(
+    await mount(
       <FleetPlanForm
         inventory={{ ...inventory, deployments } as Infrastructure}
         history={[]}
@@ -340,7 +341,7 @@ it.for(["success", "failure"])(
         : json({ detail: "Current path B preview failed" }, 503);
     });
     vi.stubGlobal("fetch", fetcher);
-    mount(
+    await mount(
       <FleetPlanForm
         inventory={{
           ...inventory,
@@ -429,7 +430,7 @@ it.for([
       return body.deploymentId === "path" ? pendingA : pendingB;
     });
     vi.stubGlobal("fetch", fetcher);
-    mount(
+    await mount(
       <FleetPlanForm
         inventory={{
           ...inventory,
@@ -506,7 +507,7 @@ it.for([
     expect(fetcher).toHaveBeenCalledTimes(2);
   },
 );
-it("keeps a failed create tied to its path and retains a new path's own failure", async () => {
+it("keeps an uncertain create frozen until abandonment before creating for another path", async () => {
   const fetcher = vi.fn(async (url, init) => {
     if (String(url).endsWith("/preview")) return json(plan);
     const body = JSON.parse(String(init?.body));
@@ -521,7 +522,7 @@ it("keeps a failed create tied to its path and retains a new path's own failure"
     );
   });
   vi.stubGlobal("fetch", fetcher);
-  mount(
+  await mount(
     <FleetPlanForm
       inventory={{
         ...inventory,
@@ -536,10 +537,15 @@ it("keeps a failed create tied to its path and retains a new path's own failure"
     />,
   );
   const path = screen.getByRole("combobox", { name: "批量变更转发路径" });
-  for (const [name, error] of [
-    ["Office path", "Path A creation result needs checking"],
-    ["Other path", "Path B creation result needs checking"],
-  ]) {
+  const bodies: unknown[] = [];
+  for (const name of ["Office path", "Other path"]) {
+    if (name === "Other path") {
+      await userEvent.click(screen.getByRole("button", { name: "放弃本页恢复记录" }));
+      const decision = await screen.findByRole("alertdialog", { name: "放弃核对这次创建？" });
+      await userEvent.click(within(decision).getByRole("button", { name: "放弃恢复记录" }));
+      await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+      expect(sessionStorage.length).toBe(0);
+    }
     await userEvent.click(path);
     await userEvent.click(screen.getByRole("option", { name }));
     if (name === "Other path") {
@@ -565,14 +571,21 @@ it("keeps a failed create tied to its path and retains a new path's own failure"
     await userEvent.click(
       screen.getByRole("button", { name: "创建待执行批次" }),
     );
-    await screen.findByText(error);
+    await screen.findByText(uncertain);
+    expect(screen.queryByRole("combobox", { name: "批量变更转发路径" })).toBeNull();
+    expect(screen.queryByRole("checkbox", { name: "选择实例 Office core" })).toBeNull();
+    const record = JSON.parse(sessionStorage.getItem("routeweaver.fleet-creation.v1:fleet-test-admin")!);
+    expect(record.request.deploymentId).toBe(name === "Office path" ? "path" : "other");
+    bodies.push(record.request);
+    expect(screen.getByRole("region", { name: "批次创建结果" }).textContent).toContain(name);
   }
   expect(fetcher).toHaveBeenCalledTimes(4);
+  expect(bodies).toHaveLength(2);
 });
 it("labels and aligns populated filters while retaining selected targets and keyboard controls", async () => {
   const fetcher = vi.fn(async () => json([]));
   vi.stubGlobal("fetch", fetcher);
-  mount(
+  await mount(
     <FleetPlanForm
       inventory={{
         ...inventory,
@@ -644,23 +657,25 @@ it("labels and aligns populated filters while retaining selected targets and key
 });
 it.for([
   { status: 409, code: "FLEET_REVIEW_CHANGED", expected: changed },
-  { status: 409, code: "UNKNOWN_FUTURE_CONFLICT", expected: legacy },
-  { status: 422, code: "FLEET_REVIEW_CHANGED", expected: legacy },
+  { status: 409, code: "UNKNOWN_FUTURE_CONFLICT", expected: uncertain },
+  { status: 422, code: "FLEET_REVIEW_CHANGED", expected: uncertain },
 ])(
   "keeps exact typed feedback and recovery for $status / $code",
   async ({ status, code, expected }, context) => {
     const scenario = ownedClickScenario(context),
       writes: unknown[] = [],
+      conditions: (string | null)[] = [],
       created = vi.fn();
     vi.stubGlobal(
       "fetch",
       vi.fn(async (url, init) => {
         if (String(url).endsWith("/preview")) return json(plan);
         writes.push(JSON.parse(String(init?.body)));
+        conditions.push(new Headers(init?.headers).get("If-None-Match"));
         return json({ detail: legacy, code }, status);
       }),
     );
-    mount(
+    await mount(
       <FleetPlanForm
         inventory={inventory}
         history={[]}
@@ -685,34 +700,30 @@ it.for([
     expect(
       dialog.queryByText(expected === changed ? legacy : changed),
     ).toBeNull();
-    expect(
-      (
-        dialog.getByRole("checkbox", {
-          name: "选择实例 Office core",
-        }) as HTMLInputElement
-      ).getAttribute("aria-checked"),
-    ).toBe("true");
-    expect(
-      dialog.getByRole("button", {
-        name: status === 409 ? "预览影响与差异" : "创建待执行批次",
-        description: new RegExp(expected),
-      }),
-    ).toBeTruthy();
-    if (status === 409)
-      expect(
-        dialog.queryByRole("button", { name: "创建待执行批次" }),
-      ).toBeNull();
-    else {
-      expect(dialog.getByText("1 个实例")).toBeTruthy();
-      expect(dialog.getByText("7 位用户受影响")).toBeTruthy();
+    expect(dialog.queryByRole("button", { name: "创建待执行批次" })).toBeNull();
+    if (expected === changed) {
+      expect(dialog.getByRole("checkbox", { name: "选择实例 Office core" }).getAttribute("aria-checked")).toBe("true");
+      const preview = dialog.getByRole("button", { name: "预览影响与差异", description: new RegExp(changed) });
+      await waitFor(() => expect(document.activeElement).toBe(preview));
+      expect(sessionStorage.length).toBe(0);
+      expect(dialog.queryByRole("checkbox", { name: "我已核对实例、阶段与影响范围" })).toBeNull();
+    } else {
+      expect(dialog.queryByRole("checkbox", { name: "选择实例 Office core" })).toBeNull();
+      expect(dialog.queryByRole("button", { name: "预览影响与差异" })).toBeNull();
+      const lookup = dialog.getByRole("button", { name: "查询该次结果" });
+      await waitFor(() => expect(document.activeElement).toBe(lookup));
+      expect(dialog.getByRole("button", { name: "用同一计划重试创建" })).toBeTruthy();
+      expect(dialog.getByRole("button", { name: "放弃本页恢复记录" })).toBeTruthy();
+      expect(sessionStorage.length).toBe(1);
     }
     expect(writes).toEqual([
       expect.objectContaining({
         deploymentId: "path",
         targetIds: ["core"],
-        expectedFingerprint: "reviewed-scope",
+        expectedFingerprint: "a".repeat(64),
       }),
     ]);
+    expect(conditions).toEqual(["*"]);
     expect(created).not.toHaveBeenCalled();
   },
 );
@@ -786,7 +797,7 @@ it("explains known attempt codes before raw detail without implying superseded w
   };
   const fetcher = vi.fn(async () => json(batch));
   vi.stubGlobal("fetch", fetcher);
-  mount(<FleetBatchDetail id="batch" onClose={() => {}} />);
+  await mount(<FleetBatchDetail id="batch" onClose={() => {}} />);
   const dialog = within(screen.getByRole("dialog"));
   const name = await dialog.findByText("Office core");
   const row = within(name.closest("tr")!);
@@ -852,7 +863,7 @@ it.each([
         }),
       ),
     );
-    mount(<FleetBatchDetail id="stage-feedback" onClose={() => {}} />);
+    await mount(<FleetBatchDetail id="stage-feedback" onClose={() => {}} />);
     expect(await screen.findByText(expected)).toBeTruthy();
     expect(
       screen.queryByText("本阶段已提交，请刷新进度并等待节点确认"),
@@ -899,7 +910,7 @@ it("keeps unexecuted targets visible in mixed and waiting stages", async () => {
       }),
     ),
   );
-  mount(<FleetBatchDetail id="mixed-stages" onClose={() => {}} />);
+  await mount(<FleetBatchDetail id="mixed-stages" onClose={() => {}} />);
   expect(
     await screen.findByText("有实例已提交，等待节点确认。 仍有实例尚未执行。"),
   ).toBeTruthy();
@@ -941,7 +952,7 @@ it("shows stock security migration consequences only for the selected Xray relea
       return json({});
     }),
   );
-  mount(
+  await mount(
     <FleetPlanForm
       inventory={inventory}
       history={[]}
@@ -970,4 +981,38 @@ it("shows stock security migration consequences only for the selected Xray relea
   );
   expect(dialog.queryByText(/不能直接沿用自定义系统 CA/)).toBeNull();
   expect(writes).toEqual([]);
+});
+
+it("opens a verified created batch only after an explicit progress action", async () => {
+  const created = vi.fn();
+  let request: Record<string, unknown> = {};
+  vi.stubGlobal("fetch", vi.fn(async (url, init) => {
+    if (String(url).endsWith("/preview")) return json(plan);
+    request = JSON.parse(String(init?.body));
+    expect(new Headers(init?.headers).get("If-None-Match")).toBe("*");
+    return json({
+      ...request, actorId: "fleet-test-admin", fingerprint: "a".repeat(64),
+      createdAt: "2026-11-07T12:00:00Z", status: "planned", affectedUsers: 7,
+      supported: true, diagnostics: [], disruption: "May restart",
+      targets: [{ instanceId: "core", stage: 0, status: "planned", attempts: [],
+        nodeId: "node", name: "Office core", adapterId: "routeweaver/xray",
+        coreVersion: "26.3.27", affectedRouteIds: [], affectedUsers: 7,
+        supported: true, diagnostics: [], changes: [], configDiff: [] }],
+    }, 201);
+  }));
+  await mount(<FleetPlanForm inventory={inventory} history={[]} initialDeploymentId="path"
+    initialTargetIds={["core"]} onClose={() => {}} onCreated={created} />);
+  await userEvent.click(screen.getByRole("button", { name: "预览影响与差异" }));
+  await userEvent.click(await screen.findByRole("checkbox", { name: "我已核对实例、阶段与影响范围" }));
+  await userEvent.click(screen.getByRole("button", { name: "创建待执行批次" }));
+  await screen.findByText("批次已创建", { exact: true });
+  expect(created).not.toHaveBeenCalled();
+  expect(screen.queryByRole("button", { name: "创建待执行批次" })).toBeNull();
+  expect(sessionStorage.length).toBe(1);
+  expect(request).toEqual({ id: expect.any(String), action: "configure", deploymentId: "path",
+    targetIds: ["core"], stages: [["core"]], continuousService: false,
+    expectedFingerprint: "a".repeat(64), leaseSeconds: 300 });
+  await userEvent.click(screen.getByRole("button", { name: "查看批次进度" }));
+  expect(created).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ id: request.id, actorId: "fleet-test-admin", status: "planned" }));
+  expect(sessionStorage.length).toBe(0);
 });

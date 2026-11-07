@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { renderFleetSession } from "./test-support/fleet-session";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import {
   act,
@@ -81,15 +82,15 @@ afterEach(() => {
   vi.useRealTimers();
   vi.unstubAllGlobals();
 });
-function mount(node: React.ReactNode) {
+async function mount(node: React.ReactElement) {
   client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  return render(
+  return renderFleetSession(node, (content) => render(
     <QueryClientProvider client={client}>
-      <UIProviders>{node}</UIProviders>
+      <UIProviders>{content}</UIProviders>
     </QueryClientProvider>,
-  );
+  ));
 }
 function form() {
   return (
@@ -112,7 +113,7 @@ it("defaults to one-off operation and binds explicit continuous-service authoriz
       writes.push({ url, body });
       return json({
         ...body,
-        fingerprint: "review",
+        fingerprint: "a".repeat(64),
         supported: true,
         targets: [],
         affectedUsers: 0,
@@ -120,7 +121,7 @@ it("defaults to one-off operation and binds explicit continuous-service authoriz
       });
     }),
   );
-  mount(form());
+  await mount(form());
   const optIn = screen.getByRole("checkbox", {
     name: "持续运行并有限自动恢复",
   });
@@ -141,7 +142,7 @@ it("defaults to one-off operation and binds explicit continuous-service authoriz
   await waitFor(() => expect(writes).toHaveLength(3));
   expect(writes[1].body.continuousService).toBe(true);
   expect(writes[2].body.continuousService).toBe(true);
-  expect(writes[2].body.expectedFingerprint).toBe("review");
+  expect(writes[2].body.expectedFingerprint).toBe("a".repeat(64));
 });
 it("distinguishes blocked continuing authorization from the last observed process state", async () => {
   vi.stubGlobal(
@@ -160,7 +161,7 @@ it("distinguishes blocked continuing authorization from the last observed proces
       }),
     ),
   );
-  mount(<InstanceObservation instanceId="core" />);
+  await mount(<InstanceObservation instanceId="core" />);
   await screen.findByText("自动恢复已暂停");
   expect(screen.getByText("已用自动恢复次数：3 / 3")).toBeTruthy();
   expect(screen.getByText(/重新检查并明确创建新的持续运行计划/)).toBeTruthy();
@@ -178,7 +179,7 @@ it("rejects a preview that does not confirm the requested continuing authorizati
       }),
     ),
   );
-  mount(form());
+  await mount(form());
   fireEvent.click(
     screen.getByRole("checkbox", { name: "持续运行并有限自动恢复" }),
   );
@@ -195,12 +196,13 @@ it("ignores a late preview after the continuing authorization is changed", async
     "fetch",
     vi.fn(async () => held),
   );
-  mount(form());
+  const businessFetch = fetch;
+  await mount(form());
   fireEvent.click(
     screen.getByRole("checkbox", { name: "持续运行并有限自动恢复" }),
   );
   fireEvent.click(screen.getByRole("button", { name: "预览影响与差异" }));
-  await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
+  await waitFor(() => expect(businessFetch).toHaveBeenCalledTimes(1));
   fireEvent.click(
     screen.getByRole("checkbox", { name: "持续运行并有限自动恢复" }),
   );
@@ -228,7 +230,7 @@ it("drops continuing authorization when changing to stop and does not revive it 
       bodies.push(body);
       return json({
         ...body,
-        fingerprint: "review",
+        fingerprint: "a".repeat(64),
         supported: true,
         targets: [],
         affectedUsers: 0,
@@ -236,7 +238,7 @@ it("drops continuing authorization when changing to stop and does not revive it 
       });
     }),
   );
-  mount(form());
+  await mount(form());
   fireEvent.click(
     screen.getByRole("checkbox", { name: "持续运行并有限自动恢复" }),
   );
@@ -288,7 +290,7 @@ it.each([
         }),
       ),
     );
-    mount(<InstanceObservation instanceId="core" />);
+    await mount(<InstanceObservation instanceId="core" />);
     await screen.findByText(label);
     expect(screen.getByText("已用自动恢复次数：1 / 3")).toBeTruthy();
   },
@@ -298,7 +300,7 @@ it("does not invent continuing authorization for a legacy/manual instance", asyn
     "fetch",
     vi.fn(async () => json({ instanceId: "core", phase: "conformant" })),
   );
-  mount(<InstanceObservation instanceId="core" />);
+  await mount(<InstanceObservation instanceId="core" />);
   await screen.findByText("未设置持续服务授权");
   expect(screen.queryByText("持续服务已授权")).toBeNull();
 });
@@ -326,7 +328,7 @@ it("discloses continuing authorization again at the actual stage-execution decis
       }),
     ),
   );
-  mount(<FleetBatchDetail id="batch" onClose={() => {}} />);
+  await mount(<FleetBatchDetail id="batch" onClose={() => {}} />);
   fireEvent.click(await screen.findByRole("button", { name: "执行第 1 阶段" }));
   const confirm = await screen.findByRole("alertdialog");
   expect(confirm.textContent).toContain("最多自动恢复 3 次");
@@ -342,7 +344,7 @@ it.each(["observed_conformant", "stopped", "unregistered"])("continues reading a
     if (reads === 1) return json({ instanceId: "core", phase });
     return new Promise<Response>((resolve) => { settle = resolve; });
   }));
-  mount(<InstanceObservation instanceId="core" />);
+  await mount(<InstanceObservation instanceId="core" />);
   await screen.findByText("平台最近记录的实例状态");
   vi.useFakeTimers();
   // Existing polling timers were scheduled before fake timers; a successful
@@ -365,7 +367,7 @@ it("recovers an initial instance read failure through the next observation poll"
     ? json({ instanceId: "core", phase: "stopped" })
     : new Response(JSON.stringify({ message: "实例读取失败" }), { status: 503, headers: { "Content-Type": "application/json" } })));
   vi.useFakeTimers();
-  mount(<InstanceObservation instanceId="core" />);
+  await mount(<InstanceObservation instanceId="core" />);
   await act(async () => { await vi.advanceTimersByTimeAsync(1); });
   expect(screen.getByText("实例读取失败")).toBeTruthy();
   healthy = true;
@@ -381,7 +383,7 @@ it.each(["刷新实例状态", "实例技术详情"])("keeps focused %s mounted 
   vi.stubGlobal("fetch", vi.fn(async () => refreshing
     ? new Promise<Response>((resolve) => { settle = resolve; })
     : json({ instanceId: "core", phase: "stopped" })));
-  mount(<InstanceObservation instanceId="core" />);
+  await mount(<InstanceObservation instanceId="core" />);
   await screen.findByText("平台最近记录的实例状态");
   const focused = screen.getByRole("button", { name: control });
   if (control === "实例技术详情") fireEvent.click(focused);

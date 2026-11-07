@@ -23,7 +23,11 @@ import { Notice } from "@/ui-patterns/notice";
 import { TaskSheet } from "@/ui-patterns/task-overlays";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
-import { APIError, list, post, request } from "./api";
+import { list, post, request } from "./api";
+import { useOptionalSessionAccess } from "./SessionBoundary";
+import { useFleetCreation } from "./useFleetCreation";
+import { FleetCreationRecovery } from "./FleetCreationRecovery";
+import { fleetCreationStorageKey } from "./fleet-creation";
 import {
   CodePreview,
   EmptyState,
@@ -53,6 +57,7 @@ import { useUnsavedChanges } from "./navigation";
 import type { Infrastructure } from "./types";
 import { useDiscardConfirmation } from "./useDiscardConfirmation";
 const base = "/admin/fleet-batches";
+const emptyInventory: Infrastructure = { hosts: [], instances: [], endpoints: [], links: [], deployments: [] };
 function serviceConsequence(
   input: Pick<FleetInput, "action" | "continuousService">,
 ): string {
@@ -61,24 +66,6 @@ function serviceConsequence(
   return input.action === "stop"
     ? "执行停止时会关闭所选实例的持续授权，不会再自动恢复。"
     : "本次不授予持续运行权限；执行时会关闭原有持续授权。现有核心仅保留当前有时限的运行授权，到期后停止。";
-}
-// Only this typed pre-creation rejection establishes that no batch was created.
-// Unknown responses retain the transport's existing fallback and uncertainty.
-function fleetCreateFeedback(error: Error | null): Error | null {
-  if (
-    error instanceof APIError &&
-    error.status === 409 &&
-    error.details !== null &&
-    typeof error.details === "object" &&
-    "code" in error.details &&
-    error.details.code === "FLEET_REVIEW_CHANGED"
-  )
-    return new APIError(
-      "计划需要重新核对，尚未创建批次。请重新预览后再创建。",
-      error.status,
-      error.details,
-    );
-  return error;
 }
 function fleetAttemptFeedback(
   attempt: FleetTarget["attempts"][number],
@@ -106,6 +93,14 @@ export function FleetPage({
 }: {
   pendingDeploymentId?: string;
 }) {
+  const access = useOptionalSessionAccess();
+  let creationRecord: "present" | "unavailable" | null = null;
+  if (access?.snapshot.phase === "active" && access.snapshot.session?.user.role === "admin") {
+    try {
+      if (sessionStorage.getItem(fleetCreationStorageKey(access.snapshot.session.user.id)) !== null)
+        creationRecord = "present";
+    } catch { creationRecord = "unavailable"; }
+  }
   const history = useQuery({
     queryKey: ["fleet-batches"],
     queryFn: () => list<FleetBatch>(base),
@@ -130,6 +125,12 @@ export function FleetPage({
           </ActionButton>
         }
       />
+      {creationRecord && <Notice tone="warning"
+        title={creationRecord === "present" ? "有批次创建结果待核对" : "无法读取本页批次创建记录"}
+        action={<ActionButton variant="outline" onClick={() => setCreating(true)}>
+          继续核对创建结果
+        </ActionButton>}
+      />}
       <QueryState
         loading={history.isPending || infrastructure.isPending}
         paused={history.isPaused || infrastructure.isPaused}
@@ -195,17 +196,17 @@ export function FleetPage({
                 },
               ]}
             />
-          ) : (
+          ) : !creationRecord && (
             <EmptyState title="暂无批量变更" />
           )}
         </Section>
       </QueryState>
-      {creating && infrastructure.data && (
+      {creating && (
         <FleetPlanForm
           inventory={infrastructure.data}
           pendingDeploymentId={pendingDeploymentId}
           history={history.data || []}
-          onClose={() => setCreating(false)}
+          onClose={() => { setCreating(false); history.refetch(); }}
           onCreated={(batch) => {
             setCreating(false);
             setSelected(batch.id);
@@ -220,7 +221,7 @@ export function FleetPage({
   );
 }
 export function FleetPlanForm({
-  inventory,
+  inventory: currentInventory,
   history,
   initialDeploymentId = "",
   initialAction,
@@ -229,7 +230,7 @@ export function FleetPlanForm({
   onClose,
   onCreated,
 }: {
-  inventory: Infrastructure;
+  inventory: Infrastructure | undefined;
   history: FleetBatch[];
   initialDeploymentId?: string;
   initialAction?: FleetAction;
@@ -238,7 +239,13 @@ export function FleetPlanForm({
   onClose: () => void;
   onCreated: (batch: FleetBatch) => void;
 }) {
+  // Missing inventory blocks new planning, never recovery of a saved request.
+  const inventory = currentInventory ?? emptyInventory;
   const confirmPathChange = useConfirm();
+  const access = useOptionalSessionAccess();
+  const creation = useFleetCreation(access?.lifecycle);
+  const [creationMode, setCreationMode] = useState<"create" | "lookup">("create");
+  const recoveryAction = useRef<HTMLButtonElement>(null);
   const pathSelect = useRef<HTMLButtonElement>(null);
   const [action, setAction] = useState<FleetAction>(
       initialAction || "configure",
@@ -301,8 +308,21 @@ export function FleetPlanForm({
   const createAction = useRef<HTMLButtonElement>(null);
   const focusBeforeCreate = useRef<HTMLElement | null>(null);
   const wasCreating = useRef(false);
-  useUnsavedChanges(dirty);
+  const abandonFrame = useRef<number | null>(null);
+  const focusEpoch = useRef(0);
+  const focusTask = useRef({ initialDeploymentId, initialAction });
+  if (focusTask.current.initialDeploymentId !== initialDeploymentId || focusTask.current.initialAction !== initialAction)
+    focusTask.current = { initialDeploymentId, initialAction };
+  const cancelAbandonFocus = () => {
+    focusEpoch.current++;
+    if (abandonFrame.current !== null) cancelAnimationFrame(abandonFrame.current);
+    abandonFrame.current = null;
+  };
+  useEffect(() => () => cancelAbandonFocus(), []);
+  useUnsavedChanges(dirty && !creation.envelope);
   const touch = () => {
+    cancelAbandonFocus();
+    creation.resetFeedback();
     revision.current++;
     setReview(null);
     setConfirmed(false);
@@ -337,6 +357,7 @@ export function FleetPlanForm({
   });
   const inspect = useMutation({
     mutationFn: async (version: number) => {
+      if (!currentInventory) throw new Error("当前实例与转发路径尚未载入，暂不能计划新批次。");
       if (blocksConfigure(input()))
         throw new Error("此转发路径有提交结果待处理，请先确认该次提交结果。");
       if (strategyIssue) throw new Error(strategyIssue);
@@ -367,60 +388,52 @@ export function FleetPlanForm({
         setReview(value);
     },
   });
-  const create = useMutation({
-    mutationFn: (_version: number) => {
-      if (!review || blocksConfigure(review.input))
-        throw new Error("此转发路径有提交结果待处理，请先确认该次提交结果。");
-      return post<FleetBatch>(base, {
-        ...review!.input,
-        expectedFingerprint: review!.plan.fingerprint,
-        leaseSeconds: review!.leaseSeconds,
-      });
-    },
-    onSuccess: onCreated,
-    onError: (error, version) => {
-      if (
-        version === revision.current &&
-        error instanceof APIError &&
-        error.status === 409
-      ) {
-        setReview(null);
-        setConfirmed(false);
-      }
-    },
-  });
+  useEffect(() => {
+    if (creation.reviewChanged) {
+      setReview(null);
+      setConfirmed(false);
+    }
+  }, [creation.reviewChanged]);
+  const beforeCreationOperation = (mode: "create" | "lookup") => {
+    cancelAbandonFocus();
+    setCreationMode(mode);
+    const focused = document.activeElement;
+    focusBeforeCreate.current = focused instanceof HTMLElement ? focused : null;
+  };
   useLayoutEffect(() => {
     const status = pendingStatus.current;
-    if (create.isPending && !wasCreating.current) {
+    if (creation.busy && !wasCreating.current) {
       const owner = focusBeforeCreate.current;
       // Inert may already have moved the owning control's focus to BODY.
       // Never take focus from Close or another independently focused element.
       if (
         owner?.isConnected &&
-        owner.closest("[inert]") === form.current &&
         (document.activeElement === owner ||
           document.activeElement === document.body)
       )
         status?.focus();
     } else if (
-      !create.isPending &&
+      !creation.busy &&
       wasCreating.current &&
-      create.isError &&
+      (creation.error || creation.result) &&
       status &&
       document.activeElement === status
     ) {
       // A conflict removes the old review; the next valid action is Preview.
-      const target = review ? createAction.current : previewAction.current;
+      const target = creation.envelope || !creation.storageReady
+        ? recoveryAction.current
+        : creation.reviewChanged || !review ? previewAction.current : createAction.current;
       if (target?.isConnected && !target.disabled)
         target.focus({ preventScroll: true });
     }
-    wasCreating.current = create.isPending;
-    if (!create.isPending) focusBeforeCreate.current = null;
-  }, [create.isPending, create.isError, review]);
+    wasCreating.current = creation.busy;
+    if (!creation.busy) focusBeforeCreate.current = null;
+  }, [creation.busy, creation.error, creation.result, creation.envelope, creation.storageReady, creation.reviewChanged, review]);
   const { confirm: confirmDiscard } = useDiscardConfirmation("fleet-plan");
   const close = () => {
-    if (create.isPending) return;
-    if (!dirty) return onClose();
+    if (creation.busy) return;
+    cancelAbandonFocus();
+    if (creation.envelope || (!creation.storageReady && creation.error) || !dirty) return onClose();
     confirmDiscard(
       {
         title: "放弃未创建的批量变更计划？",
@@ -431,24 +444,54 @@ export function FleetPlanForm({
       () => onClose(),
     );
   };
-  // A request belongs to the input revision that started it. Changing paths or
-  // editing the plan does not make an old response feedback for the new task.
-  // Creation still locks the form until the request settles, even if a live
-  // permission change invalidates the reviewed input in the meantime.
+  const abandonCreation = () => {
+    const clear = creation.prepareClear();
+    if (!clear) return;
+    const oldTrigger = document.activeElement;
+    confirmDiscard({
+      title: "放弃核对这次创建？",
+      description: "批次可能已创建。此操作只清除本页恢复记录，不会删除服务器上的批次。再次创建会生成另一个批次。",
+      confirmLabel: "放弃恢复记录",
+      cancelLabel: "继续核对",
+    }, (stillCurrent) => {
+      if (clear()) {
+        touch();
+        const token = focusEpoch.current, version = revision.current, task = focusTask.current, scope = form.current;
+        const session = access?.lifecycle.getSnapshot();
+        abandonFrame.current = requestAnimationFrame(() => {
+          if (token !== focusEpoch.current) return;
+          abandonFrame.current = null;
+          const now = access?.lifecycle.getSnapshot();
+          const target = previewAction.current;
+          // Closing the decision has already released focus. This optional
+          // handoff must not override a newer control, task or session owner.
+          if (!stillCurrent() || version !== revision.current || task !== focusTask.current ||
+            scope !== form.current || now?.phase !== "active" ||
+            now.generation !== session?.generation || now.accountEpoch !== session?.accountEpoch ||
+            now.session?.user.id !== session?.session?.user.id ||
+            (document.activeElement !== document.body && document.activeElement !== oldTrigger) ||
+            !target?.isConnected || target.disabled || target.closest("[hidden],[inert]")) return;
+          target.focus({ preventScroll: true });
+        });
+      }
+    });
+  };
+  const continueCreation = () => {
+    const batch = creation.result;
+    const clear = creation.prepareClear();
+    if (!batch || (initialDeploymentId && batch.deploymentId !== initialDeploymentId)) return;
+    if (clear?.()) onCreated(batch);
+  };
   const currentInspection = inspect.variables === revision.current;
   const previewPending = currentInspection && inspect.isPending;
-  const createError =
-    create.variables === revision.current
-      ? fleetCreateFeedback(create.error)
-      : null;
-  const previewError =
-    (currentInspection ? inspect.error : null) ||
-    (!review ? createError : null);
+  const createError = !creation.envelope && creation.storageReady && creation.error
+    ? new Error(creation.error) : null;
+  const previewError = (currentInspection ? inspect.error : null) || (!review ? createError : null);
   return (
     <TaskSheet
       bodyProps={{ className: "space-y-5" }}
       title={
-        initialDeploymentId
+        creation.envelope ? "核对批次创建结果" : initialDeploymentId
           ? `${deployment?.name || initialDeploymentId}的${initialAction ? fleetActionLabel[initialAction] : "计划变更"}`
           : "计划批量变更"
       }
@@ -458,7 +501,20 @@ export function FleetPlanForm({
       }}
       size="xl"
     >
-      <div ref={form} inert={create.isPending} className="space-y-5">
+      {creation.envelope && <FleetCreationRecovery
+        creation={creation} inventory={inventory} contextualDeploymentId={initialDeploymentId}
+        actionRef={recoveryAction} beforeOperation={beforeCreationOperation}
+        onContinue={continueCreation} onAbandon={abandonCreation}
+      />}
+      {!creation.envelope && !creation.storageReady && creation.error && (
+        <Notice tone="warning" title={creation.error} action={
+          <ActionButton ref={recoveryAction} variant="outline" onClick={creation.retryStorage}>重试读取创建记录</ActionButton>
+        } />
+      )}
+      {!creation.envelope && !currentInventory && (
+        <Notice tone="warning" title="当前实例与转发路径尚未载入，暂不能计划新批次。" />
+      )}
+      <div ref={form} hidden={!!creation.envelope || !currentInventory} inert={creation.busy || !!creation.envelope || !currentInventory} className="space-y-5">
         {directPending && (
           <Notice
             tone="warning"
@@ -1005,7 +1061,8 @@ export function FleetPlanForm({
               !!strategyIssue
             }
             onClick={() => {
-              create.reset();
+              cancelAbandonFocus();
+              creation.resetFeedback();
               inspect.mutate(revision.current);
             }}
             variant="default"
@@ -1067,29 +1124,26 @@ export function FleetPlanForm({
             </label>
             <div className="form-footer flex flex-wrap items-center justify-end gap-2 border-t pt-4 mt-6">
               <ActionButton
-                disabled={directPending || !confirmed || !review.plan.supported}
+                disabled={directPending || !confirmed || !review.plan.supported || !creation.available || creation.blocked}
                 ref={createAction}
                 aria-label="创建待执行批次"
                 aria-describedby={
-                  create.error ? `${feedbackId}-create` : undefined
+                  createError ? `${feedbackId}-create` : undefined
                 }
-                aria-busy={create.isPending}
-                pending={create.isPending}
+                aria-busy={creation.busy}
+                pending={creation.busy}
                 onClick={() => {
-                  const focused = document.activeElement;
-                  focusBeforeCreate.current =
-                    focused instanceof HTMLElement &&
-                    form.current?.contains(focused)
-                      ? focused
-                      : null;
-                  create.mutate(revision.current);
+                  if (!currentInventory || !review || blocksConfigure(review.input)) return;
+                  beforeCreationOperation("create");
+                  void creation.start({ ...review.input,
+                    expectedFingerprint: review.plan.fingerprint, leaseSeconds: review.leaseSeconds });
                 }}
                 variant="default"
               >
                 创建待执行批次
               </ActionButton>
             </div>
-            {create.error && (
+            {createError && (
               <div id={`${feedbackId}-create`}>
                 <ErrorNotice error={createError} />
               </div>
@@ -1104,10 +1158,10 @@ export function FleetPlanForm({
         ref={pendingStatus}
         role="status"
         aria-atomic="true"
-        tabIndex={create.isPending ? 0 : -1}
-        style={create.isPending ? { paddingBlock: 8 } : undefined}
+        tabIndex={creation.busy ? 0 : -1}
+        style={creation.busy ? { paddingBlock: 8 } : undefined}
       >
-        {create.isPending && <p>正在创建待执行批次…</p>}
+        {creation.busy && <p>{creationMode === "lookup" ? "正在查询批次创建结果…" : "正在创建待执行批次…"}</p>}
       </div>
     </TaskSheet>
   );

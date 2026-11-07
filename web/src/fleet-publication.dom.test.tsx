@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { renderFleetSession } from "./test-support/fleet-session";
 import { beforeEach, afterEach, it, expect, vi } from "vitest";
 import { render, cleanup, screen, within, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -82,7 +83,7 @@ beforeEach(() => {
       });
       if (url.endsWith("/preview"))
         return json({
-          fingerprint: "preview",
+          fingerprint: "a".repeat(64),
           supported: true,
           targets: [],
           diagnostics: [],
@@ -105,15 +106,15 @@ afterEach(() => {
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
 });
-function mount(node: React.ReactNode) {
+async function mount(node: React.ReactElement) {
   client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  return render(
+  return renderFleetSession(node, (content) => render(
     <QueryClientProvider client={client}>
-      <UIProviders>{node}</UIProviders>
+      <UIProviders>{content}</UIProviders>
     </QueryClientProvider>,
-  );
+  ), { force: true });
 }
 it("removes reviewed configure proof when a direct request becomes pending, retaining target input and requiring a new preview", async () => {
   function Task() {
@@ -139,7 +140,7 @@ it("removes reviewed configure proof when a direct request becomes pending, reta
     );
   }
   const user = userEvent.setup();
-  mount(<Task />);
+  await mount(<Task />);
   await user.click(screen.getByRole("button", { name: "预览影响与差异" }));
   await user.click(
     await screen.findByRole("checkbox", {
@@ -183,7 +184,7 @@ it("removes reviewed configure proof when a direct request becomes pending, reta
 });
 it("allows a deliberate stop preview while the same deployment direct configure request remains unresolved", async () => {
   const user = userEvent.setup();
-  mount(
+  await mount(
     <FleetPlanForm
       inventory={inventory}
       history={[]}
@@ -204,7 +205,7 @@ it("allows a deliberate stop preview while the same deployment direct configure 
 });
 it("threads the pending target into the standalone Fleet planner rather than allowing configure through its deployment selector", async () => {
   const user = userEvent.setup();
-  mount(<FleetPage pendingDeploymentId="office" />);
+  await mount(<FleetPage pendingDeploymentId="office" />);
   await user.click(await screen.findByRole("button", { name: "计划变更" }));
   const selector = await screen.findByRole("combobox", {
     name: "批量变更转发路径",
@@ -237,7 +238,7 @@ it("threads the pending target into the standalone Fleet planner rather than all
 });
 it("keeps Stop available but disables switching its reviewed plan to Configure for the unresolved target", async () => {
   const user = userEvent.setup();
-  mount(
+  await mount(
     <FleetPlanForm
       inventory={inventory}
       history={[]}

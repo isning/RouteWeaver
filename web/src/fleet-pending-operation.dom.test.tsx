@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { renderFleetSession } from "./test-support/fleet-session";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import {
   act,
@@ -43,7 +44,7 @@ const inventory = {
   ],
 } as unknown as Infrastructure;
 const plan = {
-  fingerprint: "reviewed-scope",
+  fingerprint: "a".repeat(64),
   supported: true,
   affectedUsers: 7,
   diagnostics: [],
@@ -122,9 +123,7 @@ it.for([
     clients.push(client);
     const close = vi.fn(),
       created = vi.fn();
-    render(
-      <QueryClientProvider client={client}>
-        <UIProviders>
+    await renderFleetSession(
           <FleetPlanForm
             inventory={inventory}
             history={[]}
@@ -132,9 +131,8 @@ it.for([
             initialTargetIds={["core"]}
             onClose={close}
             onCreated={created}
-          />
-        </UIProviders>
-      </QueryClientProvider>,
+          />,
+      (content) => render(<QueryClientProvider client={client}><UIProviders>{content}</UIProviders></QueryClientProvider>),
     );
     const dialog = within(screen.getByRole("dialog"));
     const preview = dialog.getByRole("button", { name: "预览影响与差异" });
@@ -166,35 +164,30 @@ it.for([
         dialog.getByRole("button", { name: "关闭" }),
       );
     await act(async () => resolve(json({ error: "Plan rejected" }, status)));
-    await dialog.findByText("Plan rejected");
-    expect(dialog.getAllByText("Plan rejected")).toHaveLength(1);
-    expect(
-      dialog.getByRole("button", {
-        name: status === 409 ? "预览影响与差异" : "创建待执行批次",
-        description: /Plan rejected/,
-      }),
-    ).toBe(status === 409 ? preview : create);
+    await dialog.findByText("创建结果尚未确认，批次可能已创建。请先查询该次结果。");
+    const lookup = dialog.getByRole("button", { name: "查询该次结果" });
+    expect(dialog.queryByText("Plan rejected")).toBeNull();
+    expect(dialog.queryByRole("button", { name: "创建待执行批次" })).toBeNull();
+    expect(create.isConnected).toBe(true);
+    expect(create.closest("[hidden][inert]")).not.toBeNull();
     await waitFor(() => expect(progress.textContent).toBe(""));
     expect(progress.tabIndex).toBe(-1);
     expect(progress.style.paddingBlock).toBe("");
-    await waitFor(() =>
-      expect(document.activeElement).toBe(
-        focus === "close"
-          ? dialog.getByRole("button", { name: "关闭" })
-          : status === 409
-            ? preview
-            : create,
-      ),
-    );
-    if (status === 409)
-      expect(
-        dialog.queryByRole("button", { name: "创建待执行批次" }),
-      ).toBeNull();
-    else { expect(dialog.getByText("1 个实例")).toBeTruthy(); expect(dialog.getByText("7 位用户受影响")).toBeTruthy(); }
+    await waitFor(() => expect(document.activeElement).toBe(
+      focus === "close" ? dialog.getByRole("button", { name: "关闭" }) : lookup,
+    ));
+    expect(dialog.getByRole("button", { name: "用同一计划重试创建" })).toBeTruthy();
+    const preserved = JSON.stringify(sessionStorage);
+    expect(sessionStorage.length).toBe(1);
+    await scenario.click(() => dialog.getByRole("button", { name: "关闭" }));
+    expect(close).toHaveBeenCalledOnce();
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+    expect(JSON.stringify(sessionStorage)).toBe(preserved);
+    expect(created).not.toHaveBeenCalled();
     expect(writes[0]).toMatchObject({
       deploymentId: "path",
       targetIds: ["core"],
-      expectedFingerprint: "reviewed-scope",
+      expectedFingerprint: "a".repeat(64),
     });
   },
 );
@@ -209,9 +202,7 @@ it("places a single failed preview beside and describes the preview action", asy
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   clients.push(client);
-  render(
-    <QueryClientProvider client={client}>
-      <UIProviders>
+  await renderFleetSession(
         <FleetPlanForm
           inventory={inventory}
           history={[]}
@@ -219,9 +210,8 @@ it("places a single failed preview beside and describes the preview action", asy
           initialTargetIds={["core"]}
           onClose={() => {}}
           onCreated={() => {}}
-        />
-      </UIProviders>
-    </QueryClientProvider>,
+        />,
+    (content) => render(<QueryClientProvider client={client}><UIProviders>{content}</UIProviders></QueryClientProvider>),
   );
   const dialog = within(screen.getByRole("dialog"));
   const preview = dialog.getByRole("button", { name: "预览影响与差异" });
@@ -243,7 +233,7 @@ it("keeps the fleet plan and exact Close focus after two canceled discard decisi
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   clients.push(client);
   const onClose = vi.fn();
-  render(<QueryClientProvider client={client}><UIProviders><FleetPlanForm inventory={inventory} history={[]} initialDeploymentId="path" initialTargetIds={["core"]} onClose={onClose} onCreated={() => {}} /></UIProviders></QueryClientProvider>);
+  await renderFleetSession(<FleetPlanForm inventory={inventory} history={[]} initialDeploymentId="path" initialTargetIds={["core"]} onClose={onClose} onCreated={() => {}} />, (content) => render(<QueryClientProvider client={client}><UIProviders>{content}</UIProviders></QueryClientProvider>));
   const dialog = screen.getByRole("dialog");
   const continuous = within(dialog).getByRole("checkbox", { name: "持续运行并有限自动恢复" });
   await userEvent.click(continuous);

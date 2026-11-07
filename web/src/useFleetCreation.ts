@@ -198,6 +198,10 @@ export function useFleetCreation(lifecycle: SessionLifecycle | undefined) {
     retry: () => { const e = current.current.envelope; if (e) return run(e, "retry"); },
     // Capture this callback before asking to abandon an unknown result.
     prepareClear,
+    resetFeedback: () => {
+      if (current.current.storageReady && !current.current.envelope && !busy.current)
+        publish({ ...current.current, error: null, reviewChanged: false });
+    },
     retryStorage: () => { if (!current.current.envelope && !busy.current) load(); },
   };
 }
