@@ -84,6 +84,8 @@ type EditorProps = {
     user: UserRecord;
     services: Service[];
     routes: NamedRecord[];
+    // Display metadata only; selectable managed routes remain in routes.
+    displayRoutes?: NamedRecord[];
     onClose: () => void;
     returnFocus?: HTMLElement | null;
 };
@@ -127,7 +129,7 @@ export function UserPolicyForm({ initial, drawer = false, ...props }: EditorProp
     const [context, setContext] = useState(initial), [generation, setGeneration] = useState(0), [retained, setRetained] = useState<DraftCopy[]>([]);
     return <UserPolicyFields key={generation} {...props} returnFocus={returnFocus} drawer={drawer} context={context} retained={retained} acceptLatest={(latest, draft) => { setRetained((values) => [...values, draft]); setContext(latest); setGeneration((value) => value + 1); }}/>;
 }
-function UserPolicyFields({ user, context, services, routes, onClose, retained, acceptLatest, drawer, returnFocus }: EditorProps & {
+function UserPolicyFields({ user, context, services, routes, displayRoutes = routes, onClose, retained, acceptLatest, drawer, returnFocus }: EditorProps & {
     drawer: boolean;
     context: EntitlementPolicyEditContext;
     retained: DraftCopy[];
@@ -137,7 +139,7 @@ function UserPolicyFields({ user, context, services, routes, onClose, retained, 
     const confirm = useConfirm();
     const [snapshot] = useState(() => structuredClone(context.effective));
     const [ent] = useState(() => structuredClone(context.record?.entitlement ?? context.effective.entitlement));
-    const policy = usePolicyChange({ mode: "guarded-entitlement", users: [user], services, routes, retainedDrafts: retained, onApplied: onClose });
+    const policy = usePolicyChange({ mode: "guarded-entitlement", users: [user], services, routes: displayRoutes, retainedDrafts: retained, onApplied: onClose });
     const implicitStart = ent.startsAt === zeroStart;
     const init: Record<string, unknown> = { ...ent, startsAt: implicitStart ? "" : ent.startsAt };
     for (const field of overrideFields) {
@@ -273,7 +275,7 @@ function UserPolicyFields({ user, context, services, routes, onClose, retained, 
         <p className="muted text-sm text-muted-foreground">
           这是已保存的授权。下方修改后，先预览影响，再确认应用。
         </p>
-        <PolicySummary policy={snapshot} services={services} routes={routes} visibleFields={[
+        <PolicySummary policy={snapshot} services={services} routes={displayRoutes} visibleFields={[
             "status",
             "service",
             "quotaBytes",
@@ -284,7 +286,7 @@ function UserPolicyFields({ user, context, services, routes, onClose, retained, 
             {
                 key: "effective-details",
                 label: "\u67E5\u770B\u9650\u901F\u3001\u5E76\u53D1\u4E0E\u91CD\u7F6E\u5468\u671F",
-                children: (<PolicySummary policy={snapshot} services={services} routes={routes} visibleFields={[
+                children: (<PolicySummary policy={snapshot} services={services} routes={displayRoutes} visibleFields={[
                         "onlineIpLimit",
                         "connectionLimit",
                         "entryRateBps",

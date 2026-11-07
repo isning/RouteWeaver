@@ -70,7 +70,12 @@ function policyDisplayFields(policy: EffectivePolicy, services: NamedRecord[], r
         [
             "授权线路",
             (policy.routeIds || [])
-                .map((id) => routes.find((route) => route.id === id)?.name || id)
+                .map((id) => {
+                // Legacy and managed routes cannot share a service identity.
+                // An inconsistent catalog must not silently choose either name.
+                const matches = routes.filter((route) => route.id === id);
+                return matches.length === 1 ? matches[0].name || id : id;
+            })
                 .join("、") || "无",
             "routes",
         ],

@@ -864,6 +864,7 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
           user={entitlementUser}
           services={data?.services || []}
           routes={data?.publishedRoutes || []}
+          displayRoutes={[...(data?.routes || []), ...(data?.publishedRoutes || [])]}
           onClose={() => setEntitlementUser(null)}
         />
       )}
