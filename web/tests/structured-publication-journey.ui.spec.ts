@@ -213,9 +213,13 @@ for (const width of [1440, 390]) {
       await capture("retained-group", editor);
       await editor.getByRole("tab", { name: "分流规则", exact: true }).click();
       const ruleValue = editor.getByRole("textbox", { name: "规则匹配值", exact: true });
+      const ruleAction = editor.getByRole("combobox", { name: "规则 1 的流量去向", exact: true });
       await expect(ruleValue).toHaveValue(names.domain);
-      await expect(editor.getByRole("combobox", { name: "规则 1 的流量去向", exact: true })).toContainText(`策略组 ${names.group}`);
-      await ruleValue.scrollIntoViewIfNeeded();
+      await expect(ruleAction).toContainText(`策略组 ${names.group}`);
+      await ruleAction.scrollIntoViewIfNeeded();
+      // The retained rule needs both its match and chosen destination in one frame.
+      await uncovered(ruleValue);
+      await uncovered(ruleAction);
       await capture("retained-rule", editor);
       await editor.getByRole("tab", { name: "运行设置", exact: true }).click();
       const dns = editor.getByRole("textbox", { name: "DNS 服务器 1", exact: true });
@@ -254,7 +258,18 @@ for (const width of [1440, 390]) {
       const ruleChanges = canceled.dialog.getByRole("list", { name: "分流规则变更", exact: true });
       await expect(ruleChanges).toContainText(names.domain);
       await expect(ruleChanges).toContainText("新增规则");
-      await scope.scrollIntoViewIfNeeded();
+      const ruleChange = ruleChanges.getByRole("listitem").first();
+      await expect(ruleChange).toContainText(names.group);
+      await ruleChange.scrollIntoViewIfNeeded();
+      // Do not capture only the already-visible scope while the rule is below
+      // the fixed footer. Keep the rule, limits and update consequence together.
+      await uncovered(ruleChange);
+      await uncovered(scope);
+      const comparisonDecision = canceled.dialog.getByRole("group", { name: "更新确认", exact: true });
+      await expect(comparisonDecision).toContainText("沿用当前链接，其他订阅保留原状。");
+      await uncovered(comparisonDecision);
+      await uncovered(comparisonDecision.getByRole("button", { name: "取消", exact: true }));
+      await uncovered(comparisonDecision.getByRole("button", { name: `确认更新「${names.chosen}」`, exact: true }));
       await capture("compare-rule-and-scope", canceled.dialog);
       await f.unchanged();
       await canceled.dialog.getByRole("button", { name: "取消", exact: true }).click();
