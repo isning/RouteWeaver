@@ -201,24 +201,48 @@ for (const width of [1440, 390]) {
       }, { times: 1 });
       const freshResponse = page.waitForResponse((response) => response.request().method() === "GET" && new URL(response.url()).pathname === path);
       const readsBeforeReload = detailReads;
+      // Role/name and label locators can stop matching inside an inert fieldset.
+      // Identify active controls first, then inspect the same DOM nodes while busy.
+      // The sheet title remains outside its inert fieldset.
+      const pendingEditor = page.getByRole("dialog", { name: local.name, exact: true });
+      const pendingReload = pendingEditor.locator("button").filter({ hasText: /^\s*读取最新集合\s*$/ });
+      const pendingSource = pendingEditor.locator("button").filter({ hasText: /^\s*添加来源\s*$/ });
+      const pendingName = pendingEditor.locator("label").filter({ hasText: /^\s*集合名称\s*$/ }).locator("input");
+      const identities = [
+        [pendingEditor, await editor.elementHandle()] as const,
+        [pendingReload, await reload.elementHandle()] as const,
+        [pendingSource, await editor.getByRole("button", { name: "添加来源", exact: true }).elementHandle()] as const,
+        [pendingName, await editor.getByLabel("集合名称", { exact: true }).elementHandle()] as const,
+      ];
       await reload.click();
       await accept.click();
       await held;
       try {
         await expect(confirmation).toHaveCount(0);
-        await expect(reload).toBeDisabled();
-        await expect(reload).toHaveAttribute("aria-busy", "true");
-        await expect(save).toBeDisabled();
-        await expect(editor.getByLabel("集合名称", { exact: true })).toBeDisabled();
-        await expect(editor.getByRole("button", { name: "添加来源", exact: true, includeHidden: true })).toBeDisabled();
-        await expect(editor.getByRole("button", { name: "关闭", exact: true })).toHaveCount(0);
+        for (const [control, identity] of identities) {
+          await expect(control).toHaveCount(1);
+          expect(await control.evaluate((element, original) => element === original, identity)).toBe(true);
+        }
+        await expect(pendingEditor).toHaveAttribute("aria-busy", "true");
+        await expect(pendingReload).toBeDisabled();
+        await expect(pendingReload).toHaveAttribute("aria-busy", "true");
+        await expect(pendingEditor.getByRole("button", { name: "保存集合", exact: true })).toBeDisabled();
+        await expect(pendingName).toBeDisabled();
+        await expect(pendingSource).toBeDisabled();
+        await expect(pendingEditor.getByRole("button", { name: "关闭", exact: true })).toHaveCount(0);
         await page.keyboard.press("Enter");
         await page.keyboard.press("Space");
         await page.keyboard.press("Escape");
-        await expect(editor).toBeVisible();
+        await expect(pendingEditor).toBeVisible();
         await expect(confirmation).toHaveCount(0);
         expect(detailReads).toBe(readsBeforeReload + 1);
         expect(browserWrites).toEqual([`PUT ${path}`]);
+        // A deliberately busy task cannot use settledTask. Capture the actual
+        // held state explicitly, with the same private-input masks as other shots.
+        const pendingPath = info.outputPath(`collection-reload-pending-${width}.png`);
+        await page.screenshot({ path: pendingPath, fullPage: false,
+          mask: [page.locator('input, textarea, pre, code, canvas, a[href*="/feed/"]')] });
+        await info.attach(`collection-reload-pending-${width}`, { path: pendingPath, contentType: "image/png" });
       } finally { release(); }
       const fresh = await freshResponse;
       expect(fresh.status()).toBe(200);
