@@ -1087,7 +1087,7 @@ function SettingsForm({ initial }: { initial: Settings }) {
                       trigger="onCheckedChange"
                       label="清除已保存的 SMTP 密码"
                     >
-                      <Checkbox ref={clearSMTPInput} />
+                      <Checkbox ref={clearSMTPInput} className="ms-1" />
                     </AppField>
                   )}
                   <AppField
@@ -1172,7 +1172,7 @@ function SettingsForm({ initial }: { initial: Settings }) {
                       trigger="onCheckedChange"
                       label="清除已保存的签名密钥"
                     >
-                      <Checkbox ref={clearWebhookInput} />
+                      <Checkbox ref={clearWebhookInput} className="ms-1" />
                     </AppField>
                   )}
                   <ActionButton
