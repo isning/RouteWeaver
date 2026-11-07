@@ -562,7 +562,7 @@ function ServerRouteEditor({
     },
     onSuccess: (value, complete) => {
       client.invalidateQueries({ queryKey: ["infrastructure"] });
-      if (complete(value)) message.success("转发路径草稿已保存");
+      complete(value);
     },
     onError: setError,
   });
@@ -1796,6 +1796,7 @@ function ServerRouteDetail({
     <TaskSheet
       bodyProps={{ className: "space-y-5" }}
       title={deployment.name}
+      description="转发路径草稿已保存"
       open
       onOpenChange={(next) => {
         if (!next) onClose();

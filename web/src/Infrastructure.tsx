@@ -32,7 +32,7 @@ import {
   RotateCw as ReloadOutlined,
 } from "lucide-react";
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
-import { toast } from "sonner";
+import { useSaveNotice } from "./useSaveNotice";
 import { PolicyDateInput } from "./PolicyDateInput";
 import { AccountingRecovery } from "./AccountingRecovery";
 import { list, post, request, saveRecord } from "./api";
@@ -608,7 +608,7 @@ function InventoryEditor({
   const [form] = useForm();
   const formId = useId();
   const client = useQueryClient();
-  const message = toast;
+  const saveNotice = useSaveNotice(entity);
   const { confirm, confirming } = useDiscardConfirmation(
     entity?.id || "inventory-closed",
   );
@@ -698,7 +698,10 @@ function InventoryEditor({
     },
     onSuccess: (saved) => {
       client.invalidateQueries({ queryKey: ["infrastructure"] });
-      message.success("配置已保存");
+      const name = entity?.kind === "core-instances"
+        ? coreName(saved as CoreInstance)
+        : saved.name;
+      saveNotice(`${names[entity!.kind]}「${name}」已保存`);
       if (entity?.kind === "hosts" && !entity.value)
         onHostCreated(saved as HostRecord);
       onClose();

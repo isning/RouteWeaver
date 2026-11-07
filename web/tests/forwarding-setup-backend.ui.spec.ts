@@ -118,7 +118,7 @@ async function navigateAfterClose(page: Page, width: number, name: string) {
   await navigateWorkspace(page, name);
 }
 
-async function capture(page: Page, info: TestInfo, name: string, surface: Locator) {
+async function capture(page: Page, info: TestInfo, name: string, surface: Locator, targets: Locator[] = []) {
   await settledTask(surface);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
   expect(await surface.evaluate((element) => {
@@ -126,9 +126,36 @@ async function capture(page: Page, info: TestInfo, name: string, surface: Locato
     return rect.left >= -1 && rect.right <= innerWidth + 1 &&
       element.scrollWidth <= element.clientWidth + 1;
   }), "Foreground task has no horizontal overflow").toBe(true);
+  // Sample the actual foreground after normal task motion, never after a
+  // notification-expiry wait. Viewport intersection alone cannot detect a toast.
+  const visibility = await Promise.all(targets.map((target) => target.evaluate((element) => {
+    const rect = element.getBoundingClientRect();
+    const points = [[0.5, 0.5], [0.18, 0.18], [0.82, 0.18], [0.18, 0.82], [0.82, 0.82]].map(([x, y]) => {
+      const point = { x: rect.left + rect.width * x, y: rect.top + rect.height * y };
+      const hit = document.elementFromPoint(point.x, point.y);
+      return {
+        ...point, withinTarget: !!hit && element.contains(hit),
+        hit: hit ? { tag: hit.tagName, role: hit.getAttribute("role") } : null,
+      };
+    });
+    // Synthetic fixture labels and geometry only, never input values or HTML.
+    return {
+      name: (element.getAttribute("aria-label") || element.textContent || "").replace(/\s+/g, " ").trim(),
+      rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+      viewport: { width: innerWidth, height: innerHeight }, points,
+      unobscured: rect.width > 0 && rect.height > 0 && points.every((point) => point.withinTarget),
+    };
+  })));
   const path = info.outputPath(`${name}.png`);
   await page.screenshot({ path, fullPage: false });
   await info.attach(name, { path, contentType: "image/png" });
+  if (visibility.length) {
+    const evidence = info.outputPath(`${name}-occlusion.json`);
+    await writeFile(evidence, JSON.stringify({ sampled: "Immediately before screenshot, after task motion", targets: visibility }));
+    await info.attach(`${name}-occlusion`, { path: evidence, contentType: "application/json" });
+    for (const target of visibility)
+      expect(target.unobscured, `${name}: ${target.name} is visible above other content at every sampled point`).toBe(true);
+  }
 }
 
 for (const width of [1440, 390]) {
@@ -166,7 +193,7 @@ for (const width of [1440, 390]) {
     // Continue from the saved server, rather than finding it in another tab.
     const hostDetail = page.getByRole("dialog", { name: names.host, exact: true });
     await expect(hostDetail.getByText("先添加核心，再配置监听端点", { exact: true })).toBeVisible();
-    await capture(page, info, `setup-host-continuation-${width}`, hostDetail);
+    await capture(page, info, `setup-host-continuation-${width}`, hostDetail, [hostDetail.getByRole("button", { name: "添加核心", exact: true })]);
     await hostDetail.getByRole("button", { name: "添加核心", exact: true }).click();
     const coreEditor = page.getByRole("dialog", { name: "添加核心实例", exact: true });
     await expect(hostDetail).not.toBeVisible();
@@ -202,7 +229,10 @@ for (const width of [1440, 390]) {
     expect(mutations).toEqual(["POST /api/hosts", "POST /api/core-instances"]);
     await expect(listenerEditor.getByLabel("端点名称", { exact: true })).toHaveValue(names.listener);
     await port.scrollIntoViewIfNeeded();
-    await capture(page, info, `setup-listener-explicit-port-${width}`, listenerEditor);
+    await capture(page, info, `setup-listener-explicit-port-${width}`, listenerEditor, [
+      listenerEditor.getByRole("button", { name: "取消", exact: true }),
+      listenerEditor.getByRole("button", { name: "保存", exact: true }),
+    ]);
 
     await listenerEditor.getByRole("button", { name: "取消", exact: true }).click();
     const discard = page.getByRole("alertdialog", { name: "放弃尚未保存的配置修改？", exact: true });
@@ -272,6 +302,8 @@ for (const width of [1440, 390]) {
     // inspect the matching line and its user authorization/entry state, without
     // manufacturing users or weakening the renderer to manufacture success.
     const pathDetail = page.getByRole("dialog", { name: names.path, exact: true });
+    await expect(pathDetail.getByText("转发路径草稿已保存", { exact: true })).toBeVisible();
+    expect(await page.getByText("转发路径草稿已保存", { exact: true }).count()).toBe(1);
     const entryGap = pathDetail.getByText("草稿缺少可用用户入口", { exact: true });
     const blockedDraft = pathDetail.getByText("草稿已保存，当前不能应用。", { exact: true });
     await expect(entryGap).toBeVisible();
@@ -293,7 +325,10 @@ for (const width of [1440, 390]) {
     await expect(continueToLines).toBeInViewport({ ratio: 1 });
     await expect(entryGap).toBeInViewport({ ratio: 1 });
     await expect(blockedDraft).toBeInViewport({ ratio: 1 });
-    await capture(page, info, `setup-path-awaiting-principals-${width}`, pathDetail);
+    await capture(page, info, `setup-path-awaiting-principals-${width}`, pathDetail, [
+      continueToLines, blockedDraft,
+      pathDetail.getByRole("button", { name: "编辑转发路径", exact: true }),
+    ]);
     await continueToLines.click();
     await expect(page).toHaveURL(/#published-routes$/);
     await expect(pathDetail).not.toBeVisible();
@@ -341,7 +376,13 @@ for (const width of [1440, 390]) {
     await expect(publicPortField).toHaveValue(String(listenerPort));
     expect(await read(page.request, "/published-routes")).toEqual([]);
     await tlsTitle.scrollIntoViewIfNeeded();
-    await capture(page, info, `setup-public-tls-refusal-${width}`, lineEditor);
+    await capture(page, info, `setup-public-tls-refusal-${width}`, lineEditor, [tlsTitle]);
+    // The tall recovery and completion may require separate narrow-screen
+    // views. Preserve the original error frame before inspecting the footer.
+    await inspect.scrollIntoViewIfNeeded();
+    await capture(page, info, `setup-public-tls-refusal-completion-${width}`, lineEditor, [
+      lineEditor.getByRole("button", { name: "取消", exact: true }), inspect,
+    ]);
 
     await publicHost.fill("127.0.0.1");
     const checked = responseFor(page, "/published-routes/preview");
@@ -363,7 +404,9 @@ for (const width of [1440, 390]) {
     await saveLine.scrollIntoViewIfNeeded();
     await expect(consequence).toBeInViewport({ ratio: 1 });
     await expect(saveLine).toBeInViewport({ ratio: 1 });
-    await capture(page, info, `setup-line-rechecked-decision-${width}`, lineEditor);
+    await capture(page, info, `setup-line-rechecked-decision-${width}`, lineEditor, [
+      lineEditor.getByRole("button", { name: "取消", exact: true }), inspect, saveLine, consequence,
+    ]);
     const lineSaved = responseFor(page, "/published-routes");
     await saveLine.click();
     expect((await lineSaved).status()).toBe(200);
@@ -372,7 +415,14 @@ for (const width of [1440, 390]) {
     expect(lines).toHaveLength(1);
     const line = lines[0];
     expect(line).toMatchObject({ name: names.line, deploymentId: deployment.id, endpointIds: [listener.id], publicHost: "127.0.0.1", publicPort, status: "draft", effective: null });
-    await expect(page.getByRole("dialog", { name: names.line, exact: true })).toBeVisible();
+    const justSavedLine = page.getByRole("dialog", { name: names.line, exact: true });
+    await expect(justSavedLine).toBeVisible();
+    await expect(justSavedLine.getByText("线路已保存", { exact: true })).toBeVisible();
+    expect(await page.getByText("线路已保存", { exact: true }).count()).toBe(1);
+    await capture(page, info, `setup-line-just-saved-${width}`, justSavedLine, [
+      justSavedLine.getByText("线路已保存", { exact: true }),
+      justSavedLine.getByRole("button", { name: "编辑线路", exact: true }),
+    ]);
     await page.reload();
     const lineDetail = page.getByRole("dialog", { name: names.line, exact: true });
     await expect(lineDetail.getByText("草稿已保存，尚未确认应用", { exact: true })).toBeVisible();
@@ -380,7 +430,9 @@ for (const width of [1440, 390]) {
     await expect(lineDetail).toContainText(`127.0.0.1:${publicPort}`);
     await expect(lineDetail.getByRole("link", { name: "检查并应用转发路径", exact: true })).toHaveAttribute("href", `#routes?deployment=${encodeURIComponent(deployment.id)}&line=${encodeURIComponent(line.id)}`);
     await expect(lineDetail.getByText("已确认生效", { exact: true })).toHaveCount(0);
-    await capture(page, info, `setup-line-saved-not-applied-${width}`, lineDetail);
+    await capture(page, info, `setup-line-saved-not-applied-${width}`, lineDetail, [
+      lineDetail.getByRole("button", { name: "编辑线路", exact: true }),
+    ]);
 
     const state = await read(page.request, `/agent/instances/${core.id}/state`);
     expect(state.phase).toBe("unregistered");

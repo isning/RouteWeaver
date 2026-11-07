@@ -24,7 +24,6 @@ import {
   Plus as PlusOutlined,
 } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { toast } from "sonner";
 import { DataTable, TableRowActions } from "./DataTable";
 import { loadInfrastructure } from "./infrastructure-data";
 import { RouteExitEditor } from "./RouteExitEditor";
@@ -612,7 +611,6 @@ function PublicRouteEditor({
     }
   };
   const client = useQueryClient();
-  const message = toast;
   const deployment = inventory.deployments.find(
     (d) => d.id === draft.deploymentId,
   );
@@ -674,7 +672,7 @@ function PublicRouteEditor({
       client.invalidateQueries({
         queryKey: ["published-route-resolve", draft.id],
       });
-      if (complete(value)) message.success("线路已保存");
+      complete(value);
     },
   });
   const error = [inspect.error, save.error].find((error) => {
@@ -1389,6 +1387,7 @@ function PublicRouteDetail({
       <TaskSheet
         bodyProps={{ className: "space-y-5" }}
         title={current.name}
+        description="线路已保存"
         open
         onOpenChange={(next) => {
           if (!next)
