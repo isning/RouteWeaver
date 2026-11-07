@@ -45,6 +45,7 @@ export interface FleetPlan extends FleetInput {
 }
 export interface FleetBatch extends FleetPlan {
   id: string;
+  actorId: string;
   createdAt: string;
   leaseSeconds: number;
   status: string;
