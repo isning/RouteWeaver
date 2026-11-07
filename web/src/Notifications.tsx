@@ -950,7 +950,7 @@ function SettingsForm({ initial }: { initial: Settings }) {
             baseline.providerRemainingPercent.map(String),
         }}
         onBlurCapture={(event) => {
-          if (event.target === saveButton.current) saveFocusOwner.current = null;
+          if (saveButton.current?.isSameNode(event.target)) saveFocusOwner.current = null;
         }}
         onFinish={(values) => {
           if (saving.current) return;
