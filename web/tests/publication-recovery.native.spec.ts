@@ -222,6 +222,23 @@ for (const width of [1440, 390]) {
       expect(reportedFailure.state.code).toBe("recovered_not_applied");
       expect(reportedFailure.state.desired).toEqual(queued.desired);
       expect(reportedFailure.state.observed).toBeUndefined();
+      const failedJournal = (await bridge.command("journal")).journal!;
+      expect(failedJournal).toBeDefined();
+      expect(failedJournal.rootWitness).toMatch(/^[a-f0-9]{64}$/);
+      expect(failedJournal.runningEpoch).toBeUndefined();
+      expect(failedJournal.snapshots).toHaveLength(2);
+      expect(failedJournal.snapshots.map((snapshot) => snapshot.kind)).toEqual([
+        "baseline",
+        "final",
+      ]);
+      const failedEpoch = failedJournal.snapshots[0].counterEpoch;
+      expect(failedEpoch).not.toBe("");
+      for (const snapshot of failedJournal.snapshots) {
+        expect(snapshot.counterEpoch).toBe(failedEpoch);
+        expect(snapshot.sha256).toMatch(/^[a-f0-9]{64}$/);
+        expect(snapshot.activeFlows).toBe(0);
+        expect(snapshot.counterCount).toBeGreaterThan(0);
+      }
       await refresh();
       await noSuccess();
       await expect(
@@ -269,6 +286,27 @@ for (const width of [1440, 390]) {
       expect(applied.state.observed.known).toBe(true);
       expect(applied.state.observed.quiescent).toBe(true);
       expect(applied.state.observed.evidence).toBe("owned_process_liveness");
+      const correctedJournal = (await bridge.command("journal")).journal!;
+      expect(correctedJournal).toBeDefined();
+      expect(correctedJournal.rootWitness).toBe(failedJournal.rootWitness);
+      expect(correctedJournal.runningEpoch).toBeTruthy();
+      expect(correctedJournal.runningEpoch).not.toBe(failedEpoch);
+      expect(correctedJournal.snapshots).toHaveLength(3);
+      // The old authentic baseline/final remain byte-identical in the same
+      // durable root. A reset, marker deletion, or replacement fixture cannot
+      // stand in for successful finalization followed by a fresh epoch.
+      expect(
+        correctedJournal.snapshots.filter(
+          (snapshot) => snapshot.counterEpoch === failedEpoch,
+        ),
+      ).toEqual(failedJournal.snapshots);
+      const newSnapshots = correctedJournal.snapshots.filter(
+        (snapshot) => snapshot.counterEpoch === correctedJournal.runningEpoch,
+      );
+      expect(newSnapshots).toHaveLength(1);
+      expect(newSnapshots[0].kind).toBe("baseline");
+      expect(newSnapshots[0].activeFlows).toBe(0);
+      expect(newSnapshots[0].counterCount).toBeGreaterThan(0);
       for (const [key, value] of Object.entries(correction.desired))
         expect(applied.state.observed[key], key).toEqual(value);
       expect((await readState()).phase).toBe("pending-new-generation");
@@ -297,6 +335,8 @@ for (const width of [1440, 390]) {
           failedDesired: queued.desired,
           initialCode: failure.startupFailure.code,
           confirmedFailureCode: reportedFailure.state.code,
+          failedJournal,
+          correctedJournal,
           correctionReceipt,
           correctedDesired: correction.desired,
           observedIdentity: recovered.state.observed,

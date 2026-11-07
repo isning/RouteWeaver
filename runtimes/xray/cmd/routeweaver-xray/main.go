@@ -21,7 +21,7 @@ func main() {
 		os.Exit(1)
 	}
 }
-func run(args []string) error {
+func run(args []string) (result error) {
 	// Set the supported Go process default before the unchanged upstream runtime
 	// can create listeners. Native sockopt overrides are rejected by managed config.
 	// Preserve unrelated local Go tuning, but never an inherited MPTCP enable.
@@ -120,17 +120,27 @@ func run(args []string) error {
 	if err != nil {
 		return err
 	}
+	var closeControl func() error
+	// From this point every exit owns an epoch, including control setup and
+	// partial native startup failures. Close must drain successfully before the
+	// real final snapshot can authorize another epoch. Preserve both the original
+	// error and any cleanup failure; an uncertain epoch stays fail-closed.
+	defer func() {
+		if closeControl != nil {
+			defer closeControl()
+		}
+		result = finishRuntime(r, journal, result)
+	}()
 	if controlPipes != nil {
 		go privateipc.ServeControl(controlPipes, r)
 	} else {
-		closeControl, err := r.ServeControl(*control)
+		closeControl, err = r.ServeControl(*control)
 		if err != nil {
 			return err
 		}
-		defer closeControl()
 	}
 	if err = r.Start(); err != nil {
-		return errors.New("runtime start failed; epoch requires reconciliation")
+		return fmt.Errorf("runtime start failed: %w", err)
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGTERM, syscall.SIGINT)
 	defer stop()
@@ -139,8 +149,23 @@ func run(args []string) error {
 	case <-brokerDone:
 	case <-controlDone:
 	}
-	if err = r.Close(); err != nil {
-		return errors.New("runtime close failed; epoch requires reconciliation")
+	return nil
+}
+
+// Only a successful runtime drain authorizes taking final counter evidence.
+// The narrow lifecycle contract also permits testing a close failure without
+// presenting a synthetic snapshot as native accounting evidence.
+type drainingRuntime interface {
+	Close() error
+	Snapshot() entrypolicy.Snapshot
+}
+
+func finishRuntime(r drainingRuntime, journal *managed.Journal, cause error) error {
+	if err := r.Close(); err != nil {
+		return errors.Join(cause, fmt.Errorf("runtime close failed; epoch requires reconciliation: %w", err))
 	}
-	return journal.Finish(r.Snapshot())
+	if err := journal.Finish(r.Snapshot()); err != nil {
+		return errors.Join(cause, fmt.Errorf("runtime finalization failed; epoch requires reconciliation: %w", err))
+	}
+	return cause
 }

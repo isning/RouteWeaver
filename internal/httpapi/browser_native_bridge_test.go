@@ -10,14 +10,17 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"testing"
 	"time"
 
 	"routeweaver/internal/agent"
+	"routeweaver/internal/entrypolicy"
 	"routeweaver/internal/render"
 )
 
@@ -154,6 +157,7 @@ func TestBrowserNativeBridge(t *testing.T) {
 		opCtx, opCancel := context.WithTimeout(ctx, 10*time.Second)
 		var err error
 		var startupFailure *agent.State
+		var journal *bridgeJournalEvidence
 		switch c.Action {
 		case "apply":
 			d, receiveErr := tr.ReceiveDesired(opCtx, init.Scope, r.State().HighestAccepted)
@@ -221,6 +225,8 @@ func TestBrowserNativeBridge(t *testing.T) {
 			} else if !bridgeIdentityRejected(tr.ReportObservation(opCtx, init.Scope, first)) {
 				err = fmt.Errorf("old native observation accepted")
 			}
+		case "journal":
+			journal, err = bridgeReadJournal(root)
 		case "close":
 			opCancel()
 			emit(map[string]any{"closing": true})
@@ -243,7 +249,7 @@ func TestBrowserNativeBridge(t *testing.T) {
 			emit(map[string]any{"error": err.Error(), "action": c.Action, "state": r.State(), "managedEpochMarker": marker})
 			continue
 		}
-		emit(map[string]any{"action": c.Action, "state": state, "startupFailure": startupFailure})
+		emit(map[string]any{"action": c.Action, "state": state, "startupFailure": startupFailure, "journal": journal})
 	}
 }
 
@@ -330,4 +336,71 @@ func bridgeStartupUnknown(state agent.State, err error) bool {
 }
 func bridgeRecoveredAbsence(state agent.State) bool {
 	return state.Phase == agent.ApplyFailed && state.Code == "recovered_not_applied" && state.NativeChecked && state.Observed == nil && !state.RecoveryRequired
+}
+
+// These summaries are read from the same owned durable root before and after
+// correction. Never return raw snapshots (which include account bindings), or
+// modify a marker to make a later activation possible.
+type bridgeJournalSnapshot struct {
+	Kind         string `json:"kind"`
+	CounterEpoch string `json:"counterEpoch"`
+	SHA256       string `json:"sha256"`
+	ActiveFlows  int    `json:"activeFlows"`
+	CounterCount int    `json:"counterCount"`
+}
+type bridgeJournalEvidence struct {
+	RootWitness  string                  `json:"rootWitness"`
+	RunningEpoch string                  `json:"runningEpoch,omitempty"`
+	Snapshots    []bridgeJournalSnapshot `json:"snapshots"`
+}
+
+func bridgeReadJournal(root string) (*bridgeJournalEvidence, error) {
+	dir := agent.ManagedJournalDirectory(root)
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, err
+	}
+	if len(entries) > 16 {
+		return nil, errors.New("unexpected fixture journal size")
+	}
+	rootSum := sha256.Sum256([]byte(dir))
+	out := &bridgeJournalEvidence{RootWitness: hex.EncodeToString(rootSum[:]), Snapshots: []bridgeJournalSnapshot{}}
+	for _, entry := range entries {
+		info, err := entry.Info()
+		if err != nil || !info.Mode().IsRegular() {
+			return nil, errors.New("fixture journal entry is not a regular file")
+		}
+		f, err := os.Open(filepath.Join(dir, entry.Name()))
+		if err != nil {
+			return nil, err
+		}
+		content, readErr := io.ReadAll(io.LimitReader(f, (4<<20)+1))
+		closeErr := f.Close()
+		if readErr != nil || closeErr != nil || len(content) > 4<<20 {
+			return nil, errors.New("fixture journal entry unreadable or oversized")
+		}
+		if entry.Name() == "running.json" {
+			var marker struct {
+				CounterEpoch string `json:"counterEpoch"`
+			}
+			if json.Unmarshal(content, &marker) != nil || marker.CounterEpoch == "" {
+				return nil, errors.New("invalid fixture running epoch")
+			}
+			out.RunningEpoch = marker.CounterEpoch
+			continue
+		}
+		kind := ""
+		for _, candidate := range []string{"baseline", "final"} {
+			if strings.HasSuffix(entry.Name(), "."+candidate+".json") {
+				kind = candidate
+			}
+		}
+		var snapshot entrypolicy.Snapshot
+		if kind == "" || json.Unmarshal(content, &snapshot) != nil || snapshot.CounterEpoch == "" || entry.Name() != snapshot.CounterEpoch+"."+kind+".json" {
+			return nil, errors.New("invalid fixture epoch snapshot")
+		}
+		sum := sha256.Sum256(content)
+		out.Snapshots = append(out.Snapshots, bridgeJournalSnapshot{Kind: kind, CounterEpoch: snapshot.CounterEpoch, SHA256: hex.EncodeToString(sum[:]), ActiveFlows: snapshot.ActiveFlows, CounterCount: len(snapshot.Counters)})
+	}
+	return out, nil
 }

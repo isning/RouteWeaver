@@ -33,6 +33,17 @@ export async function nativeBridge(init: {
     ready?: boolean;
     state?: any;
     startupFailure?: any;
+    journal?: {
+      rootWitness: string;
+      runningEpoch?: string;
+      snapshots: {
+        kind: "baseline" | "final";
+        counterEpoch: string;
+        sha256: string;
+        activeFlows: number;
+        counterCount: number;
+      }[];
+    };
     binarySHA256?: string;
     closing?: boolean;
   };
