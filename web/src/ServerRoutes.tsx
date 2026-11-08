@@ -1,3 +1,4 @@
+import { addServerConnector, connectorAddReason, removeServerConnector } from "./server-connector-collection";
 import { ServerConnectorConnectionDialog } from "./ServerConnectorConnectionDialog";
 import { PolicyUserEntryTask, type PolicyUserEntryTaskProps } from "./PolicyUserEntryTask";
 import { connectorInputError } from "./server-connector-editor";
@@ -184,12 +185,10 @@ export function ServerRoutesPage({
     setRequestedEntry(null);
     setEditError(null);
     try {
+      // Editing owns the revealed intent verbatim. View normalization would
+      // silently replace absent/null policy collections before the first edit.
       const full = value
-        ? normalizeDeployment(
-            await request<ServerDeployment>(
-              `/server-deployments/${value.id}/reveal`,
-            ),
-          )
+        ? await request<ServerDeployment>(`/server-deployments/${value.id}/reveal`)
         : newDeployment();
       if (sequence !== editSequence.current) return;
       setEditing(full);
@@ -588,6 +587,10 @@ export function ServerRoutesPage({
     </>
   );
 }
+function programsIn(value: ServerDeployment): ServerProgram[] {
+  return Array.isArray(value.ir.programs) ? value.ir.programs : [];
+}
+
 export function ServerRouteEditor({
   initial,
   initialRefreshEndpoint,
@@ -608,10 +611,13 @@ export function ServerRouteEditor({
   onSaved: (d: ServerDeployment) => boolean;
 }) {
   const [draft, setDraft] = useState(initial);
+  // Render empty/unsupported root lists without rewriting the saved intent.
+  const programs = useMemo(() => Array.isArray(draft.ir.programs) ? draft.ir.programs : [], [draft.ir.programs]);
   const [entryTask, setEntryTask] = useState<Pick<PolicyUserEntryTaskProps, "deploymentId" | "listenerId" | "principal">>();
   const entryReturnFocus = useRef<string | undefined>(undefined);
-  const [connectorTask, setConnectorTask] = useState<{ index: number; source: ServerProgram; connectorId: string }>();
+  const [connectorTask, setConnectorTask] = useState<{ index: number; source: ServerProgram; connectorId: string; provisional?: ServerProgram }>();
   const connectorEditing = useRef(false);
+  const policyBusy = useRef(false);
   const ruleReturnFocus = useRef<{ programIndex: number; ruleID?: string } | undefined>(undefined);
   useLayoutEffect(() => {
     const focus = ruleReturnFocus.current;
@@ -619,6 +625,15 @@ export function ServerRouteEditor({
     const row = Array.from(document.querySelectorAll<HTMLElement>("[data-rule-program]")).find((item) => item.dataset.ruleProgram === String(focus.programIndex) && item.dataset.ruleId === focus.ruleID);
     const target = row?.querySelector<HTMLElement>("button, input") || Array.from(document.querySelectorAll<HTMLButtonElement>("[data-rule-add-program]")).find((item) => item.dataset.ruleAddProgram === String(focus.programIndex));
     if (target) { target.focus(); ruleReturnFocus.current = undefined; }
+  }, [draft]);
+  const connectorReturnFocus = useRef<{ programIndex: number; connectorId?: string } | undefined>(undefined);
+  useLayoutEffect(() => {
+    const focus = connectorReturnFocus.current;
+    if (!focus) return;
+    const program = programs[focus.programIndex];
+    const row = Array.from(document.querySelectorAll<HTMLElement>("[data-connector-id]")).find((item) => item.dataset.connectorInstance === program?.instance.id && item.dataset.connectorListener === program?.listener.id && item.dataset.connectorId === focus.connectorId);
+    const target = row?.querySelector<HTMLElement>("input, button") || Array.from(document.querySelectorAll<HTMLButtonElement>("[data-connector-add-program]")).find((item) => item.dataset.connectorAddProgram === String(focus.programIndex));
+    if (target) { target.focus(); connectorReturnFocus.current = undefined; }
   }, [draft]);
   const sourceFence = useRef(false);
   const [sourceStale, setSourceStale] = useState(false);
@@ -656,7 +671,7 @@ export function ServerRouteEditor({
   const [pathLoading, setPathLoading] = useState(false);
   const [view, setView] = useState("ordered");
   const [error, setError] = useState<Error | null>(null);
-  const [dirty, setDirty] = useState(isNew && initial.ir.programs.length > 0);
+  const [dirty, setDirty] = useState(isNew && programsIn(initial).length > 0);
   const [graphNodes, setGraphNodes, onGraphNodesChange] =
     useNodesState<RouteGraphNode>([]);
   const [announcement, setAnnouncement] = useState("");
@@ -668,8 +683,8 @@ export function ServerRouteEditor({
     confirm = useConfirm();
   const client = useQueryClient();
   const path = useMemo(
-    () => draft.ir.programs.map((p) => p.listener.id),
-    [draft.ir.programs],
+    () => programs.map((p) => p.listener.id),
+    [programs],
   );
   useEffect(() => {
     setGraphNodes((previous) => routeGraphNodes(inventory, path, previous));
@@ -684,10 +699,10 @@ export function ServerRouteEditor({
       if (sourceFence.current) throw new Error("用户入口可能已更新，请重新读取路径后再保存。");
       if (pendingMaterials.current.size)
         throw new Error("请等待 TLS 文件读取完成，或取消读取后再保存。");
-      if (latestDraft.current.ir.programs.some((program) => (program.rules || []).some((rule) =>
+      if (programsIn(latestDraft.current).some((program) => (program.rules || []).some((rule) =>
         canEditRuleCondition(program, latestDraft.current.ir.schemaVersion, rule) && !!ruleConditionError(rule.match))))
         throw new Error("请先修正规则条件，再保存草稿。");
-      const connectorError = latestDraft.current.ir.programs.map((program) => connectorInputError(program, latestDraft.current.ir.schemaVersion)).find(Boolean);
+      const connectorError = programsIn(latestDraft.current).map((program) => connectorInputError(program, latestDraft.current.ir.schemaVersion)).find(Boolean);
       if (connectorError) throw new Error(connectorError);
       return saveRecord<ServerDeployment>("server-deployments", latestDraft.current, isNew);
     },
@@ -697,6 +712,7 @@ export function ServerRouteEditor({
     },
     onError: setError,
   });
+  policyBusy.current = save.isPending || !!selectionPending || materialPending || jsonDirty || !!entryTask || connectorEditing.current;
   const update = (next: ServerDeployment) => {
     draftRevision.current++;
     setPathLoading(false);
@@ -705,7 +721,7 @@ export function ServerRouteEditor({
     setDirty(true);
     setError(null);
   };
-  const chainEditable = canEditLegacyPath(draft, inventory);
+  const chainEditable = (draft.ir.programs == null || Array.isArray(draft.ir.programs)) && canEditLegacyPath({ ...draft, ir: { ...draft.ir, programs } }, inventory);
   const updatePath = async (ids: string[]) => {
     if (!chainEditable) {
       setError(new Error(pathRewriteUnavailable));
@@ -725,7 +741,7 @@ export function ServerRouteEditor({
       const revealed = new Map(
         endpoints.map((endpoint) => [endpoint.id, endpoint]),
       );
-      const next = compilePath(draft, ids, {
+      const next = compilePath({ ...draft, ir: { ...draft.ir, programs } }, ids, {
         ...inventory,
         endpoints: inventory.endpoints.map(
           (endpoint) => revealed.get(endpoint.id) || endpoint,
@@ -754,7 +770,7 @@ export function ServerRouteEditor({
       ir: {
         ...current.ir,
         topologyRevision: newID("topology"),
-        programs: current.ir.programs.map((p, i) =>
+        programs: programsIn(current).map((p, i) =>
           i === index ? { ...p, ...patch } : p,
         ),
       },
@@ -764,7 +780,7 @@ export function ServerRouteEditor({
     index: number,
     patch: Partial<NonNullable<ServerTLS["reality"]>>,
   ) => {
-    const program = draft.ir.programs[index];
+    const program = programs[index];
     const existing = program.tls?.reality;
     const clientTLS = program.listener.connection.tls;
     updateProgram(index, {
@@ -868,15 +884,22 @@ export function ServerRouteEditor({
   // only after the user keeps or explicitly adopts the listener snapshot.
   if (connectorTask) return <ServerConnectorConnectionDialog
     key={`${initial.id}:${connectorTask.source.instance.id}:${connectorTask.source.listener.id}:${connectorTask.connectorId}`}
-    program={draft.ir.programs[connectorTask.index]}
+    program={connectorTask.provisional || programs[connectorTask.index]}
     schemaVersion={draft.ir.schemaVersion}
     connectorId={connectorTask.connectorId}
+    isNew={!!connectorTask.provisional}
     onEditingChange={(editing) => { connectorEditing.current = editing; }}
     onClose={() => { connectorEditing.current = false; setConnectorTask(undefined); }}
     onApply={(next) => {
-      const source = latestDraft.current.ir.programs[connectorTask.index];
+      const source = programsIn(latestDraft.current)[connectorTask.index];
       if (source !== connectorTask.source || source.instance.id !== next.instance.id || source.listener.id !== next.listener.id) return false;
-      updateProgram(connectorTask.index, { connectors: next.connectors });
+      if (connectorTask.provisional) {
+        const connector = next.connectors?.find((item) => item.id === connectorTask.connectorId);
+        if (!connector) return false;
+        const result = addServerConnector(source, latestDraft.current.ir.schemaVersion, connector);
+        if (!result.program) return false;
+        updateProgram(connectorTask.index, { connectors: result.program.connectors });
+      } else updateProgram(connectorTask.index, { connectors: next.connectors });
       setAnnouncement("连接参数已采用到草稿，尚未保存。");
       return true;
     }}
@@ -927,8 +950,8 @@ export function ServerRouteEditor({
             leadingIcon={<SaveOutlined aria-hidden="true" />}
             pending={save.isPending}
             disabled={
-              draft.ir.programs.some((program) => (program.rules || []).some((rule) => canEditRuleCondition(program, draft.ir.schemaVersion, rule) && !!ruleConditionError(rule.match))) ||
-              draft.ir.programs.some((program) => !!connectorInputError(program, draft.ir.schemaVersion)) ||
+              programs.some((program) => (program.rules || []).some((rule) => canEditRuleCondition(program, draft.ir.schemaVersion, rule) && !!ruleConditionError(rule.match))) ||
+              programs.some((program) => !!connectorInputError(program, draft.ir.schemaVersion)) ||
               !!connectorTask ||
               sourceStale ||
               !draft.name.trim() ||
@@ -948,6 +971,7 @@ export function ServerRouteEditor({
     >
       <div inert={save.isPending} className="space-y-5">
         <ErrorNotice error={error} />
+        {draft.ir.programs != null && !Array.isArray(draft.ir.programs) && <Notice tone="warning" title="监听列表格式需要修复">原配置已保留。请使用完整 JSON 将监听列表修复为数组，再使用路径表单。</Notice>}
         {sourceStale && <Notice tone="warning" title="用户入口可能已更新">
           <p>当前草稿仍保留，保存已暂停。请重新读取路径，核对最新入口后再继续修改。</p>
           <ActionButton variant="outline" onClick={() => confirmDiscard({
@@ -1036,7 +1060,7 @@ export function ServerRouteEditor({
         </div>
         {!chainEditable ? (
           <ServerPolicyEditor
-            programs={draft.ir.programs}
+            programs={programs}
             schemaVersion={draft.ir.schemaVersion}
             inventory={inventory}
             onDefaultActionChange={(index, defaultAction) => {
@@ -1044,12 +1068,12 @@ export function ServerRouteEditor({
               setAnnouncement("默认去向已更新到草稿，尚未保存。");
             }}
             onRuleActionChange={(index, ruleID, action) => {
-              const program = latestDraft.current.ir.programs[index];
+              const program = programsIn(latestDraft.current)[index];
               if (
                 !program ||
                 typeof ruleID !== "string" ||
                 !/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$/.test(ruleID) ||
-                program.listener.id !== draft.ir.programs[index]?.listener.id ||
+                program.listener.id !== programs[index]?.listener.id ||
                 program.rules.filter((rule) => rule.id === ruleID).length !== 1
               ) return;
               updateProgram(index, {
@@ -1060,24 +1084,24 @@ export function ServerRouteEditor({
               setAnnouncement("规则去向已更新到草稿，条件与顺序不变，尚未保存。");
             }}
             onRuleConditionChange={(index, ruleID, match) => {
-              const program = latestDraft.current.ir.programs[index];
+              const program = programsIn(latestDraft.current)[index];
               const rule = program?.rules.find((item) => item.id === ruleID);
-              if (!program || !rule || program.listener.id !== draft.ir.programs[index]?.listener.id ||
-                  program.instance.id !== draft.ir.programs[index]?.instance.id ||
+              if (!program || !rule || program.listener.id !== programs[index]?.listener.id ||
+                  program.instance.id !== programs[index]?.instance.id ||
                   !canEditRuleCondition(program, latestDraft.current.ir.schemaVersion, rule)) return;
               updateProgram(index, { rules: program.rules.map((item) => item.id === ruleID ? { ...item, match } : item) });
               setAnnouncement("规则条件已更新到草稿，去向与顺序不变，尚未保存。");
             }}
             onConnectorsChange={(index, source, next) => {
-              const program = latestDraft.current.ir.programs[index];
+              const program = programsIn(latestDraft.current)[index];
               if (!program || program !== source || program.instance.id !== next.instance.id || program.listener.id !== next.listener.id) return;
               updateProgram(index, { connectors: next.connectors });
               setAnnouncement("连接器已更新到草稿，规则引用不变，尚未保存。");
             }}
             onOpenUserEntry={(index, principalIndex, focusLabel) => {
               if (entryTask || save.isPending || selectionPending || materialPending || jsonDirty) return;
-              const program = latestDraft.current.ir.programs[index];
-              if (!program || program !== draft.ir.programs[index]) return;
+              const program = programsIn(latestDraft.current)[index];
+              if (!program || program !== programs[index]) return;
               const principal = program.principals?.[principalIndex];
               if (!principal) return;
               entryReturnFocus.current = focusLabel;
@@ -1085,8 +1109,8 @@ export function ServerRouteEditor({
                 principal: { accountId: principal.accountId, subjectId: principal.subjectId, routeId: principal.routeId, credentialVersion: principal.credentialVersion } });
             }}
             onRuleListChange={(index, operation, ruleID) => {
-              const source = latestDraft.current.ir.programs[index];
-              if (!source || source !== draft.ir.programs[index] || !canEditRuleList(source, latestDraft.current.ir.schemaVersion)) return;
+              const source = programsIn(latestDraft.current)[index];
+              if (!source || source !== programs[index] || !canEditRuleList(source, latestDraft.current.ir.schemaVersion)) return;
               const rules = source.rules || [];
               if (operation === "add") {
                 const ids = new Set(rules.map((rule) => rule.id));
@@ -1105,7 +1129,7 @@ export function ServerRouteEditor({
                   confirmLabel: "删除规则", cancelLabel: "保留规则",
                 }, (stillCurrent) => {
                   if (!stillCurrent()) return;
-                  if (latestDraft.current.ir.programs[index] !== source) {
+                  if (programsIn(latestDraft.current)[index] !== source) {
                     setError(new Error("规则列表已变化，请重新选择要删除的规则。"));
                     return;
                   }
@@ -1125,18 +1149,50 @@ export function ServerRouteEditor({
             }}
             onOpenConnectorConnection={(index, connectorId, focusLabel) => {
               if (connectorTask || connectorEditing.current || entryTask || save.isPending || selectionPending || materialPending || jsonDirty) return;
-              const source = latestDraft.current.ir.programs[index];
-              if (!source || source !== draft.ir.programs[index] || !source.connectors?.some((connector) => connector.id === connectorId)) return;
+              const source = programsIn(latestDraft.current)[index];
+              if (!source || source !== programs[index] || !source.connectors?.some((connector) => connector.id === connectorId)) return;
               connectorEditing.current = true;
               entryReturnFocus.current = focusLabel;
               setConnectorTask({ index, source, connectorId });
+            }}
+            onAddConnector={(index, focusLabel) => {
+              if (connectorEditing.current || entryTask || save.isPending || selectionPending || materialPending || jsonDirty) return;
+              const source = programsIn(latestDraft.current)[index];
+              if (!source || source !== programs[index] || connectorAddReason(source, latestDraft.current.ir.schemaVersion)) return;
+              const ids = new Set((source.connectors || []).map((connector) => connector.id));
+              let serial = 1;
+              while (ids.has(`connector-${serial}`)) serial++;
+              const connectorId = `connector-${serial}`;
+              const provisional: ServerProgram = { ...source, connectors: [...(source.connectors || []), { id: connectorId, connection: { protocol: "socks", host: "", port: 1080 } }] };
+              connectorEditing.current = true;
+              entryReturnFocus.current = focusLabel;
+              setConnectorTask({ index, source, connectorId, provisional });
+            }}
+            onRemoveConnector={(index, connectorId) => {
+              if (connectorEditing.current || policyBusy.current) return;
+              const source = programsIn(latestDraft.current)[index];
+              if (!source || source !== programs[index] || removeServerConnector(source, latestDraft.current.ir.schemaVersion, connectorId).error) return;
+              confirmDiscard({
+                title: `删除连接器 ${connectorId}？`,
+                description: "仅从当前草稿移除此连接器，不修改其他去向，也不会应用到核心。",
+                confirmLabel: "删除连接器", cancelLabel: "保留连接器",
+              }, (stillCurrent) => {
+                if (!stillCurrent() || connectorEditing.current || policyBusy.current || programsIn(latestDraft.current)[index] !== source) return;
+                const result = removeServerConnector(source, latestDraft.current.ir.schemaVersion, connectorId);
+                if (!result.program) { setError(new Error(result.error || "连接器不能移除，请重新核对引用。")); return; }
+                const oldIndex = source.connectors!.findIndex((connector) => connector.id === connectorId);
+                const remaining = result.program.connectors || [];
+                connectorReturnFocus.current = { programIndex: index, connectorId: remaining[Math.min(oldIndex, remaining.length - 1)]?.id };
+                updateProgram(index, { connectors: result.program.connectors });
+                setAnnouncement("连接器已从草稿移除，尚未保存。");
+              });
             }}
             onRefreshListener={setRefreshingListener}
             onEditJSON={editIntent}
           />
         ) : view === "graph" ? (
           <>
-            <ServerPathSummary programs={draft.ir.programs} />
+            <ServerPathSummary programs={programs} />
             <div className="graph-canvas h-[480px] min-h-80 overflow-hidden rounded-lg border bg-muted/20">
               <ReactFlow
                 nodes={graphNodes}
@@ -1161,7 +1217,7 @@ export function ServerRouteEditor({
           </>
         ) : (
           <ServerPathWorkspace
-            programs={draft.ir.programs}
+            programs={programs}
             inventory={inventory}
             onChangePath={updatePath}
             onPendingChange={markPending}
@@ -1169,12 +1225,12 @@ export function ServerRouteEditor({
           />
         )}
         <Accordion type="multiple" defaultValue={initialSection ? [initialSection] : []} className="w-full">
-          {chainEditable && draft.ir.programs.length > 0 && (
+          {chainEditable && programs.length > 0 && (
             <AccordionItem value="listener-details">
               <AccordionTrigger>监听快照与转发详情</AccordionTrigger>
               <AccordionContent>
                 <ServerForwarding
-                  programs={draft.ir.programs}
+                  programs={programs}
                   inventory={inventory}
                   onRefreshListener={setRefreshingListener}
                 />
@@ -1185,10 +1241,10 @@ export function ServerRouteEditor({
             {
               key: "tls",
               label: "TLS \u8BC1\u4E66\u4E0E\u5B89\u5168\u53C2\u6570",
-              children: draft.ir.programs.some(
+              children: programs.some(
                 (p) => p.listener.connection.tls?.enabled,
               ) ? (
-                draft.ir.programs.map(
+                programs.map(
                   (p, index) =>
                     p.listener.connection.tls?.enabled && (
                       <div
@@ -1238,13 +1294,13 @@ export function ServerRouteEditor({
                               onPendingChange={(pending) => markMaterialPending(p.listener.id, pending)}
                               onChange={(tls) => {
                                 const current = latestDraft.current;
-                                if (!current.ir.programs.some((program) => program.listener.id === p.listener.id)) return;
+                                if (!programsIn(current).some((program) => program.listener.id === p.listener.id)) return;
                                 update({
                                   ...current,
                                   ir: {
                                     ...current.ir,
                                     topologyRevision: newID("topology"),
-                                    programs: current.ir.programs.map((program) =>
+                                    programs: programsIn(current).map((program) =>
                                       program.listener.id === p.listener.id ? { ...program, tls } : program,
                                     ),
                                   },
@@ -1299,13 +1355,13 @@ export function ServerRouteEditor({
                 "\u9AD8\u7EA7\uFF1A\u5185\u90E8\u76EE\u6807\u8BBF\u95EE\u4F8B\u5916",
               children: (
                 <>
-                  {draft.ir.programs.some(supportsDestinationExceptions) && (
+                  {programs.some(supportsDestinationExceptions) && (
                     <p className="muted text-sm text-muted-foreground">
                       仅为确实需要提供的内部服务添加明确网段；留空保留默认限制。修改后需重新应用。
                     </p>
                   )}
-                  {draft.ir.programs.some(supportsDestinationExceptions) ? (
-                    draft.ir.programs.map(
+                  {programs.some(supportsDestinationExceptions) ? (
+                    programs.map(
                       (p, index) =>
                         supportsDestinationExceptions(p) && (
                           <label
@@ -1389,7 +1445,7 @@ export function ServerRouteEditor({
                   const ir = JSON.parse(json);
                   if (!Array.isArray(ir.programs))
                     throw new Error("\u7F3A\u5C11 programs \u6570\u7EC4");
-                  draft.ir.programs.forEach((program) => invalidateMaterial(program.listener.id));
+                  programs.forEach((program) => invalidateMaterial(program.listener.id));
                   update({ ...draft, ir });
                   setJSONBaseline(json);
                   setJSONOpen(false);

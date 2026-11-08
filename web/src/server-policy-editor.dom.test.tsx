@@ -48,7 +48,7 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
-function setup(change?: (draft: ServerDeployment) => void) {
+function setup(change?: (draft: ServerDeployment) => void, retainInventory = false) {
   const instance = {
     id: "core",
     hostId: "server",
@@ -141,7 +141,9 @@ function setup(change?: (draft: ServerDeployment) => void) {
       ],
     },
   };
+  const registeredPrograms = structuredClone(deployment.ir.programs);
   change?.(deployment);
+  const fixturePrograms = retainInventory ? registeredPrograms : Array.isArray(deployment.ir.programs) ? deployment.ir.programs : [];
   const requests: string[] = [];
   const saved: ServerDeployment[] = [];
   const saveHeaders: Headers[] = [];
@@ -165,11 +167,12 @@ function setup(change?: (draft: ServerDeployment) => void) {
       if (path === "/api/hosts" && method === "GET")
         value = [{ id: "server", name: "Server", address: "server.invalid" }];
       else if (path === "/api/core-instances" && method === "GET")
-        value = deployment.ir.programs.map((program) => program.instance);
+        value = fixturePrograms.map((program) => program.instance);
       else if (path === "/api/managed-endpoints" && method === "GET")
         value = summary(
-          deployment.ir.programs.map((program) => program.listener),
+          fixturePrograms.map((program) => program.listener),
         );
+      else if (path === "/api/managed-endpoints/entry/reveal" && method === "GET" && retainInventory) value = registeredPrograms[0].listener;
       else if (path === "/api/links" && method === "GET") value = [];
       else if (path === "/api/server-deployments" && method === "GET")
         value = summary([saved.at(-1) || deployment]);
@@ -213,6 +216,7 @@ function setup(change?: (draft: ServerDeployment) => void) {
   );
   return {
     deployment,
+    registeredPrograms,
     requests,
     saved,
     saveHeaders,
@@ -1114,4 +1118,131 @@ it.each([false, 0, ""])("does not replace malformed rules %s with a new list", a
   await user.click(within(editor).getByRole("button", { name: "保存草稿" }));
   await waitFor(() => expect(fixture.saved).toHaveLength(1));
   expect(fixture.saved[0].ir.programs).toEqual([{ ...fixture.deployment.ir.programs[0], defaultAction: { kind: "direct" } }]);
+});
+
+it("adds a connector without selecting it as a destination and removes only the confirmed unreferenced connector", async () => {
+  const user = userEvent.setup();
+  const fixture = setup();
+  let editor = await openEditor(user);
+  expect((within(editor).getByRole("button", { name: "Policy entry 连接器 1 删除连接器" }) as HTMLButtonElement).disabled).toBe(true);
+  expect((within(editor).getByRole("button", { name: "Policy entry 连接器 2 删除连接器" }) as HTMLButtonElement).disabled).toBe(true);
+  await user.click(within(editor).getByRole("button", { name: "Policy entry 新增连接器" }));
+  let dialog = await screen.findByRole("dialog", { name: "新增连接器" });
+  await user.click(within(dialog).getByRole("button", { name: "取消" }));
+  editor = await screen.findByRole("dialog", { name: "编辑 Policy draft" });
+  expect(within(editor).queryByRole("textbox", { name: "Policy entry 连接器 3 地址" })).toBeNull();
+  await user.click(within(editor).getByRole("button", { name: "Policy entry 新增连接器" }));
+  dialog = await screen.findByRole("dialog", { name: "新增连接器" });
+  await user.type(within(dialog).getByRole("textbox", { name: "连接地址" }), "added.invalid");
+  await user.click(within(dialog).getByRole("button", { name: "添加到草稿" }));
+  editor = await screen.findByRole("dialog", { name: "编辑 Policy draft" });
+  expect((within(editor).getByRole("textbox", { name: "Policy entry 连接器 3 地址" }) as HTMLInputElement).value).toBe("added.invalid");
+  expect(fixture.saved).toEqual([]);
+  await user.click(within(editor).getByRole("button", { name: "Policy entry 连接器 3 删除连接器" }));
+  let confirmation = await screen.findByRole("alertdialog", { name: "删除连接器 connector-1？" });
+  await user.click(within(confirmation).getByRole("button", { name: "保留连接器" }));
+  expect(within(editor).getByRole("textbox", { name: "Policy entry 连接器 3 地址" })).toBeTruthy();
+  await user.click(within(editor).getByRole("button", { name: "Policy entry 连接器 3 删除连接器" }));
+  confirmation = await screen.findByRole("alertdialog", { name: "删除连接器 connector-1？" });
+  await user.click(within(confirmation).getByRole("button", { name: "删除连接器" }));
+  await waitFor(() => expect(document.activeElement).toBe(within(editor).getByRole("textbox", { name: "Policy entry 连接器 2 地址" })));
+  await user.click(within(editor).getByRole("button", { name: "保存草稿" }));
+  await waitFor(() => expect(fixture.saved).toHaveLength(1));
+  expect(fixture.saved[0].ir.programs).toEqual(fixture.deployment.ir.programs);
+  expect(fixture.saveHeaders[0].get("If-Match")).toBe("policy-r1");
+});
+
+it.each(["tls", "transport"])("keeps malformed %s sections read-only in the full connection task and retains them on independent save", async (field) => {
+  const user = userEvent.setup();
+  const fixture = setup((draft) => { Object.assign(draft.ir.programs[0].connectors![0].connection, { [field]: "malformed-original" }); });
+  await openEditor(user);
+  await user.click(screen.getByRole("button", { name: "Policy entry 连接器 1 编辑连接参数" }));
+  const dialog = await screen.findByRole("dialog", { name: "编辑连接参数" });
+  expect(within(dialog).queryByRole("spinbutton", { name: "端口" })).toBeNull();
+  expect((within(dialog).getByRole("button", { name: "采用连接参数" }) as HTMLButtonElement).disabled).toBe(true);
+  await user.click(within(dialog).getByRole("button", { name: "取消" }));
+  const editor = await screen.findByRole("dialog", { name: "编辑 Policy draft" });
+  await user.click(within(editor).getByRole("combobox", { name: "Policy entry 默认去向" }));
+  await user.click(await screen.findByRole("option", { name: "直连" }));
+  await user.click(within(editor).getByRole("button", { name: "保存草稿" }));
+  await waitFor(() => expect(fixture.saved).toHaveLength(1));
+  expect(fixture.saved[0].ir.programs).toEqual([{ ...fixture.deployment.ir.programs[0], defaultAction: { kind: "direct" } }]);
+});
+
+
+it.each(["null", "omitted", "malformed"])("opens a %s root program list without normalizing the saved intent", async (shape) => {
+  const user = userEvent.setup();
+  const fixture = setup((draft) => {
+    if (shape === "omitted") Reflect.deleteProperty(draft.ir, "programs");
+    else Object.assign(draft.ir, { programs: shape === "null" ? null : false });
+  });
+  const editor = await openEditor(user);
+  const name = within(editor).getByRole("textbox", { name: "转发路径名称" });
+  await user.clear(name);
+  await user.type(name, "Renamed retained draft");
+  await user.click(within(editor).getByRole("button", { name: "高级：完整服务端意图" }));
+  await user.click(within(editor).getByRole("button", { name: "编辑服务端意图" }));
+  const json = await screen.findByRole("dialog", { name: "服务端配置意图" });
+  const intent = JSON.parse((within(json).getByRole("textbox", { name: "服务端配置意图 JSON 文本" }) as HTMLTextAreaElement).value);
+  expect(intent).toEqual(fixture.deployment.ir);
+  await user.click(within(json).getByRole("button", { name: "取消" }));
+  await user.click(within(editor).getByRole("button", { name: "保存草稿" }));
+  await waitFor(() => expect(fixture.saved).toHaveLength(1));
+  expect(fixture.saved[0].ir).toEqual(fixture.deployment.ir);
+  expect(fixture.saved[0].name).toBe("Renamed retained draft");
+});
+
+
+it.each(["null", "omitted"])("lets a %s root program list be corrected only by an explicit JSON decision", async (shape) => {
+  const user = userEvent.setup();
+  const fixture = setup((draft) => {
+    if (shape === "omitted") Reflect.deleteProperty(draft.ir, "programs");
+    else Object.assign(draft.ir, { programs: null });
+  });
+  const editor = await openEditor(user);
+  await user.click(within(editor).getByRole("button", { name: "高级：完整服务端意图" }));
+  const openJSON = async () => {
+    await user.click(within(editor).getByRole("button", { name: "编辑服务端意图" }));
+    const dialog = await screen.findByRole("dialog", { name: "服务端配置意图" });
+    const field = within(dialog).getByRole("textbox", { name: "服务端配置意图 JSON 文本" });
+    expect(JSON.parse((field as HTMLTextAreaElement).value)).toEqual(fixture.deployment.ir);
+    await user.clear(field);
+    await user.paste(JSON.stringify({ ...fixture.deployment.ir, programs: [] }));
+    return dialog;
+  };
+  let dialog = await openJSON();
+  await user.click(within(dialog).getByRole("button", { name: "取消" }));
+  const discard = await screen.findByRole("alertdialog", { name: "放弃尚未应用的 JSON 修改？" });
+  await user.click(within(discard).getByRole("button", { name: "放弃 JSON 修改" }));
+  expect(fixture.saved).toEqual([]);
+  dialog = await openJSON();
+  await user.click(within(dialog).getByRole("button", { name: "应用到草稿" }));
+  await user.click(within(editor).getByRole("button", { name: "保存草稿" }));
+  await waitFor(() => expect(fixture.saved).toHaveLength(1));
+  expect(fixture.saved[0].ir).toEqual({ ...fixture.deployment.ir, programs: [] });
+});
+
+
+it.each(["null", "omitted"])("adds the first selected endpoint to a %s program list only after its explicit reveal succeeds", async (shape) => {
+  const user = userEvent.setup();
+  const fixture = setup((draft) => {
+    if (shape === "omitted") Reflect.deleteProperty(draft.ir, "programs");
+    else Object.assign(draft.ir, { programs: null });
+  }, true);
+  const editor = await openEditor(user);
+  expect(fixture.saved).toEqual([]);
+  await user.click(within(editor).getByRole("combobox", { name: "入口服务器" }));
+  await user.click(await screen.findByRole("option", { name: "Server" }));
+  await user.click(within(editor).getByRole("combobox", { name: "入口端点" }));
+  await user.click(await screen.findByRole("option", { name: /Policy entry/ }));
+  await within(editor).findByRole("combobox", { name: "第 1 跳端点" });
+  expect(fixture.requests).toContain("GET /api/managed-endpoints/entry/reveal");
+  await user.click(within(editor).getByRole("button", { name: "保存草稿" }));
+  await waitFor(() => expect(fixture.saved).toHaveLength(1));
+  expect(fixture.saved[0].ir.programs).toEqual([{
+    instance: fixture.registeredPrograms[0].instance,
+    listener: fixture.registeredPrograms[0].listener,
+    egress: [], rules: [], resources: [],
+  }]);
+  expect(fixture.deployment.ir.programs).toBe(shape === "null" ? null : undefined);
 });

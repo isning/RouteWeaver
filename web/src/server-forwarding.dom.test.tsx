@@ -234,7 +234,8 @@ it("shows conditional forwarding without inventing an execution chain or offerin
   const editor = await screen.findByRole("dialog", {
     name: "编辑 Reject draft",
   });
-  expect(within(editor).getByText(/域名后缀.*chatgpt.com/)).toBeTruthy();
+  expect(within(editor).getByRole("combobox", { name: /规则 1 条件类型/ }).textContent).toContain("域名后缀");
+  expect((within(editor).getByRole("textbox", { name: /规则 1 条件值/ }) as HTMLInputElement).value).toBe("chatgpt.com");
   expect(
     within(editor).queryByRole("button", { name: /上移第|下移第|移除第/ }),
   ).toBeNull();

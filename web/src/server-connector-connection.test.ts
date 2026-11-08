@@ -1,5 +1,5 @@
 import { expect, it } from "vitest";
-import { prepareConnectorConnection } from "./server-connector-connection";
+import { connectorConnectionShapeReason, prepareConnectorConnection } from "./server-connector-connection";
 import type { Connection } from "./types";
 const source = (): Connection => ({ protocol: "vless", host: "exit.example", port: 443, uuid: "00000000-0000-4000-8000-000000000001", tls: { enabled: true, serverName: "tls.example" }, transport: { type: "ws", path: "/path", host: "header.example", headers: { "X-Fixture": "synthetic" } } });
 it("patches address and exact port while retaining all untouched credentials and unknown nested fields", () => {
@@ -82,4 +82,28 @@ it("protects unknown disabled TLS and TCP subtrees from explicit structural remo
   expect(prepareConnectorConnection(original, { ...original, transport: undefined }).connection).toBeUndefined();
   expect(original.tls).toEqual({ enabled: false, futureTLS: true });
   expect(original.transport).toEqual({ type: "tcp", futureTransport: true });
+});
+
+it.each([
+  { tls: "bad" }, { tls: null }, { tls: [] },
+  { tls: { enabled: "false" } }, { tls: { enabled: true, alpn: "h2" } },
+  { tls: { enabled: true, reality: "bad" } }, { tls: { enabled: true, reality: [] } },
+  { tls: { enabled: true, reality: { publicKey: 7, shortId: "aa" } } },
+  { transport: ["x"] }, { transport: null }, { transport: { type: "ws", headers: ["x"] } },
+  { transport: { type: "ws", headers: { "X-Fixture": 7 } } },
+  { transport: { type: "ws", headers: null } },
+])("refuses malformed original security/transport shape without coercing it: %j", (fields) => {
+  const original = { ...source(), ...fields } as unknown as Connection;
+  const before = structuredClone(original);
+  expect(connectorConnectionShapeReason(original)).toBeTruthy();
+  expect(prepareConnectorConnection(original, { ...original, port: "8443" }).connection).toBeUndefined();
+  expect(original).toEqual(before);
+});
+it("rejects malformed draft subtrees and reserved original header-row metadata without mutation", () => {
+  const original = source();
+  const malformed = { ...original, transport: { type: "ws", headerRows: "bad" } };
+  expect(prepareConnectorConnection(original, malformed as unknown as Parameters<typeof prepareConnectorConnection>[1]).connection).toBeUndefined();
+  const conflicting = { ...original, transport: { ...original.transport!, headerRows: [] } };
+  expect(connectorConnectionShapeReason(conflicting)).toBeTruthy();
+  expect(prepareConnectorConnection(conflicting, { ...conflicting, port: "8443" }).connection).toBeUndefined();
 });

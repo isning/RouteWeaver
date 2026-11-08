@@ -4,19 +4,20 @@ import { ActionButton } from "@/ui-patterns/actions";
 import { TaskDialog } from "@/ui-patterns/task-overlays";
 import { ConnectionFields } from "./ConnectionFields";
 import { connectorEditReason } from "./server-connector-editor";
-import { prepareConnectorConnection, type ConnectorConnectionDraft } from "./server-connector-connection";
+import { prepareConnectorConnection, connectorConnectionShapeReason, type ConnectorConnectionDraft } from "./server-connector-connection";
 import { useDiscardConfirmation } from "./useDiscardConfirmation";
 import { useUnsavedChanges } from "./navigation";
 import type { ServerProgram } from "./types";
 
 /** Mount for one connector task. The parent must block its save/check/mode changes while open. */
-export function ServerConnectorConnectionDialog({ program, schemaVersion, connectorId, onApply, onClose, onEditingChange }: {
+export function ServerConnectorConnectionDialog({ program, schemaVersion, connectorId, onApply, onClose, onEditingChange, isNew = false }: {
   program: ServerProgram;
   schemaVersion: string;
   connectorId: string;
   onApply: (nextProgram: ServerProgram) => boolean;
   onClose: () => void;
   onEditingChange: (editing: boolean) => void;
+  isNew?: boolean;
 }) {
   const [form] = useForm<{ connection: ConnectorConnectionDraft }>();
   const formId = useId();
@@ -39,7 +40,7 @@ export function ServerConnectorConnectionDialog({ program, schemaVersion, connec
   }, []);
   const stale = () => current.current.program !== source.current.program || current.current.schemaVersion !== source.current.schemaVersion || current.current.connectorId !== source.current.connectorId;
   const reason = connectorEditReason(program, schemaVersion, connectorId) ||
-    (original?.connection?.transport && "headerRows" in original.connection.transport ? "连接器含有与表单冲突的扩展参数，请在完整 JSON 中编辑。" : undefined);
+    connectorConnectionShapeReason(original?.connection);
   const close = () => {
     if (!active.current || confirming) return;
     if (dirty) confirm({ title: "放弃连接参数修改？", description: "尚未采用的连接参数将被丢弃，策略草稿保持不变。", confirmLabel: "放弃修改", cancelLabel: "继续编辑" }, () => {
@@ -55,13 +56,13 @@ export function ServerConnectorConnectionDialog({ program, schemaVersion, connec
     active.current = false;
     current.current.onClose();
   };
-  return <TaskDialog open title="编辑连接参数" onOpenChange={(open) => { if (!open) close(); }} pending={confirming}
+  return <TaskDialog open title={isNew ? "新增连接器" : "编辑连接参数"} onOpenChange={(open) => { if (!open) close(); }} pending={confirming}
     footer={<div className="flex flex-wrap justify-end gap-2">
       <ActionButton variant="outline" onClick={close} disabled={confirming}>取消</ActionButton>
-      <ActionButton type="submit" form={formId} disabled={!!reason || confirming || stale()}>采用连接参数</ActionButton>
+      <ActionButton type="submit" form={formId} disabled={!!reason || confirming || stale()}>{isNew ? "添加到草稿" : "采用连接参数"}</ActionButton>
     </div>}>
     <p className="break-all text-sm">连接器 {connectorId}</p>
-    <p className="text-sm text-muted-foreground">采用后会修改所有引用此连接器的规则所使用的连接；保存草稿不会自动应用到核心。</p>
+    <p className="text-sm text-muted-foreground">{isNew ? "添加后不会自动更改任何默认去向或规则；请选择需要使用此连接器的去向，再保存草稿。" : "采用后会修改所有引用此连接器的规则所使用的连接；保存草稿不会自动应用到核心。"}</p>
     {(reason || error || stale()) && <p role="alert" className="text-sm text-destructive">{reason || error || "策略草稿已改变，请关闭后重新打开连接参数。"}</p>}
     {!reason && original && <AppForm form={form} id={formId} initialValues={initial} disabled={confirming}
       onValuesChange={() => { setDirty(true); setError(""); }}

@@ -329,6 +329,29 @@ for (const width of [1440, 390]) {
     await capture(page, info, connectionDialog, connectionPort, "policy-connector-connection");
     await connectionDialog.getByRole("button", { name: "采用连接参数", exact: true }).click();
     await expect(editor).toBeVisible();
+    const addConnector = editor.getByRole("button", { name: "条件转发入口 新增连接器", exact: true });
+    await addConnector.click();
+    let addition = page.getByRole("dialog", { name: "新增连接器", exact: true });
+    await addition.getByRole("button", { name: "取消", exact: true }).click();
+    await expect(addConnector).toBeFocused();
+    await addConnector.click();
+    addition = page.getByRole("dialog", { name: "新增连接器", exact: true });
+    await addition.getByRole("textbox", { name: "连接地址", exact: true }).fill("127.0.0.3");
+    await addition.getByRole("button", { name: "添加到草稿", exact: true }).click();
+    await expect(editor.getByRole("textbox", { name: "条件转发入口 连接器 3 地址", exact: true })).toHaveValue("127.0.0.3");
+    await expect(editor.getByRole("button", { name: "条件转发入口 连接器 2 删除连接器", exact: true })).toBeDisabled();
+    const removeConnector = editor.getByRole("button", { name: "条件转发入口 连接器 3 删除连接器", exact: true });
+    await removeConnector.click();
+    const removeReview = page.getByRole("alertdialog", { name: "删除连接器 connector-1？", exact: true });
+    await removeReview.getByRole("button", { name: "保留连接器", exact: true }).click();
+    await removeConnector.click();
+    await removeReview.getByRole("button", { name: "删除连接器", exact: true }).click();
+    await expect(editor.getByRole("textbox", { name: "条件转发入口 连接器 2 地址", exact: true })).toBeFocused();
+    await addConnector.click();
+    addition = page.getByRole("dialog", { name: "新增连接器", exact: true });
+    await addition.getByRole("textbox", { name: "连接地址", exact: true }).fill("127.0.0.4");
+    await addition.getByRole("button", { name: "添加到草稿", exact: true }).click();
+    await capture(page, info, editor, editor.getByRole("textbox", { name: "条件转发入口 连接器 3 地址", exact: true }), "policy-connector-added");
     const consequence = editor.getByText("仅保存草稿，检查与应用需另行操作。", {
       exact: true,
     });
@@ -353,6 +376,7 @@ for (const width of [1440, 390]) {
         connectors: [
           { ...before.ir.programs[0].connectors[0], connection: { ...before.ir.programs[0].connectors[0].connection, port: 24181 } },
           { id: "exit", connection: { ...before.ir.programs[0].connectors[1].connection, host: "127.0.0.2" } },
+          { id: "connector-1", connection: { protocol: "socks", host: "127.0.0.4", port: 1080 } },
         ],
         rules: [
           { ...before.ir.programs[0].rules[0], match: { ...before.ir.programs[0].rules[0].match, value: "updated.example.invalid" }, action: { kind: "reject" } },

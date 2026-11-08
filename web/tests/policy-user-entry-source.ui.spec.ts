@@ -114,6 +114,11 @@ for (const width of [1440, 390]) {
     await rotation.getByRole("button", { name: "准备新凭据", exact: true }).click();
     expect((await rotated).status()).toBe(201);
     await expect(page.getByText("新凭据已准备", { exact: true })).toBeVisible();
+    // The mutation/toast can finish while the confirmation's exit scope still
+    // owns Escape. Wait for real removal, including hidden closing content,
+    // before sending a distinct dismissal to the returned entry task.
+    await expect(page.locator('[role="alertdialog"]')).toHaveCount(0);
+    await settledTask(entries);
     await page.keyboard.press("Escape");
     await expect(editor).toBeVisible();
     await expect(sourceTrigger).toBeFocused();
@@ -161,6 +166,8 @@ for (const width of [1440, 390]) {
     await stop.getByRole("button", { name: "停止交付", exact: true }).click();
     expect((await stopped).status()).toBe(200);
     await expect(row.getByText("已撤销", { exact: true })).toBeVisible();
+    await expect(page.locator('[role="alertdialog"]')).toHaveCount(0);
+    await settledTask(entries);
     await page.keyboard.press("Escape");
     await expect(editor).toBeVisible();
     await expect(sourceTrigger).toBeFocused();

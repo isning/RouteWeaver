@@ -7,6 +7,38 @@ const connectionKeys = ["host", "port", "protocol", "username", "password", "met
 const tlsKeys = ["enabled", "serverName", "fingerprint", "alpn", "reality"];
 const fieldLabels: Record<string, string> = { uuid: "UUID", flow: "VLESS 流控", packetEncoding: "数据包编码", tls: "TLS 参数", transport: "传输参数", path: "传输路径", host: "传输 Host", serviceName: "gRPC 服务名", headers: "请求头", authority: "gRPC authority" };
 const transportKeys = ["type", "path", "host", "serviceName", "headers", "authority", "headerRows"];
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+function connectionShapeReason(value: unknown, allowHeaderRows: boolean): string | undefined {
+  const reason = "安全或传输参数的结构不能由此表单无损编辑，请在完整 JSON 中检查。";
+  if (!isRecord(value)) return reason;
+  const strings = (record: Record<string, unknown>, keys: string[]) => keys.every((key) => record[key] === undefined || typeof record[key] === "string");
+  if (value.tls !== undefined) {
+    if (!isRecord(value.tls)) return reason;
+    const tls = value.tls;
+    if ((tls.enabled !== undefined && typeof tls.enabled !== "boolean") || !strings(tls, ["serverName", "fingerprint"])) return reason;
+    if (tls.alpn !== undefined && (!Array.isArray(tls.alpn) || tls.alpn.some((item) => typeof item !== "string"))) return reason;
+    if (tls.reality !== undefined && (!isRecord(tls.reality) || !strings(tls.reality, ["publicKey", "shortId"]))) return reason;
+  }
+  if (value.transport !== undefined) {
+    if (!isRecord(value.transport)) return reason;
+    const transport = value.transport;
+    if (!strings(transport, ["type", "path", "host", "serviceName", "authority"])) return reason;
+    if (transport.headers !== undefined && (!isRecord(transport.headers) || Object.values(transport.headers).some((header) => typeof header !== "string"))) return reason;
+    if (Object.prototype.hasOwnProperty.call(transport, "headerRows")) {
+      if (!allowHeaderRows) return "连接器含有与请求头表单冲突的扩展参数，请在完整 JSON 中编辑。";
+      if (!Array.isArray(transport.headerRows) || transport.headerRows.some((row) => !isRecord(row) || typeof row.name !== "string" || typeof row.value !== "string")) return reason;
+    }
+  }
+  return undefined;
+}
+
+/** Read-only gate for source shapes that ConnectionFields would otherwise coerce. */
+export function connectorConnectionShapeReason(connection: unknown): string | undefined {
+  return connectionShapeReason(connection, false);
+}
+
 function unknownKeys(value: object | undefined, keys: string[]) {
   return !!value && Object.keys(value).some((key) => !keys.includes(key));
 }
@@ -27,6 +59,8 @@ export function prepareConnectorConnection(original: Connection, draft: Connecto
 } {
   const removedFields: string[] = [];
   const fail = (error: string) => ({ error, removedFields: [] });
+  const shapeReason = connectorConnectionShapeReason(original) || connectionShapeReason(draft, true);
+  if (shapeReason) return fail(shapeReason);
   const port = operationalInteger(draft.port, 1, 65535);
   if (port === undefined) return fail("端口范围为 1–65535，且必须是整数。");
   if (typeof draft.host !== "string" || !draft.host || /[\s/\\@?#\[\]]/.test(draft.host)) return fail("地址必须是主机名或 IP，不能是网址。");

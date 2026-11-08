@@ -1,3 +1,4 @@
+import { connectorAddReason } from "./server-connector-collection";
 import { ServerConnectorEditor } from "./ServerConnectorEditor";
 import { Input } from "@/components/ui/input";
 import { ActionButton } from "@/ui-patterns/actions";
@@ -325,6 +326,8 @@ export function ServerPolicyEditor({
   onOpenUserEntry,
   onRuleListChange,
   onOpenConnectorConnection,
+  onAddConnector,
+  onRemoveConnector,
   onRefreshListener,
   onEditJSON,
 }: {
@@ -342,6 +345,8 @@ export function ServerPolicyEditor({
   onOpenUserEntry: (programIndex: number, principalIndex: number, focusLabel: string) => void;
   onRuleListChange: (programIndex: number, operation: "add" | "up" | "down" | "remove", ruleID?: string) => void;
   onOpenConnectorConnection: (programIndex: number, connectorId: string, focusLabel: string) => void;
+  onAddConnector: (programIndex: number, focusLabel: string) => void;
+  onRemoveConnector: (programIndex: number, connectorId: string) => void;
   onRefreshListener: (endpointId: string) => void;
   onEditJSON: () => void;
 }) {
@@ -567,7 +572,11 @@ export function ServerPolicyEditor({
               aria-label={`${identityLabel}的连接器`}
               className="space-y-2"
             >
-              <h4 className="font-medium">连接器</h4>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h4 className="font-medium">连接器</h4>
+                {!programEditReason(program, schemaVersion) && <ActionButton data-connector-add-program={programIndex} variant="outline" disabled={!!connectorAddReason(program, schemaVersion)} aria-label={`${identityLabel} 新增连接器`} onClick={() => onAddConnector(programIndex, `${identityLabel} 新增连接器`)}>新增连接器</ActionButton>}
+              </div>
+              {!programEditReason(program, schemaVersion) && connectorAddReason(program, schemaVersion) && <p className="text-sm text-muted-foreground">{connectorAddReason(program, schemaVersion)}</p>}
               {!!program.connectors?.length && <details className="text-sm">
                 <summary className="cursor-pointer text-muted-foreground">连接器路径</summary>
                 <ul className="space-y-2 pt-2">
@@ -583,6 +592,7 @@ export function ServerPolicyEditor({
                 label={identityLabel}
                 onChange={(next) => onConnectorsChange(programIndex, program, next)}
                 onEditConnection={(id, focusLabel) => onOpenConnectorConnection(programIndex, id, focusLabel)}
+                onRemove={(id) => onRemoveConnector(programIndex, id)}
               /> : <p className="text-sm text-muted-foreground">{program.egress?.length ? `使用 ${program.egress.length} 个顺序出口。` : program.connectors?.length ? "连接器仅供查看。" : "未配置连接器"}</p>}
             </section>
             <section
