@@ -1034,26 +1034,6 @@ export function ServerRouteEditor({
               {chainEditable ? "路径编排" : "监听与转发"}
             </h2>
           </div>
-          {chainEditable && (
-            <Tabs
-              value={view}
-              onValueChange={(next) => {
-                setPendingEndpoints({});
-                setView(next);
-              }}
-              defaultValue={"ordered"}
-              className="w-full space-y-4"
-            >
-              <TabsList className="h-auto max-w-full flex-wrap">
-                <TabsTrigger key={"ordered"} value={"ordered"}>
-                  {"\u987A\u5E8F\u7F16\u8F91"}
-                </TabsTrigger>
-                <TabsTrigger key={"graph"} value={"graph"}>
-                  {"\u56FE\u5F62\u7F16\u8F91"}
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-          )}
         </div>
         <div className="sr-only" aria-live="polite">
           {announcement}
@@ -1223,6 +1203,26 @@ export function ServerRouteEditor({
             onPendingChange={markPending}
             changing={pathLoading}
           />
+        )}
+        {chainEditable && (
+          <Tabs
+            value={view}
+            onValueChange={(next) => {
+              setPendingEndpoints({});
+              setView(next);
+            }}
+            defaultValue={"ordered"}
+            className="w-full space-y-4"
+          >
+            <TabsList className="h-auto max-w-full flex-wrap">
+              <TabsTrigger key={"ordered"} value={"ordered"}>
+                {"\u987A\u5E8F\u7F16\u8F91"}
+              </TabsTrigger>
+              <TabsTrigger key={"graph"} value={"graph"}>
+                {"\u56FE\u5F62\u7F16\u8F91"}
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
         )}
         <Accordion type="multiple" defaultValue={initialSection ? [initialSection] : []} className="w-full">
           {chainEditable && programs.length > 0 && (
@@ -2428,6 +2428,7 @@ function ServerRouteDetail({
     </TaskSheet>
   );
 }
+
 
 
 

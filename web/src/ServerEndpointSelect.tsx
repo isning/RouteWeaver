@@ -112,48 +112,56 @@ export function ServerEndpointSelect({
       : undefined;
   return (
     <div className="server-endpoint-select grid min-w-0 flex-1 gap-2 sm:grid-cols-2 [&>p]:col-span-full">
-      <ChoiceSelect
-        aria-label={`${label}服务器`}
-        placeholder="选择服务器"
-        clearable
-        value={server}
-        options={hosts}
-        onValueChange={setServer}
-      />
-      <ChoiceSelect
-        ref={endpointRef}
-        aria-label={`${label}端点`}
-        aria-describedby={showUnavailableReason ? noteId : undefined}
-        placeholder={server ? "选择该服务器的端点" : "先选择服务器"}
-        disabled={!server}
-        value={selected}
-        selectedLabel={retainedLabel}
-        emptyMessage={server ? "此服务器暂无可选端点" : "先选择服务器"}
-        aria-invalid={Boolean(selected && (!available || missing))}
-        options={[
-          ...entries.map((entry) => ({
-            value: entry.id,
-            label: endpointPresentation(
-              entry,
-              entry.id === value && !available ? "（当前不可选）" : "",
-            ),
-            searchText: endpointLabel(entry),
-            disabled: !allowedIds.includes(entry.id),
-          })),
-          ...(missing
-            ? [
-                {
-                  value: selected,
-                  label: `${current?.endpoint.name || "原端点"}（当前不可用）`,
-                  disabled: true,
-                },
-              ]
-            : []),
-        ]}
-        onValueChange={(id) => {
-          if (id !== undefined) onChange(id);
-        }}
-      />
+      <div className="grid min-w-0 content-start gap-2">
+        <label htmlFor={`${noteId}-server`} className="text-sm font-medium">服务器</label>
+        <ChoiceSelect
+          id={`${noteId}-server`}
+          aria-label={`${label}服务器`}
+          placeholder="选择服务器"
+          clearable
+          value={server}
+          options={hosts}
+          onValueChange={setServer}
+        />
+      </div>
+      <div className="grid min-w-0 content-start gap-2">
+        <label htmlFor={`${noteId}-endpoint`} className="text-sm font-medium">监听端点</label>
+        <ChoiceSelect
+          id={`${noteId}-endpoint`}
+          ref={endpointRef}
+          aria-label={`${label}端点`}
+          aria-describedby={showUnavailableReason ? noteId : undefined}
+          placeholder={server ? "选择该服务器的端点" : "先选择服务器"}
+          disabled={!server}
+          value={selected}
+          selectedLabel={retainedLabel}
+          emptyMessage={server ? "此服务器暂无可选端点" : "先选择服务器"}
+          aria-invalid={Boolean(selected && (!available || missing))}
+          options={[
+            ...entries.map((entry) => ({
+              value: entry.id,
+              label: endpointPresentation(
+                entry,
+                entry.id === value && !available ? "（当前不可选）" : "",
+              ),
+              searchText: endpointLabel(entry),
+              disabled: !allowedIds.includes(entry.id),
+            })),
+            ...(missing
+              ? [
+                  {
+                    value: selected,
+                    label: `${current?.endpoint.name || "原端点"}（当前不可用）`,
+                    disabled: true,
+                  },
+                ]
+              : []),
+          ]}
+          onValueChange={(id) => {
+            if (id !== undefined) onChange(id);
+          }}
+        />
+      </div>
       {showUnavailableReason && (
         <p
           id={noteId}
@@ -165,3 +173,4 @@ export function ServerEndpointSelect({
     </div>
   );
 }
+

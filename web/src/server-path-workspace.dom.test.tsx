@@ -43,10 +43,13 @@ function Workspace({ ids = [], commit }: { ids?: string[]; commit?: () => Promis
   />;
 }
 
-it("shows entry, optional intermediate, and final exit before an endpoint exists", () => {
+it("starts with the route summary and asks for entry before offering optional transit", () => {
   render(<Workspace />);
   expect(screen.getByRole("region", { name: "入口" })).toBeTruthy();
-  expect(screen.getByRole("region", { name: "中转" })).toBeTruthy();
+  expect(screen.queryByRole("region", { name: "中转" })).toBeNull();
+  const summary = screen.getByRole("region", { name: "路径摘要" });
+  expect(summary.textContent).toContain("客户端 → 选择入口服务器 → 目标");
+  expect(summary.compareDocumentPosition(screen.getByRole("region", { name: "入口" })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   const exit = screen.getByRole("region", { name: "最终出口" });
   expect(within(exit).getByText("选择入口后，默认从入口服务器直接访问目标。")).toBeTruthy();
   expect(screen.getByRole("combobox", { name: "入口服务器" })).toBeTruthy();
@@ -171,4 +174,14 @@ it("reorders through the disclosed controls and names the new entry and exit", a
     .getByRole("combobox", { name: "第 1 跳端点" }).textContent).toContain("exit endpoint");
   expect(within(exit).getByRole("combobox", { name: "第 2 跳端点" }).textContent).toContain("entry endpoint");
   expect(screen.getByRole("region", { name: "路径摘要" }).textContent).toContain("exit endpoint → entry endpoint → 目标");
+});
+
+
+it("places final exit before optional transit so decisions follow their dependencies", () => {
+  render(<Workspace ids={["entry", "exit"]} />);
+  const exit = screen.getByRole("region", { name: "最终出口" });
+  const middle = screen.getByRole("region", { name: "中转" });
+  expect(exit.compareDocumentPosition(middle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(within(exit).getByText("服务器")).toBeTruthy();
+  expect(within(exit).getByText("监听端点")).toBeTruthy();
 });

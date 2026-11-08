@@ -148,8 +148,10 @@ export function ServerPathWorkspace({
   const exit = programs.at(-1);
   return (
     <div ref={workspace} className="ordered-path min-w-0 space-y-3 [overflow-wrap:anywhere]">
+      <ServerPathSummary programs={programs} />
       <section aria-labelledby={`${id}-entry`} className="space-y-3 rounded-xl border bg-card p-4 sm:p-5">
         <h3 id={`${id}-entry`} className="text-base font-semibold">入口</h3>
+        <p className="text-sm text-muted-foreground">客户端首先连接哪台服务器？</p>
         {entry ? row(entry, 0) : (
           <ServerEndpointSelect
             inventory={inventory} endpointRef={addControl} label="入口"
@@ -161,50 +163,9 @@ export function ServerPathWorkspace({
         {!inventory.endpoints.length && <p className="text-sm text-muted-foreground">先在「服务器」中配置监听端点，再编排路径。</p>}
       </section>
 
-      <section aria-labelledby={`${id}-middle`} className="space-y-3 rounded-xl border bg-card p-4 sm:p-5">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 id={`${id}-middle`} className="text-base font-semibold">中转</h3>
-          <span className="text-xs text-muted-foreground">可选</span>
-        </div>
-        {programs.length > 2 ? (
-          <ol className="space-y-4">
-            {programs.slice(1, -1).map((program, index) => (
-              <li key={program.listener.id} className="space-y-2 border-b pb-4 last:border-0 last:pb-0">
-                <h4 className="text-sm font-medium">中转 {index + 1}</h4>
-                {row(program, index + 1)}
-              </li>
-            ))}
-          </ol>
-        ) : <p className="text-sm text-muted-foreground">不经过中转</p>}
-        {programs.length > 1 && (
-          <ActionButton ref={addButton} variant="outline" leadingIcon={<Plus aria-hidden="true" />}
-            aria-expanded={addingIntermediate} aria-controls={`${id}-add-middle`}
-            onClick={() => {
-              addTask.current++;
-              setAddingIntermediate(true);
-            }}>添加中转</ActionButton>
-        )}
-        {programs.length > 1 && addingIntermediate && (
-          <div ref={intermediatePicker} id={`${id}-add-middle`} className="space-y-3 rounded-lg border border-dashed p-3">
-            <ServerEndpointSelect
-              key={addKey} inventory={inventory} endpointRef={addControl} label="中转"
-              allowedIds={unusedIds} unavailableReason={unavailableReason}
-              onPendingChange={(pending) => onPendingChange(addKey, pending)}
-              onChange={(endpointId) => void changePath([...path.slice(0, -1), endpointId, path[path.length - 1]], addControl.current, endpointId)}
-            />
-            <ActionButton variant="ghost" disabled={changing} onClick={() => {
-              addTask.current++;
-              onPendingChange(addKey, false);
-              setAddingIntermediate(false);
-              addButton.current?.focus();
-            }}>取消添加中转</ActionButton>
-          </div>
-        )}
-        {programs.length < 2 && <p className="text-xs text-muted-foreground">选择独立出口后，可在入口和出口之间添加中转。</p>}
-      </section>
-
       <section aria-labelledby={`${id}-exit`} className="space-y-3 rounded-xl border bg-muted/20 p-4 sm:p-5">
         <h3 id={`${id}-exit`} className="text-base font-semibold">最终出口</h3>
+        <p className="text-sm text-muted-foreground">由哪台服务器访问目标网站？</p>
         {!exit ? <p className="text-sm text-muted-foreground">选择入口后，默认从入口服务器直接访问目标。</p>
           : programs.length === 1 ? (
             <>
@@ -224,7 +185,48 @@ export function ServerPathWorkspace({
             </>
           ) : <>{row(exit, programs.length - 1)}<p className="text-sm text-muted-foreground">从此服务器直接访问目标</p></>}
       </section>
-      {!!programs.length && <ServerPathSummary programs={programs} />}
+      {programs.length > 1 && (
+        <section aria-labelledby={`${id}-middle`} className="space-y-3 rounded-xl border bg-card p-4 sm:p-5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 id={`${id}-middle`} className="text-base font-semibold">中转</h3>
+            <span className="text-xs text-muted-foreground">可选</span>
+          </div>
+          {programs.length > 2 ? (
+            <ol className="space-y-4">
+              {programs.slice(1, -1).map((program, index) => (
+                <li key={program.listener.id} className="space-y-2 border-b pb-4 last:border-0 last:pb-0">
+                  <h4 className="text-sm font-medium">中转 {index + 1}</h4>
+                  {row(program, index + 1)}
+                </li>
+              ))}
+            </ol>
+          ) : <p className="text-sm text-muted-foreground">不经过中转</p>}
+          {programs.length > 1 && (
+            <ActionButton ref={addButton} variant="outline" leadingIcon={<Plus aria-hidden="true" />}
+              aria-expanded={addingIntermediate} aria-controls={`${id}-add-middle`}
+              onClick={() => {
+                addTask.current++;
+                setAddingIntermediate(true);
+              }}>添加中转</ActionButton>
+          )}
+          {programs.length > 1 && addingIntermediate && (
+            <div ref={intermediatePicker} id={`${id}-add-middle`} className="space-y-3 rounded-lg border border-dashed p-3">
+              <ServerEndpointSelect
+                key={addKey} inventory={inventory} endpointRef={addControl} label="中转"
+                allowedIds={unusedIds} unavailableReason={unavailableReason}
+                onPendingChange={(pending) => onPendingChange(addKey, pending)}
+                onChange={(endpointId) => void changePath([...path.slice(0, -1), endpointId, path[path.length - 1]], addControl.current, endpointId)}
+              />
+              <ActionButton variant="ghost" disabled={changing} onClick={() => {
+                addTask.current++;
+                onPendingChange(addKey, false);
+                setAddingIntermediate(false);
+                addButton.current?.focus();
+              }}>取消添加中转</ActionButton>
+            </div>
+          )}
+        </section>
+      )}
     </div>
   );
 }
@@ -234,8 +236,9 @@ export function ServerPathSummary({ programs }: { programs: ServerProgram[] }) {
     <section aria-label="路径摘要" className="space-y-1 rounded-lg bg-muted/40 p-3 text-sm [overflow-wrap:anywhere]">
       <h3 className="font-medium">路径摘要</h3>
       <p className="text-muted-foreground">
-        {programs.length ? `${programs.map((program) => program.listener.name).join(" → ")} → 目标` : "尚未选择入口"}
+        {programs.length ? `客户端 → ${programs.map((program) => program.listener.name).join(" → ")} → 目标` : "客户端 → 选择入口服务器 → 目标"}
       </p>
     </section>
   );
 }
+
