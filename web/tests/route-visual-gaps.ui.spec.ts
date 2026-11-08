@@ -954,10 +954,11 @@ for (const width of [3440, 2880, 2560, 2304, 1920, 1536, 1440, 1366, 1280, 1024,
     const profileTaskWidth = (await page.locator(".profile-intent-grid").boundingBox())!.width;
     if (profileTaskWidth >= 704) {
       expect(inputTask.y).toBeCloseTo(trafficTask.y, 0);
-      expect(trafficTask.x).toBeGreaterThan(inputTask.x + inputTask.width);
+      // The user chooses where traffic goes before configuring optional sources.
+      expect(inputTask.x).toBeGreaterThan(trafficTask.x + trafficTask.width);
       expect(inputTask.width).toBeGreaterThanOrEqual(340);
       expect(trafficTask.width).toBeGreaterThanOrEqual(340);
-    } else expect(trafficTask.y).toBeGreaterThanOrEqual(inputTask.y + inputTask.height);
+    } else expect(inputTask.y).toBeGreaterThanOrEqual(trafficTask.y + trafficTask.height);
     await page.screenshot({ path: info.outputPath(`context-profile-${width}.png`), fullPage: true });
     if (width <= 390) {
       // Record the real initial viewport separately from the full-page capture.
@@ -1413,3 +1414,4 @@ for (const width of [1440, 390]) {
     expect(unexpected).toEqual([]);
   });
 }
+
