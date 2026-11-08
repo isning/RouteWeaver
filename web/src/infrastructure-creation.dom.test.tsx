@@ -1235,10 +1235,13 @@ it("keeps inventory Close focus after twice canceling a dirty server draft", asy
 
 
 // Public UI + HTTP seam: a deferred response models departure during issuance.
-async function openAgentEnrollment() {
-  await userEvent.click(await screen.findByRole("tab", { name: /核心实例/ }));
-  await userEvent.click(await screen.findByRole("button", { name: /^FRA primary/ }));
-  await userEvent.click(await screen.findByRole("button", { name: "接入 Agent" }));
+async function openAgentEnrollment(from: "inventory" | "workspace" = "inventory") {
+  if (from === "inventory") {
+    await userEvent.click(await screen.findByRole("tab", { name: /核心实例/ }));
+    await userEvent.click(await screen.findByRole("button", { name: /^FRA primary/ }));
+  }
+  const workspace = within(await screen.findByRole("region", { name: "Frankfurt的FRA primary" }));
+  await userEvent.click(workspace.getByRole("button", { name: "接入 Agent" }));
   const dialog = await screen.findByRole("dialog", { name: "接入核心实例" });
   await waitFor(() => expect(
     (within(dialog).getByLabelText("凭据到期时间") as HTMLInputElement).value,
@@ -1303,8 +1306,9 @@ it.each(["success", "failure"] as const)(
     await waitFor(() => expect(deferred.requests).toHaveLength(1));
     first.unmount();
     expect(hasUnsavedChanges()).toBe(false);
+    expect(location.hash).toBe("#servers?host=host-fra&instance=core-fra-1");
     mount();
-    const current = await openAgentEnrollment();
+    const current = await openAgentEnrollment("workspace");
     await act(async () => deferred.complete(outcome === "success" ? json({
       scope: { nodeId: "host-fra", instanceId: "core-fra-1", enrollmentEpoch: "old" },
       token: "departed-secret-token",

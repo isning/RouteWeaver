@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeAll, beforeEach, expect, it, vi } from "vitest";
-import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ConfirmationProvider } from "@/ui-patterns/confirmations";
@@ -226,19 +226,98 @@ it("retires the old server/core context after editing the core onto another serv
   expect(writes).toHaveLength(1);
 });
 
+async function fillValidListener(user: ReturnType<typeof userEvent.setup>, editor: HTMLElement) {
+  await user.type(within(editor).getByLabelText("端点名称"), "Retained draft");
+  await user.type(within(editor).getByLabelText("用户名"), "synthetic-user");
+  await user.type(within(editor).getByLabelText("密码"), "synthetic-listener-password");
+}
+
+it.each(["core", "overview"] as const)("saves the complete listener fixture when its %s owner remains valid", async (origin) => {
+  const { writes } = mount();
+  const user = userEvent.setup();
+  if (origin === "core") {
+    const page = await selectedCore(user);
+    await user.click(within(page).getByRole("button", { name: "添加监听端点" }));
+  } else {
+    await user.click(await screen.findByRole("button", { name: host.name }));
+    await user.click(screen.getByRole("button", { name: `为 ${core.name} 添加监听端点` }));
+  }
+  const editor = await screen.findByRole("dialog", { name: "添加监听端点" });
+  await fillValidListener(user, editor);
+  await user.click(within(editor).getByRole("button", { name: "保存" }));
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  expect(writes).toEqual([{ path: "/api/managed-endpoints", value: expect.objectContaining({
+    name: "Retained draft", instanceId: core.id,
+    connection: { host: "0.0.0.0", port: 1080, protocol: "socks", username: "synthetic-user", password: "synthetic-listener-password" },
+  }) }]);
+});
+
 it("keeps an unsaved listener draft but blocks its submission after authoritative core removal", async () => {
   const { controls, client, writes } = mount();
   const user = userEvent.setup();
   const page = await selectedCore(user);
   await user.click(within(page).getByRole("button", { name: "添加监听端点" }));
   const editor = await screen.findByRole("dialog", { name: "添加监听端点" });
-  await user.type(within(editor).getByLabelText("端点名称"), "Retained draft");
+  await fillValidListener(user, editor);
+  const save = within(editor).getByRole("button", { name: "保存" });
+  const form = within(editor).getByLabelText("端点名称").closest("form")!;
   controls.removeCore = true;
-  await act(async () => { await client.invalidateQueries({ queryKey: ["infrastructure"] }); });
+  await act(async () => {
+    await client.invalidateQueries({ queryKey: ["infrastructure"] });
+    expect(client.getQueryState(["infrastructure"])).toMatchObject({
+      status: "success", fetchStatus: "idle", data: { instances: [] },
+    });
+    // The completed response is authoritative even before its React notification.
+    expect(save).toHaveProperty("disabled", false);
+    fireEvent.submit(form);
+  });
+  expect(writes).toEqual([]);
+  // Copy/disabled state is asserted after the observer renders the same task.
+  expect(await within(editor).findByText("此核心已从清单移除。请返回核心列表重新选择。")).toBeTruthy();
   expect(screen.getByRole("dialog", { name: "添加监听端点" })).toBe(editor);
   expect(within(editor).getByLabelText("端点名称")).toHaveProperty("value", "Retained draft");
-  expect(within(editor).getByRole("button", { name: "保存" })).toHaveProperty("disabled", true);
-  expect(within(editor).getByText("此核心已从清单移除。请返回核心列表重新选择。")).toBeTruthy();
+  expect(within(editor).getByLabelText("用户名")).toHaveProperty("value", "synthetic-user");
+  expect(within(editor).getByLabelText("密码")).toHaveProperty("value", "synthetic-listener-password");
+  expect(save).toHaveProperty("disabled", true);
+  await act(async () => { fireEvent.submit(form); });
+  await user.click(within(editor).getByRole("button", { name: "取消" }));
+  await user.click(await screen.findByRole("button", { name: "继续编辑" }));
+  expect(within(editor).getByLabelText("端点名称")).toHaveProperty("value", "Retained draft");
+  expect(writes).toEqual([]);
+});
+
+it.each(["removed", "moved"] as const)("retains an overview-origin listener draft but blocks its %s original core", async (change) => {
+  const { controls, client, writes } = mount();
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole("button", { name: host.name }));
+  await user.click(screen.getByRole("button", { name: `为 ${core.name} 添加监听端点` }));
+  const editor = await screen.findByRole("dialog", { name: "添加监听端点" });
+  await fillValidListener(user, editor);
+  const save = within(editor).getByRole("button", { name: "保存" });
+  const form = within(editor).getByLabelText("端点名称").closest("form")!;
+  expect(location.hash).toBe(`#servers?host=${host.id}`);
+  if (change === "removed") controls.removeCore = true;
+  else controls.movedCoreHostId = otherHost.id;
+  await act(async () => {
+    await client.invalidateQueries({ queryKey: ["infrastructure"] });
+    expect(client.getQueryState(["infrastructure"])).toMatchObject({
+      status: "success", fetchStatus: "idle",
+      data: { instances: change === "removed" ? [] : [{ ...core, hostId: otherHost.id }] },
+    });
+    expect(save).toHaveProperty("disabled", false);
+    fireEvent.submit(form);
+  });
+  expect(writes).toEqual([]);
+  const message = change === "removed"
+    ? "此核心已从清单移除。请返回核心列表重新选择。"
+    : "此核心已转移到其他服务器。请打开核心所在服务器后继续配置。";
+  expect(await within(editor).findByText(message)).toBeTruthy();
+  expect(screen.getByRole("dialog", { name: "添加监听端点" })).toBe(editor);
+  expect(within(editor).getByLabelText("端点名称")).toHaveProperty("value", "Retained draft");
+  expect(within(editor).getByLabelText("用户名")).toHaveProperty("value", "synthetic-user");
+  expect(within(editor).getByLabelText("密码")).toHaveProperty("value", "synthetic-listener-password");
+  expect(save).toHaveProperty("disabled", true);
+  await act(async () => { fireEvent.submit(form); });
   await user.click(within(editor).getByRole("button", { name: "取消" }));
   await user.click(await screen.findByRole("button", { name: "继续编辑" }));
   expect(within(editor).getByLabelText("端点名称")).toHaveProperty("value", "Retained draft");
@@ -255,16 +334,29 @@ it.each(["before issuance", "after issuance"])("keeps enrollment open %s but rev
     await user.click(within(enrollment).getByRole("button", { name: "创建接入凭据" }));
     await within(enrollment).findByLabelText("接入令牌");
   }
+  const issue = stage === "before issuance" ? within(enrollment).getByRole("button", { name: "创建接入凭据" }) : null;
+  const form = stage === "before issuance" ? within(enrollment).getByLabelText("凭据到期时间").closest("form")! : null;
   controls.movedCoreHostId = otherHost.id;
-  await act(async () => { await client.invalidateQueries({ queryKey: ["infrastructure"] }); });
+  await act(async () => {
+    await client.invalidateQueries({ queryKey: ["infrastructure"] });
+    expect(client.getQueryState(["infrastructure"])).toMatchObject({
+      status: "success", fetchStatus: "idle", data: { instances: [{ ...core, hostId: otherHost.id }] },
+    });
+    if (issue && form) {
+      expect(issue).toHaveProperty("disabled", false);
+      fireEvent.submit(form);
+    }
+  });
+  expect(writes).toHaveLength(stage === "before issuance" ? 0 : 1);
+  expect(await within(enrollment).findByText("此核心已转移到其他服务器。请打开核心所在服务器后继续配置。")).toBeTruthy();
   expect(screen.getByRole("dialog", { name: "接入核心实例" })).toBe(enrollment);
-  expect(within(enrollment).getByText("此核心已转移到其他服务器。请打开核心所在服务器后继续配置。")).toBeTruthy();
   if (stage === "after issuance") {
     expect(within(enrollment).getByLabelText("接入令牌")).toHaveProperty("value", "synthetic-test-token");
     expect(hasUnsavedChanges()).toBe(true);
     expect(writes).toHaveLength(1);
   } else {
     expect(within(enrollment).getByRole("button", { name: "创建接入凭据" })).toHaveProperty("disabled", true);
+    await act(async () => { fireEvent.submit(within(enrollment).getByLabelText("凭据到期时间").closest("form")!); });
     expect(writes).toEqual([]);
   }
 });
@@ -276,9 +368,9 @@ it("does not treat failed inventory refresh as proof that the selected core was 
   controls.removeCore = true;
   controls.failInventory = true;
   await act(async () => { await client.invalidateQueries({ queryKey: ["infrastructure"] }); });
+  expect(await screen.findByText("服务器清单刷新失败，以下保留已有记录与刚保存的配置。")).toBeTruthy();
   expect(screen.queryByText("此核心已从清单移除。请返回核心列表重新选择。")).toBeNull();
   expect(screen.getByRole("button", { name: "接入 Agent" })).toHaveProperty("disabled", false);
-  expect(screen.getByText("服务器清单刷新失败，以下保留已有记录与刚保存的配置。")).toBeTruthy();
   expect(writes).toEqual([]);
 });
 

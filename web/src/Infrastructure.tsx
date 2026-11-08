@@ -22,7 +22,7 @@ import { ActionButton } from "@/ui-patterns/actions";
 import { AppField, AppForm, useForm } from "@/ui-patterns/form";
 import { Notice } from "@/ui-patterns/notice";
 import { TaskDialog } from "@/ui-patterns/task-overlays";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Server as CloudServerOutlined,
   Pencil as EditOutlined,
@@ -58,10 +58,32 @@ import type {
   Infrastructure,
   ManagedEndpoint,
 } from "./types";
+function workspaceOwnership(
+  inventory: Infrastructure,
+  hostId: string,
+  instanceId: string | undefined,
+  createdHosts: HostRecord[],
+  createdCores: CoreInstance[],
+) {
+  const currentHost = inventory.hosts.find((value) => value.id === hostId) || createdHosts.find((value) => value.id === hostId);
+  const currentCore = instanceId ? inventory.instances.find((value) => value.id === instanceId) || createdCores.find((value) => value.id === instanceId) : null;
+  const message = !currentHost ? "此服务器已从清单移除。请返回服务器清单重新选择。"
+    : instanceId && !currentCore ? "此核心已从清单移除。请返回核心列表重新选择。"
+    : currentCore && currentCore.hostId !== hostId ? "此核心已转移到其他服务器。请打开核心所在服务器后继续配置。" : null;
+  return { currentHost, message };
+}
+function inventoryTaskScope(task: Pick<InventoryEditTask, "kind" | "value" | "hostId" | "instanceId"> | null) {
+  if (!task?.hostId) return null;
+  return {
+    hostId: task.hostId,
+    instanceId: task.kind === "core-instances" ? task.value?.id : task.instanceId,
+  };
+}
 const requestedServerSetup = (hash: string) => {
   return hash.split("?")[0] === "#servers" ? hash : null;
 };
 export function ServersPage() {
+  const client = useQueryClient();
   const workspace = useContext(WorkspaceHistoryContext);
   const [requestedSetup, setRequestedSetup] = useState(() => requestedServerSetup(location.hash));
   const editSequence = useRef(0);
@@ -117,6 +139,17 @@ export function ServersPage() {
   const [editError, setEditError] = useState<Error | null>(null);
   const [ownershipIssue, setOwnershipIssue] = useState<{ hostId: string; instanceId: string | null; message: string } | null>(null);
   const scopeIssue = ownershipIssue?.hostId === host?.id && ownershipIssue?.instanceId === (instance?.id || null) ? ownershipIssue.message : null;
+  const [editorOwnershipIssue, setEditorOwnershipIssue] = useState<{ task: InventoryEditTask; message: string } | null>(null);
+  const editorScopeIssue = editorOwnershipIssue && editorOwnershipIssue.task === entity ? editorOwnershipIssue.message : null;
+  const readScopeIssue = (target?: ReturnType<typeof inventoryTaskScope>) => {
+    // An inventory response can reach the cache before React receives its
+    // scheduled notification. Check that authoritative owner at action time.
+    const latest = client.getQueryState<Infrastructure>(["infrastructure"]);
+    if (!latest?.data || latest.status !== "success" || latest.fetchStatus !== "idle") return scopeIssue;
+    const pageIssue = host ? workspaceOwnership(latest.data, host.id, instance?.id, createdHosts, createdCores).message : null;
+    const taskIssue = target ? workspaceOwnership(latest.data, target.hostId, target.instanceId, createdHosts, createdCores).message : null;
+    return pageIssue || taskIssue || scopeIssue;
+  };
   const pageCreateAction = useRef<HTMLButtonElement>(null);
   const pageOpener = useRef<{ hostId?: string; instanceId?: string } | null>(null);
   const hostResumeAction = useRef<string | null>(null);
@@ -136,11 +169,7 @@ export function ServersPage() {
     // Keep the task and any issued token mounted; block new scoped operations.
     if (!query.data || !query.isSuccess || query.isFetching || query.isError || query.isPaused) return;
     if (!host) { setOwnershipIssue(null); return; }
-    const currentHost = query.data.hosts.find((value) => value.id === host.id) || createdHosts.find((value) => value.id === host.id);
-    const currentCore = instance ? query.data.instances.find((value) => value.id === instance.id) || createdCores.find((value) => value.id === instance.id) : null;
-    const message = !currentHost ? "此服务器已从清单移除。请返回服务器清单重新选择。"
-      : instance && !currentCore ? "此核心已从清单移除。请返回核心列表重新选择。"
-      : currentCore && currentCore.hostId !== host.id ? "此核心已转移到其他服务器。请打开核心所在服务器后继续配置。" : null;
+    const { currentHost, message } = workspaceOwnership(query.data, host.id, instance?.id, createdHosts, createdCores);
     if (message) {
       for (const [hash, view] of knownViews.current) {
         if (view.host?.id === host.id && (!currentHost || view.instance?.id === instance?.id)) knownViews.current.delete(hash);
@@ -150,6 +179,17 @@ export function ServersPage() {
         ? previous : { hostId: host.id, instanceId: instance?.id || null, message });
     } else setOwnershipIssue(null);
   }, [query.data, query.isSuccess, query.isFetching, query.isError, query.isPaused, host?.id, instance?.id, createdHosts, createdCores]);
+  useLayoutEffect(() => {
+    if (!entity) { setEditorOwnershipIssue(null); return; }
+    if (!query.data || !query.isSuccess || query.isFetching || query.isError || query.isPaused) return;
+    // Overview-origin tasks have their own original core even when the page
+    // has no selected instance. Editing form choices does not change this owner.
+    const target = inventoryTaskScope(entity);
+    const message = target ? workspaceOwnership(query.data, target.hostId, target.instanceId, createdHosts, createdCores).message : null;
+    setEditorOwnershipIssue((previous) => message
+      ? previous?.task === entity && previous.message === message ? previous : { task: entity, message }
+      : null);
+  }, [entity, query.data, query.isSuccess, query.isFetching, query.isError, query.isPaused, createdHosts, createdCores]);
   useEffect(() => {
     if (!query.data || query.isFetching || query.isError || query.isPaused) return;
     for (const [hash, view] of knownViews.current) {
@@ -207,7 +247,9 @@ export function ServersPage() {
   };
   const label = tab === "hosts" ? "服务器" : tab === "core-instances" ? "核心实例" : "监听端点";
   const edit = async (value: HostRecord | CoreInstance | ManagedEndpoint | null, kind: InventoryEditTask["kind"] = tab, hostId?: string, instanceId?: string) => {
-    if (scopeIssue) { setEditError(new Error(scopeIssue)); return; }
+    const target = inventoryTaskScope({ kind, value, hostId, instanceId });
+    const issue = readScopeIssue(target);
+    if (issue) { setEditError(new Error(issue)); return; }
     setRequestedSetup(null);
     const sequence = ++editSequence.current;
     setEditError(null);
@@ -216,6 +258,8 @@ export function ServersPage() {
         ? await request<ManagedEndpoint>(`/managed-endpoints/${encodeURIComponent(value.id)}/reveal`)
         : value;
       if (sequence !== editSequence.current) return;
+      const latestIssue = readScopeIssue(target);
+      if (latestIssue) { setEditError(new Error(latestIssue)); return; }
       setEntity({ kind, value: full, hostId, instanceId,
         id: value?.id || newID(kind === "hosts" ? "host" : kind === "core-instances" ? "core" : "endpoint") });
     } catch (error) { if (sequence === editSequence.current) setEditError(error as Error); }
@@ -635,6 +679,7 @@ export function ServersPage() {
       <InstanceDetail
         onClose={closeInstance}
         scopeIssue={scopeIssue}
+        readScopeIssue={readScopeIssue}
         headingRef={coreHeading}
         instance={instance}
         inventory={data}
@@ -645,7 +690,8 @@ export function ServersPage() {
         enrollmentOpen={enrollmentOpen}
         onCloseEnrollment={() => setEnrollmentOpen(false)}
         onOpenEnrollment={() => {
-          if (scopeIssue) return;
+          const issue = readScopeIssue();
+          if (issue) { setEditError(new Error(issue)); return; }
           setRequestedSetup(null);
           ++editSequence.current;
           setEditError(null);
@@ -680,7 +726,8 @@ export function ServersPage() {
       <InventoryEditor
         entity={entity}
         inventory={data}
-        scopeIssue={scopeIssue || undefined}
+        scopeIssue={scopeIssue || editorScopeIssue || undefined}
+        readScopeIssue={() => readScopeIssue(inventoryTaskScope(entity)) || editorScopeIssue}
         onClose={() => setEntity(null)}
         onClosed={() => {
           if (!focusAfterSave.current) return;
@@ -924,6 +971,7 @@ export function InstanceObservation({ instanceId }: { instanceId: string }) {
 }
 function InstanceDetail({
   scopeIssue,
+  readScopeIssue,
   onClose,
   headingRef,
   instance,
@@ -939,6 +987,7 @@ function InstanceDetail({
   onEditEndpoint,
 }: {
   scopeIssue: string | null;
+  readScopeIssue: () => string | null;
   onClose: () => void;
   headingRef: RefObject<HTMLHeadingElement | null>;
   instance: CoreInstance | null;
@@ -1072,6 +1121,7 @@ function InstanceDetail({
               key={`${instance.hostId}:${instance.id}`}
               instance={instance}
               scopeIssue={scopeIssue}
+              readScopeIssue={readScopeIssue}
               onClose={onCloseEnrollment}
             />
           )}
@@ -1083,10 +1133,12 @@ function InstanceDetail({
 function Enrollment({
   instance,
   scopeIssue,
+  readScopeIssue,
   onClose,
 }: {
   instance: CoreInstance;
   scopeIssue: string | null;
+  readScopeIssue: () => string | null;
   onClose: () => void;
 }) {
   const [form] = useForm();
@@ -1118,6 +1170,8 @@ function Enrollment({
       instanceId: string;
     }) => {
       if (!active.current) return;
+      const issue = readScopeIssue();
+      if (issue) throw new Error(issue);
       const issued = await post<NonNullable<typeof result>>(
         "/agent/enrollments",
         values,
@@ -1210,7 +1264,7 @@ function Enrollment({
           onFinish={(v) => {
             if (
               !active.current || submitting.current || result ||
-              dateOpen || datePending || !!scopeIssue
+              dateOpen || datePending || readScopeIssue()
             ) return;
             submitting.current = true;
             mutation.mutate({

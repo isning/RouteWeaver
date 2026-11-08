@@ -43,6 +43,7 @@ export type InventoryEditorProps = {
   onClose: () => void;
   onClosed?: () => void;
   scopeIssue?: string;
+  readScopeIssue?: () => string | null;
   onHostCreated: (host: HostRecord) => void;
   onCoreCreated: (instance: CoreInstance) => void;
   onEndpointSaved: (endpoint: ManagedEndpoint) => void;
@@ -54,6 +55,7 @@ export function InventoryEditor({
   onClose,
   onClosed,
   scopeIssue,
+  readScopeIssue,
   onHostCreated,
   onCoreCreated,
   onEndpointSaved,
@@ -62,6 +64,9 @@ export function InventoryEditor({
   owner.current = entity;
   const currentScopeIssue = useRef(scopeIssue);
   currentScopeIssue.current = scopeIssue;
+  const currentScopeReader = useRef(readScopeIssue);
+  currentScopeReader.current = readScopeIssue;
+  const scopeAtAction = () => currentScopeReader.current?.() || currentScopeIssue.current;
   const presentation = useRef(entity);
   useLayoutEffect(() => {
     if (entity) presentation.current = entity;
@@ -137,7 +142,8 @@ export function InventoryEditor({
       fields: Record<string, unknown>;
       impact?: string;
     }) => {
-      if (currentScopeIssue.current) throw new Error(currentScopeIssue.current);
+      const issue = scopeAtAction();
+      if (issue) throw new Error(issue);
       const value = endpointValue(fields);
       if (entity!.kind === "managed-endpoints" && entity!.value) {
         const { revisionToken, ...draft } = value as ManagedEndpoint;
@@ -176,7 +182,8 @@ export function InventoryEditor({
   });
   const impact = useMutation({
     mutationFn: async (fields: Record<string, unknown>) => {
-      if (currentScopeIssue.current) throw new Error(currentScopeIssue.current);
+      const issue = scopeAtAction();
+      if (issue) throw new Error(issue);
       const task = entity;
       const { revisionToken, ...draft } = endpointValue(
         fields,
@@ -204,7 +211,7 @@ export function InventoryEditor({
       return { task, fields, review };
     },
     onSuccess: ({ task, fields, review }) => {
-      if (!task || owner.current !== task || currentScopeIssue.current) return;
+      if (!task || owner.current !== task || scopeAtAction()) return;
       confirm(
         {
           title: `保存端点「${review.endpoint.name}」的修改？`,
@@ -259,7 +266,7 @@ export function InventoryEditor({
           ),
         },
         (stillCurrent) => {
-          if (stillCurrent() && owner.current === task && !currentScopeIssue.current)
+          if (stillCurrent() && owner.current === task && !scopeAtAction())
             mutation.mutate({ fields, impact: review.reviewToken });
         },
       );
@@ -386,7 +393,7 @@ export function InventoryEditor({
         onFinish={(v) => {
           if (
             !entity ||
-            currentScopeIssue.current ||
+            scopeAtAction() ||
             owner.current !== entity ||
             mutation.isPending ||
             impact.isPending ||

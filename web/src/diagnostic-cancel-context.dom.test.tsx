@@ -20,6 +20,7 @@ const json = (value: unknown, status = 200) =>
   });
 let client: QueryClient;
 beforeEach(() => {
+  history.replaceState(null, "", "#servers");
   vi.stubEnv("NODE_ENV", "development");
   vi.stubGlobal(
     "ResizeObserver",
@@ -135,8 +136,8 @@ function fixture(
 }
 async function openResult(user: ReturnType<typeof userEvent.setup>) {
   await user.click(await screen.findByRole("button", { name: "Tokyo" }));
-  const host = within(screen.getByRole("dialog", { name: "Tokyo" }));
-  await user.click(host.getByRole("button", { name: "资源、额度与连接诊断" }));
+  const host = within(await screen.findByRole("region", { name: "Tokyo" }));
+  await user.click(host.getByRole("tab", { name: "诊断" }));
   await user.click(host.getByRole("tab", { name: "连接诊断" }));
   await user.click(await host.findByRole("button", { name: "查看测试结果" }));
   return within(await screen.findByRole("dialog", { name: "测试详情" }));
