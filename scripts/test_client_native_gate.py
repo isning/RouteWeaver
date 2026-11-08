@@ -1,6 +1,7 @@
 """Offline event-checker tests; no native process is launched or claimed."""
 import json
 import os
+import re
 from pathlib import Path
 import subprocess
 import tempfile
@@ -9,6 +10,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 CLIENT = "TestNativeInvitedUserDownloadedClientTraffic"
 DNS_CLIENT = "TestNativeDownloadedClientConfiguredDNS"
+MIXED = "TestNativeMixedConnectorChainLoopback"
 SERVER = [
     "TestNativeSupervisorLifecycleAndRestart/xray",
     "TestNativeSupervisorLifecycleAndRestart/sing-box",
@@ -28,7 +30,7 @@ INTEGRATION = [
 
 
 class ClientNativeGateTests(unittest.TestCase):
-    def check(self, client_action="pass", omit=False, selected="mihomo,sing-box", dns_action="pass", omit_dns=False):
+    def check(self, client_action="pass", omit=False, selected="mihomo,sing-box", dns_action="pass", omit_dns=False, mixed_action="pass", omit_mixed=False):
         shell = (ROOT / "scripts/native-cores.sh").read_text()
         checker = shell.split('python3 - "$REPORT" <<\'PY\'\n', 1)[1].split('\nPY\n', 1)[0]
         events = []
@@ -36,6 +38,9 @@ class ClientNativeGateTests(unittest.TestCase):
                            ("httpapi", ["TestNativeFleetConfigureStopStartAndRollback"])]:
             events.extend({"Package": "routeweaver/internal/" + pkg, "Test": name,
                            "Action": "pass"} for name in names)
+        if not omit_mixed:
+            events.extend({"Package": "routeweaver/internal/integration", "Test": MIXED + "/" + core,
+                           "Action": mixed_action} for core in ("xray", "sing-box"))
         events.append({"Package": "routeweaver/internal/httpapi", "Test": CLIENT + "/mihomo", "Action": "pass"})
         if not omit:
             events.append({"Package": "routeweaver/internal/httpapi", "Test": CLIENT + "/sing-box", "Action": client_action})
@@ -70,6 +75,19 @@ class ClientNativeGateTests(unittest.TestCase):
         result = self.check(client_action="skip", selected="mihomo")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("Client process selection passed: mihomo. Not requested: sing-box.", result.stdout)
+
+    def test_selected_mixed_chains_missing_skipped_or_failed_reject(self):
+        for action, omit in [("skip", False), ("fail", False), ("pass", True)]:
+            with self.subTest(action=action, omit=omit):
+                self.assertNotEqual(self.check(mixed_action=action, omit_mixed=omit).returncode, 0)
+
+    def test_mixed_parser_and_process_are_selected(self):
+        shell = (ROOT / "scripts/native-cores.sh").read_text()
+        patterns = re.findall(r"-run '([^']+)'", shell)
+        self.assertEqual(len(patterns), 2)
+        self.assertIsNotNone(re.search(patterns[0], "TestNativeMixedConnectorChain"))
+        self.assertIsNotNone(re.search(patterns[1], MIXED))
+        self.assertIn("('routeweaver/internal/render','TestNativeMixedConnectorChain')", shell)
 
 
 if __name__ == "__main__":

@@ -60,7 +60,7 @@ REPORT="bin/verification/native-$MODE.jsonl"
 if [[ "$MODE" == parsers ]]; then
   scripts/go.sh test -json -p=1 -count=1 -timeout=120s -run 'TestNative(Client|Server|VLESS|Trojan|VMess|Pinned|Check|Version|Template|MultiPrincipal|Override|Owned|CoreInstaller|Install)|^TestNativeMixedConnectorChain$|^TestNativeStockRetiredReceiptsRecoverWithoutDownload$|TestImportedProcessedVLESSPassesBothNativeClients' ./internal/render ./internal/agent ./internal/httpapi ./internal/integration | tee "$REPORT"
 else
-  scripts/go.sh test -json -p=1 -count=1 -timeout=120s -run '^TestNative(SupervisorLifecycleAndRestart|XrayTwoHopLoopbackRoundtrip)$|^TestNativeStock(Xray|SingBox)UpgradeKeepsExactRuntimeAndLease$|^TestNativeStockXraySecurityDefaults$|^TestRenderedTwoHopRouteHasNoDirectFallback$|^TestNativeSharedVLESSIngressKeepsPrincipalPathsSeparate$|^TestNativeFleetConfigureStopStartAndRollback$|^TestNativeEndpointProtocolsLoopback$|^TestNativeInvitedUserDownloadedClientTraffic$|^TestNativeDownloadedClientConfiguredDNS$' ./internal/agent ./internal/integration ./internal/httpapi | tee "$REPORT"
+  scripts/go.sh test -json -p=1 -count=1 -timeout=120s -run '^TestNative(SupervisorLifecycleAndRestart|XrayTwoHopLoopbackRoundtrip|MixedConnectorChainLoopback)$|^TestNativeStock(Xray|SingBox)UpgradeKeepsExactRuntimeAndLease$|^TestNativeStockXraySecurityDefaults$|^TestRenderedTwoHopRouteHasNoDirectFallback$|^TestNativeSharedVLESSIngressKeepsPrincipalPathsSeparate$|^TestNativeFleetConfigureStopStartAndRollback$|^TestNativeEndpointProtocolsLoopback$|^TestNativeInvitedUserDownloadedClientTraffic$|^TestNativeDownloadedClientConfiguredDNS$' ./internal/agent ./internal/integration ./internal/httpapi | tee "$REPORT"
 fi
 python3 - "$REPORT" <<'PY'
 import json,os,sys
@@ -74,9 +74,12 @@ if mode=='runtime':
     if clients-{'mihomo','sing-box'}:raise SystemExit('Unknown native client process selection')
     selected=set(os.environ['ROUTEWEAVER_NATIVE_PROCESS_TESTS'].split(','))
     if not selected or selected-{'xray','sing-box'}:raise SystemExit('Unknown or empty native process selection')
+    mixed='TestNativeMixedConnectorChainLoopback'
     base='TestNativeSupervisorLifecycleAndRestart'
     required={('routeweaver/internal/agent',base+'/'+core) for core in selected}
     allowed_skips={base+'/'+core for core in {'xray','sing-box'}-selected}
+    required.update({('routeweaver/internal/integration',mixed+'/'+core) for core in selected})
+    allowed_skips.update({mixed+'/'+core for core in {'xray','sing-box'}-selected})
     for core, label in (('xray','Xray'),('sing-box','SingBox')):
         upgrade='TestNativeStock'+label+'UpgradeKeepsExactRuntimeAndLease'
         if core in selected:

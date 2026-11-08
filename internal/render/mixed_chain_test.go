@@ -151,6 +151,11 @@ func TestNativeMixedConnectorChain(t *testing.T) {
 		t.Run(target.AdapterID+"/"+target.Version, func(t *testing.T) {
 			binary := target.binary(t)
 			p := mixedConnectorProgram(target.AdapterID, target.Version)
+			// This is a local parser fixture, not an encrypted public deployment.
+			// Current stock Xray correctly rejects public plaintext VLESS.
+			for i := range p.Connectors {
+				p.Connectors[i].Connection.Host = "127.0.0.1"
+			}
 			p.Connectors[0], p.Connectors[2] = p.Connectors[2], p.Connectors[0]
 			artifacts, err := render.DefaultServers().Render(domain.ServerDeploymentIR{SchemaVersion: "1.0", ID: "mixed-chain", TopologyRevision: "r1", Programs: []domain.ServerProgram{p}})
 			if err != nil {
@@ -169,6 +174,26 @@ func TestNativeMixedConnectorChain(t *testing.T) {
 			cmd.Dir = dir
 			if output, err := cmd.CombinedOutput(); err != nil {
 				t.Fatalf("native mixed connector check failed: %v\n%s", err, output)
+			}
+			if target.AdapterID == render.ServerAdapterXray && target.Version == render.StockXrayVersion {
+				for i := range p.Connectors {
+					if p.Connectors[i].ID == "third" {
+						p.Connectors[i].Connection.Host = "192.0.2.30"
+					}
+				}
+				unsafe, err := render.DefaultServers().Render(domain.ServerDeploymentIR{SchemaVersion: "1.0", ID: "mixed-chain", TopologyRevision: "r1", Programs: []domain.ServerProgram{p}})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if err = os.WriteFile(file, []byte(unsafe[0].Content), 0600); err != nil {
+					t.Fatal(err)
+				}
+				cmd = exec.Command(binary, args...)
+				cmd.Dir = dir
+				output, err := cmd.CombinedOutput()
+				if err == nil || !strings.Contains(string(output), "vless without TLS or other encryption is prohibited") {
+					t.Fatalf("public plaintext VLESS security boundary changed: %v\n%s", err, output)
+				}
 			}
 		})
 	}

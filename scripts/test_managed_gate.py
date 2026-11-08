@@ -17,10 +17,11 @@ CONTINUOUS = "TestNativeContinuousManagedServicePreservesPayloadAndRevocation"
 DELAYED_HEARTBEAT = "TestNativeDelayedHeartbeatAcknowledgementPreservesExistingFlow"
 RATE = "TestManagedNativeEntryRateSharesDuplexAcrossConnectionsAndIsolatesEntries"
 PROVIDER = "TestNativeManagedProviderSuspensionAndRecovery"
+MIXED = "TestManagedMixedConnectorChainLoopback"
 
 
 class ManagedGateTests(unittest.TestCase):
-    def run_gate(self, action="pass", omit=False, fail_go=False, provider_action="pass", provider_omit=False, rate_action="pass", rate_omit=False, heartbeat_action="pass", heartbeat_omit=False):
+    def run_gate(self, action="pass", omit=False, fail_go=False, provider_action="pass", provider_omit=False, rate_action="pass", rate_omit=False, heartbeat_action="pass", heartbeat_omit=False, mixed_action="pass", mixed_omit=False):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp)
             (root / "scripts").mkdir()
@@ -33,6 +34,8 @@ class ManagedGateTests(unittest.TestCase):
                 events.append({"Package": "routeweaver/internal/httpapi", "Test": DELAYED_HEARTBEAT, "Action": heartbeat_action})
             if not provider_omit:
                 events.append({"Package": "routeweaver/internal/httpapi", "Test": PROVIDER, "Action": provider_action})
+            if not mixed_omit:
+                events.append({"Package": "routeweaver/internal/integration", "Test": MIXED, "Action": mixed_action})
             if not rate_omit:
                 events.append({"Package": "routeweaver/internal/agent", "Test": RATE, "Action": rate_action})
             (root / "events").write_text("\n".join(map(json.dumps, events)) + "\n")
@@ -42,13 +45,13 @@ import json, os, sys
 from pathlib import Path
 args=sys.argv[1:]
 with open("calls", "a") as out:
-    out.write(json.dumps({"args": args, "targets": os.environ["ROUTEWEAVER_NATIVE_PROCESS_TESTS"], "managed": os.environ["ROUTEWEAVER_MANAGED_XRAY_BIN"]}) + "\\n")
+    out.write(json.dumps({"args": args, "targets": os.environ["ROUTEWEAVER_NATIVE_PROCESS_TESTS"], "managed": os.environ["ROUTEWEAVER_MANAGED_XRAY_BIN"], "stock": os.environ["ROUTEWEAVER_STOCK_CORE_BIN_DIR"]}) + "\\n")
 if "test" in args:
     print(Path("events").read_text(), end="")
     sys.exit(int(os.environ.get("FAKE_GO_FAILURE", "0")))
 ''')
             go.chmod(0o755)
-            env = dict(os.environ, ROUTEWEAVER_NATIVE_PROCESS_TESTS="xray,sing-box", FAKE_GO_FAILURE="1" if fail_go else "0")
+            env = dict(os.environ, ROUTEWEAVER_STOCK_CORE_BIN_DIR="", ROUTEWEAVER_NATIVE_PROCESS_TESTS="xray,sing-box", FAKE_GO_FAILURE="1" if fail_go else "0")
             result = subprocess.run(["bash", "scripts/managed-runtime.sh"], cwd=root, env=env,
                                     capture_output=True, text=True, timeout=5)
             calls = [json.loads(line) for line in (root / "calls").read_text().splitlines()]
@@ -60,9 +63,11 @@ if "test" in args:
             self.assertIn(DELAYED_HEARTBEAT, args[args.index("-run") + 1])
             self.assertIn(PROVIDER, args[args.index("-run") + 1])
             self.assertIn(RATE, args[args.index("-run") + 1])
+            self.assertIn(MIXED, args[args.index("-run") + 1])
             self.assertIn("./internal/httpapi", args)
             self.assertEqual(calls[1]["targets"], "xray")
             self.assertEqual(calls[1]["managed"], str(root / "bin/routeweaver-xray"))
+            self.assertEqual(calls[1]["stock"], str(root / "bin/stock-cores"))
             return result
 
     def test_all_required_positive_results_pass(self):
@@ -97,5 +102,12 @@ if "test" in args:
         for action, omit in (("pass", True), ("skip", False), ("fail", False)):
             with self.subTest(action=action, omit=omit):
                 result = self.run_gate(rate_action=action, rate_omit=omit)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("Managed native gate incomplete", result.stderr)
+
+    def test_mixed_chain_missing_skipped_or_failed_never_passes(self):
+        for action, omit in (("pass", True), ("skip", False), ("fail", False)):
+            with self.subTest(action=action, omit=omit):
+                result = self.run_gate(mixed_action=action, mixed_omit=omit)
                 self.assertNotEqual(result.returncode, 0)
                 self.assertIn("Managed native gate incomplete", result.stderr)
