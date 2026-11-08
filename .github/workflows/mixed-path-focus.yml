@@ -36,7 +36,7 @@ jobs:
         shell: bash
         run: |
           formatter="$(scripts/go.sh env GOROOT)/bin/gofmt"
-          "$formatter" -d internal/domain/published_hops*.go internal/domain/published_routes.go internal/domain/route_retarget.go internal/httpapi/published_mixed_paths*.go internal/httpapi/published_routes.go internal/httpapi/published_manifests.go internal/httpapi/published_route_retarget.go internal/store/diagnostics_paths.go internal/render/mixed_chain_test.go internal/integration/mixed_chain*.go
+          "$formatter" -d internal/domain/published_hops*.go internal/domain/published_routes.go internal/domain/route_retarget.go internal/httpapi/published_mixed_paths*.go internal/httpapi/published_routes.go internal/httpapi/published_manifests.go internal/httpapi/published_route_retarget.go internal/store/diagnostics_paths.go internal/render/mixed_chain_test.go internal/integration/mixed_chain*.go runtimes/xray/config.go runtimes/xray/detour*.go
           scripts/format.sh --check
       - name: Run exact-source mixed path regressions
         if: ${{ !cancelled() }}
@@ -65,3 +65,18 @@ jobs:
           src/published-route-path.dom.test.tsx
           src/published-route-concurrent-edit.dom.test.tsx
           --maxWorkers=1
+  managed:
+    name: Managed detour validation and isolation (supplemental)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          go: "true"
+      - name: Run exact-source managed detour regressions
+        run: >-
+          scripts/go.sh -C runtimes/xray test -race -p=1 -count=1 -timeout=5m
+          -run 'Test(Managed.*Detour|NativeTwoDetours)' ./...

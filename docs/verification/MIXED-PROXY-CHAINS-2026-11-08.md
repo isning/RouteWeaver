@@ -27,6 +27,11 @@ Commit: `48db101fc41cedc8f5bfbef53c82dce38080e57a`.
   retrieval, scoped observation and credential-reveal APIs. A partially observed
   managed path did not reveal the public credential; the complete matching path did.
 
+The [complete quality run](https://github.com/isning/RouteWeaver/actions/runs/42495815618)
+also passed every required job and the final `Required repository gates`
+aggregate. This includes the existing frontend, browser, HTTP, native, package
+and backend suites, not only the focused mixed-path checks.
+
 The observations in that HTTP test were synthetic. This establishes control-plane
 gating, not native process execution or external-proxy reachability. The baseline
 also predates the later visual mixed-path authoring changes, whose UI acceptance
@@ -49,8 +54,22 @@ VLESS upstream must satisfy the selected core's encryption requirements.
 
 Commit: `1c970c297615e68a291d97748fc7a3201d345c07`.
 [Fixed quality run](https://github.com/isning/RouteWeaver/actions/runs/42496974809).
-Execution results are pending; the following describes required assertions,
-not a passing traffic claim.
+The [native job](https://github.com/isning/RouteWeaver/actions/runs/42496974809/job/128781299919)
+ran all nine scenarios: seven passed, two failed, none skipped. All six stock
+Xray/sing-box scenarios and the managed one-external scenario passed. The two
+managed multi-external scenarios failed native configuration validation before
+the handshake. The runtime validator rejects all nonempty `sockopt`, including
+the renderer's `dialerProxy` field. Managed multi-external traffic is therefore
+not yet accepted at this checkpoint. The tests are retained unchanged while
+outbound-only detour support and accounting/security boundaries are reviewed.
+
+That follow-up must validate the full outbound reference graph and reject
+unsupported alternate `proxySettings`, not just remove the socket-option check.
+The unchanged pinned upstream detour does not re-enter the managed dispatcher,
+so admission and user-payload metering must still occur exactly once. Because
+inner dialer context cancellation differs from the ingress context, continuous
+two-detour flows must also prove revocation, lease-expiry and budget enforcement,
+including final usage, before managed multi-external support is accepted.
 
 `TestNativeMixedConnectorChainLoopback` selects pinned stock Xray and sing-box.
 `TestManagedMixedConnectorChainLoopback` selects the built managed-Xray runtime
@@ -85,7 +104,7 @@ are part of the harness. No external host or DNS name is contacted.
 
 Parser/process selectors and required-result checks include the new tests.
 Missing, failed or unexpectedly skipped selected tests cannot satisfy the gates.
-Thirteen offline shell-gate tests passed locally; these synthetic event tests
+Twenty-seven offline shell-gate/bootstrap tests passed locally; these synthetic event tests
 verify the gate behavior and are not native-runtime evidence.
 
 The traffic matrix covers TCP SOCKS5 external connectors and VLESS listeners.

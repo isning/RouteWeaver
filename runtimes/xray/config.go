@@ -25,12 +25,12 @@ const PolicyFile = "entry-policy.json"
 var identifier = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$`)
 
 type managedStreamProfile struct {
-	Network   string          `json:"network"`
-	Security  string          `json:"security"`
-	Sockopt   json.RawMessage `json:"sockopt"`
-	TCP       json.RawMessage `json:"tcpSettings"`
-	Raw       json.RawMessage `json:"rawSettings"`
-	FinalMask json.RawMessage `json:"finalmask"`
+	Network   string               `json:"network"`
+	Security  string               `json:"security"`
+	Sockopt   managedSocketOptions `json:"sockopt"`
+	TCP       json.RawMessage      `json:"tcpSettings"`
+	Raw       json.RawMessage      `json:"rawSettings"`
+	FinalMask json.RawMessage      `json:"finalmask"`
 	TLS       struct {
 		ECHSockopt           json.RawMessage `json:"echSockopt"`
 		PinnedPeerCertSha256 json.RawMessage `json:"pinnedPeerCertSha256"`
@@ -38,7 +38,70 @@ type managedStreamProfile struct {
 }
 
 func (s managedStreamProfile) supported() bool {
-	return (s.Network == "" || s.Network == "tcp" || s.Network == "raw") && (s.Security == "" || s.Security == "none" || s.Security == "tls") && len(s.Sockopt) == 0 && len(s.TCP) == 0 && len(s.Raw) == 0 && len(s.FinalMask) == 0 && len(s.TLS.ECHSockopt) == 0
+	return (s.Network == "" || s.Network == "tcp" || s.Network == "raw") && (s.Security == "" || s.Security == "none" || s.Security == "tls") && len(s.TCP) == 0 && len(s.Raw) == 0 && len(s.FinalMask) == 0 && len(s.TLS.ECHSockopt) == 0
+}
+
+// Only administrator-declared outbound dialerProxy edges are supported. Decode
+// each occurrence instead of retaining the last RawMessage: native JSON merges
+// repeated socket objects, which could otherwise hide an earlier unsafe option.
+type managedSocketOptions struct {
+	present     bool
+	dialerProxy string
+}
+
+func (s *managedSocketOptions) UnmarshalJSON(raw []byte) error {
+	if s.present {
+		return errors.New("duplicate managed socket options")
+	}
+	s.present = true
+	dec := json.NewDecoder(bytes.NewReader(raw))
+	open, err := dec.Token()
+	if err != nil || open != json.Delim('{') {
+		return errors.New("unsupported managed socket options")
+	}
+	key, err := dec.Token()
+	if err != nil || key != "dialerProxy" {
+		return errors.New("only outbound dialerProxy socket options are supported")
+	}
+	if err = dec.Decode(&s.dialerProxy); err != nil || !identifier.MatchString(s.dialerProxy) {
+		return errors.New("invalid outbound dialerProxy tag")
+	}
+	if dec.More() {
+		return errors.New("extra managed socket options are unsupported")
+	}
+	close, err := dec.Token()
+	if err != nil || close != json.Delim('}') || dec.Decode(new(any)) != io.EOF {
+		return errors.New("invalid managed socket options")
+	}
+	return nil
+}
+
+func managedProxyProtocol(protocol string) bool {
+	return protocol == "vless" || protocol == "socks" || protocol == "shadowsocks"
+}
+
+func validateManagedDetours(protocols, detours map[string]string) error {
+	for tag, via := range detours {
+		if !managedProxyProtocol(protocols[tag]) || !managedProxyProtocol(protocols[via]) {
+			return errors.New("managed dialerProxy must reference a supported outbound proxy")
+		}
+	}
+	// Each outbound has at most one predecessor. Iterative traversal is linear
+	// and avoids stack growth for a large hand-authored native configuration.
+	done := map[string]bool{}
+	for tag := range detours {
+		path := map[string]bool{}
+		for current := tag; current != "" && !done[current]; current = detours[current] {
+			if path[current] {
+				return errors.New("cyclic managed dialerProxy chain")
+			}
+			path[current] = true
+		}
+		for current := range path {
+			done[current] = true
+		}
+	}
+	return nil
 }
 
 func DecodeDescriptor(r io.Reader) (entrypolicy.Descriptor, error) {
@@ -102,7 +165,9 @@ func build(native []byte, d entrypolicy.Descriptor) (*core.Config, error) {
 	}
 	var raw struct {
 		Outbounds []struct {
-			Protocol string `json:"protocol"`
+			Tag           string          `json:"tag"`
+			Protocol      string          `json:"protocol"`
+			ProxySettings json.RawMessage `json:"proxySettings"`
 			Settings struct {
 				VNext []struct {
 					Users []struct {
@@ -146,6 +211,8 @@ func build(native []byte, d entrypolicy.Descriptor) (*core.Config, error) {
 	if len(raw.Inbounds) == 0 {
 		return nil, errors.New("no managed public entries")
 	}
+	protocols := map[string]string{}
+	detours := map[string]string{}
 	for _, out := range raw.Outbounds {
 		if len(out.Stream.TLS.PinnedPeerCertSha256) != 0 {
 			return nil, errors.New("certificate pinning unsupported on managed path")
@@ -158,6 +225,23 @@ func build(native []byte, d entrypolicy.Descriptor) (*core.Config, error) {
 		if !out.Stream.supported() {
 			return nil, errors.New("untested managed egress transport, security or wrapper")
 		}
+		// proxySettings is an alternative native chaining mechanism. Reject it
+		// rather than permit hidden edges to escape dialerProxy graph validation.
+		if len(out.ProxySettings) != 0 {
+			return nil, errors.New("managed outbound proxySettings unsupported; use dialerProxy")
+		}
+		if out.Tag != "" {
+			if _, exists := protocols[out.Tag]; exists || !identifier.MatchString(out.Tag) {
+				return nil, errors.New("duplicate or invalid outbound tag")
+			}
+			protocols[out.Tag] = out.Protocol
+		}
+		if out.Stream.Sockopt.present {
+			if out.Tag == "" {
+				return nil, errors.New("managed dialerProxy requires a named outbound")
+			}
+			detours[out.Tag] = out.Stream.Sockopt.dialerProxy
+		}
 		for _, endpoint := range out.Settings.VNext {
 			for _, user := range endpoint.Users {
 				if user.Flow != "" {
@@ -165,6 +249,9 @@ func build(native []byte, d entrypolicy.Descriptor) (*core.Config, error) {
 				}
 			}
 		}
+	}
+	if err := validateManagedDetours(protocols, detours); err != nil {
+		return nil, err
 	}
 	seen := map[string]bool{}
 	tags := map[string]bool{}
@@ -184,7 +271,7 @@ func build(native []byte, d entrypolicy.Descriptor) (*core.Config, error) {
 		}
 		// PROXY headers and transport wrappers would replace the physical peer. They
 		// need a separate trusted-ingress model and independent wire evidence.
-		if len(in.Stream.Sockopt) > 0 || len(in.Stream.TCP) > 0 || len(in.Stream.Raw) > 0 || len(in.Stream.FinalMask) > 0 || len(in.Stream.TLS.ECHSockopt) > 0 || in.Sniffing.Enabled {
+		if in.Stream.Sockopt.present || len(in.Stream.TCP) > 0 || len(in.Stream.Raw) > 0 || len(in.Stream.FinalMask) > 0 || len(in.Stream.TLS.ECHSockopt) > 0 || in.Sniffing.Enabled {
 			return nil, errors.New("untested entry socket, TCP wrapper or sniffing options")
 		}
 		if in.Settings.Decryption != "none" || len(in.Settings.Fallbacks) > 0 || len(in.Settings.Clients) == 0 {
