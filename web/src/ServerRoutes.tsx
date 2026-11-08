@@ -132,8 +132,7 @@ export function ServerRoutesPage({
     queryKey: ["infrastructure"],
     queryFn: loadInfrastructure,
   });
-  const latestInventory = useRef(query);
-  latestInventory.current = query;
+  const inventoryClient = useQueryClient();
   const [editing, setEditing] = useState<ServerDeployment | null>(null);
   const [selected, setSelected] = useState<ServerDeployment | null>(null);
   const [newRecord, setNewRecord] = useState(false);
@@ -284,8 +283,10 @@ export function ServerRoutesPage({
         if (sequence !== editSequence.current || location.hash !== origin) return;
         if (revealed.id !== endpoint.id || revealed.instanceId !== instance.id)
           throw new Error("入口监听的所属核心已变化，请返回服务器重新选择。");
-        const current = latestInventory.current;
-        if (!current.isSuccess || current.isFetching || current.isPaused || current.isError || !current.data)
+        // Query notifications can arrive after this response. Read the current
+        // cache, not the last render, before adopting the endpoint's owner.
+        const current = inventoryClient.getQueryState<Infrastructure>(["infrastructure"]);
+        if (current?.status !== "success" || current.fetchStatus !== "idle" || !current.data)
           throw new Error("服务器清单尚未确认，请重新读取入口。");
         const registered = current.data.endpoints.find((candidate) => candidate.id === endpoint.id);
         const owner = current.data.instances.find((candidate) => candidate.id === instance.id);
@@ -314,7 +315,7 @@ export function ServerRoutesPage({
         if (sequence === editSequence.current) setEntryLoading(false);
       }
     })();
-  }, [requestedEntry, editing, selected, planning, task, query.data, query.isSuccess, query.isFetching, query.isPaused, query.isError]);
+  }, [requestedEntry, editing, selected, planning, task, query.data, query.isSuccess, query.isFetching, query.isPaused, query.isError, inventoryClient]);
   const inventory = query.data;
   const returnHref = returnContext.get("line")
     ? `#published-routes?line=${encodeURIComponent(returnContext.get("line")!)}${returnContext.get("user") ? `&user=${encodeURIComponent(returnContext.get("user")!)}` : ""}`

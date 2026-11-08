@@ -122,14 +122,17 @@ it("does not reopen a delayed contextual draft after newer same-page navigation"
 it("does not initialize a draft if its registered owner disappears during the reveal", async () => {
   let release!: (value: Response) => void;
   const delayed = new Promise<Response>((done) => { release = done; });
-  mount(origin, () => delayed);
+  const { requests } = mount(origin, () => delayed);
   await screen.findByText("正在读取入口监听…");
   await act(async () => {
     client.setQueryData(["infrastructure"], { hosts: [host], instances: [], endpoints: [listener], links: [], deployments: [] });
+    // Resolve before React Query's scheduled observer notification: the cache
+    // is authoritative even while the previous inventory is still rendered.
+    release(json(listener));
   });
-  await act(async () => release(json(listener)));
   await screen.findByText("入口监听的所属核心已变化，请返回服务器重新选择。");
   expect(screen.queryByRole("dialog", { name: "新建转发路径" })).toBeNull();
+  expect(requests.every((request) => request.startsWith("GET "))).toBe(true);
 });
 
 it("preserves the selected entry and typed name when dirty navigation is cancelled", async () => {

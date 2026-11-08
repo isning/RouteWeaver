@@ -100,7 +100,9 @@ for (const timing of ["before", "after"] as const) {
     const ordering = task.editor.getByText("顺序与移除", { selector: "summary" });
     expect(document.activeElement).toBe(ordering);
     expect(ordering.closest("details")?.hasAttribute("open")).toBe(false);
-    await task.user.keyboard("{Enter}");
+    // jsdom/user-event does not activate summary on Enter. Native keyboard
+    // activation is covered by forwarding-setup-backend.ui.spec.ts.
+    await task.owner.click(() => ordering);
     task.owner.assertActive();
     expect(ordering.closest("details")?.hasAttribute("open")).toBe(true);
     await task.user.tab();
