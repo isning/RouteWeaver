@@ -153,6 +153,7 @@ it.each(["1e", "-", "300.00000000000000001", "9007199254740993"])("blocks existi
   const { writes } = mount(profile);
   const user = userEvent.setup();
   await user.click(screen.getByRole("tab", { name: "策略组" }));
+  { const summary = screen.getByText("Probe").closest("summary")!; if (!summary.closest("details")!.open) await user.click(summary); }
   await user.click(screen.getByRole("button", { name: "策略参数" }));
   const interval = screen.getByRole("spinbutton", { name: "测试间隔（秒）" });
   fireEvent.change(interval, { target: { value: raw } });
@@ -176,6 +177,7 @@ it.each(["blank", "arrow", "untouched"])("retains group interval %s semantics", 
   const user = userEvent.setup();
   if (mode !== "untouched") {
     await user.click(screen.getByRole("tab", { name: "策略组" }));
+  { const summary = screen.getByText("Probe").closest("summary")!; if (!summary.closest("details")!.open) await user.click(summary); }
     await user.click(screen.getByRole("button", { name: "策略参数" }));
     const interval = screen.getByRole("spinbutton", { name: "测试间隔（秒）" });
     fireEvent.change(interval, { target: { value: mode === "blank" ? "" : "1e" } });
@@ -220,6 +222,7 @@ it.each([300, 600])("replaces invalid group raw intent with explicitly applied J
   const { writes } = mount(profile);
   const user = userEvent.setup();
   await user.click(screen.getByRole("tab", { name: "策略组" }));
+  { const summary = screen.getByText("Probe").closest("summary")!; if (!summary.closest("details")!.open) await user.click(summary); }
   await user.click(screen.getByRole("button", { name: "策略参数" }));
   fireEvent.change(screen.getByRole("spinbutton", { name: "测试间隔（秒）" }), { target: { value: "300.00000000000000001" } });
   await user.click(screen.getByRole("tab", { name: "运行设置" }));
@@ -231,6 +234,7 @@ it.each([300, 600])("replaces invalid group raw intent with explicitly applied J
   await user.click(screen.getByRole("button", { name: "应用到草稿" }));
   await waitFor(() => expect(screen.queryByRole("textbox", { name: "配置意图 JSON 文本" })).toBeNull());
   await user.click(screen.getByRole("tab", { name: "策略组" }));
+  { const summary = screen.getByText("Probe").closest("summary")!; if (!summary.closest("details")!.open) await user.click(summary); }
   await user.click(screen.getByRole("button", { name: "策略参数" }));
   expect((screen.getByRole("spinbutton", { name: "测试间隔（秒）" }) as HTMLInputElement).value).toBe(String(intervalSeconds));
   await user.click(screen.getByRole("button", { name: "保存草稿" }));
@@ -244,6 +248,7 @@ it.each(["manual", "url-test"])("retires invalid interval when manual removes th
   const { writes } = mount(profile);
   const user = userEvent.setup();
   await user.click(screen.getByRole("tab", { name: "策略组" }));
+  { const summary = screen.getByText("Probe").closest("summary")!; if (!summary.closest("details")!.open) await user.click(summary); }
   await user.click(screen.getByRole("button", { name: "策略参数" }));
   fireEvent.change(screen.getByRole("spinbutton", { name: "测试间隔（秒）" }), { target: { value: "1e" } });
   await user.click(screen.getByRole("combobox", { name: "选择策略" }));
@@ -259,3 +264,4 @@ it.each(["manual", "url-test"])("retires invalid interval when manual removes th
   expect(writes[0].body.ir.groups[0].kind).toBe(kind);
   expect(writes[0].body.ir.groups[0].intervalSeconds).toBe(kind === "manual" ? undefined : 300);
 });
+

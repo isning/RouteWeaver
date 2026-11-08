@@ -297,6 +297,8 @@ export function ProfileEditor({
   const retainedSources = useRef(initial.sourceIds || []);
   const retainedCollection = useRef(initial.collectionId);
   const [tab, setTab] = useState("rules");
+  const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
+  const revealGroup = (id: string) => setExpandedGroups((ids) => ids.includes(id) ? ids : [...ids, id]);
   const [runtimeVisited, setRuntimeVisited] = useState(false);
   useEffect(() => {
     if (tab === "runtime") setRuntimeVisited(true);
@@ -546,6 +548,7 @@ export function ProfileEditor({
   }, [destinationFocus, tab, draft]);
   const checkDestinations = () => {
     if (invalidGroup) {
+      revealGroup(invalidGroup.id);
       setTab("groups");
       setGroupIntervalFocus((previous) => ({ id: invalidGroup.id, request: previous.request + 1 }));
       setError(new Error("请完成测试间隔输入，使用大于零的整数秒数。"));
@@ -644,6 +647,7 @@ export function ProfileEditor({
   const repairAction = (issue: MissingActionReference) => {
     const target = actionRepair(draft.ir, issue);
     if (!target) return;
+    if (issue.location.kind === "group") revealGroup(issue.location.id);
     if (target.tab) setTab(target.tab);
     setPendingRepair({ issue, revision: revision.current });
   };
@@ -921,7 +925,7 @@ export function ProfileEditor({
           ? "配置内置连接"
           : draft.platformEntryIds?.length
             ? "使用平台入口"
-            : "未选择代理连接";
+            : "尚未添加代理连接";
   const missingEntryCount =
     entries.isSuccess && !entries.isFetching && !entries.isPaused
       ? (draft.platformEntryIds || []).filter(
@@ -1223,30 +1227,57 @@ export function ProfileEditor({
                 : "profile-group-empty space-y-3 rounded-lg border border-dashed p-4"
             }
           >
-            {!draft.ir.groups.length && <p>暂无策略组</p>}
+            {!draft.ir.groups.length && <p>需要自动优选、故障切换或多个候选连接时，再添加策略组。</p>}
             <ActionButton
               leadingIcon={<Plus aria-hidden="true" />}
-              onClick={() =>
+              onClick={() => {
+                const id = newID("group");
+                revealGroup(id);
                 updateIR({
                   groups: [
                     ...draft.ir.groups,
                     {
-                      id: newID("group"),
+                      id,
                       name: "新策略组",
                       kind: "manual",
                       members: [],
                     },
                   ],
-                })
-              }
+                });
+              }}
               variant="outline"
             >
               添加策略组
             </ActionButton>
           </div>
           {draft.ir.groups.map((group, index) => (
-            <GroupEditor
+            <details
               key={group.id}
+              className="rounded-lg border p-4"
+              open={expandedGroups.includes(group.id)}
+              onToggle={(event) => {
+                const open = event.currentTarget.open;
+                setExpandedGroups((ids) => open
+                  ? ids.includes(group.id) ? ids : [...ids, group.id]
+                  : ids.filter((id) => id !== group.id));
+              }}
+            >
+              <summary className="cursor-pointer rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                <span className="font-medium">{group.name || "未命名策略组"}</span>
+                <span className="mt-2 block text-sm text-muted-foreground">
+                  {({ manual: "手动选择", "url-test": "延迟优选", fallback: "故障切换", "load-balance": "负载均衡" } as Record<string, string>)[group.kind] || group.kind}
+                  {`，${group.members.length} 个固定候选`}{group.dynamic != null ? "，自动加入连接已开启" : ""}
+                </span>
+                <span className="mt-1 block break-words text-sm">
+                  {group.members.slice(0, 3).map((member) => actions.find((action) => action.value === actionValue(member))?.label || "候选连接暂不可用").join("、") || "尚未选择固定候选"}
+                  {group.members.length > 3 ? ` 等 ${group.members.length} 个` : ""}
+                </span>
+                <span className="mt-1 block text-sm text-muted-foreground">
+                  {groupUses(draft.ir, group.id).map((use) => use.label).join("；") || "尚未用于流量分配"}
+                </span>
+              </summary>
+              <div className="mt-4">
+            <GroupEditor
               value={group}
               onIntervalFocused={() => setGroupIntervalFocus((previous) => ({ ...previous, id: "" }))}
               intervalRaw={groupIntervalDrafts[group.id]}
@@ -1281,6 +1312,7 @@ export function ProfileEditor({
                             setTab(
                               use.location.kind === "rule" ? "rules" : "groups",
                             );
+                          if (use.location.kind === "group") revealGroup(use.location.id);
                           setUseFocus(use.location);
                         }}
                         variant="link"
@@ -1345,6 +1377,8 @@ export function ProfileEditor({
                 });
               }}
             />
+              </div>
+            </details>
           ))}
         </Section>
       ),
@@ -1651,9 +1685,86 @@ export function ProfileEditor({
             tabIndex={-1}
           >
             <div className="profile-intent-grid grid gap-6 @min-[44rem]/profile-task:grid-cols-2 [&>div]:min-w-0 [&_h2]:mb-4 [&_h2]:font-semibold">
-              <div className="profile-input-task space-y-4">
+              <div className="profile-traffic-task space-y-4">
+                <h2>默认流量去向</h2>
+                <label
+                  className="standalone-label default-route grid min-w-0 gap-2 text-sm font-medium"
+                  id={actionControlID({ kind: "default" })}
+                >
+                  {draft.ir.rules.length ? "未匹配规则的流量" : "所有流量"}
+                  <ChoiceSelect
+                    aria-label="默认流量行为"
+                    aria-describedby={
+                      actions.some(
+                        (option) =>
+                          option.referenceID &&
+                          option.value === actionValue(draft.ir.defaultAction),
+                      )
+                        ? `${actionControlID({ kind: "default" })}-references`
+                        : undefined
+                    }
+                    value={actionValue(draft.ir.defaultAction)}
+                    searchable
+                    options={actions.map((option) => ({
+                      ...option,
+                      description: option.referenceID || option.detail,
+                    }))}
+                    onValueChange={(value) => {
+                      if (value === undefined) return;
+                      const action = parseAction(value);
+                      update({
+                        ir: { ...draft.ir, defaultAction: action },
+                        ...includeChosenEntries([action]),
+                      });
+                    }}
+                  />
+                </label>
+                <ActionReferenceDetails
+                  controlID={actionControlID({ kind: "default" })}
+                  location="默认去向"
+                  references={[draft.ir.defaultAction]}
+                  actions={actions}
+                />
+                <ActionButton
+                  className="profile-candidate-action flex flex-wrap items-center gap-2"
+                  aria-label="默认流量：使用多个候选连接…"
+                  onClick={() =>
+                    openGroupTask(
+                      { kind: "default", expected: draft.ir.defaultAction },
+                      draft.ir.rules.length ? "未匹配规则的流量" : "所有流量",
+                    )
+                  }
+                  variant="outline"
+                >
+                  使用多个候选连接…
+                </ActionButton>
+                {/* Keep the announcer mounted; an empty consequence has no visual card. */}
+                <div
+                  className="profile-traffic-outcome space-y-2 rounded-lg bg-muted p-4 text-sm empty:sr-only"
+                  aria-live="polite"
+                >
+                  {!nativeOverride &&
+                    !draft.ir.rules.length &&
+                    draft.ir.defaultAction.kind === "direct" &&
+                    (endpoints.length > 0 || selectedEntries.length > 0) && (
+                      <p>已导入的连接尚未用于分流。</p>
+                    )}
+                  {nativeOverride && (
+                    <p>
+                      上方保留结构化默认行为；原生规则或设置可能改变最终行为，请按具体客户端检查。
+                    </p>
+                  )}
+                  {(draft.mode === "nodes-only" ||
+                    boundOutput?.mode === "nodes-only") && (
+                    <p>
+                      纯节点订阅仅交付连接；上方分流行为保存在共享配置中，供完整配置使用。
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="profile-input-task space-y-4 @min-[44rem]/profile-task:border-l @min-[44rem]/profile-task:pl-6">
                 <div className="profile-source-summary flex flex-wrap items-center justify-between gap-3 [&>h2]:mb-0 [&>span]:w-full">
-                  <h2>可用连接</h2>
+                  <h2>代理连接</h2>
                   <ActionButton
                     ref={sourceDisclosure}
                     aria-label={sourceExpanded ? "收起来源设置" : "编辑来源"}
@@ -1688,7 +1799,13 @@ export function ProfileEditor({
                   ) : effectiveInputs.status === "error" ? (
                     <strong>有效连接暂不可用</strong>
                   ) : (
-                    <strong>{endpoints.length} 个有效连接</strong>
+                    <strong>{endpoints.length === 0 &&
+                      !selectedSourceIds.length && !draft.collectionId &&
+                      !draft.platformEntryIds?.length && !draft.ir.endpoints.length &&
+                      draft.ir.defaultAction.kind === "direct" &&
+                      !draft.ir.rules.length && !draft.ir.groups.length
+                      ? "直连与拒绝不需要代理连接"
+                      : `${endpoints.length} 个有效连接`}</strong>
                   )}
                   {entries.isPaused ? (
                     <span>等待核对平台入口…</span>
@@ -1882,83 +1999,6 @@ export function ProfileEditor({
                       </AccordionItem>
                     ))}
                   </Accordion>
-                </div>
-              </div>
-              <div className="profile-traffic-task space-y-4 @min-[44rem]/profile-task:border-l @min-[44rem]/profile-task:pl-6">
-                <h2>流量去向</h2>
-                <label
-                  className="standalone-label default-route grid min-w-0 gap-2 text-sm font-medium"
-                  id={actionControlID({ kind: "default" })}
-                >
-                  {draft.ir.rules.length ? "未匹配规则的流量" : "所有流量"}
-                  <ChoiceSelect
-                    aria-label="默认流量行为"
-                    aria-describedby={
-                      actions.some(
-                        (option) =>
-                          option.referenceID &&
-                          option.value === actionValue(draft.ir.defaultAction),
-                      )
-                        ? `${actionControlID({ kind: "default" })}-references`
-                        : undefined
-                    }
-                    value={actionValue(draft.ir.defaultAction)}
-                    searchable
-                    options={actions.map((option) => ({
-                      ...option,
-                      description: option.referenceID || option.detail,
-                    }))}
-                    onValueChange={(value) => {
-                      if (value === undefined) return;
-                      const action = parseAction(value);
-                      update({
-                        ir: { ...draft.ir, defaultAction: action },
-                        ...includeChosenEntries([action]),
-                      });
-                    }}
-                  />
-                </label>
-                <ActionReferenceDetails
-                  controlID={actionControlID({ kind: "default" })}
-                  location="默认去向"
-                  references={[draft.ir.defaultAction]}
-                  actions={actions}
-                />
-                <ActionButton
-                  className="profile-candidate-action flex flex-wrap items-center gap-2"
-                  aria-label="默认流量：使用多个候选连接…"
-                  onClick={() =>
-                    openGroupTask(
-                      { kind: "default", expected: draft.ir.defaultAction },
-                      draft.ir.rules.length ? "未匹配规则的流量" : "所有流量",
-                    )
-                  }
-                  variant="outline"
-                >
-                  使用多个候选连接…
-                </ActionButton>
-                {/* Keep the announcer mounted; an empty consequence has no visual card. */}
-                <div
-                  className="profile-traffic-outcome space-y-2 rounded-lg bg-muted p-4 text-sm empty:sr-only"
-                  aria-live="polite"
-                >
-                  {!nativeOverride &&
-                    !draft.ir.rules.length &&
-                    draft.ir.defaultAction.kind === "direct" &&
-                    (endpoints.length > 0 || selectedEntries.length > 0) && (
-                      <p>已导入的连接尚未用于分流。</p>
-                    )}
-                  {nativeOverride && (
-                    <p>
-                      上方保留结构化默认行为；原生规则或设置可能改变最终行为，请按具体客户端检查。
-                    </p>
-                  )}
-                  {(draft.mode === "nodes-only" ||
-                    boundOutput?.mode === "nodes-only") && (
-                    <p>
-                      纯节点订阅仅交付连接；上方分流行为保存在共享配置中，供完整配置使用。
-                    </p>
-                  )}
                 </div>
               </div>
             </div>
@@ -3651,3 +3691,4 @@ function MatchActionItems({
     </>
   );
 }
+

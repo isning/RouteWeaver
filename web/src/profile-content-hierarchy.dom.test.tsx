@@ -156,10 +156,10 @@ it("offers one strategy-group action in an empty panel and retains it after addi
   mount();
   await screen.findByText("2 个有效连接");
   await userEvent.click(screen.getByRole("tab", { name: "策略组" }));
-  expect(screen.getByText("暂无策略组")).toBeTruthy();
+  expect(screen.getByText("需要自动优选、故障切换或多个候选连接时，再添加策略组。")).toBeTruthy();
   expect(screen.getAllByRole("button", { name: "添加策略组" })).toHaveLength(1);
   await userEvent.click(screen.getByRole("button", { name: "添加策略组" }));
-  expect(screen.queryByText("暂无策略组")).toBeNull();
+  expect(screen.queryByText("需要自动优选、故障切换或多个候选连接时，再添加策略组。")).toBeNull();
   expect(screen.getByRole("textbox", { name: "策略组名称" })).toBeTruthy();
   expect(screen.getAllByRole("button", { name: "添加策略组" })).toHaveLength(1);
 });
@@ -709,4 +709,44 @@ it.each(["dns-removed", ""])("keeps an empty DNS inventory with final %s through
   const saved = writes.filter(entry => entry.path.endsWith("/intent-profile"))[1].body.ir.runtime.dns;
   expect(saved.final).toBe(final);
   expect(saved.servers).toHaveLength(1);
+});
+
+
+it("starts with the traffic decision and treats a direct-only profile as valid without proxy sources", async () => {
+  const profile = { ...emptyProfile(), id: "direct-only", name: "Direct only" };
+  profile.ir.defaultAction = { kind: "direct" };
+  const { writes } = mount(profile);
+  await screen.findByText("直连与拒绝不需要代理连接");
+  const traffic = screen.getByRole("heading", { name: "默认流量去向" });
+  const connections = screen.getByRole("heading", { name: "代理连接" });
+  expect(traffic.compareDocumentPosition(connections) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(screen.queryByText("0 个有效连接")).toBeNull();
+  expect(screen.queryByText("未选择代理连接")).toBeNull();
+  await userEvent.click(screen.getByRole("button", { name: "保存草稿" }));
+  await waitFor(() => expect(writes.some((write) => write.path.includes("/profiles"))).toBe(true));
+  const saved = writes.find((write) => write.path.includes("/profiles"))!.body;
+  expect(saved.ir.defaultAction).toEqual({ kind: "direct" });
+  expect(saved.ir.groups).toEqual([]);
+});
+
+it("shows the purpose of a saved strategy group before its form, preserving it when collapsed", async () => {
+  const profile = fixture();
+  profile.ir.groups = [{ id: "work", name: "Work route", kind: "manual", members: [{ kind: "direct" }] }];
+  profile.ir.defaultAction = { kind: "group", ref: "work" };
+  const { writes } = mount(profile);
+  await screen.findByText("2 个有效连接");
+  await userEvent.click(screen.getByRole("tab", { name: "策略组" }));
+  const summary = screen.getByText("Work route").closest("summary")!;
+  const details = summary.closest("details")!;
+  expect(details.open).toBe(false);
+  expect(summary.textContent).toContain("手动选择，1 个固定候选");
+  expect(summary.textContent).not.toContain("尚未用于流量分配");
+  fireEvent.click(summary);
+  await waitFor(() => expect(details.open).toBe(true));
+  fireEvent.change(screen.getByRole("textbox", { name: "策略组名称" }), { target: { value: "Work renamed" } });
+  fireEvent.click(summary);
+  await waitFor(() => expect(details.open).toBe(false));
+  await userEvent.click(screen.getByRole("button", { name: "保存草稿" }));
+  await waitFor(() => expect(writes.some((write) => write.path.includes("/profiles"))).toBe(true));
+  expect(writes.find((write) => write.path.includes("/profiles"))!.body.ir.groups[0]).toEqual({ ...profile.ir.groups[0], name: "Work renamed" });
 });

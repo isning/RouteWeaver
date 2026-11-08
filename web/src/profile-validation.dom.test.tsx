@@ -1189,6 +1189,7 @@ it.each([
     };
     await assertControl("默认流量行为");
     await user.click(screen.getByRole("tab", { name: "策略组" }));
+    await user.click(screen.getByText("旅行").closest("summary")!);
     await assertControl("策略组「旅行」的固定成员");
     await user.click(screen.getByRole("tab", { name: "分流规则" }));
     await assertControl("规则 1 的流量去向");
@@ -1327,3 +1328,4 @@ it("keeps reference disclosure native, touch-sized, and its full identity readab
     style.remove();
   }
 });
+
