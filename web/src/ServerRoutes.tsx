@@ -79,6 +79,8 @@ import { useUnsavedChanges } from "./navigation";
 import { publicationRejectionMessage } from "./publication-request";
 import { routeGraphNodes, type RouteGraphNode } from "./route-graph-nodes";
 import { ServerPathSummary, ServerPathWorkspace } from "./ServerPathWorkspace";
+import { ServerMixedPathWorkspace } from "./ServerMixedPathWorkspace";
+import { compileOrderedServerPath, orderedPathChangeReason, readOrderedServerPath, type OrderedServerHop } from "./server-path-model";
 import { ServerForwarding, matchLabel } from "./ServerForwarding";
 import { ServerPolicyEditor, canEditRuleList, canEditRuleCondition, ruleConditionError } from "./ServerPolicyEditor";
 import { TLSMaterial } from "./TLSMaterial";
@@ -691,7 +693,7 @@ export function ServerRouteEditor({
   }, [inventory, path, setGraphNodes]);
   const selectionPending =
     path.some((id) => pendingEndpoints[id]) ||
-    pendingEndpoints[`add-${path.join("/")}`];
+    pendingEndpoints[`add-${path.join("/")}`] || pendingEndpoints["ordered-add"];
   useUnsavedChanges(dirty || selectionPending || materialPending || jsonDirty);
   const save = useMutation({
     mutationFn: (_complete: typeof onSaved) => {
@@ -721,9 +723,45 @@ export function ServerRouteEditor({
     setDirty(true);
     setError(null);
   };
-  const chainEditable = (draft.ir.programs == null || Array.isArray(draft.ir.programs)) && canEditLegacyPath({ ...draft, ir: { ...draft.ir, programs } }, inventory);
+  const legacyChainEditable = (draft.ir.programs == null || Array.isArray(draft.ir.programs)) && canEditLegacyPath({ ...draft, ir: { ...draft.ir, programs } }, inventory);
+  const orderedPath = readOrderedServerPath(draft, inventory);
+  const chainEditable = legacyChainEditable || orderedPath.editable;
+  const mixedWorkspace = orderedPath.editable && (orderedPath.connectorChoices.length > 0 || !legacyChainEditable);
+  const updateOrderedPath = async (hops: OrderedServerHop[]) => {
+    const source = latestDraft.current;
+    const reason = orderedPathChangeReason(source, hops, inventory);
+    if (reason) { setError(new Error(reason)); return false; }
+    const revision = ++draftRevision.current;
+    setPathLoading(true);
+    setError(null);
+    try {
+      // Retained listeners keep the revealed draft snapshot. Only new choices
+      // need a reveal; choosing an existing administrator proxy sends no secrets.
+      const selected = hops.filter((hop): hop is Extract<OrderedServerHop, { kind: "managed" }> => hop.kind === "managed")
+        .filter((hop) => !programsIn(source).some((program) => program.listener.id === hop.endpointId));
+      const endpoints = await Promise.all(selected.map(async (hop) => {
+        const expected = inventory.endpoints.find((endpoint) => endpoint.id === hop.endpointId);
+        const endpoint = await request<ManagedEndpoint>(`/managed-endpoints/${hop.endpointId}/reveal`);
+        if (endpoint.id !== hop.endpointId) throw new Error("读取到的监听与所选端点不一致，请重新选择。");
+        if (!expected || endpoint.instanceId !== expected.instanceId)
+          throw new Error("所选监听的所属核心已变化，请重新选择服务器和端点。");
+        return endpoint;
+      }));
+      if (revision !== draftRevision.current || latestDraft.current !== source) return false;
+      const revealed = new Map(endpoints.map((endpoint) => [endpoint.id, endpoint]));
+      const next = compileOrderedServerPath(source, hops, {
+        ...inventory, endpoints: inventory.endpoints.map((endpoint) => revealed.get(endpoint.id) || endpoint),
+      });
+      update({ ...next, ir: { ...next.ir, topologyRevision: newID("topology") } });
+      setAnnouncement(hops.length ? "代理链顺序已更新到草稿，尚未保存。" : "路径已清空，请选择第一跳。");
+      return true;
+    } catch (error) {
+      if (revision === draftRevision.current) { setError(error as Error); setPathLoading(false); }
+      return false;
+    }
+  };
   const updatePath = async (ids: string[]) => {
-    if (!chainEditable) {
+    if (!legacyChainEditable) {
       setError(new Error(pathRewriteUnavailable));
       return false;
     }
@@ -775,6 +813,14 @@ export function ServerRouteEditor({
         ),
       },
     });
+  };
+  const openConnectorConnection = (index: number, connectorId: string, focusLabel: string) => {
+    if (connectorTask || connectorEditing.current || entryTask || save.isPending || pathLoading || selectionPending || materialPending || jsonDirty) return;
+    const source = programsIn(latestDraft.current)[index];
+    if (!source || source !== programs[index] || !source.connectors?.some((connector) => connector.id === connectorId)) return;
+    connectorEditing.current = true;
+    entryReturnFocus.current = focusLabel;
+    setConnectorTask({ index, source, connectorId });
   };
   const updateReality = (
     index: number,
@@ -1038,6 +1084,7 @@ export function ServerRouteEditor({
         <div className="sr-only" aria-live="polite">
           {announcement}
         </div>
+        {!legacyChainEditable && !orderedPath.editable && <p className="text-sm text-muted-foreground">{orderedPath.reason}</p>}
         {!chainEditable ? (
           <ServerPolicyEditor
             programs={programs}
@@ -1127,14 +1174,7 @@ export function ServerRouteEditor({
               updateProgram(index, { rules: next });
               setAnnouncement("规则顺序已更新到草稿，先命中的规则决定去向，尚未保存。");
             }}
-            onOpenConnectorConnection={(index, connectorId, focusLabel) => {
-              if (connectorTask || connectorEditing.current || entryTask || save.isPending || selectionPending || materialPending || jsonDirty) return;
-              const source = programsIn(latestDraft.current)[index];
-              if (!source || source !== programs[index] || !source.connectors?.some((connector) => connector.id === connectorId)) return;
-              connectorEditing.current = true;
-              entryReturnFocus.current = focusLabel;
-              setConnectorTask({ index, source, connectorId });
-            }}
+            onOpenConnectorConnection={openConnectorConnection}
             onAddConnector={(index, focusLabel) => {
               if (connectorEditing.current || entryTask || save.isPending || selectionPending || materialPending || jsonDirty) return;
               const source = programsIn(latestDraft.current)[index];
@@ -1170,7 +1210,7 @@ export function ServerRouteEditor({
             onRefreshListener={setRefreshingListener}
             onEditJSON={editIntent}
           />
-        ) : view === "graph" ? (
+        ) : view === "graph" && legacyChainEditable ? (
           <>
             <ServerPathSummary programs={programs} />
             <div className="graph-canvas h-[480px] min-h-80 overflow-hidden rounded-lg border bg-muted/20">
@@ -1195,6 +1235,19 @@ export function ServerRouteEditor({
               点击端点选择第一跳，从路径末端连接下一跳。拖动只调整图形布局。
             </p>
           </>
+        ) : mixedWorkspace && orderedPath.editable ? (
+          <ServerMixedPathWorkspace programs={programs} inventory={inventory}
+            hops={orderedPath.hops} connectorChoices={orderedPath.connectorChoices}
+            onChangePath={updateOrderedPath}
+            changeReason={(hops) => orderedPathChangeReason(draft, hops, inventory)}
+            onPendingChange={markPending}
+            onSelectionChange={() => { draftRevision.current++; setPathLoading(false); }}
+            onEditConnector={(endpointId, connectorId, focusLabel) => {
+              const index = programs.findIndex((program) => program.listener.id === endpointId);
+              if (index >= 0) openConnectorConnection(index, connectorId, focusLabel);
+            }}
+            changing={pathLoading}
+          />
         ) : (
           <ServerPathWorkspace
             programs={programs}
@@ -1208,10 +1261,12 @@ export function ServerRouteEditor({
             changing={pathLoading}
           />
         )}
-        {chainEditable && (
+        {legacyChainEditable && (
           <Tabs
             value={view}
             onValueChange={(next) => {
+              draftRevision.current++;
+              setPathLoading(false);
               setPendingEndpoints({});
               setView(next);
             }}
@@ -2432,6 +2487,7 @@ function ServerRouteDetail({
     </TaskSheet>
   );
 }
+
 
 
 

@@ -48,6 +48,11 @@ jobs:
           src/profile-source-disclosure.dom.test.tsx
           src/profile-content-hierarchy.dom.test.tsx
           src/source-profile-continuation.dom.test.tsx
+          src/server-path-model.test.ts
+          src/server-mixed-path-workspace.dom.test.tsx
+          src/server-mixed-path-editor.dom.test.tsx
+          src/published-route-mixed-create.dom.test.tsx
+          src/published-route-mixed-hops.dom.test.tsx
           --maxWorkers=1
 # Supplemental feedback only. The full Repository quality workflow and its
 # required aggregate remain authoritative; this does not replace any gate.

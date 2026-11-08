@@ -1,3 +1,4 @@
+import { readOrderedServerPath } from "./server-path-model";
 import {
   OperationalIntegerInput,
   operationalInteger,
@@ -627,11 +628,15 @@ function PublicRouteEditor({
   onSaved: (route: PublishedRoute) => boolean;
 }) {
   const [draft, setDraft] = useState(initial);
+  const [selectedSource, setSelectedSource] = useState<{
+    id: string; revisionToken?: string; ir: string;
+  } | null>(null);
+  const [newPathError, setNewPathError] = useState<string | null>(null);
   const [baseline, setBaseline] = useState(() => ({ ...publicRouteFields(initial), revisionToken: initial.revisionToken }));
   const [publicPort, setPublicPort] = useState<number | string>(initial.publicPort);
   const [portReset, setPortReset] = useState(0);
   const portDirty = String(publicPort) !== String(baseline.publicPort);
-  const dirty = JSON.stringify(publicRouteFields({ ...draft, publicPort: baseline.publicPort })) !== JSON.stringify(publicRouteFields(baseline)) || portDirty;
+  const dirty = JSON.stringify(publicRouteFields({ ...draft, publicPort: baseline.publicPort })) !== JSON.stringify(publicRouteFields(baseline)) || portDirty || JSON.stringify(draft.hops) !== JSON.stringify(initial.hops);
   const { confirm: confirmDiscard, confirming: discardConfirming } =
     useDiscardConfirmation(initial.id);
   const [discardClosing, setDiscardClosing] = useState(false);
@@ -749,14 +754,21 @@ function PublicRouteEditor({
     enabled: false,
   });
   const [mixedLatest, setMixedLatest] = useState(false);
-  const mixedEditingBlocked = mixedLatest ||
-    [initial, latest, draft, resolved.data].some(hasConnectorHops);
-  const mixedRouteKnown = () => mixedEditingBlocked ||
-    hasConnectorHops(client.getQueryData<PublishedRoute[]>(["published-routes"])?.find(route => route.id === initial.id)) ||
-    hasConnectorHops(client.getQueryData(["published-route-resolve", initial.id]));
   const deployment = inventory.deployments.find(
     (d) => d.id === draft.deploymentId,
   );
+  const draftHasConnectors = hasConnectorHops(draft);
+  // Inventory omits secrets. Its revision token detects changes hidden by that
+  // redaction; serialized IR also supports tokenless older inventory snapshots.
+  const matchesSelectedSource = (source?: ServerDeployment) => !!source && !!selectedSource &&
+    source.id === selectedSource.id && source.revisionToken === selectedSource.revisionToken &&
+    JSON.stringify(source.ir) === selectedSource.ir;
+  const sourceChanged = isNew && !!draft.deploymentId && !matchesSelectedSource(deployment);
+  const mixedEditingBlocked = !isNew && (mixedLatest ||
+    [initial, latest, draft, resolved.data].some(hasConnectorHops));
+  const mixedRouteKnown = () => !isNew && (mixedEditingBlocked ||
+    hasConnectorHops(client.getQueryData<PublishedRoute[]>(["published-routes"])?.find(route => route.id === initial.id)) ||
+    hasConnectorHops(client.getQueryData(["published-route-resolve", initial.id])));
   const pathInventory = {
     ...inventory,
     endpoints: (deployment?.ir.programs || []).map((p) => p.listener),
@@ -764,6 +776,10 @@ function PublicRouteEditor({
   };
   const payload = () => {
     if (mixedRouteKnown()) throw new Error(mixedPathEditingReason);
+    if (newPathError) throw new Error(newPathError);
+    const currentSource = client.getQueryData<Infrastructure>(["infrastructure"])?.deployments.find(value => value.id === draft.deploymentId);
+    if (sourceChanged || (isNew && !!draft.deploymentId && !matchesSelectedSource(currentSource)))
+      throw new Error("转发路径已变化，请重新载入并核对完整链路。");
     const port = operationalInteger(publicPort, 1, 65535);
     if (port === undefined) throw new Error("对外端口须为 1–65535 的整数，且不能留空。");
     return {
@@ -771,6 +787,7 @@ function PublicRouteEditor({
       name: draft.name,
       deploymentId: draft.deploymentId,
       endpointIds: draft.endpointIds,
+      ...(isNew && draftHasConnectors ? { hops: draft.hops } : {}),
       publicHost: draft.publicHost,
       publicPort: port,
     };
@@ -890,15 +907,26 @@ function PublicRouteEditor({
       stillCurrent,
     });
   };
-  const chooseDeployment = (id: string) => {
+  const chooseDeployment = (id: string, keepAddress = false) => {
+    if (save.isPending || submitting.current) return;
     const d = inventory.deployments.find((d) => d.id === id);
-    const first = d?.ir.programs[0];
+    const programs = Array.isArray(d?.ir.programs) ? d.ir.programs : [];
+    const ordered = d ? readOrderedServerPath(d, inventory) : undefined;
+    setNewPathError(ordered && !ordered.editable && programs.some(program => program.connectors?.length)
+      ? `无法在此编辑器确认完整链路：${ordered.reason}` : null);
+    const hops: PublishedRouteHop[] | undefined = ordered?.editable && ordered.hops.some(hop => hop.kind === "connector")
+      ? ordered.hops.map(hop => hop.kind === "managed"
+        ? { kind: "managed", endpointId: hop.endpointId }
+        : { kind: "connector", connectorId: hop.connectorId })
+      : undefined;
+    const first = programs[0];
     const host = inventory.hosts.find((h) => h.id === first?.instance.hostId);
+    setSelectedSource(d ? { id: d.id, revisionToken: d.revisionToken, ir: JSON.stringify(d.ir) } : null);
     update({
       deploymentId: id,
-      endpointIds: d?.ir.programs.map((p) => p.listener.id) || [],
-      publicHost: host?.address || "",
-      publicPort: first?.listener.connection.port || 443,
+      endpointIds: programs.map((p) => p.listener.id),
+      hops,
+      ...(!keepAddress ? { publicHost: host?.address || "", publicPort: first?.listener.connection.port || 443 } : {}),
     });
   };
   const close = () => {
@@ -952,6 +980,10 @@ function PublicRouteEditor({
       pending={save.isPending || !!comparison}
     >
       {mixedEditingBlocked && <Notice tone="warning" title={mixedPathEditingReason} />}
+      {newPathError && <Notice tone="warning" title={newPathError} />}
+      {sourceChanged && <Notice tone="warning" title="转发路径已变化，请重新核对完整链路。">
+        <ActionButton variant="outline" disabled={save.isPending} onClick={() => chooseDeployment(draft.deploymentId, true)}>重新载入所选路径</ActionButton>
+      </Notice>}
       <ErrorNotice
         error={error}
         presentation={
@@ -1055,14 +1087,14 @@ function PublicRouteEditor({
           )}
         <Section
           title="转发路径"
-          description="沿用所选转发路径的入口、顺序与出口。"
+          description="按所选转发路径的完整顺序转发。"
         >
           <div className="path-summary space-y-3" aria-label="公开线路转发路径">
-            {draft.endpointIds.map((id, index) => (
-              <span key={id}>
+            {newPathError ? <span>完整路径尚未确认，请先在转发设置中核对。</span> : (draftHasConnectors ? draft.hops || [] : draft.endpointIds.map(endpointId => ({ kind: "managed" as const, endpointId }))).map((hop, index) => (
+              <span key={`${index}-${hop.kind}`}>
                 {index > 0 && <i> → </i>}
-                {pathInventory.endpoints.find((endpoint) => endpoint.id === id)
-                  ?.name || id}
+                {hop.kind === "connector" ? `外部代理 ${hop.connectorId}` :
+                  pathInventory.endpoints.find(endpoint => endpoint.id === hop.endpointId)?.name || hop.endpointId}
               </span>
             ))}
             {!draft.endpointIds.length && (
@@ -1071,6 +1103,9 @@ function PublicRouteEditor({
               </span>
             )}
           </div>
+          {draftHasConnectors ? (
+            <p className="text-sm text-muted-foreground">此线路使用完整代理链。需要调整顺序时，请先编辑转发路径，再重新选择。</p>
+          ) : (
           <Accordion type="multiple" defaultValue={[]} className="w-full">
             {[
               {
@@ -1195,6 +1230,7 @@ function PublicRouteEditor({
               </AccordionItem>
             ))}
           </Accordion>
+          )}
         </Section>
         <div className="form-grid grid gap-4 sm:grid-cols-2">
           <label className="grid gap-2 text-sm font-medium">
@@ -1244,7 +1280,7 @@ function PublicRouteEditor({
           pending={inspect.isPending}
           keepFocusableWhilePending
           disabled={
-            mixedEditingBlocked ||
+            mixedEditingBlocked || sourceChanged || !!newPathError ||
             save.isPending ||
             !draft.name.trim() ||
             !deployment ||
@@ -1262,7 +1298,7 @@ function PublicRouteEditor({
           <ActionButton
             aria-label="保存公开线路"
             disabled={
-              mixedEditingBlocked ||
+              mixedEditingBlocked || sourceChanged || !!newPathError ||
               !preview ||
               !!preview.diagnostics?.length ||
               selectionPending ||
@@ -1970,5 +2006,6 @@ function PublicRouteDetail({
     </>
   );
 }
+
 
 

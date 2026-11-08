@@ -230,6 +230,42 @@ describe("ordered administrator path adapter", () => {
     inventory.instances[0].version = "future";
     expect(orderedPathChangeReason(draft, [managed("a")], inventory)).toContain("核心版本");
   });
+  it("accepts the 64-hop backend bound and refuses a 65th hop without truncation", () => {
+    const { draft, inventory } = fixture();
+    const a = draft.ir.programs[0];
+    draft.ir.programs = [a];
+    a.connectors = Array.from({ length: 63 }, (_, i) => ({ id: `hop-${i}`, ...(i ? { via: `hop-${i - 1}` } : {}), connection: connection(`external-${i}.example`) }));
+    a.defaultAction = { kind: "forward", ref: "hop-62" };
+    const path = readOrderedServerPath(draft, inventory);
+    expect(path.editable).toBe(true);
+    if (!path.editable) throw new Error("Expected editable bound fixture");
+    expect(path.hops).toHaveLength(64);
+    expect(path.hops.at(-1)).toEqual(external("a", "hop-62"));
+    a.connectors.push({ id: "hop-63", via: "hop-62", connection: connection("overflow.example") });
+    a.defaultAction.ref = "hop-63";
+    expect(readOrderedServerPath(draft, inventory)).toMatchObject({ editable: false, reason: expect.stringContaining("64") });
+  });
+  it("keeps sing-box physical order identical to Xray without assuming another runtime version", () => {
+    const { draft, inventory } = fixture();
+    for (const instance of inventory.instances) { instance.adapterId = "routeweaver/sing-box"; instance.version = "1.14.4"; }
+    const result = compileOrderedServerPath(draft, [managed("a"), external("a", "y"), external("a", "x"), managed("b"), external("b", "x")], inventory);
+    expect(result.ir.programs[0].connectors!.find(c => c.id === "y")?.via).toBeUndefined();
+    expect(result.ir.programs[0].connectors!.find(c => c.id === "x")?.via).toBe("y");
+    expect(result.ir.programs[0].connectors!.find(c => c.id === "to-b")?.via).toBe("x");
+  });
+  it("rejects unknown data attached to a requested hop instead of silently dropping it", () => {
+    const { draft, inventory } = fixture();
+    const hops = [Object.assign(managed("a"), { extraIntent: "keep" }), managed("b")];
+    expect(() => compileOrderedServerPath(draft, hops, inventory)).toThrow();
+  });
+  it("preserves Go null collections and explicit empty Via on an unchanged round-trip", () => {
+    const { draft, inventory } = fixture();
+    Object.assign(draft.ir.programs[0], { egress: null, rules: null, resources: null });
+    draft.ir.programs[0].connectors!.find(c => c.id === "x")!.via = "";
+    const path = readOrderedServerPath(draft, inventory);
+    if (!path.editable) throw new Error(path.reason);
+    expect(compileOrderedServerPath(draft, path.hops, inventory)).toBe(draft);
+  });
   it("gives the same connector name distinct stable keys in different programs", () => {
     expect(orderedServerHopKey(external("a", "x"))).toBe("connector:a:x");
     expect(orderedServerHopKey(external("b", "x"))).toBe("connector:b:x");
