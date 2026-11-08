@@ -212,32 +212,115 @@ func (t *renewingDriverTransport) SendServiceHeartbeat(ctx context.Context, h co
 func TestContinuousDriverRenewsWithoutBlockingIndependentLeaseEnforcement(t *testing.T) {
 	for _, slow := range []bool{false, true} {
 		t.Run(fmt.Sprint(slow), func(t *testing.T) {
-			r := openTest(t, t.TempDir(), LocalFixture{})
+			base := time.Now().UTC()
+			var clock atomic.Int64
+			clock.Store(base.UnixNano())
+			now := func() time.Time { return time.Unix(0, clock.Load()).UTC() }
 			d := testDesired(t, 1)
-			d.Lease.ExpiresAt = time.Now().Add(150 * time.Millisecond)
-			tr := &renewingDriverTransport{driverTransport: driverTransport{desired: &d}, slow: slow}
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
+			d.Lease.IssuedAt = base.Add(-time.Second)
+			d.Lease.ExpiresAt = base.Add(150 * time.Millisecond)
+			root := t.TempDir()
+			if err := os.Chmod(root, 0700); err != nil {
+				t.Fatal(err)
+			}
+			fixture := &signalledLeaseFixture{restricted: make(chan struct{})}
+			r, err := Open(root, d.Scope, NewRegistry(fixture), Options{MaxLease: time.Hour, Now: now})
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer r.Close()
+			if st, err := r.Submit(context.Background(), d); err != nil || st.Phase != ObservedConformant {
+				t.Fatalf("initial lease did not activate: %+v %v", st, err)
+			}
+			refresh := controlprotocol.PolicyRefresh{Identity: d.Identity(), IntentID: "service-intent", Sequence: 1, Lease: d.Lease}
+			refresh.Lease.IssuedAt = base
+			refresh.Lease.ExpiresAt = base.Add(time.Minute)
+			tr := &heartbeatCadenceTransport{
+				now: now, polls: make(chan struct{}), proceed: make(chan struct{}),
+				calls: make(chan scheduledHeartbeat, 4), response: make(chan struct{}),
+				result: controlprotocol.ServiceHeartbeatResult{PolicyRefresh: &refresh},
+			}
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			done := make(chan error, 1)
+			var errorsSeen atomic.Int32
 			go func() {
-				_, err := RunDriver(ctx, r, tr, nil, DriverOptions{Continuous: true, PollInterval: 5 * time.Millisecond, LeaseInterval: 5 * time.Millisecond})
+				_, err := RunDriver(ctx, r, tr, nil, DriverOptions{Continuous: true, PollInterval: time.Millisecond, LeaseInterval: time.Millisecond, HeartbeatNow: now, OnTransportError: func(error) { errorsSeen.Add(1) }})
 				done <- err
 			}()
-			time.Sleep(250 * time.Millisecond)
-			st := r.State()
-			if tr.calls.Load() != 1 {
-				t.Fatalf("heartbeat absent or unbounded frequency: %d", tr.calls.Load())
+			// Join even on assertion failure, before closing the reconciler.
+			defer func() {
+				cancel()
+				select {
+				case err := <-done:
+					if err != nil {
+						t.Error(err)
+					}
+				case <-time.After(12 * time.Second):
+					t.Error("driver did not finish bounded cancellation")
+				}
+			}()
+			waitPoll := func() {
+				t.Helper()
+				select {
+				case <-tr.polls:
+				case <-ctx.Done():
+					t.Fatal("driver did not reach the next poll barrier")
+				}
+			}
+			proceed := func() {
+				t.Helper()
+				select {
+				case tr.proceed <- struct{}{}:
+				case <-ctx.Done():
+					t.Fatal("driver did not leave the poll barrier")
+				}
+			}
+			waitPoll()
+			proceed()
+			select {
+			case call := <-tr.calls:
+				if !call.fact.ServiceActive || call.fact.Observed.Identity != d.Identity() || !call.fact.Observed.Known {
+					t.Fatalf("heartbeat lacked the active runtime: %+v", call.fact)
+				}
+			case <-ctx.Done():
+				t.Fatal("driver did not send the initial heartbeat")
 			}
 			if slow {
-				if st.Observed != nil || st.AccessDecision != "lease_expired" {
+				// Expire only after the request has entered the blocked network
+				// call. The real lease ticker must restrict without its response.
+				clock.Store(d.Lease.ExpiresAt.UnixNano())
+				select {
+				case <-fixture.restricted:
+				case <-ctx.Done():
+					t.Fatal("slow refresh blocked expiry")
+				}
+				st := r.State()
+				if ctx.Err() != nil || st.Observed != nil || st.AccessDecision != "lease_expired" {
 					t.Fatalf("slow refresh blocked expiry: %+v", st)
 				}
-			} else if st.Phase != ObservedConformant || st.Observed == nil || st.Observed.Identity != d.Identity() {
-				t.Fatalf("renewal changed runtime or failed: %+v", st)
 			}
-			cancel()
-			if err := <-done; err != nil {
-				t.Fatal(err)
+			close(tr.response)
+			// This barrier follows response application, not merely receipt.
+			// Keep policy time fixed until renewal has had a chance to complete.
+			waitPoll()
+			clock.Store(d.Lease.ExpiresAt.UnixNano())
+			proceed()
+			waitPoll()
+			st := r.State()
+			if ctx.Err() != nil {
+				t.Fatal("driver progressed only after the watchdog")
+			}
+			if slow {
+				if st.Observed != nil || st.AccessDecision != "lease_expired" || errorsSeen.Load() != 1 {
+					t.Fatalf("late renewal revived an expired runtime: %+v, errors=%d", st, errorsSeen.Load())
+				}
+			} else if st.Phase != ObservedConformant || st.Observed == nil || st.Observed.Identity != d.Identity() || errorsSeen.Load() != 0 {
+				t.Fatalf("renewal changed runtime or failed: %+v, errors=%d", st, errorsSeen.Load())
+			}
+			select {
+			case <-tr.calls:
+				t.Fatal("heartbeat repeated before its interval")
+			default:
 			}
 		})
 	}
@@ -253,3 +336,4 @@ func TestBoundedDriverNeverOptsIntoServiceHeartbeats(t *testing.T) {
 		t.Fatal("bounded driver silently requested perpetual authority")
 	}
 }
+

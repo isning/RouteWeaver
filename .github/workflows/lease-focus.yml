@@ -1,0 +1,48 @@
+name: Focused lease renewal regressions
+
+on:
+  push:
+    branches:
+      - 'ux-task-journeys-*'
+      - 'acceptance-checkpoint-*'
+    paths:
+      - 'internal/agent/**'
+      - '.github/workflows/lease-focus.yml'
+      - 'go.mod'
+      - 'go.sum'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lease-focused-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI: "true"
+  GOTOOLCHAIN: local
+  GOCACHE: ${{ github.workspace }}/bin/cache/go-build
+  GOMODCACHE: ${{ github.workspace }}/bin/cache/go-mod
+
+jobs:
+  focused:
+    name: Repeated lease renewal and expiry races (supplemental)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          go: "true"
+      - name: Check lease regression formatting
+        run: test -z "$(gofmt -l internal/agent/policy_refresh_test.go)"
+      - name: Repeat the original failing driver cases under the race detector
+        run: scripts/go.sh test -race ./internal/agent -run '^TestContinuousDriverRenewsWithoutBlockingIndependentLeaseEnforcement$' -count=100 -timeout=5m
+      - name: Check adjacent lease safety and heartbeat cadence contracts
+        run: scripts/go.sh test -race ./internal/agent -run '^Test(PolicyRefresh|ContinuousDriverSpacesHeartbeatsFromResponseCompletion|SlowControlPlaneCannotDelayLeaseRestriction|BoundedDriverNeverOptsIntoServiceHeartbeats)' -count=10 -timeout=5m
+
+# Supplemental feedback only. Repository quality and its required aggregate
+# remain authoritative; repeated focused tests do not replace the full gate.
