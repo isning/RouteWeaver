@@ -190,7 +190,7 @@ it("chooses independent exit deliberately and can cancel a partial selection wit
   const user = userEvent.setup();
   render(<Workspace ids={["entry"]} />);
   expect(screen.queryByRole("combobox", { name: "下一跳服务器" })).toBeNull();
-  await user.click(screen.getByRole("button", { name: "使用另一台服务器出口" }));
+  await user.click(screen.getByRole("button", { name: "选择独立出口" }));
   expect(document.activeElement).toBe(screen.getByRole("combobox", { name: "下一跳服务器" }));
   await choose(user, "下一跳服务器", "exit server");
   await user.click(screen.getByRole("button", { name: "从入口直接访问" }));

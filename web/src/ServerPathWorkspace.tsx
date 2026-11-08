@@ -192,7 +192,7 @@ export function ServerPathWorkspace({
               <ActionButton ref={exitChoice} variant={programs.length > 1 || selectingExit ? "default" : "outline"}
                 aria-pressed={programs.length > 1 || selectingExit} disabled={changing}
                 onClick={() => { setConfirmDirect(false); if (programs.length === 1) setSelectingExit(true); }}>
-                使用另一台服务器出口
+                选择独立出口
               </ActionButton>
             </div>
             {confirmDirect && (

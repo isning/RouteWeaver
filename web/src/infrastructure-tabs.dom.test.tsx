@@ -167,7 +167,7 @@ it("continues from the overview using the exact saved listener and server contex
   await user.click(await screen.findByRole("button", { name: "进入服务器 Tokyo server" }));
   const path = screen.getByRole("link", { name: "创建转发路径" });
   expect(path.getAttribute("href")).toBe("#routes?entryEndpoint=endpoint-1&returnHost=host-1&returnInstance=core-1");
-  await user.click(screen.getByRole("button", { name: "管理监听入口", exact: true }));
+  await user.click(screen.getByRole("button", { name: "管理监听入口" }));
   expect(screen.queryByRole("dialog")).toBeNull();
   const core = screen.getByRole("region", { name: "Tokyo server的Tokyo core" });
   expect(within(core).getByText("Tokyo entry", { exact: true })).toBeTruthy();
@@ -195,7 +195,7 @@ it("offers scoped listener creation only when the selected core has no listeners
   const user = userEvent.setup();
   await user.click(await screen.findByRole("button", { name: "进入服务器 Tokyo server" }));
   expect(screen.queryByRole("button", { name: "管理监听入口" })).toBeNull();
-  await user.click(screen.getByRole("button", { name: "设置监听入口", exact: true }));
+  await user.click(screen.getByRole("button", { name: "设置监听入口" }));
   const editor = await screen.findByRole("dialog", { name: "添加监听端点" });
   expect(within(editor).getByLabelText("所属服务器").textContent).toBe("Tokyo server");
   expect(within(editor).getByLabelText("所属核心").textContent).toBe("Tokyo core");

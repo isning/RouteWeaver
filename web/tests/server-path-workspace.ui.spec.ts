@@ -89,7 +89,7 @@ for (const width of [1440, 390]) {
 
     await expect(editor.getByRole("region", { name: "中转", exact: true })).toHaveCount(0);
     await expect(exit.getByRole("button", { name: "从入口直接访问", exact: true })).toHaveAttribute("aria-pressed", "true");
-    await exit.getByRole("button", { name: "使用另一台服务器出口", exact: true }).click();
+    await exit.getByRole("button", { name: "选择独立出口", exact: true }).click();
     await expect(editor.getByRole("button", { name: "保存草稿", exact: true })).toBeDisabled();
     await capture(page, info, editor, "path-choose-independent-exit", exit.getByRole("combobox", { name: "下一跳服务器", exact: true }));
     await choose(page, editor.getByRole("combobox", { name: "下一跳服务器", exact: true }), names.exit);
