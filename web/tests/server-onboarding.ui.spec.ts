@@ -8,8 +8,35 @@ import { settledTask } from "./ui-settled-task";
 // API setup writes, response substitution, or configuration application.
 test.use({ trace: "off", screenshot: "off", video: "off", reducedMotion: "no-preference" });
 
-async function capture(page: Page, info: TestInfo, name: string, surface: Locator) {
+async function capture(page: Page, info: TestInfo, name: string, surface: Locator, targets: Locator[] = []) {
   await settledTask(surface);
+  const visibility = [];
+  for (const target of targets) {
+    await expect(target).toBeInViewport({ ratio: 1 });
+    const evidence = await target.evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      const pointerlessDisabled = element.matches(":disabled") && getComputedStyle(element).pointerEvents === "none";
+      const points = [[0.5, 0.5], [0.18, 0.18], [0.82, 0.18], [0.18, 0.82], [0.82, 0.82]].map(([x, y]) => {
+        const hit = document.elementFromPoint(rect.left + rect.width * x, rect.top + rect.height * y);
+        // The disabled endpoint picker intentionally ignores pointer events.
+        // Only its immediate layout parent may stand in for that hit, never an
+        // overlay, footer or unrelated element covering the control.
+        return !!hit && (element.contains(hit) || (pointerlessDisabled && hit === element.parentElement));
+      });
+      return {
+        label: element.getAttribute("aria-label") || element.textContent,
+        rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+        fullyInside: rect.left >= 0 && rect.top >= 0 && rect.right <= innerWidth && rect.bottom <= innerHeight,
+        unobscured: points.every(Boolean),
+      };
+    });
+    visibility.push(evidence);
+    expect(evidence.fullyInside, "Exit label and controls fit fully in the viewport").toBe(true);
+    expect(evidence.unobscured, "Exit label and controls are not covered by other content").toBe(true);
+  }
+  if (visibility.length) await info.attach(`${name}-visibility`, {
+    body: JSON.stringify(visibility), contentType: "application/json",
+  });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
   expect(await surface.evaluate((element) => {
     const rect = element.getBoundingClientRect();
@@ -133,9 +160,17 @@ for (const width of [1440, 390]) {
     await pathEditor.getByLabel("转发路径名称", { exact: true }).fill("Unsaved contextual path");
     await capture(page, info, `listener-prefilled-path-${width}`, pathEditor);
     const directExit = pathEditor.getByText("从入口服务器直接访问目标", { exact: true });
-    await directExit.scrollIntoViewIfNeeded();
+    const independentExit = pathEditor.getByText("使用独立出口（可选）", { exact: true });
+    const nextServer = pathEditor.getByRole("combobox", { name: "下一跳服务器", exact: true });
+    const nextEndpoint = pathEditor.getByRole("combobox", { name: "下一跳端点", exact: true });
+    // Scroll the whole optional selector, not the already-visible direct-exit
+    // summary. No selection is made and the contextual draft stays unchanged.
+    await independentExit.locator("..").scrollIntoViewIfNeeded();
     await expect(directExit).toBeInViewport();
-    await capture(page, info, `listener-prefilled-exit-${width}`, pathEditor);
+    await expect(nextServer).toHaveText("选择服务器");
+    await expect(nextEndpoint).toHaveText("先选择服务器");
+    await expect(nextEndpoint).toBeDisabled();
+    await capture(page, info, `listener-prefilled-exit-${width}`, pathEditor, [independentExit, nextServer, nextEndpoint]);
     expect(await read(page.request, "/server-deployments")).toEqual([]);
     const backToServer = pathEditor.getByRole("link", { name: "返回原服务器", exact: true });
     await backToServer.click();
