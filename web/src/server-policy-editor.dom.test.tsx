@@ -1285,11 +1285,11 @@ it.each(["null", "omitted"])("adds the first selected endpoint to a %s program l
   }, true);
   const editor = await openEditor(user);
   expect(fixture.saved).toEqual([]);
-  await user.click(within(editor).getByRole("combobox", { name: "入口服务器" }));
+  await user.click(within(editor).getByRole("combobox", { name: "第 1 跳服务器" }));
   await user.click(await screen.findByRole("option", { name: "Server" }));
-  await user.click(within(editor).getByRole("combobox", { name: "入口端点" }));
+  await user.click(within(editor).getByRole("combobox", { name: "第 1 跳端点" }));
   await user.click(await screen.findByRole("option", { name: /Policy entry/ }));
-  await within(editor).findByRole("combobox", { name: "第 1 跳端点" });
+  await waitFor(() => expect(within(editor).getByRole("combobox", { name: "第 1 跳端点" }).textContent).toContain("Policy entry"));
   expect(fixture.requests).toContain("GET /api/managed-endpoints/entry/reveal");
   await user.click(within(editor).getByRole("button", { name: "保存草稿" }));
   await waitFor(() => expect(fixture.saved).toHaveLength(1));
@@ -1300,3 +1300,4 @@ it.each(["null", "omitted"])("adds the first selected endpoint to a %s program l
   }]);
   expect(fixture.deployment.ir.programs).toBe(shape === "null" ? null : undefined);
 });
+

@@ -36,6 +36,7 @@ test("server diagnostic cancellation retains its target and exact opener at 320p
         version: "26.10.31",
       },
     ],
+    "/api/agent/instances/core/state": { instanceId: "core", phase: "unregistered" },
     "/api/managed-endpoints": [],
     "/api/links": [],
     "/api/server-deployments": [],
@@ -116,3 +117,4 @@ test("server diagnostic cancellation retains its target and exact opener at 320p
   }
   expect(unexpected).toEqual([]);
 });
+

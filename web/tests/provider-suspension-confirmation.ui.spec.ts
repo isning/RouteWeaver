@@ -66,6 +66,7 @@ test("managed provider suspension opt-in preserves complete consequences and saf
         version: "26.3.27-rw1",
       },
     ],
+    "/agent/instances/managed-core/state": { instanceId: "managed-core", phase: "unregistered" },
     "/managed-endpoints": [],
     "/links": [],
     "/server-deployments": [],
@@ -178,3 +179,4 @@ test("managed provider suspension opt-in preserves complete consequences and saf
     expect(unexpected).toEqual([]);
   }
 });
+

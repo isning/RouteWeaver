@@ -91,7 +91,7 @@ it("retires only the previous setup save acknowledgment when the next editor ope
     toast.success("已停用测试通知", { duration: Infinity, action: { label: "撤销停用", onClick: undo } });
     toast("仍有待核对结果", { duration: Infinity, action: { label: "查看结果", onClick: inspect } });
   });
-  await user.click(detail.getByRole("button", { name: "添加核心" }));
+  await user.click(detail.getByRole("button", { name: "开始配置核心" }));
   const core = within(await screen.findByRole("dialog", { name: "添加核心实例" }));
   await waitFor(() => expect(screen.queryByText("服务器「测试服务器」已保存", { exact: true })).toBeNull());
   expect(screen.getByText("节点连接失败，请检查连接", { exact: true })).toBeTruthy();

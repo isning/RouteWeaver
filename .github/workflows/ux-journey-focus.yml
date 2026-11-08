@@ -37,6 +37,10 @@ jobs:
           src/server-forwarding.dom.test.tsx
           src/server-path-workspace.dom.test.tsx
           src/server-workspace.dom.test.tsx
+          src/server-onboarding.dom.test.tsx
+          src/server-policy-editor.dom.test.tsx
+          src/setup-save-notice.dom.test.tsx
+          src/diagnostic-cancel-context.dom.test.tsx
           src/server-overview.dom.test.tsx
           src/infrastructure-tabs.dom.test.tsx
           src/infrastructure-creation.dom.test.tsx

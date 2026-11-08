@@ -11,6 +11,7 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ConfirmationProvider } from "@/ui-patterns/confirmations";
 import { ServersPage } from "./Infrastructure";
+import type { AgentState } from "./types";
 
 // Real page/component wiring with controlled HTTP; no real node or cancellation.
 const json = (value: unknown, status = 200) =>
@@ -97,6 +98,9 @@ function fixture(
     "/api/admin/diagnostic-targets": [target],
     "/api/admin/diagnostic-jobs": [job],
     "/api/admin/nodes/host/observability": { config: {} },
+    "/api/agent/instances/core/state": {
+      instanceId: "core", phase: "unregistered",
+    } satisfies AgentState,
   };
   vi.stubGlobal(
     "fetch",

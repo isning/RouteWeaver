@@ -209,7 +209,7 @@ it("opens the exact newly registered core setup and preserves its managed listen
   const { writes } = mount({ noCore: true });
   const user = userEvent.setup();
   await user.click(await screen.findByRole("button", { name: host.name }));
-  await user.click(screen.getByRole("button", { name: "添加核心" }));
+  await user.click(screen.getByRole("button", { name: "开始配置核心" }));
   const editor = await screen.findByRole("dialog", { name: "添加核心实例" });
   await user.type(within(editor).getByLabelText("实例名称"), "Created managed core");
   await user.click(within(editor).getByLabelText("核心家族"));
@@ -304,9 +304,9 @@ it("keeps two confirmed cores discoverable after closing setup while inventory r
   const { controls, writes } = mount({ noCore: true });
   const user = userEvent.setup();
   await user.click(await screen.findByRole("button", { name: host.name }));
-  for (const name of ["First saved core", "Second saved core"]) {
+  for (const [index, name] of ["First saved core", "Second saved core"].entries()) {
     const hostSheet = await screen.findByRole("region", { name: host.name });
-    await user.click(within(hostSheet).getByRole("button", { name: "添加核心" }));
+    await user.click(within(hostSheet).getByRole("button", { name: index === 0 ? "开始配置核心" : "添加核心" }));
     const editor = await screen.findByRole("dialog", { name: "添加核心实例" });
     await user.type(within(editor).getByLabelText("实例名称"), name);
     controls.failInventory = true;
