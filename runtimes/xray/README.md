@@ -15,7 +15,7 @@ Xray; this nested module imports only the root's pure policy/private-IPC contrac
   credential version. CP independently resolves and verifies that mapping.
 - Vision (including outbound Vision), REALITY, other entry protocols/transports,
   UDP, fallbacks, reverse APIs,
-  dynamic inbound APIs, PROXY protocol/socket/finalmask wrappers and enabled sniffing are
+  dynamic inbound APIs, ingress PROXY protocol/socket/finalmask wrappers and enabled sniffing are
   rejected. Vision is not claimed safe from code inspection or a splice flag.
 - `tlsSettings.pinnedPeerCertSha256` is rejected on both ingress and egress,
   including an explicitly empty/null value. Certificate pinning is not a managed
@@ -33,6 +33,30 @@ The wrapper is registered through the upstream public dispatcher feature seam.
 It constructs and delegates to the official dispatcher, rather than copying it.
 Both `Dispatch` and `DispatchLink` are enforced. Authenticated mux streams retain
 independent admission and interruption even when their carrier remains open.
+
+## Scoped outbound chains
+
+Administrator-declared proxy outbounds may use exactly one socket option,
+`dialerProxy`, naming another supported SOCKS, Shadowsocks or VLESS outbound.
+Tags must be unique and valid. Missing references, self references, cycles,
+non-proxy targets, extra/duplicate socket fields and alternate `proxySettings`
+are rejected. Declaration order does not select traffic order. Ingress socket
+options and all existing transport, security, Vision and destination restrictions
+remain unchanged.
+
+Detours use the unchanged upstream outbound-handler path; they do not create
+another public entry or another admission/accounting boundary. The managed
+dispatcher still validates the final user destination and binds the physical
+client before dispatch. An administrator-owned private connector does not grant
+the user access to private destinations.
+
+Payload admission cutoff and physical socket cleanup are distinct. Upstream
+detour contexts use their own link lifetime and half-close timers. Tests must
+verify that revocation, lease expiry and byte limits prevent new payload admission
+and preserve final counters, separately from bounded cleanup of intermediate
+sockets. See [mixed-chain acceptance](../../docs/verification/MIXED-PROXY-CHAINS-2026-11-08.md)
+for exact tested checkpoints and remaining evidence; successful parsing alone
+does not establish these enforcement properties.
 
 ## Policy and accounting
 

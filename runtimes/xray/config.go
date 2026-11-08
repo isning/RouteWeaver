@@ -168,7 +168,7 @@ func build(native []byte, d entrypolicy.Descriptor) (*core.Config, error) {
 			Tag           string          `json:"tag"`
 			Protocol      string          `json:"protocol"`
 			ProxySettings json.RawMessage `json:"proxySettings"`
-			Settings struct {
+			Settings      struct {
 				VNext []struct {
 					Users []struct {
 						Flow string `json:"flow"`

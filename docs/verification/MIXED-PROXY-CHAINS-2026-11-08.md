@@ -71,6 +71,21 @@ inner dialer context cancellation differs from the ingress context, continuous
 two-detour flows must also prove revocation, lease-expiry and budget enforcement,
 including final usage, before managed multi-external support is accepted.
 
+Commit `91cada604be7d16336a83210597701613f178598` adds strict outbound-only
+detour validation. Its [focused runtime job](https://github.com/isning/RouteWeaver/actions/runs/42498466785/job/128785833297)
+passed the race-enabled graph/socket validation tests. This is not yet proof of
+continuous-flow cutoff or once-only payload accounting. Those runtime tests
+must run separately.
+
+The [91cada native rerun](https://github.com/isning/RouteWeaver/actions/runs/42498466765/job/128785833517)
+then ran and passed all nine original external-peer scenarios, with zero failures
+and zero skips. The two previously blocked managed multi-external paths completed
+real handshakes, payload transfer, and the retained wrong-credential/removed-hop
+negative checks. Each successful scenario recorded the required next hop and
+actual bidirectional bytes for the initial and restored-authentication requests.
+This completes that bounded traffic matrix, not the separate sustained-flow
+accounting and cutoff acceptance.
+
 `TestNativeMixedConnectorChainLoopback` selects pinned stock Xray and sing-box.
 `TestManagedMixedConnectorChainLoopback` selects the built managed-Xray runtime
 as ingress, with a stock transit when required. Each runs these path shapes:
