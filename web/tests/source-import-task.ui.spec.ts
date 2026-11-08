@@ -493,6 +493,9 @@ test("a rich Profile keeps its routing and ordered inputs through immediate real
       .getByLabel("配置名称", { exact: true })
       .fill("Unsaved rich Profile");
     await page.getByRole("tab", { name: "策略组", exact: true }).click();
+    const groupSummary = page.locator("summary").filter({ hasText: "Chosen group" });
+    await expect(groupSummary).toContainText("当前配置中的全部连接");
+    await groupSummary.click();
     await page
       .getByLabel("策略组名称", { exact: true })
       .fill("Unsaved chosen group");
@@ -624,3 +627,4 @@ test("a rich Profile keeps its routing and ordered inputs through immediate real
     });
   }
 });
+

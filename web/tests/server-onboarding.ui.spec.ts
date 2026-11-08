@@ -9,6 +9,11 @@ import { settledTask } from "./ui-settled-task";
 test.use({ trace: "off", screenshot: "off", video: "off", reducedMotion: "no-preference" });
 
 async function capture(page: Page, info: TestInfo, name: string, surface: Locator, targets: Locator[] = []) {
+  // Save feedback is real transitional UI. Move away so hover does not pause
+  // its own dismissal timer, then capture the naturally settled task. Never
+  // hide/remove notifications or relax the visibility and hit-test checks.
+  await page.mouse.move(0, 0);
+  await expect(page.locator("[data-sonner-toast]:visible")).toHaveCount(0);
   await settledTask(surface);
   const visibility = [];
   for (const target of targets) {
@@ -31,8 +36,8 @@ async function capture(page: Page, info: TestInfo, name: string, surface: Locato
       };
     });
     visibility.push(evidence);
-    expect(evidence.fullyInside, "Exit label and controls fit fully in the viewport").toBe(true);
-    expect(evidence.unobscured, "Exit label and controls are not covered by other content").toBe(true);
+    expect(evidence.fullyInside, "Captured action and controls fit fully in the viewport").toBe(true);
+    expect(evidence.unobscured, "Captured action and controls are not covered by other content").toBe(true);
   }
   if (visibility.length) await info.attach(`${name}-visibility`, {
     body: JSON.stringify(visibility), contentType: "application/json",
@@ -162,7 +167,9 @@ for (const width of [1440, 390]) {
     await host.getByRole("tab", { name: "概览", exact: true }).click();
     const createPath = setup.getByRole("link", { name: "创建转发路径", exact: true });
     await expect(createPath).toHaveAttribute("href", `#routes?entryEndpoint=${listenerRecords[0].id}&returnHost=${cores[0].hostId}&returnInstance=${cores[0].id}`);
-    await createPath.scrollIntoViewIfNeeded();
+    // Keep the next action in the reading area rather than flush against the
+    // mobile viewport edge, where a legitimate save notification may remain.
+    await createPath.evaluate((element) => element.scrollIntoView({ block: "center", inline: "nearest", behavior: "instant" }));
     await capture(page, info, `server-actionable-setup-${width}`, setup, [createPath]);
     await createPath.click();
     const pathEditor = page.getByRole("dialog", { name: "新建转发路径", exact: true });
@@ -172,7 +179,7 @@ for (const width of [1440, 390]) {
     await expect(pathEditor.getByText("从入口服务器直接访问目标", { exact: true })).toBeVisible();
     await pathEditor.getByLabel("转发路径名称", { exact: true }).fill("Unsaved contextual path");
     await capture(page, info, `listener-prefilled-path-${width}`, pathEditor);
-    const independentExit = pathEditor.getByRole("button", { name: "使用另一台服务器出口", exact: true });
+    const independentExit = pathEditor.getByRole("button", { name: "选择独立出口", exact: true });
     await independentExit.click();
     const nextServer = pathEditor.getByRole("combobox", { name: "下一跳服务器", exact: true });
     const nextEndpoint = pathEditor.getByRole("combobox", { name: "下一跳端点", exact: true });
@@ -210,4 +217,5 @@ for (const width of [1440, 390]) {
     expect(await read(page.request, "/server-deployments")).toEqual([]);
   });
 }
+
 

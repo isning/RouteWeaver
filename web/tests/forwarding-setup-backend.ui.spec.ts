@@ -130,6 +130,11 @@ async function navigateAfterClose(page: Page, width: number, name: string) {
 }
 
 async function capture(page: Page, info: TestInfo, name: string, surface: Locator, targets: Locator[] = []) {
+  // Save feedback is real transitional UI. Move away so hover does not pause
+  // its own dismissal timer, then capture the naturally settled task. Never
+  // hide/remove notifications or relax the visibility and hit-test checks.
+  await page.mouse.move(0, 0);
+  await expect(page.locator("[data-sonner-toast]:visible")).toHaveCount(0);
   await settledTask(surface);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
   expect(await surface.evaluate((element) => {
@@ -204,8 +209,9 @@ for (const width of [1440, 390]) {
     // Continue from the saved server, rather than finding it in another tab.
     const hostDetail = page.getByRole("region", { name: names.host, exact: true });
     await expect(hostDetail.getByText("先添加核心，再配置监听端点", { exact: true })).toBeVisible();
-    await capture(page, info, `setup-host-continuation-${width}`, hostDetail, [hostDetail.getByRole("button", { name: "添加核心", exact: true })]);
-    await hostDetail.getByRole("button", { name: "添加核心", exact: true }).click();
+    const startCore = hostDetail.getByRole("list", { name: "服务器配置步骤" }).getByRole("button", { name: "开始配置核心", exact: true });
+    await capture(page, info, `setup-host-continuation-${width}`, hostDetail, [startCore]);
+    await startCore.click();
     const coreEditor = page.getByRole("dialog", { name: "添加核心实例", exact: true });
     await expect(page.locator(".server-workspace")).toBeAttached();
     await expect(coreEditor.getByLabel("所属服务器", { exact: true })).toHaveText(names.host);
@@ -473,4 +479,5 @@ for (const width of [1440, 390]) {
     });
   });
 }
+
 

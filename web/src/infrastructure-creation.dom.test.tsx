@@ -637,7 +637,8 @@ describe("infrastructure creation user tasks", () => {
     expect(drawer.getByText("先添加核心，再配置监听端点")).toBeTruthy();
     expect(drawer.queryByText("尚未收到服务器资源数据")).toBeNull();
     expect(drawer.queryByText("先登记测试目标")).toBeNull();
-    const add = drawer.getByRole("button", { name: "添加核心" });
+    const add = within(drawer.getByRole("list", { name: "服务器配置步骤" })).getByRole("button", { name: "开始配置核心" });
+    expect(drawer.getByRole("button", { name: "添加核心" }).getAttribute("data-variant")).toBe("outline");
     expect(add.getAttribute("data-variant")).toBe("default");
     await user.click(add);
     await user.click(
@@ -1345,4 +1346,5 @@ it("releases the pending enrollment guard after rejection and retains expiry for
   await screen.findByText("valid scope and expiry within one year required");
   await waitFor(() => expect(hasUnsavedChanges()).toBe(false));
 });
+
 

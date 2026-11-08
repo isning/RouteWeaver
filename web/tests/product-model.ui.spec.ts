@@ -844,7 +844,7 @@ for (const intent of ["endpoint", "direct"] as const) {
     const defaultControl = task.locator(".default-route [role='combobox']");
     await task.locator(".profile-traffic-task").scrollIntoViewIfNeeded();
     await expect(
-      task.getByRole("heading", { name: "流量去向", exact: true }),
+      task.getByRole("heading", { name: "默认流量去向", exact: true }),
     ).toBeInViewport({ ratio: 1 });
     await expect(task.locator("label.default-route")).toBeInViewport({
       ratio: 1,
@@ -871,7 +871,7 @@ for (const intent of ["endpoint", "direct"] as const) {
         "intent-editor",
         page.locator(".profile-intent-editor"),
         defaultControl,
-        task.getByRole("heading", { name: "流量去向", exact: true }),
+        task.getByRole("heading", { name: "默认流量去向", exact: true }),
       );
     const choice = task.getByLabel("默认流量行为", { exact: true });
     await choice.click();
@@ -2869,4 +2869,5 @@ test("25 synthetic configurations and 100 independent links remain searchable, b
     capacityBenchmark: false,
   });
 });
+
 

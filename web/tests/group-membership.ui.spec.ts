@@ -309,6 +309,9 @@ test("automatic members are an explicit additive choice over current source, col
     // A fresh editor opens its ordinary routing tab; inspect persisted membership
     // through the visible group tab rather than an unmounted previous-session panel.
     await page.getByRole("tab", { name: "策略组", exact: true }).click();
+    const savedGroupSummary = page.locator("summary").filter({ hasText: groupName });
+    await expect(savedGroupSummary).toContainText("当前配置中的全部连接");
+    await savedGroupSummary.click();
     await expect(toggle).toBeChecked();
     await expect(
       group.getByText("当前配置中的全部连接", { exact: true }),
@@ -362,3 +365,4 @@ test("automatic members are an explicit additive choice over current source, col
     });
   }
 });
+

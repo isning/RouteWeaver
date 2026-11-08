@@ -444,7 +444,8 @@ test("removing the last direct Source keeps input focus and saves no old materia
   await expect(
     page.getByRole("combobox", { name: "使用的订阅来源", exact: true }),
   ).toBeFocused();
-  await expect(page.getByText("0 个有效连接", { exact: true })).toBeVisible();
+  await expect(page.getByText("直连与拒绝不需要代理连接", { exact: true })).toBeVisible();
+  await expect(page.getByText("0 个有效连接", { exact: true })).toHaveCount(0);
   const savedResponse = page.waitForResponse(
     (r) =>
       r.url().endsWith(`/profiles/${profile.id}`) &&
@@ -464,3 +465,4 @@ test("removing the last direct Source keeps input focus and saves no old materia
     animations: "disabled",
   });
 });
+
