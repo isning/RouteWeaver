@@ -370,11 +370,8 @@ for (const width of [1440, 390]) {
     const tlsTitle = lineEditor.getByText("公网入口需要启用 TLS", { exact: true });
     await expect(tlsTitle).toBeVisible();
     const tlsNotice = lineEditor.getByRole("alert").filter({ hasText: "公网入口需要启用 TLS" });
-    await expect(tlsNotice).toContainText("此公开线路尚不能保存，当前输入已保留。");
-    await expect(tlsNotice).toContainText("服务器 → 监听端点");
-    await expect(tlsNotice).toContainText("检查监听更新");
-    await expect(tlsNotice).toContainText("TLS 证书与安全参数");
-    await expect(tlsNotice).toContainText("保存路径后重新检查公开线路。");
+    await expect(tlsNotice).toContainText("当前输入已保留。可在这里修正入口与转发路径，再重新检查。");
+    await expect(lineEditor.getByRole("button", { name: "就地修复 TLS", exact: true })).toBeVisible();
     const tlsDetails = tlsNotice.locator("details");
     await expect(tlsDetails).not.toHaveAttribute("open", "");
     await expect(tlsNotice.getByText(publicTLSRefusal, { exact: true })).not.toBeVisible();

@@ -50,6 +50,7 @@ import type { Infrastructure, PlatformEntry, ServerDeployment } from "./types";
 import { useDiscardConfirmation } from "./useDiscardConfirmation";
 import { useWorkspaceViewEntry } from "./useWorkspaceViewEntry";
 import { WorkspaceHistoryContext } from "./SubscriptionContext";
+import { PublicRouteTLSRepair, type PublicRouteTLSRepairTarget } from "./PublicRouteTLSRepair";
 import { WORKSPACE_NAVIGATION_EVENT } from "./workspace-history";
 import { PublicRouteEditComparison, publicRouteFields, reviewedPublicRoute, type ReviewedPublicRoute } from "./PublicRouteEditComparison";
 interface RoutePathSummary {
@@ -597,6 +598,7 @@ function PublicRouteEditor({
     version.current++;
     previewVersion.current = null;
     invalidateComparison();
+    invalidateTLSRepair();
     setPreview(null);
     setPendingEndpoints(pendingEndpointState.current);
   };
@@ -617,6 +619,19 @@ function PublicRouteEditor({
   const mounted = useRef(false);
   const comparisonAttempt = useRef(0);
   const comparisonTrigger = useRef<HTMLButtonElement>(null);
+  const tlsRepairTrigger = useRef<HTMLButtonElement>(null);
+  const inspectTrigger = useRef<HTMLButtonElement>(null);
+  const tlsReturnFocus = useRef<"repair" | "inspect" | null>(null);
+  const tlsRepairEpoch = useRef(0);
+  const [tlsTask, setTLSTask] = useState<{
+    target: PublicRouteTLSRepairTarget;
+    ready: boolean;
+    stillCurrent(): boolean;
+  } | null>(null);
+  const invalidateTLSRepair = () => {
+    tlsRepairEpoch.current++;
+    setTLSTask(null);
+  };
   const nameInput = useRef<HTMLInputElement>(null);
   const [readingLatest, setReadingLatest] = useState(false);
   const [comparisonError, setComparisonError] = useState<string>();
@@ -639,12 +654,14 @@ function PublicRouteEditor({
       previewVersion.current = null;
       setPreview(null);
       invalidateComparison();
+      invalidateTLSRepair();
     };
     window.addEventListener(WORKSPACE_NAVIGATION_EVENT, changed);
     window.addEventListener("hashchange", changed);
     return () => {
       mounted.current = false;
       comparisonAttempt.current++;
+      tlsRepairEpoch.current++;
       window.removeEventListener(WORKSPACE_NAVIGATION_EVENT, changed);
       window.removeEventListener("hashchange", changed);
     };
@@ -699,6 +716,7 @@ function PublicRouteEditor({
     version.current++;
     previewVersion.current = null;
     invalidateComparison();
+    invalidateTLSRepair();
     setDraft({ ...draft, ...patch });
     setPreview(null);
   };
@@ -785,6 +803,22 @@ function PublicRouteEditor({
     return !!owner &&
       owner.revision === version.current && owner.attempt === attempt.current;
   });
+  const openTLSRepair = () => {
+    if (!isPublicTLSRefusal(error) || tlsTask || save.isPending || inspect.isPending || selectionPending || !draft.endpointIds[0]) return;
+    const epoch = ++tlsRepairEpoch.current;
+    const revision = version.current;
+    const currentView = ownView();
+    const stillCurrent = () => currentView() && tlsRepairEpoch.current === epoch && version.current === revision;
+    if (!stillCurrent()) return;
+    invalidateComparison();
+    previewVersion.current = null;
+    setPreview(null);
+    setTLSTask({
+      target: { lineId: draft.id, deploymentId: draft.deploymentId, endpointId: draft.endpointIds[0] },
+      ready: false,
+      stillCurrent,
+    });
+  };
   const chooseDeployment = (id: string) => {
     const d = inventory.deployments.find((d) => d.id === id);
     const first = d?.ir.programs[0];
@@ -798,7 +832,7 @@ function PublicRouteEditor({
   };
   const close = () => {
     if (save.isPending) return;
-    if (comparison) return;
+    if (comparison || tlsTask) return;
     if (!selectionPending && !dirty) {
       invalidateComparison();
       return onClose();
@@ -821,19 +855,22 @@ function PublicRouteEditor({
     <TaskSheet
       bodyProps={{ className: "space-y-5" }}
       title={isNew ? "配置公开线路" : `编辑 ${initial.name}`}
-      open={!discardClosing}
+      open={!discardClosing && !tlsTask}
+      initialFocus={() => tlsReturnFocus.current === "repair"
+        ? tlsRepairTrigger.current || inspectTrigger.current || nameInput.current
+        : tlsReturnFocus.current === "inspect" ? inspectTrigger.current || nameInput.current : null}
       onOpenChange={(next) => {
         if (!next) close();
       }}
-      onReady={() =>
-        ((visible) => {
-          if (!visible && discardClosing) onClose();
-        })(true)
-      }
+      onReady={() => { tlsReturnFocus.current = null; }}
       onClosed={() => {
-        ((visible) => {
-          if (!visible && discardClosing) onClose();
-        })(false);
+        if (discardClosing) onClose();
+        else if (tlsTask) {
+          // Finish the parent's exit before opening the next focus scope.
+          if (tlsTask.stillCurrent())
+            setTLSTask(current => current === tlsTask ? { ...current, ready: true } : current);
+          else invalidateTLSRepair();
+        }
       }}
       size="lg"
       pending={save.isPending || !!comparison || discardConfirming}
@@ -845,12 +882,19 @@ function PublicRouteEditor({
             ? {
                 title: "公网入口需要启用 TLS",
                 recovery:
-                  "此公开线路尚不能保存，当前输入已保留。请在「服务器 → 监听端点」为入口启用 TLS 并保存，再编辑所选转发路径，通过「检查监听更新」同步入口，并补全「TLS 证书与安全参数」。保存路径后重新检查公开线路。",
+                  "当前输入已保留。可在这里修正入口与转发路径，再重新检查。",
                 detailsLabel: "技术详情",
               }
             : undefined
         }
       />
+      {isPublicTLSRefusal(error) && <ActionButton
+        ref={tlsRepairTrigger}
+        variant="outline"
+        disabled={save.isPending || inspect.isPending || selectionPending || discardConfirming}
+        onKeyDown={event => { if (event.repeat) event.preventDefault(); }}
+        onClick={event => { if (event.detail <= 1) openTLSRepair(); }}
+      >就地修复 TLS</ActionButton>}
       {conflicted && (
         <Notice
           tone="warning"
@@ -1119,7 +1163,9 @@ function PublicRouteEditor({
           取消
         </ActionButton>
         <ActionButton
+          ref={inspectTrigger}
           pending={inspect.isPending}
+          keepFocusableWhilePending
           disabled={
             save.isPending ||
             !draft.name.trim() ||
@@ -1129,7 +1175,7 @@ function PublicRouteEditor({
             selectionPending
           }
           onKeyDown={event => { if (event.repeat) event.preventDefault(); }}
-          onClick={event => { if (event.detail <= 1 && !comparison) inspect.mutate(); }}
+          onClick={event => { if (event.detail <= 1 && !comparison && !tlsTask) inspect.mutate(); }}
           variant={preview ? "outline" : "default"}
         >
           检查公开线路
@@ -1146,7 +1192,7 @@ function PublicRouteEditor({
             pending={save.isPending}
             onKeyDown={event => { if (event.repeat) event.preventDefault(); }}
             onClick={event => {
-              if (event.detail > 1 || submitting.current || conflicted || comparison ||
+              if (event.detail > 1 || submitting.current || conflicted || comparison || tlsTask ||
                 previewVersion.current !== version.current || !preview || preview.diagnostics?.length || selectionPending) return;
               submitting.current = true;
               save.mutate(onSaved);
@@ -1158,6 +1204,26 @@ function PublicRouteEditor({
         )}
       </div>
     </TaskSheet>
+    {tlsTask?.ready && <PublicRouteTLSRepair
+      target={tlsTask.target}
+      inventory={inventory}
+      isCurrent={tlsTask.stillCurrent}
+      onClose={() => {
+        tlsReturnFocus.current = "repair";
+        invalidateTLSRepair();
+      }}
+      onRecheck={() => {
+        if (!tlsTask.stillCurrent()) return;
+        tlsReturnFocus.current = "inspect";
+        invalidateTLSRepair();
+        version.current++;
+        previewVersion.current = null;
+        setPreview(null);
+        // This is the explicit final repair action, after the child verifies
+        // freshly read summaries. It checks the same draft; it never saves it.
+        inspect.mutate();
+      }}
+    />}
     {comparison && <PublicRouteEditComparison
       current={comparison.current}
       publicPort={comparison.publicPort}

@@ -3,6 +3,8 @@ import { Input } from "@/components/ui/input";
 
 type Props = Omit<ComponentProps<typeof Input>, "value" | "defaultValue" | "onChange" | "onInput" | "type" | "min" | "max" | "step"> & {
   value?: number | null;
+  /** Initial spelling for a caller that retains raw input across task remounts. */
+  initialInputText?: string;
   onValueChange?: (value: number | null) => void;
   onInputText?: (text: string) => void;
   resetKey?: Key;
@@ -16,12 +18,17 @@ type Props = Omit<ComponentProps<typeof Input>, "value" | "defaultValue" | "onCh
 export function NumericInput({ resetKey, ...props }: Props) {
   return <NumericControl key={resetKey} {...props} />;
 }
-function NumericControl({ value, onValueChange, onInputText, min, max, step = 1, precision, onKeyDown, ...props }: Props) {
-  const [text, setText] = useState(value == null ? "" : String(value));
-  const emitted = useRef<number | null | undefined>(undefined);
+function NumericControl({ value, initialInputText, onValueChange, onInputText, min, max, step = 1, precision, onKeyDown, ...props }: Props) {
+  const [text, setText] = useState(initialInputText ?? (value == null ? "" : String(value)));
+  const emitted = useRef<number | null | undefined>(initialInputText === undefined ? undefined : value);
   const control = useRef<HTMLInputElement | null>(null);
   useEffect(() => {
-    if (value !== emitted.current) setText(value == null ? "" : String(value));
+    if (value !== emitted.current) {
+      // An external value is now the synchronized baseline too. Returning to
+      // an older number must not be mistaken for the initial raw spelling.
+      emitted.current = value;
+      setText(value == null ? "" : String(value));
+    }
   }, [value]);
   const numeric = text.trim() !== "" && /^[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$/.test(text) ? Number(text) : undefined;
   const invalid = text !== "" && (numeric === undefined || !Number.isFinite(numeric) || min !== undefined && numeric < min || max !== undefined && numeric > max || precision === 0 && !Number.isInteger(numeric));

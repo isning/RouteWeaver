@@ -21,7 +21,7 @@ export function operationalInteger(raw: string | number, min: number, max: numbe
 
 // NumericInput owns spelling and stepping; callers own every raw edit and validate
 // again at their request boundary. Do not send its rounded display value.
-export function OperationalIntegerInput({ value, onInputText, min, max, ...props }: Omit<ComponentProps<typeof NumericInput>, "value" | "onValueChange" | "min" | "max"> & {
+export function OperationalIntegerInput({ value, onInputText, min, max, ...props }: Omit<ComponentProps<typeof NumericInput>, "value" | "onValueChange" | "initialInputText" | "min" | "max"> & {
   value: string | number;
   min: number;
   max: number;
@@ -30,7 +30,7 @@ export function OperationalIntegerInput({ value, onInputText, min, max, ...props
   if (value === "") numeric.current = null;
   else if (/^[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$/.test(String(value)) && Number.isFinite(Number(value)))
     numeric.current = Number(value);
-  return <NumericInput {...props} value={numeric.current} min={min} max={max} precision={0}
+  return <NumericInput {...props} value={numeric.current} initialInputText={String(value)} min={min} max={max} precision={0}
     aria-invalid={props["aria-invalid"] || operationalInteger(value, min, max) === undefined || undefined}
     onInputText={onInputText} />;
 }

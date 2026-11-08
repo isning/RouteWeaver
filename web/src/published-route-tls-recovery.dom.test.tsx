@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -14,6 +15,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { PublishedRoutesPage } from "./PublishedRoutes";
 import type { Infrastructure } from "./types";
 import type { ReactNode } from "react";
+import { WorkspaceHistoryContext } from "./SubscriptionContext";
+import { createWorkspaceHistory, type WorkspaceHistory } from "./workspace-history";
 
 const json = (value: unknown, status = 200) =>
   new Response(JSON.stringify(value), {
@@ -160,9 +163,9 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
-async function openEditor(extra?: Parameters<typeof mockInventory>[0]) {
+async function openEditor(extra?: Parameters<typeof mockInventory>[0], workspace?: WorkspaceHistory) {
   const requests = mockInventory(extra);
-  mount(<PublishedRoutesPage />);
+  mount(<WorkspaceHistoryContext.Provider value={workspace ? { current: workspace } : null}><PublishedRoutesPage /></WorkspaceHistoryContext.Provider>);
   const user = userEvent.setup();
   await user.click(await screen.findByRole("button", { name: "编辑" }));
   const editor = within(await screen.findByRole("dialog", { name: "编辑 Office line" }));
@@ -186,11 +189,8 @@ it.each(["preview", "save"] as const)("explains the exact public TLS %s refusal 
     await user.click(await editor.findByRole("button", { name: "保存公开线路" }));
   const title = await editor.findByText(tlsTitle);
   const notice = within(title.closest('[role="alert"]')! as HTMLElement);
-  expect(notice.getByText(/此公开线路尚不能保存，当前输入已保留/)).toBeTruthy();
-  expect(notice.getByText(/服务器 → 监听端点/)).toBeTruthy();
-  expect(notice.getByText(/检查监听更新/)).toBeTruthy();
-  expect(notice.getByText(/TLS 证书与安全参数/)).toBeTruthy();
-  expect(notice.getByText(/保存路径后重新检查公开线路/)).toBeTruthy();
+  expect(notice.getByText("当前输入已保留。可在这里修正入口与转发路径，再重新检查。", { exact: true })).toBeTruthy();
+  expect(editor.getByRole("button", { name: "就地修复 TLS" })).toBeTruthy();
   const diagnostic = notice.getByText(tlsRefusal, { exact: true });
   const details = diagnostic.closest("details")!;
   expect(details.open).toBe(false);
@@ -216,6 +216,7 @@ it.each(["preview", "save"] as const)("explains the exact public TLS %s refusal 
   fireEvent.change(port, { target: { value: "9443" } });
   expect(editor.queryByRole("button", { name: "保存公开线路" })).toBeNull();
   expect(editor.queryByText(tlsTitle)).toBeNull();
+  expect(editor.queryByRole("button", { name: "就地修复 TLS" })).toBeNull();
 });
 
 it.each([
@@ -235,6 +236,7 @@ it.each([
   await editor.findByText("操作未完成", { exact: true });
   expect(editor.getByText(diagnostic, { exact: true }).closest("details")).toBeNull();
   expect(editor.queryByText(tlsTitle)).toBeNull();
+  expect(editor.queryByRole("button", { name: "就地修复 TLS" })).toBeNull();
   expect(editor.queryByText("技术详情", { exact: true })).toBeNull();
   expect((port as HTMLInputElement).value).toBe("8443");
   expect(editor.queryByRole("button", { name: "保存公开线路" })).toBeNull();
@@ -257,6 +259,7 @@ it("removes a previous TLS save refusal after a successful recheck of the same d
   await editor.findByText("路径检查完成", { exact: true });
   expect(editor.getByRole("button", { name: "保存公开线路" }).hasAttribute("disabled")).toBe(false);
   expect(editor.queryByText(tlsTitle)).toBeNull();
+  expect(editor.queryByRole("button", { name: "就地修复 TLS" })).toBeNull();
   expect(editor.queryByText(tlsRefusal, { exact: true })).toBeNull();
   expect(requests.filter(request => request.method === "PUT")).toHaveLength(1);
 });
@@ -276,6 +279,7 @@ it.each(["address", "path"] as const)("invalidates TLS recovery after a draft %s
     expect(editor.getByRole("combobox", { name: "服务器转发路径" }).textContent).toBe("Other path");
   }
   expect(editor.queryByText(tlsTitle)).toBeNull();
+  expect(editor.queryByRole("button", { name: "就地修复 TLS" })).toBeNull();
   expect(editor.queryByText(tlsRefusal, { exact: true })).toBeNull();
   expect(editor.queryByRole("button", { name: "保存公开线路" })).toBeNull();
   expect(requests.filter(request => request.method !== "GET")).toHaveLength(1);
@@ -294,6 +298,7 @@ it("does not restore TLS recovery when a pending inspection rejects an older dra
   rejectInspection(json({ error: tlsRefusal }, 422));
   await waitFor(() => expect(inspect.getAttribute("aria-busy")).not.toBe("true"));
   expect(editor.queryByText(tlsTitle)).toBeNull();
+  expect(editor.queryByRole("button", { name: "就地修复 TLS" })).toBeNull();
   expect(editor.queryByText(tlsRefusal, { exact: true })).toBeNull();
   expect(editor.queryByText("路径检查完成", { exact: true })).toBeNull();
   expect(editor.queryByRole("button", { name: "保存公开线路" })).toBeNull();
@@ -318,6 +323,7 @@ it("retains an unknown save failure and the conflict guard after a successful re
   expect(editor.getByText("线路保存发生冲突。当前输入已保留，请读取最新版本并核对。", { exact: true })).toBeTruthy();
   expect(editor.getByRole("button", { name: "保存公开线路" }).hasAttribute("disabled")).toBe(true);
   expect(editor.queryByText(tlsTitle)).toBeNull();
+  expect(editor.queryByRole("button", { name: "就地修复 TLS" })).toBeNull();
 });
 
 
@@ -335,6 +341,72 @@ it("keeps a delayed unknown inspection failure visible after the draft changes",
   await editor.findByText(diagnostic, { exact: true });
   expect(editor.getByText("操作未完成", { exact: true })).toBeTruthy();
   expect(editor.queryByText(tlsTitle)).toBeNull();
+  expect(editor.queryByRole("button", { name: "就地修复 TLS" })).toBeNull();
   expect(editor.queryByRole("button", { name: "保存公开线路" })).toBeNull();
   expect((port as HTMLInputElement).value).toBe("9443");
+});
+
+
+it("keeps one repair surface and restores its trigger after cancel without rechecking or saving", async () => {
+  const { user, editor, requests } = await openEditor(path => path.endsWith("/preview") ? json({ error: tlsRefusal }, 422) : undefined);
+  fireEvent.change(editor.getByRole("textbox", { name: "线路名称" }), { target: { value: "Preserved name" } });
+  fireEvent.change(editor.getByRole("spinbutton", { name: "对外端口" }), { target: { value: "+0443" } });
+  await user.click(editor.getByRole("button", { name: "检查公开线路" }));
+  await user.click(await editor.findByRole("button", { name: "就地修复 TLS" }));
+  const repair = within(await screen.findByRole("dialog", { name: "修复公开线路 TLS" }));
+  expect(screen.getAllByRole("dialog")).toHaveLength(1);
+  await user.click(repair.getByRole("button", { name: "返回公开线路" }));
+  const returned = within(await screen.findByRole("dialog", { name: "编辑 Office line" }));
+  await waitFor(() => expect(document.activeElement).toBe(returned.getByRole("button", { name: "就地修复 TLS" })));
+  expect(screen.getAllByRole("dialog")).toHaveLength(1);
+  expect((returned.getByRole("textbox", { name: "线路名称" }) as HTMLInputElement).value).toBe("Preserved name");
+  expect((returned.getByRole("spinbutton", { name: "对外端口" }) as HTMLInputElement).value).toBe("+0443");
+  expect(returned.queryByRole("button", { name: "保存公开线路" })).toBeNull();
+  expect(requests.filter(request => request.method !== "GET").map(request => request.path)).toEqual(["/api/published-routes/preview"]);
+});
+
+it("ignores delayed TLS refresh after an accepted new view and preserves the public draft", async () => {
+  let finish!: (response: Response) => void;
+  const pending = new Promise<Response>(resolve => { finish = resolve; });
+  let refreshing = false;
+  const workspace = createWorkspaceHistory({ isDirty: () => false, accept() {}, confirm(proceed) { proceed(); } });
+  try {
+    const { user, editor, requests } = await openEditor(path => {
+      if (path.endsWith("/preview")) return json({ error: tlsRefusal }, 422);
+      if (path.endsWith("/hosts") && refreshing) return pending;
+    }, workspace);
+    fireEvent.change(editor.getByRole("textbox", { name: "线路名称" }), { target: { value: "Preserved after navigation" } });
+    await user.click(editor.getByRole("button", { name: "检查公开线路" }));
+    await user.click(await editor.findByRole("button", { name: "就地修复 TLS" }));
+    const repair = within(await screen.findByRole("dialog", { name: "修复公开线路 TLS" }));
+    refreshing = true;
+    await user.click(repair.getByRole("button", { name: "返回并重新检查" }));
+    await act(async () => {
+      workspace.navigate("#published-routes?line=line&user=new-context");
+      finish(json(inventory.hosts));
+    });
+    expect(screen.queryByRole("dialog", { name: "修复公开线路 TLS" })).toBeNull();
+    const returned = within(await screen.findByRole("dialog", { name: "编辑 Office line" }));
+    expect((returned.getByRole("textbox", { name: "线路名称" }) as HTMLInputElement).value).toBe("Preserved after navigation");
+    expect(returned.queryByRole("button", { name: "保存公开线路" })).toBeNull();
+    expect(requests.filter(request => request.method !== "GET").map(request => request.path)).toEqual(["/api/published-routes/preview"]);
+    expect(location.hash).toBe("#published-routes?line=line&user=new-context");
+  } finally { workspace.dispose(); }
+});
+
+it("lets a suspended repair return safely without authorizing stale recheck or save", async () => {
+  const workspace = createWorkspaceHistory({ isDirty: () => false, accept() {}, confirm(proceed) { proceed(); } });
+  try {
+    const { user, editor, requests } = await openEditor(path => path.endsWith("/preview") ? json({ error: tlsRefusal }, 422) : undefined, workspace);
+    await user.click(editor.getByRole("button", { name: "检查公开线路" }));
+    await user.click(await editor.findByRole("button", { name: "就地修复 TLS" }));
+    const repair = within(await screen.findByRole("dialog", { name: "修复公开线路 TLS" }));
+    workspace.suspend();
+    await user.click(repair.getByRole("button", { name: "返回并重新检查" }));
+    expect(requests.filter(request => request.path.endsWith("/preview"))).toHaveLength(1);
+    await user.click(repair.getByRole("button", { name: "返回公开线路" }));
+    const returned = within(await screen.findByRole("dialog", { name: "编辑 Office line" }));
+    expect(returned.queryByRole("button", { name: "保存公开线路" })).toBeNull();
+    expect(requests.filter(request => request.method === "PUT")).toHaveLength(0);
+  } finally { workspace.dispose(); }
 });
