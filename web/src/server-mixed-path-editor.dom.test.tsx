@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, expect, it, vi } from "vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { UIProviders } from "./ui-patterns/providers";
@@ -68,4 +68,100 @@ it("keeps the original chain when a selected listener has moved to a different c
   expect(screen.getByRole("combobox", { name: "第 2 跳服务器" }).textContent).toContain("b server");
   expect(screen.getByRole("button", { name: "保存草稿" }).hasAttribute("disabled")).toBe(true);
   expect(calls).toEqual(["GET /api/managed-endpoints/b/reveal"]);
+});
+
+
+function mixedFixture() {
+  const inventory: Infrastructure = {
+    hosts: ["a", "b"].map(id => ({ id, name: `${id} server`, address: `${id}.example.test` })),
+    instances: ["a", "b"].map(id => ({ id: `${id}-core`, hostId: id, adapterId: "routeweaver/xray", version: "26.10.31" })),
+    endpoints: ["a", "b"].map(id => ({ id, name: `${id} listener`, instanceId: `${id}-core`, connection: { protocol: "socks", host: "127.0.0.1", port: 1080 } })),
+    deployments: [], links: [],
+  };
+  const initial: ServerDeployment = { id: "mixed", name: "Mixed path", status: "draft", diagnostics: [],
+    ir: { schemaVersion: "1.0", id: "mixed", topologyRevision: "one", programs: [{
+      instance: inventory.instances[0], listener: inventory.endpoints[0], egress: [], rules: [], resources: [],
+      defaultAction: { kind: "forward", ref: "proxy-x" }, connectors: [{ id: "proxy-x", connection: { protocol: "socks", host: "proxy.example.test", port: 1080 } }],
+    }] } };
+  return { inventory, initial };
+}
+function mountEditor(initial: ServerDeployment, inventory: Infrastructure) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  clients.push(client);
+  render(<QueryClientProvider client={client}><UIProviders>
+    <ServerRouteEditor initial={initial} inventory={inventory} isNew={false} onClose={() => {}} onSaved={() => true} />
+  </UIProviders></QueryClientProvider>);
+}
+
+it("retains the path-level explanation when a supported policy form can repair an invalid default reference", () => {
+  const { initial, inventory } = mixedFixture();
+  initial.ir.programs[0].defaultAction = { kind: "forward", ref: "missing" };
+  mountEditor(initial, inventory);
+  expect(screen.getByText("此配置包含独立转发或用户策略，请在转发设置中编辑，避免改写其他去向。")).toBeTruthy();
+  expect(screen.queryByRole("list", { name: "代理链" })).toBeNull();
+  const repair = screen.getByRole("combobox", { name: "a listener 默认去向" });
+  expect(repair.hasAttribute("disabled")).toBe(false);
+});
+
+it("waits for a new hop reveal before opening JSON so unchanged JSON cannot discard the new hop", async () => {
+  const { initial, inventory } = mixedFixture();
+  let release!: () => void;
+  const gate = new Promise<void>(resolve => { release = resolve; });
+  const calls: string[] = [];
+  vi.stubGlobal("fetch", vi.fn(async (url, init?: RequestInit) => {
+    const path = String(url);
+    calls.push(`${init?.method || "GET"} ${path}`);
+    if (path !== "/api/managed-endpoints/b/reveal") return new Response("{}", { status: 503 });
+    await gate;
+    return new Response(JSON.stringify(inventory.endpoints[1]), { headers: { "Content-Type": "application/json" } });
+  }));
+  mountEditor(initial, inventory);
+  const user = userEvent.setup();
+  await user.click(screen.getByRole("button", { name: "高级：完整服务端意图" }));
+  const editJSON = screen.getByRole("button", { name: "编辑服务端意图" });
+  await user.click(screen.getByRole("button", { name: "添加下一跳" }));
+  const choose = async (label: string, query: string) => {
+    await user.click(screen.getByRole("combobox", { name: label }));
+    await user.type(screen.getByRole("combobox", { name: "搜索选项" }), query);
+    await user.keyboard("{Enter}");
+    await waitFor(() => expect(screen.queryByRole("listbox")).toBeNull());
+  };
+  await choose("第 3 跳服务器", "b server");
+  await choose("第 3 跳端点", "b listener");
+  await waitFor(() => expect(editJSON.hasAttribute("disabled")).toBe(true));
+  await user.click(editJSON);
+  expect(screen.queryByRole("dialog", { name: "服务端配置意图" })).toBeNull();
+  await act(async () => { release(); await gate; });
+  await waitFor(() => expect(screen.getByRole("region", { name: "路径摘要" }).textContent).toContain("a listener → proxy-x → b listener → 目标"));
+  expect(editJSON.hasAttribute("disabled")).toBe(false);
+  await user.click(editJSON);
+  const dialog = await screen.findByRole("dialog", { name: "服务端配置意图" });
+  const intent = JSON.parse((within(dialog).getByRole("textbox", { name: "服务端配置意图 JSON 文本" }) as HTMLTextAreaElement).value);
+  expect(intent.programs.map((program: { listener: { id: string } }) => program.listener.id)).toEqual(["a", "b"]);
+  await user.click(within(dialog).getByRole("button", { name: "应用到草稿" }));
+  await waitFor(() => expect(screen.queryByRole("dialog", { name: "服务端配置意图" })).toBeNull());
+  expect(screen.getByRole("region", { name: "路径摘要" }).textContent).toContain("a listener → proxy-x → b listener → 目标");
+  expect(calls).toEqual(["GET /api/managed-endpoints/b/reveal"]);
+});
+
+
+it("refuses to remove an opaque program from the legacy ordered workspace", async () => {
+  const { initial, inventory } = mixedFixture();
+  delete initial.ir.programs[0].connectors;
+  delete initial.ir.programs[0].defaultAction;
+  Object.assign(initial.ir.programs[0], { futurePolicy: { keep: "opaque program data" } });
+  const fetch = vi.fn();
+  vi.stubGlobal("fetch", fetch);
+  mountEditor(initial, inventory);
+  const user = userEvent.setup();
+  expect(screen.getByRole("list", { name: "代理链" })).toBeTruthy();
+  await user.click(screen.getByRole("button", { name: "移除第 1 跳" }));
+  expect(await screen.findByText("此服务器仍保存连接器或独立设置，请先在转发设置中处理，再移除服务器。")).toBeTruthy();
+  expect(screen.getByRole("region", { name: "路径摘要" }).textContent).toContain("a listener → 目标");
+  await user.click(screen.getByRole("button", { name: "高级：完整服务端意图" }));
+  await user.click(screen.getByRole("button", { name: "编辑服务端意图" }));
+  const dialog = await screen.findByRole("dialog", { name: "服务端配置意图" });
+  const intent = JSON.parse((within(dialog).getByRole("textbox", { name: "服务端配置意图 JSON 文本" }) as HTMLTextAreaElement).value);
+  expect(intent.programs[0].futurePolicy).toEqual({ keep: "opaque program data" });
+  expect(fetch).not.toHaveBeenCalled();
 });

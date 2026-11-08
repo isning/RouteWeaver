@@ -19,7 +19,7 @@ const actionTargets: Record<string, string[]> = {
   "routeweaver/sing-box": ["1.14.3", "1.14.4"],
 };
 
-function programEditReason(program: ServerProgram, schemaVersion: string) {
+export function programEditReason(program: ServerProgram, schemaVersion: string) {
   if (schemaVersion !== "1.0")
     return "此配置版本不能用策略表单修改，请使用完整 JSON。";
   if (
@@ -636,5 +636,6 @@ export function ServerPolicyEditor({
     </div>
   );
 }
+
 
 

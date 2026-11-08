@@ -82,7 +82,7 @@ import { ServerPathSummary, ServerPathWorkspace } from "./ServerPathWorkspace";
 import { ServerMixedPathWorkspace } from "./ServerMixedPathWorkspace";
 import { compileOrderedServerPath, orderedPathChangeReason, readOrderedServerPath, type OrderedServerHop } from "./server-path-model";
 import { ServerForwarding, matchLabel } from "./ServerForwarding";
-import { ServerPolicyEditor, canEditRuleList, canEditRuleCondition, ruleConditionError } from "./ServerPolicyEditor";
+import { ServerPolicyEditor, canEditRuleList, canEditRuleCondition, ruleConditionError, programEditReason } from "./ServerPolicyEditor";
 import { TLSMaterial } from "./TLSMaterial";
 import type {
   Infrastructure,
@@ -726,6 +726,10 @@ export function ServerRouteEditor({
   const legacyChainEditable = (draft.ir.programs == null || Array.isArray(draft.ir.programs)) && canEditLegacyPath({ ...draft, ir: { ...draft.ir, programs } }, inventory);
   const orderedPath = readOrderedServerPath(draft, inventory);
   const chainEditable = legacyChainEditable || orderedPath.editable;
+  // The policy section owns its exact runtime/schema/authorization reason.
+  // Add a path-level explanation only when those sections do not already
+  // explain why the ordered workspace is unavailable.
+  const policyExplainsRestriction = programs.some((program) => !!programEditReason(program, draft.ir.schemaVersion));
   const mixedWorkspace = orderedPath.editable && (orderedPath.connectorChoices.length > 0 || !legacyChainEditable);
   const updateOrderedPath = async (hops: OrderedServerHop[]) => {
     const source = latestDraft.current;
@@ -761,10 +765,17 @@ export function ServerRouteEditor({
     }
   };
   const updatePath = async (ids: string[]) => {
-    if (!legacyChainEditable) {
+    const source = latestDraft.current;
+    if (!legacyChainEditable || (source.ir.programs != null && !Array.isArray(source.ir.programs))) {
       setError(new Error(pathRewriteUnavailable));
       return false;
     }
+    // Keep the legacy empty-list and serialization behavior, but do not let
+    // that presentation bypass the lossless/capability proof for a rewrite.
+    const base = { ...source, ir: { ...source.ir, programs: programsIn(source) } };
+    const hops: OrderedServerHop[] = ids.map((endpointId) => ({ kind: "managed", endpointId }));
+    const reason = orderedPathChangeReason(base, hops, inventory);
+    if (reason) { setError(new Error(reason)); return false; }
     const revision = ++draftRevision.current;
     setPathLoading(true);
     setError(null);
@@ -779,12 +790,15 @@ export function ServerRouteEditor({
       const revealed = new Map(
         endpoints.map((endpoint) => [endpoint.id, endpoint]),
       );
-      const next = compilePath({ ...draft, ir: { ...draft.ir, programs } }, ids, {
+      const selectedInventory = {
         ...inventory,
         endpoints: inventory.endpoints.map(
           (endpoint) => revealed.get(endpoint.id) || endpoint,
         ),
-      });
+      };
+      const revealedReason = orderedPathChangeReason(base, hops, selectedInventory);
+      if (revealedReason) throw new Error(revealedReason);
+      const next = compilePath(base, ids, selectedInventory);
       next.ir.topologyRevision = newID("topology");
       update(next);
       setAnnouncement(
@@ -849,7 +863,7 @@ export function ServerRouteEditor({
     });
   };
   const editIntent = () => {
-    if (connectorEditing.current) return;
+    if (connectorEditing.current || pathLoading) return;
     const text = JSON.stringify(draft.ir, null, 2);
     setJSON(text);
     setJSONBaseline(text);
@@ -1084,7 +1098,7 @@ export function ServerRouteEditor({
         <div className="sr-only" aria-live="polite">
           {announcement}
         </div>
-        {!legacyChainEditable && !orderedPath.editable && <p className="text-sm text-muted-foreground">{orderedPath.reason}</p>}
+        {!legacyChainEditable && !orderedPath.editable && !policyExplainsRestriction && <p className="text-sm text-muted-foreground">{orderedPath.reason}</p>}
         {!chainEditable ? (
           <ServerPolicyEditor
             programs={programs}
@@ -1467,7 +1481,7 @@ export function ServerRouteEditor({
                   <p className="muted text-sm text-muted-foreground">
                     编辑命名连接器、服务器规则与资源。服务器意图独立于个人客户端配置。
                   </p>
-                  <ActionButton onClick={editIntent} variant="outline">
+                  <ActionButton onClick={editIntent} disabled={pathLoading} variant="outline">
                     编辑服务端意图
                   </ActionButton>
                 </>
