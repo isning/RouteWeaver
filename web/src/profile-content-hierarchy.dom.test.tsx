@@ -750,3 +750,33 @@ it("shows the purpose of a saved strategy group before its form, preserving it w
   await waitFor(() => expect(writes.some((write) => write.path.includes("/profiles"))).toBe(true));
   expect(writes.find((write) => write.path.includes("/profiles"))!.body.ir.groups[0]).toEqual({ ...profile.ir.groups[0], name: "Work renamed" });
 });
+
+
+it("distinguishes fixed, all-connection, and filtered automatic members while groups remain collapsed", async () => {
+  const profile = fixture();
+  profile.ir.groups = [
+    { id: "fixed", name: "Fixed only", kind: "manual", members: [{ kind: "direct" }] },
+    { id: "all", name: "All connections", kind: "manual", members: [], dynamic: {} },
+    { id: "filtered", name: "Filtered connections", kind: "url-test", members: [], dynamic: { sourceId: source.id, namePattern: "Tokyo", protocol: "socks", region: "JP", tags: ["work"] } },
+    { id: "unresolved", name: "Unresolved source", kind: "manual", members: [], dynamic: { sourceId: "private-opaque-source-id" } },
+  ];
+  const { writes } = mount(profile);
+  await screen.findByText("2 个有效连接");
+  await userEvent.click(screen.getByRole("tab", { name: "策略组" }));
+  const summary = (name: string) => screen.getByText(name, { exact: true }).closest("summary")!;
+  expect(summary("Fixed only").textContent).toContain("仅固定成员");
+  expect(summary("All connections").textContent).toContain("当前配置中的全部连接");
+  const filtered = summary("Filtered connections");
+  expect(filtered.textContent).toContain("按条件自动加入");
+  expect(filtered.textContent).toContain("来源：Travel source");
+  expect(filtered.textContent).toContain("名称匹配：Tokyo");
+  expect(filtered.textContent).toContain("协议：socks");
+  expect(filtered.textContent).toContain("地区：JP");
+  expect(filtered.textContent).toContain("标签：work");
+  expect(filtered.textContent).not.toContain(source.id);
+  expect(summary("Unresolved source").textContent).toContain("指定来源（名称暂不可用）");
+  expect(summary("Unresolved source").textContent).not.toContain("private-opaque-source-id");
+  for (const name of ["Fixed only", "All connections", "Filtered connections", "Unresolved source"])
+    expect(summary(name).closest("details")!.open).toBe(false);
+  expect(writes).toEqual([]);
+});

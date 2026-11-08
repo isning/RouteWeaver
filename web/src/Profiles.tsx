@@ -126,6 +126,26 @@ import {
   SubscriptionsPage,
 } from "./Subscriptions";
 import { NativeOverrideEditor, NativeOverrideResult } from "./NativeOverride";
+function hasDynamicConditions(dynamic: Group["dynamic"]) {
+  return Object.values(dynamic || {}).some((condition) =>
+    Array.isArray(condition) ? condition.length > 0 : !!condition,
+  );
+}
+function automaticMemberSummary(group: Group, sources: Source[]) {
+  const filter = group.dynamic;
+  if (filter == null) return "仅固定成员";
+  if (!hasDynamicConditions(filter)) return "当前配置中的全部连接";
+  const criteria = [
+    filter.sourceId
+      ? `来源：${sources.find((source) => source.id === filter.sourceId)?.name || "指定来源（名称暂不可用）"}`
+      : "",
+    filter.namePattern ? `名称匹配：${filter.namePattern}` : "",
+    filter.protocol ? `协议：${filter.protocol}` : "",
+    filter.region ? `地区：${filter.region}` : "",
+    filter.tags?.length ? `标签：${filter.tags.join("、")}` : "",
+  ].filter(Boolean);
+  return `按条件自动加入${criteria.length ? `（${criteria.join("；")}）` : "（其他筛选条件）"}`;
+}
 type ActionOption = {
   value: string;
   label: string;
@@ -1266,7 +1286,10 @@ export function ProfileEditor({
                 <span className="font-medium">{group.name || "未命名策略组"}</span>
                 <span className="mt-2 block text-sm text-muted-foreground">
                   {({ manual: "手动选择", "url-test": "延迟优选", fallback: "故障切换", "load-balance": "负载均衡" } as Record<string, string>)[group.kind] || group.kind}
-                  {`，${group.members.length} 个固定候选`}{group.dynamic != null ? "，自动加入连接已开启" : ""}
+                  {`，${group.members.length} 个固定候选`}
+                </span>
+                <span className="mt-1 block break-words text-sm text-muted-foreground">
+                  {automaticMemberSummary(group, sources.data || [])}
                 </span>
                 <span className="mt-1 block break-words text-sm">
                   {group.members.slice(0, 3).map((member) => actions.find((action) => action.value === actionValue(member))?.label || "候选连接暂不可用").join("、") || "尚未选择固定候选"}
@@ -2564,9 +2587,7 @@ function GroupEditor({
     if (intervalFocus) setTestSections((previous) => previous.includes("policy") ? previous : [...previous, "policy"]);
   }, [intervalFocus]);
   const dynamicEnabled = value.dynamic != null;
-  const hasConditions = Object.values(value.dynamic || {}).some((condition) =>
-    Array.isArray(condition) ? condition.length > 0 : !!condition,
-  );
+  const hasConditions = hasDynamicConditions(value.dynamic);
   const updateDynamic = (dynamic: NonNullable<Group["dynamic"]>) =>
     onChange({
       ...value,
