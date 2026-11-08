@@ -65,7 +65,8 @@ it("starts an unsaved path with only the exact revealed listener and its origina
   const editor = await screen.findByRole("dialog", { name: "新建转发路径" });
   expect(within(editor).getByRole("combobox", { name: "第 1 跳端点" }).textContent).toContain("Selected listener");
   expect(within(editor).getByRole("link", { name: "返回原服务器" }).getAttribute("href")).toBe("#servers?host=server&instance=core");
-  expect(within(editor).getByText("从入口服务器直接访问目标")).toBeTruthy();
+  expect(within(editor).getByRole("region", { name: "路径摘要" }).textContent).toContain("客户端 → Selected listener → 目标");
+  expect(within(editor).queryByRole("combobox", { name: "第 2 跳服务器" })).toBeNull();
   expect(hasUnsavedChanges()).toBe(true);
   expect(requests.filter((request) => request.endsWith("/reveal"))).toEqual(["GET /api/managed-endpoints/listener/reveal"]);
   expect(requests.every((request) => request.startsWith("GET "))).toBe(true);

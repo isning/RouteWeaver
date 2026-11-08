@@ -42,19 +42,19 @@ async function capture(page: Page, info: TestInfo, editor: Locator, name: string
 }
 
 for (const width of [1440, 390]) {
-  test(`entry, intermediate and final exit remain explicit through editing at ${width}px`, async ({ page, baseURL }, info) => {
+  test(`ordered proxy chain appends, reorders and removes hops at ${width}px`, async ({ page, baseURL }, info) => {
     requireLoopback(baseURL);
     await page.setViewportSize({ width, height: 900 });
     await signIn(page, baseURL, "admin");
-    const names = { entry: "入口服务器", middle: "中转服务器", exit: "出口服务器" };
-    const endpoints = { entry: "入口监听", middle: "中转监听", exit: "出口监听" };
+    const names = { entry: "香港服务器", relay: "东京服务器", exit: "洛杉矶服务器", fourth: "新加坡服务器" };
+    const endpoints = { entry: "香港监听", relay: "东京监听", exit: "洛杉矶监听", fourth: "新加坡监听" };
     const csrf = await headers(page.request);
-    for (const [index, id] of ["entry", "middle", "exit"].entries()) {
+    for (const [index, id] of (["entry", "relay", "exit", "fourth"] as const).entries()) {
       for (const [path, data] of [
-        ["/hosts", { id, name: names[id as keyof typeof names], address: "127.0.0.1" }],
+        ["/hosts", { id, name: names[id], address: "127.0.0.1" }],
         ["/core-instances", { id: `${id}-core`, hostId: id, name: `${id} core`, adapterId: "routeweaver/xray", version: "26.10.31" }],
         ["/managed-endpoints", {
-          id, instanceId: `${id}-core`, name: endpoints[id as keyof typeof endpoints],
+          id, instanceId: `${id}-core`, name: endpoints[id],
           connection: { protocol: "socks", host: "127.0.0.1", port: 23080 + index, username: "fixture", password: "synthetic-only" },
         }],
       ] as const) {
@@ -70,81 +70,83 @@ for (const width of [1440, 390]) {
     await page.goto("/#routes");
     await page.locator(".page-heading").getByRole("button", { name: "新建转发路径", exact: true }).click();
     const editor = page.getByRole("dialog", { name: "新建转发路径", exact: true });
-    for (const name of ["入口", "最终出口"])
-      await expect(editor.getByRole("region", { name, exact: true })).toBeVisible();
-    await expect(editor.getByText("选择入口后，默认从入口服务器直接访问目标。", { exact: true })).toBeVisible();
-    await capture(page, info, editor, "path-empty-roles");
+    const summary = editor.getByRole("region", { name: "路径摘要", exact: true });
+    const save = editor.getByRole("button", { name: "保存草稿", exact: true });
+    await expect(editor.getByRole("list", { name: "代理链", exact: true })).toBeVisible();
+    await expect(editor.getByRole("region", { name: "最终出口", exact: true })).toHaveCount(0);
+    await expect(summary).toContainText("客户端 → 选择第一跳 → 目标");
+    await capture(page, info, editor, "path-empty-chain");
 
-    await editor.getByLabel("转发路径名称", { exact: true }).fill("入口经中转到出口");
-    await choose(page, editor.getByRole("combobox", { name: "入口服务器", exact: true }), names.entry);
-    await expect(editor.getByRole("button", { name: "保存草稿", exact: true })).toBeDisabled();
-    await choose(page, editor.getByRole("combobox", { name: "入口端点", exact: true }), endpoints.entry);
-    const first = editor.getByRole("combobox", { name: "第 1 跳端点", exact: true });
-    await expect(first).toBeFocused();
-    await page.keyboard.press("Tab");
-    expect(await editor.evaluate((element) => element.contains(document.activeElement))).toBe(true);
-    const exit = editor.getByRole("region", { name: "最终出口", exact: true });
-    await expect(exit.getByText("从入口服务器直接访问目标", { exact: true })).toBeVisible();
-    await capture(page, info, editor, "path-single-direct-exit", exit.getByText("从入口服务器直接访问目标", { exact: true }));
+    await editor.getByLabel("转发路径名称", { exact: true }).fill("按顺序转发");
+    await choose(page, editor.getByRole("combobox", { name: "第 1 跳服务器", exact: true }), names.entry);
+    await expect(save).toBeDisabled();
+    await choose(page, editor.getByRole("combobox", { name: "第 1 跳端点", exact: true }), endpoints.entry);
+    await expect(editor.getByRole("combobox", { name: "第 1 跳端点", exact: true })).toBeFocused();
+    await expect(summary).toContainText("客户端 → 香港监听 → 目标");
+    await capture(page, info, editor, "path-one-hop", summary);
 
-    await expect(editor.getByRole("region", { name: "中转", exact: true })).toHaveCount(0);
-    await expect(exit.getByRole("button", { name: "从入口直接访问", exact: true })).toHaveAttribute("aria-pressed", "true");
-    await exit.getByRole("button", { name: "选择独立出口", exact: true }).click();
-    await expect(editor.getByRole("button", { name: "保存草稿", exact: true })).toBeDisabled();
-    await capture(page, info, editor, "path-choose-independent-exit", exit.getByRole("combobox", { name: "下一跳服务器", exact: true }));
-    await choose(page, editor.getByRole("combobox", { name: "下一跳服务器", exact: true }), names.exit);
-    await choose(page, editor.getByRole("combobox", { name: "下一跳端点", exact: true }), endpoints.exit);
-    await expect(exit.getByRole("combobox", { name: "第 2 跳端点", exact: true })).toBeFocused();
-    await capture(page, info, editor, "path-independent-exit-selected", exit.getByRole("combobox", { name: "第 2 跳端点", exact: true }));
-    await exit.getByRole("button", { name: "从入口直接访问", exact: true }).click();
-    const directReview = editor.getByRole("region", { name: "确认改为入口直出", exact: true });
-    await expect(directReview).toContainText(endpoints.exit);
-    await capture(page, info, editor, "path-review-removed-exit", directReview.getByRole("button", { name: "保留当前路径", exact: true }));
-    await directReview.getByRole("button", { name: "保留当前路径", exact: true }).click();
-    await expect(exit.getByRole("combobox", { name: "第 2 跳端点", exact: true })).toContainText(endpoints.exit);
-    const add = editor.getByRole("button", { name: "添加中转", exact: true });
+    const add = editor.getByRole("button", { name: "添加下一跳", exact: true });
     await add.focus();
     await page.keyboard.press("Enter");
-    await expect(editor.getByRole("combobox", { name: "中转服务器", exact: true })).toBeFocused();
-    await choose(page, editor.getByRole("combobox", { name: "中转服务器", exact: true }), names.middle);
-    await expect(editor.getByRole("button", { name: "保存草稿", exact: true })).toBeDisabled();
-    await editor.getByRole("button", { name: "取消添加中转", exact: true }).click();
+    await expect(editor.getByRole("combobox", { name: "第 2 跳服务器", exact: true })).toBeFocused();
+    await expect(save).toBeDisabled();
+    await expect(summary).toContainText("香港监听 → 第 2 跳（待选择） → 目标");
+    await capture(page, info, editor, "path-append-pending", summary);
+    await choose(page, editor.getByRole("combobox", { name: "第 2 跳服务器", exact: true }), names.relay);
+    await editor.getByRole("button", { name: "取消添加", exact: true }).click();
     await expect(add).toBeFocused();
-    await expect(editor.getByRole("button", { name: "保存草稿", exact: true })).toBeEnabled();
-    await page.keyboard.press("Enter");
-    await choose(page, editor.getByRole("combobox", { name: "中转服务器", exact: true }), names.middle);
-    await choose(page, editor.getByRole("combobox", { name: "中转端点", exact: true }), endpoints.middle);
-    await expect(editor.getByRole("combobox", { name: "第 2 跳端点", exact: true })).toBeFocused();
-    await expect(exit.getByRole("combobox", { name: "第 3 跳端点", exact: true })).toContainText(endpoints.exit);
-    const summary = editor.getByRole("region", { name: "路径摘要", exact: true });
-    await expect(summary).toContainText("入口监听 → 中转监听 → 出口监听 → 目标");
-    await capture(page, info, editor, "path-intermediate-preserves-exit", summary);
+    await expect(save).toBeEnabled();
+    await expect(summary).toContainText("香港监听 → 目标");
 
-    // Inspection is optional; opening or closing it does not alter the path.
+    for (const [index, id] of (["relay", "exit", "fourth"] as const).entries()) {
+      await add.focus();
+      await page.keyboard.press("Enter");
+      await expect(save).toBeDisabled();
+      const hop = index + 2;
+      await choose(page, editor.getByRole("combobox", { name: `第 ${hop} 跳服务器`, exact: true }), names[id]);
+      await choose(page, editor.getByRole("combobox", { name: `第 ${hop} 跳端点`, exact: true }), endpoints[id]);
+      await expect(editor.getByRole("combobox", { name: `第 ${hop} 跳端点`, exact: true })).toBeFocused();
+      if (hop === 3) {
+        await expect(summary).toContainText("香港监听 → 东京监听 → 洛杉矶监听 → 目标");
+        await capture(page, info, editor, "path-three-hops", summary);
+      }
+    }
+    await expect(summary).toContainText("香港监听 → 东京监听 → 洛杉矶监听 → 新加坡监听 → 目标");
+    await capture(page, info, editor, "path-four-hops-summary", summary);
+    await capture(page, info, editor, "path-fourth-hop-actions", editor.getByRole("button", { name: "上移第 4 跳", exact: true }));
+    await editor.getByRole("button", { name: "上移第 4 跳", exact: true }).click();
+    await expect(summary).toContainText("香港监听 → 东京监听 → 新加坡监听 → 洛杉矶监听 → 目标");
+    await expect(editor.getByRole("combobox", { name: "第 3 跳端点", exact: true })).toContainText(endpoints.fourth);
+    await capture(page, info, editor, "path-reordered-summary", summary);
+    await editor.getByRole("button", { name: "移除第 2 跳", exact: true }).click();
+    await expect(summary).toContainText("香港监听 → 新加坡监听 → 洛杉矶监听 → 目标");
+    await expect(editor.getByRole("combobox", { name: "第 2 跳端点", exact: true })).toContainText(endpoints.fourth);
+    await capture(page, info, editor, "path-removed-hop-summary", summary);
+
+    // Inspection and graph view preserve the exact ordered chain.
     const details = editor.getByRole("button", { name: "监听快照与转发详情", exact: true });
-    await expect(editor.getByRole("button", { name: "检查监听更新 出口监听", exact: true })).toHaveCount(0);
+    await expect(editor.getByRole("button", { name: "检查监听更新 洛杉矶监听", exact: true })).toHaveCount(0);
     await details.click();
-    await expect(editor.getByRole("button", { name: "检查监听更新 出口监听", exact: true })).toBeVisible();
+    await expect(editor.getByRole("button", { name: "检查监听更新 洛杉矶监听", exact: true })).toBeVisible();
     await details.click();
     await editor.getByRole("tab", { name: "图形编辑", exact: true }).click();
-    await expect(summary).toContainText("入口监听 → 中转监听 → 出口监听 → 目标");
+    await expect(summary).toContainText("香港监听 → 新加坡监听 → 洛杉矶监听 → 目标");
     await editor.getByRole("tab", { name: "顺序编辑", exact: true }).click();
-    await expect(exit.getByRole("combobox", { name: "第 3 跳端点", exact: true })).toContainText(endpoints.exit);
+    await expect(editor.getByRole("combobox", { name: "第 3 跳端点", exact: true })).toContainText(endpoints.exit);
 
     const consequence = editor.getByText("仅保存草稿，检查与应用需另行操作。", { exact: true });
     await capture(page, info, editor, "path-save-consequence", consequence);
     const saved = page.waitForResponse((response) => new URL(response.url()).pathname === "/api/server-deployments" && response.request().method() === "POST");
-    await editor.getByRole("button", { name: "保存草稿", exact: true }).click();
+    await save.click();
     expect((await saved).status()).toBe(200);
     await expect(editor).toBeHidden();
     const deployments = await read(page.request, "/server-deployments");
     expect(deployments).toHaveLength(1);
-    expect(deployments[0].ir.programs.map((program: { listener: { id: string } }) => program.listener.id)).toEqual(["entry", "middle", "exit"]);
-    expect(deployments[0].ir.programs[0].egress[0]).toMatchObject({ host: "127.0.0.1", port: 23081 });
+    expect(deployments[0].ir.programs.map((program: { listener: { id: string } }) => program.listener.id)).toEqual(["entry", "fourth", "exit"]);
+    expect(deployments[0].ir.programs[0].egress[0]).toMatchObject({ host: "127.0.0.1", port: 23083 });
     expect(deployments[0].ir.programs[1].egress[0]).toMatchObject({ host: "127.0.0.1", port: 23082 });
     expect(deployments[0].ir.programs[2].egress || []).toEqual([]);
     expect(await read(page.request, "/admin/fleet-batches")).toEqual([]);
     expect(mutations).toEqual(["POST /api/server-deployments"]);
   });
 }
-

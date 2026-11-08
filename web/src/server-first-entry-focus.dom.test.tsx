@@ -56,13 +56,13 @@ async function startSelection(context: TestContext) {
   const dialog = await screen.findByRole("dialog", { name: "新建转发路径" });
   owner.assertActive();
   const editor = within(dialog);
-  const server = editor.getByRole("combobox", { name: "入口服务器" });
+  const server = editor.getByRole("combobox", { name: "第 1 跳服务器" });
   await owner.click(() => server);
   await owner.click(() => screen.getByRole("option", { name: host.name }));
   await waitFor(() => expect(document.activeElement).toBe(server));
   owner.assertActive();
   const finishExit = holdPopoverExit();
-  const entry = editor.getByRole("combobox", { name: "入口端点" });
+  const entry = editor.getByRole("combobox", { name: "第 1 跳端点" });
   await owner.click(() => entry);
   const closing = document.getElementById(entry.getAttribute("aria-controls")!)!;
   const search = screen.getByRole("combobox", { name: "搜索选项" });
@@ -97,17 +97,10 @@ for (const timing of ["before", "after"] as const) {
     task.owner.assertActive();
     await task.user.tab();
     task.owner.assertActive();
-    const ordering = task.editor.getByText("顺序与移除", { selector: "summary" });
-    expect(document.activeElement).toBe(ordering);
-    expect(ordering.closest("details")?.hasAttribute("open")).toBe(false);
-    // jsdom/user-event does not activate summary on Enter. Native keyboard
-    // activation is covered by forwarding-setup-backend.ui.spec.ts.
-    await task.owner.click(() => ordering);
-    task.owner.assertActive();
-    expect(ordering.closest("details")?.hasAttribute("open")).toBe(true);
+    expect(document.activeElement).toBe(task.editor.getByRole("button", { name: "移除第 1 跳" }));
     await task.user.tab();
     task.owner.assertActive();
-    expect(document.activeElement).toBe(task.editor.getByRole("button", { name: "移除第 1 跳" }));
+    expect(document.activeElement).toBe(task.editor.getByRole("button", { name: "添加下一跳" }));
     expect(task.mutations).toEqual([]);
   });
 }
@@ -135,7 +128,9 @@ it("keeps the original entry picker when reveal fails instead of focusing an inv
   task.owner.assertActive();
   await act(async () => task.deliver(json({ error: "Endpoint reveal unavailable" }, 503)));
   task.owner.assertActive();
-  expect(task.editor.queryByRole("combobox", { name: "第 1 跳端点" })).toBeNull();
+  expect(task.editor.getByRole("combobox", { name: "第 1 跳端点" })).toBe(task.entry);
+  expect(task.entry.textContent).not.toContain(endpoint.name);
+  expect(task.editor.queryByRole("button", { name: "移除第 1 跳" })).toBeNull();
   expect(task.editor.getByText("Endpoint reveal unavailable", { exact: true })).toBeTruthy();
   expect(task.entry.isConnected).toBe(true);
   expect(document.activeElement).toBe(task.entry);

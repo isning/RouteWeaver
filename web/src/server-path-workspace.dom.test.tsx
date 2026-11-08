@@ -1,21 +1,21 @@
 // @vitest-environment jsdom
-import { afterEach, expect, it } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import userEvent from "@testing-library/user-event";
 import { compilePath } from "./infrastructure-model";
 import { ServerPathWorkspace } from "./ServerPathWorkspace";
 import type { Infrastructure, ServerDeployment } from "./types";
 
 afterEach(cleanup);
+const ids = ["entry", "relay", "exit", "fourth", "spare"];
 const inventory: Infrastructure = {
-  hosts: ["entry", "relay", "exit"].map((id) => ({
-    id, name: `${id} server`, address: `${id}.example.test`,
-  })),
-  instances: ["entry", "relay", "exit"].map((id) => ({
+  hosts: ids.map((id) => ({ id, name: `${id} server`, address: `${id}.example.test` })),
+  instances: ids.map((id) => ({
     id: `${id}-core`, hostId: id, adapterId: "routeweaver/xray", version: "26.10.31",
   })),
-  endpoints: ["entry", "relay", "exit"].map((id) => ({
+  endpoints: ids.map((id) => ({
     id, name: `${id} endpoint`, instanceId: `${id}-core`,
     connection: { protocol: "socks", host: "0.0.0.0", port: 1080 },
   })),
@@ -25,67 +25,36 @@ const empty: ServerDeployment = {
   id: "path", name: "Path", status: "draft", diagnostics: [],
   ir: { id: "path", schemaVersion: "1.0", topologyRevision: "one", programs: [] },
 };
-function Workspace({ ids = [], commit }: { ids?: string[]; commit?: () => Promise<boolean> }) {
+function Workspace({ ids = [], commit, splitCommit = false, onPendingChange = () => undefined }: {
+  ids?: string[];
+  commit?: (next: string[]) => Promise<boolean>;
+  splitCommit?: boolean;
+  onPendingChange?: (key: string, pending: boolean) => void;
+}) {
   const [draft, setDraft] = useState(() => compilePath(empty, ids, inventory));
   const [changing, setChanging] = useState(false);
+  const revision = useRef(0);
   return <ServerPathWorkspace
     programs={draft.ir.programs}
     inventory={inventory}
-    onPendingChange={() => undefined}
+    onPendingChange={onPendingChange}
     changing={changing}
+    onSelectionChange={() => { revision.current++; setChanging(false); }}
     onChangePath={async (next) => {
+      const request = ++revision.current;
       setChanging(true);
-      const accepted = commit ? await commit() : true;
-      if (accepted) setDraft((current) => compilePath(current, next, inventory));
+      const accepted = commit ? await commit(next) : true;
+      if (request !== revision.current) return false;
+      if (accepted) {
+        const apply = () => setDraft((current) => compilePath(current, next, inventory));
+        if (splitCommit) flushSync(apply);
+        else apply();
+      }
       setChanging(false);
       return accepted;
     }}
   />;
 }
-
-it("starts with the route summary and asks for entry before offering optional transit", () => {
-  render(<Workspace />);
-  expect(screen.getByRole("region", { name: "入口" })).toBeTruthy();
-  expect(screen.queryByRole("region", { name: "中转" })).toBeNull();
-  const summary = screen.getByRole("region", { name: "路径摘要" });
-  expect(summary.textContent).toContain("客户端 → 选择入口服务器 → 目标");
-  expect(summary.compareDocumentPosition(screen.getByRole("region", { name: "入口" })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-  const exit = screen.getByRole("region", { name: "最终出口" });
-  expect(within(exit).getByText("选择入口后，默认从入口服务器直接访问目标。")).toBeTruthy();
-  expect(screen.getByRole("combobox", { name: "入口服务器" })).toBeTruthy();
-  expect(screen.queryByRole("button", { name: "添加中转" })).toBeNull();
-});
-
-it("makes a one-server path's direct final exit explicit without creating another endpoint", () => {
-  render(<Workspace ids={["entry"]} />);
-  const exit = screen.getByRole("region", { name: "最终出口" });
-  expect(within(exit).getByText("entry server")).toBeTruthy();
-  expect(within(exit).getByText("从入口服务器直接访问目标")).toBeTruthy();
-  expect(screen.getByRole("region", { name: "路径摘要" }).textContent).toContain("entry endpoint → 目标");
-  expect(screen.queryByRole("combobox", { name: "第 2 跳端点" })).toBeNull();
-});
-
-it("removes an intermediate without silently replacing the final exit", async () => {
-  const user = userEvent.setup();
-  render(<Workspace ids={["entry", "relay", "exit"]} />);
-  const intermediates = screen.getByRole("region", { name: "中转" });
-  await user.click(within(intermediates).getByText("顺序与移除"));
-  await user.click(screen.getByRole("button", { name: "移除第 2 跳" }));
-  expect(within(screen.getByRole("region", { name: "最终出口" }))
-    .getByRole("combobox", { name: "第 2 跳端点" }).textContent).toContain("exit endpoint");
-  expect(screen.getByRole("region", { name: "路径摘要" }).textContent).toContain("entry endpoint → exit endpoint → 目标");
-});
-
-it("shows the next final exit at removal and updates the resulting path", async () => {
-  const user = userEvent.setup();
-  render(<Workspace ids={["entry", "relay", "exit"]} />);
-  const exit = screen.getByRole("region", { name: "最终出口" });
-  await user.click(within(exit).getByText("顺序与移除"));
-  expect(within(exit).getByText("移除后，从 relay server 直接访问目标。")).toBeTruthy();
-  await user.click(within(exit).getByRole("button", { name: "移除第 3 跳" }));
-  expect(within(exit).getByRole("combobox", { name: "第 2 跳端点" }).textContent).toContain("relay endpoint");
-  expect(screen.getByRole("region", { name: "路径摘要" }).textContent).toContain("entry endpoint → relay endpoint → 目标");
-});
 
 async function choose(user: ReturnType<typeof userEvent.setup>, label: string, query: string) {
   const control = screen.getByRole("combobox", { name: label });
@@ -97,139 +66,204 @@ async function choose(user: ReturnType<typeof userEvent.setup>, label: string, q
   await user.keyboard("{Enter}");
   await waitFor(() => expect(screen.queryByRole("listbox")).toBeNull());
 }
-
 function deferred() {
   let resolve!: (accepted: boolean) => void;
   const promise = new Promise<boolean>((done) => { resolve = done; });
   return { promise, resolve };
 }
+const summary = () => screen.getByRole("region", { name: "路径摘要" });
 
-it("adds an intermediate by keyboard before the chosen exit and returns focus to the added hop", async () => {
-  const user = userEvent.setup();
-  render(<Workspace ids={["entry", "exit"]} />);
-  const add = screen.getByRole("button", { name: "添加中转" });
-  add.focus();
-  await user.keyboard("{Enter}");
-  expect(document.activeElement).toBe(screen.getByRole("combobox", { name: "中转服务器" }));
-  await choose(user, "中转服务器", "relay server");
-  await choose(user, "中转端点", "relay endpoint");
-  await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("combobox", { name: "第 2 跳端点" })));
-  expect(screen.getByRole("region", { name: "路径摘要" }).textContent).toContain("entry endpoint → relay endpoint → exit endpoint → 目标");
-  expect(screen.queryByRole("combobox", { name: "中转服务器" })).toBeNull();
+it("shows one ordered chain with the first numbered hop and no separate exit workflow", () => {
+  render(<Workspace />);
+  expect(screen.getByRole("list", { name: "代理链" })).toBeTruthy();
+  expect(screen.getByRole("combobox", { name: "第 1 跳服务器" })).toBeTruthy();
+  expect(summary().textContent).toContain("客户端 → 选择第一跳 → 目标");
+  expect(screen.queryByRole("region", { name: "最终出口" })).toBeNull();
+  expect(screen.queryByRole("region", { name: "中转" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "选择独立出口" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "添加下一跳" })).toBeNull();
 });
 
-it("keeps the selected server and unchanged final exit after a delayed endpoint read fails", async () => {
+it("ends a one-hop chain at the destination without a second endpoint or exit choice", () => {
+  render(<Workspace ids={["entry"]} />);
+  expect(summary().textContent).toContain("客户端 → entry endpoint → 目标");
+  expect(screen.getAllByRole("listitem")).toHaveLength(1);
+  expect(screen.getByRole("combobox", { name: "第 1 跳端点" }).textContent).toContain("entry endpoint");
+  expect(screen.queryByRole("combobox", { name: "第 2 跳端点" })).toBeNull();
+  expect(screen.getByRole("button", { name: "添加下一跳" })).toBeTruthy();
+});
+
+it("renders four supported hops in traversal order instead of grouping them by role", () => {
+  render(<Workspace ids={["entry", "relay", "exit", "fourth"]} />);
+  const hops = within(screen.getByRole("list", { name: "代理链" })).getAllByRole("listitem");
+  expect(hops).toHaveLength(4);
+  for (const [index, name] of ["entry", "relay", "exit", "fourth"].entries()) {
+    expect(within(hops[index]).getByRole("heading", { name: `第 ${index + 1} 跳` })).toBeTruthy();
+    expect(within(hops[index]).getByRole("combobox", { name: `第 ${index + 1} 跳端点` }).textContent).toContain(`${name} endpoint`);
+    expect(within(hops[index]).getByRole("button", { name: `移除第 ${index + 1} 跳` })).toBeTruthy();
+  }
+  expect(summary().textContent).toContain("entry endpoint → relay endpoint → exit endpoint → fourth endpoint → 目标");
+});
+
+it("appends a fourth hop by keyboard after the previous last hop and returns focus to it", async () => {
+  const user = userEvent.setup();
+  render(<Workspace ids={["entry", "relay", "exit"]} />);
+  screen.getByRole("button", { name: "添加下一跳" }).focus();
+  await user.keyboard("{Enter}");
+  expect(document.activeElement).toBe(screen.getByRole("combobox", { name: "第 4 跳服务器" }));
+  await choose(user, "第 4 跳服务器", "fourth server");
+  await choose(user, "第 4 跳端点", "fourth endpoint");
+  await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("combobox", { name: "第 4 跳端点" })));
+  expect(summary().textContent).toContain("entry endpoint → relay endpoint → exit endpoint → fourth endpoint → 目标");
+  expect(screen.queryByRole("button", { name: "取消添加" })).toBeNull();
+});
+
+it("clears the new append key when the parent commits before the selection promise settles", async () => {
+  const user = userEvent.setup();
+  const pending = vi.fn();
+  render(<Workspace ids={["entry"]} splitCommit onPendingChange={pending} />);
+  await user.click(screen.getByRole("button", { name: "添加下一跳" }));
+  await choose(user, "第 2 跳服务器", "relay server");
+  await choose(user, "第 2 跳端点", "relay endpoint");
+  await waitFor(() => expect(screen.queryByRole("button", { name: "取消添加" })).toBeNull());
+  const nextKeyChanges = pending.mock.calls.filter(([key]) => key === "add-entry/relay");
+  expect(nextKeyChanges.at(-1)).toEqual(["add-entry/relay", false]);
+  expect(summary().textContent).toContain("entry endpoint → relay endpoint → 目标");
+});
+
+it("marks an opened append as pending before any server is picked and restores the chain on cancel", async () => {
+  const user = userEvent.setup();
+  const pending = vi.fn();
+  render(<Workspace ids={["entry"]} onPendingChange={pending} />);
+  const add = screen.getByRole("button", { name: "添加下一跳" });
+  await user.click(add);
+  expect(pending).toHaveBeenCalledWith("add-entry", true);
+  expect(summary().textContent).toContain("entry endpoint → 第 2 跳（待选择） → 目标");
+  await choose(user, "第 2 跳服务器", "relay server");
+  await user.click(screen.getByRole("button", { name: "取消添加" }));
+  expect(pending).toHaveBeenCalledWith("add-entry", false);
+  expect(summary().textContent).toContain("entry endpoint → 目标");
+  expect(document.activeElement).toBe(add);
+  await user.keyboard("{Enter}");
+  expect(screen.getByRole("combobox", { name: "第 2 跳服务器" }).textContent).toBe("选择服务器");
+});
+
+it("keeps an append explicitly pending until the selected listener has been read", async () => {
+  const user = userEvent.setup();
+  const task = deferred();
+  render(<Workspace ids={["entry"]} commit={() => task.promise} />);
+  await user.click(screen.getByRole("button", { name: "添加下一跳" }));
+  await choose(user, "第 2 跳服务器", "relay server");
+  await choose(user, "第 2 跳端点", "relay endpoint");
+  expect(summary().textContent).toContain("entry endpoint → 第 2 跳（正在读取） → 目标");
+  expect(summary().textContent).not.toContain("entry endpoint → relay endpoint → 目标");
+  expect((screen.getByRole("button", { name: "取消添加" }) as HTMLButtonElement).disabled).toBe(false);
+  expect((screen.getByRole("button", { name: "移除第 1 跳" }) as HTMLButtonElement).disabled).toBe(true);
+  await act(async () => { task.resolve(true); await task.promise; });
+  await waitFor(() => expect(summary().textContent).toContain("entry endpoint → relay endpoint → 目标"));
+  expect(summary().textContent).not.toContain("正在读取");
+});
+
+it("cancels an append while its read is pending and ignores the late result", async () => {
+  const user = userEvent.setup();
+  const task = deferred();
+  const pending = vi.fn();
+  render(<Workspace ids={["entry"]} commit={() => task.promise} onPendingChange={pending} />);
+  await user.click(screen.getByRole("button", { name: "添加下一跳" }));
+  await choose(user, "第 2 跳服务器", "relay server");
+  await choose(user, "第 2 跳端点", "relay endpoint");
+  expect(summary().textContent).toContain("第 2 跳（正在读取）");
+  await user.click(screen.getByRole("button", { name: "取消添加" }));
+  expect(pending).toHaveBeenCalledWith("add-entry", false);
+  const add = screen.getByRole("button", { name: "添加下一跳" });
+  expect(document.activeElement).toBe(add);
+  expect(summary().textContent).toContain("entry endpoint → 目标");
+  await user.keyboard("{Enter}");
+  await choose(user, "第 2 跳服务器", "fourth server");
+  const newer = screen.getByRole("combobox", { name: "第 2 跳服务器" });
+  newer.focus();
+  await act(async () => { task.resolve(true); await task.promise; });
+  expect(newer.textContent).toContain("fourth server");
+  expect(document.activeElement).toBe(newer);
+  expect(summary().textContent).toContain("entry endpoint → 第 2 跳（待选择） → 目标");
+  expect(summary().textContent).not.toContain("relay endpoint");
+});
+
+it("retains the partial append and original chain when the listener read fails", async () => {
   const user = userEvent.setup();
   const pending = deferred();
   render(<Workspace ids={["entry", "exit"]} commit={() => pending.promise} />);
-  await user.click(screen.getByRole("button", { name: "添加中转" }));
-  await choose(user, "中转服务器", "relay server");
-  await choose(user, "中转端点", "relay endpoint");
-  expect((screen.getByRole("button", { name: "取消添加中转" }) as HTMLButtonElement).disabled).toBe(true);
+  await user.click(screen.getByRole("button", { name: "添加下一跳" }));
+  await choose(user, "第 3 跳服务器", "relay server");
+  await choose(user, "第 3 跳端点", "relay endpoint");
   await act(async () => pending.resolve(false));
-  expect(screen.getByRole("combobox", { name: "中转服务器" }).textContent).toContain("relay server");
-  expect(screen.getByRole("region", { name: "路径摘要" }).textContent).toContain("entry endpoint → exit endpoint → 目标");
-  await user.click(screen.getByRole("button", { name: "取消添加中转" }));
-  expect(document.activeElement).toBe(screen.getByRole("button", { name: "添加中转" }));
-  await user.keyboard("{Enter}");
-  expect(screen.getByRole("combobox", { name: "中转服务器" }).textContent).toBe("选择服务器");
+  expect(screen.getByRole("combobox", { name: "第 3 跳服务器" }).textContent).toContain("relay server");
+  expect(summary().textContent).toContain("entry endpoint → exit endpoint → 第 3 跳（待选择） → 目标");
+  await user.click(screen.getByRole("button", { name: "取消添加" }));
+  expect(summary().textContent).toContain("entry endpoint → exit endpoint → 目标");
+  expect(document.activeElement).toBe(screen.getByRole("button", { name: "添加下一跳" }));
 });
 
-it("does not steal newer field focus when an earlier intermediate selection finishes", async () => {
+it("does not steal newer field focus when an earlier append finishes", async () => {
   const user = userEvent.setup();
   const pending = deferred();
   render(<Workspace ids={["entry", "exit"]} commit={() => pending.promise} />);
-  await user.click(screen.getByRole("button", { name: "添加中转" }));
-  await choose(user, "中转服务器", "relay server");
-  await choose(user, "中转端点", "relay endpoint");
+  await user.click(screen.getByRole("button", { name: "添加下一跳" }));
+  await choose(user, "第 3 跳服务器", "relay server");
+  await choose(user, "第 3 跳端点", "relay endpoint");
   const newer = screen.getByRole("combobox", { name: "第 1 跳服务器" });
   newer.focus();
   await act(async () => pending.resolve(true));
   expect(document.activeElement).toBe(newer);
-  expect(screen.getByRole("region", { name: "路径摘要" }).textContent).toContain("entry endpoint → relay endpoint → exit endpoint → 目标");
+  expect(summary().textContent).toContain("entry endpoint → exit endpoint → relay endpoint → 目标");
 });
 
-it("does not close a newer add task when an earlier selection succeeds", async () => {
+it("does not close a newer server selection or commit an invalidated append", async () => {
   const user = userEvent.setup();
   const pending = deferred();
   render(<Workspace ids={["entry", "exit"]} commit={() => pending.promise} />);
-  const add = screen.getByRole("button", { name: "添加中转" });
-  await user.click(add);
-  await choose(user, "中转服务器", "relay server");
-  await choose(user, "中转端点", "relay endpoint");
-  await user.click(add);
+  await user.click(screen.getByRole("button", { name: "添加下一跳" }));
+  await choose(user, "第 3 跳服务器", "relay server");
+  await choose(user, "第 3 跳端点", "relay endpoint");
+  await choose(user, "第 3 跳服务器", "fourth server");
+  const newer = screen.getByRole("combobox", { name: "第 3 跳服务器" });
+  newer.focus();
   await act(async () => pending.resolve(true));
-  expect(add.getAttribute("aria-expanded")).toBe("true");
-  expect(screen.getByRole("combobox", { name: "中转服务器" })).toBeTruthy();
-  expect(document.activeElement).toBe(add);
+  expect(screen.getByRole("button", { name: "添加下一跳" }).getAttribute("aria-expanded")).toBe("true");
+  expect(newer.textContent).toContain("fourth server");
+  expect(document.activeElement).toBe(newer);
+  expect(summary().textContent).toContain("entry endpoint → exit endpoint → 第 3 跳（待选择） → 目标");
 });
 
-it("reorders through the disclosed controls and names the new entry and exit", async () => {
+it("reorders any hop with visible controls and updates the summary and endpoint ordinals together", async () => {
   const user = userEvent.setup();
-  render(<Workspace ids={["entry", "exit"]} />);
-  const exit = screen.getByRole("region", { name: "最终出口" });
-  await user.click(within(exit).getByText("顺序与移除"));
-  await user.click(within(exit).getByRole("button", { name: "上移第 2 跳" }));
-  expect(within(screen.getByRole("region", { name: "入口" }))
-    .getByRole("combobox", { name: "第 1 跳端点" }).textContent).toContain("exit endpoint");
-  expect(within(exit).getByRole("combobox", { name: "第 2 跳端点" }).textContent).toContain("entry endpoint");
-  expect(screen.getByRole("region", { name: "路径摘要" }).textContent).toContain("exit endpoint → entry endpoint → 目标");
+  render(<Workspace ids={["entry", "relay", "exit", "fourth"]} />);
+  await user.click(screen.getByRole("button", { name: "上移第 4 跳" }));
+  expect(summary().textContent).toContain("entry endpoint → relay endpoint → fourth endpoint → exit endpoint → 目标");
+  expect(screen.getByRole("combobox", { name: "第 3 跳端点" }).textContent).toContain("fourth endpoint");
+  await user.click(screen.getByRole("button", { name: "下移第 1 跳" }));
+  expect(summary().textContent).toContain("relay endpoint → entry endpoint → fourth endpoint → exit endpoint → 目标");
+  expect(screen.getByRole("combobox", { name: "第 1 跳端点" }).textContent).toContain("relay endpoint");
 });
 
-
-it("places final exit before optional transit so decisions follow their dependencies", () => {
-  render(<Workspace ids={["entry", "exit"]} />);
-  const exit = screen.getByRole("region", { name: "最终出口" });
-  const middle = screen.getByRole("region", { name: "中转" });
-  expect(exit.compareDocumentPosition(middle) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-  expect(within(exit).getByText("服务器")).toBeTruthy();
-  expect(within(exit).getByText("监听端点")).toBeTruthy();
+it.each([
+  [1, "relay endpoint → exit endpoint → fourth endpoint → 目标"],
+  [2, "entry endpoint → exit endpoint → fourth endpoint → 目标"],
+  [3, "entry endpoint → relay endpoint → fourth endpoint → 目标"],
+  [4, "entry endpoint → relay endpoint → exit endpoint → 目标"],
+])("removes hop %s from a four-hop chain without changing the remaining order", async (hop, expected) => {
+  const user = userEvent.setup();
+  render(<Workspace ids={["entry", "relay", "exit", "fourth"]} />);
+  await user.click(screen.getByRole("button", { name: `移除第 ${hop} 跳` }));
+  expect(summary().textContent).toContain(expected);
+  expect(screen.getAllByRole("listitem")).toHaveLength(3);
 });
 
-it("chooses independent exit deliberately and can cancel a partial selection without changing the route", async () => {
+it("removes the only hop and returns focus to the first-hop picker", async () => {
   const user = userEvent.setup();
   render(<Workspace ids={["entry"]} />);
-  expect(screen.queryByRole("combobox", { name: "下一跳服务器" })).toBeNull();
-  await user.click(screen.getByRole("button", { name: "选择独立出口" }));
-  expect(document.activeElement).toBe(screen.getByRole("combobox", { name: "下一跳服务器" }));
-  const summary = screen.getByRole("region", { name: "路径摘要" });
-  expect(summary.textContent).toContain("entry endpoint → 独立出口（待选择） → 目标");
-  expect(summary.textContent).not.toContain("entry endpoint → 目标");
-  await choose(user, "下一跳服务器", "exit server");
-  expect(summary.textContent).toContain("独立出口（待选择）");
-  await user.click(screen.getByRole("button", { name: "从入口直接访问" }));
-  expect(screen.queryByRole("combobox", { name: "下一跳端点" })).toBeNull();
-  expect(screen.getByRole("region", { name: "路径摘要" }).textContent).toContain("entry endpoint → 目标");
-});
-
-it("requires reviewing removed intermediate and exit before changing an existing path to direct", async () => {
-  const user = userEvent.setup();
-  render(<Workspace ids={["entry", "relay", "exit"]} />);
-  await user.click(screen.getByRole("button", { name: "从入口直接访问" }));
-  const review = screen.getByRole("region", { name: "确认改为入口直出" });
-  expect(review.textContent).toContain("relay endpoint");
-  expect(review.textContent).toContain("exit endpoint");
-  expect(screen.getByRole("region", { name: "路径摘要" }).textContent).toContain("entry endpoint → relay endpoint → exit endpoint → 目标");
-  await user.click(screen.getByRole("button", { name: "保留当前路径" }));
-  expect(screen.queryByRole("region", { name: "确认改为入口直出" })).toBeNull();
-  await user.click(screen.getByRole("button", { name: "从入口直接访问" }));
-  await user.click(screen.getByRole("button", { name: "移除并改为直出" }));
-  await waitFor(() => expect(screen.queryByRole("region", { name: "中转" })).toBeNull());
-  expect(screen.getByRole("region", { name: "路径摘要" }).textContent).toContain("entry endpoint → 目标");
-});
-
-
-it("keeps the independent exit explicitly pending until its endpoint configuration resolves", async () => {
-  const user = userEvent.setup();
-  const task = deferred();
-  render(<Workspace ids={["entry"]} commit={() => task.promise} />);
-  await user.click(screen.getByRole("button", { name: "选择独立出口" }));
-  await choose(user, "下一跳服务器", "exit server");
-  await choose(user, "下一跳端点", "exit endpoint");
-  const summary = screen.getByRole("region", { name: "路径摘要" });
-  expect(summary.textContent).toContain("entry endpoint → 独立出口（正在读取） → 目标");
-  expect(summary.textContent).not.toContain("entry endpoint → exit endpoint → 目标");
-  await act(async () => { task.resolve(true); await task.promise; });
-  await waitFor(() => expect(summary.textContent).toContain("entry endpoint → exit endpoint → 目标"));
-  expect(summary.textContent).not.toContain("独立出口（");
+  await user.click(screen.getByRole("button", { name: "移除第 1 跳" }));
+  expect(summary().textContent).toContain("客户端 → 选择第一跳 → 目标");
+  expect(document.activeElement).toBe(screen.getByRole("combobox", { name: "第 1 跳服务器" }));
+  expect(screen.queryByRole("button", { name: "添加下一跳" })).toBeNull();
 });

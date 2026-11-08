@@ -752,7 +752,7 @@ export function ServerRouteEditor({
       setAnnouncement(
         next.ir.programs.length
           ? `路径已更新：${next.ir.programs.map((p) => p.listener.name).join("，然后到")}，最后直接访问目标。`
-          : "路径已清空，请重新选择入口。",
+          : "路径已清空，请选择第一跳。",
       );
       return true;
     } catch (e) {
@@ -838,7 +838,7 @@ export function ServerRouteEditor({
   const connect = (connection: FlowConnection) => {
     if (!connection.source || !connection.target) return;
     if (path.length && path.at(-1) !== connection.source) {
-      setError(new Error("请从当前路径的出口连接到下一跳。"));
+      setError(new Error("请从当前路径的最后一跳连接到下一跳。"));
       return;
     }
     updatePath(
@@ -1192,7 +1192,7 @@ export function ServerRouteEditor({
               </ReactFlow>
             </div>
             <p className="muted text-sm text-muted-foreground mt-3">
-              点击端点选择入口，从路径末端连接下一跳。拖动只调整图形布局。
+              点击端点选择第一跳，从路径末端连接下一跳。拖动只调整图形布局。
             </p>
           </>
         ) : (
@@ -2432,6 +2432,7 @@ function ServerRouteDetail({
     </TaskSheet>
   );
 }
+
 
 
 

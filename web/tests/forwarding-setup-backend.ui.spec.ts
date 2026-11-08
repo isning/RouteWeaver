@@ -77,7 +77,7 @@ async function verifyEntryFocus(page: Page, info: TestInfo, surface: Locator) {
     };
   });
   type FocusSnapshot = Awaited<ReturnType<typeof snapshot>>;
-  const evidence: { before?: FocusSnapshot; after?: FocusSnapshot; afterDisclosure?: FocusSnapshot; atEnd?: FocusSnapshot | null; moved?: boolean } = {};
+  const evidence: { before?: FocusSnapshot; after?: FocusSnapshot; afterAppend?: FocusSnapshot; afterCancel?: FocusSnapshot; atEnd?: FocusSnapshot | null; moved?: boolean } = {};
   try {
     // A hidden exit is not yet a completed focus handoff. Wait for the popup
     // to unmount and real task motion to finish, without refocusing anything.
@@ -98,17 +98,26 @@ async function verifyEntryFocus(page: Page, info: TestInfo, surface: Locator) {
     expect(evidence.before, "Selection leaves meaningful focus in the path form").toMatchObject({ meaningful: true });
     expect(evidence.after, "Native Tab continues within the path form").toMatchObject({ meaningful: true });
     expect(evidence.moved, "Native Tab advances to another form control").toBe(true);
-    const ordering = surface.locator("details > summary").filter({ hasText: "顺序与移除" });
-    await expect(ordering).toHaveCount(1);
-    await expect(ordering).toBeFocused();
-    expect(await ordering.evaluate((element) => element.parentElement?.hasAttribute("open"))).toBe(false);
-    await page.keyboard.press("Enter");
-    expect(await ordering.evaluate((element) => element.parentElement?.hasAttribute("open"))).toBe(true);
-    await page.keyboard.press("Tab");
-    await settledTask(surface);
     await expect(surface.getByRole("button", { name: "移除第 1 跳", exact: true })).toBeFocused();
-    evidence.afterDisclosure = await snapshot();
-    expect(evidence.afterDisclosure, "Disclosure keeps keyboard continuation in the path form").toMatchObject({ meaningful: true });
+    await page.keyboard.press("Tab");
+    const append = surface.getByRole("button", { name: "添加下一跳", exact: true });
+    await expect(append).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(surface.getByRole("combobox", { name: "第 2 跳服务器", exact: true })).toBeFocused();
+    await settledTask(surface);
+    evidence.afterAppend = await snapshot();
+    expect(evidence.afterAppend, "Adding the next hop keeps keyboard continuation in the path form").toMatchObject({ meaningful: true });
+    await expect(surface.getByRole("button", { name: "保存草稿", exact: true })).toBeDisabled();
+    await page.keyboard.press("Tab");
+    await expect(surface.getByRole("button", { name: "取消添加", exact: true })).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(surface.getByRole("combobox", { name: "第 2 跳服务器", exact: true })).toHaveCount(0);
+    await expect(append).toBeFocused();
+    await settledTask(surface);
+    evidence.afterCancel = await snapshot();
+    expect(evidence.afterCancel, "Cancelling an unfinished hop returns meaningful focus to the append action").toMatchObject({ meaningful: true });
+    await expect(surface.getByRole("combobox", { name: "第 1 跳端点", exact: true })).toContainText(names.listener);
+    await expect(surface.getByRole("button", { name: "保存草稿", exact: true })).toBeEnabled();
   } finally {
     evidence.atEnd = await snapshot().catch(() => null);
     const width = page.viewportSize()!.width;
@@ -285,19 +294,24 @@ for (const width of [1440, 390]) {
     await page.locator(".page-heading").getByRole("button", { name: "新建转发路径", exact: true }).click();
     const pathEditor = page.getByRole("dialog", { name: "新建转发路径", exact: true });
     await pathEditor.getByLabel("转发路径名称", { exact: true }).fill(names.path);
-    await choose(page, pathEditor.getByRole("combobox", { name: "入口服务器", exact: true }), names.host);
-    const entryListener = pathEditor.getByRole("combobox", { name: "入口端点", exact: true });
+    await choose(page, pathEditor.getByRole("combobox", { name: "第 1 跳服务器", exact: true }), names.host);
+    const entryListener = pathEditor.getByRole("combobox", { name: "第 1 跳端点", exact: true });
+    const emptyListener = await entryListener.elementHandle();
+    expect(emptyListener, "The empty first-hop picker exists before endpoint reveal").not.toBeNull();
     const selectedListener = pathEditor.getByRole("combobox", { name: "第 1 跳端点", exact: true });
     const revealedSelection = page.waitForResponse((response) =>
       response.request().method() === "GET" &&
       new URL(response.url()).pathname === `/api/managed-endpoints/${encodeURIComponent(listener.id)}/reveal`,
     );
-    // Only this choice replaces its trigger: the empty entry becomes an exact
-    // selected hop after the real endpoint reveal, plus a fresh next-hop picker.
+    // Only this choice replaces its trigger: the empty first hop becomes an
+    // exact selected hop after the real endpoint reveal. Its label stays stable.
     await choose(page, entryListener, names.listener, selectedListener);
-    await expect(entryListener).toHaveCount(0);
     await expect(pathEditor.getByRole("combobox", { name: "第 1 跳服务器", exact: true })).toHaveText(names.host);
     await expect(selectedListener).toHaveText(`${names.listener} vless:${listenerPort} managed-xray`);
+    expect(await emptyListener!.evaluate((element) => element.isConnected), "The empty picker is replaced, not reused for a different selection").toBe(false);
+    await emptyListener!.dispose();
+    await expect(selectedListener).toHaveCount(1);
+    await expect(pathEditor.getByRole("combobox", { name: "第 2 跳服务器", exact: true })).toHaveCount(0);
     const selectedResponse = await revealedSelection;
     expect(selectedResponse.status()).toBe(200);
     expect(await selectedResponse.json()).toMatchObject({ id: listener.id, instanceId: core.id, name: names.listener });

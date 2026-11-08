@@ -272,7 +272,6 @@ it("explains same-core unavailable endpoint choices at the actual next-hop decis
   const editor = await screen.findByRole("dialog", {
     name: "编辑 Reject draft",
   });
-  await user.click(within(editor).getByText("顺序与移除"));
   const ordering = within(editor).getByRole("group", {
     name: "第 1 跳顺序操作",
   });
@@ -288,9 +287,9 @@ it("explains same-core unavailable endpoint choices at the actual next-hop decis
   expect(
     within(editor).getByRole("combobox", { name: "第 1 跳服务器" }),
   ).toBeTruthy();
-  await user.click(within(editor).getByRole("button", { name: "选择独立出口" }));
+  await user.click(within(editor).getByRole("button", { name: "添加下一跳" }));
   await user.click(
-    within(editor).getByRole("combobox", { name: "下一跳服务器" }),
+    within(editor).getByRole("combobox", { name: "第 2 跳服务器" }),
   );
   await user.click(
     within(
@@ -298,7 +297,7 @@ it("explains same-core unavailable endpoint choices at the actual next-hop decis
     ).getByText("FRA", {}),
   );
   await user.click(
-    within(editor).getByRole("combobox", { name: "下一跳端点" }),
+    within(editor).getByRole("combobox", { name: "第 2 跳端点" }),
   );
   expect(
     within(editor).getByText(

@@ -176,20 +176,23 @@ for (const width of [1440, 390]) {
     await expect(pathEditor).toBeVisible();
     await expect(pathEditor.getByRole("combobox", { name: "第 1 跳服务器", exact: true })).toHaveText("Setup server");
     await expect(pathEditor.getByRole("combobox", { name: "第 1 跳端点", exact: true })).toContainText("Setup listener");
-    await expect(pathEditor.getByText("从入口服务器直接访问目标", { exact: true })).toBeVisible();
+    await expect(pathEditor.getByRole("region", { name: "路径摘要" })).toContainText("客户端 → Setup listener → 目标");
+    await expect(pathEditor.getByRole("combobox", { name: "第 2 跳服务器", exact: true })).toHaveCount(0);
     await pathEditor.getByLabel("转发路径名称", { exact: true }).fill("Unsaved contextual path");
     await capture(page, info, `listener-prefilled-path-${width}`, pathEditor);
-    const independentExit = pathEditor.getByRole("button", { name: "选择独立出口", exact: true });
-    await independentExit.click();
-    const nextServer = pathEditor.getByRole("combobox", { name: "下一跳服务器", exact: true });
-    const nextEndpoint = pathEditor.getByRole("combobox", { name: "下一跳端点", exact: true });
-    // The optional exit fields are revealed only by an explicit choice. No
+    const appendHop = pathEditor.getByRole("button", { name: "添加下一跳", exact: true });
+    await appendHop.click();
+    const nextServer = pathEditor.getByRole("combobox", { name: "第 2 跳服务器", exact: true });
+    const nextEndpoint = pathEditor.getByRole("combobox", { name: "第 2 跳端点", exact: true });
+    // The next hop is added only by an explicit choice. No
     // endpoint is selected and the contextual draft remains unsaved.
     await nextEndpoint.scrollIntoViewIfNeeded();
     await expect(nextServer).toHaveText("选择服务器");
     await expect(nextEndpoint).toHaveText("先选择服务器");
     await expect(nextEndpoint).toBeDisabled();
-    await capture(page, info, `listener-prefilled-exit-${width}`, pathEditor, [nextServer, nextEndpoint]);
+    await expect(pathEditor.getByRole("region", { name: "路径摘要" })).toContainText("第 2 跳（待选择）");
+    await expect(pathEditor.getByRole("button", { name: "保存草稿", exact: true })).toBeDisabled();
+    await capture(page, info, `listener-prefilled-next-hop-${width}`, pathEditor, [nextServer, nextEndpoint]);
     expect(await read(page.request, "/server-deployments")).toEqual([]);
     const backToServer = pathEditor.getByRole("link", { name: "返回原服务器", exact: true });
     await backToServer.click();
