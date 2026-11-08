@@ -169,7 +169,7 @@ export function ServerPathWorkspace({
   const exit = programs.at(-1);
   return (
     <div ref={workspace} className="ordered-path min-w-0 space-y-3 [overflow-wrap:anywhere]">
-      <ServerPathSummary programs={programs} />
+      <ServerPathSummary programs={programs} pendingExit={selectingExit && programs.length === 1 ? (changing ? "loading" : "selecting") : undefined} />
       {changing && <p role="status" className="text-sm text-muted-foreground">正在读取所选监听配置…</p>}
       <section aria-labelledby={`${id}-entry`} className="space-y-3 rounded-xl border bg-card p-4 sm:p-5">
         <h3 id={`${id}-entry`} className="text-base font-semibold">入口</h3>
@@ -282,14 +282,18 @@ export function ServerPathWorkspace({
   );
 }
 
-export function ServerPathSummary({ programs }: { programs: ServerProgram[] }) {
+export function ServerPathSummary({ programs, pendingExit }: {
+  programs: ServerProgram[];
+  pendingExit?: "selecting" | "loading";
+}) {
   return (
     <section aria-label="路径摘要" className="space-y-1 rounded-lg bg-muted/40 p-3 text-sm [overflow-wrap:anywhere]">
       <h3 className="font-medium">路径摘要</h3>
       <p className="text-muted-foreground">
-        {programs.length ? `客户端 → ${programs.map((program) => program.listener.name).join(" → ")} → 目标` : "客户端 → 选择入口服务器 → 目标"}
+        {programs.length ? `客户端 → ${programs.map((program) => program.listener.name).join(" → ")}${pendingExit ? ` → 独立出口（${pendingExit === "loading" ? "正在读取" : "待选择"}）` : ""} → 目标` : "客户端 → 选择入口服务器 → 目标"}
       </p>
     </section>
   );
 }
+
 

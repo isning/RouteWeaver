@@ -192,7 +192,11 @@ it("chooses independent exit deliberately and can cancel a partial selection wit
   expect(screen.queryByRole("combobox", { name: "下一跳服务器" })).toBeNull();
   await user.click(screen.getByRole("button", { name: "选择独立出口" }));
   expect(document.activeElement).toBe(screen.getByRole("combobox", { name: "下一跳服务器" }));
+  const summary = screen.getByRole("region", { name: "路径摘要" });
+  expect(summary.textContent).toContain("entry endpoint → 独立出口（待选择） → 目标");
+  expect(summary.textContent).not.toContain("entry endpoint → 目标");
   await choose(user, "下一跳服务器", "exit server");
+  expect(summary.textContent).toContain("独立出口（待选择）");
   await user.click(screen.getByRole("button", { name: "从入口直接访问" }));
   expect(screen.queryByRole("combobox", { name: "下一跳端点" })).toBeNull();
   expect(screen.getByRole("region", { name: "路径摘要" }).textContent).toContain("entry endpoint → 目标");
@@ -212,4 +216,20 @@ it("requires reviewing removed intermediate and exit before changing an existing
   await user.click(screen.getByRole("button", { name: "移除并改为直出" }));
   await waitFor(() => expect(screen.queryByRole("region", { name: "中转" })).toBeNull());
   expect(screen.getByRole("region", { name: "路径摘要" }).textContent).toContain("entry endpoint → 目标");
+});
+
+
+it("keeps the independent exit explicitly pending until its endpoint configuration resolves", async () => {
+  const user = userEvent.setup();
+  const task = deferred();
+  render(<Workspace ids={["entry"]} commit={() => task.promise} />);
+  await user.click(screen.getByRole("button", { name: "选择独立出口" }));
+  await choose(user, "下一跳服务器", "exit server");
+  await choose(user, "下一跳端点", "exit endpoint");
+  const summary = screen.getByRole("region", { name: "路径摘要" });
+  expect(summary.textContent).toContain("entry endpoint → 独立出口（正在读取） → 目标");
+  expect(summary.textContent).not.toContain("entry endpoint → exit endpoint → 目标");
+  await act(async () => { task.resolve(true); await task.promise; });
+  await waitFor(() => expect(summary.textContent).toContain("entry endpoint → exit endpoint → 目标"));
+  expect(summary.textContent).not.toContain("独立出口（");
 });
