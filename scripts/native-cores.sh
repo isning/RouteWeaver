@@ -58,7 +58,7 @@ PY
 mkdir -p bin/verification
 REPORT="bin/verification/native-$MODE.jsonl"
 if [[ "$MODE" == parsers ]]; then
-  scripts/go.sh test -json -p=1 -count=1 -timeout=120s -run 'TestNative(Client|Server|VLESS|Trojan|VMess|Pinned|Check|Version|Template|MultiPrincipal|Override|Owned|CoreInstaller|Install)|^TestNativeStockRetiredReceiptsRecoverWithoutDownload$|TestImportedProcessedVLESSPassesBothNativeClients' ./internal/render ./internal/agent ./internal/httpapi ./internal/integration | tee "$REPORT"
+  scripts/go.sh test -json -p=1 -count=1 -timeout=120s -run 'TestNative(Client|Server|VLESS|Trojan|VMess|Pinned|Check|Version|Template|MultiPrincipal|Override|Owned|CoreInstaller|Install)|^TestNativeMixedConnectorChain$|^TestNativeStockRetiredReceiptsRecoverWithoutDownload$|TestImportedProcessedVLESSPassesBothNativeClients' ./internal/render ./internal/agent ./internal/httpapi ./internal/integration | tee "$REPORT"
 else
   scripts/go.sh test -json -p=1 -count=1 -timeout=120s -run '^TestNative(SupervisorLifecycleAndRestart|XrayTwoHopLoopbackRoundtrip)$|^TestNativeStock(Xray|SingBox)UpgradeKeepsExactRuntimeAndLease$|^TestNativeStockXraySecurityDefaults$|^TestRenderedTwoHopRouteHasNoDirectFallback$|^TestNativeSharedVLESSIngressKeepsPrincipalPathsSeparate$|^TestNativeFleetConfigureStopStartAndRollback$|^TestNativeEndpointProtocolsLoopback$|^TestNativeInvitedUserDownloadedClientTraffic$|^TestNativeDownloadedClientConfiguredDNS$' ./internal/agent ./internal/integration ./internal/httpapi | tee "$REPORT"
 fi
@@ -68,7 +68,7 @@ events=[json.loads(line) for line in open(sys.argv[1]) if line.strip()]
 mode=os.environ['ROUTEWEAVER_NATIVE_STAGE']
 required={('routeweaver/internal/render','TestNativeTrojanConfigurationMatrix'),('routeweaver/internal/render','TestNativeVMessConfigurationMatrix'),('routeweaver/internal/render','TestNativeClientNodesOnlyConsumption'),('routeweaver/internal/httpapi','TestNativeOwnedRuleFileBundles'),('routeweaver/internal/agent','TestNativeCoreInstallerPreparesImmutableOfficialExecutables'),('routeweaver/internal/agent','TestNativeInstallDesiredPreservesActiveRuntimeAndLease'),('routeweaver/internal/agent','TestNativeInstallDoesNotEraseAcceptedRevocation'),('routeweaver/internal/agent','TestNativeInstallDownloadCannotDelayActiveLeaseExpiry'),('routeweaver/internal/render','TestNativeClientFixtures'),('routeweaver/internal/render','TestNativeMultiPrincipalVLESSFixtures'),('routeweaver/internal/render','TestNativeVLESSClientFixtures'),('routeweaver/internal/render','TestNativeServerFixtures'),('routeweaver/internal/agent','TestNativePinnedBinariesWhenExplicitlyAvailable'),('routeweaver/internal/httpapi','TestNativeTemplateFollowedProfileUpdate'),('routeweaver/internal/httpapi','TestNativeOverridePublishedArtifactsPassPinnedNativeParsers'),('routeweaver/internal/integration','TestImportedProcessedVLESSPassesBothNativeClients')}
 allowed_skips=set()
-required.update({('routeweaver/internal/render','TestNativeVLESSStockTransportMatrix'),('routeweaver/internal/agent','TestNativeStockRetiredReceiptsRecoverWithoutDownload')})
+required.update({('routeweaver/internal/render','TestNativeMixedConnectorChain'),('routeweaver/internal/render','TestNativeVLESSStockTransportMatrix'),('routeweaver/internal/agent','TestNativeStockRetiredReceiptsRecoverWithoutDownload')})
 if mode=='runtime':
     clients=set(filter(None,os.environ.get('ROUTEWEAVER_CLIENT_PROCESS_TESTS','').split(',')))
     if clients-{'mihomo','sing-box'}:raise SystemExit('Unknown native client process selection')
