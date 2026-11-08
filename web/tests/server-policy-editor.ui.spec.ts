@@ -95,7 +95,20 @@ for (const width of [1440, 390]) {
             instance,
             listener,
             egress: [],
-            resources: [],
+            resources: [
+              {
+                id: "rules-file",
+                name: "保留的域名资源",
+                revision: "r1",
+                digest: `sha256:${"a".repeat(64)}`,
+                format: "sing-box-source",
+                formatVersion: 3,
+                location: "remote",
+                url: "https://rules.example.invalid/list.json",
+                updatePolicy: "follow",
+                intervalSeconds: 3600,
+              },
+            ],
             connectors: [
               {
                 id: "transit",
@@ -132,6 +145,11 @@ for (const width of [1440, 390]) {
                 id: "blocked-domain",
                 match: { op: "domain", value: "blocked.example.invalid" },
                 action: { kind: "reject" },
+              },
+              {
+                id: "resource-rule",
+                match: { op: "resource", value: "rules-file" },
+                action: { kind: "direct" },
               },
             ],
             defaultAction: { kind: "reject" },
@@ -208,7 +226,50 @@ for (const width of [1440, 390]) {
       .getByRole("button", { name: "继续编辑", exact: true })
       .click();
     await expect(destination).toContainText("转发至连接器 exit");
-    await editor.getByText("连接器与策略依赖", { exact: true }).click();
+    for (const section of ["默认去向", "条件规则", "用户入口", "连接器"]) {
+      await expect(
+        editor.getByRole("region", {
+          name: `条件转发入口的${section}`,
+          exact: true,
+        }),
+      ).toBeVisible();
+    }
+    await expect(
+      editor.getByRole("combobox", {
+        name: "条件转发入口 规则 3 去向",
+        exact: true,
+      }),
+    ).toHaveCount(0);
+    await expect(
+      editor.getByText("该条件尚未提供去向表单，请在完整 JSON 中修改。", {
+        exact: true,
+      }),
+    ).toBeVisible();
+    for (const [index, option] of ["拒绝连接", "直连"].entries()) {
+      const action = editor.getByRole("combobox", {
+        name: `条件转发入口 规则 ${index + 1} 去向`,
+        exact: true,
+      });
+      await action.focus();
+      await page.keyboard.press("Enter");
+      await expect(search).toBeFocused();
+      await search.fill(option);
+      await expect(
+        page.getByRole("option", { name: option, exact: true }),
+      ).toBeVisible();
+      await search.press("Enter");
+      await expect(action).toContainText(option);
+    }
+    await capture(
+      page,
+      info,
+      editor,
+      editor.getByRole("combobox", {
+        name: "条件转发入口 规则 2 去向",
+        exact: true,
+      }),
+      "policy-rule-action",
+    );
     const connectors = editor.getByRole("region", {
       name: "条件转发入口的连接器",
       exact: true,
@@ -245,6 +306,11 @@ for (const width of [1440, 390]) {
       {
         ...before.ir.programs[0],
         defaultAction: { kind: "forward", ref: "exit" },
+        rules: [
+          { ...before.ir.programs[0].rules[0], action: { kind: "reject" } },
+          { ...before.ir.programs[0].rules[1], action: { kind: "direct" } },
+          before.ir.programs[0].rules[2],
+        ],
       },
     ]);
     expect(after.ir.topologyRevision).not.toBe(before.ir.topologyRevision);

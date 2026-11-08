@@ -941,6 +941,22 @@ export function ServerRouteEditor({
               updateProgram(index, { defaultAction });
               setAnnouncement("默认去向已更新到草稿，尚未保存。");
             }}
+            onRuleActionChange={(index, ruleID, action) => {
+              const program = latestDraft.current.ir.programs[index];
+              if (
+                !program ||
+                typeof ruleID !== "string" ||
+                !/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$/.test(ruleID) ||
+                program.listener.id !== draft.ir.programs[index]?.listener.id ||
+                program.rules.filter((rule) => rule.id === ruleID).length !== 1
+              ) return;
+              updateProgram(index, {
+                rules: program.rules.map((rule) =>
+                  rule.id === ruleID ? { ...rule, action } : rule,
+                ),
+              });
+              setAnnouncement("规则去向已更新到草稿，条件与顺序不变，尚未保存。");
+            }}
             onRefreshListener={setRefreshingListener}
             onEditJSON={editIntent}
           />
