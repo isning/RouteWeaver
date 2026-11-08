@@ -285,11 +285,42 @@ for (const width of [1440, 390]) {
       ),
     ).toHaveLength(1);
 
+    // Hold only request delivery. The unchanged request still reaches the real
+    // control plane and returns its real response; no result is substituted.
+    let releaseCheck!: () => void;
+    const checkGate = new Promise<void>((resolve) => {
+      releaseCheck = resolve;
+    });
+    await page.route("**/api/published-routes/preview", async (request) => {
+      await checkGate;
+      await request.continue();
+    });
     const rechecked = responseFor(page, "/published-routes/preview", "POST");
-    await repair
-      .getByRole("button", { name: "返回并重新检查", exact: true })
-      .click();
+    const recheckRequested = page.waitForRequest(
+      (request) =>
+        new URL(request.url()).pathname === "/api/published-routes/preview" &&
+        request.method() === "POST",
+    );
+    try {
+      await repair
+        .getByRole("button", { name: "返回并重新检查", exact: true })
+        .click();
+      await recheckRequested;
+      await expect(editor).toBeVisible();
+      await expect(inspect).toHaveAttribute("aria-busy", "true");
+      await expect(inspect).toHaveAttribute("aria-disabled", "true");
+      await expect(inspect).toBeFocused();
+      await page.keyboard.press("Enter");
+      expect(
+        mutations.filter(
+          (value) => value.path === "/api/published-routes/preview",
+        ),
+      ).toHaveLength(2);
+    } finally {
+      releaseCheck();
+    }
     expect((await rechecked).status()).toBe(200);
+    await page.unroute("**/api/published-routes/preview");
     await settledTask(editor);
     await expect(inspect).toBeFocused();
     await expect(name).toHaveValue("保留的 TLS 公开线路草稿");

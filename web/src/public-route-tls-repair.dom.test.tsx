@@ -249,6 +249,67 @@ it.each(["8443", "+08443", "8.443e3"])(
   },
 );
 
+it.each(["stay", "edit", "navigate"] as const)(
+  "focuses the returned check action before its request and respects a later %s action",
+  async (nextAction) => {
+    let count = 0;
+    let finish!: (response: Response) => void;
+    const checking = new Promise<Response>((resolve) => {
+      finish = resolve;
+    });
+    const { user, editor, requests } = await openEditor((path) => {
+      if (path.endsWith("/preview")) {
+        count++;
+        return count === 1 ? json({ error: tlsRefusal }, 422) : checking;
+      }
+    });
+    await user.click(editor.getByRole("button", { name: "检查公开线路" }));
+    await user.click(
+      await editor.findByRole("button", { name: "就地修复 TLS" }),
+    );
+    const repair = within(
+      await screen.findByRole("dialog", { name: "修复公开线路 TLS" }),
+    );
+    await user.click(repair.getByRole("button", { name: "返回并重新检查" }));
+    const returned = within(
+      await screen.findByRole("dialog", { name: "编辑 Office line" }),
+    );
+    const inspect = returned.getByRole("button", { name: "检查公开线路" });
+    await waitFor(() => expect(inspect.getAttribute("aria-busy")).toBe("true"));
+    expect(document.activeElement).toBe(inspect);
+    expect(inspect.hasAttribute("disabled")).toBe(false);
+    expect(inspect.getAttribute("aria-disabled")).toBe("true");
+    expect(returned.queryByRole("button", { name: "保存公开线路" })).toBeNull();
+    // Pending remains focusable, but another activation is never another check.
+    await user.keyboard("{Enter}");
+    expect(count).toBe(2);
+    const name = returned.getByRole("textbox", { name: "线路名称" });
+    if (nextAction !== "stay") {
+      await user.click(name);
+      if (nextAction === "edit") await user.type(name, " newer");
+      else act(() => window.dispatchEvent(new HashChangeEvent("hashchange")));
+    }
+    await act(async () => {
+      finish(json(route));
+      await checking;
+    });
+    await waitFor(() => expect(inspect.getAttribute("aria-busy")).toBeNull());
+    expect(document.activeElement).toBe(nextAction === "stay" ? inspect : name);
+    if (nextAction === "stay")
+      expect(
+        returned.getByRole("button", { name: "保存公开线路" }),
+      ).toBeTruthy();
+    else
+      expect(
+        returned.queryByRole("button", { name: "保存公开线路" }),
+      ).toBeNull();
+    expect(
+      requests.filter((value) => value.path.endsWith("/preview")),
+    ).toHaveLength(2);
+    expect(requests.filter((value) => value.method === "PUT")).toHaveLength(0);
+  },
+);
+
 it("ignores a late endpoint reveal after returning to the public-line draft", async () => {
   let finish!: (response: Response) => void;
   const reading = new Promise<Response>((resolve) => {
@@ -622,6 +683,9 @@ it("repairs TLS through endpoint impact review and explicit path adoption withou
     await screen.findByRole("dialog", { name: "编辑 Office line" }),
   );
   await returned.findByText("路径检查完成", { exact: true });
+  expect(document.activeElement).toBe(
+    returned.getByRole("button", { name: "检查公开线路" }),
+  );
   expect(previewCount).toBe(2);
   expect(
     (returned.getByRole("textbox", { name: "线路名称" }) as HTMLInputElement)

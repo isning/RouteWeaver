@@ -623,6 +623,7 @@ function PublicRouteEditor({
   const tlsRepairTrigger = useRef<HTMLButtonElement>(null);
   const inspectTrigger = useRef<HTMLButtonElement>(null);
   const tlsReturnFocus = useRef<"repair" | "inspect" | null>(null);
+  const tlsRecheckOnReady = useRef<(() => void) | null>(null);
   const tlsRepairEpoch = useRef(0);
   const [tlsTask, setTLSTask] = useState<{
     target: PublicRouteTLSRepairTarget;
@@ -631,6 +632,8 @@ function PublicRouteEditor({
   } | null>(null);
   const invalidateTLSRepair = () => {
     tlsRepairEpoch.current++;
+    tlsRecheckOnReady.current = null;
+    tlsReturnFocus.current = null;
     setTLSTask(null);
   };
   const nameInput = useRef<HTMLInputElement>(null);
@@ -865,7 +868,12 @@ function PublicRouteEditor({
       onOpenChange={(next) => {
         if (!next) close();
       }}
-      onReady={() => { tlsReturnFocus.current = null; }}
+      onReady={() => {
+        const recheck = tlsRecheckOnReady.current;
+        tlsRecheckOnReady.current = null;
+        tlsReturnFocus.current = null;
+        recheck?.();
+      }}
       onClosed={() => {
         if (discardClosing) onClose();
         else if (tlsTask) {
@@ -1212,19 +1220,26 @@ function PublicRouteEditor({
       inventory={inventory}
       isCurrent={tlsTask.stillCurrent}
       onClose={() => {
-        tlsReturnFocus.current = "repair";
         invalidateTLSRepair();
+        tlsReturnFocus.current = "repair";
       }}
       onRecheck={() => {
         if (!tlsTask.stillCurrent()) return;
-        tlsReturnFocus.current = "inspect";
         invalidateTLSRepair();
         version.current++;
         previewVersion.current = null;
         setPreview(null);
-        // This is the explicit final repair action, after the child verifies
-        // freshly read summaries. It checks the same draft; it never saves it.
-        inspect.mutate();
+        tlsReturnFocus.current = "inspect";
+        const revision = version.current;
+        const epoch = tlsRepairEpoch.current;
+        const currentView = ownView();
+        // Mount and focus the returned task before the check marks its action
+        // aria-disabled. Pending keeps that focus; completion never moves it.
+        // This consumes the explicit repair action once, only in its own draft.
+        tlsRecheckOnReady.current = () => {
+          if (currentView() && version.current === revision && tlsRepairEpoch.current === epoch)
+            inspect.mutate();
+        };
       }}
     />}
     {comparison && <PublicRouteEditComparison
