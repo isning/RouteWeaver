@@ -70,7 +70,7 @@ for (const width of [1440, 390]) {
     await page.goto("/#routes");
     await page.locator(".page-heading").getByRole("button", { name: "新建转发路径", exact: true }).click();
     const editor = page.getByRole("dialog", { name: "新建转发路径", exact: true });
-    for (const name of ["入口", "中转", "最终出口"])
+    for (const name of ["入口", "最终出口"])
       await expect(editor.getByRole("region", { name, exact: true })).toBeVisible();
     await expect(editor.getByText("选择入口后，默认从入口服务器直接访问目标。", { exact: true })).toBeVisible();
     await capture(page, info, editor, "path-empty-roles");
@@ -87,9 +87,21 @@ for (const width of [1440, 390]) {
     await expect(exit.getByText("从入口服务器直接访问目标", { exact: true })).toBeVisible();
     await capture(page, info, editor, "path-single-direct-exit", exit.getByText("从入口服务器直接访问目标", { exact: true }));
 
+    await expect(editor.getByRole("region", { name: "中转", exact: true })).toHaveCount(0);
+    await expect(exit.getByRole("button", { name: "从入口直接访问", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await exit.getByRole("button", { name: "使用另一台服务器出口", exact: true }).click();
+    await expect(editor.getByRole("button", { name: "保存草稿", exact: true })).toBeDisabled();
+    await capture(page, info, editor, "path-choose-independent-exit", exit.getByRole("combobox", { name: "下一跳服务器", exact: true }));
     await choose(page, editor.getByRole("combobox", { name: "下一跳服务器", exact: true }), names.exit);
     await choose(page, editor.getByRole("combobox", { name: "下一跳端点", exact: true }), endpoints.exit);
     await expect(exit.getByRole("combobox", { name: "第 2 跳端点", exact: true })).toBeFocused();
+    await capture(page, info, editor, "path-independent-exit-selected", exit.getByRole("combobox", { name: "第 2 跳端点", exact: true }));
+    await exit.getByRole("button", { name: "从入口直接访问", exact: true }).click();
+    const directReview = editor.getByRole("region", { name: "确认改为入口直出", exact: true });
+    await expect(directReview).toContainText(endpoints.exit);
+    await capture(page, info, editor, "path-review-removed-exit", directReview.getByRole("button", { name: "保留当前路径", exact: true }));
+    await directReview.getByRole("button", { name: "保留当前路径", exact: true }).click();
+    await expect(exit.getByRole("combobox", { name: "第 2 跳端点", exact: true })).toContainText(endpoints.exit);
     const add = editor.getByRole("button", { name: "添加中转", exact: true });
     await add.focus();
     await page.keyboard.press("Enter");
@@ -135,3 +147,4 @@ for (const width of [1440, 390]) {
     expect(mutations).toEqual(["POST /api/server-deployments"]);
   });
 }
+

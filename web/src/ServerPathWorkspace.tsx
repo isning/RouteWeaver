@@ -29,6 +29,14 @@ export function ServerPathWorkspace({
   const intermediatePicker = useRef<HTMLDivElement>(null);
   const addTask = useRef(0);
   const [addingIntermediate, setAddingIntermediate] = useState(false);
+  const [selectingExit, setSelectingExit] = useState(false);
+  const [confirmDirect, setConfirmDirect] = useState(false);
+  const exitChoice = useRef<HTMLButtonElement>(null);
+  const exitPicker = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    if (selectingExit && document.activeElement === exitChoice.current)
+      exitPicker.current?.querySelector<HTMLButtonElement>('[role="combobox"]')?.focus();
+  }, [selectingExit]);
   const path = programs.map((program) => program.listener.id);
   const addKey = `add-${path.join("/")}`;
   const pendingFocus = useRef<{
@@ -75,7 +83,11 @@ export function ServerPathWorkspace({
     const task = addTask.current;
     const changed = await onChangePath(ids);
     if (!changed && pendingFocus.current === owner) pendingFocus.current = null;
-    if (changed && task === addTask.current) setAddingIntermediate(false);
+    if (changed && task === addTask.current) {
+      setAddingIntermediate(false);
+      setSelectingExit(false);
+      setConfirmDirect(false);
+    }
   };
   const hostName = (program: ServerProgram) =>
     inventory.hosts.find((host) => host.id === program.instance.hostId)?.name || "服务器不可用";
@@ -166,24 +178,50 @@ export function ServerPathWorkspace({
       <section aria-labelledby={`${id}-exit`} className="space-y-3 rounded-xl border bg-muted/20 p-4 sm:p-5">
         <h3 id={`${id}-exit`} className="text-base font-semibold">最终出口</h3>
         <p className="text-sm text-muted-foreground">由哪台服务器访问目标网站？</p>
-        {!exit ? <p className="text-sm text-muted-foreground">选择入口后，默认从入口服务器直接访问目标。</p>
-          : programs.length === 1 ? (
-            <>
+        {!exit ? <p className="text-sm text-muted-foreground">选择入口后，默认从入口服务器直接访问目标。</p> : (
+          <>
+            <div className="flex flex-wrap gap-2" role="group" aria-label="出口方式">
+              <ActionButton variant={programs.length === 1 && !selectingExit ? "default" : "outline"}
+                aria-pressed={programs.length === 1 && !selectingExit} disabled={changing}
+                onClick={() => {
+                  if (programs.length > 1) { setConfirmDirect(true); return; }
+                  addTask.current++;
+                  onPendingChange(addKey, false);
+                  setSelectingExit(false);
+                }}>从入口直接访问</ActionButton>
+              <ActionButton ref={exitChoice} variant={programs.length > 1 || selectingExit ? "default" : "outline"}
+                aria-pressed={programs.length > 1 || selectingExit} disabled={changing}
+                onClick={() => { setConfirmDirect(false); if (programs.length === 1) setSelectingExit(true); }}>
+                使用另一台服务器出口
+              </ActionButton>
+            </div>
+            {confirmDirect && (
+              <div role="region" aria-label="确认改为入口直出" className="space-y-3 rounded-lg border p-3">
+                <p className="text-sm">改为从 {hostName(entry)} 直接访问目标，将从草稿移除以下中转和出口：</p>
+                <ul className="list-inside list-disc text-sm">{programs.slice(1).map((program) => <li key={program.listener.id}>{hostName(program)}：{program.listener.name}</li>)}</ul>
+                <div className="flex flex-wrap gap-2">
+                  <ActionButton disabled={changing} onClick={(event) => void changePath([path[0]], event.currentTarget, path[0])}>移除并改为直出</ActionButton>
+                  <ActionButton variant="outline" disabled={changing} onClick={() => { setConfirmDirect(false); exitChoice.current?.focus(); }}>保留当前路径</ActionButton>
+                </div>
+              </div>
+            )}
+            {programs.length === 1 ? selectingExit ? (
+              <div ref={exitPicker} className="space-y-2 border-t pt-3">
+                <ServerEndpointSelect
+                  key={addKey} inventory={inventory} endpointRef={addControl} label="下一跳"
+                  allowedIds={unusedIds} unavailableReason={unavailableReason}
+                  onPendingChange={() => onPendingChange(addKey, true)}
+                  onChange={(endpointId) => void changePath([...path, endpointId], addControl.current, endpointId)}
+                />
+              </div>
+            ) : (
               <div className="space-y-1">
                 <p className="font-medium">{hostName(exit)}</p>
                 <p className="text-sm text-muted-foreground">从入口服务器直接访问目标</p>
               </div>
-              <div className="space-y-2 border-t pt-3">
-                <p className="text-sm font-medium">使用独立出口（可选）</p>
-                <ServerEndpointSelect
-                  key={addKey} inventory={inventory} endpointRef={addControl} label="下一跳"
-                  allowedIds={unusedIds} unavailableReason={unavailableReason}
-                  onPendingChange={(pending) => onPendingChange(addKey, pending)}
-                  onChange={(endpointId) => void changePath([...path, endpointId], addControl.current, endpointId)}
-                />
-              </div>
-            </>
-          ) : <>{row(exit, programs.length - 1)}<p className="text-sm text-muted-foreground">从此服务器直接访问目标</p></>}
+            ) : <>{row(exit, programs.length - 1)}<p className="text-sm text-muted-foreground">从此服务器直接访问目标</p></>}
+          </>
+        )}
       </section>
       {programs.length > 1 && (
         <section aria-labelledby={`${id}-middle`} className="space-y-3 rounded-xl border bg-card p-4 sm:p-5">

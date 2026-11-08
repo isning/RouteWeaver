@@ -288,6 +288,7 @@ it("explains same-core unavailable endpoint choices at the actual next-hop decis
   expect(
     within(editor).getByRole("combobox", { name: "第 1 跳服务器" }),
   ).toBeTruthy();
+  await user.click(within(editor).getByRole("button", { name: "使用另一台服务器出口" }));
   await user.click(
     within(editor).getByRole("combobox", { name: "下一跳服务器" }),
   );
@@ -409,4 +410,5 @@ it("keeps route editing direct and offers batch operations from the route's cont
   ).toBeTruthy();
   expect(requests.some((path) => path.endsWith("/publish"))).toBe(false);
 });
+
 

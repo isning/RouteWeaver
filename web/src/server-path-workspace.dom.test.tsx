@@ -185,3 +185,31 @@ it("places final exit before optional transit so decisions follow their dependen
   expect(within(exit).getByText("服务器")).toBeTruthy();
   expect(within(exit).getByText("监听端点")).toBeTruthy();
 });
+
+it("chooses independent exit deliberately and can cancel a partial selection without changing the route", async () => {
+  const user = userEvent.setup();
+  render(<Workspace ids={["entry"]} />);
+  expect(screen.queryByRole("combobox", { name: "下一跳服务器" })).toBeNull();
+  await user.click(screen.getByRole("button", { name: "使用另一台服务器出口" }));
+  expect(document.activeElement).toBe(screen.getByRole("combobox", { name: "下一跳服务器" }));
+  await choose(user, "下一跳服务器", "exit server");
+  await user.click(screen.getByRole("button", { name: "从入口直接访问" }));
+  expect(screen.queryByRole("combobox", { name: "下一跳端点" })).toBeNull();
+  expect(screen.getByRole("region", { name: "路径摘要" }).textContent).toContain("entry endpoint → 目标");
+});
+
+it("requires reviewing removed intermediate and exit before changing an existing path to direct", async () => {
+  const user = userEvent.setup();
+  render(<Workspace ids={["entry", "relay", "exit"]} />);
+  await user.click(screen.getByRole("button", { name: "从入口直接访问" }));
+  const review = screen.getByRole("region", { name: "确认改为入口直出" });
+  expect(review.textContent).toContain("relay endpoint");
+  expect(review.textContent).toContain("exit endpoint");
+  expect(screen.getByRole("region", { name: "路径摘要" }).textContent).toContain("entry endpoint → relay endpoint → exit endpoint → 目标");
+  await user.click(screen.getByRole("button", { name: "保留当前路径" }));
+  expect(screen.queryByRole("region", { name: "确认改为入口直出" })).toBeNull();
+  await user.click(screen.getByRole("button", { name: "从入口直接访问" }));
+  await user.click(screen.getByRole("button", { name: "移除并改为直出" }));
+  await waitFor(() => expect(screen.queryByRole("region", { name: "中转" })).toBeNull());
+  expect(screen.getByRole("region", { name: "路径摘要" }).textContent).toContain("entry endpoint → 目标");
+});
