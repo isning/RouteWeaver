@@ -21,8 +21,8 @@ function setup(options: { entry?: Record<string, unknown>; route?: Record<string
   // Literal entrySummary DTO: ownership comes from /users/alice/entries, not a userId property.
   const entry = { id: "entry", name: "Alice source entry", subjectId: "subject",
     routeId: "line", publishedRouteId: "line", deploymentId: "path", credentialVersion: "v1", status: "effective", revoked: false, ...options.entry };
-  const state = { users: [user], nodes: [], routes: [], services: [], revisions: [], capabilities: [],
-    publishedRoutes: [{ id: "line", name: "London", status: "effective" }], deploymentAvailable: false };
+  // Literal /state DTO: published routes and services are separate endpoints.
+  const state = { users: [user], nodes: [], routes: [], revisions: [], capabilities: [], deploymentAvailable: false };
   vi.stubGlobal("fetch", vi.fn(async (url, init) => {
     const path = String(url), method = init?.method || "GET";
     requests.push(`${method} ${path}`);
@@ -33,7 +33,7 @@ function setup(options: { entry?: Record<string, unknown>; route?: Record<string
       if (options.failEntries) return new Response(JSON.stringify({ detail: "Unavailable" }), { status: 503 });
       body = [entry];
     } else if (path === "/api/published-routes/line/resolve")
-      body = { id: "line", deploymentId: "path", path: { entry: "listener" }, ...options.route };
+      body = { id: "line", name: "London", deploymentId: "path", path: { entry: "listener" }, ...options.route };
     else if (path === "/api/users/alice/effective-policy") body = { userId: "alice", routeIds: ["line"], status: "active" };
     else throw new Error(`Unexpected request ${path}`);
     return new Response(JSON.stringify(body), { headers: { "Content-Type": "application/json" } });
@@ -52,12 +52,14 @@ function setup(options: { entry?: Record<string, unknown>; route?: Record<string
   return { requests, fence, close, props, view, renderTask };
 }
 
-it("opens verified account source management without writes, reveal or changing the parent draft", async () => {
+it("resolves the published route outside /state and opens source management without writes, reveal or changing the parent draft", async () => {
   const { requests, fence } = setup();
   await userEvent.click(await screen.findByRole("button", { name: "管理此账号的入口" }));
   expect(await screen.findByRole("dialog", { name: "Alice 的平台入口" })).toBeTruthy();
   expect(await screen.findByText("Alice source entry")).toBeTruthy();
   expect(fence).toHaveBeenCalledTimes(1);
+  expect(requests).toContain("GET /api/published-routes/line/resolve");
+  expect(screen.getByText("London")).toBeTruthy();
   expect((screen.getByLabelText("Parent unsaved note") as HTMLInputElement).value).toBe("keep raw draft");
   expect(requests.every(request => request.startsWith("GET "))).toBe(true);
   expect(requests.some(request => request.includes("/reveal"))).toBe(false);
@@ -102,3 +104,4 @@ it("drops old source controls when a newer principal identity replaces the task"
   await waitFor(() => expect(screen.queryByRole("dialog", { name: "Alice 的平台入口" })).toBeNull());
   expect(await screen.findByText("无法确认入口来源")).toBeTruthy();
 });
+

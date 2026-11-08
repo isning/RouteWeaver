@@ -57,6 +57,9 @@ for (const width of [1440, 390]) {
       accountId, entryId: "source-entry", credentialVersion: "source-v1",
     });
     const state = await read(page.request, "/state");
+    // /state is legacy inventory, not the published-route authority. The source
+    // task must resolve the actual published route without this invented field.
+    expect(Object.hasOwn(state, "publishedRoutes")).toBe(false);
     const account = state.users.find((user: { id: string }) => user.id === accountId);
     expect(!!account).toBe(true);
     const summaries = await read(page.request, `/users/${accountId}/entries`);
@@ -172,3 +175,4 @@ for (const width of [1440, 390]) {
     expect(mutations).toEqual([`POST /api/published-routes/${id}/principals`, `DELETE /api/users/${accountId}/entries/source-entry`]);
   });
 }
+

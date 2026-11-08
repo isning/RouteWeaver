@@ -61,13 +61,15 @@ function SourceTask({ deploymentId, listenerId, principal, onClose, onBeforeMana
         entry.routeId === principal.routeId && entry.publishedRouteId === principal.routeId &&
         entry.deploymentId === deploymentId &&
         entry.credentialVersion === principal.credentialVersion && !entry.revoked);
-      if (matches.length !== 1 || !state.publishedRoutes?.some(route => route.id === principal.routeId))
+      if (matches.length !== 1)
         throw new Error("此草稿未匹配到唯一的公开线路用户入口。请重新读取路径后核对；原配置仍保留。");
-      const route = await request<{ id: string; deploymentId: string; path?: { entry: string } }>(
+      // /state contains legacy routes only. Resolve the published route itself;
+      // never infer its existence or ownership from an optional UI-enriched field.
+      const route = await request<{ id: string; name: string; deploymentId: string; path?: { entry: string } }>(
         `/published-routes/${encodeURIComponent(principal.routeId)}/resolve`, { signal });
       if (route.id !== principal.routeId || route.deploymentId !== deploymentId || route.path?.entry !== listenerId)
         throw new Error("此用户入口不属于当前监听。请重新读取路径后核对；原配置仍保留。");
-      return { state, user, entry: matches[0] };
+      return { state, user, entry: matches[0], route };
     },
     enabled: !managing,
   });
@@ -78,7 +80,7 @@ function SourceTask({ deploymentId, listenerId, principal, onClose, onBeforeMana
     user={verified.user}
     services={verified.state.services || []}
     routes={verified.state.routes || []}
-    publishedRoutes={verified.state.publishedRoutes || []}
+    publishedRoutes={[verified.route]}
     allocationHref={`#published-routes?line=${encodeURIComponent(principal.routeId)}&user=${encodeURIComponent(principal.accountId)}`}
     onClose={onClose}
   />;
@@ -86,7 +88,7 @@ function SourceTask({ deploymentId, listenerId, principal, onClose, onBeforeMana
     <div className="space-y-4">
       <dl className="space-y-2 text-sm [overflow-wrap:anywhere]">
         <div><dt>账号</dt><dd>{source.data?.user.name || principal.accountId}</dd></div>
-        <div><dt>线路</dt><dd>{source.data?.state.publishedRoutes?.find(route => route.id === principal.routeId)?.name || principal.routeId}</dd></div>
+        <div><dt>线路</dt><dd>{source.data?.route.name || principal.routeId}</dd></div>
       </dl>
       {source.isFetching && <p role="status">正在核对入口来源…</p>}
       {source.isPaused && <Notice tone="warning" title="入口来源读取已暂停">恢复连接后重试。<ActionButton variant="outline" onClick={() => void source.refetch()}>重新核对</ActionButton></Notice>}
@@ -107,3 +109,4 @@ function SourceTask({ deploymentId, listenerId, principal, onClose, onBeforeMana
     </div>
   </TaskSheet>;
 }
+
