@@ -225,8 +225,15 @@ it("does not close a newer server selection or commit an invalidated append", as
   await user.click(screen.getByRole("button", { name: "添加下一跳" }));
   await choose(user, "第 3 跳服务器", "relay server");
   await choose(user, "第 3 跳端点", "relay endpoint");
-  await choose(user, "第 3 跳服务器", "fourth server");
   const newer = screen.getByRole("combobox", { name: "第 3 跳服务器" });
+  await user.click(newer);
+  await user.type(screen.getByRole("combobox", { name: "搜索选项" }), "fourth server");
+  // A previously selected server also exposes the intentional clear action.
+  expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
+    "清除选择", "fourth server",
+  ]);
+  await user.click(screen.getByRole("option", { name: "fourth server", exact: true }));
+  await waitFor(() => expect(screen.queryByRole("listbox")).toBeNull());
   newer.focus();
   await act(async () => pending.resolve(true));
   expect(screen.getByRole("button", { name: "添加下一跳" }).getAttribute("aria-expanded")).toBe("true");
