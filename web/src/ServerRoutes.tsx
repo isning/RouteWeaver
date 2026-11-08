@@ -1201,6 +1201,10 @@ export function ServerRouteEditor({
             inventory={inventory}
             onChangePath={updatePath}
             onPendingChange={markPending}
+            onSelectionChange={() => {
+              draftRevision.current++;
+              setPathLoading(false);
+            }}
             changing={pathLoading}
           />
         )}

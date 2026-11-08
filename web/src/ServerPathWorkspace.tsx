@@ -13,12 +13,14 @@ export function ServerPathWorkspace({
   inventory,
   onChangePath,
   onPendingChange,
+  onSelectionChange,
   changing = false,
 }: {
   programs: ServerProgram[];
   inventory: Infrastructure;
   onChangePath: (ids: string[]) => Promise<boolean>;
   onPendingChange: (key: string, pending: boolean) => void;
+  onSelectionChange?: () => void;
   changing?: boolean;
 }) {
   const id = useId();
@@ -46,6 +48,12 @@ export function ServerPathWorkspace({
     popup: HTMLElement | null;
     dialog: Element | null;
   } | null>(null);
+
+  const invalidateSelection = () => {
+    addTask.current++;
+    pendingFocus.current = null;
+    onSelectionChange?.();
+  };
 
   useLayoutEffect(() => {
     if (addingIntermediate && document.activeElement === addButton.current)
@@ -99,6 +107,7 @@ export function ServerPathWorkspace({
   const row = (program: ServerProgram, index: number) => (
     <div key={program.listener.id} className="hop-row min-w-0 space-y-3">
       <ServerEndpointSelect
+        onSelectionChange={invalidateSelection}
         inventory={inventory}
         endpointRef={(control) => {
           if (control) endpointControls.current.set(program.listener.id, control);
@@ -161,11 +170,13 @@ export function ServerPathWorkspace({
   return (
     <div ref={workspace} className="ordered-path min-w-0 space-y-3 [overflow-wrap:anywhere]">
       <ServerPathSummary programs={programs} />
+      {changing && <p role="status" className="text-sm text-muted-foreground">正在读取所选监听配置…</p>}
       <section aria-labelledby={`${id}-entry`} className="space-y-3 rounded-xl border bg-card p-4 sm:p-5">
         <h3 id={`${id}-entry`} className="text-base font-semibold">入口</h3>
         <p className="text-sm text-muted-foreground">客户端首先连接哪台服务器？</p>
         {entry ? row(entry, 0) : (
           <ServerEndpointSelect
+        onSelectionChange={invalidateSelection}
             inventory={inventory} endpointRef={addControl} label="入口"
             allowedIds={unusedIds} unavailableReason={unavailableReason}
             onPendingChange={(pending) => onPendingChange(addKey, pending)}
@@ -208,6 +219,7 @@ export function ServerPathWorkspace({
             {programs.length === 1 ? selectingExit ? (
               <div ref={exitPicker} className="space-y-2 border-t pt-3">
                 <ServerEndpointSelect
+        onSelectionChange={invalidateSelection}
                   key={addKey} inventory={inventory} endpointRef={addControl} label="下一跳"
                   allowedIds={unusedIds} unavailableReason={unavailableReason}
                   onPendingChange={() => onPendingChange(addKey, true)}
@@ -250,6 +262,7 @@ export function ServerPathWorkspace({
           {programs.length > 1 && addingIntermediate && (
             <div ref={intermediatePicker} id={`${id}-add-middle`} className="space-y-3 rounded-lg border border-dashed p-3">
               <ServerEndpointSelect
+        onSelectionChange={invalidateSelection}
                 key={addKey} inventory={inventory} endpointRef={addControl} label="中转"
                 allowedIds={unusedIds} unavailableReason={unavailableReason}
                 onPendingChange={(pending) => onPendingChange(addKey, pending)}

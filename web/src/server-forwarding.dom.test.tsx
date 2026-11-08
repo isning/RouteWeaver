@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ConfirmationProvider } from "@/ui-patterns/confirmations";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -412,3 +412,40 @@ it("keeps route editing direct and offers batch operations from the route's cont
 });
 
 
+
+it("retains a newer server choice when an earlier endpoint reveal resolves", async () => {
+  const user = userEvent.setup();
+  let originalListener!: ServerDeployment["ir"]["programs"][number]["listener"];
+  setup(false, (deployment) => {
+    delete deployment.ir.programs[0].defaultAction;
+    originalListener = deployment.ir.programs[0].listener;
+  });
+  const originalFetch = globalThis.fetch;
+  let release!: (response: Response) => void;
+  const delayed = new Promise<Response>((resolve) => { release = resolve; });
+  let requested = false;
+  vi.stubGlobal("fetch", vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+    if (String(input).endsWith("/managed-endpoints/fra-alternate/reveal")) {
+      requested = true;
+      return delayed;
+    }
+    return originalFetch(input, init);
+  }));
+  await user.click(await screen.findByRole("button", { name: "编辑转发路径 Reject draft" }));
+  const editor = await screen.findByRole("dialog", { name: "编辑 Reject draft" });
+  await user.click(within(editor).getByRole("combobox", { name: "第 1 跳端点" }));
+  await user.click(screen.getByRole("option", { name: /FRA alternate/ }));
+  await waitFor(() => expect(requested).toBe(true));
+  expect(within(editor).getByRole("status").textContent).toContain("正在读取所选监听配置…");
+  await user.click(within(editor).getByRole("combobox", { name: "第 1 跳服务器" }));
+  await user.click(screen.getByRole("option", { name: "UK" }));
+  expect(within(editor).queryByText("正在读取所选监听配置…")).toBeNull();
+  await act(async () => {
+    release(new Response(JSON.stringify({ ...originalListener, id: "fra-alternate", name: "FRA alternate", connection: { ...originalListener.connection, port: 1081 } }), { headers: { "Content-Type": "application/json" } }));
+    await delayed;
+  });
+  expect(within(editor).queryByText("正在读取所选监听配置…")).toBeNull();
+  expect(within(editor).getByRole("combobox", { name: "第 1 跳服务器" }).textContent).toContain("UK");
+  expect(within(editor).getByRole("region", { name: "路径摘要" }).textContent).toContain("FRA listener → 目标");
+  expect((within(editor).getByRole("button", { name: "保存草稿" }) as HTMLButtonElement).disabled).toBe(true);
+});

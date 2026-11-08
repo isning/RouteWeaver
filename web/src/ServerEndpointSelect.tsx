@@ -13,6 +13,7 @@ export function ServerEndpointSelect({
   endpointRef,
   onChange,
   onPendingChange,
+  onSelectionChange,
 }: {
   inventory: Infrastructure;
   value?: string;
@@ -28,6 +29,8 @@ export function ServerEndpointSelect({
   endpointRef?: Ref<HTMLButtonElement>;
   onChange: (id: string) => void;
   onPendingChange: (pending: boolean) => void;
+  /** A newer server choice invalidates in-flight endpoint resolution. */
+  onSelectionChange?: () => void;
 }) {
   const owner = (endpoint?: ManagedEndpoint) =>
     inventory.instances.find(
@@ -121,7 +124,7 @@ export function ServerEndpointSelect({
           clearable
           value={server}
           options={hosts}
-          onValueChange={setServer}
+          onValueChange={(next) => { onSelectionChange?.(); setServer(next); }}
         />
       </div>
       <div className="grid min-w-0 content-start gap-2">
