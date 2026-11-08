@@ -1492,7 +1492,7 @@ export function SubscriptionsPage({
           !outputs.isPending &&
           !profiles.isError &&
           !outputs.isError && (
-            <Section>
+            <Section className={!needle && !profileScope && onStartProxySubscription ? "[&_[data-slot=empty-content]]:max-w-2xl" : undefined}>
               <EmptyState
                 title={
                   needle
@@ -1517,7 +1517,7 @@ export function SubscriptionsPage({
                       清除搜索
                     </ActionButton>
                   ) : !profileScope && onStartProxySubscription ? (
-                    <div className="grid gap-3 text-left sm:grid-cols-2">
+                    <div className="grid w-full min-w-0 gap-3 text-left sm:grid-cols-2">
                       <div className="space-y-3 rounded-lg border bg-card p-4">
                         <h3 className="font-medium">我已有代理连接或订阅链接</h3>
                         <p className="text-sm text-muted-foreground">导入来源，再选择流量去向和客户端。</p>
@@ -3736,4 +3736,5 @@ export function ProfilePublicationDialog({
     </TaskDialog>
   );
 }
+
 
