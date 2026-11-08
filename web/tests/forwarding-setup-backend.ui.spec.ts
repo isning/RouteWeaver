@@ -51,7 +51,7 @@ async function verifyEntryFocus(page: Page, info: TestInfo, surface: Locator) {
     const active = document.activeElement;
     const inside = !!active && editor.contains(active);
     const control = active instanceof HTMLElement &&
-      active.matches("button,input:not([type=hidden]),select,textarea,a[href],[role=tab]");
+      active.matches("button,input:not([type=hidden]),select,textarea,a[href],[role=tab],details>summary");
     const inForm = inside && !!active?.closest("[data-task-overlay-body],[data-task-overlay-footer]");
     const disabled = !!active?.matches(":disabled,[aria-disabled=true]");
     let hidden = !!active?.closest("[hidden],[inert],[aria-hidden=true]");
@@ -65,7 +65,7 @@ async function verifyEntryFocus(page: Page, info: TestInfo, surface: Locator) {
     const tabIndex = active instanceof HTMLElement ? active.tabIndex : -1;
     // No input values, HTML, URL, or outside-task text enters this diagnostic.
     const label = inside && control
-      ? active.getAttribute("aria-label") || (active.matches("button,a") ? active.textContent : "")
+      ? active.getAttribute("aria-label") || (active.matches("button,a,details>summary") ? active.textContent : "")
       : "";
     return {
       meaningful: !!active?.isConnected && inForm && control && !disabled && !hidden && visible && tabIndex >= 0,
@@ -77,7 +77,7 @@ async function verifyEntryFocus(page: Page, info: TestInfo, surface: Locator) {
     };
   });
   type FocusSnapshot = Awaited<ReturnType<typeof snapshot>>;
-  const evidence: { before?: FocusSnapshot; after?: FocusSnapshot; atEnd?: FocusSnapshot | null; moved?: boolean } = {};
+  const evidence: { before?: FocusSnapshot; after?: FocusSnapshot; afterDisclosure?: FocusSnapshot; atEnd?: FocusSnapshot | null; moved?: boolean } = {};
   try {
     // A hidden exit is not yet a completed focus handoff. Wait for the popup
     // to unmount and real task motion to finish, without refocusing anything.
@@ -98,6 +98,17 @@ async function verifyEntryFocus(page: Page, info: TestInfo, surface: Locator) {
     expect(evidence.before, "Selection leaves meaningful focus in the path form").toMatchObject({ meaningful: true });
     expect(evidence.after, "Native Tab continues within the path form").toMatchObject({ meaningful: true });
     expect(evidence.moved, "Native Tab advances to another form control").toBe(true);
+    const ordering = surface.locator("details > summary").filter({ hasText: "顺序与移除" });
+    await expect(ordering).toHaveCount(1);
+    await expect(ordering).toBeFocused();
+    expect(await ordering.evaluate((element) => element.parentElement?.hasAttribute("open"))).toBe(false);
+    await page.keyboard.press("Enter");
+    expect(await ordering.evaluate((element) => element.parentElement?.hasAttribute("open"))).toBe(true);
+    await page.keyboard.press("Tab");
+    await settledTask(surface);
+    await expect(surface.getByRole("button", { name: "移除第 1 跳", exact: true })).toBeFocused();
+    evidence.afterDisclosure = await snapshot();
+    expect(evidence.afterDisclosure, "Disclosure keeps keyboard continuation in the path form").toMatchObject({ meaningful: true });
   } finally {
     evidence.atEnd = await snapshot().catch(() => null);
     const width = page.viewportSize()!.width;
