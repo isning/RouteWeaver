@@ -195,9 +195,17 @@ it("blocks saving an unfinished server change and saves the explicitly selected 
       programs: [],
     },
   };
-  const deployment = compilePath(base, ["a2"], inventory);
+  // This page exercises a real path rewrite, unlike the version-agnostic
+  // endpoint control fixtures above. Use the supported adapter versions.
+  const supportedInventory = {
+    ...inventory,
+    instances: inventory.instances.map(instance => ({
+      ...instance, version: instance.adapterId === "routeweaver/xray" ? "26.10.31" : "1.14.4",
+    })),
+  };
+  const deployment = compilePath(base, ["a2"], supportedInventory);
   deployment.ir.programs[0].resources = [];
-  const data = { ...inventory, deployments: [deployment] };
+  const data = { ...supportedInventory, deployments: [deployment] };
   const saved: ServerDeployment[] = [];
   const reveals: string[] = [];
   vi.stubGlobal(

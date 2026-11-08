@@ -261,6 +261,7 @@ jobs:
           name: journey-review-${{ matrix.shard }}-of-4
           # Named synthetic originals only; no attachment copies, reports or traces.
           path: |
+            web/test-results/*/mixed-chain-*.png
             web/test-results/*/setup-*.png
             web/test-results/*/setup-*.json
             web/test-results/*/template-authoring-*.png

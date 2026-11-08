@@ -48,6 +48,7 @@ jobs:
           src/profile-source-disclosure.dom.test.tsx
           src/profile-content-hierarchy.dom.test.tsx
           src/source-profile-continuation.dom.test.tsx
+          src/server-endpoint.dom.test.tsx
           src/server-path-model.test.ts
           src/server-mixed-path-workspace.dom.test.tsx
           src/server-mixed-path-editor.dom.test.tsx
