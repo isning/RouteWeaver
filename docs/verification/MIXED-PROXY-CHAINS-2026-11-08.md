@@ -144,9 +144,36 @@ proxy listeners and two detour edges. They require:
   runtime close is used to manufacture that result.
 
 The initial focused command was non-verbose, so it does not supply individual
-cutoff/cleanup durations. The follow-up JSON event gate requires every named
-parent and all eight sustained-flow/denial scenarios to pass, rejects skipped
-tests, and preserves individual assertion logs for subsequent verification.
+cutoff/cleanup durations. Commit `d625f3606e0d3e92fa5a39c1464f508015b1edb2`
+then passed the [JSON/race receipt gate](https://github.com/isning/RouteWeaver/actions/runs/42499773677/job/128789776998):
+all 13 required named passes, including all eight runtime scenarios, were present
+with zero skipped or failed tests. All three jobs in the corresponding
+[focused workflow](https://github.com/isning/RouteWeaver/actions/runs/42499773677)
+passed. Recorded payload-cutoff / later transport-cleanup timings were:
+
+- Revocation: 178.23 microseconds / 5.005645 seconds; 16384 payload bytes.
+- Unavailable-authority lease expiry: 1.002307 seconds / 5.005468 seconds;
+  16384 payload bytes.
+- Byte budget: 5.437986 milliseconds / 4.000495 seconds; 16389 payload bytes.
+- Rate-queued revocation: 176.998 microseconds / 4.005064 seconds;
+  4160 payload bytes.
+
+These are measured loopback test observations, not production latency promises.
+The frozen-counter and target-receipt bounds remained enforced throughout socket
+cleanup. Private-IP, private-DNS, UDP and admission-denial cases all passed.
+
+## Managed executable compatibility
+
+This support applies to managed executables built from the supporting source
+commit, not every existing binary named `26.3.27-rw1`. Older rw1 binaries must be
+rebuilt and revalidated. The native checker executes the actual binary's config
+check, and its receipt binds the executable SHA256 which activation rechecks.
+An old binary therefore cannot silently borrow a new binary's validation result.
+Use immutable executable paths rather than replacing a running owned process's
+executable in place. The development version is unchanged in this source/CI
+delivery; a production release or formal core upgrade needs distinct managed
+version/build identity, since the existing lifecycle transition requires an
+adapter or version change. No real server upgrade was performed for this work.
 
 ## Gate integrity and limits
 

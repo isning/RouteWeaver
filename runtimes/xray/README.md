@@ -44,6 +44,15 @@ are rejected. Declaration order does not select traffic order. Ingress socket
 options and all existing transport, security, Vision and destination restrictions
 remain unchanged.
 
+Multi-detour support requires a managed executable rebuilt from the supporting
+source commit. The unchanged development version `26.3.27-rw1` alone does not
+identify this capability: older executables reject these configurations and must
+be rebuilt and revalidated. Native validation receipts bind the executable's
+SHA256 and activation checks that identity again. Use an immutable executable
+path; never replace the executable of a running owned process in place. A formal
+managed release/upgrade needs a distinct version or build-identity plan, because
+the current lifecycle transition cannot express a same-version core upgrade.
+
 Detours use the unchanged upstream outbound-handler path; they do not create
 another public entry or another admission/accounting boundary. The managed
 dispatcher still validates the final user destination and binds the physical
