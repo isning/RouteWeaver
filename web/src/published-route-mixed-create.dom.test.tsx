@@ -156,7 +156,7 @@ it("requires a new review when a managed-only source becomes mixed after preview
   await editor.findByRole("button", { name: "保存公开线路" });
   expect(calls.find(call => call.path.endsWith("/preview"))?.body?.hops).toBeUndefined();
   await act(async () => replaceSource(client, deployment));
-  expect(editor.getByRole("button", { name: "保存公开线路" }).hasAttribute("disabled")).toBe(true);
+  await waitFor(() => expect(editor.getByRole("button", { name: "保存公开线路" }).hasAttribute("disabled")).toBe(true));
   fireEvent.click(editor.getByRole("button", { name: "保存公开线路" }));
   expect(calls.some(call => call.method === "POST" && call.path.endsWith("/published-routes"))).toBe(false);
   await user.click(editor.getByRole("button", { name: "重新载入所选路径" }));
@@ -173,7 +173,7 @@ it("blocks confirmation when the selected source is deleted after preview", asyn
   await user.click(editor.getByRole("button", { name: "检查公开线路" }));
   await editor.findByRole("button", { name: "保存公开线路" });
   await act(async () => replaceSource(client));
-  expect(editor.getByRole("button", { name: "保存公开线路" }).hasAttribute("disabled")).toBe(true);
+  await waitFor(() => expect(editor.getByRole("button", { name: "保存公开线路" }).hasAttribute("disabled")).toBe(true));
   fireEvent.click(editor.getByRole("button", { name: "保存公开线路" }));
   expect(calls.some(call => call.method === "POST" && call.path.endsWith("/published-routes"))).toBe(false);
   expect((editor.getByRole("textbox", { name: "线路名称" }) as HTMLInputElement).value).toBe("Mixed office");
@@ -186,7 +186,7 @@ it("blocks a changed source revision even when its redacted IR is unchanged", as
   await user.click(editor.getByRole("button", { name: "检查公开线路" }));
   await editor.findByRole("button", { name: "保存公开线路" });
   await act(async () => replaceSource(client, { ...source, revisionToken: "source-revision-two" }));
-  expect(editor.getByRole("button", { name: "保存公开线路" }).hasAttribute("disabled")).toBe(true);
+  await waitFor(() => expect(editor.getByRole("button", { name: "保存公开线路" }).hasAttribute("disabled")).toBe(true));
   fireEvent.click(editor.getByRole("button", { name: "保存公开线路" }));
   expect(calls.some(call => call.method === "POST" && call.path.endsWith("/published-routes"))).toBe(false);
   await user.click(editor.getByRole("button", { name: "重新载入所选路径" }));
@@ -219,7 +219,7 @@ it("does not reload a replacement source while the preceding save remains in fli
   await user.click(await editor.findByRole("button", { name: "保存公开线路" }));
   await waitFor(() => expect(calls.filter(call => call.method === "POST" && call.path.endsWith("/published-routes"))).toHaveLength(1));
   await act(async () => replaceSource(client, { ...deployment, ir: { ...deployment.ir, topologyRevision: "r2" } }));
-  const reload = editor.getByRole("button", { name: "重新载入所选路径" });
+  const reload = await editor.findByRole("button", { name: "重新载入所选路径" });
   expect(reload.hasAttribute("disabled")).toBe(true);
   fireEvent.click(reload);
   expect(editor.getByLabelText("公开线路转发路径").textContent).toBe("entry → 外部代理 relay → exit → alternate");
