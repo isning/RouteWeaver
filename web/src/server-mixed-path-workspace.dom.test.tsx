@@ -33,7 +33,7 @@ function Workspace({ initial = source, commit, onEditConnector = () => {}, onPen
   const revision = useRef(0);
   const state = readOrderedServerPath(draft, inventory);
   if (!state.editable) throw new Error(state.reason);
-  return <ServerMixedPathWorkspace programs={draft.ir.programs} inventory={inventory}
+  return <ServerMixedPathWorkspace programs={draft.ir.programs} inventory={inventory} schemaVersion={draft.ir.schemaVersion}
     hops={state.hops} connectorChoices={state.connectorChoices} changing={changing}
     onPendingChange={onPendingChange} onEditConnector={onEditConnector}
     changeReason={(next) => orderedPathChangeReason(draft, next, inventory)}
@@ -192,4 +192,30 @@ it("keeps following row labels unique while a managed hop is being inserted in t
   expect(summary().textContent).toContain("a listener → c listener → b listener → 目标");
   expect(screen.getByRole("combobox", { name: "第 2 跳端点" }).textContent).toContain("c listener");
   expect(screen.getByRole("combobox", { name: "第 3 跳端点" }).textContent).toContain("b listener");
+});
+
+
+it("shows the managed-entry credential edit restriction without opening a misleading edit task", async () => {
+  const user = userEvent.setup();
+  const edit = vi.fn();
+  const initial = structuredClone(mixed([managed("a"), external("x")]));
+  initial.ir.programs[0].instance.adapterId = "routeweaver/managed-xray";
+  initial.ir.programs[0].instance.version = "26.3.27-rw1";
+  initial.ir.programs[0].listener.connection = { protocol: "vless", host: "127.0.0.1", port: 443 };
+  const ownedInventory = { ...inventory,
+    instances: inventory.instances.map(instance => instance.id === "a-core" ? initial.ir.programs[0].instance : instance),
+    endpoints: inventory.endpoints.map(endpoint => endpoint.id === "a" ? initial.ir.programs[0].listener : endpoint),
+  };
+  const state = readOrderedServerPath(initial, ownedInventory);
+  if (!state.editable) throw new Error(state.reason);
+  render(<ServerMixedPathWorkspace programs={initial.ir.programs} inventory={ownedInventory} schemaVersion="1.0"
+    hops={state.hops} connectorChoices={state.connectorChoices} onEditConnector={edit}
+    changeReason={next => orderedPathChangeReason(initial, next, ownedInventory)}
+    onChangePath={async () => false} onPendingChange={() => {}} onSelectionChange={() => {}} />);
+  const button = screen.getByRole("button", { name: "编辑第 2 跳外部代理连接参数" });
+  expect(button.hasAttribute("disabled")).toBe(true);
+  expect(document.getElementById(button.getAttribute("aria-describedby")!)?.textContent).toBe("此监听关联用户入口或托管计量，连接器仅供查看。");
+  await user.click(button);
+  expect(edit).not.toHaveBeenCalled();
+  expect(summary().textContent).toContain("a listener → x → 目标");
 });

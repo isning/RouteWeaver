@@ -48,7 +48,10 @@ for (const width of [1440, 390]) {
             protocol: "socks", host: `${id}.example.invalid`, port: 24080 + index,
             username: "synthetic-admin", password: "synthetic-secret",
           } })),
-        ] }, programs[1],
+        ] }, { ...programs[1], connectors: [{ id: "proxy-z", connection: {
+          protocol: "socks", host: "proxy-z.example.invalid", port: 24082,
+          username: "synthetic-admin", password: "synthetic-secret",
+        } }] },
       ] } };
     expect((await page.request.post("/api/server-deployments", { headers: csrf, data: deployment })).status()).toBe(200);
     const mutations: string[] = [];
@@ -89,22 +92,32 @@ for (const width of [1440, 390]) {
     await expect(summary).toContainText("a 监听 → proxy-y → proxy-x → b 监听 → 目标");
     await editor.getByRole("button", { name: "下移第 2 跳", exact: true }).click();
     await expect(summary).toContainText("a 监听 → proxy-x → proxy-y → b 监听 → 目标");
-    const edit = editor.getByRole("button", { name: "编辑第 2 跳外部代理连接参数", exact: true });
+    const managedEdit = editor.getByRole("button", { name: "编辑第 2 跳外部代理连接参数", exact: true });
+    await expect(managedEdit).toBeDisabled();
+    const editReason = await managedEdit.getAttribute("aria-describedby");
+    expect(editReason).toBeTruthy();
+    await expect(page.locator(`[id="${editReason}"]`)).toHaveText("此监听关联用户入口或托管计量，连接器仅供查看。");
+    await editor.getByRole("button", { name: "添加下一跳", exact: true }).click();
+    await choose(page, editor.getByRole("combobox", { name: "第 5 跳类型", exact: true }), "外部代理");
+    await choose(page, editor.getByRole("combobox", { name: "第 5 跳外部代理", exact: true }), "proxy-z");
+    await expect(summary).toContainText("a 监听 → proxy-x → proxy-y → b 监听 → proxy-z → 目标");
+    await expect(editor.getByRole("list", { name: "代理链", exact: true }).getByRole("listitem")).toHaveCount(5);
+    const edit = editor.getByRole("button", { name: "编辑第 5 跳外部代理连接参数", exact: true });
     await edit.click();
     const connection = page.getByRole("dialog", { name: "编辑连接参数", exact: true });
-    await connection.getByLabel("连接地址", { exact: true }).fill("edited-proxy.example.invalid");
+    await connection.getByRole("textbox", { name: "连接地址", exact: true }).fill("edited-proxy.example.invalid");
     await connection.getByRole("button", { name: "取消", exact: true }).click();
     const discard = page.getByRole("alertdialog", { name: "放弃连接参数修改？", exact: true });
     await discard.getByRole("button", { name: "放弃修改", exact: true }).click();
     await expect(connection).toBeHidden();
     await expect(edit).toBeFocused();
     await edit.click();
-    await expect(connection.getByLabel("连接地址", { exact: true })).toHaveValue("proxy-x.example.invalid");
-    await connection.getByLabel("连接地址", { exact: true }).fill("edited-proxy.example.invalid");
+    await expect(connection.getByRole("textbox", { name: "连接地址", exact: true })).toHaveValue("proxy-z.example.invalid");
+    await connection.getByRole("textbox", { name: "连接地址", exact: true }).fill("edited-proxy.example.invalid");
     await connection.getByRole("button", { name: "采用连接参数", exact: true }).click();
     await expect(connection).toBeHidden();
     await expect(edit).toBeFocused();
-    await expect(summary).toContainText("a 监听 → proxy-x → proxy-y → b 监听 → 目标");
+    await expect(summary).toContainText("a 监听 → proxy-x → proxy-y → b 监听 → proxy-z → 目标");
     await summary.scrollIntoViewIfNeeded();
     await settledTask(editor);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
@@ -122,7 +135,9 @@ for (const width of [1440, 390]) {
     expect(first.defaultAction).toEqual({ kind: "forward", ref: "bridge-b" });
     expect(first.connectors.find((item: { id: string }) => item.id === "bridge-b").via).toBe("proxy-y");
     expect(first.connectors.find((item: { id: string }) => item.id === "proxy-y").via).toBe("proxy-x");
-    expect(first.connectors.find((item: { id: string }) => item.id === "proxy-x").connection).toMatchObject({ host: "edited-proxy.example.invalid", password: "synthetic-secret" });
+    expect(first.connectors.find((item: { id: string }) => item.id === "proxy-x").connection).toMatchObject({ host: "proxy-x.example.invalid", password: "synthetic-secret" });
+    expect(revealed.ir.programs[1].defaultAction).toEqual({ kind: "forward", ref: "proxy-z" });
+    expect(revealed.ir.programs[1].connectors.find((item: { id: string }) => item.id === "proxy-z").connection).toMatchObject({ host: "edited-proxy.example.invalid", password: "synthetic-secret" });
     expect(await read(page.request, "/admin/fleet-batches")).toEqual([]);
     expect(mutations).toEqual(["PUT /api/server-deployments/mixed-chain"]);
 
@@ -133,7 +148,7 @@ for (const width of [1440, 390]) {
     const line = page.getByRole("dialog", { name: "配置公开线路", exact: true });
     await line.getByLabel("线路名称", { exact: true }).fill("完整混合线路");
     await choose(page, line.getByRole("combobox", { name: "服务器转发路径", exact: true }), "混合代理链");
-    await expect(line.getByLabel("公开线路转发路径", { exact: true })).toContainText("a 监听 → 外部代理 proxy-x → 外部代理 proxy-y → b 监听");
+    await expect(line.getByLabel("公开线路转发路径", { exact: true })).toContainText("a 监听 → 外部代理 proxy-x → 外部代理 proxy-y → b 监听 → 外部代理 proxy-z");
     await expect(line.getByRole("button", { name: /调整公开范围/ })).toHaveCount(0);
     await expect(line.getByLabel("对外域名或 IP", { exact: true })).toHaveValue("127.0.0.1");
     const expectedHops = [
@@ -141,6 +156,7 @@ for (const width of [1440, 390]) {
       { kind: "connector", connectorId: "proxy-x" },
       { kind: "connector", connectorId: "proxy-y" },
       { kind: "managed", endpointId: "b" },
+      { kind: "connector", connectorId: "proxy-z" },
     ];
     const previewResponse = page.waitForResponse((response) => new URL(response.url()).pathname === "/api/published-routes/preview" && response.request().method() === "POST");
     await line.getByRole("button", { name: "检查公开线路", exact: true }).click();

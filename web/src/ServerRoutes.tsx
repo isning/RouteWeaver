@@ -1250,7 +1250,7 @@ export function ServerRouteEditor({
             </p>
           </>
         ) : mixedWorkspace && orderedPath.editable ? (
-          <ServerMixedPathWorkspace programs={programs} inventory={inventory}
+          <ServerMixedPathWorkspace programs={programs} inventory={inventory} schemaVersion={draft.ir.schemaVersion}
             hops={orderedPath.hops} connectorChoices={orderedPath.connectorChoices}
             onChangePath={updateOrderedPath}
             changeReason={(hops) => orderedPathChangeReason(draft, hops, inventory)}

@@ -4,17 +4,20 @@ import { ArrowDown, ArrowUp, Pencil, Plus, Trash2 } from "lucide-react";
 import { Fragment, useId, useLayoutEffect, useRef, useState } from "react";
 import { moveItem } from "./model";
 import { ServerEndpointSelect } from "./ServerEndpointSelect";
+import { connectorEditReason } from "./server-connector-editor";
+import { connectorConnectionShapeReason } from "./server-connector-connection";
 import { orderedServerHopKey, type OrderedServerHop, type ScopedConnectorChoice } from "./server-path-model";
 import type { Infrastructure, ServerProgram } from "./types";
 
 /** One traffic-order list. The model proves every replacement is lossless;
  * this view never infers ownership from an address or copies credentials. */
 export function ServerMixedPathWorkspace({
-  programs, inventory, hops, connectorChoices, onChangePath, changeReason,
+  programs, inventory, schemaVersion, hops, connectorChoices, onChangePath, changeReason,
   onPendingChange, onSelectionChange, onEditConnector, changing = false,
 }: {
   programs: ServerProgram[];
   inventory: Infrastructure;
+  schemaVersion: string;
   hops: OrderedServerHop[];
   connectorChoices: ScopedConnectorChoice[];
   onChangePath: (hops: OrderedServerHop[]) => Promise<boolean>;
@@ -176,6 +179,12 @@ export function ServerMixedPathWorkspace({
         const reasons = [...new Set([upReason, downReason, removeReason].filter(Boolean))];
         const reasonID = `${id}-hop-${index}-reason`;
         const editLabel = `编辑第 ${hopNumber} 跳外部代理连接参数`;
+        const connectorOwner = hop.kind === "connector" ? programs.find((program) => program.listener.id === hop.programEndpointId) : undefined;
+        const editReason = hop.kind === "connector" && connectorOwner
+          ? connectorEditReason(connectorOwner, schemaVersion, hop.connectorId) ||
+            connectorConnectionShapeReason(connectorOwner.connectors?.find((connector) => connector.id === hop.connectorId)?.connection)
+          : undefined;
+        const editReasonID = `${id}-hop-${index}-edit-reason`;
         return <Fragment key={key}>
           <li className="hop-row min-w-0 space-y-3 rounded-xl border bg-card p-4 sm:p-5">
             <div className="flex flex-wrap items-center gap-2">
@@ -207,10 +216,12 @@ export function ServerMixedPathWorkspace({
                     void change(replace(index, next), controls.current.get(key) || null, next);
                   }} />
               </label>
-              <ActionButton variant="outline" aria-label={editLabel} disabled={changing || !!adding}
+              <ActionButton variant="outline" aria-label={editLabel} disabled={changing || !!adding || !!editReason || !connectorOwner}
+                aria-describedby={editReason ? editReasonID : undefined}
                 leadingIcon={<Pencil aria-hidden="true" />} onClick={() => onEditConnector(hop.programEndpointId, hop.connectorId, editLabel)}>
                 编辑连接参数
               </ActionButton>
+              {editReason && <p id={editReasonID} className="text-sm text-muted-foreground">{editReason}</p>}
             </> : null}
             <div className="flex flex-wrap gap-2" role="group" aria-label={`第 ${hopNumber} 跳顺序操作`}>
               <ActionButton variant="ghost" aria-label={`上移第 ${hopNumber} 跳`} leadingIcon={<ArrowUp aria-hidden="true" />}
