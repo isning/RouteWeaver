@@ -891,3 +891,82 @@ it("does not reopen a delayed policy reveal after newer same-page navigation", a
     fixture.requests.filter((request) => !request.startsWith("GET ")),
   ).toEqual([]);
 });
+
+
+it.each([
+  ["routeweaver/sing-box", "1.14.4"],
+  ["routeweaver/xray", "26.10.31"],
+])("edits leaf conditions on %s without replacing rule identity, actions or unknown policy data", async (adapterId, version) => {
+  const user = userEvent.setup();
+  const fixture = setup((draft) => {
+    const program = draft.ir.programs[0];
+    program.instance = { ...program.instance, adapterId, version };
+    Object.assign(program, { futureProgram: { keep: true } });
+    Object.assign(program.rules[1], { futureRule: [1, 2] });
+    program.rules[1].match.children = [];
+    program.rules.push({ id: "extension", match: { op: "domain", value: "keep.invalid" }, action: { kind: "direct" } });
+    Object.assign(program.rules[2].match, { futureMatch: "keep" });
+  });
+  const editor = await openEditor(user);
+  expect(within(editor).queryByRole("textbox", { name: "Policy entry 规则 1 条件值" })).toBeNull();
+  expect(within(editor).queryByRole("textbox", { name: "Policy entry 规则 3 条件值" })).toBeNull();
+  const input = within(editor).getByRole("textbox", { name: "Policy entry 规则 2 条件值" });
+  await user.clear(input);
+  expect(input.getAttribute("aria-invalid")).toBe("true");
+  expect((within(editor).getByRole("button", { name: "保存草稿" }) as HTMLButtonElement).disabled).toBe(true);
+  await user.type(input, "changed.invalid");
+  await user.click(within(editor).getByRole("combobox", { name: "Policy entry 规则 2 条件类型" }));
+  await user.click(await screen.findByRole("option", { name: "域名后缀", exact: true }));
+  expect(hasUnsavedChanges()).toBe(true);
+  expect(fixture.saved).toEqual([]);
+  await user.click(within(editor).getByRole("button", { name: "保存草稿" }));
+  await waitFor(() => expect(fixture.saved).toHaveLength(1));
+  const expected = structuredClone(fixture.deployment.ir.programs[0]);
+  expected.rules[1].match = { op: "domain-suffix", value: "changed.invalid", children: [] };
+  expect(fixture.saved[0].ir.programs).toEqual([expected]);
+  expect(fixture.saveHeaders[0].get("If-Match")).toBe("policy-r1");
+  expect(fixture.requests.filter((request) => !request.startsWith("GET "))).toEqual(["PUT /api/server-deployments/policy"]);
+  expect(fixture.unexpected).toEqual([]);
+});
+
+it.each([
+  ["domain", "bad domain", "good.invalid"],
+  ["domain-suffix", "https://bad.invalid", "good.invalid"],
+  ["ip-cidr", "192.0.2.0/33", "192.0.2.7/24"],
+  ["ip-cidr", "2001:db8::/129", "2001:db8::1/32"],
+  ["ip-cidr", "1:2:3:4:5:6:7:8::/64", "::ffff:192.0.2.7/128"],
+  ["ip-cidr", "192.00.2.0/24", "::/0"],
+])("keeps invalid %s edits visible, blocks save, and accepts a corrected literal", async (op, invalid, valid) => {
+  const user = userEvent.setup();
+  const fixture = setup((draft) => { draft.ir.programs[0].rules[1].match = { op, value: valid }; });
+  const editor = await openEditor(user);
+  const input = within(editor).getByRole("textbox", { name: "Policy entry 规则 2 条件值" });
+  await user.clear(input);
+  await user.type(input, invalid);
+  expect(input.getAttribute("aria-invalid")).toBe("true");
+  const save = within(editor).getByRole("button", { name: "保存草稿" });
+  expect((save as HTMLButtonElement).disabled).toBe(true);
+  await user.click(save);
+  expect(fixture.saved).toEqual([]);
+  await user.clear(input);
+  await user.type(input, valid);
+  expect(input.getAttribute("aria-invalid")).toBe("false");
+  await user.click(save);
+  await waitFor(() => expect(fixture.saved).toHaveLength(1));
+  expect(fixture.saved[0].ir.programs[0].rules[1].match).toEqual({ op, value: valid });
+});
+
+
+it.each(["null", "omitted"])("retains %s rules in a connector-only policy while editing its default", async (shape) => {
+  const user = userEvent.setup();
+  const fixture = setup((draft) => {
+    if (shape === "null") Object.assign(draft.ir.programs[0], { rules: null });
+    else Reflect.deleteProperty(draft.ir.programs[0], "rules");
+  });
+  const editor = await openEditor(user);
+  await user.click(within(editor).getByRole("combobox", { name: "Policy entry 默认去向" }));
+  await user.click(await screen.findByRole("option", { name: "直连", exact: true }));
+  await user.click(within(editor).getByRole("button", { name: "保存草稿" }));
+  await waitFor(() => expect(fixture.saved).toHaveLength(1));
+  expect(fixture.saved[0].ir.programs).toEqual([{ ...fixture.deployment.ir.programs[0], defaultAction: { kind: "direct" } }]);
+});

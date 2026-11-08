@@ -76,7 +76,7 @@ import { publicationRejectionMessage } from "./publication-request";
 import { routeGraphNodes, type RouteGraphNode } from "./route-graph-nodes";
 import { ServerPathSummary, ServerPathWorkspace } from "./ServerPathWorkspace";
 import { ServerForwarding } from "./ServerForwarding";
-import { ServerPolicyEditor } from "./ServerPolicyEditor";
+import { ServerPolicyEditor, canEditRuleCondition, ruleConditionError } from "./ServerPolicyEditor";
 import { TLSMaterial } from "./TLSMaterial";
 import type {
   Infrastructure,
@@ -665,6 +665,9 @@ export function ServerRouteEditor({
     mutationFn: (_complete: typeof onSaved) => {
       if (pendingMaterials.current.size)
         throw new Error("请等待 TLS 文件读取完成，或取消读取后再保存。");
+      if (latestDraft.current.ir.programs.some((program) => (program.rules || []).some((rule) =>
+        canEditRuleCondition(program, latestDraft.current.ir.schemaVersion, rule) && !!ruleConditionError(rule.match))))
+        throw new Error("请先修正规则条件，再保存草稿。");
       return saveRecord<ServerDeployment>("server-deployments", latestDraft.current, isNew);
     },
     onSuccess: (value, complete) => {
@@ -873,6 +876,7 @@ export function ServerRouteEditor({
             leadingIcon={<SaveOutlined aria-hidden="true" />}
             pending={save.isPending}
             disabled={
+              draft.ir.programs.some((program) => (program.rules || []).some((rule) => canEditRuleCondition(program, draft.ir.schemaVersion, rule) && !!ruleConditionError(rule.match))) ||
               !draft.name.trim() ||
               pathLoading ||
               selectionPending ||
@@ -988,6 +992,15 @@ export function ServerRouteEditor({
                 ),
               });
               setAnnouncement("规则去向已更新到草稿，条件与顺序不变，尚未保存。");
+            }}
+            onRuleConditionChange={(index, ruleID, match) => {
+              const program = latestDraft.current.ir.programs[index];
+              const rule = program?.rules.find((item) => item.id === ruleID);
+              if (!program || !rule || program.listener.id !== draft.ir.programs[index]?.listener.id ||
+                  program.instance.id !== draft.ir.programs[index]?.instance.id ||
+                  !canEditRuleCondition(program, latestDraft.current.ir.schemaVersion, rule)) return;
+              updateProgram(index, { rules: program.rules.map((item) => item.id === ruleID ? { ...item, match } : item) });
+              setAnnouncement("规则条件已更新到草稿，去向与顺序不变，尚未保存。");
             }}
             onRefreshListener={setRefreshingListener}
             onEditJSON={editIntent}
@@ -2228,4 +2241,5 @@ function ServerRouteDetail({
     </TaskSheet>
   );
 }
+
 

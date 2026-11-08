@@ -1,3 +1,4 @@
+import { Input } from "@/components/ui/input";
 import { ActionButton } from "@/ui-patterns/actions";
 import { ChoiceSelect } from "@/ui-patterns/choice-select";
 import {
@@ -6,7 +7,7 @@ import {
   defaultLabel,
   matchLabel,
 } from "./ServerForwarding";
-import type { ActionRef, Infrastructure, Rule, ServerProgram } from "./types";
+import type { ActionRef, Infrastructure, MatchExpression, Rule, ServerProgram } from "./types";
 
 // This is a bounded editing surface, not a replacement for server validation.
 // Keep the saved target identity: inventory upgrades do not upgrade a draft.
@@ -104,6 +105,47 @@ function ruleEditReason(
   if (unknownAction(rule.action))
     return "此处理方式尚无表单支持，请在完整 JSON 中修改。";
   return undefined;
+}
+
+// Unknown match fields are deliberately not rewritten. Invalid values remain
+// editable, so clearing an input does not strand the user in a read-only row.
+export function canEditRuleCondition(program: ServerProgram, schemaVersion: string, rule: Rule) {
+  return !programEditReason(program, schemaVersion) &&
+    typeof rule.id === "string" && /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$/.test(rule.id) &&
+    program.rules.filter((other) => other.id === rule.id).length === 1 &&
+    leafConditions.includes(rule.match?.op) &&
+    Object.keys(rule.match).every((key) => ["op", "value", "children"].includes(key)) &&
+    typeof rule.match.value === "string" &&
+    (rule.match.children === undefined || (Array.isArray(rule.match.children) && rule.match.children.length === 0));
+}
+
+export function ruleConditionError(match: MatchExpression) {
+  const value = match.value || "";
+  if (!value) return "请输入条件值。";
+  if (match.op !== "ip-cidr")
+    return /[ ,\t\r\n/:()[\]]/.test(value) ? "请输入单个域名，不含空白、端口或网址前缀。" : undefined;
+  const parts = value.split("/");
+  const ipv4 = (address: string) => {
+    const octets = address.split(".");
+    return octets.length === 4 && octets.every((part) => /^(0|[1-9][0-9]{0,2})$/.test(part) && Number(part) <= 255);
+  };
+  const ipv6 = (address: string) => {
+    if (!/^[0-9a-fA-F:.]+$/.test(address)) return false;
+    let groups = address;
+    if (address.includes(".")) {
+      const split = address.lastIndexOf(":");
+      if (split < 0 || !ipv4(address.slice(split + 1))) return false;
+      groups = address.slice(0, split + 1) + "0:0";
+    }
+    const halves = groups.split("::");
+    if (halves.length > 2) return false;
+    const words = halves.flatMap((half) => half ? half.split(":") : []);
+    if (!words.every((word) => /^[0-9a-fA-F]{1,4}$/.test(word))) return false;
+    return halves.length === 2 ? words.length < 8 : words.length === 8;
+  };
+  const valid = parts.length === 2 && /^(0|[1-9][0-9]*)$/.test(parts[1]) &&
+    (ipv4(parts[0]) ? Number(parts[1]) <= 32 : ipv6(parts[0]) && Number(parts[1]) <= 128);
+  return valid ? undefined : "请输入有效的 IP 网段，例如 192.0.2.0/24 或 2001:db8::/32。";
 }
 
 function connectorReason(program: ServerProgram, id: string) {
@@ -267,6 +309,7 @@ export function ServerPolicyEditor({
   inventory,
   onDefaultActionChange,
   onRuleActionChange,
+  onRuleConditionChange,
   onRefreshListener,
   onEditJSON,
 }: {
@@ -279,6 +322,7 @@ export function ServerPolicyEditor({
     ruleID: string,
     action: ActionRef,
   ) => void;
+  onRuleConditionChange: (programIndex: number, ruleID: string, match: MatchExpression) => void;
   onRefreshListener: (endpointId: string) => void;
   onEditJSON: () => void;
 }) {
@@ -406,7 +450,35 @@ export function ServerPolicyEditor({
                         <span className="text-xs text-muted-foreground">
                           规则 {index + 1}
                         </span>
-                        <span>{matchLabel(rule.match)}</span>
+                        {canEditRuleCondition(program, schemaVersion, rule) ? (
+                          <div className="grid min-w-0 gap-2 sm:grid-cols-2">
+                            <div className="min-w-0 space-y-1">
+                              <span className="text-xs text-muted-foreground">条件类型</span>
+                              <ChoiceSelect
+                                aria-label={`${identityLabel} 规则 ${index + 1} 条件类型`}
+                                value={rule.match.op}
+                                options={[
+                                  { value: "domain", label: "完整域名" },
+                                  { value: "domain-suffix", label: "域名后缀" },
+                                  { value: "ip-cidr", label: "IP 网段" },
+                                ]}
+                                onValueChange={(op) => {
+                                  if (op && leafConditions.includes(op)) onRuleConditionChange(programIndex, rule.id, { ...rule.match, op });
+                                }}
+                              />
+                            </div>
+                            <label className="min-w-0 space-y-1">
+                              <span className="text-xs text-muted-foreground">条件值</span>
+                              <Input
+                                aria-label={`${identityLabel} 规则 ${index + 1} 条件值`}
+                                aria-invalid={!!ruleConditionError(rule.match)}
+                                value={rule.match.value}
+                                onChange={(event) => onRuleConditionChange(programIndex, rule.id, { ...rule.match, value: event.target.value })}
+                              />
+                            </label>
+                            {ruleConditionError(rule.match) && <p role="alert" className="text-destructive sm:col-span-2">{ruleConditionError(rule.match)}</p>}
+                          </div>
+                        ) : <span>{matchLabel(rule.match)}</span>}
                         {ruleEditReason(program, schemaVersion, rule) ? (
                           <>
                             <span>{actionLabel(program, rule.action)}</span>
@@ -455,7 +527,7 @@ export function ServerPolicyEditor({
                     ))}
                   </ol>
                   <p className="text-sm text-muted-foreground">
-                    条件与顺序尚未提供表单，请在完整 JSON 中编辑。
+                    规则按顺序匹配；新增、删除与调整顺序请使用完整 JSON。
                   </p>
                 </>
               ) : (
@@ -588,3 +660,4 @@ export function ServerPolicyEditor({
     </div>
   );
 }
+

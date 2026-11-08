@@ -270,6 +270,21 @@ for (const width of [1440, 390]) {
       }),
       "policy-rule-action",
     );
+    const condition = editor.getByRole("textbox", { name: "条件转发入口 规则 1 条件值", exact: true });
+    await condition.fill("updated.example.invalid");
+    await capture(page, info, editor, condition, "policy-leaf-condition");
+    const cidrType = editor.getByRole("combobox", { name: "条件转发入口 规则 2 条件类型", exact: true });
+    await cidrType.focus();
+    await page.keyboard.press("Enter");
+    await search.fill("IP 网段");
+    await search.press("Enter");
+    const cidr = editor.getByRole("textbox", { name: "条件转发入口 规则 2 条件值", exact: true });
+    await cidr.fill("192.0.2.0/33");
+    await expect(cidr).toHaveAttribute("aria-invalid", "true");
+    await expect(editor.getByRole("button", { name: "保存草稿", exact: true })).toBeDisabled();
+    await cidr.fill("2001:db8::7/32");
+    await expect(cidr).toHaveAttribute("aria-invalid", "false");
+    await capture(page, info, editor, cidr, "policy-ipv6-condition");
     const connectors = editor.getByRole("region", {
       name: "条件转发入口的连接器",
       exact: true,
@@ -307,8 +322,8 @@ for (const width of [1440, 390]) {
         ...before.ir.programs[0],
         defaultAction: { kind: "forward", ref: "exit" },
         rules: [
-          { ...before.ir.programs[0].rules[0], action: { kind: "reject" } },
-          { ...before.ir.programs[0].rules[1], action: { kind: "direct" } },
+          { ...before.ir.programs[0].rules[0], match: { ...before.ir.programs[0].rules[0].match, value: "updated.example.invalid" }, action: { kind: "reject" } },
+          { ...before.ir.programs[0].rules[1], match: { ...before.ir.programs[0].rules[1].match, op: "ip-cidr", value: "2001:db8::7/32" }, action: { kind: "direct" } },
           before.ir.programs[0].rules[2],
         ],
       },
@@ -320,3 +335,4 @@ for (const width of [1440, 390]) {
     ]);
   });
 }
+
