@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { RotateCw } from "lucide-react";
+import { Info, RotateCw } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ActionButton } from "@/ui-patterns/actions";
@@ -15,6 +16,21 @@ const bytes = (value: number | null | undefined) => value == null ? "未确定"
   : Number.isSafeInteger(value) && value >= 0 ? bytesLabel(value) : "超出精确显示范围";
 const rate = (value: number | null | undefined) => value == null ? "等待连续采样"
   : Number.isFinite(value) && value >= 0 ? `${bytesLabel(Math.round(value))}/s` : "未确定";
+
+/** Keep one contextual next action beside the explanation on wide screens,
+ * and in reading order beneath it on narrow screens. */
+export function ServerSetupTip({ title, children, action }: { title: string; children: ReactNode; action: ReactNode }) {
+  return <Alert role="status" aria-label="服务器配置提示" className="flex items-start gap-3 p-4">
+    <Info aria-hidden="true" className="size-4 shrink-0" />
+    <div className="flex min-w-0 flex-1 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-5">
+      <div className="min-w-0 space-y-1">
+        <AlertTitle>{title}</AlertTitle>
+        <AlertDescription>{children}</AlertDescription>
+      </div>
+      <div className="flex shrink-0 flex-wrap items-center gap-2">{action}</div>
+    </div>
+  </Alert>;
+}
 
 /** A recorded phase is not a heartbeat. Keep the server's current generation
  * authoritative, and do not reinterpret a prior nested failure as current. */
@@ -45,7 +61,7 @@ export function CoreStatusSummary({ instanceId }: { instanceId: string }) {
 }
 
 function Metric({ label, value, children }: { label: string; value: ReactNode; children?: ReactNode }) {
-  return <div role="group" aria-label={label} className="min-w-0 space-y-2 rounded-lg border bg-background p-4">
+  return <div role="group" aria-label={label} className="min-w-0 space-y-2 rounded-lg border bg-background p-4 [overflow-wrap:anywhere]">
     <p className="text-sm text-muted-foreground">{label}</p>
     <p className="break-words text-xl font-semibold tabular-nums tracking-tight">{value}</p>
     {children && <div className="space-y-1 text-xs text-muted-foreground">{children}</div>}

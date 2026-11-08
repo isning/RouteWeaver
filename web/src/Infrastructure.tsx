@@ -51,7 +51,7 @@ import { WorkspaceHistoryContext } from "./SubscriptionContext";
 import { readServerWorkspace, serverWorkspaceHash, type ServerWorkspaceSection } from "./server-workspace";
 import { useWorkspaceViewEntry } from "./useWorkspaceViewEntry";
 import { NodeObservation } from "./NodeObservation";
-import { ServerResourceOverview, CoreStatusSummary } from "./ServerOverview";
+import { ServerResourceOverview, CoreStatusSummary, ServerSetupTip } from "./ServerOverview";
 import type {
   AgentState,
   CoreInstance,
@@ -698,7 +698,7 @@ export function ServersPage() {
             <ErrorNotice error={instance && section === "cores" ? null : editError} />
             <TabsContent value="overview" className="space-y-4">
               {(!hostCores.length || !hostListeners.length || !records.length) && !scopeIssue && (
-                <Notice role="status" aria-label="服务器配置提示"
+                <ServerSetupTip
                   title={!hostCores.length ? "添加第一个核心" : !hostListeners.length ? "添加监听入口" : "设置流量去向"}
                   action={!hostCores.length ? (
                     <ActionButton ref={(node) => { if (node) hostActions.current.set("setup-core", node); else hostActions.current.delete("setup-core"); }} onClick={() => setupAction("core")} variant="outline">开始配置核心</ActionButton>
@@ -709,7 +709,7 @@ export function ServersPage() {
                   ) : <ActionButton onClick={chooseCore} variant="outline">选择监听入口</ActionButton>}
                 >
                   {!hostCores.length ? "服务器地址已保存。添加核心后即可接入 Agent。" : !hostListeners.length ? "核心已登记。选择客户端连接的协议与监听地址。" : "监听入口已保存。创建转发路径后，检查并确认应用。"}
-                </Notice>
+                </ServerSetupTip>
               )}
               <ServerResourceOverview host={host} onOpenResources={() => changeSection("diagnostics")} />
               {hostCores.length > 0 && coreList}
