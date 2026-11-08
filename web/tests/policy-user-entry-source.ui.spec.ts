@@ -31,6 +31,16 @@ async function jsonDraft(page: Page, editor: Locator) {
   return { dialog, field, value: JSON.parse(await field.inputValue()) };
 }
 
+async function finishJSONTask(page: Page, dialog: Locator, action: "应用到草稿" | "取消") {
+  // Capture this exact Radix content identity before dismissal. Its accessible
+  // name/visibility may change during exit, but the DOM scope still exists.
+  const scopeId = await dialog.getAttribute("id");
+  expect(scopeId).toBeTruthy();
+  const scope = page.locator(`[id=${JSON.stringify(scopeId)}]`);
+  await dialog.getByRole("button", { name: action, exact: true }).click();
+  await expect(scope).toHaveCount(0);
+}
+
 for (const width of [1440, 390]) {
   test(`source management preserves draft and cannot revive rotated credentials at ${width}px`, async ({ page, browser, baseURL }, info) => {
     requireLoopback(baseURL);
@@ -85,7 +95,7 @@ for (const width of [1440, 390]) {
     const raw = await jsonDraft(page, editor);
     raw.value.programs[0].futureSourceSetting = { raw: " 007 ", enabled: false };
     await raw.field.fill(JSON.stringify(raw.value, null, 2));
-    await raw.dialog.getByRole("button", { name: "应用到草稿", exact: true }).click();
+    await finishJSONTask(page, raw.dialog, "应用到草稿");
     const sourceTrigger = editor.getByRole("button", { name: `核对入口来源 ${names.listener} 用户入口 1`, exact: true });
     await sourceTrigger.click();
     let source = page.getByRole("dialog", { name: "核对用户入口", exact: true });
@@ -107,6 +117,7 @@ for (const width of [1440, 390]) {
     await row.getByRole("button", { name: "轮换凭据", exact: true }).click();
     let rotation = page.getByRole("alertdialog", { name: "轮换此用户的入口凭据？", exact: true });
     await rotation.getByRole("button", { name: "取消", exact: true }).click();
+    await expect(page.locator('[role="alertdialog"]')).toHaveCount(0);
     expect(mutations).toEqual([]);
     await row.getByRole("button", { name: "轮换凭据", exact: true }).click();
     rotation = page.getByRole("alertdialog", { name: "轮换此用户的入口凭据？", exact: true });
@@ -127,7 +138,7 @@ for (const width of [1440, 390]) {
     const retained = await jsonDraft(page, editor);
     expect(retained.value.programs[0].futureSourceSetting).toEqual({ raw: " 007 ", enabled: false });
     expect(retained.value.programs[0].principals[0].credentialVersion).toBe("source-v1");
-    await retained.dialog.getByRole("button", { name: "取消", exact: true }).click();
+    await finishJSONTask(page, retained.dialog, "取消");
     const latest = await read(page.request, `/server-deployments/${id}/reveal`);
     const newPrincipal = latest.ir.programs[0].principals[0];
     expect(latest.revisionToken !== before.revisionToken).toBe(true);
@@ -141,11 +152,13 @@ for (const width of [1440, 390]) {
     await editor.getByRole("button", { name: "重新读取路径", exact: true }).click();
     let recovery = page.getByRole("alertdialog", { name: "重新读取并放弃当前草稿？", exact: true });
     await recovery.getByRole("button", { name: "保留草稿", exact: true }).click();
+    await expect(page.locator('[role="alertdialog"]')).toHaveCount(0);
     await expect(editor.getByRole("textbox", { name: "转发路径名称", exact: true })).toHaveValue("Keep my unsaved source draft");
     await expect(editor.getByRole("button", { name: "保存草稿", exact: true })).toBeDisabled();
     await editor.getByRole("button", { name: "重新读取路径", exact: true }).click();
     recovery = page.getByRole("alertdialog", { name: "重新读取并放弃当前草稿？", exact: true });
     await recovery.getByRole("button", { name: "重新读取路径", exact: true }).click();
+    await expect(page.locator('[role="alertdialog"]')).toHaveCount(0);
     await expect(editor).toBeHidden();
     await edit.click();
     await expect(editor.getByRole("textbox", { name: "转发路径名称", exact: true })).toHaveValue(names.deployment);
@@ -154,7 +167,7 @@ for (const width of [1440, 390]) {
     expect(fresh.value.programs[0].principals[0].credential.uuid === newPrincipal.credential.uuid).toBe(true);
     expect(fresh.value.programs[0].principals.some((principal: { credentialVersion: string }) => principal.credentialVersion === "source-v1")).toBe(false);
     expect(fresh.value.programs[0].futureSourceSetting).toBeUndefined();
-    await fresh.dialog.getByRole("button", { name: "取消", exact: true }).click();
+    await finishJSONTask(page, fresh.dialog, "取消");
     // Stop-delivery uses the same source workflow but does not rewrite the
     // deployment. It still conservatively fences the captured editor draft.
     await sourceTrigger.click();
