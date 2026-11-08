@@ -36,16 +36,13 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import {
-  ArrowDown as ArrowDownOutlined,
-  ArrowUp as ArrowUpOutlined,
-  Trash2 as DeleteOutlined,
   Pencil as EditOutlined,
   Eye as EyeOutlined,
   MoreHorizontal,
   Plus as PlusOutlined,
   Save as SaveOutlined,
 } from "lucide-react";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type Ref } from "react";
+import { useEffect, useMemo, useRef, useState, type Ref } from "react";
 import { toast } from "sonner";
 import { APIError, list, request, saveRecord } from "./api";
 import {
@@ -73,11 +70,11 @@ import {
   pathRewriteUnavailable,
 } from "./infrastructure-model";
 import { ListenerRefreshReview } from "./ListenerRefreshReview";
-import { dateLabel, moveItem, newID, redact } from "./model";
+import { dateLabel, newID, redact } from "./model";
 import { useUnsavedChanges } from "./navigation";
 import { publicationRejectionMessage } from "./publication-request";
 import { routeGraphNodes, type RouteGraphNode } from "./route-graph-nodes";
-import { ServerEndpointSelect } from "./ServerEndpointSelect";
+import { ServerPathSummary, ServerPathWorkspace } from "./ServerPathWorkspace";
 import { ServerForwarding } from "./ServerForwarding";
 import { TLSMaterial } from "./TLSMaterial";
 import type {
@@ -528,25 +525,6 @@ function ServerRouteEditor({
     () => draft.ir.programs.map((p) => p.listener.id),
     [draft.ir.programs],
   );
-  const entryEndpointRef = useRef<HTMLButtonElement>(null);
-  const firstHopEndpointRef = useRef<HTMLButtonElement>(null);
-  const firstEntryFocus = useRef<{
-    trigger: HTMLButtonElement;
-    popup: HTMLElement | null;
-    dialog: Element | null;
-  } | null>(null);
-  useLayoutEffect(() => {
-    const owner = firstEntryFocus.current;
-    firstEntryFocus.current = null;
-    const target = firstHopEndpointRef.current;
-    if (!owner || !target?.isConnected || target.disabled ||
-      target.closest("[hidden],[inert],[aria-hidden='true']")) return;
-    const active = document.activeElement;
-    // The empty entry picker is replaced by the selected first hop. Restore
-    // only its own focus or removal fallback, never a newer field/task owner.
-    if (active === owner.trigger || active === owner.dialog || active === document.body ||
-      (active && owner.popup?.contains(active))) target.focus();
-  }, [draft.ir.programs]);
   useEffect(() => {
     setGraphNodes((previous) => routeGraphNodes(inventory, path, previous));
   }, [inventory, path, setGraphNodes]);
@@ -578,15 +556,8 @@ function ServerRouteEditor({
   const updatePath = async (ids: string[]) => {
     if (!chainEditable) {
       setError(new Error(pathRewriteUnavailable));
-      return;
+      return false;
     }
-    const trigger = path.length === 0 && ids.length === 1 ? entryEndpointRef.current : null;
-    const popupId = trigger?.getAttribute("aria-controls");
-    const popup = popupId ? document.getElementById(popupId) : null;
-    const active = document.activeElement;
-    const focusOwner = trigger && (active === trigger || (active && popup?.contains(active)))
-      ? { trigger, popup, dialog: trigger.closest('[role="dialog"]') }
-      : null;
     const revision = ++draftRevision.current;
     setPathLoading(true);
     setError(null);
@@ -597,7 +568,7 @@ function ServerRouteEditor({
           request<ManagedEndpoint>(`/managed-endpoints/${id}/reveal`),
         ),
       );
-      if (revision !== draftRevision.current) return;
+      if (revision !== draftRevision.current) return false;
       const revealed = new Map(
         endpoints.map((endpoint) => [endpoint.id, endpoint]),
       );
@@ -608,17 +579,19 @@ function ServerRouteEditor({
         ),
       });
       next.ir.topologyRevision = newID("topology");
-      // Only a current successful reveal may hand focus to the new row.
-      firstEntryFocus.current = focusOwner;
       update(next);
       setAnnouncement(
-        `路径已更新：${next.ir.programs.map((p) => p.listener.name).join("，然后到")}`,
+        next.ir.programs.length
+          ? `路径已更新：${next.ir.programs.map((p) => p.listener.name).join("，然后到")}，最后直接访问目标。`
+          : "路径已清空，请重新选择入口。",
       );
+      return true;
     } catch (e) {
       if (revision === draftRevision.current) {
         setError(e as Error);
         setPathLoading(false);
       }
+      return false;
     }
   };
   const updateProgram = (index: number, patch: Partial<ServerProgram>) =>
@@ -733,22 +706,26 @@ function ServerRouteEditor({
       size="xl"
       pending={!!discardConfirming}
       footer={
-        <ActionButton
-          leadingIcon={<SaveOutlined aria-hidden="true" />}
-          pending={save.isPending}
-          disabled={
-            !draft.name.trim() ||
-            pathLoading ||
-            selectionPending ||
-            materialPending ||
-            jsonDirty ||
-            (save.error instanceof APIError && save.error.status === 409)
-          }
-          onClick={() => save.mutate(onSaved)}
-          variant="default"
-        >
-          保存草稿
-        </ActionButton>
+        <div className="w-full space-y-2">
+          <p className="text-sm text-muted-foreground">仅保存草稿，检查与应用需另行操作。</p>
+          <ActionButton
+            className="w-full"
+            leadingIcon={<SaveOutlined aria-hidden="true" />}
+            pending={save.isPending}
+            disabled={
+              !draft.name.trim() ||
+              pathLoading ||
+              selectionPending ||
+              materialPending ||
+              jsonDirty ||
+              (save.error instanceof APIError && save.error.status === 409)
+            }
+            onClick={() => save.mutate(onSaved)}
+            variant="default"
+          >
+            保存草稿
+          </ActionButton>
+        </div>
       }
     >
       <div inert={save.isPending} className="space-y-5">
@@ -799,13 +776,8 @@ function ServerRouteEditor({
         <div className="section-heading flex flex-wrap items-start justify-between gap-3 mb-4">
           <div>
             <h2 className="text-base font-semibold tracking-tight">
-              {chainEditable ? "入口与出口" : "监听与转发"}
+              {chainEditable ? "路径编排" : "监听与转发"}
             </h2>
-            {chainEditable && (
-              <p className="mt-1 text-sm text-muted-foreground">
-                按入口、中转、出口的顺序选择服务器与端点。
-              </p>
-            )}
           </div>
           {chainEditable && (
             <Tabs
@@ -840,6 +812,7 @@ function ServerRouteEditor({
           </div>
         ) : view === "graph" ? (
           <>
+            <ServerPathSummary programs={draft.ir.programs} />
             <div className="graph-canvas h-[480px] min-h-80 overflow-hidden rounded-lg border bg-muted/20">
               <ReactFlow
                 nodes={graphNodes}
@@ -863,109 +836,16 @@ function ServerRouteEditor({
             </p>
           </>
         ) : (
-          <div className="ordered-path space-y-3">
-            {draft.ir.programs.map((p, index) => (
-              <div
-                key={p.listener.id}
-                className="hop-row grid min-w-0 gap-3 rounded-lg border p-4 [&_.server-endpoint-select]:w-full [&_.server-endpoint-select]:min-w-0"
-              >
-                <span className="hop-position inline-flex w-fit items-center rounded-md bg-muted px-2 py-1 text-xs font-medium">
-                  {index === 0
-                    ? "入口"
-                    : index === path.length - 1
-                      ? "出口"
-                      : `中转 ${index}`}
-                </span>
-                <ServerEndpointSelect
-                  inventory={inventory}
-                  endpointRef={index === 0 ? firstHopEndpointRef : undefined}
-                  label={`第 ${index + 1} 跳`}
-                  unavailableReason="不可选端点的核心已在路径中使用；请选择其他核心的端点。"
-                  value={p.listener.id}
-                  current={{ endpoint: p.listener, hostId: p.instance.hostId }}
-                  displayCurrentSnapshot
-                  allowedIds={inventory.endpoints
-                    .filter(
-                      (e) =>
-                        e.id === p.listener.id ||
-                        !draft.ir.programs.some(
-                          (other, i) =>
-                            i !== index && other.instance.id === e.instanceId,
-                        ),
-                    )
-                    .map((e) => e.id)}
-                  onPendingChange={(pending) =>
-                    markPending(p.listener.id, pending)
-                  }
-                  onChange={(id) =>
-                    updatePath(path.map((v, i) => (i === index ? id : v)))
-                  }
-                />
-                <div
-                  className="flex flex-wrap items-center justify-end gap-2"
-                  role="group"
-                  aria-label={`第 ${index + 1} 跳顺序操作`}
-                >
-                  <ActionButton
-                    aria-label={`上移第 ${index + 1} 跳`}
-                    leadingIcon={<ArrowUpOutlined aria-hidden="true" />}
-                    disabled={index === 0}
-                    onClick={() => updatePath(moveItem(path, index, index - 1))}
-                    variant="ghost"
-                  />
-                  <ActionButton
-                    aria-label={`下移第 ${index + 1} 跳`}
-                    leadingIcon={<ArrowDownOutlined aria-hidden="true" />}
-                    disabled={index === path.length - 1}
-                    onClick={() => updatePath(moveItem(path, index, index + 1))}
-                    variant="ghost"
-                  />
-                  <ActionButton
-                    aria-label={`移除第 ${index + 1} 跳`}
-                    leadingIcon={<DeleteOutlined aria-hidden="true" />}
-                    onClick={() =>
-                      updatePath(path.filter((_, i) => i !== index))
-                    }
-                    variant="ghost"
-                  />
-                </div>
-              </div>
-            ))}
-            <div className="add-hop flex flex-wrap items-end gap-3 rounded-lg border border-dashed p-4">
-              <ServerEndpointSelect
-                key={path.join("/")}
-                inventory={inventory}
-                endpointRef={entryEndpointRef}
-                label={path.length ? "下一跳" : "入口"}
-                unavailableReason="不可选端点的核心已在路径中使用；请选择其他核心的端点。"
-                allowedIds={inventory.endpoints
-                  .filter(
-                    (e) =>
-                      !draft.ir.programs.some(
-                        (p) => p.instance.id === e.instanceId,
-                      ),
-                  )
-                  .map((e) => e.id)}
-                onPendingChange={(pending) =>
-                  markPending(`add-${path.join("/")}`, pending)
-                }
-                onChange={(id) => updatePath([...path, id])}
-              />
-            </div>
-            {!inventory.endpoints.length && (
-              <p className="muted text-sm text-muted-foreground">
-                先在「服务器」中配置监听端点，再编排路径。
-              </p>
-            )}
-          </div>
+          <ServerPathWorkspace
+            programs={draft.ir.programs}
+            inventory={inventory}
+            onChangePath={updatePath}
+            onPendingChange={markPending}
+            changing={pathLoading}
+          />
         )}
-        {draft.ir.programs.length > 0 && (
+        {!chainEditable && draft.ir.programs.length > 0 && (
           <div className="settings-section space-y-5 rounded-xl border bg-card p-5">
-            {chainEditable && (
-              <h2 className="text-base font-semibold tracking-tight">
-                监听转发
-              </h2>
-            )}
             <ServerForwarding
               programs={draft.ir.programs}
               inventory={inventory}
@@ -974,6 +854,18 @@ function ServerRouteEditor({
           </div>
         )}
         <Accordion type="multiple" defaultValue={[]} className="w-full">
+          {chainEditable && draft.ir.programs.length > 0 && (
+            <AccordionItem value="listener-details">
+              <AccordionTrigger>监听快照与转发详情</AccordionTrigger>
+              <AccordionContent>
+                <ServerForwarding
+                  programs={draft.ir.programs}
+                  inventory={inventory}
+                  onRefreshListener={setRefreshingListener}
+                />
+              </AccordionContent>
+            </AccordionItem>
+          )}
           {[
             {
               key: "tls",
@@ -2182,3 +2074,4 @@ function ServerRouteDetail({
     </TaskSheet>
   );
 }
+

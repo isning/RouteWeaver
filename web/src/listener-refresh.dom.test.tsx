@@ -291,6 +291,7 @@ it("recovers a typed listener mismatch through reviewed local refresh, preservin
   await user.click(within(review).getByRole("button", { name: "保留草稿" }));
   owner.assertActive();
   const editor = screen.getByRole("dialog", { name: "编辑 FRA to UK" });
+  await user.click(within(editor).getByRole("button", { name: "监听快照与转发详情" }));
   expect(
     within(editor).getByText(/转发至 uk.example.invalid:1080/),
   ).toBeTruthy();
@@ -344,6 +345,7 @@ it("requires a new confirmation when the catalog changes after comparison", asyn
     await screen.findByRole("button", { name: "编辑转发路径 FRA to UK" }),
   );
   const editor = screen.getByRole("dialog", { name: "编辑 FRA to UK" });
+  await user.click(within(editor).getByRole("button", { name: "监听快照与转发详情" }));
   await user.click(
     within(editor).getByRole("button", { name: "检查监听更新 UK listener" }),
   );
@@ -378,6 +380,7 @@ it("keeps a denied or missing listener unknown rather than replacing the saved s
     await screen.findByRole("button", { name: "编辑转发路径 FRA to UK" }),
   );
   const editor = screen.getByRole("dialog", { name: "编辑 FRA to UK" });
+  await user.click(within(editor).getByRole("button", { name: "监听快照与转发详情" }));
   await user.click(
     within(editor).getByRole("button", { name: "检查监听更新 UK listener" }),
   );
@@ -448,6 +451,7 @@ it("ignores a late comparison after the user keeps the draft", async () => {
     await screen.findByRole("button", { name: "编辑转发路径 FRA to UK" }),
   );
   const editor = screen.getByRole("dialog", { name: "编辑 FRA to UK" });
+  await user.click(within(editor).getByRole("button", { name: "监听快照与转发详情" }));
   await user.click(
     within(editor).getByRole("button", { name: "检查监听更新 UK listener" }),
   );
@@ -476,6 +480,7 @@ it("cancels a pending confirmation before its delayed response can update the dr
     await screen.findByRole("button", { name: "编辑转发路径 FRA to UK" }),
   );
   const editor = screen.getByRole("dialog", { name: "编辑 FRA to UK" });
+  await user.click(within(editor).getByRole("button", { name: "监听快照与转发详情" }));
   await user.click(
     within(editor).getByRole("button", { name: "检查监听更新 UK listener" }),
   );
@@ -582,6 +587,7 @@ it("recovers publication-time inventory drift without retaining stale approval o
   const recoveryEditor = await screen.findByRole("dialog", {
     name: "编辑 FRA to UK",
   });
+  await user.click(within(recoveryEditor).getByRole("button", { name: "监听快照与转发详情" }));
   await user.click(
     within(recoveryEditor).getByRole("button", {
       name: "检查监听更新 UK listener",
@@ -644,3 +650,4 @@ it("recovers publication-time inventory drift without retaining stale approval o
     state.requests.filter((path) => path.endsWith("/publish")),
   ).toHaveLength(1);
 });
+

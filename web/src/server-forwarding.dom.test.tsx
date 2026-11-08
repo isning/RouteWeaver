@@ -271,6 +271,7 @@ it("explains same-core unavailable endpoint choices at the actual next-hop decis
   const editor = await screen.findByRole("dialog", {
     name: "编辑 Reject draft",
   });
+  await user.click(within(editor).getByText("顺序与移除"));
   const ordering = within(editor).getByRole("group", {
     name: "第 1 跳顺序操作",
   });
@@ -407,3 +408,4 @@ it("keeps route editing direct and offers batch operations from the route's cont
   ).toBeTruthy();
   expect(requests.some((path) => path.endsWith("/publish"))).toBe(false);
 });
+
