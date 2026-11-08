@@ -139,16 +139,21 @@ for (const width of [1440, 390]) {
     await expect(add).toBeFocused();
     expect(await read(page.request, "/managed-endpoints")).toEqual([]);
 
-    await add.click();
+    // Completing the first listener replaces the overview tip. Its trigger
+    // disappears, so successful completion returns focus to the stable heading.
+    await host.getByRole("tab", { name: "概览", exact: true }).click();
+    await setup.getByRole("button", { name: "设置监听入口", exact: true }).click();
     listener = page.getByRole("dialog", { name: "添加监听端点", exact: true });
     await listener.getByLabel("端点名称", { exact: true }).fill("Setup listener");
     await listener.getByLabel("用户名", { exact: true }).fill("fixture");
     await listener.getByLabel("密码", { exact: true }).fill("fixture-password");
     await listener.getByRole("button", { name: "保存", exact: true }).click();
     await expect(listener).not.toBeVisible();
+    await settledTask(host);
+    await expect(host.getByRole("heading", { name: "Setup server", level: 1, exact: true })).toBeFocused();
+    await expect(setup.getByRole("link", { name: "创建转发路径", exact: true })).toBeVisible();
+    await coreOpener.click();
     await expect(core.getByText("Setup listener", { exact: true })).toBeVisible();
-    await settledTask(core);
-    await expect(add).toBeFocused();
     const listenerRecords = await read(page.request, "/managed-endpoints");
     const cores = await read(page.request, "/core-instances");
     expect(listenerRecords).toHaveLength(1);

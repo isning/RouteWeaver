@@ -20,7 +20,7 @@ it("shows actual zero measurements and distinguishes fresh resources from older 
   mount(<ServerResourceOverview host={host} onOpenResources={vi.fn()} />);
   expect(await screen.findByText("0.0%", { exact: true })).toBeTruthy();
   expect(screen.getByText("0 B/s", { exact: true })).toBeTruthy();
-  expect(screen.getByText("等待连续采样")).toBeTruthy();
+  expect(within(screen.getByRole("group", { name: "计费网卡流量" })).getByText("发送 等待连续采样", { exact: true })).toBeTruthy();
   const quota = screen.getByRole("group", { name: "供应商剩余额度" });
   expect(within(quota).getByText("较早的用量记录")).toBeTruthy();
   expect(within(quota).getByText("手工录入的供应商账单")).toBeTruthy();
@@ -63,4 +63,20 @@ it("does not turn a failed or malformed status read into an offline core", async
   mount(<CoreStatusSummary instanceId="core-1" />);
   await waitFor(() => expect(screen.getByText("状态待核对")).toBeTruthy());
   expect(screen.queryByText("离线")).toBeNull();
+});
+
+it("keeps older samples visibly historical without claiming a live reading", async () => {
+  const data = view(); data.latest!.observedAt = "2026-01-01T00:00:00Z";
+  vi.stubGlobal("fetch", vi.fn(async () => respond(data)));
+  mount(<ServerResourceOverview host={host} onOpenResources={vi.fn()} />);
+  expect(await screen.findByText(/较早的采样/)).toBeTruthy();
+  expect(screen.getByText("该采样不在最近 15 分钟内，以上数值不代表当前资源使用情况。")).toBeTruthy();
+});
+it("does not report unconfigured collection when an observation belongs to another server", async () => {
+  const data = view(); data.nodeId = "another-host";
+  vi.stubGlobal("fetch", vi.fn(async () => respond(data)));
+  mount(<ServerResourceOverview host={host} onOpenResources={vi.fn()} />);
+  expect(await screen.findByText("资源数据尚未确定，请刷新重试。")).toBeTruthy();
+  expect(screen.queryByText("尚未设置资源采集")).toBeNull();
+  expect(screen.queryByText("0.0%")).toBeNull();
 });
