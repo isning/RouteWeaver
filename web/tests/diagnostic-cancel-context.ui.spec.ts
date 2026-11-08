@@ -80,8 +80,8 @@ test("server diagnostic cancellation retains its target and exact opener at 320p
   await page.setViewportSize({ width: 320, height: 844 });
   await page.goto("/#servers");
   await page.getByRole("button", { name: "Tokyo", exact: true }).click();
-  const host = page.getByRole("dialog", { name: "Tokyo", exact: true });
-  await host.getByRole("button", { name: "资源、额度与连接诊断" }).click();
+  const host = page.getByRole("region", { name: "Tokyo", exact: true });
+  await host.getByRole("tab", { name: "诊断", exact: true }).click();
   await host.getByRole("tab", { name: "连接诊断", exact: true }).click();
   await host.getByRole("button", { name: "查看测试结果", exact: true }).click();
   const detail = page.getByRole("dialog", { name: "测试详情", exact: true });

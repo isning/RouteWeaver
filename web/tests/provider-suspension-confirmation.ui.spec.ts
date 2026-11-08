@@ -93,9 +93,9 @@ test("managed provider suspension opt-in preserves complete consequences and saf
   await page.setViewportSize({ width: 320, height: 844 });
   await page.goto("/#servers");
   await page.getByRole("button", { name: hostName, exact: true }).click();
-  const host = page.getByRole("dialog", { name: hostName, exact: true });
+  const host = page.getByRole("region", { name: hostName, exact: true });
   await host
-    .getByRole("button", { name: "资源、额度与连接诊断", exact: true })
+    .getByRole("tab", { name: "诊断", exact: true })
     .click();
   await host
     .getByRole("button", { name: "设置采集与额度", exact: true })

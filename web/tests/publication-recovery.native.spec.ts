@@ -132,7 +132,7 @@ for (const width of [1440, 390]) {
         expect(receipt.instances).toHaveLength(1);
         return receipt;
       };
-      const status = page.getByRole("dialog", {
+      const status = page.getByRole("region", {
         name: `${host.name}的${instance.name}`,
         exact: true,
       });
@@ -144,6 +144,7 @@ for (const width of [1440, 390]) {
           .filter({ hasText: instance.name })
           .getByRole("button", { name: "查看状态", exact: true })
           .click();
+        await expect(page.getByRole("tab", { name: "核心与监听", exact: true })).toHaveAttribute("aria-selected", "true");
         await expect(status).toBeVisible();
       };
       const refresh = async () => {

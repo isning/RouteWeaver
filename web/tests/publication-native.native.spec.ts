@@ -103,7 +103,8 @@ test("same browser publication is observed by the owned native instance and stop
       .filter({ hasText: instance.name })
       .getByRole("button", { name: "查看状态", exact: true })
       .click();
-    const status = page.getByRole("dialog", {
+    await expect(page.getByRole("tab", { name: "核心与监听", exact: true })).toHaveAttribute("aria-selected", "true");
+    const status = page.getByRole("region", {
       name: `${host.name}的${instance.name}`,
       exact: true,
     });
