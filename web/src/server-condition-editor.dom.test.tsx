@@ -12,11 +12,11 @@ beforeEach(() => {
   vi.stubGlobal("ResizeObserver", class { observe() {} unobserve() {} disconnect() {} });
 });
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
-const base = {
+const base: ServerProgram = {
   instance: { id: "core", hostId: "host", name: "Core", adapterId: "routeweaver/sing-box", version: "1.14.4" },
-  listener: { id: "entry", name: "Entry", instanceId: "core", connection: { protocol: "socks", host: "0.0.0.0", port: 1080 } },
-  rules: [], defaultAction: { kind: "direct" },
-} as ServerProgram;
+  listener: { id: "entry", name: "Entry", instanceId: "core", connection: { protocol: "socks", host: "0.0.0.0", port: 1080, username: "fixture", password: "listener-fixture-only" } },
+  egress: [], resources: [], rules: [], defaultAction: { kind: "direct" },
+};
 const resource: RuleResource = { id: "work", name: "工作域名", revision: "1", digest: `sha256:${"0".repeat(64)}`, format: "sing-box-source", formatVersion: 5, location: "local", path: "rules/work.json", updatePolicy: "pinned" };
 function Harness({ initial, program = base }: { initial: MatchExpression; program?: ServerProgram }) {
   const [match, setMatch] = useState(initial);
@@ -143,3 +143,4 @@ it("allows nil optional lists but protects malformed scalar lists", () => {
     expect(screen.queryByLabelText("规则条件值")).toBeNull();
   }
 });
+
