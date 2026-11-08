@@ -1,3 +1,4 @@
+import { PolicyUserEntryTask, type PolicyUserEntryTaskProps } from "./PolicyUserEntryTask";
 import { connectorInputError } from "./server-connector-editor";
 import {
   OperationalIntegerInput,
@@ -606,6 +607,10 @@ export function ServerRouteEditor({
   onSaved: (d: ServerDeployment) => boolean;
 }) {
   const [draft, setDraft] = useState(initial);
+  const [entryTask, setEntryTask] = useState<Pick<PolicyUserEntryTaskProps, "deploymentId" | "listenerId" | "principal">>();
+  const entryReturnFocus = useRef<string | undefined>(undefined);
+  const sourceFence = useRef(false);
+  const [sourceStale, setSourceStale] = useState(false);
   const latestDraft = useRef(draft);
   latestDraft.current = draft;
   const materialGenerations = useRef<Record<string, number>>({});
@@ -664,6 +669,7 @@ export function ServerRouteEditor({
   useUnsavedChanges(dirty || selectionPending || materialPending || jsonDirty);
   const save = useMutation({
     mutationFn: (_complete: typeof onSaved) => {
+      if (sourceFence.current) throw new Error("用户入口可能已更新，请重新读取路径后再保存。");
       if (pendingMaterials.current.size)
         throw new Error("请等待 TLS 文件读取完成，或取消读取后再保存。");
       if (latestDraft.current.ir.programs.some((program) => (program.rules || []).some((rule) =>
@@ -847,6 +853,19 @@ export function ServerRouteEditor({
   // already-open Sheet on the same commit lets the two modal scopes hide one
   // another. Keep this editor's draft and revision owner, but mount its Sheet
   // only after the user keeps or explicitly adopts the listener snapshot.
+  if (entryTask) return <PolicyUserEntryTask
+    {...entryTask}
+    onClose={() => setEntryTask(undefined)}
+    onBeforeManage={() => {
+      if (save.isPending || pendingMaterials.current.size || selectionPending || jsonDirty) return false;
+      // Source management may revise credentials even when its response is lost.
+      // Fence the captured IR before any source mutation controls become reachable.
+      sourceFence.current = true;
+      setSourceStale(true);
+      void client.invalidateQueries({ queryKey: ["infrastructure"] });
+      return true;
+    }}
+  />;
   if (initialListenerReview && listenerReview) return listenerReview;
   return (
     <TaskSheet
@@ -859,11 +878,12 @@ export function ServerRouteEditor({
             if (!save.isPending) close();
           })();
       }}
-      onReady={() =>
-        ((visible) => {
-          if (!visible && discardClosing) onClose();
-        })(true)
-      }
+      onReady={() => {
+        if (entryReturnFocus.current) {
+          const target = Array.from(document.querySelectorAll<HTMLButtonElement>("button[aria-label]")).find((button) => button.getAttribute("aria-label") === entryReturnFocus.current);
+          if (target) { target.focus(); entryReturnFocus.current = undefined; }
+        }
+      }}
       onClosed={() => {
         ((visible) => {
           if (!visible && discardClosing) onClose();
@@ -881,6 +901,7 @@ export function ServerRouteEditor({
             disabled={
               draft.ir.programs.some((program) => (program.rules || []).some((rule) => canEditRuleCondition(program, draft.ir.schemaVersion, rule) && !!ruleConditionError(rule.match))) ||
               draft.ir.programs.some((program) => !!connectorInputError(program, draft.ir.schemaVersion)) ||
+              sourceStale ||
               !draft.name.trim() ||
               pathLoading ||
               selectionPending ||
@@ -898,6 +919,18 @@ export function ServerRouteEditor({
     >
       <div inert={save.isPending} className="space-y-5">
         <ErrorNotice error={error} />
+        {sourceStale && <Notice tone="warning" title="用户入口可能已更新">
+          <p>当前草稿仍保留，保存已暂停。请重新读取路径，核对最新入口后再继续修改。</p>
+          <ActionButton variant="outline" onClick={() => confirmDiscard({
+            title: "重新读取并放弃当前草稿？",
+            description: "放弃此处尚未保存的修改，返回路径列表后重新打开最新版本。已完成的入口管理操作不会撤销。",
+            confirmLabel: "重新读取路径",
+            cancelLabel: "保留草稿",
+          }, async (stillCurrent) => {
+            await client.invalidateQueries({ queryKey: ["infrastructure"] });
+            if (stillCurrent()) setDiscardClosing(true);
+          })}>重新读取路径</ActionButton>
+        </Notice>}
         {save.error instanceof APIError && save.error.status === 409 && (
           <Notice
             tone="warning"
@@ -1011,6 +1044,16 @@ export function ServerRouteEditor({
               if (!program || program !== source || program.instance.id !== next.instance.id || program.listener.id !== next.listener.id) return;
               updateProgram(index, { connectors: next.connectors });
               setAnnouncement("连接器已更新到草稿，规则引用不变，尚未保存。");
+            }}
+            onOpenUserEntry={(index, principalIndex, focusLabel) => {
+              if (entryTask || save.isPending || selectionPending || materialPending || jsonDirty) return;
+              const program = latestDraft.current.ir.programs[index];
+              if (!program || program !== draft.ir.programs[index]) return;
+              const principal = program.principals?.[principalIndex];
+              if (!principal) return;
+              entryReturnFocus.current = focusLabel;
+              setEntryTask({ deploymentId: latestDraft.current.id, listenerId: program.listener.id,
+                principal: { accountId: principal.accountId, subjectId: principal.subjectId, routeId: principal.routeId, credentialVersion: principal.credentialVersion } });
             }}
             onRefreshListener={setRefreshingListener}
             onEditJSON={editIntent}

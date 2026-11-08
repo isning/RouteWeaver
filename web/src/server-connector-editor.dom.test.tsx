@@ -33,11 +33,11 @@ it("keeps incomplete addresses in the controlled draft, then allows correction w
   render(<Harness />);
   const address = screen.getByRole("textbox", { name: "入口 连接器 1 地址" });
   await user.clear(address);
-  expect(screen.getByRole("button", { name: "保存草稿" })).toBeDisabled();
-  expect(address).toHaveValue("");
+  expect((screen.getByRole("button", { name: "保存草稿" }) as HTMLButtonElement).disabled).toBe(true);
+  expect((address as HTMLInputElement).value).toBe("");
   await user.type(address, "new.example");
-  expect(screen.getByLabelText("当前地址")).toHaveTextContent("new.example");
-  expect(screen.getByRole("button", { name: "保存草稿" })).toBeEnabled();
+  expect(screen.getByLabelText("当前地址").textContent).toBe("new.example");
+  expect((screen.getByRole("button", { name: "保存草稿" }) as HTMLButtonElement).disabled).toBe(false);
   expect(document.body.textContent).not.toContain("synthetic-private-value");
   expect(document.querySelector('input[type="password"]')).toBeNull();
 });
@@ -46,7 +46,7 @@ it("shows protected managed connectors without editable fields", () => {
   initial.instance.adapterId = "routeweaver/managed-xray";
   render(<Harness initial={initial} />);
   expect(screen.queryByRole("textbox")).toBeNull();
-  expect(screen.getByText(/关联用户入口或托管计量/)).toBeInTheDocument();
+  expect(document.body.contains(screen.getByText(/关联用户入口或托管计量/))).toBe(true);
   expect(document.body.textContent).not.toContain("synthetic-private-value");
 });
 
@@ -57,8 +57,9 @@ it("changes upstream through a user choice without changing credentials or accep
   render(<Harness initial={initial} />);
   await user.click(screen.getByRole("combobox", { name: "入口 连接器 1 上游连接器" }));
   await user.click(screen.getByRole("option", { name: "relay" }));
-  expect(screen.getByLabelText("当前上游")).toHaveTextContent("relay");
+  expect(screen.getByLabelText("当前上游").textContent).toBe("relay");
   await user.click(screen.getByRole("combobox", { name: "入口 连接器 2 上游连接器" }));
-  expect(screen.getByRole("option", { name: /^exit/ })).toHaveAttribute("aria-disabled", "true");
+  expect(screen.getByRole("option", { name: /^exit/ }).getAttribute("aria-disabled")).toBe("true");
   expect(document.body.textContent).not.toContain("synthetic-private-value");
 });
+

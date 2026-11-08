@@ -312,6 +312,7 @@ export function ServerPolicyEditor({
   onRuleActionChange,
   onRuleConditionChange,
   onConnectorsChange,
+  onOpenUserEntry,
   onRefreshListener,
   onEditJSON,
 }: {
@@ -326,6 +327,7 @@ export function ServerPolicyEditor({
   ) => void;
   onRuleConditionChange: (programIndex: number, ruleID: string, match: MatchExpression) => void;
   onConnectorsChange: (programIndex: number, source: ServerProgram, next: ServerProgram) => void;
+  onOpenUserEntry: (programIndex: number, principalIndex: number, focusLabel: string) => void;
   onRefreshListener: (endpointId: string) => void;
   onEditJSON: () => void;
 }) {
@@ -574,11 +576,16 @@ export function ServerPolicyEditor({
                         <span>账号 {principal.accountId}</span>
                         <span>线路 {principal.routeId}</span>
                         <span>{actionLabel(program, principal.action)}</span>
+                        <ActionButton variant="outline"
+                          aria-label={`核对入口来源 ${identityLabel} 用户入口 ${index + 1}`}
+                          onClick={() => onOpenUserEntry(programIndex, index, `核对入口来源 ${identityLabel} 用户入口 ${index + 1}`)}>
+                          核对入口来源
+                        </ActionButton>
                       </li>
                     ))}
                   </ul>
                   <p className="text-muted-foreground">
-                    用户入口涉及身份、凭据与授权，此表单仅供查看；请通过原入口管理流程维护。
+                    用户入口涉及身份、凭据与授权。核对来源后，可进入对应账号的入口管理。
                   </p>
                 </>
               ) : (
