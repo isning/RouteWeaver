@@ -101,11 +101,11 @@ afterEach(() => { cleanup(); histories.splice(0).forEach((controller) => control
 
 async function openSetup(user: ReturnType<typeof userEvent.setup>) {
   await user.click(await screen.findByRole("button", { name: host.name }));
-  const hostSheet = await screen.findByRole("dialog", { name: host.name });
+  const hostSheet = await screen.findByRole("region", { name: host.name });
   expect(within(hostSheet).getByText("服务器信息已登记")).toBeTruthy();
   const opener = within(hostSheet).getByRole("button", { name: "查看接入与配置" });
   await user.click(opener);
-  const sheet = await screen.findByRole("dialog", { name: `${host.name}的${core.name}` });
+  const sheet = await screen.findByRole("region", { name: `${host.name}的${core.name}` });
   return { sheet, opener, hostSheet };
 }
 
@@ -129,7 +129,7 @@ it("continues from a saved core through a scoped listener and real route navigat
   expect(within(editor).getByLabelText("端点名称")).toHaveProperty("value", "New listener");
   controls.failSave = false;
   await user.click(within(editor).getByRole("button", { name: "保存" }));
-  const resumed = await screen.findByRole("dialog", { name: `${host.name}的${core.name}` });
+  const resumed = await screen.findByRole("region", { name: `${host.name}的${core.name}` });
   expect(await within(resumed).findByText("New listener")).toBeTruthy();
   expect(within(resumed).getByRole("link", { name: "用 New listener 创建转发路径" }).getAttribute("href")).toBe(`#routes?entryEndpoint=${encodeURIComponent(String(writes[1].value.id))}&returnHost=${host.id}&returnInstance=${core.id}`);
   expect(within(resumed).getByText("保存监听端点不会修改节点。转发路径需另行检查并确认应用。")).toBeTruthy();
@@ -150,10 +150,10 @@ it("returns a discarded listener to the same core action and then the original s
     const confirmation = await screen.findByRole("alertdialog", { name: "放弃尚未保存的配置修改？" });
     await user.click(within(confirmation).getByRole("button", { name: attempt ? "放弃修改" : "继续编辑" }));
   }
-  const resumed = await screen.findByRole("dialog", { name: `${host.name}的${core.name}` });
+  const resumed = await screen.findByRole("region", { name: `${host.name}的${core.name}` });
   await waitFor(() => expect(document.activeElement).toBe(within(resumed).getByRole("button", { name: "添加监听端点" })));
-  await user.click(within(resumed).getByRole("button", { name: "关闭" }));
-  const restoredHost = await screen.findByRole("dialog", { name: host.name });
+  await user.click(within(resumed).getByRole("button", { name: "返回核心列表" }));
+  const restoredHost = await screen.findByRole("region", { name: host.name });
   await waitFor(() => expect(document.activeElement).toBe(within(restoredHost).getByRole("button", { name: "查看接入与配置" })));
   expect(writes).toEqual([]);
 });
@@ -215,8 +215,8 @@ it("opens the exact newly registered core setup and preserves its managed listen
   await user.click(within(editor).getByLabelText("核心家族"));
   await user.click(await screen.findByText("受管 Xray", { selector: "[cmdk-item] span" }));
   await user.click(within(editor).getByRole("button", { name: "保存" }));
-  const setup = await screen.findByRole("dialog", { name: `${host.name}的Created managed core` });
-  expect(screen.getAllByRole("dialog")).toEqual([setup]);
+  const setup = await screen.findByRole("region", { name: `${host.name}的Created managed core` });
+  expect(screen.queryByRole("dialog")).toBeNull();
   expect(within(setup).getByText("核心配置已登记")).toBeTruthy();
   await user.click(within(setup).getByRole("button", { name: "添加监听端点" }));
   const listener = await screen.findByRole("dialog", { name: "添加监听端点" });
@@ -237,13 +237,14 @@ it("continues a core created from the global inventory and returns focus to that
   expect(within(editor).getByLabelText("所属服务器").textContent).toBe(host.name);
   await user.type(within(editor).getByLabelText("实例名称"), "Global core");
   await user.click(within(editor).getByRole("button", { name: "保存" }));
-  const setup = await screen.findByRole("dialog", { name: `${host.name}的Global core` });
-  expect(screen.getAllByRole("dialog")).toEqual([setup]);
+  const setup = await screen.findByRole("region", { name: `${host.name}的Global core` });
+  expect(screen.queryByRole("dialog")).toBeNull();
   expect(writes).toHaveLength(1);
   expect(writes[0].value).toMatchObject({ hostId: host.id, name: "Global core" });
-  await user.click(within(setup).getByRole("button", { name: "关闭" }));
+  await user.click(within(setup).getByRole("button", { name: "返回核心列表" }));
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-  await waitFor(() => expect(add).toBe(document.activeElement));
+  await user.click(screen.getByRole("button", { name: "返回服务器清单" }));
+  await waitFor(() => expect(screen.getByRole("button", { name: "添加核心实例" })).toBe(document.activeElement));
 });
 
 it.each(["pending", "issued"])("does not let a late listener reveal interrupt %s enrollment", async (stage) => {
@@ -289,7 +290,7 @@ it.each(["delayed", "failed"])("keeps confirmed listener identity when the inven
   if (mode === "delayed") controls.inventoryReply = new Promise<Response>((resolve) => { release = resolve; });
   else controls.failInventory = true;
   await user.click(within(editor).getByRole("button", { name: "保存" }));
-  const resumed = await screen.findByRole("dialog", { name: `${host.name}的${core.name}` });
+  const resumed = await screen.findByRole("region", { name: `${host.name}的${core.name}` });
   expect(await within(resumed).findByText("Confirmed listener")).toBeTruthy();
   expect(within(resumed).queryByText("此核心尚未配置监听端点。")).toBeNull();
   expect(within(resumed).getByRole("link", { name: "用 Confirmed listener 创建转发路径" })).toBeTruthy();
@@ -304,21 +305,21 @@ it("keeps two confirmed cores discoverable after closing setup while inventory r
   const user = userEvent.setup();
   await user.click(await screen.findByRole("button", { name: host.name }));
   for (const name of ["First saved core", "Second saved core"]) {
-    const hostSheet = await screen.findByRole("dialog", { name: host.name });
+    const hostSheet = await screen.findByRole("region", { name: host.name });
     await user.click(within(hostSheet).getByRole("button", { name: "添加核心" }));
     const editor = await screen.findByRole("dialog", { name: "添加核心实例" });
     await user.type(within(editor).getByLabelText("实例名称"), name);
     controls.failInventory = true;
     await user.click(within(editor).getByRole("button", { name: "保存" }));
-    const setup = await screen.findByRole("dialog", { name: `${host.name}的${name}` });
-    await user.click(within(setup).getByRole("button", { name: "关闭" }));
+    const setup = await screen.findByRole("region", { name: `${host.name}的${name}` });
+    await user.click(within(setup).getByRole("button", { name: "返回核心列表" }));
   }
-  const hostSheet = await screen.findByRole("dialog", { name: host.name });
+  const hostSheet = await screen.findByRole("region", { name: host.name });
   expect(within(hostSheet).getByText("First saved core")).toBeTruthy();
   expect(within(hostSheet).getByText("Second saved core")).toBeTruthy();
   expect(within(hostSheet).queryByText("先添加核心，再配置监听端点")).toBeNull();
   await user.click(within(hostSheet).getAllByRole("button", { name: "查看接入与配置" })[0]);
-  expect(await screen.findByRole("dialog", { name: `${host.name}的First saved core` })).toBeTruthy();
+  expect(await screen.findByRole("region", { name: `${host.name}的First saved core` })).toBeTruthy();
   expect(writes).toHaveLength(2);
 });
 
@@ -327,7 +328,7 @@ it("retains every confirmed listener instead of only the last write before inven
   const user = userEvent.setup();
   await openSetup(user);
   for (const name of ["First saved listener", "Second saved listener"]) {
-    const setup = await screen.findByRole("dialog", { name: `${host.name}的${core.name}` });
+    const setup = await screen.findByRole("region", { name: `${host.name}的${core.name}` });
     await user.click(within(setup).getByRole("button", { name: "添加监听端点" }));
     const editor = await screen.findByRole("dialog", { name: "添加监听端点" });
     await user.type(within(editor).getByLabelText("端点名称"), name);
@@ -335,14 +336,14 @@ it("retains every confirmed listener instead of only the last write before inven
     await user.type(within(editor).getByLabelText("密码"), "fixture-password");
     controls.failInventory = true;
     await user.click(within(editor).getByRole("button", { name: "保存" }));
-    await within(await screen.findByRole("dialog", { name: `${host.name}的${core.name}` })).findByText(name);
+    await within(await screen.findByRole("region", { name: `${host.name}的${core.name}` })).findByText(name);
   }
-  const setup = await screen.findByRole("dialog", { name: `${host.name}的${core.name}` });
+  const setup = await screen.findByRole("region", { name: `${host.name}的${core.name}` });
   expect(within(setup).getByText("First saved listener")).toBeTruthy();
   expect(within(setup).getByText("Second saved listener")).toBeTruthy();
   expect(within(setup).queryByText("此核心尚未配置监听端点。")).toBeNull();
-  await user.click(within(setup).getByRole("button", { name: "关闭" }));
-  const hostSheet = await screen.findByRole("dialog", { name: host.name });
+  await user.click(within(setup).getByRole("button", { name: "返回核心列表" }));
+  const hostSheet = await screen.findByRole("region", { name: host.name });
   expect(within(hostSheet).getByText(/2 个监听端点/)).toBeTruthy();
   expect(writes).toHaveLength(2);
 });
@@ -351,19 +352,18 @@ it("retains every confirmed listener instead of only the last write before inven
 it("returns to the verified server and core without revealing credentials or writing configuration", async () => {
   history.replaceState(null, "", `#servers?host=${host.id}&instance=${core.id}`);
   const { writes } = mount({ listeners: [endpoint] });
-  const setup = await screen.findByRole("dialog", { name: `${host.name}的${core.name}` });
-  expect(screen.getAllByRole("dialog")).toEqual([setup]);
+  const setup = await screen.findByRole("region", { name: `${host.name}的${core.name}` });
+  expect(screen.queryByRole("dialog")).toBeNull();
   expect(within(setup).getByText("Setup listener")).toBeTruthy();
   expect(within(setup).getByRole("link", { name: "用 Setup listener 创建转发路径" }).getAttribute("href")).toBe(`#routes?entryEndpoint=${endpoint.id}&returnHost=${host.id}&returnInstance=${core.id}`);
   expect(vi.mocked(fetch).mock.calls.some(([input]) => String(input).endsWith("/reveal"))).toBe(false);
   expect(writes).toEqual([]);
-  await userEvent.click(within(setup).getByRole("button", { name: "关闭" }));
-  expect(location.hash).toBe("#servers");
-  expect(await screen.findByRole("dialog", { name: host.name })).toBeTruthy();
+  await userEvent.click(within(setup).getByRole("button", { name: "返回核心列表" }));
+  expect(location.hash).toBe(`#servers?host=${host.id}&section=cores`);
+  expect(await screen.findByRole("region", { name: host.name })).toBeTruthy();
 });
 
 it.each([
-  `host=${host.id}`,
   `instance=${core.id}`,
   `host=${host.id}&instance=missing-core`,
   `host=missing-host&instance=${core.id}`,
@@ -387,10 +387,11 @@ it("does not use stale cached inventory to resolve a return until a successful r
     window.dispatchEvent(new HashChangeEvent("hashchange"));
   });
   expect(screen.queryByRole("dialog")).toBeNull();
+  expect(screen.queryByRole("region", { name: `${host.name}的${core.name}` })).toBeNull();
   expect(screen.queryByText("找不到匹配的服务器与核心，请从服务器清单重新选择。")).toBeNull();
   controls.failInventory = false;
   await act(async () => { await client.refetchQueries({ queryKey: ["infrastructure"] }); });
-  expect(await screen.findByRole("dialog", { name: `${host.name}的${core.name}` })).toBeTruthy();
+  expect(await screen.findByRole("region", { name: `${host.name}的${core.name}` })).toBeTruthy();
   expect(writes).toEqual([]);
 });
 
@@ -411,6 +412,7 @@ it("a delayed inventory result cannot restore a server task after newer navigati
   });
   await act(async () => { release(json([])); await refresh; });
   expect(screen.queryByRole("dialog")).toBeNull();
+  expect(screen.queryByRole("region", { name: `${host.name}的${core.name}` })).toBeNull();
   expect(writes).toEqual([]);
 });
 
@@ -461,19 +463,21 @@ it("closes the context-owned setup after accepted Back navigation to the plain s
   const { controller, writes } = mount({ ownedHistory: true });
   await screen.findByRole("button", { name: host.name });
   act(() => controller!.navigate(`#servers?host=${host.id}&instance=${core.id}`));
-  await screen.findByRole("dialog", { name: `${host.name}的${core.name}` });
+  await screen.findByRole("region", { name: `${host.name}的${core.name}` });
   act(() => history.back());
   await waitFor(() => expect(location.hash).toBe("#servers"));
-  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  await waitFor(() => expect(screen.queryByRole("region", { name: host.name })).toBeNull());
+  expect(screen.queryByRole("dialog")).toBeNull();
   expect(writes).toEqual([]);
 });
 
-it("does not clear manually opened setup on unrelated accepted same-page navigation", async () => {
+it("returns the durable server workspace to inventory after accepted list navigation", async () => {
   const { controller, writes } = mount({ ownedHistory: true });
   const { sheet } = await openSetup(userEvent.setup());
   act(() => controller!.navigate("#servers?view=inventory"));
   expect(location.hash).toBe("#servers?view=inventory");
-  expect(screen.getByRole("dialog", { name: `${host.name}的${core.name}` })).toBe(sheet);
+  await waitFor(() => expect(screen.queryByRole("region", { name: `${host.name}的${core.name}` })).toBeNull());
+  expect(await screen.findByRole("button", { name: host.name })).toBeTruthy();
   expect(writes).toEqual([]);
 });
 
@@ -481,7 +485,7 @@ it("leaves a contextual dirty listener editor intact when list navigation has no
   const { controller, writes } = mount({ ownedHistory: true });
   await screen.findByRole("button", { name: host.name });
   act(() => controller!.navigate(`#servers?host=${host.id}&instance=${core.id}`));
-  const setup = await screen.findByRole("dialog", { name: `${host.name}的${core.name}` });
+  const setup = await screen.findByRole("region", { name: `${host.name}的${core.name}` });
   const user = userEvent.setup();
   await user.click(within(setup).getByRole("button", { name: "添加监听端点" }));
   const editor = await screen.findByRole("dialog", { name: "添加监听端点" });

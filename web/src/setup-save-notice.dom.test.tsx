@@ -74,7 +74,7 @@ async function saveHost(user: ReturnType<typeof userEvent.setup>) {
   await user.type(editor.getByLabelText("服务器名称", { exact: true }), "测试服务器");
   await user.type(editor.getByLabelText("服务器连接地址", { exact: true }), "127.0.0.1");
   await user.click(editor.getByRole("button", { name: "保存" }));
-  return within(await screen.findByRole("dialog", { name: "测试服务器" }));
+  return within(await screen.findByRole("region", { name: "测试服务器" }));
 }
 
 it("retires only the previous setup save acknowledgment when the next editor opens", async () => {
@@ -101,8 +101,8 @@ it("retires only the previous setup save acknowledgment when the next editor ope
   await user.click(core.getByRole("button", { name: "保存" }));
   const savedCore = await screen.findByText("核心实例「测试核心」已保存", { exact: true });
   expect(savedCore).toBeTruthy();
-  const resumed = within(await screen.findByRole("dialog", { name: "测试服务器的测试核心" }));
-  expect(screen.getAllByRole("dialog")).toHaveLength(1);
+  const resumed = within(await screen.findByRole("region", { name: "测试服务器的测试核心" }));
+  expect(screen.queryByRole("dialog")).toBeNull();
   await user.click(resumed.getByRole("button", { name: "添加监听端点" }));
   const listener = within(await screen.findByRole("dialog", { name: "添加监听端点" }));
   await waitFor(() => expect(screen.queryByText("核心实例「测试核心」已保存", { exact: true })).toBeNull());

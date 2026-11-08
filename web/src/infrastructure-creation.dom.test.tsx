@@ -156,7 +156,7 @@ beforeAll(() => {
 });
 // rc-util deliberately reuses "test-id" in test mode, breaking nested dialog labels.
 // Exercise the production-style unique React IDs for the drawer/editor journey.
-beforeEach(() => vi.stubEnv("NODE_ENV", "development"));
+beforeEach(() => { history.replaceState(null, "", "#servers"); vi.stubEnv("NODE_ENV", "development"); });
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
@@ -180,7 +180,7 @@ describe("infrastructure creation user tasks", () => {
       const user = userEvent.setup();
       await user.click(await screen.findByRole("button", { name: "Tokyo" }));
       await user.click(
-        within(screen.getByRole("dialog", { name: "Tokyo" })).getByRole(
+        within(screen.getByRole("region", { name: "Tokyo" })).getByRole(
           "button",
           { name: "添加核心" },
         ),
@@ -322,7 +322,7 @@ describe("infrastructure creation user tasks", () => {
     );
     await user.click(editor.getByRole("button", { name: /保\s*存/ }));
     const detail = within(
-      await screen.findByRole("dialog", { name: "New London" }),
+      await screen.findByRole("region", { name: "New London" }),
     );
     expect(detail.getByText("先添加核心，再配置监听端点")).toBeTruthy();
     await user.click(detail.getByRole("button", { name: "添加核心" }));
@@ -560,13 +560,13 @@ describe("infrastructure creation user tasks", () => {
     },
   );
 
-  it("suspends host detail while editing and restores it after cancel", async () => {
+  it("keeps the server workspace mounted beneath its editor and restores it after cancel", async () => {
     inventoryAPI();
     mount();
     const user = userEvent.setup();
     await user.click(await screen.findByRole("button", { name: "Tokyo" }));
     await user.click(
-      within(screen.getByRole("dialog", { name: "Tokyo" })).getByRole(
+      within(screen.getByRole("region", { name: "Tokyo" })).getByRole(
         "button",
         { name: "添加核心" },
       ),
@@ -575,12 +575,13 @@ describe("infrastructure creation user tasks", () => {
       await screen.findByRole("dialog", { name: "添加核心实例" }),
     );
     await waitFor(() =>
-      expect(screen.queryByRole("dialog", { name: "Tokyo" })).toBeNull(),
+      expect(screen.queryByRole("region", { name: "Tokyo" })).toBeNull(),
     );
     expect(screen.getAllByRole("dialog")).toHaveLength(1);
+    expect(document.querySelector(".server-workspace")?.isConnected).toBe(true);
     await user.click(editor.getByRole("button", { name: /取\s*消/ }));
     const restored = within(
-      await screen.findByRole("dialog", { name: "Tokyo" }),
+      await screen.findByRole("region", { name: "Tokyo" }),
     );
     expect(restored.getByText("Tokyo secondary")).toBeTruthy();
     await waitFor(() =>
@@ -614,15 +615,15 @@ describe("infrastructure creation user tasks", () => {
       name: "放弃尚未保存的配置修改？",
     });
     await user.click(within(confirm).getByRole("button", { name: "放弃修改" }));
-    const host = await screen.findByRole("dialog", { name: "Tokyo" });
+    const host = await screen.findByRole("region", { name: "Tokyo" });
     await waitFor(() =>
       expect(document.activeElement).toBe(
         within(host).getByRole("button", { name: actionName }),
       ),
     );
     expect(writes).toHaveLength(0);
-    await user.click(within(host).getByRole("button", { name: "关闭" }));
-    await waitFor(() => expect(document.activeElement).toBe(pageOpener));
+    await user.click(within(host).getByRole("button", { name: "返回服务器清单" }));
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("button", { name: "Tokyo" })));
   });
 
   it("starts a new server with core setup before optional operations", async () => {
@@ -632,7 +633,7 @@ describe("infrastructure creation user tasks", () => {
     await user.click(
       await screen.findByRole("button", { name: "Empty server" }),
     );
-    const drawer = within(screen.getByRole("dialog", { name: "Empty server" }));
+    const drawer = within(screen.getByRole("region", { name: "Empty server" }));
     expect(drawer.getByText("先添加核心，再配置监听端点")).toBeTruthy();
     expect(drawer.queryByText("尚未收到服务器资源数据")).toBeNull();
     expect(drawer.queryByText("先登记测试目标")).toBeNull();
@@ -645,14 +646,11 @@ describe("infrastructure creation user tasks", () => {
       ).getByRole("button", { name: /保\s*存/ }),
     );
     await waitFor(() => expect(writes[0]?.value.hostId).toBe("host-empty"));
-    const setup = within(await screen.findByRole("dialog", { name: "Empty server的sing-box" }));
+    const setup = within(await screen.findByRole("region", { name: "Empty server的sing-box" }));
     expect(setup.getByText("核心配置已登记")).toBeTruthy();
     expect(setup.getByRole("button", { name: "添加监听端点" })).toBeTruthy();
-    expect(
-      screen
-        .getByRole("tab", { name: "服务器 3", hidden: true })
-        .getAttribute("aria-selected"),
-    ).toBe("true");
+    expect(screen.getByRole("tab", { name: "核心与监听" }).getAttribute("aria-selected")).toBe("true");
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 
   it("adds a listener directly to the chosen core without losing server context", async () => {
@@ -660,7 +658,7 @@ describe("infrastructure creation user tasks", () => {
     mount();
     const user = userEvent.setup();
     await user.click(await screen.findByRole("button", { name: "Tokyo" }));
-    const drawer = within(screen.getByRole("dialog", { name: "Tokyo" }));
+    const drawer = within(screen.getByRole("region", { name: "Tokyo" }));
     expect(drawer.getByText("Tokyo primary")).toBeTruthy();
     expect(drawer.getByText("Tokyo secondary")).toBeTruthy();
     expect(drawer.getAllByRole("button", { name: /查\s*看/ })).toHaveLength(2);
@@ -671,9 +669,10 @@ describe("infrastructure creation user tasks", () => {
       await screen.findByRole("dialog", { name: "添加监听端点" }),
     );
     await waitFor(() =>
-      expect(screen.queryByRole("dialog", { name: "Tokyo" })).toBeNull(),
+      expect(screen.queryByRole("region", { name: "Tokyo" })).toBeNull(),
     );
     expect(screen.getAllByRole("dialog")).toHaveLength(1);
+    expect(document.querySelector(".server-workspace")?.isConnected).toBe(true);
     expect(editor.getByText("Tokyo")).toBeTruthy();
     expect(editor.getByText("Tokyo secondary")).toBeTruthy();
     await user.type(editor.getByLabelText("端点名称"), "Secondary listener");
@@ -681,7 +680,7 @@ describe("infrastructure creation user tasks", () => {
     await user.type(editor.getByLabelText("密码"), "fixture-password");
     await user.click(editor.getByRole("button", { name: /保\s*存/ }));
     await waitFor(() => expect(writes[0]?.value.instanceId).toBe("core-tyo-2"));
-    expect(screen.getByRole("dialog", { name: "Tokyo" })).toBeTruthy();
+    expect(screen.getByRole("region", { name: "Tokyo" })).toBeTruthy();
     expect(writes[0]?.value).not.toHaveProperty("endpointHostId");
   });
 
@@ -690,9 +689,9 @@ describe("infrastructure creation user tasks", () => {
     mount(true);
     const user = userEvent.setup();
     await user.click(await screen.findByRole("button", { name: "Tokyo" }));
-    const drawer = within(screen.getByRole("dialog", { name: "Tokyo" }));
+    const drawer = within(screen.getByRole("region", { name: "Tokyo" }));
     await user.click(
-      drawer.getByRole("button", { name: "资源、额度与连接诊断" }),
+      drawer.getByRole("tab", { name: "诊断", exact: true }),
     );
     expect(
       await drawer.findByRole("button", { name: "设置采集与额度" }),
@@ -715,6 +714,7 @@ describe("infrastructure creation user tasks", () => {
     await user.click(testForm.getByRole("button", { name: "取消" }));
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "新建连接测试" })).toBeNull());
     expect(writes).toEqual([]);
+    await user.click(drawer.getByRole("tab", { name: "概览" }));
     await user.click(drawer.getByRole("button", { name: "技术标识" }));
     expect(drawer.getByText("服务器 ID：host-tyo")).toBeTruthy();
   });
@@ -724,9 +724,9 @@ describe("infrastructure creation user tasks", () => {
     mount();
     const user = userEvent.setup();
     await user.click(await screen.findByRole("button", { name: "Tokyo" }));
-    const drawer = within(screen.getByRole("dialog", { name: "Tokyo" }));
+    const drawer = within(screen.getByRole("region", { name: "Tokyo" }));
     await user.click(
-      drawer.getByRole("button", { name: "资源、额度与连接诊断" }),
+      drawer.getByRole("tab", { name: "诊断", exact: true }),
     );
     expect(await drawer.findByText("资源数据暂时不可用")).toBeTruthy();
     expect(drawer.queryByText("尚未收到服务器资源数据")).toBeNull();

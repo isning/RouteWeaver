@@ -202,12 +202,12 @@ for (const width of [1440, 390]) {
     expect(host.id).toEqual(expect.any(String));
 
     // Continue from the saved server, rather than finding it in another tab.
-    const hostDetail = page.getByRole("dialog", { name: names.host, exact: true });
+    const hostDetail = page.getByRole("region", { name: names.host, exact: true });
     await expect(hostDetail.getByText("先添加核心，再配置监听端点", { exact: true })).toBeVisible();
     await capture(page, info, `setup-host-continuation-${width}`, hostDetail, [hostDetail.getByRole("button", { name: "添加核心", exact: true })]);
     await hostDetail.getByRole("button", { name: "添加核心", exact: true }).click();
     const coreEditor = page.getByRole("dialog", { name: "添加核心实例", exact: true });
-    await expect(hostDetail).not.toBeVisible();
+    await expect(page.locator(".server-workspace")).toBeAttached();
     await expect(coreEditor.getByLabel("所属服务器", { exact: true })).toHaveText(names.host);
     await coreEditor.getByLabel("实例名称", { exact: true }).fill(names.core);
     await choose(page, coreEditor.getByLabel("核心家族", { exact: true }), "受管 Xray");
@@ -220,14 +220,14 @@ for (const width of [1440, 390]) {
     expect(cores).toHaveLength(1);
     const core = cores[0];
     expect(core).toMatchObject({ name: names.core, hostId: host.id, adapterId: "routeweaver/managed-xray", version: "26.3.27-rw1" });
-    const coreSetup = page.getByRole("dialog", { name: `${names.host}的${names.core}`, exact: true });
+    const coreSetup = page.getByRole("region", { name: `${names.host}的${names.core}`, exact: true });
     await expect(coreSetup.getByText("核心配置已登记", { exact: true })).toBeVisible();
-    await coreSetup.getByRole("button", { name: "关闭", exact: true }).click();
+    await coreSetup.getByRole("button", { name: "返回核心列表", exact: true }).click();
     await expect(hostDetail).toBeVisible();
     await hostDetail.getByRole("button", { name: `为 ${names.core} 添加监听端点`, exact: true }).click();
 
     const listenerEditor = page.getByRole("dialog", { name: "添加监听端点", exact: true });
-    await expect(hostDetail).not.toBeVisible();
+    await expect(page.locator(".server-workspace")).toBeAttached();
     await expect(listenerEditor.getByLabel("所属服务器", { exact: true })).toHaveText(names.host);
     await expect(listenerEditor.getByLabel("所属核心", { exact: true })).toHaveText(names.core);
     await expect(listenerEditor.getByLabel("协议", { exact: true })).toHaveText("VLESS");
@@ -272,7 +272,7 @@ for (const width of [1440, 390]) {
     expect(Boolean(completeListener.connection.password), "No shared password was invented").toBe(false);
     expect(completeListener.connection.tls?.enabled).not.toBe(true);
     await expect(hostDetail).toBeVisible();
-    await hostDetail.getByRole("button", { name: "关闭", exact: true }).click();
+    await hostDetail.getByRole("button", { name: "返回服务器清单", exact: true }).click();
     await expect(hostDetail).not.toBeVisible();
 
     await navigateAfterClose(page, width, "转发路径");

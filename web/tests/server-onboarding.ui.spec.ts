@@ -14,7 +14,7 @@ async function capture(page: Page, info: TestInfo, name: string, surface: Locato
   expect(await surface.evaluate((element) => {
     const rect = element.getBoundingClientRect();
     return rect.left >= -1 && rect.right <= innerWidth + 1 && element.scrollWidth <= element.clientWidth + 1;
-  }), "Setup task fits the viewport").toBe(true);
+  }), "Server workspace or editing task fits the viewport").toBe(true);
   const path = info.outputPath(`${name}.png`);
   await page.screenshot({ path, fullPage: false });
   await info.attach(name, { path, contentType: "image/png" });
@@ -38,8 +38,13 @@ for (const width of [1440, 390]) {
     await hostEditor.getByLabel("服务器连接地址", { exact: true }).fill("127.0.0.1");
     await expect(hostEditor.getByText("将服务器信息登记到控制平面；服务器连接与配置需另行操作。", { exact: true })).toBeVisible();
     await hostEditor.getByRole("button", { name: "保存", exact: true }).click();
-    const host = page.getByRole("dialog", { name: "Setup server", exact: true });
+    const host = page.getByRole("region", { name: "Setup server", exact: true });
     await expect(host.getByText("服务器信息已登记", { exact: true })).toBeVisible();
+    await expect(host.getByRole("heading", { level: 1, name: "Setup server", exact: true })).toBeVisible();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    const registeredHosts = await read(page.request, "/hosts");
+    await expect(page).toHaveURL(new RegExp(`#servers\\?host=${registeredHosts[0].id}$`));
+    await capture(page, info, `server-workspace-overview-${width}`, host);
     await host.getByRole("button", { name: "添加核心", exact: true }).click();
     const coreEditor = page.getByRole("dialog", { name: "添加核心实例", exact: true });
     await expect(coreEditor.getByLabel("所属服务器", { exact: true })).toHaveText("Setup server");
@@ -47,12 +52,26 @@ for (const width of [1440, 390]) {
     await expect(coreEditor.getByLabel("核心版本", { exact: true })).toHaveText("1.14.4");
     await coreEditor.getByRole("button", { name: "保存", exact: true }).click();
     const coreOpener = host.getByRole("button", { name: "查看接入与配置", exact: true });
-    const core = page.getByRole("dialog", { name: "Setup server的Setup core", exact: true });
+    const core = page.getByRole("region", { name: "Setup server的Setup core", exact: true });
     await expect(core.getByText("核心配置已登记", { exact: true })).toBeVisible();
-    await expect(page.getByRole("dialog")).toHaveCount(1);
+    await expect(page.getByRole("dialog")).toHaveCount(0);
     await expect(core.getByText("尚未接入", { exact: true })).toBeVisible();
     await expect(core.getByRole("heading", { name: "1. Agent 接入与上报", exact: true })).toBeVisible();
     await capture(page, info, `core-registration-${width}`, core);
+    const registeredCores = await read(page.request, "/core-instances");
+    const coreURL = `#servers?host=${registeredHosts[0].id}&instance=${registeredCores[0].id}`;
+    expect(new URL(page.url()).hash).toBe(coreURL);
+    await host.getByRole("tab", { name: "配置记录", exact: true }).click();
+    await expect(host.getByText("暂无关联的转发配置", { exact: true })).toBeVisible();
+    await expect(host.getByRole("tab", { name: "配置记录", exact: true })).toBeFocused();
+    await capture(page, info, `server-workspace-records-${width}`, host);
+    await page.goBack();
+    await expect(core).toBeVisible();
+    expect(new URL(page.url()).hash).toBe(coreURL);
+    await page.goForward();
+    await expect(host.getByRole("tab", { name: "配置记录", exact: true })).toHaveAttribute("aria-selected", "true");
+    await host.getByRole("tab", { name: "核心与监听", exact: true }).click();
+    await expect(core.getByText("尚未接入", { exact: true })).toBeVisible();
 
     // Opening enrollment is not permission to create credentials. Inspect the
     // real scoped decision and cancel without invalidating any credential.
@@ -101,7 +120,7 @@ for (const width of [1440, 390]) {
     await paths.scrollIntoViewIfNeeded();
     await expect(core.getByText("保存监听端点不会修改节点。转发路径需另行检查并确认应用。", { exact: true })).toBeVisible();
     await capture(page, info, `listener-path-continuation-${width}`, core);
-    await core.getByRole("button", { name: "关闭", exact: true }).click();
+    await core.getByRole("button", { name: "返回核心列表", exact: true }).click();
     await settledTask(host);
     await expect(coreOpener).toBeFocused();
     await coreOpener.click();
@@ -129,7 +148,7 @@ for (const width of [1440, 390]) {
     await expect(core).toBeVisible();
     await expect(core.getByText("Setup listener", { exact: true })).toBeVisible();
     await capture(page, info, `contextual-server-return-${width}`, core);
-    await expect(page.getByRole("dialog")).toHaveCount(1);
+    await expect(page.getByRole("dialog")).toHaveCount(0);
     await expect(page).toHaveURL(new RegExp(`#servers\\?host=${cores[0].hostId}&instance=${cores[0].id}$`));
     // Back reopens a new unsaved draft from the same explicit endpoint identity,
     // not a previously saved/applied route or a replayed write.

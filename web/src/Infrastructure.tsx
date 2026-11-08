@@ -1,3 +1,4 @@
+import { InventoryEditor, type InventoryEditTask } from "./InventoryEditor";
 import { loadInfrastructure, coreName } from "./infrastructure-data";
 export { loadInfrastructure, coreName } from "./infrastructure-data";
 import {
@@ -18,12 +19,10 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ActionButton } from "@/ui-patterns/actions";
-import { ChoiceSelect, MultiChoice } from "@/ui-patterns/choice-select";
-import { useDiscardConfirmation } from "./useDiscardConfirmation";
-import { AppField, AppForm, useForm, useWatch } from "@/ui-patterns/form";
+import { AppField, AppForm, useForm } from "@/ui-patterns/form";
 import { Notice } from "@/ui-patterns/notice";
-import { TaskDialog, TaskSheet } from "@/ui-patterns/task-overlays";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { TaskDialog } from "@/ui-patterns/task-overlays";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   Server as CloudServerOutlined,
   Pencil as EditOutlined,
@@ -31,11 +30,10 @@ import {
   Plus as PlusOutlined,
   RotateCw as ReloadOutlined,
 } from "lucide-react";
-import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { useSaveNotice } from "./useSaveNotice";
+import { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { PolicyDateInput } from "./PolicyDateInput";
 import { AccountingRecovery } from "./AccountingRecovery";
-import { list, post, request, saveRecord } from "./api";
+import { post, request } from "./api";
 import {
   CodePreview,
   EmptyState,
@@ -44,13 +42,13 @@ import {
   QueryState,
   Section,
 } from "./components";
-import { ConnectionFields, normalizeConnection } from "./ConnectionFields";
 import { DataTable, TableRowActions } from "./DataTable";
 import { DiagnosticsPanel } from "./Diagnostics";
-import { revealFocusedPolicyModalControl } from "./drawer-control-visibility";
-import { phaseLabel, isUnchangedEndpointDraft } from "./infrastructure-model";
+import { phaseLabel } from "./infrastructure-model";
 import { dateLabel, newID } from "./model";
-import { useUnsavedChanges } from "./navigation";
+import { hasUnsavedChanges, useUnsavedChanges } from "./navigation";
+import { WorkspaceHistoryContext } from "./SubscriptionContext";
+import { readServerWorkspace, serverWorkspaceHash, type ServerWorkspaceSection } from "./server-workspace";
 import { useWorkspaceViewEntry } from "./useWorkspaceViewEntry";
 import { NodeObservation } from "./NodeObservation";
 import type {
@@ -59,102 +57,112 @@ import type {
   HostRecord,
   Infrastructure,
   ManagedEndpoint,
-  ManagedLink,
-  ServerDeployment,
 } from "./types";
-// New instance defaults only; editing preserves the saved version. Client render
-// targets and the managed embedded core have independent version contracts.
-const coreVersions: Record<string, string> = {
-  "routeweaver/sing-box": "1.14.4",
-  "routeweaver/xray": "26.10.31",
-  "routeweaver/managed-xray": "26.3.27-rw1",
-};
-// Creation recipe for the verified platform-entry target, not a registry of all
-// server capabilities. Unknown adapters/versions retain the generic editor.
-const usesManagedEntryPreset = (instance?: CoreInstance) =>
-  instance?.adapterId === "routeweaver/managed-xray" &&
-  instance.version === coreVersions["routeweaver/managed-xray"];
 const requestedServerSetup = (hash: string) => {
   return hash.split("?")[0] === "#servers" ? hash : null;
 };
 export function ServersPage() {
+  const workspace = useContext(WorkspaceHistoryContext);
   const [requestedSetup, setRequestedSetup] = useState(() => requestedServerSetup(location.hash));
-  const contextualSetup = useRef<{ hostId: string; instanceId: string } | null>(null);
-  const replaceView = useWorkspaceViewEntry((hash) => {
+  const editSequence = useRef(0);
+  const knownViews = useRef(new Map<string, { host: HostRecord | null; instance: CoreInstance | null; section: ServerWorkspaceSection }>());
+  const pendingView = useRef<{ hash: string; complete: () => void } | null>(null);
+  const accepted = (hash: string) => {
     ++editSequence.current;
-    setRequestedSetup(requestedServerSetup(hash));
-  });
+    if (workspace) { setEntity(null); setEnrollmentOpen(false); }
+    const pending = pendingView.current;
+    pendingView.current = null;
+    if (pending?.hash === hash) {
+      pending.complete();
+      setRequestedSetup(null);
+    } else {
+      const known = knownViews.current.get(hash);
+      if (known && (workspace || (!entity && !enrollmentOpen))) show(known.host, known.instance, known.section);
+      else setRequestedSetup(requestedServerSetup(hash));
+    }
+  };
+  const replaceView = useWorkspaceViewEntry(accepted);
   useEffect(() => {
-    const changed = () => {
-      ++editSequence.current;
-      setRequestedSetup(requestedServerSetup(location.hash));
-    };
+    // The authenticated controller filters native events before publishing its
+    // accepted event. Standalone embeds have only the native event path.
+    if (workspace) return;
+    const changed = () => accepted(location.hash);
     window.addEventListener("hashchange", changed);
     return () => window.removeEventListener("hashchange", changed);
-  }, []);
-  const query = useQuery({
-    queryKey: ["infrastructure"],
-    queryFn: loadInfrastructure,
   });
-  const [tab, setTab] = useState("hosts");
-  const [entity, setEntity] = useState<{
-    kind: string;
-    value: HostRecord | CoreInstance | ManagedEndpoint | null;
-    id: string;
-    hostId?: string;
-    instanceId?: string;
-  } | null>(null);
-  const [host, setHost] = useState<HostRecord | null>(null);
-  const hostPageOpener = useRef<HTMLElement | null>(null);
-  const pageCreateAction = useRef<HTMLButtonElement>(null);
-  const hostResumeAction = useRef<string | null>(null);
-  const hostActions = useRef(new Map<string, HTMLButtonElement>());
-  const openHost = (value: HostRecord) => {
-    ++editSequence.current;
-    setEditError(null);
-    contextualSetup.current = null;
-    setRequestedSetup(null);
-    hostPageOpener.current =
-      document.activeElement instanceof HTMLElement
-        ? document.activeElement
-        : null;
-    hostResumeAction.current = null;
-    setHost(value);
+  const navigate = (hash: string, complete: () => void) => {
+    if (location.hash === hash) return;
+    pendingView.current = { hash, complete };
+    if (workspace?.current) workspace.current.navigate(hash);
+    else {
+      // No authenticated controller exists in standalone embeds. Never bypass
+      // an active task's guard there either.
+      if (hasUnsavedChanges()) { pendingView.current = null; return; }
+      history.pushState(null, "", hash);
+      accepted(hash);
+    }
   };
-
+  const query = useQuery({ queryKey: ["infrastructure"], queryFn: loadInfrastructure });
+  const [tab, setTab] = useState<InventoryEditTask["kind"]>("hosts");
+  const [entity, setEntity] = useState<InventoryEditTask | null>(null);
+  const [host, setHost] = useState<HostRecord | null>(null);
   const [instance, setInstance] = useState<CoreInstance | null>(null);
+  const [section, setSection] = useState<ServerWorkspaceSection>("overview");
   const [enrollmentOpen, setEnrollmentOpen] = useState(false);
   const [createdCores, setCreatedCores] = useState<CoreInstance[]>([]);
   const [createdHosts, setCreatedHosts] = useState<HostRecord[]>([]);
-  // Retain only display identity from a confirmed write. Never place a revealed
-  // endpoint, credentials, or its revision token in the inventory query cache.
+  // Retain display identity only. Revealed values and revision tokens belong to
+  // the editor task, never to the inventory query cache or URL.
   const [savedListeners, setSavedListeners] = useState<ManagedEndpoint[]>([]);
-  const instancePageOpener = useRef<HTMLElement | null>(null);
-  const instanceHostAction = useRef<string | null>(null);
-  const instanceResumeAction = useRef<string | null>(null);
-  const instanceActions = useRef(new Map<string, HTMLButtonElement>());
-  const openInstance = (value: CoreInstance) => {
-    contextualSetup.current = null;
-    setRequestedSetup(null);
-    ++editSequence.current;
-    setEditError(null);
-    instanceHostAction.current = host?.id === value.hostId ? `instance:${value.id}` : null;
-    instancePageOpener.current = document.activeElement instanceof HTMLElement
-      ? document.activeElement
-      : null;
-    instanceResumeAction.current = null;
-    setInstance(value);
-  };
+  const [editError, setEditError] = useState<Error | null>(null);
+  const [ownershipIssue, setOwnershipIssue] = useState<{ hostId: string; instanceId: string | null; message: string } | null>(null);
+  const scopeIssue = ownershipIssue?.hostId === host?.id && ownershipIssue?.instanceId === (instance?.id || null) ? ownershipIssue.message : null;
+  const pageCreateAction = useRef<HTMLButtonElement>(null);
+  const pageOpener = useRef<{ hostId?: string; instanceId?: string } | null>(null);
+  const hostResumeAction = useRef<string | null>(null);
+  const hostActions = useRef(new Map<string, HTMLButtonElement>());
+  const listActions = useRef(new Map<string, HTMLButtonElement>());
+  const workspaceHeading = useRef<HTMLHeadingElement>(null);
+  const coreHeading = useRef<HTMLHeadingElement>(null);
+  const focusAfterSave = useRef(false);
   const data = useMemo(() => query.data && {
     ...query.data,
     hosts: [...query.data.hosts, ...createdHosts.filter((created) => !query.data!.hosts.some((saved) => saved.id === created.id))],
     instances: [...query.data.instances, ...createdCores.filter((created) => !query.data!.instances.some((saved) => saved.id === created.id))],
     endpoints: [...query.data.endpoints.filter((endpoint) => !savedListeners.some((saved) => saved.id === endpoint.id)), ...savedListeners],
   }, [query.data, createdHosts, createdCores, savedListeners]);
+  useLayoutEffect(() => {
+    // Only a completed authoritative inventory can revoke this page's owner.
+    // Keep the task and any issued token mounted; block new scoped operations.
+    if (!query.data || !query.isSuccess || query.isFetching || query.isError || query.isPaused) return;
+    if (!host) { setOwnershipIssue(null); return; }
+    const currentHost = query.data.hosts.find((value) => value.id === host.id) || createdHosts.find((value) => value.id === host.id);
+    const currentCore = instance ? query.data.instances.find((value) => value.id === instance.id) || createdCores.find((value) => value.id === instance.id) : null;
+    const message = !currentHost ? "此服务器已从清单移除。请返回服务器清单重新选择。"
+      : instance && !currentCore ? "此核心已从清单移除。请返回核心列表重新选择。"
+      : currentCore && currentCore.hostId !== host.id ? "此核心已转移到其他服务器。请打开核心所在服务器后继续配置。" : null;
+    if (message) {
+      for (const [hash, view] of knownViews.current) {
+        if (view.host?.id === host.id && (!currentHost || view.instance?.id === instance?.id)) knownViews.current.delete(hash);
+      }
+      ++editSequence.current;
+      setOwnershipIssue((previous) => previous?.hostId === host.id && previous.instanceId === (instance?.id || null) && previous.message === message
+        ? previous : { hostId: host.id, instanceId: instance?.id || null, message });
+    } else setOwnershipIssue(null);
+  }, [query.data, query.isSuccess, query.isFetching, query.isError, query.isPaused, host?.id, instance?.id, createdHosts, createdCores]);
   useEffect(() => {
     if (!query.data || query.isFetching || query.isError || query.isPaused) return;
-    // Drop write confirmations only after an authoritative inventory has caught
-    // up, so a later deletion never resurrects an already-reconciled record.
+    for (const [hash, view] of knownViews.current) {
+      if (!view.host) continue;
+      const currentHost = query.data.hosts.find((value) => value.id === view.host!.id) || createdHosts.find((value) => value.id === view.host!.id);
+      const currentCore = view.instance ? query.data.instances.find((value) => value.id === view.instance!.id) || createdCores.find((value) => value.id === view.instance!.id) : null;
+      if (!currentHost || (view.instance && (!currentCore || currentCore.hostId !== view.host.id))) knownViews.current.delete(hash);
+      else knownViews.current.set(hash, { ...view, host: currentHost, instance: currentCore || null });
+    }
+    const updatedHost = query.data.hosts.find((value) => value.id === host?.id);
+    if (updatedHost && updatedHost !== host) setHost(updatedHost);
+    const updatedInstance = query.data.instances.find((value) => value.id === instance?.id && value.hostId === host?.id);
+    if (updatedInstance && updatedInstance !== instance) setInstance(updatedInstance);
     const unseenListeners = savedListeners.filter((saved) => !query.data!.endpoints.some((endpoint) =>
       endpoint.id === saved.id && endpoint.instanceId === saved.instanceId &&
       endpoint.name === saved.name && endpoint.connection.host === saved.connection.host &&
@@ -165,114 +173,171 @@ export function ServersPage() {
     const unseenHosts = createdHosts.filter((created) => !query.data!.hosts.some((saved) => saved.id === created.id));
     if (unseenHosts.length !== createdHosts.length) setCreatedHosts(unseenHosts);
   }, [query.data, query.isFetching, query.isError, query.isPaused, createdCores, createdHosts, savedListeners]);
-  const label =
-    tab === "hosts"
-      ? "服务器"
-      : tab === "core-instances"
-        ? "核心实例"
-        : "监听端点";
-  const [editError, setEditError] = useState<Error | null>(null);
-  const editSequence = useRef(0);
-  const edit = async (
-    value: HostRecord | CoreInstance | ManagedEndpoint | null,
-    kind = tab,
-    hostId?: string,
-    instanceId?: string,
-  ) => {
+  const show = (selectedHost: HostRecord | null, selectedCore: CoreInstance | null, selectedSection: ServerWorkspaceSection = "overview") => {
+    ++editSequence.current;
+    setEditError(null);
+    setRequestedSetup(null);
+    setHost(selectedHost);
+    setInstance(selectedCore);
+    setSection(selectedSection);
+    if (scopeIssue && selectedHost?.id === host?.id && selectedCore?.id === instance?.id) knownViews.current.delete(location.hash);
+    else knownViews.current.set(location.hash, { host: selectedHost, instance: selectedCore, section: selectedSection });
+    if (knownViews.current.size > 32) knownViews.current.delete(knownViews.current.keys().next().value!);
+  };
+  const openHost = (value: HostRecord) => {
+    pageOpener.current = { hostId: value.id };
+    navigate(serverWorkspaceHash(value.id), () => show(value, null));
+  };
+  const openInstance = (value: CoreInstance) => {
+    const selectedHost = data?.hosts.find((candidate) => candidate.id === value.hostId);
+    if (!selectedHost) { setEditError(new Error("找不到此核心所属的服务器，请刷新服务器清单。")); return; }
+    if (!host) pageOpener.current = { instanceId: value.id };
+    navigate(serverWorkspaceHash(value.hostId, value.id), () => show(selectedHost, value, "cores"));
+  };
+  const closeInstance = () => {
+    if (!host || !instance) return;
+    hostResumeAction.current = `instance:${instance.id}`;
+    navigate(serverWorkspaceHash(host.id, undefined, "cores"), () => show(host, null, "cores"));
+  };
+  const backToList = () => navigate("#servers", () => show(null, null));
+  const changeSection = (value: string) => {
+    if (!host) return;
+    const next = value as ServerWorkspaceSection;
+    navigate(serverWorkspaceHash(host.id, instance?.id, next), () => show(host, instance, next));
+  };
+  const label = tab === "hosts" ? "服务器" : tab === "core-instances" ? "核心实例" : "监听端点";
+  const edit = async (value: HostRecord | CoreInstance | ManagedEndpoint | null, kind: InventoryEditTask["kind"] = tab, hostId?: string, instanceId?: string) => {
+    if (scopeIssue) { setEditError(new Error(scopeIssue)); return; }
     setRequestedSetup(null);
     const sequence = ++editSequence.current;
     setEditError(null);
     try {
-      const full =
-        kind === "managed-endpoints" && value
-          ? await request<ManagedEndpoint>(
-              `/managed-endpoints/${value.id}/reveal`,
-            )
-          : value;
+      const full = kind === "managed-endpoints" && value
+        ? await request<ManagedEndpoint>(`/managed-endpoints/${encodeURIComponent(value.id)}/reveal`)
+        : value;
       if (sequence !== editSequence.current) return;
-      setEntity({
-        kind,
-        value: full,
-        hostId,
-        instanceId,
-        id:
-          value?.id ||
-          newID(
-            kind === "hosts"
-              ? "host"
-              : kind === "core-instances"
-                ? "core"
-                : "endpoint",
-          ),
-      });
-    } catch (error) {
-      if (sequence === editSequence.current) setEditError(error as Error);
-    }
+      setEntity({ kind, value: full, hostId, instanceId,
+        id: value?.id || newID(kind === "hosts" ? "host" : kind === "core-instances" ? "core" : "endpoint") });
+    } catch (error) { if (sequence === editSequence.current) setEditError(error as Error); }
   };
   useEffect(() => {
-    if (requestedSetup === null || entity || enrollmentOpen) return;
+    if (requestedSetup === null || entity || enrollmentOpen || location.hash !== requestedSetup) return;
     const origin = requestedSetup;
-    if (location.hash !== origin) return;
-    const context = new URLSearchParams(origin.split("?")[1] || "");
-    if (!context.has("host") && !context.has("instance")) {
-      const owner = contextualSetup.current;
+    const context = readServerWorkspace(origin);
+    if (context?.hostId === null) {
+      replaceView(origin, () => show(null, null));
+      return;
+    }
+    // External deep links require a successful authoritative inventory. Local
+    // selection and confirmed saves can keep their already-known identity.
+    if (!query.data || !query.isSuccess || query.isFetching || query.isPaused || query.isError) return;
+    const selectedHost = context && query.data.hosts.find((candidate) => candidate.id === context.hostId);
+    const selectedInstance = context?.instanceId ? query.data.instances.find((candidate) => candidate.id === context.instanceId) : null;
+    if (!context || !selectedHost || (context.instanceId && (!selectedInstance || selectedInstance.hostId !== selectedHost.id))) {
       replaceView(origin, () => {
-        setRequestedSetup(null);
-        if (owner && contextualSetup.current === owner && host?.id === owner.hostId && instance?.id === owner.instanceId) {
-          contextualSetup.current = null;
-          setEditError(null);
-          setInstance(null);
-          setHost(null);
-        }
+        show(null, null);
+        knownViews.current.delete(origin);
+        setEditError(new Error("找不到匹配的服务器与核心，请从服务器清单重新选择。"));
       });
       return;
     }
-    if (!query.data || !query.isSuccess || query.isFetching || query.isPaused || query.isError) return;
-    const hosts = context.getAll("host");
-    const instances = context.getAll("instance");
-    const selectedHost = hosts.length === 1 && hosts[0]
-      ? query.data.hosts.find((candidate) => candidate.id === hosts[0]) : undefined;
-    const selectedInstance = instances.length === 1 && instances[0]
-      ? query.data.instances.find((candidate) => candidate.id === instances[0]) : undefined;
-    if (!selectedHost || !selectedInstance || selectedInstance.hostId !== selectedHost.id) {
-      setRequestedSetup(null);
-      setEditError(new Error("找不到匹配的服务器与核心，请从服务器清单重新选择。"));
-      return;
-    }
-    // The authenticated navigation lease owns this view, not a stale inventory
-    // result. Resolving a return link never writes configuration or credentials.
-    replaceView(origin, () => {
-      contextualSetup.current = { hostId: selectedHost.id, instanceId: selectedInstance.id };
-      setRequestedSetup(null);
-      setEditError(null);
-      hostPageOpener.current = pageCreateAction.current;
-      instancePageOpener.current = pageCreateAction.current;
-      instanceHostAction.current = `instance:${selectedInstance.id}`;
-      hostResumeAction.current = null;
-      instanceResumeAction.current = null;
-      setTab("hosts");
-      setHost(selectedHost);
-      setInstance(selectedInstance);
+    replaceView(origin, () => show(selectedHost, selectedInstance || null, context.section));
+  }, [requestedSetup, entity, enrollmentOpen, query.data, query.isSuccess, query.isFetching, query.isPaused, query.isError, replaceView]);
+  useLayoutEffect(() => {
+    // Editors keep their invoking action mounted. Page navigation instead puts
+    // keyboard focus at the new workspace or the exact restored list action.
+    const target = host
+      ? (hostResumeAction.current && hostActions.current.get(hostResumeAction.current)) ||
+        (section === "cores" && instance ? coreHeading.current : workspaceHeading.current)
+      : (pageOpener.current?.hostId ? listActions.current.get(`host:${pageOpener.current.hostId}`) :
+        pageOpener.current?.instanceId ? listActions.current.get(`instance:${pageOpener.current.instanceId}`) : null) || pageCreateAction.current;
+    hostResumeAction.current = null;
+    queueMicrotask(() => {
+      if (!document.querySelector('[data-task-overlay][data-state="open"]') && target?.isConnected)
+        target.focus({ preventScroll: true });
     });
-  }, [requestedSetup, entity, enrollmentOpen, host?.id, instance?.id, query.data, query.isSuccess, query.isFetching, query.isPaused, query.isError, replaceView]);
-  const closeInstance = () => {
-    const close = () => {
-      if (host && instance?.hostId === host.id)
-        hostResumeAction.current = `instance:${instance.id}`;
-      contextualSetup.current = null;
-      setRequestedSetup(null);
-      ++editSequence.current;
-      setEditError(null);
-      setEnrollmentOpen(false);
-      setInstance(null);
-    };
-    const context = new URLSearchParams(location.hash.split("?")[1] || "");
-    if (requestedServerSetup(location.hash) && context.get("instance") === instance?.id)
-      replaceView("#servers", close);
-    else close();
-  };
+  }, [host?.id, instance?.id]);
+  const records = host && data ? data.deployments.filter((deployment) => deployment.ir.programs.some((program) => program.instance.hostId === host.id)) : [];
+  const coreList = host && data ? (<>
+            <Section
+              title="核心实例"
+              variant="plain"
+              description={
+                data.instances.some((i) => i.hostId === host!.id)
+                  ? undefined
+                  : "先添加核心，再配置监听端点"
+              }
+              extra={
+                <ActionButton
+                  disabled={!!scopeIssue}
+                  ref={(node) => {
+                    if (node) hostActions.current.set("add-core", node);
+                    else hostActions.current.delete("add-core");
+                  }}
+                  onClick={() => {
+                    hostResumeAction.current = "add-core";
+                    edit(null, "core-instances", host!.id);
+                  }}
+                  variant={data.instances.some((i) => i.hostId === host!.id) ? "outline" : "default"}
+                >
+                  添加核心
+                </ActionButton>
+              }
+            >
+              {data.instances
+                .filter((i) => i.hostId === host!.id)
+                .map((i) => (
+                  <div
+                    className="subscription-row flex flex-wrap items-center justify-between gap-3 rounded-lg border p-4"
+                    key={i.id}
+                  >
+                    <div className="subscription-info min-w-0 space-y-1">
+                      <h3 className="text-sm font-semibold">{coreName(i)}</h3>
+                      <p>
+                        <span className="block">版本 {i.version}</span>
+                        {
+                          data.endpoints.filter((e) => e.instanceId === i.id)
+                            .length
+                        }{" "}
+                        个监听端点
+                      </p>
+                    </div>
+                    <div className={"flex flex-wrap items-center gap-2"}>
+                      <ActionButton
+                        disabled={!!scopeIssue}
+                        aria-label={`为 ${coreName(i)} 添加监听端点`}
+                        ref={(node) => {
+                          if (node) hostActions.current.set(i.id, node);
+                          else hostActions.current.delete(i.id);
+                        }}
+                        onClick={() => {
+                          hostResumeAction.current = i.id;
+                          edit(null, "managed-endpoints", host!.id, i.id);
+                        }}
+                        variant="outline"
+                      >
+                        添加监听端点
+                      </ActionButton>
+                      <ActionButton
+                        ref={(node) => {
+                          if (node) hostActions.current.set(`instance:${i.id}`, node);
+                          else hostActions.current.delete(`instance:${i.id}`);
+                        }}
+                        onClick={() => openInstance(i)}
+                        variant="default"
+                      >
+                        查看接入与配置
+                      </ActionButton>
+                    </div>
+                  </div>
+                ))}
+            </Section>
+  </>) : null;
   return (
     <>
+      {!host ? (
+        <>
+          <ErrorNotice error={editError} />
       <PageHeader
         title="服务器"
         action={
@@ -286,19 +351,23 @@ export function ServersPage() {
           </ActionButton>
         }
       />
-      <ErrorNotice error={editError} />
+      {(query.isError || query.isPaused) && data && <Notice tone={query.isError ? "warning" : "info"}>
+        {query.isPaused ? "等待网络连接，服务器清单尚未刷新。" : "服务器清单刷新失败，以下保留已有记录与刚保存的配置。"}
+        {query.isError && <p>{query.error.message}</p>}
+        <ActionButton onClick={() => query.refetch()} variant="outline" size="sm">刷新服务器清单</ActionButton>
+      </Notice>}
       <QueryState
         loading={query.isPending}
         paused={query.isPaused}
         loadingLayout="cards"
-        error={query.error}
+        error={data ? null : query.error}
         retry={() => query.refetch()}
       >
         {data && (
           <Section variant="plain">
             <Tabs
               value={tab}
-              onValueChange={setTab}
+              onValueChange={(value) => setTab(value as InventoryEditTask["kind"])}
               defaultValue={"hosts"}
               className="w-full space-y-4"
             >
@@ -325,6 +394,7 @@ export function ServersPage() {
                           <CardTitle>
                             <button
                               className="table-name inline-flex min-w-0 items-center gap-2 rounded-sm text-left font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                              ref={(node) => { if (node) listActions.current.set(`host:${value.id}`, node); else listActions.current.delete(`host:${value.id}`); }}
                               onClick={() => openHost(value)}
                             >
                               <CloudServerOutlined
@@ -383,6 +453,7 @@ export function ServersPage() {
                         render: (_, i) => (
                           <button
                             className="table-name inline-flex min-w-0 items-center gap-2 rounded-sm text-left text-sm font-medium text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            ref={(node) => { if (node) listActions.current.set(`instance:${i.id}`, node); else listActions.current.delete(`instance:${i.id}`); }}
                             onClick={() => openInstance(i)}
                           >
                             {coreName(i)}{" "}
@@ -516,846 +587,127 @@ export function ServersPage() {
           </Section>
         )}
       </QueryState>
-      <InventoryEditor
-        entity={entity}
-        inventory={data}
-        onClose={() => setEntity(null)}
-        onHostCreated={(created) => {
-          hostPageOpener.current = pageCreateAction.current;
-          hostResumeAction.current = "add-core";
-          setCreatedHosts((current) => [...current.filter((saved) => saved.id !== created.id), created]);
-          setHost(created);
-        }}
-        onEndpointSaved={(saved) => {
-          setSavedListeners((current) => [...current.filter((entry) => entry.id !== saved.id), {
-            id: saved.id, instanceId: saved.instanceId, name: saved.name,
-            connection: {
-              host: saved.connection.host, port: saved.connection.port,
-              protocol: saved.connection.protocol,
-            },
-          }]);
-        }}
-        onCoreCreated={(created) => {
-          contextualSetup.current = null;
-          setCreatedCores((current) => [...current.filter((saved) => saved.id !== created.id), created]);
-          instanceHostAction.current = host?.id === created.hostId ? `instance:${created.id}` : null;
-          instancePageOpener.current = pageCreateAction.current;
-          instanceResumeAction.current = null;
-          setInstance(created);
-        }}
-      />
-      <TaskSheet
-        bodyProps={{ className: "space-y-5" }}
-        title={host?.name}
-        open={!!host && !entity && !instance}
-        initialFocus={() =>
-          hostResumeAction.current
-            ? (hostActions.current.get(hostResumeAction.current) ?? hostActions.current.get("add-core") ?? null)
-            : null
-        }
-        onReady={() => {
-          hostResumeAction.current = null;
-        }}
-        onCloseAutoFocus={(event) => {
-          event.preventDefault();
-          if (host || entity) return;
-          const target = hostPageOpener.current;
-          queueMicrotask(() => {
-            const focused = document.activeElement;
-            if (
-              focused instanceof HTMLElement &&
-              focused.closest('[data-task-overlay][data-state="open"]')
-            )
-              return;
-            if (
-              target?.isConnected &&
-              !target.closest('[hidden],[inert],[aria-hidden="true"]') &&
-              !target.matches(":disabled")
-            )
-              target.focus({ preventScroll: true });
-          });
-        }}
-        onOpenChange={(next) => {
-          if (!next) {
-            contextualSetup.current = null;
-            setRequestedSetup(null);
-            setHost(null);
-          }
-        }}
-        size="lg"
-      >
-        {host && data && (
-          <>
-            <div className="host-summary flex flex-wrap items-start gap-3 rounded-lg border bg-muted/30 p-4 text-sm [&_svg]:size-5 [&_svg]:shrink-0 [&_p]:break-all [&_p]:text-muted-foreground">
-              <CloudServerOutlined aria-hidden="true" />
-              <div>
-                <h2 className="text-base font-semibold tracking-tight">
-                  {host.name}
-                </h2>
-                <p>{host.address}</p>
-              </div>
+        </>
+      ) : data && (
+        <section role="region" aria-label={host.name} className="server-workspace min-w-0 space-y-5">
+          <ActionButton onClick={backToList} variant="ghost" className="max-w-full">返回服务器清单</ActionButton>
+          <header className="flex flex-wrap items-start justify-between gap-4">
+            <div className="min-w-0 space-y-2">
+              <h1 ref={workspaceHeading} tabIndex={-1} className="break-words text-2xl font-semibold tracking-tight outline-none focus-visible:ring-2 focus-visible:ring-ring">{host.name}</h1>
+              <p className="break-all text-sm text-muted-foreground">{host.address}</p>
               <Badge variant="secondary">服务器信息已登记</Badge>
             </div>
-            {(query.isError || query.isPaused) && (
-              <Notice tone={query.isError ? "warning" : "info"}>
-                {query.isPaused ? "等待网络连接，服务器清单尚未刷新。" : "服务器清单刷新失败，以下保留已有记录与刚保存的配置。"}
-                {query.isError && <p>{query.error.message}</p>}
-                <ActionButton onClick={() => query.refetch()} variant="outline" size="sm">刷新服务器清单</ActionButton>
-              </Notice>
-            )}
-            <Section
-              title="核心实例"
-              variant="plain"
-              description={
-                data.instances.some((i) => i.hostId === host.id)
-                  ? undefined
-                  : "先添加核心，再配置监听端点"
-              }
-              extra={
-                <ActionButton
-                  ref={(node) => {
-                    if (node) hostActions.current.set("add-core", node);
-                    else hostActions.current.delete("add-core");
-                  }}
-                  onClick={() => {
-                    hostResumeAction.current = "add-core";
-                    edit(null, "core-instances", host.id);
-                  }}
-                  variant={data.instances.some((i) => i.hostId === host.id) ? "outline" : "default"}
-                >
-                  添加核心
-                </ActionButton>
-              }
-            >
-              {data.instances
-                .filter((i) => i.hostId === host.id)
-                .map((i) => (
-                  <div
-                    className="subscription-row flex flex-wrap items-center justify-between gap-3 rounded-lg border p-4"
-                    key={i.id}
-                  >
-                    <div className="subscription-info min-w-0 space-y-1">
-                      <h3 className="text-sm font-semibold">{coreName(i)}</h3>
-                      <p>
-                        <span className="block">版本 {i.version}</span>
-                        {
-                          data.endpoints.filter((e) => e.instanceId === i.id)
-                            .length
-                        }{" "}
-                        个监听端点
-                      </p>
-                    </div>
-                    <div className={"flex flex-wrap items-center gap-2"}>
-                      <ActionButton
-                        aria-label={`为 ${coreName(i)} 添加监听端点`}
-                        ref={(node) => {
-                          if (node) hostActions.current.set(i.id, node);
-                          else hostActions.current.delete(i.id);
-                        }}
-                        onClick={() => {
-                          hostResumeAction.current = i.id;
-                          edit(null, "managed-endpoints", host.id, i.id);
-                        }}
-                        variant="outline"
-                      >
-                        添加监听端点
-                      </ActionButton>
-                      <ActionButton
-                        ref={(node) => {
-                          if (node) hostActions.current.set(`instance:${i.id}`, node);
-                          else hostActions.current.delete(`instance:${i.id}`);
-                        }}
-                        onClick={() => openInstance(i)}
-                        variant="default"
-                      >
-                        查看接入与配置
-                      </ActionButton>
-                    </div>
-                  </div>
-                ))}
-            </Section>
-            <Accordion type="multiple" defaultValue={[]} className="w-full">
-              {[
-                {
-                  key: "operations",
-                  label:
-                    "\u8D44\u6E90\u3001\u989D\u5EA6\u4E0E\u8FDE\u63A5\u8BCA\u65AD",
-                  children: (
-                    <Tabs
-                      defaultValue={"resources"}
-                      className="w-full space-y-4"
-                    >
-                      <TabsList className="h-auto max-w-full flex-wrap">
-                        <TabsTrigger key={"resources"} value={"resources"}>
-                          {"\u8D44\u6E90\u4E0E\u989D\u5EA6"}
-                        </TabsTrigger>
-                        <TabsTrigger key={"diagnostics"} value={"diagnostics"}>
-                          {"\u8FDE\u63A5\u8BCA\u65AD"}
-                        </TabsTrigger>
-                      </TabsList>
-                      <TabsContent key={"resources"} value={"resources"}>
-                        {
-                          <NodeObservation
-                            host={host}
-                            instances={data.instances}
-                          />
-                        }
-                      </TabsContent>
-                      <TabsContent key={"diagnostics"} value={"diagnostics"}>
-                        {
-                          <DiagnosticsPanel
-                            host={host}
-                            instances={data.instances}
-                          />
-                        }
-                      </TabsContent>
-                    </Tabs>
-                  ),
-                },
-                {
-                  key: "ids",
-                  label: "\u6280\u672F\u6807\u8BC6",
-                  children: (
-                    <p className="muted text-sm text-muted-foreground">
-                      服务器 ID：{host.id}
-                    </p>
-                  ),
-                },
-              ].map((item) => (
-                <AccordionItem key={String(item.key)} value={String(item.key)}>
-                  <AccordionTrigger>{item.label}</AccordionTrigger>
-                  <AccordionContent>
-                    <div className="space-y-4">{item.children}</div>
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
-          </>
-        )}
-      </TaskSheet>
+            <ActionButton onClick={() => edit(host, "hosts")} disabled={!!scopeIssue} variant="outline">编辑服务器</ActionButton>
+          </header>
+          {(query.isError || query.isPaused) && <Notice tone={query.isError ? "warning" : "info"}>
+            {query.isPaused ? "等待网络连接，服务器清单尚未刷新。" : "服务器清单刷新失败，以下保留已有记录与刚保存的配置。"}
+            {query.isError && <p>{query.error.message}</p>}
+            <ActionButton onClick={() => query.refetch()} variant="outline" size="sm">刷新服务器清单</ActionButton>
+          </Notice>}
+          {scopeIssue && <Notice tone="warning" title="服务器与核心归属已变更">
+            <p>{scopeIssue}</p>
+            {instance && data.instances.some((value) => value.id === instance.id && value.hostId !== host.id) && <ActionButton variant="outline" onClick={() => {
+              const current = data.instances.find((value) => value.id === instance.id);
+              if (current) openInstance(current);
+            }}>打开核心所在服务器</ActionButton>}
+          </Notice>}
+          <Tabs value={section} onValueChange={changeSection} className="min-w-0 space-y-4">
+            <TabsList className="h-auto max-w-full flex-wrap">
+              <TabsTrigger value="overview">概览</TabsTrigger>
+              <TabsTrigger value="cores">核心与监听</TabsTrigger>
+              <TabsTrigger value="records">配置记录</TabsTrigger>
+              <TabsTrigger value="diagnostics">诊断</TabsTrigger>
+            </TabsList>
+            <ErrorNotice error={instance && section === "cores" ? null : editError} />
+            <TabsContent value="overview" className="space-y-4">
+              <dl className="grid gap-3 rounded-lg border p-4 text-sm sm:grid-cols-2">
+                <div><dt className="text-muted-foreground">核心实例</dt><dd className="mt-1 font-medium">{data.instances.filter((value) => value.hostId === host.id).length}</dd></div>
+                <div><dt className="text-muted-foreground">监听端点</dt><dd className="mt-1 font-medium">{data.endpoints.filter((endpoint) => data.instances.some((value) => value.id === endpoint.instanceId && value.hostId === host.id)).length}</dd></div>
+              </dl>
+              {coreList}
+              <Accordion type="multiple" className="w-full"><AccordionItem value="identity"><AccordionTrigger>技术标识</AccordionTrigger><AccordionContent><p className="break-all text-sm text-muted-foreground">服务器 ID：{host.id}</p></AccordionContent></AccordionItem></Accordion>
+            </TabsContent>
+            <TabsContent value="cores" className="space-y-4">
+              {instance ? <>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <ActionButton onClick={() => edit(instance, "core-instances", host.id)} disabled={!!scopeIssue} variant="outline">编辑核心</ActionButton>
+                </div>
       <InstanceDetail
+        onClose={closeInstance}
+        scopeIssue={scopeIssue}
+        headingRef={coreHeading}
         instance={instance}
         inventory={data}
         savedListeners={savedListeners}
         inventoryReadState={query.isPaused ? "paused" : query.isFetching ? "loading" : query.isError ? "error" : "ready"}
         inventoryError={query.error}
         onRefreshInventory={() => query.refetch()}
-        suspended={!!entity}
-        returnFocus={() =>
-          (instanceHostAction.current
-            ? hostActions.current.get(instanceHostAction.current) || hostActions.current.get("add-core")
-            : null) || instancePageOpener.current
-        }
         enrollmentOpen={enrollmentOpen}
         onCloseEnrollment={() => setEnrollmentOpen(false)}
         onOpenEnrollment={() => {
+          if (scopeIssue) return;
           setRequestedSetup(null);
           ++editSequence.current;
           setEditError(null);
           setEnrollmentOpen(true);
         }}
         editError={editError}
-        resumeAction={instanceResumeAction}
-        actions={instanceActions}
         onEditEndpoint={(endpoint) => {
           if (!instance) return;
-          instanceResumeAction.current = endpoint?.id || "add-listener";
           edit(endpoint, "managed-endpoints", instance.hostId, instance.id);
         }}
-        onClose={closeInstance}
+      />
+              </> : coreList}
+            </TabsContent>
+            <TabsContent value="records" className="space-y-4">
+              <Section title="已保存的转发配置" variant="plain">
+                {records.length ? records.map((record) => <div key={record.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-4">
+                  <div className="min-w-0"><p className="break-words text-sm font-medium">{record.name}</p><p className="text-sm text-muted-foreground">{record.status === "draft" ? "草稿已保存" : "配置记录已保存"}</p></div>
+                  <ActionButton asChild variant="outline"><a href={`#routes?deployment=${encodeURIComponent(record.id)}`}>查看转发路径 {record.name}</a></ActionButton>
+                </div>) : <p className="text-sm text-muted-foreground">暂无关联的转发配置</p>}
+              </Section>
+            </TabsContent>
+            <TabsContent value="diagnostics" className="space-y-4">
+              <Tabs defaultValue="resources" className="space-y-4">
+                <TabsList className="h-auto max-w-full flex-wrap"><TabsTrigger value="resources">资源与额度</TabsTrigger><TabsTrigger value="connections">连接诊断</TabsTrigger></TabsList>
+                <TabsContent value="resources"><NodeObservation host={host} instances={data.instances} /></TabsContent>
+                <TabsContent value="connections"><DiagnosticsPanel host={host} instances={data.instances} /></TabsContent>
+              </Tabs>
+            </TabsContent>
+          </Tabs>
+        </section>
+      )}
+      <InventoryEditor
+        entity={entity}
+        inventory={data}
+        scopeIssue={scopeIssue || undefined}
+        onClose={() => setEntity(null)}
+        onClosed={() => {
+          if (!focusAfterSave.current) return;
+          focusAfterSave.current = false;
+          const target = section === "cores" && instance ? coreHeading.current : hostActions.current.get("add-core") || workspaceHeading.current;
+          const focused = document.activeElement;
+          if (target?.isConnected && (!focused || focused === document.body || focused.closest('[data-task-overlay][data-state="closed"]')))
+            target.focus({ preventScroll: true });
+        }}
+        onHostCreated={(created) => {
+          setCreatedHosts((current) => [...current.filter((saved) => saved.id !== created.id), created]);
+          hostResumeAction.current = "add-core";
+          replaceView(serverWorkspaceHash(created.id), () => { focusAfterSave.current = true; show(created, null); });
+        }}
+        onEndpointSaved={(saved) => {
+          setSavedListeners((current) => [...current.filter((entry) => entry.id !== saved.id), {
+            id: saved.id, instanceId: saved.instanceId, name: saved.name,
+            connection: { host: saved.connection.host, port: saved.connection.port, protocol: saved.connection.protocol },
+          }]);
+        }}
+        onCoreCreated={(created) => {
+          setCreatedCores((current) => [...current.filter((saved) => saved.id !== created.id), created]);
+          const selectedHost = data?.hosts.find((value) => value.id === created.hostId);
+          if (selectedHost) replaceView(serverWorkspaceHash(selectedHost.id, created.id), () => { focusAfterSave.current = true; show(selectedHost, created, "cores"); });
+        }}
       />
     </>
-  );
-}
-function InventoryEditor({
-  entity,
-  inventory,
-  onClose,
-  onHostCreated,
-  onCoreCreated,
-  onEndpointSaved,
-}: {
-  entity: {
-    kind: string;
-    value: HostRecord | CoreInstance | ManagedEndpoint | null;
-    id: string;
-    hostId?: string;
-    instanceId?: string;
-  } | null;
-  inventory?: Infrastructure;
-  onClose: () => void;
-  onHostCreated: (host: HostRecord) => void;
-  onCoreCreated: (instance: CoreInstance) => void;
-  onEndpointSaved: (endpoint: ManagedEndpoint) => void;
-}) {
-  const owner = useRef(entity);
-  owner.current = entity;
-  const presentation = useRef(entity);
-  useLayoutEffect(() => {
-    if (entity) presentation.current = entity;
-  }, [entity]);
-  const displayEntity = entity || presentation.current;
-  const [form] = useForm();
-  const formId = useId();
-  const client = useQueryClient();
-  const saveNotice = useSaveNotice(entity);
-  const { confirm, confirming } = useDiscardConfirmation(
-    entity?.id || "inventory-closed",
-  );
-  const [baseline, setBaseline] = useState("");
-  const values = useWatch([], { form, preserve: true });
-  const changed =
-    !!entity && baseline !== "" && JSON.stringify(values || {}) !== baseline;
-  useUnsavedChanges(changed);
-  const adapter = useWatch("adapterId", form);
-  const endpointHostId = useWatch("endpointHostId", form);
-  const endpointInstanceId = useWatch("instanceId", form);
-  const authentication = useWatch("authentication", form);
-  const endpointProtocol = useWatch(["connection", "protocol"], form);
-  const selectedEndpointInstance = inventory?.instances.find(
-    (i) => i.id === endpointInstanceId,
-  );
-  const managedEntrySelected = usesManagedEntryPreset(selectedEndpointInstance);
-  const endpointInstances = (inventory?.instances || []).filter(
-    (i) => i.hostId === endpointHostId,
-  );
-  const currentEndpoint =
-    displayEntity?.kind === "managed-endpoints"
-      ? (displayEntity.value as ManagedEndpoint | null)
-      : null;
-  const existingEndpointSnapshot = useRef<{
-    endpoint: ManagedEndpoint;
-    instance?: CoreInstance;
-  } | null>(null);
-  const currentEndpointInstance = inventory?.instances.find(
-    (i) => i.id === currentEndpoint?.instanceId,
-  );
-  const allowUnchangedUnsupportedProtocol =
-    !!currentEndpoint &&
-    !!existingEndpointSnapshot.current &&
-    isUnchangedEndpointDraft(
-      existingEndpointSnapshot.current,
-      {
-        ...currentEndpoint,
-        ...values,
-        connection: normalizeConnection({
-          ...currentEndpoint.connection,
-          ...values?.connection,
-        }),
-      },
-      selectedEndpointInstance,
-    );
-  const endpointValue = (values: Record<string, unknown>) => {
-    const { endpointHostId: _endpointHostId, ...fields } = values;
-    const value = { ...entity!.value, ...fields, id: entity!.id };
-    if (entity!.kind === "managed-endpoints")
-      Object.assign(value, {
-        connection: normalizeConnection({
-          ...currentEndpoint?.connection,
-          ...(value as unknown as ManagedEndpoint).connection,
-        }),
-      });
-    return value;
-  };
-  const mutation = useMutation({
-    mutationFn: ({
-      fields,
-      impact,
-    }: {
-      fields: Record<string, unknown>;
-      impact?: string;
-    }) => {
-      const value = endpointValue(fields);
-      if (entity!.kind === "managed-endpoints" && entity!.value) {
-        const { revisionToken, ...draft } = value as ManagedEndpoint;
-        return request<ManagedEndpoint>(
-          `/managed-endpoints/${encodeURIComponent(draft.id)}`,
-          {
-            method: "PUT",
-            headers: {
-              "If-Match": revisionToken || "",
-              "X-Endpoint-Impact": impact || "",
-            },
-            body: JSON.stringify(draft),
-          },
-        );
-      }
-      return saveRecord<HostRecord | CoreInstance | ManagedEndpoint>(
-        entity!.kind,
-        value,
-        !entity!.value,
-      );
-    },
-    onSuccess: (saved) => {
-      client.invalidateQueries({ queryKey: ["infrastructure"] });
-      const name = entity?.kind === "core-instances"
-        ? coreName(saved as CoreInstance)
-        : saved.name;
-      saveNotice(`${names[entity!.kind]}「${name}」已保存`);
-      if (entity?.kind === "hosts" && !entity.value)
-        onHostCreated(saved as HostRecord);
-      if (entity?.kind === "core-instances" && !entity.value)
-        onCoreCreated(saved as CoreInstance);
-      if (entity?.kind === "managed-endpoints")
-        onEndpointSaved(saved as ManagedEndpoint);
-      onClose();
-    },
-  });
-  const impact = useMutation({
-    mutationFn: async (fields: Record<string, unknown>) => {
-      const task = entity;
-      const { revisionToken, ...draft } = endpointValue(
-        fields,
-      ) as ManagedEndpoint;
-      const review = await request<{
-        endpoint: { id: string; name: string };
-        proposed: {
-          name: string;
-          instanceId: string;
-          instanceName: string;
-          host: string;
-          port: number;
-          protocol: string;
-        };
-        changedFields: string[];
-        deployments: { id: string; name: string }[];
-        routes: { id: string; name: string }[];
-        links: { id: string; name: string }[];
-        reviewToken: string;
-      }>(`/managed-endpoints/${encodeURIComponent(draft.id)}/impact`, {
-        method: "POST",
-        headers: { "If-Match": revisionToken || "" },
-        body: JSON.stringify(draft),
-      });
-      return { task, fields, review };
-    },
-    onSuccess: ({ task, fields, review }) => {
-      if (!task || owner.current !== task) return;
-      confirm(
-        {
-          title: `保存端点「${review.endpoint.name}」的修改？`,
-          confirmLabel: "确认保存端点",
-          cancelLabel: "返回编辑",
-          description: (
-            <div className="space-y-3">
-              <p>修改项目：{review.changedFields.join("、") || "无变化"}。</p>
-              <p>
-                <span className="block font-medium">
-                  保存为：{review.proposed.name}
-                </span>
-                <span className="block">
-                  核心：
-                  {review.proposed.instanceName || review.proposed.instanceId}
-                </span>
-                <span className="block">
-                  {review.proposed.protocol} {review.proposed.host}:
-                  {review.proposed.port}
-                </span>
-              </p>
-              {(
-                [
-                  ["转发配置", review.deployments],
-                  ["发布线路", review.routes],
-                  ["连接关系", review.links],
-                ] as const
-              ).map(([label, items]) => (
-                <div key={label}>
-                  <p>
-                    {label}：
-                    {items.length ? `${items.length} 项需要重新核对` : "无引用"}
-                  </p>
-                  {items.length > 0 && (
-                    <ul>
-                      {items.map((item) => (
-                        <li key={item.id}>
-                          {item.name || item.id}{" "}
-                          <span className="text-sm text-muted-foreground">
-                            （{item.id}）
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              ))}
-              <p>
-                本次仅更新端点清单，保留已保存的转发配置、当前出口与节点配置。引用此端点的配置需另行更新、校验并确认发布。
-              </p>
-            </div>
-          ),
-        },
-        (stillCurrent) => {
-          if (stillCurrent() && owner.current === task)
-            mutation.mutate({ fields, impact: review.reviewToken });
-        },
-      );
-    },
-  });
-  const names: Record<string, string> = {
-    hosts: "服务器",
-    "core-instances": "核心实例",
-    "managed-endpoints": "监听端点",
-  };
-  useEffect(() => {
-    if (!entity) {
-      setBaseline("");
-      return;
-    }
-    form.resetFields();
-    mutation.reset();
-    impact.reset();
-    existingEndpointSnapshot.current =
-      entity.kind === "managed-endpoints" && entity.value
-        ? structuredClone({
-            endpoint: entity.value as ManagedEndpoint,
-            instance: inventory?.instances.find(
-              (i) => i.id === (entity.value as ManagedEndpoint).instanceId,
-            ),
-          })
-        : null;
-    const managedEntryPreset = usesManagedEntryPreset(
-      inventory?.instances.find((i) => i.id === entity.instanceId),
-    );
-    form.setFieldsValue(
-      entity.value
-        ? {
-            ...entity.value,
-            ...(entity.kind === "managed-endpoints"
-              ? {
-                  endpointHostId: inventory?.instances.find(
-                    (i) =>
-                      i.id === (entity.value as ManagedEndpoint).instanceId,
-                  )?.hostId,
-                }
-              : {}),
-          }
-        : entity.kind === "core-instances"
-          ? {
-              adapterId: "routeweaver/sing-box",
-              version: coreVersions["routeweaver/sing-box"],
-              hostId: entity.hostId || inventory?.hosts[0]?.id,
-            }
-          : entity.kind === "managed-endpoints"
-            ? {
-                endpointHostId: entity.hostId,
-                instanceId: entity.instanceId,
-                authentication: managedEntryPreset ? "principals" : undefined,
-                connection: managedEntryPreset
-                  ? { host: "0.0.0.0", protocol: "vless" }
-                  : { host: "0.0.0.0", port: 1080, protocol: "socks" },
-              }
-            : {},
-    );
-    setBaseline(JSON.stringify(form.getFieldsValue(true)));
-  }, [entity, form]);
-  const close = () => {
-    if (mutation.isPending || impact.isPending || confirming) return;
-    if (!changed) return onClose();
-    confirm(
-      {
-        title: "放弃尚未保存的配置修改？",
-        description: "当前填写的服务器、核心或监听端点配置尚未保存。",
-        confirmLabel: "放弃修改",
-        cancelLabel: "继续编辑",
-      },
-      () => onClose(),
-    );
-  };
-  return (
-    <TaskDialog
-      bodyProps={{ className: "space-y-5" }}
-      title={`${displayEntity?.value ? "编辑" : "添加"}${names[displayEntity?.kind || "hosts"]}`}
-      open={!!entity}
-      onClosed={() => {
-        if (!owner.current && presentation.current === displayEntity) {
-          presentation.current = null;
-          existingEndpointSnapshot.current = null;
-          form.resetFields();
-        }
-      }}
-      pending={mutation.isPending || impact.isPending}
-      footer={
-        <div className="flex w-full flex-wrap items-center justify-end gap-2">
-          <ActionButton
-            disabled={mutation.isPending || impact.isPending || confirming}
-            onClick={close}
-            variant="outline"
-          >
-            取消
-          </ActionButton>
-          <ActionButton
-            type="submit"
-            form={formId}
-            pending={mutation.isPending || impact.isPending}
-            keepFocusableWhilePending={impact.isPending}
-            variant="default"
-          >
-            保存
-          </ActionButton>
-        </div>
-      }
-      onOpenChange={(next) => {
-        if (!next) close();
-      }}
-      size={displayEntity?.kind === "managed-endpoints" ? "lg" : "md"}
-      contentProps={{
-        onFocusCapture: revealFocusedPolicyModalControl,
-        inert: !entity,
-      }}
-    >
-      <AppForm
-        id={formId}
-        form={form}
-        disabled={mutation.isPending || impact.isPending || confirming}
-        onFinish={(v) => {
-          if (
-            !entity ||
-            owner.current !== entity ||
-            mutation.isPending ||
-            impact.isPending ||
-            confirming
-          )
-            return;
-          if (entity.kind === "managed-endpoints" && entity.value)
-            impact.mutate(v);
-          else mutation.mutate({ fields: v });
-        }}
-      >
-        <ErrorNotice error={mutation.error || impact.error} />
-        {displayEntity?.kind === "hosts" ? (
-          <>
-            <AppField
-              name="name"
-              label="服务器名称"
-              rules={[{ required: true }]}
-            >
-              <Input placeholder="例如：FRA 01" />
-            </AppField>
-            <AppField
-              name="address"
-              label="服务器连接地址"
-              rules={[{ required: true, message: "请输入服务器的 IP 或域名" }]}
-            >
-              <Input placeholder="fra.example.com" />
-            </AppField>
-            <p className="muted text-sm text-muted-foreground">
-              这是其他服务器连接该主机时使用的地址，与监听 IP 分开。
-            </p>
-            <div className="form-grid grid gap-4 sm:grid-cols-2">
-              <AppField name="group" label="服务器分组">
-                <Input placeholder="例如：生产入口" maxLength={64} />
-              </AppField>
-              <AppField
-                name="tags"
-                label="标签"
-                trigger="onValueChange"
-                rules={[
-                  { type: "array", max: 32, message: "最多添加 32 个标签" },
-                ]}
-              >
-                <MultiChoice
-                  options={[]}
-                  placeholder="用于筛选批量变更范围"
-                  creatable
-                />
-              </AppField>
-            </div>
-          </>
-        ) : displayEntity?.kind === "core-instances" ? (
-          <>
-            <AppField name="name" label="实例名称">
-              <Input placeholder="例如：FRA 公共入口核心" />
-            </AppField>
-            <AppField
-              name="hostId"
-              label="所属服务器"
-              rules={[{ required: true }]}
-              trigger="onValueChange"
-            >
-              <ChoiceSelect
-                options={(inventory?.hosts || []).map((h) => ({
-                  value: h.id,
-                  label: h.name,
-                }))}
-              />
-            </AppField>
-            <AppField
-              name="adapterId"
-              label="核心家族"
-              rules={[{ required: true }]}
-              trigger="onValueChange"
-            >
-              <ChoiceSelect
-                options={[
-                  { value: "routeweaver/sing-box", label: "sing-box" },
-                  { value: "routeweaver/xray", label: "Xray" },
-                  {
-                    value: "routeweaver/managed-xray",
-                    label: "受管 Xray",
-                    description: "平台服务入口",
-                  },
-                ]}
-                onValueChange={(v) => {
-                  if (v !== adapter) {
-                    form.setFieldValue(
-                      "version",
-                      coreVersions[v ?? "routeweaver/sing-box"],
-                    );
-                  }
-                }}
-              />
-            </AppField>
-            <AppField
-              name="version"
-              label="核心版本"
-              rules={[{ required: true }]}
-              trigger="onValueChange"
-            >
-              <ChoiceSelect
-                options={[
-                  {
-                    value: coreVersions[adapter],
-                    label: coreVersions[adapter],
-                  },
-                ]}
-              />
-            </AppField>
-          </>
-        ) : (
-          <>
-            <AppField name="name" label="端点名称" rules={[{ required: true }]}>
-              <Input placeholder="例如：FRA 公共入口" />
-            </AppField>
-            <AppField
-              name="endpointHostId"
-              label="所属服务器"
-              rules={[{ required: true, message: "请先选择服务器" }]}
-              trigger="onValueChange"
-            >
-              <ChoiceSelect
-                placeholder="选择服务器"
-                options={[
-                  ...(inventory?.hosts || []).map((h) => ({
-                    value: h.id,
-                    label: h.name,
-                  })),
-                  ...(currentEndpointInstance &&
-                  !inventory?.hosts.some(
-                    (h) => h.id === currentEndpointInstance.hostId,
-                  )
-                    ? [
-                        {
-                          value: currentEndpointInstance.hostId,
-                          label: `服务器已移除（${currentEndpointInstance.hostId}）`,
-                          disabled: true,
-                        },
-                      ]
-                    : []),
-                ]}
-                onValueChange={() =>
-                  form.setFieldValue("instanceId", undefined)
-                }
-              />
-            </AppField>
-            <AppField
-              name="instanceId"
-              label="所属核心"
-              rules={[{ required: true, message: "请选择这台服务器上的核心" }]}
-              trigger="onValueChange"
-            >
-              <ChoiceSelect
-                disabled={!endpointHostId || !endpointInstances.length}
-                placeholder={endpointHostId ? "选择核心" : "请先选择服务器"}
-                options={[
-                  ...endpointInstances.map((i) => ({
-                    value: i.id,
-                    label:
-                      endpointInstances.filter(
-                        (other) => coreName(other) === coreName(i),
-                      ).length > 1
-                        ? `${coreName(i)}（${i.id}）`
-                        : coreName(i),
-                  })),
-                  ...(currentEndpoint &&
-                  !currentEndpointInstance &&
-                  endpointInstanceId === currentEndpoint.instanceId
-                    ? [
-                        {
-                          value: currentEndpoint.instanceId,
-                          label: `核心已移除（${currentEndpoint.instanceId}）`,
-                          disabled: true,
-                        },
-                      ]
-                    : []),
-                ]}
-              />
-            </AppField>
-            {currentEndpoint && !currentEndpointInstance && (
-              <Notice
-                tone="warning"
-                title="原核心已移除，请重新选择服务器和核心。"
-              />
-            )}
-            {endpointHostId && !endpointInstances.length && (
-              <p className="muted text-sm text-muted-foreground">
-                这台服务器还没有核心，请先在服务器详情中添加核心。
-              </p>
-            )}
-            <AppField name="authentication" hidden>
-              <Input />
-            </AppField>
-            {managedEntrySelected &&
-              (endpointProtocol !== "vless" ||
-                authentication !== "principals") && (
-                <Notice tone="warning" title="此核心需要 VLESS 用户凭据">
-                  {
-                    "\u8BF7\u8C03\u6574\u534F\u8BAE\u6216\u8BA4\u8BC1\u65B9\u5F0F\u3002"
-                  }
-                </Notice>
-              )}
-            {managedEntrySelected &&
-              !currentEndpoint &&
-              authentication !== "principals" && (
-                <ActionButton
-                  onClick={() => {
-                    form.setFieldValue("authentication", "principals");
-                    form.setFieldsValue({
-                      connection: {
-                        protocol: "vless",
-                        uuid: undefined,
-                        flow: undefined,
-                        username: undefined,
-                        password: undefined,
-                        method: undefined,
-                      },
-                    });
-                  }}
-                  variant="outline"
-                >
-                  改用 VLESS 用户凭据模式（替换当前认证）
-                </ActionButton>
-              )}
-            <ConnectionFields
-              server
-              authentication={authentication}
-              managedEntryTarget={managedEntrySelected}
-              allowUnchangedUnsupportedProtocol={
-                allowUnchangedUnsupportedProtocol
-              }
-              targetCore={selectedEndpointInstance?.adapterId.replace(
-                /^routeweaver\//,
-                "",
-              )}
-            />
-          </>
-        )}
-        {displayEntity?.kind === "hosts" && !displayEntity.value && (
-          <p className="rounded-lg border bg-muted/40 p-3 text-sm text-muted-foreground">
-            将服务器信息登记到控制平面；服务器连接与配置需另行操作。
-          </p>
-        )}
-      </AppForm>
-    </TaskDialog>
   );
 }
 // Interpret only the reconciler's explicit outcomes. An old observation is not
@@ -1571,95 +923,56 @@ export function InstanceObservation({ instanceId }: { instanceId: string }) {
   );
 }
 function InstanceDetail({
+  scopeIssue,
+  onClose,
+  headingRef,
   instance,
   inventory,
   savedListeners,
   inventoryReadState,
   inventoryError,
   onRefreshInventory,
-  suspended,
-  returnFocus,
   onOpenEnrollment,
   enrollmentOpen,
   onCloseEnrollment,
   editError,
-  resumeAction,
-  actions,
   onEditEndpoint,
-  onClose,
 }: {
+  scopeIssue: string | null;
+  onClose: () => void;
+  headingRef: RefObject<HTMLHeadingElement | null>;
   instance: CoreInstance | null;
   inventory?: Infrastructure;
   savedListeners: ManagedEndpoint[];
   inventoryReadState: "loading" | "paused" | "error" | "ready";
   inventoryError: Error | null;
   onRefreshInventory: () => void;
-  suspended: boolean;
-  returnFocus: () => HTMLElement | null;
   onOpenEnrollment: () => void;
   enrollmentOpen: boolean;
   onCloseEnrollment: () => void;
   editError: Error | null;
-  resumeAction: { current: string | null };
-  actions: { current: Map<string, HTMLButtonElement> };
   onEditEndpoint: (endpoint: ManagedEndpoint | null) => void;
-  onClose: () => void;
 }) {
   const retained = savedListeners.filter((saved) => saved.instanceId === instance?.id);
   const endpoints = inventory?.endpoints.filter((endpoint) => endpoint.instanceId === instance?.id);
   const deployments = inventory?.deployments.filter((deployment) =>
     deployment.ir.programs.some((program) => program.instance.id === instance?.id),
   );
-  const rememberAction = (key: string) => (node: HTMLButtonElement | null) => {
-    if (node) actions.current.set(key, node);
-    else actions.current.delete(key);
-  };
   return (
-    <TaskSheet
-      bodyProps={{ className: "space-y-5" }}
-      title={
-        instance
-          ? `${inventory?.hosts.find((h) => h.id === instance.hostId)?.name || instance.hostId}的${coreName(instance)}`
-          : ""
-      }
-      open={!!instance && !suspended}
-      onCloseAutoFocus={(event) => {
-        event.preventDefault();
-        if (suspended) return;
-        queueMicrotask(() => {
-          const target = returnFocus();
-          const active = document.activeElement;
-          const activeTask = active instanceof HTMLElement
-            ? active.closest('[data-task-overlay][data-state="open"]')
-            : null;
-          if (activeTask && !activeTask.contains(target)) return;
-          if (target?.isConnected && !target.closest('[hidden],[inert],[aria-hidden="true"]') && !target.matches(":disabled"))
-            target.focus({ preventScroll: true });
-        });
-      }}
-      initialFocus={() => resumeAction.current
-        ? actions.current.get(resumeAction.current) ?? null
-        : null}
-      onReady={() => { resumeAction.current = null; }}
-      onOpenChange={(next) => {
-        if (!next) {
-          onCloseEnrollment();
-          onClose();
-        }
-      }}
-      size="lg"
-    >
+    <section role="region" aria-label={instance ? `${inventory?.hosts.find((h) => h.id === instance.hostId)?.name || instance.hostId}的${coreName(instance)}` : undefined} className="min-w-0 space-y-5">
       {instance && (
         <>
+          <ActionButton onClick={onClose} variant="ghost">返回核心列表</ActionButton>
           <div className="space-y-1">
             <p className="text-sm text-muted-foreground">核心配置已登记</p>
-            <h2 className="text-base font-semibold tracking-tight">{coreName(instance)}</h2>
+            <h2 ref={headingRef} tabIndex={-1} className="break-words text-base font-semibold tracking-tight outline-none focus-visible:ring-2 focus-visible:ring-ring">{coreName(instance)}</h2>
             <p className="text-sm text-muted-foreground">{instance.adapterId.replace(/^routeweaver\//, "")} {instance.version}</p>
           </div>
           <Section
             title="1. Agent 接入与上报"
             extra={
               <ActionButton
+                disabled={!!scopeIssue}
                 leadingIcon={<KeyOutlined aria-hidden="true" />}
                 onClick={() => {
                   onOpenEnrollment();
@@ -1678,7 +991,8 @@ function InstanceDetail({
             variant="plain"
             extra={
               <ActionButton
-                ref={rememberAction("add-listener")}
+                
+                disabled={!!scopeIssue}
                 onClick={() => onEditEndpoint(null)}
                 variant={endpoints?.length ? "outline" : "default"}
               >
@@ -1712,7 +1026,8 @@ function InstanceDetail({
                   <p className="text-sm text-muted-foreground">{endpoint.connection.protocol}</p>
                 </div>
                 <ActionButton
-                  ref={rememberAction(endpoint.id)}
+                  
+                  disabled={!!scopeIssue}
                   aria-label={`编辑监听端点 ${endpoint.name}`}
                   onClick={() => onEditEndpoint(endpoint)}
                   variant="outline"
@@ -1733,7 +1048,7 @@ function InstanceDetail({
                   </ActionButton>
                 ))}
               </div>
-            ) : endpoints?.length ? (
+            ) : endpoints?.length && !scopeIssue ? (
               <div className="space-y-3">
                 <p className="text-sm text-muted-foreground">选择监听入口，继续设置流量去向。</p>
                 {endpoints.map((endpoint) => (
@@ -1745,7 +1060,7 @@ function InstanceDetail({
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">添加监听端点后，可用它配置转发路径。</p>
+              <p className="text-sm text-muted-foreground">{scopeIssue ? "请先重新选择核心所在服务器，再继续配置转发路径。" : "添加监听端点后，可用它配置转发路径。"}</p>
             )}
             {endpoints && endpoints.length > 0 && (
               <p className="mt-3 text-sm text-muted-foreground">保存监听端点不会修改节点。转发路径需另行检查并确认应用。</p>
@@ -1756,19 +1071,22 @@ function InstanceDetail({
             <Enrollment
               key={`${instance.hostId}:${instance.id}`}
               instance={instance}
+              scopeIssue={scopeIssue}
               onClose={onCloseEnrollment}
             />
           )}
         </>
       )}
-    </TaskSheet>
+    </section>
   );
 }
 function Enrollment({
   instance,
+  scopeIssue,
   onClose,
 }: {
   instance: CoreInstance;
+  scopeIssue: string | null;
   onClose: () => void;
 }) {
   const [form] = useForm();
@@ -1837,6 +1155,10 @@ function Enrollment({
         if (!next) close();
       }}
     >
+      {scopeIssue && <Notice tone="warning" title="接入范围需要重新选择">
+        <p>{scopeIssue}</p>
+        {result && <p>此处保留的是原接入范围的令牌，不要将它用于新的服务器。</p>}
+      </Notice>}
       {result ? (
         <>
           <Notice tone="success" title="接入凭据已创建">
@@ -1888,7 +1210,7 @@ function Enrollment({
           onFinish={(v) => {
             if (
               !active.current || submitting.current || result ||
-              dateOpen || datePending
+              dateOpen || datePending || !!scopeIssue
             ) return;
             submitting.current = true;
             mutation.mutate({
@@ -1923,7 +1245,7 @@ function Enrollment({
             </ActionButton>
             <ActionButton
               type="submit"
-              disabled={dateOpen || datePending}
+              disabled={dateOpen || datePending || !!scopeIssue}
               pending={mutation.isPending}
               variant="default"
             >
