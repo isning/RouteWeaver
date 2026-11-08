@@ -234,17 +234,8 @@ for (const width of [1440, 390]) {
         }),
       ).toBeVisible();
     }
-    await expect(
-      editor.getByRole("combobox", {
-        name: "条件转发入口 规则 3 去向",
-        exact: true,
-      }),
-    ).toHaveCount(0);
-    await expect(
-      editor.getByText("该条件尚未提供去向表单，请在完整 JSON 中修改。", {
-        exact: true,
-      }),
-    ).toBeVisible();
+    await expect(editor.getByRole("combobox", { name: "条件转发入口 规则 3 去向", exact: true })).toContainText("直连");
+    await expect(editor.getByRole("combobox", { name: "条件转发入口 规则 3 条件资源", exact: true })).toContainText("保留的域名资源");
     for (const [index, option] of ["拒绝连接", "直连"].entries()) {
       const action = editor.getByRole("combobox", {
         name: `条件转发入口 规则 ${index + 1} 去向`,
@@ -285,6 +276,19 @@ for (const width of [1440, 390]) {
     await cidr.fill("2001:db8::7/32");
     await expect(cidr).toHaveAttribute("aria-invalid", "false");
     await capture(page, info, editor, cidr, "policy-ipv6-condition");
+    await editor.getByRole("button", { name: "条件转发入口 规则 1 条件组合全部条件", exact: true }).click();
+    await editor.getByRole("button", { name: "条件转发入口 规则 1 条件子条件 1取反", exact: true }).click();
+    await editor.getByRole("button", { name: "条件转发入口 规则 1 条件添加资源条件", exact: true }).click();
+    await expect(editor.getByRole("combobox", { name: "条件转发入口 规则 1 条件子条件 2资源", exact: true })).toContainText("保留的域名资源");
+    await editor.getByRole("button", { name: "条件转发入口 规则 1 条件添加域名条件", exact: true }).click();
+    await editor.getByRole("textbox", { name: "条件转发入口 规则 1 条件子条件 3值", exact: true }).fill("temporary.invalid");
+    await editor.getByRole("button", { name: "条件转发入口 规则 1 条件子条件 3删除条件", exact: true }).click();
+    const conditionRemoval = page.getByRole("alertdialog", { name: "条件转发入口 规则 1 条件子条件 3删除条件", exact: true });
+    await conditionRemoval.getByRole("button", { name: "取消", exact: true }).click();
+    await editor.getByRole("button", { name: "条件转发入口 规则 1 条件子条件 3删除条件", exact: true }).click();
+    await conditionRemoval.getByRole("button", { name: "删除条件", exact: true }).click();
+    await expect(editor.getByRole("group", { name: "条件转发入口 规则 1 条件编辑器", exact: true })).toBeFocused();
+    await capture(page, info, editor, editor.getByRole("textbox", { name: "条件转发入口 规则 1 条件子条件 1子条件 1值", exact: true }), "policy-nested-condition");
     const connectors = editor.getByRole("region", {
       name: "条件转发入口的连接器",
       exact: true,
@@ -379,7 +383,7 @@ for (const width of [1440, 390]) {
           { id: "connector-1", connection: { protocol: "socks", host: "127.0.0.4", port: 1080 } },
         ],
         rules: [
-          { ...before.ir.programs[0].rules[0], match: { ...before.ir.programs[0].rules[0].match, value: "updated.example.invalid" }, action: { kind: "reject" } },
+          { ...before.ir.programs[0].rules[0], match: { op: "and", children: [{ op: "not", children: [{ ...before.ir.programs[0].rules[0].match, value: "updated.example.invalid" }] }, { op: "resource", value: "rules-file" }] }, action: { kind: "reject" } },
           { ...before.ir.programs[0].rules[1], match: { ...before.ir.programs[0].rules[1].match, op: "ip-cidr", value: "2001:db8::7/32" }, action: { kind: "direct" } },
           before.ir.programs[0].rules[2],
         ],

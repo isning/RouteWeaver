@@ -700,7 +700,7 @@ export function ServerRouteEditor({
       if (pendingMaterials.current.size)
         throw new Error("请等待 TLS 文件读取完成，或取消读取后再保存。");
       if (programsIn(latestDraft.current).some((program) => (program.rules || []).some((rule) =>
-        canEditRuleCondition(program, latestDraft.current.ir.schemaVersion, rule) && !!ruleConditionError(rule.match))))
+        canEditRuleCondition(program, latestDraft.current.ir.schemaVersion, rule) && !!ruleConditionError(program, latestDraft.current.ir.schemaVersion, rule.match))))
         throw new Error("请先修正规则条件，再保存草稿。");
       const connectorError = programsIn(latestDraft.current).map((program) => connectorInputError(program, latestDraft.current.ir.schemaVersion)).find(Boolean);
       if (connectorError) throw new Error(connectorError);
@@ -950,7 +950,7 @@ export function ServerRouteEditor({
             leadingIcon={<SaveOutlined aria-hidden="true" />}
             pending={save.isPending}
             disabled={
-              programs.some((program) => (program.rules || []).some((rule) => canEditRuleCondition(program, draft.ir.schemaVersion, rule) && !!ruleConditionError(rule.match))) ||
+              programs.some((program) => (program.rules || []).some((rule) => canEditRuleCondition(program, draft.ir.schemaVersion, rule) && !!ruleConditionError(program, draft.ir.schemaVersion, rule.match))) ||
               programs.some((program) => !!connectorInputError(program, draft.ir.schemaVersion)) ||
               !!connectorTask ||
               sourceStale ||

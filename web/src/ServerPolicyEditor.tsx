@@ -1,6 +1,7 @@
+import { ServerConditionEditor, conditionEditable, conditionInputError } from "./ServerConditionEditor";
+import { understoodConditionTree } from "./server-condition-model";
 import { connectorAddReason } from "./server-connector-collection";
 import { ServerConnectorEditor } from "./ServerConnectorEditor";
-import { Input } from "@/components/ui/input";
 import { ActionButton } from "@/ui-patterns/actions";
 import { ChoiceSelect } from "@/ui-patterns/choice-select";
 import {
@@ -90,20 +91,13 @@ function ruleEditReason(
     return "规则身份缺失或重复，请先在完整 JSON 中修复。";
   const limit = conditionLimit(program, rule);
   if (limit) return limit;
-  if (!leafConditions.includes(rule.match?.op))
+  if (!conditionEditable(program, schemaVersion, rule.match))
     return ["and", "or", "not", "resource"].includes(rule.match?.op)
       ? "该条件尚未提供去向表单，请在完整 JSON 中修改。"
       : "此表单无法解释该条件，请在完整 JSON 中检查。";
-  if (
-    Object.keys(rule.match).some(
-      (key) => !["op", "value", "children"].includes(key),
-    ) ||
-    typeof rule.match.value !== "string" ||
-    !rule.match.value.trim() ||
-    (rule.match.children !== undefined &&
-      (!Array.isArray(rule.match.children) || rule.match.children.length > 0))
-  )
-    return "条件包含扩展或不完整设置，请在完整 JSON 中检查。";
+  if (!understoodConditionTree(rule.match)) return "条件包含扩展设置，去向请在完整 JSON 中修改。";
+  const inputError = conditionInputError(program, schemaVersion, rule.match);
+  if (inputError) return inputError;
   if (unknownAction(rule.action))
     return "此处理方式尚无表单支持，请在完整 JSON 中修改。";
   return undefined;
@@ -115,10 +109,7 @@ export function canEditRuleCondition(program: ServerProgram, schemaVersion: stri
   return !programEditReason(program, schemaVersion) &&
     typeof rule.id === "string" && /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$/.test(rule.id) &&
     program.rules.filter((other) => other.id === rule.id).length === 1 &&
-    leafConditions.includes(rule.match?.op) &&
-    Object.keys(rule.match).every((key) => ["op", "value", "children"].includes(key)) &&
-    typeof rule.match.value === "string" &&
-    (rule.match.children === undefined || (Array.isArray(rule.match.children) && rule.match.children.length === 0));
+    conditionEditable(program, schemaVersion, rule.match);
 }
 
 export function canEditRuleList(program: ServerProgram, schemaVersion: string) {
@@ -126,38 +117,13 @@ export function canEditRuleList(program: ServerProgram, schemaVersion: string) {
     !unknownAction(program.defaultAction) &&
     (program.defaultAction.kind !== "forward" || !connectorReason(program, program.defaultAction.ref || "")) &&
     (program.rules == null || (Array.isArray(program.rules) && program.rules.every((rule) =>
-      canEditRuleCondition(program, schemaVersion, rule) && !unknownAction(rule.action) &&
+      canEditRuleCondition(program, schemaVersion, rule) && understoodConditionTree(rule.match) && !unknownAction(rule.action) &&
       (rule.action.kind !== "forward" || !connectorReason(program, rule.action.ref || "")) &&
       Object.keys(rule).every((key) => ["id", "match", "action"].includes(key)))));
 }
 
-export function ruleConditionError(match: MatchExpression) {
-  const value = match.value || "";
-  if (!value) return "请输入条件值。";
-  if (match.op !== "ip-cidr")
-    return /[ ,\t\r\n/:()[\]]/.test(value) ? "请输入单个域名，不含空白、端口或网址前缀。" : undefined;
-  const parts = value.split("/");
-  const ipv4 = (address: string) => {
-    const octets = address.split(".");
-    return octets.length === 4 && octets.every((part) => /^(0|[1-9][0-9]{0,2})$/.test(part) && Number(part) <= 255);
-  };
-  const ipv6 = (address: string) => {
-    if (!/^[0-9a-fA-F:.]+$/.test(address)) return false;
-    let groups = address;
-    if (address.includes(".")) {
-      const split = address.lastIndexOf(":");
-      if (split < 0 || !ipv4(address.slice(split + 1))) return false;
-      groups = address.slice(0, split + 1) + "0:0";
-    }
-    const halves = groups.split("::");
-    if (halves.length > 2) return false;
-    const words = halves.flatMap((half) => half ? half.split(":") : []);
-    if (!words.every((word) => /^[0-9a-fA-F]{1,4}$/.test(word))) return false;
-    return halves.length === 2 ? words.length < 8 : words.length === 8;
-  };
-  const valid = parts.length === 2 && /^(0|[1-9][0-9]*)$/.test(parts[1]) &&
-    (ipv4(parts[0]) ? Number(parts[1]) <= 32 : ipv6(parts[0]) && Number(parts[1]) <= 128);
-  return valid ? undefined : "请输入有效的 IP 网段，例如 192.0.2.0/24 或 2001:db8::/32。";
+export function ruleConditionError(program: ServerProgram, schemaVersion: string, match: MatchExpression) {
+  return conditionInputError(program, schemaVersion, match);
 }
 
 function connectorReason(program: ServerProgram, id: string) {
@@ -480,33 +446,13 @@ export function ServerPolicyEditor({
                           规则 {index + 1}
                         </span>
                         {canEditRuleCondition(program, schemaVersion, rule) ? (
-                          <div className="grid min-w-0 gap-2 sm:grid-cols-2">
-                            <div className="min-w-0 space-y-1">
-                              <span className="text-xs text-muted-foreground">条件类型</span>
-                              <ChoiceSelect
-                                aria-label={`${identityLabel} 规则 ${index + 1} 条件类型`}
-                                value={rule.match.op}
-                                options={[
-                                  { value: "domain", label: "完整域名" },
-                                  { value: "domain-suffix", label: "域名后缀" },
-                                  { value: "ip-cidr", label: "IP 网段" },
-                                ]}
-                                onValueChange={(op) => {
-                                  if (op && leafConditions.includes(op)) onRuleConditionChange(programIndex, rule.id, { ...rule.match, op });
-                                }}
-                              />
-                            </div>
-                            <label className="min-w-0 space-y-1">
-                              <span className="text-xs text-muted-foreground">条件值</span>
-                              <Input
-                                aria-label={`${identityLabel} 规则 ${index + 1} 条件值`}
-                                aria-invalid={!!ruleConditionError(rule.match)}
-                                value={rule.match.value}
-                                onChange={(event) => onRuleConditionChange(programIndex, rule.id, { ...rule.match, value: event.target.value })}
-                              />
-                            </label>
-                            {ruleConditionError(rule.match) && <p role="alert" className="text-destructive sm:col-span-2">{ruleConditionError(rule.match)}</p>}
-                          </div>
+                          <ServerConditionEditor
+                            program={program}
+                            schemaVersion={schemaVersion}
+                            match={rule.match}
+                            label={`${identityLabel} 规则 ${index + 1} 条件`}
+                            onChange={(match) => onRuleConditionChange(programIndex, rule.id, match)}
+                          />
                         ) : <span>{matchLabel(rule.match)}</span>}
                         {ruleEditReason(program, schemaVersion, rule) ? (
                           <>

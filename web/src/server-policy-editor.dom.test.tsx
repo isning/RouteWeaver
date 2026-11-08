@@ -1152,6 +1152,47 @@ it("adds a connector without selecting it as a destination and removes only the 
   expect(fixture.saveHeaders[0].get("If-Match")).toBe("policy-r1");
 });
 
+it("edits a known nested condition while retaining an unsupported sibling and disabling destructive whole-rule operations", async () => {
+  const user = userEvent.setup();
+  const fixture = setup((draft) => {
+    draft.ir.programs[0].rules[1].match = { op: "and", children: [
+      { op: "domain", value: "known.invalid" },
+      Object.assign({ op: "future-condition", value: "original" }, { future: { keep: true } }),
+    ] };
+  });
+  const editor = await openEditor(user);
+  const value = within(editor).getByRole("textbox", { name: "Policy entry 规则 2 条件子条件 1值" });
+  await user.clear(value);
+  await user.type(value, "changed.invalid");
+  expect(within(editor).queryByRole("textbox", { name: "Policy entry 规则 2 条件子条件 2值" })).toBeNull();
+  expect(within(editor).queryByRole("button", { name: "Policy entry 删除规则 2" })).toBeNull();
+  await user.click(within(editor).getByRole("button", { name: "保存草稿" }));
+  await waitFor(() => expect(fixture.saved).toHaveLength(1));
+  const expected = structuredClone(fixture.deployment.ir.programs[0]);
+  expected.rules[1].match.children![0].value = "changed.invalid";
+  expect(fixture.saved[0].ir.programs).toEqual([expected]);
+  expect(fixture.saveHeaders[0].get("If-Match")).toBe("policy-r1");
+});
+
+it("selects an existing supported resource condition without changing its descriptor or exposing its URL", async () => {
+  const user = userEvent.setup();
+  const fixture = setup((draft) => {
+    const resource = draft.ir.programs[0].resources[0];
+    resource.digest = `sha256:${"a".repeat(64)}`;
+    resource.updatePolicy = "follow";
+  });
+  const editor = await openEditor(user);
+  await user.click(within(editor).getByRole("combobox", { name: "Policy entry 规则 2 条件类型" }));
+  await user.click(await screen.findByRole("option", { name: "规则资源" }));
+  expect(within(editor).getByRole("combobox", { name: "Policy entry 规则 2 条件资源" }).textContent).toContain("Private domains");
+  expect(editor.textContent).not.toContain("resource-secret-fixture");
+  await user.click(within(editor).getByRole("button", { name: "保存草稿" }));
+  await waitFor(() => expect(fixture.saved).toHaveLength(1));
+  const expected = structuredClone(fixture.deployment.ir.programs[0]);
+  expected.rules[1].match = { op: "resource", value: "private-domains" };
+  expect(fixture.saved[0].ir.programs).toEqual([expected]);
+});
+
 it.each(["tls", "transport"])("keeps malformed %s sections read-only in the full connection task and retains them on independent save", async (field) => {
   const user = userEvent.setup();
   const fixture = setup((draft) => { Object.assign(draft.ir.programs[0].connectors![0].connection, { [field]: "malformed-original" }); });
