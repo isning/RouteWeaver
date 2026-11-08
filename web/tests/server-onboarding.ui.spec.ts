@@ -82,7 +82,7 @@ for (const width of [1440, 390]) {
     await expect(enterServer).toBeVisible();
     await capture(page, info, `server-explicit-entry-${width}`, page.locator(".server-grid"), [enterServer]);
     await enterServer.click();
-    const setup = host.getByRole("list", { name: "服务器配置步骤" });
+    const setup = host.getByRole("status", { name: "服务器配置提示" });
     await setup.getByRole("button", { name: "开始配置核心", exact: true }).click();
     const coreEditor = page.getByRole("dialog", { name: "添加核心实例", exact: true });
     await expect(coreEditor.getByLabel("所属服务器", { exact: true })).toHaveText("Setup server");
@@ -162,7 +162,7 @@ for (const width of [1440, 390]) {
     await settledTask(host);
     await expect(coreOpener).toBeFocused();
     await host.getByRole("tab", { name: "概览", exact: true }).click();
-    await setup.getByRole("button", { name: "查看 Agent 接入", exact: true }).click();
+    await coreOpener.click();
     await expect(core.getByText("尚未接入", { exact: true })).toBeVisible();
     await host.getByRole("tab", { name: "概览", exact: true }).click();
     const createPath = setup.getByRole("link", { name: "创建转发路径", exact: true });
@@ -220,5 +220,6 @@ for (const width of [1440, 390]) {
     expect(await read(page.request, "/server-deployments")).toEqual([]);
   });
 }
+
 
 

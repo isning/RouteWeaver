@@ -51,6 +51,7 @@ import { WorkspaceHistoryContext } from "./SubscriptionContext";
 import { readServerWorkspace, serverWorkspaceHash, type ServerWorkspaceSection } from "./server-workspace";
 import { useWorkspaceViewEntry } from "./useWorkspaceViewEntry";
 import { NodeObservation } from "./NodeObservation";
+import { ServerResourceOverview, CoreStatusSummary } from "./ServerOverview";
 import type {
   AgentState,
   CoreInstance,
@@ -368,6 +369,7 @@ export function ServersPage() {
                         个监听端点
                       </p>
                     </div>
+                    {section === "overview" && <CoreStatusSummary instanceId={i.id} />}
                     <div className={"flex flex-wrap items-center gap-2"}>
                       <ActionButton
                         disabled={!!scopeIssue}
@@ -695,51 +697,26 @@ export function ServersPage() {
             </TabsList>
             <ErrorNotice error={instance && section === "cores" ? null : editError} />
             <TabsContent value="overview" className="space-y-4">
-              <ol aria-label="服务器配置步骤" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                <li className="rounded-lg border p-4 text-sm space-y-2">
-                  <p className="font-medium">1. <span>登记服务器</span></p>
-                  <p className="text-muted-foreground">地址已保存</p>
-                </li>
-                <li className="rounded-lg border p-4 text-sm space-y-2">
-                  <p className="font-medium">2. <span>配置核心与 Agent</span></p>
-                  <p className="text-muted-foreground">{data.instances.filter((value) => value.hostId === host.id).length} 个已登记核心</p>
-                  <ActionButton
-                    ref={(node) => { if (node) hostActions.current.set("setup-core", node); else hostActions.current.delete("setup-core"); }}
-                    disabled={!!scopeIssue}
-                    onClick={() => setupAction("core")}
-                    variant={hostCores.length ? "outline" : "default"}
-                    className="h-auto max-w-full whitespace-normal"
-                  >{!hostCores.length ? "开始配置核心" : hostCores.length === 1 ? "查看 Agent 接入" : "选择要配置的核心"}</ActionButton>
-                </li>
-                <li className="rounded-lg border p-4 text-sm space-y-2">
-                  <p className="font-medium">3. <span>设置监听入口</span></p>
-                  <p className="text-muted-foreground">{data.endpoints.filter((endpoint) => data.instances.some((value) => value.id === endpoint.instanceId && value.hostId === host.id)).length} 个已保存监听</p>
-                  <ActionButton
-                    ref={(node) => { if (node) hostActions.current.set("setup-listener", node); else hostActions.current.delete("setup-listener"); }}
-                    disabled={!!scopeIssue || !hostCores.length}
-                    onClick={() => setupAction("listener")}
-                    variant={hostCores.length && !hostListeners.length ? "default" : "outline"}
-                    className="h-auto max-w-full whitespace-normal"
-                  >{!hostCores.length ? "先配置核心" : hostCores.length > 1 ? "选择核心与监听" : hostListeners.length ? "管理监听入口" : "设置监听入口"}</ActionButton>
-                </li>
-                <li className="rounded-lg border p-4 text-sm space-y-2">
-                  <p className="font-medium">4. <span>设置流量去向</span></p>
-                  <p className="text-muted-foreground">{records.length ? `${records.length} 条已保存路径` : "尚未保存转发路径"}</p>
-                  <p className="text-muted-foreground">保存后检查，再确认应用。</p>
-                  {records.length ? (
-                    <ActionButton onClick={() => changeSection("records")} variant="outline" className="h-auto max-w-full whitespace-normal">查看转发配置</ActionButton>
-                  ) : hostListeners.length === 1 && !scopeIssue ? (
-                    <ActionButton asChild variant="default" className="h-auto max-w-full whitespace-normal">
-                      <a href={`#routes?entryEndpoint=${encodeURIComponent(hostListeners[0].id)}&returnHost=${encodeURIComponent(host.id)}&returnInstance=${encodeURIComponent(hostListeners[0].instanceId)}`}>创建转发路径</a>
-                    </ActionButton>
-                  ) : (
-                    <ActionButton disabled={!!scopeIssue || !hostListeners.length} onClick={chooseCore} variant={hostListeners.length ? "default" : "outline"} className="h-auto max-w-full whitespace-normal">
-                      {hostListeners.length ? "选择监听入口" : "先设置监听入口"}
-                    </ActionButton>
-                  )}
-                </li>
-              </ol>
-              {coreList}
+              {(!hostCores.length || !hostListeners.length || !records.length) && !scopeIssue && (
+                <Notice role="status" aria-label="服务器配置提示"
+                  title={!hostCores.length ? "添加第一个核心" : !hostListeners.length ? "添加监听入口" : "设置流量去向"}
+                  action={!hostCores.length ? (
+                    <ActionButton ref={(node) => { if (node) hostActions.current.set("setup-core", node); else hostActions.current.delete("setup-core"); }} onClick={() => setupAction("core")} variant="outline">开始配置核心</ActionButton>
+                  ) : !hostListeners.length ? (
+                    <ActionButton ref={(node) => { if (node) hostActions.current.set("setup-listener", node); else hostActions.current.delete("setup-listener"); }} onClick={() => setupAction("listener")} variant="outline">{hostCores.length === 1 ? "设置监听入口" : "选择核心与监听"}</ActionButton>
+                  ) : hostListeners.length === 1 ? (
+                    <ActionButton asChild variant="outline"><a href={`#routes?entryEndpoint=${encodeURIComponent(hostListeners[0].id)}&returnHost=${encodeURIComponent(host.id)}&returnInstance=${encodeURIComponent(hostListeners[0].instanceId)}`}>创建转发路径</a></ActionButton>
+                  ) : <ActionButton onClick={chooseCore} variant="outline">选择监听入口</ActionButton>}
+                >
+                  {!hostCores.length ? "服务器地址已保存。添加核心后即可接入 Agent。" : !hostListeners.length ? "核心已登记。选择客户端连接的协议与监听地址。" : "监听入口已保存。创建转发路径后，检查并确认应用。"}
+                </Notice>
+              )}
+              <ServerResourceOverview host={host} onOpenResources={() => changeSection("diagnostics")} />
+              {hostCores.length > 0 && coreList}
+              {records.length > 0 && <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-4">
+                <div className="space-y-1"><p className="text-sm font-medium">转发配置</p><p className="text-sm text-muted-foreground">{records.length} 条已保存路径</p></div>
+                <ActionButton onClick={() => changeSection("records")} variant="outline">查看转发配置</ActionButton>
+              </div>}
               <Accordion type="multiple" className="w-full"><AccordionItem value="identity"><AccordionTrigger>技术标识</AccordionTrigger><AccordionContent><p className="break-all text-sm text-muted-foreground">服务器 ID：{host.id}</p></AccordionContent></AccordionItem></Accordion>
             </TabsContent>
             <TabsContent value="cores" className="space-y-4">
@@ -803,7 +780,7 @@ export function ServersPage() {
         onClosed={() => {
           if (!focusAfterSave.current) return;
           focusAfterSave.current = false;
-          const target = section === "cores" && instance ? coreHeading.current : hostActions.current.get("add-core") || workspaceHeading.current;
+          const target = section === "cores" && instance ? coreHeading.current : workspaceHeading.current;
           const focused = document.activeElement;
           if (target?.isConnected && (!focused || focused === document.body || focused.closest('[data-task-overlay][data-state="closed"]')))
             target.focus({ preventScroll: true });
@@ -814,6 +791,9 @@ export function ServersPage() {
           replaceView(serverWorkspaceHash(created.id), () => { focusAfterSave.current = true; show(created, null); });
         }}
         onEndpointSaved={(saved) => {
+          // The first-listener tip changes to the next task after save. Its
+          // trigger can unmount, so return focus to the stable overview title.
+          if (section === "overview") focusAfterSave.current = true;
           setSavedListeners((current) => [...current.filter((entry) => entry.id !== saved.id), {
             id: saved.id, instanceId: saved.instanceId, name: saved.name,
             connection: { host: saved.connection.host, port: saved.connection.port, protocol: saved.connection.protocol },
@@ -1382,6 +1362,7 @@ function Enrollment({
     </TaskDialog>
   );
 }
+
 
 
 

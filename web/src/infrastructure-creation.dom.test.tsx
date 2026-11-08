@@ -324,8 +324,11 @@ describe("infrastructure creation user tasks", () => {
     const detail = within(
       await screen.findByRole("region", { name: "New London" }),
     );
-    expect(detail.getByText("先添加核心，再配置监听端点")).toBeTruthy();
-    await user.click(detail.getByRole("button", { name: "添加核心" }));
+    expect(detail.queryByText("先添加核心，再配置监听端点")).toBeNull();
+    expect(detail.queryByRole("button", { name: "添加核心" })).toBeNull();
+    const tip = within(detail.getByRole("status", { name: "服务器配置提示" }));
+    expect(tip.getByText("添加第一个核心")).toBeTruthy();
+    await user.click(tip.getByRole("button", { name: "开始配置核心" }));
     const core = within(
       await screen.findByRole("dialog", { name: "添加核心实例" }),
     );
@@ -634,12 +637,15 @@ describe("infrastructure creation user tasks", () => {
       await screen.findByRole("button", { name: "Empty server" }),
     );
     const drawer = within(screen.getByRole("region", { name: "Empty server" }));
-    expect(drawer.getByText("先添加核心，再配置监听端点")).toBeTruthy();
-    expect(drawer.queryByText("尚未收到服务器资源数据")).toBeNull();
+    expect(drawer.queryByText("先添加核心，再配置监听端点")).toBeNull();
     expect(drawer.queryByText("先登记测试目标")).toBeNull();
-    const add = within(drawer.getByRole("list", { name: "服务器配置步骤" })).getByRole("button", { name: "开始配置核心" });
-    expect(drawer.getByRole("button", { name: "添加核心" }).getAttribute("data-variant")).toBe("outline");
-    expect(add.getAttribute("data-variant")).toBe("default");
+    expect(drawer.queryByRole("list", { name: "服务器配置步骤" })).toBeNull();
+    const tip = within(drawer.getByRole("status", { name: "服务器配置提示" }));
+    expect(tip.getByText("添加第一个核心")).toBeTruthy();
+    expect(tip.getByText("服务器地址已保存。添加核心后即可接入 Agent。")).toBeTruthy();
+    const add = tip.getByRole("button", { name: "开始配置核心" });
+    expect(drawer.queryByRole("button", { name: "添加核心" })).toBeNull();
+    expect(add.getAttribute("data-variant")).toBe("outline");
     await user.click(add);
     await user.click(
       within(
@@ -652,6 +658,23 @@ describe("infrastructure creation user tasks", () => {
     expect(setup.getByRole("button", { name: "添加监听端点" })).toBeTruthy();
     expect(screen.getByRole("tab", { name: "核心与监听" }).getAttribute("aria-selected")).toBe("true");
     expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("returns focus to the overview after its first-listener tip changes", async () => {
+    const writes = inventoryAPI();
+    mount();
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole("button", { name: "Frankfurt" }));
+    await user.click(within(screen.getByRole("status", { name: "服务器配置提示" })).getByRole("button", { name: "设置监听入口" }));
+    const editor = within(await screen.findByRole("dialog", { name: "添加监听端点" }));
+    await user.type(editor.getByLabelText("端点名称"), "First listener");
+    await user.type(editor.getByLabelText("用户名"), "fixture");
+    await user.type(editor.getByLabelText("密码"), "fixture-password");
+    await user.click(editor.getByRole("button", { name: /保\s*存/ }));
+    await waitFor(() => expect(writes[0]?.value.instanceId).toBe("core-fra-1"));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(within(screen.getByRole("status", { name: "服务器配置提示" })).getByRole("link", { name: "创建转发路径" })).toBeTruthy();
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("heading", { name: "Frankfurt", level: 1 })));
   });
 
   it("adds a listener directly to the chosen core without losing server context", async () => {
@@ -730,7 +753,6 @@ describe("infrastructure creation user tasks", () => {
       drawer.getByRole("tab", { name: "诊断" }),
     );
     expect(await drawer.findByText("资源数据暂时不可用")).toBeTruthy();
-    expect(drawer.queryByText("尚未收到服务器资源数据")).toBeNull();
   });
 
   it("keeps the selected server when adding its core from the server detail", async () => {
@@ -1346,5 +1368,6 @@ it("releases the pending enrollment guard after rejection and retains expiry for
   await screen.findByText("valid scope and expiry within one year required");
   await waitFor(() => expect(hasUnsavedChanges()).toBe(false));
 });
+
 
 

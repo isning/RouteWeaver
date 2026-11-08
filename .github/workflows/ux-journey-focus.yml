@@ -36,6 +36,7 @@ jobs:
           npm run test --
           src/server-forwarding.dom.test.tsx
           src/server-path-workspace.dom.test.tsx
+          src/server-overview.dom.test.tsx
           src/infrastructure-tabs.dom.test.tsx
           src/infrastructure-creation.dom.test.tsx
           src/group-membership.dom.test.tsx
@@ -45,3 +46,4 @@ jobs:
           --maxWorkers=1
 # Supplemental feedback only. The full Repository quality workflow and its
 # required aggregate remain authoritative; this does not replace any gate.
+

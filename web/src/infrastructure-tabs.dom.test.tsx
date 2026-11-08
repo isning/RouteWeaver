@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeAll, beforeEach, expect, it, vi } from "vitest";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ConfirmationProvider } from "@/ui-patterns/confirmations";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -138,7 +138,7 @@ it("keeps keyboard tab navigation connected to the active inventory panel", asyn
 });
 
 
-it("opens a server through an explicit configuration action and shows the saved setup stages", async () => {
+it("opens a server through an explicit configuration action and shows only the next setup tip", async () => {
   history.replaceState(null, "", "#servers");
   mount();
   const user = userEvent.setup();
@@ -147,13 +147,14 @@ it("opens a server through an explicit configuration action and shows the saved 
   expect(screen.getByText("1 个已保存监听")).toBeTruthy();
   expect(screen.getByText("下一步：配置转发路径")).toBeTruthy();
   await user.click(enter);
-  const progress = screen.getByRole("list", { name: "服务器配置步骤" });
-  expect(within(progress).getAllByRole("listitem")).toHaveLength(4);
-  expect(within(progress).getByText("登记服务器")).toBeTruthy();
-  expect(within(progress).getByText("配置核心与 Agent")).toBeTruthy();
-  expect(within(progress).getByText("设置监听入口", { selector: "span" })).toBeTruthy();
-  expect(within(progress).getByText("设置流量去向")).toBeTruthy();
-  expect(within(progress).getByText("尚未保存转发路径")).toBeTruthy();
+  expect(screen.queryByRole("list", { name: "服务器配置步骤" })).toBeNull();
+  const tip = screen.getByRole("status", { name: "服务器配置提示" });
+  expect(within(tip).getByText("设置流量去向")).toBeTruthy();
+  expect(within(tip).getByText("监听入口已保存。创建转发路径后，检查并确认应用。")).toBeTruthy();
+  expect(within(tip).getByRole("link", { name: "创建转发路径" })).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "管理监听入口" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "查看 Agent 接入" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "选择要配置的核心" })).toBeNull();
   expect(screen.getByRole("button", { name: "查看接入与配置" })).toBeTruthy();
   await user.click(screen.getByRole("button", { name: "返回服务器清单" }));
   expect(await screen.findByRole("button", { name: "进入服务器 Tokyo server" })).toBeTruthy();
@@ -167,7 +168,7 @@ it("continues from the overview using the exact saved listener and server contex
   await user.click(await screen.findByRole("button", { name: "进入服务器 Tokyo server" }));
   const path = screen.getByRole("link", { name: "创建转发路径" });
   expect(path.getAttribute("href")).toBe("#routes?entryEndpoint=endpoint-1&returnHost=host-1&returnInstance=core-1");
-  await user.click(screen.getByRole("button", { name: "管理监听入口" }));
+  await user.click(screen.getByRole("button", { name: "查看接入与配置" }));
   expect(screen.queryByRole("dialog")).toBeNull();
   const core = screen.getByRole("region", { name: "Tokyo server的Tokyo core" });
   expect(within(core).getByText("Tokyo entry", { exact: true })).toBeTruthy();
@@ -176,7 +177,7 @@ it("continues from the overview using the exact saved listener and server contex
 
 it("requires an explicit core choice instead of guessing among multiple cores", async () => {
   history.replaceState(null, "", "#servers");
-  mount({ "/api/core-instances": [
+  mount({ "/api/managed-endpoints": [], "/api/core-instances": [
     { id: "core-1", hostId: "host-1", name: "Tokyo core", adapterId: "routeweaver/xray", version: "26.3.27" },
     { id: "core-2", hostId: "host-1", name: "Second core", adapterId: "routeweaver/xray", version: "26.3.27" },
   ] });
@@ -200,11 +201,14 @@ it("offers scoped listener creation only when the selected core has no listeners
   expect(within(editor).getByLabelText("所属服务器").textContent).toBe("Tokyo server");
   expect(within(editor).getByLabelText("所属核心").textContent).toBe("Tokyo core");
   await user.click(within(editor).getByRole("button", { name: "取消" }));
-  expect(screen.getByRole("list", { name: "服务器配置步骤" })).toBeTruthy();
+  const tip = screen.getByRole("status", { name: "服务器配置提示" });
+  expect(within(tip).getByText("添加监听入口")).toBeTruthy();
+  expect(within(tip).getByText("核心已登记。选择客户端连接的协议与监听地址。")).toBeTruthy();
+  await waitFor(() => expect(document.activeElement).toBe(within(tip).getByRole("button", { name: "设置监听入口" })));
 });
 
 
-it.each(["选择要配置的核心", "选择核心与监听", "选择监听入口"])("clears a previously visited core when returning to the %s chooser", async (action) => {
+it("clears a previously visited core when returning to the listener chooser", async () => {
   history.replaceState(null, "", "#servers");
   mount({
     "/api/core-instances": [
@@ -222,10 +226,16 @@ it.each(["选择要配置的核心", "选择核心与监听", "选择监听入�
   expect(screen.getByRole("region", { name: "Tokyo server的Tokyo core" })).toBeTruthy();
   expect(location.hash).toContain("instance=core-1");
   await user.click(screen.getByRole("tab", { name: "概览" }));
-  await user.click(screen.getByRole("button", { name: action }));
+  await user.click(screen.getByRole("button", { name: "选择监听入口" }));
   expect(location.hash).toBe("#servers?host=host-1&section=cores");
   expect(screen.queryByRole("region", { name: "Tokyo server的Tokyo core" })).toBeNull();
   expect(screen.getByRole("heading", { name: "Tokyo core" })).toBeTruthy();
   expect(screen.getByRole("heading", { name: "Second core" })).toBeTruthy();
   expect(screen.getAllByRole("button", { name: "查看接入与配置" })).toHaveLength(2);
+  await user.click(screen.getAllByRole("button", { name: "查看接入与配置" })[1]);
+  const secondCore = screen.getByRole("region", { name: "Tokyo server的Second core" });
+  expect(within(secondCore).getByText("Second entry", { exact: true })).toBeTruthy();
+  expect(within(secondCore).queryByText("Tokyo entry", { exact: true })).toBeNull();
+  expect(location.hash).toContain("instance=core-2");
 });
+

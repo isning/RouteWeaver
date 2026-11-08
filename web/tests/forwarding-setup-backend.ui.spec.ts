@@ -217,8 +217,8 @@ for (const width of [1440, 390]) {
 
     // Continue from the saved server, rather than finding it in another tab.
     const hostDetail = page.getByRole("region", { name: names.host, exact: true });
-    await expect(hostDetail.getByText("先添加核心，再配置监听端点", { exact: true })).toBeVisible();
-    const startCore = hostDetail.getByRole("list", { name: "服务器配置步骤" }).getByRole("button", { name: "开始配置核心", exact: true });
+    await expect(hostDetail.getByText("服务器地址已保存。添加核心后即可接入 Agent。", { exact: true })).toBeVisible();
+    const startCore = hostDetail.getByRole("status", { name: "服务器配置提示" }).getByRole("button", { name: "开始配置核心", exact: true });
     await capture(page, info, `setup-host-continuation-${width}`, hostDetail, [startCore]);
     await startCore.click();
     const coreEditor = page.getByRole("dialog", { name: "添加核心实例", exact: true });
@@ -493,5 +493,6 @@ for (const width of [1440, 390]) {
     });
   });
 }
+
 
 
