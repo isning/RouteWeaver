@@ -1484,7 +1484,7 @@ function hasManagedEntrySetupGap(
   // This exact diagnostic can also mean a non-VLESS listener. Limit recovery to
   // the verified first-use shape; it says nothing about existing account grants
   // or whether this saved snapshot is still current.
-  const program = programs.length === 1 ? programs[0] : undefined;
+  const program = Array.isArray(programs) && programs.length === 1 ? programs[0] : undefined;
   return (
     diagnostics.includes(managedPrincipalsRequired) &&
     program?.instance.adapterId === "routeweaver/managed-xray" &&
@@ -1597,12 +1597,12 @@ function serverInventoryMismatch(error: unknown, deployment: ServerDeployment) {
       : undefined;
   if (
     mismatch?.code === "SERVER_LISTENER_CHANGED" &&
-    deployment.ir.programs.some((p) => p.listener.id === mismatch.endpointId)
+    programsIn(deployment).some((p) => p.listener.id === mismatch.endpointId)
   )
     return { kind: "listener" as const, endpointId: mismatch.endpointId };
   if (
     mismatch?.code === "SERVER_INSTANCE_CHANGED" &&
-    deployment.ir.programs.some((p) => p.instance.id === mismatch.instanceId)
+    programsIn(deployment).some((p) => p.instance.id === mismatch.instanceId)
   )
     return { kind: "instance" as const };
   return undefined;
@@ -1822,6 +1822,8 @@ function ServerRouteDetail({
   onReload: (deployment: ServerDeployment) => void;
   returnHref?: string;
 }) {
+  // Display projection only: retain the server snapshot for edits and CAS.
+  const programs = programsIn(deployment);
   const [review, setReview] = useState(false);
   const recoveryAction = useRef<HTMLButtonElement>(null);
   const reviewSurface = useRef<HTMLDivElement>(null);
@@ -1918,7 +1920,7 @@ function ServerRouteDetail({
   const needsAdjustment = check ? !check.valid : diagnostics.length > 0;
   const managedEntry = hasManagedEntrySetupGap(
     diagnostics,
-    deployment.ir.programs,
+    programs,
   )
     ? { deploymentName: deployment.name, href: returnHref || "#published-routes" }
     : undefined;
@@ -2083,7 +2085,7 @@ function ServerRouteDetail({
       }
     >
       <ServerForwarding
-        programs={deployment.ir.programs}
+        programs={programs}
         inventory={inventory}
       />
       <div className="deployment-actions flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-muted/30 p-4">
@@ -2192,12 +2194,12 @@ function ServerRouteDetail({
       {needsAdjustment && (
         <ServerRouteDiagnostics
           diagnostics={diagnostics}
-          programs={deployment.ir.programs}
+          programs={programs}
           managedEntry={managedEntry}
         />
       )}
       <Section title="目标实例" description="运行结果由对应 Agent 回传。">
-        {deployment.ir.programs.map((p) => (
+        {programs.map((p) => (
           <div
             className="target-status flex items-center gap-2"
             key={p.instance.id}
@@ -2247,7 +2249,7 @@ function ServerRouteDetail({
               <div className="space-y-1 text-sm leading-relaxed">
                 <p>
                   <strong className="font-medium">
-                    将更新 {deployment.ir.programs.length} 个核心实例
+                    将更新 {programs.length} 个核心实例
                   </strong>
                   。已有连接可能中断；应用后会分别核对实际状态。
                 </p>
@@ -2366,7 +2368,7 @@ function ServerRouteDetail({
           <>
             <ServerRouteDiagnostics
               diagnostics={check.diagnostics}
-              programs={deployment.ir.programs}
+              programs={programs}
               managedEntry={managedEntry}
               type="error"
             />
@@ -2377,7 +2379,7 @@ function ServerRouteDetail({
             <section aria-label="待应用转发" className="my-6">
               <h3 className="text-sm font-semibold">待应用转发</h3>
               <ServerForwarding
-                programs={deployment.ir.programs}
+                programs={programs}
                 inventory={inventory}
               />
             </section>

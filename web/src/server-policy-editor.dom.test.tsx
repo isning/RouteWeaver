@@ -1231,6 +1231,19 @@ it.each(["null", "omitted", "malformed"])("opens a %s root program list without 
   await waitFor(() => expect(fixture.saved).toHaveLength(1));
   expect(fixture.saved[0].ir).toEqual(fixture.deployment.ir);
   expect(fixture.saved[0].name).toBe("Renamed retained draft");
+  // Save returns to the real detail surface, not an unmounted/error boundary.
+  const detail = await screen.findByRole("dialog", { name: "Renamed retained draft" });
+  expect(within(detail).getByRole("button", { name: "编辑转发路径" })).toBeTruthy();
+  expect(within(detail).getByText("目标实例", { exact: true })).toBeTruthy();
+  await user.click(within(detail).getByRole("button", { name: "编辑转发路径" }));
+  const reopened = await screen.findByRole("dialog", { name: "编辑 Renamed retained draft" });
+  await user.click(within(reopened).getByRole("button", { name: "高级：完整服务端意图" }));
+  await user.click(within(reopened).getByRole("button", { name: "编辑服务端意图" }));
+  const reopenedJSON = await screen.findByRole("dialog", { name: "服务端配置意图" });
+  expect(JSON.parse((within(reopenedJSON).getByRole("textbox", { name: "服务端配置意图 JSON 文本" }) as HTMLTextAreaElement).value)).toEqual(fixture.deployment.ir);
+  await user.click(within(reopenedJSON).getByRole("button", { name: "取消" }));
+  expect(fixture.saved).toHaveLength(1);
+
 });
 
 
