@@ -130,6 +130,8 @@ function mount(profile = fixture()) {
     button: 0,
     ctrlKey: false,
   });
+  // These tests exercise the expanded membership form, not its overview.
+  fireEvent.click(screen.getByText(profile.ir.groups[0].name, { exact: true }).closest("summary")!);
   return { writes, ...rendered };
 }
 function group() {
@@ -371,3 +373,4 @@ it("retains exact fixed references and independent policy parameters while toggl
   });
   expect(saved.ir.defaultAction).toEqual(profile.ir.defaultAction);
 });
+
