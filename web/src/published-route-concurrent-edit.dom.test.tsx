@@ -62,7 +62,7 @@ function setup(options: {
 }
 async function conflict(options?: Parameters<typeof setup>[0]) {
   const context = setup(options);
-  await context.user.click(await screen.findByRole("button", { name: "编辑", exact: true }));
+  await context.user.click(await screen.findByRole("button", { name: "编辑" }));
   const element = await screen.findByRole("dialog", { name: "编辑 Office line" });
   const editor = within(element);
   fireEvent.change(editor.getByRole("textbox", { name: "线路名称" }), { target: { value: "My office line" } });
@@ -76,7 +76,7 @@ async function compare(context: Awaited<ReturnType<typeof conflict>>) {
   return within(await screen.findByRole("dialog", { name: "比较公开线路修改" }));
 }
 async function choose(review: ReturnType<typeof within>, user: ReturnType<typeof userEvent.setup>, group: string, choice: "保留当前输入" | "使用最新版本") {
-  await user.click(within(review.getByRole("group", { name: group })).getByRole("radio", { name: choice, exact: true }));
+  await user.click(within(review.getByRole("group", { name: group })).getByRole("radio", { name: choice }));
 }
 beforeEach(() => {
   vi.stubEnv("NODE_ENV", "development");
@@ -165,7 +165,7 @@ it("uses the latest baseline for dirty tracking without treating comparison as a
   expect(context.editor.queryByRole("button", { name: "保存公开线路" })).toBeNull();
   fireEvent.change(context.editor.getByRole("textbox", { name: "线路名称" }), { target: { value: "More changes" } });
   expect(hasUnsavedChanges()).toBe(true);
-  await context.user.click(context.editor.getByRole("button", { name: "取消", exact: true }));
+  await context.user.click(context.editor.getByRole("button", { name: "取消" }));
   const discard = within(await screen.findByRole("alertdialog"));
   await context.user.click(discard.getByRole("button", { name: "继续编辑" }));
   expect((context.editor.getByRole("textbox", { name: "线路名称" }) as HTMLInputElement).value).toBe("More changes");
@@ -196,11 +196,11 @@ it.each([
 
 it("does not turn a colliding new identity into an update", async () => {
   const context = setup({ extra: call => call.path.endsWith("/published-routes") && call.method === "POST" ? json({ error: "Existing identity" }, 409) : undefined });
-  await context.user.click(await screen.findByRole("button", { name: "配置公开线路", exact: true }));
+  await context.user.click(await screen.findByRole("button", { name: "配置公开线路" }));
   const editor = within(await screen.findByRole("dialog", { name: "配置公开线路" }));
   fireEvent.change(editor.getByRole("textbox", { name: "线路名称" }), { target: { value: "My new line" } });
   await context.user.click(editor.getByRole("combobox", { name: "服务器转发路径" }));
-  await context.user.click(await screen.findByRole("option", { name: "path", exact: true }));
+  await context.user.click(await screen.findByRole("option", { name: "path" }));
   await context.user.click(editor.getByRole("button", { name: "检查公开线路" }));
   await context.user.click(await editor.findByRole("button", { name: "保存公开线路" }));
   await editor.findByText("Existing identity", { exact: true });
@@ -292,7 +292,7 @@ it("revokes a pending comparison when a newer server choice has no endpoint yet"
   await context.user.click(context.editor.getByRole("button", { name: "调整公开范围（仅当需要使用路径的一部分）" }));
   await context.user.click(context.editor.getByRole("button", { name: "读取最新版本并比较" }));
   await context.user.click(context.editor.getByRole("combobox", { name: "公开路径第 1 跳服务器" }));
-  await context.user.click(await screen.findByRole("option", { name: "Other host", exact: true }));
+  await context.user.click(await screen.findByRole("option", { name: "Other host" }));
   await waitFor(() => expect(context.editor.getByRole("button", { name: "检查公开线路" }).hasAttribute("disabled")).toBe(true));
   await act(async () => finish(json(latest)));
   expect(screen.queryByRole("dialog", { name: "比较公开线路修改" })).toBeNull();
