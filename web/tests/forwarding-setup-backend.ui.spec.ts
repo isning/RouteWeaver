@@ -209,6 +209,9 @@ for (const width of [1440, 390]) {
     expect(cores).toHaveLength(1);
     const core = cores[0];
     expect(core).toMatchObject({ name: names.core, hostId: host.id, adapterId: "routeweaver/managed-xray", version: "26.3.27-rw1" });
+    const coreSetup = page.getByRole("dialog", { name: `${names.host}的${names.core}`, exact: true });
+    await expect(coreSetup.getByText("核心配置已登记", { exact: true })).toBeVisible();
+    await coreSetup.getByRole("button", { name: "关闭", exact: true }).click();
     await expect(hostDetail).toBeVisible();
     await hostDetail.getByRole("button", { name: `为 ${names.core} 添加监听端点`, exact: true }).click();
 
@@ -462,3 +465,4 @@ for (const width of [1440, 390]) {
     });
   });
 }
+

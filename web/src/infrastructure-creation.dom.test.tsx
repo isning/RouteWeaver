@@ -645,11 +645,9 @@ describe("infrastructure creation user tasks", () => {
       ).getByRole("button", { name: /保\s*存/ }),
     );
     await waitFor(() => expect(writes[0]?.value.hostId).toBe("host-empty"));
-    expect(
-      await within(
-        await screen.findByRole("dialog", { name: "Empty server" }),
-      ).findByRole("button", { name: "为 sing-box 添加监听端点" }),
-    ).toBeTruthy();
+    const setup = within(await screen.findByRole("dialog", { name: "Empty server的sing-box" }));
+    expect(setup.getByText("核心配置已登记")).toBeTruthy();
+    expect(setup.getByRole("button", { name: "添加监听端点" })).toBeTruthy();
     expect(
       screen
         .getByRole("tab", { name: "服务器 3", hidden: true })
@@ -1343,3 +1341,4 @@ it("releases the pending enrollment guard after rejection and retains expiry for
   await screen.findByText("valid scope and expiry within one year required");
   await waitFor(() => expect(hasUnsavedChanges()).toBe(false));
 });
+

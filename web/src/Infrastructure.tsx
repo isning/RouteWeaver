@@ -31,7 +31,7 @@ import {
   Plus as PlusOutlined,
   RotateCw as ReloadOutlined,
 } from "lucide-react";
-import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useSaveNotice } from "./useSaveNotice";
 import { PolicyDateInput } from "./PolicyDateInput";
 import { AccountingRecovery } from "./AccountingRecovery";
@@ -101,7 +101,45 @@ export function ServersPage() {
   };
 
   const [instance, setInstance] = useState<CoreInstance | null>(null);
-  const data = query.data;
+  const [createdCores, setCreatedCores] = useState<CoreInstance[]>([]);
+  const [createdHosts, setCreatedHosts] = useState<HostRecord[]>([]);
+  // Retain only display identity from a confirmed write. Never place a revealed
+  // endpoint, credentials, or its revision token in the inventory query cache.
+  const [savedListeners, setSavedListeners] = useState<ManagedEndpoint[]>([]);
+  const instancePageOpener = useRef<HTMLElement | null>(null);
+  const instanceHostAction = useRef<string | null>(null);
+  const instanceResumeAction = useRef<string | null>(null);
+  const instanceActions = useRef(new Map<string, HTMLButtonElement>());
+  const openInstance = (value: CoreInstance) => {
+    ++editSequence.current;
+    setEditError(null);
+    instanceHostAction.current = host?.id === value.hostId ? `instance:${value.id}` : null;
+    instancePageOpener.current = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+    instanceResumeAction.current = null;
+    setInstance(value);
+  };
+  const data = useMemo(() => query.data && {
+    ...query.data,
+    hosts: [...query.data.hosts, ...createdHosts.filter((created) => !query.data!.hosts.some((saved) => saved.id === created.id))],
+    instances: [...query.data.instances, ...createdCores.filter((created) => !query.data!.instances.some((saved) => saved.id === created.id))],
+    endpoints: [...query.data.endpoints.filter((endpoint) => !savedListeners.some((saved) => saved.id === endpoint.id)), ...savedListeners],
+  }, [query.data, createdHosts, createdCores, savedListeners]);
+  useEffect(() => {
+    if (!query.data || query.isFetching || query.isError || query.isPaused) return;
+    // Drop write confirmations only after an authoritative inventory has caught
+    // up, so a later deletion never resurrects an already-reconciled record.
+    const unseenListeners = savedListeners.filter((saved) => !query.data!.endpoints.some((endpoint) =>
+      endpoint.id === saved.id && endpoint.instanceId === saved.instanceId &&
+      endpoint.name === saved.name && endpoint.connection.host === saved.connection.host &&
+      endpoint.connection.port === saved.connection.port && endpoint.connection.protocol === saved.connection.protocol));
+    if (unseenListeners.length !== savedListeners.length) setSavedListeners(unseenListeners);
+    const unseenCores = createdCores.filter((created) => !query.data!.instances.some((saved) => saved.id === created.id));
+    if (unseenCores.length !== createdCores.length) setCreatedCores(unseenCores);
+    const unseenHosts = createdHosts.filter((created) => !query.data!.hosts.some((saved) => saved.id === created.id));
+    if (unseenHosts.length !== createdHosts.length) setCreatedHosts(unseenHosts);
+  }, [query.data, query.isFetching, query.isError, query.isPaused, createdCores, createdHosts, savedListeners]);
   const label =
     tab === "hosts"
       ? "服务器"
@@ -257,7 +295,7 @@ export function ServersPage() {
                         render: (_, i) => (
                           <button
                             className="table-name inline-flex min-w-0 items-center gap-2 rounded-sm text-left text-sm font-medium text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                            onClick={() => setInstance(i)}
+                            onClick={() => openInstance(i)}
                           >
                             {coreName(i)}{" "}
                             <Badge variant="secondary">{i.version}</Badge>
@@ -282,7 +320,7 @@ export function ServersPage() {
                         render: (_, i) => (
                           <TableRowActions name={coreName(i)}>
                             <ActionButton
-                              onClick={() => setInstance(i)}
+                              onClick={() => openInstance(i)}
                               variant="outline"
                             >
                               查看状态
@@ -397,13 +435,30 @@ export function ServersPage() {
         onHostCreated={(created) => {
           hostPageOpener.current = pageCreateAction.current;
           hostResumeAction.current = "add-core";
+          setCreatedHosts((current) => [...current.filter((saved) => saved.id !== created.id), created]);
           setHost(created);
+        }}
+        onEndpointSaved={(saved) => {
+          setSavedListeners((current) => [...current.filter((entry) => entry.id !== saved.id), {
+            id: saved.id, instanceId: saved.instanceId, name: saved.name,
+            connection: {
+              host: saved.connection.host, port: saved.connection.port,
+              protocol: saved.connection.protocol,
+            },
+          }]);
+        }}
+        onCoreCreated={(created) => {
+          setCreatedCores((current) => [...current.filter((saved) => saved.id !== created.id), created]);
+          instanceHostAction.current = host?.id === created.hostId ? `instance:${created.id}` : null;
+          instancePageOpener.current = pageCreateAction.current;
+          instanceResumeAction.current = null;
+          setInstance(created);
         }}
       />
       <TaskSheet
         bodyProps={{ className: "space-y-5" }}
         title={host?.name}
-        open={!!host && !entity}
+        open={!!host && (!entity || !!instance)}
         initialFocus={() =>
           hostResumeAction.current
             ? (hostActions.current.get(hostResumeAction.current) ?? null)
@@ -446,13 +501,21 @@ export function ServersPage() {
                 </h2>
                 <p>{host.address}</p>
               </div>
+              <Badge variant="secondary">服务器信息已登记</Badge>
             </div>
+            {(query.isError || query.isPaused) && (
+              <Notice tone={query.isError ? "warning" : "info"}>
+                {query.isPaused ? "等待网络连接，服务器清单尚未刷新。" : "服务器清单刷新失败，以下保留已有记录与刚保存的配置。"}
+                {query.isError && <p>{query.error.message}</p>}
+                <ActionButton onClick={() => query.refetch()} variant="outline" size="sm">刷新服务器清单</ActionButton>
+              </Notice>
+            )}
             <Section
               title="核心实例"
               variant="plain"
               description={
                 data.instances.some((i) => i.hostId === host.id)
-                  ? "为核心配置监听端点，或查看接入与运行状态。"
+                  ? undefined
                   : "先添加核心，再配置监听端点"
               }
               extra={
@@ -465,7 +528,7 @@ export function ServersPage() {
                     hostResumeAction.current = "add-core";
                     edit(null, "core-instances", host.id);
                   }}
-                  variant="default"
+                  variant={data.instances.some((i) => i.hostId === host.id) ? "outline" : "default"}
                 >
                   添加核心
                 </ActionButton>
@@ -505,10 +568,14 @@ export function ServersPage() {
                         添加监听端点
                       </ActionButton>
                       <ActionButton
-                        onClick={() => setInstance(i)}
-                        variant="outline"
+                        ref={(node) => {
+                          if (node) hostActions.current.set(`instance:${i.id}`, node);
+                          else hostActions.current.delete(`instance:${i.id}`);
+                        }}
+                        onClick={() => openInstance(i)}
+                        variant="default"
                       >
-                        查看
+                        查看接入与配置
                       </ActionButton>
                     </div>
                   </div>
@@ -576,7 +643,33 @@ export function ServersPage() {
       <InstanceDetail
         instance={instance}
         inventory={data}
-        onClose={() => setInstance(null)}
+        savedListeners={savedListeners}
+        inventoryReadState={query.isPaused ? "paused" : query.isFetching ? "loading" : query.isError ? "error" : "ready"}
+        inventoryError={query.error}
+        onRefreshInventory={() => query.refetch()}
+        suspended={!!entity}
+        returnFocus={() =>
+          (instanceHostAction.current
+            ? hostActions.current.get(instanceHostAction.current) || hostActions.current.get("add-core")
+            : null) || instancePageOpener.current
+        }
+        onOpenEnrollment={() => {
+          ++editSequence.current;
+          setEditError(null);
+        }}
+        editError={editError}
+        resumeAction={instanceResumeAction}
+        actions={instanceActions}
+        onEditEndpoint={(endpoint) => {
+          if (!instance) return;
+          instanceResumeAction.current = endpoint?.id || "add-listener";
+          edit(endpoint, "managed-endpoints", instance.hostId, instance.id);
+        }}
+        onClose={() => {
+          ++editSequence.current;
+          setEditError(null);
+          setInstance(null);
+        }}
       />
     </>
   );
@@ -586,6 +679,8 @@ function InventoryEditor({
   inventory,
   onClose,
   onHostCreated,
+  onCoreCreated,
+  onEndpointSaved,
 }: {
   entity: {
     kind: string;
@@ -597,6 +692,8 @@ function InventoryEditor({
   inventory?: Infrastructure;
   onClose: () => void;
   onHostCreated: (host: HostRecord) => void;
+  onCoreCreated: (instance: CoreInstance) => void;
+  onEndpointSaved: (endpoint: ManagedEndpoint) => void;
 }) {
   const owner = useRef(entity);
   owner.current = entity;
@@ -704,6 +801,10 @@ function InventoryEditor({
       saveNotice(`${names[entity!.kind]}「${name}」已保存`);
       if (entity?.kind === "hosts" && !entity.value)
         onHostCreated(saved as HostRecord);
+      if (entity?.kind === "core-instances" && !entity.value)
+        onCoreCreated(saved as CoreInstance);
+      if (entity?.kind === "managed-endpoints")
+        onEndpointSaved(saved as ManagedEndpoint);
       onClose();
     },
   });
@@ -1379,22 +1480,71 @@ export function InstanceObservation({ instanceId }: { instanceId: string }) {
 function InstanceDetail({
   instance,
   inventory,
+  savedListeners,
+  inventoryReadState,
+  inventoryError,
+  onRefreshInventory,
+  suspended,
+  returnFocus,
+  onOpenEnrollment,
+  editError,
+  resumeAction,
+  actions,
+  onEditEndpoint,
   onClose,
 }: {
   instance: CoreInstance | null;
   inventory?: Infrastructure;
+  savedListeners: ManagedEndpoint[];
+  inventoryReadState: "loading" | "paused" | "error" | "ready";
+  inventoryError: Error | null;
+  onRefreshInventory: () => void;
+  suspended: boolean;
+  returnFocus: () => HTMLElement | null;
+  onOpenEnrollment: () => void;
+  editError: Error | null;
+  resumeAction: { current: string | null };
+  actions: { current: Map<string, HTMLButtonElement> };
+  onEditEndpoint: (endpoint: ManagedEndpoint | null) => void;
   onClose: () => void;
 }) {
   const [enrollmentOpen, setEnrollmentOpen] = useState(false);
+  const retained = savedListeners.filter((saved) => saved.instanceId === instance?.id);
+  const endpoints = inventory?.endpoints.filter((endpoint) => endpoint.instanceId === instance?.id);
+  const deployments = inventory?.deployments.filter((deployment) =>
+    deployment.ir.programs.some((program) => program.instance.id === instance?.id),
+  );
+  const rememberAction = (key: string) => (node: HTMLButtonElement | null) => {
+    if (node) actions.current.set(key, node);
+    else actions.current.delete(key);
+  };
   return (
     <TaskSheet
       bodyProps={{ className: "space-y-5" }}
       title={
         instance
-          ? `${inventory?.hosts.find((h) => h.id === instance.hostId)?.name || ""}的${coreName(instance)}`
+          ? `${inventory?.hosts.find((h) => h.id === instance.hostId)?.name || instance.hostId}的${coreName(instance)}`
           : ""
       }
-      open={!!instance}
+      open={!!instance && !suspended}
+      onCloseAutoFocus={(event) => {
+        event.preventDefault();
+        if (suspended) return;
+        queueMicrotask(() => {
+          const target = returnFocus();
+          const active = document.activeElement;
+          const activeTask = active instanceof HTMLElement
+            ? active.closest('[data-task-overlay][data-state="open"]')
+            : null;
+          if (activeTask && !activeTask.contains(target)) return;
+          if (target?.isConnected && !target.closest('[hidden],[inert],[aria-hidden="true"]') && !target.matches(":disabled"))
+            target.focus({ preventScroll: true });
+        });
+      }}
+      initialFocus={() => resumeAction.current
+        ? actions.current.get(resumeAction.current) ?? null
+        : null}
+      onReady={() => { resumeAction.current = null; }}
       onOpenChange={(next) => {
         if (!next) {
           setEnrollmentOpen(false);
@@ -1405,55 +1555,104 @@ function InstanceDetail({
     >
       {instance && (
         <>
-          <div className="section-heading flex flex-wrap items-start justify-between gap-3 mb-4">
-            <div>
-              <h2 className="text-base font-semibold tracking-tight">
-                {coreName(instance)}
-              </h2>
-              <p>版本 {instance.version}</p>
-            </div>
-            <ActionButton
-              leadingIcon={<KeyOutlined aria-hidden="true" />}
-              onClick={() => setEnrollmentOpen(true)}
-              variant="outline"
-            >
-              接入 Agent
-            </ActionButton>
+          <div className="space-y-1">
+            <p className="text-sm text-muted-foreground">核心配置已登记</p>
+            <h2 className="text-base font-semibold tracking-tight">{coreName(instance)}</h2>
+            <p className="text-sm text-muted-foreground">{instance.adapterId.replace(/^routeweaver\//, "")} {instance.version}</p>
           </div>
-          <Section title="运行状态">
+          <Section
+            title="1. Agent 接入与上报"
+            extra={
+              <ActionButton
+                leadingIcon={<KeyOutlined aria-hidden="true" />}
+                onClick={() => {
+                  onOpenEnrollment();
+                  setEnrollmentOpen(true);
+                }}
+                variant="outline"
+              >
+                接入 Agent
+              </ActionButton>
+            }
+          >
             <InstanceObservation instanceId={instance.id} />
           </Section>
-          <AccountingRecovery instanceId={instance.id} />
-          <Section title="监听端点" variant="plain">
-            {inventory &&
-              !inventory.endpoints.some(
-                (e) => e.instanceId === instance.id,
-              ) && (
-                <p className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-                  此核心尚未配置监听端点。
-                </p>
-              )}
-            {inventory?.endpoints
-              .filter((e) => e.instanceId === instance.id)
-              .map((e) => (
-                <div
-                  className="subscription-row flex flex-wrap items-center justify-between gap-3 rounded-lg border p-4"
-                  key={e.id}
-                >
-                  <div className="subscription-info min-w-0 space-y-1">
-                    <h3 className="text-sm font-semibold">{e.name}</h3>
-                    <p>
-                      <span className="block">
-                        {e.connection.host}:{e.connection.port}
-                      </span>
-                      <span className="block text-muted-foreground">
-                        {e.connection.protocol}
-                      </span>
-                    </p>
-                  </div>
+          <ErrorNotice error={editError} />
+          <Section
+            title="2. 配置监听端点"
+            variant="plain"
+            extra={
+              <ActionButton
+                ref={rememberAction("add-listener")}
+                onClick={() => onEditEndpoint(null)}
+                variant={endpoints?.length ? "outline" : "default"}
+              >
+                添加监听端点
+              </ActionButton>
+            }
+          >
+            {(retained.length > 0 || inventoryReadState !== "ready") && (
+              <Notice tone={inventoryReadState === "error" ? "warning" : "info"}>
+                {inventoryReadState === "error"
+                  ? retained.length ? "清单刷新失败，以下保留刚保存的监听端点。" : "清单刷新失败，以下为上次读取的监听端点。"
+                  : inventoryReadState === "paused"
+                    ? "等待网络连接，监听端点清单尚未刷新。"
+                    : inventoryReadState === "loading"
+                      ? "正在刷新监听端点清单。"
+                      : "监听端点已保存，清单尚未包含这次更新。"}
+                {inventoryReadState === "error" && <p>{inventoryError?.message}</p>}
+                {inventoryReadState !== "loading" && (
+                  <ActionButton onClick={onRefreshInventory} variant="outline" size="sm">刷新监听端点清单</ActionButton>
+                )}
+              </Notice>
+            )}
+            {endpoints?.length === 0 && inventoryReadState === "ready" && (
+              <p className="text-sm text-muted-foreground">此核心尚未配置监听端点。</p>
+            )}
+            {endpoints?.map((endpoint) => (
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-4" key={endpoint.id}>
+                <div className="min-w-0 space-y-1">
+                  <h3 className="break-words text-sm font-semibold">{endpoint.name}</h3>
+                  <p className="break-all text-sm">{endpoint.connection.host}:{endpoint.connection.port}</p>
+                  <p className="text-sm text-muted-foreground">{endpoint.connection.protocol}</p>
                 </div>
-              ))}
+                <ActionButton
+                  ref={rememberAction(endpoint.id)}
+                  aria-label={`编辑监听端点 ${endpoint.name}`}
+                  onClick={() => onEditEndpoint(endpoint)}
+                  variant="outline"
+                >
+                  编辑
+                </ActionButton>
+              </div>
+            ))}
           </Section>
+          <Section title="3. 配置转发路径" variant="plain">
+            {deployments?.length ? (
+              <div className="space-y-2">
+                {deployments.map((deployment) => (
+                  <ActionButton key={deployment.id} asChild variant="outline" className="h-auto max-w-full whitespace-normal text-left">
+                    <a href={`#routes?deployment=${encodeURIComponent(deployment.id)}`}>
+                      查看转发路径 {deployment.name}
+                    </a>
+                  </ActionButton>
+                ))}
+              </div>
+            ) : endpoints?.length ? (
+              <div className="space-y-3">
+                <p className="text-sm text-muted-foreground">监听端点已登记。选择它作为入口，配置流量的下一跳。</p>
+                <ActionButton asChild variant="default">
+                  <a href="#routes">前往转发路径</a>
+                </ActionButton>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">添加监听端点后，可用它配置转发路径。</p>
+            )}
+            {endpoints && endpoints.length > 0 && (
+              <p className="mt-3 text-sm text-muted-foreground">保存监听端点不会修改节点。转发路径需另行检查并确认应用。</p>
+            )}
+          </Section>
+          <AccountingRecovery instanceId={instance.id} />
           {enrollmentOpen && (
             <Enrollment
               key={`${instance.hostId}:${instance.id}`}
@@ -1546,6 +1745,9 @@ function Enrollment({
               "\u53EA\u5C06\u5B83\u914D\u7F6E\u5230\u6B64\u670D\u52A1\u5668\u7684\u5BF9\u5E94\u6838\u5FC3\u5B9E\u4F8B\u3002\u4E0D\u8981\u5206\u4EAB\u7ED9\u5176\u4ED6\u4EBA\u3002"
             }
           </Notice>
+          <p className="text-sm text-muted-foreground">
+            凭据创建不会安装或启动 Agent。请在对应服务器配置 Agent，再返回查看上报。
+          </p>
           <label className="standalone-label grid gap-2 text-sm font-medium mt-5">
             接入令牌
             <Input
@@ -1575,6 +1777,10 @@ function Enrollment({
               </AccordionItem>
             ))}
           </Accordion>
+          <div className="space-y-3 border-t pt-4">
+            <p className="text-sm text-muted-foreground">关闭后将清除此页显示的令牌，请先保存到对应服务器。</p>
+            <ActionButton onClick={close} variant="default">关闭令牌并查看实例</ActionButton>
+          </div>
         </>
       ) : (
         <AppForm<{ expiresAt: string }>
@@ -1630,3 +1836,4 @@ function Enrollment({
     </TaskDialog>
   );
 }
+
