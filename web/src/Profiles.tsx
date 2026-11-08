@@ -1802,7 +1802,7 @@ export function ProfileEditor({
                     <strong>{endpoints.length === 0 &&
                       !selectedSourceIds.length && !draft.collectionId &&
                       !draft.platformEntryIds?.length && !draft.ir.endpoints.length &&
-                      draft.ir.defaultAction.kind === "direct" &&
+                      (draft.ir.defaultAction.kind === "direct" || draft.ir.defaultAction.kind === "reject") &&
                       !draft.ir.rules.length && !draft.ir.groups.length
                       ? "直连与拒绝不需要代理连接"
                       : `${endpoints.length} 个有效连接`}</strong>

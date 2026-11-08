@@ -712,9 +712,9 @@ it.each(["dns-removed", ""])("keeps an empty DNS inventory with final %s through
 });
 
 
-it("starts with the traffic decision and treats a direct-only profile as valid without proxy sources", async () => {
+it.each(["direct", "reject"] as const)("starts with the traffic decision and allows %s without proxy sources", async (kind) => {
   const profile = { ...emptyProfile(), id: "direct-only", name: "Direct only" };
-  profile.ir.defaultAction = { kind: "direct" };
+  profile.ir.defaultAction = { kind };
   const { writes } = mount(profile);
   await screen.findByText("直连与拒绝不需要代理连接");
   const traffic = screen.getByRole("heading", { name: "默认流量去向" });
@@ -725,7 +725,7 @@ it("starts with the traffic decision and treats a direct-only profile as valid w
   await userEvent.click(screen.getByRole("button", { name: "保存草稿" }));
   await waitFor(() => expect(writes.some((write) => write.path.includes("/profiles"))).toBe(true));
   const saved = writes.find((write) => write.path.includes("/profiles"))!.body;
-  expect(saved.ir.defaultAction).toEqual({ kind: "direct" });
+  expect(saved.ir.defaultAction).toEqual({ kind });
   expect(saved.ir.groups).toEqual([]);
 });
 

@@ -280,6 +280,7 @@ it("makes direct group uses navigable and preserves their actions when removal i
   const { writes, editor } = mount(profile);
   const user = userEvent.setup();
   await user.click(editor.getByRole("tab", { name: "策略组" }));
+  { const summary = editor.getByText("Travel", { exact: true }).closest("summary")!; if (!summary.closest("details")!.open) await user.click(summary); }
   const group = editor.getByRole("group", { name: "策略组「Travel」" });
   expect(
     within(group).getByRole("button", { name: "用于默认流量" }),
@@ -291,6 +292,7 @@ it("makes direct group uses navigable and preserves their actions when removal i
     ),
   );
   await user.click(editor.getByRole("tab", { name: "策略组" }));
+  { const summary = editor.getByText("Travel", { exact: true }).closest("summary")!; if (!summary.closest("details")!.open) await user.click(summary); }
   await user.click(
     within(editor.getByRole("group", { name: "策略组「Travel」" })).getByRole(
       "button",
@@ -564,6 +566,7 @@ it("does not activate an unselected platform entry merely by renaming an existin
   });
   const user = userEvent.setup();
   await user.click(editor.getByRole("tab", { name: "策略组" }));
+  { const summary = editor.getByText("Travel", { exact: true }).closest("summary")!; if (!summary.closest("details")!.open) await user.click(summary); }
   fireEvent.change(editor.getByRole("textbox", { name: "策略组名称" }), {
     target: { value: "Renamed" },
   });
@@ -579,3 +582,4 @@ it("does not activate an unselected platform entry merely by renaming an existin
     },
   ]);
 });
+

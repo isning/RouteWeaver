@@ -1,3 +1,4 @@
+import { settledTask } from "./ui-settled-task";
 import { currentProfileFixtureHeaders } from "./profile-fixture";
 import { auditTextGeometry } from "./text-geometry";
 import { openWorkspace, navigateWorkspace } from "./ui-session";
@@ -720,7 +721,7 @@ for (const intent of ["endpoint", "direct"] as const) {
     ).toBeVisible();
     await page.getByRole("tab", { name: "策略组", exact: true }).click();
     const groups = page.getByRole("tabpanel", { name: "策略组", exact: true });
-    await expect(groups.getByText("暂无策略组", { exact: true })).toBeVisible();
+    await expect(groups.getByText("需要自动优选、故障切换或多个候选连接时，再添加策略组。", { exact: true })).toBeVisible();
     await expect(
       groups.getByRole("button", { name: "添加策略组", exact: true }),
     ).toBeVisible();
@@ -1084,10 +1085,24 @@ test("existing strategy groups remain editable and revoked recovery replaces onl
   await article.getByRole("button", { name: "编辑配置", exact: true }).click();
   await page.getByRole("tab", { name: "策略组", exact: true }).click();
   const groups = page.getByRole("tabpanel", { name: "策略组", exact: true });
+  const summary = groups.locator("summary").filter({ hasText: groupName });
+  await expect(summary).toBeVisible();
+  await expect(summary).toContainText("手动选择");
+  await expect(groups.getByLabel("策略组名称", { exact: true })).toBeHidden();
+  await summary.scrollIntoViewIfNeeded();
+  await settledTask(summary);
+  await page.screenshot({ path: testInfo.outputPath("populated-group-overview-desktop.png"), animations: "disabled" });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await summary.scrollIntoViewIfNeeded();
+  await settledTask(summary);
+  await expect(summary).toBeInViewport({ ratio: 1 });
+  await page.screenshot({ path: testInfo.outputPath("populated-group-overview-mobile.png"), animations: "disabled" });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await summary.click();
   await expect(groups.getByLabel("策略组名称", { exact: true })).toHaveValue(
     groupName,
   );
-  await expect(groups.getByText("暂无策略组", { exact: true })).toHaveCount(0);
+  await expect(groups.getByText("需要自动优选、故障切换或多个候选连接时，再添加策略组。", { exact: true })).toHaveCount(0);
   await expect(
     groups.getByRole("button", { name: "添加策略组", exact: true }),
   ).toHaveCount(1);
@@ -2854,3 +2869,4 @@ test("25 synthetic configurations and 100 independent links remain searchable, b
     capacityBenchmark: false,
   });
 });
+

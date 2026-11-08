@@ -155,6 +155,16 @@ for (const width of [1440, 390]) {
       await card.getByRole("button", { name: "编辑配置", exact: true }).click();
       const editor = page.locator(".profile-intent-editor");
       const editorURL = page.url();
+      const defaultTraffic = editor.getByRole("combobox", { name: "默认流量行为", exact: true });
+      await expect(defaultTraffic).toBeVisible();
+      expect(await editor.evaluate((element) => {
+        const traffic = element.querySelector(".profile-traffic-task")!;
+        const sources = element.querySelector(".profile-input-task")!;
+        return !!(traffic.compareDocumentPosition(sources) & Node.DOCUMENT_POSITION_FOLLOWING);
+      }), "Traffic decision precedes optional connection setup in reading and keyboard order").toBe(true);
+      await defaultTraffic.scrollIntoViewIfNeeded();
+      await uncovered(defaultTraffic);
+      await capture("default-first", editor);
       await editor.getByRole("tab", { name: "策略组", exact: true }).click();
       await editor.getByRole("button", { name: "添加策略组", exact: true }).click();
       await editor.getByRole("textbox", { name: "策略组名称", exact: true }).fill(names.group);
@@ -207,6 +217,21 @@ for (const width of [1440, 390]) {
 
       await editor.getByRole("tab", { name: "策略组", exact: true }).click();
       const group = editor.getByRole("group", { name: `策略组「${names.group}」`, exact: true });
+      const groupDetails = editor.locator("details").filter({ has: page.locator("summary").getByText(names.group, { exact: true }) });
+      const groupSummary = groupDetails.locator(":scope > summary");
+      // Review the saved configuration through its overview before opening fields.
+      if (await groupDetails.evaluate((element) => (element as HTMLDetailsElement).open)) await groupSummary.click();
+      await expect(groupDetails).not.toHaveAttribute("open", "");
+      await expect(groupSummary).toContainText(names.group);
+      await expect(groupSummary).toContainText("手动选择，1 个固定候选");
+      await expect(groupSummary).toContainText("直连");
+      await expect(groupSummary).toContainText("用于规则 1");
+      await groupSummary.scrollIntoViewIfNeeded();
+      await uncovered(groupSummary);
+      await capture("group-overview", editor);
+      await groupSummary.focus();
+      await page.keyboard.press("Enter");
+      await expect(groupDetails).toHaveAttribute("open", "");
       await expect(group.getByRole("textbox", { name: "策略组名称", exact: true })).toHaveValue(names.group);
       await expect(group.getByRole("button", { name: "移除 直连", exact: true })).toBeVisible();
       await group.scrollIntoViewIfNeeded();
@@ -410,3 +435,4 @@ for (const width of [1440, 390]) {
     }
   });
 }
+
