@@ -135,6 +135,11 @@ func RunDriver(parent context.Context, r *Reconciler, tr ControlPlaneTransport, 
 				state := r.State()
 				live := state.Observed != nil && state.Observed.AdapterID == ManagedXrayID
 				if err := CollectManagedCounters(ctx, r.Root(), meter, live); err != nil {
+					// Parent cancellation interrupts live collection normally. The
+					// fresh shutdown collection below must still succeed on its own.
+					if ctx.Err() != nil && errors.Is(err, ctx.Err()) {
+						return
+					}
 					select {
 					case meterErrors <- err:
 					default:
