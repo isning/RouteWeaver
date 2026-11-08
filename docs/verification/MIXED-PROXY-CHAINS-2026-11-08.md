@@ -115,11 +115,44 @@ test does not establish production quota, subscription or billing behavior.
 Native port reservations, owned process shutdown and failure evidence retention
 are part of the harness. No external host or DNS name is contacted.
 
+## Sustained-flow enforcement checkpoint
+
+Commit `de89cd8fd5294a94c392ae905b3670138f3f7a0e` passed the
+[focused managed runtime job](https://github.com/isning/RouteWeaver/actions/runs/42499257814/job/128788215942)
+with `-race -count=1` and the explicit `Managed.*Detour|NativeTwoDetours` test
+selection. The runtime package passed in 22.420 seconds. The command subpackage
+reported no matching tests and is not counted as traffic evidence. The complete
+[focused workflow](https://github.com/isning/RouteWeaver/actions/runs/42499257814)
+also passed formatting, root-package mixed regressions and the UI suites.
+
+The new runtime tests use the pinned embedded Xray module, three real VLESS
+proxy listeners and two detour edges. They require:
+
+- One logical admission presence with the physical client's IP and correct
+  account/route/entry attribution. An 8192-byte upload and echo produce exactly
+  16384 accounted payload bytes, without multiplying by the proxy count.
+- Account revocation, unavailable-authority lease expiry and a 16389-byte
+  combined budget stop existing streams. A larger rate-queued write is also
+  revoked while active, rather than only testing an idle connection.
+- Default-private IP/DNS, UDP and explicit admission denial make no connector
+  connection and admit no payload.
+- Final counters match the durable journal. Final requests attempted while the
+  authority is unavailable are explicitly distinct from accepted settlement.
+- Payload counters remain frozen after cutoff and received bytes never exceed
+  already-admitted upload. Physical socket cleanup has a separate six-second
+  watchdog derived from the upstream per-layer half-close timers; no forced
+  runtime close is used to manufacture that result.
+
+The initial focused command was non-verbose, so it does not supply individual
+cutoff/cleanup durations. The follow-up JSON event gate requires every named
+parent and all eight sustained-flow/denial scenarios to pass, rejects skipped
+tests, and preserves individual assertion logs for subsequent verification.
+
 ## Gate integrity and limits
 
 Parser/process selectors and required-result checks include the new tests.
 Missing, failed or unexpectedly skipped selected tests cannot satisfy the gates.
-Twenty-seven offline shell-gate/bootstrap tests passed locally; these synthetic event tests
+Thirty-one offline shell-gate/bootstrap tests passed locally; these synthetic event tests
 verify the gate behavior and are not native-runtime evidence.
 
 The traffic matrix covers TCP SOCKS5 external connectors and VLESS listeners.

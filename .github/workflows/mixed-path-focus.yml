@@ -77,6 +77,28 @@ jobs:
         with:
           go: "true"
       - name: Run exact-source managed detour regressions
-        run: >-
-          scripts/go.sh -C runtimes/xray test -race -p=1 -count=1 -timeout=5m
-          -run 'Test(Managed.*Detour|NativeTwoDetours)' ./...
+        shell: bash
+        run: |
+          mkdir -p bin/verification
+          scripts/go.sh -C runtimes/xray test -json -race -p=1 -count=1 -timeout=5m \
+            -run 'Test(Managed.*Detour|NativeTwoDetours)' ./... | tee bin/verification/managed-detour-focused.jsonl
+          python3 - <<'PY'
+          import json
+          events = [json.loads(line) for line in open('bin/verification/managed-detour-focused.jsonl') if line.strip()]
+          package = 'routeweaver/runtimes/xray'
+          cutoff = 'TestNativeTwoDetoursPreserveSingleAdmissionAccountingAndCutoff'
+          denial = 'TestNativeTwoDetoursDoNotBypassDestinationOrAdmissionDenial'
+          required = {
+              'TestManagedAcceptsOnlyScopedAcyclicOutboundDetours',
+              'TestManagedRejectsAmbiguousOrUnsupportedDetourGraphs',
+              'TestManagedDetourSocketOptionsFailClosed',
+              cutoff, denial, 'TestNativeTwoDetoursRevokeInterruptsRateQueuedPayload',
+              *(cutoff + '/' + name for name in ('revoke', 'lease_expiry', 'byte_budget')),
+              *(denial + '/' + name for name in ('private_IP', 'private_DNS', 'packet_destination', 'admission')),
+          }
+          passed = {event.get('Test') for event in events if event.get('Package') == package and event.get('Action') == 'pass'}
+          skipped = [event.get('Test') for event in events if event.get('Package') == package and event.get('Action') == 'skip']
+          if required - passed or skipped:
+              raise SystemExit(f'Managed detour gate incomplete: missing={sorted(required - passed)}, skipped={skipped}')
+          print('PASS: strict detour validation and all eight sustained-flow/denial scenarios; no skipped managed detour tests.')
+          PY
