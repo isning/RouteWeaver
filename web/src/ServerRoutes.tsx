@@ -76,6 +76,7 @@ import { publicationRejectionMessage } from "./publication-request";
 import { routeGraphNodes, type RouteGraphNode } from "./route-graph-nodes";
 import { ServerPathSummary, ServerPathWorkspace } from "./ServerPathWorkspace";
 import { ServerForwarding } from "./ServerForwarding";
+import { ServerPolicyEditor } from "./ServerPolicyEditor";
 import { TLSMaterial } from "./TLSMaterial";
 import type {
   Infrastructure,
@@ -584,9 +585,10 @@ export function ServerRoutesPage({
     </>
   );
 }
-function ServerRouteEditor({
+export function ServerRouteEditor({
   initial,
   initialRefreshEndpoint,
+  initialSection,
   returnServerHref,
   inventory,
   isNew,
@@ -595,6 +597,7 @@ function ServerRouteEditor({
 }: {
   initial: ServerDeployment;
   initialRefreshEndpoint?: string;
+  initialSection?: "tls";
   returnServerHref?: string;
   inventory: Infrastructure;
   isNew: boolean;
@@ -717,17 +720,19 @@ function ServerRouteEditor({
       return false;
     }
   };
-  const updateProgram = (index: number, patch: Partial<ServerProgram>) =>
+  const updateProgram = (index: number, patch: Partial<ServerProgram>) => {
+    const current = latestDraft.current;
     update({
-      ...draft,
+      ...current,
       ir: {
-        ...draft.ir,
+        ...current.ir,
         topologyRevision: newID("topology"),
-        programs: draft.ir.programs.map((p, i) =>
+        programs: current.ir.programs.map((p, i) =>
           i === index ? { ...p, ...patch } : p,
         ),
       },
     });
+  };
   const updateReality = (
     index: number,
     patch: Partial<NonNullable<ServerTLS["reality"]>>,
@@ -928,12 +933,17 @@ function ServerRouteEditor({
           {announcement}
         </div>
         {!chainEditable ? (
-          <div className="server-policy-edit space-y-3 rounded-lg border p-4">
-            <p>当前转发由各监听的规则和默认去向决定。</p>
-            <ActionButton onClick={editIntent} variant="outline">
-              编辑转发设置
-            </ActionButton>
-          </div>
+          <ServerPolicyEditor
+            programs={draft.ir.programs}
+            schemaVersion={draft.ir.schemaVersion}
+            inventory={inventory}
+            onDefaultActionChange={(index, defaultAction) => {
+              updateProgram(index, { defaultAction });
+              setAnnouncement("默认去向已更新到草稿，尚未保存。");
+            }}
+            onRefreshListener={setRefreshingListener}
+            onEditJSON={editIntent}
+          />
         ) : view === "graph" ? (
           <>
             <ServerPathSummary programs={draft.ir.programs} />
@@ -968,16 +978,7 @@ function ServerRouteEditor({
             changing={pathLoading}
           />
         )}
-        {!chainEditable && draft.ir.programs.length > 0 && (
-          <div className="settings-section space-y-5 rounded-xl border bg-card p-5">
-            <ServerForwarding
-              programs={draft.ir.programs}
-              inventory={inventory}
-              onRefreshListener={setRefreshingListener}
-            />
-          </div>
-        )}
-        <Accordion type="multiple" defaultValue={[]} className="w-full">
+        <Accordion type="multiple" defaultValue={initialSection ? [initialSection] : []} className="w-full">
           {chainEditable && draft.ir.programs.length > 0 && (
             <AccordionItem value="listener-details">
               <AccordionTrigger>监听快照与转发详情</AccordionTrigger>

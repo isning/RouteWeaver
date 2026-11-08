@@ -1,0 +1,256 @@
+import type { Locator, Page, TestInfo } from "@playwright/test";
+import { test, expect } from "./isolated-control-plane-fixture";
+import { requireLoopback } from "./account-security-backend";
+import { headers, read, signIn } from "./uiux-inventory-helper";
+import { settledTask } from "./ui-settled-task";
+
+// Real isolated HTTP persistence with synthetic inventory. No live runtime
+// enrollment, validation/application request, mocked API or external traffic.
+test.use({
+  trace: "off",
+  screenshot: "off",
+  video: "off",
+  reducedMotion: "no-preference",
+});
+
+async function capture(
+  page: Page,
+  info: TestInfo,
+  editor: Locator,
+  target: Locator,
+  name: string,
+) {
+  await target.scrollIntoViewIfNeeded();
+  await settledTask(editor);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth + 1,
+    ),
+  ).toBe(true);
+  expect(
+    await editor.evaluate((element) => {
+      const box = element.getBoundingClientRect();
+      return (
+        box.left >= -1 &&
+        box.right <= innerWidth + 1 &&
+        element.scrollWidth <= element.clientWidth + 1
+      );
+    }),
+  ).toBe(true);
+  await expect(target).toBeInViewport({ ratio: 1 });
+  expect(
+    await target.evaluate((element) => {
+      const box = element.getBoundingClientRect();
+      const hit = document.elementFromPoint(
+        box.left + box.width / 2,
+        box.top + box.height / 2,
+      );
+      return !!hit && element.contains(hit);
+    }),
+  ).toBe(true);
+  const path = info.outputPath(`${name}-${page.viewportSize()!.width}.png`);
+  await page.screenshot({ path, fullPage: false });
+  await info.attach(name, { path, contentType: "image/png" });
+}
+
+for (const width of [1440, 390]) {
+  test(`conditional policy edits preserve connector and rule identity through real save at ${width}px`, async ({
+    page,
+    baseURL,
+  }, info) => {
+    requireLoopback(baseURL);
+    await page.setViewportSize({ width, height: 900 });
+    await signIn(page, baseURL, "admin");
+    const csrf = await headers(page.request);
+    const instance = {
+      id: "policy-core",
+      hostId: "policy-server",
+      name: "Policy core",
+      adapterId: "routeweaver/sing-box",
+      version: "1.14.4",
+    };
+    const listener = {
+      id: "policy-entry",
+      instanceId: instance.id,
+      name: "条件转发入口",
+      connection: {
+        protocol: "socks",
+        host: "127.0.0.1",
+        port: 23180,
+        username: "fixture",
+        password: "synthetic-listener-only",
+      },
+    };
+    const deployment = {
+      id: "conditional-policy",
+      name: "按域名转发",
+      status: "draft",
+      diagnostics: [],
+      ir: {
+        schemaVersion: "1.0",
+        id: "conditional-policy",
+        topologyRevision: "policy-original",
+        programs: [
+          {
+            instance,
+            listener,
+            egress: [],
+            resources: [],
+            connectors: [
+              {
+                id: "transit",
+                connection: {
+                  protocol: "socks",
+                  host: "127.0.0.1",
+                  port: 23181,
+                  username: "fixture",
+                  password: "synthetic-transit-only",
+                },
+              },
+              {
+                id: "exit",
+                via: "transit",
+                connection: {
+                  protocol: "socks",
+                  host: "127.0.0.1",
+                  port: 23182,
+                  username: "fixture",
+                  password: "synthetic-exit-only",
+                },
+              },
+            ],
+            rules: [
+              {
+                id: "selected-domain",
+                match: {
+                  op: "domain-suffix",
+                  value: "selected.example.invalid",
+                },
+                action: { kind: "forward", ref: "exit" },
+              },
+              {
+                id: "blocked-domain",
+                match: { op: "domain", value: "blocked.example.invalid" },
+                action: { kind: "reject" },
+              },
+            ],
+            defaultAction: { kind: "reject" },
+          },
+        ],
+      },
+    };
+    for (const [path, data] of [
+      [
+        "/hosts",
+        { id: "policy-server", name: "策略服务器", address: "127.0.0.1" },
+      ],
+      ["/core-instances", instance],
+      ["/managed-endpoints", listener],
+      ["/server-deployments", deployment],
+    ] as const) {
+      const response = await page.request.post(`/api${path}`, {
+        headers: csrf,
+        data,
+      });
+      expect(response.status(), `Create synthetic ${path}`).toBe(200);
+    }
+    const before = await read(
+      page.request,
+      "/server-deployments/conditional-policy/reveal",
+    );
+    const mutations: string[] = [];
+    page.on("request", (request) => {
+      const path = new URL(request.url()).pathname;
+      if (
+        path.startsWith("/api/") &&
+        !["GET", "HEAD"].includes(request.method())
+      )
+        mutations.push(`${request.method()} ${path}`);
+    });
+    await page.goto("/#routes");
+    await page
+      .getByRole("button", { name: "编辑转发路径 按域名转发", exact: true })
+      .click();
+    const editor = page.getByRole("dialog", {
+      name: "编辑 按域名转发",
+      exact: true,
+    });
+    await expect(
+      editor.getByRole("tab", { name: "图形编辑", exact: true }),
+    ).toHaveCount(0);
+    const destination = editor.getByRole("combobox", {
+      name: "条件转发入口 默认去向",
+      exact: true,
+    });
+    await expect(destination).toContainText("拒绝连接");
+    await capture(page, info, editor, destination, "policy-default-action");
+    await destination.focus();
+    await page.keyboard.press("Enter");
+    const search = page.getByRole("combobox", {
+      name: "搜索选项",
+      exact: true,
+    });
+    await expect(search).toBeFocused();
+    await search.fill("exit");
+    await expect(
+      page.getByRole("option", { name: "转发至连接器 exit", exact: true }),
+    ).toBeVisible();
+    await search.press("Enter");
+    await expect(destination).toContainText("转发至连接器 exit");
+    await expect(destination).toBeFocused();
+    expect(mutations).toEqual([]);
+    await page.keyboard.press("Escape");
+    const discard = page.getByRole("alertdialog", {
+      name: "放弃尚未保存的转发路径修改？",
+      exact: true,
+    });
+    await discard
+      .getByRole("button", { name: "继续编辑", exact: true })
+      .click();
+    await expect(destination).toContainText("转发至连接器 exit");
+    await editor.getByText("连接器与策略依赖", { exact: true }).click();
+    const connectors = editor.getByRole("region", {
+      name: "条件转发入口的连接器",
+      exact: true,
+    });
+    await expect(connectors).toContainText("127.0.0.1:23181 → 127.0.0.1:23182");
+    await expect(editor).not.toContainText(
+      /synthetic-listener-only|synthetic-transit-only|synthetic-exit-only/,
+    );
+    await capture(
+      page,
+      info,
+      editor,
+      connectors.getByText("经由连接器 transit", { exact: true }),
+      "policy-connector-dependencies",
+    );
+    const consequence = editor.getByText("仅保存草稿，检查与应用需另行操作。", {
+      exact: true,
+    });
+    await capture(page, info, editor, consequence, "policy-save-consequence");
+    const saved = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname ===
+          "/api/server-deployments/conditional-policy" &&
+        response.request().method() === "PUT",
+    );
+    await editor.getByRole("button", { name: "保存草稿", exact: true }).click();
+    expect((await saved).status()).toBe(200);
+    await expect(editor).toBeHidden();
+    const after = await read(
+      page.request,
+      "/server-deployments/conditional-policy/reveal",
+    );
+    expect(after.ir.programs).toEqual([
+      {
+        ...before.ir.programs[0],
+        defaultAction: { kind: "forward", ref: "exit" },
+      },
+    ]);
+    expect(after.ir.topologyRevision).not.toBe(before.ir.topologyRevision);
+    expect(await read(page.request, "/admin/fleet-batches")).toEqual([]);
+    expect(mutations).toEqual([
+      "PUT /api/server-deployments/conditional-policy",
+    ]);
+  });
+}

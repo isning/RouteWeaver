@@ -145,7 +145,7 @@ function connectors(program: ServerProgram) {
         via: index ? `egress-${index}` : undefined,
       }));
 }
-function connectorPath(
+export function connectorPath(
   program: ServerProgram,
   id: string,
   visited = new Set<string>(),
@@ -160,7 +160,7 @@ function connectorPath(
     ? `${connectorPath(program, connector.via, next)} → ${target}`
     : target;
 }
-function actionLabel(program: ServerProgram, action?: ActionRef) {
+export function actionLabel(program: ServerProgram, action?: ActionRef) {
   if (program.egress?.length && program.connectors?.length)
     return "转发设置冲突：同时配置了两种出口";
   if (action?.kind === "reject") return "拒绝连接";
@@ -169,7 +169,7 @@ function actionLabel(program: ServerProgram, action?: ActionRef) {
     return `转发至 ${connectorPath(program, action.ref || "")}`;
   return action?.kind ? `未识别的处理方式：${action.kind}` : "未设置处理方式";
 }
-function defaultLabel(program: ServerProgram) {
+export function defaultLabel(program: ServerProgram) {
   if (program.defaultAction?.kind)
     return actionLabel(program, program.defaultAction);
   if (program.defaultAction?.ref) return "未设置默认处理";
@@ -181,7 +181,7 @@ function defaultLabel(program: ServerProgram) {
   if (program.connectors?.length) return "未设置默认处理";
   return "直连";
 }
-function matchLabel(match?: MatchExpression, depth = 0): string {
+export function matchLabel(match?: MatchExpression, depth = 0): string {
   // Match validation has the same safety limit in domain/profile_validation.go.
   if (depth > 128) return "条件过于复杂，摘要未展开";
   if (!match) return "未识别条件：未指定";
@@ -210,3 +210,4 @@ function matchLabel(match?: MatchExpression, depth = 0): string {
       return `未识别条件：${match.op || "未指定"}`;
   }
 }
+

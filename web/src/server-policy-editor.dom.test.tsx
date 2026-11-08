@@ -1,0 +1,652 @@
+// @vitest-environment jsdom
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import {
+  act,
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { UIProviders } from "./ui-patterns/providers";
+import { ServerRoutesPage } from "./ServerRoutes";
+import { hasUnsavedChanges } from "./navigation";
+import type { ServerDeployment } from "./types";
+
+beforeEach(() => {
+  vi.stubEnv("NODE_ENV", "development");
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    value: () => ({
+      matches: false,
+      addListener() {},
+      removeListener() {},
+      addEventListener() {},
+      removeEventListener() {},
+    }),
+  });
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    },
+  );
+  const original = window.getComputedStyle;
+  vi.spyOn(window, "getComputedStyle").mockImplementation((element) =>
+    original(element),
+  );
+});
+afterEach(() => {
+  cleanup();
+  history.replaceState(null, "", "#routes");
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
+});
+
+function setup(change?: (draft: ServerDeployment) => void) {
+  const instance = {
+    id: "core",
+    hostId: "server",
+    name: "Core",
+    adapterId: "routeweaver/sing-box",
+    version: "1.14.4",
+  };
+  const listener = {
+    id: "entry",
+    name: "Policy entry",
+    instanceId: instance.id,
+    connection: {
+      protocol: "socks",
+      host: "0.0.0.0",
+      port: 1080,
+      username: "fixture",
+      password: "listener-secret-fixture",
+    },
+  };
+  const deployment: ServerDeployment = {
+    id: "policy",
+    name: "Policy draft",
+    revisionToken: "policy-r1",
+    status: "draft",
+    diagnostics: [],
+    ir: {
+      schemaVersion: "1.0",
+      id: "policy",
+      topologyRevision: "topology-r1",
+      programs: [
+        {
+          instance,
+          listener,
+          egress: [],
+          connectors: [
+            {
+              id: "transit",
+              connection: {
+                protocol: "socks",
+                host: "transit.invalid",
+                port: 1080,
+                username: "fixture",
+                password: "connector-secret-fixture",
+              },
+            },
+            {
+              id: "exit",
+              via: "transit",
+              connection: {
+                protocol: "vless",
+                host: "exit.invalid",
+                port: 443,
+                uuid: "connector-uuid-fixture",
+                tls: { enabled: true, serverName: "exit.invalid" },
+              },
+            },
+          ],
+          rules: [
+            {
+              id: "private",
+              match: { op: "resource", value: "private-domains" },
+              action: { kind: "forward", ref: "exit" },
+            },
+            {
+              id: "blocked",
+              match: { op: "domain", value: "blocked.invalid" },
+              action: { kind: "reject" },
+            },
+          ],
+          resources: [
+            {
+              id: "private-domains",
+              name: "Private domains",
+              revision: "resource-r1",
+              digest: "digest-fixture",
+              format: "sing-box-source",
+              formatVersion: 3,
+              location: "remote",
+              url: "https://rules.invalid/private?token=resource-secret-fixture",
+              updatePolicy: "manual",
+              intervalSeconds: 3600,
+            },
+          ],
+          tls: {
+            certificatePath: "/fixtures/server.pem",
+            keyPath: "/fixtures/server.key",
+          },
+          defaultAction: { kind: "reject" },
+        },
+      ],
+    },
+  };
+  change?.(deployment);
+  const requests: string[] = [];
+  const saved: ServerDeployment[] = [];
+  const saveHeaders: Headers[] = [];
+  const unexpected: string[] = [];
+  let revealGate: Promise<void> | undefined;
+  const summary = (value: unknown) =>
+    JSON.parse(
+      JSON.stringify(value, (key, child) =>
+        ["password", "username", "uuid", "privateKeyPem"].includes(key)
+          ? undefined
+          : child,
+      ),
+    );
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url, init) => {
+      const path = String(url),
+        method = init?.method || "GET";
+      requests.push(`${method} ${path}`);
+      let value: unknown;
+      if (path === "/api/hosts" && method === "GET")
+        value = [{ id: "server", name: "Server", address: "server.invalid" }];
+      else if (path === "/api/core-instances" && method === "GET")
+        value = deployment.ir.programs.map((program) => program.instance);
+      else if (path === "/api/managed-endpoints" && method === "GET")
+        value = summary(
+          deployment.ir.programs.map((program) => program.listener),
+        );
+      else if (path === "/api/links" && method === "GET") value = [];
+      else if (path === "/api/server-deployments" && method === "GET")
+        value = summary([saved.at(-1) || deployment]);
+      else if (
+        path === "/api/server-deployments/policy/reveal" &&
+        method === "GET"
+      ) {
+        if (revealGate) await revealGate;
+        value = saved.at(-1) || deployment;
+      } else if (
+        path === "/api/server-deployments/policy" &&
+        method === "PUT"
+      ) {
+        const next = JSON.parse(String(init?.body));
+        saved.push(next);
+        saveHeaders.push(new Headers(init?.headers));
+        value = { ...summary(next), revisionToken: "policy-r2" };
+      } else if (path.endsWith("/state") && method === "GET")
+        value = { phase: "unregistered" };
+      else {
+        unexpected.push(`${method} ${path}`);
+        return new Response(
+          JSON.stringify({ detail: "Unexpected policy editor request" }),
+          { status: 503 },
+        );
+      }
+      return new Response(JSON.stringify(value), {
+        headers: { "Content-Type": "application/json" },
+      });
+    }),
+  );
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <UIProviders>
+        <ServerRoutesPage />
+      </UIProviders>
+    </QueryClientProvider>,
+  );
+  return {
+    deployment,
+    requests,
+    saved,
+    saveHeaders,
+    unexpected,
+    delayReveal: (gate: Promise<void>) => {
+      revealGate = gate;
+    },
+  };
+}
+
+async function openEditor(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(
+    await screen.findByRole("button", { name: "编辑转发路径 Policy draft" }),
+  );
+  return screen.findByRole("dialog", { name: "编辑 Policy draft" });
+}
+
+it.each(["Shared core", undefined] as const)(
+  "distinguishes same-named listeners on two cores and edits only the selected saved program (core name: %s)",
+  async (coreName) => {
+    const user = userEvent.setup();
+    const fixture = setup((draft) => {
+      const first = draft.ir.programs[0];
+      first.instance.name = coreName;
+      first.listener.name = "Shared entry";
+      draft.ir.programs.push({
+        ...structuredClone(first),
+        instance: { ...first.instance, id: "core-b" },
+        listener: { ...first.listener, id: "entry-b", instanceId: "core-b" },
+      });
+    });
+    const editor = await openEditor(user);
+    const coreLabel = coreName || "sing-box";
+    const firstIdentity = `Shared entry，核心 ${coreLabel}，核心标识 core，监听标识 entry`;
+    const secondIdentity = `Shared entry，核心 ${coreLabel}，核心标识 core-b，监听标识 entry-b`;
+    const first = within(editor).getByRole("region", {
+      name: `${firstIdentity}的策略设置`,
+    });
+    const second = within(editor).getByRole("region", {
+      name: `${secondIdentity}的策略设置`,
+    });
+    for (const [card, coreID, listenerID] of [
+      [first, "core", "entry"],
+      [second, "core-b", "entry-b"],
+    ] as const) {
+      expect(within(card).getByText(coreLabel, { exact: true })).toBeTruthy();
+      const identities = within(card).getByRole("group", {
+        name: "监听与核心身份",
+      });
+      expect((identities as HTMLDetailsElement).open).toBe(true);
+      expect(
+        within(identities).getByText(coreID, { exact: true }),
+      ).toBeTruthy();
+      expect(
+        within(identities).getByText(listenerID, { exact: true }),
+      ).toBeTruthy();
+    }
+    expect(
+      within(first).getByRole("button", {
+        name: `检查监听更新 ${firstIdentity}`,
+      }),
+    ).toBeTruthy();
+    const selectedDefault = within(second).getByRole("combobox", {
+      name: `${secondIdentity} 默认去向`,
+    });
+    await user.click(selectedDefault);
+    await user.click(await screen.findByRole("option", { name: "直连" }));
+    expect(
+      within(first).getByRole("combobox", { name: `${firstIdentity} 默认去向` })
+        .textContent,
+    ).toBe("拒绝连接");
+    expect(selectedDefault.textContent).toBe("直连");
+    expect(fixture.saved).toEqual([]);
+    await user.click(within(editor).getByRole("button", { name: "保存草稿" }));
+    await waitFor(() => expect(fixture.saved).toHaveLength(1));
+    expect(fixture.saved[0].ir.programs).toEqual([
+      fixture.deployment.ir.programs[0],
+      {
+        ...fixture.deployment.ir.programs[1],
+        defaultAction: { kind: "direct" },
+      },
+    ]);
+    expect(fixture.unexpected).toEqual([]);
+  },
+);
+
+it("edits an existing conditional program's default destination and saves only that intent, preserving dependencies and unknown fields", async () => {
+  const user = userEvent.setup();
+  const fixture = setup((draft) => {
+    Object.assign(draft.ir, { futureEnvelope: { enabled: true } });
+    Object.assign(draft.ir.programs[0], {
+      futurePolicy: { mode: "retained", entries: [2, 1] },
+    });
+    Object.assign(draft.ir.programs[0].rules[0], { futureRule: "retained" });
+    Object.assign(draft.ir.programs[0].connectors![1], {
+      futureConnector: { enabled: false },
+    });
+  });
+  const editor = await openEditor(user);
+  expect(within(editor).queryByRole("tab", { name: "图形编辑" })).toBeNull();
+  expect(
+    within(editor).queryByRole("combobox", { name: /下一跳|第.*跳/ }),
+  ).toBeNull();
+  await user.click(
+    within(editor).getByRole("combobox", { name: "Policy entry 默认去向" }),
+  );
+  await user.click(
+    await screen.findByRole("option", { name: "转发至连接器 exit" }),
+  );
+  expect(fixture.saved).toEqual([]);
+  expect(
+    fixture.requests.filter((request) => !request.startsWith("GET ")),
+  ).toEqual([]);
+  expect(editor.textContent).not.toMatch(
+    /listener-secret-fixture|connector-secret-fixture|connector-uuid-fixture|resource-secret-fixture/,
+  );
+  await user.click(within(editor).getByRole("button", { name: "保存草稿" }));
+  await waitFor(() => expect(fixture.saved).toHaveLength(1));
+  const sent = fixture.saved[0];
+  expect(sent.ir.programs[0]).toEqual({
+    ...fixture.deployment.ir.programs[0],
+    defaultAction: { kind: "forward", ref: "exit" },
+  });
+  expect(sent.ir).toMatchObject({
+    schemaVersion: "1.0",
+    id: "policy",
+    futureEnvelope: { enabled: true },
+  });
+  expect(sent.ir.topologyRevision).not.toBe("topology-r1");
+  expect(fixture.saveHeaders[0].get("If-Match")).toBe("policy-r1");
+  expect(
+    fixture.requests.filter((request) => !request.startsWith("GET ")),
+  ).toEqual(["PUT /api/server-deployments/policy"]);
+  expect(fixture.unexpected).toEqual([]);
+});
+
+it("keeps an implicit direct default unchanged until the user explicitly chooses a destination", async () => {
+  const user = userEvent.setup();
+  const fixture = setup((draft) => {
+    const program = draft.ir.programs[0];
+    delete program.defaultAction;
+    delete program.connectors;
+    program.resources = [];
+    program.rules = [
+      {
+        id: "blocked",
+        match: { op: "domain", value: "blocked.invalid" },
+        action: { kind: "reject" },
+      },
+    ];
+  });
+  const editor = await openEditor(user);
+  const destination = within(editor).getByRole("combobox", {
+    name: "Policy entry 默认去向",
+  });
+  expect(destination.textContent).toContain("未显式设置（直连）");
+  expect(hasUnsavedChanges()).toBe(false);
+  await user.click(within(editor).getByRole("button", { name: "保存草稿" }));
+  await waitFor(() => expect(fixture.saved).toHaveLength(1));
+  expect(fixture.saved[0].ir.programs[0]).toEqual(
+    fixture.deployment.ir.programs[0],
+  );
+  expect(fixture.saved[0].ir.programs[0]).not.toHaveProperty("defaultAction");
+  expect(fixture.saved[0].ir.topologyRevision).toBe("topology-r1");
+  expect(fixture.unexpected).toEqual([]);
+});
+
+it("supports keyboard default changes and keeps the draft after cancelling dismissal, without exposing chain controls", async () => {
+  const user = userEvent.setup();
+  const fixture = setup();
+  const editor = await openEditor(user);
+  const destination = within(editor).getByRole("combobox", {
+    name: "Policy entry 默认去向",
+  });
+  destination.focus();
+  await user.keyboard("{Enter}");
+  await screen.findByRole("option", { name: "直连" });
+  await user.keyboard("{Home}{Enter}");
+  await waitFor(() => expect(destination.textContent).toBe("直连"));
+  expect(hasUnsavedChanges()).toBe(true);
+  expect(within(editor).queryByRole("tab", { name: "图形编辑" })).toBeNull();
+  expect(
+    within(editor).queryByRole("button", { name: /上移第|下移第|移除第/ }),
+  ).toBeNull();
+  await user.keyboard("{Escape}");
+  const confirmation = await screen.findByRole("alertdialog", {
+    name: "放弃尚未保存的转发路径修改？",
+  });
+  await user.click(
+    within(confirmation).getByRole("button", { name: "继续编辑" }),
+  );
+  expect(
+    within(editor).getByRole("combobox", { name: "Policy entry 默认去向" })
+      .textContent,
+  ).toBe("直连");
+  expect(
+    fixture.requests.filter((request) => !request.startsWith("GET ")),
+  ).toEqual([]);
+  await user.click(within(editor).getByRole("button", { name: "保存草稿" }));
+  await waitFor(() => expect(fixture.saved).toHaveLength(1));
+  expect(fixture.saved[0].ir.programs[0].defaultAction).toEqual({
+    kind: "direct",
+  });
+});
+
+it.each([
+  [
+    "unknown action fields",
+    (draft: ServerDeployment) =>
+      Object.assign(draft.ir.programs[0].defaultAction!, {
+        futureAction: "retained",
+      }),
+    /此表单无法解释/,
+  ],
+  [
+    "unknown schema",
+    (draft: ServerDeployment) => {
+      draft.ir.schemaVersion = "2.0";
+    },
+    /此配置版本/,
+  ],
+  [
+    "unknown runtime",
+    (draft: ServerDeployment) => {
+      draft.ir.programs[0].instance.version = "future-version";
+    },
+    /此核心版本/,
+  ],
+  [
+    "legacy egress",
+    (draft: ServerDeployment) => {
+      draft.ir.programs[0].egress = [
+        draft.ir.programs[0].connectors![0].connection,
+      ];
+      delete draft.ir.programs[0].connectors;
+    },
+    /此监听使用顺序出口/,
+  ],
+  [
+    "conflicting exits",
+    (draft: ServerDeployment) => {
+      draft.ir.programs[0].egress = [
+        draft.ir.programs[0].connectors![0].connection,
+      ];
+    },
+    /同时存在顺序出口和命名连接器/,
+  ],
+] as const)(
+  "keeps %s read-only with an exact reason and retains it in JSON and save",
+  async (_name, change, reason) => {
+    const user = userEvent.setup();
+    const fixture = setup(change);
+    const editor = await openEditor(user);
+    expect(
+      within(editor).queryByRole("combobox", { name: "Policy entry 默认去向" }),
+    ).toBeNull();
+    expect(within(editor).getByText(reason)).toBeTruthy();
+    await user.click(
+      within(editor).getByRole("button", { name: "编辑转发设置" }),
+    );
+    const json = await screen.findByRole("dialog", { name: "服务端配置意图" });
+    const intent = JSON.parse(
+      (
+        within(json).getByRole("textbox", {
+          name: "服务端配置意图 JSON 文本",
+        }) as HTMLTextAreaElement
+      ).value,
+    );
+    expect(intent).toEqual(fixture.deployment.ir);
+    await user.click(within(json).getByRole("button", { name: "取消" }));
+    await user.click(within(editor).getByRole("button", { name: "保存草稿" }));
+    await waitFor(() => expect(fixture.saved).toHaveLength(1));
+    expect(fixture.saved[0].ir).toEqual(fixture.deployment.ir);
+    expect(fixture.unexpected).toEqual([]);
+  },
+);
+
+it("keeps managed principal decisions, credentials and accounting scope read-only while showing their dependencies", async () => {
+  const user = userEvent.setup();
+  const fixture = setup((draft) => {
+    const program = draft.ir.programs[0];
+    program.instance.adapterId = "routeweaver/managed-xray";
+    program.listener.authentication = "principals";
+    program.destinationPolicy = { allowCidrs: ["127.0.0.1/32"] };
+    program.principals = [
+      {
+        subjectId: "subject",
+        accountId: "alice",
+        routeId: "route-a",
+        credentialVersion: "credential-r1",
+        credential: { uuid: "principal-secret-fixture" },
+        action: { kind: "forward", ref: "exit" },
+        policyRevision: "policy-identity",
+        cycleId: "cycle-identity",
+      },
+    ];
+  });
+  const editor = await openEditor(user);
+  expect(
+    within(editor).queryByRole("combobox", { name: "Policy entry 默认去向" }),
+  ).toBeNull();
+  expect(within(editor).getByText(/此监听关联用户入口或托管计量/)).toBeTruthy();
+  await user.click(within(editor).getByText("连接器与策略依赖"));
+  const principals = within(editor).getByRole("region", {
+    name: "Policy entry的用户入口",
+  });
+  expect(within(principals).getByText("账号 alice")).toBeTruthy();
+  expect(within(principals).getByText("线路 route-a")).toBeTruthy();
+  expect(within(principals).queryByRole("textbox")).toBeNull();
+  expect(editor.textContent).not.toMatch(
+    /principal-secret-fixture|policy-identity|cycle-identity|resource-secret-fixture/,
+  );
+  await user.click(within(editor).getByRole("button", { name: "保存草稿" }));
+  await waitFor(() => expect(fixture.saved).toHaveLength(1));
+  expect(fixture.saved[0].ir).toEqual(fixture.deployment.ir);
+  expect(fixture.unexpected).toEqual([]);
+});
+
+it("does not offer a cyclic or unresolved connector as a valid new destination", async () => {
+  const user = userEvent.setup();
+  const fixture = setup((draft) => {
+    const program = draft.ir.programs[0];
+    program.connectors![0].via = "exit";
+    program.connectors!.push({
+      id: "missing-upstream",
+      via: "absent",
+      connection: { protocol: "socks", host: "target.invalid", port: 1080 },
+    });
+    program.defaultAction = { kind: "forward", ref: "not-found" };
+  });
+  const editor = await openEditor(user);
+  const destination = within(editor).getByRole("combobox", {
+    name: "Policy entry 默认去向",
+  });
+  expect(destination.textContent).toContain("连接器不可用：not-found");
+  await user.click(destination);
+  expect(
+    (
+      await screen.findByRole("option", { name: "转发至连接器 exit" })
+    ).getAttribute("aria-disabled"),
+  ).toBe("true");
+  expect(
+    screen
+      .getByRole("option", { name: "转发至连接器 missing-upstream" })
+      .getAttribute("aria-disabled"),
+  ).toBe("true");
+  await user.click(screen.getByRole("option", { name: "拒绝连接" }));
+  await user.click(within(editor).getByRole("button", { name: "保存草稿" }));
+  await waitFor(() => expect(fixture.saved).toHaveLength(1));
+  expect(fixture.saved[0].ir.programs[0]).toEqual({
+    ...fixture.deployment.ir.programs[0],
+    defaultAction: { kind: "reject" },
+  });
+});
+
+it("merges a delayed TLS file read without overwriting a newer structured policy edit", async () => {
+  const user = userEvent.setup();
+  const fixture = setup((draft) => {
+    draft.ir.programs[0].listener.connection.tls = { enabled: true };
+  });
+  const editor = await openEditor(user);
+  await user.click(
+    within(editor).getByRole("button", { name: "TLS 证书与安全参数" }),
+  );
+  let release!: (value: string) => void;
+  const delayed = new Promise<string>((resolve) => {
+    release = resolve;
+  });
+  const certificate = new File(["old-certificate"], "certificate.pem", {
+    type: "application/x-pem-file",
+  });
+  Object.defineProperty(certificate, "text", { value: () => delayed });
+  await user.upload(
+    within(editor).getByLabelText("读取 TLS 证书"),
+    certificate,
+  );
+  expect(
+    (
+      within(editor).getByRole("button", {
+        name: "保存草稿",
+      }) as HTMLButtonElement
+    ).disabled,
+  ).toBe(true);
+  await user.click(
+    within(editor).getByRole("combobox", { name: "Policy entry 默认去向" }),
+  );
+  await user.click(await screen.findByRole("option", { name: "直连" }));
+  expect(
+    (
+      within(editor).getByRole("button", {
+        name: "保存草稿",
+      }) as HTMLButtonElement
+    ).disabled,
+  ).toBe(true);
+  await act(async () => release("new-certificate-fixture"));
+  expect(
+    (
+      within(editor).getByRole("button", {
+        name: "保存草稿",
+      }) as HTMLButtonElement
+    ).disabled,
+  ).toBe(false);
+  await user.click(within(editor).getByRole("button", { name: "保存草稿" }));
+  await waitFor(() => expect(fixture.saved).toHaveLength(1));
+  expect(fixture.saved[0].ir.programs[0]).toEqual({
+    ...fixture.deployment.ir.programs[0],
+    defaultAction: { kind: "direct" },
+    tls: {
+      ...fixture.deployment.ir.programs[0].tls,
+      certificatePem: "new-certificate-fixture",
+    },
+  });
+});
+
+it("does not reopen a delayed policy reveal after newer same-page navigation", async () => {
+  const user = userEvent.setup();
+  const fixture = setup();
+  let release!: () => void;
+  const delayed = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  fixture.delayReveal(delayed);
+  await user.click(
+    await screen.findByRole("button", { name: "编辑转发路径 Policy draft" }),
+  );
+  await act(async () => {
+    history.replaceState(null, "", "#routes?deployment=missing");
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+  });
+  await act(async () => release());
+  expect(
+    screen.queryByRole("dialog", { name: "编辑 Policy draft" }),
+  ).toBeNull();
+  expect(
+    fixture.requests.filter((request) => !request.startsWith("GET ")),
+  ).toEqual([]);
+});
