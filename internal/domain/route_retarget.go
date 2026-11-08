@@ -144,4 +144,3 @@ func RetargetManagedExit(ir ServerDeploymentIR, route PublishedRoute, target Ser
 	result.AffectedUsers = len(users)
 	return result, nil
 }
-

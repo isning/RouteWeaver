@@ -248,4 +248,3 @@ func ValidateListenerTransport(c Connection) error {
 	}
 	return nil
 }
-

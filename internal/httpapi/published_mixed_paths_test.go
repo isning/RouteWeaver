@@ -1,6 +1,7 @@
 package httpapi_test
 
 import (
+	"context"
 	"encoding/json"
 	"net/http/httptest"
 	"reflect"
@@ -8,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"routeweaver/internal/agent"
 	"routeweaver/internal/controlprotocol"
 	"routeweaver/internal/domain"
 	"routeweaver/internal/httpapi"
@@ -251,7 +253,7 @@ func TestPublishedMixedPathsTenantAuthorizationAndProjection(t *testing.T) {
 	}
 }
 
-func TestPublishedMixedPathsPrincipalRemainsPendingBeforeApplication(t *testing.T) {
+func TestPublishedMixedPathsPrincipalRequiresEveryAppliedHop(t *testing.T) {
 	s, srv, deployment := seedMixedPath(t, "fra", "x", "uk")
 	// Replace the fixture principal with an actual provisioned account credential.
 	deployment.IR.Programs[0].Principals = nil
@@ -274,7 +276,7 @@ func TestPublishedMixedPathsPrincipalRemainsPendingBeforeApplication(t *testing.
 		t.Fatalf("entitlement: %d %s", code, raw)
 	}
 	code, grant, raw := req(t, admin, "POST", srv.URL+"/api/published-routes/mixed-route/principals", "", map[string]any{"accountId": tenant.id, "entryId": "mixed-entry", "credentialVersion": "v1"})
-	if code != 200 || grant["status"] != "pending-deployment" {
+	if code != 201 || grant["status"] != "pending-deployment" {
 		t.Fatalf("principal: %d %s", code, raw)
 	}
 	if strings.Contains(raw, mixedSecret) {
@@ -294,5 +296,59 @@ func TestPublishedMixedPathsPrincipalRemainsPendingBeforeApplication(t *testing.
 	}
 	if strings.Contains(raw, mixedSecret) {
 		t.Fatal("unapplied response leaked connector credential")
+	}
+	// The fixture's unrelated legacy route is not part of this publication.
+	if err := s.Remove("published-routes", "route"); err != nil {
+		t.Fatal(err)
+	}
+	type enrolledTarget struct {
+		scope     agent.Scope
+		transport *agent.HTTPTransport
+	}
+	targets := []enrolledTarget{}
+	for _, program := range deployment.IR.Programs {
+		code, enrollment, raw := req(t, admin, "POST", srv.URL+"/api/agent/enrollments", "", map[string]any{"nodeId": program.Instance.HostID, "instanceId": program.Instance.ID, "expiresAt": time.Now().Add(time.Hour)})
+		if code != 200 && code != 201 {
+			t.Fatalf("enrollment: %d %s", code, raw)
+		}
+		var scope agent.Scope
+		body, _ := json.Marshal(enrollment["scope"])
+		if err := json.Unmarshal(body, &scope); err != nil {
+			t.Fatal(err)
+		}
+		transport, err := agent.NewHTTPTransport(agent.HTTPTransportOptions{BaseURL: srv.URL, Token: enrollment["token"].(string), Scope: scope, RequestTimeout: time.Second, MaxAttempts: 1, Backoff: time.Millisecond, AllowLoopbackHTTP: true})
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer transport.Close()
+		targets = append(targets, enrolledTarget{scope: scope, transport: transport})
+	}
+	opened := openServerDraft(t, admin, srv.URL+"/api/server-deployments/deployment")
+	validation := requireServerValidation(t, admin, srv.URL+"/api/server-deployments/deployment", opened["revisionToken"].(string))
+	code, published, raw := req(t, admin, "POST", srv.URL+"/api/server-deployments/deployment/publish", "", map[string]any{"operationId": "publish-mixed", "leaseSeconds": 300, "accessAllowed": true, "quotaCertain": true, "expectedFingerprint": validation["fingerprint"]})
+	if code != 200 || published["status"] != "publication-accepted" {
+		t.Fatalf("publication: %d %s", code, raw)
+	}
+	// Scoped synthetic observations verify the control-plane proof gates. They
+	// are not native process, handshake, or external-proxy reachability evidence.
+	for i, target := range targets {
+		desired, err := target.transport.ReceiveDesired(context.Background(), target.scope, 0)
+		if err != nil || desired == nil {
+			t.Fatalf("desired: %v %v", desired, err)
+		}
+		identity := desired.Identity()
+		state := agent.State{Desired: &identity, NativeChecked: true, Phase: agent.ObservedConformant, Observed: &agent.Observation{Identity: identity, Known: true, Quiescent: true, ObservedAt: time.Now()}}
+		if err := target.transport.ReportObservation(context.Background(), target.scope, state); err != nil {
+			t.Fatal(err)
+		}
+		if i+1 < len(targets) {
+			if code, _, raw := req(t, admin, "GET", reveal, "", nil); code != 409 {
+				t.Fatalf("partially observed mixed path exposed credential: %d %s", code, raw)
+			}
+		}
+	}
+	code, revealed, raw := req(t, admin, "GET", reveal, "", nil)
+	if code != 200 || revealed["connection"] == nil || strings.Contains(raw, mixedSecret) || strings.Contains(raw, ".example.invalid") {
+		t.Fatalf("observed public entry was unavailable or exposed upstream material: %d %s", code, raw)
 	}
 }

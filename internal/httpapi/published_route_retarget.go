@@ -618,4 +618,3 @@ func exitSecurityChanges(before, after domain.Connection) []string {
 	}
 	return changes
 }
-

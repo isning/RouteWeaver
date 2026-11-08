@@ -63,5 +63,4 @@ func TestRetargetManagedExitPreservesLegacyFallbackAndOtherPrincipals(t *testing
 	if _, err = domain.RetargetManagedExit(ir, route, target, next, "new-out", "new-revision"); err == nil {
 		t.Fatal("mixed path was flattened by the managed-only exit operation")
 	}
-
 }

@@ -455,4 +455,3 @@ func (h *server) publishedRouteSummary(route domain.PublishedRoute, stored ...js
 	}
 	return map[string]any{"revisionToken": h.recordRevision("published-routes", route.ID, revisionValue), "id": route.ID, "name": route.Name, "deploymentId": route.DeploymentID, "path": route.Path, "endpointIds": route.EndpointIDs, "hops": route.Hops, "savedPath": summarizePublishedRoute(route, deployment.IR.Programs), "publicHost": route.PublicHost, "publicPort": route.PublicPort, "status": status, "diagnostics": diagnostics, "fingerprint": fingerprint, "pendingChanges": pendingChanges, "effective": effective}
 }
-

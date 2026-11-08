@@ -185,9 +185,14 @@ it.each(["list", "resolve"] as const)("preserves an already-open draft and stops
     if (source === "list") client.setQueryData(["published-routes"], [mixed]);
     else client.setQueryData(["published-route-resolve", "line"], mixed);
   });
+  // Query observers notify asynchronously; the synchronous payload guard must
+  // already refuse a write before the disabled UI state has rendered.
+  fireEvent.click(editor.getByRole("button", { name: "保存公开线路" }));
+  await waitFor(() => {
+    expect(editor.getByRole("button", { name: "检查公开线路" }).hasAttribute("disabled")).toBe(true);
+    expect(editor.getByRole("button", { name: "保存公开线路" }).hasAttribute("disabled")).toBe(true);
+  });
   expect((editor.getByRole("textbox", { name: "线路名称" }) as HTMLInputElement).value).toBe("My unsaved name");
-  expect(editor.getByRole("button", { name: "检查公开线路" }).hasAttribute("disabled")).toBe(true);
-  expect(editor.getByRole("button", { name: "保存公开线路" }).hasAttribute("disabled")).toBe(true);
   fireEvent.click(editor.getByRole("button", { name: "保存公开线路" }));
   expect(calls.filter(call => call.method === "PUT")).toHaveLength(0);
 });
