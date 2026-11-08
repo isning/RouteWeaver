@@ -212,6 +212,36 @@ for (const width of [1440, 390]) {
       exact: true,
     });
     await expect(adopt).toBeEnabled();
+    await settledTask(comparison);
+    // No concurrently mounted parent modal may hide the first review. Keep
+    // exact accessible-role actions; counting DOM surfaces is an extra guard.
+    await expect(page.getByRole("dialog")).toHaveCount(1);
+    await expect(page.locator('[role="dialog"]')).toHaveCount(1);
+    await capture(page, info, comparison, "listener-comparison", width);
+    await comparison
+      .getByRole("button", { name: "保留草稿", exact: true })
+      .click();
+    const pathEditor = page.getByRole("dialog", {
+      name: `编辑 ${names.deployment}`,
+      exact: true,
+    });
+    await settledTask(pathEditor);
+    await expect(comparison).not.toBeVisible();
+    await expect(
+      pathEditor.getByRole("textbox", { name: "转发路径名称", exact: true }),
+    ).toHaveValue(names.deployment);
+    await expect(pathEditor.getByText(/当前端点未启用 TLS/)).toBeVisible();
+    await expect(
+      pathEditor.getByRole("textbox", { name: "证书文件路径", exact: true }),
+    ).toHaveCount(0);
+    await pathEditor.getByRole("button", { name: "关闭", exact: true }).click();
+    await settledTask(repair);
+    await repair
+      .getByRole("button", { name: "更新路径 TLS", exact: true })
+      .click();
+    await expect(adopt).toBeEnabled();
+    await expect(page.getByRole("dialog")).toHaveCount(1);
+    await expect(page.locator('[role="dialog"]')).toHaveCount(1);
     expect(
       mutations.filter(
         (value) =>
@@ -220,10 +250,6 @@ for (const width of [1440, 390]) {
       ),
     ).toHaveLength(0);
     await adopt.click();
-    const pathEditor = page.getByRole("dialog", {
-      name: `编辑 ${names.deployment}`,
-      exact: true,
-    });
     await expect(comparison).not.toBeVisible();
     await pathEditor
       .getByRole("textbox", { name: "证书文件路径", exact: true })

@@ -625,6 +625,9 @@ export function ServerRouteEditor({
   const [refreshingListener, setRefreshingListener] = useState(
     initialRefreshEndpoint,
   );
+  const [initialListenerReview, setInitialListenerReview] = useState(
+    !!initialRefreshEndpoint,
+  );
   const [pendingEndpoints, setPendingEndpoints] = useState<
     Record<string, boolean>
   >({});
@@ -810,6 +813,35 @@ export function ServerRouteEditor({
     markerEnd: { type: MarkerType.ArrowClosed, color: "#267a5a" },
     style: { stroke: "#267a5a", strokeWidth: 2.5 },
   }));
+  const listenerReview = refreshingListener ? (
+    <ListenerRefreshReview
+      draft={draft}
+      inventory={inventory}
+      endpointId={refreshingListener}
+      getRevision={() => draftRevision.current}
+      onClose={() => {
+        setRefreshingListener(undefined);
+        setInitialListenerReview(false);
+      }}
+      onApply={(next, revision) => {
+        if (revision !== draftRevision.current) return false;
+        invalidateMaterial(refreshingListener);
+        update({
+          ...next,
+          ir: { ...next.ir, topologyRevision: newID("topology") },
+        });
+        setRefreshingListener(undefined);
+        setInitialListenerReview(false);
+        setAnnouncement("监听设置已更新到草稿，尚未保存。");
+        return true;
+      }}
+    />
+  ) : null;
+  // The initial comparison is the first task surface. Mounting it inside an
+  // already-open Sheet on the same commit lets the two modal scopes hide one
+  // another. Keep this editor's draft and revision owner, but mount its Sheet
+  // only after the user keeps or explicitly adopts the listener snapshot.
+  if (initialListenerReview && listenerReview) return listenerReview;
   return (
     <TaskSheet
       bodyProps={{ className: "space-y-5" }}
@@ -1194,26 +1226,7 @@ export function ServerRouteEditor({
           ))}
         </Accordion>
       </div>
-      {refreshingListener && (
-        <ListenerRefreshReview
-          draft={draft}
-          inventory={inventory}
-          endpointId={refreshingListener}
-          getRevision={() => draftRevision.current}
-          onClose={() => setRefreshingListener(undefined)}
-          onApply={(next, revision) => {
-            if (revision !== draftRevision.current) return false;
-            invalidateMaterial(refreshingListener);
-            update({
-              ...next,
-              ir: { ...next.ir, topologyRevision: newID("topology") },
-            });
-            setRefreshingListener(undefined);
-            setAnnouncement("监听设置已更新到草稿，尚未保存。");
-            return true;
-          }}
-        />
-      )}
+      {listenerReview}
       <TaskDialog
         bodyProps={{ className: "space-y-5" }}
         title="服务端配置意图"

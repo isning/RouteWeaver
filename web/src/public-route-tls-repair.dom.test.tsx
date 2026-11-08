@@ -438,6 +438,61 @@ it.each(["endpoint", "summary"] as const)(
   },
 );
 
+it("opens the initial listener comparison alone and returns to the untouched path when the snapshot is kept", async () => {
+  const { user, editor, requests } = await openEditor((path) => {
+    if (path.endsWith("/preview")) return json({ error: tlsRefusal }, 422);
+    if (path.endsWith("/server-deployments/path/reveal"))
+      return json({ ...inventory.deployments[0], revisionToken: "path-r1" });
+    if (path.endsWith("/managed-endpoints/entry/reveal"))
+      return json({
+        ...listener,
+        revisionToken: "endpoint-r2",
+        connection: {
+          ...listener.connection,
+          tls: { enabled: true, serverName: "office.example" },
+        },
+      });
+  });
+  await user.click(editor.getByRole("button", { name: "检查公开线路" }));
+  await user.click(await editor.findByRole("button", { name: "就地修复 TLS" }));
+  const repair = within(
+    await screen.findByRole("dialog", { name: "修复公开线路 TLS" }),
+  );
+  await user.click(repair.getByRole("button", { name: "更新路径 TLS" }));
+  const comparison = within(
+    await screen.findByRole("dialog", { name: "更新 Office entry 的监听设置" }),
+  );
+  const adopt = comparison.getByRole("button", { name: "更新到草稿" });
+  await waitFor(() => expect(adopt.hasAttribute("disabled")).toBe(false));
+  // Count mounted dialogs as well as accessible ones: another initially open
+  // focus scope can hide this review in Chromium even if jsdom still sees it.
+  expect(screen.getAllByRole("dialog", { hidden: true })).toHaveLength(1);
+  expect(screen.queryByRole("dialog", { name: "编辑 Office path" })).toBeNull();
+  await user.click(comparison.getByRole("button", { name: "保留草稿" }));
+  const pathEditor = within(
+    await screen.findByRole("dialog", { name: "编辑 Office path" }),
+  );
+  expect(screen.getAllByRole("dialog", { hidden: true })).toHaveLength(1);
+  expect(
+    (
+      pathEditor.getByRole("textbox", {
+        name: "转发路径名称",
+      }) as HTMLInputElement
+    ).value,
+  ).toBe("Office path");
+  expect(pathEditor.getByText(/当前端点未启用 TLS/)).toBeTruthy();
+  expect(
+    pathEditor.queryByRole("textbox", { name: "证书文件路径" }),
+  ).toBeNull();
+  await user.click(pathEditor.getByRole("button", { name: "关闭" }));
+  await screen.findByRole("dialog", { name: "修复公开线路 TLS" });
+  expect(
+    requests
+      .filter((value) => value.method !== "GET")
+      .map((value) => value.path),
+  ).toEqual(["/api/published-routes/preview"]);
+});
+
 it("repairs TLS through endpoint impact review and explicit path adoption without saving or applying the public line", async () => {
   let endpoint: ManagedEndpoint = {
     ...structuredClone(listener),
