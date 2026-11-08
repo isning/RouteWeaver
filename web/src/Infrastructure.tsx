@@ -302,6 +302,21 @@ export function ServersPage() {
     });
   }, [host?.id, instance?.id]);
   const records = host && data ? data.deployments.filter((deployment) => deployment.ir.programs.some((program) => program.instance.hostId === host.id)) : [];
+  const hostCores = host && data ? data.instances.filter((core) => core.hostId === host.id) : [];
+  const hostListeners = host && data ? data.endpoints.filter((endpoint) => hostCores.some((core) => core.id === endpoint.instanceId)) : [];
+  const setupAction = (step: "core" | "listener") => {
+    if (!host || scopeIssue) return;
+    if (!hostCores.length) {
+      hostResumeAction.current = "setup-core";
+      edit(null, "core-instances", host.id);
+    } else if (hostCores.length === 1) {
+      if (step === "core" || hostListeners.length > 0) openInstance(hostCores[0]);
+      else {
+        hostResumeAction.current = "setup-listener";
+        edit(null, "managed-endpoints", host.id, hostCores[0].id);
+      }
+    } else changeSection("cores");
+  };
   const coreList = host && data ? (<>
             <Section
               title="核心实例"
@@ -322,7 +337,7 @@ export function ServersPage() {
                     hostResumeAction.current = "add-core";
                     edit(null, "core-instances", host!.id);
                   }}
-                  variant={data.instances.some((i) => i.hostId === host!.id) ? "outline" : "default"}
+                  variant={section === "overview" || data.instances.some((i) => i.hostId === host!.id) ? "outline" : "default"}
                 >
                   添加核心
                 </ActionButton>
@@ -368,7 +383,7 @@ export function ServersPage() {
                           else hostActions.current.delete(`instance:${i.id}`);
                         }}
                         onClick={() => openInstance(i)}
-                        variant="default"
+                        variant={section === "overview" ? "outline" : "default"}
                       >
                         查看接入与配置
                       </ActionButton>
@@ -681,16 +696,40 @@ export function ServersPage() {
                 <li className="rounded-lg border p-4 text-sm space-y-2">
                   <p className="font-medium">2. <span>配置核心与 Agent</span></p>
                   <p className="text-muted-foreground">{data.instances.filter((value) => value.hostId === host.id).length} 个已登记核心</p>
-                  <p className="text-muted-foreground">在下方选择核心，查看接入与上报。</p>
+                  <ActionButton
+                    ref={(node) => { if (node) hostActions.current.set("setup-core", node); else hostActions.current.delete("setup-core"); }}
+                    disabled={!!scopeIssue}
+                    onClick={() => setupAction("core")}
+                    variant={hostCores.length ? "outline" : "default"}
+                    className="h-auto max-w-full whitespace-normal"
+                  >{!hostCores.length ? "开始配置核心" : hostCores.length === 1 ? "查看 Agent 接入" : "选择要配置的核心"}</ActionButton>
                 </li>
                 <li className="rounded-lg border p-4 text-sm space-y-2">
                   <p className="font-medium">3. <span>设置监听入口</span></p>
                   <p className="text-muted-foreground">{data.endpoints.filter((endpoint) => data.instances.some((value) => value.id === endpoint.instanceId && value.hostId === host.id)).length} 个已保存监听</p>
+                  <ActionButton
+                    ref={(node) => { if (node) hostActions.current.set("setup-listener", node); else hostActions.current.delete("setup-listener"); }}
+                    disabled={!!scopeIssue || !hostCores.length}
+                    onClick={() => setupAction("listener")}
+                    variant={hostCores.length && !hostListeners.length ? "default" : "outline"}
+                    className="h-auto max-w-full whitespace-normal"
+                  >{!hostCores.length ? "先配置核心" : hostCores.length > 1 ? "选择核心与监听" : hostListeners.length ? "管理监听入口" : "设置监听入口"}</ActionButton>
                 </li>
                 <li className="rounded-lg border p-4 text-sm space-y-2">
                   <p className="font-medium">4. <span>设置流量去向</span></p>
                   <p className="text-muted-foreground">{records.length ? `${records.length} 条已保存路径` : "尚未保存转发路径"}</p>
                   <p className="text-muted-foreground">保存后检查，再确认应用。</p>
+                  {records.length ? (
+                    <ActionButton onClick={() => changeSection("records")} variant="outline" className="h-auto max-w-full whitespace-normal">查看转发配置</ActionButton>
+                  ) : hostListeners.length === 1 && !scopeIssue ? (
+                    <ActionButton asChild variant="default" className="h-auto max-w-full whitespace-normal">
+                      <a href={`#routes?entryEndpoint=${encodeURIComponent(hostListeners[0].id)}&returnHost=${encodeURIComponent(host.id)}&returnInstance=${encodeURIComponent(hostListeners[0].instanceId)}`}>创建转发路径</a>
+                    </ActionButton>
+                  ) : (
+                    <ActionButton disabled={!!scopeIssue || !hostListeners.length} onClick={() => changeSection("cores")} variant={hostListeners.length ? "default" : "outline"} className="h-auto max-w-full whitespace-normal">
+                      {hostListeners.length ? "选择监听入口" : "先设置监听入口"}
+                    </ActionButton>
+                  )}
                 </li>
               </ol>
               {coreList}
@@ -1336,5 +1375,6 @@ function Enrollment({
     </TaskDialog>
   );
 }
+
 
 

@@ -72,7 +72,13 @@ for (const width of [1440, 390]) {
     const registeredHosts = await read(page.request, "/hosts");
     await expect(page).toHaveURL(new RegExp(`#servers\\?host=${registeredHosts[0].id}$`));
     await capture(page, info, `server-workspace-overview-${width}`, host);
-    await host.getByRole("button", { name: "添加核心", exact: true }).click();
+    await host.getByRole("button", { name: "返回服务器清单", exact: true }).click();
+    const enterServer = page.getByRole("button", { name: "进入服务器 Setup server", exact: true });
+    await expect(enterServer).toBeVisible();
+    await capture(page, info, `server-explicit-entry-${width}`, page.locator(".server-grid"), [enterServer]);
+    await enterServer.click();
+    const setup = host.getByRole("list", { name: "服务器配置步骤" });
+    await setup.getByRole("button", { name: "开始配置核心", exact: true }).click();
     const coreEditor = page.getByRole("dialog", { name: "添加核心实例", exact: true });
     await expect(coreEditor.getByLabel("所属服务器", { exact: true })).toHaveText("Setup server");
     await coreEditor.getByLabel("实例名称", { exact: true }).fill("Setup core");
@@ -150,8 +156,15 @@ for (const width of [1440, 390]) {
     await core.getByRole("button", { name: "返回核心列表", exact: true }).click();
     await settledTask(host);
     await expect(coreOpener).toBeFocused();
-    await coreOpener.click();
-    await core.getByRole("link", { name: "用 Setup listener 创建转发路径", exact: true }).click();
+    await host.getByRole("tab", { name: "概览", exact: true }).click();
+    await setup.getByRole("button", { name: "查看 Agent 接入", exact: true }).click();
+    await expect(core.getByText("尚未接入", { exact: true })).toBeVisible();
+    await host.getByRole("tab", { name: "概览", exact: true }).click();
+    const createPath = setup.getByRole("link", { name: "创建转发路径", exact: true });
+    await expect(createPath).toHaveAttribute("href", `#routes?entryEndpoint=${listenerRecords[0].id}&returnHost=${cores[0].hostId}&returnInstance=${cores[0].id}`);
+    await createPath.scrollIntoViewIfNeeded();
+    await capture(page, info, `server-actionable-setup-${width}`, setup, [createPath]);
+    await createPath.click();
     const pathEditor = page.getByRole("dialog", { name: "新建转发路径", exact: true });
     await expect(pathEditor).toBeVisible();
     await expect(pathEditor.getByRole("combobox", { name: "第 1 跳服务器", exact: true })).toHaveText("Setup server");
@@ -159,18 +172,17 @@ for (const width of [1440, 390]) {
     await expect(pathEditor.getByText("从入口服务器直接访问目标", { exact: true })).toBeVisible();
     await pathEditor.getByLabel("转发路径名称", { exact: true }).fill("Unsaved contextual path");
     await capture(page, info, `listener-prefilled-path-${width}`, pathEditor);
-    const directExit = pathEditor.getByText("从入口服务器直接访问目标", { exact: true });
-    const independentExit = pathEditor.getByText("使用独立出口（可选）", { exact: true });
+    const independentExit = pathEditor.getByRole("button", { name: "使用另一台服务器出口", exact: true });
+    await independentExit.click();
     const nextServer = pathEditor.getByRole("combobox", { name: "下一跳服务器", exact: true });
     const nextEndpoint = pathEditor.getByRole("combobox", { name: "下一跳端点", exact: true });
-    // Scroll the whole optional selector, not the already-visible direct-exit
-    // summary. No selection is made and the contextual draft stays unchanged.
-    await independentExit.locator("..").scrollIntoViewIfNeeded();
-    await expect(directExit).toBeInViewport();
+    // The optional exit fields are revealed only by an explicit choice. No
+    // endpoint is selected and the contextual draft remains unsaved.
+    await nextEndpoint.scrollIntoViewIfNeeded();
     await expect(nextServer).toHaveText("选择服务器");
     await expect(nextEndpoint).toHaveText("先选择服务器");
     await expect(nextEndpoint).toBeDisabled();
-    await capture(page, info, `listener-prefilled-exit-${width}`, pathEditor, [independentExit, nextServer, nextEndpoint]);
+    await capture(page, info, `listener-prefilled-exit-${width}`, pathEditor, [nextServer, nextEndpoint]);
     expect(await read(page.request, "/server-deployments")).toEqual([]);
     const backToServer = pathEditor.getByRole("link", { name: "返回原服务器", exact: true });
     await backToServer.click();
@@ -198,3 +210,4 @@ for (const width of [1440, 390]) {
     expect(await read(page.request, "/server-deployments")).toEqual([]);
   });
 }
+
