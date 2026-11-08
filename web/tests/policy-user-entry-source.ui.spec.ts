@@ -149,6 +149,38 @@ for (const width of [1440, 390]) {
     expect(latest.ir.programs[0].futureSourceSetting).toBeUndefined();
     expect(mutations).toEqual([`POST /api/published-routes/${id}/principals`]);
     await capture(page, info, editor, "stale-policy-save-fenced");
+    // Keep the original return-state evidence, then capture the recovery UI
+    // itself after the real success toast exits. No hidden DOM removal or sleep.
+    const recoveryWarning = editor.getByText("用户入口可能已更新", { exact: true });
+    const recoveryAction = editor.getByRole("button", { name: "重新读取路径", exact: true });
+    const fencedSave = editor.getByRole("button", { name: "保存草稿", exact: true });
+    await recoveryWarning.scrollIntoViewIfNeeded();
+    await recoveryAction.scrollIntoViewIfNeeded();
+    // Move off the former JSON footer/toast area so hover cannot pause dismissal.
+    await recoveryAction.hover();
+    await expect(page.getByText("新凭据已准备", { exact: true })).toHaveCount(0);
+    await settledTask(editor);
+    await expect(fencedSave).toBeDisabled();
+    for (const control of [recoveryWarning, recoveryAction, fencedSave]) {
+      await expect(control).toBeVisible();
+      expect(await control.evaluate(element => {
+        const r = element.getBoundingClientRect();
+        return r.width > 0 && r.height > 0 && r.left >= 0 && r.top >= 0 && r.right <= innerWidth && r.bottom <= innerHeight;
+      }), "Recovery warning, action and disabled save fit the actual viewport").toBe(true);
+    }
+    // Test the actionable CTA at its center and inset corners, not just its
+    // bounding box. The disabled save is checked geometrically above because
+    // disabled controls may intentionally have pointer-events:none.
+    expect(await recoveryAction.evaluate(element => {
+      const r = element.getBoundingClientRect();
+      return [[r.left + 10, r.top + 10], [r.right - 10, r.top + 10],
+        [r.left + 10, r.bottom - 10], [r.right - 10, r.bottom - 10],
+        [r.left + r.width / 2, r.top + r.height / 2]].every(([x, y]) => {
+        const hit = document.elementFromPoint(x, y);
+        return hit === element || (!!hit && element.contains(hit));
+      });
+    }), "Recovery action is unobscured").toBe(true);
+    await capture(page, info, editor, "stale-policy-recovery-settled");
     await editor.getByRole("button", { name: "重新读取路径", exact: true }).click();
     let recovery = page.getByRole("alertdialog", { name: "重新读取并放弃当前草稿？", exact: true });
     await recovery.getByRole("button", { name: "保留草稿", exact: true }).click();
