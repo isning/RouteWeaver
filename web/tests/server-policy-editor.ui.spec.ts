@@ -348,6 +348,42 @@ for (const width of [1440, 390]) {
     expect(mutations).toEqual([
       "PUT /api/server-deployments/conditional-policy",
     ]);
+
+    const listDeployment = structuredClone(deployment);
+    listDeployment.id = "editable-rule-list";
+    listDeployment.name = "编辑规则顺序";
+    listDeployment.ir.id = "editable-rule-list";
+    listDeployment.ir.programs[0].rules = listDeployment.ir.programs[0].rules.slice(0, 2);
+    listDeployment.ir.programs[0].resources = [];
+    expect((await page.request.post("/api/server-deployments", { headers: csrf, data: listDeployment })).status()).toBe(200);
+    const listBefore = await read(page.request, "/server-deployments/editable-rule-list/reveal");
+    mutations.length = 0;
+    await page.reload();
+    await page.getByRole("button", { name: "编辑转发路径 编辑规则顺序", exact: true }).click();
+    const listEditor = page.getByRole("dialog", { name: "编辑 编辑规则顺序", exact: true });
+    await listEditor.getByRole("button", { name: "条件转发入口 新增规则", exact: true }).click();
+    await expect(listEditor.getByRole("button", { name: "保存草稿", exact: true })).toBeDisabled();
+    await listEditor.getByRole("textbox", { name: "条件转发入口 规则 3 条件值", exact: true }).fill("new.example.invalid");
+    await listEditor.getByRole("button", { name: "条件转发入口 规则 3 上移", exact: true }).click();
+    await expect(listEditor.getByRole("textbox", { name: "条件转发入口 规则 2 条件值", exact: true })).toHaveValue("new.example.invalid");
+    await listEditor.getByRole("button", { name: "条件转发入口 删除规则 3", exact: true }).click();
+    const deletion = page.getByRole("alertdialog", { name: "删除规则 3？", exact: true });
+    await expect(deletion).toContainText("后续规则");
+    await deletion.getByRole("button", { name: "保留规则", exact: true }).click();
+    await listEditor.getByRole("button", { name: "条件转发入口 删除规则 3", exact: true }).click();
+    await deletion.getByRole("button", { name: "删除规则", exact: true }).click();
+    await expect(listEditor.getByRole("combobox", { name: "条件转发入口 规则 2 条件类型", exact: true })).toBeFocused();
+    await capture(page, info, listEditor, listEditor.getByRole("textbox", { name: "条件转发入口 规则 2 条件值", exact: true }), "policy-rule-list");
+    const listSaved = page.waitForResponse(response => new URL(response.url()).pathname === "/api/server-deployments/editable-rule-list" && response.request().method() === "PUT");
+    await listEditor.getByRole("button", { name: "保存草稿", exact: true }).click();
+    expect((await listSaved).status()).toBe(200);
+    await expect(listEditor).toBeHidden();
+    const listAfter = await read(page.request, "/server-deployments/editable-rule-list/reveal");
+    expect(listAfter.ir.programs).toEqual([{
+      ...listBefore.ir.programs[0],
+      rules: [listBefore.ir.programs[0].rules[0], { id: "rule-1", match: { op: "domain", value: "new.example.invalid" }, action: { kind: "reject" } }],
+    }]);
+    expect(mutations).toEqual(["PUT /api/server-deployments/editable-rule-list"]);
   });
 }
 

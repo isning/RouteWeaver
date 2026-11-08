@@ -1002,3 +1002,79 @@ it("edits a connector address and upstream through the policy page while preserv
   expect(fixture.saveHeaders[0].get("If-Match")).toBe("policy-r1");
   expect(fixture.requests.filter((request) => !request.startsWith("GET "))).toEqual(["PUT /api/server-deployments/policy"]);
 });
+
+it("adds, reorders and confirms removal of supported rules without changing surviving IDs or connector references", async () => {
+  const user = userEvent.setup();
+  const fixture = setup((draft) => {
+    draft.ir.programs[0].rules[0].match = { op: "domain-suffix", value: "first.invalid" };
+  });
+  const editor = await openEditor(user);
+  await user.click(within(editor).getByRole("button", { name: "Policy entry 新增规则" }));
+  const input = within(editor).getByRole("textbox", { name: "Policy entry 规则 3 条件值" });
+  expect((within(editor).getByRole("button", { name: "保存草稿" }) as HTMLButtonElement).disabled).toBe(true);
+  await user.type(input, "added.invalid");
+  await user.click(within(editor).getByRole("button", { name: "Policy entry 规则 3 上移" }));
+  expect((within(editor).getByRole("textbox", { name: "Policy entry 规则 2 条件值" }) as HTMLInputElement).value).toBe("added.invalid");
+  await user.click(within(editor).getByRole("button", { name: "Policy entry 删除规则 3" }));
+  let confirmation = await screen.findByRole("alertdialog", { name: "删除规则 3？" });
+  expect(confirmation.textContent).toContain("后续规则");
+  await user.click(within(confirmation).getByRole("button", { name: "保留规则" }));
+  expect(within(editor).getByRole("textbox", { name: "Policy entry 规则 3 条件值" })).toBeTruthy();
+  await user.click(within(editor).getByRole("button", { name: "Policy entry 删除规则 3" }));
+  confirmation = await screen.findByRole("alertdialog", { name: "删除规则 3？" });
+  await user.click(within(confirmation).getByRole("button", { name: "删除规则" }));
+  await waitFor(() => expect(document.activeElement).toBe(within(editor).getByRole("combobox", { name: "Policy entry 规则 2 条件类型" })));
+  await user.click(within(editor).getByRole("button", { name: "保存草稿" }));
+  await waitFor(() => expect(fixture.saved).toHaveLength(1));
+  expect(fixture.saved[0].ir.programs).toEqual([{
+    ...fixture.deployment.ir.programs[0],
+    rules: [fixture.deployment.ir.programs[0].rules[0], { id: "rule-1", match: { op: "domain", value: "added.invalid" }, action: { kind: "reject" } }],
+  }]);
+  expect(fixture.saveHeaders[0].get("If-Match")).toBe("policy-r1");
+});
+
+it("keeps rule-list operations read-only for unknown rule extensions while allowing a supported condition patch", async () => {
+  const user = userEvent.setup();
+  const fixture = setup((draft) => {
+    draft.ir.programs[0].rules[0].match = { op: "domain", value: "first.invalid" };
+    Object.assign(draft.ir.programs[0].rules[0], { futureRule: { preserve: true } });
+  });
+  const editor = await openEditor(user);
+  expect(within(editor).queryByRole("button", { name: "Policy entry 新增规则" })).toBeNull();
+  expect(within(editor).queryByRole("button", { name: /Policy entry 删除规则/ })).toBeNull();
+  const input = within(editor).getByRole("textbox", { name: "Policy entry 规则 2 条件值" });
+  await user.clear(input);
+  await user.type(input, "changed.invalid");
+  await user.click(within(editor).getByRole("button", { name: "保存草稿" }));
+  await waitFor(() => expect(fixture.saved).toHaveLength(1));
+  expect(fixture.saved[0].ir.programs[0].rules[0]).toEqual(fixture.deployment.ir.programs[0].rules[0]);
+});
+
+it("generates a rule identity without colliding with existing rule identities", async () => {
+  const user = userEvent.setup();
+  const fixture = setup((draft) => {
+    const rules = draft.ir.programs[0].rules;
+    rules[0].id = "rule-1";
+    rules[0].match = { op: "domain", value: "first.invalid" };
+    rules[1].id = "rule-2";
+  });
+  const editor = await openEditor(user);
+  expect((within(editor).getByRole("button", { name: "Policy entry 规则 1 上移" }) as HTMLButtonElement).disabled).toBe(true);
+  await user.click(within(editor).getByRole("button", { name: "Policy entry 新增规则" }));
+  await user.type(within(editor).getByRole("textbox", { name: "Policy entry 规则 3 条件值" }), "new.invalid");
+  await user.click(within(editor).getByRole("button", { name: "保存草稿" }));
+  await waitFor(() => expect(fixture.saved).toHaveLength(1));
+  expect(fixture.saved[0].ir.programs[0].rules.map(rule => rule.id)).toEqual(["rule-1", "rule-2", "rule-3"]);
+});
+
+it.each([false, 0, ""])("does not replace malformed rules %s with a new list", async (rules) => {
+  const user = userEvent.setup();
+  const fixture = setup((draft) => { Object.assign(draft.ir.programs[0], { rules }); });
+  const editor = await openEditor(user);
+  expect(within(editor).queryByRole("button", { name: "Policy entry 新增规则" })).toBeNull();
+  await user.click(within(editor).getByRole("combobox", { name: "Policy entry 默认去向" }));
+  await user.click(await screen.findByRole("option", { name: "直连" }));
+  await user.click(within(editor).getByRole("button", { name: "保存草稿" }));
+  await waitFor(() => expect(fixture.saved).toHaveLength(1));
+  expect(fixture.saved[0].ir.programs).toEqual([{ ...fixture.deployment.ir.programs[0], defaultAction: { kind: "direct" } }]);
+});

@@ -120,6 +120,16 @@ export function canEditRuleCondition(program: ServerProgram, schemaVersion: stri
     (rule.match.children === undefined || (Array.isArray(rule.match.children) && rule.match.children.length === 0));
 }
 
+export function canEditRuleList(program: ServerProgram, schemaVersion: string) {
+  return !programEditReason(program, schemaVersion) && !!program.defaultAction?.kind &&
+    !unknownAction(program.defaultAction) &&
+    (program.defaultAction.kind !== "forward" || !connectorReason(program, program.defaultAction.ref || "")) &&
+    (program.rules == null || (Array.isArray(program.rules) && program.rules.every((rule) =>
+      canEditRuleCondition(program, schemaVersion, rule) && !unknownAction(rule.action) &&
+      (rule.action.kind !== "forward" || !connectorReason(program, rule.action.ref || "")) &&
+      Object.keys(rule).every((key) => ["id", "match", "action"].includes(key)))));
+}
+
 export function ruleConditionError(match: MatchExpression) {
   const value = match.value || "";
   if (!value) return "请输入条件值。";
@@ -313,6 +323,7 @@ export function ServerPolicyEditor({
   onRuleConditionChange,
   onConnectorsChange,
   onOpenUserEntry,
+  onRuleListChange,
   onRefreshListener,
   onEditJSON,
 }: {
@@ -328,6 +339,7 @@ export function ServerPolicyEditor({
   onRuleConditionChange: (programIndex: number, ruleID: string, match: MatchExpression) => void;
   onConnectorsChange: (programIndex: number, source: ServerProgram, next: ServerProgram) => void;
   onOpenUserEntry: (programIndex: number, principalIndex: number, focusLabel: string) => void;
+  onRuleListChange: (programIndex: number, operation: "add" | "up" | "down" | "remove", ruleID?: string) => void;
   onRefreshListener: (endpointId: string) => void;
   onEditJSON: () => void;
 }) {
@@ -443,13 +455,18 @@ export function ServerPolicyEditor({
               aria-label={`${identityLabel}的条件规则`}
               className="space-y-3"
             >
-              <h4 className="text-sm font-medium">条件规则</h4>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h4 className="text-sm font-medium">条件规则</h4>
+                {canEditRuleList(program, schemaVersion) && <ActionButton variant="outline" data-rule-add-program={programIndex} aria-label={`${identityLabel} 新增规则`} onClick={() => onRuleListChange(programIndex, "add")}>新增规则</ActionButton>}
+              </div>
               {program.rules?.length ? (
                 <>
                   <ol className="space-y-2">
                     {program.rules.map((rule, index) => (
                       <li
                         key={`${rule.id}:${index}`}
+                        data-rule-program={programIndex}
+                        data-rule-id={rule.id}
                         className="grid min-w-0 gap-1 rounded-lg bg-muted/30 p-3 text-sm"
                       >
                         <span className="text-xs text-muted-foreground">
@@ -522,6 +539,11 @@ export function ServerPolicyEditor({
                               {conditionLimit(program, rule)}
                             </p>
                           )}
+                        {canEditRuleList(program, schemaVersion) && <div className="flex flex-wrap gap-2">
+                          <ActionButton variant="outline" disabled={index === 0} aria-label={`${identityLabel} 规则 ${index + 1} 上移`} onClick={() => onRuleListChange(programIndex, "up", rule.id)}>上移</ActionButton>
+                          <ActionButton variant="outline" disabled={index === program.rules.length - 1} aria-label={`${identityLabel} 规则 ${index + 1} 下移`} onClick={() => onRuleListChange(programIndex, "down", rule.id)}>下移</ActionButton>
+                          <ActionButton variant="outline" aria-label={`${identityLabel} 删除规则 ${index + 1}`} onClick={() => onRuleListChange(programIndex, "remove", rule.id)}>删除规则</ActionButton>
+                        </div>}
                         <details>
                           <summary className="cursor-pointer text-muted-foreground">
                             规则身份
@@ -532,7 +554,7 @@ export function ServerPolicyEditor({
                     ))}
                   </ol>
                   <p className="text-sm text-muted-foreground">
-                    规则按顺序匹配；新增、删除与调整顺序请使用完整 JSON。
+                    {canEditRuleList(program, schemaVersion) ? "规则按顺序匹配，先命中的规则决定去向。新规则加在末尾，默认拒绝连接；请填写条件并选择去向。" : "此规则列表包含未支持的设置。新增、删除与调整顺序请使用完整 JSON。"}
                   </p>
                 </>
               ) : (

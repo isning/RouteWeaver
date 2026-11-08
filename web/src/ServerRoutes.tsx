@@ -44,7 +44,7 @@ import {
   Plus as PlusOutlined,
   Save as SaveOutlined,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type Ref } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type Ref } from "react";
 import { toast } from "sonner";
 import { APIError, list, request, saveRecord } from "./api";
 import {
@@ -77,8 +77,8 @@ import { useUnsavedChanges } from "./navigation";
 import { publicationRejectionMessage } from "./publication-request";
 import { routeGraphNodes, type RouteGraphNode } from "./route-graph-nodes";
 import { ServerPathSummary, ServerPathWorkspace } from "./ServerPathWorkspace";
-import { ServerForwarding } from "./ServerForwarding";
-import { ServerPolicyEditor, canEditRuleCondition, ruleConditionError } from "./ServerPolicyEditor";
+import { ServerForwarding, matchLabel } from "./ServerForwarding";
+import { ServerPolicyEditor, canEditRuleList, canEditRuleCondition, ruleConditionError } from "./ServerPolicyEditor";
 import { TLSMaterial } from "./TLSMaterial";
 import type {
   Infrastructure,
@@ -609,6 +609,14 @@ export function ServerRouteEditor({
   const [draft, setDraft] = useState(initial);
   const [entryTask, setEntryTask] = useState<Pick<PolicyUserEntryTaskProps, "deploymentId" | "listenerId" | "principal">>();
   const entryReturnFocus = useRef<string | undefined>(undefined);
+  const ruleReturnFocus = useRef<{ programIndex: number; ruleID?: string } | undefined>(undefined);
+  useLayoutEffect(() => {
+    const focus = ruleReturnFocus.current;
+    if (!focus) return;
+    const row = Array.from(document.querySelectorAll<HTMLElement>("[data-rule-program]")).find((item) => item.dataset.ruleProgram === String(focus.programIndex) && item.dataset.ruleId === focus.ruleID);
+    const target = row?.querySelector<HTMLElement>("button, input") || Array.from(document.querySelectorAll<HTMLButtonElement>("[data-rule-add-program]")).find((item) => item.dataset.ruleAddProgram === String(focus.programIndex));
+    if (target) { target.focus(); ruleReturnFocus.current = undefined; }
+  }, [draft]);
   const sourceFence = useRef(false);
   const [sourceStale, setSourceStale] = useState(false);
   const latestDraft = useRef(draft);
@@ -1054,6 +1062,45 @@ export function ServerRouteEditor({
               entryReturnFocus.current = focusLabel;
               setEntryTask({ deploymentId: latestDraft.current.id, listenerId: program.listener.id,
                 principal: { accountId: principal.accountId, subjectId: principal.subjectId, routeId: principal.routeId, credentialVersion: principal.credentialVersion } });
+            }}
+            onRuleListChange={(index, operation, ruleID) => {
+              const source = latestDraft.current.ir.programs[index];
+              if (!source || source !== draft.ir.programs[index] || !canEditRuleList(source, latestDraft.current.ir.schemaVersion)) return;
+              const rules = source.rules || [];
+              if (operation === "add") {
+                const ids = new Set(rules.map((rule) => rule.id));
+                let serial = 1;
+                while (ids.has(`rule-${serial}`)) serial++;
+                updateProgram(index, { rules: [...rules, { id: `rule-${serial}`, match: { op: "domain", value: "" }, action: { kind: "reject" } }] });
+                setAnnouncement("新规则已添加到末尾，请填写条件并选择去向后保存。");
+                return;
+              }
+              const position = rules.findIndex((rule) => rule.id === ruleID);
+              if (position < 0) return;
+              if (operation === "remove") {
+                confirmDiscard({
+                  title: `删除规则 ${position + 1}？`,
+                  description: `删除 ${ruleID}（${matchLabel(rules[position].match)}）后，原本命中此规则的流量将继续匹配后续规则，或使用默认去向。仅修改草稿，尚未应用。`,
+                  confirmLabel: "删除规则", cancelLabel: "保留规则",
+                }, (stillCurrent) => {
+                  if (!stillCurrent()) return;
+                  if (latestDraft.current.ir.programs[index] !== source) {
+                    setError(new Error("规则列表已变化，请重新选择要删除的规则。"));
+                    return;
+                  }
+                  const next = rules.filter((rule) => rule.id !== ruleID);
+                  ruleReturnFocus.current = { programIndex: index, ruleID: next[Math.min(position, next.length - 1)]?.id };
+                  updateProgram(index, { rules: next });
+                  setAnnouncement("规则已从草稿删除，尚未保存。");
+                });
+                return;
+              }
+              const target = position + (operation === "up" ? -1 : 1);
+              if (target < 0 || target >= rules.length) return;
+              const next = [...rules];
+              [next[position], next[target]] = [next[target], next[position]];
+              updateProgram(index, { rules: next });
+              setAnnouncement("规则顺序已更新到草稿，先命中的规则决定去向，尚未保存。");
             }}
             onRefreshListener={setRefreshingListener}
             onEditJSON={editIntent}
