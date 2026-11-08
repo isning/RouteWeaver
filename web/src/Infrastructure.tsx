@@ -432,7 +432,12 @@ export function ServersPage() {
               <TabsContent key={"hosts"} value={"hosts"}>
                 {data.hosts.length ? (
                   <div className="server-grid grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                    {data.hosts.map((value) => (
+                    {data.hosts.map((value) => {
+                      const cores = data.instances.filter((core) => core.hostId === value.id);
+                      const listeners = data.endpoints.filter((endpoint) => cores.some((core) => core.id === endpoint.instanceId));
+                      const paths = data.deployments.filter((deployment) => deployment.ir.programs.some((program) => program.instance.hostId === value.id));
+                      const nextStep = !cores.length ? "添加运行核心" : !listeners.length ? "设置监听入口" : !paths.length ? "配置转发路径" : "查看配置与节点上报";
+                      return (
                       <Card className="server-card min-w-0" key={value.id}>
                         <CardHeader>
                           <CardTitle>
@@ -460,15 +465,19 @@ export function ServersPage() {
                             />
                           </CardAction>
                         </CardHeader>
-                        <CardContent className="text-xs text-muted-foreground">
-                          {
-                            data.instances.filter((i) => i.hostId === value.id)
-                              .length
-                          }{" "}
-                          个核心实例
+                        <CardContent className="space-y-4">
+                          <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                            <span>{cores.length} 个已登记核心</span>
+                            <span>{listeners.length} 个已保存监听</span>
+                            <span>{paths.length} 条已保存路径</span>
+                          </div>
+                          <p className="text-sm">下一步：{nextStep}</p>
+                          <ActionButton onClick={() => openHost(value)} aria-label={`进入服务器 ${value.name}`} variant="default" className="w-full">
+                            进入服务器
+                          </ActionButton>
                         </CardContent>
                       </Card>
-                    ))}
+                    ); })}
                   </div>
                 ) : (
                   <EmptyState
@@ -664,10 +673,26 @@ export function ServersPage() {
             </TabsList>
             <ErrorNotice error={instance && section === "cores" ? null : editError} />
             <TabsContent value="overview" className="space-y-4">
-              <dl className="grid gap-3 rounded-lg border p-4 text-sm sm:grid-cols-2">
-                <div><dt className="text-muted-foreground">核心实例</dt><dd className="mt-1 font-medium">{data.instances.filter((value) => value.hostId === host.id).length}</dd></div>
-                <div><dt className="text-muted-foreground">监听端点</dt><dd className="mt-1 font-medium">{data.endpoints.filter((endpoint) => data.instances.some((value) => value.id === endpoint.instanceId && value.hostId === host.id)).length}</dd></div>
-              </dl>
+              <ol aria-label="服务器配置步骤" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <li className="rounded-lg border p-4 text-sm space-y-2">
+                  <p className="font-medium">1. <span>登记服务器</span></p>
+                  <p className="text-muted-foreground">地址已保存</p>
+                </li>
+                <li className="rounded-lg border p-4 text-sm space-y-2">
+                  <p className="font-medium">2. <span>配置核心与 Agent</span></p>
+                  <p className="text-muted-foreground">{data.instances.filter((value) => value.hostId === host.id).length} 个已登记核心</p>
+                  <p className="text-muted-foreground">在下方选择核心，查看接入与上报。</p>
+                </li>
+                <li className="rounded-lg border p-4 text-sm space-y-2">
+                  <p className="font-medium">3. <span>设置监听入口</span></p>
+                  <p className="text-muted-foreground">{data.endpoints.filter((endpoint) => data.instances.some((value) => value.id === endpoint.instanceId && value.hostId === host.id)).length} 个已保存监听</p>
+                </li>
+                <li className="rounded-lg border p-4 text-sm space-y-2">
+                  <p className="font-medium">4. <span>设置流量去向</span></p>
+                  <p className="text-muted-foreground">{records.length ? `${records.length} 条已保存路径` : "尚未保存转发路径"}</p>
+                  <p className="text-muted-foreground">保存后检查，再确认应用。</p>
+                </li>
+              </ol>
               {coreList}
               <Accordion type="multiple" className="w-full"><AccordionItem value="identity"><AccordionTrigger>技术标识</AccordionTrigger><AccordionContent><p className="break-all text-sm text-muted-foreground">服务器 ID：{host.id}</p></AccordionContent></AccordionItem></Accordion>
             </TabsContent>
@@ -1311,4 +1336,5 @@ function Enrollment({
     </TaskDialog>
   );
 }
+
 

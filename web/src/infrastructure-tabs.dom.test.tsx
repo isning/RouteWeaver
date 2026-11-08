@@ -135,3 +135,25 @@ it("keeps keyboard tab navigation connected to the active inventory panel", asyn
     ),
   ).toBeTruthy();
 });
+
+
+it("opens a server through an explicit configuration action and shows the saved setup stages", async () => {
+  history.replaceState(null, "", "#servers");
+  mount();
+  const user = userEvent.setup();
+  const enter = await screen.findByRole("button", { name: "进入服务器 Tokyo server" });
+  expect(screen.getByText("1 个已登记核心")).toBeTruthy();
+  expect(screen.getByText("1 个已保存监听")).toBeTruthy();
+  expect(screen.getByText("下一步：配置转发路径")).toBeTruthy();
+  await user.click(enter);
+  const progress = screen.getByRole("list", { name: "服务器配置步骤" });
+  expect(within(progress).getAllByRole("listitem")).toHaveLength(4);
+  expect(within(progress).getByText("登记服务器")).toBeTruthy();
+  expect(within(progress).getByText("配置核心与 Agent")).toBeTruthy();
+  expect(within(progress).getByText("设置监听入口")).toBeTruthy();
+  expect(within(progress).getByText("设置流量去向")).toBeTruthy();
+  expect(within(progress).getByText("尚未保存转发路径")).toBeTruthy();
+  expect(screen.getByRole("button", { name: "查看接入与配置" })).toBeTruthy();
+  await user.click(screen.getByRole("button", { name: "返回服务器清单" }));
+  expect(await screen.findByRole("button", { name: "进入服务器 Tokyo server" })).toBeTruthy();
+});
