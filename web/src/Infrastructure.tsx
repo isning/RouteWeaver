@@ -51,6 +51,7 @@ import { revealFocusedPolicyModalControl } from "./drawer-control-visibility";
 import { phaseLabel, isUnchangedEndpointDraft } from "./infrastructure-model";
 import { dateLabel, newID } from "./model";
 import { useUnsavedChanges } from "./navigation";
+import { useWorkspaceViewEntry } from "./useWorkspaceViewEntry";
 import { NodeObservation } from "./NodeObservation";
 import type {
   AgentState,
@@ -73,7 +74,24 @@ const coreVersions: Record<string, string> = {
 const usesManagedEntryPreset = (instance?: CoreInstance) =>
   instance?.adapterId === "routeweaver/managed-xray" &&
   instance.version === coreVersions["routeweaver/managed-xray"];
+const requestedServerSetup = (hash: string) => {
+  return hash.split("?")[0] === "#servers" ? hash : null;
+};
 export function ServersPage() {
+  const [requestedSetup, setRequestedSetup] = useState(() => requestedServerSetup(location.hash));
+  const contextualSetup = useRef<{ hostId: string; instanceId: string } | null>(null);
+  const replaceView = useWorkspaceViewEntry((hash) => {
+    ++editSequence.current;
+    setRequestedSetup(requestedServerSetup(hash));
+  });
+  useEffect(() => {
+    const changed = () => {
+      ++editSequence.current;
+      setRequestedSetup(requestedServerSetup(location.hash));
+    };
+    window.addEventListener("hashchange", changed);
+    return () => window.removeEventListener("hashchange", changed);
+  }, []);
   const query = useQuery({
     queryKey: ["infrastructure"],
     queryFn: loadInfrastructure,
@@ -92,6 +110,10 @@ export function ServersPage() {
   const hostResumeAction = useRef<string | null>(null);
   const hostActions = useRef(new Map<string, HTMLButtonElement>());
   const openHost = (value: HostRecord) => {
+    ++editSequence.current;
+    setEditError(null);
+    contextualSetup.current = null;
+    setRequestedSetup(null);
     hostPageOpener.current =
       document.activeElement instanceof HTMLElement
         ? document.activeElement
@@ -101,6 +123,7 @@ export function ServersPage() {
   };
 
   const [instance, setInstance] = useState<CoreInstance | null>(null);
+  const [enrollmentOpen, setEnrollmentOpen] = useState(false);
   const [createdCores, setCreatedCores] = useState<CoreInstance[]>([]);
   const [createdHosts, setCreatedHosts] = useState<HostRecord[]>([]);
   // Retain only display identity from a confirmed write. Never place a revealed
@@ -111,6 +134,8 @@ export function ServersPage() {
   const instanceResumeAction = useRef<string | null>(null);
   const instanceActions = useRef(new Map<string, HTMLButtonElement>());
   const openInstance = (value: CoreInstance) => {
+    contextualSetup.current = null;
+    setRequestedSetup(null);
     ++editSequence.current;
     setEditError(null);
     instanceHostAction.current = host?.id === value.hostId ? `instance:${value.id}` : null;
@@ -154,6 +179,7 @@ export function ServersPage() {
     hostId?: string,
     instanceId?: string,
   ) => {
+    setRequestedSetup(null);
     const sequence = ++editSequence.current;
     setEditError(null);
     try {
@@ -182,6 +208,68 @@ export function ServersPage() {
     } catch (error) {
       if (sequence === editSequence.current) setEditError(error as Error);
     }
+  };
+  useEffect(() => {
+    if (requestedSetup === null || entity || enrollmentOpen) return;
+    const origin = requestedSetup;
+    if (location.hash !== origin) return;
+    const context = new URLSearchParams(origin.split("?")[1] || "");
+    if (!context.has("host") && !context.has("instance")) {
+      const owner = contextualSetup.current;
+      replaceView(origin, () => {
+        setRequestedSetup(null);
+        if (owner && contextualSetup.current === owner && host?.id === owner.hostId && instance?.id === owner.instanceId) {
+          contextualSetup.current = null;
+          setEditError(null);
+          setInstance(null);
+          setHost(null);
+        }
+      });
+      return;
+    }
+    if (!query.data || !query.isSuccess || query.isFetching || query.isPaused || query.isError) return;
+    const hosts = context.getAll("host");
+    const instances = context.getAll("instance");
+    const selectedHost = hosts.length === 1 && hosts[0]
+      ? query.data.hosts.find((candidate) => candidate.id === hosts[0]) : undefined;
+    const selectedInstance = instances.length === 1 && instances[0]
+      ? query.data.instances.find((candidate) => candidate.id === instances[0]) : undefined;
+    if (!selectedHost || !selectedInstance || selectedInstance.hostId !== selectedHost.id) {
+      setRequestedSetup(null);
+      setEditError(new Error("找不到匹配的服务器与核心，请从服务器清单重新选择。"));
+      return;
+    }
+    // The authenticated navigation lease owns this view, not a stale inventory
+    // result. Resolving a return link never writes configuration or credentials.
+    replaceView(origin, () => {
+      contextualSetup.current = { hostId: selectedHost.id, instanceId: selectedInstance.id };
+      setRequestedSetup(null);
+      setEditError(null);
+      hostPageOpener.current = pageCreateAction.current;
+      instancePageOpener.current = pageCreateAction.current;
+      instanceHostAction.current = `instance:${selectedInstance.id}`;
+      hostResumeAction.current = null;
+      instanceResumeAction.current = null;
+      setTab("hosts");
+      setHost(selectedHost);
+      setInstance(selectedInstance);
+    });
+  }, [requestedSetup, entity, enrollmentOpen, host?.id, instance?.id, query.data, query.isSuccess, query.isFetching, query.isPaused, query.isError, replaceView]);
+  const closeInstance = () => {
+    const close = () => {
+      if (host && instance?.hostId === host.id)
+        hostResumeAction.current = `instance:${instance.id}`;
+      contextualSetup.current = null;
+      setRequestedSetup(null);
+      ++editSequence.current;
+      setEditError(null);
+      setEnrollmentOpen(false);
+      setInstance(null);
+    };
+    const context = new URLSearchParams(location.hash.split("?")[1] || "");
+    if (requestedServerSetup(location.hash) && context.get("instance") === instance?.id)
+      replaceView("#servers", close);
+    else close();
   };
   return (
     <>
@@ -448,6 +536,7 @@ export function ServersPage() {
           }]);
         }}
         onCoreCreated={(created) => {
+          contextualSetup.current = null;
           setCreatedCores((current) => [...current.filter((saved) => saved.id !== created.id), created]);
           instanceHostAction.current = host?.id === created.hostId ? `instance:${created.id}` : null;
           instancePageOpener.current = pageCreateAction.current;
@@ -458,10 +547,10 @@ export function ServersPage() {
       <TaskSheet
         bodyProps={{ className: "space-y-5" }}
         title={host?.name}
-        open={!!host && (!entity || !!instance)}
+        open={!!host && !entity && !instance}
         initialFocus={() =>
           hostResumeAction.current
-            ? (hostActions.current.get(hostResumeAction.current) ?? null)
+            ? (hostActions.current.get(hostResumeAction.current) ?? hostActions.current.get("add-core") ?? null)
             : null
         }
         onReady={() => {
@@ -487,7 +576,11 @@ export function ServersPage() {
           });
         }}
         onOpenChange={(next) => {
-          if (!next) (() => setHost(null))();
+          if (!next) {
+            contextualSetup.current = null;
+            setRequestedSetup(null);
+            setHost(null);
+          }
         }}
         size="lg"
       >
@@ -653,9 +746,13 @@ export function ServersPage() {
             ? hostActions.current.get(instanceHostAction.current) || hostActions.current.get("add-core")
             : null) || instancePageOpener.current
         }
+        enrollmentOpen={enrollmentOpen}
+        onCloseEnrollment={() => setEnrollmentOpen(false)}
         onOpenEnrollment={() => {
+          setRequestedSetup(null);
           ++editSequence.current;
           setEditError(null);
+          setEnrollmentOpen(true);
         }}
         editError={editError}
         resumeAction={instanceResumeAction}
@@ -665,11 +762,7 @@ export function ServersPage() {
           instanceResumeAction.current = endpoint?.id || "add-listener";
           edit(endpoint, "managed-endpoints", instance.hostId, instance.id);
         }}
-        onClose={() => {
-          ++editSequence.current;
-          setEditError(null);
-          setInstance(null);
-        }}
+        onClose={closeInstance}
       />
     </>
   );
@@ -1487,6 +1580,8 @@ function InstanceDetail({
   suspended,
   returnFocus,
   onOpenEnrollment,
+  enrollmentOpen,
+  onCloseEnrollment,
   editError,
   resumeAction,
   actions,
@@ -1502,13 +1597,14 @@ function InstanceDetail({
   suspended: boolean;
   returnFocus: () => HTMLElement | null;
   onOpenEnrollment: () => void;
+  enrollmentOpen: boolean;
+  onCloseEnrollment: () => void;
   editError: Error | null;
   resumeAction: { current: string | null };
   actions: { current: Map<string, HTMLButtonElement> };
   onEditEndpoint: (endpoint: ManagedEndpoint | null) => void;
   onClose: () => void;
 }) {
-  const [enrollmentOpen, setEnrollmentOpen] = useState(false);
   const retained = savedListeners.filter((saved) => saved.instanceId === instance?.id);
   const endpoints = inventory?.endpoints.filter((endpoint) => endpoint.instanceId === instance?.id);
   const deployments = inventory?.deployments.filter((deployment) =>
@@ -1547,7 +1643,7 @@ function InstanceDetail({
       onReady={() => { resumeAction.current = null; }}
       onOpenChange={(next) => {
         if (!next) {
-          setEnrollmentOpen(false);
+          onCloseEnrollment();
           onClose();
         }
       }}
@@ -1567,7 +1663,6 @@ function InstanceDetail({
                 leadingIcon={<KeyOutlined aria-hidden="true" />}
                 onClick={() => {
                   onOpenEnrollment();
-                  setEnrollmentOpen(true);
                 }}
                 variant="outline"
               >
@@ -1640,10 +1735,14 @@ function InstanceDetail({
               </div>
             ) : endpoints?.length ? (
               <div className="space-y-3">
-                <p className="text-sm text-muted-foreground">监听端点已登记。选择它作为入口，配置流量的下一跳。</p>
-                <ActionButton asChild variant="default">
-                  <a href="#routes">前往转发路径</a>
-                </ActionButton>
+                <p className="text-sm text-muted-foreground">选择监听入口，继续设置流量去向。</p>
+                {endpoints.map((endpoint) => (
+                  <ActionButton key={endpoint.id} asChild variant={endpoints.length === 1 ? "default" : "outline"} className="h-auto max-w-full whitespace-normal text-left">
+                    <a href={`#routes?entryEndpoint=${encodeURIComponent(endpoint.id)}&returnHost=${encodeURIComponent(instance.hostId)}&returnInstance=${encodeURIComponent(instance.id)}`}>
+                      用 {endpoint.name} 创建转发路径
+                    </a>
+                  </ActionButton>
+                ))}
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">添加监听端点后，可用它配置转发路径。</p>
@@ -1657,7 +1756,7 @@ function InstanceDetail({
             <Enrollment
               key={`${instance.hostId}:${instance.id}`}
               instance={instance}
-              onClose={() => setEnrollmentOpen(false)}
+              onClose={onCloseEnrollment}
             />
           )}
         </>

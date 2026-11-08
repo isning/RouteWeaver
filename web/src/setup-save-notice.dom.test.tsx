@@ -55,6 +55,9 @@ function inventoryAPI() {
       else throw new Error(`Unexpected write: ${path}`);
       return json(value);
     }
+    const agent = cores.find((core) => path === `/api/agent/instances/${core.id}/state`);
+    if (agent) return json({ instanceId: agent.id, phase: "unregistered" });
+    if (cores.some((core) => path === `/api/agent/instances/${core.id}/accounting-pending`)) return json([]);
     const data: Record<string, unknown> = {
       "/api/hosts": hosts, "/api/core-instances": cores,
       "/api/managed-endpoints": [], "/api/links": [], "/api/server-deployments": [],
@@ -98,8 +101,9 @@ it("retires only the previous setup save acknowledgment when the next editor ope
   await user.click(core.getByRole("button", { name: "保存" }));
   const savedCore = await screen.findByText("核心实例「测试核心」已保存", { exact: true });
   expect(savedCore).toBeTruthy();
-  const resumed = within(await screen.findByRole("dialog", { name: "测试服务器" }));
-  await user.click(await resumed.findByRole("button", { name: "为 测试核心 添加监听端点" }));
+  const resumed = within(await screen.findByRole("dialog", { name: "测试服务器的测试核心" }));
+  expect(screen.getAllByRole("dialog")).toHaveLength(1);
+  await user.click(resumed.getByRole("button", { name: "添加监听端点" }));
   const listener = within(await screen.findByRole("dialog", { name: "添加监听端点" }));
   await waitFor(() => expect(screen.queryByText("核心实例「测试核心」已保存", { exact: true })).toBeNull());
   await user.type(listener.getByLabelText("端点名称", { exact: true }), "未完成的监听端点");
@@ -236,3 +240,4 @@ it.each(["server", "public"] as const)("keeps the %s save result in its detail, 
   await waitFor(() => expect(screen.queryByText(acknowledgment, { exact: true })).toBeNull());
   expect(screen.getByRole("heading", { name: "下一页" })).toBeTruthy();
 });
+
