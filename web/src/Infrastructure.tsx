@@ -304,6 +304,13 @@ export function ServersPage() {
   const records = host && data ? data.deployments.filter((deployment) => deployment.ir.programs.some((program) => program.instance.hostId === host.id)) : [];
   const hostCores = host && data ? data.instances.filter((core) => core.hostId === host.id) : [];
   const hostListeners = host && data ? data.endpoints.filter((endpoint) => hostCores.some((core) => core.id === endpoint.instanceId)) : [];
+  const chooseCore = () => {
+    if (!host || scopeIssue) return;
+    // A chooser must clear a previously visited core, including when the
+    // overview was opened from that core's detail. Use the guarded navigator
+    // rather than only changing the tab while retaining its instance ID.
+    navigate(serverWorkspaceHash(host.id, undefined, "cores"), () => show(host, null, "cores"));
+  };
   const setupAction = (step: "core" | "listener") => {
     if (!host || scopeIssue) return;
     if (!hostCores.length) {
@@ -315,7 +322,7 @@ export function ServersPage() {
         hostResumeAction.current = "setup-listener";
         edit(null, "managed-endpoints", host.id, hostCores[0].id);
       }
-    } else changeSection("cores");
+    } else chooseCore();
   };
   const coreList = host && data ? (<>
             <Section
@@ -726,7 +733,7 @@ export function ServersPage() {
                       <a href={`#routes?entryEndpoint=${encodeURIComponent(hostListeners[0].id)}&returnHost=${encodeURIComponent(host.id)}&returnInstance=${encodeURIComponent(hostListeners[0].instanceId)}`}>创建转发路径</a>
                     </ActionButton>
                   ) : (
-                    <ActionButton disabled={!!scopeIssue || !hostListeners.length} onClick={() => changeSection("cores")} variant={hostListeners.length ? "default" : "outline"} className="h-auto max-w-full whitespace-normal">
+                    <ActionButton disabled={!!scopeIssue || !hostListeners.length} onClick={chooseCore} variant={hostListeners.length ? "default" : "outline"} className="h-auto max-w-full whitespace-normal">
                       {hostListeners.length ? "选择监听入口" : "先设置监听入口"}
                     </ActionButton>
                   )}
@@ -1375,6 +1382,7 @@ function Enrollment({
     </TaskDialog>
   );
 }
+
 
 
 

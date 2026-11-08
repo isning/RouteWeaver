@@ -202,3 +202,30 @@ it("offers scoped listener creation only when the selected core has no listeners
   await user.click(within(editor).getByRole("button", { name: "取消" }));
   expect(screen.getByRole("list", { name: "服务器配置步骤" })).toBeTruthy();
 });
+
+
+it.each(["选择要配置的核心", "选择核心与监听", "选择监听入口"])("clears a previously visited core when returning to the %s chooser", async (action) => {
+  history.replaceState(null, "", "#servers");
+  mount({
+    "/api/core-instances": [
+      { id: "core-1", hostId: "host-1", name: "Tokyo core", adapterId: "routeweaver/xray", version: "26.3.27" },
+      { id: "core-2", hostId: "host-1", name: "Second core", adapterId: "routeweaver/xray", version: "26.3.27" },
+    ],
+    "/api/managed-endpoints": [
+      { id: "endpoint-1", instanceId: "core-1", name: "Tokyo entry", connection: { protocol: "vless", host: "0.0.0.0", port: 443 } },
+      { id: "endpoint-2", instanceId: "core-2", name: "Second entry", connection: { protocol: "vless", host: "0.0.0.0", port: 8443 } },
+    ],
+  });
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole("button", { name: "进入服务器 Tokyo server" }));
+  await user.click(screen.getAllByRole("button", { name: "查看接入与配置" })[0]);
+  expect(screen.getByRole("region", { name: "Tokyo server的Tokyo core" })).toBeTruthy();
+  expect(location.hash).toContain("instance=core-1");
+  await user.click(screen.getByRole("tab", { name: "概览" }));
+  await user.click(screen.getByRole("button", { name: action }));
+  expect(location.hash).toBe("#servers?host=host-1&section=cores");
+  expect(screen.queryByRole("region", { name: "Tokyo server的Tokyo core" })).toBeNull();
+  expect(screen.getByRole("heading", { name: "Tokyo core" })).toBeTruthy();
+  expect(screen.getByRole("heading", { name: "Second core" })).toBeTruthy();
+  expect(screen.getAllByRole("button", { name: "查看接入与配置" })).toHaveLength(2);
+});
