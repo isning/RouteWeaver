@@ -336,4 +336,3 @@ func TestBoundedDriverNeverOptsIntoServiceHeartbeats(t *testing.T) {
 		t.Fatal("bounded driver silently requested perpetual authority")
 	}
 }
-
