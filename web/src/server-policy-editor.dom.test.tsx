@@ -916,7 +916,7 @@ it.each([
   expect((within(editor).getByRole("button", { name: "保存草稿" }) as HTMLButtonElement).disabled).toBe(true);
   await user.type(input, "changed.invalid");
   await user.click(within(editor).getByRole("combobox", { name: "Policy entry 规则 2 条件类型" }));
-  await user.click(await screen.findByRole("option", { name: "域名后缀", exact: true }));
+  await user.click(await screen.findByRole("option", { name: "域名后缀" }));
   expect(hasUnsavedChanges()).toBe(true);
   expect(fixture.saved).toEqual([]);
   await user.click(within(editor).getByRole("button", { name: "保存草稿" }));
@@ -965,8 +965,40 @@ it.each(["null", "omitted"])("retains %s rules in a connector-only policy while 
   });
   const editor = await openEditor(user);
   await user.click(within(editor).getByRole("combobox", { name: "Policy entry 默认去向" }));
-  await user.click(await screen.findByRole("option", { name: "直连", exact: true }));
+  await user.click(await screen.findByRole("option", { name: "直连" }));
   await user.click(within(editor).getByRole("button", { name: "保存草稿" }));
   await waitFor(() => expect(fixture.saved).toHaveLength(1));
   expect(fixture.saved[0].ir.programs).toEqual([{ ...fixture.deployment.ir.programs[0], defaultAction: { kind: "direct" } }]);
+});
+
+
+it("edits a connector address and upstream through the policy page while preserving references and security fields", async () => {
+  const user = userEvent.setup();
+  const fixture = setup((draft) => {
+    Object.assign(draft.ir.programs[0].connectors![1].connection, { futureConnection: { retain: true } });
+    Object.assign(draft.ir.programs[0].connectors![1], { futureConnector: [2, 1] });
+  });
+  const editor = await openEditor(user);
+  const host = within(editor).getByRole("textbox", { name: "Policy entry 连接器 2 地址" });
+  await user.clear(host);
+  const save = within(editor).getByRole("button", { name: "保存草稿" });
+  expect((save as HTMLButtonElement).disabled).toBe(true);
+  await user.type(host, "updated-exit.invalid");
+  await user.click(within(editor).getByRole("combobox", { name: "Policy entry 连接器 2 上游连接器" }));
+  await user.click(await screen.findByRole("option", { name: "无上游连接器" }));
+  expect(hasUnsavedChanges()).toBe(true);
+  expect(fixture.saved).toEqual([]);
+  await user.click(within(editor).getByRole("button", { name: "编辑转发设置" }));
+  const json = await screen.findByRole("dialog", { name: "服务端配置意图" });
+  const intent = JSON.parse((within(json).getByRole("textbox", { name: "服务端配置意图 JSON 文本" }) as HTMLTextAreaElement).value);
+  const expected = structuredClone(fixture.deployment.ir.programs[0]);
+  expected.connectors![1].connection.host = "updated-exit.invalid";
+  delete expected.connectors![1].via;
+  expect(intent.programs).toEqual([expected]);
+  await user.click(within(json).getByRole("button", { name: "取消" }));
+  await user.click(save);
+  await waitFor(() => expect(fixture.saved).toHaveLength(1));
+  expect(fixture.saved[0].ir.programs).toEqual([expected]);
+  expect(fixture.saveHeaders[0].get("If-Match")).toBe("policy-r1");
+  expect(fixture.requests.filter((request) => !request.startsWith("GET "))).toEqual(["PUT /api/server-deployments/policy"]);
 });

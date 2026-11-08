@@ -289,6 +289,7 @@ for (const width of [1440, 390]) {
       name: "条件转发入口的连接器",
       exact: true,
     });
+    await connectors.getByText("连接器路径", { exact: true }).click();
     await expect(connectors).toContainText("127.0.0.1:23181 → 127.0.0.1:23182");
     await expect(editor).not.toContainText(
       /synthetic-listener-only|synthetic-transit-only|synthetic-exit-only/,
@@ -300,6 +301,16 @@ for (const width of [1440, 390]) {
       connectors.getByText("经由连接器 transit", { exact: true }),
       "policy-connector-dependencies",
     );
+    const connectorHost = editor.getByRole("textbox", { name: "条件转发入口 连接器 2 地址", exact: true });
+    await connectorHost.fill("");
+    await expect(editor.getByRole("button", { name: "保存草稿", exact: true })).toBeDisabled();
+    await connectorHost.fill("127.0.0.2");
+    const upstream = editor.getByRole("combobox", { name: "条件转发入口 连接器 2 上游连接器", exact: true });
+    await upstream.focus();
+    await page.keyboard.press("Enter");
+    await search.fill("无上游连接器");
+    await search.press("Enter");
+    await capture(page, info, editor, connectorHost, "policy-connector-host");
     const consequence = editor.getByText("仅保存草稿，检查与应用需另行操作。", {
       exact: true,
     });
@@ -321,6 +332,10 @@ for (const width of [1440, 390]) {
       {
         ...before.ir.programs[0],
         defaultAction: { kind: "forward", ref: "exit" },
+        connectors: [
+          before.ir.programs[0].connectors[0],
+          { id: "exit", connection: { ...before.ir.programs[0].connectors[1].connection, host: "127.0.0.2" } },
+        ],
         rules: [
           { ...before.ir.programs[0].rules[0], match: { ...before.ir.programs[0].rules[0].match, value: "updated.example.invalid" }, action: { kind: "reject" } },
           { ...before.ir.programs[0].rules[1], match: { ...before.ir.programs[0].rules[1].match, op: "ip-cidr", value: "2001:db8::7/32" }, action: { kind: "direct" } },
@@ -335,4 +350,5 @@ for (const width of [1440, 390]) {
     ]);
   });
 }
+
 

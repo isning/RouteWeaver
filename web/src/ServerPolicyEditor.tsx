@@ -1,3 +1,4 @@
+import { ServerConnectorEditor } from "./ServerConnectorEditor";
 import { Input } from "@/components/ui/input";
 import { ActionButton } from "@/ui-patterns/actions";
 import { ChoiceSelect } from "@/ui-patterns/choice-select";
@@ -310,6 +311,7 @@ export function ServerPolicyEditor({
   onDefaultActionChange,
   onRuleActionChange,
   onRuleConditionChange,
+  onConnectorsChange,
   onRefreshListener,
   onEditJSON,
 }: {
@@ -323,6 +325,7 @@ export function ServerPolicyEditor({
     action: ActionRef,
   ) => void;
   onRuleConditionChange: (programIndex: number, ruleID: string, match: MatchExpression) => void;
+  onConnectorsChange: (programIndex: number, source: ServerProgram, next: ServerProgram) => void;
   onRefreshListener: (endpointId: string) => void;
   onEditJSON: () => void;
 }) {
@@ -539,36 +542,21 @@ export function ServerPolicyEditor({
               className="space-y-2"
             >
               <h4 className="font-medium">连接器</h4>
-              {program.connectors?.length ? (
-                <>
-                  <dl className="space-y-2">
-                    {program.connectors.map((connector, index) => (
-                      <div
-                        key={`${connector.id}:${index}`}
-                        className="grid gap-1 rounded-lg bg-muted/30 p-3"
-                      >
-                        <dt className="font-medium">{connector.id}</dt>
-                        <dd>{connectorPath(program, connector.id)}</dd>
-                        <dd className="text-muted-foreground">
-                          {connector.via
-                            ? `经由连接器 ${connector.via}`
-                            : "无上游连接器"}
-                        </dd>
-                      </div>
-                    ))}
-                  </dl>
-                  <p className="text-muted-foreground">
-                    连接参数与经由关系尚未提供表单，请在完整 JSON
-                    中编辑；保留连接器身份与引用。
-                  </p>
-                </>
-              ) : (
-                <p className="text-muted-foreground">
-                  {program.egress?.length
-                    ? `使用 ${program.egress.length} 个顺序出口，请在完整 JSON 中查看和编辑。`
-                    : "未配置连接器"}
-                </p>
-              )}
+              {!!program.connectors?.length && <details className="text-sm">
+                <summary className="cursor-pointer text-muted-foreground">连接器路径</summary>
+                <ul className="space-y-2 pt-2">
+                  {program.connectors.map((connector, index) => <li key={`${connector.id}:${index}`}>
+                    <p>{connector.id}：{connectorPath(program, connector.id)}</p>
+                    <p className="text-muted-foreground">{connector.via ? `经由连接器 ${connector.via}` : "无上游连接器"}</p>
+                  </li>)}
+                </ul>
+              </details>}
+              {!programEditReason(program, schemaVersion) ? <ServerConnectorEditor
+                program={program}
+                schemaVersion={schemaVersion}
+                label={identityLabel}
+                onChange={(next) => onConnectorsChange(programIndex, program, next)}
+              /> : <p className="text-sm text-muted-foreground">{program.egress?.length ? `使用 ${program.egress.length} 个顺序出口。` : program.connectors?.length ? "连接器仅供查看。" : "未配置连接器"}</p>}
             </section>
             <section
               aria-label={`${identityLabel}的用户入口`}
@@ -660,4 +648,5 @@ export function ServerPolicyEditor({
     </div>
   );
 }
+
 

@@ -1,3 +1,4 @@
+import { connectorInputError } from "./server-connector-editor";
 import {
   OperationalIntegerInput,
   operationalInteger,
@@ -668,6 +669,8 @@ export function ServerRouteEditor({
       if (latestDraft.current.ir.programs.some((program) => (program.rules || []).some((rule) =>
         canEditRuleCondition(program, latestDraft.current.ir.schemaVersion, rule) && !!ruleConditionError(rule.match))))
         throw new Error("请先修正规则条件，再保存草稿。");
+      const connectorError = latestDraft.current.ir.programs.map((program) => connectorInputError(program, latestDraft.current.ir.schemaVersion)).find(Boolean);
+      if (connectorError) throw new Error(connectorError);
       return saveRecord<ServerDeployment>("server-deployments", latestDraft.current, isNew);
     },
     onSuccess: (value, complete) => {
@@ -877,6 +880,7 @@ export function ServerRouteEditor({
             pending={save.isPending}
             disabled={
               draft.ir.programs.some((program) => (program.rules || []).some((rule) => canEditRuleCondition(program, draft.ir.schemaVersion, rule) && !!ruleConditionError(rule.match))) ||
+              draft.ir.programs.some((program) => !!connectorInputError(program, draft.ir.schemaVersion)) ||
               !draft.name.trim() ||
               pathLoading ||
               selectionPending ||
@@ -1001,6 +1005,12 @@ export function ServerRouteEditor({
                   !canEditRuleCondition(program, latestDraft.current.ir.schemaVersion, rule)) return;
               updateProgram(index, { rules: program.rules.map((item) => item.id === ruleID ? { ...item, match } : item) });
               setAnnouncement("规则条件已更新到草稿，去向与顺序不变，尚未保存。");
+            }}
+            onConnectorsChange={(index, source, next) => {
+              const program = latestDraft.current.ir.programs[index];
+              if (!program || program !== source || program.instance.id !== next.instance.id || program.listener.id !== next.listener.id) return;
+              updateProgram(index, { connectors: next.connectors });
+              setAnnouncement("连接器已更新到草稿，规则引用不变，尚未保存。");
             }}
             onRefreshListener={setRefreshingListener}
             onEditJSON={editIntent}
@@ -2241,5 +2251,6 @@ function ServerRouteDetail({
     </TaskSheet>
   );
 }
+
 
 
