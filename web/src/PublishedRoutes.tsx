@@ -23,7 +23,7 @@ import {
   Trash2 as DeleteOutlined,
   Plus as PlusOutlined,
 } from "lucide-react";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { DataTable, TableRowActions } from "./DataTable";
 import { loadInfrastructure } from "./infrastructure-data";
 import { RouteExitEditor } from "./RouteExitEditor";
@@ -49,6 +49,9 @@ import { invalidateOutputInputs } from "./output-comparison";
 import type { Infrastructure, PlatformEntry, ServerDeployment } from "./types";
 import { useDiscardConfirmation } from "./useDiscardConfirmation";
 import { useWorkspaceViewEntry } from "./useWorkspaceViewEntry";
+import { WorkspaceHistoryContext } from "./SubscriptionContext";
+import { WORKSPACE_NAVIGATION_EVENT } from "./workspace-history";
+import { PublicRouteEditComparison, publicRouteFields, reviewedPublicRoute, type ReviewedPublicRoute } from "./PublicRouteEditComparison";
 interface RoutePathSummary {
   hops: {
     endpointId: string;
@@ -443,6 +446,7 @@ export function PublishedRoutesPage() {
       </QueryState>
       {editing && infrastructure.data && (
         <PublicRouteEditor
+          key={`${isNew ? "new" : "existing"}:${editing.id}`}
           initial={editing}
           isNew={isNew}
           inventory={infrastructure.data}
@@ -573,29 +577,85 @@ function PublicRouteEditor({
   onSaved: (route: PublishedRoute) => boolean;
 }) {
   const [draft, setDraft] = useState(initial);
+  const [baseline, setBaseline] = useState(() => ({ ...publicRouteFields(initial), revisionToken: initial.revisionToken }));
   const [publicPort, setPublicPort] = useState<number | string>(initial.publicPort);
-  const portDirty = String(publicPort) !== String(initial.publicPort);
+  const [portReset, setPortReset] = useState(0);
+  const portDirty = String(publicPort) !== String(baseline.publicPort);
+  const dirty = JSON.stringify(publicRouteFields({ ...draft, publicPort: baseline.publicPort })) !== JSON.stringify(publicRouteFields(baseline)) || portDirty;
   const { confirm: confirmDiscard, confirming: discardConfirming } =
     useDiscardConfirmation(initial.id);
   const [discardClosing, setDiscardClosing] = useState(false);
   const [pendingEndpoints, setPendingEndpoints] = useState<
     Record<string, boolean>
   >({});
-  const markPending = (key: string, pending: boolean) =>
-    setPendingEndpoints((previous) =>
-      previous[key] === pending ? previous : { ...previous, [key]: pending },
-    );
+  const pendingEndpointState = useRef<Record<string, boolean>>({});
+  const markPending = (key: string, pending: boolean) => {
+    if (!!pendingEndpointState.current[key] === pending) return;
+    pendingEndpointState.current = { ...pendingEndpointState.current, [key]: pending };
+    // Picking a server is already a draft edit, even before an endpoint is
+    // chosen. Revoke any comparison/read synchronously with that transition.
+    version.current++;
+    previewVersion.current = null;
+    invalidateComparison();
+    setPreview(null);
+    setPendingEndpoints(pendingEndpointState.current);
+  };
   const addKey = `add-${draft.deploymentId}-${draft.endpointIds.join("/")}`;
   const selectionPending =
     draft.endpointIds.some((id) => pendingEndpoints[id]) ||
     pendingEndpoints[addKey];
   useUnsavedChanges(
-    JSON.stringify(draft) !== JSON.stringify(initial) || portDirty || selectionPending,
+    dirty || selectionPending,
   );
   const [preview, setPreview] = useState<PublishedRoute | null>(null);
   const [checkedBefore, setCheckedBefore] = useState(false);
   const version = useRef(0);
+  const previewVersion = useRef<number | null>(null);
+  const submitting = useRef(false);
   const attempt = useRef(0);
+  const workspace = useContext(WorkspaceHistoryContext);
+  const mounted = useRef(false);
+  const comparisonAttempt = useRef(0);
+  const comparisonTrigger = useRef<HTMLButtonElement>(null);
+  const nameInput = useRef<HTMLInputElement>(null);
+  const [readingLatest, setReadingLatest] = useState(false);
+  const [comparisonError, setComparisonError] = useState<string>();
+  const [comparison, setComparison] = useState<{
+    latest: ReviewedPublicRoute;
+    current: ReturnType<typeof publicRouteFields>;
+    publicPort: number | string;
+    stillCurrent(): boolean;
+  } | null>(null);
+  const invalidateComparison = () => {
+    comparisonAttempt.current++;
+    setReadingLatest(false);
+    setComparison(null);
+    setComparisonError(undefined);
+  };
+  useLayoutEffect(() => {
+    mounted.current = true;
+    const changed = () => {
+      version.current++;
+      previewVersion.current = null;
+      setPreview(null);
+      invalidateComparison();
+    };
+    window.addEventListener(WORKSPACE_NAVIGATION_EVENT, changed);
+    window.addEventListener("hashchange", changed);
+    return () => {
+      mounted.current = false;
+      comparisonAttempt.current++;
+      window.removeEventListener(WORKSPACE_NAVIGATION_EVENT, changed);
+      window.removeEventListener("hashchange", changed);
+    };
+  }, []);
+  const ownView = () => {
+    const hash = location.hash;
+    const owner = workspace?.current;
+    const lease = owner?.bindView(hash);
+    return () => mounted.current && location.hash === hash &&
+      (!workspace || (workspace.current === owner && !!lease?.(hash)));
+  };
   const tlsFailureOwners = useRef(
     new WeakMap<Error, { revision: number; attempt: number }>(),
   );
@@ -632,23 +692,33 @@ function PublicRouteEditor({
     };
   };
   const update = (patch: Partial<PublishedRoute>) => {
-    if (patch.publicPort !== undefined) setPublicPort(patch.publicPort);
+    if (patch.publicPort !== undefined) {
+      setPublicPort(patch.publicPort);
+      setPortReset(value => value + 1);
+    }
     version.current++;
+    previewVersion.current = null;
+    invalidateComparison();
     setDraft({ ...draft, ...patch });
     setPreview(null);
   };
   const inspect = useMutation({
     mutationFn: async () => {
       const revision = version.current;
+      const stillCurrent = ownView();
+      previewVersion.current = null;
+      setPreview(null);
       return {
         value: await withTLSFailureOwner(() =>
           post<PublishedRoute>("/published-routes/preview", payload()),
         ),
         revision,
+        stillCurrent,
       };
     },
-    onSuccess: ({ value, revision }) => {
-      if (version.current === revision) {
+    onSuccess: ({ value, revision, stillCurrent }) => {
+      if (stillCurrent() && version.current === revision) {
+        previewVersion.current = revision;
         setPreview(value);
         setCheckedBefore(true);
       }
@@ -656,13 +726,16 @@ function PublicRouteEditor({
   });
   const save = useMutation({
     onMutate: () => invalidateOutputInputs(client),
-    onSettled: () => invalidateOutputInputs(client),
+    onSettled: () => {
+      submitting.current = false;
+      invalidateOutputInputs(client);
+    },
     // Carry the originating view completion through the request; options may rerender.
     mutationFn: (_complete: typeof onSaved) =>
       withTLSFailureOwner(() =>
         saveRecord<PublishedRoute>(
           "published-routes",
-          { ...payload(), revisionToken: initial.revisionToken },
+          { ...payload(), revisionToken: baseline.revisionToken },
           isNew,
         ),
       ),
@@ -675,6 +748,37 @@ function PublicRouteEditor({
       complete(value);
     },
   });
+  const conflicted = save.error instanceof APIError && save.error.status === 409;
+  const readLatest = async () => {
+    if (isNew || !conflicted || readingLatest || save.isPending || selectionPending) return;
+    const sequence = ++comparisonAttempt.current;
+    const revision = version.current;
+    const currentView = ownView();
+    const stillCurrent = () => currentView() && comparisonAttempt.current === sequence && version.current === revision;
+    setReadingLatest(true);
+    setComparisonError(undefined);
+    try {
+      const value = await request<unknown>(`/published-routes/${encodeURIComponent(initial.id)}/resolve`);
+      if (!stillCurrent()) return;
+      const latest = reviewedPublicRoute(value, initial.id);
+      if (!latest || !baseline.revisionToken?.trim()) {
+        setComparisonError("无法确认最新线路的身份或版本。当前输入已保留，请稍后重新读取。");
+      } else if (latest.revisionToken === baseline.revisionToken) {
+        setComparisonError("未发现更新的线路版本。冲突可能来自线路身份或关联配置，当前输入已保留，请核对转发路径后重新读取。");
+      } else {
+        setComparison({ latest, current: publicRouteFields(draft), publicPort, stillCurrent });
+      }
+    } catch (error) {
+      if (!stillCurrent()) return;
+      setComparisonError(error instanceof APIError && error.status === 404
+        ? "找不到这条线路。当前输入已保留，请确认线路是否已删除。"
+        : error instanceof APIError && [401, 403].includes(error.status)
+          ? "暂时无法读取这条线路，请确认登录状态与访问权限。当前输入已保留。"
+          : "无法读取最新线路。当前输入已保留，请重试。");
+    } finally {
+      if (mounted.current && comparisonAttempt.current === sequence) setReadingLatest(false);
+    }
+  };
   const error = [inspect.error, save.error].find((error) => {
     if (!isPublicTLSRefusal(error)) return !!error;
     const owner = tlsFailureOwners.current.get(error);
@@ -694,8 +798,11 @@ function PublicRouteEditor({
   };
   const close = () => {
     if (save.isPending) return;
-    if (!selectionPending && !portDirty && JSON.stringify(draft) === JSON.stringify(initial))
+    if (comparison) return;
+    if (!selectionPending && !dirty) {
+      invalidateComparison();
       return onClose();
+    }
     confirmDiscard(
       {
         title: "放弃未保存的公开线路修改？",
@@ -703,10 +810,14 @@ function PublicRouteEditor({
         confirmLabel: "放弃修改",
         cancelLabel: "继续编辑",
       },
-      () => setDiscardClosing(true),
+      () => {
+        invalidateComparison();
+        setDiscardClosing(true);
+      },
     );
   };
   return (
+    <>
     <TaskSheet
       bodyProps={{ className: "space-y-5" }}
       title={isNew ? "配置公开线路" : `编辑 ${initial.name}`}
@@ -725,7 +836,7 @@ function PublicRouteEditor({
         })(false);
       }}
       size="lg"
-      pending={save.isPending}
+      pending={save.isPending || !!comparison || discardConfirming}
     >
       <ErrorNotice
         error={error}
@@ -740,11 +851,19 @@ function PublicRouteEditor({
             : undefined
         }
       />
-      {save.error instanceof APIError && save.error.status === 409 && (
+      {conflicted && (
         <Notice
           tone="warning"
-          title="线路已被其他修改更新。当前输入保留，但不能覆盖新版本。"
+          title={isNew ? "线路未保存，当前身份与已有配置冲突。当前输入已保留。" : "线路保存发生冲突。当前输入已保留，请读取最新版本并核对。"}
           action={
+            <div className="flex flex-wrap gap-2">
+            {!isNew && <ActionButton
+              ref={comparisonTrigger}
+              pending={readingLatest}
+              disabled={selectionPending || inspect.isPending || discardConfirming}
+              onClick={() => void readLatest()}
+              variant="outline"
+            >读取最新版本并比较</ActionButton>}
             <ActionButton
               onClick={() =>
                 confirmDiscard(
@@ -761,7 +880,10 @@ function PublicRouteEditor({
                     await client.invalidateQueries({
                       queryKey: ["published-route-resolve", draft.id],
                     });
-                    if (stillCurrent()) setDiscardClosing(true);
+                    if (stillCurrent()) {
+                      invalidateComparison();
+                      setDiscardClosing(true);
+                    }
                   },
                 )
               }
@@ -769,9 +891,11 @@ function PublicRouteEditor({
             >
               放弃修改并返回
             </ActionButton>
+            </div>
           }
         />
       )}
+      {comparisonError && <Notice tone="warning" title={comparisonError} />}
       <Notice
         tone="info"
         title={
@@ -786,6 +910,7 @@ function PublicRouteEditor({
         <label className="standalone-label grid gap-2 text-sm font-medium">
           线路名称
           <Input
+            ref={nameInput}
             value={draft.name}
             onChange={(e) => update({ name: e.target.value })}
           />
@@ -961,7 +1086,7 @@ function PublicRouteEditor({
           <label className="grid gap-2 text-sm font-medium">
             对外端口
             <OperationalIntegerInput
-              key={draft.deploymentId}
+              key={portReset}
               min={1}
               max={65535}
               value={publicPort}
@@ -1003,7 +1128,8 @@ function PublicRouteEditor({
             !draft.endpointIds.length ||
             selectionPending
           }
-          onClick={() => inspect.mutate()}
+          onKeyDown={event => { if (event.repeat) event.preventDefault(); }}
+          onClick={event => { if (event.detail <= 1 && !comparison) inspect.mutate(); }}
           variant={preview ? "outline" : "default"}
         >
           检查公开线路
@@ -1015,10 +1141,16 @@ function PublicRouteEditor({
               !preview ||
               !!preview.diagnostics?.length ||
               selectionPending ||
-              (save.error instanceof APIError && save.error.status === 409)
+              conflicted
             }
             pending={save.isPending}
-            onClick={() => save.mutate(onSaved)}
+            onKeyDown={event => { if (event.repeat) event.preventDefault(); }}
+            onClick={event => {
+              if (event.detail > 1 || submitting.current || conflicted || comparison ||
+                previewVersion.current !== version.current || !preview || preview.diagnostics?.length || selectionPending) return;
+              submitting.current = true;
+              save.mutate(onSaved);
+            }}
             variant="default"
           >
             保存公开线路
@@ -1026,6 +1158,36 @@ function PublicRouteEditor({
         )}
       </div>
     </TaskSheet>
+    {comparison && <PublicRouteEditComparison
+      current={comparison.current}
+      publicPort={comparison.publicPort}
+      latest={comparison.latest}
+      inventory={inventory}
+      returnFocus={comparisonTrigger.current}
+      continueFocus={nameInput.current}
+      onCancel={() => invalidateComparison()}
+      onContinue={(selected, port) => {
+        if (!comparison.stillCurrent()) {
+          invalidateComparison();
+          setComparisonError("比较期间内容或页面已变化，请重新读取最新版本。当前输入已保留。");
+          return;
+        }
+        version.current++;
+        previewVersion.current = null;
+        setDraft(current => ({ ...current, ...selected }));
+        setPublicPort(port);
+        if (port !== comparison.publicPort) setPortReset(value => value + 1);
+        setBaseline(comparison.latest);
+        pendingEndpointState.current = {};
+        setPendingEndpoints({});
+        setPreview(null);
+        setCheckedBefore(true);
+        inspect.reset();
+        save.reset();
+        invalidateComparison();
+      }}
+    />}
+    </>
   );
 }
 function PrincipalEditor({
@@ -1646,3 +1808,4 @@ function PublicRouteDetail({
     </>
   );
 }
+

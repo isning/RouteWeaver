@@ -315,7 +315,7 @@ it("retains an unknown save failure and the conflict guard after a successful re
   await waitFor(() => expect(inspect.getAttribute("aria-busy")).not.toBe("true"));
   await editor.findByText("路径检查完成", { exact: true });
   expect(editor.getByText(conflict, { exact: true }).closest("details")).toBeNull();
-  expect(editor.getByText("线路已被其他修改更新。当前输入保留，但不能覆盖新版本。", { exact: true })).toBeTruthy();
+  expect(editor.getByText("线路保存发生冲突。当前输入已保留，请读取最新版本并核对。", { exact: true })).toBeTruthy();
   expect(editor.getByRole("button", { name: "保存公开线路" }).hasAttribute("disabled")).toBe(true);
   expect(editor.queryByText(tlsTitle)).toBeNull();
 });
