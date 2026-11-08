@@ -8,8 +8,9 @@ import {
   screen,
   within,
   waitFor,
-} from "@testing-library/react";
+} from "@testing-library/react/pure";
 import userEvent from "@testing-library/user-event";
+import { toast } from "sonner";
 import { UIProviders } from "./ui-patterns/providers";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { PublishedRoutesPage } from "./PublishedRoutes";
@@ -170,13 +171,25 @@ beforeEach(() => {
     original(element),
   );
 });
-afterEach(() => {
-  cleanup();
-  navigations.splice(0).forEach((navigation) => navigation.dispose());
-  clients.splice(0).forEach((client) => client.clear());
-  vi.restoreAllMocks();
-  vi.unstubAllGlobals();
-  vi.unstubAllEnvs();
+afterEach(async () => {
+  try {
+    // Sonner's exit callback outlives the toast component. Own RTL cleanup
+    // explicitly so real notification removal finishes before jsdom teardown.
+    // This also drains save notices already dismissed by their departing task.
+    await act(async () => {
+      toast.dismiss();
+    });
+    await waitFor(() =>
+      expect(document.querySelectorAll("[data-sonner-toast]")).toHaveLength(0),
+    );
+  } finally {
+    cleanup();
+    navigations.splice(0).forEach((navigation) => navigation.dispose());
+    clients.splice(0).forEach((client) => client.clear());
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  }
 });
 
 async function openEditor(
