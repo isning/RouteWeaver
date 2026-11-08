@@ -97,6 +97,14 @@ for (const timing of ["before", "after"] as const) {
     task.owner.assertActive();
     await task.user.tab();
     task.owner.assertActive();
+    const ordering = task.editor.getByText("顺序与移除", { selector: "summary" });
+    expect(document.activeElement).toBe(ordering);
+    expect(ordering.closest("details")?.hasAttribute("open")).toBe(false);
+    await task.user.keyboard("{Enter}");
+    task.owner.assertActive();
+    expect(ordering.closest("details")?.hasAttribute("open")).toBe(true);
+    await task.user.tab();
+    task.owner.assertActive();
     expect(document.activeElement).toBe(task.editor.getByRole("button", { name: "移除第 1 跳" }));
     expect(task.mutations).toEqual([]);
   });
@@ -146,3 +154,4 @@ it("does not take focus from a newer discard decision when the first-entry revea
   expect(document.activeElement).toBe(keepEditing);
   expect(task.mutations).toEqual([]);
 });
+

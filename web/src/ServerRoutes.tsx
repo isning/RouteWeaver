@@ -119,9 +119,12 @@ export function ServerRoutesPage({
   publicationRequests?: PublicationOwner;
 } = {}) {
   const replaceView = useWorkspaceViewEntry((hash) => {
-    const target = new URLSearchParams(hash.split("?")[1] || "").get(
-      "deployment",
-    );
+    const context = new URLSearchParams(hash.split("?")[1] || "");
+    const target = context.get("deployment");
+    editSequence.current++;
+    setEntryLoading(false);
+    setEntryRetry(null);
+    setRequestedEntry(context.has("entryEndpoint") ? hash : null);
     setEditing((current) => (current?.id === target ? current : null));
   });
   const viewHash = location.hash;
@@ -129,6 +132,8 @@ export function ServerRoutesPage({
     queryKey: ["infrastructure"],
     queryFn: loadInfrastructure,
   });
+  const latestInventory = useRef(query);
+  latestInventory.current = query;
   const [editing, setEditing] = useState<ServerDeployment | null>(null);
   const [selected, setSelected] = useState<ServerDeployment | null>(null);
   const [newRecord, setNewRecord] = useState(false);
@@ -153,14 +158,27 @@ export function ServerRoutesPage({
       publicationRequests?.pendingDeploymentId === id
     )
       return;
+    editSequence.current++;
+    setEntryLoading(false);
+    setEntryRetry(null);
     setSelected(null);
     setPlanning({ deploymentId: id, action });
   };
   const [editError, setEditError] = useState<Error | null>(null);
   const editSequence = useRef(0);
   const [refreshEndpoint, setRefreshEndpoint] = useState<string>();
+  const [requestedEntry, setRequestedEntry] = useState<string | null>(() =>
+    new URLSearchParams(location.hash.split("?")[1] || "").has("entryEndpoint")
+      ? location.hash : null,
+  );
+  const [entryLoading, setEntryLoading] = useState(false);
+  const [entryRetry, setEntryRetry] = useState<string | null>(null);
+  useEffect(() => () => { editSequence.current++; }, []);
   const edit = async (value?: ServerDeployment, endpointId?: string) => {
     const sequence = ++editSequence.current;
+    setEntryLoading(false);
+    setEntryRetry(null);
+    setRequestedEntry(null);
     setEditError(null);
     try {
       const full = value
@@ -184,6 +202,11 @@ export function ServerRoutesPage({
   );
   useEffect(() => {
     const changed = () => {
+      const context = new URLSearchParams(location.hash.split("?")[1] || "");
+      editSequence.current++;
+      setEntryLoading(false);
+      setEntryRetry(null);
+      setRequestedEntry(context.has("entryEndpoint") ? location.hash : null);
       const target = new URLSearchParams(location.hash.split("?")[1] || "").get(
         "deployment",
       );
@@ -205,6 +228,7 @@ export function ServerRoutesPage({
       editing ||
       planning ||
       task ||
+      requestedEntry !== null ||
       !requestedDeployment ||
       !query.data ||
       query.isFetching
@@ -221,13 +245,105 @@ export function ServerRoutesPage({
     planning,
     task,
     requestedDeployment,
+    requestedEntry,
     query.data,
     query.isFetching,
   ]);
+  useEffect(() => {
+    if (requestedEntry === null || editing || selected || planning || task ||
+        !query.data || !query.isSuccess || query.isFetching || query.isPaused || query.isError) return;
+    const origin = requestedEntry;
+    setRequestedEntry(null);
+    if (location.hash !== origin) return;
+    const context = new URLSearchParams(origin.split("?")[1] || "");
+    const ids = context.getAll("entryEndpoint");
+    const endpoint = ids.length === 1 && ids[0]
+      ? query.data.endpoints.find((candidate) => candidate.id === ids[0]) : undefined;
+    const instance = query.data.instances.find((candidate) => candidate.id === endpoint?.instanceId);
+    const host = query.data.hosts.find((candidate) => candidate.id === instance?.hostId);
+    if (context.has("deployment") || !endpoint || !instance || !host) {
+      setRequestedDeployment(null);
+      setEditError(new Error("找不到指定的入口监听，请返回服务器选择当前可用的端点。"));
+      return;
+    }
+    if (context.getAll("returnHost").length > 1 || context.getAll("returnInstance").length > 1 ||
+        (context.has("returnHost") && context.get("returnHost") !== host.id) ||
+        (context.has("returnInstance") && context.get("returnInstance") !== instance.id)) {
+      setEditError(new Error("入口监听与原服务器不一致，请返回服务器重新选择。"));
+      return;
+    }
+    const sequence = ++editSequence.current;
+    setEntryLoading(true);
+    setEntryRetry(null);
+    setEditError(null);
+    void (async () => {
+      try {
+        // A contextual link identifies one endpoint; it never authorizes saving,
+        // publishing, refreshing another listener, or adopting summary secrets.
+        const revealed = await request<ManagedEndpoint>(`/managed-endpoints/${encodeURIComponent(endpoint.id)}/reveal`);
+        if (sequence !== editSequence.current || location.hash !== origin) return;
+        if (revealed.id !== endpoint.id || revealed.instanceId !== instance.id)
+          throw new Error("入口监听的所属核心已变化，请返回服务器重新选择。");
+        const current = latestInventory.current;
+        if (!current.isSuccess || current.isFetching || current.isPaused || current.isError || !current.data)
+          throw new Error("服务器清单尚未确认，请重新读取入口。");
+        const registered = current.data.endpoints.find((candidate) => candidate.id === endpoint.id);
+        const owner = current.data.instances.find((candidate) => candidate.id === instance.id);
+        if (!owner || registered?.instanceId !== instance.id || owner.hostId !== host.id ||
+            owner.adapterId !== instance.adapterId || owner.version !== instance.version ||
+            !current.data.hosts.some((candidate) => candidate.id === host.id))
+          throw new Error("入口监听的所属核心已变化，请返回服务器重新选择。");
+        const next = compilePath(newDeployment(), [endpoint.id], {
+          ...current.data,
+          endpoints: current.data.endpoints.map((candidate) => candidate.id === endpoint.id ? revealed : candidate),
+        });
+        const completed = replaceView(origin, () => {
+          setNewRecord(true);
+          setRefreshEndpoint(undefined);
+          setSelected(null);
+          setEditing(next);
+        });
+        if (!completed && sequence === editSequence.current && location.hash === origin)
+          setEntryRetry(origin);
+      } catch (error) {
+        if (sequence === editSequence.current && location.hash === origin) {
+          setEditError(error as Error);
+          setEntryRetry(origin);
+        }
+      } finally {
+        if (sequence === editSequence.current) setEntryLoading(false);
+      }
+    })();
+  }, [requestedEntry, editing, selected, planning, task, query.data, query.isSuccess, query.isFetching, query.isPaused, query.isError]);
   const inventory = query.data;
   const returnHref = returnContext.get("line")
     ? `#published-routes?line=${encodeURIComponent(returnContext.get("line")!)}${returnContext.get("user") ? `&user=${encodeURIComponent(returnContext.get("user")!)}` : ""}`
     : undefined;
+  const returnInstance = inventory?.instances.find((instance) =>
+    instance.id === returnContext.get("returnInstance") && instance.hostId === returnContext.get("returnHost"),
+  );
+  const returnServerHref = returnInstance && inventory?.hosts.some((host) => host.id === returnInstance.hostId)
+    ? `#servers?host=${encodeURIComponent(returnInstance.hostId)}&instance=${encodeURIComponent(returnInstance.id)}`
+    : undefined;
+  const finishEditor = (value?: ServerDeployment) => {
+    const context = new URLSearchParams(viewHash.split("?")[1] || "");
+    if (!value && !context.has("entryEndpoint")) {
+      setEditing(null);
+      return true;
+    }
+    if (context.has("entryEndpoint")) {
+      context.delete("entryEndpoint");
+      if (value) context.set("deployment", value.id);
+      return replaceView(`#routes${context.size ? `?${context}` : ""}`, () => {
+        setEditing(null);
+        if (value) setSelected(value);
+      });
+    }
+    return replaceView(viewHash, () => {
+      setEditing(null);
+      if (value) setSelected(value);
+    });
+  };
   return (
     <>
       <PageHeader
@@ -243,6 +359,9 @@ export function ServerRoutesPage({
         }
       />
       <ErrorNotice error={editError} />
+      {entryLoading && <p role="status" className="text-sm text-muted-foreground">正在读取入口监听…</p>}
+      {entryRetry && <ActionButton variant="outline" onClick={() => setRequestedEntry(entryRetry)}>重新读取入口</ActionButton>}
+      {returnServerHref && !returnHref && <ActionButton variant="link" asChild><a href={returnServerHref}>返回原服务器</a></ActionButton>}
       {!selected && !editing && !planning && !task && (
         <PublicationNotice
           owner={publicationRequests}
@@ -296,7 +415,12 @@ export function ServerRoutesPage({
                     render: (_, d) => (
                       <button
                         className="table-name inline-flex min-w-0 items-center gap-2 rounded-sm text-left text-sm font-medium text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                        onClick={() => setSelected(d)}
+                        onClick={() => {
+                          editSequence.current++;
+                          setEntryLoading(false);
+                          setEntryRetry(null);
+                          setSelected(d);
+                        }}
                       >
                         {d.name}
                       </button>
@@ -382,13 +506,9 @@ export function ServerRoutesPage({
           initialRefreshEndpoint={refreshEndpoint}
           inventory={inventory}
           isNew={newRecord}
-          onClose={() => setEditing(null)}
-          onSaved={(value) =>
-            replaceView(viewHash, () => {
-              setEditing(null);
-              setSelected(value);
-            })
-          }
+          onClose={() => { finishEditor(); }}
+          onSaved={finishEditor}
+          returnServerHref={returnServerHref}
         />
       )}
       {inventory && selected && (
@@ -466,6 +586,7 @@ export function ServerRoutesPage({
 function ServerRouteEditor({
   initial,
   initialRefreshEndpoint,
+  returnServerHref,
   inventory,
   isNew,
   onClose,
@@ -473,6 +594,7 @@ function ServerRouteEditor({
 }: {
   initial: ServerDeployment;
   initialRefreshEndpoint?: string;
+  returnServerHref?: string;
   inventory: Infrastructure;
   isNew: boolean;
   onClose: () => void;
@@ -510,7 +632,7 @@ function ServerRouteEditor({
   const [pathLoading, setPathLoading] = useState(false);
   const [view, setView] = useState("ordered");
   const [error, setError] = useState<Error | null>(null);
-  const [dirty, setDirty] = useState(false);
+  const [dirty, setDirty] = useState(isNew && initial.ir.programs.length > 0);
   const [graphNodes, setGraphNodes, onGraphNodesChange] =
     useNodesState<RouteGraphNode>([]);
   const [announcement, setAnnouncement] = useState("");
@@ -764,6 +886,7 @@ function ServerRouteEditor({
             正在读取所选端点的完整连接设置…
           </p>
         )}
+        {returnServerHref && <ActionButton variant="link" asChild><a href={returnServerHref}>返回原服务器</a></ActionButton>}
         <label className="standalone-label grid gap-2 text-sm font-medium">
           转发路径名称
           <Input
