@@ -13,6 +13,7 @@ import stat
 import subprocess
 import tarfile
 import tempfile
+import time
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -52,7 +53,21 @@ def materialize(core, destination):
         if cached_archive.exists():
             data = cached_archive.read_bytes()
         else:
-            subprocess.run(["curl", "--disable", "--fail", "--location", "--proto", "=https", "--proto-redir", "=https", "--tlsv1.2", "--max-time", "180", "--max-filesize", "134217728", core["url"], "-o", str(archive)], check=True)
+            # Retry only transient server failures/timeouts at the same pinned URL.
+            # Every attempt starts fresh; integrity failures below are never retried.
+            for attempt in range(4):
+                archive.unlink(missing_ok=True)
+                result = subprocess.run(["curl", "--disable", "--fail", "--location", "--proto", "=https", "--proto-redir", "=https", "--tlsv1.2", "--max-time", "180", "--max-filesize", "134217728", core["url"], "-o", str(archive), "--write-out", "%{http_code}"],
+                                        stdout=subprocess.PIPE, text=True, check=False)
+                if result.returncode == 0:
+                    break
+                transient = result.returncode == 28 or (
+                    result.returncode == 22 and result.stdout.strip() in {"500", "502", "503", "504"})
+                if not transient or attempt == 3:
+                    result.check_returncode()
+                delay = 2 ** (attempt + 1)
+                print(f"Transient native download failure; retry {attempt + 1}/3 in {delay}s.", flush=True)
+                time.sleep(delay)
             data = archive.read_bytes()
         if hashlib.sha256(data).hexdigest() != core["archiveSHA256"]:
             raise SystemExit(f"Archive checksum mismatch for {core['id']}; refusing to extract.")

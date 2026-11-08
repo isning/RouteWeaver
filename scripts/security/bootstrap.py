@@ -8,6 +8,8 @@ from pathlib import Path
 import platform
 import tarfile
 import tempfile
+import time
+import urllib.error
 import urllib.request
 
 
@@ -22,8 +24,26 @@ def main():
             raise SystemExit("Existing scanner differs from its pin; refusing to replace it automatically.")
         print("Pinned Gitleaks executable already verified.")
         return
-    with urllib.request.urlopen(lock["archiveURL"], timeout=60) as response:
-        archive = response.read(20 * 1024 * 1024 + 1)
+    # Retry only transient server failures/timeouts at the same pinned URL.
+    # The size limit and both integrity checks remain mandatory on success.
+    for attempt in range(4):
+        try:
+            with urllib.request.urlopen(lock["archiveURL"], timeout=60) as response:
+                archive = response.read(20 * 1024 * 1024 + 1)
+            break
+        except urllib.error.HTTPError as error:
+            error.close()
+            if error.code not in {500, 502, 503, 504} or attempt == 3:
+                raise
+        except urllib.error.URLError as error:
+            if not isinstance(error.reason, TimeoutError) or attempt == 3:
+                raise
+        except TimeoutError:
+            if attempt == 3:
+                raise
+        delay = 2 ** (attempt + 1)
+        print(f"Transient scanner download failure; retry {attempt + 1}/3 in {delay}s.", flush=True)
+        time.sleep(delay)
     if hashlib.sha256(archive).hexdigest() != lock["archiveSHA256"]:
         raise SystemExit("Gitleaks archive checksum mismatch; nothing installed.")
     with tarfile.open(fileobj=io.BytesIO(archive), mode="r:gz") as release:
