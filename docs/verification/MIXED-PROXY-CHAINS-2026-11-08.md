@@ -1,0 +1,99 @@
+# Mixed proxy chain acceptance
+
+## Scope
+
+The path model accepts ordered managed listeners and explicitly configured
+administrator connectors. The last proxy is a position in that path, not a
+separate endpoint category. The published route retains its complete physical
+hop sequence and a separate managed deployment/observation projection.
+
+No private subscription has been imported, credential copied to a real server,
+or production deployment performed for this acceptance. All test network peers
+and credentials are synthetic. Source import, ownership, consent, refresh and
+revocation remain separate requirements.
+
+## Completed control-plane and UI baseline
+
+Commit: `48db101fc41cedc8f5bfbef53c82dce38080e57a`.
+
+[Fixed focused run](https://github.com/isning/RouteWeaver/actions/runs/42495815598):
+
+- Exact-source formatting passed.
+- Race-enabled focused domain, render, HTTP API and store suites passed.
+- TypeScript checking passed.
+- All 38 tests in the three published-path DOM suites passed, including complete
+  connector summaries, legacy edit/retarget refusal and concurrent refetch guards.
+- The publication test used real enrollment, draft validation, publish, desired
+  retrieval, scoped observation and credential-reveal APIs. A partially observed
+  managed path did not reveal the public credential; the complete matching path did.
+
+The observations in that HTTP test were synthetic. This establishes control-plane
+gating, not native process execution or external-proxy reachability. The baseline
+also predates the later visual mixed-path authoring changes, whose UI acceptance
+is tracked separately.
+
+## Native parsing correction
+
+The parser gate initially did not select `TestNativeMixedConnectorChain`. Commit
+`e890852810086d6464b262399edf06d2ebac90e0` added the selector and required pass
+result. Its [fixed run](https://github.com/isning/RouteWeaver/actions/runs/42496501980)
+then exposed an invalid parser fixture: current Xray rejected a public plaintext
+VLESS upstream. Both sing-box versions and historical Xray parsed the chain.
+
+Commit `1c970c297615e68a291d97748fc7a3201d345c07` changes only the successful native
+fixture's destinations to loopback and adds an explicit current-Xray rejection
+check for public plaintext VLESS. No core security control is disabled. A public
+VLESS upstream must satisfy the selected core's encryption requirements.
+
+## Isolated traffic acceptance
+
+Commit: `1c970c297615e68a291d97748fc7a3201d345c07`.
+[Fixed quality run](https://github.com/isning/RouteWeaver/actions/runs/42496974809).
+Execution results are pending; the following describes required assertions,
+not a passing traffic claim.
+
+`TestNativeMixedConnectorChainLoopback` selects pinned stock Xray and sing-box.
+`TestManagedMixedConnectorChainLoopback` selects the built managed-Xray runtime
+as ingress, with a stock transit when required. Each runs these path shapes:
+
+- Native entry → one authenticated external SOCKS5 proxy → TCP echo target.
+- Native entry → two authenticated external SOCKS5 proxies → TCP echo target.
+- Native entry → two authenticated external SOCKS5 proxies → stock VLESS
+  listener with one service credential → TCP echo target.
+
+Each external proxy is an independent RFC 1928/1929 wire peer. It accepts only its
+specified literal loopback successor and records authentication, successful
+onward connections, destination and byte counts. Successful requests require
+every hop's counters to advance and the final target to receive and return the
+exact opaque payload. Connector IDs and declaration order differ from traffic
+order, preventing accidental array-position or lexical sorting from satisfying
+all assertions.
+
+Each scenario also checks an unknown ingress credential, a revoked synthetic
+external password, restored authentication, and physical removal of a required
+external listener. Failures require both a client error and zero new target
+connections/bytes during the request and a further 200 ms observation window.
+This is bounded evidence, not a proof about arbitrary future delayed activity.
+
+The supervisor validates and launches the actual generated native configuration.
+Managed ingress uses a local synthetic admission broker to isolate routing; this
+test does not establish production quota, subscription or billing behavior.
+Native port reservations, owned process shutdown and failure evidence retention
+are part of the harness. No external host or DNS name is contacted.
+
+## Gate integrity and limits
+
+Parser/process selectors and required-result checks include the new tests.
+Missing, failed or unexpectedly skipped selected tests cannot satisfy the gates.
+Thirteen offline shell-gate tests passed locally; these synthetic event tests
+verify the gate behavior and are not native-runtime evidence.
+
+The traffic matrix covers TCP SOCKS5 external connectors and VLESS listeners.
+Other external protocols, UDP, production network conditions, managed-Xray
+transit, arbitrary conditional graphs and tenant subscription import are not
+established by this matrix. Structural mixed-protocol rendering has separate
+tests. Current capability and accounting restrictions remain authoritative.
+
+The complete repository quality aggregate must be checked independently of any
+focused or individual job result. CI, not the authoring environment, supplies
+the exact-source Go compilation, formatting and native execution results.

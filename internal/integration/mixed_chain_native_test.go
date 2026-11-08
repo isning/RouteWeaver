@@ -303,7 +303,7 @@ func mixedRunProgram(t *testing.T, program domain.ServerProgram, source string, 
 		t.Fatal(err)
 	}
 	now := time.Now()
-	desired := agent.Desired{Scope: scope, AdapterID: program.Instance.AdapterID, CoreVersion: program.Instance.Version, Generation: 1, RevisionID: "r1", OperationID: "mixed-apply", Digest: digest, EntryFile: "config.json", Artifacts: material, Lease: agent.PolicyLease{Revision: "p1", IssuedAt: now.Add(-time.Second), ExpiresAt: now.Add(5*time.Minute), AccessAllowed: true, QuotaCertain: true}}
+	desired := agent.Desired{Scope: scope, AdapterID: program.Instance.AdapterID, CoreVersion: program.Instance.Version, Generation: 1, RevisionID: "r1", OperationID: "mixed-apply", Digest: digest, EntryFile: "config.json", Artifacts: material, Lease: agent.PolicyLease{Revision: "p1", IssuedAt: now.Add(-time.Second), ExpiresAt: now.Add(5 * time.Minute), AccessAllowed: true, QuotaCertain: true}}
 	releasePort()
 	state, err := reconciler.Submit(context.Background(), desired)
 	if err != nil || state.Phase != agent.ObservedConformant || state.Observed == nil || state.Observed.Identity != desired.Identity() {
@@ -341,7 +341,7 @@ func mixedRoundtrip(address, target, uuid string, payload []byte) error {
 		return err
 	}
 	defer conn.Close()
-	conn.SetDeadline(time.Now().Add(2*time.Second))
+	conn.SetDeadline(time.Now().Add(2 * time.Second))
 	credential, err := hex.DecodeString(strings.ReplaceAll(uuid, "-", ""))
 	if err != nil || len(credential) != 16 {
 		return fmt.Errorf("invalid synthetic UUID")
@@ -377,7 +377,7 @@ func mixedRequireDenied(t *testing.T, address string, target *mixedWireServer, u
 	}
 	// The client error alone is insufficient: the still-live target must see no
 	// connection or data throughout a bounded post-attempt observation window.
-	until := time.Now().Add(200*time.Millisecond)
+	until := time.Now().Add(200 * time.Millisecond)
 	for {
 		after := target.snapshot()
 		if after.Accepted != before.Accepted || after.Upload != before.Upload || after.Download != before.Download {
@@ -386,7 +386,7 @@ func mixedRequireDenied(t *testing.T, address string, target *mixedWireServer, u
 		if time.Now().After(until) {
 			return
 		}
-		time.Sleep(5*time.Millisecond)
+		time.Sleep(5 * time.Millisecond)
 	}
 }
 
@@ -395,8 +395,8 @@ func mixedAwait(t *testing.T, ready func() bool, description string) {
 	deadline := time.Now().Add(time.Second)
 	for !ready() {
 		if time.Now().After(deadline) {
-			t.Fatal("timed out waiting for "+description)
+			t.Fatal("timed out waiting for " + description)
 		}
-		time.Sleep(5*time.Millisecond)
+		time.Sleep(5 * time.Millisecond)
 	}
 }

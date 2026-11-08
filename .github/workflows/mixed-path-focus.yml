@@ -36,7 +36,7 @@ jobs:
         shell: bash
         run: |
           formatter="$(scripts/go.sh env GOROOT)/bin/gofmt"
-          "$formatter" -d internal/domain/published_hops*.go internal/domain/published_routes.go internal/domain/route_retarget.go internal/httpapi/published_mixed_paths*.go internal/httpapi/published_routes.go internal/httpapi/published_manifests.go internal/httpapi/published_route_retarget.go internal/store/diagnostics_paths.go internal/render/mixed_chain_test.go
+          "$formatter" -d internal/domain/published_hops*.go internal/domain/published_routes.go internal/domain/route_retarget.go internal/httpapi/published_mixed_paths*.go internal/httpapi/published_routes.go internal/httpapi/published_manifests.go internal/httpapi/published_route_retarget.go internal/store/diagnostics_paths.go internal/render/mixed_chain_test.go internal/integration/mixed_chain*.go
           scripts/format.sh --check
       - name: Run exact-source mixed path regressions
         if: ${{ !cancelled() }}
