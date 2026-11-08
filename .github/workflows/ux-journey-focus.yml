@@ -36,6 +36,7 @@ jobs:
           npm run test --
           src/server-forwarding.dom.test.tsx
           src/server-path-workspace.dom.test.tsx
+          src/server-workspace.dom.test.tsx
           src/server-overview.dom.test.tsx
           src/infrastructure-tabs.dom.test.tsx
           src/infrastructure-creation.dom.test.tsx

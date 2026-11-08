@@ -123,13 +123,14 @@ it("opens a durable server page with URL identity and no detail dialog", async (
   expect(writes).toEqual([]);
 });
 
-it("opens a host-only direct URL and keeps diagnostics out of the initial task", async () => {
+it("opens a host-only URL with read-only resource and core records, without revealing credentials", async () => {
   history.replaceState(null, "", `#servers?host=${host.id}`);
   const { writes } = mount();
   const page = await screen.findByRole("region", { name: host.name });
   expect(within(page).getByRole("tab", { name: "概览" }).getAttribute("aria-selected")).toBe("true");
   expect(within(page).getByRole("button", { name: "添加核心" })).toBeTruthy();
-  expect(vi.mocked(fetch).mock.calls.some(([input]) => String(input).includes("observability"))).toBe(false);
+  await waitFor(() => expect(vi.mocked(fetch).mock.calls.some(([input]) => String(input) === `/api/admin/nodes/${host.id}/observability`)).toBe(true));
+  expect(vi.mocked(fetch).mock.calls.some(([input]) => String(input) === `/api/agent/instances/${core.id}/state`)).toBe(true);
   expect(vi.mocked(fetch).mock.calls.some(([input]) => String(input).endsWith("/reveal"))).toBe(false);
   expect(writes).toEqual([]);
 });
@@ -387,3 +388,4 @@ it("does not resurrect a removed core when Back revisits its old workspace URL",
   expect(screen.queryByRole("button", { name: "接入 Agent" })).toBeNull();
   expect(writes).toEqual([]);
 });
+
