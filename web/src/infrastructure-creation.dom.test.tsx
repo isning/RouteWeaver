@@ -691,7 +691,7 @@ describe("infrastructure creation user tasks", () => {
     await user.click(await screen.findByRole("button", { name: "Tokyo" }));
     const drawer = within(screen.getByRole("region", { name: "Tokyo" }));
     await user.click(
-      drawer.getByRole("tab", { name: "诊断", exact: true }),
+      drawer.getByRole("tab", { name: "诊断" }),
     );
     expect(
       await drawer.findByRole("button", { name: "设置采集与额度" }),
@@ -726,7 +726,7 @@ describe("infrastructure creation user tasks", () => {
     await user.click(await screen.findByRole("button", { name: "Tokyo" }));
     const drawer = within(screen.getByRole("region", { name: "Tokyo" }));
     await user.click(
-      drawer.getByRole("tab", { name: "诊断", exact: true }),
+      drawer.getByRole("tab", { name: "诊断" }),
     );
     expect(await drawer.findByText("资源数据暂时不可用")).toBeTruthy();
     expect(drawer.queryByText("尚未收到服务器资源数据")).toBeNull();

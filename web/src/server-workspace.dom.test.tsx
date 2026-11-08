@@ -206,14 +206,14 @@ it("retires the old server/core context after editing the core onto another serv
   const { writes } = mount({ secondHost: true, ownedHistory: true });
   const user = userEvent.setup();
   await selectedCore(user);
-  await user.click(screen.getByRole("button", { name: "编辑核心", exact: true }));
+  await user.click(screen.getByRole("button", { name: "编辑核心" }));
   const editor = await screen.findByRole("dialog", { name: "编辑核心实例" });
   await user.click(within(editor).getByLabelText("所属服务器"));
   await user.click(await screen.findByRole("option", { name: otherHost.name }));
   await user.click(within(editor).getByRole("button", { name: "保存" }));
   expect(await screen.findByText("此核心已转移到其他服务器。请打开核心所在服务器后继续配置。")).toBeTruthy();
   expect(screen.getByRole("button", { name: "接入 Agent" })).toHaveProperty("disabled", true);
-  expect(screen.getByRole("button", { name: "添加监听端点", exact: true })).toHaveProperty("disabled", true);
+  expect(screen.getByRole("button", { name: "添加监听端点" })).toHaveProperty("disabled", true);
   expect(writes).toEqual([{ path: `/api/core-instances/${core.id}`, value: expect.objectContaining({ hostId: otherHost.id }) }]);
   await user.click(screen.getByRole("button", { name: "打开核心所在服务器" }));
   const moved = await screen.findByRole("region", { name: `${otherHost.name}的${core.name}` });
