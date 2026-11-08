@@ -617,6 +617,7 @@ function PublicRouteEditor({
   const attempt = useRef(0);
   const workspace = useContext(WorkspaceHistoryContext);
   const mounted = useRef(false);
+  const viewEpoch = useRef(0);
   const comparisonAttempt = useRef(0);
   const comparisonTrigger = useRef<HTMLButtonElement>(null);
   const tlsRepairTrigger = useRef<HTMLButtonElement>(null);
@@ -650,9 +651,10 @@ function PublicRouteEditor({
   useLayoutEffect(() => {
     mounted.current = true;
     const changed = () => {
-      version.current++;
-      previewVersion.current = null;
-      setPreview(null);
+      viewEpoch.current++;
+      // A same-line view entry does not edit the checked draft. Preserve its
+      // preview for a fresh explicit save, but revoke old recovery tasks.
+      // Outstanding inspections/completions remain fenced by their view lease.
       invalidateComparison();
       invalidateTLSRepair();
     };
@@ -668,18 +670,19 @@ function PublicRouteEditor({
   }, []);
   const ownView = () => {
     const hash = location.hash;
+    const epoch = viewEpoch.current;
     const owner = workspace?.current;
     const lease = owner?.bindView(hash);
-    return () => mounted.current && location.hash === hash &&
+    return () => mounted.current && viewEpoch.current === epoch && location.hash === hash &&
       (!workspace || (workspace.current === owner && !!lease?.(hash)));
   };
   const tlsFailureOwners = useRef(
-    new WeakMap<Error, { revision: number; attempt: number }>(),
+    new WeakMap<Error, { revision: number; attempt: number; stillCurrent(): boolean }>(),
   );
   // Only the known TLS refusal describes the current draft. Keep other errors,
   // including unknown outcomes and conflicts, under their existing lifecycle.
   const withTLSFailureOwner = async <T,>(request: () => Promise<T>): Promise<T> => {
-    const owner = { revision: version.current, attempt: ++attempt.current };
+    const owner = { revision: version.current, attempt: ++attempt.current, stillCurrent: ownView() };
     try {
       return await request();
     } catch (error) {
@@ -800,7 +803,7 @@ function PublicRouteEditor({
   const error = [inspect.error, save.error].find((error) => {
     if (!isPublicTLSRefusal(error)) return !!error;
     const owner = tlsFailureOwners.current.get(error);
-    return !!owner &&
+    return !!owner && owner.stillCurrent() &&
       owner.revision === version.current && owner.attempt === attempt.current;
   });
   const openTLSRepair = () => {
@@ -873,7 +876,7 @@ function PublicRouteEditor({
         }
       }}
       size="lg"
-      pending={save.isPending || !!comparison || discardConfirming}
+      pending={save.isPending || !!comparison}
     >
       <ErrorNotice
         error={error}

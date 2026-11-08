@@ -213,11 +213,13 @@ it("does not turn a colliding new identity into an update", async () => {
 it("ignores an old read after newer typing and never puts resolution extras in the comparison or query cache", async () => {
   let finish!: (response: Response) => void;
   const pending = new Promise<Response>(resolve => { finish = resolve; });
-  const context = await conflict({ extra: call => call.path.endsWith("/resolve") ? pending : undefined });
+  const resolution = { ...latest, privateKey: "DO-NOT-CACHE-PRIVATE-KEY", path: { secret: "DO-NOT-CACHE-PATH" } };
+  let reads = 0;
+  const context = await conflict({ extra: call => call.path.endsWith("/resolve") ? (++reads === 1 ? pending : json(resolution)) : undefined });
   const name = context.editor.getByRole("textbox", { name: "线路名称" });
   await context.user.click(context.editor.getByRole("button", { name: "读取最新版本并比较" }));
   fireEvent.change(name, { target: { value: "Newer local typing" } });
-  await act(async () => finish(json({ ...latest, privateKey: "DO-NOT-CACHE-PRIVATE-KEY", path: { secret: "DO-NOT-CACHE-PATH" } })));
+  await act(async () => finish(json(resolution)));
   expect(screen.queryByRole("dialog", { name: "比较公开线路修改" })).toBeNull();
   expect((name as HTMLInputElement).value).toBe("Newer local typing");
   await context.user.click(context.editor.getByRole("button", { name: "读取最新版本并比较" }));
@@ -302,4 +304,39 @@ it("revokes a pending comparison when a newer server choice has no endpoint yet"
   expect((context.editor.getByRole("textbox", { name: "线路名称" }) as HTMLInputElement).value).toBe("My office line");
   expect(context.calls.filter(call => call.method === "PUT")).toHaveLength(1);
   expect(hasUnsavedChanges()).toBe(true);
+});
+
+
+it.each(["success", "TLS refusal"] as const)("rejects a standalone inspection %s after leaving and returning to the same hash, then accepts a fresh check", async (outcome) => {
+  let finish!: (response: Response) => void;
+  const pending = new Promise<Response>(resolve => { finish = resolve; });
+  let inspections = 0;
+  const context = setup({ extra: call => {
+    if (call.path.endsWith("/preview")) return ++inspections === 1 ? pending : json(original);
+  } });
+  await context.user.click(await screen.findByRole("button", { name: "编辑" }));
+  const editor = within(await screen.findByRole("dialog", { name: "编辑 Office line" }));
+  const inspect = editor.getByRole("button", { name: "检查公开线路" });
+  await context.user.click(inspect);
+  await waitFor(() => expect(inspections).toBe(1));
+  for (const hash of ["#servers", "#published-routes"]) {
+    await act(async () => {
+      const changed = new Promise<void>(resolve => window.addEventListener("hashchange", () => resolve(), { once: true }));
+      location.hash = hash;
+      await changed;
+    });
+  }
+  await act(async () => finish(outcome === "success" ? json(original) : json({ error: "public VLESS entries require TLS; unencrypted entries are restricted to explicit private or loopback IPs" }, 422)));
+  await waitFor(() => expect(inspect.getAttribute("aria-busy")).not.toBe("true"));
+  expect(location.hash).toBe("#published-routes");
+  expect(editor.queryByText("路径检查完成", { exact: true })).toBeNull();
+  expect(editor.queryByText("公网入口需要启用 TLS", { exact: true })).toBeNull();
+  expect(editor.queryByRole("button", { name: "就地修复 TLS" })).toBeNull();
+  expect(editor.queryByRole("button", { name: "保存公开线路" })).toBeNull();
+  expect((editor.getByRole("textbox", { name: "线路名称" }) as HTMLInputElement).value).toBe("Office line");
+  await context.user.click(inspect);
+  await editor.findByText("路径检查完成", { exact: true });
+  expect(editor.getByRole("button", { name: "保存公开线路" }).hasAttribute("disabled")).toBe(false);
+  expect(inspections).toBe(2);
+  expect(context.calls.filter(call => call.method === "PUT")).toHaveLength(0);
 });

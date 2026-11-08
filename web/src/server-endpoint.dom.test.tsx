@@ -372,13 +372,10 @@ it("limits public-path selection to its deployment and blocks an unfinished serv
     within(drawer).getByRole("combobox", { name: "公开路径第 1 跳服务器" }),
   );
   await user.click(screen.getByText("London"));
-  expect(
-    (
-      within(drawer).getByRole("button", {
-        name: "保存公开线路",
-      }) as HTMLButtonElement
-    ).disabled,
-  ).toBe(true);
+  // A server choice is an edit even before its endpoint is selected. It
+  // invalidates the old preview rather than retaining a stale save action.
+  expect(within(drawer).queryByRole("button", { name: "保存公开线路" })).toBeNull();
+  expect(vi.mocked(fetch).mock.calls.some(([, init]) => init?.method === "PUT")).toBe(false);
   expect(
     (
       within(drawer).getByRole("button", {
