@@ -1013,7 +1013,7 @@ export function ServerRouteEditor({
             }
           />
         )}
-        {pathLoading && (
+        {pathLoading && view === "graph" && (
           <p role="status" className="muted text-sm text-muted-foreground">
             正在读取所选端点的完整连接设置…
           </p>
@@ -2432,6 +2432,7 @@ function ServerRouteDetail({
     </TaskSheet>
   );
 }
+
 
 
 

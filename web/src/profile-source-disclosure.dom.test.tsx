@@ -238,7 +238,12 @@ it("retains source choice and rule intent across disclosure and keyboard navigat
   await user.click(editor.getByRole("button", { name: "收起来源设置" }));
   const toggle = editor.getByRole("button", { name: "编辑来源" });
   expect(document.activeElement).toBe(toggle);
-  await user.tab();
+  // Traffic choices now precede source setup in DOM and keyboard order.
+  await user.tab({ shift: true });
+  expect(document.activeElement).toBe(
+    editor.getByRole("button", { name: "默认流量：使用多个候选连接…" }),
+  );
+  await user.tab({ shift: true });
   expect(document.activeElement).toBe(
     editor.getByRole("combobox", { name: "默认流量行为" }),
   );
@@ -400,3 +405,4 @@ it("returns focus only after dirty source cancellation releases its confirmation
   await waitFor(() => expect(document.activeElement).toBe(add));
   expect(writes).toEqual([]);
 });
+
