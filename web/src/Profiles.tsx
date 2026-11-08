@@ -914,6 +914,9 @@ export function ProfileEditor({
         detail: "",
       });
   }
+  const sourceDisclosureLabel = sourceCatalogChecked && sources.data?.length === 0 && !selectedSourceIds.length &&
+    !draft.collectionId && !draft.ir.endpoints.length && !draft.platformEntryIds?.length
+    ? "添加代理来源" : "编辑来源";
   const missingSourceCount = sourceCatalogChecked
     ? selectedSourceIds.filter(
         (id) => !sources.data?.some((source) => source.id === id),
@@ -1282,7 +1285,7 @@ export function ProfileEditor({
                   : ids.filter((id) => id !== group.id));
               }}
             >
-              <summary className="cursor-pointer rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+              <summary className="min-w-0 cursor-pointer rounded-sm [overflow-wrap:anywhere] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                 <span className="font-medium">{group.name || "未命名策略组"}</span>
                 <span className="mt-2 block text-sm text-muted-foreground">
                   {({ manual: "手动选择", "url-test": "延迟优选", fallback: "故障切换", "load-balance": "负载均衡" } as Record<string, string>)[group.kind] || group.kind}
@@ -1790,7 +1793,7 @@ export function ProfileEditor({
                   <h2>代理连接</h2>
                   <ActionButton
                     ref={sourceDisclosure}
-                    aria-label={sourceExpanded ? "收起来源设置" : "编辑来源"}
+                    aria-label={sourceExpanded ? "收起来源设置" : sourceDisclosureLabel}
                     aria-expanded={sourceExpanded}
                     aria-controls={sourcePanelID}
                     onKeyDown={(event) => {
@@ -1803,7 +1806,7 @@ export function ProfileEditor({
                     onClick={() => setSourceExpanded((expanded) => !expanded)}
                     variant="outline"
                   >
-                    {sourceExpanded ? "收起来源设置" : "编辑来源"}
+                    {sourceExpanded ? "收起来源设置" : sourceDisclosureLabel}
                   </ActionButton>
                   <span className="profile-source-identity flex flex-wrap items-center gap-2">
                     {sourceSummary}
@@ -3712,4 +3715,5 @@ function MatchActionItems({
     </>
   );
 }
+
 

@@ -359,12 +359,14 @@ function Workspace() {
     entry: SourceProfileEntry;
     scope: string | null;
   } | null>(null);
+  const [sourceSubscriptionSetup, setSourceSubscriptionSetup] = useState(false);
   const [sourceProfileEntry, setSourceProfileEntry] =
     useState<SourceProfileEntry | null>(null);
   useLayoutEffect(() => {
     if (sourceProfileRequest.current?.scope !== receiptScope) {
       sourceProfileRequest.current = null;
       setSourceProfileEntry(null);
+      setSourceSubscriptionSetup(false);
     }
   }, [receiptScope]);
   const [discardGeneration, setDiscardGeneration] = useState(0);
@@ -512,8 +514,13 @@ function Workspace() {
     );
   };
   const consumeSourceProfileEntry = (token: string) => {
-    if (sourceProfileRequest.current?.entry.token === token)
+    if (sourceProfileRequest.current?.entry.token === token) {
+      // Only the accepted, guarded handoff consumes this task context. Merely
+      // requesting navigation (which may be declined) must not retire it.
+      if (sourceProfileRequest.current.scope === receiptScope)
+        setSourceSubscriptionSetup(false);
       sourceProfileRequest.current = null;
+    }
     setSourceProfileEntry((current) =>
       current?.token === token ? null : current,
     );
@@ -921,6 +928,11 @@ function Workspace() {
                     ) ? (
                     <SubscriptionsPage
                       navigate={navigate}
+                      onStartProxySubscription={() => {
+                        setSourceSubscriptionSetup(true);
+                        navigate("sources");
+                      }}
+                      onConfigureServer={isAdmin ? () => navigate("servers") : undefined}
                       sourceDraft={
                         sourceProfileRequest.current?.scope === receiptScope
                           ? (sourceProfileEntry ?? undefined)
@@ -937,6 +949,7 @@ function Workspace() {
                     />
                   ) : page === "sources" ? (
                     <SourcesPage
+                      subscriptionSetup={sourceSubscriptionSetup}
                       acceptanceScope={receiptScope}
                       acceptanceReceipts={
                         sourceReceipts.scope === receiptScope
@@ -1278,3 +1291,4 @@ function LoginForm({
     </div>
   );
 }
+

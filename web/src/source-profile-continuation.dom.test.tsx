@@ -77,14 +77,17 @@ afterEach(() => {
 });
 function mount(
   sources = [source],
-  options: { strict?: boolean; children?: ReactNode } = {},
+  options: { strict?: boolean; children?: ReactNode; role?: "admin" | "member"; postSaveInventory?: "delayed" | "failed"; importCandidate?: boolean } = {},
 ) {
   let currentSources = sources;
+  let sourceSaved = false;
+  let inventoryRecovered = false;
+  let finishInventory: (() => void) | undefined;
   let account = "account-a";
   let holdSession = false;
   let finishSession: ((value: Response) => void) | undefined;
   const session = () => ({
-    user: { id: account, name: account, role: "member" },
+    user: { id: account, name: account, role: options.role || "member" },
     csrfToken: account,
   });
   const writes: string[] = [];
@@ -99,7 +102,21 @@ function mount(
               finishSession = resolve;
             })
           : json(session());
-      if (path === "/me/sources") return json(currentSources);
+      if (path === "/me/sources") {
+        if (init?.method === "POST" && (options.postSaveInventory || options.importCandidate)) {
+          writes.push(path);
+          const submitted = JSON.parse(String(init.body));
+          currentSources = [{ ...source, ...submitted, ...(options.importCandidate ? { snapshot: undefined, candidate } : { snapshot: { endpoints } }) }];
+          sourceSaved = true;
+          return json(currentSources[0]);
+        }
+        if (sourceSaved && !inventoryRecovered) {
+          if (options.postSaveInventory === "delayed")
+            return new Promise<Response>((resolve) => { finishInventory = () => resolve(json(currentSources)); });
+          if (options.postSaveInventory === "failed") return json({ detail: "Source inventory unavailable" }, 503);
+        }
+        return json(currentSources);
+      }
       if (path === "/me/overview")
         return json({ status: "active", routes: [] });
       if (path === "/me/collections/preview") {
@@ -141,6 +158,10 @@ function mount(
   return {
     writes,
     previews,
+    recoverInventory: () => {
+      inventoryRecovered = true;
+      finishInventory?.();
+    },
     setSources: (next: Source[]) => {
       currentSources = next;
     },
@@ -201,7 +222,7 @@ it("continues an accepted source into an unsaved full configuration without choo
   expect(location.hash).toBe("#subscriptions");
 });
 
-async function continueFromSource() {
+async function continueFromSource(actionName = "用此来源新建分流配置") {
   await userEvent.click(
     await screen.findByRole(
       "button",
@@ -211,7 +232,7 @@ async function continueFromSource() {
   );
   const detail = await screen.findByRole("dialog", { name: source.name });
   const start = within(detail).getByRole("button", {
-    name: "用此来源新建分流配置",
+    name: actionName,
   });
   start.focus();
   await userEvent.keyboard("{Enter}");
@@ -490,5 +511,119 @@ it("does not let an unowned same-page entry overwrite a dirty configuration with
   await screen.findByRole("heading", { name: "我的订阅", level: 1 });
   expect(screen.queryByRole("textbox", { name: "配置名称" })).toBeNull();
   expect(location.hash).toBe("#subscriptions");
+  expect(writes).toEqual([]);
+});
+
+
+
+it("starts an existing-proxy subscription task from the empty inventory and retains its accepted source draft", async () => {
+  history.replaceState(null, "", "#subscriptions");
+  const { writes, previews } = mount();
+  const start = await screen.findByRole("button", { name: "用已有代理生成订阅" }, { timeout: INITIAL_PAGE_READY_TIMEOUT_MS });
+  expect(screen.queryByRole("button", { name: "配置自有服务器" })).toBeNull();
+  expect(screen.getByRole("button", { name: "新建分流配置" })).toBeTruthy();
+  await userEvent.click(start);
+  await screen.findByRole("heading", { name: "订阅来源", level: 1 });
+  expect(screen.getByText("先导入已有代理或订阅链接。导入后继续设置客户端订阅，也可以打开下方已有来源继续。")).toBeTruthy();
+  await continueFromSource("继续设置订阅");
+  await screen.findByText("1 个有效连接");
+  expect(screen.getByRole("combobox", { name: "使用的订阅来源" }).closest("label")?.textContent).toContain(source.name);
+  expect(screen.getByRole("combobox", { name: "默认流量行为" }).textContent).toContain("直连");
+  fireEvent.change(screen.getByRole("textbox", { name: "配置名称" }), { target: { value: "Proxy subscription draft" } });
+  await userEvent.click(screen.getByRole("button", { name: "返回" }));
+  await userEvent.click(await screen.findByRole("button", { name: "继续编辑" }));
+  expect((screen.getByRole("textbox", { name: "配置名称" }) as HTMLInputElement).value).toBe("Proxy subscription draft");
+  expect(screen.getByRole("combobox", { name: "使用的订阅来源" }).closest("label")?.textContent).toContain(source.name);
+  expect(previews.length).toBeGreaterThan(0);
+  expect(writes).toEqual([]);
+  await act(async () => history.back());
+  await userEvent.click(await screen.findByRole("button", { name: "放弃修改并离开" }));
+  await screen.findByRole("heading", { name: "订阅来源", level: 1 });
+  expect(screen.getByText("导入外部订阅和节点，与平台节点组合使用。")).toBeTruthy();
+  expect(screen.queryByText("先导入已有代理或订阅链接。导入后继续设置客户端订阅，也可以打开下方已有来源继续。")).toBeNull();
+});
+
+it("offers owned-server setup only for a verified administrator", async () => {
+  history.replaceState(null, "", "#subscriptions");
+  mount([], { role: "admin" });
+  await screen.findByRole("button", { name: "用已有代理生成订阅" }, { timeout: INITIAL_PAGE_READY_TIMEOUT_MS });
+  expect(screen.getByRole("button", { name: "配置自有服务器" })).toBeTruthy();
+});
+
+
+it("keeps direct-only configuration available and names its empty-catalog source action explicitly", async () => {
+  history.replaceState(null, "", "#subscriptions");
+  const { writes } = mount([]);
+  await screen.findByRole("button", { name: "用已有代理生成订阅" }, { timeout: INITIAL_PAGE_READY_TIMEOUT_MS });
+  await userEvent.click(screen.getByRole("button", { name: "新建分流配置" }));
+  await screen.findByRole("heading", { name: "新建分流配置" });
+  expect(screen.getByRole("combobox", { name: "默认流量行为" }).textContent).toContain("直连");
+  await userEvent.click(screen.getByRole("button", { name: "收起来源设置" }));
+  const addSource = await screen.findByRole("button", { name: "添加代理来源" });
+  expect(screen.queryByRole("button", { name: "编辑来源" })).toBeNull();
+  await userEvent.click(addSource);
+  expect(screen.getByRole("combobox", { name: "使用的订阅来源" })).toBeTruthy();
+  expect(writes).toEqual([]);
+});
+
+
+it.each(["delayed", "failed"] as const)("retains the confirmed import task through a %s inventory refresh until verified recovery", async (postSaveInventory) => {
+  const onCreateProfile = vi.fn();
+  const { writes, recoverInventory } = mount([], {
+    postSaveInventory,
+    children: <SourcesPage subscriptionSetup onCreateProfile={onCreateProfile} />,
+  });
+  await userEvent.click((await screen.findAllByRole("button", { name: "添加来源" }))[0]);
+  const importer = await screen.findByRole("dialog", { name: "添加订阅来源" });
+  fireEvent.change(within(importer).getByRole("textbox", { name: "来源名称" }), { target: { value: "Confirmed proxy source" } });
+  fireEvent.change(within(importer).getByRole("textbox", { name: "节点链接或配置内容" }), { target: { value: "socks5://192.0.2.40:1080#Accepted" } });
+  await userEvent.click(within(importer).getByRole("button", { name: "导入来源" }));
+  await waitFor(() => expect(screen.queryByRole("dialog", { name: "添加订阅来源" })).toBeNull());
+  const task = await screen.findByRole("region", { name: "继续设置订阅" });
+  expect(within(task).getByRole("heading").textContent).toContain("Confirmed proxy source");
+  const proceed = within(task).getByRole("button", { name: "继续设置订阅" });
+  expect((proceed as HTMLButtonElement).disabled).toBe(true);
+  await within(task).findByText(postSaveInventory === "delayed" ? "正在核对已导入的来源…" : "暂时无法核对来源，导入结果已保留。请重试。");
+  expect(within(task).queryByText("当前来源列表中找不到此来源，请重新核对。")).toBeNull();
+  await userEvent.click(proceed);
+  expect(onCreateProfile).not.toHaveBeenCalled();
+  expect(writes).toEqual(["/me/sources"]);
+  await act(async () => recoverInventory());
+  if (postSaveInventory === "failed") await userEvent.click(within(task).getByRole("button", { name: "重新核对来源" }));
+  await waitFor(() => expect((proceed as HTMLButtonElement).disabled).toBe(false));
+  expect(onCreateProfile).not.toHaveBeenCalled();
+  await userEvent.click(proceed);
+  expect(onCreateProfile).toHaveBeenCalledTimes(1);
+  expect(writes).toEqual(["/me/sources"]);
+});
+
+
+it("retains a candidate-only imported source task without inventing an accepted snapshot", async () => {
+  const onCreateProfile = vi.fn();
+  const { writes } = mount([], { importCandidate: true, children: <SourcesPage subscriptionSetup onCreateProfile={onCreateProfile} /> });
+  await userEvent.click((await screen.findAllByRole("button", { name: "添加来源" }))[0]);
+  const importer = await screen.findByRole("dialog", { name: "添加订阅来源" });
+  fireEvent.change(within(importer).getByRole("textbox", { name: "来源名称" }), { target: { value: "Pending proxy source" } });
+  fireEvent.change(within(importer).getByRole("textbox", { name: "节点链接或配置内容" }), { target: { value: "socks5://192.0.2.40:1080#Pending" } });
+  await userEvent.click(within(importer).getByRole("button", { name: "导入来源" }));
+  await waitFor(() => expect(screen.queryByRole("dialog", { name: "添加订阅来源" })).toBeNull());
+  const task = await screen.findByRole("region", { name: "继续设置订阅" });
+  expect(within(task).getByRole("heading").textContent).toBe("已保存来源「Pending proxy source」");
+  await within(task).findByText("此来源还没有已接受的连接，请先完成导入检查。");
+  expect((within(task).getByRole("button", { name: "继续设置订阅" }) as HTMLButtonElement).disabled).toBe(true);
+  expect(within(task).getByRole("button", { name: "查看导入变化" })).toBeTruthy();
+  expect(onCreateProfile).not.toHaveBeenCalled();
+  expect(writes).toEqual(["/me/sources"]);
+});
+
+it("keeps the subscription task action on existing accepted sources and discloses an unapplied candidate", async () => {
+  const onCreateProfile = vi.fn();
+  const { writes } = mount([{ ...source, candidate }], { children: <SourcesPage subscriptionSetup onCreateProfile={onCreateProfile} /> });
+  await userEvent.click(await screen.findByRole("button", { name: /^My accepted source/ }));
+  const detail = await screen.findByRole("dialog", { name: source.name });
+  expect(within(detail).getByText("使用已应用版本，待审更新不会加入。")).toBeTruthy();
+  expect(within(detail).queryByRole("button", { name: "用此来源新建分流配置" })).toBeNull();
+  await userEvent.click(within(detail).getByRole("button", { name: "继续设置订阅" }));
+  expect(onCreateProfile).toHaveBeenCalledWith(source.id);
   expect(writes).toEqual([]);
 });

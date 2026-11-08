@@ -215,7 +215,11 @@ export function SubscriptionsPage({
   view = "overview",
   sourceDraft,
   onSourceDraftConsumed,
+  onStartProxySubscription,
+  onConfigureServer,
 }: {
+  onStartProxySubscription?: () => void;
+  onConfigureServer?: () => void;
   navigate?: (page: Page) => void;
   view?: SubscriptionView;
   sourceDraft?: SourceProfileEntry;
@@ -1081,7 +1085,7 @@ export function SubscriptionsPage({
               data-return-focus="new-profile"
               leadingIcon={<Plus aria-hidden="true" />}
               onClick={() => edit()}
-              variant="default"
+              variant={onStartProxySubscription && !groups.length ? "outline" : "default"}
               pending={!!opening}
             >
               新建分流配置
@@ -1512,6 +1516,21 @@ export function SubscriptionsPage({
                     >
                       清除搜索
                     </ActionButton>
+                  ) : !profileScope && onStartProxySubscription ? (
+                    <div className="grid gap-3 text-left sm:grid-cols-2">
+                      <div className="space-y-3 rounded-lg border bg-card p-4">
+                        <h3 className="font-medium">我已有代理连接或订阅链接</h3>
+                        <p className="text-sm text-muted-foreground">导入来源，再选择流量去向和客户端。</p>
+                        <ActionButton onClick={onStartProxySubscription} variant="default">用已有代理生成订阅</ActionButton>
+                      </div>
+                      {onConfigureServer && (
+                        <div className="space-y-3 rounded-lg border bg-card p-4">
+                          <h3 className="font-medium">我有自己的服务器</h3>
+                          <p className="text-sm text-muted-foreground">配置服务器、监听和转发路径。</p>
+                          <ActionButton onClick={onConfigureServer} variant="outline">配置自有服务器</ActionButton>
+                        </div>
+                      )}
+                    </div>
                   ) : undefined
                 }
               />
@@ -3717,3 +3736,4 @@ export function ProfilePublicationDialog({
     </TaskDialog>
   );
 }
+

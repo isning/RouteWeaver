@@ -41,6 +41,7 @@ jobs:
           src/group-membership.dom.test.tsx
           src/profile-source-disclosure.dom.test.tsx
           src/profile-content-hierarchy.dom.test.tsx
+          src/source-profile-continuation.dom.test.tsx
           --maxWorkers=1
 # Supplemental feedback only. The full Repository quality workflow and its
 # required aggregate remain authoritative; this does not replace any gate.

@@ -76,6 +76,7 @@ import {
 export { SourceEditorDialog } from "./SourceEditorDialog";
 export type { SourceEditorDialogProps } from "./SourceEditorDialog";
 export function SourcesPage({
+  subscriptionSetup = false,
   onAdded,
   onEditingChange,
   acceptanceReceipts,
@@ -83,6 +84,7 @@ export function SourcesPage({
   onAccepted,
   onCreateProfile,
 }: {
+  subscriptionSetup?: boolean;
   onAdded?: (source: Source) => void;
   onEditingChange?: (blocked: boolean) => void;
   acceptanceReceipts?: Record<string, SourceAcceptanceReceipt>;
@@ -101,6 +103,7 @@ export function SourcesPage({
   const [search, setSearch] = useState("");
   const searchInput = useRef<HTMLInputElement>(null);
   const [editing, setEditing] = useState<Source | null>(null);
+  const [setupSource, setSetupSource] = useState<Source | null>(null);
   const [open, setOpen] = useState(false);
   const [detail, setDetail] = useState<Source | null>(null);
   const [review, setReview] = useState<Source | null>(null);
@@ -119,6 +122,7 @@ export function SourcesPage({
         [receipt.sourceId]: receipt,
       }));
     onAccepted?.(receipt);
+    setSetupSource((current) => current?.id === source.id ? source : current);
     setDetail((current) => (current?.id === source.id ? source : current));
     message.success(`「${source.name}」已应用，已发布订阅未改变`, {
       id: sourceApplicationNoticeID(source.id),
@@ -287,11 +291,14 @@ export function SourcesPage({
   const configurationSource = query.data?.find(
     (source) => source.id === detail?.id,
   );
+  const acceptedSetupSource = query.isSuccess && !query.isFetching && !query.isPaused
+    ? query.data.find((source) => source.id === setupSource?.id)
+    : undefined;
   return (
     <>
       <PageHeader
         title="订阅来源"
-        description="导入外部订阅和节点，与平台节点组合使用。"
+        description={subscriptionSetup ? "先导入已有代理或订阅链接。导入后继续设置客户端订阅，也可以打开下方已有来源继续。" : "导入外部订阅和节点，与平台节点组合使用。"}
         action={
           <ActionButton
             leadingIcon={<Plus aria-hidden="true" />}
@@ -304,6 +311,38 @@ export function SourcesPage({
         }
       />
       <ErrorNotice error={actionError} />
+      {subscriptionSetup && setupSource && !open && onCreateProfile && (
+        <section aria-label="继续设置订阅" className="mb-6 space-y-3 rounded-lg border bg-card p-4">
+          <h2 className="font-medium">{setupSource.snapshot ? "已导入" : "已保存来源"}「{acceptedSetupSource?.name || setupSource.name}」</h2>
+          <p className="text-sm text-muted-foreground">{setupSource.snapshot ? `导入时包含 ${setupSource.snapshot.endpoints?.length ?? 0} 个连接，尚未发布订阅。` : "导入结果尚未接受，尚未发布订阅。"}</p>
+          <p role="status" className="text-sm">
+            {query.isPaused ? "等待恢复连接后核对来源。"
+              : query.isFetching || query.isPending ? "正在核对已导入的来源…"
+              : query.isError ? "暂时无法核对来源，导入结果已保留。请重试。"
+              : !acceptedSetupSource ? "当前来源列表中找不到此来源，请重新核对。"
+              : !acceptedSetupSource.enabled ? "此来源已停用，启用后才能继续。"
+              : !acceptedSetupSource.snapshot ? "此来源还没有已接受的连接，请先完成导入检查。"
+              : acceptedSetupSource.candidate ? "使用已应用版本，待审更新不会加入。"
+              : "接下来选择流量去向和客户端。"}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <ActionButton
+              onClick={() => {
+                if (acceptedSetupSource?.enabled && acceptedSetupSource.snapshot)
+                  onCreateProfile(acceptedSetupSource.id);
+              }}
+              disabled={!acceptedSetupSource?.enabled || !acceptedSetupSource.snapshot || application.pending || otherWritePending}
+              variant="default"
+            >继续设置订阅</ActionButton>
+            {acceptedSetupSource?.candidate && (
+              <ActionButton onClick={() => openChanges(acceptedSetupSource)} disabled={application.pending || otherWritePending} variant="outline">查看导入变化</ActionButton>
+            )}
+            {!(acceptedSetupSource?.enabled && acceptedSetupSource.snapshot) && (
+              <ActionButton onClick={() => query.refetch()} disabled={query.isFetching} variant="outline">重新核对来源</ActionButton>
+            )}
+          </div>
+        </section>
+      )}
       <QueryState
         loading={query.isPending}
         paused={query.isPaused}
@@ -531,11 +570,14 @@ export function SourcesPage({
           setEditing(null);
         }}
         onSaved={(result) => {
+          if (subscriptionSetup && (!editing || setupSource?.id === result.id)) setSetupSource(result);
           if (result.candidate)
             message.info("来源已保存，有更新可手动应用", {
               id: sourceApplicationNoticeID(result.id),
             });
-          else if (!editing && result.snapshot) onAdded?.(result);
+          else if (!editing && result.snapshot) {
+            onAdded?.(result);
+          }
         }}
       />
       <SourceUpdateReview
@@ -544,6 +586,7 @@ export function SourcesPage({
         onAccepted={(receipt, source) => {
           // Acceptance is complete: do not keep a pending review/dirty guard alive.
           setReview(null);
+          setSetupSource((current) => current?.id === source.id ? source : current);
           message.success(`「${source.name}」已应用，已发布订阅未改变`, {
             id: sourceApplicationNoticeID(source.id),
           });
@@ -567,6 +610,8 @@ export function SourcesPage({
           onCreateProfile &&
           configurationSource?.enabled === true &&
           configurationSource.snapshot ? (
+            <>
+            {subscriptionSetup && configurationSource.candidate && <p className="text-sm text-muted-foreground">使用已应用版本，待审更新不会加入。</p>}
             <ActionButton
               disabled={application.pending || otherWritePending}
               onClick={() => {
@@ -575,8 +620,9 @@ export function SourcesPage({
               }}
               variant="default"
             >
-              用此来源新建分流配置
+              {subscriptionSetup ? "继续设置订阅" : "用此来源新建分流配置"}
             </ActionButton>
+            </>
           ) : null
         }
         onOpenChange={(nextOpen) => {
@@ -1718,3 +1764,4 @@ function CollectionDelete({
     </TaskDialog>
   );
 }
+
