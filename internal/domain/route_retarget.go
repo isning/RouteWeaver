@@ -27,6 +27,11 @@ func RetargetManagedExit(ir ServerDeploymentIR, route PublishedRoute, target Ser
 	refuse := func() (ExitRetarget, error) {
 		return result, fmt.Errorf("route exit change requires an unambiguous managed two-endpoint path")
 	}
+	if len(route.Hops) > 0 {
+		if _, err := ResolvePublishedRouteHops(route); err != nil || HasExternalHops(route) {
+			return refuse()
+		}
+	}
 	if ir.SchemaVersion != "1.0" || route.DeploymentID != ir.ID || len(route.EndpointIDs) != 2 || route.EndpointIDs[0] != route.Path.Entry || route.EndpointIDs[1] != route.Path.Exit || !ValidID(connectorID) || !ValidID(revision) || target.Listener.ID == route.Path.Exit || target.Listener.ID == route.Path.Entry {
 		return refuse()
 	}
@@ -129,6 +134,9 @@ func RetargetManagedExit(ir ServerDeploymentIR, route PublishedRoute, target Ser
 	}
 	result.IR.TopologyRevision = revision
 	result.Route.EndpointIDs[1] = target.Listener.ID
+	if len(result.Route.Hops) > 0 {
+		result.Route.Hops[1].EndpointID = target.Listener.ID
+	}
 	result.Route.Path.Exit = target.Listener.ID
 	sum := sha256.Sum256([]byte(route.Path.Entry + "\x00" + target.Listener.ID))
 	result.Link = Link{ID: "path_" + hex.EncodeToString(sum[:16]), From: route.Path.Entry, To: target.Listener.ID}
@@ -136,3 +144,4 @@ func RetargetManagedExit(ir ServerDeploymentIR, route PublishedRoute, target Ser
 	result.AffectedUsers = len(users)
 	return result, nil
 }
+

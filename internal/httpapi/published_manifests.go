@@ -116,6 +116,12 @@ func (h *server) probeAppliedPublishedManifest(routeID, instanceID string) (doma
 		if route.DeploymentID != manifest.DeploymentID || len(route.EndpointIDs) == 0 || route.Path.Entry != route.EndpointIDs[0] || route.Path.Exit != route.EndpointIDs[len(route.EndpointIDs)-1] {
 			return manifest, fmt.Errorf("published route manifest identity is inconsistent")
 		}
+		if _, err := domain.ResolvePublishedRouteHops(route); err != nil {
+			return manifest, fmt.Errorf("published route manifest path is inconsistent")
+		}
+		if found {
+			return manifest, fmt.Errorf("published route manifest identity is duplicated")
+		}
 		found = true
 	}
 	if !found {
@@ -152,6 +158,7 @@ func (h *server) probeAppliedPublishedPathBundle(routeID string) (appliedPathBun
 		return appliedPathBundle{}, e
 	}
 	manifests := map[string]domain.PublishedManifest{}
+	ambiguous := map[string]bool{}
 	var unexpected error
 	for _, raw := range records {
 		var state controlprotocol.State
@@ -172,21 +179,35 @@ func (h *server) probeAppliedPublishedPathBundle(routeID string) (appliedPathBun
 		}
 		manifest, e := h.probeAppliedPublishedManifest(routeID, state.Observed.InstanceID)
 		if e == nil {
-			manifests[manifest.Program.Listener.ID] = manifest
+			id := manifest.Program.Listener.ID
+			if _, exists := manifests[id]; exists {
+				ambiguous[id] = true
+			}
+			manifests[id] = manifest
 		} else if !errors.Is(e, errPublishedProofUnconfirmed) && unexpected == nil {
 			unexpected = e
 		}
 	}
 	for _, manifest := range manifests {
 		for _, route := range manifest.Routes {
-			if route.ID != routeID || route.Path.Entry != manifest.Program.Listener.ID {
+			if route.ID != routeID || route.Path.Entry != manifest.Program.Listener.ID || ambiguous[route.Path.Entry] {
 				continue
 			}
 			complete := true
 			programs := make([]domain.ServerProgram, 0, len(route.EndpointIDs))
 			for _, id := range route.EndpointIDs {
 				hop, ok := manifests[id]
-				if !ok || hop.DeploymentID != manifest.DeploymentID || hop.Fingerprint != manifest.Fingerprint {
+				if !ok || ambiguous[id] || hop.DeploymentID != manifest.DeploymentID || hop.Fingerprint != manifest.Fingerprint {
+					complete = false
+					break
+				}
+				matches := 0
+				for _, snapshot := range hop.Routes {
+					if snapshot.ID == route.ID && samePublishedRouteSnapshot(route, snapshot) {
+						matches++
+					}
+				}
+				if matches != 1 {
 					complete = false
 					break
 				}

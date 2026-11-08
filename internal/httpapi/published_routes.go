@@ -20,12 +20,13 @@ import (
 // are generated from stable pairs only after inventory and native forwarding
 // intent have both been checked.
 type publishedRouteInput struct {
-	ID           string   `json:"id"`
-	Name         string   `json:"name"`
-	DeploymentID string   `json:"deploymentId"`
-	EndpointIDs  []string `json:"endpointIds"`
-	PublicHost   string   `json:"publicHost"`
-	PublicPort   int      `json:"publicPort"`
+	ID           string                     `json:"id"`
+	Name         string                     `json:"name"`
+	DeploymentID string                     `json:"deploymentId"`
+	EndpointIDs  []string                   `json:"endpointIds"`
+	Hops         []domain.PublishedRouteHop `json:"hops,omitempty"`
+	PublicHost   string                     `json:"publicHost"`
+	PublicPort   int                        `json:"publicPort"`
 }
 
 func (h *server) registerPublishedRouteAdmin(r chi.Router) {
@@ -70,6 +71,18 @@ func (h *server) registerPublishedRouteAdmin(r chi.Router) {
 					return
 				}
 				proof.Compares = append(proof.Compares, *expected)
+				if expected.Expected != nil && len(in.Hops) == 0 {
+					raw, err := json.Marshal(expected.Expected)
+					var previous domain.PublishedRoute
+					if err != nil || json.Unmarshal(raw, &previous) != nil {
+						fail(w, 500, "cannot read the previous published path")
+						return
+					}
+					if domain.HasExternalHops(previous) {
+						fail(w, 422, "explicit hops are required when editing a mixed path; reopen the complete path before saving")
+						return
+					}
+				}
 			}
 			route, links, e := h.preparePublishedRouteWithProof(in, proof)
 			if e != nil {
@@ -125,7 +138,14 @@ func (h *server) preparePublishedRoute(in publishedRouteInput) (domain.Published
 	return h.preparePublishedRouteWithProof(in, &preparedFleet{})
 }
 func (h *server) preparePublishedRouteWithProof(in publishedRouteInput, proof *preparedFleet) (domain.PublishedRoute, []domain.Link, error) {
-	route := domain.PublishedRoute{ID: in.ID, Name: in.Name, DeploymentID: in.DeploymentID, EndpointIDs: in.EndpointIDs, PublicHost: in.PublicHost, PublicPort: in.PublicPort}
+	if len(in.Hops) > 0 && len(in.EndpointIDs) == 0 {
+		for _, hop := range in.Hops {
+			if hop.Kind == "managed" {
+				in.EndpointIDs = append(in.EndpointIDs, hop.EndpointID)
+			}
+		}
+	}
+	route := domain.PublishedRoute{ID: in.ID, Name: in.Name, DeploymentID: in.DeploymentID, EndpointIDs: in.EndpointIDs, Hops: in.Hops, PublicHost: in.PublicHost, PublicPort: in.PublicPort}
 	if !domain.ValidID(in.ID) || strings.TrimSpace(in.Name) == "" || !domain.ValidID(in.DeploymentID) || len(in.EndpointIDs) == 0 || len(in.EndpointIDs) > 32 {
 		return route, nil, fmt.Errorf("stable route identity, name, deployment and selected endpoint path required")
 	}
@@ -161,6 +181,9 @@ func (h *server) preparePublishedRouteWithProof(in publishedRouteInput, proof *p
 	route.Path = domain.RoutePath{ID: route.ID, Entry: in.EndpointIDs[0], Exit: in.EndpointIDs[len(in.EndpointIDs)-1], Links: []string{}}
 	for _, link := range links {
 		route.Path.Links = append(route.Path.Links, link.ID)
+	}
+	if _, err := domain.ResolvePublishedRouteHops(route); err != nil {
+		return route, nil, err
 	}
 	for _, link := range links {
 		var existing domain.Link
@@ -227,6 +250,9 @@ func (h *server) publishedPathActionWithProof(ir domain.ServerDeploymentIR, rout
 	return action, nil
 }
 func verifyPublishedPath(ir domain.ServerDeploymentIR, route domain.PublishedRoute, endpoints []domain.ManagedEndpoint, dialConnections []domain.Connection) (domain.ActionRef, error) {
+	if len(route.Hops) > 0 {
+		return verifyExplicitPublishedPath(ir, route, endpoints, dialConnections)
+	}
 	action := domain.ActionRef{Kind: "direct"}
 	for i, endpoint := range endpoints {
 		var program *domain.ServerProgram
@@ -318,9 +344,12 @@ func sameListenerNetwork(a, b domain.Connection) bool {
 // Only names and stable identities cross this read-model boundary. Programs
 // contain credentials and server-only material and must never be serialized.
 type publishedPathHopSummary struct {
-	EndpointID    string `json:"endpointId"`
-	Name          string `json:"name,omitempty"`
-	MetadataState string `json:"metadataState"`
+	EndpointID        string `json:"endpointId,omitempty"`
+	Kind              string `json:"kind,omitempty"`
+	ConnectorID       string `json:"connectorId,omitempty"`
+	ProgramEndpointID string `json:"programEndpointId,omitempty"`
+	Name              string `json:"name,omitempty"`
+	MetadataState     string `json:"metadataState"`
 }
 type publishedPathSummary struct {
 	Hops []publishedPathHopSummary `json:"hops"`
@@ -341,6 +370,41 @@ func summarizePublishedPath(ids []string, programs []domain.ServerProgram) publi
 			hop.MetadataState = "snapshot"
 		} else {
 			hop.Name = ""
+		}
+		summary.Hops = append(summary.Hops, hop)
+	}
+	return summary
+}
+
+// Mixed summaries preserve every declared hop without serializing dial values.
+func summarizePublishedRoute(route domain.PublishedRoute, programs []domain.ServerProgram) publishedPathSummary {
+	if len(route.Hops) == 0 {
+		return summarizePublishedPath(route.EndpointIDs, programs)
+	}
+	summary := publishedPathSummary{Hops: []publishedPathHopSummary{}}
+	owner := ""
+	for _, selected := range route.Hops {
+		if selected.Kind == "managed" {
+			owner = selected.EndpointID
+			hop := summarizePublishedPath([]string{owner}, programs).Hops[0]
+			hop.Kind = "managed"
+			summary.Hops = append(summary.Hops, hop)
+			continue
+		}
+		hop := publishedPathHopSummary{Kind: selected.Kind, ConnectorID: selected.ConnectorID, ProgramEndpointID: owner, MetadataState: "unavailable"}
+		matches := 0
+		for _, program := range programs {
+			if program.Listener.ID != owner {
+				continue
+			}
+			connectors, _, err := publishedProgramConnectors(program)
+			if err == nil && connectors[selected.ConnectorID].ID != "" {
+				matches++
+			}
+		}
+		if matches == 1 {
+			hop.MetadataState = "snapshot"
+			hop.Name = selected.ConnectorID
 		}
 		summary.Hops = append(summary.Hops, hop)
 	}
@@ -380,8 +444,8 @@ func (h *server) publishedRouteSummary(route domain.PublishedRoute, stored ...js
 							continue
 						}
 						status = "effective"
-						effective = map[string]any{"publicHost": snapshot.PublicHost, "publicPort": snapshot.PublicPort, "endpointIds": snapshot.EndpointIDs, "fingerprint": applied.Fingerprint, "path": summarizePublishedPath(snapshot.EndpointIDs, bundle.Programs)}
-						pendingChanges = fingerprint != applied.Fingerprint || route.DeploymentID != snapshot.DeploymentID || route.PublicHost != snapshot.PublicHost || route.PublicPort != snapshot.PublicPort || !reflect.DeepEqual(route.EndpointIDs, snapshot.EndpointIDs)
+						effective = map[string]any{"publicHost": snapshot.PublicHost, "publicPort": snapshot.PublicPort, "endpointIds": snapshot.EndpointIDs, "fingerprint": applied.Fingerprint, "hops": snapshot.Hops, "path": summarizePublishedRoute(snapshot, bundle.Programs)}
+						pendingChanges = fingerprint != applied.Fingerprint || route.DeploymentID != snapshot.DeploymentID || route.PublicHost != snapshot.PublicHost || route.PublicPort != snapshot.PublicPort || !samePublishedRouteSnapshot(route, snapshot)
 					}
 				}
 			}
@@ -389,5 +453,6 @@ func (h *server) publishedRouteSummary(route domain.PublishedRoute, stored ...js
 	} else {
 		diagnostics = append(diagnostics, "Deployment is missing")
 	}
-	return map[string]any{"revisionToken": h.recordRevision("published-routes", route.ID, revisionValue), "id": route.ID, "name": route.Name, "deploymentId": route.DeploymentID, "path": route.Path, "endpointIds": route.EndpointIDs, "savedPath": summarizePublishedPath(route.EndpointIDs, deployment.IR.Programs), "publicHost": route.PublicHost, "publicPort": route.PublicPort, "status": status, "diagnostics": diagnostics, "fingerprint": fingerprint, "pendingChanges": pendingChanges, "effective": effective}
+	return map[string]any{"revisionToken": h.recordRevision("published-routes", route.ID, revisionValue), "id": route.ID, "name": route.Name, "deploymentId": route.DeploymentID, "path": route.Path, "endpointIds": route.EndpointIDs, "hops": route.Hops, "savedPath": summarizePublishedRoute(route, deployment.IR.Programs), "publicHost": route.PublicHost, "publicPort": route.PublicPort, "status": status, "diagnostics": diagnostics, "fingerprint": fingerprint, "pendingChanges": pendingChanges, "effective": effective}
 }
+

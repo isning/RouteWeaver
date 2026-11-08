@@ -240,6 +240,9 @@ func (h *server) prepareExitChange(actor, routeID string, in exitChangeInput) (p
 	if !sameReviewToken(in.ExpectedRouteRevision, h.recordRevision("published-routes", routeID, proof.Compares[0].Expected)) || !sameReviewToken(in.ExpectedDeploymentRevision, h.recordRevision("server-deployments", out.deployment.ID, proof.Compares[1].Expected)) {
 		return out, store.ErrConflict
 	}
+	if _, err := domain.ResolvePublishedRouteHops(route); err != nil || domain.HasExternalHops(route) {
+		return out, exitBlocked("EXIT_PATH_UNSUPPORTED", "此操作不能省略外部代理。请保留完整链路后再修改。")
+	}
 	if len(route.EndpointIDs) != 2 || route.Path.Entry != route.EndpointIDs[0] || route.Path.Exit != route.EndpointIDs[1] {
 		return out, exitBlocked("EXIT_PATH_UNSUPPORTED", "此操作支持保留入口、更换两段线路的直连出口。当前路径没有被改写。")
 	}
@@ -615,3 +618,4 @@ func exitSecurityChanges(before, after domain.Connection) []string {
 	}
 	return changes
 }
+

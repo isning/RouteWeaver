@@ -48,6 +48,11 @@ func (s *Store) diagnosticManifestTx(tx *sql.Tx, instance string, now time.Time)
 	return out, nil
 }
 func diagnosticConnector(m domain.PublishedManifest, route domain.PublishedRoute) (string, error) {
+	// This diagnostic contract names a managed terminal endpoint. Until it can
+	// represent external hops, refuse rather than probe or label a partial path.
+	if domain.HasExternalHops(route) {
+		return "", diagnostics.ErrScope
+	}
 	if m.Identity.AdapterID != "routeweaver/managed-xray" || m.Program.Listener.ID != route.Path.Entry {
 		return "", diagnostics.ErrScope
 	}

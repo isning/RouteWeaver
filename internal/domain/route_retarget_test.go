@@ -49,4 +49,19 @@ func TestRetargetManagedExitPreservesLegacyFallbackAndOtherPrincipals(t *testing
 	if string(before) != string(after) {
 		t.Fatal("input mutated")
 	}
+	// The explicit managed-only representation remains compatible and is kept
+	// coherent; adding an external hop must not be silently flattened.
+	route.Hops = []domain.PublishedRouteHop{{Kind: "managed", EndpointID: "fra"}, {Kind: "managed", EndpointID: "uk"}}
+	explicit, err := domain.RetargetManagedExit(ir, route, target, next, "new-out", "new-revision")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = domain.ResolvePublishedRouteHops(explicit.Route); err != nil || explicit.Route.Hops[1].EndpointID != "new-uk" || route.Hops[1].EndpointID != "uk" {
+		t.Fatalf("explicit managed path lost coherence: %#v %v", explicit.Route.Hops, err)
+	}
+	route.Hops = []domain.PublishedRouteHop{{Kind: "managed", EndpointID: "fra"}, {Kind: "connector", ConnectorID: "external"}, {Kind: "managed", EndpointID: "uk"}}
+	if _, err = domain.RetargetManagedExit(ir, route, target, next, "new-out", "new-revision"); err == nil {
+		t.Fatal("mixed path was flattened by the managed-only exit operation")
+	}
+
 }

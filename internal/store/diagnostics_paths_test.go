@@ -209,3 +209,23 @@ func TestManagedDiagnosticChangedPathPreservesNotRunAndUnknownEvidence(t *testin
 		})
 	}
 }
+
+func TestManagedDiagnosticRejectsMixedPathProjection(t *testing.T) {
+	s, _, _, now := diagnosticStoreFixture(t)
+	manifests := diagnosticPathFixture(t, s, now)
+	for _, manifest := range manifests {
+		manifest.Routes[0].Hops = []domain.PublishedRouteHop{
+			{Kind: "managed", EndpointID: "fra-entry"},
+			{Kind: "connector", ConnectorID: "external"},
+			{Kind: "managed", EndpointID: "uk-exit"},
+		}
+		diagnosticSaveManifest(t, s, manifest, now)
+	}
+	paths, err := s.DiagnosticPaths(now)
+	if err != nil || len(paths) != 0 {
+		t.Fatalf("mixed path exposed as a managed-only probe: %+v %v", paths, err)
+	}
+	if _, err = s.RequestDiagnostic(managedRequest("mixed"), "operator", now); !errors.Is(err, diagnostics.ErrScope) {
+		t.Fatalf("partial mixed-path diagnostic accepted: %v", err)
+	}
+}

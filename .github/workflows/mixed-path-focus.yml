@@ -1,0 +1,67 @@
+name: Focused mixed path regressions
+
+on:
+  push:
+    branches:
+      - 'ux-task-journeys-*'
+      - 'acceptance-checkpoint-*-mixed-path*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mixed-path-focused-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CI: "true"
+  GOTOOLCHAIN: local
+  GOCACHE: ${{ github.workspace }}/bin/cache/go-build
+  GOMODCACHE: ${{ github.workspace }}/bin/cache/go-mod
+
+jobs:
+  focused:
+    name: Mixed path compilation and publication (supplemental)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          go: "true"
+      - name: Check source formatting with repair diff
+        shell: bash
+        run: |
+          formatter="$(scripts/go.sh env GOROOT)/bin/gofmt"
+          "$formatter" -d internal/domain/published_hops*.go internal/domain/published_routes.go internal/domain/route_retarget.go internal/httpapi/published_mixed_paths*.go internal/httpapi/published_routes.go internal/httpapi/published_manifests.go internal/httpapi/published_route_retarget.go internal/store/diagnostics_paths.go internal/render/mixed_chain_test.go
+          scripts/format.sh --check
+      - name: Run exact-source mixed path regressions
+        if: ${{ !cancelled() }}
+        run: >-
+          scripts/go.sh test -race -p=1 -count=1 -timeout=6m
+          ./internal/domain ./internal/render ./internal/httpapi ./internal/store
+          -run 'Test(ResolvePublishedRouteHops|ServerMixedConnectorChain|PublishedMixedPaths|PublishedRoutePathSummary|ManagedRouteRetarget|RetargetManagedExit|ManagedDiagnostic)'
+# Supplemental feedback only. The complete package suites and required
+# Repository quality aggregate remain authoritative and are not replaced.
+  ui:
+    name: Mixed path display and edit preservation (supplemental)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          node: "true"
+      - run: npm --prefix web run typecheck
+      - name: Run focused public path behavior tests
+        working-directory: web
+        run: >-
+          npm run test -- src/published-route-mixed-hops.dom.test.tsx
+          src/published-route-path.dom.test.tsx
+          src/published-route-concurrent-edit.dom.test.tsx
+          --maxWorkers=1

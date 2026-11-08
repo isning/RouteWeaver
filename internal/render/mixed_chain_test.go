@@ -2,6 +2,9 @@ package render_test
 
 import (
 	"encoding/json"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -139,5 +142,34 @@ func TestServerMixedConnectorChainRejectsAmbiguousOrUnsupportedIntent(t *testing
 				}
 			})
 		}
+	}
+}
+
+// Native parsing verifies the named mixed chain shape, not a remote handshake.
+func TestNativeMixedConnectorChain(t *testing.T) {
+	for _, target := range nativeStockServerTargets() {
+		t.Run(target.AdapterID+"/"+target.Version, func(t *testing.T) {
+			binary := target.binary(t)
+			p := mixedConnectorProgram(target.AdapterID, target.Version)
+			p.Connectors[0], p.Connectors[2] = p.Connectors[2], p.Connectors[0]
+			artifacts, err := render.DefaultServers().Render(domain.ServerDeploymentIR{SchemaVersion: "1.0", ID: "mixed-chain", TopologyRevision: "r1", Programs: []domain.ServerProgram{p}})
+			if err != nil {
+				t.Fatal(err)
+			}
+			dir := t.TempDir()
+			file := filepath.Join(dir, "config.json")
+			if err = os.WriteFile(file, []byte(artifacts[0].Content), 0600); err != nil {
+				t.Fatal(err)
+			}
+			args := []string{"run", "-test", "-format", "json", "-config", file}
+			if target.AdapterID == render.ServerAdapterSingBox {
+				args = []string{"check", "-c", file}
+			}
+			cmd := exec.Command(binary, args...)
+			cmd.Dir = dir
+			if output, err := cmd.CombinedOutput(); err != nil {
+				t.Fatalf("native mixed connector check failed: %v\n%s", err, output)
+			}
+		})
 	}
 }

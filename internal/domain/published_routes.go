@@ -12,13 +12,14 @@ import (
 // PublishedRoute is a stable service-facing identity for a managed server path.
 // It is not a client chain and never contains transit authentication material.
 type PublishedRoute struct {
-	ID           string    `json:"id"`
-	Name         string    `json:"name"`
-	DeploymentID string    `json:"deploymentId"`
-	Path         RoutePath `json:"path"`
-	EndpointIDs  []string  `json:"endpointIds"`
-	PublicHost   string    `json:"publicHost"`
-	PublicPort   int       `json:"publicPort"`
+	ID           string              `json:"id"`
+	Name         string              `json:"name"`
+	DeploymentID string              `json:"deploymentId"`
+	Path         RoutePath           `json:"path"`
+	EndpointIDs  []string            `json:"endpointIds"`
+	Hops         []PublishedRouteHop `json:"hops,omitempty"`
+	PublicHost   string              `json:"publicHost"`
+	PublicPort   int                 `json:"publicPort"`
 }
 
 // PrincipalCredential is deliberately separate from listener transport/security.
@@ -247,3 +248,4 @@ func ValidateListenerTransport(c Connection) error {
 	}
 	return nil
 }
+

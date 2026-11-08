@@ -55,10 +55,18 @@ import { WORKSPACE_NAVIGATION_EVENT } from "./workspace-history";
 import { PublicRouteEditComparison, publicRouteFields, reviewedPublicRoute, type ReviewedPublicRoute } from "./PublicRouteEditComparison";
 interface RoutePathSummary {
   hops: {
-    endpointId: string;
+    kind?: "managed" | "connector";
+    endpointId?: string;
+    connectorId?: string;
+    programEndpointId?: string;
     name?: string;
     metadataState: "snapshot" | "unavailable";
   }[];
+}
+interface PublishedRouteHop {
+  kind: "managed" | "connector";
+  endpointId?: string;
+  connectorId?: string;
 }
 export interface PublishedRoute {
   revisionToken?: string;
@@ -66,6 +74,7 @@ export interface PublishedRoute {
   name: string;
   deploymentId: string;
   endpointIds: string[];
+  hops?: PublishedRouteHop[];
   publicHost: string;
   publicPort: number;
   status: string;
@@ -77,6 +86,7 @@ export interface PublishedRoute {
     publicHost: string;
     publicPort: number;
     endpointIds: string[];
+    hops?: PublishedRouteHop[];
     fingerprint: string;
     path?: RoutePathSummary;
   } | null;
@@ -87,9 +97,29 @@ export interface PublishedRoute {
     links: string[];
   };
 }
+const mixedPathEditingReason =
+  "当前编辑与更换出口暂不支持完整混合路径，已停用以避免丢失连接器。";
+// Check the complete route before any managed-only projection or conflict
+// comparison. Legacy managed summaries deliberately remain editable.
+function hasConnectorHops(value: unknown): boolean {
+  if (!value || typeof value !== "object") return false;
+  const route = value as Partial<PublishedRoute>;
+  return [route.hops, route.savedPath?.hops, route.effective?.hops, route.effective?.path?.hops]
+    .some(hops => Array.isArray(hops) && hops.some(hop =>
+      hop?.kind === "connector" || !!hop?.connectorId,
+    ));
+}
 function RoutePathComparison({ route }: { route: PublishedRoute }) {
-  const saved = route.savedPath;
-  const confirmed = route.effective?.path;
+  const fallback = (hops?: PublishedRouteHop[]): RoutePathSummary | undefined => {
+    if (!hops?.length) return;
+    let programEndpointId: string | undefined;
+    return { hops: hops.map(hop => {
+      if (hop.kind === "managed") programEndpointId = hop.endpointId;
+      return { ...hop, ...(hop.kind === "connector" ? { programEndpointId } : {}), metadataState: "unavailable" };
+    }) };
+  };
+  const saved = route.savedPath?.hops.length ? route.savedPath : fallback(route.hops);
+  const confirmed = route.effective?.path?.hops.length ? route.effective.path : fallback(route.effective?.hops);
   const status = (
     <Badge className="whitespace-normal max-w-full" variant="secondary">
       {route.pendingChanges && route.status === "effective"
@@ -99,27 +129,36 @@ function RoutePathComparison({ route }: { route: PublishedRoute }) {
           : routeStatus(route.status) || "未知"}
     </Badge>
   );
-  if (!saved?.hops.length) return <p>运行配置：{status}</p>;
-  const name = (hop: RoutePathSummary["hops"][number]) =>
-    hop.metadataState === "snapshot" ? hop.name?.trim() : undefined;
-  const all = [...saved.hops, ...(confirmed?.hops || [])];
+  if (!saved?.hops.length && !confirmed?.hops.length) return <p>运行配置：{status}</p>;
+  type Hop = RoutePathSummary["hops"][number];
+  const isConnector = (hop: Hop) => hop.kind === "connector" || !!hop.connectorId;
+  const identity = (hop: Hop) => JSON.stringify(isConnector(hop)
+    ? ["connector", hop.programEndpointId || "", hop.connectorId || ""]
+    : ["managed", hop.endpointId || ""]);
+  // Connector display never consumes names or connection metadata. Its stable
+  // ID is scoped to a managed program, not a globally unique endpoint ID.
+  const name = (hop: Hop) => isConnector(hop)
+    ? hop.connectorId || "未知连接器"
+    : (hop.metadataState === "snapshot" ? hop.name?.trim() : undefined) || hop.endpointId || "未知端点";
+  const all = [...(saved?.hops || []), ...(confirmed?.hops || [])];
   const sequence = (path: RoutePathSummary) =>
     path.hops
       .map((hop) => {
         const label = name(hop);
-        if (!label) return hop.endpointId;
-        return all.some(
+        const ambiguous = all.some(
           (other) =>
-            other.endpointId !== hop.endpointId && name(other) === label,
-        )
-          ? `${label}（${hop.endpointId}）`
-          : label;
+            identity(other) !== identity(hop) && name(other) === label,
+        );
+        if (!ambiguous) return label;
+        return isConnector(hop)
+          ? `${label}（经 ${hop.programEndpointId || "未知入口"}）`
+          : `${label}（${hop.endpointId || "未知端点"}）`;
       })
       .join(" → ");
   const same =
-    confirmed?.hops.length === saved.hops.length &&
+    !!saved && !!confirmed && confirmed.hops.length === saved.hops.length &&
     saved.hops.every(
-      (hop, index) => hop.endpointId === confirmed.hops[index]?.endpointId,
+      (hop, index) => identity(hop) === identity(confirmed.hops[index]),
     );
   return (
     <div>
@@ -133,13 +172,13 @@ function RoutePathComparison({ route }: { route: PublishedRoute }) {
               <strong>{sequence(confirmed)}</strong>
               {same && (
                 <span className="muted text-sm text-muted-foreground">
-                  （已保存路径端点相同）
+                  {hasConnectorHops(route) ? "（已保存的完整路径相同）" : "（已保存路径端点相同）"}
                 </span>
               )}
             </dd>
           </div>
         )}
-        {!same && (
+        {saved && !same && (
           <div aria-label="已保存路径">
             <dt className="muted text-sm text-muted-foreground mb-1">
               已保存路径
@@ -250,7 +289,8 @@ export function PublishedRoutesPage() {
     route: PublishedRoute,
     deployment: ServerDeployment,
     inventory: Infrastructure,
-  ) =>
+  ) => {
+    if (hasConnectorHops(route)) return;
     setExitTask((current) =>
       current
         ? { ...current, open: true }
@@ -263,6 +303,7 @@ export function PublishedRoutesPage() {
             removeAfterClose: false,
           },
     );
+  };
   const [requestedLine, setRequestedLine] = useState(() =>
     new URLSearchParams(location.hash.split("?")[1] || "").get("line"),
   );
@@ -429,7 +470,10 @@ export function PublishedRoutesPage() {
                         配置用户入口
                       </ActionButton>
                       <ActionButton
+                        disabled={hasConnectorHops(r)}
+                        aria-describedby={hasConnectorHops(r) ? `mixed-route-${r.id}` : undefined}
                         onClick={() => {
+                          if (hasConnectorHops(r)) return;
                           setIsNew(false);
                           setEditing(r);
                         }}
@@ -437,6 +481,7 @@ export function PublishedRoutesPage() {
                       >
                         编辑
                       </ActionButton>
+                      {hasConnectorHops(r) && <p id={`mixed-route-${r.id}`} className="max-w-xs text-left text-sm text-muted-foreground">{mixedPathEditingReason}</p>}
                     </TableRowActions>
                   ),
                 },
@@ -449,6 +494,7 @@ export function PublishedRoutesPage() {
         <PublicRouteEditor
           key={`${isNew ? "new" : "existing"}:${editing.id}`}
           initial={editing}
+          latest={query.data?.find(route => route.id === editing.id)}
           isNew={isNew}
           inventory={infrastructure.data}
           onClose={() => setEditing(null)}
@@ -499,6 +545,7 @@ export function PublishedRoutesPage() {
           onRetarget={openExitTask}
           onUserSelected={setSelectedUser}
           onEdit={(line) => {
+            if (hasConnectorHops(line)) return;
             setIsNew(false);
             setEditing(line);
           }}
@@ -566,12 +613,14 @@ function isPublicTLSRefusal(error: unknown): error is APIError {
 }
 function PublicRouteEditor({
   initial,
+  latest,
   isNew,
   inventory,
   onClose,
   onSaved,
 }: {
   initial: PublishedRoute;
+  latest?: PublishedRoute;
   isNew: boolean;
   inventory: Infrastructure;
   onClose: () => void;
@@ -694,6 +743,17 @@ function PublicRouteEditor({
     }
   };
   const client = useQueryClient();
+  const resolved = useQuery<PublishedRoute>({
+    queryKey: ["published-route-resolve", initial.id],
+    queryFn: () => request<PublishedRoute>(`/published-routes/${encodeURIComponent(initial.id)}/resolve`),
+    enabled: false,
+  });
+  const [mixedLatest, setMixedLatest] = useState(false);
+  const mixedEditingBlocked = mixedLatest ||
+    [initial, latest, draft, resolved.data].some(hasConnectorHops);
+  const mixedRouteKnown = () => mixedEditingBlocked ||
+    hasConnectorHops(client.getQueryData<PublishedRoute[]>(["published-routes"])?.find(route => route.id === initial.id)) ||
+    hasConnectorHops(client.getQueryData(["published-route-resolve", initial.id]));
   const deployment = inventory.deployments.find(
     (d) => d.id === draft.deploymentId,
   );
@@ -703,6 +763,7 @@ function PublicRouteEditor({
     instances: (deployment?.ir.programs || []).map((p) => p.instance),
   };
   const payload = () => {
+    if (mixedRouteKnown()) throw new Error(mixedPathEditingReason);
     const port = operationalInteger(publicPort, 1, 65535);
     if (port === undefined) throw new Error("对外端口须为 1–65535 的整数，且不能留空。");
     return {
@@ -784,6 +845,10 @@ function PublicRouteEditor({
     try {
       const value = await request<unknown>(`/published-routes/${encodeURIComponent(initial.id)}/resolve`);
       if (!stillCurrent()) return;
+      if (hasConnectorHops(value)) {
+        setMixedLatest(true);
+        return;
+      }
       const latest = reviewedPublicRoute(value, initial.id);
       if (!latest || !baseline.revisionToken?.trim()) {
         setComparisonError("无法确认最新线路的身份或版本。当前输入已保留，请稍后重新读取。");
@@ -886,6 +951,7 @@ function PublicRouteEditor({
       size="lg"
       pending={save.isPending || !!comparison}
     >
+      {mixedEditingBlocked && <Notice tone="warning" title={mixedPathEditingReason} />}
       <ErrorNotice
         error={error}
         presentation={
@@ -1178,6 +1244,7 @@ function PublicRouteEditor({
           pending={inspect.isPending}
           keepFocusableWhilePending
           disabled={
+            mixedEditingBlocked ||
             save.isPending ||
             !draft.name.trim() ||
             !deployment ||
@@ -1186,7 +1253,7 @@ function PublicRouteEditor({
             selectionPending
           }
           onKeyDown={event => { if (event.repeat) event.preventDefault(); }}
-          onClick={event => { if (event.detail <= 1 && !comparison && !tlsTask) inspect.mutate(); }}
+          onClick={event => { if (event.detail <= 1 && !comparison && !tlsTask && !mixedRouteKnown()) inspect.mutate(); }}
           variant={preview ? "outline" : "default"}
         >
           检查公开线路
@@ -1195,6 +1262,7 @@ function PublicRouteEditor({
           <ActionButton
             aria-label="保存公开线路"
             disabled={
+              mixedEditingBlocked ||
               !preview ||
               !!preview.diagnostics?.length ||
               selectionPending ||
@@ -1203,7 +1271,7 @@ function PublicRouteEditor({
             pending={save.isPending}
             onKeyDown={event => { if (event.repeat) event.preventDefault(); }}
             onClick={event => {
-              if (event.detail > 1 || submitting.current || conflicted || comparison || tlsTask ||
+              if (event.detail > 1 || submitting.current || conflicted || comparison || tlsTask || mixedRouteKnown() ||
                 previewVersion.current !== version.current || !preview || preview.diagnostics?.length || selectionPending) return;
               submitting.current = true;
               save.mutate(onSaved);
@@ -1251,6 +1319,11 @@ function PublicRouteEditor({
       continueFocus={nameInput.current}
       onCancel={() => invalidateComparison()}
       onContinue={(selected, port) => {
+        if (mixedRouteKnown()) {
+          setMixedLatest(true);
+          invalidateComparison();
+          return;
+        }
         if (!comparison.stillCurrent()) {
           invalidateComparison();
           setComparisonError("比较期间内容或页面已变化，请重新读取最新版本。当前输入已保留。");
@@ -1592,6 +1665,8 @@ function PublicRouteDetail({
       retargetTrigger.current?.focus({ preventScroll: true });
   }, [exitFocusRevision]);
   const current = detail.data || route;
+  const mixedEditingBlocked = hasConnectorHops(current) || hasConnectorHops(route);
+  const mixedReasonId = `mixed-route-detail-${route.id}`;
   const deployment = inventory?.deployments.find(
     (item) => item.id === current.deploymentId,
   );
@@ -1645,8 +1720,9 @@ function PublicRouteDetail({
         pending={!(!action && !exitChangeOpen)}
         footer={
           <ActionButton
-            disabled={!!action || exitChangeOpen}
-            onClick={() => onEdit(current)}
+            disabled={!!action || exitChangeOpen || mixedEditingBlocked}
+            aria-describedby={mixedEditingBlocked ? mixedReasonId : undefined}
+            onClick={() => { if (!mixedEditingBlocked) onEdit(current); }}
             variant="outline"
           >
             编辑线路
@@ -1682,6 +1758,7 @@ function PublicRouteDetail({
             )}
           </QueryState>
           {detail.error && <p>运行配置：未知，无法取得最新确认结果。</p>}
+          {mixedEditingBlocked && <p id={mixedReasonId} className="text-sm text-muted-foreground">{mixedPathEditingReason}</p>}
           <div className={"flex flex-wrap items-center gap-2"}>
             <ActionButton
               className="min-h-11"
@@ -1702,9 +1779,10 @@ function PublicRouteDetail({
             <ActionButton
               ref={retargetTrigger}
               className="min-h-11"
-              disabled={!inventory || !deployment || !!action || exitChangeOpen}
+              disabled={!inventory || !deployment || !!action || exitChangeOpen || mixedEditingBlocked}
+              aria-describedby={mixedEditingBlocked ? mixedReasonId : undefined}
               onClick={() => {
-                if (inventory && deployment)
+                if (inventory && deployment && !mixedEditingBlocked)
                   onRetarget(current, deployment, inventory);
               }}
               variant="outline"
@@ -1892,4 +1970,5 @@ function PublicRouteDetail({
     </>
   );
 }
+
 
