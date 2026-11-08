@@ -1,3 +1,4 @@
+import { ServerConnectorConnectionDialog } from "./ServerConnectorConnectionDialog";
 import { PolicyUserEntryTask, type PolicyUserEntryTaskProps } from "./PolicyUserEntryTask";
 import { connectorInputError } from "./server-connector-editor";
 import {
@@ -609,6 +610,8 @@ export function ServerRouteEditor({
   const [draft, setDraft] = useState(initial);
   const [entryTask, setEntryTask] = useState<Pick<PolicyUserEntryTaskProps, "deploymentId" | "listenerId" | "principal">>();
   const entryReturnFocus = useRef<string | undefined>(undefined);
+  const [connectorTask, setConnectorTask] = useState<{ index: number; source: ServerProgram; connectorId: string }>();
+  const connectorEditing = useRef(false);
   const ruleReturnFocus = useRef<{ programIndex: number; ruleID?: string } | undefined>(undefined);
   useLayoutEffect(() => {
     const focus = ruleReturnFocus.current;
@@ -677,6 +680,7 @@ export function ServerRouteEditor({
   useUnsavedChanges(dirty || selectionPending || materialPending || jsonDirty);
   const save = useMutation({
     mutationFn: (_complete: typeof onSaved) => {
+      if (connectorEditing.current) throw new Error("请先采用或取消连接参数修改。");
       if (sourceFence.current) throw new Error("用户入口可能已更新，请重新读取路径后再保存。");
       if (pendingMaterials.current.size)
         throw new Error("请等待 TLS 文件读取完成，或取消读取后再保存。");
@@ -783,6 +787,7 @@ export function ServerRouteEditor({
     });
   };
   const editIntent = () => {
+    if (connectorEditing.current) return;
     const text = JSON.stringify(draft.ir, null, 2);
     setJSON(text);
     setJSONBaseline(text);
@@ -804,7 +809,7 @@ export function ServerRouteEditor({
     });
   };
   const close = () =>
-    dirty || selectionPending || materialPending || jsonDirty
+    connectorEditing.current ? undefined : dirty || selectionPending || materialPending || jsonDirty
       ? confirm({
           title: "放弃尚未保存的转发路径修改？",
           description: "保留已保存的配置。",
@@ -861,6 +866,21 @@ export function ServerRouteEditor({
   // already-open Sheet on the same commit lets the two modal scopes hide one
   // another. Keep this editor's draft and revision owner, but mount its Sheet
   // only after the user keeps or explicitly adopts the listener snapshot.
+  if (connectorTask) return <ServerConnectorConnectionDialog
+    key={`${initial.id}:${connectorTask.source.instance.id}:${connectorTask.source.listener.id}:${connectorTask.connectorId}`}
+    program={draft.ir.programs[connectorTask.index]}
+    schemaVersion={draft.ir.schemaVersion}
+    connectorId={connectorTask.connectorId}
+    onEditingChange={(editing) => { connectorEditing.current = editing; }}
+    onClose={() => { connectorEditing.current = false; setConnectorTask(undefined); }}
+    onApply={(next) => {
+      const source = latestDraft.current.ir.programs[connectorTask.index];
+      if (source !== connectorTask.source || source.instance.id !== next.instance.id || source.listener.id !== next.listener.id) return false;
+      updateProgram(connectorTask.index, { connectors: next.connectors });
+      setAnnouncement("连接参数已采用到草稿，尚未保存。");
+      return true;
+    }}
+  />;
   if (entryTask) return <PolicyUserEntryTask
     {...entryTask}
     onClose={() => setEntryTask(undefined)}
@@ -909,6 +929,7 @@ export function ServerRouteEditor({
             disabled={
               draft.ir.programs.some((program) => (program.rules || []).some((rule) => canEditRuleCondition(program, draft.ir.schemaVersion, rule) && !!ruleConditionError(rule.match))) ||
               draft.ir.programs.some((program) => !!connectorInputError(program, draft.ir.schemaVersion)) ||
+              !!connectorTask ||
               sourceStale ||
               !draft.name.trim() ||
               pathLoading ||
@@ -1101,6 +1122,14 @@ export function ServerRouteEditor({
               [next[position], next[target]] = [next[target], next[position]];
               updateProgram(index, { rules: next });
               setAnnouncement("规则顺序已更新到草稿，先命中的规则决定去向，尚未保存。");
+            }}
+            onOpenConnectorConnection={(index, connectorId, focusLabel) => {
+              if (connectorTask || connectorEditing.current || entryTask || save.isPending || selectionPending || materialPending || jsonDirty) return;
+              const source = latestDraft.current.ir.programs[index];
+              if (!source || source !== draft.ir.programs[index] || !source.connectors?.some((connector) => connector.id === connectorId)) return;
+              connectorEditing.current = true;
+              entryReturnFocus.current = focusLabel;
+              setConnectorTask({ index, source, connectorId });
             }}
             onRefreshListener={setRefreshingListener}
             onEditJSON={editIntent}

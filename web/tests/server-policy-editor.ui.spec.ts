@@ -311,6 +311,24 @@ for (const width of [1440, 390]) {
     await search.fill("无上游连接器");
     await search.press("Enter");
     await capture(page, info, editor, connectorHost, "policy-connector-host");
+    const connectionTrigger = editor.getByRole("button", { name: "条件转发入口 连接器 1 编辑连接参数", exact: true });
+    await connectionTrigger.click();
+    let connectionDialog = page.getByRole("dialog", { name: "编辑连接参数", exact: true });
+    await expect(editor).toBeHidden();
+    await connectionDialog.getByRole("spinbutton", { name: "端口", exact: true }).fill("");
+    await connectionDialog.getByRole("button", { name: "采用连接参数", exact: true }).click();
+    await expect(connectionDialog).toBeVisible();
+    await connectionDialog.getByRole("button", { name: "取消", exact: true }).click();
+    await page.getByRole("alertdialog", { name: "放弃连接参数修改？", exact: true }).getByRole("button", { name: "放弃修改", exact: true }).click();
+    await expect(connectionTrigger).toBeFocused();
+    await connectionTrigger.click();
+    connectionDialog = page.getByRole("dialog", { name: "编辑连接参数", exact: true });
+    const connectionPort = connectionDialog.getByRole("spinbutton", { name: "端口", exact: true });
+    await expect(connectionPort).toHaveValue("23181");
+    await connectionPort.fill("24181");
+    await capture(page, info, connectionDialog, connectionPort, "policy-connector-connection");
+    await connectionDialog.getByRole("button", { name: "采用连接参数", exact: true }).click();
+    await expect(editor).toBeVisible();
     const consequence = editor.getByText("仅保存草稿，检查与应用需另行操作。", {
       exact: true,
     });
@@ -333,7 +351,7 @@ for (const width of [1440, 390]) {
         ...before.ir.programs[0],
         defaultAction: { kind: "forward", ref: "exit" },
         connectors: [
-          before.ir.programs[0].connectors[0],
+          { ...before.ir.programs[0].connectors[0], connection: { ...before.ir.programs[0].connectors[0].connection, port: 24181 } },
           { id: "exit", connection: { ...before.ir.programs[0].connectors[1].connection, host: "127.0.0.2" } },
         ],
         rules: [

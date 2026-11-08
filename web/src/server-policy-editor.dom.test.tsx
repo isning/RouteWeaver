@@ -1050,6 +1050,43 @@ it("keeps rule-list operations read-only for unknown rule extensions while allow
   expect(fixture.saved[0].ir.programs[0].rules[0]).toEqual(fixture.deployment.ir.programs[0].rules[0]);
 });
 
+it("opens one connection task, discards raw invalid port, then adopts valid fields into the retained policy draft", async () => {
+  const user = userEvent.setup();
+  const fixture = setup((draft) => {
+    Object.assign(draft.ir.programs[0].connectors![0].connection, { futureConnection: { keep: true } });
+  });
+  await openEditor(user);
+  const triggerName = "Policy entry 连接器 1 编辑连接参数";
+  await user.click(screen.getByRole("button", { name: triggerName }));
+  let dialog = await screen.findByRole("dialog", { name: "编辑连接参数" });
+  expect(screen.queryByRole("dialog", { name: "编辑 Policy draft" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "保存草稿" })).toBeNull();
+  let port = within(dialog).getByRole("spinbutton", { name: "端口" });
+  await user.clear(port);
+  await user.click(within(dialog).getByRole("button", { name: "采用连接参数" }));
+  expect(fixture.saved).toEqual([]);
+  expect(hasUnsavedChanges()).toBe(true);
+  await user.click(within(dialog).getByRole("button", { name: "取消" }));
+  const discard = await screen.findByRole("alertdialog", { name: "放弃连接参数修改？" });
+  await user.click(within(discard).getByRole("button", { name: "放弃修改" }));
+  await screen.findByRole("dialog", { name: "编辑 Policy draft" });
+  await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("button", { name: triggerName })));
+  await user.click(screen.getByRole("button", { name: triggerName }));
+  dialog = await screen.findByRole("dialog", { name: "编辑连接参数" });
+  port = within(dialog).getByRole("spinbutton", { name: "端口" });
+  expect((port as HTMLInputElement).value).toBe("1080");
+  await user.clear(port);
+  await user.type(port, "8443");
+  await user.click(within(dialog).getByRole("button", { name: "采用连接参数" }));
+  const editor = await screen.findByRole("dialog", { name: "编辑 Policy draft" });
+  await user.click(within(editor).getByRole("button", { name: "保存草稿" }));
+  await waitFor(() => expect(fixture.saved).toHaveLength(1));
+  const expected = structuredClone(fixture.deployment.ir.programs[0]);
+  expected.connectors![0].connection.port = 8443;
+  expect(fixture.saved[0].ir.programs).toEqual([expected]);
+  expect(fixture.saveHeaders[0].get("If-Match")).toBe("policy-r1");
+});
+
 it("generates a rule identity without colliding with existing rule identities", async () => {
   const user = userEvent.setup();
   const fixture = setup((draft) => {

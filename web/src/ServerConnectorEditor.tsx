@@ -1,15 +1,17 @@
+import { ActionButton } from "@/ui-patterns/actions";
 import { Input } from "@/components/ui/input";
 import { ChoiceSelect } from "@/ui-patterns/choice-select";
 import { connectorEditReason, connectorViaChoices, updateServerConnector, updateServerConnectorVia } from "./server-connector-editor";
 import type { ServerProgram } from "./types";
 
 /** Controlled fields participate in the policy draft's existing review and discard flow. */
-export function ServerConnectorEditor({ program, schemaVersion, label, onChange, disabled = false }: {
+export function ServerConnectorEditor({ program, schemaVersion, label, onChange, onEditConnection, disabled = false }: {
   program: ServerProgram;
   schemaVersion: string;
   label: string;
   onChange: (program: ServerProgram) => void;
   disabled?: boolean;
+  onEditConnection?: (connectorId: string, focusLabel: string) => void;
 }) {
   if (!program.connectors?.length) return <p className="text-sm text-muted-foreground">
     {program.egress?.length ? "顺序出口请在完整 JSON 中编辑。" : "未配置连接器"}
@@ -42,6 +44,7 @@ export function ServerConnectorEditor({ program, schemaVersion, label, onChange,
               }} />
           </div>
         </>}
+        {!reason && onEditConnection && <ActionButton variant="outline" disabled={disabled} aria-label={`${prefix} 编辑连接参数`} onClick={() => onEditConnection(connector.id, `${prefix} 编辑连接参数`)}>编辑连接参数</ActionButton>}
         <dl className="grid grid-cols-2 gap-1 text-sm">
           <dt className="text-muted-foreground">协议</dt><dd>{connector.connection?.protocol || "未知"}</dd>
           <dt className="text-muted-foreground">端口</dt><dd>{connector.connection?.port ?? "未设置"}</dd>
@@ -49,6 +52,6 @@ export function ServerConnectorEditor({ program, schemaVersion, label, onChange,
         </dl>
       </div>;
     })}
-    <p className="text-sm text-muted-foreground">修改地址或上游会影响所有引用此连接器的规则。端口、协议、凭据、TLS 和传输参数请在完整 JSON 中编辑。</p>
+    <p className="text-sm text-muted-foreground">修改地址、上游或连接参数会影响所有引用此连接器的规则。</p>
   </div>;
 }

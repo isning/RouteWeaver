@@ -324,6 +324,7 @@ export function ServerPolicyEditor({
   onConnectorsChange,
   onOpenUserEntry,
   onRuleListChange,
+  onOpenConnectorConnection,
   onRefreshListener,
   onEditJSON,
 }: {
@@ -340,6 +341,7 @@ export function ServerPolicyEditor({
   onConnectorsChange: (programIndex: number, source: ServerProgram, next: ServerProgram) => void;
   onOpenUserEntry: (programIndex: number, principalIndex: number, focusLabel: string) => void;
   onRuleListChange: (programIndex: number, operation: "add" | "up" | "down" | "remove", ruleID?: string) => void;
+  onOpenConnectorConnection: (programIndex: number, connectorId: string, focusLabel: string) => void;
   onRefreshListener: (endpointId: string) => void;
   onEditJSON: () => void;
 }) {
@@ -580,6 +582,7 @@ export function ServerPolicyEditor({
                 schemaVersion={schemaVersion}
                 label={identityLabel}
                 onChange={(next) => onConnectorsChange(programIndex, program, next)}
+                onEditConnection={(id, focusLabel) => onOpenConnectorConnection(programIndex, id, focusLabel)}
               /> : <p className="text-sm text-muted-foreground">{program.egress?.length ? `使用 ${program.egress.length} 个顺序出口。` : program.connectors?.length ? "连接器仅供查看。" : "未配置连接器"}</p>}
             </section>
             <section
