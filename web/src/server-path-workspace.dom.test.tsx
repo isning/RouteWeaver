@@ -232,7 +232,7 @@ it("does not close a newer server selection or commit an invalidated append", as
   expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
     "清除选择", "fourth server",
   ]);
-  await user.click(screen.getByRole("option", { name: "fourth server", exact: true }));
+  await user.click(screen.getByRole("option", { name: "fourth server" }));
   await waitFor(() => expect(screen.queryByRole("listbox")).toBeNull());
   newer.focus();
   await act(async () => pending.resolve(true));
