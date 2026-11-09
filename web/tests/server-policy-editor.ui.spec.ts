@@ -356,10 +356,10 @@ for (const width of [1440, 390]) {
     await addition.getByRole("textbox", { name: "连接地址", exact: true }).fill("127.0.0.4");
     await addition.getByRole("button", { name: "添加到草稿", exact: true }).click();
     await capture(page, info, editor, editor.getByRole("textbox", { name: "条件转发入口 连接器 3 地址", exact: true }), "policy-connector-added");
-    const consequence = editor.getByText("仅保存草稿，检查与应用需另行操作。", {
+    await expect(editor.getByText("仅保存草稿，检查与应用需另行操作。", {
       exact: true,
-    });
-    await capture(page, info, editor, consequence, "policy-save-consequence");
+    })).toHaveCount(0);
+    await capture(page, info, editor, editor.getByRole("button", { name: "保存草稿", exact: true }), "policy-save-draft");
     const saved = page.waitForResponse(
       (response) =>
         new URL(response.url()).pathname ===

@@ -1,4 +1,5 @@
 import { ChoiceSelect } from "@/ui-patterns/choice-select";
+import { cn } from "@/lib/utils";
 import { useEffect, useId, useState, type Ref } from "react";
 import type { Infrastructure, ManagedEndpoint } from "./types";
 /** Presentation only: callers supply the authoritative role/capability/path filter. */
@@ -9,6 +10,7 @@ export function ServerEndpointSelect({
   allowedIds,
   current,
   displayCurrentSnapshot = false,
+  compact = false,
   unavailableReason,
   endpointRef,
   onChange,
@@ -25,6 +27,8 @@ export function ServerEndpointSelect({
   };
   /** Saved route editors show their retained snapshot, not an unadopted catalog change. */
   displayCurrentSnapshot?: boolean;
+  /** Keep adjacent server/listener choices together in an ordered path row. */
+  compact?: boolean;
   unavailableReason?: string;
   endpointRef?: Ref<HTMLButtonElement>;
   onChange: (id: string) => void;
@@ -77,13 +81,13 @@ export function ServerEndpointSelect({
       duplicates.filter((other) => owner(other)?.name === name).length > 1;
     return `${baseLabel(entry)} ${name || "核心"}${sameName || !name ? ` (${instance?.id || entry.instanceId} / ${entry.id})` : ""}`;
   };
-  const endpointPresentation = (entry: ManagedEndpoint, status = "") => (
+  const endpointPresentation = (entry: ManagedEndpoint, status = "", compactSelection = false) => (
     <span className="grid min-w-0 gap-1">
       <span>
         {entry.name}
         {status}
       </span>{" "}
-      <span className="text-xs font-normal text-muted-foreground">
+      <span className={cn("text-xs font-normal text-muted-foreground", compactSelection && "max-[360px]:sr-only")}>
         {endpointLabel(entry).slice(entry.name.length).trim()}
       </span>
     </span>
@@ -111,11 +115,12 @@ export function ServerEndpointSelect({
             endpointLabel(current.endpoint) !== endpointLabel(endpoint)
             ? "（草稿）"
             : "",
+          compact,
         )
       : undefined;
   return (
-    <div className="server-endpoint-select grid min-w-0 flex-1 gap-2 sm:grid-cols-2 [&>p]:col-span-full">
-      <div className="grid min-w-0 content-start gap-2">
+    <div className={cn("server-endpoint-select grid min-w-0 flex-1 gap-2 sm:grid-cols-2 [&>p]:col-span-full", compact && "grid-cols-2")}>
+      <div className={cn("grid min-w-0 content-start gap-2", compact && "gap-1")}>
         <label htmlFor={`${noteId}-server`} className="text-sm font-medium">服务器</label>
         <ChoiceSelect
           id={`${noteId}-server`}
@@ -127,7 +132,7 @@ export function ServerEndpointSelect({
           onValueChange={(next) => { onSelectionChange?.(); setServer(next); }}
         />
       </div>
-      <div className="grid min-w-0 content-start gap-2">
+      <div className={cn("grid min-w-0 content-start gap-2", compact && "gap-1")}>
         <label htmlFor={`${noteId}-endpoint`} className="text-sm font-medium">监听端点</label>
         <ChoiceSelect
           id={`${noteId}-endpoint`}

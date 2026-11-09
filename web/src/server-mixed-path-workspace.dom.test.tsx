@@ -212,10 +212,15 @@ it("shows the managed-entry credential edit restriction without opening a mislea
     hops={state.hops} connectorChoices={state.connectorChoices} onEditConnector={edit}
     changeReason={next => orderedPathChangeReason(initial, next, ownedInventory)}
     onChangePath={async () => false} onPendingChange={() => {}} onSelectionChange={() => {}} />);
-  const button = screen.getByRole("button", { name: "编辑第 2 跳外部代理连接参数" });
-  expect(button.hasAttribute("disabled")).toBe(true);
-  expect(document.getElementById(button.getAttribute("aria-describedby")!)?.textContent).toBe("此监听关联用户入口或托管计量，连接器仅供查看。");
+  expect(screen.queryByText("此监听关联用户入口或托管计量，连接器仅供查看。")).toBeNull();
+  expect(screen.queryByRole("button", { name: "编辑第 2 跳外部代理连接参数" })).toBeNull();
+  const button = screen.getByRole("button", { name: "第 2 跳连接参数只读原因" });
   await user.click(button);
+  expect(screen.getByRole("dialog", { name: "第 2 跳连接参数只读原因" })).toBeTruthy();
+  expect(screen.getByText("此监听关联用户入口或托管计量，连接器仅供查看。")).toBeTruthy();
+  await user.keyboard("{Escape}");
+  expect(document.activeElement).toBe(button);
+  expect(screen.queryByText("此监听关联用户入口或托管计量，连接器仅供查看。")).toBeNull();
   expect(edit).not.toHaveBeenCalled();
   expect(summary().textContent).toContain("a listener → x → 目标");
 });

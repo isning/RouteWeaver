@@ -1004,7 +1004,6 @@ export function ServerRouteEditor({
       pending={!!discardConfirming}
       footer={
         <div className="w-full space-y-2">
-          <p className="text-sm text-muted-foreground">仅保存草稿，检查与应用需另行操作。</p>
           <ActionButton
             className="w-full"
             leadingIcon={<SaveOutlined aria-hidden="true" />}

@@ -134,8 +134,8 @@ for (const width of [1440, 390]) {
     await editor.getByRole("tab", { name: "顺序编辑", exact: true }).click();
     await expect(editor.getByRole("combobox", { name: "第 3 跳端点", exact: true })).toContainText(endpoints.exit);
 
-    const consequence = editor.getByText("仅保存草稿，检查与应用需另行操作。", { exact: true });
-    await capture(page, info, editor, "path-save-consequence", consequence);
+    await expect(editor.getByText("仅保存草稿，检查与应用需另行操作。", { exact: true })).toHaveCount(0);
+    await capture(page, info, editor, "path-save-draft", save);
     const saved = page.waitForResponse((response) => new URL(response.url()).pathname === "/api/server-deployments" && response.request().method() === "POST");
     await save.click();
     expect((await saved).status()).toBe(200);

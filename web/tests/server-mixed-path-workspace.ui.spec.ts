@@ -16,7 +16,7 @@ async function choose(page: Page, control: Locator, query: string) {
   await search.press("Enter");
   await expect(page.getByRole("listbox", { includeHidden: true })).toHaveCount(0);
 }
-for (const width of [1440, 390]) {
+for (const width of [1440, 390, 320]) {
   test(`one mixed chain inserts and edits existing external proxies at ${width}px`, async ({ page, baseURL }, info) => {
     requireLoopback(baseURL);
     await page.setViewportSize({ width, height: 900 });
@@ -92,11 +92,14 @@ for (const width of [1440, 390]) {
     await expect(summary).toContainText("a 监听 → proxy-y → proxy-x → b 监听 → 目标");
     await editor.getByRole("button", { name: "下移第 2 跳", exact: true }).click();
     await expect(summary).toContainText("a 监听 → proxy-x → proxy-y → b 监听 → 目标");
-    const managedEdit = editor.getByRole("button", { name: "编辑第 2 跳外部代理连接参数", exact: true });
-    await expect(managedEdit).toBeDisabled();
-    const editReason = await managedEdit.getAttribute("aria-describedby");
-    expect(editReason).toBeTruthy();
-    await expect(page.locator(`[id="${editReason}"]`)).toHaveText("此监听关联用户入口或托管计量，连接器仅供查看。");
+    const readOnly = editor.getByRole("button", { name: "第 2 跳连接参数只读原因", exact: true });
+    await expect(editor.getByRole("button", { name: "编辑第 2 跳外部代理连接参数", exact: true })).toHaveCount(0);
+    await expect(editor.getByText("此监听关联用户入口或托管计量，连接器仅供查看。", { exact: true })).toHaveCount(0);
+    await readOnly.click();
+    await expect(page.getByText("此监听关联用户入口或托管计量，连接器仅供查看。", { exact: true })).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(readOnly).toBeFocused();
+    await expect(editor.getByText("此监听关联用户入口或托管计量，连接器仅供查看。", { exact: true })).toHaveCount(0);
     await editor.getByRole("button", { name: "添加下一跳", exact: true }).click();
     await choose(page, editor.getByRole("combobox", { name: "第 5 跳类型", exact: true }), "外部代理");
     await choose(page, editor.getByRole("combobox", { name: "第 5 跳外部代理", exact: true }), "proxy-z");
@@ -120,6 +123,18 @@ for (const width of [1440, 390]) {
     await expect(summary).toContainText("a 监听 → proxy-x → proxy-y → b 监听 → proxy-z → 目标");
     await summary.scrollIntoViewIfNeeded();
     await settledTask(editor);
+    await expect(editor.getByText("仅保存草稿，检查与应用需另行操作。", { exact: true })).toHaveCount(0);
+    // The choices and 44px controls, not repeated prose, determine row height.
+    const rows = editor.getByRole("list", { name: "代理链", exact: true }).getByRole("listitem");
+    for (const row of await rows.all()) {
+      const bounds = await row.boundingBox();
+      expect(bounds!.height).toBeLessThanOrEqual(width >= 1024 ? 100 : 180);
+      for (const control of await row.getByRole("button").all()) {
+        const target = await control.boundingBox();
+        expect(target!.width).toBeGreaterThanOrEqual(44);
+        expect(target!.height).toBeGreaterThanOrEqual(44);
+      }
+    }
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
     expect(await editor.evaluate((element) => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
     const screenshot = info.outputPath(`mixed-chain-${width}.png`);
