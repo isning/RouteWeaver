@@ -57,6 +57,15 @@ async function choose(user: ReturnType<typeof userEvent.setup>, label: string, q
   await waitFor(() => expect(screen.queryByRole("listbox")).toBeNull());
 }
 const summary = () => screen.getByRole("region", { name: "路径摘要" });
+async function configure(user: ReturnType<typeof userEvent.setup>, hop: number) {
+  const button = screen.getByRole("button", { name: new RegExp(`^配置第 ${hop} 跳 `) });
+  if (button.getAttribute("aria-expanded") !== "true") await user.click(button);
+}
+async function action(user: ReturnType<typeof userEvent.setup>, hop: number, label: string) {
+  await user.click(screen.getByRole("button", { name: `第 ${hop} 跳更多操作` }));
+  await user.click(screen.getByRole("menuitem", { name: label }));
+}
+
 
 it("adds an existing administrator connector as an ordinary hop and never exposes its address or secrets", async () => {
   const user = userEvent.setup();
@@ -81,10 +90,12 @@ function deferred() {
   return { promise, resolve };
 }
 
-it("renders managed and external hops in actual traversal order and hides the managed bridge", () => {
+it("renders managed and external hops in actual traversal order and hides the managed bridge", async () => {
+  const user = userEvent.setup();
   render(<Workspace initial={mixed([managed("a"), external("x"), external("y"), managed("b")])} />);
   const rows = within(screen.getByRole("list", { name: "代理链" })).getAllByRole("listitem");
   expect(rows).toHaveLength(4);
+  for (const hop of [1, 2, 3, 4]) await configure(user, hop);
   expect(within(rows[0]).getByRole("combobox", { name: "第 1 跳端点" }).textContent).toContain("a listener");
   expect(within(rows[1]).getByRole("combobox", { name: "第 2 跳外部代理" }).textContent).toContain("x");
   expect(within(rows[2]).getByRole("combobox", { name: "第 3 跳外部代理" }).textContent).toContain("y");
@@ -95,28 +106,29 @@ it("renders managed and external hops in actual traversal order and hides the ma
 it("inserts an external proxy before a later managed hop rather than treating it as a separate exit", async () => {
   const user = userEvent.setup();
   render(<Workspace initial={mixed([managed("a"), managed("b")])} />);
-  await user.click(screen.getByRole("button", { name: "在第 1 跳后插入下一跳" }));
+  await action(user, 1, "在第 1 跳后插入下一跳");
   await choose(user, "第 2 跳类型", "外部代理");
   await choose(user, "第 2 跳外部代理", "x");
   await waitFor(() => expect(summary().textContent).toContain("a listener → x → b listener → 目标"));
-  expect(document.activeElement).toBe(screen.getByRole("combobox", { name: "第 2 跳外部代理" }));
+  await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("button", { name: /^配置第 2 跳 / })));
 });
 
 it("reorders external proxies within their owner and explains disabled cross-owner moves", async () => {
   const user = userEvent.setup();
   render(<Workspace initial={mixed([managed("a"), external("x"), external("y"), managed("b")])} />);
-  const across = screen.getByRole("button", { name: "下移第 3 跳" }) as HTMLButtonElement;
-  expect(across.disabled).toBe(true);
+  await user.click(screen.getByRole("button", { name: "第 3 跳更多操作" }));
+  const across = screen.getByRole("menuitem", { name: "下移第 3 跳" });
+  expect(across.getAttribute("aria-disabled")).toBe("true");
   expect(document.getElementById(across.getAttribute("aria-describedby")!)?.textContent).toContain("不能跨服务器");
-  await user.click(screen.getByRole("button", { name: "上移第 3 跳" }));
+  await user.click(screen.getByRole("menuitem", { name: "上移第 3 跳" }));
   expect(summary().textContent).toContain("a listener → y → x → b listener → 目标");
-  expect(document.activeElement).toBe(screen.getByRole("combobox", { name: "第 2 跳外部代理" }));
+  await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("button", { name: /^配置第 2 跳 / })));
 });
 
 it("removes an external hop without removing its managed neighbors", async () => {
   const user = userEvent.setup();
   render(<Workspace initial={mixed([managed("a"), external("x"), managed("b")])} />);
-  await user.click(screen.getByRole("button", { name: "移除第 2 跳" }));
+  await action(user, 2, "移除第 2 跳");
   expect(summary().textContent).toContain("a listener → b listener → 目标");
   expect(within(screen.getByRole("list", { name: "代理链" })).getAllByRole("listitem")).toHaveLength(2);
 });
@@ -125,6 +137,7 @@ it("opens connection editing for the stable connector and owning managed listene
   const user = userEvent.setup();
   const edit = vi.fn();
   render(<Workspace initial={mixed([managed("a"), external("x")])} onEditConnector={edit} />);
+  await configure(user, 2);
   await user.click(screen.getByRole("button", { name: "编辑第 2 跳外部代理连接参数" }));
   expect(edit).toHaveBeenCalledWith("a", "x", "编辑第 2 跳外部代理连接参数");
 });
@@ -174,6 +187,7 @@ it("does not steal a newer field's focus when a pending insertion completes", as
   await user.click(screen.getByRole("button", { name: "添加下一跳" }));
   await choose(user, "第 2 跳类型", "外部代理");
   await choose(user, "第 2 跳外部代理", "x");
+  await configure(user, 1);
   const newer = screen.getByRole("combobox", { name: "第 1 跳服务器" });
   newer.focus();
   await act(async () => { task.resolve(true); await task.promise; });
@@ -184,14 +198,14 @@ it("does not steal a newer field's focus when a pending insertion completes", as
 it("keeps following row labels unique while a managed hop is being inserted in the middle", async () => {
   const user = userEvent.setup();
   render(<Workspace initial={mixed([managed("a"), managed("b")])} />);
-  await user.click(screen.getByRole("button", { name: "在第 1 跳后插入下一跳" }));
+  await action(user, 1, "在第 1 跳后插入下一跳");
   expect(screen.getAllByRole("combobox", { name: "第 2 跳服务器" })).toHaveLength(1);
-  expect(screen.getByRole("combobox", { name: "第 3 跳端点" }).textContent).toContain("b listener");
+  expect(screen.getByRole("button", { name: "配置第 3 跳 b listener" })).toBeTruthy();
   await choose(user, "第 2 跳服务器", "c server");
   await choose(user, "第 2 跳端点", "c listener");
   expect(summary().textContent).toContain("a listener → c listener → b listener → 目标");
-  expect(screen.getByRole("combobox", { name: "第 2 跳端点" }).textContent).toContain("c listener");
-  expect(screen.getByRole("combobox", { name: "第 3 跳端点" }).textContent).toContain("b listener");
+  expect(screen.getByRole("button", { name: "配置第 2 跳 c listener" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "配置第 3 跳 b listener" })).toBeTruthy();
 });
 
 
@@ -214,6 +228,7 @@ it("shows the managed-entry credential edit restriction without opening a mislea
     onChangePath={async () => false} onPendingChange={() => {}} onSelectionChange={() => {}} />);
   expect(screen.queryByText("此监听关联用户入口或托管计量，连接器仅供查看。")).toBeNull();
   expect(screen.queryByRole("button", { name: "编辑第 2 跳外部代理连接参数" })).toBeNull();
+  await configure(user, 2);
   const button = screen.getByRole("button", { name: "第 2 跳连接参数只读原因" });
   await user.click(button);
   expect(screen.getByRole("dialog", { name: "第 2 跳连接参数只读原因" })).toBeTruthy();
@@ -223,4 +238,52 @@ it("shows the managed-entry credential edit restriction without opening a mislea
   expect(screen.queryByText("此监听关联用户入口或托管计量，连接器仅供查看。")).toBeNull();
   expect(edit).not.toHaveBeenCalled();
   expect(summary().textContent).toContain("a listener → x → 目标");
+});
+
+it("presents a connected route overview before revealing each hop's configuration", async () => {
+  const user = userEvent.setup();
+  render(<Workspace initial={mixed([managed("a"), external("x"), external("y"), managed("b")])} />);
+  expect(screen.queryByRole("combobox", { name: "第 1 跳端点" })).toBeNull();
+  expect(screen.getByRole("button", { name: "配置第 1 跳 a listener" }).getAttribute("aria-expanded")).toBe("false");
+  await user.click(screen.getByRole("button", { name: "配置第 1 跳 a listener" }));
+  expect(screen.getByRole("combobox", { name: "第 1 跳端点" })).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "上移第 3 跳" })).toBeNull();
+  await user.click(screen.getByRole("button", { name: "第 3 跳更多操作" }));
+  expect(screen.getByRole("menuitem", { name: "上移第 3 跳" })).toBeTruthy();
+  await user.keyboard("{Escape}");
+  expect(document.activeElement).toBe(screen.getByRole("button", { name: "第 3 跳更多操作" }));
+});
+
+it("keeps an unfinished server choice visible in the collapsed overview", async () => {
+  const user = userEvent.setup();
+  const pending = vi.fn();
+  render(<Workspace onPendingChange={pending} />);
+  await configure(user, 1);
+  await user.click(screen.getByRole("combobox", { name: "第 1 跳服务器" }));
+  await user.click(screen.getByRole("option", { name: "c server" }));
+  expect(screen.getByRole("combobox", { name: "第 1 跳服务器" }).textContent).toContain("c server");
+  await user.click(screen.getByRole("button", { name: "配置第 1 跳 a listener" }));
+  expect(screen.getByText("待选择监听端点")).toBeTruthy();
+  expect(pending).toHaveBeenCalledWith("a", true);
+  await configure(user, 1);
+  expect(screen.getByRole("combobox", { name: "第 1 跳服务器" }).textContent).toContain("c server");
+  expect(summary().textContent).toContain("a listener → 目标");
+});
+
+it("returns to the node menu trigger when a reorder fails", async () => {
+  const user = userEvent.setup();
+  render(<Workspace initial={mixed([managed("a"), external("x"), external("y")])} commit={async () => false} />);
+  await action(user, 3, "上移第 3 跳");
+  expect(summary().textContent).toContain("a listener → x → y → 目标");
+  await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("button", { name: "第 3 跳更多操作" })));
+});
+
+it("focuses the new first-hop picker after removing the final managed hop", async () => {
+  const user = userEvent.setup();
+  const initial = structuredClone(source);
+  delete initial.ir.programs[0].connectors;
+  render(<Workspace initial={initial} />);
+  await action(user, 1, "移除第 1 跳");
+  expect(summary().textContent).toContain("选择第一跳");
+  await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("combobox", { name: "第 1 跳服务器" })));
 });

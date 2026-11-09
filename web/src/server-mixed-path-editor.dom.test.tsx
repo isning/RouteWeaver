@@ -165,3 +165,16 @@ it("refuses to remove an opaque program from the legacy ordered workspace", asyn
   expect(intent.programs[0].futurePolicy).toEqual({ keep: "opaque program data" });
   expect(fetch).not.toHaveBeenCalled();
 });
+
+it("returns from connection editing to the expanded hop and its parameter button", async () => {
+  const { initial, inventory } = mixedFixture();
+  mountEditor(initial, inventory);
+  const user = userEvent.setup();
+  await user.click(screen.getByRole("button", { name: "配置第 2 跳 proxy-x" }));
+  await user.click(screen.getByRole("button", { name: "编辑第 2 跳外部代理连接参数" }));
+  const connection = await screen.findByRole("dialog", { name: "编辑连接参数" });
+  await user.click(within(connection).getByRole("button", { name: "取消" }));
+  await waitFor(() => expect(screen.queryByRole("dialog", { name: "编辑连接参数" })).toBeNull());
+  await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("button", { name: "编辑第 2 跳外部代理连接参数" })));
+  expect(screen.getByRole("button", { name: "配置第 2 跳 proxy-x" }).getAttribute("aria-expanded")).toBe("true");
+});

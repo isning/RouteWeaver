@@ -1,7 +1,9 @@
 import { ActionButton } from "@/ui-patterns/actions";
 import { ChoiceSelect } from "@/ui-patterns/choice-select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ArrowDown, ArrowUp, LockKeyhole, Pencil, Plus, Trash2 } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
+import { ArrowDown, ArrowUp, ChevronDown, Globe, Laptop, LockKeyhole, MoreHorizontal, Pencil, Plus, Server, Trash2 } from "lucide-react";
 import { Fragment, useId, useLayoutEffect, useRef, useState } from "react";
 import { moveItem } from "./model";
 import { ServerEndpointSelect } from "./ServerEndpointSelect";
@@ -14,7 +16,7 @@ import type { Infrastructure, ServerProgram } from "./types";
  * this view never infers ownership from an address or copies credentials. */
 export function ServerMixedPathWorkspace({
   programs, inventory, schemaVersion, hops, connectorChoices, onChangePath, changeReason,
-  onPendingChange, onSelectionChange, onEditConnector, changing = false,
+  onPendingChange, onSelectionChange, onEditConnector, changing = false, expandedHops, onExpandedHopsChange,
 }: {
   programs: ServerProgram[];
   inventory: Infrastructure;
@@ -27,10 +29,18 @@ export function ServerMixedPathWorkspace({
   onSelectionChange: () => void;
   onEditConnector: (programEndpointId: string, connectorId: string, focusLabel: string) => void;
   changing?: boolean;
+  expandedHops?: ReadonlySet<string>;
+  onExpandedHopsChange?: (keys: Set<string>) => void;
 }) {
   const id = useId();
   const workspace = useRef<HTMLDivElement>(null);
   const controls = useRef(new Map<string, HTMLButtonElement>());
+  const rowControls = useRef(new Map<string, HTMLButtonElement>());
+  const menuControls = useRef(new Map<string, HTMLButtonElement>());
+  const menuAction = useRef<"change" | "insert" | null>(null);
+  const [localExpanded, setLocalExpanded] = useState(new Set<string>());
+  const expanded = expandedHops ?? localExpanded;
+  const [pendingRows, setPendingRows] = useState(new Set<string>());
   const addButtons = useRef(new Map<number, HTMLButtonElement>());
   const addPicker = useRef<HTMLLIElement>(null);
   const addControl = useRef<HTMLButtonElement>(null);
@@ -42,6 +52,8 @@ export function ServerMixedPathWorkspace({
     path: string; key?: string; trigger: HTMLElement; popup: HTMLElement | null; dialog: Element | null;
   } | null>(null);
   const pathKey = hops.map(orderedServerHopKey).join("/");
+  const currentPath = useRef(pathKey);
+  currentPath.current = pathKey;
   const invalidate = () => {
     sequence.current++;
     pendingFocus.current = null;
@@ -61,16 +73,20 @@ export function ServerMixedPathWorkspace({
     if (document.activeElement === owner || document.activeElement === document.body)
       addOrigin.current?.focus();
   }, [adding, changing]);
-  useLayoutEffect(() => {
+  const restorePendingFocus = () => {
     const owner = pendingFocus.current;
-    if (!owner || owner.path !== pathKey) return;
+    if (!owner || owner.path !== currentPath.current) return;
     pendingFocus.current = null;
-    const target = owner.key ? controls.current.get(owner.key)
-      : workspace.current?.querySelector<HTMLButtonElement>('[aria-label="第 1 跳服务器"]');
+    const field = owner.key ? controls.current.get(owner.key) : undefined;
+    const target = field && !field.closest("[hidden]") ? field
+      : owner.key ? rowControls.current.get(owner.key) : workspace.current?.querySelector<HTMLButtonElement>('.hop-summary, [aria-label="第 1 跳服务器"]');
     const active = document.activeElement;
     if (target?.isConnected && !target.disabled && !target.closest("[hidden],[inert],[aria-hidden='true']") &&
       (active === owner.trigger || active === owner.dialog || active === document.body ||
         (active && owner.popup?.contains(active)))) target.focus();
+  };
+  useLayoutEffect(() => {
+    if (menuAction.current !== "change") restorePendingFocus();
   }, [hops, pathKey]);
   const change = async (next: OrderedServerHop[], trigger: HTMLElement | null, focus?: OrderedServerHop) => {
     if (changeReason(next)) return;
@@ -115,7 +131,7 @@ export function ServerMixedPathWorkspace({
     if (hops.length && adding?.index !== index) return null;
     const choices = choicesAt(index);
     const kind = adding?.kind || "managed";
-    return <li ref={addPicker} id={`${id}-add-hop`} className="min-w-0 space-y-3 rounded-xl border border-dashed p-4 sm:p-5">
+    return <li ref={addPicker} id={`${id}-add-hop`} className="relative ml-11 min-w-0 space-y-3 rounded-lg border border-dashed bg-background p-4">
       <h3 className="text-sm font-semibold">第 {index + 1} 跳</h3>
       {!!choices.length && <label className="grid gap-2 text-sm font-medium">类型
         <ChoiceSelect aria-label={`第 ${index + 1} 跳类型`} value={kind}
@@ -157,21 +173,20 @@ export function ServerMixedPathWorkspace({
       }}>取消添加</ActionButton>}
     </li>;
   };
-  const restrictions = [...new Set(hops.flatMap((_, index) => [
-    index > 0 ? changeReason(moveItem(hops, index, index - 1)) : undefined,
-    index < hops.length - 1 ? changeReason(moveItem(hops, index, index + 1)) : undefined,
-    changeReason(hops.filter((_, i) => i !== index)),
-  ]).filter((reason): reason is string => !!reason))];
-  const reasonID = `${id}-order-reasons`;
-  // Hierarchy: choices first, sequence second, tertiary row actions alongside.
-  // Use the existing neutral shadcn tokens and spacing scale; keep 44px targets.
-  return <div ref={workspace} className="ordered-path min-w-0 space-y-3 [overflow-wrap:anywhere]">
-    <section aria-label="路径摘要" className="space-y-1 rounded-lg bg-muted/40 p-3 text-sm [overflow-wrap:anywhere]">
+  // §2.1 / §2.8: primary = route identity and order; secondary = configuration
+  // on demand; tertiary = node menu. One primary Save stays in the sheet footer.
+  // §3.6: neutral shadcn tokens, 4/8/12/16px rhythm, 44px targets. No new palette.
+  return <div ref={workspace} className="ordered-path min-w-0 [overflow-wrap:anywhere]">
+    <section aria-label="路径摘要" className="sr-only">
       <h3 className="font-medium">路径摘要</h3>
       <p className="text-muted-foreground">客户端 → {summary.length ? summary.join(" → ") : "选择第一跳"} → 目标</p>
     </section>
     {changing && <p role="status" className="text-sm text-muted-foreground">正在读取所选监听配置…</p>}
-    <ol aria-label="代理链" className="divide-y rounded-lg border">
+    <div className="flex items-center gap-3 pb-3 text-xs text-muted-foreground">
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-full border bg-background"><Laptop className="size-4" aria-hidden="true" /></span>
+      客户端
+    </div>
+    <ol aria-label="代理链" className="relative space-y-3 before:absolute before:inset-y-0 before:left-4 before:w-px before:bg-border">
       {!hops.length && picker(0)}
       {hops.map((hop, index) => {
         const key = orderedServerHopKey(hop);
@@ -191,20 +206,88 @@ export function ServerMixedPathWorkspace({
           ? connectorEditReason(connectorOwner, schemaVersion, hop.connectorId) ||
             connectorConnectionShapeReason(connectorOwner.connectors?.find((connector) => connector.id === hop.connectorId)?.connection)
           : undefined;
+        const isExpanded = expanded.has(key);
+        const isPending = pendingRows.has(key);
+        const host = program && inventory.hosts.find((item) => item.id === program.instance.hostId);
         return <Fragment key={key}>
-          <li className="hop-row grid min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 p-3 lg:grid-cols-[auto_minmax(0,1fr)_auto]">
-            <h3 className="mt-7 flex size-6 items-center justify-center rounded-full bg-muted text-xs font-medium tabular-nums text-muted-foreground">
+          <li className="hop-row relative grid min-w-0 grid-cols-[2rem_minmax(0,1fr)] items-start gap-x-3">
+            <span className="relative z-10 mt-5 flex size-8 items-center justify-center rounded-full border bg-background text-xs font-medium tabular-nums text-muted-foreground">
               <span className="sr-only">第 </span>{hopNumber}<span className="sr-only"> 跳</span>
-            </h3>
+            </span>
+            <div className={cn("min-w-0 rounded-lg border bg-background", isExpanded && "ring-1 ring-border")}>
+              <div className="flex min-w-0 items-center gap-1 pr-2">
+                <button type="button" className="hop-summary group flex min-h-18 min-w-0 flex-1 items-center gap-3 rounded-lg px-3 py-3 text-left hover:bg-muted/40 focus-visible:outline-2 focus-visible:outline-ring sm:px-4"
+                  aria-label={`配置第 ${hopNumber} 跳 ${name(hop)}`} aria-expanded={isExpanded} aria-controls={`${id}-fields-${index}`}
+                  ref={(control) => { if (control) rowControls.current.set(key, control); else rowControls.current.delete(key); }}
+                  onClick={() => { const next = new Set(expanded); if (next.has(key)) next.delete(key); else next.add(key); setLocalExpanded(next); onExpandedHopsChange?.(next); }}>
+                  <span className="grid min-w-0 flex-1 gap-1">
+                    <span className="flex min-w-0 items-center gap-2 text-sm font-semibold">
+                      {hop.kind === "managed" ? <Server className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" /> : <Globe className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />}
+                      <span className="min-w-0 break-words">{name(hop)}</span>
+                    </span>
+                    <span className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                      {isPending ? <span>待选择监听端点</span> : program ? <><span>{host?.name || "原服务器"}</span><span>{program.listener.connection.protocol.toUpperCase()}</span><span>端口 {program.listener.connection.port}</span></> : <span>外部代理</span>}
+                    </span>
+                  </span>
+                  <ChevronDown className={cn("size-4 shrink-0 text-muted-foreground transition-transform motion-reduce:transition-none", isExpanded && "rotate-180")} aria-hidden="true" />
+                </button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <ActionButton variant="ghost" size="icon" aria-label={`第 ${hopNumber} 跳更多操作`} title="更多操作" leadingIcon={<MoreHorizontal aria-hidden="true" />}
+                      ref={(control) => { if (control) menuControls.current.set(key, control); else menuControls.current.delete(key); }} />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-64" aria-label={`第 ${hopNumber} 跳操作`}
+                    onCloseAutoFocus={(event) => {
+                      if (!menuAction.current) return;
+                      event.preventDefault();
+                      if (menuAction.current === "change") {
+                        restorePendingFocus();
+                        // A rejected or still-pending change has no new row to
+                        // focus yet. Keep keyboard users on the action owner.
+                        const active = document.activeElement;
+                        if (active === document.body || active?.closest('[role="menu"]')) menuControls.current.get(key)?.focus();
+                      }
+                      if (menuAction.current === "insert") addPicker.current?.querySelector<HTMLButtonElement>('[role="combobox"]')?.focus();
+                      menuAction.current = null;
+                    }}>
+                    <DropdownMenuItem className="min-h-11 data-disabled:opacity-100 data-disabled:text-muted-foreground" aria-label={`上移第 ${hopNumber} 跳`} disabled={changing || index === 0 || !!upReason}
+                      aria-describedby={upReason ? `${id}-up-${index}` : undefined}
+                      onSelect={() => { menuAction.current = "change"; void change(up, menuControls.current.get(key) || null, hop); }}>
+                      <ArrowUp aria-hidden="true" /><span>上移{upReason && <span id={`${id}-up-${index}`} className="mt-1 block text-xs font-normal">{upReason}</span>}</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="min-h-11 data-disabled:opacity-100 data-disabled:text-muted-foreground" aria-label={`下移第 ${hopNumber} 跳`} disabled={changing || index === hops.length - 1 || !!downReason}
+                      aria-describedby={downReason ? `${id}-down-${index}` : undefined}
+                      onSelect={() => { menuAction.current = "change"; void change(down, menuControls.current.get(key) || null, hop); }}>
+                      <ArrowDown aria-hidden="true" /><span>下移{downReason && <span id={`${id}-down-${index}`} className="mt-1 block text-xs font-normal">{downReason}</span>}</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem className="min-h-11 data-disabled:opacity-100 data-disabled:text-muted-foreground" aria-label={`在第 ${hopNumber} 跳后插入下一跳`} disabled={changing}
+                      onSelect={() => { menuAction.current = "insert"; openAdd(index + 1, menuControls.current.get(key)!); }}>
+                      <Plus aria-hidden="true" />在此后插入
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem className="min-h-11 data-disabled:opacity-100 data-disabled:text-muted-foreground" variant="destructive" aria-label={`移除第 ${hopNumber} 跳`} disabled={changing || !!removeReason}
+                      aria-describedby={removeReason ? `${id}-remove-${index}` : undefined}
+                      onSelect={() => { menuAction.current = "change"; void change(removed, menuControls.current.get(key) || null, hops[index + 1] || hops[index - 1]); }}>
+                      <Trash2 aria-hidden="true" /><span>移除此跳{removeReason && <span id={`${id}-remove-${index}`} className="mt-1 block text-xs font-normal">{removeReason}</span>}</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+              <div id={`${id}-fields-${index}`} hidden={!isExpanded} className="border-t bg-muted/20 p-3 sm:p-4">
             {hop.kind === "managed" && program ? <ServerEndpointSelect inventory={inventory}
-              compact
               endpointRef={(control) => { if (control) controls.current.set(key, control); else controls.current.delete(key); }}
               value={hop.endpointId} label={`第 ${hopNumber} 跳`} displayCurrentSnapshot
               current={{ endpoint: program.listener, hostId: program.instance.hostId }}
               onSelectionChange={invalidate}
               allowedIds={inventory.endpoints.filter((endpoint) => !changeReason(replace(index, { kind: "managed", endpointId: endpoint.id }))).map((endpoint) => endpoint.id)}
               unavailableReason="此端点不能替换当前监听；请先移除关联的外部代理跳，且不要重复使用同一核心。"
-              onPendingChange={(pending) => onPendingChange(hop.endpointId, pending)}
+              onPendingChange={(pending) => {
+                onPendingChange(hop.endpointId, pending);
+                setPendingRows((current) => {
+                  if (current.has(key) === pending) return current;
+                  const next = new Set(current); if (pending) next.add(key); else next.delete(key); return next;
+                });
+              }}
               onChange={(endpointId) => {
                 const next: OrderedServerHop = { kind: "managed", endpointId };
                 void change(replace(index, next), controls.current.get(key) || null, next);
@@ -226,7 +309,7 @@ export function ServerMixedPathWorkspace({
                   }} />
               {editReason ? <Popover>
                 <PopoverTrigger asChild>
-                  <ActionButton variant="ghost" aria-label={`第 ${hopNumber} 跳连接参数只读原因`} leadingIcon={<LockKeyhole aria-hidden="true" />}>只读</ActionButton>
+                  <ActionButton variant="ghost" aria-label={`第 ${hopNumber} 跳连接参数只读原因`} leadingIcon={<LockKeyhole aria-hidden="true" />}>参数只读</ActionButton>
                 </PopoverTrigger>
                 <PopoverContent aria-label={`第 ${hopNumber} 跳连接参数只读原因`} className="text-sm font-normal" align="end">{editReason}</PopoverContent>
               </Popover> : <ActionButton variant="ghost" aria-label={editLabel} disabled={changing || !!adding || !connectorOwner}
@@ -236,35 +319,23 @@ export function ServerMixedPathWorkspace({
                 </div>
               </div>
             </> : null}
-            <div className="col-span-2 flex flex-wrap items-center justify-end gap-1 self-end lg:col-span-1 lg:col-start-3 lg:row-start-1" role="group" aria-label={`第 ${hopNumber} 跳顺序操作`}>
-              <ActionButton variant="ghost" size="icon" aria-label={`上移第 ${hopNumber} 跳`} title={upReason || "上移"} leadingIcon={<ArrowUp aria-hidden="true" />}
-                disabled={changing || index === 0 || !!upReason} aria-describedby={upReason ? reasonID : undefined}
-                onClick={(event) => void change(up, event.currentTarget, hop)} />
-              <ActionButton variant="ghost" size="icon" aria-label={`下移第 ${hopNumber} 跳`} title={downReason || "下移"} leadingIcon={<ArrowDown aria-hidden="true" />}
-                disabled={changing || index === hops.length - 1 || !!downReason} aria-describedby={downReason ? reasonID : undefined}
-                onClick={(event) => void change(down, event.currentTarget, hop)} />
-              <ActionButton variant="ghost" size="icon" aria-label={`移除第 ${hopNumber} 跳`} title={removeReason || "移除"} leadingIcon={<Trash2 aria-hidden="true" />}
-                disabled={changing || !!removeReason} aria-describedby={removeReason ? reasonID : undefined}
-                onClick={(event) => void change(removed, event.currentTarget, hops[index + 1] || hops[index - 1])} />
-              {index < hops.length - 1 && <ActionButton variant="ghost" aria-label={`在第 ${hopNumber} 跳后插入下一跳`}
-                leadingIcon={<Plus aria-hidden="true" />} disabled={changing}
-                ref={(button) => { if (button) addButtons.current.set(index + 1, button); else addButtons.current.delete(index + 1); }}
-                aria-expanded={adding?.index === index + 1} aria-controls={adding?.index === index + 1 ? `${id}-add-hop` : undefined}
-                onClick={(event) => openAdd(index + 1, event.currentTarget)}>插入</ActionButton>}
+              </div>
             </div>
           </li>
           {adding?.index === index + 1 && picker(index + 1)}
         </Fragment>;
       })}
     </ol>
-    {!!restrictions.length && <details className="text-sm text-muted-foreground">
-      <summary className="min-h-11 cursor-pointer content-center rounded-md focus-visible:outline-2 focus-visible:outline-ring">操作限制</summary>
-      <p id={reasonID} className="pb-2">{restrictions.join(" ")}</p>
-    </details>}
-    {!!hops.length && <ActionButton variant="outline" leadingIcon={<Plus aria-hidden="true" />}
-      ref={(button) => { if (button) addButtons.current.set(hops.length, button); else addButtons.current.delete(hops.length); }}
-      aria-expanded={adding?.index === hops.length} aria-controls={adding?.index === hops.length ? `${id}-add-hop` : undefined}
-      disabled={changing} onClick={(event) => openAdd(hops.length, event.currentTarget)}>添加下一跳</ActionButton>}
-    <p className="flex items-center gap-2 px-4 text-sm text-muted-foreground"><ArrowDown className="size-4" aria-hidden="true" />目标</p>
+    <div className="relative flex items-center gap-3 py-3 before:absolute before:inset-y-0 before:left-4 before:w-px before:bg-border">
+      <span className="relative z-10 flex size-8 shrink-0 items-center justify-center rounded-full border bg-background"><ArrowDown className="size-4 text-muted-foreground" aria-hidden="true" /></span>
+      {!!hops.length && <ActionButton variant="outline" className="border-dashed" leadingIcon={<Plus aria-hidden="true" />}
+        ref={(button) => { if (button) addButtons.current.set(hops.length, button); else addButtons.current.delete(hops.length); }}
+        aria-expanded={adding?.index === hops.length} aria-controls={adding?.index === hops.length ? `${id}-add-hop` : undefined}
+        disabled={changing} onClick={(event) => openAdd(hops.length, event.currentTarget)}>添加下一跳</ActionButton>}
+    </div>
+    <div className="flex items-center gap-3 text-xs text-muted-foreground">
+      <span className="relative z-10 flex size-8 items-center justify-center rounded-full border bg-background"><Globe className="size-4" aria-hidden="true" /></span>
+      目标
+    </div>
   </div>;
 }

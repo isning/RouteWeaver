@@ -617,6 +617,7 @@ export function ServerRouteEditor({
   const programs = useMemo(() => Array.isArray(draft.ir.programs) ? draft.ir.programs : [], [draft.ir.programs]);
   const [entryTask, setEntryTask] = useState<Pick<PolicyUserEntryTaskProps, "deploymentId" | "listenerId" | "principal">>();
   const entryReturnFocus = useRef<string | undefined>(undefined);
+  const [mixedExpandedHops, setMixedExpandedHops] = useState(new Set<string>());
   const [connectorTask, setConnectorTask] = useState<{ index: number; source: ServerProgram; connectorId: string; provisional?: ServerProgram }>();
   const connectorEditing = useRef(false);
   const policyBusy = useRef(false);
@@ -1000,12 +1001,12 @@ export function ServerRouteEditor({
           if (!visible && discardClosing) onClose();
         })(false);
       }}
-      size="xl"
+      size={mixedWorkspace ? "lg" : "xl"}
       pending={!!discardConfirming}
       footer={
-        <div className="w-full space-y-2">
+        <div className="flex w-full justify-end">
           <ActionButton
-            className="w-full"
+            className="w-full sm:w-auto sm:min-w-32"
             leadingIcon={<SaveOutlined aria-hidden="true" />}
             pending={save.isPending}
             disabled={
@@ -1249,7 +1250,7 @@ export function ServerRouteEditor({
             </p>
           </>
         ) : mixedWorkspace && orderedPath.editable ? (
-          <ServerMixedPathWorkspace programs={programs} inventory={inventory} schemaVersion={draft.ir.schemaVersion}
+          <ServerMixedPathWorkspace expandedHops={mixedExpandedHops} onExpandedHopsChange={setMixedExpandedHops} programs={programs} inventory={inventory} schemaVersion={draft.ir.schemaVersion}
             hops={orderedPath.hops} connectorChoices={orderedPath.connectorChoices}
             onChangePath={updateOrderedPath}
             changeReason={(hops) => orderedPathChangeReason(draft, hops, inventory)}

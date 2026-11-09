@@ -16,6 +16,14 @@ async function choose(page: Page, control: Locator, query: string) {
   await search.press("Enter");
   await expect(page.getByRole("listbox", { includeHidden: true })).toHaveCount(0);
 }
+async function hopAction(editor: Locator, hop: number, label: string) {
+  await editor.getByRole("button", { name: `第 ${hop} 跳更多操作`, exact: true }).click();
+  await editor.getByRole("menuitem", { name: label, exact: true }).click();
+}
+async function configure(editor: Locator, hop: number) {
+  const trigger = editor.getByRole("button", { name: new RegExp(`^配置第 ${hop} 跳 `) });
+  if (await trigger.getAttribute("aria-expanded") !== "true") await trigger.click();
+}
 for (const width of [1440, 390, 320]) {
   test(`one mixed chain inserts and edits existing external proxies at ${width}px`, async ({ page, baseURL }, info) => {
     requireLoopback(baseURL);
@@ -69,29 +77,31 @@ for (const width of [1440, 390, 320]) {
     await expect(summary).toContainText("a 监听 → b 监听 → 目标");
     await expect(editor.getByRole("region", { name: "最终出口", exact: true })).toHaveCount(0);
     await expect(editor.getByRole("tab", { name: "图形编辑", exact: true })).toHaveCount(0);
-    const insert = editor.getByRole("button", { name: "在第 1 跳后插入下一跳", exact: true });
-    await insert.click();
+    const insert = editor.getByRole("button", { name: "第 1 跳更多操作", exact: true });
+    await hopAction(editor, 1, "在第 1 跳后插入下一跳");
     await expect(save).toBeDisabled();
     await choose(page, editor.getByRole("combobox", { name: "第 2 跳类型", exact: true }), "外部代理");
     await editor.getByRole("button", { name: "取消添加", exact: true }).click();
     await expect(insert).toBeFocused();
     await expect(summary).toContainText("a 监听 → b 监听 → 目标");
-    await insert.click();
+    await hopAction(editor, 1, "在第 1 跳后插入下一跳");
     await choose(page, editor.getByRole("combobox", { name: "第 2 跳类型", exact: true }), "外部代理");
     await choose(page, editor.getByRole("combobox", { name: "第 2 跳外部代理", exact: true }), "proxy-x");
-    await expect(editor.getByRole("combobox", { name: "第 2 跳外部代理", exact: true })).toBeFocused();
-    await editor.getByRole("button", { name: "在第 2 跳后插入下一跳", exact: true }).click();
+    await expect(editor.getByRole("button", { name: "配置第 2 跳 proxy-x", exact: true })).toBeFocused();
+    await hopAction(editor, 2, "在第 2 跳后插入下一跳");
     await choose(page, editor.getByRole("combobox", { name: "第 3 跳类型", exact: true }), "外部代理");
     await choose(page, editor.getByRole("combobox", { name: "第 3 跳外部代理", exact: true }), "proxy-y");
     await expect(summary).toContainText("a 监听 → proxy-x → proxy-y → b 监听 → 目标");
     await expect(editor.getByRole("list", { name: "代理链", exact: true }).getByRole("listitem")).toHaveCount(4);
-    await expect(editor.getByRole("button", { name: "下移第 3 跳", exact: true })).toBeDisabled();
+    await editor.getByRole("button", { name: "第 3 跳更多操作", exact: true }).click();
+    await expect(editor.getByRole("menuitem", { name: "下移第 3 跳", exact: true })).toBeDisabled();
     await expect(editor).not.toContainText("example.invalid");
     await expect(editor).not.toContainText("synthetic-secret");
-    await editor.getByRole("button", { name: "上移第 3 跳", exact: true }).click();
+    await editor.getByRole("menuitem", { name: "上移第 3 跳", exact: true }).click();
     await expect(summary).toContainText("a 监听 → proxy-y → proxy-x → b 监听 → 目标");
-    await editor.getByRole("button", { name: "下移第 2 跳", exact: true }).click();
+    await hopAction(editor, 2, "下移第 2 跳");
     await expect(summary).toContainText("a 监听 → proxy-x → proxy-y → b 监听 → 目标");
+    await configure(editor, 2);
     const readOnly = editor.getByRole("button", { name: "第 2 跳连接参数只读原因", exact: true });
     await expect(editor.getByRole("button", { name: "编辑第 2 跳外部代理连接参数", exact: true })).toHaveCount(0);
     await expect(editor.getByText("此监听关联用户入口或托管计量，连接器仅供查看。", { exact: true })).toHaveCount(0);
@@ -105,6 +115,7 @@ for (const width of [1440, 390, 320]) {
     await choose(page, editor.getByRole("combobox", { name: "第 5 跳外部代理", exact: true }), "proxy-z");
     await expect(summary).toContainText("a 监听 → proxy-x → proxy-y → b 监听 → proxy-z → 目标");
     await expect(editor.getByRole("list", { name: "代理链", exact: true }).getByRole("listitem")).toHaveCount(5);
+    await configure(editor, 5);
     const edit = editor.getByRole("button", { name: "编辑第 5 跳外部代理连接参数", exact: true });
     await edit.click();
     const connection = page.getByRole("dialog", { name: "编辑连接参数", exact: true });
@@ -121,14 +132,15 @@ for (const width of [1440, 390, 320]) {
     await expect(connection).toBeHidden();
     await expect(edit).toBeFocused();
     await expect(summary).toContainText("a 监听 → proxy-x → proxy-y → b 监听 → proxy-z → 目标");
-    await summary.scrollIntoViewIfNeeded();
+    for (const trigger of await editor.locator(".hop-summary[aria-expanded='true']").all()) await trigger.click();
+    await editor.getByRole("textbox", { name: "转发路径名称", exact: true }).scrollIntoViewIfNeeded();
     await settledTask(editor);
     await expect(editor.getByText("仅保存草稿，检查与应用需另行操作。", { exact: true })).toHaveCount(0);
-    // The choices and 44px controls, not repeated prose, determine row height.
+    // The overview keeps identity and sequence visible; configuration expands on demand.
     const rows = editor.getByRole("list", { name: "代理链", exact: true }).getByRole("listitem");
     for (const row of await rows.all()) {
       const bounds = await row.boundingBox();
-      expect(bounds!.height).toBeLessThanOrEqual(width >= 1024 ? 100 : 180);
+      expect(bounds!.height).toBeLessThanOrEqual(100);
       for (const control of await row.getByRole("button").all()) {
         const target = await control.boundingBox();
         expect(target!.width).toBeGreaterThanOrEqual(44);
