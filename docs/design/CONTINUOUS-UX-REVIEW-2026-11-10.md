@@ -20,7 +20,7 @@ All rows below still require a complete state and rendered-layout review. Entrie
 | Subscription sources | Import and accept owned connection options | Not yet reviewed in this pass |
 | Collections | Combine sources without silently changing their meaning | Not yet reviewed in this pass |
 | Rule resources | Inspect and accept owned rule versions | Not yet reviewed in this pass |
-| Templates and presets | Reuse configuration and review updates | Not yet reviewed in this pass |
+| Templates and presets | Reuse configuration and review updates | Publication-target recovery reviewed; remaining extraction states open |
 | Inbox | Read account messages and recover acknowledgement failures | Source inspection only |
 | Published routes | Offer a versioned usable entry and route | Not yet reviewed in this pass |
 | Forwarding paths | Select explicit ordered managed/external hops | Source and bounded DOM review; first correction below |
@@ -70,6 +70,13 @@ This pass inspected `DataTable`, `PageNavigation`, `ResourceToolbar`, `AppForm`/
 - Identity and freshness: refreshed records must match the confirmed request and arrive after the receipt's cached-list boundary. A confirmed terminal result cannot become active again because of an older list state. Missing or mismatched results retain the confirmed target and cancellation ID. Receipt retention is not persistence across page reload.
 - Public-seam evidence: ten new full-panel tests cover successful submission/reconciliation, delayed/failed/initially hanging reads, explicit retry, late results, missing/wrong host/target/limits, stale cached queued records and retained terminal results. Four focused diagnostic suites pass (27 tests), with red-before-green evidence for the original blank panel and all three review-discovered recovery edges.
 - Independent review found and drove correction of disabled retry, cached receipt regression and initial-read deduplication. No live diagnostic traffic or visual acceptance is claimed.
+
+### Preserve the chosen shared-template publication target
+
+- Defect: when a catalog refresh removed the selected template, publication re-resolved that selection as absent and generated a new template ID. The same reviewed draft could silently change from updating an existing template to creating another one.
+- Decision: retain the explicit selected ID and readable identity. An unresolved or missing existing target blocks publishing, preserves the reviewed draft, and exposes catalog recovery. Creating a new template remains an explicit selection.
+- Public-seam evidence: disappearance regression fails before the fix; missing and failed-refresh recovery cases preserve inputs and publish only the original ID/version after authoritative recovery. Four focused template suites pass (49 tests), strict TypeScript passes, and an independent source review found no blocking issue.
+- Still open: extraction-source loading/error presentation and empty JSON-draft editing; no whole-page or visual acceptance claim.
 
 ## Rendered-evidence follow-up
 

@@ -652,3 +652,67 @@ it("blocks extraction after publication has started in the same turn", async () 
   await within(dialog).findByText("Synthetic publication rejection");
   expect((within(dialog).getByRole("textbox", { name: "共享结构" }) as HTMLTextAreaElement).value).toContain('"steps": []');
 });
+
+it("preserves an unavailable publication target and draft instead of silently creating a new template", async () => {
+  const { client, writes } = mount(async url => url.endsWith("/sanitize")
+    ? json({ spec: { steps: [] } }) : json({}), true);
+  await userEvent.click(await screen.findByRole("button", { name: "发布模板" }));
+  const dialog = await screen.findByRole("dialog", { name: "发布共享模板" });
+  await userEvent.click(within(dialog).getByRole("combobox", { name: "发布位置" }));
+  await userEvent.click(await screen.findByRole("option", { name: /Template Alpha/ }));
+  await userEvent.click(within(dialog).getByRole("combobox", { name: "从自己的已保存配置提取" }));
+  await userEvent.click(await screen.findByText("My collection"));
+  await userEvent.click(within(dialog).getByRole("button", { name: "提取可共享结构" }));
+  await userEvent.click(await within(dialog).findByRole("checkbox"));
+  const spec = (within(dialog).getByRole("textbox", { name: "共享结构" }) as HTMLTextAreaElement).value;
+  await act(async () => { client.setQueryData(["templates"], [templates[1]]); });
+  await waitFor(() => expect(within(dialog).getByRole("button", { name: /^发布 v/ }).hasAttribute("disabled")).toBe(true));
+  expect(within(dialog).getByRole("combobox", { name: "发布位置" }).textContent).toContain("Template Alpha");
+  expect(within(dialog).getByText("所选模板已不可用。重新加载模板列表，或选择其他发布位置。")).toBeTruthy();
+  expect((within(dialog).getByRole("textbox", { name: "共享结构" }) as HTMLTextAreaElement).value).toBe(spec);
+  expect((within(dialog).getByRole("textbox", { name: "模板名称" }) as HTMLInputElement).value).toBe("Template Alpha");
+  fireEvent.click(within(dialog).getByRole("button", { name: /^发布 v/ }));
+  expect(writes.filter(write => write.url === "/api/admin/templates")).toHaveLength(0);
+  await userEvent.click(within(dialog).getByRole("button", { name: "重新加载模板列表" }));
+  const publish = await within(dialog).findByRole("button", { name: "发布 v3" });
+  await waitFor(() => expect(publish.hasAttribute("disabled")).toBe(false));
+  expect((within(dialog).getByRole("textbox", { name: "共享结构" }) as HTMLTextAreaElement).value).toBe(spec);
+  await userEvent.click(publish);
+  await waitFor(() => expect(writes.filter(write => write.url === "/api/admin/templates")).toHaveLength(1));
+  expect(writes.find(write => write.url === "/api/admin/templates")?.body).toMatchObject({
+    id: "alpha", expectedVersion: 2, name: "Template Alpha", spec: { steps: [] },
+  });
+});
+
+it("blocks publication during failed catalog verification without discarding the selected template or reviewed draft", async () => {
+  const { client, writes } = mount(async url => url.endsWith("/sanitize")
+    ? json({ spec: { steps: [] } }) : json({}), true);
+  await userEvent.click(await screen.findByRole("button", { name: "发布模板" }));
+  const dialog = await screen.findByRole("dialog", { name: "发布共享模板" });
+  await userEvent.click(within(dialog).getByRole("combobox", { name: "发布位置" }));
+  await userEvent.click(await screen.findByRole("option", { name: /Template Alpha/ }));
+  await userEvent.click(within(dialog).getByRole("combobox", { name: "从自己的已保存配置提取" }));
+  await userEvent.click(await screen.findByText("My collection"));
+  await userEvent.click(within(dialog).getByRole("button", { name: "提取可共享结构" }));
+  await userEvent.click(await within(dialog).findByRole("checkbox"));
+  const originalFetch = globalThis.fetch;
+  let finish!: (response: Response) => void;
+  vi.stubGlobal("fetch", vi.fn((input, init) => String(input) === "/api/templates"
+    ? new Promise<Response>(resolve => { finish = resolve; }) : originalFetch(input, init)));
+  let refresh!: Promise<void>;
+  act(() => { refresh = client.refetchQueries({ queryKey: ["templates"], exact: true }); });
+  await within(dialog).findByText("正在读取模板列表…");
+  expect(within(dialog).getByRole("button", { name: "发布 v3" }).hasAttribute("disabled")).toBe(true);
+  expect(within(dialog).queryByText("已不可用")).toBeNull();
+  await act(async () => { finish(json({ detail: "Catalog unavailable" }, 503)); await refresh; });
+  expect(await within(dialog).findByText("暂时无法加载模板")).toBeTruthy();
+  expect(within(dialog).getByRole("combobox", { name: "发布位置" }).textContent).toContain("Template Alpha");
+  expect(within(dialog).getByRole("checkbox").getAttribute("aria-checked")).toBe("true");
+  expect(within(dialog).getByRole("button", { name: "发布 v3" }).hasAttribute("disabled")).toBe(true);
+  expect(writes.filter(write => write.url === "/api/admin/templates")).toHaveLength(0);
+  vi.stubGlobal("fetch", originalFetch);
+  await userEvent.click(within(dialog).getByRole("button", { name: "重新加载模板" }));
+  await waitFor(() => expect(within(dialog).getByRole("button", { name: "发布 v3" }).hasAttribute("disabled")).toBe(false));
+  await userEvent.click(within(dialog).getByRole("button", { name: "发布 v3" }));
+  await waitFor(() => expect(writes.find(write => write.url === "/api/admin/templates")?.body.id).toBe("alpha"));
+});

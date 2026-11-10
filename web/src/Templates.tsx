@@ -775,7 +775,7 @@ export function TemplatesPage({ admin = false }: { admin?: boolean }) {
       )}
       {publishing && (
         <PublishTemplate
-          templates={query.data || []}
+          templates={query}
           profiles={profiles.data || []}
           collections={collections.data || []}
           onClose={() => setPublishing(false)}
@@ -1616,13 +1616,14 @@ function PublishTemplate({
   collections,
   onClose,
 }: {
-  templates: Template[];
+  templates: TemplateCatalog<Template>;
   profiles: Profile[];
   collections: Collection[];
   onClose: () => void;
 }) {
   const [kind, setKind] = useState<Kind>("processing-preset");
   const [existing, setExisting] = useState<string>();
+  const [selectedIdentity, setSelectedIdentity] = useState<Pick<Template, "name" | "version">>();
   const [targetId, setTargetId] = useState<string>();
   const [name, setName] = useState("");
   const [spec, setSpec] = useState("");
@@ -1645,7 +1646,14 @@ function PublishTemplate({
   const { confirm, confirming } = useDiscardConfirmation("publish-template");
   const client = useQueryClient();
   const message = toast;
-  const selected = templates.find((t) => t.id === existing);
+  const selected = templates.data?.find((t) => t.id === existing);
+  const publicationTargetReady =
+    !existing || (catalogReady(templates) && !!selected);
+  const missingPublicationTarget =
+    !!existing && catalogReady(templates) && !selected;
+  const nextVersion = existing
+    ? (selected?.version ?? selectedIdentity?.version ?? 0) + 1
+    : 1;
   const sanitize = useMutation({
     mutationFn: async ({ version, kind, targetId }: {
       version: number;
@@ -1749,21 +1757,38 @@ function PublishTemplate({
               value={existing}
               clearable
               placeholder="创建新模板"
-              options={templates.map((t) => ({
-                value: t.id,
-                label: (
-                  <Metadata className="flex-col items-start">
-                    <span>{t.name}</span>
-                    <span className="text-muted-foreground">{`v${t.version}`}</span>
-                  </Metadata>
-                ),
-              }))}
+              options={[
+                ...(templates.data || []).map((t) => ({
+                  value: t.id,
+                  label: (
+                    <Metadata className="flex-col items-start">
+                      <span>{t.name}</span>
+                      <span className="text-muted-foreground">{`v${t.version}`}</span>
+                    </Metadata>
+                  ),
+                })),
+                ...(existing && !selected
+                  ? [{
+                      value: existing,
+                      label: (
+                        <Metadata className="flex-col items-start">
+                          <span>{selectedIdentity?.name || existing}</span>
+                          <span className="text-muted-foreground">
+                            {catalogReady(templates) ? "已不可用" : "暂不可用"}
+                          </span>
+                        </Metadata>
+                      ),
+                      disabled: true,
+                    }]
+                  : []),
+              ]}
               onValueChange={(id) => {
                 if (submitting.current) return;
                 revision.current++;
                 setExtractionError(null);
                 setExisting(id);
-                const t = templates.find((t) => t.id === id);
+                const t = templates.data?.find((t) => t.id === id);
+                setSelectedIdentity(t);
                 setKind(t?.kind || "processing-preset");
                 setName(t?.name || "");
                 setTargetId(undefined);
@@ -1773,6 +1798,18 @@ function PublishTemplate({
               disabled={publish.isPending || !open}
             />
           </label>
+          <TemplateCatalogNotice query={templates} label="模板列表" />
+          {missingPublicationTarget && (
+            <Notice tone="warning">
+              <p>所选模板已不可用。重新加载模板列表，或选择其他发布位置。</p>
+              <ActionButton
+                variant="link"
+                onClick={() => void templates.refetch()}
+              >
+                重新加载模板列表
+              </ActionButton>
+            </Notice>
+          )}
           <div className="form-grid grid gap-4 sm:grid-cols-2 [&>label]:grid [&>label]:gap-2 [&>label]:text-sm">
             <label>
               模板名称
@@ -1786,7 +1823,7 @@ function PublishTemplate({
               模板类型
               <ChoiceSelect
                 aria-label="模板类型"
-                disabled={!!selected || publish.isPending || !open}
+                disabled={!!existing || publish.isPending || !open}
                 value={kind}
                 options={[
                   { value: "processing-preset", label: "节点处理预设" },
@@ -1886,10 +1923,10 @@ function PublishTemplate({
         </ActionButton>
         <ActionButton
           ref={submitButton}
-          aria-label={`发布 v${(selected?.version || 0) + 1}`}
+          aria-label={`发布 v${nextVersion}`}
           aria-busy={publish.isPending}
           disabled={
-            !open || sanitize.isPending ||
+            !open || !publicationTargetReady || sanitize.isPending ||
             (!publish.isPending && (!reviewed || !name.trim() || !spec))
           }
           onClick={() => {
@@ -1900,6 +1937,7 @@ function PublishTemplate({
               extracting.current !== null ||
               publish.isPending ||
               confirming ||
+              !publicationTargetReady ||
               !reviewed ||
               !name.trim() ||
               !spec
@@ -1911,7 +1949,7 @@ function PublishTemplate({
             if (submit && dialog?.contains(document.activeElement))
               submit.focus();
             publish.mutate({
-              id: selected?.id || newID("template"),
+              id: existing ?? newID("template"),
               name,
               kind,
               expectedVersion: selected?.version || 0,
@@ -1921,7 +1959,7 @@ function PublishTemplate({
           variant="default"
           pending={!!publish.isPending}
         >
-          发布 v{(selected?.version || 0) + 1}
+          发布 v{nextVersion}
         </ActionButton>
       </div>
     </TaskDialog>
