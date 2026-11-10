@@ -1626,7 +1626,7 @@ function PublishTemplate({
   const [selectedIdentity, setSelectedIdentity] = useState<Pick<Template, "name" | "version">>();
   const [targetId, setTargetId] = useState<string>();
   const [name, setName] = useState("");
-  const [spec, setSpec] = useState("");
+  const [spec, setSpec] = useState<string | null>(null);
   const [reviewed, setReviewed] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const revision = useRef(0);
@@ -1716,7 +1716,7 @@ function PublishTemplate({
     !!existing ||
     !!targetId ||
     name !== "" ||
-    spec !== "" ||
+    spec !== null ||
     kind !== "processing-preset";
   useUnsavedChanges(open && (dirty || publish.isPending));
   const close = () => {
@@ -1792,7 +1792,7 @@ function PublishTemplate({
                 setKind(t?.kind || "processing-preset");
                 setName(t?.name || "");
                 setTargetId(undefined);
-                setSpec("");
+                setSpec(null);
                 setReviewed(false);
               }}
               disabled={publish.isPending || !open}
@@ -1835,7 +1835,7 @@ function PublishTemplate({
                   setExtractionError(null);
                   setKind(value);
                   setTargetId(undefined);
-                  setSpec("");
+                  setSpec(null);
                   setReviewed(false);
                 }}
               />
@@ -1855,7 +1855,7 @@ function PublishTemplate({
                 revision.current++;
                 setExtractionError(null);
                 setTargetId(v);
-                setSpec("");
+                setSpec(null);
                 setReviewed(false);
               }}
               disabled={publish.isPending || !open}
@@ -1876,7 +1876,7 @@ function PublishTemplate({
           >
             提取可共享结构
           </ActionButton>
-          {spec && (
+          {spec !== null && (
             <>
               <p className="muted text-sm text-muted-foreground">
                 连接和资源地址已替换成绑定位置。请检查名称、规则和 DNS

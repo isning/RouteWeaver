@@ -76,7 +76,13 @@ This pass inspected `DataTable`, `PageNavigation`, `ResourceToolbar`, `AppForm`/
 - Defect: when a catalog refresh removed the selected template, publication re-resolved that selection as absent and generated a new template ID. The same reviewed draft could silently change from updating an existing template to creating another one.
 - Decision: retain the explicit selected ID and readable identity. An unresolved or missing existing target blocks publishing, preserves the reviewed draft, and exposes catalog recovery. Creating a new template remains an explicit selection.
 - Public-seam evidence: disappearance regression fails before the fix; missing and failed-refresh recovery cases preserve inputs and publish only the original ID/version after authoritative recovery. Four focused template suites pass (49 tests), strict TypeScript passes, and an independent source review found no blocking issue.
-- Still open: extraction-source loading/error presentation and empty JSON-draft editing; no whole-page or visual acceptance claim.
+- Still open: extraction-source loading/error presentation; no whole-page or visual acceptance claim.
+
+### Keep an emptied JSON draft editable
+
+- Defect: the extracted shared-structure textarea was rendered only while its string was truthy. Select-all/delete removed the editor and its focus, preventing ordinary replacement typing.
+- Decision: distinguish not-yet-extracted (`null`) from an intentionally empty editing draft. Preserve the same editor and review reset while empty; publishing remains blocked until nonempty valid content is reviewed. Explicit source, type or publication-location changes still reset extraction.
+- Public-seam evidence: new regression fails before the change, then verifies retained DOM/focus, empty/invalid input rejection before HTTP, correction and explicit re-review, plus source/type reset. Twenty-six surrounding tests and strict TypeScript pass.
 
 ## Rendered-evidence follow-up
 
