@@ -227,12 +227,13 @@ it("does not close a newer server selection or commit an invalidated append", as
   await choose(user, "第 3 跳端点", "relay endpoint");
   const newer = screen.getByRole("combobox", { name: "第 3 跳服务器" });
   await user.click(newer);
+  expect(screen.getByRole("option", { name: "清除选择" })).toBeTruthy();
   await user.type(screen.getByRole("combobox", { name: "搜索选项" }), "fourth server");
-  // A previously selected server also exposes the intentional clear action.
+  // Search Enter selects the matching owner, never the unrelated clear action.
   expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
-    "清除选择", "fourth server",
+    "fourth server",
   ]);
-  await user.click(screen.getByRole("option", { name: "fourth server" }));
+  await user.keyboard("{Enter}");
   await waitFor(() => expect(screen.queryByRole("listbox")).toBeNull());
   newer.focus();
   await act(async () => pending.resolve(true));

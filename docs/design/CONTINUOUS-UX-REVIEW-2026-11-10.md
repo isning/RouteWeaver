@@ -19,7 +19,7 @@ All rows below still require a complete state and rendered-layout review. Entrie
 | Subscriptions, profiles and outputs | Configure, review and deliver a client subscription | Captured profile summary and source-read slices reviewed; remaining publication/output states open |
 | Subscription sources | Import and accept owned connection options | Not yet reviewed in this pass |
 | Collections | Combine sources without silently changing their meaning | Not yet reviewed in this pass |
-| Rule resources | Inspect and accept owned rule versions | Not yet reviewed in this pass |
+| Rule resources | Inspect and accept owned rule versions | Source and 88 focused recovery tests reviewed; no new reachable defect, rendered states open |
 | Templates and presets | Reuse configuration and review updates | Publication-target and extraction recovery reviewed; rendered states open |
 | Inbox | Read account messages and recover acknowledgement failures | Source inspection only |
 | Published routes | Offer a versioned usable entry and route | Captured authorization attribution and nested catalog recovery reviewed; other states open |
@@ -168,6 +168,8 @@ Application/spec TypeScript checks and discovery pass (four tests in that file, 
 Run `42857558136` at `8910172` completed six of eight cases successfully and preserved artifact `13782968543`; both duplicate-server failures exposed the keyboard-clear defect above, so the run is not green. Artifact SHA256 matched its upload receipt. Eight actual desktop/narrow captures were inspected: target-instance identity/state/actions now stack legibly, platform and own-connection counts have clear equal hierarchy, and duplicate-server choices retain complete distinct IDs without horizontal clipping. Target-card occlusion records confirm the sampled controls were unobscured.
 
 These observations cover the captured regions only. The narrow first-profile image ends within its lower source controls, and the narrow selected-east image does not show Save. Their offscreen reachability is not established by those pixels.
+
+The corrected run `42859483432` at `57c0487` subsequently passed all eight unchanged browser cases, including searched same-name server replacement, endpoint ownership and persisted draft identity at both widths. A frozen full-suite run then exposed one older DOM assertion that still required the unrelated clear item during search. That integration test now verifies explicit clear before typing and keyboard Enter selecting only the searched replacement while an older append is pending; the 31 related workspace/choice tests pass. This updates the intentional search contract without relaxing the browser assertions or stale-append safeguards.
 
 ### Keep a short browser review running during continuous delivery
 
