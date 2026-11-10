@@ -58,3 +58,22 @@ The workflow contract fails before adding this sixth isolated spec and passes
 afterward. All 102 static helper tests, architecture checks and actionlint pass;
 application/browser TypeScript and discovery confirm 15 supplemental cases.
 This is verification scheduling, not a new successful browser execution claim.
+
+
+## Supplemental browser execution confirmed
+
+[Run 42895822429](https://github.com/isning/RouteWeaver/actions/runs/42895822429)
+at exact commit `1cf36ca471b4808b14afee8baad176e416b7244b` completed successfully.
+Its job log reports **15 passed**, including the three newly isolated backup
+lifecycle/keyboard-focus cases. This closes the execution gap noted above for
+that bounded suite, not the entire repository gate. Pixel review of the new
+masked backup screenshots is separate and is not claimed by this log result.
+
+The subsequent successful run at `1968623` also produced artifact `13799374981`
+(SHA256 `46f9d03d29ca6560612235c47275bea26eb7eb2180f0d30878c3500236b574d1`).
+The masked password-error screenshots at 1440×1000 and 390×640 were viewed:
+field labels, error text, privacy consequence and footer actions are visible.
+Password masks intentionally prevent evaluating the covered input interior;
+focus/occlusion behavior is established by the browser assertions, not by inferring
+a caret through a mask. Confirmation-field screenshots have not been visually
+reviewed in this follow-up.

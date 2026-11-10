@@ -196,7 +196,7 @@ for (const theme of ["light", "dark"]) {
         info,
         `focus-sample-${theme}-${name}`,
       );
-      if (name === "sidebar" || name === "destructive") {
+      if (name === "sidebar" || name === "destructive" || name === "outline" || name === "muted-outline") {
         // Inspect actual screenshot pixels at a straight edge, avoiding
         // rounded-corner antialiasing. Computed tokens alone miss compositing.
         const screenshot = await page.screenshot({ fullPage: false, scale: "css" });
@@ -240,6 +240,9 @@ for (const theme of ["light", "dark"]) {
         expect(paint.after.target.rect.width).toBe(paint.before.target.rect.width);
         expect(paint.after.target.rect.height).toBe(paint.before.target.rect.height);
         expect(paint.after.target.shadow).not.toBe(paint.before.target.shadow);
+        if (theme === "dark" && (name === "outline" || name === "muted-outline")) {
+          expect(paint.after.target.border).not.toEqual(paint.before.target.border);
+        }
       }
       if (
         name === "invalid-checkbox" ||
@@ -330,7 +333,7 @@ for (const theme of ["light", "dark"]) {
       contentType: "application/json",
       body: JSON.stringify({
         scope:
-          "Synthetic actual shared components, native focus, desktop. Bounded sidebar/destructive pixel contrast and checkbox focus assertions, not whole-app compliance. Both destructive themes are sampled; app layout and other dark focus treatments remain outside these repairs.",
+          "Synthetic actual shared components, native focus, desktop. Bounded sidebar/destructive/outline pixel contrast and checkbox focus assertions, not whole-app compliance. Both themes are sampled; app layout and other dark focus treatments remain outside these repairs.",
         samples: [...samples.map(([name]) => name), "inactive-tab"],
       }),
     });

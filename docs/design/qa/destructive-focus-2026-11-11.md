@@ -32,3 +32,15 @@ React SPA、Tailwind v4、官方 shadcn/ui radix-nova 组件，使用 `shadcn.cs
 新版本的实际浏览器像素仍待 CI 产物验证。本地 Chromium 进程启动时受 socket 限制（browser singleton socket() 失败，Operation not permitted），没有绕过限制或把未运行的浏览器测试写为通过。本轮不宣称完成窄视口、全应用焦点审查或真实节点部署验收。
 
 独立源码复核已完成，无阻塞发现：确认 `cn` 的 Tailwind 合并使新焦点颜色替换原类、明暗语义色使用、顶部取样避开相邻控件，以及尺寸/焦点断言。该源码复核不替代修正后的浏览器像素验收。
+
+## Corrected rendered evidence
+
+[Supplemental run 42896088159](https://github.com/isning/RouteWeaver/actions/runs/42896088159)
+at `196862363dd170019e182d7a72c6f3f020da9fba` succeeded. Artifact `13799374981`
+was downloaded and SHA256-verified against
+`46f9d03d29ca6560612235c47275bea26eb7eb2180f0d30878c3500236b574d1`.
+Both exact measured PNGs were viewed. The light ring and border are `(201,16,24)`
+against `(255,255,255)`, **5.881:1**. The dark ring and border are `(255,100,103)`
+against `(23,23,23)`, **6.207:1**. The sampler's focus-change and size assertions
+passed. These are desktop synthetic destructive-button results, not whole-app
+accessibility certification or narrow-layout acceptance.
