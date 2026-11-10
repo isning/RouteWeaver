@@ -72,9 +72,10 @@ export async function captureNativeFocusPair(
   target: Locator,
   info: TestInfo,
   name: string,
+  keys = { leave: "Shift+Tab", return: "Tab" },
 ) {
   await expect(target).toBeFocused();
-  await page.keyboard.press("Shift+Tab");
+  await page.keyboard.press(keys.leave);
   await expect(target).not.toBeFocused();
   await settledTask(target);
   const before = await paintSnapshot(target);
@@ -82,7 +83,7 @@ export async function captureNativeFocusPair(
     body: await page.screenshot(),
     contentType: "image/png",
   });
-  await page.keyboard.press("Tab");
+  await page.keyboard.press(keys.return);
   await expect(target).toBeFocused();
   await settledTask(target);
   const after = await paintSnapshot(target);
@@ -95,7 +96,8 @@ export async function captureNativeFocusPair(
     body: JSON.stringify(
       {
         scope:
-          "Synthetic service form; native Shift+Tab then Tab; settled styles. Not a contrast compliance verdict. Geometry may change through native scrolling.",
+          "Synthetic controls; native keyboard focus; settled styles. Not a contrast compliance verdict. Geometry may change through native scrolling.",
+        keys,
         before,
         after,
       },

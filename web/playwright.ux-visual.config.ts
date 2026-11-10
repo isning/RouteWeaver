@@ -1,8 +1,9 @@
 import { defineConfig } from "@playwright/test";
 import shared from "./playwright.config";
 
-// Supplemental review only. Each selected test owns its normal loopback CLI
-// and compiled production UI; do not start the shared demo/Vite servers.
+// Supplemental review only. Tests own loopback CLIs or a compiled synthetic
+// component sampler; do not start the shared demo/Vite servers.
+// Focus samples characterize paint, not accessibility acceptance.
 export default defineConfig({
   ...shared,
   projects: shared.projects!
@@ -14,6 +15,7 @@ export default defineConfig({
         "**/forwarding-setup-backend.ui.spec.ts",
         "**/invitation-subscription.ui.spec.ts",
         "**/service-focus-paint.ui.spec.ts",
+        "**/focus-components.ui.spec.ts",
       ],
     })),
   workers: 1,

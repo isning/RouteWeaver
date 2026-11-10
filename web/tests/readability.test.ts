@@ -143,3 +143,15 @@ it("uses in-gamut accessible light tokens so contrast does not rely on browser g
   expect(token("muted-foreground").every((v) => v > 0 && v < 1)).toBe(true);
   expect(token("destructive").every((v) => v > 0 && v < 1)).toBe(true);
 });
+
+// Public semantic-token seam: the shared neutral focus halo is painted at 50%
+// opacity. This guards its contrast on these light surfaces, not all controls,
+// error overrides, dark mode, focus area, or whole-app WCAG conformance.
+it.each(["background", "card", "muted", "sidebar", "popover"])(
+  "keeps the light neutral half-opacity focus halo distinguishable on %s",
+  (surface) => {
+    const background = token(surface);
+    expect(contrast(composite(token("ring"), background, 0.5), background))
+      .toBeGreaterThanOrEqual(3);
+  },
+);

@@ -25,7 +25,7 @@ class UXVisualWorkflowTests(unittest.TestCase):
         self.assertEqual(re.findall(r'^  ([a-z_]+):$', workflow.split('jobs:\n', 1)[1], re.M), ['visual'])
         for expected in ('contents: read', 'persist-credentials: false', 'runs-on: ubuntu-24.04',
                          'timeout-minutes: 12', 'timeout-minutes: 8',
-                         'name: Four UX specs (supplemental evidence only)',
+                         'name: Five UX specs (supplemental evidence only)',
                          'ROUTEWEAVER_CHROMIUM: /opt/google/chrome/chrome',
                          'npx --no-install playwright install-deps chromium',
                          '--config=playwright.ux-visual.config.ts --workers=1 --retries=0'):
@@ -60,7 +60,7 @@ class UXVisualWorkflowTests(unittest.TestCase):
             'web/test-results/*/subscription-delivered-*.png', 'web/test-results/*/persisted-subscription-*.png',
         })
 
-    def test_config_inherits_sandbox_and_selects_only_four_isolated_specs(self):
+    def test_config_inherits_sandbox_and_selects_only_five_test_owned_specs(self):
         config = (ROOT / 'web/playwright.ux-visual.config.ts').read_text()
         self.assertIn('import shared from "./playwright.config"', config)
         self.assertIn('...shared,', config)
@@ -71,11 +71,16 @@ class UXVisualWorkflowTests(unittest.TestCase):
         for forbidden in ('launchOptions:', 'use:', 'testIgnore:', 'grep:', 'grepInvert:'):
             self.assertNotIn(forbidden, config)
         specs = {'server-path-workspace.ui.spec.ts', 'forwarding-setup-backend.ui.spec.ts',
-                 'invitation-subscription.ui.spec.ts', 'service-focus-paint.ui.spec.ts'}
+                 'invitation-subscription.ui.spec.ts', 'service-focus-paint.ui.spec.ts',
+                 'focus-components.ui.spec.ts'}
         self.assertEqual(set(re.findall(r'"\*\*/([^"/]+)"', config)), specs)
         for name in specs:
             source = (ROOT / 'web/tests' / name).read_text()
-            self.assertIn('from "./isolated-control-plane-fixture"', source)
+            if name == 'focus-components.ui.spec.ts':
+                self.assertIn('server.listen(0, "127.0.0.1", done)', source)
+                self.assertIn('tests/focus-sample/vite.config.ts', source)
+            else:
+                self.assertIn('from "./isolated-control-plane-fixture"', source)
             self.assertIn('trace: "off"', source)
             self.assertIn('screenshot: "off"', source)
             self.assertIn('video: "off"', source)
