@@ -575,6 +575,8 @@ func semanticExitReviewCompares(compares []store.RecordCompare) []store.RecordCo
 		if json.Unmarshal(raw, &state) != nil {
 			continue
 		}
+		// Sequence is transport freshness, not changed activation evidence.
+		state.ReportSequence = 0
 		if state.Observed != nil {
 			state.Observed.ObservedAt = time.Time{}
 			state.Observed.Evidence = ""

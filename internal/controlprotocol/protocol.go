@@ -95,6 +95,8 @@ type Observation struct {
 }
 
 type State struct {
+	// ReportSequence orders snapshots within one enrollment; zero is legacy.
+	ReportSequence   uint64            `json:"reportSequence,string,omitempty"`
 	Installation     *CoreInstallation `json:"installation,omitempty"`
 	HighestAccepted  uint64            `json:"highestAccepted,string"`
 	Desired          *Identity         `json:"desired,omitempty"`

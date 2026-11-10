@@ -23,6 +23,10 @@ type DriverOptions struct {
 	MaxRuntime       time.Duration
 	OnTransportError func(error)
 }
+type observationDelivery struct {
+	state State
+	err   error
+}
 type heartbeatDelivery struct {
 	heartbeat controlprotocol.ServiceHeartbeat
 	err       error
@@ -76,7 +80,7 @@ func RunDriver(parent context.Context, r *Reconciler, tr ControlPlaneTransport, 
 	// Recovery is observational. Unknown native completion stays blocked; the
 	// running loop can retry observation, never replay the uncertain mutation.
 	deliveries := make(chan desiredDelivery)
-	observations := make(chan chan State)
+	observations := make(chan chan observationDelivery)
 	heartbeatRequests := make(chan chan heartbeatDelivery)
 	policyRefreshes := make(chan policyDelivery)
 	// Observation shares the mutation lane and never replays a Desired.
@@ -154,15 +158,19 @@ func RunDriver(parent context.Context, r *Reconciler, tr ControlPlaneTransport, 
 					reportError(errors.New("transport does not support node observations"))
 				}
 			}
-			reply := make(chan State, 1)
+			reply := make(chan observationDelivery, 1)
 			select {
 			case observations <- reply:
 			case <-ctx.Done():
 				return
 			}
 			select {
-			case state := <-reply:
-				reportError(tr.ReportObservation(ctx, scope, state))
+			case report := <-reply:
+				if report.err != nil {
+					reportError(report.err)
+				} else {
+					reportError(tr.ReportObservation(ctx, scope, report.state))
+				}
 			case <-ctx.Done():
 				return
 			}
@@ -238,7 +246,9 @@ loop:
 			st, _ := r.Submit(ctx, delivery.desired)
 			delivery.done <- st
 		case reply := <-observations:
-			reply <- observe()
+			_ = observe()
+			state, err := r.ObservationReport()
+			reply <- observationDelivery{state: state, err: err}
 		case reply := <-heartbeatRequests:
 			factCtx, stop := context.WithTimeout(ctx, time.Second)
 			fact, err := r.ServiceHeartbeat(factCtx)
@@ -296,10 +306,18 @@ loop:
 	// Final delivery has a fresh, small context; a failed report does not turn a
 	// known local stop into a fictional remote acknowledgement.
 	reportCtx, reportCancel := context.WithTimeout(context.Background(), time.Second)
-	reportErr := tr.ReportObservation(reportCtx, scope, final)
+	report, preparationErr := r.ObservationReport()
+	reportErr := preparationErr
+	if preparationErr == nil {
+		final = report
+		reportErr = tr.ReportObservation(reportCtx, scope, final)
+	}
 	reportCancel()
 	if reportErr != nil && o.OnTransportError != nil {
 		o.OnTransportError(reportErr)
+	}
+	if preparationErr != nil {
+		return final, preparationErr
 	}
 	if collectionErr != nil {
 		return final, collectionErr

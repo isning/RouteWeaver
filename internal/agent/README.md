@@ -81,6 +81,15 @@ All requests bind one scope, derive the instance from that scope and carry `Auth
 - `POST /api/agent/instances/{instanceId}/meter-batches`: raw `MeterBatch`; exact `MeterReceipt {streamEpoch,sequence,digest}` after durable acceptance.
 - POST `Idempotency-Key` is SHA256 of the exact immutable request bytes. The server must bind/deduplicate that key and authenticate the scope independently of these headers.
 
+Runtime `State.reportSequence` is an optional decimal string for compatibility.
+The production driver now obtains durable, enrollment-scoped snapshots through
+`Reconciler.ObservationReport`. The server rejects older or conflicting sequences,
+ACKs exact retries without refreshing receipt time, and rejects unsequenced
+reports once an enrollment has adopted ordered reporting. Upgrade the control
+plane before agents; keep the agent journal across restart. Legacy-only agents
+retain their ordering limitation until upgraded. See
+`docs/verification/RUNTIME-REPORT-ORDERING-2026-11-10.md` for rollout/recovery limits.
+
 No user-session credential is implicitly reused as an agent token. Tokens are neither created nor persisted by this package. Actual enrollment, external credentials and deployment remain separately authorized operational work.
 
 ## Verification evidence (2026-10-19)

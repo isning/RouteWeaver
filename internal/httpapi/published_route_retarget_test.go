@@ -342,6 +342,7 @@ func TestManagedRouteRetargetHeartbeatDoesNotInvalidateReviewAndOldPathRemainsOb
 	}
 	var state controlprotocol.State
 	s.Get("agent-observations", "fra-core", &state)
+	state.ReportSequence++
 	state.Observed.ObservedAt = state.Observed.ObservedAt.Add(time.Second)
 	state.Observed.Evidence = "same identity refreshed"
 	s.Put("agent-observations", "fra-core", state)

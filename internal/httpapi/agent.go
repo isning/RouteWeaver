@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"github.com/go-chi/chi/v5"
 	"net/http"
 	"routeweaver/internal/auth"
@@ -105,6 +106,10 @@ func (h *server) registerAgent(r chi.Router) {
 			return
 		}
 		if e := h.recordAgentObservation(desired, enrollment, state); e != nil {
+			if errors.Is(e, store.ErrConflict) {
+				fail(w, 409, "observation is stale or conflicts with current state")
+				return
+			}
 			fail(w, 500, "cannot persist observation")
 			return
 		}

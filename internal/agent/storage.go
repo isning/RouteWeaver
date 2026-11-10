@@ -13,6 +13,7 @@ import (
 )
 
 type journal struct {
+	ReportSequence        uint64                         `json:"reportSequence,string,omitempty"`
 	PolicyRefresh         *controlprotocol.PolicyRefresh `json:"policyRefresh,omitempty"`
 	PolicyIssuedHighWater time.Time                      `json:"policyIssuedHighWater,omitempty"`
 	LatestPolicy          *PolicyLease                   `json:"latestPolicy,omitempty"`
