@@ -160,7 +160,9 @@ export function InboxPage() {
     });
     read.mutate(id);
   };
-  const selectedError = selected ? readErrors.get(selected.eventId) : undefined;
+  const selectedError = selected && !displayed?.readAt
+    ? readErrors.get(selected.eventId)
+    : undefined;
   return (
     <>
       <PageHeader
@@ -239,6 +241,17 @@ export function InboxPage() {
               : query.isError ? "消息刷新失败，当前显示上次读取内容。"
               : "此消息已不在当前列表中，以下为之前读取的内容。"}
           </Notice>
+        )}
+        {selected && query.isError && (
+          <ActionButton
+            variant="outline"
+            pending={query.isFetching}
+            keepFocusableWhilePending
+            disabled={query.isPaused}
+            onClick={() => query.refetch()}
+          >
+            重试刷新
+          </ActionButton>
         )}
         <ErrorNotice error={selectedError} />
         {selected && !displayed?.readAt && (

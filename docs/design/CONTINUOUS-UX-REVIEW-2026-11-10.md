@@ -21,7 +21,7 @@ All rows below still require a complete state and rendered-layout review. Entrie
 | Collections | Combine sources without silently changing their meaning | Not yet reviewed in this pass |
 | Rule resources | Inspect and accept owned rule versions | Source and 88 focused recovery tests reviewed; no new reachable defect, rendered states open |
 | Templates and presets | Reuse configuration and review updates | Publication-target and extraction recovery reviewed; rendered states open |
-| Inbox | Read account messages and recover acknowledgement failures | Source inspection only |
+| Inbox | Read account messages and recover acknowledgement failures | Open-sheet refresh recovery and obsolete acknowledgement errors reviewed; remaining states and rendered layout open |
 | Published routes | Offer a versioned usable entry and route | Captured authorization attribution and nested catalog recovery reviewed; other states open |
 | Forwarding paths | Select explicit ordered managed/external hops | Source, bounded DOM and captured layout review; corrections below |
 | Servers and core instances | Find a server, inspect observations and manage configuration | Source and focused DOM tests; diagnostic receipt correction below |
@@ -206,3 +206,9 @@ Focused tests, strict TypeScript and production build pass for these slices. A f
 - Defect: after a successful acknowledged preview, explicitly previewing again left the old reviewed plan and enabled Create action present during the replacement request and after a failed replacement. The user could create from a check they had just attempted to supersede.
 - Decision: starting the explicit recheck advances its ownership revision and clears only the prior review and acknowledgement. Input selections remain; successful recovery requires a fresh acknowledgement before creating a pending batch. No batch is executed by preview or acknowledgement.
 - Evidence: public FleetPlanForm regression fails before the correction, then verifies pending/failure invalidation, retained selected instance, successful retry and renewed acknowledgement without a create request. Thirty-eight focused tests across three files and TypeScript pass; coordinator independently reviewed the source and reran all seven pending-operation cases. This is bounded source/DOM evidence, not actual-node or rendered-layout acceptance.
+
+### Keep inbox recovery inside the open message
+
+- Defects: a message-sheet refresh failure had recovery controls only behind the modal. Separately, a failed mark-read request could retain its error even after an authoritative refresh confirmed the message was read, including an older failure arriving after that confirmation.
+- Decision: failed reads offer a focusable retry within the message sheet, preserving its full content. Once the displayed message has confirmed read state, obsolete acknowledgement errors are not presented as an outstanding task. No automatic mutation retry or duplicate acknowledgement is introduced.
+- Evidence: three public-task cases fail before and pass after the correction, including Tab/Enter recovery and both acknowledgement/refetch orderings. Nineteen inbox cases and TypeScript pass; coordinator independently reran 28 inbox/time-label/decision-copy cases across three files and reviewed source. Paused-state behavior is unchanged. Native-browser layout and focus restoration after the successful read remain outside this bounded DOM review.

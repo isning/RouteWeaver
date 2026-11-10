@@ -461,3 +461,56 @@ it("offers explicit mark-read after opening an unread message during a backgroun
   await userEvent.keyboard("{Escape}");
   await screen.findByRole("button", { name: /等待更新的消息.*已读/ });
 });
+
+it("recovers a failed inbox refresh by keyboard from the open message", async () => {
+  let reads = 0;
+  vi.stubGlobal("fetch", vi.fn(async () => {
+    reads++;
+    if (reads === 2) return json({ message: "读取失败" }, 503);
+    return json([{ eventId: "recover", title: "维护消息", body: reads > 2 ? "最新完整正文" : "之前完整正文", createdAt: "2026-11-01T10:00:00Z", readAt: "2026-11-01T11:00:00Z" }]);
+  }));
+  const client = mountInbox();
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole("button", { name: /维护消息.*已读/ }));
+  const dialog = await screen.findByRole("dialog", { name: "维护消息" });
+  await act(async () => { await client.invalidateQueries({ queryKey: ["inbox"] }); });
+  await within(dialog).findByText("消息刷新失败，当前显示上次读取内容。");
+  const retry = within(dialog).getByRole("button", { name: "重试刷新" });
+  within(dialog).getByRole("button", { name: "关闭" }).focus();
+  for (let step = 0; step < 4 && document.activeElement !== retry; step++) await user.tab();
+  expect(document.activeElement).toBe(retry);
+  await user.keyboard("{Enter}");
+  expect(await within(dialog).findByText("最新完整正文")).toBeTruthy();
+  expect(within(dialog).queryByText("消息刷新失败，当前显示上次读取内容。")).toBeNull();
+  expect(reads).toBe(3);
+});
+
+it.each([false, true])("removes obsolete acknowledgement errors when the message is confirmed read, with late failure: %s", async (lateFailure) => {
+  let acknowledged = false;
+  let settle!: (response: Response) => void;
+  let writes = 0;
+  vi.stubGlobal("fetch", vi.fn(async (_url: string, init?: RequestInit) => {
+    if (init?.method === "POST") {
+      writes++;
+      return new Promise<Response>((resolve) => { settle = resolve; });
+    }
+    return json([{ eventId: "confirmed", title: "状态已同步的消息", body: "保留正文", createdAt: "2026-11-01T10:00:00Z", ...(acknowledged ? { readAt: "2026-11-01T11:00:00Z" } : {}) }]);
+  }));
+  const client = mountInbox();
+  await userEvent.click(await screen.findByRole("button", { name: /状态已同步的消息.*未读/ }));
+  const dialog = await screen.findByRole("dialog", { name: "状态已同步的消息" });
+  if (!lateFailure) {
+    await act(async () => { settle(json({ message: "旧的已读更新失败" }, 503)); });
+    await within(dialog).findByText("旧的已读更新失败");
+  }
+  acknowledged = true;
+  await act(async () => { await client.invalidateQueries({ queryKey: ["inbox"] }); });
+  await waitFor(() => expect(within(dialog).queryByRole("button", { name: /标记已读/ })).toBeNull());
+  if (lateFailure) await act(async () => { settle(json({ message: "旧的已读更新失败" }, 503)); });
+  await waitFor(() => expect(within(dialog).queryByText("旧的已读更新失败")).toBeNull());
+  expect(within(dialog).getByText("保留正文")).toBeTruthy();
+  await userEvent.keyboard("{Escape}");
+  await userEvent.click(screen.getByRole("button", { name: /状态已同步的消息.*已读/ }));
+  expect(within(screen.getByRole("dialog")).queryByText("旧的已读更新失败")).toBeNull();
+  expect(writes).toBe(1);
+});
