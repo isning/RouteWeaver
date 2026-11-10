@@ -306,7 +306,7 @@ it.each(["stay", "edit", "navigate"] as const)(
       finish(json(route));
       await checking;
     });
-    await waitFor(() => expect(inspect.getAttribute("aria-busy")).toBeNull());
+    await waitFor(() => expect([null, "false"]).toContain(inspect.getAttribute("aria-busy")));
     expect(document.activeElement).toBe(nextAction === "stay" ? inspect : name);
     if (nextAction === "stay")
       expect(

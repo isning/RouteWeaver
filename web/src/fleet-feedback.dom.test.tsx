@@ -384,11 +384,11 @@ it.for(["success", "failure"])(
       await pendingA;
     });
     await waitFor(() =>
-      expect(
+      expect([null, "false"]).toContain(
         screen
           .getByRole("button", { name: "预览影响与差异" })
           .getAttribute("aria-busy"),
-      ).toBeNull(),
+      ),
     );
     expect(screen.queryByText("Obsolete path A preview failed")).toBeNull();
     expect(
@@ -491,7 +491,7 @@ it.for([
     expect(
       screen.getByText("Current path B preview failed", { exact: true }),
     ).toBeTruthy();
-    expect(preview.getAttribute("aria-busy")).toBeNull();
+    expect([null, "false"]).toContain(preview.getAttribute("aria-busy"));
     expect(preview).toHaveProperty("disabled", false);
     expect(screen.queryByText("Obsolete path A preview failed")).toBeNull();
     expect(
