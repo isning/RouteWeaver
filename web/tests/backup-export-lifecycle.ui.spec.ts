@@ -60,55 +60,64 @@ test("leaving backup export retires its download and preserves the new export ta
   expect(requests).toHaveLength(2);
 });
 
-for (const width of [1440, 390]) {
-  test(`backup keyboard validation reveals its invalid field at ${width}px`, async ({ page }, info) => {
-    await page.setViewportSize({ width, height: width === 390 ? 640 : 1000 });
-    await openBackupWorkspace(page);
-    let writes = 0;
-    await page.route("**/api/admin/backups", (route) => {
-      writes++;
-      return route.abort();
-    });
-    await page.goto("/#settings");
-    await page.getByRole("tab", { name: "备份与恢复", exact: true }).click();
-    await page.getByRole("button", { name: "创建加密备份", exact: true }).click();
-    const dialog = page.getByRole("dialog", { name: "创建加密备份", exact: true });
-    await settledTask(dialog);
-    const password = dialog.getByLabel("设置备份密码", { exact: true });
-    const confirmation = dialog.getByLabel("再次输入密码", { exact: true });
-    const submit = dialog.getByRole("button", { name: "加密并下载", exact: true });
-    for (const [name, field] of [["password", password], ["confirmation", confirmation]] as const) {
-      if (name === "confirmation") {
-        await password.fill("synthetic-valid-backup");
-        await confirmation.fill("synthetic-mismatch-backup");
-      }
-      await submit.focus();
-      await submit.press("Enter");
-      await expect(field).toHaveAttribute("aria-invalid", "true");
-      await expect(field).toBeFocused();
-      await expect(field).toBeInViewport({ ratio: 1 });
-      expect(await field.evaluate((node) => {
-        const r = node.getBoundingClientRect();
-        return document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2) === node;
-      }), "Focused invalid field is uncovered").toBe(true);
-      await info.attach(`backup-error-${name}-${width}`, {
-        body: await page.screenshot({ mask: [password, confirmation] }),
+for (const theme of ["light", "dark"] as const) {
+  for (const width of [1440, 390]) {
+    test(`backup keyboard validation reveals its invalid field at ${width}px with ${theme} tokens`, async ({ page }, info) => {
+      await page.setViewportSize({ width, height: width === 390 ? 640 : 1000 });
+      await openBackupWorkspace(page);
+      let writes = 0;
+      await page.route("**/api/admin/backups", (route) => {
+        writes++;
+        return route.abort();
+      });
+      await page.goto("/#settings");
+      await page.getByRole("tab", { name: "备份与恢复", exact: true }).click();
+      await page.getByRole("button", { name: "创建加密备份", exact: true }).click();
+      // Controlled token audit, not a claim that the app exposes a theme switch.
+      await page.evaluate((dark) => document.documentElement.classList.toggle("dark", dark), theme === "dark");
+      await expect(page.locator("html")).toHaveClass(theme === "dark" ? /dark/ : /^(?!.*\bdark\b).*$/);
+      const dialog = page.getByRole("dialog", { name: "创建加密备份", exact: true });
+      await settledTask(dialog);
+      const password = dialog.getByLabel("设置备份密码", { exact: true });
+      const confirmation = dialog.getByLabel("再次输入密码", { exact: true });
+      const submit = dialog.getByRole("button", { name: "加密并下载", exact: true });
+      await info.attach(`backup-initial-${theme}-${width}`, {
+        body: await page.screenshot({ mask: [password, confirmation], scale: "css" }),
         contentType: "image/png",
       });
-    }
-    // Distinct accessible names let keyboard/assistive-tech users choose the
-    // confirmation reveal control without disclosing the other field.
-    const reveal = dialog.getByRole("button", { name: /^(显示|隐藏)再次输入的密码$/ });
-    await expect(dialog.getByRole("button", { name: "显示备份密码", exact: true })).toBeVisible();
-    await reveal.focus();
-    await reveal.press("Enter");
-    await expect(confirmation).toHaveAttribute("type", "text");
-    await expect(password).toHaveAttribute("type", "password");
-    await expect(reveal).toHaveAccessibleName("隐藏再次输入的密码");
-    await expect(reveal).toBeFocused();
-    await reveal.press("Space");
-    await expect(confirmation).toHaveAttribute("type", "password");
-    await expect(reveal).toHaveAttribute("aria-pressed", "false");
-    expect(writes).toBe(0);
-  });
+      for (const [name, field] of [["password", password], ["confirmation", confirmation]] as const) {
+        if (name === "confirmation") {
+          await password.fill("synthetic-valid-backup");
+          await confirmation.fill("synthetic-mismatch-backup");
+        }
+        await submit.focus();
+        await submit.press("Enter");
+        await expect(field).toHaveAttribute("aria-invalid", "true");
+        await expect(field).toBeFocused();
+        await expect(field).toBeInViewport({ ratio: 1 });
+        expect(await field.evaluate((node) => {
+          const r = node.getBoundingClientRect();
+          return document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2) === node;
+        }), "Focused invalid field is uncovered").toBe(true);
+        await info.attach(`backup-error-${name}-${theme}-${width}`, {
+          body: await page.screenshot({ mask: [password, confirmation], scale: "css" }),
+          contentType: "image/png",
+        });
+      }
+      // Distinct accessible names let keyboard/assistive-tech users choose the
+      // confirmation reveal control without disclosing the other field.
+      const reveal = dialog.getByRole("button", { name: /^(显示|隐藏)再次输入的密码$/ });
+      await expect(dialog.getByRole("button", { name: "显示备份密码", exact: true })).toBeVisible();
+      await reveal.focus();
+      await reveal.press("Enter");
+      await expect(confirmation).toHaveAttribute("type", "text");
+      await expect(password).toHaveAttribute("type", "password");
+      await expect(reveal).toHaveAccessibleName("隐藏再次输入的密码");
+      await expect(reveal).toBeFocused();
+      await reveal.press("Space");
+      await expect(confirmation).toHaveAttribute("type", "password");
+      await expect(reveal).toHaveAttribute("aria-pressed", "false");
+      expect(writes).toBe(0);
+    });
+  }
 }
