@@ -198,7 +198,8 @@ test("automatic members are an explicit additive choice over current source, col
       .fill(profileName);
     await choose("使用的订阅来源", sourceName);
     await choose("使用的平台入口", platformName);
-    await expect(page.getByText("2 个有效连接", { exact: true })).toBeVisible();
+    await expect(page.getByText("自有连接：2 个", { exact: true })).toBeVisible();
+    await expect(page.getByText("平台入口：1 个", { exact: true })).toBeVisible();
     await page.getByRole("tab", { name: "策略组", exact: true }).click();
     await page.getByRole("button", { name: "添加策略组", exact: true }).click();
     await page
@@ -329,7 +330,8 @@ test("automatic members are an explicit additive choice over current source, col
       .getByRole("listbox")
       .getByRole("option", { name: "North collection", exact: true })
       .click();
-    await expect(page.getByText("1 个有效连接", { exact: true })).toBeVisible();
+    await expect(page.getByText("自有连接：1 个", { exact: true })).toBeVisible();
+    await expect(page.getByText("平台入口：1 个", { exact: true })).toBeVisible();
     await saveAndInspect(
       "processed-collection-plus-platform",
       ["North Gate", platformName],

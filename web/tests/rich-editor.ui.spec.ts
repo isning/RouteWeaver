@@ -262,9 +262,7 @@ test("both processing stages keep ordinary titles readable and offer genuine com
       .click();
     await page.setViewportSize({ width: 320, height: 568 });
     for (const stage of ["来源处理", "合并后处理"]) {
-      const editor = drawer.locator(".steps-editor").filter({
-        has: page.getByRole("heading", { name: stage, exact: true }),
-      });
+      const editor = drawer.getByRole("group", { name: stage, exact: true });
       const card = editor.locator(".processing-step").first();
       await card.scrollIntoViewIfNeeded();
       const title = card.locator("strong");

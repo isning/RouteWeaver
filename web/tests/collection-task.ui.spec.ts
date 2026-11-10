@@ -267,10 +267,8 @@ async function newCollection(page: Page, name: string) {
   await drawer.getByLabel("集合名称", { exact: true }).fill(name);
   return drawer;
 }
-function stage(drawer: Locator, page: Page, name: string) {
-  return drawer
-    .locator(".steps-editor")
-    .filter({ has: page.getByRole("heading", { name, exact: true }) });
+function stage(drawer: Locator, name: string) {
+  return drawer.getByRole("group", { name, exact: true });
 }
 function row(drawer: Locator, page: Page, order: number, name: string) {
   // Exact source identity scopes the disclosure; does not match cached dropdowns.
@@ -382,7 +380,7 @@ for (const width of [1280, 390, 320]) {
         { exact: true },
       ),
     ).toBeVisible();
-    const merged = stage(drawer, page, "合并后处理");
+    const merged = stage(drawer, "合并后处理");
     await choose(
       page,
       merged.getByRole("combobox", { name: "添加处理步骤", exact: true }),
@@ -500,7 +498,7 @@ test("source acquisition preserves ordered source and merged steps until explici
   });
   for (const source of sources) await choose(page, selector, source.name);
   await row(drawer, page, 1, sources[0].name).click();
-  const perSource = stage(drawer, page, "来源处理");
+  const perSource = stage(drawer, "来源处理");
   await choose(
     page,
     perSource.getByRole("combobox", { name: "添加处理步骤", exact: true }),
@@ -521,7 +519,7 @@ test("source acquisition preserves ordered source and merged steps until explici
     perSource.getByRole("switch", { name: "启用步骤 2", exact: true }),
   ).not.toBeChecked();
   await row(drawer, page, 1, sources[0].name).click();
-  const merged = stage(drawer, page, "合并后处理");
+  const merged = stage(drawer, "合并后处理");
   await choose(
     page,
     merged.getByRole("combobox", { name: "添加处理步骤", exact: true }),
@@ -642,7 +640,7 @@ test("source acquisition preserves ordered source and merged steps until explici
     await shot(page, info, `collection-reopened-counts-${width}.png`);
   }
   await row(reopened, page, 2, sources[0].name).press("Enter");
-  const reopenedStage = stage(reopened, page, "来源处理");
+  const reopenedStage = stage(reopened, "来源处理");
   await expect(
     reopenedStage.getByLabel("步骤 1 命名模板", { exact: true }),
   ).toHaveValue("{name} · 常用");
@@ -667,7 +665,7 @@ test("synthetic source-save HTTP failure retains uncertainty, parent recipe and 
   const sources = await read(page, "sources");
   const name = `未保存集合 ${Date.now().toString(36)}`;
   const drawer = await newCollection(page, name);
-  const merged = stage(drawer, page, "合并后处理");
+  const merged = stage(drawer, "合并后处理");
   await choose(
     page,
     merged.getByRole("combobox", { name: "添加处理步骤", exact: true }),
@@ -740,7 +738,7 @@ for (const abnormal of ["candidate", "failed"] as const) {
     const diagnostic = "第 2 行：合成诊断：第二行连接尚需检查。";
     const recoveryMessage = "订阅未能完整导入。请检查内容后重试。";
     const drawer = await newCollection(page, name);
-    const merged = stage(drawer, page, "合并后处理");
+    const merged = stage(drawer, "合并后处理");
     await choose(
       page,
       merged.getByRole("combobox", { name: "添加处理步骤", exact: true }),
@@ -970,7 +968,7 @@ test("synthetic informational diagnostic does not misclassify an accepted source
   const name = `诊断不等于失败 ${suffix}`;
   const sourceName = `已接受合成来源 ${suffix}`;
   const drawer = await newCollection(page, name);
-  const merged = stage(drawer, page, "合并后处理");
+  const merged = stage(drawer, "合并后处理");
   await choose(
     page,
     merged.getByRole("combobox", { name: "添加处理步骤", exact: true }),

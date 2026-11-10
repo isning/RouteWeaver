@@ -398,9 +398,7 @@ test("collection zero one and multiple source states retain preparation ordering
     .getByLabel("集合名称", { exact: true })
     .fill(`合成集合 ${suffix}`);
   await expect(drawer.getByText("尚未选择来源", { exact: true })).toBeVisible();
-  const merged = drawer.locator(".steps-editor").filter({
-    has: page.getByRole("heading", { name: "合并后处理", exact: true }),
-  });
+  const merged = drawer.getByRole("group", { name: "合并后处理", exact: true });
   await choose(
     page,
     merged.getByRole("combobox", { name: "添加处理步骤", exact: true }),
@@ -449,9 +447,7 @@ test("collection zero one and multiple source states retain preparation ordering
   await expect(
     drawer.getByText("未添加处理步骤", { exact: true }),
   ).toBeVisible();
-  const perSource = drawer.locator(".steps-editor").filter({
-    has: page.getByRole("heading", { name: "来源处理", exact: true }),
-  });
+  const perSource = drawer.getByRole("group", { name: "来源处理", exact: true });
   await choose(
     page,
     perSource.getByRole("combobox", { name: "添加处理步骤", exact: true }),
