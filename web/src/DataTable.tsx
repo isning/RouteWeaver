@@ -198,6 +198,16 @@ export function DataTable<T extends object>({
   const totalPages =
     pageSize > 0 ? Math.max(1, Math.ceil(rows.length / pageSize)) : 1;
   const currentPage = Math.max(1, Math.min(controlledPage ?? page, totalPages));
+  // Once confirmed rows move an uncontrolled table onto a valid page, that
+  // visible page becomes its position. Do not resurrect an abandoned page on
+  // later growth, or let temporary loading/unpaginated rows change ownership.
+  if (
+    controlledPage === undefined &&
+    !loading &&
+    pageSize > 0 &&
+    page !== currentPage
+  )
+    setPage(currentPage);
   const pagination = useMemo<PaginationState>(
     () => ({
       pageIndex: currentPage - 1,
