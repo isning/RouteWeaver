@@ -260,6 +260,33 @@ for (const size of [
     await expect(
       page.getByRole("button", { name: "修改密码", exact: true }),
     ).toBeVisible();
+    // Choose a disclosure from its task-specific accessible name. Revealing an
+    // empty field cannot submit a security action or dirty the recovery task.
+    const passwordFields = [
+      ["当前密码", "当前密码"],
+      ["新密码", "新密码"],
+      ["确认新密码", "确认新密码"],
+      ["验证当前密码", "退出其他会话的验证密码"],
+    ] as const;
+    for (const [label, revealLabel] of passwordFields) {
+      const field = page.getByLabel(label, { exact: true });
+      await field.focus();
+      await page.keyboard.press("Tab");
+      const reveal = page.getByRole("button", { name: `显示${revealLabel}`, exact: true });
+      await expect(reveal).toBeFocused();
+      await inView(reveal);
+      await reveal.press("Enter");
+      await expect(field).toHaveAttribute("type", "text");
+      const hide = page.getByRole("button", { name: `隐藏${revealLabel}`, exact: true });
+      await expect(hide).toHaveAttribute("aria-pressed", "true");
+      for (const [otherLabel] of passwordFields.filter(([other]) => other !== label))
+        await expect(page.getByLabel(otherLabel, { exact: true })).toHaveAttribute("type", "password");
+      await expect(hide).toBeFocused();
+      await hide.press("Space");
+      await expect(field).toHaveAttribute("type", "password");
+      await expect(field).toHaveValue("");
+      await expect(reveal).toHaveAttribute("aria-pressed", "false");
+    }
     const manage = page.getByRole("button", {
       name: "管理 需要恢复访问的测试账号",
       exact: true,
@@ -350,6 +377,15 @@ for (const size of [
       "password",
       "Native Tab reached the blank, concealed administrator-password field; no input or reveal",
     );
+    await page.keyboard.press("Tab");
+    const revealAdmin = dialog.getByRole("button", { name: "显示管理员当前密码", exact: true });
+    await expect(revealAdmin).toBeFocused();
+    await revealAdmin.press("Enter");
+    await expect(password).toHaveAttribute("type", "text");
+    const hideAdmin = dialog.getByRole("button", { name: "隐藏管理员当前密码", exact: true });
+    await expect(hideAdmin).toBeFocused();
+    await hideAdmin.press("Space");
+    await expect(password).toHaveAttribute("type", "password");
     await tabTo(page, totp, dialog);
     await expect(totp).toHaveValue("");
     await inView(dialog.getByText("管理员验证器验证码", { exact: true }));

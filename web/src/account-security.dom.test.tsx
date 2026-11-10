@@ -837,3 +837,75 @@ it("retains an unknown administrator operation after closing its task and remoun
   expect((screen.getByRole("button", { name: "管理 Target" }) as HTMLButtonElement).disabled).toBe(true);
   expect(writes).toBe(1);
 });
+
+it("names each account password reveal and toggles only the chosen field by keyboard", async () => {
+  const writes: string[] = [];
+  vi.stubGlobal("fetch", vi.fn(async (url, init) => {
+    if (init?.method && init.method !== "GET") writes.push(`${init.method} ${url}`);
+    return json([]);
+  }));
+  mountSecurity();
+  const controls = [
+    ["当前密码", "当前密码"],
+    ["新密码", "新密码"],
+    ["确认新密码", "确认新密码"],
+    ["验证当前密码", "退出其他会话的验证密码"],
+  ];
+  const user = userEvent.setup();
+  for (const [label, revealLabel] of controls) {
+    const field = screen.getByLabelText(label, { exact: true });
+    fill(label, "synthetic-private-password");
+    field.focus();
+    await user.tab();
+    const show = screen.getByRole("button", { name: `显示${revealLabel}` });
+    expect(document.activeElement).toBe(show);
+    await user.keyboard("{Enter}");
+    expect(field.getAttribute("type")).toBe("text");
+    expect(show.getAttribute("aria-label")).toBe(`隐藏${revealLabel}`);
+    expect(show.getAttribute("aria-pressed")).toBe("true");
+    for (const [other] of controls.filter(([candidate]) => candidate !== label))
+      expect(screen.getByLabelText(other, { exact: true }).getAttribute("type")).toBe("password");
+    expect(document.activeElement).toBe(show);
+    await user.keyboard(" ");
+    expect(field.getAttribute("type")).toBe("password");
+    expect(show.getAttribute("aria-pressed")).toBe("false");
+    expect(field).toHaveProperty("value", "synthetic-private-password");
+  }
+  expect(writes).toEqual([]);
+});
+
+it("separates the target temporary password reveal from administrator authentication", async () => {
+  const writes: string[] = [];
+  vi.stubGlobal("fetch", vi.fn(async (url, init) => {
+    if (init?.method && init.method !== "GET") writes.push(`${init.method} ${url}`);
+    return json(String(url).endsWith("/admin/accounts") ? [{ id: "target", name: "Target", username: "target", role: "user", disabled: false, retired: false, mfaEnabled: false }] : []);
+  }));
+  mountSecurity({ ...person, user: { ...person.user, id: "admin", role: "admin" } });
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole("button", { name: "管理 Target" }));
+  const dialog = within(screen.getByRole("dialog"));
+  await user.click(dialog.getByRole("combobox", { name: "账号操作" }));
+  await user.click(await screen.findByRole("option", { name: "重置账号密码" }));
+  const temporary = dialog.getByLabelText("临时密码", { exact: true });
+  const ownPassword = dialog.getByLabelText("管理员当前密码", { exact: true });
+  temporary.focus();
+  await user.tab();
+  const revealTemporary = dialog.getByRole("button", { name: "显示临时密码" });
+  expect(document.activeElement).toBe(revealTemporary);
+  await user.keyboard("{Enter}");
+  expect(temporary.getAttribute("type")).toBe("text");
+  expect(ownPassword.getAttribute("type")).toBe("password");
+  await user.keyboard(" ");
+  expect(temporary.getAttribute("type")).toBe("password");
+  ownPassword.focus();
+  await user.tab();
+  const revealOwn = dialog.getByRole("button", { name: "显示管理员当前密码" });
+  expect(document.activeElement).toBe(revealOwn);
+  await user.keyboard("{Enter}");
+  expect(ownPassword.getAttribute("type")).toBe("text");
+  expect(temporary.getAttribute("type")).toBe("password");
+  expect(revealOwn.getAttribute("aria-label")).toBe("隐藏管理员当前密码");
+  await user.keyboard(" ");
+  expect(ownPassword.getAttribute("type")).toBe("password");
+  expect(writes).toEqual([]);
+});

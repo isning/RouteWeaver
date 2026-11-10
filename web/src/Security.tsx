@@ -162,7 +162,7 @@ function MFASetupTask() {
         }}>
             <ErrorNotice error={prepare.error}/>
             <AppField name="password" label="验证当前账号密码" rules={[{ required: true }]}>
-              <PasswordInput autoComplete="current-password"/>
+              <PasswordInput autoComplete="current-password" revealLabel="二次验证设置的验证密码"/>
             </AppField>
             <ActionButton type="submit" pending={prepare.isPending} variant="default">
               设置二次验证

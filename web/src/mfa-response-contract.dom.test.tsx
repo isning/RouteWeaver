@@ -2,6 +2,7 @@
 // Real security controls with synthetic HTTP responses; no native authenticator claim.
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { SessionBoundary, useSessionAccess } from "./SessionBoundary";
@@ -237,4 +238,26 @@ it.each([401, 503])("discards enrollment material when an uncertain enable is fo
   expect(screen.queryByRole("heading", { name: "二次验证已启用" })).toBeNull();
   expect(toast.success).not.toHaveBeenCalled();
   expect(writes).toEqual(["/api/auth/mfa/setup", "/api/auth/mfa/enable"]);
+});
+
+
+it("names the MFA setup password reveal without starting enrollment", async () => {
+  const writes: string[] = [];
+  vi.stubGlobal("fetch", vi.fn(async (url, init) => {
+    if (init?.method && init.method !== "GET") writes.push(`${init.method} ${url}`);
+    return json(session());
+  }));
+  mount();
+  const password = await screen.findByLabelText("验证当前账号密码", { exact: true });
+  password.focus();
+  const user = userEvent.setup();
+  await user.tab();
+  const reveal = screen.getByRole("button", { name: "显示二次验证设置的验证密码" });
+  expect(document.activeElement).toBe(reveal);
+  await user.keyboard("{Enter}");
+  expect(password.getAttribute("type")).toBe("text");
+  expect(reveal.getAttribute("aria-label")).toBe("隐藏二次验证设置的验证密码");
+  await user.keyboard(" ");
+  expect(password.getAttribute("type")).toBe("password");
+  expect(writes).toEqual([]);
 });

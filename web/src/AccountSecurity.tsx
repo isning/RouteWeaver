@@ -201,7 +201,7 @@ function Reauthentication({
         label={`${prefix}当前密码`}
         rules={[{ required: true }]}
       >
-        <PasswordInput autoComplete="current-password" />
+        <PasswordInput autoComplete="current-password" revealLabel={prefix === "验证" ? "退出其他会话的验证密码" : `${prefix}当前密码`} />
       </AppField>
       {mfa && (
         <AppField
@@ -393,7 +393,7 @@ function AccountSecurityTask({
             description="使用 12–72 个 UTF-8 字节；中文通常每字占 3 字节。"
             rules={[{ required: true }, passwordRule]}
           >
-            <PasswordInput autoComplete="new-password" />
+            <PasswordInput autoComplete="new-password" revealLabel="新密码" />
           </AppField>
           <AppField
             name="confirmation"
@@ -409,7 +409,7 @@ function AccountSecurityTask({
               },
             ]}
           >
-            <PasswordInput autoComplete="new-password" />
+            <PasswordInput autoComplete="new-password" revealLabel="确认新密码" />
           </AppField>
           <p className="text-sm text-muted-foreground">
             修改后保留当前会话，其他会话立即失效。已下载的连接凭据不会因此从节点撤销。
@@ -802,7 +802,7 @@ function AccountRecoveryTask({
             description="使用 12–72 个 UTF-8 字节；中文通常每字占 3 字节。"
             rules={[{ required: true }, passwordRule]}
           >
-            <PasswordInput autoComplete="new-password" />
+            <PasswordInput autoComplete="new-password" revealLabel="临时密码" />
           </AppField>
         )}
         {action === "retire" && (
