@@ -29,3 +29,15 @@ Name edits now preserve the pending topology request. Completion merges the late
 ## Narrow viewport review
 
 The real app was also inspected in a 390 × 844 same-origin frame in the cloud browser. Pending choices remain visible, inactive graph editing stays disabled, keyboard ArrowRight does not leave sequence editing, and explicit cancellation restores the action and focus to Add next hop. The sampled fields, explanation and fixed footer remain readable without page-level horizontal overflow. This is a constrained viewport review, not mobile-device certification or a full accessibility audit. Requested captures contain synthetic demo data only and are not committed to the repository.
+
+## Completed two-hop browser journey
+
+Using the same isolated demo backend, the browser created a second synthetic server, core and listener through the UI. It completed the second-hop server/endpoint choice, switched graph → sequence without losing either hop, moved the second hop up and back down, renamed the path, and saved the draft. After a full page reload, reopening the editor retained the new name and the exact first-hop → second-hop order. The saved forwarding summary pointed the first listener to the second server, and left the final listener direct. Nothing was applied to a core.
+
+## Final local web gate
+
+On source commit `206aedef5805157fc256b38201b9ec7b604f66f2`, `scripts/verify.sh web` completed successfully: TypeScript checking, all **286 files / 3,602 tests** in 806.05 seconds with one worker, and the production build. Test stderr included jsdom's existing `Window.scrollTo()` not-implemented notices; there were no failed tests. The changes after this run are verification-document updates only. This named web pass does not establish automated browser-suite, backend/native, deployed or full-project acceptance. Remote CI was not a prerequisite for either implementation push.
+
+## Secret-content verification
+
+The first secrets gate correctly refused to scan incomplete shallow-clone history. After fetching the complete public branch history, `scripts/verify.sh secrets` passed: 30 scanner regressions and the checksum-pinned Gitleaks 8.24.3 source/index/reachable-history scan (4,115 distinct path/content pairs, 8,748 source entries). Existing exact path/rule/line false-positive reviews were retained; no path-wide exemption was added. This checks plaintext source patterns, not credential validity, encrypted/archive content or unreachable history, and is not a security certification. Only the two source files and this verification document are part of this work's public changes.
