@@ -20,7 +20,7 @@ import { ActionButton } from "@/ui-patterns/actions";
 import { toast } from "sonner";
 import { BookOpen, Plus, RotateCw } from "lucide-react";
 import { revealFocusedPolicyModalControl as revealFocusedModalAction } from "./drawer-control-visibility";
-import { DataTable } from "./DataTable";
+import { DataTable, TableRowActions } from "./DataTable";
 import { useUnsavedChanges } from "./navigation";
 import { useDiscardConfirmation } from "./useDiscardConfirmation";
 import { invalidateOutputInputs } from "./output-comparison";
@@ -309,11 +309,10 @@ function TemplateBindingsTable(props: DataTableProps<Binding>) {
         !focused.matches(".template-binding-action button")
       )
         return;
-      const identity = focused
-        .closest("tr")
-        ?.querySelector<HTMLElement>(".template-binding-identity");
-      if (!identity) return;
+      const context = focused.closest<HTMLElement>(".table-row-actions");
+      if (!context) return;
       const actionBounds = focused.getBoundingClientRect();
+      const contextBounds = context.getBoundingClientRect();
       if (actionBounds.width <= 0) return;
       const bounds = viewport.getBoundingClientRect();
       const style = window.getComputedStyle(focused);
@@ -323,21 +322,22 @@ function TemplateBindingsTable(props: DataTableProps<Binding>) {
           : (Number.parseFloat(style.outlineWidth) || 0) +
             Math.max(0, Number.parseFloat(style.outlineOffset) || 0);
       const margin = Math.max(2, outline);
-      const left =
-        Math.max(bounds.left, identity.getBoundingClientRect().right) + margin;
+      const left = bounds.left + margin;
       const right = bounds.right - margin;
+      const contextLeft = Math.min(contextBounds.left, actionBounds.left);
+      const contextRight = Math.max(contextBounds.right, actionBounds.right);
       const delta =
-        actionBounds.right > right
-          ? actionBounds.right - right
-          : actionBounds.left < left
-            ? actionBounds.left - left
+        contextRight > right
+          ? contextRight - right
+          : contextLeft < left
+            ? contextLeft - left
             : 0;
       const scrollLeft = Math.max(
         0,
         Math.min(viewport.scrollWidth - width, viewport.scrollLeft + delta),
       );
       // Preserve the active element and vertical position; move only enough to
-      // keep its actual outline beside the fixed identity after a width change.
+      // keep the repeated target/template and actual outline visible together.
       if (scrollLeft !== viewport.scrollLeft) viewport.scrollLeft = scrollLeft;
     });
     observer.observe(viewport);
@@ -562,6 +562,18 @@ export function TemplatesPage({ admin = false }: { admin?: boolean }) {
     (b.targetKind === "collections" ? collections.data : profiles.data)?.find(
       (p) => p.id === b.targetId,
     )?.name || b.targetId;
+  const actionTargetName = (b: Binding) => {
+    const name = targetName(b);
+    const duplicate = bindings.data?.some(
+      (other) => other.id !== b.id && targetName(other) === name,
+    );
+    return duplicate
+      ? `${name}（${b.targetKind === "collections" ? "集合" : "配置"} ${b.targetId}）`
+      : name;
+  };
+  const templateName = (b: Binding) =>
+    query.data?.find((template) => template.id === b.templateId)?.name ||
+    b.templateId;
   const catalogTabs = [
     {
       key: "library",
@@ -669,8 +681,7 @@ export function TemplatesPage({ admin = false }: { admin?: boolean }) {
                     width: 206,
                     render: (_, b) => (
                       <span className="template-binding-name block wrap-anywhere">
-                        {query.data?.find((t) => t.id === b.templateId)?.name ||
-                          b.templateId}
+                        {templateName(b)}
                       </span>
                     ),
                   },
@@ -697,23 +708,32 @@ export function TemplatesPage({ admin = false }: { admin?: boolean }) {
                           独立维护
                         </span>
                       ) : (
-                        <ActionButton
-                          aria-label={`${b.mode === "follow" ? "检查更新" : "查看固定版本"} ${targetName(b)}`}
-                          leadingIcon={<RotateCw aria-hidden="true" />}
-                          onClick={() => {
-                            setChecking(b);
-                            setUpdateEdited(false);
-                            setUpdateVersion(undefined);
-                            setUpdateBindings(b.bindings || {});
-                            inspect.reset();
-                            apply.reset();
-                            inspectUpdate(b, b.bindings);
-                          }}
-                          variant="outline"
-                          size="sm"
+                        <TableRowActions
+                          name={`${actionTargetName(b)} 使用 ${templateName(b)}`}
+                          className={
+                            actionTargetName(b) !== targetName(b)
+                              ? "[&>.table-row-action-target]:block"
+                              : undefined
+                          }
                         >
-                          {b.mode === "follow" ? "检查更新" : "查看固定版本"}
-                        </ActionButton>
+                          <ActionButton
+                            aria-label={`${b.mode === "follow" ? "检查更新" : "查看固定版本"} ${actionTargetName(b)}`}
+                            leadingIcon={<RotateCw aria-hidden="true" />}
+                            onClick={() => {
+                              setChecking(b);
+                              setUpdateEdited(false);
+                              setUpdateVersion(undefined);
+                              setUpdateBindings(b.bindings || {});
+                              inspect.reset();
+                              apply.reset();
+                              inspectUpdate(b, b.bindings);
+                            }}
+                            variant="outline"
+                            size="sm"
+                          >
+                            {b.mode === "follow" ? "检查更新" : "查看固定版本"}
+                          </ActionButton>
+                        </TableRowActions>
                       ),
                   },
                 ]}

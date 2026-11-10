@@ -123,16 +123,25 @@ for (const width of [1440, 390]) for (const [route, title] of routes) {
           expect(await read(page.request, "/me/template-bindings")).toHaveLength(1);
           await expect(content.getByText(names.template, { exact: true })).toBeVisible();
           await inventory.capture("my-bindings", "populated", "One real follow-mode binding on the owned collection; no update or publication performed");
+          const row = content.getByRole("row").filter({ has: page.getByRole("button", { name: `检查更新 ${names.collection}`, exact: true }) });
+          const actions = row.getByRole("group", { name: `${names.collection} 使用 ${names.template} 的操作`, exact: true });
+          const action = actions.getByRole("button", { name: `检查更新 ${names.collection}`, exact: true });
           if (width === 390) {
             const viewport = content.getByRole("region", { name: "表格滚动区域", exact: true });
-            const row = content.getByRole("row").filter({ has: page.getByRole("button", { name: `检查更新 ${names.collection}`, exact: true }) });
-            const action = row.getByRole("button", { name: `检查更新 ${names.collection}`, exact: true });
             const mode = row.getByRole("cell", { name: "跟随版本", exact: true });
             const version = row.getByRole("cell", { name: "v1", exact: true });
-            await inventory.wheelColumns(viewport, [mode, version, action]);
+            await inventory.wheelColumns(viewport, [mode, version]);
             await inventory.inView(viewport.getByRole("columnheader", { name: "当前版本", exact: true }));
-            await inventory.capture("my-bindings-actions", "populated", "Real horizontal wheel reveals unchanged follow mode, applied v1 and named Check Update action; no inspection/update request activated");
-            inventory.interactions.push("Template reference table: real horizontal wheel and full mode/version/action geometry; no check-update request or mutation");
+            await inventory.capture("my-bindings-version", "populated", "Real horizontal wheel reveals unchanged follow mode and applied v1");
+            await inventory.wheelColumns(viewport, [actions]);
+            await inventory.inView(actions.getByText(`${names.collection} 使用 ${names.template}`, { exact: true }));
+            await inventory.inView(action);
+            await inventory.capture("my-bindings-actions", "populated", "Real horizontal wheel reveals full target and template context beside Check Update; no inspection/update request activated");
+            inventory.interactions.push("Template reference table: real horizontal wheel, full mode/version then full target/template/action geometry; no check-update request or mutation");
+          } else {
+            await inventory.inView(row.getByText(names.collection, { exact: true }));
+            await inventory.inView(row.getByText(names.template, { exact: true }));
+            await inventory.inView(action);
           }
           break;
         }

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-// Real TemplatesPage/Ant controls; only ResizeObserver/layout boundaries are fake.
+// Real TemplatesPage controls; only ResizeObserver/layout boundaries are fake.
 // These tests establish scroll/focus ownership, not actual browser fit or paint.
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
@@ -9,6 +9,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { TemplatesPage } from "./Templates";
 
 let viewportWidth = 900;
+let contextWidth = 160;
+let contentWidth = 650;
 const observers: {
   callback: ResizeObserverCallback;
   targets: Set<Element>;
@@ -29,6 +31,8 @@ const rect = (left: number, width: number) =>
 
 beforeEach(() => {
   viewportWidth = 900;
+  contextWidth = 160;
+  contentWidth = 650;
   observers.length = 0;
   Object.defineProperty(window, "matchMedia", {
     configurable: true,
@@ -70,8 +74,15 @@ beforeEach(() => {
         this.matches('.template-bindings-table [data-slot="table-container"]')
       )
         return rect(33, viewportWidth);
-      if (this.matches(".template-bindings-table table")) return rect(33, 650);
+      if (this.matches(".template-bindings-table table"))
+        return rect(33, contentWidth);
       if (this.matches(".template-binding-identity")) return rect(33, 104);
+      if (this.matches(".template-binding-action .table-row-actions")) {
+        const viewport = this.closest<HTMLElement>(
+          '[data-slot="table-container"]',
+        )!;
+        return rect(669 - contextWidth - viewport.scrollLeft, contextWidth);
+      }
       if (this.matches(".template-binding-action button")) {
         const viewport = this.closest<HTMLElement>(
           '[data-slot="table-container"]',
@@ -95,7 +106,7 @@ beforeEach(() => {
       return this.matches(
         '.template-bindings-table [data-slot="table-container"]',
       )
-        ? 650
+        ? contentWidth
         : 0;
     },
   );
@@ -248,4 +259,23 @@ it("does not move the table or steal focus when resize belongs to an unfocused a
   expect(view.viewport.scrollTop).toBe(19);
   expect(document.activeElement).toBe(tab);
   expect(focus).not.toHaveBeenCalled();
+});
+
+it("reveals the full wrapped action identity on resize even when its button already fits", async () => {
+  const view = await openLoadedMine();
+  act(() => view.action.focus());
+  const focus = vi.spyOn(view.action, "focus");
+  const pageScroll = vi.spyOn(window, "scrollTo").mockImplementation(() => {});
+  contextWidth = 320;
+  contentWidth = 900;
+  view.viewport.scrollLeft = 350;
+  view.viewport.scrollTop = 27;
+  resize(view.viewport, 390);
+  const context = view.action.closest(".table-row-actions")!;
+  expect(context.getBoundingClientRect().left).toBeGreaterThanOrEqual(37);
+  expect(context.getBoundingClientRect().right).toBeLessThanOrEqual(419);
+  expect(document.activeElement).toBe(view.action);
+  expect(view.viewport.scrollTop).toBe(27);
+  expect(focus).not.toHaveBeenCalled();
+  expect(pageScroll).not.toHaveBeenCalled();
 });

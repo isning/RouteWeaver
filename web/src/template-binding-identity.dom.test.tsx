@@ -50,9 +50,17 @@ const cases = [
   ["collections", "pinned"],
 ] as const;
 
-it.each(cases)(
-  "keeps %s/%s row identity through dismissal, review and explicit apply",
-  async (kind, mode) => {
+it.each(
+  cases.flatMap(
+    ([kind, mode]) =>
+      [
+        [kind, mode, false],
+        [kind, mode, true],
+      ] as const,
+  ),
+)(
+  "keeps %s/%s row identity (duplicate names: %s) through dismissal, review and explicit apply",
+  async (kind, mode, duplicateNames) => {
     const rows = cases.map(([targetKind, rowMode], index) => ({
       id: `binding-${index}`,
       targetId: `target-${index}`,
@@ -60,7 +68,9 @@ it.each(cases)(
       mode: rowMode,
       templateId: targetKind,
       appliedVersion: 1,
-      name: `SharedLongUnbrokenTargetPrefixForRecognition-${index === 0 ? "Alpha" : index === 1 ? "Beta" : index === 2 ? "Gamma" : "Delta"}`,
+      name: duplicateNames
+        ? "同名的长期维护配置与集合"
+        : `SharedLongUnbrokenTargetPrefixForRecognition-${index === 0 ? "Alpha" : index === 1 ? "Beta" : index === 2 ? "Gamma" : "Delta"}`,
       bindings: { endpoints: {}, resources: {} },
       updatedAt: "2026-10-24T00:00:00Z",
     }));
@@ -157,13 +167,28 @@ it.each(cases)(
     );
     const user = userEvent.setup();
     await user.click(await screen.findByRole("tab", { name: "我的引用" }));
+    const actionTarget = (row: typeof selected) =>
+      `${row.name}${duplicateNames ? `（${row.targetKind === "collections" ? "集合" : "配置"} ${row.targetId}）` : ""}`;
+    const contextName = (row: typeof selected) =>
+      `${actionTarget(row)} 使用 同名模板`;
     const action = (row: typeof selected) =>
-      within(screen.getByText(row.name).closest("tr")!).getByRole("button", {
+      within(
+        screen.getByRole("group", { name: `${contextName(row)} 的操作` }),
+      ).getByRole("button", {
         name: row.mode === "follow" ? /检查更新/ : /查看固定版本/,
       });
-    await screen.findByText(selected.name);
+    await screen.findAllByText(selected.name);
+    const context = screen.getByRole("group", {
+      name: `${contextName(selected)} 的操作`,
+    });
+    expect(within(context).getByText(contextName(selected))).toBeTruthy();
+    expect(
+      within(context).getByRole("button", {
+        name: `${mode === "follow" ? "检查更新" : "查看固定版本"} ${actionTarget(selected)}`,
+      }),
+    ).toBe(action(selected));
     expect(action(other).getAttribute("aria-label")).toBe(
-      `${other.mode === "follow" ? "检查更新" : "查看固定版本"} ${other.name}`,
+      `${other.mode === "follow" ? "检查更新" : "查看固定版本"} ${actionTarget(other)}`,
     );
     await user.click(action(other));
     await screen.findByText(
@@ -187,7 +212,7 @@ it.each(cases)(
     await user.click(closeActions[0] as HTMLElement);
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(action(selected).getAttribute("aria-label")).toBe(
-      `${mode === "follow" ? "检查更新" : "查看固定版本"} ${selected.name}`,
+      `${mode === "follow" ? "检查更新" : "查看固定版本"} ${actionTarget(selected)}`,
     );
     await user.click(action(selected));
     const dialog = await screen.findByRole("dialog", {
