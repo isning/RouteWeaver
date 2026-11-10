@@ -780,6 +780,26 @@ function notificationThresholdRules(max: number) {
   } }];
 }
 
+// The restart path must not replace a recoverable draft with an incomplete
+// wire snapshot. This is a bounded recovery-read guard, not all API validation.
+function completeRestartSettings(value: unknown): value is Settings {
+  const record = (v: unknown): v is Record<string, unknown> => !!v && typeof v === "object" && !Array.isArray(v);
+  const strings = (v: unknown): v is string[] => Array.isArray(v) && v.every((item) => typeof item === "string");
+  const integer = (v: unknown): v is number => typeof v === "number" && Number.isSafeInteger(v);
+  if (!record(value) || !record(value.email) || !record(value.webhook)) return false;
+  const email = value.email, webhook = value.webhook;
+  return integer(value.revision) && value.revision >= 0 &&
+    integer(value.repeatHours) && value.repeatHours >= 1 &&
+    ["inApp", "smtpPasswordSet", "webhookSecretSet"].every((key) => typeof value[key] === "boolean") &&
+    ["quotaPercent", "expiryHours", "providerRemainingPercent"].every((key) =>
+      Array.isArray(value[key]) && value[key].every((item: unknown) => integer(item) && item >= 1)) &&
+    typeof email.enabled === "boolean" && typeof email.automatic === "boolean" &&
+    integer(email.port) && email.port >= 1 &&
+    ["host", "tlsMode", "username", "from"].every((key) => typeof email[key] === "string") &&
+    strings(email.to) && typeof webhook.enabled === "boolean" && typeof webhook.automatic === "boolean" &&
+    typeof webhook.url === "string";
+}
+
 function SettingsForm({ initial, saved, savedReady }: { initial: Settings; saved: Settings; savedReady: boolean }) {
   const [form] = useForm();
   const saveConsequenceId = useId();
@@ -890,6 +910,10 @@ function SettingsForm({ initial, saved, savedReady }: { initial: Settings; saved
   }, [save.error]);
   const mounted = useRef(true);
   const testDecision = useRef<ConfirmationHandle | null>(null);
+  const recoveryTask = useRef<object | null>(null);
+  const recoveryDecision = useRef<ConfirmationHandle | null>(null);
+  const [recovering, setRecovering] = useState(false);
+  const [recoveryFailed, setRecoveryFailed] = useState(false);
   const latestTestContext = useRef({ saved, savedReady, saving: save.isPending });
   latestTestContext.current = { saved, savedReady, saving: save.isPending };
   useLayoutEffect(() => {
@@ -898,6 +922,9 @@ function SettingsForm({ initial, saved, savedReady }: { initial: Settings; saved
       mounted.current = false;
       testDecision.current?.close();
       testDecision.current = null;
+      recoveryTask.current = null;
+      recoveryDecision.current?.close();
+      recoveryDecision.current = null;
     };
   }, []);
   const changedTestTarget = "已保存的通知设置已变更。请取消并重新确认发送目标。";
@@ -934,7 +961,7 @@ function SettingsForm({ initial, saved, savedReady }: { initial: Settings; saved
     },
   });
   const sendTest = (channel: string) => {
-    if (!mounted.current || testDecision.current || test.isPending || saving.current) return;
+    if (!mounted.current || testDecision.current || test.isPending || saving.current || recoveryTask.current) return;
     const external = channel !== "in-app";
     const context = latestTestContext.current;
     if (external && !context.savedReady) return;
@@ -978,6 +1005,87 @@ function SettingsForm({ initial, saved, savedReady }: { initial: Settings; saved
     });
     testDecision.current = handle;
   };
+  const saveConflict = save.error instanceof APIError && save.error.status === 409;
+  const loadLatestSettings = async () => {
+    if (!mounted.current || recoveryTask.current || saving.current || testDecision.current || test.isPending || !saveConflict) return;
+    const task = {};
+    recoveryTask.current = task;
+    setRecovering(true);
+    setRecoveryFailed(false);
+    const ownsTask = () => mounted.current && recoveryTask.current === task;
+    const release = () => {
+      if (!ownsTask()) return;
+      recoveryTask.current = null;
+      recoveryDecision.current = null;
+      setRecovering(false);
+    };
+    try {
+      // A pending older read must not satisfy this explicit recovery request.
+      await client.cancelQueries({ queryKey: ["notification-settings"], exact: true });
+      if (!ownsTask()) return;
+      await client.fetchQuery({
+        queryKey: ["notification-settings"],
+        queryFn: async ({ signal }) => {
+          const value = await request<unknown>("/admin/notification-settings", { signal });
+          if (!completeRestartSettings(value)) throw new Error("最新设置不完整，无法替换当前修改。请重试载入。");
+          return value;
+        },
+        staleTime: 0,
+      });
+      if (!ownsTask()) return;
+      // Capture the cache's structurally shared identity after the fresh read;
+      // fetchQuery's returned object need not be the retained cache object.
+      const readback = client.getQueryState<Settings>(["notification-settings"]);
+      if (readback?.status !== "success" || readback.fetchStatus !== "idle" || !completeRestartSettings(readback.data)) {
+        setRecoveryFailed(true);
+        release();
+        return;
+      }
+      const reviewed = readback.data;
+      // Prepare every conversion before presenting the destructive local choice.
+      // A malformed read or conversion failure must never reach resetFields.
+      const replacement = {
+        ...reviewed,
+        quotaPercent: reviewed.quotaPercent.map(String),
+        expiryHours: reviewed.expiryHours.map(String),
+        providerRemainingPercent: reviewed.providerRemainingPercent.map(String),
+        smtpPassword: "",
+        webhookSecret: "",
+        clearSMTP: false,
+        clearWebhook: false,
+      };
+      let invalidated = false;
+      recoveryDecision.current = confirm({
+        title: "用最新设置替换当前修改？",
+        description: "这会替换当前未保存的修改，并清除本次输入的替换密码、签名密钥及清除选择。服务器上已保存的设置不会改变；如需修改，请载入后重新编辑并保存。",
+        confirmLabel: "替换当前修改",
+        cancelLabel: "继续编辑",
+        onCancel: release,
+        onClosed: release,
+        onConfirm: () => {
+          if (!ownsTask()) throw new Error("此通知设置任务已结束，请重新打开后再试。");
+          const current = client.getQueryState<Settings>(["notification-settings"]);
+          if (invalidated || saving.current || current?.status !== "success" || current.fetchStatus !== "idle" ||
+            current.data !== reviewed || current.data.revision !== reviewed.revision) {
+            invalidated = true;
+            throw new Error("最新设置已再次变化或尚未核对完成。请继续编辑，再重新载入最新设置。");
+          }
+          // This is a local restart, not a merge or a save. Secret values are
+          // never read back; all unsaved replacement/removal intentions end.
+          form.resetFields();
+          form.setFieldsValue(replacement);
+          setBaseline(reviewed);
+          setDirty(false);
+          save.reset();
+          release();
+        },
+      });
+    } catch {
+      if (!ownsTask()) return;
+      setRecoveryFailed(true);
+      release();
+    }
+  };
   return (
     <Section
       title="提醒与发送渠道"
@@ -1015,7 +1123,7 @@ function SettingsForm({ initial, saved, savedReady }: { initial: Settings; saved
           if (saveButton.current?.isSameNode(event.target)) saveFocusOwner.current = null;
         }}
         onFinish={(values) => {
-          if (saving.current) return;
+          if (saving.current || recoveryTask.current) return;
           const task = {};
           saving.current = task;
           failedSave.current = null;
@@ -1289,7 +1397,21 @@ function SettingsForm({ initial, saved, savedReady }: { initial: Settings; saved
           ))}
         </Accordion>
         <div ref={saveDecision} role="group" aria-label="保存通知设置" className="flex flex-wrap items-center justify-end gap-2 border-t pt-4">
-          {save.error && <div className="w-full"><ErrorNotice error={save.error} /></div>}
+          {saveConflict ? (
+            <div className="w-full space-y-3">
+              <Notice tone="warning">通知设置已由其他操作更新，当前修改尚未保存。</Notice>
+              {recoveryFailed && <p role="status">未能载入最新设置，当前修改未变。请重试载入。</p>}
+              <ActionButton variant="outline" pending={recovering} onClick={() => void loadLatestSettings()}>
+                载入最新设置
+              </ActionButton>
+              {recovering && <ActionButton variant="outline" onClick={() => {
+                if (!recoveryTask.current || recoveryDecision.current) return;
+                recoveryTask.current = null;
+                setRecovering(false);
+                void client.cancelQueries({ queryKey: ["notification-settings"], exact: true });
+              }}>取消载入</ActionButton>}
+            </div>
+          ) : save.error && <div className="w-full"><ErrorNotice error={save.error} /></div>}
           <p id={saveConsequenceId} className="w-full text-sm text-muted-foreground">
             保存会取消此前排队或等待重试的外部发送；已开始发送的请求仍可能完成。
           </p>
@@ -1302,6 +1424,7 @@ function SettingsForm({ initial, saved, savedReady }: { initial: Settings; saved
             type="submit"
             aria-describedby={saveConsequenceId}
             pending={save.isPending}
+            disabled={recovering}
             variant="default"
           >
             保存通知设置
