@@ -20,7 +20,7 @@ All rows below still require a complete state and rendered-layout review. Entrie
 | Subscription sources | Import and accept owned connection options | Not yet reviewed in this pass |
 | Collections | Combine sources without silently changing their meaning | Not yet reviewed in this pass |
 | Rule resources | Inspect and accept owned rule versions | Not yet reviewed in this pass |
-| Templates and presets | Reuse configuration and review updates | Publication-target recovery reviewed; remaining extraction states open |
+| Templates and presets | Reuse configuration and review updates | Publication-target and extraction recovery reviewed; rendered states open |
 | Inbox | Read account messages and recover acknowledgement failures | Source inspection only |
 | Published routes | Offer a versioned usable entry and route | Not yet reviewed in this pass |
 | Forwarding paths | Select explicit ordered managed/external hops | Source and bounded DOM review; first correction below |
@@ -76,13 +76,20 @@ This pass inspected `DataTable`, `PageNavigation`, `ResourceToolbar`, `AppForm`/
 - Defect: when a catalog refresh removed the selected template, publication re-resolved that selection as absent and generated a new template ID. The same reviewed draft could silently change from updating an existing template to creating another one.
 - Decision: retain the explicit selected ID and readable identity. An unresolved or missing existing target blocks publishing, preserves the reviewed draft, and exposes catalog recovery. Creating a new template remains an explicit selection.
 - Public-seam evidence: disappearance regression fails before the fix; missing and failed-refresh recovery cases preserve inputs and publish only the original ID/version after authoritative recovery. Four focused template suites pass (49 tests), strict TypeScript passes, and an independent source review found no blocking issue.
-- Still open: extraction-source loading/error presentation; no whole-page or visual acceptance claim.
+- No whole-page or visual acceptance claim.
 
 ### Keep an emptied JSON draft editable
 
 - Defect: the extracted shared-structure textarea was rendered only while its string was truthy. Select-all/delete removed the editor and its focus, preventing ordinary replacement typing.
 - Decision: distinguish not-yet-extracted (`null`) from an intentionally empty editing draft. Preserve the same editor and review reset while empty; publishing remains blocked until nonempty valid content is reviewed. Explicit source, type or publication-location changes still reset extraction.
 - Public-seam evidence: new regression fails before the change, then verifies retained DOM/focus, empty/invalid input rejection before HTTP, correction and explicit re-review, plus source/type reset. Twenty-six surrounding tests and strict TypeScript pass.
+
+### Distinguish unavailable extraction sources from empty catalogs
+
+- Defect: the publication dialog received only `data || []` for profile/collection sources. Read failures appeared as empty choices without an explanation or recovery action.
+- Decision: preserve the full query state for the active template kind. Loading, paused, failure, confirmed empty and missing selected identity are separate. Extraction requires a confirmed available source; an already extracted reviewed draft remains independently publishable when a source list fails. Retry keeps the entered name, JSON and review.
+- Public-seam evidence: failed-source regression first fails, then six new catalog cases cover retry, both template kinds, retained reviewed drafts, missing source, pending versus empty and paused/resumed reads. Thirty-two surrounding tests pass; independent review re-ran all six new cases successfully. TypeScript and build pass.
+- Boundary: shared `api.list` historically normalizes wire `null` to `[]`; this change does not redefine that decoder. Pending initial reads show a loading state, not an ineffective retry that would reuse the same pending request.
 
 ## Rendered-evidence follow-up
 

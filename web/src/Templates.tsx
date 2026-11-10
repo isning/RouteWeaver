@@ -776,8 +776,8 @@ export function TemplatesPage({ admin = false }: { admin?: boolean }) {
       {publishing && (
         <PublishTemplate
           templates={query}
-          profiles={profiles.data || []}
-          collections={collections.data || []}
+          profiles={profiles}
+          collections={collections}
           onClose={() => setPublishing(false)}
         />
       )}
@@ -1617,14 +1617,15 @@ function PublishTemplate({
   onClose,
 }: {
   templates: TemplateCatalog<Template>;
-  profiles: Profile[];
-  collections: Collection[];
+  profiles: TemplateCatalog<Profile>;
+  collections: TemplateCatalog<Collection>;
   onClose: () => void;
 }) {
   const [kind, setKind] = useState<Kind>("processing-preset");
   const [existing, setExisting] = useState<string>();
   const [selectedIdentity, setSelectedIdentity] = useState<Pick<Template, "name" | "version">>();
   const [targetId, setTargetId] = useState<string>();
+  const [selectedSourceName, setSelectedSourceName] = useState<string>();
   const [name, setName] = useState("");
   const [spec, setSpec] = useState<string | null>(null);
   const [reviewed, setReviewed] = useState(false);
@@ -1654,6 +1655,12 @@ function PublishTemplate({
   const nextVersion = existing
     ? (selected?.version ?? selectedIdentity?.version ?? 0) + 1
     : 1;
+  const sources: TemplateCatalog<Profile | Collection> =
+    kind === "processing-preset" ? collections : profiles;
+  const sourceLabel = kind === "processing-preset" ? "节点集合" : "客户端配置";
+  const source = sources.data?.find((item) => item.id === targetId);
+  const sourceReady = catalogReady(sources) && !!source;
+  const missingSource = !!targetId && catalogReady(sources) && !source;
   const sanitize = useMutation({
     mutationFn: async ({ version, kind, targetId }: {
       version: number;
@@ -1792,6 +1799,7 @@ function PublishTemplate({
                 setKind(t?.kind || "processing-preset");
                 setName(t?.name || "");
                 setTargetId(undefined);
+                setSelectedSourceName(undefined);
                 setSpec(null);
                 setReviewed(false);
               }}
@@ -1835,6 +1843,7 @@ function PublishTemplate({
                   setExtractionError(null);
                   setKind(value);
                   setTargetId(undefined);
+                  setSelectedSourceName(undefined);
                   setSpec(null);
                   setReviewed(false);
                 }}
@@ -1846,25 +1855,59 @@ function PublishTemplate({
             <ChoiceSelect
               aria-label="从自己的已保存配置提取"
               value={targetId}
-              options={(kind === "processing-preset"
-                ? collections
-                : profiles
-              ).map((t) => ({ value: t.id, label: t.name }))}
+              options={[
+                ...(sources.data || []).map((item) => ({
+                  value: item.id,
+                  label: item.name,
+                })),
+                ...(targetId && !source
+                  ? [{
+                      value: targetId,
+                      label: (
+                        <Metadata className="flex-col items-start">
+                          <span>{selectedSourceName || targetId}</span>
+                          <span className="text-muted-foreground">
+                            {catalogReady(sources) ? "已不可用" : "暂不可用"}
+                          </span>
+                        </Metadata>
+                      ),
+                      disabled: true,
+                    }]
+                  : []),
+              ]}
               onValueChange={(v) => {
                 if (v === undefined || submitting.current) return;
                 revision.current++;
                 setExtractionError(null);
                 setTargetId(v);
+                setSelectedSourceName(
+                  sources.data?.find((item) => item.id === v)?.name,
+                );
                 setSpec(null);
                 setReviewed(false);
               }}
-              disabled={publish.isPending || !open}
+              disabled={publish.isPending || !open || !catalogReady(sources)}
             />
           </label>
+          <TemplateCatalogNotice query={sources} label={`${sourceLabel}列表`} />
+          {catalogReady(sources) && !sources.data?.length && !targetId && (
+            <p role="status">暂无已保存的{sourceLabel}，请先创建并保存。</p>
+          )}
+          {missingSource && (
+            <Notice tone="warning">
+              <p>所选{sourceLabel}已不可用。重新加载列表，或选择其他已保存配置。</p>
+              <ActionButton
+                variant="link"
+                onClick={() => void sources.refetch()}
+              >
+                重新加载{sourceLabel}
+              </ActionButton>
+            </Notice>
+          )}
           <ActionButton
-            disabled={!targetId || publish.isPending || !open}
+            disabled={!sourceReady || publish.isPending || !open}
             onClick={() => {
-              if (!active.current || !open || submitting.current || extracting.current !== null || !targetId) return;
+              if (!active.current || !open || submitting.current || extracting.current !== null || !targetId || !sourceReady) return;
               const version = ++revision.current;
               extracting.current = version;
               setExtractionError(null);
