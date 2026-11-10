@@ -78,6 +78,7 @@ export function StepsEditor({
   value,
   onChange,
   label = "处理步骤",
+  showHeading = true,
   emptyText = "未添加处理步骤",
   portDrafts,
   onPortInput,
@@ -91,6 +92,8 @@ export function StepsEditor({
   value: PipelineStep[];
   onChange: (v: PipelineStep[]) => void;
   label?: string;
+  /** Omit only when the surrounding disclosure already names this group. */
+  showHeading?: boolean;
   /** Context-specific empty state; null keeps the step controls without prose. */
   emptyText?: string | null;
 }) {
@@ -103,7 +106,7 @@ export function StepsEditor({
   return (
     <div className="steps-editor space-y-4" role="group" aria-label={label}>
       <div className="section-heading compact mb-4 flex flex-wrap items-center justify-between gap-3 [&>h3]:font-semibold">
-        <h3>{label}</h3>
+        {showHeading && <h3>{label}</h3>}
         <ChoiceSelect
           aria-label="添加处理步骤"
           placeholder="添加处理步骤"

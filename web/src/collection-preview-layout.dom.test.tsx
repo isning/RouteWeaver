@@ -238,3 +238,40 @@ it("resets a removed selection without stealing editor focus or scrolling, even 
   expect(document.activeElement).toBe(field);
   expect(scroll).not.toHaveBeenCalled();
 });
+
+it("shows one total for each intermediate stage while retaining final totals, paging and step-input changes", async () => {
+  const endpoints = Array.from({ length: 9 }, (_, index) => ({
+    id: `node-${index}`, name: `Node ${index}`, region: "DE",
+    connection: { protocol: "socks", host: "proxy.example.test", port: 1080 },
+  }));
+  const recipe: Collection = {
+    ...collection,
+    steps: [{ id: "deduplicate", kind: "deduplicate", enabled: true }],
+  };
+  render(<CollectionPreview collection={recipe} sources={sources} value={{
+    endpoints: endpoints.slice(0, 1),
+    stages: [
+      { scope: "raw", endpoints },
+      { scope: "aggregate", stepId: "deduplicate", endpoints: endpoints.slice(0, 1), comparison: "step-input", removedIds: ["removed"] },
+    ],
+  }} />);
+  const user = userEvent.setup();
+  expect(within(screen.getByRole("tabpanel")).getByText(/已加载/).textContent).toBe("已加载 1 项");
+  await user.click(screen.getByRole("tab", { name: "原始输入" }));
+  let panel = within(screen.getByRole("tabpanel"));
+  expect(panel.getByText("9 个节点")).toBeTruthy();
+  expect(panel.queryByText(/已加载/)).toBeNull();
+  expect(panel.getByText("第 1 / 2 页")).toBeTruthy();
+  await user.click(panel.getByRole("button", { name: "下一页" }));
+  expect(panel.getByText("Node 8")).toBeTruthy();
+  expect(panel.getByText("第 2 / 2 页")).toBeTruthy();
+  expect(panel.getByText("9 个节点")).toBeTruthy();
+  await user.click(screen.getByRole("tab", { name: "合并后 第 1 步：去除重复连接" }));
+  panel = within(screen.getByRole("tabpanel"));
+  for (const fact of ["1 个节点", "相对此步骤输入", "新增 0 个", "移除 1 个", "修改 0 个"]) {
+    expect(panel.getByText(fact)).toBeTruthy();
+  }
+  expect(panel.queryByText(/已加载/)).toBeNull();
+  await user.click(screen.getByRole("tab", { name: "最终结果" }));
+  expect(within(screen.getByRole("tabpanel")).getByText(/已加载/).textContent).toBe("已加载 1 项");
+});

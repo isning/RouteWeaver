@@ -1569,6 +1569,7 @@ export function CollectionsPage() {
                       onPortInput={(id, raw) => editPort(source.sourceId, id, raw)}
                       portFocus={portFocus.source === source.sourceId ? portFocus : undefined}
                       label="来源处理"
+                      showHeading={false}
                       emptyText="未添加处理步骤"
                       onChange={(steps) =>
                         changeDraft({

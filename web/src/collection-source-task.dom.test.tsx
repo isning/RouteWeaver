@@ -394,6 +394,10 @@ it(
     expect(chevron.classList.contains("rotate-90")).toBe(true);
     expect(chevron.classList.contains("rotate-0")).toBe(false);
     const region = document.getElementById(two.getAttribute("aria-controls")!)!;
+    expect(within(region).queryByRole("heading", { name: "来源处理" })).toBeNull();
+    expect(within(region).getByRole("group", { name: "来源处理" })).toBeTruthy();
+    expect(within(region).getByRole("combobox", { name: "添加处理步骤" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "合并后处理" })).toBeTruthy();
     expect(
       within(region)
         .getByRole("switch", { name: "启用步骤 1" })

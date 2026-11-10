@@ -78,10 +78,11 @@ export function CollectionPreview({
       fallback.focus({ preventScroll: true });
     }
   });
-  const table = (nodes: Preview["endpoints"]) => (
+  const table = (nodes: Preview["endpoints"], showSummary = true) => (
     <DataTable
       rowKey="id"
       rows={nodes || []}
+      summary={showSummary ? undefined : null}
       columns={[
         { title: "名称", accessor: "name" },
         {
@@ -167,7 +168,7 @@ export function CollectionPreview({
                     </div>
                   )}
                 </div>
-                {table(stage.endpoints)}
+                {table(stage.endpoints, false)}
               </>
             ),
           })),
