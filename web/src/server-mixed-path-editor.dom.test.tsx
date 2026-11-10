@@ -155,8 +155,10 @@ it("refuses to remove an opaque program from the legacy ordered workspace", asyn
   mountEditor(initial, inventory);
   const user = userEvent.setup();
   expect(screen.getByRole("list", { name: "代理链" })).toBeTruthy();
-  await user.click(screen.getByRole("button", { name: "移除第 1 跳" }));
-  expect(await screen.findByText("此服务器仍保存连接器或独立设置，请先在转发设置中处理，再移除服务器。")).toBeTruthy();
+  await user.click(screen.getByRole("button", { name: "第 1 跳更多操作" }));
+  expect(screen.getByRole("menuitem", { name: "移除第 1 跳" }).getAttribute("aria-disabled")).toBe("true");
+  expect(screen.getByText("此服务器仍保存连接器或独立设置，请先在转发设置中处理，再移除服务器。")).toBeTruthy();
+  await user.keyboard("{Escape}");
   expect(screen.getByRole("region", { name: "路径摘要" }).textContent).toContain("a listener → 目标");
   await user.click(screen.getByRole("button", { name: "高级：完整服务端意图" }));
   await user.click(screen.getByRole("button", { name: "编辑服务端意图" }));
@@ -177,4 +179,19 @@ it("returns from connection editing to the expanded hop and its parameter button
   await waitFor(() => expect(screen.queryByRole("dialog", { name: "编辑连接参数" })).toBeNull());
   await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("button", { name: "编辑第 2 跳外部代理连接参数" })));
   expect(screen.getByRole("button", { name: "配置第 2 跳 proxy-x" }).getAttribute("aria-expanded")).toBe("true");
+});
+
+it("uses the same collapsed chain overview for a legacy managed-only path without external proxies", async () => {
+  const { initial, inventory } = mixedFixture();
+  delete initial.ir.programs[0].defaultAction;
+  delete initial.ir.programs[0].connectors;
+  mountEditor(initial, inventory);
+  const user = userEvent.setup();
+  const hop = screen.getByRole("button", { name: "配置第 1 跳 a listener" });
+  expect(hop.getAttribute("aria-expanded")).toBe("false");
+  expect(screen.queryByRole("combobox", { name: "第 1 跳端点" })).toBeNull();
+  await user.click(hop);
+  expect(screen.getByRole("combobox", { name: "第 1 跳端点" }).textContent).toContain("a listener");
+  await user.click(screen.getByRole("button", { name: "第 1 跳更多操作" }));
+  expect(screen.getByRole("menuitem", { name: "在第 1 跳后插入下一跳" })).toBeTruthy();
 });

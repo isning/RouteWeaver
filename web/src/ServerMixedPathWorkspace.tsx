@@ -45,6 +45,7 @@ export function ServerMixedPathWorkspace({
   const addPicker = useRef<HTMLLIElement>(null);
   const addControl = useRef<HTMLButtonElement>(null);
   const sequence = useRef(0);
+  const [addPending, setAddPending] = useState(false);
   const [adding, setAdding] = useState<{ index: number; kind: "managed" | "connector"; connectorId?: string } | null>(null);
   const addOrigin = useRef<HTMLButtonElement | null>(null);
   const cancelledControl = useRef<HTMLElement | null>(null);
@@ -60,8 +61,8 @@ export function ServerMixedPathWorkspace({
     onSelectionChange();
   };
   useLayoutEffect(() => {
-    onPendingChange("ordered-add", !!adding);
-  }, [adding, onPendingChange]);
+    onPendingChange("ordered-add", !!adding || addPending);
+  }, [adding, addPending, onPendingChange]);
   useLayoutEffect(() => {
     if (adding && document.activeElement === addOrigin.current)
       addPicker.current?.querySelector<HTMLButtonElement>('[role="combobox"]')?.focus();
@@ -100,7 +101,7 @@ export function ServerMixedPathWorkspace({
     const request = ++sequence.current;
     const accepted = await onChangePath(next);
     if (!accepted && pendingFocus.current === owner) pendingFocus.current = null;
-    if (accepted && request === sequence.current) setAdding(null);
+    if (accepted && request === sequence.current) { setAdding(null); setAddPending(false); }
   };
   const insert = (index: number, hop: OrderedServerHop) => [...hops.slice(0, index), hop, ...hops.slice(index)];
   const replace = (index: number, hop: OrderedServerHop) => hops.map((current, i) => i === index ? hop : current);
@@ -124,6 +125,7 @@ export function ServerMixedPathWorkspace({
     }
     invalidate();
     addOrigin.current = trigger;
+    setAddPending(false);
     onPendingChange("ordered-add", true);
     setAdding({ index, kind: "managed" });
   };
@@ -147,7 +149,7 @@ export function ServerMixedPathWorkspace({
         onSelectionChange={invalidate}
         allowedIds={inventory.endpoints.filter((endpoint) => !changeReason(insert(index, { kind: "managed", endpointId: endpoint.id }))).map((endpoint) => endpoint.id)}
         unavailableReason="此端点不能插入当前位置；同一核心不能重复使用，外部代理也不能转移到另一核心。"
-        onPendingChange={(pending) => onPendingChange("ordered-add", !!adding || pending)}
+        onPendingChange={setAddPending}
         onChange={(endpointId) => {
           const hop: OrderedServerHop = { kind: "managed", endpointId };
           void change(insert(index, hop), addControl.current, hop);
@@ -164,11 +166,13 @@ export function ServerMixedPathWorkspace({
             void change(insert(index, hop), addControl.current, hop);
           }} />
       </label>}
+      {kind === "managed" && !inventory.endpoints.length && <p className="text-sm text-muted-foreground">先在「服务器」中配置监听端点，再编排路径。</p>}
       {kind === "connector" && <p className="text-sm text-muted-foreground">仅显示前一台服务器已配置的外部代理。</p>}
       {adding && <ActionButton variant="ghost" onClick={(event) => {
         cancelledControl.current = event.currentTarget;
         invalidate();
         onPendingChange("ordered-add", false);
+        setAddPending(false);
         setAdding(null);
       }}>取消添加</ActionButton>}
     </li>;

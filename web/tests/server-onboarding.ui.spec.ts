@@ -179,6 +179,9 @@ for (const width of [1440, 390]) {
     await createPath.click();
     const pathEditor = page.getByRole("dialog", { name: "新建转发路径", exact: true });
     await expect(pathEditor).toBeVisible();
+    const configureEntry = pathEditor.getByRole("button", { name: "配置第 1 跳 Setup listener", exact: true });
+    await expect(configureEntry).toHaveAttribute("aria-expanded", "false");
+    await configureEntry.click();
     await expect(pathEditor.getByRole("combobox", { name: "第 1 跳服务器", exact: true })).toHaveText("Setup server");
     await expect(pathEditor.getByRole("combobox", { name: "第 1 跳端点", exact: true })).toContainText("Setup listener");
     await expect(pathEditor.getByRole("region", { name: "路径摘要" })).toContainText("客户端 → Setup listener → 目标");
@@ -216,6 +219,8 @@ for (const width of [1440, 390]) {
     // not a previously saved/applied route or a replayed write.
     await page.goBack();
     await expect(pathEditor).toBeVisible();
+    await expect(configureEntry).toHaveAttribute("aria-expanded", "false");
+    await configureEntry.click();
     await expect(pathEditor.getByRole("combobox", { name: "第 1 跳端点", exact: true })).toContainText("Setup listener");
     await page.goForward();
     discardPath = page.getByRole("alertdialog", { name: "放弃未保存的修改？", exact: true });

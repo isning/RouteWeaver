@@ -202,6 +202,7 @@ it("retains measured geometry and dragging across path updates and view switches
     measured: { width: 185, height: 90 },
   });
   await userEvent.click(screen.getByRole("tab", { name: "顺序编辑" }));
+  await userEvent.click(screen.getByRole("button", { name: /^配置第 2 跳 / }));
   expect(screen.getByRole("combobox", { name: "第 2 跳端点" })).toBeTruthy();
   await userEvent.click(screen.getByRole("tab", { name: "图形编辑" }));
   expect(geometry()[0].measured).toEqual({ width: 185, height: 90 });

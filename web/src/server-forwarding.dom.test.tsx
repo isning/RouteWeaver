@@ -272,21 +272,14 @@ it("explains same-core unavailable endpoint choices at the actual next-hop decis
   const editor = await screen.findByRole("dialog", {
     name: "编辑 Reject draft",
   });
-  const ordering = within(editor).getByRole("group", {
-    name: "第 1 跳顺序操作",
-  });
-  expect(within(ordering).getAllByRole("button")).toHaveLength(3);
+  await user.click(within(editor).getByRole("button", { name: "第 1 跳更多操作" }));
+  const ordering = screen.getByRole("menu", { name: "第 1 跳更多操作" });
+  expect(within(ordering).getAllByRole("menuitem")).toHaveLength(4);
   expect(within(ordering).queryByRole("combobox")).toBeNull();
-  expect(
-    (
-      within(ordering).getByRole("button", {
-        name: "上移第 1 跳",
-      }) as HTMLButtonElement
-    ).disabled,
-  ).toBe(true);
-  expect(
-    within(editor).getByRole("combobox", { name: "第 1 跳服务器" }),
-  ).toBeTruthy();
+  expect(within(ordering).getByRole("menuitem", { name: "上移第 1 跳" }).getAttribute("aria-disabled")).toBe("true");
+  await user.keyboard("{Escape}");
+  await user.click(within(editor).getByRole("button", { name: "配置第 1 跳 FRA listener" }));
+  expect(within(editor).getByRole("combobox", { name: "第 1 跳服务器" })).toBeTruthy();
   await user.click(within(editor).getByRole("button", { name: "添加下一跳" }));
   await user.click(
     within(editor).getByRole("combobox", { name: "第 2 跳服务器" }),
@@ -301,7 +294,7 @@ it("explains same-core unavailable endpoint choices at the actual next-hop decis
   );
   expect(
     within(editor).getByText(
-      "不可选端点的核心已在路径中使用；请选择其他核心的端点。",
+      "此端点不能插入当前位置；同一核心不能重复使用，外部代理也不能转移到另一核心。",
       {},
     ),
   ).toBeTruthy();
@@ -432,6 +425,7 @@ it("retains a newer server choice when an earlier endpoint reveal resolves", asy
   }));
   await user.click(await screen.findByRole("button", { name: "编辑转发路径 Reject draft" }));
   const editor = await screen.findByRole("dialog", { name: "编辑 Reject draft" });
+  await user.click(within(editor).getByRole("button", { name: "配置第 1 跳 FRA listener" }));
   await user.click(within(editor).getByRole("combobox", { name: "第 1 跳端点" }));
   await user.click(screen.getByRole("option", { name: /FRA alternate/ }));
   await waitFor(() => expect(requested).toBe(true));

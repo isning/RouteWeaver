@@ -310,3 +310,10 @@ it("describes collapsed hops with safe identity and retains pending selection fe
   expect(describedText(listener)).toContain("待选择监听端点");
   expect(describedText(listener)).not.toContain("端口 1080");
 });
+
+it("offers a first-listener recovery direction when no endpoints are registered", () => {
+  render(<ServerMixedPathWorkspace programs={[]} inventory={{ hosts: [], instances: [], endpoints: [], deployments: [], links: [] }}
+    schemaVersion="1.0" hops={[]} connectorChoices={[]} onChangePath={async () => false} changeReason={() => undefined}
+    onPendingChange={() => {}} onSelectionChange={() => {}} onEditConnector={() => {}} />);
+  expect(screen.getByText("先在「服务器」中配置监听端点，再编排路径。")).toBeTruthy();
+});

@@ -98,7 +98,7 @@ async function verifyEntryFocus(page: Page, info: TestInfo, surface: Locator) {
     expect(evidence.before, "Selection leaves meaningful focus in the path form").toMatchObject({ meaningful: true });
     expect(evidence.after, "Native Tab continues within the path form").toMatchObject({ meaningful: true });
     expect(evidence.moved, "Native Tab advances to another form control").toBe(true);
-    await expect(surface.getByRole("button", { name: "移除第 1 跳", exact: true })).toBeFocused();
+    await expect(surface.getByRole("button", { name: "第 1 跳更多操作", exact: true })).toBeFocused();
     await page.keyboard.press("Tab");
     const append = surface.getByRole("button", { name: "添加下一跳", exact: true });
     await expect(append).toBeFocused();
@@ -116,7 +116,7 @@ async function verifyEntryFocus(page: Page, info: TestInfo, surface: Locator) {
     await settledTask(surface);
     evidence.afterCancel = await snapshot();
     expect(evidence.afterCancel, "Cancelling an unfinished hop returns meaningful focus to the append action").toMatchObject({ meaningful: true });
-    await expect(surface.getByRole("combobox", { name: "第 1 跳端点", exact: true })).toContainText(names.listener);
+    await expect(surface.getByRole("button", { name: `配置第 1 跳 ${names.listener}`, exact: true })).toHaveAttribute("aria-expanded", "false");
     await expect(surface.getByRole("button", { name: "保存草稿", exact: true })).toBeEnabled();
   } finally {
     evidence.atEnd = await snapshot().catch(() => null);
@@ -298,16 +298,18 @@ for (const width of [1440, 390]) {
     const entryListener = pathEditor.getByRole("combobox", { name: "第 1 跳端点", exact: true });
     const emptyListener = await entryListener.elementHandle();
     expect(emptyListener, "The empty first-hop picker exists before endpoint reveal").not.toBeNull();
-    const selectedListener = pathEditor.getByRole("combobox", { name: "第 1 跳端点", exact: true });
+    const selectedListener = pathEditor.getByRole("button", { name: `配置第 1 跳 ${names.listener}`, exact: true });
     const revealedSelection = page.waitForResponse((response) =>
       response.request().method() === "GET" &&
       new URL(response.url()).pathname === `/api/managed-endpoints/${encodeURIComponent(listener.id)}/reveal`,
     );
-    // Only this choice replaces its trigger: the empty first hop becomes an
-    // exact selected hop after the real endpoint reveal. Its label stays stable.
+    // Endpoint reveal replaces the empty picker with a collapsed selected row.
+    // Focus must move to its visible configuration summary, not its hidden picker.
     await choose(page, entryListener, names.listener, selectedListener);
-    await expect(pathEditor.getByRole("combobox", { name: "第 1 跳服务器", exact: true })).toHaveText(names.host);
-    await expect(selectedListener).toHaveText(`${names.listener} vless:${listenerPort} managed-xray`);
+    await expect(selectedListener).toContainText(names.host);
+    await expect(selectedListener).toContainText(names.listener);
+    await expect(selectedListener).toContainText(`端口 ${listenerPort}`);
+    await expect(selectedListener).toBeFocused();
     expect(await emptyListener!.evaluate((element) => element.isConnected), "The empty picker is replaced, not reused for a different selection").toBe(false);
     await emptyListener!.dispose();
     await expect(selectedListener).toHaveCount(1);
@@ -318,6 +320,10 @@ for (const width of [1440, 390]) {
     await verifyEntryFocus(page, info, pathEditor);
     await pathEditor.getByRole("tab", { name: "图形编辑", exact: true }).click();
     await pathEditor.getByRole("tab", { name: "顺序编辑", exact: true }).click();
+    await selectedListener.click();
+    await expect(pathEditor.getByRole("combobox", { name: "第 1 跳服务器", exact: true })).toHaveText(names.host);
+    await expect(pathEditor.getByRole("combobox", { name: "第 1 跳端点", exact: true })).toHaveText(`${names.listener} vless:${listenerPort} managed-xray`);
+    await selectedListener.click();
     await expect(selectedListener).toContainText(names.listener);
     await expect(pathEditor.getByLabel("转发路径名称", { exact: true })).toHaveValue(names.path);
     const pathSaved = responseFor(page, "/server-deployments");

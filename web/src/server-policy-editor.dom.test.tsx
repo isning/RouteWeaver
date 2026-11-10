@@ -1289,7 +1289,7 @@ it.each(["null", "omitted"])("adds the first selected endpoint to a %s program l
   await user.click(await screen.findByRole("option", { name: "Server" }));
   await user.click(within(editor).getByRole("combobox", { name: "第 1 跳端点" }));
   await user.click(await screen.findByRole("option", { name: /Policy entry/ }));
-  await waitFor(() => expect(within(editor).getByRole("combobox", { name: "第 1 跳端点" }).textContent).toContain("Policy entry"));
+  await within(editor).findByRole("button", { name: "配置第 1 跳 Policy entry" });
   expect(fixture.requests).toContain("GET /api/managed-endpoints/entry/reveal");
   await user.click(within(editor).getByRole("button", { name: "保存草稿" }));
   await waitFor(() => expect(fixture.saved).toHaveLength(1));

@@ -26,7 +26,10 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-async function startSelection(context: TestContext) {
+async function startSelection(
+  context: TestContext,
+  afterServerSelected?: (editor: ReturnType<typeof within>, owner: ReturnType<typeof ownedClickScenario>) => void,
+) {
   const owner = ownedClickScenario(context);
   const user = userEvent.setup();
   let deliver!: (response: Response) => void;
@@ -61,6 +64,7 @@ async function startSelection(context: TestContext) {
   await owner.click(() => screen.getByRole("option", { name: host.name }));
   await waitFor(() => expect(document.activeElement).toBe(server));
   owner.assertActive();
+  afterServerSelected?.(editor, owner);
   const finishExit = holdPopoverExit();
   const entry = editor.getByRole("combobox", { name: "第 1 跳端点" });
   await owner.click(() => entry);
@@ -88,16 +92,17 @@ for (const timing of ["before", "after"] as const) {
     task.owner.assertActive();
     await act(async () => task.deliver(json(endpoint)));
     task.owner.assertActive();
-    const selected = task.editor.getByRole("combobox", { name: "第 1 跳端点" });
+    const selected = task.editor.getByRole("button", { name: "配置第 1 跳 用户入口" });
     expect(selected.textContent).toContain("用户入口");
-    expect(task.editor.getByRole("combobox", { name: "第 1 跳服务器" }).textContent).toBe(host.name);
+    expect(selected.getAttribute("aria-expanded")).toBe("false");
+    expect(selected.textContent).toContain(host.name);
     expect(task.entry.isConnected).toBe(false);
     expect(screen.queryByRole("listbox", { hidden: true })).toBeNull();
     await waitFor(() => expect(document.activeElement).toBe(selected));
     task.owner.assertActive();
     await task.user.tab();
     task.owner.assertActive();
-    expect(document.activeElement).toBe(task.editor.getByRole("button", { name: "移除第 1 跳" }));
+    expect(document.activeElement).toBe(task.editor.getByRole("button", { name: "第 1 跳更多操作" }));
     await task.user.tab();
     task.owner.assertActive();
     expect(document.activeElement).toBe(task.editor.getByRole("button", { name: "添加下一跳" }));
@@ -112,7 +117,7 @@ it("does not reclaim a newer field focus when the first-entry reveal finishes", 
   task.finishExit(task.closing);
   await act(async () => task.deliver(json(endpoint)));
   task.owner.assertActive();
-  expect(task.editor.getByRole("combobox", { name: "第 1 跳端点" }).textContent).toContain(endpoint.name);
+  expect(task.editor.getByRole("button", { name: "配置第 1 跳 用户入口" }).textContent).toContain(endpoint.name);
   expect(document.activeElement).toBe(name);
   await task.user.keyboard("保留焦点");
   task.owner.assertActive();
@@ -130,7 +135,8 @@ it("keeps the original entry picker when reveal fails instead of focusing an inv
   task.owner.assertActive();
   expect(task.editor.getByRole("combobox", { name: "第 1 跳端点" })).toBe(task.entry);
   expect(task.entry.textContent).not.toContain(endpoint.name);
-  expect(task.editor.queryByRole("button", { name: "移除第 1 跳" })).toBeNull();
+  expect(task.editor.queryByRole("button", { name: /^配置第 1 跳 / })).toBeNull();
+  expect(task.editor.queryByRole("button", { name: "第 1 跳更多操作" })).toBeNull();
   expect(task.editor.getByText("Endpoint reveal unavailable", { exact: true })).toBeTruthy();
   expect(task.entry.isConnected).toBe(true);
   expect(document.activeElement).toBe(task.entry);
@@ -152,3 +158,32 @@ it("does not take focus from a newer discard decision when the first-entry revea
   expect(task.mutations).toEqual([]);
 });
 
+
+it("keeps an empty path pending across parent rerenders until the selected listener reveal completes", async (context) => {
+  const errors = vi.spyOn(console, "error");
+  const task = await startSelection(context, (editor, owner) => {
+    // A nonempty name rules out name validation as the reason Save is disabled.
+    // These changes rerender the parent while the empty-path picker owns pending.
+    for (const value of ["First name", "Revised name", "Final path name"]) {
+      owner.change(() => editor.getByRole("textbox", { name: "转发路径名称" }), { target: { value } });
+      expect(editor.getByRole("button", { name: "保存草稿" })).toHaveProperty("disabled", true);
+      expect(editor.getByRole("combobox", { name: "第 1 跳服务器" }).textContent).toBe(host.name);
+      expect(editor.queryByRole("button", { name: /^配置第 1 跳 / })).toBeNull();
+    }
+  });
+  task.finishExit(task.closing);
+  await waitFor(() => expect(document.activeElement).toBe(task.entry));
+  task.owner.assertActive();
+  task.owner.change(() => task.editor.getByRole("textbox", { name: "转发路径名称" }), { target: { value: "Pending reveal name" } });
+  expect(task.editor.getByRole("button", { name: "保存草稿" })).toHaveProperty("disabled", true);
+  expect(task.editor.queryByRole("button", { name: /^配置第 1 跳 / })).toBeNull();
+  expect(task.mutations).toEqual([]);
+  await act(async () => task.deliver(json(endpoint)));
+  task.owner.assertActive();
+  expect(task.editor.getByRole("button", { name: "配置第 1 跳 用户入口" })).toBeTruthy();
+  await waitFor(() => expect(task.editor.getByRole("button", { name: "保存草稿" })).toHaveProperty("disabled", false));
+  task.owner.assertActive();
+  expect(task.editor.getByRole("textbox", { name: "转发路径名称" })).toHaveProperty("value", "Pending reveal name");
+  expect(task.mutations).toEqual([]);
+  expect(errors.mock.calls.flat().map(String).join("\n")).not.toMatch(/Maximum update depth exceeded/i);
+});

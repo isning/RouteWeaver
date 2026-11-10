@@ -63,7 +63,7 @@ function mount(hash = origin, reveal?: () => Promise<Response>) {
 it("starts an unsaved path with only the exact revealed listener and its original server return link", async () => {
   const { requests } = mount();
   const editor = await screen.findByRole("dialog", { name: "新建转发路径" });
-  expect(within(editor).getByRole("combobox", { name: "第 1 跳端点" }).textContent).toContain("Selected listener");
+  expect(within(editor).getByRole("button", { name: "配置第 1 跳 Selected listener" }).getAttribute("aria-expanded")).toBe("false");
   expect(within(editor).getByRole("link", { name: "返回原服务器" }).getAttribute("href")).toBe("#servers?host=server&instance=core");
   expect(within(editor).getByRole("region", { name: "路径摘要" }).textContent).toContain("客户端 → Selected listener → 目标");
   expect(within(editor).queryByRole("combobox", { name: "第 2 跳服务器" })).toBeNull();
@@ -146,7 +146,7 @@ it("preserves the selected entry and typed name when dirty navigation is cancell
   expect(location.hash).toBe(origin);
   act(() => decisions[0].cancel());
   expect((within(editor).getByRole("textbox", { name: "转发路径名称" }) as HTMLInputElement).value).toBe("Keep my path");
-  expect(within(editor).getByRole("combobox", { name: "第 1 跳端点" }).textContent).toContain("Selected listener");
+  expect(within(editor).getByRole("button", { name: "配置第 1 跳 Selected listener" }).getAttribute("aria-expanded")).toBe("false");
   await act(async () => controller.navigate("#routes?entryEndpoint=missing"));
   expect(decisions).toHaveLength(2);
   await act(async () => decisions[1].proceed());
@@ -162,7 +162,7 @@ it("asks before discarding a prefilled draft and consumes its creation link afte
   await user.click(within(editor).getByRole("button", { name: "关闭" }));
   const confirmation = await screen.findByRole("alertdialog", { name: "放弃尚未保存的转发路径修改？" });
   await user.click(within(confirmation).getByRole("button", { name: "继续编辑" }));
-  expect(within(editor).getByRole("combobox", { name: "第 1 跳端点" }).textContent).toContain("Selected listener");
+  expect(within(editor).getByRole("button", { name: "配置第 1 跳 Selected listener" }).getAttribute("aria-expanded")).toBe("false");
   await user.click(within(editor).getByRole("button", { name: "关闭" }));
   await user.click(within(await screen.findByRole("alertdialog", { name: "放弃尚未保存的转发路径修改？" })).getByRole("button", { name: "放弃修改" }));
   await waitFor(() => expect(screen.queryByRole("dialog", { name: "新建转发路径" })).toBeNull());

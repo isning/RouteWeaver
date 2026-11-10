@@ -731,7 +731,8 @@ export function ServerRouteEditor({
   // Add a path-level explanation only when those sections do not already
   // explain why the ordered workspace is unavailable.
   const policyExplainsRestriction = programs.some((program) => !!programEditReason(program, draft.ir.schemaVersion));
-  const mixedWorkspace = orderedPath.editable && (orderedPath.connectorChoices.length > 0 || !legacyChainEditable);
+  // Keep the same route overview whether or not external proxies are configured.
+  const mixedWorkspace = orderedPath.editable;
   const updateOrderedPath = async (hops: OrderedServerHop[]) => {
     const source = latestDraft.current;
     const reason = orderedPathChangeReason(source, hops, inventory);

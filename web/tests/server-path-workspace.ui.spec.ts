@@ -20,6 +20,11 @@ async function choose(page: Page, control: Locator, query: string) {
   await expect(page.getByRole("listbox", { includeHidden: true })).toHaveCount(0);
 }
 
+async function hopAction(editor: Locator, hop: number, label: string) {
+  await editor.getByRole("button", { name: `第 ${hop} 跳更多操作`, exact: true }).click();
+  await editor.getByRole("menuitem", { name: label, exact: true }).click();
+}
+
 async function capture(page: Page, info: TestInfo, editor: Locator, name: string, target?: Locator) {
   if (target) await target.scrollIntoViewIfNeeded();
   await settledTask(editor);
@@ -70,6 +75,7 @@ for (const width of [1440, 390]) {
     await page.goto("/#routes");
     await page.locator(".page-heading").getByRole("button", { name: "新建转发路径", exact: true }).click();
     const editor = page.getByRole("dialog", { name: "新建转发路径", exact: true });
+    const chain = editor.getByRole("list", { name: "代理链", exact: true });
     const summary = editor.getByRole("region", { name: "路径摘要", exact: true });
     const save = editor.getByRole("button", { name: "保存草稿", exact: true });
     await expect(editor.getByRole("list", { name: "代理链", exact: true })).toBeVisible();
@@ -81,9 +87,9 @@ for (const width of [1440, 390]) {
     await choose(page, editor.getByRole("combobox", { name: "第 1 跳服务器", exact: true }), names.entry);
     await expect(save).toBeDisabled();
     await choose(page, editor.getByRole("combobox", { name: "第 1 跳端点", exact: true }), endpoints.entry);
-    await expect(editor.getByRole("combobox", { name: "第 1 跳端点", exact: true })).toBeFocused();
+    await expect(editor.getByRole("button", { name: `配置第 1 跳 ${endpoints.entry}`, exact: true })).toBeFocused();
     await expect(summary).toContainText("客户端 → 香港监听 → 目标");
-    await capture(page, info, editor, "path-one-hop", summary);
+    await capture(page, info, editor, "path-one-hop", chain.getByRole("listitem").last());
 
     const add = editor.getByRole("button", { name: "添加下一跳", exact: true });
     await add.focus();
@@ -91,7 +97,7 @@ for (const width of [1440, 390]) {
     await expect(editor.getByRole("combobox", { name: "第 2 跳服务器", exact: true })).toBeFocused();
     await expect(save).toBeDisabled();
     await expect(summary).toContainText("香港监听 → 第 2 跳（待选择） → 目标");
-    await capture(page, info, editor, "path-append-pending", summary);
+    await capture(page, info, editor, "path-append-pending", chain.getByRole("listitem").last());
     await choose(page, editor.getByRole("combobox", { name: "第 2 跳服务器", exact: true }), names.relay);
     await editor.getByRole("button", { name: "取消添加", exact: true }).click();
     await expect(add).toBeFocused();
@@ -105,25 +111,25 @@ for (const width of [1440, 390]) {
       const hop = index + 2;
       await choose(page, editor.getByRole("combobox", { name: `第 ${hop} 跳服务器`, exact: true }), names[id]);
       await choose(page, editor.getByRole("combobox", { name: `第 ${hop} 跳端点`, exact: true }), endpoints[id]);
-      await expect(editor.getByRole("combobox", { name: `第 ${hop} 跳端点`, exact: true })).toBeFocused();
+      await expect(editor.getByRole("button", { name: `配置第 ${hop} 跳 ${endpoints[id]}`, exact: true })).toBeFocused();
       if (hop === 3) {
         await expect(summary).toContainText("香港监听 → 东京监听 → 洛杉矶监听 → 目标");
-        await capture(page, info, editor, "path-three-hops", summary);
+        await capture(page, info, editor, "path-three-hops", chain.getByRole("listitem").last());
       }
     }
     await expect(summary).toContainText("香港监听 → 东京监听 → 洛杉矶监听 → 新加坡监听 → 目标");
-    await capture(page, info, editor, "path-four-hops-summary", summary);
-    await capture(page, info, editor, "path-fourth-hop-actions", editor.getByRole("button", { name: "上移第 4 跳", exact: true }));
-    await editor.getByRole("button", { name: "上移第 4 跳", exact: true }).click();
+    await capture(page, info, editor, "path-four-hops-summary", chain.getByRole("listitem").last());
+    await capture(page, info, editor, "path-fourth-hop-actions", editor.getByRole("button", { name: "第 4 跳更多操作", exact: true }));
+    await hopAction(editor, 4, "上移第 4 跳");
     await expect(summary).toContainText("香港监听 → 东京监听 → 新加坡监听 → 洛杉矶监听 → 目标");
-    await expect(editor.getByRole("combobox", { name: "第 3 跳端点", exact: true })).toContainText(endpoints.fourth);
-    await capture(page, info, editor, "path-reordered-summary", summary);
-    await editor.getByRole("button", { name: "移除第 2 跳", exact: true }).click();
+    await expect(editor.getByRole("button", { name: `配置第 3 跳 ${endpoints.fourth}`, exact: true })).toBeFocused();
+    await capture(page, info, editor, "path-reordered-summary", chain.getByRole("listitem").last());
+    await hopAction(editor, 2, "移除第 2 跳");
     await expect(summary).toContainText("香港监听 → 新加坡监听 → 洛杉矶监听 → 目标");
-    await expect(editor.getByRole("combobox", { name: "第 2 跳端点", exact: true })).toContainText(endpoints.fourth);
-    await capture(page, info, editor, "path-removed-hop-summary", summary);
+    await expect(editor.getByRole("button", { name: `配置第 2 跳 ${endpoints.fourth}`, exact: true })).toBeFocused();
+    await capture(page, info, editor, "path-removed-hop-summary", chain.getByRole("listitem").last());
 
-    // Inspection and graph view preserve the exact ordered chain.
+    // Inspection, graph view and expanding configuration preserve the exact ordered chain.
     const details = editor.getByRole("button", { name: "监听快照与转发详情", exact: true });
     await expect(editor.getByRole("button", { name: "检查监听更新 洛杉矶监听", exact: true })).toHaveCount(0);
     await details.click();
@@ -132,7 +138,13 @@ for (const width of [1440, 390]) {
     await editor.getByRole("tab", { name: "图形编辑", exact: true }).click();
     await expect(summary).toContainText("香港监听 → 新加坡监听 → 洛杉矶监听 → 目标");
     await editor.getByRole("tab", { name: "顺序编辑", exact: true }).click();
+    const configure = editor.getByRole("button", { name: `配置第 3 跳 ${endpoints.exit}`, exact: true });
+    await expect(configure).toHaveAttribute("aria-expanded", "false");
+    await configure.click();
+    await expect(summary).toContainText("香港监听 → 新加坡监听 → 洛杉矶监听 → 目标");
     await expect(editor.getByRole("combobox", { name: "第 3 跳端点", exact: true })).toContainText(endpoints.exit);
+    await configure.click();
+    await expect(configure).toHaveAttribute("aria-expanded", "false");
 
     await expect(editor.getByText("仅保存草稿，检查与应用需另行操作。", { exact: true })).toHaveCount(0);
     await capture(page, info, editor, "path-save-draft", save);
