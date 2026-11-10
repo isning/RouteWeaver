@@ -196,6 +196,45 @@ for (const theme of ["light", "dark"]) {
         info,
         `focus-sample-${theme}-${name}`,
       );
+      if (name === "sidebar") {
+        // Inspect actual screenshot pixels at the straight left edge, avoiding
+        // rounded-corner antialiasing. Computed tokens alone miss compositing.
+        const screenshot = await page.screenshot({ fullPage: false, scale: "css" });
+        await info.attach(`focus-sample-${theme}-sidebar-measured.png`, {
+          body: screenshot, contentType: "image/png",
+        });
+        const png = screenshot.toString("base64");
+        const pixels = await page.evaluate(async ({ png, rect }) => {
+          const image = new Image();
+          image.src = `data:image/png;base64,${png}`;
+          await image.decode();
+          const canvas = document.createElement("canvas");
+          canvas.width = image.naturalWidth;
+          canvas.height = image.naturalHeight;
+          const context = canvas.getContext("2d")!;
+          context.drawImage(image, 0, 0);
+          const scale = image.naturalWidth / innerWidth;
+          const read = (x: number) => Array.from(context.getImageData(
+            Math.floor(x * scale),
+            Math.floor((rect.y + rect.height / 2) * scale),
+            1, 1,
+          ).data).slice(0, 3);
+          return { ring: read(rect.x - 1), background: read(rect.x - 4) };
+        }, { png, rect: paint.after.target.rect });
+        const luminance = (rgb: number[]) => rgb.map((channel) => {
+          const value = channel / 255;
+          return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+        }).reduce((sum, value, index) => sum + value * [0.2126, 0.7152, 0.0722][index], 0);
+        const a = luminance(pixels.ring), b = luminance(pixels.background);
+        const contrast = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+        await info.attach(`focus-sample-${theme}-sidebar-pixels`, {
+          body: JSON.stringify({ ...pixels, contrast }), contentType: "application/json",
+        });
+        expect(contrast, "Sidebar keyboard focus against its adjacent background").toBeGreaterThanOrEqual(3);
+        expect(paint.after.target.rect.width).toBe(paint.before.target.rect.width);
+        expect(paint.after.target.rect.height).toBe(paint.before.target.rect.height);
+        expect(paint.after.target.shadow).not.toBe(paint.before.target.shadow);
+      }
       if (
         name === "invalid-checkbox" ||
         name === "invalid-checked" ||
@@ -285,7 +324,7 @@ for (const theme of ["light", "dark"]) {
       contentType: "application/json",
       body: JSON.stringify({
         scope:
-          "Synthetic actual shared components, native focus, desktop; screenshots for review, not compliance assertions. App layout and dark/destructive/sidebar contrast are not repaired by the light ring change.",
+          "Synthetic actual shared components, native focus, desktop. Bounded sidebar pixel contrast and checkbox focus assertions, not whole-app compliance. Light sidebar contrast is corrected separately; app layout and general dark/destructive focus remain outside these repairs.",
         samples: [...samples.map(([name]) => name), "inactive-tab"],
       }),
     });
