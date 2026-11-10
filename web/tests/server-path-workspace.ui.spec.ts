@@ -22,7 +22,10 @@ async function choose(page: Page, control: Locator, query: string) {
 
 async function hopAction(editor: Locator, hop: number, label: string) {
   await editor.getByRole("button", { name: `第 ${hop} 跳更多操作`, exact: true }).click();
-  await editor.getByRole("menuitem", { name: label, exact: true }).click();
+  // shadcn renders the menu in the workspace portal, outside the editor dialog.
+  const menu = editor.page().getByRole("menu", { name: `第 ${hop} 跳更多操作`, exact: true });
+  await expect(menu).toBeVisible();
+  await menu.getByRole("menuitem", { name: label, exact: true }).click();
 }
 
 async function capture(page: Page, info: TestInfo, editor: Locator, name: string, target?: Locator) {

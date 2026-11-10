@@ -63,7 +63,8 @@ async function configure(user: ReturnType<typeof userEvent.setup>, hop: number) 
 }
 async function action(user: ReturnType<typeof userEvent.setup>, hop: number, label: string) {
   await user.click(screen.getByRole("button", { name: `第 ${hop} 跳更多操作` }));
-  await user.click(screen.getByRole("menuitem", { name: label }));
+  const menu = screen.getByRole("menu", { name: `第 ${hop} 跳更多操作`, exact: true });
+  await user.click(within(menu).getByRole("menuitem", { name: label, exact: true }));
 }
 
 

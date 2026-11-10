@@ -18,7 +18,10 @@ async function choose(page: Page, control: Locator, query: string) {
 }
 async function hopAction(editor: Locator, hop: number, label: string) {
   await editor.getByRole("button", { name: `第 ${hop} 跳更多操作`, exact: true }).click();
-  await editor.getByRole("menuitem", { name: label, exact: true }).click();
+  // shadcn renders the menu in the workspace portal, outside the editor dialog.
+  const menu = editor.page().getByRole("menu", { name: `第 ${hop} 跳更多操作`, exact: true });
+  await expect(menu).toBeVisible();
+  await menu.getByRole("menuitem", { name: label, exact: true }).click();
 }
 async function configure(editor: Locator, hop: number) {
   const trigger = editor.getByRole("button", { name: new RegExp(`^配置第 ${hop} 跳 `) });
@@ -94,10 +97,11 @@ for (const width of [1440, 390, 320]) {
     await expect(summary).toContainText("a 监听 → proxy-x → proxy-y → b 监听 → 目标");
     await expect(editor.getByRole("list", { name: "代理链", exact: true }).getByRole("listitem")).toHaveCount(4);
     await editor.getByRole("button", { name: "第 3 跳更多操作", exact: true }).click();
-    await expect(editor.getByRole("menuitem", { name: "下移第 3 跳", exact: true })).toBeDisabled();
+    const thirdHopMenu = page.getByRole("menu", { name: "第 3 跳更多操作", exact: true });
+    await expect(thirdHopMenu.getByRole("menuitem", { name: "下移第 3 跳", exact: true })).toBeDisabled();
     await expect(editor).not.toContainText("example.invalid");
     await expect(editor).not.toContainText("synthetic-secret");
-    await editor.getByRole("menuitem", { name: "上移第 3 跳", exact: true }).click();
+    await thirdHopMenu.getByRole("menuitem", { name: "上移第 3 跳", exact: true }).click();
     await expect(summary).toContainText("a 监听 → proxy-y → proxy-x → b 监听 → 目标");
     await hopAction(editor, 2, "下移第 2 跳");
     await expect(summary).toContainText("a 监听 → proxy-x → proxy-y → b 监听 → 目标");
