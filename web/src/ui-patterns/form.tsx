@@ -4,6 +4,8 @@ import {
   isValidElement,
   useContext,
   useId,
+  useLayoutEffect,
+  useRef,
   useState,
   type ReactElement,
   type ReactNode,
@@ -29,19 +31,140 @@ import { cn } from "@/lib/utils";
 
 const DisabledContext = createContext(false);
 
-/** State and validation belong to rc-field-form; this adds only field layout. */
+type SubmitFocus = {
+  form: HTMLFormElement;
+  origin: Element | null;
+  owner: object;
+  release: () => void;
+};
+
+function canRecoverFocus(control: HTMLElement) {
+  if (
+    control.matches(':disabled, input[type="hidden"]') ||
+    control.closest(
+      '[hidden], [inert], [aria-hidden="true"], [aria-disabled="true"]',
+    )
+  )
+    return false;
+  const view = control.ownerDocument.defaultView;
+  if (!view) return false;
+  for (
+    let node: HTMLElement | null = control;
+    node;
+    node = node.parentElement
+  ) {
+    const style = view.getComputedStyle(node);
+    if (
+      style.display === "none" ||
+      ["hidden", "collapse"].includes(style.visibility) ||
+      style.contentVisibility === "hidden" ||
+      style.opacity === "0"
+    )
+      return false;
+  }
+  return true;
+}
+
+/** rc-field-form owns validation; focus recovery is explicitly task-owned. */
 export function AppForm<Values = Record<string, unknown>>({
   disabled = false,
   className,
   children,
+  submitErrorFocusOwner,
+  onSubmitCapture,
+  onFinish,
+  onFinishFailed,
   ...props
-}: FormProps<Values> & { disabled?: boolean }) {
+}: FormProps<Values> & {
+  disabled?: boolean;
+  /** Explicit native-submit recovery, invalidated when the editing task changes. */
+  submitErrorFocusOwner?: object | null;
+}) {
+  const submission = useRef<SubmitFocus | null>(null);
+  const [recovery, setRecovery] = useState<SubmitFocus | null>(null);
+  const cancelRecovery = () => {
+    submission.current?.release();
+    submission.current = null;
+  };
+  useLayoutEffect(() => {
+    cancelRecovery();
+    return cancelRecovery;
+  }, [submitErrorFocusOwner]);
+  useLayoutEffect(() => {
+    if (!recovery || submission.current !== recovery) return;
+    const { form, origin, owner } = recovery;
+    const eligible =
+      owner === submitErrorFocusOwner &&
+      form.isConnected &&
+      form.ownerDocument.activeElement === origin &&
+      !disabled &&
+      !onFinishFailed;
+    cancelRecovery();
+    if (!eligible) return;
+    // Wait for the error DOM commit, then use the actual native control. Focusing
+    // enters the existing modal reveal path; never open collapsed content here.
+    const controls = form.querySelectorAll<HTMLElement>(
+      'input[aria-invalid="true"], button[aria-invalid="true"], select[aria-invalid="true"], textarea[aria-invalid="true"]',
+    );
+    for (const control of controls) {
+      if (!canRecoverFocus(control)) continue;
+      control.focus();
+      if (form.ownerDocument.activeElement === control) break;
+    }
+  }, [recovery, submitErrorFocusOwner, disabled, onFinishFailed]);
   return (
     <DisabledContext.Provider value={disabled}>
       <RcForm<Values>
         className={cn("space-y-5", className)}
         validateMessages={{ required: "请填写${label}" }}
         {...props}
+        onSubmitCapture={(event) => {
+          cancelRecovery();
+          onSubmitCapture?.(event);
+          if (
+            !submitErrorFocusOwner ||
+            onFinishFailed ||
+            disabled ||
+            event.defaultPrevented ||
+            !(event.currentTarget instanceof HTMLFormElement)
+          )
+            return;
+          const form = event.currentTarget;
+          const doc = form.ownerDocument;
+          // These listeners start after the initiating key/click. Even moving
+          // away and back is newer intent, not permission to reclaim focus.
+          const events = [
+            "focusin",
+            "pointerdown",
+            "keydown",
+            "input",
+          ] as const;
+          const cancel = () => cancelRecovery();
+          for (const name of events) doc.addEventListener(name, cancel, true);
+          doc.defaultView?.addEventListener("blur", cancel);
+          submission.current = {
+            form,
+            origin: doc.activeElement,
+            owner: submitErrorFocusOwner,
+            release: () => {
+              for (const name of events)
+                doc.removeEventListener(name, cancel, true);
+              doc.defaultView?.removeEventListener("blur", cancel);
+            },
+          };
+        }}
+        onFinish={(values) => {
+          cancelRecovery();
+          onFinish?.(values);
+        }}
+        onFinishFailed={(error) => {
+          if (onFinishFailed) {
+            cancelRecovery();
+            onFinishFailed(error);
+          } else if (!error.outOfDate && submission.current) {
+            setRecovery(submission.current);
+          }
+        }}
       >
         {children}
       </RcForm>

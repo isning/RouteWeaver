@@ -30,7 +30,7 @@ All rows below still require a complete state and rendered-layout review. Entrie
 | Service offerings | Define user-visible limits and permitted routes | Not yet reviewed in this pass |
 | Change records | Inspect attributable operations | Not yet reviewed in this pass |
 | Platform settings and backup | Configure shared services and perform explicit recovery | Not yet reviewed in this pass |
-| Endpoint and legacy link configuration | Maintain stable connection and forwarding intent | Server picker slice only |
+| Endpoint and legacy link configuration | Maintain stable connection and forwarding intent | Server picker and inventory submit-recovery slices reviewed; other states open |
 | Announcements and delivery settings | Compose in-app messages and inspect channel results | External test identity and outcome recovery reviewed; other states open |
 
 ## Shared component inventory
@@ -110,6 +110,13 @@ This pass inspected `DataTable`, `PageNavigation`, `ResourceToolbar`, `AppForm`/
 - Defect: invitation acceptance reconciled the current session after a lost or malformed response, but ordinary password login did not. A successful server cookie could leave the user on the login form and invite another password/verification-code submission.
 - Decision: uncertain password-login responses now use the same read-only session check. Only the authoritative session read selects the account. Definite credential rejection keeps the inputs without an extra request; an unavailable session read offers read-only reconnect without replaying credentials. Invitation-specific wording and administrator-token behavior remain unchanged.
 - Evidence: the lost-response regression fails before the change. Eleven new cases cover lost bodies/responses, malformed or incomplete sessions, six definite rejection statuses, preserved password/code input and failed-read recovery. All 159 focused account/session/mobile-navigation tests across eight files pass, along with TypeScript. This is synthetic DOM and source evidence, not a live-account or visual verification.
+
+### Return invalid inventory submissions to a usable field
+
+- Defect: the server, core and listener editors use a native form-owned Save button in the dialog footer. Invalid submission rendered field alerts but left keyboard focus at Save, away from the fields requiring correction.
+- Decision: only InventoryEditor opts into task-owned submit-error focus recovery. After validation errors render, focus the first visible enabled invalid native control. Newer interaction, changed/closed task or outdated validation cancels recovery. Hidden/inert/disabled controls are skipped; specialized failure callbacks retain sole ownership. Existing dialog focus-reveal behavior handles scrolling.
+- Additional task-lifetime finding: same-stack native submit then close/reopen before validation microtasks settle could run rc-form's latest callback against the reopened task. InventoryEditor now captures and consumes native submission ownership, clearing it on every committed task transition. This race was reproduced at the owner seam, not by ordinary sequential clicks; a moved focus alone still does not cancel a valid save.
+- Evidence: all three actual invalid-editor cases fail before and pass after, asserting the exact first field. Twenty-seven new cases cover external footer, native keyboard-submit seams, hidden/disabled candidates, custom callbacks, newer interaction, close/reopen of the same entity and overlapping validation. Seventy-six focused form/inventory tests pass, including coordinator reruns; TypeScript passes. Independent source review found no blocker. Native-browser focus/scroll acceptance remains open.
 
 ## Rendered-evidence follow-up
 

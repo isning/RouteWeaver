@@ -62,6 +62,12 @@ export function InventoryEditor({
 }: InventoryEditorProps) {
   const owner = useRef(entity);
   owner.current = entity;
+  const submittedOwner = useRef<InventoryEditTask | null>(null);
+  useLayoutEffect(() => {
+    // rc-form reads its latest finish callback after asynchronous validation.
+    // A close/reopen must not let an old submission finish in the new session.
+    submittedOwner.current = null;
+  }, [entity]);
   const currentScopeIssue = useRef(scopeIssue);
   currentScopeIssue.current = scopeIssue;
   const currentScopeReader = useRef(readScopeIssue);
@@ -388,10 +394,17 @@ export function InventoryEditor({
     >
       <AppForm
         id={formId}
+        submitErrorFocusOwner={entity}
         form={form}
         disabled={mutation.isPending || impact.isPending || confirming}
+        onSubmitCapture={() => {
+          submittedOwner.current = entity;
+        }}
         onFinish={(v) => {
+          const submitted = submittedOwner.current;
+          submittedOwner.current = null;
           if (
+            submitted !== entity ||
             !entity ||
             scopeAtAction() ||
             owner.current !== entity ||
