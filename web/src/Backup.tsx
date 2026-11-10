@@ -61,6 +61,11 @@ export function BackupSettings() {
         file: File;
     } | null>(null);
     const [createOpen, setCreateOpen] = useState(false);
+    const exportTask = useRef<object | null>(null);
+    const exportFormTask = useRef<object | null>(null);
+    const nextExport = useRef(0);
+    const activeExport = useRef<number | null>(null);
+    const exportSubmission = useRef<{ id: number; password: string } | null>(null);
     const [form] = useForm();
     const [file, setFile] = useState<File | null>(null);
     const [password, setPassword] = useState("");
@@ -89,6 +94,10 @@ export function BackupSettings() {
     } | null>(null);
     const [restoreError, setRestoreError] = useState<Error | null>(null);
     useEffect(() => () => {
+        exportTask.current = null;
+        exportFormTask.current = null;
+        activeExport.current = null;
+        exportSubmission.current = null;
         activeAttempt.current = null;
         submission.current = null;
         activeInspection.current = null;
@@ -96,10 +105,17 @@ export function BackupSettings() {
     }, []);
     const message = toast;
     const create = useMutation({
-        mutationFn: (values: {
-            password: string;
-        }) => requestFile("/admin/backups", { password: values.password }),
-        onSuccess: (blob) => {
+        retry: false,
+        mutationFn: ({ id }: { id: number }) => {
+            const snapshot = exportSubmission.current;
+            exportSubmission.current = null;
+            if (!snapshot || snapshot.id !== id || activeExport.current !== id || !exportTask.current)
+                throw new Error("备份创建任务已结束，未发送请求。");
+            return requestFile("/admin/backups", { password: snapshot.password });
+        },
+        onSuccess: (blob, { id }) => {
+            if (activeExport.current !== id || !exportTask.current)
+                return;
             const url = URL.createObjectURL(blob);
             const link = document.createElement("a");
             link.href = url;
@@ -109,10 +125,24 @@ export function BackupSettings() {
             link.remove();
             setTimeout(() => URL.revokeObjectURL(url), 1000);
             form.resetFields();
+            exportTask.current = null;
+            exportFormTask.current = null;
             setCreateOpen(false);
             message.success("加密备份已准备好，请保管好文件和密码");
         },
+        onSettled: (_value, _error, { id }) => {
+            if (activeExport.current === id)
+                activeExport.current = null;
+        },
     });
+    const closeExport = () => {
+        if (activeExport.current !== null || create.isPending)
+            return;
+        exportTask.current = null;
+        exportFormTask.current = null;
+        setCreateOpen(false);
+        form.resetFields();
+    };
     const inspect = useMutation({
         mutationFn: async ({ version }: {
             version: number;
@@ -249,6 +279,8 @@ export function BackupSettings() {
           <ActionButton leadingIcon={<DownloadOutlined aria-hidden="true"/>} onClick={() => {
             create.reset();
             form.resetFields();
+            exportTask.current = {};
+            exportFormTask.current = null;
             setCreateOpen(true);
         }} variant="default">
             创建加密备份
@@ -401,14 +433,21 @@ export function BackupSettings() {
       </ContextLayout>
       <TaskDialog title="创建加密备份" open={createOpen} footer={null} onOpenChange={open => {
             if (!open)
-                (() => {
-                    if (create.isPending)
-                        return;
-                    setCreateOpen(false);
-                    form.resetFields();
-                })();
+                closeExport();
         }} pending={!(!create.isPending)} contentProps={{ onFocusCapture: revealFocusedPolicyModalControl }}>
-        <AppForm form={form} disabled={create.isPending} onFinish={(values) => create.mutate(values)}>
+        <AppForm form={form} disabled={create.isPending} clearOnDestroy
+          onSubmitCapture={() => { exportFormTask.current = exportTask.current; }}
+          onFinish={(values) => {
+            const task = exportFormTask.current;
+            exportFormTask.current = null;
+            if (!task || task !== exportTask.current || activeExport.current !== null)
+                return;
+            const id = ++nextExport.current;
+            activeExport.current = id;
+            // The query cache receives only an attempt ID, never either password.
+            exportSubmission.current = { id, password: values.password };
+            create.mutate({ id });
+          }}>
           <ErrorNotice error={create.error}/>
           <AppField name="password" label="设置备份密码" rules={[
             {
@@ -433,10 +472,7 @@ export function BackupSettings() {
             备份包含账号与订阅凭据，仅下载到你的设备，不发送到第三方。请将文件与密码分开保管；忘记密码无法恢复。
           </p>
           <div className="form-footer flex flex-wrap items-center justify-end gap-2 border-t pt-4">
-            <ActionButton disabled={create.isPending} onClick={() => {
-            setCreateOpen(false);
-            form.resetFields();
-        }} variant="outline">
+            <ActionButton disabled={create.isPending} onClick={closeExport} variant="outline">
               取消
             </ActionButton>
             <ActionButton type="submit" aria-label="加密并下载" aria-busy={create.isPending} pending={create.isPending} variant="default">

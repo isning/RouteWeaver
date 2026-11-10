@@ -143,3 +143,97 @@ it("groups creation and capacity actions without starting a request", async () =
   expect(await screen.findByRole("dialog")).toBeTruthy();
   expect(fetch).not.toHaveBeenCalled();
 });
+
+it("ignores an abandoned export and only downloads the current page's confirmed response", async () => {
+  const completions: Array<(response: Response) => void> = [];
+  const fetch = vi.fn(() => new Promise<Response>((resolve) => completions.push(resolve)));
+  vi.stubGlobal("fetch", fetch);
+  const objectURL = vi.fn(() => "blob:synthetic-current-backup");
+  vi.stubGlobal("URL", class extends URL {
+    static createObjectURL = objectURL;
+    static revokeObjectURL = vi.fn();
+  });
+  const download = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  const mount = () => render(
+    <QueryClientProvider client={client}>
+      <UIProviders><BackupSettings /></UIProviders>
+    </QueryClientProvider>,
+  );
+  const user = userEvent.setup();
+  const prepare = async (password: string) => {
+    await user.click(screen.getByRole("button", { name: "创建加密备份" }));
+    const dialog = screen.getByRole("dialog", { name: "创建加密备份" });
+    fireEvent.change(within(dialog).getByLabelText("设置备份密码"), { target: { value: password } });
+    fireEvent.change(within(dialog).getByLabelText("再次输入密码"), { target: { value: password } });
+    return dialog;
+  };
+  const first = mount();
+  const oldDialog = await prepare("synthetic-old-backup-password");
+  await user.click(within(oldDialog).getByRole("button", { name: "加密并下载" }));
+  await waitFor(() => expect(fetch).toHaveBeenCalledTimes(1));
+  first.unmount();
+
+  mount();
+  const current = await prepare("synthetic-new-backup-password");
+  await act(async () => completions[0](new Response("synthetic old archive", { headers: { "Content-Type": "application/octet-stream" } })));
+  await waitFor(() => expect(client.getMutationCache().getAll()[0].state.status).toBe("success"));
+  expect(objectURL).not.toHaveBeenCalled();
+  expect(download).not.toHaveBeenCalled();
+  expect(screen.queryByText("加密备份已准备好，请保管好文件和密码")).toBeNull();
+  expect(screen.getByRole("dialog", { name: "创建加密备份" })).toBe(current);
+  expect((within(current).getByLabelText("设置备份密码") as HTMLInputElement).value).toBe("synthetic-new-backup-password");
+  expect((within(current).getByLabelText("再次输入密码") as HTMLInputElement).value).toBe("synthetic-new-backup-password");
+
+  await user.click(within(current).getByRole("button", { name: "加密并下载" }));
+  await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+  await act(async () => completions[1](new Response("synthetic current archive", { headers: { "Content-Type": "application/octet-stream" } })));
+  await waitFor(() => expect(download).toHaveBeenCalledTimes(1));
+  expect(objectURL).toHaveBeenCalledTimes(1);
+  await waitFor(() => expect(screen.queryByRole("dialog", { name: "创建加密备份" })).toBeNull());
+  expect(screen.getAllByText("加密备份已准备好，请保管好文件和密码")).toHaveLength(1);
+  expect(fetch).toHaveBeenCalledTimes(2);
+  client.clear();
+});
+
+it("does not submit dismissed validation into a reopened export and keeps explicit retries single", async () => {
+  const fetch = vi.fn(async () => new Response(JSON.stringify({ detail: "Synthetic export rejection" }), {
+    status: 503, headers: { "Content-Type": "application/json" },
+  }));
+  vi.stubGlobal("fetch", fetch);
+  const client = new QueryClient({ defaultOptions: { mutations: { retry: 2, retryDelay: 0 } } });
+  render(<QueryClientProvider client={client}><UIProviders><BackupSettings /></UIProviders></QueryClientProvider>);
+  const opener = screen.getByRole("button", { name: "创建加密备份" });
+  await userEvent.click(opener);
+  const oldDialog = screen.getByRole("dialog", { name: "创建加密备份" });
+  for (const name of ["设置备份密码", "再次输入密码"])
+    fireEvent.change(within(oldDialog).getByLabelText(name), { target: { value: "synthetic-dismissed-password" } });
+  const oldSubmit = within(oldDialog).getByRole("button", { name: "加密并下载" }) as HTMLButtonElement;
+  // Native submit queues validation. Dismiss and reopen before its microtasks settle.
+  fireEvent.submit(oldSubmit.form!);
+  fireEvent.click(within(oldDialog).getByRole("button", { name: "取消" }));
+  fireEvent.click(opener);
+  const current = screen.getByRole("dialog", { name: "创建加密备份" });
+  for (const name of ["设置备份密码", "再次输入密码"])
+    fireEvent.change(within(current).getByLabelText(name), { target: { value: "synthetic-current-password" } });
+  await act(async () => {});
+  expect(fetch).not.toHaveBeenCalled();
+  expect((within(current).getByLabelText("设置备份密码") as HTMLInputElement).value).toBe("synthetic-current-password");
+
+  const submit = within(current).getByRole("button", { name: "加密并下载" }) as HTMLButtonElement;
+  fireEvent.submit(submit.form!);
+  fireEvent.submit(submit.form!);
+  await within(current).findByText("Synthetic export rejection");
+  expect(fetch).toHaveBeenCalledTimes(1);
+  expect(client.getMutationCache().getAll().map((mutation) => mutation.state.variables)).toEqual([{ id: 1 }]);
+  expect((within(current).getByLabelText("设置备份密码") as HTMLInputElement).value).toBe("synthetic-current-password");
+  await userEvent.click(submit);
+  await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+  await waitFor(() => expect(submit.disabled).toBe(false));
+  expect(client.getMutationCache().getAll().map((mutation) => mutation.state.variables)).toEqual([{ id: 1 }, { id: 2 }]);
+  await userEvent.click(within(current).getByRole("button", { name: "取消" }));
+  expect(screen.queryByRole("dialog", { name: "创建加密备份" })).toBeNull();
+  client.clear();
+});

@@ -1,0 +1,20 @@
+# Backup export lifecycle
+
+Baseline: `3e7dd47033412128e4cadbd8b5a21552e7db6054`.
+
+## Findings and correction
+
+- Leaving the backup page did not retire an in-flight export. Its later success could initiate a download and announce success from a page the user had left.
+- Mutation variables retained both password fields. Export now hands the request a one-use local password snapshot and retains only an attempt ID in mutation variables. Automatic retry is explicitly disabled, even when the shared client enables it.
+- Dismissal, replacement and unmount retire the task. Repeated submission cannot start a second request. Failures preserve the visible form for an explicit retry.
+- Independent review identified that cached callbacks could still retain the unmounted form store. The export form now uses the form library's `clearOnDestroy` contract, clearing its stored field values on unmount. This is a bounded retention improvement, not a JavaScript memory-zeroization claim.
+
+## Verification
+
+- Running the two new DOM cases against baseline production code fails: the abandoned archive creates a download URL, and mutation variables expose password/confirmation rather than only the attempt ID.
+- Five focused files pass all 50 cases: export UI/API, inspection recovery, restore outcomes and capacity. The export retry case also verifies that client-wide retries do not resubmit this request.
+- Application TypeScript, production build and `scripts/verify.sh static` pass, including 102 offline helper cases, architecture guards and pinned actionlint.
+- An independent source review found the retention issue above and no additional concrete blocker. Dependency inspection confirmed that superseded form validation is rejected.
+- A browser regression adds same-document navigation away from a delayed export, a new task, the abandoned response, and exactly one download from the current request. Discovery and strict browser-file TypeScript pass. Local Chromium launch failed before any browser interaction at the host's `socket()` restriction (`Operation not permitted`); no sandbox setting was relaxed. Browser execution remains pending exact-commit CI.
+
+No full-suite, actual-pixel, encryption, live-node, deployment or production-data claim follows from this slice. Existing real-backend backup acceptance remains separate.
