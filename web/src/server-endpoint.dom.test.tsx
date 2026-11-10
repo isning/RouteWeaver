@@ -251,6 +251,7 @@ it("blocks saving an unfinished server change and saves the explicitly selected 
   const drawer = await screen.findByRole("dialog", {
     name: "编辑 Office path",
   });
+  await user.click(within(drawer).getByRole("button", { name: "配置第 1 跳 Entry" }));
   await user.click(
     within(drawer).getByRole("combobox", { name: "第 1 跳服务器" }),
   );

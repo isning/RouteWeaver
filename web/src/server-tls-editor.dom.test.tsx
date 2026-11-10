@@ -337,7 +337,8 @@ it("does not resurrect a removed listener when its file finishes reading", async
   const { user, drawer, saved } = await openSecurityEditor(undefined, false);
   const old = delayedPEM();
   await user.upload(within(drawer).getByLabelText("读取 TLS 证书"), old.file);
-  await user.click(within(drawer).getByRole("button", { name: "移除第 1 跳" }));
+  await user.click(within(drawer).getByRole("button", { name: "第 1 跳更多操作" }));
+  await user.click(screen.getByRole("menuitem", { name: "移除第 1 跳" }));
   await waitFor(() => expect(within(drawer).queryByLabelText("读取 TLS 证书")).toBeNull());
   await act(async () => old.resolve("obsolete certificate"));
   await user.click(within(drawer).getByRole("button", { name: "保存草稿" }));

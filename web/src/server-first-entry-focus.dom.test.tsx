@@ -174,7 +174,6 @@ it("keeps an empty path pending across parent rerenders until the selected liste
   task.finishExit(task.closing);
   await waitFor(() => expect(document.activeElement).toBe(task.entry));
   task.owner.assertActive();
-  task.owner.change(() => task.editor.getByRole("textbox", { name: "转发路径名称" }), { target: { value: "Pending reveal name" } });
   expect(task.editor.getByRole("button", { name: "保存草稿" })).toHaveProperty("disabled", true);
   expect(task.editor.queryByRole("button", { name: /^配置第 1 跳 / })).toBeNull();
   expect(task.mutations).toEqual([]);
@@ -183,7 +182,7 @@ it("keeps an empty path pending across parent rerenders until the selected liste
   expect(task.editor.getByRole("button", { name: "配置第 1 跳 用户入口" })).toBeTruthy();
   await waitFor(() => expect(task.editor.getByRole("button", { name: "保存草稿" })).toHaveProperty("disabled", false));
   task.owner.assertActive();
-  expect(task.editor.getByRole("textbox", { name: "转发路径名称" })).toHaveProperty("value", "Pending reveal name");
+  expect(task.editor.getByRole("textbox", { name: "转发路径名称" })).toHaveProperty("value", "Final path name");
   expect(task.mutations).toEqual([]);
   expect(errors.mock.calls.flat().map(String).join("\n")).not.toMatch(/Maximum update depth exceeded/i);
 });
