@@ -22,7 +22,7 @@ All rows below still require a complete state and rendered-layout review. Entrie
 | Rule resources | Inspect and accept owned rule versions | Not yet reviewed in this pass |
 | Templates and presets | Reuse configuration and review updates | Publication-target and extraction recovery reviewed; rendered states open |
 | Inbox | Read account messages and recover acknowledgement failures | Source inspection only |
-| Published routes | Offer a versioned usable entry and route | Not yet reviewed in this pass |
+| Published routes | Offer a versioned usable entry and route | Captured authorization attribution and nested catalog recovery reviewed; other states open |
 | Forwarding paths | Select explicit ordered managed/external hops | Source, bounded DOM and captured layout review; corrections below |
 | Servers and core instances | Find a server, inspect observations and manage configuration | Source and focused DOM tests; diagnostic receipt correction below |
 | Fleet tasks | Review targets, execute stages and inspect actual outcomes | Not yet reviewed in this pass |
@@ -149,6 +149,13 @@ This pass inspected `DataTable`, `PageNavigation`, `ResourceToolbar`, `AppForm`/
 - Observed failure: supplemental browser run `42857558136` passed six journeys but both same-named-server cases stopped after searching for the second server: an unrelated clear action remained before the matching result. A public DOM reproduction confirmed Enter invoked `undefined`, clearing the current choice rather than selecting the searched server.
 - Decision: explicit `清除选择` remains available with an empty/whitespace search. Resource searches contain matching resources only; no-match and disabled-result Enter cannot clear a selection. The existing browser assertions remain unchanged.
 - Evidence: the keyboard regression fails before the one-condition fix. All 14 choice-selector tests pass, including searched replacement, no-match/disabled retention, explicit clearing after removing search, and prior disabled/reopen behavior. Coordinator independently reran the same suite. TypeScript passes. Local native-browser startup is blocked by host socket restrictions; no sandbox setting was weakened. Corrected browser rerun remains pending.
+
+### Read service-plan identity from its actual catalog
+
+- Observed defect: an operator-line CI capture displayed a generated service ID as the authorization source despite the fixture having a readable service name. Both the line detail and its principal-to-authorization editor read services from `/state`, whose real API response does not include that catalog. Refreshing the same endpoint could never resolve the name or populate those choices.
+- Decision: both callers share the established independent `/services` query. Detail attribution distinguishes pending, failed and confirmed-missing catalog states, offers retry and retains the stable ID in contextual details. Nested authorization editing disables only unresolved service choices and preserves the selected ID and unrelated fields. Other callers and shared policy-source formatting remain unchanged.
+- Review correction: the new missing-plan notice also reads service ID, so its field-update dependency must include that ID, not only service mode. A dirty draft changing to an available plan now clears the stale warning.
+- Evidence: real-API-shape detail and dirty-warning regressions fail before their fixes. Twenty-one line-workflow tests pass, plus 49 adjacent policy/routing tests; new cases cover catalog failure/retry, unrelated dirty edits and changing users during an in-flight catalog read. Independent review identified and verified the dependency correction. Application/spec typechecks and browser discovery pass. The real operator journey now asserts the created plan's name in both nested editing and detail; new browser pixels remain pending.
 
 ## Rendered-evidence follow-up
 

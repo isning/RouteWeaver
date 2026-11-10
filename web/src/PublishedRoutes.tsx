@@ -47,7 +47,7 @@ import {
 import { moveItem, newID } from "./model";
 import { useUnsavedChanges } from "./navigation";
 import { invalidateOutputInputs } from "./output-comparison";
-import type { Infrastructure, PlatformEntry, ServerDeployment } from "./types";
+import type { Infrastructure, PlatformEntry, ServerDeployment, Service } from "./types";
 import { useDiscardConfirmation } from "./useDiscardConfirmation";
 import { useWorkspaceViewEntry } from "./useWorkspaceViewEntry";
 import { WorkspaceHistoryContext } from "./SubscriptionContext";
@@ -1407,6 +1407,13 @@ function PrincipalEditor({
     enabled: !!route,
     staleTime: 0,
   });
+  const serviceCatalog = useQuery({
+    queryKey: ["services"],
+    queryFn: () => list<Service>("/services"),
+    enabled: !!accountId,
+    refetchOnMount: "always",
+    staleTime: 0,
+  });
   const client = useQueryClient();
   const [result, setResult] = useState<{
     entryId: string;
@@ -1616,7 +1623,8 @@ function PrincipalEditor({
       {editingPolicy && selectedUser && (
         <UserPolicyEditor
           user={selectedUser}
-          services={users.data?.services || []}
+          services={serviceCatalog.data || []}
+          serviceCatalog={{ pending: serviceCatalog.isPending || serviceCatalog.isFetching, paused: serviceCatalog.isPaused, error: serviceCatalog.isError, retry: () => { void serviceCatalog.refetch(); } }}
           routes={[
             ...(users.data?.routes || []),
             ...(users.data?.publishedRoutes || []),
@@ -1682,6 +1690,13 @@ function PublicRouteDetail({
     queryFn: loadState,
     staleTime: 0,
   });
+  const serviceCatalog = useQuery({
+    queryKey: ["services"],
+    queryFn: () => list<Service>("/services"),
+    enabled: !!userId,
+    refetchOnMount: "always",
+    staleTime: 0,
+  });
   const policy = useQuery({
     queryKey: ["effective-policy", userId],
     queryFn: () =>
@@ -1707,7 +1722,15 @@ function PublicRouteDetail({
     (item) => item.id === current.deploymentId,
   );
   const user = state.data?.users.find((item) => item.id === userId);
-  const services = state.data?.services || [];
+  // /state intentionally contains users and legacy inventory, not service plans.
+  const services = serviceCatalog.data || [];
+  const routeSource = policy.data?.provenance.routes;
+  const sourceServiceId = routeSource?.startsWith("service:")
+    ? routeSource.slice(8).replace(/\+direct$/, "")
+    : undefined;
+  const sourceService = services.find((service) => service.id === sourceServiceId);
+  const sourceChecking = serviceCatalog.isPending || serviceCatalog.isFetching;
+  const sourceUnresolved = serviceCatalog.isPaused || sourceChecking || serviceCatalog.isError || !sourceService;
   const routes = [
     ...(state.data?.routes || []),
     ...(state.data?.publishedRoutes || []),
@@ -1726,6 +1749,7 @@ function PublicRouteDetail({
     if (userId) {
       policy.refetch();
       entries.refetch();
+      serviceCatalog.refetch();
     }
   };
   const returnToLine = () => {
@@ -1885,10 +1909,31 @@ function PublicRouteDetail({
                           : "尚未获准使用此线路"}</span>
                         <Badge variant="secondary">{policyStatus[policy.data.status] || policy.data.status}</Badge>
                       </Metadata>
-                      <p className="muted text-sm text-muted-foreground">
-                        授权来源：
-                        {policySource(policy.data.provenance.routes, services)}
-                      </p>
+                      <div className="grid min-w-0 gap-2 text-sm wrap-anywhere">
+                        <p className="text-muted-foreground">
+                          {sourceServiceId && sourceUnresolved
+                            ? serviceCatalog.isPaused
+                              ? "授权来源：等待网络连接后核对服务方案"
+                              : sourceChecking
+                                ? "授权来源：正在核对服务方案…"
+                                : serviceCatalog.isError
+                                  ? "授权来源：服务方案暂无法读取"
+                                  : "授权来源：服务方案已不在当前清单中"
+                            : `授权来源：${policySource(routeSource, services)}`}
+                        </p>
+                        {sourceServiceId && sourceUnresolved && routeSource?.endsWith("+direct") && <p>另有直接授权</p>}
+                        {sourceServiceId && (
+                          <details>
+                            <summary>授权来源标识</summary>
+                            <p className="mt-2">服务方案 ID：{sourceServiceId}</p>
+                          </details>
+                        )}
+                        {sourceServiceId && !sourceChecking && (serviceCatalog.isError || serviceCatalog.isPaused || !sourceService) && (
+                          <ActionButton className="justify-self-start" variant="outline" onClick={() => serviceCatalog.refetch()}>
+                            重新核对授权来源
+                          </ActionButton>
+                        )}
+                      </div>
                     </>
                   )}
                 </QueryState>
@@ -1982,6 +2027,7 @@ function PublicRouteDetail({
         <UserPolicyEditor
           user={user}
           services={services}
+          serviceCatalog={{ pending: serviceCatalog.isPending || serviceCatalog.isFetching, paused: serviceCatalog.isPaused, error: serviceCatalog.isError, retry: () => { void serviceCatalog.refetch(); } }}
           routes={routes}
           onClose={returnToLine}
         />

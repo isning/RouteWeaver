@@ -1945,6 +1945,7 @@ test("operator keeps line and user context through authorization, entry preparat
     exact: true,
   });
   await expect(policy).toBeVisible();
+  await expect(policy.getByRole("combobox", { name: /个人指定方案/ })).toContainText(service.name);
   await policy.getByRole("button", { name: /^取\s*消$/ }).click();
   await expect(policy).not.toBeVisible();
   await expect(page).toHaveURL(
@@ -1965,10 +1966,13 @@ test("operator keeps line and user context through authorization, entry preparat
     .getByRole("button", { name: "检查此用户授权", exact: true })
     .click();
   await expect(policy).toBeVisible();
+  await expect(policy.getByRole("combobox", { name: /个人指定方案/ })).toContainText(service.name);
   await policy.getByRole("button", { name: /^取\s*消$/ }).click();
   await expect(principal).toBeVisible();
   await principal.getByRole("button", { name: /^取\s*消$/ }).click();
   await expect(principal).not.toBeVisible();
+  await expect(detail.getByText(`授权来源：方案：${service.name}`, { exact: true })).toBeVisible();
+  await expect(detail.getByText(`授权来源：方案：${service.id}`, { exact: true })).toHaveCount(0);
   await page.screenshot({
     path: testInfo.outputPath("operator-line-progress.png"),
     fullPage: false,

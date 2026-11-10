@@ -2,6 +2,7 @@
 import { renderFleetSession } from "./test-support/fleet-session";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -384,7 +385,7 @@ it("keeps unknown checks distinct from confirmed path and credentials, including
   );
   await within(detail).findByText("入口凭据已确认生效");
   expect(within(detail).getByText("已确认生效")).toBeTruthy();
-  expect(within(detail).getByText("授权来源：方案：office")).toBeTruthy();
+  expect(within(detail).getByText("授权来源：服务方案已不在当前清单中")).toBeTruthy();
   expect(within(detail).getByText(/获取订阅时，会按当时的授权、额度与入口状态重新检查是否可交付。/)).toBeTruthy();
   failed = true;
   await userEvent.click(
@@ -524,7 +525,7 @@ it.each([
     override: null,
     routeIds: ["line"],
     source: "service:office",
-    sourceLabel: "方案：office",
+    sourceLabel: "方案：Office plan",
     granted: true,
   },
   {
@@ -546,6 +547,7 @@ it.each([
   async ({ override, routeIds, source, sourceLabel, granted }) => {
     history.replaceState(null, "", "#published-routes?line=line&user=alice");
     const requests = mockInventory((path) => {
+      if (path === "/api/services") return json([{ id: "office", name: "Office plan", routeIds: ["line"], quotaBytes: 0 }]);
       if (path.endsWith("/effective-policy"))
         return json({
           ...effectivePolicy,
@@ -603,3 +605,213 @@ it.each([
     expect(requests.every((request) => request.method === "GET")).toBe(true);
   },
 );
+
+it("resolves the line authorization service name from its catalog when the real state response omits services", async () => {
+  history.replaceState(null, "", "#published-routes?line=line&user=alice");
+  const requests = mockInventory((path) => {
+    if (path === "/api/state") return json({
+      nodes: [], users: [{ id: "alice", name: "Alice", enabled: true }], routes: [], revisions: [], capabilities: [],
+    });
+    if (path === "/api/services") return json([{ id: "office", name: "Synthetic operator access", routeIds: ["line"], quotaBytes: 0 }]);
+    if (path.endsWith("/effective-policy")) return json(effectivePolicy);
+    return undefined;
+  });
+  await mount(<PublishedRoutesPage />);
+  const detail = await screen.findByRole("dialog", { name: "Office line" });
+  await within(detail).findByText("已获准使用此线路");
+  await within(detail).findByText("授权来源：方案：Synthetic operator access");
+  expect(requests.some((request) => request.path === "/api/services")).toBe(true);
+  expect(requests.every((request) => request.method === "GET")).toBe(true);
+});
+
+function catalogFixture(reply: () => Response | Promise<Response>, source = "service:office") {
+  history.replaceState(null, "", "#published-routes?line=line&user=alice");
+  return mockInventory((path) => {
+    if (path === "/api/state") return json({ nodes: [], users: [{ id: "alice", name: "Alice", enabled: true }], routes: [], revisions: [], capabilities: [] });
+    if (path === "/api/services") return reply();
+    if (path.endsWith("/effective-policy")) return json({ ...effectivePolicy, provenance: { routes: source } });
+    return undefined;
+  });
+}
+const namedService = { id: "office", name: "Synthetic operator access", routeIds: ["line"], quotaBytes: 0 };
+
+it("keeps delayed service attribution identifiable without changing the selected user or line actions", async () => {
+  let resolve!: (response: Response) => void;
+  const requests = catalogFixture(() => new Promise<Response>((done) => { resolve = done; }));
+  await mount(<PublishedRoutesPage />);
+  const detail = await screen.findByRole("dialog", { name: "Office line" });
+  await within(detail).findByText("授权来源：正在核对服务方案…");
+  expect(within(detail).queryByText("授权来源：服务方案已不在当前清单中")).toBeNull();
+  expect(within(detail).queryByText("授权来源：方案：office")).toBeNull();
+  await userEvent.click(within(detail).getByText("授权来源标识"));
+  expect(within(detail).getByText("服务方案 ID：office")).toBeTruthy();
+  expect((within(detail).getByRole("button", { name: "检查或调整用户授权" }) as HTMLButtonElement).disabled).toBe(false);
+  expect(location.hash).toContain("user=alice");
+  resolve(json([namedService]));
+  await within(detail).findByText("授权来源：方案：Synthetic operator access");
+  expect(requests.every((request) => request.method === "GET")).toBe(true);
+});
+
+it.each(["failed", "missing"])("keeps %s service attribution recoverable without changing authorization", async (state) => {
+  let recovered = false;
+  const requests = catalogFixture(() => recovered ? json([namedService]) : state === "failed" ? json({ detail: "Synthetic catalog unavailable" }, 503) : json([]));
+  await mount(<PublishedRoutesPage />);
+  const detail = await screen.findByRole("dialog", { name: "Office line" });
+  await within(detail).findByText(state === "failed" ? "授权来源：服务方案暂无法读取" : "授权来源：服务方案已不在当前清单中");
+  expect(within(detail).getByText("已获准使用此线路")).toBeTruthy();
+  await userEvent.click(within(detail).getByText("授权来源标识"));
+  expect(within(detail).getByText("服务方案 ID：office")).toBeTruthy();
+  recovered = true;
+  await userEvent.click(within(detail).getByRole("button", { name: "重新核对授权来源" }));
+  await within(detail).findByText("授权来源：方案：Synthetic operator access");
+  expect(location.hash).toContain("user=alice");
+  expect(requests.every((request) => request.method === "GET")).toBe(true);
+});
+
+it("does not present a cached service name as current while its catalog refresh fails", async () => {
+  let resolve!: (response: Response) => void;
+  let pending = false;
+  catalogFixture(() => pending ? new Promise<Response>((done) => { resolve = done; }) : json([namedService]));
+  await mount(<PublishedRoutesPage />);
+  const detail = await screen.findByRole("dialog", { name: "Office line" });
+  await within(detail).findByText("授权来源：方案：Synthetic operator access");
+  pending = true;
+  await act(async () => { void clients.at(-1)!.invalidateQueries({ queryKey: ["services"] }); });
+  await within(detail).findByText("授权来源：正在核对服务方案…");
+  expect(within(detail).queryByText("授权来源：方案：Synthetic operator access")).toBeNull();
+  resolve(json({ detail: "Synthetic catalog unavailable" }, 503));
+  await within(detail).findByText("授权来源：服务方案暂无法读取");
+  expect(within(detail).queryByText("授权来源：方案：Synthetic operator access")).toBeNull();
+  expect(within(detail).queryByText("授权来源：服务方案已不在当前清单中")).toBeNull();
+});
+
+it("retains direct authorization attribution while the accompanying service catalog is unresolved", async () => {
+  catalogFixture(() => json({ detail: "Synthetic catalog unavailable" }, 503), "service:office+direct");
+  await mount(<PublishedRoutesPage />);
+  const detail = await screen.findByRole("dialog", { name: "Office line" });
+  await within(detail).findByText("授权来源：服务方案暂无法读取");
+  expect(within(detail).getByText("另有直接授权")).toBeTruthy();
+  await userEvent.click(within(detail).getByText("授权来源标识"));
+  expect(within(detail).getByText("服务方案 ID：office")).toBeTruthy();
+});
+
+it.each(["ready", "delayed", "failed", "missing"])("loads the principal setup authorization catalog independently of state (%s)", async (mode) => {
+  history.replaceState(null, "", "#published-routes?line=line&user=alice");
+  let reply = "ready";
+  let resolve!: (response: Response) => void;
+  const entitlement = { ...effectivePolicy.entitlement, serviceId: "office", cycle: { mode: "none", anchor: "0001-01-01T00:00:00Z", timezone: "" } };
+  const requests = mockInventory((path) => {
+    if (path === "/api/state") return json({ nodes: [], users: [{ id: "alice", name: "Alice", enabled: true }], routes: [], revisions: [], capabilities: [] });
+    if (path === "/api/services") return reply === "delayed" ? new Promise<Response>((done) => { resolve = done; }) : reply === "failed" ? json({ detail: "Synthetic service list failed" }, 503) : reply === "missing" ? json([]) : json([namedService]);
+    if (path.endsWith("/effective-policy")) return json({ ...effectivePolicy, entitlement });
+    if (path === "/api/access-policy/edit-context/entitlement/alice") return json({ target: { kind: "entitlement", id: "alice" }, record: { entitlement }, precondition: { exists: true, revision: "opened-line-alice" }, effective: { ...effectivePolicy, entitlement } });
+    if (path.endsWith("/admission-status")) return json({ onlineIps: [], entries: [], activeStreams: 0, maxLeaseSeconds: 300 });
+    return undefined;
+  });
+  await mount(<PublishedRoutesPage />);
+  const detail = await screen.findByRole("dialog", { name: "Office line" });
+  await within(detail).findByText("授权来源：方案：Synthetic operator access");
+  reply = mode;
+  await userEvent.click(within(detail).getByRole("button", { name: "准备独立入口" }));
+  const principal = await screen.findByRole("dialog", { name: "配置「Office line」的用户入口" });
+  await userEvent.click(within(principal).getByRole("button", { name: "检查此用户授权" }));
+  const editor = await screen.findByRole("dialog", { name: "Alice 的服务授权" });
+  const selected = await within(editor).findByRole("combobox", { name: /个人指定方案/ });
+  if (mode === "delayed" || mode === "failed") {
+    await within(editor).findByText(mode === "delayed" ? "正在读取服务方案…" : "服务方案暂无法读取");
+    expect((selected as HTMLButtonElement).disabled).toBe(true);
+    expect(within(editor).queryByText("所选服务方案已不在当前清单中，原选择已保留。")).toBeNull();
+    reply = "ready";
+    if (mode === "delayed") resolve(json([namedService]));
+    else await userEvent.click(within(editor).getByRole("button", { name: "重新加载服务方案" }));
+    await waitFor(() => expect((selected as HTMLButtonElement).disabled).toBe(false));
+  }
+  if (mode === "missing") {
+    await within(editor).findByText("所选服务方案已不在当前清单中，原选择已保留。");
+    expect(selected.textContent).toContain("office");
+    reply = "ready";
+    await userEvent.click(within(editor).getByRole("button", { name: "重新加载服务方案" }));
+    await waitFor(() => expect(selected.textContent).toContain("Synthetic operator access"));
+  } else expect(selected.textContent).toContain("Synthetic operator access");
+  expect(location.hash).toContain("user=alice");
+  await userEvent.click(within(editor).getByRole("button", { name: "关闭" }));
+  await screen.findByRole("dialog", { name: "配置「Office line」的用户入口" });
+  expect(requests.every((request) => request.method === "GET")).toBe(true);
+});
+
+function editableCatalogFixture(reply: () => Response | Promise<Response>, serviceId = "office") {
+  history.replaceState(null, "", "#published-routes?line=line&user=alice");
+  return mockInventory((path) => {
+    if (path === "/api/state") return json({ nodes: [], users: [{ id: "alice", name: "Alice", enabled: true }, { id: "bob", name: "Bob", enabled: true }], routes: [], revisions: [], capabilities: [] });
+    if (path === "/api/services") return reply();
+    const userId = path.endsWith("/bob") || path.includes("/bob/") ? "bob" : "alice";
+    const entitlement = { ...effectivePolicy.entitlement, userId, serviceId, cycle: { mode: "none", anchor: "0001-01-01T00:00:00Z", timezone: "" } };
+    const effective = { ...effectivePolicy, userId, entitlement };
+    if (path.endsWith("/effective-policy")) return json(effective);
+    if (path.includes("/edit-context/entitlement/")) return json({ target: { kind: "entitlement", id: userId }, record: { entitlement }, precondition: { exists: true, revision: `opened-${userId}` }, effective });
+    if (path.endsWith("/admission-status")) return json({ onlineIps: [], entries: [], activeStreams: 0, maxLeaseSeconds: 300 });
+    return undefined;
+  });
+}
+async function openLinePolicy() {
+  await mount(<PublishedRoutesPage />);
+  const detail = await screen.findByRole("dialog", { name: "Office line" });
+  await within(detail).findByText("已获准使用此线路");
+  await userEvent.click(within(detail).getByRole("button", { name: "检查或调整用户授权" }));
+  const editor = await screen.findByRole("dialog", { name: "Alice 的服务授权" });
+  await within(editor).findByRole("combobox", { name: /个人指定方案/ });
+  return { detail, editor };
+}
+
+it("clears a missing-plan warning when an already dirty draft selects an available plan", async () => {
+  editableCatalogFixture(() => json([namedService]), "removed-plan");
+  const { editor } = await openLinePolicy();
+  await within(editor).findByText("所选服务方案已不在当前清单中，原选择已保留。");
+  await userEvent.click(within(editor).getByRole("switch", { name: "暂停平台服务" }));
+  await userEvent.click(within(editor).getByRole("combobox", { name: /个人指定方案/ }));
+  await userEvent.click(await screen.findByRole("option", { name: "Synthetic operator access" }));
+  await waitFor(() => expect(within(editor).queryByText("所选服务方案已不在当前清单中，原选择已保留。")).toBeNull());
+  expect(within(editor).getByRole("switch", { name: "暂停平台服务" }).getAttribute("aria-checked")).toBe("true");
+});
+
+it("preserves unrelated dirty authorization fields across catalog failure and retry", async () => {
+  let failed = false;
+  const requests = editableCatalogFixture(() => failed ? json({ detail: "Synthetic catalog failure" }, 503) : json([namedService]));
+  const { editor } = await openLinePolicy();
+  await userEvent.click(within(editor).getByRole("switch", { name: "暂停平台服务" }));
+  failed = true;
+  await act(async () => { await clients.at(-1)!.invalidateQueries({ queryKey: ["services"] }); });
+  await within(editor).findByText("服务方案暂无法读取");
+  expect(within(editor).getByRole("switch", { name: "暂停平台服务" }).getAttribute("aria-checked")).toBe("true");
+  expect((within(editor).getByRole("combobox", { name: /个人指定方案/ }) as HTMLButtonElement).disabled).toBe(true);
+  failed = false;
+  await userEvent.click(within(editor).getByRole("button", { name: "重新加载服务方案" }));
+  await waitFor(() => expect((within(editor).getByRole("combobox", { name: /个人指定方案/ }) as HTMLButtonElement).disabled).toBe(false));
+  expect(within(editor).getByRole("switch", { name: "暂停平台服务" }).getAttribute("aria-checked")).toBe("true");
+  expect(requests.every((request) => request.method === "GET")).toBe(true);
+});
+
+it("keeps the newly selected user's draft when an earlier catalog read finishes", async () => {
+  let pending = false;
+  let resolve!: (response: Response) => void;
+  const requests = editableCatalogFixture(() => pending ? new Promise<Response>((done) => { resolve = done; }) : json([namedService]));
+  const { detail, editor } = await openLinePolicy();
+  pending = true;
+  await act(async () => { void clients.at(-1)!.invalidateQueries({ queryKey: ["services"] }); });
+  await within(editor).findByText("正在读取服务方案…");
+  await userEvent.click(within(editor).getByRole("button", { name: "关闭" }));
+  await userEvent.click(within(detail).getByRole("combobox", { name: "线路使用用户" }));
+  await userEvent.click(await screen.findByRole("option", { name: "Bob" }));
+  await waitFor(() => expect(location.hash).toContain("user=bob"));
+  await userEvent.click(within(detail).getByRole("button", { name: "检查或调整用户授权" }));
+  const bob = await screen.findByRole("dialog", { name: "Bob 的服务授权" });
+  await userEvent.click(await within(bob).findByRole("switch", { name: "暂停平台服务" }));
+  pending = false;
+  await act(async () => { resolve(json([namedService])); });
+  await waitFor(() => expect((within(bob).getByRole("combobox", { name: /个人指定方案/ }) as HTMLButtonElement).disabled).toBe(false));
+  expect(within(bob).getByRole("switch", { name: "暂停平台服务" }).getAttribute("aria-checked")).toBe("true");
+  expect(screen.queryByRole("dialog", { name: "Alice 的服务授权" })).toBeNull();
+  expect(location.hash).toContain("user=bob");
+  expect(requests.some((request) => request.path === "/api/access-policy/edit-context/entitlement/bob")).toBe(true);
+  expect(requests.every((request) => request.method === "GET")).toBe(true);
+});

@@ -83,6 +83,7 @@ function exactEditedInteger(text: string, scale: number): number | undefined {
 type EditorProps = {
     user: UserRecord;
     services: Service[];
+    serviceCatalog?: { pending: boolean; paused: boolean; error: boolean; retry: () => void };
     routes: NamedRecord[];
     // Display metadata only; selectable managed routes remain in routes.
     displayRoutes?: NamedRecord[];
@@ -129,7 +130,7 @@ export function UserPolicyForm({ initial, drawer = false, ...props }: EditorProp
     const [context, setContext] = useState(initial), [generation, setGeneration] = useState(0), [retained, setRetained] = useState<DraftCopy[]>([]);
     return <UserPolicyFields key={generation} {...props} returnFocus={returnFocus} drawer={drawer} context={context} retained={retained} acceptLatest={(latest, draft) => { setRetained((values) => [...values, draft]); setContext(latest); setGeneration((value) => value + 1); }}/>;
 }
-function UserPolicyFields({ user, context, services, routes, displayRoutes = routes, onClose, retained, acceptLatest, drawer, returnFocus }: EditorProps & {
+function UserPolicyFields({ user, context, services, serviceCatalog, routes, displayRoutes = routes, onClose, retained, acceptLatest, drawer, returnFocus }: EditorProps & {
     drawer: boolean;
     context: EntitlementPolicyEditContext;
     retained: DraftCopy[];
@@ -311,24 +312,34 @@ function UserPolicyFields({ user, context, services, routes, displayRoutes = rou
         </section>}
         {Object.values(dateOpen).some(Boolean) && <p role="status">请先确认或取消日期选择，再预览或重新编辑。</p>}
         <Section title="方案与线路" variant="plain">
+          {serviceCatalog && (serviceCatalog.paused || serviceCatalog.pending || serviceCatalog.error) && (
+            <Notice tone={serviceCatalog.error && !serviceCatalog.pending ? "warning" : "info"}
+              title={serviceCatalog.paused ? "等待网络连接后读取服务方案" : serviceCatalog.pending ? "正在读取服务方案…" : "服务方案暂无法读取"}>
+              <p>当前方案选择已保留。</p>
+              {!serviceCatalog.pending && <ActionButton variant="outline" onClick={serviceCatalog.retry}>重新加载服务方案</ActionButton>}
+            </Notice>
+          )}
           <AppField name="serviceMode" label="方案来源" trigger="onValueChange">
             <RadioGroup>{([
         { value: "inherit", label: "\u7EE7\u627F\u7528\u6237\u7EC4\u65B9\u6848" },
         { value: "custom", label: "\u6307\u5B9A\u4E2A\u4EBA\u65B9\u6848" },
     ]).map(option => <label key={option.value} className="flex items-center gap-2 text-sm"><RadioGroupItem value={option.value}/>{option.label}</label>)}</RadioGroup>
           </AppField>
-          <AppField noStyle shouldUpdate={(a, b) => a.serviceMode !== b.serviceMode}>
-            {({ getFieldValue }) => getFieldValue("serviceMode") === "custom" ? (<AppField name="serviceId" label="个人指定方案" rules={[
+          <AppField noStyle shouldUpdate={(a, b) => a.serviceMode !== b.serviceMode || a.serviceId !== b.serviceId}>
+            {({ getFieldValue }) => getFieldValue("serviceMode") === "custom" ? (<><AppField name="serviceId" label="个人指定方案" rules={[
                 {
                     required: true,
                     message: "请选择个人方案，或切换为继承用户组方案",
                 },
             ]} trigger="onValueChange">
-                  <ChoiceSelect placeholder="选择服务方案" options={services.map((s) => ({
+                  <ChoiceSelect placeholder="选择服务方案" disabled={!!serviceCatalog && (serviceCatalog.pending || serviceCatalog.paused || serviceCatalog.error)} options={services.map((s) => ({
                 value: s.id,
                 label: s.name,
             }))}/>
-                </AppField>) : (<p className="muted text-sm text-muted-foreground">
+                </AppField>
+                {serviceCatalog && !serviceCatalog.pending && !serviceCatalog.paused && !serviceCatalog.error && getFieldValue("serviceId") && !services.some((service) => service.id === getFieldValue("serviceId")) && (
+                  <div className="space-y-2"><p className="text-sm text-muted-foreground">所选服务方案已不在当前清单中，原选择已保留。</p><ActionButton variant="outline" onClick={serviceCatalog.retry}>重新加载服务方案</ActionButton></div>
+                )}</>) : (<p className="muted text-sm text-muted-foreground">
                   使用最高优先级用户组的方案；没有用户组时，使用账号设置与直接授权。
                 </p>)}
           </AppField>
