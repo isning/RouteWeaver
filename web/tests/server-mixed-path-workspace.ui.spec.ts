@@ -136,7 +136,13 @@ for (const width of [1440, 390, 320]) {
     await expect(connection).toBeHidden();
     await expect(edit).toBeFocused();
     await expect(summary).toContainText("a 监听 → proxy-x → proxy-y → b 监听 → proxy-z → 目标");
-    for (const trigger of await editor.locator(".hop-summary[aria-expanded='true']").all()) await trigger.click();
+    // Keep the locator collection stable as each expanded row is collapsed.
+    const configurations = editor.getByRole("button", { name: /^配置第 \d+ 跳 / });
+    await expect(configurations).toHaveCount(5);
+    for (const trigger of await configurations.all()) {
+      if (await trigger.getAttribute("aria-expanded") === "true") await trigger.click();
+      await expect(trigger).toHaveAttribute("aria-expanded", "false");
+    }
     await editor.getByRole("textbox", { name: "转发路径名称", exact: true }).scrollIntoViewIfNeeded();
     await settledTask(editor);
     await expect(editor.getByText("仅保存草稿，检查与应用需另行操作。", { exact: true })).toHaveCount(0);
