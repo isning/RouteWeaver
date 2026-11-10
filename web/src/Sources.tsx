@@ -1464,7 +1464,13 @@ export function CollectionsPage() {
                 }
               </Notice>
             )}
-            {sources.isPending && <p role="status">正在加载可选来源…</p>}
+            {sources.isPaused ? (
+              <p role="status">等待网络连接，恢复后将继续加载可选来源。</p>
+            ) : sources.isPending || (sources.isFetching && !sources.data) ? (
+              <p role="status">正在加载可选来源…</p>
+            ) : sources.isFetching ? (
+              <p role="status">正在更新可选来源，当前显示上次读取结果。</p>
+            ) : null}
             {sources.isError && (
               <Notice
                 tone="error"
@@ -1482,7 +1488,7 @@ export function CollectionsPage() {
                 {"已选来源、顺序和处理步骤已保留。重试后可更改来源选择。"}
               </Notice>
             )}
-            {sources.isSuccess && sourceNames.size === 0 && <p>暂无可选来源</p>}
+            {sourceCatalogChecked && sourceNames.size === 0 && <p>暂无可选来源</p>}
             {sources.isSuccess &&
               sourceNames.size > 0 &&
               !draft.sources.length && <p>尚未选择来源</p>}

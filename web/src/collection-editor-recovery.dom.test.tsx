@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, onlineManager } from "@tanstack/react-query";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { CollectionsPage } from "./Sources";
 import { UIProviders } from "./ui-patterns/providers";
@@ -29,10 +29,11 @@ const providers: Source[] = ["one", "two"].map((id) => ({
 }));
 const conflict = () => json({ code: "COLLECTION_DRAFT_CHANGED", message: "Untrusted conflict detail" }, 409);
 const clients: QueryClient[] = [];
-function mount(cachedCollections?: unknown[]) {
+function mount(cachedCollections?: unknown[], cachedSources?: Source[]) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   clients.push(client);
   if (cachedCollections) client.setQueryData(["collections"], cachedCollections);
+  if (cachedSources) client.setQueryData(["sources"], cachedSources);
   const tree = (key: string) => <QueryClientProvider client={client}>
     <UIProviders><CollectionsPage key={key} /></UIProviders>
   </QueryClientProvider>;
@@ -47,6 +48,7 @@ function api(options: {
   read?: () => Promise<Response>;
   preview?: (value: Collection) => Promise<Response>;
   createSource?: (value: Source) => Promise<Response>;
+  sourceList?: () => Promise<Response>;
 } = {}) {
   const writes: Write[] = [], reads: string[] = [], previews: Collection[] = [];
   let collections = options.collections ?? [opened], sources = providers;
@@ -67,7 +69,7 @@ function api(options: {
       return options.save ? options.save(body, writes.length) : conflict();
     }
     if (path === "/me/collections") return options.list ? options.list() : json(collections);
-    if (path === "/me/sources") return json(sources);
+    if (path === "/me/sources") return options.sourceList ? options.sourceList() : json(sources);
     if (path === "/me/collections/travel") {
       reads.push(path);
       return options.read ? options.read() : json(current);
@@ -86,6 +88,7 @@ beforeEach(() => {
 });
 afterEach(async () => {
   await act(async () => { cleanup(); clients.splice(0).forEach((client) => client.clear()); });
+  onlineManager.setOnline(true);
   vi.restoreAllMocks(); vi.unstubAllGlobals();
 });
 async function openRecipe() {
@@ -370,4 +373,36 @@ it.each(["empty collection", "empty source steps"] as const)("opens a cached leg
     id: "travel", name: "Retained cached edit", steps: [],
     sources: shape === "empty collection" ? [] : [{ sourceId: "one", steps: [] }],
   });
+});
+
+
+it("distinguishes a cached empty source list being refreshed from a confirmed empty list", async () => {
+  let finish: ((response: Response) => void) | undefined;
+  api({ sourceList: () => new Promise<Response>((resolve) => { finish = resolve; }) });
+  mount(undefined, []);
+  const editor = await openRecipe();
+  expect(editor.queryByText("暂无可选来源")).toBeNull();
+  expect(editor.getByText("正在更新可选来源，当前显示上次读取结果。")).toBeTruthy();
+  fireEvent.change(editor.getByLabelText("集合名称"), { target: { value: "Retained local name" } });
+  await act(async () => finish!(json([])));
+  expect(await editor.findByText("暂无可选来源")).toBeTruthy();
+  expect(editor.queryByText("正在更新可选来源，当前显示上次读取结果。")).toBeNull();
+  expect((editor.getByLabelText("集合名称") as HTMLInputElement).value).toBe("Retained local name");
+  expect(editor.getByRole("button", { name: /^1\. one/ })).toBeTruthy();
+});
+
+it("identifies a paused initial source read and resumes without replacing the collection draft", async () => {
+  api();
+  onlineManager.setOnline(false);
+  mount([opened]);
+  await userEvent.click(screen.getAllByRole("button", { name: "新建集合" })[0]);
+  const editor = within(await screen.findByRole("dialog", { name: "新建集合" }));
+  expect(editor.getByText("等待网络连接，恢复后将继续加载可选来源。")).toBeTruthy();
+  expect(editor.queryByText("正在加载可选来源…")).toBeNull();
+  expect(editor.queryByText("暂无可选来源")).toBeNull();
+  fireEvent.change(editor.getByLabelText("集合名称"), { target: { value: "Offline draft" } });
+  await act(async () => onlineManager.setOnline(true));
+  await waitFor(() => expect((editor.getByLabelText("订阅来源") as HTMLButtonElement).disabled).toBe(false));
+  expect(editor.queryByText("等待网络连接，恢复后将继续加载可选来源。")).toBeNull();
+  expect((editor.getByLabelText("集合名称") as HTMLInputElement).value).toBe("Offline draft");
 });

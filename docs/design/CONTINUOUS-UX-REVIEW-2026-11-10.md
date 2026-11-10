@@ -18,7 +18,7 @@ All rows below still require a complete state and rendered-layout review. Entrie
 | Workspace navigation and mobile menu | Find a task without losing current work | Source inspection only |
 | Subscriptions, profiles and outputs | Configure, review and deliver a client subscription | Captured profile summary, source reads and subscription copy lifecycle reviewed; remaining publication/output states open |
 | Subscription sources | Import and accept owned connection options | Not yet reviewed in this pass |
-| Collections | Combine sources without silently changing their meaning | Not yet reviewed in this pass |
+| Collections | Combine sources without silently changing their meaning | Source-catalog refresh/pause states and retained drafts reviewed; other states and rendered layout open |
 | Rule resources | Inspect and accept owned rule versions | Source and 88 focused recovery tests reviewed; no new reachable defect, rendered states open |
 | Templates and presets | Reuse configuration and review updates | Publication-target and extraction recovery reviewed; rendered states open |
 | Inbox | Read account messages and recover acknowledgement failures | Open-sheet refresh recovery and obsolete acknowledgement errors reviewed; remaining states and rendered layout open |
@@ -212,3 +212,9 @@ Focused tests, strict TypeScript and production build pass for these slices. A f
 - Defects: a message-sheet refresh failure had recovery controls only behind the modal. Separately, a failed mark-read request could retain its error even after an authoritative refresh confirmed the message was read, including an older failure arriving after that confirmation.
 - Decision: failed reads offer a focusable retry within the message sheet, preserving its full content. Once the displayed message has confirmed read state, obsolete acknowledgement errors are not presented as an outstanding task. No automatic mutation retry or duplicate acknowledgement is introduced.
 - Evidence: three public-task cases fail before and pass after the correction, including Tab/Enter recovery and both acknowledgement/refetch orderings. Nineteen inbox cases and TypeScript pass; coordinator independently reran 28 inbox/time-label/decision-copy cases across three files and reviewed source. Paused-state behavior is unchanged. Native-browser layout and focus restoration after the successful read remain outside this bounded DOM review.
+
+### Distinguish collection source loading from confirmed emptiness
+
+- Defects: an empty cached source catalog was labeled empty during an in-flight refresh. An initial offline read described indefinite loading instead of its paused network state.
+- Decision: keep initial loading, cached refresh, paused waiting and confirmed empty states distinct. Only a checked source catalog claims no available sources; existing source selections, ordering, processing and local collection name remain intact across reconnection. The change does not infer current availability from cached names.
+- Evidence: two public CollectionsPage regressions fail before and pass after the correction. They check cached-empty refresh completion, pause/resume and retained draft/name/selected source. Forty-six focused recovery/source-task/preview cases and TypeScript pass; coordinator independently reran all 21 collection-editor recovery cases and reviewed the state conditions. This is source/DOM evidence, not native-browser content/layout acceptance.
