@@ -26,10 +26,10 @@ All rows below still require a complete state and rendered-layout review. Entrie
 | Forwarding paths | Select explicit ordered managed/external hops | Source, bounded DOM and captured layout review; corrections below |
 | Servers and core instances | Find a server, inspect observations and manage configuration | Source and focused DOM tests; diagnostic receipt correction below |
 | Fleet tasks | Review targets, execute stages and inspect actual outcomes | Not yet reviewed in this pass |
-| Users and access policy | Grant and inspect effective service access | Not yet reviewed in this pass |
-| Service offerings | Define user-visible limits and permitted routes | Not yet reviewed in this pass |
-| Change records | Inspect attributable operations | Not yet reviewed in this pass |
-| Platform settings and backup | Configure shared services and perform explicit recovery | Not yet reviewed in this pass |
+| Users and access policy | Grant and inspect effective service access | List empty/filter source inspection only; decisions and rendered states open |
+| Service offerings | Define user-visible limits and permitted routes | List empty/filter source inspection only; decisions and rendered states open |
+| Change records | Inspect attributable operations | Source/list regression slices reviewed; remaining states open |
+| Platform settings and backup | Configure shared services and perform explicit recovery | Backup preview replacement reviewed; settings source-only, other states open |
 | Endpoint and legacy link configuration | Maintain stable connection and forwarding intent | Server picker and inventory submit-recovery slices reviewed; other states open |
 | Announcements and delivery settings | Compose in-app messages and inspect channel results | External test identity and outcome recovery reviewed; other states open |
 
@@ -37,7 +37,7 @@ All rows below still require a complete state and rendered-layout review. Entrie
 
 The shared layers are `components/ui` (registry primitives), `ui-patterns` (task/form/navigation composition), `DataTable`, `components.tsx`, and the task-specific components imported by the pages above. A passing primitive test does not certify every composed use.
 
-This pass inspected `DataTable`, `PageNavigation`, `ResourceToolbar`, `AppForm`/`AppField`, `PageBoundary`, task overlays and choice selectors at source level. Only the choice-selector change below has new behavior evidence. Pixel layout, contrast and touch geometry remain unreviewed here. The remaining shared and task components remain open; the implementation inventory is the tracked `web/src` tree, not a hand-maintained claim of exhaustive code review.
+This pass inspected `DataTable`, `PageNavigation`, `ResourceToolbar`, `AppForm`/`AppField`, `PageBoundary`, task overlays and choice selectors at source level. New public-seam evidence covers choice disabling, caller-owned busy state, opt-in inventory submission recovery and uncontrolled pagination. Task-specific corrections and their limits appear below. Actual pixel observations are limited to the identified CI captures; contrast and touch geometry have not received a comprehensive review. The remaining shared and task components remain open; the implementation inventory is the tracked `web/src` tree, not a claim of exhaustive code review.
 
 ## Completed corrections and design reasons
 
@@ -130,6 +130,12 @@ This pass inspected `DataTable`, `PageNavigation`, `ResourceToolbar`, `AppForm`/
 - Decision: when platform entries are selected, show equally weighted, separately scoped own-connection and platform-entry counts. Keep publication-time credential resolution as a separate fact. Entry-only, mixed and own-only configurations remain distinct; direct-only configurations keep their existing concise explanation.
 - Read boundaries: pending, paused, background-refresh and failed catalog reads never show cached entry counts as confirmed availability. Missing selections remain visible. Unselected platform-catalog states do not displace an own-only/direct-only summary; the selector still retains its error and retry.
 - Evidence: entry-only/mixed hierarchy and irrelevant-catalog regressions fail before their fixes. Focused profile/source suites, application/spec typechecks and browser discovery pass; coordinator independently reran the affected DOM files. The desktop/390px invitation journey now asserts equal visual weight and captures the full summary. Corrected pixels remain pending CI; the original screenshot establishes a content-hierarchy defect, not a routing failure.
+
+### Let a cleared backup preview start a new inspection
+
+- Defect: clearing inputs during a pending backup preview reset visible loading but retained the old inspection owner. After selecting a replacement file/password, the enabled validation button silently refused to submit until the abandoned request finished.
+- Decision: explicit clearing retires both preview-ownership references as well as its visible inputs. A later explicit validation owns its exact replacement file/password; old completion cannot replace its preview, clear its pending state or expose a restore decision. Clearing does not abort a submitted server request or change restore-operation ownership.
+- Evidence: the public DOM regression fails before the two-line fix. Four synthetic races cover obsolete success/failure both before and after replacement completion, exact submitted inputs, no automatic request, duplicate activation and fresh restore confirmation. Thirty-five focused backup tests and TypeScript pass; coordinator independently reran all four new cases. No real backup, restore or upload was performed, and no browser-layout claim is made.
 
 ## Rendered-evidence follow-up
 

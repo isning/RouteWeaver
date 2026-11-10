@@ -345,6 +345,8 @@ export function BackupSettings() {
                 setPreview(null);
                 setConfirmation("");
                 setFileError(null);
+                activeInspection.current = null;
+                inspectionSubmission.current = null;
                 inspect.reset();
                 restore.reset();
                 setRestoreError(null);
