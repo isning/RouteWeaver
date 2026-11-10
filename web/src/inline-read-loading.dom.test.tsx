@@ -142,9 +142,15 @@ it("keeps user assignment offline, pending and failed without blocking dismissal
   );
   let release!: (response: Response) => void;
   const unexpected: string[] = [];
+  const catalogReads: string[] = [];
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url: string, init?: RequestInit) => {
+      // Service plans are read separately from /state after selecting a user.
+      if (url === "/api/services" && (!init?.method || init.method === "GET")) {
+        catalogReads.push(url);
+        return json([]);
+      }
       if (url !== "/api/state" || (init?.method && init.method !== "GET")) {
         unexpected.push(`${init?.method || "GET"} ${url}`);
         throw new Error("Unexpected request");
@@ -201,7 +207,9 @@ it("keeps user assignment offline, pending and failed without blocking dismissal
   await user.click(
     await within(dialog).findByRole("combobox", { name: "用户" }),
   );
+  expect(catalogReads).toEqual([]);
   await user.click(await screen.findByRole("option", { name: "Alice" }));
+  await waitFor(() => expect(catalogReads).toEqual(["/api/services"]));
   expect((version as HTMLInputElement).value).toBe("unsent-version");
   let refresh!: Promise<void>;
   act(() => {
