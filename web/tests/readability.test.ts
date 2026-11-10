@@ -155,3 +155,15 @@ it.each(["background", "card", "muted", "sidebar", "popover"])(
       .toBeGreaterThanOrEqual(3);
   },
 );
+
+// Ordinary dark controls retain the shared 50% halo. Target 3:1 against
+// these adjacent neutral surfaces, including the brighter muted surface.
+// This is a bounded palette guard, not a focus-area or compliance verdict.
+it.each(["background", "card", "muted", "popover"])(
+  "keeps the dark neutral half-opacity focus halo distinguishable on %s",
+  (surface) => {
+    const background = token(surface, true);
+    expect(contrast(composite(token("ring", true), background, 0.5), background))
+      .toBeGreaterThanOrEqual(3);
+  },
+);

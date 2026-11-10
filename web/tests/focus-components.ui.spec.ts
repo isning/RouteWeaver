@@ -196,7 +196,7 @@ for (const theme of ["light", "dark"]) {
         info,
         `focus-sample-${theme}-${name}`,
       );
-      if (name === "sidebar" || name === "destructive" || name === "outline" || name === "muted-outline") {
+      if (name === "sidebar" || name === "destructive" || name === "outline" || name === "muted-outline" || name === "input" || name === "muted-input") {
         // Inspect actual screenshot pixels at a straight edge, avoiding
         // rounded-corner antialiasing. Computed tokens alone miss compositing.
         const screenshot = await page.screenshot({ fullPage: false, scale: "css" });
@@ -333,7 +333,7 @@ for (const theme of ["light", "dark"]) {
       contentType: "application/json",
       body: JSON.stringify({
         scope:
-          "Synthetic actual shared components, native focus, desktop. Bounded sidebar/destructive/outline pixel contrast and checkbox focus assertions, not whole-app compliance. Both themes are sampled; app layout and other dark focus treatments remain outside these repairs.",
+          "Synthetic actual shared components, native focus, desktop. Bounded sidebar/destructive/outline/input pixel contrast and checkbox focus assertions, including muted outline/input surfaces, not whole-app compliance. Both themes are sampled. The shared dark neutral token also brightens opaque consumers; unchanged error/destructive and sidebar overrides are sampled separately. App-wide layout and focus coverage remain outside this sampler.",
         samples: [...samples.map(([name]) => name), "inactive-tab"],
       }),
     });
