@@ -77,6 +77,18 @@ export function DiagnosticsPanel({
     [selected, setSelected] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<DiagnosticJob | null>(null);
   const receiptListBoundary = useRef<{ data: DiagnosticJob[] | undefined; updatedAt: number }>({ data: undefined, updatedAt: 0 });
+  const retainReceipt = (job: DiagnosticJob) => {
+    const cached = client.getQueryState<DiagnosticJob[]>(["diagnostic-jobs"]);
+    receiptListBoundary.current = { data: cached?.data, updatedAt: cached?.dataUpdatedAt || 0 };
+    // A terminal poll may finish while a cancellation POST is in flight.
+    // Keep that outcome rather than replacing it with its older acknowledgement.
+    const completed = cached?.data?.find((known) => sameDiagnosticRequest(known, job) &&
+      ["succeeded", "failed", "cancelled", "not_run"].includes(known.status));
+    setReceipt((previous) =>
+      previous && sameDiagnosticRequest(previous, job) &&
+        ["succeeded", "failed", "cancelled", "not_run"].includes(previous.status)
+        ? previous : completed || job);
+  };
   const availableTargets = (targets.data || []).filter(
     (t) => t.nodeId === host.id,
   );
@@ -90,6 +102,9 @@ export function DiagnosticsPanel({
     jobs.data !== receiptListBoundary.current.data;
   const refreshedReceipt = scopedReceipt && listReadAfterReceipt && listedRows.find((job) =>
     sameDiagnosticRequest(job, scopedReceipt) &&
+    // A cancellation acknowledgement cannot regress to queued/running while
+    // waiting for a terminal observation, even if the read completes later.
+    (scopedReceipt.status !== "cancel_requested" || !["queued", "running"].includes(job.status)) &&
     // The API supplies no ordered observation version. A final result must not
     // become an active job again merely because another list response arrives.
     (!["succeeded", "failed", "cancelled", "not_run"].includes(scopedReceipt.status) || job.status === scopedReceipt.status));
@@ -261,9 +276,7 @@ export function DiagnosticsPanel({
           instances={availableInstances}
           onClose={() => setCreating(false)}
           onCreated={(job) => {
-            const cached = client.getQueryState<DiagnosticJob[]>(["diagnostic-jobs"]);
-            receiptListBoundary.current = { data: cached?.data, updatedAt: cached?.dataUpdatedAt || 0 };
-            setReceipt(job);
+            retainReceipt(job);
             client.invalidateQueries({ queryKey: ["diagnostic-jobs"] });
             setCreating(false);
             setSelected(job.id);
@@ -286,7 +299,7 @@ export function DiagnosticsPanel({
             : "最新列表尚未确认该次测试的状态，以下保留上次确认的记录。请刷新结果核对。"}
         </Notice>}
         {selectedJob && (
-          <DiagnosticResult job={selectedJob} refresh={() => { void refreshJobs(); }} />
+          <DiagnosticResult key={selectedJob.id} job={selectedJob} onCancelled={retainReceipt} refresh={() => { void refreshJobs(); }} />
         )}
       </TaskSheet>
     </>
@@ -295,14 +308,25 @@ export function DiagnosticsPanel({
 export function DiagnosticResult({
   job,
   refresh,
+  onCancelled,
 }: {
   job: DiagnosticJob;
   refresh: () => void;
+  onCancelled?: (job: DiagnosticJob) => void;
 }) {
   const confirm = useConfirm();
   const cancel = useMutation({
-    mutationFn: () => post<DiagnosticJob>(`${base}/${job.id}/cancel`, {}),
-    onSuccess: refresh,
+    mutationFn: async (requested: DiagnosticJob) => {
+      const accepted = await post<DiagnosticJob>(`${base}/${requested.id}/cancel`, {});
+      if (!sameDiagnosticRequest(accepted, requested)) {
+        throw new Error("取消响应与当前测试不匹配。请刷新结果核对。");
+      }
+      return accepted;
+    },
+    onSuccess: (accepted) => {
+      onCancelled?.(accepted);
+      refresh();
+    },
   });
   const result = job.result;
   return (
@@ -389,7 +413,7 @@ export function DiagnosticResult({
                   "节点收到后停止剩余测试。已经产生的流量不会撤销，取消请求不等于已停止。",
                 confirmLabel: "请求取消",
                 cancelLabel: "继续测试",
-                onConfirm: () => cancel.mutateAsync().catch(() => {}),
+                onConfirm: () => cancel.mutateAsync(job).catch(() => {}),
               })
             }
             variant="destructive"

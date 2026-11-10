@@ -92,7 +92,12 @@ it.each(["missing", "wrong-host", "wrong-target", "wrong-limits"])("keeps the co
   expect(confirmation.getByText("取消对「Owned target」的连通性？")).toBeTruthy();
   await userEvent.click(confirmation.getByRole("button", { name: "请求取消" }));
   expect(f.writes).toEqual(["/api/admin/diagnostic-jobs", `/api/admin/diagnostic-jobs/${f.receipt().id}/cancel`]);
+  expect(await details.findByText("已请求取消")).toBeTruthy();
+  expect(details.queryByRole("button", { name: "取消测试" })).toBeNull();
   expect(details.queryByText("已取消")).toBeNull();
+  await userEvent.click(details.getByRole("button", { name: "刷新结果" }));
+  expect(await details.findByText("已请求取消")).toBeTruthy();
+  expect(details.queryByRole("button", { name: "取消测试" })).toBeNull();
 });
 
 it("retains the latest confirmed terminal result when a later list omits the job", async () => {
