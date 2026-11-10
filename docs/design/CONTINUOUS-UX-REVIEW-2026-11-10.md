@@ -25,7 +25,7 @@ All rows below still require a complete state and rendered-layout review. Entrie
 | Published routes | Offer a versioned usable entry and route | Captured authorization attribution and nested catalog recovery reviewed; other states open |
 | Forwarding paths | Select explicit ordered managed/external hops | Source, bounded DOM and captured layout review; corrections below |
 | Servers and core instances | Find a server, inspect observations and manage configuration | Source and focused DOM tests; diagnostic receipt correction below |
-| Fleet tasks | Review targets, execute stages and inspect actual outcomes | Not yet reviewed in this pass |
+| Fleet tasks | Review targets, execute stages and inspect actual outcomes | Re-preview ownership and acknowledgement recovery reviewed; remaining states and rendered layout open |
 | Users and access policy | Grant and inspect effective service access | List empty/filter source inspection only; decisions and rendered states open |
 | Service offerings | Define user-visible limits and permitted routes | List empty/filter source inspection only; decisions and rendered states open |
 | Change records | Inspect attributable operations | Source/list regression slices reviewed; remaining states open |
@@ -200,3 +200,9 @@ The two existing service-focus tests retain all prior assertions and now attach 
 ## Current verification boundary
 
 Focused tests, strict TypeScript and production build pass for these slices. A frozen tree corresponding to `81865ca` passed all 3,656 frontend tests in 290 files. Later form, pagination, summary and backup changes have their separately recorded focused evidence; they are not retroactively covered by that earlier full run. Exact-commit CI remains a separate check. They do not establish visual quality or comprehension. No deployment, live-node operation, production data change or historical quota decision belongs to this review.
+
+### Require a new acknowledgement after rechecking a fleet plan
+
+- Defect: after a successful acknowledged preview, explicitly previewing again left the old reviewed plan and enabled Create action present during the replacement request and after a failed replacement. The user could create from a check they had just attempted to supersede.
+- Decision: starting the explicit recheck advances its ownership revision and clears only the prior review and acknowledgement. Input selections remain; successful recovery requires a fresh acknowledgement before creating a pending batch. No batch is executed by preview or acknowledgement.
+- Evidence: public FleetPlanForm regression fails before the correction, then verifies pending/failure invalidation, retained selected instance, successful retry and renewed acknowledgement without a create request. Thirty-eight focused tests across three files and TypeScript pass; coordinator independently reviewed the source and reran all seven pending-operation cases. This is bounded source/DOM evidence, not actual-node or rendered-layout acceptance.

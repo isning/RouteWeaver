@@ -1063,6 +1063,9 @@ export function FleetPlanForm({
             onClick={() => {
               cancelAbandonFocus();
               creation.resetFeedback();
+              revision.current++;
+              setReview(null);
+              setConfirmed(false);
               inspect.mutate(revision.current);
             }}
             variant="default"

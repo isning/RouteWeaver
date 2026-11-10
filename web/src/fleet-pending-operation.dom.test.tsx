@@ -249,3 +249,42 @@ it("keeps the fleet plan and exact Close focus after two canceled discard decisi
   }
   expect(requests).toEqual([]);
 });
+
+it("requires a fresh review after rechecking a previously acknowledged fleet plan", async () => {
+  let finish!: (response: Response) => void;
+  let previews = 0;
+  const writes: string[] = [];
+  vi.stubGlobal("fetch", vi.fn(async (url) => {
+    if (!String(url).endsWith("/preview")) {
+      writes.push(String(url));
+      throw new Error(`Unexpected write ${url}`);
+    }
+    previews++;
+    if (previews === 2) return new Promise<Response>((resolve) => { finish = resolve; });
+    return json(plan);
+  }));
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  clients.push(client);
+  await renderFleetSession(<FleetPlanForm inventory={inventory} history={[]} initialDeploymentId="path"
+    initialTargetIds={["core"]} onClose={() => {}} onCreated={() => {}} />,
+    (content) => render(<QueryClientProvider client={client}><UIProviders>{content}</UIProviders></QueryClientProvider>));
+  const preview = screen.getByRole("button", { name: "预览影响与差异" });
+  await userEvent.click(preview);
+  await userEvent.click(await screen.findByRole("checkbox", { name: "我已核对实例、阶段与影响范围" }));
+  expect(screen.getByRole("button", { name: "创建待执行批次" })).toHaveProperty("disabled", false);
+  await userEvent.click(preview);
+  await waitFor(() => expect(previews).toBe(2));
+  expect(screen.queryByRole("button", { name: "创建待执行批次" })).toBeNull();
+  expect(screen.queryByRole("checkbox", { name: "我已核对实例、阶段与影响范围" })).toBeNull();
+  await act(async () => finish(json({ error: "Preview unavailable" }, 503)));
+  await screen.findByText("Preview unavailable");
+  expect(screen.queryByRole("button", { name: "创建待执行批次" })).toBeNull();
+  expect(screen.getByRole("checkbox", { name: "选择实例 Office core" }).getAttribute("aria-checked")).toBe("true");
+  await userEvent.click(preview);
+  const acknowledgment = await screen.findByRole("checkbox", { name: "我已核对实例、阶段与影响范围" });
+  expect(acknowledgment.getAttribute("aria-checked")).toBe("false");
+  expect(screen.getByRole("button", { name: "创建待执行批次" })).toHaveProperty("disabled", true);
+  await userEvent.click(acknowledgment);
+  expect(screen.getByRole("button", { name: "创建待执行批次" })).toHaveProperty("disabled", false);
+  expect(writes).toEqual([]);
+});
