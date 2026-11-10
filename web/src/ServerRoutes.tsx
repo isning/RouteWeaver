@@ -730,6 +730,15 @@ export function ServerRouteEditor({
     setDirty(true);
     setError(null);
   };
+  // A display-name edit does not invalidate an endpoint selection in flight.
+  // Topology/policy edits still go through update and advance the revision fence.
+  const rename = (name: string) => {
+    const next = { ...latestDraft.current, name };
+    latestDraft.current = next;
+    setDraft(next);
+    setDirty(true);
+    setError(null);
+  };
   const legacyChainEditable = (draft.ir.programs == null || Array.isArray(draft.ir.programs)) && canEditLegacyPath({ ...draft, ir: { ...draft.ir, programs } }, inventory);
   const orderedPath = readOrderedServerPath(draft, inventory);
   const chainEditable = legacyChainEditable || orderedPath.editable;
@@ -759,12 +768,12 @@ export function ServerRouteEditor({
           throw new Error("所选监听的所属核心已变化，请重新选择服务器和端点。");
         return endpoint;
       }));
-      if (revision !== draftRevision.current || latestDraft.current !== source) return false;
+      if (revision !== draftRevision.current || latestDraft.current.ir !== source.ir) return false;
       const revealed = new Map(endpoints.map((endpoint) => [endpoint.id, endpoint]));
       const next = compileOrderedServerPath(source, hops, {
         ...inventory, endpoints: inventory.endpoints.map((endpoint) => revealed.get(endpoint.id) || endpoint),
       });
-      update({ ...next, ir: { ...next.ir, topologyRevision: newID("topology") } });
+      update({ ...next, name: latestDraft.current.name, ir: { ...next.ir, topologyRevision: newID("topology") } });
       setAnnouncement(hops.length ? "代理链顺序已更新到草稿，尚未保存。" : "路径已清空，请选择第一跳。");
       return true;
     } catch (error) {
@@ -808,7 +817,7 @@ export function ServerRouteEditor({
       if (revealedReason) throw new Error(revealedReason);
       const next = compilePath(base, ids, selectedInventory);
       next.ir.topologyRevision = newID("topology");
-      update(next);
+      update({ ...next, name: latestDraft.current.name });
       setAnnouncement(
         next.ir.programs.length
           ? `路径已更新：${next.ir.programs.map((p) => p.listener.name).join("，然后到")}，最后直接访问目标。`
@@ -1091,7 +1100,7 @@ export function ServerRouteEditor({
           <Input
             aria-label="转发路径名称"
             value={draft.name}
-            onChange={(e) => update({ ...draft, name: e.target.value })}
+            onChange={(e) => rename(e.target.value)}
             placeholder="例如：FRA → 英国"
           />
         </label>

@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -251,5 +252,50 @@ it("keeps unfinished server choices in sequence view until they are completed or
   expect(screen.getByRole("button", { name: /^配置第 1 跳 Listener FRA/ })).toBeTruthy();
   expect(screen.queryByRole("combobox", { name: "第 2 跳服务器" })).toBeNull();
   expect(screen.getByRole("button", { name: "保存草稿" }).hasAttribute("disabled")).toBe(false);
+  client.clear();
+});
+
+it("keeps a pending endpoint replacement when the path is renamed, and saves both choices", async () => {
+  const alternate = { ...endpoints[0], id: "entry-a-alt", name: "FRA alternate", connection: { ...endpoints[0].connection, port: 1081 } };
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => { release = resolve; });
+  const originalFetch = vi.mocked(fetch).getMockImplementation()!;
+  vi.mocked(fetch).mockImplementation(async (url, init) => {
+    const path = String(url);
+    if (path.endsWith("/managed-endpoints")) return json([...endpoints, alternate]);
+    if (path.endsWith("/managed-endpoints/entry-a-alt/reveal")) { await gate; return json(alternate); }
+    return originalFetch(url, init);
+  });
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  render(<QueryClientProvider client={client}><UIProviders><ServerRoutesPage /></UIProviders></QueryClientProvider>);
+  const user = userEvent.setup();
+  await user.click((await screen.findAllByRole("button", { name: "新建转发路径" }))[0]);
+  const name = screen.getByRole("textbox", { name: "转发路径名称" });
+  await user.type(name, "Original name");
+  const choose = async (label: string, query: string) => {
+    await user.click(screen.getByRole("combobox", { name: label }));
+    await user.type(screen.getByRole("combobox", { name: "搜索选项" }), query);
+    await user.keyboard("{Enter}");
+    await waitFor(() => expect(screen.queryByRole("listbox")).toBeNull());
+  };
+  await choose("第 1 跳服务器", "FRA");
+  await choose("第 1 跳端点", "Listener FRA");
+  await user.click(await screen.findByRole("button", { name: /^配置第 1 跳 Listener FRA/ }));
+  await choose("第 1 跳端点", "FRA alternate");
+  await waitFor(() => expect(screen.getByRole("button", { name: "保存草稿" }).hasAttribute("disabled")).toBe(true));
+  await user.clear(name);
+  await user.type(name, "Renamed during read");
+  expect(screen.getByRole("button", { name: "保存草稿" }).hasAttribute("disabled")).toBe(true);
+  const graph = screen.getByRole("tab", { name: "图形编辑" });
+  expect(graph.hasAttribute("disabled")).toBe(true);
+  expect(document.getElementById(graph.getAttribute("aria-describedby")!)?.textContent).toBe("正在读取所选端点，完成后可切换编辑方式。");
+  await act(async () => { release(); await gate; });
+  await waitFor(() => expect(screen.getByRole("region", { name: "路径摘要" }).textContent).toContain("FRA alternate"));
+  expect((name as HTMLInputElement).value).toBe("Renamed during read");
+  expect(graph.hasAttribute("disabled")).toBe(false);
+  await user.click(screen.getByRole("button", { name: "保存草稿" }));
+  await waitFor(() => expect(saved).toBeTruthy());
+  expect(saved.name).toBe("Renamed during read");
+  expect(saved.ir.programs.map((program: any) => program.listener.id)).toEqual(["entry-a-alt"]);
   client.clear();
 });
