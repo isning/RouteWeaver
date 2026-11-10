@@ -85,7 +85,12 @@ import {
   type ActionLocation,
   type MissingActionReference,
 } from "./profile-validation";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  onlineManager,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { list, post, request, saveRecord } from "./api";
 import type {
   ActionRef,
@@ -417,7 +422,6 @@ export function ProfileEditor({
   const [code, setCode] = useState("");
   const [codeBaseline, setCodeBaseline] = useState("");
   const codeDirty = codeOpen && code !== codeBaseline;
-  useUnsavedChanges(changed || codeDirty || !!groupTask);
   const client = useQueryClient();
   const message = toast,
     confirm = useConfirm();
@@ -607,15 +611,32 @@ export function ProfileEditor({
       ir: { ...profile.ir, name: draft.name },
     };
   };
+  const submitting = useRef(false);
+  const saveOwner = useRef(false);
+  useLayoutEffect(() => {
+    saveOwner.current = true;
+    return () => {
+      saveOwner.current = false;
+    };
+  }, []);
   const save = useMutation({
+    // Draft saves must never queue behind an offline pause and outlive the editor.
+    networkMode: "always",
+    retry: false,
     onMutate: () => invalidateOutputInputs(client, draft.id),
     onSettled: () => invalidateOutputInputs(client, draft.id),
-    mutationFn: () =>
-      saveRecord<Profile>(
+    mutationFn: () => {
+      if (!saveOwner.current)
+        throw new Error("配置编辑已关闭，未发送保存请求。");
+      if (!onlineManager.isOnline()) {
+        throw new Error("当前离线，草稿未保存。请联网后重新保存。");
+      }
+      return saveRecord<Profile>(
         "me/profiles",
         { ...payload(), revisionToken: draft.revisionToken },
         !persisted,
-      ),
+      );
+    },
     onSuccess: (result) => {
       client.invalidateQueries({ queryKey: ["profiles"] });
       // A saved draft changes candidates, not frozen Output artifacts. Mark only
@@ -628,6 +649,7 @@ export function ProfileEditor({
             (query.state.data as Output | undefined)?.profileId === draft.id),
         refetchType: "none",
       });
+      if (!saveOwner.current) return;
       // Save responses are redacted summaries. Keep editable secrets and native
       // override text from this draft rather than replacing them with blanks.
       setDraft({
@@ -641,6 +663,7 @@ export function ProfileEditor({
       setSaved(true);
     },
     onError: (error) => {
+      if (!saveOwner.current) return;
       if (profileDraftChanged(error)) {
         setDraftConflict(true);
         setSaved(false);
@@ -650,6 +673,12 @@ export function ProfileEditor({
       setErrorRevision(revision.current);
     },
   });
+  useUnsavedChanges(
+    changed || codeDirty || !!groupTask || save.isPending,
+    save.isPending
+      ? "草稿正在保存，离开不会取消已发送的请求。请返回后核对保存结果。"
+      : undefined,
+  );
   const inspect = useMutation({
     mutationFn: async (_version: number) =>
       post<Preview>("/me/profiles/preview", payload()),
@@ -710,6 +739,7 @@ export function ProfileEditor({
     });
   };
   const close = () => {
+    if (submitting.current || save.isPending) return;
     if (sourceOwner.current) {
       message.info("请先完成或关闭来源编辑，当前输入会保留。");
       return;
@@ -1553,6 +1583,7 @@ export function ProfileEditor({
         <PageHeader
           title={persisted ? draft.name : "新建分流配置"}
           back={close}
+          backDisabled={save.isPending}
         />
       </div>
       <div
@@ -1567,7 +1598,9 @@ export function ProfileEditor({
             aria-live="polite"
             aria-atomic="true"
           >
-            {saved && !codeDirty
+            {save.isPending
+              ? "正在保存草稿，请等待结果。"
+              : saved && !codeDirty
               ? "草稿已保存"
               : codeDirty
                 ? "JSON 修改尚未应用"
@@ -1580,11 +1613,19 @@ export function ProfileEditor({
               leadingIcon={<SaveOutlined aria-hidden="true" />}
               aria-label="保存草稿"
               aria-busy={save.isPending}
-              onClick={() => {
-                if (sourceOwner.current || draftConflict) return;
+              onClick={async () => {
+                if (submitting.current || sourceOwner.current || draftConflict)
+                  return;
                 setError(null);
                 if (!checkDestinations()) return;
-                save.mutate();
+                submitting.current = true;
+                try {
+                  await save.mutateAsync();
+                } catch {
+                  /* The mutation reports the failure and retains the draft. */
+                } finally {
+                  submitting.current = false;
+                }
               }}
               disabled={
                 !draft.name.trim() ||
@@ -1611,19 +1652,26 @@ export function ProfileEditor({
                 unavailableSources.length > 0
               }
               onClick={async () => {
-                if (sourceOwner.current || draftConflict) return;
+                if (submitting.current || sourceOwner.current || draftConflict)
+                  return;
                 setError(null);
                 if (!checkDestinations()) return;
+                submitting.current = true;
                 const handoffRevision = revision.current;
+                const handoffOrigin = location.hash;
                 try {
                   if (!persisted || changed) await save.mutateAsync();
                   if (revision.current !== handoffRevision) return;
-                  setPublicationProfile(payload());
-                  setRepairingReview(false);
-                  setReviewRevision(handoffRevision);
-                  setReviewOpen(true);
+                  replaceView(handoffOrigin, () => {
+                    setPublicationProfile(payload());
+                    setRepairingReview(false);
+                    setReviewRevision(handoffRevision);
+                    setReviewOpen(true);
+                  });
                 } catch {
                   /* The mutation keeps the editable draft and reports the failure. */
+                } finally {
+                  submitting.current = false;
                 }
               }}
               variant="default"

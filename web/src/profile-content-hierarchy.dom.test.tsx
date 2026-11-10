@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -9,11 +10,13 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { UIProviders } from "./ui-patterns/providers";
 import {
   QueryClient,
   QueryClientProvider,
   QueryObserver,
+  onlineManager,
 } from "@tanstack/react-query";
 import { ProfileEditor } from "./Profiles";
 import { emptyProfile } from "./model";
@@ -72,6 +75,7 @@ beforeEach(() => {
 });
 afterEach(() => {
   cleanup();
+  onlineManager.setOnline(true);
   clients.splice(0).forEach((client) => client.clear());
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
@@ -94,6 +98,7 @@ function mount(
     inputFailure?: boolean;
     isNew?: boolean;
     saveResponse?: () => Promise<Response>;
+    unmountOnClose?: boolean;
   } = {},
 ) {
   const writes: { path: string; body: any }[] = [];
@@ -137,19 +142,24 @@ function mount(
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   clients.push(client);
-  render(
+  function Host() {
+    const [open, setOpen] = useState(true);
+    return open ? <ProfileEditor
+      initial={profile}
+      isNew={options.isNew ?? false}
+      output={options.output}
+      onClose={() => {
+        onClose();
+        if (options.unmountOnClose) setOpen(false);
+      }}
+    /> : <p>Profile list</p>;
+  }
+  const rendered = render(
     <QueryClientProvider client={client}>
-      <UIProviders>
-        <ProfileEditor
-          initial={profile}
-          isNew={options.isNew ?? false}
-          output={options.output}
-          onClose={onClose}
-        />
-      </UIProviders>
+      <UIProviders><Host /></UIProviders>
     </QueryClientProvider>,
   );
-  return { writes, fetcher, onClose, client };
+  return { writes, fetcher, onClose, client, unmount: rendered.unmount };
 }
 
 it("offers one strategy-group action in an empty panel and retains it after adding", async () => {
@@ -252,7 +262,7 @@ it("keeps dirty input and error on failed save while pending actions stay busy",
   });
   expect((save as HTMLButtonElement).disabled).toBe(true);
   expect(check.getAttribute("aria-busy")).toBe("true");
-  expect(within(actions).getByRole("status").textContent).toBe("草稿尚未保存");
+  expect(within(actions).getByRole("status").textContent).toBe("正在保存草稿，请等待结果。");
   resolveSave(json({ detail: "Draft save unavailable" }, 503));
   await screen.findByText("Draft save unavailable");
   expect((name as HTMLInputElement).value).toBe("Unsaved retained name");
@@ -779,4 +789,139 @@ it("distinguishes fixed, all-connection, and filtered automatic members while gr
   for (const name of ["Fixed only", "All connections", "Filtered connections", "Unresolved source"])
     expect(summary(name).closest("details")!.open).toBe(false);
   expect(writes).toEqual([]);
+});
+
+
+it("never sends an offline draft after discarding and reconnecting", async () => {
+  const profile = { ...emptyProfile(), id: "direct-only", name: "Direct only" };
+  const { writes } = mount(profile, { unmountOnClose: true });
+  const name = await screen.findByRole("textbox", { name: "配置名称" });
+  fireEvent.change(name, { target: { value: "Abandoned offline draft" } });
+  act(() => onlineManager.setOnline(false));
+  await userEvent.click(screen.getByRole("button", { name: "保存草稿" }));
+  await userEvent.click(screen.getByRole("button", { name: "返回" }));
+  await userEvent.click(await screen.findByRole("button", { name: "放弃修改" }));
+  await screen.findByText("Profile list");
+  await act(async () => {
+    onlineManager.setOnline(true);
+    await new Promise(resolve => setTimeout(resolve, 50));
+  });
+  expect(writes).toEqual([]);
+  expect(screen.queryByRole("dialog")).toBeNull();
+});
+
+it.each(["保存草稿", "保存并检查"])("keeps offline values editable after %s and requires an explicit online retry", async (action) => {
+  const profile = { ...emptyProfile(), id: "direct-only", name: "Direct only" };
+  const { writes } = mount(profile);
+  const name = await screen.findByRole("textbox", { name: "配置名称" });
+  fireEvent.change(name, { target: { value: "Offline draft" } });
+  act(() => onlineManager.setOnline(false));
+  await userEvent.click(screen.getByRole("button", { name: action }));
+  await screen.findByText("当前离线，草稿未保存。请联网后重新保存。");
+  expect(name.closest("[inert]")).toBeNull();
+  expect(name).toHaveProperty("value", "Offline draft");
+  fireEvent.change(name, { target: { value: "Recovered draft" } });
+  await act(async () => {
+    onlineManager.setOnline(true);
+    await new Promise(resolve => setTimeout(resolve, 50));
+  });
+  expect(writes).toEqual([]);
+  expect(screen.queryByRole("dialog")).toBeNull();
+  await userEvent.click(screen.getByRole("button", { name: action }));
+  await waitFor(() => expect(writes.filter(write => write.path === "/api/me/profiles/direct-only")).toHaveLength(1));
+  expect(writes[0].body.name).toBe("Recovered draft");
+  if (action === "保存并检查") await screen.findByRole("dialog", { name: "新增客户端订阅" });
+  else await screen.findByText("草稿已保存");
+});
+
+it("does not offer to discard a save already sent and blocks duplicate saves until it settles", async () => {
+  let finish!: (response: Response) => void;
+  const profile = { ...emptyProfile(), id: "direct-only", name: "Direct only" };
+  const { writes, onClose } = mount(profile, {
+    unmountOnClose: true,
+    saveResponse: () => new Promise(resolve => { finish = resolve; }),
+  });
+  fireEvent.change(await screen.findByRole("textbox", { name: "配置名称" }), { target: { value: "Pending online draft" } });
+  await userEvent.dblClick(screen.getByRole("button", { name: "保存草稿" }));
+  await waitFor(() => expect(writes).toHaveLength(1));
+  const back = screen.getByRole("button", { name: "返回" });
+  expect(back).toHaveProperty("disabled", true);
+  await userEvent.click(back);
+  expect(screen.queryByRole("alertdialog")).toBeNull();
+  expect(onClose).not.toHaveBeenCalled();
+  expect(screen.getByRole("group", { name: "保存与检查配置" }).textContent).toContain("正在保存草稿，请等待结果。");
+  finish(json(writes[0].body));
+  await screen.findByText("草稿已保存");
+  expect(back).toHaveProperty("disabled", false);
+  await userEvent.click(screen.getByRole("button", { name: "返回" }));
+  await screen.findByText("Profile list");
+  expect(writes).toHaveLength(1);
+});
+
+it("submits once when save and inspect are activated in the same event turn", async () => {
+  let finish!: (response: Response) => void;
+  const { writes } = mount({ ...emptyProfile(), id: "direct-only", name: "Direct only" }, {
+    saveResponse: () => new Promise(resolve => { finish = resolve; }),
+  });
+  fireEvent.change(await screen.findByRole("textbox", { name: "配置名称" }), { target: { value: "One submission" } });
+  act(() => {
+    screen.getByRole("button", { name: "保存草稿" }).click();
+    screen.getByRole("button", { name: "保存并检查" }).click();
+  });
+  await waitFor(() => expect(writes).toHaveLength(1));
+  finish(json(writes[0].body));
+  await screen.findByText("草稿已保存");
+  expect(writes).toHaveLength(1);
+  expect(screen.queryByRole("dialog")).toBeNull();
+});
+
+it("does not start a save after its editor has unmounted in the submission turn", async () => {
+  const { writes, unmount } = mount({ ...emptyProfile(), id: "direct-only", name: "Direct only" });
+  await screen.findByRole("textbox", { name: "配置名称" });
+  await act(async () => {
+    screen.getByRole("button", { name: "保存草稿" }).click();
+    unmount();
+    await new Promise(resolve => setTimeout(resolve, 50));
+  });
+  expect(writes).toEqual([]);
+});
+
+it("does not retry a sent save after losing connection and keeps its values on failure", async () => {
+  let finish!: (response: Response) => void;
+  const { writes } = mount({ ...emptyProfile(), id: "direct-only", name: "Direct only" }, {
+    saveResponse: () => new Promise(resolve => { finish = resolve; }),
+  });
+  const name = await screen.findByRole("textbox", { name: "配置名称" });
+  fireEvent.change(name, { target: { value: "Retained failed draft" } });
+  await userEvent.click(screen.getByRole("button", { name: "保存并检查" }));
+  await waitFor(() => expect(writes).toHaveLength(1));
+  act(() => onlineManager.setOnline(false));
+  await userEvent.click(screen.getByRole("button", { name: "返回" }));
+  expect(screen.queryByRole("alertdialog")).toBeNull();
+  finish(json({ detail: "Save service unavailable" }, 503));
+  await screen.findByText("Save service unavailable");
+  expect(name.closest("[inert]")).toBeNull();
+  expect(name).toHaveProperty("value", "Retained failed draft");
+  await act(async () => {
+    onlineManager.setOnline(true);
+    await new Promise(resolve => setTimeout(resolve, 50));
+  });
+  expect(writes).toHaveLength(1);
+  expect(screen.queryByRole("dialog")).toBeNull();
+});
+
+it("does not reopen review in a newer view when an already sent save completes", async () => {
+  let finish!: (response: Response) => void;
+  const { writes } = mount({ ...emptyProfile(), id: "direct-only", name: "Direct only" }, {
+    saveResponse: () => new Promise(resolve => { finish = resolve; }),
+  });
+  fireEvent.change(await screen.findByRole("textbox", { name: "配置名称" }), { target: { value: "Saved before leaving" } });
+  await userEvent.click(screen.getByRole("button", { name: "保存并检查" }));
+  await waitFor(() => expect(writes).toHaveLength(1));
+  history.replaceState(null, "", "#subscriptions");
+  finish(json(writes[0].body));
+  await screen.findByText("草稿已保存");
+  expect(location.hash).toBe("#subscriptions");
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(writes).toHaveLength(1);
 });

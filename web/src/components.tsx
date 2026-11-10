@@ -33,11 +33,13 @@ export function PageHeader({
   description,
   action,
   back,
+  backDisabled = false,
 }: {
   title: string;
   description?: string;
   action?: ReactNode;
   back?: () => void;
+  backDisabled?: boolean;
 }) {
   return (
     <header className="page-heading flex w-full flex-wrap items-center justify-between gap-4">
@@ -48,6 +50,7 @@ export function PageHeader({
             variant="ghost"
             size="sm"
             onClick={back}
+            disabled={backDisabled}
             className="-ml-2 mb-2"
           >
             <ArrowLeft aria-hidden="true" />
