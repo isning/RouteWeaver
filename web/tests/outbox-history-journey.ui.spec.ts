@@ -1,5 +1,5 @@
 import { writeFile } from "node:fs/promises";
-import { test, expect, type Locator, type Page, type TestInfo } from "@playwright/test";
+import { test, expect, type Locator, type Page, type Route, type TestInfo } from "@playwright/test";
 
 // Controlled production UI + read-only HTTP fixtures. These are backend-shaped
 // summary records, not observed deliveries. Every API write/off-origin request
@@ -26,7 +26,7 @@ const deliveries = [
   { eventId: "missing-time", kind: "provider-expiry", title: "Provider expiry reminder", channel: "email", status: "retrying", attempts: 1, createdAt, nextAttemptAt: "0001-01-01T00:00:00Z", lastError: transportFailure },
   { eventId: "unknown", kind: "test", title: testTitle, channel: "push", status: "unrecognized", attempts: 1, createdAt, nextAttemptAt, lastError: "Unrecognized persisted delivery classification" },
 ];
-async function setup(page: Page, baseURL: string | undefined) {
+async function setup(page: Page, baseURL: string | undefined, onRefresh?: (route: Route, read: number) => Promise<void>) {
   if (!baseURL || !["127.0.0.1", "localhost", "[::1]"].includes(new URL(baseURL).hostname)) {
     throw new Error("Controlled outbox history requires a loopback base URL");
   }
@@ -56,7 +56,10 @@ async function setup(page: Page, baseURL: string | undefined) {
       unexpected.push(`unconfigured API read ${url.pathname}`);
       return route.abort();
     }
-    if (url.pathname === "/api/admin/notifications/outbox") outboxReads++;
+    if (url.pathname === "/api/admin/notifications/outbox") {
+      outboxReads++;
+      if (outboxReads > 1 && onRefresh) return onRefresh(route, outboxReads);
+    }
     return route.fulfill({ json: responses[url.pathname] });
   });
   await page.goto("/#notifications");
@@ -151,10 +154,10 @@ for (const width of [1440, 390]) {
     await expect(missingTime.getByText("下次尝试时间未提供。")).toBeVisible();
     await expect(missingTime.getByText(/下次尝试不早于/)).toHaveCount(0);
     const unknown = context(page, testTitle, "未知状态", "push");
-    await expect(unknown.getByText("原因尚未识别，请查看技术详情。")).toBeVisible();
+    await expect(unknown.getByText("原因尚未识别，请查看技术详情。")).toHaveCount(0);
     await expect(unknown.getByText("请刷新记录并查看技术详情。")).toBeVisible();
     await expect(unknown.getByText(/下次尝试|Webhook/)).toHaveCount(0);
-    await fitsContext(page, unknown, [unknown.getByText(testTitle, { exact: true }), unknown.getByText("push", { exact: true }), unknown.getByText("未知状态", { exact: true }), unknown.getByText("原因尚未识别，请查看技术详情。")]);
+    await fitsContext(page, unknown, [unknown.getByText(testTitle, { exact: true }), unknown.getByText("push", { exact: true }), unknown.getByText("未知状态", { exact: true }), unknown.getByText("请刷新记录并查看技术详情。")]);
     await capture(page, info, "unknown", width, unknown);
     await expect(page.getByRole("button", { name: /发送.*测试|重试/ })).toHaveCount(0);
     expect(audit.unexpected).toEqual([]);
@@ -170,5 +173,83 @@ for (const width of [1440, 390]) {
       contextFitsVisibleTableWidth: true,
       limits: ["No real delivery or receiver acceptance", "No recipient or destination lookup", "No backend state transition or persistence", "No credentials or live settings"],
     }, null, 2));
+  });
+}
+
+
+for (const width of [1440, 390]) {
+  test(`controlled outbox refresh preserves records and open detail through recovery at ${width}px`, async ({ page, baseURL }, info) => {
+    await page.setViewportSize({ width, height: 900 });
+    // Freeze browser timers after initial render. Explicit short advances flush
+    // query notifications while staying below the 15-second polling interval.
+    const time = new Date("2026-11-07T10:00:00Z");
+    await page.clock.install({ time });
+    let pending: Route | undefined;
+    const audit = await setup(page, baseURL, async (route) => { pending = route; });
+    await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now()) + 100));
+    expect(audit.outboxReads()).toBe(1);
+    const failed = context(page, testTitle, "发送失败", "邮件");
+    const detail = failed.locator("details");
+    await failed.locator("summary").click();
+    await expect(detail).toHaveAttribute("open", "");
+    const refresh = page.getByRole("button", { name: "刷新记录", exact: true });
+    await refresh.click();
+    await page.clock.runFor(100);
+    await expect(refresh).toHaveAttribute("aria-busy", "true");
+    await expect(page.getByRole("status").filter({ hasText: "正在刷新记录" })).toBeVisible();
+    await expect(detail).toHaveAttribute("open", "");
+    await expect(failed.getByText(exhausted, { exact: true })).toBeVisible();
+    // The focusable pending action must ignore repeated keyboard activation.
+    await refresh.focus();
+    await page.keyboard.press("Enter");
+    await page.clock.runFor(100);
+    expect(audit.outboxReads()).toBe(2);
+    await expect.poll(() => pending !== undefined).toBe(true);
+    await pending!.fulfill({ status: 503, json: { error: "Controlled read unavailable" } });
+    pending = undefined;
+    // The actual App retries failed reads once (main.tsx). Advance only
+    // enough virtual time for that retry, never the 15-second polling interval.
+    await expect.poll(async () => {
+      await page.clock.runFor(100);
+      return pending !== undefined;
+    }, { timeout: 3000, intervals: [100] }).toBe(true);
+    const retryRoute: Route = pending!;
+    pending = undefined;
+    await retryRoute.fulfill({ status: 503, json: { error: "Controlled read unavailable" } });
+    await expect.poll(async () => {
+      await page.clock.runFor(100);
+      return refresh.getAttribute("aria-busy");
+    }, { timeout: 3000, intervals: [100] }).not.toBe("true");
+    expect(audit.outboxReads()).toBe(3);
+    const failure = page.getByText("未能刷新发送记录，仍显示上次读取的记录。请重试刷新。", { exact: true });
+    await expect(failure).toBeVisible();
+    await expect(refresh).not.toHaveAttribute("aria-busy", "true");
+    await expect(detail).toHaveAttribute("open", "");
+    await expect(failed.getByText(exhausted, { exact: true })).toBeVisible();
+    await expect(page.getByText("暂无发送记录", { exact: true })).toHaveCount(0);
+    await failure.scrollIntoViewIfNeeded();
+    await capture(page, info, "refresh-failure", width);
+    await fitsContext(page, failed, [failed.getByText(testTitle, { exact: true }), failed.getByText("发送失败", { exact: true }), failed.getByText(exhausted, { exact: true })]);
+    await capture(page, info, "refresh-failure-detail", width, failed);
+    const readsBeforeRecovery = audit.outboxReads();
+    await refresh.click();
+    await page.clock.runFor(100);
+    await expect.poll(() => pending !== undefined).toBe(true);
+    await pending!.fulfill({ json: deliveries.map((record) => record.eventId === "failed" ? { ...record, attempts: 6 } : record) });
+    pending = undefined;
+    await expect.poll(async () => {
+      await page.clock.runFor(100);
+      return refresh.getAttribute("aria-busy");
+    }, { timeout: 3000, intervals: [100] }).not.toBe("true");
+    await expect(failure).toHaveCount(0);
+    await expect(detail).toHaveAttribute("open", "");
+    await expect(failed.locator("..").getByRole("cell", { name: "6", exact: true })).toHaveCount(1);
+    await fitsContext(page, failed, [failed.getByText(testTitle, { exact: true }), failed.getByText("发送失败", { exact: true }), failed.getByText(exhausted, { exact: true })]);
+    await capture(page, info, "refresh-recovered-detail", width, failed);
+    await refresh.scrollIntoViewIfNeeded();
+    await capture(page, info, "refresh-recovered", width);
+    expect(audit.outboxReads()).toBe(readsBeforeRecovery + 1);
+    expect(audit.unexpected).toEqual([]);
+    await expect(page.getByRole("button", { name: /发送.*测试|标为已读/ })).toHaveCount(0);
   });
 }

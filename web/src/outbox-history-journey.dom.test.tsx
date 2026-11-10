@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 // Controlled public-page/API-boundary coverage, not external delivery evidence.
 import { afterEach, expect, it, vi } from "vitest";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { onlineManager, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { UIProviders } from "./ui-patterns/providers";
 import { NotificationsAdminPage } from "./Notifications";
 
@@ -15,6 +15,7 @@ const json = (value: unknown) => new Response(JSON.stringify(value), {
 });
 afterEach(() => {
   cleanup();
+  onlineManager.setOnline(true);
   clients.splice(0).forEach((client) => client.clear());
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
@@ -28,7 +29,8 @@ function record(overrides: Record<string, unknown>) {
     ...overrides,
   };
 }
-async function openHistory(records: unknown[]) {
+async function openHistory(records: unknown[], refresh?: () => Promise<Response>) {
+  let historyReads = 0;
   const unexpected: string[] = [];
   const responses: Record<string, unknown> = {
     "/api/state": { users: [] },
@@ -40,6 +42,7 @@ async function openHistory(records: unknown[]) {
       unexpected.push(`${init?.method || "GET"} ${url}`);
       throw new Error("Unexpected controlled outbox request");
     }
+    if (url === "/api/admin/notifications/outbox" && historyReads++ > 0 && refresh) return refresh();
     return json(responses[url]);
   }));
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -133,8 +136,67 @@ it("keeps unknown reasons and statuses honest with original technical detail ins
   expect(unknown.queryByText("Webhook", { exact: true })).toBeNull();
   expect(unknown.getByText("未知状态", { exact: true })).toBeTruthy();
   expect(unknown.getByText("请刷新记录并查看技术详情。")).toBeTruthy();
+  expect(unknown.queryByText("原因尚未识别，请查看技术详情。")).toBeNull();
   expect(unknown.queryByText(/下次尝试|已停止自动重试/)).toBeNull();
   expect(item("原因缺失通知").getByText("服务端未提供原因，请核对该通知与渠道的记录。")).toBeTruthy();
   expect(item("原因缺失通知").queryByText("技术详情", { exact: true })).toBeNull();
+  expect(unexpected).toEqual([]);
+});
+
+
+it("refreshes records read-only with pending feedback and keeps open details through failure and recovery", async () => {
+  let settle!: (response: Response) => void;
+  const refresh = vi.fn(() => new Promise<Response>((resolve) => { settle = resolve; }));
+  const unexpected = await openHistory([record({})], refresh);
+  const detail = item("邮件渠道测试").getByText("技术详情", { exact: true }).closest("details")!;
+  await userEvent.click(within(detail).getByText("技术详情", { exact: true }));
+  expect(detail.open).toBe(true);
+  const button = screen.getByRole("button", { name: "刷新记录" });
+  await userEvent.click(button);
+  expect(button.getAttribute("aria-busy")).toBe("true");
+  expect(screen.getByRole("status").textContent).toContain("正在刷新记录");
+  expect(detail.isConnected && detail.open).toBe(true);
+  await userEvent.click(button);
+  expect(refresh).toHaveBeenCalledTimes(1);
+  await act(async () => settle(new Response("unavailable", { status: 503 })));
+  expect(await screen.findByText("未能刷新发送记录，仍显示上次读取的记录。请重试刷新。")).toBeTruthy();
+  expect(detail.isConnected && detail.open).toBe(true);
+  expect(item("邮件渠道测试").getByText("等待重试", { exact: true })).toBeTruthy();
+  expect(screen.queryByText("暂无发送记录")).toBeNull();
+  await userEvent.click(button);
+  await act(async () => settle(json([record({ attempts: 2 })])));
+  await waitFor(() => expect(button.getAttribute("aria-busy")).not.toBe("true"));
+  expect(screen.queryByText(/未能刷新发送记录/)).toBeNull();
+  expect(detail.isConnected && detail.open).toBe(true);
+  expect(screen.getByRole("cell", { name: "2" })).toBeTruthy();
+  expect(refresh).toHaveBeenCalledTimes(2);
+  expect(unexpected).toEqual([]);
+  expect(screen.queryByRole("button", { name: /发送.*测试|标为已读/ })).toBeNull();
+});
+
+
+it("keeps a cached refresh visibly waiting offline and resumes one read on reconnect", async () => {
+  let settle!: (response: Response) => void;
+  const refresh = vi.fn(() => new Promise<Response>((resolve) => { settle = resolve; }));
+  const unexpected = await openHistory([record({})], refresh);
+  const detail = item("邮件渠道测试").getByText("技术详情", { exact: true }).closest("details")!;
+  await userEvent.click(within(detail).getByText("技术详情", { exact: true }));
+  act(() => onlineManager.setOnline(false));
+  const button = screen.getByRole("button", { name: "刷新记录" });
+  await userEvent.click(button);
+  expect(await screen.findByText("等待网络连接，恢复后将刷新记录。仍显示上次读取的记录。")).toBeTruthy();
+  expect(button.getAttribute("aria-busy")).toBe("true");
+  expect(detail.isConnected && detail.open).toBe(true);
+  await userEvent.click(button);
+  expect(refresh).not.toHaveBeenCalled();
+  act(() => onlineManager.setOnline(true));
+  await waitFor(() => expect(refresh).toHaveBeenCalledTimes(1));
+  expect(screen.queryByText(/等待网络连接，恢复后将刷新记录/)).toBeNull();
+  expect(detail.isConnected && detail.open).toBe(true);
+  await act(async () => settle(json([record({ attempts: 2 })])));
+  await waitFor(() => expect(button.getAttribute("aria-busy")).not.toBe("true"));
+  expect(screen.getByRole("cell", { name: "2" })).toBeTruthy();
+  expect(detail.isConnected && detail.open).toBe(true);
+  expect(refresh).toHaveBeenCalledTimes(1);
   expect(unexpected).toEqual([]);
 });

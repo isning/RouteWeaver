@@ -82,6 +82,7 @@ for (const width of [1440, 390]) {
     await expect(save).toBeDisabled();
     await expect(amount).toHaveValue("5");
     await expect(reason).toHaveValue("已核对显示时点的供应商控制台用量");
+    await settledTask(dialog);
     await info.attach(`provider-baseline-failed-read-${width}`, { body: await page.screenshot(), contentType: "image/png" });
     await refresh.click();
     await expect.poll(() => pending.length).toBe(2);
@@ -98,6 +99,8 @@ for (const width of [1440, 390]) {
     await expect(amount).toHaveValue("5");
     await expect(reason).toHaveValue("已核对显示时点的供应商控制台用量");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+    await settledTask(dialog);
+    await expect(save).toHaveCSS("opacity", "1");
     await info.attach(`provider-baseline-reviewed-replacement-${width}`, { body: await page.screenshot(), contentType: "image/png" });
     expect(unexpected).toEqual([]);
     // Read/review is not authorization to publish a baseline; never activate Save.

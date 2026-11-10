@@ -1475,10 +1475,21 @@ function Outbox() {
       "渠道设置或发送许可已变更。请在“提醒与渠道”核对设置，需要验证时另行发送测试。",
   };
   return (
-    <Section title="通知发送记录" description="渠道接收不等于收件人已经阅读。">
+    <Section title="通知发送记录" description="渠道接收不等于收件人已经阅读。" extra={
+      <ActionButton variant="outline" pending={query.isFetching || query.isPaused} keepFocusableWhilePending
+        onClick={() => void query.refetch({ cancelRefetch: false })}>
+        刷新记录
+      </ActionButton>
+    }>
+      {query.data !== undefined && (query.isPaused
+        ? <p role="status">等待网络连接，恢复后将刷新记录。仍显示上次读取的记录。</p>
+        : query.isFetching && <p role="status">正在刷新记录…</p>)}
+      {query.error && query.data !== undefined && (
+        <Notice tone="error">未能刷新发送记录，仍显示上次读取的记录。请重试刷新。</Notice>
+      )}
       <QueryState
         loading={query.isPending} paused={query.isPaused} loadingLayout="table"
-        error={query.error}
+        error={query.data === undefined ? query.error : null}
         retry={() => query.refetch()}
       >
         <DataTable
@@ -1504,7 +1515,7 @@ function Outbox() {
                 const recovery = showReason && r.lastError
                   ? Object.hasOwn(reasons, r.lastError)
                     ? reasons[r.lastError]
-                    : "原因尚未识别，请查看技术详情。"
+                    : knownStatus ? "原因尚未识别，请查看技术详情。" : undefined
                   : showReason && knownStatus ? "服务端未提供原因，请核对该通知与渠道的记录。" : undefined;
                 return (
                   <div className="w-[min(24rem,calc(var(--table-viewport-width,100vw)-2rem))] space-y-2 whitespace-normal wrap-anywhere">
