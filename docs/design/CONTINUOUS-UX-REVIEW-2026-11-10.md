@@ -71,6 +71,12 @@ This pass inspected `DataTable`, `PageNavigation`, `ResourceToolbar`, `AppForm`/
 - Public-seam evidence: ten new full-panel tests cover successful submission/reconciliation, delayed/failed/initially hanging reads, explicit retry, late results, missing/wrong host/target/limits, stale cached queued records and retained terminal results. Four focused diagnostic suites pass (27 tests), with red-before-green evidence for the original blank panel and all three review-discovered recovery edges.
 - Independent review found and drove correction of disabled retry, cached receipt regression and initial-read deduplication. No live diagnostic traffic or visual acceptance is claimed.
 
+## Rendered-evidence follow-up
+
+`web/tests/server-path-workspace.ui.spec.ts` now adds same-named, same-address server journeys at 1440 and 390 pixels. The real isolated backend creates synthetic records; keyboard selection, explicit owner replacement, endpoint filtering and persisted draft identity are asserted. Capture points show the two identity choices, retained first server and second server's endpoints. No fleet task or runtime application is requested.
+
+Application/spec TypeScript checks and discovery pass (four tests in that file, two newly added). Browser execution and actual pixel review remain pending CI. The supported cloud-browser attempt could not reach the local demo URL despite the launch session reporting ready; a separate command also could not reach that session. The exact isolation cause is unconfirmed. The demo was stopped, and no public tunnel or security bypass was used.
+
 ## Current verification boundary
 
 Focused tests, strict TypeScript and production build pass for these slices. Broader regression and exact-commit CI are separate checks. They do not establish visual quality or comprehension. No deployment, live-node operation, production data change or historical quota decision belongs to this review.

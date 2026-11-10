@@ -165,3 +165,91 @@ for (const width of [1440, 390]) {
     expect(mutations).toEqual(["POST /api/server-deployments"]);
   });
 }
+
+for (const width of [1440, 390]) {
+  test(`same-named servers retain visible identity and endpoint ownership at ${width}px`, async ({ page, baseURL }, info) => {
+    requireLoopback(baseURL);
+    await page.setViewportSize({ width, height: 900 });
+    await signIn(page, baseURL, "admin");
+    const csrf = await headers(page.request);
+    const hosts = ["synthetic-server-east-0001", "synthetic-server-west-0002"];
+    const endpoints = ["东侧监听", "西侧监听"];
+    for (const [index, id] of hosts.entries()) {
+      for (const [path, data] of [
+        ["/hosts", { id, name: "同名服务器", address: "127.0.0.1" }],
+        ["/core-instances", { id: `${id}-core`, hostId: id, name: "合成核心", adapterId: "routeweaver/xray", version: "26.10.31" }],
+        ["/managed-endpoints", {
+          id: `${id}-endpoint`, instanceId: `${id}-core`, name: endpoints[index],
+          connection: { protocol: "socks", host: "127.0.0.1", port: 23180 + index, username: "fixture", password: "synthetic-only" },
+        }],
+      ] as const) {
+        const response = await page.request.post(`/api${path}`, { headers: csrf, data });
+        expect(response.status(), `Create synthetic ${path}`).toBe(200);
+      }
+    }
+    const mutations: string[] = [];
+    page.on("request", (request) => {
+      const path = new URL(request.url()).pathname;
+      if (path.startsWith("/api/") && !["GET", "HEAD"].includes(request.method())) mutations.push(`${request.method()} ${path}`);
+    });
+    await page.goto("/#routes");
+    await page.locator(".page-heading").getByRole("button", { name: "新建转发路径", exact: true }).click();
+    const editor = page.getByRole("dialog", { name: "新建转发路径", exact: true });
+    await editor.getByLabel("转发路径名称", { exact: true }).fill("同名服务器身份验证");
+    const server = editor.getByRole("combobox", { name: "第 1 跳服务器", exact: true });
+    const endpoint = editor.getByRole("combobox", { name: "第 1 跳端点", exact: true });
+    const save = editor.getByRole("button", { name: "保存草稿", exact: true });
+
+    await server.focus();
+    await page.keyboard.press("Enter");
+    const search = page.getByRole("combobox", { name: "搜索选项", exact: true });
+    await expect(search).toBeFocused();
+    await search.fill("同名服务器");
+    await expect(page.getByRole("option")).toHaveCount(2);
+    for (const id of hosts) {
+      const option = page.getByRole("option").filter({ hasText: id });
+      await expect(option).toContainText("同名服务器");
+      await expect(option.getByText(`服务器 ID ${id}`, { exact: true })).toBeVisible();
+      await expect(option).toBeInViewport({ ratio: 1 });
+      expect(await option.evaluate((element) => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+    }
+    await settledTask(page.getByRole("listbox"));
+    await capture(page, info, editor, "duplicate-server-choices", page.getByRole("option").last());
+    await search.fill(hosts[0]);
+    await expect(page.getByRole("option")).toHaveCount(1);
+    await search.press("Enter");
+    await expect(page.getByRole("listbox", { includeHidden: true })).toHaveCount(0);
+    await expect(server).toContainText(hosts[0]);
+    await expect(save).toBeDisabled();
+    await choose(page, endpoint, endpoints[0]);
+    await expect(save).toBeEnabled();
+
+    // Reopen the same hop, switch owners, and prove the old owner's listener
+    // cannot silently remain the selected route. No live application is involved.
+    await editor.getByRole("button", { name: `配置第 1 跳 ${endpoints[0]}`, exact: true }).click();
+    await expect(server).toContainText(hosts[0]);
+    await capture(page, info, editor, "duplicate-server-selected-east", server);
+    await choose(page, server, hosts[1]);
+    await expect(server).toContainText(hosts[1]);
+    await expect(save).toBeDisabled();
+    await endpoint.click();
+    await expect(page.getByRole("option")).toHaveCount(1);
+    await expect(page.getByRole("option")).toContainText(endpoints[1]);
+    await expect(page.getByRole("option").filter({ hasText: endpoints[0] })).toHaveCount(0);
+    await settledTask(page.getByRole("listbox"));
+    await capture(page, info, editor, "duplicate-server-west-endpoints", page.getByRole("option"));
+    await page.getByRole("option").click();
+    await expect(save).toBeEnabled();
+    await expect(editor.getByRole("region", { name: "路径摘要", exact: true })).toContainText(`客户端 → ${endpoints[1]} → 目标`);
+    expect(mutations).toEqual([]);
+    const saved = page.waitForResponse((response) => new URL(response.url()).pathname === "/api/server-deployments" && response.request().method() === "POST");
+    await save.click();
+    expect((await saved).status()).toBe(200);
+    await expect(editor).toBeHidden();
+    const deployments = await read(page.request, "/server-deployments");
+    expect(deployments).toHaveLength(1);
+    expect(deployments[0].ir.programs.map((program: { listener: { id: string } }) => program.listener.id)).toEqual([`${hosts[1]}-endpoint`]);
+    expect(await read(page.request, "/admin/fleet-batches")).toEqual([]);
+    expect(mutations).toEqual(["POST /api/server-deployments"]);
+  });
+}
