@@ -14,7 +14,7 @@ All rows below still require a complete state and rendered-layout review. Entrie
 
 | Page or task | User purpose | Current review |
 | --- | --- | --- |
-| Login, invitation and account security | Enter the right account and recover safely | Not yet reviewed in this pass |
+| Login, invitation and account security | Enter the right account and recover safely | Uncertain-login recovery and neighboring DOM regressions reviewed; rendered states open |
 | Workspace navigation and mobile menu | Find a task without losing current work | Source inspection only |
 | Subscriptions, profiles and outputs | Configure, review and deliver a client subscription | Not yet reviewed in this pass |
 | Subscription sources | Import and accept owned connection options | Not yet reviewed in this pass |
@@ -104,6 +104,12 @@ This pass inspected `DataTable`, `PageNavigation`, `ResourceToolbar`, `AppForm`/
 - Decision: keep editable drafts separate from authoritative saved settings. External test decisions capture the saved revision, block unresolved reads and saving, and require fresh confirmation after a target change. The server checks that revision in the enqueue transaction; existing dispatch revision checks prevent a later settings change from retargeting queued work. Optional API revision preserves existing clients' explicit current-settings contract.
 - Recovery and ownership: cancellation, duplicate activation, departed tasks and late responses do not revive a decision. Conflict refreshes settings without resending. A cancelled delivery has its own warning and asks for renewed review; it is neither a queued-success claim nor proof that no previous delivery attempt occurred.
 - Evidence: saved-target and stale-revision regressions fail before the fix. Ninety-one focused notification tests passed before the six-outcome feedback matrix was added; the final affected two-file run passes 63 tests. Independent review reran 57 cases and identified the cancelled-result feedback correction. Both complete Go service/HTTP packages pass, and TypeScript passes. All deliveries use synthetic transports. Actual external delivery and rendered-layout acceptance are not claimed.
+
+### Recover password login after an uncertain response
+
+- Defect: invitation acceptance reconciled the current session after a lost or malformed response, but ordinary password login did not. A successful server cookie could leave the user on the login form and invite another password/verification-code submission.
+- Decision: uncertain password-login responses now use the same read-only session check. Only the authoritative session read selects the account. Definite credential rejection keeps the inputs without an extra request; an unavailable session read offers read-only reconnect without replaying credentials. Invitation-specific wording and administrator-token behavior remain unchanged.
+- Evidence: the lost-response regression fails before the change. Eleven new cases cover lost bodies/responses, malformed or incomplete sessions, six definite rejection statuses, preserved password/code input and failed-read recovery. All 159 focused account/session/mobile-navigation tests across eight files pass, along with TypeScript. This is synthetic DOM and source evidence, not a live-account or visual verification.
 
 ## Rendered-evidence follow-up
 

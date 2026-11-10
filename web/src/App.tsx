@@ -1114,17 +1114,17 @@ function LoginForm({
         onSuccess(result);
       }
     } catch (e) {
-      const uncertainInvite =
-        mode === "invite" &&
+      const uncertainLogin =
+        mode !== "admin" &&
         !(e instanceof APIError &&
           [400, 401, 403, 404, 413, 429].includes(e.status));
       if (mounted.current) {
         setError(e as Error);
-        if (uncertainInvite) setInviteUncertain(true);
+        if (uncertainLogin && mode === "invite") setInviteUncertain(true);
       }
       // A cookie may have changed even when the body was lost or unreadable.
       // Reconcile read-only, including obsolete attempts; never replay credentials.
-      if (uncertainInvite) {
+      if (uncertainLogin) {
         void lifecycle.check();
         lifecycle.changed();
       }

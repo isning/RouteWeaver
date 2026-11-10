@@ -1,5 +1,4 @@
 // @vitest-environment jsdom
-// SOURCE ONLY: authored 2026-11-06; not executed in the recovery workspace.
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -212,4 +211,70 @@ it("reconciles a malformed success through me without retrying creation or loggi
   expect(await screen.findByRole("navigation", { name: "工作空间导航" })).toBeTruthy();
   expect(screen.getByText("Account confirmed-cookie")).toBeTruthy();
   expect(flow.writes.map((write) => write.path)).toEqual(["/api/auth/accept-invite"]);
+});
+
+it.each([
+  ["lost body", async () => {
+    const response = json(session("untrusted-login-body"));
+    response.text = async () => { throw new TypeError("body interrupted"); };
+    return response;
+  }],
+  ["lost response", async () => { throw new TypeError("network interrupted"); }],
+  ["malformed response", async () => new Response("{", { status: 200 })],
+  ["incomplete session", async () => json({ user: { id: "untrusted-login-body" } })],
+] as const)("enters the cookie-confirmed workspace after password login %s without resubmitting credentials", async (_name, response) => {
+  history.replaceState(null, "", "/#collections");
+  const flow = mount(async () => { throw new Error("unexpected invite"); });
+  flow.setLogin(async () => {
+    flow.setMe(async () => json(session("confirmed-password-login")));
+    return response();
+  });
+  await fill();
+  await userEvent.click(screen.getByRole("button", { name: "进入工作空间" }));
+  expect(await screen.findByText("Account confirmed-password-login")).toBeTruthy();
+  expect(screen.queryByText("Account untrusted-login-body")).toBeNull();
+  expect(flow.writes.map((write) => write.path)).toEqual(["/api/auth/login"]);
+});
+
+
+it.each([400, 401, 403, 404, 413, 429])("retains password/TOTP inputs after definite login rejection %s without checking or replaying", async (status) => {
+  history.replaceState(null, "", "/#collections");
+  const flow = mount(async () => { throw new Error("unexpected invite"); });
+  await fill();
+  const read = vi.fn(async () => json(session("must-not-adopt")));
+  flow.setMe(read);
+  flow.setLogin(async () => json({ error: "Credentials rejected" }, status));
+  await userEvent.click(screen.getByText("使用二次验证码"));
+  fireEvent.change(screen.getByLabelText("验证码"), { target: { value: "123456" } });
+  await userEvent.click(screen.getByRole("button", { name: "进入工作空间" }));
+  await screen.findByText("Credentials rejected");
+  expect(read).not.toHaveBeenCalled();
+  expect((screen.getByLabelText("账号") as HTMLInputElement).value).toBe("invited.user");
+  expect((screen.getByLabelText("密码") as HTMLInputElement).value).toBe("synthetic-password");
+  expect((screen.getByLabelText("验证码") as HTMLInputElement).value).toBe("123456");
+  expect(flow.writes).toHaveLength(1);
+});
+
+it("preserves login inputs when session reconciliation fails and reconnects with reads only", async () => {
+  history.replaceState(null, "", "/#collections");
+  const flow = mount(async () => { throw new Error("unexpected invite"); });
+  flow.setLogin(async () => {
+    flow.setMe(async () => json({ error: "temporarily unavailable" }, 503));
+    throw new TypeError("login response lost");
+  });
+  await fill();
+  await userEvent.click(screen.getByText("使用二次验证码"));
+  fireEvent.change(screen.getByLabelText("验证码"), { target: { value: "123456" } });
+  await userEvent.click(screen.getByRole("button", { name: "进入工作空间" }));
+  await screen.findByText("暂时无法确认登录状态");
+  expect(screen.queryByRole("button", { name: "进入工作空间" })).toBeNull();
+  expect((screen.getByLabelText("密码") as HTMLInputElement).value).toBe("synthetic-password");
+  expect((screen.getByLabelText("验证码") as HTMLInputElement).value).toBe("123456");
+  flow.setMe(async () => json({ error: "authentication required" }, 401));
+  await userEvent.click(screen.getByRole("button", { name: "重新连接" }));
+  await screen.findByRole("button", { name: "进入工作空间" });
+  expect((screen.getByLabelText("账号") as HTMLInputElement).value).toBe("invited.user");
+  expect((screen.getByLabelText("密码") as HTMLInputElement).value).toBe("synthetic-password");
+  expect((screen.getByLabelText("验证码") as HTMLInputElement).value).toBe("123456");
+  expect(flow.writes).toHaveLength(1);
 });
