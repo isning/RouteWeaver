@@ -125,7 +125,8 @@ func (h *server) registerNotificationAdmin(r chi.Router) {
 	})
 	r.Post("/admin/notifications/test", func(w http.ResponseWriter, r *http.Request) {
 		var in struct {
-			Channel string `json:"channel"`
+			Channel                  string  `json:"channel"`
+			ExpectedSettingsRevision *uint64 `json:"expectedSettingsRevision,omitempty"`
 		}
 		if !decode(w, r, &in) {
 			return
@@ -133,7 +134,7 @@ func (h *server) registerNotificationAdmin(r chi.Router) {
 		n := h.notificationService()
 		now := time.Now().UTC()
 		recipient := notificationRecipient(r)
-		eventID, e := n.Test(in.Channel, recipient, now)
+		eventID, e := n.TestWithSettingsRevision(in.Channel, recipient, now, in.ExpectedSettingsRevision)
 		if e != nil {
 			notificationError(w, e)
 			return

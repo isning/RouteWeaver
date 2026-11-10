@@ -131,3 +131,32 @@ func TestNotificationHTTPAudienceReadAndSettingsIsolation(t *testing.T) {
 		}
 	}
 }
+
+func TestNotificationHTTPRejectsStaleReviewedExternalSettings(t *testing.T) {
+	s, srv := makeServer(t)
+	n := notifications.New(s, nil)
+	current, err := n.Settings()
+	if err != nil {
+		t.Fatal(err)
+	}
+	stale := current.Revision + 1
+	// Channel remains disabled: revision conflict must be checked before enqueue
+	// or channel use. This test cannot invoke any external transport.
+	for _, channel := range []string{"email", "webhook"} {
+		code, raw := adminNotificationRequest(t, srv.URL+"/api/admin/notifications/test", "POST", map[string]any{"channel": channel, "expectedSettingsRevision": stale})
+		if code != 409 {
+			t.Fatalf("%s stale decision: %d %s", channel, code, raw)
+		}
+	}
+	state, err := s.ReadNotifications()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(state.Events) != 0 || len(state.Deliveries) != 0 {
+		t.Fatal("rejected test created work")
+	}
+	code, raw := adminNotificationRequest(t, srv.URL+"/api/admin/notifications/test", "POST", map[string]any{"channel": "in-app", "expectedSettingsRevision": stale})
+	if code != 200 || !bytes.Contains(raw, []byte(`"status":"available"`)) {
+		t.Fatalf("in-app test unexpectedly blocked: %d %s", code, raw)
+	}
+}

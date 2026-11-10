@@ -31,7 +31,7 @@ All rows below still require a complete state and rendered-layout review. Entrie
 | Change records | Inspect attributable operations | Not yet reviewed in this pass |
 | Platform settings and backup | Configure shared services and perform explicit recovery | Not yet reviewed in this pass |
 | Endpoint and legacy link configuration | Maintain stable connection and forwarding intent | Server picker slice only |
-| Announcements and delivery settings | Compose in-app messages and inspect channel results | Not yet reviewed in this pass |
+| Announcements and delivery settings | Compose in-app messages and inspect channel results | External test identity and outcome recovery reviewed; other states open |
 
 ## Shared component inventory
 
@@ -97,6 +97,13 @@ This pass inspected `DataTable`, `PageNavigation`, `ResourceToolbar`, `AppForm`/
 - Cause and decision: `InstanceObservation` returns multiple semantic blocks, which became direct flex siblings of the identity heading. The route-detail caller now supplies an explicit observation wrapper and a named target group. Identity, observation state, authorization and technical details stack in reading order at both widths; full labels remain, with wrap-safe sizing and separators between instances. No change to the shared observation component or its other callers is needed.
 - Public-seam evidence: new DOM regression fails before the named grouping exists, then verifies server/core/listener identity, actual unregistered state, authorization status, refresh and technical-detail access in the same target group without mutation. The existing real-backend forwarding journey now checks vertical ordering of those groups and captures `setup-target-instance-grouped-1440.png` / `setup-target-instance-grouped-390.png` with unobscured controls.
 - Verification boundary: the old CI job confirms both forwarding-setup journeys completed before the job was cancelled; that run is not an all-green gate. All 54 focused policy-editor DOM tests, application/spec typechecks and browser test discovery pass locally. Updated browser execution and visual assessment of the corrected pixels remain pending CI. No live-node action or runtime application was performed.
+
+### Bind external notification tests to the reviewed destination
+
+- Defect: the editor preserved its initial settings baseline while background reads could replace the saved email recipients or Webhook. Test confirmation named the old baseline, but the server used current saved settings. A confirmed action could therefore reach a different destination.
+- Decision: keep editable drafts separate from authoritative saved settings. External test decisions capture the saved revision, block unresolved reads and saving, and require fresh confirmation after a target change. The server checks that revision in the enqueue transaction; existing dispatch revision checks prevent a later settings change from retargeting queued work. Optional API revision preserves existing clients' explicit current-settings contract.
+- Recovery and ownership: cancellation, duplicate activation, departed tasks and late responses do not revive a decision. Conflict refreshes settings without resending. A cancelled delivery has its own warning and asks for renewed review; it is neither a queued-success claim nor proof that no previous delivery attempt occurred.
+- Evidence: saved-target and stale-revision regressions fail before the fix. Ninety-one focused notification tests passed before the six-outcome feedback matrix was added; the final affected two-file run passes 63 tests. Independent review reran 57 cases and identified the cancelled-result feedback correction. Both complete Go service/HTTP packages pass, and TypeScript passes. All deliveries use synthetic transports. Actual external delivery and rendered-layout acceptance are not claimed.
 
 ## Rendered-evidence follow-up
 

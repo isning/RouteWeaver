@@ -284,7 +284,15 @@ func (s *Service) Outbox() ([]OutboxItem, error) {
 
 // Test records explicit permission for exactly this event/channel. Saving
 // settings alone never performs this operation or grants automatic delivery.
+// Test preserves the legacy contract: explicitly test the current saved settings.
 func (s *Service) Test(channel string, r Recipient, now time.Time) (string, error) {
+	return s.TestWithSettingsRevision(channel, r, now, nil)
+}
+
+// TestWithSettingsRevision binds an external test to the configuration reviewed
+// by its caller. Compare inside the enqueue transaction, not a preceding read.
+// A nil revision retains current-settings semantics for existing API clients.
+func (s *Service) TestWithSettingsRevision(channel string, r Recipient, now time.Time, expected *uint64) (string, error) {
 	if r.Role != "admin" || !r.Enabled {
 		return "", fmt.Errorf("administrator required")
 	}
@@ -294,6 +302,9 @@ func (s *Service) Test(channel string, r Recipient, now time.Time) (string, erro
 	}
 	id := hex.EncodeToString(idBytes)
 	err := s.update(Scope{EventIDs: []string{id}}, func(st *State) error {
+		if channel != "in-app" && expected != nil && *expected != st.Settings.Revision {
+			return ErrConflict
+		}
 		if channel != "in-app" && channel != "email" && channel != "webhook" {
 			return fmt.Errorf("unsupported channel")
 		}
@@ -303,7 +314,10 @@ func (s *Service) Test(channel string, r Recipient, now time.Time) (string, erro
 		enqueue(st, Event{EventID: id, Kind: "test", RecipientID: r.ID, Title: "RouteWeaver notification test", Body: "This is an explicitly requested notification-channel test.", CreatedAt: now}, []string{channel}, true)
 		return nil
 	})
-	return id, err
+	if err != nil {
+		return "", err
+	}
+	return id, nil
 }
 
 // Dispatch resumes durable queued/retrying/expired-lease work. The same eventId

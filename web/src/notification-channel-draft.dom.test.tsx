@@ -228,7 +228,7 @@ it("discloses queued-send cancellation at Save while test confirmation uses the 
   confirmation = screen.getByRole("alertdialog", { name: "发送一条测试通知？" });
   fireEvent.click(within(confirmation).getByRole("button", { name: "发送测试" }));
   await waitFor(() => expect(testsSent()).toHaveLength(1));
-  expect(JSON.parse(String(testsSent()[0][1]?.body))).toEqual({ channel: "webhook" });
+  expect(JSON.parse(String(testsSent()[0][1]?.body))).toEqual({ channel: "webhook", expectedSettingsRevision: 1 });
   await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
   save();
   await waitFor(() => expect(sent).toHaveLength(1));

@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { TaskSheet, TaskDialog } from "@/ui-patterns/task-overlays";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useConfirm } from "@/ui-patterns/confirmations";
+import { useConfirm, type ConfirmationHandle } from "@/ui-patterns/confirmations";
 import { Switch } from "@/components/ui/switch";
 import { ChoiceSelect, MultiChoice } from "@/ui-patterns/choice-select";
 import { Textarea } from "@/components/ui/textarea";
@@ -32,7 +32,7 @@ import { useDiscardConfirmation } from "./useDiscardConfirmation";
 import { wrapPublicationModalTab as wrapAnnouncementModalTab } from "./publication-modal-focus";
 import { revealFocusedPolicyModalControl as revealFocusedModalAction } from "./drawer-control-visibility";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { list, loadState, post, request, saveRecord } from "./api";
+import { APIError, list, loadState, post, request, saveRecord } from "./api";
 import {
   EmptyState,
   ErrorNotice,
@@ -692,7 +692,11 @@ function NotificationSettings() {
         error={query.data ? null : query.error}
         retry={() => query.refetch()}
       >
-        {query.data && <SettingsForm initial={query.data} />}
+        {query.data && <SettingsForm initial={query.data} saved={query.data}
+          savedReady={query.isSuccess && !query.isFetching && !query.isPaused} />}
+        {query.data && (query.isFetching || query.isPaused) && (
+          <Notice tone="info">{query.isPaused ? "等待网络连接，暂时无法核对外部测试目标。" : "正在核对已保存的通知设置，暂时无法发送外部测试。"}</Notice>
+        )}
       </QueryState>
     </>
   );
@@ -776,7 +780,7 @@ function notificationThresholdRules(max: number) {
   } }];
 }
 
-function SettingsForm({ initial }: { initial: Settings }) {
+function SettingsForm({ initial, saved, savedReady }: { initial: Settings; saved: Settings; savedReady: boolean }) {
   const [form] = useForm();
   const saveConsequenceId = useId();
   const senderInput = useRef<HTMLInputElement>(null);
@@ -884,13 +888,39 @@ function SettingsForm({ initial }: { initial: Settings }) {
     // Reveal failure and retry together without changing the user's focus.
     decision.scrollIntoView?.({ block: "center", inline: "nearest" });
   }, [save.error]);
+  const mounted = useRef(true);
+  const testDecision = useRef<ConfirmationHandle | null>(null);
+  const latestTestContext = useRef({ saved, savedReady, saving: save.isPending });
+  latestTestContext.current = { saved, savedReady, saving: save.isPending };
+  useLayoutEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      testDecision.current?.close();
+      testDecision.current = null;
+    };
+  }, []);
+  const changedTestTarget = "已保存的通知设置已变更。请取消并重新确认发送目标。";
   const test = useMutation({
-    mutationFn: (channel: string) =>
-      post<Delivery>("/admin/notifications/test", { channel }),
+    mutationFn: async (decision: { channel: string; expectedSettingsRevision?: number }) => {
+      try {
+        return await post<Delivery>("/admin/notifications/test", decision);
+      } catch (error) {
+        if (error instanceof APIError && error.status === 409 && decision.expectedSettingsRevision !== undefined) {
+          void client.invalidateQueries({ queryKey: ["notification-settings"] });
+          throw new Error(changedTestTarget);
+        }
+        throw error;
+      }
+    },
     onSuccess: (delivery) => {
+      if (!mounted.current) return;
       client.invalidateQueries({ queryKey: ["notification-outbox"] });
       client.invalidateQueries({ queryKey: ["inbox"] });
-      if (["failed", "retrying"].includes(delivery.status)) {
+      if (delivery.status === "cancelled") {
+        void client.invalidateQueries({ queryKey: ["notification-settings"] });
+        message.warning("测试通知已取消。请在发送记录核对原因，检查渠道设置后重新确认测试。");
+      } else if (["failed", "retrying"].includes(delivery.status)) {
         message.warning("此次发送未成功，请在发送记录查看重试状态");
       } else {
         message.success(
@@ -903,19 +933,51 @@ function SettingsForm({ initial }: { initial: Settings }) {
       }
     },
   });
-  const sendTest = (channel: string) =>
-    confirm({
+  const sendTest = (channel: string) => {
+    if (!mounted.current || testDecision.current || test.isPending || saving.current) return;
+    const external = channel !== "in-app";
+    const context = latestTestContext.current;
+    if (external && !context.savedReady) return;
+    const reviewed = context.saved;
+    const decision = { channel, ...(external ? { expectedSettingsRevision: reviewed.revision } : {}) };
+    let closed = false;
+    let rejectedRevision = false;
+    const releaseDecision = () => {
+      closed = true;
+      if (testDecision.current === handle) testDecision.current = null;
+    };
+    const handle = confirm({
       title: "发送一条测试通知？",
       description:
         channel === "email"
-          ? `将向已保存的收件人 ${baseline.email.to.join("、")} 发送测试内容。`
+          ? `将向已保存的收件人 ${reviewed.email.to.join("、")} 发送测试内容。`
           : channel === "webhook"
-            ? `将向已保存的 Webhook ${baseline.webhook.url} 发送测试内容。`
+            ? `将向已保存的 Webhook ${reviewed.webhook.url} 发送测试内容。`
             : "将在站内消息中生成测试通知。",
       confirmLabel: "发送测试",
       cancelLabel: "取消",
-      onConfirm: () => test.mutateAsync(channel),
+      onCancel: releaseDecision,
+      onClosed: releaseDecision,
+      onConfirm: async () => {
+        if (!mounted.current || closed) throw new Error("此通知设置任务已结束，请重新打开后再试。");
+        const current = latestTestContext.current;
+        const query = client.getQueryState<Settings>(["notification-settings"]);
+        if (saving.current || current.saving) throw new Error("请等待通知设置保存完成后重新确认。");
+        if (external) {
+          if (rejectedRevision || current.saved.revision !== reviewed.revision || query?.data?.revision !== reviewed.revision)
+            throw new Error(changedTestTarget);
+          if (!current.savedReady || query?.status !== "success" || query.fetchStatus !== "idle")
+            throw new Error("暂时无法核对已保存的发送目标。请取消，等待设置读取成功后重试。");
+        }
+        try { await test.mutateAsync(decision); }
+        catch (error) {
+          if (error instanceof Error && error.message === changedTestTarget) rejectedRevision = true;
+          throw error;
+        }
+      },
     });
+    testDecision.current = handle;
+  };
   return (
     <Section
       title="提醒与发送渠道"
@@ -1137,7 +1199,7 @@ function SettingsForm({ initial }: { initial: Settings }) {
                     <MultiChoice creatable options={[]} />
                   </AppField>
                   <ActionButton
-                    disabled={!baseline.email.enabled}
+                    disabled={!savedReady || !saved.email.enabled || save.isPending || test.isPending}
                     onClick={() => sendTest("email")}
                     variant="outline"
                   >
@@ -1204,7 +1266,7 @@ function SettingsForm({ initial }: { initial: Settings }) {
                     </AppField>
                   )}
                   <ActionButton
-                    disabled={!baseline.webhook.enabled}
+                    disabled={!savedReady || !saved.webhook.enabled || save.isPending || test.isPending}
                     onClick={() => sendTest("webhook")}
                     variant="outline"
                   >
