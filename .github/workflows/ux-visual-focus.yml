@@ -21,7 +21,7 @@ env:
 
 jobs:
   visual:
-    name: Five UX specs (supplemental evidence only)
+    name: Six UX specs (supplemental evidence only)
     runs-on: ubuntu-24.04
     timeout-minutes: 12
     env:
@@ -81,7 +81,7 @@ jobs:
             await browser.close();
           }
           JS
-      - name: Run five test-owned UX specs at their existing viewport sizes
+      - name: Run six test-owned UX specs at their existing viewport sizes
         working-directory: web
         # Leave time for failure artifacts before the job deadline.
         timeout-minutes: 8

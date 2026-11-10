@@ -40,3 +40,21 @@ occlusion and masked captures at 1440×1000 and 390×640; all three export brows
 cases are discovered. Browser execution and actual-pixel review remain pending
 CI because of the same unchanged host startup restriction. This follow-up was
 source-reviewed locally; it has no additional independent review claim.
+
+## Preserve browser feedback during incremental pushes
+
+The `90990d0` full run was superseded before reaching the new export-lifecycle
+file. Its existing real-backend encrypted download/restore journeys did pass at
+1440 and 390 pixels, but that does not prove the new lifecycle/focus scenarios.
+
+The three new browser cases now use a fresh test-owned normal control-plane CLI
+and normal UI login, and join the bounded supplemental visual workflow. Its
+existing running job is allowed to finish while later pushes replace only the
+pending job. No shared demo cookie, added server endpoint, retry, timeout or
+weakened full gate is introduced. Traces/video/automatic screenshots remain off;
+the explicit focus screenshots mask both password fields.
+
+The workflow contract fails before adding this sixth isolated spec and passes
+afterward. All 102 static helper tests, architecture checks and actionlint pass;
+application/browser TypeScript and discovery confirm 15 supplemental cases.
+This is verification scheduling, not a new successful browser execution claim.

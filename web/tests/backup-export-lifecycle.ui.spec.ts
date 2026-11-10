@@ -1,11 +1,24 @@
-import { expect, test, type Route } from "@playwright/test";
-import { openWorkspace } from "./ui-session";
+import { type Page, type Route } from "@playwright/test";
+import { expect, test } from "./isolated-control-plane-fixture";
+import { waitForConfirmedWorkspace } from "./ui-workspace-confirmation";
 import { settledTask } from "./ui-settled-task";
+
+test.use({ trace: "off", screenshot: "off", video: "off" });
+
+async function openBackupWorkspace(page: Page) {
+  // Each test owns a fresh normal CLI/database and establishes its own actor.
+  // Never reuse a cookie from the shared demo or another isolated test.
+  await page.goto("/");
+  await page.getByLabel("账号", { exact: true }).fill("routeweaver");
+  await page.getByLabel("密码", { exact: true }).fill("local-demo-password");
+  await page.getByRole("button", { name: "进入工作空间", exact: true }).click();
+  await waitForConfirmedWorkspace(page, "normal-ui-login");
+}
 
 // Controlled delayed archives exercise browser navigation/download ownership.
 // Encryption and restore correctness belong to backup-restore-backend.ui.spec.ts.
 test("leaving backup export retires its download and preserves the new export task", async ({ page }) => {
-  await openWorkspace(page);
+  await openBackupWorkspace(page);
   const requests: Route[] = [];
   await page.route("**/api/admin/backups", (route) => { requests.push(route); });
   const downloads: string[] = [];
@@ -50,7 +63,7 @@ test("leaving backup export retires its download and preserves the new export ta
 for (const width of [1440, 390]) {
   test(`backup keyboard validation reveals its invalid field at ${width}px`, async ({ page }, info) => {
     await page.setViewportSize({ width, height: width === 390 ? 640 : 1000 });
-    await openWorkspace(page);
+    await openBackupWorkspace(page);
     let writes = 0;
     await page.route("**/api/admin/backups", (route) => {
       writes++;

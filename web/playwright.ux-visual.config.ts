@@ -16,6 +16,7 @@ export default defineConfig({
         "**/invitation-subscription.ui.spec.ts",
         "**/service-focus-paint.ui.spec.ts",
         "**/focus-components.ui.spec.ts",
+        "**/backup-export-lifecycle.ui.spec.ts",
       ],
     })),
   workers: 1,
