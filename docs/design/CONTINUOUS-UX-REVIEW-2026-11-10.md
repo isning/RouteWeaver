@@ -57,6 +57,12 @@ This pass inspected `DataTable`, `PageNavigation`, `ResourceToolbar`, `AppForm`/
 - Public-seam evidence: separate single/multi-choice regressions fail before each fix and pass after. They verify closure, retained values, one close/blur notification, fresh search on explicit reopen and subsequent normal editing. All 11 choice-selector tests pass.
 - Not claimed: native-browser focus/layout acceptance. The native Chromium launch in this workspace was blocked before UI assertions; browser security was not weakened.
 
+### Preserve busy state for custom task lifecycles
+
+- Defect: `ActionButton` overwrote an explicitly supplied `aria-busy` when its separate `pending` prop was omitted. The authenticated configuration-bundle download is one affected caller: the action was disabled but its ongoing work was not exposed through the requested accessibility state.
+- Decision: the built-in pending lifecycle still forces busy; otherwise preserve the caller's native busy value. This does not add a second loading message or alter click behavior.
+- Public-seam evidence: both ordinary buttons and link-composed actions fail before the fix and pass afterwards, including clearing busy on completion. Eight focused button/target-size tests pass.
+
 ## Current verification boundary
 
 Focused tests, strict TypeScript and production build pass for these slices. Broader regression and exact-commit CI are separate checks. They do not establish visual quality or comprehension. No deployment, live-node operation, production data change or historical quota decision belongs to this review.

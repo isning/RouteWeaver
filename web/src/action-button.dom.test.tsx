@@ -30,3 +30,16 @@ it("defaults non-submit task actions to native button semantics", async () => {
   await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
   expect(submit).not.toHaveBeenCalled();
 });
+
+it.each([false, true])("preserves caller-owned busy state for a custom task lifecycle (link=%s)", (asChild) => {
+  const action = (busy: boolean) => (
+    <ActionButton asChild={asChild} disabled={busy} aria-busy={busy}>
+      {asChild ? <a href="#download">下载配置文件</a> : "下载配置文件"}
+    </ActionButton>
+  );
+  const view = render(action(true));
+  const button = screen.getByRole(asChild ? "link" : "button", { name: "下载配置文件" });
+  expect(button.getAttribute("aria-busy")).toBe("true");
+  view.rerender(action(false));
+  expect(button.getAttribute("aria-busy")).toBe("false");
+});

@@ -43,7 +43,7 @@ export function ActionButton({
         aria-disabled={
           disabled || pending || props["aria-disabled"] || undefined
         }
-        aria-busy={pending || undefined}
+        aria-busy={pending ? true : props["aria-busy"]}
         onClick={(event) => {
           if (disabled || pending) {
             event.preventDefault();
@@ -76,7 +76,7 @@ export function ActionButton({
       className={cn("h-auto min-h-11 min-w-11", className)}
       disabled={disabled || (pending && !keepFocusableWhilePending)}
       aria-disabled={disabled || pending || props["aria-disabled"] || undefined}
-      aria-busy={pending || undefined}
+      aria-busy={pending ? true : props["aria-busy"]}
       onClick={(event) => {
         if (disabled || pending) {
           event.preventDefault();
