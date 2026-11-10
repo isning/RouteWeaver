@@ -1301,3 +1301,19 @@ it.each(["null", "omitted"])("adds the first selected endpoint to a %s program l
   expect(fixture.deployment.ir.programs).toBe(shape === "null" ? null : undefined);
 });
 
+
+it("groups each target identity with its observation and read-only actions", async () => {
+  const user = userEvent.setup();
+  const fixture = setup();
+  await user.click(await screen.findByRole("button", { name: "Policy draft" }));
+  const detail = await screen.findByRole("dialog", { name: "Policy draft" });
+  const target = within(detail).getByRole("group", { name: "目标实例 Core" });
+  expect(within(target).getByRole("heading", { name: "Server Core" })).toBeTruthy();
+  expect(within(target).getByText("Policy entry", { exact: true })).toBeTruthy();
+  expect(await within(target).findByText("尚未接入", { exact: true })).toBeTruthy();
+  expect(within(target).getByText("未设置持续服务授权", { exact: true })).toBeTruthy();
+  await user.click(within(target).getByRole("button", { name: "刷新实例状态" }));
+  await user.click(within(target).getByRole("button", { name: "实例技术详情" }));
+  expect(fixture.requests.filter((request) => !request.startsWith("GET "))).toEqual([]);
+  expect(fixture.unexpected).toEqual([]);
+});

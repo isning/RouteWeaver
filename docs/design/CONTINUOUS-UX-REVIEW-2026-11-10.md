@@ -23,7 +23,7 @@ All rows below still require a complete state and rendered-layout review. Entrie
 | Templates and presets | Reuse configuration and review updates | Publication-target and extraction recovery reviewed; rendered states open |
 | Inbox | Read account messages and recover acknowledgement failures | Source inspection only |
 | Published routes | Offer a versioned usable entry and route | Not yet reviewed in this pass |
-| Forwarding paths | Select explicit ordered managed/external hops | Source and bounded DOM review; first correction below |
+| Forwarding paths | Select explicit ordered managed/external hops | Source, bounded DOM and captured layout review; corrections below |
 | Servers and core instances | Find a server, inspect observations and manage configuration | Source and focused DOM tests; diagnostic receipt correction below |
 | Fleet tasks | Review targets, execute stages and inspect actual outcomes | Not yet reviewed in this pass |
 | Users and access policy | Grant and inspect effective service access | Not yet reviewed in this pass |
@@ -90,6 +90,13 @@ This pass inspected `DataTable`, `PageNavigation`, `ResourceToolbar`, `AppForm`/
 - Decision: preserve the full query state for the active template kind. Loading, paused, failure, confirmed empty and missing selected identity are separate. Extraction requires a confirmed available source; an already extracted reviewed draft remains independently publishable when a source list fails. Retry keeps the entered name, JSON and review.
 - Public-seam evidence: failed-source regression first fails, then six new catalog cases cover retry, both template kinds, retained reviewed drafts, missing source, pending versus empty and paused/resumed reads. Thirty-two surrounding tests pass; independent review re-ran all six new cases successfully. TypeScript and build pass.
 - Boundary: shared `api.list` historically normalizes wire `null` to `[]`; this change does not redefine that decoder. Pending initial reads show a loading state, not an ineffective retry that would reuse the same pending request.
+
+### Group target-instance identity and observations
+
+- Observed defect: synthetic CI screenshots from run `42851399972`, artifact `13781261854` (`browser-diagnostics-2-of-4`), show the forwarding-path detail's target instance rendered as adjacent miniature columns. At 390px the server/core/listener names and `未设置持续服务授权` break into short fragments while the technical-details control retains a wide single line. The desktop capture shows the same ungrouped structure less severely. Evidence files: `setup-path-awaiting-principals-390.png` and `setup-path-awaiting-principals-1440.png` under the forwarding-setup test results. Raw artifacts remain private and are not repository content.
+- Cause and decision: `InstanceObservation` returns multiple semantic blocks, which became direct flex siblings of the identity heading. The route-detail caller now supplies an explicit observation wrapper and a named target group. Identity, observation state, authorization and technical details stack in reading order at both widths; full labels remain, with wrap-safe sizing and separators between instances. No change to the shared observation component or its other callers is needed.
+- Public-seam evidence: new DOM regression fails before the named grouping exists, then verifies server/core/listener identity, actual unregistered state, authorization status, refresh and technical-detail access in the same target group without mutation. The existing real-backend forwarding journey now checks vertical ordering of those groups and captures `setup-target-instance-grouped-1440.png` / `setup-target-instance-grouped-390.png` with unobscured controls.
+- Verification boundary: the old CI job confirms both forwarding-setup journeys completed before the job was cancelled; that run is not an all-green gate. All 54 focused policy-editor DOM tests, application/spec typechecks and browser test discovery pass locally. Updated browser execution and visual assessment of the corrected pixels remain pending CI. No live-node action or runtime application was performed.
 
 ## Rendered-evidence follow-up
 

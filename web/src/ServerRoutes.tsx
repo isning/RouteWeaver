@@ -2296,17 +2296,19 @@ function ServerRouteDetail({
       <Section title="目标实例" description="运行结果由对应 Agent 回传。">
         {programs.map((p) => (
           <div
-            className="target-status flex items-center gap-2"
+            role="group"
+            aria-label={`目标实例 ${coreName(p.instance)}`}
+            className="target-status grid min-w-0 gap-3 border-b py-4 first:pt-0 last:border-b-0 last:pb-0 wrap-anywhere"
             key={p.instance.id}
           >
-            <div className="section-heading flex flex-wrap items-start justify-between gap-3 mb-4">
+            <div className="grid min-w-0 gap-2">
               <h3 className="text-sm font-semibold">
                 <span className="block">
                   {
                     inventory.hosts.find((h) => h.id === p.instance.hostId)
                       ?.name
                   }
-                </span>
+                </span>{" "}
                 <span className="mt-1 block text-muted-foreground font-normal">
                   {coreName(p.instance)}
                 </span>
@@ -2315,7 +2317,9 @@ function ServerRouteDetail({
                 {p.listener.name}
               </span>
             </div>
-            <InstanceObservation instanceId={p.instance.id} />
+            <div className="grid min-w-0 gap-3">
+              <InstanceObservation instanceId={p.instance.id} />
+            </div>
           </div>
         ))}
       </Section>

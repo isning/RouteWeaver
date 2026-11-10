@@ -369,6 +369,27 @@ for (const width of [1440, 390]) {
       continueToLines, blockedDraft,
       pathDetail.getByRole("button", { name: "编辑转发路径", exact: true }),
     ]);
+    const target = pathDetail.getByRole("group", { name: `目标实例 ${names.core}`, exact: true });
+    const identity = target.getByRole("heading", { name: `${names.host} ${names.core}`, exact: true });
+    const targetListener = target.getByText(names.listener, { exact: true });
+    const phase = target.getByText("尚未接入", { exact: true });
+    const authorization = target.getByText("未设置持续服务授权", { exact: true });
+    const instanceDetails = target.getByRole("button", { name: "实例技术详情", exact: true });
+    await expect(identity).toBeVisible();
+    await expect(phase).toBeVisible();
+    await target.scrollIntoViewIfNeeded();
+    await settledTask(pathDetail);
+    // Identity, observed state, authorization and diagnostics have separate
+    // full-width rows, not a collection of fragments squeezed side-by-side.
+    const boxes = await Promise.all([identity, targetListener, phase, authorization, instanceDetails].map((item) => item.boundingBox()));
+    for (const box of boxes) expect(box).not.toBeNull();
+    for (let index = 1; index < boxes.length; index++)
+      expect(boxes[index]!.y, "Target facts follow the previous semantic group").toBeGreaterThanOrEqual(boxes[index - 1]!.y + boxes[index - 1]!.height - 1);
+    expect(await target.evaluate((element) => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
+    await capture(page, info, `setup-target-instance-grouped-${width}`, pathDetail, [
+      identity, targetListener, phase, authorization, instanceDetails,
+      target.getByRole("button", { name: "刷新实例状态", exact: true }),
+    ]);
     await continueToLines.click();
     await expect(page).toHaveURL(/#published-routes$/);
     await expect(pathDetail).not.toBeVisible();
