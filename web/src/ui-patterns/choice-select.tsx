@@ -209,7 +209,7 @@ export function ChoiceSelect<V extends Value = string>({
           )}
           <CommandList aria-label="候选项">
             <CommandEmpty>{emptyMessage}</CommandEmpty>
-            {clearable && value !== undefined && (
+            {clearable && value !== undefined && !query.trim() && (
               <CommandGroup>
                 <CommandItem
                   value="__clear"

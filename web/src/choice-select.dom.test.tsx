@@ -345,3 +345,64 @@ it("ends a multi-choice edit when disabled and retains the selected tags", async
   await user.click(screen.getByRole("option", { name: "添加“新标签”" }));
   expect(changed).toHaveBeenCalledExactlyOnceWith(["current", "新标签"]);
 });
+
+it("selects the searched server with Enter instead of clearing the existing server", async () => {
+  const changed = vi.fn();
+  render(
+    <UIProviders>
+      <ChoiceSelect
+        aria-label="Server"
+        value="synthetic-server-east-0001"
+        clearable
+        onValueChange={changed}
+        options={[
+          { value: "synthetic-server-east-0001", label: "Shared server East" },
+          { value: "synthetic-server-west-0002", label: "Shared server West" },
+        ]}
+      />
+    </UIProviders>,
+  );
+  const user = userEvent.setup();
+  await user.click(screen.getByRole("combobox", { name: "Server" }));
+  await user.type(screen.getByRole("combobox", { name: "搜索选项" }), "synthetic-server-west-0002");
+  await user.keyboard("{Enter}");
+  expect(changed).toHaveBeenCalledExactlyOnceWith("synthetic-server-west-0002");
+});
+
+it.each(["missing-server", "disabled-server"])("retains the current server when Enter has no enabled search result (%s)", async (query) => {
+  const changed = vi.fn();
+  render(
+    <UIProviders>
+      <ChoiceSelect
+        aria-label="Server"
+        value="current-server"
+        clearable
+        onValueChange={changed}
+        options={[
+          { value: "current-server", label: "Current server" },
+          { value: "disabled-server", label: "Unavailable server", disabled: true },
+        ]}
+      />
+    </UIProviders>,
+  );
+  const user = userEvent.setup();
+  const trigger = screen.getByRole("combobox", { name: "Server" });
+  await user.click(trigger);
+  const search = screen.getByRole("combobox", { name: "搜索选项" });
+  await user.type(search, query);
+  expect(screen.queryByRole("option", { name: "清除选择" })).toBeNull();
+  if (query === "missing-server") {
+    expect(screen.queryByRole("option")).toBeNull();
+    expect(screen.getByText("没有匹配的选项")).toBeTruthy();
+  } else {
+    expect(screen.getByRole("option", { name: "Unavailable server" }).getAttribute("aria-disabled")).toBe("true");
+  }
+  await user.keyboard("{Enter}");
+  expect(changed).not.toHaveBeenCalled();
+  expect(trigger.textContent).toContain("Current server");
+  expect(trigger.getAttribute("aria-expanded")).toBe("true");
+  await user.clear(search);
+  await user.click(screen.getByRole("option", { name: "清除选择" }));
+  expect(changed).toHaveBeenCalledExactlyOnceWith(undefined);
+  expect(trigger.getAttribute("aria-expanded")).toBe("false");
+});

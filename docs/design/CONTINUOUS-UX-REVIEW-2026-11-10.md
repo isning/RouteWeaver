@@ -144,17 +144,29 @@ This pass inspected `DataTable`, `PageNavigation`, `ResourceToolbar`, `AppForm`/
 - Ownership and safety: a changed query identity/revision invalidates approval. Retired reads cannot replace a newer decision. Recovery and test-send confirmations are mutually exclusive. The new recovery read rejects incomplete required shapes before cache acceptance, and prepares all replacement values before any form reset; this does not claim comprehensive initial-query/domain validation.
 - Evidence: initial conflict recovery and malformed-payload regressions fail before their fixes. Seventy-seven focused notification tests pass, with an independent 14-case recovery rerun and source review. Cases include old pending reads, immediate retry after cancellation, departed tasks, incomplete payloads, preserved secret intentions and a subsequent Save using the explicitly accepted revision. TypeScript passes; no actual settings mutation or external send was performed.
 
+### Keep search Enter separate from clearing the selected resource
+
+- Observed failure: supplemental browser run `42857558136` passed six journeys but both same-named-server cases stopped after searching for the second server: an unrelated clear action remained before the matching result. A public DOM reproduction confirmed Enter invoked `undefined`, clearing the current choice rather than selecting the searched server.
+- Decision: explicit `清除选择` remains available with an empty/whitespace search. Resource searches contain matching resources only; no-match and disabled-result Enter cannot clear a selection. The existing browser assertions remain unchanged.
+- Evidence: the keyboard regression fails before the one-condition fix. All 14 choice-selector tests pass, including searched replacement, no-match/disabled retention, explicit clearing after removing search, and prior disabled/reopen behavior. Coordinator independently reran the same suite. TypeScript passes. Local native-browser startup is blocked by host socket restrictions; no sandbox setting was weakened. Corrected browser rerun remains pending.
+
 ## Rendered-evidence follow-up
 
 `web/tests/server-path-workspace.ui.spec.ts` now adds same-named, same-address server journeys at 1440 and 390 pixels. The real isolated backend creates synthetic records; keyboard selection, explicit owner replacement, endpoint filtering and persisted draft identity are asserted. Capture points show the two identity choices, retained first server and second server's endpoints. No fleet task or runtime application is requested.
 
 Application/spec TypeScript checks and discovery pass (four tests in that file, two newly added). Browser execution and actual pixel review remain pending CI. The supported cloud-browser attempt could not reach the local demo URL despite the launch session reporting ready; a separate command also could not reach that session. The exact isolation cause is unconfirmed. The demo was stopped, and no public tunnel or security bypass was used.
 
+### First supplemental pixel review
+
+Run `42857558136` at `8910172` completed six of eight cases successfully and preserved artifact `13782968543`; both duplicate-server failures exposed the keyboard-clear defect above, so the run is not green. Artifact SHA256 matched its upload receipt. Eight actual desktop/narrow captures were inspected: target-instance identity/state/actions now stack legibly, platform and own-connection counts have clear equal hierarchy, and duplicate-server choices retain complete distinct IDs without horizontal clipping. Target-card occlusion records confirm the sampled controls were unobscured.
+
+These observations cover the captured regions only. The narrow first-profile image ends within its lower source controls, and the narrow selected-east image does not show Save. Their offscreen reachability is not established by those pixels.
+
 ### Keep a short browser review running during continuous delivery
 
 The supplemental `ux-visual-focus.yml` workflow runs only the three changed server/path/invitation journeys on this review branch: eight desktop/narrow cases, one worker and one running job. New pushes replace the pending run, not the running review. It retains the pinned setup, vendor Chrome provenance and enabled browser sandbox, and uses the existing isolated production fixtures. Full Repository quality and its required aggregate remain unchanged.
 
-Artifacts identify their exact commit and include only deliberate synthetic captures, reports and the browser-environment receipt. Intermediate commits may have no supplemental run. A completed subset is not full browser acceptance, and an upload attempt does not guarantee screenshots after an early startup failure. Contract tests, eight-case discovery, typechecks, the full 102-test static helper suite and pinned actionlint pass; initial workflow execution is still pending.
+Artifacts identify their exact commit and include only deliberate synthetic captures, reports and the browser-environment receipt. Intermediate commits may have no supplemental run. A completed subset is not full browser acceptance, and an upload attempt does not guarantee screenshots after an early startup failure. Contract tests, eight-case discovery, typechecks, the full 102-test static helper suite and pinned actionlint pass; the first eight-case run completed with the bounded results recorded above.
 
 ## Current verification boundary
 
