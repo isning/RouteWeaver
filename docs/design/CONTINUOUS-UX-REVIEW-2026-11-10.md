@@ -143,6 +143,12 @@ This pass inspected `DataTable`, `PageNavigation`, `ResourceToolbar`, `AppForm`/
 
 Application/spec TypeScript checks and discovery pass (four tests in that file, two newly added). Browser execution and actual pixel review remain pending CI. The supported cloud-browser attempt could not reach the local demo URL despite the launch session reporting ready; a separate command also could not reach that session. The exact isolation cause is unconfirmed. The demo was stopped, and no public tunnel or security bypass was used.
 
+### Keep a short browser review running during continuous delivery
+
+The supplemental `ux-visual-focus.yml` workflow runs only the three changed server/path/invitation journeys on this review branch: eight desktop/narrow cases, one worker and one running job. New pushes replace the pending run, not the running review. It retains the pinned setup, vendor Chrome provenance and enabled browser sandbox, and uses the existing isolated production fixtures. Full Repository quality and its required aggregate remain unchanged.
+
+Artifacts identify their exact commit and include only deliberate synthetic captures, reports and the browser-environment receipt. Intermediate commits may have no supplemental run. A completed subset is not full browser acceptance, and an upload attempt does not guarantee screenshots after an early startup failure. Contract tests, eight-case discovery, typechecks, the full 102-test static helper suite and pinned actionlint pass; initial workflow execution is still pending.
+
 ## Current verification boundary
 
-Focused tests, strict TypeScript and production build pass for these slices. Broader regression and exact-commit CI are separate checks. They do not establish visual quality or comprehension. No deployment, live-node operation, production data change or historical quota decision belongs to this review.
+Focused tests, strict TypeScript and production build pass for these slices. A frozen tree corresponding to `81865ca` passed all 3,656 frontend tests in 290 files. Later form, pagination, summary and backup changes have their separately recorded focused evidence; they are not retroactively covered by that earlier full run. Exact-commit CI remains a separate check. They do not establish visual quality or comprehension. No deployment, live-node operation, production data change or historical quota decision belongs to this review.

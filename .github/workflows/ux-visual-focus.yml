@@ -1,0 +1,112 @@
+name: Supplemental UX visual feedback
+
+# This bounded subset never replaces Repository quality or its required aggregate.
+on:
+  push:
+    branches:
+      - 'ux-task-journeys-20261108'
+
+permissions:
+  contents: read
+
+# Finish the running review; newer pushes replace only the single pending run.
+concurrency:
+  group: ux-visual-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CI: "true"
+  GOMEMLIMIT: 768MiB
+  npm_config_cache: ${{ github.workspace }}/bin/cache/npm
+
+jobs:
+  visual:
+    name: Three UX journeys (supplemental evidence only)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    env:
+      # Vendor-installed binary covered by the runner's Chrome AppArmor profile.
+      ROUTEWEAVER_CHROMIUM: /opt/google/chrome/chrome
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+        with:
+          go: "true"
+          node: "true"
+      - name: Install browser OS dependencies and CJK fonts
+        working-directory: web
+        run: npx --no-install playwright install-deps chromium
+      - name: Verify installed Chrome Stable and sandboxed startup
+        working-directory: web
+        run: |
+          test "$(readlink -f "$ROUTEWEAVER_CHROMIUM")" = /opt/google/chrome/chrome
+          test -x "$ROUTEWEAVER_CHROMIUM"
+          test "$(dpkg-query -S "$ROUTEWEAVER_CHROMIUM")" = "google-chrome-stable: /opt/google/chrome/chrome"
+          expected=$(dpkg-query --control-show google-chrome-stable md5sums | awk '$2 == "opt/google/chrome/chrome" { print $1 }')
+          [[ "$expected" =~ ^[0-9a-f]{32}$ ]]
+          printf '%s  %s\n' "$expected" "$ROUTEWEAVER_CHROMIUM" | md5sum --check --strict
+          node --input-type=module <<'JS'
+          import { chromium } from 'playwright';
+          import { execFileSync } from 'node:child_process';
+          import { mkdirSync, writeFileSync } from 'node:fs';
+          const executablePath = process.env.ROUTEWEAVER_CHROMIUM;
+          const evidence = {
+            runnerImage: process.env.ImageOS,
+            runnerImageVersion: process.env.ImageVersion,
+            executablePath,
+            playwrightShard: process.env.ROUTEWEAVER_BROWSER_SHARD,
+            installedVersion: execFileSync(executablePath, ['--version'], { encoding: 'utf8' }).trim(),
+            packageVersion: execFileSync('dpkg-query', ['-W', '-f=${Version}', 'google-chrome-stable'], { encoding: 'utf8' }).trim(),
+            executableSHA256: execFileSync('sha256sum', [executablePath], { encoding: 'utf8' }).split(' ')[0],
+            chromiumSandbox: true,
+            startup: 'not-confirmed',
+          };
+          const record = () => {
+            mkdirSync('../bin/verification', { recursive: true });
+            writeFileSync('../bin/verification/browser-environment.json', JSON.stringify(evidence, null, 2) + '\n');
+            console.log(JSON.stringify(evidence));
+          };
+          record();
+          const browser = await chromium.launch({ executablePath, chromiumSandbox: true });
+          try {
+            evidence.browserVersion = browser.version();
+            const page = await browser.newPage();
+            await page.setContent('<title>Sandboxed browser startup</title>');
+            if (await page.title() !== 'Sandboxed browser startup') throw new Error('Browser startup page failed');
+            evidence.startup = 'passed';
+            record();
+          } finally {
+            await browser.close();
+          }
+          JS
+      - name: Run three isolated journeys at desktop and narrow widths
+        working-directory: web
+        # Leave time for failure artifacts before the job deadline.
+        timeout-minutes: 8
+        run: npm run test:browser -- --config=playwright.ux-visual.config.ts --workers=1 --retries=0
+      - name: Supplemental visual diagnostics for this commit
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ux-visual-supplemental-${{ github.sha }}
+          # Only the HTML report, named synthetic captures and browser receipt.
+          # No databases, fixture keys, automatic screenshots, video or traces.
+          path: |
+            web/playwright-report/
+            bin/verification/browser-environment.json
+            web/test-results/*/path-*.png
+            web/test-results/*/duplicate-server-*.png
+            web/test-results/*/setup-*.png
+            web/test-results/*/setup-*.json
+            web/test-results/*/invitation-*.png
+            web/test-results/*/signup-correction-*.png
+            web/test-results/*/grant-*.png
+            web/test-results/*/authorized-service-*.png
+            web/test-results/*/first-profile-*.png
+            web/test-results/*/publication-review-*.png
+            web/test-results/*/subscription-delivered-*.png
+            web/test-results/*/persisted-subscription-*.png
+          if-no-files-found: warn
+          retention-days: 7
