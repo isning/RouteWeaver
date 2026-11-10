@@ -21,7 +21,7 @@ env:
 
 jobs:
   visual:
-    name: Three UX journeys (supplemental evidence only)
+    name: Four UX specs (supplemental evidence only)
     runs-on: ubuntu-24.04
     timeout-minutes: 12
     env:
@@ -81,7 +81,7 @@ jobs:
             await browser.close();
           }
           JS
-      - name: Run three isolated journeys at desktop and narrow widths
+      - name: Run four isolated UX specs at their existing viewport sizes
         working-directory: web
         # Leave time for failure artifacts before the job deadline.
         timeout-minutes: 8
@@ -91,7 +91,8 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: ux-visual-supplemental-${{ github.sha }}
-          # Only the HTML report, named synthetic captures and browser receipt.
+          # HTML report includes attached focus-paint images/JSON, not a compliance verdict.
+          # Also retain named synthetic captures and the browser receipt.
           # No databases, fixture keys, automatic screenshots, video or traces.
           path: |
             web/playwright-report/

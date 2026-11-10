@@ -13,6 +13,7 @@ export default defineConfig({
         "**/server-path-workspace.ui.spec.ts",
         "**/forwarding-setup-backend.ui.spec.ts",
         "**/invitation-subscription.ui.spec.ts",
+        "**/service-focus-paint.ui.spec.ts",
       ],
     })),
   workers: 1,

@@ -180,9 +180,15 @@ The corrected run `42859483432` at `57c0487` subsequently passed all eight uncha
 
 ### Keep a short browser review running during continuous delivery
 
-The supplemental `ux-visual-focus.yml` workflow runs only the three changed server/path/invitation journeys on this review branch: eight desktop/narrow cases, one worker and one running job. New pushes replace the pending run, not the running review. It retains the pinned setup, vendor Chrome provenance and enabled browser sandbox, and uses the existing isolated production fixtures. Full Repository quality and its required aggregate remain unchanged.
+The supplemental `ux-visual-focus.yml` workflow runs four isolated specs on this review branch: the original eight server/path/invitation cases plus two existing service-focus cases at 390×900 and 390×640, one worker and one running job. New pushes replace the pending run, not the running review. It retains the pinned setup, vendor Chrome provenance and enabled browser sandbox, and uses the existing isolated production fixtures. Full Repository quality and its required aggregate remain unchanged.
 
-Artifacts identify their exact commit and include only deliberate synthetic captures, reports and the browser-environment receipt. Intermediate commits may have no supplemental run. A completed subset is not full browser acceptance, and an upload attempt does not guarantee screenshots after an early startup failure. Contract tests, eight-case discovery, typechecks, the full 102-test static helper suite and pinned actionlint pass; the first eight-case run completed with the bounded results recorded above.
+Artifacts identify their exact commit and include only deliberate synthetic captures, reports and the browser-environment receipt. Intermediate commits may have no supplemental run. A completed subset is not full browser acceptance, and an upload attempt does not guarantee screenshots after an early startup failure. Contract tests, discovery, typechecks, the full 102-test static helper suite and pinned actionlint pass; the first eight-case run completed with the bounded results recorded above.
+
+### Measure actual keyboard-focus paint before changing it
+
+Source-level neutral-color calculation gives the current light opaque ring 2.593:1 against white and its half-opacity halo about 1.545:1. These values alone do not establish every control fails: solid borders, primary fills, outlines, invalid-state overrides and wrapper-owned paint can provide different indicators. Existing focus/clipping captures did not supply paired neutral focused/unfocused evidence. No production color or component style has been changed.
+
+The two existing service-focus tests retain all prior assertions and now attach paired screenshots and computed paint/context after native Shift+Tab/Tab for an outline Cancel button and blank name input, on both openings. Evidence records actual ancestors, pseudo-elements, adjacent hit surfaces, geometry and opacity without reading field values. Measurements are diagnostic, not a compliance verdict. Desktop, unchecked checkbox, tabs, sidebar and comprehensive dark/error-state comparison remain unsampled. Ten-case supplemental discovery, focused typechecks, 25 independent workflow/distribution tests and pinned actionlint pass. The new paired browser captures remain pending.
 
 ## Current verification boundary
 

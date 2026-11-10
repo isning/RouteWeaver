@@ -2,6 +2,7 @@ import { type Locator, type Page } from "@playwright/test";
 import { expect, test } from "./isolated-control-plane-fixture";
 import { activate, signIn } from "./uiux-inventory-helper";
 import { settledTask } from "./ui-settled-task";
+import { captureNativeFocusPair } from "./focus-paint-evidence";
 
 test.use({
   trace: "off",
@@ -154,6 +155,24 @@ for (const height of [900, 640]) {
         body: await page.screenshot(),
         contentType: "image/png",
       });
+      // Capture only after the original scroll/clipping assertions so this
+      // extra native traversal cannot make their starting geometry favorable.
+      await tabTo(page, dialog, cancel);
+      await expect(cancel).toHaveAttribute("data-variant", "outline");
+      await captureNativeFocusPair(
+        page,
+        cancel,
+        info,
+        `service-outline-390x${height}-open${attempt}`,
+      );
+      await tabTo(page, dialog, name);
+      await captureNativeFocusPair(
+        page,
+        name,
+        info,
+        `service-input-390x${height}-open${attempt}`,
+      );
+      await expect(name).toHaveValue("");
       await page.keyboard.press("Escape");
       await expect(dialog).toBeHidden();
       await expect(opener).toBeFocused();
