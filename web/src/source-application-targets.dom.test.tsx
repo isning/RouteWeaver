@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import {
-  cleanup,
   render,
   screen,
   waitFor,
@@ -12,6 +11,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SourcesPage } from "./Sources";
 import { UIProviders } from "./ui-patterns/providers";
 import type { Source } from "./types";
+import { cleanupNotifications } from "./test-support/cleanup-notifications";
 
 const pending: Source = {
   id: "source",
@@ -98,8 +98,8 @@ beforeEach(() => {
     original(element),
   );
 });
-afterEach(() => {
-  cleanup();
+afterEach(async () => {
+  await cleanupNotifications();
   clients.splice(0).forEach((client) => client.clear());
   vi.restoreAllMocks();
   vi.unstubAllGlobals();

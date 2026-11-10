@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { act, cleanup, render, screen, within } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -8,6 +8,7 @@ import { SourcesPage } from "./Sources";
 import { UIProviders } from "./ui-patterns/providers";
 import { sourceRowAction } from "./test-support/source-row-actions";
 import type { Source } from "./types";
+import { cleanupNotifications } from "./test-support/cleanup-notifications";
 
 const initial: Source = {
   id: "travel",
@@ -59,8 +60,8 @@ beforeEach(() => {
     original(element),
   );
 });
-afterEach(() => {
-  cleanup();
+afterEach(async () => {
+  await cleanupNotifications();
   clients.splice(0).forEach((client) => client.clear());
   vi.restoreAllMocks();
   vi.unstubAllGlobals();

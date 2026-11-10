@@ -164,6 +164,13 @@ This pass inspected `DataTable`, `PageNavigation`, `ResourceToolbar`, `AppForm`/
 - Review correction: the backend can retain a feed URL in a bundle response, so URL equality alone is insufficient. Delivery mode is part of ownership, including feed-to-bundle-to-feed transitions.
 - Evidence: four initial stale-feedback cases and four delivery-transition cases fail before their respective fixes. Seventy-six related access/rotation/bundle tests pass, including 22 clipboard scenarios independently rerun after review. TypeScript passes. StrictMode was source-reviewed, not separately exercised; no live subscription or clipboard operation and no geometry acceptance are claimed.
 
+### Finish notification exits before destroying the test environment
+
+- Evidence gap: the frozen `57c0487` frontend run completed 3,717 tests successfully but retained one old search assertion (corrected in `40df9fb`) and two unhandled React/Sonner callbacks after jsdom teardown. This was not an all-green run.
+- Cause: Sonner's exit-removal timeout can outlive immediate RTL unmount. Clearing the public toast queue does not mean its mounted notification has finished leaving. A deterministic queued/dismissing regression retains one pending timer with the old cleanup; an ordinary focused run can pass because the race is timing-sensitive.
+- Decision: only the two affected suites use a test helper that lets queued publication render, dismisses while the host remains mounted, waits for actual notification removal and then unmounts. Production code, global setup, assertion strength and timeout budgets remain unchanged. The helper does not promise to repair a host already unmounted elsewhere.
+- Verification: queued, active and dismissing ownership cases pass; three implementation repetitions plus an independent coordinator repetition pass all 28 focused tests without unhandled errors. TypeScript passes. The next frozen full run remains necessary; no exception is suppressed.
+
 ## Rendered-evidence follow-up
 
 `web/tests/server-path-workspace.ui.spec.ts` now adds same-named, same-address server journeys at 1440 and 390 pixels. The real isolated backend creates synthetic records; keyboard selection, explicit owner replacement, endpoint filtering and persisted draft identity are asserted. Capture points show the two identity choices, retained first server and second server's endpoints. No fleet task or runtime application is requested.
