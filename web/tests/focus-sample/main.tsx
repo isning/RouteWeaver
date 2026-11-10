@@ -3,6 +3,13 @@ import { createRoot } from "react-dom/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Field,
+  FieldContent,
+  FieldLabel,
+  FieldTitle,
+  FieldDescription,
+} from "@/components/ui/field";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   SidebarProvider,
@@ -60,7 +67,15 @@ function Sample() {
             <Checkbox id="invalid-check" aria-invalid="true" />
             <label htmlFor="invalid-check">Invalid checkbox sample</label>
           </div>
+          <div className="flex gap-3">
+            <Checkbox id="invalid-checked" aria-invalid="true" defaultChecked />
+            <label htmlFor="invalid-checked">Invalid checked sample</label>
+          </div>
         </div>
+        <FieldLabel htmlFor="invalid-plain-label">
+          <Checkbox id="invalid-plain-label" aria-invalid="true" />
+          Invalid plain label sample
+        </FieldLabel>
         <Tabs defaultValue="active" activationMode="manual">
           <TabsList aria-label="Sample tabs">
             <TabsTrigger value="active">Active sample tab</TabsTrigger>
@@ -79,6 +94,37 @@ function Sample() {
           <label htmlFor="muted">Muted name sample</label>
           <Input id="muted" />
         </div>
+      </section>
+      <section
+        aria-label="Invalid checkbox cards"
+        className="grid grid-cols-2 gap-8 bg-card p-8"
+      >
+        {[false, true].map((checked) => {
+          const id = checked ? "card-checked" : "card-unchecked";
+          return (
+            <FieldLabel key={id} htmlFor={id}>
+              <Field orientation="horizontal" data-invalid="true">
+                <Checkbox
+                  id={id}
+                  defaultChecked={checked}
+                  aria-invalid="true"
+                  aria-labelledby={`${id}-title`}
+                  aria-describedby={`${id}-error`}
+                />
+                <FieldContent>
+                  <FieldTitle id={`${id}-title`}>
+                    {checked
+                      ? "Invalid checked card sample"
+                      : "Invalid unchecked card sample"}
+                  </FieldTitle>
+                  <FieldDescription id={`${id}-error`}>
+                    Synthetic choice needs correction
+                  </FieldDescription>
+                </FieldContent>
+              </Field>
+            </FieldLabel>
+          );
+        })}
       </section>
       <SidebarProvider className="min-h-0">
         <aside

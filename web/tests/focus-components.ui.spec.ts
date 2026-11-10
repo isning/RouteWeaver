@@ -147,6 +147,34 @@ for (const theme of ["light", "dark"]) {
         }),
       ],
       [
+        "invalid-checked",
+        page.getByRole("checkbox", {
+          name: "Invalid checked sample",
+          exact: true,
+        }),
+      ],
+      [
+        "invalid-unchecked-card",
+        page.getByRole("checkbox", {
+          name: "Invalid unchecked card sample",
+          exact: true,
+        }),
+      ],
+      [
+        "invalid-checked-card",
+        page.getByRole("checkbox", {
+          name: "Invalid checked card sample",
+          exact: true,
+        }),
+      ],
+      [
+        "invalid-plain-label",
+        page.getByRole("checkbox", {
+          name: "Invalid plain label sample",
+          exact: true,
+        }),
+      ],
+      [
         "active-tab",
         page.getByRole("tab", { name: "Active sample tab", exact: true }),
       ],
@@ -162,12 +190,71 @@ for (const theme of ["light", "dark"]) {
     ];
     for (const [name, target] of samples) {
       await tabTo(page, target);
-      await captureNativeFocusPair(
+      const paint = await captureNativeFocusPair(
         page,
         target,
         info,
         `focus-sample-${theme}-${name}`,
       );
+      if (
+        name === "invalid-checkbox" ||
+        name === "invalid-checked" ||
+        name === "invalid-plain-label"
+      ) {
+        // The saved pre-fix actual snapshots fail this public painted-state
+        // assertion: their invalid shadow is identical before/after native Tab.
+        expect(paint.after.target.shadow).not.toBe(paint.before.target.shadow);
+        expect(paint.after.target.shadow).toMatch(
+          /(?:^|\s)0px 0px 0px 3px(?:\s|,|$)/,
+        );
+        expect(paint.after.target.border).toEqual(paint.before.target.border);
+        if (name === "invalid-plain-label") {
+          const label = paint.after.ancestors.find(
+            (node) => node.slot === "field-label",
+          );
+          expect(label).toBeDefined();
+          expect(label!.shadow).toBe("none");
+        }
+        expect(paint.after.target.rect.width).toBe(
+          paint.before.target.rect.width,
+        );
+        expect(paint.after.target.rect.height).toBe(
+          paint.before.target.rect.height,
+        );
+        await expect(target).toHaveAttribute("aria-invalid", "true");
+        await expect(target).toBeChecked({
+          checked: name === "invalid-checked",
+        });
+      }
+      if (name.endsWith("-card")) {
+        const beforeOwner = paint.before.ancestors.find(
+          (node) => node.slot === "field-label",
+        );
+        const afterOwner = paint.after.ancestors.find(
+          (node) => node.slot === "field-label",
+        );
+        expect(beforeOwner).toBeDefined();
+        expect(afterOwner).toBeDefined();
+        expect(afterOwner!.shadow).not.toBe(beforeOwner!.shadow);
+        expect(afterOwner!.shadow).toMatch(/(?:^|\s)0px 0px 0px 3px(?:\s|,|$)/);
+        // The composed label owns focus, without a second checkbox halo.
+        expect(paint.after.target.shadow).not.toMatch(
+          /(?:^|\s)0px 0px 0px 3px(?:\s|,|$)/,
+        );
+        const errorBorder = await page
+          .getByRole("checkbox", {
+            name: "Invalid checkbox sample",
+            exact: true,
+          })
+          .evaluate((element) => getComputedStyle(element).borderTopColor);
+        expect(paint.after.target.border[0].color).toBe(errorBorder);
+        expect(afterOwner!.rect.width).toBe(beforeOwner!.rect.width);
+        expect(afterOwner!.rect.height).toBe(beforeOwner!.rect.height);
+        await expect(target).toHaveAttribute("aria-invalid", "true");
+        await expect(target).toBeChecked({
+          checked: name === "invalid-checked-card",
+        });
+      }
     }
     await tabTo(
       page,

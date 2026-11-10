@@ -106,4 +106,5 @@ export async function captureNativeFocusPair(
     ),
     contentType: "application/json",
   });
+  return { before, after };
 }
