@@ -135,6 +135,11 @@ func (s *Store) grantAdmissionBudget(tx *sql.Tx, binding EntryAdmissionBinding, 
 	if e != nil {
 		return nil, "", e
 	}
+	// Defense in depth for byte issuance; shared eligibility applies the same
+	// hold. Settlement remains before eligibility in AcquireAdmission.
+	if policy.Quota > 0 && policy.CycleStart.After(now) {
+		return nil, "accounting-pending", nil
+	}
 	if budget.LeaseID != "" {
 		if budget.Closed {
 			return nil, "presence-closed", nil

@@ -98,6 +98,13 @@ func (s *Store) policyUsageEligibilityTx(tx *sql.Tx, policy service.EffectivePol
 	if window, err = policy.Entitlement.Cycle.Window(now); err != nil {
 		return
 	}
+	// Reversible safety hold: a future window cannot account for bytes used
+	// now. Preserve the calendar and ledger; pre-anchor consumption treatment
+	// requires an explicit product/migration decision, not an implicit reset.
+	if policy.QuotaBytes > 0 && window.Start.After(now) {
+		reason = "accounting-pending"
+		return
+	}
 	var resets []json.RawMessage
 	if resets, err = s.listTx(tx, "resets"); err != nil {
 		return
