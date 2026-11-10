@@ -24,7 +24,7 @@ All rows below still require a complete state and rendered-layout review. Entrie
 | Inbox | Read account messages and recover acknowledgement failures | Source inspection only |
 | Published routes | Offer a versioned usable entry and route | Not yet reviewed in this pass |
 | Forwarding paths | Select explicit ordered managed/external hops | Source and bounded DOM review; first correction below |
-| Servers and core instances | Find a server, inspect observations and manage configuration | Source and existing focused DOM tests; diagnostics correction underway |
+| Servers and core instances | Find a server, inspect observations and manage configuration | Source and focused DOM tests; diagnostic receipt correction below |
 | Fleet tasks | Review targets, execute stages and inspect actual outcomes | Not yet reviewed in this pass |
 | Users and access policy | Grant and inspect effective service access | Not yet reviewed in this pass |
 | Service offerings | Define user-visible limits and permitted routes | Not yet reviewed in this pass |
@@ -62,6 +62,14 @@ This pass inspected `DataTable`, `PageNavigation`, `ResourceToolbar`, `AppForm`/
 - Defect: `ActionButton` overwrote an explicitly supplied `aria-busy` when its separate `pending` prop was omitted. The authenticated configuration-bundle download is one affected caller: the action was disabled but its ongoing work was not exposed through the requested accessibility state.
 - Decision: the built-in pending lifecycle still forces busy; otherwise preserve the caller's native busy value. This does not add a second loading message or alter click behavior.
 - Public-seam evidence: both ordinary buttons and link-composed actions fail before the fix and pass afterwards, including clearing busy on completion. Eight focused button/target-size tests pass.
+
+### Keep accepted diagnostics inspectable through failed reads
+
+- Defect: submitting a diagnostic retained only its ID, while the details panel required the asynchronously refreshed list to contain its record. A delayed, failed or incomplete list produced a blank details sheet even though a job had been accepted.
+- Decision: retain the accepted receipt in the mounted task, distinguish it from current list observations, and keep a read-only refresh available. Retrying explicitly cancels the prior query owner, including a hanging initial read with no cached data. Late responses cannot displace the replacement read. No second test is submitted.
+- Identity and freshness: refreshed records must match the confirmed request and arrive after the receipt's cached-list boundary. A confirmed terminal result cannot become active again because of an older list state. Missing or mismatched results retain the confirmed target and cancellation ID. Receipt retention is not persistence across page reload.
+- Public-seam evidence: ten new full-panel tests cover successful submission/reconciliation, delayed/failed/initially hanging reads, explicit retry, late results, missing/wrong host/target/limits, stale cached queued records and retained terminal results. Four focused diagnostic suites pass (27 tests), with red-before-green evidence for the original blank panel and all three review-discovered recovery edges.
+- Independent review found and drove correction of disabled retry, cached receipt regression and initial-read deduplication. No live diagnostic traffic or visual acceptance is claimed.
 
 ## Current verification boundary
 

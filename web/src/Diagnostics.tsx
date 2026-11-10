@@ -18,7 +18,7 @@ import { AppField, AppForm, useForm, useWatch } from "@/ui-patterns/form";
 import { Notice } from "@/ui-patterns/notice";
 import { TaskDialog, TaskSheet } from "@/ui-patterns/task-overlays";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { list, post } from "./api";
 import { EmptyState, ErrorNotice, QueryState, Section } from "./components";
 import { DataTable } from "./DataTable";
@@ -37,6 +37,17 @@ import type { CoreInstance, HostRecord } from "./types";
 import { useDiagnosticRequest } from "./useDiagnosticRequest";
 import { useDiscardConfirmation } from "./useDiscardConfirmation";
 const base = "/admin/diagnostic-jobs";
+// A refreshed list may omit a newly accepted job. Keep its confirmed receipt,
+// and never replace it with another request that happens to reuse the same ID.
+function sameDiagnosticRequest(a: DiagnosticJob, b: DiagnosticJob) {
+  return a.id === b.id && a.targetId === b.targetId && a.instanceId === b.instanceId &&
+    a.scope.nodeId === b.scope.nodeId && a.scope.instanceId === b.scope.instanceId &&
+    a.scope.enrollmentEpoch === b.scope.enrollmentEpoch &&
+    a.kind === b.kind && a.maxBytes === b.maxBytes && a.timeoutSeconds === b.timeoutSeconds &&
+    (a.pathMode || "node_direct") === (b.pathMode || "node_direct") &&
+    a.publishedRouteId === b.publishedRouteId && a.requestedAt === b.requestedAt &&
+    a.target.id === b.target.id && a.target.nodeId === b.target.nodeId && a.target.url === b.target.url;
+}
 export function DiagnosticsPanel({
   host,
   instances,
@@ -55,15 +66,41 @@ export function DiagnosticsPanel({
     refetchInterval: (q) =>
       q.state.data?.some((j) => diagnosticActive(j.status)) ? 5000 : false,
   });
+  const refreshJobs = async () => {
+    // refetch alone cannot supersede an initial read with no cached data.
+    // Cancel its query owner first, so even a late transport response is ignored.
+    await client.cancelQueries({ queryKey: ["diagnostic-jobs"], exact: true });
+    return jobs.refetch();
+  };
   const [creating, setCreating] = useState(false),
     [adding, setAdding] = useState(false),
     [selected, setSelected] = useState<string | null>(null);
+  const [receipt, setReceipt] = useState<DiagnosticJob | null>(null);
+  const receiptListBoundary = useRef<{ data: DiagnosticJob[] | undefined; updatedAt: number }>({ data: undefined, updatedAt: 0 });
   const availableTargets = (targets.data || []).filter(
     (t) => t.nodeId === host.id,
   );
   const availableInstances = instances.filter((i) => i.hostId === host.id);
-  const rows = (jobs.data || []).filter((j) => j.scope.nodeId === host.id);
+  const listedRows = (jobs.data || []).filter((j) => j.scope.nodeId === host.id);
+  const scopedReceipt = receipt?.scope.nodeId === host.id ? receipt : null;
+  // Acceptance/reconciliation is newer evidence than the list cached at that
+  // moment. Structural sharing can preserve data identity on a successful read,
+  // so use both the completed-read timestamp and the captured data identity.
+  const listReadAfterReceipt = jobs.dataUpdatedAt > receiptListBoundary.current.updatedAt ||
+    jobs.data !== receiptListBoundary.current.data;
+  const refreshedReceipt = scopedReceipt && listReadAfterReceipt && listedRows.find((job) =>
+    sameDiagnosticRequest(job, scopedReceipt) &&
+    // The API supplies no ordered observation version. A final result must not
+    // become an active job again merely because another list response arrives.
+    (!["succeeded", "failed", "cancelled", "not_run"].includes(scopedReceipt.status) || job.status === scopedReceipt.status));
+  useEffect(() => {
+    if (refreshedReceipt && refreshedReceipt !== receipt) setReceipt(refreshedReceipt);
+  }, [refreshedReceipt, receipt]);
+  const rows = scopedReceipt
+    ? [...listedRows.filter((job) => job.id !== scopedReceipt.id), refreshedReceipt || scopedReceipt]
+    : listedRows;
   const selectedJob = rows.find((j) => j.id === selected);
+  const retainedReceipt = selected === scopedReceipt?.id && !refreshedReceipt;
   return (
     <>
       <Section
@@ -224,6 +261,9 @@ export function DiagnosticsPanel({
           instances={availableInstances}
           onClose={() => setCreating(false)}
           onCreated={(job) => {
+            const cached = client.getQueryState<DiagnosticJob[]>(["diagnostic-jobs"]);
+            receiptListBoundary.current = { data: cached?.data, updatedAt: cached?.dataUpdatedAt || 0 };
+            setReceipt(job);
             client.invalidateQueries({ queryKey: ["diagnostic-jobs"] });
             setCreating(false);
             setSelected(job.id);
@@ -239,8 +279,14 @@ export function DiagnosticsPanel({
         }}
         size="md"
       >
+        {(jobs.isError || jobs.isPaused || jobs.isFetching || retainedReceipt) && <Notice tone={jobs.isError ? "warning" : "info"} role="status">
+          {jobs.isError ? "测试状态刷新失败，以下保留上次确认的记录。"
+            : jobs.isPaused ? "等待网络连接，以下保留上次确认的记录。"
+            : jobs.isFetching ? "正在核对最新测试状态。以下保留上次确认的记录。"
+            : "最新列表尚未确认该次测试的状态，以下保留上次确认的记录。请刷新结果核对。"}
+        </Notice>}
         {selectedJob && (
-          <DiagnosticResult job={selectedJob} refresh={() => jobs.refetch()} />
+          <DiagnosticResult job={selectedJob} refresh={() => { void refreshJobs(); }} />
         )}
       </TaskSheet>
     </>
