@@ -16,7 +16,7 @@ All rows below still require a complete state and rendered-layout review. Entrie
 | --- | --- | --- |
 | Login, invitation and account security | Enter the right account and recover safely | Uncertain-login recovery and neighboring DOM regressions reviewed; rendered states open |
 | Workspace navigation and mobile menu | Find a task without losing current work | Source inspection only |
-| Subscriptions, profiles and outputs | Configure, review and deliver a client subscription | Not yet reviewed in this pass |
+| Subscriptions, profiles and outputs | Configure, review and deliver a client subscription | Captured profile summary and source-read slices reviewed; remaining publication/output states open |
 | Subscription sources | Import and accept owned connection options | Not yet reviewed in this pass |
 | Collections | Combine sources without silently changing their meaning | Not yet reviewed in this pass |
 | Rule resources | Inspect and accept owned rule versions | Not yet reviewed in this pass |
@@ -123,6 +123,13 @@ This pass inspected `DataTable`, `PageNavigation`, `ResourceToolbar`, `AppForm`/
 - Defect: an uncontrolled table on page 3 visually moved to page 2 after a confirmed removal reduced its row count. Internal page state remained 3, so a later added record unexpectedly jumped the table back to page 3 without a navigation action.
 - Decision: confirmed bounds changes commit the visible page for internally owned pagination. A still-valid page remains unchanged. Controlled parents retain ownership; passive refresh emits no page-change callback. Temporary loading rows and disabled pagination do not overwrite the remembered position. A confirmed local-filter clamp follows the same visible-page contract instead of silently restoring an earlier hidden page.
 - Evidence: authoritative shrink/grow regression fails before and passes after. Five new cases cover the above boundaries; 33 focused table/history/navigation tests and TypeScript pass. Coordinator independently reran all five. Users/services empty-versus-filtered states and activity-list presentation were inspected without additional demonstrated defects. No browser-layout or full-page acceptance is claimed.
+
+### Give selected platform entries an accurate connection summary
+
+- Observed defect: the 390px first-profile screenshot from synthetic CI run `42851399972` showed a platform entry selected as the default destination, but emphasized `0 个有效连接`; the usable selected entry appeared only as a secondary `另有 1 个平台入口` sentence. The count covered materialized own connections, not every selected destination.
+- Decision: when platform entries are selected, show equally weighted, separately scoped own-connection and platform-entry counts. Keep publication-time credential resolution as a separate fact. Entry-only, mixed and own-only configurations remain distinct; direct-only configurations keep their existing concise explanation.
+- Read boundaries: pending, paused, background-refresh and failed catalog reads never show cached entry counts as confirmed availability. Missing selections remain visible. Unselected platform-catalog states do not displace an own-only/direct-only summary; the selector still retains its error and retry.
+- Evidence: entry-only/mixed hierarchy and irrelevant-catalog regressions fail before their fixes. Focused profile/source suites, application/spec typechecks and browser discovery pass; coordinator independently reran the affected DOM files. The desktop/390px invitation journey now asserts equal visual weight and captures the full summary. Corrected pixels remain pending CI; the original screenshot establishes a content-hierarchy defect, not a routing failure.
 
 ## Rendered-evidence follow-up
 

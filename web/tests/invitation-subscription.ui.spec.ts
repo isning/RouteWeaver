@@ -373,7 +373,21 @@ for (const width of [1440, 390]) {
       });
       await expect(entryOption).toHaveCount(1);
       await entryOption.click();
+      const ownSummary = recipient.getByText("自有连接：0 个", { exact: true });
+      const entrySummary = recipient.getByText("平台入口：1 个", { exact: true });
+      const credentialTiming = recipient.getByText("平台入口凭据在发布时解析。", { exact: true });
+      await expect(ownSummary).toBeVisible();
+      await expect(entrySummary).toBeVisible();
+      await expect(recipient.getByText("0 个有效连接", { exact: true })).toHaveCount(0);
+      expect(await ownSummary.evaluate((element) => getComputedStyle(element).fontWeight)).toBe(
+        await entrySummary.evaluate((element) => getComputedStyle(element).fontWeight),
+      );
       await capture(recipient, info, `first-profile-${width}`);
+      await credentialTiming.scrollIntoViewIfNeeded();
+      await expect(ownSummary).toBeInViewport({ ratio: 1 });
+      await expect(entrySummary).toBeInViewport({ ratio: 1 });
+      await expect(credentialTiming).toBeInViewport({ ratio: 1 });
+      await capture(recipient, info, `first-profile-input-summary-${width}`);
       await recipient
         .getByRole("button", { name: "保存并检查", exact: true })
         .click();

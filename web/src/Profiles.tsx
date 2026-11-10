@@ -949,6 +949,7 @@ export function ProfileEditor({
           : draft.platformEntryIds?.length
             ? "使用平台入口"
             : "尚未添加代理连接";
+  const ownConnectionLabel = draft.platformEntryIds?.length ? "自有连接" : "有效连接";
   const missingEntryCount =
     entries.isSuccess && !entries.isFetching && !entries.isPaused
       ? (draft.platformEntryIds || []).filter(
@@ -1819,11 +1820,11 @@ export function ProfileEditor({
                   {effectiveInputs.status === "pending" ? (
                     <span>
                       {effectiveInputs.paused
-                        ? "等待核对有效连接…"
-                        : "正在计算有效连接…"}
+                        ? `等待核对${ownConnectionLabel}…`
+                        : `正在计算${ownConnectionLabel}…`}
                     </span>
                   ) : effectiveInputs.status === "error" ? (
-                    <strong>有效连接暂不可用</strong>
+                    <strong>{ownConnectionLabel}暂不可用</strong>
                   ) : (
                     <strong>{endpoints.length === 0 &&
                       !selectedSourceIds.length && !draft.collectionId &&
@@ -1831,20 +1832,24 @@ export function ProfileEditor({
                       (draft.ir.defaultAction.kind === "direct" || draft.ir.defaultAction.kind === "reject") &&
                       !draft.ir.rules.length && !draft.ir.groups.length
                       ? "直连与拒绝不需要代理连接"
-                      : `${endpoints.length} 个有效连接`}</strong>
+                      : draft.platformEntryIds?.length
+                        ? `自有连接：${endpoints.length} 个`
+                        : `${endpoints.length} 个有效连接`}</strong>
                   )}
-                  {entries.isPaused ? (
-                    <span>等待核对平台入口…</span>
-                  ) : entries.isLoading ? (
-                    <span>正在核对平台入口…</span>
+                  {!!draft.platformEntryIds?.length && (entries.isPaused ? (
+                    <strong>等待核对平台入口…</strong>
+                  ) : entries.isFetching || entries.isPending ? (
+                    <strong>正在核对平台入口…</strong>
+                  ) : entries.isError ? (
+                    <strong>平台入口暂无法核对</strong>
                   ) : (
                     selectedEntries.length > 0 && (
-                      <span>
-                        另有 {selectedEntries.length}{" "}
-                        个平台入口，凭据在发布时解析。
-                      </span>
+                      <>
+                        <strong>平台入口：{selectedEntries.length} 个</strong>
+                        <span>平台入口凭据在发布时解析。</span>
+                      </>
                     )
-                  )}
+                  ))}
                   {missingEntryCount > 0 && (
                     <span>
                       {missingEntryCount} 个平台入口暂不可用，原选择已保留。

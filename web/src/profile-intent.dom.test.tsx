@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -14,7 +15,7 @@ import { UIProviders } from "./ui-patterns/providers";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ProfileEditor } from "./Profiles";
 import { emptyProfile } from "./model";
-import type { ClientNode, Output, Profile, Source } from "./types";
+import type { ClientNode, Output, PlatformEntry, Profile, Source } from "./types";
 
 const node = (id: string, name: string): ClientNode => ({
   id,
@@ -86,13 +87,14 @@ function fixture() {
 }
 function mount(
   profile: Profile = fixture(),
-  options: { output?: Output; inputFailure?: boolean } = {},
+  options: { output?: Output; inputFailure?: boolean; entryReply?: () => Promise<Response>; cachedEntries?: PlatformEntry[] } = {},
 ) {
   const writes: { path: string; body: any }[] = [];
   const savedSources = [source];
   const onClose = vi.fn();
   const fetcher = vi.fn(async (url: unknown, init?: RequestInit) => {
     const path = String(url);
+    if (path === "/api/me/platform-entries" && options.entryReply) return options.entryReply();
     if (path === "/api/me/collections/preview")
       return options.inputFailure
         ? json({ detail: "Accepted source is unavailable" }, 503)
@@ -134,6 +136,7 @@ function mount(
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
+  if (options.cachedEntries) client.setQueryData(["platform-entries"], options.cachedEntries);
   clients.push(client);
   const view = render(
     <QueryClientProvider client={client}>
@@ -149,6 +152,7 @@ function mount(
   );
   return {
     writes,
+    client,
     fetcher,
     onClose,
     unmount: view.unmount,
@@ -1539,3 +1543,85 @@ it.each(["native", "nodes-only"] as const)(
     expect(live.matches(":empty")).toBe(false);
   },
 );
+
+const summaryEntry: PlatformEntry = { id: "platform-one", name: "平台入口样例", routeId: "route-one", credentialVersion: "v1", status: "active" };
+function entryProfile(mixed = false) {
+  const profile = mixed ? fixture() : { ...emptyProfile(), id: "entry-summary", name: "入口配置" };
+  profile.platformEntryIds = [summaryEntry.id];
+  profile.ir.defaultAction = { kind: "endpoint", ref: summaryEntry.id };
+  return profile;
+}
+
+it.each([false, true])("scopes own connections and platform entries equally in the summary (mixed: %s)", async (mixed) => {
+  mount(entryProfile(mixed), { entryReply: async () => json([summaryEntry]) });
+  const own = await screen.findByText(`自有连接：${mixed ? 2 : 0} 个`);
+  const platform = await screen.findByText("平台入口：1 个");
+  expect(own.tagName).toBe("STRONG");
+  expect(platform.tagName).toBe("STRONG");
+  expect(own.parentElement).toBe(platform.parentElement);
+  expect(screen.getByText("平台入口凭据在发布时解析。")).toBeTruthy();
+  expect(screen.queryByText("0 个有效连接")).toBeNull();
+});
+
+it("keeps direct-only and own-only summaries concise without inventing platform entries", async () => {
+  const view = mount(emptyProfile());
+  await screen.findByText("直连与拒绝不需要代理连接");
+  expect(screen.queryByText(/^平台入口：/)).toBeNull();
+  view.unmount();
+  mount();
+  await screen.findByText("2 个有效连接");
+  expect(screen.queryByText(/^平台入口：/)).toBeNull();
+});
+
+it("keeps a confirmed missing platform selection separate from available entry counts", async () => {
+  const { writes } = mount(entryProfile(), { entryReply: async () => json([]) });
+  await screen.findByText("1 个平台入口暂不可用，原选择已保留。");
+  expect(screen.queryByText("平台入口：1 个")).toBeNull();
+  await userEvent.setup().click(screen.getByRole("button", { name: "保存草稿" }));
+  await waitFor(() => expect(writes).toHaveLength(1));
+  expect(writes[0].body.platformEntryIds).toEqual([summaryEntry.id]);
+});
+
+it.each([false, true])("does not count platform entries while loading or after failure and recovers explicitly (cached: %s)", async (cached) => {
+  let reply: () => Promise<Response> = () => new Promise(() => {});
+  const { client } = mount(entryProfile(), { cachedEntries: cached ? [summaryEntry] : undefined, entryReply: () => reply() });
+  await screen.findByText("正在核对平台入口…");
+  expect(screen.queryByText("平台入口：1 个")).toBeNull();
+  expect(screen.queryByText(/个平台入口暂不可用/)).toBeNull();
+  reply = async () => json({ detail: "入口清单读取失败" }, 503);
+  await act(async () => { await client.cancelQueries({ queryKey: ["platform-entries"] }); await client.invalidateQueries({ queryKey: ["platform-entries"] }); });
+  await screen.findByText("平台入口暂无法核对");
+  expect(screen.queryByText("平台入口：1 个")).toBeNull();
+  expect(screen.queryByText(/个平台入口暂不可用/)).toBeNull();
+  reply = async () => json([summaryEntry]);
+  await userEvent.setup().click(screen.getByRole("button", { name: "重新加载平台入口" }));
+  await screen.findByText("平台入口：1 个");
+  expect(screen.queryByText("平台入口暂无法核对")).toBeNull();
+});
+
+it("keeps a platform entry count separate from a failed own-connection read", async () => {
+  mount(entryProfile(true), { inputFailure: true, entryReply: async () => json([summaryEntry]) });
+  await screen.findByText("自有连接暂不可用");
+  expect(screen.getByText("平台入口：1 个")).toBeTruthy();
+  expect(screen.queryByText("自有连接：0 个")).toBeNull();
+  expect(screen.queryByText("自有连接：2 个")).toBeNull();
+});
+
+it.each(["own", "direct"] as const)("keeps unselected platform catalog failures out of the %s summary but preserves recovery", async (kind) => {
+  let reply: () => Promise<Response> = () => new Promise(() => {});
+  const { client } = mount(kind === "own" ? fixture() : emptyProfile(), { entryReply: () => reply() });
+  const summaryText = kind === "own" ? "2 个有效连接" : "直连与拒绝不需要代理连接";
+  await screen.findByText(summaryText);
+  expect(screen.queryByText("正在核对平台入口…")).toBeNull();
+  reply = async () => json({ detail: "入口清单读取失败" }, 503);
+  await act(async () => { await client.cancelQueries({ queryKey: ["platform-entries"] }); await client.invalidateQueries({ queryKey: ["platform-entries"] }); });
+  await screen.findByText("入口清单读取失败");
+  expect(screen.getByText(summaryText)).toBeTruthy();
+  expect(screen.queryByText("平台入口暂无法核对")).toBeNull();
+  expect(screen.queryByText(/^平台入口：/)).toBeNull();
+  reply = async () => json([summaryEntry]);
+  await userEvent.setup().click(screen.getByRole("button", { name: "重新加载平台入口" }));
+  await waitFor(() => expect(screen.queryByText("入口清单读取失败")).toBeNull());
+  expect(screen.queryByText(/^平台入口：/)).toBeNull();
+  expect(screen.getByText(summaryText)).toBeTruthy();
+});

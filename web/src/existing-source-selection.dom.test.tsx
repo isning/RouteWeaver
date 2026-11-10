@@ -391,7 +391,7 @@ it(
     expect(saved.ir.rules).toEqual(profile.ir.rules);
     expect(saved.ir.defaultAction).toEqual(profile.ir.defaultAction);
     expect(saved.platformEntryIds).toEqual(["platform"]);
-    expect(screen.getByText(/另有 1 个平台入口/)).toBeTruthy();
+    expect(screen.getByText("平台入口：1 个")).toBeTruthy();
   },
   SOURCE_IMPORT_JOURNEY_TIMEOUT_MS,
 );
@@ -441,7 +441,7 @@ it(
     expect(document.activeElement).toBe(
       screen.getByRole("combobox", { name: "复用节点集合" }),
     );
-    expect(screen.queryByText("1 个有效连接")).toBeNull();
+    expect(screen.queryByText("自有连接：1 个")).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "保存草稿" }));
     await waitFor(() =>
       expect(writes.some((w) => w.path === "/me/profiles/profile")).toBe(true),
@@ -451,7 +451,7 @@ it(
     expect(saved.sourceIds).toEqual([]);
     expect(saved.ir.endpoints).toEqual([]);
     expect(saved.platformEntryIds).toEqual(["platform"]);
-    expect(screen.getByText(/另有 1 个平台入口/)).toBeTruthy();
+    expect(screen.getByText("平台入口：1 个")).toBeTruthy();
     expect(saved.ir.groups).toEqual(profile.ir.groups);
     expect(
       writes.filter(
@@ -500,7 +500,7 @@ it.each(["remove-action", "selection-clear", "mode-change"])(
         screen.queryByRole("region", { name: "需要处理的来源" }),
       ).toBeNull(),
     );
-    expect(screen.queryByText("1 个有效连接")).toBeNull();
+    expect(screen.queryByText("自有连接：1 个")).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "保存草稿" }));
     await waitFor(() =>
       expect(writes.some((w) => w.path === "/me/profiles/profile")).toBe(true),
@@ -510,7 +510,7 @@ it.each(["remove-action", "selection-clear", "mode-change"])(
     expect(saved.collectionId).toBeUndefined();
     expect(saved.ir.endpoints).toEqual([]);
     expect(saved.platformEntryIds).toEqual(["platform"]);
-    expect(screen.getByText(/另有 1 个平台入口/)).toBeTruthy();
+    expect(screen.getByText("平台入口：1 个")).toBeTruthy();
   },
   SOURCE_IMPORT_JOURNEY_TIMEOUT_MS,
 );
@@ -639,7 +639,7 @@ it(
     expect(saved.collectionId).toBeUndefined();
     expect(saved.ir.endpoints).toEqual([]);
     expect(saved.platformEntryIds).toEqual(["platform"]);
-    expect(screen.getByText(/另有 1 个平台入口/)).toBeTruthy();
+    expect(screen.getByText("平台入口：1 个")).toBeTruthy();
   },
   SOURCE_IMPORT_JOURNEY_TIMEOUT_MS,
 );
