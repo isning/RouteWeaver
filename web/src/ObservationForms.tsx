@@ -17,7 +17,7 @@ import { AppField, AppForm, useForm, useWatch } from "@/ui-patterns/form";
 import { Notice } from "@/ui-patterns/notice";
 import { TaskDialog } from "@/ui-patterns/task-overlays";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { toast } from "sonner";
 import { post, request } from "./api";
 import { ErrorNotice } from "./components";
@@ -463,6 +463,9 @@ export function ProviderMeasurementForm({
 }) {
   const [form] = useForm();
   const [snapshot, setSnapshot] = useState(initial);
+  // A requested replacement retires the previous review before the request or
+  // React render settles. Failed replacement reads never revive that consent.
+  const sampleIsCurrent = useRef(true);
   const [confirmed, setConfirmed] = useState(false);
   const [dirty, setDirty] = useState(false);
   useUnsavedChanges(dirty);
@@ -486,14 +489,16 @@ export function ProviderMeasurementForm({
     );
   };
   const refresh = useMutation({
-    mutationFn: () =>
-      request<NodeObservationView>(observationPath(initial.nodeId)),
-    onSuccess: (value) => {
+    mutationFn: async () => {
+      const value = await request<NodeObservationView>(observationPath(initial.nodeId));
       if (value.config.provider?.cycleId !== initial.config.provider?.cycleId) {
-        message.error("供应商周期已变更，请重新检查周期后核对。");
-        return;
+        throw new Error("供应商周期已变更，请关闭窗口，刷新服务器资源后重新核对。");
       }
+      return value;
+    },
+    onSuccess: (value) => {
       setSnapshot(value);
+      sampleIsCurrent.current = true;
       setConfirmed(false);
     },
   });
@@ -502,7 +507,7 @@ export function ProviderMeasurementForm({
       const values = form.getFieldsValue(true);
       const usedBytes = measuredBytes(values.amount || "", values.unit);
       const cycleId = initial.config.provider!.cycleId;
-      if (baseline && !confirmed)
+      if (baseline && (!sampleIsCurrent.current || !snapshot.latest || !confirmed))
         throw new Error("请确认用量已与当前采样时点核对。");
       const body = baseline
         ? {
@@ -531,6 +536,7 @@ export function ProviderMeasurementForm({
       onClose();
     },
   });
+  const canReviewSample = sampleIsCurrent.current && !!snapshot.latest && !refresh.isPending && !refresh.isError;
   return (
     <TaskDialog
       bodyProps={{ className: "space-y-5" }}
@@ -559,7 +565,10 @@ export function ProviderMeasurementForm({
           setDirty(true);
           setConfirmed(false);
         }}
-        onFinish={() => save.mutate()}
+        onFinish={() => {
+          if (save.isPending || baseline && !canReviewSample) return;
+          save.mutate();
+        }}
         initialValues={{ unit: "GB" }}
       >
         <ErrorNotice error={save.error || refresh.error} />
@@ -567,13 +576,24 @@ export function ProviderMeasurementForm({
           <Notice tone="info" title="以实际已知用量建立估算起点">
             {
               <>
-                <p>
+                {!sampleIsCurrent.current ? <p>
+                  最新采样尚未确认。读取成功后，请重新核对输入用量。
+                </p> : !snapshot.latest ? <p>
+                  尚未收到可用于核对的采样。收到新的服务器资源采样后，再读取并核对。
+                </p> : <p>
                   将输入的本周期已用与 {dateLabel(snapshot.latest?.observedAt)}{" "}
                   的网卡计数对齐。之后只累加连续采样，不推测接入前或缺失期间的流量。
-                </p>
+                </p>}
                 <ActionButton
                   pending={refresh.isPending}
-                  onClick={() => refresh.mutate()}
+                  disabled={save.isPending}
+                  onClick={() => {
+                    if (save.isPending || refresh.isPending) return;
+                    sampleIsCurrent.current = false;
+                    setConfirmed(false);
+                    save.reset();
+                    refresh.mutate();
+                  }}
                   variant="outline"
                 >
                   读取最新采样用于核对
@@ -635,11 +655,10 @@ export function ProviderMeasurementForm({
         {baseline && (
           <label className="flex items-start gap-2 text-sm leading-relaxed">
             <Checkbox
+              disabled={save.isPending || !canReviewSample}
               checked={confirmed}
               onCheckedChange={(checked) =>
-                ((e) => setConfirmed(e.target.checked))({
-                  target: { checked: checked === true },
-                })
+                canReviewSample && !save.isPending && setConfirmed(checked === true)
               }
             />
             已将输入用量与显示的采样时点核对，了解此结果仍是网卡估算。
@@ -653,7 +672,7 @@ export function ProviderMeasurementForm({
             type="submit"
             pending={save.isPending}
             disabled={
-              baseline && (!confirmed || refresh.isPending || !snapshot.latest)
+              baseline && (!confirmed || !canReviewSample)
             }
             variant="default"
           >
