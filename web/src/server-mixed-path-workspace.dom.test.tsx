@@ -287,3 +287,26 @@ it("focuses the new first-hop picker after removing the final managed hop", asyn
   expect(summary().textContent).toContain("选择第一跳");
   await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("combobox", { name: "第 1 跳服务器" })));
 });
+
+function describedText(control: HTMLElement) {
+  return (control.getAttribute("aria-describedby") || "").split(/\s+/).map((id) => document.getElementById(id)?.textContent || "").join(" ");
+}
+it("describes collapsed hops with safe identity and retains pending selection feedback", async () => {
+  const user = userEvent.setup();
+  render(<Workspace initial={mixed([managed("a"), external("x")])} />);
+  const listener = screen.getByRole("button", { name: "配置第 1 跳 a listener" });
+  expect(describedText(listener)).toContain("a server");
+  expect(describedText(listener)).toContain("SOCKS");
+  expect(describedText(listener)).toContain("端口 1080");
+  const proxy = screen.getByRole("button", { name: "配置第 2 跳 x" });
+  expect(describedText(proxy)).toContain("外部代理");
+  expect(describedText(proxy)).toContain("SOCKS");
+  expect(describedText(proxy)).toContain("a server");
+  expect(describedText(proxy)).not.toContain("private.example");
+  expect(describedText(proxy)).not.toContain("private-password");
+  await user.click(listener);
+  await choose(user, "第 1 跳服务器", "c server");
+  await user.click(listener);
+  expect(describedText(listener)).toContain("待选择监听端点");
+  expect(describedText(listener)).not.toContain("端口 1080");
+});

@@ -209,6 +209,8 @@ export function ServerMixedPathWorkspace({
         const isExpanded = expanded.has(key);
         const isPending = pendingRows.has(key);
         const host = program && inventory.hosts.find((item) => item.id === program.instance.hostId);
+        const connector = hop.kind === "connector" ? connectorOwner?.connectors?.find((item) => item.id === hop.connectorId) : undefined;
+        const connectorHost = connectorOwner && inventory.hosts.find((item) => item.id === connectorOwner.instance.hostId);
         return <Fragment key={key}>
           <li className="hop-row relative grid min-w-0 grid-cols-[2rem_minmax(0,1fr)] items-start gap-x-3">
             <span className="relative z-10 mt-5 flex size-8 items-center justify-center rounded-full border bg-background text-xs font-medium tabular-nums text-muted-foreground">
@@ -217,7 +219,7 @@ export function ServerMixedPathWorkspace({
             <div className={cn("min-w-0 rounded-lg border bg-background", isExpanded && "ring-1 ring-border")}>
               <div className="flex min-w-0 items-center gap-1 pr-2">
                 <button type="button" className="hop-summary group flex min-h-18 min-w-0 flex-1 items-center gap-3 rounded-lg px-3 py-3 text-left hover:bg-muted/40 focus-visible:outline-2 focus-visible:outline-ring sm:px-4"
-                  aria-label={`配置第 ${hopNumber} 跳 ${name(hop)}`} aria-expanded={isExpanded} aria-controls={`${id}-fields-${index}`}
+                  aria-label={`配置第 ${hopNumber} 跳 ${name(hop)}`} aria-describedby={`${id}-identity-${index}`} aria-expanded={isExpanded} aria-controls={`${id}-fields-${index}`}
                   ref={(control) => { if (control) rowControls.current.set(key, control); else rowControls.current.delete(key); }}
                   onClick={() => { const next = new Set(expanded); if (next.has(key)) next.delete(key); else next.add(key); setLocalExpanded(next); onExpandedHopsChange?.(next); }}>
                   <span className="grid min-w-0 flex-1 gap-1">
@@ -225,8 +227,8 @@ export function ServerMixedPathWorkspace({
                       {hop.kind === "managed" ? <Server className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" /> : <Globe className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />}
                       <span className="min-w-0 break-words">{name(hop)}</span>
                     </span>
-                    <span className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                      {isPending ? <span>待选择监听端点</span> : program ? <><span>{host?.name || "原服务器"}</span><span>{program.listener.connection.protocol.toUpperCase()}</span><span>端口 {program.listener.connection.port}</span></> : <span>外部代理</span>}
+                    <span id={`${id}-identity-${index}`} className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                      {isPending ? <span>待选择监听端点</span> : program ? <><span>{host?.name || "原服务器"}</span><span>{program.listener.connection.protocol.toUpperCase()}</span><span>端口 {program.listener.connection.port}</span></> : <><span>外部代理{connector ? ` ${connector.connection.protocol.toUpperCase()}` : ""}</span>{connectorHost && <span>由 {connectorHost.name} 连接</span>}</>}
                     </span>
                   </span>
                   <ChevronDown className={cn("size-4 shrink-0 text-muted-foreground transition-transform motion-reduce:transition-none", isExpanded && "rotate-180")} aria-hidden="true" />
@@ -294,9 +296,9 @@ export function ServerMixedPathWorkspace({
               }} /> : hop.kind === "connector" ? <>
               <div className="grid min-w-0 gap-1 text-sm font-medium">
                 <label htmlFor={`${id}-hop-${index}-proxy`}>外部代理</label>
-                <div className="flex min-w-0 items-start gap-2">
+                <div className="flex min-w-0 flex-wrap items-start gap-2">
                 <ChoiceSelect ref={(control) => { if (control) controls.current.set(key, control); else controls.current.delete(key); }}
-                  id={`${id}-hop-${index}-proxy`} className="min-w-0 flex-1"
+                  id={`${id}-hop-${index}-proxy`} className="min-w-0 basis-full sm:basis-0 sm:flex-1"
                   aria-label={`第 ${hopNumber} 跳外部代理`} value={hop.connectorId} selectedLabel={name(hop)}
                   options={choicesAt(index, true).map((choice) => ({ value: choice.connectorId, label: choice.label,
                     disabled: !!changeReason(replace(index, connectorHop(choice))) }))}
