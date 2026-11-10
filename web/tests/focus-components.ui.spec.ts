@@ -12,6 +12,7 @@ import { tmpdir } from "node:os";
 import { dirname, extname, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { captureNativeFocusPair } from "./focus-paint-evidence";
+import { settledTask } from "./ui-settled-task";
 
 const web = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const execute = promisify(execFile);
@@ -190,6 +191,10 @@ for (const theme of ["light", "dark"]) {
     ];
     for (const [name, target] of samples) {
       await tabTo(page, target);
+      if (name === "invalid-input") {
+        // Native input, not a fixture/style override.
+        await page.keyboard.type("Synthetic retained value");
+      }
       const paint = await captureNativeFocusPair(
         page,
         target,
@@ -243,6 +248,75 @@ for (const theme of ["light", "dark"]) {
         if (theme === "dark" && (name === "outline" || name === "muted-outline")) {
           expect(paint.after.target.border).not.toEqual(paint.before.target.border);
         }
+      }
+      if (name === "invalid-input") {
+        const value = "Synthetic retained value";
+        const error = page.locator("#sample-error");
+        expect(paint.after.target.rect.width).toBe(paint.before.target.rect.width);
+        expect(paint.after.target.rect.height).toBe(paint.before.target.rect.height);
+        const geometry = await target.boundingBox();
+        expect(geometry).not.toBeNull();
+        const assertRetainedState = async () => {
+          await expect(target).toHaveValue(value);
+          await expect(target).toHaveAttribute("aria-invalid", "true");
+          await expect(target).toHaveAttribute("aria-describedby", "sample-error");
+          await expect(error).toHaveText("Synthetic validation error");
+          await expect(error).toBeVisible();
+          expect(await target.boundingBox()).toEqual(geometry);
+        };
+        await assertRetainedState();
+        await page.keyboard.press("Shift+Tab");
+        await expect(target).not.toBeFocused();
+        await settledTask(target);
+        await assertRetainedState();
+        await info.attach(`focus-sample-${theme}-invalid-input-caret-before.png`, {
+          body: await page.screenshot({ caret: "initial", animations: "allow", scale: "css" }),
+          contentType: "image/png",
+        });
+        await page.keyboard.press("Tab");
+        await expect(target).toBeFocused();
+        await settledTask(target);
+        // Tab may select all. End collapses selection without changing the value.
+        // Do not override caret color, animation or blink phase through CSS.
+        await page.keyboard.press("End");
+        const started = Date.now();
+        const frames = [];
+        for (let frame = 0; frame < 6; frame++) {
+          // Sample natural blinking, not application readiness. Screenshot
+          // latency varies; record real times and never assert a blink phase.
+          if (frame > 0) await page.waitForTimeout(170);
+          await expect(target).toBeFocused();
+          await assertRetainedState();
+          const state = await target.evaluate((element: HTMLInputElement) => ({
+            focused: element === document.activeElement,
+            focusVisible: element.matches(":focus-visible"),
+            selectionStart: element.selectionStart,
+            selectionEnd: element.selectionEnd,
+            caretColor: getComputedStyle(element).caretColor,
+            color: getComputedStyle(element).color,
+          }));
+          expect(state.focused).toBe(true);
+          expect(state.focusVisible).toBe(true);
+          expect(state.selectionStart).toBe(value.length);
+          expect(state.selectionEnd).toBe(value.length);
+          const name = `focus-sample-${theme}-invalid-input-caret-frame-${frame}.png`;
+          const captureStartedMs = Date.now() - started;
+          const body = await page.screenshot({ caret: "initial", animations: "allow", scale: "css" });
+          frames.push({ name, captureStartedMs, captureFinishedMs: Date.now() - started, ...state });
+          await info.attach(name, { body, contentType: "image/png" });
+        }
+        await expect(target).toBeFocused();
+        await assertRetainedState();
+        await info.attach(`focus-sample-${theme}-invalid-input-caret-scope`, {
+          contentType: "application/json",
+          body: JSON.stringify({
+            scope: "Actual compiled shared Input, synthetic typed value, native keyboard focus and End, unchanged styles/animation. caret:initial preserves natural blinking rather than forcing visibility. These bounded frames require visual review: they do not assert visible pixels, contrast, a complete blink cycle, or whole-app accessibility. A missing caret in one/all frames is not itself proof of an absent focus cue. Existing before/focused paint snapshots describe border/halo separately.",
+            screenshot: { caret: "initial", animations: "allow", scale: "css" },
+            value,
+            geometry,
+            frames,
+          }, null, 2),
+        });
       }
       if (
         name === "invalid-checkbox" ||

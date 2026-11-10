@@ -481,6 +481,7 @@ it("recovers a failed inbox refresh by keyboard from the open message", async ()
   expect(document.activeElement).toBe(retry);
   await user.keyboard("{Enter}");
   expect(await within(dialog).findByText("最新完整正文")).toBeTruthy();
+  await waitFor(() => expect(dialog.contains(document.activeElement)).toBe(true));
   expect(within(dialog).queryByText("消息刷新失败，当前显示上次读取内容。")).toBeNull();
   expect(reads).toBe(3);
 });

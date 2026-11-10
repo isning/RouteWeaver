@@ -394,9 +394,14 @@ test("inbox failure stays with its message across repeated keyboard close at 320
 }) => {
   await page.setViewportSize({ width: 320, height: 700 });
   const unexpected = await setup(page);
-  await page.route("**/api/me/notifications/unread/read", (route) =>
-    route.fulfill({ status: 503, json: { message: "额度提醒未能标记已读" } }),
-  );
+  const markReadURL = new URL("/api/me/notifications/unread/read", test.info().project.use.baseURL).href;
+  await page.route(markReadURL, (route) => {
+    if (route.request().method() !== "POST") {
+      unexpected.push(`${route.request().method()} /me/notifications/unread/read`);
+      return route.abort();
+    }
+    return route.fulfill({ status: 503, json: { message: "额度提醒未能标记已读" } });
+  });
   await page.goto("/#inbox");
   const unread = page.getByRole("button", { name: /额度提醒.*未读/ });
   await unread.focus();
@@ -427,6 +432,108 @@ test("inbox failure stays with its message across repeated keyboard close at 320
   }
   expect(unexpected).toEqual([]);
 });
+
+// Actual App/session defaults remain active. Start a visible list refresh before
+// opening a cached, already-read message; no offline switch or hidden control is
+// needed. Both failed GET attempts are distinct from any mark-read mutation.
+for (const width of [1440, 390]) {
+  test(`open inbox preserves content and keyboard focus through list refresh recovery at ${width}`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: width === 390 ? 844 : 1000 });
+    const unexpected = await setup(page);
+    const pageErrors: string[] = [];
+    page.on("pageerror", (error) => pageErrors.push(error.message));
+    const inboxURL = new URL("/api/me/notifications", info.project.use.baseURL).href;
+    const cachedBody = "请在维护结束后检查连接；这条消息保留完整内容供打开后阅读。";
+    const recoveredBody = "维护已结束。东京与伦敦线路已恢复，请重新检查连接。完整维护消息仍可在这里阅读。";
+    let reads = 0;
+    let releaseFailure!: () => void;
+    const failureGate = new Promise<void>((resolve) => { releaseFailure = resolve; });
+    let releaseRecovery!: () => void;
+    const recoveryGate = new Promise<void>((resolve) => { releaseRecovery = resolve; });
+    await page.route(inboxURL, async (route) => {
+      if (route.request().method() !== "GET") {
+        unexpected.push(`${route.request().method()} /me/notifications`);
+        return route.abort();
+      }
+      reads++;
+      if (reads === 1) return route.fulfill({ json: fixtures["/me/notifications"] });
+      if (reads <= 3) {
+        await failureGate;
+        return route.fulfill({ status: 503, json: { message: "消息列表暂时无法读取" } });
+      }
+      if (reads === 4) {
+        await recoveryGate;
+        return route.fulfill({ json: [
+          { eventId: "read", title, body: recoveredBody, createdAt: "2026-10-25T10:00:00Z", readAt: "2026-10-25T11:00:00Z" },
+          { eventId: "unread", title: "额度提醒", body: "当月流量已使用 80%。", createdAt: "2026-10-26T09:00:00Z" },
+        ] });
+      }
+      unexpected.push("extra inbox GET");
+      return route.abort();
+    });
+    try {
+      await page.goto("/#inbox");
+      const row = page.getByRole("button", { name: new RegExp(`${title}.*已读`) });
+      await expect(row).toBeVisible();
+      await page.getByRole("button", { name: "刷新", exact: true }).click();
+      await expect.poll(() => reads).toBe(2);
+      await expect(page.getByText("正在刷新消息，列表仍为上次读取结果。", { exact: true })).toBeVisible();
+      await row.focus();
+      await page.keyboard.press("Enter");
+      const dialog = page.getByRole("dialog", { name: title });
+      await expect(dialog.getByText(cachedBody, { exact: true })).toBeVisible();
+      await expect(dialog.getByText("正在核对消息，当前显示上次读取内容。", { exact: true })).toBeVisible();
+      releaseFailure();
+      const failure = dialog.getByText("消息刷新失败，当前显示上次读取内容。", { exact: true });
+      await expect(failure).toBeInViewport({ ratio: 1 });
+      expect(reads, "The production query performs one automatic read retry").toBe(3);
+      const retry = dialog.getByRole("button", { name: "重试刷新", exact: true });
+      const close = dialog.getByRole("button", { name: "关闭", exact: true });
+      await expect(close).toBeFocused();
+      for (let step = 0; step < 4 && !(await retry.evaluate((element) => element === document.activeElement)); step++) {
+        await page.keyboard.press("Tab");
+      }
+      await expect(retry).toBeFocused();
+      await expect(retry).toBeInViewport({ ratio: 1 });
+      await expect(dialog.getByText(cachedBody, { exact: true })).toBeInViewport({ ratio: 1 });
+      await expect(dialog.getByRole("button", { name: /标记已读/ })).toHaveCount(0);
+      await noOverflow(page);
+      await page.screenshot({ path: info.outputPath(`inbox-list-refresh-failed-controlled-${width}.png`), animations: "disabled" });
+      await page.keyboard.press("Enter");
+      await expect.poll(() => reads).toBe(4);
+      await expect(dialog.getByText("正在核对消息，当前显示上次读取内容。", { exact: true })).toBeVisible();
+      await expect(dialog.getByText(cachedBody, { exact: true })).toBeVisible();
+      releaseRecovery();
+      await expect(dialog.getByText(recoveredBody, { exact: true })).toBeInViewport({ ratio: 1 });
+      await expect(failure).toHaveCount(0);
+      await expect(retry).toHaveCount(0);
+      // Do not repair focus from the test after the focused retry disappears.
+      // The sheet itself is a meaningful reading context; its Close is also a
+      // valid destination. Body/background focus would fail this contract.
+      await expect.poll(() => dialog.evaluate((element) => {
+        const active = document.activeElement;
+        return active === element || (active instanceof HTMLElement && element.contains(active) && !active.matches(":disabled,[aria-disabled=true]"));
+      })).toBe(true);
+      await expect(page.locator(":focus")).toBeInViewport({ ratio: 1 });
+      await expect(dialog.getByRole("button", { name: /标记已读/ })).toHaveCount(0);
+      await noOverflow(page);
+      await page.screenshot({ path: info.outputPath(`inbox-list-refresh-recovered-controlled-${width}.png`), animations: "disabled" });
+      // Continued keyboard navigation remains trapped inside the open message.
+      await page.keyboard.press("Tab");
+      await expect(close).toBeFocused();
+      await page.keyboard.press("Escape");
+      await expect(dialog).not.toBeVisible();
+      await expect(row.getByText("已读", { exact: true })).toBeVisible();
+      await expect(page.getByRole("button", { name: /额度提醒.*未读/ })).toBeVisible();
+      expect(reads).toBe(4);
+      expect(unexpected, "All writes (including mark-read POSTs) and unexpected reads are denied").toEqual([]);
+      expect(pageErrors).toEqual([]);
+    } finally {
+      releaseFailure();
+      releaseRecovery();
+    }
+  });
+}
 
 // Rendering evidence only: every API read is fulfilled with the bounded fixture
 // above. No save, send, delivery or backend persistence is inferred from pixels.
