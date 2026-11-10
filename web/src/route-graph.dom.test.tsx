@@ -215,3 +215,41 @@ it("retains measured geometry and dragging across path updates and view switches
   ]);
   expect(saved.ir.programs[0]).not.toHaveProperty("position");
 });
+
+it("keeps unfinished server choices in sequence view until they are completed or cancelled", async () => {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  render(<QueryClientProvider client={client}><UIProviders><ServerRoutesPage /></UIProviders></QueryClientProvider>);
+  const user = userEvent.setup();
+  await user.click((await screen.findAllByRole("button", { name: "新建转发路径" }))[0]);
+  await user.type(screen.getByRole("textbox", { name: "转发路径名称" }), "Preserved choice");
+  const choose = async (label: string, query: string) => {
+    await user.click(screen.getByRole("combobox", { name: label }));
+    await user.type(screen.getByRole("combobox", { name: "搜索选项" }), query);
+    await user.keyboard("{Enter}");
+    await waitFor(() => expect(screen.queryByRole("listbox")).toBeNull());
+  };
+  await choose("第 1 跳服务器", "FRA");
+  const graph = screen.getByRole("tab", { name: "图形编辑" });
+  expect(graph.hasAttribute("disabled")).toBe(true);
+  expect(document.getElementById(graph.getAttribute("aria-describedby")!)?.textContent).toBe("先完成或取消当前端点选择，再切换编辑方式。");
+  await user.click(graph);
+  expect(screen.getByRole("combobox", { name: "第 1 跳服务器" }).textContent).toContain("FRA");
+  expect(screen.getByRole("tab", { name: "顺序编辑" }).getAttribute("aria-selected")).toBe("true");
+  await choose("第 1 跳端点", "Listener FRA");
+  await waitFor(() => expect(graph.hasAttribute("disabled")).toBe(false));
+  await user.click(screen.getByRole("button", { name: "添加下一跳" }));
+  await choose("第 2 跳服务器", "UK");
+  expect(graph.hasAttribute("disabled")).toBe(true);
+  await user.click(graph);
+  expect(screen.getByRole("combobox", { name: "第 2 跳服务器" }).textContent).toContain("UK");
+  expect(screen.getByRole("button", { name: "保存草稿" }).hasAttribute("disabled")).toBe(true);
+  await user.click(screen.getByRole("button", { name: "取消添加" }));
+  await waitFor(() => expect(graph.hasAttribute("disabled")).toBe(false));
+  await user.click(graph);
+  await screen.findByLabelText("graph geometry");
+  await user.click(screen.getByRole("tab", { name: "顺序编辑" }));
+  expect(screen.getByRole("button", { name: /^配置第 1 跳 Listener FRA/ })).toBeTruthy();
+  expect(screen.queryByRole("combobox", { name: "第 2 跳服务器" })).toBeNull();
+  expect(screen.getByRole("button", { name: "保存草稿" }).hasAttribute("disabled")).toBe(false);
+  client.clear();
+});

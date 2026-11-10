@@ -46,7 +46,7 @@ import {
   Plus as PlusOutlined,
   Save as SaveOutlined,
 } from "lucide-react";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type Ref } from "react";
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type Ref } from "react";
 import { toast } from "sonner";
 import { APIError, list, request, saveRecord } from "./api";
 import {
@@ -673,6 +673,7 @@ export function ServerRouteEditor({
   const draftRevision = useRef(0);
   const [pathLoading, setPathLoading] = useState(false);
   const [view, setView] = useState("ordered");
+  const viewChangeNoteId = useId();
   const [error, setError] = useState<Error | null>(null);
   const [dirty, setDirty] = useState(isNew && programsIn(initial).length > 0);
   const [graphNodes, setGraphNodes, onGraphNodesChange] =
@@ -695,6 +696,11 @@ export function ServerRouteEditor({
   const selectionPending =
     path.some((id) => pendingEndpoints[id]) ||
     pendingEndpoints[`add-${path.join("/")}`] || pendingEndpoints["ordered-add"];
+  const viewChangeReason = pathLoading
+    ? "正在读取所选端点，完成后可切换编辑方式。"
+    : selectionPending
+      ? "先完成或取消当前端点选择，再切换编辑方式。"
+      : undefined;
   useUnsavedChanges(dirty || selectionPending || materialPending || jsonDirty);
   const save = useMutation({
     mutationFn: (_complete: typeof onSaved) => {
@@ -1280,6 +1286,7 @@ export function ServerRouteEditor({
           <Tabs
             value={view}
             onValueChange={(next) => {
+              if (viewChangeReason) return;
               draftRevision.current++;
               setPathLoading(false);
               setPendingEndpoints({});
@@ -1289,13 +1296,18 @@ export function ServerRouteEditor({
             className="w-full space-y-4"
           >
             <TabsList className="h-auto max-w-full flex-wrap">
-              <TabsTrigger key={"ordered"} value={"ordered"}>
+              <TabsTrigger key={"ordered"} value={"ordered"}
+                disabled={view !== "ordered" && !!viewChangeReason}
+                aria-describedby={viewChangeReason ? viewChangeNoteId : undefined}>
                 {"\u987A\u5E8F\u7F16\u8F91"}
               </TabsTrigger>
-              <TabsTrigger key={"graph"} value={"graph"}>
+              <TabsTrigger key={"graph"} value={"graph"}
+                disabled={view !== "graph" && !!viewChangeReason}
+                aria-describedby={viewChangeReason ? viewChangeNoteId : undefined}>
                 {"\u56FE\u5F62\u7F16\u8F91"}
               </TabsTrigger>
             </TabsList>
+            {viewChangeReason && <p id={viewChangeNoteId} className="text-sm text-muted-foreground">{viewChangeReason}</p>}
           </Tabs>
         )}
         <Accordion type="multiple" defaultValue={initialSection ? [initialSection] : []} className="w-full">
