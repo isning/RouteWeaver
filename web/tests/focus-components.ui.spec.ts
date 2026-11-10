@@ -196,15 +196,15 @@ for (const theme of ["light", "dark"]) {
         info,
         `focus-sample-${theme}-${name}`,
       );
-      if (name === "sidebar") {
-        // Inspect actual screenshot pixels at the straight left edge, avoiding
+      if (name === "sidebar" || name === "destructive") {
+        // Inspect actual screenshot pixels at a straight edge, avoiding
         // rounded-corner antialiasing. Computed tokens alone miss compositing.
         const screenshot = await page.screenshot({ fullPage: false, scale: "css" });
-        await info.attach(`focus-sample-${theme}-sidebar-measured.png`, {
+        await info.attach(`focus-sample-${theme}-${name}-measured.png`, {
           body: screenshot, contentType: "image/png",
         });
         const png = screenshot.toString("base64");
-        const pixels = await page.evaluate(async ({ png, rect }) => {
+        const pixels = await page.evaluate(async ({ png, rect, name }) => {
           const image = new Image();
           image.src = `data:image/png;base64,${png}`;
           await image.decode();
@@ -214,23 +214,29 @@ for (const theme of ["light", "dark"]) {
           const context = canvas.getContext("2d")!;
           context.drawImage(image, 0, 0);
           const scale = image.naturalWidth / innerWidth;
-          const read = (x: number) => Array.from(context.getImageData(
+          const read = (x: number, y: number) => Array.from(context.getImageData(
             Math.floor(x * scale),
-            Math.floor((rect.y + rect.height / 2) * scale),
+            Math.floor(y * scale),
             1, 1,
           ).data).slice(0, 3);
-          return { ring: read(rect.x - 1), background: read(rect.x - 4) };
-        }, { png, rect: paint.after.target.rect });
+          // The destructive button sits close to a sibling. Use the top
+          // midpoint so another button's halo cannot contaminate the sample.
+          const x = rect.x + rect.width / 2;
+          const y = rect.y + rect.height / 2;
+          return name === "destructive"
+            ? { ring: read(x, rect.y - 1), background: read(x, rect.y - 5), border: read(x, Math.ceil(rect.y)) }
+            : { ring: read(rect.x - 1, y), background: read(rect.x - 4, y) };
+        }, { png, rect: paint.after.target.rect, name });
         const luminance = (rgb: number[]) => rgb.map((channel) => {
           const value = channel / 255;
           return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
         }).reduce((sum, value, index) => sum + value * [0.2126, 0.7152, 0.0722][index], 0);
         const a = luminance(pixels.ring), b = luminance(pixels.background);
         const contrast = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
-        await info.attach(`focus-sample-${theme}-sidebar-pixels`, {
+        await info.attach(`focus-sample-${theme}-${name}-pixels`, {
           body: JSON.stringify({ ...pixels, contrast }), contentType: "application/json",
         });
-        expect(contrast, "Sidebar keyboard focus against its adjacent background").toBeGreaterThanOrEqual(3);
+        expect(contrast, `${name} keyboard focus against its adjacent background`).toBeGreaterThanOrEqual(3);
         expect(paint.after.target.rect.width).toBe(paint.before.target.rect.width);
         expect(paint.after.target.rect.height).toBe(paint.before.target.rect.height);
         expect(paint.after.target.shadow).not.toBe(paint.before.target.shadow);
@@ -324,7 +330,7 @@ for (const theme of ["light", "dark"]) {
       contentType: "application/json",
       body: JSON.stringify({
         scope:
-          "Synthetic actual shared components, native focus, desktop. Bounded sidebar pixel contrast and checkbox focus assertions, not whole-app compliance. Light sidebar contrast is corrected separately; app layout and general dark/destructive focus remain outside these repairs.",
+          "Synthetic actual shared components, native focus, desktop. Bounded sidebar/destructive pixel contrast and checkbox focus assertions, not whole-app compliance. Both destructive themes are sampled; app layout and other dark focus treatments remain outside these repairs.",
         samples: [...samples.map(([name]) => name), "inactive-tab"],
       }),
     });
