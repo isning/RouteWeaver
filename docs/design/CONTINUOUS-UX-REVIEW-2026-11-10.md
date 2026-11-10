@@ -16,7 +16,7 @@ All rows below still require a complete state and rendered-layout review. Entrie
 | --- | --- | --- |
 | Login, invitation and account security | Enter the right account and recover safely | Uncertain-login recovery and neighboring DOM regressions reviewed; rendered states open |
 | Workspace navigation and mobile menu | Find a task without losing current work | Source inspection only |
-| Subscriptions, profiles and outputs | Configure, review and deliver a client subscription | Captured profile summary and source-read slices reviewed; remaining publication/output states open |
+| Subscriptions, profiles and outputs | Configure, review and deliver a client subscription | Captured profile summary, source reads and subscription copy lifecycle reviewed; remaining publication/output states open |
 | Subscription sources | Import and accept owned connection options | Not yet reviewed in this pass |
 | Collections | Combine sources without silently changing their meaning | Not yet reviewed in this pass |
 | Rule resources | Inspect and accept owned rule versions | Source and 88 focused recovery tests reviewed; no new reachable defect, rendered states open |
@@ -156,6 +156,13 @@ This pass inspected `DataTable`, `PageNavigation`, `ResourceToolbar`, `AppForm`/
 - Decision: both callers share the established independent `/services` query. Detail attribution distinguishes pending, failed and confirmed-missing catalog states, offers retry and retains the stable ID in contextual details. Nested authorization editing disables only unresolved service choices and preserves the selected ID and unrelated fields. Other callers and shared policy-source formatting remain unchanged.
 - Review correction: the new missing-plan notice also reads service ID, so its field-update dependency must include that ID, not only service mode. A dirty draft changing to an available plan now clears the stale warning.
 - Evidence: real-API-shape detail and dirty-warning regressions fail before their fixes. Twenty-one line-workflow tests pass, plus 49 adjacent policy/routing tests; new cases cover catalog failure/retry, unrelated dirty edits and changing users during an in-flight catalog read. Independent review identified and verified the dependency correction. Application/spec typechecks and browser discovery pass. The real operator journey now asserts the created plan's name in both nested editing and detail; new browser pixels remain pending.
+
+### Keep copy feedback with the current subscription access task
+
+- Defect: a pending clipboard call checked only whether the dialog remained open. After access revision/URL changes, an authoritative rejection or a nested recovery decision, it could still announce success or tell the user to manually select a link no longer displayed.
+- Decision: copy feedback belongs to a committed access lifecycle. Changed identity, read authority, URL, delivery mode, recovery or dismissal retires old feedback; unchanged successful same-link refetch preserves legitimate feedback. Bundle mode cannot start a link-copy action. Already-submitted browser clipboard writes cannot be cancelled or recalled by this change.
+- Review correction: the backend can retain a feed URL in a bundle response, so URL equality alone is insufficient. Delivery mode is part of ownership, including feed-to-bundle-to-feed transitions.
+- Evidence: four initial stale-feedback cases and four delivery-transition cases fail before their respective fixes. Seventy-six related access/rotation/bundle tests pass, including 22 clipboard scenarios independently rerun after review. TypeScript passes. StrictMode was source-reviewed, not separately exercised; no live subscription or clipboard operation and no geometry acceptance are claimed.
 
 ## Rendered-evidence follow-up
 

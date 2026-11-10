@@ -894,49 +894,133 @@ it("keeps a completed publication from notifying or reopening a departed access 
   }
 });
 
-for (const outcome of ["resolved", "rejected"] as const)
-  it(`does not notify a departed access task when clipboard ${outcome}`, async (context) => {
-    const scenario = ownedClickScenario(context),
-      f = fixture();
-    f.setReadiness("ready");
-    let complete!: () => void, reject!: (error: Error) => void;
-    const pending = new Promise<void>((resolve, fail) => {
-      complete = resolve;
-      reject = fail;
-    });
-    const writeText = vi.fn(() => pending);
-    const descriptor = Object.getOwnPropertyDescriptor(navigator, "clipboard");
-    Object.defineProperty(navigator, "clipboard", {
-      configurable: true,
-      value: { writeText },
-    });
-    const view = mountAccess(phone);
-    try {
-      const access = await screen.findByRole("dialog", {
-        name: "获取「Phone」",
+for (const departure of [
+  "close",
+  "close and reopen",
+  "access revision",
+  "changed link",
+  "bundle delivery",
+  "bundle then feed",
+  "rejected access",
+  "recovered access",
+  "nested review",
+  "same access",
+  "current access",
+] as const)
+  for (const outcome of ["resolved", "rejected"] as const)
+    it(`scopes clipboard ${outcome} feedback after ${departure}`, async (context) => {
+      const scenario = ownedClickScenario(context),
+        f = fixture();
+      f.setReadiness("ready");
+      let complete!: () => void, reject!: (error: Error) => void;
+      const pending = new Promise<void>((resolve, fail) => {
+        complete = resolve;
+        reject = fail;
       });
-      await within(access).findByRole("textbox", { name: "订阅链接" });
-      await scenario.click(() =>
-        within(access).getAllByRole("button", { name: "复制订阅链接" }).at(-1)!,
-      );
-      expect(writeText).toHaveBeenCalledTimes(1);
-      view.setOutput(null);
-      await act(async () => {
-        if (outcome === "resolved") complete();
-        else reject(new Error("Synthetic clipboard rejection"));
-        await pending.catch(() => undefined);
+      const writeText = vi.fn(() => pending);
+      const descriptor = Object.getOwnPropertyDescriptor(navigator, "clipboard");
+      Object.defineProperty(navigator, "clipboard", {
+        configurable: true,
+        value: { writeText },
       });
-      expect(screen.queryByText("订阅链接已复制")).toBeNull();
-      expect(
-        screen.queryByText("自动复制未成功，请在下方选中链接手动复制。"),
-      ).toBeNull();
-      expect(f.writes).toHaveLength(0);
-    } finally {
-      complete();
-      if (descriptor) Object.defineProperty(navigator, "clipboard", descriptor);
-      else Reflect.deleteProperty(navigator, "clipboard");
-    }
-  });
+      const view = mountAccess(phone);
+      try {
+        const access = await screen.findByRole("dialog", {
+          name: "获取「Phone」",
+        });
+        await within(access).findByRole("textbox", { name: "订阅链接" });
+        await scenario.click(() =>
+          within(access).getAllByRole("button", { name: "复制订阅链接" }).at(-1)!,
+        );
+        expect(writeText).toHaveBeenCalledTimes(1);
+        if (departure === "close") view.setOutput(null);
+        else if (departure === "close and reopen") {
+          view.setOutput(null);
+          view.setOutput(phone);
+          await screen.findByRole("textbox", { name: "订阅链接" });
+        } else if (departure === "access revision") {
+          view.setOutput({ ...phone, accessRevision: "new-access-revision" });
+          await waitFor(() => expect(f.accessReads).toHaveLength(2));
+          await within(access).findByRole("textbox", { name: "订阅链接" });
+        } else if (departure === "changed link") {
+          const finish = f.holdNextAccess();
+          await act(async () => {
+            const checking = view.client.invalidateQueries({ queryKey: ["output-access"] });
+            finish(json({ delivery: "feed", feedPath: "/feed/synthetic-new-link" }));
+            await checking;
+          });
+          expect((await within(access).findByRole("textbox", { name: "订阅链接" }) as HTMLInputElement).value)
+            .toBe(new URL("/feed/synthetic-new-link", location.origin).href);
+        } else if (departure === "bundle delivery" || departure === "bundle then feed") {
+          const finish = f.holdNextAccess();
+          await act(async () => {
+            const checking = view.client.invalidateQueries({ queryKey: ["output-access"] });
+            finish(json({
+              delivery: "bundle",
+              feedPath: "/feed/synthetic-existing-link",
+              downloadPath: "/api/me/outputs/phone/bundle",
+            }));
+            await checking;
+          });
+          await within(access).findByText("配置与规则文件包");
+          expect(within(access).queryByRole("textbox", { name: "订阅链接" })).toBeNull();
+          if (departure === "bundle then feed") {
+            await act(async () => {
+              await view.client.invalidateQueries({ queryKey: ["output-access"] });
+            });
+            await within(access).findByRole("textbox", { name: "订阅链接" });
+          }
+        } else if (departure === "same access") {
+          await act(async () => {
+            await view.client.invalidateQueries({ queryKey: ["output-access"] });
+          });
+          await within(access).findByRole("textbox", { name: "订阅链接" });
+        } else if (departure !== "current access") {
+          f.setReadiness("OUTPUT_REPUBLISH_REQUIRED");
+          await act(async () => {
+            await view.client.invalidateQueries({ queryKey: ["output-access"] });
+          });
+          await within(access).findByRole("button", { name: "检查更新" });
+          if (departure === "recovered access") {
+            f.setReadiness("ready");
+            await act(async () => {
+              await view.client.invalidateQueries({ queryKey: ["output-access"] });
+            });
+            await within(access).findByRole("textbox", { name: "订阅链接" });
+          } else if (departure === "nested review") {
+            await scenario.click(() => within(access).getByRole("button", { name: "检查更新" }));
+            const review = await screen.findByRole("dialog", { name: "检查订阅更新「Phone」" });
+            await within(review).findByRole("button", { name: "确认更新「Phone」" });
+            await scenario.click(() => within(review).getByRole("button", { name: /取\s*消/ }));
+            const reopened = await screen.findByRole("dialog", { name: "获取「Phone」" });
+            await within(reopened).findByRole("button", { name: "检查更新" });
+          }
+        }
+        await act(async () => {
+          if (outcome === "resolved") complete();
+          else reject(new Error("Synthetic clipboard rejection"));
+          await pending.catch(() => undefined);
+          // Flush the notification host's scheduled render before checking silence.
+          await new Promise((resolve) => setTimeout(resolve, 0));
+        });
+        if (departure === "same access" || departure === "current access") {
+          expect(await screen.findByText(outcome === "resolved"
+            ? "订阅链接已复制"
+            : "自动复制未成功，请在下方选中链接手动复制。")).toBeTruthy();
+        } else {
+          expect(screen.queryByText("订阅链接已复制")).toBeNull();
+          expect(
+            screen.queryByText("自动复制未成功，请在下方选中链接手动复制。"),
+          ).toBeNull();
+        }
+        expect(f.writes).toHaveLength(departure === "nested review" ? 1 : 0);
+        expect(f.writes.some((write) => !write.path.endsWith("/preview"))).toBe(false);
+      } finally {
+        complete();
+        if (descriptor) Object.defineProperty(navigator, "clipboard", descriptor);
+        else Reflect.deleteProperty(navigator, "clipboard");
+      }
+    });
 
 it("keeps explicit recheck focus inside its persistent status without stealing a newer focus", async (context) => {
   const scenario = ownedClickScenario(context),

@@ -2810,13 +2810,28 @@ function OutputAccessTask({
   const accessDelivery = accessReady
     ? query.data?.delivery || output?.delivery
     : output?.delivery;
+  const copyGeneration = useRef(0);
+  // Keep a pending copy through a same-link background check, but expire its
+  // feedback when access changes. A submitted clipboard write cannot be recalled.
+  const copyPath = query.isSuccess
+    ? query.data?.feedURL || query.data?.feedPath
+    : undefined;
+  useLayoutEffect(
+    () => () => {
+      copyGeneration.current++;
+    },
+    [open, review, inputIdentity, readGeneration, copyPath, query.data?.delivery],
+  );
   const copy = async () => {
+    if (!active.current || review || bundle || !url) return;
+    const generation = copyGeneration.current;
+    const ownsFeedback = () =>
+      active.current && copyGeneration.current === generation;
     try {
-      if (!active.current || !url) return;
       await navigator.clipboard.writeText(url);
-      if (active.current) message.success("订阅链接已复制");
+      if (ownsFeedback()) message.success("订阅链接已复制");
     } catch {
-      if (!active.current) return;
+      if (!ownsFeedback()) return;
       message.warning("自动复制未成功，请在下方选中链接手动复制。");
     }
   };
