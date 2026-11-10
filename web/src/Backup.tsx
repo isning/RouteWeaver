@@ -436,6 +436,7 @@ export function BackupSettings() {
                 closeExport();
         }} pending={!(!create.isPending)} contentProps={{ onFocusCapture: revealFocusedPolicyModalControl }}>
         <AppForm form={form} disabled={create.isPending} clearOnDestroy
+          submitErrorFocusOwner={exportTask.current}
           onSubmitCapture={() => { exportFormTask.current = exportTask.current; }}
           onFinish={(values) => {
             const task = exportFormTask.current;

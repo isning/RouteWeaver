@@ -237,3 +237,58 @@ it("does not submit dismissed validation into a reopened export and keeps explic
   expect(screen.queryByRole("dialog", { name: "创建加密备份" })).toBeNull();
   client.clear();
 });
+
+it("recovers keyboard export validation to the field that needs correction", async () => {
+  const fetch = vi.fn();
+  vi.stubGlobal("fetch", fetch);
+  const client = new QueryClient();
+  render(<QueryClientProvider client={client}><UIProviders><BackupSettings /></UIProviders></QueryClientProvider>);
+  const user = userEvent.setup();
+  await user.click(screen.getByRole("button", { name: "创建加密备份" }));
+  const dialog = screen.getByRole("dialog", { name: "创建加密备份" });
+  const password = within(dialog).getByLabelText("设置备份密码");
+  const confirm = within(dialog).getByLabelText("再次输入密码");
+  const submit = within(dialog).getByRole("button", { name: "加密并下载" });
+  submit.focus();
+  await user.keyboard("{Enter}");
+  await within(dialog).findByText("请使用至少 12 个字符的独立密码");
+  await waitFor(() => expect(document.activeElement).toBe(password));
+  expect(password.getAttribute("aria-invalid")).toBe("true");
+  fireEvent.change(password, { target: { value: "synthetic-corrected-password" } });
+  fireEvent.change(confirm, { target: { value: "synthetic-mismatched-password" } });
+  submit.focus();
+  await user.keyboard("{Enter}");
+  await within(dialog).findByText("两次输入的密码不一致");
+  await waitFor(() => expect(document.activeElement).toBe(confirm));
+  expect(confirm.getAttribute("aria-invalid")).toBe("true");
+  expect((password as HTMLInputElement).value).toBe("synthetic-corrected-password");
+  expect(fetch).not.toHaveBeenCalled();
+  client.clear();
+});
+
+it.each(["new-control", "reopened-task"])("does not reclaim export focus after %s", async (mode) => {
+  const fetch = vi.fn();
+  vi.stubGlobal("fetch", fetch);
+  const client = new QueryClient();
+  render(<QueryClientProvider client={client}><UIProviders><BackupSettings /></UIProviders></QueryClientProvider>);
+  const opener = screen.getByRole("button", { name: "创建加密备份" });
+  await userEvent.click(opener);
+  const dialog = screen.getByRole("dialog", { name: "创建加密备份" });
+  const submit = within(dialog).getByRole("button", { name: "加密并下载" }) as HTMLButtonElement;
+  submit.focus();
+  fireEvent.submit(submit.form!);
+  let expected: HTMLElement;
+  if (mode === "reopened-task") {
+    fireEvent.click(within(dialog).getByRole("button", { name: "取消" }));
+    fireEvent.click(opener);
+    expected = within(screen.getByRole("dialog", { name: "创建加密备份" })).getByLabelText("再次输入密码");
+  } else {
+    expected = within(dialog).getByLabelText("再次输入密码");
+  }
+  expected.focus();
+  await act(async () => {});
+  expect(document.activeElement).toBe(expected);
+  expect(fetch).not.toHaveBeenCalled();
+  if (mode === "reopened-task") expect(screen.queryByRole("alert")).toBeNull();
+  client.clear();
+});
