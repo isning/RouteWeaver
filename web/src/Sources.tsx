@@ -35,7 +35,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { onlineManager, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { APIError, deleteRecord, list, post, request, saveRecord } from "./api";
 import type {
   Collection,
@@ -814,6 +814,8 @@ function collectionRecipe(value: unknown): Collection | null {
   };
 }
 
+class CollectionSaveNotSentError extends Error {}
+
 export function CollectionsPage() {
   const client = useQueryClient();
   const message = toast,
@@ -983,13 +985,20 @@ export function CollectionsPage() {
   const ownsDraft = ({ owner, version }: DraftTask) =>
     owner === collectionSession.current && version === revision.current;
   const save = useMutation({
+    // Saves belong to the open editor, never to an offline reconnect queue.
+    networkMode: "always",
+    retry: false,
     onMutate: () => invalidateOutputInputs(client),
     onSettled: (_result, _error, { owner }) => {
       if (saving.current === owner) saving.current = null;
       invalidateOutputInputs(client);
     },
-    mutationFn: ({ value, creating }: DraftTask & { value: Collection; creating: boolean }) =>
-      saveRecord<Collection>("me/collections", value, creating),
+    mutationFn: (task: DraftTask & { value: Collection; creating: boolean }) => {
+      if (!ownsDraft(task)) throw new CollectionSaveNotSentError("集合编辑已关闭，未发送保存请求。");
+      if (!onlineManager.isOnline())
+        throw new CollectionSaveNotSentError("当前离线，集合未保存。请联网后重新保存。");
+      return saveRecord<Collection>("me/collections", task.value, task.creating);
+    },
     onSuccess: (_result, task) => {
       client.invalidateQueries({ queryKey: ["collections"] });
       if (!ownsDraft(task)) return;
@@ -999,7 +1008,7 @@ export function CollectionsPage() {
     onError: (error, task) => {
       if (!ownsDraft(task)) return;
       // A rejected retry cannot resolve an earlier response lost after commit.
-      if (task.creating && (!(error instanceof APIError) || error.status === 0 ||
+      if (task.creating && !(error instanceof CollectionSaveNotSentError) && (!(error instanceof APIError) || error.status === 0 ||
         error.status >= 500 || error.status === 200)) setCreationUncertain(true);
       if (task.creating && error instanceof APIError && error.status === 412 &&
         (error.details as { code?: string } | undefined)?.code === "COLLECTION_CREATION_CONFLICT") {
@@ -1057,7 +1066,14 @@ export function CollectionsPage() {
     },
   });
   const pending = save.isPending || reload.isPending;
-  useUnsavedChanges(changed || pending || (!!draft && creationUncertain));
+  useUnsavedChanges(
+    changed || pending || (!!draft && creationUncertain),
+    save.isPending
+      ? "集合正在保存，离开不会取消已发送的请求。请返回后核对保存结果。"
+      : draft && creationUncertain
+        ? "此前集合保存结果尚未确认。离开会丢弃当前输入，不会删除可能已保存的集合。请返回后核对保存结果。"
+        : undefined,
+  );
   useLayoutEffect(() => {
     if (reloadFocus === focusedReload.current || pending) return;
     focusedReload.current = reloadFocus;

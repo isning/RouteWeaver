@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { CollectionsPage } from "./Sources";
 import { UIProviders } from "./ui-patterns/providers";
-import { hasUnsavedChanges } from "./navigation";
+import { getNavigationWarning, hasNavigationWarning, hasUnsavedChanges } from "./navigation";
 import type { Collection, Source } from "./types";
 
 const json = (value: unknown, status = 200) => new Response(JSON.stringify(value), {
@@ -118,6 +118,8 @@ it("retries a lost creation with the same guarded ID, preserves cancellation, th
   const editor = await createDraft();
   await saveDraft(editor);
   await editor.findByText("集合保存结果尚未确认");
+  expect(hasNavigationWarning()).toBe(true);
+  expect(getNavigationWarning()).toBe("此前集合保存结果尚未确认。离开会丢弃当前输入，不会删除可能已保存的集合。请返回后核对保存结果。");
   fireEvent.change(editor.getByLabelText("集合名称"), { target: { value: "Local retry" } });
   await saveDraft(editor);
   await editor.findByText("集合创建发生冲突");

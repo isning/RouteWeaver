@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider, onlineManager } from "@tanstack/react
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { CollectionsPage } from "./Sources";
 import { UIProviders } from "./ui-patterns/providers";
-import { hasUnsavedChanges } from "./navigation";
+import { getNavigationWarning, hasNavigationWarning, hasUnsavedChanges } from "./navigation";
 import type { Collection, Source } from "./types";
 
 const json = (value: unknown, status = 200) => new Response(JSON.stringify(value), {
@@ -30,7 +30,7 @@ const providers: Source[] = ["one", "two"].map((id) => ({
 const conflict = () => json({ code: "COLLECTION_DRAFT_CHANGED", message: "Untrusted conflict detail" }, 409);
 const clients: QueryClient[] = [];
 function mount(cachedCollections?: unknown[], cachedSources?: Source[]) {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false, networkMode: "always" } } });
   clients.push(client);
   if (cachedCollections) client.setQueryData(["collections"], cachedCollections);
   if (cachedSources) client.setQueryData(["sources"], cachedSources);
@@ -405,4 +405,85 @@ it("identifies a paused initial source read and resumes without replacing the co
   await waitFor(() => expect((editor.getByLabelText("订阅来源") as HTMLButtonElement).disabled).toBe(false));
   expect(editor.queryByText("等待网络连接，恢复后将继续加载可选来源。")).toBeNull();
   expect((editor.getByLabelText("集合名称") as HTMLInputElement).value).toBe("Offline draft");
+});
+
+it.each([false, true])("does not send an offline collection save after its editor is abandoned (creating=%s)", async (creating) => {
+  const f = api({ save: async (value) => json(value) });
+  const host = mount();
+  let editor: ReturnType<typeof within>;
+  if (creating) {
+    await userEvent.click((await screen.findAllByRole("button", { name: "新建集合" }))[0]);
+    editor = within(await screen.findByRole("dialog", { name: "新建集合" }));
+  } else editor = await openRecipe();
+  fireEvent.change(editor.getByLabelText("集合名称"), { target: { value: "Abandoned recipe" } });
+  onlineManager.setOnline(false);
+  await userEvent.click(editor.getByRole("button", { name: "保存集合" }));
+  expect(f.writes).toEqual([]);
+  host.replace();
+  await act(async () => { onlineManager.setOnline(true); await host.client.resumePausedMutations(); });
+  expect(f.writes).toEqual([]);
+  expect(screen.queryByText("集合已保存")).toBeNull();
+});
+
+it.each([false, true])("keeps an offline save editable and requires a fresh save after reconnect (creating=%s)", async (creating) => {
+  const f = api({ save: async (value) => json(value) });
+  const host = mount();
+  let editor: ReturnType<typeof within>;
+  if (creating) {
+    await userEvent.click((await screen.findAllByRole("button", { name: "新建集合" }))[0]);
+    editor = within(await screen.findByRole("dialog", { name: "新建集合" }));
+  } else editor = await openRecipe();
+  fireEvent.change(editor.getByLabelText("集合名称"), { target: { value: "Offline recipe" } });
+  onlineManager.setOnline(false);
+  await userEvent.click(editor.getByRole("button", { name: "保存集合" }));
+  expect(await editor.findByText("当前离线，集合未保存。请联网后重新保存。")).toBeTruthy();
+  expect(editor.queryByText("集合保存结果尚未确认")).toBeNull();
+  expect((editor.getByLabelText("集合名称") as HTMLInputElement).disabled).toBe(false);
+  expect((editor.getByRole("button", { name: "保存集合" }) as HTMLButtonElement).disabled).toBe(false);
+  expect(hasUnsavedChanges()).toBe(true);
+  fireEvent.change(editor.getByLabelText("集合名称"), { target: { value: "Revised offline recipe" } });
+  await act(async () => { onlineManager.setOnline(true); await host.client.resumePausedMutations(); });
+  expect(f.writes).toEqual([]);
+  await userEvent.click(editor.getByRole("button", { name: "保存集合" }));
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  expect(f.writes).toHaveLength(1);
+  expect(f.writes[0].method).toBe(creating ? "POST" : "PUT");
+  expect(f.writes[0].body.name).toBe("Revised offline recipe");
+});
+
+
+it("warns that leaving cannot cancel a collection save already sent, without applying its late feedback to a new editor", async () => {
+  let finish!: (response: Response) => void;
+  const f = api({ save: () => new Promise<Response>((resolve) => { finish = resolve; }) });
+  const host = mount();
+  const editor = await openRecipe();
+  fireEvent.change(editor.getByLabelText("集合名称"), { target: { value: "Sent recipe" } });
+  await userEvent.click(editor.getByRole("button", { name: "保存集合" }));
+  await waitFor(() => expect(f.writes).toHaveLength(1));
+  expect(hasNavigationWarning()).toBe(true);
+  expect(getNavigationWarning()).toBe("集合正在保存，离开不会取消已发送的请求。请返回后核对保存结果。");
+  host.replace();
+  const next = await openRecipe();
+  fireEvent.change(next.getByLabelText("集合名称"), { target: { value: "New editor recipe" } });
+  await act(async () => finish(json(f.writes[0].body)));
+  expect((next.getByLabelText("集合名称") as HTMLInputElement).value).toBe("New editor recipe");
+  expect(screen.queryByText("集合已保存")).toBeNull();
+  expect(hasNavigationWarning()).toBe(false);
+});
+
+it.each([false, true])("does not send when an online save loses its editor before dispatch (creating=%s)", async (creating) => {
+  const f = api({ save: async (value) => json(value) });
+  const host = mount();
+  let editor: ReturnType<typeof within>;
+  if (creating) {
+    await userEvent.click((await screen.findAllByRole("button", { name: "新建集合" }))[0]);
+    editor = within(await screen.findByRole("dialog", { name: "新建集合" }));
+  } else editor = await openRecipe();
+  fireEvent.change(editor.getByLabelText("集合名称"), { target: { value: "Abandoned online recipe" } });
+  // A save yields for onMutate before I/O. Synchronous owner teardown must win.
+  fireEvent.click(editor.getByRole("button", { name: "保存集合" }));
+  host.replace();
+  await act(async () => { await Promise.resolve(); });
+  expect(f.writes).toEqual([]);
+  expect(screen.queryByText("集合已保存")).toBeNull();
 });

@@ -139,7 +139,11 @@ function mount(
   });
   vi.stubGlobal("fetch", fetcher);
   const client = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    // Match the authenticated application client in SessionBoundary.
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false, networkMode: "always" },
+    },
   });
   clients.push(client);
   function Host() {
@@ -792,7 +796,7 @@ it("distinguishes fixed, all-connection, and filtered automatic members while gr
 });
 
 
-it("never sends an offline draft after discarding and reconnecting", async () => {
+it("rejects an offline draft without sending it before or after discard and reconnect", async () => {
   const profile = { ...emptyProfile(), id: "direct-only", name: "Direct only" };
   const { writes } = mount(profile, { unmountOnClose: true });
   const name = await screen.findByRole("textbox", { name: "配置名称" });
