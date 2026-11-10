@@ -60,3 +60,16 @@ claimed from this shallow checkout.
 Independent read-only review inspected both actual baseline PNGs and the patch,
 confirmed sample coordinates and bounded selectors, and found no blocking issue.
 Corrected-pixel acceptance is still reserved for exact-commit CI.
+
+## Corrected rendered evidence
+
+[Supplemental run 42897359172](https://github.com/isning/RouteWeaver/actions/runs/42897359172)
+succeeded at exact commit `62e27ef007513c3fe8769daf195df741c772a127`.
+Artifact `13802025598` was downloaded and its SHA-256 verified as
+`a6c076129eab3d294e09b7871b5a9268da75a5ed79ca7aaafbe54c66988ec14d`.
+Both corrected measured PNGs were visually inspected: `cb1a6aae6a2f436b166dabd5a442ce9b9013a15a.png`
+(card) and `14ce73787afaf036147d41c4e59869888e7fa496.png` (muted).
+Their attached pixel readings show ring RGB(115,115,115) against RGB(23,23,23)
+at 3.781:1 and RGB(38,38,38) at 3.192:1 respectively. The corrected focus ring
+is visibly distinct on both surfaces. This closes the corrected desktop pixel
+check above, not whole-app compliance or the required aggregate CI gate.

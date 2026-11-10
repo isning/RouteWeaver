@@ -96,6 +96,19 @@ for (const width of [1440, 390]) {
         contentType: "image/png",
       });
     }
+    // Distinct accessible names let keyboard/assistive-tech users choose the
+    // confirmation reveal control without disclosing the other field.
+    const reveal = dialog.getByRole("button", { name: /^(显示|隐藏)再次输入的密码$/ });
+    await expect(dialog.getByRole("button", { name: "显示备份密码", exact: true })).toBeVisible();
+    await reveal.focus();
+    await reveal.press("Enter");
+    await expect(confirmation).toHaveAttribute("type", "text");
+    await expect(password).toHaveAttribute("type", "password");
+    await expect(reveal).toHaveAccessibleName("隐藏再次输入的密码");
+    await expect(reveal).toBeFocused();
+    await reveal.press("Space");
+    await expect(confirmation).toHaveAttribute("type", "password");
+    await expect(reveal).toHaveAttribute("aria-pressed", "false");
     expect(writes).toBe(0);
   });
 }

@@ -292,3 +292,33 @@ it.each(["new-control", "reopened-task"])("does not reclaim export focus after %
   if (mode === "reopened-task") expect(screen.queryByRole("alert")).toBeNull();
   client.clear();
 });
+
+it("distinguishes backup password reveal controls and toggles only the keyboard-selected field", async () => {
+  const fetch = vi.fn();
+  vi.stubGlobal("fetch", fetch);
+  const client = new QueryClient();
+  render(<QueryClientProvider client={client}><UIProviders><BackupSettings /></UIProviders></QueryClientProvider>);
+  const user = userEvent.setup();
+  await user.click(screen.getByRole("button", { name: "创建加密备份" }));
+  const dialog = screen.getByRole("dialog", { name: "创建加密备份" });
+  const password = within(dialog).getByLabelText("设置备份密码") as HTMLInputElement;
+  const confirmation = within(dialog).getByLabelText("再次输入密码") as HTMLInputElement;
+  fireEvent.change(password, { target: { value: "synthetic-password" } });
+  fireEvent.change(confirmation, { target: { value: "synthetic-confirmation" } });
+  const reveal = within(dialog).getByRole("button", { name: "显示再次输入的密码" });
+  expect(within(dialog).getByRole("button", { name: "显示备份密码" })).toBeTruthy();
+  reveal.focus();
+  await user.keyboard("{Enter}");
+  expect(confirmation.type).toBe("text");
+  expect(password.type).toBe("password");
+  expect(within(dialog).getByRole("button", { name: "隐藏再次输入的密码" })).toBe(reveal);
+  expect(reveal.getAttribute("aria-pressed")).toBe("true");
+  expect(document.activeElement).toBe(reveal);
+  await user.keyboard(" ");
+  expect(confirmation.type).toBe("password");
+  expect(reveal.getAttribute("aria-pressed")).toBe("false");
+  expect(password.value).toBe("synthetic-password");
+  expect(confirmation.value).toBe("synthetic-confirmation");
+  expect(fetch).not.toHaveBeenCalled();
+  client.clear();
+});

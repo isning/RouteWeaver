@@ -457,7 +457,7 @@ export function BackupSettings() {
                 message: "请使用至少 12 个字符的独立密码",
             },
         ]}>
-            <PasswordInput autoComplete="new-password" maxLength={1024}/>
+            <PasswordInput revealLabel="备份密码" autoComplete="new-password" maxLength={1024}/>
           </AppField>
           <AppField name="confirm" label="再次输入密码" dependencies={["password"]} rules={[
             { required: true },
@@ -467,7 +467,7 @@ export function BackupSettings() {
                     : Promise.reject(new Error("两次输入的密码不一致")),
             }),
         ]}>
-            <PasswordInput autoComplete="new-password"/>
+            <PasswordInput revealLabel="再次输入的密码" autoComplete="new-password"/>
           </AppField>
           <p className="muted text-sm text-muted-foreground">
             备份包含账号与订阅凭据，仅下载到你的设备，不发送到第三方。请将文件与密码分开保管；忘记密码无法恢复。
