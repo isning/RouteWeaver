@@ -1,5 +1,6 @@
 import {
   useState,
+  useEffect,
   useRef,
   useImperativeHandle,
   isValidElement,
@@ -134,6 +135,11 @@ export function ChoiceSelect<V extends Value = string>({
       onBlur?.();
     }
   };
+  // A read-only transition ends this editing interaction, including its search.
+  // Closing also keeps an already-open portal from mutating a locked task.
+  useEffect(() => {
+    if (disabled && open) changeOpen(false);
+  }, [disabled, open]);
   return (
     <Popover open={open} onOpenChange={changeOpen}>
       <PopoverTrigger asChild>
@@ -207,7 +213,9 @@ export function ChoiceSelect<V extends Value = string>({
               <CommandGroup>
                 <CommandItem
                   value="__clear"
+                  disabled={disabled}
                   onSelect={() => {
+                    if (disabled) return;
                     onValueChange?.(undefined);
                     changeOpen(false);
                   }}
@@ -227,8 +235,9 @@ export function ChoiceSelect<V extends Value = string>({
                       key={String(option.value)}
                       value={`${option.value} ${option.searchText ?? (typeof option.label === "string" ? option.label : "")}`}
                       aria-label={option["aria-label"]}
-                      disabled={option.disabled}
+                      disabled={disabled || option.disabled}
                       onSelect={() => {
+                        if (disabled) return;
                         onValueChange?.(option.value);
                         changeOpen(false);
                       }}
@@ -301,13 +310,18 @@ export function MultiChoice<V extends Value = string>({
       onBlur?.();
     }
   };
+  useEffect(() => {
+    if (disabled && open) changeOpen(false);
+  }, [disabled, open]);
   // Retained/imported drafts can contain repeated references. Each chip owns
   // its occurrence; ordinary distinct values keep their identity on reorder.
   const selectedOccurrences = new Map<V, number>();
-  const toggle = (v: V) =>
+  const toggle = (v: V) => {
+    if (disabled) return;
     onValueChange?.(
       value.includes(v) ? value.filter((x) => x !== v) : [...value, v],
     );
+  };
   return (
     <div className={cn("grid gap-2", className)}>
       <Popover open={open} onOpenChange={changeOpen}>
@@ -359,7 +373,7 @@ export function MultiChoice<V extends Value = string>({
                         key={String(option.value)}
                         value={`${option.value} ${option.searchText ?? (typeof option.label === "string" ? option.label : "")}`}
                         aria-label={option["aria-label"]}
-                        disabled={option.disabled}
+                        disabled={disabled || option.disabled}
                         onSelect={() => toggle(option.value)}
                       >
                         <Check
@@ -391,7 +405,9 @@ export function MultiChoice<V extends Value = string>({
                   <CommandGroup>
                     <CommandItem
                       value={query}
+                      disabled={disabled}
                       onSelect={() => {
+                        if (disabled) return;
                         onValueChange?.([...value, query.trim() as V]);
                         setQuery("");
                       }}

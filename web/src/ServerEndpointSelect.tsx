@@ -100,7 +100,12 @@ export function ServerEndpointSelect({
   const missing = selected && !entries.some((entry) => entry.id === selected);
   const hosts = inventory.hosts.map((host) => ({
     value: host.id,
-    label: host.name,
+    label: inventory.hosts.filter((other) => other.name === host.name).length > 1
+      ? <span className="grid min-w-0 gap-1">
+          <span>{host.name}</span>{" "}
+          <span className="text-xs font-normal text-muted-foreground">服务器 ID {host.id}</span>
+        </span>
+      : host.name,
   }));
   if (server && !hosts.some((host) => host.value === server))
     hosts.push({ value: server, label: "原服务器（当前不可用）" });

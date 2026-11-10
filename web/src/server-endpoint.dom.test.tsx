@@ -453,3 +453,29 @@ it("uses retained labels only in opted-in saved route editors while choices and 
   expect(screen.getByText("socks:1081 xray")).toBeTruthy();
   expect(props.onChange).not.toHaveBeenCalled();
 });
+
+it("distinguishes same-named servers and selects each exact owner's endpoints", async () => {
+  const duplicateInventory: Infrastructure = {
+    ...inventory,
+    hosts: inventory.hosts.map((host) => ({ ...host, name: "Tokyo", address: "shared.example" })),
+  };
+  const selected = vi.fn();
+  render(<ServerEndpointSelect inventory={duplicateInventory} label="入口"
+    allowedIds={inventory.endpoints.map((endpoint) => endpoint.id)}
+    onChange={selected} onPendingChange={() => {}} />);
+  const user = userEvent.setup();
+  await user.click(screen.getByRole("combobox", { name: "入口服务器" }));
+  await user.click(screen.getByRole("option", { name: "Tokyo 服务器 ID a" }));
+  expect(screen.getByRole("combobox", { name: "入口服务器" }).textContent).toContain("服务器 ID a");
+  await user.click(screen.getByRole("combobox", { name: "入口端点" }));
+  expect(screen.queryByRole("option", { name: /Exit/ })).toBeNull();
+  await user.click(screen.getByRole("option", { name: /Primary/ }));
+  expect(selected).toHaveBeenLastCalledWith("a1");
+  await user.click(screen.getByRole("combobox", { name: "入口服务器" }));
+  await user.click(screen.getByRole("option", { name: "Tokyo 服务器 ID b" }));
+  expect(screen.getByRole("combobox", { name: "入口服务器" }).textContent).toContain("服务器 ID b");
+  await user.click(screen.getByRole("combobox", { name: "入口端点" }));
+  expect(screen.queryByRole("option", { name: /Entry/ })).toBeNull();
+  await user.click(screen.getByRole("option", { name: /Exit/ }));
+  expect(selected).toHaveBeenLastCalledWith("b1");
+});

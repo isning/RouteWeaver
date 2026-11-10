@@ -263,3 +263,85 @@ it("preserves repeated selected references and removes only the chosen occurrenc
   ).toHaveLength(1);
   expect(errors.mock.calls.flat().join(" ")).not.toContain("same key");
 });
+
+it("closes an open choice when its task becomes unavailable without changing the draft", async () => {
+  const changed = vi.fn();
+  const openChanged = vi.fn();
+  const blurred = vi.fn();
+  const choices = (disabled: boolean) => (
+    <UIProviders>
+      <ChoiceSelect
+        aria-label="上游连接器"
+        value="first"
+        options={[
+          { value: "first", label: "当前出口" },
+          { value: "second", label: "备用出口" },
+        ]}
+        disabled={disabled}
+        clearable
+        onValueChange={changed}
+        onOpenChange={openChanged}
+        onBlur={blurred}
+      />
+    </UIProviders>
+  );
+  const view = render(choices(false));
+  const user = userEvent.setup();
+  const trigger = screen.getByRole("combobox", { name: "上游连接器" });
+  await user.click(trigger);
+  await user.type(screen.getByRole("combobox", { name: "搜索选项" }), "备用");
+  view.rerender(choices(true));
+  expect(trigger.getAttribute("aria-expanded")).toBe("false");
+  expect(screen.queryByRole("option")).toBeNull();
+  expect(changed).not.toHaveBeenCalled();
+  expect(openChanged).toHaveBeenLastCalledWith(false);
+  expect(blurred).toHaveBeenCalledTimes(1);
+  view.rerender(choices(false));
+  expect(trigger.getAttribute("aria-expanded")).toBe("false");
+  await user.click(trigger);
+  expect(screen.getByRole("combobox", { name: "搜索选项" })).toHaveProperty("value", "");
+  await user.click(screen.getByRole("option", { name: "备用出口" }));
+  expect(changed).toHaveBeenCalledExactlyOnceWith("second");
+});
+
+it("ends a multi-choice edit when disabled and retains the selected tags", async () => {
+  const changed = vi.fn();
+  const openChanged = vi.fn();
+  const blurred = vi.fn();
+  const choices = (disabled: boolean) => (
+    <UIProviders>
+      <MultiChoice
+        aria-label="服务器标签"
+        value={["current"]}
+        options={[{ value: "current", label: "当前标签" }]}
+        disabled={disabled}
+        clearable
+        creatable
+        onValueChange={changed}
+        onOpenChange={openChanged}
+        onBlur={blurred}
+      />
+    </UIProviders>
+  );
+  const view = render(choices(false));
+  const user = userEvent.setup();
+  const trigger = screen.getByRole("combobox", { name: "服务器标签" });
+  await user.click(trigger);
+  await user.type(screen.getByRole("combobox", { name: "搜索选项" }), "新标签");
+  expect(screen.getByRole("option", { name: "添加“新标签”" })).toBeTruthy();
+  view.rerender(choices(true));
+  expect(trigger.getAttribute("aria-expanded")).toBe("false");
+  expect(screen.queryByRole("option")).toBeNull();
+  expect(changed).not.toHaveBeenCalled();
+  expect(openChanged).toHaveBeenLastCalledWith(false);
+  expect(blurred).toHaveBeenCalledTimes(1);
+  expect(screen.getByText("当前标签")).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "移除 当前标签" })).toBeNull();
+  view.rerender(choices(false));
+  expect(trigger.getAttribute("aria-expanded")).toBe("false");
+  await user.click(trigger);
+  expect(screen.getByRole("combobox", { name: "搜索选项" })).toHaveProperty("value", "");
+  await user.type(screen.getByRole("combobox", { name: "搜索选项" }), "新标签");
+  await user.click(screen.getByRole("option", { name: "添加“新标签”" }));
+  expect(changed).toHaveBeenCalledExactlyOnceWith(["current", "新标签"]);
+});
