@@ -27,6 +27,7 @@ export default defineConfig({
         "**/route-account-identity.ui.spec.ts",
         "**/backup-tab-continuity.ui.spec.ts",
         "**/profile-read-recovery.ui.spec.ts",
+        "**/users-inventory-read-recovery.ui.spec.ts",
         "**/resource-source-inventory-recovery.ui.spec.ts",
         "**/group-priority-draft-continuity.ui.spec.ts",
         "**/usage-reset-ownership.ui.spec.ts",

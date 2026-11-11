@@ -21,7 +21,7 @@ env:
 
 jobs:
   recovery:
-    name: Twenty recovery specs (supplemental evidence only)
+    name: Twenty-one recovery specs (supplemental evidence only)
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
@@ -81,7 +81,7 @@ jobs:
             await browser.close();
           }
           JS
-      - name: Run twenty recovery specs with unchanged fixtures
+      - name: Run twenty-one recovery specs with unchanged fixtures
         working-directory: web
         # Bound this subset without changing per-test timeouts; reserve cleanup/upload time.
         timeout-minutes: 10
@@ -94,6 +94,19 @@ jobs:
           # Only the synthetic report, browser receipt and named test captures.
           # No databases, fixture keys, automatic screenshots, video or traces.
           path: |
+            web/test-results/users-inventory-read-recovery*/users-inventory-cached-error-open-menu.png
+            web/test-results/users-inventory-read-recovery*/users-inventory-cached-error-open-menu.json
+            web/test-results/users-inventory-read-recovery*/users-inventory-retry-keyboard.png
+            web/test-results/users-inventory-read-recovery*/users-inventory-retry-keyboard.json
+            web/test-results/users-inventory-read-recovery*/users-inventory-retry-pending.png
+            web/test-results/users-inventory-read-recovery*/users-inventory-retry-pending.json
+            web/test-results/users-inventory-read-recovery*/users-inventory-recovered-entry-keyboard.png
+            web/test-results/users-inventory-read-recovery*/users-inventory-recovered-entry-keyboard.json
+            web/test-results/users-inventory-read-recovery*/users-inventory-correct-user-entry.png
+            web/test-results/users-inventory-read-recovery*/users-inventory-correct-user-entry.json
+            web/test-results/users-inventory-read-recovery*/users-inventory-final-original.png
+            web/test-results/users-inventory-read-recovery*/users-inventory-final-original.json
+            web/test-results/users-inventory-read-recovery*/users-inventory-request-ledger.json
             bin/verification/browser-environment.json
             web/playwright-report/
             web/test-results/group-access-decision*/group-access-*.png

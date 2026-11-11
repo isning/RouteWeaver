@@ -5,6 +5,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 SPECS = {
+    'users-inventory-read-recovery',
     'diagnostic-target-submit-focus',
     'usage-reset-ownership',
     'group-priority-draft-continuity',
@@ -42,7 +43,12 @@ GROUP_PRIORITY_PHASES = (
 )
 RESET_PHASES = ('reason-draft', 'reset-review', 'reset-canceled', 'discard-review', 'draft-continued', 'reopened-clean', 'navigation-review', 'navigation-stayed', 'navigation-left', 'forward-clean', 'pending-reset', 'navigation-after-reset', 'success-stayed', 'success-left', 'final-original')
 TARGET_REGISTRATION_PHASES = ('invalid-name', 'invalid-url', 'invalid-methods', 'save-rejected', 'discard-review', 'continued-draft', 'reopened-clean', 'returned-opener', 'final-original')
+USERS_PHASES = ('cached-error-open-menu', 'retry-keyboard', 'retry-pending', 'recovered-entry-keyboard', 'correct-user-entry', 'final-original')
 ARTIFACTS = {
+    *{f'web/test-results/users-inventory-read-recovery*/users-inventory-{phase}.{ext}'
+      for phase in USERS_PHASES for ext in ('png', 'json')},
+    'web/test-results/users-inventory-read-recovery*/users-inventory-request-ledger.json',
+
     *{f'web/test-results/diagnostic-target-submit-focus*/{phase}.{ext}'
       for phase in TARGET_REGISTRATION_PHASES for ext in ('png', 'json')},
     'web/test-results/diagnostic-target-submit-focus*/request-ledger.json',
@@ -104,8 +110,8 @@ class UXRecoveryWorkflowTests(unittest.TestCase):
         for value in ('group: ux-recovery-${{ github.ref }}', 'cancel-in-progress: false',
                       'contents: read', 'persist-credentials: false', 'runs-on: ubuntu-24.04',
                       'timeout-minutes: 15', 'timeout-minutes: 10',
-                      'name: Twenty recovery specs (supplemental evidence only)',
-                      'name: Run twenty recovery specs with unchanged fixtures',
+                      'name: Twenty-one recovery specs (supplemental evidence only)',
+                      'name: Run twenty-one recovery specs with unchanged fixtures',
                       'ROUTEWEAVER_CHROMIUM: /opt/google/chrome/chrome',
                       'npx --no-install playwright install-deps chromium',
                       '--config=playwright.ux-recovery.config.ts --workers=1 --retries=0'):
@@ -178,6 +184,10 @@ class UXRecoveryWorkflowTests(unittest.TestCase):
         for width in (1440, 390):
             for mode in ('invalid', 'rejection'):
                 observed[f'diagnostic-target-submit-focus.ui-{mode}-at-{width}px-chromium'] = target_outputs
+        users_outputs = tuple(f'users-inventory-{phase}.{ext}' for phase in USERS_PHASES
+                              for ext in ('png', 'json')) + ('users-inventory-request-ledger.json',)
+        for width in (1440, 390):
+            observed[f'users-inventory-read-recovery.ui-continuity-at-{width}px-chromium'] = users_outputs
         for directory, filenames in observed.items():
             for filename in filenames:
                 path = f'web/test-results/{directory}/{filename}'
@@ -196,8 +206,12 @@ class UXRecoveryWorkflowTests(unittest.TestCase):
                 with self.subTest(path=path):
                     self.assertFalse(retained(path), path)
 
+        # Generic ledgers and extra user-like names are not authorized captures.
+        for filename in ('request-ledger.json', 'users-inventory-private.json', 'users-inventory-request-ledger.png'):
+            self.assertFalse(retained(f'web/test-results/users-inventory-read-recovery.ui-chromium/{filename}'))
+
         # A named compact capture is not an upload permission for another fixture.
-        for filename in compact_outputs + multi_outputs + inventory_outputs + group_priority_outputs + reset_outputs + target_outputs:
+        for filename in compact_outputs + multi_outputs + inventory_outputs + group_priority_outputs + reset_outputs + target_outputs + users_outputs:
             path = f'web/test-results/unrelated.ui-chromium/{filename}'
             with self.subTest(path=path):
                 self.assertFalse(retained(path), path)
