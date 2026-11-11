@@ -623,7 +623,7 @@ export function UserGroups({ users, services, routes, }: {
     } | null>(null);
     const inventoryKnown = query.data !== undefined;
     return (<Section variant="plain" title="用户组" description="以组分配服务方案；个人指定方案优先，多组按优先级选定一个方案及其额度。" extra={<div className="flex flex-wrap gap-2">
-        {inventoryKnown && <ActionButton onClick={() => void query.refetch({ cancelRefetch: false })}
+        {inventoryKnown && <ActionButton className="scroll-m-1" onClick={() => void query.refetch({ cancelRefetch: false })}
           pending={query.isFetching || query.isPaused} keepFocusableWhilePending variant="outline">刷新用户组</ActionButton>}
         <ActionButton onClick={() => setEditing({ initial: null })} variant="outline">
           新建用户组
