@@ -21,6 +21,7 @@ export default defineConfig({
         "**/multi-choice-reopening.ui.spec.ts",
         "**/fleet-request-recovery.ui.spec.ts",
         "**/group-access-decision.ui.spec.ts",
+        "**/route-inventory-recovery.ui.spec.ts",
       ],
     })),
   workers: 1,

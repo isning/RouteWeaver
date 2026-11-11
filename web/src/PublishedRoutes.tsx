@@ -24,7 +24,7 @@ import {
   Trash2 as DeleteOutlined,
   Plus as PlusOutlined,
 } from "lucide-react";
-import { useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useContext, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { DataTable, TableRowActions } from "./DataTable";
 import { loadInfrastructure } from "./infrastructure-data";
 import { RouteExitEditor } from "./RouteExitEditor";
@@ -340,7 +340,7 @@ export function PublishedRoutesPage() {
     deployment: ServerDeployment,
     inventory: Infrastructure,
   ) => {
-    if (hasConnectorHops(route)) return;
+    if (!inventoryReady || hasConnectorHops(route)) return;
     setExitTask((current) =>
       current
         ? { ...current, open: true }
@@ -386,6 +386,7 @@ export function PublishedRoutesPage() {
     replaceView(`#published-routes?line=${encodeURIComponent(line.id)}`);
   };
   const create = () => {
+    if (!pendingCreate && !inventoryReady) return;
     setIsNew(true);
     if (pendingCreate) {
       setEditing(pendingCreate);
@@ -403,7 +404,17 @@ export function PublishedRoutesPage() {
     });
   };
   const needsTransferPath = infrastructure.data?.deployments.length === 0;
-  const creationDisabled = !infrastructure.data || !!infrastructure.error;
+  const inventoryReady = !!infrastructure.data && infrastructure.isSuccess && infrastructure.fetchStatus === "idle";
+  const creationDisabled = !inventoryReady;
+  const inventoryNotice = infrastructure.isPaused
+    ? <Notice title="等待网络连接后核对转发路径。暂不能新建、编辑或更换出口。" />
+    : infrastructure.error
+      ? <Notice tone="warning"
+          title="转发路径信息暂时无法读取，仍可查看线路。新建、编辑和更换出口前请重试。"
+          action={<ActionButton variant="outline" pending={infrastructure.isFetching} onClick={() => infrastructure.refetch()}>重试读取转发路径</ActionButton>} />
+      : !inventoryReady
+        ? <Notice title="正在核对转发路径，完成后可新建、编辑或更换出口。" />
+        : null;
   const creationAction = needsTransferPath ? (
     <ActionButton
       leadingIcon={<PlusOutlined aria-hidden="true" />}
@@ -453,13 +464,11 @@ export function PublishedRoutesPage() {
           }
         />
       )}
+      {inventoryNotice}
       <QueryState
-        loading={query.isPending || infrastructure.isPending} paused={query.isPaused || infrastructure.isPaused} loadingLayout="table"
-        error={query.error || infrastructure.error}
-        retry={() => {
-          query.refetch();
-          infrastructure.refetch();
-        }}
+        loading={query.isPending} paused={query.isPaused} loadingLayout="table"
+        error={query.error}
+        retry={() => query.refetch()}
       >
         <ErrorNotice error={contextError} />
         <Section variant="plain">
@@ -520,16 +529,17 @@ export function PublishedRoutesPage() {
                   render: (_, r) => (
                     <TableRowActions name={r.name}>
                       <ActionButton
-                        onClick={() => setPrincipal(r)}
+                        disabled={!inventoryReady}
+                        onClick={() => { if (inventoryReady) setPrincipal(r); }}
                         variant="outline"
                       >
                         配置用户入口
                       </ActionButton>
                       <ActionButton
-                        disabled={hasConnectorHops(r)}
+                        disabled={!inventoryReady || hasConnectorHops(r)}
                         aria-describedby={hasConnectorHops(r) ? `mixed-route-${r.id}` : undefined}
                         onClick={() => {
-                          if (hasConnectorHops(r)) return;
+                          if (!inventoryReady || hasConnectorHops(r)) return;
                           setIsNew(false);
                           setEditing(r);
                         }}
@@ -596,6 +606,8 @@ export function PublishedRoutesPage() {
             )
             .map((line) => line.name)}
           inventory={infrastructure.data}
+          inventoryReady={inventoryReady}
+          inventoryNotice={inventoryNotice}
           initialUserId={selectedUser}
           exitChangeOpen={!!exitTask?.open}
           exitFocusRevision={exitFocusRevision}
@@ -603,7 +615,7 @@ export function PublishedRoutesPage() {
           onRetarget={openExitTask}
           onUserSelected={setSelectedUser}
           onEdit={(line) => {
-            if (hasConnectorHops(line)) return;
+            if (!inventoryReady || hasConnectorHops(line)) return;
             setIsNew(false);
             setEditing(line);
           }}
@@ -1814,6 +1826,8 @@ function PublicRouteDetail({
   route,
   sharedLines,
   inventory,
+  inventoryReady,
+  inventoryNotice,
   initialUserId,
   exitChangeOpen,
   exitFocusRevision,
@@ -1826,6 +1840,8 @@ function PublicRouteDetail({
   route: PublishedRoute;
   sharedLines: string[];
   inventory?: Infrastructure;
+  inventoryReady: boolean;
+  inventoryNotice: ReactNode;
   initialUserId?: string;
   exitChangeOpen: boolean;
   exitFocusRevision: number;
@@ -1948,15 +1964,16 @@ function PublicRouteDetail({
         pending={!(!action && !exitChangeOpen)}
         footer={
           <ActionButton
-            disabled={!!action || exitChangeOpen || mixedEditingBlocked}
+            disabled={!inventoryReady || !!action || exitChangeOpen || mixedEditingBlocked}
             aria-describedby={mixedEditingBlocked ? mixedReasonId : undefined}
-            onClick={() => { if (!mixedEditingBlocked) onEdit(current); }}
+            onClick={() => { if (inventoryReady && !mixedEditingBlocked) onEdit(current); }}
             variant="outline"
           >
             编辑线路
           </ActionButton>
         }
       >
+        {inventoryNotice}
         <Section title="线路开通进度">
           <p className="muted text-sm text-muted-foreground">
             {deployment?.name || current.deploymentId}
@@ -2007,10 +2024,10 @@ function PublicRouteDetail({
             <ActionButton
               ref={retargetTrigger}
               className="min-h-11"
-              disabled={!inventory || !deployment || !!action || exitChangeOpen || mixedEditingBlocked}
+              disabled={!inventoryReady || !inventory || !deployment || !!action || exitChangeOpen || mixedEditingBlocked}
               aria-describedby={mixedEditingBlocked ? mixedReasonId : undefined}
               onClick={() => {
-                if (inventory && deployment && !mixedEditingBlocked)
+                if (inventoryReady && inventory && deployment && !mixedEditingBlocked)
                   onRetarget(current, deployment, inventory);
               }}
               variant="outline"
@@ -2151,13 +2168,14 @@ function PublicRouteDetail({
                   ) : (
                     <ActionButton
                       disabled={
+                        !inventoryReady ||
                         !authorized ||
                         !user ||
                         !entries.data ||
                         !!entries.error ||
                         !!state.error
                       }
-                      onClick={() => setAction("principal")}
+                      onClick={() => { if (inventoryReady) setAction("principal"); }}
                       variant={authorized ? "default" : "outline"}
                     >
                       准备独立入口
@@ -2177,7 +2195,7 @@ function PublicRouteDetail({
                     </ActionButton>
                   )}
                 </div>
-                {user && !supportsPublicUsers(current, deployment) && (
+                {inventoryReady && user && !supportsPublicUsers(current, deployment) && (
                   <EntryPrerequisite deployment={deployment} />
                 )}
               </Section>
