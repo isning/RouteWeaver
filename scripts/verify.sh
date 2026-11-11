@@ -55,8 +55,16 @@ backend_gate() {
   backend_store_gate; backend_managed_gate
 }
 web_gate() {
+  local args=()
+  if [[ -n "${ROUTEWEAVER_WEB_SHARD:-}" ]]; then
+    if [[ ! "$ROUTEWEAVER_WEB_SHARD" =~ ^([1-9][0-9]{0,2})/([1-9][0-9]{0,2})$ ]] || (( BASH_REMATCH[1] > BASH_REMATCH[2] )); then
+      echo 'Web shard must be a one-based index/total (index <= total, each <= 999).' >&2
+      return 2
+    fi
+    args=("--shard=$ROUTEWEAVER_WEB_SHARD")
+  fi
   stage 'Web typecheck' npm --prefix web run typecheck
-  stage 'Web behavior tests' npm --prefix web run test -- --maxWorkers="${ROUTEWEAVER_WEB_TEST_WORKERS:-1}"
+  stage 'Web behavior tests' npm --prefix web run test -- --maxWorkers="${ROUTEWEAVER_WEB_TEST_WORKERS:-1}" "${args[@]}"
   stage 'Web production build' npm --prefix web run build
 }
 api_gate() { stage 'Real HTTP API integration (no browser/Vite)' npm --prefix web run test:api; }
@@ -100,6 +108,10 @@ print('PASS: two consecutive builds from unchanged source produced identical arc
 PY
   stage 'Extracted package durable-state smoke' python3 scripts/smoke-package.py "$archive"
 }
+if [[ "$MODE" == full || "$MODE" == quick ]] && [[ -n "${ROUTEWEAVER_WEB_SHARD:-}" ]]; then
+  echo 'Full/quick verification cannot select a partial web shard. Unset ROUTEWEAVER_WEB_SHARD.' >&2
+  exit 2
+fi
 case "$MODE" in
   quick) static_gate; backend_gate; web_gate ;;
   full)
@@ -119,7 +131,9 @@ case "$MODE" in
     native_gate; runtime_gate; managed_gate; package_gate ;;
   *) "${MODE}_gate" ;;
 esac
-if [[ "$MODE" == browser && -n "${ROUTEWEAVER_BROWSER_SHARD:-}" ]]; then
+if [[ "$MODE" == web && -n "${ROUTEWEAVER_WEB_SHARD:-}" ]]; then
+  printf '\nPASS: web shard %s only. All shards must pass before the web gate is complete.\n' "$ROUTEWEAVER_WEB_SHARD"
+elif [[ "$MODE" == browser && -n "${ROUTEWEAVER_BROWSER_SHARD:-}" ]]; then
   printf '\nPASS: browser shard %s only. All shards must pass before the browser gate is complete.\n' "$ROUTEWEAVER_BROWSER_SHARD"
 else
   printf '\nPASS: %s verification. This is the named gate only, not deployed acceptance or completion of all 35 stories.\n' "$MODE"
