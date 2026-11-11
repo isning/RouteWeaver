@@ -181,9 +181,14 @@ export function InboxPage() {
       {query.data && (query.isFetching || query.isPaused) && (
         <Notice tone="info">{query.isPaused ? "等待网络连接，消息列表尚未更新。" : "正在刷新消息，列表仍为上次读取结果。"}</Notice>
       )}
+      {query.data !== undefined && query.error && !query.isFetching && !query.isPaused && (
+        <Notice tone="error" title="消息刷新失败，仍显示上次读取的消息。请重试刷新。">
+          {query.error.message}
+        </Notice>
+      )}
       <QueryState
         loading={query.isPending} paused={query.isPaused} loadingLayout="table"
-        error={query.error}
+        error={query.data === undefined ? query.error : null}
         retry={() => query.refetch()}
       >
         <Section variant="plain">
