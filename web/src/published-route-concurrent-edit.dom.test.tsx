@@ -340,3 +340,173 @@ it.each(["success", "TLS refusal"] as const)("rejects a standalone inspection %s
   expect(inspections).toBe(2);
   expect(context.calls.filter(call => call.method === "PUT")).toHaveLength(0);
 });
+
+async function uncertainCreation(read: (saved: PublishedRoute) => Response | Promise<Response> = saved => json(saved), options: {
+  write?: (saved: PublishedRoute) => Response | Promise<Response>;
+  successful?: boolean;
+  workspace?: { current: WorkspaceHistory | null };
+} = {}) {
+  let saved!: PublishedRoute;
+  let posts = 0;
+  const context = setup({ workspace: options.workspace, extra: call => {
+    if (call.path === "/api/published-routes" && call.method === "POST") {
+      posts++;
+      if (posts > 1) return json({ error: "Record changed" }, 409);
+      saved = { ...original, ...call.body, revisionToken: "created-revision" } as PublishedRoute;
+      return options.write ? options.write(saved) : Promise.reject(new TypeError("Controlled response lost"));
+    }
+    if (call.path === "/api/published-routes" && call.method === "GET")
+      return json(saved ? [original, saved] : [original]);
+    if (saved && call.path === `/api/published-routes/${saved.id}/resolve`) return read(saved);
+  } });
+  await context.user.click(await screen.findByRole("button", { name: "配置公开线路" }));
+  const editor = within(await screen.findByRole("dialog", { name: "配置公开线路" }));
+  fireEvent.change(editor.getByRole("textbox", { name: "线路名称" }), { target: { value: "New office line" } });
+  await context.user.click(editor.getByRole("combobox", { name: "服务器转发路径" }));
+  await context.user.click(await screen.findByRole("option", { name: "path" }));
+  await context.user.click(editor.getByRole("button", { name: "检查公开线路" }));
+  await context.user.click(await editor.findByRole("button", { name: "保存公开线路" }));
+  if (!options.successful) await editor.findByText("线路保存结果尚未确认", { exact: true });
+  return { ...context, editor, saved: () => saved, posts: () => posts };
+}
+
+it("recovers a committed new route after its response was lost without replaying or claiming it was unsaved", async () => {
+  const context = await uncertainCreation();
+  expect((context.editor.getByRole("textbox", { name: "线路名称" }) as HTMLInputElement).value).toBe("New office line");
+  expect(context.editor.queryByRole("button", { name: "保存公开线路" })).toBeNull();
+  expect(context.editor.queryByRole("button", { name: "检查公开线路" })).toBeNull();
+  expect(context.editor.queryByText("线路未保存，当前身份与已有配置冲突。当前输入已保留。", { exact: true })).toBeNull();
+  await context.user.click(context.editor.getByRole("button", { name: "核对保存结果" }));
+  const detail = within(await screen.findByRole("dialog", { name: "New office line" }));
+  expect(detail.getByText("线路已保存")).toBeTruthy();
+  expect(context.posts()).toBe(1);
+  expect(context.calls.filter(call => call.method === "PUT")).toHaveLength(0);
+});
+
+it("keeps absent creation unknown and only retries the same identity explicitly after reading, then reconciles a late commit", async () => {
+  let reads = 0;
+  const context = await uncertainCreation(saved => ++reads === 1 ? json({ error: "not found" }, 404) : json(saved));
+  await context.user.click(context.editor.getByRole("button", { name: "核对保存结果" }));
+  const retry = await context.editor.findByRole("button", { name: "重试保存同一线路" });
+  expect(context.editor.getByText(/当前尚未找到此线路，先前请求仍可能完成/)).toBeTruthy();
+  expect(context.posts()).toBe(1);
+  await context.user.click(retry);
+  await context.editor.findByRole("button", { name: "核对保存结果" });
+  expect(context.editor.queryByText(/线路未保存/)).toBeNull();
+  expect(context.editor.queryByRole("button", { name: "重试保存同一线路" })).toBeNull();
+  expect(context.posts()).toBe(2);
+  const creates = context.calls.filter(call => call.method === "POST" && call.path === "/api/published-routes");
+  expect(creates[1].body).toEqual(creates[0].body);
+  expect(context.calls.filter(call => call.method === "PUT")).toHaveLength(0);
+  await context.user.click(context.editor.getByRole("button", { name: "核对保存结果" }));
+  await screen.findByRole("dialog", { name: "New office line" });
+  expect(context.posts()).toBe(2);
+});
+
+it.each(["different fields", "different hops", "wrong identity", "missing revision", "failed read"])("preserves submitted input without writes when creation recovery has %s", async kind => {
+  const context = await uncertainCreation(saved => kind === "failed read" ? json({ error: "Unavailable" }, 503) : json({
+    ...saved,
+    ...(kind === "different fields" ? { publicHost: "someone-else.example" } : {}),
+    ...(kind === "different hops" ? { hops: [{ kind: "managed", endpointId: "entry" }, { kind: "connector", connectorId: "foreign" }, { kind: "managed", endpointId: "exit" }] } : {}),
+    ...(kind === "wrong identity" ? { id: "foreign-line" } : {}),
+    ...(kind === "missing revision" ? { revisionToken: undefined } : {}),
+  }));
+  await context.user.click(context.editor.getByRole("button", { name: "核对保存结果" }));
+  await context.editor.findByText(kind === "failed read"
+    ? "暂时无法核对保存结果。已提交的线路内容保留，请稍后重试核对。"
+    : kind === "different fields" || kind === "different hops"
+      ? "此身份已有不同的线路内容。无法据此确认先前保存结果；当前提交内容已保留，不会覆盖已有线路。"
+      : "无法确认返回的线路身份与内容，请重新核对。", { exact: true });
+  expect((context.editor.getByRole("textbox", { name: "线路名称" }) as HTMLInputElement).value).toBe("New office line");
+  expect(context.editor.queryByRole("button", { name: "重试保存同一线路" })).toBeNull();
+  if (kind === "different hops") {
+    expect(context.editor.getByText("当前保存路径：path，entry → 外部代理 foreign → exit", { exact: true })).toBeTruthy();
+  }
+  expect(context.posts()).toBe(1);
+  expect(context.calls.filter(call => call.method === "PUT")).toHaveLength(0);
+});
+
+it("retains the exact uncertain creation through local close and reopen and ignores the departed read", async () => {
+  let finish!: (response: Response) => void;
+  let reads = 0;
+  const held = new Promise<Response>(resolve => { finish = resolve; });
+  const context = await uncertainCreation(saved => ++reads === 1 ? held : json(saved));
+  await context.user.click(context.editor.getByRole("button", { name: "核对保存结果" }));
+  await context.user.click(context.editor.getByRole("button", { name: "稍后核对" }));
+  await waitFor(() => expect(screen.queryByRole("dialog", { name: "配置公开线路" })).toBeNull());
+  await context.user.click(screen.getByRole("button", { name: "核对保存结果" }));
+  const editor = within(await screen.findByRole("dialog", { name: "配置公开线路" }));
+  await act(async () => finish(json(context.saved())));
+  expect(screen.queryByRole("dialog", { name: "New office line" })).toBeNull();
+  expect((editor.getByRole("textbox", { name: "线路名称" }) as HTMLInputElement).value).toBe("New office line");
+  expect(editor.queryByRole("button", { name: "保存公开线路" })).toBeNull();
+  await context.user.click(editor.getByRole("button", { name: "核对保存结果" }));
+  await screen.findByRole("dialog", { name: "New office line" });
+  expect(context.posts()).toBe(1);
+});
+
+it("requires explicit confirmation to end a differing creation recovery without changing the saved record", async () => {
+  const context = await uncertainCreation(saved => json({ ...saved, name: "Someone else's line" }));
+  await context.user.click(context.editor.getByRole("button", { name: "核对保存结果" }));
+  await context.editor.findByText(/此身份已有不同的线路内容/);
+  await context.user.click(context.editor.getByRole("button", { name: "结束本次核对…" }));
+  let confirm = within(await screen.findByRole("alertdialog"));
+  expect(confirm.getByText(/不会撤销已经提交或保存的线路/)).toBeTruthy();
+  await context.user.click(confirm.getByRole("button", { name: "继续核对" }));
+  expect((context.editor.getByRole("textbox", { name: "线路名称" }) as HTMLInputElement).value).toBe("New office line");
+  await context.user.click(context.editor.getByRole("button", { name: "结束本次核对…" }));
+  confirm = within(await screen.findByRole("alertdialog"));
+  await context.user.click(confirm.getByRole("button", { name: "结束核对并返回" }));
+  await waitFor(() => expect(screen.queryByRole("dialog", { name: "配置公开线路" })).toBeNull());
+  expect(screen.queryByText(/的保存结果尚未确认/)).toBeNull();
+  await context.user.click(screen.getByRole("button", { name: "配置公开线路" }));
+  const fresh = within(await screen.findByRole("dialog", { name: "配置公开线路" }));
+  expect((fresh.getByRole("textbox", { name: "线路名称" }) as HTMLInputElement).value).toBe("");
+  expect(context.posts()).toBe(1);
+  expect(context.calls.filter(call => call.method === "PUT" || call.method === "DELETE")).toHaveLength(0);
+});
+
+it("accepts a valid matching creation receipt as saved without a recovery write", async () => {
+  const context = await uncertainCreation(undefined, { write: saved => json(saved), successful: true });
+  const detail = within(await screen.findByRole("dialog", { name: "New office line" }));
+  expect(detail.getByText("线路已保存")).toBeTruthy();
+  expect(screen.queryByText("线路保存结果尚未确认", { exact: true })).toBeNull();
+  expect(context.posts()).toBe(1);
+});
+
+it.each(["malformed receipt", "503"])("preserves creation uncertainty after %s and recovers with an exact read", async kind => {
+  const context = await uncertainCreation(undefined, { write: saved => kind === "503"
+    ? json({ error: "Unavailable" }, 503) : json({ ...saved, id: "wrong-line" }) });
+  expect(context.editor.queryByRole("button", { name: "保存公开线路" })).toBeNull();
+  await context.user.click(context.editor.getByRole("button", { name: "核对保存结果" }));
+  await screen.findByRole("dialog", { name: "New office line" });
+  expect(context.posts()).toBe(1);
+});
+
+it("rejects a recovery response after session generation changes and keeps the submitted copy", async () => {
+  let generation = 0;
+  disposers.push(installSessionTransport({ beforeRequest() {
+    const owner = generation;
+    const verify = () => { if (owner !== generation) throw new APIError("Session changed", 409); };
+    return { beforeSend: verify, waitForResponse: async () => verify() };
+  }, failed() {} }));
+  let finish!: (response: Response) => void;
+  const held = new Promise<Response>(resolve => { finish = resolve; });
+  const context = await uncertainCreation(() => held);
+  await context.user.click(context.editor.getByRole("button", { name: "核对保存结果" }));
+  await act(async () => { generation++; finish(json(context.saved())); });
+  await context.editor.findByText("暂时无法核对保存结果。已提交的线路内容保留，请稍后重试核对。", { exact: true });
+  expect(screen.queryByRole("dialog", { name: "New office line" })).toBeNull();
+  expect(context.posts()).toBe(1);
+});
+
+it("revokes the absent-result retry permission when the workspace view is suspended", async () => {
+  const workspace = { current: createWorkspaceHistory({ isDirty: () => false, accept() {}, confirm(proceed) { proceed(); } }) };
+  disposers.push(() => workspace.current.dispose());
+  const context = await uncertainCreation(() => json({ error: "not found" }, 404), { workspace });
+  await context.user.click(context.editor.getByRole("button", { name: "核对保存结果" }));
+  const retry = await context.editor.findByRole("button", { name: "重试保存同一线路" });
+  await act(async () => workspace.current.suspend());
+  fireEvent.click(retry);
+  expect(context.posts()).toBe(1);
+});

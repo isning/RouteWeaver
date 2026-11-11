@@ -98,6 +98,31 @@ export interface PublishedRoute {
     links: string[];
   };
 }
+function reviewedCreatedRoute(value: unknown, id: string): PublishedRoute | undefined {
+  const reviewed = reviewedPublicRoute(value, id);
+  if (!reviewed) return;
+  const hops = (value as PublishedRoute).hops;
+  if (hops != null && (!Array.isArray(hops) || !hops.every(hop => hop &&
+    ((hop.kind === "managed" && typeof hop.endpointId === "string" && !!hop.endpointId && !hop.connectorId) ||
+     (hop.kind === "connector" && typeof hop.connectorId === "string" && !!hop.connectorId && !hop.endpointId))))) return;
+  return { ...reviewed, status: "unknown", diagnostics: [],
+    ...(hops?.length ? { hops: hops.map(hop => hop.kind === "managed"
+      ? { kind: "managed" as const, endpointId: hop.endpointId }
+      : { kind: "connector" as const, connectorId: hop.connectorId }) } : {}),
+  };
+}
+function createdRouteHops(route: PublishedRoute): PublishedRouteHop[] {
+  return route.hops?.length ? route.hops : route.endpointIds.map(endpointId => ({ kind: "managed", endpointId }));
+}
+function createdRoutePath(route: PublishedRoute) {
+  return createdRouteHops(route).map(hop => hop.kind === "connector" ? `外部代理 ${hop.connectorId}` : hop.endpointId).join(" → ");
+}
+function matchingCreatedRoute(value: unknown, submitted: PublishedRoute) {
+  const reviewed = reviewedCreatedRoute(value, submitted.id);
+  if (!reviewed) return false;
+  return JSON.stringify(publicRouteFields(reviewed)) === JSON.stringify(publicRouteFields(submitted)) &&
+    JSON.stringify(createdRouteHops(reviewed)) === JSON.stringify(createdRouteHops(submitted));
+}
 const mixedPathEditingReason =
   "当前编辑与更换出口暂不支持完整混合路径，已停用以避免丢失连接器。";
 // Check the complete route before any managed-only projection or conflict
@@ -273,6 +298,9 @@ export function PublishedRoutesPage() {
   });
   const [editing, setEditing] = useState<PublishedRoute | null>(null);
   const [isNew, setIsNew] = useState(false);
+  const [pendingCreate, setPendingCreate] = useState<PublishedRoute | null>(null);
+  useUnsavedChanges(!!pendingCreate,
+    "线路保存结果尚未确认。离开不会撤销已提交的保存；再次创建前请先核对线路列表。");
   const [principal, setPrincipal] = useState<PublishedRoute | null>(null);
   const [detail, setDetail] = useState<PublishedRoute | null>(null);
   const [contextError, setContextError] = useState<Error | null>(null);
@@ -338,6 +366,10 @@ export function PublishedRoutesPage() {
   };
   const create = () => {
     setIsNew(true);
+    if (pendingCreate) {
+      setEditing(pendingCreate);
+      return;
+    }
     setEditing({
       id: newID("public-route"),
       name: "",
@@ -381,6 +413,8 @@ export function PublishedRoutesPage() {
   return (
     <>
       <PageHeader title="线路" action={creationAction} />
+      {pendingCreate && !editing && <Notice tone="warning" title={`「${pendingCreate.name}」的保存结果尚未确认`}
+        action={<ActionButton variant="outline" onClick={create}>核对保存结果</ActionButton>} /> }
       {exitTask && !exitTask.open && (
         <Notice
           tone={exitTask.pending ? "warning" : "info"}
@@ -497,6 +531,8 @@ export function PublishedRoutesPage() {
           initial={editing}
           latest={query.data?.find(route => route.id === editing.id)}
           isNew={isNew}
+          pendingCreate={isNew ? pendingCreate : null}
+          onPendingCreate={setPendingCreate}
           inventory={infrastructure.data}
           onClose={() => setEditing(null)}
           onSaved={(value) =>
@@ -616,6 +652,8 @@ function PublicRouteEditor({
   initial,
   latest,
   isNew,
+  pendingCreate,
+  onPendingCreate,
   inventory,
   onClose,
   onSaved,
@@ -623,6 +661,8 @@ function PublicRouteEditor({
   initial: PublishedRoute;
   latest?: PublishedRoute;
   isNew: boolean;
+  pendingCreate: PublishedRoute | null;
+  onPendingCreate: (route: PublishedRoute | null) => void;
   inventory: Infrastructure;
   onClose: () => void;
   onSaved: (route: PublishedRoute) => boolean;
@@ -661,7 +701,8 @@ function PublicRouteEditor({
     draft.endpointIds.some((id) => pendingEndpoints[id]) ||
     pendingEndpoints[addKey];
   useUnsavedChanges(
-    dirty || selectionPending,
+    dirty || selectionPending || !!pendingCreate,
+    pendingCreate ? "线路保存结果尚未确认。离开不会撤销已提交的保存；再次创建前请先核对线路列表。" : undefined,
   );
   const [preview, setPreview] = useState<PublishedRoute | null>(null);
   const [checkedBefore, setCheckedBefore] = useState(false);
@@ -692,6 +733,12 @@ function PublicRouteEditor({
   };
   const nameInput = useRef<HTMLInputElement>(null);
   const [readingLatest, setReadingLatest] = useState(false);
+  const [recoveringCreate, setRecoveringCreate] = useState(false);
+  const [createRecovery, setCreateRecovery] = useState<"unknown" | "absent" | "different">("unknown");
+  const [createRecoveryError, setCreateRecoveryError] = useState<string>();
+  const [conflictingCreate, setConflictingCreate] = useState<PublishedRoute | null>(null);
+  const recoveryAttempt = useRef(0);
+  const retryLease = useRef<(() => boolean) | null>(null);
   const [comparisonError, setComparisonError] = useState<string>();
   const [comparison, setComparison] = useState<{
     latest: ReviewedPublicRoute;
@@ -709,6 +756,11 @@ function PublicRouteEditor({
     mounted.current = true;
     const changed = () => {
       viewEpoch.current++;
+      recoveryAttempt.current++;
+      retryLease.current = null;
+      setRecoveringCreate(false);
+      setCreateRecovery("unknown");
+      setCreateRecoveryError(undefined);
       // A same-line view entry does not edit the checked draft. Preserve its
       // preview for a fresh explicit save, but revoke old recovery tasks.
       // Outstanding inspections/completions remain fenced by their view lease.
@@ -793,6 +845,7 @@ function PublicRouteEditor({
     };
   };
   const update = (patch: Partial<PublishedRoute>) => {
+    if (pendingCreate) return;
     if (patch.publicPort !== undefined) {
       setPublicPort(patch.publicPort);
       setPortReset(value => value + 1);
@@ -832,25 +885,79 @@ function PublicRouteEditor({
       submitting.current = false;
       invalidateOutputInputs(client);
     },
-    // Carry the originating view completion through the request; options may rerender.
-    mutationFn: (_complete: typeof onSaved) =>
-      withTLSFailureOwner(() =>
-        saveRecord<PublishedRoute>(
-          "published-routes",
-          { ...payload(), revisionToken: baseline.revisionToken },
-          isNew,
-        ),
-      ),
-    onSuccess: (value, complete) => {
-      // The save is a committed account fact even if its originating view has left.
+    // Carry the originating view completion and exact submitted identity through
+    // the request. A replay is create-only, never an update to an existing row.
+    mutationFn: async ({ complete: _complete, retry = false }: { complete: typeof onSaved; retry?: boolean }) => {
+      if (!isNew) return withTLSFailureOwner(() => saveRecord<PublishedRoute>(
+        "published-routes", { ...payload(), revisionToken: baseline.revisionToken }, false,
+      ));
+      const submitted: PublishedRoute = retry && pendingCreate ? pendingCreate : {
+        ...payload(), status: "draft", diagnostics: [],
+      };
+      if (isNew) {
+        onPendingCreate(submitted);
+        setCreateRecovery("unknown");
+        retryLease.current = null;
+        setCreateRecoveryError(undefined);
+      }
+      try {
+        const value = await withTLSFailureOwner(() => saveRecord<PublishedRoute>(
+          "published-routes", { ...publicRouteFields(submitted),
+            ...(isNew && submitted.hops?.length ? { hops: submitted.hops } : {}),
+            revisionToken: baseline.revisionToken }, isNew,
+        ));
+        if (isNew && !matchingCreatedRoute(value, submitted))
+          throw new Error("无法确认返回的线路身份与保存内容。");
+        return isNew ? reviewedCreatedRoute(value, submitted.id)! : value;
+      } catch (error) {
+        // These first-attempt refusals precede persistence. A refusal of a retry
+        // says nothing about whether its earlier, unknown attempt committed.
+        if (isNew && !retry && error instanceof APIError && error.details !== null && typeof error.details === "object" && [401, 403, 409, 422].includes(error.status))
+          onPendingCreate(null);
+        throw error;
+      }
+    },
+    onSuccess: (value, { complete }) => {
       client.invalidateQueries({ queryKey: ["published-routes"] });
-      client.invalidateQueries({
-        queryKey: ["published-route-resolve", draft.id],
-      });
-      complete(value);
+      client.invalidateQueries({ queryKey: ["published-route-resolve", draft.id] });
+      if (complete(value) && isNew) onPendingCreate(null);
     },
   });
-  const conflicted = save.error instanceof APIError && save.error.status === 409;
+  const recoverCreate = async () => {
+    if (!pendingCreate || save.isPending || recoveringCreate) return;
+    const submitted = pendingCreate;
+    const sequence = ++recoveryAttempt.current;
+    const currentView = ownView();
+    const stillCurrent = () => currentView() && sequence === recoveryAttempt.current;
+    setRecoveringCreate(true);
+    setCreateRecovery("unknown");
+    retryLease.current = null;
+    setCreateRecoveryError(undefined);
+    try {
+      const value = await request<unknown>(`/published-routes/${encodeURIComponent(submitted.id)}/resolve`);
+      if (!stillCurrent()) return;
+      const reviewed = reviewedCreatedRoute(value, submitted.id);
+      if (!reviewed) {
+        setCreateRecoveryError("无法确认返回的线路身份与内容，请重新核对。");
+      } else if (!matchingCreatedRoute(reviewed, submitted)) {
+        setCreateRecovery("different");
+        setConflictingCreate(reviewed);
+      } else {
+        client.invalidateQueries({ queryKey: ["published-routes"] });
+        client.invalidateQueries({ queryKey: ["published-route-resolve", submitted.id] });
+        if (onSaved(reviewed)) onPendingCreate(null);
+      }
+    } catch (error) {
+      if (!stillCurrent()) return;
+      if (error instanceof APIError && error.status === 404) {
+        setCreateRecovery("absent");
+        retryLease.current = stillCurrent;
+      } else setCreateRecoveryError("暂时无法核对保存结果。已提交的线路内容保留，请稍后重试核对。");
+    } finally {
+      if (stillCurrent()) setRecoveringCreate(false);
+    }
+  };
+  const conflicted = !pendingCreate && save.error instanceof APIError && save.error.status === 409;
   const readLatest = async () => {
     if (isNew || !conflicted || readingLatest || save.isPending || selectionPending) return;
     const sequence = ++comparisonAttempt.current;
@@ -931,6 +1038,7 @@ function PublicRouteEditor({
   };
   const close = () => {
     if (save.isPending) return;
+    if (pendingCreate) return onClose();
     if (comparison || tlsTask) return;
     if (!selectionPending && !dirty) {
       invalidateComparison();
@@ -981,11 +1089,11 @@ function PublicRouteEditor({
     >
       {mixedEditingBlocked && <Notice tone="warning" title={mixedPathEditingReason} />}
       {newPathError && <Notice tone="warning" title={newPathError} />}
-      {sourceChanged && <Notice tone="warning" title="转发路径已变化，请重新核对完整链路。">
+      {sourceChanged && (!pendingCreate || save.isPending) && <Notice tone="warning" title="转发路径已变化，请重新核对完整链路。">
         <ActionButton variant="outline" disabled={save.isPending} onClick={() => chooseDeployment(draft.deploymentId, true)}>重新载入所选路径</ActionButton>
       </Notice>}
       <ErrorNotice
-        error={error}
+        error={pendingCreate ? null : error}
         presentation={
           isPublicTLSRefusal(error)
             ? {
@@ -997,7 +1105,7 @@ function PublicRouteEditor({
             : undefined
         }
       />
-      {isPublicTLSRefusal(error) && <ActionButton
+      {!pendingCreate && isPublicTLSRefusal(error) && <ActionButton
         ref={tlsRepairTrigger}
         variant="outline"
         disabled={save.isPending || inspect.isPending || selectionPending || discardConfirming}
@@ -1049,6 +1157,47 @@ function PublicRouteEditor({
         />
       )}
       {comparisonError && <Notice tone="warning" title={comparisonError} />}
+      {pendingCreate && !save.isPending && <Notice tone="warning" title="线路保存结果尚未确认">
+        <p>{createRecovery === "different"
+          ? "此身份已有不同的线路内容。无法据此确认先前保存结果；当前提交内容已保留，不会覆盖已有线路。"
+          : createRecovery === "absent"
+            ? "当前尚未找到此线路，先前请求仍可能完成。可以继续核对，或明确重试同一份内容；重试不会覆盖已有线路。"
+            : "先核对已提交的线路，再决定下一步。核对不会重新保存或应用服务器配置。"}</p>
+        {createRecovery === "different" && conflictingCreate && <div className="mt-2 space-y-2">
+          <p>已提交：{pendingCreate.name}，{pendingCreate.publicHost}:{pendingCreate.publicPort}</p>
+          <p>当前保存：{conflictingCreate.name}，{conflictingCreate.publicHost}:{conflictingCreate.publicPort}</p>
+          <details><summary>查看线路身份与路径</summary>
+            <p>线路 ID：{pendingCreate.id}</p>
+            <p>已提交路径：{pendingCreate.deploymentId}，{createdRoutePath(pendingCreate)}</p>
+            <p>当前保存路径：{conflictingCreate.deploymentId}，{createdRoutePath(conflictingCreate)}</p>
+          </details>
+        </div>}
+        {createRecoveryError && <p>{createRecoveryError}</p>}
+        <div className="mt-3 flex flex-wrap gap-2">
+          <ActionButton variant="outline" pending={recoveringCreate} onClick={() => void recoverCreate()}>核对保存结果</ActionButton>
+          <ActionButton variant="ghost" disabled={recoveringCreate} onClick={() => confirmDiscard({
+            title: `结束「${pendingCreate.name}」的保存核对？`,
+            description: "这只会放弃本页保留的提交内容，不会撤销已经提交或保存的线路。再次创建前请先核对线路列表。",
+            confirmLabel: "结束核对并返回",
+            cancelLabel: "继续核对",
+          }, async stillCurrent => {
+            const currentView = ownView();
+            await client.invalidateQueries({ queryKey: ["published-routes"] });
+            if (!stillCurrent() || !currentView()) return;
+            recoveryAttempt.current++;
+            retryLease.current = null;
+            onPendingCreate(null);
+            setDiscardClosing(true);
+          })}>结束本次核对…</ActionButton>
+          {createRecovery === "absent" && <ActionButton variant="outline" onKeyDown={event => { if (event.repeat) event.preventDefault(); }} onClick={event => {
+            if (event.detail > 1 || submitting.current || !retryLease.current?.()) return;
+            submitting.current = true;
+            retryLease.current = null;
+            save.mutate({ complete: onSaved, retry: true });
+          }}>重试保存同一线路</ActionButton>}
+        </div>
+      </Notice>}
+      {!pendingCreate && <>
       <Notice
         tone="info"
         title={
@@ -1059,7 +1208,8 @@ function PublicRouteEditor({
               : "先检查线路，再核对结果并保存；用户授权与服务器配置应用需分别确认。"
         }
       />
-      <div inert={save.isPending} className="space-y-5">
+      </>}
+      <div inert={save.isPending || !!pendingCreate} className="space-y-5">
         <label className="standalone-label grid gap-2 text-sm font-medium">
           线路名称
           <Input
@@ -1273,9 +1423,9 @@ function PublicRouteEditor({
           onClick={close}
           variant="outline"
         >
-          取消
+          {pendingCreate ? "稍后核对" : "取消"}
         </ActionButton>
-        <ActionButton
+        {!pendingCreate && <ActionButton
           ref={inspectTrigger}
           pending={inspect.isPending}
           keepFocusableWhilePending
@@ -1293,8 +1443,8 @@ function PublicRouteEditor({
           variant={preview ? "outline" : "default"}
         >
           检查公开线路
-        </ActionButton>
-        {preview && (
+        </ActionButton>}
+        {preview && !pendingCreate && (
           <ActionButton
             aria-label="保存公开线路"
             disabled={
@@ -1310,7 +1460,7 @@ function PublicRouteEditor({
               if (event.detail > 1 || submitting.current || conflicted || comparison || tlsTask || mixedRouteKnown() ||
                 previewVersion.current !== version.current || !preview || preview.diagnostics?.length || selectionPending) return;
               submitting.current = true;
-              save.mutate(onSaved);
+              save.mutate({ complete: onSaved });
             }}
             variant="default"
           >

@@ -63,7 +63,7 @@ function setup(route = mixed, extra?: (call: Call) => Response | undefined | Pro
     if (call.path.endsWith("/preview")) return json({ ...route, ...call.body });
     if (call.method === "PUT") return json({ ...route, ...call.body });
     if (call.path.endsWith("/resolve")) return json(route);
-    if (call.path.endsWith("/published-routes") && call.method === "POST") return json({ ...call.body, status: "draft", diagnostics: [] });
+    if (call.path.endsWith("/published-routes") && call.method === "POST") return json({ ...call.body, revisionToken: "created-revision", status: "draft", diagnostics: [] });
     if (call.path.endsWith("/published-routes")) return json([route]);
     if (call.path.endsWith("/server-deployments")) return json([deployment]);
     if (call.path.endsWith("/managed-endpoints")) return json(endpoints);
@@ -122,6 +122,7 @@ it("previews and explicitly creates the complete mixed chain without managed-onl
   await waitFor(() => expect(calls.filter(call => call.method === "POST" && call.path.endsWith("/published-routes"))).toHaveLength(1));
   expect(calls.find(call => call.method === "POST" && call.path.endsWith("/published-routes"))?.body).toEqual(preview?.body);
   expect(calls.some(call => /sources|subscriptions|import/.test(call.path))).toBe(false);
+  await screen.findByText("线路已保存", { exact: true });
 });
 
 it("blocks stale mixed-source confirmation and requires explicit reload without losing name or address", async () => {
@@ -223,8 +224,38 @@ it("does not reload a replacement source while the preceding save remains in fli
   expect(reload.hasAttribute("disabled")).toBe(true);
   fireEvent.click(reload);
   expect(editor.getByLabelText("公开线路转发路径").textContent).toBe("entry → 外部代理 relay → exit → alternate");
-  await act(async () => finishSave(json({ error: "Save was not committed" }, 503)));
+  await act(async () => finishSave(json({ error: "Path validation refused the save" }, 422)));
   await waitFor(() => expect(editor.getByRole("button", { name: "重新载入所选路径" }).hasAttribute("disabled")).toBe(false));
   await user.click(editor.getByRole("button", { name: "重新载入所选路径" }));
   expect(editor.getByLabelText("公开线路转发路径").textContent).toContain("外部代理 relay-two");
+});
+
+it("preserves every ordered connector hop in an explicitly retried uncertain creation", async () => {
+  let submitted: Record<string, unknown> | undefined;
+  let posts = 0;
+  const { user, calls } = setup(legacy, call => {
+    if (call.method === "POST" && call.path === "/api/published-routes") {
+      posts++;
+      submitted = call.body;
+      return posts === 1 ? json({ error: "Lost save response" }, 503)
+        : json({ ...submitted, revisionToken: "created-revision", status: "draft", diagnostics: [] });
+    }
+    if (call.path.endsWith("/resolve")) return json({ error: "not found" }, 404);
+  });
+  const editor = await create(user);
+  await user.click(editor.getByRole("button", { name: "检查公开线路" }));
+  await user.click(await editor.findByRole("button", { name: "保存公开线路" }));
+  await user.click(await editor.findByRole("button", { name: "核对保存结果" }));
+  await user.click(await editor.findByRole("button", { name: "重试保存同一线路" }));
+  await screen.findByText("线路已保存", { exact: true });
+  const writes = calls.filter(call => call.method === "POST" && call.path === "/api/published-routes");
+  expect(writes).toHaveLength(2);
+  expect(writes[1].body).toEqual(writes[0].body);
+  expect(writes[1].body?.hops).toEqual([
+    { kind: "managed", endpointId: "entry" },
+    { kind: "connector", connectorId: "relay" },
+    { kind: "managed", endpointId: "exit" },
+    { kind: "managed", endpointId: "alternate" },
+  ]);
+  expect(calls.some(call => call.method === "PUT")).toBe(false);
 });
