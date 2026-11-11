@@ -107,6 +107,87 @@ export async function request<T>(
 ): Promise<T> {
   return readResponse<T>(await send(path, init));
 }
+export type InvitationDraft = {
+  name: string;
+  role: string;
+  expiresInHours?: number;
+};
+export type InvitationReceipt = {
+  id: string;
+  token: string;
+  name: string;
+  role: string;
+  expiresAt: string;
+};
+export class InvitationCreationError extends Error {
+  constructor(
+    message: string,
+    public outcome: "rejected" | "unknown",
+  ) {
+    super(message);
+  }
+}
+/** No invitation read-back or idempotent retry exists: a lost receipt is unknown. */
+export async function createInvitation(
+  draft: InvitationDraft,
+): Promise<InvitationReceipt> {
+  try {
+    sessionTransport?.beforeRequest().beforeSend();
+  } catch (error) {
+    throw new InvitationCreationError(
+      error instanceof Error ? error.message : "本次邀请未发送。",
+      "rejected",
+    );
+  }
+  let response: Response;
+  try {
+    response = await send("/invites", {
+      method: "POST",
+      body: JSON.stringify(draft),
+    });
+  } catch {
+    throw new InvitationCreationError("邀请创建结果尚未确认", "unknown");
+  }
+  let value: unknown;
+  try {
+    value = await readResponse<unknown>(response);
+  } catch (error) {
+    // Only a server rejection is definite. Session guards can also throw 409
+    // after dispatch, so classify by the actual HTTP response, not error status.
+    if ([400, 401, 403, 404, 405, 413, 429].includes(response.status))
+      throw new InvitationCreationError(
+        error instanceof Error ? error.message : "邀请未创建。",
+        "rejected",
+      );
+    throw new InvitationCreationError("邀请创建结果尚未确认", "unknown");
+  }
+  // Treat identifiers as opaque; the UI URL-encodes the confirmed token.
+  const receipt = value as Partial<InvitationReceipt> | null;
+  if (
+    response.status !== 201 ||
+    !receipt ||
+    typeof receipt !== "object" ||
+    typeof receipt.id !== "string" ||
+    !receipt.id.trim() ||
+    typeof receipt.token !== "string" ||
+    !receipt.token.trim() ||
+    receipt.name !== draft.name ||
+    receipt.role !== draft.role ||
+    typeof receipt.expiresAt !== "string" ||
+    !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|[+-]\d{2}:\d{2})$/.test(
+      receipt.expiresAt,
+    ) ||
+    !Number.isFinite(Date.parse(receipt.expiresAt))
+  )
+    throw new InvitationCreationError("邀请创建结果尚未确认", "unknown");
+  try {
+    encodeURIComponent(receipt.token);
+  } catch {
+    throw new InvitationCreationError("邀请创建结果尚未确认", "unknown");
+  }
+  return receipt as InvitationReceipt;
+}
+
 export async function requestFile(path: string, value: unknown): Promise<Blob> {
   const response = await send(path, {
     method: "POST",

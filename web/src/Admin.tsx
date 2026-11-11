@@ -61,6 +61,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Connection as FlowConnection, MarkerType } from "@xyflow/react";
 import { RouteGraph } from "./route-graph";
 import {
+  createInvitation,
+  InvitationCreationError,
+  type InvitationReceipt,
   deleteRecord,
   list,
   loadState,
@@ -1702,6 +1705,9 @@ const inviteDefaults = { name: "", role: "user", expiresInHours: "72" };
 function InviteUser({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [form] = useForm();
   const [dirty, setDirty] = useState(false);
+  const [uncertain, setUncertain] = useState(false);
+  const departureWarning =
+    "邀请可能已经创建。离开不会撤销邀请，也无法找回本次未收到的链接。";
   const active = useRef(open);
   const submitting = useRef(false);
   useLayoutEffect(() => {
@@ -1711,52 +1717,62 @@ function InviteUser({ open, onClose }: { open: boolean; onClose: () => void }) {
     };
   }, [open]);
   const { confirm, confirming } = useDiscardConfirmation("invite");
-  const [result, setResult] = useState<{
-    token?: string;
-    url?: string;
-    expiresAt?: string;
-    name: string;
-    role: string;
-  } | null>(null);
+  const [result, setResult] = useState<InvitationReceipt | null>(null);
   const mutation = useMutation({
-    mutationFn: (values: {
+    gcTime: 0,
+    mutationFn: async (values: {
       name: string;
       role: string;
       expiresInHours: string;
     }) => {
       // Validate raw decimal intent at the request boundary as well as the field.
-      const expiry = values.expiresInHours === ""
-        ? undefined
-        : exactDraftInteger(values.expiresInHours, 168);
+      const expiry =
+        values.expiresInHours === ""
+          ? undefined
+          : exactDraftInteger(values.expiresInHours, 168);
       if (values.expiresInHours !== "" && expiry === undefined)
         throw new Error("有效时长为 1–168 整数小时");
-      return post<{ token?: string; url?: string; expiresAt?: string }>(
-        "/invites",
-        { ...values, expiresInHours: expiry },
-      );
+      const receipt = await createInvitation({ ...values, expiresInHours: expiry });
+      if (active.current) setResult(receipt);
+      // The shared mutation cache must not retain the invitation secret.
+    },
+    onError: (error) => {
+      if (
+        active.current &&
+        error instanceof InvitationCreationError &&
+        error.outcome === "unknown"
+      )
+        setUncertain(true);
     },
     onSettled: () => {
       submitting.current = false;
     },
-    onSuccess: (value, submitted) => {
+    onSuccess: () => {
       if (!active.current) return;
       setDirty(false);
-      setResult({ ...value, name: submitted.name, role: submitted.role });
     },
   });
-  useUnsavedChanges(open && ((!result && dirty) || mutation.isPending));
+  useUnsavedChanges(
+    open && ((!result && (dirty || uncertain)) || mutation.isPending),
+    uncertain || mutation.isPending ? departureWarning : undefined,
+  );
   const close = () => {
     if (submitting.current || mutation.isPending || confirming) return;
     const finish = () => {
-      if (active.current) onClose();
+      if (!active.current) return;
+      setResult(null);
+      mutation.reset();
+      onClose();
     };
-    if (!dirty || result) return finish();
+    if ((!dirty && !uncertain) || result) return finish();
     confirm(
       {
-        title: "放弃未生成的邀请？",
-        description: "当前受邀人、角色与有效时长尚未提交。",
-        confirmLabel: "放弃修改",
-        cancelLabel: "继续编辑",
+        title: uncertain ? "离开结果未确认的邀请？" : "放弃邀请草稿？",
+        description: uncertain
+          ? departureWarning
+          : "离开会清除当前受邀人、角色与有效时长。",
+        confirmLabel: uncertain ? "离开邀请" : "放弃修改",
+        cancelLabel: uncertain ? "保留当前结果" : "继续编辑",
         contentProps: { onFocusCapture: revealFocusedModalAction },
       },
       finish,
@@ -1786,10 +1802,7 @@ function InviteUser({ open, onClose }: { open: boolean; onClose: () => void }) {
             邀请链接
             <Input
               readOnly
-              value={
-                result.url ||
-                `${location.origin}/?invite=${encodeURIComponent(result.token || "")}`
-              }
+              value={`${location.origin}/?invite=${encodeURIComponent(result.token)}`}
               onFocus={(e) => e.target.select()}
             />
           </label>
@@ -1797,11 +1810,11 @@ function InviteUser({ open, onClose }: { open: boolean; onClose: () => void }) {
             有效期至 {dateLabel(result.expiresAt)}，请通过安全方式交给受邀人。
           </p>
         </>
-      ) : (
+      ) : open ? (
         <AppForm
           form={form}
           initialValues={inviteDefaults}
-          disabled={mutation.isPending}
+          disabled={mutation.isPending || uncertain || confirming}
           onValuesChange={(_changed, values) =>
             setDirty(
               Object.entries(inviteDefaults).some(
@@ -1814,14 +1827,21 @@ function InviteUser({ open, onClose }: { open: boolean; onClose: () => void }) {
               !active.current ||
               submitting.current ||
               mutation.isPending ||
-              confirming
+              confirming ||
+              uncertain
             )
               return;
             submitting.current = true;
             mutation.mutate(structuredClone(values));
           }}
         >
-          <ErrorNotice error={mutation.error} />
+          {uncertain ? (
+            <Notice tone="warning" title="邀请创建结果尚未确认">
+              邀请可能已经创建，但未收到可用链接。再次生成会创建另一份邀请，不会撤销上一次邀请。
+            </Notice>
+          ) : (
+            <ErrorNotice error={mutation.error} />
+          )}
           <AppField name="name" label="受邀人名称" rules={[{ required: true }]}>
             <Input />
           </AppField>
@@ -1862,16 +1882,43 @@ function InviteUser({ open, onClose }: { open: boolean; onClose: () => void }) {
             >
               取消
             </ActionButton>
-            <ActionButton
-              type="submit"
-              pending={mutation.isPending}
-              variant="default"
-            >
-              生成邀请
-            </ActionButton>
+            {uncertain ? (
+              <ActionButton
+                disabled={confirming}
+                onClick={() =>
+                  confirm(
+                    {
+                      title: "准备另一份邀请？",
+                      description:
+                        "上一次邀请可能已经创建。继续后可编辑并生成另一份邀请，不会撤销上一次邀请。",
+                      confirmLabel: "准备另一份邀请",
+                      cancelLabel: "保留当前结果",
+                      contentProps: {
+                        onFocusCapture: revealFocusedModalAction,
+                      },
+                    },
+                    () => {
+                      if (!active.current) return;
+                      setUncertain(false);
+                      mutation.reset();
+                    },
+                  )
+                }
+              >
+                准备另一份邀请
+              </ActionButton>
+            ) : (
+              <ActionButton
+                type="submit"
+                pending={mutation.isPending}
+                variant="default"
+              >
+                生成邀请
+              </ActionButton>
+            )}
           </div>
         </AppForm>
-      )}
+      ) : null}
     </TaskDialog>
   );
 }

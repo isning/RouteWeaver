@@ -63,7 +63,7 @@ function mount() {
       </UIProviders>
     </QueryClientProvider>,
   );
-  return { requests, responses, view };
+  return { requests, responses, view, client };
 }
 async function open() {
   await userEvent.click(
@@ -93,16 +93,23 @@ it("keeps one pending invite bound to its recipient and starts the next invitati
   await act(async () =>
     state.responses[0](
       json({
-        url: "https://example.invalid/?invite=alice-token",
+        id: "iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii", token: "ttttttttttttttttttttttttttttttttttttttttttt", name: "Alice", role: "user",
         expiresAt: "2026-11-01T00:00:00Z",
-      }),
+      }, 201),
     ),
   );
-  await screen.findByLabelText("邀请链接");
+  const link = await screen.findByLabelText("邀请链接") as HTMLInputElement;
+  expect(link.value === `${location.origin}/?invite=${"t".repeat(43)}`).toBe(true);
+  // This AdminPage seam owns the actual client used by InviteUser. The outer
+  // client in App-based tests is not the private workspace's mutation cache.
+  await waitFor(() => expect(state.client.getMutationCache().getAll().map((entry) => ({
+    status: entry.state.status, hasData: entry.state.data !== undefined,
+  }))).toEqual([{ status: "success", hasData: false }]));
   expect(within(dialog).getByText("Alice")).toBeTruthy();
   expect(within(dialog).getByText("普通用户")).toBeTruthy();
   expect(hasUnsavedChanges()).toBe(false);
   await user.click(within(dialog).getByRole("button", { name: "关闭" }));
+  await waitFor(() => expect(state.client.getMutationCache().getAll()).toHaveLength(0));
   const next = await open();
   expect(within(next).queryByLabelText("邀请链接")).toBeNull();
   expect(
@@ -122,7 +129,7 @@ it("retains a rejected invitation draft and requires explicit discard before cle
   await user.click(within(dialog).getByRole("button", { name: "生成邀请" }));
   await waitFor(() => expect(state.requests).toHaveLength(1));
   await act(async () =>
-    state.responses[0](json({ error: "邀请未能创建" }, 503)),
+    state.responses[0](json({ error: "邀请未能创建" }, 400)),
   );
   await screen.findByText("邀请未能创建");
   expect(
@@ -160,7 +167,7 @@ it("retains a rejected invitation draft and requires explicit discard before cle
   ).toContain("普通用户");
 });
 
-it.each([200, 503])(
+it.each([201, 503])(
   "does not deliver an old invitation outcome (%s) into a replacement page task",
   async (status) => {
     const first = mount();
@@ -181,8 +188,8 @@ it.each([200, 503])(
     await act(async () =>
       first.responses[0](
         json(
-          status === 200
-            ? { url: "https://example.invalid/?invite=alice-token" }
+          status === 201
+            ? { id: "synthetic-id", token: "synthetic-token", name: "Alice", role: "user", expiresAt: "2027-01-01T00:00:00Z" }
             : { error: "Alice request failed" },
           status,
         ),
