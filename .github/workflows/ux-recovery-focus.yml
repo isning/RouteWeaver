@@ -21,7 +21,7 @@ env:
 
 jobs:
   recovery:
-    name: Twenty-five recovery specs (supplemental evidence only)
+    name: Twenty-six recovery specs (supplemental evidence only)
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
@@ -81,7 +81,7 @@ jobs:
             await browser.close();
           }
           JS
-      - name: Run twenty-five recovery specs with unchanged fixtures
+      - name: Run twenty-six recovery specs with unchanged fixtures
         working-directory: web
         # Bound this subset without changing per-test timeouts; reserve cleanup/upload time.
         timeout-minutes: 10
@@ -94,6 +94,25 @@ jobs:
           # Only the synthetic report, browser receipt and named test captures.
           # No databases, fixture keys, automatic screenshots, video or traces.
           path: |
+            web/test-results/service-count-draft*/service-count-raw-input.png
+            web/test-results/service-count-draft*/service-count-raw-input.json
+            web/test-results/service-count-draft*/service-count-visible-blocked.png
+            web/test-results/service-count-draft*/service-count-visible-blocked.json
+            web/test-results/service-count-draft*/service-count-collapsed-draft.png
+            web/test-results/service-count-draft*/service-count-collapsed-draft.json
+            web/test-results/service-count-draft*/service-count-collapsed-blocked.png
+            web/test-results/service-count-draft*/service-count-collapsed-blocked.json
+            web/test-results/service-count-draft*/service-count-discard-decision.png
+            web/test-results/service-count-draft*/service-count-discard-decision.json
+            web/test-results/service-count-draft*/service-count-continued-draft.png
+            web/test-results/service-count-draft*/service-count-continued-draft.json
+            web/test-results/service-count-draft*/service-count-corrected-remount.png
+            web/test-results/service-count-draft*/service-count-corrected-remount.json
+            web/test-results/service-count-draft*/service-count-preview-review.png
+            web/test-results/service-count-draft*/service-count-preview-review.json
+            web/test-results/service-count-draft*/service-count-final-original.png
+            web/test-results/service-count-draft*/service-count-final-original.json
+            web/test-results/service-count-draft*/service-count-request-ledger.json
             web/test-results/service-rate-draft*/service-rate-raw-input.png
             web/test-results/service-rate-draft*/service-rate-raw-input.json
             web/test-results/service-rate-draft*/service-rate-collapsed-draft.png

@@ -5,6 +5,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 SPECS = {
+    'service-count-draft',
     'service-rate-draft',
     'admin-policy-inventory-recovery',
     'announcement-list-recovery',
@@ -52,7 +53,11 @@ INITIAL_RESOURCE_PHASES = ('retry-keyboard', 'retry-pending', 'repeated-error', 
 ANNOUNCEMENT_PHASES = ('initial-unknown', 'refresh-pending', 'cached-error', 'retry-keyboard', 'retry-pending', 'recovered', 'fresh-edit', 'newer-create-pending', 'newer-create-owned', 'final-original')
 POLICY_INVENTORY_PHASES = ('cached-error', 'retry-keyboard', 'retry-pending', 'recovered', 'guarded-editor', 'newer-draft-pending', 'newer-draft-owned', 'final-original')
 SERVICE_RATE_PHASES = ('raw-input', 'collapsed-draft', 'blocked-preview', 'discard-decision', 'continued-draft', 'corrected-remount', 'preview-review', 'final-original')
+SERVICE_COUNT_PHASES = ('raw-input', 'visible-blocked', 'collapsed-draft', 'collapsed-blocked', 'discard-decision', 'continued-draft', 'corrected-remount', 'preview-review', 'final-original')
 ARTIFACTS = {
+    *{f'web/test-results/service-count-draft*/service-count-{phase}.{ext}'
+      for phase in SERVICE_COUNT_PHASES for ext in ('png', 'json')},
+    'web/test-results/service-count-draft*/service-count-request-ledger.json',
     *{f'web/test-results/service-rate-draft*/service-rate-{phase}.{ext}'
       for phase in SERVICE_RATE_PHASES for ext in ('png', 'json')},
     'web/test-results/service-rate-draft*/service-rate-request-ledger.json',
@@ -130,8 +135,8 @@ class UXRecoveryWorkflowTests(unittest.TestCase):
         for value in ('group: ux-recovery-${{ github.ref }}', 'cancel-in-progress: false',
                       'contents: read', 'persist-credentials: false', 'runs-on: ubuntu-24.04',
                       'timeout-minutes: 15', 'timeout-minutes: 10',
-                      'name: Twenty-five recovery specs (supplemental evidence only)',
-                      'name: Run twenty-five recovery specs with unchanged fixtures',
+                      'name: Twenty-six recovery specs (supplemental evidence only)',
+                      'name: Run twenty-six recovery specs with unchanged fixtures',
                       'ROUTEWEAVER_CHROMIUM: /opt/google/chrome/chrome',
                       'npx --no-install playwright install-deps chromium',
                       '--config=playwright.ux-recovery.config.ts --workers=1 --retries=0'):
@@ -245,6 +250,16 @@ class UXRecoveryWorkflowTests(unittest.TestCase):
         for filename in ('request-ledger.json', 'service-rate-private.json',
                          'service-rate-preview-review-private.png', 'service-rate-request-ledger.png'):
             self.assertFalse(retained(f'web/test-results/service-rate-draft.ui-abcde-chromium/{filename}'))
+        count_outputs = tuple(f'service-count-{phase}.{ext}' for phase in SERVICE_COUNT_PHASES
+                             for ext in ('png', 'json')) + ('service-count-request-ledger.json',)
+        # Representative short/truncated names; native execution remains pending.
+        for width in (1440, 390):
+            for scenario in ('ip-minus', 'connection-exponent'):
+                observed[f'service-count-draft.ui-count-{scenario}-at-{width}px-chromium'] = count_outputs
+                observed[f'service-count-draft.ui-abcde-{scenario}-at-{width}px-chromium'] = count_outputs
+        for filename in ('request-ledger.json', 'service-count-private.json',
+                         'service-count-preview-review-private.png', 'service-count-request-ledger.png'):
+            self.assertFalse(retained(f'web/test-results/service-count-draft.ui-abcde-chromium/{filename}'))
         for directory, filenames in observed.items():
             for filename in filenames:
                 path = f'web/test-results/{directory}/{filename}'
@@ -276,7 +291,7 @@ class UXRecoveryWorkflowTests(unittest.TestCase):
             self.assertFalse(retained(f'web/test-results/announcement-list-recovery.ui-chromium/{filename}'))
 
         # A named compact capture is not an upload permission for another fixture.
-        for filename in compact_outputs + multi_outputs + inventory_outputs + group_priority_outputs + reset_outputs + target_outputs + users_outputs + initial_resource_outputs + announcement_outputs + policy_outputs + rate_outputs:
+        for filename in compact_outputs + multi_outputs + inventory_outputs + group_priority_outputs + reset_outputs + target_outputs + users_outputs + initial_resource_outputs + announcement_outputs + policy_outputs + rate_outputs + count_outputs:
             path = f'web/test-results/unrelated.ui-chromium/{filename}'
             with self.subTest(path=path):
                 self.assertFalse(retained(path), path)
