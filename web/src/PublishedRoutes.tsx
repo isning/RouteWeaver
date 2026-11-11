@@ -54,6 +54,27 @@ import { WorkspaceHistoryContext } from "./SubscriptionContext";
 import { PublicRouteTLSRepair, type PublicRouteTLSRepairTarget } from "./PublicRouteTLSRepair";
 import { WORKSPACE_NAVIGATION_EVENT } from "./workspace-history";
 import { PublicRouteEditComparison, publicRouteFields, reviewedPublicRoute, type ReviewedPublicRoute } from "./PublicRouteEditComparison";
+// Names are not account identities. Keep ambiguous selections identifiable in
+// both the open choices and their collapsed selected value.
+function routeUserChoices(users: { id: string; name: string }[]) {
+  const identities = new Map<string, Set<string>>();
+  for (const user of users) {
+    const label = user.name || user.id;
+    const ids = identities.get(label) ?? new Set<string>();
+    ids.add(user.id);
+    identities.set(label, ids);
+  }
+  return users.map(user => {
+    const label = user.name || user.id;
+    const duplicate = identities.get(label)!.size > 1;
+    return {
+      value: user.id,
+      label: duplicate ? <span>{label}<span className="block text-xs text-muted-foreground [overflow-wrap:anywhere]">账号标识：<code>{user.id}</code></span></span> : label,
+      "aria-label": duplicate ? `${label}，账号标识：${user.id}` : label,
+      searchText: `${label} ${user.id}`,
+    };
+  });
+}
 interface RoutePathSummary {
   hops: {
     kind?: "managed" | "connector";
@@ -1690,10 +1711,7 @@ function PrincipalEditor({
             >
               <ChoiceSelect
                 disabled={!!initialUserId}
-                options={(users.data?.users || []).map((u) => ({
-                  value: u.id,
-                  label: u.name,
-                }))}
+                options={routeUserChoices(users.data?.users || [])}
               />
             </AppField>
             </QueryState>
@@ -2028,10 +2046,7 @@ function PublicRouteDetail({
                 onValueChange={(value) => {
                   if (value !== undefined) chooseUser(value);
                 }}
-                options={(state.data?.users || []).map((item) => ({
-                  value: item.id,
-                  label: item.name,
-                }))}
+                options={routeUserChoices(state.data?.users || [])}
               />
             </label>
             {!state.isLoading && !state.error && !state.data?.users.length && (

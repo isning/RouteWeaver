@@ -815,3 +815,34 @@ it("keeps the newly selected user's draft when an earlier catalog read finishes"
   expect(requests.some((request) => request.path === "/api/access-policy/edit-context/entitlement/bob")).toBe(true);
   expect(requests.every((request) => request.method === "GET")).toBe(true);
 });
+
+it("identifies same-name route users before choosing whose authorization to inspect", async () => {
+  history.replaceState(null, "", "#published-routes?line=line");
+  const users = [{ id: "alice", name: "同名用户", enabled: true }, { id: "bob", name: "同名用户", enabled: true }, { id: "carol", name: "Carol", enabled: true }];
+  const requests = mockInventory(path => {
+    if (path === "/api/state") return json({ users, routes: [], revisions: [], capabilities: [] });
+    if (path.endsWith("/effective-policy")) {
+      const userId = path.includes("/bob/") ? "bob" : "alice";
+      return json({ ...effectivePolicy, userId, entitlement: { ...effectivePolicy.entitlement, userId } });
+    }
+    return undefined;
+  });
+  await mount(<PublishedRoutesPage />);
+  const detail = within(await screen.findByRole("dialog", { name: "Office line" }));
+  const choice = await detail.findByRole("combobox", { name: "线路使用用户" });
+  await userEvent.click(choice);
+  expect(screen.getByRole("option", { name: "同名用户，账号标识：alice" })).toBeTruthy();
+  expect(screen.getByRole("option", { name: "Carol" })).toBeTruthy();
+  await userEvent.click(screen.getByRole("option", { name: "同名用户，账号标识：bob" }));
+  await waitFor(() => expect(location.hash).toContain("user=bob"));
+  expect(choice.textContent).toContain("bob");
+  expect(choice.textContent).toContain("同名用户");
+  await waitFor(() => expect(requests.some(request => request.path === "/api/users/bob/effective-policy")).toBe(true));
+  await userEvent.click(detail.getByRole("button", { name: "准备独立入口" }));
+  const principal = within(await screen.findByRole("dialog", { name: "配置「Office line」的用户入口" }));
+  const selected = await principal.findByRole("combobox", { name: "用户" });
+  expect(selected.hasAttribute("disabled")).toBe(true);
+  expect(selected.textContent).toContain("bob");
+  expect(selected.textContent).toContain("同名用户");
+  expect(requests.every(request => request.method === "GET")).toBe(true);
+});
