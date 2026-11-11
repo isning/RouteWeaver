@@ -506,7 +506,7 @@ it("keeps an absent creation draft after an ID collision and requires another ex
   await name("New family");
   owner.assertActive();
   await owner.click(() => screen.getByLabelText("组服务方案"));
-  await owner.click(() => screen.findByText("Same name（plan-a）"));
+  await owner.click(() => screen.findByRole("option", { name: "Same name，标识：plan-a" }));
   await preview();
   await screen.findByText("用户组已更新。当前草稿尚未保存，请查看最新版本。");
   expect(writes[0].precondition).toEqual({
@@ -593,7 +593,7 @@ it("reviews a changed service identity even when the catalog gives both services
   await screen.findByLabelText("组服务方案");
   owner.assertActive();
   await owner.click(() => screen.getByLabelText("组服务方案"));
-  await owner.click(() => screen.findByText("Same name（plan-b）"));
+  await owner.click(() => screen.findByRole("option", { name: "Same name，标识：plan-b" }));
   await preview();
   const review = within(
     await screen.findByRole("dialog", { name: "确认授权变更" }),
@@ -974,7 +974,7 @@ it("retains opening labels with their draft and uses an exact ID for a draft-onl
   await screen.findByLabelText("组成员");
   owner.assertActive();
   await owner.click(() => screen.getByLabelText("组成员"));
-  await owner.click(() => screen.findByText("Same person（u2）"));
+  await owner.click(() => screen.findByRole("option", { name: "Same person，标识：u2" }));
   await name("Draft with new member");
   await preview();
   await screen.findByText("用户组已更新。当前草稿尚未保存，请查看最新版本。");
@@ -1403,4 +1403,46 @@ it("counts distinct initial members and lists their additions once when creating
   expect(added.getAllByRole("listitem")).toHaveLength(1);
   expect(added.getByText("Alice")).toBeTruthy();
   expect(added.queryByText("u1")).toBeNull();
+});
+
+
+it.each(["parentheses", "metadata"] as const)("keeps literal %s names distinct from duplicate member and service identities", async (style) => {
+  const literalPlan = style === "parentheses" ? "Same name（plan-a）" : "Same name，标识：plan-a";
+  const literalUser = style === "parentheses" ? "Same person（u1）" : "Same person，标识：u1";
+  const planChoice = style === "parentheses" ? literalPlan : `${literalPlan}，标识：plan-c`;
+  const userChoice = style === "parentheses" ? literalUser : `${literalUser}，标识：u3`;
+  const writes: any[] = [];
+  vi.stubGlobal("fetch", vi.fn(async (url, init) => {
+    if (String(url).includes("/edit-context/")) return json(context(group));
+    const body = JSON.parse(init!.body as string);
+    writes.push(body);
+    return json(reviewed(group, body.change.group));
+  }));
+  const view = mount();
+  await screen.findByLabelText("组服务方案");
+  view.rerenderCatalogs(
+    [...users, { ...users[0], id: "u3", name: literalUser }],
+    [...services, { ...service, id: "plan-c", name: literalPlan }],
+  );
+  await owner.click(() => screen.getByLabelText("组服务方案"));
+  const planA = await screen.findByRole("option", { name: "Same name，标识：plan-a" });
+  expect(within(planA).getByText("Same name", { exact: true })).toBeTruthy();
+  expect(within(planA).getByText("plan-a", { exact: true })).toBeTruthy();
+  await owner.change(() => screen.getByRole("combobox", { name: "搜索选项" }), { target: { value: "plan-c" } });
+  await owner.click(() => screen.getByRole("option", { name: planChoice }));
+  expect(screen.getByLabelText("组服务方案").textContent).toContain(literalPlan);
+  await owner.click(() => screen.getByLabelText("组成员"));
+  const userOne = await screen.findByRole("option", { name: "Same person，标识：u1" });
+  expect(within(userOne).getByText("u1", { exact: true })).toBeTruthy();
+  await owner.change(() => screen.getByRole("combobox", { name: "搜索选项" }), { target: { value: "u3" } });
+  await owner.click(() => screen.getByRole("option", { name: userChoice }));
+  await owner.click(() => screen.getByLabelText("用户组名称"));
+  expect(screen.getByRole("button", { name: "移除 Same person，标识：u1" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: `移除 ${userChoice}` })).toBeTruthy();
+  await owner.click(() => screen.getByRole("button", { name: "移除 Same person，标识：u1" }));
+  await preview();
+  await screen.findByRole("dialog", { name: "确认授权变更" });
+  expect(writes).toHaveLength(1);
+  expect(writes[0].change.group).toMatchObject({ serviceId: "plan-c", memberIds: ["u3"] });
+  expect(writes[0].precondition).toEqual({ exists: true, revision: "opened-1" });
 });

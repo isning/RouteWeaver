@@ -146,7 +146,7 @@ for (const width of [1440, 390]) {
       };
       const edit = async () => {
         await editor.getByRole("textbox", { name: "用户组名称", exact: true }).fill(draftName);
-        await choose(page, editor, "组服务方案", `${planName}（${replacementPlan}）`);
+        await choose(page, editor, "组服务方案", `${planName}，标识：${replacementPlan}`);
         await choose(page, editor, "组成员", oldName, true);
         await choose(page, editor, "组成员", newName, true);
       };

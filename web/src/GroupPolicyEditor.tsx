@@ -35,8 +35,25 @@ type Props = {
     returnFocus?: HTMLElement | null;
 };
 const newGroup = (id: string): UserGroup => ({ id, name: "", serviceId: "", priority: 0, memberIds: [] });
-const options = (records: NamedRecord[]) => records.map((record) => ({ value: record.id,
-    label: records.some((other) => other.id !== record.id && other.name === record.name) ? `${record.name}（${record.id}）` : record.name }));
+const options = (records: NamedRecord[]) => {
+    const identities = new Map<string, Set<string>>();
+    const identityCaptions = new Set<string>();
+    for (const record of records) {
+        const ids = identities.get(record.name) ?? new Set<string>();
+        ids.add(record.id);
+        identities.set(record.name, ids);
+        identityCaptions.add(`${record.name}，标识：${record.id}`);
+    }
+    return records.map((record) => {
+        const showIdentity = identities.get(record.name)!.size > 1 || identityCaptions.has(record.name);
+        return {
+            value: record.id,
+            label: showIdentity ? <span>{record.name}<span className="block text-xs text-muted-foreground [overflow-wrap:anywhere]">标识：<code>{record.id}</code></span></span> : record.name,
+            "aria-label": showIdentity ? `${record.name}，标识：${record.id}` : record.name,
+            searchText: `${record.name} ${record.id}`,
+        };
+    });
+};
 // Local ownership deliberately mirrors ServicePolicyEditor. The transport guard
 // and preview/apply state machine are shared; no independent token/session exists.
 export function GroupPolicyEditor(props: Props) {
