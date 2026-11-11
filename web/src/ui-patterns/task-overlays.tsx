@@ -168,8 +168,38 @@ export function useTaskOverlayFocus(
             !activeDialog.isConnected)
         ) {
           const style = getComputedStyle(target);
-          if (style.display !== "none" && style.visibility !== "hidden")
+          if (style.display !== "none" && style.visibility !== "hidden") {
             target.focus({ preventScroll: true });
+            // Focus handlers can open another task or deliberately move focus.
+            // Recover visibility only while this remains our returned opener.
+            if (
+              !latest.current.open &&
+              opener.current === target &&
+              target.isConnected &&
+              document.activeElement === target
+            ) {
+              const rect = target.getBoundingClientRect();
+              // The standard focus ring extends 3px beyond the control. Leave
+              // an extra pixel for fractional layout/browser scroll rounding.
+              const clearance = 4;
+              if (
+                rect.width > 0 &&
+                rect.height > 0 &&
+                (rect.left < clearance ||
+                  rect.top < clearance ||
+                  rect.right > window.innerWidth - clearance ||
+                  rect.bottom > window.innerHeight - clearance)
+              ) {
+                // Nearest alignment can retain a fractional edge clip. Center
+                // only an unsafe opener, without motion or an independent timer.
+                target.scrollIntoView?.({
+                  block: "center",
+                  inline: "center",
+                  behavior: "instant",
+                });
+              }
+            }
+          }
         }
       }
       if (!latest.current.open) latest.current.onClosed?.();
