@@ -43,3 +43,41 @@ Correction checks: standalone Users spec TypeScript check and two-case Playwrigh
 ## Coordinator aggregate check
 
 On 2026-11-11 at 18:39 UTC, the clean serialized web aggregate completed with 4,135/4,135 tests across 337 files (exit 0; 1,164.91 seconds). Production and DOM-test content was the Users retry implementation from `5f91524`; intervening commits changed native tests, workflows, and evidence notes only. The subsequent production build also passed. This does not replace native execution of the corrected pending-phase sampler or the latest remote full gate.
+
+## Exact-source native success and bounded pixel acceptance
+
+The corrected recovery lane at `213e6b211effe36461a9dec4393fff87d0b20703`
+passes 70/70 native cases, including both Users viewport journeys. Artifact
+`13885140996` has original ZIP SHA-256
+`2c79cc2f0f86f89dad42a3f13cb32d61fe61369f43cb571c5c92bdca1fc5f52b`.
+This digest identifies the downloaded ZIP, not the review manifest.
+
+Independent review opened these six unmodified originals under the artifact's
+`web/playwright-report/data/`, mapped by `users-recovery-originals-manifest.json`:
+
+| State | 390×560 | 1440×900 |
+| --- | --- | --- |
+| Held retry | `f667c3d380addd1c8d1ccd239d0c424a40ac6eae.png` | `9458d05f5211ed9555ced03622970acd4ef40321.png` |
+| Recovered search | `588247f8a0f95e007510266d37661c576510caa5.png` | `50a3d46cce18db863a39546a1cd6543940a80f33.png` |
+| Recovered entry | `9468b189c7e30dedb261b5292882945050720a0b.png` | `a99defc9ba42f4ea06d4a61fbf886bfbdeec5e06.png` |
+
+Pixels show complete, clearly painted focus rings in all six states. Held retry
+retains readable failure/stale-list context, a spinner and the checking status.
+Recovered search removes the failure panel, retains “合成用户”, and shows the
+count and 合成用户10 row. Recovered entry visibly associates the focused 平台入口
+with 合成用户10; the narrow action-side identity remains legible after table
+scrolling. No clipped ring, obscured target or blocking visual defect was observed
+in these captures.
+
+Separately, paired geometry reports focus/focus-visible/inViewport/hit true for
+the target in every capture, with scrollWidth equal to viewport width. Both
+ledgers record two failed reads, one held retry and one entry read, no rejected
+requests and no page errors. These measurements and native assertions corroborate
+but do not substitute for the pixel observations.
+
+This accepts the captured light-mode pending → search recovery → correct-entry
+continuity, not uninterrupted ring animation, dark-mode pixels, real backend
+mutations, renewed native failure/backoff, offline transitions, newer-interaction
+races or comprehensive accessibility. The reviewer performed no download, image
+transformation, test run or source edit. Exact-head full CI remains a separate
+gate; the coordinator aggregate above is not duplicated or relabelled here.
