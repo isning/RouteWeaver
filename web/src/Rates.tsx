@@ -22,6 +22,7 @@ interface Rate {
   micros: number;
   effectiveAt: string;
 }
+class UnverifiedRateReceipt extends Error {}
 // Keep decimal intent until it is proven to be an integer number of micros.
 // The existing API contract is 0–1000×, with 1,000,000 micros per unit.
 function rateMicros(raw: string): number {
@@ -47,13 +48,20 @@ function rateMicros(raw: string): number {
 }
 
 export function RateSettings({ routes }: { routes: RouteRecord[] }) {
+  const [savedRates, setSavedRates] = useState<Rate[]>([]);
   const query = useQuery({
     queryKey: ["rates"],
     queryFn: () => list<Rate>("/rates"),
   });
+  // Versions are immutable. An independent list read cannot undo a matching
+  // committed receipt, even when that read fails or omits the new version.
+  const rates = [...(query.data || [])];
+  for (const saved of savedRates) {
+    if (!rates.some((rate) => rate.id === saved.id)) rates.push(saved);
+  }
   const [boundaryRevision, setBoundaryRevision] = useState(0);
   const renderedAt = Date.now();
-  const nextBoundary = (query.data || []).reduce((nearest, rate) => {
+  const nextBoundary = rates.reduce((nearest, rate) => {
     const at = Date.parse(rate.effectiveAt);
     return Number.isFinite(at) && at > renderedAt ? Math.min(nearest, at) : nearest;
   }, Infinity);
@@ -93,18 +101,27 @@ export function RateSettings({ routes }: { routes: RouteRecord[] }) {
         (key) => draft[key] !== baseline[key],
       ));
   const mutation = useMutation({
-    mutationFn: (values: {
+    mutationFn: async (values: {
       routeId: string;
       factor: string;
       effectiveAt: string;
-    }) =>
-      post("/rates", {
+    }) => {
+      const submitted: Rate = {
         id: newID("rate"),
         routeId: values.routeId,
         micros: rateMicros(values.factor),
         effectiveAt: new Date(values.effectiveAt).toISOString(),
-      }),
-    onSuccess: () => {
+      };
+      const saved = await post<Rate>("/rates", submitted);
+      if (!saved || saved.id !== submitted.id || saved.routeId !== submitted.routeId ||
+        saved.micros !== submitted.micros ||
+        Date.parse(saved.effectiveAt) !== Date.parse(submitted.effectiveAt)) {
+        throw new UnverifiedRateReceipt("保存结果无法核对，请检查倍率记录，避免重复保存。");
+      }
+      return saved;
+    },
+    onSuccess: (saved) => {
+      setSavedRates((current) => [...current.filter((rate) => rate.id !== saved.id), saved]);
       client.invalidateQueries({ queryKey: ["rates"] });
       client.invalidateQueries({ queryKey: ["overview"] });
       setOpen(false);
@@ -112,13 +129,23 @@ export function RateSettings({ routes }: { routes: RouteRecord[] }) {
       message.success("线路倍率版本已保存");
     },
   });
-  useUnsavedChanges(open && (changed || mutation.isPending));
+  const needsReceiptCheck = mutation.error instanceof UnverifiedRateReceipt;
+  useUnsavedChanges(
+    open && (changed || mutation.isPending || needsReceiptCheck),
+    needsReceiptCheck
+      ? "倍率保存结果尚未核对。离开不会撤销已提交的保存，请返回倍率记录核对，避免重复保存。"
+      : undefined,
+  );
   const close = () => {
     if (mutation.isPending || confirming) return;
     const discard = () => {
       setOpen(false);
       setBaseline(null);
     };
+    if (needsReceiptCheck) {
+      void query.refetch();
+      return discard();
+    }
     if (!changed) return discard();
     confirm(
       {
@@ -161,14 +188,17 @@ export function RateSettings({ routes }: { routes: RouteRecord[] }) {
         </ActionButton>
       }
     >
+      {query.error && rates.length > 0 && (
+        <QueryState error={query.error} retry={() => query.refetch()}>{null}</QueryState>
+      )}
       <QueryState
-        loading={query.isPending} paused={query.isPaused} loadingLayout="table"
-        error={query.error}
+        loading={query.isPending && rates.length === 0} paused={query.isPaused} loadingLayout="table"
+        error={rates.length === 0 ? query.error : null}
         retry={() => query.refetch()}
       >
         <DataTable
           rowKey="id"
-          rows={[...(query.data || [])].sort(
+          rows={[...rates].sort(
             (a, b) => Date.parse(b.effectiveAt) - Date.parse(a.effectiveAt),
           )}
           columns={[
@@ -213,7 +243,7 @@ export function RateSettings({ routes }: { routes: RouteRecord[] }) {
           form={form}
           disabled={mutation.isPending}
           onFinish={(values) => {
-            if (!mutation.isPending && !confirming) {
+            if (!mutation.isPending && !confirming && !needsReceiptCheck) {
               mutation.mutate({ ...values, factor: factorText.current });
             }
           }}
@@ -273,10 +303,11 @@ export function RateSettings({ routes }: { routes: RouteRecord[] }) {
               onClick={close}
               variant="outline"
             >
-              取消
+              {needsReceiptCheck ? "关闭并检查记录" : "取消"}
             </ActionButton>
             <ActionButton
               type="submit"
+              disabled={needsReceiptCheck}
               pending={mutation.isPending}
               variant="default"
             >
