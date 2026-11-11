@@ -24,6 +24,7 @@ function deferred<T>() {
 }
 let client: QueryClient;
 beforeEach(() => {
+  sessionStorage.clear();
   setToken("");
   setCSRF("");
   vi.spyOn(toast, "success");
@@ -77,7 +78,7 @@ it.each([
   });
   mount();
   await submitSetup();
-  await screen.findByText("未收到完整的验证器设置，请重新设置二次验证。");
+  await screen.findByText("未收到完整的验证器设置。请先查看当前状态，再决定是否重新设置。");
   expect(screen.queryByLabelText("验证器设置密钥")).toBeNull();
   expect(screen.queryByLabelText("验证器验证码")).toBeNull();
   expect((screen.getByLabelText("验证当前账号密码") as HTMLInputElement).value).toBe("synthetic-password");
@@ -139,6 +140,7 @@ it.each(["valid receipt", "malformed receipt"])("shows enabled only after author
   expect(toast.success).not.toHaveBeenCalled();
   await act(async () => { refreshed.resolve(json(session("A", true, "rotated"))); });
   await screen.findByRole("heading", { name: "二次验证已启用" });
+  if (kind === "valid receipt") await waitFor(() => expect(sessionStorage.getItem("routeweaver.security-recovery.v1:A")).toBeNull());
   expect(screen.queryByLabelText("验证器设置密钥")).toBeNull();
   expect(screen.queryByLabelText("验证器验证码")).toBeNull();
   expect(writes).toEqual(["/api/auth/mfa/setup", "/api/auth/mfa/enable"]);
@@ -159,7 +161,7 @@ it.each(["still disabled", "read fails"])("does not claim enable success from a 
   mount();
   await prepare();
   submitEnable();
-  if (outcome === "still disabled") await screen.findByLabelText("验证当前账号密码");
+  if (outcome === "still disabled") await screen.findByText(unknownResult);
   else await screen.findByText("暂时无法确认登录状态");
   expect(reads).toBe(2);
   expect(screen.queryByRole("heading", { name: "二次验证已启用" })).toBeNull();

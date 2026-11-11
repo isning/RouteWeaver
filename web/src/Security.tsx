@@ -1,3 +1,4 @@
+import { SecurityRecoveryNotice, useSecurityRecovery } from "./SecurityRecovery";
 import { PasswordInput } from "@/ui-patterns/password-input";
 import { QRCodeSVG as QRCode } from "qrcode.react";
 import { ActionButton } from "@/ui-patterns/actions";
@@ -11,12 +12,13 @@ import { APIError, post } from "./api";
 import type { Session } from "./types";
 import { useSessionAccess } from "./SessionBoundary";
 import { ErrorNotice, QueryState, Section } from "./components";
-export function SecuritySettings() {
+export function SecuritySettings({ recoveryNotice = true }: { recoveryNotice?: boolean }) {
     const { snapshot } = useSessionAccess();
-    return <MFASetupTask key={`${snapshot.accountEpoch}:${snapshot.generation}`} />;
+    return <MFASetupTask key={`${snapshot.accountEpoch}:${snapshot.generation}`} recoveryNotice={recoveryNotice} />;
 }
-function MFASetupTask() {
+function MFASetupTask({ recoveryNotice }: { recoveryNotice: boolean }) {
     const { lifecycle, snapshot } = useSessionAccess();
+    const recovery = useSecurityRecovery(snapshot.session?.user.id ?? "");
     const active = useRef(true);
     const submitting = useRef(false);
     useLayoutEffect(() => {
@@ -43,11 +45,11 @@ function MFASetupTask() {
         mutationFn: async (values: { password: string }) => {
             try {
                 if (!active.current) throw new Error("设置页面已关闭，本次尚未提交。");
-                const value = await post<{ secret: string; uri: string }>("/auth/mfa/setup", values);
-                if (typeof value?.secret !== "string" || !value.secret.trim() ||
-                    typeof value?.uri !== "string" || !value.uri.trim()) {
-                    throw new Error("未收到完整的验证器设置，请重新设置二次验证。");
-                }
+                const value = await recovery.run("mfa-setup", snapshot.session!.user.id,
+                    () => post<{ secret: string; uri: string }>("/auth/mfa/setup", values),
+                    (value) => typeof value?.secret === "string" && Boolean(value.secret.trim()) &&
+                        typeof value?.uri === "string" && Boolean(value.uri.trim()),
+                    "未收到完整的验证器设置。请先查看当前状态，再决定是否重新设置。");
                 if (active.current) {
                     setSetup({ secret: value.secret, uri: value.uri });
                     passwordForm.resetFields();
@@ -66,24 +68,22 @@ function MFASetupTask() {
             try {
                 if (!active.current) throw new Error("设置页面已关闭，本次尚未提交。");
                 try {
-                    const value = await post<Session>("/auth/mfa/enable", values);
-                    if (typeof value?.user?.id !== "string" || !value.user.id ||
-                        value.user.id !== snapshot.session?.user.id ||
-                        value?.user?.role !== "admin" || value?.user?.mfaEnabled !== true ||
-                        typeof value?.csrfToken !== "string" || !value.csrfToken.trim()) {
-                        throw new Error("Incomplete MFA enable response");
-                    }
+                    await recovery.run("mfa-enable", snapshot.session!.user.id,
+                        () => post<Session>("/auth/mfa/enable", values),
+                        (value) => typeof value?.user?.id === "string" && Boolean(value.user.id) &&
+                            value.user.id === snapshot.session?.user.id &&
+                            value.user.role === "admin" && value.user.mfaEnabled === true &&
+                            typeof value.csrfToken === "string" && Boolean(value.csrfToken.trim()),
+                        "启用结果尚未确认。请先核对当前登录状态，不要重复提交。");
                 } catch (error) {
                     // A lost or malformed response can follow a committed enrollment
                     // and rotated cookie. Recheck authority without replaying the write.
-                    if (!(error instanceof APIError && [400, 401, 403, 429].includes(error.status))) {
+                    if (recovery.hasRecord() && !(error instanceof APIError && [400, 401, 403, 429].includes(error.status))) {
                         if (active.current) {
                             uncertainEnable.current = true;
                             setEnableUncertain(true);
                             codeForm.resetFields();
                         }
-                        lifecycle.changed();
-                        void lifecycle.check();
                         throw new Error("启用结果尚未确认。请先核对当前登录状态，不要重复提交。");
                     }
                     throw error;
@@ -96,10 +96,7 @@ function MFASetupTask() {
         networkMode: "always",
         gcTime: 0,
         onSuccess: () => {
-            // The cookie may have rotated even after this screen was removed.
-            // Reconcile current authority, but never resurrect the old task UI.
-            lifecycle.changed();
-            void lifecycle.check();
+            // The shared owner reconciles even after this screen is removed.
             if (!active.current) return;
             setSetup(null);
             codeForm.resetFields();
@@ -119,6 +116,7 @@ function MFASetupTask() {
         setEnableUncertain(false);
     };
     return (<Section title="管理员二次验证" description="保护当前登录账号：登录时在密码之外验证一次性验证码。">
+      {recoveryNotice && <SecurityRecoveryNotice recovery={recovery} />}
       <QueryState loading={session.isLoading} error={session.error} retry={() => session.refetch()}>
         {session.data?.user.mfaEnabled === true ? (<div className="security-enabled flex flex-wrap items-center gap-3 rounded-lg border p-4">
             <SafetyCertificateOutlined aria-hidden="true"/>
@@ -136,8 +134,8 @@ function MFASetupTask() {
               <PasswordInput aria-label="验证器设置密钥" revealLabel="验证器设置密钥" value={setup.secret} readOnly autoComplete="off" className="mt-3"/>
             </details>
             <p className="mt-4 text-sm text-muted-foreground">关闭只清除此页的设置密钥和输入，不会撤销已提交的启用操作。</p>
-            <AppForm disabled={enable.isPending || enableUncertain} form={codeForm} className="mt-6 max-w-sm" onFinish={(v) => {
-                if (!active.current || submitting.current || uncertainEnable.current) return;
+            <AppForm disabled={enable.isPending || enableUncertain || recovery.blocked} form={codeForm} className="mt-6 max-w-sm" onFinish={(v) => {
+                if (!active.current || submitting.current || uncertainEnable.current || recovery.blocked) return;
                 submitting.current = true;
                 enable.mutate({ code: v.code });
             }}>
@@ -148,15 +146,15 @@ function MFASetupTask() {
             ]}>
                 <Input inputMode="numeric" autoComplete="one-time-code" maxLength={6}/>
               </AppField>
-              <ActionButton type="submit" pending={enable.isPending} disabled={enableUncertain} variant="default">
+              <ActionButton type="submit" pending={enable.isPending} disabled={enableUncertain || recovery.blocked} variant="default">
                 验证并启用
               </ActionButton>
               <ActionButton disabled={enable.isPending} onClick={dismissSetup} variant="ghost">
                 关闭设置
               </ActionButton>
             </AppForm>
-          </>) : (<AppForm disabled={prepare.isPending} form={passwordForm} className="settings-form max-w-md space-y-5" onFinish={(v) => {
-            if (!active.current || submitting.current) return;
+          </>) : (<AppForm disabled={prepare.isPending || recovery.blocked} form={passwordForm} className="settings-form max-w-md space-y-5" onFinish={(v) => {
+            if (!active.current || submitting.current || recovery.blocked) return;
             submitting.current = true;
             prepare.mutate({ password: v.password });
         }}>
@@ -164,7 +162,7 @@ function MFASetupTask() {
             <AppField name="password" label="验证当前账号密码" rules={[{ required: true }]}>
               <PasswordInput autoComplete="current-password" revealLabel="二次验证设置的验证密码"/>
             </AppField>
-            <ActionButton type="submit" pending={prepare.isPending} variant="default">
+            <ActionButton type="submit" pending={prepare.isPending} disabled={recovery.blocked} variant="default">
               设置二次验证
             </ActionButton>
           </AppForm>)}

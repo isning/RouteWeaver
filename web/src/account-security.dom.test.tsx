@@ -752,7 +752,7 @@ it("blocks writes when persisted metadata belongs to another actor", async () =>
   sessionStorage.setItem("routeweaver.security-recovery.v1:person", JSON.stringify({ actor: "other", target: "other", action: "password", startedAt: "2026-11-06T00:00:00Z" }));
   vi.stubGlobal("fetch", vi.fn(async () => json([])));
   mountSecurity();
-  await screen.findByText("无法读取安全操作记录。请恢复浏览器会话存储后重新打开此页；暂不提交新的安全操作。");
+  await screen.findByText("无法读取安全操作记录。请恢复浏览器会话存储后重新检查操作记录；暂不提交新的安全操作。");
   expect((screen.getByRole("button", { name: "修改密码" }) as HTMLButtonElement).disabled).toBe(true);
   expect(screen.queryByText(/目标标识：other/)).toBeNull();
 });

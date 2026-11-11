@@ -1,3 +1,4 @@
+import { SecurityRecoveryProvider } from "./SecurityRecovery";
 import { UIProviders } from "./ui-patterns/providers";
 import { LoadingState } from "./ui-patterns/loading-state";
 import { ActionButton } from "@/ui-patterns/actions";
@@ -316,6 +317,35 @@ export function SessionBoundary({
   }, [active, snapshot.accountEpoch]);
   return (
     <Context.Provider value={{ lifecycle, snapshot }}>
+      <SecurityRecoveryProvider authorize={(actor) => {
+        if (lifecycle.getSnapshot().session?.user.id !== actor) throw new Error("账号已变化，本次安全操作尚未提交。");
+        const guard = lifecycle.beforeRequest();
+        guard.beforeSend();
+        return guard.beforeSend;
+      }} reconcile={async (actor, action, receipt) => {
+        if (action === "revoke-session") {
+          if (receipt && typeof receipt === "object" && "current" in receipt && receipt.current === true &&
+              lifecycle.getSnapshot().session?.user.id === actor) {
+            lifecycle.forget();
+            return true;
+          }
+          return;
+        }
+        if (action !== "password" && action !== "mfa-enable") return;
+        lifecycle.changed();
+        await lifecycle.check();
+        // A successful read publishes accepting; wait for the matching React
+        // commit before releasing the shared write owner. Disposal also wakes it.
+        if (lifecycle.getSnapshot().phase === "accepting") {
+          await new Promise<void>((resolve) => {
+            const unsubscribe = lifecycle.subscribe(() => { unsubscribe(); resolve(); });
+          });
+        }
+        const current = lifecycle.getSnapshot();
+        if (current.session?.user.id !== actor || current.phase !== "active" ||
+            action === "mfa-enable" && current.session.user.mfaEnabled !== true)
+          throw new Error("安全操作结果尚未确认。");
+      }}>
       {snapshot.session && (
         <PrivateWorkspace
           key={snapshot.accountEpoch}
@@ -367,6 +397,7 @@ export function SessionBoundary({
           </div>
         </div>
       )}
+      </SecurityRecoveryProvider>
     </Context.Provider>
   );
 }

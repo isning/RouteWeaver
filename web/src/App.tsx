@@ -894,7 +894,7 @@ function Workspace() {
                         lifecycle.forget();
                       }}
                       mfaSettings={
-                        isAdmin && !passwordRequired ? <AccountMFA /> : undefined
+                        isAdmin && !passwordRequired ? <AccountMFA recoveryNotice={false} /> : undefined
                       }
                     />
                   ) : adminMode ? (

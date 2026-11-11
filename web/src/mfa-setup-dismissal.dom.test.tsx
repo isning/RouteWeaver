@@ -12,6 +12,7 @@ const json = (value: unknown, status = 200) => new Response(JSON.stringify(value
 const session = (id: string) => ({ user: { id, name: id, role: "admin", mfaEnabled: false }, csrfToken: `synthetic-${id}` });
 let client: QueryClient;
 beforeEach(() => {
+  sessionStorage.clear();
   setToken("");
   setCSRF("");
   Object.defineProperty(window, "matchMedia", { configurable: true, value: () => ({
