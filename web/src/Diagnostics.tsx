@@ -18,7 +18,7 @@ import { AppField, AppForm, useForm, useWatch } from "@/ui-patterns/form";
 import { Notice } from "@/ui-patterns/notice";
 import { TaskDialog, TaskSheet } from "@/ui-patterns/task-overlays";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ComponentProps } from "react";
 import { list, post } from "./api";
 import { EmptyState, ErrorNotice, QueryState, Section } from "./components";
 import { DataTable } from "./DataTable";
@@ -497,6 +497,12 @@ function DiagnosticTargetForm({
   onClose: () => void;
 }) {
   const [id] = useState(() => newID("probe-target"));
+  const submitErrorFocusOwner = useRef({ active: true });
+  useLayoutEffect(() => {
+    const owner = submitErrorFocusOwner.current;
+    owner.active = true;
+    return () => { owner.active = false; };
+  }, []);
   const [dirty, setDirty] = useState(false);
   useUnsavedChanges(dirty);
   const client = useQueryClient();
@@ -541,10 +547,13 @@ function DiagnosticTargetForm({
       }}
     >
       <AppForm
+        submitErrorFocusOwner={submitErrorFocusOwner.current}
         initialValues={{ methods: ["connectivity"] }}
         disabled={save.isPending}
         onValuesChange={() => setDirty(true)}
-        onFinish={(values) => save.mutate(values)}
+        onFinish={(values) => {
+          if (submitErrorFocusOwner.current.active) save.mutate(values);
+        }}
       >
         <ErrorNotice error={save.error} />
         <AppField name="name" label="目标名称" rules={[{ required: true }]}>
@@ -997,13 +1006,17 @@ function DiagnosticMethods({
   value = [],
   onChange,
   id,
+  disabled,
+  "aria-invalid": invalid,
+  "aria-describedby": describedBy,
+  "aria-labelledby": labelledBy,
 }: {
   value?: string[];
   onChange?: (value: string[]) => void;
   id?: string;
-}) {
+} & Pick<ComponentProps<typeof Checkbox>, "disabled" | "aria-invalid" | "aria-describedby" | "aria-labelledby">) {
   return (
-    <div id={id} className="space-y-3">
+    <div id={id} role="group" aria-labelledby={labelledBy} className="space-y-3">
       {[
         { value: "connectivity", label: "HEAD 连通性" },
         { value: "download", label: "Range 下载" },
@@ -1011,6 +1024,9 @@ function DiagnosticMethods({
       ].map((option) => (
         <label key={option.value} className="flex items-center gap-2 text-sm">
           <Checkbox
+            disabled={disabled}
+            aria-invalid={invalid}
+            aria-describedby={describedBy}
             checked={value.includes(option.value)}
             onCheckedChange={(checked) =>
               onChange?.(
