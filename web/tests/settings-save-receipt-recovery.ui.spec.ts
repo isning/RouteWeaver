@@ -31,7 +31,9 @@ async function fixture(
   )
     throw new Error("Synthetic settings recovery requires loopback");
   const origin = new URL(baseURL).origin;
+  let phase = "initial";
   const ledger = {
+    readEvents: [] as { phase: string; path: string }[],
     writes: 0,
     settingsReads: 0,
     rejected: [] as string[],
@@ -90,6 +92,7 @@ async function fixture(
     }
     if (request.method() === "GET" && url.pathname === "/api/settings") {
       ledger.settingsReads++;
+      ledger.readEvents.push({ phase, path: url.pathname });
       if (readMode === "held") {
         pending = route;
         return;
@@ -101,8 +104,10 @@ async function fixture(
             : settings(readMode === "initial" ? "RouteWeaver" : submitted),
       });
     }
-    if (request.method() === "GET" && Object.hasOwn(reads, url.pathname))
+    if (request.method() === "GET" && Object.hasOwn(reads, url.pathname)) {
+      ledger.readEvents.push({ phase, path: url.pathname });
       return route.fulfill({ json: reads[url.pathname] });
+    }
     if (request.method() === "PUT" && url.pathname === "/api/settings") {
       let body: unknown;
       try {
@@ -135,6 +140,9 @@ async function fixture(
   });
   return {
     ledger,
+    phase(value: string) {
+      phase = value;
+    },
     mode(value: typeof readMode) {
       readMode = value;
     },
@@ -147,20 +155,28 @@ async function fixture(
   };
 }
 
-async function tabTo(page: Page, target: Locator) {
+async function tabTo(
+  page: Page,
+  target: Locator,
+  direction?: "Tab" | "Shift+Tab",
+  observe?: () => Promise<void>,
+) {
   await expect(target).toBeVisible();
   // Follow document order in the appropriate direction. In particular, the
   // domain draft is below the name form: forward-only traversal would wrap
   // through browser chrome and can trigger unrelated window-focus reads.
-  const key = await target.evaluate((node) => {
-    const active = document.activeElement;
-    return active &&
-      active !== document.body &&
-      active.compareDocumentPosition(node) & Node.DOCUMENT_POSITION_PRECEDING
-      ? "Shift+Tab"
-      : "Tab";
-  });
+  const key =
+    direction ??
+    (await target.evaluate((node) => {
+      const active = document.activeElement;
+      return active &&
+        active !== document.body &&
+        active.compareDocumentPosition(node) & Node.DOCUMENT_POSITION_PRECEDING
+        ? "Shift+Tab"
+        : "Tab";
+    }));
   for (let index = 0; index < 80; index++) {
+    await observe?.();
     if (await target.evaluate((node) => node === document.activeElement))
       return;
     await page.keyboard.press(key);
@@ -266,6 +282,24 @@ for (const width of [390, 1440]) {
         name: "核对当前设置",
         exact: true,
       });
+      const focusSamples: unknown[] = [];
+      const sampleFocus = async (phase: string) => {
+        http.phase(phase);
+        focusSamples.push({
+          phase,
+          settingsReads: http.ledger.settingsReads,
+          reads: http.ledger.readEvents.length,
+          ...(await name.evaluate((node) => ({
+            activeTag: document.activeElement?.tagName ?? null,
+            nameFocused: document.activeElement === node,
+            documentFocused: document.hasFocus(),
+            visibility: document.visibilityState,
+            workspaceBusy: document
+              .querySelector("[data-session-workspace]")
+              ?.getAttribute("aria-busy"),
+          }))),
+        });
+      };
       const failures: unknown[] = [];
       try {
         await page.goto("/#settings");
@@ -291,22 +325,37 @@ for (const width of [390, 1440]) {
         await expect(cancel).toBeDisabled();
         await expect(form.getByRole("status")).toHaveCount(0);
         const initialReads = http.ledger.settingsReads;
-        // Native Enter in the editable input must not replay the unknown write.
-        await tabTo(page, name);
+        // Save has just become disabled. BODY is not a reliable indication of
+        // Chromium's sequential-focus starting point, so use the known local
+        // reverse direction rather than guessing forward and wrapping chrome.
+        await tabTo(page, name, "Shift+Tab", () =>
+          sampleFocus("return-to-name"),
+        );
+        await sampleFocus("before-replay-enter");
         await page.keyboard.press("Enter");
+        await sampleFocus("after-replay-enter");
         expect(http.ledger.writes).toBe(1);
         expect(http.ledger.settingsReads).toBe(initialReads);
 
+        http.phase("departure-warning");
         if (width === 390)
           await activate(
             page,
             page.getByRole("button", { name: "打开导航", exact: true }),
           );
+        const navigation = page.getByRole("navigation", {
+          name: "工作空间导航",
+          exact: true,
+        });
+        const materials = navigation.getByRole("button", {
+          name: "订阅素材",
+          exact: true,
+        });
+        if ((await materials.getAttribute("aria-expanded")) !== "true")
+          await activate(page, materials);
         await activate(
           page,
-          page
-            .getByRole("navigation", { name: "工作空间导航", exact: true })
-            .getByRole("button", { name: "规则资源", exact: true }),
+          navigation.getByRole("button", { name: "规则资源", exact: true }),
         );
         const leave = page.getByRole("alertdialog");
         const stay = leave.getByRole("button", {
@@ -316,11 +365,16 @@ for (const width of [390, 1440]) {
         await evidence(page, info, "departure-warning", leave, [stay]);
         await expect(leave).toContainText("保存可能已完成");
         await expect(leave).toContainText("离开不会撤销保存");
-        await expect(leave).not.toContainText("当前编辑尚未保存");
+        // The name write is uncertain, while the independent domain input is
+        // still an unsaved draft. Navigation must preserve both consequences.
+        await expect(leave).toContainText(
+          "当前编辑尚未保存。离开会放弃尚未保存的内容。",
+        );
         await expect(stay).toBeInViewport({ ratio: 1 });
         await activate(page, stay);
         await expect(leave).toHaveCount(0);
 
+        http.phase("explicit-invalid-read");
         http.mode("invalid");
         await tabTo(page, check);
         await evidence(page, info, "explicit-read-decision", form, [check]);
@@ -353,8 +407,13 @@ for (const width of [390, 1440]) {
         await expect(save).toBeDisabled();
         await expect(cancel).toBeDisabled();
 
+        http.phase("explicit-held-read");
         http.mode("held");
-        await activate(page, check);
+        // The previous pending check also disabled its focused button. Step to
+        // the next name input, then back to the re-enabled check without a wrap.
+        await tabTo(page, name, "Tab", () => sampleFocus("retry-next-name"));
+        await tabTo(page, check, "Shift+Tab", () => sampleFocus("retry-check"));
+        await page.keyboard.press("Enter");
         await expect
           .poll(() => http.ledger.settingsReads)
           .toBe(initialReads + 2);
@@ -410,7 +469,7 @@ for (const width of [390, 1440]) {
           // the original task failure too, rather than replacing it at cleanup.
           try {
             await info.attach("synthetic-settings-request-counts", {
-              body: JSON.stringify(http.ledger, null, 2),
+              body: JSON.stringify({ ...http.ledger, focusSamples }, null, 2),
               contentType: "application/json",
             });
           } catch (error) {
