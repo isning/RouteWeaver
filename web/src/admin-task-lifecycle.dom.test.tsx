@@ -1246,3 +1246,45 @@ it("protects a raw quota edit even when Number conversion equals the default", a
   expect(quota.value).toBe("100.00000000000000000001");
   expect(api.writes).toHaveLength(0);
 });
+
+it("keeps user browsing and group access independent of unavailable platform settings", async () => {
+  history.replaceState(null, "", "#users");
+  const state = fixture(undefined, async () => json({ message: "Settings unavailable" }, 503));
+  const baseFetch = globalThis.fetch;
+  vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
+    if (url === "/api/user-groups") return json([{
+      id: "team", name: "Existing team", serviceId: "plan", memberIds: ["user"], priority: 1,
+    }]);
+    return baseFetch(url, init);
+  }));
+  mount();
+  await screen.findByRole("button", { name: "Example user" });
+  await screen.findAllByText("Existing team");
+  expect(screen.getByRole("button", { name: "编辑 Existing team" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "新建用户组" })).toBeTruthy();
+  expect(state.settingsReads).toBe(0);
+  expect(state.writes).toEqual([]);
+});
+
+it.each([{ value: null }, { value: [] }, { value: "invalid" }])("offers retry for malformed platform settings $value without depending on inventory", async ({ value }) => {
+  history.replaceState(null, "", "#settings");
+  const state = fixture(undefined, async (count, values) => json(count === 1 ? value : values));
+  const baseFetch = globalThis.fetch;
+  const inventoryReads: string[] = [];
+  vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
+    if (["/api/state", "/api/services", "/api/published-routes"].includes(url)) {
+      inventoryReads.push(url);
+      return json({ message: "Inventory unavailable" }, 503);
+    }
+    return baseFetch(url, init);
+  }));
+  mount();
+  await screen.findByText("无法读取平台设置，请重试。");
+  expect(screen.queryByRole("button", { name: "编辑平台名称" })).toBeNull();
+  await userEvent.click(screen.getByRole("button", { name: "重试" }));
+  await userEvent.click(await screen.findByRole("button", { name: "编辑平台名称" }));
+  expect(screen.getByRole("textbox", { name: "平台名称" })).toHaveProperty("value", "RouteWeaver");
+  expect(inventoryReads).toEqual([]);
+  expect(state.settingsReads).toBe(2);
+  expect(state.writes).toEqual([]);
+});

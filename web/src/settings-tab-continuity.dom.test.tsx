@@ -231,7 +231,7 @@ it.each(["notification", "platform"] as const)(
     await act(async () => {
       await client.refetchQueries({
         queryKey: [
-          kind === "notification" ? "notification-settings" : "admin-state",
+          kind === "notification" ? "notification-settings" : "platform-settings",
         ],
       });
     });

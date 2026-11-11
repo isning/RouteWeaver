@@ -140,18 +140,28 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
   const query = useQuery({
     queryKey: ["admin-state"],
     queryFn: async () => {
-      const [state, services, settings, publishedRoutes] = await Promise.all([
+      const [state, services, publishedRoutes] = await Promise.all([
         loadState(),
         list<Service>("/services"),
-        request<Record<string, unknown>>("/settings"),
         list<{
           id: string;
           name: string;
           status: string;
         }>("/published-routes"),
       ]);
-      return { ...state, services, settings, publishedRoutes };
+      return { ...state, services, publishedRoutes };
     },
+    enabled: page !== "settings",
+  });
+  const settingsQuery = useQuery({
+    queryKey: ["platform-settings"],
+    queryFn: async () => {
+      const settings = await request<unknown>("/settings");
+      if (!settings || typeof settings !== "object" || Array.isArray(settings))
+        throw new Error("无法读取平台设置，请重试。");
+      return settings as Record<string, unknown>;
+    },
+    enabled: page === "settings",
   });
   const client = useQueryClient();
   const message = toast;
@@ -285,26 +295,26 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
     name.toLowerCase().includes(search.toLowerCase());
   if (page === "settings") {
     const readNotice =
-      query.error && data ? (
+      settingsQuery.error && settingsQuery.data ? (
         <Notice
           tone="error"
           title="暂时无法刷新设置"
           action={
             <ActionButton
               variant="outline"
-              pending={query.isFetching}
-              onClick={() => query.refetch()}
+              pending={settingsQuery.isFetching}
+              onClick={() => settingsQuery.refetch()}
             >
               重新读取设置
             </ActionButton>
           }
         >
-          {query.error.message}
+          {settingsQuery.error.message}
         </Notice>
       ) : null;
-    return data ? (
+    return settingsQuery.data ? (
       <PlatformSettingsTabs
-        initial={data.settings || {}}
+        initial={settingsQuery.data}
         readNotice={readNotice}
       />
     ) : (
@@ -322,11 +332,11 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
         }
       >
         <QueryState
-          loading={query.isPending}
-          paused={query.isPaused}
+          loading={settingsQuery.isPending}
+          paused={settingsQuery.isPaused}
           loadingLayout="settings"
-          error={query.error}
-          retry={() => query.refetch()}
+          error={settingsQuery.error}
+          retry={() => settingsQuery.refetch()}
         >
           {null}
         </QueryState>
@@ -2108,13 +2118,9 @@ function Settings({
     },
     onSuccess: async (saved, submitted) => {
       // A pre-save background read must not replace the accepted settings.
-      // Cancel only this composite read; later refreshes remain available.
-      await client.cancelQueries({ queryKey: ["admin-state"], exact: true });
-      client.setQueryData(
-        ["admin-state"],
-        (cached: Record<string, unknown> | undefined) =>
-          cached ? { ...cached, settings: saved } : cached,
-      );
+      // Cancel only the settings read; later refreshes remain available.
+      await client.cancelQueries({ queryKey: ["platform-settings"], exact: true });
+      client.setQueryData(["platform-settings"], saved);
       if (!active.current) return;
       setBaseline(saved);
       const currentMatchesSubmission = sameSettings(
@@ -2147,13 +2153,9 @@ function Settings({
       // A read belongs to this editor, unlike a confirmed write receipt.
       // A departed editor must not cancel or replace a newer owner's state.
       if (!active.current) return;
-      await client.cancelQueries({ queryKey: ["admin-state"], exact: true });
+      await client.cancelQueries({ queryKey: ["platform-settings"], exact: true });
       if (!active.current) return;
-      client.setQueryData(
-        ["admin-state"],
-        (cached: Record<string, unknown> | undefined) =>
-          cached ? { ...cached, settings: current } : cached,
-      );
+      client.setQueryData(["platform-settings"], current);
       if (!active.current) return;
       setBaseline(current);
       setSaveUnconfirmed(false);

@@ -22,6 +22,7 @@ export default defineConfig({
         "**/fleet-request-recovery.ui.spec.ts",
         "**/group-access-decision.ui.spec.ts",
         "**/route-inventory-recovery.ui.spec.ts",
+        "**/admin-settings-isolation.ui.spec.ts",
       ],
     })),
   workers: 1,
