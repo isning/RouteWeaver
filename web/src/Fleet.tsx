@@ -1333,7 +1333,7 @@ export function FleetBatchDetail({
     confirm = useConfirm();
   const query = useQuery({
     queryKey: ["fleet-batch", id],
-    queryFn: () => request<FleetBatch>(`${base}/${id}`),
+    queryFn: ({ signal }) => request<FleetBatch>(`${base}/${id}`, { signal }),
     refetchInterval: (q) => (q.state.data?.status === "pending" ? 5000 : false),
   });
   const [selected, setSelected] = useState<string[]>([]);
@@ -1348,7 +1348,9 @@ export function FleetBatchDetail({
   const execute = useMutation({
     mutationFn: (op: NonNullable<typeof operation>) =>
       post<FleetBatch>(`${base}/${id}/${op.endpoint}`, op.body),
-    onSuccess: (value) => {
+    onSuccess: async (value) => {
+      // Older progress reads must not replace this confirmed mutation result.
+      await client.cancelQueries({ queryKey: ["fleet-batch", id], exact: true });
       client.setQueryData(["fleet-batch", id], value);
       client.invalidateQueries({ queryKey: ["fleet-batches"] });
       client.invalidateQueries({ queryKey: ["instance-state"] });

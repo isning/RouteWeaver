@@ -1153,3 +1153,60 @@ for (const refreshState of ["pending", "failed", "changed"] as const) {
     await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
   });
 }
+
+
+it("keeps successful fleet retry progress when an older refresh arrives late, then allows a fresh read", async (context) => {
+  const scenario = ownedClickScenario(context);
+  const batch = { ...plan, id: "batch", action: "configure", deploymentId: "path", createdAt: "2026-11-11T10:00:00Z", leaseSeconds: 300, status: "planned",
+    targets: [{ ...plan.targets[0], status: "planned", attempts: [], changes: [], diagnostics: [] }],
+  };
+  const queued = { ...batch, status: "queued", targets: [{ ...batch.targets[0], status: "queued" }] };
+  const completed = { ...batch, status: "succeeded", targets: [{ ...batch.targets[0], status: "succeeded" }] };
+  let reads = 0;
+  const writes: unknown[] = [];
+  let finishOlderRead!: (response: Response) => void;
+  let finishRetry!: (response: Response) => void;
+  let finishFreshRead!: (response: Response) => void;
+  vi.stubGlobal("fetch", vi.fn(async (_url: string, init?: RequestInit) => {
+    if (init?.method === "POST") {
+      writes.push(JSON.parse(String(init.body)));
+      if (writes.length === 1) return json({ error: "执行暂时不可用" }, 503);
+      return new Promise<Response>(resolve => { finishRetry = resolve; });
+    }
+    reads++;
+    if (reads <= 2) return json(batch);
+    // Deliberately let this mock deliver even after AbortSignal cancellation:
+    // the public UI must reject an obsolete result, not depend on transport timing.
+    if (reads === 3) return new Promise<Response>(resolve => { finishOlderRead = resolve; });
+    return new Promise<Response>(resolve => { finishFreshRead = resolve; });
+  }));
+  await mount(<FleetBatchDetail id="batch" onClose={() => {}} />);
+  await scenario.click(() => screen.findByRole("button", { name: "执行第 1 阶段" }));
+  await scenario.click(() => screen.findByRole("button", { name: "确认执行" }));
+  await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+  await screen.findByRole("button", { name: "重新提交同一请求" });
+  await waitFor(() => expect(reads).toBe(2));
+  await scenario.click(() => screen.getByRole("button", { name: "刷新进度" }));
+  await waitFor(() => expect(reads).toBe(3));
+  await scenario.click(() => screen.getByRole("button", { name: "重新提交同一请求" }));
+  await waitFor(() => expect(writes.length).toBe(2));
+  expect(writes[1]).toEqual(writes[0]);
+  await act(async () => finishRetry(json(queued)));
+  await waitFor(() => expect(screen.queryByRole("button", { name: "重新提交同一请求" })).toBeNull());
+  await screen.findAllByText("已提交，等待节点", { exact: true });
+
+  await act(async () => finishOlderRead(json(batch)));
+  await waitFor(() => expect(screen.queryByText("正在刷新批次进度，以下为上次读取的记录。暂不能开始新的执行或目标重试。")).toBeNull());
+  expect(screen.getAllByText("已提交，等待节点", { exact: true }).length).toBeGreaterThan(0);
+  expect(screen.getByRole("button", { name: "执行第 1 阶段" }).hasAttribute("disabled")).toBe(true);
+  expect(screen.queryByRole("button", { name: "重新提交同一请求" })).toBeNull();
+  expect(writes.length).toBe(2);
+
+  await scenario.click(() => screen.getByRole("button", { name: "刷新进度" }));
+  await waitFor(() => expect(reads).toBe(4));
+  await act(async () => finishFreshRead(json(completed)));
+  await screen.findByText("本阶段已完成", { exact: true });
+  expect(screen.getByRole("button", { name: "执行第 1 阶段" }).hasAttribute("disabled")).toBe(true);
+  expect(screen.queryByText("已提交，等待节点", { exact: true })).toBeNull();
+  expect(writes.length).toBe(2);
+});

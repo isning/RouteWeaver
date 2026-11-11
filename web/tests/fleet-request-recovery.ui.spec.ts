@@ -119,9 +119,12 @@ for (const width of [390, 1440]) {
       expect(JSON.stringify(writes[1]) === JSON.stringify(writes[0])).toBe(true);
       expect(JSON.stringify(writes[2]) === JSON.stringify(writes[0])).toBe(true);
       const succeeding = held!; held = undefined;
-      await succeeding.fulfill({ json: { ...batch, status: "queued" } });
+      const submitted = { ...batch, status: "queued", targets: batch.targets.map(target => ({ ...target, status: "queued" })) };
+      fixtures["/api/admin/fleet-batches/batch"] = submitted;
+      await succeeding.fulfill({ json: submitted });
       await expect(retry).toHaveCount(0);
-      await expect(detail.getByText("已提交，等待节点", { exact: true })).toBeVisible();
+      await expect(detail.getByText("已提交，等待节点", { exact: true }).first()).toBeVisible();
+      await expect(detail.getByRole("button", { name: "执行第 1 阶段", exact: true })).toBeDisabled();
       await capture("submitted");
       expect(blocked).toEqual([]);
     } finally {
