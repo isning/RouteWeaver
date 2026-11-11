@@ -25,3 +25,9 @@ Independent source review caught two intermediate regressions before acceptance:
 - Independent read-only source review accepted the final implementation and test design with no remaining concrete blocker. That review did not execute suites or browsers.
 
 These are bounded DOM/HTTP-fixture and build results, not native browser, pixel, backend persistence, full-suite, or remote-CI acceptance. No native/browser execution, publication, deployment, credentials, or real source/resource mutation was performed in this work. The coordinator owns the subsequent full suite.
+
+## Prepared native evidence
+
+Six real-App synthetic loopback journeys now cover resource unknown/cached/empty recovery and source cached-sheet changed/removed reconciliation at 390 and 1440 pixels. Exact synthetic refresh requests are fulfilled locally, unexpected/off-origin HTTP is blocked, and no API mutation is forwarded. Current-viewport masked originals, keyboard focus/geometry, and independent sanitized request ledgers have bounded artifact retention.
+
+Strict browser-spec TypeScript passes. Supplemental discovery is 50 cases across 17 files, and all five workflow contracts pass. Independent source review accepted payload/path matching, selectors, keyboard traversal, evidence privacy and additive artifact bounds. Existing sandbox, time limits, one worker, zero retries and required gates remain unchanged. Actual native execution, lane runtime, pixel review, paused native recovery and backend correctness remain unverified.

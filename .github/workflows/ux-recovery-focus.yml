@@ -21,7 +21,7 @@ env:
 
 jobs:
   recovery:
-    name: Sixteen recovery specs (supplemental evidence only)
+    name: Seventeen recovery specs (supplemental evidence only)
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
@@ -81,7 +81,7 @@ jobs:
             await browser.close();
           }
           JS
-      - name: Run sixteen recovery specs with unchanged fixtures
+      - name: Run seventeen recovery specs with unchanged fixtures
         working-directory: web
         # Bound this subset without changing per-test timeouts; reserve cleanup/upload time.
         timeout-minutes: 10
@@ -163,5 +163,24 @@ jobs:
             web/test-results/template-target-identity*/client-profile-*.png
             web/test-results/template-target-identity*/processing-preset-*-ledger.json
             web/test-results/template-target-identity*/processing-preset-*.png
+            web/test-results/resource-source-inventory-recovery*/resource-initial-unknown.png
+            web/test-results/resource-source-inventory-recovery*/resource-initial-unknown.json
+            web/test-results/resource-source-inventory-recovery*/resource-cached-error.png
+            web/test-results/resource-source-inventory-recovery*/resource-cached-error.json
+            web/test-results/resource-source-inventory-recovery*/resource-retry-keyboard.png
+            web/test-results/resource-source-inventory-recovery*/resource-retry-keyboard.json
+            web/test-results/resource-source-inventory-recovery*/resource-reconciled-empty.png
+            web/test-results/resource-source-inventory-recovery*/resource-reconciled-empty.json
+            web/test-results/resource-source-inventory-recovery*/source-cached-error.png
+            web/test-results/resource-source-inventory-recovery*/source-cached-error.json
+            web/test-results/resource-source-inventory-recovery*/source-detail-cached.png
+            web/test-results/resource-source-inventory-recovery*/source-detail-cached.json
+            web/test-results/resource-source-inventory-recovery*/source-detail-retry-keyboard.png
+            web/test-results/resource-source-inventory-recovery*/source-detail-retry-keyboard.json
+            web/test-results/resource-source-inventory-recovery*/source-detail-reconciled.png
+            web/test-results/resource-source-inventory-recovery*/source-detail-reconciled.json
+            web/test-results/resource-source-inventory-recovery*/final-original.png
+            web/test-results/resource-source-inventory-recovery*/final-original.json
+            web/test-results/resource-source-inventory-recovery*/request-ledger.json
           if-no-files-found: warn
           retention-days: 7

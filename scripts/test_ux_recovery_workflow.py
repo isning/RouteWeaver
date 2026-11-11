@@ -7,7 +7,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SPECS = {
     'server-json-recovery', 'workspace-return', 'notification-channel-journey',
     'template-target-identity', 'admin-validation-recovery', 'admin-validation-order',
-    'compact-choice-keyboard', 'multi-choice-reopening', 'fleet-request-recovery', 'group-access-decision', 'route-inventory-recovery', 'admin-settings-isolation', 'entry-route-identity', 'route-account-identity', 'backup-tab-continuity', 'profile-read-recovery',
+    'compact-choice-keyboard', 'multi-choice-reopening', 'fleet-request-recovery', 'group-access-decision', 'route-inventory-recovery', 'admin-settings-isolation', 'entry-route-identity', 'route-account-identity', 'backup-tab-continuity', 'profile-read-recovery', 'resource-source-inventory-recovery',
 }
 COMPACT_PHASES = (
     'protocol-cancel', 'protocol-settled-reopen', 'transport-cancel',
@@ -19,8 +19,22 @@ MULTI_PHASES = (
     'returned-to-tag-trigger', 'newer-region-owner', 'newer-protocol-owner',
     'protocol-selected', 'preview-draft', 'final-state', 'failure-original',
 )
+INVENTORY_PHASES = (
+    'resource-initial-unknown',
+    'resource-cached-error',
+    'resource-retry-keyboard',
+    'resource-reconciled-empty',
+    'source-cached-error',
+    'source-detail-cached',
+    'source-detail-retry-keyboard',
+    'source-detail-reconciled',
+    'final-original',
+)
 ARTIFACTS = {
     'web/playwright-report/',
+    *{f'web/test-results/resource-source-inventory-recovery*/{phase}.{ext}'
+      for phase in INVENTORY_PHASES for ext in ('png', 'json')},
+    'web/test-results/resource-source-inventory-recovery*/request-ledger.json',
     'web/test-results/group-access-decision*/group-access-*.png',
     'web/test-results/group-access-decision*/group-access-evidence-*.json', 'bin/verification/browser-environment.json',
     'web/test-results/*/route-json-*.png',
@@ -69,8 +83,8 @@ class UXRecoveryWorkflowTests(unittest.TestCase):
         for value in ('group: ux-recovery-${{ github.ref }}', 'cancel-in-progress: false',
                       'contents: read', 'persist-credentials: false', 'runs-on: ubuntu-24.04',
                       'timeout-minutes: 15', 'timeout-minutes: 10',
-                      'name: Sixteen recovery specs (supplemental evidence only)',
-                      'name: Run sixteen recovery specs with unchanged fixtures',
+                      'name: Seventeen recovery specs (supplemental evidence only)',
+                      'name: Run seventeen recovery specs with unchanged fixtures',
                       'ROUTEWEAVER_CHROMIUM: /opt/google/chrome/chrome',
                       'npx --no-install playwright install-deps chromium',
                       '--config=playwright.ux-recovery.config.ts --workers=1 --retries=0'):
@@ -124,6 +138,11 @@ class UXRecoveryWorkflowTests(unittest.TestCase):
                               for ext in ('png', 'json')) + ('request-ledger.json',)
         for width in (1440, 390):
             observed[f'multi-choice-reopening.ui-task-at-{width}x560-chromium'] = multi_outputs
+        inventory_outputs = tuple(f'{phase}.{ext}' for phase in INVENTORY_PHASES
+                                  for ext in ('png', 'json')) + ('request-ledger.json',)
+        for width in (1440, 390):
+            for scenario in ('resource', 'source-changed', 'source-removed'):
+                observed[f'resource-source-inventory-recovery.ui-inventory-read-recovery-{scenario}-at-{width}px-chromium'] = inventory_outputs
         for directory, filenames in observed.items():
             for filename in filenames:
                 path = f'web/test-results/{directory}/{filename}'
@@ -143,7 +162,7 @@ class UXRecoveryWorkflowTests(unittest.TestCase):
                     self.assertFalse(retained(path), path)
 
         # A named compact capture is not an upload permission for another fixture.
-        for filename in compact_outputs + multi_outputs:
+        for filename in compact_outputs + multi_outputs + inventory_outputs:
             path = f'web/test-results/unrelated.ui-chromium/{filename}'
             with self.subTest(path=path):
                 self.assertFalse(retained(path), path)
