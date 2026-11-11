@@ -84,6 +84,76 @@ for (const width of [1440, 390]) {
     });
     const inventory = new Inventory(page, info, "admin", "notifications");
     const measurements: unknown[] = [];
+    const traversals: unknown[] = [];
+    const tabTo = async (surface: Locator, target: Locator) => {
+      const controls = surface.locator(
+        "a[href],button,input,select,textarea,[tabindex]",
+      );
+      // A datetime-local host is not one Tab stop: Chromium's native editor
+      // contains date/time segments. Use a conservative bound for the possible year,
+      // month, day, hour, minute, second, fraction, AM/PM and picker stops (9).
+      // Optional segments need not appear. Ordinary controls still count once.
+      const budget = await controls.evaluateAll((elements) =>
+        elements.reduce(
+          (total, element) =>
+            total +
+            (element instanceof HTMLInputElement &&
+            element.type === "datetime-local"
+              ? 9
+              : 1),
+          0,
+        ),
+      );
+      const sequence: unknown[] = [];
+      const traversal = {
+        target:
+          (await target.getAttribute("aria-label")) ??
+          (await target.innerText()),
+        budget,
+        sequence,
+        reached: false,
+      };
+      traversals.push(traversal);
+      for (let presses = 0; presses <= budget; presses++) {
+        const state = await surface.evaluate((element) => {
+          const active = document.activeElement;
+          const input = active instanceof HTMLInputElement ? active : null;
+          return {
+            contained: element.contains(active),
+            tag: active?.tagName ?? null,
+            type: input?.type ?? null,
+            id: active?.id ?? null,
+            label:
+              active?.getAttribute("aria-label") ??
+              (input
+                ? Array.from(input.labels ?? [])
+                    .map((label) => label.textContent)
+                    .join(" ")
+                : null),
+          };
+        });
+        // Repeated datetime host entries are meaningful: document.activeElement
+        // does not expose which native shadow-editor segment currently has focus.
+        sequence.push({ presses, ...state });
+        expect(state.contained, "Native Tab remains in the current task").toBe(
+          true,
+        );
+        if (
+          await target.evaluate((element) => element === document.activeElement)
+        ) {
+          traversal.reached = true;
+          break;
+        }
+        if (presses < budget) await page.keyboard.press("Tab");
+      }
+      expect(
+        traversal.reached,
+        `Target reached within native control budget: ${JSON.stringify(traversal)}`,
+      ).toBe(true);
+      await expect(target).toBeFocused();
+      await inventory.stable(surface);
+      await inventory.inView(target);
+    };
     const screenshot = async (stage: string) => {
       if (process.env.CI)
         await info.attach(`announcement-${width}-${stage}.png`, {
@@ -175,7 +245,7 @@ for (const width of [1440, 390]) {
               (element as HTMLButtonElement).form!.checkValidity(),
             ),
           ).toBe(true);
-          await inventory.tabTo(dialog, save);
+          await tabTo(dialog, save);
           const before = await geometry(dialog, field);
           expect(
             before.rail.max,
@@ -234,14 +304,14 @@ for (const width of [1440, 390]) {
           await title.fill("Retained title");
           await recover(body, "正文", "body");
           await retained("Retained title", "   ");
-          await inventory.tabTo(dialog, cancel);
+          await tabTo(dialog, cancel);
           await page.keyboard.press("Enter");
           const review = page.getByRole("alertdialog", {
             name: "放弃未保存的公告修改？",
             exact: true,
           });
           await inventory.stable(review);
-          await inventory.tabTo(
+          await tabTo(
             review,
             review.getByRole("button", { name: "继续编辑", exact: true }),
           );
@@ -252,14 +322,14 @@ for (const width of [1440, 390]) {
           await recover(body, "正文", "continued-body");
           await retained("Retained title", "   ");
         }
-        await inventory.tabTo(dialog, cancel);
+        await tabTo(dialog, cancel);
         await page.keyboard.press("Enter");
         const discard = page.getByRole("alertdialog", {
           name: "放弃未保存的公告修改？",
           exact: true,
         });
         await inventory.stable(discard);
-        await inventory.tabTo(
+        await tabTo(
           discard,
           discard.getByRole("button", { name: "放弃修改", exact: true }),
         );
@@ -277,22 +347,22 @@ for (const width of [1440, 390]) {
         expect(reads).toContain(path);
       inventory.finish();
     } finally {
-      if (process.env.CI)
-        await info.attach("announcement-submit-focus-measurements", {
-          contentType: "application/json",
-          body: JSON.stringify(
-            {
-              viewport: page.viewportSize(),
-              measurements,
-              reads,
-              blocked,
-              scope:
-                "Production-built App with synthetic authenticated reads; invalid native footer submits, field ordering, retained draft, continue editing, discard and clean reopen. No successful save, announcement scheduling, delivery, live data or screen-reader acceptance.",
-            },
-            null,
-            2,
-          ),
-        });
+      await info.attach("announcement-submit-focus-measurements", {
+        contentType: "application/json",
+        body: JSON.stringify(
+          {
+            viewport: page.viewportSize(),
+            measurements,
+            traversals,
+            reads,
+            blocked,
+            scope:
+              "Production-built App with synthetic authenticated reads; invalid native footer submits, field ordering, retained draft, continue editing, discard and clean reopen. No successful save, announcement scheduling, delivery, live data or screen-reader acceptance.",
+          },
+          null,
+          2,
+        ),
+      });
       expect(
         blocked,
         "No writes, unexpected API reads or external requests, even on assertion failure",

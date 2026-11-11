@@ -67,7 +67,7 @@ async function installFixture(
       url = new URL(request.url());
     const refuse = () => {
       unexpected.push(
-        `${request.method()} ${url.origin}${url.pathname}${url.search}`,
+        `${request.method()} ${url.origin === origin ? url.pathname : "external-origin"}${url.search ? "?redacted" : ""}`,
       );
       return route.abort("blockedbyclient");
     };
@@ -153,6 +153,130 @@ async function capture(page: Page, info: TestInfo, name: string) {
   await info.attach(name, {
     body: await page.screenshot({ scale: "css" }),
     contentType: "image/png",
+  });
+}
+
+// A narrow DataTable deliberately keeps readable columns in a horizontal rail.
+// Inspect each semantic column at its actual visible position, rather than
+// demanding the entire wide row fit or accepting merely attached/clipped text.
+async function captureRecord(
+  page: Page,
+  row: Locator,
+  info: TestInfo,
+  width: number,
+  name: string,
+  failedRefresh = false,
+) {
+  await row.scrollIntoViewIfNeeded();
+  if (width !== 390) {
+    await expect(row).toBeInViewport({ ratio: 1 });
+    await capture(page, info, name);
+    return;
+  }
+  const rail = page
+    .getByRole("region", { name: "表格滚动区域", exact: true })
+    .filter({ has: row });
+  await expect(rail).toHaveAttribute("tabindex", "0");
+  await expect(rail).toHaveAccessibleDescription("向左右滚动查看完整表格");
+  await expect(rail).toBeInViewport({ ratio: 1 });
+  expect(
+    await rail.evaluate((node) => ({
+      overflow: getComputedStyle(node).overflowX,
+      scrollable: node.scrollWidth > node.clientWidth + 1,
+    })),
+  ).toEqual({ overflow: "auto", scrollable: true });
+  await tabTo(page, rail);
+  await expect(rail).toBeFocused();
+  const scrollToEdge = async (edge: "left" | "right") => {
+    for (let count = 0; count < 40; count++) {
+      const before = await rail.evaluate((node) => ({
+        left: node.scrollLeft,
+        max: node.scrollWidth - node.clientWidth,
+      }));
+      if (edge === "left" ? before.left <= 1 : before.left >= before.max - 1)
+        break;
+      await page.keyboard.press(edge === "left" ? "ArrowLeft" : "ArrowRight");
+      if (edge === "left")
+        await expect
+          .poll(() => rail.evaluate((node) => node.scrollLeft))
+          .toBeLessThan(before.left);
+      else
+        await expect
+          .poll(() => rail.evaluate((node) => node.scrollLeft))
+          .toBeGreaterThan(before.left);
+    }
+    await expect
+      .poll(() =>
+        rail.evaluate(
+          (node, side) =>
+            side === "left"
+              ? node.scrollLeft
+              : node.scrollWidth - node.clientWidth - node.scrollLeft,
+          edge,
+        ),
+      )
+      .toBeLessThanOrEqual(1);
+  };
+  for (const [edge, columns] of [
+    [
+      "left",
+      [
+        ["线路", routeName],
+        ["倍率", "2×"],
+      ],
+    ],
+    [
+      "right",
+      [
+        ["生效时间（UTC+8）", "2099/01/02 11:04"],
+        ["状态", "待生效"],
+      ],
+    ],
+  ] as const) {
+    await scrollToEdge(edge);
+    for (const [header, value] of columns) {
+      for (const cell of [
+        rail.getByRole("columnheader", { name: header, exact: true }),
+        row.getByRole("cell", { name: value, exact: true }),
+      ]) {
+        await expect(cell).toBeInViewport({ ratio: 1 });
+        expect(
+          await cell.evaluate((node) => {
+            const viewport = node.closest('[role="region"]')!;
+            const box = node.getBoundingClientRect(),
+              clip = viewport.getBoundingClientRect();
+            return (
+              box.left >= clip.left + viewport.clientLeft - 1 &&
+              box.right <=
+                clip.left + viewport.clientLeft + viewport.clientWidth + 1 &&
+              box.top >= clip.top - 1 &&
+              box.bottom <= clip.top + viewport.clientHeight + 1
+            );
+          }),
+        ).toBe(true);
+      }
+    }
+    if (failedRefresh) {
+      await expect(page.getByText(failure, { exact: true })).toBeInViewport({
+        ratio: 1,
+      });
+      await expect(
+        page.getByRole("button", { name: "重试", exact: true }),
+      ).toBeInViewport({ ratio: 1 });
+    }
+    await capture(page, info, `${name}-${edge}-columns`);
+  }
+  await info.attach(`${name}-rail-geometry`, {
+    contentType: "application/json",
+    body: JSON.stringify(
+      await rail.evaluate((node) => ({
+        width: node.clientWidth,
+        contentWidth: node.scrollWidth,
+        scrollLeft: node.scrollLeft,
+        pageWidth: document.documentElement.scrollWidth,
+        viewportWidth: innerWidth,
+      })),
+    ),
   });
 }
 
@@ -255,11 +379,13 @@ for (const width of [1440, 390]) {
         await expect(page.getByText(failure, { exact: true })).toBeInViewport({
           ratio: 1,
         });
-        await expect(row).toBeInViewport({ ratio: 1 });
-        await capture(
+        await captureRecord(
           page,
+          row,
           info,
+          width,
           `rate-${width}-saved-despite-refresh-failure`,
+          true,
         );
         // A fresh, canceled editor cannot erase the earlier confirmed receipt.
         await tabTo(page, opener);
@@ -283,10 +409,11 @@ for (const width of [1440, 390]) {
       await expect(row).toHaveCount(1);
       await expect(page.getByText(failure, { exact: true })).toHaveCount(0);
       await expect(row).toContainText("2099/01/02 11:04");
-      await row.scrollIntoViewIfNeeded();
-      await capture(
+      await captureRecord(
         page,
+        row,
         info,
+        width,
         `rate-${width}-${mismatched}-authoritative-record`,
       );
       expect(fixture.writes).toHaveLength(1);
