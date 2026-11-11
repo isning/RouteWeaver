@@ -288,6 +288,14 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
     />
   ) : undefined;
   const data = query.data;
+  const usersInventoryKnown = page === "users" && data !== undefined;
+  const usersInventoryReady = query.isSuccess && query.fetchStatus === "idle";
+  // A closing menu may retain an older callback: check current read authority.
+  const usersReadAuthority = useRef(false);
+  usersReadAuthority.current = usersInventoryReady;
+  const openUserTask = (open: () => void) => {
+    if (usersReadAuthority.current) open();
+  };
   const nodes = data?.nodes || [];
   const users = data?.users || [];
   const routes = data?.routes || [];
@@ -375,11 +383,24 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
       />
       <ErrorNotice error={error} />
       <ErrorNotice error={validate.error} />
+      {usersInventoryKnown && query.isError && (
+        <Notice tone="error" title="暂时无法核对用户" action={
+          <ActionButton onClick={() => query.refetch()} disabled={query.isFetching} variant="outline">重试用户列表</ActionButton>
+        }>
+          <p>{query.error.message}</p>
+          <p>显示上次读取的用户，请重试后再打开用户操作。</p>
+        </Notice>
+      )}
+      {usersInventoryKnown && (query.isFetching || query.isPaused) && (
+        <p role="status" className="text-sm text-muted-foreground">
+          {query.isPaused ? "等待网络连接后核对用户。" : "正在核对用户…"}
+        </p>
+      )}
       <QueryState
         loading={query.isPending}
         paused={query.isPaused}
         loadingLayout="table"
-        error={query.error}
+        error={usersInventoryKnown ? null : query.error}
         retry={() => query.refetch()}
       >
         {data && (
@@ -637,9 +658,10 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
                           render: (name, u) => (
                             <button
                               className="table-name inline-flex min-w-0 items-center gap-2 rounded-sm text-left text-sm font-medium text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                              onClick={() =>
-                                setEntity({ kind: "users", value: u })
-                              }
+                              disabled={!usersInventoryReady}
+                              onClick={() => openUserTask(() =>
+                                setEntity({ kind: "users", value: u }),
+                              )}
                             >
                               {name}
                             </button>
@@ -664,22 +686,25 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
                           render: (_, u) => (
                             <TableRowActions name={u.name}>
                               <ActionButton
-                                onClick={() => setEntryUser(u)}
+                                disabled={!usersInventoryReady}
+                                onClick={() => openUserTask(() => setEntryUser(u))}
                                 variant="ghost"
                               >
                                 平台入口
                               </ActionButton>
                               <AdminRowMenu
+                                disabled={!usersInventoryReady}
                                 name={u.name}
                                 actions={[
                                   {
                                     label: "授权与续期",
-                                    run: () => setEntitlementUser(u),
+                                    run: () => openUserTask(() => setEntitlementUser(u)),
                                   },
                                   {
                                     label: "编辑用户",
-                                    run: () =>
+                                    run: () => openUserTask(() =>
                                       setEntity({ kind: "users", value: u }),
+                                    ),
                                   },
                                 ]}
                               />
@@ -704,7 +729,7 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
                         ) : undefined
                       }
                     />
-                  ) : (
+                  ) : usersInventoryReady ? (
                     <EmptyState
                       title="暂无用户"
                       description="邀请用户注册，或直接添加账号。"
@@ -722,7 +747,7 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
                         </ActionButton>
                       }
                     />
-                  ))}
+                  ) : null)}
                 {page === "services" &&
                   ((data.services || []).length ? (
                     <DataTable<Service>
@@ -2406,8 +2431,10 @@ function AuditLog() {
 function AdminRowMenu({
   name,
   actions,
+  disabled = false,
 }: {
   name: string;
+  disabled?: boolean;
   actions: {
     label: string;
     accessibleLabel?: string;
@@ -2423,6 +2450,7 @@ function AdminRowMenu({
       <DropdownMenuTrigger asChild>
         <Button
           ref={trigger}
+          disabled={disabled}
           variant="ghost"
           size="icon"
           className="size-11"
@@ -2447,6 +2475,7 @@ function AdminRowMenu({
         {actions.map((action) => (
           <DropdownMenuItem
             key={action.label}
+            disabled={disabled}
             className="min-h-11"
             variant={action.destructive ? "destructive" : "default"}
             aria-label={action.accessibleLabel}
