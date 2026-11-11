@@ -172,9 +172,10 @@ function sharedLimitSource(policy: EffectivePolicy, fields: PolicyDisplayField[]
         return source;
     return undefined;
 }
-function PolicyComparison({ effect, userName, services, routes, showFull, }: {
+function PolicyComparison({ effect, userName, showUserId, services, routes, showFull, }: {
     effect: PolicyPreview["affected"][number];
     userName: string;
+    showUserId?: boolean;
     services: NamedRecord[];
     routes: NamedRecord[];
     showFull: boolean;
@@ -244,7 +245,7 @@ function PolicyComparison({ effect, userName, services, routes, showFull, }: {
     const firstLimit = grouped ? fields.indexOf(limits[0]) : -1;
     const lastLimit = grouped ? fields.indexOf(limits[limits.length - 1]) : -1;
     return (<section className="policy-comparison-user space-y-3" aria-labelledby={`${id}-user`}>
-      <h3 id={`${id}-user`}>{userName}</h3>
+      <h3 id={`${id}-user`} aria-label={showUserId ? `${userName}，账号标识：${effect.userId}` : undefined}>{userName}{showUserId && <span className="block text-xs font-normal text-muted-foreground [overflow-wrap:anywhere]"> 账号标识：<code>{effect.userId}</code></span>}</h3>
       {fields.length ? (<Table className="policy-comparison-table w-full table-fixed text-sm [&_th]:p-2 [&_td]:p-2 sm:[&_th]:p-3 sm:[&_td]:p-3 [&_th]:whitespace-normal [&_td]:whitespace-normal [&_th]:[overflow-wrap:anywhere] [&_td]:[overflow-wrap:anywhere] [&_th]:text-left [&_th]:font-medium [&_td]:align-top [&_tr]:border-b [&_thead]:bg-muted/50 [&_td]:break-words" role="table" aria-labelledby={`${id}-user`}>
           <TableHeader role="rowgroup">
             <TableRow role="row">
@@ -485,6 +486,16 @@ export function usePolicyChange({ mode, retainedDrafts, users, services, routes,
         setFailureFocus(null);
         setReview(null);
     };
+    // Disambiguate against the whole review, not just its current page.
+    // Missing catalog records use their ID and participate in label collisions.
+    const accountLabel = (id: string) => users.find(user => user.id === id)?.name || id;
+    const accountIdentities = new Map<string, Set<string>>();
+    for (const effect of review?.preview.affected ?? []) {
+        const label = accountLabel(effect.userId);
+        const ids = accountIdentities.get(label) ?? new Set<string>();
+        ids.add(effect.userId);
+        accountIdentities.set(label, ids);
+    }
     const dialog = (<TaskDialog title="确认授权变更" bodyProps={{ className: "space-y-5" }} open={!!review} footer={<div className={"flex flex-wrap items-center gap-2"}>
           <ActionButton disabled={apply.isPending} onClick={dismissReview} variant="outline">
             返回编辑
@@ -527,7 +538,7 @@ export function usePolicyChange({ mode, retainedDrafts, users, services, routes,
               <label className="flex items-start gap-2 text-sm leading-relaxed"><Checkbox checked={showFull} onCheckedChange={checked => (event => setShowFull(event.target.checked))({ target: { checked: checked === true } })}/>
                 显示完整授权
               </label>
-              <ul className="policy-review-users divide-y rounded-lg border">{review.preview.affected.slice((reviewPage - 1) * 5, reviewPage * 5).map(effect => <li key={effect.userId} className="p-4"><PolicyComparison effect={effect} userName={users.find(user => user.id === effect.userId)?.name || effect.userId} services={services} routes={routes} showFull={showFull}/></li>)}</ul>
+              <ul className="policy-review-users divide-y rounded-lg border">{review.preview.affected.slice((reviewPage - 1) * 5, reviewPage * 5).map(effect => <li key={effect.userId} className="p-4"><PolicyComparison effect={effect} userName={accountLabel(effect.userId)} showUserId={(accountIdentities.get(accountLabel(effect.userId))?.size ?? 0) > 1} services={services} routes={routes} showFull={showFull}/></li>)}</ul>
               {review.preview.affected.length > 5 && <PageNavigation page={reviewPage} pageSize={5} total={review.preview.affected.length} onPageChange={setReviewPage}/>}
               <p className="muted text-sm text-muted-foreground">切换方案或续期后，保留已有用量。</p>
             </>)}

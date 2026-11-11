@@ -1464,3 +1464,35 @@ it("requires a selected personal plan and restores inheritance without sending a
   owner.assertActive();
   expect(writes[0].entitlement.serviceId).toBe("");
 });
+
+it.each([false, true])("distinguishes colliding affected account labels across impact-review pages before consent (missing=%s)", async (missing) => {
+  const owner = currentOwner;
+  const { usePolicyChange } = await import("./AccessPolicy");
+  const ids = ["account-a", "account-b", "account-c", "account-d", "account-e", "account-f"];
+  const writes: string[] = [];
+  vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+    writes.push(url);
+    return json({ revision: "review-identities", blockers: [], affected: ids.map(userId => ({
+      userId, before: { ...before, userId }, after: { ...before, userId, connectionLimit: 8 },
+    })) });
+  }));
+  function Review() {
+    const change = usePolicyChange({ mode: "legacy-replacement",
+      users: ids.filter(id => !missing || id !== "account-f").map((id, index) => ({ id, name: index === 0 || index === 5 ? (missing ? "account-f" : "同名账号") : index === 1 ? "同名账号（ID：account-a）" : `账号 ${index}` })),
+      services: [], routes: [], onApplied: () => {},
+    });
+    return <><button onClick={() => change.propose({ entitlement: before.entitlement })}>Review identities</button>{change.dialog}</>;
+  }
+  mount(owner, <Review />);
+  await owner.click(() => screen.getByRole("button", { name: "Review identities" }));
+  const dialog = within(await screen.findByRole("dialog", { name: "确认授权变更" }));
+  expect(dialog.getByRole("heading", { name: `${missing ? "account-f" : "同名账号"}，账号标识：account-a` })).toBeTruthy();
+  expect(dialog.getByRole("heading", { name: "账号 2" })).toBeTruthy();
+  const literal = dialog.getByRole("heading", { name: "同名账号（ID：account-a）" });
+  expect(literal.querySelector("code")).toBeNull();
+  expect(dialog.getByText("account-a", { selector: "code" })).toBeTruthy();
+  await owner.click(() => dialog.getByRole("button", { name: "下一页" }));
+  expect(dialog.getByRole("heading", { name: `${missing ? "account-f" : "同名账号"}，账号标识：account-f` })).toBeTruthy();
+  expect(dialog.getByRole("button", { name: "更新授权" }).hasAttribute("disabled")).toBe(true);
+  expect(writes).toEqual(["/api/access-policy/preview"]);
+});
