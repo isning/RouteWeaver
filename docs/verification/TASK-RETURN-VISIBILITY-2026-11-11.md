@@ -48,3 +48,34 @@ supplied at the DOM boundary; these tests do not prove rendered visibility.
 No local native browser was launched. The unchanged native diagnostic cases and
 fresh original-pixel review remain required on the new exact commit. No full
 aggregate run, publication or deployment is claimed by this note.
+
+## Native rerun exposed a missed conditional-unmount branch
+
+The subsequent exact-head native run at `9122d4d` did **not** accept the first
+correction: 68 cases passed and the same two diagnostic 1440px cases failed.
+Artifact `13879020889` has identical returned-opener geometry and the same PNG
+content as the first failure. The earlier DOM passes remain valid only for their
+exercised paths; they did not establish native recovery.
+
+The diagnostic owner conditionally mounts `DiagnosticTargetForm`, whose dialog
+uses a constant `open` prop. Closing it unmounts the hook without rendering
+`open=false`. The added visibility guard therefore rejected the disposed task's
+last `open=true` snapshot, even though the existing focus-restoration path ran.
+The first regression host instead kept the dialog mounted with `open={state}`,
+so it missed this branch.
+
+A new public conditional-mount dialog/sheet tracer fails on the original guard
+(two failures; the preceding eleven cases pass). The correction tracks the
+hook's mounted lifetime in layout cleanup: a disposed task can recover its
+returned opener, while a still-mounted reopened task remains protected. Exact
+opener identity, connectedness and active focus checks remain in place. No
+native assertion, tolerance, timeout, timer or modal owner contract changed.
+Additional cases cover safely visible conditional returns, newer interaction
+after unmount, and a replacement task opened by the return-focus handler.
+
+After the lifetime correction, the same nine-file one-worker affected suite
+passed **172/172 tests** in 26.03 seconds, including the two formerly failing
+conditional-unmount cases and three additional guards. `tsc -b` and
+`git diff --check` passed. The native failures at `9122d4d` are not relabelled as
+passes. New exact-head native execution and original-pixel acceptance are still
+pending; no local browser was launched.

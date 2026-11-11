@@ -105,6 +105,11 @@ export function useTaskOverlayFocus(
   const opener = useRef<HTMLElement | null>(null);
   const previouslyOpen = useRef(false);
   const latest = useRef(props);
+  const mounted = useRef(false);
+  useLayoutEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
   latest.current = props;
   if (props.open && !previouslyOpen.current) {
     opener.current =
@@ -173,7 +178,9 @@ export function useTaskOverlayFocus(
             // Focus handlers can open another task or deliberately move focus.
             // Recover visibility only while this remains our returned opener.
             if (
-              !latest.current.open &&
+              // Conditional task owners unmount with their last open prop true.
+              // A still-mounted task that reopened must not recover old focus.
+              (!mounted.current || !latest.current.open) &&
               opener.current === target &&
               target.isConnected &&
               document.activeElement === target

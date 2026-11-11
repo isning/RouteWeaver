@@ -122,3 +122,70 @@ it("does not scroll an opener that reopens its task during focus return", async 
   await waitFor(() => expect(screen.getByRole("dialog").contains(document.activeElement)).toBe(true));
   expect(scroll).not.toHaveBeenCalled();
 });
+
+function ConditionalHost({ sheet = false }: { sheet?: boolean }) {
+  const [open, setOpen] = useState(false);
+  const Component = sheet ? TaskSheet : TaskDialog;
+  return <><button onClick={() => setOpen(true)}>登记测试目标</button>
+    <button>另一个任务</button>
+    {open && <Component open onOpenChange={setOpen} title="登记授权测试目标">
+      <input aria-label="目标名称" />
+      <button onClick={() => setOpen(false)}>取消</button>
+    </Component>}
+  </>;
+}
+
+it.each([false, true])("recovers a clipped opener when its always-open task is conditionally unmounted (sheet=%s)", async (sheet) => {
+  vi.stubGlobal("innerWidth", 1440); vi.stubGlobal("innerHeight", 640);
+  render(<ConditionalHost sheet={sheet} />);
+  const opener = screen.getByRole("button", { name: "登记测试目标" });
+  const scroll = observeScroll(opener, new DOMRect(795.5, 596.25, 106, 44));
+  await userEvent.click(opener);
+  await userEvent.keyboard("{Escape}");
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  await waitFor(() => expect(document.activeElement).toBe(opener));
+  expect(scroll).toHaveBeenCalledOnce();
+  expect(scroll).toHaveBeenCalledWith({ block: "center", inline: "center", behavior: "instant" });
+});
+
+it("leaves a safely visible opener stationary after conditional task unmount", async () => {
+  render(<ConditionalHost />);
+  const opener = screen.getByRole("button", { name: "登记测试目标" });
+  const scroll = observeScroll(opener, new DOMRect(100, 100, 106, 44));
+  await userEvent.click(opener);
+  await userEvent.keyboard("{Escape}");
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  await waitFor(() => expect(document.activeElement).toBe(opener));
+  expect(scroll).not.toHaveBeenCalled();
+});
+
+it("does not scroll or refocus a conditionally unmounted task's opener over a newer interaction", async () => {
+  render(<ConditionalHost />);
+  const opener = screen.getByRole("button", { name: "登记测试目标" });
+  const scroll = observeScroll(opener, new DOMRect(0, 0, 106, 44));
+  await userEvent.click(opener);
+  const next = screen.getByText("另一个任务");
+  act(() => {
+    flushSync(() => fireEvent.click(screen.getByRole("button", { name: "取消" })));
+    next.focus();
+  });
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  await act(async () => {});
+  expect(document.activeElement).toBe(next);
+  expect(scroll).not.toHaveBeenCalled();
+});
+
+it("does not scroll a disposed task's opener after focus return opens a replacement task", async () => {
+  render(<ConditionalHost />);
+  const opener = screen.getByRole("button", { name: "登记测试目标" });
+  const scroll = observeScroll(opener, new DOMRect(0, 0, 106, 44));
+  await userEvent.click(opener);
+  const original = screen.getByRole("dialog");
+  opener.addEventListener("focus", () => {
+    flushSync(() => fireEvent.click(opener));
+  }, { once: true });
+  await userEvent.keyboard("{Escape}");
+  await waitFor(() => expect(screen.getByRole("dialog")).not.toBe(original));
+  await waitFor(() => expect(screen.getByRole("dialog").contains(document.activeElement)).toBe(true));
+  expect(scroll).not.toHaveBeenCalled();
+});
