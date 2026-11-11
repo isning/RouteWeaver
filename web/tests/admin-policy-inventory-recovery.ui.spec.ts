@@ -1,10 +1,14 @@
 import { writeFile } from "node:fs/promises";
-import { expect, test, type Locator, type Page, type TestInfo } from "@playwright/test";
+import { expect, test, type Locator, type Page, type Request, type TestInfo } from "@playwright/test";
 import { settledTask } from "./ui-settled-task";
 
 // Real App and guarded editors; only exact synthetic HTTP GET responses.
 test.use({ serviceWorkers: "block", trace: "off", screenshot: "off", video: "off" });
 type Kind = "service" | "group";
+type EditRead = {
+  target: { kind: Kind; id: string };
+  lifecycle: "intercepted" | "finished" | "failed";
+};
 const labels = {
   service: { refresh: "刷新服务方案", pending: "正在刷新服务方案…", field: "服务方案名称" },
   group: { refresh: "刷新用户组", pending: "正在刷新用户组…", field: "用户组名称" },
@@ -24,7 +28,10 @@ async function fixture(page: Page, baseURL: string | undefined, kind: Kind) {
   let release!: () => void;
   const gate = new Promise<void>(resolve => { release = resolve; });
   const ledger = { reads: [] as { phase: Phase; outcome: string; authReads: number }[], editReads: 0, authReads: 0,
-    rejected: [] as string[], pageErrors: 0 };
+    editRequests: [] as EditRead[], rejected: [] as string[], pageErrors: 0 };
+  const editRequests = new WeakMap<Request, EditRead>();
+  page.on("requestfinished", request => { const entry = editRequests.get(request); if (entry) entry.lifecycle = "finished"; });
+  page.on("requestfailed", request => { const entry = editRequests.get(request); if (entry) entry.lifecycle = "failed"; });
   // App shell plus the actual services/users page's companion inventories.
   const reads: Record<string, unknown> = {
     "/api/auth/me": { user: { id: "synthetic-policy-admin", name: "合成管理员", role: "admin" }, csrfToken: "synthetic-policy-only" },
@@ -60,6 +67,10 @@ async function fixture(page: Page, baseURL: string | undefined, kind: Kind) {
     }
     if (url.pathname === `/api/access-policy/edit-context/${kind}/${kind}-10`) {
       ledger.editReads++;
+      // Only the exact allowlisted synthetic target is recorded, never raw URLs,
+      // headers, response bodies or transport error text.
+      const entry: EditRead = { target: { kind, id: url.pathname.split("/").at(-1)! }, lifecycle: "intercepted" };
+      ledger.editRequests.push(entry); editRequests.set(request, entry);
       return route.fulfill({ json: { target: { kind, id: `${kind}-10` },
         record: { [kind]: { ...records[10], name: "Authoritative record" } },
         precondition: { exists: true, revision: "opening-1" } } });
@@ -151,6 +162,7 @@ for (const width of [1440, 390]) for (const kind of ["service", "group"] as cons
     const traversals: Traversal[] = [];
     const walk = (target: Locator, stage: string) => tabTo(page, target, stage, traversals, () => http.ledger.authReads);
     let authBaseline: number | undefined;
+    let openingReadsAtReady: number | undefined;
     const main = page.locator("main");
     const refresh = page.getByRole("button", { name: label.refresh, exact: true });
     const search = page.getByRole("textbox", { name: "搜索服务方案", exact: true });
@@ -199,7 +211,13 @@ for (const width of [1440, 390]) for (const kind of ["service", "group"] as cons
       const dialog = page.getByRole("dialog", { name: "编辑 Authoritative record", exact: true });
       const field = dialog.getByRole("textbox", { name: label.field, exact: true });
       await expect(field).toHaveValue("Authoritative record");
-      expect(http.ledger.editReads).toBe(1);
+      // Vite's real App uses StrictMode: opening effect replay may abort one
+      // transport attempt. Correct authoritative ownership, not attempt count,
+      // is the public contract. An empty or wrong target set must still fail.
+      expect([...new Map(http.ledger.editRequests.map(entry =>
+        [`${entry.target.kind}:${entry.target.id}`, entry.target])).values()])
+        .toEqual([{ kind, id: `${kind}-10` }]);
+      openingReadsAtReady = http.ledger.editReads;
       await capture(page, info, "guarded-editor", dialog);
       if (scenario === "stale-editor") {
         await walk(field, "newer-draft"); await page.keyboard.press("ControlOrMeta+A");
@@ -210,6 +228,8 @@ for (const width of [1440, 390]) for (const kind of ["service", "group"] as cons
         await expect(field).toHaveValue("Synthetic newer draft"); await expect(field).toBeFocused();
         await capture(page, info, "newer-draft-owned", dialog);
       }
+      // Background inventory reconciliation must not reopen the ready editor.
+      expect(http.ledger.editReads).toBe(openingReadsAtReady);
       expect(http.count("recovered")).toBe(1);
       expect(http.ledger.authReads).toBe(authBaseline);
     } catch (error) { failures.push(error); }
@@ -218,7 +238,7 @@ for (const width of [1440, 390]) for (const kind of ["service", "group"] as cons
       catch (error) { failures.push(error); }
       finally { http.release(); }
       try {
-        const body = JSON.stringify({ width, kind, scenario, authBaseline, traversals, ...http.ledger,
+        const body = JSON.stringify({ width, kind, scenario, authBaseline, openingReadsAtReady, traversals, ...http.ledger,
           scope: "Synthetic native cached policy inventory recovery; no writes, preview, apply or backend revision enforcement claim" }, null, 2);
         await writeFile(info.outputPath("policy-inventory-request-ledger.json"), body);
         await info.attach("policy-inventory-request-ledger", { body, contentType: "application/json" });

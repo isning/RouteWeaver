@@ -120,5 +120,51 @@ Correction verification: strict standalone TypeScript and both eight-case
 Playwright discovery commands pass. Focused workflow contracts pass 5/5
 (10.534 seconds), and the whitespace check passes. Independent source review
 found no blocking issue in the four-file correction; strict count/auth assertions
-remain intentionally capable of surfacing unexpected native activity. No corrected native run,
-full-suite acceptance, local browser bypass or deployment is claimed here.
+remain intentionally capable of surfacing unexpected native activity. At that
+source-review checkpoint, corrected native execution was pending. The subsequent
+native result is recorded below; no full-suite acceptance, local browser bypass
+or deployment is claimed here.
+
+## Guarded editor assertion correction after df1ff56
+
+The subsequent native run at `df1ff56` passes the corrected preparation and exact
+list failure-count checks. Verified recovery artifact `13894293646` records six
+cases reaching the authoritative editor, each with one initial/two failed/one
+recovery list read, unchanged auth baseline, no rejected requests and no page
+errors. Those six fail the sampler's opening transport count (expected one,
+observed two). Both desktop group cases instead stop at the unchanged refresh
+viewport-containment assertion; that product geometry issue is tracked separately.
+
+Real App mounts under React.StrictMode on the Vite development server. Both
+ServiceEditSession and GroupEditSession start an opening read in an effect, whose
+cleanup marks its owner inactive and aborts its controller. Development effect
+replay may therefore start a canceled attempt and a current attempt. Their loader
+validates the requested kind/id, target existence and opening revision before
+exposing an authoritative draft. The previous DOM fixture did not mount this
+StrictMode App. A single intercepted opening GET was not a public contract.
+The old artifact counts cannot establish individual aborted/finished outcomes.
+
+The sampler now requires the unique observed target set to be exactly the chosen
+row-10 kind/id, alongside its existing authoritative title and field assertions.
+Zero reads and wrong-target requests still fail. Raw opening attempts remain in
+the ledger; exact allowlisted requests additionally record synthetic target and
+intercepted/finished/failed lifecycle categories, without URLs, credentials or
+error text. No fixed abort count is asserted. Once the authoritative editor is
+ready, its opening-read count must remain unchanged through the rest of the
+journey, including background inventory recovery and newer-draft preservation.
+The strict list two-failure/one-held-recovery, auth, focus and geometry assertions
+are unchanged. No product effect or StrictMode setting is modified.
+
+Original final screenshots were inspected for desktop service and narrow group:
+the authoritative editor content is present, including the matching group plan.
+They were captured during opening motion after the count assertion failed and
+are not settled visual acceptance. The new editor assertion correction requires
+another native run; passing type/discovery/contracts alone does not establish it.
+
+Editor correction verification: strict standalone TypeScript passed, both
+Playwright configurations discover eight cases, focused workflow contracts pass
+5/5 (12.102 seconds), and whitespace checks pass. Independent source review
+accepted the two-file correction without blockers. Opening attempts before
+readiness are now diagnosed rather than bounded: this tests target ownership,
+not request-count optimality or backend revision enforcement. Corrected native
+execution and the separate group geometry acceptance remain pending.
