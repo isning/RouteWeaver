@@ -61,6 +61,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Connection as FlowConnection, MarkerType } from "@xyflow/react";
 import { RouteGraph } from "./route-graph";
 import {
+  APIError,
   createInvitation,
   InvitationCreationError,
   type InvitationReceipt,
@@ -1979,6 +1980,19 @@ function PlatformSettingsTabs({
   );
 }
 
+function validPlatformSettings(value: unknown): value is Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const settings = value as Record<string, unknown>;
+  return typeof settings.name === "string" && settings.name !== "" &&
+    settings.timezone === "UTC+8" && settings.registration === "invite";
+}
+
+class SettingsSaveUnconfirmed extends Error {
+  constructor() {
+    super("平台设置保存结果尚未确认，当前输入已保留。请先核对当前设置。");
+  }
+}
+
 function Settings({
   initial,
   sectionID,
@@ -1988,6 +2002,7 @@ function Settings({
 }) {
   const [form] = useForm();
   const [saveFeedback, setSaveFeedback] = useState<string | null>(null);
+  const [saveUnconfirmed, setSaveUnconfirmed] = useState(false);
   const client = useQueryClient();
   const [baseline, setBaseline] = useState(initial);
   const [nameEditOwner, setNameEditOwner] = useState<object | null>(null);
@@ -2027,11 +2042,28 @@ function Settings({
     };
   }, []);
   const save = useMutation({
-    mutationFn: (values: Record<string, unknown>) =>
-      request<Record<string, unknown>>("/settings", {
-        method: "PUT",
-        body: JSON.stringify(values),
-      }),
+    mutationFn: async (values: Record<string, unknown>) => {
+      let saved: unknown;
+      try {
+        saved = await request<unknown>("/settings", {
+          method: "PUT",
+          body: JSON.stringify(values),
+        });
+      } catch (error) {
+        // These are explicit validation/auth refusals from this endpoint.
+        // Transport failures and server errors cannot establish non-persistence.
+        if (error instanceof APIError && [400, 401, 403].includes(error.status))
+          throw error;
+        throw new SettingsSaveUnconfirmed();
+      }
+      if (!validPlatformSettings(saved) || !sameSettings(saved, values))
+        throw new SettingsSaveUnconfirmed();
+      return saved;
+    },
+    onError: (error) => {
+      if (active.current && error instanceof SettingsSaveUnconfirmed)
+        setSaveUnconfirmed(true);
+    },
     onSuccess: async (saved, submitted) => {
       // A pre-save background read must not replace the accepted settings.
       // Cancel only this composite read; later refreshes remain available.
@@ -2058,8 +2090,44 @@ function Settings({
       );
     },
   });
+  const reconcileInFlight = useRef(false);
+  const reconcile = useMutation({
+    mutationFn: async () => {
+      const current = await request<unknown>("/settings");
+      if (!validPlatformSettings(current))
+        throw new Error("无法核对当前平台设置。当前输入已保留，请重试核对。");
+      return current;
+    },
+    onSettled: () => {
+      reconcileInFlight.current = false;
+    },
+    onSuccess: async (current) => {
+      // A read belongs to this editor, unlike a confirmed write receipt.
+      // A departed editor must not cancel or replace a newer owner's state.
+      if (!active.current) return;
+      await client.cancelQueries({ queryKey: ["admin-state"], exact: true });
+      if (!active.current) return;
+      client.setQueryData(
+        ["admin-state"],
+        (cached: Record<string, unknown> | undefined) =>
+          cached ? { ...cached, settings: current } : cached,
+      );
+      if (!active.current) return;
+      setBaseline(current);
+      setSaveUnconfirmed(false);
+      save.reset();
+      const matchesCurrent = sameSettings(form.getFieldsValue(true), current);
+      if (matchesCurrent) finishNameEdit();
+      setSaveFeedback(matchesCurrent
+        ? "已核对当前平台设置"
+        : "已核对当前平台设置，当前修改尚未保存");
+    },
+  });
   useUnsavedChanges(
-    !sameSettings(values || initial, baseline) || save.isPending,
+    !sameSettings(values || initial, baseline) || save.isPending || saveUnconfirmed,
+    save.isPending || saveUnconfirmed
+      ? "平台设置保存可能已完成，离开不会撤销保存。离开会丢失当前输入和核对信息。"
+      : undefined,
   );
   return (
     <>
@@ -2072,7 +2140,8 @@ function Settings({
             initialValues={initial}
             onValuesChange={() => setSaveFeedback(null)}
             onFinish={(v) => {
-              if (!save.isPending) save.mutate(structuredClone(v));
+              if (!save.isPending && !saveUnconfirmed && !reconcileInFlight.current)
+                save.mutate(structuredClone(v));
             }}
             className="settings-form space-y-0"
           >
@@ -2108,6 +2177,23 @@ function Settings({
               className="space-y-4 border-b px-4 py-5 sm:px-5"
             >
               <ErrorNotice error={save.error} />
+              {saveUnconfirmed && (
+                <>
+                  <ErrorNotice error={reconcile.error} />
+                  <ActionButton
+                    type="button"
+                    pending={reconcile.isPending}
+                    onClick={() => {
+                      // React's pending render may follow another click.
+                      if (reconcileInFlight.current) return;
+                      reconcileInFlight.current = true;
+                      reconcile.mutate();
+                    }}
+                  >
+                    核对当前设置
+                  </ActionButton>
+                </>
+              )}
               <AppField
                 name="name"
                 label="平台名称"
@@ -2120,6 +2206,7 @@ function Settings({
                 <ActionButton
                   type="submit"
                   pending={save.isPending}
+                  disabled={saveUnconfirmed || reconcile.isPending}
                   keepFocusableWhilePending
                   variant="default"
                 >
@@ -2127,7 +2214,7 @@ function Settings({
                 </ActionButton>
                 <ActionButton
                   type="button"
-                  disabled={save.isPending}
+                  disabled={save.isPending || saveUnconfirmed || reconcile.isPending}
                   variant="outline"
                   onClick={() => {
                     form.setFieldValue("name", baseline.name);

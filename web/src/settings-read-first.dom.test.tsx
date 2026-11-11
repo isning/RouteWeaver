@@ -77,7 +77,7 @@ function mountSettings() {
       act(async () =>
         finish(
           new Response(JSON.stringify({ message: "名称保存失败" }), {
-            status: 503,
+            status: 400,
             headers: { "Content-Type": "application/json" },
           }),
         ),
@@ -164,7 +164,7 @@ it("retains a newer in-flight name draft and cancels to the newly accepted basel
   );
 });
 
-it("keeps failed name edits editable and does not pretend the accepted summary changed", async () => {
+it("keeps explicitly refused name edits editable and does not pretend the accepted summary changed", async () => {
   const task = mountSettings();
   await userEvent.click(
     await screen.findByRole("button", { name: "编辑平台名称" }),
