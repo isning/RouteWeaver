@@ -15,3 +15,17 @@
 - Added native tests at 1280px and 390px: real provider responds to OS preference changes, explicit choice survives reload, browser native color scheme, graph node/card matching, notification theme and overflow.
 - Native tests did not execute: Chromium launch aborts on this host with `socket() failed: Operation not permitted`, including an approved elevated attempt. No browser security setting was weakened. Run `cd web && ROUTEWEAVER_CHROMIUM=/path/to/chromium npx playwright test --config=playwright.theme.config.ts --workers=1` on a supported native runner.
 - Actual rendered full-page contrast, visual hierarchy, graph interaction and screenshots remain unverified here. This is a bounded source audit plus functional checks, not a claim that every product state has passed native dark-mode review. Coordinator owns final aggregate/integrated verification.
+
+## Composed local integration
+
+Integrated with compact tabs and the forwarding-path Sheet. Remaining
+ServerRoutes graph edges/markers now use --primary, and its background grid uses
+--border. New Sheet surfaces already use semantic background/muted/foreground
+and border tokens. The official tab primitive retains its dark variants.
+
+The Sheet native sampler now uses OS color-scheme emulation before loading actual
+UIProviders, asserts the resulting root theme, and prepares light/dark cases at
+320/390/1440 pixels without manually injecting a class. Strict native types and
+six Sheet/two theme case discovery passed; browser execution remains unrun.
+Combined focused DOM tests passed 41/41 across five files in 17.02 seconds, followed
+by production TypeScript/Vite build. These are not contrast or screenshot proof.

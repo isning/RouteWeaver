@@ -669,7 +669,7 @@ it("binds the newly published subscription to the open editor instead of creatin
   expect(writes[writes.length - 1]?.body.outputId).toBe(creation[0].body.id);
 });
 
-it("allows profile inputs and wrapped tab rows to grow with enlarged text", async () => {
+it("preserves expandable profile inputs with compact default tabs and horizontal overflow", async () => {
   vi.stubGlobal(
     "fetch",
     vi.fn(
@@ -692,11 +692,12 @@ it("allows profile inputs and wrapped tab rows to grow with enlarged text", asyn
   try {
     expect(getComputedStyle(name).height).toBe("auto");
     expect(getComputedStyle(name).minHeight).toBe("calc(var(--spacing) * 11)");
-    expect(getComputedStyle(tabs).height).toBe("auto");
+    expect(getComputedStyle(tabs.parentElement!).overflowX).toBe("auto");
+    expect(tabs.className).toContain("group-data-horizontal/tabs:h-8");
     for (const tab of screen.getAllByRole("tab")) {
       expect(getComputedStyle(tab).whiteSpace).toBe("nowrap");
-      expect(getComputedStyle(tab).height).toBe("auto");
-      expect(getComputedStyle(tab).minHeight).toBe("calc(var(--spacing) * 11)");
+      expect(getComputedStyle(tab).height).toBe("calc(100% - 1px)");
+      expect(tab.classList.contains("min-h-11")).toBe(false);
     }
   } finally {
     style.remove();

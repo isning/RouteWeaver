@@ -941,8 +941,8 @@ export function ServerRouteEditor({
     id: `${path[index]}-${id}`,
     source: path[index],
     target: id,
-    markerEnd: { type: MarkerType.ArrowClosed, color: "#267a5a" },
-    style: { stroke: "#267a5a", strokeWidth: 2.5 },
+    markerEnd: { type: MarkerType.ArrowClosed, color: "var(--primary)" },
+    style: { stroke: "var(--primary)", strokeWidth: 2.5 },
   }));
   const listenerReview = refreshingListener ? (
     <ListenerRefreshReview
@@ -1299,7 +1299,7 @@ export function ServerRouteEditor({
                 minZoom={0.25}
                 maxZoom={1.7}
               >
-                <Background gap={23} color="#d8e2d1" />
+                <Background gap={23} color="var(--border)" />
                 <Controls showInteractive={false} />
               </ReactFlow>
             </div>

@@ -22,10 +22,11 @@ test.beforeAll(async () => {
 test.afterAll(async () => {
   await server?.close();
 });
-for (const width of [1440, 390, 320]) {
-  test(`route sheet groups its nodes and preserves cancellation at ${width}px`, async ({
+for (const theme of ["light", "dark"] as const) for (const width of [1440, 390, 320]) {
+  test(`route sheet groups its nodes and preserves cancellation at ${width}px in ${theme}`, async ({
     page,
   }, info) => {
+    await page.emulateMedia({ colorScheme: theme });
     await page.setViewportSize({ width, height: 900 });
     const requests: string[] = [];
     await page.route("**/api/**", async (route) => {
@@ -33,6 +34,7 @@ for (const width of [1440, 390, 320]) {
       await route.abort();
     });
     await page.goto(`${origin}/tests/route-sheet-sample/index.html`);
+    await expect(page.locator("html")).toHaveClass(new RegExp(`(^| )${theme}( |$)`));
     const sheet = page.getByRole("dialog", {
       name: "编辑 香港 → 东京 → 洛杉矶",
       exact: true,
@@ -59,7 +61,7 @@ for (const width of [1440, 390, 320]) {
       expect(box!.width).toBeGreaterThanOrEqual(44);
       expect(box!.height).toBeGreaterThanOrEqual(44);
     }
-    const collapsed = info.outputPath(`route-sheet-${width}.png`);
+    const collapsed = info.outputPath(`route-sheet-${theme}-${width}.png`);
     await page.screenshot({ path: collapsed });
     await info.attach("Synthetic route sheet overview", {
       path: collapsed,

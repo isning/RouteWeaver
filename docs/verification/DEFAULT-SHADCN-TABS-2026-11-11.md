@@ -49,3 +49,10 @@ separate outstanding acceptance, not implied by these results.
 Strict targeted native TypeScript passed for the updated visual-gaps and Sheet
 specifications. Sheet discovery lists three viewport cases (320/390/1440).
 Discovery/typechecking do not execute a browser or establish rendered acceptance.
+
+The first integrated full run returned **4,106 passes and one failure** across
+332 files in 1,178.88 seconds. Its sole failure was the prior profile CSS contract
+requiring auto-height/minimum44px wrapped tabs, which conflicts with the explicit
+new default-shadcn request. That check now retains expandable-input assertions
+and verifies compact tab height plus horizontal overflow instead. Native focus,
+viewport and hit checks remain. This earlier run is not relabelled as a pass.
