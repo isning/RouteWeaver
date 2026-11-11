@@ -42,3 +42,42 @@ Independent native-sampler source review accepted the bounded preparation withou
 ## Coordinator aggregate check
 
 The clean serialized local aggregate completed on 2026-11-11 with 4,146/4,146 tests across 339 files (exit 0; 1,086.58 seconds), including the production and DOM changes from `b11c2cd`. Build had already passed. Exact remote `aceb55ea9e9146b9561030e483ef2d8fbda6fd77` is verified on the review branch, but its native and full workflow runs remain queued as of 20:54 UTC. The preceding `e08a779` reports successful test steps but unresolved diagnostic-upload failures and inconsistent nonterminal status. Neither is claimed as a completed remote pass; no rerun, artifact deletion or gate weakening was performed.
+
+## Bounded native original-pixel acceptance
+
+Exact `5b65a44` recovery artifact `13893322650` has original ZIP SHA-256
+`40c7adff429b63719be20f4924841a86ce3a684cfcaf3dfe0f4a80b5e9460d8a`.
+Its `decoded-report/3f8f1ff5b06f8877b9db.json` maps the four passing announcement
+cases at 390×560 and 1440×900. The eight separate policy sampler-preparation
+failures are not announcement failures or a passing aggregate.
+
+Independent review opened all 20 unique original PNGs underlying 26 mapped image
+attachments in `web/playwright-report/data/`. Repeated cached-error/retry-keyboard,
+narrow fresh-edit/final, newer-create-owned/final and narrow initial-unknown
+images were deduplicated. Coverage includes initial unknown, initial refresh
+pending, cached failure, keyboard retry, retry pending, recovered inventory,
+fresh Edit, newer Create while pending and retained newer Create after failure.
+
+Cached failure clearly preserves old-result context and requires refresh before
+editing. Retry-pending and recovered captures have strong, complete refresh
+rings; recovery shows the updated title. Fresh Edit preserves that title, shows
+the read-record/re-notification consequence, and has a complete Close ring with
+footer disclosure and actions visible. Newer Create retains “Synthetic newer
+draft” and its complete input ring before and after background failure. Initial
+loading presents skeletons rather than a false empty state.
+
+Initial desktop refresh-pending `697de8d9ecaea39ec86d387998b1e2faca3a4c26.png`
+does not show the strong painted halo present in later retry-pending
+`db62ccb9ca86a8d5c09bcd066e8e411ba6383633.png`; other initial-pending samples also
+have weaker halos. Paired geometry reports focusVisible=true, but this does not
+prove uninterrupted ring painting or its timing cause. Target containment and
+unobscured geometry are separate evidence from the observed pixels.
+
+Mobile schedule columns are partly outside the horizontal table viewport, and
+lower dialog fields are outside the captured scroll-body viewport. These images
+do not establish complete schedule readability or reachability. Masked body
+content cannot be reviewed. Acceptance is limited to the captured light-mode
+recovery/context states, with the initial-paint limitation above; no dark-mode,
+delivery, publication, concurrency-protection or comprehensive accessibility
+claim follows. This reviewer performed no download, source edit, test run or
+application action.
