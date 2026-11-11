@@ -184,3 +184,34 @@ it("keeps a restriction outcome uncertain when recovery is still required", asyn
   expect(within(notice).getByText("应用结果尚未确认")).toBeTruthy();
   expect(within(notice).queryByText("节点已执行访问限制")).toBeNull();
 });
+
+it("keeps a saved unknown result distinct from refresh progress and refresh failure", async () => {
+  const { requests } = mount(response("unknown", "activation_outcome_unknown", true));
+  await screen.findByLabelText("实例处理建议");
+  expect(screen.getByText("状态尚未确认", { selector: '[data-slot="badge"]' })).toBeTruthy();
+  expect(screen.queryByText("正在确认状态")).toBeNull();
+  let finishRefresh!: (value: Response) => void;
+  vi.mocked(fetch).mockImplementationOnce(async (url, init) => {
+    requests.push({ url: String(url), method: init?.method || "GET" });
+    return new Promise<Response>((resolve) => { finishRefresh = resolve; });
+  });
+  fireEvent.click(screen.getByRole("button", { name: "刷新实例状态" }));
+  await screen.findByText("正在刷新，以下为上次读取的实例记录。");
+  expect(screen.getByText("状态尚未确认", { selector: '[data-slot="badge"]' })).toBeTruthy();
+  finishRefresh(new Response(JSON.stringify({ detail: "状态读取失败" }), {
+    status: 503, headers: { "Content-Type": "application/json" },
+  }));
+  await screen.findByText("刷新失败，以下为上次读取的实例记录。");
+  expect(screen.getByText("状态尚未确认", { selector: '[data-slot="badge"]' })).toBeTruthy();
+  expect(screen.queryByText("正在确认状态")).toBeNull();
+  expect(screen.queryByText("正在刷新，以下为上次读取的实例记录。")).toBeNull();
+  const notice = screen.getByLabelText("实例处理建议");
+  expect(within(notice).getByText("应用结果尚未确认")).toBeTruthy();
+  expect(within(notice).getByText(/结果明确前不要重复应用/)).toBeTruthy();
+  expect(screen.getByRole("button", { name: "刷新实例状态" })).toBeTruthy();
+  expect(screen.queryByRole("button", { name: /重试|应用|启动/ })).toBeNull();
+  expect(requests).toEqual([
+    { url: "/api/agent/instances/core/state", method: "GET" },
+    { url: "/api/agent/instances/core/state", method: "GET" },
+  ]);
+});

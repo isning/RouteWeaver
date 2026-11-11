@@ -152,7 +152,7 @@ export const phaseLabel = (phase: string) =>
     observed_conformant: "已确认生效",
     validation_failed: "核心校验失败",
     apply_failed: "应用失败",
-    unknown: "正在确认状态",
+    unknown: "状态尚未确认",
     blocked: "访问已受限",
     "pending-new-generation": "等待最新配置",
     stopped: "已停止",
