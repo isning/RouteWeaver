@@ -96,8 +96,25 @@ for (const width of [390, 1440]) for (const resolution of ["matching", "differen
       await editor.getByRole("combobox", { name: "服务器转发路径", exact: true }).click();
       await page.getByRole("option", { name: deployment.name, exact: true }).click();
       await editor.getByRole("button", { name: "检查公开线路", exact: true }).click();
+      const readyTitle = editor.getByText("路径检查完成", { exact: true });
+      const readyCopy = editor.getByText("可以保存线路身份；分配用户和节点应用仍是后续独立步骤。", { exact: true });
+      await expect(readyTitle).toBeVisible();
+      await expect(readyCopy).toBeVisible();
+      const assertFrozenRecovery = async () => {
+        // Text locators include the inert draft; obsolete save-ready copy must
+        // be removed, not merely hidden from the accessibility tree.
+        await expect(readyTitle).toHaveCount(0);
+        await expect(readyCopy).toHaveCount(0);
+        await expect(editor.getByText("线路保存结果尚未确认", { exact: true })).toBeVisible();
+        await expect(editor.getByRole("button", { name: "核对保存结果", exact: true })).toBeVisible();
+        await expect(editor.locator("label").filter({ hasText: /^\s*线路名称\s*$/ }).locator("input")).toHaveValue(name);
+        await expect(editor.locator("label").filter({ hasText: /^\s*服务器转发路径/ }).locator('[role="combobox"]')).toContainText(deployment.name);
+        await expect(editor.locator("label").filter({ hasText: /^\s*对外域名或 IP\s*$/ }).locator("input")).toHaveValue("127.0.0.1");
+        await expect(editor.locator("label").filter({ hasText: /^\s*对外端口\s*$/ }).locator("input")).toHaveValue("24443");
+      };
       await editor.getByRole("button", { name: "保存公开线路", exact: true }).click();
       await expect(editor.getByText("线路保存结果尚未确认", { exact: true })).toBeVisible();
+      await assertFrozenRecovery();
       expect(resolveReads).toBe(0);
       const originalID = submitted!.id;
       await capture(page, editor, info, `route-create-unknown-${resolution}-${width}`);
@@ -106,6 +123,7 @@ for (const width of [390, 1440]) for (const resolution of ["matching", "differen
       await expect(page.getByText(`「${name}」的保存结果尚未确认`, { exact: true })).toBeVisible();
       await page.getByRole("button", { name: "核对保存结果", exact: true }).click();
       await expect(editor).toBeVisible();
+      await assertFrozenRecovery();
       // Inert fields remain visible but leave the accessibility tree during recovery.
       const field = editor.locator("label").filter({ hasText: /^\s*线路名称\s*$/ }).locator("input");
       await expect(field).toHaveValue(name);

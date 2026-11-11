@@ -1404,7 +1404,7 @@ function PublicRouteEditor({
             />
           </label>
         </div>
-        {preview && (
+        {preview && !pendingCreate && (
           <Notice
             className="mt-4"
             tone={preview.diagnostics?.length ? "warning" : "info"}

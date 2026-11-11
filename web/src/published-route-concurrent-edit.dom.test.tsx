@@ -365,6 +365,8 @@ async function uncertainCreation(read: (saved: PublishedRoute) => Response | Pro
   await context.user.click(editor.getByRole("combobox", { name: "服务器转发路径" }));
   await context.user.click(await screen.findByRole("option", { name: "path" }));
   await context.user.click(editor.getByRole("button", { name: "检查公开线路" }));
+  await editor.findByText("路径检查完成", { exact: true });
+  expect(editor.getByText("可以保存线路身份；分配用户和节点应用仍是后续独立步骤。", { exact: true })).toBeTruthy();
   await context.user.click(await editor.findByRole("button", { name: "保存公开线路" }));
   if (!options.successful) await editor.findByText("线路保存结果尚未确认", { exact: true });
   return { ...context, editor, saved: () => saved, posts: () => posts };
@@ -509,4 +511,33 @@ it("revokes the absent-result retry permission when the workspace view is suspen
   await act(async () => workspace.current.suspend());
   fireEvent.click(retry);
   expect(context.posts()).toBe(1);
+});
+
+it("retires the save-ready preview during unknown creation, reopen and explicit retry while preserving the submitted route", async () => {
+  let reads = 0;
+  const context = await uncertainCreation(saved => ++reads === 1 ? json({ error: "not found" }, 404) : json(saved));
+  const assertRecovery = (editor: ReturnType<typeof within>) => {
+    expect(editor.queryByText("路径检查完成", { exact: true })).toBeNull();
+    expect(editor.queryByText("可以保存线路身份；分配用户和节点应用仍是后续独立步骤。", { exact: true })).toBeNull();
+    expect(editor.getByText("线路保存结果尚未确认", { exact: true })).toBeTruthy();
+    expect((editor.getByRole("textbox", { name: "线路名称" }) as HTMLInputElement).value).toBe("New office line");
+    expect((editor.getByRole("textbox", { name: "对外域名或 IP" }) as HTMLInputElement).value).toBe("office.example");
+    expect(editor.getByLabelText("公开线路转发路径").textContent).toContain("entry");
+    expect(editor.getByRole("button", { name: "核对保存结果" })).toBeTruthy();
+  };
+  assertRecovery(context.editor);
+  await context.user.click(context.editor.getByRole("button", { name: "稍后核对" }));
+  await waitFor(() => expect(screen.queryByRole("dialog", { name: "配置公开线路" })).toBeNull());
+  await context.user.click(screen.getByRole("button", { name: "核对保存结果" }));
+  const reopened = within(await screen.findByRole("dialog", { name: "配置公开线路" }));
+  assertRecovery(reopened);
+  await context.user.click(reopened.getByRole("button", { name: "核对保存结果" }));
+  await context.user.click(await reopened.findByRole("button", { name: "重试保存同一线路" }));
+  await reopened.findByRole("button", { name: "核对保存结果" });
+  assertRecovery(reopened);
+  await context.user.click(reopened.getByRole("button", { name: "核对保存结果" }));
+  const detail = within(await screen.findByRole("dialog", { name: "New office line" }));
+  expect(detail.getByText("线路已保存", { exact: true })).toBeTruthy();
+  expect(context.posts()).toBe(2);
+  expect(context.calls.filter(call => call.method === "PUT")).toHaveLength(0);
 });
