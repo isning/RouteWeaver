@@ -84,6 +84,11 @@ for (const width of [1440, 390]) {
         await field.fill(input);
         await tabTo(page, dialog, apply);
         await capture(`${stage}-before`);
+        const underlyingPosition = await route.evaluate(el => ({
+          pageX: window.scrollX, pageY: window.scrollY,
+          taskTop: el.scrollTop,
+          bodyTop: el.querySelector<HTMLElement>("[data-task-overlay-body]")?.scrollTop,
+        }));
         await page.keyboard.press("Enter");
         await capture(`${stage}-after`);
         await expect(field).toBeFocused();
@@ -92,6 +97,11 @@ for (const width of [1440, 390]) {
         const error = dialog.getByRole("alert");
         await expect(error).toHaveText(message);
         await inventory.inView(error);
+        expect(await route.evaluate(el => ({
+          pageX: window.scrollX, pageY: window.scrollY,
+          taskTop: el.scrollTop,
+          bodyTop: el.querySelector<HTMLElement>("[data-task-overlay-body]")?.scrollTop,
+        }))).toEqual(underlyingPosition);
         expect((await field.getAttribute("aria-describedby"))?.split(/\s+/)).toContain(await error.getAttribute("id"));
         // The 22-row editor can exceed the viewport. Require usable visible
         // editing area inside its actual scroll rail, not the entire textarea.
@@ -122,6 +132,7 @@ for (const width of [1440, 390]) {
       await route.getByRole("button", { name: "编辑服务端意图", exact: true }).click();
       await expect(field).toHaveValue(corrected);
       await expect(dialog.getByRole("alert")).toHaveCount(0);
+      await inventory.stable(dialog);
       await capture("reopened-retained-draft");
     } catch (error) { failures.push(error); }
     finally {

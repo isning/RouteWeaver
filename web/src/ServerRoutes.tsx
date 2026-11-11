@@ -683,10 +683,16 @@ export function ServerRouteEditor({
   const [jsonBaseline, setJSONBaseline] = useState("");
   const [jsonError, setJSONError] = useState<string>();
   const jsonInput = useRef<HTMLTextAreaElement>(null);
+  const jsonErrorMessage = useRef<HTMLParagraphElement>(null);
   const jsonErrorId = useId();
   const [jsonFailure, setJSONFailure] = useState(0);
   useLayoutEffect(() => {
-    if (jsonOpen && jsonFailure) jsonInput.current?.focus();
+    if (jsonOpen && jsonFailure) {
+      jsonInput.current?.focus();
+      // The editor can already fit while its following error is below the
+      // short dialog's body clip. Reveal the message without moving focus.
+      jsonErrorMessage.current?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    }
   }, [jsonFailure]);
   const jsonDirty = jsonOpen && json !== jsonBaseline;
   const confirm = useConfirm();
@@ -1575,7 +1581,7 @@ export function ServerRouteEditor({
           onChange={(e) => { setJSON(e.target.value); setJSONError(undefined); }}
           spellCheck={false}
         />
-        {jsonError && <p id={jsonErrorId} role="alert" className="text-sm text-destructive">{jsonError}</p>}
+        {jsonError && <p ref={jsonErrorMessage} id={jsonErrorId} role="alert" className="text-sm text-destructive">{jsonError}</p>}
       </TaskDialog>
     </TaskSheet>
   );

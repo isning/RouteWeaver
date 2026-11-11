@@ -1,7 +1,8 @@
 import { navigateWorkspace } from "./ui-session";
 import { test } from "./native-browser";
 import { waitForConfirmedWorkspace } from "./ui-workspace-confirmation";
-import { expect, type Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
+import { settledTask } from "./ui-settled-task";
 const origin = "http://127.0.0.1:4173";
 const search = (p: Page) =>
   p.getByRole("textbox", { name: "搜索配置或客户端订阅" });
@@ -440,3 +441,208 @@ test("dirty native Back cancel preserves entry; paused routine auth defers confi
     contentType: "application/json",
   });
 });
+
+// Traverse the real tab order rather than repairing focus in the test.
+async function tabToReturnControl(page: Page, control: Locator) {
+  for (let step = 0; step < 80; step++) {
+    if (await control.evaluate((element) => element === document.activeElement))
+      return;
+    await page.keyboard.press("Tab");
+  }
+  throw new Error("Subscription return control was not keyboard reachable");
+}
+
+for (const width of [1440, 390]) {
+  for (const dirty of [false, true]) {
+    test(`subscription detail linked editor keyboard return restores More actions at ${width}px (dirty=${dirty})`, async ({
+      page,
+    }, info) => {
+      await page.setViewportSize({ width, height: 560 });
+      await login(page);
+      const fixture = await seed(page, 1);
+      const writes: string[] = [];
+      // Only setup may write. Use the real backend, including profile reveal.
+      page.on("request", (request) => {
+        const url = new URL(request.url());
+        if (
+          url.pathname.startsWith("/api/") &&
+          !["GET", "HEAD", "OPTIONS"].includes(request.method())
+        )
+          writes.push(`${request.method()} ${url.pathname}`);
+      });
+      const errors: unknown[] = [];
+      const observations: {
+        attempt: number;
+        focusInViewport: boolean;
+        sameDetailAndHistory: boolean;
+        exactMoreActionsFocus: boolean;
+      }[] = [];
+      let phase = "after synthetic setup";
+      let canceledDrafts = 0;
+      let discardedDrafts = 0;
+      let journeyCompleted = false;
+      let screenshotCaptured = false;
+      try {
+        phase = "open subscription detail";
+        await search(page).fill(fixture.prefix);
+        await page
+          .getByRole("button", {
+            name: "查看订阅 " + fixture.output.name,
+            exact: true,
+          })
+          .click();
+        const detail = page.getByRole("dialog", {
+          name: fixture.output.name + " 的订阅详情",
+          exact: true,
+        });
+        const more = detail.getByRole("button", {
+          name: "更多操作",
+          exact: true,
+        });
+        await settledTask(detail);
+        const original = await proof(page);
+        await tabToReturnControl(page, more);
+        await expect(more).toBeFocused();
+        for (let attempt = 0; attempt < 2; attempt++) {
+          phase = `open linked editor (attempt ${attempt + 1})`;
+          // Repeat Enter consumes restored focus: no focus/click/Tab after return.
+          await page.keyboard.press("Enter");
+          await settledTask(page.getByRole("menu"));
+          await page.keyboard.press("Home");
+          await expect(
+            page.getByRole("menuitem", {
+              name: "查看已发布内容",
+              exact: true,
+            }),
+          ).toBeFocused();
+          await page.keyboard.press("ArrowDown");
+          await expect(
+            page.getByRole("menuitem", {
+              name: "编辑关联分流配置",
+              exact: true,
+            }),
+          ).toBeFocused();
+          await page.keyboard.press("Enter");
+          const name = page.getByRole("textbox", {
+            name: "配置名称",
+            exact: true,
+          });
+          await expect(name).toBeVisible();
+          await expect(name).toHaveValue(fixture.profile.name);
+          await expect(detail).not.toBeVisible();
+          expect(await proof(page)).toEqual(original);
+          const draft = `Unsaved synthetic routing ${attempt}`;
+          if (dirty) await name.fill(draft);
+          const back = page.getByRole("button", { name: "返回", exact: true });
+          phase = `keyboard Back (attempt ${attempt + 1})`;
+          await tabToReturnControl(page, back);
+          await expect(back).toBeFocused();
+          await page.keyboard.press("Enter");
+          const confirmation = page.getByRole("alertdialog", {
+            name: "放弃未保存的修改？",
+            exact: true,
+          });
+          if (dirty) {
+            await settledTask(confirmation);
+            await page.keyboard.press("Escape");
+            await expect(confirmation).toHaveCount(0);
+            await expect(back).toBeFocused();
+            await expect(name).toHaveValue(draft);
+            expect(await proof(page)).toEqual(original);
+            canceledDrafts++;
+            phase = `confirm discard (attempt ${attempt + 1})`;
+            await page.keyboard.press("Enter");
+            await settledTask(confirmation);
+            const discard = confirmation.getByRole("button", {
+              name: "放弃修改",
+              exact: true,
+            });
+            await tabToReturnControl(page, discard);
+            await page.keyboard.press("Enter");
+          }
+          phase = `verify returned detail (attempt ${attempt + 1})`;
+          await expect(confirmation).toHaveCount(0);
+          await expect(name).toHaveCount(0);
+          // Observe real entrance motion before checking native noDefaults focus.
+          await settledTask(detail);
+          await expect(more).toBeFocused();
+          expect(await proof(page)).toEqual(original);
+          const focusInViewport = await more.evaluate((element) => {
+            const rect = element.getBoundingClientRect();
+            return (
+              rect.top >= 0 &&
+              rect.left >= 0 &&
+              rect.bottom <= innerHeight &&
+              rect.right <= innerWidth
+            );
+          });
+          expect(focusInViewport).toBe(true);
+          expect(writes).toEqual([]);
+          if (dirty) discardedDrafts++;
+          observations.push({
+            attempt: attempt + 1,
+            focusInViewport,
+            sameDetailAndHistory: true,
+            exactMoreActionsFocus: true,
+          });
+        }
+        journeyCompleted = true;
+        phase = "completed";
+      } catch (error) {
+        // Keep the original assertion/error object, including its stack.
+        errors.push(error);
+      } finally {
+        // Independently enforce this even when an earlier journey check fails.
+        try {
+          expect(writes, "No API writes after synthetic setup").toEqual([]);
+        } catch (error) {
+          errors.push(error);
+        }
+        try {
+          const screenshot = await page.screenshot({
+            path: info.outputPath("subscription-linked-editor-return.png"),
+            timeout: 2000,
+          });
+          await info.attach("synthetic-subscription-detail-return", {
+            body: screenshot,
+            contentType: "image/png",
+          });
+          screenshotCaptured = true;
+        } catch (error) {
+          errors.push(error);
+        }
+        // Write the ledger even when the browser can no longer take a picture.
+        try {
+          await info.attach("safe-result", {
+            body: JSON.stringify({
+              task: "subscription detail linked editor keyboard return",
+              viewport: { width, height: 560 },
+              dirty,
+              phase,
+              journeyCompleted,
+              screenshotCaptured,
+              canceledDrafts,
+              discardedDrafts,
+              observations,
+              postSetupWrites: writes,
+              errors: errors.map((error) =>
+                error instanceof Error
+                  ? { name: error.name, message: error.message }
+                  : { message: String(error) },
+              ),
+            }),
+            contentType: "application/json",
+          });
+        } catch (error) {
+          errors.push(error);
+        }
+      }
+      if (errors.length === 1) throw errors[0];
+      if (errors.length > 1)
+        throw new AggregateError(
+          errors,
+          "Subscription return journey and evidence checks failed",
+        );
+    });
+  }
+}
