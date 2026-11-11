@@ -82,6 +82,42 @@ function openRouteChecks(names = ["测试链路"]) {
   return { user, pending, tabTo };
 }
 
+it.each(["clipped", "visible", "search"] as const)(
+  "reveals only an owned clipped retry after failure (%s)",
+  async (state) => {
+    const { user, pending, tabTo } = openRouteChecks();
+    const check = await screen.findByRole("button", { name: "校验 测试链路" });
+    await tabTo(check);
+    await user.keyboard("{Enter}");
+    await waitFor(() => expect(pending).toHaveLength(1));
+    // Browser layout is the system boundary: jsdom cannot paint/scroll. These
+    // values reproduce the original 390x560 CI failure, not native proof.
+    vi.stubGlobal("innerHeight", 560);
+    vi.spyOn(document, "hasFocus").mockReturnValue(true);
+    vi.spyOn(check, "getBoundingClientRect").mockReturnValue({
+      x: 265, y: state === "visible" ? 400 : 528.5,
+      left: 265, right: 309, width: 44, height: 44,
+      top: state === "visible" ? 400 : 528.5,
+      bottom: state === "visible" ? 444 : 572.5,
+      toJSON: () => ({}),
+    });
+    const reveal = vi.fn();
+    check.scrollIntoView = reveal;
+    const search = screen.getByRole("textbox", { name: "搜索链路配置" });
+    if (state === "search") await user.click(search);
+    await act(async () =>
+      pending[0].finish(json({ error: "检查服务暂时不可用" }, 503)),
+    );
+    await screen.findByText("检查服务暂时不可用");
+    expect(document.activeElement).toBe(state === "search" ? search : check);
+    if (state === "clipped")
+      expect(reveal).toHaveBeenCalledWith({
+        block: "nearest", inline: "nearest", behavior: "instant",
+      });
+    else expect(reveal).not.toHaveBeenCalled();
+  },
+);
+
 it("keeps a pending route check keyboard-reachable and blocks duplicate activation through repeated failure and retry", async () => {
   const { user, pending, tabTo } = openRouteChecks();
   const check = await screen.findByRole("button", { name: "校验 测试链路" });

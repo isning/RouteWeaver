@@ -610,8 +610,8 @@ test.describe("keyboard validation recovery", () => {
           await expect(check).toBeEnabled();
           await expect(check).not.toHaveAttribute("aria-busy", "true");
           await assertIndependentError();
-          // Save both pending and failed originals before judging focus. A
-          // partially offscreen failed control alone is not a failure assertion.
+          // Save both pending and failed originals before judging focus or
+          // visibility. Failure feedback must not push the retry out of view.
           const failedState = await capturePhase(`failed-${cycle}`);
           // Exercise the ordinary retry command before any focus expectation;
           // even a failing ownership assertion therefore retains its request evidence.
@@ -629,6 +629,16 @@ test.describe("keyboard validation recovery", () => {
             )?.focused,
             "Failed check retains the keyboard retry owner without focus repair",
           ).toBe(true);
+          const failedControl = failedState.controls.find(
+            (control) => control.kind === "validation-control",
+          );
+          expect(
+            failedControl?.inViewport && failedControl.unobscured,
+            "Failed keyboard retry remains fully visible without test scrolling",
+          ).toBe(true);
+          expect(failedControl!.box.bottom + 3).toBeLessThanOrEqual(
+            failedState.viewport.height,
+          );
           await expect.poll(() => held.has(retryAttempt)).toBe(true);
           await expect(check).toHaveAttribute("aria-busy", "true");
           await expect(

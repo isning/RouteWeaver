@@ -193,6 +193,7 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
     onError: setError,
   });
   const pendingValidationRoutes = useRef(new Set<string>());
+  const validationTrigger = useRef<HTMLButtonElement | null>(null);
   const [pendingValidationRouteIds, setPendingValidationRouteIds] = useState(
     new Set<string>(),
   );
@@ -207,8 +208,32 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
       setPendingValidationRouteIds(new Set(pendingValidationRoutes.current));
     },
   });
-  const validateRoute = (route: RouteRecord) => {
+  useLayoutEffect(() => {
+    const trigger = validationTrigger.current;
+    const doc = trigger?.ownerDocument;
+    const view = doc?.defaultView;
+    // Error feedback inserts height above the table without a new focus event.
+    // Reveal only this request's still-focused retry, never a newer task.
+    if (
+      !validate.error || !trigger || !doc || !view ||
+      doc.activeElement !== trigger || !doc.hasFocus() ||
+      doc.visibilityState !== "visible" ||
+      trigger.closest(
+        '[hidden], [inert], [aria-hidden="true"], [data-session-workspace][aria-busy="true"]',
+      )
+    ) return;
+    const box = trigger.getBoundingClientRect();
+    // Match scroll-m-1, leaving space for the official shadcn ring-3.
+    if (
+      box.width > 0 && box.height > 0 &&
+      (box.top < 4 || box.bottom + 4 > view.innerHeight)
+    ) trigger.scrollIntoView({
+      block: "nearest", inline: "nearest", behavior: "instant",
+    });
+  }, [validate.error]);
+  const validateRoute = (route: RouteRecord, trigger: HTMLButtonElement) => {
     if (pendingValidationRoutes.current.has(route.id)) return;
+    validationTrigger.current = trigger;
     pendingValidationRoutes.current.add(route.id);
     setPendingValidationRouteIds(new Set(pendingValidationRoutes.current));
     validate.mutate(route, {
@@ -438,7 +463,8 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
                                 aria-label={`校验 ${r.name}`}
                                 keepFocusableWhilePending
                                 pending={pendingValidationRouteIds.has(r.id)}
-                                onClick={() => validateRoute(r)}
+                                className="scroll-m-1"
+                                onClick={(event) => validateRoute(r, event.currentTarget)}
                                 variant="ghost"
                               />
                               <AdminRowMenu
