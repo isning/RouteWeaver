@@ -273,7 +273,7 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
     page === "routes"
       ? editRoute()
       : page === "services"
-        ? setServiceEditor({ value: null })
+        ? query.data !== undefined && setServiceEditor({ value: null })
         : setEntity({
             kind: page as "nodes" | "users",
             value: null,
@@ -391,6 +391,7 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
               <ActionButton
                 leadingIcon={<PlusOutlined aria-hidden="true" />}
                 onClick={add}
+                disabled={page === "services" && query.data === undefined}
                 variant="default"
               >
                 {meta.action}
