@@ -21,7 +21,7 @@ env:
 
 jobs:
   recovery:
-    name: Twenty-four recovery specs (supplemental evidence only)
+    name: Twenty-five recovery specs (supplemental evidence only)
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
@@ -81,7 +81,7 @@ jobs:
             await browser.close();
           }
           JS
-      - name: Run twenty-four recovery specs with unchanged fixtures
+      - name: Run twenty-five recovery specs with unchanged fixtures
         working-directory: web
         # Bound this subset without changing per-test timeouts; reserve cleanup/upload time.
         timeout-minutes: 10
@@ -94,6 +94,23 @@ jobs:
           # Only the synthetic report, browser receipt and named test captures.
           # No databases, fixture keys, automatic screenshots, video or traces.
           path: |
+            web/test-results/service-rate-draft*/service-rate-raw-input.png
+            web/test-results/service-rate-draft*/service-rate-raw-input.json
+            web/test-results/service-rate-draft*/service-rate-collapsed-draft.png
+            web/test-results/service-rate-draft*/service-rate-collapsed-draft.json
+            web/test-results/service-rate-draft*/service-rate-blocked-preview.png
+            web/test-results/service-rate-draft*/service-rate-blocked-preview.json
+            web/test-results/service-rate-draft*/service-rate-discard-decision.png
+            web/test-results/service-rate-draft*/service-rate-discard-decision.json
+            web/test-results/service-rate-draft*/service-rate-continued-draft.png
+            web/test-results/service-rate-draft*/service-rate-continued-draft.json
+            web/test-results/service-rate-draft*/service-rate-corrected-remount.png
+            web/test-results/service-rate-draft*/service-rate-corrected-remount.json
+            web/test-results/service-rate-draft*/service-rate-preview-review.png
+            web/test-results/service-rate-draft*/service-rate-preview-review.json
+            web/test-results/service-rate-draft*/service-rate-final-original.png
+            web/test-results/service-rate-draft*/service-rate-final-original.json
+            web/test-results/service-rate-draft*/service-rate-request-ledger.json
             web/test-results/admin-policy-inventory-rec-*/policy-inventory-cached-error.png
             web/test-results/admin-policy-inventory-rec-*/policy-inventory-cached-error.json
             web/test-results/admin-policy-inventory-rec-*/policy-inventory-retry-keyboard.png
