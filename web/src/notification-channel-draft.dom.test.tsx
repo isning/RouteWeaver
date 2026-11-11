@@ -636,3 +636,45 @@ it("reveals a collapsed sender address error and preserves optional native email
   await waitFor(() => expect(sent).toHaveLength(1));
   expect(sent[0].email.from).toBe("");
 });
+
+// Public notification-settings tasks, including recovery from a collapsed channel.
+it.each([
+  ["到期提醒重复周期（小时）", "721", "24", "请输入 1–720 之间的整数", false],
+  ["端口", "65536", "587", "请输入 1–65535 之间的整数", true],
+  ["发件地址", "invalid-address", "sender@example.test", "请输入有效的发件地址", true],
+] as const)("returns rejected %s submission to its retained correction", async (label, raw, corrected, error, channel) => {
+  const sent = await mount();
+  if (channel) toggle("邮件通知");
+  change(label, raw);
+  if (channel) toggle("邮件通知");
+  const submit = screen.getByRole("button", { name: "保存通知设置" });
+  for (let attempt = 0; attempt < 2; attempt++) {
+    submit.focus();
+    save();
+    await screen.findByText(error);
+    expect(sent).toHaveLength(0);
+    const invalid = screen.getByLabelText(label);
+    expect(invalid).toHaveProperty("value", raw);
+    await waitFor(() => expect(document.activeElement === invalid).toBe(true));
+  }
+  if (channel) expect(screen.getByRole("button", { name: "邮件通知" }).getAttribute("aria-expanded")).toBe("true");
+  change(label, corrected);
+  save();
+  await waitFor(() => expect(sent).toHaveLength(1));
+  expect(sent[0].revision).toBe(1);
+  expect(sent[0].webhook.url).toBe("https://old.example");
+});
+
+it("does not take newer focus when reminder validation rejects", async () => {
+  const sent = await mount();
+  change("到期提醒重复周期（小时）", "721");
+  const submit = screen.getByRole("button", { name: "保存通知设置" });
+  submit.focus();
+  save();
+  const newer = screen.getByRole("button", { name: "发送站内测试" });
+  newer.focus();
+  await screen.findByText("请输入 1–720 之间的整数");
+  await act(async () => {});
+  expect(document.activeElement).toBe(newer);
+  expect(sent).toHaveLength(0);
+});

@@ -828,15 +828,18 @@ function SettingsForm({ initial, saved, savedReady }: { initial: Settings; saved
   const saving = useRef<object | null>(null);
   const saveFocusOwner = useRef<object | null>(null);
   const failedSave = useRef<object | null>(null);
-  const clearSMTPInput = useRef<HTMLButtonElement>(null);
-  const clearWebhookInput = useRef<HTMLButtonElement>(null);
-  const invalidSecretFocus = useRef<HTMLButtonElement | null>(null);
+  const invalidSubmitFocus = useRef(false);
   const [openChannels, setOpenChannels] = useState<string[]>([]);
   useLayoutEffect(() => {
-    const target = invalidSecretFocus.current;
-    invalidSecretFocus.current = null;
-    if (!target) return;
+    const recover = invalidSubmitFocus.current;
+    invalidSubmitFocus.current = false;
     const owner = saveButton.current;
+    if (!recover || !owner) return;
+    const target = Array.from(owner.closest("form")?.querySelectorAll<HTMLElement>(
+      'input[aria-invalid="true"], button[aria-invalid="true"], select[aria-invalid="true"], textarea[aria-invalid="true"]',
+    ) || []).find((control) => !control.matches(':disabled, input[type="hidden"]') &&
+      !control.closest('[hidden], [inert], [aria-hidden="true"], [aria-disabled="true"]'));
+    if (!target) return;
     let current = true;
     const cancelOnNewFocus = (event: FocusEvent) => {
       if (event.target !== owner) current = false;
@@ -848,8 +851,8 @@ function SettingsForm({ initial, saved, savedReady }: { initial: Settings; saved
     void Promise.all(animations.map((animation) => animation.finished.catch(() => {}))).then(() => {
       if (!current || document.activeElement !== owner || !target.isConnected || target.closest('[hidden], [inert]')) return;
       target.focus({ preventScroll: true });
-      // Keep the label, clear choice and recovery instruction together instead
-      // of aligning only the checkbox against the bottom of a narrow viewport.
+      // Keep the field's label, retained value and correction together instead
+      // of aligning only its control against the bottom of a narrow viewport.
       if (document.activeElement === target && !target.closest('[hidden], [inert]'))
         (target.closest<HTMLElement>('[data-slot="field"]') || target)
           .scrollIntoView?.({ block: "center", inline: "nearest" });
@@ -1115,12 +1118,9 @@ function SettingsForm({ initial, saved, savedReady }: { initial: Settings; saved
         form={form}
         disabled={save.isPending}
         noValidate
-        onFinishFailed={({ errorFields }) => {
-          const first = errorFields[0]?.name[0];
-          invalidSecretFocus.current = document.activeElement === saveButton.current
-            ? first === "clearSMTP" ? clearSMTPInput.current
-              : first === "clearWebhook" ? clearWebhookInput.current : null
-            : null;
+        onFinishFailed={({ errorFields, outOfDate }) => {
+          if (outOfDate) return;
+          invalidSubmitFocus.current = document.activeElement === saveButton.current;
           const invalidChannels = errorFields.flatMap(({ name }) =>
             ["email", "smtpPassword", "clearSMTP"].includes(String(name[0]))
               ? ["email"]
@@ -1304,7 +1304,7 @@ function SettingsForm({ initial, saved, savedReady }: { initial: Settings; saved
                       trigger="onCheckedChange"
                       label="清除已保存的 SMTP 密码"
                     >
-                      <Checkbox ref={clearSMTPInput} className="ms-1" />
+                      <Checkbox className="ms-1" />
                     </AppField>
                   )}
                   <AppField
@@ -1389,7 +1389,7 @@ function SettingsForm({ initial, saved, savedReady }: { initial: Settings; saved
                       trigger="onCheckedChange"
                       label="清除已保存的签名密钥"
                     >
-                      <Checkbox ref={clearWebhookInput} className="ms-1" />
+                      <Checkbox className="ms-1" />
                     </AppField>
                   )}
                   <ActionButton

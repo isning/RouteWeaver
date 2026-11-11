@@ -334,3 +334,152 @@ for (const width of [1440, 390]) {
     }
   });
 }
+
+// Zero-save focus journeys: only synthetic drafts, never external delivery.
+for (const width of [1440, 390]) {
+  test(`rejected notification fields recover native keyboard focus at ${width}x560`, async ({ page, request, baseURL }, info) => {
+    requireLoopback(baseURL);
+    const ledger = {
+      width, height: 560, settingsWrites: 0, testDeliveries: 0, offOriginRequests: 0,
+      pageErrors: 0, failedRequests: 0, rejectedAttempts: 0, corrections: 0,
+      screenshotFailures: 0, unchangedRevision: false, emptyOutbox: false,
+    };
+    // Do not serialize URLs, payloads or exception messages containing secrets.
+    page.on("pageerror", () => { ledger.pageErrors++; });
+    page.on("requestfailed", () => { ledger.failedRequests++; });
+    const screenshot = async (stage: string) => {
+      try {
+        await page.screenshot({
+          path: info.outputPath(`notification-focus-${stage}-${width}x560.png`),
+          fullPage: false, timeout: 2000, animations: "disabled",
+          mask: [page.locator('input[autocomplete="new-password"], input[type="password"]')],
+        });
+      } catch { ledger.screenshotFailures++; }
+    };
+    let failed = false;
+    try {
+      await page.setViewportSize({ width, height: 560 });
+      const origin = new URL(baseURL!).origin;
+      await page.route("**/*", async route => {
+        const url = new URL(route.request().url());
+        if (url.origin !== origin) { ledger.offOriginRequests++; return route.abort(); }
+        if (url.pathname === "/api/admin/notifications/test") { ledger.testDeliveries++; return route.abort(); }
+        if (url.pathname === "/api/admin/notification-settings" && route.request().method() !== "GET") {
+          ledger.settingsWrites++;
+          return route.abort();
+        }
+        return route.continue();
+      });
+      await signInAPI(request, "routeweaver", demoPassword);
+      const readSettings = async () => {
+        const response = await request.get("/api/admin/notification-settings");
+        expect(response.status()).toBe(200);
+        return response.json();
+      };
+      const baseline = await readSettings();
+      expect(baseline.email.automatic || baseline.webhook.automatic).toBe(false);
+      await login(page);
+      await expand(page, "邮件通知");
+      await page.getByLabel("SMTP 主机", { exact: true }).fill("smtp.focus.example.test");
+      await page.getByLabel("SMTP 密码", { exact: true }).fill(nextSMTP);
+      await expand(page, "Webhook 通知");
+      await page.getByLabel("HTTPS Webhook 地址", { exact: true }).fill("https://focus.example.test/hook");
+      await page.getByLabel("签名密钥", { exact: true }).fill(nextWebhook);
+      const assertDraft = async () => {
+        await retained(page.getByLabel("SMTP 密码", { exact: true }), nextSMTP);
+        await retained(page.getByLabel("签名密钥", { exact: true }), nextWebhook);
+        await expect(page.getByLabel("SMTP 主机", { exact: true })).toHaveValue("smtp.focus.example.test");
+        await expect(page.getByLabel("HTTPS Webhook 地址", { exact: true })).toHaveValue("https://focus.example.test/hook");
+        expect(ledger.settingsWrites).toBe(0);
+        expect(ledger.testDeliveries).toBe(0);
+        expect(ledger.offOriginRequests).toBe(0);
+      };
+      const save = page.getByRole("button", { name: "保存通知设置", exact: true });
+      const keyboardSave = async () => {
+        // Native traversal, no forced focus or test-owned scrolling.
+        for (let tab = 0; tab < 60; tab++) {
+          if (await save.evaluate(element => element === document.activeElement)) break;
+          await page.keyboard.press("Tab");
+        }
+        await expect(save).toBeFocused();
+        await page.keyboard.press("Enter");
+      };
+      const cases = [
+        { key: "repeat", label: "到期提醒重复周期（小时）", invalid: "721", corrected: "24", error: "请输入 1–720 之间的整数", channel: false },
+        { key: "port", label: "端口", invalid: "65536", corrected: "587", error: "请输入 1–65535 之间的整数", channel: true },
+        { key: "sender", label: "发件地址", invalid: "invalid-address", corrected: "sender@example.test", error: "请输入有效的发件地址", channel: true },
+      ];
+      for (const scenario of cases) {
+        const input = page.getByLabel(scenario.label, { exact: true });
+        const error = page.getByText(scenario.error, { exact: true });
+        if (scenario.channel) await expand(page, "邮件通知");
+        await input.fill(scenario.invalid);
+        for (let attempt = 0; attempt < 2; attempt++) {
+          if (scenario.channel) {
+            const trigger = page.getByRole("button", { name: "邮件通知", exact: true });
+            await trigger.click();
+            await expect(trigger).toHaveAttribute("aria-expanded", "false");
+          }
+          await keyboardSave();
+          await expect(error).toBeVisible();
+          await expect(input).toBeFocused();
+          await expect(input).toHaveAttribute("aria-invalid", "true");
+          await expect(input).toHaveValue(scenario.invalid);
+          if (scenario.channel) await expect(page.getByRole("button", { name: "邮件通知", exact: true })).toHaveAttribute("aria-expanded", "true");
+          // Wait on real ancestor animations, rather than an arbitrary delay.
+          await expect.poll(() => input.evaluate(element => {
+            for (let node: Element | null = element; node; node = node.parentElement) {
+              if (node.getAnimations().some(animation => animation.playState === "running")) return false;
+            }
+            return true;
+          })).toBe(true);
+          const group = input.locator('xpath=ancestor::*[@role="group"][1]');
+          const geometry = {
+            field: await visibility(group), label: await visibility(group.locator("label")),
+            control: await visibility(input, 3), error: await visibility(error),
+          };
+          const stage = `${scenario.key}-${attempt + 1}`;
+          await screenshot(stage);
+          await writeFile(info.outputPath(`notification-focus-${stage}-${width}x560.json`), JSON.stringify({
+            geometry, sampled: "Settled production focus recovery; no test scrolling or forced focus", requiresPixelReview: true,
+          }, null, 2));
+          expect(geometry.control.focused && geometry.control.focusVisible).toBe(true);
+          expect(Object.values(geometry).every(target => target.fullyInside && target.unobscured)).toBe(true);
+          await assertDraft();
+          ledger.rejectedAttempts++;
+        }
+        // Edit the naturally focused field, then blur with the keyboard.
+        await page.keyboard.press("ControlOrMeta+A");
+        await page.keyboard.type(scenario.corrected);
+        await page.keyboard.press("Tab");
+        await expect(input).toHaveValue(scenario.corrected);
+        await expect(input).not.toHaveAttribute("aria-invalid", "true");
+        await expect(error).toBeHidden();
+        await assertDraft();
+        ledger.corrections++;
+      }
+      const finalSettings = await readSettings();
+      ledger.unchangedRevision = finalSettings.revision === baseline.revision;
+      expect(ledger.unchangedRevision).toBe(true);
+      expect(finalSettings.email.automatic || finalSettings.webhook.automatic).toBe(false);
+      const outbox = await request.get("/api/admin/notifications/outbox");
+      expect(outbox.status()).toBe(200);
+      const deliveries = await outbox.json();
+      ledger.emptyOutbox = Array.isArray(deliveries) && deliveries.length === 0;
+      expect(ledger.emptyOutbox).toBe(true);
+      expect(ledger.pageErrors).toBe(0);
+      expect(ledger.failedRequests).toBe(0);
+      expect(ledger.screenshotFailures).toBe(0);
+    } catch (error) {
+      failed = true;
+      throw error;
+    } finally {
+      // Independent evidence, even when a prior assertion fails. The bounded
+      // screenshot cannot mask that failure or prevent the JSON ledger write.
+      await screenshot("final");
+      try {
+        await writeFile(info.outputPath(`notification-focus-ledger-${width}x560.json`), JSON.stringify(ledger, null, 2));
+      } catch (error) { if (!failed) throw error; }
+    }
+  });
+}
