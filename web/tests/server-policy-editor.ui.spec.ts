@@ -22,6 +22,26 @@ async function capture(
 ) {
   await target.scrollIntoViewIfNeeded();
   await settledTask(editor);
+  // This isolated fixture contains synthetic inventory only. Preserve the same
+  // unmodified viewport artifact before a geometry assertion can abort capture.
+  const path = info.outputPath(`${name}-${page.viewportSize()!.width}.png`);
+  await page.screenshot({ path, fullPage: false });
+  await info.attach(name, { path, contentType: "image/png" });
+  await info.attach(`${name}-geometry`, {
+    contentType: "application/json",
+    body: JSON.stringify(await target.evaluate((element) => {
+      const box = element.getBoundingClientRect();
+      const body = element.closest("[data-task-overlay-body]");
+      const clip = body?.getBoundingClientRect();
+      return {
+        viewport: { width: innerWidth, height: innerHeight },
+        target: { x: box.x, y: box.y, width: box.width, height: box.height },
+        body: clip ? { x: clip.x, y: clip.y, width: clip.width, height: clip.height,
+          scrollTop: body!.scrollTop, scrollLeft: body!.scrollLeft } : null,
+        focused: document.activeElement === element,
+      };
+    })),
+  });
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth + 1,
@@ -48,9 +68,6 @@ async function capture(
       return !!hit && element.contains(hit);
     }),
   ).toBe(true);
-  const path = info.outputPath(`${name}-${page.viewportSize()!.width}.png`);
-  await page.screenshot({ path, fullPage: false });
-  await info.attach(name, { path, contentType: "image/png" });
 }
 
 for (const width of [1440, 390]) {
@@ -250,6 +267,7 @@ for (const width of [1440, 390]) {
       ).toBeVisible();
       await search.press("Enter");
       await expect(action).toContainText(option);
+      await expect(action).toBeFocused();
     }
     await capture(
       page,
