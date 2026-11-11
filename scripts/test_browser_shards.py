@@ -26,7 +26,7 @@ class BrowserShardTests(unittest.TestCase):
         self.tests.mkdir(parents=True)
         for name in ("verify.sh", "browser_distribution.py"):
             shutil.copy(ROOT / "scripts" / name, self.root / "scripts" / name)
-        self.names = ["slow.ui.spec.ts", "a [copy]+.ui.spec.ts", "nested/b.ui.spec.ts", "new.ui.spec.ts", "c.ui.spec.ts"]
+        self.names = ["slow.ui.spec.ts", "a [copy]+.ui.spec.ts", "nested/b.ui.spec.ts", "new.ui.spec.ts", "c.ui.spec.ts", "sixth.ui.spec.ts", "seventh.ui.spec.ts"]
         for name in [*self.names, "ignored.ui.spec.ts", "separate.native.spec.ts", "api.api.spec.ts"]:
             path = self.tests / name
             path.parent.mkdir(parents=True, exist_ok=True)
@@ -73,28 +73,29 @@ print(json.dumps(data))
         self.assertIn("PASS: browser verification", result.stdout)
 
     def test_ci_shards_run_every_discovered_file_exactly_once_without_native_sharding(self):
-        selected = []
-        for index in range(1, 5):
-            shard = f"{index}/4"
-            with self.subTest(shard=shard):
-                result = self.run_gate(shard)
-                self.assertEqual(result.returncode, 0, result.stderr)
-                calls = self.calls()
-                self.assertEqual(len(calls), 3)
-                self.assertEqual(calls[0], DISCOVER)
-                self.assertEqual(calls[2][:5], [*RUN, "--"])
-                patterns = calls[2][5:]
-                self.assertTrue(patterns)
-                self.assertEqual(calls[1], [*DISCOVER, *patterns])
-                matches = [name for name in self.names if any(re.search(pattern, str(self.tests / name)) for pattern in patterns)]
-                self.assertEqual(len(matches), len(patterns))
-                selected.extend(matches)
-                self.assertNotIn("--shard", json.dumps(calls))
-                self.assertIn(f"PASS: browser shard {shard} only", result.stdout)
-                self.assertNotIn("PASS: browser verification", result.stdout)
-                for name in ("ignored.ui.spec.ts", "separate.native.spec.ts", "api.api.spec.ts"):
-                    self.assertFalse(any(re.search(pattern, str(self.tests / name)) for pattern in patterns))
-        self.assertCountEqual(selected, self.names)
+        for total in (4, 6):
+            selected = []
+            for index in range(1, total + 1):
+                shard = f"{index}/{total}"
+                with self.subTest(shard=shard):
+                    result = self.run_gate(shard)
+                    self.assertEqual(result.returncode, 0, result.stderr)
+                    calls = self.calls()
+                    self.assertEqual(len(calls), 3)
+                    self.assertEqual(calls[0], DISCOVER)
+                    self.assertEqual(calls[2][:5], [*RUN, "--"])
+                    patterns = calls[2][5:]
+                    self.assertTrue(patterns)
+                    self.assertEqual(calls[1], [*DISCOVER, *patterns])
+                    matches = [name for name in self.names if any(re.search(pattern, str(self.tests / name)) for pattern in patterns)]
+                    self.assertEqual(len(matches), len(patterns))
+                    selected.extend(matches)
+                    self.assertNotIn("--shard", json.dumps(calls))
+                    self.assertIn(f"PASS: browser shard {shard} only", result.stdout)
+                    self.assertNotIn("PASS: browser verification", result.stdout)
+                    for name in ("ignored.ui.spec.ts", "separate.native.spec.ts", "api.api.spec.ts"):
+                        self.assertFalse(any(re.search(pattern, str(self.tests / name)) for pattern in patterns))
+            self.assertCountEqual(selected, self.names)
 
     def test_invalid_shards_fail_before_discovery_or_execution(self):
         for shard in ("0/4", "5/4", "1/0", "1/04", "all", "1/4 --grep smoke", "1000/1000"):
