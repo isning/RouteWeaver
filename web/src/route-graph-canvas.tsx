@@ -8,7 +8,7 @@ import "@xyflow/react/dist/style.css";
 export default function RouteGraphCanvas(props: ReactFlowProps) {
   return (
     <ReactFlow {...props}>
-      <Background color="#d5dfd9" gap={22} />
+      <Background color="var(--border)" gap={22} />
       <Controls showInteractive={false} />
     </ReactFlow>
   );

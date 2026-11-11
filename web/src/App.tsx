@@ -1,3 +1,4 @@
+import { ThemePreference } from "@/ui-patterns/theme-preference";
 import { RouteContent } from "@/ui-patterns/route-content";
 import { PasswordInput } from "@/ui-patterns/password-input";
 import {
@@ -723,6 +724,7 @@ function Workspace() {
         </nav>
       </SidebarContent>
       <SidebarFooter className="border-t p-2">
+        <ThemePreference />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <SidebarMenuButton size="lg" className="h-14">

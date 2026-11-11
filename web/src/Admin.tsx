@@ -1156,8 +1156,8 @@ function RouteEditor({
     },
     style: {
       border: draft.hops.includes(n.id)
-        ? "2px solid #167565"
-        : "1px solid #dce4df",
+        ? "2px solid var(--primary)"
+        : "1px solid var(--border)",
       borderRadius: 12,
       width: 160,
       padding: 12,
@@ -1169,8 +1169,8 @@ function RouteEditor({
     id: `${draft.hops[i]}-${id}`,
     source: draft.hops[i],
     target: id,
-    markerEnd: { type: "arrowclosed" as MarkerType, color: "#167565" },
-    style: { stroke: "#167565", strokeWidth: 2.5 },
+    markerEnd: { type: "arrowclosed" as MarkerType, color: "var(--primary)" },
+    style: { stroke: "var(--primary)", strokeWidth: 2.5 },
   }));
   return (
     <TaskSheet

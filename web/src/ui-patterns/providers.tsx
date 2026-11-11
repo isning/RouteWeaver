@@ -7,6 +7,7 @@ import {
   type ReactNode,
 } from "react";
 import { toast } from "sonner";
+import { ThemeProvider } from "next-themes";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 import { ConfirmationProvider } from "./confirmations";
@@ -36,7 +37,7 @@ export function UIProviders({
       parent?.(false);
     };
   }, [parent, portal]);
-  return (
+  const content = (
     <NestedHostContext.Provider value={register}>
       <PortalHostProvider container={portal}>
         <TooltipProvider>
@@ -47,5 +48,19 @@ export function UIProviders({
         </TooltipProvider>
       </PortalHostProvider>
     </NestedHostContext.Provider>
+  );
+  // Nested workspaces share the root preference, including portal-mounted UI.
+  return parent ? (
+    content
+  ) : (
+    <ThemeProvider
+      attribute="class"
+      defaultTheme="system"
+      storageKey="routeweaver-theme"
+      enableSystem
+      enableColorScheme
+    >
+      {content}
+    </ThemeProvider>
   );
 }

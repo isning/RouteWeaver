@@ -133,3 +133,31 @@
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
 }
+
+/* React Flow ships its own light defaults. Keep every canvas, node and control
+   on the same semantic surfaces as the surrounding workspace in either theme. */
+.react-flow {
+  --xy-background-color: var(--background);
+  --xy-node-background-color: var(--card);
+  --xy-node-color: var(--card-foreground);
+  --xy-node-border: 1px solid var(--border);
+  --xy-node-boxshadow-hover: 0 0 0 1px var(--ring);
+  --xy-node-boxshadow-selected: 0 0 0 2px var(--ring);
+  --xy-handle-background-color: var(--primary);
+  --xy-handle-border-color: var(--card);
+  --xy-edge-label-background-color: var(--card);
+  --xy-edge-label-color: var(--card-foreground);
+  --xy-edge-stroke: var(--muted-foreground);
+  --xy-edge-stroke-selected: var(--primary);
+  --xy-connectionline-stroke: var(--primary);
+  --xy-controls-button-background-color: var(--popover);
+  --xy-controls-button-background-color-hover: var(--accent);
+  --xy-controls-button-color: var(--popover-foreground);
+  --xy-controls-button-color-hover: var(--accent-foreground);
+  --xy-controls-button-border-color: var(--border);
+  --xy-attribution-background-color: var(--card);
+}
+.react-flow__controls-button:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
