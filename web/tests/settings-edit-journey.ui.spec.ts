@@ -22,10 +22,24 @@ async function visibleControl(control: Locator) {
 }
 
 async function capture(page: Page, surface: Locator, info: TestInfo, name: string, controls: Locator[] = []) {
-  await settledTask(surface);
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
+  let settlingFailure: unknown;
+  try {
+    await settledTask(surface);
+  } catch (error) {
+    settlingFailure = error;
+  }
+  const viewport = await page.evaluate(() => ({
+    width: innerWidth, height: innerHeight,
+    scrollWidth: document.documentElement.scrollWidth,
+    activeElement: document.activeElement?.getAttribute("id") || document.activeElement?.tagName,
+  }));
   const visibility = [];
+  const matches = [];
   for (const control of controls) {
+    // A missing error must leave diagnostics, not block capture waiting for it.
+    const count = await control.count();
+    matches.push({ locator: control.toString(), count });
+    if (count !== 1) continue;
     // Pointer hit-testing alone misses painted Sonner cards with pointer-events:
     // none. Check all nine interior sample points against their visible bounds,
     // immediately before the screenshot. No polling for a toast to expire.
@@ -76,8 +90,20 @@ async function capture(page: Page, surface: Locator, info: TestInfo, name: strin
     });
     visibility.push(observed);
   }
+  // Keep the original viewport even when a geometry assertion fails. Mask
+  // synthetic security fields; never scroll or focus to stage evidence.
+  const path = info.outputPath(`settings-edit-journey-${name}.png`);
+  await page.screenshot({ path, fullPage: false, mask: [page.locator('input[type="password"]')] });
+  await info.attach(`settings-edit-journey-${name}`, { path, contentType: "image/png" });
+  await writeFile(info.outputPath(`settings-edit-journey-visibility-${name}.json`), `${JSON.stringify(visibility, null, 2)}\n`);
+  await writeFile(info.outputPath(`settings-edit-journey-viewport-${name}.json`), `${JSON.stringify({
+    ...viewport, matches, settlingFailure: settlingFailure ? String(settlingFailure) : null,
+  }, null, 2)}\n`);
+  if (settlingFailure) throw settlingFailure;
+  expect(viewport.scrollWidth <= viewport.width + 1, "document has no horizontal overflow").toBe(true);
+  for (const match of matches)
+    expect(match.count, `${match.locator} has exactly one evidence target`).toBe(1);
   if (visibility.length) {
-    await writeFile(info.outputPath(`settings-edit-journey-visibility-${name}.json`), `${JSON.stringify(visibility, null, 2)}\n`);
     for (const observed of visibility) {
       expect(observed.positiveArea, `${observed.control} has positive rendered area`).toBe(true);
       expect(observed.paintChain.every((item) =>
@@ -90,9 +116,6 @@ async function capture(page: Page, surface: Locator, info: TestInfo, name: strin
       expect(observed.points.some((point) => point.paintedToastOverlap), `${observed.control} has no painted toast overlap`).toBe(false);
     }
   }
-  const path = info.outputPath(`settings-edit-journey-${name}.png`);
-  await page.screenshot({ path, fullPage: false });
-  await info.attach(`settings-edit-journey-${name}`, { path, contentType: "image/png" });
 }
 
 // Native Tab may scroll the sequential short-height task. Never place focus on
@@ -160,20 +183,48 @@ for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844
     await edit.click();
     const name = platform.getByRole("textbox", { name: "平台名称", exact: true });
     await expect(name).toBeFocused();
-    await name.fill("");
-    await page.keyboard.press("Tab");
     const saveName = platform.getByRole("button", { name: "保存设置", exact: true });
-    await expect(saveName).toBeFocused();
-    await page.keyboard.press("Enter");
+    const nameLabel = platform.locator("label").filter({ hasText: /^平台名称$/ });
     const nameError = platform.getByText("请填写平台名称", { exact: true });
-    await expect(nameError).toBeVisible();
-    await expect(name).toHaveAttribute("aria-invalid", "true");
-    expect(await name.getAttribute("aria-describedby")).toBe(await nameError.getAttribute("id"));
-    expect(writes).toEqual([]);
-    await visibleControl(saveName);
-    await capture(page, platform, info, `empty-name-${suffix}`);
-    await name.fill(draftName);
+    const rejectEmptyName = async (captureName: string) => {
+      await name.fill("");
+      await page.keyboard.press("Tab");
+      await expect(saveName).toBeFocused();
+      await visibleControl(saveName);
+      await page.keyboard.press("Enter");
+      const recoveryFailures: unknown[] = [];
+      try {
+        await expect(nameError).toBeVisible();
+        await expect(name).toBeFocused();
+      } catch (error) {
+        recoveryFailures.push(error);
+      }
+      try {
+        // Also preserve the original if the error/focus never arrives. A short
+        // viewport need not show the save footer alongside the invalid field.
+        await capture(page, platform, info, `${captureName}-${suffix}`, [nameLabel, name, nameError]);
+      } catch (error) {
+        recoveryFailures.push(error);
+      }
+      if (recoveryFailures.length > 1)
+        throw new AggregateError(recoveryFailures, "Invalid-name readiness and evidence checks failed");
+      if (recoveryFailures.length) throw recoveryFailures[0];
+      await expect(name).toHaveValue("");
+      await expect(name).toHaveAttribute("aria-invalid", "true");
+      expect(await name.getAttribute("aria-describedby")).toBe(await nameError.getAttribute("id"));
+      expect(await name.getAttribute("aria-labelledby")).toBe(await nameLabel.getAttribute("id"));
+      expect(await nameLabel.getAttribute("for")).toBe(await name.getAttribute("id"));
+      await expect(domain).toHaveValue(draftOrigin);
+      expect(writes).toEqual([]);
+    };
     await domain.fill(draftOrigin);
+    await rejectEmptyName("empty-name");
+    await rejectEmptyName("empty-name-repeat");
+    // Correction clears the error without saving either independent draft.
+    await page.keyboard.type(draftName);
+    await expect(nameError).toHaveCount(0);
+    await expect(name).toBeFocused();
+    expect(writes).toEqual([]);
 
     await security.click();
     await expect(basic).toHaveAttribute("aria-selected", "false");
@@ -215,7 +266,11 @@ for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844
     await expect(domain).toHaveValue(draftOrigin);
     await edit.press("Enter");
     await expect(name).toHaveValue(initialSettings.name);
-    await name.fill(draftName);
+    await expect(name).toBeFocused();
+    await expect(nameError).toHaveCount(0);
+    await rejectEmptyName("empty-name-reopened");
+    await page.keyboard.type(draftName);
+    await expect(nameError).toHaveCount(0);
     const nameSaved = page.waitForResponse((response) =>
       new URL(response.url()).pathname === "/api/settings" && response.request().method() === "PUT");
     await saveName.click();
@@ -339,6 +394,8 @@ for (const viewport of [{ width: 1440, height: 1000 }, { width: 390, height: 844
     const proof = {
       viewport, writes, abortedReads, forbidden,
       nameSaved: true, nameCancelPreservesDomain: true,
+      invalidNameFocusRecovered: true, repeatedInvalidNameFocusRecovered: true,
+      reopenedInvalidNameFocusRecovered: true, invalidNameContextVisible: true,
       securityPasswordClearedOnReturn: true, mfaEnabled: false,
       draftsPreservedAcrossTabsAndCancelledBack: true,
       readFailureRetainedUnsavedDomain: true,

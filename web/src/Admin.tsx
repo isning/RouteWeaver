@@ -1990,7 +1990,8 @@ function Settings({
   const [saveFeedback, setSaveFeedback] = useState<string | null>(null);
   const client = useQueryClient();
   const [baseline, setBaseline] = useState(initial);
-  const [editingName, setEditingName] = useState(false);
+  const [nameEditOwner, setNameEditOwner] = useState<object | null>(null);
+  const editingName = nameEditOwner !== null;
   const nameInput = useRef<HTMLInputElement>(null);
   const nameEditor = useRef<HTMLDivElement>(null);
   const editName = useRef<HTMLButtonElement>(null);
@@ -2007,7 +2008,7 @@ function Settings({
     restoreNameFocus.current = !!nameEditor.current?.contains(
       document.activeElement,
     );
-    setEditingName(false);
+    setNameEditOwner(null);
   };
   const values = useWatch([], { form, preserve: true });
   const currentSettings = values || initial;
@@ -2066,6 +2067,7 @@ function Settings({
         <SettingsGroup title="平台信息">
           <AppForm
             aria-label="平台基本设置"
+            submitErrorFocusOwner={nameEditOwner}
             form={form}
             initialValues={initial}
             onValuesChange={() => setSaveFeedback(null)}
@@ -2085,7 +2087,7 @@ function Settings({
                     onClick={() => {
                       save.reset();
                       setSaveFeedback(null);
-                      setEditingName(true);
+                      setNameEditOwner({});
                     }}
                   >
                     编辑平台名称
