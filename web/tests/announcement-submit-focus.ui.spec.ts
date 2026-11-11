@@ -27,7 +27,9 @@ async function geometry(dialog: Locator, field: Locator) {
       max: element.scrollHeight - element.clientHeight,
     };
   });
-  return { mode, rail, field: await field.boundingBox() };
+  const box = await field.boundingBox();
+  expect(box).not.toBeNull();
+  return { mode, rail, field: box! };
 }
 
 for (const width of [1440, 390]) {
@@ -255,6 +257,12 @@ for (const width of [1440, 390]) {
             before.rail.offset,
             "Native Tab reached the lower footer",
           ).toBeGreaterThan(0);
+          const clippedAbove = before.field.y < before.rail.top - 1;
+          const clippedBelow =
+            before.field.y + before.field.height > before.rail.bottom + 1;
+          // Keep an explicit offscreen recovery exercise, not just a branch
+          // that can silently stop exercising scroll restoration.
+          if (label === "标题") expect(clippedAbove).toBe(true);
           await screenshot(`${opening}-${stage}-before`);
           await page.keyboard.press("Enter");
           await expect(field).toBeFocused();
@@ -275,7 +283,6 @@ for (const width of [1440, 390]) {
           await inventory.inView(field);
           await inventory.inView(error);
           const after = await geometry(dialog, field);
-          expect(after.rail.offset).toBeLessThan(before.rail.offset);
           expect(blocked).toEqual([]);
           measurements.push({
             opening,
@@ -283,8 +290,17 @@ for (const width of [1440, 390]) {
             before,
             after,
             focusedField: label,
+            clippedAbove,
+            clippedBelow,
           });
           await screenshot(`${opening}-${stage}-recovered`);
+          // A desktop body can already fit in the rail at footer focus. It must
+          // receive focus with the complete field/error visible, not scroll just
+          // to satisfy the test. A clipped field must still be revealed naturally.
+          if (clippedAbove)
+            expect(after.rail.offset).toBeLessThan(before.rail.offset);
+          if (clippedBelow)
+            expect(after.rail.offset).toBeGreaterThan(before.rail.offset);
         };
         await recover(title, "标题", "title");
         await retained("   ", "Retained maintenance announcement");

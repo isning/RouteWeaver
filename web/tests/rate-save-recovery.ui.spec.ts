@@ -156,6 +156,117 @@ async function capture(page: Page, info: TestInfo, name: string) {
   });
 }
 
+// CSS boxes use fractional coordinates while client sizes are integral. Use the
+// suite's existing one-CSS-pixel boundary convention, not an area percentage.
+// Record every clipping ancestor so a genuine cut-off cannot hide behind a
+// viewport-only check. Native pixels remain a separate review requirement.
+function paintedBounds(node: Element) {
+  const rect = (r: DOMRect) => ({
+    left: r.left,
+    right: r.right,
+    top: r.top,
+    bottom: r.bottom,
+  });
+  const clipChain = (start: Element | null) => {
+    const clips = [
+      {
+        owner: "viewport",
+        x: true,
+        y: true,
+        left: 0,
+        right: innerWidth,
+        top: 0,
+        bottom: innerHeight,
+      },
+    ];
+    for (let parent = start; parent; parent = parent.parentElement) {
+      const style = getComputedStyle(parent);
+      const x = style.overflowX !== "visible",
+        y = style.overflowY !== "visible";
+      if (!x && !y) continue;
+      const r = parent.getBoundingClientRect();
+      clips.push({
+        owner: `${parent.tagName}:${parent.getAttribute("data-slot") ?? parent.getAttribute("role") ?? ""}`,
+        x,
+        y,
+        left: r.left + parent.clientLeft,
+        right: r.left + parent.clientLeft + parent.clientWidth,
+        top: r.top + parent.clientTop,
+        bottom: r.top + parent.clientTop + parent.clientHeight,
+      });
+    }
+    return clips;
+  };
+  const measurement = (
+    box: ReturnType<typeof rect>,
+    clips: ReturnType<typeof clipChain>,
+    allowance: number,
+  ) => ({
+    box,
+    clips,
+    allowance,
+    excess: clips.map((clip) => ({
+      owner: clip.owner,
+      left: clip.x ? Math.max(0, clip.left - box.left) : 0,
+      right: clip.x ? Math.max(0, box.right - clip.right) : 0,
+      top: clip.y ? Math.max(0, clip.top - box.top) : 0,
+      bottom: clip.y ? Math.max(0, box.bottom - clip.bottom) : 0,
+    })),
+  });
+  const box = measurement(
+    rect(node.getBoundingClientRect()),
+    clipChain(node.parentElement),
+    1,
+  );
+  const text: ReturnType<typeof measurement>[] = [];
+  const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
+  while (walker.nextNode()) {
+    if (!walker.currentNode.textContent?.trim()) continue;
+    const range = document.createRange();
+    range.selectNodeContents(walker.currentNode);
+    // Text includes its own enclosing elements' clipping, not just the cell's
+    // ancestors. Only floating-point noise is allowed for actual glyph ranges.
+    text.push(
+      ...Array.from(range.getClientRects(), (r) =>
+        measurement(rect(r), clipChain(walker.currentNode.parentElement), 0.01),
+      ),
+    );
+  }
+  return {
+    box,
+    text,
+    scrollLeft: node.scrollLeft,
+    clientWidth: node.clientWidth,
+    scrollWidth: node.scrollWidth,
+    pageWidth: document.documentElement.scrollWidth,
+    viewportWidth: innerWidth,
+  };
+}
+
+async function assertPainted(target: Locator, includeText = true) {
+  await expect(target).toBeVisible();
+  const geometry = await target.evaluate(paintedBounds);
+  if (includeText)
+    expect(
+      geometry.text.length,
+      "Semantic text has painted rectangles",
+    ).toBeGreaterThan(0);
+  for (const measured of [
+    geometry.box,
+    ...(includeText ? geometry.text : []),
+  ]) {
+    for (const excess of measured.excess) {
+      for (const side of ["left", "right", "top", "bottom"] as const) {
+        expect(
+          excess[side],
+          `${side} clipping at ${excess.owner}`,
+        ).toBeLessThanOrEqual(measured.allowance);
+      }
+    }
+  }
+  expect(geometry.pageWidth).toBeLessThanOrEqual(geometry.viewportWidth + 1);
+}
+
 // A narrow DataTable deliberately keeps readable columns in a horizontal rail.
 // Inspect each semantic column at its actual visible position, rather than
 // demanding the entire wide row fit or accepting merely attached/clipped text.
@@ -176,108 +287,108 @@ async function captureRecord(
   const rail = page
     .getByRole("region", { name: "表格滚动区域", exact: true })
     .filter({ has: row });
-  await expect(rail).toHaveAttribute("tabindex", "0");
-  await expect(rail).toHaveAccessibleDescription("向左右滚动查看完整表格");
-  await expect(rail).toBeInViewport({ ratio: 1 });
-  expect(
-    await rail.evaluate((node) => ({
-      overflow: getComputedStyle(node).overflowX,
-      scrollable: node.scrollWidth > node.clientWidth + 1,
-    })),
-  ).toEqual({ overflow: "auto", scrollable: true });
-  await tabTo(page, rail);
-  await expect(rail).toBeFocused();
-  const scrollToEdge = async (edge: "left" | "right") => {
-    for (let count = 0; count < 40; count++) {
-      const before = await rail.evaluate((node) => ({
-        left: node.scrollLeft,
-        max: node.scrollWidth - node.clientWidth,
-      }));
-      if (edge === "left" ? before.left <= 1 : before.left >= before.max - 1)
-        break;
-      await page.keyboard.press(edge === "left" ? "ArrowLeft" : "ArrowRight");
-      if (edge === "left")
-        await expect
-          .poll(() => rail.evaluate((node) => node.scrollLeft))
-          .toBeLessThan(before.left);
-      else
-        await expect
-          .poll(() => rail.evaluate((node) => node.scrollLeft))
-          .toBeGreaterThan(before.left);
-    }
-    await expect
-      .poll(() =>
-        rail.evaluate(
-          (node, side) =>
-            side === "left"
-              ? node.scrollLeft
-              : node.scrollWidth - node.clientWidth - node.scrollLeft,
-          edge,
-        ),
-      )
-      .toBeLessThanOrEqual(1);
-  };
-  for (const [edge, columns] of [
-    [
-      "left",
-      [
-        ["线路", routeName],
-        ["倍率", "2×"],
-      ],
-    ],
-    [
-      "right",
-      [
-        ["生效时间（UTC+8）", "2099/01/02 11:04"],
-        ["状态", "待生效"],
-      ],
-    ],
-  ] as const) {
-    await scrollToEdge(edge);
-    for (const [header, value] of columns) {
-      for (const cell of [
-        rail.getByRole("columnheader", { name: header, exact: true }),
-        row.getByRole("cell", { name: value, exact: true }),
-      ]) {
-        await expect(cell).toBeInViewport({ ratio: 1 });
-        expect(
-          await cell.evaluate((node) => {
-            const viewport = node.closest('[role="region"]')!;
-            const box = node.getBoundingClientRect(),
-              clip = viewport.getBoundingClientRect();
-            return (
-              box.left >= clip.left + viewport.clientLeft - 1 &&
-              box.right <=
-                clip.left + viewport.clientLeft + viewport.clientWidth + 1 &&
-              box.top >= clip.top - 1 &&
-              box.bottom <= clip.top + viewport.clientHeight + 1
-            );
-          }),
-        ).toBe(true);
-      }
-    }
-    if (failedRefresh) {
-      await expect(page.getByText(failure, { exact: true })).toBeInViewport({
-        ratio: 1,
+  const diagnose = async (stage: string) => {
+    // Attach before checking geometry and again on failure, not after a gate
+    // that can prevent the only useful evidence from being captured.
+    await info.attach(`${name}-${stage}-pixels`, {
+      body: await page.screenshot({ scale: "css" }),
+      contentType: "image/png",
+    });
+    const boxes = [
+      { label: "rail", bounds: await rail.evaluate(paintedBounds) },
+    ];
+    for (const cell of await rail.locator("th, td").all())
+      boxes.push({
+        label: await cell.innerText(),
+        bounds: await cell.evaluate(paintedBounds),
       });
-      await expect(
-        page.getByRole("button", { name: "重试", exact: true }),
-      ).toBeInViewport({ ratio: 1 });
-    }
-    await capture(page, info, `${name}-${edge}-columns`);
-  }
-  await info.attach(`${name}-rail-geometry`, {
-    contentType: "application/json",
-    body: JSON.stringify(
+    await info.attach(`${name}-${stage}-geometry`, {
+      contentType: "application/json",
+      body: JSON.stringify(boxes, null, 2),
+    });
+  };
+  await diagnose("before");
+  try {
+    await expect(rail).toHaveAttribute("tabindex", "0");
+    await expect(rail).toHaveAccessibleDescription("向左右滚动查看完整表格");
+    await assertPainted(rail, false);
+    expect(
       await rail.evaluate((node) => ({
-        width: node.clientWidth,
-        contentWidth: node.scrollWidth,
-        scrollLeft: node.scrollLeft,
-        pageWidth: document.documentElement.scrollWidth,
-        viewportWidth: innerWidth,
+        overflow: getComputedStyle(node).overflowX,
+        scrollable: node.scrollWidth > node.clientWidth + 1,
       })),
-    ),
-  });
+    ).toEqual({ overflow: "auto", scrollable: true });
+    await tabTo(page, rail);
+    await expect(rail).toBeFocused();
+    const scrollToEdge = async (edge: "left" | "right") => {
+      for (let count = 0; count < 40; count++) {
+        const before = await rail.evaluate((node) => ({
+          left: node.scrollLeft,
+          max: node.scrollWidth - node.clientWidth,
+        }));
+        if (edge === "left" ? before.left <= 1 : before.left >= before.max - 1)
+          break;
+        await page.keyboard.press(edge === "left" ? "ArrowLeft" : "ArrowRight");
+        if (edge === "left")
+          await expect
+            .poll(() => rail.evaluate((node) => node.scrollLeft))
+            .toBeLessThan(before.left);
+        else
+          await expect
+            .poll(() => rail.evaluate((node) => node.scrollLeft))
+            .toBeGreaterThan(before.left);
+      }
+      await expect
+        .poll(() =>
+          rail.evaluate(
+            (node, side) =>
+              side === "left"
+                ? node.scrollLeft
+                : node.scrollWidth - node.clientWidth - node.scrollLeft,
+            edge,
+          ),
+        )
+        .toBeLessThanOrEqual(1);
+    };
+    for (const [edge, columns] of [
+      [
+        "left",
+        [
+          ["线路", routeName],
+          ["倍率", "2×"],
+        ],
+      ],
+      [
+        "right",
+        [
+          ["生效时间（UTC+8）", "2099/01/02 11:04"],
+          ["状态", "待生效"],
+        ],
+      ],
+    ] as const) {
+      await scrollToEdge(edge);
+      await diagnose(`${edge}-before-check`);
+      for (const [header, value] of columns) {
+        for (const cell of [
+          rail.getByRole("columnheader", { name: header, exact: true }),
+          row.getByRole("cell", { name: value, exact: true }),
+        ]) {
+          await assertPainted(cell);
+        }
+      }
+      if (failedRefresh) {
+        await expect(page.getByText(failure, { exact: true })).toBeInViewport({
+          ratio: 1,
+        });
+        await expect(
+          page.getByRole("button", { name: "重试", exact: true }),
+        ).toBeInViewport({ ratio: 1 });
+      }
+      await capture(page, info, `${name}-${edge}-columns`);
+    }
+  } finally {
+    await diagnose("final");
+  }
 }
 
 for (const width of [1440, 390]) {
