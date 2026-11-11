@@ -276,7 +276,7 @@ for (const width of [1440, 390]) {
 // fixtures. DOM-unit measurements cannot establish actual hit testing/clipping.
 test("validation evidence distinguishes pointer suppression from overlays and clips", async ({
   page,
-}) => {
+}, info) => {
   await page.setViewportSize({ width: 390, height: 560 });
   await page.setContent(`
     <style>
@@ -290,55 +290,121 @@ test("validation evidence distinguishes pointer suppression from overlays and cl
     <div id="cover"></div>
   `);
   const control = page.getByRole("button", { name: "校验链路", exact: true });
-  const observe = async () =>
-    (
+  const readControlState = () =>
+    control.evaluate((element) => ({
+      // Keep null distinct from an existing empty attribute. The original native
+      // failure recorded only the latter, not the fixture's actual initial state.
+      style: element.getAttribute("style"),
+      pointerEvents: getComputedStyle(element).pointerEvents,
+      disabled: (element as HTMLButtonElement).disabled,
+      busy: element.getAttribute("aria-busy"),
+      bodyFocused: document.activeElement === document.body,
+    }));
+  type ControlState = Awaited<ReturnType<typeof readControlState>>;
+  type Geometry = ReturnType<
+    typeof observeValidationGeometry
+  >["controls"][number];
+  const probes: Array<{
+    stage: string;
+    before: ControlState;
+    geometry?: Geometry;
+    after?: ControlState;
+  }> = [];
+  const initial = await readControlState();
+  const observe = async (stage: string) => {
+    const probe: (typeof probes)[number] = {
+      stage,
+      before: await readControlState(),
+    };
+    probes.push(probe);
+    probe.geometry = (
       await page
         .locator("body")
         .evaluate(observeValidationGeometry, { checkFailure, removalFailure })
     ).controls[0];
-  expect(await observe()).toMatchObject({
-    inViewport: true,
-    unobscured: true,
-    busy: "true",
-    occlusionProbe: "temporary-pointer-events-auto",
-  });
-  await expect(control).toBeDisabled();
-  expect(await control.getAttribute("style")).toBeNull();
-  expect(
-    await control.evaluate(
-      (element) => getComputedStyle(element).pointerEvents,
-    ),
-  ).toBe("none");
-  expect(
-    await page.evaluate(() => document.activeElement === document.body),
-  ).toBe(true);
+    probe.after = await readControlState();
+    // Exact restoration, not null/empty equivalence. Repeat at every geometry
+    // boundary so a failure cannot skip the overlay/clipping evidence silently.
+    expect(probe.before).toEqual(initial);
+    expect(probe.after).toEqual(probe.before);
+    return probe.geometry;
+  };
+  let taskFailed = false;
+  let taskError: unknown;
+  let evidenceError: unknown;
+  const serializeEvidence = () =>
+    JSON.stringify(
+      {
+        scope:
+          "native evidence-helper fixture; not application or deployment proof",
+        initial,
+        probes,
+      },
+      null,
+      2,
+    );
+  try {
+    expect(initial).toMatchObject({
+      pointerEvents: "none",
+      disabled: true,
+      busy: "true",
+      bodyFocused: true,
+    });
+    expect(await observe("unobscured")).toMatchObject({
+      inViewport: true,
+      unobscured: true,
+      busy: "true",
+      occlusionProbe: "temporary-pointer-events-auto",
+    });
 
-  await page.locator("#cover").evaluate((element) => {
-    element.style.display = "block";
-  });
-  expect(await observe()).toMatchObject({
-    inViewport: true,
-    unobscured: false,
-  });
-  await page.locator("#cover").evaluate((element) => {
-    element.style.display = "none";
-  });
+    await page.locator("#cover").evaluate((element) => {
+      element.style.display = "block";
+    });
+    expect(await observe("covered")).toMatchObject({
+      inViewport: true,
+      unobscured: false,
+    });
+    await page.locator("#cover").evaluate((element) => {
+      element.style.display = "none";
+    });
 
-  await page.locator("#clip").evaluate((element) => {
-    element.style.width = "20px";
-  });
-  expect(await observe()).toMatchObject({
-    inViewport: true,
-    unobscured: false,
-  });
-  await page.locator("#clip").evaluate((element) => {
-    element.style.width = "120px";
-    element.style.left = "-10px";
-  });
-  expect(await observe()).toMatchObject({
-    inViewport: false,
-    unobscured: true,
-  });
-  await expect(control).toBeDisabled();
-  expect(await control.getAttribute("style")).toBeNull();
+    await page.locator("#clip").evaluate((element) => {
+      element.style.width = "20px";
+    });
+    expect(await observe("ancestor-clipped")).toMatchObject({
+      inViewport: true,
+      unobscured: false,
+    });
+    await page.locator("#clip").evaluate((element) => {
+      element.style.width = "120px";
+      element.style.left = "-10px";
+    });
+    expect(await observe("viewport-clipped")).toMatchObject({
+      inViewport: false,
+      unobscured: true,
+    });
+  } catch (error) {
+    taskFailed = true;
+    taskError = error;
+  } finally {
+    // Synthetic fixture data only. This path is already retained by the CI
+    // artifact allowlist, including when exact restoration fails before later probes.
+    try {
+      await writeFile(info.outputPath("final-state.json"), serializeEvidence());
+    } catch (error) {
+      evidenceError = error;
+    }
+    // Attach the bytes independently, even if persisting the original failed.
+    // Evidence errors must never replace the original assertion failure.
+    try {
+      await info.attach("measurement-restoration", {
+        body: serializeEvidence(),
+        contentType: "application/json",
+      });
+    } catch (error) {
+      evidenceError ??= error;
+    }
+  }
+  if (taskFailed) throw taskError;
+  if (evidenceError) throw evidenceError;
 });

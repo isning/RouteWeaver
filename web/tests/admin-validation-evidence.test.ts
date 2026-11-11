@@ -92,35 +92,47 @@ it("still rejects a partly offscreen control even if its center is unobscured", 
   });
 });
 
-it("restores the exact inline style and disabled state when the hit test throws", () => {
-  const button = pending();
-  const before = button.getAttribute("style");
-  vi.spyOn(document, "elementFromPoint").mockImplementation(() => {
-    throw new Error("hit test interrupted");
-  });
-  expect(() => observeValidationGeometry(document.body, failures)).toThrow(
-    "hit test interrupted",
-  );
-  expect(button.getAttribute("style")).toBe(before);
-  expect(button.disabled).toBe(true);
-  expect(document.activeElement).toBe(document.body);
-});
+it.each([null, "", "pointer-events: none !important; color: red;"])(
+  "restores the exact inline style (%j) and disabled state when the hit test throws",
+  (before) => {
+    const button = pending();
+    if (before === null) button.removeAttribute("style");
+    else button.setAttribute("style", before);
+    const css = document.createElement("style");
+    css.textContent = "button:disabled { pointer-events: none; }";
+    document.body.prepend(css);
+    vi.spyOn(document, "elementFromPoint").mockImplementation(() => {
+      throw new Error("hit test interrupted");
+    });
+    expect(() => observeValidationGeometry(document.body, failures)).toThrow(
+      "hit test interrupted",
+    );
+    expect(button.getAttribute("style")).toBe(before);
+    expect(button.disabled).toBe(true);
+    expect(document.activeElement).toBe(document.body);
+  },
+);
 
-it("restores an absent inline style after probing CSS-only pointer suppression", () => {
-  const button = pending();
-  button.removeAttribute("style");
-  const css = document.createElement("style");
-  css.textContent = "button:disabled { pointer-events: none; }";
-  document.body.prepend(css);
-  expect(
-    observeValidationGeometry(document.body, failures).controls[0],
-  ).toMatchObject({
-    unobscured: true,
-    occlusionProbe: "temporary-pointer-events-auto",
-  });
-  expect(button.hasAttribute("style")).toBe(false);
-  expect(getComputedStyle(button).pointerEvents).toBe("none");
-});
+it.each([null, ""])(
+  "restores the exact CSS-only style baseline (%j)",
+  (before) => {
+    const button = pending();
+    if (before === null) button.removeAttribute("style");
+    else button.setAttribute("style", before);
+    const css = document.createElement("style");
+    css.textContent = "button:disabled { pointer-events: none; }";
+    document.body.prepend(css);
+    expect(
+      observeValidationGeometry(document.body, failures).controls[0],
+    ).toMatchObject({
+      unobscured: true,
+      occlusionProbe: "temporary-pointer-events-auto",
+    });
+    expect(button.getAttribute("style")).toBe(before);
+    expect(button.hasAttribute("style")).toBe(before !== null);
+    expect(getComputedStyle(button).pointerEvents).toBe("none");
+  },
+);
 
 it("does not alter a control whose pointer hit testing is already enabled", () => {
   const button = pending();
