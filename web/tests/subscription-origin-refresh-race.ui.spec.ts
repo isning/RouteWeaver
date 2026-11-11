@@ -18,11 +18,11 @@ const saved = { ...old, revision: 5, configuredRevision: 5,
   proposedLinkExample: "https://new.example/feed/{existing-token}" };
 const fresh = { ...saved, revision: 6, verificationStatus: "failed",
   lastFailure: "Could not verify this instance. Check public DNS, the HTTPS certificate and /feed routing, then verify again." };
-async function tabTo(page: Page, target: Locator) {
+async function tabTo(page: Page, target: Locator, direction: "forward" | "backward" = "forward") {
   await expect(target).toBeVisible();
   for (let count = 0; count < 80; count++) {
     if (await target.evaluate(node => node === document.activeElement)) return;
-    await page.keyboard.press("Tab");
+    await page.keyboard.press(direction === "backward" ? "Shift+Tab" : "Tab");
   }
   await expect(target).toBeFocused();
 }
@@ -41,6 +41,22 @@ for (const width of [390, 1440]) {
     const writes: { method: string; path: string; matchesExpectedDraft: boolean }[] = [];
     const responses: { method: string; path: string; status: number }[] = [];
     let reads = 0, errors = 0;
+    let failed = false;
+    let phase = "initial";
+    const requests: { method: string; phase: string; read?: number }[] = [];
+    const draftChecks: { expectedKeys: boolean; expectedOrigin: boolean; expectedRevision: boolean }[] = [];
+    const checkpoints: { phase: string; reads: number; writes: number; documentFocused: boolean; inputFocused: boolean; saveFocused: boolean }[] = [];
+    const section = page.getByRole("region", { name: "订阅域名设置", exact: true });
+    const input = section.getByRole("textbox", { name: "订阅域名草稿", exact: true });
+    const save = section.getByRole("button", { name: "保存域名草稿", exact: true });
+    const checkpoint = async (next: string) => {
+      phase = next;
+      checkpoints.push({ phase, reads, writes: writes.length,
+        documentFocused: await page.evaluate(() => document.hasFocus()),
+        inputFocused: await input.evaluate(node => node === document.activeElement),
+        saveFocused: await save.evaluate(node => node === document.activeElement),
+      });
+    };
     let held: Route | undefined;
     page.on("pageerror", () => errors++);
     page.on("response", response => {
@@ -56,10 +72,14 @@ for (const width of [390, 1440]) {
       if (url.origin !== origin || url.search) return refuse();
       if (request.method() === "PUT" && url.pathname === path) {
         const body: unknown = request.postDataJSON();
-        const matchesExpectedDraft = !!body && typeof body === "object" &&
-          Object.keys(body).sort().join(",") === "expectedRevision,origin" &&
-          (body as { origin: unknown }).origin === "https://new.example" &&
-          (body as { expectedRevision: unknown }).expectedRevision === 4;
+        const check = {
+          expectedKeys: !!body && typeof body === "object" && Object.keys(body).sort().join(",") === "expectedRevision,origin",
+          expectedOrigin: !!body && typeof body === "object" && (body as { origin?: unknown }).origin === "https://new.example",
+          expectedRevision: !!body && typeof body === "object" && (body as { expectedRevision?: unknown }).expectedRevision === 4,
+        };
+        draftChecks.push(check);
+        requests.push({ method: "PUT", phase });
+        const matchesExpectedDraft = check.expectedKeys && check.expectedOrigin && check.expectedRevision;
         writes.push({ method: "PUT", path, matchesExpectedDraft });
         if (!matchesExpectedDraft || writes.length !== 1) return refuse();
         return route.fulfill({ json: saved });
@@ -67,8 +87,10 @@ for (const width of [390, 1440]) {
       if (request.method() !== "GET") return refuse();
       if (url.pathname === path) {
         reads++;
+        requests.push({ method: "GET", phase, read: reads });
         if (reads === 2) { held = route; return; }
-        if (reads === 1 || reads === 3) return route.fulfill({ json: reads === 1 ? old : fresh });
+        if (reads === 1) return route.fulfill({ json: old });
+        if (reads === 3 && phase === "start-fresh-refresh") return route.fulfill({ json: fresh });
         return refuse();
       }
       if (Object.hasOwn(fixtures, url.pathname)) return route.fulfill({ json: fixtures[url.pathname] });
@@ -78,25 +100,43 @@ for (const width of [390, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     try {
       await page.goto("/#settings");
-      const section = page.getByRole("region", { name: "订阅域名设置", exact: true });
-      const input = section.getByRole("textbox", { name: "订阅域名草稿", exact: true });
       const refresh = section.getByRole("button", { name: "刷新状态", exact: true });
       const verify = section.getByRole("button", { name: "验证 HTTPS 与实例", exact: true });
       const activate = section.getByRole("button", { name: "启用已保存草稿", exact: true });
       const status = section.getByRole("status");
       const current = section.getByRole("term").filter({ hasText: /^当前链接示例$/ }).locator("xpath=following-sibling::dd");
       await expect(input).toHaveValue("https://old.example");
+      await page.evaluate(() => {
+        const events: { type: string; focused: boolean; visible: boolean; inputFocused: boolean }[] = [];
+        (window as Window & { originFocusEvents?: typeof events }).originFocusEvents = events;
+        const record = (event: Event) => events.push({ type: event.type,
+          focused: document.hasFocus(), visible: document.visibilityState === "visible",
+          inputFocused: document.activeElement?.getAttribute("aria-label") === "订阅域名草稿",
+        });
+        window.addEventListener("focus", record);
+        window.addEventListener("blur", record);
+        document.addEventListener("visibilitychange", record);
+        document.addEventListener("focusin", record);
+        document.addEventListener("focusout", record);
+      });
       await tabTo(page, refresh);
+      await checkpoint("start-old-refresh");
       await page.keyboard.press("Enter");
       await expect.poll(() => reads).toBe(2);
       expect(held).toBeDefined();
-      await tabTo(page, input);
+      // Input precedes Refresh. Reverse-tab within the form instead of wrapping
+      // through browser chrome, which can trigger session revalidation.
+      await tabTo(page, input, "backward");
+      await checkpoint("edit-draft");
       await page.keyboard.press("ControlOrMeta+A");
       await page.keyboard.type("https://new.example");
-      await tabTo(page, section.getByRole("button", { name: "保存域名草稿", exact: true }));
+      await expect(input).toHaveValue("https://new.example");
+      await tabTo(page, save);
+      await checkpoint("submit-draft");
       await page.keyboard.press("Space");
       await expect(status).toHaveText("域名草稿已保存，当前订阅地址未改变");
       expect(writes).toEqual([{ method: "PUT", path, matchesExpectedDraft: true }]);
+      await checkpoint("release-old-refresh");
       // Release the old read only after saved-result UI has committed.
       const delivered = page.waitForResponse(r => new URL(r.url()).pathname === path && r.request().method() === "GET");
       await held!.fulfill({ json: old });
@@ -116,6 +156,7 @@ for (const width of [390, 1440]) {
       await info.attach(`synthetic-origin-retained-${width}`, { body: await page.screenshot({ fullPage: true }), contentType: "image/png" });
       // The fence must not prevent later deliberate authoritative reads.
       await tabTo(page, refresh);
+      await checkpoint("start-fresh-refresh");
       await page.keyboard.press("Enter");
       await expect(section.getByText("草稿验证未通过", { exact: true })).toBeVisible();
       await expect(section.getByText("无法确认此地址指向当前实例", { exact: true })).toBeVisible();
@@ -135,11 +176,26 @@ for (const width of [390, 1440]) {
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
       await settledTask(section);
       await info.attach(`synthetic-origin-fresh-${width}`, { body: await page.screenshot({ fullPage: true }), contentType: "image/png" });
+    } catch (error) {
+      failed = true;
+      throw error;
     } finally {
-      if (held) await held.abort("blockedbyclient");
+      // Persist the failing phase before aborting the held read changes the UI.
+      if (failed && !page.isClosed()) {
+        try {
+          await info.attach(`synthetic-origin-failure-${width}`, {
+            body: await page.screenshot({ fullPage: true }), contentType: "image/png",
+          });
+        } catch {
+          // Diagnostic capture must not replace the original assertion failure.
+        }
+      }
+      const focusEvents = page.isClosed() ? [] : await page.evaluate(() =>
+        (window as Window & { originFocusEvents?: unknown[] }).originFocusEvents || []);
       await info.attach("synthetic-origin-request-metadata", {
-        body: JSON.stringify({ reads, writes, responses, unexpected, pageErrors: errors }), contentType: "application/json",
+        body: JSON.stringify({ phase, reads, writes, draftChecks, requests, checkpoints, focusEvents, responses, unexpected, pageErrors: errors }), contentType: "application/json",
       });
+      if (held) await held.abort("blockedbyclient");
     }
   });
 }

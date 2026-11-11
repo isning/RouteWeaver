@@ -278,6 +278,11 @@ async function captureRecord(
   name: string,
   failedRefresh = false,
 ) {
+  // Definitive table evidence follows the owned toast's normal auto-dismiss.
+  // The initial feedback/overlap is captured separately, not hidden or fixed.
+  await expect(
+    page.getByText("线路倍率版本已保存", { exact: true }),
+  ).toHaveCount(0);
   await row.scrollIntoViewIfNeeded();
   if (width !== 390) {
     await expect(row).toBeInViewport({ ratio: 1 });
@@ -384,6 +389,9 @@ async function captureRecord(
           page.getByRole("button", { name: "重试", exact: true }),
         ).toBeInViewport({ ratio: 1 });
       }
+      await expect(
+        page.getByText("线路倍率版本已保存", { exact: true }),
+      ).toHaveCount(0);
       await capture(page, info, `${name}-${edge}-columns`);
     }
   } finally {
@@ -482,6 +490,10 @@ for (const width of [1440, 390]) {
         await page.keyboard.press("Enter");
       } else {
         await expect(editor).toHaveCount(0);
+        await expect(
+          page.getByText("线路倍率版本已保存", { exact: true }),
+        ).toBeVisible();
+        await capture(page, info, `rate-${width}-initial-save-feedback`);
         await expect(page.getByText(failure, { exact: true })).toBeVisible();
         await expect(row).toHaveCount(1);
         await expect(row).toContainText("2099/01/02 11:04");
@@ -490,6 +502,11 @@ for (const width of [1440, 390]) {
         await expect(page.getByText(failure, { exact: true })).toBeInViewport({
           ratio: 1,
         });
+        // Keep the transient state, including any toast/table overlap. The
+        // production Toaster has no Close control and uses Sonner's normal
+        // 4000ms lifetime; captureRecord waits for removal without clock edits,
+        // forced dismissal, DOM changes or an increased assertion timeout.
+        await capture(page, info, `rate-${width}-list-before-toast-dismissal`);
         await captureRecord(
           page,
           row,
