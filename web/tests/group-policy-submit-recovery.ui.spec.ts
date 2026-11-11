@@ -172,6 +172,11 @@ for (const width of [1440, 390])
         await members.click();
         await page.getByRole("option", { name: "Alice", exact: true }).click();
         await page.keyboard.press("Escape");
+        // The portaled picker keeps its focus scope until its exit motion ends.
+        // Observe the real return before beginning a separate Tab journey.
+        await expect(members).toHaveAttribute("aria-expanded", "false");
+        await expect(page.locator('[data-slot="popover-content"]')).toHaveCount(0);
+        await expect(members).toBeFocused();
         for (const field of [name, service]) {
           await tabTo(page, dialog, preview);
           expect(

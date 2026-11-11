@@ -373,6 +373,23 @@ for (const width of [390, 1440]) {
         await expect(stay).toBeInViewport({ ratio: 1 });
         await activate(page, stay);
         await expect(leave).toHaveCount(0);
+        if (width === 390) {
+          // Stay returns to the mobile navigation task that opened the warning.
+          // Dismiss that drawer before resuming the intentionally hidden form.
+          const drawer = page.getByRole("dialog", {
+            name: "导航",
+            exact: true,
+          });
+          await evidence(page, info, "navigation-retained-after-stay", drawer, [
+            navigation.getByRole("button", { name: "规则资源", exact: true }),
+          ]);
+          await expect(drawer).toBeVisible();
+          await page.keyboard.press("Escape");
+          await expect(drawer).toBeHidden();
+          await expect(
+            page.getByRole("button", { name: "打开导航", exact: true }),
+          ).toBeFocused();
+        }
 
         http.phase("explicit-invalid-read");
         http.mode("invalid");

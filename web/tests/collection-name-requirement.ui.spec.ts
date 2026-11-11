@@ -88,7 +88,8 @@ for (const width of [390, 1440]) {
       await name.fill("稍后添加来源");
       await measure("named-without-sources");
       await expect(editor.getByText("集合名称为必填项", { exact: true })).toHaveCount(0);
-      await expect(editor.getByText("尚未选择来源", { exact: true })).toBeVisible();
+      // The fresh account has no source inventory, unlike the seeded DOM fixture.
+      await expect(editor.getByText("暂无可选来源", { exact: true })).toBeVisible();
       await expect(save).toBeEnabled();
       // Continue from real input focus using native Tab, never target.focus().
       const stops = await editor.locator('a[href],button,input,select,textarea,[tabindex]').count();
