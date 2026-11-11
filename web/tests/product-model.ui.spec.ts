@@ -1,3 +1,4 @@
+import { captureTextScaleFailure } from "./text-scale-failure";
 import { settledTask } from "./ui-settled-task";
 import { currentProfileFixtureHeaders } from "./profile-fixture";
 import { auditTextGeometry } from "./text-geometry";
@@ -460,7 +461,13 @@ async function auditReflowAndTextScale(
     expect(enlargedFont).toBeCloseTo(originalFont * 2, 2);
     if (readingTarget) {
       await readingTarget.scrollIntoViewIfNeeded();
-      await expect(readingTarget).toBeInViewport({ ratio: 1 });
+      try {
+        await expect(readingTarget).toBeInViewport({ ratio: 1 });
+      } catch (error) {
+        if (context === "lower-group-completion")
+          await captureTextScaleFailure(page, testInfo, readingTarget);
+        throw error;
+      }
     }
     await primary.scrollIntoViewIfNeeded();
     await expect(primary).toBeInViewport({ ratio: 1 });
