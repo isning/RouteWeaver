@@ -10,7 +10,7 @@ permissions:
 
 concurrency:
   group: routeweaver-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/ux-task-journeys-20261108' }}
 
 env:
   CI: "true"

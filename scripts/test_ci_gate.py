@@ -42,6 +42,17 @@ class CIGateTests(unittest.TestCase):
         result = subprocess.run([sys.executable, str(Path(__file__).with_name("ci_gate.py"))], env=env, capture_output=True)
         self.assertEqual(result.returncode, 1)
 
+    def test_only_current_audit_branch_preserves_running_repository_quality(self):
+        workflow = (Path(__file__).resolve().parents[1] / ".github/workflows/ci.yml").read_text()
+        concurrency = workflow.split("\nconcurrency:\n", 1)[1].split("\nenv:\n", 1)[0]
+        # GitHub comparisons and concurrency groups are case-insensitive.
+        # Match the complete branch ref, not a prefix, tag name or PR head ref.
+        # Keeping the same group retains GitHub's normal pending-run replacement.
+        self.assertEqual(concurrency, (
+            "  group: routeweaver-${{ github.workflow }}-${{ github.ref }}\n"
+            "  cancel-in-progress: ${{ github.ref != 'refs/heads/ux-task-journeys-20261108' }}\n"
+        ))
+
     def test_workflow_declares_and_aggregates_every_required_gate(self):
         workflow = (Path(__file__).resolve().parents[1] / ".github/workflows/ci.yml").read_text()
         jobs = set(re.findall(r"^  ([a-z_]+):$", workflow, re.M)) - {"push", "pull_request", "workflow_dispatch", "verify"}
