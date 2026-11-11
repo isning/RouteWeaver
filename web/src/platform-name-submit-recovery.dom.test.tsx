@@ -258,3 +258,57 @@ it.each(["domain", "backup"] as const)(
     expect(document.activeElement).toBe(next);
   },
 );
+
+it.each([
+  { name: "clipped label", top: -27, height: 99.25, reveals: true },
+  { name: "already visible context", top: 24, height: 99.25, reveals: false },
+  { name: "oversized context", top: -27, height: 500, reveals: false },
+])(
+  "reveals only fitting clipped name context after invalid save: $name",
+  async ({ top, height, reveals }) => {
+    const { writes } = mount();
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: "编辑平台名称" }),
+    );
+    const name = screen.getByRole("textbox", { name: "平台名称" });
+    const context = name.closest<HTMLElement>('[data-slot="field"]')!;
+    // Browser-boundary fixture from the untouched 320x360 CI failure.
+    // jsdom has no layout or scroll implementation; native screenshot remains required.
+    vi.spyOn(document, "hasFocus").mockReturnValue(true);
+    vi.spyOn(window, "innerHeight", "get").mockReturnValue(360);
+    vi.spyOn(window, "innerWidth", "get").mockReturnValue(320);
+    vi.spyOn(context, "getBoundingClientRect").mockReturnValue({
+      x: 33,
+      y: top,
+      top,
+      bottom: top + height,
+      left: 33,
+      right: 287,
+      width: 254,
+      height,
+      toJSON() {},
+    });
+    const reveal = vi.fn();
+    Object.defineProperty(context, "scrollIntoView", {
+      configurable: true,
+      value: reveal,
+    });
+    // Ordinary focus on the valid name must not reposition the page.
+    await user.click(screen.getByRole("textbox", { name: "订阅域名草稿" }));
+    await user.click(name);
+    expect(reveal).not.toHaveBeenCalled();
+    await user.clear(name);
+    await user.click(screen.getByRole("button", { name: "保存设置" }));
+    await screen.findByText("请填写平台名称");
+    expect(document.activeElement).toBe(name);
+    expect(writes).toEqual([]);
+    if (reveals)
+      expect(reveal).toHaveBeenCalledWith({
+        block: "nearest",
+        inline: "nearest",
+        behavior: "instant",
+      });
+    else expect(reveal).not.toHaveBeenCalled();
+  },
+);

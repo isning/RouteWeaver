@@ -2200,7 +2200,40 @@ function Settings({
                 rules={[{ required: true, message: "请填写平台名称" }]}
                 className="max-w-xl"
               >
-                <Input ref={nameInput} />
+                <Input
+                  ref={nameInput}
+                  onFocus={(event) => {
+                    const input = event.currentTarget;
+                    const doc = input.ownerDocument;
+                    const view = doc.defaultView;
+                    const field = input.closest<HTMLElement>(
+                      '[data-slot="field"]',
+                    );
+                    // Native focus can reveal the control but leave its name above
+                    // a short page viewport. Keep this reveal owned by this editor.
+                    if (
+                      !nameEditOwner || !view || !field ||
+                      !nameEditor.current?.contains(field) ||
+                      doc.activeElement !== input || !doc.hasFocus() ||
+                      doc.visibilityState !== "visible" ||
+                      input.getAttribute("aria-invalid") !== "true" ||
+                      input.closest(
+                        '[hidden], [inert], [aria-hidden="true"], [data-session-workspace][aria-busy="true"]',
+                      )
+                    ) return;
+                    const box = field.getBoundingClientRect();
+                    if (
+                      box.width > 0 && box.height > 0 &&
+                      box.width <= view.innerWidth && box.height <= view.innerHeight &&
+                      (box.top < 0 || box.bottom > view.innerHeight ||
+                        box.left < 0 || box.right > view.innerWidth)
+                    ) {
+                      field.scrollIntoView({
+                        block: "nearest", inline: "nearest", behavior: "instant",
+                      });
+                    }
+                  }}
+                />
               </AppField>
               <div className="flex flex-wrap gap-2">
                 <ActionButton
