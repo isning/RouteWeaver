@@ -21,7 +21,7 @@ env:
 
 jobs:
   recovery:
-    name: Eight recovery specs (supplemental evidence only)
+    name: Nine recovery specs (supplemental evidence only)
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
@@ -81,7 +81,7 @@ jobs:
             await browser.close();
           }
           JS
-      - name: Run eight recovery specs with unchanged fixtures
+      - name: Run nine recovery specs with unchanged fixtures
         working-directory: web
         # Bound this subset without changing per-test timeouts; reserve cleanup/upload time.
         timeout-minutes: 10

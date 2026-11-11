@@ -7,7 +7,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SPECS = {
     'server-json-recovery', 'workspace-return', 'notification-channel-journey',
     'template-target-identity', 'admin-validation-recovery', 'admin-validation-order',
-    'compact-choice-keyboard', 'multi-choice-reopening',
+    'compact-choice-keyboard', 'multi-choice-reopening', 'fleet-request-recovery',
 }
 COMPACT_PHASES = (
     'protocol-cancel', 'protocol-settled-reopen', 'transport-cancel',
@@ -67,8 +67,8 @@ class UXRecoveryWorkflowTests(unittest.TestCase):
         for value in ('group: ux-recovery-${{ github.ref }}', 'cancel-in-progress: false',
                       'contents: read', 'persist-credentials: false', 'runs-on: ubuntu-24.04',
                       'timeout-minutes: 15', 'timeout-minutes: 10',
-                      'name: Eight recovery specs (supplemental evidence only)',
-                      'name: Run eight recovery specs with unchanged fixtures',
+                      'name: Nine recovery specs (supplemental evidence only)',
+                      'name: Run nine recovery specs with unchanged fixtures',
                       'ROUTEWEAVER_CHROMIUM: /opt/google/chrome/chrome',
                       'npx --no-install playwright install-deps chromium',
                       '--config=playwright.ux-recovery.config.ts --workers=1 --retries=0'):

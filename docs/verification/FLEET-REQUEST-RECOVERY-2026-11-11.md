@@ -19,3 +19,9 @@ A pre-existing boundary remains: if background batch refresh itself fails, Query
 Separate read-only review inspected all 16 original group decision PNGs and both ledgers in exact 59f6205 artifact 13841417265 (ZIP SHA-256 `800f43b328c86718d27c16185bb6a3551aa11af97c24dfb13480f588a97a9281`). The desktop/mobile editor, paired changes, unchanged consent and retained-draft recovery are supported without a blocking visual defect or horizontal overflow. Equal service names are distinguished by stable IDs in the group comparison; both runs contain only the expected stale-apply 409 and no page errors.
 
 At 390px the lower affected-account limit rows scroll away from the account and before/after headings. Retaining identity/direction in that viewport is a further design opportunity, not proof of an incorrect-target action. These older originals do not validate the later duplicate-user identity correction, large memberships, screen-reader behavior, live enforcement or full product acceptance.
+
+## Earlier native feedback without replacing full CI
+
+The existing supplemental recovery lane now includes the two Fleet request-recovery cases: 30 cases in nine files. This is additive feedback while the unchanged full repository gate runs asynchronously. Required jobs, sandboxed vendor Chrome/provenance, permissions, timeouts, one worker, zero retries and artifact paths remain unchanged. The new PNG/ledger attachments travel through the already-uploaded Playwright report.
+
+Updated exact-spec contracts fail before adding the spec and pass afterward (five contract tests). Discovery and independent source review pass. Local tracked-private-file and ticket guards pass. The complete local static gate is not claimed: this workspace lacks a Go compiler, so Go architecture/actionlint stages were not run locally. Remote full CI remains authoritative.
