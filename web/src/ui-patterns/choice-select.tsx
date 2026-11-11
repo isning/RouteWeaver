@@ -125,6 +125,8 @@ export function ChoiceSelect<V extends Value = string>({
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const hasSearch = searchable || flat(options).length > 40;
   const reopeningRetainedContent = useRef(false);
   useImperativeHandle(ref, () => triggerRef.current!, []);
   const [query, setQuery] = useState("");
@@ -146,7 +148,7 @@ export function ChoiceSelect<V extends Value = string>({
     // for its exit animation, so it needs a new opening focus handoff. Transfer
     // only from our trigger, never from a newer field/picker, and keep motion.
     if (open && reopening && document.activeElement === triggerRef.current) {
-      contentRef.current?.querySelector<HTMLInputElement>("[cmdk-input]")?.focus();
+      (contentRef.current?.querySelector<HTMLInputElement>("[cmdk-input]") ?? listRef.current)?.focus();
     }
   }, [open]);
   // A read-only transition ends this editing interaction, including its search.
@@ -192,6 +194,14 @@ export function ChoiceSelect<V extends Value = string>({
         align="start"
         aria-hidden={!open || undefined}
         inert={!open}
+        onOpenAutoFocus={(event) => {
+          if (!hasSearch) {
+            // The input-free listbox owns cmdk navigation and active-descendant
+            // semantics; the surrounding popover cannot handle those keys.
+            event.preventDefault();
+            listRef.current?.focus();
+          }
+        }}
         onCloseAutoFocus={(event) => {
           // Exit motion can outlive the next tap. Do not let this picker
           // reclaim focus and dismiss a newer picker that has already opened.
@@ -219,7 +229,7 @@ export function ChoiceSelect<V extends Value = string>({
         }}
       >
         <Command label="搜索选项" shouldFilter={false}>
-          {(searchable || flat(options).length > 40) && (
+          {hasSearch && (
             <CommandInput
               value={query}
               onValueChange={setQuery}
@@ -227,7 +237,12 @@ export function ChoiceSelect<V extends Value = string>({
               placeholder="搜索选项…"
             />
           )}
-          <CommandList aria-label="候选项">
+          <CommandList
+            ref={listRef}
+            label={!hasSearch ? aria["aria-label"] ?? "候选项" : "候选项"}
+            aria-labelledby={!hasSearch ? aria["aria-labelledby"] : undefined}
+            className={!hasSearch ? "focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring" : undefined}
+          >
             <CommandEmpty>{emptyMessage}</CommandEmpty>
             {clearable && value !== undefined && !query.trim() && (
               <CommandGroup>
