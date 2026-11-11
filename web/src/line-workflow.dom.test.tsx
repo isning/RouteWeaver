@@ -846,3 +846,42 @@ it("identifies same-name route users before choosing whose authorization to insp
   expect(selected.textContent).toContain("同名用户");
   expect(requests.every(request => request.method === "GET")).toBe(true);
 });
+
+it("distinguishes literal account captions when preparing a route user's entry", async () => {
+  history.replaceState(null, "", "#published-routes?line=line");
+  const users = [
+    { id: "alice", name: "同名用户", enabled: true },
+    { id: "bob", name: "同名用户", enabled: true },
+    { id: "caption-user", name: "同名用户，账号标识：bob", enabled: true },
+    { id: "nested-user", name: "同名用户，账号标识：bob，账号标识：caption-user", enabled: true },
+    { id: "carol", name: "Carol", enabled: true },
+    { id: "unnamed", name: "", enabled: true },
+  ];
+  const requests = mockInventory(path => {
+    if (path === "/api/state") return json({ users, routes: [], revisions: [], capabilities: [] });
+    if (path === "/api/users/caption-user/effective-policy") {
+      return json({ ...effectivePolicy, userId: "caption-user", entitlement: { ...effectivePolicy.entitlement, userId: "caption-user" } });
+    }
+    return undefined;
+  });
+  await mount(<PublishedRoutesPage />);
+  const detail = within(await screen.findByRole("dialog", { name: "Office line" }));
+  const choice = await detail.findByRole("combobox", { name: "线路使用用户" });
+  await userEvent.click(choice);
+  expect(screen.getByRole("option", { name: "同名用户，账号标识：bob" })).toBeTruthy();
+  expect(screen.getByRole("option", { name: "同名用户，账号标识：bob，账号标识：caption-user，账号标识：nested-user" })).toBeTruthy();
+  expect(screen.getByRole("option", { name: "Carol" }).textContent).toBe("Carol");
+  expect(screen.getByRole("option", { name: "unnamed" }).textContent).toBe("unnamed");
+  await userEvent.click(screen.getByRole("option", { name: "同名用户，账号标识：bob，账号标识：caption-user" }));
+  await waitFor(() => expect(new URLSearchParams(location.hash.split("?")[1]).get("user")).toBe("caption-user"));
+  expect(choice.textContent).toContain("账号标识：caption-user");
+  await waitFor(() => expect(requests.some(request => request.path === "/api/users/caption-user/effective-policy")).toBe(true));
+  expect(requests.some(request => request.path === "/api/users/bob/effective-policy")).toBe(false);
+  await userEvent.click(detail.getByRole("button", { name: "准备独立入口" }));
+  const principal = within(await screen.findByRole("dialog", { name: "配置「Office line」的用户入口" }));
+  const selected = await principal.findByRole("combobox", { name: "用户" });
+  expect(selected.hasAttribute("disabled")).toBe(true);
+  expect(selected.textContent).toContain("同名用户，账号标识：bob");
+  expect(selected.textContent).toContain("账号标识：caption-user");
+  expect(requests.every(request => request.method === "GET")).toBe(true);
+});

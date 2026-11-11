@@ -58,19 +58,21 @@ import { PublicRouteEditComparison, publicRouteFields, reviewedPublicRoute, type
 // both the open choices and their collapsed selected value.
 function routeUserChoices(users: { id: string; name: string }[]) {
   const identities = new Map<string, Set<string>>();
+  const identityCaptions = new Set<string>();
   for (const user of users) {
     const label = user.name || user.id;
     const ids = identities.get(label) ?? new Set<string>();
     ids.add(user.id);
     identities.set(label, ids);
+    identityCaptions.add(`${label}，账号标识：${user.id}`);
   }
   return users.map(user => {
     const label = user.name || user.id;
-    const duplicate = identities.get(label)!.size > 1;
+    const showIdentity = identities.get(label)!.size > 1 || identityCaptions.has(label);
     return {
       value: user.id,
-      label: duplicate ? <span>{label}<span className="block text-xs text-muted-foreground [overflow-wrap:anywhere]">账号标识：<code>{user.id}</code></span></span> : label,
-      "aria-label": duplicate ? `${label}，账号标识：${user.id}` : label,
+      label: showIdentity ? <span>{label}<span className="block text-xs text-muted-foreground [overflow-wrap:anywhere]">账号标识：<code>{user.id}</code></span></span> : label,
+      "aria-label": showIdentity ? `${label}，账号标识：${user.id}` : label,
       searchText: `${label} ${user.id}`,
     };
   });
