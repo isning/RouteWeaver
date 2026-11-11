@@ -50,6 +50,8 @@ for (const width of [390, 1440]) {
         },
         "/api/auth/sessions": [],
         "/api/admin/accounts": [],
+        // AdminPage mounts the user-group list alongside the invitation task.
+        "/api/user-groups": [],
         "/api/me/sources": [],
         "/api/me/notifications": [],
         "/api/settings": {},
@@ -157,7 +159,16 @@ for (const width of [390, 1440]) {
             /^\/assets\/[A-Za-z0-9_.-]+\.(?:js|css|woff2?)$/.test(url.pathname))
         )
           return route.continue();
-        unexpected.push("unlisted request rejected");
+        // Retain only fixed categories: unknown paths can themselves contain
+        // credentials, so do not serialize their URL or arbitrary path segments.
+        const category = url.pathname.startsWith("/api/")
+          ? "API"
+          : url.pathname.startsWith("/assets/")
+            ? "asset"
+            : "other";
+        unexpected.push(
+          `unlisted ${method === "GET" ? "read" : "write"} ${category} request rejected`,
+        );
         return route.abort();
       });
       const capture = async (surface: Locator, label: string) => {
