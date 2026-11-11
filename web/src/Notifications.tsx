@@ -438,8 +438,16 @@ function Announcements() {
       discard,
     );
   };
+  const listReady = query.isSuccess && !query.isFetching && !query.isPaused;
   const edit = (item?: Announcement) => {
     if (submitting.current || save.isPending || confirming) return;
+    if (item) {
+      if (!listReady) return;
+      const id = item.id;
+      const current = query.data?.find((candidate) => candidate.id === id);
+      if (!current) return;
+      item = current;
+    }
     editorTask.current = {};
     setEditorKey((key) => key + 1);
     const value = item || {
@@ -467,7 +475,12 @@ function Announcements() {
     <>
       <Section
         title="服务公告"
-        extra={
+        extra={<div className="flex flex-wrap gap-2">
+          {query.data !== undefined && <ActionButton variant="outline"
+            pending={query.isFetching || query.isPaused} keepFocusableWhilePending
+            onClick={() => { void query.refetch({ cancelRefetch: false }); }}>
+            刷新公告
+          </ActionButton>}
           <ActionButton
             leadingIcon={<PlusOutlined aria-hidden="true" />}
             onClick={() => edit()}
@@ -475,11 +488,16 @@ function Announcements() {
           >
             创建公告
           </ActionButton>
-        }
+        </div>}
       >
+        {query.data !== undefined && (query.isPaused
+          ? <p role="status">等待网络连接，仍显示上次读取的公告。恢复后将刷新，刷新成功后可编辑。</p>
+          : query.isFetching
+            ? <p role="status">正在刷新公告，仍显示上次读取结果。刷新成功后可编辑。</p>
+            : query.error && <Notice tone="error" title="公告刷新失败，仍显示上次读取结果。请刷新后再编辑。">{query.error.message}</Notice>)}
         <QueryState
           loading={query.isPending} paused={query.isPaused} loadingLayout="table"
-          error={query.error}
+          error={query.data === undefined ? query.error : null}
           retry={() => query.refetch()}
         >
           {!query.data?.length ? (
@@ -525,7 +543,7 @@ function Announcements() {
                   title: "",
                   render: (_, a) => (
                     <TableRowActions name={a.title}>
-                      <ActionButton onClick={() => edit(a)} variant="outline">
+                      <ActionButton disabled={!listReady} onClick={() => edit(a)} variant="outline">
                         编辑
                       </ActionButton>
                     </TableRowActions>
