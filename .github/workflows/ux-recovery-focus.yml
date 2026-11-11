@@ -21,7 +21,7 @@ env:
 
 jobs:
   recovery:
-    name: Seven recovery specs (supplemental evidence only)
+    name: Eight recovery specs (supplemental evidence only)
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
@@ -81,7 +81,7 @@ jobs:
             await browser.close();
           }
           JS
-      - name: Run seven recovery specs with unchanged fixtures
+      - name: Run eight recovery specs with unchanged fixtures
         working-directory: web
         # Bound this subset without changing per-test timeouts; reserve cleanup/upload time.
         timeout-minutes: 10
@@ -134,6 +134,29 @@ jobs:
             web/test-results/compact-choice-keyboard*/transport-cancel.png
             web/test-results/compact-choice-keyboard*/transport-disabled-skip.json
             web/test-results/compact-choice-keyboard*/transport-disabled-skip.png
+            web/test-results/multi-choice-reopening*/initial-draft-preview.json
+            web/test-results/multi-choice-reopening*/initial-draft-preview.png
+            web/test-results/multi-choice-reopening*/first-tag-option.json
+            web/test-results/multi-choice-reopening*/first-tag-option.png
+            web/test-results/multi-choice-reopening*/same-trigger-reopened.json
+            web/test-results/multi-choice-reopening*/same-trigger-reopened.png
+            web/test-results/multi-choice-reopening*/second-tag-created.json
+            web/test-results/multi-choice-reopening*/second-tag-created.png
+            web/test-results/multi-choice-reopening*/returned-to-tag-trigger.json
+            web/test-results/multi-choice-reopening*/returned-to-tag-trigger.png
+            web/test-results/multi-choice-reopening*/newer-region-owner.json
+            web/test-results/multi-choice-reopening*/newer-region-owner.png
+            web/test-results/multi-choice-reopening*/newer-protocol-owner.json
+            web/test-results/multi-choice-reopening*/newer-protocol-owner.png
+            web/test-results/multi-choice-reopening*/protocol-selected.json
+            web/test-results/multi-choice-reopening*/protocol-selected.png
+            web/test-results/multi-choice-reopening*/preview-draft.json
+            web/test-results/multi-choice-reopening*/preview-draft.png
+            web/test-results/multi-choice-reopening*/final-state.json
+            web/test-results/multi-choice-reopening*/final-state.png
+            web/test-results/multi-choice-reopening*/failure-original.json
+            web/test-results/multi-choice-reopening*/failure-original.png
+            web/test-results/multi-choice-reopening*/request-ledger.json
             web/test-results/template-target-identity*/client-profile-*-ledger.json
             web/test-results/template-target-identity*/client-profile-*.png
             web/test-results/template-target-identity*/processing-preset-*-ledger.json

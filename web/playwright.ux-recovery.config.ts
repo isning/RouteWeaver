@@ -18,6 +18,7 @@ export default defineConfig({
         "**/admin-validation-recovery.ui.spec.ts",
         "**/admin-validation-order.ui.spec.ts",
         "**/compact-choice-keyboard.ui.spec.ts",
+        "**/multi-choice-reopening.ui.spec.ts",
       ],
     })),
   workers: 1,
