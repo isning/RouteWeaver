@@ -167,9 +167,24 @@ for (const width of [390, 1440]) {
       http.armRetry(); await page.keyboard.press("Enter");
       await expect(page.getByText("正在核对用户…", { exact: true })).toBeVisible();
       await expect(row).toBeDisabled(); await expect(entry).toBeDisabled();
-      await capture(page, info, "retry-pending", page.locator("body"), [{ label: "retry", locator: retry }]);
+      const pendingGeometry = await capture(page, info, "retry-pending", page.locator("body"), [{ label: "retry", locator: retry }]);
+      expect(pendingGeometry[0].bounds).toMatchObject({ focused: true, focusVisible: true, inViewport: true, hit: true });
+      await expect(retry).toBeFocused();
+      await expect(retry).toHaveAttribute("aria-disabled", "true");
+      await expect(retry).toHaveAttribute("aria-busy", "true");
+      expect(await retry.evaluate(node => (node as HTMLButtonElement).disabled)).toBe(false);
+      await expect.poll(() => http.ledger.retryReads).toBe(1);
+      // Ordinary keyboard activation must not cancel/restart the held GET.
+      await page.keyboard.press("Enter"); await page.keyboard.press("Space");
+      await expect(retry).toBeFocused();
+      expect(http.ledger.retryReads).toBe(1);
       http.releaseRetry();
       await expect(entry).toBeEnabled(); await expect(search).toHaveValue("合成用户");
+      // Capture the actual success handoff before Tab or other focus-changing input.
+      const searchGeometry = await capture(page, info, "recovered-search-keyboard", page.locator("body"), [{ label: "search", locator: search }]);
+      await expect(search).toBeFocused();
+      expect(searchGeometry[0].bounds).toMatchObject({ focused: true, focusVisible: true, inViewport: true, hit: true });
+      await expect(retry).toHaveCount(0);
       await expect(row).toBeVisible();
       await tabTo(page, entry);
       const entryGeometry = await capture(page, info, "recovered-entry-keyboard", page.locator("body"), [{ label: "correct-entry", locator: entry }]);
@@ -178,7 +193,8 @@ for (const width of [390, 1440]) {
       const dialog = page.getByRole("dialog", { name: "合成用户 10 的平台入口", exact: true });
       await expect(dialog).toBeVisible(); await expect.poll(() => http.ledger.entryReads).toBe(1);
       await capture(page, info, "correct-user-entry", dialog, []);
-      expect(http.ledger.failedReads).toBeGreaterThan(0);
+      // Real App defaults retry one failed read before exposing recovery.
+      expect(http.ledger.failedReads).toBeGreaterThanOrEqual(2);
       expect(http.ledger.retryReads).toBe(1);
     } catch (error) { failures.push(error); }
     finally {

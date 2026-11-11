@@ -23,3 +23,9 @@ Public seam: real AdminPage, table, dialogs, and shared action controls; control
 - `npm run typecheck` passed. `git diff --check` passed.
 
 These are DOM behavioral and type checks, not browser layout or cross-browser evidence. No browser was launched, no full suite rerun was performed by this worker, and no publication/deployment occurred. Real browser focus/viewport verification remains a separate delivery gate.
+
+## Native sampler extension (execution pending)
+
+The existing loopback-only Users sampler at 390×560 and 1440×900 now checks pending retry focus/focus-visible/viewport/hit geometry, non-native-disabled plus aria-disabled/aria-busy semantics, and exactly one held services GET after repeated ordinary Enter/Space activation. After release, it captures the original success viewport before further keyboard navigation and checks that search receives focus and the retry notice is removed. Existing stale action gates, correct-user entry task, screenshot-before-geometry ordering, strict API allowlist, mutation blocking, and final evidence capture remain intact. No script focus or scrolling was added.
+
+Playwright discovery recognizes both viewport cases; standalone spec TypeScript checking passes. The sampler uses the real App query defaults (`retry: 1`) and requires at least two failed inventory reads before recovery, rather than disabling automatic retry. A renewed failure/backoff after manual activation is not separately exercised by this native fixture. Native browser execution is not available locally and remains unrun; these new assertions require CI. Same-turn duplicate activation, controlled renewed failure, offline resume, and newer search/dialog focus remain covered by DOM tests rather than a claimed native run.
