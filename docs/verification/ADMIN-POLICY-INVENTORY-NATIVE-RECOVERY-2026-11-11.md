@@ -168,3 +168,44 @@ accepted the two-file correction without blockers. Opening attempts before
 readiness are now diagnosed rather than bounded: this tests target ownership,
 not request-count optimality or backend revision enforcement. Corrected native
 execution and the separate group geometry acceptance remain pending.
+
+
+## Corrected native original-pixel acceptance
+
+The previously pending corrected native review is complete for exact source
+`2f5291ba3fbc419d90d7d2963d9094af77056cd2`, recovery artifact `13897258136`.
+The monitor verified the original ZIP SHA256 as
+`ca79a6393a6c7318abd8be85b97807c59f57ce8a3587cf5731ae905c1c22f3fe`.
+All eight policy cases passed. Independently reviewed **27 unique original PNGs
+across 52 mapped captures**, without image transformations or duplicate downloads.
+The decoded report `decoded-report/eb10f82b7fa81549ca85.json` maps attachments to
+the eight `web/test-results/admin-policy-inventory-rec-*` case directories.
+
+Coverage includes service/group retry and newer-editor journeys at 390×560 and
+1440×900: `policy-inventory-cached-error`, `retry-keyboard`, `retry-pending`,
+`guarded-editor`, and `final-original`, plus `recovered` for retry cases and
+`newer-draft-pending` / `newer-draft-owned` for stale-editor cases (all filenames
+carry the `policy-inventory-` prefix and `.png` / paired `.json` suffix).
+
+Actual pixels show clear cached-failure and pending-refresh context, retained
+service search “Record,” and recovery clearing the warning without replacing the
+inventory context. Editors visibly contain “Authoritative record”; the newer
+name “Synthetic newer draft” and its focus remain through background recovery.
+Refresh, editor-close and newer-name input rings are visibly strong and complete.
+Desktop group Refresh now has border-box y=3.5–47.5 and its outer ring is inside
+the viewport, resolving the earlier clipped-top finding. See
+[the group clearance review](GROUP-REFRESH-SCROLL-CLEARANCE-2026-11-11.md).
+
+All 52 paired geometry records report `focusVisible`, `inViewport` and
+`unobscured` true, with `settlingFailed` false. These diagnostics corroborate the
+pixel review; they do not replace painted-ring inspection. Correct row-10 request
+ownership is established by the native target/ledger assertions, not by pixels
+alone. No blocking visual defect was found within this bounded review.
+
+At 390×560, pending layouts put most row content below the viewport and horizontal
+table scrolling leaves some columns partial. Group editor actions are visible;
+service editor lower sections and actions are outside the short still. This is
+not full-viewport table readability, dark-mode, full-offline/session behavior,
+full keyboard traversal, backend enforcement, or save/apply/publish acceptance.
+No source changes, new tests, browser actions or publication were performed for
+this independent pixel review; aggregate verification is recorded separately.

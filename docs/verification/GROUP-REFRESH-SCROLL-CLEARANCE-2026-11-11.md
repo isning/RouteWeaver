@@ -43,3 +43,23 @@ not proof of native painted geometry.
 The unchanged native keyboard/viewport assertions still require
 a corrected run before claiming native acceptance. No full aggregate, browser
 bypass, publication, deployment or real-user mutation was performed here.
+
+
+## Corrected native acceptance
+
+The pending native check above is now resolved by exact source
+`2f5291ba3fbc419d90d7d2963d9094af77056cd2`, recovery artifact `13897258136`,
+original ZIP SHA256
+`ca79a6393a6c7318abd8be85b97807c59f57ce8a3587cf5731ae905c1c22f3fe`.
+Both desktop group cases retain Refresh at y=3.5 with height 44 (pending width
+increases from 92 to 114). Independent original-PNG inspection shows the strong
+outer ring wholly inside the top viewport edge; paired geometry reports
+focus-visible, viewport-contained and unobscured focus. This directly resolves
+the previous y=-0.5 clipping finding without weakening its assertions.
+
+The [policy recovery acceptance](ADMIN-POLICY-INVENTORY-NATIVE-RECOVERY-2026-11-11.md#corrected-native-original-pixel-acceptance)
+records the complete bounded review: 27 unique originals across 52 captures,
+eight passing service/group cases at 390×560 and 1440×900. Narrow table content
+remains horizontally partial and may be below the viewport during pending
+refresh. No dark-mode, full-offline, comprehensive keyboard/accessibility,
+backend enforcement or deployment claim follows from these captures.
