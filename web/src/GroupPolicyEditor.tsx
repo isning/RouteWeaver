@@ -169,7 +169,7 @@ function GroupPolicyDraft({ context, seed, retained, discardRetained, acceptLate
       <GroupPolicyComparison resource={{ target: { kind: "group", id: saved.group.id }, before: saved.baseline, after: { group: saved.group }, references: { before: referencesFor(saved.baseline?.group ?? null, saved.references), after: referencesFor(saved.group, saved.references) } }} title="保留的草稿" showAll beforeLabel="当时打开的版本" afterLabel="保留的草稿"/>
       <ActionButton onClick={() => discardRetained(index)} variant="destructive">丢弃此草稿副本</ActionButton>
     </> }))).map(section => <AccordionItem key={section.key} value={String(section.key)}><AccordionTrigger>{section.label}</AccordionTrigger><AccordionContent className="space-y-4">{section.children}</AccordionContent></AccordionItem>)}</Accordion>}
-    <AppForm form={form} initialValues={value} onValuesChange={() => { invalidateLatest(); policy.clearError(); }} onFinish={() => { if (!policy.closingBlocked) policy.propose({ group: draft() }, context.precondition); }}>
+    <AppForm form={form} submitErrorFocusOwner={value} initialValues={value} onValuesChange={() => { invalidateLatest(); policy.clearError(); }} onFinish={() => { if (!policy.closingBlocked) policy.propose({ group: draft() }, context.precondition); }}>
       <ErrorNotice error={policy.error} focusRef={policy.errorFocusRef} presentation={stalePolicyConflict ? {
           title: "操作未完成", recovery: "草稿尚未保存，请核对最新版本。", detailsLabel: "查看技术详情",
       } : undefined}/>
