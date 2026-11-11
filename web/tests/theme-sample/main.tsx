@@ -19,9 +19,16 @@ createRoot(document.getElementById("root")!).render(
         <Button onClick={() => toast.success("Saved")}>Notify</Button>
         <div className="h-80">
           <RouteGraphCanvas
-            nodes={[
+            defaultNodes={[
               { id: "one", position: { x: 0, y: 0 }, data: { label: "Entry" } },
+              { id: "two", position: { x: 180, y: 160 }, data: { label: "Exit" } },
             ]}
+            defaultEdges={[{ id: "sample-edge", source: "one", target: "two", ariaLabel: "Entry to Exit" }]}
+            ariaLabelConfig={{
+              "controls.zoomIn.ariaLabel": "Zoom in",
+              "controls.zoomOut.ariaLabel": "Zoom out",
+              "controls.fitView.ariaLabel": "Fit view",
+            }}
             fitView
           />
         </div>
