@@ -93,6 +93,26 @@ function ConnectionPortInput({
   );
 }
 
+// Absent transport is TCP intent, but confirming its displayed default is not
+// an edit. Filter that confirmation before the form marks the field touched.
+function ConnectionTransportSelect({
+  implicitTCP,
+  value,
+  onValueChange,
+  ...props
+}: ComponentProps<typeof ChoiceSelect<string>> & { implicitTCP?: boolean }) {
+  return (
+    <ChoiceSelect
+      {...props}
+      value={implicitTCP ? "tcp" : value}
+      onValueChange={(next) => {
+        if (implicitTCP && next === "tcp") return;
+        onValueChange?.(next);
+      }}
+    />
+  );
+}
+
 export function normalizeConnection(connection: Connection): Connection {
   const copy = { ...connection };
   const port = connectionPort(copy.port);
@@ -492,6 +512,11 @@ export function ConnectionFields({
             )}
             <AppField
               name={[...prefix, "transport", "type"]}
+              getValueProps={(value) => ({
+                value,
+                implicitTCP: value === undefined &&
+                  form.getFieldValue([...prefix, "transport"]) == null,
+              })}
               className="sm:grid sm:grid-cols-[7rem_minmax(0,18rem)] sm:items-center [&>[data-slot=field-error]]:sm:col-span-2"
               label="传输方式"
               rules={
@@ -510,7 +535,7 @@ export function ConnectionFields({
               }
               trigger="onValueChange"
             >
-              <ChoiceSelect
+              <ConnectionTransportSelect
                 searchable={false}
                 placeholder="TCP"
                 options={

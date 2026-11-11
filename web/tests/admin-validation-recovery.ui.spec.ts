@@ -408,3 +408,331 @@ test("validation evidence distinguishes pointer suppression from overlays and cl
   if (taskFailed) throw taskError;
   if (evidenceError) throw evidenceError;
 });
+
+// These are unverified native task requirements, not observed failures. Keep the
+// existing pointer journeys and observation fixture above unchanged. jsdom keeps
+// focus on newly disabled buttons, so it cannot establish this browser behavior.
+test.describe("keyboard validation recovery", () => {
+  test.use({ serviceWorkers: "block" });
+  for (const width of [1440, 390]) {
+    test(`admin validation keeps keyboard retry ownership at ${width}x560`, async ({
+      page,
+      baseURL,
+    }, info) => {
+      if (
+        !baseURL ||
+        !["localhost", "127.0.0.1", "[::1]"].includes(new URL(baseURL).hostname)
+      )
+        throw new Error("Controlled keyboard validation requires loopback");
+      const origin = new URL(baseURL).origin;
+      const preserveRemoval = width === 390;
+      const ledger: { method: string; target: string; outcome: string }[] = [];
+      const stages: string[] = [];
+      const focusStates: {
+        stage: string;
+        checkFocused: boolean;
+        bodyFocused: boolean;
+        insideResult: boolean;
+        focusVisible: boolean;
+        disabled: boolean;
+        busy: string | null;
+      }[] = [];
+      // Retain every held request so an accidental duplicate cannot overwrite
+      // evidence or survive teardown. Only synthetic responses are released.
+      const held = new Map<
+        number,
+        { route: Route; entry: (typeof ledger)[number] }
+      >();
+      let attempts = 0;
+      let retryCommands = 0;
+      let failed = false;
+      let originalError: unknown;
+      let captureError: unknown;
+      const check = page.getByRole("button", {
+        name: `校验 ${name}`,
+        exact: true,
+      });
+      const capturePhase = async (stage: string) => {
+        const observation = await capture(page, info, stage);
+        stages.push(stage);
+        // Observe only public focus/state booleans. Never persist DOM text,
+        // inputs, credentials, raw request bodies or private response payloads.
+        focusStates.push({
+          stage,
+          ...(await check.evaluate(
+            (element) => ({
+              checkFocused: document.activeElement === element,
+              bodyFocused: document.activeElement === document.body,
+              insideResult:
+                !!document.activeElement?.closest('[role="dialog"]'),
+              focusVisible: element.matches(":focus-visible"),
+              disabled: (element as HTMLButtonElement).disabled,
+              busy: element.getAttribute("aria-busy"),
+            }),
+            undefined,
+            { timeout: 1000 },
+          )),
+        });
+        return observation;
+      };
+      const assertIndependentError = async () => {
+        if (preserveRemoval)
+          await expect(
+            page.getByText(removalFailure, { exact: true }),
+          ).toHaveCount(1);
+      };
+      try {
+        await page.setViewportSize({ width, height: 560 });
+        await page.route("**/*", async (route) => {
+          const request = route.request(),
+            url = new URL(request.url());
+          const entry = {
+            method: request.method(),
+            target: "unexpected",
+            outcome: "blocked",
+          };
+          if (url.origin !== origin) {
+            ledger.push(entry);
+            return route.abort();
+          }
+          if (request.method() === "GET" && !url.pathname.startsWith("/api/"))
+            return route.continue();
+          ledger.push(entry);
+          if (
+            !url.search &&
+            request.method() === "POST" &&
+            url.pathname === "/api/routes/route/validate"
+          ) {
+            entry.target = "validation";
+            entry.outcome = "held";
+            held.set(++attempts, { route, entry });
+            return;
+          }
+          if (
+            !url.search &&
+            preserveRemoval &&
+            request.method() === "DELETE" &&
+            url.pathname === "/api/routes/route"
+          ) {
+            entry.target = "removal";
+            entry.outcome = "synthetic-409";
+            return route.fulfill({
+              status: 409,
+              json: { error: removalFailure },
+            });
+          }
+          const key = url.pathname.slice(4);
+          if (
+            !url.search &&
+            request.method() === "GET" &&
+            Object.hasOwn(historyLegacyFixtures, key)
+          ) {
+            entry.target = key;
+            entry.outcome = "fixture";
+            return route.fulfill({ json: historyLegacyFixtures[key] });
+          }
+          return route.abort();
+        });
+        await page.goto("/#legacy-routes");
+        if (preserveRemoval) {
+          // Independent failure setup uses the existing public removal task.
+          // Validation itself is keyboard-only from initial navigation onward.
+          await page
+            .getByRole("button", { name: `更多操作 ${name}`, exact: true })
+            .click();
+          await page
+            .getByRole("menuitem", {
+              name: `删除链路配置 ${name}`,
+              exact: true,
+            })
+            .click();
+          const removal = page.getByRole("alertdialog");
+          await removal
+            .getByRole("button", { name: "删除", exact: true })
+            .click();
+          await expect(
+            removal.getByText(removalFailure, { exact: true }),
+          ).toBeVisible();
+          await removal
+            .getByRole("button", { name: "保留", exact: true })
+            .click();
+          await expect(removal).toBeHidden();
+          await expect(
+            page.getByText(removalFailure, { exact: true }),
+          ).toBeVisible();
+        }
+        await expect(check).toBeVisible();
+        for (let step = 0; step < 60; step++) {
+          if (
+            await check.evaluate(
+              (element) => element === document.activeElement,
+            )
+          )
+            break;
+          await page.keyboard.press("Tab");
+        }
+        await expect(
+          check,
+          "Initial check is reachable by ordinary Tab",
+        ).toBeFocused();
+        for (let cycle = 0; cycle < 2; cycle++) {
+          const failingAttempt = cycle * 2 + 1;
+          const retryAttempt = failingAttempt + 1;
+          // No locator.press, focus(), scrolling or pointer repair after entry.
+          await page.keyboard.press("Enter");
+          await expect.poll(() => held.has(failingAttempt)).toBe(true);
+          await expect(check).toHaveAttribute("aria-busy", "true");
+          const pendingFailure = await capturePhase(`pending-failure-${cycle}`);
+          await page.keyboard.press("Enter");
+          await page.keyboard.press("Enter");
+          expect(
+            attempts,
+            "Pending keyboard repeats do not issue another check",
+          ).toBe(failingAttempt);
+          const first = held.get(failingAttempt)!;
+          await first.route.fulfill({
+            status: 503,
+            json: { error: checkFailure },
+          });
+          first.entry.outcome = "held-then-synthetic-503";
+          held.delete(failingAttempt);
+          await expect(
+            page.getByText(checkFailure, { exact: true }),
+          ).toBeVisible();
+          await expect(check).toBeEnabled();
+          await expect(check).not.toHaveAttribute("aria-busy", "true");
+          await assertIndependentError();
+          // Save both pending and failed originals before judging focus. A
+          // partially offscreen failed control alone is not a failure assertion.
+          const failedState = await capturePhase(`failed-${cycle}`);
+          // Exercise the ordinary retry command before any focus expectation;
+          // even a failing ownership assertion therefore retains its request evidence.
+          await page.keyboard.press("Enter");
+          retryCommands++;
+          expect(
+            pendingFailure.controls.find(
+              (control) => control.kind === "validation-control",
+            )?.focused,
+            "Pending check retains the keyboard action owner",
+          ).toBe(true);
+          expect(
+            failedState.controls.find(
+              (control) => control.kind === "validation-control",
+            )?.focused,
+            "Failed check retains the keyboard retry owner without focus repair",
+          ).toBe(true);
+          await expect.poll(() => held.has(retryAttempt)).toBe(true);
+          await expect(check).toHaveAttribute("aria-busy", "true");
+          await expect(
+            page.getByText(checkFailure, { exact: true }),
+          ).toHaveCount(0);
+          await expect(page.getByRole("dialog")).toHaveCount(0);
+          await expect(
+            page.getByText("配置结构校验完成", { exact: true }),
+          ).not.toBeVisible();
+          await assertIndependentError();
+          const pendingRetry = await capturePhase(`pending-retry-${cycle}`);
+          const retryControl = pendingRetry.controls.find(
+            (control) => control.kind === "validation-control",
+          );
+          expect(
+            retryControl?.focused,
+            "Keyboard retry keeps the same action owner",
+          ).toBe(true);
+          expect(pendingRetry.overflow).toBe(false);
+          expect(retryControl?.inViewport && retryControl.unobscured).toBe(
+            true,
+          );
+          await page.keyboard.press("Enter");
+          await page.keyboard.press("Enter");
+          expect(
+            attempts,
+            "Pending retry blocks duplicate keyboard requests",
+          ).toBe(retryAttempt);
+          const retry = held.get(retryAttempt)!;
+          await retry.route.fulfill({
+            json: { valid: true, diagnostics: [], artifacts: [] },
+          });
+          retry.entry.outcome = "held-then-synthetic-success";
+          held.delete(retryAttempt);
+          const result = page.getByRole("dialog", {
+            name: `${name}的配置检查`,
+            exact: true,
+          });
+          await expect(
+            result.getByText("配置结构校验完成", { exact: true }),
+          ).toBeVisible();
+          await expect(
+            page.getByText(checkFailure, { exact: true }),
+          ).toHaveCount(0);
+          await assertIndependentError();
+          await settledTask(result);
+          const ready = await capturePhase(`result-${cycle}`);
+          expect(ready.overflow).toBe(false);
+          expect(
+            ready.controls.find((control) => control.kind === "result")
+              ?.inViewport,
+          ).toBe(true);
+          const resultCopy = ready.controls.find(
+            (control) => control.kind === "result-copy",
+          );
+          expect(resultCopy?.inViewport && resultCopy.unobscured).toBe(true);
+          await page.keyboard.press("Escape");
+          await expect(result).toBeHidden();
+          await expect(check).toBeEnabled();
+          await expect(
+            check,
+            "Escape returns to the same check for the next keyboard cycle",
+          ).toBeFocused();
+          await assertIndependentError();
+          await capturePhase(`result-return-${cycle}`);
+        }
+        expect(attempts).toBe(4);
+        expect(retryCommands).toBe(2);
+        expect(ledger.filter((entry) => entry.outcome === "blocked")).toEqual(
+          [],
+        );
+      } catch (error) {
+        failed = true;
+        originalError = error;
+      } finally {
+        try {
+          await capture(page, info, "final-state");
+        } catch (error) {
+          captureError = error;
+        }
+        try {
+          const path = info.outputPath("request-ledger.json");
+          await writeFile(
+            path,
+            JSON.stringify(
+              {
+                scope:
+                  "synthetic HTTP keyboard UI faults, not backend or deployment proof",
+                width,
+                stages,
+                focusStates,
+                attempts,
+                retryCommands,
+                finalCapture: captureError ? "failed-or-timed-out" : "saved",
+                requests: ledger,
+              },
+              null,
+              2,
+            ),
+          );
+          await info.attach("request-ledger", {
+            path,
+            contentType: "application/json",
+          });
+        } catch (error) {
+          captureError ??= error;
+        }
+        for (const request of held.values())
+          await request.route.abort().catch(() => {});
+      }
+      if (failed) throw originalError;
+      if (captureError) throw captureError;
+    });
+  }
+});

@@ -146,3 +146,37 @@ it("does not alter a control whose pointer hit testing is already enabled", () =
   });
   expect(button.getAttribute("style")).toBe(before);
 });
+
+it("preserves other inline declarations during the probe and restores their original spelling", () => {
+  const button = pending();
+  const before =
+    ' color : red ; --label: "keep;semicolons"; pointer-events : none !important; /* retained comment */ ';
+  button.setAttribute("style", before);
+  expect(getComputedStyle(button).color).toBe("rgb(255, 0, 0)");
+  let during:
+    { pointerEvents: string; color: string; label: string } | undefined;
+  vi.spyOn(document, "elementFromPoint").mockImplementation(() => {
+    const style = getComputedStyle(button);
+    during = {
+      pointerEvents: style.pointerEvents,
+      color: style.color,
+      label: style.getPropertyValue("--label"),
+    };
+    return style.pointerEvents === "auto" ? button : button.parentElement;
+  });
+  expect(
+    observeValidationGeometry(document.body, failures).controls[0],
+  ).toMatchObject({
+    inViewport: true,
+    unobscured: true,
+    occlusionProbe: "temporary-pointer-events-auto",
+  });
+  expect(during).toEqual({
+    pointerEvents: "auto",
+    color: "rgb(255, 0, 0)",
+    label: '"keep;semicolons"',
+  });
+  expect(button.getAttribute("style")).toBe(before);
+  expect(getComputedStyle(button).pointerEvents).toBe("none");
+  expect(button.disabled).toBe(true);
+});

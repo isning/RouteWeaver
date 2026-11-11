@@ -32,8 +32,16 @@ export function observeValidationGeometry(
         // suppress pointer hits. Probe only this element, synchronously, without
         // enabling, focusing, scrolling, or clicking it. Covering elements and
         // ancestor clips still participate in the browser's actual hit test.
-        if (pointerSuppressed)
-          el.style.setProperty("pointer-events", "auto", "important");
+        if (pointerSuppressed) {
+          // Keep the live element out of the CSSOM mutation path: native evidence
+          // showed an absent attribute becoming empty after setProperty/removeAttribute.
+          // Parse/override a detached declaration, then use the attribute API for
+          // both the temporary value and the exact restoration below.
+          const probeStyle = document.createElement("span").style;
+          probeStyle.cssText = originalStyle ?? "";
+          probeStyle.setProperty("pointer-events", "auto", "important");
+          el.setAttribute("style", probeStyle.cssText);
+        }
         hit = document.elementFromPoint(
           r.left + r.width / 2,
           r.top + r.height / 2,
