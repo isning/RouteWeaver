@@ -18,3 +18,5 @@ Platform settings now use their own query, enabled only for the settings page. U
 ## Limits
 
 Native execution and independent image review are pending publication. The fixture does not accept group editing, settings saving, receipt ordering, full accessibility or real backend/runtime behavior. Whole-suite local DOM evidence of 4,013 cases predates this and the route inventory change. Settings field-level malformed objects retain their previous handling. No deployment, real credential action or alternate publication attempt occurred; remote source writes remain blocked pending authorization.
+
+Final local whole-suite recheck: application/test source `12d96c4` passed all 4,027 DOM tests across 324 files (one worker, 1,054.52 seconds), completed around 2026-11-11 11:25:39 UTC. This includes the route/settings isolation changes, corrected cross-page contracts and group identity fixes, superseding earlier local whole-suite limitations for those changes. Native execution and original-pixel acceptance of unpublished changes remain pending.
