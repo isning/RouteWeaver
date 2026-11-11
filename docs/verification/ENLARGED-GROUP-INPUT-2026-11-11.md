@@ -57,3 +57,39 @@ Candidate: add `scroll-mb-1` only to the strategy-group-name Input in `Profiles.
 A rendered `ProfileEditor` CSS contract in `group-membership.dom.test.tsx` compiles actual Tailwind utilities and checks the group input's bottom margin plus retained top margin. The final contract failed before the candidate (`scrollMarginBottom` was `0`, expected `var(--spacing)`). An initial assertion expected an unsimplified `calc(var(--spacing) * 1)` expression; it was corrected to the installed compiler's equivalent `var(--spacing)` serialization, then the no-production-change red baseline was repeated. This checks applied CSS, not browser scrolling or painted pixels. Native candidate execution and red-to-green ring evidence remain pending; no local browser bypass was used.
 
 Candidate local checks passed: 68 focused tests across group membership, profile content hierarchy and group interval intent (one worker), application `tsc -b`, and `git diff --check`. The coordinator owns the final aggregate gate and native CI verification.
+
+## Corrected natural-focus clearance: bounded acceptance
+
+Exact source `c22478d843b3bef6efcd9fdae97985f60819caec`, run `43090150934`,
+shard job `130764758717`, passes the unchanged natural-focus probe and original
+scroll-based audit; the native suite reports 567/567. Artifact `13888258077`
+(35,708,848 bytes) has verified original ZIP SHA-256
+`c488392407ad578a73810e444fb6e2e1fc7fd7947f13ce4b954500f1fb4a8473`.
+The corrected originals are under
+`/workspace/scratch/d385eb428cee/ci-evidence-c22478d-13888258077/web/test-results/product-model.ui-enlarged--a5e42-l-keyboard-entry-and-return-chromium/`:
+`group-name-keyboard-200pct-entry.json/.png` and
+`group-name-keyboard-200pct-reverse-entry.json/.png`.
+
+Independent review opened both corrected JSON records and original-position
+privacy-redacted PNGs, alongside both prior e3f PNGs. Forward entry now places the
+input at x66–324/y774–840, with the unchanged 3px ring reaching y843 inside the
+844px viewport. The corrected image contains the lower ring boundary; the prior
+y778–844 input lost its ring below the viewport at y847. Reverse entry remains
+y334–400, with its ring at y331–403, visibly contained.
+
+Both corrected records retain 32px font/48px line-height, ratio 1,
+focus/focus-visible/center-hit true, top scroll margin 128px and bottom margin
+4px. Forward scrollY is 859 rather than 855; reverse remains 1299. The ring fits
+the recorded clipping ancestor and does not overlap the sticky toolbar y0–121.
+The numeric observations corroborate the bounded image review rather than
+substituting for it.
+
+This accepts the observed natural-keyboard forward/reverse ring-clearance
+correction only. The remaining forward clearance is 1px, not evidence of broad
+cross-browser or layout robustness. Computed text was doubled; this is not
+browser-native zoom. Privacy redaction changes content/styles, so the captures
+do not establish original text readability, full visual contrast or color. The
+older intermittent 213e6b2 border-box-ratio failure is not root-caused by this
+result. The reviewer performed no download, image transformation, source edit or
+test run. The separate full local suite was still running when this note was
+written; no pass is recorded for it here.
