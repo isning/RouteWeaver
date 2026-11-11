@@ -1,3 +1,4 @@
+import { adaptiveTabsHeight } from "@/ui-patterns/adaptive-tabs-height";
 import { useLayoutEffect, useRef, useState } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
@@ -109,7 +110,7 @@ export function CollectionPreview({
         <ScrollArea className="w-full min-w-0 overflow-hidden pb-3">
           <TabsList
             aria-label="处理阶段"
-            className="w-max max-w-none flex-nowrap justify-start"
+            className={`w-max max-w-none flex-nowrap justify-start ${adaptiveTabsHeight}`}
           >
             {[
               { key: "final", label: "最终结果" },
