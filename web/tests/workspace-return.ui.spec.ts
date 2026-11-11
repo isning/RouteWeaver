@@ -1,3 +1,4 @@
+import { writeFile } from "node:fs/promises";
 import { navigateWorkspace } from "./ui-session";
 import { test } from "./native-browser";
 import { waitForConfirmedWorkspace } from "./ui-workspace-confirmation";
@@ -509,13 +510,7 @@ for (const width of [1440, 390]) {
           await page.keyboard.press("Enter");
           await settledTask(page.getByRole("menu"));
           await page.keyboard.press("Home");
-          await expect(
-            page.getByRole("menuitem", {
-              name: "查看已发布内容",
-              exact: true,
-            }),
-          ).toBeFocused();
-          await page.keyboard.press("ArrowDown");
+          // Detail omits "view": the linked editor is its first menu action.
           await expect(
             page.getByRole("menuitem", {
               name: "编辑关联分流配置",
@@ -613,24 +608,32 @@ for (const width of [1440, 390]) {
         }
         // Write the ledger even when the browser can no longer take a picture.
         try {
+          const ledger = JSON.stringify({
+            task: "subscription detail linked editor keyboard return",
+            viewport: { width, height: 560 },
+            dirty,
+            phase,
+            journeyCompleted,
+            screenshotCaptured,
+            canceledDrafts,
+            discardedDrafts,
+            observations,
+            postSetupWrites: writes,
+            errors: errors.map((error) =>
+              error instanceof Error
+                ? { name: error.name, message: error.message }
+                : { message: String(error) },
+            ),
+          });
+          // Persist before reporter attachment: a later CI cancellation may
+          // prevent HTML report finalization but retain test-results files.
+          await writeFile(
+            info.outputPath("subscription-linked-editor-return.json"),
+            ledger,
+            "utf8",
+          );
           await info.attach("safe-result", {
-            body: JSON.stringify({
-              task: "subscription detail linked editor keyboard return",
-              viewport: { width, height: 560 },
-              dirty,
-              phase,
-              journeyCompleted,
-              screenshotCaptured,
-              canceledDrafts,
-              discardedDrafts,
-              observations,
-              postSetupWrites: writes,
-              errors: errors.map((error) =>
-                error instanceof Error
-                  ? { name: error.name, message: error.message }
-                  : { message: String(error) },
-              ),
-            }),
+            body: ledger,
             contentType: "application/json",
           });
         } catch (error) {

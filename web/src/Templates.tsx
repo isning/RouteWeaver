@@ -1414,7 +1414,16 @@ function SelectTemplate({
               options={[
                 ...(targets.data || []).map((t) => ({
                   value: t.id,
-                  label: t.name,
+                  label: targets.data?.some(
+                    (other) => other.id !== t.id && other.name === t.name,
+                  ) ? (
+                    <span className="grid min-w-0 gap-1">
+                      <span>{t.name}</span>{" "}
+                      <span className="text-xs font-normal text-muted-foreground wrap-anywhere">
+                        {t.id}
+                      </span>
+                    </span>
+                  ) : t.name,
                 })),
                 ...unavailableOptions(
                   targetId,

@@ -1,3 +1,4 @@
+import { writeFile } from "node:fs/promises";
 import type { Locator, Page } from "@playwright/test";
 import { expect, test } from "./isolated-control-plane-fixture";
 import { requireLoopback } from "./account-security-backend";
@@ -43,7 +44,15 @@ for (const width of [1440, 390]) {
     const dialog = page.getByRole("dialog", { name: "服务端配置意图", exact: true });
     const field = dialog.getByRole("textbox", { name: "服务端配置意图 JSON 文本", exact: true });
     const capture = async (stage: string) => {
-      try { if (process.env.CI) await info.attach(`route-json-${width}-${stage}.png`, { body: await page.screenshot({ timeout: 2000 }), contentType: "image/png" }); }
+      try {
+        if (process.env.CI) {
+          const name = `route-json-${width}-${stage}.png`;
+          const path = info.outputPath(name);
+          // Retain original pixels even if a later cancellation prevents report flush.
+          await page.screenshot({ path, timeout: 2000 });
+          await info.attach(name, { path, contentType: "image/png" });
+        }
+      }
       catch (error) { failures.push(error); }
       try {
         if (await dialog.count()) measurements.push({ stage, geometry: await dialog.evaluate(el => {
@@ -137,7 +146,13 @@ for (const width of [1440, 390]) {
     } catch (error) { failures.push(error); }
     finally {
       await capture("final-state");
-      try { if (process.env.CI) await info.attach("route-json-recovery-evidence", { contentType: "application/json", body: JSON.stringify({ viewport: page.viewportSize(), measurements, reads, blocked, browserErrors, scope: "Synthetic read-only API; native keyboard and local JSON draft only. No saved configuration or deployment." }, null, 2) }); }
+      try {
+        if (process.env.CI) {
+          const path = info.outputPath("route-json-recovery-evidence.json");
+          await writeFile(path, JSON.stringify({ viewport: page.viewportSize(), measurements, reads, blocked, browserErrors, scope: "Synthetic read-only API; native keyboard and local JSON draft only. No saved configuration or deployment." }, null, 2), "utf8");
+          await info.attach("route-json-recovery-evidence", { path, contentType: "application/json" });
+        }
+      }
       catch (error) { failures.push(error); }
       try { expect(blocked, "No unexpected requests, including writes").toEqual([]); } catch (error) { failures.push(error); }
       try { expect(browserErrors).toEqual([]); } catch (error) { failures.push(error); }
