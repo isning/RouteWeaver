@@ -1091,3 +1091,76 @@ it("retains only nonprivate history proof through logout and B login, not A's li
   await waitFor(() => expect(location.hash).toBe(""));
   expect(history.state.routeweaverLineage).toBe(sourceProof.routeweaverLineage);
 });
+
+it.each([false, true])(
+  "returns detail editing to More actions after repeated local returns (discard=%s)",
+  async (dirty) => {
+    inventory([profile], [output("phone", "Phone")]);
+    const baseFetch = globalThis.fetch;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url, init) =>
+        String(url).endsWith("/profiles/shared/reveal")
+          ? Promise.resolve(json(profile))
+          : baseFetch(url, init),
+      ),
+    );
+    mount();
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: "查看订阅 Phone" }),
+    );
+    const hash = location.hash;
+    const state = { ...history.state };
+    const length = history.length;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const detail = await screen.findByRole("dialog", {
+        name: "Phone 的订阅详情",
+      });
+      if (attempt === 0)
+        within(detail).getByRole("button", { name: "更多操作" }).focus();
+      await user.keyboard("{Enter}");
+      await user.click(
+        await screen.findByRole("menuitem", { name: "编辑关联分流配置" }),
+      );
+      const name = await screen.findByRole("textbox", { name: "配置名称" });
+      if (dirty)
+        fireEvent.change(name, { target: { value: "Discard detail draft" } });
+      const back = screen.getByRole("button", { name: "返回" });
+      back.focus();
+      await user.keyboard("{Enter}");
+      if (dirty) {
+        await screen.findByRole("alertdialog", { name: "放弃未保存的修改？" });
+        await user.keyboard("{Escape}");
+        await waitFor(() =>
+          expect(screen.queryByRole("alertdialog")).toBeNull(),
+        );
+        await waitFor(() => expect(document.activeElement).toBe(back));
+        expect(name).toHaveProperty("value", "Discard detail draft");
+        await user.keyboard("{Enter}");
+        const confirmed = await screen.findByRole("alertdialog", {
+          name: "放弃未保存的修改？",
+        });
+        await user.click(
+          within(confirmed).getByRole("button", { name: "放弃修改" }),
+        );
+      }
+      const returned = await screen.findByRole("dialog", {
+        name: "Phone 的订阅详情",
+      });
+      await waitFor(() =>
+        expect(document.activeElement).toBe(
+          within(returned).getByRole("button", { name: "更多操作" }),
+        ),
+      );
+      expect(location.hash).toBe(hash);
+      expect(history.state).toEqual(state);
+      expect(history.length).toBe(length);
+    }
+    expect(
+      vi
+        .mocked(fetch)
+        .mock.calls.filter(([, init]) => init?.method && init.method !== "GET"),
+    ).toEqual([]);
+  },
+);

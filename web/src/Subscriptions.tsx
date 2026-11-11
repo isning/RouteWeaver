@@ -290,10 +290,14 @@ export function SubscriptionsPage({
   const [actionError, setActionError] = useState<Error | null>(null);
   const [opening, setOpening] = useState(false);
   const editSequence = useRef(0);
-  const recoveryReturn = useRef<string | null>(null);
+  const detailEditorReturn = useRef<{
+    outputId: string;
+    recovery: boolean;
+  } | null>(null);
   const detailReady = useRef(false);
   const recoveryButton = useRef<HTMLButtonElement>(null);
   const updateButton = useRef<HTMLButtonElement>(null);
+  const detailActionsButton = useRef<HTMLButtonElement>(null);
   useEffect(
     () => () => {
       editSequence.current++;
@@ -306,6 +310,7 @@ export function SubscriptionsPage({
     dirty: boolean;
     output?: Output;
     recovery?: boolean;
+    returnToDetail?: boolean;
     focusName?: boolean;
   } | null>(null);
   const client = useQueryClient();
@@ -442,7 +447,7 @@ export function SubscriptionsPage({
     editSequence.current++;
     setOpening(false);
     setEditError(null);
-    recoveryReturn.current = null;
+    detailEditorReturn.current = null;
     checkSequence.current++;
     setCheckingID(null);
     const params = new URLSearchParams(location.hash.split("?")[1] || "");
@@ -470,7 +475,7 @@ export function SubscriptionsPage({
     const syncScope = () => {
       // App's early guard allows only accepted navigation to reach this listener.
       editSequence.current++;
-      recoveryReturn.current = null;
+      detailEditorReturn.current = null;
       setEditor(null);
       setOpening(false);
       setAccessID(null);
@@ -531,6 +536,7 @@ export function SubscriptionsPage({
           dirty: copy,
           output: copy ? undefined : output,
           recovery,
+          returnToDetail: !!output && output.id === selectedID,
         });
       }
     } catch (error) {
@@ -767,21 +773,25 @@ export function SubscriptionsPage({
   const recoveryLabel = recoveryProfileName
     ? `修复「${recoveryProfileName}」配置`
     : "修复关联配置";
-  const restoreRecoveryFocus = () => {
+  const restoreDetailEditorFocus = () => {
+    const ticket = detailEditorReturn.current;
     if (
       detailReady.current &&
       !editor &&
-      !outputStatus.isFetching &&
-      recoveryReturn.current === selectedID
+      ticket &&
+      ticket.outputId === selectedID &&
+      (!ticket.recovery || !outputStatus.isFetching)
     ) {
-      const target = recoveryButton.current || updateButton.current;
+      const target = ticket.recovery
+        ? recoveryButton.current || updateButton.current
+        : detailActionsButton.current;
       if (target) {
         target.focus({ preventScroll: true });
-        recoveryReturn.current = null;
+        detailEditorReturn.current = null;
       }
     }
   };
-  useLayoutEffect(restoreRecoveryFocus, [
+  useLayoutEffect(restoreDetailEditorFocus, [
     editor,
     selectedID,
     outputStatus.isFetching,
@@ -935,8 +945,11 @@ export function SubscriptionsPage({
           focusNameOnOpen={editor.focusName}
           output={editor.output}
           onClose={() => {
-            if (editor.recovery)
-              recoveryReturn.current = editor.output?.id || null;
+            if (editor.returnToDetail && editor.output)
+              detailEditorReturn.current = {
+                outputId: editor.output.id,
+                recovery: !!editor.recovery,
+              };
             setEditor(null);
           }}
         />
@@ -1564,13 +1577,13 @@ export function SubscriptionsPage({
           onReady={() =>
             ((open) => {
               detailReady.current = open;
-              if (open) restoreRecoveryFocus();
+              if (open) restoreDetailEditorFocus();
             })(true)
           }
           onClosed={() =>
             ((open) => {
               detailReady.current = open;
-              if (open) restoreRecoveryFocus();
+              if (open) restoreDetailEditorFocus();
             })(false)
           }
           size="lg"
@@ -1710,7 +1723,11 @@ export function SubscriptionsPage({
             </ActionButton>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <ActionButton disabled={opening} variant="outline">
+                <ActionButton
+                  ref={detailActionsButton}
+                  disabled={opening}
+                  variant="outline"
+                >
                   更多操作
                 </ActionButton>
               </DropdownMenuTrigger>
