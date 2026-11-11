@@ -94,25 +94,23 @@ jobs:
           # Only the synthetic report, browser receipt and named test captures.
           # No databases, fixture keys, automatic screenshots, video or traces.
           path: |
-            web/test-results/admin-policy-inventory-recovery*/policy-inventory-cached-error.png
-            web/test-results/admin-policy-inventory-recovery*/policy-inventory-cached-error.json
-            web/test-results/admin-policy-inventory-recovery*/policy-inventory-retry-keyboard.png
-            web/test-results/admin-policy-inventory-recovery*/policy-inventory-retry-keyboard.json
-            web/test-results/admin-policy-inventory-recovery*/policy-inventory-retry-offline.png
-            web/test-results/admin-policy-inventory-recovery*/policy-inventory-retry-offline.json
-            web/test-results/admin-policy-inventory-recovery*/policy-inventory-retry-pending.png
-            web/test-results/admin-policy-inventory-recovery*/policy-inventory-retry-pending.json
-            web/test-results/admin-policy-inventory-recovery*/policy-inventory-recovered.png
-            web/test-results/admin-policy-inventory-recovery*/policy-inventory-recovered.json
-            web/test-results/admin-policy-inventory-recovery*/policy-inventory-guarded-editor.png
-            web/test-results/admin-policy-inventory-recovery*/policy-inventory-guarded-editor.json
-            web/test-results/admin-policy-inventory-recovery*/policy-inventory-newer-draft-pending.png
-            web/test-results/admin-policy-inventory-recovery*/policy-inventory-newer-draft-pending.json
-            web/test-results/admin-policy-inventory-recovery*/policy-inventory-newer-draft-owned.png
-            web/test-results/admin-policy-inventory-recovery*/policy-inventory-newer-draft-owned.json
-            web/test-results/admin-policy-inventory-recovery*/policy-inventory-final-original.png
-            web/test-results/admin-policy-inventory-recovery*/policy-inventory-final-original.json
-            web/test-results/admin-policy-inventory-recovery*/policy-inventory-request-ledger.json
+            web/test-results/admin-policy-inventory-rec-*/policy-inventory-cached-error.png
+            web/test-results/admin-policy-inventory-rec-*/policy-inventory-cached-error.json
+            web/test-results/admin-policy-inventory-rec-*/policy-inventory-retry-keyboard.png
+            web/test-results/admin-policy-inventory-rec-*/policy-inventory-retry-keyboard.json
+            web/test-results/admin-policy-inventory-rec-*/policy-inventory-retry-pending.png
+            web/test-results/admin-policy-inventory-rec-*/policy-inventory-retry-pending.json
+            web/test-results/admin-policy-inventory-rec-*/policy-inventory-recovered.png
+            web/test-results/admin-policy-inventory-rec-*/policy-inventory-recovered.json
+            web/test-results/admin-policy-inventory-rec-*/policy-inventory-guarded-editor.png
+            web/test-results/admin-policy-inventory-rec-*/policy-inventory-guarded-editor.json
+            web/test-results/admin-policy-inventory-rec-*/policy-inventory-newer-draft-pending.png
+            web/test-results/admin-policy-inventory-rec-*/policy-inventory-newer-draft-pending.json
+            web/test-results/admin-policy-inventory-rec-*/policy-inventory-newer-draft-owned.png
+            web/test-results/admin-policy-inventory-rec-*/policy-inventory-newer-draft-owned.json
+            web/test-results/admin-policy-inventory-rec-*/policy-inventory-final-original.png
+            web/test-results/admin-policy-inventory-rec-*/policy-inventory-final-original.json
+            web/test-results/admin-policy-inventory-rec-*/policy-inventory-request-ledger.json
             web/test-results/announcement-list-recovery*/announcement-initial-unknown.png
             web/test-results/announcement-list-recovery*/announcement-initial-unknown.json
             web/test-results/announcement-list-recovery*/announcement-refresh-pending.png

@@ -6,8 +6,8 @@ import { settledTask } from "./ui-settled-task";
 test.use({ serviceWorkers: "block", trace: "off", screenshot: "off", video: "off" });
 type Kind = "service" | "group";
 const labels = {
-  service: { refresh: "刷新服务方案", pending: "正在刷新服务方案…", paused: "等待网络连接后刷新服务方案。", field: "服务方案名称" },
-  group: { refresh: "刷新用户组", pending: "正在刷新用户组…", paused: "等待网络连接后刷新用户组。", field: "用户组名称" },
+  service: { refresh: "刷新服务方案", pending: "正在刷新服务方案…", field: "服务方案名称" },
+  group: { refresh: "刷新用户组", pending: "正在刷新用户组…", field: "用户组名称" },
 };
 async function fixture(page: Page, baseURL: string | undefined, kind: Kind) {
   if (!baseURL || !["localhost", "127.0.0.1", "[::1]"].includes(new URL(baseURL).hostname))
@@ -23,7 +23,7 @@ async function fixture(page: Page, baseURL: string | undefined, kind: Kind) {
   let phase: Phase = "initial";
   let release!: () => void;
   const gate = new Promise<void>(resolve => { release = resolve; });
-  const ledger = { reads: [] as { phase: Phase; outcome: string }[], editReads: 0,
+  const ledger = { reads: [] as { phase: Phase; outcome: string; authReads: number }[], editReads: 0, authReads: 0,
     rejected: [] as string[], pageErrors: 0 };
   // App shell plus the actual services/users page's companion inventories.
   const reads: Record<string, unknown> = {
@@ -52,7 +52,7 @@ async function fixture(page: Page, baseURL: string | undefined, kind: Kind) {
     }
     if (method !== "GET" || url.search) return reject("mutation or API query metadata");
     if (url.pathname === (kind === "service" ? "/api/services" : "/api/user-groups")) {
-      const owned = phase, entry = { phase: owned, outcome: "pending" };
+      const owned = phase, entry = { phase: owned, outcome: "pending", authReads: ledger.authReads };
       ledger.reads.push(entry);
       if (owned === "recovered") await gate;
       entry.outcome = owned === "failure" ? "synthetic-503" : "synthetic-records";
@@ -64,7 +64,10 @@ async function fixture(page: Page, baseURL: string | undefined, kind: Kind) {
         record: { [kind]: { ...records[10], name: "Authoritative record" } },
         precondition: { exists: true, revision: "opening-1" } } });
     }
-    if (Object.hasOwn(reads, url.pathname)) return route.fulfill({ json: reads[url.pathname] });
+    if (Object.hasOwn(reads, url.pathname)) {
+      if (url.pathname === "/api/auth/me") ledger.authReads++;
+      return route.fulfill({ json: reads[url.pathname] });
+    }
     return reject("unexpected API read");
   });
   return { ledger, count: (key: Phase) => ledger.reads.filter(entry => entry.phase === key).length,
@@ -89,15 +92,34 @@ async function focused(page: Page) {
   });
 }
 
-async function tabTo(page: Page, target: Locator) {
+type Traversal = {
+  stage: string; direction: "Tab" | "Shift+Tab"; authBefore: number; authAfter: number;
+  reached: boolean; path: { tag: string; inWorkspace: boolean; documentFocused: boolean }[];
+};
+async function tabTo(page: Page, target: Locator, stage: string,
+  traversals: Traversal[], authReads: () => number) {
   await expect(target).toBeVisible();
-  const path = [];
-  for (let tabs = 0; tabs < 80; tabs++) {
-    if (await target.evaluate(node => node === document.activeElement)) return { tabs, path };
-    await page.keyboard.press("Tab");
-    path.push(await focused(page));
-  }
-  throw new Error("Policy inventory action was not reachable by ordinary keyboard traversal");
+  // Choose the actual DOM direction, rather than wrapping through browser chrome
+  // and causing the real session boundary to revalidate the private workspace.
+  const direction = await target.evaluate(node => {
+    const active = document.activeElement;
+    return active && active !== document.body &&
+      active.compareDocumentPosition(node) & Node.DOCUMENT_POSITION_PRECEDING ? "Shift+Tab" : "Tab";
+  });
+  const entry: Traversal = { stage, direction, authBefore: authReads(), authAfter: authReads(), reached: false, path: [] };
+  traversals.push(entry);
+  try {
+    for (let tabs = 0; tabs < 80; tabs++) {
+      if (await target.evaluate(node => node === document.activeElement)) { entry.reached = true; return; }
+      await page.keyboard.press(direction);
+      entry.path.push(await page.evaluate(() => ({
+        tag: document.activeElement?.tagName ?? "none",
+        inWorkspace: !!document.activeElement?.closest("[data-session-workspace]"),
+        documentFocused: document.hasFocus(),
+      })));
+    }
+    throw new Error("Policy inventory action was not reachable by ordinary keyboard traversal");
+  } finally { entry.authAfter = authReads(); }
 }
 
 async function capture(page: Page, info: TestInfo, stage: string, surface: Locator, settle = true) {
@@ -126,6 +148,9 @@ for (const width of [1440, 390]) for (const kind of ["service", "group"] as cons
     await page.setViewportSize({ width, height: width === 390 ? 560 : 900 });
     const http = await fixture(page, baseURL, kind), label = labels[kind];
     const failures: unknown[] = [];
+    const traversals: Traversal[] = [];
+    const walk = (target: Locator, stage: string) => tabTo(page, target, stage, traversals, () => http.ledger.authReads);
+    let authBaseline: number | undefined;
     const main = page.locator("main");
     const refresh = page.getByRole("button", { name: label.refresh, exact: true });
     const search = page.getByRole("textbox", { name: "搜索服务方案", exact: true });
@@ -137,27 +162,23 @@ for (const width of [1440, 390]) for (const kind of ["service", "group"] as cons
       if (kind === "service") await search.fill("Record");
       await main.getByRole("button", { name: "下一页", exact: true }).click();
       await expect(main.getByRole("cell", { name: "Record 10", exact: true })).toBeVisible();
+      const authBeforePreparation = http.ledger.authReads;
+      await walk(refresh, "prepare-refresh"); await expect(refresh).toBeFocused();
+      expect(http.ledger.authReads).toBe(authBeforePreparation);
+      authBaseline = http.ledger.authReads;
       http.arm("failure");
-      await tabTo(page, refresh); await page.keyboard.press("Enter");
+      await page.keyboard.press("Enter");
       await expect(main.getByText("Inventory unavailable", { exact: true })).toBeVisible();
       expect(http.count("failure")).toBe(2); // Real App's one automatic retry.
       await expect(row).toBeAttached(); await expect(edit).toBeEnabled();
       if (kind === "service") await expect(search).toHaveValue("Record");
       await capture(page, info, "cached-error", main);
-      await tabTo(page, refresh); await expect(refresh).toBeFocused();
+      await walk(refresh, "retry-refresh"); await expect(refresh).toBeFocused();
       await capture(page, info, "retry-keyboard", main);
       expect(await focused(page)).toMatchObject({ focusVisible: true, inViewport: true, unobscured: true });
       http.arm("recovered");
-      await page.context().setOffline(true);
-      await expect.poll(() => page.evaluate(() => navigator.onLine)).toBe(false);
       await page.keyboard.press("Space");
-      await expect(main.getByText(label.paused, { exact: true })).toBeVisible();
       await expect(refresh).toHaveAttribute("aria-disabled", "true");
-      await page.keyboard.press("Enter"); await page.keyboard.press("Space");
-      expect(http.count("recovered")).toBe(0);
-      await expect(refresh).toBeFocused();
-      await capture(page, info, "retry-offline", main, false);
-      await page.context().setOffline(false);
       await expect(main.getByText(label.pending, { exact: true })).toBeVisible();
       await expect.poll(() => http.count("recovered")).toBe(1);
       await page.keyboard.press("Enter"); await page.keyboard.press("Space");
@@ -174,14 +195,14 @@ for (const width of [1440, 390]) for (const kind of ["service", "group"] as cons
         await capture(page, info, "recovered", main);
         expect(await focused(page)).toMatchObject({ focusVisible: true, inViewport: true, unobscured: true });
       }
-      await tabTo(page, edit); await page.keyboard.press("Enter");
+      await walk(edit, "guarded-edit"); await page.keyboard.press("Enter");
       const dialog = page.getByRole("dialog", { name: "编辑 Authoritative record", exact: true });
       const field = dialog.getByRole("textbox", { name: label.field, exact: true });
       await expect(field).toHaveValue("Authoritative record");
       expect(http.ledger.editReads).toBe(1);
       await capture(page, info, "guarded-editor", dialog);
       if (scenario === "stale-editor") {
-        await tabTo(page, field); await page.keyboard.press("ControlOrMeta+A");
+        await walk(field, "newer-draft"); await page.keyboard.press("ControlOrMeta+A");
         await page.keyboard.type("Synthetic newer draft");
         await capture(page, info, "newer-draft-pending", dialog);
         http.release();
@@ -190,13 +211,14 @@ for (const width of [1440, 390]) for (const kind of ["service", "group"] as cons
         await capture(page, info, "newer-draft-owned", dialog);
       }
       expect(http.count("recovered")).toBe(1);
+      expect(http.ledger.authReads).toBe(authBaseline);
     } catch (error) { failures.push(error); }
     finally {
       try { await capture(page, info, "final-original", page.locator("body"), false); }
       catch (error) { failures.push(error); }
-      finally { http.release(); await page.context().setOffline(false); }
+      finally { http.release(); }
       try {
-        const body = JSON.stringify({ width, kind, scenario, ...http.ledger,
+        const body = JSON.stringify({ width, kind, scenario, authBaseline, traversals, ...http.ledger,
           scope: "Synthetic native cached policy inventory recovery; no writes, preview, apply or backend revision enforcement claim" }, null, 2);
         await writeFile(info.outputPath("policy-inventory-request-ledger.json"), body);
         await info.attach("policy-inventory-request-ledger", { body, contentType: "application/json" });

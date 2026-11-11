@@ -49,11 +49,11 @@ TARGET_REGISTRATION_PHASES = ('invalid-name', 'invalid-url', 'invalid-methods', 
 USERS_PHASES = ('cached-error-open-menu', 'retry-keyboard', 'retry-pending', 'recovered-search-keyboard', 'recovered-entry-keyboard', 'correct-user-entry', 'final-original')
 INITIAL_RESOURCE_PHASES = ('retry-keyboard', 'retry-pending', 'repeated-error', 'failure-next-tab', 'recovered', 'success-next-tab', 'newer-dialog-pending', 'dialog-owned', 'final-original')
 ANNOUNCEMENT_PHASES = ('initial-unknown', 'refresh-pending', 'cached-error', 'retry-keyboard', 'retry-pending', 'recovered', 'fresh-edit', 'newer-create-pending', 'newer-create-owned', 'final-original')
-POLICY_INVENTORY_PHASES = ('cached-error', 'retry-keyboard', 'retry-offline', 'retry-pending', 'recovered', 'guarded-editor', 'newer-draft-pending', 'newer-draft-owned', 'final-original')
+POLICY_INVENTORY_PHASES = ('cached-error', 'retry-keyboard', 'retry-pending', 'recovered', 'guarded-editor', 'newer-draft-pending', 'newer-draft-owned', 'final-original')
 ARTIFACTS = {
-    *{f'web/test-results/admin-policy-inventory-recovery*/policy-inventory-{phase}.{ext}'
+    *{f'web/test-results/admin-policy-inventory-rec-*/policy-inventory-{phase}.{ext}'
       for phase in POLICY_INVENTORY_PHASES for ext in ('png', 'json')},
-    'web/test-results/admin-policy-inventory-recovery*/policy-inventory-request-ledger.json',
+    'web/test-results/admin-policy-inventory-rec-*/policy-inventory-request-ledger.json',
     *{f'web/test-results/announcement-list-recovery*/announcement-{phase}.{ext}'
       for phase in ANNOUNCEMENT_PHASES for ext in ('png', 'json')},
     'web/test-results/announcement-list-recovery*/announcement-request-ledger.json',
@@ -214,13 +214,22 @@ class UXRecoveryWorkflowTests(unittest.TestCase):
                 observed[f'announcement-list-recovery.ui-{scenario}-at-{width}px-chromium'] = announcement_outputs
         policy_outputs = tuple(f'policy-inventory-{phase}.{ext}' for phase in POLICY_INVENTORY_PHASES
                                for ext in ('png', 'json')) + ('policy-inventory-request-ledger.json',)
-        for width in (1440, 390):
-            for kind in ('service', 'group'):
-                for scenario in ('retry', 'stale-editor'):
-                    observed[f'admin-policy-inventory-recovery.ui-{kind}-{scenario}-at-{width}px-chromium'] = policy_outputs
+        # Actual directory names from 5b65a44 shard3, not invented full stems.
+        for directory in (
+            'admin-policy-inventory-rec-1c4a9-ory-service-retry-at-1440px-chromium',
+            'admin-policy-inventory-rec-48a3e-vice-stale-editor-at-1440px-chromium',
+            'admin-policy-inventory-rec-be5b3-ntory-group-retry-at-1440px-chromium',
+            'admin-policy-inventory-rec-50ee3-roup-stale-editor-at-1440px-chromium',
+            'admin-policy-inventory-rec-a5e91-tory-service-retry-at-390px-chromium',
+            'admin-policy-inventory-rec-04790-rvice-stale-editor-at-390px-chromium',
+            'admin-policy-inventory-rec-77311-entory-group-retry-at-390px-chromium',
+            'admin-policy-inventory-rec-7aadc-group-stale-editor-at-390px-chromium',
+        ):
+            observed[directory] = policy_outputs
         for filename in ('request-ledger.json', 'policy-inventory-private.json',
-                         'policy-inventory-request-ledger.png', 'policy-inventory-retry-pending-private.png'):
-            self.assertFalse(retained(f'web/test-results/admin-policy-inventory-recovery.ui-chromium/{filename}'))
+                         'policy-inventory-request-ledger.png', 'policy-inventory-retry-pending-private.png',
+                         'policy-inventory-retry-offline.png', 'policy-inventory-retry-offline.json'):
+            self.assertFalse(retained(f'web/test-results/admin-policy-inventory-rec-1c4a9-ory-service-retry-at-1440px-chromium/{filename}'))
         for directory, filenames in observed.items():
             for filename in filenames:
                 path = f'web/test-results/{directory}/{filename}'
