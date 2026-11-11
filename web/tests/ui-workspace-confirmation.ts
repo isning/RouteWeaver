@@ -1,4 +1,8 @@
 import { test, type Page } from "@playwright/test";
+import {
+  persistSetupDiagnostic,
+  type SetupOutcome,
+} from "./ui-session-diagnostics";
 
 // Setup only: SessionLifecycle allows 15s for /auth/me including its body,
 // followed by at most 3s of rendering. This is not an interaction timeout.
@@ -46,7 +50,7 @@ export async function waitForConfirmedWorkspace(
   setup: "normal-ui-login" | "cold-workspace" | "new-tab" = "cold-workspace",
 ) {
   const started = Date.now();
-  let outcome = "timeout-or-page-error";
+  let outcome: SetupOutcome = "timeout-or-page-error";
   try {
     const result = await page.waitForFunction(
       workspaceConfirmationState,
@@ -56,24 +60,23 @@ export async function waitForConfirmedWorkspace(
       },
     );
     try {
-      outcome = (await result.jsonValue()) || "not-confirmed";
+      const state = await result.jsonValue();
+      if (state === "confirmed" || state === "session-error") outcome = state;
     } finally {
       await result.dispose();
     }
     if (outcome !== "confirmed")
       throw new Error(
-        "Workspace setup stopped at an explicit session-recovery error; no retry was attempted.",
+        `Workspace setup (${setup}) stopped at an explicit session-recovery error; no retry was attempted.`,
       );
   } finally {
     // No cookie, credentials, response body, business text, or URL is recorded.
-    await test.info().attach("workspace-setup-confirmation", {
-      body: JSON.stringify({
-        setup,
-        outcome,
-        elapsedMs: Date.now() - started,
-        timeoutMs: WORKSPACE_SETUP_TIMEOUT_MS,
-      }),
-      contentType: "application/json",
+    await persistSetupDiagnostic(test.info(), {
+      kind: "confirmation",
+      phase: setup,
+      outcome,
+      elapsedMs: Date.now() - started,
+      timeoutMs: WORKSPACE_SETUP_TIMEOUT_MS,
     });
   }
 }

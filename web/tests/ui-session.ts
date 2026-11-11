@@ -1,5 +1,9 @@
 import { test, type BrowserContext, type Page } from "@playwright/test";
 import { waitForConfirmedWorkspace } from "./ui-workspace-confirmation";
+import {
+  observeSetupAuth,
+  persistSetupDiagnostic,
+} from "./ui-session-diagnostics";
 
 // Domain journeys share one legitimately established actor session per worker,
 // while every journey keeps its own fresh browser context and UI/query state.
@@ -20,17 +24,10 @@ async function establishSession(page: Page) {
   if (!browser)
     throw new Error("Synthetic UI session setup requires a browser.");
   const setup = await browser.newContext({ baseURL });
-  const responses: { operation: "login" | "me"; status: number }[] = [];
+  let observation: ReturnType<typeof observeSetupAuth> | undefined;
   try {
     const login = await setup.newPage();
-    login.on("response", (response) => {
-      const path = new URL(response.url()).pathname;
-      if (path === "/api/auth/login" || path === "/api/auth/me")
-        responses.push({
-          operation: path.endsWith("/login") ? "login" : "me",
-          status: response.status(),
-        });
-    });
+    observation = observeSetupAuth(login);
     await login.goto("/");
     await login.getByLabel("账号", { exact: true }).fill("routeweaver");
     await login.getByLabel("密码", { exact: true }).fill("local-demo-password");
@@ -51,11 +48,15 @@ async function establishSession(page: Page) {
     // Preserve the status evidence even when a failed worker's new login is
     // rejected. No credential, response body, cookie or URL is attached, and
     // diagnostic collection never retries the authentication operation.
-    await test.info().attach("normal-ui-login-http", {
-      body: JSON.stringify({ responses }),
-      contentType: "application/json",
-    });
-    await setup.close();
+    try {
+      await persistSetupDiagnostic(test.info(), {
+        kind: "http",
+        phase: "normal-ui-login",
+        events: observation?.stop() ?? [],
+      });
+    } finally {
+      await setup.close();
+    }
   }
 }
 
@@ -65,15 +66,22 @@ export async function openWorkspace(page: Page) {
   const created = !session;
   session ??= establishSession(page);
   await page.context().addCookies(await session);
-  await test.info().attach("domain-session-setup", {
-    body: JSON.stringify({
-      worker: test.info().workerIndex,
-      setup: created ? "normal-ui-login" : "reuse-valid-session",
-    }),
-    contentType: "application/json",
+  await persistSetupDiagnostic(test.info(), {
+    kind: "domain",
+    worker: test.info().workerIndex,
+    setup: created ? "normal-ui-login" : "reuse-valid-session",
   });
-  await page.goto("/");
-  await waitForConfirmedWorkspace(page, "cold-workspace");
+  const observation = observeSetupAuth(page);
+  try {
+    await page.goto("/");
+    await waitForConfirmedWorkspace(page, "cold-workspace");
+  } finally {
+    await persistSetupDiagnostic(test.info(), {
+      kind: "http",
+      phase: "cold-workspace",
+      events: observation.stop(),
+    });
+  }
 }
 
 /** Navigate through the visible sidebar, expanding its official Collapsible group. */
