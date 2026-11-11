@@ -786,7 +786,9 @@ export function SubscriptionsPage({
         ? recoveryButton.current || updateButton.current
         : detailActionsButton.current;
       if (target) {
-        target.focus({ preventScroll: true });
+        // The remounted detail starts at the top. Native focus must reveal its
+        // return control inside the scrolling body, including short viewports.
+        target.focus();
         detailEditorReturn.current = null;
       }
     }

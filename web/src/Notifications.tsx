@@ -1411,7 +1411,7 @@ function SettingsForm({ initial, saved, savedReady }: { initial: Settings; saved
               }
             >
               <AccordionTrigger>{section.label}</AccordionTrigger>
-              <AccordionContent forceMount className="space-y-5">{section.children}</AccordionContent>
+              <AccordionContent forceMount className="space-y-5 px-1">{section.children}</AccordionContent>
             </AccordionItem>
           ))}
         </Accordion>
