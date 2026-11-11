@@ -122,3 +122,17 @@ save receipts and page recovery. `git diff --check` passed. No production code
 changed in this correction. A new coordinator-owned full run is still required;
 the failed aggregate is not relabelled as a pass, and the focused result does not
 provide native-browser or rendered acceptance.
+
+## Final local aggregate
+
+The serialized rerun at `4424892` passed **4,100/4,100 tests across 330 files**
+in 1,155.68 seconds (2026-11-11, start 15:41 UTC, exit 0). The earlier failed
+aggregate remains recorded above. This accepts local DOM behavior, not native
+browser execution or original-pixel review.
+
+The preceding published checkpoint `2addd3a` passed journey/mixed feedback and all
+11 primary non-browser repository-quality jobs. Browser installation failed on
+Ubuntu mirror DNS resolution (`azure.archive.ubuntu.com`), including one bounded
+recovery rerun on a fresh runner. Browser tests never started and recovery emitted
+no screenshot artifact. No sandbox, browser checks, assertions or timeouts were
+weakened. Later diagnostic changes require fresh exact-head CI after publication.
