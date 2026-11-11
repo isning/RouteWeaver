@@ -39,3 +39,7 @@ Independent inspection of original PNGs `ceff2526fd5a68c5daff52385d5800ab77ac569
 The pending capture now explicitly skips the settled-task precondition for this deliberately unfinished phase only. All original pixels, geometry, pending focus/semantics, held-GET, and recovered-state assertions remain. Recovered search, entry, and dialog captures still require strict settling. No shared animation rule, spinner, timer, timeout, or production code changed. Explicit workflow artifact paths now include the recovered-search PNG and JSON. Corrected native execution remains pending CI.
 
 Correction checks: standalone Users spec TypeScript check and two-case Playwright discovery pass. The workflow's exact artifact contract first failed on the newly added recovered-search files; adding that named phase to its expected inventory restored all 5 focused workflow contracts. `git diff --check` passes. Native assertions after the corrected pending capture have not yet run.
+
+## Coordinator aggregate check
+
+On 2026-11-11 at 18:39 UTC, the clean serialized web aggregate completed with 4,135/4,135 tests across 337 files (exit 0; 1,164.91 seconds). Production and DOM-test content was the Users retry implementation from `5f91524`; intervening commits changed native tests, workflows, and evidence notes only. The subsequent production build also passed. This does not replace native execution of the corrected pending-phase sampler or the latest remote full gate.
