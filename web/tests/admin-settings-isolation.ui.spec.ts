@@ -46,7 +46,7 @@ for (const width of [390, 1440]) {
     try {
       await page.setViewportSize({ width, height: 844 });
       await page.goto("/#users");
-      await expect(page.getByText("协作测试用户", { exact: true })).toBeVisible();
+      await expect(page.getByRole("button", { name: "协作测试用户", exact: true })).toBeVisible();
       await expect(page.getByRole("heading", { name: "用户组", exact: true })).toBeVisible();
       await expect(page.getByText("暂无用户组", { exact: true })).toBeVisible();
       expect(settingsReads).toBe(0);
