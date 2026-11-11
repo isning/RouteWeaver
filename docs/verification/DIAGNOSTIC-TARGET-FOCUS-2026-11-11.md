@@ -93,4 +93,32 @@ Four real-App native fixture cases at 390 and 1440 pixels cover missing name, in
 
 Strict native TypeScript, 68-case/20-spec supplemental discovery, and all five workflow contracts pass. Independent source review accepted the integrated fixture, complete reopening assertions and additive artifact wiring. Shared sandbox, servers, timeouts, one worker, zero retries and required gates remain unchanged. Native execution/pixel acceptance and lane runtime remain unverified.
 
-The first coordinator full-DOM attempt was interrupted: its process handle became unavailable and its log contains no completion result. It is not a pass or an assertion failure. A fresh serialized run was started against production/DOM source `0d7e226`; its final result is still pending at this record. The separate published checkpoint `172fc6e` excludes this diagnostic change.
+The first coordinator full-DOM attempt was interrupted: its process handle became unavailable and its log contains no completion result. It is not a pass or an assertion failure. A fresh serialized run was started against production/DOM source `0d7e226`; its completed result is recorded below. The separate published checkpoint `172fc6e` excludes this diagnostic change.
+
+## Completed aggregate and origin fixture preparation
+
+The replacement serialized full-DOM run completed with **4,099 passes and one
+failure across 330 files** in 1,171.66 seconds. Production/DOM source was
+`0d7e226`; later `eae55d2` only added native/config/contract/documentation changes.
+The sole failure was the first `subscription-origin-refresh-race.dom.test.tsx`
+case, at its initial `findByRole("textbox", { name: "订阅域名草稿" })` on line 77
+before any refresh, write or race/recovery assertion. The other four origin-race
+cases passed. Neither that fixture nor its production component changed since
+the earlier complete 4,093-test pass at `36fa9d7`.
+
+This identifies an initial field-readiness failure, not a failed origin-write
+invariant. Cold loading of the real lazy Admin module is consistent with the
+first-case-only result and the earlier settings-receipt finding, but the truncated
+failure DOM does not establish which initial loading stage consumed the wait.
+The origin-race fixture now imports the real Admin module in `beforeAll`, matching
+the receipt-test preparation from `dde6bf7`. These tasks exercise read/write
+ownership after the workspace is available, rather than cold route compilation.
+App routing/session, intercepted HTTP, assertions and all timeout budgets are
+unchanged. Controlled pending/rejected page imports remain covered separately.
+
+After this setup correction, the requested one-worker focused run passed
+**23/23 tests across three files** in 15.11 seconds: origin refresh races, settings
+save receipts and page recovery. `git diff --check` passed. No production code
+changed in this correction. A new coordinator-owned full run is still required;
+the failed aggregate is not relabelled as a pass, and the focused result does not
+provide native-browser or rendered acceptance.

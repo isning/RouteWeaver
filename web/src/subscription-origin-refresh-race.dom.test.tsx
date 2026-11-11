@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, expect, it, vi } from "vitest";
 import { act, cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import App from "./App";
@@ -8,6 +8,13 @@ import { setCSRF, setToken } from "./api";
 import { ownedClickScenario } from "./test-support/owned-click-scenario";
 const clients: QueryClient[] = [];
 const json = (value: unknown) => new Response(JSON.stringify(value), { headers: { "Content-Type": "application/json" } });
+beforeAll(async () => {
+  // These origin read/write races do not measure cold route compilation.
+  // Load the real module before interaction waits; App routing/session, HTTP
+  // fixtures, wait budgets and assertions remain unchanged. Controlled pending
+  // and rejected imports are covered by page-recovery.dom.test.tsx.
+  await import("./Admin");
+});
 afterEach(() => {
   cleanup(); clients.splice(0).forEach(client => client.clear());
   vi.restoreAllMocks(); vi.unstubAllGlobals(); vi.unstubAllEnvs();
