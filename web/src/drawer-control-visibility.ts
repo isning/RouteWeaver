@@ -1,4 +1,4 @@
-import type { FocusEvent, KeyboardEvent, SyntheticEvent } from "react";
+import type { AnimationEvent, FocusEvent, KeyboardEvent, SyntheticEvent } from "react";
 import { visibleFocusCandidates } from "./ui-patterns/focus-candidates";
 
 // Nearest-edge movement; an oversized control already spanning the clip stays put.
@@ -181,8 +181,10 @@ function revealInScroller(
 
 /** Reveal native focus, never choose it. The current Drawer body is the only scroller. */
 export function revealFocusedDrawerControl(event: FocusEvent<HTMLFormElement>) {
-  const form = event.currentTarget,
-    target = event.target;
+  revealOwnedDrawerControl(event.currentTarget, event.target);
+}
+
+function revealOwnedDrawerControl(form: HTMLFormElement, target: EventTarget | null) {
   const doc = form.ownerDocument,
     view = doc.defaultView;
   if (
@@ -213,6 +215,20 @@ export function revealFocusedDrawerControl(event: FocusEvent<HTMLFormElement>) {
   )
     return;
   revealInScroller(target, body, view);
+}
+
+/** Opening motion can enlarge the rail after native focus was already revealed.
+ * Recheck only the current control in this exact open content; never choose focus.
+ * Nonanimated/reduced-motion entry still uses the synchronous focus handler. */
+export function revealFocusedDrawerControlAfterAccordionOpen(event: AnimationEvent<HTMLDivElement>) {
+  const content = event.currentTarget;
+  if (event.target !== content || event.animationName !== "accordion-down" ||
+      !content.matches('[data-slot="accordion-content"][data-state="open"]')) return;
+  const target = content.ownerDocument.activeElement;
+  if (!(target instanceof HTMLElement) || !content.contains(target) ||
+      target.closest('[data-slot="accordion-content"]') !== content) return;
+  const form = content.closest("form");
+  if (form) revealOwnedDrawerControl(form, target);
 }
 
 const excluded =

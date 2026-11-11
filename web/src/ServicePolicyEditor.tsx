@@ -20,7 +20,7 @@ import { loadServicePolicyEditContext } from "./service-policy-edit";
 import { ServicePolicyComparison } from "./ServicePolicyComparison";
 import { useUnsavedChanges } from "./navigation";
 import { useDiscardConfirmation } from "./useDiscardConfirmation";
-import { revealFocusedDrawerControl } from "./drawer-control-visibility";
+import { revealFocusedDrawerControl, revealFocusedDrawerControlAfterAccordionOpen } from "./drawer-control-visibility";
 const countFields = ["onlineIpLimit", "connectionLimit"] as const;
 type CountField = typeof countFields[number];
 type CountText = Partial<Record<CountField, string>>;
@@ -319,7 +319,7 @@ function ServicePolicyDraft({ context, seed, retained, discardRetained, acceptLa
                     onInput: (text: string) => inputCount(field, text), valid: () => countReady(field), resetKey: countKeys[field], initialInputText: rawCounts[field],
                 }]))}/>,
             },
-        ]).map(section => <AccordionItem key={section.key} value={String(section.key)}><AccordionTrigger>{section.label}</AccordionTrigger><AccordionContent className="space-y-4">{section.children}</AccordionContent></AccordionItem>)}</Accordion>
+        ]).map(section => <AccordionItem key={section.key} value={String(section.key)}><AccordionTrigger>{section.label}</AccordionTrigger><AccordionContent className="space-y-4 px-1" onAnimationEnd={revealFocusedDrawerControlAfterAccordionOpen}>{section.children}</AccordionContent></AccordionItem>)}</Accordion>
         {unfinishedRate !== null && <div role="status" className="space-y-2">
           <p>限速输入「{unfinishedRate}」暂不可用。请修正 Mbps 数值，或保留上一个有效限速。</p>
           <ActionButton onClick={discardRate} variant="outline">放弃本次输入，保留上一个有效限速</ActionButton>

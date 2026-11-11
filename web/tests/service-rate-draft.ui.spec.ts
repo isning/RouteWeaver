@@ -17,6 +17,44 @@ const contextPath = "/api/access-policy/edit-context/service/synthetic-rate-plan
 const scenarios = [{ name: "visible-minus", raw: "-", collapse: false },
   { name: "collapsed-exponent", raw: "1e", collapse: true }] as const;
 
+// Observe real DOM events without changing focus, scrolling or animation timing.
+// Only whitelisted synthetic control categories and geometry are retained.
+async function observeLimitMotion(page: Page) {
+  await page.addInitScript(() => {
+    const observations: unknown[] = [];
+    Object.defineProperty(window, "__serviceRateMotionObservations", { value: observations });
+    const take = (event: string, node: EventTarget | null) => {
+      if (!(node instanceof HTMLInputElement) || observations.length >= 50) return;
+      const names = Array.from(node.labels ?? []).map(label => label.textContent?.trim());
+      const field = names.includes("每个入口限速（Mbps）") ? "rate" : names.includes("账号在线 IP 数上限") ? "ip" : names.includes("账号并发逻辑流数上限") ? "connection" : null;
+      const content = node.closest<HTMLElement>('[data-slot="accordion-content"]');
+      const body = node.closest<HTMLElement>("[data-task-overlay-body]");
+      if (!field || !content || !body) return;
+      const box = (element: HTMLElement) => {
+        const rect = element.getBoundingClientRect();
+        return { x: rect.x, y: rect.y, width: rect.width, height: rect.height,
+          scrollTop: element.scrollTop, scrollHeight: element.scrollHeight, clientHeight: element.clientHeight };
+      };
+      observations.push({ event, field, time: performance.now(), focused: document.activeElement === node,
+        input: box(node), accordion: box(content), body: box(body), state: content.getAttribute("data-state"),
+        taskScroll: body.closest('[role="dialog"]')?.getAttribute("data-task-scroll") ?? null });
+    };
+    document.addEventListener("focusin", event => take("focus-capture", event.target), true);
+    document.addEventListener("focusin", event => take("focus-bubble", event.target));
+    document.addEventListener("beforeinput", event => take("beforeinput", event.target), true);
+    document.addEventListener("input", event => take("input-bubble", event.target));
+    const opening = (event: AnimationEvent, phase: string) => {
+      const content = event.target;
+      if (event.animationName !== "accordion-down" || !(content instanceof HTMLElement) ||
+          !content.matches('[data-slot="accordion-content"][data-state="open"]')) return;
+      const target = document.activeElement;
+      if (content.contains(target)) take(phase, target);
+    };
+    document.addEventListener("animationend", event => opening(event, "opening-end-capture"), true);
+    document.addEventListener("animationend", event => opening(event, "opening-end-bubble"));
+  });
+}
+
 async function fixture(page: Page, baseURL: string | undefined) {
   if (!baseURL || !["localhost", "127.0.0.1", "[::1]"].includes(new URL(baseURL).hostname))
     throw new Error("Synthetic service-rate sampler requires loopback");
@@ -90,14 +128,32 @@ async function capture(page: Page, info: TestInfo, stage: string, surface: Locat
     ] });
     await info.attach(`${stage}-pixels`, { body: pixels, contentType: "image/png" });
   } catch (error) { failures.push(error); }
-  let geometry: Record<string, number | boolean | null> | null = null;
+  let geometry: Record<string, number | boolean | string | null> | null = null;
   try {
     const viewport = await page.evaluate(() => ({ width: innerWidth, height: innerHeight,
       scrollWidth: document.documentElement.scrollWidth, focusedTag: document.activeElement?.tagName || null }));
     const count = target ? await target.count() : 0;
     geometry = target && count === 1 ? await target.evaluate((node, expected) => {
       const r = node.getBoundingClientRect(), hit = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2);
+      let clipLeft = 0, clipTop = 0, clipRight = innerWidth, clipBottom = innerHeight;
+      for (let ancestor = node.parentElement; ancestor; ancestor = ancestor.parentElement) {
+        const style = getComputedStyle(ancestor), box = ancestor.getBoundingClientRect();
+        if (/(auto|scroll|hidden|clip)/.test(style.overflowX)) {
+          clipLeft = Math.max(clipLeft, box.left + ancestor.clientLeft);
+          clipRight = Math.min(clipRight, box.left + ancestor.clientLeft + ancestor.clientWidth);
+        }
+        if (/(auto|scroll|hidden|clip)/.test(style.overflowY)) {
+          clipTop = Math.max(clipTop, box.top + ancestor.clientTop);
+          clipBottom = Math.min(clipBottom, box.top + ancestor.clientTop + ancestor.clientHeight);
+        }
+      }
+      const shadow = getComputedStyle(node).boxShadow;
       return { x: r.x, y: r.y, width: r.width, height: r.height,
+        shadow, clipLeft, clipTop, clipRight, clipBottom,
+        // Official shadcn input/button ring; independently verify settled paint.
+        ring3px: /(?:^|\s)0px 0px 0px 3px(?:\s|,|$)/.test(shadow),
+        ringInsideClips: r.left - 3 >= clipLeft - 0.5 && r.right + 3 <= clipRight + 0.5 &&
+          r.top - 3 >= clipTop - 0.5 && r.bottom + 3 <= clipBottom + 0.5,
         inViewport: r.x >= 0 && r.y >= 0 && r.right <= innerWidth && r.bottom <= innerHeight,
         focused: node === document.activeElement, focusVisible: node.matches(":focus-visible"),
         hit: hit === node || node.contains(hit),
@@ -118,6 +174,7 @@ for (const width of [390, 1440]) for (const scenario of scenarios) {
   test(`service rate ${scenario.name} correction at ${width}px`, async ({ page, baseURL }, info) => {
     await page.setViewportSize({ width, height: width === 390 ? 560 : 900 });
     const ledger = await fixture(page, baseURL), failures: unknown[] = [];
+    await observeLimitMotion(page);
     const editor = page.getByRole("dialog", { name: `编辑 ${service.name}`, exact: true });
     const limits = editor.getByRole("button", { name: "在线、并发与速率限制", exact: true });
     const rate = editor.getByRole("spinbutton", { name: "每个入口限速（Mbps）", exact: true });
@@ -148,7 +205,7 @@ for (const width of [390, 1440]) for (const scenario of scenarios) {
       await page.keyboard.type(scenario.raw);
       await expect(rate).toHaveValue(scenario.raw);
       const raw = await capture(page, info, "raw-input", editor, rate, scenario.raw);
-      expect(raw).toMatchObject({ focused: true, focusVisible: true, inViewport: true, hit: true, inputMatches: true });
+      expect(raw).toMatchObject({ focused: true, focusVisible: true, inViewport: true, hit: true, inputMatches: true, ring3px: true, ringInsideClips: true });
       if (scenario.collapse) {
         await collapseLimits();
         await capture(page, info, "collapsed-draft", editor, limits);
@@ -161,7 +218,7 @@ for (const width of [390, 1440]) for (const scenario of scenarios) {
       await expect(review).toHaveCount(0);
       expect(ledger.previewRequests).toBe(0);
       const invalid = await capture(page, info, "blocked-preview", editor, rate, scenario.raw);
-      expect(invalid).toMatchObject({ focused: true, focusVisible: true, inViewport: true, hit: true, invalid: true, inputMatches: true });
+      expect(invalid).toMatchObject({ focused: true, focusVisible: true, inViewport: true, hit: true, invalid: true, inputMatches: true, ring3px: true, ringInsideClips: true });
       await activate(cancel);
       const decision = page.getByRole("alertdialog", { name: "放弃尚未保存的授权修改？", exact: true });
       const continueEditing = decision.getByRole("button", { name: "继续编辑", exact: true });
@@ -178,7 +235,7 @@ for (const width of [390, 1440]) for (const scenario of scenarios) {
       await activate(limits); await expect(rate).toHaveValue("+03.000");
       await tabTo(page, editor, rate);
       const corrected = await capture(page, info, "corrected-remount", editor, rate, "+03.000");
-      expect(corrected).toMatchObject({ focused: true, focusVisible: true, inViewport: true, hit: true, inputMatches: true });
+      expect(corrected).toMatchObject({ focused: true, focusVisible: true, inViewport: true, hit: true, inputMatches: true, ring3px: true, ringInsideClips: true });
       ledger.previewCommands++;
       await activate(preview); await expect(review).toBeVisible();
       await expect(review.getByRole("row", { name: /每个逻辑入口速率/ }).getByRole("cell").nth(1)).toHaveText("3 Mbps");
@@ -191,7 +248,9 @@ for (const width of [390, 1440]) for (const scenario of scenarios) {
       try { await capture(page, info, "final-original", page.locator("body"), undefined, undefined, false); }
       catch (error) { failures.push(error); }
       try {
-        const body = JSON.stringify({ width, scenario: scenario.name, readyReads, authBaseline, ...ledger,
+        const motionTimeline = await page.evaluate(() =>
+          (window as unknown as { __serviceRateMotionObservations?: unknown[] }).__serviceRateMotionObservations ?? []);
+        const body = JSON.stringify({ width, scenario: scenario.name, readyReads, authBaseline, motionTimeline, ...ledger,
           scope: "Synthetic native service-rate draft and preview only; no save/apply/backend enforcement" }, null, 2);
         await writeFile(info.outputPath("service-rate-request-ledger.json"), body);
         await info.attach("service-rate-request-ledger", { body, contentType: "application/json" });
