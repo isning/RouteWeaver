@@ -57,8 +57,12 @@ negative private/arbitrary-file checks; these are not observed browser artifacts
 - Independent source review accepted the bounded sampler. Its lane-count metadata
   correction was applied and the focused contracts rerun. Setup uses pointer
   pagination/search fill; recovery and editor entry use keyboard. Row attachment
-  demonstrates retention, not visibility in the current viewport. The synthetic
-  group references an absent plan, so this is not valid-plan edit completion.
+  demonstrates retention, not visibility in the current viewport. A fixture-only
+  follow-up supplies the matching synthetic group plan through the existing
+  allowlisted services response, avoiding an unrelated missing-plan state.
+  Follow-up verification repeated strict TypeScript, both eight-case discovery
+  commands, 5/5 focused contracts (10.321 seconds) and the whitespace check.
+  This still does not exercise edit completion or backend policy enforcement.
   Focus-ring contrast and actual native stale-editor behavior remain unverified.
 - Pinned TDD, tests, mocking and review references were read from the exact
   upstream commit in AGENTS.md because its local reference directory was absent.

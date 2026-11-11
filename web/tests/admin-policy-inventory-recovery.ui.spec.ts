@@ -30,7 +30,11 @@ async function fixture(page: Page, baseURL: string | undefined, kind: Kind) {
     "/api/auth/me": { user: { id: "synthetic-policy-admin", name: "合成管理员", role: "admin" }, csrfToken: "synthetic-policy-only" },
     "/api/state": { users: [], nodes: [], routes: [], revisions: [], capabilities: [] },
     "/api/published-routes": [],
-    ...(kind === "service" ? { "/api/rates": [] } : { "/api/services": [] }),
+    ...(kind === "service" ? { "/api/rates": [] } : { "/api/services": [{
+      id: "plan", name: "Synthetic group plan", quotaBytes: 0, routeIds: [],
+      onlineIpLimit: 0, connectionLimit: 0, entryRateBps: 0,
+      cycle: { mode: "none", timezone: "UTC+8", anchor: "0001-01-01T00:00:00Z" },
+    }] }),
   };
   page.on("pageerror", () => ledger.pageErrors++);
   await page.context().route("**/*", async route => {
