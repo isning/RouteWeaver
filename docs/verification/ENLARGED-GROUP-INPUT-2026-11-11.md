@@ -93,3 +93,7 @@ older intermittent 213e6b2 border-box-ratio failure is not root-caused by this
 result. The reviewer performed no download, image transformation, source edit or
 test run. The separate full local suite was still running when this note was
 written; no pass is recorded for it here.
+
+### Aggregate completion
+
+The clean local aggregate for production candidate `e55538d` completed on 2026-11-11 at 20:04 UTC: 4,139/4,139 tests across 338 files, exit 0, 1,165.21 seconds; the production build also passed. Exact remote `c22478d843b3bef6efcd9fdae97985f60819caec` subsequently passed all five workflows and all 20 required quality jobs, including 567/567 native browser cases and 72/72 recovery cases. Required run: https://github.com/isning/RouteWeaver/actions/runs/43090150934. This aggregate result does not broaden the specific pixel acceptance or resolve the separately documented intermittent pre-existing intersection failure.
