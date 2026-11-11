@@ -452,6 +452,14 @@ test.describe("keyboard validation recovery", () => {
         name: `校验 ${name}`,
         exact: true,
       });
+      // The result modal correctly hides the background action from the
+      // accessibility tree. Passive evidence still reads that same DOM control;
+      // all user actions and task assertions keep the visible-only check locator.
+      const observedCheck = page.getByRole("button", {
+        name: `校验 ${name}`,
+        exact: true,
+        includeHidden: true,
+      });
       const capturePhase = async (stage: string) => {
         const observation = await capture(page, info, stage);
         stages.push(stage);
@@ -459,7 +467,7 @@ test.describe("keyboard validation recovery", () => {
         // inputs, credentials, raw request bodies or private response payloads.
         focusStates.push({
           stage,
-          ...(await check.evaluate(
+          ...(await observedCheck.evaluate(
             (element) => ({
               checkFocused: document.activeElement === element,
               bodyFocused: document.activeElement === document.body,

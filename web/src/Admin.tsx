@@ -192,13 +192,33 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
     },
     onError: setError,
   });
+  const pendingValidationRoutes = useRef(new Set<string>());
+  const [pendingValidationRouteIds, setPendingValidationRouteIds] = useState(
+    new Set<string>(),
+  );
   const validate = useMutation({
     mutationFn: (r: RouteRecord) =>
       post<Validation>(`/routes/${r.id}/validate`),
     onSuccess: () => {
       client.invalidateQueries({ queryKey: ["admin-state"] });
     },
+    onSettled: (_result, _error, route) => {
+      pendingValidationRoutes.current.delete(route.id);
+      setPendingValidationRouteIds(new Set(pendingValidationRoutes.current));
+    },
   });
+  const validateRoute = (route: RouteRecord) => {
+    if (pendingValidationRoutes.current.has(route.id)) return;
+    pendingValidationRoutes.current.add(route.id);
+    setPendingValidationRouteIds(new Set(pendingValidationRoutes.current));
+    validate.mutate(route, {
+      // Only the latest observed check owns this sheet.
+      onSuccess: (result) => {
+        setValidation(result);
+        setValidationName(route.name);
+      },
+    });
+  };
   const editRoute = (r?: RouteRecord) => {
     setRoute(
       r
@@ -417,19 +437,8 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
                                 leadingIcon={<EyeOutlined aria-hidden="true" />}
                                 aria-label={`校验 ${r.name}`}
                                 keepFocusableWhilePending
-                                pending={
-                                  validate.isPending &&
-                                  validate.variables?.id === r.id
-                                }
-                                onClick={() =>
-                                  validate.mutate(r, {
-                                    // Only the latest observed check owns this sheet.
-                                    onSuccess: (result) => {
-                                      setValidation(result);
-                                      setValidationName(r.name);
-                                    },
-                                  })
-                                }
+                                pending={pendingValidationRouteIds.has(r.id)}
+                                onClick={() => validateRoute(r)}
                                 variant="ghost"
                               />
                               <AdminRowMenu
