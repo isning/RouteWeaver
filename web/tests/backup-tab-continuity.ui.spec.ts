@@ -299,7 +299,7 @@ for (const width of [390, 1440]) {
             scope: "Synthetic App continuity only; no backend restore or complete accessibility acceptance" }, null, 2),
           contentType: "application/json",
         });
-        expect(http.ledger.rejected, "All unexpected and off-origin traffic is blocked").toEqual([]);
+        expect(http.ledger.rejected, "All unexpected and off-origin HTTP requests are blocked").toEqual([]);
         expect(http.ledger.pageErrors).toBe(0);
         expect(http.ledger.payloadChecks.every((item) => item.valid)).toBe(true);
       } catch (error) { failures.push(error); }

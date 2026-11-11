@@ -26,6 +26,7 @@ export default defineConfig({
         "**/entry-route-identity.ui.spec.ts",
         "**/route-account-identity.ui.spec.ts",
         "**/backup-tab-continuity.ui.spec.ts",
+        "**/profile-read-recovery.ui.spec.ts",
       ],
     })),
   workers: 1,
