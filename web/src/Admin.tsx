@@ -200,7 +200,6 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
       setValidation(result);
       setValidationName(r.name);
     },
-    onError: setError,
   });
   const editRoute = (r?: RouteRecord) => {
     setRoute(
@@ -322,6 +321,7 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
         }
       />
       <ErrorNotice error={error} />
+      <ErrorNotice error={validate.error} />
       <QueryState
         loading={query.isPending}
         paused={query.isPaused}
