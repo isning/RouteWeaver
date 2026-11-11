@@ -239,8 +239,8 @@ it("keeps full-view status, routes, validity, calendar and all zero-limit values
   );
   const table = dialog.getByRole("table", { name: "Alice" });
   expect(within(table).getAllByRole("rowheader")).toHaveLength(11);
-  expectCellAssociation(table, "状态", "变更前", "平台授权有效");
-  expectCellAssociation(table, "状态", "变更后", "平台授权有效");
+  expectCellAssociation(table, "状态", "变更前", "服务已开通");
+  expectCellAssociation(table, "状态", "变更后", "服务已开通");
   expectCellAssociation(
     table,
     "授权线路",

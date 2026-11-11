@@ -72,14 +72,15 @@ export interface NamedRecord {
   id: string;
   name: string;
 }
+// Policy status describes service eligibility, not assigned routes or applied entries.
 export const policyStatus: Record<string, string> = {
-  active: "平台授权有效",
+  active: "服务已开通",
   paused: "平台服务已暂停",
   disabled: "账号已停用",
   expired: "已到期",
-  "not-started": "尚未开通",
+  "not-started": "未到开通时间",
   ambiguous: "用户组方案冲突",
-  "service-missing": "服务方案已缺失",
+  "service-missing": "服务方案不存在",
 };
 export function policySource(
   source: string | undefined,

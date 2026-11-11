@@ -139,7 +139,7 @@ function OverviewPolicyStatus({ value }: { value?: string }) {
     ambiguous: "error",
     "service-missing": "error",
   };
-  return <Badge variant="secondary">{policyStatus[value]}</Badge>;
+  return <Badge variant="secondary">{value === "active" ? "已开通" : policyStatus[value]}</Badge>;
 }
 function OutputComparisonLine({
   output,

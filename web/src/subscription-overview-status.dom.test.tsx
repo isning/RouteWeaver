@@ -104,13 +104,13 @@ afterEach(() => {
 });
 
 it.each([
-  ["active", "平台授权有效"],
+  ["active", "已开通"],
   ["paused", "平台服务已暂停"],
   ["disabled", "账号已停用"],
   ["expired", "已到期"],
-  ["not-started", "尚未开通"],
+  ["not-started", "未到开通时间"],
   ["ambiguous", "用户组方案冲突"],
-  ["service-missing", "服务方案已缺失"],
+  ["service-missing", "服务方案不存在"],
   ["exhausted", "额度已用尽"],
   ["accounting-pending", "等待统计同步"],
 ])("names the ordinary account's %s policy state", async (status, label) => {
@@ -118,6 +118,7 @@ it.each([
   const card = await usageCard();
   expect(card.getByText(label, { exact: true, selector: '[data-slot="badge"]' })).toBeTruthy();
   expect(card.queryByText(status, { exact: true })).toBeNull();
+  if (status !== "active") expect(card.queryByText("已开通")).toBeNull();
 });
 
 it.each<{ status: string | undefined; label: string }>([
@@ -128,17 +129,18 @@ it.each<{ status: string | undefined; label: string }>([
   mountWorkspace(status);
   const card = await usageCard();
   expect(card.getByText(label, { exact: true, selector: '[data-slot="badge"]' })).toBeTruthy();
-  expect(card.queryByText("平台授权有效")).toBeNull();
+  expect(card.queryByText("已开通")).toBeNull();
 });
 
-it("names active authorization without presenting unlimited quota as available routes", async () => {
+it("names an opened service even with no assigned routes, without claiming connection readiness", async () => {
   mountWorkspace("active");
   const card = await usageCard();
-  expect(card.getByText("平台授权有效")).toBeTruthy();
+  expect(card.getByText("已开通")).toBeTruthy();
   expect(card.getAllByText("不限额")).toHaveLength(2);
   expect(card.getByText("剩余额度")).toBeTruthy();
   expect(card.getByText("总额度")).toBeTruthy();
   expect(card.queryByText("生效中")).toBeNull();
+  expect(card.queryByText(/线路可用|连接正常|已连接/)).toBeNull();
   expect(screen.queryByText(/平台提供的线路/)).toBeNull();
 });
 
