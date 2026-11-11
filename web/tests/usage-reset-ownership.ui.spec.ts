@@ -45,6 +45,9 @@ async function fixture(page: Page, baseURL: string | undefined, writeMode: Write
   const reads: Record<string, unknown> = {
     "/api/auth/me": { user: { id: "synthetic-reset-admin", name: "合成管理员", role: "admin" }, csrfToken: csrf },
     "/api/state": { users: [account], nodes: [], routes: [], revisions: [], capabilities: [] },
+    // Back/Forward journeys visit Services, which mounts RateSettings.
+    // Fulfill only its exact GET; query metadata and all writes remain guarded.
+    "/api/rates": [],
     "/api/services": [], "/api/published-routes": [], "/api/user-groups": [], "/api/invites": [], "/api/me/notifications": [],
     [contextPath]: { target: { kind: "entitlement", id: account.id }, record: { entitlement },
       precondition: { exists: true, revision: "synthetic-reset-opened" },
