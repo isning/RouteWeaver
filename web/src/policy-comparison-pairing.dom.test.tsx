@@ -205,9 +205,14 @@ it("pairs each changed field under one label and associates both values with the
     within(table).getAllByRole("rowheader", { name: "周期额度" }),
   ).toHaveLength(1);
   expectCellAssociation(table, "周期额度", "变更前", "50 GiB 方案：旧方案");
-  expectCellAssociation(table, "周期额度", "变更后", "100 GiB 方案：新方案");
+  expectCellAssociation(table, "周期额度", "变更后", "100 GiB");
+  const sourceCells = fieldRow(table, "来源").getAllByRole("cell");
+  expect(sourceCells.map((cell) => cell.textContent)).toEqual(["见各项", "方案：新方案"]);
+  const limitCells = fieldRow(table, "周期额度").getAllByRole("cell");
+  expect(limitCells[0].getAttribute("aria-describedby")).toBeNull();
+  expect(limitCells[1].getAttribute("aria-describedby")).toBe(sourceCells[1].id);
   expectCellAssociation(table, "在线 IP 上限", "变更前", "2 个 个人覆盖");
-  expectCellAssociation(table, "在线 IP 上限", "变更后", "不限制 方案：新方案");
+  expectCellAssociation(table, "在线 IP 上限", "变更后", "不限制");
   expectCellAssociation(table, "并发逻辑流上限", "变更前", "8 条 个人覆盖");
   expectCellAssociation(table, "每个逻辑入口速率", "变更前", "1 Mbps 个人覆盖");
   expect(within(table).queryByRole("rowheader", { name: "状态" })).toBeNull();
@@ -233,7 +238,7 @@ it("keeps full-view status, routes, validity, calendar and all zero-limit values
     dialog.getByRole("checkbox", { name: "显示完整授权" }),
   );
   const table = dialog.getByRole("table", { name: "Alice" });
-  expect(within(table).getAllByRole("rowheader")).toHaveLength(10);
+  expect(within(table).getAllByRole("rowheader")).toHaveLength(11);
   expectCellAssociation(table, "状态", "变更前", "平台授权有效");
   expectCellAssociation(table, "状态", "变更后", "平台授权有效");
   expectCellAssociation(
@@ -264,7 +269,7 @@ it("keeps full-view status, routes, validity, calendar and all zero-limit values
     table,
     "每个逻辑入口速率",
     "变更后",
-    "不限制 方案：新方案",
+    "不限制",
   );
   expect(
     dialog.getAllByText("切换方案或续期后，保留已有用量。"),
@@ -398,13 +403,13 @@ it("keeps five users per page and retains a failed review, but resets a differen
     within(dialog.getByRole("table", { name: "User 6" })).getAllByRole(
       "rowheader",
     ),
-  ).toHaveLength(10);
+  ).toHaveLength(11);
   await owner.click(() => dialog.getByRole("button", { name: "上一页" }));
   expect(
     within(dialog.getByRole("table", { name: "User 1" })).getAllByRole(
       "rowheader",
     ),
-  ).toHaveLength(10);
+  ).toHaveLength(11);
   await owner.click(() => dialog.getByRole("button", { name: "下一页" }));
   await owner.click(() => dialog.getByRole("checkbox", { name: consent }));
   await owner.click(() => dialog.getByRole("button", { name: "更新授权" }));
@@ -415,7 +420,7 @@ it("keeps five users per page and retains a failed review, but resets a differen
     within(dialog.getByRole("table", { name: "User 6" })).getAllByRole(
       "rowheader",
     ),
-  ).toHaveLength(10);
+  ).toHaveLength(11);
   await owner.click(() => dialog.getByRole("button", { name: "返回编辑" }));
   mounted.rerender(
     <Caller
@@ -502,7 +507,7 @@ it("retains blocked paired values without a completeness claim or an apply reque
     dialog.getByRole("table", { name: "Alice" }),
     "周期额度",
     "变更后",
-    "100 GiB 方案：新方案",
+    "100 GiB",
   );
   await owner.click(() => dialog.getByRole("checkbox", { name: consent }));
   const apply = dialog.getByRole("button", {

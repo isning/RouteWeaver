@@ -21,7 +21,7 @@ env:
 
 jobs:
   recovery:
-    name: Nine recovery specs (supplemental evidence only)
+    name: Ten recovery specs (supplemental evidence only)
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
@@ -81,7 +81,7 @@ jobs:
             await browser.close();
           }
           JS
-      - name: Run nine recovery specs with unchanged fixtures
+      - name: Run ten recovery specs with unchanged fixtures
         working-directory: web
         # Bound this subset without changing per-test timeouts; reserve cleanup/upload time.
         timeout-minutes: 10
@@ -96,6 +96,8 @@ jobs:
           path: |
             bin/verification/browser-environment.json
             web/playwright-report/
+            web/test-results/group-access-decision*/group-access-*.png
+            web/test-results/group-access-decision*/group-access-evidence-*.json
             web/test-results/*/direct-output-close-scoped-list.png
             web/test-results/*/notification-channel-journey-*.json
             web/test-results/*/notification-channel-journey-*.png

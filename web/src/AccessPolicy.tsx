@@ -191,7 +191,8 @@ function PolicyComparison({ effect, userName, showUserId, services, routes, show
     const grouped = limits.length > 1;
     const beforeSource = grouped ? sharedLimitSource(effect.before, limits) : undefined;
     const afterSource = grouped ? sharedLimitSource(effect.after, limits) : undefined;
-    const sharedSource = beforeSource !== undefined && afterSource !== undefined;
+    const sharedSources = [beforeSource !== undefined, afterSource !== undefined];
+    const hasSharedSource = sharedSources.some(Boolean);
     const identitiesByLabel = new Map<string, Set<string>>();
     const identityLabel = (reference: string, policy: EffectivePolicy) => policySource(`service:${reference}`, services, policy.service);
     const sourceReference = (field: PolicyDisplayField, policy: EffectivePolicy) => ["service", "routes", ...policyLimitFields].includes(field.key)
@@ -229,13 +230,14 @@ function PolicyComparison({ effect, userName, showUserId, services, routes, show
             disambiguate(after.find((value) => value.key === field.key)!, effect.after),
         ];
     };
-    const sourcePair = sharedSource ? pair(limits[0]) : undefined;
+    const sourcePair = hasSharedSource ? pair(limits[0]) : undefined;
     const renderRow = (field: PolicyDisplayField) => {
-        const shared = sharedSource && policyLimitFields.includes(field.key);
+        const isLimit = policyLimitFields.includes(field.key);
         return (<TableRow role="row" key={field.key}>
         <TableHead scope="row" role="rowheader" id={`${id}-${field.key}`}>{field.label}</TableHead>
         {pair(field).map((value, index) => {
                 const column = index === 0 ? "before" : "after";
+                const shared = isLimit && sharedSources[index];
                 return (<TableCell className="whitespace-normal [overflow-wrap:anywhere]" key={column} role="cell" aria-label={!shared && value.detail && value.detail !== value.value ? `${value.value} ${Array.isArray(value.detail) ? value.detail.join(" ") : value.detail}` : undefined} headers={`${id}-${field.key} ${id}-${column}`} aria-describedby={shared ? `${id}-source-${column}` : undefined}>
               <PolicyFieldValue field={shared ? { ...value, detail: undefined } : value}/>
             </TableCell>);
@@ -268,11 +270,11 @@ function PolicyComparison({ effect, userName, showUserId, services, routes, show
                 </TableRow>
                 {sourcePair && (<TableRow role="row" className="policy-comparison-source text-xs text-muted-foreground">
                     <TableHead scope="row" role="rowheader" id={`${id}-source`}>
-                      {beforeSource === afterSource ? "来源" : "来源变更"}
+                      {sharedSources.every(Boolean) && beforeSource !== afterSource ? "来源变更" : "来源"}
                     </TableHead>
                     {sourcePair.map((value, index) => {
                         const column = index === 0 ? "before" : "after";
-                        return <TableCell className="whitespace-normal [overflow-wrap:anywhere]" key={column} role="cell" id={`${id}-source-${column}`} headers={`${id}-source ${id}-${column}`}>{value.detail}</TableCell>;
+                        return <TableCell className="whitespace-normal [overflow-wrap:anywhere]" key={column} role="cell" id={`${id}-source-${column}`} headers={`${id}-source ${id}-${column}`}>{sharedSources[index] ? value.detail : "见各项"}</TableCell>;
                     })}
                   </TableRow>)}
                 {limits.map(renderRow)}

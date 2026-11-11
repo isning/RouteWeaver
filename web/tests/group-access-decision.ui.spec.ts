@@ -202,6 +202,20 @@ for (const width of [1440, 390]) {
         await expect(ip.getByRole("cell").nth(1)).toContainText(afterIP);
         await expect(streams.getByRole("cell").nth(0)).toContainText(beforeLimit);
         await expect(streams.getByRole("cell").nth(1)).toContainText(afterLimit);
+        // Repeated proven limit provenance belongs to its own column once.
+        // Mixed opposite provenance must not suppress that independent summary.
+        if (name === newName) {
+          const source = impact.getByRole("row").filter({
+            has: page.getByRole("rowheader", { name: /^来源(?:变更)?$/, exact: true }),
+          }).getByRole("cell").nth(1);
+          await expect(source).toContainText(planName);
+          const sourceId = await source.getAttribute("id");
+          expect(sourceId).toBeTruthy();
+          await expect(ip.getByRole("cell").nth(1)).toHaveAttribute("aria-describedby", sourceId!);
+          await expect(streams.getByRole("cell").nth(1)).toHaveAttribute("aria-describedby", sourceId!);
+          await expect(ip.getByRole("cell").nth(1)).toHaveText(afterIP);
+          await expect(streams.getByRole("cell").nth(1)).toHaveText(afterLimit);
+        }
         if (width === 390) {
           await impact.evaluate((element) => element.scrollIntoView({ block: "start" }));
           await capture(name === oldName ? "outgoing-identity" : "incoming-identity", review,

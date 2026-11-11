@@ -20,6 +20,7 @@ export default defineConfig({
         "**/compact-choice-keyboard.ui.spec.ts",
         "**/multi-choice-reopening.ui.spec.ts",
         "**/fleet-request-recovery.ui.spec.ts",
+        "**/group-access-decision.ui.spec.ts",
       ],
     })),
   workers: 1,

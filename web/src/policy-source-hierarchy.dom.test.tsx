@@ -179,7 +179,7 @@ it("disambiguates distinct plan references with identical names only where the p
   ]);
 });
 
-it.each(["before", "after"] as const)("keeps mixed %s provenance local without a shared-source legend", async (side) => {
+it.each(["before", "after"] as const)("keeps mixed %s provenance inline while summarizing only its proven opposite side", async (side) => {
   const owner = currentOwner;
   const previous = side === "before" ? { ...before, provenance: { ...before.provenance, quotaBytes: "account" } } : before;
   const next = side === "after" ? { ...after, provenance: { ...after.provenance, quotaBytes: "individual" }, entitlement: { ...after.entitlement, quotaOverride: 107374182400 } } : after;
@@ -187,12 +187,16 @@ it.each(["before", "after"] as const)("keeps mixed %s provenance local without a
   mount(owner, <Caller />);
   const table = (await review(owner)).getByRole("table", { name: "Alice" });
   expect(within(table).getByRole("rowgroup", { name: "周期额度与访问限制" })).toBeTruthy();
-  expect(within(table).queryByRole("rowheader", { name: /^来源/ })).toBeNull();
+  const sources = row(table, "来源").getAllByRole("cell");
+  expect(sources.map(cell => cell.textContent)).toEqual(side === "before" ? ["见各项", "方案：标准方案"] : ["个人覆盖", "见各项"]);
   expect(row(table, "周期额度").getAllByRole("cell").map((cell) => cell.textContent)).toEqual(
-    side === "before" ? ["50 GiB账号设置", "100 GiB方案：标准方案"] : ["50 GiB个人覆盖", "100 GiB个人覆盖"],
+    side === "before" ? ["50 GiB账号设置", "100 GiB"] : ["50 GiB", "100 GiB个人覆盖"],
   );
-  expect(row(table, "在线 IP 上限").getAllByRole("cell").map((cell) => cell.textContent)).toEqual(["2 个个人覆盖", "不限制方案：标准方案"]);
-  expect(row(table, "在线 IP 上限").getAllByRole("cell").every((cell) => !cell.hasAttribute("aria-describedby"))).toBe(true);
+  const ip = row(table, "在线 IP 上限").getAllByRole("cell");
+  expect(ip.map(cell => cell.textContent)).toEqual(side === "before" ? ["2 个个人覆盖", "不限制"] : ["2 个", "不限制方案：标准方案"]);
+  const shared = side === "before" ? 1 : 0;
+  expect(ip[shared].getAttribute("aria-describedby")).toBe(sources[shared].id);
+  expect(ip[1 - shared].hasAttribute("aria-describedby")).toBe(false);
 });
 
 it("distinguishes same-named mixed source references within one column without inventing a common source", async () => {
@@ -202,7 +206,7 @@ it("distinguishes same-named mixed source references within one column without i
   preview(before, { ...after, provenance: { ...after.provenance, onlineIpLimit: "service:other-plan" } });
   mount(owner, <Caller services={[{ id: "other-plan", name: "标准方案" }]} />);
   const table = (await review(owner)).getByRole("table", { name: "Alice" });
-  expect(within(table).queryByRole("rowheader", { name: /^来源/ })).toBeNull();
+  expect(row(table, "来源").getAllByRole("cell").map(cell => cell.textContent)).toEqual(["个人覆盖", "见各项"]);
   expect(row(table, "周期额度").getAllByRole("cell")[1].textContent).toBe("100 GiB方案：标准方案（ID：plan-next）");
   expect(row(table, "在线 IP 上限").getAllByRole("cell")[1].textContent).toBe("不限制方案：标准方案（ID：other-plan）");
   expect(row(table, "服务方案").getAllByRole("cell")[1].textContent).toBe("标准方案（ID：plan-next）个人覆盖");
@@ -229,7 +233,8 @@ it.each(fallbackSources)("preserves the full inline fallback for $label", async 
   mount(owner, <Caller services={services} />);
   const table = (await review(owner)).getByRole("table", { name: "Alice" });
   const group = within(table).getByRole("rowgroup", { name: "周期额度与访问限制" });
-  expect(within(group).queryByRole("rowheader", { name: /^来源/ })).toBeNull();
+  expect(row(table, "来源").getAllByRole("cell").map(cell => cell.textContent)).toEqual(["个人覆盖", "见各项"]);
+  expect(row(table, "周期额度").getAllByRole("cell")[1].hasAttribute("aria-describedby")).toBe(false);
   expect(within(group).getAllByText(expected)).toHaveLength(4);
   expect(row(table, "周期额度").getAllByRole("cell")[1].textContent).toBe(`100 GiB${expected}`);
   expect(row(table, "在线 IP 上限").getAllByRole("cell")[1].textContent).toBe(`不限制${expected}`);
@@ -345,4 +350,70 @@ it("keeps shared-source comparisons and every blocker without permitting a block
   expect(update.disabled).toBe(true);
   await owner.click(() => update);
   expect(writes).toEqual(["/api/access-policy/preview"]);
+});
+
+it("states a proven shared source once on its own side while retaining the mixed opposite sources", async () => {
+  const owner = currentOwner;
+  preview({ ...before, provenance: { ...before.provenance, quotaBytes: "account" } }, after);
+  mount(owner, <Caller />);
+  const table = (await review(owner)).getByRole("table", { name: "Alice" });
+  const group = within(table).getByRole("rowgroup", { name: "周期额度与访问限制" });
+  const sources = row(table, "来源").getAllByRole("cell");
+  expect(sources.map(cell => cell.textContent)).toEqual(["见各项", "方案：标准方案"]);
+  expect(within(group).getAllByText("方案：标准方案")).toHaveLength(1);
+  expect(row(table, "周期额度").getAllByRole("cell").map(cell => cell.textContent)).toEqual(["50 GiB账号设置", "100 GiB"]);
+  expect(row(table, "在线 IP 上限").getAllByRole("cell").map(cell => cell.textContent)).toEqual(["2 个个人覆盖", "不限制"]);
+  for (const label of ["周期额度", "在线 IP 上限", "并发逻辑流上限", "每个逻辑入口速率"]) {
+    const cells = row(table, label).getAllByRole("cell");
+    expect(cells[0].hasAttribute("aria-describedby")).toBe(false);
+    expect(cells[1].getAttribute("aria-describedby")).toBe(sources[1].id);
+  }
+  expect((screen.getByRole("button", { name: "更新授权" }) as HTMLButtonElement).disabled).toBe(true);
+});
+
+it("keeps both mixed source columns inline without a source summary", async () => {
+  const owner = currentOwner;
+  preview(
+    { ...before, provenance: { ...before.provenance, quotaBytes: "account" } },
+    { ...after, provenance: { ...after.provenance, quotaBytes: "individual" }, entitlement: { ...after.entitlement, quotaOverride: plan.quotaBytes } },
+  );
+  mount(owner, <Caller />);
+  const table = (await review(owner)).getByRole("table", { name: "Alice" });
+  const group = within(table).getByRole("rowgroup", { name: "周期额度与访问限制" });
+  expect(within(group).queryByRole("rowheader", { name: /^来源/ })).toBeNull();
+  const expected = [
+    ["周期额度", "50 GiB账号设置", "100 GiB个人覆盖"],
+    ["在线 IP 上限", "2 个个人覆盖", "不限制方案：标准方案"],
+    ["并发逻辑流上限", "8 条个人覆盖", "不限制方案：标准方案"],
+    ["每个逻辑入口速率", "1 Mbps个人覆盖", "不限制方案：标准方案"],
+  ];
+  for (const [label, previous, next] of expected) {
+    const cells = row(table, label).getAllByRole("cell");
+    expect(cells.map(cell => cell.textContent)).toEqual([previous, next]);
+    expect(cells.every(cell => !cell.hasAttribute("aria-describedby"))).toBe(true);
+  }
+});
+
+it.each(["before", "after"] as const)("disambiguates a shared %s plan from a same-named inline opposite plan", async (side) => {
+  const owner = currentOwner;
+  const mixed: EffectivePolicy = {
+    ...before, serviceId: "plan-old", service: { ...plan, id: "plan-old" },
+    provenance: { ...before.provenance, service: "individual", quotaBytes: "service:plan-old" },
+  };
+  preview(side === "before" ? after : mixed, side === "before" ? mixed : after);
+  mount(owner, <Caller />);
+  const table = (await review(owner)).getByRole("table", { name: "Alice" });
+  const shared = side === "before" ? 0 : 1;
+  const sources = row(table, "来源").getAllByRole("cell");
+  expect(sources[shared].textContent).toBe("方案：标准方案（ID：plan-next）");
+  expect(sources[1 - shared].textContent).toBe("见各项");
+  const quota = row(table, "周期额度").getAllByRole("cell");
+  expect(quota[shared].textContent).toBe("100 GiB");
+  expect(quota[1 - shared].textContent).toBe("50 GiB方案：标准方案（ID：plan-old）");
+  expect(quota[1 - shared].getAttribute("aria-label")).toBe("50 GiB 方案：标准方案（ID：plan-old）");
+  for (const label of ["周期额度", "在线 IP 上限", "并发逻辑流上限", "每个逻辑入口速率"]) {
+    const cells = row(table, label).getAllByRole("cell");
+    expect(cells[shared].getAttribute("aria-describedby")).toBe(sources[shared].id);
+    expect(cells[1 - shared].hasAttribute("aria-describedby")).toBe(false);
+  }
 });
