@@ -167,7 +167,9 @@ for (const width of [390, 1440]) {
       http.armRetry(); await page.keyboard.press("Enter");
       await expect(page.getByText("正在核对用户…", { exact: true })).toBeVisible();
       await expect(row).toBeDisabled(); await expect(entry).toBeDisabled();
-      const pendingGeometry = await capture(page, info, "retry-pending", page.locator("body"), [{ label: "retry", locator: retry }]);
+      // This deliberately held read owns a visible infinite spinner: capture
+      // the pending phase as-is, not as a settled task. Recovery stays strict.
+      const pendingGeometry = await capture(page, info, "retry-pending", page.locator("body"), [{ label: "retry", locator: retry }], false);
       expect(pendingGeometry[0].bounds).toMatchObject({ focused: true, focusVisible: true, inViewport: true, hit: true });
       await expect(retry).toBeFocused();
       await expect(retry).toHaveAttribute("aria-disabled", "true");

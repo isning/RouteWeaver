@@ -100,6 +100,8 @@ jobs:
             web/test-results/users-inventory-read-recovery*/users-inventory-retry-keyboard.json
             web/test-results/users-inventory-read-recovery*/users-inventory-retry-pending.png
             web/test-results/users-inventory-read-recovery*/users-inventory-retry-pending.json
+            web/test-results/users-inventory-read-recovery*/users-inventory-recovered-search-keyboard.png
+            web/test-results/users-inventory-read-recovery*/users-inventory-recovered-search-keyboard.json
             web/test-results/users-inventory-read-recovery*/users-inventory-recovered-entry-keyboard.png
             web/test-results/users-inventory-read-recovery*/users-inventory-recovered-entry-keyboard.json
             web/test-results/users-inventory-read-recovery*/users-inventory-correct-user-entry.png

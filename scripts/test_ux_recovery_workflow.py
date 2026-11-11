@@ -43,7 +43,7 @@ GROUP_PRIORITY_PHASES = (
 )
 RESET_PHASES = ('reason-draft', 'reset-review', 'reset-canceled', 'discard-review', 'draft-continued', 'reopened-clean', 'navigation-review', 'navigation-stayed', 'navigation-left', 'forward-clean', 'pending-reset', 'navigation-after-reset', 'success-stayed', 'success-left', 'final-original')
 TARGET_REGISTRATION_PHASES = ('invalid-name', 'invalid-url', 'invalid-methods', 'save-rejected', 'discard-review', 'continued-draft', 'reopened-clean', 'returned-opener', 'final-original')
-USERS_PHASES = ('cached-error-open-menu', 'retry-keyboard', 'retry-pending', 'recovered-entry-keyboard', 'correct-user-entry', 'final-original')
+USERS_PHASES = ('cached-error-open-menu', 'retry-keyboard', 'retry-pending', 'recovered-search-keyboard', 'recovered-entry-keyboard', 'correct-user-entry', 'final-original')
 ARTIFACTS = {
     *{f'web/test-results/users-inventory-read-recovery*/users-inventory-{phase}.{ext}'
       for phase in USERS_PHASES for ext in ('png', 'json')},
