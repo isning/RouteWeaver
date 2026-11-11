@@ -416,6 +416,7 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
                               <ActionButton
                                 leadingIcon={<EyeOutlined aria-hidden="true" />}
                                 aria-label={`校验 ${r.name}`}
+                                keepFocusableWhilePending
                                 pending={
                                   validate.isPending &&
                                   validate.variables?.id === r.id
