@@ -67,6 +67,21 @@ for (const width of [390, 1440]) {
       "/api/me/sources": [],
       "/api/me/notifications": [],
       "/api/settings": {},
+      // The basic settings tab stays mounted behind the alternate MFA entry.
+      "/api/admin/subscription-origin": {
+        revision: 0,
+        configuredRevision: 0,
+        draftOrigin: "",
+        effectiveRevision: 0,
+        effectiveOrigin: "",
+        defaultOrigin: "https://synthetic.example.invalid",
+        verificationStatus: "not-required",
+        currentLinkExample:
+          "https://synthetic.example.invalid/feed/{existing-token}",
+        proposedLinkExample:
+          "https://synthetic.example.invalid/feed/{existing-token}",
+        tokensUnchanged: true,
+      },
       "/api/services": [],
       "/api/published-routes": [],
       "/api/state": {
