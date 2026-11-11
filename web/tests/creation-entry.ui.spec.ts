@@ -30,7 +30,14 @@ for (const width of [1280, 390])
           contentType: "application/json",
           body: JSON.stringify({ error: "Synthetic inventory unavailable" }),
         });
-      return route.continue();
+      // This journey recovers to an empty inventory. Other journeys can leave
+      // revoked outputs in the shared demo account, so keep successful reads
+      // synthetic too rather than depending on backend test execution order.
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify([]),
+      });
     });
     try {
       await openWorkspace(page);
