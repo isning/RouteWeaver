@@ -43,7 +43,7 @@ for (const width of [1440, 390]) {
     const dialog = page.getByRole("dialog", { name: "服务端配置意图", exact: true });
     const field = dialog.getByRole("textbox", { name: "服务端配置意图 JSON 文本", exact: true });
     const capture = async (stage: string) => {
-      try { if (process.env.CI) await info.attach(`route-json-${width}-${stage}.png`, { body: await page.screenshot(), contentType: "image/png" }); }
+      try { if (process.env.CI) await info.attach(`route-json-${width}-${stage}.png`, { body: await page.screenshot({ timeout: 2000 }), contentType: "image/png" }); }
       catch (error) { failures.push(error); }
       try {
         if (await dialog.count()) measurements.push({ stage, geometry: await dialog.evaluate(el => {
@@ -57,8 +57,16 @@ for (const width of [1440, 390]) {
       } catch (error) { failures.push(error); }
     };
     try {
-      await page.goto("/#routes");
-      await page.getByRole("heading", { name: "转发路径", exact: true }).locator("..").getByRole("button", { name: "新建转发路径", exact: true }).click();
+      await page.goto("/#routes", { timeout: 10000 });
+      const heading = page.getByRole("heading", { name: "转发路径", level: 1, exact: true });
+      await expect(heading).toBeVisible({ timeout: 5000 });
+      // PageHeader puts title and actions in sibling wrappers. Scope to the
+      // actual header, not the heading's immediate title-only parent.
+      const header = page.getByRole("main").locator("header").filter({ has: heading });
+      const opener = header.getByRole("button", { name: "新建转发路径", exact: true });
+      await capture("route-page-before-open");
+      await expect(opener).toBeVisible({ timeout: 5000 });
+      await opener.click({ timeout: 5000 });
       const route = page.getByRole("dialog", { name: "新建转发路径", exact: true });
       await inventory.stable(route);
       const name = route.getByRole("textbox", { name: "转发路径名称", exact: true });
