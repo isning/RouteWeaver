@@ -290,6 +290,7 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
   ) : undefined;
   const data = query.data;
   const usersInventoryKnown = page === "users" && data !== undefined;
+  const servicesInventoryKnown = page === "services" && data !== undefined;
   const usersInventoryReady = query.isSuccess && query.fetchStatus === "idle";
   const usersSearch = useRef<HTMLInputElement>(null);
   const restoreUsersSearch = useRef(false);
@@ -414,11 +415,22 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
           {query.isPaused ? "等待网络连接后核对用户。" : "正在核对用户…"}
         </p>
       )}
+      {servicesInventoryKnown && query.isError && (
+        <Notice tone="error" title="暂时无法刷新服务方案">
+          <p>{query.error.message}</p>
+          <p>列表暂未更新，请刷新重试。</p>
+        </Notice>
+      )}
+      {servicesInventoryKnown && (query.isFetching || query.isPaused) && (
+        <p role="status" className="text-sm text-muted-foreground">
+          {query.isPaused ? "等待网络连接后刷新服务方案。" : "正在刷新服务方案…"}
+        </p>
+      )}
       <QueryState
         loading={query.isPending}
         paused={query.isPaused}
         loadingLayout="table"
-        error={usersInventoryKnown ? null : query.error}
+        error={usersInventoryKnown || servicesInventoryKnown ? null : query.error}
         retry={() => query.refetch()}
       >
         {data && (
@@ -427,6 +439,12 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
               <Section variant="plain">
                 <ResourceToolbar
                   label={`查找${meta.title}`}
+                  filters={page === "services" && (
+                    <ActionButton onClick={() => void query.refetch({ cancelRefetch: false })}
+                      pending={query.isFetching || query.isPaused} keepFocusableWhilePending variant="outline">
+                      刷新服务方案
+                    </ActionButton>
+                  )}
                   search={
                     <SearchField
                       ref={page === "users" ? usersSearch : undefined}
@@ -836,7 +854,7 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
                       minWidth={850}
                       empty={searchEmpty}
                     />
-                  ) : (
+                  ) : query.isSuccess && query.fetchStatus === "idle" ? (
                     <EmptyState
                       title="暂无服务方案"
                       description="新建方案后，可分配给用户或用户组。"
@@ -846,7 +864,7 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
                         </ActionButton>
                       }
                     />
-                  ))}
+                  ) : null)}
               </Section>
             )}
             {page === "activity" && (

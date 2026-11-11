@@ -621,10 +621,20 @@ export function UserGroups({ users, services, routes, }: {
     const [editing, setEditing] = useState<{
         initial: UserGroup | null;
     } | null>(null);
-    return (<Section variant="plain" title="用户组" description="以组分配服务方案；个人指定方案优先，多组按优先级选定一个方案及其额度。" extra={<ActionButton onClick={() => setEditing({ initial: null })} variant="outline">
+    const inventoryKnown = query.data !== undefined;
+    return (<Section variant="plain" title="用户组" description="以组分配服务方案；个人指定方案优先，多组按优先级选定一个方案及其额度。" extra={<div className="flex flex-wrap gap-2">
+        {inventoryKnown && <ActionButton onClick={() => void query.refetch({ cancelRefetch: false })}
+          pending={query.isFetching || query.isPaused} keepFocusableWhilePending variant="outline">刷新用户组</ActionButton>}
+        <ActionButton onClick={() => setEditing({ initial: null })} variant="outline">
           新建用户组
-        </ActionButton>}>
-      <QueryState loading={query.isPending} paused={query.isPaused} loadingLayout="table" error={query.error} retry={() => query.refetch()}>
+        </ActionButton></div>}>
+      {inventoryKnown && query.isError && <Notice tone="error" title="暂时无法刷新用户组">
+        <p>{query.error.message}</p><p>列表暂未更新，请刷新重试。</p>
+      </Notice>}
+      {inventoryKnown && (query.isFetching || query.isPaused) && <p role="status" className="text-sm text-muted-foreground">
+        {query.isPaused ? "等待网络连接后刷新用户组。" : "正在刷新用户组…"}
+      </p>}
+      <QueryState loading={query.isPending} paused={query.isPaused} loadingLayout="table" error={inventoryKnown ? null : query.error} retry={() => query.refetch()}>
         {query.data?.length ? (<DataTable rowKey="id" rows={query.data} columns={[
                 { title: "用户组", accessor: "name" },
                 {
@@ -643,7 +653,7 @@ export function UserGroups({ users, services, routes, }: {
                     </ActionButton>
                   </TableRowActions>),
                 },
-            ]} minWidth={560}/>) : (<p className="rounded-lg border border-dashed px-4 py-3 text-sm text-muted-foreground">暂无用户组</p>)}
+            ]} minWidth={560}/>) : query.isSuccess && query.fetchStatus === "idle" ? (<p className="rounded-lg border border-dashed px-4 py-3 text-sm text-muted-foreground">暂无用户组</p>) : null}
       </QueryState>
       {editing && (<GroupPolicyEditor key={editing.initial?.id || "create"} initial={editing.initial} users={users} services={services} routes={routes} onClose={() => setEditing(null)}/>)}
     </Section>);
