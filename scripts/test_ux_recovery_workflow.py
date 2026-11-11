@@ -5,6 +5,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 SPECS = {
+    'admin-policy-inventory-recovery',
     'announcement-list-recovery',
     'users-inventory-read-recovery',
     'initial-resource-read-recovery',
@@ -48,7 +49,11 @@ TARGET_REGISTRATION_PHASES = ('invalid-name', 'invalid-url', 'invalid-methods', 
 USERS_PHASES = ('cached-error-open-menu', 'retry-keyboard', 'retry-pending', 'recovered-search-keyboard', 'recovered-entry-keyboard', 'correct-user-entry', 'final-original')
 INITIAL_RESOURCE_PHASES = ('retry-keyboard', 'retry-pending', 'repeated-error', 'failure-next-tab', 'recovered', 'success-next-tab', 'newer-dialog-pending', 'dialog-owned', 'final-original')
 ANNOUNCEMENT_PHASES = ('initial-unknown', 'refresh-pending', 'cached-error', 'retry-keyboard', 'retry-pending', 'recovered', 'fresh-edit', 'newer-create-pending', 'newer-create-owned', 'final-original')
+POLICY_INVENTORY_PHASES = ('cached-error', 'retry-keyboard', 'retry-offline', 'retry-pending', 'recovered', 'guarded-editor', 'newer-draft-pending', 'newer-draft-owned', 'final-original')
 ARTIFACTS = {
+    *{f'web/test-results/admin-policy-inventory-recovery*/policy-inventory-{phase}.{ext}'
+      for phase in POLICY_INVENTORY_PHASES for ext in ('png', 'json')},
+    'web/test-results/admin-policy-inventory-recovery*/policy-inventory-request-ledger.json',
     *{f'web/test-results/announcement-list-recovery*/announcement-{phase}.{ext}'
       for phase in ANNOUNCEMENT_PHASES for ext in ('png', 'json')},
     'web/test-results/announcement-list-recovery*/announcement-request-ledger.json',
@@ -120,8 +125,8 @@ class UXRecoveryWorkflowTests(unittest.TestCase):
         for value in ('group: ux-recovery-${{ github.ref }}', 'cancel-in-progress: false',
                       'contents: read', 'persist-credentials: false', 'runs-on: ubuntu-24.04',
                       'timeout-minutes: 15', 'timeout-minutes: 10',
-                      'name: Twenty-three recovery specs (supplemental evidence only)',
-                      'name: Run twenty-three recovery specs with unchanged fixtures',
+                      'name: Twenty-four recovery specs (supplemental evidence only)',
+                      'name: Run twenty-four recovery specs with unchanged fixtures',
                       'ROUTEWEAVER_CHROMIUM: /opt/google/chrome/chrome',
                       'npx --no-install playwright install-deps chromium',
                       '--config=playwright.ux-recovery.config.ts --workers=1 --retries=0'):
@@ -207,6 +212,15 @@ class UXRecoveryWorkflowTests(unittest.TestCase):
         for width in (1440, 390):
             for scenario in ('retry', 'newer-create'):
                 observed[f'announcement-list-recovery.ui-{scenario}-at-{width}px-chromium'] = announcement_outputs
+        policy_outputs = tuple(f'policy-inventory-{phase}.{ext}' for phase in POLICY_INVENTORY_PHASES
+                               for ext in ('png', 'json')) + ('policy-inventory-request-ledger.json',)
+        for width in (1440, 390):
+            for kind in ('service', 'group'):
+                for scenario in ('retry', 'stale-editor'):
+                    observed[f'admin-policy-inventory-recovery.ui-{kind}-{scenario}-at-{width}px-chromium'] = policy_outputs
+        for filename in ('request-ledger.json', 'policy-inventory-private.json',
+                         'policy-inventory-request-ledger.png', 'policy-inventory-retry-pending-private.png'):
+            self.assertFalse(retained(f'web/test-results/admin-policy-inventory-recovery.ui-chromium/{filename}'))
         for directory, filenames in observed.items():
             for filename in filenames:
                 path = f'web/test-results/{directory}/{filename}'
@@ -238,7 +252,7 @@ class UXRecoveryWorkflowTests(unittest.TestCase):
             self.assertFalse(retained(f'web/test-results/announcement-list-recovery.ui-chromium/{filename}'))
 
         # A named compact capture is not an upload permission for another fixture.
-        for filename in compact_outputs + multi_outputs + inventory_outputs + group_priority_outputs + reset_outputs + target_outputs + users_outputs + initial_resource_outputs + announcement_outputs:
+        for filename in compact_outputs + multi_outputs + inventory_outputs + group_priority_outputs + reset_outputs + target_outputs + users_outputs + initial_resource_outputs + announcement_outputs + policy_outputs:
             path = f'web/test-results/unrelated.ui-chromium/{filename}'
             with self.subTest(path=path):
                 self.assertFalse(retained(path), path)

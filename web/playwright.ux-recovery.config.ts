@@ -11,6 +11,7 @@ export default defineConfig({
     .map((project) => ({
       ...project,
       testMatch: [
+        "**/admin-policy-inventory-recovery.ui.spec.ts",
         "**/announcement-list-recovery.ui.spec.ts",
         "**/server-json-recovery.ui.spec.ts",
         "**/workspace-return.ui.spec.ts",
