@@ -537,6 +537,7 @@ export function ResourcesPage() {
         <AppForm
           className="space-y-5"
           form={form}
+          submitErrorFocusOwner={open ? editorTask.current : null}
           id={formId}
           name={formId}
           disabled={mutation.isPending}
