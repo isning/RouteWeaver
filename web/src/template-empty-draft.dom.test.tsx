@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { UIProviders } from "./ui-patterns/providers";
-import { TemplatesPage } from "./Templates";
+import Workspace from "./App";
 import { setCSRF, setToken } from "./api";
 
 const json = (value: unknown) => new Response(JSON.stringify(value), {
@@ -12,6 +12,8 @@ const json = (value: unknown) => new Response(JSON.stringify(value), {
 });
 let client: QueryClient;
 beforeEach(() => {
+  history.replaceState(null, "", "#templates");
+  vi.spyOn(window, "scrollTo").mockImplementation(() => {});
   setCSRF("");
   setToken("");
   vi.stubGlobal("ResizeObserver", class {
@@ -38,6 +40,7 @@ function mount() {
       writes.push({ url, body: JSON.parse(String(init.body)) });
       return json(url.endsWith("/sanitize") ? { spec: { steps: [] } } : {});
     }
+    if (url === "/api/auth/me") return json({ user: { id: "admin", name: "Admin", role: "admin" }, csrfToken: "test-csrf" });
     if (url === "/api/me/collections") return json([
       { id: "one", name: "Saved collection", sources: [], pipeline: [] },
       { id: "two", name: "Other collection", sources: [], pipeline: [] },
@@ -45,7 +48,7 @@ function mount() {
     return json([]);
   }));
   client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
-  render(<QueryClientProvider client={client}><UIProviders><TemplatesPage admin /></UIProviders></QueryClientProvider>);
+  render(<QueryClientProvider client={client}><UIProviders><Workspace /></UIProviders></QueryClientProvider>);
   return writes;
 }
 async function extract() {
@@ -77,7 +80,16 @@ it("keeps the extracted JSON editor focused and editable when emptied, requiring
   await within(dialog).findByText("模板结构不是有效的 JSON，请先修正。");
   expect(writes.filter(write => write.url === "/api/admin/templates")).toHaveLength(0);
   expect((editor as HTMLTextAreaElement).value).toBe("invalid JSON");
+  await waitFor(() => expect(document.activeElement).toBe(editor));
+  expect(editor.getAttribute("aria-invalid")).toBe("true");
+  const errorId = editor.getAttribute("aria-describedby");
+  expect(errorId && document.getElementById(errorId)?.textContent).toBe("模板结构不是有效的 JSON，请先修正。");
+  await userEvent.click(within(dialog).getByRole("button", { name: "发布 v1" }));
+  expect(document.activeElement).toBe(editor);
+  expect(writes.filter(write => write.url === "/api/admin/templates")).toHaveLength(0);
   fireEvent.change(editor, { target: { value: '{"steps":[]}' } });
+  expect(within(dialog).queryByText("模板结构不是有效的 JSON，请先修正。")).toBeNull();
+  expect(editor.getAttribute("aria-invalid")).not.toBe("true");
   expect(within(dialog).getByRole("button", { name: "发布 v1" }).hasAttribute("disabled")).toBe(true);
   await userEvent.click(within(dialog).getByRole("checkbox"));
   await userEvent.click(within(dialog).getByRole("button", { name: "发布 v1" }));
@@ -96,4 +108,22 @@ it("hides the previous extracted editor after an explicit source or template-typ
   await userEvent.click(within(dialog).getByRole("combobox", { name: "模板类型" }));
   await userEvent.click(await screen.findByRole("option", { name: "客户端配置模板" }));
   expect(within(dialog).queryByRole("textbox", { name: "共享结构" })).toBeNull();
+});
+
+it("retires invalid JSON feedback after extracting a replacement without publishing or reusing review", async () => {
+  const writes = mount();
+  const dialog = await extract();
+  const editor = within(dialog).getByRole("textbox", { name: "共享结构" });
+  fireEvent.change(editor, { target: { value: "invalid JSON" } });
+  await userEvent.click(within(dialog).getByRole("checkbox"));
+  await userEvent.click(within(dialog).getByRole("button", { name: "发布 v1" }));
+  await within(dialog).findByText("模板结构不是有效的 JSON，请先修正。");
+  await userEvent.click(within(dialog).getByRole("button", { name: "提取可共享结构" }));
+  await waitFor(() => expect((editor as HTMLTextAreaElement).value).toContain('"steps": []'));
+  expect(within(dialog).queryByText("模板结构不是有效的 JSON，请先修正。")).toBeNull();
+  expect(editor.getAttribute("aria-invalid")).not.toBe("true");
+  expect((within(dialog).getByRole("textbox", { name: "模板名称" }) as HTMLInputElement).value).toBe("Reusable settings");
+  expect(within(dialog).getByRole("checkbox").getAttribute("aria-checked")).toBe("false");
+  expect(within(dialog).getByRole("button", { name: "发布 v1" }).hasAttribute("disabled")).toBe(true);
+  expect(writes.filter(write => write.url === "/api/admin/templates")).toHaveLength(0);
 });

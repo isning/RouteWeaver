@@ -1649,7 +1649,8 @@ function PublishTemplate({
   const [name, setName] = useState("");
   const [spec, setSpec] = useState<string | null>(null);
   const [reviewed, setReviewed] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
+  const [specError, setSpecError] = useState<string | null>(null);
+  const specEditor = useRef<HTMLTextAreaElement>(null);
   const revision = useRef(0);
   const extracting = useRef<number | null>(null);
   const [extractionError, setExtractionError] = useState<Error | null>(null);
@@ -1699,6 +1700,7 @@ function PublishTemplate({
     },
     onSuccess: ({ value, version }) => {
       if (!active.current || version !== revision.current || extracting.current !== version) return;
+      setSpecError(null);
       setSpec(JSON.stringify(value.spec, null, 2));
       setReviewed(false);
     },
@@ -1719,18 +1721,9 @@ function PublishTemplate({
       name: string;
       kind: Kind;
       expectedVersion: number;
-      spec: string;
+      spec: unknown;
     }) => {
-      let parsed;
-      try {
-        parsed = JSON.parse(submission.spec);
-      } catch {
-        throw new Error("模板结构不是有效的 JSON，请先修正。");
-      }
-      return post("/admin/templates", {
-        ...submission,
-        spec: parsed,
-      });
+      return post("/admin/templates", submission);
     },
     onSuccess: () => {
       client.invalidateQueries({ queryKey: ["templates"] });
@@ -1774,7 +1767,7 @@ function PublishTemplate({
       }}
       size="lg"
     >
-      <ErrorNotice error={error || extractionError || publish.error} />
+      <ErrorNotice error={extractionError || publish.error} />
       <>
         <div className="space-y-5">
           <label className="standalone-label grid min-w-0 gap-2 text-sm font-medium">
@@ -1820,6 +1813,7 @@ function PublishTemplate({
                 setName(t?.name || "");
                 setTargetId(undefined);
                 setSelectedSourceName(undefined);
+                setSpecError(null);
                 setSpec(null);
                 setReviewed(false);
               }}
@@ -1864,6 +1858,7 @@ function PublishTemplate({
                   setKind(value);
                   setTargetId(undefined);
                   setSelectedSourceName(undefined);
+                  setSpecError(null);
                   setSpec(null);
                   setReviewed(false);
                 }}
@@ -1903,6 +1898,7 @@ function PublishTemplate({
                 setSelectedSourceName(
                   sources.data?.find((item) => item.id === v)?.name,
                 );
+                setSpecError(null);
                 setSpec(null);
                 setReviewed(false);
               }}
@@ -1948,6 +1944,9 @@ function PublishTemplate({
               <label className="standalone-label grid min-w-0 gap-2 text-sm font-medium">
                 共享结构
                 <Textarea
+                  ref={specEditor}
+                  aria-invalid={specError ? true : undefined}
+                  aria-describedby={specError ? "template-structure-error" : undefined}
                   rows={14}
                   className="json-editor min-h-48 font-mono text-xs"
                   value={spec}
@@ -1955,12 +1954,18 @@ function PublishTemplate({
                     if (submitting.current) return;
                     revision.current++;
                     setExtractionError(null);
+                    setSpecError(null);
                     setSpec(e.target.value);
                     setReviewed(false);
                   }}
                   disabled={publish.isPending || !open}
                 />
               </label>
+              {specError && (
+                <p id="template-structure-error" role="alert" className="text-sm text-destructive">
+                  {specError}
+                </p>
+              )}
               <Label className="flex items-start gap-3 rounded-lg border bg-muted/30 p-4 text-sm leading-relaxed">
                 <Checkbox
                   checked={reviewed}
@@ -2006,6 +2011,15 @@ function PublishTemplate({
               !spec
             )
               return;
+            let parsed: unknown;
+            try {
+              parsed = JSON.parse(spec);
+            } catch {
+              setSpecError("模板结构不是有效的 JSON，请先修正。");
+              specEditor.current?.focus();
+              return;
+            }
+            setSpecError(null);
             submitting.current = true;
             const submit = submitButton.current;
             const dialog = submit?.closest('[role="dialog"]');
@@ -2016,7 +2030,7 @@ function PublishTemplate({
               name,
               kind,
               expectedVersion: selected?.version || 0,
-              spec,
+              spec: parsed,
             });
           }}
           variant="default"
