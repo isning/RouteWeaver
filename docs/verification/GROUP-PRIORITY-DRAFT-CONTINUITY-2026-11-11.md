@@ -37,3 +37,9 @@ These results are DOM and source/build evidence, not a new full-suite, browser/p
 ## Separate deferred observation
 
 Read-only review also found that the manual usage-reset reason in UserPolicyEditor is outside the policy form and does not register its own unsaved state. Closing an otherwise untouched policy sheet can lose that reason. Its confirmation has no explicit owner cleanup, so departure behavior should receive a separate public-seam check. These are source observations only; this patch does not change or test that flow.
+
+## Native fixture preparation
+
+Four real-App synthetic GET-only journeys cover raw `-` with Cancel and raw `1e` with Escape at 390×560 and 1440×560. They require the discard decision, Continue with exact text/focus, blocked invalid Preview, explicit discard and clean reopening. All API writes are aborted; original masked screenshots, keyboard geometry and fixed-category ledgers use narrow artifact names. This small native fixture omits adoption/restart, which remains DOM-covered.
+
+Strict native TypeScript passes. Supplemental discovery is 54 cases across 18 specs; five workflow contracts pass. Independent source review accepted selectors, context response shape, overlay keyboard flow, HTTP safety and evidence bounds. Required sandbox, workers, retries, time limits and discovery are unchanged. No native execution/pixel acceptance, lane-runtime acceptance or WebSocket protection is claimed.

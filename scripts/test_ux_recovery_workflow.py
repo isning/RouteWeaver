@@ -5,6 +5,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 SPECS = {
+    'group-priority-draft-continuity',
     'server-json-recovery', 'workspace-return', 'notification-channel-journey',
     'template-target-identity', 'admin-validation-recovery', 'admin-validation-order',
     'compact-choice-keyboard', 'multi-choice-reopening', 'fleet-request-recovery', 'group-access-decision', 'route-inventory-recovery', 'admin-settings-isolation', 'entry-route-identity', 'route-account-identity', 'backup-tab-continuity', 'profile-read-recovery', 'resource-source-inventory-recovery',
@@ -30,8 +31,18 @@ INVENTORY_PHASES = (
     'source-detail-reconciled',
     'final-original',
 )
+GROUP_PRIORITY_PHASES = (
+    'raw-input',
+    'discard-decision',
+    'continued-draft',
+    'blocked-preview',
+    'final-original',
+)
 ARTIFACTS = {
     'web/playwright-report/',
+    *{f'web/test-results/group-priority-draft-continuity*/{phase}.{ext}'
+      for phase in GROUP_PRIORITY_PHASES for ext in ('png', 'json')},
+    'web/test-results/group-priority-draft-continuity*/request-ledger.json',
     *{f'web/test-results/resource-source-inventory-recovery*/{phase}.{ext}'
       for phase in INVENTORY_PHASES for ext in ('png', 'json')},
     'web/test-results/resource-source-inventory-recovery*/request-ledger.json',
@@ -83,8 +94,8 @@ class UXRecoveryWorkflowTests(unittest.TestCase):
         for value in ('group: ux-recovery-${{ github.ref }}', 'cancel-in-progress: false',
                       'contents: read', 'persist-credentials: false', 'runs-on: ubuntu-24.04',
                       'timeout-minutes: 15', 'timeout-minutes: 10',
-                      'name: Seventeen recovery specs (supplemental evidence only)',
-                      'name: Run seventeen recovery specs with unchanged fixtures',
+                      'name: Eighteen recovery specs (supplemental evidence only)',
+                      'name: Run eighteen recovery specs with unchanged fixtures',
                       'ROUTEWEAVER_CHROMIUM: /opt/google/chrome/chrome',
                       'npx --no-install playwright install-deps chromium',
                       '--config=playwright.ux-recovery.config.ts --workers=1 --retries=0'):
@@ -143,6 +154,11 @@ class UXRecoveryWorkflowTests(unittest.TestCase):
         for width in (1440, 390):
             for scenario in ('resource', 'source-changed', 'source-removed'):
                 observed[f'resource-source-inventory-recovery.ui-inventory-read-recovery-{scenario}-at-{width}px-chromium'] = inventory_outputs
+        group_priority_outputs = tuple(f'{phase}.{ext}' for phase in GROUP_PRIORITY_PHASES
+                                       for ext in ('png', 'json')) + ('request-ledger.json',)
+        for width in (1440, 390):
+            for scenario in ('minus', 'exponent'):
+                observed[f'group-priority-draft-continuity.ui-{scenario}-at-{width}px-chromium'] = group_priority_outputs
         for directory, filenames in observed.items():
             for filename in filenames:
                 path = f'web/test-results/{directory}/{filename}'
@@ -162,7 +178,7 @@ class UXRecoveryWorkflowTests(unittest.TestCase):
                     self.assertFalse(retained(path), path)
 
         # A named compact capture is not an upload permission for another fixture.
-        for filename in compact_outputs + multi_outputs + inventory_outputs:
+        for filename in compact_outputs + multi_outputs + inventory_outputs + group_priority_outputs:
             path = f'web/test-results/unrelated.ui-chromium/{filename}'
             with self.subTest(path=path):
                 self.assertFalse(retained(path), path)

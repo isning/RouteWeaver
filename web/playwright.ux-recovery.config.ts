@@ -28,6 +28,7 @@ export default defineConfig({
         "**/backup-tab-continuity.ui.spec.ts",
         "**/profile-read-recovery.ui.spec.ts",
         "**/resource-source-inventory-recovery.ui.spec.ts",
+        "**/group-priority-draft-continuity.ui.spec.ts",
       ],
     })),
   workers: 1,
