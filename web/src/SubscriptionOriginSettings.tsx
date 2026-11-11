@@ -195,6 +195,8 @@ function OriginForm({
     if (writeLock.current || uncertainLock.current || readLock.current || readBlocked) return;
     writeLock.current = true;
     setFeedback(null);
+    // A read started before this write cannot supersede its accepted result.
+    void client.cancelQueries({ queryKey: key });
     write();
   };
   const reconcile = async () => {
@@ -237,6 +239,8 @@ function OriginForm({
   }, [review, state]);
   const client = useQueryClient();
   const accept = (next: OriginState) => {
+    // Session reconciliation can start a read while the write is in flight.
+    void client.cancelQueries({ queryKey: key });
     client.setQueryData(key, next);
     setError(null);
   };
