@@ -5,6 +5,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 SPECS = {
+    'usage-reset-ownership',
     'group-priority-draft-continuity',
     'server-json-recovery', 'workspace-return', 'notification-channel-journey',
     'template-target-identity', 'admin-validation-recovery', 'admin-validation-order',
@@ -38,7 +39,11 @@ GROUP_PRIORITY_PHASES = (
     'blocked-preview',
     'final-original',
 )
+RESET_PHASES = ('reason-draft', 'reset-review', 'reset-canceled', 'discard-review', 'draft-continued', 'reopened-clean', 'navigation-review', 'navigation-stayed', 'navigation-left', 'forward-clean', 'pending-reset', 'navigation-after-reset', 'success-stayed', 'success-left', 'final-original')
 ARTIFACTS = {
+    *{f'web/test-results/usage-reset-ownership*/{phase}.{ext}'
+      for phase in RESET_PHASES for ext in ('png', 'json')},
+    'web/test-results/usage-reset-ownership*/request-ledger.json',
     'web/playwright-report/',
     *{f'web/test-results/group-priority-draft-continuity*/{phase}.{ext}'
       for phase in GROUP_PRIORITY_PHASES for ext in ('png', 'json')},
@@ -94,8 +99,8 @@ class UXRecoveryWorkflowTests(unittest.TestCase):
         for value in ('group: ux-recovery-${{ github.ref }}', 'cancel-in-progress: false',
                       'contents: read', 'persist-credentials: false', 'runs-on: ubuntu-24.04',
                       'timeout-minutes: 15', 'timeout-minutes: 10',
-                      'name: Eighteen recovery specs (supplemental evidence only)',
-                      'name: Run eighteen recovery specs with unchanged fixtures',
+                      'name: Nineteen recovery specs (supplemental evidence only)',
+                      'name: Run nineteen recovery specs with unchanged fixtures',
                       'ROUTEWEAVER_CHROMIUM: /opt/google/chrome/chrome',
                       'npx --no-install playwright install-deps chromium',
                       '--config=playwright.ux-recovery.config.ts --workers=1 --retries=0'):
@@ -159,6 +164,10 @@ class UXRecoveryWorkflowTests(unittest.TestCase):
         for width in (1440, 390):
             for scenario in ('minus', 'exponent'):
                 observed[f'group-priority-draft-continuity.ui-{scenario}-at-{width}px-chromium'] = group_priority_outputs
+        reset_outputs = tuple(f'{phase}.{ext}' for phase in RESET_PHASES
+                              for ext in ('png', 'json')) + ('request-ledger.json',)
+        for width in (1440, 390):
+            observed[f'usage-reset-ownership.ui-reset-review-at-{width}px-chromium'] = reset_outputs
         for directory, filenames in observed.items():
             for filename in filenames:
                 path = f'web/test-results/{directory}/{filename}'
@@ -178,7 +187,7 @@ class UXRecoveryWorkflowTests(unittest.TestCase):
                     self.assertFalse(retained(path), path)
 
         # A named compact capture is not an upload permission for another fixture.
-        for filename in compact_outputs + multi_outputs + inventory_outputs + group_priority_outputs:
+        for filename in compact_outputs + multi_outputs + inventory_outputs + group_priority_outputs + reset_outputs:
             path = f'web/test-results/unrelated.ui-chromium/{filename}'
             with self.subTest(path=path):
                 self.assertFalse(retained(path), path)

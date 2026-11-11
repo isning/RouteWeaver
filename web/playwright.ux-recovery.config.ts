@@ -29,6 +29,7 @@ export default defineConfig({
         "**/profile-read-recovery.ui.spec.ts",
         "**/resource-source-inventory-recovery.ui.spec.ts",
         "**/group-priority-draft-continuity.ui.spec.ts",
+        "**/usage-reset-ownership.ui.spec.ts",
       ],
     })),
   workers: 1,

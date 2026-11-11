@@ -63,3 +63,11 @@ The reset request directly awaits the existing `post` helper so request ownershi
 - Independent read-only source review accepted the shared optional contract, exact Stay-outcome gate and observer/listener teardown without a remaining material source blocker. That review inspected the red/green evidence but did not independently run tests or a browser.
 
 No full-suite or browser pass is claimed for this change. The prior coordinator full suite preceded these edits. Coordinator-owned aggregate verification and rendered desktop/narrow focus/animation checks remain separate; this scoped work performed no browser, remote publication or deployment.
+
+## Integrated pass and prepared native evidence
+
+At approximately 14:39 UTC on 2026-11-11, the complete serialized DOM suite at production/test source `36fa9d7` passed **4,093 tests across 329 files** in 1,120.73 seconds.
+
+The prepared native fixture adds ten real-App synthetic journeys at 390×560 and 1440×560. Six are GET-only dismissal/review-retirement flows with all writes blocked. Four validate and locally fulfill exactly one held synthetic reset, then verify success behind a navigation review and explicit Stay/Leave focus behavior, including transient departing-input focus. No reset request is forwarded to a backend. Masked original PNGs, fixed-category ledgers and named phase geometry have bounded artifact retention.
+
+Strict native TypeScript passes. Supplemental discovery is **64 cases across 19 files** and all five workflow contracts pass. Independent source review accepted the fixture and additive wiring/allowlist; required gates, sandbox, time limits, one worker and zero retries remain unchanged. Actual native execution, lane runtime, browser focus/animation behavior, pixel acceptance and remote CI for unpublished changes remain pending. The authored fixture does not establish real reset execution or backend persistence/auth correctness.

@@ -21,7 +21,7 @@ env:
 
 jobs:
   recovery:
-    name: Eighteen recovery specs (supplemental evidence only)
+    name: Nineteen recovery specs (supplemental evidence only)
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
@@ -81,7 +81,7 @@ jobs:
             await browser.close();
           }
           JS
-      - name: Run eighteen recovery specs with unchanged fixtures
+      - name: Run nineteen recovery specs with unchanged fixtures
         working-directory: web
         # Bound this subset without changing per-test timeouts; reserve cleanup/upload time.
         timeout-minutes: 10
@@ -193,5 +193,36 @@ jobs:
             web/test-results/group-priority-draft-continuity*/final-original.png
             web/test-results/group-priority-draft-continuity*/final-original.json
             web/test-results/group-priority-draft-continuity*/request-ledger.json
+            web/test-results/usage-reset-ownership*/reason-draft.png
+            web/test-results/usage-reset-ownership*/reason-draft.json
+            web/test-results/usage-reset-ownership*/reset-review.png
+            web/test-results/usage-reset-ownership*/reset-review.json
+            web/test-results/usage-reset-ownership*/reset-canceled.png
+            web/test-results/usage-reset-ownership*/reset-canceled.json
+            web/test-results/usage-reset-ownership*/discard-review.png
+            web/test-results/usage-reset-ownership*/discard-review.json
+            web/test-results/usage-reset-ownership*/draft-continued.png
+            web/test-results/usage-reset-ownership*/draft-continued.json
+            web/test-results/usage-reset-ownership*/reopened-clean.png
+            web/test-results/usage-reset-ownership*/reopened-clean.json
+            web/test-results/usage-reset-ownership*/navigation-review.png
+            web/test-results/usage-reset-ownership*/navigation-review.json
+            web/test-results/usage-reset-ownership*/navigation-stayed.png
+            web/test-results/usage-reset-ownership*/navigation-stayed.json
+            web/test-results/usage-reset-ownership*/navigation-left.png
+            web/test-results/usage-reset-ownership*/navigation-left.json
+            web/test-results/usage-reset-ownership*/forward-clean.png
+            web/test-results/usage-reset-ownership*/forward-clean.json
+            web/test-results/usage-reset-ownership*/pending-reset.png
+            web/test-results/usage-reset-ownership*/pending-reset.json
+            web/test-results/usage-reset-ownership*/navigation-after-reset.png
+            web/test-results/usage-reset-ownership*/navigation-after-reset.json
+            web/test-results/usage-reset-ownership*/success-stayed.png
+            web/test-results/usage-reset-ownership*/success-stayed.json
+            web/test-results/usage-reset-ownership*/success-left.png
+            web/test-results/usage-reset-ownership*/success-left.json
+            web/test-results/usage-reset-ownership*/final-original.png
+            web/test-results/usage-reset-ownership*/final-original.json
+            web/test-results/usage-reset-ownership*/request-ledger.json
           if-no-files-found: warn
           retention-days: 7
