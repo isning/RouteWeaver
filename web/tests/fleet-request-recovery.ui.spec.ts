@@ -1,4 +1,4 @@
-import { test, expect, type Route } from "@playwright/test";
+import { test, expect, type Route, type Locator } from "@playwright/test";
 import { settledTask } from "./ui-settled-task";
 
 // Actual App with loopback-only synthetic batch responses. No operation reaches
@@ -38,7 +38,29 @@ for (const width of [390, 1440]) {
       blocked.push(`${request.method()} ${url.pathname}`);
       return route.abort();
     });
-    const capture = async (phase: string) => {
+    const focusEvidence: { phase: string; focused: boolean; focusVisible: boolean; shadow: string; inViewport: boolean }[] = [];
+    const capture = async (phase: string, control?: Locator) => {
+      await page.evaluate(() => document.fonts.ready.then(() => undefined));
+      if (control) {
+        // Observe this control's finite CSS transitions, not the pending spinner.
+        // Do not disable motion or synthesize focus for a passing screenshot.
+        await control.evaluate(async element => {
+          await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+          await Promise.all(element.getAnimations().filter(animation =>
+            Number.isFinite(animation.effect?.getComputedTiming().endTime),
+          ).map(animation => animation.finished.catch(() => undefined)));
+        });
+        const observation = await control.evaluate(element => {
+          const box = element.getBoundingClientRect();
+          return { focused: document.activeElement === element, focusVisible: element.matches(":focus-visible"),
+            shadow: getComputedStyle(element).boxShadow,
+            inViewport: box.left >= 3 && box.top >= 3 && box.right <= innerWidth - 3 && box.bottom <= innerHeight - 3 };
+        });
+        focusEvidence.push({ phase, ...observation });
+        expect(observation.focused).toBe(true);
+        expect(observation.focusVisible).toBe(true);
+        expect(observation.inViewport).toBe(true);
+      }
       await info.attach(`fleet-retry-${width}-${phase}`, { body: await page.screenshot(), contentType: "image/png" });
     };
     try {
@@ -51,13 +73,20 @@ for (const width of [390, 1440]) {
       await page.getByRole("button", { name: "确认执行", exact: true }).click();
       await expect(page.getByRole("alertdialog")).toHaveCount(0);
       const retry = detail.getByRole("button", { name: "重新提交同一请求", exact: true });
-      await retry.click();
+      await expect(retry).toBeVisible();
+      // Reach the recovery action through ordinary keyboard navigation.
+      await page.keyboard.press("Tab");
+      for (let step = 0; step < 30 && !await retry.evaluate(element => document.activeElement === element); step++)
+        await page.keyboard.press("Tab");
+      await expect(retry).toBeFocused();
+      await capture("initial-failure", retry);
+      await page.keyboard.press("Enter");
       await expect.poll(() => writes.length).toBe(2);
       await expect(retry).toHaveAttribute("aria-busy", "true");
       await expect(retry).toHaveAttribute("aria-disabled", "true");
       await expect(retry).not.toHaveAttribute("disabled");
       await expect(retry).toBeFocused();
-      await capture("pending");
+      await capture("pending", retry);
       await page.keyboard.press("Enter");
       await page.keyboard.press("Enter");
       expect(writes.length).toBe(2);
@@ -65,7 +94,7 @@ for (const width of [390, 1440]) {
       await failing.fulfill({ status: 503, json: { error: "执行服务仍不可用" } });
       await expect(detail.getByText("执行服务仍不可用", { exact: true })).toBeVisible();
       await expect(retry).toBeFocused();
-      await capture("failed");
+      await capture("failed", retry);
       await page.keyboard.press("Enter");
       await expect.poll(() => writes.length).toBe(3);
       expect(JSON.stringify(writes[1]) === JSON.stringify(writes[0])).toBe(true);
@@ -78,7 +107,7 @@ for (const width of [390, 1440]) {
       expect(blocked).toEqual([]);
     } finally {
       if (held) await held.abort();
-      await info.attach("fleet-retry-ledger", { body: JSON.stringify({ count: writes.length, sameRequest: writes.length === 3 && JSON.stringify(writes[0]) === JSON.stringify(writes[1]) && JSON.stringify(writes[1]) === JSON.stringify(writes[2]), blocked }), contentType: "application/json" });
+      await info.attach("fleet-retry-ledger", { body: JSON.stringify({ focusEvidence, count: writes.length, sameRequest: writes.length === 3 && JSON.stringify(writes[0]) === JSON.stringify(writes[1]) && JSON.stringify(writes[1]) === JSON.stringify(writes[2]), blocked }), contentType: "application/json" });
     }
   });
 }
