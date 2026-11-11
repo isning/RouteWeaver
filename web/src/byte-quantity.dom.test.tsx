@@ -101,3 +101,37 @@ it("keeps zero explicit and clearing distinct from an unlimited limit", () => {
   fireEvent.change(screen.getByRole("spinbutton"), { target: { value: "" } });
   expect(change).toHaveBeenLastCalledWith(null);
 });
+
+it("restores an opt-in raw spelling without treating it as a numeric change", () => {
+  const change = vi.fn(), input = vi.fn();
+  const view = render(<ByteQuantityInput unit="Mbps" value={250000} initialInputText="1e" onChange={change} onInput={input} />);
+  expect((screen.getByRole("spinbutton") as HTMLInputElement).value).toBe("1e");
+  expect(change).not.toHaveBeenCalled();
+  expect(input).not.toHaveBeenCalled();
+  view.rerender(<ByteQuantityInput unit="Mbps" value={375000} initialInputText="1e" onChange={change} onInput={input} />);
+  expect((screen.getByRole("spinbutton") as HTMLInputElement).value).toBe("3");
+  view.rerender(<ByteQuantityInput unit="Mbps" value={250000} initialInputText="1e" onChange={change} onInput={input} />);
+  expect((screen.getByRole("spinbutton") as HTMLInputElement).value).toBe("2");
+  expect(change).not.toHaveBeenCalled();
+  expect(input).not.toHaveBeenCalled();
+});
+
+it("keeps a deliberately accepted exact spelling after an opt-in raw restart", () => {
+  const change = vi.fn();
+  const view = render(<ByteQuantityInput unit="Mbps" value={250000} initialInputText="-" onChange={change} />);
+  fireEvent.change(screen.getByRole("spinbutton"), { target: { value: "+03.000" } });
+  expect(change).toHaveBeenLastCalledWith(375000);
+  view.rerender(<ByteQuantityInput unit="Mbps" value={375000} initialInputText="-" onChange={change} />);
+  expect((screen.getByRole("spinbutton") as HTMLInputElement).value).toBe("+03.000");
+});
+
+it.each([undefined, "+01.000"])("reformats an authoritative unit change at unchanged bytes with initial spelling %j", (initialInputText) => {
+  const change = vi.fn();
+  const view = render(<ByteQuantityInput unit="GiB" value={1073741824} initialInputText={initialInputText} onChange={change} />);
+  expect((screen.getByRole("spinbutton") as HTMLInputElement).value).toBe(initialInputText ?? "1");
+  view.rerender(<ByteQuantityInput unit="Mbps" value={1073741824} initialInputText={initialInputText} onChange={change} />);
+  expect((screen.getByRole("spinbutton") as HTMLInputElement).value).toBe("8589.934592");
+  view.rerender(<ByteQuantityInput unit="GiB" value={1073741824} initialInputText={initialInputText} onChange={change} />);
+  expect((screen.getByRole("spinbutton") as HTMLInputElement).value).toBe("1");
+  expect(change).not.toHaveBeenCalled();
+});

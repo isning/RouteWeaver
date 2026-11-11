@@ -1,4 +1,4 @@
-import { serviceQuotaBytes } from "./service-quota-input";
+import { serviceQuotaBytes, serviceRateBytes } from "./service-quota-input";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { useId } from "react";
 import { bitrateLabel, bytesLabel } from "./model";
@@ -27,6 +27,12 @@ const retainedQuota = (value: unknown) => {
     return bytes === undefined ? `${String(value)} GiB（待修正）`
         : bytes === 0 ? "不限额（0 GiB）" : `${String(value)} GiB（${bytes} 字节）`;
 };
+const retainedRate = (value: string) => {
+    if (value === "") return "尚未填写";
+    const bytes = serviceRateBytes(value);
+    return bytes === undefined ? `${value} Mbps（待修正）`
+        : bytes === 0 ? `不限制（${value} Mbps）` : `${value} Mbps（${bytes} 字节/秒）`;
+};
 function fields(plan: Service): Field[] {
     const cycle = plan.cycle;
     return [
@@ -44,7 +50,7 @@ function fields(plan: Service): Field[] {
     ];
 }
 /** Resource intent, deliberately separate from existing-account effective policy. */
-export function ServicePolicyComparison({ resource, title = "方案变更", showAll = false, beforeLabel = "当前保存", afterLabel = "本次保存", draftQuota }: {
+export function ServicePolicyComparison({ resource, title = "方案变更", showAll = false, beforeLabel = "当前保存", afterLabel = "本次保存", draftQuota, draftRate }: {
     resource: ServicePolicyResource;
     title?: string;
     showAll?: boolean;
@@ -53,6 +59,7 @@ export function ServicePolicyComparison({ resource, title = "方案变更", show
     draftQuota?: {
         value: unknown;
     };
+    draftRate?: { value: string };
 }) {
     const id = useId();
     const before = resource.before?.service;
@@ -61,6 +68,8 @@ export function ServicePolicyComparison({ resource, title = "方案变更", show
     const next = fields(after).map((field) => {
         if (field.key === "quota" && draftQuota)
             return { ...field, raw: draftQuota.value, value: retainedQuota(draftQuota.value) };
+        if (field.key === "rate" && draftRate)
+            return { ...field, raw: draftRate.value, value: retainedRate(draftRate.value) };
         if (showAll && ["quota", "rate"].includes(field.key) && typeof field.raw === "number" && Number.isFinite(field.raw))
             return { ...field, value: `${field.value}（${field.raw} ${field.key === "quota" ? "字节" : "字节/秒"}）` };
         return field;

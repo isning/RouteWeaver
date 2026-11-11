@@ -14,6 +14,7 @@ export function ByteQuantityInput({
   disabled,
   onInput,
   inputResetKey,
+  initialInputText,
   ...aria
 }: Pick<AriaAttributes, "aria-labelledby" | "aria-describedby" | "aria-invalid" | "aria-required"> & {
   value?: number | null;
@@ -25,25 +26,33 @@ export function ByteQuantityInput({
   onInput?: (text: string) => void;
   /** Explicitly discard only this control's unaccepted input, not Form values. */
   inputResetKey?: Key;
+  /** A caller-owned draft spelling when this field is mounted again. */
+  initialInputText?: string;
 }) {
-  return <ByteQuantityControl key={inputResetKey} {...{ value, onChange, id, unit, disabled, onInput }} {...aria} />;
+  return <ByteQuantityControl key={inputResetKey} {...{ value, onChange, id, unit, disabled, onInput, initialInputText }} {...aria} />;
 }
 
-function ByteQuantityControl({ value, onChange, id, unit, disabled, onInput, ...aria }: Pick<AriaAttributes, "aria-labelledby" | "aria-describedby" | "aria-invalid" | "aria-required"> & {
+function ByteQuantityControl({ value, onChange, id, unit, disabled, onInput, initialInputText, ...aria }: Pick<AriaAttributes, "aria-labelledby" | "aria-describedby" | "aria-invalid" | "aria-required"> & {
   value?: number | null;
   onChange?: (value: number | null) => void;
   id?: string;
   unit: ByteUnit;
   disabled?: boolean;
   onInput?: (text: string) => void;
+  initialInputText?: string;
 }) {
   const scale = byteScale[unit];
-  const [text, setText] = useState(value == null ? "" : String(value / scale));
-  const emitted = useRef<number | null | undefined>(undefined);
+  const [text, setText] = useState(initialInputText ?? (value == null ? "" : String(value / scale)));
+  const emitted = useRef<number | null | undefined>(initialInputText === undefined ? undefined : value);
+  const displayedUnit = useRef(unit);
   useEffect(() => {
-    if (value === emitted.current) return;
+    if (value === emitted.current && unit === displayedUnit.current) return;
+    // A later authoritative value supersedes the mount-time raw spelling,
+    // including a subsequent return to its original numeric value.
+    emitted.current = value;
+    displayedUnit.current = unit;
     setText(value == null ? "" : String(value / scale));
-  }, [value, scale]);
+  }, [value, scale, unit]);
   const update = (raw: string) => {
     setText(raw);
     if (raw === "") {

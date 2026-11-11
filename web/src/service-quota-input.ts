@@ -1,5 +1,15 @@
 // Edited GiB text must denote exact safe integer bytes. Stored bytes bypass this display parser.
 export function serviceQuotaBytes(text: string): number | undefined {
+    return scaledServiceBytes(text, 1073741824n);
+}
+
+// Edited Mbps text has the same exact-byte contract; untouched stored rates
+// never pass through display conversion. Keep the quota caller's behavior.
+export function serviceRateBytes(text: string): number | undefined {
+    return text.trim() === text ? scaledServiceBytes(text, 125000n) : undefined;
+}
+
+function scaledServiceBytes(text: string, scale: bigint): number | undefined {
     // A paste-size resource guard, not a quota/rate maximum. Keep oversized
     // edits pending rather than spending unbounded work on BigInt parsing.
     if (text.length > 4096)
@@ -21,7 +31,7 @@ export function serviceQuotaBytes(text: string): number | undefined {
         return undefined;
     const exponent = Number(exponentText === "+" || exponentText === "-" ? "0" : exponentText);
     try {
-        const product = (BigInt(digits) * 1073741824n).toString();
+        const product = (BigInt(digits) * scale).toString();
         const significant = product.replace(/0+$/, "");
         const shift = exponent - fraction.length + product.length - significant.length;
         if (shift < 0 || significant.length + shift > 16)
