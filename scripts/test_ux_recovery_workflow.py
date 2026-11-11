@@ -5,6 +5,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 SPECS = {
+    'diagnostic-target-submit-focus',
     'usage-reset-ownership',
     'group-priority-draft-continuity',
     'server-json-recovery', 'workspace-return', 'notification-channel-journey',
@@ -40,7 +41,11 @@ GROUP_PRIORITY_PHASES = (
     'final-original',
 )
 RESET_PHASES = ('reason-draft', 'reset-review', 'reset-canceled', 'discard-review', 'draft-continued', 'reopened-clean', 'navigation-review', 'navigation-stayed', 'navigation-left', 'forward-clean', 'pending-reset', 'navigation-after-reset', 'success-stayed', 'success-left', 'final-original')
+TARGET_REGISTRATION_PHASES = ('invalid-name', 'invalid-url', 'invalid-methods', 'save-rejected', 'discard-review', 'continued-draft', 'reopened-clean', 'returned-opener', 'final-original')
 ARTIFACTS = {
+    *{f'web/test-results/diagnostic-target-submit-focus*/{phase}.{ext}'
+      for phase in TARGET_REGISTRATION_PHASES for ext in ('png', 'json')},
+    'web/test-results/diagnostic-target-submit-focus*/request-ledger.json',
     *{f'web/test-results/usage-reset-ownership*/{phase}.{ext}'
       for phase in RESET_PHASES for ext in ('png', 'json')},
     'web/test-results/usage-reset-ownership*/request-ledger.json',
@@ -99,8 +104,8 @@ class UXRecoveryWorkflowTests(unittest.TestCase):
         for value in ('group: ux-recovery-${{ github.ref }}', 'cancel-in-progress: false',
                       'contents: read', 'persist-credentials: false', 'runs-on: ubuntu-24.04',
                       'timeout-minutes: 15', 'timeout-minutes: 10',
-                      'name: Nineteen recovery specs (supplemental evidence only)',
-                      'name: Run nineteen recovery specs with unchanged fixtures',
+                      'name: Twenty recovery specs (supplemental evidence only)',
+                      'name: Run twenty recovery specs with unchanged fixtures',
                       'ROUTEWEAVER_CHROMIUM: /opt/google/chrome/chrome',
                       'npx --no-install playwright install-deps chromium',
                       '--config=playwright.ux-recovery.config.ts --workers=1 --retries=0'):
@@ -168,6 +173,11 @@ class UXRecoveryWorkflowTests(unittest.TestCase):
                               for ext in ('png', 'json')) + ('request-ledger.json',)
         for width in (1440, 390):
             observed[f'usage-reset-ownership.ui-reset-review-at-{width}px-chromium'] = reset_outputs
+        target_outputs = tuple(f'{phase}.{ext}' for phase in TARGET_REGISTRATION_PHASES
+                               for ext in ('png', 'json')) + ('request-ledger.json',)
+        for width in (1440, 390):
+            for mode in ('invalid', 'rejection'):
+                observed[f'diagnostic-target-submit-focus.ui-{mode}-at-{width}px-chromium'] = target_outputs
         for directory, filenames in observed.items():
             for filename in filenames:
                 path = f'web/test-results/{directory}/{filename}'
@@ -187,7 +197,7 @@ class UXRecoveryWorkflowTests(unittest.TestCase):
                     self.assertFalse(retained(path), path)
 
         # A named compact capture is not an upload permission for another fixture.
-        for filename in compact_outputs + multi_outputs + inventory_outputs + group_priority_outputs + reset_outputs:
+        for filename in compact_outputs + multi_outputs + inventory_outputs + group_priority_outputs + reset_outputs + target_outputs:
             path = f'web/test-results/unrelated.ui-chromium/{filename}'
             with self.subTest(path=path):
                 self.assertFalse(retained(path), path)

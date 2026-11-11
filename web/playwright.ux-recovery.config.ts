@@ -30,6 +30,7 @@ export default defineConfig({
         "**/resource-source-inventory-recovery.ui.spec.ts",
         "**/group-priority-draft-continuity.ui.spec.ts",
         "**/usage-reset-ownership.ui.spec.ts",
+        "**/diagnostic-target-submit-focus.ui.spec.ts",
       ],
     })),
   workers: 1,

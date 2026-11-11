@@ -86,3 +86,11 @@ performed. The previous full-suite pass at the integration base does not accept
 these later changes.
 
 Independent final source review accepted the stable owner/liveness guard, checkbox-group field semantics, seven public cases and bounded documentation with no blocking finding. The review did not execute tests or a browser.
+
+## Native preparation and aggregate interruption
+
+Four real-App native fixture cases at 390 and 1440 pixels cover missing name, invalid HTTPS URL, empty methods, definite synthetic save rejection, Continue/discard and clean reopening. Invalid cases forbid all writes; rejection cases validate and locally fulfill exactly one synthetic registration response. No target registration or diagnostic execution is forwarded to a backend. Original masked captures and a sanitized ledger have 19 exact scoped artifact paths.
+
+Strict native TypeScript, 68-case/20-spec supplemental discovery, and all five workflow contracts pass. Independent source review accepted the integrated fixture, complete reopening assertions and additive artifact wiring. Shared sandbox, servers, timeouts, one worker, zero retries and required gates remain unchanged. Native execution/pixel acceptance and lane runtime remain unverified.
+
+The first coordinator full-DOM attempt was interrupted: its process handle became unavailable and its log contains no completion result. It is not a pass or an assertion failure. A fresh serialized run was started against production/DOM source `0d7e226`; its final result is still pending at this record. The separate published checkpoint `172fc6e` excludes this diagnostic change.

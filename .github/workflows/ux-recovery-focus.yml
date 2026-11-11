@@ -21,7 +21,7 @@ env:
 
 jobs:
   recovery:
-    name: Nineteen recovery specs (supplemental evidence only)
+    name: Twenty recovery specs (supplemental evidence only)
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
@@ -81,7 +81,7 @@ jobs:
             await browser.close();
           }
           JS
-      - name: Run nineteen recovery specs with unchanged fixtures
+      - name: Run twenty recovery specs with unchanged fixtures
         working-directory: web
         # Bound this subset without changing per-test timeouts; reserve cleanup/upload time.
         timeout-minutes: 10
@@ -224,5 +224,24 @@ jobs:
             web/test-results/usage-reset-ownership*/final-original.png
             web/test-results/usage-reset-ownership*/final-original.json
             web/test-results/usage-reset-ownership*/request-ledger.json
+            web/test-results/diagnostic-target-submit-focus*/invalid-name.png
+            web/test-results/diagnostic-target-submit-focus*/invalid-name.json
+            web/test-results/diagnostic-target-submit-focus*/invalid-url.png
+            web/test-results/diagnostic-target-submit-focus*/invalid-url.json
+            web/test-results/diagnostic-target-submit-focus*/invalid-methods.png
+            web/test-results/diagnostic-target-submit-focus*/invalid-methods.json
+            web/test-results/diagnostic-target-submit-focus*/save-rejected.png
+            web/test-results/diagnostic-target-submit-focus*/save-rejected.json
+            web/test-results/diagnostic-target-submit-focus*/discard-review.png
+            web/test-results/diagnostic-target-submit-focus*/discard-review.json
+            web/test-results/diagnostic-target-submit-focus*/continued-draft.png
+            web/test-results/diagnostic-target-submit-focus*/continued-draft.json
+            web/test-results/diagnostic-target-submit-focus*/reopened-clean.png
+            web/test-results/diagnostic-target-submit-focus*/reopened-clean.json
+            web/test-results/diagnostic-target-submit-focus*/returned-opener.png
+            web/test-results/diagnostic-target-submit-focus*/returned-opener.json
+            web/test-results/diagnostic-target-submit-focus*/final-original.png
+            web/test-results/diagnostic-target-submit-focus*/final-original.json
+            web/test-results/diagnostic-target-submit-focus*/request-ledger.json
           if-no-files-found: warn
           retention-days: 7
