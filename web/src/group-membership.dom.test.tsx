@@ -9,6 +9,7 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { compile } from "tailwindcss";
 import { UIProviders } from "./ui-patterns/providers";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ProfileEditor } from "./Profiles";
@@ -134,6 +135,25 @@ function mount(profile = fixture()) {
   fireEvent.click(screen.getByText(profile.ir.groups[0].name, { exact: true }).closest("summary")!);
   return { writes, ...rendered };
 }
+it("reserves group-name focus-ring scroll clearance while preserving sticky-action clearance", async () => {
+  mount();
+  await screen.findByRole("textbox", { name: "策略组名称" });
+  const input = screen.getByRole("textbox", { name: "策略组名称" });
+  const stylesheet = document.createElement("style");
+  // Compile the actual rendered editor utilities, including ancestor selectors.
+  // jsdom checks the CSS contract; native keyboard QA owns painted clearance.
+  stylesheet.textContent = (await compile("@theme { --spacing: 0.25rem; } @tailwind utilities;"))
+    .build([...document.body.querySelectorAll<HTMLElement>("[class]")].flatMap((node) => [...node.classList]));
+  document.head.append(stylesheet);
+  try {
+    const style = getComputedStyle(input);
+    expect(style.scrollMarginTop).toBe("calc(var(--spacing) * 32)");
+    expect(style.scrollMarginBottom).toBe("var(--spacing)");
+  } finally {
+    stylesheet.remove();
+  }
+});
+
 function group() {
   return within(
     screen

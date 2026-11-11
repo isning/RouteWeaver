@@ -2666,6 +2666,7 @@ function GroupEditor({
           策略组名称
           <Input
             value={value.name}
+            className="scroll-mb-1"
             aria-label="策略组名称"
             onChange={(e) => onChange({ ...value, name: e.target.value })}
           />
