@@ -1016,3 +1016,41 @@ it("opens a verified created batch only after an explicit progress action", asyn
   expect(created).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ id: request.id, actorId: "fleet-test-admin", status: "planned" }));
   expect(sessionStorage.length).toBe(0);
 });
+
+it("keeps same-request fleet recovery visible and keyboard-owned while resubmission is pending", async (context) => {
+  const scenario = ownedClickScenario(context);
+  const batch = { ...plan, id: "batch", action: "configure", deploymentId: "path", createdAt: "2026-11-11T10:00:00Z", leaseSeconds: 300, status: "planned",
+    targets: [{ ...plan.targets[0], status: "planned", attempts: [], changes: [], diagnostics: [] }],
+  };
+  const writes: unknown[] = [];
+  let resolve!: (response: Response) => void;
+  vi.stubGlobal("fetch", vi.fn(async (_url: string, init?: RequestInit) => {
+    if (init?.method !== "POST") return json(batch);
+    writes.push(JSON.parse(String(init.body)));
+    if (writes.length === 1) return json({ error: "服务暂时不可用" }, 503);
+    return new Promise<Response>(done => { resolve = done; });
+  }));
+  await mount(<FleetBatchDetail id="batch" onClose={() => {}} />);
+  await scenario.click(() => screen.findByRole("button", { name: "执行第 1 阶段" }));
+  await scenario.click(() => screen.findByRole("button", { name: "确认执行" }));
+  await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+  const retry = await screen.findByRole("button", { name: "重新提交同一请求" });
+  await scenario.click(() => retry);
+  await waitFor(() => expect(writes).toHaveLength(2));
+  expect(screen.getByRole("button", { name: "重新提交同一请求" })).toBe(retry);
+  expect(retry.getAttribute("aria-busy")).toBe("true");
+  expect(retry.getAttribute("aria-disabled")).toBe("true");
+  expect(retry.hasAttribute("disabled")).toBe(false);
+  expect(document.activeElement).toBe(retry);
+  await userEvent.keyboard("{Enter}{Enter}");
+  expect(writes).toHaveLength(2);
+  await act(async () => resolve(json({ error: "请稍后重试" }, 503)));
+  await waitFor(() => expect(retry.getAttribute("aria-busy")).not.toBe("true"));
+  expect(document.activeElement).toBe(retry);
+  await userEvent.keyboard("{Enter}");
+  await waitFor(() => expect(writes).toHaveLength(3));
+  expect(writes[1]).toEqual(writes[0]);
+  expect(writes[2]).toEqual(writes[0]);
+  await act(async () => resolve(json(batch)));
+  await waitFor(() => expect(screen.queryByRole("button", { name: "重新提交同一请求" })).toBeNull());
+});

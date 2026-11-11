@@ -1454,9 +1454,10 @@ export function FleetBatchDetail({
                 重试所选失败目标
               </ActionButton>
             </div>
-            {operation && execute.isError && (
+            {operation && (execute.isError || execute.isPending) && (
               <ActionButton
                 pending={execute.isPending}
+                keepFocusableWhilePending
                 onClick={() => execute.mutate(operation)}
                 variant="outline"
               >
