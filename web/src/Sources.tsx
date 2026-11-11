@@ -817,6 +817,7 @@ function collectionRecipe(value: unknown): Collection | null {
 class CollectionSaveNotSentError extends Error {}
 
 export function CollectionsPage() {
+  const nameRequirementId = useId();
   const client = useQueryClient();
   const message = toast,
     confirm = useConfirm();
@@ -1297,6 +1298,7 @@ export function CollectionsPage() {
           <ActionButton
             className="collection-save-action"
             aria-label="保存集合"
+            aria-describedby={!draft?.name.trim() ? nameRequirementId : undefined}
             aria-busy={save.isPending}
             onKeyDown={(event) => {
               if (event.repeat && (event.key === "Enter" || event.key === " ")) event.preventDefault();
@@ -1342,17 +1344,26 @@ export function CollectionsPage() {
                   : "当前输入已保留，不能覆盖新版本。"}
               </Notice>
             )}
-            <label className="standalone-label grid min-w-0 gap-2 text-sm font-medium">
-              集合名称
-              <Input
-                ref={collectionName}
-                value={draft.name}
-                onChange={(e) =>
-                  changeDraft({ ...draft, name: e.target.value })
-                }
-                placeholder="例如：日常连接"
-              />
-            </label>
+            <div className="space-y-2">
+              <label className="standalone-label grid min-w-0 gap-2 text-sm font-medium">
+                集合名称
+                <Input
+                  ref={collectionName}
+                  aria-required="true"
+                  aria-describedby={!draft.name.trim() ? nameRequirementId : undefined}
+                  value={draft.name}
+                  onChange={(e) =>
+                    changeDraft({ ...draft, name: e.target.value })
+                  }
+                  placeholder="例如：日常连接"
+                />
+              </label>
+              {!draft.name.trim() && (
+                <p id={nameRequirementId} className="text-sm text-muted-foreground">
+                  集合名称为必填项
+                </p>
+              )}
+            </div>
             <label className="standalone-label grid min-w-0 gap-2 text-sm font-medium">
               订阅来源
               <MultiChoice

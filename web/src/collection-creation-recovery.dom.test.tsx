@@ -306,3 +306,33 @@ it("keeps an independently saved source notice through canceled and failed creat
   expect((editor.getByLabelText("集合名称") as HTMLInputElement).value).toBe("Local creation");
   expect(f.writes).toHaveLength(1);
 });
+
+
+it("explains the required collection name and saves a named collection without sources", async () => {
+  const f = api({ save: async (value) => json({ ...value, revisionToken: "created-r1" }) });
+  mount();
+  await userEvent.click((await screen.findAllByRole("button", { name: "新建集合" }))[0]);
+  const editor = within(await screen.findByRole("dialog", { name: "新建集合" }));
+  const name = editor.getByRole("textbox", { name: "集合名称" });
+  const save = editor.getByRole("button", { name: "保存集合" }) as HTMLButtonElement;
+  expect(save.disabled).toBe(true);
+  expect(name.getAttribute("aria-required")).toBe("true");
+  const hint = editor.getByText("集合名称为必填项");
+  expect(name.getAttribute("aria-describedby")).toBe(hint.id);
+  expect(save.getAttribute("aria-describedby")).toBe(hint.id);
+  fireEvent.change(name, { target: { value: "   " } });
+  expect(save.disabled).toBe(true);
+  await userEvent.click(save);
+  expect(f.writes).toHaveLength(0);
+  fireEvent.change(name, { target: { value: "稍后添加来源" } });
+  expect(editor.queryByText("集合名称为必填项")).toBeNull();
+  expect(name.hasAttribute("aria-describedby")).toBe(false);
+  expect(save.hasAttribute("aria-describedby")).toBe(false);
+  expect(editor.getByText("尚未选择来源")).toBeTruthy();
+  expect(save.disabled).toBe(false);
+  await userEvent.click(save);
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  expect(f.writes).toHaveLength(1);
+  expect(f.writes[0].method).toBe("POST");
+  expect(f.writes[0].body).toMatchObject({ name: "稍后添加来源", sources: [], steps: [] });
+});
