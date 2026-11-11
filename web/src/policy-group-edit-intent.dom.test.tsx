@@ -15,6 +15,7 @@ import { StrictMode, type ReactNode } from "react";
 import { GroupPolicyEditor } from "./GroupPolicyEditor";
 import { GroupPolicyComparison } from "./GroupPolicyComparison";
 import { usePolicyChange } from "./AccessPolicy";
+import { hasUnsavedChanges } from "./navigation";
 import { ownedClickScenario } from "./test-support/owned-click-scenario";
 import type {
   GroupReferenceLabels,
@@ -643,6 +644,204 @@ it("requires deliberate discard before closing a changed group draft", async () 
     within(reopened).getByRole("button", { name: "放弃修改" }),
   );
   await waitFor(() => expect(close).toHaveBeenCalledTimes(1));
+});
+
+it("owns a raw-only group priority draft through canceled dismissal and explicit discard", async () => {
+  const close = vi.fn();
+  vi.stubGlobal("fetch", vi.fn(async () => json(context(group))));
+  mount(group, close);
+  const priority = await screen.findByLabelText("用户组优先级");
+  owner.change(() => priority, { target: { value: "-" } });
+  expect(hasUnsavedChanges()).toBe(true);
+  const cancel = () => within(screen.getByRole("dialog", { name: "编辑 Family" })).getByRole("button", { name: "取消" });
+  await owner.click(cancel);
+  const decision = await screen.findByRole("alertdialog", { name: "放弃尚未保存的授权修改？" });
+  expect(close).not.toHaveBeenCalled();
+  await owner.click(() => within(decision).getByRole("button", { name: "继续编辑" }));
+  await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+  expect((priority as HTMLInputElement).value).toBe("-");
+  await owner.click(cancel);
+  await owner.click(() => screen.findByRole("button", { name: "放弃修改" }));
+  await waitFor(() => expect(close).toHaveBeenCalledTimes(1));
+});
+
+it.each(["-", "1e", "1.0000000000000001", "-2147483648.0000000000000001", "2147483648", "-2147483649", ""])(
+  "rejects raw group priority %j at form submission and saves only a corrected integer",
+  async (raw) => {
+    const writes: any[] = [];
+    vi.stubGlobal("fetch", vi.fn(async (url, init) => {
+      if (String(url).includes("/edit-context/")) return json(context(group));
+      const body = JSON.parse(init!.body as string);
+      writes.push(body);
+      return json(reviewed(group, body.change.group));
+    }));
+    mount();
+    const priority = await screen.findByLabelText("用户组优先级");
+    owner.change(() => priority, { target: { value: raw } });
+    // Programmatic/native-form submission must not depend on customValidity.
+    fireEvent.submit(priority.closest("form")!);
+    await screen.findByText("请输入有效的 32 位整数优先级");
+    expect(writes).toEqual([]);
+    expect((priority as HTMLInputElement).value).toBe(raw);
+    expect(screen.queryByRole("dialog", { name: "确认授权变更" })).toBeNull();
+    owner.change(() => priority, { target: { value: "-2" } });
+    await preview();
+    await screen.findByRole("dialog", { name: "确认授权变更" });
+    expect(writes).toHaveLength(1);
+    expect(writes[0].change.group.priority).toBe(-2);
+  },
+);
+
+it.each([["-", "-（待修正）"], ["1e", "1e（待修正）"], ["+0002", "+0002"]])(
+  "retains exact priority text %j when explicitly adopting the latest group",
+  async (raw, displayed) => {
+    let saved = group;
+    vi.stubGlobal("fetch", vi.fn(async (url) => String(url).includes("/edit-context/")
+      ? json(context(saved, saved === group ? "opened-1" : "opened-2")) : conflict()));
+    mount();
+    await name("Draft before latest");
+    await preview();
+    await screen.findByText("用户组已更新。当前草稿尚未保存，请查看最新版本。");
+    owner.change(() => screen.getByLabelText("用户组优先级"), { target: { value: raw } });
+    saved = { ...group, priority: 9 };
+    await owner.click(() => screen.getByRole("button", { name: "查看最新版本" }));
+    await owner.click(() => screen.findByRole("button", { name: "使用最新版本重新编辑" }));
+    await owner.click(() => screen.getByRole("button", { name: "使用最新版本" }));
+    await waitFor(() => expect((screen.getByLabelText("用户组优先级") as HTMLInputElement).value).toBe("9"));
+    await owner.click(() => screen.getByText("上一版草稿（未保存）"));
+    const row = within(screen.getByRole("table", { name: "保留的草稿" })).getByRole("row", { name: /用户组优先级/ });
+    expect(within(row).getAllByRole("cell").map((cell) => cell.textContent)).toEqual(["1", displayed]);
+    expect(hasUnsavedChanges()).toBe(true);
+  },
+);
+
+it.each(["1e", "+0002"])("carries raw priority %j into a fresh creation identity after a collision", async (raw) => {
+  let firstID = "", collided = false;
+  const writes: any[] = [];
+  vi.stubGlobal("fetch", vi.fn(async (url, init) => {
+    if (String(url).includes("/edit-context/")) {
+      const id = decodeURIComponent(String(url).split("/").at(-1)!);
+      firstID ||= id;
+      return collided && id === firstID ? json(context({ ...group, id }, "collision-present"))
+        : json({ target: { kind: "group", id }, record: null, precondition: { exists: false, revision: `absent:${id}` } });
+    }
+    const body = JSON.parse(init!.body as string);
+    writes.push(body);
+    if (body.change.group.id === firstID) { collided = true; return conflict(); }
+    return json(reviewed(null, body.change.group));
+  }));
+  mount(null);
+  await name("New family");
+  await owner.click(() => screen.getByLabelText("组服务方案"));
+  await owner.click(() => screen.findByRole("option", { name: "Same name，标识：plan-a" }));
+  await preview();
+  await screen.findByText("用户组已更新。当前草稿尚未保存，请查看最新版本。");
+  owner.change(() => screen.getByLabelText("用户组优先级"), { target: { value: raw } });
+  await owner.click(() => screen.getByRole("button", { name: "查看最新版本" }));
+  await owner.click(() => screen.findByRole("button", { name: "使用新标识另建用户组" }));
+  const priority = await screen.findByLabelText("用户组优先级");
+  expect((priority as HTMLInputElement).value).toBe(raw);
+  expect(hasUnsavedChanges()).toBe(true);
+  await owner.click(() => screen.getByText("上一版草稿（未保存）"));
+  await owner.click(() => screen.getByRole("button", { name: "丢弃此草稿副本" }));
+  expect(screen.queryByText("上一版草稿（未保存）")).toBeNull();
+  // The active creation seed is still a draft after its backup copy is removed.
+  expect(hasUnsavedChanges()).toBe(true);
+  await owner.click(() => within(screen.getByRole("dialog", { name: "新建用户组" })).getByRole("button", { name: "取消" }));
+  const discard = await screen.findByRole("alertdialog", { name: "放弃尚未保存的授权修改？" });
+  await owner.click(() => within(discard).getByRole("button", { name: "继续编辑" }));
+  await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+  expect((priority as HTMLInputElement).value).toBe(raw);
+  if (raw === "1e") {
+    fireEvent.submit(priority.closest("form")!);
+    await screen.findByText("请输入有效的 32 位整数优先级");
+    expect(writes).toHaveLength(1);
+    owner.change(() => priority, { target: { value: "-3" } });
+  }
+  await preview();
+  await screen.findByRole("dialog", { name: "确认授权变更" });
+  expect(writes).toHaveLength(2);
+  expect(writes[1].change.group).toMatchObject({ name: "New family", serviceId: "plan-a", priority: raw === "1e" ? -3 : 2 });
+  expect(writes[1].change.group.id).not.toBe(firstID);
+  expect(writes[1].precondition).toEqual({ exists: false, revision: `absent:${writes[1].change.group.id}` });
+});
+
+it("retires both a latest read and its adoption decision after newer raw priority intent", async (test) => {
+  let release!: () => void, readingLatest = false, hold = true;
+  const held = new Promise<void>((resolve) => { release = resolve; });
+  test.onTestFinished(release);
+  vi.stubGlobal("fetch", vi.fn(async (url) => {
+    if (String(url).includes("/edit-context/")) {
+      if (!readingLatest) return json(context(group));
+      if (hold) await held;
+      return json(context({ ...group, priority: 9 }, "opened-2"));
+    }
+    readingLatest = true;
+    return conflict();
+  }));
+  mount();
+  await name("Draft before conflict");
+  await preview();
+  await screen.findByText("用户组已更新。当前草稿尚未保存，请查看最新版本。");
+  await owner.click(() => screen.getByRole("button", { name: "查看最新版本" }));
+  owner.change(() => screen.getByLabelText("用户组优先级"), { target: { value: "-" } });
+  await act(async () => release());
+  expect(screen.queryByRole("button", { name: "使用最新版本重新编辑" })).toBeNull();
+  expect((screen.getByLabelText("用户组优先级") as HTMLInputElement).value).toBe("-");
+  hold = false;
+  await owner.click(() => screen.getByRole("button", { name: "查看最新版本" }));
+  await owner.click(() => screen.findByRole("button", { name: "使用最新版本重新编辑" }));
+  // As in the existing name-intent regression, deliver a later input before
+  // the old confirmation callback. It must no longer own draft replacement.
+  owner.change(() => screen.getByLabelText("用户组优先级"), { target: { value: "1e" } });
+  await owner.click(() => screen.getByRole("button", { name: "使用最新版本" }));
+  expect((screen.getByLabelText("用户组优先级") as HTMLInputElement).value).toBe("1e");
+  expect(screen.queryByText("上一版草稿（未保存）")).toBeNull();
+});
+
+it("retires a pending group preview when a newer raw priority edit cannot emit a number", async (test) => {
+  let release!: () => void;
+  const held = new Promise<void>((resolve) => { release = resolve; });
+  test.onTestFinished(release);
+  const writes: any[] = [];
+  vi.stubGlobal("fetch", vi.fn(async (url, init) => {
+    if (String(url).includes("/edit-context/")) return json(context(group));
+    const body = JSON.parse(init!.body as string);
+    writes.push(body);
+    await held;
+    return json(reviewed(group, body.change.group));
+  }));
+  mount();
+  await screen.findByLabelText("用户组优先级");
+  await preview();
+  await waitFor(() => expect(writes).toHaveLength(1));
+  owner.change(() => screen.getByLabelText("用户组优先级"), { target: { value: "1e" } });
+  await act(async () => release());
+  expect(screen.queryByRole("dialog", { name: "确认授权变更" })).toBeNull();
+  expect((screen.getByLabelText("用户组优先级") as HTMLInputElement).value).toBe("1e");
+  expect(hasUnsavedChanges()).toBe(true);
+});
+
+it.each([
+  ["0", 0], ["-0.000e999", 0], ["-2147483648", -2147483648], ["2147483647", 2147483647],
+  ["+0002", 2], ["-2.000e3", -2000], [".010e2", 1],
+] as const)("previews exact signed priority %j as %j without rewriting its input", async (raw, expected) => {
+  const writes: any[] = [];
+  vi.stubGlobal("fetch", vi.fn(async (url, init) => {
+    if (String(url).includes("/edit-context/")) return json(context(group));
+    const body = JSON.parse(init!.body as string);
+    writes.push(body);
+    return json(reviewed(group, body.change.group));
+  }));
+  mount();
+  const priority = await screen.findByLabelText("用户组优先级");
+  owner.change(() => priority, { target: { value: raw } });
+  await preview();
+  await screen.findByRole("dialog", { name: "确认授权变更" });
+  expect(writes).toHaveLength(1);
+  expect(writes[0].change.group.priority).toBe(expected);
+  await owner.click(() => screen.getByRole("button", { name: "返回编辑" }));
+  expect((priority as HTMLInputElement).value).toBe(raw);
 });
 
 it("keeps each retained group draft with its own opening record and keeps an incomplete priority incomplete", async () => {

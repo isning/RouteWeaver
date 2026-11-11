@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { useForm, AppField, AppForm } from "@/ui-patterns/form";
 import { ActionButton } from "@/ui-patterns/actions";
 import { useConfirm } from "@/ui-patterns/confirmations";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { APIError } from "./api";
 import { ErrorNotice, QueryState } from "./components";
 import { newID } from "./model";
@@ -17,8 +17,10 @@ import { loadGroupPolicyEditContext } from "./service-policy-edit";
 import { GroupPolicyComparison } from "./GroupPolicyComparison";
 import { useUnsavedChanges } from "./navigation";
 import { useDiscardConfirmation } from "./useDiscardConfirmation";
+import { operationalInteger } from "./OperationalIntegerInput";
 type DraftCopy = {
     group: UserGroup;
+    priorityText?: string;
     baseline: GroupPolicyEditContext["record"];
     references?: GroupReferenceLabels;
 };
@@ -35,6 +37,18 @@ type Props = {
     returnFocus?: HTMLElement | null;
 };
 const newGroup = (id: string): UserGroup => ({ id, name: "", serviceId: "", priority: 0, memberIds: [] });
+const priorityError = "请输入有效的 32 位整数优先级";
+// Reuse the bounded decimal-intent parser, extending its positive range to
+// signed group priorities and exact zero. Never round a fractional tail away.
+function groupPriority(raw: string): number | undefined {
+    if (raw.length > 256) return undefined;
+    const match = /^([+-]?)(?:(\d+)(?:\.(\d*))?|\.(\d+))(?:[eE]([+-]?\d+))?$/.exec(raw);
+    if (!match || match[0] !== raw) return undefined;
+    if (!/[1-9]/.test((match[2] ?? "") + (match[3] ?? match[4] ?? ""))) return 0;
+    const negative = match[1] === "-";
+    const magnitude = operationalInteger(raw.replace(/^[+-]/, ""), 1, negative ? 2147483648 : 2147483647);
+    return magnitude === undefined ? undefined : negative ? -magnitude : magnitude;
+}
 const options = (records: NamedRecord[]) => {
     const identities = new Map<string, Set<string>>();
     const identityCaptions = new Set<string>();
@@ -126,10 +140,18 @@ function GroupPolicyDraft({ context, seed, retained, discardRetained, acceptLate
     const confirm = useConfirm();
     const [form] = useForm();
     const [value] = useState<UserGroup>(() => structuredClone(context.record?.group || (seed ? { ...seed.group, id: context.target.id } : newGroup(context.target.id))));
+    const initialPriorityText = !context.record ? seed?.priorityText : undefined;
+    const priorityText = useRef(initialPriorityText);
+    const [rawPriority, setRawPriority] = useState(initialPriorityText);
     const [latest, setLatest] = useState<GroupPolicyEditContext | null>(null), [latestError, setLatestError] = useState<Error | null>(null);
     const [latestPending, setLatestPending] = useState(false), [conflicted, setConflicted] = useState(false);
     const latestGeneration = useRef(0), latestController = useRef<AbortController | null>(null);
     const policy = usePolicyChange({ mode: "guarded-group", users: props.users, services: props.services, routes: props.routes, retainedDrafts: retained, onApplied: props.onClose });
+    // A collision restart carries an active unsaved draft, not just its backup.
+    // Removing retained copies must not retire the new editor's own close guard.
+    useLayoutEffect(() => {
+        if (!context.record && seed) policy.clearError();
+    }, [context, seed]);
     useEffect(() => () => { latestGeneration.current++; latestController.current?.abort(); }, []);
     useEffect(() => {
         if (policy.error instanceof APIError && policy.error.status === 409)
@@ -145,8 +167,15 @@ function GroupPolicyDraft({ context, seed, retained, discardRetained, acceptLate
         Object.keys(policy.error.details).length === 1 && "detail" in policy.error.details &&
         policy.error.details.detail === policy.error.message;
     const draft = (): UserGroup => ({ ...value, ...form.getFieldsValue(true), id: value.id });
-    const draftCopy = (): DraftCopy => structuredClone({ group: draft(), baseline: context.record, references: context.references });
+    const draftCopy = (): DraftCopy => structuredClone({ group: draft(), priorityText: priorityText.current, baseline: context.record, references: context.references });
     const invalidateLatest = () => { latestGeneration.current++; latestController.current?.abort(); setLatest(null); setLatestError(null); setLatestPending(false); };
+    const inputPriority = (text: string) => {
+        priorityText.current = text;
+        setRawPriority(text);
+        invalidateLatest();
+        policy.clearError();
+    };
+    const priorityValue = () => groupPriority(priorityText.current ?? String(form.getFieldValue("priority") ?? ""));
     const readLatest = async () => {
         invalidateLatest();
         const owner = latestGeneration.current, controller = new AbortController();
@@ -183,10 +212,13 @@ function GroupPolicyDraft({ context, seed, retained, discardRetained, acceptLate
                 (policy.requestClose)();
         }} pending={!(!policy.closingBlocked)} size="lg" bodyProps={{ className: "space-y-6" }}>
     {retained.length > 0 && <Accordion type="multiple">{(retained.map((saved, index) => ({ key: `${index}`, label: index === retained.length - 1 ? "\u4E0A\u4E00\u7248\u8349\u7A3F\uFF08\u672A\u4FDD\u5B58\uFF09" : `较早草稿 ${index + 1}（未保存）`, children: <>
-      <GroupPolicyComparison resource={{ target: { kind: "group", id: saved.group.id }, before: saved.baseline, after: { group: saved.group }, references: { before: referencesFor(saved.baseline?.group ?? null, saved.references), after: referencesFor(saved.group, saved.references) } }} title="保留的草稿" showAll beforeLabel="当时打开的版本" afterLabel="保留的草稿"/>
+      <GroupPolicyComparison resource={{ target: { kind: "group", id: saved.group.id }, before: saved.baseline, after: { group: saved.group }, references: { before: referencesFor(saved.baseline?.group ?? null, saved.references), after: referencesFor(saved.group, saved.references) } }} title="保留的草稿" showAll draftPriority={saved.priorityText === undefined ? undefined : { value: saved.priorityText, invalid: groupPriority(saved.priorityText) === undefined }} beforeLabel="当时打开的版本" afterLabel="保留的草稿"/>
       <ActionButton onClick={() => discardRetained(index)} variant="destructive">丢弃此草稿副本</ActionButton>
     </> }))).map(section => <AccordionItem key={section.key} value={String(section.key)}><AccordionTrigger>{section.label}</AccordionTrigger><AccordionContent className="space-y-4">{section.children}</AccordionContent></AccordionItem>)}</Accordion>}
-    <AppForm form={form} submitErrorFocusOwner={value} initialValues={value} onValuesChange={() => { invalidateLatest(); policy.clearError(); }} onFinish={() => { if (!policy.closingBlocked) policy.propose({ group: draft() }, context.precondition); }}>
+    <AppForm form={form} submitErrorFocusOwner={value} initialValues={value} onValuesChange={() => { invalidateLatest(); policy.clearError(); }} onFinish={() => {
+        const priority = priorityValue();
+        if (!policy.closingBlocked && priority !== undefined) policy.propose({ group: { ...draft(), priority } }, context.precondition);
+    }}>
       <ErrorNotice error={policy.error} focusRef={policy.errorFocusRef} presentation={stalePolicyConflict ? {
           title: "操作未完成", recovery: "草稿尚未保存，请核对最新版本。", detailsLabel: "查看技术详情",
       } : undefined}/>
@@ -202,7 +234,7 @@ function GroupPolicyDraft({ context, seed, retained, discardRetained, acceptLate
       <AppField name="name" label="用户组名称" rules={[{ required: true, whitespace: true, message: "请输入用户组名称" }]}><Input /></AppField>
       <AppField name="serviceId" label="组服务方案" rules={[{ required: true, message: "请选择服务方案" }]} trigger="onValueChange"><ChoiceSelect options={options(props.services)}/></AppField>
       <AppField name="memberIds" label="组成员" trigger="onValueChange"><MultiChoice options={options(props.users)}/></AppField>
-      <AppField name="priority" label="用户组优先级" description="数值越大越优先。同一优先级不能给同一用户分配不同方案。" rules={[{ required: true }, { type: "integer", min: -2147483648, max: 2147483647, message: "请输入有效的 32 位整数优先级" }]} trigger="onValueChange"><NumericInput precision={0} min={-2147483648} max={2147483647}/></AppField>
+      <AppField name="priority" label="用户组优先级" description="数值越大越优先。同一优先级不能给同一用户分配不同方案。" required rules={[{ validator: () => priorityValue() === undefined ? Promise.reject(new Error(priorityError)) : Promise.resolve() }]} trigger="onValueChange" validateTrigger="onInputText"><NumericInput precision={0} min={-2147483648} max={2147483647} initialInputText={initialPriorityText} onInputText={inputPriority} aria-invalid={rawPriority !== undefined && groupPriority(rawPriority) === undefined || undefined}/></AppField>
       <div className="form-footer flex flex-wrap items-center justify-end gap-2 border-t pt-4"><ActionButton disabled={policy.closingBlocked} onClick={policy.requestClose} variant="outline">取消</ActionButton><ActionButton type="submit" aria-label="预览影响" aria-busy={policy.pending} keepFocusableWhilePending pending={policy.pending} variant="default">预览影响</ActionButton></div>
     </AppForm>
     {policy.dialog}

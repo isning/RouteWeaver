@@ -20,15 +20,21 @@ function fields(group: UserGroup): Field[] {
     ];
 }
 /** Read-time names explain IDs; neither labels nor catalogs define a change. */
-export function GroupPolicyComparison({ resource, title = "用户组变更", showAll = false, beforeLabel = "当前保存", afterLabel = "本次保存" }: {
+export function GroupPolicyComparison({ resource, title = "用户组变更", showAll = false, beforeLabel = "当前保存", afterLabel = "本次保存", draftPriority }: {
     resource: GroupPolicyResource;
     title?: string;
     showAll?: boolean;
     beforeLabel?: string;
     afterLabel?: string;
+    /** Local retained input only; never supplied for a server policy review. */
+    draftPriority?: { value: string; invalid: boolean };
 }) {
     const id = useId(), before = resource.before?.group, after = resource.after.group;
-    const previous = before ? fields(before) : [], next = fields(after);
+    const previous = before ? fields(before) : [], next = fields(after).map((field) => field.key === "priority" && draftPriority ? {
+        ...field,
+        raw: draftPriority.value === String(field.raw) ? field.raw : draftPriority.value,
+        value: draftPriority.value === "" ? "尚未填写" : `${draftPriority.value}${draftPriority.invalid ? "（待修正）" : ""}`,
+    } : field);
     const rows = next.filter((field) => showAll || !before || JSON.stringify(previous.find((prior) => prior.key === field.key)?.raw) !== JSON.stringify(field.raw));
     const beforeIDs = new Set(members(before)), afterIDs = new Set(members(after));
     const added = [...afterIDs].filter((member) => !beforeIDs.has(member));
