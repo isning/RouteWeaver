@@ -65,3 +65,9 @@ Services' header New action can set `serviceEditor` before the combined admin
 inventory exists, while editor rendering requires `serviceEditor && data`.
 An initial read failure can therefore silently retain creation intent and open
 it on later recovery. This source-only finding is not changed in this slice.
+
+## Coordinator aggregate and first native result
+
+The clean local aggregate including this slice and initial Services creation readiness completed on 2026-11-11 with 4,163/4,163 tests across 341 files (exit 0; 1,095.52 seconds). Production/DOM source was `6285879`; subsequent sampler commits did not change that source. Build had passed.
+
+Exact remote `5b65a446f339fd39da0fd1d05fda71cb5f9d3413` ran 579 required browser cases: 571 passed and eight new policy-inventory sampler cases failed. Supplemental recovery recorded 76 passes and the same eight failures. All stopped before pending recovery/editor checks because the sampler armed failure before forward keyboard traversal toward an earlier Refresh control. Real session-boundary revalidation can invalidate queries during browser-focus restoration; recorded preparation used 17–73 Tabs and 6–27 failed reads. The ledger did not record enough auth-event timing to attribute each read individually. Sampler correction is pending; this is not a native product-acceptance claim. The isolated DOM offline checks also do not imply that the real App exposes its private workspace while offline.
