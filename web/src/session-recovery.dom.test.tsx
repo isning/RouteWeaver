@@ -643,8 +643,9 @@ it("keeps the labelled workspace visible but read-only during routine focus veri
   );
   fireEvent.click(await screen.findByRole("button", { name: "新建集合" }));
   const name = screen.getByLabelText("集合名称") as HTMLInputElement;
-  fireEvent.change(name, { target: { value: "Keep my place" } });
-  name.focus();
+  // Finish the user input before simulating a later window-focus check.
+  // Hint removal must settle while the input, not BODY, owns focus.
+  await userEvent.setup().type(name, "Keep my place");
   name.setSelectionRange(2, 5);
   hold = true;
   fireEvent(window, new Event("focus"));
