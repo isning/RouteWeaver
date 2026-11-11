@@ -9,8 +9,13 @@ export function serviceRateBytes(text: string): number | undefined {
     return text.trim() === text ? scaledServiceBytes(text, 125000n) : undefined;
 }
 
+// Count limits share the exact nonnegative-integer contract without scaling.
+export function serviceCountInteger(text: string): number | undefined {
+    return text.trim() === text ? scaledServiceBytes(text, 1n) : undefined;
+}
+
 function scaledServiceBytes(text: string, scale: bigint): number | undefined {
-    // A paste-size resource guard, not a quota/rate maximum. Keep oversized
+    // A paste-size resource guard, not a limit maximum. Keep oversized
     // edits pending rather than spending unbounded work on BigInt parsing.
     if (text.length > 4096)
         return undefined;

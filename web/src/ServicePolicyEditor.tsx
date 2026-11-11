@@ -1,4 +1,4 @@
-import { serviceQuotaBytes, serviceRateBytes } from "./service-quota-input";
+import { serviceCountInteger, serviceQuotaBytes, serviceRateBytes } from "./service-quota-input";
 import { NumericInput } from "@/ui-patterns/numeric-input";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { TaskSheet, useTaskReturnFocus } from "@/ui-patterns/task-overlays";
@@ -21,11 +21,16 @@ import { ServicePolicyComparison } from "./ServicePolicyComparison";
 import { useUnsavedChanges } from "./navigation";
 import { useDiscardConfirmation } from "./useDiscardConfirmation";
 import { revealFocusedDrawerControl } from "./drawer-control-visibility";
+const countFields = ["onlineIpLimit", "connectionLimit"] as const;
+type CountField = typeof countFields[number];
+type CountText = Partial<Record<CountField, string>>;
+const countLabels: Record<CountField, string> = { onlineIpLimit: "在线 IP 上限", connectionLimit: "并发逻辑流上限" };
 type DraftCopy = {
     service: Service;
     quotaGiB: unknown;
     quotaText?: string;
     rateText?: string;
+    countText?: CountText;
     baseline: ServicePolicyEditContext["record"];
 };
 type Props = {
@@ -122,6 +127,10 @@ function ServicePolicyDraft({ context, seed, retained, discardRetained, acceptLa
     const pendingRate = useRef<string | null>(initialRateText !== undefined && serviceRateBytes(initialRateText) === undefined ? initialRateText : null);
     const [unfinishedRate, setUnfinishedRate] = useState(pendingRate.current);
     const [rateKey, setRateKey] = useState(0);
+    const acceptedCounts = useRef({ onlineIpLimit: value.onlineIpLimit ?? 0, connectionLimit: value.connectionLimit ?? 0 });
+    const countText = useRef<CountText>({ ...(!context.record ? seed?.countText : undefined) });
+    const [rawCounts, setRawCounts] = useState(countText.current);
+    const [countKeys, setCountKeys] = useState({ onlineIpLimit: 0, connectionLimit: 0 });
     const [limitSections, setLimitSections] = useState<string[]>([]);
     const [latest, setLatest] = useState<ServicePolicyEditContext | null>(null);
     const [latestError, setLatestError] = useState<Error | null>(null);
@@ -145,9 +154,9 @@ function ServicePolicyDraft({ context, seed, retained, discardRetained, acceptLa
         "code" in policy.error.details && policy.error.details.code === "POLICY_EDIT_BASELINE_CHANGED";
     const draft = (): Service => {
         const { quotaGiB, ...values } = form.getFieldsValue(true);
-        return { ...value, ...values, id: value.id, cycle: { ...value.cycle, ...values.cycle }, quotaBytes: acceptedQuota.current, entryRateBps: acceptedRate.current };
+        return { ...value, ...values, ...acceptedCounts.current, id: value.id, cycle: { ...value.cycle, ...values.cycle }, quotaBytes: acceptedQuota.current, entryRateBps: acceptedRate.current };
     };
-    const draftCopy = (): DraftCopy => structuredClone({ service: draft(), quotaGiB: acceptedQuota.current / 1024 ** 3, quotaText: pendingQuota.current ?? undefined, rateText: rawRateText.current, baseline: context.record });
+    const draftCopy = (): DraftCopy => structuredClone({ service: draft(), quotaGiB: acceptedQuota.current / 1024 ** 3, quotaText: pendingQuota.current ?? undefined, rateText: rawRateText.current, countText: countText.current, baseline: context.record });
     const invalidateLatest = () => {
         latestGeneration.current++;
         latestController.current?.abort();
@@ -190,6 +199,31 @@ function ServicePolicyDraft({ context, seed, retained, discardRetained, acceptLa
         invalidateLatest();
         policy.clearError();
     };
+    const countReady = (field: CountField) => {
+        const raw = countText.current[field];
+        return raw === undefined
+            ? Number.isSafeInteger(acceptedCounts.current[field]) && acceptedCounts.current[field] >= 0
+            : serviceCountInteger(raw) !== undefined;
+    };
+    const countsReady = () => countFields.every(countReady);
+    const inputCount = (field: CountField, text: string) => {
+        countText.current = { ...countText.current, [field]: text };
+        setRawCounts(countText.current);
+        const count = serviceCountInteger(text);
+        if (count !== undefined) acceptedCounts.current[field] = count;
+        invalidateLatest();
+        policy.clearError();
+    };
+    const discardCount = (field: CountField) => {
+        const remaining = { ...countText.current };
+        delete remaining[field];
+        countText.current = remaining;
+        setRawCounts(remaining);
+        form.setFieldValue(field, acceptedCounts.current[field]);
+        setCountKeys((keys) => ({ ...keys, [field]: keys[field] + 1 }));
+        invalidateLatest();
+        policy.clearError();
+    };
     const readLatest = async () => {
         invalidateLatest();
         const owner = latestGeneration.current;
@@ -227,15 +261,15 @@ function ServicePolicyDraft({ context, seed, retained, discardRetained, acceptLa
                 (policy.requestClose)();
         }} pending={!(!policy.closingBlocked)} size="lg" bodyProps={{ className: "space-y-6" }}>
     {retained.length > 0 && <Accordion type="multiple">{(retained.map((saved, index) => ({ key: `${index}`, label: index === retained.length - 1 ? "\u4E0A\u4E00\u7248\u8349\u7A3F\uFF08\u672A\u4FDD\u5B58\uFF09" : `较早草稿 ${index + 1}（未保存）`, children: <>
-      <ServicePolicyComparison resource={{ target: { kind: "service", id: saved.service.id }, before: saved.baseline, after: { service: saved.service } }} title="保留的草稿" showAll draftQuota={saved.quotaText !== undefined ? { value: saved.quotaText } : undefined} draftRate={saved.rateText !== undefined ? { value: saved.rateText } : undefined} beforeLabel="当时打开的版本" afterLabel="保留的草稿"/>
+      <ServicePolicyComparison resource={{ target: { kind: "service", id: saved.service.id }, before: saved.baseline, after: { service: saved.service } }} title="保留的草稿" showAll draftQuota={saved.quotaText !== undefined ? { value: saved.quotaText } : undefined} draftRate={saved.rateText !== undefined ? { value: saved.rateText } : undefined} draftCounts={saved.countText} beforeLabel="当时打开的版本" afterLabel="保留的草稿"/>
       <ActionButton onClick={() => discardRetained(index)} variant="destructive">丢弃此草稿副本</ActionButton>
     </> }))).map(section => <AccordionItem key={section.key} value={String(section.key)}><AccordionTrigger>{section.label}</AccordionTrigger><AccordionContent className="space-y-4">{section.children}</AccordionContent></AccordionItem>)}</Accordion>}
     <AppForm form={form} submitErrorFocusOwner={value} onFocusCapture={revealFocusedDrawerControl} onSubmitCapture={() => {
         // Remount the invalid field before Form validates, so its ordinary
         // submit-error owner can reveal and focus the actual editable control.
-        if (!rateReady() && !limitSections.includes("limits"))
+        if ((!rateReady() || !countsReady()) && !limitSections.includes("limits"))
             flushSync(() => setLimitSections(["limits"]));
-    }} initialValues={{ ...value, onlineIpLimit: value.onlineIpLimit || 0, connectionLimit: value.connectionLimit || 0, entryRateBps: value.entryRateBps || 0, quotaGiB: !context.record && seed ? seed.quotaGiB : value.quotaBytes / 1024 ** 3 }} onValuesChange={() => { invalidateLatest(); policy.clearError(); }} onFinish={() => { if (!policy.closingBlocked && pendingQuota.current === null && rateReady()) policy.propose({ service: draft() }, context.precondition); }}>
+    }} initialValues={{ ...value, onlineIpLimit: value.onlineIpLimit || 0, connectionLimit: value.connectionLimit || 0, entryRateBps: value.entryRateBps || 0, quotaGiB: !context.record && seed ? seed.quotaGiB : value.quotaBytes / 1024 ** 3 }} onValuesChange={() => { invalidateLatest(); policy.clearError(); }} onFinish={() => { if (!policy.closingBlocked && pendingQuota.current === null && rateReady() && countsReady()) policy.propose({ service: draft() }, context.precondition); }}>
       <ErrorNotice error={policy.error} focusRef={policy.errorFocusRef}/>
       {conflicted && <section className="space-y-4 rounded-lg border bg-muted/30 p-4" aria-label="处理方案版本变化">
         {!baselineConflictVisible && <p>草稿尚未保存，请核对最新版本。</p>}
@@ -244,7 +278,7 @@ function ServicePolicyDraft({ context, seed, retained, discardRetained, acceptLa
         {latest && <>
           {latest.record ? <ServicePolicyComparison resource={{ target: latest.target, before: context.record, after: latest.record }} title="已保存的方案变化" beforeLabel="打开时保存" afterLabel="最新保存"/> : <p>{context.precondition.exists ? "方案已不存在，当前草稿不会自动新建同名方案。" : "方案仍未创建，可用当前草稿重新预览。"}</p>}
           {context.precondition.exists && latest.record && <ActionButton onClick={useLatest} disabled={policy.closingBlocked} variant="outline">使用最新版本重新编辑</ActionButton>}
-          {!context.precondition.exists && latest.record && <ActionButton onClick={() => { if (pendingQuota.current === null && rateReady()) restartCreation(draftCopy()); }} disabled={policy.closingBlocked || unfinishedQuota !== null || unfinishedRate !== null} variant="outline">使用新标识另建方案</ActionButton>}
+          {!context.precondition.exists && latest.record && <ActionButton onClick={() => { if (pendingQuota.current === null && rateReady() && countsReady()) restartCreation(draftCopy()); }} disabled={policy.closingBlocked || unfinishedQuota !== null || unfinishedRate !== null || !countsReady()} variant="outline">使用新标识另建方案</ActionButton>}
         </>}
       </section>}
         <AppField name="name" label="服务方案名称" rules={[{ required: true, whitespace: true }]}>
@@ -281,13 +315,19 @@ function ServicePolicyDraft({ context, seed, retained, discardRetained, acceptLa
             {
                 key: "limits",
                 label: "\u5728\u7EBF\u3001\u5E76\u53D1\u4E0E\u901F\u7387\u9650\u5236",
-                children: <LimitFields rateInput={{ onInput: inputRate, valid: rateReady, resetKey: rateKey, initialInputText: rawRateText.current }}/>,
+                children: <LimitFields rateInput={{ onInput: inputRate, valid: rateReady, resetKey: rateKey, initialInputText: rawRateText.current }} countInputs={Object.fromEntries(countFields.map(field => [field, {
+                    onInput: (text: string) => inputCount(field, text), valid: () => countReady(field), resetKey: countKeys[field], initialInputText: rawCounts[field],
+                }]))}/>,
             },
         ]).map(section => <AccordionItem key={section.key} value={String(section.key)}><AccordionTrigger>{section.label}</AccordionTrigger><AccordionContent className="space-y-4">{section.children}</AccordionContent></AccordionItem>)}</Accordion>
         {unfinishedRate !== null && <div role="status" className="space-y-2">
           <p>限速输入「{unfinishedRate}」暂不可用。请修正 Mbps 数值，或保留上一个有效限速。</p>
           <ActionButton onClick={discardRate} variant="outline">放弃本次输入，保留上一个有效限速</ActionButton>
         </div>}
+        {countFields.filter(field => rawCounts[field] !== undefined && !countReady(field)).map(field => <div key={field} role="status" className="space-y-2">
+          <p>{countLabels[field]}输入「{rawCounts[field]}」暂不可用。请填写非负整数，或保留上一个有效上限。</p>
+          <ActionButton onClick={() => discardCount(field)} variant="outline">{field === "onlineIpLimit" ? "放弃输入，保留 IP 上限" : "放弃输入，保留并发上限"}</ActionButton>
+        </div>)}
 
       <div className="form-footer flex flex-wrap items-center justify-end gap-2 border-t pt-4">
         <ActionButton disabled={policy.closingBlocked} onClick={policy.requestClose} variant="outline">取消</ActionButton>

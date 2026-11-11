@@ -1,4 +1,4 @@
-import { serviceQuotaBytes, serviceRateBytes } from "./service-quota-input";
+import { serviceCountInteger, serviceQuotaBytes, serviceRateBytes } from "./service-quota-input";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { useId } from "react";
 import { bitrateLabel, bytesLabel } from "./model";
@@ -33,6 +33,12 @@ const retainedRate = (value: string) => {
     return bytes === undefined ? `${value} Mbps（待修正）`
         : bytes === 0 ? `不限制（${value} Mbps）` : `${value} Mbps（${bytes} 字节/秒）`;
 };
+const retainedCount = (value: string, unit: string) => {
+    if (value === "") return "尚未填写";
+    const count = serviceCountInteger(value);
+    return count === undefined ? `${value} ${unit}（待修正）`
+        : count === 0 ? `不限制（${value}）` : `${value} ${unit}`;
+};
 function fields(plan: Service): Field[] {
     const cycle = plan.cycle;
     return [
@@ -50,7 +56,7 @@ function fields(plan: Service): Field[] {
     ];
 }
 /** Resource intent, deliberately separate from existing-account effective policy. */
-export function ServicePolicyComparison({ resource, title = "方案变更", showAll = false, beforeLabel = "当前保存", afterLabel = "本次保存", draftQuota, draftRate }: {
+export function ServicePolicyComparison({ resource, title = "方案变更", showAll = false, beforeLabel = "当前保存", afterLabel = "本次保存", draftQuota, draftRate, draftCounts }: {
     resource: ServicePolicyResource;
     title?: string;
     showAll?: boolean;
@@ -60,6 +66,7 @@ export function ServicePolicyComparison({ resource, title = "方案变更", show
         value: unknown;
     };
     draftRate?: { value: string };
+    draftCounts?: Partial<Record<"onlineIpLimit" | "connectionLimit", string>>;
 }) {
     const id = useId();
     const before = resource.before?.service;
@@ -70,6 +77,9 @@ export function ServicePolicyComparison({ resource, title = "方案变更", show
             return { ...field, raw: draftQuota.value, value: retainedQuota(draftQuota.value) };
         if (field.key === "rate" && draftRate)
             return { ...field, raw: draftRate.value, value: retainedRate(draftRate.value) };
+        const countText = field.key === "ips" ? draftCounts?.onlineIpLimit : field.key === "connections" ? draftCounts?.connectionLimit : undefined;
+        if (countText !== undefined)
+            return { ...field, raw: countText, value: retainedCount(countText, field.key === "ips" ? "个" : "条") };
         if (showAll && ["quota", "rate"].includes(field.key) && typeof field.raw === "number" && Number.isFinite(field.raw))
             return { ...field, value: `${field.value}（${field.raw} ${field.key === "quota" ? "字节" : "字节/秒"}）` };
         return field;

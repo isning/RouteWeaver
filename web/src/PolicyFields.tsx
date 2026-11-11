@@ -108,7 +108,17 @@ export function CycleFields({ planDefaults = false, numericControls, modeDisable
         </AppField>)}
     </div>);
 }
-export function LimitFields({ rateInput }: {
+type CountInput = {
+    onInput: (text: string) => void;
+    valid: () => boolean;
+    resetKey?: Key;
+    initialInputText?: string;
+};
+const countRules = (input?: CountInput) => input ? [{
+    validator: () => input.valid() ? Promise.resolve() : Promise.reject(new Error("请输入安全范围内的非负整数")),
+}] : wholeNumberRules;
+export function LimitFields({ rateInput, countInputs }: {
+    countInputs?: Partial<Record<"onlineIpLimit" | "connectionLimit", CountInput>>;
     rateInput?: {
         onInput: (text: string) => void;
         valid: () => boolean;
@@ -118,11 +128,11 @@ export function LimitFields({ rateInput }: {
 } = {}) {
     return (<>
       <div className="form-grid grid gap-5 sm:grid-cols-2">
-        <AppField name="onlineIpLimit" label="账号在线 IP 数上限" description="跨入口合并去重，不按设备计数。" rules={wholeNumberRules} trigger="onValueChange">
-          <NumericInput min={0} max={Number.MAX_SAFE_INTEGER}/>
+        <AppField name="onlineIpLimit" label="账号在线 IP 数上限" description="跨入口合并去重，不按设备计数。" rules={countRules(countInputs?.onlineIpLimit)} trigger="onValueChange" validateTrigger={countInputs?.onlineIpLimit ? "onInputText" : undefined}>
+          <NumericInput min={0} max={Number.MAX_SAFE_INTEGER} onInputText={countInputs?.onlineIpLimit?.onInput} resetKey={countInputs?.onlineIpLimit?.resetKey} initialInputText={countInputs?.onlineIpLimit?.initialInputText}/>
         </AppField>
-        <AppField name="connectionLimit" label="账号并发逻辑流数上限" description="跨入口累加；同一 IP 的多个流分别计数。" rules={wholeNumberRules} trigger="onValueChange">
-          <NumericInput min={0} max={Number.MAX_SAFE_INTEGER}/>
+        <AppField name="connectionLimit" label="账号并发逻辑流数上限" description="跨入口累加；同一 IP 的多个流分别计数。" rules={countRules(countInputs?.connectionLimit)} trigger="onValueChange" validateTrigger={countInputs?.connectionLimit ? "onInputText" : undefined}>
+          <NumericInput min={0} max={Number.MAX_SAFE_INTEGER} onInputText={countInputs?.connectionLimit?.onInput} resetKey={countInputs?.connectionLimit?.resetKey} initialInputText={countInputs?.connectionLimit?.initialInputText}/>
         </AppField>
         <AppField name="entryRateBps" label="每个入口限速（Mbps）" description="按账号 × 逻辑入口计算，上下行与多个流共用。" rules={rateInput ? [{
             validator: () => rateInput.valid() ? Promise.resolve() : Promise.reject(new Error("请输入非负 Mbps 数值，需为 0.000008 Mbps 的整数倍且不超过上限")),
