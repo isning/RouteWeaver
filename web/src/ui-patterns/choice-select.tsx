@@ -367,11 +367,18 @@ export function MultiChoice<V extends Value = string>({
   creatable?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const reopeningRetainedContent = useRef(false);
+  useImperativeHandle(ref, () => triggerRef.current!, []);
   const [query, setQuery] = useState("");
   const value = providedValue ?? [];
   const choices = flat(options);
   const { visible, total } = boundedOptions(options, query);
   const changeOpen = (next: boolean) => {
+    reopeningRetainedContent.current =
+      next && !open && !!contentRef.current?.isConnected;
     setOpen(next);
     onOpenChange?.(next);
     if (!next) {
@@ -379,6 +386,19 @@ export function MultiChoice<V extends Value = string>({
       onBlur?.();
     }
   };
+  useLayoutEffect(() => {
+    const reopening = reopeningRetainedContent.current;
+    reopeningRetainedContent.current = false;
+    // Retained exit content does not remount, so Radix cannot autofocus it
+    // again. Only the trigger that reopened this picker may hand focus back.
+    if (
+      open &&
+      !disabled &&
+      reopening &&
+      document.activeElement === triggerRef.current
+    )
+      inputRef.current?.focus();
+  }, [open]);
   useEffect(() => {
     if (disabled && open) changeOpen(false);
   }, [disabled, open]);
@@ -401,7 +421,7 @@ export function MultiChoice<V extends Value = string>({
             role="combobox"
             aria-expanded={open}
             disabled={disabled}
-            ref={ref}
+            ref={triggerRef}
             className="h-auto min-h-11 w-full justify-between whitespace-normal font-normal"
             {...aria}
           >
@@ -415,14 +435,38 @@ export function MultiChoice<V extends Value = string>({
           </Button>
         </PopoverTrigger>
         <PopoverContent
+          ref={contentRef}
           className="w-(--radix-popover-trigger-width) p-0"
           align="start"
           aria-hidden={!open || undefined}
           inert={!open}
+          onCloseAutoFocus={(event) => {
+            // A same-content reopen can retain Radix's outside-interaction
+            // flag. Restore this trigger only while this picker still owns
+            // focus; newer fields and pickers must keep their interaction.
+            const closingContent = event.target;
+            const active = document.activeElement;
+            const enclosingDialog = triggerRef.current?.closest(
+              '[role="dialog"], [role="alertdialog"]',
+            );
+            event.preventDefault();
+            if (
+              closingContent instanceof HTMLElement &&
+              active &&
+              active !== document.body &&
+              active !== enclosingDialog &&
+              active.isConnected &&
+              !closingContent.contains(active)
+            )
+              return;
+            if (triggerRef.current?.isConnected && !triggerRef.current.disabled)
+              triggerRef.current.focus();
+          }}
         >
           <Command label="搜索选项" shouldFilter={false}>
             {(searchable || creatable || choices.length > 40) && (
               <CommandInput
+                ref={inputRef}
                 aria-label="搜索选项"
                 value={query}
                 onValueChange={setQuery}
