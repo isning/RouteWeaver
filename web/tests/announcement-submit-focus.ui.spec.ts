@@ -13,7 +13,12 @@ test.use({
   reducedMotion: "no-preference",
 });
 
-async function geometry(dialog: Locator, field: Locator) {
+async function geometry(
+  dialog: Locator,
+  field: Locator,
+  label: Locator,
+  error: Locator,
+) {
   const mode = await dialog.getAttribute("data-task-scroll");
   expect(["body", "task"]).toContain(mode);
   const scroller =
@@ -21,15 +26,57 @@ async function geometry(dialog: Locator, field: Locator) {
   const rail = await scroller.evaluate((element) => {
     const box = element.getBoundingClientRect();
     return {
-      top: box.top + element.clientTop,
-      bottom: box.top + element.clientTop + element.clientHeight,
+      left: Math.max(0, box.left + element.clientLeft),
+      right: Math.min(
+        innerWidth,
+        box.left + element.clientLeft + element.clientWidth,
+      ),
+      top: Math.max(0, box.top + element.clientTop),
+      bottom: Math.min(
+        innerHeight,
+        box.top + element.clientTop + element.clientHeight,
+      ),
       offset: element.scrollTop,
       max: element.scrollHeight - element.clientHeight,
     };
   });
   const box = await field.boundingBox();
   expect(box).not.toBeNull();
-  return { mode, rail, field: box! };
+  const labelBox = await label.boundingBox();
+  expect(labelBox).not.toBeNull();
+  const errorBox = (await error.count()) ? await error.boundingBox() : null;
+  const boxes = [box!, labelBox!, ...(errorBox ? [errorBox] : [])];
+  const context = {
+    top: Math.min(...boxes.map((rect) => rect.y)),
+    bottom: Math.max(...boxes.map((rect) => rect.y + rect.height)),
+    left: Math.min(...boxes.map((rect) => rect.x)),
+    right: Math.max(...boxes.map((rect) => rect.x + rect.width)),
+  };
+  return {
+    mode,
+    rail,
+    field: box!,
+    label: labelBox!,
+    error: errorBox,
+    context,
+  };
+}
+
+function expectContextVisible(
+  measurement: Awaited<ReturnType<typeof geometry>>,
+) {
+  const { context, rail } = measurement;
+  // These fixtures must exercise the fitting-context path, never silently skip it.
+  expect(context.bottom - context.top).toBeLessThanOrEqual(
+    rail.bottom - rail.top,
+  );
+  expect(context.right - context.left).toBeLessThanOrEqual(
+    rail.right - rail.left,
+  );
+  expect(context.top).toBeGreaterThanOrEqual(rail.top - 1);
+  expect(context.bottom).toBeLessThanOrEqual(rail.bottom + 1);
+  expect(context.left).toBeGreaterThanOrEqual(rail.left - 1);
+  expect(context.right).toBeLessThanOrEqual(rail.right + 1);
 }
 
 for (const width of [1440, 390]) {
@@ -248,7 +295,25 @@ for (const width of [1440, 390]) {
             ),
           ).toBe(true);
           await tabTo(dialog, save);
-          const before = await geometry(dialog, field);
+          const fieldLabel = dialog
+            .locator("label")
+            .filter({ hasText: `公告${label}` });
+          await expect(fieldLabel).toHaveCount(1);
+          await expect(fieldLabel).toHaveAttribute(
+            "for",
+            (await field.getAttribute("id"))!,
+          );
+          const error = dialog
+            .getByRole("alert")
+            .filter({ hasText: `请填写${label}，不能只包含空白。` });
+          const before = await geometry(dialog, field, fieldLabel, error);
+          const measurement: Record<string, unknown> = {
+            opening,
+            stage,
+            before,
+            focusedField: label,
+          };
+          measurements.push(measurement);
           expect(
             before.rail.max,
             "Short announcement task has a real scroll rail",
@@ -257,9 +322,8 @@ for (const width of [1440, 390]) {
             before.rail.offset,
             "Native Tab reached the lower footer",
           ).toBeGreaterThan(0);
-          const clippedAbove = before.field.y < before.rail.top - 1;
-          const clippedBelow =
-            before.field.y + before.field.height > before.rail.bottom + 1;
+          const clippedAbove = before.context.top < before.rail.top - 1;
+          const clippedBelow = before.context.bottom > before.rail.bottom + 1;
           // Keep an explicit offscreen recovery exercise, not just a branch
           // that can silently stop exercising scroll restoration.
           if (label === "标题") expect(clippedAbove).toBe(true);
@@ -267,9 +331,6 @@ for (const width of [1440, 390]) {
           await page.keyboard.press("Enter");
           await expect(field).toBeFocused();
           await expect(field).toHaveAttribute("aria-invalid", "true");
-          const error = dialog
-            .getByRole("alert")
-            .filter({ hasText: `请填写${label}，不能只包含空白。` });
           await expect(error).toHaveText(`请填写${label}，不能只包含空白。`);
           const errorId = await error.getAttribute("id");
           expect(errorId).toBeTruthy();
@@ -280,27 +341,26 @@ for (const width of [1440, 390]) {
           // intervene between submitting and clip/scroll assertions.
           await inventory.stable(dialog);
           await expect(field).toBeFocused();
-          await inventory.inView(field);
-          await inventory.inView(error);
-          const after = await geometry(dialog, field);
-          expect(blocked).toEqual([]);
-          measurements.push({
-            opening,
-            stage,
-            before,
-            after,
-            focusedField: label,
-            clippedAbove,
-            clippedBelow,
-          });
+          const after = await geometry(dialog, field, fieldLabel, error);
+          Object.assign(measurement, { after, clippedAbove, clippedBelow });
+          // Preserve pixels and all bounds before any visibility assertion fails.
           await screenshot(`${opening}-${stage}-recovered`);
-          // A desktop body can already fit in the rail at footer focus. It must
-          // receive focus with the complete field/error visible, not scroll just
-          // to satisfy the test. A clipped field must still be revealed naturally.
+          await inventory.inView(field);
+          await inventory.inView(fieldLabel);
+          await inventory.inView(error);
+          expectContextVisible(after);
+          expect(after.mode).toBe(before.mode);
+          expect(blocked).toEqual([]);
+          // Native footer focus can already expose desktop body context. Only
+          // that complete label/control/error state permits no rail movement.
           if (clippedAbove)
             expect(after.rail.offset).toBeLessThan(before.rail.offset);
           if (clippedBelow)
             expect(after.rail.offset).toBeGreaterThan(before.rail.offset);
+          if (after.rail.offset === before.rail.offset) {
+            expect(before.error).not.toBeNull();
+            expectContextVisible(before);
+          }
         };
         await recover(title, "标题", "title");
         await retained("   ", "Retained maintenance announcement");

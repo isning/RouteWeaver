@@ -26,6 +26,33 @@ function rendered(target: HTMLElement, view: Window) {
   return true;
 }
 
+// Optional context must be visibly rendered. Conservatively omit intentionally
+// clipped metadata rather than scrolling to its unpainted layout box. The owning
+// scroll rail is excluded: revealing content through that clip is the task here.
+function visibleFieldContext(
+  node: HTMLElement,
+  scroller: HTMLElement,
+  view: Window,
+) {
+  if (closedDetailsContent(node) || !rendered(node, view)) return false;
+  for (
+    let ancestor: HTMLElement | null = node;
+    ancestor && ancestor !== scroller;
+    ancestor = ancestor.parentElement
+  ) {
+    const style = view.getComputedStyle(ancestor);
+    if (
+      (style.clip && style.clip !== "auto") ||
+      (style.clipPath && style.clipPath !== "none") ||
+      [style.overflow, style.overflowX, style.overflowY].some((value) =>
+        /^(hidden|clip)$/.test(value),
+      )
+    )
+      return false;
+  }
+  return true;
+}
+
 /** Pending submit actions remain native focus stops, but cannot be activated again. */
 function disabledForReveal(target: HTMLElement) {
   if (
@@ -69,6 +96,7 @@ function revealInScroller(
   body: HTMLElement,
   view: Window,
   wholePixelMovement = false,
+  fieldContext = false,
 ) {
   if (!rendered(target, view)) return;
   const box = target.getBoundingClientRect(),
@@ -95,8 +123,50 @@ function revealInScroller(
     outer.top + body.clientTop + body.clientHeight,
   );
   if (right <= left || bottom <= top) return;
-  const dx = nearestDelta(box.left - outset, box.right + outset, left, right);
-  const dy = nearestDelta(box.top - outset, box.bottom + outset, top, bottom);
+  let bounds = {
+    left: box.left - outset,
+    right: box.right + outset,
+    top: box.top - outset,
+    bottom: box.bottom + outset,
+  };
+  if (fieldContext) {
+    const form = target.closest("form");
+    const context = { ...bounds };
+    const ids = [
+      target.getAttribute("aria-labelledby"),
+      target.getAttribute("aria-describedby"),
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .split(/\s+/);
+    for (const id of ids) {
+      const node = target.ownerDocument.getElementById(id);
+      if (
+        !node ||
+        !form?.contains(node) ||
+        !body.contains(node) ||
+        node.closest('[role="dialog"],[role="alertdialog"]') !==
+          target.closest('[role="dialog"],[role="alertdialog"]') ||
+        node.closest('[hidden], [inert], [aria-hidden="true"]') ||
+        !visibleFieldContext(node, body, view)
+      )
+        continue;
+      const rect = node.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) continue;
+      context.left = Math.min(context.left, rect.left);
+      context.right = Math.max(context.right, rect.right);
+      context.top = Math.min(context.top, rect.top);
+      context.bottom = Math.max(context.bottom, rect.bottom);
+    }
+    // Context is optional: oversized fields keep the native control/ring fallback.
+    if (
+      context.right - context.left <= right - left &&
+      context.bottom - context.top <= bottom - top
+    )
+      bounds = context;
+  }
+  const dx = nearestDelta(bounds.left, bounds.right, left, right);
+  const dy = nearestDelta(bounds.top, bounds.bottom, top, bottom);
   // Modal scroll offsets can quantize fractional movement toward a clipped edge.
   // Round only a required move outward; Drawer callers retain their exact arithmetic.
   const movement = (delta: number) =>
@@ -365,4 +435,40 @@ export function revealFocusedUsageResetControl(
   )
     return;
   revealInScroller(target, body, view, true);
+}
+
+/** Called only after the form's owned submit recovery has selected native focus. */
+export function revealSubmittedFieldContext(
+  form: HTMLFormElement,
+  target: HTMLElement,
+) {
+  const doc = form.ownerDocument,
+    view = doc.defaultView;
+  if (
+    !view ||
+    !form.isConnected ||
+    !target.isConnected ||
+    doc.activeElement !== target ||
+    !doc.hasFocus() ||
+    doc.visibilityState !== "visible" ||
+    !form.contains(target) ||
+    target.closest("form") !== form ||
+    target.getAttribute("aria-invalid") !== "true" ||
+    target.matches(':disabled, [aria-disabled="true"]') ||
+    target.closest(excluded) ||
+    closedDetailsContent(target)
+  )
+    return;
+  const dialog = form.closest<HTMLElement>('[role="dialog"]');
+  const body = target.closest<HTMLElement>("[data-task-overlay-body]");
+  if (
+    !dialog ||
+    !body ||
+    body.closest('[role="dialog"]') !== dialog ||
+    target.closest('[role="dialog"],[role="alertdialog"]') !== dialog
+  )
+    return;
+  const scroller =
+    dialog.getAttribute("data-task-scroll") === "task" ? dialog : body;
+  revealInScroller(target, scroller, view, true, true);
 }

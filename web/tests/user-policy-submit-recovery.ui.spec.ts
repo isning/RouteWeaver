@@ -144,69 +144,143 @@ async function openEditor(page: Page) {
   return sheet;
 }
 
+async function geometry(
+  dialog: Locator,
+  field: Locator,
+  label: Locator,
+  error: Locator,
+) {
+  const mode = await dialog.getAttribute("data-task-scroll");
+  expect(["body", "task"]).toContain(mode);
+  const scroller =
+    mode === "task" ? dialog : dialog.locator("[data-task-overlay-body]");
+  const rail = await scroller.evaluate((element) => {
+    const box = element.getBoundingClientRect();
+    return {
+      left: Math.max(0, box.left + element.clientLeft),
+      right: Math.min(
+        innerWidth,
+        box.left + element.clientLeft + element.clientWidth,
+      ),
+      top: Math.max(0, box.top + element.clientTop),
+      bottom: Math.min(
+        innerHeight,
+        box.top + element.clientTop + element.clientHeight,
+      ),
+      offset: element.scrollTop,
+      max: element.scrollHeight - element.clientHeight,
+    };
+  });
+  const box = await field.boundingBox();
+  expect(box).not.toBeNull();
+  const labelBox = await label.boundingBox();
+  expect(labelBox).not.toBeNull();
+  const errorBox = (await error.count()) ? await error.boundingBox() : null;
+  const boxes = [box!, labelBox!, ...(errorBox ? [errorBox] : [])];
+  const context = {
+    top: Math.min(...boxes.map((rect) => rect.y)),
+    bottom: Math.max(...boxes.map((rect) => rect.y + rect.height)),
+    left: Math.min(...boxes.map((rect) => rect.x)),
+    right: Math.max(...boxes.map((rect) => rect.x + rect.width)),
+  };
+  return {
+    mode,
+    rail,
+    field: box!,
+    label: labelBox!,
+    error: errorBox,
+    context,
+  };
+}
+
+function expectContextVisible(
+  measurement: Awaited<ReturnType<typeof geometry>>,
+) {
+  const { context, rail } = measurement;
+  // These fixtures must exercise the fitting-context path, never silently skip it.
+  expect(context.bottom - context.top).toBeLessThanOrEqual(
+    rail.bottom - rail.top,
+  );
+  expect(context.right - context.left).toBeLessThanOrEqual(
+    rail.right - rail.left,
+  );
+  expect(context.top).toBeGreaterThanOrEqual(rail.top - 1);
+  expect(context.bottom).toBeLessThanOrEqual(rail.bottom + 1);
+  expect(context.left).toBeGreaterThanOrEqual(rail.left - 1);
+  expect(context.right).toBeLessThanOrEqual(rail.right + 1);
+}
+
 async function captureRecovery(
   page: Page,
   sheet: Locator,
   choice: Locator,
   info: TestInfo,
   name: string,
+  measurements: unknown[],
+  before: Awaited<ReturnType<typeof geometry>>,
 ) {
   // Observe automatic recovery scrolling only. Do not scroll/focus the invalid
   // control after submission: that would hide the very regression under test.
-  await expect(choice).toBeFocused();
-  await expect(choice).toBeInViewport({ ratio: 1 });
-  await expect(sheet.getByText(failure, { exact: true })).toBeInViewport({
-    ratio: 1,
-  });
-  await expect
-    .poll(() =>
-      choice.evaluate((node) => {
-        const box = node.getBoundingClientRect();
-        let top = 0,
-          bottom = innerHeight,
-          left = 0,
-          right = innerWidth;
-        for (
-          let parent = node.parentElement;
-          parent;
-          parent = parent.parentElement
-        ) {
-          const style = getComputedStyle(parent),
-            rect = parent.getBoundingClientRect();
-          if (/(auto|scroll|hidden|clip)/.test(style.overflowY)) {
-            top = Math.max(top, rect.top + parent.clientTop);
-            bottom = Math.min(
-              bottom,
-              rect.top + parent.clientTop + parent.clientHeight,
-            );
-          }
-          if (/(auto|scroll|hidden|clip)/.test(style.overflowX)) {
-            left = Math.max(left, rect.left + parent.clientLeft);
-            right = Math.min(
-              right,
-              rect.left + parent.clientLeft + parent.clientWidth,
-            );
-          }
-        }
-        return (
-          box.top >= top - 1 &&
-          box.bottom <= bottom + 1 &&
-          box.left >= left - 1 &&
-          box.right <= right + 1
-        );
-      }),
-    )
-    .toBe(true);
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth <= innerWidth + 1,
-    ),
-  ).toBe(true);
+  const label = sheet.locator("label").filter({ hasText: "个人指定方案" });
+  const error = sheet.getByText(failure, { exact: true });
+  await settledTask(sheet);
+  const after = await geometry(sheet, choice, label, error);
+  measurements.push({ name, before, after });
   await page.evaluate(() => document.fonts.ready);
   await info.attach(name, {
     body: await page.screenshot({ scale: "css" }),
     contentType: "image/png",
   });
+  await expect(choice).toBeFocused();
+  expect(after.mode).toBe(before.mode);
+  expectContextVisible(after);
+  for (const target of [choice, label, error]) {
+    await expect(target).toBeInViewport({ ratio: 1 });
+    await expect
+      .poll(() =>
+        target.evaluate((node) => {
+          const box = node.getBoundingClientRect();
+          let top = 0,
+            bottom = innerHeight,
+            left = 0,
+            right = innerWidth;
+          for (
+            let parent = node.parentElement;
+            parent;
+            parent = parent.parentElement
+          ) {
+            const style = getComputedStyle(parent),
+              rect = parent.getBoundingClientRect();
+            if (/(auto|scroll|hidden|clip)/.test(style.overflowY)) {
+              top = Math.max(top, rect.top + parent.clientTop);
+              bottom = Math.min(
+                bottom,
+                rect.top + parent.clientTop + parent.clientHeight,
+              );
+            }
+            if (/(auto|scroll|hidden|clip)/.test(style.overflowX)) {
+              left = Math.max(left, rect.left + parent.clientLeft);
+              right = Math.min(
+                right,
+                rect.left + parent.clientLeft + parent.clientWidth,
+              );
+            }
+          }
+          return (
+            box.top >= top - 1 &&
+            box.bottom <= bottom + 1 &&
+            box.left >= left - 1 &&
+            box.right <= right + 1
+          );
+        }),
+      )
+      .toBe(true);
+  }
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth + 1,
+    ),
+  ).toBe(true);
 }
 
 for (const width of [390, 1440]) {
@@ -216,6 +290,7 @@ for (const width of [390, 1440]) {
   }, info) => {
     await page.setViewportSize({ width, height: 900 });
     const fixture = await installFixture(page, baseURL);
+    const measurements: unknown[] = [];
     await page.goto("/#users");
     let sheet = await openEditor(page);
     for (const opening of ["initial", "reopened"]) {
@@ -252,22 +327,71 @@ for (const width of [390, 1440]) {
         await tabTo(page, preview);
         await expect(preview).toBeFocused();
         await expect(preview).not.toHaveAttribute("aria-disabled", "true");
-        await page.keyboard.press(key);
-        await expect(choice).toHaveAttribute("aria-invalid", "true");
-        await expect(choice).toHaveAccessibleDescription(failure);
-        await expect(choice).toHaveText("选择服务方案");
-        await expect(pause).toHaveAttribute("aria-checked", "true");
-        await expect(personal).toHaveAttribute("aria-checked", "true");
-        await expect(
-          page.getByRole("dialog", { name: "确认授权变更", exact: true }),
-        ).toHaveCount(0);
-        await captureRecovery(
-          page,
+        const label = sheet
+          .locator("label")
+          .filter({ hasText: "个人指定方案" });
+        await expect(label).toHaveCount(1);
+        await expect(label).toHaveAttribute(
+          "for",
+          (await choice.getAttribute("id"))!,
+        );
+        const before = await geometry(
           sheet,
           choice,
-          info,
-          `${opening}-${key}-${width}`,
+          label,
+          sheet.getByText(failure, { exact: true }),
         );
+        measurements.push({
+          name: `${opening}-${key}-${width}-before`,
+          before,
+        });
+        await info.attach(`${opening}-${key}-${width}-before`, {
+          body: await page.screenshot({ scale: "css" }),
+          contentType: "image/png",
+        });
+        try {
+          await page.keyboard.press(key);
+          await expect(choice).toHaveAttribute("aria-invalid", "true");
+          await expect(choice).toHaveAccessibleDescription(failure);
+          await expect(choice).toHaveText("选择服务方案");
+          await expect(pause).toHaveAttribute("aria-checked", "true");
+          await expect(personal).toHaveAttribute("aria-checked", "true");
+          await expect(
+            page.getByRole("dialog", { name: "确认授权变更", exact: true }),
+          ).toHaveCount(0);
+          await captureRecovery(
+            page,
+            sheet,
+            choice,
+            info,
+            `${opening}-${key}-${width}`,
+            measurements,
+            before,
+          );
+        } finally {
+          await info.attach("user-policy-submit-recovery-measurements", {
+            contentType: "application/json",
+            body: JSON.stringify(
+              {
+                viewport: page.viewportSize(),
+                measurements,
+                reads: fixture.reads,
+                writes: fixture.writes,
+                unexpected: fixture.unexpected,
+              },
+              null,
+              2,
+            ),
+          });
+          expect(
+            fixture.writes,
+            "No writes, even on assertion failure",
+          ).toEqual([]);
+          expect(
+            fixture.unexpected,
+            "No unexpected requests, even on assertion failure",
+          ).toEqual([]);
+        }
         expect(fixture.writes).toEqual([]);
         expect(fixture.unexpected).toEqual([]);
       }

@@ -30,6 +30,7 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { cn } from "@/lib/utils";
+import { revealSubmittedFieldContext } from "../drawer-control-visibility";
 
 const DisabledContext = createContext(false);
 
@@ -148,7 +149,10 @@ export function AppForm<Values = Record<string, unknown>>({
     for (const control of controls) {
       if (!canRecoverFocus(control)) continue;
       control.focus();
-      if (form.ownerDocument.activeElement === control) break;
+      if (form.ownerDocument.activeElement === control) {
+        revealSubmittedFieldContext(form, control);
+        break;
+      }
     }
   }, [recovery, submitErrorFocusOwner, disabled, onFinishFailed]);
   return (
