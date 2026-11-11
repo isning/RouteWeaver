@@ -537,19 +537,26 @@ function Workspace() {
           ? { panel: null as HTMLElement | null }
           : null;
         if (review) mobileReview.current = review;
+        let navigationDescription: HTMLDivElement | null = null;
         const handle = navigationCallbacks.current.confirm({
           title: hasNavigationWarning() ? "离开当前页面？" : "放弃未保存的修改？",
-          description: [
+          description: <div data-workspace-navigation-review ref={element => { if (element) navigationDescription = element; }}>{[
             getNavigationWarning(),
             context?.unowned
               ? "继续编辑会建立新的历史记录，并清除浏览器的前进记录。"
               : "",
-          ].filter(Boolean).join(" "),
+          ].filter(Boolean).join(" ")}</div>,
           confirmLabel: hasNavigationWarning() ? "仍然离开" : "放弃修改并离开",
           cancelLabel: hasNavigationWarning() ? "留在当前页面" : "继续编辑",
           destructive: true,
-          onConfirm: proceed,
-          onCancel: cancel,
+          onConfirm: () => {
+            navigationDescription?.setAttribute("data-navigation-outcome", "leave");
+            proceed();
+          },
+          onCancel: () => {
+            navigationDescription?.setAttribute("data-navigation-outcome", "stay");
+            cancel();
+          },
           contentProps: review
             ? {
                 ref: (element: HTMLDivElement | null) => {

@@ -11,13 +11,13 @@ import { Switch } from "@/components/ui/switch";
 import { Notice } from "@/ui-patterns/notice";
 import { ChoiceSelect, MultiChoice } from "@/ui-patterns/choice-select";
 import { ActionButton } from "@/ui-patterns/actions";
-import { useConfirm } from "@/ui-patterns/confirmations";
+import { useConfirm, type ConfirmationHandle } from "@/ui-patterns/confirmations";
 import { useForm, AppField, AppForm, type AppFormSubmitHandle } from "@/ui-patterns/form";
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from "react";
 import { ByteQuantityInput } from "./ByteQuantityInput";
 import { PolicyDateInput } from "./PolicyDateInput";
 import { isPolicyTimestamp } from "./policy-date-model";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { APIError, post, request } from "./api";
 import { dateLabel } from "./model";
 import type { Entitlement, Service, UserRecord } from "./types";
@@ -28,6 +28,7 @@ import { revealFocusedDrawerControl, revealFocusedUsageResetControl } from "./dr
 import { PolicySummary, usePolicyChange } from "./AccessPolicy";
 import { ErrorNotice, QueryState, Section, KeyValue } from "./components";
 import { CycleFields, wholeNumberRules, byteQuantityRules, } from "./PolicyFields";
+import { useUnsavedChanges } from "./navigation";
 // Go's zero time represents an implicit start, not a date chosen by the user.
 const zeroStart = "0001-01-01T00:00:00Z";
 const overrideFields = [
@@ -128,10 +129,13 @@ export function UserPolicyForm({ initial, drawer = false, ...props }: EditorProp
 }) {
     const returnFocus = useTaskReturnFocus(props.returnFocus);
     const [context, setContext] = useState(initial), [generation, setGeneration] = useState(0), [retained, setRetained] = useState<DraftCopy[]>([]);
-    return <UserPolicyFields key={generation} {...props} returnFocus={returnFocus} drawer={drawer} context={context} retained={retained} acceptLatest={(latest, draft) => { setRetained((values) => [...values, draft]); setContext(latest); setGeneration((value) => value + 1); }}/>;
+    // Policy rebasing replaces its fields, not the separate reset-reason task.
+    const usageReset = useUsageResetTask(props.user);
+    return <UserPolicyFields key={generation} usageReset={drawer ? usageReset : undefined} {...props} returnFocus={returnFocus} drawer={drawer} context={context} retained={retained} acceptLatest={(latest, draft) => { setRetained((values) => [...values, draft]); setContext(latest); setGeneration((value) => value + 1); }}/>;
 }
-function UserPolicyFields({ user, context, services, serviceCatalog, routes, displayRoutes = routes, onClose, retained, acceptLatest, drawer, returnFocus }: EditorProps & {
+function UserPolicyFields({ user, context, services, serviceCatalog, routes, displayRoutes = routes, onClose, retained, acceptLatest, drawer, returnFocus, usageReset }: EditorProps & {
     drawer: boolean;
+    usageReset?: ReturnType<typeof useUsageResetTask>;
     context: EntitlementPolicyEditContext;
     retained: DraftCopy[];
     acceptLatest: (latest: EntitlementPolicyEditContext, draft: DraftCopy) => void;
@@ -142,7 +146,15 @@ function UserPolicyFields({ user, context, services, serviceCatalog, routes, dis
     const confirm = useConfirm();
     const [snapshot] = useState(() => structuredClone(context.effective));
     const [ent] = useState(() => structuredClone(context.record?.entitlement ?? context.effective.entitlement));
-    const policy = usePolicyChange({ mode: "guarded-entitlement", users: [user], services, routes: displayRoutes, retainedDrafts: retained, onApplied: onClose });
+    const policy = usePolicyChange({ mode: "guarded-entitlement", users: [user], services, routes: displayRoutes, retainedDrafts: retained, onApplied: onClose,
+        closeCompanion: usageReset && {
+            pending: usageReset.pending,
+            dirty: usageReset.reason !== "",
+            revision: usageReset.revision,
+            label: "重置原因",
+            discardDescription: "重置原因尚未提交。",
+        },
+    });
     const implicitStart = ent.startsAt === zeroStart;
     const init: Record<string, unknown> = { ...ent, startsAt: implicitStart ? "" : ent.startsAt };
     for (const field of overrideFields) {
@@ -451,7 +463,7 @@ function UserPolicyFields({ user, context, services, serviceCatalog, routes, dis
             if (!open)
                 (policy.requestClose)();
         }} pending={!(!policy.closingBlocked)} size="lg" bodyProps={{ className: "space-y-6" }}>
-    {content}<AdmissionStatus user={user}/><UsageReset user={user}/>
+    {content}<AdmissionStatus user={user}/>{usageReset && <UsageReset task={usageReset} blocked={policy.closingBlocked}/>}
   </TaskSheet> : content;
 }
 function RetainedEntitlementDraft({ copy }: {
@@ -471,32 +483,167 @@ function RetainedEntitlementDraft({ copy }: {
     <details><summary>当时打开的个人设置</summary><pre className="mt-3 max-h-80 overflow-auto rounded-md bg-muted p-3 text-xs">{JSON.stringify(copy.context.record, null, 2)}</pre></details>
   </section>;
 }
-function UsageReset({ user }: {
-    user: UserRecord;
+type UsageResetOwner = {
+    userId: string;
+    active: boolean;
+    reason: string;
+    revision: number;
+    pending: boolean;
+    decision: ConfirmationHandle | null;
+    cancelFocus: (() => void) | null;
+};
+function useUsageResetTask(user: UserRecord) {
+    const confirm = useConfirm(), client = useQueryClient();
+    const reasonInput = useRef<HTMLTextAreaElement>(null);
+    const owner = useRef<UsageResetOwner | null>(null);
+    if (!owner.current || owner.current.userId !== user.id)
+        owner.current = { userId: user.id, active: false, reason: "", revision: 0, pending: false, decision: null, cancelFocus: null };
+    const task = owner.current;
+    const [state, setState] = useState({ task, reason: "", pending: false, error: null as Error | null });
+    const current = state.task === task ? state : { task, reason: "", pending: false, error: null };
+    const live = () => task.active && owner.current === task;
+    const update = (patch: Partial<Omit<typeof state, "task">>) => {
+        if (live()) setState(previous => ({ ...(previous.task === task ? previous : { task, reason: "", pending: false, error: null }), ...patch }));
+    };
+    useLayoutEffect(() => {
+        task.active = true;
+        return () => {
+            task.active = false;
+            task.cancelFocus?.();
+            const decision = task.decision;
+            task.decision = null;
+            decision?.close();
+        };
+    }, [task]);
+    useUnsavedChanges(current.reason !== "" || current.pending,
+        current.pending ? "用量重置正在提交。离开不会取消已提交的重置；请返回后核对结果。" : undefined);
+    const changeReason = (reason: string) => {
+        if (!live() || task.pending || reason === task.reason) return;
+        task.cancelFocus?.();
+        task.reason = reason;
+        task.revision++;
+        const decision = task.decision;
+        task.decision = null;
+        decision?.close();
+        update({ reason, error: null });
+    };
+    const requestReset = () => {
+        if (!live() || task.pending || task.decision || !task.reason.trim()) return;
+        task.cancelFocus?.();
+        const reason = task.reason, revision = task.revision;
+        let completedRevision: number | null = null, decisionContent: HTMLDivElement | null = null;
+        const ownsDecision = () => live() && task.decision === decision && task.revision === revision && task.reason === reason;
+        const release = () => { if (task.decision === decision) task.decision = null; };
+        const decision = confirm({
+            title: `重置「${user.name}」的本周期用量？`,
+            description: "本周期已用额度会清零，历史与自动重置日期保留。",
+            confirmLabel: "确认重置", cancelLabel: "取消", destructive: true,
+            onCancel: release,
+            contentProps: { ref: element => { if (element) decisionContent = element; } },
+            onClosed: () => {
+                release();
+                // Success clears the reason and disables its former reset opener.
+                // Return to this task's enabled input only from released focus,
+                // never over a newer control, task or inactive session workspace.
+                const target = reasonInput.current;
+                const ownsCompletion = () => completedRevision !== null && live() && task.revision === completedRevision;
+                if (!ownsCompletion() || !target?.isConnected) return;
+                const sheet = target.closest("[role='dialog']");
+                const restore = () => {
+                    if (!ownsCompletion() || reasonInput.current !== target || !target.isConnected ||
+                        target.closest("[hidden],[inert],[aria-hidden='true']") ||
+                        target.matches(":disabled,[aria-disabled='true']")) return;
+                    const current = document.activeElement;
+                    const released = !current || current === document.body || !current.isConnected ||
+                        current === sheet || !!decisionContent?.contains(current);
+                    if (!released) return;
+                    const style = getComputedStyle(target);
+                    if (style.display !== "none" && style.visibility !== "hidden")
+                        target.focus({ preventScroll: true });
+                };
+                const focused = document.activeElement;
+                const navigation = focused instanceof HTMLElement
+                    ? focused.closest<HTMLElement>('[data-task-overlay="confirmation"]') : null;
+                // Only this exact navigation decision may delay the handoff.
+                // An unrelated/newer modal never schedules a later focus retry.
+                const navigationReview = navigation?.querySelector("[data-workspace-navigation-review]");
+                if (!navigationReview || !navigation?.parentElement) {
+                    restore();
+                    return;
+                }
+                let cancelled = false;
+                const dispose = () => {
+                    observer.disconnect();
+                    document.removeEventListener("focusin", newerFocus, true);
+                    document.removeEventListener("visibilitychange", cancel);
+                    window.removeEventListener("blur", cancel);
+                    if (task.cancelFocus === cancel) task.cancelFocus = null;
+                };
+                const cancel = () => { cancelled = true; dispose(); };
+                // This temporary listener only revokes the exact pending handoff.
+                const newerFocus = (event: FocusEvent) => {
+                    const current = event.target;
+                    if (current instanceof HTMLElement && current !== document.body && current !== sheet &&
+                        !navigation.contains(current)) cancel();
+                };
+                const observer = new MutationObserver(() => {
+                    if (navigation.isConnected) return;
+                    observer.disconnect();
+                    queueMicrotask(() => {
+                        // A confirmed history traversal may unmount the editor later.
+                        // Removal alone does not mean the user chose to keep editing.
+                        if (!cancelled && navigationReview.getAttribute("data-navigation-outcome") === "stay") restore();
+                        dispose();
+                    });
+                });
+                task.cancelFocus = cancel;
+                document.addEventListener("focusin", newerFocus, true);
+                document.addEventListener("visibilitychange", cancel);
+                window.addEventListener("blur", cancel);
+                observer.observe(navigation.parentElement, { childList: true, subtree: true });
+            },
+            onConfirm: async () => {
+                // Synchronous dispatch belongs to this live editor and exact reviewed text.
+                if (!ownsDecision() || task.pending) return;
+                task.pending = true;
+                update({ pending: true, error: null });
+                try {
+                    await post(`/users/${task.userId}/reset`, { reason });
+                    if (!ownsDecision()) return;
+                    task.reason = "";
+                    task.revision++;
+                    completedRevision = task.revision;
+                    update({ reason: "", error: null });
+                    void client.invalidateQueries({ queryKey: ["overview"] });
+                    toast.success("本周期用量已重置，历史记录与下次自动重置时间保留");
+                } catch (error) {
+                    if (!ownsDecision()) return;
+                    update({ error: error as Error });
+                    throw error;
+                } finally {
+                    task.pending = false;
+                    if (live()) update({ pending: false });
+                }
+            },
+        });
+        task.decision = decision;
+    };
+    return { reason: current.reason, pending: current.pending, error: current.error, revision: task.revision, reasonInput, changeReason, requestReset };
+}
+function UsageReset({ task, blocked }: {
+    task: ReturnType<typeof useUsageResetTask>;
+    blocked: boolean;
 }) {
-    const confirmReset = useConfirm();
-    const [reason, setReason] = useState("");
-    const message = toast, client = useQueryClient();
-    const reset = useMutation({
-        mutationFn: () => post(`/users/${user.id}/reset`, { reason }),
-        onSuccess: () => {
-            setReason("");
-            client.invalidateQueries({ queryKey: ["overview"] });
-            message.success("本周期用量已重置，历史记录与下次自动重置时间保留");
-        },
-    });
     return (<div data-policy-usage-reset onFocusCapture={revealFocusedUsageResetControl}>
     <Section title="手动重置用量">
       <p className="muted text-sm text-muted-foreground">
         清零本周期已用额度，保留历史记录与下次自动重置时间。
       </p>
-      <ErrorNotice error={reset.error}/>
-      <Textarea aria-label="重置原因" placeholder="记录重置原因" value={reason} onChange={(e) => setReason(e.target.value)}/>
-      
-        <ActionButton onClick={() => confirmReset({ title: `重置「${user.name}」的本周期用量？`, description: "本周期已用额度会清零，历史与自动重置日期保留。", confirmLabel: "确认重置", cancelLabel: "取消", destructive: true, onConfirm: () => reset.mutateAsync() })} disabled={!reason.trim()} pending={reset.isPending} className="mt-3.5" variant="destructive">
-          重置本周期用量
-        </ActionButton>
-      
+      <ErrorNotice error={task.error}/>
+      <Textarea ref={task.reasonInput} aria-label="重置原因" placeholder="记录重置原因" value={task.reason} disabled={blocked} onChange={(e) => task.changeReason(e.target.value)}/>
+      <ActionButton onClick={() => { if (!blocked) task.requestReset(); }} disabled={blocked || !task.reason.trim()} pending={task.pending} className="mt-3.5" variant="destructive">
+        重置本周期用量
+      </ActionButton>
     </Section>
     </div>);
 }

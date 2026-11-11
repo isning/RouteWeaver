@@ -284,9 +284,18 @@ function PolicyComparison({ effect, userName, showUserId, services, routes, show
         </Table>) : (<p className="muted text-sm text-muted-foreground">当前生效授权保持不变</p>)}
     </section>);
 }
-export function usePolicyChange({ mode, retainedDrafts, users, services, routes, onApplied, }: {
+// A separate task can share the editor's lifetime without entering policy data.
+export type PolicyCloseCompanion = {
+    pending: boolean;
+    dirty: boolean;
+    revision: unknown;
+    label: string;
+    discardDescription: string;
+};
+export function usePolicyChange({ mode, retainedDrafts, users, services, routes, onApplied, closeCompanion, }: {
     mode: "guarded-service" | "guarded-group" | "guarded-entitlement" | "legacy-replacement";
     retainedDrafts?: readonly object[];
+    closeCompanion?: PolicyCloseCompanion;
     users: NamedRecord[];
     services: NamedRecord[];
     routes: NamedRecord[];
@@ -308,7 +317,7 @@ export function usePolicyChange({ mode, retainedDrafts, users, services, routes,
     const appliedReview = useRef<number | null>(null);
     const hasRetainedDraft = !!retainedDrafts?.length;
     // Disposal consent belongs to this exact local copy set, not merely its count.
-    useLayoutEffect(() => setConfirmed(false), [retainedDrafts]);
+    useLayoutEffect(() => setConfirmed(false), [retainedDrafts, closeCompanion?.revision]);
     const [failureFocus, setFailureFocus] = useState<{
         error: Error;
         version: number;
@@ -453,6 +462,7 @@ export function usePolicyChange({ mode, retainedDrafts, users, services, routes,
     }, [failureFocus, error, review, reviewClosed, preview.isPending, apply.isPending]);
     useUnsavedChanges(dirty || hasRetainedDraft || preview.isPending || apply.isPending);
     const propose = (change: PolicyChange, precondition?: PolicyEditPrecondition) => {
+        if (closeCompanion?.pending) return;
         setFailureFocus(null);
         setError(null);
         const proposedChange = structuredClone(change);
@@ -502,7 +512,7 @@ export function usePolicyChange({ mode, retainedDrafts, users, services, routes,
           <ActionButton disabled={apply.isPending} onClick={dismissReview} variant="outline">
             返回编辑
           </ActionButton>
-          <ActionButton disabled={!confirmed || !!review?.preview.blockers?.length} aria-label="更新授权" aria-busy={apply.isPending} keepFocusableWhilePending pending={apply.isPending} onClick={() => apply.mutate()} variant="default">
+          <ActionButton disabled={!confirmed || !!review?.preview.blockers?.length || !!closeCompanion?.pending} aria-label="更新授权" aria-busy={apply.isPending} keepFocusableWhilePending pending={apply.isPending} onClick={() => { if (!closeCompanion?.pending) apply.mutate(); }} variant="default">
             更新授权
           </ActionButton>
         </div>} onOpenChange={open => {
@@ -558,23 +568,29 @@ export function usePolicyChange({ mode, retainedDrafts, users, services, routes,
             受管入口配置需单独应用。
           </p>
           <label className="flex items-start gap-2 text-sm leading-relaxed"><Checkbox checked={confirmed} onCheckedChange={checked => (e => setConfirmed(e.target.checked))({ target: { checked: checked === true } })}/>
-            {hasRetainedDraft ? "我已核对本次授权变更，并同意更新成功后关闭编辑器、丢弃保留的未保存草稿副本" : "我已核对本次授权变更"}
+            {closeCompanion?.dirty
+                ? `我已核对本次授权变更，并同意更新成功后关闭编辑器、丢弃${closeCompanion.label}${hasRetainedDraft ? "与保留的未保存草稿副本" : ""}`
+                : hasRetainedDraft ? "我已核对本次授权变更，并同意更新成功后关闭编辑器、丢弃保留的未保存草稿副本" : "我已核对本次授权变更"}
           </label>
         </>)}
     </TaskDialog>);
     return {
         propose,
-        closingBlocked: preview.isPending || apply.isPending || appliedReview.current !== null,
+        closingBlocked: preview.isPending || apply.isPending || appliedReview.current !== null || !!closeCompanion?.pending,
         requestClose: () => {
-            if (preview.isPending || apply.isPending || appliedReview.current !== null || confirming)
+            if (preview.isPending || apply.isPending || appliedReview.current !== null || closeCompanion?.pending || confirming)
                 return;
-            if (!dirty && !hasRetainedDraft) {
+            if (!dirty && !hasRetainedDraft && !closeCompanion?.dirty) {
                 onApplied();
                 return;
             }
             confirmDiscard({
-                title: "放弃尚未保存的授权修改？",
-                description: "当前修改尚未保存。放弃后将无法恢复。",
+                title: closeCompanion?.dirty
+                    ? `放弃${dirty || hasRetainedDraft ? "授权修改与" : ""}${closeCompanion.label}？`
+                    : "放弃尚未保存的授权修改？",
+                description: closeCompanion?.dirty
+                    ? `${dirty ? "当前授权修改尚未保存。" : ""}${hasRetainedDraft ? "保留的授权草稿尚未保存。" : ""}${closeCompanion.discardDescription}放弃后将无法恢复。`
+                    : "当前修改尚未保存。放弃后将无法恢复。",
                 confirmLabel: "放弃修改",
                 cancelLabel: "继续编辑",
             }, onApplied);
