@@ -115,6 +115,11 @@ for (const width of [1440, 390]) {
       await search.fill("Saved collection");
       await expect(page.getByRole("option", { name: "Saved collection", exact: true })).toHaveCount(1);
       await page.keyboard.press("Enter");
+      // Selection closes a portaled focus scope only after its exit motion.
+      // Observe detachment and natural focus return before the next Tab journey.
+      await expect(source).toHaveAttribute("aria-expanded", "false");
+      await expect(page.locator('[data-slot="popover-content"]')).toHaveCount(0);
+      await expect(source).toBeFocused();
       const extract = dialog.getByRole("button", { name: "提取可共享结构", exact: true });
       await tabTo(page, dialog, extract);
       await page.keyboard.press("Enter");
