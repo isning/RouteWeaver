@@ -7,6 +7,7 @@ import {
   type TestInfo,
 } from "@playwright/test";
 import { settledTask } from "./ui-settled-task";
+import { observeValidationGeometry } from "./admin-validation-evidence";
 import {
   historyLegacyFixtures,
   historyLegacyName as name,
@@ -28,62 +29,15 @@ async function capture(page: Page, info: TestInfo, stage: string) {
     return ms;
   };
   // Observe the current viewport without scrolling or moving focus to repair it.
+  // Screenshot precedes the synchronous pointer-events-only occlusion probe.
   await page.screenshot({ path: png, timeout: remaining() });
-  const observation = await page.locator("body").evaluate(
-    (_body, { checkFailure, removalFailure }) => {
-      const targets = [
-        ...document.querySelectorAll('button, [role="dialog"], [role="alert"]'),
-      ];
-      const controls = targets
-        .filter((el) => {
-          const label = el.getAttribute("aria-label") || el.textContent || "";
-          return (
-            label.includes("校验") ||
-            el.getAttribute("role") === "dialog" ||
-            label.includes(checkFailure) ||
-            label.includes(removalFailure)
-          );
-        })
-        .map((el) => {
-          const r = el.getBoundingClientRect();
-          const hit = document.elementFromPoint(
-            r.left + r.width / 2,
-            r.top + r.height / 2,
-          );
-          return {
-            role: el.getAttribute("role") || "button",
-            kind:
-              el.getAttribute("role") === "dialog"
-                ? "result"
-                : (el.textContent || "").includes("配置结构校验完成")
-                  ? "result-copy"
-                  : (el.textContent || "").includes(removalFailure)
-                    ? "removal-error"
-                    : (el.textContent || "").includes(checkFailure)
-                      ? "validation-error"
-                      : "validation-control",
-            box: { left: r.left, top: r.top, right: r.right, bottom: r.bottom },
-            inViewport:
-              r.width > 0 &&
-              r.height > 0 &&
-              r.top >= 0 &&
-              r.left >= 0 &&
-              r.right <= innerWidth + 1 &&
-              r.bottom <= innerHeight + 1,
-            unobscured: !!hit && el.contains(hit),
-            focused: el === document.activeElement,
-            busy: el.getAttribute("aria-busy"),
-          };
-        });
-      return {
-        viewport: { width: innerWidth, height: innerHeight },
-        overflow: document.documentElement.scrollWidth > innerWidth + 1,
-        controls,
-      };
-    },
-    { checkFailure, removalFailure },
-    { timeout: remaining() },
-  );
+  const observation = await page
+    .locator("body")
+    .evaluate(
+      observeValidationGeometry,
+      { checkFailure, removalFailure },
+      { timeout: remaining() },
+    );
   await writeFile(json, JSON.stringify(observation, null, 2));
   // Both originals are persisted before any attachment or geometry assertion.
   await info.attach(stage, { path: png, contentType: "image/png" });
@@ -317,3 +271,74 @@ for (const width of [1440, 390]) {
     if (captureError) throw captureError;
   });
 }
+
+// A native browser checks the observation helper itself, independently of App
+// fixtures. DOM-unit measurements cannot establish actual hit testing/clipping.
+test("validation evidence distinguishes pointer suppression from overlays and clips", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 560 });
+  await page.setContent(`
+    <style>
+      body { margin: 0; }
+      #clip { position: fixed; left: 20px; top: 20px; width: 120px; height: 100px; overflow: hidden; }
+      button { width: 44px; height: 44px; padding: 0; border: 0; }
+      button:disabled { pointer-events: none; }
+      #cover { display: none; position: fixed; inset: 0; z-index: 10; background: white; }
+    </style>
+    <div id="clip"><button aria-label="校验链路" aria-busy="true" disabled>等待</button></div>
+    <div id="cover"></div>
+  `);
+  const control = page.getByRole("button", { name: "校验链路", exact: true });
+  const observe = async () =>
+    (
+      await page
+        .locator("body")
+        .evaluate(observeValidationGeometry, { checkFailure, removalFailure })
+    ).controls[0];
+  expect(await observe()).toMatchObject({
+    inViewport: true,
+    unobscured: true,
+    busy: "true",
+    occlusionProbe: "temporary-pointer-events-auto",
+  });
+  await expect(control).toBeDisabled();
+  expect(await control.getAttribute("style")).toBeNull();
+  expect(
+    await control.evaluate(
+      (element) => getComputedStyle(element).pointerEvents,
+    ),
+  ).toBe("none");
+  expect(
+    await page.evaluate(() => document.activeElement === document.body),
+  ).toBe(true);
+
+  await page.locator("#cover").evaluate((element) => {
+    element.style.display = "block";
+  });
+  expect(await observe()).toMatchObject({
+    inViewport: true,
+    unobscured: false,
+  });
+  await page.locator("#cover").evaluate((element) => {
+    element.style.display = "none";
+  });
+
+  await page.locator("#clip").evaluate((element) => {
+    element.style.width = "20px";
+  });
+  expect(await observe()).toMatchObject({
+    inViewport: true,
+    unobscured: false,
+  });
+  await page.locator("#clip").evaluate((element) => {
+    element.style.width = "120px";
+    element.style.left = "-10px";
+  });
+  expect(await observe()).toMatchObject({
+    inViewport: false,
+    unobscured: true,
+  });
+  await expect(control).toBeDisabled();
+  expect(await control.getAttribute("style")).toBeNull();
+});

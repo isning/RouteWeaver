@@ -46,10 +46,16 @@ async function geometry(label: Locator) {
   });
 }
 
-async function capture(page: Page, info: TestInfo, name: string, surface: Locator, labels: Locator[], ledger: unknown[]) {
+async function capture(page: Page, info: TestInfo, name: string, surface: Locator, labels: Locator[], ledger: unknown[], focusedTrigger?: Locator) {
   let screenshotError: string | undefined;
+  let focusObservationError: string | undefined;
+  let observedTriggerFocused: boolean | undefined;
   let failed = false;
   try {
+    if (focusedTrigger) {
+      await expect(focusedTrigger, "Keyboard selection returns focus to the original target trigger").toBeFocused();
+      await settledTask(focusedTrigger);
+    }
     await settledTask(surface);
     const observations = await Promise.all(labels.map(geometry));
     ledger.push({ checkpoint: name, observations });
@@ -62,7 +68,37 @@ async function capture(page: Page, info: TestInfo, name: string, surface: Locato
     failed = true;
     throw error;
   } finally {
-    // Original viewport PNG even on geometry failure, bounded independently.
+    if (focusedTrigger) {
+      // Read-only diagnostics also survive a failed restoration expectation.
+      // Paint values support the original PNG review, not a forced focus/ring.
+      try {
+        const focusObservation = await focusedTrigger.evaluate(element => {
+          const rect = element.getBoundingClientRect();
+          const css = getComputedStyle(element);
+          return {
+            focused: document.activeElement === element,
+            focusVisible: element.matches(":focus-visible"),
+            activeRole: document.activeElement?.getAttribute("role"),
+            activeLabel: document.activeElement?.getAttribute("aria-label"),
+            expanded: element.getAttribute("aria-expanded"),
+            bounds: { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom },
+            viewport: { width: innerWidth, height: innerHeight },
+            paint: {
+              boxShadow: css.boxShadow, outlineStyle: css.outlineStyle,
+              outlineWidth: css.outlineWidth, outlineColor: css.outlineColor,
+              outlineOffset: css.outlineOffset, borderColor: css.borderColor,
+              opacity: css.opacity,
+            },
+          };
+        }, undefined, { timeout: 2000 });
+        observedTriggerFocused = focusObservation.focused;
+        ledger.push({ checkpoint: name, focusObservation });
+      } catch (error) {
+        focusObservationError = error instanceof Error ? error.name : "FocusObservationError";
+        ledger.push({ checkpoint: name, focusObservationError });
+      }
+    }
+    // Original viewport PNG even on focus/geometry failure, bounded independently.
     try {
       const path = info.outputPath(`${name}.png`);
       await page.screenshot({ path, fullPage: false, timeout: 2000 });
@@ -79,7 +115,10 @@ async function capture(page: Page, info: TestInfo, name: string, surface: Locato
       if (!failed) throw error;
     }
   }
+  expect(focusObservationError, "Native focus observation must be retained").toBeUndefined();
   expect(screenshotError, "Native screenshot must be retained").toBeUndefined();
+  if (focusedTrigger)
+    expect(observedTriggerFocused, "Captured focus remains on the original target trigger").toBe(true);
 }
 
 for (const width of [1440, 390]) for (const kind of ["processing-preset", "client-profile"] as const) {
@@ -232,6 +271,11 @@ for (const width of [1440, 390]) for (const kind of ["processing-preset", "clien
       await expect(trigger).toHaveText(`${sharedName} ${chosenId}`);
       await capture(page, info, `${kind}-${width}-id-search-selected`, dialog,
         [trigger.getByText(sharedName, { exact: true }), trigger.getByText(chosenId!, { exact: true })], ledger);
+      // The immediate capture can precede close autofocus. Verify its public
+      // result separately, only after the final selection; the earlier unique-
+      // name selection still reopens immediately to cover retained exit presence.
+      await capture(page, info, `${kind}-${width}-id-search-focus-restored`, dialog,
+        [trigger.getByText(sharedName, { exact: true }), trigger.getByText(chosenId!, { exact: true })], ledger, trigger);
       await assertUnchanged();
       const response = page.waitForResponse(value => new URL(value.url()).pathname === `/api/me/templates/${template.id}/select` && value.request().method() === "POST");
       await dialog.getByRole("button", { name: "应用模板到草稿", exact: true }).click();
