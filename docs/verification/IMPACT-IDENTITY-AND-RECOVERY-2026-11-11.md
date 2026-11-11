@@ -21,3 +21,11 @@ The review now determines collisions across its complete affected-account set, i
 Independent review identified an ambiguity in an intermediate generated-suffix approach. Separate metadata replaces that approach; regressions also retain a literal decorated account name to distinguish it from generated identity metadata. This is ordinary duplicate-label clarity, not immunity to deliberately deceptive names.
 
 Validation: the first public regression failed before the fix. The final production change passes 48 tests across access-policy, group-submit recovery and stale-group recovery; the final added literal-name test cases pass separately. Application type checking and production build pass. An overlapping full-suite run imported an intermediate test revision and failed its two subsequently corrected accessible-name expectations; it is not claimed as a final-source full pass. Exact new-commit full CI and native/pixel validation of this identity presentation remain pending.
+
+## Result heading / Close clearance
+
+Original narrow result PNGs above establish the title crowding the focused Close button. TaskSheet reserved 56px, exactly the 12px right inset plus 44px Close width, leaving no clearance for its 3px focus ring. Its header now reserves 64px, matching TaskDialog; this is spacing, not smaller text or a reduced hit target.
+
+The native recovery observation records title-right, Close-left and their separation for the open result sheet. Both pointer and keyboard journeys require at least 4px clearance after saving original PNG/JSON evidence. No focus or scrolling is injected to satisfy this assertion. Existing filenames and artifact allowlists are unchanged.
+
+Independent source/original-pixel review accepts the bounded correction. Fourteen overlay behavior tests, application types/build, strict native-spec TypeScript and 28-case recovery discovery pass. New-commit native geometry and pixels still need CI review; local startup remains blocked as described above. The immediate returned-focus painting caveat remains separate and unresolved.

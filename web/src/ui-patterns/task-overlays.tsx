@@ -424,7 +424,7 @@ export function TaskSheet({
         <SheetHeader
           ref={scrollMode === "auto" ? headerRef : undefined}
           data-task-overlay-header
-          className="min-w-0 shrink-0 border-b px-4 py-4 pr-14 text-left sm:px-6 sm:pr-14"
+          className="min-w-0 shrink-0 border-b px-4 py-4 pr-16 text-left sm:px-6 sm:pr-16"
         >
           <SheetTitle className="min-w-0 text-lg leading-snug font-semibold tracking-tight [overflow-wrap:anywhere]">
             {title}

@@ -219,6 +219,8 @@ for (const width of [1440, 390]) {
           (control) => control.kind === "result-copy",
         );
         expect(resultCopy?.inViewport && resultCopy.unobscured).toBe(true);
+        expect(ready.resultHeader, "result title and Close are measured").not.toBeNull();
+        expect(ready.resultHeader!.clearance, "title leaves room for the Close focus ring").toBeGreaterThanOrEqual(4);
         await page.keyboard.press("Escape");
         await expect(result).toBeHidden();
         await expect(check).toBeEnabled();
@@ -695,6 +697,8 @@ test.describe("keyboard validation recovery", () => {
             (control) => control.kind === "result-copy",
           );
           expect(resultCopy?.inViewport && resultCopy.unobscured).toBe(true);
+          expect(ready.resultHeader, "result title and Close are measured").not.toBeNull();
+          expect(ready.resultHeader!.clearance, "title leaves room for the Close focus ring").toBeGreaterThanOrEqual(4);
           await page.keyboard.press("Escape");
           await expect(result).toBeHidden();
           await expect(check).toBeEnabled();

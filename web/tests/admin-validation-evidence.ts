@@ -81,7 +81,17 @@ export function observeValidationGeometry(
         busy: el.getAttribute("aria-busy"),
       };
     });
+  const result = document.querySelector<HTMLElement>('[data-slot="sheet-content"][data-state="open"][role="dialog"]');
+  const title = result?.querySelector<HTMLElement>('[data-slot="sheet-title"]');
+  const close = result?.querySelector<HTMLElement>('button[aria-label="关闭"]');
+  const titleBox = title?.getBoundingClientRect();
+  const closeBox = close?.getBoundingClientRect();
   return {
+    resultHeader: titleBox && closeBox ? {
+      titleRight: titleBox.right,
+      closeLeft: closeBox.left,
+      clearance: closeBox.left - titleBox.right,
+    } : null,
     viewport: { width: innerWidth, height: innerHeight },
     overflow: document.documentElement.scrollWidth > innerWidth + 1,
     controls,
