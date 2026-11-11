@@ -256,6 +256,7 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
     });
   };
   const editRoute = (r?: RouteRecord) => {
+    if (!r && query.data === undefined) return;
     setRoute(
       r
         ? structuredClone(r)
@@ -391,7 +392,7 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
               <ActionButton
                 leadingIcon={<PlusOutlined aria-hidden="true" />}
                 onClick={add}
-                disabled={page === "services" && query.data === undefined}
+                disabled={(page === "services" || page === "routes") && query.data === undefined}
                 variant="default"
               >
                 {meta.action}
