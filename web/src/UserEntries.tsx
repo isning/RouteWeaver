@@ -30,6 +30,27 @@ import type {
   Service,
   UserRecord,
 } from "./types";
+// Disambiguate only the authorized inventory, including literal names that
+// would otherwise impersonate another option's accessible identity caption.
+function authorizedRouteChoices(routes: RouteRecord[]) {
+  const identities = new Map<string, Set<string>>();
+  const identityCaptions = new Set<string>();
+  for (const route of routes) {
+    const ids = identities.get(route.name) ?? new Set<string>();
+    ids.add(route.id);
+    identities.set(route.name, ids);
+    identityCaptions.add(`${route.name}，线路标识：${route.id}`);
+  }
+  return routes.map((route) => {
+    const showIdentity = identities.get(route.name)!.size > 1 || identityCaptions.has(route.name);
+    return {
+      value: route.id,
+      label: showIdentity ? <span>{route.name}<span className="block text-xs text-muted-foreground [overflow-wrap:anywhere]">线路标识：<code>{route.id}</code></span></span> : route.name,
+      "aria-label": showIdentity ? `${route.name}，线路标识：${route.id}` : route.name,
+      searchText: `${route.name} ${route.id}`,
+    };
+  });
+}
 interface Grant extends PlatformEntry {
   userId?: string;
   publishedRouteId?: string;
@@ -642,9 +663,7 @@ function UserEntryTask({
             trigger="onValueChange"
           >
             <ChoiceSelect
-              options={routes
-                .filter((r) => permitted.has(r.id))
-                .map((r) => ({ value: r.id, label: r.name }))}
+              options={authorizedRouteChoices(routes.filter((r) => permitted.has(r.id)))}
             />
           </AppField>
           <ConnectionFields />

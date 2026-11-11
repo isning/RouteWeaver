@@ -23,6 +23,7 @@ export default defineConfig({
         "**/group-access-decision.ui.spec.ts",
         "**/route-inventory-recovery.ui.spec.ts",
         "**/admin-settings-isolation.ui.spec.ts",
+        "**/entry-route-identity.ui.spec.ts",
       ],
     })),
   workers: 1,

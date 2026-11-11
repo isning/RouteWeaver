@@ -25,7 +25,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup(); client?.clear(); vi.restoreAllMocks(); vi.unstubAllGlobals();
 });
-function mountPolicy(value: unknown, cached = false, entryRoute = "direct") {
+function mountPolicy(value: unknown, cached = false, entryRoute = "direct", routes?: RouteRecord[]) {
   const currentEntry = { ...entry, routeId: entryRoute };
   const writes: unknown[] = [];
   const reads: string[] = [];
@@ -44,7 +44,7 @@ function mountPolicy(value: unknown, cached = false, entryRoute = "direct") {
   if (cached) client.setQueryData(["effective-policy", "u"], value);
   render(<QueryClientProvider client={client}><UIProviders><UserEntries
     user={{ id: "u", name: "User", enabled: true, quotaBytes: 0, usedBytes: 0 }}
-    routes={[
+    routes={routes ?? [
       { id: "direct", name: "Direct route", userIds: ["u"] },
       { id: "individual", name: "Individual plan route", userIds: [] },
       { id: "override", name: "Override route", userIds: [] },
@@ -149,5 +149,36 @@ it("offers retry after a failed policy read without presenting explicit deny-all
   await userEvent.click(screen.getByRole("button", { name: "重试" }));
   await openChoices();
   expect(screen.getByRole("option", { name: "Override route" })).toBeTruthy();
+  expect(task.writes).toEqual([]);
+});
+
+// Public UI + transport seam; all requests and entry data are local fixtures.
+it("distinguishes authorized same-name routes and literal identity captions before saving the raw route ID", async () => {
+  const routes = [
+    { id: "direct", name: "London" },
+    { id: "group", name: "London" },
+    { id: "literal", name: "London，线路标识：group" },
+    { id: "forbidden", name: "London" },
+  ] as RouteRecord[];
+  const task = mountPolicy(policy(["direct", "group", "literal"]), false, "direct", routes);
+  await openChoices();
+  expect(screen.getAllByRole("option")).toHaveLength(3);
+  expect(screen.getByRole("option", { name: "London，线路标识：direct" }).textContent).toContain("direct");
+  expect(screen.getByRole("option", { name: "London，线路标识：group，线路标识：literal" }).textContent).toContain("literal");
+  expect(screen.queryByRole("option", { name: /forbidden/ })).toBeNull();
+  await userEvent.type(screen.getByRole("combobox", { name: "搜索选项" }), "group");
+  await userEvent.click(screen.getByRole("option", { name: "London，线路标识：group" }));
+  expect(screen.getByRole("combobox", { name: "授权线路" }).textContent).toBe("London线路标识：group");
+  await userEvent.click(screen.getByRole("button", { name: "保存入口" }));
+  await waitFor(() => expect(task.writes).toEqual([expect.objectContaining({ routeId: "group" })]));
+});
+it("keeps a sole authorized route concise when only unauthorized routes share its name", async () => {
+  const task = mountPolicy(policy(["direct"]), false, "direct", [
+    { id: "direct", name: "London" },
+    { id: "forbidden", name: "London" },
+  ] as RouteRecord[]);
+  await openChoices();
+  expect(screen.getAllByRole("option")).toHaveLength(1);
+  expect(screen.getByRole("option", { name: "London" }).textContent).toBe("London");
   expect(task.writes).toEqual([]);
 });
