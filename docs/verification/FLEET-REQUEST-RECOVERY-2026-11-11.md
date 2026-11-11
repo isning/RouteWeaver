@@ -55,3 +55,7 @@ Validation: the ordering regression failed before the fix; all 33 focused feedba
 Independent final source review accepted the exact-key awaited cancellation and updated public regression without blockers. Latest published `ae91497` then completed full Repository quality run `42996160004` successfully at 2026-11-11 10:09:32 UTC, including all 18 jobs and the required aggregate. This remote success still predates the unpublished local hierarchy and Fleet follow-ups.
 
 Final local whole-suite follow-up: application/test source at `75727639cf8ab1bd68152b07027b1a530dd40366` passed all 4,013 DOM tests in all 323 files (one worker, 1,051.32 seconds), completed 2026-11-11 around 10:27:50 UTC. This supersedes the earlier full-suite limitation for the local Fleet fixes. Native CI and original-pixel acceptance of these unpublished changes still remain pending; local whole-suite success is not a deployment or full repository-gate claim.
+
+## Successful-retry focus audit
+
+A bounded public DOM audit found no new focus defect: when a successful retry removes its focused control, the existing Radix FocusScope restores focus to the progress sheet rather than document body. If the user moved to the Refresh control while submission was pending, success preserved that newer control's focus. Two regression cases now protect this existing behavior; all 35 Fleet feedback tests passed. No additional runtime focus code was introduced. This is DOM-level ownership evidence, not a new native focus-ring or screenshot acceptance claim.

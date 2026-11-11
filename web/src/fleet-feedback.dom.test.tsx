@@ -1210,3 +1210,38 @@ it("keeps successful fleet retry progress when an older refresh arrives late, th
   expect(screen.queryByText("已提交，等待节点", { exact: true })).toBeNull();
   expect(writes.length).toBe(2);
 });
+
+
+for (const owner of ["removed retry", "newer control"] as const) {
+  it(`keeps successful fleet recovery focus in its sheet without stealing from ${owner}`, async (context) => {
+    const scenario = ownedClickScenario(context);
+    const batch = { ...plan, id: "batch", action: "configure", deploymentId: "path", createdAt: "2026-11-11T10:00:00Z", leaseSeconds: 300, status: "planned",
+      targets: [{ ...plan.targets[0], status: "planned", attempts: [], changes: [], diagnostics: [] }],
+    };
+    let writes = 0;
+    let finishWrite!: (response: Response) => void;
+    vi.stubGlobal("fetch", vi.fn(async (_url: string, init?: RequestInit) => {
+      if (init?.method !== "POST") return json(batch);
+      if (++writes === 1) return json({ error: "执行暂时不可用" }, 503);
+      return new Promise<Response>(resolve => { finishWrite = resolve; });
+    }));
+    await mount(<FleetBatchDetail id="batch" onClose={() => {}} />);
+    await scenario.click(() => screen.findByRole("button", { name: "执行第 1 阶段" }));
+    await scenario.click(() => screen.findByRole("button", { name: "确认执行" }));
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+    const retry = await screen.findByRole("button", { name: "重新提交同一请求" });
+    await scenario.click(() => retry);
+    await waitFor(() => expect(writes).toBe(2));
+    expect(document.activeElement).toBe(retry);
+    const destination = owner === "newer control"
+      ? screen.getByRole("button", { name: "刷新进度" })
+      : screen.getByRole("dialog", { name: "批量变更进度" });
+    if (owner === "newer control") await scenario.click(() => destination);
+    await act(async () => finishWrite(json({ ...batch, status: "queued",
+      targets: [{ ...batch.targets[0], status: "queued" }],
+    })));
+    await waitFor(() => expect(screen.queryByRole("button", { name: "重新提交同一请求" })).toBeNull());
+    await waitFor(() => expect(document.activeElement).toBe(destination));
+    expect(document.activeElement).not.toBe(document.body);
+  });
+}
