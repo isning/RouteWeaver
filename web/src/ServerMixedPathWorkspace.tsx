@@ -3,7 +3,7 @@ import { ChoiceSelect } from "@/ui-patterns/choice-select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { ArrowDown, ArrowUp, ChevronDown, Globe, Laptop, LockKeyhole, MoreHorizontal, Pencil, Plus, Server, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ChevronDown, Globe, Laptop, LockKeyhole, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
 import { Fragment, useId, useLayoutEffect, useRef, useState } from "react";
 import { moveItem } from "./model";
 import { ServerEndpointSelect } from "./ServerEndpointSelect";
@@ -133,7 +133,7 @@ export function ServerMixedPathWorkspace({
     if (hops.length && adding?.index !== index) return null;
     const choices = choicesAt(index);
     const kind = adding?.kind || "managed";
-    return <li ref={addPicker} id={`${id}-add-hop`} className="relative ml-11 min-w-0 space-y-3 rounded-lg border border-dashed bg-background p-4">
+    return <li ref={addPicker} id={`${id}-add-hop`} className="relative min-w-0 space-y-3 rounded-lg border border-dashed bg-background p-4">
       <h3 className="text-sm font-semibold">第 {index + 1} 跳</h3>
       {!!choices.length && <label className="grid gap-2 text-sm font-medium">类型
         <ChoiceSelect aria-label={`第 ${index + 1} 跳类型`} value={kind}
@@ -186,11 +186,11 @@ export function ServerMixedPathWorkspace({
       <p className="text-muted-foreground">客户端 → {summary.length ? summary.join(" → ") : "选择第一跳"} → 目标</p>
     </section>
     {changing && <p role="status" className="text-sm text-muted-foreground">正在读取所选监听配置…</p>}
-    <div className="flex items-center gap-3 pb-3 text-xs text-muted-foreground">
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-full border bg-background"><Laptop className="size-4" aria-hidden="true" /></span>
+    <div className="flex items-center gap-2 px-1 pb-3 text-xs font-medium text-muted-foreground">
+      <span className="flex size-5 shrink-0 items-center justify-center"><Laptop className="size-4" aria-hidden="true" /></span>
       客户端
     </div>
-    <ol aria-label="代理链" className="relative space-y-3 before:absolute before:inset-y-0 before:left-4 before:w-px before:bg-border">
+    <ol aria-label="代理链" className="relative space-y-2">
       {!hops.length && picker(0)}
       {hops.map((hop, index) => {
         const key = orderedServerHopKey(hop);
@@ -216,11 +216,8 @@ export function ServerMixedPathWorkspace({
         const connector = hop.kind === "connector" ? connectorOwner?.connectors?.find((item) => item.id === hop.connectorId) : undefined;
         const connectorHost = connectorOwner && inventory.hosts.find((item) => item.id === connectorOwner.instance.hostId);
         return <Fragment key={key}>
-          <li className="hop-row relative grid min-w-0 grid-cols-[2rem_minmax(0,1fr)] items-start gap-x-3">
-            <span className="relative z-10 mt-5 flex size-8 items-center justify-center rounded-full border bg-background text-xs font-medium tabular-nums text-muted-foreground">
-              <span className="sr-only">第 </span>{hopNumber}<span className="sr-only"> 跳</span>
-            </span>
-            <div className={cn("min-w-0 rounded-lg border bg-background", isExpanded && "ring-1 ring-border")}>
+          <li className="hop-row relative min-w-0">
+            <div className={cn("min-w-0 rounded-lg border bg-background transition-colors motion-reduce:transition-none", isExpanded && "border-ring/50")}>
               <div className="flex min-w-0 items-center gap-1 pr-2">
                 <button type="button" className="hop-summary group flex min-h-18 min-w-0 flex-1 items-center gap-3 rounded-lg px-3 py-3 text-left hover:bg-muted/40 focus-visible:outline-2 focus-visible:outline-ring sm:px-4"
                   aria-label={`配置第 ${hopNumber} 跳 ${name(hop)}`} aria-describedby={`${id}-identity-${index}`} aria-expanded={isExpanded} aria-controls={`${id}-fields-${index}`}
@@ -228,7 +225,7 @@ export function ServerMixedPathWorkspace({
                   onClick={() => { const next = new Set(expanded); if (next.has(key)) next.delete(key); else next.add(key); setLocalExpanded(next); onExpandedHopsChange?.(next); }}>
                   <span className="grid min-w-0 flex-1 gap-1">
                     <span className="flex min-w-0 items-center gap-2 text-sm font-semibold">
-                      {hop.kind === "managed" ? <Server className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" /> : <Globe className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />}
+                      <span aria-hidden="true" className="flex size-5 shrink-0 items-center justify-center rounded bg-muted text-xs font-medium tabular-nums text-muted-foreground">{hopNumber}</span>
                       <span className="min-w-0 break-words">{name(hop)}</span>
                     </span>
                     <span id={`${id}-identity-${index}`} className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
@@ -332,15 +329,14 @@ export function ServerMixedPathWorkspace({
         </Fragment>;
       })}
     </ol>
-    <div className="relative flex items-center gap-3 py-3 before:absolute before:inset-y-0 before:left-4 before:w-px before:bg-border">
-      <span className="relative z-10 flex size-8 shrink-0 items-center justify-center rounded-full border bg-background"><ArrowDown className="size-4 text-muted-foreground" aria-hidden="true" /></span>
-      {!!hops.length && <ActionButton variant="outline" className="border-dashed" leadingIcon={<Plus aria-hidden="true" />}
+    <div className="flex items-center py-3">
+      {!!hops.length && <ActionButton variant="outline" className="w-full border-dashed bg-transparent" leadingIcon={<Plus aria-hidden="true" />}
         ref={(button) => { if (button) addButtons.current.set(hops.length, button); else addButtons.current.delete(hops.length); }}
         aria-expanded={adding?.index === hops.length} aria-controls={adding?.index === hops.length ? `${id}-add-hop` : undefined}
         disabled={changing} onClick={(event) => openAdd(hops.length, event.currentTarget)}>添加下一跳</ActionButton>}
     </div>
-    <div className="flex items-center gap-3 text-xs text-muted-foreground">
-      <span className="relative z-10 flex size-8 items-center justify-center rounded-full border bg-background"><Globe className="size-4" aria-hidden="true" /></span>
+    <div className="flex items-center gap-2 px-1 text-xs font-medium text-muted-foreground">
+      <span className="flex size-5 items-center justify-center"><Globe className="size-4" aria-hidden="true" /></span>
       目标
     </div>
   </div>;

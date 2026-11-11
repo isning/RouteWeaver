@@ -195,3 +195,24 @@ it("uses the same collapsed chain overview for a legacy managed-only path withou
   await user.click(screen.getByRole("button", { name: "第 1 跳更多操作" }));
   expect(screen.getByRole("menuitem", { name: "在第 1 跳后插入下一跳" })).toBeTruthy();
 });
+
+it("keeps unsaved path edits when footer cancellation is declined", async () => {
+  const { initial, inventory } = mixedFixture();
+  const fetch = vi.fn();
+  vi.stubGlobal("fetch", fetch);
+  mountEditor(initial, inventory);
+  const user = userEvent.setup();
+  const editor = screen.getByRole("dialog", { name: "编辑 Mixed path" });
+  const path = within(editor).getByRole("region", { name: "路径编排" });
+  expect(within(path).getByRole("list", { name: "代理链" })).toBeTruthy();
+  const name = within(editor).getByRole("textbox", { name: "转发路径名称" });
+  await user.clear(name);
+  await user.type(name, "Updated path");
+  await user.click(within(editor).getByRole("button", { name: "取消", exact: true }));
+  const confirmation = await screen.findByRole("alertdialog", { name: "放弃尚未保存的转发路径修改？" });
+  await user.click(within(confirmation).getByRole("button", { name: "继续编辑" }));
+  await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+  expect((name as HTMLInputElement).value).toBe("Updated path");
+  expect(within(editor).getByRole("region", { name: "路径摘要" }).textContent).toContain("a listener → proxy-x → 目标");
+  expect(fetch).not.toHaveBeenCalled();
+});

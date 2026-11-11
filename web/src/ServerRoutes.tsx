@@ -1009,7 +1009,7 @@ export function ServerRouteEditor({
   if (initialListenerReview && listenerReview) return listenerReview;
   return (
     <TaskSheet
-      bodyProps={{ className: "space-y-5" }}
+      bodyProps={{ className: "space-y-6" }}
       title={isNew ? "新建转发路径" : `编辑 ${initial.name}`}
       open={!discardClosing}
       onOpenChange={(next) => {
@@ -1029,12 +1029,13 @@ export function ServerRouteEditor({
           if (!visible && discardClosing) onClose();
         })(false);
       }}
-      size={mixedWorkspace ? "lg" : "xl"}
+      size={chainEditable && view !== "graph" ? "lg" : "xl"}
       pending={!!discardConfirming}
       footer={
-        <div className="flex w-full justify-end">
+        <div className="flex w-full items-center justify-end gap-3">
+          <ActionButton variant="outline" disabled={save.isPending} onClick={close}>取消</ActionButton>
           <ActionButton
-            className="w-full sm:w-auto sm:min-w-32"
+            className="min-w-32 flex-1 sm:flex-none"
             leadingIcon={<SaveOutlined aria-hidden="true" />}
             pending={save.isPending}
             disabled={
@@ -1057,7 +1058,7 @@ export function ServerRouteEditor({
         </div>
       }
     >
-      <div inert={save.isPending} className="space-y-5">
+      <div inert={save.isPending} className="space-y-6">
         <ErrorNotice error={error} />
         {draft.ir.programs != null && !Array.isArray(draft.ir.programs) && <Notice tone="warning" title="监听列表格式需要修复">原配置已保留。请使用完整 JSON 将监听列表修复为数组，再使用路径表单。</Notice>}
         {sourceStale && <Notice tone="warning" title="用户入口可能已更新">
@@ -1116,13 +1117,41 @@ export function ServerRouteEditor({
             placeholder="例如：FRA → 英国"
           />
         </label>
-        <div className="section-heading flex flex-wrap items-start justify-between gap-3 mb-4">
-          <div>
-            <h2 className="text-base font-semibold tracking-tight">
-              {chainEditable ? "路径编排" : "监听与转发"}
-            </h2>
-          </div>
+        <section aria-label={chainEditable ? "路径编排" : "监听与转发"} className="min-w-0 overflow-hidden rounded-xl border bg-muted/20">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b bg-background px-4 py-3">
+          <h2 className="text-sm font-semibold">
+            {chainEditable ? "路径编排" : "监听与转发"}
+          </h2>
+        {legacyChainEditable && (
+          <Tabs
+            value={view}
+            onValueChange={(next) => {
+              if (viewChangeReason) return;
+              draftRevision.current++;
+              setPathLoading(false);
+              setPendingEndpoints({});
+              setView(next);
+            }}
+            defaultValue={"ordered"}
+            className="min-w-0 space-y-2"
+          >
+            <TabsList className="h-auto max-w-full flex-wrap">
+              <TabsTrigger key={"ordered"} value={"ordered"}
+                disabled={view !== "ordered" && !!viewChangeReason}
+                aria-describedby={viewChangeReason ? viewChangeNoteId : undefined}>
+                {"\u987A\u5E8F\u7F16\u8F91"}
+              </TabsTrigger>
+              <TabsTrigger key={"graph"} value={"graph"}
+                disabled={view !== "graph" && !!viewChangeReason}
+                aria-describedby={viewChangeReason ? viewChangeNoteId : undefined}>
+                {"\u56FE\u5F62\u7F16\u8F91"}
+              </TabsTrigger>
+            </TabsList>
+            {viewChangeReason && <p id={viewChangeNoteId} className="text-sm text-muted-foreground">{viewChangeReason}</p>}
+          </Tabs>
+        )}
         </div>
+        <div className="min-w-0 p-3 sm:p-4">
         <div className="sr-only" aria-live="polite">
           {announcement}
         </div>
@@ -1303,34 +1332,8 @@ export function ServerRouteEditor({
             changing={pathLoading}
           />
         )}
-        {legacyChainEditable && (
-          <Tabs
-            value={view}
-            onValueChange={(next) => {
-              if (viewChangeReason) return;
-              draftRevision.current++;
-              setPathLoading(false);
-              setPendingEndpoints({});
-              setView(next);
-            }}
-            defaultValue={"ordered"}
-            className="w-full space-y-4"
-          >
-            <TabsList className="h-auto max-w-full flex-wrap">
-              <TabsTrigger key={"ordered"} value={"ordered"}
-                disabled={view !== "ordered" && !!viewChangeReason}
-                aria-describedby={viewChangeReason ? viewChangeNoteId : undefined}>
-                {"\u987A\u5E8F\u7F16\u8F91"}
-              </TabsTrigger>
-              <TabsTrigger key={"graph"} value={"graph"}
-                disabled={view !== "graph" && !!viewChangeReason}
-                aria-describedby={viewChangeReason ? viewChangeNoteId : undefined}>
-                {"\u56FE\u5F62\u7F16\u8F91"}
-              </TabsTrigger>
-            </TabsList>
-            {viewChangeReason && <p id={viewChangeNoteId} className="text-sm text-muted-foreground">{viewChangeReason}</p>}
-          </Tabs>
-        )}
+        </div>
+        </section>
         <Accordion type="multiple" defaultValue={initialSection ? [initialSection] : []} className="w-full">
           {chainEditable && programs.length > 0 && (
             <AccordionItem value="listener-details">
