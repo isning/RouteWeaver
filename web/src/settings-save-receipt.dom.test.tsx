@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, expect, it, vi } from "vitest";
 import {
   act,
   fireEvent,
@@ -21,6 +21,13 @@ const json = (value: unknown, status = 200) =>
     headers: { "Content-Type": "application/json" },
   });
 const clients: QueryClient[] = [];
+beforeAll(async () => {
+  // These receipt/reconciliation tasks do not measure cold route compilation.
+  // Load the real module before interaction waits; App routing/session, HTTP
+  // fixtures, wait budgets and assertions remain unchanged. Controlled pending
+  // and rejected imports are covered by page-recovery.dom.test.tsx.
+  await import("./Admin");
+});
 beforeEach(() => {
   setToken("");
   setCSRF("");

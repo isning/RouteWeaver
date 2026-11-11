@@ -29,3 +29,11 @@ The real-App loopback fixture covers keyboard local-tab changes while a syntheti
 Strict native TypeScript passes. The supplemental lane discovers 42 cases across 15 files; all five workflow contracts pass, with required full discovery, sandbox provenance, timeouts, retries and workers unchanged. These checks do not constitute browser execution or rendered acceptance.
 
 Independent native-fixture source review found no concrete blocker in current selectors, roving-tab keyboard use, staged synthetic transport, masked original captures or safe ledger preservation. This remains source acceptance only: asset compatibility, keyboard traversal and pixels require actual native execution. The fixture covers response completion while hidden; DOM regressions additionally cover completion before tab departure.
+
+## Integrated run after backup changes
+
+At approximately 12:21 UTC, the full serialized DOM suite completed with **4,031 passes and one failure across 325 files** in 1,066.00 seconds. The sole failure was the same first `settings-save-receipt` initial-loading wait described above; both backup-tab cases passed. Source under test was `5a12394`; `c6ec689` only added native/config/contract/documentation files during the run. This result is not a complete pass and does not replace the earlier passing run at `f497893`.
+
+## Receipt-test setup correction
+
+The receipt-specific file now loads the actual Admin module in `beforeAll`, matching the existing history-fixture setup pattern. This moves cold compilation outside receipt interaction timing without mocking the page, altering App/session/HTTP behavior, changing wait budgets, or weakening assertions. Controlled pending/rejected route-loading tests remain unchanged. All 25 receipt, page-recovery and settings-read-first tests across three files pass after this setup correction. A new full run is still required; the earlier 4,031/one-failure run is not relabelled as a pass.
