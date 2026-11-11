@@ -45,3 +45,7 @@ TypeScript/Vite build passed. Integration caught and fixed a mismatched JSX tag
 and unsupported RTL `exact` option in the new Sheet test before this passing run;
 no assertion or timeout was relaxed. Full aggregate and actual native pixels are
 separate outstanding acceptance, not implied by these results.
+
+Strict targeted native TypeScript passed for the updated visual-gaps and Sheet
+specifications. Sheet discovery lists three viewport cases (320/390/1440).
+Discovery/typechecking do not execute a browser or establish rendered acceptance.

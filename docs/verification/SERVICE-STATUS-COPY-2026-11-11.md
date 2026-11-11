@@ -39,7 +39,7 @@ Updated proposal includes a one-line Subscriptions.tsx hunk. Apply the patch, no
 
 Applied localized hunks without replacing concurrent layout work. Independent
 composed source review confirmed backend semantics and unchanged unknown/error
-handling. Combined ten-file run passed106tests in35.35seconds, including overview
+handling. Combined ten-file run passed 106 tests in 35.35 seconds, including overview
 and comparison status assertions; production build passed. No matches for the
 three replaced phrases remain in web/src or web/tests. Full aggregate and native
 rendered review remain separate checks. No connectivity claim, backend policy

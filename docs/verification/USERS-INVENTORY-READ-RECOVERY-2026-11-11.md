@@ -41,3 +41,8 @@ successful refresh: a pre-existing queued closure can still capture older row
 fields. Already-open editor reconciliation remains outside this slice. No
 native-browser/pixel acceptance or complete aggregate pass is claimed yet.
 No deployment or real-user mutation was performed.
+
+Final serialized local aggregate at production/DOM checkpoint `0cbc9fa` passed
+**4,105/4,105 tests across 331 files** in 1,163.31 seconds. Native preparation
+`bdeab243` adds no production/DOM changes; its separate execution remains unrun.
+Later Sheet, compact-tab and copy changes require their own full aggregate.
