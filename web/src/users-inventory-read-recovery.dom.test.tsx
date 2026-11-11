@@ -148,3 +148,111 @@ it("opens the recovered page-two user's own authorization context without writes
   ]);
   expect(task.requests.every(request => request.startsWith("GET "))).toBe(true);
 });
+
+it("keeps the users retry keyboard-owned while one read settles and hands successful recovery to search", async () => {
+  const task = setup();
+  const user = userEvent.setup();
+  await screen.findByRole("button", { name: "Member 00" });
+  const search = screen.getByRole("textbox", { name: "搜索用户" });
+  await user.type(search, "Member");
+  await user.click(screen.getByRole("button", { name: "下一页" }));
+  task.fail();
+  await act(async () => { await task.client.invalidateQueries({ queryKey: ["admin-state"] }); });
+  const retry = await screen.findByRole("button", { name: "重试用户列表" });
+  const before = task.requests.filter(request => request === "GET /api/services").length;
+  let release = task.hold();
+  act(() => { retry.focus(); retry.click(); retry.click(); });
+  await screen.findByText("正在核对用户…");
+  expect(retry).toHaveProperty("disabled", false);
+  expect(retry.getAttribute("aria-disabled")).toBe("true");
+  expect(retry.getAttribute("aria-busy")).toBe("true");
+  expect(document.activeElement).toBe(retry);
+  await user.keyboard("{Enter} ");
+  await user.click(retry);
+  expect(task.requests.filter(request => request === "GET /api/services")).toHaveLength(before + 1);
+  expect(search).toHaveProperty("value", "Member");
+  expect(screen.getByRole("button", { name: "Member 10" })).toHaveProperty("disabled", true);
+  expect(screen.queryByRole("button", { name: "Member 00" })).toBeNull();
+  const actions = within(screen.getByRole("group", { name: "Member 10 的操作" }));
+  expect(actions.getByRole("button", { name: "平台入口" })).toHaveProperty("disabled", true);
+  expect(actions.getByRole("button", { name: "更多操作 Member 10" })).toHaveProperty("disabled", true);
+  await act(async () => release(json({ detail: "Retry still unavailable" }, 503)));
+  await screen.findByText("Retry still unavailable");
+  expect(document.activeElement).toBe(retry);
+  expect(retry.getAttribute("aria-busy")).not.toBe("true");
+  release = task.hold();
+  await user.keyboard("{Enter}");
+  await screen.findByText("正在核对用户…");
+  task.recover();
+  await act(async () => release(json([])));
+  await waitFor(() => expect(screen.queryByRole("button", { name: "重试用户列表" })).toBeNull());
+  expect(document.activeElement).toBe(search);
+  expect(search).toHaveProperty("value", "Member");
+  expect(screen.getByRole("button", { name: "Member 10" })).toHaveProperty("disabled", false);
+  expect(task.requests.filter(request => request === "GET /api/services")).toHaveLength(before + 2);
+  expect(task.requests.every(request => request.startsWith("GET "))).toBe(true);
+});
+
+it.each([200, 503])("does not take a newer search or dialog focus when a users retry returns %s", async (status) => {
+  const task = setup();
+  const user = userEvent.setup();
+  await screen.findByRole("button", { name: "Member 00" });
+  task.fail();
+  await act(async () => { await task.client.invalidateQueries({ queryKey: ["admin-state"] }); });
+  for (const owner of ["search", "dialog"]) {
+    const release = task.hold();
+    await user.click(await screen.findByRole("button", { name: "重试用户列表" }));
+    await screen.findByText("正在核对用户…");
+    if (owner === "search") {
+      await user.tab();
+      expect(document.activeElement).toBe(screen.getByRole("textbox", { name: "搜索用户" }));
+      await user.keyboard("Member 01");
+    } else {
+      await user.click(screen.getByRole("button", { name: "添加用户" }));
+      await screen.findByRole("dialog", { name: "添加用户" });
+    }
+    const focused = document.activeElement;
+    expect(focused).not.toBe(document.body);
+    task.recover();
+    await act(async () => release(status === 200 ? json([]) : json({ detail: "Retry still unavailable" }, 503)));
+    await waitFor(() => expect(screen.queryByText("正在核对用户…")).toBeNull());
+    expect(document.activeElement).toBe(focused);
+    expect(screen.getByRole("textbox", { name: "搜索用户", hidden: owner === "dialog" })).toHaveProperty("value", "Member 01");
+    if (owner === "dialog") {
+      expect(within(screen.getByRole("dialog", { name: "添加用户" })).getByRole("button", { name: "取消" })).toBeTruthy();
+    } else if (status === 200) {
+      task.fail();
+      await act(async () => { await task.client.invalidateQueries({ queryKey: ["admin-state"] }); });
+    }
+  }
+  expect(task.requests.every(request => request.startsWith("GET "))).toBe(true);
+});
+
+it("keeps the focused users retry queued offline without restarting its read on repeated activation", async () => {
+  const task = setup();
+  const user = userEvent.setup();
+  await screen.findByRole("button", { name: "Member 00" });
+  task.fail();
+  await act(async () => { await task.client.invalidateQueries({ queryKey: ["admin-state"] }); });
+  const retry = await screen.findByRole("button", { name: "重试用户列表" });
+  const before = task.requests.filter(request => request === "GET /api/services").length;
+  const release = task.hold();
+  act(() => onlineManager.setOnline(false));
+  await user.click(retry);
+  await screen.findByText("等待网络连接后核对用户。");
+  expect(document.activeElement).toBe(retry);
+  expect(retry).toHaveProperty("disabled", false);
+  expect(retry.getAttribute("aria-disabled")).toBe("true");
+  await user.keyboard("{Enter} ");
+  expect(task.requests.filter(request => request === "GET /api/services")).toHaveLength(before);
+  expect(screen.getByRole("button", { name: "Member 00" })).toHaveProperty("disabled", true);
+  act(() => onlineManager.setOnline(true));
+  await screen.findByText("正在核对用户…");
+  expect(document.activeElement).toBe(retry);
+  await user.keyboard("{Enter}");
+  expect(task.requests.filter(request => request === "GET /api/services")).toHaveLength(before + 1);
+  task.recover();
+  await act(async () => release(json([])));
+  await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("textbox", { name: "搜索用户" })));
+  expect(task.requests.every(request => request.startsWith("GET "))).toBe(true);
+});

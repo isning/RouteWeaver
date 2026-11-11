@@ -55,7 +55,7 @@ import { ServicePolicyEditor } from "./ServicePolicyEditor";
 import { UserPolicyEditor } from "./UserPolicyEditor";
 import { RateSettings } from "./Rates";
 import { UserEntries } from "./UserEntries";
-import { useId, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useId, useLayoutEffect, useRef, useState } from "react";
 import { useUnsavedChanges } from "./navigation";
 import { useDiscardConfirmation } from "./useDiscardConfirmation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -291,6 +291,22 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
   const data = query.data;
   const usersInventoryKnown = page === "users" && data !== undefined;
   const usersInventoryReady = query.isSuccess && query.fetchStatus === "idle";
+  const usersSearch = useRef<HTMLInputElement>(null);
+  const restoreUsersSearch = useRef(false);
+  const usersRetryRef = useCallback((button: HTMLButtonElement | null) => {
+    if (!button) return;
+    // Read ownership before React removes the recovered notice. A newer task
+    // already holding focus must never inherit this retry's handoff.
+    return () => { restoreUsersSearch.current = button.ownerDocument.activeElement === button; };
+  }, []);
+  useLayoutEffect(() => {
+    const restore = restoreUsersSearch.current;
+    restoreUsersSearch.current = false;
+    const search = usersSearch.current;
+    if (restore && page === "users" && usersInventoryReady && search?.isConnected &&
+      search.ownerDocument.activeElement === search.ownerDocument.body &&
+      !search.closest('[inert], [hidden], [aria-hidden="true"]')) search.focus();
+  });
   // A closing menu may retain an older callback: check current read authority.
   const usersReadAuthority = useRef(false);
   usersReadAuthority.current = usersInventoryReady;
@@ -386,7 +402,8 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
       <ErrorNotice error={validate.error} />
       {usersInventoryKnown && query.isError && (
         <Notice tone="error" title="暂时无法核对用户" action={
-          <ActionButton onClick={() => query.refetch()} disabled={query.isFetching} variant="outline">重试用户列表</ActionButton>
+          <ActionButton ref={usersRetryRef} onClick={() => void query.refetch({ cancelRefetch: false })}
+            pending={query.isFetching || query.isPaused} keepFocusableWhilePending variant="outline">重试用户列表</ActionButton>
         }>
           <p>{query.error.message}</p>
           <p>显示上次读取的用户，请重试后再打开用户操作。</p>
@@ -412,6 +429,7 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
                   label={`查找${meta.title}`}
                   search={
                     <SearchField
+                      ref={page === "users" ? usersSearch : undefined}
                       placeholder={`搜索${meta.title}`}
                       value={search}
                       onValueChange={setSearch}
