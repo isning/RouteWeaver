@@ -1054,3 +1054,102 @@ it("keeps same-request fleet recovery visible and keyboard-owned while resubmiss
   await act(async () => resolve(json(batch)));
   await waitFor(() => expect(screen.queryByRole("button", { name: "重新提交同一请求" })).toBeNull());
 });
+
+
+it("preserves cached fleet recovery through a failed refresh while the same request is pending", async (context) => {
+  const scenario = ownedClickScenario(context);
+  const batch = { ...plan, id: "batch", action: "configure", deploymentId: "path", createdAt: "2026-11-11T10:00:00Z", leaseSeconds: 300, status: "planned",
+    targets: [{ ...plan.targets[0], status: "planned", attempts: [], changes: [], diagnostics: [] }],
+  };
+  let reads = 0;
+  const writes: unknown[] = [];
+  let finishRefresh!: (response: Response) => void;
+  let finishWrite!: (response: Response) => void;
+  vi.stubGlobal("fetch", vi.fn(async (_url: string, init?: RequestInit) => {
+    if (init?.method === "POST") {
+      writes.push(JSON.parse(String(init.body)));
+      if (writes.length === 1) return json({ error: "执行暂时不可用" }, 503);
+      return new Promise<Response>(resolve => { finishWrite = resolve; });
+    }
+    reads++;
+    if (reads <= 2) return json(batch);
+    if (reads === 3) return new Promise<Response>(resolve => { finishRefresh = resolve; });
+    return json({ error: "读取暂时不可用" }, 503);
+  }));
+  await mount(<FleetBatchDetail id="batch" onClose={() => {}} />);
+  await scenario.click(() => screen.findByRole("button", { name: "执行第 1 阶段" }));
+  await scenario.click(() => screen.findByRole("button", { name: "确认执行" }));
+  await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+  const retry = await screen.findByRole("button", { name: "重新提交同一请求" });
+  await scenario.click(() => screen.getByRole("button", { name: "刷新进度" }));
+  await waitFor(() => expect(reads).toBe(3));
+  await scenario.click(() => retry);
+  await waitFor(() => expect(writes.length).toBe(2));
+  await act(async () => finishRefresh(json({ error: "读取暂时不可用" }, 503)));
+  await screen.findByText("批次进度刷新失败，以下为上次读取的记录。请刷新进度后再开始新的执行或目标重试。");
+  expect(screen.getByText("Office core")).toBeTruthy();
+  expect(screen.getByRole("button", { name: "重新提交同一请求" })).toBe(retry);
+  expect(document.activeElement).toBe(retry);
+  expect(retry.getAttribute("aria-busy")).toBe("true");
+  expect(retry.getAttribute("aria-disabled")).toBe("true");
+  expect(screen.getByRole("button", { name: "执行第 1 阶段" }).hasAttribute("disabled")).toBe(true);
+  await userEvent.keyboard("{Enter}{Enter}");
+  expect(writes.length).toBe(2);
+  await act(async () => finishWrite(json({ error: "执行仍不可用" }, 503)));
+  await waitFor(() => expect(retry.getAttribute("aria-busy")).not.toBe("true"));
+  expect(document.activeElement).toBe(retry);
+  expect(screen.getByRole("button", { name: "执行第 1 阶段" }).hasAttribute("disabled")).toBe(true);
+  await userEvent.keyboard("{Enter}");
+  await waitFor(() => expect(writes.length).toBe(3));
+  expect(JSON.stringify(writes[1]) === JSON.stringify(writes[0])).toBe(true);
+  expect(JSON.stringify(writes[2]) === JSON.stringify(writes[0])).toBe(true);
+  await act(async () => finishWrite(json({ ...batch, status: "queued", targets: [{ ...batch.targets[0], status: "queued" }] })));
+  await waitFor(() => expect(screen.queryByRole("button", { name: "重新提交同一请求" })).toBeNull());
+  expect(screen.getByText("Office core")).toBeTruthy();
+});
+
+for (const refreshState of ["pending", "failed", "changed"] as const) {
+  it(`rejects a fleet confirmation opened before progress refresh becomes ${refreshState}`, async (context) => {
+    const scenario = ownedClickScenario(context);
+    const batch = { ...plan, id: "batch", action: "configure", deploymentId: "path", createdAt: "2026-11-11T10:00:00Z", leaseSeconds: 300, status: "planned",
+      targets: [{ ...plan.targets[0], status: "planned", attempts: [], changes: [], diagnostics: [] }],
+    };
+    let reads = 0, writes = 0;
+    let finishRefresh!: (response: Response) => void;
+    vi.spyOn(document, "visibilityState", "get").mockReturnValue("visible");
+    vi.stubGlobal("fetch", vi.fn(async (_url: string, init?: RequestInit) => {
+      if (init?.method === "POST") { writes++; return json(batch); }
+      reads++;
+      if (reads === 1) return json(batch);
+      return new Promise<Response>(resolve => { finishRefresh = resolve; });
+    }));
+    await mount(<FleetBatchDetail id="batch" onClose={() => {}} />);
+    await scenario.click(() => screen.findByRole("button", { name: "执行第 1 阶段" }));
+    await screen.findByRole("alertdialog");
+    // A returning browser tab refreshes a stale query even with a decision open.
+    await act(async () => { fireEvent(window, new Event("visibilitychange")); });
+    await waitFor(() => expect(reads).toBe(2));
+    if (refreshState === "failed")
+      await act(async () => finishRefresh(json({ error: "读取暂时不可用" }, 503)));
+    if (refreshState === "changed")
+      await act(async () => finishRefresh(json({ ...batch, targets: [{ ...batch.targets[0], status: "failed" }] })));
+    await scenario.click(() => screen.getByRole("button", { name: "确认执行" }));
+    await screen.findByText("批次进度尚未核对。请取消，刷新进度后重新确认。");
+    expect(writes).toBe(0);
+    await scenario.click(() => within(screen.getByRole("alertdialog")).getByRole("button", { name: "取消" }));
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+    const execute = screen.getByRole("button", { name: "执行第 1 阶段" });
+    expect(execute.hasAttribute("disabled")).toBe(true);
+    if (refreshState !== "pending") {
+      await scenario.click(() => screen.getByRole("button", { name: "刷新进度" }));
+      await waitFor(() => expect(reads).toBe(3));
+      expect(execute.hasAttribute("disabled")).toBe(true);
+    }
+    await act(async () => finishRefresh(json(batch)));
+    await waitFor(() => expect(execute.hasAttribute("disabled")).toBe(false));
+    await scenario.click(() => execute);
+    await scenario.click(() => screen.getByRole("button", { name: "确认执行" }));
+    await waitFor(() => expect(writes).toBe(1));
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+  });
+}

@@ -1358,7 +1358,9 @@ export function FleetBatchDetail({
     onError: () => query.refetch(),
   });
   const batch = query.data;
+  const progressReady = query.isSuccess && !query.isFetching && !query.isPaused;
   const begin = (stage?: number) => {
+    if (!progressReady || execute.isPending) return;
     const retry = stage === undefined;
     const targetIds = selected.filter((id) =>
       batch?.targets.some((t) => t.instanceId === id && t.status === "failed"),
@@ -1384,6 +1386,12 @@ export function FleetBatchDetail({
       confirmLabel: retry ? "确认重试" : "确认执行",
       cancelLabel: "取消",
       onConfirm: () => {
+        // A confirmation keeps its opening closure. Read the current cache before
+        // authorizing a new request, including refreshes completed while it was open.
+        const current = client.getQueryState<FleetBatch>(["fleet-batch", id]);
+        if (current?.status !== "success" || current.fetchStatus !== "idle" || current.data !== batch) {
+          throw new Error("批次进度尚未核对。请取消，刷新进度后重新确认。");
+        }
         setOperation(op);
         return execute.mutateAsync(op).catch(() => {});
       },
@@ -1403,11 +1411,20 @@ export function FleetBatchDetail({
       size="xl"
     >
       <ErrorNotice error={execute.error} />
+      {batch && !progressReady && (
+        <Notice tone={query.isError ? "warning" : "info"}>
+          {query.isPaused
+            ? "等待网络连接，以下为上次读取的批次进度。暂不能开始新的执行或目标重试。"
+            : query.isError
+              ? "批次进度刷新失败，以下为上次读取的记录。请刷新进度后再开始新的执行或目标重试。"
+              : "正在刷新批次进度，以下为上次读取的记录。暂不能开始新的执行或目标重试。"}
+        </Notice>
+      )}
       <QueryState
         loading={query.isPending}
         paused={query.isPaused}
         loadingLayout="summary"
-        error={query.error}
+        error={batch ? null : query.error}
         retry={() => query.refetch()}
       >
         {batch && (
@@ -1446,7 +1463,7 @@ export function FleetBatchDetail({
                     batch.targets.some(
                       (t) => t.instanceId === id && t.status === "failed",
                     ),
-                  ) || execute.isPending
+                  ) || execute.isPending || !progressReady
                 }
                 onClick={() => begin()}
                 variant="outline"
@@ -1505,7 +1522,7 @@ export function FleetBatchDetail({
                           )}
                         </div>
                         <ActionButton
-                          disabled={!ready || execute.isPending}
+                          disabled={!ready || execute.isPending || !progressReady}
                           onClick={() => begin(stage)}
                           variant="default"
                         >

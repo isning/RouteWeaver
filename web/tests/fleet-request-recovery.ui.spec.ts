@@ -21,11 +21,16 @@ for (const width of [390, 1440]) {
       "/api/server-deployments": [{ id: "path", name: "办公路径", ir: { programs: [] } }],
     };
     const writes: unknown[] = [], blocked: string[] = [];
-    let held: Route | undefined;
+    let held: Route | undefined, heldRefresh: Route | undefined;
+    let holdRefresh = false, refreshUnavailable = false;
     await page.route("**/*", async route => {
       const request = route.request(), url = new URL(request.url());
       if (url.origin !== origin) { blocked.push("external request"); return route.abort(); }
       if (!url.pathname.startsWith("/api/")) return route.continue();
+      if (!url.search && request.method() === "GET" && url.pathname === "/api/admin/fleet-batches/batch") {
+        if (holdRefresh) { holdRefresh = false; heldRefresh = route; return; }
+        if (refreshUnavailable) return route.fulfill({ status: 503, json: { error: "进度读取暂时不可用" } });
+      }
       if (!url.search && request.method() === "GET" && url.pathname in fixtures)
         return route.fulfill({ json: fixtures[url.pathname] });
       if (!url.search && request.method() === "POST" && url.pathname === "/api/admin/fleet-batches/batch/execute") {
@@ -75,11 +80,18 @@ for (const width of [390, 1440]) {
       const retry = detail.getByRole("button", { name: "重新提交同一请求", exact: true });
       await expect(retry).toBeVisible();
       // Reach the recovery action through ordinary keyboard navigation.
-      await page.keyboard.press("Tab");
-      for (let step = 0; step < 30 && !await retry.evaluate(element => document.activeElement === element); step++)
+      const focusRetry = async () => {
         await page.keyboard.press("Tab");
-      await expect(retry).toBeFocused();
+        for (let step = 0; step < 30 && !await retry.evaluate(element => document.activeElement === element); step++)
+          await page.keyboard.press("Tab");
+        await expect(retry).toBeFocused();
+      };
+      await focusRetry();
       await capture("initial-failure", retry);
+      holdRefresh = true;
+      await detail.getByRole("button", { name: "刷新进度", exact: true }).click();
+      await expect.poll(() => Boolean(heldRefresh)).toBe(true);
+      await focusRetry();
       await page.keyboard.press("Enter");
       await expect.poll(() => writes.length).toBe(2);
       await expect(retry).toHaveAttribute("aria-busy", "true");
@@ -87,6 +99,13 @@ for (const width of [390, 1440]) {
       await expect(retry).not.toHaveAttribute("disabled");
       await expect(retry).toBeFocused();
       await capture("pending", retry);
+      refreshUnavailable = true;
+      const failedRefresh = heldRefresh!; heldRefresh = undefined;
+      await failedRefresh.fulfill({ status: 503, json: { error: "进度读取暂时不可用" } });
+      await expect(detail.getByText("批次进度刷新失败，以下为上次读取的记录。请刷新进度后再开始新的执行或目标重试。", { exact: true })).toBeVisible();
+      await expect(detail.getByRole("button", { name: "执行第 1 阶段", exact: true })).toBeDisabled();
+      await expect(retry).toHaveAttribute("aria-busy", "true");
+      await capture("stale-pending", retry);
       await page.keyboard.press("Enter");
       await page.keyboard.press("Enter");
       expect(writes.length).toBe(2);
@@ -107,6 +126,7 @@ for (const width of [390, 1440]) {
       expect(blocked).toEqual([]);
     } finally {
       if (held) await held.abort();
+      if (heldRefresh) await heldRefresh.abort();
       await info.attach("fleet-retry-ledger", { body: JSON.stringify({ focusEvidence, count: writes.length, sameRequest: writes.length === 3 && JSON.stringify(writes[0]) === JSON.stringify(writes[1]) && JSON.stringify(writes[1]) === JSON.stringify(writes[2]), blocked }), contentType: "application/json" });
     }
   });
