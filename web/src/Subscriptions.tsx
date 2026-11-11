@@ -681,8 +681,10 @@ export function SubscriptionsPage({
     });
   };
   const allOutputs = Array.isArray(outputs.data) ? outputs.data : [];
-  const allProfiles =
-    !profiles.isError && Array.isArray(profiles.data) ? profiles.data : [];
+  // A failed refresh does not erase known identities or prove missing profiles.
+  // Publication authority stays separate from this retained list presentation.
+  const allProfiles = Array.isArray(profiles.data) ? profiles.data : [];
+  const profilesReady = profiles.isSuccess && profiles.fetchStatus === "idle";
   const currentOutput = selectedID
     ? allOutputs.find(
         (output) =>
@@ -1171,7 +1173,9 @@ export function SubscriptionsPage({
                   重试配置
                 </ActionButton>
               }
-            />
+            >
+              {!!allProfiles.length && "显示上次读取的配置，请重试以核对最新状态。"}
+            </Notice>
           )}
           {outputs.isError && (
             <Notice
@@ -1207,11 +1211,11 @@ export function SubscriptionsPage({
             </Metadata>
           </span>} />
       )}
-      {(profiles.isPending || outputs.isPending) && (
+      {(profiles.isPending || outputs.isPending || profiles.isFetching || outputs.isFetching || profiles.isPaused || outputs.isPaused) && (
         profiles.isPaused || outputs.isPaused ? (
           <Notice tone="info" title="等待网络连接">连接恢复后将继续核对配置与客户端订阅。</Notice>
         ) : hasInventory ? (
-          <p role="status" aria-label="正在加载配置与客户端订阅" className="text-sm text-muted-foreground">正在核对尚未返回的配置与客户端订阅…</p>
+          <p role="status" aria-label="正在加载配置与客户端订阅" className="text-sm text-muted-foreground">正在核对配置与客户端订阅…</p>
         ) : (
           <LoadingState layout="subscriptions" label="正在加载配置与客户端订阅" />
         )
@@ -1397,7 +1401,7 @@ export function SubscriptionsPage({
                       <OutputUpdateButton
                         output={output}
                         pending={comparisons.pendingIds.has(output.id)}
-                        disabled={!profile || outputs.isError || !!checkingID}
+                        disabled={!profilesReady || !profile || outputs.isError || !!checkingID}
                         busy={checkingID === output.id}
                         onClick={() => inspectOutput(output)}
                       />
@@ -1489,7 +1493,7 @@ export function SubscriptionsPage({
                   <ActionButton
                     leadingIcon={<Plus aria-hidden="true" />}
                     aria-label={`为 ${profile.name} 新增客户端订阅`}
-                    disabled={!!checkingID}
+                    disabled={!profilesReady || !!checkingID}
                     onClick={() =>
                       setPublication({ id: newID("publication"), profile })
                     }
@@ -1705,6 +1709,7 @@ export function SubscriptionsPage({
               disabled={
                 opening ||
                 !!checkingID ||
+                !profilesReady ||
                 !allProfiles.some(
                   (profile) => profile.id === detailOutput.profileId,
                 )
