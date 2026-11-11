@@ -15,3 +15,7 @@ The platform-entry editor offered permitted routes using their display names alo
 ## Limits
 
 This change has not yet run natively or received independent pixel review. The browser fixture is read-only and does not establish credential saving/delivery, backend enforcement or full accessibility. The latest 4,027-test whole DOM pass was at source `12d96c4`, before this entry-choice change. Publication remains blocked awaiting authorization; no workaround, deployment or real credential operation occurred.
+
+## Final integrated DOM pass
+
+On 2026-11-11 at approximately 11:55 UTC, the complete serialized web suite at source `f497893` passed all **4,030 tests across 324 files** in 1,072.41 seconds. This includes both the entry-route identity and subsequent route-account literal-caption changes. This supersedes the older 4,027-test scope above; it does not establish native browser or pixel acceptance.

@@ -1983,6 +1983,7 @@ function PlatformSettingsTabs({
   readNotice?: ReactNode;
 }) {
   const [activeTab, setActiveTab] = useState("basic");
+  const [backupVisited, setBackupVisited] = useState(false);
   const sectionID = useId();
   const tabs = [
     {
@@ -1994,7 +1995,13 @@ function PlatformSettingsTabs({
     { key: "backup", label: "备份与恢复", children: <BackupSettings /> },
   ];
   return (
-    <Tabs value={activeTab} onValueChange={setActiveTab}>
+    <Tabs
+      value={activeTab}
+      onValueChange={(next) => {
+        setActiveTab(next);
+        if (next === "backup") setBackupVisited(true);
+      }}
+    >
       <WorkspaceFrame
         contentKind="settings"
         contextKind="navigation"
@@ -2020,7 +2027,10 @@ function PlatformSettingsTabs({
           <TabsContent
             key={tab.key}
             value={tab.key}
-            forceMount={tab.key === "basic" ? true : undefined}
+            forceMount={
+              tab.key === "basic" || (tab.key === "backup" && backupVisited)
+                ? true : undefined
+            }
             hidden={activeTab !== tab.key}
             className={tab.key === "basic" ? "space-y-10" : "space-y-6"}
           >
