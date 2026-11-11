@@ -12,7 +12,7 @@ import { Notice } from "@/ui-patterns/notice";
 import { ChoiceSelect, MultiChoice } from "@/ui-patterns/choice-select";
 import { ActionButton } from "@/ui-patterns/actions";
 import { useConfirm } from "@/ui-patterns/confirmations";
-import { useForm, AppField, AppForm } from "@/ui-patterns/form";
+import { useForm, AppField, AppForm, type AppFormSubmitHandle } from "@/ui-patterns/form";
 import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { ByteQuantityInput } from "./ByteQuantityInput";
 import { PolicyDateInput } from "./PolicyDateInput";
@@ -137,6 +137,8 @@ function UserPolicyFields({ user, context, services, serviceCatalog, routes, dis
     acceptLatest: (latest: EntitlementPolicyEditContext, draft: DraftCopy) => void;
 }) {
     const [form] = useForm();
+    const submitErrorFocusOwner = useRef({});
+    const submitWithErrorFocus = useRef<AppFormSubmitHandle>(null);
     const confirm = useConfirm();
     const [snapshot] = useState(() => structuredClone(context.effective));
     const [ent] = useState(() => structuredClone(context.record?.entitlement ?? context.effective.entitlement));
@@ -296,7 +298,7 @@ function UserPolicyFields({ user, context, services, serviceCatalog, routes, dis
             },
         ]).map(section => <AccordionItem key={section.key} value={String(section.key)}><AccordionTrigger>{section.label}</AccordionTrigger><AccordionContent className="space-y-4">{section.children}</AccordionContent></AccordionItem>)}</Accordion>
       </Section>
-      <AppForm form={form} initialValues={init} onValuesChange={() => invalidate()} onFocusCapture={revealFocusedDrawerControl} onKeyDownCapture={(event) => {
+      <AppForm form={form} submitErrorFocusOwner={submitErrorFocusOwner.current} submitWithErrorFocusRef={submitWithErrorFocus} initialValues={init} onValuesChange={() => invalidate()} onFocusCapture={revealFocusedDrawerControl} onKeyDownCapture={(event) => {
             if (event.key === "Enter" && blocked()) {
                 event.preventDefault();
             }
@@ -437,7 +439,7 @@ function UserPolicyFields({ user, context, services, serviceCatalog, routes, dis
           </ActionButton>
           <ActionButton {...commandProps} type="button" aria-disabled={blocked() || policy.closingBlocked} onClick={() => {
             if (commandAllowed())
-                form.submit();
+                submitWithErrorFocus.current?.submit();
         }} aria-label="预览影响" aria-busy={policy.pending} keepFocusableWhilePending pending={policy.pending} variant="default">
             预览影响
           </ActionButton>

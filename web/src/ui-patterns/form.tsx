@@ -4,11 +4,13 @@ import {
   isValidElement,
   useContext,
   useId,
+  useImperativeHandle,
   useLayoutEffect,
   useRef,
   useState,
   type ReactElement,
   type ReactNode,
+  type Ref,
 } from "react";
 import RcForm, {
   Field as RcField,
@@ -65,27 +67,64 @@ function canRecoverFocus(control: HTMLElement) {
   return true;
 }
 
+export type AppFormSubmitHandle = { submit: () => void };
+
 /** rc-field-form owns validation; focus recovery is explicitly task-owned. */
 export function AppForm<Values = Record<string, unknown>>({
   disabled = false,
   className,
   children,
   submitErrorFocusOwner,
+  submitWithErrorFocusRef,
   onSubmitCapture,
   onFinish,
   onFinishFailed,
   ...props
 }: FormProps<Values> & {
   disabled?: boolean;
-  /** Explicit native-submit recovery, invalidated when the editing task changes. */
+  /** Explicit recovery ownership, invalidated when the editing task changes. */
   submitErrorFocusOwner?: object | null;
+  /** Guarded actions may opt into the same recovery without native submission. */
+  submitWithErrorFocusRef?: Ref<AppFormSubmitHandle>;
 }) {
+  const formRef = useRef<
+    FormInstance<Values> & { nativeElement?: HTMLElement }
+  >(null);
   const submission = useRef<SubmitFocus | null>(null);
   const [recovery, setRecovery] = useState<SubmitFocus | null>(null);
   const cancelRecovery = () => {
     submission.current?.release();
     submission.current = null;
   };
+  const beginRecovery = (form: HTMLFormElement) => {
+    cancelRecovery();
+    if (!submitErrorFocusOwner || onFinishFailed || disabled) return;
+    const doc = form.ownerDocument;
+    // These listeners start after the initiating key/click. Even moving
+    // away and back is newer intent, not permission to reclaim focus.
+    const events = ["focusin", "pointerdown", "keydown", "input"] as const;
+    const cancel = () => cancelRecovery();
+    for (const name of events) doc.addEventListener(name, cancel, true);
+    doc.defaultView?.addEventListener("blur", cancel);
+    submission.current = {
+      form,
+      origin: doc.activeElement,
+      owner: submitErrorFocusOwner,
+      release: () => {
+        for (const name of events) doc.removeEventListener(name, cancel, true);
+        doc.defaultView?.removeEventListener("blur", cancel);
+      },
+    };
+  };
+  useImperativeHandle(submitWithErrorFocusRef, () => ({
+    submit: () => {
+      cancelRecovery();
+      const form = formRef.current;
+      if (form?.nativeElement instanceof HTMLFormElement)
+        beginRecovery(form.nativeElement);
+      form?.submit();
+    },
+  }));
   useLayoutEffect(() => {
     cancelRecovery();
     return cancelRecovery;
@@ -115,6 +154,7 @@ export function AppForm<Values = Record<string, unknown>>({
   return (
     <DisabledContext.Provider value={disabled}>
       <RcForm<Values>
+        ref={formRef}
         className={cn("space-y-5", className)}
         validateMessages={{ required: "请填写${label}" }}
         {...props}
@@ -129,29 +169,7 @@ export function AppForm<Values = Record<string, unknown>>({
             !(event.currentTarget instanceof HTMLFormElement)
           )
             return;
-          const form = event.currentTarget;
-          const doc = form.ownerDocument;
-          // These listeners start after the initiating key/click. Even moving
-          // away and back is newer intent, not permission to reclaim focus.
-          const events = [
-            "focusin",
-            "pointerdown",
-            "keydown",
-            "input",
-          ] as const;
-          const cancel = () => cancelRecovery();
-          for (const name of events) doc.addEventListener(name, cancel, true);
-          doc.defaultView?.addEventListener("blur", cancel);
-          submission.current = {
-            form,
-            origin: doc.activeElement,
-            owner: submitErrorFocusOwner,
-            release: () => {
-              for (const name of events)
-                doc.removeEventListener(name, cancel, true);
-              doc.defaultView?.removeEventListener("blur", cancel);
-            },
-          };
+          beginRecovery(event.currentTarget);
         }}
         onFinish={(values) => {
           cancelRecovery();
