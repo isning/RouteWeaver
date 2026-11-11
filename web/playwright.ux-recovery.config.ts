@@ -17,6 +17,7 @@ export default defineConfig({
         "**/template-target-identity.ui.spec.ts",
         "**/admin-validation-recovery.ui.spec.ts",
         "**/admin-validation-order.ui.spec.ts",
+        "**/compact-choice-keyboard.ui.spec.ts",
       ],
     })),
   workers: 1,

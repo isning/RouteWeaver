@@ -7,7 +7,12 @@ ROOT = Path(__file__).resolve().parents[1]
 SPECS = {
     'server-json-recovery', 'workspace-return', 'notification-channel-journey',
     'template-target-identity', 'admin-validation-recovery', 'admin-validation-order',
+    'compact-choice-keyboard',
 }
+COMPACT_PHASES = (
+    'protocol-cancel', 'protocol-settled-reopen', 'transport-cancel',
+    'transport-disabled-skip', 'final-state',
+)
 ARTIFACTS = {
     'web/playwright-report/', 'bin/verification/browser-environment.json',
     'web/test-results/*/route-json-*.png',
@@ -25,6 +30,9 @@ ARTIFACTS = {
     'web/test-results/template-target-identity*/processing-preset-*.png',
     'web/test-results/template-target-identity*/processing-preset-*-ledger.json',
     'web/test-results/*/template-target-identity-ledger.json',
+    *{f'web/test-results/compact-choice-keyboard*/{phase}.{ext}'
+      for phase in COMPACT_PHASES for ext in ('png', 'json')},
+    'web/test-results/compact-choice-keyboard*/capture-failure.json',
     *{f'web/test-results/admin-validation-recovery*/{name}.{ext}'
       for name in ('failed-*', 'pending-*', 'result-*', 'final-state', 'request-ledger')
       for ext in ('png', 'json') if name != 'request-ledger' or ext == 'json'},
@@ -50,7 +58,8 @@ class UXRecoveryWorkflowTests(unittest.TestCase):
         for value in ('group: ux-recovery-${{ github.ref }}', 'cancel-in-progress: false',
                       'contents: read', 'persist-credentials: false', 'runs-on: ubuntu-24.04',
                       'timeout-minutes: 15', 'timeout-minutes: 10',
-                      'name: Six recovery specs (supplemental evidence only)',
+                      'name: Seven recovery specs (supplemental evidence only)',
+                      'name: Run seven recovery specs with unchanged fixtures',
                       'ROUTEWEAVER_CHROMIUM: /opt/google/chrome/chrome',
                       'npx --no-install playwright install-deps chromium',
                       '--config=playwright.ux-recovery.config.ts --workers=1 --retries=0'):
@@ -95,6 +104,11 @@ class UXRecoveryWorkflowTests(unittest.TestCase):
             'admin-validation-order.ui-result-at-1440x560-chromium': (
                 '0-latest-result.png', 'older-did-not-replace.json', 'final-state.png', 'request-ledger.json'),
         }
+        # Representative compact-picker directories, not claimed browser runs.
+        compact_outputs = tuple(f'{phase}.{ext}' for phase in COMPACT_PHASES
+                                for ext in ('png', 'json')) + ('capture-failure.json',)
+        for width in (1440, 390):
+            observed[f'compact-choice-keyboard.ui-pickers-at-{width}x560-chromium'] = compact_outputs
         for directory, filenames in observed.items():
             for filename in filenames:
                 path = f'web/test-results/{directory}/{filename}'
@@ -103,10 +117,19 @@ class UXRecoveryWorkflowTests(unittest.TestCase):
             for filename in ('live.db', 'live.db-wal', 'trace.zip', 'video.webm',
                              'master.key', 'fixture-key.json', 'storage-state.json',
                              'error-context.md', 'client-profile-390-selected.key',
-                             'request-ledger.db', 'final-state.zip'):
+                             'request-ledger.db', 'final-state.zip', 'arbitrary.json',
+                             'arbitrary.png', 'protocol-cancel-private.json',
+                             'transport-cancel-private.png', 'protocol-cancel.key',
+                             'protocol-cancel.png.zip', 'capture-failure.png'):
                 path = f'web/test-results/{directory}/{filename}'
                 with self.subTest(path=path):
                     self.assertFalse(retained(path), path)
+
+        # A named compact capture is not an upload permission for another fixture.
+        for filename in compact_outputs:
+            path = f'web/test-results/unrelated.ui-chromium/{filename}'
+            with self.subTest(path=path):
+                self.assertFalse(retained(path), path)
 
     def test_config_inherits_servers_and_sandbox_without_overriding_fixtures(self):
         config = (ROOT / 'web/playwright.ux-recovery.config.ts').read_text()

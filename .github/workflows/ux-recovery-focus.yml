@@ -21,7 +21,7 @@ env:
 
 jobs:
   recovery:
-    name: Six recovery specs (supplemental evidence only)
+    name: Seven recovery specs (supplemental evidence only)
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
@@ -81,7 +81,7 @@ jobs:
             await browser.close();
           }
           JS
-      - name: Run six existing recovery specs with unchanged fixtures
+      - name: Run seven recovery specs with unchanged fixtures
         working-directory: web
         # Bound this subset without changing per-test timeouts; reserve cleanup/upload time.
         timeout-minutes: 10
@@ -123,6 +123,17 @@ jobs:
             web/test-results/admin-validation-recovery*/request-ledger.json
             web/test-results/admin-validation-recovery*/result-*.json
             web/test-results/admin-validation-recovery*/result-*.png
+            web/test-results/compact-choice-keyboard*/capture-failure.json
+            web/test-results/compact-choice-keyboard*/final-state.json
+            web/test-results/compact-choice-keyboard*/final-state.png
+            web/test-results/compact-choice-keyboard*/protocol-cancel.json
+            web/test-results/compact-choice-keyboard*/protocol-cancel.png
+            web/test-results/compact-choice-keyboard*/protocol-settled-reopen.json
+            web/test-results/compact-choice-keyboard*/protocol-settled-reopen.png
+            web/test-results/compact-choice-keyboard*/transport-cancel.json
+            web/test-results/compact-choice-keyboard*/transport-cancel.png
+            web/test-results/compact-choice-keyboard*/transport-disabled-skip.json
+            web/test-results/compact-choice-keyboard*/transport-disabled-skip.png
             web/test-results/template-target-identity*/client-profile-*-ledger.json
             web/test-results/template-target-identity*/client-profile-*.png
             web/test-results/template-target-identity*/processing-preset-*-ledger.json

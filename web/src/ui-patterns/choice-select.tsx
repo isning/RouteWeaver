@@ -1,5 +1,6 @@
 import {
   useState,
+  useCallback,
   useEffect,
   useLayoutEffect,
   useRef,
@@ -7,6 +8,7 @@ import {
   isValidElement,
   type ReactNode,
   type Ref,
+  type ComponentProps,
 } from "react";
 import { Check, ChevronsUpDown, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -100,6 +102,11 @@ function boundedOptions<V extends Value>(options: Options<V>, query: string) {
   return { visible, total };
 }
 
+// cmdk's List asChild composition expects a component rather than a DOM tag.
+function ChoiceListSurface(props: ComponentProps<"div">) {
+  return <div {...props} />;
+}
+
 /** Official shadcn combobox composition, shared by resource and endpoint choices. */
 export function ChoiceSelect<V extends Value = string>({
   value,
@@ -130,9 +137,22 @@ export function ChoiceSelect<V extends Value = string>({
   const reopeningRetainedContent = useRef(false);
   useImperativeHandle(ref, () => triggerRef.current!, []);
   const [query, setQuery] = useState("");
+  const [activeValue, setActiveValue] = useState<string>();
+  const [activeItemId, setActiveItemId] = useState<string>();
+  // cmdk does not initialize selectedItemId from a controlled value. Keep its
+  // own option IDs, supplying the active descendant through List's public slot.
+  const activeItemRef = useCallback((element: HTMLDivElement | null) => {
+    setActiveItemId(element?.id);
+  }, []);
   const { visible, total } = boundedOptions(options, query);
   const selected = flat(options).find((o) => o.value === value);
   const changeOpen = (next: boolean) => {
+    // Compact choices reopen at the committed identity, not the first item or
+    // a keyboard highlight left behind by a canceled, still-animating popover.
+    if (next && !hasSearch) {
+      setActiveValue(value !== undefined ? JSON.stringify(value) : undefined);
+      if (!selected) setActiveItemId(undefined);
+    }
     reopeningRetainedContent.current = next && !open && !!contentRef.current?.isConnected;
     setOpen(next);
     onOpenChange?.(next);
@@ -228,7 +248,12 @@ export function ChoiceSelect<V extends Value = string>({
             triggerRef.current.focus();
         }}
       >
-        <Command label="搜索选项" shouldFilter={false}>
+        <Command
+          label="搜索选项"
+          shouldFilter={false}
+          value={!hasSearch ? activeValue ?? "" : undefined}
+          onValueChange={!hasSearch ? setActiveValue : undefined}
+        >
           {hasSearch && (
             <CommandInput
               value={query}
@@ -238,73 +263,82 @@ export function ChoiceSelect<V extends Value = string>({
             />
           )}
           <CommandList
+            asChild
             ref={listRef}
             label={!hasSearch ? aria["aria-label"] ?? "候选项" : "候选项"}
             aria-labelledby={!hasSearch ? aria["aria-labelledby"] : undefined}
             className={!hasSearch ? "focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring" : undefined}
           >
-            <CommandEmpty>{emptyMessage}</CommandEmpty>
-            {clearable && value !== undefined && !query.trim() && (
-              <CommandGroup>
-                <CommandItem
-                  value="__clear"
-                  disabled={disabled}
-                  onSelect={() => {
-                    if (disabled) return;
-                    onValueChange?.(undefined);
-                    changeOpen(false);
-                  }}
+            <ChoiceListSurface {...(!hasSearch ? { "aria-activedescendant": activeItemId } : {})}>
+              <CommandEmpty>{emptyMessage}</CommandEmpty>
+              {clearable && value !== undefined && !query.trim() && (
+                <CommandGroup>
+                  <CommandItem
+                    value="__clear"
+                    ref={!hasSearch && activeValue === "__clear"
+                      ? activeItemRef
+                      : undefined}
+                    disabled={disabled}
+                    onSelect={() => {
+                      if (disabled) return;
+                      onValueChange?.(undefined);
+                      changeOpen(false);
+                    }}
+                  >
+                    清除选择
+                  </CommandItem>
+                </CommandGroup>
+              )}
+              {visible.map((group, i) => (
+                <CommandGroup
+                  key={i}
+                  heading={"options" in group ? group.label : undefined}
                 >
-                  清除选择
-                </CommandItem>
-              </CommandGroup>
-            )}
-            {visible.map((group, i) => (
-              <CommandGroup
-                key={i}
-                heading={"options" in group ? group.label : undefined}
-              >
-                {("options" in group ? group.options : [group]).map(
-                  (option) => (
-                    <CommandItem
-                      key={String(option.value)}
-                      value={`${option.value} ${option.searchText ?? (typeof option.label === "string" ? option.label : "")}`}
-                      aria-label={option["aria-label"]}
-                      disabled={disabled || option.disabled}
-                      onSelect={() => {
-                        if (disabled) return;
-                        onValueChange?.(option.value);
-                        changeOpen(false);
-                      }}
-                    >
-                      <Check
-                        className={cn(
-                          "size-4",
-                          value === option.value ? "opacity-100" : "opacity-0",
-                        )}
-                        aria-hidden="true"
-                      />
-                      <span className="min-w-0 wrap-anywhere">
-                        <span>{option.label}</span>
-                        {option.description && (
-                          <span className="block text-xs text-muted-foreground">
-                            {option.description}
-                          </span>
-                        )}
-                      </span>
-                    </CommandItem>
-                  ),
-                )}
-              </CommandGroup>
-            ))}
-            {total > 40 && (
-              <div
-                role="status"
-                className="px-3 py-2 text-xs text-muted-foreground"
-              >
-                显示前 40 项，共 {total} 项；输入名称或标识继续搜索。
-              </div>
-            )}
+                  {("options" in group ? group.options : [group]).map(
+                    (option) => (
+                      <CommandItem
+                        key={String(option.value)}
+                        ref={!hasSearch && activeValue === JSON.stringify(option.value)
+                          ? activeItemRef
+                          : undefined}
+                        value={hasSearch ? `${option.value} ${option.searchText ?? (typeof option.label === "string" ? option.label : "")}` : JSON.stringify(option.value)}
+                        aria-label={option["aria-label"]}
+                        disabled={disabled || option.disabled}
+                        onSelect={() => {
+                          if (disabled) return;
+                          onValueChange?.(option.value);
+                          changeOpen(false);
+                        }}
+                      >
+                        <Check
+                          className={cn(
+                            "size-4",
+                            value === option.value ? "opacity-100" : "opacity-0",
+                          )}
+                          aria-hidden="true"
+                        />
+                        <span className="min-w-0 wrap-anywhere">
+                          <span>{option.label}</span>
+                          {option.description && (
+                            <span className="block text-xs text-muted-foreground">
+                              {option.description}
+                            </span>
+                          )}
+                        </span>
+                      </CommandItem>
+                    ),
+                  )}
+                </CommandGroup>
+              ))}
+              {total > 40 && (
+                <div
+                  role="status"
+                  className="px-3 py-2 text-xs text-muted-foreground"
+                >
+                  显示前 40 项，共 {total} 项；输入名称或标识继续搜索。
+                </div>
+              )}
+            </ChoiceListSurface>
           </CommandList>
         </Command>
       </PopoverContent>

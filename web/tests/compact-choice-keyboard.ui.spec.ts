@@ -167,6 +167,37 @@ for (const width of [1440, 390]) {
       await page.keyboard.press("Enter");
       await expect(transport).toHaveText("gRPC");
       await expect(transport).toBeFocused();
+      // Confirming an already-selected non-first value must not rewrite it.
+      // Reopening after cancel must discard the uncommitted keyboard highlight.
+      for (const choice of [
+        { trigger: protocol, name: "协议", current: "VLESS", next: "Trojan", key: "ArrowDown" },
+        { trigger: transport, name: "传输方式", current: "gRPC", next: "TCP", key: "ArrowUp" },
+      ]) {
+        await tabTo(page, choice.trigger);
+        await page.keyboard.press("Enter");
+        const list = page.getByRole("listbox", { name: choice.name, exact: true });
+        const current = list.getByRole("option", { name: choice.current, exact: true });
+        await expect(list).toBeFocused();
+        await expect(current).toHaveAttribute("aria-selected", "true");
+        await expect(list).toHaveAttribute("aria-activedescendant", (await current.getAttribute("id"))!);
+        await page.keyboard.press("Enter");
+        await expect(choice.trigger).toHaveText(choice.current);
+        await expect(choice.trigger).toBeFocused();
+        await page.keyboard.press("Enter");
+        await page.keyboard.press(choice.key);
+        await expect(list.getByRole("option", { name: choice.next, exact: true })).toHaveAttribute("aria-selected", "true");
+        await page.keyboard.press("Escape");
+        await expect(choice.trigger).toHaveText(choice.current);
+        // Click the actual trigger without imposing an exit-animation wait.
+        // This remains valid whether Radix retains or remounts the content.
+        await choice.trigger.click();
+        await expect(list).toBeFocused();
+        await expect(current).toHaveAttribute("aria-selected", "true");
+        await expect(list).toHaveAttribute("aria-activedescendant", (await current.getAttribute("id"))!);
+        await page.keyboard.press("Enter");
+        await expect(choice.trigger).toHaveText(choice.current);
+        await expect(choice.trigger).toBeFocused();
+      }
       await expect(protocol).toHaveText("VLESS");
       await expect(dialog.getByRole("spinbutton", { name: "端口", exact: true })).toHaveValue("1080");
       expect(await background(page)).toEqual(initialBackground);
