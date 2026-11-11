@@ -37,3 +37,7 @@ At approximately 12:21 UTC, the full serialized DOM suite completed with **4,031
 ## Receipt-test setup correction
 
 The receipt-specific file now loads the actual Admin module in `beforeAll`, matching the existing history-fixture setup pattern. This moves cold compilation outside receipt interaction timing without mocking the page, altering App/session/HTTP behavior, changing wait budgets, or weakening assertions. Controlled pending/rejected route-loading tests remain unchanged. All 25 receipt, page-recovery and settings-read-first tests across three files pass after this setup correction. A new full run is still required; the earlier 4,031/one-failure run is not relabelled as a pass.
+
+## Superseding complete integrated result
+
+The fresh whole DOM run completed at approximately 12:46 UTC with **4,038 passes across 326 files** in 1,074.45 seconds, including backup continuity and the receipt setup correction. Source was `ee59579` (current `b0eb1c0` has native/config/docs-only additions). This is a new passing run; earlier failed runs and their diagnostic conclusions remain recorded above. Native browser/pixel and remote CI acceptance remain pending.
