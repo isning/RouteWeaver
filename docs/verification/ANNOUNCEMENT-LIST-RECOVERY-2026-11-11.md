@@ -26,3 +26,15 @@ No native browser or screenshot acceptance was performed for this change. jsdom 
 Announcement API writes have no revision check: POST/PUT share an unconditional replacement handler. A successful idle read prevents deliberately starting from a known-failed/pending list but does not provide optimistic concurrency or protect against another administrator changing the record after it is opened. This patch does not add such a backend contract or silently overwrite an existing draft with fetched values.
 
 Independent bounded source review accepted the change without a blocker. The starting-Edit gate applies to the current rendered list and its callback. This is a direct row button, not a delayed menu action; no guarantee is claimed for an artificially retained old callback invoked after a cache update but before React rerenders.
+
+## Native sampler prepared (not executed locally)
+
+`announcement-list-recovery.ui.spec.ts` adds four discovered Chromium cases: retry and newer-Create ownership at 390×560 and 1440×900. Native keyboard traversal, Enter/Space activation and typed input are used. The retry journey observes initial unknown, populated cached error, held retry focus/deduplication, recovered data and explicitly opened Edit. The newer-Create journey holds a background refresh while typing a new draft, then checks that its failed read cannot replace that draft or focus. Neither journey submits a form.
+
+The context request boundary allows loopback static resources plus exact query-free GETs for `/api/auth/me`, `/api/state` and `/api/admin/announcements`. All other API calls and all mutations are rejected. Announcement 503 handling accounts for the production query client's one automatic retry. Fixtures are synthetic and do not establish backend acceptance or announcement delivery.
+
+Named screenshots preserve original viewport position before focus geometry checks. Pending captures do not globally settle busy animations. Finally captures occur before held requests are released. Exact PNG/JSON paths, including a synthetic request ledger, were added to the supplemental recovery workflow and its positive/negative artifact contract. Shared sandbox/server defaults remain unchanged; required full discovery is not narrowed.
+
+Prepared checks: TypeScript passed; Playwright list-only discovery found four cases; the five recovery-workflow contracts passed. No local browser, screenshot inspection or full-suite run was performed. Native execution and independent screenshot review are still required before claiming rendered acceptance.
+
+Independent native-sampler source review accepted the bounded preparation without blockers. Coverage limits remain explicit: schedule/header attachment assertions do not establish their viewport visibility; the 80-Tab traversal bound is a reachability guard, not an efficiency claim. This sampler does not establish native offline behavior, known-empty recovery or already-open Edit draft retention; those have component evidence only. Native execution, artifact delivery and screenshot acceptance remain unverified.

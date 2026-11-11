@@ -21,7 +21,7 @@ env:
 
 jobs:
   recovery:
-    name: Twenty-two recovery specs (supplemental evidence only)
+    name: Twenty-three recovery specs (supplemental evidence only)
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
@@ -81,7 +81,7 @@ jobs:
             await browser.close();
           }
           JS
-      - name: Run twenty-two recovery specs with unchanged fixtures
+      - name: Run twenty-three recovery specs with unchanged fixtures
         working-directory: web
         # Bound this subset without changing per-test timeouts; reserve cleanup/upload time.
         timeout-minutes: 10
@@ -94,6 +94,27 @@ jobs:
           # Only the synthetic report, browser receipt and named test captures.
           # No databases, fixture keys, automatic screenshots, video or traces.
           path: |
+            web/test-results/announcement-list-recovery*/announcement-initial-unknown.png
+            web/test-results/announcement-list-recovery*/announcement-initial-unknown.json
+            web/test-results/announcement-list-recovery*/announcement-refresh-pending.png
+            web/test-results/announcement-list-recovery*/announcement-refresh-pending.json
+            web/test-results/announcement-list-recovery*/announcement-cached-error.png
+            web/test-results/announcement-list-recovery*/announcement-cached-error.json
+            web/test-results/announcement-list-recovery*/announcement-retry-keyboard.png
+            web/test-results/announcement-list-recovery*/announcement-retry-keyboard.json
+            web/test-results/announcement-list-recovery*/announcement-retry-pending.png
+            web/test-results/announcement-list-recovery*/announcement-retry-pending.json
+            web/test-results/announcement-list-recovery*/announcement-recovered.png
+            web/test-results/announcement-list-recovery*/announcement-recovered.json
+            web/test-results/announcement-list-recovery*/announcement-fresh-edit.png
+            web/test-results/announcement-list-recovery*/announcement-fresh-edit.json
+            web/test-results/announcement-list-recovery*/announcement-newer-create-pending.png
+            web/test-results/announcement-list-recovery*/announcement-newer-create-pending.json
+            web/test-results/announcement-list-recovery*/announcement-newer-create-owned.png
+            web/test-results/announcement-list-recovery*/announcement-newer-create-owned.json
+            web/test-results/announcement-list-recovery*/announcement-final-original.png
+            web/test-results/announcement-list-recovery*/announcement-final-original.json
+            web/test-results/announcement-list-recovery*/announcement-request-ledger.json
             web/test-results/users-inventory-read-recovery*/users-inventory-cached-error-open-menu.png
             web/test-results/users-inventory-read-recovery*/users-inventory-cached-error-open-menu.json
             web/test-results/users-inventory-read-recovery*/users-inventory-retry-keyboard.png

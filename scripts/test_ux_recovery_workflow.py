@@ -5,6 +5,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 SPECS = {
+    'announcement-list-recovery',
     'users-inventory-read-recovery',
     'initial-resource-read-recovery',
     'diagnostic-target-submit-focus',
@@ -46,7 +47,11 @@ RESET_PHASES = ('reason-draft', 'reset-review', 'reset-canceled', 'discard-revie
 TARGET_REGISTRATION_PHASES = ('invalid-name', 'invalid-url', 'invalid-methods', 'save-rejected', 'discard-review', 'continued-draft', 'reopened-clean', 'returned-opener', 'final-original')
 USERS_PHASES = ('cached-error-open-menu', 'retry-keyboard', 'retry-pending', 'recovered-search-keyboard', 'recovered-entry-keyboard', 'correct-user-entry', 'final-original')
 INITIAL_RESOURCE_PHASES = ('retry-keyboard', 'retry-pending', 'repeated-error', 'failure-next-tab', 'recovered', 'success-next-tab', 'newer-dialog-pending', 'dialog-owned', 'final-original')
+ANNOUNCEMENT_PHASES = ('initial-unknown', 'refresh-pending', 'cached-error', 'retry-keyboard', 'retry-pending', 'recovered', 'fresh-edit', 'newer-create-pending', 'newer-create-owned', 'final-original')
 ARTIFACTS = {
+    *{f'web/test-results/announcement-list-recovery*/announcement-{phase}.{ext}'
+      for phase in ANNOUNCEMENT_PHASES for ext in ('png', 'json')},
+    'web/test-results/announcement-list-recovery*/announcement-request-ledger.json',
     *{f'web/test-results/initial-resource-read-recovery*/initial-resource-{phase}.{ext}'
       for phase in INITIAL_RESOURCE_PHASES for ext in ('png', 'json')},
     'web/test-results/initial-resource-read-recovery*/initial-resource-request-ledger.json',
@@ -115,8 +120,8 @@ class UXRecoveryWorkflowTests(unittest.TestCase):
         for value in ('group: ux-recovery-${{ github.ref }}', 'cancel-in-progress: false',
                       'contents: read', 'persist-credentials: false', 'runs-on: ubuntu-24.04',
                       'timeout-minutes: 15', 'timeout-minutes: 10',
-                      'name: Twenty-two recovery specs (supplemental evidence only)',
-                      'name: Run twenty-two recovery specs with unchanged fixtures',
+                      'name: Twenty-three recovery specs (supplemental evidence only)',
+                      'name: Run twenty-three recovery specs with unchanged fixtures',
                       'ROUTEWEAVER_CHROMIUM: /opt/google/chrome/chrome',
                       'npx --no-install playwright install-deps chromium',
                       '--config=playwright.ux-recovery.config.ts --workers=1 --retries=0'):
@@ -197,6 +202,11 @@ class UXRecoveryWorkflowTests(unittest.TestCase):
                                          for ext in ('png', 'json')) + ('initial-resource-request-ledger.json',)
         for scenario in ('retry', 'newer-dialog'):
             observed[f'initial-resource-read-recovery.ui-{scenario}-at-1440px-chromium'] = initial_resource_outputs
+        announcement_outputs = tuple(f'announcement-{phase}.{ext}' for phase in ANNOUNCEMENT_PHASES
+                                     for ext in ('png', 'json')) + ('announcement-request-ledger.json',)
+        for width in (1440, 390):
+            for scenario in ('retry', 'newer-create'):
+                observed[f'announcement-list-recovery.ui-{scenario}-at-{width}px-chromium'] = announcement_outputs
         for directory, filenames in observed.items():
             for filename in filenames:
                 path = f'web/test-results/{directory}/{filename}'
@@ -223,8 +233,12 @@ class UXRecoveryWorkflowTests(unittest.TestCase):
                          'initial-resource-request-ledger.png', 'initial-resource-retry-pending-private.png'):
             self.assertFalse(retained(f'web/test-results/initial-resource-read-recovery.ui-chromium/{filename}'))
 
+        for filename in ('request-ledger.json', 'announcement-private.json',
+                         'announcement-request-ledger.png', 'announcement-retry-pending-private.png'):
+            self.assertFalse(retained(f'web/test-results/announcement-list-recovery.ui-chromium/{filename}'))
+
         # A named compact capture is not an upload permission for another fixture.
-        for filename in compact_outputs + multi_outputs + inventory_outputs + group_priority_outputs + reset_outputs + target_outputs + users_outputs + initial_resource_outputs:
+        for filename in compact_outputs + multi_outputs + inventory_outputs + group_priority_outputs + reset_outputs + target_outputs + users_outputs + initial_resource_outputs + announcement_outputs:
             path = f'web/test-results/unrelated.ui-chromium/{filename}'
             with self.subTest(path=path):
                 self.assertFalse(retained(path), path)
