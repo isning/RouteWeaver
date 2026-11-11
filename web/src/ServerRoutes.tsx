@@ -47,7 +47,6 @@ import {
   Save as SaveOutlined,
 } from "lucide-react";
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type Ref } from "react";
-import { toast } from "sonner";
 import { APIError, list, request, saveRecord } from "./api";
 import {
   CodePreview,
@@ -682,9 +681,15 @@ export function ServerRouteEditor({
   const [jsonOpen, setJSONOpen] = useState(false);
   const [json, setJSON] = useState("");
   const [jsonBaseline, setJSONBaseline] = useState("");
+  const [jsonError, setJSONError] = useState<string>();
+  const jsonInput = useRef<HTMLTextAreaElement>(null);
+  const jsonErrorId = useId();
+  const [jsonFailure, setJSONFailure] = useState(0);
+  useLayoutEffect(() => {
+    if (jsonOpen && jsonFailure) jsonInput.current?.focus();
+  }, [jsonFailure]);
   const jsonDirty = jsonOpen && json !== jsonBaseline;
-  const message = toast,
-    confirm = useConfirm();
+  const confirm = useConfirm();
   const client = useQueryClient();
   const path = useMemo(
     () => programs.map((p) => p.listener.id),
@@ -883,6 +888,7 @@ export function ServerRouteEditor({
     if (connectorEditing.current || pathLoading) return;
     const text = JSON.stringify(draft.ir, null, 2);
     setJSON(text);
+    setJSONError(undefined);
     setJSONBaseline(text);
     setJSONOpen(true);
   };
@@ -1538,14 +1544,15 @@ export function ServerRouteEditor({
               onClick={() => {
                 try {
                   const ir = JSON.parse(json);
-                  if (!Array.isArray(ir.programs))
+                  if (!ir || !Array.isArray(ir.programs))
                     throw new Error("\u7F3A\u5C11 programs \u6570\u7EC4");
                   programs.forEach((program) => invalidateMaterial(program.listener.id));
                   update({ ...draft, ir });
                   setJSONBaseline(json);
                   setJSONOpen(false);
                 } catch (e) {
-                  message.error((e as Error).message);
+                  setJSONError(e instanceof SyntaxError ? "请输入有效的 JSON，再应用到草稿。" : (e as Error).message);
+                  setJSONFailure((attempt) => attempt + 1);
                 }
               }}
             >
@@ -1561,10 +1568,14 @@ export function ServerRouteEditor({
           className="json-editor min-h-64 font-mono text-xs"
           rows={22}
           aria-label="服务端配置意图 JSON 文本"
+          ref={jsonInput}
+          aria-invalid={!!jsonError}
+          aria-describedby={jsonError ? jsonErrorId : undefined}
           value={json}
-          onChange={(e) => setJSON(e.target.value)}
+          onChange={(e) => { setJSON(e.target.value); setJSONError(undefined); }}
           spellCheck={false}
         />
+        {jsonError && <p id={jsonErrorId} role="alert" className="text-sm text-destructive">{jsonError}</p>}
       </TaskDialog>
     </TaskSheet>
   );
