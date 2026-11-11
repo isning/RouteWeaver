@@ -1,3 +1,4 @@
+import { captureGroupFocusGeometry } from "./group-focus-geometry";
 import { captureTextScaleFailure } from "./text-scale-failure";
 import { settledTask } from "./ui-settled-task";
 import { currentProfileFixtureHeaders } from "./profile-fixture";
@@ -1022,6 +1023,92 @@ for (const intent of ["endpoint", "direct"] as const) {
     });
   });
 }
+
+test("enlarged group name keeps its focus ring visible on natural keyboard entry and return", async ({ page }, testInfo) => {
+  await openWorkspace(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  const { profile } = await seedIndependentOutputs(page);
+  const session = await readJSON<{ csrfToken: string }>(page, "/auth/me");
+  const saved = await page.request.put(`/api/me/profiles/${profile.id}`, {
+    headers: await currentProfileFixtureHeaders(page.request, profile.id, { "X-CSRF-Token": session.csrfToken }),
+    data: { ...profile, ir: { ...profile.ir, groups: [{
+      id: `group-${profile.id}`, name: "Keyboard group", kind: "manual", members: [{ kind: "direct" }],
+    }] } },
+  });
+  expect(saved.ok(), "Saved-group fixture succeeds").toBe(true);
+  await page.goto(`/#subscriptions?profile=${profile.id}`);
+  await page.reload();
+  await page.getByRole("article", { name: `分流配置 ${profile.name}`, exact: true })
+    .getByRole("button", { name: "编辑配置", exact: true }).click();
+  const tab = page.getByRole("tab", { name: "策略组", exact: true });
+  await tab.click();
+  const groups = page.getByRole("tabpanel", { name: "策略组", exact: true });
+  const summary = groups.locator("summary").filter({ hasText: "Keyboard group" });
+  const field = groups.getByLabel("策略组名称", { exact: true });
+  await expect(field).toBeHidden();
+  await expect(tab).toBeFocused();
+  const originalFont = await field.evaluate((element) => parseFloat(getComputedStyle(element).fontSize));
+  // This test owns its page. Snapshot all sizes before changing any ancestor,
+  // including collapsed details, so opening the group cannot inherit 4x text.
+  await page.evaluate(async () => {
+    await document.fonts.ready;
+    const entries = Array.from(document.querySelectorAll<HTMLElement>("body *"))
+      .filter((element) => element instanceof HTMLElement && !["SCRIPT", "STYLE", "LINK"].includes(element.tagName))
+      .map((element) => ({ element, font: parseFloat(getComputedStyle(element).fontSize), line: getComputedStyle(element).lineHeight }));
+    for (const { element, font, line } of entries) {
+      element.style.setProperty("font-size", `${font * 2}px`, "important");
+      if (line !== "normal") element.style.setProperty("line-height", `${parseFloat(line) * 2}px`, "important");
+    }
+    await Promise.all(document.getAnimations().filter((animation) => animation.effect?.getComputedTiming().iterations !== Infinity)
+      .map((animation) => animation.finished.catch(() => {})));
+  });
+  await expect.poll(() => field.evaluate((element) => parseFloat(getComputedStyle(element).fontSize))).toBeCloseTo(originalFont * 2, 2);
+  await settledTask(groups);
+  // From the selected tab onward, only actual keyboard input may move focus or
+  // scroll. Radix's panel itself is a tab stop before the first button.
+  await page.keyboard.press("Tab");
+  await expect(groups).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(groups.getByRole("button", { name: "添加策略组", exact: true })).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(summary).toBeFocused();
+  await page.keyboard.press("Enter");
+  await page.keyboard.press("Tab");
+
+  const inspect = async (phase: "entry" | "reverse-entry") => {
+    // Evidence precedes every focus/clearance assertion. Soft assertions keep
+    // reverse-entry evidence available if forward entry reveals real clipping.
+    const result = await captureGroupFocusGeometry(page, testInfo, field, phase);
+    expect.soft(result.focused, `${phase}: group name receives keyboard focus`).toBe(true);
+    expect.soft(result.focusVisible, `${phase}: keyboard focus indicator is active`).toBe(true);
+    expect.soft(result.shadows.some((shadow) => shadow.x === 0 && shadow.y === 0 && shadow.blur === 0 && shadow.spread === 3), `${phase}: rendered input uses its 3px outer ring`).toBe(true);
+    expect.soft(result.ratio, `${phase}: whole input is in viewport`).toBe(1);
+    const { target, viewport, toolbar } = result;
+    expect.soft(target.left - 3, `${phase}: left ring clearance`).toBeGreaterThanOrEqual(0);
+    expect.soft(target.top - 3, `${phase}: top ring clearance`).toBeGreaterThanOrEqual(0);
+    expect.soft(target.right + 3, `${phase}: right ring clearance`).toBeLessThanOrEqual(viewport.width);
+    expect.soft(target.bottom + 3, `${phase}: bottom ring clearance`).toBeLessThanOrEqual(viewport.height);
+    for (const clip of result.clippingAncestors) {
+      if (clip.clipsX) {
+        expect.soft(target.left - 3, `${phase}: ancestor left clearance`).toBeGreaterThanOrEqual(clip.left);
+        expect.soft(target.right + 3, `${phase}: ancestor right clearance`).toBeLessThanOrEqual(clip.right);
+      }
+      if (clip.clipsY) {
+        expect.soft(target.top - 3, `${phase}: ancestor top clearance`).toBeGreaterThanOrEqual(clip.top);
+        expect.soft(target.bottom + 3, `${phase}: ancestor bottom clearance`).toBeLessThanOrEqual(clip.bottom);
+      }
+    }
+    expect.soft(toolbar, `${phase}: completion toolbar exists`).not.toBeNull();
+    if (toolbar && target.right + 3 > toolbar.left && target.left - 3 < toolbar.right)
+      expect.soft(target.top - 3, `${phase}: ring below sticky completion toolbar`).toBeGreaterThanOrEqual(toolbar.bottom);
+    expect.soft(result.centerHitsTarget, `${phase}: field is unobscured`).toBe(true);
+  };
+  await inspect("entry");
+  await page.keyboard.press("Tab");
+  await expect(groups.getByRole("combobox", { name: "选择策略", exact: true })).toBeFocused();
+  await page.keyboard.press("Shift+Tab");
+  await inspect("reverse-entry");
+});
 
 test("existing strategy groups remain editable and revoked recovery replaces only the selected client link", async ({
   page,
