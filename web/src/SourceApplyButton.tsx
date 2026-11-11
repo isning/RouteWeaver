@@ -63,13 +63,21 @@ export function useSourceApplication({
         receipt: sourceAcceptanceReceipt(pending, result),
       };
     },
-    onSuccess: (result, command) => {
-      if (
-        alive.current &&
-        running.current === command &&
-        command.scope === currentScope.current
-      )
-        onApplied(result.source, result.receipt);
+    onSuccess: async (result, command) => {
+      const ownsCommand = () => alive.current && running.current === command &&
+        command.scope === currentScope.current;
+      if (!ownsCommand()) return;
+      // Keep the confirmed public summary ahead of older list reads. The normal
+      // settlement still reconciles the list; this is not an optimistic result.
+      await client.cancelQueries({ queryKey: ["sources"], exact: true });
+      if (!ownsCommand()) return;
+      const { application: _application, ...summary } = result.source;
+      client.setQueryData<Source[]>(["sources"], (items) =>
+        items?.some((item) => item.id === summary.id)
+          ? items.map((item) => item.id === summary.id ? summary : item)
+          : undefined,
+      );
+      onApplied(result.source, result.receipt);
     },
     onError: (error, command) => {
       const pending = command.pending;

@@ -97,6 +97,8 @@ export function SourcesPage({
     queryKey: ["sources"],
     queryFn: () => list<Source>("/me/sources"),
   });
+  const inventoryKnown = query.data !== undefined;
+  const inventoryReady = query.isSuccess && query.fetchStatus === "idle";
   const client = useQueryClient();
   const message = toast,
     confirm = useConfirm();
@@ -109,7 +111,7 @@ export function SourcesPage({
   const [review, setReview] = useState<Source | null>(null);
   const [reviewRecovery, setReviewRecovery] = useState<SourceApplyRecovery>();
   const openChanges = (source: Source) => {
-    if (application.isRunning() || refreshStarted.current || otherWritePending)
+    if (!inventoryReady || application.isRunning() || refreshStarted.current || otherWritePending)
       return;
     message.dismiss(sourceApplicationNoticeID(source.id));
     setReviewRecovery(undefined);
@@ -207,7 +209,7 @@ export function SourcesPage({
   const application = {
     ...applyCommand,
     apply(source: Source) {
-      if (otherWritePending || refreshStarted.current) return;
+      if (!inventoryReady || otherWritePending || refreshStarted.current) return;
       applyCommand.apply(source);
     },
   };
@@ -225,7 +227,7 @@ export function SourcesPage({
     onEditingChange?.(blocksContainerClose);
   }, [blocksContainerClose, onEditingChange]);
   const reviewDelete = async (source: Source) => {
-    if (application.isRunning() || refreshStarted.current || otherWritePending)
+    if (!inventoryReady || application.isRunning() || refreshStarted.current || otherWritePending)
       return;
     const sequence = ++deleteSequence.current;
     setDeleteReview(source.id);
@@ -291,9 +293,30 @@ export function SourcesPage({
   const configurationSource = query.data?.find(
     (source) => source.id === detail?.id,
   );
-  const acceptedSetupSource = query.isSuccess && !query.isFetching && !query.isPaused
+  const detailSource = configurationSource ?? detail;
+  const detailMissing = inventoryKnown && !!detail && !configurationSource;
+  const acceptedSetupSource = inventoryReady
     ? query.data.find((source) => source.id === setupSource?.id)
     : undefined;
+  // Retained identities are useful during failed reads, but never authorize
+  // mutations. Source editing keeps its separate current reveal/summary read.
+  const inventoryFeedback = inventoryKnown && !inventoryReady && (
+    <>
+      {query.isError && (
+        <Notice tone="error" title="暂时无法核对来源列表" action={
+          <ActionButton onClick={() => query.refetch()} disabled={query.isFetching} variant="outline">重试来源列表</ActionButton>
+        }>
+          <p>{query.error.message}</p>
+          <p>显示上次读取的来源，请重试以核对最新状态。</p>
+        </Notice>
+      )}
+      {(query.isFetching || query.isPaused) && (
+        <p role="status" className="text-sm text-muted-foreground">
+          {query.isPaused ? "等待网络连接后核对来源列表。" : "正在核对来源列表…"}
+        </p>
+      )}
+    </>
+  );
   return (
     <>
       <PageHeader
@@ -343,11 +366,12 @@ export function SourcesPage({
           </div>
         </section>
       )}
+      {inventoryFeedback}
       <QueryState
         loading={query.isPending}
         paused={query.isPaused}
         loadingLayout="table"
-        error={query.error}
+        error={inventoryKnown ? null : query.error}
         retry={() => query.refetch()}
       >
         <Section variant="plain">
@@ -364,7 +388,7 @@ export function SourcesPage({
             }
           />
           {!query.data?.length ? (
-            <EmptyState
+            inventoryReady ? <EmptyState
               title="暂无订阅来源"
               action={
                 <ActionButton
@@ -376,7 +400,7 @@ export function SourcesPage({
                   添加来源
                 </ActionButton>
               }
-            />
+            /> : null
           ) : (
             <DataTable<Source>
               className="@container/source-table"
@@ -474,10 +498,10 @@ export function SourcesPage({
                             key={`${acceptanceScope ?? ""}:${s.id}`}
                             source={s}
                             application={application}
-                            disabled={otherWritePending}
+                            disabled={!inventoryReady || otherWritePending}
                           />
                           <ActionButton
-                            disabled={application.pending || otherWritePending}
+                            disabled={!inventoryReady || application.pending || otherWritePending}
                             onClick={() => openChanges(s)}
                             variant="link"
                           >
@@ -512,14 +536,15 @@ export function SourcesPage({
                         }
                         disabled={application.pending || otherWritePending}
                         deleteDisabled={
-                          application.pending || otherWritePending
+                          !inventoryReady || application.pending || otherWritePending
                         }
                         onDelete={() => reviewDelete(s)}
                         refreshDisabled={
-                          !s.enabled || application.pending || otherWritePending
+                          !inventoryReady || !s.enabled || application.pending || otherWritePending
                         }
                         onRefresh={() => {
                           if (
+                            !inventoryReady ||
                             application.isRunning() ||
                             refreshStarted.current ||
                             otherWritePending
@@ -604,7 +629,7 @@ export function SourcesPage({
         onClose={() => setAccepted(null)}
       />
       <TaskSheet
-        title={detail?.name}
+        title={detailSource?.name}
         open={!!detail}
         footer={
           onCreateProfile &&
@@ -613,9 +638,9 @@ export function SourcesPage({
             <>
             {subscriptionSetup && configurationSource.candidate && <p className="text-sm text-muted-foreground">使用已应用版本，待审更新不会加入。</p>}
             <ActionButton
-              disabled={application.pending || otherWritePending}
+              disabled={!inventoryReady || application.pending || otherWritePending}
               onClick={() => {
-                if (!application.isRunning())
+                if (inventoryReady && !application.isRunning())
                   onCreateProfile(configurationSource.id);
               }}
               variant="default"
@@ -630,34 +655,40 @@ export function SourcesPage({
         }}
         size="lg"
       >
-        {detail && (
+        {detailSource && (
           <>
-            {sourceIssueText(detail) && (
+            {inventoryFeedback}
+            {detailMissing ? (
+              <Notice tone="warning" title={inventoryReady ? "此来源已不在当前列表中" : "上次读取时未找到此来源"}>
+                请关闭详情并选择当前来源。
+              </Notice>
+            ) : <>
+            {sourceIssueText(detailSource) && (
               <Notice
                 tone="warning"
                 title={
-                  sourceStatusUnknown(detail)
+                  sourceStatusUnknown(detailSource)
                     ? "来源状态待确认"
                     : "最近更新未完成"
                 }
               >
-                {sourceIssueText(detail)}
+                {sourceIssueText(detailSource)}
               </Notice>
             )}
-            {detail.candidate && (
+            {detailSource.candidate && (
               <Notice
                 tone="info"
                 title="有更新可应用"
                 action={
                   <div className="flex flex-wrap gap-2">
                     <SourceApplyButton
-                      key={`${acceptanceScope ?? ""}:${detail.id}`}
-                      source={detail}
+                      key={`${acceptanceScope ?? ""}:${detailSource.id}`}
+                      source={detailSource}
                       application={application}
-                      disabled={otherWritePending}
+                      disabled={!inventoryReady || otherWritePending}
                     />
                     <ActionButton
-                      disabled={application.pending || otherWritePending}
+                      disabled={!inventoryReady || application.pending || otherWritePending}
                       onClick={() => {
                         if (
                           application.isRunning() ||
@@ -665,7 +696,7 @@ export function SourcesPage({
                           otherWritePending
                         )
                           return;
-                        openChanges(detail);
+                        openChanges(detailSource);
                         setDetail(null);
                       }}
                       variant="outline"
@@ -678,13 +709,13 @@ export function SourcesPage({
             )}
             <p className="muted text-sm text-muted-foreground">
               <Metadata>
-                <MetadataItem>最近更新 {dateLabel(detail.updatedAt)}</MetadataItem>
-                <MetadataItem>{(detail.snapshot?.endpoints || detail.endpoints || []).length} 个节点</MetadataItem>
+                <MetadataItem>最近更新 {dateLabel(detailSource.updatedAt)}</MetadataItem>
+                <MetadataItem>{(detailSource.snapshot?.endpoints || detailSource.endpoints || []).length} 个节点</MetadataItem>
               </Metadata>
             </p>
             <DataTable
               rowKey="id"
-              rows={detail.snapshot?.endpoints || detail.endpoints || []}
+              rows={detailSource.snapshot?.endpoints || detailSource.endpoints || []}
               summary={false}
               columns={[
                 { title: "名称", accessor: "name" },
@@ -699,9 +730,9 @@ export function SourcesPage({
             />
             <section className="mt-6 space-y-3">
               <h3 className="text-sm font-medium">应用记录</h3>
-              {detail.applyHistory?.length ? (
+              {detailSource.applyHistory?.length ? (
                 <ul className="divide-y rounded-lg border px-4">
-                  {detail.applyHistory.map((event) => (
+                  {detailSource.applyHistory.map((event) => (
                     <li key={event.id} className="space-y-1 py-3 text-sm">
                       <p>
                         <Metadata>
@@ -726,9 +757,10 @@ export function SourcesPage({
                 <p className="text-sm text-muted-foreground">暂无应用记录</p>
               )}
             </section>
-            {detail.diagnostics?.map((d, i) => (
+            {detailSource.diagnostics?.map((d, i) => (
               <Notice key={i} title={diagnosticText(d)} tone="warning" />
             ))}
+            </>}
           </>
         )}
       </TaskSheet>

@@ -9,6 +9,7 @@ import {
 import { ChoiceSelect } from "@/ui-patterns/choice-select";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Notice } from "@/ui-patterns/notice";
 import { ActionButton } from "@/ui-patterns/actions";
 import { useForm, useWatch, AppField, AppForm } from "@/ui-patterns/form";
 import { toast } from "sonner";
@@ -163,14 +164,18 @@ export function ResourcesPage() {
     queryKey: ["resources"],
     queryFn: () => list<RuleResource>("/me/resources"),
   });
+  const inventoryKnown = query.data !== undefined;
+  const inventoryReady = query.isSuccess && query.fetchStatus === "idle";
   const [current, setCurrent] = useState<RuleResource | null>(null);
   const [open, setOpen] = useState(false);
   const [importing, setImporting] = useState<{
     identity: string;
     initial?: RuleResource;
   } | null>(null);
-  const startImport = (initial?: RuleResource) =>
+  const startImport = (initial?: RuleResource) => {
+    if (initial && !inventoryReady) return;
     setImporting({ identity: newID("resource-task"), initial });
+  };
   const refresh = useMutation({
     onMutate: () => invalidateOutputInputs(client),
     mutationFn: (id: string) => post(`/me/resources/${id}/refresh`),
@@ -300,6 +305,7 @@ export function ResourcesPage() {
     }
   };
   const edit = (resource?: RuleResource) => {
+    if (resource && !inventoryReady) return;
     if (resource?.acceptedVersion || resource?.location === "local") {
       startImport(resource);
       return;
@@ -369,16 +375,29 @@ export function ResourcesPage() {
         }
       />
       <ErrorNotice error={refreshDecisionOpen ? null : refresh.error} />
+      {inventoryKnown && query.isError && (
+        <Notice tone="error" title="暂时无法核对规则资源" action={
+          <ActionButton onClick={() => query.refetch()} disabled={query.isFetching} variant="outline">重试规则资源</ActionButton>
+        }>
+          <p>{query.error.message}</p>
+          <p>显示上次读取的规则资源，请重试以核对最新状态。</p>
+        </Notice>
+      )}
+      {inventoryKnown && (query.isFetching || query.isPaused) && (
+        <p role="status" className="text-sm text-muted-foreground">
+          {query.isPaused ? "等待网络连接后核对规则资源。" : "正在核对规则资源…"}
+        </p>
+      )}
       <QueryState
         loading={query.isPending}
         paused={query.isPaused}
         loadingLayout="table"
-        error={query.error}
+        error={inventoryKnown ? null : query.error}
         retry={() => query.refetch()}
       >
         <Section variant="plain">
           {!query.data?.length ? (
-            <EmptyState title="暂无规则资源" />
+            inventoryReady ? <EmptyState title="暂无规则资源" /> : null
           ) : (
             <DataTable
               rowKey="id"
@@ -390,6 +409,7 @@ export function ResourcesPage() {
                   render: (_, r) => (
                     <button
                       className="table-name inline-flex min-w-0 items-center gap-2 rounded-sm text-left text-sm font-medium text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      disabled={!inventoryReady}
                       onClick={() => edit(r)}
                     >
                       {r.name || r.id}
@@ -449,6 +469,7 @@ export function ResourcesPage() {
                       )}
                       <ActionButton
                         onClick={() => edit(r)}
+                        disabled={!inventoryReady}
                         variant="outline"
                         aria-describedby={refreshFailureId(r)}
                       >
@@ -456,12 +477,14 @@ export function ResourcesPage() {
                       </ActionButton>
                       {r.canRefresh && (
                         <ActionButton
+                          disabled={!inventoryReady}
                           aria-describedby={refreshFailureId(r)}
                           variant="outline"
                           pending={
                             !!(refresh.isPending && refresh.variables === r.id)
                           }
                           onClick={() => {
+                            if (!inventoryReady) return;
                             setRefreshDecisionOpen(true);
                             confirmRefresh({
                               title: `重新读取并接纳「${r.name || r.id}」的远程规则文件？`,
