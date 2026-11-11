@@ -43,3 +43,7 @@ Read-only review also found that the manual usage-reset reason in UserPolicyEdit
 Four real-App synthetic GET-only journeys cover raw `-` with Cancel and raw `1e` with Escape at 390×560 and 1440×560. They require the discard decision, Continue with exact text/focus, blocked invalid Preview, explicit discard and clean reopening. All API writes are aborted; original masked screenshots, keyboard geometry and fixed-category ledgers use narrow artifact names. This small native fixture omits adoption/restart, which remains DOM-covered.
 
 Strict native TypeScript passes. Supplemental discovery is 54 cases across 18 specs; five workflow contracts pass. Independent source review accepted selectors, context response shape, overlay keyboard flow, HTTP safety and evidence bounds. Required sandbox, workers, retries, time limits and discovery are unchanged. No native execution/pixel acceptance, lane-runtime acceptance or WebSocket protection is claimed.
+
+## Complete integrated DOM pass
+
+At approximately 13:55 UTC on 2026-11-11, the serialized complete web suite passed **4,068 tests across 328 files** in 1,115.72 seconds. Production/DOM source was `924120a`; current `5da7b72` adds only reviewed native fixtures/config/contracts/documentation. Native browser/pixel review and remote CI for these unpublished changes remain pending.
