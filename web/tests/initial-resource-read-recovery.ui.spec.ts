@@ -94,7 +94,8 @@ async function tabTo(page: Page, target: Locator) {
 async function capture(page: Page, info: TestInfo, stage: string, surface: Locator, settle = true) {
   const failures: unknown[] = [];
   try { if (settle) await settledTask(surface); } catch (error) { failures.push(error); }
-  // Capture the original viewport before any subsequent Tab, focus or scrolling.
+  // Capture the original viewport position before subsequent Tab, focus or scrolling.
+  // Privacy masks and Playwright's default hidden caret remain intentional.
   try {
     const pixels = await page.screenshot({ path: info.outputPath(`initial-resource-${stage}.png`), fullPage: false,
       mask: [page.locator('input[type="password"], textarea, [autocomplete="current-password"], [autocomplete="new-password"]')] });
@@ -186,9 +187,10 @@ for (const scenario of ["retry", "newer-dialog"] as const) {
       expect(http.count("held-success")).toBe(1);
     } catch (error) { failures.push(error); }
     finally {
-      http.releaseAll();
+      // Preserve the failed/pending viewport before releasing requests can change it.
       try { await capture(page, info, "final-original", page.locator("body"), false); }
       catch (error) { failures.push(error); }
+      finally { http.releaseAll(); }
       try {
         const body = JSON.stringify({ scenario, observation, ...http.ledger,
           scope: "Synthetic desktop initial-read keyboard observation; no production handoff choice, backend writes or comprehensive accessibility claim" }, null, 2);
