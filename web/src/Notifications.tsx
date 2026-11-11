@@ -567,6 +567,7 @@ function Announcements() {
         <AppForm
           id={formId}
           form={form}
+          submitErrorFocusOwner={editing ? editorTask.current : null}
           disabled={save.isPending}
           onValuesChange={() => setDirty(true)}
           onFinish={(v) => {
