@@ -25,6 +25,7 @@ export default defineConfig({
         "**/admin-settings-isolation.ui.spec.ts",
         "**/entry-route-identity.ui.spec.ts",
         "**/route-account-identity.ui.spec.ts",
+        "**/backup-tab-continuity.ui.spec.ts",
       ],
     })),
   workers: 1,
