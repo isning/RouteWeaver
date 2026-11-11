@@ -56,3 +56,7 @@ requiring auto-height/minimum44px wrapped tabs, which conflicts with the explici
 new default-shadcn request. That check now retains expandable-input assertions
 and verifies compact tab height plus horizontal overflow instead. Native focus,
 viewport and hit checks remain. This earlier run is not relabelled as a pass.
+
+After the explicit default-style expectation correction and dark-mode integration,
+the full local aggregate at `074dc7a` passed **4,108/4,108 tests across 333 files**
+in 1,195.89 seconds. Earlier failed result remains recorded, not overwritten.
