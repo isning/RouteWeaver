@@ -21,7 +21,7 @@ env:
 
 jobs:
   recovery:
-    name: Twenty-one recovery specs (supplemental evidence only)
+    name: Twenty-two recovery specs (supplemental evidence only)
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
@@ -81,7 +81,7 @@ jobs:
             await browser.close();
           }
           JS
-      - name: Run twenty-one recovery specs with unchanged fixtures
+      - name: Run twenty-two recovery specs with unchanged fixtures
         working-directory: web
         # Bound this subset without changing per-test timeouts; reserve cleanup/upload time.
         timeout-minutes: 10
@@ -109,6 +109,25 @@ jobs:
             web/test-results/users-inventory-read-recovery*/users-inventory-final-original.png
             web/test-results/users-inventory-read-recovery*/users-inventory-final-original.json
             web/test-results/users-inventory-read-recovery*/users-inventory-request-ledger.json
+            web/test-results/initial-resource-read-recovery*/initial-resource-retry-keyboard.png
+            web/test-results/initial-resource-read-recovery*/initial-resource-retry-keyboard.json
+            web/test-results/initial-resource-read-recovery*/initial-resource-retry-pending.png
+            web/test-results/initial-resource-read-recovery*/initial-resource-retry-pending.json
+            web/test-results/initial-resource-read-recovery*/initial-resource-repeated-error.png
+            web/test-results/initial-resource-read-recovery*/initial-resource-repeated-error.json
+            web/test-results/initial-resource-read-recovery*/initial-resource-failure-next-tab.png
+            web/test-results/initial-resource-read-recovery*/initial-resource-failure-next-tab.json
+            web/test-results/initial-resource-read-recovery*/initial-resource-recovered.png
+            web/test-results/initial-resource-read-recovery*/initial-resource-recovered.json
+            web/test-results/initial-resource-read-recovery*/initial-resource-success-next-tab.png
+            web/test-results/initial-resource-read-recovery*/initial-resource-success-next-tab.json
+            web/test-results/initial-resource-read-recovery*/initial-resource-newer-dialog-pending.png
+            web/test-results/initial-resource-read-recovery*/initial-resource-newer-dialog-pending.json
+            web/test-results/initial-resource-read-recovery*/initial-resource-dialog-owned.png
+            web/test-results/initial-resource-read-recovery*/initial-resource-dialog-owned.json
+            web/test-results/initial-resource-read-recovery*/initial-resource-final-original.png
+            web/test-results/initial-resource-read-recovery*/initial-resource-final-original.json
+            web/test-results/initial-resource-read-recovery*/initial-resource-request-ledger.json
             bin/verification/browser-environment.json
             web/playwright-report/
             web/test-results/group-access-decision*/group-access-*.png
