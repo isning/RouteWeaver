@@ -45,13 +45,32 @@ it.each([
   render(<QueryClientProvider client={client}><UIProviders><App /></UIProviders></QueryClientProvider>);
   const main = await screen.findByRole("main");
   await within(main).findByRole("heading", { name: heading, level: 1 });
-  expect(within(main).getByLabelText("正在加载").getAttribute("aria-busy")).toBe("true");
-  expect(within(main).queryByText(empty)).toBeNull();
+  const optionalRouteInventory = hash === "published-routes" && heldEndpoint === "/api/core-instances";
+  if (optionalRouteInventory) {
+    // The primary route list already succeeded; missing enrichment does not
+    // turn its authoritative empty result into an unavailable route list.
+    await within(main).findByText(empty);
+    expect(within(main).getByRole("button", { name: "配置公开线路" }).hasAttribute("disabled")).toBe(true);
+  } else {
+    expect(within(main).getByLabelText("正在加载").getAttribute("aria-busy")).toBe("true");
+    expect(within(main).queryByText(empty)).toBeNull();
+  }
   await act(async () => { release(json({ message: `${heading}列表暂不可用` }, 503)); });
-  await within(main).findByText(`${heading}列表暂不可用`);
-  expect(within(main).queryByText(empty)).toBeNull();
-  await userEvent.click(within(main).getByRole("button", { name: "重试" }));
+  if (optionalRouteInventory) {
+    await within(main).findByText("转发路径信息暂时无法读取，仍可查看线路。新建、编辑和更换出口前请重试。");
+    expect(within(main).getByText(empty)).toBeTruthy();
+    expect(within(main).getByRole("button", { name: "配置公开线路" }).hasAttribute("disabled")).toBe(true);
+  } else {
+    await within(main).findByText(`${heading}列表暂不可用`);
+    expect(within(main).queryByText(empty)).toBeNull();
+  }
+  await userEvent.click(within(main).getByRole("button", { name: optionalRouteInventory ? "重试读取转发路径" : "重试" }));
   await within(main).findByText(empty);
   expect(within(main).queryByText(`${heading}列表暂不可用`)).toBeNull();
+  if (optionalRouteInventory) {
+    const next = await within(main).findByRole("link", { name: "创建转发路径" });
+    expect(next.getAttribute("aria-disabled")).toBeNull();
+    expect(within(main).queryByText("转发路径信息暂时无法读取，仍可查看线路。新建、编辑和更换出口前请重试。")).toBeNull();
+  }
   expect(reads).toBe(2); expect(unexpected).toEqual([]);
 });
