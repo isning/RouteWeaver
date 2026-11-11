@@ -195,10 +195,8 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
   const validate = useMutation({
     mutationFn: (r: RouteRecord) =>
       post<Validation>(`/routes/${r.id}/validate`),
-    onSuccess: (result, r) => {
+    onSuccess: () => {
       client.invalidateQueries({ queryKey: ["admin-state"] });
-      setValidation(result);
-      setValidationName(r.name);
     },
   });
   const editRoute = (r?: RouteRecord) => {
@@ -422,7 +420,15 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
                                   validate.isPending &&
                                   validate.variables?.id === r.id
                                 }
-                                onClick={() => validate.mutate(r)}
+                                onClick={() =>
+                                  validate.mutate(r, {
+                                    // Only the latest observed check owns this sheet.
+                                    onSuccess: (result) => {
+                                      setValidation(result);
+                                      setValidationName(r.name);
+                                    },
+                                  })
+                                }
                                 variant="ghost"
                               />
                               <AdminRowMenu

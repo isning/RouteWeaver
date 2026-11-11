@@ -1,6 +1,7 @@
 import {
   useState,
   useEffect,
+  useLayoutEffect,
   useRef,
   useImperativeHandle,
   isValidElement,
@@ -123,11 +124,14 @@ export function ChoiceSelect<V extends Value = string>({
 }) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const reopeningRetainedContent = useRef(false);
   useImperativeHandle(ref, () => triggerRef.current!, []);
   const [query, setQuery] = useState("");
   const { visible, total } = boundedOptions(options, query);
   const selected = flat(options).find((o) => o.value === value);
   const changeOpen = (next: boolean) => {
+    reopeningRetainedContent.current = next && !open && !!contentRef.current?.isConnected;
     setOpen(next);
     onOpenChange?.(next);
     if (!next) {
@@ -135,6 +139,16 @@ export function ChoiceSelect<V extends Value = string>({
       onBlur?.();
     }
   };
+  useLayoutEffect(() => {
+    const reopening = reopeningRetainedContent.current;
+    reopeningRetainedContent.current = false;
+    // Radix autofocus runs on mount. A rapid reopen can reuse content retained
+    // for its exit animation, so it needs a new opening focus handoff. Transfer
+    // only from our trigger, never from a newer field/picker, and keep motion.
+    if (open && reopening && document.activeElement === triggerRef.current) {
+      contentRef.current?.querySelector<HTMLInputElement>("[cmdk-input]")?.focus();
+    }
+  }, [open]);
   // A read-only transition ends this editing interaction, including its search.
   // Closing also keeps an already-open portal from mutating a locked task.
   useEffect(() => {
@@ -173,6 +187,7 @@ export function ChoiceSelect<V extends Value = string>({
         </Button>
       </PopoverTrigger>
       <PopoverContent
+        ref={contentRef}
         className="w-(--radix-popover-trigger-width) p-0"
         align="start"
         aria-hidden={!open || undefined}
@@ -187,6 +202,10 @@ export function ChoiceSelect<V extends Value = string>({
           const enclosingDialog = triggerRef.current?.closest(
             '[role="dialog"], [role="alertdialog"]',
           );
+          // Own the safe return as well: Radix's non-modal outside-interaction
+          // flag can survive a same-content reopen until final unmount, making
+          // its default return skip the trigger after the next selection.
+          event.preventDefault();
           if (
             closingContent instanceof HTMLElement &&
             active &&
@@ -194,8 +213,9 @@ export function ChoiceSelect<V extends Value = string>({
             active !== enclosingDialog &&
             active.isConnected &&
             !closingContent.contains(active)
-          )
-            event.preventDefault();
+          ) return;
+          if (triggerRef.current?.isConnected && !triggerRef.current.disabled)
+            triggerRef.current.focus();
         }}
       >
         <Command label="搜索选项" shouldFilter={false}>

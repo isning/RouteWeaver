@@ -154,10 +154,34 @@ for (const width of [1440, 390]) for (const kind of ["processing-preset", "clien
       const trigger = dialog.getByRole("combobox", { name: "模板目标", exact: true });
       const search = page.getByRole("combobox", { name: "搜索选项", exact: true });
       const options = page.getByRole("option");
+      let pickerOpenAttempt = 0;
       const openPicker = async () => {
+        pickerOpenAttempt++;
         await trigger.focus();
         await page.keyboard.press("Enter");
-        await expect(search).toBeFocused();
+        try {
+          await expect(search).toBeFocused();
+        } catch (error) {
+          // Failure-only observation preserves rapid close/reopen timing. Never
+          // focus search, retry opening, or wait away retained exit presence.
+          try {
+            ledger.push({ pickerOpenAttempt, focusFailure: await page.evaluate(() => ({
+              activeRole: document.activeElement?.getAttribute("role"),
+              activeLabel: document.activeElement?.getAttribute("aria-label"),
+              targetExpanded: document.querySelector('[role="combobox"][aria-label="模板目标"]')?.getAttribute("aria-expanded"),
+              popovers: Array.from(document.querySelectorAll('[data-slot="popover-content"]')).map(element => ({
+                state: element.getAttribute("data-state"),
+                hidden: element.getAttribute("aria-hidden"),
+                inert: element.hasAttribute("inert"),
+                containsFocus: element.contains(document.activeElement),
+                searchPresent: !!element.querySelector('[aria-label="搜索选项"]'),
+              })),
+            })) });
+          } catch {
+            ledger.push({ pickerOpenAttempt, focusObservationUnavailable: true });
+          }
+          throw error;
+        }
       };
       await openPicker();
       await search.fill(sharedName);

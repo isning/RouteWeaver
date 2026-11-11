@@ -74,6 +74,49 @@ it("preserves a newer picker through delayed single-choice exit and restores its
   await waitFor(() => expect(document.activeElement).toBe(next));
 });
 
+it("focuses search when the same picker reopens before its selection exit finishes", async () => {
+  const finishExit = holdPopoverExit();
+  function Choices() {
+    const [value, setValue] = useState<string>();
+    return (
+      <UIProviders>
+        <TaskSheet open onOpenChange={() => {}} title="目标选择">
+          <ChoiceSelect
+            aria-label="模板目标"
+            value={value}
+            onValueChange={setValue}
+            options={[{ value: "first", label: "日常草稿" }, { value: "second", label: "备用草稿" }]}
+          />
+        </TaskSheet>
+      </UIProviders>
+    );
+  }
+  render(<Choices />);
+  const user = userEvent.setup();
+  const trigger = screen.getByRole("combobox", { name: "模板目标" });
+  await user.click(trigger);
+  const content = document.getElementById(trigger.getAttribute("aria-controls")!)!;
+  await user.keyboard("日常{Enter}");
+  expect(trigger.textContent).toContain("日常草稿");
+  expect(trigger.getAttribute("aria-expanded")).toBe("false");
+  expect(content.isConnected).toBe(true);
+  expect(content.hasAttribute("inert")).toBe(true);
+  // A real click reopens the retained content; no manual focus or animation wait.
+  await user.click(trigger);
+  expect(content.isConnected).toBe(true);
+  expect(content.hasAttribute("inert")).toBe(false);
+  expect(trigger.getAttribute("aria-expanded")).toBe("true");
+  const search = screen.getByRole("combobox", { name: "搜索选项" });
+  await waitFor(() => expect(document.activeElement).toBe(search));
+  await user.keyboard("备用");
+  expect(search).toHaveProperty("value", "备用");
+  expect(screen.getAllByRole("option")).toHaveLength(1);
+  await user.keyboard("{Enter}");
+  expect(trigger.textContent).toContain("备用草稿");
+  finishExit(content);
+  await waitFor(() => expect(document.activeElement).toBe(trigger));
+});
+
 it.each([false, true])("does not steal newer field focus during delayed exit (different dialog=%s)", async (differentDialog) => {
   const finishExit = holdPopoverExit();
   function Choices() {
