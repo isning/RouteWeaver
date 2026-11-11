@@ -31,3 +31,7 @@ These are bounded DOM/HTTP-fixture and build results, not native browser, pixel,
 Six real-App synthetic loopback journeys now cover resource unknown/cached/empty recovery and source cached-sheet changed/removed reconciliation at 390 and 1440 pixels. Exact synthetic refresh requests are fulfilled locally, unexpected/off-origin HTTP is blocked, and no API mutation is forwarded. Current-viewport masked originals, keyboard focus/geometry, and independent sanitized request ledgers have bounded artifact retention.
 
 Strict browser-spec TypeScript passes. Supplemental discovery is 50 cases across 17 files, and all five workflow contracts pass. Independent source review accepted payload/path matching, selectors, keyboard traversal, evidence privacy and additive artifact bounds. Existing sandbox, time limits, one worker, zero retries and required gates remain unchanged. Actual native execution, lane runtime, pixel review, paused native recovery and backend correctness remain unverified.
+
+## Complete integrated DOM pass
+
+At approximately 13:22 UTC on 2026-11-11, the serialized whole suite passed **4,046 tests across 328 files** in 1,100.61 seconds. Production/DOM source was `e4b2298`; `5486e50` adds only native fixtures/config/contracts/documentation. This passing run includes resource/source read recovery, confirmed-apply ordering, open-detail reconciliation, and the earlier backup/profile fixes. Native browser/pixel acceptance and remote CI for unpublished changes remain pending.
