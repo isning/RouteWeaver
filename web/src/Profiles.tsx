@@ -1,3 +1,4 @@
+import { ScrollableTabsList } from "@/ui-patterns/scrollable-tabs-list";
 import { DraftIntegerInput, exactDraftInteger } from "./draft-integer";
 import { Metadata, MetadataItem } from "@/ui-patterns/metadata";
 import { contentWidth } from "@/ui-patterns/content-width";
@@ -12,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { NumericInput } from "@/ui-patterns/numeric-input";
 import { TaskDialog, TaskSheet } from "@/ui-patterns/task-overlays";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Accordion,
   AccordionItem,
@@ -2320,10 +2321,9 @@ export function ProfileEditor({
               }}
             >
               {
-                <TabsList aria-label="配置内容" className="max-w-full flex-wrap justify-start group-data-horizontal/tabs:h-auto">
+                <ScrollableTabsList aria-label="配置内容">
                   {editorTabs.map((section) => (
                     <TabsTrigger
-                      className="h-auto min-h-11 whitespace-nowrap"
                       key={section.key}
                       value={String(section.key)}
                       data-section={section.key}
@@ -2332,7 +2332,7 @@ export function ProfileEditor({
                       {section.label}
                     </TabsTrigger>
                   ))}
-                </TabsList>
+                </ScrollableTabsList>
               }
               {editorTabs.map((section) => (
                 <TabsContent key={section.key} value={String(section.key)}

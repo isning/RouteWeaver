@@ -1,3 +1,4 @@
+import { ScrollableTabsList } from "@/ui-patterns/scrollable-tabs-list";
 import { PasswordInput } from "@/ui-patterns/password-input";
 import { NumericInput } from "@/ui-patterns/numeric-input";
 import {
@@ -7,7 +8,7 @@ import {
   AccordionContent,
 } from "@/components/ui/accordion";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { TaskSheet, TaskDialog } from "@/ui-patterns/task-overlays";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useConfirm, type ConfirmationHandle } from "@/ui-patterns/confirmations";
@@ -308,13 +309,13 @@ export function NotificationsAdminPage() {
           if (next === "settings") setSettingsVisited(true);
         }}
       >
-        <TabsList className="h-auto max-w-full flex-wrap justify-start">
+        <ScrollableTabsList>
           {sections.map((section) => (
             <TabsTrigger key={section.key} value={section.key}>
               {section.label}
             </TabsTrigger>
           ))}
-        </TabsList>
+        </ScrollableTabsList>
         {sections.map((section) => (
           <TabsContent
             key={section.key}

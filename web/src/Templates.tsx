@@ -1,3 +1,4 @@
+import { ScrollableTabsList } from "@/ui-patterns/scrollable-tabs-list";
 import { Metadata } from "./ui-patterns/metadata";
 import type { DataTableProps, DataTableHandle } from "./DataTable";
 import { Label } from "@/components/ui/label";
@@ -9,7 +10,7 @@ import {
   AccordionTrigger,
   AccordionContent,
 } from "@/components/ui/accordion";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -762,7 +763,7 @@ export function TemplatesPage({ admin = false }: { admin?: boolean }) {
       />
       <Tabs defaultValue={String(catalogTabs[0]?.key ?? "")}>
         {
-          <TabsList className="h-auto max-w-full flex-wrap justify-start">
+          <ScrollableTabsList>
             {catalogTabs.map((section) => (
               <TabsTrigger
                 key={section.key}
@@ -772,7 +773,7 @@ export function TemplatesPage({ admin = false }: { admin?: boolean }) {
                 {section.label}
               </TabsTrigger>
             ))}
-          </TabsList>
+          </ScrollableTabsList>
         }
         {catalogTabs.map((section) => (
           <TabsContent

@@ -1,3 +1,4 @@
+import { ScrollableTabsList } from "@/ui-patterns/scrollable-tabs-list";
 import { addServerConnector, connectorAddReason, removeServerConnector } from "./server-connector-collection";
 import { ServerConnectorConnectionDialog } from "./ServerConnectorConnectionDialog";
 import { PolicyUserEntryTask, type PolicyUserEntryTaskProps } from "./PolicyUserEntryTask";
@@ -22,7 +23,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { ActionButton } from "@/ui-patterns/actions";
 import { MultiChoice } from "@/ui-patterns/choice-select";
@@ -1135,7 +1136,7 @@ export function ServerRouteEditor({
             defaultValue={"ordered"}
             className="min-w-0 space-y-2"
           >
-            <TabsList className="h-auto max-w-full flex-wrap">
+            <ScrollableTabsList>
               <TabsTrigger key={"ordered"} value={"ordered"}
                 disabled={view !== "ordered" && !!viewChangeReason}
                 aria-describedby={viewChangeReason ? viewChangeNoteId : undefined}>
@@ -1146,7 +1147,7 @@ export function ServerRouteEditor({
                 aria-describedby={viewChangeReason ? viewChangeNoteId : undefined}>
                 {"\u56FE\u5F62\u7F16\u8F91"}
               </TabsTrigger>
-            </TabsList>
+            </ScrollableTabsList>
             {viewChangeReason && <p id={viewChangeNoteId} className="text-sm text-muted-foreground">{viewChangeReason}</p>}
           </Tabs>
         )}

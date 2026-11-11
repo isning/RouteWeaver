@@ -1,3 +1,4 @@
+import { ScrollableTabsList } from "@/ui-patterns/scrollable-tabs-list";
 import { InventoryEditor, type InventoryEditTask } from "./InventoryEditor";
 import { loadInfrastructure, coreName } from "./infrastructure-data";
 export { loadInfrastructure, coreName } from "./infrastructure-data";
@@ -17,7 +18,7 @@ import {
 } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
 import { ActionButton } from "@/ui-patterns/actions";
 import { AppField, AppForm, useForm } from "@/ui-patterns/form";
 import { Notice } from "@/ui-patterns/notice";
@@ -439,7 +440,7 @@ export function ServersPage() {
               defaultValue={"hosts"}
               className="w-full space-y-4"
             >
-              <TabsList className="h-auto max-w-full flex-wrap">
+              <ScrollableTabsList>
                 <TabsTrigger
                   key={"hosts"}
                   value={"hosts"}
@@ -452,7 +453,7 @@ export function ServersPage() {
                   key={"managed-endpoints"}
                   value={"managed-endpoints"}
                 >{`监听端点 ${data.endpoints.length}`}</TabsTrigger>
-              </TabsList>
+              </ScrollableTabsList>
               <TabsContent key={"hosts"} value={"hosts"}>
                 {data.hosts.length ? (
                   <div className="server-grid grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -689,12 +690,12 @@ export function ServersPage() {
             }}>打开核心所在服务器</ActionButton>}
           </Notice>}
           <Tabs value={section} onValueChange={changeSection} className="min-w-0 space-y-4">
-            <TabsList className="h-auto max-w-full flex-wrap">
+            <ScrollableTabsList>
               <TabsTrigger value="overview">概览</TabsTrigger>
               <TabsTrigger value="cores">核心与监听</TabsTrigger>
               <TabsTrigger value="records">配置记录</TabsTrigger>
               <TabsTrigger value="diagnostics">诊断</TabsTrigger>
-            </TabsList>
+            </ScrollableTabsList>
             <ErrorNotice error={instance && section === "cores" ? null : editError} />
             <TabsContent value="overview" className="space-y-4">
               {(!hostCores.length || !hostListeners.length || !records.length) && !scopeIssue && (
@@ -763,7 +764,7 @@ export function ServersPage() {
             </TabsContent>
             <TabsContent value="diagnostics" className="space-y-4">
               <Tabs defaultValue="resources" className="space-y-4">
-                <TabsList className="h-auto max-w-full flex-wrap"><TabsTrigger value="resources">资源与额度</TabsTrigger><TabsTrigger value="connections">连接诊断</TabsTrigger></TabsList>
+                <ScrollableTabsList><TabsTrigger value="resources">资源与额度</TabsTrigger><TabsTrigger value="connections">连接诊断</TabsTrigger></ScrollableTabsList>
                 <TabsContent value="resources"><NodeObservation host={host} instances={data.instances} /></TabsContent>
                 <TabsContent value="connections"><DiagnosticsPanel host={host} instances={data.instances} /></TabsContent>
               </Tabs>

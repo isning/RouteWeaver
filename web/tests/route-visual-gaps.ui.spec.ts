@@ -382,7 +382,22 @@ for (const width of [1280, 390]) {
     const originHelpBox = (await originHelp.boundingBox())!;
     const originSaveBox = (await originSave.boundingBox())!;
     expect(originHelpBox.y + originHelpBox.height).toBeLessThanOrEqual(originSaveBox.y);
-    for (const tab of await page.getByRole("tab").all()) expect((await tab.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+    // 2026-11-11: user requested the installed shadcn radix-nova defaults.
+    // Keep task action controls at 44px; tab bars use the registry's 32px rail.
+    for (const list of await page.getByRole("tablist").all()) {
+      expect((await list.boundingBox())!.height).toBeCloseTo(32, 0);
+      const initiallySelected = list.getByRole("tab", { selected: true });
+      const selectedName = await initiallySelected.textContent();
+      for (const tab of await list.getByRole("tab").all()) {
+        const box = (await tab.boundingBox())!;
+        expect(box.height).toBeGreaterThanOrEqual(24);
+        expect(box.height).toBeLessThanOrEqual(26);
+        await tab.focus();
+        await expect(tab).toBeFocused();
+        await expect(tab).toBeInViewport({ ratio: 1 });
+      }
+      await list.getByRole("tab", { name: selectedName!, exact: true }).click();
+    }
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width + 1);
     await page.screenshot({ path: info.outputPath(`refined-settings-${width}.png`), fullPage: true });
     await page.route("**/api/auth/me", route => route.fulfill({ status: 401, json: { detail: "Sign in required for the synthetic login view" } }));
@@ -973,12 +988,17 @@ for (const width of [3440, 2880, 2560, 2304, 1920, 1536, 1440, 1366, 1280, 1024,
       await page.screenshot({ path: info.outputPath(`context-profile-initial-viewport-${width}.png`) });
     }
     const profileHistory = await page.evaluate(() => ({ hash: location.hash, length: history.length }));
+    expect((await profileTabs.boundingBox())!.height).toBeCloseTo(32, 0);
     const controls = profileTabs.getByRole("tab");
     const keyboardGeometry = [];
     await controls.first().focus();
     for (let index = 0; index < await controls.count(); index++) {
       if (index) await page.keyboard.press("ArrowRight");
       await expect(controls.nth(index)).toHaveAttribute("aria-selected", "true");
+      await expect(controls.nth(index)).toBeInViewport({ ratio: 1 });
+      const tabBox = (await controls.nth(index).boundingBox())!;
+      expect(tabBox.height).toBeGreaterThanOrEqual(24);
+      expect(tabBox.height).toBeLessThanOrEqual(26);
       await expect(profileTabs.getByRole("tab", { selected: true })).toHaveCount(1);
       if (width <= 390) keyboardGeometry.push(await focusedControlGeometry(controls.nth(index)));
     }

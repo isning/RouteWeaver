@@ -1,3 +1,4 @@
+import { ScrollableTabsList } from "@/ui-patterns/scrollable-tabs-list";
 import { SettingsGroup, SettingsRow } from "@/ui-patterns/settings-group";
 import { PlatformSettingsTabList } from "@/ui-patterns/platform-settings-navigation";
 import type { ComponentProps, ReactNode } from "react";
@@ -23,7 +24,7 @@ import {
   AccordionTrigger,
   AccordionContent,
 } from "@/components/ui/accordion";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { useForm, useWatch, AppField, AppForm } from "@/ui-patterns/form";
 import { ChoiceSelect, MultiChoice } from "@/ui-patterns/choice-select";
@@ -1225,7 +1226,7 @@ function RouteEditor({
           <Tabs value={view} onValueChange={setView}>
             {
               <>
-                <TabsList className="flex h-auto max-w-full flex-wrap">
+                <ScrollableTabsList>
                   {[
                     { key: "ordered", label: "\u987A\u5E8F\u7F16\u8F91" },
                     { key: "graph", label: "\u56FE\u5F62\u7F16\u8F91" },
@@ -1234,7 +1235,7 @@ function RouteEditor({
                       {tab.label}
                     </TabsTrigger>
                   ))}
-                </TabsList>
+                </ScrollableTabsList>
               </>
             }
           </Tabs>

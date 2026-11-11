@@ -208,7 +208,7 @@ it("keeps unsaved path edits when footer cancellation is declined", async () => 
   const name = within(editor).getByRole("textbox", { name: "转发路径名称" });
   await user.clear(name);
   await user.type(name, "Updated path");
-  await user.click(within(editor).getByRole("button", { name: "取消", exact: true }));
+  await user.click(within(editor).getByRole("button", { name: "取消" }));
   const confirmation = await screen.findByRole("alertdialog", { name: "放弃尚未保存的转发路径修改？" });
   await user.click(within(confirmation).getByRole("button", { name: "继续编辑" }));
   await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());

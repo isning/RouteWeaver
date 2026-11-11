@@ -1,4 +1,5 @@
-import { TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollableTabsList } from "@/ui-patterns/scrollable-tabs-list";
+import { TabsTrigger } from "@/components/ui/tabs";
 
 export const platformSettingsTabs = [
   { key: "basic", label: "基本设置" },
@@ -13,12 +14,12 @@ export function PlatformSettingsTabList({
   disabled?: boolean;
 }) {
   return (
-    <TabsList variant="line" className="flex h-auto max-w-full flex-wrap">
+    <ScrollableTabsList variant="line">
       {platformSettingsTabs.map((tab) => (
         <TabsTrigger key={tab.key} value={tab.key} disabled={disabled}>
           {tab.label}
         </TabsTrigger>
       ))}
-    </TabsList>
+    </ScrollableTabsList>
   );
 }
