@@ -148,6 +148,7 @@ function SourceEditorSession({
     close: () => void;
   } | null>(null);
   const [form] = useForm();
+  const submitErrorFocusOwner = useRef({});
   const [completionElement, setCompletionElement] =
     useState<HTMLDivElement | null>(null);
   const [sequentialScroll, setSequentialScroll] = useState(false);
@@ -576,6 +577,7 @@ function SourceEditorSession({
         id={formID}
         name={formID}
         form={form}
+        submitErrorFocusOwner={open ? submitErrorFocusOwner.current : null}
         onKeyDownCapture={(event) => {
           // A held confirmation key must not submit the freshly loaded form.
           // Keep ordinary Enter submission and textarea editing available.
