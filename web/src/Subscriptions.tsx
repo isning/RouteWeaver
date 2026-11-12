@@ -3,7 +3,7 @@ import { WorkspaceFrame } from "@/ui-patterns/workspace-frame";
 import { useSubscriptionRotationState } from "./subscription-rotation-state";
 import { groupSubscriptionInventory } from "./subscription-inventory";
 import { ResourceToolbar, SearchField } from "@/ui-patterns/resource-toolbar";
-import type { ReactNode } from "react";
+import type { MouseEvent, ReactNode } from "react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -2834,6 +2834,7 @@ function OutputAccessTask({
   const accessDelivery = accessReady
     ? query.data?.delivery || output?.delivery
     : output?.delivery;
+  const copyLink = useRef<HTMLInputElement>(null);
   const copyGeneration = useRef(0);
   // Keep a pending copy through a same-link background check, but expire its
   // feedback when access changes. A submitted clipboard write cannot be recalled.
@@ -2846,8 +2847,9 @@ function OutputAccessTask({
     },
     [open, review, inputIdentity, readGeneration, copyPath, query.data?.delivery],
   );
-  const copy = async () => {
+  const copy = async (event: MouseEvent<HTMLButtonElement>) => {
     if (!active.current || review || bundle || !url) return;
+    const trigger = event.currentTarget;
     const generation = copyGeneration.current;
     const ownsFeedback = () =>
       active.current && copyGeneration.current === generation;
@@ -2856,7 +2858,8 @@ function OutputAccessTask({
       if (ownsFeedback()) message.success("订阅链接已复制");
     } catch {
       if (!ownsFeedback()) return;
-      message.warning("自动复制未成功，请在下方选中链接手动复制。");
+      if (document.activeElement === trigger) copyLink.current?.focus();
+      message.warning("自动复制未成功，请选中订阅链接手动复制。");
     }
   };
   return (
@@ -3058,6 +3061,7 @@ function OutputAccessTask({
                       <label className="standalone-label grid min-w-0 gap-2 text-sm font-medium">
                         你的订阅链接
                         <Input
+                          ref={copyLink}
                           value={url}
                           readOnly
                           aria-label="订阅链接"

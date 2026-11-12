@@ -996,6 +996,8 @@ for (const departure of [
             await within(reopened).findByRole("button", { name: "检查更新" });
           }
         }
+        const closeButton = departure === "same access" ? within(access).getByRole("button", { name: "关闭" }) : null;
+        closeButton?.focus();
         await act(async () => {
           if (outcome === "resolved") complete();
           else reject(new Error("Synthetic clipboard rejection"));
@@ -1006,13 +1008,20 @@ for (const departure of [
         if (departure === "same access" || departure === "current access") {
           expect(await screen.findByText(outcome === "resolved"
             ? "订阅链接已复制"
-            : "自动复制未成功，请在下方选中链接手动复制。")).toBeTruthy();
+            : "自动复制未成功，请选中订阅链接手动复制。")).toBeTruthy();
         } else {
           expect(screen.queryByText("订阅链接已复制")).toBeNull();
           expect(
-            screen.queryByText("自动复制未成功，请在下方选中链接手动复制。"),
+            screen.queryByText("自动复制未成功，请选中订阅链接手动复制。"),
           ).toBeNull();
         }
+        if (outcome === "rejected" && departure === "current access") {
+          const link = within(access).getByRole("textbox", { name: "订阅链接" }) as HTMLInputElement;
+          expect(document.activeElement).toBe(link);
+          expect(link.selectionStart).toBe(0);
+          expect(link.selectionEnd).toBe(link.value.length);
+        }
+        if (closeButton) expect(document.activeElement).toBe(closeButton);
         expect(f.writes).toHaveLength(departure === "nested review" ? 1 : 0);
         expect(f.writes.some((write) => !write.path.endsWith("/preview"))).toBe(false);
       } finally {
