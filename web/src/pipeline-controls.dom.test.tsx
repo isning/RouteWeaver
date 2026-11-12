@@ -163,6 +163,16 @@ it("keeps each processing identity, execution state, fields and focus with its r
     "sort",
   ]);
   expect(steps[1].enabled).toBe(false);
+  screen.getByRole("button", { name: "删除步骤 2" }).focus();
+  await user.keyboard("{Enter}");
+  expect(document.activeElement).toBe(screen.getByRole("heading", { name: "步骤 2 排序" }));
+  // Returning focus to a title avoids a repeated Enter deleting the next step.
+  await user.keyboard("{Enter}");
+  expect(JSON.parse(screen.getByLabelText("authored steps").textContent!)).toHaveLength(2);
+  await user.click(screen.getByRole("button", { name: "删除步骤 2" }));
+  expect(document.activeElement).toBe(screen.getByRole("heading", { name: "步骤 1 去除重复连接" }));
+  await user.click(screen.getByRole("button", { name: "删除步骤 1" }));
+  expect(document.activeElement).toBe(screen.getByRole("combobox", { name: "添加处理步骤" }));
 });
 
 it("clears visible optional filters when current selection is reset to all connections", async () => {

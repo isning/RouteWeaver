@@ -4,7 +4,7 @@ import {
   TooltipTrigger,
   TooltipContent,
 } from "@/components/ui/tooltip";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { DraftIntegerInput, exactDraftInteger } from "./draft-integer";
 import { ActionButton } from "@/ui-patterns/actions";
 import { ChoiceSelect, MultiChoice } from "@/ui-patterns/choice-select";
@@ -97,6 +97,8 @@ export function StepsEditor({
   /** Context-specific empty state; null keeps the step controls without prose. */
   emptyText?: string | null;
 }) {
+  const addStep = useRef<HTMLButtonElement>(null);
+  const stepHeadings = useRef(new Map<string, HTMLHeadingElement>());
   const [localPortDrafts, setLocalPortDrafts] = useState<Record<string, string>>({});
   const rawPorts = portDrafts ?? localPortDrafts;
   const update = (index: number, patch: Partial<PipelineStep>) =>
@@ -108,6 +110,7 @@ export function StepsEditor({
       <div className="section-heading compact mb-4 flex flex-wrap items-center justify-between gap-3 [&>h3]:font-semibold">
         {showHeading && <h3>{label}</h3>}
         <ChoiceSelect
+          ref={addStep}
           aria-label="添加处理步骤"
           placeholder="添加处理步骤"
           options={kinds}
@@ -133,9 +136,14 @@ export function StepsEditor({
               <span className="step-index flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium">
                 {index + 1}
               </span>
-              <strong className="text-sm font-medium">
+              <h4
+                ref={(node) => { if (node) stepHeadings.current.set(step.id, node); else stepHeadings.current.delete(step.id); }}
+                tabIndex={-1}
+                aria-label={`步骤 ${index + 1} ${processingStepLabel(step.kind)}`}
+                className="text-sm font-medium"
+              >
                 {processingStepLabel(step.kind)}
-              </strong>
+              </h4>
               <span className="step-state text-xs text-muted-foreground">
                 {step.enabled ? "已启用" : "已停用"}
               </span>
@@ -178,7 +186,16 @@ export function StepsEditor({
               <ActionButton
                 aria-label={`删除步骤 ${index + 1}`}
                 leadingIcon={<Trash2 aria-hidden="true" />}
-                onClick={() => onChange(value.filter((_, i) => i !== index))}
+                onClick={(event) => {
+                  const remaining = value.filter((_, i) => i !== index);
+                  if (document.activeElement === event.currentTarget) {
+                    const neighbor = remaining[Math.min(index, remaining.length - 1)];
+                    // Move to a surviving title, not another destructive action.
+                    // Focus is set before removal so it never falls back to body.
+                    (neighbor ? stepHeadings.current.get(neighbor.id) : addStep.current)?.focus();
+                  }
+                  onChange(remaining);
+                }}
                 variant="ghost"
                 size="sm"
               />
