@@ -5,6 +5,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 SPECS = {
+    'user-override-draft',
     'service-count-draft',
     'service-rate-draft',
     'admin-policy-inventory-recovery',
@@ -54,7 +55,11 @@ ANNOUNCEMENT_PHASES = ('initial-unknown', 'refresh-pending', 'cached-error', 're
 POLICY_INVENTORY_PHASES = ('cached-error', 'retry-keyboard', 'retry-pending', 'recovered', 'guarded-editor', 'newer-draft-pending', 'newer-draft-owned', 'final-original')
 SERVICE_RATE_PHASES = ('raw-input', 'collapsed-draft', 'blocked-preview', 'discard-decision', 'continued-draft', 'corrected-remount', 'preview-review', 'final-original')
 SERVICE_COUNT_PHASES = ('raw-input', 'visible-blocked', 'collapsed-draft', 'collapsed-blocked', 'discard-decision', 'continued-draft', 'corrected-remount', 'preview-review', 'final-original')
+USER_OVERRIDE_PHASES = ('blank-input', 'visible-blocked', 'collapsed-draft', 'collapsed-blocked', 'discard-decision', 'continued-draft', 'corrected-remount', 'correction-review', 'inheritance-review', 'fresh-reset', 'final-original')
 ARTIFACTS = {
+    *{f'web/test-results/user-override-draft*/user-override-{phase}.{ext}'
+      for phase in USER_OVERRIDE_PHASES for ext in ('png', 'json')},
+    'web/test-results/user-override-draft*/user-override-request-ledger.json',
     *{f'web/test-results/service-count-draft*/service-count-{phase}.{ext}'
       for phase in SERVICE_COUNT_PHASES for ext in ('png', 'json')},
     'web/test-results/service-count-draft*/service-count-request-ledger.json',
@@ -135,8 +140,8 @@ class UXRecoveryWorkflowTests(unittest.TestCase):
         for value in ('group: ux-recovery-${{ github.ref }}', 'cancel-in-progress: false',
                       'contents: read', 'persist-credentials: false', 'runs-on: ubuntu-24.04',
                       'timeout-minutes: 15', 'timeout-minutes: 10',
-                      'name: Twenty-six recovery specs (supplemental evidence only)',
-                      'name: Run twenty-six recovery specs with unchanged fixtures',
+                      'name: Twenty-seven recovery specs (supplemental evidence only)',
+                      'name: Run twenty-seven recovery specs with unchanged fixtures',
                       'ROUTEWEAVER_CHROMIUM: /opt/google/chrome/chrome',
                       'npx --no-install playwright install-deps chromium',
                       '--config=playwright.ux-recovery.config.ts --workers=1 --retries=0'):
@@ -260,6 +265,16 @@ class UXRecoveryWorkflowTests(unittest.TestCase):
         for filename in ('request-ledger.json', 'service-count-private.json',
                          'service-count-preview-review-private.png', 'service-count-request-ledger.png'):
             self.assertFalse(retained(f'web/test-results/service-count-draft.ui-abcde-chromium/{filename}'))
+        override_outputs = tuple(f'user-override-{phase}.{ext}' for phase in USER_OVERRIDE_PHASES
+                             for ext in ('png', 'json')) + ('user-override-request-ledger.json',)
+        # Representative short/truncated names; native execution remains pending.
+        for width in (1440, 390):
+            for scenario in ('quota', 'ip', 'connection', 'rate'):
+                observed[f'user-override-draft.ui-count-{scenario}-at-{width}px-chromium'] = override_outputs
+                observed[f'user-override-draft.ui-abcde-{scenario}-at-{width}px-chromium'] = override_outputs
+        for filename in ('request-ledger.json', 'user-override-private.json',
+                         'user-override-preview-review-private.png', 'user-override-request-ledger.png'):
+            self.assertFalse(retained(f'web/test-results/user-override-draft.ui-abcde-chromium/{filename}'))
         for directory, filenames in observed.items():
             for filename in filenames:
                 path = f'web/test-results/{directory}/{filename}'
@@ -291,7 +306,7 @@ class UXRecoveryWorkflowTests(unittest.TestCase):
             self.assertFalse(retained(f'web/test-results/announcement-list-recovery.ui-chromium/{filename}'))
 
         # A named compact capture is not an upload permission for another fixture.
-        for filename in compact_outputs + multi_outputs + inventory_outputs + group_priority_outputs + reset_outputs + target_outputs + users_outputs + initial_resource_outputs + announcement_outputs + policy_outputs + rate_outputs + count_outputs:
+        for filename in compact_outputs + multi_outputs + inventory_outputs + group_priority_outputs + reset_outputs + target_outputs + users_outputs + initial_resource_outputs + announcement_outputs + policy_outputs + rate_outputs + count_outputs + override_outputs:
             path = f'web/test-results/unrelated.ui-chromium/{filename}'
             with self.subTest(path=path):
                 self.assertFalse(retained(path), path)

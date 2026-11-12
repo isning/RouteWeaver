@@ -11,6 +11,7 @@ export default defineConfig({
     .map((project) => ({
       ...project,
       testMatch: [
+        "**/user-override-draft.ui.spec.ts",
         "**/service-count-draft.ui.spec.ts",
         "**/service-rate-draft.ui.spec.ts",
         "**/admin-policy-inventory-recovery.ui.spec.ts",

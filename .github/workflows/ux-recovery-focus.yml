@@ -21,7 +21,7 @@ env:
 
 jobs:
   recovery:
-    name: Twenty-six recovery specs (supplemental evidence only)
+    name: Twenty-seven recovery specs (supplemental evidence only)
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
@@ -81,7 +81,7 @@ jobs:
             await browser.close();
           }
           JS
-      - name: Run twenty-six recovery specs with unchanged fixtures
+      - name: Run twenty-seven recovery specs with unchanged fixtures
         working-directory: web
         # Bound this subset without changing per-test timeouts; reserve cleanup/upload time.
         timeout-minutes: 10
@@ -94,6 +94,29 @@ jobs:
           # Only the synthetic report, browser receipt and named test captures.
           # No databases, fixture keys, automatic screenshots, video or traces.
           path: |
+            web/test-results/user-override-draft*/user-override-blank-input.png
+            web/test-results/user-override-draft*/user-override-blank-input.json
+            web/test-results/user-override-draft*/user-override-visible-blocked.png
+            web/test-results/user-override-draft*/user-override-visible-blocked.json
+            web/test-results/user-override-draft*/user-override-collapsed-draft.png
+            web/test-results/user-override-draft*/user-override-collapsed-draft.json
+            web/test-results/user-override-draft*/user-override-collapsed-blocked.png
+            web/test-results/user-override-draft*/user-override-collapsed-blocked.json
+            web/test-results/user-override-draft*/user-override-discard-decision.png
+            web/test-results/user-override-draft*/user-override-discard-decision.json
+            web/test-results/user-override-draft*/user-override-continued-draft.png
+            web/test-results/user-override-draft*/user-override-continued-draft.json
+            web/test-results/user-override-draft*/user-override-corrected-remount.png
+            web/test-results/user-override-draft*/user-override-corrected-remount.json
+            web/test-results/user-override-draft*/user-override-correction-review.png
+            web/test-results/user-override-draft*/user-override-correction-review.json
+            web/test-results/user-override-draft*/user-override-inheritance-review.png
+            web/test-results/user-override-draft*/user-override-inheritance-review.json
+            web/test-results/user-override-draft*/user-override-fresh-reset.png
+            web/test-results/user-override-draft*/user-override-fresh-reset.json
+            web/test-results/user-override-draft*/user-override-final-original.png
+            web/test-results/user-override-draft*/user-override-final-original.json
+            web/test-results/user-override-draft*/user-override-request-ledger.json
             web/test-results/service-count-draft*/service-count-raw-input.png
             web/test-results/service-count-draft*/service-count-raw-input.json
             web/test-results/service-count-draft*/service-count-visible-blocked.png
