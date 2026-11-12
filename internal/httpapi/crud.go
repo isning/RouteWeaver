@@ -48,6 +48,7 @@ type userCreationError struct {
 func userCreationFailure(status int, code, detail string) error {
 	return &userCreationError{ErrorModel: &huma.ErrorModel{Status: status, Title: http.StatusText(status), Detail: detail}, Code: code}
 }
+
 type UserUpdate struct {
 	ID   string `path:"id"`
 	Body domain.User
