@@ -60,6 +60,9 @@ SERVICE_COUNT_PHASES = ('raw-input', 'visible-blocked', 'collapsed-draft', 'coll
 USER_OVERRIDE_PHASES = ('blank-input', 'visible-blocked', 'collapsed-draft', 'collapsed-blocked', 'discard-decision', 'continued-draft', 'corrected-remount', 'correction-review', 'inheritance-review', 'fresh-reset', 'final-original')
 SERVICE_CYCLE_PHASES = ('incomplete-input', 'native-blocked', 'discard-decision', 'continued-draft', 'fraction-input', 'fraction-blocked', 'corrected-input', 'preview-review', 'fresh-reset', 'final-original')
 ARTIFACTS = {
+    *{f'web/test-results/user-override-draft*/user-override-dark-{phase}.{ext}'
+      for phase in USER_OVERRIDE_PHASES for ext in ('png', 'json')},
+    'web/test-results/user-override-draft*/user-override-dark-request-ledger.json',
     *{f'web/test-results/service-cycle-draft*/service-cycle-{phase}.{ext}'
       for phase in SERVICE_CYCLE_PHASES for ext in ('png', 'json')},
     'web/test-results/service-cycle-draft*/service-cycle-request-ledger.json',
@@ -293,6 +296,14 @@ class UXRecoveryWorkflowTests(unittest.TestCase):
         for filename in ('request-ledger.json', 'service-cycle-private.json',
                          'service-cycle-preview-review-private.png', 'service-cycle-request-ledger.png'):
             self.assertFalse(retained(f'web/test-results/service-cycle-draft.ui-abcde-chromium/{filename}'))
+        dark_override_outputs = tuple(f'user-override-dark-{phase}.{ext}' for phase in USER_OVERRIDE_PHASES
+                                      for ext in ('png', 'json')) + ('user-override-dark-request-ledger.json',)
+        for width, field in ((390, 'quota'), (1440, 'rate')):
+            observed[f'user-override-draft.ui-user-{field}-at-{width}px-dark-chromium'] = dark_override_outputs
+            observed[f'user-override-draft.ui-abcde-{width}px-dark-chromium'] = dark_override_outputs
+        for filename in ('user-override-dark-private.json', 'user-override-dark-request-ledger.png',
+                         'user-override-dark-blank-input-private.png', 'user-override-dark-final-original.zip'):
+            self.assertFalse(retained(f'web/test-results/user-override-draft.ui-abcde-dark-chromium/{filename}'))
         for directory, filenames in observed.items():
             for filename in filenames:
                 path = f'web/test-results/{directory}/{filename}'
@@ -324,7 +335,7 @@ class UXRecoveryWorkflowTests(unittest.TestCase):
             self.assertFalse(retained(f'web/test-results/announcement-list-recovery.ui-chromium/{filename}'))
 
         # A named compact capture is not an upload permission for another fixture.
-        for filename in compact_outputs + multi_outputs + inventory_outputs + group_priority_outputs + reset_outputs + target_outputs + users_outputs + initial_resource_outputs + announcement_outputs + policy_outputs + rate_outputs + count_outputs + override_outputs + cycle_outputs:
+        for filename in compact_outputs + multi_outputs + inventory_outputs + group_priority_outputs + reset_outputs + target_outputs + users_outputs + initial_resource_outputs + announcement_outputs + policy_outputs + rate_outputs + count_outputs + override_outputs + cycle_outputs + dark_override_outputs:
             path = f'web/test-results/unrelated.ui-chromium/{filename}'
             with self.subTest(path=path):
                 self.assertFalse(retained(path), path)

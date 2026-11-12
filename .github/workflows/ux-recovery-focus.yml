@@ -102,6 +102,29 @@ jobs:
           # Only the synthetic report, browser receipt and named test captures.
           # No databases, fixture keys, automatic screenshots, video or traces.
           path: |
+            web/test-results/user-override-draft*/user-override-dark-blank-input.png
+            web/test-results/user-override-draft*/user-override-dark-blank-input.json
+            web/test-results/user-override-draft*/user-override-dark-visible-blocked.png
+            web/test-results/user-override-draft*/user-override-dark-visible-blocked.json
+            web/test-results/user-override-draft*/user-override-dark-collapsed-draft.png
+            web/test-results/user-override-draft*/user-override-dark-collapsed-draft.json
+            web/test-results/user-override-draft*/user-override-dark-collapsed-blocked.png
+            web/test-results/user-override-draft*/user-override-dark-collapsed-blocked.json
+            web/test-results/user-override-draft*/user-override-dark-discard-decision.png
+            web/test-results/user-override-draft*/user-override-dark-discard-decision.json
+            web/test-results/user-override-draft*/user-override-dark-continued-draft.png
+            web/test-results/user-override-draft*/user-override-dark-continued-draft.json
+            web/test-results/user-override-draft*/user-override-dark-corrected-remount.png
+            web/test-results/user-override-draft*/user-override-dark-corrected-remount.json
+            web/test-results/user-override-draft*/user-override-dark-correction-review.png
+            web/test-results/user-override-draft*/user-override-dark-correction-review.json
+            web/test-results/user-override-draft*/user-override-dark-inheritance-review.png
+            web/test-results/user-override-draft*/user-override-dark-inheritance-review.json
+            web/test-results/user-override-draft*/user-override-dark-fresh-reset.png
+            web/test-results/user-override-draft*/user-override-dark-fresh-reset.json
+            web/test-results/user-override-draft*/user-override-dark-final-original.png
+            web/test-results/user-override-draft*/user-override-dark-final-original.json
+            web/test-results/user-override-draft*/user-override-dark-request-ledger.json
             web/test-results/service-cycle-draft*/service-cycle-incomplete-input.png
             web/test-results/service-cycle-draft*/service-cycle-incomplete-input.json
             web/test-results/service-cycle-draft*/service-cycle-native-blocked.png

@@ -139,16 +139,26 @@ async function tabTo(page: Page, scope: Locator, target: Locator) {
   throw new Error("User-override task control was not reachable by ordinary keyboard traversal");
 }
 
+async function verifyTheme(page: Page, theme: "light" | "dark") {
+  await expect(page.locator("html")).toHaveClass(new RegExp(`(?:^|\\s)${theme}(?:\\s|$)`));
+  await expect(page.locator("html")).not.toHaveClass(new RegExp(`(?:^|\\s)${theme === "dark" ? "light" : "dark"}(?:\\s|$)`));
+  expect(await page.evaluate(() => localStorage.getItem("routeweaver-theme"))).toBe(theme);
+  await expect.poll(() => page.evaluate(() => getComputedStyle(document.documentElement).colorScheme)).toBe(theme);
+}
+
 async function capture(page: Page, info: TestInfo, stage: string, surface: Locator,
   target?: Locator, expectedRaw?: string, settle = true) {
   const failures: unknown[] = [];
+  const theme = info.title.endsWith(" dark") ? "dark" : "light";
+  const prefix = theme === "dark" ? "user-override-dark" : "user-override";
   let settlingFailed = false;
   try { if (settle) await settledTask(surface); }
   catch (error) { settlingFailed = true; failures.push(error); }
+  try { await verifyTheme(page, theme); } catch (error) { failures.push(error); }
   // Preserve original current-viewport pixels before any geometry assertion.
   // No script focus, forced scrolling, motion override or overlay removal.
   try {
-    const pixels = await page.screenshot({ path: info.outputPath(`user-override-${stage}.png`), fullPage: false, mask: [
+    const pixels = await page.screenshot({ path: info.outputPath(`${prefix}-${stage}.png`), fullPage: false, mask: [
       page.locator('input[type="password"], textarea, [autocomplete="current-password"], [autocomplete="new-password"], [aria-label*="密码"], [aria-label*="密钥"], [aria-label*="令牌"]'),
     ] });
     await info.attach(`${stage}-pixels`, { body: pixels, contentType: "image/png" });
@@ -187,8 +197,14 @@ async function capture(page: Page, info: TestInfo, stage: string, surface: Locat
         nativeCustomError: node instanceof HTMLInputElement ? node.validity.customError : null,
         inputMatches: expected !== undefined && node instanceof HTMLInputElement ? node.value === expected : null };
     }, expectedRaw) : null;
-    const body = JSON.stringify({ viewport, geometry, count, settlingFailed }, null, 2);
-    await writeFile(info.outputPath(`user-override-${stage}.json`), body);
+    const themeState = await page.evaluate(() => ({ stored: localStorage.getItem("routeweaver-theme"),
+      dark: document.documentElement.classList.contains("dark"), light: document.documentElement.classList.contains("light"),
+      colorScheme: getComputedStyle(document.documentElement).colorScheme,
+      backgroundToken: getComputedStyle(document.documentElement).getPropertyValue("--background").trim(),
+      foregroundToken: getComputedStyle(document.documentElement).getPropertyValue("--foreground").trim(),
+      bodyBackground: getComputedStyle(document.body).backgroundColor }));
+    const body = JSON.stringify({ theme, themeState, viewport, geometry, count, settlingFailed }, null, 2);
+    await writeFile(info.outputPath(`${prefix}-${stage}.json`), body);
     await info.attach(`${stage}-geometry`, { body, contentType: "application/json" });
     expect(viewport.scrollWidth, "Page has no horizontal overflow").toBeLessThanOrEqual(viewport.width + 1);
   } catch (error) { failures.push(error); }
@@ -196,9 +212,18 @@ async function capture(page: Page, info: TestInfo, stage: string, surface: Locat
   return geometry;
 }
 
-for (const width of [390, 1440]) for (const scenario of scenarios) {
-  test(`user override ${scenario.name} blank correction at ${width}px`, async ({ page, baseURL }, info) => {
+const journeys: { width: number; scenario: Scenario; theme: "light" | "dark" }[] = [
+  ...[390, 1440].flatMap(width => scenarios.map(scenario => ({ width, scenario, theme: "light" as const }))),
+  { width: 390, scenario: scenarios[0], theme: "dark" },
+  { width: 1440, scenario: scenarios[3], theme: "dark" },
+];
+for (const { width, scenario, theme } of journeys) {
+  test(`user override ${scenario.name} blank correction at ${width}px${theme === "dark" ? " dark" : ""}`, async ({ page, baseURL }, info) => {
     await page.setViewportSize({ width, height: width === 390 ? 560 : 900 });
+    // Real root ThemeProvider reads the persisted preference. A light OS
+    // preference proves dark comes from persistence, not a painted sampler.
+    await page.emulateMedia({ colorScheme: "light" });
+    await page.addInitScript(value => localStorage.setItem("routeweaver-theme", value), theme);
     const fixtureState = await fixture(page, baseURL, scenario), ledger = fixtureState.ledger, failures: unknown[] = [];
     await observeLimitMotion(page);
     const editor = page.getByRole("dialog", { name: `${user.name} 的服务授权`, exact: true });
@@ -223,7 +248,7 @@ for (const width of [390, 1440]) for (const scenario of scenarios) {
     const fieldFocus = { focused: true, focusVisible: true, inViewport: true, hit: true, inputMatches: true, ring3px: true, ringInsideClips: true };
     let readyReads: number | undefined, authBaseline: number | undefined;
     try {
-      await page.goto("/#users"); await openEditor();
+      await page.goto("/#users"); await verifyTheme(page, theme); await openEditor();
       readyReads = ledger.contextReads; authBaseline = ledger.authReads;
       await activate(limits); await expect(input).toHaveValue(scenario.saved); await expect(enabled).toBeChecked();
       await tabTo(page, editor, input); await page.keyboard.press("ControlOrMeta+A"); await page.keyboard.press("Backspace");
@@ -278,9 +303,9 @@ for (const width of [390, 1440]) for (const scenario of scenarios) {
       try { await capture(page, info, "final-original", page.locator("body"), undefined, undefined, false); } catch (error) { failures.push(error); }
       try {
         const motionTimeline = await page.evaluate(() => (window as unknown as { __userOverrideMotionObservations?: unknown[] }).__userOverrideMotionObservations ?? []);
-        const body = JSON.stringify({ width, scenario: scenario.name, readyReads, authBaseline, motionTimeline, ...ledger,
+        const body = JSON.stringify({ width, theme, scenario: scenario.name, readyReads, authBaseline, motionTimeline, ...ledger,
           scope: "Synthetic native user-override draft and preview only; no apply/backend enforcement" }, null, 2);
-        await writeFile(info.outputPath("user-override-request-ledger.json"), body);
+        await writeFile(info.outputPath(theme === "dark" ? "user-override-dark-request-ledger.json" : "user-override-request-ledger.json"), body);
         await info.attach("user-override-request-ledger", { body, contentType: "application/json" });
         expect(ledger.rejected).toEqual([]); expect(ledger.pageErrors).toBe(0);
       } catch (error) { failures.push(error); }
