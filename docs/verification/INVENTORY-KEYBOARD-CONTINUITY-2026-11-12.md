@@ -17,3 +17,7 @@ The whole-row-absence case is a supplementary changed-response control, not a cl
 ## Remaining verification
 
 These are DOM/HTTP-read-boundary results, not native keyboard, animation, viewport, screen-reader or pixel acceptance. Tests cover explicit hidden/inert/aria-hidden ancestors and target style hiding, not every CSS-hidden ancestor combination. Whole frontend regression and bounded mobile/desktop native evidence must be reported separately. No writes, real data, deployment or Go behavior is involved.
+
+## Complete local frontend result
+
+Both serialized frontend shards passed against production source `988ebfaa85524f503b94d4ceb038d1ceaa977d61`: 2,376 tests in 178 files (600.88 seconds) and 2,191 tests in 178 files (596.97 seconds), totaling 4,567 tests in 356 files. Each also passed typecheck and production build. Later native-only sampler/config changes did not alter those aggregate inputs. This completes local frontend regression, not native-browser, pixel, screen-reader or whole-repository acceptance.
