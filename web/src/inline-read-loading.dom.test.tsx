@@ -186,6 +186,13 @@ it("keeps user assignment offline, pending and failed without blocking dismissal
     name: "配置「Route」的用户入口",
   });
   await user.click(within(dialog).getByText("凭据与版本设置"));
+  const uuid = within(dialog).getByLabelText("已有 VLESS UUID（可选）");
+  expect(uuid).toHaveProperty("type", "password");
+  await user.click(within(dialog).getByRole("button", { name: "显示已有 VLESS UUID" }));
+  expect(uuid).toHaveProperty("type", "text");
+  expect(uuid).toHaveProperty("value", "");
+  await user.click(within(dialog).getByRole("button", { name: "隐藏已有 VLESS UUID" }));
+  expect(uuid).toHaveProperty("type", "password");
   const version = within(dialog).getByRole("textbox", { name: "凭据版本" });
   await user.clear(version);
   await user.type(version, "unsent-version");

@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/ui-patterns/password-input";
 import { ActionButton } from "@/ui-patterns/actions";
 import { ChoiceSelect } from "@/ui-patterns/choice-select";
 import { AppField, AppForm, useForm } from "@/ui-patterns/form";
@@ -1760,10 +1761,10 @@ function PrincipalEditor({
                         <Input />
                       </AppField>
                       <AppField name="uuid" label="已有 VLESS UUID（可选）">
-                        <Input
+                        <PasswordInput
                           placeholder="留空，由服务器生成"
                           autoComplete="off"
-                          type="password"
+                          revealLabel="已有 VLESS UUID"
                         />
                       </AppField>
                     </>

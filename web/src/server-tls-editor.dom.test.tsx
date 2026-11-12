@@ -177,6 +177,13 @@ it.each(["target-first", "key-first"])(
       await user.clear(within(drawer).getByLabelText("握手目标"));
       await setTarget();
     }
+    const keyInput = within(drawer).getByLabelText("REALITY 服务端私钥");
+    expect(keyInput).toHaveProperty("type", "password");
+    await user.click(within(drawer).getByRole("button", { name: /显示.*REALITY 服务端私钥/ }));
+    expect(keyInput).toHaveProperty("type", "text");
+    expect(keyInput).toHaveProperty("value", privateKey);
+    await user.click(within(drawer).getByRole("button", { name: /隐藏.*REALITY 服务端私钥/ }));
+    expect(keyInput).toHaveProperty("type", "password");
     expect(await save()).toEqual({
       reality: {
         privateKey,

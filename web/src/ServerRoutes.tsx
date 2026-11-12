@@ -23,6 +23,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/ui-patterns/password-input";
 import { Tabs, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { ActionButton } from "@/ui-patterns/actions";
@@ -669,6 +670,7 @@ export function ServerRouteEditor({
   const [pathLoading, setPathLoading] = useState(false);
   const [view, setView] = useState("ordered");
   const viewChangeNoteId = useId();
+  const realityKeyId = useId();
   const [error, setError] = useState<Error | null>(null);
   const [dirty, setDirty] = useState(isNew && programsIn(initial).length > 0);
   const [graphNodes, setGraphNodes, onGraphNodesChange] =
@@ -1420,18 +1422,21 @@ export function ServerRouteEditor({
                         )}
                         {p.listener.connection.tls?.reality && (
                           <div className="form-grid grid gap-4 sm:grid-cols-2 mt-4">
-                            <label>
-                              REALITY 服务端私钥
-                              <Input
+                            <div className="grid gap-2 text-sm">
+                              <label htmlFor={`${realityKeyId}-${p.listener.id}`}>REALITY 服务端私钥</label>
+                              <PasswordInput
+                                key={`${initial.id}-${p.listener.id}`}
+                                id={`${realityKeyId}-${p.listener.id}`}
+                                revealLabel={`${p.listener.name} 的 REALITY 服务端私钥`}
                                 value={p.tls?.reality?.privateKey}
                                 onChange={(e) =>
                                   updateReality(index, {
                                     privateKey: e.target.value,
                                   })
                                 }
-                                type="password"
+                                autoComplete="off"
                               />
-                            </label>
+                            </div>
                             <label>
                               握手目标
                               <Input
