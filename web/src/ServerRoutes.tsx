@@ -395,18 +395,20 @@ export function ServerRoutesPage({
       >
         {inventory && (
           <Section variant="plain">
-            <ResourceToolbar
-              label="查找转发路径"
-              search={
-                <SearchField
-                  placeholder="搜索转发路径"
-                  aria-label="搜索转发路径"
-                  value={search}
-                  onValueChange={setSearch}
-                  type="search"
-                />
-              }
-            />
+            {inventory.deployments.length > 0 && (
+              <ResourceToolbar
+                label="查找转发路径"
+                search={
+                  <SearchField
+                    placeholder="搜索转发路径"
+                    aria-label="搜索转发路径"
+                    value={search}
+                    onValueChange={setSearch}
+                    type="search"
+                  />
+                }
+              />
+            )}
             {inventory.deployments.length ? (
               <DataTable
                 rowKey="id"
@@ -494,14 +496,7 @@ export function ServerRoutesPage({
                 ]}
               />
             ) : (
-              <EmptyState
-                title="暂无服务器转发路径"
-                action={
-                  <ActionButton onClick={() => edit()} variant="default">
-                    新建转发路径
-                  </ActionButton>
-                }
-              />
+              <EmptyState title="暂无服务器转发路径" />
             )}
           </Section>
         )}

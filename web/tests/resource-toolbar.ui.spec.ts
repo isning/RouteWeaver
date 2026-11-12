@@ -211,22 +211,17 @@ for (const width of [320, 390, 900, 1440]) {
   }
 }
 
-test("an empty route inventory keeps its neutral state and search keyboard flow", async ({ page }) => {
+test("an empty route inventory keeps one create action without a search", async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 900 });
   const unexpected = await setup(page);
   await page.goto("/#routes");
   await expect(page.getByText("暂无服务器转发路径", { exact: true })).toBeVisible();
   await expect(page.getByRole("table")).toHaveCount(0);
-  const toolbar = page.getByRole("search", { name: "查找转发路径", exact: true });
-  const search = toolbar.getByLabel("搜索转发路径", { exact: true });
-  await search.fill("待查名称");
-  await search.press("Tab");
-  const clear = toolbar.getByRole("button", { name: "清除搜索输入", exact: true });
-  await expect(clear).toBeFocused();
-  await clear.press("Enter");
-  await expect(search).toBeFocused();
-  await expect(search).toHaveValue("");
-  await expect(page.getByText("暂无服务器转发路径", { exact: true })).toBeVisible();
+  await expect(page.getByRole("search", { name: "查找转发路径", exact: true })).toHaveCount(0);
+  const create = page.getByRole("button", { name: "新建转发路径", exact: true });
+  await expect(create).toHaveCount(1);
+  await expect(create).toBeEnabled();
+  await expect(create).toBeInViewport({ ratio: 1 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   expect(unexpected).toEqual([]);
 });

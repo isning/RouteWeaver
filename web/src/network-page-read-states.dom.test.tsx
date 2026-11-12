@@ -67,6 +67,10 @@ it.each([
   await userEvent.click(within(main).getByRole("button", { name: optionalRouteInventory ? "重试读取转发路径" : "重试" }));
   await within(main).findByText(empty);
   expect(within(main).queryByText(`${heading}列表暂不可用`)).toBeNull();
+  if (hash === "routes") {
+    expect(within(main).getAllByRole("button", { name: "新建转发路径" })).toHaveLength(1);
+    expect(within(main).queryByRole("search", { name: "查找转发路径" })).toBeNull();
+  }
   if (optionalRouteInventory) {
     const next = await within(main).findByRole("link", { name: "创建转发路径" });
     expect(next.getAttribute("aria-disabled")).toBeNull();

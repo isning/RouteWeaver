@@ -648,6 +648,8 @@ test("controlled empty inventories name the task and server registration does no
       .locator(".page-heading")
       .getByRole("button", { name: "新建转发路径", exact: true }),
   ).toBeVisible();
+  await expect(page.getByRole("button", { name: "新建转发路径", exact: true })).toHaveCount(1);
+  await expect(page.getByRole("search", { name: "查找转发路径", exact: true })).toHaveCount(0);
   await page.screenshot({
     path: testInfo.outputPath("route-empty-task-desktop.png"),
     animations: "disabled",
