@@ -42,6 +42,7 @@ type Props = {
     routes: NamedRecord[];
     onClose: () => void;
     returnFocus?: HTMLElement | null;
+    returnFocusFallback?: () => HTMLElement | null;
 };
 function newPlan(id: string): Service {
     return { id, name: "", quotaBytes: 100 * 1024 ** 3, routeIds: [], onlineIpLimit: 0, connectionLimit: 0, entryRateBps: 0,
@@ -99,7 +100,7 @@ function ServiceEditSession({ id, seed, retained: initialRetained, restartCreati
         return () => { current = false; controller.abort(); };
     }, [id, attempt]);
     if (!context)
-        return <TaskSheet returnFocus={props.returnFocus} title={props.initial ? `编辑 ${props.initial.name}` : "新建服务方案"} open onOpenChange={open => {
+        return <TaskSheet returnFocus={props.returnFocus} returnFocusFallback={props.returnFocusFallback} title={props.initial ? `编辑 ${props.initial.name}` : "新建服务方案"} open onOpenChange={open => {
                 if (!open)
                     (closeLoading)();
             }} size="lg" bodyProps={{ className: "space-y-6" }}>
@@ -278,7 +279,7 @@ function ServicePolicyDraft({ context, seed, retained, discardRetained, acceptLa
             }
         });
     };
-    return <TaskSheet returnFocus={props.returnFocus} title={context.precondition.exists ? `编辑 ${value.name}` : "新建服务方案"} open onOpenChange={open => {
+    return <TaskSheet returnFocus={props.returnFocus} returnFocusFallback={props.returnFocusFallback} title={context.precondition.exists ? `编辑 ${value.name}` : "新建服务方案"} open onOpenChange={open => {
             if (!open)
                 (policy.requestClose)();
         }} pending={!(!policy.closingBlocked)} size="lg" bodyProps={{ className: "space-y-6" }}>

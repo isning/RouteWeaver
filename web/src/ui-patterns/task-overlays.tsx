@@ -53,6 +53,8 @@ export interface TaskOverlayProps {
   initialFocus?: () => HTMLElement | null;
   /** Stable owner for a task whose loading/editing surfaces may be replaced. */
   returnFocus?: HTMLElement | null;
+  /** Scope-owned destination when the original opener is no longer available. */
+  returnFocusFallback?: () => HTMLElement | null;
   onReady?(): void;
   onClosed?(): void;
   onCloseAutoFocus?(event: FocusEvent): void;
@@ -90,6 +92,14 @@ function captureTaskReturnFocus() {
   return trigger ?? active;
 }
 
+function eligibleTaskReturnFocus(target: HTMLElement | null | undefined): target is HTMLElement {
+  if (!target?.isConnected ||
+    target.closest("[hidden],[inert],[aria-hidden='true']") ||
+    target.matches(":disabled,[aria-disabled='true']")) return false;
+  const style = getComputedStyle(target);
+  return style.display !== "none" && style.visibility !== "hidden";
+}
+
 /** Triggerless task dialogs capture an eligible opener; Radix owns the focus scope. */
 export function useTaskOverlayFocus(
   props: Pick<
@@ -97,6 +107,7 @@ export function useTaskOverlayFocus(
     | "open"
     | "initialFocus"
     | "returnFocus"
+    | "returnFocusFallback"
     | "onReady"
     | "onClosed"
     | "onCloseAutoFocus"
@@ -137,13 +148,20 @@ export function useTaskOverlayFocus(
     // No DialogTrigger is rendered by this task composition. Do not let the
     // primitive attempt to focus an absent trigger; honor an explicit owner.
     event.preventDefault();
-    const target = opener.current;
+    const captured = opener.current;
     const closingScope =
       event.target instanceof HTMLElement ? event.target : null;
     // hideOthers and the closing FocusScope release in this commit. Evaluate
     // eligibility afterwards, without stealing focus from a newer task.
     queueMicrotask(() => {
-      if (opener.current !== target) return;
+      if (opener.current !== captured) return;
+      // A reconciled inventory can remove the original row. Only an explicit
+      // owner may supply an alternative, and never for a reopened task.
+      const target = eligibleTaskReturnFocus(captured)
+        ? captured
+        : !claimed && (!mounted.current || !latest.current.open)
+          ? latest.current.returnFocusFallback?.()
+          : null;
       if (
         !claimed &&
         target?.isConnected &&
@@ -181,7 +199,7 @@ export function useTaskOverlayFocus(
               // Conditional task owners unmount with their last open prop true.
               // A still-mounted task that reopened must not recover old focus.
               (!mounted.current || !latest.current.open) &&
-              opener.current === target &&
+              opener.current === captured &&
               target.isConnected &&
               document.activeElement === target
             ) {

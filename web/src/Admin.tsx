@@ -176,6 +176,7 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
   const client = useQueryClient();
   const message = toast;
   const [search, setSearch] = useState("");
+  const inventorySearch = useRef<HTMLInputElement>(null);
   const [route, setRoute] = useState<RouteRecord | null>(null);
   const [routeNew, setRouteNew] = useState(false);
   const [entity, setEntity] = useState<{
@@ -288,11 +289,15 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
             kind: page as "nodes" | "users",
             value: null,
           });
+  const clearSearch = () => {
+    setSearch("");
+    inventorySearch.current?.focus();
+  };
   const searchEmpty = search ? (
     <EmptyState
       title={`没有匹配的${meta.title}`}
       action={
-        <ActionButton onClick={() => setSearch("")} variant="outline">
+        <ActionButton onClick={clearSearch} variant="outline">
           清除搜索
         </ActionButton>
       }
@@ -302,7 +307,6 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
   const usersInventoryKnown = page === "users" && data !== undefined;
   const servicesInventoryKnown = page === "services" && data !== undefined;
   const usersInventoryReady = query.isSuccess && query.fetchStatus === "idle";
-  const usersSearch = useRef<HTMLInputElement>(null);
   const restoreUsersSearch = useRef(false);
   const usersRetryRef = useCallback((button: HTMLButtonElement | null) => {
     if (!button) return;
@@ -313,7 +317,7 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
   useLayoutEffect(() => {
     const restore = restoreUsersSearch.current;
     restoreUsersSearch.current = false;
-    const search = usersSearch.current;
+    const search = inventorySearch.current;
     if (restore && page === "users" && usersInventoryReady && search?.isConnected &&
       search.ownerDocument.activeElement === search.ownerDocument.body &&
       !search.closest('[inert], [hidden], [aria-hidden="true"]')) search.focus();
@@ -458,7 +462,7 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
                   )}
                   search={
                     <SearchField
-                      ref={page === "users" ? usersSearch : undefined}
+                      ref={inventorySearch}
                       placeholder={`搜索${meta.title}`}
                       value={search}
                       onValueChange={setSearch}
@@ -767,7 +771,7 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
                             title="没有匹配的用户"
                             action={
                               <ActionButton
-                                onClick={() => setSearch("")}
+                                onClick={clearSearch}
                                 variant="outline"
                               >
                                 清除搜索
@@ -985,6 +989,7 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
           services={data.services || []}
           routes={data.publishedRoutes || []}
           onClose={() => setServiceEditor(null)}
+          returnFocusFallback={() => page === "services" ? inventorySearch.current : null}
         />
       )}
       {entitlementUser && (
