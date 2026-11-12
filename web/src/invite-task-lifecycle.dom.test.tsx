@@ -90,6 +90,9 @@ it("keeps one pending invite bound to its recipient and starts the next invitati
   fireEvent.submit(dialog.querySelector("form")!);
   await act(async () => {});
   expect(state.requests).toHaveLength(1);
+  const generate = within(dialog).getByRole("button", { name: "生成邀请" });
+  generate.focus();
+  expect(document.activeElement).toBe(generate);
   await act(async () =>
     state.responses[0](
       json({
@@ -100,6 +103,9 @@ it("keeps one pending invite bound to its recipient and starts the next invitati
   );
   const link = await screen.findByLabelText("邀请链接") as HTMLInputElement;
   expect(link.value === `${location.origin}/?invite=${"t".repeat(43)}`).toBe(true);
+  expect(document.activeElement).toBe(link);
+  expect(link.selectionStart).toBe(0);
+  expect(link.selectionEnd).toBe(link.value.length);
   // This AdminPage seam owns the actual client used by InviteUser. The outer
   // client in App-based tests is not the private workspace's mutation cache.
   await waitFor(() => expect(state.client.getMutationCache().getAll().map((entry) => ({
@@ -115,6 +121,16 @@ it("keeps one pending invite bound to its recipient and starts the next invitati
   expect(
     (within(next).getByLabelText("受邀人名称") as HTMLInputElement).value,
   ).toBe("");
+  fireEvent.change(within(next).getByLabelText("受邀人名称"), { target: { value: "Bob" } });
+  await user.click(within(next).getByRole("button", { name: "生成邀请" }));
+  await waitFor(() => expect(state.requests).toHaveLength(2));
+  next.focus();
+  await act(async () => state.responses[1](json({
+    id: "j".repeat(43), token: "u".repeat(43), name: "Bob", role: "user",
+    expiresAt: "2026-11-01T00:00:00Z",
+  }, 201)));
+  await within(next).findByLabelText("邀请链接");
+  expect(document.activeElement).toBe(next);
 });
 
 it("retains a rejected invitation draft and requires explicit discard before clearing it", async () => {

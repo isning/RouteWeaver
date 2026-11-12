@@ -2374,6 +2374,25 @@ function InviteUser({ open, onClose }: { open: boolean; onClose: () => void }) {
   }, [open]);
   const { confirm, confirming } = useDiscardConfirmation("invite");
   const [result, setResult] = useState<InvitationReceipt | null>(null);
+  const generateButton = useRef<HTMLButtonElement>(null);
+  const invitationLink = useRef<HTMLInputElement>(null);
+  const focusReceipt = useRef<InvitationReceipt | null>(null);
+  useLayoutEffect(() => {
+    const cancelFocusHandoff = (event: FocusEvent) => {
+      if (event.target !== generateButton.current) focusReceipt.current = null;
+    };
+    document.addEventListener("focusin", cancelFocusHandoff);
+    return () => {
+      focusReceipt.current = null;
+      document.removeEventListener("focusin", cancelFocusHandoff);
+    };
+  }, []);
+  useLayoutEffect(() => {
+    const requested = focusReceipt.current;
+    focusReceipt.current = null;
+    if (active.current && result && requested === result)
+      invitationLink.current?.focus();
+  }, [result]);
   const mutation = useMutation({
     gcTime: 0,
     mutationFn: async (values: {
@@ -2389,7 +2408,11 @@ function InviteUser({ open, onClose }: { open: boolean; onClose: () => void }) {
       if (values.expiresInHours !== "" && expiry === undefined)
         throw new Error("有效时长为 1–168 整数小时");
       const receipt = await createInvitation({ ...values, expiresInHours: expiry });
-      if (active.current) setResult(receipt);
+      if (active.current) {
+        // Hand off only the still-focused submitter, never a user's newer focus.
+        focusReceipt.current = document.activeElement === generateButton.current ? receipt : null;
+        setResult(receipt);
+      }
       // The shared mutation cache must not retain the invitation secret.
     },
     onError: (error) => {
@@ -2457,6 +2480,7 @@ function InviteUser({ open, onClose }: { open: boolean; onClose: () => void }) {
           <label className="standalone-label grid gap-2 text-sm font-medium">
             邀请链接
             <Input
+              ref={invitationLink}
               readOnly
               value={`${location.origin}/?invite=${encodeURIComponent(result.token)}`}
               onFocus={(e) => e.target.select()}
@@ -2567,6 +2591,8 @@ function InviteUser({ open, onClose }: { open: boolean; onClose: () => void }) {
               <ActionButton
                 type="submit"
                 pending={mutation.isPending}
+                keepFocusableWhilePending
+                ref={generateButton}
                 variant="default"
               >
                 生成邀请
