@@ -135,7 +135,6 @@ async function create() {
 }
 const usernameError =
   "账号须为 3–128 位，以英文字母或数字开头，仅使用英文字母、数字和 _ . @ + -。";
-const passwordError = "密码须为 12–72 个 UTF-8 字节（中文通常每字 3 字节）。";
 
 it("explains requirements at the fields and preserves an invalid invitation until explicitly corrected", async () => {
   const flow = mount(async () => {
@@ -219,13 +218,13 @@ it.each([
 );
 
 it.each([
-  ["short ASCII", "a".repeat(11)],
-  ["overlong ASCII", "a".repeat(73)],
-  ["short multibyte", "界界界"],
-  ["overlong multibyte", "界".repeat(24) + "a"],
+  ["short ASCII", "a".repeat(11), "密码太短：当前 11 字节，至少需要 12 字节。"],
+  ["overlong ASCII", "a".repeat(73), "密码太长：当前 73 字节，最多允许 72 字节。"],
+  ["short multibyte", "界界界", "密码太短：当前 9 字节，至少需要 12 字节。"],
+  ["overlong multibyte", "界".repeat(24) + "a", "密码太长：当前 73 字节，最多允许 72 字节。"],
 ])(
   "rejects %s password without consuming the invitation or retrying",
-  async (_name, password) => {
+  async (_name, password, passwordError) => {
     const { writes } = mount(async () => json({ error: "must not send" }, 400));
     await fill("invited.user", password);
     await create();
@@ -299,7 +298,7 @@ it("does not impose creation rules on ordinary login or administrator tokens", a
         .getAttribute("aria-busy"),
     ).not.toBe("true"),
   );
-  expect(screen.queryByText(passwordError)).toBeNull();
+  expect(screen.queryByText(/密码太短：|密码太长：/)).toBeNull();
   expect(writes).toHaveLength(1);
   expect(
     vi

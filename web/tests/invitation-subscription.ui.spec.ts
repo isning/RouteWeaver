@@ -155,7 +155,7 @@ for (const width of [1440, 390]) {
       ).toBeVisible();
       await expect(
         recipient.getByText(
-          "密码须为 12–72 个 UTF-8 字节（中文通常每字 3 字节）。",
+          "密码太短：当前 5 字节，至少需要 12 字节。",
           { exact: true },
         ),
       ).toBeVisible();

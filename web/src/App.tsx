@@ -1023,7 +1023,9 @@ const invitePasswordRule = {
     return bytes >= 12 && bytes <= 72
       ? Promise.resolve()
       : Promise.reject(
-          new Error("密码须为 12–72 个 UTF-8 字节（中文通常每字 3 字节）。"),
+          new Error(bytes < 12
+            ? `密码太短：当前 ${bytes} 字节，至少需要 12 字节。`
+            : `密码太长：当前 ${bytes} 字节，最多允许 72 字节。`),
         );
   },
 };
