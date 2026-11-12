@@ -79,6 +79,15 @@ it("retains known rules after a refresh read fails, then reconciles before using
   expect(actions().getByRole("button", { name: "替换文件" })).toHaveProperty("disabled", true);
   act(() => onlineManager.setOnline(true));
   await screen.findByText("正在核对规则资源…");
+  const retry = screen.getByRole("button", { name: "重试规则资源" });
+  expect(retry).toHaveProperty("disabled", false);
+  expect(retry.getAttribute("aria-busy")).toBe("true");
+  expect(retry.getAttribute("aria-disabled")).toBe("true");
+  const pendingReads = vi.mocked(fetch).mock.calls.length;
+  retry.focus();
+  await userEvent.keyboard("{Enter} ");
+  expect(document.activeElement).toBe(retry);
+  expect(vi.mocked(fetch).mock.calls.length).toBe(pendingReads);
   expect(actions().getByRole("button", { name: "替换文件" })).toHaveProperty("disabled", true);
   rows = [{ ...resource, revisionToken: "revision-2" }];
   failed = false; held = undefined;

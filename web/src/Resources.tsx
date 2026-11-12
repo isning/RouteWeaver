@@ -377,7 +377,8 @@ export function ResourcesPage() {
       <ErrorNotice error={refreshDecisionOpen ? null : refresh.error} />
       {inventoryKnown && query.isError && (
         <Notice tone="error" title="暂时无法核对规则资源" action={
-          <ActionButton onClick={() => query.refetch()} disabled={query.isFetching} variant="outline">重试规则资源</ActionButton>
+          <ActionButton onClick={() => void query.refetch({ cancelRefetch: false })}
+            pending={query.isFetching} keepFocusableWhilePending variant="outline">重试规则资源</ActionButton>
         }>
           <p>{query.error.message}</p>
           <p>显示上次读取的规则资源，请重试以核对最新状态。</p>

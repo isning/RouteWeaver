@@ -219,6 +219,11 @@ for (const width of [390, 1440]) for (const scenario of ["resource", "source-cha
         await tabTo(page, retry);
         const geometry = await capture(page, info, "resource-retry-keyboard", main, [{ label: "retry", locator: retry }]);
         expect(geometry[0].bounds).toMatchObject({ focused: true, focusVisible: true, inViewport: true, hit: true });
+        // The retry remains in the keyboard path while a native tab-return
+        // session check refreshes inventory. Wait here, without moving focus or
+        // sending another command, until that existing read has settled.
+        await expect(retry).toBeEnabled();
+        await expect(retry).toBeFocused();
         http.authorizeRetry(); await page.keyboard.press("Enter");
         const empty = page.getByText("暂无规则资源", { exact: true });
         await expect(empty).toBeVisible(); await expect(known).toHaveCount(0); await expect(other).toHaveCount(0);
