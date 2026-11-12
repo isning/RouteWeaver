@@ -42,7 +42,7 @@ function mountRead(hash: string, endpoint: string, result: unknown, role = "admi
 
 it.each([
   { hash: "account-security", endpoint: "/api/admin/accounts", section: "账号恢复与退役", empty: "没有账号记录。", result: [{ id: "recovered", name: "Recovered account", username: "recovered", role: "user", disabled: false, retired: false }], visible: "Recovered account", tab: "" },
-  { hash: "activity", endpoint: "/api/audit", section: "操作审计", empty: "暂无管理操作记录", result: [{ id: "audit-1", actorId: "admin", action: "invite.created", targetId: "invite-recovered", at: "2026-11-01T10:00:00Z" }], visible: "invite-recovered", tab: "" },
+  { hash: "activity", endpoint: "/api/audit", section: "操作审计", empty: "暂无管理操作记录", result: [{ id: "audit-1", actorId: "admin", action: "fleet.stop.queued", targetId: "batch/core", at: "2026-11-01T10:00:00Z" }], visible: "batch/core", tab: "" },
   { hash: "notifications", endpoint: "/api/admin/notifications/outbox", section: "通知发送记录", empty: "暂无发送记录", result: [{ eventId: "delivery-1", title: "Recovered delivery", channel: "email", status: "failed", attempts: 1, lastError: "SMTP unavailable", createdAt: "2026-11-01T10:00:00Z" }], visible: "Recovered delivery", tab: "发送记录" },
 ])("recovers the $section secondary list without presenting pending or failed reads as empty", async ({ hash, endpoint, section, empty, result, visible, tab }) => {
   const task = mountRead(hash, endpoint, result);
@@ -60,6 +60,13 @@ it.each([
   await userEvent.click(region.getByRole("button", { name: "重试" }));
   await region.findByText(visible);
   expect(region.queryByText("所选列表暂不可用")).toBeNull();
+  if (section === "操作审计") {
+    expect(region.getByText("提交核心停止")).toBeTruthy();
+    const row = region.getByText(visible).closest("tr")!;
+    await userEvent.click(within(row).getByRole("button", { name: "展开详情" }));
+    expect(region.getByText("操作代码：fleet.stop.queued")).toBeTruthy();
+    expect(region.getByText("操作者账号：admin")).toBeTruthy();
+  }
   expect(task.state.reads).toBe(2); expect(task.state.unexpected).toEqual([]);
 });
 

@@ -2970,6 +2970,17 @@ function AuditLog() {
     "inventory.saved": "修改服务器资源",
     "deployment.queued": "提交线路更新",
     "entry.granted": "分配用户入口",
+    "access-policy.applied": "更新服务授权",
+    "published-route.saved": "保存公开线路",
+    "published-route.exit-draft-saved": "保存线路出口草稿",
+    "published-principal.saved": "保存用户入口",
+    "fleet.configure.queued": "提交配置应用",
+    "fleet.start.queued": "提交核心启动",
+    "fleet.stop.queued": "提交核心停止",
+    "fleet.rollback.queued": "提交配置回滚",
+    "fleet.install.queued": "提交核心版本准备",
+    "fleet.upgrade.queued": "提交核心升级",
+    "service.recovery.queued": "提交持续服务恢复",
   };
   return (
     <Section title="操作审计" variant="plain">
@@ -2992,6 +3003,7 @@ function AuditLog() {
           ]}
           expandedRow={(value) => (
             <p className="text-sm leading-relaxed text-muted-foreground [overflow-wrap:anywhere]">
+              <span className="block">操作代码：{value.action}</span>{" "}
               <span className="block">操作者账号：{value.actorId}</span>{" "}
               <span className="block">审计标识：{value.id}</span>
             </p>
