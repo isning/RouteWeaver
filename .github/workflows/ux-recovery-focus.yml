@@ -21,7 +21,7 @@ env:
 
 jobs:
   recovery:
-    name: Twenty-seven recovery specs (supplemental evidence only)
+    name: Twenty-eight recovery specs (supplemental evidence only)
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
@@ -81,7 +81,7 @@ jobs:
             await browser.close();
           }
           JS
-      - name: Run twenty-seven recovery specs with unchanged fixtures
+      - name: Run twenty-eight recovery specs with unchanged fixtures
         working-directory: web
         # Bound this subset without changing per-test timeouts; reserve cleanup/upload time.
         timeout-minutes: 10
@@ -94,6 +94,27 @@ jobs:
           # Only the synthetic report, browser receipt and named test captures.
           # No databases, fixture keys, automatic screenshots, video or traces.
           path: |
+            web/test-results/service-cycle-draft*/service-cycle-incomplete-input.png
+            web/test-results/service-cycle-draft*/service-cycle-incomplete-input.json
+            web/test-results/service-cycle-draft*/service-cycle-native-blocked.png
+            web/test-results/service-cycle-draft*/service-cycle-native-blocked.json
+            web/test-results/service-cycle-draft*/service-cycle-discard-decision.png
+            web/test-results/service-cycle-draft*/service-cycle-discard-decision.json
+            web/test-results/service-cycle-draft*/service-cycle-continued-draft.png
+            web/test-results/service-cycle-draft*/service-cycle-continued-draft.json
+            web/test-results/service-cycle-draft*/service-cycle-fraction-input.png
+            web/test-results/service-cycle-draft*/service-cycle-fraction-input.json
+            web/test-results/service-cycle-draft*/service-cycle-fraction-blocked.png
+            web/test-results/service-cycle-draft*/service-cycle-fraction-blocked.json
+            web/test-results/service-cycle-draft*/service-cycle-corrected-input.png
+            web/test-results/service-cycle-draft*/service-cycle-corrected-input.json
+            web/test-results/service-cycle-draft*/service-cycle-preview-review.png
+            web/test-results/service-cycle-draft*/service-cycle-preview-review.json
+            web/test-results/service-cycle-draft*/service-cycle-fresh-reset.png
+            web/test-results/service-cycle-draft*/service-cycle-fresh-reset.json
+            web/test-results/service-cycle-draft*/service-cycle-final-original.png
+            web/test-results/service-cycle-draft*/service-cycle-final-original.json
+            web/test-results/service-cycle-draft*/service-cycle-request-ledger.json
             web/test-results/user-override-draft*/user-override-blank-input.png
             web/test-results/user-override-draft*/user-override-blank-input.json
             web/test-results/user-override-draft*/user-override-visible-blocked.png
