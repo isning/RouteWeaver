@@ -158,6 +158,17 @@ async function completeInputs(dialog: HTMLElement, kind: "file" | "reference") {
     );
   }
 }
+it("closes an untouched public reference immediately after opening without a false discard prompt", async () => {
+  const state = mount();
+  await screen.findByText("暂无规则资源");
+  const opener = screen.getByRole("button", { name: "添加公开引用" });
+  fireEvent.click(opener);
+  const dialog = screen.getByRole("dialog", { name: "添加公开规则引用" });
+  fireEvent.keyDown(dialog, { key: "Escape", code: "Escape" });
+  await waitFor(() => expect(screen.queryByRole("dialog", { name: "添加公开规则引用", hidden: true })).toBeNull());
+  expect(screen.queryByRole("alertdialog")).toBeNull();
+  expect(state.writes).toHaveLength(0);
+});
 it.each(["file", "reference"] as const)(
   "keeps %s edits on Escape until explicit discard",
   async (kind) => {

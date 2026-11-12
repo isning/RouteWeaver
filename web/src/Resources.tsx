@@ -186,7 +186,8 @@ export function ResourcesPage() {
     onSuccess: () => message.success("已重新读取并接纳规则文件"),
   });
   const [form] = useForm<ResourceDraft>();
-  const values = useWatch([], { form, preserve: true });
+  // Subscribe for rendering; watcher notifications may trail the live store.
+  useWatch([], { form, preserve: true });
   const [baseline, setBaseline] = useState("");
   const [editorIdentity, setEditorIdentity] = useState("closed");
   const editorTask = useRef<object | null>(null);
@@ -205,8 +206,9 @@ export function ResourcesPage() {
       inspectionRequest.current = null;
     };
   }, []);
-  const changed =
-    open && baseline !== "" && draftSnapshot(values || {}) !== baseline;
+  const hasChanges = () =>
+    open && baseline !== "" && draftSnapshot(form.getFieldsValue(true)) !== baseline;
+  const changed = hasChanges();
   const { confirm, confirming } = useDiscardConfirmation(editorIdentity);
   const [inspection, setInspection] = useState<Inspection | null>(null);
   const inspectionRequest = useRef<AbortController | null>(null);
@@ -343,7 +345,7 @@ export function ResourcesPage() {
       setBaseline("");
       setEditorIdentity("closed");
     };
-    if (!changed) return finish();
+    if (!hasChanges()) return finish();
     confirm(
       {
         title: "放弃未保存的规则资源修改？",

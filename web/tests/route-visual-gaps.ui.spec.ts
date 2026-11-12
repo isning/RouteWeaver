@@ -1370,6 +1370,7 @@ for (const width of [320, 390, 768, 1440, 1920, 2048, 3440]) {
           await expect(page.getByRole("dialog", { name: title, exact: true })).toBeVisible();
           await page.keyboard.press("Escape");
           await expect(page.getByRole("dialog", { name: title, exact: true })).toHaveCount(0);
+          await expect(page.getByRole("alertdialog")).toHaveCount(0);
           await expect(action).toBeFocused();
         }
       }
