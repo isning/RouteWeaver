@@ -26,3 +26,11 @@ server-response reachability.
 This change does not alter backend validation, request intent, saved policy,
 permissions or deployment. New native execution and corrected original-pixel
 acceptance remain necessary; prior screenshots describe the old fixture.
+
+## Exact-head native and original-pixel follow-up
+
+At review head `75c695e223cfda2ff0f10936e6b45ae1734a7abf`, all eight light journeys and the pure serializer contract passed in supplemental run [43133876607](https://github.com/isning/RouteWeaver/actions/runs/43133876607). Artifact `13905744729` has SHA-256 `da051c439e1d7e5496f25e882fe2858087d32f5cae33b6c30db716e25afbe443`.
+
+An independent reviewer inspected all 16 original correction/inheritance PNGs: quota, IP, connections and rate at 390×560 and 1440×900. Each personal-settings table contains only the intended changed row. The target, saved values (50 GiB, 17, 9 and 1 Mbps), corrected three-unit values and explicit inheritance remain readable without horizontal clipping. Irrelevant empty service/route rows are absent.
+
+This is fixture-response fidelity acceptance, not a production comparison change. On mobile the affected-user details lie below the captured initial fold, so this review does not establish their readability. Desktop affected-user provenance captions still say “未单独设置” beside personal overrides because the sampler supplies an empty provenance map; this remaining fixture limitation is not evidence of a production provenance defect. Privacy masks cover some lower regions, not the reviewed change row. Native request-ledger assertions, rather than pixels, establish outgoing command ownership and exact values.
