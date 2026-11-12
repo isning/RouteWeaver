@@ -21,7 +21,7 @@ env:
 
 jobs:
   recovery:
-    name: Recovery shard ${{ matrix.shard }}/2 (28 specs total, supplemental only)
+    name: Recovery shard ${{ matrix.shard }}/2 (29 specs total, supplemental only)
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     strategy:
@@ -89,7 +89,7 @@ jobs:
             await browser.close();
           }
           JS
-      - name: Run twenty-eight recovery specs with unchanged fixtures
+      - name: Run twenty-nine recovery specs with unchanged fixtures
         working-directory: web
         # Bound this subset without changing per-test timeouts; reserve cleanup/upload time.
         timeout-minutes: 10
@@ -102,6 +102,25 @@ jobs:
           # Only the synthetic report, browser receipt and named test captures.
           # No databases, fixture keys, automatic screenshots, video or traces.
           path: |
+            web/test-results/user-creation-recovery*/user-creation-uncertain.png
+            web/test-results/user-creation-recovery*/user-creation-uncertain.json
+            web/test-results/user-creation-recovery*/user-creation-checking.png
+            web/test-results/user-creation-recovery*/user-creation-checking.json
+            web/test-results/user-creation-recovery*/user-creation-close-decision.png
+            web/test-results/user-creation-recovery*/user-creation-close-decision.json
+            web/test-results/user-creation-recovery*/user-creation-late-close-result.png
+            web/test-results/user-creation-recovery*/user-creation-late-close-result.json
+            web/test-results/user-creation-recovery*/user-creation-route-decision.png
+            web/test-results/user-creation-recovery*/user-creation-route-decision.json
+            web/test-results/user-creation-recovery*/user-creation-late-route-result.png
+            web/test-results/user-creation-recovery*/user-creation-late-route-result.json
+            web/test-results/user-creation-recovery*/user-creation-absent.png
+            web/test-results/user-creation-recovery*/user-creation-absent.json
+            web/test-results/user-creation-recovery*/user-creation-confirmed-list.png
+            web/test-results/user-creation-recovery*/user-creation-confirmed-list.json
+            web/test-results/user-creation-recovery*/user-creation-final-original.png
+            web/test-results/user-creation-recovery*/user-creation-final-original.json
+            web/test-results/user-creation-recovery*/user-creation-request-ledger.json
             web/test-results/user-override-draft*/user-override-dark-blank-input.png
             web/test-results/user-override-draft*/user-override-dark-blank-input.json
             web/test-results/user-override-draft*/user-override-dark-visible-blocked.png
