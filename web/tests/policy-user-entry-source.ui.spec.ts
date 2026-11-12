@@ -115,12 +115,12 @@ for (const width of [1440, 390]) {
     await expect(row).toBeVisible();
     await capture(page, info, entries, "source-entry-management");
     await row.getByRole("button", { name: "轮换凭据", exact: true }).click();
-    let rotation = page.getByRole("alertdialog", { name: "轮换此用户的入口凭据？", exact: true });
+    let rotation = page.getByRole("alertdialog", { name: `轮换「${summaries[0].name}」的入口凭据？`, exact: true });
     await rotation.getByRole("button", { name: "取消", exact: true }).click();
     await expect(page.locator('[role="alertdialog"]')).toHaveCount(0);
     expect(mutations).toEqual([]);
     await row.getByRole("button", { name: "轮换凭据", exact: true }).click();
-    rotation = page.getByRole("alertdialog", { name: "轮换此用户的入口凭据？", exact: true });
+    rotation = page.getByRole("alertdialog", { name: `轮换「${summaries[0].name}」的入口凭据？`, exact: true });
     const rotated = page.waitForResponse(response => response.url().endsWith(`/api/published-routes/${id}/principals`) && response.request().method() === "POST");
     await rotation.getByRole("button", { name: "准备新凭据", exact: true }).click();
     expect((await rotated).status()).toBe(201);
