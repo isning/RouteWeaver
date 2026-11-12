@@ -111,7 +111,10 @@ export function useTaskOverlayFocus(
     | "onReady"
     | "onClosed"
     | "onCloseAutoFocus"
-  >,
+  > & {
+    /** Completed action's destination. Null declines restoration, not a fallback. */
+    returnFocusDestination?: () => HTMLElement | null;
+  },
 ) {
   const opener = useRef<HTMLElement | null>(null);
   const previouslyOpen = useRef(false);
@@ -157,11 +160,19 @@ export function useTaskOverlayFocus(
       if (opener.current !== captured) return;
       // A reconciled inventory can remove the original row. Only an explicit
       // owner may supply an alternative, and never for a reopened task.
-      const target = eligibleTaskReturnFocus(captured)
-        ? captured
-        : !claimed && (!mounted.current || !latest.current.open)
-          ? latest.current.returnFocusFallback?.()
-          : null;
+      const destination = latest.current.returnFocusDestination;
+      const released = !mounted.current || !latest.current.open;
+      // An explicit completed-action destination supersedes the old opener,
+      // even when it declines or is unavailable. Never revive a deleted row.
+      const target = destination
+        ? !claimed && released
+          ? destination()
+          : null
+        : eligibleTaskReturnFocus(captured)
+          ? captured
+          : !claimed && released
+            ? latest.current.returnFocusFallback?.()
+            : null;
       if (
         !claimed &&
         target?.isConnected &&

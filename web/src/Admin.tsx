@@ -177,6 +177,21 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
   const message = toast;
   const [search, setSearch] = useState("");
   const inventorySearch = useRef<HTMLInputElement>(null);
+  // Each mounted page visit owns its completed-action destination, including
+  // when navigation leaves and returns before an older deletion finishes.
+  const removalOwner = useRef<object | null>(null);
+  useLayoutEffect(() => {
+    const owner = {};
+    removalOwner.current = owner;
+    return () => {
+      if (removalOwner.current === owner) removalOwner.current = null;
+    };
+  }, [page]);
+  const completedRemovalDestination = () => {
+    const owner = removalOwner.current;
+    return () =>
+      owner && removalOwner.current === owner ? inventorySearch.current : null;
+  };
   const [route, setRoute] = useState<RouteRecord | null>(null);
   const [routeNew, setRouteNew] = useState(false);
   const [entity, setEntity] = useState<{
@@ -565,6 +580,8 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
                                         confirmLabel: "删除",
                                         cancelLabel: "保留",
                                         destructive: true,
+                                        returnFocusOnSuccess:
+                                          completedRemovalDestination(),
                                         onConfirm: () =>
                                           remove.mutateAsync({
                                             kind: "routes",
@@ -669,6 +686,8 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
                                         confirmLabel: "删除",
                                         cancelLabel: "保留",
                                         destructive: true,
+                                        returnFocusOnSuccess:
+                                          completedRemovalDestination(),
                                         onConfirm: () =>
                                           remove.mutateAsync({
                                             kind: "nodes",

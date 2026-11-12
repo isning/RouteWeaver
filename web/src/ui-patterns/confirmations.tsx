@@ -33,6 +33,8 @@ export interface ConfirmationOptions {
   /** Runs after the scope has released and restored focus. */
   onClosed?(): void;
   restoreFocus?: boolean;
+  /** Success-only owner destination; null declines restoring the old opener. */
+  returnFocusOnSuccess?: () => HTMLElement | null;
   className?: string;
   contentProps?: Omit<
     ComponentProps<typeof AlertDialogContent>,
@@ -109,6 +111,7 @@ function DecisionDialog({
   const cancel = useRef<HTMLButtonElement>(null);
   const running = useRef(false);
   const completed = useRef(false);
+  const succeeded = useRef(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string>();
   const latest = useRef({ open, close });
@@ -116,6 +119,9 @@ function DecisionDialog({
   const focusEvents = useTaskOverlayFocus({
     open,
     initialFocus: () => cancel.current,
+    returnFocusDestination: succeeded.current
+      ? options.returnFocusOnSuccess
+      : undefined,
     onCloseAutoFocus: (event) => {
       if (options.restoreFocus === false) event.preventDefault();
     },
@@ -138,7 +144,10 @@ function DecisionDialog({
     setError(undefined);
     try {
       await options.onConfirm?.();
-      if (latest.current.open) latest.current.close();
+      if (latest.current.open) {
+        succeeded.current = true;
+        latest.current.close();
+      }
     } catch (cause) {
       if (latest.current.open)
         setError(
