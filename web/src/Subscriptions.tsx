@@ -1629,28 +1629,6 @@ export function SubscriptionsPage({
                 : "尚未发布"}
             </p>
           </div>
-          <section
-            aria-label="已发布分流"
-            className="subscription-frozen-detail space-y-4 border-t pt-5 [&>h3]:font-semibold"
-          >
-            <h3>已发布分流</h3>
-            <RoutingSummaryView
-              summary={detailOutput.routingSummary}
-              intent={
-                !outputStatus.isError &&
-                outputStatus.data?.id === detailOutput.id
-                  ? outputStatus.data.routingIntent
-                  : undefined
-              }
-            />
-            {!outputStatus.isError &&
-              outputStatus.data?.id === detailOutput.id &&
-              !outputStatus.data.routingIntent &&
-              (detailOutput.routingSummary?.kind === "basic" ||
-                detailOutput.routingSummary?.kind === "advanced") && (
-                <p>此版本未保存具体规则明细，无法逐条比较。</p>
-              )}
-          </section>
           <div className="subscription-draft-comparison space-y-3 rounded-lg bg-muted/50 p-4">
             {outputStatus.isFetching ? (
               <p role="status">正在核对已保存的修改…</p>
@@ -1776,6 +1754,28 @@ export function SubscriptionsPage({
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
+          <section
+            aria-label="已发布分流"
+            className="subscription-frozen-detail space-y-4 border-t pt-5 [&>h3]:font-semibold"
+          >
+            <h3>已发布分流</h3>
+            <RoutingSummaryView
+              summary={detailOutput.routingSummary}
+              intent={
+                !outputStatus.isError &&
+                outputStatus.data?.id === detailOutput.id
+                  ? outputStatus.data.routingIntent
+                  : undefined
+              }
+            />
+            {!outputStatus.isError &&
+              outputStatus.data?.id === detailOutput.id &&
+              !outputStatus.data.routingIntent &&
+              (detailOutput.routingSummary?.kind === "basic" ||
+                detailOutput.routingSummary?.kind === "advanced") && (
+                <p>此版本未保存具体规则明细，无法逐条比较。</p>
+              )}
+          </section>
         </TaskDialog>
       )}
       <PublishOutput

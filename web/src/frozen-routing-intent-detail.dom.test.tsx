@@ -139,7 +139,11 @@ it("reads frozen rules only from the selected owner status, never from a saved d
   expect(within(detail).getByText("节点「东京-已发布」")).toBeTruthy();
   expect(within(detail).getByText("节点「香港-已发布」")).toBeTruthy();
   expect(within(detail).queryByText(/伦敦|未保存具体规则/)).toBeNull();
-  expect(await screen.findByText("已保存的修改尚未发布")).toBeTruthy();
+  const draftStatus = await screen.findByText("已保存的修改尚未发布");
+  const getSubscription = screen.getByRole("button", { name: "获取订阅" });
+  // The decision state and primary task come before potentially long rule details.
+  expect(draftStatus.compareDocumentPosition(detail) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
+  expect(getSubscription.compareDocumentPosition(detail) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
   expect(paths.filter((path) => path.endsWith("/status"))).toEqual([
     "/api/me/outputs/one/status",
   ]);
