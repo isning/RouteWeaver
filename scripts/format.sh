@@ -10,6 +10,8 @@ elif [[ "${1:---check}" == --check ]]; then
   UNFORMATTED=$("$GOFMT" -l "${FILES[@]}")
   if [[ -n "$UNFORMATTED" ]]; then
     printf 'Go formatting required (run scripts/format.sh --write):\n%s\n' "$UNFORMATTED" >&2
+    # Keep the original inventory; -d emits diffs only for files needing repair.
+    "$GOFMT" -d "${FILES[@]}" >&2
     exit 1
   fi
 else
