@@ -20,6 +20,11 @@ import (
 
 var ErrNotFound = errors.New("not found")
 
+var (
+	ErrUserExists       = errors.New("user already exists")
+	ErrInvalidUserInput = errors.New("valid id, name and non-negative quota required")
+)
+
 type State struct {
 	Nodes     []domain.Node     `json:"nodes"`
 	Users     []domain.User     `json:"users"`
@@ -196,28 +201,46 @@ func (s *Store) PutNode(v domain.Node) error {
 	return s.put("nodes", v.ID, v)
 }
 func (s *Store) PutUser(v domain.User) error {
+	_, e := s.putUser(v, false)
+	return e
+}
+
+// CreateUser requires absence under the same database writer reservation used by
+// legacy user edits and policy guards. It returns the committed value without a
+// separate state read that could fail after creation has already succeeded.
+func (s *Store) CreateUser(v domain.User) (domain.User, error) {
+	return s.putUser(v, true)
+}
+
+func (s *Store) putUser(v domain.User, createOnly bool) (domain.User, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if !domain.ValidID(v.ID) || v.Name == "" || v.QuotaBytes < 0 {
-		return fmt.Errorf("valid id, name and non-negative quota required")
+		return domain.User{}, ErrInvalidUserInput
 	}
 	tx, e := s.db.Begin()
 	if e != nil {
-		return e
+		return domain.User{}, e
 	}
 	defer tx.Rollback()
 	if _, e = tx.Exec(`UPDATE counters SET value=value WHERE kind='admission-lock'`); e != nil {
-		return e
+		return domain.User{}, e
 	}
 	var old domain.User
 	if e = s.getTx(tx, "users", v.ID, &old); e != nil && e != ErrNotFound {
-		return e
+		return domain.User{}, e
+	}
+	if createOnly && e == nil {
+		return domain.User{}, ErrUserExists
 	}
 	v.UsedBytes = old.UsedBytes
 	if e = s.guardBudgetPolicyUpdate(tx, "users", v.ID, v, time.Now().UTC()); e != nil {
-		return e
+		return domain.User{}, e
 	}
-	return tx.Commit()
+	if e = tx.Commit(); e != nil {
+		return domain.User{}, e
+	}
+	return v, nil
 }
 func (s *Store) PutRoute(v domain.Route) error {
 	s.mu.Lock()

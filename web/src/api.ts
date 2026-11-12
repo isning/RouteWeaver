@@ -1,4 +1,4 @@
-import type { State, Session } from "./types";
+import type { State, Session, UserRecord } from "./types";
 let adminToken = "";
 let tokenRevision = 0;
 let legacyTokenValidated = false;
@@ -107,6 +107,73 @@ export async function request<T>(
 ): Promise<T> {
   return readResponse<T>(await send(path, init));
 }
+export class UserCreationError extends Error {
+  constructor(
+    message: string,
+    public outcome: "rejected" | "unknown",
+  ) {
+    super(message);
+  }
+}
+/** Only Add user opts into atomic absence; legacy saveRecord remains an upsert. */
+export async function createUser(draft: UserRecord): Promise<UserRecord> {
+  try {
+    sessionTransport?.beforeRequest().beforeSend();
+  } catch (error) {
+    throw new UserCreationError(
+      error instanceof Error ? error.message : "本次创建未发送。",
+      "rejected",
+    );
+  }
+  let response: Response;
+  try {
+    response = await send("/users", {
+      method: "POST",
+      headers: { "If-None-Match": "*" },
+      body: JSON.stringify(draft),
+    });
+  } catch {
+    throw new UserCreationError("尚未确认用户是否创建", "unknown");
+  }
+  let value: unknown;
+  try {
+    value = await readResponse<unknown>(response);
+  } catch (error) {
+    // Status alone cannot establish non-commit: legacy user storage errors also
+    // use 400. Only the guarded endpoint's explicit pre-write codes are definite.
+    const code =
+      error instanceof APIError
+        ? (error.details as { code?: string } | null)?.code
+        : undefined;
+    if (
+      response.status === 400 &&
+      ["USER_CREATION_INVALID", "USER_CREATION_PRECONDITION_INVALID"].includes(
+        code || "",
+      )
+    )
+      throw new UserCreationError(
+        error instanceof Error ? error.message : "用户未创建。",
+        "rejected",
+      );
+    throw new UserCreationError("尚未确认用户是否创建", "unknown");
+  }
+  const receipt = value as Partial<UserRecord> | null;
+  if (
+    !receipt ||
+    typeof receipt !== "object" ||
+    receipt.id !== draft.id ||
+    typeof receipt.name !== "string" ||
+    typeof receipt.enabled !== "boolean" ||
+    !Number.isSafeInteger(receipt.quotaBytes) ||
+    Number(receipt.quotaBytes) < 0 ||
+    typeof receipt.usedBytes !== "number" ||
+    !Number.isFinite(receipt.usedBytes) ||
+    receipt.usedBytes < 0
+  )
+    throw new UserCreationError("尚未确认用户是否创建", "unknown");
+  return receipt as UserRecord;
+}
+
 export type InvitationDraft = {
   name: string;
   role: string;

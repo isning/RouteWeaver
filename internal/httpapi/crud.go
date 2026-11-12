@@ -2,10 +2,13 @@ package httpapi
 
 import (
 	"context"
+	"errors"
 	"github.com/danielgtaylor/huma/v2"
+	"net/http"
 	"routeweaver/internal/domain"
 	"routeweaver/internal/render"
 	"routeweaver/internal/store"
+	"strings"
 )
 
 type NodeInput struct{ Body domain.Node }
@@ -14,7 +17,37 @@ type NodeUpdate struct {
 	Body domain.Node
 }
 type NodeOutput struct{ Body domain.Node }
-type UserInput struct{ Body domain.User }
+type UserInput struct {
+	IfNoneMatch                 string `header:"If-None-Match" required:"false" doc:"Use a single * to create only when the user ID is absent."`
+	Body                        domain.User
+	createOnly                  bool
+	invalidCreationPrecondition bool
+}
+
+// Resolve inspects every header value: Header/Get alone cannot distinguish a
+// missing header from an empty one, or reject duplicate conditional headers.
+func (in *UserInput) Resolve(ctx huma.Context) []error {
+	count := 0
+	valid := true
+	ctx.EachHeader(func(name, value string) {
+		if strings.EqualFold(name, "If-None-Match") {
+			count++
+			valid = valid && strings.Trim(value, " \t") == "*"
+		}
+	})
+	in.createOnly = count > 0
+	in.invalidCreationPrecondition = count > 0 && (count != 1 || !valid)
+	return nil
+}
+
+type userCreationError struct {
+	*huma.ErrorModel
+	Code string `json:"code"`
+}
+
+func userCreationFailure(status int, code, detail string) error {
+	return &userCreationError{ErrorModel: &huma.ErrorModel{Status: status, Title: http.StatusText(status), Detail: detail}, Code: code}
+}
 type UserUpdate struct {
 	ID   string `path:"id"`
 	Body domain.User
@@ -67,7 +100,25 @@ func registerCRUD(api huma.API, s *store.Store, registry *render.Registry) {
 		}
 		return putNode(in.Body)
 	})
-	huma.Post(api, "/users", func(ctx context.Context, in *UserInput) (*UserOutput, error) { return putUser(in.Body) })
+	huma.Post(api, "/users", func(ctx context.Context, in *UserInput) (*UserOutput, error) {
+		if in.invalidCreationPrecondition {
+			return nil, userCreationFailure(http.StatusBadRequest, "USER_CREATION_PRECONDITION_INVALID", "user creation requires a single If-None-Match: * precondition")
+		}
+		if !in.createOnly {
+			return putUser(in.Body)
+		}
+		v, err := s.CreateUser(in.Body)
+		if errors.Is(err, store.ErrUserExists) {
+			return nil, userCreationFailure(http.StatusPreconditionFailed, "USER_CREATION_CONFLICT", "user already exists; review the saved user before continuing")
+		}
+		if errors.Is(err, store.ErrInvalidUserInput) {
+			return nil, userCreationFailure(http.StatusBadRequest, "USER_CREATION_INVALID", err.Error())
+		}
+		if err != nil {
+			return nil, huma.Error500InternalServerError("cannot create user")
+		}
+		return &UserOutput{Body: v}, nil
+	})
 	huma.Put(api, "/users/{id}", func(ctx context.Context, in *UserUpdate) (*UserOutput, error) {
 		if in.ID != in.Body.ID {
 			return nil, huma.Error400BadRequest("id mismatch")

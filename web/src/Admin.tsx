@@ -64,6 +64,8 @@ import { RouteGraph } from "./route-graph";
 import {
   APIError,
   createInvitation,
+  createUser,
+  UserCreationError,
   InvitationCreationError,
   type InvitationReceipt,
   deleteRecord,
@@ -1475,6 +1477,14 @@ const quotaInputError =
 const unsafeQuotaError =
   "当前账号额度超出网页可精确保存的范围。为避免改写额度，名称和启用状态也暂不能保存；请取消编辑。";
 
+const creationCloseWarning =
+  "用户可能已经创建，关闭不会撤销创建。再次添加会开始新的创建。";
+const sameCreatedUser = (submitted: UserRecord, current: UserRecord) =>
+  submitted.id === current.id &&
+  submitted.name === current.name &&
+  submitted.enabled === current.enabled &&
+  submitted.quotaBytes === current.quotaBytes;
+
 function EntityEditor({
   entity,
   state: _state,
@@ -1526,16 +1536,53 @@ function EntityEditor({
   const { confirm, confirming } = useDiscardConfirmation(
     entity ? `${entity.kind}:${entity.value?.id || "new"}` : "closed",
   );
+  type CreationAttempt = {
+    task: NonNullable<typeof entity>;
+    record: UserRecord;
+    phase:
+      | "submitting"
+      | "uncertain"
+      | "checking"
+      | "absent"
+      | "different"
+      | "created";
+    decisionRevision: number;
+    mayHaveCommitted: boolean;
+    current?: UserRecord;
+    checkError?: Error;
+  };
+  const creationID = useRef<{
+    task: NonNullable<typeof entity>;
+    id: string;
+  } | null>(null);
+  const creationOwner = useRef<CreationAttempt | null>(null);
+  const creationDecisionRevision = useRef(0);
+  const [creation, setCreation] = useState<CreationAttempt | null>(null);
+  const updateCreation = (next: CreationAttempt | null) => {
+    creationOwner.current = next;
+    setCreation(next);
+  };
+  const ownsCreation = (attempt: CreationAttempt) =>
+    active.current &&
+    owner.current === attempt.task &&
+    creationOwner.current === attempt;
+  const currentCreation = creation?.task === entity ? creation : null;
+  const recovering =
+    !!currentCreation && currentCreation.phase !== "submitting";
+  const completedCreation = currentCreation?.phase === "created";
   const mutation = useMutation({
     mutationFn: ({
       values,
       task,
       quotaBytes,
+      creationAttempt,
     }: {
       values: Record<string, unknown>;
       task: NonNullable<typeof entity>;
       quotaBytes?: number;
+      creationAttempt?: CreationAttempt;
     }) => {
+      if (creationAttempt) return createUser(creationAttempt.record);
       const value = {
         ...task.value,
         ...values,
@@ -1564,12 +1611,52 @@ function EntityEditor({
         !task.value,
       );
     },
-    onSuccess: (_saved, { task }) => {
+    onSuccess: (saved, { task, creationAttempt }) => {
       client.invalidateQueries({ queryKey: ["admin-state"] });
       client.invalidateQueries({ queryKey: ["effective-policy"] });
       if (!active.current || owner.current !== task) return;
+      if (creationAttempt) {
+        if (!ownsCreation(creationAttempt)) return;
+        if (!sameCreatedUser(creationAttempt.record, saved as UserRecord)) {
+          updateCreation({
+            ...creationAttempt,
+            phase: "different",
+            mayHaveCommitted: true,
+            current: saved as UserRecord,
+          });
+          return;
+        }
+        if (
+          creationAttempt.decisionRevision !== creationDecisionRevision.current
+        ) {
+          // A newer navigation decision owns dismissal. Keep the confirmed
+          // result available after Stay rather than closing behind that decision.
+          updateCreation({
+            ...creationAttempt,
+            phase: "created",
+            current: saved as UserRecord,
+          });
+          return;
+        }
+      }
       message.success("已保存");
       onClose();
+    },
+    onError: (error, { creationAttempt }) => {
+      if (!creationAttempt || !ownsCreation(creationAttempt)) return;
+      // A rejection of a retry says nothing about an earlier uncertain request.
+      if (
+        error instanceof UserCreationError &&
+        error.outcome === "rejected" &&
+        !creationAttempt.mayHaveCommitted
+      )
+        updateCreation(null);
+      else
+        updateCreation({
+          ...creationAttempt,
+          phase: "uncertain",
+          mayHaveCommitted: true,
+        });
     },
     onSettled: (_saved, _error, { task }) => {
       if (submitting.current === task) submitting.current = null;
@@ -1577,8 +1664,89 @@ function EntityEditor({
   });
   const pending =
     !!entity && mutation.isPending && mutation.variables?.task === entity;
-  useUnsavedChanges(changed || pending);
+  useUnsavedChanges(
+    !completedCreation && (changed || pending || !!currentCreation),
+    currentCreation ? creationCloseWarning : undefined,
+    () => {
+      const attempt = creationOwner.current;
+      if (!attempt || !ownsCreation(attempt)) return;
+      creationDecisionRevision.current++;
+      if (attempt.phase === "checking")
+        updateCreation({ ...attempt, phase: "uncertain" });
+    },
+  );
+  const checkCreation = async () => {
+    const attempt = creationOwner.current;
+    if (
+      !attempt ||
+      !ownsCreation(attempt) ||
+      confirming ||
+      ["submitting", "checking"].includes(attempt.phase)
+    )
+      return;
+    const checking: CreationAttempt = {
+      ...attempt,
+      phase: "checking",
+      checkError: undefined,
+    };
+    updateCreation(checking);
+    try {
+      // Never use a cached list or update a newer task from this readback.
+      const snapshot = await loadState();
+      if (!ownsCreation(checking)) return;
+      if (!Array.isArray(snapshot?.users))
+        throw new Error("未能读取用户列表，请重新检查。");
+      const current = snapshot.users.find(
+        (user) => user.id === attempt.record.id,
+      );
+      if (!current) {
+        updateCreation({ ...checking, phase: "absent" });
+      } else if (sameCreatedUser(attempt.record, current)) {
+        client.invalidateQueries({ queryKey: ["admin-state"] });
+        message.success("已确认用户已创建");
+        onClose();
+      } else {
+        updateCreation({ ...checking, phase: "different", current });
+        client.invalidateQueries({ queryKey: ["admin-state"] });
+      }
+    } catch (error) {
+      if (ownsCreation(checking))
+        updateCreation({
+          ...checking,
+          phase: "uncertain",
+          checkError:
+            error instanceof Error
+              ? error
+              : new Error("未能读取用户列表，请重新检查。"),
+        });
+    }
+  };
+  const retryCreation = () => {
+    const attempt = creationOwner.current;
+    if (
+      !attempt ||
+      !ownsCreation(attempt) ||
+      confirming ||
+      attempt.phase !== "absent" ||
+      submitting.current === entity
+    )
+      return;
+    const retry: CreationAttempt = {
+      ...attempt,
+      phase: "submitting",
+      decisionRevision: creationDecisionRevision.current,
+      checkError: undefined,
+    };
+    updateCreation(retry);
+    submitting.current = attempt.task;
+    // This is the same submitted snapshot under an atomic absence precondition,
+    // never an upsert or permission inferred from the absent list result.
+    mutation.mutate({ task: attempt.task, values: {}, creationAttempt: retry });
+  };
   useLayoutEffect(() => {
+    creationID.current = null;
+    creationDecisionRevision.current = 0;
+    updateCreation(null);
     if (!entity) {
       setBaseline("");
       return;
@@ -1601,8 +1769,26 @@ function EntityEditor({
     setBaseline(JSON.stringify(form.getFieldsValue(true)));
   }, [entity, form]);
   const close = () => {
+    if (!entity || !active.current || owner.current !== entity) return;
     if (pending || (!!entity && submitting.current === entity) || confirming)
       return;
+    if (completedCreation) return onClose();
+    if (currentCreation) {
+      // A close decision is newer intent than an outstanding readback. Returning
+      // to this task may check again; the old read must not dismiss that decision.
+      if (currentCreation.phase === "checking")
+        updateCreation({ ...currentCreation, phase: "uncertain" });
+      confirm(
+        {
+          title: "关闭创建窗口？",
+          description: creationCloseWarning,
+          confirmLabel: "关闭窗口",
+          cancelLabel: "继续核对",
+        },
+        () => onClose(),
+      );
+      return;
+    }
     if (!changed) return onClose();
     confirm(
       {
@@ -1628,25 +1814,59 @@ function EntityEditor({
       }}
       footer={
         <div className="form-footer flex w-full flex-wrap items-center justify-end gap-2">
-          <ActionButton
-            disabled={pending || confirming}
-            onClick={close}
-            variant="outline"
-          >
-            取消
-          </ActionButton>
+          {!completedCreation && (
+            <ActionButton
+              disabled={pending || confirming}
+              onClick={close}
+              variant="outline"
+            >
+              取消
+            </ActionButton>
+          )}
+          {currentCreation?.phase === "absent" && (
+            <ActionButton
+              variant="outline"
+              disabled={confirming}
+              onClick={checkCreation}
+            >
+              检查创建结果
+            </ActionButton>
+          )}
           <ActionButton
             ref={submitButton}
-            form={formId}
-            type="submit"
+            form={recovering ? undefined : formId}
+            type={recovering ? "button" : "submit"}
+            onClick={
+              completedCreation
+                ? close
+                : recovering
+                  ? currentCreation?.phase === "absent"
+                    ? retryCreation
+                    : checkCreation
+                  : undefined
+            }
             keepFocusableWhilePending
-            pending={pending}
+            pending={pending || currentCreation?.phase === "checking"}
             disabled={confirming || unsafeQuota}
-            aria-label="保存"
-            aria-busy={pending}
+            aria-label={
+              completedCreation
+                ? "完成"
+                : recovering
+                  ? currentCreation?.phase === "absent"
+                    ? "重试本次创建"
+                    : "检查创建结果"
+                  : "保存"
+            }
+            aria-busy={pending || currentCreation?.phase === "checking"}
             variant="default"
           >
-            保存
+            {completedCreation
+              ? "完成"
+              : recovering
+                ? currentCreation?.phase === "absent"
+                  ? "重试本次创建"
+                  : "检查创建结果"
+                : "保存"}
           </ActionButton>
         </div>
       }
@@ -1663,7 +1883,7 @@ function EntityEditor({
       <AppForm
         id={formId}
         form={form}
-        disabled={pending || confirming}
+        disabled={pending || confirming || !!currentCreation}
         onFinish={(v) => {
           if (
             !entity ||
@@ -1672,6 +1892,7 @@ function EntityEditor({
             confirming ||
             unsafeQuota ||
             pending ||
+            creationOwner.current?.task === entity ||
             submitting.current === entity
           )
             return;
@@ -1688,10 +1909,73 @@ function EntityEditor({
           submitting.current = entity;
           const submit = submitButton.current;
           if (submit?.form?.contains(document.activeElement)) submit.focus();
-          mutation.mutate({ values, task: entity, quotaBytes });
+          let creationAttempt: CreationAttempt | undefined;
+          if (entity.kind === "users" && !entity.value) {
+            if (creationID.current?.task !== entity)
+              creationID.current = { task: entity, id: newID("user") };
+            creationAttempt = {
+              task: entity,
+              record: {
+                id: creationID.current.id,
+                name: String(values.name),
+                enabled: !!values.enabled,
+                quotaBytes: quotaBytes!,
+                usedBytes: 0,
+              },
+              phase: "submitting",
+              decisionRevision: creationDecisionRevision.current,
+              mayHaveCommitted: false,
+            };
+            updateCreation(creationAttempt);
+          }
+          mutation.mutate({
+            values,
+            task: entity,
+            quotaBytes,
+            creationAttempt,
+          });
         }}
       >
-        <ErrorNotice error={mutation.error} />
+        {!recovering && <ErrorNotice error={mutation.error} />}
+        {recovering && (
+          <Notice
+            tone={completedCreation ? "success" : "warning"}
+            title={
+              completedCreation
+                ? "用户已创建"
+                : currentCreation.phase === "absent"
+                  ? "暂未找到本次创建的用户"
+                  : currentCreation.phase === "different"
+                    ? "已有用户的资料与本次提交不同"
+                    : "尚未确认用户是否创建"
+            }
+          >
+            {completedCreation
+              ? "本次创建已完成。关闭窗口不会删除用户。"
+              : currentCreation.phase === "absent"
+                ? "之前的请求仍可能完成。重试只会继续本次创建，不会覆盖已有用户。"
+                : currentCreation.phase === "different"
+                  ? "未覆盖现有资料。请在用户列表中核对，再决定是否编辑。"
+                  : "已保留本次提交，确认结果前暂不能修改。请检查创建结果；关闭不会撤销可能已完成的创建。"}
+            {currentCreation.phase === "different" &&
+              currentCreation.current && (
+                <div className="mt-2 space-y-1">
+                  <KeyValue label="现有用户名称">
+                    {currentCreation.current.name}
+                  </KeyValue>
+                  <KeyValue label="账号状态">
+                    {currentCreation.current.enabled ? "已启用" : "已停用"}
+                  </KeyValue>
+                  <KeyValue label="账号基础额度">
+                    {currentCreation.current.quotaBytes === 0
+                      ? "不限额"
+                      : bytesLabel(currentCreation.current.quotaBytes)}
+                  </KeyValue>
+                </div>
+              )}
+            <ErrorNotice error={currentCreation.checkError} />
+          </Notice>
+        )}
         {unsafeQuota && (
           <Notice tone="warning" title="暂不能保存此账号">
             {unsafeQuotaError}
@@ -1769,7 +2053,12 @@ function EntityEditor({
                   quotaText.current = text;
                   setQuotaEdited(text !== "100");
                 }}
-                disabled={!!displayEntity?.value || pending || confirming}
+                disabled={
+                  !!displayEntity?.value ||
+                  pending ||
+                  confirming ||
+                  !!currentCreation
+                }
               />
             </AppField>
             {displayEntity?.value && (

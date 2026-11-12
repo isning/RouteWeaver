@@ -63,6 +63,7 @@ import {
   WorkspaceHistoryContext,
 } from "./SubscriptionContext";
 import {
+  beginNavigationReview,
   getNavigationWarning,
   hasNavigationWarning,
   hasUnsavedChanges,
@@ -534,6 +535,7 @@ function Workspace() {
       isDirty: hasUnsavedChanges,
       isActive: () => lifecycle.getSnapshot().phase === "active",
       confirm: (proceed, cancel, context) => {
+        beginNavigationReview();
         const review = mobileOpenRef.current
           ? { panel: null as HTMLElement | null }
           : null;
