@@ -79,3 +79,5 @@ Independent backend source review accepted v2's semantics and strict patch appli
 ## Coordinator integration
 
 Frozen full v2 patch `8d9e8b4ea9af606253fba3eb85bcc14e33ef9398d98ce0ab25031faa0258c8ca` received independent source acceptance. All eleven integrated files matched its manifest before this evidence append. Integrated focused execution passed all 283 tests in 15 files (62.61 seconds), followed by typecheck and production build. Complete frontend regression is a separate pending step; no Go or native/pixel acceptance is inferred.
+
+Complete local frontend regression subsequently passed on production frontend source `1dd98c6028542e621735a69bd73737c714f974e6`: shard 1 passed 2,353 tests in 177 files (605.30 seconds), shard 2 passed 2,177 tests in 177 files (601.33 seconds), totaling 4,530 tests in 354 files. Both serialized shards passed typecheck and production build. The native-only sampler added during the run did not alter application or frontend aggregate inputs. Backend/native-browser execution remains separate and unaccepted.
