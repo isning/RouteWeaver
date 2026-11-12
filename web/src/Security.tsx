@@ -12,6 +12,18 @@ import { APIError, post } from "./api";
 import type { Session } from "./types";
 import { useSessionAccess } from "./SessionBoundary";
 import { ErrorNotice, QueryState, Section } from "./components";
+function enrollmentError(error: Error | null) {
+    if (!(error instanceof APIError)) return error;
+    const messages: Record<string, string> = {
+        "400:invalid credentials": "当前账号或密码未通过验证，请核对后重试。",
+        "400:MFA already enabled": "此账号已启用二次验证，请刷新页面核对当前状态。",
+        "400:MFA enrollment expired, already completed, or invalid code": "设置可能已过期、已完成，或验证码不正确。请核对验证码；仍无法启用时，刷新页面确认状态后再决定是否重新设置。",
+        "403:local administrator session required": "请使用管理员账号密码登录后设置二次验证。",
+        "429:too many MFA attempts; retry later": "二次验证尝试次数过多，请稍后再试。",
+    };
+    const message = messages[`${error.status}:${error.message}`];
+    return message ? new Error(message) : error;
+}
 export function SecuritySettings({ recoveryNotice = true }: { recoveryNotice?: boolean }) {
     const { snapshot } = useSessionAccess();
     return <MFASetupTask key={`${snapshot.accountEpoch}:${snapshot.generation}`} recoveryNotice={recoveryNotice} />;
@@ -125,7 +137,7 @@ function MFASetupTask({ recoveryNotice }: { recoveryNotice: boolean }) {
               <p className="mt-1 text-sm text-muted-foreground">下次登录需要输入验证器中的六位验证码。</p>
             </div>
           </div>) : setup ? (<>
-            <Notice tone="info" title="使用验证器扫描二维码">{"\u5B8C\u6210\u4E0B\u65B9\u9A8C\u8BC1\u540E\u624D\u4F1A\u542F\u7528\u3002\u8BF7\u59A5\u5584\u4FDD\u5B58\u9A8C\u8BC1\u5668\u7684\u5B89\u5168\u5907\u4EFD\u3002"}</Notice>
+            <Notice tone="info" title="使用验证器扫描二维码">本次设置需在生成后 10 分钟内完成。完成下方验证后才会启用；请妥善保存验证器的安全备份。</Notice>
             <div className="qr-container my-5 grid w-fit justify-items-start gap-3 rounded-lg border bg-white p-4 text-black">
               <QRCode value={setup.uri} size={190}/>
             </div>
@@ -139,13 +151,14 @@ function MFASetupTask({ recoveryNotice }: { recoveryNotice: boolean }) {
                 submitting.current = true;
                 enable.mutate({ code: v.code });
             }}>
-              <ErrorNotice error={enable.error}/>
+              <ErrorNotice error={enrollmentError(enable.error)}/>
               <AppField name="code" label="验证器验证码" rules={[
                 { required: true },
                 { pattern: /^\d{6}$/, message: "请输入六位数字验证码" },
             ]}>
                 <Input inputMode="numeric" autoComplete="one-time-code" maxLength={6}/>
               </AppField>
+              <p className="text-sm text-muted-foreground">启用后将更新当前登录状态，并退出其他登录会话。</p>
               <ActionButton type="submit" pending={enable.isPending} disabled={enableUncertain || recovery.blocked} variant="default">
                 验证并启用
               </ActionButton>
@@ -158,7 +171,7 @@ function MFASetupTask({ recoveryNotice }: { recoveryNotice: boolean }) {
             submitting.current = true;
             prepare.mutate({ password: v.password });
         }}>
-            <ErrorNotice error={prepare.error}/>
+            <ErrorNotice error={enrollmentError(prepare.error)}/>
             <AppField name="password" label="验证当前账号密码" rules={[{ required: true }]}>
               <PasswordInput autoComplete="current-password" revealLabel="二次验证设置的验证密码"/>
             </AppField>

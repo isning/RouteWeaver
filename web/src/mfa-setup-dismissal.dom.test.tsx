@@ -36,20 +36,22 @@ it("closes local setup without submitting enable and starts with blank credentia
     if (url.endsWith("/auth/me")) return json(session("A"));
     writes.push(url);
     if (url.endsWith("/mfa/setup")) return json({ secret: "SYNTHETIC-SETUP", uri: "otpauth://totp/test?secret=SYNTHETIC" });
-    return json({ error: "invalid enrollment code" }, 400);
+    return json({ error: "MFA enrollment expired, already completed, or invalid code" }, 400);
   });
   mount();
   await prepare();
+  expect(screen.getByText(/本次设置需在生成后 10 分钟内完成/)).toBeTruthy();
+  expect(screen.getByText("启用后将更新当前登录状态，并退出其他登录会话。")).toBeTruthy();
   fireEvent.change(screen.getByLabelText("验证器验证码"), { target: { value: "000000" } });
   fireEvent.click(screen.getByRole("button", { name: "验证并启用" }));
-  await screen.findByText("invalid enrollment code");
+  await screen.findByText("设置可能已过期、已完成，或验证码不正确。请核对验证码；仍无法启用时，刷新页面确认状态后再决定是否重新设置。");
   fireEvent.click(screen.getByRole("button", { name: "关闭设置" }));
   await waitFor(() => expect(screen.queryByLabelText("验证器设置密钥")).toBeNull());
   expect((screen.getByLabelText("验证当前账号密码") as HTMLInputElement).value).toBe("");
   expect(writes).toEqual(["/api/auth/mfa/setup", "/api/auth/mfa/enable"]);
   await prepare();
   expect((screen.getByLabelText("验证器验证码") as HTMLInputElement).value).toBe("");
-  expect(screen.queryByText("invalid enrollment code")).toBeNull();
+  expect(screen.queryByText(/设置可能已过期、已完成，或验证码不正确/)).toBeNull();
 });
 it("does not show a late setup response after the owning task was removed", async () => {
   let finish!: (response: Response) => void;
