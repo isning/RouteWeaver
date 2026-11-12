@@ -45,3 +45,11 @@ scripts/go.sh test ./internal/store -run 'Test(CreateUser|UserCreation)' -count=
 scripts/go.sh test ./internal/httpapi -run 'TestUser(Creation|GuardedCreation)' -count=1
 "$(scripts/go.sh env GOROOT)/bin/gofmt" -l internal/store/store.go internal/store/user_creation_test.go internal/httpapi/crud.go internal/httpapi/user_creation_precondition_test.go
 ```
+
+## Integrated frontend verification
+
+The frozen v2 patch passed independent source review and all eleven integrated file hashes matched. Integrated focused checks passed 156 tests in six files (32.60 seconds) plus 13 navigation tests in four files (7.51 seconds); type checking and production build passed.
+
+The complete frontend aggregate then passed both serialized shards against production frontend source `e446bcc78ebb9708503b13c539ac4dbc88cdbe90`: 2,297 tests / 176 files in 605.62 seconds and 2,115 tests / 175 files in 581.63 seconds, totaling 4,412 tests / 351 files. Each shard also passed its typecheck and production build. Later local commits changed only Go whitespace, native-only sampling/CI, shell helpers and documentation; frontend aggregate inputs remained unchanged. This is frontend acceptance, not a completed repository/backend/native gate.
+
+Remote `240ce876a46d774d1061b58dad137e5a1f2e56e6` reported a formatting failure in `internal/httpapi/crud.go`. A local blank-line correction separates the helper function from the following type declaration; actual formatter confirmation is pending. The supplemental mixed-path package regressions compiled and passed but do not establish execution of the nine new creation tests. Required HTTP/store suites and the new native creation journeys require their own exact-head results.
