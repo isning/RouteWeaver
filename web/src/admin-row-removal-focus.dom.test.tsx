@@ -85,7 +85,8 @@ it.each(variants)("$page: successful removal returns to inventory search before 
   await acceptDecision(task, opened);
   await waitFor(() => expect(task.reads).toBe(2));
   await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
-  expect(opened.opener.isConnected).toBe(true);
+  // Confirmed deletion now updates the cached list before its reread.
+  expect(opened.opener.isConnected).toBe(false);
   await waitFor(() => expect(document.activeElement).toBe(opened.search));
   await act(async () => task.reconcile());
   await waitFor(() => expect(opened.opener.isConnected).toBe(false));
@@ -129,8 +130,9 @@ for (const mode of ["other-control", "other-control-then-body", "navigation", "n
       await screen.findByRole("textbox", { name: v.page === "nodes" ? "搜索链路配置" : "搜索连接端点" });
       owner = navigation;
     } else if (mode === "new-dialog") {
-      const row = screen.getByRole("group", { name: "Fixture 11 的操作" });
-      await opened.user.click(within(row).getByRole("button", { name: "编辑" }));
+      // Cached row edits are fenced during reconciliation; independent creation
+      // remains the valid newer task whose focus this lifecycle must preserve.
+      await opened.user.click(screen.getByRole("button", { name: v.page === "nodes" ? "添加端点" : "新建链路配置" }));
       await screen.findByRole("dialog");
       await waitFor(() => expect(document.activeElement?.closest('[role="dialog"]')).toBeTruthy());
       owner = document.activeElement!;
@@ -155,7 +157,9 @@ it.each(variants)("$page: successful removal selects stable search even when the
   await waitFor(() => expect(document.activeElement).toBe(opened.search));
   await act(async () => task.reconcile());
   await waitFor(() => expect(task.fetching).toBe(0));
-  expect(opened.opener.isConnected).toBe(true); expect(document.activeElement).toBe(opened.search);
+  // A later authoritative read may return the same ID, but never restores the
+  // deleted opener element or makes it the completion focus destination.
+  expect(opened.opener.isConnected).toBe(false); expect(document.activeElement).toBe(opened.search);
   expect(task.writes).toEqual([`DELETE /api/${v.kind}/fixture-10`]); expect(task.unexpected).toEqual([]);
 });
 
@@ -197,7 +201,7 @@ for (const timing of ["before-close", "after-close"] as const) {
       expect(document.activeElement).toBe(newer);
     } else await screen.findByText("Synthetic inventory unavailable");
     expect(screen.getByText("已删除")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "重试" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: `刷新${v.noun}` })).toBeTruthy();
     expect(screen.queryByRole("alertdialog")).toBeNull();
     expect(document.activeElement).not.toBe(opened.opener);
     expect(task.writes).toEqual([`DELETE /api/${v.kind}/fixture-10`]); expect(task.unexpected).toEqual([]);

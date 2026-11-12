@@ -207,6 +207,7 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
     null,
   );
   const [error, setError] = useState<Error | null>(null);
+  const retainedInventoryError = useRef<Error | null>(null);
   const [validation, setValidation] = useState<
     (Validation & { historical?: boolean }) | null
   >(null);
@@ -220,14 +221,54 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
   const displayedValidation = validation || validationPresentation.current;
   const meta = pageMeta[page];
   const remove = useMutation({
-    mutationFn: ({ kind, id }: { kind: string; id: string }) =>
+    mutationFn: ({ kind, id }: { kind: "nodes" | "routes"; id: string }) =>
       deleteRecord(kind, id),
-    onSuccess: () => {
-      client.invalidateQueries({ queryKey: ["admin-state"] });
+    onSuccess: (_result, { kind, id }) => {
+      // Projecting an acknowledged write is not a successful inventory read.
+      // Capture even a failure that has not reached a React render yet.
+      const readError = client.getQueryState(["admin-state"])?.error;
+      if (readError) retainedInventoryError.current = readError;
+      // An already-running read may predate the acknowledged deletion. Cancel
+      // its query ownership before projecting only the confirmed target, then
+      // reconcile without making command completion wait for that read.
+      void client.cancelQueries({ queryKey: ["admin-state"], exact: true });
+      client.setQueryData<NonNullable<typeof query.data>>(["admin-state"], current => current && ({
+        ...current, [kind]: current[kind].filter(record => record.id !== id),
+      }));
+      void client.invalidateQueries({ queryKey: ["admin-state"], exact: true });
       message.success("已删除");
     },
     onError: setError,
   });
+  // Event callbacks can outlive a render or a closing menu. Read authority at
+  // invocation, not from the row snapshot or a disabled trigger alone.
+  const currentLegacyInventory = () => {
+    const current = client.getQueryState<NonNullable<typeof query.data>>(["admin-state"]);
+    return current?.status === "success" && current.fetchStatus === "idle" && !current.isInvalidated
+      ? current.data : undefined;
+  };
+  const editNode = (id: string) => {
+    const node = currentLegacyInventory()?.nodes.find(node => node.id === id);
+    if (node) setEntity({ kind: "nodes", value: node });
+  };
+  const confirmLegacyRemoval = (kind: "nodes" | "routes", id: string) => {
+    const record = currentLegacyInventory()?.[kind].find(record => record.id === id);
+    if (!record) return;
+    const owner = removalOwner.current;
+    confirmRemoval({
+      title: `${kind === "nodes" ? "删除端点" : "删除链路配置"}「${record.name}」？`,
+      description: kind === "nodes"
+        ? "仍被链路配置引用的端点不能删除。请先从相关链路配置中移除引用。"
+        : "已分配用户将不能从此链路配置获取新配置。",
+      confirmLabel: "删除", cancelLabel: "保留", destructive: true,
+      returnFocusOnSuccess: completedRemovalDestination(),
+      onConfirm: () => {
+        if (!owner || owner !== removalOwner.current || !currentLegacyInventory()?.[kind].some(record => record.id === id))
+          throw new Error("列表已变化，请刷新后重新确认删除。");
+        return remove.mutateAsync({ kind, id });
+      },
+    });
+  };
   const pendingValidationRoutes = useRef(new Set<string>());
   const validationTrigger = useRef<HTMLButtonElement | null>(null);
   const [pendingValidationRouteIds, setPendingValidationRouteIds] = useState(
@@ -268,11 +309,12 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
     });
   }, [validate.error]);
   const validateRoute = (route: RouteRecord, trigger: HTMLButtonElement) => {
-    if (pendingValidationRoutes.current.has(route.id)) return;
+    const current = currentLegacyInventory()?.routes.find(record => record.id === route.id);
+    if (!current || pendingValidationRoutes.current.has(route.id)) return;
     validationTrigger.current = trigger;
     pendingValidationRoutes.current.add(route.id);
     setPendingValidationRouteIds(new Set(pendingValidationRoutes.current));
-    validate.mutate(route, {
+    validate.mutate(current, {
       // Only the latest observed check owns this sheet.
       onSuccess: (result) => {
         setValidation(result);
@@ -282,9 +324,11 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
   };
   const editRoute = (r?: RouteRecord) => {
     if (!r && query.data === undefined) return;
+    const current = r && currentLegacyInventory()?.routes.find(record => record.id === r.id);
+    if (r && !current) return;
     setRoute(
-      r
-        ? structuredClone(r)
+      current
+        ? structuredClone(current)
         : {
             id: newID("route"),
             name: "",
@@ -319,6 +363,33 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
     />
   ) : undefined;
   const data = query.data;
+  const legacyInventoryPage = page === "nodes" || page === "routes";
+  const legacyInventoryKnown = legacyInventoryPage && data !== undefined;
+  const legacyInventoryReady = query.isSuccess && query.fetchStatus === "idle";
+  if (data === undefined || currentLegacyInventory()) retainedInventoryError.current = null;
+  else if (legacyInventoryPage && query.error) retainedInventoryError.current = query.error;
+  const legacyCachedError = legacyInventoryKnown ? query.error || retainedInventoryError.current : null;
+  // Keep the first failed read's action mounted while its retry has no data.
+  const firstInventoryError = useRef<Error | null>(null);
+  if (!legacyInventoryPage || data !== undefined) firstInventoryError.current = null;
+  else if (query.error) firstInventoryError.current = query.error;
+  const legacyFirstError = legacyInventoryPage ? firstInventoryError.current : null;
+  const restoreInventorySearch = useRef<object | null>(null);
+  const firstInventoryRetryOwner = useRef<object | null>(null);
+  const firstInventoryRetryRef = useCallback((button: HTMLButtonElement | null) => {
+    if (!button) return;
+    return () => {
+      if (button.ownerDocument.activeElement === button) restoreInventorySearch.current = firstInventoryRetryOwner.current;
+    };
+  }, []);
+  useLayoutEffect(() => {
+    const owner = restoreInventorySearch.current;
+    restoreInventorySearch.current = null;
+    const search = inventorySearch.current;
+    if (owner && owner === removalOwner.current && legacyInventoryPage && legacyInventoryReady &&
+      search?.isConnected && search.ownerDocument.activeElement === search.ownerDocument.body &&
+      !search.closest('[inert], [hidden], [aria-hidden="true"]')) search.focus();
+  });
   const usersInventoryKnown = page === "users" && data !== undefined;
   const servicesInventoryKnown = page === "services" && data !== undefined;
   const usersInventoryReady = query.isSuccess && query.fetchStatus === "idle";
@@ -431,6 +502,26 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
       />
       <ErrorNotice error={error} />
       <ErrorNotice error={validate.error} />
+      {legacyFirstError && (
+        <Notice tone="error" title="暂时无法加载" action={
+          <ActionButton ref={firstInventoryRetryRef} onClick={() => {
+            firstInventoryRetryOwner.current = removalOwner.current;
+            void query.refetch({ cancelRefetch: false });
+          }}
+            pending={query.isFetching || query.isPaused} keepFocusableWhilePending variant="outline">重试</ActionButton>
+        }>{legacyFirstError.message}</Notice>
+      )}
+      {legacyCachedError && (
+        <Notice tone="error" title={`暂时无法刷新${meta.title}`}>
+          <p>{legacyCachedError.message}</p>
+          <p>{page === "nodes" ? "显示上次读取的端点，请刷新后再打开端点操作。" : "显示上次读取的链路配置，请刷新后再打开链路操作。"}</p>
+        </Notice>
+      )}
+      {(legacyInventoryKnown || legacyFirstError) && (query.isFetching || query.isPaused) && (
+        <p role="status" className="text-sm text-muted-foreground">
+          {query.isPaused ? `等待网络连接后刷新${meta.title}。` : `正在刷新${meta.title}…`}
+        </p>
+      )}
       {usersInventoryKnown && query.isError && (
         <Notice tone="error" title="暂时无法核对用户" action={
           <ActionButton ref={usersRetryRef} onClick={() => void query.refetch({ cancelRefetch: false })}
@@ -457,10 +548,10 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
         </p>
       )}
       <QueryState
-        loading={query.isPending}
+        loading={query.isPending && !legacyFirstError}
         paused={query.isPaused}
         loadingLayout="table"
-        error={usersInventoryKnown || servicesInventoryKnown ? null : query.error}
+        error={usersInventoryKnown || servicesInventoryKnown || legacyInventoryPage ? null : query.error}
         retry={() => query.refetch()}
       >
         {data && (
@@ -469,10 +560,10 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
               <Section variant="plain">
                 <ResourceToolbar
                   label={`查找${meta.title}`}
-                  filters={page === "services" && (
+                  filters={(page === "services" || legacyInventoryPage) && (
                     <ActionButton onClick={() => void query.refetch({ cancelRefetch: false })}
                       pending={query.isFetching || query.isPaused} keepFocusableWhilePending variant="outline">
-                      刷新服务方案
+                      {`刷新${meta.title}`}
                     </ActionButton>
                   )}
                   search={
@@ -497,6 +588,7 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
                           render: (_, r) => (
                             <button
                               className="table-name inline-flex min-w-0 items-center gap-2 rounded-sm text-left text-sm font-medium text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                              disabled={!legacyInventoryReady}
                               onClick={() => editRoute(r)}
                             >
                               <span className="table-icon size-4 shrink-0 text-muted-foreground [&_svg]:size-4">
@@ -551,6 +643,7 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
                           render: (_, r) => (
                             <TableRowActions name={r.name}>
                               <ActionButton
+                                disabled={!legacyInventoryReady}
                                 onClick={() => editRoute(r)}
                                 variant="ghost"
                               >
@@ -559,6 +652,7 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
                               <ActionButton
                                 leadingIcon={<EyeOutlined aria-hidden="true" />}
                                 aria-label={`校验 ${r.name}`}
+                                disabled={!legacyInventoryReady && !pendingValidationRouteIds.has(r.id)}
                                 keepFocusableWhilePending
                                 pending={pendingValidationRouteIds.has(r.id)}
                                 className="scroll-m-1"
@@ -566,28 +660,14 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
                                 variant="ghost"
                               />
                               <AdminRowMenu
+                                disabled={!legacyInventoryReady}
                                 name={r.name}
                                 actions={[
                                   {
                                     label: "删除链路配置",
                                     accessibleLabel: `删除链路配置 ${r.name}`,
                                     destructive: true,
-                                    run: () =>
-                                      confirmRemoval({
-                                        title: `删除链路配置「${r.name}」？`,
-                                        description:
-                                          "已分配用户将不能从此链路配置获取新配置。",
-                                        confirmLabel: "删除",
-                                        cancelLabel: "保留",
-                                        destructive: true,
-                                        returnFocusOnSuccess:
-                                          completedRemovalDestination(),
-                                        onConfirm: () =>
-                                          remove.mutateAsync({
-                                            kind: "routes",
-                                            id: r.id,
-                                          }),
-                                      }),
+                                    run: () => confirmLegacyRemoval("routes", r.id),
                                   },
                                 ]}
                               />
@@ -598,7 +678,7 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
                       minWidth={760}
                       empty={searchEmpty}
                     />
-                  ) : (
+                  ) : legacyInventoryReady ? (
                     <EmptyState
                       title="暂无链路配置"
                       description="选择一个端点直连，或按顺序连接多个端点。"
@@ -611,7 +691,7 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
                         </ActionButton>
                       }
                     />
-                  ))}
+                  ) : null)}
                 {page === "nodes" &&
                   (nodes.length ? (
                     <DataTable<NodeRecord>
@@ -624,9 +704,8 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
                           render: (_, n) => (
                             <button
                               className="table-name inline-flex min-w-0 items-center gap-2 rounded-sm text-left text-sm font-medium text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                              onClick={() =>
-                                setEntity({ kind: "nodes", value: n })
-                              }
+                              disabled={!legacyInventoryReady}
+                              onClick={() => editNode(n.id)}
                             >
                               <span className="table-icon size-4 shrink-0 text-muted-foreground [&_svg]:size-4">
                                 <CloudServerOutlined
@@ -665,35 +744,20 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
                           render: (_, n) => (
                             <TableRowActions name={n.name}>
                               <ActionButton
-                                onClick={() =>
-                                  setEntity({ kind: "nodes", value: n })
-                                }
+                                disabled={!legacyInventoryReady}
+                                onClick={() => editNode(n.id)}
                                 variant="ghost"
                               >
                                 编辑
                               </ActionButton>
                               <AdminRowMenu
+                                disabled={!legacyInventoryReady}
                                 actions={[
                                   {
                                     label: "删除端点",
                                     accessibleLabel: `删除端点 ${n.name}`,
                                     destructive: true,
-                                    run: () =>
-                                      confirmRemoval({
-                                        title: `删除端点「${n.name}」？`,
-                                        description:
-                                          "仍被链路配置引用的端点不能删除。请先从相关链路配置中移除引用。",
-                                        confirmLabel: "删除",
-                                        cancelLabel: "保留",
-                                        destructive: true,
-                                        returnFocusOnSuccess:
-                                          completedRemovalDestination(),
-                                        onConfirm: () =>
-                                          remove.mutateAsync({
-                                            kind: "nodes",
-                                            id: n.id,
-                                          }),
-                                      }),
+                                    run: () => confirmLegacyRemoval("nodes", n.id),
                                   },
                                 ]}
                                 name={n.name}
@@ -705,7 +769,7 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
                       minWidth={750}
                       empty={searchEmpty}
                     />
-                  ) : (
+                  ) : legacyInventoryReady ? (
                     <EmptyState
                       title="暂无连接端点"
                       description="维护连接端点，供链路配置引用。"
@@ -715,7 +779,7 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
                         </ActionButton>
                       }
                     />
-                  ))}
+                  ) : null)}
                 {page === "users" &&
                   (users.length ? (
                     <DataTable<UserRecord>
