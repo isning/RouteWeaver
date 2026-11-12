@@ -8,6 +8,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { UIProviders } from "./ui-patterns/providers";
@@ -316,6 +317,7 @@ it("discloses continuing authorization again at the actual stage-execution decis
         affectedUsers: 1,
         status: "planned",
         targets: [
+          { instanceId: "future", name: "Later core", stage: 1, supported: true, status: "planned", attempts: [] },
           {
             instanceId: "core",
             name: "Core",
@@ -333,6 +335,8 @@ it("discloses continuing authorization again at the actual stage-execution decis
   const confirm = await screen.findByRole("alertdialog");
   expect(confirm.textContent).toContain("最多自动恢复 3 次");
   expect(confirm.textContent).toContain("权限变化");
+  expect(within(confirm).getByRole("list", { name: "本次目标" }).textContent).toBe("Core");
+  expect(within(confirm).queryByText("Later core")).toBeNull();
 });
 
 

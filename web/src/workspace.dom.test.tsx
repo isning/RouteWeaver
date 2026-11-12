@@ -1353,7 +1353,10 @@ it("retries only explicitly selected known-failed fleet targets and never repeat
   ).toBe(true);
   await user.click(screen.getByLabelText("选择重试 Failed core"));
   await user.click(screen.getByRole("button", { name: "重试所选失败目标" }));
-  await user.click(await screen.findByRole("button", { name: "确认重试" }));
+  const confirmation = await screen.findByRole("alertdialog");
+  expect(within(confirmation).getByRole("list", { name: "本次目标" }).textContent).toBe("Failed core");
+  expect(within(confirmation).queryByText("Next stage core")).toBeNull();
+  await user.click(within(confirmation).getByRole("button", { name: "确认重试" }));
   await waitFor(() => expect(sent?.targetIds).toEqual(["failed"]));
   expect(sent.requestId).toBeTruthy();
 });

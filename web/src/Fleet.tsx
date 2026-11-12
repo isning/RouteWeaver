@@ -1374,17 +1374,37 @@ export function FleetBatchDetail({
         ...(retry ? { targetIds } : { stage }),
       },
     };
+    const targets = (batch?.targets || []).filter((target) =>
+      retry ? targetIds.includes(target.instanceId) : target.stage === stage,
+    );
+    const nameCounts = new Map<string, number>();
+    for (const target of targets) {
+      const name = target.name || target.instanceId;
+      nameCounts.set(name, (nameCounts.get(name) || 0) + 1);
+    }
     confirm({
       title: retry
         ? `重试 ${targetIds.length} 个失败实例？`
         : `执行第 ${stage! + 1} 阶段？`,
-      description:
-        (batch?.action === "install"
-          ? "仅准备目标版本文件，保留核心当前的运行状态与版本。"
-          : batch?.action === "stop"
-            ? "所选实例将停止，相关连接会中断。"
-            : "所选实例将重启并应用已检查的配置，当前连接可能中断。成功实例不会重复执行。") +
-        (batch ? serviceConsequence(batch) : ""),
+      description: (
+        <div className="space-y-3">
+          <p>{(batch?.action === "install"
+            ? "仅准备目标版本文件，保留核心当前的运行状态与版本。"
+            : batch?.action === "stop"
+              ? "所选实例将停止，相关连接会中断。"
+              : "所选实例将重启并应用已检查的配置，当前连接可能中断。成功实例不会重复执行。") +
+            (batch ? serviceConsequence(batch) : "")}</p>
+          <div className="space-y-1">
+            <p>本次目标</p>
+            <ul aria-label="本次目标" className="list-disc space-y-1 pl-5 wrap-anywhere">
+              {targets.map((target) => {
+                const name = target.name || target.instanceId;
+                return <li key={target.instanceId}>{name}{(nameCounts.get(name) || 0) > 1 ? `（${target.instanceId}）` : ""}</li>;
+              })}
+            </ul>
+          </div>
+        </div>
+      ),
       confirmLabel: retry ? "确认重试" : "确认执行",
       cancelLabel: "取消",
       onConfirm: () => {
