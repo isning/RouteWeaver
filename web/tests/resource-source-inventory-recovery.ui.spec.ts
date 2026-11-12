@@ -256,6 +256,8 @@ for (const width of [390, 1440]) for (const scenario of ["resource", "source-cha
         await tabTo(page, retry);
         const geometry = await capture(page, info, "source-detail-retry-keyboard", sheet, [{ label: "detail-retry", locator: retry }]);
         expect(geometry[0].bounds).toMatchObject({ focused: true, focusVisible: true, inViewport: true, hit: true });
+        await expect(retry).toBeEnabled();
+        await expect(retry).toBeFocused();
         http.authorizeRetry(); await page.keyboard.press("Enter");
         await expect(sheet.getByText("合成清单核对失败", { exact: true })).toHaveCount(0);
         await expect(sheet.getByRole("button", { name: `应用更新 ${sourceName}`, exact: true })).toHaveCount(0);

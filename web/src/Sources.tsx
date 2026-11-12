@@ -304,7 +304,7 @@ export function SourcesPage({
     <>
       {query.isError && (
         <Notice tone="error" title="暂时无法核对来源列表" action={
-          <ActionButton onClick={() => query.refetch()} disabled={query.isFetching} variant="outline">重试来源列表</ActionButton>
+          <ActionButton onClick={() => void query.refetch({ cancelRefetch: false })} pending={query.isFetching} keepFocusableWhilePending variant="outline">重试来源列表</ActionButton>
         }>
           <p>{query.error.message}</p>
           <p>显示上次读取的来源，请重试以核对最新状态。</p>
@@ -361,7 +361,7 @@ export function SourcesPage({
               <ActionButton onClick={() => openChanges(acceptedSetupSource)} disabled={application.pending || otherWritePending} variant="outline">查看导入变化</ActionButton>
             )}
             {!(acceptedSetupSource?.enabled && acceptedSetupSource.snapshot) && (
-              <ActionButton onClick={() => query.refetch()} disabled={query.isFetching} variant="outline">重新核对来源</ActionButton>
+              <ActionButton onClick={() => void query.refetch({ cancelRefetch: false })} pending={query.isFetching} keepFocusableWhilePending variant="outline">重新核对来源</ActionButton>
             )}
           </div>
         </section>

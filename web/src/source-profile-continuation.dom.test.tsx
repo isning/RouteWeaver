@@ -585,6 +585,11 @@ it.each(["delayed", "failed"] as const)("retains the confirmed import task throu
   expect((proceed as HTMLButtonElement).disabled).toBe(true);
   await within(task).findByText(postSaveInventory === "delayed" ? "正在核对已导入的来源…" : "暂时无法核对来源，导入结果已保留。请重试。");
   expect(within(task).queryByText("当前来源列表中找不到此来源，请重新核对。")).toBeNull();
+  if (postSaveInventory === "delayed") {
+    const retry = within(task).getByRole("button", { name: "重新核对来源" });
+    expect(retry).toHaveProperty("disabled", false);
+    expect(retry.getAttribute("aria-busy")).toBe("true");
+  }
   await userEvent.click(proceed);
   expect(onCreateProfile).not.toHaveBeenCalled();
   expect(writes).toEqual(["/me/sources"]);

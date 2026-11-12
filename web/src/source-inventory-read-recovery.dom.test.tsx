@@ -113,6 +113,14 @@ it("retains source search and known identities after failed refresh while indepe
   expect(screen.getByRole("button", { name: "应用更新 Known source A" })).toHaveProperty("disabled", true);
   act(() => onlineManager.setOnline(true));
   await screen.findByText("正在核对来源列表…");
+  const retry = screen.getByRole("button", { name: "重试来源列表" });
+  expect(retry).toHaveProperty("disabled", false);
+  expect(retry.getAttribute("aria-busy")).toBe("true");
+  const pendingReads = reads.length;
+  retry.focus();
+  await userEvent.keyboard("{Enter} ");
+  expect(document.activeElement).toBe(retry);
+  expect(reads).toHaveLength(pendingReads);
   expect(screen.getByRole("button", { name: "应用更新 Known source A" })).toHaveProperty("disabled", true);
   failed = false; held = undefined; rows = [];
   await act(async () => finish(json(rows)));
