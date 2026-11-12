@@ -11,11 +11,22 @@ const entitlement = { userId: user.id, startsAt: "2026-01-01T00:00:00Z", paused:
   cycle: { mode: "monthly", day: 1, anchor: "2026-01-01T00:00:00Z", timezone: "UTC+8" },
   quotaOverride: 50 * 1024 ** 3, onlineIpLimitOverride: 17, connectionLimitOverride: 9, entryRateBpsOverride: 125000 };
 type EntitlementFixture = Omit<typeof entitlement, "quotaOverride" | "onlineIpLimitOverride" | "connectionLimitOverride" | "entryRateBpsOverride"> & {
-  quotaOverride: number | null; onlineIpLimitOverride: number | null; connectionLimitOverride: number | null; entryRateBpsOverride: number | null;
+  serviceId?: string; routeIdsOverride?: string[] | null; expiresAt?: string | null;
+  quotaOverride?: number | null; onlineIpLimitOverride?: number | null; connectionLimitOverride?: number | null; entryRateBpsOverride?: number | null;
 };
+// Match the top-level omitempty fields exercised by this fixture. The real
+// preview decodes PolicyChange into service.Entitlement and encodes a typed
+// PolicyResourceReview; it does not echo the request map. Keep [] and 0 explicit.
+function responseEntitlement(ent: EntitlementFixture): EntitlementFixture {
+  const response = { ...ent };
+  if (response.serviceId === "") delete response.serviceId;
+  for (const field of ["expiresAt", "routeIdsOverride", "quotaOverride", "onlineIpLimitOverride", "connectionLimitOverride", "entryRateBpsOverride"] as const)
+    if (response[field] == null) delete response[field];
+  return response;
+}
 const effective = (ent: EntitlementFixture) => ({ userId: user.id, groupIds: [], routeIds: [], quotaBytes: ent.quotaOverride ?? 0,
   onlineIpLimit: ent.onlineIpLimitOverride ?? 0, connectionLimit: ent.connectionLimitOverride ?? 0,
-  entryRateBps: ent.entryRateBpsOverride ?? 0, status: "active", provenance: {}, entitlement: ent });
+  entryRateBps: ent.entryRateBpsOverride ?? 0, status: "active", provenance: {}, entitlement: responseEntitlement(ent) });
 const precondition = { exists: true, revision: "synthetic-override-opening" };
 const contextPath = `/api/access-policy/edit-context/entitlement/${user.id}`;
 const scenarios = [
@@ -76,7 +87,7 @@ async function fixture(page: Page, baseURL: string | undefined, scenario: Scenar
     "/api/state": { users: [user], nodes: [], routes: [], revisions: [], capabilities: [], deploymentAvailable: false },
     "/api/services": [], "/api/published-routes": [], "/api/rates": [], "/api/settings": {}, "/api/user-groups": [],
     [`/api/users/${user.id}/admission-status`]: { asOf: "2026-01-01T00:00:00Z", maxLeaseSeconds: 30, onlineIps: [], activeStreams: 0, entries: [] },
-    [contextPath]: { target: { kind: "entitlement", id: user.id }, record: { entitlement }, precondition, effective: effective(entitlement) },
+    [contextPath]: { target: { kind: "entitlement", id: user.id }, record: { entitlement: responseEntitlement(entitlement) }, precondition, effective: effective(entitlement) },
   };
   const ledger = { contextReads: 0, authReads: 0, previewCommands: 0, previewRequests: 0,
     acceptedPreviews: 0, previewPhases: [] as string[], rejected: [] as string[], pageErrors: 0 };
@@ -105,7 +116,7 @@ async function fixture(page: Page, baseURL: string | undefined, scenario: Scenar
         return reject("unexpected synthetic preview intent");
       ledger.acceptedPreviews++; ledger.previewPhases.push(expectedPhase);
       return route.fulfill({ json: { revision: "synthetic-override-preview", guard: "opened-record", affected: [{ userId: user.id, before: effective(entitlement), after: effective(after) }], blockers: [],
-        resource: { target: { kind: "entitlement", id: user.id }, before: { entitlement }, after: { entitlement: after } } } });
+        resource: { target: { kind: "entitlement", id: user.id }, before: { entitlement: responseEntitlement(entitlement) }, after: { entitlement: responseEntitlement(after) } } } });
     }
     if (method !== "GET") return reject("API mutation attempt");
     if (!Object.hasOwn(reads, url.pathname)) return reject("unexpected API read");
@@ -241,6 +252,8 @@ for (const width of [390, 1440]) for (const scenario of scenarios) {
       expect(await capture(page, info, "corrected-remount", editor, input, "3")).toMatchObject(fieldFocus);
       ledger.previewCommands++; await activate(preview); await expect(review).toBeVisible();
       await expect(review.getByRole("row", { name: new RegExp(scenario.reviewRow) }).getByRole("cell").nth(1)).toHaveText(scenario.after);
+      const correctionRows = review.getByRole("table", { name: "个人授权变更", exact: true }).getByRole("rowheader");
+      await expect(correctionRows).toHaveText([scenario.reviewRow]);
       await capture(page, info, "correction-review", review);
       expect(ledger.previewPhases).toEqual(["correction"]);
       await activate(review.getByRole("button", { name: "返回编辑", exact: true }), review); await expect(review).toHaveCount(0);
@@ -248,6 +261,8 @@ for (const width of [390, 1440]) for (const scenario of scenarios) {
       await activate(enabled, editor, "Space"); await expect(enabled).not.toBeChecked(); await expect(mounted).toHaveCount(0);
       fixtureState.expectInheritance(); ledger.previewCommands++; await activate(preview); await expect(review).toBeVisible();
       await expect(review.getByRole("row", { name: new RegExp(scenario.reviewRow) }).getByRole("cell").nth(1)).toHaveText("继承");
+      const inheritanceRows = review.getByRole("table", { name: "个人授权变更", exact: true }).getByRole("rowheader");
+      await expect(inheritanceRows).toHaveText([scenario.reviewRow]);
       await capture(page, info, "inheritance-review", review);
       expect(ledger.previewPhases).toEqual(["correction", "inheritance"]);
       expect(ledger.previewRequests).toBe(2); expect(ledger.acceptedPreviews).toBe(2);
@@ -274,3 +289,21 @@ for (const width of [390, 1440]) for (const scenario of scenarios) {
     if (failures.length > 1) throw new AggregateError(failures, "User-override journey or evidence failed");
   });
 }
+
+
+// Pure serializer checks; no page fixture is requested.
+test("user-override fixture mirrors typed optional-field omission without changing request intent", () => {
+  const request: EntitlementFixture = { ...entitlement, serviceId: "", routeIdsOverride: null, expiresAt: null,
+    quotaOverride: null, onlineIpLimitOverride: null, connectionLimitOverride: null, entryRateBpsOverride: null };
+  expect(responseEntitlement(request)).toEqual({ userId: user.id, startsAt: "2026-01-01T00:00:00Z", paused: false,
+    cycle: { mode: "monthly", day: 1, anchor: "2026-01-01T00:00:00Z", timezone: "UTC+8" } });
+  expect(request).toEqual({ ...entitlement, serviceId: "", routeIdsOverride: null, expiresAt: null,
+    quotaOverride: null, onlineIpLimitOverride: null, connectionLimitOverride: null, entryRateBpsOverride: null });
+  const explicit: EntitlementFixture = { ...request, serviceId: "explicit-plan", routeIdsOverride: [],
+    quotaOverride: 0, onlineIpLimitOverride: 0, connectionLimitOverride: 0, entryRateBpsOverride: 0 };
+  expect(responseEntitlement(explicit)).toEqual({ userId: user.id, startsAt: "2026-01-01T00:00:00Z", paused: false,
+    cycle: { mode: "monthly", day: 1, anchor: "2026-01-01T00:00:00Z", timezone: "UTC+8" },
+    serviceId: "explicit-plan", routeIdsOverride: [], quotaOverride: 0, onlineIpLimitOverride: 0, connectionLimitOverride: 0, entryRateBpsOverride: 0 });
+  expect(responseEntitlement({ ...explicit, routeIdsOverride: ["chosen-route"], expiresAt: "2027-01-01T00:00:00Z" }))
+    .toMatchObject({ routeIdsOverride: ["chosen-route"], expiresAt: "2027-01-01T00:00:00Z" });
+});
