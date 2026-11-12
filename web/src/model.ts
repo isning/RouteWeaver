@@ -37,6 +37,7 @@ export function resetCountdown(value?: string, now = Date.now()) {
   if (!value) return null;
   const left = new Date(value).getTime() - now;
   if (!Number.isFinite(left) || left < 0) return null;
+  if (left < 3600000) return "不足 1 小时";
   const days = Math.floor(left / 86400000),
     hours = Math.floor((left % 86400000) / 3600000);
   return days ? `${days} 天 ${hours} 小时` : `${hours} 小时`;

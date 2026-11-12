@@ -22,6 +22,12 @@ describe("user-visible subscription facts", () => {
   });
   it("counts down from the actual reset instant and does not invent a date", () => {
     expect(resetCountdown(undefined)).toBe(null);
+    const reset = "2026-11-01T00:00:00Z";
+    const at = Date.parse(reset);
+    expect(resetCountdown(reset, at - 59 * 60000)).toBe("不足 1 小时");
+    expect(resetCountdown(reset, at - 3600000)).toBe("1 小时");
+    expect(resetCountdown(reset, at + 1)).toBe(null);
+    expect(resetCountdown("invalid", at)).toBe(null);
     expect(
       resetCountdown(
         "2026-11-01T00:00:00+08:00",
