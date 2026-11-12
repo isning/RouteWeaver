@@ -21,6 +21,8 @@ import (
 var ErrNotFound = errors.New("not found")
 
 var (
+	ErrNodeExists       = errors.New("node already exists")
+	ErrInvalidNodeInput = errors.New("valid node connection settings required")
 	ErrUserExists       = errors.New("user already exists")
 	ErrInvalidUserInput = errors.New("valid id, name and non-negative quota required")
 )
@@ -200,6 +202,40 @@ func (s *Store) PutNode(v domain.Node) error {
 	v.Status = "unregistered"
 	return s.put("nodes", v.ID, v)
 }
+
+// CreateNode requires absence by kind and ID under a database writer reservation.
+// The committed receipt does not depend on a subsequent State read. This creates
+// only the connection record; it does not register or provision a server.
+func (s *Store) CreateNode(v domain.Node) (domain.Node, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if err := domain.ValidateNode(v); err != nil {
+		// Validation errors may quote input. Do not expose connection secrets.
+		return domain.Node{}, ErrInvalidNodeInput
+	}
+	v.Status = "unregistered"
+	tx, err := s.beginWriteTx()
+	if err != nil {
+		return domain.Node{}, err
+	}
+	defer tx.Rollback()
+	var exists int
+	err = tx.QueryRow(`SELECT 1 FROM records WHERE kind='nodes' AND id=?`, v.ID).Scan(&exists)
+	if err == nil {
+		return domain.Node{}, ErrNodeExists
+	}
+	if err != sql.ErrNoRows {
+		return domain.Node{}, err
+	}
+	if err = s.putTx(tx, "nodes", v.ID, v); err != nil {
+		return domain.Node{}, err
+	}
+	if err = tx.Commit(); err != nil {
+		return domain.Node{}, err
+	}
+	return v, nil
+}
+
 func (s *Store) PutUser(v domain.User) error {
 	_, e := s.putUser(v, false)
 	return e

@@ -11,7 +11,37 @@ import (
 	"strings"
 )
 
-type NodeInput struct{ Body domain.Node }
+type NodeInput struct {
+	IfNoneMatch                 string `header:"If-None-Match" required:"false" doc:"Use a single * to create only when the node ID is absent."`
+	Body                        domain.Node
+	createOnly                  bool
+	invalidCreationPrecondition bool
+}
+
+// Resolve keeps empty, repeated and list-valued headers from becoming upserts.
+func (in *NodeInput) Resolve(ctx huma.Context) []error {
+	count := 0
+	valid := true
+	ctx.EachHeader(func(name, value string) {
+		if strings.EqualFold(name, "If-None-Match") {
+			count++
+			valid = valid && strings.Trim(value, " \t") == "*"
+		}
+	})
+	in.createOnly = count > 0
+	in.invalidCreationPrecondition = count > 0 && (count != 1 || !valid)
+	return nil
+}
+
+type nodeCreationError struct {
+	*huma.ErrorModel
+	Code string `json:"code"`
+}
+
+func nodeCreationFailure(status int, code, detail string) error {
+	return &nodeCreationError{ErrorModel: &huma.ErrorModel{Status: status, Title: http.StatusText(status), Detail: detail}, Code: code}
+}
+
 type NodeUpdate struct {
 	ID   string `path:"id"`
 	Body domain.Node
@@ -94,7 +124,25 @@ func registerCRUD(api huma.API, s *store.Store, registry *render.Registry) {
 		}
 		return &RouteOutput{Body: v}, nil
 	}
-	huma.Post(api, "/nodes", func(ctx context.Context, in *NodeInput) (*NodeOutput, error) { return putNode(in.Body) })
+	huma.Post(api, "/nodes", func(ctx context.Context, in *NodeInput) (*NodeOutput, error) {
+		if in.invalidCreationPrecondition {
+			return nil, nodeCreationFailure(http.StatusBadRequest, "NODE_CREATION_PRECONDITION_INVALID", "node creation requires a single If-None-Match: * precondition")
+		}
+		if !in.createOnly {
+			return putNode(in.Body)
+		}
+		v, err := s.CreateNode(in.Body)
+		if errors.Is(err, store.ErrNodeExists) {
+			return nil, nodeCreationFailure(http.StatusPreconditionFailed, "NODE_CREATION_CONFLICT", "node already exists; review the saved node before continuing")
+		}
+		if errors.Is(err, store.ErrInvalidNodeInput) {
+			return nil, nodeCreationFailure(http.StatusBadRequest, "NODE_CREATION_INVALID", "valid node connection settings required")
+		}
+		if err != nil {
+			return nil, huma.Error500InternalServerError("cannot create node")
+		}
+		return &NodeOutput{Body: v}, nil
+	})
 	huma.Put(api, "/nodes/{id}", func(ctx context.Context, in *NodeUpdate) (*NodeOutput, error) {
 		if in.ID != in.Body.ID {
 			return nil, huma.Error400BadRequest("id mismatch")

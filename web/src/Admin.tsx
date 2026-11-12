@@ -13,6 +13,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ConnectionFields, normalizeConnection } from "./ConnectionFields";
+import {
+  nodeCreationSnapshot,
+  readNodeRecord,
+  sameCreatedNode,
+} from "./node-creation";
 import { useConfirm } from "@/ui-patterns/confirmations";
 import { measuredBytes } from "./observability-model";
 import { NumericInput } from "@/ui-patterns/numeric-input";
@@ -65,7 +70,9 @@ import {
   APIError,
   createInvitation,
   createUser,
+  createNode,
   UserCreationError,
+  NodeCreationError,
   InvitationCreationError,
   type InvitationReceipt,
   deleteRecord,
@@ -1477,8 +1484,8 @@ const quotaInputError =
 const unsafeQuotaError =
   "当前账号额度超出网页可精确保存的范围。为避免改写额度，名称和启用状态也暂不能保存；请取消编辑。";
 
-const creationCloseWarning =
-  "用户可能已经创建，关闭不会撤销创建。再次添加会开始新的创建。";
+const entityCreationCloseWarning = (kind: "nodes" | "users") =>
+  `${kind === "nodes" ? "端点" : "用户"}可能已经创建，关闭不会撤销创建。再次添加会开始新的创建。`;
 const sameCreatedUser = (submitted: UserRecord, current: UserRecord) =>
   submitted.id === current.id &&
   submitted.name === current.name &&
@@ -1538,7 +1545,7 @@ function EntityEditor({
   );
   type CreationAttempt = {
     task: NonNullable<typeof entity>;
-    record: UserRecord;
+    record: UserRecord | NodeRecord;
     phase:
       | "submitting"
       | "uncertain"
@@ -1548,7 +1555,7 @@ function EntityEditor({
       | "created";
     decisionRevision: number;
     mayHaveCommitted: boolean;
-    current?: UserRecord;
+    current?: UserRecord | NodeRecord;
     checkError?: Error;
   };
   const creationID = useRef<{
@@ -1570,6 +1577,21 @@ function EntityEditor({
   const recovering =
     !!currentCreation && currentCreation.phase !== "submitting";
   const completedCreation = currentCreation?.phase === "created";
+  const creationNoun = entity?.kind === "nodes" ? "端点" : "用户";
+  const creationCloseWarning = entityCreationCloseWarning(
+    entity?.kind || "users",
+  );
+  const sameCreation = (
+    attempt: CreationAttempt,
+    current: UserRecord | NodeRecord,
+  ) =>
+    attempt.task.kind === "nodes"
+      ? sameCreatedNode(attempt.record as NodeRecord, current as NodeRecord)
+      : sameCreatedUser(attempt.record as UserRecord, current as UserRecord);
+  const refreshNodeCreation = () => {
+    if (creationOwner.current?.task.kind === "nodes")
+      client.invalidateQueries({ queryKey: ["admin-state"] });
+  };
   const mutation = useMutation({
     mutationFn: ({
       values,
@@ -1582,7 +1604,10 @@ function EntityEditor({
       quotaBytes?: number;
       creationAttempt?: CreationAttempt;
     }) => {
-      if (creationAttempt) return createUser(creationAttempt.record);
+      if (creationAttempt)
+        return creationAttempt.task.kind === "nodes"
+          ? createNode(creationAttempt.record as NodeRecord)
+          : createUser(creationAttempt.record as UserRecord);
       const value = {
         ...task.value,
         ...values,
@@ -1617,12 +1642,12 @@ function EntityEditor({
       if (!active.current || owner.current !== task) return;
       if (creationAttempt) {
         if (!ownsCreation(creationAttempt)) return;
-        if (!sameCreatedUser(creationAttempt.record, saved as UserRecord)) {
+        if (!sameCreation(creationAttempt, saved as UserRecord | NodeRecord)) {
           updateCreation({
             ...creationAttempt,
             phase: "different",
             mayHaveCommitted: true,
-            current: saved as UserRecord,
+            current: saved as UserRecord | NodeRecord,
           });
           return;
         }
@@ -1634,7 +1659,7 @@ function EntityEditor({
           updateCreation({
             ...creationAttempt,
             phase: "created",
-            current: saved as UserRecord,
+            current: saved as UserRecord | NodeRecord,
           });
           return;
         }
@@ -1643,10 +1668,13 @@ function EntityEditor({
       onClose();
     },
     onError: (error, { creationAttempt }) => {
+      if (creationAttempt?.task.kind === "nodes")
+        client.invalidateQueries({ queryKey: ["admin-state"] });
       if (!creationAttempt || !ownsCreation(creationAttempt)) return;
       // A rejection of a retry says nothing about an earlier uncertain request.
       if (
-        error instanceof UserCreationError &&
+        (error instanceof UserCreationError ||
+          error instanceof NodeCreationError) &&
         error.outcome === "rejected" &&
         !creationAttempt.mayHaveCommitted
       )
@@ -1671,6 +1699,7 @@ function EntityEditor({
       const attempt = creationOwner.current;
       if (!attempt || !ownsCreation(attempt)) return;
       creationDecisionRevision.current++;
+      refreshNodeCreation();
       if (attempt.phase === "checking")
         updateCreation({ ...attempt, phase: "uncertain" });
     },
@@ -1694,16 +1723,31 @@ function EntityEditor({
       // Never use a cached list or update a newer task from this readback.
       const snapshot = await loadState();
       if (!ownsCreation(checking)) return;
-      if (!Array.isArray(snapshot?.users))
-        throw new Error("未能读取用户列表，请重新检查。");
-      const current = snapshot.users.find(
-        (user) => user.id === attempt.record.id,
-      );
+      let current: UserRecord | NodeRecord | undefined;
+      if (attempt.task.kind === "nodes") {
+        if (!Array.isArray(snapshot?.nodes))
+          throw new Error("Invalid endpoint list");
+        const records = snapshot.nodes.map(readNodeRecord);
+        if (
+          records.some((record) => !record) ||
+          new Set(records.map((record) => record!.id)).size !== records.length
+        )
+          throw new Error("Invalid endpoint list");
+        current =
+          records.find((record) => record!.id === attempt.record.id) ||
+          undefined;
+      } else {
+        if (!Array.isArray(snapshot?.users))
+          throw new Error("未能读取用户列表，请重新检查。");
+        current = snapshot.users.find((user) => user.id === attempt.record.id);
+      }
       if (!current) {
         updateCreation({ ...checking, phase: "absent" });
-      } else if (sameCreatedUser(attempt.record, current)) {
+      } else if (sameCreation(attempt, current)) {
         client.invalidateQueries({ queryKey: ["admin-state"] });
-        message.success("已确认用户已创建");
+        message.success(
+          `已确认${attempt.task.kind === "nodes" ? "端点" : "用户"}已创建`,
+        );
         onClose();
       } else {
         updateCreation({ ...checking, phase: "different", current });
@@ -1715,9 +1759,11 @@ function EntityEditor({
           ...checking,
           phase: "uncertain",
           checkError:
-            error instanceof Error
-              ? error
-              : new Error("未能读取用户列表，请重新检查。"),
+            attempt.task.kind === "nodes"
+              ? new Error("未能读取端点列表，请重新检查。")
+              : error instanceof Error
+                ? error
+                : new Error("未能读取用户列表，请重新检查。"),
         });
     }
   };
@@ -1785,7 +1831,10 @@ function EntityEditor({
           confirmLabel: "关闭窗口",
           cancelLabel: "继续核对",
         },
-        () => onClose(),
+        () => {
+          refreshNodeCreation();
+          onClose();
+        },
       );
       return;
     }
@@ -1910,18 +1959,29 @@ function EntityEditor({
           const submit = submitButton.current;
           if (submit?.form?.contains(document.activeElement)) submit.focus();
           let creationAttempt: CreationAttempt | undefined;
-          if (entity.kind === "users" && !entity.value) {
+          if (!entity.value) {
             if (creationID.current?.task !== entity)
-              creationID.current = { task: entity, id: newID("user") };
+              creationID.current = {
+                task: entity,
+                id: newID(entity.kind === "nodes" ? "node" : "user"),
+              };
             creationAttempt = {
               task: entity,
-              record: {
-                id: creationID.current.id,
-                name: String(values.name),
-                enabled: !!values.enabled,
-                quotaBytes: quotaBytes!,
-                usedBytes: 0,
-              },
+              record:
+                entity.kind === "nodes"
+                  ? nodeCreationSnapshot(
+                      normalizeConnection({
+                        ...values,
+                        id: creationID.current.id,
+                      } as NodeRecord) as NodeRecord,
+                    )
+                  : {
+                      id: creationID.current.id,
+                      name: String(values.name),
+                      enabled: !!values.enabled,
+                      quotaBytes: quotaBytes!,
+                      usedBytes: 0,
+                    },
               phase: "submitting",
               decisionRevision: creationDecisionRevision.current,
               mayHaveCommitted: false,
@@ -1942,35 +2002,55 @@ function EntityEditor({
             tone={completedCreation ? "success" : "warning"}
             title={
               completedCreation
-                ? "用户已创建"
+                ? `${creationNoun}已创建`
                 : currentCreation.phase === "absent"
-                  ? "暂未找到本次创建的用户"
+                  ? `暂未找到本次创建的${creationNoun}`
                   : currentCreation.phase === "different"
-                    ? "已有用户的资料与本次提交不同"
-                    : "尚未确认用户是否创建"
+                    ? `已有${creationNoun}的资料与本次提交不同`
+                    : `尚未确认${creationNoun}是否创建`
             }
           >
             {completedCreation
-              ? "本次创建已完成。关闭窗口不会删除用户。"
+              ? `本次创建已完成。关闭窗口不会删除${creationNoun}。`
               : currentCreation.phase === "absent"
-                ? "之前的请求仍可能完成。重试只会继续本次创建，不会覆盖已有用户。"
+                ? `之前的请求仍可能完成。重试只会继续本次创建，不会覆盖已有${creationNoun}。`
                 : currentCreation.phase === "different"
-                  ? "未覆盖现有资料。请在用户列表中核对，再决定是否编辑。"
+                  ? `未覆盖现有资料。请在${creationNoun}列表中核对，再决定是否编辑。`
                   : "已保留本次提交，确认结果前暂不能修改。请检查创建结果；关闭不会撤销可能已完成的创建。"}
             {currentCreation.phase === "different" &&
               currentCreation.current && (
                 <div className="mt-2 space-y-1">
-                  <KeyValue label="现有用户名称">
+                  <KeyValue label={`现有${creationNoun}名称`}>
                     {currentCreation.current.name}
                   </KeyValue>
-                  <KeyValue label="账号状态">
-                    {currentCreation.current.enabled ? "已启用" : "已停用"}
-                  </KeyValue>
-                  <KeyValue label="账号基础额度">
-                    {currentCreation.current.quotaBytes === 0
-                      ? "不限额"
-                      : bytesLabel(currentCreation.current.quotaBytes)}
-                  </KeyValue>
+                  {currentCreation.task.kind === "nodes" ? (
+                    <>
+                      <KeyValue label="连接地址">
+                        {(currentCreation.current as NodeRecord).host}:
+                        {(currentCreation.current as NodeRecord).port}
+                      </KeyValue>
+                      <KeyValue label="协议">
+                        {(currentCreation.current as NodeRecord).protocol}
+                      </KeyValue>
+                    </>
+                  ) : (
+                    <>
+                      <KeyValue label="账号状态">
+                        {(currentCreation.current as UserRecord).enabled
+                          ? "已启用"
+                          : "已停用"}
+                      </KeyValue>
+                      <KeyValue label="账号基础额度">
+                        {(currentCreation.current as UserRecord).quotaBytes ===
+                        0
+                          ? "不限额"
+                          : bytesLabel(
+                              (currentCreation.current as UserRecord)
+                                .quotaBytes,
+                            )}
+                      </KeyValue>
+                    </>
+                  )}
                 </div>
               )}
             <ErrorNotice error={currentCreation.checkError} />

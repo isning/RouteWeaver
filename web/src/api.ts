@@ -1,4 +1,5 @@
-import type { State, Session, UserRecord } from "./types";
+import type { State, Session, UserRecord, NodeRecord } from "./types";
+import { readNodeRecord } from "./node-creation";
 let adminToken = "";
 let tokenRevision = 0;
 let legacyTokenValidated = false;
@@ -172,6 +173,65 @@ export async function createUser(draft: UserRecord): Promise<UserRecord> {
   )
     throw new UserCreationError("尚未确认用户是否创建", "unknown");
   return receipt as UserRecord;
+}
+
+export class NodeCreationError extends Error {
+  constructor(
+    message: string,
+    public outcome: "rejected" | "unknown",
+  ) {
+    super(message);
+  }
+}
+/** Add endpoint uses a create-only command; legacy saveRecord stays an upsert. */
+export async function createNode(draft: NodeRecord): Promise<NodeRecord> {
+  const record = readNodeRecord({ ...draft, status: "unregistered" });
+  if (!record)
+    throw new NodeCreationError("端点资料格式不正确，请检查输入。", "rejected");
+  try {
+    sessionTransport?.beforeRequest().beforeSend();
+  } catch {
+    throw new NodeCreationError(
+      "本次创建未发送，请先确认登录状态。",
+      "rejected",
+    );
+  }
+  let response: Response;
+  try {
+    response = await send("/nodes", {
+      method: "POST",
+      headers: { "If-None-Match": "*" },
+      body: JSON.stringify(record),
+    });
+  } catch {
+    throw new NodeCreationError("尚未确认端点是否创建", "unknown");
+  }
+  let value: unknown;
+  try {
+    value = await readResponse<unknown>(response);
+  } catch (error) {
+    const code =
+      error instanceof APIError
+        ? (error.details as { code?: string } | null)?.code
+        : undefined;
+    // Neither an untagged 400 nor a conflict rules out an earlier commit.
+    if (
+      response.status === 400 &&
+      ["NODE_CREATION_INVALID", "NODE_CREATION_PRECONDITION_INVALID"].includes(
+        code || "",
+      )
+    )
+      throw new NodeCreationError(
+        "端点未创建，请检查连接参数后重试。",
+        "rejected",
+      );
+    // Do not echo arbitrary response detail, which could contain connection data.
+    throw new NodeCreationError("尚未确认端点是否创建", "unknown");
+  }
+  const receipt = readNodeRecord(value);
+  if (!receipt || receipt.id !== record.id)
+    throw new NodeCreationError("尚未确认端点是否创建", "unknown");
+  return receipt;
 }
 
 export type InvitationDraft = {
