@@ -14,6 +14,7 @@ import { ActionButton } from "@/ui-patterns/actions";
 import { useConfirm, type ConfirmationHandle } from "@/ui-patterns/confirmations";
 import { useForm, AppField, AppForm, type AppFormSubmitHandle } from "@/ui-patterns/form";
 import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from "react";
+import { flushSync } from "react-dom";
 import { ByteQuantityInput } from "./ByteQuantityInput";
 import { PolicyDateInput } from "./PolicyDateInput";
 import { isPolicyTimestamp } from "./policy-date-model";
@@ -24,7 +25,7 @@ import type { Entitlement, Service, UserRecord } from "./types";
 import type { EntitlementPolicyEditContext, NamedRecord } from "./access-policy-model";
 import { loadEntitlementPolicyEditContext } from "./service-policy-edit";
 import { EntitlementPolicyComparison } from "./EntitlementPolicyComparison";
-import { revealFocusedDrawerControl, revealFocusedUsageResetControl } from "./drawer-control-visibility";
+import { revealFocusedDrawerControl, revealFocusedDrawerControlAfterAccordionOpen, revealFocusedUsageResetControl } from "./drawer-control-visibility";
 import { PolicySummary, usePolicyChange } from "./AccessPolicy";
 import { ErrorNotice, QueryState, Section, KeyValue } from "./components";
 import { CycleFields, wholeNumberRules, byteQuantityRules, } from "./PolicyFields";
@@ -45,6 +46,10 @@ const overrideFields = [
     },
     { key: "entryRateBpsOverride", label: "个人入口限速（Mbps）", unit: "Mbps" },
 ] as const;
+// Enabled inputs must contain a number. Only disabling an override means
+// inheritance; a cleared field must not become a null override on submission.
+const hasInvalidEnabledOverride = (values: Record<string, any>) => overrideFields.some(field =>
+    values[`${field.key}Enabled`] && (!Number.isSafeInteger(values[field.key]) || values[field.key] < 0));
 // Only edited decimal text is checked here. Stored values must never be
 // reconstructed from the rounded GiB/Mbps display when another field changes.
 function exactEditedInteger(text: string, scale: number): number | undefined {
@@ -172,6 +177,7 @@ function UserPolicyFields({ user, context, services, serviceCatalog, routes, dis
     const [unfinished, setUnfinished] = useState<Record<string, string>>({});
     const unfinishedRef = useRef<Record<string, string>>({});
     const [numberKeys, setNumberKeys] = useState<Record<string, number>>({});
+    const [editSections, setEditSections] = useState<string[]>([]);
     const blocked = () => Object.values(openRef.current).some(Boolean) || Object.keys(unfinishedRef.current).length > 0;
     const invalidate = (dirty = true) => { intent.current++; latestController.current?.abort(); setLatest(null); setLatestError(null); setLatestPending(false); policy.clearError(dirty); };
     useEffect(() => () => { intent.current++; latestController.current?.abort(); }, []);
@@ -226,6 +232,13 @@ function UserPolicyFields({ user, context, services, serviceCatalog, routes, dis
         },
         // Match themed disabled paint without suppressing the owned start event.
         className: blocked() || policy.closingBlocked ? "opacity-50 cursor-not-allowed" : undefined };
+    const prepareOverrideValidation = () => {
+        if (blocked() || policy.closingBlocked) return;
+        // Register the missing field rules before either native submit or the
+        // guarded Preview command enters existing error-focus recovery.
+        if (hasInvalidEnabledOverride(form.getFieldsValue(true)) && !editSections.includes("overrides"))
+            flushSync(() => setEditSections(sections => [...sections, "overrides"]));
+    };
     const readLatest = async () => {
         latestController.current?.abort();
         const owner = ++intent.current, controller = new AbortController();
@@ -264,6 +277,7 @@ function UserPolicyFields({ user, context, services, serviceCatalog, routes, dis
             return;
         const full = form.getFieldsValue(true);
         const values = { ...full, ...submitted, cycle: { ...ent.cycle, ...full.cycle, ...submitted.cycle } };
+        if (hasInvalidEnabledOverride(values)) return;
         const entitlement: Entitlement = {
             ...ent,
             userId: user.id,
@@ -310,7 +324,7 @@ function UserPolicyFields({ user, context, services, serviceCatalog, routes, dis
             },
         ]).map(section => <AccordionItem key={section.key} value={String(section.key)}><AccordionTrigger>{section.label}</AccordionTrigger><AccordionContent className="space-y-4">{section.children}</AccordionContent></AccordionItem>)}</Accordion>
       </Section>
-      <AppForm form={form} submitErrorFocusOwner={submitErrorFocusOwner.current} submitWithErrorFocusRef={submitWithErrorFocus} initialValues={init} onValuesChange={() => invalidate()} onFocusCapture={revealFocusedDrawerControl} onKeyDownCapture={(event) => {
+      <AppForm form={form} submitErrorFocusOwner={submitErrorFocusOwner.current} submitWithErrorFocusRef={submitWithErrorFocus} initialValues={init} onValuesChange={() => invalidate()} onFocusCapture={revealFocusedDrawerControl} onSubmitCapture={prepareOverrideValidation} onKeyDownCapture={(event) => {
             if (event.key === "Enter" && blocked()) {
                 event.preventDefault();
             }
@@ -407,7 +421,7 @@ function UserPolicyFields({ user, context, services, serviceCatalog, routes, dis
             续期后保留已有用量；切换方案或用户组时，账号继续沿用已有周期。
           </p>
         </Section>
-        <Accordion type="multiple">{([
+        <Accordion type="multiple" value={editSections} onValueChange={setEditSections}>{([
             {
                 key: "overrides",
                 label: "\u4E2A\u4EBA\u989D\u5EA6\u4E0E\u9650\u5236",
@@ -422,7 +436,7 @@ function UserPolicyFields({ user, context, services, serviceCatalog, routes, dis
                       </AppField>
                       <AppField noStyle shouldUpdate={(a, b) => a[`${field.key}Enabled`] !== b[`${field.key}Enabled`]}>
                         {({ getFieldValue }) => getFieldValue(`${field.key}Enabled`) && (<AppField name={field.key} label={field.label} trigger={field.unit ? "onChange" : "onValueChange"} rules={field.unit ? byteQuantityRules : wholeNumberRules}>
-                              {field.unit ? (<ByteQuantityInput unit={field.unit} inputResetKey={numberKeys[field.key]} onInput={text => inputNumber(field.key, text, field.unit === "GiB" ? 1024 ** 3 : 1000000 / 8)}/>) : (<NumericInput key={numberKeys[field.key]} onInputText={text => inputNumber(field.key, text)} min={0} max={Number.MAX_SAFE_INTEGER}/>)}
+                              {field.unit ? (<ByteQuantityInput unit={field.unit} inputResetKey={numberKeys[field.key]} initialInputText={unfinished[field.key]} onInput={text => inputNumber(field.key, text, field.unit === "GiB" ? 1024 ** 3 : 1000000 / 8)}/>) : (<NumericInput key={numberKeys[field.key]} initialInputText={unfinished[field.key]} onInputText={text => inputNumber(field.key, text)} min={0} max={Number.MAX_SAFE_INTEGER}/>)}
                             </AppField>)}
                       </AppField>
                       {unfinishedNotice(field.key)}
@@ -444,14 +458,16 @@ function UserPolicyFields({ user, context, services, serviceCatalog, routes, dis
                   </p>
                 </>),
             },
-        ]).map(section => <AccordionItem key={section.key} value={String(section.key)}><AccordionTrigger>{section.label}</AccordionTrigger><AccordionContent className="space-y-4">{section.children}</AccordionContent></AccordionItem>)}</Accordion>
+        ]).map(section => <AccordionItem key={section.key} value={String(section.key)}><AccordionTrigger>{section.label}</AccordionTrigger><AccordionContent className={section.key === "overrides" ? "space-y-4 px-1" : "space-y-4"} onAnimationEnd={section.key === "overrides" ? revealFocusedDrawerControlAfterAccordionOpen : undefined}>{section.children}</AccordionContent></AccordionItem>)}</Accordion>
         <div className="form-footer flex flex-wrap items-center justify-end gap-2 border-t pt-4">
           <ActionButton disabled={policy.closingBlocked} onClick={policy.requestClose} variant="outline">
             取消
           </ActionButton>
           <ActionButton {...commandProps} type="button" aria-disabled={blocked() || policy.closingBlocked} onClick={() => {
-            if (commandAllowed())
+            if (commandAllowed()) {
+                prepareOverrideValidation();
                 submitWithErrorFocus.current?.submit();
+            }
         }} aria-label="预览影响" aria-busy={policy.pending} keepFocusableWhilePending pending={policy.pending} variant="default">
             预览影响
           </ActionButton>
