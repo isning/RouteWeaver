@@ -508,6 +508,7 @@ for (const width of [1440, 390]) {
 
       await preview.click();
       await settledTask(review);
+      if (kind === "user") await review.getByRole("button", { name: "查看个人设置变更", exact: true }).click();
       await expect(consent).not.toBeChecked();
       await expect(apply).toBeDisabled();
       await expect(quotaRow.getByRole("cell").nth(1)).toHaveText("175 GiB");
