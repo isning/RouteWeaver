@@ -11,6 +11,7 @@ export default defineConfig({
     .map((project) => ({
       ...project,
       testMatch: [
+        "**/endpoint-creation-recovery.ui.spec.ts",
         "**/user-creation-recovery.ui.spec.ts",
         "**/service-cycle-draft.ui.spec.ts",
         "**/user-override-draft.ui.spec.ts",

@@ -6,6 +6,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 SPECS = {
+    'endpoint-creation-recovery',
     'user-creation-recovery',
     'service-cycle-draft',
     'user-override-draft',
@@ -61,7 +62,11 @@ SERVICE_COUNT_PHASES = ('raw-input', 'visible-blocked', 'collapsed-draft', 'coll
 USER_OVERRIDE_PHASES = ('blank-input', 'visible-blocked', 'collapsed-draft', 'collapsed-blocked', 'discard-decision', 'continued-draft', 'corrected-remount', 'correction-review', 'inheritance-review', 'fresh-reset', 'final-original')
 SERVICE_CYCLE_PHASES = ('incomplete-input', 'native-blocked', 'discard-decision', 'continued-draft', 'fraction-input', 'fraction-blocked', 'corrected-input', 'preview-review', 'fresh-reset', 'final-original')
 USER_CREATION_PHASES = ('uncertain', 'checking', 'close-decision', 'late-close-result', 'route-decision', 'late-route-result', 'absent', 'confirmed-list', 'final-original')
+ENDPOINT_CREATION_PHASES = ('uncertain', 'checking', 'close-decision', 'late-close-result', 'route-decision', 'late-route-result', 'absent', 'conflict', 'different', 'close-review', 'refreshed-list', 'final-original')
 ARTIFACTS = {
+    *{f'web/test-results/endpoint-creation-recovery*/endpoint-creation-{phase}.{ext}'
+      for phase in ENDPOINT_CREATION_PHASES for ext in ('png', 'json')},
+    'web/test-results/endpoint-creation-recovery*/endpoint-creation-request-ledger.json',
     *{f'web/test-results/user-creation-recovery*/user-creation-{phase}.{ext}'
       for phase in USER_CREATION_PHASES for ext in ('png', 'json')},
     'web/test-results/user-creation-recovery*/user-creation-request-ledger.json',
@@ -154,8 +159,8 @@ class UXRecoveryWorkflowTests(unittest.TestCase):
         for value in ('group: ux-recovery-${{ github.ref }}', 'cancel-in-progress: false',
                       'contents: read', 'persist-credentials: false', 'runs-on: ubuntu-24.04',
                       'timeout-minutes: 15', 'timeout-minutes: 10',
-                      'name: Recovery shard ${{ matrix.shard }}/2 (29 specs total, supplemental only)',
-                      'name: Run twenty-nine recovery specs with unchanged fixtures',
+                      'name: Recovery shard ${{ matrix.shard }}/2 (' + str(len(SPECS)) + ' specs total, supplemental only)',
+                      f'name: Run {len(SPECS)} recovery specs with unchanged fixtures',
                       'ROUTEWEAVER_CHROMIUM: /opt/google/chrome/chrome',
                       'npx --no-install playwright install-deps chromium',
                       '--config=playwright.ux-recovery.config.ts --workers=1 --retries=0 --shard=${{ matrix.shard }}/2',
@@ -317,6 +322,17 @@ class UXRecoveryWorkflowTests(unittest.TestCase):
         for filename in ('user-creation-private.json', 'user-creation-request-ledger.png',
                          'user-creation-uncertain-private.png', 'user-creation-final-original.zip'):
             self.assertFalse(retained(f'web/test-results/user-creation-recovery.ui-abcde-chromium/{filename}'))
+        endpoint_outputs = tuple(f'endpoint-creation-{phase}.{ext}' for phase in ENDPOINT_CREATION_PHASES
+                                 for ext in ('png', 'json')) + ('endpoint-creation-request-ledger.json',)
+        # Representative directories only; discovery is not a native run.
+        for width, scenario in ((390, 'ownership'), (1440, 'conflict')):
+            observed[f'endpoint-creation-recovery.ui-endpoint-{scenario}-at-{width}px-chromium'] = endpoint_outputs
+            observed[f'endpoint-creation-recovery.ui-abcde-{width}px-chromium'] = endpoint_outputs
+        for filename in ('request-ledger.json', 'endpoint-creation-private.json', 'endpoint-creation-request-ledger.png',
+                         'endpoint-creation-uncertain-private.png', 'endpoint-creation-final-original.zip',
+                         'endpoint-creation-request-body.json', 'endpoint-creation-headers.json',
+                         'endpoint-creation-storage-state.json', 'endpoint-creation-error-context.md'):
+            self.assertFalse(retained(f'web/test-results/endpoint-creation-recovery.ui-abcde-chromium/{filename}'))
         for directory, filenames in observed.items():
             for filename in filenames:
                 path = f'web/test-results/{directory}/{filename}'
@@ -348,7 +364,7 @@ class UXRecoveryWorkflowTests(unittest.TestCase):
             self.assertFalse(retained(f'web/test-results/announcement-list-recovery.ui-chromium/{filename}'))
 
         # A named compact capture is not an upload permission for another fixture.
-        for filename in compact_outputs + multi_outputs + inventory_outputs + group_priority_outputs + reset_outputs + target_outputs + users_outputs + initial_resource_outputs + announcement_outputs + policy_outputs + rate_outputs + count_outputs + override_outputs + cycle_outputs + dark_override_outputs + creation_outputs:
+        for filename in compact_outputs + multi_outputs + inventory_outputs + group_priority_outputs + reset_outputs + target_outputs + users_outputs + initial_resource_outputs + announcement_outputs + policy_outputs + rate_outputs + count_outputs + override_outputs + cycle_outputs + dark_override_outputs + creation_outputs + endpoint_outputs:
             path = f'web/test-results/unrelated.ui-chromium/{filename}'
             with self.subTest(path=path):
                 self.assertFalse(retained(path), path)
@@ -360,7 +376,9 @@ class UXRecoveryWorkflowTests(unittest.TestCase):
             self.assertIn(expected, config)
         for forbidden in ('webServer:', 'launchOptions:', 'use:', 'testIgnore:', 'grep:', 'grepInvert:', 'timeout:'):
             self.assertNotIn(forbidden, config)
-        self.assertEqual(set(re.findall(r'"\*\*/([^"/]+)\.ui\.spec\.ts"', config)), SPECS)
+        configured = re.findall(r'"\*\*/([^"/]+)\.ui\.spec\.ts"', config)
+        self.assertEqual(set(configured), SPECS)
+        self.assertEqual(len(configured), len(SPECS), 'Recovery specs must be configured once')
         shared = (ROOT / 'web/playwright.config.ts').read_text()
         for expected in ('chromiumSandbox: true', 'trace: "off"', 'screenshot: "off"'):
             self.assertIn(expected, shared)
