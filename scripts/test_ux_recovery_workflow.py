@@ -1,6 +1,7 @@
 """The recovery lane is supplemental; browser safety and required gates stay intact."""
 from pathlib import Path, PurePosixPath
 import re
+import runpy
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -145,11 +146,13 @@ class UXRecoveryWorkflowTests(unittest.TestCase):
         for value in ('group: ux-recovery-${{ github.ref }}', 'cancel-in-progress: false',
                       'contents: read', 'persist-credentials: false', 'runs-on: ubuntu-24.04',
                       'timeout-minutes: 15', 'timeout-minutes: 10',
-                      'name: Twenty-eight recovery specs (supplemental evidence only)',
+                      'name: Recovery shard ${{ matrix.shard }}/2 (28 specs total, supplemental only)',
                       'name: Run twenty-eight recovery specs with unchanged fixtures',
                       'ROUTEWEAVER_CHROMIUM: /opt/google/chrome/chrome',
                       'npx --no-install playwright install-deps chromium',
-                      '--config=playwright.ux-recovery.config.ts --workers=1 --retries=0'):
+                      '--config=playwright.ux-recovery.config.ts --workers=1 --retries=0 --shard=${{ matrix.shard }}/2',
+                      'fail-fast: false', 'shard: [1, 2]',
+                      'ROUTEWEAVER_BROWSER_SHARD: ${{ matrix.shard }}/2'):
             self.assertIn(value, workflow)
         self.assertEqual(re.findall(r'^  ([a-z_]+):$', workflow.split('jobs:\n', 1)[1], re.M), ['recovery'])
         self.assertIn('uses: ./.github/actions/setup\n        with:\n          go: "true"\n          node: "true"', workflow)
@@ -166,7 +169,7 @@ class UXRecoveryWorkflowTests(unittest.TestCase):
     def test_named_synthetic_artifacts_have_cleanup_headroom(self):
         workflow = (ROOT / '.github/workflows/ux-recovery-focus.yml').read_text()
         upload = workflow.split('      - name: Supplemental recovery diagnostics for this commit\n', 1)[1]
-        for expected in ('if: always()', 'name: ux-recovery-supplemental-${{ github.sha }}',
+        for expected in ('if: always()', 'name: ux-recovery-supplemental-${{ github.sha }}-${{ matrix.shard }}-of-2',
                          'retention-days: 7', 'if-no-files-found: warn'):
             self.assertIn(expected, upload)
         paths = upload.split('path: |\n', 1)[1].split('          if-no-files-found:', 1)[0]
@@ -339,6 +342,24 @@ class UXRecoveryWorkflowTests(unittest.TestCase):
             self.assertIn(expected, shared)
         for name in SPECS:
             self.assertTrue((ROOT / 'web/tests' / f'{name}.ui.spec.ts').is_file())
+
+    def test_shard_checker_is_offline_testable_and_runs_only_after_node_setup(self):
+        workflow = (ROOT / '.github/workflows/ux-recovery-focus.yml').read_text()
+        self.assertIn('      - name: Verify exact-once recovery shard discovery\n        run: python3 scripts/check_recovery_shards.py', workflow)
+        self.assertLess(workflow.index('          node: "true"'), workflow.index('run: python3 scripts/check_recovery_shards.py'))
+        check = runpy.run_path(str(ROOT / 'scripts/check_recovery_shards.py'))['validate_coverage']
+        def part(ids, files=('one.ui.spec.ts', 'two.ui.spec.ts')):
+            return {'identities': [('chromium', item) for item in ids], 'files': set(files)}
+        whole, first, second = part(['one', 'two']), part(['one']), part(['two'])
+        expected = {'one.ui.spec.ts', 'two.ui.spec.ts'}
+        self.assertEqual(check(whole, first, second, expected), (2, 1, 1))
+        for bad_first, bad_second in ((part([]), second), (part(['one', 'one']), second),
+                                      (first, part(['one'])), (first, part(['other'])),
+                                      (first, part(['two', 'extra']))):
+            with self.assertRaises(ValueError):
+                check(whole, bad_first, bad_second, expected)
+        with self.assertRaises(ValueError):
+            check(part(['one', 'two'], ('wrong.ui.spec.ts',)), first, second, expected)
 
 
 if __name__ == '__main__':

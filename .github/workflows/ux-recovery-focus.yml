@@ -21,12 +21,18 @@ env:
 
 jobs:
   recovery:
-    name: Twenty-eight recovery specs (supplemental evidence only)
+    name: Recovery shard ${{ matrix.shard }}/2 (28 specs total, supplemental only)
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
     env:
       # Vendor-installed binary covered by the runner's Chrome AppArmor profile.
       ROUTEWEAVER_CHROMIUM: /opt/google/chrome/chrome
+      # Each matrix job owns its own demo/server state; keep one worker per job.
+      ROUTEWEAVER_BROWSER_SHARD: ${{ matrix.shard }}/2
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
@@ -35,6 +41,8 @@ jobs:
         with:
           go: "true"
           node: "true"
+      - name: Verify exact-once recovery shard discovery
+        run: python3 scripts/check_recovery_shards.py
       - name: Install browser OS dependencies and CJK fonts
         working-directory: web
         run: npx --no-install playwright install-deps chromium
@@ -85,12 +93,12 @@ jobs:
         working-directory: web
         # Bound this subset without changing per-test timeouts; reserve cleanup/upload time.
         timeout-minutes: 10
-        run: npm run test:browser -- --config=playwright.ux-recovery.config.ts --workers=1 --retries=0
+        run: npm run test:browser -- --config=playwright.ux-recovery.config.ts --workers=1 --retries=0 --shard=${{ matrix.shard }}/2
       - name: Supplemental recovery diagnostics for this commit
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: ux-recovery-supplemental-${{ github.sha }}
+          name: ux-recovery-supplemental-${{ github.sha }}-${{ matrix.shard }}-of-2
           # Only the synthetic report, browser receipt and named test captures.
           # No databases, fixture keys, automatic screenshots, video or traces.
           path: |
