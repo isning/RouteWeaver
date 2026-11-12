@@ -510,8 +510,9 @@ it("blocks staged application for the same unresolved direct request while leavi
     ).disabled,
   ).toBe(false);
   await user.click(within(detail).getByRole("button", { name: "实例操作" }));
-  const configure = await screen.findByRole("menuitem", { name: "应用配置" });
-  expect(configure.getAttribute("aria-disabled")).toBe("true");
+  // Staged configuration has one named action in the sheet, not a second
+  // differently named entry in the instance lifecycle menu.
+  expect(screen.queryByRole("menuitem", { name: "应用配置" })).toBeNull();
   expect(
     screen
       .getByRole("menuitem", { name: "停止核心" })

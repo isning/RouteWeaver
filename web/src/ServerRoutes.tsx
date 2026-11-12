@@ -2170,13 +2170,9 @@ function ServerRouteDetail({
               <ActionButton variant="outline">实例操作</ActionButton>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              {Object.entries(fleetActionLabel).map(([key, label]) => (
+              {Object.entries(fleetActionLabel).filter(([key]) => key !== "configure").map(([key, label]) => (
                 <DropdownMenuItem
                   key={key}
-                  disabled={
-                    key === "configure" &&
-                    publicationRequests?.pendingDeploymentId === deployment.id
-                  }
                   onSelect={() => onPlan(key as FleetAction)}
                 >
                   {label}
