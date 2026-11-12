@@ -265,7 +265,7 @@ test("both processing stages keep ordinary titles readable and offer genuine com
       const editor = drawer.getByRole("group", { name: stage, exact: true });
       const card = editor.locator(".processing-step").first();
       await card.scrollIntoViewIfNeeded();
-      const title = card.locator("strong");
+      const title = card.getByRole("heading", { level: 4 });
       const box = await title.boundingBox();
       expect(box).not.toBeNull();
       // A normal four-character title fits on one 22px line, not four vertical lines.
@@ -490,7 +490,7 @@ test("desktop and narrow pixels preserve identities, contained targets and edita
             bounds!.x + bounds!.width - 14,
           );
         }
-        const title = await textStyle(card.locator("strong"));
+        const title = await textStyle(card.getByRole("heading", { level: 4 }));
         expect(title.rect.height).toBeLessThanOrEqual(24);
         const label = await textStyle(card.locator("label"));
         const input = await textStyle(card.locator("input"));
