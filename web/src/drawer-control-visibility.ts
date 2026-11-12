@@ -33,6 +33,7 @@ function visibleFieldContext(
   node: HTMLElement,
   scroller: HTMLElement,
   view: Window,
+  completedContent?: HTMLElement,
 ) {
   if (closedDetailsContent(node) || !rendered(node, view)) return false;
   for (
@@ -41,14 +42,19 @@ function visibleFieldContext(
     ancestor = ancestor.parentElement
   ) {
     const style = view.getComputedStyle(ancestor);
-    if (
-      (style.clip && style.clip !== "auto") ||
-      (style.clipPath && style.clipPath !== "none") ||
-      [style.overflow, style.overflowX, style.overflowY].some((value) =>
-        /^(hidden|clip)$/.test(value),
-      )
-    )
-      return false;
+    if ((style.clip && style.clip !== "auto") ||
+        (style.clipPath && style.clipPath !== "none")) return false;
+    if ([style.overflow, style.overflowX, style.overflowY].some(value => /^(hidden|clip)$/.test(value))) {
+      // Only this completion event's exact open accordion may contribute context.
+      // Its clip is not ignored: every candidate must already fit inside it.
+      if (ancestor !== completedContent ||
+          !ancestor.matches('[data-slot="accordion-content"][data-state="open"]')) return false;
+      const box = node.getBoundingClientRect(), clip = ancestor.getBoundingClientRect();
+      if (box.left < clip.left + ancestor.clientLeft ||
+          box.right > clip.left + ancestor.clientLeft + ancestor.clientWidth ||
+          box.top < clip.top + ancestor.clientTop ||
+          box.bottom > clip.top + ancestor.clientTop + ancestor.clientHeight) return false;
+    }
   }
   return true;
 }
@@ -97,6 +103,7 @@ function revealInScroller(
   view: Window,
   wholePixelMovement = false,
   fieldContext = false,
+  completedContent?: HTMLElement,
 ) {
   if (!rendered(target, view)) return;
   const box = target.getBoundingClientRect(),
@@ -148,7 +155,7 @@ function revealInScroller(
         node.closest('[role="dialog"],[role="alertdialog"]') !==
           target.closest('[role="dialog"],[role="alertdialog"]') ||
         node.closest('[hidden], [inert], [aria-hidden="true"]') ||
-        !visibleFieldContext(node, body, view)
+        !visibleFieldContext(node, body, view, completedContent)
       )
         continue;
       const rect = node.getBoundingClientRect();
@@ -228,7 +235,11 @@ export function revealFocusedDrawerControlAfterAccordionOpen(event: AnimationEve
   if (!(target instanceof HTMLElement) || !content.contains(target) ||
       target.closest('[data-slot="accordion-content"]') !== content) return;
   const form = content.closest("form");
-  if (form) revealOwnedDrawerControl(form, target);
+  if (form) {
+    revealOwnedDrawerControl(form, target);
+    if (target.getAttribute("aria-invalid") === "true")
+      revealSubmittedContext(form, target, content);
+  }
 }
 
 const excluded =
@@ -454,9 +465,14 @@ export function revealFocusedUsageResetControl(
 }
 
 /** Called only after the form's owned submit recovery has selected native focus. */
-export function revealSubmittedFieldContext(
+export function revealSubmittedFieldContext(form: HTMLFormElement, target: HTMLElement) {
+  revealSubmittedContext(form, target);
+}
+
+function revealSubmittedContext(
   form: HTMLFormElement,
   target: HTMLElement,
+  completedContent?: HTMLElement,
 ) {
   const doc = form.ownerDocument,
     view = doc.defaultView;
@@ -486,5 +502,5 @@ export function revealSubmittedFieldContext(
     return;
   const scroller =
     dialog.getAttribute("data-task-scroll") === "task" ? dialog : body;
-  revealInScroller(target, scroller, view, true, true);
+  revealInScroller(target, scroller, view, true, true, completedContent);
 }

@@ -148,8 +148,15 @@ async function capture(page: Page, info: TestInfo, stage: string, surface: Locat
         }
       }
       const shadow = getComputedStyle(node).boxShadow;
+      const error = (node.getAttribute("aria-describedby") ?? "").split(/\s+/)
+        .map(id => document.getElementById(id)).find(element => element?.textContent?.trim() ===
+          "请输入非负 Mbps 数值，需为 0.000008 Mbps 的整数倍且不超过上限");
+      const errorBox = error?.getBoundingClientRect();
       return { x: r.x, y: r.y, width: r.width, height: r.height,
         shadow, clipLeft, clipTop, clipRight, clipBottom,
+        errorTextMatches: !!error,
+        errorInViewport: !!errorBox && errorBox.width > 0 && errorBox.height > 0 &&
+          errorBox.left >= clipLeft && errorBox.right <= clipRight && errorBox.top >= clipTop && errorBox.bottom <= clipBottom,
         // Official shadcn input/button ring; independently verify settled paint.
         ring3px: /(?:^|\s)0px 0px 0px 3px(?:\s|,|$)/.test(shadow),
         ringInsideClips: r.left - 3 >= clipLeft - 0.5 && r.right + 3 <= clipRight + 0.5 &&
@@ -219,6 +226,7 @@ for (const width of [390, 1440]) for (const scenario of scenarios) {
       expect(ledger.previewRequests).toBe(0);
       const invalid = await capture(page, info, "blocked-preview", editor, rate, scenario.raw);
       expect(invalid).toMatchObject({ focused: true, focusVisible: true, inViewport: true, hit: true, invalid: true, inputMatches: true, ring3px: true, ringInsideClips: true });
+      if (scenario.collapse) expect(invalid).toMatchObject({ errorTextMatches: true, errorInViewport: true });
       await activate(cancel);
       const decision = page.getByRole("alertdialog", { name: "放弃尚未保存的授权修改？", exact: true });
       const continueEditing = decision.getByRole("button", { name: "继续编辑", exact: true });
