@@ -54,7 +54,10 @@ function setup(options: { entry?: Record<string, unknown>; route?: Record<string
 
 it("resolves the published route outside /state and opens source management without writes, reveal or changing the parent draft", async () => {
   const { requests, fence } = setup();
-  await userEvent.click(await screen.findByRole("button", { name: "管理此账号的入口" }));
+  const manage = await screen.findByRole("button", { name: "管理此账号的入口" });
+  expect(screen.getByText("Alice source entry")).toBeTruthy();
+  expect(screen.getByText("当前路径草稿会保留；返回后需重新核对路径版本才能保存。")).toBeTruthy();
+  await userEvent.click(manage);
   expect(await screen.findByRole("dialog", { name: "Alice 的平台入口" })).toBeTruthy();
   expect(await screen.findByText("Alice source entry")).toBeTruthy();
   expect(fence).toHaveBeenCalledTimes(1);

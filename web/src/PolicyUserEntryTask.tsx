@@ -84,11 +84,21 @@ function SourceTask({ deploymentId, listenerId, principal, onClose, onBeforeMana
     allocationHref={`#published-routes?line=${encodeURIComponent(principal.routeId)}&user=${encodeURIComponent(principal.accountId)}`}
     onClose={onClose}
   />;
-  return <TaskSheet title="核对用户入口" open onOpenChange={open => { if (!open) onClose(); }}>
+  return <TaskSheet title="核对用户入口" open onOpenChange={open => { if (!open) onClose(); }}
+    footer={source.data && !source.isError ? <div className="w-full space-y-3">
+      <p className="text-sm text-muted-foreground">当前路径草稿会保留；返回后需重新核对路径版本才能保存。</p>
+      <div className="flex justify-end"><ActionButton className="w-full sm:w-auto" disabled={source.isFetching || source.isPaused} onClick={() => {
+        if (managing || source.isFetching || source.isPaused || source.isError || !source.data) return;
+        if (!onBeforeManage()) { setBlocked(true); return; }
+        setVerified(source.data);
+        setManaging(true);
+      }}>管理此账号的入口</ActionButton></div>
+    </div> : undefined}>
     <div className="space-y-4">
-      <dl className="space-y-2 text-sm [overflow-wrap:anywhere]">
+      <dl className="divide-y text-sm [overflow-wrap:anywhere] [&>div]:grid [&>div]:gap-1 [&>div]:py-3 [&>div:first-child]:pt-0 [&_dt]:text-muted-foreground [&_dd]:font-medium">
         <div><dt>账号</dt><dd>{source.data?.user.name || principal.accountId}</dd></div>
         <div><dt>线路</dt><dd>{source.data?.route.name || principal.routeId}</dd></div>
+        {source.data && !source.isError && <div><dt>用户入口</dt><dd>{source.data.entry.name || source.data.entry.id}</dd></div>}
       </dl>
       {source.isFetching && <p role="status">正在核对入口来源…</p>}
       {source.isPaused && <Notice tone="warning" title="入口来源读取已暂停">恢复连接后重试。<ActionButton variant="outline" onClick={() => void source.refetch()}>重新核对</ActionButton></Notice>}
@@ -96,15 +106,6 @@ function SourceTask({ deploymentId, listenerId, principal, onClose, onBeforeMana
         <p>{source.error.message}</p>
         <ActionButton variant="outline" onClick={() => void source.refetch()}>重新核对</ActionButton>
       </Notice>}
-      {source.data && !source.isError && <>
-        <p className="text-sm">在账号入口管理中维护凭据和交付状态。当前路径草稿会保留；返回后需重新核对路径版本才能保存。</p>
-        <ActionButton disabled={source.isFetching || source.isPaused} onClick={() => {
-          if (managing || source.isFetching || source.isPaused || source.isError || !source.data) return;
-          if (!onBeforeManage()) { setBlocked(true); return; }
-          setVerified(source.data);
-          setManaging(true);
-        }}>管理此账号的入口</ActionButton>
-      </>}
       {blocked && <Notice tone="warning" title="请先完成当前路径操作">当前入口来源仍保留，请稍后重试。</Notice>}
     </div>
   </TaskSheet>;
