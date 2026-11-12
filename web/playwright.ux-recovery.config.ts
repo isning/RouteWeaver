@@ -11,6 +11,7 @@ export default defineConfig({
     .map((project) => ({
       ...project,
       testMatch: [
+        "**/inventory-keyboard-continuity.ui.spec.ts",
         "**/endpoint-creation-recovery.ui.spec.ts",
         "**/user-creation-recovery.ui.spec.ts",
         "**/service-cycle-draft.ui.spec.ts",

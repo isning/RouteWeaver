@@ -6,6 +6,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 SPECS = {
+    'inventory-keyboard-continuity',
     'endpoint-creation-recovery',
     'user-creation-recovery',
     'service-cycle-draft',
@@ -63,7 +64,11 @@ USER_OVERRIDE_PHASES = ('blank-input', 'visible-blocked', 'collapsed-draft', 'co
 SERVICE_CYCLE_PHASES = ('incomplete-input', 'native-blocked', 'discard-decision', 'continued-draft', 'fraction-input', 'fraction-blocked', 'corrected-input', 'preview-review', 'fresh-reset', 'final-original')
 USER_CREATION_PHASES = ('uncertain', 'checking', 'close-decision', 'late-close-result', 'route-decision', 'late-route-result', 'absent', 'confirmed-list', 'final-original')
 ENDPOINT_CREATION_PHASES = ('uncertain', 'checking', 'close-decision', 'late-close-result', 'route-decision', 'late-route-result', 'absent', 'conflict', 'different', 'close-review', 'refreshed-list', 'final-original')
+INVENTORY_KEYBOARD_PHASES = ('empty-clear-keyboard', 'empty-search-return', 'connected-opener-return', 'refresh-keyboard', 'refresh-pending', 'refreshed-draft-owned', 'missing-opener-search-return', 'final-original')
 ARTIFACTS = {
+    *{f'web/test-results/inventory-keyboard-continu*/inventory-keyboard-{phase}.{ext}'
+      for phase in INVENTORY_KEYBOARD_PHASES for ext in ('png', 'json')},
+    'web/test-results/inventory-keyboard-continu*/inventory-keyboard-request-ledger.json',
     *{f'web/test-results/endpoint-creation-recovery*/endpoint-creation-{phase}.{ext}'
       for phase in ENDPOINT_CREATION_PHASES for ext in ('png', 'json')},
     'web/test-results/endpoint-creation-recovery*/endpoint-creation-request-ledger.json',
@@ -333,6 +338,20 @@ class UXRecoveryWorkflowTests(unittest.TestCase):
                          'endpoint-creation-request-body.json', 'endpoint-creation-headers.json',
                          'endpoint-creation-storage-state.json', 'endpoint-creation-error-context.md'):
             self.assertFalse(retained(f'web/test-results/endpoint-creation-recovery.ui-abcde-chromium/{filename}'))
+        keyboard_outputs = tuple(f'inventory-keyboard-{phase}.{ext}' for phase in INVENTORY_KEYBOARD_PHASES
+                                 for ext in ('png', 'json')) + ('inventory-keyboard-request-ledger.json',)
+        # Normal stem plus names derived from installed Playwright's output-dir
+        # algorithm. This is filename coverage, not observed browser output.
+        for directory in ('inventory-keyboard-continuity.ui-services-at-390px-light-chromium',
+                          'inventory-keyboard-continu-13a24-ard-services-at-390px-light-chromium',
+                          'inventory-keyboard-continu-4fafc-yboard-users-at-1440px-dark-chromium'):
+            observed[directory] = keyboard_outputs
+            for filename in ('request-ledger.json', 'inventory-keyboard-private.json',
+                             'inventory-keyboard-request-ledger.png', 'inventory-keyboard-final-original.zip',
+                             'inventory-keyboard-empty-search-return-private.png',
+                             'inventory-keyboard-request-body.json', 'inventory-keyboard-headers.json',
+                             'inventory-keyboard-storage-state.json', 'inventory-keyboard-error-context.md'):
+                self.assertFalse(retained(f'web/test-results/{directory}/{filename}'))
         for directory, filenames in observed.items():
             for filename in filenames:
                 path = f'web/test-results/{directory}/{filename}'
@@ -364,7 +383,7 @@ class UXRecoveryWorkflowTests(unittest.TestCase):
             self.assertFalse(retained(f'web/test-results/announcement-list-recovery.ui-chromium/{filename}'))
 
         # A named compact capture is not an upload permission for another fixture.
-        for filename in compact_outputs + multi_outputs + inventory_outputs + group_priority_outputs + reset_outputs + target_outputs + users_outputs + initial_resource_outputs + announcement_outputs + policy_outputs + rate_outputs + count_outputs + override_outputs + cycle_outputs + dark_override_outputs + creation_outputs + endpoint_outputs:
+        for filename in compact_outputs + multi_outputs + inventory_outputs + group_priority_outputs + reset_outputs + target_outputs + users_outputs + initial_resource_outputs + announcement_outputs + policy_outputs + rate_outputs + count_outputs + override_outputs + cycle_outputs + dark_override_outputs + creation_outputs + endpoint_outputs + keyboard_outputs:
             path = f'web/test-results/unrelated.ui-chromium/{filename}'
             with self.subTest(path=path):
                 self.assertFalse(retained(path), path)

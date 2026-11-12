@@ -21,7 +21,7 @@ env:
 
 jobs:
   recovery:
-    name: Recovery shard ${{ matrix.shard }}/2 (30 specs total, supplemental only)
+    name: Recovery shard ${{ matrix.shard }}/2 (31 specs total, supplemental only)
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     strategy:
@@ -89,7 +89,7 @@ jobs:
             await browser.close();
           }
           JS
-      - name: Run 30 recovery specs with unchanged fixtures
+      - name: Run 31 recovery specs with unchanged fixtures
         working-directory: web
         # Bound this subset without changing per-test timeouts; reserve cleanup/upload time.
         timeout-minutes: 10
@@ -102,6 +102,23 @@ jobs:
           # Only the synthetic report, browser receipt and named test captures.
           # No databases, fixture keys, automatic screenshots, video or traces.
           path: |
+            web/test-results/inventory-keyboard-continu*/inventory-keyboard-empty-clear-keyboard.png
+            web/test-results/inventory-keyboard-continu*/inventory-keyboard-empty-clear-keyboard.json
+            web/test-results/inventory-keyboard-continu*/inventory-keyboard-empty-search-return.png
+            web/test-results/inventory-keyboard-continu*/inventory-keyboard-empty-search-return.json
+            web/test-results/inventory-keyboard-continu*/inventory-keyboard-connected-opener-return.png
+            web/test-results/inventory-keyboard-continu*/inventory-keyboard-connected-opener-return.json
+            web/test-results/inventory-keyboard-continu*/inventory-keyboard-refresh-keyboard.png
+            web/test-results/inventory-keyboard-continu*/inventory-keyboard-refresh-keyboard.json
+            web/test-results/inventory-keyboard-continu*/inventory-keyboard-refresh-pending.png
+            web/test-results/inventory-keyboard-continu*/inventory-keyboard-refresh-pending.json
+            web/test-results/inventory-keyboard-continu*/inventory-keyboard-refreshed-draft-owned.png
+            web/test-results/inventory-keyboard-continu*/inventory-keyboard-refreshed-draft-owned.json
+            web/test-results/inventory-keyboard-continu*/inventory-keyboard-missing-opener-search-return.png
+            web/test-results/inventory-keyboard-continu*/inventory-keyboard-missing-opener-search-return.json
+            web/test-results/inventory-keyboard-continu*/inventory-keyboard-final-original.png
+            web/test-results/inventory-keyboard-continu*/inventory-keyboard-final-original.json
+            web/test-results/inventory-keyboard-continu*/inventory-keyboard-request-ledger.json
             web/test-results/endpoint-creation-recovery*/endpoint-creation-uncertain.png
             web/test-results/endpoint-creation-recovery*/endpoint-creation-uncertain.json
             web/test-results/endpoint-creation-recovery*/endpoint-creation-checking.png
