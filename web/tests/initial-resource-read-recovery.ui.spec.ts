@@ -18,13 +18,26 @@ async function fixture(page: Page, baseURL: string | undefined) {
     gates.set(key, { promise, release });
   }
   const ledger = {
-    reads: [] as { phase: Phase; outcome: string }[],
+    reads: [] as { phase: Phase; outcome: string; sessionRead: number }[],
+    sessionReads: 0,
     rejected: [] as string[], pageErrors: 0,
   };
   const reads: Record<string, unknown> = {
     "/api/auth/me": { user: { id: "synthetic-resource-reader", name: "合成用户", role: "user" }, csrfToken: "synthetic-resource-only" },
     "/api/me/notifications": [],
   };
+  // Native Tab can leave the document and return through browser chrome.
+  // Record lifecycle evidence without changing production focus/session behavior.
+  await page.addInitScript(() => {
+    const events: { type: string; trusted: boolean; visible: string }[] = [];
+    Object.assign(window, { resourceLifecycleEvents: events });
+    const record = (event: Event) => events.push({
+      type: event.type, trusted: event.isTrusted, visible: document.visibilityState,
+    });
+    window.addEventListener("focus", record);
+    window.addEventListener("blur", record);
+    document.addEventListener("visibilitychange", record);
+  });
   page.on("pageerror", () => ledger.pageErrors++);
   await page.context().route("**/*", async route => {
     const request = route.request(), url = new URL(request.url()), method = request.method();
@@ -42,7 +55,7 @@ async function fixture(page: Page, baseURL: string | undefined) {
     if (method !== "GET" || url.search) return reject("mutation or API query metadata");
     if (url.pathname === "/api/me/resources") {
       const ownedPhase = phase;
-      const entry = { phase: ownedPhase, outcome: "pending" };
+      const entry = { phase: ownedPhase, outcome: "pending", sessionRead: ledger.sessionReads };
       ledger.reads.push(entry);
       if (ownedPhase !== "initial-failure") await gates.get(ownedPhase)!.promise;
       entry.outcome = ownedPhase === "held-success" ? "synthetic-empty" : "synthetic-503";
@@ -50,6 +63,7 @@ async function fixture(page: Page, baseURL: string | undefined) {
         status: 503, json: { error: ownedPhase === "initial-failure" ? "合成首次规则资源读取失败" : "合成规则资源再次读取失败" },
       });
     }
+    if (url.pathname === "/api/auth/me") ledger.sessionReads++;
     if (Object.hasOwn(reads, url.pathname)) return route.fulfill({ json: reads[url.pathname] });
     return reject("unexpected API read");
   });
@@ -161,6 +175,8 @@ for (const scenario of ["retry", "newer-dialog"] as const) {
         http.release("held-success");
         await expect(page.getByText("暂无规则资源", { exact: true })).toBeVisible();
         await expect(retry).toHaveCount(0);
+        // The explicit recovery itself must still issue exactly one read.
+        expect(http.count("held-success")).toBe(1);
         observation.successFocus = await focused(page);
         await capture(page, info, "recovered", main);
         await page.keyboard.press("Tab");
@@ -184,7 +200,14 @@ for (const scenario of ["retry", "newer-dialog"] as const) {
       await expect(name).toBeFocused(); await expect(name).toHaveValue("合成新任务草稿");
       await expect(dialog).toBeVisible();
       await capture(page, info, "dialog-owned", dialog);
-      expect(http.count("held-success")).toBe(1);
+      const successfulReads = http.ledger.reads.filter(entry => entry.phase === "held-success");
+      expect(successfulReads.length).toBeGreaterThan(0);
+      // A later native tab-return session check deliberately invalidates inventory.
+      // Each extra read requires a newer synthetic session-check request; a
+      // duplicate read without a new check still fails this observation.
+      for (let index = 1; index < successfulReads.length; index++) {
+        expect(successfulReads[index].sessionRead).toBeGreaterThan(successfulReads[index - 1].sessionRead);
+      }
     } catch (error) { failures.push(error); }
     finally {
       // Preserve the failed/pending viewport before releasing requests can change it.
@@ -192,7 +215,9 @@ for (const scenario of ["retry", "newer-dialog"] as const) {
       catch (error) { failures.push(error); }
       finally { http.releaseAll(); }
       try {
-        const body = JSON.stringify({ scenario, observation, ...http.ledger,
+        const lifecycleEvents = await page.evaluate(() =>
+          (window as unknown as { resourceLifecycleEvents: unknown[] }).resourceLifecycleEvents);
+        const body = JSON.stringify({ scenario, observation, lifecycleEvents, ...http.ledger,
           scope: "Synthetic desktop initial-read keyboard observation; no production handoff choice, backend writes or comprehensive accessibility claim" }, null, 2);
         await writeFile(info.outputPath("initial-resource-request-ledger.json"), body);
         await info.attach("initial-resource-ledger", { body, contentType: "application/json" });
