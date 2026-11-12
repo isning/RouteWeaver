@@ -1,4 +1,5 @@
 import { serviceCountInteger, serviceQuotaBytes, serviceRateBytes } from "./service-quota-input";
+import { operationalInteger } from "./OperationalIntegerInput";
 import { NumericInput } from "@/ui-patterns/numeric-input";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { TaskSheet, useTaskReturnFocus } from "@/ui-patterns/task-overlays";
@@ -31,6 +32,7 @@ type DraftCopy = {
     quotaText?: string;
     rateText?: string;
     countText?: CountText;
+    cycleText?: Partial<Record<"day" | "days", string>>;
     baseline: ServicePolicyEditContext["record"];
 };
 type Props = {
@@ -131,6 +133,9 @@ function ServicePolicyDraft({ context, seed, retained, discardRetained, acceptLa
     const countText = useRef<CountText>({ ...(!context.record ? seed?.countText : undefined) });
     const [rawCounts, setRawCounts] = useState(countText.current);
     const [countKeys, setCountKeys] = useState({ onlineIpLimit: 0, connectionLimit: 0 });
+    const acceptedCycle = useRef({ day: value.cycle.day, days: value.cycle.days });
+    const cycleText = useRef({ ...(!context.record ? seed?.cycleText : undefined) });
+    const [rawCycle, setRawCycle] = useState(cycleText.current);
     const [limitSections, setLimitSections] = useState<string[]>([]);
     const [latest, setLatest] = useState<ServicePolicyEditContext | null>(null);
     const [latestError, setLatestError] = useState<Error | null>(null);
@@ -154,9 +159,9 @@ function ServicePolicyDraft({ context, seed, retained, discardRetained, acceptLa
         "code" in policy.error.details && policy.error.details.code === "POLICY_EDIT_BASELINE_CHANGED";
     const draft = (): Service => {
         const { quotaGiB, ...values } = form.getFieldsValue(true);
-        return { ...value, ...values, ...acceptedCounts.current, id: value.id, cycle: { ...value.cycle, ...values.cycle }, quotaBytes: acceptedQuota.current, entryRateBps: acceptedRate.current };
+        return { ...value, ...values, ...acceptedCounts.current, id: value.id, cycle: { ...value.cycle, ...values.cycle, ...acceptedCycle.current }, quotaBytes: acceptedQuota.current, entryRateBps: acceptedRate.current };
     };
-    const draftCopy = (): DraftCopy => structuredClone({ service: draft(), quotaGiB: acceptedQuota.current / 1024 ** 3, quotaText: pendingQuota.current ?? undefined, rateText: rawRateText.current, countText: countText.current, baseline: context.record });
+    const draftCopy = (): DraftCopy => structuredClone({ service: draft(), quotaGiB: acceptedQuota.current / 1024 ** 3, quotaText: pendingQuota.current ?? undefined, rateText: rawRateText.current, countText: countText.current, cycleText: cycleText.current, baseline: context.record });
     const invalidateLatest = () => {
         latestGeneration.current++;
         latestController.current?.abort();
@@ -224,6 +229,23 @@ function ServicePolicyDraft({ context, seed, retained, discardRetained, acceptLa
         invalidateLatest();
         policy.clearError();
     };
+    const cycleValue = (field: "day" | "days") => {
+        const text = cycleText.current[field];
+        return operationalInteger(text ?? acceptedCycle.current[field] ?? "", 1, field === "day" ? 31 : 3660);
+    };
+    const cycleReady = () => {
+        const mode = form.getFieldValue(["cycle", "mode"]);
+        return mode === "monthly" ? cycleValue("day") !== undefined
+            : mode === "fixed-days" ? cycleValue("days") !== undefined : true;
+    };
+    const inputCycle = (field: "day" | "days", text: string) => {
+        cycleText.current = { ...cycleText.current, [field]: text };
+        setRawCycle(cycleText.current);
+        const count = cycleValue(field);
+        if (count !== undefined) acceptedCycle.current[field] = count;
+        invalidateLatest();
+        policy.clearError();
+    };
     const readLatest = async () => {
         invalidateLatest();
         const owner = latestGeneration.current;
@@ -261,7 +283,7 @@ function ServicePolicyDraft({ context, seed, retained, discardRetained, acceptLa
                 (policy.requestClose)();
         }} pending={!(!policy.closingBlocked)} size="lg" bodyProps={{ className: "space-y-6" }}>
     {retained.length > 0 && <Accordion type="multiple">{(retained.map((saved, index) => ({ key: `${index}`, label: index === retained.length - 1 ? "\u4E0A\u4E00\u7248\u8349\u7A3F\uFF08\u672A\u4FDD\u5B58\uFF09" : `较早草稿 ${index + 1}（未保存）`, children: <>
-      <ServicePolicyComparison resource={{ target: { kind: "service", id: saved.service.id }, before: saved.baseline, after: { service: saved.service } }} title="保留的草稿" showAll draftQuota={saved.quotaText !== undefined ? { value: saved.quotaText } : undefined} draftRate={saved.rateText !== undefined ? { value: saved.rateText } : undefined} draftCounts={saved.countText} beforeLabel="当时打开的版本" afterLabel="保留的草稿"/>
+      <ServicePolicyComparison resource={{ target: { kind: "service", id: saved.service.id }, before: saved.baseline, after: { service: saved.service } }} title="保留的草稿" showAll draftQuota={saved.quotaText !== undefined ? { value: saved.quotaText } : undefined} draftRate={saved.rateText !== undefined ? { value: saved.rateText } : undefined} draftCounts={saved.countText} draftCycle={saved.cycleText} beforeLabel="当时打开的版本" afterLabel="保留的草稿"/>
       <ActionButton onClick={() => discardRetained(index)} variant="destructive">丢弃此草稿副本</ActionButton>
     </> }))).map(section => <AccordionItem key={section.key} value={String(section.key)}><AccordionTrigger>{section.label}</AccordionTrigger><AccordionContent className="space-y-4">{section.children}</AccordionContent></AccordionItem>)}</Accordion>}
     <AppForm form={form} submitErrorFocusOwner={value} onFocusCapture={revealFocusedDrawerControl} onSubmitCapture={() => {
@@ -269,7 +291,7 @@ function ServicePolicyDraft({ context, seed, retained, discardRetained, acceptLa
         // submit-error owner can reveal and focus the actual editable control.
         if ((!rateReady() || !countsReady()) && !limitSections.includes("limits"))
             flushSync(() => setLimitSections(["limits"]));
-    }} initialValues={{ ...value, onlineIpLimit: value.onlineIpLimit || 0, connectionLimit: value.connectionLimit || 0, entryRateBps: value.entryRateBps || 0, quotaGiB: !context.record && seed ? seed.quotaGiB : value.quotaBytes / 1024 ** 3 }} onValuesChange={() => { invalidateLatest(); policy.clearError(); }} onFinish={() => { if (!policy.closingBlocked && pendingQuota.current === null && rateReady() && countsReady()) policy.propose({ service: draft() }, context.precondition); }}>
+    }} initialValues={{ ...value, onlineIpLimit: value.onlineIpLimit || 0, connectionLimit: value.connectionLimit || 0, entryRateBps: value.entryRateBps || 0, quotaGiB: !context.record && seed ? seed.quotaGiB : value.quotaBytes / 1024 ** 3 }} onValuesChange={() => { invalidateLatest(); policy.clearError(); }} onFinish={() => { if (!policy.closingBlocked && pendingQuota.current === null && rateReady() && countsReady() && cycleReady()) policy.propose({ service: draft() }, context.precondition); }}>
       <ErrorNotice error={policy.error} focusRef={policy.errorFocusRef}/>
       {conflicted && <section className="space-y-4 rounded-lg border bg-muted/30 p-4" aria-label="处理方案版本变化">
         {!baselineConflictVisible && <p>草稿尚未保存，请核对最新版本。</p>}
@@ -278,7 +300,7 @@ function ServicePolicyDraft({ context, seed, retained, discardRetained, acceptLa
         {latest && <>
           {latest.record ? <ServicePolicyComparison resource={{ target: latest.target, before: context.record, after: latest.record }} title="已保存的方案变化" beforeLabel="打开时保存" afterLabel="最新保存"/> : <p>{context.precondition.exists ? "方案已不存在，当前草稿不会自动新建同名方案。" : "方案仍未创建，可用当前草稿重新预览。"}</p>}
           {context.precondition.exists && latest.record && <ActionButton onClick={useLatest} disabled={policy.closingBlocked} variant="outline">使用最新版本重新编辑</ActionButton>}
-          {!context.precondition.exists && latest.record && <ActionButton onClick={() => { if (pendingQuota.current === null && rateReady() && countsReady()) restartCreation(draftCopy()); }} disabled={policy.closingBlocked || unfinishedQuota !== null || unfinishedRate !== null || !countsReady()} variant="outline">使用新标识另建方案</ActionButton>}
+          {!context.precondition.exists && latest.record && <ActionButton onClick={() => { if (pendingQuota.current === null && rateReady() && countsReady() && cycleReady()) restartCreation(draftCopy()); }} disabled={policy.closingBlocked || unfinishedQuota !== null || unfinishedRate !== null || !countsReady() || !cycleReady()} variant="outline">使用新标识另建方案</ActionButton>}
         </>}
       </section>}
         <AppField name="name" label="服务方案名称" rules={[{ required: true, whitespace: true }]}>
@@ -300,7 +322,10 @@ function ServicePolicyDraft({ context, seed, retained, discardRetained, acceptLa
             <p>额度输入「{unfinishedQuota}」无法表示为安全范围内的整数字节；当前额度为 {acceptedQuota.current} 字节。请修正输入，或保留当前额度。</p>
             <ActionButton onClick={discardQuota} variant="outline">放弃未完成输入，保留当前额度</ActionButton>
           </div>}
-          <CycleFields planDefaults/>
+          <CycleFields planDefaults numericControls={{
+              day: { onInput: text => inputCycle("day", text), valid: () => cycleValue("day") !== undefined, initialInputText: rawCycle.day },
+              days: { onInput: text => inputCycle("days", text), valid: () => cycleValue("days") !== undefined, initialInputText: rawCycle.days },
+          }}/>
           <p className="muted text-sm text-muted-foreground">
             用户组首次设置账号周期时使用；已有周期和用量继续保留，方案额度按优先级选用一份，个人覆盖优先。
           </p>

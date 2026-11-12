@@ -1,4 +1,5 @@
 import { serviceCountInteger, serviceQuotaBytes, serviceRateBytes } from "./service-quota-input";
+import { operationalInteger } from "./OperationalIntegerInput";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { useId } from "react";
 import { bitrateLabel, bytesLabel } from "./model";
@@ -56,7 +57,7 @@ function fields(plan: Service): Field[] {
     ];
 }
 /** Resource intent, deliberately separate from existing-account effective policy. */
-export function ServicePolicyComparison({ resource, title = "方案变更", showAll = false, beforeLabel = "当前保存", afterLabel = "本次保存", draftQuota, draftRate, draftCounts }: {
+export function ServicePolicyComparison({ resource, title = "方案变更", showAll = false, beforeLabel = "当前保存", afterLabel = "本次保存", draftQuota, draftRate, draftCounts, draftCycle }: {
     resource: ServicePolicyResource;
     title?: string;
     showAll?: boolean;
@@ -67,6 +68,7 @@ export function ServicePolicyComparison({ resource, title = "方案变更", show
     };
     draftRate?: { value: string };
     draftCounts?: Partial<Record<"onlineIpLimit" | "connectionLimit", string>>;
+    draftCycle?: Partial<Record<"day" | "days", string>>;
 }) {
     const id = useId();
     const before = resource.before?.service;
@@ -80,6 +82,15 @@ export function ServicePolicyComparison({ resource, title = "方案变更", show
         const countText = field.key === "ips" ? draftCounts?.onlineIpLimit : field.key === "connections" ? draftCounts?.connectionLimit : undefined;
         if (countText !== undefined)
             return { ...field, raw: countText, value: retainedCount(countText, field.key === "ips" ? "个" : "条") };
+        const cycleText = field.key === "day" ? draftCycle?.day : field.key === "days" ? draftCycle?.days : undefined;
+        if (cycleText !== undefined) {
+            const raw = cycleText;
+            const active = after.cycle.mode === (field.key === "day" ? "monthly" : "fixed-days");
+            const valid = operationalInteger(raw, 1, field.key === "day" ? 31 : 3660) !== undefined;
+            if (valid && raw === String(field.raw)) return field;
+            const input = raw === "" ? "尚未填写" : `${raw} ${field.key === "day" ? "日" : "天"}${valid ? "" : "（待修正）"}`;
+            return { ...field, raw, value: active ? input : `未启用（草稿输入：${input}）` };
+        }
         if (showAll && ["quota", "rate"].includes(field.key) && typeof field.raw === "number" && Number.isFinite(field.raw))
             return { ...field, value: `${field.value}（${field.raw} ${field.key === "quota" ? "字节" : "字节/秒"}）` };
         return field;

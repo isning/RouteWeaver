@@ -20,14 +20,16 @@ const supportedCycleTimezone = (value: unknown) => value === undefined ||
     value === "" ||
     value === "UTC+8" ||
     value === "Asia/Shanghai";
-const positiveIntegerRule = (maximum: number) => ({
-    validator: (_: unknown, value: unknown) => Number.isSafeInteger(value) && Number(value) >= 1 && Number(value) <= maximum
+const positiveIntegerRule = (maximum: number, valid?: () => boolean) => ({
+    validator: (_: unknown, value: unknown) => (valid ? valid() : Number.isSafeInteger(value) && Number(value) >= 1 && Number(value) <= maximum)
         ? Promise.resolve()
         : Promise.reject(new Error(`请输入 1–${maximum} 之间的整数`)),
 });
 type CycleNumericControl = {
     onInput?: (text: string) => void;
     resetKey?: Key;
+    initialInputText?: string;
+    valid?: () => boolean;
 };
 export function CycleFields({ planDefaults = false, numericControls, modeDisabled }: {
     planDefaults?: boolean;
@@ -74,16 +76,16 @@ export function CycleFields({ planDefaults = false, numericControls, modeDisable
       </AppField>
       {mode === "monthly" && (<AppField name={["cycle", "day"]} label="每月几号" rules={[
                 { required: true },
-                ...(planDefaults ? [positiveIntegerRule(31)] : []),
-            ]} trigger="onValueChange">
-          <NumericInput key={numericControls?.day?.resetKey} onInputText={numericControls?.day?.onInput} min={1} max={31}/>
+                ...(planDefaults ? [positiveIntegerRule(31, numericControls?.day?.valid)] : []),
+            ]} trigger="onValueChange" validateTrigger={numericControls?.day?.valid ? "onInputText" : undefined}>
+          <NumericInput key={numericControls?.day?.resetKey} onInputText={numericControls?.day?.onInput} initialInputText={numericControls?.day?.initialInputText} min={1} max={31}/>
         </AppField>)}
       {mode === "fixed-days" && (<AppField name={["cycle", "days"]} label="每周期天数" rules={[
                 { required: true },
                 ...wholeNumberRules,
-                ...(planDefaults ? [positiveIntegerRule(3660)] : []),
-            ]} trigger="onValueChange">
-          <NumericInput key={numericControls?.days?.resetKey} onInputText={numericControls?.days?.onInput} min={1} max={planDefaults ? 3660 : undefined}/>
+                ...(planDefaults ? [positiveIntegerRule(3660, numericControls?.days?.valid)] : []),
+            ]} trigger="onValueChange" validateTrigger={numericControls?.days?.valid ? "onInputText" : undefined}>
+          <NumericInput key={numericControls?.days?.resetKey} onInputText={numericControls?.days?.onInput} initialInputText={numericControls?.days?.initialInputText} min={1} max={planDefaults ? 3660 : undefined}/>
         </AppField>)}
       {(!planDefaults || repair.anchor) && (<AppField name={["cycle", "anchor"]} label={planDefaults ? "修正周期起点" : "周期起点"} description={planDefaults
                 ? "原有时间格式无效，请明确修正；不会自动替换为当前时间。"
