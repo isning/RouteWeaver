@@ -21,3 +21,33 @@ Focused tests include rectangle-outside-clip, separate nested clipping, sr-only 
 The rate native sampler adds an exact known error-copy/viewport assertion after collapsed submit. It retains fast keyboard entry, original screenshots before geometry, the existing3px ring checks and exact synthetic request boundaries. Only error-match/visibility booleans are added to geometry; error text and user values are not recorded.
 
 Corrected native pixels and full integration remain pending. Focused DOM geometry is modeled because jsdom has no layout, and is not a native screenshot claim.
+
+## Bounded corrected native pixel acceptance
+
+The pending native pixel review above is complete on exact source
+`23f68bb4440258d6c7fb946664cf02828706ba73`, recovery artifact `13902587793`,
+verified original ZIP SHA256
+`49ae072bfb4e477780b7753cac1551abee7f1a711b62515cb1063f08ba138221`.
+Independent inspection covered all four original `service-rate-blocked-preview.png`
+captures at 390×560 and 1440×900, mapped by decoded report
+`196b0fad6bb81adcf4a4.json`. All four rate native cases passed.
+
+The reopened exponent captures now visibly include the complete invalid input,
+red focus ring, helper and both lines of inline error together. Mobile input
+bounds are y426.5–470.5, with ring bottom473.5; desktop bounds are
+766.25–810.25, with ring bottom813.25. Paired geometry reports the ring inside
+clipping ancestors and the expected error in the viewport. Both visible-minus
+blocked captures also show the complete inline error with their input. This
+resolves the ed83f6d below-fold explanation limitation for these specific
+blocked/reopened states, not every state or animation frame.
+
+Rate inputs remain native-valid while application validation rejects the raw
+draft. Pixels establish readable context, not the validation path or transport
+behavior. Each ledger separately records one accepted synthetic corrected-rate
+preview at 375000 bytes/s, unchanged auth/context reads and no rejected requests
+or page errors. Valid remount remains ring-only by design. No dark-mode,
+blank-inherit, full-system, save/apply or backend-enforcement claim follows.
+The [count review](SERVICE-COUNT-NATIVE-SAMPLER-2026-11-11.md#bounded-native-original-pixel-acceptance)
+records the additional 32 unique count originals / 36 captures and mobile
+label, native-popup, return-focus and lower-preview limits. Aggregate verification
+is separate; this pixel review performed no source edits, new tests or publication.
