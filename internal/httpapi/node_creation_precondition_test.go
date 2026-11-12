@@ -92,7 +92,7 @@ func TestNodeGuardedCreationReceiptReplayAndLaterEdit(t *testing.T) {
 		ID: "guarded", Name: "Original", Host: "endpoint.invalid", Port: 443, Protocol: "vless", Status: "online",
 		UUID: "00000000-0000-4000-8000-000000000001", Region: "test", Tags: []string{"fixture"},
 		CoreID: "metadata-only", CoreVersion: "test",
-		TLS: &domain.TLSOptions{Enabled: true, ServerName: "tls.invalid", ALPN: []string{"http/1.1"}},
+		TLS:       &domain.TLSOptions{Enabled: true, ServerName: "tls.invalid", ALPN: []string{"http/1.1"}},
 		Transport: &domain.TransportOptions{Type: "ws", Path: "/proxy", Host: "cdn.invalid", Headers: map[string]string{"X-Client": "fixture"}},
 	}
 	code, _, raw := sendNodeCreation(t, admin, nodeCreationRequest(t, srv.URL, input, " \t*\t "))

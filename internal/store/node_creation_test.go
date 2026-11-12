@@ -24,7 +24,7 @@ func TestCreateNodeRequiresAbsenceAndReturnsCommittedOptions(t *testing.T) {
 		ID: "created", Name: "Original", Host: "endpoint.invalid", Port: 443, Protocol: "vless",
 		UUID: "00000000-0000-4000-8000-000000000001", Status: "online", Region: "test",
 		CoreID: "metadata-only", CoreVersion: "test", Tags: []string{"fixture"},
-		TLS: &domain.TLSOptions{Enabled: true, ServerName: "tls.invalid", ALPN: []string{"http/1.1"}},
+		TLS:       &domain.TLSOptions{Enabled: true, ServerName: "tls.invalid", ALPN: []string{"http/1.1"}},
 		Transport: &domain.TransportOptions{Type: "ws", Path: "/proxy", Host: "cdn.invalid", Headers: map[string]string{"X-Client": "fixture"}},
 	}
 	created, err := s.CreateNode(input)
