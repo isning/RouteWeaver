@@ -499,7 +499,10 @@ it("rotates a managed entry through its public route without opening the legacy 
   expect(await screen.findByText("尚未确认生效")).toBeTruthy();
   expect(screen.queryByRole("button", { name: /^编\s*辑$/ })).toBeNull();
   await user.click(screen.getByRole("button", { name: "轮换凭据" }));
-  await user.click(await screen.findByRole("button", { name: "准备新凭据" }));
+  const confirmation = await screen.findByRole("alertdialog", { name: "轮换「Private entry」的入口凭据？" });
+  expect(within(confirmation).getByText("用户：Member；公开线路：public-route。")).toBeTruthy();
+  expect(within(confirmation).getByText(/需要重新检查并应用服务器路径/)).toBeTruthy();
+  await user.click(within(confirmation).getByRole("button", { name: "准备新凭据" }));
   await waitFor(() => expect(posts).toHaveLength(1));
   expect(posts[0].url).toBe("/api/published-routes/public-route/principals");
   expect(posts[0].body).toMatchObject({

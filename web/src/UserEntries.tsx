@@ -487,10 +487,14 @@ function UserEntryTask({
                               onClick={() =>
                                 confirm({
                                   title: g.revoked
-                                    ? "\u91CD\u65B0\u5206\u914D\u72EC\u7ACB\u51ED\u636E\uFF1F"
-                                    : "\u8F6E\u6362\u6B64\u7528\u6237\u7684\u5165\u53E3\u51ED\u636E\uFF1F",
-                                  description:
-                                    "\u4F1A\u51C6\u5907\u65B0\u7684\u51ED\u636E\u7248\u672C\uFF1B\u9700\u8981\u91CD\u65B0\u68C0\u67E5\u5E76\u5E94\u7528\u670D\u52A1\u5668\u8DEF\u5F84\uFF0C\u786E\u8BA4\u540E\u624D\u80FD\u518D\u6B21\u4EA4\u4ED8\u3002\u65E7\u8BA2\u9605\u4E2D\u7684\u51ED\u636E\u4E0D\u80FD\u7EE7\u7EED\u4F7F\u7528\u3002",
+                                    ? `为「${g.name}」重新分配独立凭据？`
+                                    : `轮换「${g.name}」的入口凭据？`,
+                                  description: (
+                                    <div className="space-y-2">
+                                      <p>用户：{user?.name}；公开线路：{publishedRoutes.find((r) => r.id === g.publishedRouteId)?.name || g.publishedRouteId}。</p>
+                                      <p>会准备新的凭据版本；需要重新检查并应用服务器路径，确认后才能再次交付。旧订阅中的凭据不能继续使用。</p>
+                                    </div>
+                                  ),
                                   confirmLabel:
                                     "\u51C6\u5907\u65B0\u51ED\u636E",
                                   cancelLabel: "\u53D6\u6D88",
