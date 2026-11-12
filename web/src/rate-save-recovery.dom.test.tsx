@@ -19,7 +19,7 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
-it.each(["failed", "stale", "mismatched"])("preserves confirmed rate saves and recovers %s responses in the actual workspace", async (followUp) => {
+it.each(["failed", "stale", "mismatched", "lost receipt"])("preserves confirmed rate saves and recovers %s responses in the actual workspace", async (followUp) => {
   vi.stubEnv("NODE_ENV", "development");
   setCSRF("");
   setToken("");
@@ -35,6 +35,7 @@ it.each(["failed", "stale", "mismatched"])("preserves confirmed rate saves and r
     if (url === "/api/rates" && method === "POST") {
       const body = JSON.parse(String(init.body));
       writes.push(body);
+      if (followUp === "lost receipt") throw new TypeError("synthetic response lost after commit");
       return json(followUp === "mismatched" ? { ...body, id: "unrelated-rate" } : body, 201);
     }
     if (method !== "GET") {
@@ -68,7 +69,7 @@ it.each(["failed", "stale", "mismatched"])("preserves confirmed rate saves and r
   await user.click(screen.getByRole("option", { name: "办公线路" }));
   fireEvent.change(within(dialog).getByLabelText("整条线路倍率（×）"), { target: { value: "2" } });
   await user.click(within(dialog).getByRole("button", { name: "保存倍率版本" }));
-  if (followUp === "mismatched") {
+  if (followUp === "mismatched" || followUp === "lost receipt") {
     await within(dialog).findByText("保存结果无法核对，请检查倍率记录，避免重复保存。");
     expect(within(dialog).getByRole("button", { name: "保存倍率版本" }).hasAttribute("disabled")).toBe(true);
     expect(screen.queryByText("线路倍率版本已保存")).toBeNull();

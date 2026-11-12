@@ -116,7 +116,7 @@ it("closes untouched and reverted rates without an extra decision", async () => 
   }
 });
 
-it("keeps the selected route, factor, and start time when saving fails", async () => {
+it("keeps the selected route, factor, and start time while a server failure needs receipt checking", async () => {
   const writes = mount();
   const user = userEvent.setup();
   await user.click(screen.getByRole("button", { name: "调整倍率" }));
@@ -132,7 +132,7 @@ it("keeps the selected route, factor, and start time when saving fails", async (
   await user.click(
     within(dialog).getByRole("button", { name: "保存倍率版本" }),
   );
-  await screen.findByText("暂时无法保存倍率，请重试");
+  await screen.findByText("保存结果无法核对，请检查倍率记录，避免重复保存。");
   expect(writes).toHaveLength(1);
   expect(
     within(dialog).getByRole("combobox", { name: "线路" }).textContent,
@@ -150,7 +150,7 @@ it("keeps the selected route, factor, and start time when saving fails", async (
     within(dialog)
       .getByRole("button", { name: "保存倍率版本" })
       .hasAttribute("disabled"),
-  ).toBe(false);
+  ).toBe(true);
 });
 
 it("keeps rate Close focus after twice canceling an unsaved adjustment", async () => {

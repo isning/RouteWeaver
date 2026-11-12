@@ -19,7 +19,7 @@ async function editRate(fail = false, selectRoute = true) {
     if (init?.method === "POST") {
       const body = JSON.parse(String(init.body));
       writes.push(body);
-      return fail ? json({ error: "暂时无法保存倍率，请重试" }, 503) : json(body);
+      return fail ? json({ error: "invalid rate revision" }, 400) : json(body);
     }
     return json([]);
   }));
@@ -112,7 +112,7 @@ it("preserves exact raw input after a failed save and sends again only on explic
   fireEvent.change(start, { target: { value: "2026-11-06T08:00" } });
   fireEvent.change(factor, { target: { value: "0.0000010" } });
   await user.click(save);
-  await within(dialog).findByText("暂时无法保存倍率，请重试");
+  await within(dialog).findByText("invalid rate revision");
   expect(writes).toHaveLength(1);
   expect(writes[0]).toMatchObject({ routeId: "route", micros: 1 });
   expect(factor.value).toBe("0.0000010");

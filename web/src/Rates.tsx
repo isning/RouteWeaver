@@ -12,7 +12,7 @@ import { useDiscardConfirmation } from "./useDiscardConfirmation";
 import { revealFocusedPolicyModalControl } from "./drawer-control-visibility";
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { list, post } from "./api";
+import { APIError, list, post } from "./api";
 import { ErrorNotice, QueryState, Section } from "./components";
 import { dateLabel, newID } from "./model";
 import type { RouteRecord } from "./types";
@@ -112,7 +112,23 @@ export function RateSettings({ routes }: { routes: RouteRecord[] }) {
         micros: rateMicros(values.factor),
         effectiveAt: new Date(values.effectiveAt).toISOString(),
       };
-      const saved = await post<Rate>("/rates", submitted);
+      let saved: Rate;
+      try {
+        saved = await post<Rate>("/rates", submitted);
+      } catch (error) {
+        // Storage errors also use 400, so only known pre-write rejections
+        // establish that retrying cannot create a second immutable version.
+        const rejected = error instanceof APIError && (
+          [401, 403, 404, 429].includes(error.status) ||
+          error.status === 400 && [
+            "invalid rate revision", "rate revisions are immutable",
+            "duplicate effective boundary",
+            "rate boundary overlaps an issued byte budget; schedule after its expiry or settle active presences first",
+          ].includes(error.message)
+        );
+        if (rejected) throw error;
+        throw new UnverifiedRateReceipt("保存结果无法核对，请检查倍率记录，避免重复保存。");
+      }
       if (!saved || saved.id !== submitted.id || saved.routeId !== submitted.routeId ||
         saved.micros !== submitted.micros ||
         Date.parse(saved.effectiveAt) !== Date.parse(submitted.effectiveAt)) {
