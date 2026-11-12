@@ -1,5 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, expect, it, vi } from "vitest";
+import { useState } from "react";
+import { NodeObservation } from "./NodeObservation";
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -68,9 +70,20 @@ it("does not turn a failed or malformed status read into an offline core", async
 it("keeps older samples visibly historical without claiming a live reading", async () => {
   const data = view(); data.latest!.observedAt = "2026-01-01T00:00:00Z";
   vi.stubGlobal("fetch", vi.fn(async () => respond(data)));
-  mount(<ServerResourceOverview host={host} onOpenResources={vi.fn()} />);
+  function ResourceTask() {
+    const [details, setDetails] = useState(false);
+    return details ? <NodeObservation host={host} instances={[]} />
+      : <ServerResourceOverview host={host} onOpenResources={() => setDetails(true)} />;
+  }
+  mount(<ResourceTask />);
   expect(await screen.findByText(/较早的采样/)).toBeTruthy();
   expect(screen.getByText("该采样不在最近 15 分钟内，以上数值不代表当前资源使用情况。")).toBeTruthy();
+  await userEvent.click(screen.getByRole("button", { name: "查看资源与额度" }));
+  await screen.findByText("资源与供应商额度");
+  expect(screen.getByText(/较早的采样/)).toBeTruthy();
+  expect(screen.getByText("该采样不在最近 15 分钟内，以上数值不代表当前资源使用情况。")).toBeTruthy();
+  expect(screen.getByText("0.0%", { exact: true })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "刷新服务器资源数据" })).toBeTruthy();
 });
 it("does not report unconfigured collection when an observation belongs to another server", async () => {
   const data = view(); data.nodeId = "another-host";

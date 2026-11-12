@@ -107,7 +107,7 @@ export function NodeObservation({
           ) : (
             <>
               <div className="observation-meta flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                <span>资源数据采集于 {dateLabel(sample.observedAt)}</span>
+                <span>{currentSample ? "最近采样" : "较早的采样"} {dateLabel(sample.observedAt)}</span>
               </div>
               <div className="observation-grid grid min-w-0 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <Metric
@@ -142,6 +142,9 @@ export function NodeObservation({
                   }
                 />
               </div>
+              {!currentSample && <p className="text-sm text-muted-foreground">
+                该采样不在最近 15 分钟内，以上数值不代表当前资源使用情况。
+              </p>}
               <Accordion type="multiple" defaultValue={[]} className="w-full">
                 {[
                   {
