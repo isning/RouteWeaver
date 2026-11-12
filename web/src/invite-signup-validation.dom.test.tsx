@@ -212,7 +212,7 @@ it.each([
     );
     await fill(username);
     await create();
-    await screen.findByText("invite invalid or expired");
+    await screen.findByText("邀请码无效、已使用或已过期。若已完成注册，请返回账号登录；否则请向邀请人获取新邀请。");
     expect(writes).toHaveLength(1);
     expect(writes[0].body.username).toBe(username);
   },
@@ -260,7 +260,7 @@ it.each([
     );
     await fill("invited.user", password);
     await create();
-    await screen.findByText("invite invalid or expired");
+    await screen.findByText("邀请码无效、已使用或已过期。若已完成注册，请返回账号登录；否则请向邀请人获取新邀请。");
     expect(writes).toHaveLength(1);
     expect(writes[0].body).toEqual({
       token: "synthetic-invite",
@@ -280,7 +280,7 @@ it("does not impose creation rules on ordinary login or administrator tokens", a
   await fill("中文账号", "short");
   expect(screen.queryByText(/使用 12–72/)).toBeNull();
   await userEvent.click(screen.getByRole("button", { name: "进入工作空间" }));
-  await screen.findByText("invalid credentials");
+  await screen.findByText(/登录未通过，请核对账号和密码/);
   expect(writes).toEqual([
     {
       path: "/api/auth/login",

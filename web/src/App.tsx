@@ -1029,6 +1029,21 @@ const invitePasswordRule = {
 };
 
 type LoginMode = "login" | "invite" | "admin";
+function loginDisplayError(error: Error | null, mode: LoginMode) {
+  if (!(error instanceof APIError)) return error;
+  if (mode === "login" && error.status === 401 && error.message === "invalid credentials") {
+    return new Error("登录未通过，请核对账号和密码。如已启用二次验证，请展开“使用二次验证码”填写当前验证码；仍无法登录时，请联系管理员核对账号状态。");
+  }
+  if (mode === "invite" && error.status === 400 && error.message === "invite invalid or expired") {
+    return new Error("邀请码无效、已使用或已过期。若已完成注册，请返回账号登录；否则请向邀请人获取新邀请。");
+  }
+  if (error.status === 429 && (
+    mode === "login" && error.message === "too many login attempts; retry later" ||
+    mode === "invite" && error.message === "too many attempts; retry later"
+  )) return new Error("尝试次数过多，请稍后再试。");
+  return error;
+}
+
 function Login(props: {
   onSuccess: (s: Session) => void;
   initialError: Error | null;
@@ -1169,7 +1184,7 @@ function LoginForm({
               账号可能已创建。请返回账号登录，使用刚才设置的账号和密码登录；不要仅凭错误提示判断账号未创建。
             </Notice>
           )}
-          <ErrorNotice error={error} />
+          <ErrorNotice error={loginDisplayError(error, mode)} />
           <AppForm
             form={form}
             onFinish={submit}
