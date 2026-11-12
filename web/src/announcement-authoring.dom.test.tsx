@@ -40,6 +40,28 @@ async function audience(dialog: HTMLElement, name: string) {
   await userEvent.click(await screen.findByRole("option", { name }));
 }
 function submit(dialog: HTMLElement) { fireEvent.submit(within(dialog).getByLabelText("公告标题").closest("form")!); }
+it("corrects announcement validity dates in place before submitting", async () => {
+  const state = mount(); const dialog = await create();
+  const start = within(dialog).getByLabelText("开始时间（本机时区）");
+  const end = within(dialog).getByLabelText("结束时间（本机时区）");
+  fireEvent.change(start, { target: { value: "2026-01-01T10:00" } });
+  fireEvent.change(end, { target: { value: "2026-01-01T09:00" } });
+  submit(dialog);
+  await within(dialog).findByText("结束时间须晚于开始时间。");
+  expect(state.writes).toHaveLength(0);
+  expect((end as HTMLInputElement).value).toBe("2026-01-01T09:00");
+  fireEvent.change(end, { target: { value: "2027-01-02T10:01" } });
+  submit(dialog);
+  await within(dialog).findByText("公告有效期最长为 366 天，请调整开始或结束时间。");
+  expect(state.writes).toHaveLength(0);
+  fireEvent.change(start, { target: { value: "2026-01-01T10:01" } });
+  await waitFor(() => expect(within(dialog).queryByText("公告有效期最长为 366 天，请调整开始或结束时间。")).toBeNull());
+  expect((within(dialog).getByLabelText("公告标题") as HTMLInputElement).value).toBe("维护通知");
+  submit(dialog);
+  await waitFor(() => expect(state.writes).toHaveLength(1));
+  expect(state.writes[0].startsAt).toBe(new Date("2026-01-01T10:01").toISOString());
+  expect(state.writes[0].expiresAt).toBe(new Date("2027-01-02T10:01").toISOString());
+});
 it.each([
   ["公告标题", "界".repeat(53) + "a", "界".repeat(53) + "ab", "标题最多 160 字节（UTF-8），请缩短标题。"],
   ["公告正文", "😀".repeat(2000), "😀".repeat(2000) + "a", "正文最多 8000 字节（UTF-8），请缩短正文。"],

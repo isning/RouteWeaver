@@ -685,7 +685,17 @@ function Announcements() {
             <AppField
               name="expiresAt"
               label="结束时间（本机时区）"
-              rules={[{ required: true }]}
+              description="结束时间须晚于开始时间，有效期最长为 366 天。"
+              dependencies={["startsAt"]}
+              rules={[{ required: true }, { validator: (_rule, value: string | undefined) => {
+                const start = form.getFieldValue("startsAt");
+                if (!start || !value) return Promise.resolve();
+                const duration = new Date(value).getTime() - new Date(start).getTime();
+                if (!Number.isFinite(duration)) return Promise.reject(new Error("请输入有效的开始和结束时间。"));
+                if (duration <= 0) return Promise.reject(new Error("结束时间须晚于开始时间。"));
+                if (duration > 366 * 24 * 60 * 60 * 1000) return Promise.reject(new Error("公告有效期最长为 366 天，请调整开始或结束时间。"));
+                return Promise.resolve();
+              } }]}
             >
               <Input type="datetime-local" />
             </AppField>
