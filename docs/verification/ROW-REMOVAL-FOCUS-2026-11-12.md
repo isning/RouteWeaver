@@ -22,3 +22,7 @@ The focused files cover row removal, confirmation success destination, overlay l
 ## Separately tracked refresh failure
 
 A successful deletion followed by a failed inventory refresh can still replace the entire Nodes/legacy-route content, unmount the search, and lose focus. A separate two-case DOM audit reproduces this. The command remains successful, the confirmation closes, and no second DELETE occurs. This patch deliberately does not claim to repair that cached-view/error-state behavior. A follow-up must retain useful cached context while preventing stale row edits and duplicate retry reads; merely hiding the error would not be safe.
+
+## Completed frontend aggregate
+
+The serialized full frontend aggregate subsequently passed against source commit `31f2c5dc2359735feb8683c233cdcc87b521b0cf` on 2026-11-12: **4619 tests across 358 files**. Shard 1 passed 2386 tests across 179 files in 630.22 seconds for the full shard command; shard 2 passed 2233 tests across 179 files in 652.11 seconds. Each shard also passed typecheck and production build. This supersedes the pending full-frontend status above for this source commit only. The separate cached-inventory candidate was isolated and is not covered by this aggregate. Native/pixel acceptance and remote publication remain pending.
