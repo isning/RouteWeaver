@@ -276,6 +276,9 @@ it.each(["network", "unauthorized", "wrong media type", "body failure"])(
     mount(<AccessSubscription output={output} onClose={() => {}} />);
     const button = await screen.findByRole("button", { name: "下载配置与规则文件" });
     await userEvent.click(button);
+    await screen.findByText(failure === "unauthorized"
+      ? "无法下载配置包，请确认登录状态后重试。"
+      : "配置包未下载成功，请重试。");
     await waitFor(() => expect(button.hasAttribute("disabled")).toBe(false));
     expect(f.create).not.toHaveBeenCalled();
     expect(f.saves).toEqual([]);

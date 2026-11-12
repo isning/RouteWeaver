@@ -2821,8 +2821,10 @@ function OutputAccessTask({
         link.remove();
         setTimeout(() => URL.revokeObjectURL(objectURL), 1000);
       }
-    } catch {
-      if (ownsDownload()) message.error("无法下载配置包，请确认登录状态后重试。");
+    } catch (error) {
+      if (ownsDownload()) message.error(error instanceof APIError && error.status === 401
+        ? "无法下载配置包，请确认登录状态后重试。"
+        : "配置包未下载成功，请重试。");
     } finally {
       // An obsolete completion must not release a newer request's busy state.
       if (downloadPending.current === controller) {
