@@ -25,3 +25,9 @@ Applied strictly to docs-only successor `0d6674c`. All four integrated source/te
 Coverage includes cached/initial/empty/pending/offline recovery, single-owner retry, stale row tasks and confirmations, existing draft continuity, creation readiness, route validation, page-two/last-row deletion, failed reread, late obsolete read, navigation, and prior confirmation/keyboard controls. Existing removal tests retain newer-owner intent using independent creation while stale row edits are now fenced, and account for immediate confirmed-row removal.
 
 Full aggregate for this candidate is pending. The preceding 4619-test/358-file full frontend pass covered source `31f2c5d`, not this patch. Native browser, rendered copy/pixel, backend concurrency, and deployment acceptance are not claimed. Publication remains blocked; no denied write was retried.
+
+## Completed aggregate and next review priority
+
+The already-running serialized aggregate completed on source `dcffc69f03ec70435d2450f87c3bbc801e9ac029`: 4669 tests across 360 files passed. Shards passed 2387/180 and 2282/180, with command durations 609.14 and 626.08 seconds; both typecheck/build gates passed. This supersedes the pending frontend aggregate status above, not native or pixel acceptance.
+
+Further work prioritizes actual page design and core user journeys. A proposed additional browser sampler remains isolated and was not integrated. Full aggregates will be grouped at meaningful iteration checkpoints rather than repeated for every small edit. Detailed shared-mechanism test matrices should stay at the owning layer; page-level checks should retain representative user journeys rather than duplicate every permutation.
