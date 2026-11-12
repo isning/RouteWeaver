@@ -13,9 +13,10 @@ class QRBoundary extends Component<
   }
   render() {
     return this.state.failed ? (
+      // The QR surface stays white in both themes for scanning contrast.
       <p
         role="alert"
-        className="flex size-[180px] items-center text-center text-sm text-muted-foreground"
+        className="flex size-[180px] items-center text-center text-sm text-neutral-600"
       >
         二维码暂时无法加载，请复制订阅链接。
       </p>

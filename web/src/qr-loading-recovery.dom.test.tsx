@@ -93,7 +93,10 @@ it("keeps copying and dismissal available while QR is held, closed, reopened and
   await act(async () =>
     chunk.fail(new Error("Synthetic QR chunk interrupted")),
   );
-  await within(dialog).findByText("二维码暂时无法加载，请复制订阅链接。");
+  const fallback = await within(dialog).findByText("二维码暂时无法加载，请复制订阅链接。");
+  // This fixed white scanning surface must not inherit light text in dark mode.
+  expect(fallback.closest(".qr-container")?.classList.contains("bg-white")).toBe(true);
+  expect(fallback.classList.contains("text-neutral-600")).toBe(true);
   expect(
     within(dialog).getByRole("textbox", { name: "订阅链接" }),
   ).toBeTruthy();
