@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import {
+  act,
   cleanup,
   render,
   screen,
@@ -171,6 +172,7 @@ it("sets ChatGPT to an actual entitled route and other traffic to an owned endpo
   await select("其他流量使用的线路", "Tokyo 来源 My airport");
   await userEvent.click(screen.getByRole("button", { name: "保存并查看修改" }));
   const review = await screen.findByRole("region", { name: "发布前确认" });
+  await waitFor(() => expect(document.activeElement).toBe(within(review).getByRole("heading", { name: "发布前确认" })));
   expect(within(review).getByText("FRA → UK · 2×")).toBeTruthy();
   expect(within(review).getByText("My airport · Tokyo")).toBeTruthy();
   const saved = requests.find(
@@ -183,8 +185,33 @@ it("sets ChatGPT to an actual entitled route and other traffic to an owned endpo
     ref: "basic_default",
   });
   expect(requests.some((r) => r.path.endsWith("/outputs"))).toBe(false);
+  await userEvent.click(within(review).getByRole("button", { name: "继续调整" }));
+  const inspect = screen.getByRole("button", { name: "保存并查看修改" });
+  expect(document.activeElement).toBe(inspect);
+  expect(screen.queryByRole("region", { name: "发布前确认" })).toBeNull();
+  const normalFetch = fetch;
+  let releasePreview!: () => void;
+  const previewGate = new Promise<void>((resolve) => { releasePreview = resolve; });
+  vi.stubGlobal("fetch", vi.fn(async (url, init) => {
+    const response = await normalFetch(url, init);
+    if (String(url).endsWith("/preview")) await previewGate;
+    return response;
+  }));
+  const back = screen.getByRole("button", { name: "返回" });
+  try {
+    await userEvent.click(inspect);
+    await waitFor(() => expect(requests.filter((r) => r.path.endsWith("/preview"))).toHaveLength(2));
+    await userEvent.click(inspect);
+    expect(requests.filter((r) => r.path.endsWith("/preview"))).toHaveLength(2);
+    // A deliberate move elsewhere while the response is pending owns focus.
+    await userEvent.click(back);
+  } finally {
+    await act(async () => releasePreview());
+  }
+  const returnedReview = await screen.findByRole("region", { name: "发布前确认" });
+  expect(document.activeElement).toBe(back);
   await userEvent.click(
-    within(review).getByRole("button", { name: "发布并获取订阅" }),
+    within(returnedReview).getByRole("button", { name: "发布并获取订阅" }),
   );
   await waitFor(() => expect(published).toHaveBeenCalledTimes(1));
   const creation = requests.find((r) => r.path.endsWith("/outputs"))!.body;

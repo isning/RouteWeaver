@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import { ActionButton } from "@/ui-patterns/actions";
 import { invalidateOutputInputs } from "./output-comparison";
 import { RoutingReview } from "./RoutingSummary";
-import { useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { APIError, list, post, request, saveRecord } from "./api";
 import {
@@ -129,6 +129,9 @@ function BasicRoutingEditor({
   }));
   const [dirty, setDirty] = useState(false);
   const [preview, setPreview] = useState<Preview | null>(null);
+  const inspectButton = useRef<HTMLButtonElement>(null);
+  const reviewHeading = useRef<HTMLHeadingElement>(null);
+  const focusReviewedPreview = useRef<Preview | null>(null);
   const creationWasUncertain = useRef(false);
   const [pendingCreation, setPendingCreation] = useState<
     | (OutputCreation & {
@@ -180,6 +183,15 @@ function BasicRoutingEditor({
     !sources.isFetching &&
     !entries.isError &&
     !sources.isError;
+  useLayoutEffect(() => {
+    const requested = focusReviewedPreview.current;
+    focusReviewedPreview.current = null;
+    // Only the just-completed user task can move focus. A stale review becoming
+    // current after a background refresh must not interrupt another control.
+    if (requested && requested === preview && reviewCurrent &&
+        document.activeElement === inspectButton.current)
+      reviewHeading.current?.focus();
+  }, [preview, reviewCurrent]);
   const selected = (id: string) => choices.find((choice) => choice.id === id);
   const labels = (id: string) =>
     selected(id)?.label ||
@@ -299,6 +311,7 @@ function BasicRoutingEditor({
     },
     onSuccess: ({ result, creation, atVersion, stamp }) => {
       if (atVersion === version.current) {
+        focusReviewedPreview.current = result;
         setPreview(result);
         setReviewedCreation(creation);
         setReviewedInputs(stamp);
@@ -595,7 +608,9 @@ function BasicRoutingEditor({
                   保存草稿
                 </ActionButton>
                 <ActionButton
-                  disabled={locked || draftConflict}
+                  ref={inspectButton}
+                  disabled={save.isPending || publish.isPending || recover.isPending || !!pendingCreation || draftConflict}
+                  keepFocusableWhilePending
                   onClick={() => {
                     if (draftConflict) return;
                     setPreview(null);
@@ -624,7 +639,7 @@ function BasicRoutingEditor({
                 className="surface space-y-5 rounded-lg border bg-card p-5 [&>h2]:font-semibold"
                 aria-label="发布前确认"
               >
-                <h2>发布前确认</h2>
+                <h2 ref={reviewHeading} tabIndex={-1}>发布前确认</h2>
                 <RoutingReview
                   published={preview.publishedRoutingSummary}
                   candidate={preview.routingSummary}
@@ -675,7 +690,10 @@ function BasicRoutingEditor({
                 <div className="form-footer mt-6 flex flex-wrap items-center justify-end gap-2">
                   <ActionButton
                     disabled={locked}
-                    onClick={() => setPreview(null)}
+                    onClick={() => {
+                      setPreview(null);
+                      inspectButton.current?.focus();
+                    }}
                     variant="outline"
                   >
                     继续调整
