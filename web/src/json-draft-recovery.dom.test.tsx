@@ -119,16 +119,16 @@ async function openEditor(kind: "profile" | "server") {
     await user.click(
       await screen.findByRole("button", { name: "编辑转发路径 JSON route" }),
     );
-    await user.click(await screen.findByText("高级：完整服务端意图"));
+    await user.click(await screen.findByText("完整配置（JSON）"));
   }
   const reopen = async () => {
     await user.click(
       screen.getByRole("button", {
-        name: kind === "profile" ? "编辑配置意图 JSON" : "编辑服务端意图",
+        name: kind === "profile" ? "编辑配置意图 JSON" : "编辑 JSON",
       }),
     );
     return screen.findByRole("dialog", {
-      name: kind === "profile" ? "配置意图 JSON" : "服务端配置意图",
+      name: kind === "profile" ? "配置意图 JSON" : "服务端配置 JSON",
     });
   };
   const dialog = await reopen();
@@ -214,7 +214,7 @@ it.each(["profile", "server"] as const)(
     await waitFor(() =>
       expect(
         screen.queryByRole("dialog", {
-          name: kind === "profile" ? "配置意图 JSON" : "服务端配置意图",
+          name: kind === "profile" ? "配置意图 JSON" : "服务端配置 JSON",
         }),
       ).toBeNull(),
     );

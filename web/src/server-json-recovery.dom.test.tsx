@@ -69,10 +69,10 @@ it("returns rejected route JSON to the retained input and permits correction wit
   await user.click(within(header).getByRole("button", { name: "新建转发路径" }));
   const route = within(await screen.findByRole("dialog", { name: "新建转发路径" }));
   await user.type(route.getByRole("textbox", { name: "转发路径名称" }), "Retained route");
-  await user.click(route.getByRole("button", { name: "高级：完整服务端意图" }));
-  await user.click(route.getByRole("button", { name: "编辑服务端意图" }));
-  const editor = within(await screen.findByRole("dialog", { name: "服务端配置意图" }));
-  const input = editor.getByRole("textbox", { name: "服务端配置意图 JSON 文本" }) as HTMLTextAreaElement;
+  await user.click(route.getByRole("button", { name: "完整配置（JSON）" }));
+  await user.click(route.getByRole("button", { name: "编辑 JSON" }));
+  const editor = within(await screen.findByRole("dialog", { name: "服务端配置 JSON" }));
+  const input = editor.getByRole("textbox", { name: "服务端配置 JSON 文本" }) as HTMLTextAreaElement;
   const corrected = JSON.stringify({ ...JSON.parse(input.value), topologyRevision: "corrected-local-revision" });
   const rail = input.closest<HTMLElement>("[data-task-overlay-body]")!;
   // Layout and native nearest scrolling are the mocked browser boundary. These
@@ -146,11 +146,11 @@ it("returns rejected route JSON to the retained input and permits correction wit
   expect(input.getAttribute("aria-invalid")).toBe("false");
   expect(input.hasAttribute("aria-describedby")).toBe(false);
   await user.click(apply);
-  await waitFor(() => expect(screen.queryByRole("dialog", { name: "服务端配置意图" })).toBeNull());
+  await waitFor(() => expect(screen.queryByRole("dialog", { name: "服务端配置 JSON" })).toBeNull());
   expect(route.getByRole("textbox", { name: "转发路径名称" })).toHaveProperty("value", "Retained route");
-  await user.click(route.getByRole("button", { name: "编辑服务端意图" }));
-  const reopened = within(await screen.findByRole("dialog", { name: "服务端配置意图" }));
-  expect(JSON.parse((reopened.getByRole("textbox", { name: "服务端配置意图 JSON 文本" }) as HTMLTextAreaElement).value).topologyRevision).toBe("corrected-local-revision");
+  await user.click(route.getByRole("button", { name: "编辑 JSON" }));
+  const reopened = within(await screen.findByRole("dialog", { name: "服务端配置 JSON" }));
+  expect(JSON.parse((reopened.getByRole("textbox", { name: "服务端配置 JSON 文本" }) as HTMLTextAreaElement).value).topologyRevision).toBe("corrected-local-revision");
   expect(reopened.queryByRole("alert")).toBeNull();
   expect(writes).toEqual([]);
 });

@@ -230,8 +230,8 @@ it("keeps the blank server-intent JSON dialog boundaries without editing or appl
     (await screen.findAllByRole("button", { name: "新建转发路径" }))[0],
   );
   await userEvent.click(
-    screen.getByRole("button", { name: "高级：完整服务端意图" }),
+    screen.getByRole("button", { name: "完整配置（JSON）" }),
   );
-  await userEvent.click(screen.getByRole("button", { name: "编辑服务端意图" }));
-  await boundary("服务端配置意图", "应用到草稿");
+  await userEvent.click(screen.getByRole("button", { name: "编辑 JSON" }));
+  await boundary("服务端配置 JSON", "应用到草稿");
 });

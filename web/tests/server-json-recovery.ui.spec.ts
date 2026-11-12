@@ -41,8 +41,8 @@ for (const width of [1440, 390]) {
     });
     const inventory = new Inventory(page, info, "admin", "routes");
     const failures: unknown[] = [], measurements: unknown[] = [];
-    const dialog = page.getByRole("dialog", { name: "服务端配置意图", exact: true });
-    const field = dialog.getByRole("textbox", { name: "服务端配置意图 JSON 文本", exact: true });
+    const dialog = page.getByRole("dialog", { name: "服务端配置 JSON", exact: true });
+    const field = dialog.getByRole("textbox", { name: "服务端配置 JSON 文本", exact: true });
     const capture = async (stage: string) => {
       try {
         if (process.env.CI) {
@@ -80,8 +80,8 @@ for (const width of [1440, 390]) {
       await inventory.stable(route);
       const name = route.getByRole("textbox", { name: "转发路径名称", exact: true });
       await name.fill("Retained route");
-      await route.getByRole("button", { name: "高级：完整服务端意图", exact: true }).click();
-      await route.getByRole("button", { name: "编辑服务端意图", exact: true }).click();
+      await route.getByRole("button", { name: "完整配置（JSON）", exact: true }).click();
+      await route.getByRole("button", { name: "编辑 JSON", exact: true }).click();
       await inventory.stable(dialog);
       const corrected = JSON.stringify({ ...JSON.parse(await field.inputValue()), topologyRevision: "corrected-local-revision" }, null, 2);
       const apply = dialog.getByRole("button", { name: "应用到草稿", exact: true });
@@ -128,7 +128,7 @@ for (const width of [1440, 390]) {
       await page.keyboard.press("Enter");
       await expect(dialog).toHaveCount(0);
       await expect(name).toHaveValue("Retained route");
-      await route.getByRole("button", { name: "编辑服务端意图", exact: true }).click();
+      await route.getByRole("button", { name: "编辑 JSON", exact: true }).click();
       await expect(field).toHaveValue(corrected);
       await field.fill("abandoned JSON");
       const cancel = dialog.getByRole("button", { name: "取消", exact: true });
@@ -138,7 +138,7 @@ for (const width of [1440, 390]) {
       await tabTo(page, discard, discard.getByRole("button", { name: "放弃 JSON 修改", exact: true }));
       await page.keyboard.press("Enter");
       await expect(dialog).toHaveCount(0);
-      await route.getByRole("button", { name: "编辑服务端意图", exact: true }).click();
+      await route.getByRole("button", { name: "编辑 JSON", exact: true }).click();
       await expect(field).toHaveValue(corrected);
       await expect(dialog.getByRole("alert")).toHaveCount(0);
       await inventory.stable(dialog);

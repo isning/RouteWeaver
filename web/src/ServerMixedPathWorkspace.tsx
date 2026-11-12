@@ -218,25 +218,25 @@ export function ServerMixedPathWorkspace({
         return <Fragment key={key}>
           <li className="hop-row relative min-w-0">
             <div className={cn("min-w-0 rounded-lg border bg-background transition-colors motion-reduce:transition-none", isExpanded && "border-ring/50")}>
-              <div className="flex min-w-0 items-center gap-1 pr-2">
-                <button type="button" className="hop-summary group flex min-h-18 min-w-0 flex-1 items-center gap-3 rounded-lg px-3 py-3 text-left hover:bg-muted/40 focus-visible:outline-2 focus-visible:outline-ring sm:px-4"
+              <div className="relative flex min-w-0 items-center gap-1 sm:pr-2">
+                <button type="button" className="hop-summary group grid min-h-18 min-w-0 flex-1 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 rounded-lg px-3 pb-3 text-left hover:bg-muted/40 focus-visible:outline-2 focus-visible:outline-ring sm:flex sm:gap-3 sm:px-4 sm:py-3"
                   aria-label={`配置第 ${hopNumber} 跳 ${name(hop)}`} aria-describedby={`${id}-identity-${index}`} aria-expanded={isExpanded} aria-controls={`${id}-fields-${index}`}
                   ref={(control) => { if (control) rowControls.current.set(key, control); else rowControls.current.delete(key); }}
                   onClick={() => { const next = new Set(expanded); if (next.has(key)) next.delete(key); else next.add(key); setLocalExpanded(next); onExpandedHopsChange?.(next); }}>
-                  <span className="grid min-w-0 flex-1 gap-1">
-                    <span className="flex min-w-0 items-center gap-2 text-sm font-semibold">
+                  <span className="contents sm:grid sm:min-w-0 sm:flex-1 sm:gap-1">
+                    <span className="col-start-1 row-start-1 flex min-h-11 min-w-0 items-center gap-2 text-sm font-semibold sm:min-h-0">
                       <span aria-hidden="true" className="flex size-5 shrink-0 items-center justify-center rounded bg-muted text-xs font-medium tabular-nums text-muted-foreground">{hopNumber}</span>
                       <span className="min-w-0 break-words">{name(hop)}</span>
                     </span>
-                    <span id={`${id}-identity-${index}`} className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                    <span id={`${id}-identity-${index}`} className="col-span-2 row-start-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground sm:col-span-1">
                       {isPending ? <span>待选择监听端点</span> : program ? <><span>{host?.name || "原服务器"}</span><span>{program.listener.connection.protocol.toUpperCase()}</span><span>端口 {program.listener.connection.port}</span></> : <><span>外部代理{connector ? ` ${connector.connection.protocol.toUpperCase()}` : ""}</span>{connectorHost && <span>由 {connectorHost.name} 连接</span>}</>}
                     </span>
                   </span>
-                  <ChevronDown className={cn("size-4 shrink-0 text-muted-foreground transition-transform motion-reduce:transition-none", isExpanded && "rotate-180")} aria-hidden="true" />
+                  <ChevronDown className={cn("col-start-2 row-start-1 mr-14 size-4 shrink-0 text-muted-foreground transition-transform motion-reduce:transition-none sm:mr-0", isExpanded && "rotate-180")} aria-hidden="true" />
                 </button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <ActionButton variant="ghost" size="icon" aria-label={`第 ${hopNumber} 跳更多操作`} title="更多操作" leadingIcon={<MoreHorizontal aria-hidden="true" />}
+                    <ActionButton className="absolute right-2 top-0 sm:static" variant="ghost" size="icon" aria-label={`第 ${hopNumber} 跳更多操作`} title="更多操作" leadingIcon={<MoreHorizontal aria-hidden="true" />}
                       ref={(control) => { if (control) menuControls.current.set(key, control); else menuControls.current.delete(key); }} />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-64" aria-label={`第 ${hopNumber} 跳操作`}

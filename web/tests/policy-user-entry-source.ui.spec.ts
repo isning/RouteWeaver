@@ -26,8 +26,8 @@ async function capture(page: Page, info: TestInfo, dialog: Locator, name: string
 }
 async function jsonDraft(page: Page, editor: Locator) {
   await editor.getByRole("button", { name: "编辑转发设置", exact: true }).click();
-  const dialog = page.getByRole("dialog", { name: "服务端配置意图", exact: true });
-  const field = dialog.getByRole("textbox", { name: "服务端配置意图 JSON 文本", exact: true });
+  const dialog = page.getByRole("dialog", { name: "服务端配置 JSON", exact: true });
+  const field = dialog.getByRole("textbox", { name: "服务端配置 JSON 文本", exact: true });
   return { dialog, field, value: JSON.parse(await field.inputValue()) };
 }
 

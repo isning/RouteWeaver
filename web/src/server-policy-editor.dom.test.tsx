@@ -470,9 +470,9 @@ it.each([
     await user.click(
       within(editor).getByRole("button", { name: "编辑转发设置" }),
     );
-    const json = await screen.findByRole("dialog", { name: "服务端配置意图" });
+    const json = await screen.findByRole("dialog", { name: "服务端配置 JSON" });
     const text = within(json).getByRole("textbox", {
-      name: "服务端配置意图 JSON 文本",
+      name: "服务端配置 JSON 文本",
     }) as HTMLTextAreaElement;
     const intent = JSON.parse(text.value);
     if (invalidID === undefined) delete intent.programs[0].rules[0].id;
@@ -683,11 +683,11 @@ it.each([
     await user.click(
       within(editor).getByRole("button", { name: "编辑转发设置" }),
     );
-    const json = await screen.findByRole("dialog", { name: "服务端配置意图" });
+    const json = await screen.findByRole("dialog", { name: "服务端配置 JSON" });
     const intent = JSON.parse(
       (
         within(json).getByRole("textbox", {
-          name: "服务端配置意图 JSON 文本",
+          name: "服务端配置 JSON 文本",
         }) as HTMLTextAreaElement
       ).value,
     );
@@ -993,8 +993,8 @@ it("edits a connector address and upstream through the policy page while preserv
   expect(hasUnsavedChanges()).toBe(true);
   expect(fixture.saved).toEqual([]);
   await user.click(within(editor).getByRole("button", { name: "编辑转发设置" }));
-  const json = await screen.findByRole("dialog", { name: "服务端配置意图" });
-  const intent = JSON.parse((within(json).getByRole("textbox", { name: "服务端配置意图 JSON 文本" }) as HTMLTextAreaElement).value);
+  const json = await screen.findByRole("dialog", { name: "服务端配置 JSON" });
+  const intent = JSON.parse((within(json).getByRole("textbox", { name: "服务端配置 JSON 文本" }) as HTMLTextAreaElement).value);
   const expected = structuredClone(fixture.deployment.ir.programs[0]);
   expected.connectors![1].connection.host = "updated-exit.invalid";
   delete expected.connectors![1].via;
@@ -1221,10 +1221,10 @@ it.each(["null", "omitted", "malformed"])("opens a %s root program list without 
   const name = within(editor).getByRole("textbox", { name: "转发路径名称" });
   await user.clear(name);
   await user.type(name, "Renamed retained draft");
-  await user.click(within(editor).getByRole("button", { name: "高级：完整服务端意图" }));
-  await user.click(within(editor).getByRole("button", { name: "编辑服务端意图" }));
-  const json = await screen.findByRole("dialog", { name: "服务端配置意图" });
-  const intent = JSON.parse((within(json).getByRole("textbox", { name: "服务端配置意图 JSON 文本" }) as HTMLTextAreaElement).value);
+  await user.click(within(editor).getByRole("button", { name: "完整配置（JSON）" }));
+  await user.click(within(editor).getByRole("button", { name: "编辑 JSON" }));
+  const json = await screen.findByRole("dialog", { name: "服务端配置 JSON" });
+  const intent = JSON.parse((within(json).getByRole("textbox", { name: "服务端配置 JSON 文本" }) as HTMLTextAreaElement).value);
   expect(intent).toEqual(fixture.deployment.ir);
   await user.click(within(json).getByRole("button", { name: "取消" }));
   await user.click(within(editor).getByRole("button", { name: "保存草稿" }));
@@ -1237,10 +1237,10 @@ it.each(["null", "omitted", "malformed"])("opens a %s root program list without 
   expect(within(detail).getByText("目标实例", { exact: true })).toBeTruthy();
   await user.click(within(detail).getByRole("button", { name: "编辑转发路径" }));
   const reopened = await screen.findByRole("dialog", { name: "编辑 Renamed retained draft" });
-  await user.click(within(reopened).getByRole("button", { name: "高级：完整服务端意图" }));
-  await user.click(within(reopened).getByRole("button", { name: "编辑服务端意图" }));
-  const reopenedJSON = await screen.findByRole("dialog", { name: "服务端配置意图" });
-  expect(JSON.parse((within(reopenedJSON).getByRole("textbox", { name: "服务端配置意图 JSON 文本" }) as HTMLTextAreaElement).value)).toEqual(fixture.deployment.ir);
+  await user.click(within(reopened).getByRole("button", { name: "完整配置（JSON）" }));
+  await user.click(within(reopened).getByRole("button", { name: "编辑 JSON" }));
+  const reopenedJSON = await screen.findByRole("dialog", { name: "服务端配置 JSON" });
+  expect(JSON.parse((within(reopenedJSON).getByRole("textbox", { name: "服务端配置 JSON 文本" }) as HTMLTextAreaElement).value)).toEqual(fixture.deployment.ir);
   await user.click(within(reopenedJSON).getByRole("button", { name: "取消" }));
   expect(fixture.saved).toHaveLength(1);
 
@@ -1254,11 +1254,11 @@ it.each(["null", "omitted"])("lets a %s root program list be corrected only by a
     else Object.assign(draft.ir, { programs: null });
   });
   const editor = await openEditor(user);
-  await user.click(within(editor).getByRole("button", { name: "高级：完整服务端意图" }));
+  await user.click(within(editor).getByRole("button", { name: "完整配置（JSON）" }));
   const openJSON = async () => {
-    await user.click(within(editor).getByRole("button", { name: "编辑服务端意图" }));
-    const dialog = await screen.findByRole("dialog", { name: "服务端配置意图" });
-    const field = within(dialog).getByRole("textbox", { name: "服务端配置意图 JSON 文本" });
+    await user.click(within(editor).getByRole("button", { name: "编辑 JSON" }));
+    const dialog = await screen.findByRole("dialog", { name: "服务端配置 JSON" });
+    const field = within(dialog).getByRole("textbox", { name: "服务端配置 JSON 文本" });
     expect(JSON.parse((field as HTMLTextAreaElement).value)).toEqual(fixture.deployment.ir);
     await user.clear(field);
     await user.paste(JSON.stringify({ ...fixture.deployment.ir, programs: [] }));

@@ -1512,15 +1512,14 @@ export function ServerRouteEditor({
             },
             {
               key: "native",
-              label:
-                "\u9AD8\u7EA7\uFF1A\u5B8C\u6574\u670D\u52A1\u7AEF\u610F\u56FE",
+              label: "完整配置（JSON）",
               children: (
                 <>
                   <p className="muted text-sm text-muted-foreground">
-                    编辑命名连接器、服务器规则与资源。服务器意图独立于个人客户端配置。
+                    编辑服务端连接器、规则与资源。个人客户端配置单独管理。
                   </p>
                   <ActionButton onClick={editIntent} disabled={pathLoading} variant="outline">
-                    编辑服务端意图
+                    编辑 JSON
                   </ActionButton>
                 </>
               ),
@@ -1538,7 +1537,7 @@ export function ServerRouteEditor({
       {listenerReview}
       <TaskDialog
         bodyProps={{ className: "space-y-5" }}
-        title="服务端配置意图"
+        title="服务端配置 JSON"
         open={jsonOpen}
         onOpenChange={(next) => {
           if (!next) closeJSON();
@@ -1577,7 +1576,7 @@ export function ServerRouteEditor({
         <Textarea
           className="json-editor min-h-64 font-mono text-xs"
           rows={22}
-          aria-label="服务端配置意图 JSON 文本"
+          aria-label="服务端配置 JSON 文本"
           ref={jsonInput}
           aria-invalid={!!jsonError}
           aria-describedby={jsonError ? jsonErrorId : undefined}

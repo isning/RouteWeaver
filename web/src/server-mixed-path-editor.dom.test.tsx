@@ -117,8 +117,8 @@ it("waits for a new hop reveal before opening JSON so unchanged JSON cannot disc
   }));
   mountEditor(initial, inventory);
   const user = userEvent.setup();
-  await user.click(screen.getByRole("button", { name: "高级：完整服务端意图" }));
-  const editJSON = screen.getByRole("button", { name: "编辑服务端意图" });
+  await user.click(screen.getByRole("button", { name: "完整配置（JSON）" }));
+  const editJSON = screen.getByRole("button", { name: "编辑 JSON" });
   await user.click(screen.getByRole("button", { name: "添加下一跳" }));
   const choose = async (label: string, query: string) => {
     await user.click(screen.getByRole("combobox", { name: label }));
@@ -130,16 +130,16 @@ it("waits for a new hop reveal before opening JSON so unchanged JSON cannot disc
   await choose("第 3 跳端点", "b listener");
   await waitFor(() => expect(editJSON.hasAttribute("disabled")).toBe(true));
   await user.click(editJSON);
-  expect(screen.queryByRole("dialog", { name: "服务端配置意图" })).toBeNull();
+  expect(screen.queryByRole("dialog", { name: "服务端配置 JSON" })).toBeNull();
   await act(async () => { release(); await gate; });
   await waitFor(() => expect(screen.getByRole("region", { name: "路径摘要" }).textContent).toContain("a listener → proxy-x → b listener → 目标"));
   expect(editJSON.hasAttribute("disabled")).toBe(false);
   await user.click(editJSON);
-  const dialog = await screen.findByRole("dialog", { name: "服务端配置意图" });
-  const intent = JSON.parse((within(dialog).getByRole("textbox", { name: "服务端配置意图 JSON 文本" }) as HTMLTextAreaElement).value);
+  const dialog = await screen.findByRole("dialog", { name: "服务端配置 JSON" });
+  const intent = JSON.parse((within(dialog).getByRole("textbox", { name: "服务端配置 JSON 文本" }) as HTMLTextAreaElement).value);
   expect(intent.programs.map((program: { listener: { id: string } }) => program.listener.id)).toEqual(["a", "b"]);
   await user.click(within(dialog).getByRole("button", { name: "应用到草稿" }));
-  await waitFor(() => expect(screen.queryByRole("dialog", { name: "服务端配置意图" })).toBeNull());
+  await waitFor(() => expect(screen.queryByRole("dialog", { name: "服务端配置 JSON" })).toBeNull());
   expect(screen.getByRole("region", { name: "路径摘要" }).textContent).toContain("a listener → proxy-x → b listener → 目标");
   expect(calls).toEqual(["GET /api/managed-endpoints/b/reveal"]);
 });
@@ -160,10 +160,10 @@ it("refuses to remove an opaque program from the legacy ordered workspace", asyn
   expect(screen.getByText("此服务器仍保存连接器或独立设置，请先在转发设置中处理，再移除服务器。")).toBeTruthy();
   await user.keyboard("{Escape}");
   expect(screen.getByRole("region", { name: "路径摘要" }).textContent).toContain("a listener → 目标");
-  await user.click(screen.getByRole("button", { name: "高级：完整服务端意图" }));
-  await user.click(screen.getByRole("button", { name: "编辑服务端意图" }));
-  const dialog = await screen.findByRole("dialog", { name: "服务端配置意图" });
-  const intent = JSON.parse((within(dialog).getByRole("textbox", { name: "服务端配置意图 JSON 文本" }) as HTMLTextAreaElement).value);
+  await user.click(screen.getByRole("button", { name: "完整配置（JSON）" }));
+  await user.click(screen.getByRole("button", { name: "编辑 JSON" }));
+  const dialog = await screen.findByRole("dialog", { name: "服务端配置 JSON" });
+  const intent = JSON.parse((within(dialog).getByRole("textbox", { name: "服务端配置 JSON 文本" }) as HTMLTextAreaElement).value);
   expect(intent.programs[0].futurePolicy).toEqual({ keep: "opaque program data" });
   expect(fetch).not.toHaveBeenCalled();
 });

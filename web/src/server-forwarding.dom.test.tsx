@@ -247,12 +247,12 @@ it("shows conditional forwarding without inventing an execution chain or offerin
     within(editor).getByRole("button", { name: "编辑转发设置" }),
   );
   const json = await screen.findByRole("dialog", {
-    name: "服务端配置意图",
+    name: "服务端配置 JSON",
   });
   expect(
     (
       within(json).getByRole("textbox", {
-        name: "服务端配置意图 JSON 文本",
+        name: "服务端配置 JSON 文本",
       }) as HTMLTextAreaElement
     ).value,
   ).toContain('"ref": "uk-out"');
