@@ -1,6 +1,8 @@
 import { writeFile } from "node:fs/promises";
 import { isDeepStrictEqual } from "node:util";
 import { expect, test, type Locator, type Page, type TestInfo } from "@playwright/test";
+import { policyDifferenceFields, policySource, type EffectivePolicy } from "../src/access-policy-model";
+import type { Entitlement } from "../src/types";
 import { settledTask } from "./ui-settled-task";
 
 // Real App/session and editor, exact synthetic GETs plus one local preview response.
@@ -17,23 +19,37 @@ type EntitlementFixture = Omit<typeof entitlement, "quotaOverride" | "onlineIpLi
 // Match the top-level omitempty fields exercised by this fixture. The real
 // preview decodes PolicyChange into service.Entitlement and encodes a typed
 // PolicyResourceReview; it does not echo the request map. Keep [] and 0 explicit.
-function responseEntitlement(ent: EntitlementFixture): EntitlementFixture {
-  const response = { ...ent };
+function responseEntitlement(ent: EntitlementFixture): Entitlement {
+  const response = { ...ent, expiresAt: ent.expiresAt ?? undefined };
   if (response.serviceId === "") delete response.serviceId;
   for (const field of ["expiresAt", "routeIdsOverride", "quotaOverride", "onlineIpLimitOverride", "connectionLimitOverride", "entryRateBpsOverride"] as const)
     if (response[field] == null) delete response[field];
   return response;
 }
-const effective = (ent: EntitlementFixture) => ({ userId: user.id, groupIds: [], routeIds: [], quotaBytes: ent.quotaOverride ?? 0,
-  onlineIpLimit: ent.onlineIpLimitOverride ?? 0, connectionLimit: ent.connectionLimitOverride ?? 0,
-  entryRateBps: ent.entryRateBpsOverride ?? 0, status: "active", provenance: {}, entitlement: responseEntitlement(ent) });
+// ResolvePolicy's sources for this enabled account with no selected service,
+// groups or route grants. Unset IP/stream/rate limits have no source; quota
+// falls back to the user's account setting. Explicit zero is still an override.
+function effective(ent: EntitlementFixture): EffectivePolicy {
+  const provenance: Record<string, string> = { service: "none", quotaBytes: "account", routes: "direct", cycle: "account" };
+  if (ent.quotaOverride != null) provenance.quotaBytes = "individual";
+  if (ent.onlineIpLimitOverride != null) provenance.onlineIpLimit = "individual";
+  if (ent.connectionLimitOverride != null) provenance.connectionLimit = "individual";
+  if (ent.entryRateBpsOverride != null) provenance.entryRateBps = "individual";
+  return { userId: user.id, groupIds: [], routeIds: [], quotaBytes: ent.quotaOverride ?? user.quotaBytes,
+    onlineIpLimit: ent.onlineIpLimitOverride ?? 0, connectionLimit: ent.connectionLimitOverride ?? 0,
+    entryRateBps: ent.entryRateBpsOverride ?? 0, status: "active", provenance, entitlement: responseEntitlement(ent) };
+}
 const precondition = { exists: true, revision: "synthetic-override-opening" };
 const contextPath = `/api/access-policy/edit-context/entitlement/${user.id}`;
 const scenarios = [
-  { name: "quota", field: "quotaOverride", label: "个人周期额度（GiB）", saved: "50", value: 3 * 1024 ** 3, reviewRow: "个人周期额度", after: "3 GiB" },
-  { name: "ip", field: "onlineIpLimitOverride", label: "个人在线 IP 数上限", saved: "17", value: 3, reviewRow: "个人在线 IP 上限", after: "3 个" },
-  { name: "connection", field: "connectionLimitOverride", label: "个人并发逻辑流数上限", saved: "9", value: 3, reviewRow: "个人并发逻辑流上限", after: "3 条" },
-  { name: "rate", field: "entryRateBpsOverride", label: "个人入口限速（Mbps）", saved: "1", value: 375000, reviewRow: "个人入口限速", after: "3 Mbps" },
+  { name: "quota", field: "quotaOverride", label: "个人周期额度（GiB）", saved: "50", value: 3 * 1024 ** 3, reviewRow: "个人周期额度", after: "3 GiB",
+    effectiveField: "quotaBytes", effectiveRow: "周期额度", effectiveSaved: "50 GiB", inheritedValue: "不限额", inheritedSource: "account", inheritedCaption: "账号设置" },
+  { name: "ip", field: "onlineIpLimitOverride", label: "个人在线 IP 数上限", saved: "17", value: 3, reviewRow: "个人在线 IP 上限", after: "3 个",
+    effectiveField: "onlineIpLimit", effectiveRow: "在线 IP 上限", effectiveSaved: "17 个", inheritedValue: "不限制", inheritedSource: undefined, inheritedCaption: "未单独设置" },
+  { name: "connection", field: "connectionLimitOverride", label: "个人并发逻辑流数上限", saved: "9", value: 3, reviewRow: "个人并发逻辑流上限", after: "3 条",
+    effectiveField: "connectionLimit", effectiveRow: "并发逻辑流上限", effectiveSaved: "9 条", inheritedValue: "不限制", inheritedSource: undefined, inheritedCaption: "未单独设置" },
+  { name: "rate", field: "entryRateBpsOverride", label: "个人入口限速（Mbps）", saved: "1", value: 375000, reviewRow: "个人入口限速", after: "3 Mbps",
+    effectiveField: "entryRateBps", effectiveRow: "每个逻辑入口速率", effectiveSaved: "1 Mbps", inheritedValue: "不限制", inheritedSource: undefined, inheritedCaption: "未单独设置" },
 ] as const;
 type Scenario = typeof scenarios[number];
 
@@ -234,6 +250,8 @@ for (const { width, scenario, theme } of journeys) {
     const preview = editor.getByRole("button", { name: "预览影响", exact: true });
     const cancel = editor.getByRole("button", { name: "取消", exact: true });
     const review = page.getByRole("dialog", { name: "确认授权变更", exact: true });
+    const affectedCells = review.getByRole("table", { name: user.name, exact: true }).getByRole("row")
+      .filter({ has: page.getByRole("rowheader", { name: scenario.effectiveRow, exact: true }) }).getByRole("cell");
     const activate = async (target: Locator, scope = editor, key = "Enter") => { await tabTo(page, scope, target); await page.keyboard.press(key); };
     const openEditor = async () => {
       await page.getByRole("button", { name: `更多操作 ${user.name}`, exact: true }).click();
@@ -279,6 +297,7 @@ for (const { width, scenario, theme } of journeys) {
       await expect(review.getByRole("row", { name: new RegExp(scenario.reviewRow) }).getByRole("cell").nth(1)).toHaveText(scenario.after);
       const correctionRows = review.getByRole("table", { name: "个人授权变更", exact: true }).getByRole("rowheader");
       await expect(correctionRows).toHaveText([scenario.reviewRow]);
+      await expect(affectedCells).toHaveText([new RegExp(`^${scenario.effectiveSaved}\\s*个人覆盖$`), new RegExp(`^${scenario.after}\\s*个人覆盖$`)]);
       await capture(page, info, "correction-review", review);
       expect(ledger.previewPhases).toEqual(["correction"]);
       await activate(review.getByRole("button", { name: "返回编辑", exact: true }), review); await expect(review).toHaveCount(0);
@@ -288,6 +307,7 @@ for (const { width, scenario, theme } of journeys) {
       await expect(review.getByRole("row", { name: new RegExp(scenario.reviewRow) }).getByRole("cell").nth(1)).toHaveText("继承");
       const inheritanceRows = review.getByRole("table", { name: "个人授权变更", exact: true }).getByRole("rowheader");
       await expect(inheritanceRows).toHaveText([scenario.reviewRow]);
+      await expect(affectedCells).toHaveText([new RegExp(`^${scenario.effectiveSaved}\\s*个人覆盖$`), new RegExp(`^${scenario.inheritedValue}\\s*${scenario.inheritedCaption}$`)]);
       await capture(page, info, "inheritance-review", review);
       expect(ledger.previewPhases).toEqual(["correction", "inheritance"]);
       expect(ledger.previewRequests).toBe(2); expect(ledger.acceptedPreviews).toBe(2);
@@ -331,4 +351,72 @@ test("user-override fixture mirrors typed optional-field omission without changi
     serviceId: "explicit-plan", routeIdsOverride: [], quotaOverride: 0, onlineIpLimitOverride: 0, connectionLimitOverride: 0, entryRateBpsOverride: 0 });
   expect(responseEntitlement({ ...explicit, routeIdsOverride: ["chosen-route"], expiresAt: "2027-01-01T00:00:00Z" }))
     .toMatchObject({ routeIdsOverride: ["chosen-route"], expiresAt: "2027-01-01T00:00:00Z" });
+});
+
+test("user-override fixture identifies saved numeric overrides and no-service sources", () => {
+  const opening = effective(entitlement);
+  expect(opening).toMatchObject({ quotaBytes: 53687091200, onlineIpLimit: 17, connectionLimit: 9, entryRateBps: 125000 });
+  expect(opening.provenance).toEqual({
+    service: "none", quotaBytes: "individual", routes: "direct", cycle: "account",
+    onlineIpLimit: "individual", connectionLimit: "individual", entryRateBps: "individual",
+  });
+  expect(["quotaBytes", "onlineIpLimit", "connectionLimit", "entryRateBps"].map(field => policySource(opening.provenance[field], [])))
+    .toEqual(["个人覆盖", "个人覆盖", "个人覆盖", "个人覆盖"]);
+});
+
+for (const scenario of scenarios) {
+  test(`user-override fixture preserves ${scenario.name} sources through correction and inheritance`, () => {
+    const opening = effective(entitlement);
+    const request: EntitlementFixture = { ...entitlement, serviceId: "", routeIdsOverride: null, [scenario.field]: scenario.value };
+    const unchangedRequest = structuredClone(request);
+    const corrected = effective(request);
+    expect(corrected[scenario.effectiveField]).toBe(scenario.value);
+    expect(corrected.provenance).toEqual(opening.provenance);
+    expect(policyDifferenceFields(opening, corrected)).toEqual([scenario.effectiveField]);
+    expect(policySource(corrected.provenance[scenario.effectiveField], [])).toBe("个人覆盖");
+    expect(request).toEqual(unchangedRequest);
+
+    const inheritanceRequest: EntitlementFixture = { ...request, [scenario.field]: null };
+    const unchangedInheritance = structuredClone(inheritanceRequest);
+    const inherited = effective(inheritanceRequest);
+    expect(inherited[scenario.effectiveField]).toBe(0);
+    expect(inherited.provenance[scenario.effectiveField]).toBe(scenario.inheritedSource);
+    expect(Object.hasOwn(inherited.provenance, scenario.effectiveField)).toBe(scenario.name === "quota");
+    expect(policySource(inherited.provenance[scenario.effectiveField], [])).toBe(scenario.inheritedCaption);
+    expect(policyDifferenceFields(opening, inherited)).toEqual([scenario.effectiveField]);
+    expect(inherited.entitlement).not.toHaveProperty(scenario.field);
+    for (const other of scenarios.filter(other => other !== scenario)) {
+      expect(inherited[other.effectiveField]).toBe(opening[other.effectiveField]);
+      expect(inherited.provenance[other.effectiveField]).toBe("individual");
+    }
+    const omitted: EntitlementFixture = { ...inheritanceRequest };
+    delete omitted[scenario.field];
+    expect(effective(omitted)).toEqual(inherited);
+    expect(effective({ ...omitted, [scenario.field]: undefined })).toEqual(inherited);
+    expect(inheritanceRequest).toEqual(unchangedInheritance);
+  });
+}
+
+test("user-override fixture keeps explicit zero personal instead of inherited", () => {
+  const request: EntitlementFixture = { ...entitlement, quotaOverride: 0, onlineIpLimitOverride: 0, connectionLimitOverride: 0, entryRateBpsOverride: 0 };
+  const unchangedRequest = structuredClone(request);
+  const explicit = effective(request);
+  expect(explicit).toMatchObject({ quotaBytes: 0, onlineIpLimit: 0, connectionLimit: 0, entryRateBps: 0 });
+  expect(explicit.provenance).toEqual({
+    service: "none", quotaBytes: "individual", routes: "direct", cycle: "account",
+    onlineIpLimit: "individual", connectionLimit: "individual", entryRateBps: "individual",
+  });
+  expect(explicit.entitlement).toEqual(request);
+  expect(request).toEqual(unchangedRequest);
+});
+
+test("user-override fixture distinguishes account quota from absent service limits", () => {
+  const request: EntitlementFixture = { ...entitlement, quotaOverride: null, onlineIpLimitOverride: null, connectionLimitOverride: null, entryRateBpsOverride: null };
+  const inherited = effective(request);
+  expect(inherited).toMatchObject({ quotaBytes: 0, onlineIpLimit: 0, connectionLimit: 0, entryRateBps: 0, groupIds: [], routeIds: [] });
+  expect(inherited.provenance).toEqual({ service: "none", quotaBytes: "account", routes: "direct", cycle: "account" });
+  expect(inherited).not.toHaveProperty("serviceId");
+  expect(inherited).not.toHaveProperty("service");
+  const explicit = effective({ ...entitlement, quotaOverride: 0, onlineIpLimitOverride: 0, connectionLimitOverride: 0, entryRateBpsOverride: 0 });
+  expect(policyDifferenceFields(explicit, inherited)).toEqual(["quotaBytes", "onlineIpLimit", "connectionLimit", "entryRateBps"]);
 });
