@@ -180,7 +180,7 @@ export function InboxPage() {
         }
       />
       {query.data && (query.isFetching || query.isPaused) && (
-        <Notice tone="info">{query.isPaused ? "等待网络连接，消息列表尚未更新。" : "正在刷新消息，列表仍为上次读取结果。"}</Notice>
+        <Notice tone="info" role="status">{query.isPaused ? "等待网络连接，消息列表尚未更新。" : "正在刷新消息，列表仍为上次读取结果。"}</Notice>
       )}
       {query.data !== undefined && query.error && !query.isFetching && !query.isPaused && (
         <Notice tone="error" title="消息刷新失败，仍显示上次读取的消息。请重试刷新。">
@@ -241,7 +241,10 @@ export function InboxPage() {
         size="lg"
       >
         {selected && (query.isFetching || query.isPaused || query.isError || !currentSelected) && (
-          <Notice tone="warning">
+          <Notice
+            tone={query.isFetching || query.isPaused ? "info" : "warning"}
+            role={query.isFetching || query.isPaused ? "status" : "alert"}
+          >
             {query.isFetching ? "正在核对消息，当前显示上次读取内容。"
               : query.isPaused ? "等待网络连接，当前显示上次读取内容。"
               : query.isError ? "消息刷新失败，当前显示上次读取内容。"

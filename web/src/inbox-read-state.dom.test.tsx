@@ -341,7 +341,7 @@ it("labels cached inbox contents while a refresh is pending and does not call th
   await screen.findByRole("button", { name: /缓存消息.*已读/ });
   refresh = true;
   await userEvent.click(screen.getByRole("button", { name: "刷新" }));
-  await screen.findByText("正在刷新消息，列表仍为上次读取结果。");
+  expect((await screen.findByText("正在刷新消息，列表仍为上次读取结果。")).closest('[role="status"]')).toBeTruthy();
   await act(async () => { settle(json({ message: "刷新不可用" }, 503)); });
   await screen.findByText("刷新不可用");
   expect(screen.queryByText("暂无消息")).toBeNull();
@@ -443,9 +443,10 @@ it("offers explicit mark-read after opening an unread message during a backgroun
   refresh = true;
   let readback!: Promise<void>;
   act(() => { readback = client.invalidateQueries({ queryKey: ["inbox"] }); });
-  await screen.findByText("正在刷新消息，列表仍为上次读取结果。");
+  expect((await screen.findByText("正在刷新消息，列表仍为上次读取结果。")).closest('[role="status"]')).toBeTruthy();
   await userEvent.click(opener);
   const dialog = await screen.findByRole("dialog", { name: "等待更新的消息" });
+  expect(within(dialog).getByText("正在核对消息，当前显示上次读取内容。").closest('[role="status"]')).toBeTruthy();
   const mark = within(dialog).getByRole("button", { name: "标记已读" });
   expect((mark as HTMLButtonElement).disabled).toBe(true);
   await userEvent.click(mark);
@@ -474,7 +475,7 @@ it("recovers a failed inbox refresh by keyboard from the open message", async ()
   await user.click(await screen.findByRole("button", { name: /维护消息.*已读/ }));
   const dialog = await screen.findByRole("dialog", { name: "维护消息" });
   await act(async () => { await client.invalidateQueries({ queryKey: ["inbox"] }); });
-  await within(dialog).findByText("消息刷新失败，当前显示上次读取内容。");
+  expect((await within(dialog).findByText("消息刷新失败，当前显示上次读取内容。")).closest('[role="alert"]')).toBeTruthy();
   const retry = within(dialog).getByRole("button", { name: "重试刷新" });
   within(dialog).getByRole("button", { name: "关闭" }).focus();
   for (let step = 0; step < 4 && document.activeElement !== retry; step++) await user.tab();
