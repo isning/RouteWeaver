@@ -409,13 +409,15 @@ export function PublishedRoutesPage() {
   const inventoryReady = !!infrastructure.data && infrastructure.isSuccess && infrastructure.fetchStatus === "idle";
   const creationDisabled = !inventoryReady;
   const inventoryNotice = infrastructure.isPaused
-    ? <Notice title="等待网络连接后核对转发路径。暂不能新建、编辑或更换出口。" />
+    ? <Notice role="status" title="等待网络连接后核对转发路径">暂不能新建、编辑或更换出口。</Notice>
     : infrastructure.error
       ? <Notice tone="warning"
-          title="转发路径信息暂时无法读取，仍可查看线路。新建、编辑和更换出口前请重试。"
-          action={<ActionButton variant="outline" pending={infrastructure.isFetching} onClick={() => infrastructure.refetch()}>重试读取转发路径</ActionButton>} />
+          title="转发路径信息暂时无法读取"
+          action={<ActionButton variant="outline" pending={infrastructure.isFetching} onClick={() => infrastructure.refetch()}>重试读取转发路径</ActionButton>}>
+          仍可查看线路。新建、编辑和更换出口前请重试。
+        </Notice>
       : !inventoryReady
-        ? <Notice title="正在核对转发路径，完成后可新建、编辑或更换出口。" />
+        ? <Notice role="status" title="正在核对转发路径">核对完成后可新建、编辑或更换出口。</Notice>
         : null;
   const creationAction = needsTransferPath ? (
     <ActionButton

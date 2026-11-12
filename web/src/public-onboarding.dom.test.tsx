@@ -685,7 +685,7 @@ it("keeps public-route creation disabled until infrastructure is known, includin
   await act(async () => finish(new Response(JSON.stringify({message: "Infrastructure unavailable"}), {
     status: 503, headers: {"Content-Type": "application/json"},
   })));
-  await screen.findByText("转发路径信息暂时无法读取，仍可查看线路。新建、编辑和更换出口前请重试。");
+  await screen.findByText("转发路径信息暂时无法读取");
   expect((action as HTMLButtonElement).disabled).toBe(true);
   expect(screen.getByText("暂无线路")).toBeTruthy();
   expect(screen.queryByRole("link", { name: "创建转发路径" })).toBeNull();

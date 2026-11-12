@@ -57,7 +57,7 @@ it.each([
   }
   await act(async () => { release(json({ message: `${heading}列表暂不可用` }, 503)); });
   if (optionalRouteInventory) {
-    await within(main).findByText("转发路径信息暂时无法读取，仍可查看线路。新建、编辑和更换出口前请重试。");
+    await within(main).findByText("转发路径信息暂时无法读取");
     expect(within(main).getByText(empty)).toBeTruthy();
     expect(within(main).getByRole("button", { name: "配置公开线路" }).hasAttribute("disabled")).toBe(true);
   } else {
@@ -74,7 +74,7 @@ it.each([
   if (optionalRouteInventory) {
     const next = await within(main).findByRole("link", { name: "创建转发路径" });
     expect(next.getAttribute("aria-disabled")).toBeNull();
-    expect(within(main).queryByText("转发路径信息暂时无法读取，仍可查看线路。新建、编辑和更换出口前请重试。")).toBeNull();
+    expect(within(main).queryByText("转发路径信息暂时无法读取")).toBeNull();
   }
   expect(reads).toBe(2); expect(unexpected).toEqual([]);
 });

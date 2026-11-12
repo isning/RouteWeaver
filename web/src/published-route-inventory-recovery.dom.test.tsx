@@ -24,7 +24,7 @@ const deployments = ["path", "other-path"].map((id, index) => ({
   ir: { schemaVersion: "1.0", id, topologyRevision: "r1", programs: endpoints.slice(index * 2, index * 2 + 2).map(listener => ({ instance, listener, rules: [], resources: [], egress: [] })) },
 }));
 const clients: QueryClient[] = [];
-const warning = "转发路径信息暂时无法读取，仍可查看线路。新建、编辑和更换出口前请重试。";
+const warning = "转发路径信息暂时无法读取";
 function setup(initialFailure = false, extra?: (path: string) => Response | Promise<Response> | undefined) {
   let failed = initialFailure;
   const calls: { path: string; method: string }[] = [];
@@ -73,6 +73,7 @@ it.each(["initial", "refresh"])("keeps independently loaded routes browsable aft
     await focusPage();
   }
   await screen.findByText(warning);
+  expect(screen.getByText("仍可查看线路。新建、编辑和更换出口前请重试。")).toBeTruthy();
   expect(screen.getByText("office.example:443")).toBeTruthy();
   expect(screen.getByRole("button", { name: "配置公开线路" }).hasAttribute("disabled")).toBe(true);
   expect(screen.getByRole("button", { name: "配置用户入口" }).hasAttribute("disabled")).toBe(true);
@@ -114,11 +115,12 @@ it("shows routes while initial inventory is pending without enabling inventory-d
   const pending = new Promise<Response>(resolve => { finish = resolve; });
   const { user } = setup(false, path => path.endsWith("/hosts") ? pending : undefined);
   const opener = await screen.findByRole("button", { name: "Office line" });
-  expect(screen.getByText("正在核对转发路径，完成后可新建、编辑或更换出口。")).toBeTruthy();
+  expect(screen.getByText("正在核对转发路径").closest('[role="status"]')).not.toBeNull();
+  expect(screen.getByText("核对完成后可新建、编辑或更换出口。")).toBeTruthy();
   expect(screen.getByRole("button", { name: "编辑" }).hasAttribute("disabled")).toBe(true);
   await user.click(opener);
   const detail = within(await screen.findByRole("dialog", { name: "Resolved office line" }));
-  expect(detail.getByText("正在核对转发路径，完成后可新建、编辑或更换出口。")).toBeTruthy();
+  expect(detail.getByText("正在核对转发路径")).toBeTruthy();
   expect(detail.getByRole("button", { name: "编辑线路" }).hasAttribute("disabled")).toBe(true);
   await act(async () => finish(json([])));
   await waitFor(() => expect(detail.getByRole("button", { name: "编辑线路" }).hasAttribute("disabled")).toBe(false));
