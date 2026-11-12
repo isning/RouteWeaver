@@ -34,12 +34,18 @@ import { Switch } from "@/components/ui/switch";
 import { useForm, useWatch, AppField, AppForm } from "@/ui-patterns/form";
 import { ChoiceSelect, MultiChoice } from "@/ui-patterns/choice-select";
 import { Notice } from "@/ui-patterns/notice";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { ActionButton } from "@/ui-patterns/actions";
 import { toast } from "sonner";
 import {
   Ellipsis,
+  ChevronDown,
   Network as ApartmentOutlined,
   ArrowDown as ArrowDownOutlined,
   ArrowUp as ArrowUpOutlined,
@@ -1580,6 +1586,50 @@ const sameCreatedUser = (submitted: UserRecord, current: UserRecord) =>
   submitted.enabled === current.enabled &&
   submitted.quotaBytes === current.quotaBytes;
 
+// Keep the original controls mounted: raw input text and protocol drafts belong
+// to this task even while recovery replaces editing with a result-check decision.
+function EndpointSubmissionDetails({
+  task,
+  recovering,
+  children,
+}: {
+  task: object | null;
+  recovering: boolean;
+  children: ReactNode;
+}) {
+  const [expandedTask, setExpandedTask] = useState<object | null>(null);
+  if (!task) return children;
+  const expanded = !recovering || expandedTask === task;
+  return (
+    <Collapsible
+      open={expanded}
+      onOpenChange={(open) => setExpandedTask(open ? task : null)}
+    >
+      {recovering && (
+        <CollapsibleTrigger asChild>
+          <Button
+            variant="ghost"
+            className="mb-3 min-h-11 w-full justify-between"
+          >
+            查看本次提交
+            <ChevronDown
+              aria-hidden="true"
+              className="transition-transform [[data-state=open]>&]:rotate-180 motion-reduce:transition-none"
+            />
+          </Button>
+        </CollapsibleTrigger>
+      )}
+      <CollapsibleContent
+        forceMount
+        hidden={!expanded}
+        className="data-[state=open]:overflow-visible"
+      >
+        {children}
+      </CollapsibleContent>
+    </Collapsible>
+  );
+}
+
 function EntityEditor({
   entity,
   state: _state,
@@ -1941,6 +1991,127 @@ function EntityEditor({
     );
   };
   const title = displayEntity?.kind === "nodes" ? "端点" : "用户";
+  const endpointRecovery =
+    currentCreation?.task.kind === "nodes" &&
+    (recovering || currentCreation.mayHaveCommitted);
+  const submittedEndpoint = endpointRecovery
+    ? (currentCreation.record as NodeRecord)
+    : null;
+  const creationNotice = currentCreation &&
+    (recovering || endpointRecovery) && (
+      <Notice
+        tone={completedCreation ? "success" : "warning"}
+        title={
+          completedCreation
+            ? `${creationNoun}已创建`
+            : currentCreation.phase === "absent"
+              ? `暂未找到本次创建的${creationNoun}`
+              : currentCreation.phase === "different"
+                ? `已有${creationNoun}的资料与本次提交不同`
+                : `尚未确认${creationNoun}是否创建`
+        }
+      >
+        {completedCreation
+          ? `本次创建已完成。关闭窗口不会删除${creationNoun}。`
+          : currentCreation.phase === "absent"
+            ? `之前的请求仍可能完成。重试只会继续本次创建，不会覆盖已有${creationNoun}。`
+            : currentCreation.phase === "different"
+              ? `未覆盖现有资料。请在${creationNoun}列表中核对，再决定是否编辑。`
+              : "已保留本次提交，确认结果前暂不能修改。请检查创建结果；关闭不会撤销可能已完成的创建。"}
+        {currentCreation.phase === "different" && currentCreation.current && (
+          <div className="mt-2 space-y-1">
+            <KeyValue label={`现有${creationNoun}名称`}>
+              {currentCreation.current.name}
+            </KeyValue>
+            {currentCreation.task.kind === "nodes" ? (
+              <>
+                <KeyValue label="连接地址">
+                  {(currentCreation.current as NodeRecord).host}:
+                  {(currentCreation.current as NodeRecord).port}
+                </KeyValue>
+                <KeyValue label="协议">
+                  {(currentCreation.current as NodeRecord).protocol}
+                </KeyValue>
+              </>
+            ) : (
+              <>
+                <KeyValue label="账号状态">
+                  {(currentCreation.current as UserRecord).enabled
+                    ? "已启用"
+                    : "已停用"}
+                </KeyValue>
+                <KeyValue label="账号基础额度">
+                  {(currentCreation.current as UserRecord).quotaBytes === 0
+                    ? "不限额"
+                    : bytesLabel(
+                        (currentCreation.current as UserRecord).quotaBytes,
+                      )}
+                </KeyValue>
+              </>
+            )}
+          </div>
+        )}
+        <ErrorNotice error={currentCreation.checkError} />
+      </Notice>
+    );
+  const footerActions = (
+    <div className="form-footer flex w-full flex-wrap items-center justify-end gap-2">
+      {!completedCreation && (
+        <ActionButton
+          disabled={pending || confirming}
+          onClick={close}
+          variant="outline"
+        >
+          取消
+        </ActionButton>
+      )}
+      {currentCreation?.phase === "absent" && (
+        <ActionButton
+          variant="outline"
+          disabled={confirming}
+          onClick={checkCreation}
+        >
+          检查创建结果
+        </ActionButton>
+      )}
+      <ActionButton
+        ref={submitButton}
+        form={recovering ? undefined : formId}
+        type={recovering ? "button" : "submit"}
+        onClick={
+          completedCreation
+            ? close
+            : recovering
+              ? currentCreation?.phase === "absent"
+                ? retryCreation
+                : checkCreation
+              : undefined
+        }
+        keepFocusableWhilePending
+        pending={pending || currentCreation?.phase === "checking"}
+        disabled={confirming || unsafeQuota}
+        aria-label={
+          completedCreation
+            ? "完成"
+            : recovering
+              ? currentCreation?.phase === "absent"
+                ? "重试本次创建"
+                : "检查创建结果"
+              : "保存"
+        }
+        aria-busy={pending || currentCreation?.phase === "checking"}
+        variant="default"
+      >
+        {completedCreation
+          ? "完成"
+          : recovering
+            ? currentCreation?.phase === "absent"
+              ? "重试本次创建"
+              : "检查创建结果"
+            : "保存"}
+      </ActionButton>
+    </div>
+  );
   return (
     <TaskDialog
       title={`${displayEntity?.value ? "编辑" : "添加"}${title}`}
@@ -1949,63 +2120,16 @@ function EntityEditor({
         if (!owner.current && presentation.current === displayEntity)
           presentation.current = null;
       }}
+      scrollMode={endpointRecovery ? "auto" : "body"}
       footer={
-        <div className="form-footer flex w-full flex-wrap items-center justify-end gap-2">
-          {!completedCreation && (
-            <ActionButton
-              disabled={pending || confirming}
-              onClick={close}
-              variant="outline"
-            >
-              取消
-            </ActionButton>
-          )}
-          {currentCreation?.phase === "absent" && (
-            <ActionButton
-              variant="outline"
-              disabled={confirming}
-              onClick={checkCreation}
-            >
-              检查创建结果
-            </ActionButton>
-          )}
-          <ActionButton
-            ref={submitButton}
-            form={recovering ? undefined : formId}
-            type={recovering ? "button" : "submit"}
-            onClick={
-              completedCreation
-                ? close
-                : recovering
-                  ? currentCreation?.phase === "absent"
-                    ? retryCreation
-                    : checkCreation
-                  : undefined
-            }
-            keepFocusableWhilePending
-            pending={pending || currentCreation?.phase === "checking"}
-            disabled={confirming || unsafeQuota}
-            aria-label={
-              completedCreation
-                ? "完成"
-                : recovering
-                  ? currentCreation?.phase === "absent"
-                    ? "重试本次创建"
-                    : "检查创建结果"
-                  : "保存"
-            }
-            aria-busy={pending || currentCreation?.phase === "checking"}
-            variant="default"
-          >
-            {completedCreation
-              ? "完成"
-              : recovering
-                ? currentCreation?.phase === "absent"
-                  ? "重试本次创建"
-                  : "检查创建结果"
-                : "保存"}
-          </ActionButton>
-        </div>
+        displayEntity?.kind === "nodes" ? (
+          <div className="w-full space-y-3">
+            {endpointRecovery && creationNotice}
+            {footerActions}
+          </div>
+        ) : (
+          footerActions
+        )
       }
       onOpenChange={(open) => {
         if (!open) close();
@@ -2017,237 +2141,195 @@ function EntityEditor({
         inert: !entity,
       }}
     >
-      <AppForm
-        id={formId}
-        form={form}
-        disabled={pending || confirming || !!currentCreation}
-        onFinish={(v) => {
-          if (
-            !entity ||
-            !active.current ||
-            owner.current !== entity ||
-            confirming ||
-            unsafeQuota ||
-            pending ||
-            creationOwner.current?.task === entity ||
-            submitting.current === entity
-          )
-            return;
-          const values = structuredClone(v);
-          let quotaBytes: number | undefined;
-          if (entity.kind === "users" && !entity.value) {
-            try {
-              quotaBytes = measuredBytes(quotaText.current, "GiB");
-            } catch {
-              form.setFields([{ name: "quotaGiB", errors: [quotaInputError] }]);
-              return;
-            }
-          }
-          submitting.current = entity;
-          const submit = submitButton.current;
-          if (submit?.form?.contains(document.activeElement)) submit.focus();
-          let creationAttempt: CreationAttempt | undefined;
-          if (!entity.value) {
-            if (creationID.current?.task !== entity)
-              creationID.current = {
-                task: entity,
-                id: newID(entity.kind === "nodes" ? "node" : "user"),
-              };
-            creationAttempt = {
-              task: entity,
-              record:
-                entity.kind === "nodes"
-                  ? nodeCreationSnapshot(
-                      normalizeConnection({
-                        ...values,
-                        id: creationID.current.id,
-                      } as NodeRecord) as NodeRecord,
-                    )
-                  : {
-                      id: creationID.current.id,
-                      name: String(values.name),
-                      enabled: !!values.enabled,
-                      quotaBytes: quotaBytes!,
-                      usedBytes: 0,
-                    },
-              phase: "submitting",
-              decisionRevision: creationDecisionRevision.current,
-              mayHaveCommitted: false,
-            };
-            updateCreation(creationAttempt);
-          }
-          mutation.mutate({
-            values,
-            task: entity,
-            quotaBytes,
-            creationAttempt,
-          });
-        }}
-      >
-        {!recovering && <ErrorNotice error={mutation.error} />}
-        {recovering && (
-          <Notice
-            tone={completedCreation ? "success" : "warning"}
-            title={
-              completedCreation
-                ? `${creationNoun}已创建`
-                : currentCreation.phase === "absent"
-                  ? `暂未找到本次创建的${creationNoun}`
-                  : currentCreation.phase === "different"
-                    ? `已有${creationNoun}的资料与本次提交不同`
-                    : `尚未确认${creationNoun}是否创建`
-            }
-          >
-            {completedCreation
-              ? `本次创建已完成。关闭窗口不会删除${creationNoun}。`
-              : currentCreation.phase === "absent"
-                ? `之前的请求仍可能完成。重试只会继续本次创建，不会覆盖已有${creationNoun}。`
-                : currentCreation.phase === "different"
-                  ? `未覆盖现有资料。请在${creationNoun}列表中核对，再决定是否编辑。`
-                  : "已保留本次提交，确认结果前暂不能修改。请检查创建结果；关闭不会撤销可能已完成的创建。"}
-            {currentCreation.phase === "different" &&
-              currentCreation.current && (
-                <div className="mt-2 space-y-1">
-                  <KeyValue label={`现有${creationNoun}名称`}>
-                    {currentCreation.current.name}
-                  </KeyValue>
-                  {currentCreation.task.kind === "nodes" ? (
-                    <>
-                      <KeyValue label="连接地址">
-                        {(currentCreation.current as NodeRecord).host}:
-                        {(currentCreation.current as NodeRecord).port}
-                      </KeyValue>
-                      <KeyValue label="协议">
-                        {(currentCreation.current as NodeRecord).protocol}
-                      </KeyValue>
-                    </>
-                  ) : (
-                    <>
-                      <KeyValue label="账号状态">
-                        {(currentCreation.current as UserRecord).enabled
-                          ? "已启用"
-                          : "已停用"}
-                      </KeyValue>
-                      <KeyValue label="账号基础额度">
-                        {(currentCreation.current as UserRecord).quotaBytes ===
-                        0
-                          ? "不限额"
-                          : bytesLabel(
-                              (currentCreation.current as UserRecord)
-                                .quotaBytes,
-                            )}
-                      </KeyValue>
-                    </>
-                  )}
-                </div>
-              )}
-            <ErrorNotice error={currentCreation.checkError} />
-          </Notice>
-        )}
-        {unsafeQuota && (
-          <Notice tone="warning" title="暂不能保存此账号">
-            {unsafeQuotaError}
-          </Notice>
-        )}
-        <div
-          className={
-            displayEntity?.kind === "nodes"
-              ? "grid gap-4 sm:grid-cols-[minmax(0,1fr)_10rem]"
-              : undefined
-          }
-        >
-          <AppField
-            name="name"
-            label={`${title}名称`}
-            rules={[{ required: true, message: "请输入名称" }]}
-          >
-            <Input />
-          </AppField>
-          {displayEntity?.kind === "nodes" && (
-            <AppField name="region" label="地区">
-              <Input placeholder="例如：UK" />
-            </AppField>
-          )}
+      {submittedEndpoint && (
+        <div className="mb-3 space-y-2 text-sm [overflow-wrap:anywhere]">
+          <KeyValue label="端点名称">{submittedEndpoint.name}</KeyValue>
+          <KeyValue label="连接地址">
+            {submittedEndpoint.host}:{submittedEndpoint.port}
+          </KeyValue>
+          <KeyValue label="协议">{submittedEndpoint.protocol}</KeyValue>
         </div>
-        {displayEntity?.kind === "nodes" ? (
-          <>
-            <ConnectionFields prefix={[]} showAddressLegend={false} />
-            <Accordion type="multiple">
-              <AccordionItem value="metadata">
-                <AccordionTrigger>核心与标签</AccordionTrigger>
-                <AccordionContent
-                  forceMount
-                  className="space-y-4 data-[state=closed]:hidden"
-                >
-                  <div className="grid gap-5 sm:grid-cols-2">
-                    <AppField name="coreId" label="核心实例 ID">
-                      <Input />
-                    </AppField>
-                    <AppField name="coreVersion" label="核心版本">
-                      <Input />
-                    </AppField>
-                  </div>
-                  <AppField name="tags" label="标签" trigger="onValueChange">
-                    <MultiChoice creatable options={[]} />
-                  </AppField>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-          </>
-        ) : (
-          <>
+      )}
+      <EndpointSubmissionDetails
+        task={displayEntity?.kind === "nodes" ? displayEntity : null}
+        recovering={endpointRecovery}
+      >
+        <AppForm
+          id={formId}
+          form={form}
+          disabled={pending || confirming || !!currentCreation}
+          onFinish={(v) => {
+            if (
+              !entity ||
+              !active.current ||
+              owner.current !== entity ||
+              confirming ||
+              unsafeQuota ||
+              pending ||
+              creationOwner.current?.task === entity ||
+              submitting.current === entity
+            )
+              return;
+            const values = structuredClone(v);
+            let quotaBytes: number | undefined;
+            if (entity.kind === "users" && !entity.value) {
+              try {
+                quotaBytes = measuredBytes(quotaText.current, "GiB");
+              } catch {
+                form.setFields([
+                  { name: "quotaGiB", errors: [quotaInputError] },
+                ]);
+                return;
+              }
+            }
+            submitting.current = entity;
+            const submit = submitButton.current;
+            if (submit?.form?.contains(document.activeElement)) submit.focus();
+            let creationAttempt: CreationAttempt | undefined;
+            if (!entity.value) {
+              if (creationID.current?.task !== entity)
+                creationID.current = {
+                  task: entity,
+                  id: newID(entity.kind === "nodes" ? "node" : "user"),
+                };
+              creationAttempt = {
+                task: entity,
+                record:
+                  entity.kind === "nodes"
+                    ? nodeCreationSnapshot(
+                        normalizeConnection({
+                          ...values,
+                          id: creationID.current.id,
+                        } as NodeRecord) as NodeRecord,
+                      )
+                    : {
+                        id: creationID.current.id,
+                        name: String(values.name),
+                        enabled: !!values.enabled,
+                        quotaBytes: quotaBytes!,
+                        usedBytes: 0,
+                      },
+                phase: "submitting",
+                decisionRevision: creationDecisionRevision.current,
+                mayHaveCommitted: false,
+              };
+              updateCreation(creationAttempt);
+            }
+            mutation.mutate({
+              values,
+              task: entity,
+              quotaBytes,
+              creationAttempt,
+            });
+          }}
+        >
+          {!recovering && <ErrorNotice error={mutation.error} />}
+          {!endpointRecovery && creationNotice}
+          {unsafeQuota && (
+            <Notice tone="warning" title="暂不能保存此账号">
+              {unsafeQuotaError}
+            </Notice>
+          )}
+          <div
+            className={
+              displayEntity?.kind === "nodes"
+                ? "grid gap-4 sm:grid-cols-[minmax(0,1fr)_10rem]"
+                : undefined
+            }
+          >
             <AppField
-              name="quotaGiB"
-              label="账号基础额度（GiB，0 为不限额）"
-              rules={[
-                {
-                  validator: () => {
-                    if (entity?.value) return Promise.resolve();
-                    try {
-                      measuredBytes(quotaText.current, "GiB");
-                      return Promise.resolve();
-                    } catch {
-                      return Promise.reject(new Error(quotaInputError));
-                    }
-                  },
-                },
-              ]}
-              trigger="onValueChange"
-              validateTrigger="onInputText"
+              name="name"
+              label={`${title}名称`}
+              rules={[{ required: true, message: "请输入名称" }]}
             >
-              <NumericInput
-                min={0}
-                onInputText={(text) => {
-                  quotaText.current = text;
-                  setQuotaEdited(text !== "100");
-                }}
-                disabled={
-                  !!displayEntity?.value ||
-                  pending ||
-                  confirming ||
-                  !!currentCreation
-                }
-              />
+              <Input />
             </AppField>
-            {displayEntity?.value && (
-              <p className="muted text-sm text-muted-foreground">
-                额度与个人限制请在“授权与续期”中预览后调整。
-              </p>
+            {displayEntity?.kind === "nodes" && (
+              <AppField name="region" label="地区">
+                <Input placeholder="例如：UK" />
+              </AppField>
             )}
-            <AppField
-              name="enabled"
-              label="启用账号"
-              trigger="onCheckedChange"
-              valuePropName="checked"
-            >
-              <Switch />
-            </AppField>
-            <p className="muted text-sm text-muted-foreground">
-              停用账号会阻止平台服务及个人转换订阅访问。如只需暂停平台线路，请使用“暂停平台服务”。
-            </p>
-          </>
-        )}
-      </AppForm>
+          </div>
+          {displayEntity?.kind === "nodes" ? (
+            <>
+              <ConnectionFields prefix={[]} showAddressLegend={false} />
+              <Accordion type="multiple">
+                <AccordionItem value="metadata">
+                  <AccordionTrigger>核心与标签</AccordionTrigger>
+                  <AccordionContent
+                    forceMount
+                    className="space-y-4 data-[state=closed]:hidden"
+                  >
+                    <div className="grid gap-5 sm:grid-cols-2">
+                      <AppField name="coreId" label="核心实例 ID">
+                        <Input />
+                      </AppField>
+                      <AppField name="coreVersion" label="核心版本">
+                        <Input />
+                      </AppField>
+                    </div>
+                    <AppField name="tags" label="标签" trigger="onValueChange">
+                      <MultiChoice creatable options={[]} />
+                    </AppField>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
+            </>
+          ) : (
+            <>
+              <AppField
+                name="quotaGiB"
+                label="账号基础额度（GiB，0 为不限额）"
+                rules={[
+                  {
+                    validator: () => {
+                      if (entity?.value) return Promise.resolve();
+                      try {
+                        measuredBytes(quotaText.current, "GiB");
+                        return Promise.resolve();
+                      } catch {
+                        return Promise.reject(new Error(quotaInputError));
+                      }
+                    },
+                  },
+                ]}
+                trigger="onValueChange"
+                validateTrigger="onInputText"
+              >
+                <NumericInput
+                  min={0}
+                  onInputText={(text) => {
+                    quotaText.current = text;
+                    setQuotaEdited(text !== "100");
+                  }}
+                  disabled={
+                    !!displayEntity?.value ||
+                    pending ||
+                    confirming ||
+                    !!currentCreation
+                  }
+                />
+              </AppField>
+              {displayEntity?.value && (
+                <p className="muted text-sm text-muted-foreground">
+                  额度与个人限制请在“授权与续期”中预览后调整。
+                </p>
+              )}
+              <AppField
+                name="enabled"
+                label="启用账号"
+                trigger="onCheckedChange"
+                valuePropName="checked"
+              >
+                <Switch />
+              </AppField>
+              <p className="muted text-sm text-muted-foreground">
+                停用账号会阻止平台服务及个人转换订阅访问。如只需暂停平台线路，请使用“暂停平台服务”。
+              </p>
+            </>
+          )}
+        </AppForm>
+      </EndpointSubmissionDetails>
     </TaskDialog>
   );
 }

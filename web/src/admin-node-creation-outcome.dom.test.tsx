@@ -239,6 +239,11 @@ async function start() {
 async function unknown(d: HTMLElement) {
   await within(d).findByText("尚未确认端点是否创建");
 }
+async function showSubmission(d: HTMLElement) {
+  const details = within(d).getByRole("button", { name: "查看本次提交" });
+  if (details.getAttribute("aria-expanded") !== "true")
+    await owner.click(() => details);
+}
 async function check(d: HTMLElement) {
   await owner.click(() =>
     within(d).getByRole("button", { name: "检查创建结果" }),
@@ -270,8 +275,25 @@ it.each([
   "checks an uncertain endpoint read-only after %s without making a duplicate",
   async (outcome) => {
     const f = mount(outcome),
-      d = await start();
+      d = await open();
+    await fill(d);
+    const draftName = within(d).getByRole("textbox", { name: "端点名称" });
+    const completion = within(d).getByRole("button", { name: "保存" });
+    await owner.click(() => completion);
     await unknown(d);
+    expect(within(d).getByRole("button", { name: "检查创建结果" })).toBe(
+      completion,
+    );
+    expect(within(d).queryByRole("textbox", { name: "端点名称" })).toBeNull();
+    const footer = d.querySelector("[data-task-overlay-footer]")!;
+    expect(
+      within(footer as HTMLElement).getByText("尚未确认端点是否创建"),
+    ).toBeTruthy();
+    expect(footer.textContent).toContain("关闭不会撤销可能已完成的创建");
+    await showSubmission(d);
+    expect(within(d).getByRole("textbox", { name: "端点名称" })).toBe(
+      draftName,
+    );
     expect(f.writes).toHaveLength(1);
     expect(f.writes[0].condition).toBe("*");
     expect(within(d).queryByRole("button", { name: "保存" })).toBeNull();
@@ -368,6 +390,7 @@ it("retains the frozen attempt after failed readback without echoing arbitrary r
   await within(d).findByText("未能读取端点列表，请重新检查。");
   expect(d.textContent).not.toContain("Arbitrary read detail");
   expect(within(d).queryByRole("button", { name: "重试本次创建" })).toBeNull();
+  await showSubmission(d);
   expect(within(d).getByRole("textbox", { name: "连接地址" })).toHaveProperty(
     "value",
     "proxy.example.invalid",
@@ -409,6 +432,7 @@ it("does not erase earlier uncertainty when the guarded retry is rejected before
     within(d).getByRole("button", { name: "重试本次创建" }),
   );
   await unknown(d);
+  await showSubmission(d);
   expect(within(d).getByRole("textbox", { name: "端点名称" })).toHaveProperty(
     "disabled",
     true,
@@ -593,6 +617,7 @@ it.each([true, false])(
     await stay(decision);
     if (!beforeStay) await act(async () => finish());
     expect(screen.getByRole("dialog", { name: "添加端点" })).toBe(d);
+    await showSubmission(d);
     expect(within(d).getByRole("textbox", { name: "连接地址" })).toHaveProperty(
       "value",
       "proxy.example.invalid",

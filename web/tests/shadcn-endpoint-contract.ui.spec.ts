@@ -157,9 +157,9 @@ test("native Enter submits the associated pinned footer once and retains the dra
       release = resolve;
     });
     await route.fulfill({
-      status: 503,
+      status: 400,
       contentType: "application/json",
-      body: JSON.stringify({ error: "synthetic endpoint save rejected" }),
+      body: JSON.stringify({ code: "NODE_CREATION_INVALID" }),
     });
   });
   const dialog = await editor(page);
@@ -187,12 +187,13 @@ test("native Enter submits the associated pinned footer once and retains the dra
   expect(count).toBe(1);
   release();
   await expect(
-    dialog.getByText("synthetic endpoint save rejected"),
+    dialog.getByText("端点未创建，请检查连接参数后重试。"),
   ).toBeVisible();
   await expect(dialog.getByLabel("端点名称", { exact: true })).toHaveValue(
     "native-submit-fixture",
   );
   await expect(submit).not.toHaveAttribute("aria-busy", "true");
+  await expect(dialog.getByLabel("端点名称", { exact: true })).toBeEnabled();
 });
 
 test("semantic token conversion agrees with real Chromium sRGB pixels", async ({
@@ -255,7 +256,7 @@ test("connection port preserves exact invalid intent, discard reset and numeric 
   await page.route("**/api/nodes", async (route) => {
     if (route.request().method() !== "POST") return route.continue();
     writes.push(route.request().postDataJSON());
-    await route.fulfill({ status: 503, json: { error: "port fixture rejected" } });
+    await route.fulfill({ status: 400, json: { code: "NODE_CREATION_INVALID" } });
   });
   let dialog = await editor(page);
   let port = dialog.getByRole("spinbutton", { name: "端口", exact: true });
@@ -294,7 +295,8 @@ test("connection port preserves exact invalid intent, discard reset and numeric 
   await expect(port).toHaveValue("443");
   await port.fill("443.000");
   await dialog.getByRole("button", { name: "保存", exact: true }).click();
-  await expect(dialog.getByText("port fixture rejected", { exact: true })).toBeVisible();
+  await expect(dialog.getByText("端点未创建，请检查连接参数后重试。", { exact: true })).toBeVisible();
   expect(writes).toEqual([expect.objectContaining({ port: 443 })]);
   await expect(port).toHaveValue("443.000");
+  await expect(port).toBeEnabled();
 });

@@ -524,6 +524,13 @@ for (const journey of [
       readsBeforeClose = 0,
       closeRefreshed = false;
     const assertFrozen = async () => {
+      const details = editor.getByRole("button", {
+        name: "查看本次提交",
+        exact: true,
+      });
+      await expect(details).toHaveAttribute("aria-expanded", "false");
+      await activate(details);
+      await expect(details).toHaveAttribute("aria-expanded", "true");
       await expect(field).toBeDisabled();
       await expect(field).toHaveValue(name);
       await expect(host).toBeDisabled();
@@ -540,6 +547,8 @@ for (const journey of [
       await expect(
         editor.getByRole("button", { name: "保存", exact: true }),
       ).toHaveCount(0);
+      await activate(details);
+      await expect(details).toHaveAttribute("aria-expanded", "false");
     };
     const releaseRead = async (
       gate: {
@@ -657,6 +666,7 @@ for (const journey of [
       await expect(
         editor.getByText("尚未确认端点是否创建", { exact: true }).first(),
       ).toBeVisible();
+      await expect(check).toBeFocused();
       await assertFrozen();
       expect(http.ledger.postAttempts).toBe(1);
       expect(http.ledger.validatedCommands).toBe(1);
