@@ -535,9 +535,8 @@ export function usePolicyChange({ mode, retainedDrafts, users, services, routes,
             </p>)}
           {review.preview.resource?.target.kind === "service" && <ServicePolicyComparison resource={review.preview.resource as ServicePolicyResource}/>}
           {review.preview.resource?.target.kind === "group" && <GroupPolicyComparison resource={review.preview.resource as GroupPolicyResource}/>}
-          {review.preview.resource?.target.kind === "entitlement" && <EntitlementPolicyComparison resource={review.preview.resource as EntitlementPolicyResource} services={services}/>}
           {review.preview.resource?.target.kind === "entitlement" && review.preview.resource.before === null && <p>保存后将使用此账号周期；之后加入用户组时，继续沿用此周期。</p>}
-          {review.preview.resource && <h3 className="border-t pt-5 text-base font-medium">现有账号影响</h3>}
+          {review.preview.resource && <h3 className={review.preview.resource.target.kind === "entitlement" ? "text-base font-medium" : "border-t pt-5 text-base font-medium"}>现有账号影响</h3>}
           {review.preview.blockers?.length > 0 && (<Notice tone="error" title="暂时无法更新授权">{<ul className="list-disc space-y-2 pl-5">
                   {review.preview.blockers.map((b, i) => (<li key={i}>{b}</li>))}
                 </ul>}</Notice>)}
@@ -554,6 +553,14 @@ export function usePolicyChange({ mode, retainedDrafts, users, services, routes,
               {review.preview.affected.length > 5 && <PageNavigation page={reviewPage} pageSize={5} total={review.preview.affected.length} onPageChange={setReviewPage}/>}
               <p className="muted text-sm text-muted-foreground">切换方案或续期后，保留已有用量。</p>
             </>)}
+          {review.preview.resource?.target.kind === "entitlement" && <Accordion type="multiple">
+            <AccordionItem value="personal-settings">
+              <AccordionTrigger>查看个人设置变更</AccordionTrigger>
+              <AccordionContent>
+                <EntitlementPolicyComparison resource={review.preview.resource as EntitlementPolicyResource} services={services}/>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>}
           <Accordion value={showRules ? ["rules"] : []} onValueChange={(keys) => setShowRules(keys.includes("rules"))} type="multiple">{([
                 {
                     key: "rules",

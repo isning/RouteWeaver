@@ -361,6 +361,7 @@ for (const width of [1440, 390]) {
         exact: true,
       });
       await contained(review, page);
+      if (kind === "entitlement") await review.getByRole("button", { name: "查看个人设置变更", exact: true }).click();
       const resource = review.getByRole("table", {
         name: kind === "service" ? "方案变更" : "个人授权变更",
         exact: true,

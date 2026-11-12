@@ -294,6 +294,7 @@ for (const { width, scenario, theme } of journeys) {
       await tabTo(page, editor, input);
       expect(await capture(page, info, "corrected-remount", editor, input, "3")).toMatchObject(fieldFocus);
       ledger.previewCommands++; await activate(preview); await expect(review).toBeVisible();
+      await activate(review.getByRole("button", { name: "查看个人设置变更", exact: true }), review);
       await expect(review.getByRole("row", { name: new RegExp(scenario.reviewRow) }).getByRole("cell").nth(1)).toHaveText(scenario.after);
       const correctionRows = review.getByRole("table", { name: "个人授权变更", exact: true }).getByRole("rowheader");
       await expect(correctionRows).toHaveText([scenario.reviewRow]);
@@ -304,6 +305,7 @@ for (const { width, scenario, theme } of journeys) {
       // Explicitly disable the previously blank/corrected override: this alone means inheritance.
       await activate(enabled, editor, "Space"); await expect(enabled).not.toBeChecked(); await expect(mounted).toHaveCount(0);
       fixtureState.expectInheritance(); ledger.previewCommands++; await activate(preview); await expect(review).toBeVisible();
+      await activate(review.getByRole("button", { name: "查看个人设置变更", exact: true }), review);
       await expect(review.getByRole("row", { name: new RegExp(scenario.reviewRow) }).getByRole("cell").nth(1)).toHaveText("继承");
       const inheritanceRows = review.getByRole("table", { name: "个人授权变更", exact: true }).getByRole("rowheader");
       await expect(inheritanceRows).toHaveText([scenario.reviewRow]);

@@ -241,6 +241,7 @@ it.each(["service", "group", "entitlement"] as const)(
     expect(review.queryByRole("table", { name: "Alice" })).toBeNull();
     if (kind === "group") expect(review.queryByRole("table")).toBeNull();
     if (kind === "entitlement") {
+      await owner.click(() => review.getByRole("button", { name: "查看个人设置变更" }));
       expect(review.getByRole("heading", { name: "个人授权变更" })).toBeTruthy();
       expect(review.getByText("个人设置保持不变。")).toBeTruthy();
       expect(review.queryByRole("table")).toBeNull();

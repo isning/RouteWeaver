@@ -237,6 +237,7 @@ for (const width of [1440, 390]) {
         exact: true,
       });
       await expect(apply).toBeDisabled();
+      await review.getByRole("button", { name: "查看个人设置变更", exact: true }).click();
       await expect(
         review
           .getByRole("table", { name: "个人授权变更", exact: true })

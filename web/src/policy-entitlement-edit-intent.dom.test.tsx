@@ -260,6 +260,12 @@ it("keeps A's complete draft until explicit reconciliation and saves quota100 wi
     },
   });
   expect(review.queryByText(/之后加入用户组不会/)).toBeNull();
+  // Review starts with effective account changes; stored values remain available
+  // without making the user read a second comparison before the decision.
+  expect(review.getByRole("table", { name: "Alice" })).toBeTruthy();
+  expect(review.queryByRole("table", { name: "个人授权变更" })).toBeNull();
+  await owner.click(() => review.getByRole("button", { name: "查看个人设置变更" }));
+  expect(review.getByRole("table", { name: "个人授权变更" })).toBeTruthy();
   await owner.click(() =>
     review.getByRole("checkbox", {
       name: "我已核对本次授权变更，并同意更新成功后关闭编辑器、丢弃保留的未保存草稿副本",
@@ -425,7 +431,7 @@ it("discloses absent-row calendar adoption despite unchanged effective values an
   const review = within(
     await screen.findByRole("dialog", { name: "确认授权变更" }),
   );
-  expect(review.getByText("新建个人授权设置")).toBeTruthy();
+  expect(review.queryByText("新建个人授权设置")).toBeNull();
   expect(
     review.getByText(
       "保存后将使用此账号周期；之后加入用户组时，继续沿用此周期。",
