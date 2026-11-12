@@ -187,3 +187,21 @@ it("can recover an accepted job when the initial list read never completed", asy
   expect(details.queryByRole("button", { name: "取消测试" })).toBeNull();
   expect(f.writes).toEqual(["/api/admin/diagnostic-jobs"]);
 });
+
+it("keeps a recovery action when an opened historical test disappears from the list", async () => {
+  const f = fixture(true);
+  await userEvent.click(await screen.findByRole("button", { name: "查看测试结果" }));
+  const details = within(await screen.findByRole("dialog", { name: "测试详情" }));
+  await details.findByText("等待节点执行");
+  await userEvent.click(details.getByRole("button", { name: "刷新结果" }));
+  f.settle([]);
+  await details.findByText("当前列表中未找到此测试，不能据此判断测试已结束。请刷新结果核对。");
+  expect(details.queryByRole("button", { name: "取消测试" })).toBeNull();
+  f.latest(() => json({ error: "temporary" }, 503));
+  await userEvent.click(details.getByRole("button", { name: "刷新结果" }));
+  await details.findByText("读取测试状态失败，请刷新结果重试。");
+  f.latest(() => json([{ ...f.receipt(), status: "succeeded" }]));
+  await userEvent.click(details.getByRole("button", { name: "刷新结果" }));
+  await details.findByText("测试完成");
+  expect(f.writes).toEqual([]);
+});

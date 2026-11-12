@@ -292,12 +292,22 @@ export function DiagnosticsPanel({
         }}
         size="md"
       >
-        {(jobs.isError || jobs.isPaused || jobs.isFetching || retainedReceipt) && <Notice tone={jobs.isError ? "warning" : "info"} role="status">
+        {selectedJob && (jobs.isError || jobs.isPaused || jobs.isFetching || retainedReceipt) && <Notice tone={jobs.isError ? "warning" : "info"} role="status">
           {jobs.isError ? "测试状态刷新失败，以下保留上次确认的记录。"
             : jobs.isPaused ? "等待网络连接，以下保留上次确认的记录。"
             : jobs.isFetching ? "正在核对最新测试状态。以下保留上次确认的记录。"
             : "最新列表尚未确认该次测试的状态，以下保留上次确认的记录。请刷新结果核对。"}
         </Notice>}
+        {selected && !selectedJob && (
+          <EmptyState
+            title="暂时无法显示此测试"
+            description={jobs.isFetching ? "正在核对测试状态，请稍候或重新刷新。"
+              : jobs.isPaused ? "等待网络连接，暂时无法核对测试状态。"
+              : jobs.isError ? "读取测试状态失败，请刷新结果重试。"
+              : "当前列表中未找到此测试，不能据此判断测试已结束。请刷新结果核对。"}
+            action={<ActionButton variant="outline" onClick={() => { void refreshJobs(); }}>刷新结果</ActionButton>}
+          />
+        )}
         {selectedJob && (
           <DiagnosticResult key={selectedJob.id} job={selectedJob} onCancelled={retainReceipt} refresh={() => { void refreshJobs(); }} />
         )}
