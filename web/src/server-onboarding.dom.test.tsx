@@ -197,6 +197,11 @@ it("creates credentials only on explicit submission and clears the token when co
   expect(await within(enrollment).findByText("接入凭据已创建")).toBeTruthy();
   expect(within(enrollment).getByText(/凭据创建不会安装或启动 Agent/)).toBeTruthy();
   expect(within(enrollment).getByLabelText("接入令牌").getAttribute("type")).toBe("password");
+  await user.click(within(enrollment).getByRole("button", { name: "显示接入令牌" }));
+  expect(within(enrollment).getByLabelText("接入令牌").getAttribute("type")).toBe("text");
+  expect(writes).toHaveLength(1);
+  await user.click(within(enrollment).getByRole("button", { name: "隐藏接入令牌" }));
+  expect(within(enrollment).getByLabelText("接入令牌").getAttribute("type")).toBe("password");
   await user.click(within(enrollment).getByRole("button", { name: "关闭令牌并查看实例" }));
   await waitFor(() => expect(screen.queryByLabelText("接入令牌")).toBeNull());
   expect(writes).toHaveLength(1);

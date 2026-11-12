@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/ui-patterns/password-input";
 import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
 import { ActionButton } from "@/ui-patterns/actions";
 import { AppField, AppForm, useForm } from "@/ui-patterns/form";
@@ -31,7 +32,7 @@ import {
   Plus as PlusOutlined,
   RotateCw as ReloadOutlined,
 } from "lucide-react";
-import { useContext, useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from "react";
+import { useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type RefObject } from "react";
 import { PolicyDateInput } from "./PolicyDateInput";
 import { AccountingRecovery } from "./AccountingRecovery";
 import { post, request } from "./api";
@@ -1193,6 +1194,7 @@ function Enrollment({
   readScopeIssue: () => string | null;
   onClose: () => void;
 }) {
+  const tokenId = useId();
   const [form] = useForm();
   const [dateOpen, setDateOpen] = useState(false);
   const [datePending, setDatePending] = useState(false);
@@ -1275,15 +1277,16 @@ function Enrollment({
           <p className="text-sm text-muted-foreground">
             凭据创建不会安装或启动 Agent。请在对应服务器配置 Agent，再返回查看上报。
           </p>
-          <label className="standalone-label grid gap-2 text-sm font-medium mt-5">
-            接入令牌
-            <Input
+          <div className="grid gap-2 text-sm font-medium mt-5">
+            <label htmlFor={tokenId}>接入令牌</label>
+            <PasswordInput
+              id={tokenId}
+              revealLabel="接入令牌"
               value={result.token}
               readOnly
               autoComplete="off"
-              type="password"
             />
-          </label>
+          </div>
           <Accordion type="multiple" defaultValue={[]} className="w-full">
             {[
               {
