@@ -1653,7 +1653,8 @@ function EntityEditor({
   const [form] = useForm(),
     client = useQueryClient(),
     message = toast;
-  const values = useWatch([], { form, preserve: true });
+  // Subscribe for rendering; dismissal reads the current form store below.
+  useWatch([], { form, preserve: true });
   const [baseline, setBaseline] = useState("");
   // NumericInput's Number value is display-only: keep decimal intent before rounding.
   const quotaText = useRef("100");
@@ -1663,10 +1664,11 @@ function EntityEditor({
     !!entity.value &&
     (!Number.isSafeInteger((entity.value as UserRecord).quotaBytes) ||
       (entity.value as UserRecord).quotaBytes < 0);
-  const changed =
+  const hasChanges = () =>
     !!entity &&
     baseline !== "" &&
-    (quotaEdited || JSON.stringify(values || {}) !== baseline);
+    (quotaEdited || JSON.stringify(form.getFieldsValue(true)) !== baseline);
+  const changed = hasChanges();
   const submitButton = useRef<HTMLButtonElement>(null);
   const submitting = useRef<typeof entity>(null);
   const owner = useRef(entity);
@@ -1976,7 +1978,7 @@ function EntityEditor({
       );
       return;
     }
-    if (!changed) return onClose();
+    if (!hasChanges()) return onClose();
     confirm(
       {
         title: "放弃未保存的修改？",

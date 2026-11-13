@@ -206,6 +206,18 @@ async function nav(group: string, name: string) {
   );
 }
 
+it("closes an untouched endpoint immediately without a false discard prompt", async () => {
+  const state = fixture();
+  mount(<AdminPage page="nodes" />);
+  const opener = await screen.findByRole("button", { name: /^Alpha endpoint/ });
+  fireEvent.click(opener);
+  const dialog = screen.getByRole("dialog", { name: "编辑端点" });
+  fireEvent.keyDown(dialog, { key: "Escape", code: "Escape" });
+  await waitFor(() => expect(screen.queryByRole("dialog", { name: "编辑端点", hidden: true })).toBeNull());
+  expect(screen.queryByRole("alertdialog")).toBeNull();
+  expect(state.writes).toHaveLength(0);
+});
+
 it("retains edited endpoint Cancel and discards only after explicit confirmation, then reopens cleanly", async () => {
   fixture();
   mount(<AdminPage page="nodes" />);
