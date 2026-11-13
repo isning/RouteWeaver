@@ -1354,7 +1354,6 @@ function LoginForm({
               <>
                 <ActionButton
                   onClick={() => {
-                    if (submitting.current) return;
                     changeMode("invite");
                     setError(null);
                   }}
@@ -1364,7 +1363,6 @@ function LoginForm({
                 </ActionButton>
                 <ActionButton
                   onClick={() => {
-                    if (submitting.current) return;
                     changeMode("admin");
                     setError(null);
                   }}
@@ -1376,7 +1374,6 @@ function LoginForm({
             ) : (
               <ActionButton
                 onClick={() => {
-                  if (submitting.current) return;
                   changeMode("login");
                   setError(null);
                 }}
