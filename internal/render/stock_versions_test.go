@@ -24,7 +24,7 @@ func TestStockSecurityVersionsPreserveHistoricalAndIndependentTargets(t *testing
 			}
 			protocols := []string{"socks", "shadowsocks", "vless", "trojan", "vmess"}
 			if capability.AdapterID == render.ServerAdapterSingBox {
-				protocols = append(protocols, "hysteria2")
+				protocols = append(protocols, "hysteria2", "anytls")
 			}
 			if !reflect.DeepEqual(capability.Protocols, protocols) {
 				t.Fatalf("stock update changed protocol capabilities: %v", capability.Protocols)

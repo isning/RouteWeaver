@@ -1026,3 +1026,28 @@ it("keeps unsupported Hysteria2 ALPN visible until removed and only offers h3", 
   await waitFor(() => expect(save).toHaveBeenCalledOnce());
   expect(save.mock.calls[0][0].tls.alpn).toEqual(["h3"]);
 });
+
+it("edits AnyTLS with password and ordinary TLS while preserving unsupported fields for explicit removal", async () => {
+  const save = vi.fn();
+  const original = { protocol: "anytls", host: "anytls.example", port: 443, uuid: "old-uuid", transport: { type: "ws", path: "/old" }, tls: { enabled: true, fingerprint: "chrome", alpn: ["http/1.1"] } };
+  expect(normalizeConnection(original as Connection)).toEqual(original);
+  render(<UIProviders><Form initialValues={{ connection: original }} onFinish={values => save(normalizeConnection(values.connection as Connection))}>
+    <ConnectionFields targetCore="sing-box" targetVersion="1.14.4" />
+    <Button type="submit">Save</Button>
+  </Form></UIProviders>);
+  expect(screen.queryByLabelText("传输方式")).toBeNull();
+  expect(screen.queryByLabelText("客户端指纹")).toBeNull();
+  expect(screen.queryByRole("radio", { name: "REALITY" })).toBeNull();
+  expect(screen.getByRole("radio", { name: /^无$/ }).hasAttribute("disabled")).toBe(true);
+  expect(screen.queryByText(/使用 QUIC/)).toBeNull();
+  await userEvent.click(screen.getByRole("button", { name: "Save" }));
+  expect(await screen.findByText("填写 AnyTLS 连接密码")).toBeTruthy();
+  expect(await screen.findByText("请先移除 AnyTLS 不支持的参数。")).toBeTruthy();
+  expect(save).not.toHaveBeenCalled();
+  for (const name of ["移除UUID", "移除传输参数", "移除客户端指纹"]) await userEvent.click(screen.getByRole("button", { name }));
+  await userEvent.type(screen.getByLabelText("连接密码"), "synthetic-anytls-password");
+  await userEvent.click(screen.getByRole("button", { name: "Save" }));
+  await waitFor(() => expect(save).toHaveBeenCalledOnce());
+  expect(save.mock.calls[0][0]).toEqual({ protocol: "anytls", host: "anytls.example", port: 443, password: "synthetic-anytls-password", tls: { enabled: true, alpn: ["http/1.1"] } });
+  expect(original.transport.path).toBe("/old");
+});

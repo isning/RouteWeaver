@@ -171,7 +171,7 @@ func (h *server) saveInventory(w http.ResponseWriter, r *http.Request, kind stri
 			storeError(w, e)
 			return
 		}
-		if e := validateHysteria2EndpointTarget(v, instance); e != nil {
+		if e := validateSingBoxOnlyEndpointTarget(v, instance); e != nil {
 			fail(w, 400, e.Error())
 			return
 		}
@@ -489,9 +489,9 @@ func serverFingerprint(ir domain.ServerDeploymentIR) string {
 	return hex.EncodeToString(sum[:])
 }
 
-// Hysteria2 inventory must not advertise a listener the selected core cannot run.
-func validateHysteria2EndpointTarget(v domain.ManagedEndpoint, instance domain.CoreInstance) error {
-	if v.Connection.Protocol != "hysteria2" {
+// Sing-box-only protocol inventory must not advertise a listener the selected core cannot run.
+func validateSingBoxOnlyEndpointTarget(v domain.ManagedEndpoint, instance domain.CoreInstance) error {
+	if v.Connection.Protocol != "hysteria2" && v.Connection.Protocol != "anytls" {
 		return nil
 	}
 	capability := (render.SingBoxServer{}).ServerCapability()
@@ -502,5 +502,5 @@ func validateHysteria2EndpointTarget(v domain.ManagedEndpoint, instance domain.C
 			}
 		}
 	}
-	return errors.New("HYSTERIA2_TARGET_UNSUPPORTED: select a supported sing-box core version")
+	return fmt.Errorf("%s_TARGET_UNSUPPORTED: select a supported sing-box core version", strings.ToUpper(v.Connection.Protocol))
 }

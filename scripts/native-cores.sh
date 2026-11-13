@@ -58,9 +58,9 @@ PY
 mkdir -p bin/verification
 REPORT="bin/verification/native-$MODE.jsonl"
 if [[ "$MODE" == parsers ]]; then
-  scripts/go.sh test -json -p=1 -count=1 -timeout=120s -run 'TestNative(Client|Server|VLESS|Trojan|VMess|Hysteria2Configuration|Pinned|Check|Version|Template|MultiPrincipal|Override|Owned|CoreInstaller|Install)|^TestNativeMixedConnectorChain$|^TestNativeStockRetiredReceiptsRecoverWithoutDownload$|TestImportedProcessedVLESSPassesBothNativeClients' ./internal/render ./internal/agent ./internal/httpapi ./internal/integration | tee "$REPORT"
+  scripts/go.sh test -json -p=1 -count=1 -timeout=120s -run 'TestNative(Client|Server|VLESS|Trojan|VMess|Hysteria2Configuration|AnyTLSConfiguration|Pinned|Check|Version|Template|MultiPrincipal|Override|Owned|CoreInstaller|Install)|^TestNativeMixedConnectorChain$|^TestNativeStockRetiredReceiptsRecoverWithoutDownload$|TestImportedProcessedVLESSPassesBothNativeClients' ./internal/render ./internal/agent ./internal/httpapi ./internal/integration | tee "$REPORT"
 else
-  scripts/go.sh test -json -p=1 -count=1 -timeout=120s -run '^TestNative(SupervisorLifecycleAndRestart|XrayTwoHopLoopbackRoundtrip|MixedConnectorChainLoopback)$|^TestNativeStock(Xray|SingBox)UpgradeKeepsExactRuntimeAndLease$|^TestNativeStockXraySecurityDefaults$|^TestRenderedTwoHopRouteHasNoDirectFallback$|^TestNativeSharedVLESSIngressKeepsPrincipalPathsSeparate$|^TestNativeFleetConfigureStopStartAndRollback$|^TestNativeHysteria2Loopback$|^TestNativeEndpointProtocolsLoopback$|^TestNativeInvitedUserDownloadedClientTraffic$|^TestNativeDownloadedClientConfiguredDNS$' ./internal/agent ./internal/integration ./internal/httpapi | tee "$REPORT"
+  scripts/go.sh test -json -p=1 -count=1 -timeout=120s -run '^TestNative(SupervisorLifecycleAndRestart|XrayTwoHopLoopbackRoundtrip|MixedConnectorChainLoopback)$|^TestNativeStock(Xray|SingBox)UpgradeKeepsExactRuntimeAndLease$|^TestNativeStockXraySecurityDefaults$|^TestRenderedTwoHopRouteHasNoDirectFallback$|^TestNativeSharedVLESSIngressKeepsPrincipalPathsSeparate$|^TestNativeFleetConfigureStopStartAndRollback$|^TestNativeAnyTLSLoopback$|^TestNativeHysteria2Loopback$|^TestNativeEndpointProtocolsLoopback$|^TestNativeInvitedUserDownloadedClientTraffic$|^TestNativeDownloadedClientConfiguredDNS$' ./internal/agent ./internal/integration ./internal/httpapi | tee "$REPORT"
 fi
 python3 - "$REPORT" <<'PY'
 import json,os,sys
@@ -68,6 +68,7 @@ events=[json.loads(line) for line in open(sys.argv[1]) if line.strip()]
 mode=os.environ['ROUTEWEAVER_NATIVE_STAGE']
 required={('routeweaver/internal/render','TestNativeTrojanConfigurationMatrix'),('routeweaver/internal/render','TestNativeVMessConfigurationMatrix'),('routeweaver/internal/render','TestNativeClientNodesOnlyConsumption'),('routeweaver/internal/httpapi','TestNativeOwnedRuleFileBundles'),('routeweaver/internal/agent','TestNativeCoreInstallerPreparesImmutableOfficialExecutables'),('routeweaver/internal/agent','TestNativeInstallDesiredPreservesActiveRuntimeAndLease'),('routeweaver/internal/agent','TestNativeInstallDoesNotEraseAcceptedRevocation'),('routeweaver/internal/agent','TestNativeInstallDownloadCannotDelayActiveLeaseExpiry'),('routeweaver/internal/render','TestNativeClientFixtures'),('routeweaver/internal/render','TestNativeMultiPrincipalVLESSFixtures'),('routeweaver/internal/render','TestNativeVLESSClientFixtures'),('routeweaver/internal/render','TestNativeServerFixtures'),('routeweaver/internal/agent','TestNativePinnedBinariesWhenExplicitlyAvailable'),('routeweaver/internal/httpapi','TestNativeTemplateFollowedProfileUpdate'),('routeweaver/internal/httpapi','TestNativeOverridePublishedArtifactsPassPinnedNativeParsers'),('routeweaver/internal/integration','TestImportedProcessedVLESSPassesBothNativeClients')}
 required.add(('routeweaver/internal/render','TestNativeHysteria2Configuration'))
+required.add(('routeweaver/internal/render','TestNativeAnyTLSConfiguration'))
 allowed_skips=set()
 required.update({('routeweaver/internal/render','TestNativeMixedConnectorChain'),('routeweaver/internal/render','TestNativeVLESSStockTransportMatrix'),('routeweaver/internal/agent','TestNativeStockRetiredReceiptsRecoverWithoutDownload')})
 if mode=='runtime':
@@ -90,8 +91,10 @@ if mode=='runtime':
             allowed_skips.add(upgrade)
     if 'sing-box' in selected:
         required.add(('routeweaver/internal/integration','TestNativeHysteria2Loopback'))
+        required.add(('routeweaver/internal/integration','TestNativeAnyTLSLoopback'))
     else:
         allowed_skips.add('TestNativeHysteria2Loopback')
+        allowed_skips.add('TestNativeAnyTLSLoopback')
     if 'xray' in selected:
         required.add(('routeweaver/internal/agent','TestNativeStockXrayUpgradeKeepsExactRuntimeAndLease'))
         required.add(('routeweaver/internal/integration','TestNativeStockXraySecurityDefaults'))

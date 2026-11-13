@@ -450,13 +450,13 @@ func xrayStream(c domain.Connection) map[string]any {
 type SingBoxServer struct{}
 
 func (SingBoxServer) ServerCapability() ServerCapability {
-	return ServerCapability{AdapterID: ServerAdapterSingBox, Versions: []string{StockSingBoxVersion, HistoricalStockSingBoxVersion}, Protocols: []string{"socks", "shadowsocks", "vless", "trojan", "vmess", "hysteria2"}, MultiPrincipalProtocols: []string{"vless"}}
+	return ServerCapability{AdapterID: ServerAdapterSingBox, Versions: []string{StockSingBoxVersion, HistoricalStockSingBoxVersion}, Protocols: []string{"socks", "shadowsocks", "vless", "trojan", "vmess", "hysteria2", "anytls"}, MultiPrincipalProtocols: []string{"vless"}}
 }
 func (SingBoxServer) RenderServer(p domain.ServerProgram) (any, error) {
-	if err := domain.ValidateConnection(p.Listener.Connection); err != nil && p.Listener.Connection.Protocol == "hysteria2" {
+	if err := domain.ValidateConnection(p.Listener.Connection); err != nil && (p.Listener.Connection.Protocol == "hysteria2" || p.Listener.Connection.Protocol == "anytls") {
 		return nil, err
 	}
-	if err := validateHysteria2Connectors(p); err != nil {
+	if err := validateDirectTLSConnectors(p); err != nil {
 		return nil, err
 	}
 	if err := domain.ValidateListenerTransport(p.Listener.Connection); err != nil {
@@ -484,9 +484,9 @@ func (SingBoxServer) RenderServer(p domain.ServerProgram) (any, error) {
 	case "shadowsocks":
 		inbound["method"] = c.Method
 		inbound["password"] = c.Password
-	case "vless", "trojan", "vmess", "hysteria2":
+	case "vless", "trojan", "vmess", "hysteria2", "anytls":
 		user := map[string]any{"name": p.Listener.ID, "uuid": c.UUID}
-		if c.Protocol == "trojan" || c.Protocol == "hysteria2" {
+		if c.Protocol == "trojan" || (c.Protocol == "hysteria2" || c.Protocol == "anytls") {
 			user = map[string]any{"name": p.Listener.ID, "password": c.Password}
 		}
 		if c.Flow != "" {

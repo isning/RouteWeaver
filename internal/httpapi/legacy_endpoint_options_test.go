@@ -93,35 +93,37 @@ func TestListenerInventoryRejectsRequestOptionsBeforePersistence(t *testing.T) {
 func TestHysteria2InventoryTargetAndSecretRoundtrip(t *testing.T) {
 	s, srv := makeServer(t)
 	admin := operatorClient()
-	for _, target := range []struct {
-		adapter, version string
-		valid            bool
-	}{
-		{"routeweaver/sing-box", "1.14.3", true}, {"routeweaver/sing-box", "1.14.4", true},
-		{"routeweaver/xray", "26.10.31", false}, {"routeweaver/sing-box", "0.0.0", false},
-	} {
-		instance := domain.CoreInstance{ID: "hy2-core", HostID: "host", AdapterID: target.adapter, Version: target.version}
-		if err := s.Put("core-instances", instance.ID, instance); err != nil {
-			t.Fatal(err)
-		}
-		endpoint := domain.ManagedEndpoint{ID: "hy2-" + strings.ReplaceAll(target.version, ".", "-"), InstanceID: instance.ID, Name: "Hysteria2", Connection: domain.Connection{Protocol: "hysteria2", Host: "127.0.0.1", Port: 443, Password: "synthetic-hy2-secret", TLS: &domain.TLSOptions{Enabled: true, ServerName: "proxy.example"}}}
-		code, _, raw := req(t, admin, "POST", srv.URL+"/api/managed-endpoints", "", endpoint)
-		if target.valid {
-			if code != 200 && code != 201 {
-				t.Fatalf("valid save %d %s", code, raw)
-			}
-			var saved domain.ManagedEndpoint
-			if err := s.Get("managed-endpoints", endpoint.ID, &saved); err != nil {
+	for _, protocol := range []string{"hysteria2", "anytls"} {
+		for _, target := range []struct {
+			adapter, version string
+			valid            bool
+		}{
+			{"routeweaver/sing-box", "1.14.3", true}, {"routeweaver/sing-box", "1.14.4", true},
+			{"routeweaver/xray", "26.10.31", false}, {"routeweaver/sing-box", "0.0.0", false},
+		} {
+			instance := domain.CoreInstance{ID: "hy2-core", HostID: "host", AdapterID: target.adapter, Version: target.version}
+			if err := s.Put("core-instances", instance.ID, instance); err != nil {
 				t.Fatal(err)
 			}
-			if saved.Connection.Password != endpoint.Connection.Password || saved.Connection.TLS.ServerName != "proxy.example" {
-				t.Fatal("HY2 data lost")
+			endpoint := domain.ManagedEndpoint{ID: protocol + "-" + strings.ReplaceAll(target.version, ".", "-"), InstanceID: instance.ID, Name: "Hysteria2", Connection: domain.Connection{Protocol: protocol, Host: "127.0.0.1", Port: 443, Password: "synthetic-hy2-secret", TLS: &domain.TLSOptions{Enabled: true, ServerName: "proxy.example"}}}
+			code, _, raw := req(t, admin, "POST", srv.URL+"/api/managed-endpoints", "", endpoint)
+			if target.valid {
+				if code != 200 && code != 201 {
+					t.Fatalf("valid save %d %s", code, raw)
+				}
+				var saved domain.ManagedEndpoint
+				if err := s.Get("managed-endpoints", endpoint.ID, &saved); err != nil {
+					t.Fatal(err)
+				}
+				if saved.Connection.Password != endpoint.Connection.Password || saved.Connection.TLS.ServerName != "proxy.example" {
+					t.Fatal("HY2 data lost")
+				}
+			} else if code != 400 {
+				t.Fatalf("unsupported core accepted %d %s", code, raw)
 			}
-		} else if code != 400 {
-			t.Fatalf("unsupported core accepted %d %s", code, raw)
-		}
-		if strings.Contains(raw, endpoint.Connection.Password) {
-			t.Fatal("save response leaked password")
+			if strings.Contains(raw, endpoint.Connection.Password) {
+				t.Fatal("save response leaked password")
+			}
 		}
 	}
 }

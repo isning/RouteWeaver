@@ -60,10 +60,10 @@ it("retains unknown REALITY metadata after switching modes and returning to REAL
   expect(apply.mock.calls[0][0].connectors![0].connection.tls?.reality).toEqual({ publicKey: reality.publicKey, shortId: "bb", extension: { retain: true } });
 });
 
-it("edits a direct Hysteria2 connector without losing password or TLS and disables it for a detour", async () => {
+it.each(["hysteria2", "anytls"])("direct %s saves while chained selections remain disabled", async (protocol) => {
   const program = fixture();
   program.instance = { ...program.instance, adapterId: "routeweaver/sing-box", version: "1.14.4" };
-  program.connectors![0].connection = { protocol: "hysteria2", host: "hy2.example", port: 443, password: "synthetic", tls: { enabled: true, serverName: "hy2.example" } };
+  program.connectors![0].connection = { protocol, host: "hy2.example", port: 443, password: "synthetic", tls: { enabled: true, serverName: "hy2.example" } };
   const apply = vi.fn((_program: ServerProgram) => true);
   const view = render(<UIProviders><ServerConnectorConnectionDialog program={program} schemaVersion="1.0" connectorId="exit" onApply={apply} onClose={vi.fn()} onEditingChange={vi.fn()} /></UIProviders>);
   await userEvent.click(screen.getByRole("button", { name: "采用连接参数" }));
@@ -76,5 +76,5 @@ it("edits a direct Hysteria2 connector without losing password or TLS and disabl
   chained.connectors![0].via = "relay";
   render(<UIProviders><ServerConnectorConnectionDialog program={chained} schemaVersion="1.0" connectorId="exit" onApply={vi.fn(() => true)} onClose={vi.fn()} onEditingChange={vi.fn()} /></UIProviders>);
   await userEvent.click(screen.getByLabelText("协议"));
-  expect(screen.getByRole("option", { name: /^Hysteria2$/ }).getAttribute("aria-disabled")).toBe("true");
+  expect(screen.getByRole("option", { name: protocol === "hysteria2" ? /^Hysteria2$/ : /^AnyTLS$/ }).getAttribute("aria-disabled")).toBe("true");
 });

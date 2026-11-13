@@ -4,13 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"routeweaver/internal/domain"
+	"strings"
 )
 
 // SingBox preserves the legacy client-chain preview seam only.
 type SingBox struct{}
 
 func (SingBox) Capability() domain.Capability {
-	return domain.Capability{ID: "sing-box", Name: "sing-box", Protocols: []string{"socks", "shadowsocks", "vless", "trojan", "vmess", "hysteria2"}, MaxHops: 0}
+	return domain.Capability{ID: "sing-box", Name: "sing-box", Protocols: []string{"socks", "shadowsocks", "vless", "trojan", "vmess", "hysteria2", "anytls"}, MaxHops: 0}
 }
 func (SingBox) Render(r domain.Route, ns []domain.Node) ([]domain.Artifact, error) {
 	if len(ns) == 0 {
@@ -18,8 +19,8 @@ func (SingBox) Render(r domain.Route, ns []domain.Node) ([]domain.Artifact, erro
 	}
 	out := []any{}
 	for i, n := range ns {
-		if n.Protocol == "hysteria2" && len(ns) > 1 {
-			return nil, fmt.Errorf("HYSTERIA2_DETOUR_UNSUPPORTED: Hysteria2 must connect directly")
+		if (n.Protocol == "hysteria2" || n.Protocol == "anytls") && len(ns) > 1 {
+			return nil, fmt.Errorf("%s_DETOUR_UNSUPPORTED: protocol must connect directly", strings.ToUpper(n.Protocol))
 		}
 		if err := validateOutboundTarget(n.ConnectionValue(), "sing-box"); err != nil {
 			return nil, err

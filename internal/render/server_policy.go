@@ -3,6 +3,7 @@ package render
 import (
 	"fmt"
 	"routeweaver/internal/domain"
+	"strings"
 )
 
 // normalizeServerProgram adapts the earlier ordered egress contract into named
@@ -165,12 +166,12 @@ func singboxRuleSets(resources []domain.RuleResource) ([]any, bool, error) {
 	return sets, remote, nil
 }
 
-// QUIC detours need explicit packet-dial capability verification. This first
-// Hysteria2 slice permits only direct connections, not either side of a detour.
-func validateHysteria2Connectors(p domain.ServerProgram) error {
+// These protocols currently have only direct-connection validation. Reject both
+// sides of a detour rather than implying unverified chain support.
+func validateDirectTLSConnectors(p domain.ServerProgram) error {
 	for _, c := range p.Egress {
-		if c.Protocol == "hysteria2" && len(p.Egress) > 1 {
-			return fmt.Errorf("HYSTERIA2_DETOUR_UNSUPPORTED: Hysteria2 must connect directly")
+		if (c.Protocol == "hysteria2" || c.Protocol == "anytls") && len(p.Egress) > 1 {
+			return fmt.Errorf("%s_DETOUR_UNSUPPORTED: protocol must connect directly", strings.ToUpper(c.Protocol))
 		}
 	}
 	byID := map[string]domain.Connection{}
@@ -178,8 +179,12 @@ func validateHysteria2Connectors(p domain.ServerProgram) error {
 		byID[c.ID] = c.Connection
 	}
 	for _, c := range p.Connectors {
-		if c.Via != "" && (c.Connection.Protocol == "hysteria2" || byID[c.Via].Protocol == "hysteria2") {
-			return fmt.Errorf("HYSTERIA2_DETOUR_UNSUPPORTED: Hysteria2 must connect directly")
+		if c.Via != "" && (c.Connection.Protocol == "hysteria2" || byID[c.Via].Protocol == "hysteria2" || c.Connection.Protocol == "anytls" || byID[c.Via].Protocol == "anytls") {
+			protocol := c.Connection.Protocol
+			if protocol != "hysteria2" && protocol != "anytls" {
+				protocol = byID[c.Via].Protocol
+			}
+			return fmt.Errorf("%s_DETOUR_UNSUPPORTED: protocol must connect directly", strings.ToUpper(protocol))
 		}
 	}
 	return nil

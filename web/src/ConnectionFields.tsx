@@ -119,9 +119,9 @@ export function normalizeConnection(connection: Connection): Connection {
   // This normalizer is also used for render-time comparisons. Invalid drafts
   // stay invalid here; the field validator prevents submitting them.
   if (port !== undefined) copy.port = port;
-  // Hysteria2 has its own protocol envelope. Preserve unsupported values so
+  // Direct-only TLS protocols have their own protocol envelope. Preserve unsupported values so
   // validation can reject them rather than silently erasing imported intent.
-  if (copy.protocol === "hysteria2") return copy;
+  if (["hysteria2", "anytls"].includes(copy.protocol)) return copy;
   const secured = ["vless", "trojan", "vmess"].includes(copy.protocol);
   if (!secured) {
     delete copy.uuid;
@@ -185,7 +185,7 @@ export function ConnectionFields({
   targetCore,
   targetVersion,
   allowUnchangedUnsupportedProtocol = false,
-  hysteria2UnavailableReason,
+  directTlsUnavailableReason,
 }: {
   prefix?: string[];
   server?: boolean;
@@ -195,7 +195,7 @@ export function ConnectionFields({
   targetCore?: string;
   targetVersion?: string;
   allowUnchangedUnsupportedProtocol?: boolean;
-  hysteria2UnavailableReason?: string;
+  directTlsUnavailableReason?: string;
 }) {
   const form = useFormInstance();
   // useWatch subscribes after the first commit. Conditional controls must read
@@ -231,17 +231,19 @@ export function ConnectionFields({
       targetCore === "managed-xray" ||
       targetCore === "routeweaver/managed-xray");
   const hysteria2 = protocol === "hysteria2";
-  const hysteria2Target = !targetCore || (targetCore === "sing-box" &&
+  const directTls = hysteria2 || protocol === "anytls";
+  const directTlsName = hysteria2 ? "Hysteria2" : "AnyTLS";
+  const directTlsTarget = !targetCore || (targetCore === "sing-box" &&
     (!targetVersion || ["1.14.3", "1.14.4"].includes(targetVersion)));
   const currentConnection = useWatch(prefix, { form, preserve: true }) ?? form.getFieldValue(prefix);
-  const hysteria2Conflicts = hysteria2 ? [
+  const directTlsConflicts = directTls ? [
     ...["uuid", "flow", "packetEncoding", "method", "username", "vmessSecurity", "transport"]
       .filter((key) => currentConnection?.[key] != null && currentConnection[key] !== "")
       .map((key) => ({ path: [...prefix, key], label: ({ uuid: "UUID", flow: "Flow", packetEncoding: "数据包编码", method: "加密方式", username: "用户名", vmessSecurity: "VMess 加密方式", transport: "传输参数" } as Record<string, string>)[key] })),
     ...(tls?.reality ? [{ path: [...prefix, "tls", "reality"], label: "REALITY" }] : []),
     ...(tls?.fingerprint ? [{ path: [...prefix, "tls", "fingerprint"], label: "客户端指纹" }] : []),
   ] : [];
-  const secured = ["vless", "trojan", "vmess", "hysteria2"].includes(protocol);
+  const secured = ["vless", "trojan", "vmess", "hysteria2", "anytls"].includes(protocol);
   const security = tls?.enabled ? (tls.reality ? "reality" : "tls") : "none";
   const xrayReality = targetCore === "xray" && security === "reality";
   const realityTransportBlocked =
@@ -336,12 +338,12 @@ export function ConnectionFields({
           trigger="onValueChange"
           rules={[
             { required: true, message: "选择协议" },
-            { validator: (_, value) => value !== "hysteria2" || !hysteria2UnavailableReason
-              ? Promise.resolve() : Promise.reject(new Error(hysteria2UnavailableReason)) },
-            { validator: (_, value) => value !== "hysteria2" || allowUnchangedUnsupportedProtocol || hysteria2Target
-              ? Promise.resolve() : Promise.reject(new Error("Hysteria2 目前仅支持 sing-box 1.14.3 / 1.14.4，请更换核心或协议。")) },
-            { validator: (_, value) => value !== "hysteria2" || allowUnchangedUnsupportedProtocol || !hysteria2Conflicts.length
-              ? Promise.resolve() : Promise.reject(new Error("请先移除 Hysteria2 不支持的参数。")) },
+            { validator: (_, value) => !["hysteria2", "anytls"].includes(value) || !directTlsUnavailableReason
+              ? Promise.resolve() : Promise.reject(new Error(directTlsUnavailableReason)) },
+            { validator: (_, value) => !["hysteria2", "anytls"].includes(value) || allowUnchangedUnsupportedProtocol || directTlsTarget
+              ? Promise.resolve() : Promise.reject(new Error(`${directTlsName} 目前仅支持 sing-box 1.14.3 / 1.14.4，请更换核心或协议。`)) },
+            { validator: (_, value) => !["hysteria2", "anytls"].includes(value) || allowUnchangedUnsupportedProtocol || !directTlsConflicts.length
+              ? Promise.resolve() : Promise.reject(new Error(`请先移除 ${directTlsName} 不支持的参数。`)) },
             {
               validator: (_rule, value) =>
                 !limited ||
@@ -365,7 +367,8 @@ export function ConnectionFields({
               { value: "vless", label: "VLESS" },
               { value: "trojan", label: "Trojan", disabled: limited },
               { value: "vmess", label: "VMess AEAD", disabled: limited },
-              { value: "hysteria2", label: "Hysteria2", disabled: limited || !hysteria2Target || !!hysteria2UnavailableReason },
+              { value: "hysteria2", label: "Hysteria2", disabled: limited || !directTlsTarget || !!directTlsUnavailableReason },
+              { value: "anytls", label: "AnyTLS", disabled: limited || !directTlsTarget || !!directTlsUnavailableReason },
             ]}
           />
         </AppField>
@@ -434,12 +437,12 @@ export function ConnectionFields({
             </AppField>
           </>
         )}
-        {hysteria2 && (
+        {directTls && (
           <div className="space-y-2 sm:col-span-2">
-            <p className="text-sm text-muted-foreground">Hysteria2 使用 QUIC（UDP）和 TLS；目前仅支持 sing-box 直接连接，不支持链式中转。</p>
-            {hysteria2UnavailableReason && <p className="text-sm text-destructive">{hysteria2UnavailableReason}</p>}
-            {!!hysteria2Conflicts.length && <Notice tone="warning" title="以下参数不适用于 Hysteria2">
-              <div className="flex flex-wrap gap-2">{hysteria2Conflicts.map(({ path, label }) => (
+            <p className="text-sm text-muted-foreground">{hysteria2 ? "Hysteria2 使用 QUIC（UDP）和 TLS" : "AnyTLS 使用密码和 TLS"}；目前仅支持 sing-box 直接连接，不支持链式中转。</p>
+            {directTlsUnavailableReason && <p className="text-sm text-destructive">{directTlsUnavailableReason}</p>}
+            {!!directTlsConflicts.length && <Notice tone="warning" title={`以下参数不适用于 ${directTlsName}`}>
+              <div className="flex flex-wrap gap-2">{directTlsConflicts.map(({ path, label }) => (
                 <AppField key={path.join(".")} name={path} noStyle trigger="onClear">
                   <ClearValueButton>移除{label}</ClearValueButton>
                 </AppField>
@@ -447,11 +450,11 @@ export function ConnectionFields({
             </Notice>}
           </div>
         )}
-        {["trojan", "hysteria2"].includes(protocol) && (
+        {["trojan", "hysteria2", "anytls"].includes(protocol) && (
           <AppField
             name={field("password")}
             label="连接密码"
-            rules={[{ required: true, message: `填写 ${hysteria2 ? "Hysteria2" : "Trojan"} 连接密码` }]}
+            rules={[{ required: true, message: `填写 ${directTls ? directTlsName : "Trojan"} 连接密码` }]}
           >
             <PasswordInput autoComplete="new-password" />
           </AppField>
@@ -541,7 +544,7 @@ export function ConnectionFields({
               已有参数会保留，直到你明确修改；不支持的组合无法发布。
             </Notice>
           )}
-          {!hysteria2 && <FieldSet className="min-w-0 border-t pt-4" aria-label="传输设置">
+          {!directTls && <FieldSet className="min-w-0 border-t pt-4" aria-label="传输设置">
             <FieldLegend variant="label">传输设置</FieldLegend>
             {xrayReality && realityTransportBlocked && (
               <Notice tone="warning" title="当前 Xray REALITY 传输组合不受支持">
@@ -715,13 +718,13 @@ export function ConnectionFields({
               valuePropName="checked"
               trigger="onCheckedChange"
               rules={
-                ["trojan", "hysteria2"].includes(protocol)
+                ["trojan", "hysteria2", "anytls"].includes(protocol)
                   ? [
                       {
                         validator: (_, value) =>
                           value
                             ? Promise.resolve()
-                            : Promise.reject(new Error(`${hysteria2 ? "Hysteria2" : "Trojan"} 必须启用 TLS`)),
+                            : Promise.reject(new Error(`${directTls ? directTlsName : "Trojan"} 必须启用 TLS`)),
                       },
                     ]
                   : []
@@ -757,7 +760,7 @@ export function ConnectionFields({
                   <Input placeholder="example.com" />
                 </AppField>
                 <div className="grid gap-4 sm:grid-cols-2">
-                  {!hysteria2 && <AppField
+                  {!directTls && <AppField
                     name={[...prefix, "tls", "fingerprint"]}
                     label="客户端指纹"
                     description={
@@ -841,7 +844,7 @@ export function ConnectionFields({
                     </p>
                   )}
                 </div>
-                {!hysteria2 && security === "reality" && (
+                {!directTls && security === "reality" && (
                   <div className="grid gap-4 sm:grid-cols-2">
                     <AppField
                       name={[...prefix, "tls", "reality", "publicKey"]}
@@ -1133,13 +1136,13 @@ function SecurityModePicker({
       }}
     >
       <label className="flex items-center gap-2 text-sm">
-        <RadioGroupItem value="none" disabled={["trojan", "hysteria2"].includes(protocol)} />无
+        <RadioGroupItem value="none" disabled={["trojan", "hysteria2", "anytls"].includes(protocol)} />无
       </label>
       <label className="flex items-center gap-2 text-sm">
         <RadioGroupItem value="tls" />
         TLS
       </label>
-      {protocol !== "hysteria2" && ((!limited && protocol === "vless") || reality) && (
+      {!["hysteria2", "anytls"].includes(protocol) && ((!limited && protocol === "vless") || reality) && (
         <label className="flex items-center gap-2 text-sm">
           <RadioGroupItem
             value="reality"

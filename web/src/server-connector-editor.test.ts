@@ -94,9 +94,9 @@ it.each([0, null, false])("keeps malformed upstream %j read-only", (via) => {
   expect(connectorEditReason(program, "1.0", "exit")).toBeTruthy();
 });
 
-it("allows direct sing-box Hysteria2 but rejects both directions of a connector detour", () => {
+it.each(["hysteria2", "anytls"])("allows direct sing-box %s but rejects both directions of a connector detour", (protocol) => {
   const program = fixture();
-  program.connectors![0].connection = { protocol: "hysteria2", host: "hy2.example", port: 443, password: "synthetic", tls: { enabled: true } };
+  program.connectors![0].connection = { protocol, host: "direct.example", port: 443, password: "synthetic", tls: { enabled: true } };
   expect(connectorEditReason(program, "1.0", "exit")).toBeUndefined();
   expect(updateServerConnectorVia(program, "1.0", "exit", "relay").error).toContain("直接连接");
   expect(updateServerConnectorVia(program, "1.0", "relay", "exit").error).toContain("直接连接");

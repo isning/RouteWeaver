@@ -10,9 +10,16 @@ import (
 	"routeweaver/internal/render"
 )
 
-// These are exact-version parser checks, not evidence of QUIC connectivity.
-func TestNativeHysteria2Configuration(t *testing.T) {
-	connection := domain.Connection{Protocol: "hysteria2", Host: "127.0.0.1", Port: 18443, Password: "synthetic-hysteria2-password", TLS: &domain.TLSOptions{Enabled: true, ServerName: "localhost"}}
+// These are exact-version parser checks, not evidence of connectivity.
+func TestNativeHysteria2Configuration(t *testing.T) { nativePasswordTLSConfiguration(t, "hysteria2") }
+func TestNativeAnyTLSConfiguration(t *testing.T)    { nativePasswordTLSConfiguration(t, "anytls") }
+
+func nativePasswordTLSConfiguration(t *testing.T, protocol string) {
+	t.Helper()
+	connection := domain.Connection{Protocol: protocol, Host: "127.0.0.1", Port: 18443, Password: "synthetic-password-tls-fixture", TLS: &domain.TLSOptions{Enabled: true, ServerName: "localhost"}}
+	if protocol == "anytls" {
+		connection.TLS.ALPN = []string{"http/1.1"}
+	}
 	for _, target := range []nativeTarget{
 		{render.Target{AdapterID: "sing-box", Version: render.SingBoxVersion}, "sing-box", "ROUTEWEAVER_SINGBOX_BIN", ""},
 		{render.Target{AdapterID: render.ServerAdapterSingBox, Version: render.HistoricalStockSingBoxVersion}, "sing-box-server", "ROUTEWEAVER_SINGBOX_BIN", ""},
@@ -59,7 +66,7 @@ func TestNativeHysteria2Configuration(t *testing.T) {
 			cmd := exec.Command(binary, "check", "-c", file)
 			cmd.Dir = filepath.Dir(file)
 			if output, err := cmd.CombinedOutput(); err != nil {
-				t.Fatalf("native Hysteria2 parser rejected generated configuration: %v\n%s", err, output)
+				t.Fatalf("native password-TLS parser rejected generated configuration: %v\n%s", err, output)
 			}
 		})
 	}

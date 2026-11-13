@@ -132,3 +132,21 @@ stopped-server/no-direct-fallback checks. The local sandbox denies native proces
 startup (`create netlink socket: operation not permitted`), so parser success
 alone must not be described as successful traffic validation. Use the exact
 commit's CI result before claiming this slice's runtime gate passed.
+
+## 2026-11-13: direct AnyTLS slice
+
+AnyTLS adds a second explicit sing-box-only capability: manual endpoint entry and
+strict sing-box native import, client 1.14.3 output, and ordinary server
+1.14.3/1.14.4 listener/connector output. Password and ordinary TLS are required.
+Optional ALPN is preserved; unlike Hysteria2 it is not forced to h3. Unsupported
+uTLS, Reality, transport wrappers, padding/session knobs and unrelated protocol
+credentials are rejected, not silently removed. AnyTLS share-link import is not
+part of this slice. Xray/managed-Xray/Mihomo output and both sides of an AnyTLS
+detour remain unsupported. Principal-based listeners remain VLESS-only.
+
+The implementation follows the pinned upstream `option/anytls.go` and
+`protocol/anytls/inbound.go` contracts. Native parser fixtures cover all three
+exact targets. A mandatory generated-client TCP loopback gate covers successful
+traffic, stopped-server/no-direct-fallback, wrong password and wrong hostname.
+As with Hysteria2, the sandbox cannot activate native processes; rely on the
+exact commit's CI runtime result, not parser success, for traffic evidence.

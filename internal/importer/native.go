@@ -249,7 +249,7 @@ func fromSingBox(raw []byte) (candidate, error) {
 		return candidate{}, ErrInput
 	}
 	c := domain.Connection{Host: n.Server, Port: n.Port, Protocol: n.Type, Username: n.Username, Password: n.Password, Method: n.Method, UUID: n.UUID, Flow: n.Flow, PacketEncoding: n.PacketEncoding}
-	if n.Type != "socks" && n.Type != "shadowsocks" && n.Type != "vless" && n.Type != "trojan" && n.Type != "vmess" && n.Type != "hysteria2" {
+	if n.Type != "socks" && n.Type != "shadowsocks" && n.Type != "vless" && n.Type != "trojan" && n.Type != "vmess" && n.Type != "hysteria2" && n.Type != "anytls" {
 		return candidate{}, ErrInput
 	}
 	if n.AlterID != nil && (*n.AlterID != 0 || n.Type != "vmess") || n.Type != "vmess" && n.Security != "" {
@@ -262,7 +262,7 @@ func fromSingBox(raw []byte) (candidate, error) {
 	if n.TLS != nil {
 		c.TLS = &domain.TLSOptions{Enabled: n.TLS.Enabled, ServerName: n.TLS.ServerName, ALPN: n.TLS.ALPN}
 		if n.TLS.UTLS != nil {
-			if n.Type == "hysteria2" {
+			if n.Type == "hysteria2" || n.Type == "anytls" {
 				return candidate{}, ErrInput
 			}
 			if !n.TLS.UTLS.Enabled {

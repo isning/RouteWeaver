@@ -33,6 +33,26 @@ func ValidateConnection(c Connection) error {
 		}
 		return nil
 	}
+	if c.Protocol == "anytls" {
+		if err := ValidateNode(Node{ID: "connection", Name: "connection", Host: c.Host, Port: c.Port, Protocol: "socks"}); err != nil {
+			return err
+		}
+		if c.Password == "" || c.Username != "" || c.UUID != "" || c.Method != "" || c.Flow != "" || c.PacketEncoding != "" || c.VMessSecurity != "" || c.Transport != nil {
+			return fmt.Errorf("AnyTLS requires password without other protocol or transport options")
+		}
+		if c.TLS == nil || !c.TLS.Enabled || c.TLS.Reality != nil || c.TLS.Fingerprint != "" {
+			return fmt.Errorf("AnyTLS requires ordinary TLS without REALITY or uTLS fingerprint")
+		}
+		if strings.ContainsAny(c.TLS.ServerName, " /\r\n") {
+			return fmt.Errorf("invalid TLS server name")
+		}
+		for _, alpn := range c.TLS.ALPN {
+			if len(alpn) == 0 || len(alpn) > 255 {
+				return fmt.Errorf("invalid AnyTLS ALPN")
+			}
+		}
+		return nil
+	}
 	if c.Protocol != "vmess" && c.VMessSecurity != "" {
 		return fmt.Errorf("VMess security requires VMess protocol")
 	}

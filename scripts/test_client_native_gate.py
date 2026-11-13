@@ -30,7 +30,7 @@ INTEGRATION = [
 
 
 class ClientNativeGateTests(unittest.TestCase):
-    def check(self, client_action="pass", omit=False, selected="mihomo,sing-box", dns_action="pass", omit_dns=False, mixed_action="pass", omit_mixed=False, hy2_action="pass"):
+    def check(self, client_action="pass", omit=False, selected="mihomo,sing-box", dns_action="pass", omit_dns=False, mixed_action="pass", omit_mixed=False, hy2_action="pass", anytls_action="pass", omit_anytls=False):
         shell = (ROOT / "scripts/native-cores.sh").read_text()
         checker = shell.split('python3 - "$REPORT" <<\'PY\'\n', 1)[1].split('\nPY\n', 1)[0]
         events = []
@@ -39,6 +39,8 @@ class ClientNativeGateTests(unittest.TestCase):
             events.extend({"Package": "routeweaver/internal/" + pkg, "Test": name,
                            "Action": "pass"} for name in names)
         events.append({"Package": "routeweaver/internal/integration", "Test": "TestNativeHysteria2Loopback", "Action": hy2_action})
+        if not omit_anytls:
+            events.append({"Package": "routeweaver/internal/integration", "Test": "TestNativeAnyTLSLoopback", "Action": anytls_action})
         if not omit_mixed:
             events.extend({"Package": "routeweaver/internal/integration", "Test": MIXED + "/" + core,
                            "Action": mixed_action} for core in ("xray", "sing-box"))
@@ -60,6 +62,10 @@ class ClientNativeGateTests(unittest.TestCase):
     def test_hysteria2_runtime_cannot_be_skipped_or_fail(self):
         for action in ("skip", "fail"):
             self.assertNotEqual(self.check(hy2_action=action).returncode, 0)
+
+    def test_anytls_runtime_missing_skipped_or_failed_reject(self):
+        for action, omit in [("skip", False), ("fail", False), ("pass", True)]:
+            self.assertNotEqual(self.check(anytls_action=action, omit_anytls=omit).returncode, 0)
 
     def test_both_clients_required(self):
         result = self.check()
@@ -90,6 +96,8 @@ class ClientNativeGateTests(unittest.TestCase):
         shell = (ROOT / "scripts/native-cores.sh").read_text()
         patterns = re.findall(r"-run '([^']+)'", shell)
         self.assertEqual(len(patterns), 2)
+        self.assertIsNotNone(re.search(patterns[0], "TestNativeAnyTLSConfiguration"))
+        self.assertIsNotNone(re.search(patterns[1], "TestNativeAnyTLSLoopback"))
         self.assertIsNotNone(re.search(patterns[0], "TestNativeMixedConnectorChain"))
         self.assertIsNotNone(re.search(patterns[1], MIXED))
         self.assertIn("('routeweaver/internal/render','TestNativeMixedConnectorChain')", shell)
