@@ -114,7 +114,11 @@ func TestBrowserNativeBridge(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	supervisor, e := agent.NewProcessSupervisor(checker, agent.SupervisorOptions{AllowLocalProcess: true, StartupGrace: 150 * time.Millisecond, StopTimeout: time.Second})
+	// A live PID is not listener readiness. On a busy browser CI worker the
+	// core can still be initializing after 150 ms, before its bind failure or
+	// managed epoch marker. Keep observing startup long enough for the owned
+	// port-conflict fixture to fail natively; do not relax its exact assertions.
+	supervisor, e := agent.NewProcessSupervisor(checker, agent.SupervisorOptions{AllowLocalProcess: true, StartupGrace: 2 * time.Second, StopTimeout: time.Second})
 	if e != nil {
 		t.Fatal(e)
 	}
