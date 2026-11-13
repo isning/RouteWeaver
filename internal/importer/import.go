@@ -164,7 +164,7 @@ func parseURI(raw string) (candidate, error) {
 		return candidate{}, ErrInput
 	}
 	portText := u.Port()
-	if portText == "" && (u.Scheme == "hy2" || u.Scheme == "hysteria2") && !strings.HasSuffix(u.Host, ":") {
+	if portText == "" && (u.Scheme == "hy2" || u.Scheme == "hysteria2" || u.Scheme == "anytls") && !strings.HasSuffix(u.Host, ":") {
 		portText = "443"
 	}
 	port, err := strconv.Atoi(portText)
@@ -183,6 +183,24 @@ func parseURI(raw string) (candidate, error) {
 	c := domain.Connection{Host: u.Hostname(), Port: port}
 	name := u.Fragment
 	switch u.Scheme {
+	case "anytls":
+		if u.User == nil || u.Path != "" && u.Path != "/" {
+			return candidate{}, ErrInput
+		}
+		if _, has := u.User.Password(); has {
+			return candidate{}, ErrInput
+		}
+		for key := range q {
+			if key != "sni" && key != "insecure" {
+				return candidate{}, ErrInput
+			}
+		}
+		if values, exists := q["insecure"]; exists && values[0] != "0" {
+			return candidate{}, ErrInput
+		}
+		c.Protocol = "anytls"
+		c.Password = u.User.Username()
+		c.TLS = &domain.TLSOptions{Enabled: true, ServerName: q.Get("sni")}
 	case "hysteria2", "hy2":
 		if u.User == nil || u.Path != "" && u.Path != "/" {
 			return candidate{}, ErrInput

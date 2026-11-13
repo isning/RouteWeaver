@@ -150,3 +150,18 @@ exact targets. A mandatory generated-client TCP loopback gate covers successful
 traffic, stopped-server/no-direct-fallback, wrong password and wrong hostname.
 As with Hysteria2, the sandbox cannot activate native processes; rely on the
 exact commit's CI runtime result, not parser success, for traffic evidence.
+
+
+### AnyTLS official share-link import
+
+The URI import path now accepts `anytls://` links following the upstream
+[URI scheme](https://github.com/anytls/anytls-go/blob/main/docs/uri_scheme.md):
+percent-encoded username-as-password and fragment-as-name, default port 443,
+explicit ports, and SNI (including IP certificate identity). Only absent
+`insecure` or `insecure=0` are accepted. Insecure TLS, unknown or repeated
+parameters, paths other than `/`, and ambiguous `user:pass@` authentication
+are rejected. Passwords containing colons must use `%3A`. This increment replaces
+the share-link exclusion above; engine, version and direct-only boundaries
+remain unchanged. The real authenticated API test covers import, save, preview,
+publication and downloaded sing-box connection settings without exposing source
+credentials to another user or in ordinary inventory responses.

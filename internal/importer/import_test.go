@@ -315,3 +315,37 @@ func TestHysteria2ShareLinkDefaultPort(t *testing.T) {
 		}
 	}
 }
+
+func TestAnyTLSShareURIKeepsPasswordNameAndTLS(t *testing.T) {
+	for _, raw := range []string{
+		"anytls://p%3Aa%40ss@proxy.example/?sni=tls.example&insecure=0#My%20node",
+		"anytls://p%3Aa%40ss@[2001:db8::1]/?sni=tls.example#My%20node",
+	} {
+		r, err := Parse(Request{SourceID: "source", OwnerID: "u", SnapshotID: "snapshot", Format: "uri-list", Data: []byte(raw)})
+		if err != nil {
+			t.Fatal(err)
+		}
+		e := r.Snapshot.Endpoints[0]
+		if e.Name != "My node" || e.Connection.Protocol != "anytls" || e.Connection.Password != "p:a@ss" || e.Connection.Port != 443 || e.Connection.TLS == nil || !e.Connection.TLS.Enabled || e.Connection.TLS.ServerName != "tls.example" {
+			t.Fatal("AnyTLS link lost semantics")
+		}
+	}
+	for _, serverName := range []string{"127.0.0.1", "2001:db8::1"} {
+		r, err := Parse(Request{SourceID: "source", OwnerID: "u", SnapshotID: "snapshot", Format: "uri-list", Data: []byte("anytls://pass@proxy.example:8443/?sni=" + serverName)})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if r.Snapshot.Endpoints[0].Connection.Port != 8443 || r.Snapshot.Endpoints[0].Connection.TLS.ServerName != serverName {
+			t.Fatal("IP certificate identity or explicit port changed")
+		}
+	}
+	for _, raw := range []string{
+		"anytls://pass@proxy.example/?insecure=1", "anytls://pass@proxy.example/?insecure=true", "anytls://pass@proxy.example/?insecure=",
+		"anytls://user:pass@proxy.example/", "anytls://pass@proxy.example/?sni=a&sni=b", "anytls://pass@proxy.example/?alpn=h3", "anytls://pass@proxy.example/path", "anytls://pass@proxy.example:0", "anytls://pass@proxy.example:",
+	} {
+		r, err := Parse(Request{SourceID: "source", OwnerID: "u", SnapshotID: "snapshot", Format: "uri-list", Data: []byte(raw)})
+		if err == nil || len(r.Snapshot.Endpoints) != 0 {
+			t.Fatal("unsupported AnyTLS URI accepted or partially imported")
+		}
+	}
+}
