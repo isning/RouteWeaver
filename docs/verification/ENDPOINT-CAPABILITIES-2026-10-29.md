@@ -165,3 +165,21 @@ the share-link exclusion above; engine, version and direct-only boundaries
 remain unchanged. The real authenticated API test covers import, save, preview,
 publication and downloaded sing-box connection settings without exposing source
 credentials to another user or in ordinary inventory responses.
+
+### AnyTLS through a SOCKS5 relay
+
+Ordinary sing-box server programs now support one bounded named-connector chain:
+select the AnyTLS connector as the forwarding action and set its `via` to a
+SOCKS5 connector with no upstream of its own. The generated AnyTLS outbound keeps
+its original server and TLS identity and uses the SOCKS5 connector's tag as its
+`detour`. The upstream dialer establishes the AnyTLS TLS session through the
+relay; this is not a replacement of the selected exit with the relay.
+
+This supersedes the direct-only AnyTLS restriction for that named shape only.
+Reverse use (another connector through AnyTLS), non-SOCKS5 upstreams, additional
+upstream layers, legacy ordered Egress and Hysteria2 chains remain rejected.
+The existing client output remains a direct connection to the selected listener;
+this increment is server forwarding, not general client-side chain editing.
+The native gate tests the generated chain, relay traversal, TCP/UDP delivery and
+stopped-relay/no-direct-fallback. Runtime claims require its exact-commit CI
+result, not merely parser acceptance.

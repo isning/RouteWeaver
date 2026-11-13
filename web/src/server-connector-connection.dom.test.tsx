@@ -60,7 +60,7 @@ it("retains unknown REALITY metadata after switching modes and returning to REAL
   expect(apply.mock.calls[0][0].connectors![0].connection.tls?.reality).toEqual({ publicKey: reality.publicKey, shortId: "bb", extension: { retain: true } });
 });
 
-it.each(["hysteria2", "anytls"])("direct %s saves while chained selections remain disabled", async (protocol) => {
+it.each(["hysteria2", "anytls"])("direct %s saves and only AnyTLS allows a SOCKS5 upstream", async (protocol) => {
   const program = fixture();
   program.instance = { ...program.instance, adapterId: "routeweaver/sing-box", version: "1.14.4" };
   program.connectors![0].connection = { protocol, host: "hy2.example", port: 443, password: "synthetic", tls: { enabled: true, serverName: "hy2.example" } };
@@ -76,5 +76,29 @@ it.each(["hysteria2", "anytls"])("direct %s saves while chained selections remai
   chained.connectors![0].via = "relay";
   render(<UIProviders><ServerConnectorConnectionDialog program={chained} schemaVersion="1.0" connectorId="exit" onApply={vi.fn(() => true)} onClose={vi.fn()} onEditingChange={vi.fn()} /></UIProviders>);
   await userEvent.click(screen.getByLabelText("协议"));
-  expect(screen.getByRole("option", { name: protocol === "hysteria2" ? /^Hysteria2$/ : /^AnyTLS$/ }).getAttribute("aria-disabled")).toBe("true");
+  expect(screen.getByRole("option", { name: protocol === "hysteria2" ? /^Hysteria2$/ : /^AnyTLS$/ }).getAttribute("aria-disabled")).toBe(protocol === "hysteria2" ? "true" : "false");
+});
+
+it("saves AnyTLS through SOCKS5 but does not silently change its upstream protocol", async () => {
+  const program = fixture();
+  program.instance = { ...program.instance, adapterId: "routeweaver/sing-box", version: "1.14.4" };
+  program.connectors![0] = { id: "exit", via: "relay", connection: { protocol: "anytls", host: "anytls.example", port: 443, password: "synthetic", tls: { enabled: true } } };
+  program.connectors!.push({ id: "relay", connection: { protocol: "socks", host: "relay.example", port: 1080 } });
+  const apply = vi.fn((_next: ServerProgram) => true);
+  const view = render(<UIProviders><ServerConnectorConnectionDialog program={program} schemaVersion="1.0" connectorId="exit" onApply={apply} onClose={vi.fn()} onEditingChange={vi.fn()} /></UIProviders>);
+  await userEvent.click(screen.getByRole("button", { name: "采用连接参数" }));
+  await waitFor(() => expect(apply).toHaveBeenCalledOnce());
+  expect(apply.mock.calls[0][0]).toEqual(program);
+  view.unmount();
+  const applyRelay = vi.fn(() => true);
+  render(<UIProviders><ServerConnectorConnectionDialog program={program} schemaVersion="1.0" connectorId="relay" onApply={applyRelay} onClose={vi.fn()} onEditingChange={vi.fn()} /></UIProviders>);
+  await userEvent.click(screen.getByLabelText("协议"));
+  expect(screen.getByRole("option", { name: /^AnyTLS$/ }).getAttribute("aria-disabled")).toBe("true");
+  await userEvent.click(screen.getByRole("option", { name: /^Trojan$/ }));
+  await userEvent.type(screen.getByLabelText("连接密码"), "synthetic");
+  await userEvent.click(screen.getByRole("radio", { name: "TLS" }));
+  await userEvent.click(screen.getByRole("button", { name: "采用连接参数" }));
+  expect(await screen.findByText("AnyTLS 仅支持经由无上游的 SOCKS5 连接器。")).toBeTruthy();
+  expect(applyRelay).not.toHaveBeenCalled();
+  expect(program.connectors![1].connection.protocol).toBe("socks");
 });

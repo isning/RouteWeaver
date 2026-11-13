@@ -186,6 +186,8 @@ export function ConnectionFields({
   targetVersion,
   allowUnchangedUnsupportedProtocol = false,
   directTlsUnavailableReason,
+  anytlsUnavailableReason,
+  anytlsConnector = false,
 }: {
   prefix?: string[];
   server?: boolean;
@@ -196,6 +198,8 @@ export function ConnectionFields({
   targetVersion?: string;
   allowUnchangedUnsupportedProtocol?: boolean;
   directTlsUnavailableReason?: string;
+  anytlsUnavailableReason?: string;
+  anytlsConnector?: boolean;
 }) {
   const form = useFormInstance();
   // useWatch subscribes after the first commit. Conditional controls must read
@@ -232,6 +236,7 @@ export function ConnectionFields({
       targetCore === "routeweaver/managed-xray");
   const hysteria2 = protocol === "hysteria2";
   const directTls = hysteria2 || protocol === "anytls";
+  const protocolUnavailableReason = hysteria2 ? directTlsUnavailableReason : anytlsUnavailableReason;
   const directTlsName = hysteria2 ? "Hysteria2" : "AnyTLS";
   const directTlsTarget = !targetCore || (targetCore === "sing-box" &&
     (!targetVersion || ["1.14.3", "1.14.4"].includes(targetVersion)));
@@ -338,8 +343,8 @@ export function ConnectionFields({
           trigger="onValueChange"
           rules={[
             { required: true, message: "选择协议" },
-            { validator: (_, value) => !["hysteria2", "anytls"].includes(value) || !directTlsUnavailableReason
-              ? Promise.resolve() : Promise.reject(new Error(directTlsUnavailableReason)) },
+            { validator: (_, value) => !["hysteria2", "anytls"].includes(value) || !protocolUnavailableReason
+              ? Promise.resolve() : Promise.reject(new Error(protocolUnavailableReason)) },
             { validator: (_, value) => !["hysteria2", "anytls"].includes(value) || allowUnchangedUnsupportedProtocol || directTlsTarget
               ? Promise.resolve() : Promise.reject(new Error(`${directTlsName} 目前仅支持 sing-box 1.14.3 / 1.14.4，请更换核心或协议。`)) },
             { validator: (_, value) => !["hysteria2", "anytls"].includes(value) || allowUnchangedUnsupportedProtocol || !directTlsConflicts.length
@@ -368,7 +373,7 @@ export function ConnectionFields({
               { value: "trojan", label: "Trojan", disabled: limited },
               { value: "vmess", label: "VMess AEAD", disabled: limited },
               { value: "hysteria2", label: "Hysteria2", disabled: limited || !directTlsTarget || !!directTlsUnavailableReason },
-              { value: "anytls", label: "AnyTLS", disabled: limited || !directTlsTarget || !!directTlsUnavailableReason },
+              { value: "anytls", label: "AnyTLS", disabled: limited || !directTlsTarget || !!anytlsUnavailableReason },
             ]}
           />
         </AppField>
@@ -439,8 +444,8 @@ export function ConnectionFields({
         )}
         {directTls && (
           <div className="space-y-2 sm:col-span-2">
-            <p className="text-sm text-muted-foreground">{hysteria2 ? "Hysteria2 使用 QUIC（UDP）和 TLS" : "AnyTLS 使用密码和 TLS"}；目前仅支持 sing-box 直接连接，不支持链式中转。</p>
-            {directTlsUnavailableReason && <p className="text-sm text-destructive">{directTlsUnavailableReason}</p>}
+            <p className="text-sm text-muted-foreground">{hysteria2 ? "Hysteria2 使用 QUIC（UDP）和 TLS；目前仅支持 sing-box 直接连接。" : anytlsConnector ? "AnyTLS 使用密码和 TLS；可直接连接，或经由一个无上游的 SOCKS5 连接器。" : "AnyTLS 使用密码和 TLS；目前仅支持 sing-box。"}</p>
+            {protocolUnavailableReason && <p className="text-sm text-destructive">{protocolUnavailableReason}</p>}
             {!!directTlsConflicts.length && <Notice tone="warning" title={`以下参数不适用于 ${directTlsName}`}>
               <div className="flex flex-wrap gap-2">{directTlsConflicts.map(({ path, label }) => (
                 <AppField key={path.join(".")} name={path} noStyle trigger="onClear">

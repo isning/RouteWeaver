@@ -7,7 +7,7 @@ const targets: Record<string, string[]> = {
   "routeweaver/sing-box": ["1.14.3", "1.14.4"],
 };
 
-function graphError(connectors: Connector[]) {
+export function connectorGraphError(connectors: Connector[], adapterId: string) {
   const ids = new Set<string>();
   for (const connector of connectors) {
     if (typeof connector.id !== "string" || !/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,63}$/.test(connector.id) ||
@@ -29,8 +29,13 @@ function graphError(connectors: Connector[]) {
       if (!current.via) break;
       const next: Connector | undefined = byId.get(current.via);
       if (!next) return "上游连接器不存在，请在完整 JSON 中修正引用。";
-      if ([current.connection?.protocol, next.connection?.protocol].some(protocol => protocol === "hysteria2" || protocol === "anytls"))
-        return "Hysteria2 / AnyTLS 目前只支持直接连接，不能用于连接器之间的中转。";
+      if ([current.connection?.protocol, next.connection?.protocol].includes("hysteria2"))
+        return "Hysteria2 目前只支持直接连接，不能用于连接器之间的中转。";
+      if (next.connection?.protocol === "anytls")
+        return "AnyTLS 不能作为其他连接器的上游。";
+      if (current.connection?.protocol === "anytls" &&
+        (adapterId !== "routeweaver/sing-box" || next.connection?.protocol !== "socks" || next.via))
+        return "AnyTLS 仅支持经由无上游的 SOCKS5 连接器。";
       current = next;
     }
     for (const id of visited) completed.add(id);
@@ -48,15 +53,15 @@ export function connectorEditReason(program: ServerProgram, schemaVersion: strin
     return "此核心版本不支持连接器表单，请使用完整 JSON。";
   if (program.egress?.length) return "顺序出口请使用完整 JSON 编辑，不能与命名连接器混用。";
   const connectors = program.connectors || [];
-  const graphReason = graphError(connectors);
+  const graphReason = connectorGraphError(connectors, program.instance.adapterId);
   if (graphReason) return graphReason;
   const connector = connectors.find((item) => item.id === id);
   if (!connector) return "连接器不存在，请重新选择。";
   if (!connector.connection || !["socks", "shadowsocks", "vless", "trojan", "vmess", "hysteria2", "anytls"].includes(connector.connection.protocol))
     return "此协议尚不支持连接器表单，请使用完整 JSON。";
   if (["hysteria2", "anytls"].includes(connector.connection.protocol) &&
-    (program.instance.adapterId !== "routeweaver/sing-box" || connector.via || connectors.some(item => item.via === id)))
-    return "Hysteria2 / AnyTLS 目前仅支持 sing-box 直接连接，不能用于连接器之间的中转。";
+    program.instance.adapterId !== "routeweaver/sing-box")
+    return "Hysteria2 / AnyTLS 目前仅支持 sing-box。";
   return undefined;
 }
 
@@ -89,7 +94,7 @@ export function updateServerConnector(
     }
     return next;
   });
-  const error = graphError(connectors);
+  const error = connectorGraphError(connectors, program.instance.adapterId);
   return error ? { error } : { program: { ...program, connectors } };
 }
 
@@ -112,7 +117,7 @@ export function updateServerConnectorVia(program: ServerProgram, schemaVersion: 
     else delete next.via;
     return next;
   });
-  const error = graphError(connectors);
+  const error = connectorGraphError(connectors, program.instance.adapterId);
   return error ? { error } : { program: { ...program, connectors } };
 }
 
@@ -129,10 +134,9 @@ export function connectorViaChoices(program: ServerProgram, id: string) {
       if (!blocked.has(dependent)) { blocked.add(dependent); queue.push(dependent); }
     }
   }
-  return (program.connectors || []).map((connector) => ({
-    value: connector.id,
-    label: connector.id,
-    disabled: blocked.has(connector.id),
-    description: blocked.has(connector.id) ? "会形成连接器循环" : undefined,
-  }));
+  return (program.connectors || []).map((connector) => {
+    const reason = blocked.has(connector.id) ? "会形成连接器循环" : connectorGraphError(
+      (program.connectors || []).map(item => item.id === id ? { ...item, via: connector.id } : item), program.instance.adapterId);
+    return { value: connector.id, label: connector.id, disabled: !!reason, description: reason };
+  });
 }

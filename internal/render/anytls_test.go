@@ -60,7 +60,7 @@ func TestAnyTLSDirectRoundtripAndBoundaries(t *testing.T) {
 	program.Egress = nil
 	program.DefaultAction = domain.ActionRef{Kind: "forward", Ref: "a"}
 	program.Connectors = []domain.ServerConnector{{ID: "a", Connection: anyTLSConnection()}, {ID: "b", Connection: domain.Connection{Protocol: "socks", Host: "proxy.example", Port: 1080}}}
-	for _, edge := range []int{0, 1} {
+	for _, edge := range []int{1} {
 		program.Connectors[0].Via = ""
 		program.Connectors[1].Via = ""
 		program.Connectors[edge].Via = program.Connectors[1-edge].ID
@@ -83,5 +83,53 @@ func TestAnyTLSRejectsUnmodeledSecurity(t *testing.T) {
 		if _, err := importer.Parse(importer.Request{OwnerID: "u", SourceID: "s", SnapshotID: "snap", Format: "sing-box", Data: []byte(body)}); err == nil {
 			t.Fatal("unmodeled native parameter discarded")
 		}
+	}
+}
+
+func TestAnyTLSViaDirectSOCKSCompilesWithoutChangingExit(t *testing.T) {
+	ir := serverIR(render.ServerAdapterSingBox, render.StockSingBoxVersion)
+	p := &ir.Programs[0]
+	p.Egress = nil
+	p.Connectors = []domain.ServerConnector{{ID: "exit", Connection: anyTLSConnection(), Via: "relay"}, {ID: "relay", Connection: domain.Connection{Protocol: "socks", Host: "relay.example", Port: 1080}}}
+	p.DefaultAction = domain.ActionRef{Kind: "forward", Ref: "exit"}
+	artifacts, err := render.DefaultServers().Render(ir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var config map[string]any
+	if err = json.Unmarshal([]byte(artifacts[0].Content), &config); err != nil {
+		t.Fatal(err)
+	}
+	if config["route"].(map[string]any)["final"] != "exit" {
+		t.Fatal("forwarding action changed from AnyTLS exit")
+	}
+	found := false
+	for _, raw := range config["outbounds"].([]any) {
+		o := raw.(map[string]any)
+		if o["tag"] == "exit" {
+			found = true
+			if o["type"] != "anytls" || o["detour"] != "relay" || o["server"] != "proxy.example" {
+				t.Fatal("AnyTLS exit or relay changed")
+			}
+		}
+	}
+	if !found {
+		t.Fatal("exit missing")
+	}
+	p.Connectors = append(p.Connectors, domain.ServerConnector{ID: "third", Connection: domain.Connection{Protocol: "socks", Host: "third.example", Port: 1080}})
+	p.Connectors[1].Via = "third"
+	if _, err = render.DefaultServers().Render(ir); err == nil || !strings.Contains(err.Error(), "ANYTLS_DETOUR_UNSUPPORTED") {
+		t.Fatal("extra hop accepted")
+	}
+	p.Connectors[1].Via = ""
+	p.Connectors[1].Connection = anyTLSConnection()
+	if _, err = render.DefaultServers().Render(ir); err == nil || !strings.Contains(err.Error(), "ANYTLS_DETOUR_UNSUPPORTED") {
+		t.Fatal("unsupported upstream accepted")
+	}
+	p.Connectors = nil
+	p.Egress = []domain.Connection{{Protocol: "socks", Host: "relay.example", Port: 1080}, anyTLSConnection()}
+	p.DefaultAction = domain.ActionRef{}
+	if _, err = render.DefaultServers().Render(ir); err == nil || !strings.Contains(err.Error(), "ANYTLS_DETOUR_UNSUPPORTED") {
+		t.Fatal("legacy chain accepted")
 	}
 }

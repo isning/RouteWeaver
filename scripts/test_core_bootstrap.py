@@ -188,6 +188,7 @@ class CoreBootstrapTests(unittest.TestCase):
                                "Test": "TestNativeHysteria2Loopback", "Action": "pass"})
                 events.append({"Package": "routeweaver/internal/integration",
                                "Test": "TestNativeAnyTLSLoopback", "Action": "pass"})
+                events.append({"Package": "routeweaver/internal/integration", "Test": "TestNativeAnyTLSViaSOCKSLoopback", "Action": "pass"})
                 (self.root / "scripts/go.sh").write_text(
                     "#!/bin/sh\ncat <<'EVENTS'\n" +
                     "\n".join(json.dumps(event) for event in events) + "\nEVENTS\n")

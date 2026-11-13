@@ -3,7 +3,7 @@ import { AppForm, useForm } from "@/ui-patterns/form";
 import { ActionButton } from "@/ui-patterns/actions";
 import { TaskDialog } from "@/ui-patterns/task-overlays";
 import { ConnectionFields } from "./ConnectionFields";
-import { connectorEditReason } from "./server-connector-editor";
+import { connectorEditReason, connectorGraphError } from "./server-connector-editor";
 import { prepareConnectorConnection, connectorConnectionShapeReason, type ConnectorConnectionDraft } from "./server-connector-connection";
 import { useDiscardConfirmation } from "./useDiscardConfirmation";
 import { useUnsavedChanges } from "./navigation";
@@ -40,7 +40,9 @@ export function ServerConnectorConnectionDialog({ program, schemaVersion, connec
   }, []);
   const stale = () => current.current.program !== source.current.program || current.current.schemaVersion !== source.current.schemaVersion || current.current.connectorId !== source.current.connectorId;
   const directTlsUnavailableReason = original?.via || program.connectors?.some(item => item.via === connectorId)
-    ? "此连接器参与链式中转，请先移除中转关系后再选择 Hysteria2 或 AnyTLS。" : undefined;
+    ? "此连接器参与链式中转，请先移除中转关系后再选择 Hysteria2。" : undefined;
+  const anytlsUnavailableReason = connectorGraphError((program.connectors || []).map(item => item.id === connectorId
+    ? { ...item, connection: { ...item.connection, protocol: "anytls" } } : item), program.instance.adapterId);
   const reason = connectorEditReason(program, schemaVersion, connectorId) ||
     connectorConnectionShapeReason(original?.connection);
   const close = () => {
@@ -54,6 +56,8 @@ export function ServerConnectorConnectionDialog({ program, schemaVersion, connec
   const accept = (connection: NonNullable<ReturnType<typeof prepareConnectorConnection>["connection"]>) => {
     if (!active.current || stale()) { setError("策略草稿已改变，请关闭后重新打开连接参数，避免覆盖新修改。"); return; }
     const nextProgram = { ...program, connectors: program.connectors!.map((item) => item.id === connectorId ? { ...item, connection } : item) };
+    const graphReason = connectorGraphError(nextProgram.connectors, program.instance.adapterId);
+    if (graphReason) { setError(graphReason); return; }
     if (!current.current.onApply(nextProgram)) { setError("连接器已改变，未覆盖当前草稿。请关闭后重新打开。"); return; }
     active.current = false;
     current.current.onClose();
@@ -73,13 +77,13 @@ export function ServerConnectorConnectionDialog({ program, schemaVersion, connec
         const prepared = prepareConnectorConnection(original.connection, form.getFieldsValue(true).connection);
         if (prepared.error || !prepared.connection) { setError(prepared.error || "请检查连接参数。"); return; }
         const connection = prepared.connection;
-        if (["hysteria2", "anytls"].includes(connection.protocol) && (program.instance.adapterId !== "routeweaver/sing-box" || directTlsUnavailableReason)) {
-          setError(directTlsUnavailableReason || "Hysteria2 / AnyTLS 目前仅支持 sing-box。"); return;
+        if (["hysteria2", "anytls"].includes(connection.protocol) && program.instance.adapterId !== "routeweaver/sing-box") {
+          setError("Hysteria2 / AnyTLS 目前仅支持 sing-box。"); return;
         }
         if (prepared.removedFields.length) confirm({ title: "移除不适用的连接参数？", description: `本次协议、安全或传输切换将移除：${prepared.removedFields.join("、")}。其他参数保留。`, confirmLabel: "移除并采用", cancelLabel: "返回编辑" }, () => accept(connection));
         else accept(connection);
       }}>
-      <ConnectionFields targetCore={program.instance.adapterId.replace(/^routeweaver\//, "")} targetVersion={program.instance.version} directTlsUnavailableReason={directTlsUnavailableReason} />
+      <ConnectionFields targetCore={program.instance.adapterId.replace(/^routeweaver\//, "")} targetVersion={program.instance.version} directTlsUnavailableReason={directTlsUnavailableReason} anytlsUnavailableReason={anytlsUnavailableReason} anytlsConnector />
     </AppForm>}
   </TaskDialog>;
 }

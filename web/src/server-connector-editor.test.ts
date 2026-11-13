@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { connectorEditReason, updateServerConnector, updateServerConnectorVia } from "./server-connector-editor";
+import { connectorEditReason, connectorViaChoices, updateServerConnector, updateServerConnectorVia } from "./server-connector-editor";
 import type { ServerProgram } from "./types";
 
 function fixture(): ServerProgram {
@@ -98,8 +98,24 @@ it.each(["hysteria2", "anytls"])("allows direct sing-box %s but rejects both dir
   const program = fixture();
   program.connectors![0].connection = { protocol, host: "direct.example", port: 443, password: "synthetic", tls: { enabled: true } };
   expect(connectorEditReason(program, "1.0", "exit")).toBeUndefined();
-  expect(updateServerConnectorVia(program, "1.0", "exit", "relay").error).toContain("直接连接");
-  expect(updateServerConnectorVia(program, "1.0", "relay", "exit").error).toContain("直接连接");
+  const throughSocks = updateServerConnectorVia(program, "1.0", "exit", "relay");
+  if (protocol === "anytls") expect(throughSocks.program?.connectors?.[0].via).toBe("relay");
+  else expect(throughSocks.error).toContain("直接连接");
+  expect(updateServerConnectorVia(program, "1.0", "relay", "exit").error).toBeTruthy();
   program.instance = { ...program.instance, adapterId: "routeweaver/xray", version: "26.10.31" };
   expect(connectorEditReason(program, "1.0", "exit")).toContain("仅支持 sing-box");
 });
+
+ it("limits AnyTLS upstream choices to a single direct SOCKS5 connector", () => {
+  const program = fixture();
+  program.connectors![0].connection.protocol = "anytls";
+  program.connectors!.push({ id: "other", connection: { protocol: "trojan", host: "other.example", port: 443 } });
+  const choices = connectorViaChoices(program, "exit");
+  expect(choices.find(item => item.value === "relay")?.disabled).toBe(false);
+  expect(choices.find(item => item.value === "other")?.disabled).toBe(true);
+  expect(updateServerConnectorVia(program, "1.0", "exit", "other").error).toContain("SOCKS5");
+  program.connectors![1].via = "other";
+  expect(updateServerConnectorVia(program, "1.0", "exit", "relay").error).toContain("无上游");
+  expect(connectorViaChoices(program, "exit").find(item => item.value === "relay")?.disabled).toBe(true);
+  expect(program.connectors![0].via).toBeUndefined();
+ });

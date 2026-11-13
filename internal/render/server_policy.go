@@ -16,6 +16,9 @@ func normalizeServerProgram(p domain.ServerProgram) (domain.ServerProgram, error
 	if legacy {
 		p.Connectors = make([]domain.ServerConnector, len(p.Egress))
 		for i, c := range p.Egress {
+			if c.Protocol == "anytls" && len(p.Egress) > 1 {
+				return p, fmt.Errorf("ANYTLS_DETOUR_UNSUPPORTED: use a named AnyTLS connector through one direct SOCKS5 relay")
+			}
 			id := fmt.Sprintf("egress-%d", i+1)
 			via := ""
 			if i > 0 {
@@ -166,25 +169,32 @@ func singboxRuleSets(resources []domain.RuleResource) ([]any, bool, error) {
 	return sets, remote, nil
 }
 
-// These protocols currently have only direct-connection validation. Reject both
-// sides of a detour rather than implying unverified chain support.
+// Hysteria2 remains direct-only. AnyTLS has one verified detour shape: the
+// terminal AnyTLS connector dials through a direct SOCKS5 relay. Do not infer
+// arbitrary-depth or reverse-direction support from the engine dialer API.
 func validateDirectTLSConnectors(p domain.ServerProgram) error {
 	for _, c := range p.Egress {
 		if (c.Protocol == "hysteria2" || c.Protocol == "anytls") && len(p.Egress) > 1 {
-			return fmt.Errorf("%s_DETOUR_UNSUPPORTED: protocol must connect directly", strings.ToUpper(c.Protocol))
+			return fmt.Errorf("%s_DETOUR_UNSUPPORTED: use supported named connectors", strings.ToUpper(c.Protocol))
 		}
 	}
-	byID := map[string]domain.Connection{}
+	byID := map[string]domain.ServerConnector{}
 	for _, c := range p.Connectors {
-		byID[c.ID] = c.Connection
+		byID[c.ID] = c
 	}
 	for _, c := range p.Connectors {
-		if c.Via != "" && (c.Connection.Protocol == "hysteria2" || byID[c.Via].Protocol == "hysteria2" || c.Connection.Protocol == "anytls" || byID[c.Via].Protocol == "anytls") {
-			protocol := c.Connection.Protocol
-			if protocol != "hysteria2" && protocol != "anytls" {
-				protocol = byID[c.Via].Protocol
-			}
-			return fmt.Errorf("%s_DETOUR_UNSUPPORTED: protocol must connect directly", strings.ToUpper(protocol))
+		if c.Via == "" {
+			continue
+		}
+		upstream := byID[c.Via]
+		if c.Connection.Protocol == "hysteria2" || upstream.Connection.Protocol == "hysteria2" {
+			return fmt.Errorf("HYSTERIA2_DETOUR_UNSUPPORTED: Hysteria2 must connect directly")
+		}
+		if upstream.Connection.Protocol == "anytls" {
+			return fmt.Errorf("ANYTLS_DETOUR_UNSUPPORTED: AnyTLS cannot be an upstream relay")
+		}
+		if c.Connection.Protocol == "anytls" && (upstream.Connection.Protocol != "socks" || upstream.Via != "") {
+			return fmt.Errorf("ANYTLS_DETOUR_UNSUPPORTED: AnyTLS requires one direct SOCKS5 relay")
 		}
 	}
 	return nil
