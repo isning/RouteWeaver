@@ -380,7 +380,7 @@ export function ObservationConfigForm({
                         },
                         {
                           value: "nic_estimate",
-                          label: "核对后的网卡 IN + OUT 估算",
+                          label: "按网卡流量估算（需先核对用量）",
                         },
                       ]}
                     />
@@ -508,7 +508,7 @@ export function ProviderMeasurementForm({
       const usedBytes = measuredBytes(values.amount || "", values.unit);
       const cycleId = initial.config.provider!.cycleId;
       if (baseline && (!sampleIsCurrent.current || !snapshot.latest || !confirmed))
-        throw new Error("请确认用量已与当前采样时点核对。");
+        throw new Error("请确认用量已核对到当前服务器数据的时间。");
       const body = baseline
         ? {
             cycleId,
@@ -577,12 +577,12 @@ export function ProviderMeasurementForm({
             {
               <>
                 {!sampleIsCurrent.current ? <p>
-                  最新采样尚未确认。读取成功后，请重新核对输入用量。
+                  尚未读取最新的服务器数据。读取成功后，请重新核对输入用量。
                 </p> : !snapshot.latest ? <p>
-                  尚未收到可用于核对的采样。收到新的服务器资源采样后，再读取并核对。
+                  尚未收到可用于核对的服务器数据。请检查服务器连接和监控设置，然后重新读取。
                 </p> : <p>
                   将输入的本周期已用与 {dateLabel(snapshot.latest?.observedAt)}{" "}
-                  的网卡计数对齐。之后只累加连续采样，不推测接入前或缺失期间的流量。
+                  的网卡流量记录对齐。之后只累加连续上报的流量，不推测接入前或数据缺失期间的流量。
                 </p>}
                 <ActionButton
                   pending={refresh.isPending}
@@ -596,7 +596,7 @@ export function ProviderMeasurementForm({
                   }}
                   variant="outline"
                 >
-                  读取最新采样用于核对
+                  读取最新服务器数据
                 </ActionButton>
               </>
             }
@@ -627,7 +627,7 @@ export function ProviderMeasurementForm({
           >
             <Textarea
               rows={3}
-              placeholder="说明用量来源及如何与本次采样时点对齐"
+              placeholder="说明用量来源，以及如何核对到这份服务器数据的时间"
               maxLength={1000}
             />
           </AppField>
@@ -661,7 +661,7 @@ export function ProviderMeasurementForm({
                 canReviewSample && !save.isPending && setConfirmed(checked === true)
               }
             />
-            已将输入用量与显示的采样时点核对，了解此结果仍是网卡估算。
+            已将输入用量与显示的数据更新时间核对，了解此结果仍是网卡估算。
           </label>
         )}
         <div className="form-footer flex flex-wrap items-center justify-end gap-2 border-t pt-4 mt-6">

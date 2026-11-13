@@ -14,7 +14,7 @@ import type { AgentState, HostRecord } from "./types";
 
 const bytes = (value: number | null | undefined) => value == null ? "未确定"
   : Number.isSafeInteger(value) && value >= 0 ? bytesLabel(value) : "超出精确显示范围";
-const rate = (value: number | null | undefined) => value == null ? "等待连续采样"
+const rate = (value: number | null | undefined) => value == null ? "暂时无法计算"
   : Number.isFinite(value) && value >= 0 ? `${bytesLabel(Math.round(value))}/s` : "未确定";
 
 /** Keep one contextual next action beside the explanation on wide screens,
@@ -92,7 +92,7 @@ export function ServerResourceOverview({ host, onOpenResources }: { host: HostRe
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0 space-y-1">
             <CardTitle>资源与流量</CardTitle>
-            {sample && <p className="text-xs text-muted-foreground">{stale ? "较早的采样" : "最近采样"} {dateLabel(sample.observedAt)}</p>}
+            {sample && <p className="text-xs text-muted-foreground">{stale ? "较早的数据" : "数据更新时间"} {dateLabel(sample.observedAt)}</p>}
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <ActionButton variant="ghost" size="sm" leadingIcon={<RotateCw aria-hidden="true" />} aria-label="刷新资源概览" pending={query.isFetching} keepFocusableWhilePending onClick={() => query.refetch()} />
@@ -106,16 +106,18 @@ export function ServerResourceOverview({ host, onOpenResources }: { host: HostRe
         {query.isPaused && <p role="status" className="text-sm text-muted-foreground">等待网络连接{data ? "，以下为上次读取的数据。" : "。"}</p>}
         {query.isPending && !query.isPaused && <p role="status" className="text-sm text-muted-foreground">正在读取资源数据…</p>}
         {!query.isPending && !query.isError && data && !sample && <div className="space-y-1 py-2">
-          <p className="text-sm font-medium">{data?.config.observerInstanceId ? "等待首个资源样本" : "尚未设置资源采集"}</p>
-          <p className="text-sm text-muted-foreground">{data?.config.observerInstanceId ? "采集实例上报后，将显示 CPU、内存和网卡流量。" : "选择这台服务器上的一个核心采集资源，避免重复统计。"}</p>
+          <p className="text-sm font-medium">{data?.config.observerInstanceId ? "尚未收到服务器资源数据" : "尚未设置服务器资源监控"}</p>
+          <p className="text-sm text-muted-foreground">{data?.config.observerInstanceId ? "收到数据后，这里会显示 CPU、内存和网卡流量。若长时间没有数据，请检查监控设置和服务器连接。" : "选择一个核心负责上报这台服务器的资源数据，避免重复统计。"}</p>
         </div>}
         {(sample || plan) && <div className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {sample && <>
-            <Metric label="CPU 使用率" value={sample.cpuPercent == null ? "等待连续采样" : Number.isFinite(sample.cpuPercent) && sample.cpuPercent >= 0 && sample.cpuPercent <= 100 ? `${sample.cpuPercent.toFixed(1)}%` : "未确定"}>
+            <Metric label="CPU 使用率" value={sample.cpuPercent == null ? "暂时无法计算" : Number.isFinite(sample.cpuPercent) && sample.cpuPercent >= 0 && sample.cpuPercent <= 100 ? `${sample.cpuPercent.toFixed(1)}%` : "未确定"}>
+              {sample.cpuPercent == null && <p>需要连续两次有效数据才能计算。</p>}
               <p>1 分钟负载 {Number.isFinite(sample.metrics.load1) ? sample.metrics.load1.toFixed(2) : "未确定"}</p>
             </Metric>
             <Metric label="可用内存" value={bytes(sample.metrics.memoryAvailableBytes)}><p>总内存 {bytes(sample.metrics.memoryTotalBytes)}</p></Metric>
             <Metric label="计费网卡流量" value={rate(sample.receiveBytesPerSecond)}>
+              {(sample.receiveBytesPerSecond == null || sample.transmitBytesPerSecond == null) && <p>需要连续两次有效数据才能计算网速。</p>}
               <p>接收 / 秒</p><p className="font-medium text-foreground">发送 {rate(sample.transmitBytesPerSecond)}</p>
               <p>{data?.config.billedInterfaces?.length ? data.config.billedInterfaces.join("、") : "尚未选择计费网卡"}</p>
             </Metric>
@@ -130,7 +132,7 @@ export function ServerResourceOverview({ host, onOpenResources }: { host: HostRe
             </>}
           </Metric>
         </div>}
-        {stale && <p className="text-xs text-muted-foreground">该采样不在最近 15 分钟内，以上数值不代表当前资源使用情况。</p>}
+        {stale && <p className="text-xs text-muted-foreground">无法确认这些数据反映最近 15 分钟的情况，请刷新后再查看。</p>}
         {providerNeedsReview && <div className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-muted p-3 text-sm">
           <p className="min-w-0 break-words">{reasonLabel(provider!.statusReason)}</p>
           <ActionButton variant="ghost" size="sm" onClick={onOpenResources}>核对供应商用量</ActionButton>

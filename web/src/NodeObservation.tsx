@@ -34,7 +34,7 @@ const exactBytes = (value: number | null | undefined) =>
       ? bytesLabel(value)
       : "超出精确显示范围";
 const rate = (value: number | null | undefined) =>
-  value == null ? "等待连续采样" : `${bytesLabel(Math.round(value))}/s`;
+  value == null ? "暂时无法计算" : `${bytesLabel(Math.round(value))}/s`;
 export function NodeObservation({
   host,
   instances,
@@ -100,21 +100,22 @@ export function NodeObservation({
               title="尚未收到服务器资源数据"
               description={
                 data?.config.observerInstanceId
-                  ? "已选择采集实例，等待它上报主机资源。"
-                  : "选择这台服务器上的一个采集实例，避免多个核心重复统计主机。"
+                  ? "已选好负责上报数据的核心。若长时间没有数据，请检查监控设置和服务器连接。"
+                  : "选择一个核心负责上报这台服务器的资源数据，避免重复统计。"
               }
             />
           ) : (
             <>
               <div className="observation-meta flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                <span>{currentSample ? "最近采样" : "较早的采样"} {dateLabel(sample.observedAt)}</span>
+                <span>{currentSample ? "数据更新时间" : "较早的数据"} {dateLabel(sample.observedAt)}</span>
               </div>
               <div className="observation-grid grid min-w-0 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <Metric
                   label="CPU 使用率"
+                  detail={sample.cpuPercent == null ? "需要连续两次有效数据才能计算。" : undefined}
                   value={
                     sample.cpuPercent == null
-                      ? "等待下一次采样"
+                      ? "暂时无法计算"
                       : `${sample.cpuPercent.toFixed(1)}%`
                   }
                 />
@@ -143,7 +144,7 @@ export function NodeObservation({
                 />
               </div>
               {!currentSample && <p className="text-sm text-muted-foreground">
-                该采样不在最近 15 分钟内，以上数值不代表当前资源使用情况。
+                无法确认这些数据反映最近 15 分钟的情况，请刷新后再查看。
               </p>}
               <Accordion type="multiple" defaultValue={[]} className="w-full">
                 {[

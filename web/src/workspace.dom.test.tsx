@@ -814,7 +814,7 @@ it("does not display unknown provider usage or initial CPU as zero", async () =>
       instances={[]}
     />,
   );
-  expect(await screen.findByText("等待下一次采样")).toBeTruthy();
+  expect(await screen.findByText("暂时无法计算")).toBeTruthy();
   expect(screen.getAllByText("未确定")).toHaveLength(2);
   expect(screen.queryByLabelText("供应商周期额度使用比例")).toBeNull();
   expect(screen.queryByText("0.0%")).toBeNull();
@@ -868,7 +868,7 @@ it("keeps a rejected provider reconciliation input and requires an explicit fres
     (screen.getByLabelText("本周期实际已用") as HTMLInputElement).value,
   ).toBe("5");
   await user.click(
-    screen.getByRole("button", { name: "读取最新采样用于核对" }),
+    screen.getByRole("button", { name: "读取最新服务器数据" }),
   );
   await waitFor(() =>
     expect(screen.getByRole("checkbox").getAttribute("aria-checked")).toBe(

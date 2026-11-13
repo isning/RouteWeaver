@@ -22,7 +22,7 @@ it("shows actual zero measurements and distinguishes fresh resources from older 
   mount(<ServerResourceOverview host={host} onOpenResources={vi.fn()} />);
   expect(await screen.findByText("0.0%", { exact: true })).toBeTruthy();
   expect(screen.getByText("0 B/s", { exact: true })).toBeTruthy();
-  expect(within(screen.getByRole("group", { name: "计费网卡流量" })).getByText("发送 等待连续采样", { exact: true })).toBeTruthy();
+  expect(within(screen.getByRole("group", { name: "计费网卡流量" })).getByText("发送 暂时无法计算", { exact: true })).toBeTruthy();
   const quota = screen.getByRole("group", { name: "供应商剩余额度" });
   expect(within(quota).getByText("较早的用量记录")).toBeTruthy();
   expect(within(quota).getByText("手工录入的供应商账单")).toBeTruthy();
@@ -41,7 +41,7 @@ it("makes a missing observation actionable without inventing metrics", async () 
   const data = view(); data.latest = null; data.config.observerInstanceId = ""; data.config.provider = null;
   const open = vi.fn(); vi.stubGlobal("fetch", vi.fn(async () => respond(data)));
   mount(<ServerResourceOverview host={host} onOpenResources={open} />);
-  expect(await screen.findByText("尚未设置资源采集")).toBeTruthy();
+  expect(await screen.findByText("尚未设置服务器资源监控")).toBeTruthy();
   expect(screen.queryByText("0.0%")).toBeNull();
   await userEvent.click(screen.getByRole("button", { name: "设置采集与额度" }));
   expect(open).toHaveBeenCalledOnce();
@@ -76,12 +76,12 @@ it("keeps older samples visibly historical without claiming a live reading", asy
       : <ServerResourceOverview host={host} onOpenResources={() => setDetails(true)} />;
   }
   mount(<ResourceTask />);
-  expect(await screen.findByText(/较早的采样/)).toBeTruthy();
-  expect(screen.getByText("该采样不在最近 15 分钟内，以上数值不代表当前资源使用情况。")).toBeTruthy();
+  expect(await screen.findByText(/较早的数据/)).toBeTruthy();
+  expect(screen.getByText("无法确认这些数据反映最近 15 分钟的情况，请刷新后再查看。")).toBeTruthy();
   await userEvent.click(screen.getByRole("button", { name: "查看资源与额度" }));
   await screen.findByText("资源与供应商额度");
-  expect(screen.getByText(/较早的采样/)).toBeTruthy();
-  expect(screen.getByText("该采样不在最近 15 分钟内，以上数值不代表当前资源使用情况。")).toBeTruthy();
+  expect(screen.getByText(/较早的数据/)).toBeTruthy();
+  expect(screen.getByText("无法确认这些数据反映最近 15 分钟的情况，请刷新后再查看。")).toBeTruthy();
   expect(screen.getByText("0.0%", { exact: true })).toBeTruthy();
   expect(screen.getByRole("button", { name: "刷新服务器资源数据" })).toBeTruthy();
 });
@@ -90,6 +90,6 @@ it("does not report unconfigured collection when an observation belongs to anoth
   vi.stubGlobal("fetch", vi.fn(async () => respond(data)));
   mount(<ServerResourceOverview host={host} onOpenResources={vi.fn()} />);
   expect(await screen.findByText("资源数据尚未确定，请刷新重试。")).toBeTruthy();
-  expect(screen.queryByText("尚未设置资源采集")).toBeNull();
+  expect(screen.queryByText("尚未设置服务器资源监控")).toBeNull();
   expect(screen.queryByText("0.0%")).toBeNull();
 });

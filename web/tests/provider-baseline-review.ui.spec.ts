@@ -62,7 +62,7 @@ for (const width of [1440, 390]) {
     const reason = dialog.getByLabel("核对依据与说明", { exact: true });
     const confirmation = dialog.getByRole("checkbox");
     const save = dialog.getByRole("button", { name: "保存核对结果", exact: true });
-    const refresh = dialog.getByRole("button", { name: "读取最新采样用于核对", exact: true });
+    const refresh = dialog.getByRole("button", { name: "读取最新服务器数据", exact: true });
     await amount.fill("5");
     await reason.fill("已核对显示时点的供应商控制台用量");
     await confirmation.focus();
@@ -74,7 +74,7 @@ for (const width of [1440, 390]) {
     await expect(confirmation).not.toBeChecked();
     await expect(confirmation).toBeDisabled();
     await expect(save).toBeDisabled();
-    await expect(dialog.getByText("最新采样尚未确认。读取成功后，请重新核对输入用量。", { exact: true })).toBeVisible();
+    await expect(dialog.getByText("尚未读取最新的服务器数据。读取成功后，请重新核对输入用量。", { exact: true })).toBeVisible();
     await pending[0].fulfill({ status: 503, json: { error: "最新采样暂时读取失败，请重试" } });
     const error = dialog.getByText("最新采样暂时读取失败，请重试", { exact: true });
     await expect(error).toBeVisible();

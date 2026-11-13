@@ -53,11 +53,11 @@ it("retires the acknowledged sample as soon as a re-read starts and keeps it ret
   vi.stubGlobal("fetch", fetcher);
   mount();
   const user = await acknowledge();
-  await user.click(screen.getByRole("button", { name: "读取最新采样用于核对" }));
+  await user.click(screen.getByRole("button", { name: "读取最新服务器数据" }));
   await waitFor(() => expect(fetcher).toHaveBeenCalledOnce());
   const confirmation = screen.getByRole("checkbox");
   expect(confirmation.getAttribute("aria-checked")).toBe("false");
-  expect(screen.getByText("最新采样尚未确认。读取成功后，请重新核对输入用量。")).toBeTruthy();
+  expect(screen.getByText("尚未读取最新的服务器数据。读取成功后，请重新核对输入用量。")).toBeTruthy();
   expect(confirmation).toHaveProperty("disabled", true);
   await user.click(confirmation);
   fireEvent.submit(screen.getByLabelText("本周期实际已用").closest("form")!);
@@ -88,7 +88,7 @@ it.each(["failed read", "changed cycle", "missing sample"])("requires a successf
   }));
   const close = mount();
   const user = await acknowledge();
-  const refresh = screen.getByRole("button", { name: "读取最新采样用于核对" });
+  const refresh = screen.getByRole("button", { name: "读取最新服务器数据" });
   const save = screen.getByRole("button", { name: "保存核对结果" });
   await user.click(refresh);
   await waitFor(() => expect(refresh.getAttribute("aria-busy")).not.toBe("true"));
@@ -124,7 +124,7 @@ it("does not carry an old save error into a different failed sample read", async
   const user = await acknowledge();
   await user.click(screen.getByRole("button", { name: "保存核对结果" }));
   await screen.findByText("采样已变化，请重新核对");
-  await user.click(screen.getByRole("button", { name: "读取最新采样用于核对" }));
+  await user.click(screen.getByRole("button", { name: "读取最新服务器数据" }));
   expect(await screen.findByText("最新采样暂时读取失败")).toBeTruthy();
   expect(screen.queryByText("采样已变化，请重新核对")).toBeNull();
   expect(reads).toBe(1);
@@ -143,7 +143,7 @@ it("keeps manual supplier statements independent of sample review", async () => 
   fireEvent.change(screen.getByLabelText("供应商用量的统计时间（浏览器当地时间）"), { target: { value: "2026-11-10T12:00" } });
   fireEvent.change(screen.getByLabelText("账单或控制台记录引用"), { target: { value: "supplier receipt" } });
   expect(screen.queryByRole("checkbox")).toBeNull();
-  expect(screen.queryByRole("button", { name: "读取最新采样用于核对" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "读取最新服务器数据" })).toBeNull();
   await userEvent.click(screen.getByRole("button", { name: "保存核对结果" }));
   await waitFor(() => expect(close).toHaveBeenCalledOnce());
   expect(bodies).toEqual([{ cycleId: "cycle", usedBytes: 5000000000, observedAt: new Date("2026-11-10T12:00").toISOString(), reference: "supplier receipt" }]);
@@ -164,7 +164,7 @@ it("does not let a departed read change a reopened baseline decision", async () 
   }
   render(<QueryClientProvider client={client}><UIProviders><Owner /></UIProviders></QueryClientProvider>);
   const user = await acknowledge();
-  await user.click(screen.getByRole("button", { name: "读取最新采样用于核对" }));
+  await user.click(screen.getByRole("button", { name: "读取最新服务器数据" }));
   await user.click(screen.getByRole("button", { name: "取消" }));
   await user.click(await screen.findByRole("button", { name: "放弃修改" }));
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
