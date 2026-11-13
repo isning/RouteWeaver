@@ -87,6 +87,7 @@ browser_gate() {
 }
 browser_native_gate() {
   stage 'Same-instance browser/native acceptance' scripts/browser-native.sh
+  stage 'Production assets for OIDC login UI' npm --prefix web run build
   stage 'Cross-site OIDC browser cookies and MFA' scripts/go.sh test -tags oidc_browser_acceptance ./internal/httpapi -run '^TestOIDCBrowserCrossSite$' -count=1 -timeout=3m
 }
 native_gate() { stage 'Pinned native parser integration' scripts/native-cores.sh parsers; }
