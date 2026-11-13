@@ -48,6 +48,7 @@ func run() error {
 	recoverAccount := flag.String("recover-account", "", "offline recovery of an existing administrator username; temporary password from standard input")
 	recoverReason := flag.String("recover-reason", "", "required audit reason for offline account recovery")
 	recoverMFA := flag.Bool("recover-disable-mfa", false, "explicitly clear lost MFA during offline account recovery")
+	oidcConfigPath := flag.String("oidc-config", "", "private JSON OIDC provider and explicit subject bindings; requires --public-origin")
 	publicOriginFlag := flag.String("public-origin", "", "explicit external HTTPS origin behind a Host-preserving reverse proxy")
 	backupArchiveMiB := flag.Int64("backup-max-archive-mib", 1024, "maximum encrypted backup upload/download MiB (1–1024)")
 	backupRecordMiB := flag.Int("backup-max-record-mib", 32, "maximum logical backup record MiB (1–128)")
@@ -174,7 +175,14 @@ func run() error {
 	if strings.TrimSpace(*trustedProxies) != "" {
 		proxyCIDRs = strings.Split(*trustedProxies, ",")
 	}
-	app := httpapi.NewWithOptions(s, render.Default(), httpapi.Options{TrustedProxyCIDRs: proxyCIDRs, PublicOrigin: publicOrigin, AdminToken: adminToken, UIDir: *uiDir, SecureCookies: tlsEnabled, BackupRestoreDir: restoreDir, BackupRestoreKey: key, BackupLimits: backupLimits})
+	if *demo && *oidcConfigPath != "" {
+		return fmt.Errorf("OIDC is unavailable in demo mode")
+	}
+	oidcProvider, err := configuredOIDC(*oidcConfigPath, publicOrigin)
+	if err != nil {
+		return err
+	}
+	app := httpapi.NewWithOptions(s, render.Default(), httpapi.Options{OIDC: oidcProvider, TrustedProxyCIDRs: proxyCIDRs, PublicOrigin: publicOrigin, AdminToken: adminToken, UIDir: *uiDir, SecureCookies: tlsEnabled, BackupRestoreDir: restoreDir, BackupRestoreKey: key, BackupLimits: backupLimits})
 	srv := &http.Server{Addr: *listen, Handler: app, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 30 * time.Second, WriteTimeout: 30 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 1 << 20}
 	listener, e := listenControlPlane(context.Background(), *listen)
 	if e != nil {

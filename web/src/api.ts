@@ -20,7 +20,7 @@ export function installSessionTransport(value: SessionTransport) {
   };
 }
 const isSessionEntry = (path: string) =>
-  ["/auth/me", "/auth/login", "/auth/accept-invite"].includes(path);
+  ["/auth/me", "/auth/login", "/auth/accept-invite", "/auth/oidc", "/auth/oidc/start", "/auth/oidc/complete"].includes(path);
 export function setToken(value: string) {
   tokenRevision++;
   adminToken = value;

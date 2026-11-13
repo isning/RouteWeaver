@@ -10,6 +10,8 @@ The engineering guards are executable and include rejecting fixtures. Native tar
 
 The owner-created private repository is [isning/RouteWeaver](https://github.com/isning/RouteWeaver). Source import and actual GitHub Actions results must be verified for the exact remote commit; local test results or workflow files are not remote CI evidence. No live VPS changes, persistent external credentials or real notifications are authorized by these development commands.
 
+Optional [OIDC sign-in](docs/operations/OIDC.md) supports explicitly mapped existing accounts while retaining local MFA and password recovery. It is disabled until an operator supplies a private provider configuration.
+
 ## Requirements and run
 
 Go as declared in go.mod, Node as pinned in `scripts/node-version`/npm, Python 3.12+, Bash 4+ and a C compiler for race tests. Pinned native binaries currently target Linux amd64. Dependencies use go.sum/package-lock.json; native archive and executable hashes are in scripts/core-lock.json.

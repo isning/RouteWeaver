@@ -78,7 +78,7 @@ import {
 } from "react";
 import { lazyPage, PageBoundary } from "./PageBoundary";
 import { SessionBoundary, useSessionAccess } from "./SessionBoundary";
-import { APIError, loginWithToken, post, setToken } from "./api";
+import { APIError, loginWithToken, post, request, setToken } from "./api";
 import type { Session } from "./types";
 import type { SourceAcceptanceReceipt } from "./SourceUpdateContinuation";
 import { ErrorNotice } from "./components";
@@ -1077,9 +1077,15 @@ function LoginForm({
   changeMode: (mode: LoginMode) => void;
 }) {
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<Error | null>(initialError);
+  const [oidcStage, setOIDCStage] = useState(() => {
+    const status = new URLSearchParams(location.search).get("oidc");
+    return mode === "login" && (status === "mfa" || status === "complete") ? status : null;
+  });
+  const [provider, setProvider] = useState<{ label: string } | null>(null);
+  const [error, setError] = useState<Error | null>(() => new URLSearchParams(location.search).get("oidc") === "error"
+    ? new Error("单点登录未完成。请重试，或使用账号密码登录。") : initialError);
   const [form] = useForm();
-  const { lifecycle } = useSessionAccess();
+  const { lifecycle, snapshot } = useSessionAccess();
   const [inviteUncertain, setInviteUncertain] = useState(false);
   const mounted = useRef(true);
   const submitting = useRef(false);
@@ -1089,6 +1095,51 @@ function LoginForm({
       mounted.current = false;
     };
   }, []);
+  useLayoutEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.has("oidc")) {
+      params.delete("oidc");
+      const query = params.toString();
+      history.replaceState(history.state, "", `${location.pathname}${query ? `?${query}` : ""}${location.hash}`);
+    }
+  }, []);
+  useEffect(() => {
+    if (mode !== "login") return;
+    const controller = new AbortController();
+    void request<{ enabled: boolean; label: string }>("/auth/oidc", { signal: controller.signal }).then(value => {
+      if (!controller.signal.aborted && value?.enabled === true && typeof value.label === "string" && value.label.trim())
+        setProvider({ label: value.label });
+    }).catch(() => { /* Password login remains available if provider discovery fails. */ });
+    return () => controller.abort();
+  }, [mode]);
+  const oidcAction = async (action: "start" | "complete", totp?: string) => {
+    if (!mounted.current || submitting.current || lifecycle.getSnapshot().phase !== "recovery") return;
+    if (!navigator.onLine) { setError(new Error("网络已断开，请恢复连接后再登录。")); return; }
+    submitting.current = true; setBusy(true); setError(null); setToken("");
+    try {
+      if (action === "start") {
+        const result = await post<{ authorizationUrl: string }>("/auth/oidc/start", {});
+        if (!mounted.current) return;
+        const url = new URL(result.authorizationUrl);
+        if (url.protocol !== "https:" || url.username || url.password) throw new Error("invalid authorization URL");
+        location.assign(url.href);
+      } else {
+        const result = await post<Session>("/auth/oidc/complete", totp ? { totp } : {});
+        // Cookie identity is always independently checked by SessionBoundary.
+        onSuccess(result);
+      }
+    } catch {
+      if (mounted.current) {
+        if (action === "complete") setOIDCStage(null);
+        setError(new Error(action === "complete"
+          ? "单点登录未完成或验证已过期，请重新使用单点登录，或改用账号密码。"
+          : "暂时无法开始单点登录，请重试，或使用账号密码登录。"));
+      }
+      if (action === "complete") { void lifecycle.check(); lifecycle.changed(); }
+    } finally {
+      if (mounted.current) { submitting.current = false; setBusy(false); }
+    }
+  };
   const submit = async (values: Record<string, string>) => {
     // Validation can settle after mode exit or while session checks hide this form.
     // Lock before dispatch, not after React commits a disabled button.
@@ -1187,7 +1238,18 @@ function LoginForm({
             </Notice>
           )}
           <ErrorNotice error={loginDisplayError(error, mode)} />
-          <AppForm
+          {mode === "login" && oidcStage ? <div className="space-y-4">
+            <Notice title={oidcStage === "mfa" ? "输入二次验证码" : "完成单点登录"}>
+              {oidcStage === "mfa" ? "身份验证已通过，请输入此账号的二次验证码。" : "身份验证已通过，请确认进入工作空间。"}
+            </Notice>
+            <AppForm onFinish={(values) => oidcAction("complete", oidcStage === "mfa" ? String(values.totp || "") : undefined)}>
+              {oidcStage === "mfa" && <AppField name="totp" label="二次验证码" rules={[{ required: true, message: "请输入二次验证码" }, { pattern: /^[0-9]{6}$/, message: "请输入 6 位数字验证码" }]}>
+                <Input autoComplete="one-time-code" inputMode="numeric" maxLength={6} />
+              </AppField>}
+              <ActionButton type="submit" pending={busy} className="w-full">{oidcStage === "mfa" ? "验证并登录" : "完成单点登录"}</ActionButton>
+            </AppForm>
+            <ActionButton variant="outline" disabled={busy} onClick={() => { setOIDCStage(null); setError(null); }}>使用账号密码登录</ActionButton>
+          </div> : <AppForm
             form={form}
             onFinish={submit}
             initialValues={{
@@ -1275,12 +1337,18 @@ function LoginForm({
             >
               {mode === "invite" ? "创建账号并继续" : "进入工作空间"}
             </ActionButton>
-          </AppForm>
+          </AppForm>}
+          {mode === "login" && !oidcStage && provider && snapshot.phase === "recovery" && snapshot.session && hasUnsavedChanges() &&
+            <p className="text-sm text-muted-foreground">单点登录会离开此页并丢失未保存内容。请使用账号密码登录以保留草稿。</p>}
+          {mode === "login" && !oidcStage && provider && <ActionButton variant="outline" className="w-full" disabled={busy} onClick={() => oidcAction("start")}>
+            使用 {provider.label} 登录
+          </ActionButton>}
           <div className="flex flex-wrap justify-between gap-2">
             {mode === "login" ? (
               <>
                 <ActionButton
                   onClick={() => {
+                    if (submitting.current) return;
                     changeMode("invite");
                     setError(null);
                   }}
@@ -1290,6 +1358,7 @@ function LoginForm({
                 </ActionButton>
                 <ActionButton
                   onClick={() => {
+                    if (submitting.current) return;
                     changeMode("admin");
                     setError(null);
                   }}
@@ -1301,6 +1370,7 @@ function LoginForm({
             ) : (
               <ActionButton
                 onClick={() => {
+                  if (submitting.current) return;
                   changeMode("login");
                   setError(null);
                 }}

@@ -37,6 +37,7 @@ type MessageOutput struct {
 	}
 }
 type Options struct {
+	OIDC              *OIDCProvider
 	TrustedProxyCIDRs []string
 	PublicOrigin      string
 	BackupLimits      backup.Limits
@@ -90,6 +91,9 @@ func newWithOptions(s *store.Store, registry *render.Registry, opts Options, ver
 	if err != nil {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { fail(w, 500, "invalid trusted proxy configuration") })
 	}
+	if opts.OIDC != nil && opts.OIDC.origin != origin {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { fail(w, 500, "OIDC public origin mismatch") })
+	}
 	opts.PublicOrigin = origin
 	opts.SecureCookies = opts.SecureCookies || origin != ""
 	if verification == nil {
@@ -113,6 +117,10 @@ func newWithOptions(s *store.Store, registry *render.Registry, opts Options, ver
 	root.Get("/feed/{token}/bundle", h.feedBundle)
 	root.Route("/api", func(r chi.Router) {
 		h.registerAgent(r)
+		r.Get("/auth/oidc", h.oidcMetadata)
+		r.Post("/auth/oidc/start", h.oidcStart)
+		r.Get("/auth/oidc/callback", h.oidcCallback)
+		r.Post("/auth/oidc/complete", h.oidcComplete)
 		r.Post("/auth/login", h.login)
 		r.Post("/auth/accept-invite", h.acceptInvite)
 		r.Group(func(r chi.Router) {
