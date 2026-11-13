@@ -22,16 +22,17 @@ import (
 	"routeweaver/internal/render"
 )
 
-// Three independently owned processes exercise named connectors, not flattened
+// Independently owned processes exercise named connectors, not flattened
 // egress. Restarting the entry after stopping transit discards AnyTLS sessions.
-func TestNativeAnyTLSViaSOCKSLoopback(t *testing.T)  { nativeAnyTLSViaLoopback(t, "socks") }
-func TestNativeAnyTLSViaTrojanLoopback(t *testing.T) { nativeAnyTLSViaLoopback(t, "trojan") }
+func TestNativeAnyTLSViaSOCKSLoopback(t *testing.T)     { nativeAnyTLSViaLoopback(t, "socks") }
+func TestNativeAnyTLSViaTrojanLoopback(t *testing.T)    { nativeAnyTLSViaLoopback(t, "trojan") }
+func TestNativeAnyTLSViaTwoTrojanLoopback(t *testing.T) { nativeAnyTLSViaLoopback(t, "trojan2") }
 func nativeAnyTLSViaLoopback(t *testing.T, relay string) {
 	t.Helper()
 	if !strings.Contains(","+os.Getenv("ROUTEWEAVER_NATIVE_PROCESS_TESTS")+",", ",sing-box,") {
 		t.Skip("requires explicit local sing-box process opt-in")
 	}
-	if relay == "trojan" && !strings.Contains(","+os.Getenv("ROUTEWEAVER_NATIVE_PROCESS_TESTS")+",", ",xray,") {
+	if relay != "socks" && !strings.Contains(","+os.Getenv("ROUTEWEAVER_NATIVE_PROCESS_TESTS")+",", ",xray,") {
 		t.Skip("requires explicit Xray relay process opt-in")
 	}
 	binary := filepath.Join(os.Getenv("ROUTEWEAVER_STOCK_CORE_BIN_DIR"), "sing-box-"+render.StockSingBoxVersion+"-linux-amd64")
@@ -55,7 +56,7 @@ func nativeAnyTLSViaLoopback(t *testing.T, relay string) {
 	exit := program("exit", anytls)
 	exit.TLS = &domain.ServerTLSOptions{CertificatePath: "tls/cert.pem", KeyPath: "tls/key.pem", CertificatePEM: certificate, PrivateKeyPEM: key}
 	transit := program("transit", socks(transitPort))
-	if relay == "trojan" {
+	if relay != "socks" {
 		transit.Listener.Connection = domain.Connection{Protocol: "trojan", Host: "127.0.0.1", Port: transitPort, Password: "synthetic-relay-password", TLS: &domain.TLSOptions{Enabled: true, ServerName: "localhost"}}
 		transit.Instance.AdapterID = render.ServerAdapterXray
 		transit.Instance.Version = render.StockXrayVersion
@@ -66,7 +67,20 @@ func nativeAnyTLSViaLoopback(t *testing.T, relay string) {
 	entry := program("entry", socks(entryPort))
 	entry.Connectors = []domain.ServerConnector{{ID: "a-anytls", Via: "z-relay", Connection: anytls}, {ID: "z-relay", Connection: transit.Listener.Connection}}
 	entry.DefaultAction = domain.ActionRef{Kind: "forward", Ref: "a-anytls"}
-	material, err := render.DefaultServers().Render(domain.ServerDeploymentIR{SchemaVersion: "1.0", ID: "anytls-chain", TopologyRevision: "1", Programs: []domain.ServerProgram{exit, transit, entry}})
+	programs := []domain.ServerProgram{exit, transit}
+	if relay == "trojan2" {
+		first := transit
+		first.Instance.ID = "first-relay"
+		first.Listener.ID = "first-relay-listener"
+		first.Listener.InstanceID = "first-relay"
+		first.Listener.Connection.Port = port()
+		first.Listener.Connection.Password = "synthetic-first-relay-password"
+		entry.Connectors[1].Via = "m-first-relay"
+		entry.Connectors = append(entry.Connectors, domain.ServerConnector{ID: "m-first-relay", Connection: first.Listener.Connection})
+		programs = append(programs, first)
+	}
+	programs = append(programs, entry)
+	material, err := render.DefaultServers().Render(domain.ServerDeploymentIR{SchemaVersion: "1.0", ID: "anytls-chain", TopologyRevision: "1", Programs: programs})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -109,11 +123,25 @@ func nativeAnyTLSViaLoopback(t *testing.T, relay string) {
 	}
 	grouped["entry"] = append(grouped["entry"], domain.Artifact{Path: "fixture-ca.pem", Content: string(ca)})
 	transitBinary := binary
-	if relay == "trojan" {
+	if relay != "socks" {
 		transitBinary = filepath.Join(os.Getenv("ROUTEWEAVER_STOCK_CORE_BIN_DIR"), "xray-"+render.StockXrayVersion+"-linux-amd64")
 	}
-	stopTransit := passwordTLSRunOwnedAdapter(t, "transit", transit.Instance.AdapterID, transit.Instance.Version, transitBinary, grouped["transit"])
-	stopExit := passwordTLSRunOwned(t, "exit", render.StockSingBoxVersion, binary, grouped["exit"])
+	// Start Xray relays before sing-box so their own parser/startup is checked.
+	stages := []string{"transit"}
+	if relay == "trojan2" {
+		stages = append(stages, "first-relay")
+	}
+	stages = append(stages, "exit")
+	startStage := func(id string) func() {
+		if id == "exit" {
+			return passwordTLSRunOwned(t, id, render.StockSingBoxVersion, binary, grouped[id])
+		}
+		return passwordTLSRunOwnedAdapter(t, id, transit.Instance.AdapterID, transit.Instance.Version, transitBinary, grouped[id])
+	}
+	stops := map[string]func(){}
+	for _, id := range stages {
+		stops[id] = startStage(id)
+	}
 	stopEntry := passwordTLSRunOwned(t, "entry", render.StockSingBoxVersion, binary, grouped["entry"])
 	var hits atomic.Int64
 	origin := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -147,24 +175,23 @@ func nativeAnyTLSViaLoopback(t *testing.T, relay string) {
 		t.Fatalf("named chain roundtrip: body=%q error=%v hits=%d", body, e, hits.Load())
 	}
 	anyTLSChainUDP(t, fmt.Sprintf("127.0.0.1:%d", entryPort))
-	stopExit()
-	if body, e := request(); e == nil || hits.Load() != 1 {
-		t.Fatalf("stopped AnyTLS exit bypassed: body=%q error=%v hits=%d", body, e, hits.Load())
-	}
-	// Restore and prove the complete route before testing transit failure;
-	// otherwise two stopped peers could make the second negative a false pass.
-	passwordTLSRunOwned(t, "restored-exit", render.StockSingBoxVersion, binary, grouped["exit"])
-	stopEntry()
-	stopEntry = passwordTLSRunOwned(t, "restored-entry", render.StockSingBoxVersion, binary, grouped["entry"])
-	if body, e := request(); e != nil || body != "anytls-via-relay-payload" || hits.Load() != 2 {
-		t.Fatalf("restored chain roundtrip: body=%q error=%v hits=%d", body, e, hits.Load())
-	}
-	stopEntry()
-	stopTransit()
-	// New process/root cannot reuse the old authenticated AnyTLS TCP session.
-	passwordTLSRunOwned(t, "fresh-entry", render.StockSingBoxVersion, binary, grouped["entry"])
-	if body, e := request(); e == nil || hits.Load() != 2 {
-		t.Fatalf("stopped relay transit bypassed: body=%q error=%v hits=%d", body, e, hits.Load())
+	// Each stopped peer must independently break the route. Fresh entries
+	// discard AnyTLS sessions; full restoration proves no prior failure lingers.
+	for i, id := range stages {
+		before := hits.Load()
+		stopEntry()
+		stops[id]()
+		stopEntry = passwordTLSRunOwned(t, fmt.Sprintf("negative-entry-%d", i), render.StockSingBoxVersion, binary, grouped["entry"])
+		if body, e := request(); e == nil || hits.Load() != before {
+			t.Fatalf("stopped %s bypassed: body=%q error=%v hits=%d", id, body, e, hits.Load())
+		}
+		stopEntry()
+		stops[id] = startStage(id)
+		stopEntry = passwordTLSRunOwned(t, fmt.Sprintf("restored-entry-%d", i), render.StockSingBoxVersion, binary, grouped["entry"])
+		if body, e := request(); e != nil || body != "anytls-via-relay-payload" || hits.Load() != before+1 {
+			t.Fatalf("restored %s chain: body=%q error=%v hits=%d", id, body, e, hits.Load())
+		}
+		anyTLSChainUDP(t, fmt.Sprintf("127.0.0.1:%d", entryPort))
 	}
 }
 

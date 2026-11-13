@@ -100,7 +100,7 @@ it("saves AnyTLS through SOCKS5 and validates a switch of its upstream to Trojan
   await userEvent.click(screen.getByLabelText("传输方式"));
   await userEvent.click(screen.getByRole("option", { name: "WebSocket" }));
   await userEvent.click(screen.getByRole("button", { name: "采用连接参数" }));
-  expect(await screen.findByText("AnyTLS 上游须为无上游的 SOCKS5，或使用普通 TLS、无客户端指纹的 TCP Trojan 连接器。")).toBeTruthy();
+  expect(await screen.findByText("AnyTLS 上游须为无上游的 SOCKS5，或最多两级普通 TLS、无客户端指纹的 TCP Trojan；不能混用。")).toBeTruthy();
   expect(applyRelay).not.toHaveBeenCalled();
   expect(program.connectors![1].connection.protocol).toBe("socks");
   await userEvent.click(screen.getByLabelText("传输方式"));
@@ -109,4 +109,28 @@ it("saves AnyTLS through SOCKS5 and validates a switch of its upstream to Trojan
   await waitFor(() => expect(applyRelay).toHaveBeenCalledOnce());
   expect(applyRelay.mock.calls[0][0].connectors?.[0].via).toBe("relay");
   expect(applyRelay.mock.calls[0][0].connectors?.[1].connection.protocol).toBe("trojan");
+});
+
+it("edits a two-Trojan AnyTLS path without losing its upstream links", async () => {
+  const program = fixture();
+  program.instance = { ...program.instance, adapterId: "routeweaver/sing-box", version: "1.14.4" };
+  const trojan = { protocol: "trojan", host: "relay.example", port: 443, password: "synthetic", tls: { enabled: true } };
+  program.connectors = [
+    { id: "exit", via: "second", connection: { ...trojan, protocol: "anytls" } },
+    { id: "second", via: "first", connection: structuredClone(trojan) },
+    { id: "first", connection: structuredClone(trojan) },
+  ];
+  const apply = vi.fn((_next: ServerProgram) => true);
+  render(<UIProviders><ServerConnectorConnectionDialog program={program} schemaVersion="1.0" connectorId="first" onApply={apply} onClose={vi.fn()} onEditingChange={vi.fn()} /></UIProviders>);
+  await userEvent.click(screen.getByLabelText("传输方式"));
+  await userEvent.click(screen.getByRole("option", { name: "WebSocket" }));
+  await userEvent.click(screen.getByRole("button", { name: "采用连接参数" }));
+  expect(await screen.findByText("AnyTLS 上游须为无上游的 SOCKS5，或最多两级普通 TLS、无客户端指纹的 TCP Trojan；不能混用。")).toBeTruthy();
+  expect(apply).not.toHaveBeenCalled();
+  await userEvent.click(screen.getByLabelText("传输方式"));
+  await userEvent.click(screen.getByRole("option", { name: "TCP" }));
+  await userEvent.click(screen.getByRole("button", { name: "采用连接参数" }));
+  await waitFor(() => expect(apply).toHaveBeenCalledOnce());
+  expect(apply.mock.calls[0][0].connectors?.slice(0, 2)).toEqual(program.connectors.slice(0, 2));
+  expect(program.connectors[2].connection.transport).toBeUndefined();
 });

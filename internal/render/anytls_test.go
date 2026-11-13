@@ -182,3 +182,48 @@ func TestAnyTLSViaTrojanPreservesBothTLSIdentities(t *testing.T) {
 		}
 	}
 }
+
+func TestAnyTLSTwoTrojanRelaysKeepOrderAndRejectExtraOrMixedHops(t *testing.T) {
+	ir := serverIR(render.ServerAdapterSingBox, render.StockSingBoxVersion)
+	p := &ir.Programs[0]
+	p.Egress = nil
+	relay := domain.Connection{Protocol: "trojan", Host: "relay.example", Port: 443, Password: "synthetic-secret", TLS: &domain.TLSOptions{Enabled: true, ServerName: "relay.example"}}
+	p.Connectors = []domain.ServerConnector{{ID: "exit", Connection: anyTLSConnection(), Via: "second"}, {ID: "second", Connection: relay, Via: "first"}, {ID: "first", Connection: relay}}
+	p.DefaultAction = domain.ActionRef{Kind: "forward", Ref: "exit"}
+	artifacts, err := render.DefaultServers().Render(ir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var config map[string]any
+	if err = json.Unmarshal([]byte(artifacts[0].Content), &config); err != nil {
+		t.Fatal(err)
+	}
+	expected := map[string]string{"exit": "second", "second": "first", "first": ""}
+	seen := 0
+	for _, raw := range config["outbounds"].([]any) {
+		o := raw.(map[string]any)
+		tag, _ := o["tag"].(string)
+		want, ok := expected[tag]
+		if !ok {
+			continue
+		}
+		seen++
+		got, _ := o["detour"].(string)
+		if got != want {
+			t.Fatal("relay order changed")
+		}
+	}
+	if seen != 3 || config["route"].(map[string]any)["final"] != "exit" {
+		t.Fatal("chain missing or exit changed")
+	}
+	p.Connectors = append(p.Connectors, domain.ServerConnector{ID: "extra", Connection: relay})
+	p.Connectors[2].Via = "extra"
+	if _, err = render.DefaultServers().Render(ir); err == nil || !strings.Contains(err.Error(), "ANYTLS_DETOUR_UNSUPPORTED") {
+		t.Fatal("third relay accepted")
+	}
+	p.Connectors[2].Via = ""
+	p.Connectors[2].Connection = domain.Connection{Protocol: "socks", Host: "relay.example", Port: 1080}
+	if _, err = render.DefaultServers().Render(ir); err == nil || !strings.Contains(err.Error(), "ANYTLS_DETOUR_UNSUPPORTED") {
+		t.Fatal("mixed two-relay chain accepted")
+	}
+}

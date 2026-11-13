@@ -199,3 +199,21 @@ entry, an Xray 26.10.31 Trojan relay and a sing-box AnyTLS exit, with isolated
 trusted certificates. It exercises TCP, UDP-over-AnyTLS, stopped exit and stopped
 relay without direct fallback. Engine-parser acceptance alone is not proof of
 this cross-core traffic path; consult the exact commit's runtime result.
+
+### Two encrypted Trojan relays before an AnyTLS exit
+
+Named sing-box forwarding can also use two ordinary TLS Trojan relays in order:
+`AnyTLS exit -> via second Trojan -> via first Trojan -> direct`. This represents
+three remote VPS nodes while retaining the final AnyTLS server and TLS identity.
+Both relays use the previously bounded Trojan settings. A third relay, a mixed
+SOCKS5/Trojan two-relay chain, wrappers/fingerprints, reverse AnyTLS use, HY2 chains
+and legacy ordered egress are still rejected. Existing single-relay shapes are
+unchanged. The selector and parameter editor validate the complete graph before
+accepting a change.
+
+The mandatory native fixture extends the mixed-core path to two Xray Trojan
+relay processes, verifies TCP and UDP delivery, and independently stops each
+relay and the final exit. Positive recovery between stop cases prevents a
+second stopped node from producing a false negative-path success. Recreated
+entry processes avoid reusing an already established AnyTLS session. As always,
+only the exact commit's successful runtime gate establishes these traffic claims.

@@ -170,7 +170,7 @@ func singboxRuleSets(resources []domain.RuleResource) ([]any, bool, error) {
 }
 
 // Hysteria2 remains direct-only. A terminal AnyTLS connector may dial through
-// one direct SOCKS5 or ordinary TLS Trojan relay. Do not infer
+// one direct SOCKS5/Trojan relay, or two ordinary TLS Trojan relays. Do not infer
 // arbitrary-depth or reverse-direction support from the engine dialer API.
 func validateDirectTLSConnectors(p domain.ServerProgram) error {
 	for _, c := range p.Egress {
@@ -193,8 +193,15 @@ func validateDirectTLSConnectors(p domain.ServerProgram) error {
 		if upstream.Connection.Protocol == "anytls" {
 			return fmt.Errorf("ANYTLS_DETOUR_UNSUPPORTED: AnyTLS cannot be an upstream relay")
 		}
-		if c.Connection.Protocol == "anytls" && (!supportedAnyTLSRelay(upstream.Connection) || upstream.Via != "") {
-			return fmt.Errorf("ANYTLS_DETOUR_UNSUPPORTED: AnyTLS requires one direct SOCKS5 or ordinary TLS Trojan relay")
+		if c.Connection.Protocol == "anytls" {
+			allowed := supportedAnyTLSRelay(upstream.Connection)
+			if upstream.Via != "" {
+				first := byID[upstream.Via]
+				allowed = allowed && upstream.Connection.Protocol == "trojan" && first.Connection.Protocol == "trojan" && supportedAnyTLSRelay(first.Connection) && first.Via == ""
+			}
+			if !allowed {
+				return fmt.Errorf("ANYTLS_DETOUR_UNSUPPORTED: use one SOCKS5/Trojan relay or two ordinary TLS Trojan relays")
+			}
 		}
 	}
 	return nil

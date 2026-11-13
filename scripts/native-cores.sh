@@ -58,9 +58,9 @@ PY
 mkdir -p bin/verification
 REPORT="bin/verification/native-$MODE.jsonl"
 if [[ "$MODE" == parsers ]]; then
-  scripts/go.sh test -json -p=1 -count=1 -timeout=120s -run 'TestNative(Client|Server|VLESS|Trojan|VMess|Hysteria2Configuration|AnyTLSConfiguration|AnyTLSViaSOCKSConfiguration|AnyTLSViaTrojanConfiguration|Pinned|Check|Version|Template|MultiPrincipal|Override|Owned|CoreInstaller|Install)|^TestNativeMixedConnectorChain$|^TestNativeStockRetiredReceiptsRecoverWithoutDownload$|TestImportedProcessedVLESSPassesBothNativeClients' ./internal/render ./internal/agent ./internal/httpapi ./internal/integration | tee "$REPORT"
+  scripts/go.sh test -json -p=1 -count=1 -timeout=120s -run 'TestNative(Client|Server|VLESS|Trojan|VMess|Hysteria2Configuration|AnyTLSConfiguration|AnyTLSViaSOCKSConfiguration|AnyTLSViaTrojanConfiguration|AnyTLSViaTwoTrojanConfiguration|Pinned|Check|Version|Template|MultiPrincipal|Override|Owned|CoreInstaller|Install)|^TestNativeMixedConnectorChain$|^TestNativeStockRetiredReceiptsRecoverWithoutDownload$|TestImportedProcessedVLESSPassesBothNativeClients' ./internal/render ./internal/agent ./internal/httpapi ./internal/integration | tee "$REPORT"
 else
-  scripts/go.sh test -json -p=1 -count=1 -timeout=120s -run '^TestNative(SupervisorLifecycleAndRestart|XrayTwoHopLoopbackRoundtrip|MixedConnectorChainLoopback)$|^TestNativeStock(Xray|SingBox)UpgradeKeepsExactRuntimeAndLease$|^TestNativeStockXraySecurityDefaults$|^TestRenderedTwoHopRouteHasNoDirectFallback$|^TestNativeSharedVLESSIngressKeepsPrincipalPathsSeparate$|^TestNativeFleetConfigureStopStartAndRollback$|^TestNativeAnyTLSViaTrojanLoopback$|^TestNativeAnyTLSViaSOCKSLoopback$|^TestNativeAnyTLSLoopback$|^TestNativeHysteria2Loopback$|^TestNativeEndpointProtocolsLoopback$|^TestNativeInvitedUserDownloadedClientTraffic$|^TestNativeDownloadedClientConfiguredDNS$' ./internal/agent ./internal/integration ./internal/httpapi | tee "$REPORT"
+  scripts/go.sh test -json -p=1 -count=1 -timeout=120s -run '^TestNative(SupervisorLifecycleAndRestart|XrayTwoHopLoopbackRoundtrip|MixedConnectorChainLoopback)$|^TestNativeStock(Xray|SingBox)UpgradeKeepsExactRuntimeAndLease$|^TestNativeStockXraySecurityDefaults$|^TestRenderedTwoHopRouteHasNoDirectFallback$|^TestNativeSharedVLESSIngressKeepsPrincipalPathsSeparate$|^TestNativeFleetConfigureStopStartAndRollback$|^TestNativeAnyTLSViaTwoTrojanLoopback$|^TestNativeAnyTLSViaTrojanLoopback$|^TestNativeAnyTLSViaSOCKSLoopback$|^TestNativeAnyTLSLoopback$|^TestNativeHysteria2Loopback$|^TestNativeEndpointProtocolsLoopback$|^TestNativeInvitedUserDownloadedClientTraffic$|^TestNativeDownloadedClientConfiguredDNS$' ./internal/agent ./internal/integration ./internal/httpapi | tee "$REPORT"
 fi
 python3 - "$REPORT" <<'PY'
 import json,os,sys
@@ -71,6 +71,7 @@ required.add(('routeweaver/internal/render','TestNativeHysteria2Configuration'))
 required.add(('routeweaver/internal/render','TestNativeAnyTLSConfiguration'))
 required.add(('routeweaver/internal/render','TestNativeAnyTLSViaSOCKSConfiguration'))
 required.add(('routeweaver/internal/render','TestNativeAnyTLSViaTrojanConfiguration'))
+required.add(('routeweaver/internal/render','TestNativeAnyTLSViaTwoTrojanConfiguration'))
 allowed_skips=set()
 required.update({('routeweaver/internal/render','TestNativeMixedConnectorChain'),('routeweaver/internal/render','TestNativeVLESSStockTransportMatrix'),('routeweaver/internal/agent','TestNativeStockRetiredReceiptsRecoverWithoutDownload')})
 if mode=='runtime':
@@ -93,8 +94,10 @@ if mode=='runtime':
             allowed_skips.add(upgrade)
     if {'sing-box', 'xray'} <= selected:
         required.add(('routeweaver/internal/integration','TestNativeAnyTLSViaTrojanLoopback'))
+        required.add(('routeweaver/internal/integration','TestNativeAnyTLSViaTwoTrojanLoopback'))
     else:
         allowed_skips.add('TestNativeAnyTLSViaTrojanLoopback')
+        allowed_skips.add('TestNativeAnyTLSViaTwoTrojanLoopback')
     if 'sing-box' in selected:
         required.add(('routeweaver/internal/integration','TestNativeHysteria2Loopback'))
         required.add(('routeweaver/internal/integration','TestNativeAnyTLSLoopback'))

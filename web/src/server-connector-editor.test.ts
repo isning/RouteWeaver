@@ -142,3 +142,28 @@ it("allows AnyTLS through plain TLS Trojan but rejects unsupported relay setting
   expect(updateServerConnectorVia(program, "1.0", "exit", "relay").error).toBeUndefined();
   expect(program.connectors![0].via).toBeUndefined();
 });
+
+it("allows two plain Trojan relays for AnyTLS without admitting mixed or longer paths", () => {
+  const program = fixture();
+  program.connectors![0].connection.protocol = "anytls";
+  const trojan = { protocol: "trojan", host: "relay.example", port: 443, password: "synthetic", tls: { enabled: true } };
+  program.connectors![1] = { id: "relay", via: "first", connection: structuredClone(trojan) };
+  program.connectors!.push({ id: "first", connection: structuredClone(trojan) }, { id: "extra", connection: structuredClone(trojan) });
+  const linked = updateServerConnectorVia(program, "1.0", "exit", "relay").program;
+  expect(linked?.connectors?.[0].via).toBe("relay");
+  expect(connectorViaChoices(program, "exit").find(item => item.value === "relay")?.disabled).toBe(false);
+  expect(updateServerConnectorVia(linked!, "1.0", "first", "extra").error).toBeTruthy();
+  for (const index of [1, 2]) {
+    for (const connection of [
+      { protocol: "socks", host: "relay.example", port: 1080 },
+      { ...trojan, tls: { enabled: true, fingerprint: "chrome" } },
+      { ...trojan, transport: { type: "ws" } },
+    ]) {
+      const invalid = structuredClone(program);
+      invalid.connectors![index].connection = connection;
+      expect(updateServerConnectorVia(invalid, "1.0", "exit", "relay").error).toBeTruthy();
+      expect(connectorViaChoices(invalid, "exit").find(item => item.value === "relay")?.disabled).toBe(true);
+    }
+  }
+  expect(program.connectors![0].via).toBeUndefined();
+});

@@ -12,6 +12,9 @@ import (
 
 func TestNativeAnyTLSViaSOCKSConfiguration(t *testing.T)  { nativeAnyTLSViaConfiguration(t, "socks") }
 func TestNativeAnyTLSViaTrojanConfiguration(t *testing.T) { nativeAnyTLSViaConfiguration(t, "trojan") }
+func TestNativeAnyTLSViaTwoTrojanConfiguration(t *testing.T) {
+	nativeAnyTLSViaConfiguration(t, "trojan2")
+}
 func nativeAnyTLSViaConfiguration(t *testing.T, relay string) {
 	t.Helper()
 	for _, target := range nativeStockServerTargets() {
@@ -24,8 +27,15 @@ func nativeAnyTLSViaConfiguration(t *testing.T, relay string) {
 			p := &ir.Programs[0]
 			p.Egress = nil
 			p.Connectors = []domain.ServerConnector{{ID: "a-anytls", Via: "z-relay", Connection: domain.Connection{Protocol: "anytls", Host: "127.0.0.1", Port: 18443, Password: "synthetic-password", TLS: &domain.TLSOptions{Enabled: true, ServerName: "localhost"}}}, {ID: "z-relay", Connection: domain.Connection{Protocol: "socks", Host: "127.0.0.1", Port: 18081}}}
-			if relay == "trojan" {
+			if relay != "socks" {
 				p.Connectors[1].Connection = domain.Connection{Protocol: "trojan", Host: "127.0.0.1", Port: 18444, Password: "synthetic-relay-password", TLS: &domain.TLSOptions{Enabled: true, ServerName: "localhost"}}
+			}
+			if relay == "trojan2" {
+				first := p.Connectors[1].Connection
+				first.Port = 18445
+				first.Password = "synthetic-first-relay-password"
+				p.Connectors[1].Via = "m-first-relay"
+				p.Connectors = append(p.Connectors, domain.ServerConnector{ID: "m-first-relay", Connection: first})
 			}
 			p.DefaultAction = domain.ActionRef{Kind: "forward", Ref: "a-anytls"}
 			artifacts, err := render.DefaultServers().Render(ir)
@@ -37,13 +47,17 @@ func nativeAnyTLSViaConfiguration(t *testing.T, relay string) {
 				t.Fatal(err)
 			}
 			found := false
+			secondHop := relay != "trojan2"
 			for _, raw := range config["outbounds"].([]any) {
 				out := raw.(map[string]any)
+				if out["tag"] == "z-relay" && relay == "trojan2" {
+					secondHop = out["detour"] == "m-first-relay"
+				}
 				if out["tag"] == "a-anytls" {
 					found = out["type"] == "anytls" && out["detour"] == "z-relay"
 				}
 			}
-			if !found {
+			if !found || !secondHop {
 				t.Fatal("named AnyTLS detour was flattened or lost")
 			}
 			dir := t.TempDir()

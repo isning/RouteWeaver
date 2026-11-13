@@ -7,6 +7,12 @@ const targets: Record<string, string[]> = {
   "routeweaver/sing-box": ["1.14.3", "1.14.4"],
 };
 
+function isPlainTrojan(connector: Connector | undefined) {
+  const connection = connector?.connection;
+  return connection?.protocol === "trojan" && connection.tls?.enabled && !connection.tls.reality && !connection.tls.fingerprint &&
+    (!connection.transport || connection.transport.type === "tcp");
+}
+
 export function connectorGraphError(connectors: Connector[], adapterId: string) {
   const ids = new Set<string>();
   for (const connector of connectors) {
@@ -33,12 +39,13 @@ export function connectorGraphError(connectors: Connector[], adapterId: string) 
         return "Hysteria2 目前只支持直接连接，不能用于连接器之间的中转。";
       if (next.connection?.protocol === "anytls")
         return "AnyTLS 不能作为其他连接器的上游。";
-      const relay = next.connection;
-      const plainTrojan = relay?.protocol === "trojan" && relay.tls?.enabled && !relay.tls.reality && !relay.tls.fingerprint &&
-        (!relay.transport || relay.transport.type === "tcp");
-      if (current.connection?.protocol === "anytls" &&
-        (adapterId !== "routeweaver/sing-box" || (relay?.protocol !== "socks" && !plainTrojan) || next.via))
-        return "AnyTLS 上游须为无上游的 SOCKS5，或使用普通 TLS、无客户端指纹的 TCP Trojan 连接器。";
+      if (current.connection?.protocol === "anytls") {
+        const first = next.via ? byId.get(next.via) : undefined;
+        const singleSocks = next.connection?.protocol === "socks" && !next.via;
+        const trojanPath = isPlainTrojan(next) && (!next.via || (isPlainTrojan(first) && !first?.via));
+        if (adapterId !== "routeweaver/sing-box" || (!singleSocks && !trojanPath))
+          return "AnyTLS 上游须为无上游的 SOCKS5，或最多两级普通 TLS、无客户端指纹的 TCP Trojan；不能混用。";
+      }
       current = next;
     }
     for (const id of visited) completed.add(id);
