@@ -586,6 +586,7 @@ export function PublishedRoutesPage() {
         <PrincipalEditor
           key={principal.id}
           route={principal}
+          publishedRoutes={query.data || []}
           deployment={infrastructure.data?.deployments.find(
             (d) => d.id === principal.deploymentId,
           )}
@@ -603,6 +604,7 @@ export function PublishedRoutesPage() {
         <PublicRouteDetail
           key={`detail:${detail.id}`}
           route={detail}
+          publishedRoutes={query.data || []}
           sharedLines={(query.data || [])
             .filter(
               (line) =>
@@ -1571,14 +1573,20 @@ function PublicRouteEditor({
     </>
   );
 }
+function authorizationRouteChoices(legacy: { id: string; name: string }[], published: PublishedRoute[]) {
+  return [...new Map([...legacy, ...published].map(route => [route.id, route])).values()];
+}
+
 function PrincipalEditor({
   route,
+  publishedRoutes,
   deployment,
   onClose,
   initialUserId,
   pathHref,
 }: {
   route: PublishedRoute;
+  publishedRoutes: PublishedRoute[];
   deployment?: ServerDeployment;
   onClose: (userId?: string) => void;
   initialUserId?: string;
@@ -1810,10 +1818,7 @@ function PrincipalEditor({
           user={selectedUser}
           services={serviceCatalog.data || []}
           serviceCatalog={{ pending: serviceCatalog.isPending || serviceCatalog.isFetching, paused: serviceCatalog.isPaused, error: serviceCatalog.isError, retry: () => { void serviceCatalog.refetch(); } }}
-          routes={[
-            ...(users.data?.routes || []),
-            ...(users.data?.publishedRoutes || []),
-          ]}
+          routes={authorizationRouteChoices(users.data?.routes || [], publishedRoutes)}
           onClose={() => {
             setEditingPolicy(false);
             mutation.reset();
@@ -1829,6 +1834,7 @@ interface LineEntry extends PlatformEntry {
 }
 function PublicRouteDetail({
   route,
+  publishedRoutes,
   sharedLines,
   inventory,
   inventoryReady,
@@ -1843,6 +1849,7 @@ function PublicRouteDetail({
   onClose,
 }: {
   route: PublishedRoute;
+  publishedRoutes: PublishedRoute[];
   sharedLines: string[];
   inventory?: Infrastructure;
   inventoryReady: boolean;
@@ -1920,10 +1927,7 @@ function PublicRouteDetail({
   const sourceService = services.find((service) => service.id === sourceServiceId);
   const sourceChecking = serviceCatalog.isPending || serviceCatalog.isFetching;
   const sourceUnresolved = serviceCatalog.isPaused || sourceChecking || serviceCatalog.isError || !sourceService;
-  const routes = [
-    ...(state.data?.routes || []),
-    ...(state.data?.publishedRoutes || []),
-  ];
+  const routes = authorizationRouteChoices(state.data?.routes || [], publishedRoutes);
   const grants = entries.data?.filter(
     (entry) => entry.publishedRouteId === route.id,
   );
@@ -2223,6 +2227,7 @@ function PublicRouteDetail({
       {action === "principal" && user && (
         <PrincipalEditor
           route={current}
+          publishedRoutes={publishedRoutes}
           deployment={deployment}
           initialUserId={user.id}
           pathHref={pathHref}
@@ -2233,7 +2238,7 @@ function PublicRouteDetail({
         user={action === "entries" ? user || null : null}
         services={services}
         routes={state.data?.routes || []}
-        publishedRoutes={state.data?.publishedRoutes || []}
+        publishedRoutes={publishedRoutes}
         allocationHref={`#published-routes?line=${encodeURIComponent(route.id)}${user ? `&user=${encodeURIComponent(user.id)}` : ""}`}
         onClose={returnToLine}
       />

@@ -259,3 +259,21 @@ to publish only their supported VLESS entry, not the private AnyTLS/relay secret
 The changed UI paths are checked through the real path model, editing controls and
 public-route creation. Native runtime boundaries and exact-commit CI remain as
 specified above; this increment changes no engine configuration format.
+
+### Complete provisioning-to-traffic check (2026-11-13)
+
+A single local HTTP/native journey verified: create hosts, core instances and
+listeners; save a managed VLESS entry with required Xray SOCKS transit; assign a
+service and principal; publish through scoped HTTP agents; wait for both real
+native applications/observations; download a tenant subscription; launch official
+mihomo with the unchanged downloaded configuration; receive an exact HTTP payload.
+Stopping the transit then caused the next request to fail without another origin
+hit. Versions were managed-xray 26.3.27-rw1, Xray 26.3.27 and mihomo 1.19.32.
+This reused existing harnesses in a temporary focused acceptance check, not a new
+protocol matrix. It is loopback TCP evidence, not remote VPS, TUN or ISP evidence.
+
+The same review found that public-route user-policy editors incorrectly expected
+`publishedRoutes` in `/state`, whose contract contains only legacy routes. They
+now use the separately loaded administrator public-route catalog (including the
+entry-management context), preserving legacy choices and stable-ID deduplication.
+This changes available choices, not authorization rules or automatic grants.

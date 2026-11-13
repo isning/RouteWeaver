@@ -403,9 +403,12 @@ it("returns from authorization, credentials and the path planner to the same lin
   // Go emits zero anchor/timezone fields even for its implicit none cycle.
   const entitlement = {
     ...effectivePolicy.entitlement,
+    routeIdsOverride: ["line"],
     cycle: { mode: "none", anchor: "0001-01-01T00:00:00Z", timezone: "" },
   };
   const requests = mockInventory((path) => {
+    // Actual /state has legacy inventory only; published routes have their own API.
+    if (path === "/api/state") return json({ users: [{ id: "alice", name: "Alice", enabled: true }], routes: [{ id: "legacy", name: "Legacy route" }, { id: "line", name: "Old inventory name" }], services: [] });
     if (path === "/api/access-policy/edit-context/entitlement/alice")
       return json({
         target: { kind: "entitlement", id: "alice" },
@@ -434,6 +437,12 @@ it("returns from authorization, credentials and the path planner to the same lin
     name: "Alice 的服务授权",
   });
   await within(policy).findByText("当前生效授权");
+  await userEvent.click(within(policy).getByRole("combobox", { name: "个人授权线路" }));
+  expect(await screen.findByRole("option", { name: "Office line" })).toBeTruthy();
+  expect(screen.getAllByRole("option", { name: "Office line" })).toHaveLength(1);
+  expect(screen.getByRole("option", { name: "Legacy route" })).toBeTruthy();
+  expect(screen.queryByRole("option", { name: "Old inventory name" })).toBeNull();
+  await userEvent.keyboard("{Escape}");
   await userEvent.click(within(policy).getByRole("button", { name: "关闭" }));
   await waitFor(() =>
     expect(
@@ -465,9 +474,13 @@ it("returns from authorization, credentials and the path planner to the same lin
   const nestedPolicy = await screen.findByRole("dialog", {
     name: "Alice 的服务授权",
   });
-  await userEvent.click(
-    within(nestedPolicy).getByRole("button", { name: "关闭" }),
-  );
+  await userEvent.click(await within(nestedPolicy).findByRole("combobox", { name: "个人授权线路" }));
+  expect(await screen.findByRole("option", { name: "Office line" })).toBeTruthy();
+  expect(screen.getAllByRole("option", { name: "Office line" })).toHaveLength(1);
+  expect(screen.getByRole("option", { name: "Legacy route" })).toBeTruthy();
+  expect(screen.queryByRole("option", { name: "Old inventory name" })).toBeNull();
+  await userEvent.keyboard("{Escape}");
+  await userEvent.click(within(nestedPolicy).getByRole("button", { name: "关闭" }));
   expect((credentialVersion as HTMLInputElement).value).toBe("chosen-version");
   await userEvent.click(
     within(principal).getByRole("button", { name: /取\s*消/ }),
