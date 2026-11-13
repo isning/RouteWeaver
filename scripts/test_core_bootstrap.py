@@ -184,6 +184,8 @@ class CoreBootstrapTests(unittest.TestCase):
                           for name in names if name != absent or skip]
                 events.append({"Package": "routeweaver/internal/integration",
                                "Test": "TestNativeMixedConnectorChainLoopback/sing-box", "Action": "pass"})
+                events.append({"Package": "routeweaver/internal/integration",
+                               "Test": "TestNativeHysteria2Loopback", "Action": "pass"})
                 (self.root / "scripts/go.sh").write_text(
                     "#!/bin/sh\ncat <<'EVENTS'\n" +
                     "\n".join(json.dumps(event) for event in events) + "\nEVENTS\n")

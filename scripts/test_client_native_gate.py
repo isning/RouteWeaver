@@ -30,7 +30,7 @@ INTEGRATION = [
 
 
 class ClientNativeGateTests(unittest.TestCase):
-    def check(self, client_action="pass", omit=False, selected="mihomo,sing-box", dns_action="pass", omit_dns=False, mixed_action="pass", omit_mixed=False):
+    def check(self, client_action="pass", omit=False, selected="mihomo,sing-box", dns_action="pass", omit_dns=False, mixed_action="pass", omit_mixed=False, hy2_action="pass"):
         shell = (ROOT / "scripts/native-cores.sh").read_text()
         checker = shell.split('python3 - "$REPORT" <<\'PY\'\n', 1)[1].split('\nPY\n', 1)[0]
         events = []
@@ -38,6 +38,7 @@ class ClientNativeGateTests(unittest.TestCase):
                            ("httpapi", ["TestNativeFleetConfigureStopStartAndRollback"])]:
             events.extend({"Package": "routeweaver/internal/" + pkg, "Test": name,
                            "Action": "pass"} for name in names)
+        events.append({"Package": "routeweaver/internal/integration", "Test": "TestNativeHysteria2Loopback", "Action": hy2_action})
         if not omit_mixed:
             events.extend({"Package": "routeweaver/internal/integration", "Test": MIXED + "/" + core,
                            "Action": mixed_action} for core in ("xray", "sing-box"))
@@ -55,6 +56,10 @@ class ClientNativeGateTests(unittest.TestCase):
                          ROUTEWEAVER_NATIVE_PROCESS_TESTS="xray,sing-box",
                          ROUTEWEAVER_CLIENT_PROCESS_TESTS=selected),
                 capture_output=True, text=True, timeout=3)
+
+    def test_hysteria2_runtime_cannot_be_skipped_or_fail(self):
+        for action in ("skip", "fail"):
+            self.assertNotEqual(self.check(hy2_action=action).returncode, 0)
 
     def test_both_clients_required(self):
         result = self.check()
