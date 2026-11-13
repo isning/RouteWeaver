@@ -271,3 +271,63 @@ describe("ordered administrator path adapter", () => {
     expect(orderedServerHopKey(external("b", "x"))).toBe("connector:b:x");
   });
 });
+
+it.each(["direct", "socks", "vless", "trojan", "two-trojan"])("edits the supported AnyTLS %s path without changing credentials", (mode) => {
+  const { draft, inventory } = fixture();
+  const program = draft.ir.programs[0];
+  program.instance.adapterId = "routeweaver/sing-box"; program.instance.version = "1.14.4";
+  draft.ir.programs = [program];
+  const relay: Connection = mode === "socks" ? { protocol: "socks", host: "relay.example", port: 1080 } : mode === "vless"
+    ? { protocol: "vless", host: "relay.example", port: 443, uuid: "00000000-0000-4000-8000-000000000001", tls: { enabled: true } }
+    : { protocol: "trojan", host: "relay.example", port: 443, password: "synthetic", tls: { enabled: true } };
+  program.connectors = [{ id: "exit", connection: { protocol: "anytls", host: "exit.example", port: 443, password: "synthetic-anytls", tls: { enabled: true } } }];
+  if (mode !== "direct") {
+    program.connectors.push({ id: "relay", connection: relay }); program.connectors[0].via = "relay";
+    if (mode === "two-trojan") { program.connectors.push({ id: "first", connection: structuredClone(relay) }); program.connectors[1].via = "first"; }
+  }
+  program.defaultAction = { kind: "forward", ref: "exit" };
+  const before = structuredClone(draft);
+  const state = readOrderedServerPath(draft, inventory);
+  expect(state.editable).toBe(true);
+  if (!state.editable) throw new Error(state.reason);
+  const directHops = [managed("a"), external("a", "exit")];
+  const direct = compileOrderedServerPath(draft, directHops, inventory);
+  expect(direct.ir.programs[0].connectors?.[0].via).toBeUndefined();
+  expect(direct.ir.programs[0].connectors?.[0].connection).toEqual(program.connectors[0].connection);
+  const restored = compileOrderedServerPath(direct, state.hops, inventory);
+  expect(readOrderedServerPath(restored, inventory)).toMatchObject({ editable: true, hops: state.hops });
+  if (mode === "two-trojan") {
+    const swapped = [managed("a"), external("a", "relay"), external("a", "first"), external("a", "exit")];
+    expect(readOrderedServerPath(compileOrderedServerPath(draft, swapped, inventory), inventory)).toMatchObject({ editable: true, hops: swapped });
+  }
+  if (mode === "direct") {
+    const withEntry = [managed("c"), ...state.hops];
+    expect(readOrderedServerPath(compileOrderedServerPath(draft, withEntry, inventory), inventory)).toMatchObject({ editable: true, hops: withEntry });
+  }
+  expect(orderedPathChangeReason(draft, [...state.hops, managed("c")], inventory)).toBeTruthy();
+  if (mode !== "direct") expect(orderedPathChangeReason(draft, [managed("a"), external("a", "exit"), external("a", "relay")], inventory)).toBeTruthy();
+  expect(draft).toEqual(before);
+});
+
+it("validates both original and rewritten named paths, including direct-only Hysteria2", () => {
+  const { draft, inventory } = fixture();
+  const program = draft.ir.programs[0];
+  program.instance.adapterId = "routeweaver/sing-box"; program.instance.version = "1.14.4";
+  draft.ir.programs = [program];
+  program.connectors = [
+    { id: "exit", connection: { protocol: "hysteria2", host: "hy2.example", port: 443, password: "synthetic", tls: { enabled: true } } },
+    { id: "relay", connection: connection("relay.example") },
+  ];
+  program.defaultAction = { kind: "forward", ref: "exit" };
+  const path = [managed("a"), external("a", "exit")];
+  expect(readOrderedServerPath(draft, inventory)).toMatchObject({ editable: true, hops: path });
+  expect(orderedPathChangeReason(draft, [managed("a"), external("a", "relay"), external("a", "exit")], inventory)).toBeTruthy();
+  program.connectors[0].via = "relay";
+  const invalid = structuredClone(draft);
+  expect(readOrderedServerPath(draft, inventory).editable).toBe(false);
+  expect(() => compileOrderedServerPath(draft, path, inventory)).toThrow();
+  expect(draft).toEqual(invalid);
+  program.connectors[0].connection.protocol = "anytls";
+  program.connectors[1].connection.protocol = "vmess";
+  expect(readOrderedServerPath(draft, inventory).editable).toBe(false);
+});

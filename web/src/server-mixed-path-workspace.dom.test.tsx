@@ -22,8 +22,9 @@ const source: ServerDeployment = {
     connectors: ["x", "y"].map((id) => ({ id, connection: { protocol: "socks", host: `${id}.private.example`, port: 1080, username: "private-user", password: "private-password" } })),
   }] },
 };
-function Workspace({ initial = source, commit, onEditConnector = () => {}, onPendingChange = () => {} }: {
+function Workspace({ initial = source, inventory: selectedInventory = inventory, commit, onEditConnector = () => {}, onPendingChange = () => {} }: {
   initial?: ServerDeployment;
+  inventory?: Infrastructure;
   commit?: (next: OrderedServerHop[]) => Promise<boolean>;
   onEditConnector?: (programEndpointId: string, connectorId: string, focusLabel: string) => void;
   onPendingChange?: (key: string, pending: boolean) => void;
@@ -31,19 +32,19 @@ function Workspace({ initial = source, commit, onEditConnector = () => {}, onPen
   const [draft, setDraft] = useState(initial);
   const [changing, setChanging] = useState(false);
   const revision = useRef(0);
-  const state = readOrderedServerPath(draft, inventory);
+  const state = readOrderedServerPath(draft, selectedInventory);
   if (!state.editable) throw new Error(state.reason);
-  return <ServerMixedPathWorkspace programs={draft.ir.programs} inventory={inventory} schemaVersion={draft.ir.schemaVersion}
+  return <ServerMixedPathWorkspace programs={draft.ir.programs} inventory={selectedInventory} schemaVersion={draft.ir.schemaVersion}
     hops={state.hops} connectorChoices={state.connectorChoices} changing={changing}
     onPendingChange={onPendingChange} onEditConnector={onEditConnector}
-    changeReason={(next) => orderedPathChangeReason(draft, next, inventory)}
+    changeReason={(next) => orderedPathChangeReason(draft, next, selectedInventory)}
     onSelectionChange={() => { revision.current++; setChanging(false); }}
     onChangePath={async (next) => {
       const request = ++revision.current;
       setChanging(true);
       const accepted = commit ? await commit(next) : true;
       if (request !== revision.current) return false;
-      if (accepted) setDraft((current) => compileOrderedServerPath(current, next, inventory));
+      if (accepted) setDraft((current) => compileOrderedServerPath(current, next, selectedInventory));
       setChanging(false);
       return accepted;
     }} />;
@@ -317,4 +318,26 @@ it("offers a first-listener recovery direction when no endpoints are registered"
     schemaVersion="1.0" hops={[]} connectorChoices={[]} onChangePath={async () => false} changeReason={() => undefined}
     onPendingChange={() => {}} onSelectionChange={() => {}} onEditConnector={() => {}} />);
   expect(screen.getByText("先在「服务器」中配置监听端点，再编排路径。")).toBeTruthy();
+});
+
+it("reorders and removes supported AnyTLS relays while blocking reverse forwarding", async () => {
+  const user = userEvent.setup();
+  const selectedInventory = structuredClone(inventory);
+  selectedInventory.instances[0].adapterId = "routeweaver/sing-box";
+  selectedInventory.instances[0].version = "1.14.4";
+  const initial = structuredClone(source);
+  const program = initial.ir.programs[0]; program.instance = selectedInventory.instances[0];
+  const trojan = { protocol: "trojan", host: "private.example", port: 443, password: "private-password", tls: { enabled: true } };
+  program.connectors = [{ id: "x", connection: trojan }, { id: "y", via: "x", connection: { ...trojan } }, { id: "exit", via: "y", connection: { ...trojan, protocol: "anytls" } }];
+  program.defaultAction = { kind: "forward", ref: "exit" };
+  render(<Workspace initial={initial} inventory={selectedInventory} />);
+  expect(summary().textContent).toContain("a listener → x → y → exit → 目标");
+  await user.click(screen.getByRole("button", { name: "第 4 跳更多操作" }));
+  expect(screen.getByRole("menuitem", { name: "上移第 4 跳" }).getAttribute("aria-disabled")).toBe("true");
+  await user.keyboard("{Escape}");
+  await action(user, 3, "上移第 3 跳");
+  expect(summary().textContent).toContain("a listener → y → x → exit → 目标");
+  await action(user, 3, "移除第 3 跳");
+  expect(summary().textContent).toContain("a listener → y → exit → 目标");
+  expect(document.body.textContent).not.toContain("private-password");
 });

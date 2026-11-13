@@ -242,3 +242,20 @@ and independent exit/relay shutdown and recovery checks. Parser fixtures cover
 sing-box 1.14.3 and 1.14.4; traffic support requires the exact commit's successful
 runtime gate. These local native processes do not verify a user's real VPS
 firewall, certificates or network reachability, and no production VPS is changed.
+
+### Visual path editing and publication for supported AnyTLS chains
+
+The visual path reader previously retained the original five-protocol allowlist,
+so even server-valid AnyTLS connector graphs were reported as uneditable. The
+same reader is used when selecting a server deployment for a public route; its
+rejection also prevented selecting the complete chain for publication.
+
+The path editor now uses the existing connector-graph restrictions for both saved
+and rewritten graphs, including unused connectors and generated managed bridges.
+This enables the already-supported AnyTLS paths without adding combinations.
+Invalid reversed, mixed or excessive relay paths are rejected before mutation;
+removing a hop preserves its stored connector credentials. Public routes continue
+to publish only their supported VLESS entry, not the private AnyTLS/relay secrets.
+The changed UI paths are checked through the real path model, editing controls and
+public-route creation. Native runtime boundaries and exact-commit CI remain as
+specified above; this increment changes no engine configuration format.

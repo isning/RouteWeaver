@@ -1,3 +1,4 @@
+import { connectorGraphError } from "./server-connector-editor";
 import { canEditLegacyPath, compilePath, endpointIntent } from "./infrastructure-model";
 import type { ActionRef, Connection, Infrastructure, ServerDeployment, ServerProgram } from "./types";
 
@@ -41,8 +42,10 @@ function objects(value: unknown): boolean {
 function connectionReason(program: ServerProgram, connection: Connection): string | undefined {
   if (!targets[program.instance.adapterId]?.includes(program.instance.version))
     return "此核心版本的链式转发尚未支持，请在完整配置中检查。";
-  if (!connection || !["socks", "shadowsocks", "vless", "trojan", "vmess"].includes(connection.protocol))
+  if (!connection || !["socks", "shadowsocks", "vless", "trojan", "vmess", "anytls", "hysteria2"].includes(connection.protocol))
     return "此连接器协议不支持当前核心的链式转发。";
+  if (["anytls", "hysteria2"].includes(connection.protocol) && program.instance.adapterId !== "routeweaver/sing-box")
+    return "AnyTLS 和 Hysteria2 连接仅支持 sing-box。";
   if (!connection.host || !Number.isInteger(connection.port) || connection.port < 1 || connection.port > 65535)
     return "连接器地址或端口无效，请先修正转发设置。";
   if (program.instance.adapterId === "routeweaver/managed-xray" &&
@@ -53,7 +56,7 @@ function connectionReason(program: ServerProgram, connection: Connection): strin
   // Do not grant a future adapter/version another adapter's known capabilities.
   return undefined;
 }
-function checkGraph(connectors: Connector[]): void {
+function checkGraph(connectors: Connector[], adapterId: string): void {
   const byId = new Map<string, Connector>();
   for (const c of connectors) {
     if (!validID(c.id) || ["rw-direct", "rw-reject"].includes(c.id) || byId.has(c.id) ||
@@ -71,6 +74,8 @@ function checkGraph(connectors: Connector[]): void {
     }
     for (const visited of seen) complete.add(visited);
   }
+  const reason = connectorGraphError(connectors, adapterId);
+  if (reason) fail(reason);
 }
 function dial(program: ServerProgram, inventory: Infrastructure): Connection {
   const connection = program.listener.connection;
@@ -126,8 +131,8 @@ function inspect(draft: ServerDeployment, inventory: Infrastructure): { segments
     // inferred as editable external intent or silently converted.
     if (legacy.length > 1) fail();
     const connectors = legacy.length ? [{ id: "egress-1", connection: legacy[0] }] : program.connectors || [];
-    checkGraph(connectors);
-    for (const connector of program.connectors || []) {
+    checkGraph(connectors, program.instance.adapterId);
+    for (const connector of connectors) {
       const reason = connectionReason(program, connector.connection);
       if (reason) fail(reason);
     }
@@ -237,8 +242,11 @@ export function compileOrderedServerPath(draft: ServerDeployment, hops: OrderedS
   }
   // Preserve legacy serialization only after the same capability and ownership
   // guards have run. Otherwise an empty legacy draft could bypass those checks.
-  if (!hops.some(hop => hop.kind === "connector") && canEditLegacyPath(draft, inventory))
-    return compilePath(draft, wanted.map(segment => segment.endpointId), inventory);
+  if (!hops.some(hop => hop.kind === "connector") && canEditLegacyPath(draft, inventory)) {
+    const result = compilePath(draft, wanted.map(segment => segment.endpointId), inventory);
+    if (wire(inspect(result, inventory).hops) !== wire(hops)) fail();
+    return result;
+  }
 
   const programs = selected.map((program, index) => {
     programShape(program, inventory);
@@ -279,7 +287,7 @@ export function compileOrderedServerPath(draft: ServerDeployment, hops: OrderedS
       connectors = connectors.map(item => item.id === bridge.id ? withVia(item, previous) : item);
       previous = bridge.id;
     }
-    checkGraph(connectors);
+    checkGraph(connectors, program.instance.adapterId);
     const defaultAction: ActionRef = previous ? { kind: "forward", ref: previous } : { kind: "direct" };
     return { ...program, egress: [], connectors,
       defaultAction: wire(program.defaultAction) === wire(defaultAction) ? program.defaultAction : defaultAction };
