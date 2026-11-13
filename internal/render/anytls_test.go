@@ -133,3 +133,52 @@ func TestAnyTLSViaDirectSOCKSCompilesWithoutChangingExit(t *testing.T) {
 		t.Fatal("legacy chain accepted")
 	}
 }
+
+func TestAnyTLSViaTrojanPreservesBothTLSIdentities(t *testing.T) {
+	ir := serverIR(render.ServerAdapterSingBox, render.StockSingBoxVersion)
+	p := &ir.Programs[0]
+	p.Egress = nil
+	relay := domain.Connection{Protocol: "trojan", Host: "relay.example", Port: 443, Password: "synthetic-relay-secret", TLS: &domain.TLSOptions{Enabled: true, ServerName: "relay-tls.example"}}
+	p.Connectors = []domain.ServerConnector{{ID: "exit", Connection: anyTLSConnection(), Via: "relay"}, {ID: "relay", Connection: relay}}
+	p.DefaultAction = domain.ActionRef{Kind: "forward", Ref: "exit"}
+	artifacts, err := render.DefaultServers().Render(ir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var config map[string]any
+	if err = json.Unmarshal([]byte(artifacts[0].Content), &config); err != nil {
+		t.Fatal(err)
+	}
+	if config["route"].(map[string]any)["final"] != "exit" {
+		t.Fatal("final exit changed")
+	}
+	seen := map[string]bool{}
+	for _, raw := range config["outbounds"].([]any) {
+		o := raw.(map[string]any)
+		tag, _ := o["tag"].(string)
+		if tag != "exit" && tag != "relay" {
+			continue
+		}
+		seen[tag] = true
+		tls := o["tls"].(map[string]any)
+		if tag == "exit" && (o["detour"] != "relay" || o["type"] != "anytls" || tls["server_name"] != "proxy.example") {
+			t.Fatal("exit identity changed")
+		}
+		if tag == "relay" && (o["type"] != "trojan" || o["password"] != "synthetic-relay-secret" || tls["server_name"] != "relay-tls.example") {
+			t.Fatal("relay identity changed")
+		}
+	}
+	if len(seen) != 2 {
+		t.Fatal("missing chain node")
+	}
+	for _, bad := range []func(*domain.Connection){func(c *domain.Connection) { c.Transport = &domain.TransportOptions{Type: "ws"} }, func(c *domain.Connection) {
+		c.TLS = &domain.TLSOptions{Enabled: true, ServerName: "relay.example", Fingerprint: "chrome"}
+	}} {
+		c := relay
+		bad(&c)
+		p.Connectors[1].Connection = c
+		if _, err = render.DefaultServers().Render(ir); err == nil || !strings.Contains(err.Error(), "ANYTLS_DETOUR_UNSUPPORTED") {
+			t.Fatalf("unverified relay accepted: %v", err)
+		}
+	}
+}

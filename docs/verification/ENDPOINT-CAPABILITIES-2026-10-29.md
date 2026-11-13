@@ -183,3 +183,19 @@ this increment is server forwarding, not general client-side chain editing.
 The native gate tests the generated chain, relay traversal, TCP/UDP delivery and
 stopped-relay/no-direct-fallback. Runtime claims require its exact-commit CI
 result, not merely parser acceptance.
+
+### AnyTLS through an ordinary TLS Trojan relay
+
+The bounded named AnyTLS chain also accepts a direct Trojan relay with ordinary
+TLS, no Reality/uTLS fingerprint, and no transport wrapper (absent or TCP only).
+This protects the transit connection across VPS boundaries; the inner AnyTLS
+connection still authenticates its own destination and TLS identity. The two
+connections' passwords and certificate identities remain separate. The UI
+rejects changes that would make an existing chain unsupported.
+
+The supported shape is still one upstream relay, not arbitrary nesting or
+reverse use of AnyTLS as a relay. The native acceptance fixture uses a sing-box
+entry, an Xray 26.10.31 Trojan relay and a sing-box AnyTLS exit, with isolated
+trusted certificates. It exercises TCP, UDP-over-AnyTLS, stopped exit and stopped
+relay without direct fallback. Engine-parser acceptance alone is not proof of
+this cross-core traffic path; consult the exact commit's runtime result.

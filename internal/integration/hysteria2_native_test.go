@@ -149,7 +149,12 @@ func nativePasswordTLSLoopback(t *testing.T, protocol string) {
 
 func passwordTLSRunOwned(t *testing.T, id, version, binary string, material []domain.Artifact) func() {
 	t.Helper()
-	checker, err := agent.NewNativeChecker(render.ServerAdapterSingBox, version, binary, 5*time.Second)
+	return passwordTLSRunOwnedAdapter(t, id, render.ServerAdapterSingBox, version, binary, material)
+}
+
+func passwordTLSRunOwnedAdapter(t *testing.T, id, adapter, version, binary string, material []domain.Artifact) func() {
+	t.Helper()
+	checker, err := agent.NewNativeChecker(adapter, version, binary, 5*time.Second)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -176,7 +181,7 @@ func passwordTLSRunOwned(t *testing.T, id, version, binary string, material []do
 		t.Fatal(err)
 	}
 	now := time.Now()
-	desired := agent.Desired{Scope: scope, AdapterID: render.ServerAdapterSingBox, CoreVersion: version, Generation: 1, RevisionID: "revision-one", OperationID: "apply-one", Digest: digest, EntryFile: "config.json", Artifacts: material, Lease: agent.PolicyLease{Revision: "policy-one", IssuedAt: now.Add(-time.Second), ExpiresAt: now.Add(5 * time.Minute), AccessAllowed: true, QuotaCertain: true}}
+	desired := agent.Desired{Scope: scope, AdapterID: adapter, CoreVersion: version, Generation: 1, RevisionID: "revision-one", OperationID: "apply-one", Digest: digest, EntryFile: "config.json", Artifacts: material, Lease: agent.PolicyLease{Revision: "policy-one", IssuedAt: now.Add(-time.Second), ExpiresAt: now.Add(5 * time.Minute), AccessAllowed: true, QuotaCertain: true}}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	state, err := reconciler.Submit(ctx, desired)

@@ -24,9 +24,15 @@ import (
 
 // Three independently owned processes exercise named connectors, not flattened
 // egress. Restarting the entry after stopping transit discards AnyTLS sessions.
-func TestNativeAnyTLSViaSOCKSLoopback(t *testing.T) {
+func TestNativeAnyTLSViaSOCKSLoopback(t *testing.T)  { nativeAnyTLSViaLoopback(t, "socks") }
+func TestNativeAnyTLSViaTrojanLoopback(t *testing.T) { nativeAnyTLSViaLoopback(t, "trojan") }
+func nativeAnyTLSViaLoopback(t *testing.T, relay string) {
+	t.Helper()
 	if !strings.Contains(","+os.Getenv("ROUTEWEAVER_NATIVE_PROCESS_TESTS")+",", ",sing-box,") {
 		t.Skip("requires explicit local sing-box process opt-in")
+	}
+	if relay == "trojan" && !strings.Contains(","+os.Getenv("ROUTEWEAVER_NATIVE_PROCESS_TESTS")+",", ",xray,") {
+		t.Skip("requires explicit Xray relay process opt-in")
 	}
 	binary := filepath.Join(os.Getenv("ROUTEWEAVER_STOCK_CORE_BIN_DIR"), "sing-box-"+render.StockSingBoxVersion+"-linux-amd64")
 	caPath, certificate, key := loopbackCertificate(t)
@@ -49,8 +55,16 @@ func TestNativeAnyTLSViaSOCKSLoopback(t *testing.T) {
 	exit := program("exit", anytls)
 	exit.TLS = &domain.ServerTLSOptions{CertificatePath: "tls/cert.pem", KeyPath: "tls/key.pem", CertificatePEM: certificate, PrivateKeyPEM: key}
 	transit := program("transit", socks(transitPort))
+	if relay == "trojan" {
+		transit.Listener.Connection = domain.Connection{Protocol: "trojan", Host: "127.0.0.1", Port: transitPort, Password: "synthetic-relay-password", TLS: &domain.TLSOptions{Enabled: true, ServerName: "localhost"}}
+		transit.Instance.AdapterID = render.ServerAdapterXray
+		transit.Instance.Version = render.StockXrayVersion
+		transit.TLS = &domain.ServerTLSOptions{CertificatePath: "tls/cert.pem", KeyPath: "tls/key.pem", CertificatePEM: certificate, PrivateKeyPEM: key}
+		// Only this loopback fixture permits the private AnyTLS endpoint.
+		transit.DestinationPolicy = &domain.DestinationPolicy{AllowCIDRs: []string{"127.0.0.1/32"}}
+	}
 	entry := program("entry", socks(entryPort))
-	entry.Connectors = []domain.ServerConnector{{ID: "a-anytls", Via: "z-socks", Connection: anytls}, {ID: "z-socks", Connection: socks(transitPort)}}
+	entry.Connectors = []domain.ServerConnector{{ID: "a-anytls", Via: "z-relay", Connection: anytls}, {ID: "z-relay", Connection: transit.Listener.Connection}}
 	entry.DefaultAction = domain.ActionRef{Kind: "forward", Ref: "a-anytls"}
 	material, err := render.DefaultServers().Render(domain.ServerDeploymentIR{SchemaVersion: "1.0", ID: "anytls-chain", TopologyRevision: "1", Programs: []domain.ServerProgram{exit, transit, entry}})
 	if err != nil {
@@ -79,9 +93,11 @@ func TestNativeAnyTLSViaSOCKSLoopback(t *testing.T) {
 		for _, raw := range config["outbounds"].([]any) {
 			out := raw.(map[string]any)
 			if out["type"] == "anytls" {
-				if out["detour"] != "z-socks" {
+				if out["detour"] != "z-relay" {
 					t.Fatal("named detour lost")
 				}
+			}
+			if out["type"] == "anytls" || out["type"] == "trojan" {
 				out["tls"].(map[string]any)["certificate_path"] = "fixture-ca.pem"
 			}
 		}
@@ -92,13 +108,17 @@ func TestNativeAnyTLSViaSOCKSLoopback(t *testing.T) {
 		grouped["entry"][i].Content = string(b)
 	}
 	grouped["entry"] = append(grouped["entry"], domain.Artifact{Path: "fixture-ca.pem", Content: string(ca)})
+	transitBinary := binary
+	if relay == "trojan" {
+		transitBinary = filepath.Join(os.Getenv("ROUTEWEAVER_STOCK_CORE_BIN_DIR"), "xray-"+render.StockXrayVersion+"-linux-amd64")
+	}
+	stopTransit := passwordTLSRunOwnedAdapter(t, "transit", transit.Instance.AdapterID, transit.Instance.Version, transitBinary, grouped["transit"])
 	stopExit := passwordTLSRunOwned(t, "exit", render.StockSingBoxVersion, binary, grouped["exit"])
-	stopTransit := passwordTLSRunOwned(t, "transit", render.StockSingBoxVersion, binary, grouped["transit"])
 	stopEntry := passwordTLSRunOwned(t, "entry", render.StockSingBoxVersion, binary, grouped["entry"])
 	var hits atomic.Int64
 	origin := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		hits.Add(1)
-		io.WriteString(w, "anytls-via-socks-payload")
+		io.WriteString(w, "anytls-via-relay-payload")
 	}))
 	defer origin.Close()
 	transport := &http.Transport{DisableKeepAlives: true, DialContext: func(_ context.Context, network, address string) (net.Conn, error) {
@@ -123,7 +143,7 @@ func TestNativeAnyTLSViaSOCKSLoopback(t *testing.T) {
 		b, e := io.ReadAll(r.Body)
 		return string(b), e
 	}
-	if body, e := request(); e != nil || body != "anytls-via-socks-payload" || hits.Load() != 1 {
+	if body, e := request(); e != nil || body != "anytls-via-relay-payload" || hits.Load() != 1 {
 		t.Fatalf("named chain roundtrip: body=%q error=%v hits=%d", body, e, hits.Load())
 	}
 	anyTLSChainUDP(t, fmt.Sprintf("127.0.0.1:%d", entryPort))
@@ -136,7 +156,7 @@ func TestNativeAnyTLSViaSOCKSLoopback(t *testing.T) {
 	passwordTLSRunOwned(t, "restored-exit", render.StockSingBoxVersion, binary, grouped["exit"])
 	stopEntry()
 	stopEntry = passwordTLSRunOwned(t, "restored-entry", render.StockSingBoxVersion, binary, grouped["entry"])
-	if body, e := request(); e != nil || body != "anytls-via-socks-payload" || hits.Load() != 2 {
+	if body, e := request(); e != nil || body != "anytls-via-relay-payload" || hits.Load() != 2 {
 		t.Fatalf("restored chain roundtrip: body=%q error=%v hits=%d", body, e, hits.Load())
 	}
 	stopEntry()
@@ -144,11 +164,11 @@ func TestNativeAnyTLSViaSOCKSLoopback(t *testing.T) {
 	// New process/root cannot reuse the old authenticated AnyTLS TCP session.
 	passwordTLSRunOwned(t, "fresh-entry", render.StockSingBoxVersion, binary, grouped["entry"])
 	if body, e := request(); e == nil || hits.Load() != 2 {
-		t.Fatalf("stopped SOCKS transit bypassed: body=%q error=%v hits=%d", body, e, hits.Load())
+		t.Fatalf("stopped relay transit bypassed: body=%q error=%v hits=%d", body, e, hits.Load())
 	}
 }
 
-// SOCKS UDP ASSOCIATE -> AnyTLS UoT -> UDP echo; the transit carries TCP only.
+// SOCKS UDP ASSOCIATE -> AnyTLS UoT -> UDP echo; either relay carries TCP only.
 func anyTLSChainUDP(t *testing.T, entry string) {
 	t.Helper()
 	echo, err := net.ListenPacket("udp", "127.0.0.1:0")
@@ -225,7 +245,7 @@ func anyTLSChainUDP(t *testing.T, entry string) {
 	defer c.Close()
 	c.SetDeadline(time.Now().Add(4 * time.Second))
 	target := echo.LocalAddr().(*net.UDPAddr)
-	payload := []byte("anytls-via-socks-udp-payload")
+	payload := []byte("anytls-via-relay-udp-payload")
 	packet := append([]byte{0, 0, 0, 1, 127, 0, 0, 1, byte(target.Port >> 8), byte(target.Port)}, payload...)
 	if _, err = c.Write(packet); err != nil {
 		t.Fatal(err)

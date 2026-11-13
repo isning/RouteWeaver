@@ -79,7 +79,7 @@ it.each(["hysteria2", "anytls"])("direct %s saves and only AnyTLS allows a SOCKS
   expect(screen.getByRole("option", { name: protocol === "hysteria2" ? /^Hysteria2$/ : /^AnyTLS$/ }).getAttribute("aria-disabled")).toBe(protocol === "hysteria2" ? "true" : "false");
 });
 
-it("saves AnyTLS through SOCKS5 but does not silently change its upstream protocol", async () => {
+it("saves AnyTLS through SOCKS5 and validates a switch of its upstream to Trojan", async () => {
   const program = fixture();
   program.instance = { ...program.instance, adapterId: "routeweaver/sing-box", version: "1.14.4" };
   program.connectors![0] = { id: "exit", via: "relay", connection: { protocol: "anytls", host: "anytls.example", port: 443, password: "synthetic", tls: { enabled: true } } };
@@ -90,15 +90,23 @@ it("saves AnyTLS through SOCKS5 but does not silently change its upstream protoc
   await waitFor(() => expect(apply).toHaveBeenCalledOnce());
   expect(apply.mock.calls[0][0]).toEqual(program);
   view.unmount();
-  const applyRelay = vi.fn(() => true);
+  const applyRelay = vi.fn((_next: ServerProgram) => true);
   render(<UIProviders><ServerConnectorConnectionDialog program={program} schemaVersion="1.0" connectorId="relay" onApply={applyRelay} onClose={vi.fn()} onEditingChange={vi.fn()} /></UIProviders>);
   await userEvent.click(screen.getByLabelText("协议"));
   expect(screen.getByRole("option", { name: /^AnyTLS$/ }).getAttribute("aria-disabled")).toBe("true");
   await userEvent.click(screen.getByRole("option", { name: /^Trojan$/ }));
   await userEvent.type(screen.getByLabelText("连接密码"), "synthetic");
   await userEvent.click(screen.getByRole("radio", { name: "TLS" }));
+  await userEvent.click(screen.getByLabelText("传输方式"));
+  await userEvent.click(screen.getByRole("option", { name: "WebSocket" }));
   await userEvent.click(screen.getByRole("button", { name: "采用连接参数" }));
-  expect(await screen.findByText("AnyTLS 仅支持经由无上游的 SOCKS5 连接器。")).toBeTruthy();
+  expect(await screen.findByText("AnyTLS 上游须为无上游的 SOCKS5，或使用普通 TLS、无客户端指纹的 TCP Trojan 连接器。")).toBeTruthy();
   expect(applyRelay).not.toHaveBeenCalled();
   expect(program.connectors![1].connection.protocol).toBe("socks");
+  await userEvent.click(screen.getByLabelText("传输方式"));
+  await userEvent.click(screen.getByRole("option", { name: "TCP" }));
+  await userEvent.click(screen.getByRole("button", { name: "采用连接参数" }));
+  await waitFor(() => expect(applyRelay).toHaveBeenCalledOnce());
+  expect(applyRelay.mock.calls[0][0].connectors?.[0].via).toBe("relay");
+  expect(applyRelay.mock.calls[0][0].connectors?.[1].connection.protocol).toBe("trojan");
 });

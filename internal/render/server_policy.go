@@ -169,8 +169,8 @@ func singboxRuleSets(resources []domain.RuleResource) ([]any, bool, error) {
 	return sets, remote, nil
 }
 
-// Hysteria2 remains direct-only. AnyTLS has one verified detour shape: the
-// terminal AnyTLS connector dials through a direct SOCKS5 relay. Do not infer
+// Hysteria2 remains direct-only. A terminal AnyTLS connector may dial through
+// one direct SOCKS5 or ordinary TLS Trojan relay. Do not infer
 // arbitrary-depth or reverse-direction support from the engine dialer API.
 func validateDirectTLSConnectors(p domain.ServerProgram) error {
 	for _, c := range p.Egress {
@@ -193,9 +193,16 @@ func validateDirectTLSConnectors(p domain.ServerProgram) error {
 		if upstream.Connection.Protocol == "anytls" {
 			return fmt.Errorf("ANYTLS_DETOUR_UNSUPPORTED: AnyTLS cannot be an upstream relay")
 		}
-		if c.Connection.Protocol == "anytls" && (upstream.Connection.Protocol != "socks" || upstream.Via != "") {
-			return fmt.Errorf("ANYTLS_DETOUR_UNSUPPORTED: AnyTLS requires one direct SOCKS5 relay")
+		if c.Connection.Protocol == "anytls" && (!supportedAnyTLSRelay(upstream.Connection) || upstream.Via != "") {
+			return fmt.Errorf("ANYTLS_DETOUR_UNSUPPORTED: AnyTLS requires one direct SOCKS5 or ordinary TLS Trojan relay")
 		}
 	}
 	return nil
+}
+
+func supportedAnyTLSRelay(c domain.Connection) bool {
+	if c.Protocol == "socks" {
+		return true
+	}
+	return c.Protocol == "trojan" && c.TLS != nil && c.TLS.Enabled && c.TLS.Reality == nil && c.TLS.Fingerprint == "" && (c.Transport == nil || c.Transport.Type == "tcp")
 }

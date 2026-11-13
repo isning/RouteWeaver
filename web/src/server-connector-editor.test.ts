@@ -119,3 +119,26 @@ it.each(["hysteria2", "anytls"])("allows direct sing-box %s but rejects both dir
   expect(connectorViaChoices(program, "exit").find(item => item.value === "relay")?.disabled).toBe(true);
   expect(program.connectors![0].via).toBeUndefined();
  });
+
+it("allows AnyTLS through plain TLS Trojan but rejects unsupported relay settings", () => {
+  const program = fixture();
+  program.connectors![0].connection.protocol = "anytls";
+  const relay = program.connectors![1];
+  relay.connection = { protocol: "trojan", host: "relay.example", port: 443, password: "synthetic", tls: { enabled: true, alpn: ["http/1.1"] } };
+  expect(updateServerConnectorVia(program, "1.0", "exit", "relay").program?.connectors?.[0].via).toBe("relay");
+  expect(connectorViaChoices(program, "exit").find(item => item.value === "relay")?.disabled).toBe(false);
+  const plain = structuredClone(relay.connection);
+  for (const patch of [
+    { tls: { enabled: false } },
+    { tls: { enabled: true, fingerprint: "chrome" } },
+    { tls: { enabled: true, reality: { publicKey: "key", shortId: "ab" } } },
+    { transport: { type: "ws" } },
+  ]) {
+    relay.connection = { ...plain, ...patch };
+    expect(updateServerConnectorVia(program, "1.0", "exit", "relay").error).toBeTruthy();
+    expect(connectorViaChoices(program, "exit").find(item => item.value === "relay")?.disabled).toBe(true);
+  }
+  relay.connection = { ...plain, transport: { type: "tcp" } };
+  expect(updateServerConnectorVia(program, "1.0", "exit", "relay").error).toBeUndefined();
+  expect(program.connectors![0].via).toBeUndefined();
+});

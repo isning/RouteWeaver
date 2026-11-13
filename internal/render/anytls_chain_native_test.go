@@ -10,7 +10,10 @@ import (
 	"testing"
 )
 
-func TestNativeAnyTLSViaSOCKSConfiguration(t *testing.T) {
+func TestNativeAnyTLSViaSOCKSConfiguration(t *testing.T)  { nativeAnyTLSViaConfiguration(t, "socks") }
+func TestNativeAnyTLSViaTrojanConfiguration(t *testing.T) { nativeAnyTLSViaConfiguration(t, "trojan") }
+func nativeAnyTLSViaConfiguration(t *testing.T, relay string) {
+	t.Helper()
 	for _, target := range nativeStockServerTargets() {
 		if target.AdapterID != render.ServerAdapterSingBox {
 			continue
@@ -20,7 +23,10 @@ func TestNativeAnyTLSViaSOCKSConfiguration(t *testing.T) {
 			ir := serverIR(target.AdapterID, target.Version)
 			p := &ir.Programs[0]
 			p.Egress = nil
-			p.Connectors = []domain.ServerConnector{{ID: "a-anytls", Via: "z-socks", Connection: domain.Connection{Protocol: "anytls", Host: "127.0.0.1", Port: 18443, Password: "synthetic-password", TLS: &domain.TLSOptions{Enabled: true, ServerName: "localhost"}}}, {ID: "z-socks", Connection: domain.Connection{Protocol: "socks", Host: "127.0.0.1", Port: 18081}}}
+			p.Connectors = []domain.ServerConnector{{ID: "a-anytls", Via: "z-relay", Connection: domain.Connection{Protocol: "anytls", Host: "127.0.0.1", Port: 18443, Password: "synthetic-password", TLS: &domain.TLSOptions{Enabled: true, ServerName: "localhost"}}}, {ID: "z-relay", Connection: domain.Connection{Protocol: "socks", Host: "127.0.0.1", Port: 18081}}}
+			if relay == "trojan" {
+				p.Connectors[1].Connection = domain.Connection{Protocol: "trojan", Host: "127.0.0.1", Port: 18444, Password: "synthetic-relay-password", TLS: &domain.TLSOptions{Enabled: true, ServerName: "localhost"}}
+			}
 			p.DefaultAction = domain.ActionRef{Kind: "forward", Ref: "a-anytls"}
 			artifacts, err := render.DefaultServers().Render(ir)
 			if err != nil {
@@ -34,7 +40,7 @@ func TestNativeAnyTLSViaSOCKSConfiguration(t *testing.T) {
 			for _, raw := range config["outbounds"].([]any) {
 				out := raw.(map[string]any)
 				if out["tag"] == "a-anytls" {
-					found = out["type"] == "anytls" && out["detour"] == "z-socks"
+					found = out["type"] == "anytls" && out["detour"] == "z-relay"
 				}
 			}
 			if !found {
@@ -54,7 +60,7 @@ func TestNativeAnyTLSViaSOCKSConfiguration(t *testing.T) {
 			cmd := exec.Command(binary, "check", "-c", file)
 			cmd.Dir = filepath.Dir(file)
 			if out, e := cmd.CombinedOutput(); e != nil {
-				t.Fatalf("AnyTLS named SOCKS detour parser: %v\n%s", e, out)
+				t.Fatalf("AnyTLS named relay detour parser: %v\n%s", e, out)
 			}
 		})
 	}

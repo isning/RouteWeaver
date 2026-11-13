@@ -33,9 +33,12 @@ export function connectorGraphError(connectors: Connector[], adapterId: string) 
         return "Hysteria2 目前只支持直接连接，不能用于连接器之间的中转。";
       if (next.connection?.protocol === "anytls")
         return "AnyTLS 不能作为其他连接器的上游。";
+      const relay = next.connection;
+      const plainTrojan = relay?.protocol === "trojan" && relay.tls?.enabled && !relay.tls.reality && !relay.tls.fingerprint &&
+        (!relay.transport || relay.transport.type === "tcp");
       if (current.connection?.protocol === "anytls" &&
-        (adapterId !== "routeweaver/sing-box" || next.connection?.protocol !== "socks" || next.via))
-        return "AnyTLS 仅支持经由无上游的 SOCKS5 连接器。";
+        (adapterId !== "routeweaver/sing-box" || (relay?.protocol !== "socks" && !plainTrojan) || next.via))
+        return "AnyTLS 上游须为无上游的 SOCKS5，或使用普通 TLS、无客户端指纹的 TCP Trojan 连接器。";
       current = next;
     }
     for (const id of visited) completed.add(id);
