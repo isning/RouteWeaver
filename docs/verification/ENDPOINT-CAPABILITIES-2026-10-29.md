@@ -217,3 +217,28 @@ relay and the final exit. Positive recovery between stop cases prevents a
 second stopped node from producing a false negative-path success. Recreated
 entry processes avoid reusing an already established AnyTLS session. As always,
 only the exact commit's successful runtime gate establishes these traffic claims.
+
+### AnyTLS through a single ordinary TLS VLESS relay
+
+The named sing-box connector graph also accepts one direct VLESS relay with
+ordinary TLS and TCP. Flow/Vision, Reality, client fingerprints, explicit packet
+encoding and additional upstreams are not included. Two-relay shapes remain
+Trojan-only; this does not enable arbitrary mixed nesting or AnyTLS as a relay.
+The UI and server validation reject unsupported combinations rather than dropping
+fields or changing the exit. The VLESS UUID and TLS identity remain separate from
+the AnyTLS exit password and TLS identity.
+
+This path reuses an existing Xray VLESS VPS as transit to an AnyTLS exit. AnyTLS
+carries its UDP payloads over its own TCP session (UoT), so VLESS in this path
+transports TCP to the exit; it is not evidence of independent VLESS UDP/XUDP
+behavior. An omitted packet-encoding field uses the native engine default, not an
+explicit request to disable XUDP. Sources: sing-box v1.14.4
+[`anytls/outbound.go`](https://github.com/SagerNet/sing-box/blob/v1.14.4/protocol/anytls/outbound.go)
+and [`vless/outbound.go`](https://github.com/SagerNet/sing-box/blob/v1.14.4/protocol/vless/outbound.go).
+
+The native fixture uses sing-box 1.14.4 at entry/exit and Xray 26.10.31 at transit,
+with separately owned processes, generated configurations, TCP and UDP delivery,
+and independent exit/relay shutdown and recovery checks. Parser fixtures cover
+sing-box 1.14.3 and 1.14.4; traffic support requires the exact commit's successful
+runtime gate. These local native processes do not verify a user's real VPS
+firewall, certificates or network reachability, and no production VPS is changed.

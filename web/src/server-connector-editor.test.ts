@@ -113,9 +113,9 @@ it.each(["hysteria2", "anytls"])("allows direct sing-box %s but rejects both dir
   const choices = connectorViaChoices(program, "exit");
   expect(choices.find(item => item.value === "relay")?.disabled).toBe(false);
   expect(choices.find(item => item.value === "other")?.disabled).toBe(true);
-  expect(updateServerConnectorVia(program, "1.0", "exit", "other").error).toContain("SOCKS5");
+  expect(updateServerConnectorVia(program, "1.0", "exit", "other").error).toBeTruthy();
   program.connectors![1].via = "other";
-  expect(updateServerConnectorVia(program, "1.0", "exit", "relay").error).toContain("无上游");
+  expect(updateServerConnectorVia(program, "1.0", "exit", "relay").error).toBeTruthy();
   expect(connectorViaChoices(program, "exit").find(item => item.value === "relay")?.disabled).toBe(true);
   expect(program.connectors![0].via).toBeUndefined();
  });
@@ -166,4 +166,31 @@ it("allows two plain Trojan relays for AnyTLS without admitting mixed or longer 
     }
   }
   expect(program.connectors![0].via).toBeUndefined();
+});
+
+it("allows one ordinary TLS VLESS relay for AnyTLS and disables incompatible paths", () => {
+  const program = fixture();
+  program.connectors![0].connection.protocol = "anytls";
+  const vless = { protocol: "vless", host: "relay.example", port: 443, uuid: "00000000-0000-4000-8000-000000000001", tls: { enabled: true } };
+  program.connectors![1].connection = structuredClone(vless);
+  expect(updateServerConnectorVia(program, "1.0", "exit", "relay").program?.connectors?.[0].via).toBe("relay");
+  expect(connectorViaChoices(program, "exit").find(item => item.value === "relay")?.disabled).toBe(false);
+  expect(updateServerConnectorVia(program, "1.0", "relay", "exit").error).toBeTruthy();
+  for (const patch of [
+    { flow: "xtls-rprx-vision" }, { packetEncoding: "xudp" }, { tls: { enabled: false } },
+    { tls: { enabled: true, fingerprint: "chrome" } },
+    { tls: { enabled: true, reality: { publicKey: "key", shortId: "ab" } } },
+    { transport: { type: "ws" } },
+  ]) {
+    program.connectors![1].connection = { ...vless, ...patch };
+    expect(updateServerConnectorVia(program, "1.0", "exit", "relay").error).toBeTruthy();
+    expect(connectorViaChoices(program, "exit").find(item => item.value === "relay")?.disabled).toBe(true);
+  }
+  program.connectors![1].connection = { ...vless, transport: { type: "tcp" } };
+  expect(updateServerConnectorVia(program, "1.0", "exit", "relay").error).toBeUndefined();
+  program.connectors!.push({ id: "first", connection: structuredClone(vless) });
+  program.connectors![1].via = "first";
+  expect(updateServerConnectorVia(program, "1.0", "exit", "relay").error).toBeTruthy();
+  program.connectors![1].connection = { protocol: "trojan", host: "relay.example", port: 443, password: "synthetic", tls: { enabled: true } };
+  expect(updateServerConnectorVia(program, "1.0", "exit", "relay").error).toBeTruthy();
 });

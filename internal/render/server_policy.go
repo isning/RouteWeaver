@@ -17,7 +17,7 @@ func normalizeServerProgram(p domain.ServerProgram) (domain.ServerProgram, error
 		p.Connectors = make([]domain.ServerConnector, len(p.Egress))
 		for i, c := range p.Egress {
 			if c.Protocol == "anytls" && len(p.Egress) > 1 {
-				return p, fmt.Errorf("ANYTLS_DETOUR_UNSUPPORTED: use a named AnyTLS connector through one direct SOCKS5 relay")
+				return p, fmt.Errorf("ANYTLS_DETOUR_UNSUPPORTED: use supported named AnyTLS connectors")
 			}
 			id := fmt.Sprintf("egress-%d", i+1)
 			via := ""
@@ -200,7 +200,7 @@ func validateDirectTLSConnectors(p domain.ServerProgram) error {
 				allowed = allowed && upstream.Connection.Protocol == "trojan" && first.Connection.Protocol == "trojan" && supportedAnyTLSRelay(first.Connection) && first.Via == ""
 			}
 			if !allowed {
-				return fmt.Errorf("ANYTLS_DETOUR_UNSUPPORTED: use one SOCKS5/Trojan relay or two ordinary TLS Trojan relays")
+				return fmt.Errorf("ANYTLS_DETOUR_UNSUPPORTED: use one SOCKS5/VLESS/Trojan relay or two ordinary TLS Trojan relays")
 			}
 		}
 	}
@@ -211,5 +211,6 @@ func supportedAnyTLSRelay(c domain.Connection) bool {
 	if c.Protocol == "socks" {
 		return true
 	}
-	return c.Protocol == "trojan" && c.TLS != nil && c.TLS.Enabled && c.TLS.Reality == nil && c.TLS.Fingerprint == "" && (c.Transport == nil || c.Transport.Type == "tcp")
+	protocolOK := c.Protocol == "trojan" || (c.Protocol == "vless" && c.Flow == "" && c.PacketEncoding == "")
+	return protocolOK && c.TLS != nil && c.TLS.Enabled && c.TLS.Reality == nil && c.TLS.Fingerprint == "" && (c.Transport == nil || c.Transport.Type == "tcp")
 }

@@ -30,7 +30,7 @@ INTEGRATION = [
 
 
 class ClientNativeGateTests(unittest.TestCase):
-    def check(self, client_action="pass", omit=False, selected="mihomo,sing-box", dns_action="pass", omit_dns=False, mixed_action="pass", omit_mixed=False, hy2_action="pass", anytls_action="pass", omit_anytls=False, chain_action="pass", omit_chain=False, trojan_action="pass", omit_trojan=False, two_trojan_action="pass", omit_two_trojan=False):
+    def check(self, client_action="pass", omit=False, selected="mihomo,sing-box", dns_action="pass", omit_dns=False, mixed_action="pass", omit_mixed=False, hy2_action="pass", anytls_action="pass", omit_anytls=False, chain_action="pass", omit_chain=False, trojan_action="pass", omit_trojan=False, two_trojan_action="pass", omit_two_trojan=False, vless_action="pass", omit_vless=False):
         shell = (ROOT / "scripts/native-cores.sh").read_text()
         checker = shell.split('python3 - "$REPORT" <<\'PY\'\n', 1)[1].split('\nPY\n', 1)[0]
         events = []
@@ -39,6 +39,8 @@ class ClientNativeGateTests(unittest.TestCase):
             events.extend({"Package": "routeweaver/internal/" + pkg, "Test": name,
                            "Action": "pass"} for name in names)
         events.append({"Package": "routeweaver/internal/integration", "Test": "TestNativeHysteria2Loopback", "Action": hy2_action})
+        if not omit_vless:
+            events.append({"Package": "routeweaver/internal/integration", "Test": "TestNativeAnyTLSViaVLESSLoopback", "Action": vless_action})
         if not omit_two_trojan:
             events.append({"Package": "routeweaver/internal/integration", "Test": "TestNativeAnyTLSViaTwoTrojanLoopback", "Action": two_trojan_action})
         if not omit_trojan:
@@ -85,6 +87,10 @@ class ClientNativeGateTests(unittest.TestCase):
         for action, omit in [("skip", False), ("fail", False), ("pass", True)]:
             self.assertNotEqual(self.check(two_trojan_action=action, omit_two_trojan=omit).returncode, 0)
 
+    def test_anytls_vless_runtime_missing_skipped_or_failed_reject(self):
+        for action, omit in [("skip", False), ("fail", False), ("pass", True)]:
+            self.assertNotEqual(self.check(vless_action=action, omit_vless=omit).returncode, 0)
+
     def test_both_clients_required(self):
         result = self.check()
         self.assertEqual(result.returncode, 0, result.stderr)
@@ -114,6 +120,8 @@ class ClientNativeGateTests(unittest.TestCase):
         shell = (ROOT / "scripts/native-cores.sh").read_text()
         patterns = re.findall(r"-run '([^']+)'", shell)
         self.assertEqual(len(patterns), 2)
+        self.assertIsNotNone(re.search(patterns[0], "TestNativeAnyTLSViaVLESSConfiguration"))
+        self.assertIsNotNone(re.search(patterns[1], "TestNativeAnyTLSViaVLESSLoopback"))
         self.assertIsNotNone(re.search(patterns[0], "TestNativeAnyTLSViaTwoTrojanConfiguration"))
         self.assertIsNotNone(re.search(patterns[1], "TestNativeAnyTLSViaTwoTrojanLoopback"))
         self.assertIsNotNone(re.search(patterns[0], "TestNativeAnyTLSViaTrojanConfiguration"))

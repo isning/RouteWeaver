@@ -27,6 +27,7 @@ import (
 func TestNativeAnyTLSViaSOCKSLoopback(t *testing.T)     { nativeAnyTLSViaLoopback(t, "socks") }
 func TestNativeAnyTLSViaTrojanLoopback(t *testing.T)    { nativeAnyTLSViaLoopback(t, "trojan") }
 func TestNativeAnyTLSViaTwoTrojanLoopback(t *testing.T) { nativeAnyTLSViaLoopback(t, "trojan2") }
+func TestNativeAnyTLSViaVLESSLoopback(t *testing.T)     { nativeAnyTLSViaLoopback(t, "vless") }
 func nativeAnyTLSViaLoopback(t *testing.T, relay string) {
 	t.Helper()
 	if !strings.Contains(","+os.Getenv("ROUTEWEAVER_NATIVE_PROCESS_TESTS")+",", ",sing-box,") {
@@ -63,6 +64,11 @@ func nativeAnyTLSViaLoopback(t *testing.T, relay string) {
 		transit.TLS = &domain.ServerTLSOptions{CertificatePath: "tls/cert.pem", KeyPath: "tls/key.pem", CertificatePEM: certificate, PrivateKeyPEM: key}
 		// Only this loopback fixture permits the private AnyTLS endpoint.
 		transit.DestinationPolicy = &domain.DestinationPolicy{AllowCIDRs: []string{"127.0.0.1/32"}}
+	}
+	if relay == "vless" {
+		transit.Listener.Connection.Protocol = "vless"
+		transit.Listener.Connection.Password = ""
+		transit.Listener.Connection.UUID = "00000000-0000-4000-8000-000000000091"
 	}
 	entry := program("entry", socks(entryPort))
 	entry.Connectors = []domain.ServerConnector{{ID: "a-anytls", Via: "z-relay", Connection: anytls}, {ID: "z-relay", Connection: transit.Listener.Connection}}
@@ -111,7 +117,7 @@ func nativeAnyTLSViaLoopback(t *testing.T, relay string) {
 					t.Fatal("named detour lost")
 				}
 			}
-			if out["type"] == "anytls" || out["type"] == "trojan" {
+			if out["type"] == "anytls" || out["type"] == "trojan" || out["type"] == "vless" {
 				out["tls"].(map[string]any)["certificate_path"] = "fixture-ca.pem"
 			}
 		}

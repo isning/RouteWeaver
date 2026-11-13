@@ -227,3 +227,55 @@ func TestAnyTLSTwoTrojanRelaysKeepOrderAndRejectExtraOrMixedHops(t *testing.T) {
 		t.Fatal("mixed two-relay chain accepted")
 	}
 }
+
+func TestAnyTLSViaVLESSPreservesExitAndRejectsUnverifiedCombinations(t *testing.T) {
+	ir := serverIR(render.ServerAdapterSingBox, render.StockSingBoxVersion)
+	p := &ir.Programs[0]
+	p.Egress = nil
+	relay := domain.Connection{Protocol: "vless", Host: "relay.example", Port: 443, UUID: "11111111-1111-4111-8111-111111111111", TLS: &domain.TLSOptions{Enabled: true, ServerName: "relay-tls.example"}}
+	p.Connectors = []domain.ServerConnector{{ID: "exit", Connection: anyTLSConnection(), Via: "relay"}, {ID: "relay", Connection: relay}}
+	p.DefaultAction = domain.ActionRef{Kind: "forward", Ref: "exit"}
+	artifacts, err := render.DefaultServers().Render(ir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var config map[string]any
+	if err = json.Unmarshal([]byte(artifacts[0].Content), &config); err != nil {
+		t.Fatal(err)
+	}
+	seen := map[string]bool{}
+	for _, raw := range config["outbounds"].([]any) {
+		o := raw.(map[string]any)
+		switch o["tag"] {
+		case "exit":
+			seen["exit"] = o["type"] == "anytls" && o["detour"] == "relay" && o["tls"].(map[string]any)["server_name"] == "proxy.example"
+		case "relay":
+			seen["relay"] = o["type"] == "vless" && o["uuid"] == relay.UUID && o["tls"].(map[string]any)["server_name"] == "relay-tls.example" && o["detour"] == nil
+		}
+	}
+	if !seen["exit"] || !seen["relay"] || config["route"].(map[string]any)["final"] != "exit" {
+		t.Fatal("VLESS relay or AnyTLS exit identity changed")
+	}
+	for _, bad := range []func(*domain.Connection){
+		func(c *domain.Connection) { c.Flow = "xtls-rprx-vision" },
+		func(c *domain.Connection) { c.PacketEncoding = "xudp" },
+		func(c *domain.Connection) { c.TLS = nil },
+		func(c *domain.Connection) { c.Transport = &domain.TransportOptions{Type: "ws"} },
+		func(c *domain.Connection) {
+			c.TLS = &domain.TLSOptions{Enabled: true, ServerName: "relay.example", Fingerprint: "chrome"}
+		},
+	} {
+		c := relay
+		bad(&c)
+		p.Connectors[1].Connection = c
+		if _, err = render.DefaultServers().Render(ir); err == nil {
+			t.Fatal("unverified VLESS relay accepted")
+		}
+	}
+	p.Connectors[1].Connection = relay
+	p.Connectors[1].Via = "first"
+	p.Connectors = append(p.Connectors, domain.ServerConnector{ID: "first", Connection: relay})
+	if _, err = render.DefaultServers().Render(ir); err == nil || !strings.Contains(err.Error(), "ANYTLS_DETOUR_UNSUPPORTED") {
+		t.Fatalf("VLESS with extra relay accepted: %v", err)
+	}
+}

@@ -15,6 +15,7 @@ func TestNativeAnyTLSViaTrojanConfiguration(t *testing.T) { nativeAnyTLSViaConfi
 func TestNativeAnyTLSViaTwoTrojanConfiguration(t *testing.T) {
 	nativeAnyTLSViaConfiguration(t, "trojan2")
 }
+func TestNativeAnyTLSViaVLESSConfiguration(t *testing.T) { nativeAnyTLSViaConfiguration(t, "vless") }
 func nativeAnyTLSViaConfiguration(t *testing.T, relay string) {
 	t.Helper()
 	for _, target := range nativeStockServerTargets() {
@@ -29,6 +30,11 @@ func nativeAnyTLSViaConfiguration(t *testing.T, relay string) {
 			p.Connectors = []domain.ServerConnector{{ID: "a-anytls", Via: "z-relay", Connection: domain.Connection{Protocol: "anytls", Host: "127.0.0.1", Port: 18443, Password: "synthetic-password", TLS: &domain.TLSOptions{Enabled: true, ServerName: "localhost"}}}, {ID: "z-relay", Connection: domain.Connection{Protocol: "socks", Host: "127.0.0.1", Port: 18081}}}
 			if relay != "socks" {
 				p.Connectors[1].Connection = domain.Connection{Protocol: "trojan", Host: "127.0.0.1", Port: 18444, Password: "synthetic-relay-password", TLS: &domain.TLSOptions{Enabled: true, ServerName: "localhost"}}
+			}
+			if relay == "vless" {
+				p.Connectors[1].Connection.Protocol = "vless"
+				p.Connectors[1].Connection.Password = ""
+				p.Connectors[1].Connection.UUID = "00000000-0000-4000-8000-000000000091"
 			}
 			if relay == "trojan2" {
 				first := p.Connectors[1].Connection

@@ -42,9 +42,12 @@ export function connectorGraphError(connectors: Connector[], adapterId: string) 
       if (current.connection?.protocol === "anytls") {
         const first = next.via ? byId.get(next.via) : undefined;
         const singleSocks = next.connection?.protocol === "socks" && !next.via;
+        const vless = next.connection;
+        const singleVless = vless?.protocol === "vless" && !next.via && !vless.flow && !vless.packetEncoding &&
+          vless.tls?.enabled && !vless.tls.reality && !vless.tls.fingerprint && (!vless.transport || vless.transport.type === "tcp");
         const trojanPath = isPlainTrojan(next) && (!next.via || (isPlainTrojan(first) && !first?.via));
-        if (adapterId !== "routeweaver/sing-box" || (!singleSocks && !trojanPath))
-          return "AnyTLS 上游须为无上游的 SOCKS5，或最多两级普通 TLS、无客户端指纹的 TCP Trojan；不能混用。";
+        if (adapterId !== "routeweaver/sing-box" || (!singleSocks && !trojanPath && !singleVless))
+          return "此中转组合不支持 AnyTLS，请更换上游连接器。";
       }
       current = next;
     }

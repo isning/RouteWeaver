@@ -444,7 +444,7 @@ export function ConnectionFields({
         )}
         {directTls && (
           <div className="space-y-2 sm:col-span-2">
-            <p className="text-sm text-muted-foreground">{hysteria2 ? "Hysteria2 使用 QUIC（UDP）和 TLS；目前仅支持 sing-box 直接连接。" : anytlsConnector ? "AnyTLS 可直接连接，或经由一级 SOCKS5、最多两级 Trojan，不能混用；Trojan 须使用普通 TLS 和 TCP，不设置客户端指纹。" : "AnyTLS 使用密码和 TLS；目前仅支持 sing-box。"}</p>
+            <p className="text-sm text-muted-foreground">{hysteria2 ? "Hysteria2 使用 QUIC（UDP）和 TLS；目前仅支持 sing-box 直接连接。" : anytlsConnector ? "AnyTLS 可直接连接，也可在上游连接器中选择可用中转。" : "AnyTLS 使用密码和 TLS；目前仅支持 sing-box。"}</p>
             {protocolUnavailableReason && <p className="text-sm text-destructive">{protocolUnavailableReason}</p>}
             {!!directTlsConflicts.length && <Notice tone="warning" title={`以下参数不适用于 ${directTlsName}`}>
               <div className="flex flex-wrap gap-2">{directTlsConflicts.map(({ path, label }) => (
