@@ -95,3 +95,24 @@ If discovery prevents startup during an outage, start the same database without
 Provider credentials, public DNS/TLS and actual provider interoperability must
 be configured and verified by the deployment operator. Controlled signed-IdP
 fixtures are software evidence, not a real-provider deployment claim.
+
+## Controlled browser verification
+
+The `browser_native` verification gate also runs `TestOIDCBrowserCrossSite`
+with the `oidc_browser_acceptance` build tag. It uses an isolated temporary
+account and signed test IdP, with HTTPS `localhost` and `127.0.0.1` origins
+(different sites), actual browser navigation, and sandboxed Chromium. Only the
+fixture certificate's exact public-key fingerprint is trusted by that browser
+process; no production TLS or system trust settings change.
+
+This checks the protocol/cookie boundary, local MFA and consumed-proof replay
+rejection. It does not exercise the production React login controls, a real
+provider, public DNS/CA trust, or a production deployment. A browser startup
+failure is a failed check, not a skipped success. Run the focused check with an
+installed Chromium and the locked web dependencies:
+
+```sh
+ROUTEWEAVER_CHROMIUM=/path/to/chromium scripts/go.sh test \
+  -tags oidc_browser_acceptance ./internal/httpapi \
+  -run '^TestOIDCBrowserCrossSite$' -count=1 -timeout=3m
+```

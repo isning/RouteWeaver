@@ -8,6 +8,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"html"
 	"io"
 	"net/http"
 	"net/http/cookiejar"
@@ -39,6 +40,10 @@ type oidcFixture struct {
 }
 
 func newOIDCFixture(t *testing.T) *oidcFixture {
+	return newOIDCFixtureForBrowser(t, false)
+}
+
+func newOIDCFixtureForBrowser(t *testing.T, browser bool) *oidcFixture {
 	t.Helper()
 	s, old := makeServer(t)
 	old.Close()
@@ -82,7 +87,12 @@ func newOIDCFixture(t *testing.T) *oidcFixture {
 			v.Set("code", code)
 			v.Set("state", q.Get("state"))
 			target.RawQuery = v.Encode()
-			http.Redirect(w, r, target.String(), 302)
+			if browser {
+				w.Header().Set("Content-Type", "text/html")
+				io.WriteString(w, "<!doctype html><a href=\""+html.EscapeString(target.String())+"\">Continue to RouteWeaver</a>")
+			} else {
+				http.Redirect(w, r, target.String(), 302)
+			}
 		case "/token":
 			r.ParseForm()
 			f.mu.Lock()
@@ -130,6 +140,9 @@ func newOIDCFixture(t *testing.T) *oidcFixture {
 	t.Cleanup(f.idp.Close)
 	f.app = httptest.NewUnstartedServer(nil)
 	f.app.StartTLS()
+	if browser {
+		f.app.URL = strings.Replace(f.app.URL, "127.0.0.1", "localhost", 1)
+	}
 	t.Cleanup(f.app.Close)
 	ctx := context.WithValue(context.Background(), oauth2.HTTPClient, f.idp.Client())
 	provider, e := httpapi.NewOIDCProvider(ctx, httpapi.OIDCConfig{Issuer: f.idp.URL, ClientID: "fixture-client", ClientSecret: "synthetic-client-secret", Label: "Fixture SSO", Bindings: []httpapi.OIDCBinding{{Subject: "mapped-subject", AccountID: a.ID}}}, f.app.URL)
@@ -137,6 +150,17 @@ func newOIDCFixture(t *testing.T) *oidcFixture {
 		t.Fatal(e)
 	}
 	f.app.Config.Handler = httpapi.NewWithOptions(s, render.Default(), httpapi.Options{PublicOrigin: f.app.URL, OIDC: provider})
+	if browser {
+		api := f.app.Config.Handler
+		f.app.Config.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path == "/" {
+				w.Header().Set("Content-Type", "text/html")
+				io.WriteString(w, "<!doctype html><title>OIDC browser protocol fixture</title><p>Test-only application origin</p>")
+				return
+			}
+			api.ServeHTTP(w, r)
+		})
+	}
 	f.client = f.newClient()
 	return f
 }

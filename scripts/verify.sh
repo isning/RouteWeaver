@@ -85,7 +85,10 @@ browser_gate() {
   fi
   stage "$label" npm --prefix web run test:browser "${args[@]}"
 }
-browser_native_gate() { stage 'Same-instance browser/native acceptance' scripts/browser-native.sh; }
+browser_native_gate() {
+  stage 'Same-instance browser/native acceptance' scripts/browser-native.sh
+  stage 'Cross-site OIDC browser cookies and MFA' scripts/go.sh test -tags oidc_browser_acceptance ./internal/httpapi -run '^TestOIDCBrowserCrossSite$' -count=1 -timeout=3m
+}
 native_gate() { stage 'Pinned native parser integration' scripts/native-cores.sh parsers; }
 runtime_gate() { stage 'Explicitly selected native process lifecycle' scripts/native-cores.sh runtime; }
 managed_gate() { stage 'Managed native runtime end-to-end' scripts/managed-runtime.sh; }
