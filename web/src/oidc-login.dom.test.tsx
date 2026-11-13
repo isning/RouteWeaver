@@ -25,8 +25,7 @@ it("finishes OIDC only on explicit confirmation and trusts the checked cookie id
   const complete = vi.fn();
   const storage = vi.spyOn(Storage.prototype, "setItem");
   vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
-    if (url.endsWith("/auth/me")) return loggedIn ? json(session("checked")) : json({}, 401);
-    if (url.endsWith("/auth/oidc")) return json({ enabled: true, label: "Company" });
+    if (url.endsWith("/auth/me")) return loggedIn ? json(session("checked")) : json({ oidc: { enabled: true, label: "Company" } }, 401);
     if (url.endsWith("/auth/oidc/complete")) { complete(init); loggedIn = true; return json(session("untrusted-payload")); }
     return json([]);
   }));
@@ -40,14 +39,14 @@ it("finishes OIDC only on explicit confirmation and trusts the checked cookie id
   expect(complete).toHaveBeenCalledOnce();
   expect(JSON.parse(complete.mock.calls[0][0].body)).toEqual({});
   expect(storage).not.toHaveBeenCalled();
+  expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url).endsWith("/auth/oidc"))).toBe(false);
 });
 
 it("requires the local MFA code and consumes a failed pending login without leaking its error", async () => {
   history.replaceState(null, "", "/?oidc=mfa");
   const complete = vi.fn();
   vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
-    if (url.endsWith("/auth/me")) return json({}, 401);
-    if (url.endsWith("/auth/oidc")) return json({ enabled: true, label: "Company" });
+    if (url.endsWith("/auth/me")) return json({ oidc: { enabled: true, label: "Company" } }, 401);
     if (url.endsWith("/auth/oidc/complete")) { complete(JSON.parse(String(init?.body))); return json({ error: "private-provider-detail" }, 401); }
     return json([]);
   }));
@@ -72,8 +71,7 @@ it("keeps password login available on OIDC errors and disables duplicate starts"
   const pending = new Promise<Response>(resolve => { finish = resolve; });
   let starts = 0;
   vi.stubGlobal("fetch", vi.fn(async (url: string) => {
-    if (url.endsWith("/auth/me")) return json({}, 401);
-    if (url.endsWith("/auth/oidc")) return json({ enabled: true, label: "Company" });
+    if (url.endsWith("/auth/me")) return json({ oidc: { enabled: true, label: "Company" } }, 401);
     if (url.endsWith("/auth/oidc/start")) { starts++; return pending; }
     return json([]);
   }));
@@ -88,4 +86,17 @@ it("keeps password login available on OIDC errors and disables duplicate starts"
   finish(json({ authorizationUrl: "http://localhost/authorize" }));
   await screen.findByText("暂时无法开始单点登录，请重试，或使用账号密码登录。");
   expect(screen.getByRole("button", { name: "进入工作空间" }).hasAttribute("disabled")).toBe(false);
+});
+
+it("does not add discovery requests or a pointless check button on a password-only server", async () => {
+  const reads: string[] = [];
+  vi.stubGlobal("fetch", vi.fn(async (url: string) => {
+    reads.push(url);
+    if (url.endsWith("/auth/me")) return json({}, 401);
+    throw new Error("unexpected request");
+  }));
+  mount();
+  await screen.findByLabelText("密码");
+  expect(reads).toEqual(["/api/auth/me"]);
+  expect(screen.queryByRole("button", { name: "检查其他登录方式" })).toBeNull();
 });

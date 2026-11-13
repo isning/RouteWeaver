@@ -142,6 +142,7 @@ func newOIDCFixture(t *testing.T) *oidcFixture {
 }
 func (f *oidcFixture) newClient() *http.Client {
 	c := *f.app.Client()
+	c.Timeout = 10 * time.Second
 	c.Jar, _ = cookiejar.New(nil)
 	c.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
 	return &c
@@ -195,6 +196,48 @@ func TestOIDCHTTPMappedLoginAndFailureBoundaries(t *testing.T) {
 	json.NewDecoder(r.Body).Decode(&metadata)
 	if metadata["enabled"] != true || metadata["label"] != "Fixture SSO" {
 		t.Fatal(metadata)
+	}
+	for _, invalidCookie := range []bool{false, true} {
+		c := f.newClient()
+		expected := "authentication required"
+		if invalidCookie {
+			u, _ := url.Parse(f.app.URL)
+			c.Jar.SetCookies(u, []*http.Cookie{{Name: "routeweaver_session", Value: "invalid-fixture-session", Path: "/", Secure: true}})
+			expected = "session invalid or expired"
+		}
+		response := f.request(c, "GET", f.app.URL+"/api/auth/me", "", nil)
+		body, _ := io.ReadAll(response.Body)
+		var failure map[string]any
+		if json.Unmarshal(body, &failure) != nil || response.StatusCode != 401 || failure["detail"] != expected || len(failure) != 2 {
+			t.Fatalf("session bootstrap changed: %d %s", response.StatusCode, body)
+		}
+		advertised, ok := failure["oidc"].(map[string]any)
+		if !ok || len(advertised) != 2 || advertised["enabled"] != true || advertised["label"] != "Fixture SSO" {
+			t.Fatalf("public login metadata: %s", body)
+		}
+		for _, secret := range []string{f.idp.URL, "synthetic-client-secret", "fixture-client", "mapped-subject", f.account.ID} {
+			if strings.Contains(string(body), secret) {
+				t.Fatalf("private provider config leaked in bootstrap: %s", secret)
+			}
+		}
+		other := f.request(c, "GET", f.app.URL+"/api/me/overview", "", nil)
+		var otherBody map[string]any
+		json.NewDecoder(other.Body).Decode(&otherBody)
+		if other.StatusCode != 401 || len(otherBody) != 1 || otherBody["detail"] != expected {
+			t.Fatalf("other auth failure changed: %#v", otherBody)
+		}
+	}
+	// Unconfigured installs retain the exact original error shape.
+	plain := httpapi.NewWithOptions(f.db, render.Default(), httpapi.Options{})
+	for _, method := range []string{"GET", "HEAD"} {
+		w := httptest.NewRecorder()
+		plain.ServeHTTP(w, httptest.NewRequest(method, "http://example.invalid/api/auth/me", nil))
+		if strings.Contains(w.Body.String(), "oidc") {
+			t.Fatal("unconfigured OIDC advertised")
+		}
+		if method == "GET" && (w.Code != 401 || strings.TrimSpace(w.Body.String()) != `{"detail":"authentication required"}`) {
+			t.Fatalf("unconfigured error shape changed: %s", w.Body.String())
+		}
 	}
 	for _, origin := range []string{"", "https://evil.invalid"} {
 		if r := f.request(f.client, "POST", f.app.URL+"/api/auth/oidc/start", origin, map[string]any{}); r.StatusCode != 403 {
@@ -285,14 +328,47 @@ func TestOIDCHTTPMFAAndAccountChanges(t *testing.T) {
 	if f.loginCallback(one) != "/?oidc=mfa" || f.loginCallback(two) != "/?oidc=mfa" {
 		t.Fatal("MFA missing")
 	}
-	results := make(chan int, 2)
+	type completionResult struct {
+		status int
+		err    error
+	}
+	results := make(chan completionResult, 2)
 	for _, c := range []*http.Client{one, two} {
 		go func(c *http.Client) {
-			r := f.request(c, "POST", f.app.URL+"/api/auth/oidc/complete", f.app.URL, map[string]string{"totp": code})
-			results <- r.StatusCode
+			// Do not call testing.Fatal from a worker: Goexit would leave the
+			// main test waiting forever for a result that can never arrive.
+			body, _ := json.Marshal(map[string]string{"totp": code})
+			request, err := http.NewRequest("POST", f.app.URL+"/api/auth/oidc/complete", bytes.NewReader(body))
+			if err != nil {
+				results <- completionResult{err: err}
+				return
+			}
+			request.Header.Set("Content-Type", "application/json")
+			request.Header.Set("Origin", f.app.URL)
+			response, err := c.Do(request)
+			if err != nil {
+				results <- completionResult{err: err}
+				return
+			}
+			response.Body.Close()
+			results <- completionResult{status: response.StatusCode}
 		}(c)
 	}
-	x, y := <-results, <-results
+	deadline := time.NewTimer(12 * time.Second)
+	defer deadline.Stop()
+	statuses := make([]int, 0, 2)
+	for len(statuses) < 2 {
+		select {
+		case result := <-results:
+			if result.err != nil {
+				t.Fatalf("concurrent completion request: %v", result.err)
+			}
+			statuses = append(statuses, result.status)
+		case <-deadline.C:
+			t.Fatal("concurrent OIDC completion did not return within 12 seconds")
+		}
+	}
+	x, y := statuses[0], statuses[1]
 	if !((x == 200 && y == 401) || (x == 401 && y == 200)) {
 		t.Fatalf("TOTP replay race: %d %d", x, y)
 	}

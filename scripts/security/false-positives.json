@@ -346,5 +346,11 @@
     "rule": "generic-api-key",
     "lineSHA256": "e2cc092057e0e68bd7aa28612333d3b5348fce06539eba1b0dfee0d010f41781",
     "reason": "SHA-256 source-file digest for web/src/AccessPolicy.tsx, independently recomputed from the audited Git commit 6c6f2a33a6381e0badbfb8eeab9ba6a191cf3314; not an API key or credential."
+  },
+  {
+    "path": "go.sum",
+    "rule": "generic-api-key",
+    "lineSHA256": "9a6c5f60dfc9d62a1527a075e3bf8bf0ccc12e0d713e256091a874322a00f9ab",
+    "reason": "Official golang.org/x/oauth2 v0.38.0 module checksum, independently matched against go mod download and sum.golang.org; not a credential."
   }
 ]

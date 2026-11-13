@@ -136,7 +136,6 @@ it("retains a concealed draft after expiry and retries only after same-account l
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url: string, init?: RequestInit) => {
-      if (url.endsWith("/auth/oidc")) return json({ enabled: true, label: "Company" });
       if (url.endsWith("/auth/login")) {
         loggedIn = true;
         version = 2;
@@ -148,7 +147,7 @@ it("retains a concealed draft after expiry and retries only after same-account l
               ...session("A"),
               csrfToken: version === 1 ? "csrf-A" : "csrf-renewed",
             })
-          : json({ error: "session invalid or expired" }, 401);
+          : json({ error: "session invalid or expired", oidc: { enabled: true, label: "Company" } }, 401);
       if (init?.method === "POST") {
         writes.push({
           body: JSON.parse(String(init.body)),
@@ -187,6 +186,9 @@ it("retains a concealed draft after expiry and retries only after same-account l
     target: { value: "a.test" },
   });
   expect(screen.queryByRole("button", { name: "保存集合" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "使用 Company 登录" })).toBeNull();
+  screen.getByRole("button", { name: "检查其他登录方式" }).focus();
+  await userEvent.keyboard("{Enter}");
   await screen.findByRole("button", { name: "使用 Company 登录" });
   expect(screen.getByText("单点登录会离开此页并丢失未保存内容。请使用账号密码登录以保留草稿。")).toBeTruthy();
   fireEvent.change(screen.getByLabelText("密码"), {

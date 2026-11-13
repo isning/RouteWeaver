@@ -78,7 +78,7 @@ import {
 } from "react";
 import { lazyPage, PageBoundary } from "./PageBoundary";
 import { SessionBoundary, useSessionAccess } from "./SessionBoundary";
-import { APIError, loginWithToken, post, request, setToken } from "./api";
+import { APIError, loginWithToken, post, setToken } from "./api";
 import type { Session } from "./types";
 import type { SourceAcceptanceReceipt } from "./SourceUpdateContinuation";
 import { ErrorNotice } from "./components";
@@ -1081,11 +1081,17 @@ function LoginForm({
     const status = new URLSearchParams(location.search).get("oidc");
     return mode === "login" && (status === "mfa" || status === "complete") ? status : null;
   });
-  const [provider, setProvider] = useState<{ label: string } | null>(null);
   const [error, setError] = useState<Error | null>(() => new URLSearchParams(location.search).get("oidc") === "error"
     ? new Error("单点登录未完成。请重试，或使用账号密码登录。") : initialError);
   const [form] = useForm();
   const { lifecycle, snapshot } = useSessionAccess();
+  // Login options arrive only with the existing anonymous session check.
+  // Mounting recovery must never introduce another network read.
+  const options = snapshot.error instanceof APIError && snapshot.error.status === 401
+    ? (snapshot.error.details as { oidc?: { enabled?: unknown; label?: unknown } } | null)?.oidc : undefined;
+  const provider = options?.enabled === true && typeof options.label === "string" && options.label.trim()
+    ? { label: options.label } : null;
+  const [checkedLoginOptions, setCheckedLoginOptions] = useState(false);
   const [inviteUncertain, setInviteUncertain] = useState(false);
   const mounted = useRef(true);
   const submitting = useRef(false);
@@ -1103,15 +1109,6 @@ function LoginForm({
       history.replaceState(history.state, "", `${location.pathname}${query ? `?${query}` : ""}${location.hash}`);
     }
   }, []);
-  useEffect(() => {
-    if (mode !== "login") return;
-    const controller = new AbortController();
-    void request<{ enabled: boolean; label: string }>("/auth/oidc", { signal: controller.signal }).then(value => {
-      if (!controller.signal.aborted && value?.enabled === true && typeof value.label === "string" && value.label.trim())
-        setProvider({ label: value.label });
-    }).catch(() => { /* Password login remains available if provider discovery fails. */ });
-    return () => controller.abort();
-  }, [mode]);
   const oidcAction = async (action: "start" | "complete", totp?: string) => {
     if (!mounted.current || submitting.current || lifecycle.getSnapshot().phase !== "recovery") return;
     if (!navigator.onLine) { setError(new Error("网络已断开，请恢复连接后再登录。")); return; }
@@ -1343,6 +1340,15 @@ function LoginForm({
           {mode === "login" && !oidcStage && provider && <ActionButton variant="outline" className="w-full" disabled={busy} onClick={() => oidcAction("start")}>
             使用 {provider.label} 登录
           </ActionButton>}
+          {mode === "login" && !oidcStage && !provider && (snapshot.session || checkedLoginOptions) && <div className="space-y-2">
+            {checkedLoginOptions && snapshot.error instanceof APIError && snapshot.error.status === 401 &&
+              <p className="text-sm text-muted-foreground">未启用单点登录，请使用账号密码登录。</p>}
+            {snapshot.session && !(snapshot.error instanceof APIError && snapshot.error.status === 401) && <ActionButton variant="outline" className="w-full" disabled={busy || snapshot.phase !== "recovery"} onClick={() => {
+              if (submitting.current || lifecycle.getSnapshot().phase !== "recovery") return;
+              setCheckedLoginOptions(true);
+              void lifecycle.check();
+            }}>检查其他登录方式</ActionButton>}
+          </div>}
           <div className="flex flex-wrap justify-between gap-2">
             {mode === "login" ? (
               <>

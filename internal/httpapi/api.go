@@ -205,12 +205,12 @@ func (h *server) authenticate(next http.Handler) http.Handler {
 		} else {
 			cookie, e := r.Cookie("routeweaver_session")
 			if e != nil {
-				fail(w, 401, "authentication required")
+				h.authFailure(w, r, "authentication required")
 				return
 			}
 			a, s, e := h.s.ResolveSession(cookie.Value, time.Now())
 			if e != nil {
-				fail(w, 401, "session invalid or expired")
+				h.authFailure(w, r, "session invalid or expired")
 				return
 			}
 			if a.PasswordChangeRequired && !passwordResetRoute(r.URL.Path) {
@@ -227,6 +227,17 @@ func (h *server) authenticate(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), principalKey{}, p)))
 	})
 }
+
+// The existing session bootstrap can advertise a public sign-in option without
+// adding requests to recovery/login screens. Never attach provider configuration.
+func (h *server) authFailure(w http.ResponseWriter, r *http.Request, message string) {
+	if r.Method == http.MethodGet && r.URL.Path == "/api/auth/me" && h.opts.OIDC != nil {
+		writeJSON(w, http.StatusUnauthorized, map[string]any{"detail": message, "oidc": map[string]any{"enabled": true, "label": h.opts.OIDC.label}})
+		return
+	}
+	fail(w, http.StatusUnauthorized, message)
+}
+
 func requireAdmin(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if current(r).Account.Role != "admin" {
