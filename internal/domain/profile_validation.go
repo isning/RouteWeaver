@@ -15,6 +15,24 @@ import (
 var uuidPattern = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
 
 func ValidateConnection(c Connection) error {
+	if c.Protocol == "hysteria2" {
+		if err := ValidateNode(Node{ID: "connection", Name: "connection", Host: c.Host, Port: c.Port, Protocol: "socks"}); err != nil {
+			return err
+		}
+		if c.Password == "" || c.Username != "" || c.UUID != "" || c.Method != "" || c.Flow != "" || c.PacketEncoding != "" || c.VMessSecurity != "" || c.Transport != nil {
+			return fmt.Errorf("Hysteria2 requires password and does not accept TCP transport or other protocol options")
+		}
+		if c.TLS == nil || !c.TLS.Enabled || c.TLS.Reality != nil || c.TLS.Fingerprint != "" {
+			return fmt.Errorf("Hysteria2 requires ordinary QUIC TLS without REALITY or uTLS fingerprint")
+		}
+		if strings.ContainsAny(c.TLS.ServerName, " /\r\n") {
+			return fmt.Errorf("invalid TLS server name")
+		}
+		if len(c.TLS.ALPN) != 0 && (len(c.TLS.ALPN) != 1 || c.TLS.ALPN[0] != "h3") {
+			return fmt.Errorf("Hysteria2 requires h3 ALPN")
+		}
+		return nil
+	}
 	if c.Protocol != "vmess" && c.VMessSecurity != "" {
 		return fmt.Errorf("VMess security requires VMess protocol")
 	}

@@ -11,7 +11,7 @@ type SingBoxClient struct{}
 func (SingBoxClient) NormalizeName(name string) string { return name }
 
 func (SingBoxClient) ClientCapability() ClientCapability {
-	return ClientCapability{NativeOverride: nativeCapability("upstream-json-schema-and-references"), AdapterID: "sing-box", Versions: []string{SingBoxVersion}, Protocols: []string{"socks", "shadowsocks", "vless", "trojan", "vmess"}, Groups: []string{"manual", "url-test"}, MatchOps: []string{"domain", "domain-suffix", "ip-cidr", "resource", "and", "or", "not"}, ResourceFormats: []string{"sing-box-source", "srs"}, Runtime: []string{"dns", "sniff", "tun"}, TLSFingerprints: []string{"chrome", "firefox", "safari", "ios", "android", "edge", "360", "qq", "random", "randomized"}, ReservedNames: []string{"rw-direct"}}
+	return ClientCapability{NativeOverride: nativeCapability("upstream-json-schema-and-references"), AdapterID: "sing-box", Versions: []string{SingBoxVersion}, Protocols: []string{"socks", "shadowsocks", "vless", "trojan", "vmess", "hysteria2"}, Groups: []string{"manual", "url-test"}, MatchOps: []string{"domain", "domain-suffix", "ip-cidr", "resource", "and", "or", "not"}, ResourceFormats: []string{"sing-box-source", "srs"}, Runtime: []string{"dns", "sniff", "tun"}, TLSFingerprints: []string{"chrome", "firefox", "safari", "ios", "android", "edge", "360", "qq", "random", "randomized"}, ReservedNames: []string{"rw-direct"}}
 }
 func (SingBoxClient) RenderClient(p domain.ClientProfileIR, _ Target, mode OutputMode, names map[string]string) (ClientResult, error) {
 	semantics := newSemanticCapture(mode)
@@ -114,8 +114,8 @@ func singboxConnection(c domain.Connection, tag string) map[string]any {
 			o["username"] = c.Username
 			o["password"] = c.Password
 		}
-	} else if c.Protocol == "vless" || c.Protocol == "trojan" || c.Protocol == "vmess" {
-		if c.Protocol == "trojan" {
+	} else if c.Protocol == "vless" || c.Protocol == "trojan" || c.Protocol == "vmess" || c.Protocol == "hysteria2" {
+		if c.Protocol == "trojan" || c.Protocol == "hysteria2" {
 			o["password"] = c.Password
 		} else {
 			o["uuid"] = c.UUID

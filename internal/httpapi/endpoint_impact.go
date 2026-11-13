@@ -97,6 +97,9 @@ func (h *server) endpointImpactReview(v domain.ManagedEndpoint, revision string)
 	if err := proof.read(h.s, "core-instances", v.InstanceID, &instance); err != nil {
 		return view, proof, err
 	}
+	if err := validateHysteria2EndpointTarget(v, instance); err != nil {
+		return view, proof, err
+	}
 	view.Endpoint = endpointImpactItem{ID: old.ID, Name: old.Name}
 	view.Proposed = endpointImpactTarget{Name: v.Name, InstanceID: instance.ID, InstanceName: instance.Name, Host: v.Connection.Host, Port: v.Connection.Port, Protocol: v.Connection.Protocol}
 	if old.Name != v.Name {

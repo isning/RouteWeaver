@@ -14,6 +14,9 @@ func validateOutboundTarget(c domain.Connection, target string) error {
 	}
 	switch target {
 	case "xray":
+		if !has((Xray{}).Capability().Protocols, c.Protocol) {
+			return fmt.Errorf("PROTOCOL_UNSUPPORTED: selected Xray target")
+		}
 		if c.PacketEncoding != "" {
 			return fmt.Errorf("XRAY_PACKET_ENCODING_UNVERIFIED: explicit packet encoding cannot be omitted")
 		}

@@ -272,6 +272,9 @@ func (XrayServer) ServerCapability() ServerCapability {
 	return ServerCapability{AdapterID: ServerAdapterXray, Versions: []string{StockXrayVersion, "26.10.29", HistoricalStockXrayVersion}, Protocols: []string{"socks", "shadowsocks", "vless", "trojan", "vmess"}, MultiPrincipalProtocols: []string{"vless"}}
 }
 func (XrayServer) RenderServer(p domain.ServerProgram) (any, error) {
+	if !has((XrayServer{}).ServerCapability().Protocols, p.Listener.Connection.Protocol) {
+		return nil, fmt.Errorf("SERVER_PROTOCOL_UNSUPPORTED: Xray listener")
+	}
 	if err := validateXraySecurity(p.Listener.Connection); err != nil {
 		return nil, err
 	}
@@ -447,9 +450,15 @@ func xrayStream(c domain.Connection) map[string]any {
 type SingBoxServer struct{}
 
 func (SingBoxServer) ServerCapability() ServerCapability {
-	return ServerCapability{AdapterID: ServerAdapterSingBox, Versions: []string{StockSingBoxVersion, HistoricalStockSingBoxVersion}, Protocols: []string{"socks", "shadowsocks", "vless", "trojan", "vmess"}, MultiPrincipalProtocols: []string{"vless"}}
+	return ServerCapability{AdapterID: ServerAdapterSingBox, Versions: []string{StockSingBoxVersion, HistoricalStockSingBoxVersion}, Protocols: []string{"socks", "shadowsocks", "vless", "trojan", "vmess", "hysteria2"}, MultiPrincipalProtocols: []string{"vless"}}
 }
 func (SingBoxServer) RenderServer(p domain.ServerProgram) (any, error) {
+	if err := domain.ValidateConnection(p.Listener.Connection); err != nil && p.Listener.Connection.Protocol == "hysteria2" {
+		return nil, err
+	}
+	if err := validateHysteria2Connectors(p); err != nil {
+		return nil, err
+	}
 	if err := domain.ValidateListenerTransport(p.Listener.Connection); err != nil {
 		return nil, err
 	}
@@ -475,9 +484,9 @@ func (SingBoxServer) RenderServer(p domain.ServerProgram) (any, error) {
 	case "shadowsocks":
 		inbound["method"] = c.Method
 		inbound["password"] = c.Password
-	case "vless", "trojan", "vmess":
+	case "vless", "trojan", "vmess", "hysteria2":
 		user := map[string]any{"name": p.Listener.ID, "uuid": c.UUID}
-		if c.Protocol == "trojan" {
+		if c.Protocol == "trojan" || c.Protocol == "hysteria2" {
 			user = map[string]any{"name": p.Listener.ID, "password": c.Password}
 		}
 		if c.Flow != "" {

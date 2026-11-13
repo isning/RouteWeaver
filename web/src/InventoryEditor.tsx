@@ -640,6 +640,7 @@ export function InventoryEditor({
               allowUnchangedUnsupportedProtocol={
                 allowUnchangedUnsupportedProtocol
               }
+              targetVersion={selectedEndpointInstance?.version}
               targetCore={selectedEndpointInstance?.adapterId.replace(
                 /^routeweaver\//,
                 "",

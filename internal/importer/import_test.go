@@ -267,3 +267,51 @@ func TestNativeProtocolSpecificFieldsCannotBeSilentlyIgnored(t *testing.T) {
 		}
 	}
 }
+
+func TestHysteria2ShareLinkAndUnsupportedOptions(t *testing.T) {
+	req := Request{SourceID: "source", OwnerID: "alice", SnapshotID: "snapshot", Format: "uri-list", Data: []byte("hy2://fixture-password@proxy.example:443/?sni=proxy.example&alpn=h3#HY2")}
+	result, err := Parse(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c := result.Snapshot.Endpoints[0].Connection
+	if c.Protocol != "hysteria2" || c.Password != "fixture-password" || c.TLS == nil || !c.TLS.Enabled || c.TLS.ServerName != "proxy.example" {
+		t.Fatal("HY2 link lost settings")
+	}
+	for _, raw := range []string{
+		"hy2://fixture-password@proxy.example:443/?insecure=1",
+		"hy2://fixture-password@proxy.example:443/?obfs=salamander&obfs-password=secret",
+	} {
+		req.Data = []byte(raw)
+		r, e := Parse(req)
+		if e == nil || len(r.Snapshot.Endpoints) > 0 {
+			t.Fatal("unsupported URI silently weakened")
+		}
+	}
+	req.Format = "sing-box"
+	req.Data = []byte(`{"outbounds":[{"type":"hysteria2","tag":"HY2","server":"proxy.example","server_port":443,"password":"fixture-password","tls":{"enabled":true},"up_mbps":10}]}`)
+	if _, err := Parse(req); err == nil {
+		t.Fatal("unmodeled bandwidth silently discarded")
+	}
+}
+
+func TestHysteria2ImportRejectsEmptyUTLS(t *testing.T) {
+	_, err := Parse(Request{SourceID: "source", OwnerID: "u", SnapshotID: "snap", Format: "sing-box", Data: []byte(`{"outbounds":[{"type":"hysteria2","server":"proxy.example","server_port":443,"password":"fixture","tls":{"enabled":true,"utls":{"enabled":true}}}]}`)})
+	if err == nil {
+		t.Fatal("unmodeled uTLS silently discarded")
+	}
+}
+
+func TestHysteria2ShareLinkDefaultPort(t *testing.T) {
+	for _, link := range []string{"hy2://fixture@proxy.example", "hysteria2://fixture@proxy.example"} {
+		r, err := Parse(Request{SourceID: "source", OwnerID: "u", SnapshotID: "snap", Format: "uri-list", Data: []byte(link)})
+		if err != nil || len(r.Snapshot.Endpoints) != 1 || r.Snapshot.Endpoints[0].Connection.Port != 443 {
+			t.Fatalf("default port: %v", err)
+		}
+	}
+	for _, link := range []string{"hy2://fixture@proxy.example:", "hy2://fixture@proxy.example:0", "hy2://fixture@proxy.example:65536"} {
+		if _, err := Parse(Request{SourceID: "source", OwnerID: "u", SnapshotID: "snap", Format: "uri-list", Data: []byte(link)}); err == nil {
+			t.Fatal("invalid port accepted")
+		}
+	}
+}

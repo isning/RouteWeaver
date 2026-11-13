@@ -67,7 +67,7 @@ export function prepareConnectorConnection(original: Connection, draft: Connecto
   if (draft.host.includes(":")) {
     try { new URL(`http://[${draft.host}]/`); } catch { return fail("请输入有效的 IP 地址，不要附加端口。"); }
   }
-  if (!["socks", "shadowsocks", "vless", "vmess", "trojan"].includes(draft.protocol)) return fail("此协议请使用完整 JSON 编辑。");
+  if (!["socks", "shadowsocks", "vless", "vmess", "trojan", "hysteria2"].includes(draft.protocol)) return fail("此协议请使用完整 JSON 编辑。");
   const next = preserveUnknown(original, { ...original, ...draft, port }, connectionKeys) as Connection;
   if (next.tls) {
     next.tls = preserveUnknown(original.tls, next.tls, tlsKeys);
@@ -98,15 +98,15 @@ export function prepareConnectorConnection(original: Connection, draft: Connecto
     removedFields.push("REALITY 参数");
   }
   if (protocolChanged) {
-    const secured = ["vless", "vmess", "trojan"].includes(next.protocol);
+    const secured = ["vless", "vmess", "trojan", "hysteria2"].includes(next.protocol);
     if (!secured) {
       if (unknownSecurity || unknownKeys(next.transport, transportKeys)) return fail("安全或传输设置含有扩展参数，无法安全切换此协议；请使用完整 JSON。");
       for (const key of ["uuid", "flow", "packetEncoding", "tls", "transport"]) remove(next, key, fieldLabels[key] || key);
     } else {
       remove(next, "username", "用户名"); remove(next, "method", "加密方法");
-      if (next.protocol !== "trojan") remove(next, "password", "密码");
+      if (!["trojan", "hysteria2"].includes(next.protocol)) remove(next, "password", "密码");
       if (next.protocol !== "vless") { remove(next, "flow", "VLESS 流控"); remove(next, "packetEncoding", "数据包编码"); }
-      if (next.protocol === "trojan") remove(next, "uuid", "UUID");
+      if (["trojan", "hysteria2"].includes(next.protocol)) remove(next, "uuid", "UUID");
       if (next.protocol !== "vless" && next.tls?.reality) {
         if (unknownKeys(next.tls.reality, ["publicKey", "shortId"])) return fail("REALITY 含有扩展参数，无法安全切换协议；请使用完整 JSON。");
         remove(next.tls, "reality", "REALITY 参数");

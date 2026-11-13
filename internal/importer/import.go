@@ -163,7 +163,11 @@ func parseURI(raw string) (candidate, error) {
 	if err != nil || u.Hostname() == "" {
 		return candidate{}, ErrInput
 	}
-	port, err := strconv.Atoi(u.Port())
+	portText := u.Port()
+	if portText == "" && (u.Scheme == "hy2" || u.Scheme == "hysteria2") && !strings.HasSuffix(u.Host, ":") {
+		portText = "443"
+	}
+	port, err := strconv.Atoi(portText)
 	if err != nil || port < 1 || port > 65535 {
 		return candidate{}, ErrInput
 	}
@@ -179,6 +183,24 @@ func parseURI(raw string) (candidate, error) {
 	c := domain.Connection{Host: u.Hostname(), Port: port}
 	name := u.Fragment
 	switch u.Scheme {
+	case "hysteria2", "hy2":
+		if u.User == nil || u.Path != "" && u.Path != "/" {
+			return candidate{}, ErrInput
+		}
+		for key := range q {
+			if key != "sni" && key != "alpn" {
+				return candidate{}, ErrInput
+			}
+		}
+		c.Protocol = "hysteria2"
+		c.Password = u.User.Username()
+		if password, has := u.User.Password(); has {
+			c.Password += ":" + password
+		}
+		c.TLS = &domain.TLSOptions{Enabled: true, ServerName: q.Get("sni")}
+		if value := q.Get("alpn"); value != "" {
+			c.TLS.ALPN = strings.Split(value, ",")
+		}
 	case "socks", "socks5":
 		if len(q) != 0 {
 			return candidate{}, ErrInput

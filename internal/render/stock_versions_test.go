@@ -22,7 +22,11 @@ func TestStockSecurityVersionsPreserveHistoricalAndIndependentTargets(t *testing
 			if !reflect.DeepEqual(capability.Versions, tc.versions) {
 				t.Fatalf("stock versions must prefer current release and preserve historic identity: %v", capability.Versions)
 			}
-			if !reflect.DeepEqual(capability.Protocols, []string{"socks", "shadowsocks", "vless", "trojan", "vmess"}) {
+			protocols := []string{"socks", "shadowsocks", "vless", "trojan", "vmess"}
+			if capability.AdapterID == render.ServerAdapterSingBox {
+				protocols = append(protocols, "hysteria2")
+			}
+			if !reflect.DeepEqual(capability.Protocols, protocols) {
 				t.Fatalf("stock update changed protocol capabilities: %v", capability.Protocols)
 			}
 			for _, version := range tc.versions {

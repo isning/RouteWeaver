@@ -39,6 +39,8 @@ export function ServerConnectorConnectionDialog({ program, schemaVersion, connec
     return () => { active.current = false; editingCallback.current(false); };
   }, []);
   const stale = () => current.current.program !== source.current.program || current.current.schemaVersion !== source.current.schemaVersion || current.current.connectorId !== source.current.connectorId;
+  const hysteria2UnavailableReason = original?.via || program.connectors?.some(item => item.via === connectorId)
+    ? "此连接器参与链式中转，请先移除中转关系后再选择 Hysteria2。" : undefined;
   const reason = connectorEditReason(program, schemaVersion, connectorId) ||
     connectorConnectionShapeReason(original?.connection);
   const close = () => {
@@ -71,10 +73,13 @@ export function ServerConnectorConnectionDialog({ program, schemaVersion, connec
         const prepared = prepareConnectorConnection(original.connection, form.getFieldsValue(true).connection);
         if (prepared.error || !prepared.connection) { setError(prepared.error || "请检查连接参数。"); return; }
         const connection = prepared.connection;
+        if (connection.protocol === "hysteria2" && (program.instance.adapterId !== "routeweaver/sing-box" || hysteria2UnavailableReason)) {
+          setError(hysteria2UnavailableReason || "Hysteria2 目前仅支持 sing-box。"); return;
+        }
         if (prepared.removedFields.length) confirm({ title: "移除不适用的连接参数？", description: `本次协议、安全或传输切换将移除：${prepared.removedFields.join("、")}。其他参数保留。`, confirmLabel: "移除并采用", cancelLabel: "返回编辑" }, () => accept(connection));
         else accept(connection);
       }}>
-      <ConnectionFields targetCore={program.instance.adapterId.replace(/^routeweaver\//, "")} />
+      <ConnectionFields targetCore={program.instance.adapterId.replace(/^routeweaver\//, "")} targetVersion={program.instance.version} hysteria2UnavailableReason={hysteria2UnavailableReason} />
     </AppForm>}
   </TaskDialog>;
 }

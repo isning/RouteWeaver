@@ -11,6 +11,7 @@ import userEvent from "@testing-library/user-event";
 import { Button } from "@/components/ui/button";
 import { UIProviders } from "@/ui-patterns/providers";
 import { AppForm as Form, useForm } from "@/ui-patterns/form";
+import type { Connection } from "./types";
 import { ConnectionFields, normalizeConnection } from "./ConnectionFields";
 
 beforeAll(() => {
@@ -902,7 +903,7 @@ it("keeps every port edit in the form, rejects exact fractions, and resets throu
         initialValues={{ connection: { protocol: "socks", host: "endpoint.test", port: 1080 } }}
         onValuesChange={changed}
         onFinishFailed={rejected}
-        onFinish={values => submitted.push(normalizeConnection(values.connection))}
+        onFinish={values => submitted.push(normalizeConnection(values.connection as Connection))}
       >
         <ConnectionFields />
         <Button type="submit">Save port</Button>
@@ -936,4 +937,92 @@ it("keeps every port edit in the form, rejects exact fractions, and resets throu
     expect(port().value).toBe(raw);
     expect(port().getAttribute("aria-invalid")).not.toBe("true");
   }
+});
+
+it("edits a direct sing-box Hysteria2 connection with required password and TLS only", async () => {
+  const save = vi.fn();
+  render(<UIProviders><Form initialValues={{ connection: {
+    host: "hy2.example", port: 443, protocol: "hysteria2",
+    tls: { enabled: true, serverName: "hy2.example", alpn: ["h3"] },
+  } }} onFinish={(values) => save(normalizeConnection(values.connection as Connection))}>
+    <ConnectionFields targetCore="sing-box" />
+    <Button type="submit">Save</Button>
+  </Form></UIProviders>);
+  expect(screen.queryByLabelText("用户 UUID")).toBeNull();
+  expect(screen.queryByLabelText("传输方式")).toBeNull();
+  expect(screen.queryByLabelText("客户端指纹")).toBeNull();
+  expect(screen.getByRole("radio", { name: /^无$/ }).hasAttribute("disabled")).toBe(true);
+  await userEvent.click(screen.getByRole("button", { name: "Save" }));
+  expect(await screen.findByText("填写 Hysteria2 连接密码")).toBeTruthy();
+  expect(save).not.toHaveBeenCalled();
+  await userEvent.type(screen.getByLabelText("连接密码"), "synthetic-hy2-password");
+  await userEvent.click(screen.getByRole("button", { name: "Save" }));
+  await waitFor(() => expect(save).toHaveBeenCalledOnce());
+  expect(save.mock.calls[0][0]).toEqual({ host: "hy2.example", port: 443, protocol: "hysteria2", password: "synthetic-hy2-password", tls: { enabled: true, serverName: "hy2.example", alpn: ["h3"] } });
+});
+
+it("preserves incompatible Hysteria2 fields until explicit removal and rejects an unsupported core", async () => {
+  const save = vi.fn();
+  render(<UIProviders><Form initialValues={{ connection: {
+    host: "hy2.example", port: 443, protocol: "hysteria2", password: "synthetic",
+    uuid: "legacy-uuid", transport: { type: "ws", path: "/retained" },
+    tls: { enabled: true, fingerprint: "chrome" },
+  } }} onFinish={(values) => save(normalizeConnection(values.connection as Connection))}>
+    <ConnectionFields targetCore="xray" />
+    <Button type="submit">Save</Button>
+  </Form></UIProviders>);
+  await userEvent.click(screen.getByRole("button", { name: "Save" }));
+  expect(await screen.findByText("Hysteria2 目前仅支持 sing-box 1.14.3 / 1.14.4，请更换核心或协议。")).toBeTruthy();
+  expect(save).not.toHaveBeenCalled();
+  expect(screen.getByRole("button", { name: "移除UUID" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "移除传输参数" })).toBeTruthy();
+  await userEvent.click(screen.getByLabelText("协议"));
+  expect(screen.getByRole("option", { name: /^Hysteria2$/ }).getAttribute("aria-disabled")).toBe("true");
+});
+
+it("requires explicit removal of incompatible values before saving Hysteria2", async () => {
+  const save = vi.fn();
+  const original = { host: "hy2.example", port: 443, protocol: "hysteria2", password: "synthetic", uuid: "old", transport: { type: "ws", path: "/old" }, tls: { enabled: true, fingerprint: "chrome" } };
+  const view = render(<UIProviders><Form initialValues={{ connection: original }} onFinish={(values) => save(normalizeConnection(values.connection as Connection))}>
+    <ConnectionFields targetCore="sing-box" targetVersion="1.14.4" />
+    <Button type="submit">Save</Button>
+  </Form></UIProviders>);
+  await userEvent.click(screen.getByRole("button", { name: "Save" }));
+  expect(await screen.findByText("请先移除 Hysteria2 不支持的参数。")).toBeTruthy();
+  expect(save).not.toHaveBeenCalled();
+  for (const name of ["移除UUID", "移除传输参数", "移除客户端指纹"]) await userEvent.click(screen.getByRole("button", { name }));
+  await userEvent.click(screen.getByRole("button", { name: "Save" }));
+  await waitFor(() => expect(save).toHaveBeenCalledOnce());
+  expect(save.mock.calls[0][0].password).toBe("synthetic");
+  expect(save.mock.calls[0][0].tls.enabled).toBe(true);
+  expect(save.mock.calls[0][0].transport).toBeUndefined();
+  expect(original.transport.path).toBe("/old");
+  view.unmount();
+  render(<UIProviders><Form initialValues={{ connection: { protocol: "socks" } }}><ConnectionFields server targetCore="sing-box" targetVersion="future" /></Form></UIProviders>);
+  await userEvent.click(screen.getByLabelText("协议"));
+  expect(screen.getByRole("option", { name: /^Hysteria2$/ }).getAttribute("aria-disabled")).toBe("true");
+});
+
+it("keeps unsupported Hysteria2 ALPN visible until removed and only offers h3", async () => {
+  const save = vi.fn();
+  render(<UIProviders><Form initialValues={{ connection: {
+    host: "hy2.example", port: 443, protocol: "hysteria2", password: "synthetic",
+    tls: { enabled: true, alpn: ["h2", "h3", "h3"] },
+  } }} onFinish={(values) => save(normalizeConnection(values.connection as Connection))}>
+    <ConnectionFields targetCore="sing-box" targetVersion="1.14.4" />
+    <Button type="submit">Save</Button>
+  </Form></UIProviders>);
+  await userEvent.click(screen.getByRole("button", { name: "Save" }));
+  expect(await screen.findByText("Hysteria2 的 ALPN 只能留空或选择一个 h3，请移除其他值或重复项。")).toBeTruthy();
+  expect(save).not.toHaveBeenCalled();
+  await userEvent.click(screen.getByRole("button", { name: "移除 h2" }));
+  await userEvent.click(screen.getAllByRole("button", { name: "移除 h3" })[0]);
+  await userEvent.click(screen.getByLabelText("ALPN"));
+  expect(screen.queryByRole("combobox", { name: "搜索选项" })).toBeNull();
+  expect(screen.getByRole("option", { name: "h3" })).toBeTruthy();
+  expect(screen.queryByRole("option", { name: "h2" })).toBeNull();
+  await userEvent.keyboard("{Escape}");
+  await userEvent.click(screen.getByRole("button", { name: "Save" }));
+  await waitFor(() => expect(save).toHaveBeenCalledOnce());
+  expect(save.mock.calls[0][0].tls.alpn).toEqual(["h3"]);
 });

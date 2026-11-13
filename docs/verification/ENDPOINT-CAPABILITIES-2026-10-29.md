@@ -106,3 +106,29 @@ The consolidated target-parity source is now frozen at 16:19 UTC: `wip47/backend
 Raw runner logs named above are retained locally, not included as archive attachments. Their hashes and sizes are in `CHECKPOINT-EVIDENCE/WIP47/local-evidence-index.json` (relative to the repository root). Public scoped receipts retain the results and limitations. Earlier “pending” paragraphs describe the named historical attempts, not the latest state.
 
 The later global `scripts/verify.sh quick` R2 passed every Go and managed-runtime vet/race/build stage, all preceding static guards, and frontend typecheck on an unchanged 1,355-file source manifest. It then failed two frontend behavior tests (1,783 passed, 2 failed out of 1,785); production frontend build was not reached. Backend acceptance is retained only for unchanged backend source. The subsequent repaired frontend passed all 1,796 tests, typecheck and production build on unchanged source. A final 542-file backend/API scope comparison found no changes. Acceptance is a repaired modular aggregate, not a relabeling of the failed quick run. See `CHECKPOINT-EVIDENCE/WIP47/quick-r2.failed.json` and `docs/verification/WIP47-FINAL.md`.
+
+
+## 2026-11-13: direct Hysteria2 slice
+
+Hysteria2 now has typed password/TLS endpoint data, share-link and sing-box import,
+sing-box client 1.14.3 output, and ordinary sing-box server 1.14.3/1.14.4
+listener and connector output. The earlier "not implemented" statement above
+refers to the October slice, not this increment. The UI and inventory API reject
+unsupported server targets. Xray, managed-Xray and Mihomo output remain unsupported
+for this protocol in RouteWeaver; this is not a claim about all upstream versions.
+
+Only direct Hysteria2 connections are supported. Either side of a connector
+`via` relationship using Hysteria2, and legacy multi-hop chains containing it,
+are rejected. TLS and password are required; ALPN may be omitted or `h3`.
+Obfuscation, port hopping, bandwidth knobs, insecure TLS, Reality, uTLS and
+TCP/WS/gRPC transports are not silently accepted or discarded. Principal-based
+metered listeners remain VLESS-only. External firewall UDP reachability and
+certificate provisioning remain deployment prerequisites, not capabilities
+proven by a local configuration check.
+
+Validation includes generated native parser fixtures for all three exact targets
+and a mandatory CI QUIC loopback gate with wrong-password, wrong-hostname and
+stopped-server/no-direct-fallback checks. The local sandbox denies native process
+startup (`create netlink socket: operation not permitted`), so parser success
+alone must not be described as successful traffic validation. Use the exact
+commit's CI result before claiming this slice's runtime gate passed.

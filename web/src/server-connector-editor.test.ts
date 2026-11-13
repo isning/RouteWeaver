@@ -93,3 +93,13 @@ it.each([0, null, false])("keeps malformed upstream %j read-only", (via) => {
   (program.connectors![0] as unknown as { via: unknown }).via = via;
   expect(connectorEditReason(program, "1.0", "exit")).toBeTruthy();
 });
+
+it("allows direct sing-box Hysteria2 but rejects both directions of a connector detour", () => {
+  const program = fixture();
+  program.connectors![0].connection = { protocol: "hysteria2", host: "hy2.example", port: 443, password: "synthetic", tls: { enabled: true } };
+  expect(connectorEditReason(program, "1.0", "exit")).toBeUndefined();
+  expect(updateServerConnectorVia(program, "1.0", "exit", "relay").error).toContain("直接连接");
+  expect(updateServerConnectorVia(program, "1.0", "relay", "exit").error).toContain("直接连接");
+  program.instance = { ...program.instance, adapterId: "routeweaver/xray", version: "26.10.31" };
+  expect(connectorEditReason(program, "1.0", "exit")).toContain("仅支持 sing-box");
+});

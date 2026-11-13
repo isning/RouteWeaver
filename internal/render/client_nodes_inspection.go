@@ -331,6 +331,14 @@ func inspectionNodeShape(adapter string, m map[string]any) ([]string, bool) {
 		protect(m, "password")
 		return secrets, true
 	}
+	if adapter == "sing-box" && kind == "hysteria2" {
+		tls, ok := object(m, "tls")
+		if !ok || !keysOnly(m, name, "type", "server", port, "password", "tls") || !str(m, "password", true) || !keysOnly(tls, "enabled", "server_name", "alpn") || !truth(tls, "enabled", true) || !str(tls, "server_name", false) || !stringsArray(tls, "alpn") {
+			return nil, false
+		}
+		protect(m, "password")
+		return secrets, true
+	}
 	credential := "uuid"
 	if kind == "trojan" {
 		credential = "password"

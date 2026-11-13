@@ -19,3 +19,7 @@ it("removes stale protocol fields when changing transport without mutating the s
   });
   expect(value.transport.path).toBe("/old");
 });
+it("does not erase unsupported Hysteria2 input before validation", () => {
+  const value = { host: "hy2.example", port: 443, protocol: "hysteria2", password: "synthetic", uuid: "retained", tls: { enabled: true, fingerprint: "chrome" }, transport: { type: "ws", path: "/retained" } };
+  expect(normalizeConnection(value)).toEqual(value);
+});

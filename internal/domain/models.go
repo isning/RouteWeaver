@@ -79,11 +79,11 @@ func ValidateNode(n Node) error {
 	if n.Host == "" || strings.ContainsAny(n.Host, " /\\\t\n\r") || strings.Contains(n.Host, ":") && net.ParseIP(n.Host) == nil {
 		return fmt.Errorf("host must be a hostname or IP, not a URL")
 	}
-	if n.Protocol != "vless" && n.Protocol != "trojan" && n.Protocol != "vmess" && (n.VMessSecurity != "" || n.UUID != "" || n.Flow != "" || n.PacketEncoding != "" || n.TLS != nil || n.Transport != nil) {
+	if n.Protocol != "vless" && n.Protocol != "trojan" && n.Protocol != "vmess" && n.Protocol != "hysteria2" && (n.VMessSecurity != "" || n.UUID != "" || n.Flow != "" || n.PacketEncoding != "" || n.TLS != nil || n.Transport != nil) {
 		return fmt.Errorf("protocol does not accept VLESS security or transport fields")
 	}
 	switch n.Protocol {
-	case "vless", "trojan", "vmess":
+	case "vless", "trojan", "vmess", "hysteria2":
 		return ValidateConnection(n.ConnectionValue())
 	case "socks":
 		if n.Method != "" {

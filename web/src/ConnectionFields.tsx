@@ -119,6 +119,9 @@ export function normalizeConnection(connection: Connection): Connection {
   // This normalizer is also used for render-time comparisons. Invalid drafts
   // stay invalid here; the field validator prevents submitting them.
   if (port !== undefined) copy.port = port;
+  // Hysteria2 has its own protocol envelope. Preserve unsupported values so
+  // validation can reject them rather than silently erasing imported intent.
+  if (copy.protocol === "hysteria2") return copy;
   const secured = ["vless", "trojan", "vmess"].includes(copy.protocol);
   if (!secured) {
     delete copy.uuid;
@@ -180,7 +183,9 @@ export function ConnectionFields({
   authentication,
   managedEntryTarget = false,
   targetCore,
+  targetVersion,
   allowUnchangedUnsupportedProtocol = false,
+  hysteria2UnavailableReason,
 }: {
   prefix?: string[];
   server?: boolean;
@@ -188,7 +193,9 @@ export function ConnectionFields({
   authentication?: string;
   managedEntryTarget?: boolean;
   targetCore?: string;
+  targetVersion?: string;
   allowUnchangedUnsupportedProtocol?: boolean;
+  hysteria2UnavailableReason?: string;
 }) {
   const form = useFormInstance();
   // useWatch subscribes after the first commit. Conditional controls must read
@@ -223,7 +230,18 @@ export function ConnectionFields({
     (managedEntryTarget ||
       targetCore === "managed-xray" ||
       targetCore === "routeweaver/managed-xray");
-  const secured = ["vless", "trojan", "vmess"].includes(protocol);
+  const hysteria2 = protocol === "hysteria2";
+  const hysteria2Target = !targetCore || (targetCore === "sing-box" &&
+    (!targetVersion || ["1.14.3", "1.14.4"].includes(targetVersion)));
+  const currentConnection = useWatch(prefix, { form, preserve: true }) ?? form.getFieldValue(prefix);
+  const hysteria2Conflicts = hysteria2 ? [
+    ...["uuid", "flow", "packetEncoding", "method", "username", "vmessSecurity", "transport"]
+      .filter((key) => currentConnection?.[key] != null && currentConnection[key] !== "")
+      .map((key) => ({ path: [...prefix, key], label: ({ uuid: "UUID", flow: "Flow", packetEncoding: "数据包编码", method: "加密方式", username: "用户名", vmessSecurity: "VMess 加密方式", transport: "传输参数" } as Record<string, string>)[key] })),
+    ...(tls?.reality ? [{ path: [...prefix, "tls", "reality"], label: "REALITY" }] : []),
+    ...(tls?.fingerprint ? [{ path: [...prefix, "tls", "fingerprint"], label: "客户端指纹" }] : []),
+  ] : [];
+  const secured = ["vless", "trojan", "vmess", "hysteria2"].includes(protocol);
   const security = tls?.enabled ? (tls.reality ? "reality" : "tls") : "none";
   const xrayReality = targetCore === "xray" && security === "reality";
   const realityTransportBlocked =
@@ -318,6 +336,12 @@ export function ConnectionFields({
           trigger="onValueChange"
           rules={[
             { required: true, message: "选择协议" },
+            { validator: (_, value) => value !== "hysteria2" || !hysteria2UnavailableReason
+              ? Promise.resolve() : Promise.reject(new Error(hysteria2UnavailableReason)) },
+            { validator: (_, value) => value !== "hysteria2" || allowUnchangedUnsupportedProtocol || hysteria2Target
+              ? Promise.resolve() : Promise.reject(new Error("Hysteria2 目前仅支持 sing-box 1.14.3 / 1.14.4，请更换核心或协议。")) },
+            { validator: (_, value) => value !== "hysteria2" || allowUnchangedUnsupportedProtocol || !hysteria2Conflicts.length
+              ? Promise.resolve() : Promise.reject(new Error("请先移除 Hysteria2 不支持的参数。")) },
             {
               validator: (_rule, value) =>
                 !limited ||
@@ -341,6 +365,7 @@ export function ConnectionFields({
               { value: "vless", label: "VLESS" },
               { value: "trojan", label: "Trojan", disabled: limited },
               { value: "vmess", label: "VMess AEAD", disabled: limited },
+              { value: "hysteria2", label: "Hysteria2", disabled: limited || !hysteria2Target || !!hysteria2UnavailableReason },
             ]}
           />
         </AppField>
@@ -409,11 +434,24 @@ export function ConnectionFields({
             </AppField>
           </>
         )}
-        {protocol === "trojan" && (
+        {hysteria2 && (
+          <div className="space-y-2 sm:col-span-2">
+            <p className="text-sm text-muted-foreground">Hysteria2 使用 QUIC（UDP）和 TLS；目前仅支持 sing-box 直接连接，不支持链式中转。</p>
+            {hysteria2UnavailableReason && <p className="text-sm text-destructive">{hysteria2UnavailableReason}</p>}
+            {!!hysteria2Conflicts.length && <Notice tone="warning" title="以下参数不适用于 Hysteria2">
+              <div className="flex flex-wrap gap-2">{hysteria2Conflicts.map(({ path, label }) => (
+                <AppField key={path.join(".")} name={path} noStyle trigger="onClear">
+                  <ClearValueButton>移除{label}</ClearValueButton>
+                </AppField>
+              ))}</div>
+            </Notice>}
+          </div>
+        )}
+        {["trojan", "hysteria2"].includes(protocol) && (
           <AppField
             name={field("password")}
             label="连接密码"
-            rules={[{ required: true, message: "填写 Trojan 连接密码" }]}
+            rules={[{ required: true, message: `填写 ${hysteria2 ? "Hysteria2" : "Trojan"} 连接密码` }]}
           >
             <PasswordInput autoComplete="new-password" />
           </AppField>
@@ -503,7 +541,7 @@ export function ConnectionFields({
               已有参数会保留，直到你明确修改；不支持的组合无法发布。
             </Notice>
           )}
-          <FieldSet className="min-w-0 border-t pt-4" aria-label="传输设置">
+          {!hysteria2 && <FieldSet className="min-w-0 border-t pt-4" aria-label="传输设置">
             <FieldLegend variant="label">传输设置</FieldLegend>
             {xrayReality && realityTransportBlocked && (
               <Notice tone="warning" title="当前 Xray REALITY 传输组合不受支持">
@@ -659,7 +697,7 @@ export function ConnectionFields({
                 )}
               </>
             )}
-          </FieldSet>
+          </FieldSet>}
           <FieldSet className="min-w-0 border-t pt-4" aria-label="连接安全">
             <FieldLegend variant="label">连接安全</FieldLegend>
             <AppField
@@ -677,13 +715,13 @@ export function ConnectionFields({
               valuePropName="checked"
               trigger="onCheckedChange"
               rules={
-                protocol === "trojan"
+                ["trojan", "hysteria2"].includes(protocol)
                   ? [
                       {
                         validator: (_, value) =>
                           value
                             ? Promise.resolve()
-                            : Promise.reject(new Error("Trojan 必须启用 TLS")),
+                            : Promise.reject(new Error(`${hysteria2 ? "Hysteria2" : "Trojan"} 必须启用 TLS`)),
                       },
                     ]
                   : []
@@ -719,7 +757,7 @@ export function ConnectionFields({
                   <Input placeholder="example.com" />
                 </AppField>
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <AppField
+                  {!hysteria2 && <AppField
                     name={[...prefix, "tls", "fingerprint"]}
                     label="客户端指纹"
                     description={
@@ -750,7 +788,7 @@ export function ConnectionFields({
                         label: value,
                       }))}
                     />
-                  </AppField>
+                  </AppField>}
                   {(!xrayReality || tls.alpn?.length > 0) && (
                     <AppField
                       name={[...prefix, "tls", "alpn"]}
@@ -759,7 +797,7 @@ export function ConnectionFields({
                       description={
                         xrayReality
                           ? "Xray REALITY 不支持显式 ALPN；已有值仍保留，请移除后保存。"
-                          : undefined
+                          : hysteria2 ? "仅支持 h3；也可留空使用默认值。" : undefined
                       }
                       rules={
                         xrayReality
@@ -775,17 +813,21 @@ export function ConnectionFields({
                                     : Promise.resolve(),
                               },
                             ]
-                          : []
+                          : hysteria2 ? [{ validator: (_, value) =>
+                              !value?.length || (value.length === 1 && value[0] === "h3")
+                                ? Promise.resolve()
+                                : Promise.reject(new Error("Hysteria2 的 ALPN 只能留空或选择一个 h3，请移除其他值或重复项。")),
+                            }] : []
                       }
                     >
                       <MultiChoice
-                        creatable={!xrayReality}
-                        clearable={xrayReality}
-                        searchable={!xrayReality}
+                        creatable={!xrayReality && !hysteria2}
+                        clearable={xrayReality || hysteria2}
+                        searchable={!xrayReality && !hysteria2}
                         options={
                           xrayReality
                             ? []
-                            : ["h2", "http/1.1"].map((value) => ({
+                            : (hysteria2 ? ["h3"] : ["h2", "http/1.1"]).map((value) => ({
                                 value,
                                 label: value,
                               }))
@@ -799,7 +841,7 @@ export function ConnectionFields({
                     </p>
                   )}
                 </div>
-                {security === "reality" && (
+                {!hysteria2 && security === "reality" && (
                   <div className="grid gap-4 sm:grid-cols-2">
                     <AppField
                       name={[...prefix, "tls", "reality", "publicKey"]}
@@ -1091,13 +1133,13 @@ function SecurityModePicker({
       }}
     >
       <label className="flex items-center gap-2 text-sm">
-        <RadioGroupItem value="none" disabled={protocol === "trojan"} />无
+        <RadioGroupItem value="none" disabled={["trojan", "hysteria2"].includes(protocol)} />无
       </label>
       <label className="flex items-center gap-2 text-sm">
         <RadioGroupItem value="tls" />
         TLS
       </label>
-      {((!limited && protocol === "vless") || reality) && (
+      {protocol !== "hysteria2" && ((!limited && protocol === "vless") || reality) && (
         <label className="flex items-center gap-2 text-sm">
           <RadioGroupItem
             value="reality"

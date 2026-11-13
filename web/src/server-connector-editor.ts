@@ -29,6 +29,8 @@ function graphError(connectors: Connector[]) {
       if (!current.via) break;
       const next: Connector | undefined = byId.get(current.via);
       if (!next) return "上游连接器不存在，请在完整 JSON 中修正引用。";
+      if (current.connection?.protocol === "hysteria2" || next.connection?.protocol === "hysteria2")
+        return "Hysteria2 目前只支持直接连接，不能用于连接器之间的中转。";
       current = next;
     }
     for (const id of visited) completed.add(id);
@@ -50,8 +52,11 @@ export function connectorEditReason(program: ServerProgram, schemaVersion: strin
   if (graphReason) return graphReason;
   const connector = connectors.find((item) => item.id === id);
   if (!connector) return "连接器不存在，请重新选择。";
-  if (!connector.connection || !["socks", "shadowsocks", "vless", "trojan", "vmess"].includes(connector.connection.protocol))
+  if (!connector.connection || !["socks", "shadowsocks", "vless", "trojan", "vmess", "hysteria2"].includes(connector.connection.protocol))
     return "此协议尚不支持连接器表单，请使用完整 JSON。";
+  if (connector.connection.protocol === "hysteria2" &&
+    (program.instance.adapterId !== "routeweaver/sing-box" || connector.via || connectors.some(item => item.via === id)))
+    return "Hysteria2 目前仅支持 sing-box 直接连接，不能用于连接器之间的中转。";
   return undefined;
 }
 

@@ -164,3 +164,23 @@ func singboxRuleSets(resources []domain.RuleResource) ([]any, bool, error) {
 	}
 	return sets, remote, nil
 }
+
+// QUIC detours need explicit packet-dial capability verification. This first
+// Hysteria2 slice permits only direct connections, not either side of a detour.
+func validateHysteria2Connectors(p domain.ServerProgram) error {
+	for _, c := range p.Egress {
+		if c.Protocol == "hysteria2" && len(p.Egress) > 1 {
+			return fmt.Errorf("HYSTERIA2_DETOUR_UNSUPPORTED: Hysteria2 must connect directly")
+		}
+	}
+	byID := map[string]domain.Connection{}
+	for _, c := range p.Connectors {
+		byID[c.ID] = c.Connection
+	}
+	for _, c := range p.Connectors {
+		if c.Via != "" && (c.Connection.Protocol == "hysteria2" || byID[c.Via].Protocol == "hysteria2") {
+			return fmt.Errorf("HYSTERIA2_DETOUR_UNSUPPORTED: Hysteria2 must connect directly")
+		}
+	}
+	return nil
+}

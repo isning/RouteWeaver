@@ -171,6 +171,10 @@ func (h *server) saveInventory(w http.ResponseWriter, r *http.Request, kind stri
 			storeError(w, e)
 			return
 		}
+		if e := validateHysteria2EndpointTarget(v, instance); e != nil {
+			fail(w, 400, e.Error())
+			return
+		}
 		id = v.ID
 		value = v
 	case "links":
@@ -483,4 +487,20 @@ func serverFingerprint(ir domain.ServerDeploymentIR) string {
 	b, _ := json.Marshal(ir)
 	sum := sha256.Sum256(b)
 	return hex.EncodeToString(sum[:])
+}
+
+// Hysteria2 inventory must not advertise a listener the selected core cannot run.
+func validateHysteria2EndpointTarget(v domain.ManagedEndpoint, instance domain.CoreInstance) error {
+	if v.Connection.Protocol != "hysteria2" {
+		return nil
+	}
+	capability := (render.SingBoxServer{}).ServerCapability()
+	if instance.AdapterID == capability.AdapterID {
+		for _, version := range capability.Versions {
+			if instance.Version == version {
+				return nil
+			}
+		}
+	}
+	return errors.New("HYSTERIA2_TARGET_UNSUPPORTED: select a supported sing-box core version")
 }
