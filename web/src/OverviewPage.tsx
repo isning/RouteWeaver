@@ -1,3 +1,11 @@
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
 import { useContext } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, CircleAlert, Network, RefreshCw } from "lucide-react";
@@ -410,32 +418,44 @@ export function OverviewPage() {
               </CardHeader>
               <CardContent>
                 {detail.routes.length ? (
-                  <ul className="divide-y">
-                    {detail.routes.map((r) => (
-                      <li
-                        key={r.routeId}
-                        className="grid items-center gap-3 py-3 sm:grid-cols-[minmax(0,1fr)_minmax(8rem,1fr)_auto]"
-                      >
-                        <span className="text-sm wrap-anywhere">
-                          {names.get(r.routeId) ||
-                            (overview.isSuccess
-                              ? "历史线路"
-                              : "线路名称暂不可用")}
-                        </span>
-                        <Progress
-                          className="h-1.5"
-                          value={total ? (r.rawBytes / total) * 100 : 0}
-                          aria-label={`${names.get(r.routeId) || (overview.isSuccess ? "历史线路" : "线路名称暂不可用")}用量占比`}
-                        />
-                        <div className="text-right text-xs tabular-nums">
-                          <p>{bytesLabel(r.rawBytes)}</p>
-                          <p className="mt-1 text-muted-foreground">
-                            扣除额度 {bytesLabel(r.weightedBytes)}
-                          </p>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
+                  <Table aria-label="线路用量" className="min-w-96 table-fixed">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="pl-0">线路</TableHead>
+                        <TableHead className="w-28 text-right sm:w-40">
+                          实际流量
+                        </TableHead>
+                        <TableHead className="w-28 pr-0 text-right sm:w-40">
+                          扣除额度
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {detail.routes.map((r) => (
+                        <TableRow key={r.routeId}>
+                          <TableCell className="space-y-2 py-3 pl-0 whitespace-normal">
+                            <p className="wrap-anywhere">
+                              {names.get(r.routeId) ||
+                                (overview.isSuccess
+                                  ? "历史线路"
+                                  : "线路名称暂不可用")}
+                            </p>
+                            <Progress
+                              className="h-1.5 max-w-48"
+                              value={total ? (r.rawBytes / total) * 100 : 0}
+                              aria-label={`${names.get(r.routeId) || (overview.isSuccess ? "历史线路" : "线路名称暂不可用")}用量占比`}
+                            />
+                          </TableCell>
+                          <TableCell className="py-3 text-right tabular-nums">
+                            {bytesLabel(r.rawBytes)}
+                          </TableCell>
+                          <TableCell className="py-3 pr-0 text-right tabular-nums">
+                            {bytesLabel(r.weightedBytes)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 ) : (
                   <p className="text-sm text-muted-foreground">
                     本周期暂无线路用量记录
@@ -470,53 +490,66 @@ export function OverviewPage() {
             {fetches.data && (
               <>
                 {fetches.data.items.length ? (
-                  <ul className="divide-y">
-                    {fetches.data.items.slice(0, 8).map((item, index) => {
-                      const output = outputs.data?.find(
-                        (o) => o.id === item.outputId,
-                      );
-                      return (
-                        <li
-                          key={`${item.outputId}:${item.at}:${index}`}
-                          className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 py-3 sm:grid-cols-[minmax(0,1fr)_auto_auto]"
-                        >
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium wrap-anywhere">
-                              {output?.name ||
-                                (outputs.isSuccess
-                                  ? "已删除的订阅"
-                                  : "订阅名称暂不可用")}
-                            </p>
-                            <p className="mt-1 text-xs text-muted-foreground">
-                              {item.delivery === "bundle"
-                                ? "配置包"
-                                : "订阅链接"}
-                            </p>
-                          </div>
-                          <time
-                            dateTime={item.at}
-                            className="col-start-1 row-start-2 text-xs tabular-nums text-muted-foreground sm:col-start-2 sm:row-start-1"
+                  <Table aria-label="最近订阅拉取" className="min-w-96 table-fixed">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="pl-0">订阅</TableHead>
+                        <TableHead className="w-32 sm:w-48">拉取时间</TableHead>
+                        <TableHead className="w-14 pr-0 text-right">
+                          操作
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {fetches.data.items.slice(0, 8).map((item, index) => {
+                        const output = outputs.data?.find(
+                          (o) => o.id === item.outputId,
+                        );
+                        return (
+                          <TableRow
+                            key={`${item.outputId}:${item.at}:${index}`}
                           >
-                            {dateLabel(item.at)}
-                          </time>
-                          {output && (
-                            <ActionButton
-                              className="col-start-2 row-span-2 row-start-1 sm:col-start-3 sm:row-span-1"
-                              size="sm"
-                              variant="ghost"
-                              onClick={() =>
-                                go(
-                                  `#subscriptions?output=${encodeURIComponent(item.outputId)}`,
-                                )
-                              }
-                            >
-                              查看
-                            </ActionButton>
-                          )}
-                        </li>
-                      );
-                    })}
-                  </ul>
+                            <TableCell className="py-3 pl-0 whitespace-normal">
+                              <p className="text-sm font-medium wrap-anywhere">
+                                {output?.name ||
+                                  (outputs.isSuccess
+                                    ? "已删除的订阅"
+                                    : "订阅名称暂不可用")}
+                              </p>
+                              <p className="mt-1 text-xs text-muted-foreground">
+                                {item.delivery === "bundle"
+                                  ? "配置包"
+                                  : "订阅链接"}
+                              </p>
+                            </TableCell>
+                            <TableCell className="py-3 whitespace-normal">
+                              <time
+                                dateTime={item.at}
+                                className="text-xs tabular-nums text-muted-foreground"
+                              >
+                                {dateLabel(item.at)}
+                              </time>
+                            </TableCell>
+                            <TableCell className="py-3 pr-0 text-right">
+                              {output && (
+                                <ActionButton
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() =>
+                                    go(
+                                      `#subscriptions?output=${encodeURIComponent(item.outputId)}`,
+                                    )
+                                  }
+                                >
+                                  查看
+                                </ActionButton>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
                 ) : (
                   <p className="text-sm text-muted-foreground">暂无拉取记录</p>
                 )}

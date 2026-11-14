@@ -208,7 +208,7 @@ test("rotating one link immediately exposes its exact replacement and offline re
   );
   const oldPath = new URL(oldAccess.feedPath, "http://127.0.0.1:4173").pathname;
   await page.goto(`/#subscriptions?profile=${profile.id}`);
-  const row = page.getByRole("group", {
+  const row = page.getByRole("row", {
     name: `客户端订阅 ${selected.name}`,
     exact: true,
   });

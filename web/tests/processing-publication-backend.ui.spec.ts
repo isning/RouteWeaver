@@ -129,7 +129,7 @@ test("real processing editor → stage comparison → saved recipe → selected 
     );
     await sheet.getByRole("button", { name: "关闭", exact: true }).click();
     await page.goto("/#subscriptions");
-    const row = page.getByRole("group", {
+    const row = page.getByRole("row", {
       name: "客户端订阅 处理待更新订阅",
       exact: true,
     });

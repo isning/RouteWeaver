@@ -504,13 +504,13 @@ for (const width of [1440, 390]) {
         }
         if (surface.route === "subscriptions") {
           await expect(
-            main.getByRole("group", {
+            main.getByRole("row", {
               name: "客户端订阅 办公电脑",
               exact: true,
             }),
           ).toBeVisible();
           await expect(
-            main.getByRole("group", {
+            main.getByRole("row", {
               name: "客户端订阅 移动设备",
               exact: true,
             }),

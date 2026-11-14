@@ -126,7 +126,7 @@ async function check(
       screen.getByRole("button", { name: "预览此订阅更新" }),
     );
   } else {
-    const row = await screen.findByRole("group", { name: "客户端订阅 Phone" });
+    const row = await screen.findByRole("row", { name: "客户端订阅 Phone" });
     await userEvent.click(
       within(row).getByRole("button", { name: "检查更新" }),
     );

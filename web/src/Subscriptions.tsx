@@ -1,3 +1,6 @@
+import {
+  Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
+} from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { Metadata, MetadataItem } from "@/ui-patterns/metadata";
 import { WorkspaceFrame } from "@/ui-patterns/workspace-frame";
@@ -1241,7 +1244,7 @@ export function SubscriptionsPage({
             >
               <header className="subscription-configuration-heading grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 p-4">
                 <div className="subscription-info min-w-0 space-y-1">
-                  <h2 className="text-base font-semibold tracking-tight text-foreground wrap-anywhere">
+                  <h2 className="text-base font-medium tracking-tight text-foreground wrap-anywhere">
                     {profile?.name ||
                       (profiles.isPending
                         ? "正在核对关联配置…"
@@ -1249,12 +1252,16 @@ export function SubscriptionsPage({
                   </h2>
                   <p className="text-xs text-muted-foreground">
                     <Metadata>
-                      <MetadataItem>{profile
-                        ? "已保存的分流配置"
-                        : "配置暂不可编辑；保留独立订阅的访问与管理"}</MetadataItem>
-                      <MetadataItem>{outputs.isPending || outputs.isError
-                        ? "关联订阅待核对"
-                        : `${group.totalLinks} 个客户端订阅`}</MetadataItem>
+                      <MetadataItem>
+                        {profile
+                          ? "已保存的分流配置"
+                          : "配置暂不可编辑；保留独立订阅的访问与管理"}
+                      </MetadataItem>
+                      <MetadataItem>
+                        {outputs.isPending || outputs.isError
+                          ? "关联订阅待核对"
+                          : `${group.totalLinks} 个客户端订阅`}
+                      </MetadataItem>
                     </Metadata>
                   </p>
                 </div>
@@ -1341,102 +1348,137 @@ export function SubscriptionsPage({
                 )}
               </header>
               <div className="subscription-owned-links divide-y border-t">
-                {visibleLinks.map((output) => (
-                  <div
-                    className="subscription-client-row grid min-w-0 items-center gap-3 p-4 @min-[36rem]/configuration:grid-cols-[minmax(0,1fr)_auto]"
-                    key={output.id}
-                    role="group"
-                    aria-label={`客户端订阅 ${output.name}`}
+                {visibleLinks.length > 0 && (
+                  <Table
+                    aria-label={`${profile?.name || "关联配置不可用"}的客户端订阅`}
+                    className="min-w-96 table-fixed"
                   >
-                    <div className="subscription-info min-w-0 max-w-full text-sm text-muted-foreground">
-                      <ActionButton
-                        className="subscription-name-button h-auto max-w-full justify-start whitespace-normal wrap-anywhere p-0 text-left text-sm font-medium text-foreground underline-offset-4 hover:underline focus-visible:outline-ring"
-                        data-return-focus={`output:${output.id}`}
-                        aria-label={`查看订阅 ${output.name}`}
-                        onClick={() => updateScope("output", output.id)}
-                        variant="link"
-                      >
-                        {output.name}
-                      </ActionButton>
-                      <div className="subscription-client-meta mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
-                        {output.status === "published" ? (
-                          <span className="subscription-publication-state text-xs text-muted-foreground">
-                            已发布
-                          </span>
-                        ) : (
-                          <Status value={output.status} />
-                        )}
-                        <span>{output.target.adapterId}</span>
-                        <span>{output.mode === "nodes-only" ? "纯节点" : "完整配置"}</span>
-                        <span className="wrap-anywhere">{output.publishedAt
-                          ? `最近发布 ${dateLabel(output.publishedAt)}`
-                          : "尚未发布"}</span>
-                      </div>
-                    <OutputComparisonLine
-                      output={output}
-                      pending={comparisons.pendingIds.has(output.id)}
-                    />
-                    </div>
-                    <div className={"flex flex-wrap items-center gap-2"}>
-                      <ActionButton
-                        disabled={
-                          output.status === "revoked" ||
-                          outputs.isError ||
-                          !!checkingID
-                        }
-                        onClick={() => setAccessID(output.id)}
-                        variant="outline"
-                      >
-                        获取订阅
-                      </ActionButton>
-                      <OutputUpdateButton
-                        output={output}
-                        pending={comparisons.pendingIds.has(output.id)}
-                        disabled={!profilesReady || !profile || outputs.isError || !!checkingID}
-                        busy={checkingID === output.id}
-                        onClick={() => inspectOutput(output)}
-                      />
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <ActionButton
-                            aria-label={`管理 ${output.name}`}
-                            leadingIcon={<Ellipsis aria-hidden="true" />}
-                            variant="ghost"
-                          />
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent
-                          align="end"
-                          onCloseAutoFocus={(event) => {
-                            if (
-                              document.activeElement?.closest(
-                                '[role="dialog"],[role="alertdialog"]',
-                              )
-                            )
-                              event.preventDefault();
-                          }}
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="px-4">订阅</TableHead>
+                        <TableHead className="w-44 px-4 text-right @min-[36rem]/configuration:w-64">
+                          操作
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {visibleLinks.map((output) => (
+                        <TableRow
+                          className="subscription-client-row"
+                          key={output.id}
+                          aria-label={`客户端订阅 ${output.name}`}
                         >
-                          {outputMenu(output, profile).map((item) => (
-                            <DropdownMenuItem
-                              key={item.key}
-                              disabled={"disabled" in item && !!item.disabled}
-                              variant={
-                                "danger" in item && item.danger
-                                  ? "destructive"
-                                  : "default"
-                              }
-                              onSelect={() => {
-                                item.onClick?.();
-                              }}
+                          <TableCell className="subscription-info px-4 py-3 whitespace-normal text-muted-foreground">
+                            <ActionButton
+                              className="subscription-name-button h-auto max-w-full justify-start whitespace-normal wrap-anywhere p-0 text-left text-sm font-medium text-foreground underline-offset-4 hover:underline focus-visible:outline-ring"
+                              data-return-focus={`output:${output.id}`}
+                              aria-label={`查看订阅 ${output.name}`}
+                              onClick={() => updateScope("output", output.id)}
+                              variant="link"
                             >
-                              {"icon" in item ? (item.icon as ReactNode) : null}
-                              {item.label}
-                            </DropdownMenuItem>
-                          ))}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </div>
-                ))}
+                              {output.name}
+                            </ActionButton>
+                            <div className="subscription-client-meta mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                              {output.status === "published" ? (
+                                <span className="subscription-publication-state text-xs text-muted-foreground">
+                                  已发布
+                                </span>
+                              ) : (
+                                <Status value={output.status} />
+                              )}
+                              <span>{output.target.adapterId}</span>
+                              <span>
+                                {output.mode === "nodes-only"
+                                  ? "纯节点"
+                                  : "完整配置"}
+                              </span>
+                              <span className="wrap-anywhere">
+                                {output.publishedAt
+                                  ? `最近发布 ${dateLabel(output.publishedAt)}`
+                                  : "尚未发布"}
+                              </span>
+                            </div>
+                            <OutputComparisonLine
+                              output={output}
+                              pending={comparisons.pendingIds.has(output.id)}
+                            />
+                          </TableCell>
+                          <TableCell className="px-4 py-3">
+                            <div className="flex flex-wrap items-center justify-end gap-2">
+                              <ActionButton
+                                disabled={
+                                  output.status === "revoked" ||
+                                  outputs.isError ||
+                                  !!checkingID
+                                }
+                                onClick={() => setAccessID(output.id)}
+                                variant="outline"
+                              >
+                                获取订阅
+                              </ActionButton>
+                              <OutputUpdateButton
+                                output={output}
+                                pending={comparisons.pendingIds.has(output.id)}
+                                disabled={
+                                  !profilesReady ||
+                                  !profile ||
+                                  outputs.isError ||
+                                  !!checkingID
+                                }
+                                busy={checkingID === output.id}
+                                onClick={() => inspectOutput(output)}
+                              />
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <ActionButton
+                                    aria-label={`管理 ${output.name}`}
+                                    leadingIcon={
+                                      <Ellipsis aria-hidden="true" />
+                                    }
+                                    variant="ghost"
+                                  />
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent
+                                  align="end"
+                                  onCloseAutoFocus={(event) => {
+                                    if (
+                                      document.activeElement?.closest(
+                                        '[role="dialog"],[role="alertdialog"]',
+                                      )
+                                    )
+                                      event.preventDefault();
+                                  }}
+                                >
+                                  {outputMenu(output, profile).map((item) => (
+                                    <DropdownMenuItem
+                                      key={item.key}
+                                      disabled={
+                                        "disabled" in item && !!item.disabled
+                                      }
+                                      variant={
+                                        "danger" in item && item.danger
+                                          ? "destructive"
+                                          : "default"
+                                      }
+                                      onSelect={() => {
+                                        item.onClick?.();
+                                      }}
+                                    >
+                                      {"icon" in item
+                                        ? (item.icon as ReactNode)
+                                        : null}
+                                      {item.label}
+                                    </DropdownMenuItem>
+                                  ))}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
                 {!links.length && !outputs.isPending && !outputs.isError && (
                   <p className="subscription-no-links p-4 text-sm text-muted-foreground">
                     {group.totalLinks

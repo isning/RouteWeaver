@@ -165,9 +165,9 @@ for (const width of [1440, 390]) {
         );
         for (const group of groups) {
           const card = page.getByRole("article", { name: `分流配置 ${group.name}`, exact: true });
-          await expect(card.getByRole("group", { name: /^客户端订阅 / })).toHaveCount(group.outputs.length);
+          await expect(card.getByRole("row", { name: /^客户端订阅 / })).toHaveCount(group.outputs.length);
           for (const output of group.outputs)
-            await expect(card.getByRole("group", { name: `客户端订阅 ${output.name}`, exact: true })).toBeVisible();
+            await expect(card.getByRole("row", { name: `客户端订阅 ${output.name}`, exact: true })).toBeVisible();
         }
       };
       await reloadSeededInventory([{ name: names.profile, outputs: [chosen, sibling] }]);
@@ -196,7 +196,7 @@ for (const width of [1440, 390]) {
       expect(await f.bundleState(sibling, v1)).toEqual(originalSibling);
       await page.goto(`/#subscriptions?profile=${profile.id}`);
       const pinnedCard = page.getByRole("article", { name: `分流配置 ${names.profile}`, exact: true });
-      await expect(pinnedCard.getByRole("group", { name: /^客户端订阅 / })).toHaveCount(2);
+      await expect(pinnedCard.getByRole("row", { name: /^客户端订阅 / })).toHaveCount(2);
       await pinnedCard.getByRole("button", { name: "编辑配置", exact: true }).click();
       const pin = editor.getByRole("button", { name: "固定到最新接纳版本", exact: true });
       await expect(editor.getByText(`${names.resource}：当前配置固定较早的文件版本。`, { exact: false })).toBeVisible();

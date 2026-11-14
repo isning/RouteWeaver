@@ -528,7 +528,7 @@ it.for(["row", "detail", "revoked-row", "revoked-detail"] as const)(
       }),
     );
     await mount(<SubscriptionsPage />);
-    const row = await screen.findByRole("group", { name: "客户端订阅 Laptop" });
+    const row = await screen.findByRole("row", { name: "客户端订阅 Laptop" });
     let scope = within(row);
     const name = surface.startsWith("revoked") ? "检查重新发布" : "检查更新";
     if (surface.endsWith("detail")) {

@@ -177,7 +177,7 @@ async function ownerFixture(page: Page) {
   };
 }
 async function openPhone(page: Page, pendingRead = false) {
-  const row = page.getByRole("group", {
+  const row = page.getByRole("row", {
     name: "客户端订阅 Phone",
     exact: true,
   });
@@ -322,7 +322,7 @@ for (const reducedMotion of ["no-preference", "reduce"] as const)
       });
       phase = "outer Close after nested review";
       const trigger = page
-        .getByRole("group", { name: "客户端订阅 Phone", exact: true })
+        .getByRole("row", { name: "客户端订阅 Phone", exact: true })
         .getByRole("button", { name: "获取订阅", exact: true });
       await access.getByRole("button", { name: "关闭", exact: true }).click();
       await expect.soft(trigger).toBeFocused();
@@ -394,7 +394,7 @@ test("late blocked access cannot restore the previous account task at 390px", as
       page.getByRole("dialog", { name: "获取「Phone」", exact: true }),
     ).toHaveCount(0);
     await expect(
-      page.getByRole("group", { name: "客户端订阅 Phone", exact: true }),
+      page.getByRole("row", { name: "客户端订阅 Phone", exact: true }),
     ).toHaveCount(0);
     f.ready("OUTPUT_REPUBLISH_REQUIRED");
     release();

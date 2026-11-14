@@ -170,7 +170,7 @@ for (const width of [1440, 390]) {
         page.getByRole("button", { name: "进入工作空间", exact: true }),
       );
       expect((await loggedIn).status()).toBe(200);
-      const row = page.getByRole("group", {
+      const row = page.getByRole("row", {
         name: `客户端订阅 ${selectedName}`,
         exact: true,
       });

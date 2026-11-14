@@ -168,10 +168,10 @@ it("keeps published and revoked client subscription states separate from account
   const card = await usageCard();
   expect(card.getByText("平台服务已暂停")).toBeTruthy();
   const published = within(
-    await screen.findByRole("group", { name: "客户端订阅 电脑订阅" }),
+    await screen.findByRole("row", { name: "客户端订阅 电脑订阅" }),
   );
   const revoked = within(
-    await screen.findByRole("group", { name: "客户端订阅 手机订阅" }),
+    await screen.findByRole("row", { name: "客户端订阅 手机订阅" }),
   );
   expect(published.getByText("已发布", { exact: true })).toBeTruthy();
   expect(revoked.getByText("已撤销", { exact: true })).toBeTruthy();

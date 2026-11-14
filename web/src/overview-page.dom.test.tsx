@@ -114,6 +114,15 @@ it("shows current-account overview and navigates to an unpublished configuration
   expect(await screen.findByText("192.0.2.7")).toBeTruthy();
   expect(screen.getByText("100 Mbps")).toBeTruthy();
   expect(screen.getByText("东京")).toBeTruthy();
+  expect(
+    screen.getByRole("table", { name: "线路用量" }).getAttribute("data-slot"),
+  ).toBe("table");
+  expect(
+    screen
+      .getByRole("table", { name: "最近订阅拉取" })
+      .getAttribute("data-slot"),
+  ).toBe("table");
+  expect(screen.getByRole("columnheader", { name: "实际流量" })).toBeTruthy();
   expect(screen.getByText("旅行配置")).toBeTruthy();
   expect(await screen.findByText("工作订阅")).toBeTruthy();
   expect(screen.queryByText("工作配置")).toBeNull();

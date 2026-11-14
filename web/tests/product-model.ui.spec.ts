@@ -1285,7 +1285,7 @@ test("existing strategy groups remain editable and revoked recovery replaces onl
   await page.getByRole("button", { name: "返回", exact: true }).click();
   await expect(page.getByLabel("配置名称", { exact: true })).not.toBeVisible();
   await page.setViewportSize({ width: 1440, height: 900 });
-  const targetRow = article.getByRole("group", {
+  const targetRow = article.getByRole("row", {
     name: `客户端订阅 ${selected.name}`,
     exact: true,
   });
@@ -2731,7 +2731,7 @@ test("25 synthetic configurations and 100 independent links remain searchable, b
   });
   await expect(inventory.getByRole("article")).toHaveCount(10);
   expect(
-    await inventory.getByRole("group", { name: /^客户端订阅 / }).count(),
+    await inventory.getByRole("row", { name: /^客户端订阅 / }).count(),
   ).toBeLessThanOrEqual(50);
   await expect(
     page.getByRole("region", { name: "已发布分流", exact: true }),
@@ -2760,7 +2760,7 @@ test("25 synthetic configurations and 100 independent links remain searchable, b
     exact: true,
   });
   await expect(
-    found.getByRole("group", {
+    found.getByRole("row", {
       name: `客户端订阅 ${target.name}`,
       exact: true,
     }),
@@ -2827,7 +2827,7 @@ test("25 synthetic configurations and 100 independent links remain searchable, b
   await search.fill(`${prefix} Duplicate tablet`);
   await expect(inventory.getByRole("article")).toHaveCount(1);
   await expect(
-    inventory.getByRole("group", {
+    inventory.getByRole("row", {
       name: `客户端订阅 ${prefix} Duplicate tablet`,
       exact: true,
     }),
@@ -2841,7 +2841,7 @@ test("25 synthetic configurations and 100 independent links remain searchable, b
     exact: true,
   });
   await expect(
-    longProfile.getByRole("group", { name: /^客户端订阅 / }),
+    longProfile.getByRole("row", { name: /^客户端订阅 / }),
   ).toHaveCount(5);
   await expect(page.locator("body")).toHaveJSProperty("scrollWidth", 390);
   const longHeading = longProfile.getByRole("heading", {
@@ -2909,7 +2909,7 @@ test("25 synthetic configurations and 100 independent links remain searchable, b
   });
   await linksPage.getByRole("button", { name: "下一页", exact: true }).click();
   await expect(
-    longProfile.getByRole("group", { name: /^客户端订阅 / }),
+    longProfile.getByRole("row", { name: /^客户端订阅 / }),
   ).toHaveCount(5);
   await expect(
     longProfile.getByRole("button", {

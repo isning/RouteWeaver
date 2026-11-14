@@ -709,7 +709,7 @@ it("retains an orphaned frozen link for access and lifecycle management without 
     }),
   );
   mount(<SubscriptionsPage view="outputs" />);
-  const row = await screen.findByRole("group", {
+  const row = await screen.findByRole("row", {
     name: "客户端订阅 Preserved link",
   });
   expect(

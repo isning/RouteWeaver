@@ -25,7 +25,7 @@ for (const width of [1440, 390]) for (const [route, title] of routes) {
         case "subscriptions": {
           expect(await read(page.request, "/me/profiles")).toHaveLength(1);
           expect(await read(page.request, "/me/outputs")).toHaveLength(1);
-          await expect(page.getByRole("group", { name: `客户端订阅 ${names.output}`, exact: true })).toBeVisible();
+          await expect(page.getByRole("row", { name: `客户端订阅 ${names.output}`, exact: true })).toBeVisible();
           await expect(content.getByText(names.profile, { exact: true })).toBeVisible();
           await inventory.capture("overview", "populated", "One real saved Profile and one published Output; service entitlement absent; access links never opened");
           const create = page.getByRole("button", { name: "新建分流配置", exact: true });

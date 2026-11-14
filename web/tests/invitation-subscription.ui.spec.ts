@@ -493,7 +493,7 @@ for (const width of [1440, 390]) {
       );
       await login(recipient, username, invitationPassword);
       await recipient.goto("/#subscriptions");
-      const row = recipient.getByRole("group", {
+      const row = recipient.getByRole("row", {
         name: `客户端订阅 ${outputName}`,
         exact: true,
       });

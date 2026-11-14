@@ -151,7 +151,7 @@ for (const width of [1440, 390]) {
       await page.goto("/#subscriptions");
       await waitForConfirmedWorkspace(page);
       const card = page.getByRole("article", { name: `分流配置 ${names.profile}`, exact: true });
-      await expect(card.getByRole("group", { name: /^客户端订阅 / })).toHaveCount(2);
+      await expect(card.getByRole("row", { name: /^客户端订阅 / })).toHaveCount(2);
       await card.getByRole("button", { name: "编辑配置", exact: true }).click();
       const editor = page.locator(".profile-intent-editor");
       const editorURL = page.url();
@@ -350,7 +350,7 @@ for (const width of [1440, 390]) {
 
       await editor.getByRole("button", { name: "返回", exact: true }).click();
       await expect(editor).toHaveCount(0);
-      const chosenRow = card.getByRole("group", { name: `客户端订阅 ${names.chosen}`, exact: true });
+      const chosenRow = card.getByRole("row", { name: `客户端订阅 ${names.chosen}`, exact: true });
       const accessPath = `/api/me/outputs/${f.chosen.id}/access`;
       await page.route(`**${accessPath}`, async (route) => {
         interceptedAccessReads++;

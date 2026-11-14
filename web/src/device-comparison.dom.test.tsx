@@ -96,7 +96,7 @@ it("bounds an explicit visible page to five checks with two in flight and never 
     name: "分流配置 日常分流",
   });
   expect(
-    within(group).getAllByRole("group", { name: /^客户端订阅 / }),
+    within(group).getAllByRole("row", { name: /^客户端订阅 / }),
   ).toHaveLength(5);
   expect(pending).toHaveLength(0);
   await scenario.click(() =>
@@ -180,7 +180,7 @@ it("keeps known invalid intent, unknown failures and never-checked rows distinct
     screen.findByRole("button", { name: "检查 日常分流 的 3 个订阅更新" }),
   );
   await screen.findByText(comparisonText(/默认流量需修复.*上次核对/));
-  const failed = screen.getByRole("group", { name: "客户端订阅 Android" });
+  const failed = screen.getByRole("row", { name: "客户端订阅 Android" });
   await within(failed).findByText("暂时无法比较");
   await screen.findByText(comparisonText(/暂时无法比较.*上次核对/));
   expect(
@@ -368,10 +368,10 @@ it("never records a late private detail as fresh evidence after a known input mu
     within(dialog).getByRole("button", { name: "关闭" }),
   );
   await within(
-    screen.getByRole("group", { name: "客户端订阅 MacBook" }),
+    screen.getByRole("row", { name: "客户端订阅 MacBook" }),
   ).findByText("未检查更新");
   await within(
-    screen.getByRole("group", { name: "客户端订阅 Android" }),
+    screen.getByRole("row", { name: "客户端订阅 Android" }),
   ).findByText("需要重新检查更新");
   expect(
     screen.queryByText(comparisonText(/与保存草稿一致.*上次核对/)),
@@ -539,10 +539,10 @@ it("checks only after an explicit scoped action and keeps publication separate f
       name: "检查 日常分流 的 2 个订阅更新",
     }),
   );
-  const macbook = within(group).getByRole("group", {
+  const macbook = within(group).getByRole("row", {
     name: "客户端订阅 MacBook",
   });
-  const android = within(group).getByRole("group", {
+  const android = within(group).getByRole("row", {
     name: "客户端订阅 Android",
   });
   await within(macbook).findByText(comparisonText(/与保存草稿一致.*上次核对/));
@@ -617,10 +617,10 @@ it("replaces an older unchanged receipt when a newer private recheck fails", asy
     within(dialog).getByRole("button", { name: "关闭" }),
   );
   await within(
-    screen.getByRole("group", { name: "客户端订阅 MacBook" }),
+    screen.getByRole("row", { name: "客户端订阅 MacBook" }),
   ).findByText(comparisonText(/暂时无法比较.*上次核对/));
   expect(
-    within(screen.getByRole("group", { name: "客户端订阅 Android" })).getByText(
+    within(screen.getByRole("row", { name: "客户端订阅 Android" })).getByText(
       comparisonText(/与保存草稿一致.*上次核对/),
     ),
   ).toBeTruthy();
@@ -687,7 +687,7 @@ it.for([false, true])(
     expect(publications).toHaveLength(0);
     await scenario.click(() =>
       within(
-        screen.getByRole("group", { name: "客户端订阅 MacBook" }),
+        screen.getByRole("row", { name: "客户端订阅 MacBook" }),
       ).getByRole("button", { name: "查看修改" }),
     );
     const dialog = screen.getByRole("dialog", {
@@ -713,11 +713,11 @@ it.for([false, true])(
       ).toBeNull(),
     );
     await within(
-      screen.getByRole("group", { name: "客户端订阅 MacBook" }),
+      screen.getByRole("row", { name: "客户端订阅 MacBook" }),
     ).findByText("未检查更新");
     expect(
       within(
-        screen.getByRole("group", { name: "客户端订阅 Android" }),
+        screen.getByRole("row", { name: "客户端订阅 Android" }),
       ).getByText(comparisonText(/有未发布修改.*上次核对/)),
     ).toBeTruthy();
     expect(publications).toEqual([
@@ -762,7 +762,7 @@ it("does not request deleted or reassigned devices and rejects mismatched compar
   await screen.findByText("暂时无法比较");
   expect(calls).toEqual(["/api/me/outputs/android/comparison"]);
   expect(
-    screen.queryByRole("group", { name: "客户端订阅 MacBook" }),
+    screen.queryByRole("row", { name: "客户端订阅 MacBook" }),
   ).toBeNull();
   expect(
     screen.queryByText(comparisonText(/与保存草稿一致.*上次核对/)),

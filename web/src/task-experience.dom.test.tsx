@@ -330,7 +330,7 @@ it("puts published subscriptions before usage and retrieves the explicitly selec
     subscriptionHeading.compareDocumentPosition(usageHeading) &
       Node.DOCUMENT_POSITION_FOLLOWING,
   ).toBeTruthy();
-  const travel = await screen.findByRole("group", {
+  const travel = await screen.findByRole("row", {
     name: "客户端订阅 Travel",
   });
   await user.click(within(travel).getByRole("button", { name: "获取订阅" }));

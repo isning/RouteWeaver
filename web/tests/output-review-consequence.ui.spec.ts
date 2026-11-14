@@ -114,7 +114,7 @@ for (const scenario of ["unchanged", "changed-long-name"] as const) {
         ).toBe(true);
       }
       await page.reload();
-      const row = page.getByRole("group", {
+      const row = page.getByRole("row", {
         name: `客户端订阅 ${name}`,
         exact: true,
       });

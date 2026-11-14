@@ -293,7 +293,7 @@ for (const width of [1440, 390])
       await f.unchanged();
 
       await page.goto("/#subscriptions");
-      const row = page.getByRole("group", {
+      const row = page.getByRole("row", {
         name: "客户端订阅 待更新订阅",
         exact: true,
       });

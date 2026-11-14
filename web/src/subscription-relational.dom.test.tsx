@@ -164,7 +164,7 @@ it("keeps same-prefix long names complete and opens the chosen identity by keybo
     within(group).getByRole("heading", { name: longProfile.name }).textContent,
   ).toBe(longProfile.name);
   for (const link of [phone, laptop]) {
-    const row = within(group).getByRole("group", {
+    const row = within(group).getByRole("row", {
       name: `客户端订阅 ${link.name}`,
     });
     expect(
@@ -208,7 +208,7 @@ it("bounds 100 client links and finds a hidden long client name within its ownin
     name: "分流配置 Configuration 0",
   });
   expect(
-    within(first).getAllByRole("group", { name: /^客户端订阅 / }),
+    within(first).getAllByRole("row", { name: /^客户端订阅 / }),
   ).toHaveLength(5);
   expect(within(first).queryByText("Client 5")).toBeNull();
   const pager = within(first).getByRole("navigation", {
@@ -370,7 +370,7 @@ it("retains readable orphan delivery and frozen detail when configurations fail 
   );
   mount();
   await screen.findByText("暂时无法加载分流配置");
-  const row = screen.getByRole("group", { name: "客户端订阅 Orphan laptop" });
+  const row = screen.getByRole("row", { name: "客户端订阅 Orphan laptop" });
   expect(
     (within(row).getByRole("button", { name: "检查更新" }) as HTMLButtonElement)
       .disabled,
@@ -513,7 +513,7 @@ it.each(["revoked", "missing"])(
       }),
     );
     mount();
-    const row = await screen.findByRole("group", { name: "客户端订阅 Phone" });
+    const row = await screen.findByRole("row", { name: "客户端订阅 Phone" });
     await userEvent.click(
       within(row).getByRole("button", { name: "检查更新" }),
     );
@@ -577,7 +577,7 @@ it("does not reopen an old Output check when fresh metadata arrives after scope 
     }),
   );
   mount();
-  const row = await screen.findByRole("group", { name: "客户端订阅 Phone" });
+  const row = await screen.findByRole("row", { name: "客户端订阅 Phone" });
   await userEvent.click(within(row).getByRole("button", { name: "检查更新" }));
   await waitFor(() => expect(reads).toBe(2));
   history.replaceState(null, "", "#subscriptions?profile=other");
