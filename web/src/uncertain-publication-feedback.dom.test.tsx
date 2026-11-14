@@ -109,7 +109,7 @@ it("explains an uncertain subscription publication once and identifies recovery 
   );
   await userEvent.clear(ui.getByRole("textbox", { name: "订阅名称" }));
   await userEvent.type(ui.getByRole("textbox", { name: "订阅名称" }), "Phone");
-  expect(ui.getByText("创建独立的客户端订阅，其他订阅保留原版本。")).toBeTruthy();
+  expect(ui.getByText("创建新的客户端订阅，其他订阅保留原版本。")).toBeTruthy();
   await userEvent.click(ui.getByRole("button", { name: "检查发布内容" }));
   await ui.findByText("兼容检查通过。");
   await userEvent.click(
@@ -155,7 +155,7 @@ it("explains an uncertain subscription publication once and identifies recovery 
       ui.queryByText("核对或重试均沿用上次发布请求。") !== null,
     freshCreationConsequenceVisible:
       ui.queryByText(
-        /新建独立链接，其他订阅保留原版本。|创建独立的客户端订阅，其他订阅保留原版本。/,
+        /新建独立链接，其他订阅保留原版本。|创建新的客户端订阅，其他订阅保留原版本。/,
       ) !== null,
   }).toEqual({
     pendingAnnouncements: 1,

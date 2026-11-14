@@ -23,6 +23,10 @@ function mountRead(hash: string, endpoint: string, result: unknown, role = "admi
     "/api/auth/me": { user: { id: "reader", name: "Reader", role }, csrfToken: "synthetic" },
     "/api/auth/sessions": [], "/api/admin/accounts": [], "/api/state": inventory,
     "/api/services": [], "/api/settings": {}, "/api/published-routes": [], "/api/audit": [],
+    "/api/me/outputs/independent": { items: [] },
+    "/api/me/insights": {daily: [], routes: [], admission: {available: false}, limits: {}},
+    "/api/me/subscription-fetches": {items: [], limit: 100, windowDays: 14},
+    "/api/me/output-usage": {complete: true, period: "current-cycle", outputs: [], unattributedRawBytes: 0},
     "/api/admin/announcements": [], "/api/me/profiles": [], "/api/me/outputs": [],
   };
   vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
@@ -92,20 +96,20 @@ it("does not offer invented notification settings during loading or failure and 
   expect(task.state.unexpected).toEqual([]);
 });
 
-it.each(["user", "admin"])("keeps %s service overview unknown until its own read succeeds without hiding independent empty subscriptions", async (role) => {
-  const task = mountRead("subscriptions", "/api/me/overview", { user: { id: "reader", name: "Reader" }, status: "paused", quotaBytes: 1024, usage: { rawBytes: 128, weightedBytes: 256 }, routes: [] }, role);
+it.each(["user", "admin"])("keeps %s overview usage unknown until its own read succeeds without hiding the independently loaded subscription list", async (role) => {
+  const task = mountRead("overview", "/api/me/overview", { user: { id: "reader", name: "Reader" }, status: "paused", quotaBytes: 1024, usage: { rawBytes: 128, weightedBytes: 256 }, routes: [] }, role);
   const main = await screen.findByRole("main");
-  await within(main).findByText("暂无订阅");
+  await within(main).findByText("尚无客户端订阅");
   expect(within(main).getByLabelText("正在加载").getAttribute("aria-busy")).toBe("true");
   expect(within(main).queryByText("不限额")).toBeNull();
-  expect(within(main).queryByRole("heading", { name: "平台服务用量" })).toBeNull();
+  expect(within(main).queryByRole("heading", { name: "本周期剩余额度" })).toBeNull();
   await task.fail();
   await within(main).findByText("所选列表暂不可用");
-  expect(within(main).getByText("暂无订阅")).toBeTruthy();
+  expect(within(main).getByText("尚无客户端订阅")).toBeTruthy();
   expect(within(main).queryByText("不限额")).toBeNull();
   await userEvent.click(within(main).getByRole("button", { name: "重试" }));
-  await within(main).findByRole("heading", { name: "平台服务用量" });
+  await within(main).findByRole("heading", { name: "本周期剩余额度" });
   expect(within(main).getByText("平台服务已暂停")).toBeTruthy();
-  expect(within(main).getByText("暂无订阅")).toBeTruthy();
+  expect(within(main).getByText("尚无客户端订阅")).toBeTruthy();
   expect(task.state.reads).toBe(2); expect(task.state.unexpected).toEqual([]);
 });

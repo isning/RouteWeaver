@@ -84,6 +84,7 @@ async function check(
         return json({ status: "active", routes: [] });
       if (path === "/api/me/profiles")
         return json(profileRecord ? [profileRecord] : []);
+      if (method === "GET" && path === "/api/me/outputs/independent") return json({ items: [] });
       if (path === "/api/me/outputs") return json([output]);
       if (path === "/api/me/profiles/profile/preview")
         return json({
@@ -143,16 +144,16 @@ it("states the accepted-source scope beside an unchanged configuration text resu
     within(dialog).getByText("生成的配置文本与已发布版本相同。"),
   ).toBeTruthy();
   expect(within(dialog).getByText(scopeNote)).toBeTruthy();
-  expect(requests).toHaveLength(5);
-  expect(requests).toEqual(
-    expect.arrayContaining([
-      { path: "/api/me/overview", method: "GET" },
-      { path: "/api/me/outputs", method: "GET" },
-      { path: "/api/me/profiles", method: "GET" },
-      { path: "/api/me/outputs", method: "GET" },
-      { path: "/api/me/profiles/profile/preview", method: "POST" },
-    ]),
-  );
+  expect(requests).toHaveLength(7);
+  expect(requests.map(({ method, path }) => `${method} ${path}`).sort()).toEqual([
+    "GET /api/me/outputs",
+    "GET /api/me/outputs",
+    "GET /api/me/outputs",
+    "GET /api/me/outputs/independent",
+    "GET /api/me/overview",
+    "GET /api/me/profiles",
+    "POST /api/me/profiles/profile/preview",
+  ]);
 });
 
 it("uses a known collection-backed profile without reading the collection or inventing a pending candidate", async () => {

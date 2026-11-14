@@ -54,6 +54,7 @@ it("settles an active import with the current source continuation and preserves 
           "/me/overview",
           "/me/profiles",
           "/me/outputs",
+          "/me/outputs/independent",
           "/me/sources",
           "/me/collections",
           "/me/resources",
@@ -63,7 +64,7 @@ it("settles an active import with the current source continuation and preserves 
       )
         unexpected.push(path);
       const data =
-        path === "/me/overview"
+        path === "/me/outputs/independent" ? { items: [] } : path === "/me/overview"
           ? { status: "active", routes: [] }
           : path === "/me/sources"
             ? [

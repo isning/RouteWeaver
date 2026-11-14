@@ -59,7 +59,7 @@ it("owns accessible loading without Suspense, ignores inactive completion and re
     vi.fn(async (url: string, init?: RequestInit) => {
       (init?.method && init.method !== "GET" ? writes : reads).push(url);
       return json(
-        url.endsWith("/overview") ? { status: "active", routes: [] } : [],
+        url.endsWith("/overview") ? { status: "active", routes: [] } : url.endsWith("/outputs/independent") ? { items: [] } : [],
       );
     }),
   );
@@ -124,7 +124,7 @@ it("a cached public module cannot start business reads while the real session bo
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url: string) =>
-      json(url.endsWith("/overview") ? { status: "active", routes: [] } : []),
+      json(url.endsWith("/overview") ? { status: "active", routes: [] } : url.endsWith("/outputs/independent") ? { items: [] } : []),
     ),
   );
   const primed = mount(<SubscriptionPageLoader />);
@@ -144,10 +144,11 @@ it("a cached public module cannot start business reads while the real session bo
       return url.endsWith("/auth/me")
         ? auth
         : json(
-            url.endsWith("/overview") ? { status: "active", routes: [] } : [],
+            url.endsWith("/overview") ? { status: "active", routes: [] } : url.endsWith("/outputs/independent") ? { items: [] } : [],
           );
     }),
   );
+  history.replaceState(null, "", "#subscriptions");
   mount(<App />);
   expect(screen.getByRole("status", { name: "正在确认登录状态" })).toBeTruthy();
   expect(calls).toEqual(["/api/auth/me"]);
@@ -162,6 +163,8 @@ it("a cached public module cannot start business reads while the real session bo
   await screen.findByText("暂无订阅", { exact: true });
   expect(calls.filter((path) => path.startsWith("/api/me/")).sort()).toEqual([
     "/api/me/outputs",
+    "/api/me/outputs",
+    "/api/me/outputs/independent",
     "/api/me/overview",
     "/api/me/profiles",
   ]);

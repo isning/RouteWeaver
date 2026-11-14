@@ -55,6 +55,7 @@ function fixture(profiles: Profile[], outputs: Output[]) {
     calls.push({ method, path, body });
     if (method === "GET" && path === "/api/me/profiles")
       return state.pendingProfiles || (state.failProfiles ? json({ error: "Profile list unavailable" }, 503) : json(state.profiles));
+    if (method === "GET" && path === "/api/me/outputs/independent") return json({ items: [] });
     if (method === "GET" && path === "/api/me/outputs") return json(state.outputs);
     if (method === "GET" && path === "/api/me/overview") return json({ status: "active", routes: [] });
     if (method === "GET" && ["sources", "collections", "resources", "platform-entries"].some((name) => path === `/api/me/${name}`)) return json([]);

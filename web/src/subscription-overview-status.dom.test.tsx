@@ -34,6 +34,7 @@ function mountWorkspace(
     },
     "/api/me/profiles": inventory.profiles,
     "/api/me/outputs": inventory.outputs,
+    "/api/me/outputs/independent": { items: [] },
   };
   vi.stubGlobal(
     "fetch",
@@ -233,6 +234,7 @@ for (const role of ["user", "admin"]) {
         return json([]);
       }
       if (url === "/api/me/overview") return json({ user: { id: "inventory-reader", name: "Reader" }, status: "active", quotaBytes: 0, usage: { rawBytes: 0, weightedBytes: 0 }, routes: [] });
+      if (url === "/api/me/outputs/independent") return json({ items: [] });
       if (["/api/me/profiles", "/api/me/outputs"].includes(url)) return json([]);
       unexpectedRequests.push(url); throw new Error(`Unexpected inventory request ${url}`);
     }));

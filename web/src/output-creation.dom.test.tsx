@@ -144,7 +144,7 @@ it("requires review of the exact new subscription identity and publishes only th
     within(dialog).queryByRole("button", { name: "预览此输出" }),
   ).toBeNull();
   const consequence =
-    within(dialog).getByText("创建独立的客户端订阅，其他订阅保留原版本。");
+    within(dialog).getByText("创建新的客户端订阅，其他订阅保留原版本。");
   expect(consequence.closest('[data-slot="dialog-footer"]')).toBe(
     check.closest('[data-slot="dialog-footer"]'),
   );

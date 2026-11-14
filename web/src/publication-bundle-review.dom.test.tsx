@@ -119,13 +119,13 @@ it.each([
       ),
     );
     expect(screen.queryByText(notice)).toBeNull();
-    expect(screen.getByText("创建独立的客户端订阅，其他订阅保留原版本。")).toBeTruthy();
+    expect(screen.getByText("创建新的客户端订阅，其他订阅保留原版本。")).toBeTruthy();
     expect(screen.queryByText("新建独立链接，其他订阅保留原版本。")).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "检查发布内容" }));
     await screen.findByText("兼容检查通过。");
     if (shown) {
       const disclosure = screen.getByText(notice);
-      const consequence = screen.getByText("新建独立订阅，其他订阅保留原版本。");
+      const consequence = screen.getByText("新建订阅，其他订阅保留原版本。");
       expect(disclosure.closest("[data-slot=dialog-footer]")).toBe(
         consequence.closest("[data-slot=dialog-footer]"),
       );
@@ -141,9 +141,9 @@ it.each([
     expect(writes).toHaveLength(0);
     await userEvent.clear(screen.getByRole("textbox", { name: "订阅名称" }));
     expect(screen.queryByText(notice)).toBeNull();
-    expect(screen.queryByText("新建独立订阅，其他订阅保留原版本。")).toBeNull();
+    expect(screen.queryByText("新建订阅，其他订阅保留原版本。")).toBeNull();
     expect(screen.queryByText("新建独立链接，其他订阅保留原版本。")).toBeNull();
-    expect(screen.getByText("创建独立的客户端订阅，其他订阅保留原版本。")).toBeTruthy();
+    expect(screen.getByText("创建新的客户端订阅，其他订阅保留原版本。")).toBeTruthy();
   },
 );
 

@@ -330,6 +330,6 @@ it("does not hide a review503 without a pending creation or change the ordinary 
     "Review service unavailable",
   );
   expect(f.ui.queryByRole("status", { name: "上次发布待确认" })).toBeNull();
-  expect(f.ui.getByText("创建独立的客户端订阅，其他订阅保留原版本。")).toBeTruthy();
+  expect(f.ui.getByText("创建新的客户端订阅，其他订阅保留原版本。")).toBeTruthy();
   expect(f.creates).toHaveLength(0);
 });
