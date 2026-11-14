@@ -1,3 +1,4 @@
+import { PrincipalDelegationPanel } from "./PrincipalDelegationPanel";
 import { ScrollableTabsList } from "@/ui-patterns/scrollable-tabs-list";
 import { addServerConnector, connectorAddReason, removeServerConnector } from "./server-connector-collection";
 import { ServerConnectorConnectionDialog } from "./ServerConnectorConnectionDialog";
@@ -2311,6 +2312,7 @@ function ServerRouteDetail({
           managedEntry={managedEntry}
         />
       )}
+      <PrincipalDelegationPanel deployment={deployment} />
       <Section title="目标实例">
         {programs.map((p) => (
           <div
