@@ -343,6 +343,9 @@ func (s *Store) ImportSnapshot(ctx context.Context, v Snapshot) error {
 			return err
 		}
 	}
+	if err = s.invalidateRestoredQuotaCoverageTx(tx); err != nil {
+		return err
+	}
 	if err = s.invalidateUsageTx(tx); err != nil {
 		return err
 	}

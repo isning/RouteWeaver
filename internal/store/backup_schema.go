@@ -24,7 +24,7 @@ func validateBackupSchema(ctx context.Context, tx schemaQuerier) error {
 			schemaRows.Close()
 			return err
 		}
-		if name == "usage_history" || name == "usage_history_owners" || name == "usage_history_state" || name == "usage_rebuilds" || name == "usage_projection_state" || name == "usage_windows" || name == "admission_lease_state" || name == "admission_budget_state" || name == "admission_lease_windows" || name == "admission_budget_windows" {
+		if name == "quota_coverage_state" || name == "usage_history" || name == "usage_history_owners" || name == "usage_history_state" || name == "usage_rebuilds" || name == "usage_projection_state" || name == "usage_windows" || name == "admission_lease_state" || name == "admission_budget_state" || name == "admission_lease_windows" || name == "admission_budget_windows" {
 			derived[name] = true
 			continue
 		}
@@ -47,6 +47,10 @@ func validateBackupSchema(ctx context.Context, tx schemaQuerier) error {
 	columns := map[string][]string{"records": {"kind", "id", "data"}, "identities": {"username", "account_id"}, "token_index": {"kind", "digest", "record_id"}, "counters": {"kind", "id", "value"}, "schema_migrations": {"version", "applied_at"}}
 	// Older physical databases need not have derived tables; if present, only
 	// this exact rebuildable shape is accepted. They never enter logical frames.
+	if derived["quota_coverage_state"] {
+		columns["quota_coverage_state"] = []string{"id", "epoch"}
+		primaryKeys["quota_coverage_state"] = []int{1, 0}
+	}
 	if derived["usage_history"] {
 		columns["usage_history"] = []string{"account", "id"}
 		primaryKeys["usage_history"] = []int{1, 2}

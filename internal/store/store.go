@@ -126,6 +126,10 @@ func openStoreWithNotificationLimit(path string, key []byte, limit int64) (*Stor
 		db.Close()
 		return nil, e
 	}
+	if e = s.initializeQuotaCoverage(); e != nil {
+		db.Close()
+		return nil, e
+	}
 	if e = s.initializeNotifications(); e != nil {
 		db.Close()
 		return nil, e

@@ -38,6 +38,10 @@ func (s *Store) putTx(tx *sql.Tx, kind, id string, value any) error {
 	if err != nil {
 		return err
 	}
+	quotaMutation, err := s.prepareQuotaCoverageMutationTx(tx, kind, id, raw)
+	if err != nil {
+		return err
+	}
 	liveMutation, err := s.prepareAdmissionLiveMutationTx(tx, kind, id, raw)
 	if err != nil {
 		return err
@@ -75,6 +79,9 @@ func (s *Store) putTx(tx *sql.Tx, kind, id string, value any) error {
 	if _, err = tx.Exec(`INSERT INTO records(kind,id,data) VALUES(?,?,?) ON CONFLICT(kind,id) DO UPDATE SET data=excluded.data`, kind, id, raw); err != nil {
 		return err
 	}
+	if err = s.finishQuotaCoverageMutationTx(tx, quotaMutation); err != nil {
+		return err
+	}
 	if err = s.finishAdmissionLiveMutationTx(tx, id, liveMutation); err != nil {
 		return err
 	}
@@ -94,6 +101,10 @@ func (s *Store) putTx(tx *sql.Tx, kind, id string, value any) error {
 }
 
 func (s *Store) deleteTx(tx *sql.Tx, kind, id string) (int64, error) {
+	quotaMutation, quotaErr := s.prepareQuotaCoverageMutationTx(tx, kind, id, nil)
+	if quotaErr != nil {
+		return 0, quotaErr
+	}
 	liveMutation, liveErr := s.prepareAdmissionLiveMutationTx(tx, kind, id, nil)
 	if liveErr != nil {
 		return 0, liveErr
@@ -130,6 +141,9 @@ func (s *Store) deleteTx(tx *sql.Tx, kind, id string) (int64, error) {
 		return 0, err
 	}
 	if count > 0 {
+		if err = s.finishQuotaCoverageMutationTx(tx, quotaMutation); err != nil {
+			return 0, err
+		}
 		if err = s.finishAdmissionLiveMutationTx(tx, id, liveMutation); err != nil {
 			return 0, err
 		}

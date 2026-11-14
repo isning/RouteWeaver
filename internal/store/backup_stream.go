@@ -279,6 +279,9 @@ func (s *Store) importBackupMode(ctx context.Context, l BackupLimits, produce fu
 			return err
 		}
 	}
+	if err = s.invalidateRestoredQuotaCoverageTx(tx); err != nil {
+		return err
+	}
 	if err = s.invalidateUsageTx(tx); err != nil {
 		return err
 	}
