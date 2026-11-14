@@ -1,5 +1,6 @@
+import { RawCoreLogSettings } from "./RawCoreLogSettings";
 import { useEffect, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Download, RefreshCw } from "lucide-react";
 import {
   Card,
@@ -35,7 +36,7 @@ import type { CoreInstance, HostRecord } from "./types";
 
 interface RawLogView {
   instanceId: string;
-  collectionState: "not_reported" | "recent" | "stale";
+  collectionState: "disabled" | "not_reported" | "recent" | "stale";
   lastReceivedAt: string | null;
   events: {
     adapterId: string;
@@ -53,7 +54,9 @@ interface RawLogView {
 function validView(value: RawLogView, id: string) {
   return (
     value?.instanceId === id &&
-    ["not_reported", "recent", "stale"].includes(value.collectionState) &&
+    ["disabled", "not_reported", "recent", "stale"].includes(
+      value.collectionState,
+    ) &&
     (value.lastReceivedAt === null ||
       Number.isFinite(Date.parse(value.lastReceivedAt))) &&
     Array.isArray(value.events) &&
@@ -84,8 +87,10 @@ export function RawCoreLogsPanel({
   host: HostRecord;
   instances: CoreInstance[];
 }) {
+  const client = useQueryClient();
   const cores = instances.filter((core) => core.hostId === host.id);
   const [selected, setSelected] = useState("");
+  const [settingsEpoch, setSettingsEpoch] = useState(0);
   const core = cores.find((item) => item.id === selected) || cores[0];
   return (
     <section aria-label="核心日志原文" className="min-w-0 space-y-4">
@@ -103,17 +108,37 @@ export function RawCoreLogsPanel({
         </div>
       )}
       {core ? (
-        <RawLogDetails
-          key={`${core.id}:${core.adapterId}:${core.version}`}
-          core={core}
-        />
+        <div className="space-y-4">
+          <RawCoreLogSettings
+            key={core.id}
+            instanceId={core.id}
+            onChanged={() => {
+              void client.cancelQueries({
+                queryKey: ["raw-core-logs", core.id],
+              });
+              client.removeQueries({ queryKey: ["raw-core-logs", core.id] });
+              setSettingsEpoch((n) => n + 1);
+            }}
+          />
+          <RawLogDetails
+            key={`${core.id}:${core.adapterId}:${core.version}:${settingsEpoch}`}
+            core={core}
+            settingsEpoch={settingsEpoch}
+          />
+        </div>
       ) : (
         <p className="text-sm text-muted-foreground">添加核心后可查看日志。</p>
       )}
     </section>
   );
 }
-function RawLogDetails({ core }: { core: CoreInstance }) {
+function RawLogDetails({
+  core,
+  settingsEpoch,
+}: {
+  core: CoreInstance;
+  settingsEpoch: number;
+}) {
   const [revealed, setRevealed] = useState(false);
   const [stream, setStream] = useState("all");
   const [period, setPeriod] = useState("all");
@@ -140,7 +165,7 @@ function RawLogDetails({ core }: { core: CoreInstance }) {
     [],
   );
   const query = useQuery({
-    queryKey: ["raw-core-logs", core.id, filters],
+    queryKey: ["raw-core-logs", core.id, settingsEpoch, filters],
     enabled: revealed,
     queryFn: async ({ signal }) => {
       const value = await request<RawLogView>(coreLogPath(core.id, filters), {
@@ -284,6 +309,8 @@ function RawLogDetails({ core }: { core: CoreInstance }) {
                     { value: "all", label: "全部保留记录" },
                     { value: "15", label: "最近15分钟" },
                     { value: "60", label: "最近1小时" },
+                    { value: "1440", label: "最近24小时" },
+                    { value: "10080", label: "最近7天" },
                   ]}
                 />
               </div>
@@ -357,11 +384,16 @@ function RawLogDetails({ core }: { core: CoreInstance }) {
                 日志导出失败，请重试。未生成可下载的文件。
               </Notice>
             )}
+            {data?.collectionState === "disabled" && (
+              <Notice tone="info">
+                平台已停止接收日志原文。已有记录仅供查看，不代表仍在采集。
+              </Notice>
+            )}
             {data?.collectionState === "not_reported" && (
               <Notice tone="info">
                 尚未收到原文日志。采集默认不启用，需要管理员在节点上启动 Agent
                 时明确添加 <code>--raw-core-logs-accept-sensitive</code>
-                。此页面不会修改核心配置或开启采集。
+                ，并在采集设置中允许平台接收。平台设置不会修改节点权限或核心配置。
               </Notice>
             )}
             {data?.collectionState === "stale" && (

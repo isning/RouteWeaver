@@ -6,6 +6,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"routeweaver/internal/diagnostics"
 	"strings"
 	"testing"
 	"time"
@@ -29,6 +30,8 @@ func TestRawCoreLogsOwnedNativeProcessOutput(t *testing.T) {
 				t.Fatal(e)
 			}
 			defer capture.Close()
+			recv := &rawReceiver{settings: &diagnostics.RawCoreSettings{InstanceID: d.Scope.InstanceID, Enabled: true, RetentionSeconds: 3600, Revision: "native-policy", HistoryLimit: 128, LineBytesLimit: 4096}}
+			primeRawCollector(t, capture, recv)
 			checker, e := NewNativeChecker(tc.id, tc.version, filepath.Join(dir, tc.binary+"-"+tc.version+"-linux-amd64"), 5*time.Second)
 			if e != nil {
 				t.Fatal(e)
@@ -45,7 +48,6 @@ func TestRawCoreLogsOwnedNativeProcessOutput(t *testing.T) {
 			if tc.binary == "xray" && (submitErr != nil || state.Observed == nil) {
 				t.Fatalf("xray startup: %v %+v", submitErr, state)
 			}
-			recv := &rawReceiver{}
 			if e = capture.Flush(context.Background(), recv); e != nil {
 				t.Fatal(e)
 			}

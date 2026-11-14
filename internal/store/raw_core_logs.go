@@ -19,8 +19,15 @@ func (s *Store) AcceptRawCoreLogs(r diagnostics.RawCoreReport, now time.Time) (d
 		if e := s.diagnosticEnrollment(tx, r.Scope, now); e != nil {
 			return e
 		}
+		policy, e := s.rawCoreSettingsTx(tx, r.Scope.InstanceID)
+		if e != nil {
+			return e
+		}
+		if !policy.Enabled || r.PolicyRevision != policy.Revision {
+			return diagnostics.ErrRawCoreConflict
+		}
 		h := diagnostics.RawCoreHistory{Events: []diagnostics.RawCoreRecord{}}
-		e := s.getTx(tx, rawCoreLogsKind, r.Scope.InstanceID, &h)
+		e = s.getTx(tx, rawCoreLogsKind, r.Scope.InstanceID, &h)
 		if e != nil && e != ErrNotFound {
 			return e
 		}
@@ -49,11 +56,11 @@ func (s *Store) AcceptRawCoreLogs(r diagnostics.RawCoreReport, now time.Time) (d
 		if h.LastReceivedAt != nil && now.Before(h.LastReceivedAt.Add(5*time.Second)) {
 			return diagnostics.ErrRawCoreRate
 		}
-		diagnostics.PruneRawCoreHistory(&h, now)
+		diagnostics.PruneRawCoreHistoryRetention(&h, now, time.Duration(policy.RetentionSeconds)*time.Second)
 		for _, event := range r.Events {
 			h.Events = append(h.Events, diagnostics.RawCoreRecord{RawCoreEvent: event, ReceivedAt: now})
 		}
-		diagnostics.PruneRawCoreHistory(&h, now)
+		diagnostics.PruneRawCoreHistoryRetention(&h, now, time.Duration(policy.RetentionSeconds)*time.Second)
 		h.Session = r.Session
 		h.Sequence = r.Sequence
 		h.Digest = r.Digest
@@ -67,11 +74,21 @@ func (s *Store) AcceptRawCoreLogs(r diagnostics.RawCoreReport, now time.Time) (d
 	return receipt, e
 }
 func (s *Store) RawCoreLogs(instanceID string, now time.Time) (diagnostics.RawCoreHistory, error) {
+	h, _, e := s.RawCoreLogsWithSettings(instanceID, now)
+	return h, e
+}
+func (s *Store) RawCoreLogsWithSettings(instanceID string, now time.Time) (diagnostics.RawCoreHistory, diagnostics.RawCoreSettings, error) {
+	policy := rawCoreDefaultSettings(instanceID)
 	h := diagnostics.RawCoreHistory{Events: []diagnostics.RawCoreRecord{}}
 	if !domain.ValidID(instanceID) {
-		return h, diagnostics.ErrInvalid
+		return h, policy, diagnostics.ErrInvalid
 	}
 	e := s.diagnosticTransaction(func(tx *sql.Tx) error {
+		var err error
+		policy, err = s.rawCoreSettingsTx(tx, instanceID)
+		if err != nil {
+			return err
+		}
 		var instance domain.CoreInstance
 		if e := s.getTx(tx, "core-instances", instanceID, &instance); e != nil {
 			return e
@@ -89,13 +106,13 @@ func (s *Store) RawCoreLogs(instanceID string, now time.Time) (diagnostics.RawCo
 			return e
 		}
 		before := len(h.Events)
-		diagnostics.PruneRawCoreHistory(&h, now)
+		diagnostics.PruneRawCoreHistoryRetention(&h, now, time.Duration(policy.RetentionSeconds)*time.Second)
 		if len(h.Events) != before {
 			return s.putTx(tx, rawCoreLogsKind, instanceID, h)
 		}
 		return nil
 	})
-	return h, e
+	return h, policy, e
 }
 
 // PruneRawCoreLogs removes expired event bodies, while retaining the small
@@ -147,7 +164,11 @@ func (s *Store) PruneRawCoreLogs(now time.Time) error {
 				return e
 			}
 			before := len(h.Events)
-			diagnostics.PruneRawCoreHistory(&h, now)
+			policy, e := s.rawCoreSettingsTx(tx, id)
+			if e != nil {
+				return e
+			}
+			diagnostics.PruneRawCoreHistoryRetention(&h, now, time.Duration(policy.RetentionSeconds)*time.Second)
 			if len(h.Events) != before {
 				return s.putTx(tx, rawCoreLogsKind, id, h)
 			}

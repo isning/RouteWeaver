@@ -24,6 +24,19 @@ func rawCoreError(w http.ResponseWriter, e error) {
 	}
 }
 func (h *server) registerRawCoreLogAgent(r chi.Router) {
+	r.Get("/agent/instances/{instanceId}/core-logs/settings", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-store")
+		enrollment, ok := h.agentIdentity(w, r)
+		if !ok {
+			return
+		}
+		settings, e := h.s.AgentRawCoreSettings(enrollment.Scope, time.Now().UTC())
+		if e != nil {
+			rawCoreError(w, e)
+			return
+		}
+		writeJSON(w, 200, settings)
+	})
 	r.Post("/agent/instances/{instanceId}/core-logs", func(w http.ResponseWriter, r *http.Request) {
 		enrollment, ok := h.agentIdentity(w, r)
 		if !ok {
@@ -47,6 +60,33 @@ func (h *server) registerRawCoreLogAgent(r chi.Router) {
 	})
 }
 func (h *server) registerRawCoreLogAdmin(r chi.Router) {
+	r.Get("/admin/instances/{instanceId}/core-logs/settings", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-store")
+		settings, e := h.s.RawCoreSettings(chi.URLParam(r, "instanceId"))
+		if e != nil {
+			rawCoreError(w, e)
+			return
+		}
+		writeJSON(w, 200, settings)
+	})
+	r.Put("/admin/instances/{instanceId}/core-logs/settings", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-store")
+		r.Body = http.MaxBytesReader(w, r.Body, 4096)
+		var in struct {
+			ExpectedRevision string `json:"expectedRevision"`
+			Enabled          bool   `json:"enabled"`
+			RetentionSeconds int64  `json:"retentionSeconds"`
+		}
+		if !decode(w, r, &in) {
+			return
+		}
+		settings, e := h.s.SetRawCoreSettings(chi.URLParam(r, "instanceId"), in.ExpectedRevision, in.Enabled, in.RetentionSeconds)
+		if e != nil {
+			rawCoreError(w, e)
+			return
+		}
+		writeJSON(w, 200, settings)
+	})
 	r.Get("/admin/instances/{instanceId}/core-logs", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "no-store")
 		w.Header().Set("X-Content-Type-Options", "nosniff")
@@ -57,7 +97,7 @@ func (h *server) registerRawCoreLogAdmin(r chi.Router) {
 			return
 		}
 		now := time.Now().UTC()
-		since := now.Add(-diagnostics.RawCoreRetention)
+		since := time.Time{}
 		if v := query.Get("since"); v != "" {
 			var e error
 			since, e = time.Parse(time.RFC3339, v)
@@ -67,7 +107,7 @@ func (h *server) registerRawCoreLogAdmin(r chi.Router) {
 			}
 		}
 		id := chi.URLParam(r, "instanceId")
-		history, e := h.s.RawCoreLogs(id, now)
+		history, settings, e := h.s.RawCoreLogsWithSettings(id, now)
 		if e != nil {
 			rawCoreError(w, e)
 			return
@@ -96,6 +136,9 @@ func (h *server) registerRawCoreLogAdmin(r chi.Router) {
 				state = "recent"
 			}
 		}
-		writeJSON(w, 200, map[string]any{"instanceId": id, "collectionState": state, "lastReceivedAt": history.LastReceivedAt, "events": events, "dropped": history.Dropped, "retentionSeconds": 3600, "historyLimit": diagnostics.RawCoreHistoryLimit, "lineBytesLimit": 4096})
+		if !settings.Enabled {
+			state = "disabled"
+		}
+		writeJSON(w, 200, map[string]any{"instanceId": id, "collectionState": state, "lastReceivedAt": history.LastReceivedAt, "events": events, "dropped": history.Dropped, "enabled": settings.Enabled, "revision": settings.Revision, "retentionSeconds": settings.RetentionSeconds, "historyLimit": diagnostics.RawCoreHistoryLimit, "lineBytesLimit": 4096})
 	})
 }

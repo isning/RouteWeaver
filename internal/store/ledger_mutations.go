@@ -148,6 +148,15 @@ func (s *Store) deleteTx(tx *sql.Tx, kind, id string) (int64, error) {
 			return 0, err
 		}
 	}
+	// A deleted instance must not leave an enabled raw-log policy available to a
+	// future instance reusing the same ID. Cleanup is atomic with the deletion.
+	if kind == "core-instances" && count > 0 {
+		for _, childKind := range []string{rawCoreSettingsKind, rawCoreLogsKind} {
+			if _, err = s.deleteTx(tx, childKind, id); err != nil {
+				return 0, err
+			}
+		}
+	}
 	if kind == "users" && count > 0 {
 		if err = s.deleteUsageRebuildTx(tx, id); err != nil {
 			return 0, err

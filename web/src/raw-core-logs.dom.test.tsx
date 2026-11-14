@@ -288,3 +288,55 @@ it("hides previously read raw records when a refresh denies access", async () =>
   ).toBe(true);
   client.clear();
 });
+
+it("shows disabled collection without rejecting readable retained history", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({
+            instanceId: "core",
+            enabled: false,
+            revision: "disabled",
+            collectionState: "disabled",
+            lastReceivedAt: null,
+            events: [],
+            dropped: 0,
+            retentionSeconds: 3600,
+            historyLimit: 128,
+            lineBytesLimit: 4096,
+          }),
+        ),
+    ),
+  );
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <UIProviders>
+        <RawCoreLogsPanel
+          host={{ id: "host" } as HostRecord}
+          instances={[
+            {
+              id: "core",
+              hostId: "host",
+              adapterId: "xray",
+              version: "1",
+            } as CoreInstance,
+          ]}
+        />
+      </UIProviders>
+    </QueryClientProvider>,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "查看日志原文" }));
+  expect(
+    await screen.findByText(
+      "平台已停止接收日志原文。已有记录仅供查看，不代表仍在采集。",
+    ),
+  ).toBeTruthy();
+  expect(screen.queryByText(/日志读取失败/)).toBeNull();
+  expect(screen.queryByText(/尚未收到原文日志/)).toBeNull();
+  client.clear();
+});

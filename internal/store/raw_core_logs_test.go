@@ -11,6 +11,11 @@ import (
 func TestRawCoreLogsAreScopedIdempotentBoundedAndExpire(t *testing.T) {
 	s, _, _, now := diagnosticStoreFixture(t)
 	r := diagnostics.RawCoreReport{Scope: domain.InstanceScope{NodeID: "node", InstanceID: "one", EnrollmentEpoch: "epoch"}, Session: "session", Sequence: 1, Events: []diagnostics.RawCoreEvent{{AdapterID: "routeweaver/xray", Version: "26.3.27", Stream: "stderr", Text: "original secret://test", ObservedAt: now}}}
+	policy, err := s.SetRawCoreSettings(r.Scope.InstanceID, "", true, 3600)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r.PolicyRevision = policy.Revision
 	r.Digest = diagnostics.RawCoreReportDigest(r)
 	if _, e := s.AcceptRawCoreLogs(r, now); e != nil {
 		t.Fatal(e)
@@ -59,6 +64,11 @@ func TestRawCoreLogsAreScopedIdempotentBoundedAndExpire(t *testing.T) {
 func TestRawCoreLogsRejectRateAndInvalidDigest(t *testing.T) {
 	s, _, _, now := diagnosticStoreFixture(t)
 	r := diagnostics.RawCoreReport{Scope: domain.InstanceScope{NodeID: "node", InstanceID: "one", EnrollmentEpoch: "epoch"}, Session: "session", Sequence: 1}
+	policy, err := s.SetRawCoreSettings(r.Scope.InstanceID, "", true, 3600)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r.PolicyRevision = policy.Revision
 	if _, e := s.AcceptRawCoreLogs(r, now); e == nil {
 		t.Fatal("invalid digest accepted")
 	}
@@ -81,6 +91,11 @@ func TestRawCoreLogsCorruptHistoryDoesNotBlockOtherRetention(t *testing.T) {
 	scope := domain.InstanceScope{NodeID: "node", InstanceID: "two", EnrollmentEpoch: "epoch"}
 	s.Put("instance-enrollments", "two", map[string]any{"scope": scope, "expiresAt": now.Add(48 * time.Hour)})
 	r := diagnostics.RawCoreReport{Scope: scope, Session: "session", Sequence: 1, Events: []diagnostics.RawCoreEvent{{AdapterID: "routeweaver/xray", Version: "26.3.27", Stream: "stderr", Text: "sensitive", ObservedAt: now}}}
+	policy, err := s.SetRawCoreSettings(r.Scope.InstanceID, "", true, 3600)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r.PolicyRevision = policy.Revision
 	r.Digest = diagnostics.RawCoreReportDigest(r)
 	if _, e := s.AcceptRawCoreLogs(r, now); e != nil {
 		t.Fatal(e)
@@ -101,6 +116,11 @@ func TestRawCoreLogsCorruptHistoryDoesNotBlockOtherRetention(t *testing.T) {
 func TestRawCoreLogsAgentRestartRetainsHistoryButRequiresFirstSequence(t *testing.T) {
 	s, _, _, now := diagnosticStoreFixture(t)
 	r := diagnostics.RawCoreReport{Scope: domain.InstanceScope{NodeID: "node", InstanceID: "one", EnrollmentEpoch: "epoch"}, Session: "first", Sequence: 1, Events: []diagnostics.RawCoreEvent{{AdapterID: "routeweaver/xray", Version: "26.3.27", Stream: "stdout", Text: "one", ObservedAt: now}}}
+	policy, err := s.SetRawCoreSettings(r.Scope.InstanceID, "", true, 3600)
+	if err != nil {
+		t.Fatal(err)
+	}
+	r.PolicyRevision = policy.Revision
 	r.Digest = diagnostics.RawCoreReportDigest(r)
 	if _, e := s.AcceptRawCoreLogs(r, now); e != nil {
 		t.Fatal(e)
