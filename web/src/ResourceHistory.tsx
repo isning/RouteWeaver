@@ -27,6 +27,16 @@ function Series({ points, fields, maximum, start, end, interval, windowLabel, ti
   points: ResourcePoint[]; fields: { key: "cpuPercent" | "memoryUsedPercent" | "receiveBytesPerSecond" | "transmitBytesPerSecond"; label: string; color: string }[];
   maximum?: number; start: number; end: number; interval: number; windowLabel: string; title: string; format: (n: number) => string;
 }) {
+  const [selectedAt, setSelectedAt] = useState<string>();
+  const selectedIndex = Math.max(0, points.findIndex(p => p.observedAt === selectedAt));
+  const selected = points[selectedIndex];
+  const selectAtPointer = (event: React.PointerEvent<SVGSVGElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    if (!rect.width) return;
+    const at = start + ((event.clientX - rect.left) / rect.width * 500 - 6) / 488 * (end - start);
+    const nearest = points.reduce((best, point) => Math.abs(Date.parse(point.observedAt) - at) < Math.abs(Date.parse(best.observedAt) - at) ? point : best, points[0]);
+    if (nearest) setSelectedAt(nearest.observedAt);
+  };
   const all = fields.flatMap(f => points.map(p => p[f.key])).filter(valid) as number[];
   const max = maximum || Math.max(1, ...all);
   const x = (at: string) => 6 + 488 * (Date.parse(at) - start) / (end - start);
@@ -35,8 +45,9 @@ function Series({ points, fields, maximum, start, end, interval, windowLabel, ti
     <div className="flex flex-wrap items-center justify-between gap-2 text-sm"><p className="font-medium">{title}</p></div>
     {!all.length ? <div className="flex h-40 items-center justify-center rounded-md border border-dashed text-sm text-muted-foreground">尚无可绘制的数据</div> : <div className="grid h-40 min-w-0 grid-cols-[4rem_minmax(0,1fr)] gap-2">
       <div aria-hidden="true" className="relative text-right text-[11px] leading-none tabular-nums text-muted-foreground">{[max, max / 2, 0].map((value, index) => <span key={index} className="absolute right-0 -translate-y-1/2 whitespace-nowrap" style={{ top: `${y(value) / 155 * 100}%` }}>{format(value)}</span>)}</div>
-      <svg role="img" aria-label={`${title}，最近${windowLabel}实际采样趋势`} viewBox="0 0 500 155" className="h-40 w-full overflow-visible" preserveAspectRatio="none">
+      <svg role="img" aria-label={`${title}，最近${windowLabel}实际采样趋势`} onPointerMove={selectAtPointer} onPointerDown={selectAtPointer} viewBox="0 0 500 155" className="h-40 w-full overflow-visible" preserveAspectRatio="none">
       {[max, max / 2, 0].map((value, index) => <line key={index} x1="6" x2="494" y1={y(value)} y2={y(value)} className="stroke-border" strokeDasharray="3 4" vectorEffect="non-scaling-stroke" />)}
+      {selected && <line x1={x(selected.observedAt)} x2={x(selected.observedAt)} y1="10" y2="142" className="stroke-foreground" strokeDasharray="2 3" vectorEffect="non-scaling-stroke" />}
       {fields.map(f => {
         let previous: ResourcePoint | undefined;
         return <g key={f.key} style={{ color: f.color }}>{points.map((p, index) => {
@@ -53,6 +64,10 @@ function Series({ points, fields, maximum, start, end, interval, windowLabel, ti
       })}
     </svg></div>}
     <div className="flex justify-between gap-2 text-[11px] tabular-nums text-muted-foreground"><time>{dateLabel(new Date(start).toISOString())}</time><time>{dateLabel(new Date(end).toISOString())}</time></div>
+    {!!points.length && <div className="space-y-2">
+      <input type="range" min={0} max={points.length - 1} step={1} value={selectedIndex} aria-label={`${title}采样时间`} aria-valuetext={selected?.observedAt} className="h-8 w-full accent-primary" onChange={event => setSelectedAt(points[Number(event.target.value)].observedAt)} />
+      {selected && <div role="status" className="break-words rounded-md bg-muted p-3 text-xs tabular-nums"><time dateTime={selected.observedAt}>{dateLabel(selected.observedAt)} UTC+8</time><dl className="mt-2 flex flex-wrap gap-x-4 gap-y-2">{fields.map(f => <div key={f.key}><dt className="text-muted-foreground">{f.label}</dt><dd>{valid(selected[f.key]) ? `${format(selected[f.key]!)} (${selected[f.key]!.toLocaleString(undefined, { maximumFractionDigits: 3 })}${f.key.endsWith("Percent") ? "%" : " B/s"})` : "无数据"}</dd></div>)}</dl></div>}
+    </div>}
     <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">{fields.map(f => <span className="inline-flex items-center gap-1.5" key={f.key}><span className="size-2 rounded-full" style={{ background: f.color }} />{f.label}</span>)}</div>
   </div>;
 }

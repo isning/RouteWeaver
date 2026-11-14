@@ -44,3 +44,15 @@ it("requests hourly seven-day history without relabeling cached daily samples",a
  expect(fetcher.mock.calls.some(([url])=>String(url).includes("window=7d"))).toBe(true);
  expect(screen.queryByRole("img",{name:/最近24小时/})).toBeNull();
 });
+it("lets keyboard and touch controls inspect exact samples without replacing missing rates with zero",async()=>{
+ const data=fixture();vi.stubGlobal("fetch",vi.fn(async()=>response(data)));mount();
+ const slider=await screen.findByRole("slider",{name:"计费网卡流量采样时间"});
+ expect(slider.getAttribute("aria-valuetext")).toBe(data.points[0].observedAt);
+ const {fireEvent}=await import("@testing-library/react");
+ fireEvent.change(slider,{target:{value:"1"}});
+ expect(slider.getAttribute("aria-valuetext")).toBe(data.points[1].observedAt);
+ expect(screen.getByText("1 KiB/s (1,024 B/s)")).toBeTruthy();
+ expect(screen.getByText("无数据")).toBeTruthy();
+ fireEvent.change(slider,{target:{value:"0"}});
+ expect(screen.getByText("0 B/s (0 B/s)")).toBeTruthy();
+});

@@ -434,3 +434,23 @@ it.each([3, 366, 367])("bounds a verified zero-use forecast to 366 days (%s)", a
   else expect(screen.queryByLabelText("额度使用预测")).toBeNull();
   expect(screen.queryByText(/按近7天/)).toBeNull();
 });
+
+it("offers focus and touch access to daily and route chart values", async () => {
+  mount();
+  const day = await screen.findByRole("button", {name:"2026-11-14用量"});
+  fireEvent.focus(day);
+  fireEvent.click(day);
+  expect(day.getAttribute("aria-pressed")).toBe("true");
+  expect(screen.getByText(/2026-11-14 \(UTC\+8\)：额度消耗/).textContent).toContain("512 B");
+  const route = screen.getByRole("button", {name:"东京用量占比"});
+  fireEvent.pointerEnter(route);
+  fireEvent.click(route);
+  expect(route.getAttribute("aria-pressed")).toBe("true");
+  expect(screen.getByText(/占 100.00%/).textContent).toContain("256 B");
+});
+
+it("does not call a route historical when its name lookup fails", async () => {
+  mount(false, false, true);
+  expect(await screen.findByRole("button", { name: "线路名称暂不可用用量占比" })).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "历史线路用量占比" })).toBeNull();
+});
