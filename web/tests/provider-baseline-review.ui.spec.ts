@@ -55,8 +55,8 @@ for (const width of [1440, 390]) {
     await page.getByRole("button", { name: hostName, exact: true }).click();
     const host = page.getByRole("region", { name: hostName, exact: true });
     await host.getByRole("tab", { name: "诊断", exact: true }).click();
-    await host.getByRole("button", { name: "核对网卡估算基线", exact: true }).click();
-    const dialog = page.getByRole("dialog", { name: "核对网卡估算基线", exact: true });
+    await host.getByRole("button", { name: "设置流量估算起点", exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: "设置流量估算起点", exact: true });
     await settledTask(dialog);
     const amount = dialog.getByLabel("本周期实际已用", { exact: true });
     const reason = dialog.getByLabel("核对依据与说明", { exact: true });

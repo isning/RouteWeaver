@@ -301,13 +301,13 @@ export function NodeObservation({
                     }
                     variant="outline"
                   >
-                    核对网卡估算基线
+                    设置流量估算起点
                   </ActionButton>
                 </div>
               )}
               {plan.cycleId && !canBaseline && (
                 <p className="muted text-sm text-muted-foreground">
-                  核对网卡基线需要当前周期的新采样，并明确选择计费网卡。
+                  请在「设置采集与额度」中确认计费周期和计费网卡，并等待服务器上报最新数据。
                 </p>
               )}
               <Accordion type="multiple" defaultValue={[]} className="w-full">
@@ -338,7 +338,7 @@ export function NodeObservation({
                         {data?.baseline && (
                           <p>
                             <span className="block">
-                              基线说明：{data.baseline.reason}
+                              起点核对说明：{data.baseline.reason}
                             </span>{" "}
                             <span className="block text-muted-foreground">
                               {dateLabel(data.baseline.observedAt)}

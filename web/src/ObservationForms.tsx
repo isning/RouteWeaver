@@ -145,7 +145,7 @@ export function ObservationConfigForm({
       footer={
         <div className="w-full space-y-3">
           <p className="text-sm leading-relaxed text-muted-foreground">
-            更换采集实例、计费网卡或周期会重建估算基线；更换周期会清除原周期的账单引用，保留用户流量账单。
+            更换采集实例、计费网卡或周期后，需要重新设置流量估算起点；更换周期会清除原周期的账单引用，保留用户流量账单。
             {providerEnabled &&
               "供应商用量单独记录，所选耗尽行为不自动更换线路。"}
           </p>
@@ -530,7 +530,7 @@ export function ProviderMeasurementForm({
     onSuccess: (value) => {
       client.setQueryData(["node-observation", initial.nodeId], value);
       message.success(
-        baseline ? "本周期网卡估算基线已核对" : "供应商用量记录已保存",
+        baseline ? "本周期流量估算起点已保存" : "供应商用量记录已保存",
       );
       setDirty(false);
       onClose();
@@ -540,7 +540,7 @@ export function ProviderMeasurementForm({
   return (
     <TaskDialog
       bodyProps={{ className: "space-y-5" }}
-      title={baseline ? "核对网卡估算基线" : "录入供应商用量"}
+      title={baseline ? "设置流量估算起点" : "录入供应商用量"}
       open
       pending={save.isPending}
       footer={null}
@@ -573,7 +573,7 @@ export function ProviderMeasurementForm({
       >
         <ErrorNotice error={save.error || refresh.error} />
         {baseline && (
-          <Notice tone="info" title="以实际已知用量建立估算起点">
+          <Notice tone="info" title="从已核对的用量开始估算">
             {
               <>
                 {!sampleIsCurrent.current ? <p>
@@ -581,8 +581,8 @@ export function ProviderMeasurementForm({
                 </p> : !snapshot.latest ? <p>
                   尚未收到可用于核对的服务器数据。请检查服务器连接和监控设置，然后重新读取。
                 </p> : <p>
-                  将输入的本周期已用与 {dateLabel(snapshot.latest?.observedAt)}{" "}
-                  的网卡流量记录对齐。之后只累加连续上报的流量，不推测接入前或数据缺失期间的流量。
+                  填写截至 {dateLabel(snapshot.latest?.observedAt)}{" "}
+                  本周期实际已用的流量。之后按服务器持续上报的流量继续估算；未上报期间的用量不会补算。
                 </p>}
                 <ActionButton
                   pending={refresh.isPending}
