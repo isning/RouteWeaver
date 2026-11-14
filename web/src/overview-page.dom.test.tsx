@@ -43,7 +43,7 @@ function mount(fail = false, shell = false, namesFail = false) {
           user: { id: "u" },
           usage: { rawBytes: 256, weightedBytes: 512 },
           routes: [{ id: "r", name: "东京" }],
-          cycle: { timezone: "UTC+8" },
+          cycle: { timezone: "UTC+8", nextReset: "2026-12-01T00:00:00+08:00" },
         });
       if (url.endsWith("/me/profiles"))
         return json([
@@ -116,6 +116,7 @@ it("shows current-account overview and navigates to an unpublished configuration
   mount();
   expect(await screen.findByText("192.0.2.7")).toBeTruthy();
   expect(screen.getByText("100 Mbps")).toBeTruthy();
+  expect(screen.getByText("UTC+8", { exact: true })).toBeTruthy();
   expect(screen.getByText("东京")).toBeTruthy();
   expect(
     screen.getByRole("table", { name: "线路用量" }).getAttribute("data-slot"),

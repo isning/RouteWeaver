@@ -132,17 +132,15 @@ for (const [mode, label] of cycleModes)
       await f.verifyReplayAndAudit();
       // New normal login + full page reload uses the real invited user's own view.
       await signInAPI(page.request, f.account.username, initialPassword);
-      await page.goto("/#subscriptions");
+      await page.goto("/#overview");
       await page.reload();
-      await expect(page.getByRole("region", { name: "用量与周期明细", exact: true })).toBeVisible();
-      await expect(
-        page.getByText("UTC+8", { exact: true }).first(),
-      ).toBeVisible();
+      await expect(page.getByRole("heading", { name: "本周期剩余额度", exact: true })).toBeVisible();
+      if (mode !== "none") await expect(page.getByText("UTC+8", { exact: true }).first()).toBeVisible();
       if (mode === "none")
         await expect(
           page.getByText("不自动重置", { exact: true }),
         ).toBeVisible();
-      else await expect(page.getByText(/（还有 .+）/)).toBeVisible();
+      else await expect(page.getByText(/^\d+ 天 \d+ 小时$/)).toBeVisible();
       expect(
         (await (await page.request.get("/api/me/overview")).json()).usage
           .weightedBytes,

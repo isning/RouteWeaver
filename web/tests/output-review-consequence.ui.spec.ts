@@ -1,6 +1,6 @@
 import { currentProfileFixtureHeaders } from "./profile-fixture";
 import { expect, test } from "@playwright/test";
-import { openWorkspace } from "./ui-session";
+import { openWorkspace, navigateWorkspace } from "./ui-session";
 
 // All preview/list/publish responses are real. External revoke uses the same
 // synthetic owner's HTTP session after the real list refresh and before preview.
@@ -10,6 +10,7 @@ for (const scenario of ["unchanged", "changed-long-name"] as const) {
     page,
   }, info) => {
     await openWorkspace(page);
+  await navigateWorkspace(page, "我的订阅");
     const headers = {
       "X-CSRF-Token": (await (await page.request.get("/api/auth/me")).json())
         .csrfToken,

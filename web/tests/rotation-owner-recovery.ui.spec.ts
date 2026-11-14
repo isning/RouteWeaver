@@ -114,6 +114,8 @@ async function ownerFixture(page: Page) {
         return route.fulfill({
           json: owner === "rotation-owner" ? [profile] : [],
         });
+      if (path === "/api/me/outputs/independent")
+        return route.fulfill({ json: { items: [] } });
       if (path === "/api/me/outputs")
         return route.fulfill({
           json: owner === "rotation-owner" ? [current, sibling] : [],

@@ -7,6 +7,7 @@ test("imports directly into a configuration, retains a failed source, and saves 
   const sourceName = `UI source ${suffix}`;
   const profileName = `UI work ${suffix}`;
   await openWorkspace(page);
+  await navigateWorkspace(page, "我的订阅");
   await page.getByRole("button", { name: /^(设置订阅|新建分流配置)$/ }).click();
   await page.getByLabel("配置名称", { exact: true }).fill(profileName);
   await page.getByRole("button", { name: /^(?:loading )?添加来源$/ }).click();
@@ -89,6 +90,7 @@ test("mobile navigation and cancellation preserve a useful return path", async (
 }, testInfo) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await openWorkspace(page);
+  await navigateWorkspace(page, "我的订阅");
   await page.getByRole("button", { name: "打开导航" }).click();
   await navigateWorkspace(page, "我的订阅");
   await page.getByRole("button", { name: /^(设置订阅|新建分流配置)$/ }).click();
@@ -135,6 +137,7 @@ test("administrator edits an ordered route without dragging", async ({
   page,
 }) => {
   await openWorkspace(page);
+  await navigateWorkspace(page, "我的订阅");
   await page.getByText("网络资源", { exact: true }).click();
   await navigateWorkspace(page, "转发路径");
   await expect(

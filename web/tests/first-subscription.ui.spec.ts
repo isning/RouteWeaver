@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { openWorkspace } from "./ui-session";
+import { openWorkspace, navigateWorkspace } from "./ui-session";
 
 test("first subscription skips the empty target gate but preserves save, cancel, review, and explicit publication", async ({
   page,
@@ -29,6 +29,7 @@ test("first subscription skips the empty target gate but preserves save, cancel,
   try {
     await page.setViewportSize({ width: 1280, height: 900 });
     await openWorkspace(page);
+  await navigateWorkspace(page, "我的订阅");
     csrf = (await read("/auth/me")).csrfToken;
     const before = await read("/me/outputs");
     await page

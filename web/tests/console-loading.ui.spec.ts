@@ -55,6 +55,7 @@ for (const width of [1440, 390])
     await page.setViewportSize({ width, height: 960 });
     await page.emulateMedia({ reducedMotion: "reduce" });
     await openWorkspace(page);
+  await navigateWorkspace(page, "我的订阅");
     const module = barrier(),
       data = barrier();
     const reads = await inventories(page, data);
@@ -244,7 +245,7 @@ test("an inactive subscription import cannot mount or read account inventory", a
       }),
     ).toBeVisible();
     await expect
-      .poll(() => reads.slice().sort())
+      .poll(() => [...new Set(reads)].sort())
       .toEqual(["/api/me/outputs", "/api/me/overview", "/api/me/profiles"]);
   } finally {
     gate.release();
@@ -301,6 +302,7 @@ test("an interrupted QR module preserves the link, copy and Close", async ({
   context,
 }) => {
   await openWorkspace(page);
+  await navigateWorkspace(page, "我的订阅");
   await inventories(page, undefined, true);
   await page.route(
     /\/api\/me\/outputs\/loading-output\/access(?:\?.*)?$/,

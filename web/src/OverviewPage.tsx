@@ -341,7 +341,12 @@ export function OverviewPage() {
                             {dateLabel(
                               data.cycle.nextReset,
                               data.cycle.timezone,
-                            )}
+                            )}{" "}
+                            <span>
+                              {data.cycle.timezone === "Asia/Shanghai"
+                                ? "UTC+8"
+                                : data.cycle.timezone}
+                            </span>
                           </dd>
                         )}
                       </div>

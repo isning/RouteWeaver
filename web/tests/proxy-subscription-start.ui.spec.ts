@@ -1,5 +1,6 @@
 import type { Locator } from "@playwright/test";
 import { test as isolatedTest, expect } from "./isolated-control-plane-fixture";
+import { navigateWorkspace } from "./ui-session";
 import { settledTask } from "./ui-settled-task";
 import { waitForConfirmedWorkspace } from "./ui-workspace-confirmation";
 
@@ -17,6 +18,7 @@ test("existing proxy task imports a source and explicitly publishes a named clie
   await page.getByLabel("密码", { exact: true }).fill("local-demo-password");
   await page.getByRole("button", { name: "进入工作空间", exact: true }).click();
   await waitForConfirmedWorkspace(page);
+  await navigateWorkspace(page, "我的订阅");
   const publicationWrites: string[] = [];
   page.on("request", (request) => {
     const path = new URL(request.url()).pathname;

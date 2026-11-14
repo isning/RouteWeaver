@@ -145,7 +145,7 @@ test("setup helper: real cold workspace waits for complete delayed session confi
   expect(Date.now() - started).toBeGreaterThan(5000);
   expect(Date.now() - started).toBeLessThan(WORKSPACE_SETUP_TIMEOUT_MS);
   await expect(
-    page.getByRole("heading", { name: "我的订阅", exact: true }),
+    page.getByRole("heading", { name: "概览", exact: true }),
   ).toBeVisible();
 });
 

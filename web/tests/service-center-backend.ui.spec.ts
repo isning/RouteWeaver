@@ -2,6 +2,7 @@ import { type Locator, type Page } from "@playwright/test";
 import jsQR from "jsqr";
 import { test, expect } from "./isolated-control-plane-fixture";
 import { initialPassword, requireLoopback } from "./account-security-backend";
+import { navigateWorkspace } from "./ui-session";
 import { settledTask } from "./ui-settled-task";
 import {
   routeName,
@@ -187,17 +188,20 @@ for (const width of [1440, 390]) {
       expect(
         (await (await page.request.get("/api/auth/me")).json()).user.role,
       ).toBe("user");
+      await navigateWorkspace(page, "概览");
       await expect(page.getByText(serviceName, { exact: true })).toBeVisible();
       await expect(
         page.getByText("100 MiB", { exact: true }).first(),
       ).toBeVisible();
-      await expect(page.getByRole("region", { name: "用量与周期明细", exact: true })).toBeVisible();
+      await expect(page.getByRole("heading", { name: "本周期剩余额度", exact: true })).toBeVisible();
       await expect(page.getByText("UTC+8", { exact: true })).toBeVisible();
-      await expect(page.getByText(/（还有 .+）/)).toBeVisible();
+      await expect(page.getByText(/^\d+ 天 \d+ 小时$/)).toBeVisible();
       await expect(
-        page.getByText("本周期实际流量", { exact: true }),
+        page.getByText("实际流量", { exact: true }),
       ).toBeVisible();
       await expect(page.getByText("服务到期", { exact: true })).toBeVisible();
+      await navigateWorkspace(page, "我的订阅");
+      await expect(row).toBeVisible();
       await expect(page.getByRole("region", { name: "平台提供的线路 1 条", exact: true })).toBeVisible();
       await expect(
         page.getByRole("heading", { name: routeName, exact: true }),

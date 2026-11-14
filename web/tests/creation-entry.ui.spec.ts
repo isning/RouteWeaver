@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { openWorkspace } from "./ui-session";
+import { openWorkspace, navigateWorkspace } from "./ui-session";
 
 for (const width of [1280, 390])
   test(`new local draft remains available while inventory is pending and failed at ${width}`, async ({
@@ -41,6 +41,7 @@ for (const width of [1280, 390])
     });
     try {
       await openWorkspace(page);
+  await navigateWorkspace(page, "我的订阅");
       await expect(
         page.getByRole("status", { name: "正在加载配置与客户端订阅", exact: true }),
       ).toBeVisible();

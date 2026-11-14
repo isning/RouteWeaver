@@ -198,6 +198,7 @@ test("rotating one link immediately exposes its exact replacement and offline re
   context,
 }, testInfo) => {
   await openWorkspace(page);
+  await navigateWorkspace(page, "我的订阅");
   const { profile, outputs } = await seedIndependentOutputs(page);
   const [selected, sibling] = outputs;
   const before = await frozenState(page, selected.id);
@@ -349,6 +350,7 @@ test("normal private-rule bundle update immediately offers a real configuration-
   page,
 }, testInfo) => {
   await openWorkspace(page);
+  await navigateWorkspace(page, "我的订阅");
   const { profile, outputs } = await seedIndependentOutputs(page, 1);
   const siblingBefore = await frozenState(page, outputs[0].id);
   const session = await readJSON<{ csrfToken: string }>(page, "/auth/me");

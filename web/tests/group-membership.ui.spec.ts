@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { openWorkspace } from "./ui-session";
+import { openWorkspace, navigateWorkspace } from "./ui-session";
 
 // Real loopback backend/rendering. Public setup provisions only synthetic inputs;
 // all membership, source-scope and save decisions below use the Profile editor.
@@ -8,6 +8,7 @@ test("automatic members are an explicit additive choice over current source, col
 }, info) => {
   page.setDefaultTimeout(5000);
   await openWorkspace(page);
+  await navigateWorkspace(page, "我的订阅");
   const suffix = Date.now().toString(36);
   const profileName = `Membership ${suffix}`;
   const groupName = "Airport choice";

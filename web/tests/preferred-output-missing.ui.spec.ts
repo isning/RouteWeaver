@@ -13,6 +13,7 @@ test("fault contract: a missing preferred Output does not become first creation 
   page.setDefaultTimeout(5000);
   await page.setViewportSize({ width: 1280, height: 900 });
   await openWorkspace(page);
+  await navigateWorkspace(page, "我的订阅");
   const read = async (path: string) => {
     const response = await page.request.get(`/api${path}`);
     expect(response.ok(), `Real read ${path} succeeds`).toBe(true);
