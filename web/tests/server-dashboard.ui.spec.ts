@@ -40,6 +40,8 @@ for (const width of [1440, 390, 320]) {
     await expect(workspace.getByText("23.4%", { exact: true })).toBeVisible();
     await expect(workspace.getByText("核心校验失败", { exact: true })).toBeVisible();
     await expect(workspace.getByText("较早的用量记录", { exact: true })).toBeVisible();
+    await expect(workspace.getByRole("progressbar", { name: "供应商额度使用比例" })).toHaveAttribute("aria-valuenow", "24");
+    await expect(workspace.getByRole("region", { name: "周期额度消耗" })).toContainText("已用 24%");
     await expect(workspace.getByRole("status", { name: "服务器配置提示" })).toHaveCount(0);
     await expect(workspace.getByText("服务器在线", { exact: true })).toHaveCount(0);
     await settledTask(workspace);

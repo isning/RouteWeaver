@@ -93,3 +93,22 @@ it("does not report unconfigured collection when an observation belongs to anoth
   expect(screen.queryByText("尚未设置服务器资源监控")).toBeNull();
   expect(screen.queryByText("0.0%")).toBeNull();
 });
+it("shows recorded cycle consumption without forecasting exhaustion from one balance", async () => {
+  const data = view();
+  data.config.provider!.cycleStart = "2026-01-01T00:00:00Z";
+  data.config.provider!.cycleEnd = "2026-02-01T00:00:00Z";
+  vi.stubGlobal("fetch", vi.fn(async () => respond(data)));
+  mount(<ServerResourceOverview host={host} onOpenResources={vi.fn()} />);
+  const cycle = await screen.findByRole("region", { name: "周期额度消耗" });
+  expect(within(cycle).getByRole("progressbar", { name: "供应商额度使用比例" }).getAttribute("aria-valuenow")).toBe("20");
+  expect(within(cycle).getByText("已用 20%", { exact: true })).toBeTruthy();
+  expect(within(cycle).getByText(/较早的用量记录/)).toBeTruthy();
+  expect(screen.queryByText(/按当前速度/)).toBeNull();
+});
+it("does not turn missing or unlimited cycle usage into a zero progress bar", async () => {
+  const data = view(); data.provider.usedBytes = null; data.provider.totalBytes = null;
+  vi.stubGlobal("fetch", vi.fn(async () => respond(data)));
+  mount(<ServerResourceOverview host={host} onOpenResources={vi.fn()} />);
+  await screen.findByText("0.0%", { exact: true });
+  expect(screen.queryByRole("progressbar", { name: "供应商额度使用比例" })).toBeNull();
+});

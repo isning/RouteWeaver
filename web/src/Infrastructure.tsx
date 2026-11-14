@@ -26,6 +26,8 @@ import { Notice } from "@/ui-patterns/notice";
 import { TaskDialog } from "@/ui-patterns/task-overlays";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  ArrowLeft,
+  ArrowRight,
   Server as CloudServerOutlined,
   Pencil as EditOutlined,
   KeyRound as KeyOutlined,
@@ -349,7 +351,7 @@ export function ServersPage() {
                   }}
                   variant={section === "overview" || data.instances.some((i) => i.hostId === host!.id) ? "outline" : "default"}
                 >
-                  添加核心
+                  <PlusOutlined aria-hidden="true" />添加核心
                 </ActionButton>
               }
             >
@@ -386,7 +388,7 @@ export function ServersPage() {
                         }}
                         variant="outline"
                       >
-                        添加监听端点
+                        <PlusOutlined aria-hidden="true" />添加监听端点
                       </ActionButton>
                       <ActionButton
                         ref={(node) => {
@@ -656,7 +658,7 @@ export function ServersPage() {
                         onClick={() => edit(null)}
                         variant="default"
                       >
-                        添加监听端点
+                        <PlusOutlined aria-hidden="true" />添加监听端点
                       </ActionButton>
                     }
                   />
@@ -669,14 +671,14 @@ export function ServersPage() {
         </>
       ) : data && (
         <section role="region" aria-label={host.name} className="server-workspace min-w-0 space-y-5">
-          <ActionButton onClick={backToList} variant="ghost" className="max-w-full">返回服务器清单</ActionButton>
+          <ActionButton leadingIcon={<ArrowLeft aria-hidden="true" />} onClick={backToList} variant="ghost" className="max-w-full">返回服务器清单</ActionButton>
           <header className="flex flex-wrap items-start justify-between gap-4">
             <div className="min-w-0 space-y-2">
               <h1 ref={workspaceHeading} tabIndex={-1} className="break-words text-2xl font-semibold tracking-tight outline-none focus-visible:ring-2 focus-visible:ring-ring">{host.name}</h1>
               <p className="break-all text-sm text-muted-foreground">{host.address}</p>
               <Badge variant="secondary">服务器信息已登记</Badge>
             </div>
-            <ActionButton onClick={() => edit(host, "hosts")} disabled={!!scopeIssue} variant="outline">编辑服务器</ActionButton>
+            <ActionButton leadingIcon={<EditOutlined aria-hidden="true" />} onClick={() => edit(host, "hosts")} disabled={!!scopeIssue} variant="outline">编辑服务器</ActionButton>
           </header>
           {(query.isError || query.isPaused) && <Notice tone={query.isError ? "warning" : "info"}>
             {query.isPaused ? "等待网络连接，服务器清单尚未刷新。" : "服务器清单刷新失败，以下保留已有记录与刚保存的配置。"}
@@ -717,7 +719,7 @@ export function ServersPage() {
               {hostCores.length > 0 && coreList}
               {records.length > 0 && <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-4">
                 <div className="space-y-1"><p className="text-sm font-medium">转发配置</p><p className="text-sm text-muted-foreground">{records.length} 条已保存路径</p></div>
-                <ActionButton onClick={() => changeSection("records")} variant="outline">查看转发配置</ActionButton>
+                <ActionButton leadingIcon={<ArrowRight aria-hidden="true" />} onClick={() => changeSection("records")} variant="outline">查看转发配置</ActionButton>
               </div>}
               <Accordion type="multiple" className="w-full"><AccordionItem value="identity"><AccordionTrigger>技术标识</AccordionTrigger><AccordionContent><p className="break-all text-sm text-muted-foreground">服务器 ID：{host.id}</p></AccordionContent></AccordionItem></Accordion>
             </TabsContent>

@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Info, RotateCw } from "lucide-react";
+import { ArrowDownUp, ChartNoAxesCombined, Cpu, MemoryStick, Info, RotateCw, Wallet } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ActionButton } from "@/ui-patterns/actions";
@@ -60,9 +61,9 @@ export function CoreStatusSummary({ instanceId }: { instanceId: string }) {
   </div>;
 }
 
-function Metric({ label, value, children }: { label: string; value: ReactNode; children?: ReactNode }) {
+function Metric({ label, value, icon, children }: { label: string; value: ReactNode; icon: ReactNode; children?: ReactNode }) {
   return <div role="group" aria-label={label} className="min-w-0 space-y-2 rounded-lg border bg-background p-4 [overflow-wrap:anywhere]">
-    <p className="text-sm text-muted-foreground">{label}</p>
+    <p className="flex items-center gap-2 text-sm text-muted-foreground"><span aria-hidden="true" className="[&>svg]:size-4">{icon}</span>{label}</p>
     <p className="break-words text-xl font-semibold tabular-nums tracking-tight">{value}</p>
     {children && <div className="space-y-1 text-xs text-muted-foreground">{children}</div>}
   </div>;
@@ -96,7 +97,7 @@ export function ServerResourceOverview({ host, onOpenResources }: { host: HostRe
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <ActionButton variant="ghost" size="sm" leadingIcon={<RotateCw aria-hidden="true" />} aria-label="刷新资源概览" pending={query.isFetching} keepFocusableWhilePending onClick={() => query.refetch()} />
-            <ActionButton variant="outline" size="sm" onClick={onOpenResources}>{!sample ? "设置采集与额度" : "查看资源与额度"}</ActionButton>
+            <ActionButton variant="outline" size="sm" leadingIcon={<ChartNoAxesCombined aria-hidden="true" />} onClick={onOpenResources}>{!sample ? "设置采集与额度" : "查看资源与额度"}</ActionButton>
           </div>
         </div>
       </CardHeader>
@@ -111,18 +112,18 @@ export function ServerResourceOverview({ host, onOpenResources }: { host: HostRe
         </div>}
         {(sample || plan) && <div className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {sample && <>
-            <Metric label="CPU 使用率" value={sample.cpuPercent == null ? "暂时无法计算" : Number.isFinite(sample.cpuPercent) && sample.cpuPercent >= 0 && sample.cpuPercent <= 100 ? `${sample.cpuPercent.toFixed(1)}%` : "未确定"}>
+            <Metric icon={<Cpu />} label="CPU 使用率" value={sample.cpuPercent == null ? "暂时无法计算" : Number.isFinite(sample.cpuPercent) && sample.cpuPercent >= 0 && sample.cpuPercent <= 100 ? `${sample.cpuPercent.toFixed(1)}%` : "未确定"}>
               {sample.cpuPercent == null && <p>需要连续两次有效数据才能计算。</p>}
               <p>1 分钟负载 {Number.isFinite(sample.metrics.load1) ? sample.metrics.load1.toFixed(2) : "未确定"}</p>
             </Metric>
-            <Metric label="可用内存" value={bytes(sample.metrics.memoryAvailableBytes)}><p>总内存 {bytes(sample.metrics.memoryTotalBytes)}</p></Metric>
-            <Metric label="计费网卡流量" value={rate(sample.receiveBytesPerSecond)}>
+            <Metric icon={<MemoryStick />} label="可用内存" value={bytes(sample.metrics.memoryAvailableBytes)}><p>总内存 {bytes(sample.metrics.memoryTotalBytes)}</p></Metric>
+            <Metric icon={<ArrowDownUp />} label="计费网卡流量" value={rate(sample.receiveBytesPerSecond)}>
               {(sample.receiveBytesPerSecond == null || sample.transmitBytesPerSecond == null) && <p>需要连续两次有效数据才能计算网速。</p>}
               <p>接收 / 秒</p><p className="font-medium text-foreground">发送 {rate(sample.transmitBytesPerSecond)}</p>
               <p>{data?.config.billedInterfaces?.length ? data.config.billedInterfaces.join("、") : "尚未选择计费网卡"}</p>
             </Metric>
           </>}
-          <Metric label="供应商剩余额度" value={!plan ? "未设置额度" : plan.mode === "unlimited" ? "不限量" : bytes(provider?.remainingBytes)}>
+          <Metric icon={<Wallet />} label="供应商剩余额度" value={!plan ? "未设置额度" : plan.mode === "unlimited" ? "不限量" : bytes(provider?.remainingBytes)}>
             {plan && <>
               <p>{plan.name}</p>
               {provider?.source && provider.source !== "none" && <p>{sourceLabel(provider.source)}</p>}
@@ -139,5 +140,32 @@ export function ServerResourceOverview({ host, onOpenResources }: { host: HostRe
         </div>}
       </CardContent>
     </Card>
+    {data && <ProviderCycleSummary data={data} />}
   </section>;
+}
+
+/** A balance is not a time series. Display the recorded consumption and cycle
+ * boundaries without inventing a burn-rate forecast or filling absent data. */
+function ProviderCycleSummary({ data }: { data: NodeObservationView }) {
+  const { provider, config: { provider: plan } } = data;
+  const total = provider?.totalBytes;
+  const used = provider?.usedBytes;
+  if (!plan || plan.mode !== "limited" || total == null || used == null ||
+      !Number.isSafeInteger(total) || total <= 0 || !Number.isSafeInteger(used) || used < 0) return null;
+  const percent = used / total * 100;
+  return <Card role="region" aria-label="周期额度消耗" className="min-w-0 gap-3">
+    <CardHeader><CardTitle className="flex items-center gap-2"><Wallet aria-hidden="true" className="size-4 text-muted-foreground" />周期额度消耗</CardTitle></CardHeader>
+    <CardContent className="space-y-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
+        <p className="text-2xl font-semibold tabular-nums tracking-tight">{bytes(used)} <span className="text-sm font-normal text-muted-foreground">/ {bytes(total)}</span></p>
+        <p className="text-sm tabular-nums text-muted-foreground">已用 {percent.toFixed(0)}%</p>
+      </div>
+      <Progress aria-label="供应商额度使用比例" value={Math.min(100, percent)} className="h-2" />
+      {provider.source && provider.source !== "none" && <p className="text-xs text-muted-foreground">用量来源：{sourceLabel(provider.source)}</p>}
+      <div className="flex flex-wrap justify-between gap-x-6 gap-y-2 text-xs text-muted-foreground">
+        {plan.cycleStart && plan.cycleEnd && <p className="min-w-0 break-words">周期 {dateLabel(plan.cycleStart)} 至 {dateLabel(plan.cycleEnd)}</p>}
+        {provider.observedAt && <p>{provider.fresh ? "用量截至" : "较早的用量记录"} {dateLabel(provider.observedAt)}</p>}
+      </div>
+    </CardContent>
+  </Card>;
 }
