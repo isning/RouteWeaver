@@ -14,6 +14,7 @@ type insightLimits struct {
 	EntryRateBPS    int64 `json:"entryRateBps"`
 }
 type insightsResponse struct {
+	IPMetadata ipMetadataView `json:"ipMetadata"`
 	store.UsageInsights
 	Cycle  service.CycleWindow `json:"cycle"`
 	Limits insightLimits       `json:"limits"`
@@ -37,5 +38,5 @@ func (h *server) myInsights(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, 200, insightsResponse{usage, cycle, insightLimits{policy.OnlineIPLimit, policy.ConnectionLimit, policy.EntryRateBPS}})
+	writeJSON(w, 200, insightsResponse{IPMetadata: h.ipMetadata(usage.Admission.OnlineIPs), UsageInsights: usage, Cycle: cycle, Limits: insightLimits{policy.OnlineIPLimit, policy.ConnectionLimit, policy.EntryRateBPS}})
 }

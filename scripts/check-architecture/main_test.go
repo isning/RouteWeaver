@@ -62,3 +62,12 @@ func TestRuntimeSDKBoundaryIsExplicit(t *testing.T) {
 		t.Fatalf("expected explicit runtime violations: %v %v", got, err)
 	}
 }
+
+func TestIPMetadataCannotAddNetworkLookup(t *testing.T) {
+	p := policy{Module: "routeweaver", Allowed: map[string][]string{"ipmeta": {}}, Forbidden: map[string][]string{"ipmeta": {"net/http", "database/sql", "os/exec"}}}
+	root := fixture(t, map[string]string{"internal/ipmeta/bad.go": `package ipmeta; import "net/http"`})
+	got, err := inspect(root, p)
+	if err != nil || len(got) != 1 {
+		t.Fatalf("network enrichment must be rejected: %v %v", got, err)
+	}
+}

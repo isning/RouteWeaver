@@ -15,6 +15,7 @@ import (
 	"net/netip"
 	"routeweaver/internal/backup"
 	"routeweaver/internal/domain"
+	"routeweaver/internal/ipmeta"
 	"routeweaver/internal/render"
 	"routeweaver/internal/store"
 	"strings"
@@ -37,6 +38,7 @@ type MessageOutput struct {
 	}
 }
 type Options struct {
+	IPMetadata        *ipmeta.Database
 	OIDC              *OIDCProvider
 	TrustedProxyCIDRs []string
 	PublicOrigin      string

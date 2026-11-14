@@ -54,7 +54,8 @@
       "notifications",
       "observability",
       "fleet",
-      "diagnostics"
+      "diagnostics",
+      "ipmeta"
     ],
     "application": [
       "domain",
@@ -107,7 +108,8 @@
     "diagnosticexec": [
       "diagnostics",
       "resources"
-    ]
+    ],
+    "ipmeta": []
   },
   "forbidden_imports": {
     "domain": [
@@ -223,6 +225,11 @@
       "net/http",
       "database/sql",
       "os",
+      "os/exec"
+    ],
+    "ipmeta": [
+      "net/http",
+      "database/sql",
       "os/exec"
     ]
   }

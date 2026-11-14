@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"routeweaver/internal/backup"
 	"routeweaver/internal/httpapi"
+	"routeweaver/internal/ipmeta"
 	"routeweaver/internal/render"
 	"routeweaver/internal/store"
 	"strings"
@@ -54,6 +55,8 @@ func run() error {
 	backupRecordMiB := flag.Int("backup-max-record-mib", 32, "maximum logical backup record MiB (1–128)")
 	backupRows := flag.Int("backup-max-rows", 2000000, "maximum logical backup rows (1–2000000)")
 	backupTimeout := flag.Duration("backup-timeout", 10*time.Minute, "bounded backup operation timeout (at most 10m)")
+	countryDB := flag.String("ip-country-db", "", "optional local GeoLite2/GeoIP2 Country MMDB; no external lookups")
+	asnDB := flag.String("ip-asn-db", "", "optional local GeoLite2 ASN MMDB; no external lookups")
 	flag.Parse()
 	if flag.NArg() != 0 {
 		return fmt.Errorf("unexpected control-plane command arguments")
@@ -182,7 +185,11 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	app := httpapi.NewWithOptions(s, render.Default(), httpapi.Options{OIDC: oidcProvider, TrustedProxyCIDRs: proxyCIDRs, PublicOrigin: publicOrigin, AdminToken: adminToken, UIDir: *uiDir, SecureCookies: tlsEnabled, BackupRestoreDir: restoreDir, BackupRestoreKey: key, BackupLimits: backupLimits})
+	ipMetadata, err := ipmeta.Open(*countryDB, *asnDB)
+	if err != nil {
+		return fmt.Errorf("IP metadata: %w", err)
+	}
+	app := httpapi.NewWithOptions(s, render.Default(), httpapi.Options{IPMetadata: ipMetadata, OIDC: oidcProvider, TrustedProxyCIDRs: proxyCIDRs, PublicOrigin: publicOrigin, AdminToken: adminToken, UIDir: *uiDir, SecureCookies: tlsEnabled, BackupRestoreDir: restoreDir, BackupRestoreKey: key, BackupLimits: backupLimits})
 	srv := &http.Server{Addr: *listen, Handler: app, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 30 * time.Second, WriteTimeout: 30 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 1 << 20}
 	listener, e := listenControlPlane(context.Background(), *listen)
 	if e != nil {
