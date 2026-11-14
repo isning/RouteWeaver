@@ -17,6 +17,9 @@ it("shows fixed fault categories and collection limits without raw logs or expor
   expect(screen.getByText(/2 行未识别，1 行因采集限制丢弃/)).toBeTruthy();
   expect(screen.getByText(/不包含原始日志/)).toBeTruthy();
   expect(screen.queryByRole("button", { name: "导出" })).toBeNull();
+  const table = screen.getByRole("table", { name: "故障记录" });
+  expect(table.getAttribute("data-slot")).toBe("table");
+  expect(within(table).getAllByRole("cell")).toHaveLength(4);
 });
 it("isolates core switching and rejects another core's response", async () => {
   vi.stubGlobal("fetch", vi.fn(async () => response(view())));
@@ -33,5 +36,5 @@ it("retains last records with a visible refresh error instead of claiming no fau
   await screen.findByText("监听地址已被占用");
   await userEvent.click(screen.getByRole("button", { name: "刷新" }));
   expect(await screen.findByText("诊断记录刷新失败，以下保留上次读取的记录。")).toBeTruthy();
-  expect(within(screen.getByRole("list", { name: "故障记录" })).getByText("监听地址已被占用")).toBeTruthy();
+  expect(within(screen.getByRole("table", { name: "故障记录" })).getByText("监听地址已被占用")).toBeTruthy();
 });

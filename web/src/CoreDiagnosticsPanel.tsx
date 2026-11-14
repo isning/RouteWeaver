@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { CircleAlert, FileText, RotateCw } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CircleAlert, RotateCw } from "lucide-react";
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { ActionButton } from "@/ui-patterns/actions";
 import { ChoiceSelect } from "@/ui-patterns/choice-select";
@@ -33,7 +34,7 @@ function usableView(value: CoreDiagnosticView, instanceId: string) {
     ["not_reported", "unsupported", "recent", "stale"].includes(value.collectionState) &&
     (value.lastReceivedAt === null || Number.isFinite(Date.parse(value.lastReceivedAt))) &&
     Array.isArray(value.events) && value.events.length <= 128 && value.events.every(event => event &&
-      typeof event.code === "string" && typeof event.version === "string" &&
+      typeof event.adapterId === "string" && typeof event.code === "string" && typeof event.version === "string" &&
       Number.isFinite(Date.parse(event.observedAt)) && Number.isFinite(Date.parse(event.receivedAt))) &&
     [value.omitted, value.dropped, value.retentionHours, value.historyLimit].every(n => Number.isSafeInteger(n) && n >= 0);
 }
@@ -59,14 +60,12 @@ function CoreDiagnosticDetails({ instance }: { instance: CoreInstance }) {
   });
   const data = query.data;
   const records = [...(data?.events || [])].reverse();
-  return <div className="grid min-w-0 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_18rem]">
+  return <div className="grid min-w-0 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
     <Card className="min-w-0">
-      <CardHeader className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 space-y-1"><CardTitle className="flex items-center gap-2"><FileText aria-hidden="true" className="size-4 text-muted-foreground" />核心诊断记录</CardTitle>
-          <p className="break-words text-xs text-muted-foreground">{coreName(instance)}</p>
-          {data?.lastReceivedAt && <p className="text-xs text-muted-foreground">最近收到 {dateLabel(data.lastReceivedAt)}</p>}
-        </div>
-        <ActionButton variant="outline" size="sm" leadingIcon={<RotateCw aria-hidden="true" />} pending={query.isFetching} keepFocusableWhilePending onClick={() => query.refetch()}>刷新</ActionButton>
+      <CardHeader>
+        <CardTitle>核心诊断记录</CardTitle>
+        <CardDescription className="text-xs">{data?.lastReceivedAt ? `最近收到 ${dateLabel(data.lastReceivedAt)}` : coreName(instance)}</CardDescription>
+        <CardAction><ActionButton variant="outline" size="sm" leadingIcon={<RotateCw aria-hidden="true" />} pending={query.isFetching} keepFocusableWhilePending onClick={() => query.refetch()}>刷新</ActionButton></CardAction>
       </CardHeader>
       <CardContent className="space-y-3">
         {query.isError && <Notice tone="warning">{data ? "诊断记录刷新失败，以下保留上次读取的记录。" : "无法读取诊断记录，请重试。"}</Notice>}
@@ -76,25 +75,30 @@ function CoreDiagnosticDetails({ instance }: { instance: CoreInstance }) {
         {data?.collectionState === "not_reported" && <p role="status" className="text-sm text-muted-foreground">尚未收到诊断上报。请核对 Agent 的采集选项及连接。</p>}
         {data?.collectionState === "stale" && <Notice tone="warning">近期未收到诊断上报，以下记录不代表当前运行状态。</Notice>}
         {data && records.length === 0 && data.collectionState === "recent" && <p className="py-4 text-sm text-muted-foreground">查询范围内没有已识别的故障记录。</p>}
-        {records.length > 0 && <ol className="divide-y rounded-lg border" aria-label="故障记录">
-          {records.map((event, index) => {
-            const category = Object.hasOwn(categories, event.code) ? categories[event.code] : undefined;
-            return <li key={`${event.receivedAt}:${index}`} className="min-w-0 space-y-2 p-3 sm:p-4">
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1"><Badge variant="outline"><CircleAlert aria-hidden="true" className="size-3" />故障</Badge><time className="text-xs tabular-nums text-muted-foreground" dateTime={event.observedAt}>{dateLabel(event.observedAt)}</time></div>
-              <p className="text-sm font-medium">{category?.title || "未识别的故障类别"}</p>
-              {category && <p className="text-sm text-muted-foreground">{category.action}</p>}
-              <p className="break-words text-xs text-muted-foreground">上报版本 {event.version}</p>
-            </li>;
-          })}
-        </ol>}
+        {records.length > 0 && <div className="overflow-hidden rounded-lg border">
+          <Table aria-label="故障记录" className="min-w-[700px] table-fixed text-xs">
+            <colgroup><col className="w-[152px]" /><col className="w-[60px]" /><col className="w-[176px]" /><col /></colgroup>
+            <TableHeader className="sr-only"><TableRow><TableHead>时间</TableHead><TableHead>级别</TableHead><TableHead>核心版本</TableHead><TableHead>诊断详情</TableHead></TableRow></TableHeader>
+            <TableBody>{records.map((event, index) => {
+              const category = Object.hasOwn(categories, event.code) ? categories[event.code] : undefined;
+              return <TableRow key={`${event.receivedAt}:${index}`} className="align-top">
+                <TableCell className="w-[152px] px-3 py-1.5 font-mono text-muted-foreground"><time dateTime={event.observedAt}>{dateLabel(event.observedAt)}</time></TableCell>
+                <TableCell className="w-[60px] px-1.5 py-1.5"><Badge variant="outline" className="gap-1 text-[10px]"><CircleAlert aria-hidden="true" className="size-3" />故障</Badge></TableCell>
+                <TableCell className="w-[176px] whitespace-normal break-words px-3 py-1.5 text-muted-foreground">{event.adapterId.replace("routeweaver/", "")} {event.version}</TableCell>
+                <TableCell className="whitespace-normal break-words px-3 py-1.5"><p>{category?.title || "未识别的故障类别"}</p>{category && <p className="mt-1 text-muted-foreground">{category.action}</p>}</TableCell>
+              </TableRow>;
+            })}</TableBody>
+          </Table>
+        </div>}
+
       </CardContent>
     </Card>
     <Card className="min-w-0">
-      <CardHeader><CardTitle>采集范围</CardTitle></CardHeader>
+      <CardHeader><CardTitle>诊断采集</CardTitle><CardDescription className="text-xs">由节点 Agent 上传到平台</CardDescription></CardHeader>
       <CardContent className="space-y-3 text-sm text-muted-foreground">
         <p>只显示已识别的故障类别，不包含原始日志、访问目标或客户端 IP。</p>
-        <p>需在节点上启动 Agent 时添加 <code className="break-all text-foreground">--core-diagnostics</code>。</p>
-        {data && <p>最多显示最近 {data.retentionHours} 小时内的 {data.historyLimit} 条记录。</p>}
+        <p>需在节点上启动 Agent 时添加 <code className="whitespace-nowrap text-foreground">--core-diagnostics</code>。</p>
+        {data && <div className="flex items-center justify-between gap-3 border-t pt-3"><span>保留范围</span><span className="text-right font-medium text-foreground">{data.retentionHours} 小时 / {data.historyLimit} 条</span></div>}
         {data && (data.omitted > 0 || data.dropped > 0) && <p>最近一次上报：{data.omitted} 行未识别，{data.dropped} 行因采集限制丢弃。列表不代表全部故障。</p>}
       </CardContent>
     </Card>

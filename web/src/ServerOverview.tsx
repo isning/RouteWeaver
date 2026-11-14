@@ -4,7 +4,7 @@ import { ArrowDownUp, ChartNoAxesCombined, Cpu, MemoryStick, Info, RotateCw, Wal
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ActionButton } from "@/ui-patterns/actions";
 import { Notice } from "@/ui-patterns/notice";
 import { request } from "./api";
@@ -140,6 +140,13 @@ export function ServerResourceOverview({ host, onOpenResources }: { host: HostRe
         </div>}
       </CardContent>
     </Card>
+    {data && <Card aria-label="资源趋势" className="min-w-0 gap-4">
+      <CardHeader><CardTitle>趋势</CardTitle><CardDescription>历史资源数据暂不可用</CardDescription></CardHeader>
+      <CardContent><div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
+        <div className="min-w-0 space-y-3"><p className="text-sm font-medium">计费网卡流量</p><div className="flex min-h-40 items-center justify-center rounded-lg border border-dashed px-5 py-8 text-center text-sm text-muted-foreground">暂不可用：尚未保存网卡流量历史。</div></div>
+        <div className="min-w-0 space-y-3"><p className="text-sm font-medium">CPU 与内存</p><div className="flex min-h-40 items-center justify-center rounded-lg border border-dashed px-5 py-8 text-center text-sm text-muted-foreground">暂不可用：尚未保存资源历史。</div></div>
+      </div></CardContent>
+    </Card>}
     {data && <ProviderCycleSummary data={data} />}
   </section>;
 }
@@ -154,12 +161,12 @@ function ProviderCycleSummary({ data }: { data: NodeObservationView }) {
       !Number.isSafeInteger(total) || total <= 0 || !Number.isSafeInteger(used) || used < 0) return null;
   const percent = used / total * 100;
   return <Card role="region" aria-label="周期额度消耗" className="min-w-0 gap-3">
-    <CardHeader><CardTitle className="flex items-center gap-2"><Wallet aria-hidden="true" className="size-4 text-muted-foreground" />周期额度消耗</CardTitle></CardHeader>
+    <CardHeader className="flex flex-wrap items-center justify-between gap-2">
+      <CardTitle className="flex items-center gap-2 text-sm"><Wallet aria-hidden="true" className="size-4 text-muted-foreground" />周期额度消耗</CardTitle>
+      <p className="text-sm font-semibold tabular-nums">{bytes(used)} <span className="font-normal text-muted-foreground">/ {bytes(total)}</span></p>
+    </CardHeader>
     <CardContent className="space-y-3">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
-        <p className="text-2xl font-semibold tabular-nums tracking-tight">{bytes(used)} <span className="text-sm font-normal text-muted-foreground">/ {bytes(total)}</span></p>
-        <p className="text-sm tabular-nums text-muted-foreground">已用 {percent.toFixed(0)}%</p>
-      </div>
+      <p className="text-sm tabular-nums text-muted-foreground">已用 {percent.toFixed(0)}%</p>
       <Progress aria-label="供应商额度使用比例" value={Math.min(100, percent)} className="h-2" />
       {provider.source && provider.source !== "none" && <p className="text-xs text-muted-foreground">用量来源：{sourceLabel(provider.source)}</p>}
       <div className="flex flex-wrap justify-between gap-x-6 gap-y-2 text-xs text-muted-foreground">
