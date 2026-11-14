@@ -1,3 +1,4 @@
+import { SubscriptionFetchDetails } from "./SubscriptionFetchDetails";
 import { SubscriptionFetchAlerts, type FetchHistory } from "./SubscriptionFetchAlerts";
 import { Metadata, MetadataItem } from "@/ui-patterns/metadata";
 import {
@@ -8,7 +9,7 @@ import {
   TableHead,
   TableCell,
 } from "@/components/ui/table";
-import { useContext } from "react";
+import { useContext, useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, CircleAlert, RefreshCw } from "lucide-react";
 import { request, list } from "./api";
@@ -65,6 +66,11 @@ export interface PersonalInsights {
   };
 }
 export function OverviewPage() {
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(timer);
+  }, []);
   const history = useContext(WorkspaceHistoryContext);
   const go = (hash: string) =>
     history?.current ? history.current.navigate(hash) : (location.hash = hash);
@@ -695,7 +701,9 @@ export function OverviewPage() {
                           </p>
                         </TableCell>
                         <TableCell className="py-3 whitespace-normal">
-                          {fetches.isError ? (
+                          {fetches.isPaused ? (
+                            <p className="text-xs text-muted-foreground">等待网络恢复后读取</p>
+                          ) : fetches.isError ? (
                             <ActionButton
                               size="sm"
                               variant="link"
@@ -713,6 +721,7 @@ export function OverviewPage() {
                                   ? "配置包"
                                   : "订阅链接"}
                               </p>
+                              {fetches.data && <SubscriptionFetchDetails history={fetches.data} outputId={output.id} now={now} />}
                             </>
                           ) : (
                             <p className="text-xs text-muted-foreground">
@@ -760,7 +769,7 @@ export function OverviewPage() {
                   重试订阅用量
                 </ActionButton>
               )}
-              {fetches.data && (
+              {fetches.data && !fetches.isError && !fetches.isPaused && (
                 <SubscriptionFetchAlerts
                   history={fetches.data}
                   names={Object.fromEntries((outputs.data || []).map((output) => [output.id, output.name]))}

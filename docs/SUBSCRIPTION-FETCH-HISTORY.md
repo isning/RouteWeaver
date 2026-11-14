@@ -75,3 +75,18 @@ Addresses are not device identities: NAT, VPNs, mobile networks, and proxies can
 change or share them. A reminder is not proof of compromise, client receipt,
 import, or actual proxy traffic. Logging failures can omit reminders and do not
 prevent delivery. This is a bounded diagnostic feature, not security enforcement.
+
+## Overview delivery details
+
+The overview shows the most recent retained delivery source only while the
+returned tracking preference is explicitly enabled. If that delivery has no
+address, it remains unknown; an older address is not substituted. Its new-address
+badge uses the recorded flag, not geography or device inference. Disabling
+tracking hides addresses immediately after the save response updates the shared
+query state, including older cached records.
+
+Per-subscription recent counts include only retained records in the preceding
+24 hours, excluding future timestamps. The label explicitly says retained
+records: this is not a complete request count or a connection count. A local
+minute clock updates this window without new polling or writes. Failed/offline
+reads do not keep displaying prior address details as current data.
