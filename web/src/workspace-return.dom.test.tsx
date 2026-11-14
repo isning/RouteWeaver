@@ -1079,9 +1079,14 @@ it("retains only nonprivate history proof through logout and B login, not A's li
   expect(history.state.routeweaverPosition).toBe(
     sourceProof.routeweaverPosition,
   );
+  const signedInProof = { ...history.state };
   await act(async () => history.back());
-  await waitFor(() => expect(location.hash).toBe("#subscriptions"));
-  expect(history.state).toEqual(initialProof);
+  // Both entries now have the same management hash after B signs in.
+  // Wait for asynchronous traversal proof, not the already-matching URL.
+  await waitFor(() => {
+    expect(location.hash).toBe("#subscriptions");
+    expect(history.state).toEqual(initialProof);
+  });
   expect(
     (
       screen.getByRole("textbox", {
@@ -1090,8 +1095,13 @@ it("retains only nonprivate history proof through logout and B login, not A's li
     ).value,
   ).toBe("");
   await act(async () => history.forward());
-  await waitFor(() => expect(location.hash).toBe("#subscriptions"));
-  expect(history.state.routeweaverLineage).toBe(sourceProof.routeweaverLineage);
+  await waitFor(() => {
+    expect(location.hash).toBe("#subscriptions");
+    expect(history.state).toEqual(signedInProof);
+  });
+  expect((screen.getByRole("textbox", {
+    name: "搜索配置或客户端订阅",
+  }) as HTMLInputElement).value).toBe("");
 });
 
 it.each([false, true])(
