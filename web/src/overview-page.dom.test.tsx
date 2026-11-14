@@ -248,9 +248,9 @@ it("renders only the database's reported IP metadata, not an inferred device loc
       ],
     },
   }));
-  expect(
-    await screen.findByText("德国 (DE) · Example Network · AS64500"),
-  ).toBeTruthy();
+  expect(await screen.findByText("德国 (DE)")).toBeTruthy();
+  expect(screen.getByText("Example Network")).toBeTruthy();
+  expect(screen.getByText("AS64500")).toBeTruthy();
   expect(screen.getByText(/不代表设备的实际位置或运营商/)).toBeTruthy();
   expect(screen.queryByText("IP 归属资料暂不可用")).toBeNull();
 });

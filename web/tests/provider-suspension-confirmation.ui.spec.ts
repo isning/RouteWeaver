@@ -71,6 +71,7 @@ test("managed provider suspension opt-in preserves complete consequences and saf
     "/links": [],
     "/server-deployments": [],
     [`/admin/nodes/${hostId}/observability`]: observation,
+      [`/admin/nodes/${hostId}/observability/history`]: { nodeId: hostId, available: true, intervalSeconds: 300, windowStart: new Date(Date.now() - 86400000).toISOString(), windowEnd: new Date().toISOString(), points: [] },
   };
   const unexpected: string[] = [];
   await page.route("**/*", (route) => {

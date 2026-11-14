@@ -1,3 +1,4 @@
+import { Metadata, MetadataItem } from "@/ui-patterns/metadata";
 import {
   Table,
   TableHeader,
@@ -161,7 +162,7 @@ export function OverviewPage() {
       if (!outputs.data.some((output) => output.id === row.outputId))
         outputRows.push({
           id: row.outputId,
-          name: `已停用订阅 · ${row.outputId.slice(-8)}`,
+          name: `已停用订阅（${row.outputId.slice(-8)}）`,
           profileId: "",
           target: { adapterId: "", version: "" },
           mode: "full",
@@ -539,10 +540,7 @@ export function OverviewPage() {
                           国家和网络组织来自本地数据库，不代表设备的实际位置或运营商。
                         </p>
                         {detail.ipMetadata.sources.map((source, index) => (
-                          <p key={`${source.kind}:${index}`}>
-                            {source.databaseType} · 更新于{" "}
-                            {dateLabel(source.builtAt)}
-                          </p>
+                          <Metadata key={`${source.kind}:${index}`}><MetadataItem>{source.databaseType}</MetadataItem><MetadataItem>更新于 {dateLabel(source.builtAt)}</MetadataItem></Metadata>
                         ))}
                         {detail.ipMetadata.truncated && (
                           <p>部分 IP 尚未查询归属资料。</p>
@@ -888,17 +886,15 @@ function IPDetails({
     );
   if (item.status !== "available")
     return <p className="truncate text-xs text-muted-foreground">归属未知</p>;
-  const label = [
+  const labels = [
     item.countryCode ? countryName(item.countryCode) : "国家/地区未知",
     item.organization || "网络组织未知",
     item.asn ? `AS${item.asn}` : "",
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  ].filter(Boolean);
   return (
-    <p className="truncate text-xs text-muted-foreground" title={label}>
-      {label}
-    </p>
+    <Metadata className="text-xs text-muted-foreground" title={labels.join("，")} >
+      {labels.map(label => <MetadataItem key={label}>{label}</MetadataItem>)}
+    </Metadata>
   );
 }
 

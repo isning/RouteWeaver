@@ -1,3 +1,4 @@
+import { Metadata, MetadataItem } from "@/ui-patterns/metadata";
 import { useState } from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useQuery } from "@tanstack/react-query";
@@ -46,7 +47,7 @@ function Series({ points, fields, maximum, start, end, interval, windowLabel, ti
           const linkNext = next && valid(next[f.key]) && !next.breakBefore && Date.parse(next.observedAt) - Date.parse(p.observedAt) <= interval * 1500;
           return <g key={index}>
             {link && <line x1={x(prior!.observedAt)} y1={y(prior![f.key]!)} x2={x(p.observedAt)} y2={y(value!)} stroke="currentColor" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />}
-            <circle cx={x(p.observedAt)} cy={y(value!)} r={!link && !linkNext ? 2 : 4} fill={!link && !linkNext ? "currentColor" : "transparent"}><title>{f.label} {format(value!)} · {dateLabel(p.observedAt)}</title></circle>
+            <circle cx={x(p.observedAt)} cy={y(value!)} r={!link && !linkNext ? 2 : 4} fill={!link && !linkNext ? "currentColor" : "transparent"}><title>{f.label} {format(value!)}，{dateLabel(p.observedAt)}</title></circle>
           </g>;
         })}</g>;
       })}
@@ -67,7 +68,7 @@ export function ResourceHistory({ nodeId }: { nodeId: string }) {
   const stale = last && Date.now() - Date.parse(last.observedAt) > Math.max(15 * 60000, (data?.intervalSeconds || 300) * 1500);
   return <Card aria-label="资源趋势" className="min-w-0 gap-4">
     <CardHeader className="flex flex-row items-start justify-between gap-3">
-      <div className="space-y-1"><CardTitle>趋势</CardTitle><CardDescription>最近 {windowLabel} · {window === "7d" ? "每小时" : "每 5 分钟"}保留一次实际采样</CardDescription></div>
+      <div className="space-y-1"><CardTitle>趋势</CardTitle><CardDescription><Metadata><MetadataItem>最近 {windowLabel}</MetadataItem><MetadataItem>{window === "7d" ? "每小时" : "每 5 分钟"}保留一次实际采样</MetadataItem></Metadata></CardDescription></div>
       <ActionButton variant="ghost" size="sm" aria-label="刷新资源趋势" leadingIcon={<RotateCw aria-hidden="true" />} pending={query.isFetching} onClick={() => query.refetch()} />
     </CardHeader>
     <CardContent className="space-y-3">

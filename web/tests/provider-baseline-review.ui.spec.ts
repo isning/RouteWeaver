@@ -35,6 +35,7 @@ for (const width of [1440, 390]) {
       "/agent/instances/review-core/state": { instanceId: "review-core", phase: "unregistered" },
       "/managed-endpoints": [], "/links": [], "/server-deployments": [],
       [observationPath]: observation,
+      [`/admin/nodes/${hostId}/observability/history`]: { nodeId: hostId, available: true, intervalSeconds: 300, windowStart: new Date(Date.now() - 86400000).toISOString(), windowEnd: new Date().toISOString(), points: [] },
     };
     const unexpected: string[] = [];
     const pending: Route[] = [];
