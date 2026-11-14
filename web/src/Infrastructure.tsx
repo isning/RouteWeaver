@@ -48,6 +48,7 @@ import {
 } from "./components";
 import { DataTable, TableRowActions } from "./DataTable";
 import { DiagnosticsPanel } from "./Diagnostics";
+import { CoreDiagnosticsPanel } from "./CoreDiagnosticsPanel";
 import { phaseLabel } from "./infrastructure-model";
 import { dateLabel, newID } from "./model";
 import { hasUnsavedChanges, useUnsavedChanges } from "./navigation";
@@ -767,8 +768,9 @@ export function ServersPage() {
             </TabsContent>
             <TabsContent value="diagnostics" className="space-y-4">
               <Tabs defaultValue="resources" className="space-y-4">
-                <ScrollableTabsList><TabsTrigger value="resources">资源与额度</TabsTrigger><TabsTrigger value="connections">连接诊断</TabsTrigger></ScrollableTabsList>
+                <ScrollableTabsList><TabsTrigger value="resources">资源与额度</TabsTrigger><TabsTrigger value="core-diagnostics">核心诊断</TabsTrigger><TabsTrigger value="connections">连接诊断</TabsTrigger></ScrollableTabsList>
                 <TabsContent value="resources"><NodeObservation host={host} instances={data.instances} /></TabsContent>
+                <TabsContent value="core-diagnostics"><CoreDiagnosticsPanel host={host} instances={data.instances} /></TabsContent>
                 <TabsContent value="connections"><DiagnosticsPanel host={host} instances={data.instances} /></TabsContent>
               </Tabs>
             </TabsContent>
