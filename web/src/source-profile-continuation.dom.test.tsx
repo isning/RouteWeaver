@@ -129,6 +129,8 @@ function mount(
         writes.push(path);
         return json([]);
       }
+      if (path === "/me/outputs/independent")
+        return json({ items: [] });
       if (
         [
           "/me/profiles",
