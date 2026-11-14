@@ -112,7 +112,12 @@ func (s *Store) initializeUsageHistoryTx(tx *sql.Tx) error {
 			}
 		}
 	}
-	if _, err := tx.Exec(`DELETE FROM usage_history; DELETE FROM usage_history_owners; DELETE FROM usage_history_state; INSERT INTO usage_history_state VALUES(1,0,X'');`); err != nil {
+	// Rebuild the disposable membership index on every open, including upgrades
+	// from the older two-column schema. Canonical encrypted ledger is untouched.
+	if _, err := tx.Exec(`DROP TABLE usage_history;
+ CREATE TABLE usage_history(account TEXT NOT NULL,id TEXT NOT NULL,observed_second INTEGER NOT NULL DEFAULT 0,PRIMARY KEY(account,id));
+ CREATE INDEX usage_history_window ON usage_history(account,observed_second,id);
+ DELETE FROM usage_history_owners; DELETE FROM usage_history_state; INSERT INTO usage_history_state VALUES(1,0,X'');`); err != nil {
 		return err
 	}
 	// Populate before installing derived mutation triggers: the final fence is
@@ -134,7 +139,7 @@ func (s *Store) initializeUsageHistoryTx(tx *sql.Tx) error {
 			valid = false
 			break
 		}
-		if _, err = tx.Exec(`INSERT INTO usage_history(account,id) VALUES(?,?)`, s.usageHistoryToken(record.UserID), id); err != nil {
+		if _, err = tx.Exec(`INSERT INTO usage_history(account,id,observed_second) VALUES(?,?,?)`, s.usageHistoryToken(record.UserID), id, record.ObservedAt.Unix()); err != nil {
 			rows.Close()
 			return err
 		}
@@ -282,7 +287,7 @@ func (s *Store) updateUsageHistoryTx(tx *sql.Tx, before int64, id string, old, n
 		}
 	}
 	if next != nil {
-		if _, err = tx.Exec(`INSERT INTO usage_history(account,id) VALUES(?,?)`, s.usageHistoryToken(next.UserID), id); err != nil {
+		if _, err = tx.Exec(`INSERT INTO usage_history(account,id,observed_second) VALUES(?,?,?)`, s.usageHistoryToken(next.UserID), id, next.ObservedAt.Unix()); err != nil {
 			return err
 		}
 	}

@@ -50,6 +50,14 @@ func validateBackupSchema(ctx context.Context, tx schemaQuerier) error {
 	if derived["usage_history"] {
 		columns["usage_history"] = []string{"account", "id"}
 		primaryKeys["usage_history"] = []int{1, 2}
+		var timeColumn int
+		if err := tx.QueryRowContext(ctx, `SELECT count(*) FROM pragma_table_xinfo('usage_history') WHERE name='observed_second'`).Scan(&timeColumn); err != nil {
+			return err
+		}
+		if timeColumn == 1 {
+			columns["usage_history"] = append(columns["usage_history"], "observed_second")
+			primaryKeys["usage_history"] = append(primaryKeys["usage_history"], 0)
+		}
 	}
 	if derived["usage_history_owners"] {
 		columns["usage_history_owners"] = []string{"account", "data"}
