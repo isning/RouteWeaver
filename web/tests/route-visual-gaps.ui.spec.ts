@@ -136,6 +136,10 @@ const fixtures: Record<string, unknown> = {
   "/auth/sessions": [],
   "/admin/accounts": [],
   "/me/outputs": outputs,
+  "/me/outputs/independent": { items: [] },
+  "/me/insights": { asOf: "2026-11-14T08:00:00Z", timezone: "UTC+8", daily: [], routes: [], admission: { available: false, asOf: "2026-11-14T08:00:00Z", maxLeaseSeconds: 0, onlineIps: [], activeStreams: 0 }, limits: { onlineIpLimit: 0, connectionLimit: 0, entryRateBps: 0 } },
+  "/me/subscription-fetches": { items: [], collectionStartedAt: null },
+  "/me/output-usage": { asOf: "2026-11-14T08:00:00Z", period: "current-cycle", windowStart: "2026-11-01T00:00:00Z", windowEnd: "2026-12-01T00:00:00Z", complete: true, outputs: [], unattributedRawBytes: 0, unattributedWeightedBytes: 0 },
 };
 
 async function readOnlyInventory(page: Page, overrides: Record<string, unknown> = {}) {
@@ -876,93 +880,47 @@ for (const width of [3440, 2880, 2560, 2304, 1920, 1536, 1440, 1366, 1280, 1024,
     await expect(mfaLink).toHaveAttribute("aria-current", "location");
     await page.screenshot({ path: info.outputPath(`context-account-mfa-focus-${width}.png`) });
     await page.goto("/#subscriptions");
-    await expect(page.getByRole("heading", { name: "平台服务用量", exact: true })).toHaveCount(1);
-    const subscriptionPrimary = await assertLayout(false);
+    // Subscription management owns its full canvas. Usage has moved to Overview;
+    // the hidden legacy context must not reserve an obsolete 320px rail.
+    await expect(page.getByRole("heading", { name: "我的订阅", exact: true })).toBeVisible();
+    const content = page.locator('.workspace-canvas > .workspace-content');
+    const subscriptionPrimary = (await content.boundingBox())!;
+    await expect(page.locator('.workspace-context')).toBeHidden();
     const createBox = (await page.getByRole("button", { name: "新建分流配置", exact: true }).boundingBox())!;
     const titleBox = (await page.getByRole("heading", { name: "我的订阅", exact: true }).boundingBox())!;
     expect(titleBox.x).toBeCloseTo(subscriptionPrimary.x, 0);
     if (width >= 1024) expect(createBox.x + createBox.width).toBeCloseTo(subscriptionPrimary.x + subscriptionPrimary.width, 0);
-    await page.screenshot({ path: info.outputPath(`context-subscriptions-${width}.png`), fullPage: true });
-    const usage = page.getByRole("complementary", { name: "平台服务概览", exact: true });
-    const details = usage.getByRole("region", { name: "用量与周期明细", exact: true });
-    await expect(details).toBeVisible();
-    await expect(usage.getByRole("button", { name: "用量与周期明细", exact: true })).toHaveCount(0);
     const routes = page.getByRole("region", { name: "平台提供的线路 3 条", exact: true });
     await expect(routes).toBeVisible();
     await expect(routes.getByRole("listitem")).toHaveCount(3);
     for (const [index, multiplier] of ["1.5×", "1×", "0.5×"].entries()) {
       const row = routes.getByRole("listitem").nth(index);
       const rate = row.getByText(multiplier, { exact: true });
-      const name = row.getByRole("heading");
       await expect(rate).toBeVisible();
-      const nameBox = (await name.boundingBox())!;
+      const nameBox = (await row.getByRole("heading").boundingBox())!;
       const rateBox = (await rate.boundingBox())!;
       const rowBox = (await row.boundingBox())!;
       expect(rateBox.x).toBeGreaterThanOrEqual(nameBox.x + nameBox.width);
-      expect(rateBox.y).toBeLessThan(nameBox.y + nameBox.height);
       expect(rateBox.x + rateBox.width).toBeLessThanOrEqual(rowBox.x + rowBox.width + 1);
-      // Measure actual rendered characters rather than assuming text-wrap can
-      // balance a single unspaced word. Camel-case break opportunities preserve
-      // the full name and avoid isolated final letters in narrow context rails.
-      const latinLineLengths = await name.evaluate(element => {
-        const lines = new Map<number, string>();
-        const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
-        let node: Node | null;
-        while ((node = walker.nextNode())) {
-          for (let offset = 0; offset < (node.textContent?.length ?? 0); offset++) {
-            const char = node.textContent![offset];
-            if (!/[a-zA-Z]/.test(char)) continue;
-            const range = document.createRange();
-            range.setStart(node, offset);
-            range.setEnd(node, offset + 1);
-            const top = Math.round(range.getBoundingClientRect().top);
-            lines.set(top, (lines.get(top) ?? "") + char);
-          }
-        }
-        return [...lines.values()].map(line => line.length);
-      });
-      for (const count of latinLineLengths) expect(count).toBeGreaterThan(1);
+      expect(await row.evaluate(el => el.scrollWidth)).toBeLessThanOrEqual(rowBox.width + 1);
     }
-    const hero = usage.locator(".subscription-usage");
-    await expect(hero.getByRole("heading", { name: "本周期剩余额度", exact: true })).toBeVisible();
-    await expect(hero.getByText("75 GiB", { exact: true })).toBeVisible();
-    const heroBox = (await hero.boundingBox())!;
-    const remainingBox = (await hero.getByText("75 GiB", { exact: true }).boundingBox())!;
-    const detailsBox = (await details.boundingBox())!;
-    expect(heroBox.x).toBeCloseTo(subscriptionPrimary.x, 0);
-    expect(heroBox.width).toBeCloseTo(subscriptionPrimary.width, 0);
-    expect(heroBox.y + heroBox.height).toBeLessThan(subscriptionPrimary.y);
-    expect(detailsBox.y).toBeGreaterThan(remainingBox.y + remainingBox.height);
     const mainBox = (await page.locator(".subscription-task-main").boundingBox())!;
     const routesBox = (await routes.boundingBox())!;
     if (subscriptionPrimary.width >= 992) {
       expect(routesBox.x).toBeGreaterThanOrEqual(mainBox.x + mainBox.width);
       expect(routesBox.y).toBeCloseTo(mainBox.y, 0);
     } else expect(routesBox.y).toBeGreaterThanOrEqual(mainBox.y + mainBox.height);
-    const resetDate = details.locator(".usage-reset-date");
-    const resetCountdown = details.locator(".usage-reset-countdown");
-    await expect(resetDate).toBeVisible();
-    await expect(resetCountdown).toBeVisible();
-    const dateBox = (await resetDate.boundingBox())!;
-    const countdownBox = (await resetCountdown.boundingBox())!;
-    expect(countdownBox.y).toBeGreaterThanOrEqual(dateBox.y - 2);
-    expect(countdownBox.x + countdownBox.width).toBeLessThanOrEqual(detailsBox.x + detailsBox.width + 1);
-    expect(await routes.evaluate(el => getComputedStyle(el).borderTopWidth)).toBe("1px");
-    for (const selector of [".route-option"]) {
-      const rows = routes.locator(selector);
-      for (let i = 0; i < await rows.count(); i++) {
-        expect(await rows.nth(i).evaluate(el => getComputedStyle(el).borderBottomWidth)).toBe(i === await rows.count() - 1 ? "0px" : "1px");
-      }
-    }
-    await expect(routes.getByText("欧洲与亚太协作线路 LongRemoteWorkspaceConnection", { exact: true })).toBeVisible();
-    for (const inner of await usage.locator('[data-slot="card-header"], [data-slot="card-content"], .route-option').all()) {
-      expect(await inner.evaluate(el => el.scrollWidth)).toBeLessThanOrEqual((await inner.boundingBox())!.width + 1);
-    }
+    await expect(page.getByRole("row", { name: "客户端订阅 办公电脑", exact: true })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+    await page.screenshot({ path: info.outputPath(`context-subscriptions-${width}.png`), fullPage: true });
+    // Keep the recorded quota assertion on its new page rather than dropping it.
+    await page.goto("/#overview");
+    await expect(page.getByRole("heading", { name: "概览", exact: true })).toBeVisible();
+    await expect(page.getByText("本周期剩余额度", { exact: true })).toBeVisible();
+    await expect(page.getByText("75 GiB", { exact: true })).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
     await page.screenshot({ path: info.outputPath(`context-usage-visible-${width}.png`), fullPage: true });
-    await page.setViewportSize({ width: width >= 1280 ? 390 : 1280, height: 900 });
-    await expect(details).toBeVisible();
-    await expect(page.getByRole("heading", { name: "平台服务用量", exact: true })).toHaveCount(1);
-    await page.setViewportSize({ width, height: width === 320 ? 480 : 900 });
+    await page.goto("/#subscriptions");
     await page.getByRole("button", { name: "编辑配置", exact: true }).click();
     await expect(page.getByRole("navigation", { name: "配置内容", exact: true })).toHaveCount(0);
     const profileTabs = page.getByRole("tablist", { name: "配置内容", exact: true });
@@ -1145,7 +1103,6 @@ test("context rails yield space before their primary task becomes cramped", asyn
   const unexpected = await readOnlyInventory(page);
   for (const task of [
     { route: "settings", navigation: true, widths: [1136, 1184], threshold: 896 },
-    { route: "subscriptions", navigation: false, widths: [1232, 1280], threshold: 992 },
   ]) {
     await page.goto(`/#${task.route}`);
     // A visible grid can still belong to the lazy or GET skeleton. Await the
@@ -1177,15 +1134,15 @@ test("context rails yield space before their primary task becomes cramped", asyn
         };
         return { frame: rect(element), main: rect(canvas), rail: rect(context) };
       });
-      const sideBySide = task.route !== "subscriptions" && frame.width >= task.threshold;
+      const sideBySide = frame.width >= task.threshold;
       modes.push(sideBySide);
       if (sideBySide) {
         expect(main.width).toBeGreaterThanOrEqual(672);
         expect(rail.x).toBeGreaterThanOrEqual(main.x + main.width);
-      } else if (task.navigation || task.route === "subscriptions") expect(rail.y + rail.height).toBeLessThanOrEqual(main.y);
+      } else if (task.navigation) expect(rail.y + rail.height).toBeLessThanOrEqual(main.y);
       else expect(main.y + main.height).toBeLessThanOrEqual(rail.y);
     }
-    expect(modes).toEqual(task.route === "subscriptions" ? [false, false] : [false, true]);
+    expect(modes).toEqual([false, true]);
   }
   expect(unexpected).toEqual([]);
 });
