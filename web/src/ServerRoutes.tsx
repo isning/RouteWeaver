@@ -1007,6 +1007,7 @@ export function ServerRouteEditor({
   if (initialListenerReview && listenerReview) return listenerReview;
   return (
     <TaskSheet
+      scrollMode="auto"
       bodyProps={{ className: "space-y-6" }}
       title={isNew ? "新建转发路径" : `编辑 ${initial.name}`}
       open={!discardClosing}
@@ -2155,6 +2156,7 @@ function ServerRouteDetail({
     draftChanged(validate.error) || draftChanged(publish.error);
   return (
     <TaskSheet
+      scrollMode="auto"
       bodyProps={{ className: "space-y-5" }}
       title={deployment.name}
       description="转发路径草稿已保存"

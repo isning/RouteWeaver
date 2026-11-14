@@ -40,6 +40,7 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390, 
       exact: true,
     });
     await settledTask(sheet);
+    await expect(sheet).toHaveAttribute("data-task-scroll", "body");
     const workspace = sheet.getByRole("region", {
       name: "路径编排",
       exact: true,
@@ -93,6 +94,29 @@ for (const theme of ["light", "dark"] as const) for (const width of [1440, 390, 
     await expect(
       sheet.getByRole("textbox", { name: "转发路径名称" }),
     ).toHaveValue("待保存路径");
+    if (width === 320) {
+      // Keep the original normal-height review above, then exercise the same
+      // route editor with one reachable scroller in a short viewport.
+      await page.setViewportSize({ width, height: 320 });
+      await expect(sheet).toHaveAttribute("data-task-scroll", "task");
+      const body = sheet.locator("[data-task-overlay-body]");
+      expect(await body.evaluate((node) => getComputedStyle(node).overflowY)).toBe("visible");
+      expect((await body.boundingBox())!.height).toBeGreaterThan(200);
+      const save = sheet.getByRole("button", { name: "保存草稿", exact: true });
+      await save.focus();
+      await expect(save).toBeFocused();
+      await expect(save).toBeInViewport({ ratio: 1 });
+      const name = sheet.getByRole("textbox", { name: "转发路径名称" });
+      await name.focus();
+      await expect(name).toBeFocused();
+      await expect(name).toBeInViewport({ ratio: 1 });
+      await sheet.getByRole("button", { name: "取消", exact: true }).click();
+      await page.getByRole("alertdialog")
+        .getByRole("button", { name: "继续编辑", exact: true }).click();
+      await expect(name).toHaveValue("待保存路径");
+      await page.setViewportSize({ width, height: 900 });
+      await expect(sheet).toHaveAttribute("data-task-scroll", "body");
+    }
     expect(requests).toEqual([]);
   });
 }
