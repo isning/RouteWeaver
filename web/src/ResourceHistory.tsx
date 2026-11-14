@@ -1,6 +1,9 @@
 import { Metadata, MetadataItem } from "@/ui-patterns/metadata";
 import { useState } from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useQuery } from "@tanstack/react-query";
 import { RotateCw } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -73,6 +76,7 @@ function Series({ points, fields, maximum, start, end, interval, windowLabel, ti
 }
 export function ResourceHistory({ nodeId }: { nodeId: string }) {
   const [window, setWindow] = useState("24h");
+  const [tableOpen, setTableOpen] = useState(false);
   const windowLabel = window === "1h" ? "1小时" : window === "7d" ? "7天" : "24小时";
   const query = useQuery({ queryKey: ["node-resource-history", nodeId, window], queryFn: ({ signal }) => request<ResourceHistoryView>(`${observationPath(nodeId)}/history?window=${window}`, { signal }), refetchInterval: 60000 });
   const data = query.data?.nodeId === nodeId && Array.isArray(query.data.points) && query.data.points.length <= 288 ? query.data : undefined;
@@ -99,6 +103,24 @@ export function ResourceHistory({ nodeId }: { nodeId: string }) {
           <Series title="计费网卡流量" points={points} start={start} end={end} interval={data.intervalSeconds} windowLabel={windowLabel} format={formatRate} fields={[{ key: "receiveBytesPerSecond", label: "接收", color: "var(--foreground)" }, { key: "transmitBytesPerSecond", label: "发送", color: "var(--muted-foreground)" }]} />
           <Series title="CPU 与内存" points={points} start={start} end={end} interval={data.intervalSeconds} windowLabel={windowLabel} maximum={100} format={n => `${n.toFixed(0)}%`} fields={[{ key: "cpuPercent", label: "CPU", color: "var(--foreground)" }, { key: "memoryUsedPercent", label: "内存使用率", color: "var(--muted-foreground)" }]} />
         </div>
+        <Collapsible open={tableOpen} onOpenChange={setTableOpen} className="min-w-0 space-y-2">
+          <CollapsibleTrigger asChild><Button variant="outline" size="sm">{tableOpen ? "收起" : "查看"}采样数据（{points.length} 条）</Button></CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="max-h-80 overflow-auto rounded-md border focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&_[data-slot=table-container]]:overflow-visible" tabIndex={0} role="region" aria-label="资源采样明细，可滚动" >
+              <Table aria-label="资源采样数据" className="tabular-nums">
+                <TableHeader><TableRow>
+                  <TableHead scope="col">采样时间（UTC+8）</TableHead>
+                  <TableHead scope="col" className="text-right">CPU</TableHead><TableHead scope="col" className="text-right">内存使用率</TableHead>
+                  <TableHead scope="col" className="text-right">接收（B/s）</TableHead><TableHead scope="col" className="text-right">发送（B/s）</TableHead>
+                </TableRow></TableHeader>
+                <TableBody>{points.map((point, index) => <TableRow key={`${point.observedAt}-${index}`}>
+                  <TableCell><time dateTime={point.observedAt}>{dateLabel(point.observedAt)}</time></TableCell>
+                  {(["cpuPercent", "memoryUsedPercent", "receiveBytesPerSecond", "transmitBytesPerSecond"] as const).map(field => <TableCell key={field} className="text-right">{valid(point[field]) ? `${point[field]!.toLocaleString(undefined, { maximumFractionDigits: 3 })}${field.endsWith("Percent") ? "%" : " B/s"}` : "无数据"}</TableCell>)}
+                </TableRow>)}</TableBody>
+              </Table>
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
         <p className="text-xs text-muted-foreground">实际快照，不代表均值或峰值；历史不能回填。缺失采样与重启处断开显示；网卡速率仅包含所选计费网卡，不等于供应商账单。</p>
       </>}
     </CardContent>

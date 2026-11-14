@@ -56,3 +56,17 @@ it("lets keyboard and touch controls inspect exact samples without replacing mis
  fireEvent.change(slider,{target:{value:"0"}});
  expect(screen.getByText("0 B/s (0 B/s)")).toBeTruthy();
 });
+it("opens a real sample table without inventing values and can collapse it", async()=>{
+ const data=fixture();vi.stubGlobal("fetch",vi.fn(async()=>response(data)));mount();
+ await screen.findByRole("img",{name:/CPU 与内存/});
+ expect(screen.queryByRole("table",{name:"资源采样数据"})).toBeNull();
+ await userEvent.click(screen.getByRole("button",{name:"查看采样数据（2 条）"}));
+ const table=screen.getByRole("table",{name:"资源采样数据"});
+ const {within}=await import("@testing-library/react");
+ const rows=within(table).getAllByRole("row");expect(rows).toHaveLength(3);
+ expect(within(rows[1]).getAllByRole("cell").map(cell=>cell.textContent)).toEqual([expect.any(String),"0%","50%","0 B/s","无数据"]);
+ expect(within(rows[2]).getAllByRole("cell").map(cell=>cell.textContent)).toEqual([expect.any(String),"25%","60%","1,024 B/s","无数据"]);
+ expect(table.querySelector("time")?.dateTime).toBe(data.points[0].observedAt);
+ await userEvent.click(screen.getByRole("button",{name:"收起采样数据（2 条）"}));
+ expect(screen.queryByRole("table",{name:"资源采样数据"})).toBeNull();
+});
