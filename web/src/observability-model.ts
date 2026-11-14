@@ -71,6 +71,7 @@ export interface NodeSnapshot {
   };
 }
 export interface NodeObservationView {
+  forecast?: { status: string; reason: string; basisStart?: string; basisEnd?: string; averageBytesPerSecond?: number; exhaustedAt?: string; horizon?: string };
   nodeId: string;
   config: ObservationConfig;
   latest: NodeSnapshot | null;

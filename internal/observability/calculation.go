@@ -211,10 +211,12 @@ func ViewOf(id string, s State, now time.Time) View {
 			p.ManagedAdmissionReason = "provider-usage-unknown"
 		}
 		result.Provider = p
+		result.Forecast = ForecastOf(s, result.Provider, now)
 		return result
 	}
 	if c == nil {
 		result.Provider = p
+		result.Forecast = ForecastOf(s, result.Provider, now)
 		return result
 	}
 	if c.Mode == "limited" {
@@ -276,5 +278,6 @@ func ViewOf(id string, s State, now time.Time) View {
 	}
 	p.ManagedAdmissionReason, _ = managedAdmissionView(c, p, now)
 	result.Provider = p
+	result.Forecast = ForecastOf(s, result.Provider, now)
 	return result
 }

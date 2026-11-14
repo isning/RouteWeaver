@@ -133,6 +133,7 @@ type ProviderView struct {
 	NotificationEligible   bool       `json:"notificationEligible"`
 }
 type View struct {
+	Forecast  Forecast     `json:"forecast"`
 	NodeID    string       `json:"nodeId"`
 	Config    Config       `json:"config"`
 	Latest    *Snapshot    `json:"latest"`

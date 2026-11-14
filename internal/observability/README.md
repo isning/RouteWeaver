@@ -73,3 +73,23 @@ scheduled rewrites are 5.625 GiB/day daily plus 0.28125 GiB/day hourly (rather t
 9 GiB/day for a combined 128 KiB record); discontinuity, retention and WAL writes
 add overhead. This is a conservative allocation bound, not measured SSD writes.
 This small-fleet store is not a time-series database for thousands of hosts.
+
+## Advisory exhaustion projection
+
+The resource view computes a constant-rate projection only for the current,
+fresh, reconciled NIC-estimate allowance. The numerator is the actual cumulative
+selected-NIC IN+OUT increment since the latest operator reconciliation; the
+denominator is its exact observation interval, which must cover at least 24
+continuous hours. A reboot, missing sequence, long report gap or selected-NIC
+counter reset invalidates the baseline and therefore the projection. A new
+reconciliation starts a new 24-hour qualification period. Single manual bills
+cannot establish a rate. Zero observed traffic does not imply infinite service.
+
+The result is restricted to the current cycle or earlier service-expiration
+boundary, with explicit insufficient/stale/unsupported states. It assumes the
+observed average persists; it is not a confidence interval, billing guarantee,
+peak forecast or short-term burst model. It does not change notifications,
+admission policy, suspension or any user setting. The frontend hides the date
+after read failure or staleness. Computation is read-only O(1) over existing state:
+no new agent reports, history scans, records, encryption writes or SSD write
+amplification are introduced.
