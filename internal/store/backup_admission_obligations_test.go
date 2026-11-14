@@ -21,6 +21,9 @@ func TestEncryptedBackupRestorePreservesOutstandingAdmissionObligation(t *testin
 	if err != nil || !first.Allowed || first.ByteBudget == nil || *first.ByteBudget != 100 {
 		t.Fatalf("initial budget: %+v %v", first, err)
 	}
+	if _, err = s.AcquireAdmission(scope, in, now.Add(500*time.Millisecond)); err != nil {
+		t.Fatal(err)
+	}
 	if err = s.ReleaseAdmission(scope, first.LeaseID, now.Add(time.Second)); err != nil {
 		t.Fatal(err)
 	}
@@ -44,6 +47,10 @@ func TestEncryptedBackupRestorePreservesOutstandingAdmissionObligation(t *testin
 		t.Fatal(err)
 	}
 	defer restored.Close()
+	evidence := readCoverage(t, restored, first.LeaseID)
+	if evidence.Coverage == nil || evidence.Coverage.Version != 1 || !evidence.Coverage.StartedAt.Equal(now) || evidence.Coverage.LastReceiptAt == nil || !evidence.Coverage.LastReceiptAt.Equal(now.Add(500*time.Millisecond)) || evidence.Coverage.FinalReceivedAt != nil {
+		t.Fatal("backup lost or fabricated coverage evidence")
+	}
 	other := admissionRequest("entry2", "192.0.2.2", "after-restore")
 	pending, err := restored.AcquireAdmission(scope, other, now.Add(31*time.Second))
 	if err != nil || pending.Allowed || pending.Reason != "quota-budget-pending" {

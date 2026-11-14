@@ -32,6 +32,10 @@ func TestReviewedFinalBudgetRecoveryRequiresExactStateAndKeepsAudit(t *testing.T
 	if e = s.ResolveAdmissionBudget(scope.InstanceID, cmd, now.Add(time.Minute)); e != nil {
 		t.Fatal(e)
 	}
+	evidence := readCoverage(t, s, first.LeaseID)
+	if evidence.Coverage == nil || evidence.Coverage.FinalSource != "reviewed" || evidence.Coverage.FinalReceivedAt == nil || !evidence.Coverage.FinalReceivedAt.Equal(now.Add(time.Minute)) {
+		t.Fatal("reviewed late final was misrepresented as agent confirmation")
+	}
 	usage, e := s.Usage("account", time.Time{}, time.Time{})
 	if e != nil || usage.RawBytes != 25 {
 		t.Fatalf("recovered debit %+v %v", usage, e)

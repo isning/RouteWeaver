@@ -15,22 +15,23 @@ const AdmissionBudgetChunk uint64 = 1 << 20
 // admissionBudget is a reservation, not consumption. Only monotonically
 // reported admitted bytes enter the ledger. Expiry never refunds its remainder.
 type admissionBudget struct {
-	OutputID       string       `json:"outputId,omitempty"`
-	OutputRevision string       `json:"outputRevision,omitempty"`
-	LeaseID        string       `json:"leaseId"`
-	AccountID      string       `json:"accountId"`
-	RouteID        string       `json:"routeId"`
-	GrantedRaw     uint64       `json:"grantedRaw,string"`
-	SettledRaw     uint64       `json:"settledRaw,string"`
-	Finite         bool         `json:"finite"`
-	Closed         bool         `json:"closed"`
-	CycleStart     time.Time    `json:"cycleStart"`
-	PolicyEnd      *time.Time   `json:"policyEnd,omitempty"`
-	Rate           service.Rate `json:"rate"`
-	IssuedAt       time.Time    `json:"issuedAt"`
-	ExpiresAt      time.Time    `json:"expiresAt"`
-	LastSettlement time.Time    `json:"lastSettlement"`
-	Sequence       uint64       `json:"sequence,string"`
+	Coverage       *admissionCoverage `json:"coverage,omitempty"`
+	OutputID       string             `json:"outputId,omitempty"`
+	OutputRevision string             `json:"outputRevision,omitempty"`
+	LeaseID        string             `json:"leaseId"`
+	AccountID      string             `json:"accountId"`
+	RouteID        string             `json:"routeId"`
+	GrantedRaw     uint64             `json:"grantedRaw,string"`
+	SettledRaw     uint64             `json:"settledRaw,string"`
+	Finite         bool               `json:"finite"`
+	Closed         bool               `json:"closed"`
+	CycleStart     time.Time          `json:"cycleStart"`
+	PolicyEnd      *time.Time         `json:"policyEnd,omitempty"`
+	Rate           service.Rate       `json:"rate"`
+	IssuedAt       time.Time          `json:"issuedAt"`
+	ExpiresAt      time.Time          `json:"expiresAt"`
+	LastSettlement time.Time          `json:"lastSettlement"`
+	Sequence       uint64             `json:"sequence,string"`
 }
 type budgetPolicy struct {
 	Quota      int64
@@ -100,6 +101,10 @@ func (s *Store) admissionBudgetPolicy(tx *sql.Tx, binding EntryAdmissionBinding,
 	return result, nil
 }
 func (s *Store) settleAdmissionBudget(tx *sql.Tx, budget *admissionBudget, in AdmissionRequest, now time.Time) error {
+	return s.settleAdmissionBudgetWithSource(tx, budget, in, now, "agent")
+}
+
+func (s *Store) settleAdmissionBudgetWithSource(tx *sql.Tx, budget *admissionBudget, in AdmissionRequest, now time.Time, finalSource string) error {
 	if in.AdmittedBytes < budget.SettledRaw {
 		return ErrConflict
 	}
@@ -127,6 +132,7 @@ func (s *Store) settleAdmissionBudget(tx *sql.Tx, budget *admissionBudget, in Ad
 		budget.SettledRaw = in.AdmittedBytes
 		budget.LastSettlement = at
 	}
+	budget.recordCoverageReceipt(now, in.Final, finalSource)
 	if in.Final {
 		budget.Closed = true
 	}
@@ -153,7 +159,7 @@ func (s *Store) grantAdmissionBudget(tx *sql.Tx, binding EntryAdmissionBinding, 
 			return nil, "policy-boundary-reconnect", nil
 		}
 	} else {
-		*budget = admissionBudget{OutputID: binding.OutputID, OutputRevision: binding.OutputRevision, LeaseID: leaseID, AccountID: binding.UserID, RouteID: binding.RouteID, Finite: policy.Quota > 0, CycleStart: policy.CycleStart, PolicyEnd: policy.End, Rate: policy.Rate, IssuedAt: now, LastSettlement: now}
+		*budget = admissionBudget{Coverage: &admissionCoverage{Version: 1, StartedAt: now}, OutputID: binding.OutputID, OutputRevision: binding.OutputRevision, LeaseID: leaseID, AccountID: binding.UserID, RouteID: binding.RouteID, Finite: policy.Quota > 0, CycleStart: policy.CycleStart, PolicyEnd: policy.End, Rate: policy.Rate, IssuedAt: now, LastSettlement: now}
 	}
 	if policy.End != nil && policy.End.Before(until) {
 		until = *policy.End

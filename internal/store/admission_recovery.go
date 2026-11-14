@@ -96,7 +96,7 @@ func (s *Store) ResolveAdmissionBudget(instance string, in AdmissionBudgetResolu
 	if b.Closed || budgetDigest(b) != in.ExpectedDigest {
 		return ErrConflict
 	}
-	if e = s.settleAdmissionBudget(tx, &b, AdmissionRequest{AdmittedBytes: in.AdmittedBytes, Final: true}, now); e != nil {
+	if e = s.settleAdmissionBudgetWithSource(tx, &b, AdmissionRequest{AdmittedBytes: in.AdmittedBytes, Final: true}, now, "reviewed"); e != nil {
 		return e
 	}
 	lease.ExpiresAt = now

@@ -54,6 +54,10 @@ func TestReviewerLiveErrorRollsBackSettlement(t *testing.T) {
 	finiteAdmissionPlan(t, s, int64(2*store.AdmissionBudgetChunk))
 	in := admissionRequest("entry1", "192.0.2.1", "one")
 	liveExpect(t, s, scope, in, now, "")
+	rows, err := s.AdmissionBudgetReviews(scope.InstanceID, now)
+	if err != nil || len(rows) != 1 {
+		t.Fatal("missing initial budget")
+	}
 	livePut(t, s, "admission-budgets", "bad", map[string]any{"accountId": []string{"unknown"}})
 	in.AdmittedBytes = 10
 	if _, err := s.AcquireAdmission(scope, in, now.Add(time.Second)); err == nil {
@@ -62,6 +66,9 @@ func TestReviewerLiveErrorRollsBackSettlement(t *testing.T) {
 	u, err := s.Usage("account", time.Time{}, time.Time{})
 	if err != nil || u.RawBytes != 0 {
 		t.Fatalf("error committed settlement: %+v %v", u, err)
+	}
+	if b := readCoverage(t, s, rows[0].LeaseID); b.Coverage == nil || b.Coverage.LastReceiptAt != nil {
+		t.Fatal("rolled-back receipt survived")
 	}
 	if err = s.Remove("admission-budgets", "bad"); err != nil {
 		t.Fatal(err)
