@@ -255,7 +255,7 @@ export function OverviewPage() {
               <Card className="shadow-none">
                 <CardHeader className="items-center gap-4">
                   <CardTitle className="text-base">近 14 天每日用量</CardTitle>
-                  <CardAction>
+                  <CardAction className="row-span-1 self-center">
                     <span className="text-xs text-muted-foreground">
                       {detail.timezone}
                     </span>
@@ -302,7 +302,7 @@ export function OverviewPage() {
                     <Network className="size-4" aria-hidden="true" />
                     在线 IP
                   </CardTitle>
-                  <CardAction>
+                  <CardAction className="row-span-1 self-center">
                     <ActionButton
                       size="icon"
                       variant="ghost"
@@ -449,7 +449,7 @@ export function OverviewPage() {
       <Card className="shadow-none">
         <CardHeader className="items-center gap-4">
           <CardTitle className="text-base">最近订阅拉取</CardTitle>
-          <CardAction>
+          <CardAction className="row-span-1 self-center">
             <ActionButton
               variant="ghost"
               size="sm"
