@@ -44,7 +44,7 @@ it("does not collect by default and explains consent before enabling", async () 
   vi.stubGlobal("fetch", fetch);
   const refresh = mount();
   expect(fetch).not.toHaveBeenCalled();
-  fireEvent.click(screen.getByText("未开启 · 查看设置"));
+  fireEvent.click(screen.getByText("未开启，查看设置"));
   expect(screen.getByText(/已有备份不会同步清除/)).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "开启并记录来源 IP" }));
   await waitFor(() => expect(refresh).toHaveBeenCalledTimes(1));
@@ -70,7 +70,8 @@ it("shows real bounded alerts and can clear addresses", async () => {
       },
     ],
   });
-  expect(screen.getByText(/手机订阅 · 新拉取地址/)).toBeTruthy();
+  expect(screen.getByText("手机订阅")).toBeTruthy();
+  expect(screen.getByText(/新拉取地址/)).toBeTruthy();
   expect(screen.getByText("192.0.2.4")).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "关闭并清除地址" }));
   await waitFor(() => expect(refresh).toHaveBeenCalled());
@@ -82,7 +83,7 @@ it("keeps the existing state when saving fails", async () => {
     vi.fn(async () => new Response("{}", { status: 503 })),
   );
   const refresh = mount();
-  fireEvent.click(screen.getByText("未开启 · 查看设置"));
+  fireEvent.click(screen.getByText("未开启，查看设置"));
   fireEvent.click(screen.getByRole("button", { name: "开启并记录来源 IP" }));
   expect((await screen.findByRole("alert")).textContent).toContain(
     "尚未确认保存结果",

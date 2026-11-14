@@ -1,3 +1,4 @@
+import { Metadata, MetadataItem } from "@/ui-patterns/metadata";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CircleAlert, ShieldCheck } from "lucide-react";
 import { request } from "./api";
@@ -60,7 +61,7 @@ export function SubscriptionFetchAlerts({
       </div>
       {!history.trackSourceIps ? (
         <details className="mt-2 text-muted-foreground">
-          <summary className="cursor-pointer">未开启 · 查看设置</summary>
+          <summary className="cursor-pointer">未开启，查看设置</summary>
           <p className="mt-2">
             开启后，记录订阅拉取的来源 IP，仅在此处提醒。显示近 30 天内最近 100
             次记录，过期记录在读写时清理；同一订阅的首个地址作为基线，不提醒。关闭会清除当前记录中的地址并重置基线，已有备份不会同步清除。
@@ -97,13 +98,11 @@ export function SubscriptionFetchAlerts({
                     className="mt-0.5 size-3.5 shrink-0 text-muted-foreground"
                     aria-hidden="true"
                   />
-                  <span className="min-w-0 break-words">
-                    {names[item.outputId] || "订阅名称暂不可用"} · 新拉取地址{" "}
-                    <span className="font-mono">{item.sourceIp}</span>
-                    <span className="ml-2 text-muted-foreground">
-                      {dateLabel(item.at)}
-                    </span>
-                  </span>
+                  <Metadata>
+                    <MetadataItem>{names[item.outputId] || "订阅名称暂不可用"}</MetadataItem>
+                    <MetadataItem>新拉取地址 <span className="font-mono">{item.sourceIp}</span></MetadataItem>
+                    <MetadataItem className="text-muted-foreground">{dateLabel(item.at)}</MetadataItem>
+                  </Metadata>
                 </li>
               ))}
             </ul>
