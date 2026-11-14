@@ -20,6 +20,7 @@ import tarfile
 import tempfile
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 
 from package_artifacts import canonical, verify_archive
@@ -132,6 +133,45 @@ def create_subscription(client):
     return output["feedPath"], body
 
 
+
+def backup_set_recovery(executable, workspace, database, environment, username, password,
+                        feed_path, original, retired_feed):
+    """Exercise shipped CLI bytes, then activate only disposable restored state."""
+    backup = workspace / "backup-set"
+    restored = workspace / "restored.db"
+    archive_password = secrets.token_urlsafe(32) + "\n"
+    # Bounded tiny smoke state, not deployment capacity recommendations.
+    budgets = ["--total-bytes", "16777216", "--total-rows", "1000",
+               "--part-bytes", "1048576", "--part-rows", "100",
+               "--record-bytes", "131072", "--parts", "32",
+               "--timeout", "1m", "--disk-bytes", "536870912"]
+    source_digest = hashlib.sha256(database.read_bytes()).hexdigest()
+    restored_environment = {**environment, "ROUTEWEAVER_MASTER_KEY": secrets.token_hex(32)}
+    for action, target, env in (("create", database, environment),
+                                ("restore", restored, restored_environment)):
+        result = subprocess.run([str(executable), "backup-set", action,
+                                 "--db", str(target), "--set-dir", str(backup), *budgets],
+                                input=archive_password, text=True, capture_output=True,
+                                env=env, cwd=executable.parent, timeout=90)
+        if result.returncode:
+            # Never print credentials or command output into CI artifacts.
+            raise RuntimeError(f"Packaged backup-set {action} failed")
+    if not restored.is_file() or hashlib.sha256(database.read_bytes()).hexdigest() != source_digest:
+        raise RuntimeError("Backup-set restore is absent or changed its source database")
+    # Different encryption key, original account, no administrator bootstrap.
+    with server(executable, workspace, ["--db", str(restored)], restored_environment) as client:
+        client.login(username, password)
+        if Client(client.origin).request(feed_path)[0] != original:
+            raise RuntimeError("Restored backup lost published subscription state")
+        Client(client.origin).request(retired_feed, expected=404)
+    # Recovery must not silently change the original DB/key or activate it.
+    with server(executable, workspace, ["--db", str(database)], environment) as client:
+        client.login(username, password)
+        if Client(client.origin).request(feed_path)[0] != original:
+            raise RuntimeError("Original database no longer works after backup-set recovery")
+        Client(client.origin).request(retired_feed, expected=404)
+
+
 def smoke(archive_path):
     provenance = verify_archive(archive_path)
     with tempfile.TemporaryDirectory(prefix="routeweaver-package-smoke-") as temporary:
@@ -145,6 +185,13 @@ def smoke(archive_path):
         manifest = json.loads((executable.parent / "SOURCE-MANIFEST.json").read_text())
         if hashlib.sha256(canonical(manifest["files"])).hexdigest() != provenance["source"]["sha256"]:
             raise RuntimeError("Embedded source manifest differs from package provenance")
+        for link in re.findall(r"\[[^\]]+\]\(([^)]+)\)", (executable.parent / "README.md").read_text()):
+            parsed = urllib.parse.urlsplit(link)
+            if parsed.scheme or parsed.netloc or not parsed.path:
+                continue
+            target = (executable.parent / urllib.parse.unquote(parsed.path)).resolve()
+            if not target.is_relative_to(executable.parent.resolve()) or not target.is_file():
+                raise RuntimeError(f"Packaged README has a missing local document: {parsed.path}")
         maintenance = executable.parent / "routeweaver-notification-migrate"
         if not maintenance.is_file() or not os.access(maintenance, os.X_OK):
             raise RuntimeError("Package is missing the executable offline notification maintenance tool")
@@ -229,17 +276,21 @@ def smoke(archive_path):
             if Client(client.origin).request(rotated)[0] != original:
                 raise RuntimeError("Fresh migrated database lost committed WAL subscription state")
             Client(client.origin).request(feed_path, expected=404)
+        backup_set_recovery(executable, workspace, database, persistent, username, password,
+                            rotated, original, feed_path)
         if list(workspace.glob("routeweaver-demo-*")):
             raise RuntimeError("Demo did not remove its disposable state on shutdown")
     receipt = {"schemaVersion": 1, "result": "passed", "archive": provenance["archive"], "source": provenance["source"],
-               "checks": ["demo-static-ui-and-auth", "missing-key-startup-rejected", "fresh-non-demo-inventories-empty",
+               "checks": ["packaged-readme-local-links", "demo-static-ui-and-auth", "missing-key-startup-rejected", "fresh-non-demo-inventories-empty",
                           "non-demo-source-profile-publication",
                           "anonymous-subscription", "persistent-restart-without-bootstrap", "rotation-and-old-link-denial", "clean-shutdown",
                           "offline-maintenance-wal-fresh-copy", "offline-maintenance-no-overwrite",
-                          "offline-maintenance-source-db-wal-unchanged", "offline-maintenance-copy-reopen"],
+                          "offline-maintenance-source-db-wal-unchanged", "offline-maintenance-copy-reopen",
+                          "backup-set-create-restore-with-fresh-key", "restored-login-and-published-feed",
+                          "backup-set-original-db-and-key-still-usable"],
                "limitations": "No Chromium, real client, native process, node deployment, TLS proxy, or production acceptance."}
     Path(str(archive_path) + ".smoke.json").write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n")
-    print("PASS: extracted package static/auth, fresh non-demo empty inventories, persistence, anonymous subscription, rotation and old-link denial. Not browser or deployment acceptance.")
+    print("PASS: extracted package static/auth, fresh non-demo empty inventories, persistence, anonymous subscription, rotation, offline migration and fresh-key backup-set recovery. Not browser or deployment acceptance.")
 
 
 def main():

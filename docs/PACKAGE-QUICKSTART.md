@@ -45,6 +45,42 @@ Settings. Changing a subscription origin does not change login security or rotat
 subscription tokens. Subscription domain activation requires its own explicit
 verification and activation steps.
 
+## Upgrade and recovery
+
+Keep each extracted release in a separate directory and keep persistent state
+outside those directories. Record the package/source identity, database path,
+public origin and private configuration paths before changing versions.
+
+1. Prepare a maintenance window. Pause traffic/admission through supported
+   controls and drain durable meter updates before stopping the single control-
+   plane writer, as described in the backup runbook. Preserve node accounting
+   journals and unresolved reservations; do not delete state to make a restart pass.
+2. With the current compatible package, create an encrypted offline backup set
+   using the [exact packaged commands](operations/BACKUP-SETS.md). Retain every
+   part, the password, source key and the original package. Database backup does
+   not include external TLS/OIDC files or node state.
+3. Use the candidate package to restore the set into a **fresh path**, with the
+   intended target key. Start this copy on loopback and an unused port using
+   `--db`, `--listen` and `--ui-dir` pointing to that candidate's `web/dist`.
+   Do not provide bootstrap credentials. Keep it isolated from real agents,
+   notification transports and providers while checking existing account login,
+   published subscription content, usage and unresolved obligations. Background
+   tasks may use restored configuration: perform the rehearsal in a network-
+   isolated disposable environment, not beside production with unrestricted egress.
+4. Stop the rehearsal copy. A successful rehearsal is not an automatic cutover.
+   After an explicitly planned cutover, verify the chosen database/key, HTTPS
+   origin, normal login, node observations and representative traffic before
+   resuming service.
+5. If rollback is needed, do not start the older binary against a database already
+   written by the newer release. Restore the **pre-upgrade** set to another fresh
+   path using a compatible retained package. Reconcile post-backup changes and
+   accounting before any cutover; restoring older data can lose newer updates.
+
+The package smoke rehearses same-version backup/restore with disposable data.
+It does not establish compatibility with a different release or authorize a live
+upgrade. Keep older packages and recovery material until the chosen deployment's
+acceptance and retention requirements are satisfied.
+
 ## Node agent
 
 See `NODE-AGENT.md` for explicit scope, pinned core installation, authenticated

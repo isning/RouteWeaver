@@ -13,7 +13,7 @@ supported production fleet size. No new service or executable is required.
    stopping the control plane; preserve uncertain obligations. Stopping the CP
    first is not a disk-full recovery strategy. This document is not authorization
    to deploy or stop a production service.
-2. Stop the single control plane for export. `control-plane backup-set create`
+2. Stop the single control plane for export. `./routeweaver-control-plane backup-set create`
    holds the same database inode lock as the daemon and opens the existing SQLite
    database read-only, including its WAL state, without migrations. It refuses a
    running CP rather than bypassing its lock. Do not copy only the DB while its
@@ -27,6 +27,18 @@ supported production fleet size. No new service or executable is required.
    For create this is the source key; for restore it is the fresh target key.
    Keep the archive password separately. Never put either secret in argv,
    shell history, logs, issue reports or this repository. Avoid shell tracing.
+
+## Recovery materials
+
+This is a complete **logical database** backup, not a machine image. Separately
+retain the exact compatible application package, startup flags/service definition,
+private TLS files, OIDC configuration and explicit identity bindings, and node
+agent/runtime state. These files are not reconstructed by database restore.
+Keep source/target master keys and the archive password under separate protected
+custody; never put them in a shared checklist or source repository.
+
+Run the examples below from the extracted package directory. The packaged
+executable is `./routeweaver-control-plane`, not a globally installed command.
 
 ## Commands and explicit budgets
 
@@ -63,14 +75,14 @@ Their parents must already be operator-controlled paths; existing permissions
 are not changed for you.
 
 ```sh
-control-plane backup-set create \
+./routeweaver-control-plane backup-set create \
   --db /private/state/routeweaver.db --set-dir /private/backups/set-unique-id \
   --total-bytes 1073741824 --total-rows 2000000 \
   --part-bytes 67108864 --part-rows 100000 --record-bytes 33554432 \
   --parts 32 --timeout 1h --disk-bytes 9797894144 \
   < /private/secrets/backup-password
 
-control-plane backup-set restore \
+./routeweaver-control-plane backup-set restore \
   --set-dir /private/backups/set-unique-id --db /private/verification/fresh.db \
   --total-bytes 1073741824 --total-rows 2000000 \
   --part-bytes 67108864 --part-rows 100000 --record-bytes 33554432 \

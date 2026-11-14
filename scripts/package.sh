@@ -30,7 +30,7 @@ python3 scripts/collect-notices.py "$STAGE/$NAME/licenses/root-and-web" \
   --binary bin/routeweaver-notification-migrate
 cp -R internal/render/schemas "$STAGE/$NAME/client-schemas"
 cp -R web/dist "$STAGE/$NAME/web/"
-sed 's|](verification/|](docs/verification/|g' docs/PACKAGE-QUICKSTART.md > "$STAGE/$NAME/README.md"
+sed -e 's|](verification/|](docs/verification/|g' -e 's|](operations/|](docs/operations/|g' docs/PACKAGE-QUICKSTART.md > "$STAGE/$NAME/README.md"
 cp docs/DELIVERY.zh-CN.md "$STAGE/$NAME/README.zh-CN.md"
 cp README.md "$STAGE/$NAME/PROJECT.md"
 cp AGENTS.md "$STAGE/$NAME/AGENTS.md"
