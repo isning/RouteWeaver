@@ -1,11 +1,13 @@
 import { test, expect, type Page } from "@playwright/test";
+import { waitForConfirmedWorkspace } from "./ui-workspace-confirmation";
 async function login(page: Page) {
   await page.goto("/");
   await page.getByLabel("账号", { exact: true }).fill("routeweaver");
   await page.getByLabel("密码", { exact: true }).fill("local-demo-password");
   await page.getByRole("button", { name: "进入工作空间" }).click();
+  await waitForConfirmedWorkspace(page, "normal-ui-login");
   await expect(
-    page.getByRole("heading", { name: "我的订阅", exact: true }),
+    page.getByRole("heading", { name: "概览", exact: true }),
   ).toBeVisible();
 }
 for (const width of [390, 320])

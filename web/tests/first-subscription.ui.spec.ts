@@ -97,7 +97,7 @@ test("first subscription skips the empty target gate but preserves save, cancel,
         create.getByLabel("订阅名称", { exact: true }),
       ).toBeInViewport({ ratio: 1 });
       await expect(
-        create.getByText("创建独立的客户端订阅，其他订阅保留原版本。", { exact: true }),
+        create.getByText("创建新的客户端订阅，其他订阅保留原版本。", { exact: true }),
       ).toBeInViewport({ ratio: 1 });
       await expect(
         create.getByRole("button", { name: "检查发布内容", exact: true }),

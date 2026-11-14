@@ -4,6 +4,7 @@ import { settledTask } from "./ui-settled-task";
 import { currentProfileFixtureHeaders } from "./profile-fixture";
 import { auditTextGeometry } from "./text-geometry";
 import { openWorkspace, navigateWorkspace } from "./ui-session";
+import { waitForConfirmedWorkspace } from "./ui-workspace-confirmation";
 import { createHash } from "node:crypto";
 import {
   test,
@@ -128,6 +129,7 @@ async function seedIndependentOutputs(
   // API fixtures predate the UI task. Reload their initial read model rather than
   // carrying the empty query cache from login into a hash-only navigation.
   await page.reload();
+  await waitForConfirmedWorkspace(page, "cold-workspace");
   await navigateWorkspace(page, "我的订阅");
   await expect(
     page.getByRole("heading", { name: "我的订阅", exact: true }),
