@@ -554,6 +554,7 @@ export interface FrozenRoutingIntent {
   resources?: { id: string; label: string }[];
 }
 export interface Output {
+  trafficAttribution?: "independent-managed" | "unattributed";
   accessRevision?: string;
   revision?: string;
   routingSummary?: RoutingSummary;

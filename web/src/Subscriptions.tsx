@@ -1,3 +1,4 @@
+import { IndependentOutputCreate, IndependentOutputTasks } from "./IndependentOutputPublication";
 import {
   Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
 } from "@/components/ui/table";
@@ -1188,6 +1189,7 @@ export function SubscriptionsPage({
           )}
         </div>
       )}
+      <IndependentOutputTasks />
       {hasInventory && (
         <ResourceToolbar className="subscription-inventory-tools" label="查找配置与订阅" search={
           <SearchField
@@ -1952,6 +1954,8 @@ export function PublishOutput({
   const client = useQueryClient();
   const message = toast;
   const [created, setCreated] = useState<Output | null>(null);
+  const [independent, setIndependent] = useState(false);
+  const [independentLocked, setIndependentLocked] = useState(false);
   const [preview, setPreview] = useState<Preview | null>(null);
   const creationWasUncertain = useRef(false);
   const [pendingCreation, setPendingCreation] = useState<
@@ -2185,7 +2189,7 @@ export function PublishOutput({
   }, [suspended]);
   const busy = inspect.isPending || mutation.isPending || recover.isPending;
   const bundlePreview = previewUsesBundle(preview);
-  const locked = busy || !!pendingCreation;
+  const locked = busy || !!pendingCreation || independentLocked;
   const pendingTransportError =
     !!pendingCreation &&
     mutation.error instanceof APIError &&
@@ -2274,6 +2278,8 @@ export function PublishOutput({
     if (!profile) return;
     outputID.current = newID("output");
     creationWasUncertain.current = false;
+    setIndependent(false);
+    setIndependentLocked(false);
     mutation.reset();
     inspect.reset();
     recover.reset();
@@ -2350,9 +2356,9 @@ export function PublishOutput({
               {pendingCreation
                 ? "核对或重试均沿用上次发布请求。"
                 : !preview
-                  ? "创建独立的客户端订阅，其他订阅保留原版本。"
+                  ? "创建新的客户端订阅，其他订阅保留原版本。"
                   : bundlePreview
-                    ? "新建独立订阅，其他订阅保留原版本。"
+                    ? "新建订阅，其他订阅保留原版本。"
                     : "新建独立链接，其他订阅保留原版本。"}
             </p>
             {bundlePreview && (
@@ -2397,6 +2403,14 @@ export function PublishOutput({
                 >
                   重试上次发布
                 </ActionButton>
+              ) : preview?.previewDigest && independent && reviewedCreation ? (
+                <IndependentOutputCreate
+                  key={`${reviewedCreation.id}:${preview.previewDigest}`}
+                  creation={{ ...reviewedCreation, previewDigest: preview.previewDigest }}
+                  enabled={!busy && presentation.writeReady}
+                  onLocked={setIndependentLocked}
+                  onAccepted={() => { toast.success("创建请求已提交，可在订阅页查看进度"); onClose(); }}
+                />
               ) : preview?.previewDigest ? (
                 <ActionButton
                   key="confirm-publication"
@@ -2474,7 +2488,7 @@ export function PublishOutput({
             setPreview(null);
           }}
           onFinish={() =>
-            mutation.mutate({
+            !independent && mutation.mutate({
               retry: pendingCreation || undefined,
               owner: opening.current,
             })
@@ -2531,6 +2545,16 @@ export function PublishOutput({
           )}
           {pendingCreation && (
             <h2 className="mb-4 font-medium">本次发布的选项</h2>
+          )}
+          {!!displayProfile?.platformEntryIds?.length && !displayProfile?.sourceIds?.length && !displayProfile?.collectionId && (
+            <fieldset className="space-y-2 rounded-lg border p-3" disabled={locked}>
+              <legend className="px-1 text-sm font-medium">流量计量</legend>
+              <RadioGroup value={independent ? "independent" : "shared"} disabled={locked} onValueChange={value => setIndependent(value === "independent")}>
+                <Label className="flex items-center gap-2"><RadioGroupItem value="shared" />共用凭据（默认）</Label>
+                <Label className="flex items-center gap-2"><RadioGroupItem value="independent" />为这份订阅单独计量</Label>
+              </RadioGroup>
+              {independent && <p className="text-sm text-muted-foreground">仅支持已获管理员允许的平台受管线路。会生成新凭据并重载服务器，已有连接可能短暂中断；原订阅保持不变。</p>}
+            </fieldset>
           )}
           <AppField
             name="name"

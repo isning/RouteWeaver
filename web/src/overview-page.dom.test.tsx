@@ -61,6 +61,9 @@ function mount(fail = false, shell = false, namesFail = false) {
             mode: "nodes-only",
           },
         ]);
+      if (url.endsWith("/me/output-usage"))
+        return json({ error: "usage unavailable" }, 503);
+      if (url.endsWith("/me/outputs/independent")) return json({ items: [] });
       if (url.endsWith("/me/subscription-fetches"))
         return json({
           items: [
@@ -142,10 +145,8 @@ it("shows current-account overview and navigates to an unpublished configuration
   expect(location.hash).toBe("#subscriptions?profile=draft");
   fireEvent.click(screen.getByRole("button", { name: "管理全部订阅" }));
   expect(location.hash).toBe("#subscriptions");
-  expect(
-    screen.getByText("按订阅计量尚不可用，以下不按用量排序。"),
-  ).toBeTruthy();
-  expect(screen.getByText("尚未单独计量")).toBeTruthy();
+  expect(screen.getByText("用量暂不可用，以下不按用量排序。")).toBeTruthy();
+  expect(screen.getByRole("button", { name: "重试订阅用量" })).toBeTruthy();
 });
 it("does not invent zero online IPs or daily usage when the bounded query fails", async () => {
   mount(true);
@@ -275,4 +276,36 @@ it("distinguishes no database match, non-public IP and unavailable metadata", as
     expect(await screen.findByText(label)).toBeTruthy();
     expect(screen.queryByText(/国家\/地区/)).toBeNull();
   }
+});
+
+it("shows zero only for independent subscriptions and keeps shared traffic unassigned", async () => {
+  mount();
+  await screen.findByText("工作订阅");
+  const client = clients.at(-1)!;
+  const existing = client.getQueryData<object[]>(["outputs"])![0];
+  client.setQueryData(
+    ["outputs"],
+    [
+      existing,
+      {
+        ...existing,
+        id: "independent",
+        name: "独立订阅",
+        trafficAttribution: "independent-managed",
+      },
+    ],
+  );
+  client.setQueryData(["output-usage"], {
+    period: "current-cycle",
+    complete: true,
+    outputs: [],
+    unattributedRawBytes: 1024,
+    unattributedWeightedBytes: 1024,
+  });
+  const independent = await screen.findByText("独立订阅");
+  expect(within(independent.closest("tr")!).getByText("0 B")).toBeTruthy();
+  expect(
+    within(screen.getByText("工作订阅").closest("tr")!).getByText("未单独计量"),
+  ).toBeTruthy();
+  expect(screen.getByText(/共用凭据流量，无法分配/)).toBeTruthy();
 });

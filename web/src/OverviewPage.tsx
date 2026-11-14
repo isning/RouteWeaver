@@ -87,6 +87,25 @@ export function OverviewPage() {
     queryFn: () => request<SubscriptionFetches>("/me/subscription-fetches"),
     staleTime: 30_000,
   });
+  const usage = useQuery({
+    queryKey: ["output-usage"],
+    queryFn: () =>
+      request<{
+        asOf: string;
+        period: "current-cycle";
+        windowStart: string;
+        windowEnd: string;
+        complete: boolean;
+        outputs: {
+          outputId: string;
+          rawBytes: number;
+          weightedBytes: number;
+        }[];
+        unattributedRawBytes: number;
+        unattributedWeightedBytes: number;
+      }>("/me/output-usage"),
+    staleTime: 30_000,
+  });
   const data = overview.data,
     detail = insights.data;
   const pending =
@@ -120,7 +139,39 @@ export function OverviewPage() {
     "bg-neutral-700",
     "bg-neutral-800 dark:bg-neutral-400",
   ];
-  const outputRows = outputs.data?.slice(0, 6) ?? [];
+  const usageReady =
+    usage.isSuccess &&
+    usage.data.complete === true &&
+    usage.data.period === "current-cycle";
+  const measured = new Map(
+    usageReady
+      ? usage.data.outputs.map((row) => [row.outputId, row.rawBytes])
+      : [],
+  );
+  const outputRows = (outputs.data ?? []).map((output) => ({
+    ...output,
+    historical: false,
+    rawBytes: usageReady
+      ? (measured.get(output.id) ??
+        (output.trafficAttribution === "independent-managed" ? 0 : undefined))
+      : undefined,
+  }));
+  if (usageReady && outputs.isSuccess) {
+    for (const row of usage.data.outputs)
+      if (!outputs.data.some((output) => output.id === row.outputId))
+        outputRows.push({
+          id: row.outputId,
+          name: `已停用订阅 · ${row.outputId.slice(-8)}`,
+          profileId: "",
+          target: { adapterId: "", version: "" },
+          mode: "full",
+          status: "revoked",
+          historical: true,
+          rawBytes: row.rawBytes,
+        });
+    outputRows.sort((a, b) => (b.rawBytes ?? -1) - (a.rawBytes ?? -1));
+  }
+  const visibleOutputRows = outputRows.slice(0, 6);
   return (
     <div className="max-w-6xl space-y-6" data-testid="personal-overview">
       <PageHeader
@@ -538,7 +589,9 @@ export function OverviewPage() {
               用量最多的订阅
             </CardTitle>
             <CardDescription className="col-span-2 col-start-1 row-start-2 sm:col-span-1">
-              按订阅计量尚不可用，以下不按用量排序。
+              {usageReady
+                ? "本周期实际流量，由高到低排列。"
+                : "用量暂不可用，以下不按用量排序。"}
             </CardDescription>
             <CardAction className="row-span-1 self-center sm:row-span-2 sm:self-start">
               <ActionButton
@@ -571,7 +624,7 @@ export function OverviewPage() {
                       订阅
                     </TableHead>
                     <TableHead className="h-auto w-[26%] py-2 text-xs text-muted-foreground">
-                      本周期用量
+                      本周期实际流量
                     </TableHead>
                     <TableHead className="h-auto py-2 text-xs text-muted-foreground">
                       最近拉取
@@ -582,7 +635,7 @@ export function OverviewPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {outputRows.map((output) => {
+                  {visibleOutputRows.map((output) => {
                     const last = fetches.data?.items.find(
                       (item) => item.outputId === output.id,
                     );
@@ -601,8 +654,12 @@ export function OverviewPage() {
                           </p>
                         </TableCell>
                         <TableCell className="py-3 whitespace-normal">
-                          <p className="text-xs text-muted-foreground">
-                            尚未单独计量
+                          <p className="text-sm tabular-nums">
+                            {output.rawBytes !== undefined
+                              ? bytesLabel(output.rawBytes)
+                              : !usageReady
+                                ? "暂不可用"
+                                : "未单独计量"}
                           </p>
                         </TableCell>
                         <TableCell className="py-3 whitespace-normal">
@@ -635,6 +692,7 @@ export function OverviewPage() {
                           <ActionButton
                             size="sm"
                             variant="ghost"
+                            disabled={output.historical}
                             onClick={() =>
                               go(
                                 `#subscriptions?output=${encodeURIComponent(output.id)}`,
@@ -653,6 +711,22 @@ export function OverviewPage() {
                 <p className="px-6 py-6 text-sm text-muted-foreground">
                   尚无客户端订阅
                 </p>
+              )}
+              {usageReady && usage.data.unattributedRawBytes > 0 && (
+                <p className="px-6 pt-3 text-xs text-muted-foreground">
+                  另有 {bytesLabel(usage.data.unattributedRawBytes)}{" "}
+                  共用凭据流量，无法分配到具体订阅。
+                </p>
+              )}
+              {usage.isError && (
+                <ActionButton
+                  className="mx-6 mt-3"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => usage.refetch()}
+                >
+                  重试订阅用量
+                </ActionButton>
               )}
               {fetches.data && (
                 <p className="px-6 pt-3 text-xs text-muted-foreground">
