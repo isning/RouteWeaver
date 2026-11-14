@@ -94,6 +94,7 @@ export function OverviewPage() {
     queryKey: ["personal-insights"],
     queryFn: () => request<PersonalInsights>("/me/insights"),
     staleTime: 30_000,
+    refetchInterval: 30_000,
   });
   const fetches = useQuery({
     queryKey: ["subscription-fetches"],
@@ -154,6 +155,7 @@ export function OverviewPage() {
     connectionsByIP.set(row.ip, rows);
   }
   const online = detail?.admission.available === true;
+  const onlineSnapshotStale = insights.isError || insights.isPaused;
   const count = online ? (detail?.admission.onlineIps.length ?? 0) : 0;
   const limit = detail?.limits.onlineIpLimit ?? 0;
   const palette = [
@@ -474,7 +476,7 @@ export function OverviewPage() {
             </CardTitle>
             <CardDescription>
               按在线 IP 计
-              {online && `，截至 ${relativeTime(detail!.admission.asOf)}`}
+              {online && <>，截至 <time dateTime={detail!.admission.asOf} title={`${dateLabel(detail!.admission.asOf)} UTC+8`}>{relativeTime(detail!.admission.asOf)}</time></>}
             </CardDescription>
             <CardAction className="row-span-1 self-center">
               <ActionButton
@@ -491,6 +493,7 @@ export function OverviewPage() {
           <CardContent>
             {online && detail ? (
               <>
+                {onlineSnapshotStale && <p role="status" className="mb-3 text-sm text-muted-foreground">{insights.isPaused ? "网络已断开，以下为上次读取的在线情况。" : "刷新失败，以下为上次读取的在线情况。"}</p>}
                 <div className="mb-5">
                   <p className="mb-2 flex items-baseline gap-2">
                     <span className="text-4xl font-semibold tabular-nums">
@@ -510,13 +513,13 @@ export function OverviewPage() {
                       ))}
                     </div>
                   )}
-                  <p className="text-xs text-muted-foreground">
+                  {!onlineSnapshotStale && <p className="text-xs text-muted-foreground">
                     {limit
                       ? count >= limit
                         ? "已达到在线 IP 上限，新的 IP 暂时无法接入。"
                         : `再有 ${limit - count} 个新 IP 接入后，后来的设备将无法连接。`
                       : "当前服务不限制在线 IP 数量。"}
-                  </p>
+                  </p>}
                 </div>
                 <ul className="mb-5 max-h-52 divide-y overflow-y-auto rounded-[10px] border">
                   {detail.admission.onlineIps.map((ip) => (
@@ -526,7 +529,7 @@ export function OverviewPage() {
                     >
                       <span
                         aria-hidden="true"
-                        className="size-2 shrink-0 rounded-full bg-emerald-500"
+                        className={`size-2 shrink-0 rounded-full ${onlineSnapshotStale ? "bg-muted-foreground" : "bg-emerald-500"}`}
                       />
                       <div className="min-w-0 flex-1">
                         <p className="font-mono wrap-anywhere">{ip}</p>

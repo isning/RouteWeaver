@@ -2,12 +2,13 @@
 import { afterEach, expect, it, vi } from "vitest";
 import {
   cleanup,
+  act,
   fireEvent,
   render,
   screen,
   within,
 } from "@testing-library/react";
-import { QueryClient, QueryClientProvider, onlineManager } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, onlineManager, focusManager } from "@tanstack/react-query";
 import { UIProviders } from "./ui-patterns/providers";
 import Workspace from "./App";
 import { OverviewPage } from "./OverviewPage";
@@ -22,8 +23,51 @@ afterEach(() => {
   cleanup();
   clients.splice(0).forEach((c) => c.clear());
   vi.unstubAllGlobals();
+  vi.useRealTimers();
   onlineManager.setOnline(true);
+  focusManager.setFocused(undefined);
 });
+it("refreshes online snapshots while mounted and warns when a refresh fails", async () => {
+  vi.useFakeTimers();
+  mount();
+  await act(async () => { await vi.advanceTimersByTimeAsync(100); });
+  expect(screen.getByText("192.0.2.7")).toBeTruthy();
+  const original = vi.mocked(fetch).getMockImplementation()!;
+  let failed = false;
+  vi.mocked(fetch).mockImplementation(async (...args) => {
+    if (String(args[0]).endsWith("/me/insights")) {
+      failed = true;
+      return json({ error: "refresh unavailable" }, 503);
+    }
+    return original(...args);
+  });
+  await act(async () => { await vi.advanceTimersByTimeAsync(31_000); });
+  expect(failed).toBe(true);
+  expect(screen.queryByText(/再有 3 个新 IP/)).toBeNull();
+  expect(screen.getByText("刷新失败，以下为上次读取的在线情况。")).toBeTruthy();
+  expect(screen.getByText("192.0.2.7")).toBeTruthy();
+});
+
+it("pauses online polling in the background and identifies an offline snapshot", async () => {
+  vi.useFakeTimers();
+  mount();
+  await act(async () => { await vi.advanceTimersByTimeAsync(100); });
+  const count = () => vi.mocked(fetch).mock.calls.filter(args => String(args[0]).endsWith("/me/insights")).length;
+  expect(count()).toBe(1);
+  act(() => focusManager.setFocused(false));
+  await act(async () => { await vi.advanceTimersByTimeAsync(61_000); });
+  expect(count()).toBe(1);
+  act(() => { onlineManager.setOnline(false); focusManager.setFocused(true); });
+  await act(async () => { await vi.advanceTimersByTimeAsync(31_000); });
+  expect(count()).toBe(1);
+  expect(screen.getByText("网络已断开，以下为上次读取的在线情况。")).toBeTruthy();
+  expect(screen.getByText("192.0.2.7")).toBeTruthy();
+  act(() => onlineManager.setOnline(true));
+  await act(async () => { await vi.advanceTimersByTimeAsync(100); });
+  expect(count()).toBe(2);
+  expect(screen.queryByText("网络已断开，以下为上次读取的在线情况。")).toBeNull();
+});
+
 function mount(fail = false, shell = false, namesFail = false, connections?: unknown[], overviewOverride: Partial<Overview> = {}) {
   vi.stubGlobal(
     "fetch",
