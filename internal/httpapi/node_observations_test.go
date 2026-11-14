@@ -35,6 +35,17 @@ func TestNodeResourcesAndProviderAllowanceHaveAuthenticatedEndToEndDataPath(t *t
 	if code, _, _ := req(t, user.c, "GET", base, "", nil); code != 403 {
 		t.Fatalf("tenant node data %d", code)
 	}
+	for _, c := range []struct {
+		client *http.Client
+		want   int
+	}{{http.DefaultClient, 401}, {user.c, 403}} {
+		if code, _, _ := req(t, c.client, "GET", base+"/history", "", nil); code != c.want {
+			t.Fatalf("history authorization %d want %d", code, c.want)
+		}
+	}
+	if code, _, body := req(t, admin, "GET", base+"/history", "", nil); code != 200 {
+		t.Fatalf("empty history %d %s", code, body)
+	}
 	now := time.Now().UTC()
 	cfg := observability.Config{ObserverInstanceID: instance.ID, BilledInterfaces: []string{"eth0"}, Provider: &observability.ProviderConfig{Name: "ISP", Mode: "limited", Allowance: 1, Unit: "GB", CycleID: "cycle", CycleStart: now.Add(-time.Hour), CycleEnd: now.Add(time.Hour), NotificationSource: "nic_estimate", ExhaustionAction: "advisory"}}
 	if code, _, body := req(t, admin, "PUT", base+"/config", "", cfg); code != 200 {

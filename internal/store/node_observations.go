@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"reflect"
 	"routeweaver/internal/domain"
 	"routeweaver/internal/observability"
 	"time"
@@ -101,7 +102,16 @@ func (s *Store) ConfigureNodeObservations(id string, config observability.Config
 				return state, observability.ErrScope
 			}
 		}
-		return observability.Configure(state, config)
+		next, err := observability.Configure(state, config)
+		if err != nil {
+			return state, err
+		}
+		if config.ObserverInstanceID != state.Config.ObserverInstanceID || !reflect.DeepEqual(config.BilledInterfaces, state.Config.BilledInterfaces) {
+			if _, err = s.deleteTx(tx, nodeHistoryKind, id); err != nil {
+				return state, err
+			}
+		}
+		return next, nil
 	})
 }
 func (s *Store) AcceptNodeObservation(report observability.Report, now time.Time) (observability.Receipt, error) {
@@ -127,6 +137,9 @@ func (s *Store) AcceptNodeObservation(report observability.Report, now time.Time
 		}
 		next, r, e := observability.Accept(state, report, now)
 		receipt = r
+		if e == nil && !r.Duplicate && next.Latest != nil {
+			e = s.appendNodeResourceHistoryTx(tx, report.Scope.NodeID, *next.Latest, now)
+		}
 		return next, e
 	})
 	return receipt, e

@@ -213,6 +213,11 @@ func run() error {
 		ticker := time.NewTicker(time.Minute)
 		defer ticker.Stop()
 		for {
+			cleanupCtx, cleanupCancel := context.WithTimeout(coreCleanupCtx, 5*time.Second)
+			if err := s.PruneNodeResourceHistories(cleanupCtx, time.Now().UTC()); err != nil && coreCleanupCtx.Err() == nil {
+				log.Print("Resource history retention cleanup failed")
+			}
+			cleanupCancel()
 			if err := s.PruneCoreDiagnostics(time.Now().UTC()); err != nil {
 				log.Print("Core diagnostic retention cleanup failed")
 			}

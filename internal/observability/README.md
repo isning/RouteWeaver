@@ -38,3 +38,26 @@ scripts/go.sh test -race ./internal/observability ./internal/store ./internal/ht
 ```
 
 These are local/synthetic and loopback transport results, not evidence of deployment on the user's real VPS nodes, exact provider billing equivalence, provider-account access, or production traffic throughput.
+
+## Resource history
+
+The administrator resource-history endpoint retains **real** CPU, memory and
+selected-NIC rate snapshots, not averages, peaks or billing totals. The first
+accepted snapshot in each five-minute bucket is kept; a discontinuity can
+replace that bucket once so a restart cannot disappear behind downsampling.
+Missing derivatives remain null. Charts must not bridge discontinuities or
+missing intervals. Changing the designated observer or selected interfaces
+clears the incompatible history; changing only provider allowance does not.
+
+Storage uses an independent encrypted record (not the frequently rewritten
+latest-observation state): at most 288 points per host, 256 hosts globally and
+128 KiB per encrypted record. Normal collection adds one history write per five
+minutes (the bounded history record is read/decrypted on each report and
+rewritten as a whole on retention updates). Damaged optional history is reported
+as unavailable without rolling back authoritative observations or starving
+cleanup of other nodes. The foreground control plane prunes records at startup and each minute,
+in separate bounded per-host transactions. Reads always hide samples outside the
+last 24 hours, even before physical cleanup. Offline backups retain their own
+copies. A full history store does **not** stop latest resource observations or
+provider accounting: the history response explicitly reports unavailable
+capacity. There is no historical backfill, forecast or external data service.

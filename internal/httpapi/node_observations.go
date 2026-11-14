@@ -56,6 +56,20 @@ func (h *server) registerNodeObservationAdmin(r chi.Router) {
 		}
 		writeJSON(w, 200, observability.ViewOf(id, state, time.Now().UTC()))
 	})
+	r.Get(base+"/history", func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
+		defer cancel()
+		view, err := h.s.NodeResourceHistory(ctx, chi.URLParam(r, "nodeId"), time.Now().UTC())
+		if errors.Is(err, store.ErrNotFound) {
+			fail(w, 404, "node not found")
+			return
+		}
+		if err != nil {
+			fail(w, 503, "resource history unavailable; retry later")
+			return
+		}
+		writeJSON(w, 200, view)
+	})
 	r.Put(base+"/config", func(w http.ResponseWriter, r *http.Request) {
 		var in observability.Config
 		if !decode(w, r, &in) {

@@ -1,10 +1,11 @@
+import { ResourceHistory } from "./ResourceHistory";
 import type { ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowDownUp, ChartNoAxesCombined, Cpu, MemoryStick, Info, RotateCw, Wallet } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ActionButton } from "@/ui-patterns/actions";
 import { Notice } from "@/ui-patterns/notice";
 import { request } from "./api";
@@ -140,13 +141,7 @@ export function ServerResourceOverview({ host, onOpenResources }: { host: HostRe
         </div>}
       </CardContent>
     </Card>
-    {data && <Card aria-label="资源趋势" className="min-w-0 gap-4">
-      <CardHeader><CardTitle>趋势</CardTitle><CardDescription>历史资源数据暂不可用</CardDescription></CardHeader>
-      <CardContent><div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-        <div className="min-w-0 space-y-3"><p className="text-sm font-medium">计费网卡流量</p><div className="flex min-h-40 items-center justify-center rounded-lg border border-dashed px-5 py-8 text-center text-sm text-muted-foreground">暂不可用：尚未保存网卡流量历史。</div></div>
-        <div className="min-w-0 space-y-3"><p className="text-sm font-medium">CPU 与内存</p><div className="flex min-h-40 items-center justify-center rounded-lg border border-dashed px-5 py-8 text-center text-sm text-muted-foreground">暂不可用：尚未保存资源历史。</div></div>
-      </div></CardContent>
-    </Card>}
+    {data && <ResourceHistory nodeId={host.id} />}
     {data && <ProviderCycleSummary data={data} />}
   </section>;
 }

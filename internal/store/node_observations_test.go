@@ -2,6 +2,7 @@ package store_test
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"path/filepath"
@@ -51,6 +52,10 @@ func TestNodeObservationsPersistAndDesignateOneCorePerPhysicalNode(t *testing.T)
 	if _, e = db.AcceptNodeObservation(r, now); e == nil {
 		t.Fatal("second core reported same physical node")
 	}
+	history, e := db.NodeResourceHistory(context.Background(), "node", now)
+	if e != nil || !history.Available || len(history.Points) != 1 || history.Points[0].CPUPercent != nil {
+		t.Fatalf("history retry/scope protection: %+v %v", history, e)
+	}
 	if e = db.Close(); e != nil {
 		t.Fatal(e)
 	}
@@ -62,6 +67,22 @@ func TestNodeObservationsPersistAndDesignateOneCorePerPhysicalNode(t *testing.T)
 	state, e := db.NodeObservations("node")
 	if e != nil || state.Latest == nil || state.Latest.Sequence != 1 || state.Config.Revision != 1 {
 		t.Fatalf("snapshot/config lost after reopen: %+v %v", state, e)
+	}
+	history, e = db.NodeResourceHistory(context.Background(), "node", now)
+	if e != nil || len(history.Points) != 1 {
+		t.Fatal("history not persisted", e)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if _, e = db.NodeResourceHistory(ctx, "node", now); !errors.Is(e, context.Canceled) {
+		t.Fatal("ignored cancellation", e)
+	}
+	if e = db.PruneNodeResourceHistories(context.Background(), now.Add(25*time.Hour)); e != nil {
+		t.Fatal(e)
+	}
+	history, e = db.NodeResourceHistory(context.Background(), "node", now.Add(25*time.Hour))
+	if e != nil || len(history.Points) != 0 {
+		t.Fatal("retained expired history", e)
 	}
 }
 
