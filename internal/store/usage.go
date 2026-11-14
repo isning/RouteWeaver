@@ -69,14 +69,10 @@ func (s *Store) RecordUsage(userID, batchID string, bytes int64) error {
 	if _, e = tx.Exec(`INSERT INTO records(kind,id,data) VALUES('usage',?,?)`, key, bb); e != nil {
 		return e
 	}
-	quotaMutation, e := s.prepareQuotaCoverageMutationTx(tx, "users", userID, ub)
-	if e != nil {
-		return e
-	}
 	if _, e = tx.Exec(`UPDATE records SET data=? WHERE kind='users' AND id=?`, ub, userID); e != nil {
 		return e
 	}
-	if e = s.finishQuotaCoverageMutationTx(tx, quotaMutation); e != nil {
+	if e = s.invalidateQuotaAccountTx(tx, userID); e != nil {
 		return e
 	}
 	return tx.Commit()

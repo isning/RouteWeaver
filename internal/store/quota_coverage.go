@@ -13,28 +13,29 @@ import (
 
 const quotaCoverageKind = "quota-coverage-checkpoints"
 const quotaCoverageLimit = 256
+const quotaCheckpointVersion = 2
 
 // A checkpoint is evidence only from StartedAt forward. It never upgrades old
 // usage or turns an empty ledger into zero usage. Mutations invalidate it in the
 // same transaction as the authoritative source, including transient ABA changes.
 type quotaCoverageCheckpoint struct {
-	Epoch             string                  `json:"epoch"`
-	Version           int                     `json:"version"`
-	AccountID         string                  `json:"accountId"`
-	Generation        uint64                  `json:"generation,string"`
-	StartedAt         time.Time               `json:"startedAt"`
-	Invalid           bool                    `json:"invalid"`
-	Dependencies      []quotaSourceDependency `json:"dependencies"`
-	RouteIDs          []string                `json:"routeIds"`
-	Issued            uint64                  `json:"issued,string"`
-	Closed            uint64                  `json:"closed,string"`
-	RawBytes          uint64                  `json:"rawBytes,string"`
-	WeightedNumerator string                  `json:"weightedNumerator"`
+	Epoch           string                   `json:"epoch"`
+	Version         int                      `json:"version"`
+	AccountID       string                   `json:"accountId"`
+	Generation      uint64                   `json:"generation,string"`
+	StartedAt       time.Time                `json:"startedAt"`
+	Invalid         bool                     `json:"invalid"`
+	Dependencies    []quotaSourceDependency  `json:"dependencies"`
+	RouteIDs        []string                 `json:"routeIds"`
+	Open            uint64                   `json:"open,string"`
+	LastEventAt     time.Time                `json:"lastEventAt"`
+	LastWindowStart time.Time                `json:"lastWindowStart"`
+	Windows         []quotaObservationWindow `json:"windows"`
 }
 
 func quotaSourceMutationKind(kind string) bool {
 	switch kind {
-	case "entry-admission-bindings", "meter-bindings", "agent-observations", "agent-desired", "agent-enrollments", "instance-enrollments", "published-manifests", "published-routes", "server-deployments", "managed-endpoints", "core-instances", "users", "entitlements", "services", "groups", "rates", "resets", "issued-principal-credentials", "output-attribution-claims", "output-attribution-intents", "memberships", "group-memberships", "ledger":
+	case "entry-admission-bindings", "meter-bindings", "agent-observations", "agent-desired", "agent-enrollments", "instance-enrollments", "published-manifests", "published-routes", "server-deployments", "managed-endpoints", "core-instances", "users", "rates", "issued-principal-credentials", "output-attribution-claims", "output-attribution-intents", "memberships", "group-memberships", "ledger":
 		return true
 	}
 	return strings.HasPrefix(kind, "tenant/") && (strings.HasSuffix(kind, "/platform-entries") || strings.HasSuffix(kind, "/entry-versions") || strings.HasSuffix(kind, "/output-attribution-intents"))
@@ -53,6 +54,12 @@ func (s *Store) prepareQuotaCoverageMutationTx(tx *sql.Tx, kind, id string, next
 	err := tx.QueryRow(`SELECT data FROM records WHERE kind=? AND id=?`, kind, id).Scan(&prior)
 	if err != nil && err != sql.ErrNoRows {
 		return nil, err
+	}
+	if kind == "users" && prior != nil && next != nil {
+		var a, b domain.User
+		if s.open(kind, id, prior, &a) == nil && s.open(kind, id, next, &b) == nil && a.ID == id && b.ID == id {
+			return nil, nil
+		}
 	}
 	if kind == "agent-observations" && prior != nil && next != nil {
 		var a, b appliedManifestObservation
@@ -127,10 +134,10 @@ func (s *Store) prepareQuotaCoverageMutationTx(tx *sql.Tx, kind, id string, next
 			return nil, err
 		}
 		var c quotaCoverageCheckpoint
-		if len(raw) == 0 || s.open(quotaCoverageKind, account, raw, &c) != nil || c.Version != 1 || c.AccountID != account {
+		if len(raw) == 0 || s.open(quotaCoverageKind, account, raw, &c) != nil || c.Version != quotaCheckpointVersion || c.AccountID != account {
 			// A broken optional checkpoint cannot block editing its source. Replace
 			// only this projection with explicit unknown rather than salvaging history.
-			c = quotaCoverageCheckpoint{Version: 1, AccountID: account, Invalid: true}
+			c = quotaCoverageCheckpoint{Version: quotaCheckpointVersion, AccountID: account, Invalid: true}
 		}
 		candidates = append(candidates, c)
 	}
@@ -241,8 +248,8 @@ func (s *Store) readQuotaCheckpointTx(tx *sql.Tx, account string) (quotaCoverage
 		return quotaCoverageCheckpoint{}, false, err
 	}
 	var c quotaCoverageCheckpoint
-	if len(raw) == 0 || s.open(quotaCoverageKind, account, raw, &c) != nil || c.Version != 1 || c.AccountID != account || len(c.Dependencies) > 512 || len(c.RouteIDs) > 64 {
-		return quotaCoverageCheckpoint{Version: 1, AccountID: account, Invalid: true}, true, nil
+	if len(raw) == 0 || s.open(quotaCoverageKind, account, raw, &c) != nil || c.Version != quotaCheckpointVersion || c.AccountID != account || c.LastEventAt.IsZero() || c.LastEventAt.Before(c.StartedAt) || len(c.Dependencies) > 512 || len(c.RouteIDs) > 64 || len(c.Windows) > 9 {
+		return quotaCoverageCheckpoint{Version: quotaCheckpointVersion, AccountID: account, Invalid: true}, true, nil
 	}
 	epoch, err := quotaCoverageEpochTx(tx)
 	if err != nil {
@@ -253,4 +260,18 @@ func (s *Store) readQuotaCheckpointTx(tx *sql.Tx, account string) (quotaCoverage
 		c.StartedAt = time.Time{}
 	}
 	return c, true, nil
+}
+
+// Legacy/manual usage is not part of the managed budget proof. A quota limit
+// edit itself is not usage and must not restart an otherwise complete window.
+func (s *Store) invalidateQuotaAccountTx(tx *sql.Tx, account string) error {
+	c, found, err := s.readQuotaCheckpointTx(tx, account)
+	if err != nil {
+		return err
+	}
+	if !found || c.Invalid {
+		return nil
+	}
+	c.invalidateQuota()
+	return s.putTx(tx, quotaCoverageKind, account, c)
 }

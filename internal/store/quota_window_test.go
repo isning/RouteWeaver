@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"path/filepath"
 	"reflect"
 	"routeweaver/internal/domain"
@@ -72,7 +73,7 @@ func TestQuotaWindowIncrementalSealingAndIsolation(t *testing.T) {
 		t.Fatalf("sealed %+v %v", got, e)
 	}
 	c := quotaCheckpoint(t, s, "account")
-	if c.Issued != 1 || c.Closed != 1 {
+	if len(c.Windows) == 0 || c.Windows[0].Issued != 1 || c.Windows[0].Closed != 1 {
 		t.Fatalf("replay/foreign counted: %+v", c)
 	}
 	later := quotaBudget("account", "later", now.Add(quotaCoverageDuration+time.Second))
@@ -272,5 +273,87 @@ func TestQuotaCorruptOptionalCheckpointDoesNotBlockBudgetPersistence(t *testing.
 	got, e := s.ObserveQuotaCoverageContext(context.Background(), "account", now.Add(quotaCoverageDuration))
 	if e != nil || got.Available || !got.Start.Equal(now.Add(quotaCoverageDuration)) {
 		t.Fatalf("corruption was salvaged as complete %+v %v", got, e)
+	}
+}
+
+func TestQuotaRollingDailyWindowsAndConfirmedIdle(t *testing.T) {
+	s, now := quotaWindowFixture(t)
+	for day := 0; day < 11; day++ {
+		at := now.Add(time.Duration(day)*24*time.Hour + time.Second)
+		b := quotaBudget("account", fmt.Sprintf("day-%d", day), at)
+		if e := s.Put("admission-budgets", b.LeaseID, b); e != nil {
+			t.Fatal(e)
+		}
+		b.SettledRaw = 10
+		b.recordCoverageReceipt(at.Add(time.Second), true, "agent")
+		b.Closed = true
+		if e := s.Put("admission-budgets", b.LeaseID, b); e != nil {
+			t.Fatal(e)
+		}
+		if c := quotaCheckpoint(t, s, "account"); c.Invalid {
+			t.Fatalf("invalid after day %d %+v", day, c)
+		}
+		if day >= 7 {
+			got, e := s.ObserveQuotaCoverageContext(context.Background(), "account", at.Add(2*time.Second))
+			if e != nil || !got.Available || got.RawBytes != 70 {
+				t.Fatalf("day %d: %+v %v", day, got, e)
+			}
+		}
+		if c := quotaCheckpoint(t, s, "account"); len(c.Windows) > 9 {
+			t.Fatal("unbounded windows")
+		}
+	}
+	got, e := s.ObserveQuotaCoverageContext(context.Background(), "account", now.Add(18*24*time.Hour))
+	if e != nil || !got.Available || got.RawBytes != 0 || !got.End.Equal(now.Add(18*24*time.Hour)) {
+		t.Fatalf("confirmed idle %+v %v", got, e)
+	}
+}
+
+func TestQuotaLimitChangePreservesEvidence(t *testing.T) {
+	s, now := quotaWindowFixture(t)
+	// Existing identity updates can change quota without falsifying measured usage.
+	u := domain.User{ID: "account", QuotaBytes: 1000, Enabled: true}
+	if e := s.Put("users", u.ID, u); e != nil {
+		t.Fatal(e)
+	}
+	s.ObserveQuotaCoverageContext(context.Background(), u.ID, now)
+	before := quotaCheckpoint(t, s, u.ID)
+	u.QuotaBytes = 2000
+	if e := s.Put("users", u.ID, u); e != nil {
+		t.Fatal(e)
+	}
+	after := quotaCheckpoint(t, s, u.ID)
+	if !reflect.DeepEqual(before, after) {
+		t.Fatal("quota-only update reset observation")
+	}
+}
+
+func TestQuotaRollingCrossCutoffNeverAllocatesPartialBudget(t *testing.T) {
+	s, now := quotaWindowFixture(t)
+	b := quotaBudget("account", "cross", now.Add(6*24*time.Hour))
+	if e := s.Put("admission-budgets", b.LeaseID, b); e != nil {
+		t.Fatal(e)
+	}
+	got, e := s.ObserveQuotaCoverageContext(context.Background(), "account", now.Add(7*24*time.Hour))
+	if e != nil || got.Available {
+		t.Fatalf("open budget sealed %+v %v", got, e)
+	}
+	b.SettledRaw = 100
+	b.recordCoverageReceipt(now.Add(8*24*time.Hour), true, "agent")
+	b.Closed = true
+	if e = s.Put("admission-budgets", b.LeaseID, b); e != nil {
+		t.Fatal(e)
+	}
+	got, e = s.ObserveQuotaCoverageContext(context.Background(), "account", now.Add(8*24*time.Hour))
+	if e != nil || got.Available {
+		t.Fatalf("late final assigned to old window %+v %v", got, e)
+	}
+	c := quotaCheckpoint(t, s, "account")
+	if c.Invalid {
+		t.Fatal("late final discarded later complete observation")
+	}
+	got, e = s.ObserveQuotaCoverageContext(context.Background(), "account", now.Add(13*24*time.Hour))
+	if e != nil || !got.Available || got.RawBytes != 100 {
+		t.Fatalf("later full interval %+v %v", got, e)
 	}
 }

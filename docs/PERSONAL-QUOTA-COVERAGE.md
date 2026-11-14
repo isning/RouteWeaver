@@ -1,4 +1,4 @@
-# Personal quota forecast foundation
+# Personal quota coverage and conservative prediction
 
 ## Delivered: managed budget receipt evidence (phase 1)
 
@@ -23,7 +23,7 @@ backup storage preserves additive fields; absence remains valid legacy data.
 This phase intentionally adds no forecast API, estimate or UI. Absence of a hold,
 zero ledger rows or a recently active IP does not establish complete account usage.
 
-## Required before a forecast can be exposed
+## Prerequisites (implemented across the following phases)
 
 1. Account-level, versioned proof of exclusively managed sources over the window,
    including publication/change history; current bindings alone are insufficient.
@@ -86,9 +86,42 @@ gate must fully inspect the bounded budget inventory (10,000 rows/8 MiB); an
 oversized or unresolved inventory is unavailable, never partially accepted.
 Subsequent sealing uses the incremental aggregate, not a growing history scan.
 
-This is deliberately not yet a UI feature: the user endpoint does not call this
+At the phase-2 commit this was deliberately not yet a UI feature: the user endpoint does not call this
 operation, expose estimates or claim that production observation has started.
 The next delivery step must wire authorized account observation, freshness and
 current quota/reset/expiry policy, then present only a complete bounded window.
 Long-lived connections crossing the cutoff and installations above these bounds
 remain unsupported for this first window implementation.
+
+## Inline conservative prediction (phase 3)
+
+The authenticated `/me/overview` now starts observation for its own account and
+may include `quotaForecast`. Existing installations cannot display it immediately:
+seven future complete days are required. No extra endpoint, historical backfill,
+external data source or automatic production installation is introduced.
+
+Up to nine overlapping seven-day windows start at daily **zero-open-budget**
+boundaries. A cutoff-spanning budget invalidates that window, not arbitrary daily
+traffic allocation. Subsequent eligible windows continue without weekly manual
+restarts. Seven days with no budget events can prove zero only after complete
+managed source tracking and with no open budget. Continuous long-lived overlapping
+connections may never produce a usable boundary; this is unavailable, not zero.
+A sealed window is accepted for at most 24 hours. It is not necessarily the exact
+seven days immediately preceding the request; the UI calls it verified seven-day
+usage rather than current-day traffic.
+
+A second bounded reserved-writer snapshot rechecks the exact sealed evidence,
+current effective policy/cycle and displayed usage. An overview mismatch suppresses
+the estimate. Current live reservations are deducted only from predictive usable
+balance, never from displayed settled balance or billing. Quota, expiry and reset
+changes are reevaluated without erasing measured consumption; source/rate changes
+still discard coverage. Accounting uncertainty, invalid inventory or errors hide
+only this optional field. Read requests can take up to two three-second bounded
+transactions; capacity limits above remain conservative availability limits.
+
+The UI hides estimates during overview refresh/error, after 90 seconds without a
+fresh response, or when response balance/deadline does not match the overview.
+Available estimates refresh with that overview once per minute. Exhaustion dates
+and sufficient-until claims are limited to 366 days; no infinite-use promise is
+made from a zero-use observation. These are estimates under unchanged future use,
+not a guarantee. No source IP, credential or source inventory is exposed.

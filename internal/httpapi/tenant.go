@@ -70,11 +70,16 @@ func (h *server) registerTenant(r chi.Router) {
 	r.Route("/me", func(r chi.Router) {
 		r.Get("/insights", h.myInsights)
 		r.Get("/overview", func(w http.ResponseWriter, r *http.Request) {
-			v, e := h.overviewContext(r.Context(), current(r).Account.ID, time.Now())
+			now := time.Now().UTC()
+			v, e := h.overviewContext(r.Context(), current(r).Account.ID, now)
 			if e != nil {
 				storeError(w, e)
 				return
 			}
+			if forecast, err := h.s.QuotaForecastContext(r.Context(), current(r).Account.ID, now, v.EffectivePolicy, v.Cycle, v.Usage, v.AccountingPending); err == nil {
+				v.QuotaForecast = &forecast
+			}
+			w.Header().Set("Cache-Control", "no-store")
 			writeJSON(w, 200, v)
 		})
 		r.Get("/platform-entries", func(w http.ResponseWriter, r *http.Request) {

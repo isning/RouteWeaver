@@ -7,10 +7,11 @@ import {
   screen,
   within,
 } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, onlineManager } from "@tanstack/react-query";
 import { UIProviders } from "./ui-patterns/providers";
 import Workspace from "./App";
 import { OverviewPage } from "./OverviewPage";
+import type { Overview } from "./types";
 const json = (data: unknown, status = 200) =>
   new Response(JSON.stringify(data), {
     status,
@@ -21,8 +22,9 @@ afterEach(() => {
   cleanup();
   clients.splice(0).forEach((c) => c.clear());
   vi.unstubAllGlobals();
+  onlineManager.setOnline(true);
 });
-function mount(fail = false, shell = false, namesFail = false, connections?: unknown[]) {
+function mount(fail = false, shell = false, namesFail = false, connections?: unknown[], overviewOverride: Partial<Overview> = {}) {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url: string) => {
@@ -44,6 +46,7 @@ function mount(fail = false, shell = false, namesFail = false, connections?: unk
           usage: { rawBytes: 256, weightedBytes: 512 },
           routes: [{ id: "r", name: "东京" }],
           cycle: { timezone: "UTC+8", nextReset: "2026-12-01T00:00:00+08:00" },
+          ...overviewOverride,
         });
       if (url.endsWith("/me/profiles"))
         return json([
@@ -352,3 +355,52 @@ it.each([
   expect(screen.getByText("订阅名称暂不可用（1 个连接）")).toBeTruthy();
   expect(screen.getByText(/^最近连接确认：/).textContent).toContain("2026");
  });
+
+it("shows only a fresh inline forecast and hides it when overview refresh fails", async () => {
+  const now = Date.now();
+  const horizon = new Date(now + 3 * 86400000).toISOString();
+  mount(false, false, false, undefined, {
+    cycle: {nextReset: horizon},
+    quotaForecast: {available:true,asOf:new Date(now).toISOString(),windowStart:new Date(now-7*86400000).toISOString(),windowEnd:new Date(now).toISOString(),weightedBytes:"2048",remainingBytes:"512",reservedBytes:"0",horizon,estimatedExhaustionAt:new Date(now+86400000).toISOString(),enoughUntilHorizon:false},
+  });
+  expect(await screen.findByText(/按已核实的7天平均用量.*预计/)).toBeTruthy();
+  const {waitFor}=await import("@testing-library/react");
+  onlineManager.setOnline(false);
+  const pendingRefresh = clients.at(-1)!.refetchQueries({queryKey:["overview"]});
+  await waitFor(()=>expect(screen.queryByText(/按已核实的7天平均用量.*预计/)).toBeNull());
+  onlineManager.setOnline(true);
+  await pendingRefresh;
+  expect(await screen.findByText(/按已核实的7天平均用量.*预计/)).toBeTruthy();
+  const fetch = vi.mocked(globalThis.fetch);
+  const original = fetch.getMockImplementation()!;
+  fetch.mockImplementation((input, init) => String(input).endsWith("/me/overview") ? Promise.resolve(json({error:"unavailable"},503)) : original(input, init));
+  await clients.at(-1)!.refetchQueries({queryKey:["overview"]});
+  await waitFor(()=>expect(screen.queryByText(/按已核实的7天平均用量.*预计/)).toBeNull());
+});
+
+it.each(["expired", "balance-changed", "fully-reserved"])("omits an inline estimate when %s without a waiting message", async (state) => {
+  const now=Date.now();
+  const asOf=state==="expired" ? now-120000 : now;
+  const horizon=new Date(now+3*86400000).toISOString();
+  mount(false,false,false,undefined,{
+    cycle:{nextReset:horizon},
+    quotaForecast:{available:true,asOf:new Date(asOf).toISOString(),windowStart:new Date(asOf-7*86400000).toISOString(),windowEnd:new Date(asOf).toISOString(),remainingBytes:state==="balance-changed"?"513":"512",reservedBytes:state==="fully-reserved"?"512":"0",horizon,estimatedExhaustionAt:new Date(now+86400000).toISOString(),enoughUntilHorizon:false},
+  });
+  await screen.findByText("东京");
+  expect(screen.queryByText(/按已核实的7天平均用量.*预计/)).toBeNull();
+  expect(screen.queryByText(/等待.*样本/)).toBeNull();
+});
+
+
+it.each([3, 366, 367])("bounds a verified zero-use forecast to 366 days (%s)", async (horizonDays) => {
+  const now = Date.now();
+  const horizon = new Date(now + horizonDays * 86400000).toISOString();
+  mount(false, false, false, undefined, {
+    cycle: {nextReset: horizon},
+    quotaForecast: {available:true,reason:"zero_usage_within_horizon",asOf:new Date(now).toISOString(),windowStart:new Date(now-7*86400000).toISOString(),windowEnd:new Date(now).toISOString(),weightedBytes:"0",remainingBytes:"512",reservedBytes:"0",horizon,enoughUntilHorizon:true},
+  });
+  await screen.findByText("东京");
+  if (horizonDays <= 366) expect(screen.getByText(/观察的7天内未产生用量，当前额度预计足够用到/)).toBeTruthy();
+  else expect(screen.queryByLabelText("额度使用预测")).toBeNull();
+  expect(screen.queryByText(/按近7天/)).toBeNull();
+});

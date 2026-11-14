@@ -14,6 +14,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, CircleAlert, RefreshCw } from "lucide-react";
 import { request, list } from "./api";
 import { policyStatus } from "./access-policy-model";
+import { quotaForecastText } from "./quota-forecast";
 import type { Overview, Output, Profile } from "./types";
 import { bytesLabel, dateLabel } from "./model";
 import { PageHeader, QueryState, Status } from "./components";
@@ -77,6 +78,7 @@ export function OverviewPage() {
   const overview = useQuery({
     queryKey: ["overview"],
     queryFn: () => request<Overview>("/me/overview"),
+    refetchInterval: query => query.state.data?.quotaForecast?.available === true ? 60_000 : false,
   });
   const profiles = useQuery({
     queryKey: ["profiles"],
@@ -129,6 +131,8 @@ export function OverviewPage() {
     data && used !== undefined
       ? Math.max(0, data.quotaBytes - used)
       : undefined;
+  const forecastText = data && overview.isSuccess && !overview.isFetching && !overview.isPaused
+    ? quotaForecastText(data, Date.now()) : null;
   const max = Math.max(1, ...(detail?.daily.map((d) => d.weightedBytes) ?? []));
   const total = detail?.routes.reduce((sum, r) => sum + r.rawBytes, 0) ?? 0;
   const names = new Map(data?.routes.map((r) => [r.id, r.name]));
@@ -322,6 +326,7 @@ export function OverviewPage() {
                         aria-label="本周期已用额度比例"
                       />
                     )}
+                    {forecastText && <p aria-label="额度使用预测" className="mb-3 text-xs text-muted-foreground">{forecastText}</p>}
                     <dl className="grid grid-cols-2 gap-4 pt-2 sm:grid-cols-4">
                       <div>
                         <dt className="text-xs text-muted-foreground">

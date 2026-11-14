@@ -94,7 +94,21 @@ export interface Service {
   connectionLimit?: number;
   entryRateBps?: number;
 }
+export interface AccountQuotaForecast {
+  reason?: string;
+  available: boolean;
+  asOf: string;
+  windowStart?: string;
+  windowEnd?: string;
+  weightedBytes?: string;
+  remainingBytes?: string;
+  reservedBytes?: string;
+  horizon?: string;
+  estimatedExhaustionAt?: string;
+  enoughUntilHorizon?: boolean;
+}
 export interface Overview {
+  quotaForecast?: AccountQuotaForecast;
   accountingPending?: boolean;
   status: string;
   quotaBytes: number;

@@ -19,11 +19,12 @@ type QuotaCoverageStatus struct {
 	End           time.Time
 	RawBytes      uint64
 	WeightedBytes uint64
+	Generation    uint64
+	Epoch         string
 }
 
-// ObserveQuotaCoverageContext begins or seals a bounded future observation.
-// It is not a prediction and is not exposed by the user API. Callers must not
-// describe unavailable, old or partial periods as seven days of zero use.
+// Observations are prospective. At most nine overlapping windows start on
+// daily zero-open boundaries; no active interval is divided or interpolated.
 func (s *Store) ObserveQuotaCoverageContext(ctx context.Context, account string, now time.Time) (QuotaCoverageStatus, error) {
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
@@ -58,23 +59,20 @@ func (s *Store) ObserveQuotaCoverageContext(ctx context.Context, account string,
 	}
 	if !proof.Available {
 		if found && !c.Invalid {
-			c.Invalid = true
-			c.StartedAt = time.Time{}
-			if c.Generation < math.MaxUint64 {
-				c.Generation++
-			}
+			c.invalidateQuota()
 			if err = s.putTx(tx, quotaCoverageKind, account, c); err != nil {
 				return QuotaCoverageStatus{}, err
 			}
 		}
 		return finish(QuotaCoverageStatus{Reason: proof.Reason})
 	}
-	if found && (c.Version != 1 || c.AccountID != account) {
-		return finish(QuotaCoverageStatus{Reason: "invalid_checkpoint"})
+	if found && !c.Invalid && (!reflect.DeepEqual(c.Dependencies, proof.Dependencies) || !reflect.DeepEqual(c.RouteIDs, proof.RouteIDs) || now.Before(c.StartedAt) || now.Before(c.LastEventAt)) {
+		c.invalidateQuota()
+		if err = s.putTx(tx, quotaCoverageKind, account, c); err != nil {
+			return QuotaCoverageStatus{}, err
+		}
 	}
-	if found && !c.Invalid && (!reflect.DeepEqual(c.Dependencies, proof.Dependencies) || !reflect.DeepEqual(c.RouteIDs, proof.RouteIDs) || now.Before(c.StartedAt)) {
-		c.Invalid = true
-	}
+	changed := false
 	if !found || c.Invalid {
 		if c.Generation == math.MaxUint64 {
 			return finish(QuotaCoverageStatus{Reason: "coverage_generation_exhausted"})
@@ -86,9 +84,9 @@ func (s *Store) ObserveQuotaCoverageContext(ctx context.Context, account string,
 		if !found && count >= quotaCoverageLimit {
 			return finish(QuotaCoverageStatus{Reason: "coverage_capacity"})
 		}
-		ready, err := s.quotaStartBudgetsTx(ctx, tx, account)
-		if err != nil {
-			return QuotaCoverageStatus{}, err
+		ready, e := s.quotaStartBudgetsTx(ctx, tx, account)
+		if e != nil {
+			return QuotaCoverageStatus{}, e
 		}
 		if !ready {
 			return finish(QuotaCoverageStatus{Reason: "budgets_not_closed_or_inventory_limit"})
@@ -97,37 +95,73 @@ func (s *Store) ObserveQuotaCoverageContext(ctx context.Context, account string,
 		if e != nil {
 			return QuotaCoverageStatus{}, e
 		}
-		c = quotaCoverageCheckpoint{Epoch: epoch, Version: 1, AccountID: account, Generation: c.Generation + 1, StartedAt: now, Dependencies: proof.Dependencies, RouteIDs: proof.RouteIDs, WeightedNumerator: "0"}
-		encoded, encodeErr := json.Marshal(c)
-		if encodeErr != nil || len(encoded) > 64000 {
+		if len(epoch) != 64 {
+			return finish(QuotaCoverageStatus{Reason: "invalid_coverage_epoch"})
+		}
+		c = quotaCoverageCheckpoint{Epoch: epoch, Version: quotaCheckpointVersion, AccountID: account, Generation: c.Generation + 1, StartedAt: now, LastEventAt: now, Dependencies: proof.Dependencies, RouteIDs: proof.RouteIDs}
+		changed = true
+	}
+	if c.startQuotaWindow(now) {
+		changed = true
+	}
+	if changed {
+		encoded, e := json.Marshal(c)
+		if e != nil || len(encoded) > 64000 {
 			return finish(QuotaCoverageStatus{Reason: "coverage_record_limit"})
 		}
 		if err = s.putTx(tx, quotaCoverageKind, account, c); err != nil {
 			return QuotaCoverageStatus{}, err
 		}
 	}
-	status := QuotaCoverageStatus{Start: c.StartedAt, End: c.StartedAt.Add(quotaCoverageDuration), Reason: "collecting_complete_window"}
-	if now.Before(status.End) {
-		return finish(status)
+	return finish(quotaSealedWindow(c, now))
+}
+func quotaSealedWindow(c quotaCoverageCheckpoint, now time.Time) QuotaCoverageStatus {
+	status := QuotaCoverageStatus{Reason: "collecting_complete_window", Start: c.StartedAt, End: c.StartedAt.Add(quotaCoverageDuration), Generation: c.Generation, Epoch: c.Epoch}
+	if c.Invalid || c.Version != quotaCheckpointVersion || c.StartedAt.IsZero() || now.Before(c.LastEventAt) || now.Before(c.StartedAt) {
+		status.Reason = "invalid_checkpoint"
+		return status
 	}
-	if c.Issued != c.Closed {
-		status.Reason = "window_has_unclosed_budgets"
-		return finish(status)
+	// This is confirmed zero, not absence-of-ledger inference: this managed-only
+	// checkpoint has tracked every issuance and final, no open budget remains,
+	// and no budget event occurred anywhere in the complete seven-day interval.
+	if c.Open == 0 && !c.LastEventAt.After(now.Add(-quotaCoverageDuration)) && !c.StartedAt.After(now.Add(-quotaCoverageDuration)) {
+		status.Available = true
+		status.Reason = ""
+		status.Start = now.Add(-quotaCoverageDuration)
+		status.End = now
+		return status
 	}
-	total, ok := new(big.Int).SetString(c.WeightedNumerator, 10)
-	if !ok || total.Sign() < 0 || c.Closed > c.Issued {
-		return finish(QuotaCoverageStatus{Reason: "invalid_checkpoint"})
+	var selected *quotaObservationWindow
+	for i := range c.Windows {
+		w := &c.Windows[i]
+		if w.Invalid || w.End.Sub(w.Start) != quotaCoverageDuration || w.Start.Before(c.StartedAt) || w.End.After(now) || now.Sub(w.End) > 24*time.Hour || w.Closed != w.Issued {
+			continue
+		}
+		if selected == nil || w.End.After(selected.End) {
+			selected = w
+		}
 	}
-	total.Add(total, big.NewInt(service.RateScale-1))
-	total.Div(total, big.NewInt(service.RateScale))
-	if !total.IsUint64() {
-		return finish(QuotaCoverageStatus{Reason: "usage_overflow"})
+	if selected == nil {
+		return status
+	}
+	n, ok := new(big.Int).SetString(selected.WeightedNumerator, 10)
+	if !ok || n.Sign() < 0 {
+		status.Reason = "invalid_checkpoint"
+		return status
+	}
+	n.Add(n, big.NewInt(service.RateScale-1))
+	n.Div(n, big.NewInt(service.RateScale))
+	if !n.IsUint64() {
+		status.Reason = "usage_overflow"
+		return status
 	}
 	status.Available = true
 	status.Reason = ""
-	status.RawBytes = c.RawBytes
-	status.WeightedBytes = total.Uint64()
-	return finish(status)
+	status.Start = selected.Start
+	status.End = selected.End
+	status.RawBytes = selected.RawBytes
+	status.WeightedBytes = n.Uint64()
+	return status
 }
 
 // This one-time start gate rejects a bounded inventory it cannot fully inspect.

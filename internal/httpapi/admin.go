@@ -266,6 +266,7 @@ func (h *server) listGlobal(w http.ResponseWriter, kind string) {
 }
 
 type Overview struct {
+	QuotaForecast     *store.QuotaForecast    `json:"quotaForecast,omitempty"`
 	EffectivePolicy   service.EffectivePolicy `json:"effectivePolicy"`
 	AccountingPending bool                    `json:"accountingPending"`
 	User              domain.User             `json:"user"`
