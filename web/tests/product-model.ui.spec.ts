@@ -128,6 +128,7 @@ async function seedIndependentOutputs(
   // API fixtures predate the UI task. Reload their initial read model rather than
   // carrying the empty query cache from login into a hash-only navigation.
   await page.reload();
+  await navigateWorkspace(page, "我的订阅");
   await expect(
     page.getByRole("heading", { name: "我的订阅", exact: true }),
   ).toBeVisible();
@@ -179,6 +180,7 @@ async function changeDefault(page: Page, label: "拒绝连接" | "直连") {
 }
 
 async function startConfiguration(page: Page) {
+  await navigateWorkspace(page, "我的订阅");
   await page.getByRole("button", { name: /^(设置订阅|新建分流配置)$/ }).click();
 }
 

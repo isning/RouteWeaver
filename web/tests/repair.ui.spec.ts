@@ -14,6 +14,7 @@ async function json(page: Page, path: string) {
 }
 async function fixture(page: Page, repeated = false) {
   await openWorkspace(page);
+  await navigateWorkspace(page, "我的订阅");
   await expect(
     page.getByRole("heading", { name: "我的订阅", exact: true }),
   ).toBeVisible();

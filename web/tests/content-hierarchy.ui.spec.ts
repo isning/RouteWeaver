@@ -1,6 +1,6 @@
 import { sourceRowAction } from "./source-row-actions";
 import { test, expect, type Page, type Locator } from "@playwright/test";
-import { openWorkspace } from "./ui-session";
+import { openWorkspace, navigateWorkspace } from "./ui-session";
 import { surfaceMotionState } from "./ui-surface-stability";
 
 // Runs inside the page; capture geometry without exposing displayed values.
@@ -624,7 +624,7 @@ for (const gesture of ["double click", "held Enter"] as const) {
     await expect(check).toBeEnabled();
     await expect(publish).toHaveCount(0);
     await expect(
-      dialog.getByText("创建独立的客户端订阅，其他订阅保留原版本。", { exact: true }),
+      dialog.getByText("创建新的客户端订阅，其他订阅保留原版本。", { exact: true }),
     ).toHaveCount(1);
     if (gesture === "double click") {
       // Exercise an ordinary native double-click first. The guarded second-stage
@@ -882,6 +882,7 @@ for (const gesture of ["double click", "held Enter"] as const) {
 
 async function missingReferenceFixture(page: Page) {
   await openWorkspace(page);
+  await navigateWorkspace(page, "我的订阅");
   await expect(
     page.getByRole("heading", { name: "我的订阅", exact: true }),
   ).toBeVisible();
