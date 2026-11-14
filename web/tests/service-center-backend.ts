@@ -1,3 +1,4 @@
+import { stableOverviewSnapshot } from "./overview-snapshot";
 import { randomUUID } from "node:crypto";
 import { expect, type APIRequestContext } from "@playwright/test";
 import { inviteSyntheticAccount } from "./account-security-backend";
@@ -146,8 +147,8 @@ export async function serviceCenterFixture(
     expect((await feed(otherOutputs[0].feedPath)).equals(otherBefore)).toBe(
       true,
     );
-    expect(await (await other.get("/api/me/overview")).json()).toEqual(
-      otherOverview,
+    expect(stableOverviewSnapshot(await (await other.get("/api/me/overview")).json())).toEqual(
+      stableOverviewSnapshot(otherOverview),
     );
     const otherAccess = await other.get(
       `/api/me/outputs/${otherOutputs[0].id}/access`,

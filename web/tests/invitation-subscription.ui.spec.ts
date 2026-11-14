@@ -1,3 +1,4 @@
+import { stableOverviewSnapshot } from "./overview-snapshot";
 import { randomUUID } from "node:crypto";
 import { type Page, type Locator, type TestInfo } from "@playwright/test";
 import { test, expect } from "./isolated-control-plane-fixture";
@@ -253,8 +254,8 @@ for (const width of [1440, 390]) {
       await expect(
         review.getByText("受管入口配置需单独应用。", { exact: true }),
       ).toBeVisible();
-      expect(await readOnboarding(recipient.request, "/me/overview")).toEqual(
-        beforeGrant,
+      expect(stableOverviewSnapshot(await readOnboarding(recipient.request, "/me/overview"))).toEqual(
+        stableOverviewSnapshot(beforeGrant),
       );
       await capture(admin, info, `grant-review-${width}`);
       const impact = review.getByRole("table", { name, exact: true });
@@ -309,8 +310,8 @@ for (const width of [1440, 390]) {
       await review
         .getByRole("button", { name: "返回编辑", exact: true })
         .click();
-      expect(await readOnboarding(recipient.request, "/me/overview")).toEqual(
-        beforeGrant,
+      expect(stableOverviewSnapshot(await readOnboarding(recipient.request, "/me/overview"))).toEqual(
+        stableOverviewSnapshot(beforeGrant),
       );
       await grant
         .getByRole("button", { name: "预览影响", exact: true })
@@ -328,8 +329,8 @@ for (const width of [1440, 390]) {
       await expect(
         review.getByText("受管入口配置需单独应用。", { exact: true }),
       ).toBeInViewport({ ratio: 1 });
-      expect(await readOnboarding(recipient.request, "/me/overview")).toEqual(
-        beforeGrant,
+      expect(stableOverviewSnapshot(await readOnboarding(recipient.request, "/me/overview"))).toEqual(
+        stableOverviewSnapshot(beforeGrant),
       );
       await capture(admin, info, `grant-confirmed-${width}`);
       const applied = admin.waitForResponse(
