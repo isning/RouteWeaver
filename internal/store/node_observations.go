@@ -110,6 +110,9 @@ func (s *Store) ConfigureNodeObservations(id string, config observability.Config
 			if _, err = s.deleteTx(tx, nodeHistoryKind, id); err != nil {
 				return state, err
 			}
+			if _, err = s.deleteTx(tx, nodeHourlyKind, id); err != nil {
+				return state, err
+			}
 		}
 		return next, nil
 	})

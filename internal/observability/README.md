@@ -49,15 +49,27 @@ Missing derivatives remain null. Charts must not bridge discontinuities or
 missing intervals. Changing the designated observer or selected interfaces
 clears the incompatible history; changing only provider allowance does not.
 
-Storage uses an independent encrypted record (not the frequently rewritten
-latest-observation state): at most 288 points per host, 256 hosts globally and
-128 KiB per encrypted record. Normal collection adds one history write per five
-minutes (the bounded history record is read/decrypted on each report and
-rewritten as a whole on retention updates). Damaged optional history is reported
-as unavailable without rolling back authoritative observations or starving
-cleanup of other nodes. The foreground control plane prunes records at startup and each minute,
-in separate bounded per-host transactions. Reads always hide samples outside the
-last 24 hours, even before physical cleanup. Offline backups retain their own
-copies. A full history store does **not** stop latest resource observations or
-provider accounting: the history response explicitly reports unavailable
-capacity. There is no historical backfill, forecast or external data service.
+Storage uses two independent encrypted records per node: at most 288 five-minute
+points (80 KiB new writes) and 168 hourly points (48 KiB new writes), with a
+global limit of 256 distinct nodes across both tiers. Normal collection writes
+only changed tiers: the daily tier once per five minutes and the weekly tier
+once per hour, plus bounded discontinuity updates. Each report reads/decrypts
+bounded records, but does not re-encrypt an unchanged hourly tier. Both updates
+share the accepted-observation transaction. A damaged optional tier stays
+unavailable without rolling back authoritative observations or blocking cleanup
+of other records. Changing observer/NIC scope clears both tiers atomically.
+
+The control plane prunes at startup and each minute in bounded per-record
+transactions. Reads always hide data outside the selected window. Legacy daily
+records (up to their original 128 KiB read limit) and backups remain readable;
+they have no hourly tier until new reports arrive. There is no backfill, average,
+peak or forecast. Offline backups retain their own copies.
+
+Capacity counts distinct nodes, not records: a full store does not stop latest
+resource observations or provider accounting. The endpoint reports unavailable
+capacity for new nodes. New-write live ciphertext is bounded by 32 MiB across
+both tiers, excluding SQLite/WAL, freed pages and backups. Theoretical full-cap
+scheduled rewrites are 5.625 GiB/day daily plus 0.28125 GiB/day hourly (rather than
+9 GiB/day for a combined 128 KiB record); discontinuity, retention and WAL writes
+add overhead. This is a conservative allocation bound, not measured SSD writes.
+This small-fleet store is not a time-series database for thousands of hosts.

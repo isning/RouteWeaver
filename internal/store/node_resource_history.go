@@ -3,25 +3,32 @@ package store
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"math"
+	"reflect"
 	"routeweaver/internal/domain"
 	"routeweaver/internal/observability"
 	"time"
 )
 
 const nodeHistoryKind = "node-resource-history"
+const nodeHourlyKind = "node-resource-hourly"
 const nodeHistoryLimit = 256
 const nodeHistoryBytes = 128 << 10
 
 var ErrNodeHistoryCapacity = errors.New("node resource history capacity exceeded")
 var errNodeHistoryInvalid = errors.New("invalid resource history record")
 
-func (s *Store) resourceHistoryTx(ctx context.Context, tx *sql.Tx, id string) (observability.ResourceHistory, error) {
+func (s *Store) resourceHistoryTx(ctx context.Context, tx *sql.Tx, id string, kinds ...string) (observability.ResourceHistory, error) {
+	kind := nodeHistoryKind
+	if len(kinds) > 0 {
+		kind = kinds[0]
+	}
 	h := observability.ResourceHistory{Points: []observability.ResourcePoint{}}
 	var raw []byte
 	var size int
-	err := tx.QueryRowContext(ctx, `SELECT length(data),CASE WHEN length(data)<=? THEN data ELSE NULL END FROM records WHERE kind=? AND id=?`, nodeHistoryBytes, nodeHistoryKind, id).Scan(&size, &raw)
+	err := tx.QueryRowContext(ctx, `SELECT length(data),CASE WHEN length(data)<=? THEN data ELSE NULL END FROM records WHERE kind=? AND id=?`, nodeHistoryBytes, kind, id).Scan(&size, &raw)
 	if err == sql.ErrNoRows {
 		return h, ErrNotFound
 	}
@@ -31,54 +38,99 @@ func (s *Store) resourceHistoryTx(ctx context.Context, tx *sql.Tx, id string) (o
 	if size > nodeHistoryBytes {
 		return h, ErrNodeHistoryCapacity
 	}
-	if err = s.open(nodeHistoryKind, id, raw, &h); err != nil {
+	if err = s.open(kind, id, raw, &h); err != nil {
 		return h, errNodeHistoryInvalid
 	}
-	if len(h.Points) > observability.ResourceHistoryPoints {
+	if len(h.Points) > observability.ResourceHistoryPoints || len(h.Hourly) > 168 {
 		return h, ErrNodeHistoryCapacity
 	}
-	for i, p := range h.Points {
-		if p.ObservedAt.IsZero() || (i > 0 && !p.ObservedAt.After(h.Points[i-1].ObservedAt)) || math.IsNaN(p.MemoryUsedPercent) || math.IsInf(p.MemoryUsedPercent, 0) || p.MemoryUsedPercent < 0 || p.MemoryUsedPercent > 100 {
-			return h, errNodeHistoryInvalid
-		}
-		for _, v := range []*float64{p.CPUPercent, p.ReceiveBytesPerSecond, p.TransmitBytesPerSecond} {
-			if v != nil && (math.IsNaN(*v) || math.IsInf(*v, 0) || *v < 0) {
+	for _, points := range [][]observability.ResourcePoint{h.Points, h.Hourly} {
+		for i, p := range points {
+			if p.ObservedAt.IsZero() || (i > 0 && !p.ObservedAt.After(points[i-1].ObservedAt)) || math.IsNaN(p.MemoryUsedPercent) || math.IsInf(p.MemoryUsedPercent, 0) || p.MemoryUsedPercent < 0 || p.MemoryUsedPercent > 100 {
 				return h, errNodeHistoryInvalid
 			}
-		}
-		if p.CPUPercent != nil && *p.CPUPercent > 100 {
-			return h, errNodeHistoryInvalid
+			for _, v := range []*float64{p.CPUPercent, p.ReceiveBytesPerSecond, p.TransmitBytesPerSecond} {
+				if v != nil && (math.IsNaN(*v) || math.IsInf(*v, 0) || *v < 0) {
+					return h, errNodeHistoryInvalid
+				}
+			}
+			if p.CPUPercent != nil && *p.CPUPercent > 100 {
+				return h, errNodeHistoryInvalid
+			}
 		}
 	}
 	return h, nil
 }
+
+// Both tiers participate in the authoritative observation transaction, but a
+// damaged optional tier is isolated. Only the tier that changes is encrypted.
 func (s *Store) appendNodeResourceHistoryTx(tx *sql.Tx, id string, snapshot observability.Snapshot, now time.Time) error {
-	h, err := s.resourceHistoryTx(context.Background(), tx, id)
-	if err == ErrNotFound {
-		var count int
-		if err = tx.QueryRow(`SELECT count(*) FROM (SELECT 1 FROM records WHERE kind=? LIMIT ?)`, nodeHistoryKind, nodeHistoryLimit).Scan(&count); err != nil {
+	var admitted bool
+	if err := tx.QueryRow(`SELECT EXISTS(SELECT 1 FROM records WHERE kind IN (?,?) AND id=?)`, nodeHistoryKind, nodeHourlyKind, id).Scan(&admitted); err != nil {
+		return err
+	}
+	if !admitted {
+		count, err := historyNodeCount(context.Background(), tx)
+		if err != nil {
 			return err
 		}
-		// Optional history capacity must not stop the existing latest-observation or
-		// provider accounting path. The history endpoint explicitly reports capacity.
 		if count >= nodeHistoryLimit {
 			return nil
 		}
-	} else if errors.Is(err, errNodeHistoryInvalid) || errors.Is(err, ErrNodeHistoryCapacity) {
-		// Damaged optional history remains visibly unavailable, but must not
-		// roll back authoritative resource/provider observations.
-		return nil
-	} else if err != nil {
-		return err
 	}
-	next, changed := observability.AppendResourceHistory(h, snapshot, now)
-	if !changed {
-		return nil
+	for _, kind := range []string{nodeHistoryKind, nodeHourlyKind} {
+		h, err := s.resourceHistoryTx(context.Background(), tx, id, kind)
+		if errors.Is(err, errNodeHistoryInvalid) || errors.Is(err, ErrNodeHistoryCapacity) {
+			continue
+		}
+		if err != nil && err != ErrNotFound {
+			return err
+		}
+		next, _ := observability.AppendResourceHistory(h, snapshot, now)
+		limit := 80 << 10
+		if kind == nodeHistoryKind {
+			next.Hourly = nil
+		} else {
+			next.Points = nil
+			limit = 48 << 10
+		}
+		if reflect.DeepEqual(next, h) {
+			continue
+		}
+		encoded, err := json.Marshal(next)
+		if err != nil {
+			return err
+		}
+		if len(encoded)+s.aead.NonceSize()+s.aead.Overhead() > limit {
+			continue
+		}
+		if err = s.putTx(tx, kind, id, next); err != nil {
+			return err
+		}
 	}
-	return s.putTx(tx, nodeHistoryKind, id, next)
+	return nil
 }
-func (s *Store) NodeResourceHistory(ctx context.Context, id string, now time.Time) (observability.ResourceHistoryView, error) {
+func historyNodeCount(ctx context.Context, tx *sql.Tx) (int, error) {
+	var count int
+	err := tx.QueryRowContext(ctx, `SELECT count(*) FROM (SELECT DISTINCT id FROM records WHERE kind IN (?,?) LIMIT ?)`, nodeHistoryKind, nodeHourlyKind, nodeHistoryLimit).Scan(&count)
+	return count, err
+}
+func (s *Store) NodeResourceHistory(ctx context.Context, id string, now time.Time, windows ...string) (observability.ResourceHistoryView, error) {
 	view := observability.ResourceHistoryView{NodeID: id, Available: true, IntervalSeconds: 300, WindowStart: now.Add(-observability.ResourceHistoryRetention), WindowEnd: now, Points: []observability.ResourcePoint{}}
+	window := "24h"
+	if len(windows) > 0 {
+		window = windows[0]
+	}
+	switch window {
+	case "1h":
+		view.WindowStart = now.Add(-time.Hour)
+	case "24h":
+	case "7d":
+		view.WindowStart = now.Add(-7 * 24 * time.Hour)
+		view.IntervalSeconds = 3600
+	default:
+		return view, errors.New("invalid history window")
+	}
 	if !domain.ValidID(id) {
 		return view, errors.New("invalid node ID")
 	}
@@ -98,31 +150,49 @@ func (s *Store) NodeResourceHistory(ctx context.Context, id string, now time.Tim
 	if !exists {
 		return view, ErrNotFound
 	}
-	h, err := s.resourceHistoryTx(ctx, tx, id)
+	kind := nodeHistoryKind
+	if window == "7d" {
+		kind = nodeHourlyKind
+	}
+	h, err := s.resourceHistoryTx(ctx, tx, id, kind)
 	if err == ErrNotFound {
-		var count int
-		if err = tx.QueryRowContext(ctx, `SELECT count(*) FROM (SELECT 1 FROM records WHERE kind=? LIMIT ?)`, nodeHistoryKind, nodeHistoryLimit).Scan(&count); err != nil {
+		var admitted bool
+		if err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM records WHERE kind IN (?,?) AND id=?)`, nodeHistoryKind, nodeHourlyKind, id).Scan(&admitted); err != nil {
 			return view, err
 		}
-		if count >= nodeHistoryLimit {
+		count, e := historyNodeCount(ctx, tx)
+		if e != nil {
+			err = e
+			return view, err
+		}
+		if count >= nodeHistoryLimit && !admitted {
 			view.Available = false
 			view.Reason = "capacity"
 		}
 	} else if err != nil {
 		return view, err
 	}
-	view.Points = observability.PruneResourceHistory(h, now).Points
+	pruned := observability.PruneResourceHistory(h, now)
+	points := pruned.Points
+	if window == "7d" {
+		points = pruned.Hourly
+	}
+	for _, p := range points {
+		if p.ObservedAt.After(view.WindowStart) && !p.ObservedAt.After(now) {
+			view.Points = append(view.Points, p)
+		}
+	}
 	return view, tx.Commit()
 }
 
-// Bounded global retention: at most 256 * 288 compact samples. Each transaction
+// Bounded global retention: at most 256 * (288 + 168) compact samples. Each transaction
 // touches one history, so cleanup yields the writer between nodes. Backups are
 // independent retained copies. The service calls this on startup and each minute.
 func (s *Store) PruneNodeResourceHistories(ctx context.Context, now time.Time) error {
 	if err := s.lockNotificationContext(ctx); err != nil {
 		return err
 	}
-	rows, err := s.db.QueryContext(ctx, `SELECT id FROM records WHERE kind=? LIMIT ?`, nodeHistoryKind, nodeHistoryLimit+1)
+	rows, err := s.db.QueryContext(ctx, `SELECT DISTINCT id FROM records WHERE kind IN (?,?) LIMIT ?`, nodeHistoryKind, nodeHourlyKind, nodeHistoryLimit+1)
 	if err != nil {
 		s.mu.Unlock()
 		return err
@@ -148,17 +218,19 @@ func (s *Store) PruneNodeResourceHistories(ctx context.Context, now time.Time) e
 	}
 	var invalid error
 	for _, id := range ids {
-		if err = s.pruneNodeResourceHistory(ctx, id, now); err != nil {
-			if errors.Is(err, errNodeHistoryInvalid) || errors.Is(err, ErrNodeHistoryCapacity) {
-				invalid = errors.Join(invalid, err)
-				continue
+		for _, kind := range []string{nodeHistoryKind, nodeHourlyKind} {
+			if err = s.pruneNodeResourceHistory(ctx, id, now, kind); err != nil {
+				if errors.Is(err, errNodeHistoryInvalid) || errors.Is(err, ErrNodeHistoryCapacity) {
+					invalid = errors.Join(invalid, err)
+					continue
+				}
+				return errors.Join(invalid, err)
 			}
-			return errors.Join(invalid, err)
 		}
 	}
 	return invalid
 }
-func (s *Store) pruneNodeResourceHistory(ctx context.Context, id string, now time.Time) error {
+func (s *Store) pruneNodeResourceHistory(ctx context.Context, id string, now time.Time, kind string) error {
 	if err := s.lockNotificationContext(ctx); err != nil {
 		return err
 	}
@@ -168,7 +240,7 @@ func (s *Store) pruneNodeResourceHistory(ctx context.Context, id string, now tim
 		return err
 	}
 	defer tx.Rollback()
-	h, err := s.resourceHistoryTx(ctx, tx, id)
+	h, err := s.resourceHistoryTx(ctx, tx, id, kind)
 	if err == ErrNotFound {
 		return nil
 	}
@@ -180,10 +252,10 @@ func (s *Store) pruneNodeResourceHistory(ctx context.Context, id string, now tim
 	if err = tx.QueryRowContext(ctx, `SELECT EXISTS(SELECT 1 FROM records WHERE kind='hosts' AND id=?)`, id).Scan(&exists); err != nil {
 		return err
 	}
-	if !exists || len(next.Points) == 0 {
-		_, err = s.deleteTx(tx, nodeHistoryKind, id)
-	} else if len(next.Points) != len(h.Points) {
-		err = s.putTx(tx, nodeHistoryKind, id, next)
+	if !exists || len(next.Points) == 0 && len(next.Hourly) == 0 {
+		_, err = s.deleteTx(tx, kind, id)
+	} else if len(next.Points) != len(h.Points) || len(next.Hourly) != len(h.Hourly) {
+		err = s.putTx(tx, kind, id, next)
 	}
 	if err != nil {
 		return err

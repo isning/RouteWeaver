@@ -40,3 +40,28 @@ func TestResourceHistoryKeepsBoundedRealSamplesAndBreaks(t *testing.T) {
 		t.Fatal("stale samples returned")
 	}
 }
+
+func TestResourceHistoryHourlyTierIsBoundedAndNeverBackfilled(t *testing.T) {
+	s, _, now := fixture(t)
+	h := observability.ResourceHistory{Points: []observability.ResourcePoint{{ObservedAt: now.Add(-time.Hour), MemoryUsedPercent: 10}}}
+	h, _ = observability.AppendResourceHistory(h, *s.Latest, now)
+	if len(h.Hourly) != 1 || !h.Hourly[0].ObservedAt.Equal(s.Latest.ObservedAt) {
+		t.Fatal("backfilled hourly history")
+	}
+	for i := 1; i <= 200; i++ {
+		snapshot := *s.Latest
+		snapshot.ObservedAt = now.Add(time.Duration(i) * time.Hour)
+		snapshot.Continuity = "continuous"
+		h, _ = observability.AppendResourceHistory(h, snapshot, snapshot.ObservedAt)
+	}
+	if len(h.Hourly) != 168 || len(h.Points) > 288 {
+		t.Fatal("unbounded tiers", len(h.Hourly), len(h.Points))
+	}
+	if h.Hourly[len(h.Hourly)-1].BreakBefore {
+		t.Fatal("normal hourly sampling treated as gap")
+	}
+	h = observability.PruneResourceHistory(h, now.Add(369*time.Hour))
+	if len(h.Hourly) != 0 || len(h.Points) != 0 {
+		t.Fatal("expired history retained")
+	}
+}

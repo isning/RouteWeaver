@@ -59,7 +59,15 @@ func (h *server) registerNodeObservationAdmin(r chi.Router) {
 	r.Get(base+"/history", func(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
 		defer cancel()
-		view, err := h.s.NodeResourceHistory(ctx, chi.URLParam(r, "nodeId"), time.Now().UTC())
+		window := r.URL.Query().Get("window")
+		if window == "" {
+			window = "24h"
+		}
+		if window != "1h" && window != "24h" && window != "7d" {
+			fail(w, 400, "invalid history window")
+			return
+		}
+		view, err := h.s.NodeResourceHistory(ctx, chi.URLParam(r, "nodeId"), time.Now().UTC(), window)
 		if errors.Is(err, store.ErrNotFound) {
 			fail(w, 404, "node not found")
 			return

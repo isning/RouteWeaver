@@ -26,7 +26,7 @@ it("distinguishes capacity, empty history and errors while retaining prior real 
  const fetcher=vi.fn(async()=>response(value));vi.stubGlobal("fetch",fetcher);mount();
  await screen.findByText("历史存储容量已满，当前资源数据仍可查看。");
  value={...value,available:true};await userEvent.click(screen.getByRole("button",{name:"刷新资源趋势"}));
- await screen.findByText(/最近 24 小时没有历史数据/);
+ await screen.findByText(/最近 24小时没有历史数据/);
  value=fixture();await userEvent.click(screen.getByRole("button",{name:"刷新资源趋势"}));await screen.findByRole("img",{name:/CPU 与内存/});
  fetcher.mockImplementation(async()=>response({},503));await userEvent.click(screen.getByRole("button",{name:"刷新资源趋势"}));
  await screen.findByText("趋势刷新失败，保留上次读取的数据。");expect(screen.getByRole("img",{name:/CPU 与内存/})).toBeTruthy();
@@ -34,4 +34,13 @@ it("distinguishes capacity, empty history and errors while retaining prior real 
 it("never displays another node's history",async()=>{
  vi.stubGlobal("fetch",vi.fn(async()=>response({...fixture(),nodeId:"other"})));mount();
  await screen.findByText("趋势数据尚未确定，请重试。");expect(screen.queryByRole("img")).toBeNull();
+});
+it("requests hourly seven-day history without relabeling cached daily samples",async()=>{
+ const fetcher=vi.fn(async(input:RequestInfo|URL)=>{const url=String(input);return response(url.includes("window=7d")?{...fixture(),intervalSeconds:3600,windowStart:new Date(Date.now()-7*24*3600000).toISOString()}:fixture())});
+ vi.stubGlobal("fetch",fetcher);mount();
+ await screen.findByRole("img",{name:/计费网卡流量，最近24小时/});
+ await userEvent.click(screen.getByRole("tab",{name:"7 天"}));
+ await screen.findByRole("img",{name:/计费网卡流量，最近7天/});
+ expect(fetcher.mock.calls.some(([url])=>String(url).includes("window=7d"))).toBe(true);
+ expect(screen.queryByRole("img",{name:/最近24小时/})).toBeNull();
 });

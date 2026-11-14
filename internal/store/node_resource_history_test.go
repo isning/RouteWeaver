@@ -103,3 +103,54 @@ func TestDamagedResourceHistoryDoesNotBlockObservationsOrOtherCleanup(t *testing
 		t.Fatal("one bad history blocked other cleanup", e)
 	}
 }
+
+func TestNodeHistoryWindowsAndLegacyCompatibility(t *testing.T) {
+	db, e := store.Open(filepath.Join(t.TempDir(), "windows.db"), bytes.Repeat([]byte{7}, 32))
+	if e != nil {
+		t.Fatal(e)
+	}
+	defer db.Close()
+	now := time.Now().UTC()
+	if e = db.Put("hosts", "node", domain.Host{ID: "node", Name: "Node"}); e != nil {
+		t.Fatal(e)
+	}
+	h := observability.ResourceHistory{}
+	for i := 287; i >= 0; i-- {
+		h.Points = append(h.Points, observability.ResourcePoint{ObservedAt: now.Add(-time.Duration(i) * 5 * time.Minute), MemoryUsedPercent: 50})
+	}
+	if e = db.Put("node-resource-history", "node", h); e != nil {
+		t.Fatal(e)
+	}
+	v, e := db.NodeResourceHistory(context.Background(), "node", now, "7d")
+	if e != nil || len(v.Points) != 0 {
+		t.Fatal("legacy data fabricated hourly history", e)
+	}
+	for i := 167; i >= 0; i-- {
+		h.Hourly = append(h.Hourly, observability.ResourcePoint{ObservedAt: now.Add(-time.Duration(i) * time.Hour), MemoryUsedPercent: 50})
+	}
+	if e = db.Put("node-resource-history", "node", h); e != nil {
+		t.Fatal(e)
+	}
+	if e = db.Put("node-resource-hourly", "node", observability.ResourceHistory{Hourly: h.Hourly}); e != nil {
+		t.Fatal(e)
+	}
+	for _, tc := range []struct {
+		window          string
+		count, interval int
+	}{{"1h", 12, 300}, {"24h", 288, 300}, {"7d", 168, 3600}} {
+		v, e = db.NodeResourceHistory(context.Background(), "node", now, tc.window)
+		if e != nil || len(v.Points) != tc.count || v.IntervalSeconds != tc.interval {
+			t.Fatalf("window %s %+v %v", tc.window, v, e)
+		}
+	}
+	if e = db.PruneNodeResourceHistories(context.Background(), now.Add(25*time.Hour)); e != nil {
+		t.Fatal(e)
+	}
+	v, e = db.NodeResourceHistory(context.Background(), "node", now.Add(25*time.Hour), "7d")
+	if e != nil || len(v.Points) == 0 {
+		t.Fatal("daily cleanup removed weekly data", e)
+	}
+	if _, e = db.NodeResourceHistory(context.Background(), "node", now, "forever"); e == nil {
+		t.Fatal("unbounded window accepted")
+	}
+}

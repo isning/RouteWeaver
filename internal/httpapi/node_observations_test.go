@@ -46,6 +46,12 @@ func TestNodeResourcesAndProviderAllowanceHaveAuthenticatedEndToEndDataPath(t *t
 	if code, _, body := req(t, admin, "GET", base+"/history", "", nil); code != 200 {
 		t.Fatalf("empty history %d %s", code, body)
 	}
+	if code, _, _ := req(t, admin, "GET", base+"/history?window=forever", "", nil); code != 400 {
+		t.Fatalf("invalid window %d", code)
+	}
+	if code, _, _ := req(t, admin, "GET", base+"/history?window=7d", "", nil); code != 200 {
+		t.Fatalf("weekly window %d", code)
+	}
 	now := time.Now().UTC()
 	cfg := observability.Config{ObserverInstanceID: instance.ID, BilledInterfaces: []string{"eth0"}, Provider: &observability.ProviderConfig{Name: "ISP", Mode: "limited", Allowance: 1, Unit: "GB", CycleID: "cycle", CycleStart: now.Add(-time.Hour), CycleEnd: now.Add(time.Hour), NotificationSource: "nic_estimate", ExhaustionAction: "advisory"}}
 	if code, _, body := req(t, admin, "PUT", base+"/config", "", cfg); code != 200 {
