@@ -60,6 +60,7 @@ async function fixture(page: Page, baseURL: string | undefined) {
       target: linked.target, mode: "full", status: "published", publishedAt: "2026-10-01T00:00:00Z" }],
     "/api/me/sources": [], "/api/me/collections": [], "/api/me/resources": [],
     "/api/me/platform-entries": [], "/api/me/notifications": [],
+    "/api/me/outputs/independent": { items: [] },
   };
   const ledger = {
     profileReads: 0, failedProfileReads: 0, recoveredProfileReads: 0, reveals: 0, saves: 0,

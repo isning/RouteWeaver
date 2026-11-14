@@ -15,6 +15,8 @@ async function login(p: Page) {
   await p.getByLabel("密码", { exact: true }).fill("local-demo-password");
   await p.getByRole("button", { name: "进入工作空间", exact: true }).click();
   await waitForConfirmedWorkspace(p, "normal-ui-login");
+  await navigateWorkspace(p, "我的订阅");
+  await expect(heading(p, "我的订阅")).toBeVisible();
 }
 async function api(p: Page, path: string, data?: unknown) {
   const result = await p.evaluate(
