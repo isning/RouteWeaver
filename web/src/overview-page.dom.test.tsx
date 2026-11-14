@@ -228,7 +228,7 @@ it("does not label unknown names as deleted subscriptions or historical routes",
 it("renders only the database's reported IP metadata, not an inferred device location", async () => {
   mount();
   await screen.findByText("192.0.2.7");
-  expect(screen.getByText("IP 归属资料暂不可用")).toBeTruthy();
+  expect(screen.getByText("IP 归属查询暂不可用")).toBeTruthy();
   const client = clients.at(-1)!;
   client.setQueryData(["personal-insights"], (current: object) => ({
     ...current,
@@ -259,7 +259,7 @@ it("renders only the database's reported IP metadata, not an inferred device loc
   expect(screen.getByText("Example Network")).toBeTruthy();
   expect(screen.getByText("AS64500")).toBeTruthy();
   expect(screen.getByText(/不代表设备的实际位置或运营商/)).toBeTruthy();
-  expect(screen.queryByText("IP 归属资料暂不可用")).toBeNull();
+  expect(screen.queryByText("IP 归属查询暂不可用")).toBeNull();
   expect(screen.getByRole("link", { name: "IP Geolocation by DB-IP" }).getAttribute("href")).toBe("https://db-ip.com");
   expect(screen.getByRole("link", { name: "CC BY 4.0" })).toBeTruthy();
 });
@@ -270,8 +270,8 @@ it("distinguishes no database match, non-public IP and unavailable metadata", as
   const client = clients.at(-1)!;
   for (const [status, label] of [
     ["not-found", "归属未知"],
-    ["non-public", "非公网地址，无公网归属资料"],
-    ["unavailable", "归属资料暂不可用"],
+    ["non-public", "非公网 IP"],
+    ["unavailable", "归属查询暂不可用"],
   ]) {
     client.setQueryData(["personal-insights"], (current: object) => ({
       ...current,
@@ -285,6 +285,32 @@ it("distinguishes no database match, non-public IP and unavailable metadata", as
     expect(await screen.findByText(label)).toBeTruthy();
     expect(screen.queryByText(/国家\/地区/)).toBeNull();
   }
+});
+
+it.each([
+  ["10.0.0.1", "私有 IP"],
+  ["172.16.0.1", "私有 IP"],
+  ["172.31.255.255", "私有 IP"],
+  ["192.168.1.1", "私有 IP"],
+  ["fc00::1", "私有 IP"],
+  ["fdff::1", "私有 IP"],
+  ["127.0.0.1", "非公网 IP"],
+  ["::1", "非公网 IP"],
+  ["169.254.1.1", "非公网 IP"],
+  ["fe80::1", "非公网 IP"],
+  ["100.64.0.1", "非公网 IP"],
+  ["192.0.2.1", "非公网 IP"],
+  ["2001:db8::1", "非公网 IP"],
+])("labels %s without confusing private and special addresses", async (ip, label) => {
+  mount();
+  await screen.findByText("192.0.2.7");
+  clients.at(-1)!.setQueryData(["personal-insights"], (current: { admission: object }) => ({
+    ...current,
+    admission: { ...current.admission, onlineIps: [ip] },
+    ipMetadata: { available: true, sources: [], truncated: false, items: [{ ip, status: "non-public" }] },
+  }));
+  expect(await screen.findByText(label)).toBeTruthy();
+  expect(screen.queryByText("非公网地址，无公网归属资料")).toBeNull();
 });
 
 it("shows zero only for independent subscriptions and keeps shared traffic unassigned", async () => {

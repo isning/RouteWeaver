@@ -595,7 +595,7 @@ export function OverviewPage() {
                         )}
                       </>
                     ) : (
-                      <p>IP 归属资料暂不可用</p>
+                      <p>IP 归属查询暂不可用</p>
                     )}
                   </div>
                 </details>
@@ -934,12 +934,12 @@ function IPDetails({
 }) {
   if (!item || item.status === "unavailable")
     return (
-      <p className="truncate text-xs text-muted-foreground">归属资料暂不可用</p>
+      <p className="truncate text-xs text-muted-foreground">归属查询暂不可用</p>
     );
   if (item.status === "non-public")
     return (
       <p className="truncate text-xs text-muted-foreground">
-        非公网地址，无公网归属资料
+        {isPrivateIP(item.ip) ? "私有 IP" : "非公网 IP"}
       </p>
     );
   if (item.status !== "available")
@@ -954,6 +954,16 @@ function IPDetails({
       {labels.map(label => <MetadataItem key={label}>{label}</MetadataItem>)}
     </Metadata>
   );
+}
+
+// The API returns canonical, unmapped addresses. Only RFC 1918 and IPv6 ULA
+// are private; loopback, link-local and other special ranges remain non-public.
+function isPrivateIP(ip: string) {
+  if (ip.includes(":")) return /^f[cd][0-9a-f]{2}:/i.test(ip);
+  const octets = ip.split(".").map(Number);
+  if (octets.length !== 4 || octets.some(n => !Number.isInteger(n) || n < 0 || n > 255)) return false;
+  const [first, second] = octets;
+  return first === 10 || (first === 172 && second >= 16 && second <= 31) || (first === 192 && second === 168);
 }
 
 function countryName(code: string) {
