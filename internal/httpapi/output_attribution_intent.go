@@ -14,6 +14,10 @@ import (
 	"routeweaver/internal/store"
 )
 
+// Revisions also serve as store identities. Prefix the opaque token rather than
+// weakening ValidID: base64url tokens may begin with '-' or '_'.
+func attributedOutputRevision(token string) string { return "or_" + token }
+
 type attributedPrincipalPlan struct {
 	OriginalGrantID string                 `json:"originalGrantId"`
 	Grant           PublicEntryGrant       `json:"grant"`
@@ -154,6 +158,7 @@ func (h *server) prepareAttributedOutputReservation(owner string, in outputCreat
 	if err != nil {
 		return result, proof, err
 	}
+	revision = attributedOutputRevision(revision)
 	result = attributedOutputIntent{ID: in.ID, Owner: owner, Revision: revision, State: "reserved", Deadline: now.Add(10 * time.Minute), CreatedAt: now, UpdatedAt: now, RequestDigest: digest, Output: in.output(), Plans: []attributedPrincipalPlan{}, CapabilityRevisions: map[string]string{}, MigrationIDs: map[string]string{}}
 	result.Output.Attribution = &outputAttribution{Revision: revision, Grants: map[string]string{}}
 	caps := map[string]principalDelegation{}
