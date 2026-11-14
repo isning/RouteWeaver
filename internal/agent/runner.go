@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"errors"
+	"io"
 	"os/exec"
 	"strings"
 	"sync"
@@ -33,6 +34,9 @@ func (b *cappedOutput) Write(p []byte) (int, error) {
 // OS helper terminates the direct child through its stable handle; WaitDelay
 // also bounds pipe shutdown. A truncated output is a failed check, not success.
 func runBounded(ctx context.Context, binary string, args []string, dir string, timeout time.Duration, limit int, environment ...string) (string, error) {
+	return runBoundedCapture(ctx, binary, args, dir, timeout, limit, nil, environment...)
+}
+func runBoundedCapture(ctx context.Context, binary string, args []string, dir string, timeout time.Duration, limit int, diagnostic io.Writer, environment ...string) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, binary, args...)
@@ -42,8 +46,12 @@ func runBounded(ctx context.Context, binary string, args []string, dir string, t
 	cmd.WaitDelay = 250 * time.Millisecond
 	configureCommand(cmd)
 	output := &cappedOutput{limit: limit}
-	cmd.Stdout = output
-	cmd.Stderr = output
+	var writer io.Writer = output
+	if diagnostic != nil {
+		writer = io.MultiWriter(output, diagnostic)
+	}
+	cmd.Stdout = writer
+	cmd.Stderr = writer
 	err := cmd.Run()
 	if ctx.Err() != nil {
 		return "", ctx.Err()

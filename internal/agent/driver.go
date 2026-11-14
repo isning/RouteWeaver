@@ -9,7 +9,8 @@ import (
 )
 
 type DriverOptions struct {
-	Diagnostics *DiagnosticWorker
+	CoreDiagnostics *CoreDiagnostics
+	Diagnostics     *DiagnosticWorker
 	// Opt-in physical-node collector; the control plane enforces one observer.
 	NodeObserver  *NodeObserver
 	PollInterval  time.Duration
@@ -97,6 +98,14 @@ func RunDriver(parent context.Context, r *Reconciler, tr ControlPlaneTransport, 
 			o.OnTransportError(err)
 		}
 	}
+	var coreTransport CoreDiagnosticTransport
+	if o.CoreDiagnostics != nil {
+		var ok bool
+		coreTransport, ok = tr.(CoreDiagnosticTransport)
+		if !ok {
+			return State{}, errors.New("transport does not support core diagnostics")
+		}
+	}
 	diagnosticDone := make(chan struct{})
 	if o.Diagnostics != nil {
 		o.Diagnostics.bindManaged(r)
@@ -110,6 +119,12 @@ func RunDriver(parent context.Context, r *Reconciler, tr ControlPlaneTransport, 
 		}()
 	} else {
 		close(diagnosticDone)
+	}
+	coreDiagnosticDone := make(chan struct{})
+	if o.CoreDiagnostics != nil {
+		go func() { defer close(coreDiagnosticDone); o.CoreDiagnostics.Run(ctx, coreTransport, reportError) }()
+	} else {
+		close(coreDiagnosticDone)
 	}
 	go func() {
 		defer close(workerDone)
@@ -277,6 +292,11 @@ loop:
 	case <-diagnosticDone:
 	case <-time.After(5 * time.Second):
 		workerErr = errors.New("diagnostics did not quiesce on cancellation")
+	}
+	select {
+	case <-coreDiagnosticDone:
+	case <-time.After(5 * time.Second):
+		workerErr = errors.New("core diagnostics did not quiesce on cancellation")
 	}
 	stopCtx, stopCancel := context.WithTimeout(context.Background(), 4*time.Second)
 	defer stopCancel()

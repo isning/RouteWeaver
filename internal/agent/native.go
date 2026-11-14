@@ -67,6 +67,7 @@ func init() {
 // NativeChecker validates only. A ProcessSupervisor separately opts in to
 // foreground child-process ownership; neither result proves a live route.
 type NativeChecker struct {
+	coreDiagnostics  *CoreDiagnostics
 	descriptor       Descriptor
 	binary           string
 	executableSHA256 string
@@ -129,7 +130,9 @@ func (n *NativeChecker) Validate(ctx context.Context, s Staged) error {
 	if !n.commands.MatchVersion(out, n.descriptor.Version) {
 		return phaseError("core_version_mismatch")
 	}
-	if _, err = runBounded(ctx, n.binary, n.commands.ValidateArgs(s), s.Directory, n.timeout, 64<<10, n.stagedEnvironment(s)...); err != nil {
+	diagnostic := n.coreDiagnostics.NewWriter(n.descriptor.ID, n.descriptor.Version)
+	defer diagnostic.Close()
+	if _, err = runBoundedCapture(ctx, n.binary, n.commands.ValidateArgs(s), s.Directory, n.timeout, 64<<10, diagnostic, n.stagedEnvironment(s)...); err != nil {
 		return phaseError("native_config_check_failed")
 	}
 	if s.nativeReceipt != nil {

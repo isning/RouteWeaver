@@ -22,6 +22,7 @@ func (h *server) registerAdmin(r chi.Router) {
 	h.registerAccessPolicyAdmin(r)
 	h.registerFleetAdmin(r)
 	h.registerNodeObservationAdmin(r)
+	h.registerCoreDiagnosticAdmin(r)
 	h.registerEntryAdmin(r)
 	h.registerAgentAdmin(r)
 	h.registerServerAdmin(r)

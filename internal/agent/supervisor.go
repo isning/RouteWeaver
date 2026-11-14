@@ -7,6 +7,7 @@ import (
 )
 
 type SupervisorOptions struct {
+	CoreDiagnostics *CoreDiagnostics
 	// This explicit local opt-in is never inferred from a rendered artifact.
 	AllowLocalProcess bool
 	StartupGrace      time.Duration
@@ -29,6 +30,7 @@ func NewProcessSupervisor(checker *NativeChecker, options SupervisorOptions) (*P
 	if options.StartupGrace <= 0 || options.StartupGrace > 10*time.Second || options.StopTimeout <= 0 || options.StopTimeout > 30*time.Second {
 		return nil, errors.New("bounded supervisor timeouts required")
 	}
+	checker.coreDiagnostics = options.CoreDiagnostics
 	return &ProcessSupervisor{checker: checker, options: options}, nil
 }
 func (s *ProcessSupervisor) Descriptor() Descriptor {

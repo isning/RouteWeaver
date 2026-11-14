@@ -199,6 +199,24 @@ func run() error {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	coreCleanupCtx, cancelCoreCleanup := context.WithCancel(ctx)
+	coreCleanupDone := make(chan struct{})
+	go func() {
+		defer close(coreCleanupDone)
+		ticker := time.NewTicker(time.Minute)
+		defer ticker.Stop()
+		for {
+			if err := s.PruneCoreDiagnostics(time.Now().UTC()); err != nil {
+				log.Print("Core diagnostic retention cleanup failed")
+			}
+			select {
+			case <-coreCleanupCtx.Done():
+				return
+			case <-ticker.C:
+			}
+		}
+	}()
+	defer func() { cancelCoreCleanup(); <-coreCleanupDone }()
 	notificationCtx, cancelNotifications := context.WithCancel(ctx)
 	notificationsDone := make(chan struct{})
 	go func() {

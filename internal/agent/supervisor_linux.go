@@ -259,6 +259,12 @@ func (s *ProcessSupervisor) Activate(ctx context.Context, st Staged) error {
 	cmd.Env = nativeProcessEnvironment(st.Directory, s.checker.stagedEnvironment(st))
 	cmd.Stdout = io.Discard
 	cmd.Stderr = io.Discard
+	stdoutDiagnostic := s.options.CoreDiagnostics.NewWriter(st.Desired.AdapterID, st.Desired.CoreVersion)
+	stderrDiagnostic := s.options.CoreDiagnostics.NewWriter(st.Desired.AdapterID, st.Desired.CoreVersion)
+	if s.options.CoreDiagnostics != nil {
+		cmd.Stdout = stdoutDiagnostic
+		cmd.Stderr = stderrDiagnostic
+	}
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true, Pdeathsig: syscall.SIGKILL}
 	var processIO *ProcessIO
 	if s.checker.commands.PrepareProcess != nil {
@@ -288,6 +294,8 @@ func (s *ProcessSupervisor) Activate(ctx context.Context, st Staged) error {
 	done := make(chan error, 1)
 	go func() {
 		err := cmd.Wait()
+		_ = stdoutDiagnostic.Close()
+		_ = stderrDiagnostic.Close()
 		if processIO != nil && processIO.OnExit != nil {
 			processIO.OnExit()
 		}

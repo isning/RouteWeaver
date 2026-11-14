@@ -259,6 +259,9 @@ func (r *Reconciler) installedAdapterLocked(installed InstalledCore, activate bo
 	if err != nil {
 		return nil, err
 	}
+	if r.options.InstallSupervisor != nil {
+		checker.coreDiagnostics = r.options.InstallSupervisor.CoreDiagnostics
+	}
 	var adapter Adapter = checker
 	if activate && r.options.InstallSupervisor != nil {
 		adapter, err = NewProcessSupervisor(checker, *r.options.InstallSupervisor)

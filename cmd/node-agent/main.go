@@ -48,6 +48,7 @@ func run(ctx context.Context, args []string, out, errOut io.Writer) int {
 	adapterID := flags.String("adapter", agent.LocalFixtureID, "exact trusted adapter ID for outbound mode")
 	version := flags.String("core-version", "1", "exact core version for outbound mode")
 	meterEpoch := flags.String("meter-stream-epoch", "", "optional explicit durable meter outbox epoch")
+	enableCoreDiagnostics := flags.Bool("core-diagnostics", false, "opt-in fixed core diagnostic categories only; no raw logs; qualified versions only")
 	enableDiagnostics := flags.Bool("diagnostics", true, "process bounded administrator-authorized public HTTPS diagnostic jobs in outbound mode")
 	observeNode := flags.Bool("observe-node", false, "read bounded Linux procfs resource/NIC counters; enable only on the designated instance per node")
 	if err := flags.Parse(args); err != nil {
@@ -116,6 +117,20 @@ func run(ctx context.Context, args []string, out, errOut io.Writer) int {
 		fmt.Fprintln(errOut, "managed supervision requires enrolled control-plane admission and an explicit durable meter-stream-epoch")
 		return 2
 	}
+	var coreDiagnostics *agent.CoreDiagnostics
+	if *enableCoreDiagnostics {
+		if *controlPlane == "" || (*mode != "supervise" && *mode != "catalog") || !*allowProcess {
+			fmt.Fprintln(errOut, "core-diagnostics requires enrolled process supervision")
+			return 2
+		}
+		var e error
+		coreDiagnostics, e = agent.OpenCoreDiagnostics(filepath.Join(*stateDir, "core-diagnostics"), d.Scope)
+		if e != nil {
+			fmt.Fprintln(errOut, e)
+			return 2
+		}
+		defer coreDiagnostics.Close()
+	}
 	var adapter agent.Adapter
 	options := agent.Options{MaxLease: *maxLease}
 	switch *mode {
@@ -131,7 +146,7 @@ func run(ctx context.Context, args []string, out, errOut io.Writer) int {
 		}
 		options.CoreInstaller = installer
 		if *allowProcess {
-			options.InstallSupervisor = &agent.SupervisorOptions{AllowLocalProcess: true, StartupGrace: 200 * time.Millisecond, StopTimeout: 2 * time.Second}
+			options.InstallSupervisor = &agent.SupervisorOptions{CoreDiagnostics: coreDiagnostics, AllowLocalProcess: true, StartupGrace: 200 * time.Millisecond, StopTimeout: 2 * time.Second}
 		}
 
 	case "fixture":
@@ -148,7 +163,7 @@ func run(ctx context.Context, args []string, out, errOut io.Writer) int {
 				fmt.Fprintln(errOut, "supervise requires allow-local-process and service or run-for in (0,1h]")
 				return 2
 			}
-			supervisor, err := agent.NewProcessSupervisor(checker, agent.SupervisorOptions{AllowLocalProcess: true, StartupGrace: 200 * time.Millisecond, StopTimeout: 2 * time.Second})
+			supervisor, err := agent.NewProcessSupervisor(checker, agent.SupervisorOptions{CoreDiagnostics: coreDiagnostics, AllowLocalProcess: true, StartupGrace: 200 * time.Millisecond, StopTimeout: 2 * time.Second})
 			if err != nil {
 				fmt.Fprintln(errOut, err)
 				return 2
@@ -230,7 +245,7 @@ func run(ctx context.Context, args []string, out, errOut io.Writer) int {
 			}
 			defer diagnosticWorker.Close()
 		}
-		final, driverErr := agent.RunDriver(ctx, r, transport, spool, agent.DriverOptions{Diagnostics: diagnosticWorker, NodeObserver: observer, PollInterval: time.Second, LeaseInterval: 250 * time.Millisecond, MaxRuntime: *runFor, Continuous: *service, OnTransportError: func(e error) { fmt.Fprintln(errOut, e) }})
+		final, driverErr := agent.RunDriver(ctx, r, transport, spool, agent.DriverOptions{CoreDiagnostics: coreDiagnostics, Diagnostics: diagnosticWorker, NodeObserver: observer, PollInterval: time.Second, LeaseInterval: 250 * time.Millisecond, MaxRuntime: *runFor, Continuous: *service, OnTransportError: func(e error) { fmt.Fprintln(errOut, e) }})
 		if encode(final) != nil {
 			return 1
 		}
