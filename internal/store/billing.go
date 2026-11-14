@@ -23,7 +23,9 @@ type MeterBatch struct {
 	ObservedAt    time.Time `json:"observedAt"`
 }
 type MeterRecord struct {
-	BudgetID string `json:"budgetId,omitempty"`
+	OutputID       string `json:"outputId,omitempty"`
+	OutputRevision string `json:"outputRevision,omitempty"`
+	BudgetID       string `json:"budgetId,omitempty"`
 	MeterBatch
 	IntervalStart time.Time `json:"intervalStart,omitzero"`
 	IntervalEnd   time.Time `json:"intervalEnd,omitzero"`

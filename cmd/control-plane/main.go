@@ -189,7 +189,8 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("IP metadata: %w", err)
 	}
-	app := httpapi.NewWithOptions(s, render.Default(), httpapi.Options{IPMetadata: ipMetadata, OIDC: oidcProvider, TrustedProxyCIDRs: proxyCIDRs, PublicOrigin: publicOrigin, AdminToken: adminToken, UIDir: *uiDir, SecureCookies: tlsEnabled, BackupRestoreDir: restoreDir, BackupRestoreKey: key, BackupLimits: backupLimits})
+	apiOptions := httpapi.Options{IPMetadata: ipMetadata, OIDC: oidcProvider, TrustedProxyCIDRs: proxyCIDRs, PublicOrigin: publicOrigin, AdminToken: adminToken, UIDir: *uiDir, SecureCookies: tlsEnabled, BackupRestoreDir: restoreDir, BackupRestoreKey: key, BackupLimits: backupLimits}
+	app := httpapi.NewWithOptions(s, render.Default(), apiOptions)
 	srv := &http.Server{Addr: *listen, Handler: app, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 30 * time.Second, WriteTimeout: 30 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 1 << 20}
 	listener, e := listenControlPlane(context.Background(), *listen)
 	if e != nil {
@@ -206,6 +207,13 @@ func run() error {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	independentCtx, cancelIndependent := context.WithCancel(ctx)
+	independentDone := make(chan struct{})
+	go func() {
+		defer close(independentDone)
+		httpapi.RunIndependentOutputProvisioning(independentCtx, s, apiOptions)
+	}()
+	defer func() { cancelIndependent(); <-independentDone }()
 	coreCleanupCtx, cancelCoreCleanup := context.WithCancel(ctx)
 	coreCleanupDone := make(chan struct{})
 	go func() {

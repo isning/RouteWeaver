@@ -18,6 +18,7 @@ import (
 )
 
 type serviceIntent struct {
+	MigrationID         string                         `json:"migrationId,omitempty"`
 	ID                  string                         `json:"id"`
 	BatchID             string                         `json:"batchId"`
 	ActorID             string                         `json:"actorId"`
@@ -57,6 +58,17 @@ func (h *server) serviceIntentView(id string, current controlprotocol.Identity) 
 	return map[string]any{"id": intent.ID, "running": running, "status": status, "automaticAttempts": intent.AutomaticAttempts, "nextAttemptAt": intent.NextAttemptAt, "leaseExpiresAt": intent.Lease.ExpiresAt}, nil
 }
 func (h *server) checkServiceAuthority(p *preparedFleet, intent serviceIntent) error {
+	if intent.MigrationID != "" {
+		var receipt principalServiceMigration
+		if err := h.fleetRead(p, "principal-service-migrations", intent.MigrationID, &receipt, false); err != nil {
+			return err
+		}
+		original, ok := receipt.OldService[intent.Current.InstanceID]
+		if !ok || receipt.ID != intent.MigrationID || intent.BatchID != receipt.ID || original.ID != intent.ID || original.ActorID != intent.ActorID || original.AuthorityDigest != intent.AuthorityDigest || receipt.Owner == "" || receipt.CapabilityRevision == "" {
+			return fmt.Errorf("invalid inherited service authority receipt")
+		}
+	}
+
 	if intent.ActorID == "operator" {
 		if len(h.opts.AdminToken) < 32 || intent.AuthorityDigest == "" || intent.AuthorityDigest != auth.Digest(h.opts.AdminToken) {
 			return fmt.Errorf("service operator authority changed")

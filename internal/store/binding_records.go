@@ -11,6 +11,9 @@ import (
 // account, grant/version and deployment inputs and require new binding absence.
 // They do not authorize caller-supplied references or perform database writes.
 func EntryAdmissionBindingRecord(v EntryAdmissionBinding) (RecordWrite, error) {
+	if (v.OutputID != "" || v.OutputRevision != "") && (!domain.ValidID(v.OutputID) || !domain.ValidID(v.OutputRevision)) {
+		return RecordWrite{}, fmt.Errorf("complete output attribution identity required")
+	}
 	for _, id := range []string{v.ID, v.InstanceID, v.EntryID, v.SubjectID, v.UserID, v.RouteID, v.GrantID, v.CredentialVersion} {
 		if !domain.ValidID(id) {
 			return RecordWrite{}, fmt.Errorf("valid explicit entry binding identities required")

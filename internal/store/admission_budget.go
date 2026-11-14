@@ -15,6 +15,8 @@ const AdmissionBudgetChunk uint64 = 1 << 20
 // admissionBudget is a reservation, not consumption. Only monotonically
 // reported admitted bytes enter the ledger. Expiry never refunds its remainder.
 type admissionBudget struct {
+	OutputID       string       `json:"outputId,omitempty"`
+	OutputRevision string       `json:"outputRevision,omitempty"`
 	LeaseID        string       `json:"leaseId"`
 	AccountID      string       `json:"accountId"`
 	RouteID        string       `json:"routeId"`
@@ -118,7 +120,7 @@ func (s *Store) settleAdmissionBudget(tx *sql.Tx, budget *admissionBudget, in Ad
 			return e
 		}
 		budget.Sequence++
-		record := MeterRecord{MeterBatch: MeterBatch{UserID: budget.AccountID, RouteID: budget.RouteID, MeterID: "admission-budget", Epoch: budget.LeaseID, Sequence: budget.Sequence, RawBytes: int64(delta), ObservedAt: at}, RateID: budget.Rate.ID, RateMicros: budget.Rate.Micros, WeightedBytes: weighted, RecordedAt: now, IntervalStart: budget.LastSettlement, IntervalEnd: at, BudgetID: budget.LeaseID}
+		record := MeterRecord{OutputID: budget.OutputID, OutputRevision: budget.OutputRevision, MeterBatch: MeterBatch{UserID: budget.AccountID, RouteID: budget.RouteID, MeterID: "admission-budget", Epoch: budget.LeaseID, Sequence: budget.Sequence, RawBytes: int64(delta), ObservedAt: at}, RateID: budget.Rate.ID, RateMicros: budget.Rate.Micros, WeightedBytes: weighted, RecordedAt: now, IntervalStart: budget.LastSettlement, IntervalEnd: at, BudgetID: budget.LeaseID}
 		if e = s.putTx(tx, "ledger", fmt.Sprintf("admission:%s:%d", budget.LeaseID, in.AdmittedBytes), record); e != nil {
 			return e
 		}
@@ -151,7 +153,7 @@ func (s *Store) grantAdmissionBudget(tx *sql.Tx, binding EntryAdmissionBinding, 
 			return nil, "policy-boundary-reconnect", nil
 		}
 	} else {
-		*budget = admissionBudget{LeaseID: leaseID, AccountID: binding.UserID, RouteID: binding.RouteID, Finite: policy.Quota > 0, CycleStart: policy.CycleStart, PolicyEnd: policy.End, Rate: policy.Rate, IssuedAt: now, LastSettlement: now}
+		*budget = admissionBudget{OutputID: binding.OutputID, OutputRevision: binding.OutputRevision, LeaseID: leaseID, AccountID: binding.UserID, RouteID: binding.RouteID, Finite: policy.Quota > 0, CycleStart: policy.CycleStart, PolicyEnd: policy.End, Rate: policy.Rate, IssuedAt: now, LastSettlement: now}
 	}
 	if policy.End != nil && policy.End.Before(until) {
 		until = *policy.End

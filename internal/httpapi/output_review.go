@@ -53,8 +53,22 @@ func (h *server) prepareOutput(owner string, output Output, inputs *templateInpu
 	if err := inputs.TenantGet(owner, "profiles", output.ProfileID, &p); err != nil {
 		return candidate, fmt.Errorf("profile missing or not owned")
 	}
-	if err := h.materializeProfileWithReader(owner, &p, inputs); err != nil {
+	var reader tenantRecordReader = inputs
+	if output.Attribution != nil {
+		reader = attributedOutputReader{inputs: inputs, owner: owner, outputID: output.ID, attribution: output.Attribution}
+	}
+	if err := h.materializeProfileWithReader(owner, &p, reader); err != nil {
 		return candidate, err
+	}
+	if output.Attribution != nil {
+		if len(p.IR.Endpoints) != len(output.Attribution.Grants) {
+			return candidate, fmt.Errorf("independent metering requires only its isolated managed routes")
+		}
+		for _, endpoint := range p.IR.Endpoints {
+			if endpoint.Origin != "platform-entry" {
+				return candidate, fmt.Errorf("imported routes cannot be independently metered by this platform")
+			}
+		}
 	}
 	if err := domain.ValidateClientProfile(p.IR); err != nil {
 		return candidate, err
@@ -87,7 +101,11 @@ func (h *server) prepareOutput(owner string, output Output, inputs *templateInpu
 			return candidate, fmt.Errorf("platform entry provenance missing")
 		}
 		ref := endpoint.Provenance[0]
-		output.PlatformDependencies = append(output.PlatformDependencies, EntryDependency{ID: endpoint.ID, RouteID: ref.SourceID, CredentialVersion: ref.SnapshotID, ConnectionDigest: connectionDigest(endpoint.Connection)})
+		dependencyID := endpoint.ID
+		if output.Attribution != nil {
+			dependencyID = output.Attribution.Grants[endpoint.ID]
+		}
+		output.PlatformDependencies = append(output.PlatformDependencies, EntryDependency{ID: dependencyID, RouteID: ref.SourceID, CredentialVersion: ref.SnapshotID, ConnectionDigest: connectionDigest(endpoint.Connection)})
 	}
 	output.NameAllocations = result.NameAllocations
 	output.Artifacts = result.Artifacts

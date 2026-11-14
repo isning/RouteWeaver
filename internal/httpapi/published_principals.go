@@ -110,6 +110,10 @@ func (h *server) savePublishedPrincipal(w http.ResponseWriter, r *http.Request) 
 			storeError(w, e)
 			return
 		}
+		if previous.OutputID != "" {
+			fail(w, 409, "independently metered credentials must be managed through their output lifecycle")
+			return
+		}
 		if previous.PublishedRouteID == "" || previous.RouteID != route.ID {
 			fail(w, 409, "entry identity belongs to a different route or authentication workflow")
 			return

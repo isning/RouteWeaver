@@ -27,6 +27,7 @@ type fleetRecord struct {
 	Requests                map[string]string                         `json:"requests"`
 }
 type preparedFleet struct {
+	overlay                 map[string]store.RecordWrite
 	Policies                map[string]service.EffectivePolicy
 	OwnershipWrites         map[string]instanceOwnership
 	LiveDeployment          ServerDeployment
@@ -47,6 +48,16 @@ type preparedFleet struct {
 func (h *server) fleetRead(p *preparedFleet, kind, id string, out any, optional bool) error {
 	var raw json.RawMessage
 	e := h.s.Get(kind, id, &raw)
+	if e == store.ErrNotFound {
+		if value, ok := p.overlay[kind+"\x00"+id]; ok {
+			p.Compares = append(p.Compares, store.RecordCompare{Kind: kind, ID: id})
+			raw, e = json.Marshal(value.Value)
+			if e != nil {
+				return e
+			}
+			return json.Unmarshal(raw, out)
+		}
+	}
 	if e == store.ErrNotFound && optional {
 		p.Compares = append(p.Compares, store.RecordCompare{Kind: kind, ID: id})
 		return nil
@@ -55,32 +66,79 @@ func (h *server) fleetRead(p *preparedFleet, kind, id string, out any, optional 
 		return e
 	}
 	p.Compares = append(p.Compares, store.RecordCompare{Kind: kind, ID: id, Expected: raw})
+	if value, ok := p.overlay[kind+"\x00"+id]; ok {
+		raw, e = json.Marshal(value.Value)
+		if e != nil {
+			return e
+		}
+	}
 	return json.Unmarshal(raw, out)
 }
 func (h *server) fleetList(p *preparedFleet, kind string) ([]json.RawMessage, error) {
-	all, e := h.s.List(kind)
-	if e != nil {
-		return nil, e
+	all, err := h.s.List(kind)
+	if err != nil {
+		return nil, err
 	}
+	originals := map[string]json.RawMessage{}
 	ids := []string{}
 	for _, raw := range all {
-		var id struct {
+		var identity struct {
 			ID string `json:"id"`
 		}
-		if e = json.Unmarshal(raw, &id); e != nil {
-			return nil, e
+		if err = json.Unmarshal(raw, &identity); err != nil {
+			return nil, err
 		}
-		if id.ID == "" {
+		if identity.ID == "" {
 			return nil, fmt.Errorf("record identity missing in %s", kind)
 		}
-		ids = append(ids, id.ID)
-		p.Compares = append(p.Compares, store.RecordCompare{Kind: kind, ID: id.ID, Expected: raw})
+		originals[identity.ID] = raw
+		ids = append(ids, identity.ID)
 	}
 	p.Sets = append(p.Sets, store.RecordSetCompare{Kind: kind, IDs: ids})
-	return all, nil
+	effective := map[string]json.RawMessage{}
+	for id, raw := range originals {
+		effective[id] = raw
+	}
+	for _, write := range p.overlay {
+		if write.Kind == kind {
+			raw, e := json.Marshal(write.Value)
+			if e != nil {
+				return nil, e
+			}
+			effective[write.ID] = raw
+		}
+	}
+	order := make([]string, 0, len(effective))
+	for id := range effective {
+		order = append(order, id)
+	}
+	sort.Strings(order)
+	result := []json.RawMessage{}
+	for _, id := range order {
+		var expected any
+		if raw, ok := originals[id]; ok {
+			expected = raw
+		}
+		p.Compares = append(p.Compares, store.RecordCompare{Kind: kind, ID: id, Expected: expected})
+		result = append(result, effective[id])
+	}
+	return result, nil
 }
+
 func (h *server) prepareFleet(in fleet.Input) (preparedFleet, error) {
+	return h.prepareFleetWithOverlay(in, nil)
+}
+
+func (h *server) prepareFleetWithOverlay(in fleet.Input, writes []store.RecordWrite) (preparedFleet, error) {
 	p := preparedFleet{Policies: map[string]service.EffectivePolicy{}, OwnershipWrites: map[string]instanceOwnership{}, Plan: fleet.Plan{Input: in, Targets: []fleet.Target{}, Supported: true, Diagnostics: []string{}}, Baselines: map[string]*controlprotocol.Desired{}, Enrollments: map[string]Enrollment{}, Artifacts: map[string][]domain.Artifact{}}
+	p.overlay = map[string]store.RecordWrite{}
+	for _, write := range writes {
+		key := write.Kind + "\x00" + write.ID
+		if _, exists := p.overlay[key]; exists {
+			return p, fmt.Errorf("duplicate overlay record")
+		}
+		p.overlay[key] = write
+	}
 	stages, e := fleet.Stages(in)
 	if e != nil {
 		return p, e
@@ -174,23 +232,29 @@ func (h *server) prepareFleet(in fleet.Input) (preparedFleet, error) {
 		}
 	}
 	authStart := len(p.Compares)
+	pathProof := preparedFleet{overlay: p.overlay}
 	if in.Action != "stop" {
-		if e = h.refreshFleetPrincipals(&p); e != nil {
+		if e = h.refreshFleetPrincipals(&p, &pathProof); e != nil {
 			return p, e
 		}
 	}
-	p.AuthorizationHash = fleet.Fingerprint(p.Compares[authStart:])
-	p.ContinuousAuthorityHash, e = continuousAuthorityFingerprint(p.Compares[authStart:], p.Policies)
+	authorityCompares := fleetOverlayCompares(p.Compares[authStart:], p.overlay)
+	p.AuthorizationHash = fleet.Fingerprint(authorityCompares)
+	p.ContinuousAuthorityHash, e = continuousAuthorityFingerprint(authorityCompares, p.Policies)
 	if e != nil {
 		return p, e
 	}
+	// Path dependencies strengthen transactional CAS without changing the
+	// established continuous-authority digest projection of existing services.
+	p.Compares = append(p.Compares, pathProof.Compares...)
+	p.Sets = append(p.Sets, pathProof.Sets...)
 	allArtifacts := []domain.Artifact{}
 	if in.Action != "stop" {
 		allArtifacts, e = render.DefaultServers().Render(p.Deployment.IR)
 		if e != nil {
 			return p, e
 		}
-		if e = h.verifyServerTLSArtifacts(p.Deployment.IR, allArtifacts); e != nil {
+		if e = h.verifyServerTLSArtifactsWithProof(p.Deployment.IR, allArtifacts, &p); e != nil {
 			return p, e
 		}
 	}
@@ -362,7 +426,7 @@ func (h *server) prepareFleet(in fleet.Input) (preparedFleet, error) {
 	return p, nil
 }
 
-func (h *server) refreshFleetPrincipals(p *preparedFleet) error {
+func (h *server) refreshFleetPrincipals(p *preparedFleet, pathProof *preparedFleet) error {
 	for i := range p.Deployment.IR.Programs {
 		program := &p.Deployment.IR.Programs[i]
 		accepted := []domain.ServerPrincipal{}
@@ -436,7 +500,12 @@ func (h *server) refreshFleetPrincipals(p *preparedFleet) error {
 			if len(endpoints) != len(route.EndpointIDs) {
 				return fmt.Errorf("historic configuration no longer contains the authorized published route")
 			}
-			action, e := h.publishedPathAction(p.Deployment.IR, *route, endpoints)
+			var action domain.ActionRef
+			if pathProof == nil {
+				action, e = h.publishedPathAction(p.Deployment.IR, *route, endpoints)
+			} else {
+				action, e = h.publishedPathActionWithProof(p.Deployment.IR, *route, endpoints, pathProof)
+			}
 			if e != nil {
 				return e
 			}

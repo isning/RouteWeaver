@@ -34,14 +34,18 @@ type rotationRecoveryFixture struct {
 }
 
 func newRotationRecoveryFixture(t *testing.T, additionalEntries ...string) *rotationRecoveryFixture {
+	return newRotationRecoveryFixtureAtPorts(t, 12345, 12346, additionalEntries...)
+}
+
+func newRotationRecoveryFixtureAtPorts(t *testing.T, entryPort, transitPort int, additionalEntries ...string) *rotationRecoveryFixture {
 	t.Helper()
 	s, srv := makeServer(t)
 	f := &rotationRecoveryFixture{t: t, s: s, srv: srv, admin: operatorClient(), owner: inviteClient(t, s, srv, "rotation-owner"), other: inviteClient(t, s, srv, "rotation-other")}
 	host := domain.Host{ID: "rotation-host", Name: "Synthetic rotation host", Address: "127.0.0.1"}
 	entryCore := domain.CoreInstance{ID: "rotation-core", HostID: host.ID, AdapterID: render.ServerAdapterManagedXray, Version: render.ManagedXrayVersion}
 	transitCore := domain.CoreInstance{ID: "rotation-transit", HostID: host.ID, AdapterID: render.ServerAdapterXray, Version: render.XrayVersion}
-	entry := domain.ManagedEndpoint{ID: "rotation-entry", InstanceID: entryCore.ID, Name: "Synthetic public entry", Connection: domain.Connection{Protocol: "vless", Host: "127.0.0.1", Port: 12345, UUID: "11111111-1111-4111-8111-111111111111"}}
-	transit := domain.ManagedEndpoint{ID: "rotation-exit", InstanceID: transitCore.ID, Name: "Synthetic transit", Connection: domain.Connection{Protocol: "socks", Host: "127.0.0.1", Port: 12346, Username: "rotation-transit-user", Password: "rotation-transit-secret"}}
+	entry := domain.ManagedEndpoint{ID: "rotation-entry", InstanceID: entryCore.ID, Name: "Synthetic public entry", Connection: domain.Connection{Protocol: "vless", Host: "127.0.0.1", Port: entryPort, UUID: "11111111-1111-4111-8111-111111111111"}}
+	transit := domain.ManagedEndpoint{ID: "rotation-exit", InstanceID: transitCore.ID, Name: "Synthetic transit", Connection: domain.Connection{Protocol: "socks", Host: "127.0.0.1", Port: transitPort, Username: "rotation-transit-user", Password: "rotation-transit-secret"}}
 	f.postAdmin("hosts", host)
 	for _, core := range []domain.CoreInstance{entryCore, transitCore} {
 		f.postAdmin("core-instances", core)
@@ -51,7 +55,7 @@ func newRotationRecoveryFixture(t *testing.T, additionalEntries ...string) *rota
 	}
 	deployment := httpapi.ServerDeployment{ID: "rotation-path", Name: "Synthetic rotation path", IR: domain.ServerDeploymentIR{SchemaVersion: "1.0", TopologyRevision: "rotation-topology", Programs: []domain.ServerProgram{{Instance: entryCore, Listener: entry, Egress: []domain.Connection{transit.Connection}, DestinationPolicy: &domain.DestinationPolicy{AllowCIDRs: []string{"127.0.0.1/32"}}}, {Instance: transitCore, Listener: transit}}}}
 	f.postAdmin("server-deployments", deployment)
-	f.postAdmin("published-routes", map[string]any{"id": "rotation-line", "name": "Synthetic rotation line", "deploymentId": deployment.ID, "endpointIds": []string{entry.ID, transit.ID}, "publicHost": "127.0.0.1", "publicPort": 12345})
+	f.postAdmin("published-routes", map[string]any{"id": "rotation-line", "name": "Synthetic rotation line", "deploymentId": deployment.ID, "endpointIds": []string{entry.ID, transit.ID}, "publicHost": "127.0.0.1", "publicPort": entryPort})
 	plan := service.Plan{ID: "rotation-service", Name: "Synthetic service", QuotaBytes: 1 << 20, RouteIDs: []string{"rotation-line"}, Cycle: service.CyclePolicy{Mode: "none", Timezone: "UTC+8"}}
 	f.postAdmin("services", plan)
 	code, _, _ := req(t, f.admin, "PUT", srv.URL+"/api/users/"+f.owner.id+"/entitlement", "", service.Entitlement{ServiceID: plan.ID, Cycle: plan.Cycle})

@@ -25,6 +25,7 @@ type EntryDependency struct {
 	ConnectionDigest  string `json:"connectionDigest"`
 }
 type Output struct {
+	Attribution          *outputAttribution               `json:"attribution,omitempty"`
 	SemanticSnapshot     *render.SemanticSnapshot         `json:"semanticSnapshot,omitempty"`
 	RoutingIntent        *FrozenRoutingIntent             `json:"routingIntent,omitempty"`
 	RoutingSummary       *RoutingSummary                  `json:"routingSummary,omitempty"`
@@ -47,6 +48,11 @@ type Output struct {
 
 func (h *server) outputView(owner string, o Output) map[string]any {
 	view := map[string]any{"id": o.ID, "name": o.Name, "profileId": o.ProfileID, "target": o.Target, "mode": o.Mode, "status": o.Status, "publishedAt": o.PublishedAt, "revision": o.Revision}
+	if o.Attribution != nil {
+		view["trafficAttribution"] = "independent-managed"
+	} else {
+		view["trafficAttribution"] = "unattributed"
+	}
 	if o.CreationReviewDigest != "" {
 		view["creationReviewDigest"] = o.CreationReviewDigest
 	}
@@ -62,6 +68,9 @@ func (h *server) outputView(owner string, o Output) map[string]any {
 	return view
 }
 func (h *server) registerOutputs(r chi.Router) {
+	r.Post("/outputs/independent", h.reserveAttributedOutput)
+	h.registerAttributedOutputLifecycle(r)
+	r.Get("/output-usage", h.myOutputUsage)
 	r.Get("/subscription-fetches", h.subscriptionFetches)
 	r.Get("/outputs/{id}/bundle", h.outputBundle)
 	r.Get("/outputs/{id}/status", h.outputStatus)
@@ -134,6 +143,16 @@ func (h *server) registerOutputs(r chi.Router) {
 		}
 		v := in.output()
 		inputs := newTemplateInputs(h.s)
+		if err := inputs.expectRecord(owner, "output-attribution-intents", in.ID); err != nil {
+			storeError(w, err)
+			return
+		}
+		for _, c := range inputs.compares() {
+			if c.Kind == store.TenantKind(owner, "output-attribution-intents") && c.Expected != nil {
+				fail(w, 409, "output ID is reserved by independent provisioning")
+				return
+			}
+		}
 		prepared, e := h.prepareOutput(owner, v, inputs)
 		if e != nil {
 			if in.PreviewDigest != nil {

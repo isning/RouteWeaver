@@ -18,6 +18,7 @@ type Settings struct {
 }
 
 func (h *server) registerAdmin(r chi.Router) {
+	h.registerPrincipalDelegationAdmin(r)
 	h.registerSubscriptionOriginAdmin(r)
 	h.registerAccessPolicyAdmin(r)
 	h.registerFleetAdmin(r)

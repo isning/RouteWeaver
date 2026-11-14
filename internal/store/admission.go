@@ -16,6 +16,8 @@ import (
 // EntryAdmissionBinding links an authenticated public listener principal to one
 // account. Transit connectors and imported client subscriptions cannot create it.
 type EntryAdmissionBinding struct {
+	OutputID          string `json:"outputId,omitempty"`
+	OutputRevision    string `json:"outputRevision,omitempty"`
 	ID                string `json:"id"`
 	InstanceID        string `json:"instanceId"`
 	EntryID           string `json:"entryId"`
@@ -37,6 +39,8 @@ type admissionLease struct {
 	ExpiresAt  time.Time             `json:"expiresAt"`
 }
 type admissionGrant struct {
+	OutputID          string            `json:"outputId,omitempty"`
+	OutputRevision    string            `json:"outputRevision,omitempty"`
 	PublishedRouteID  string            `json:"publishedRouteId"`
 	SubjectID         string            `json:"subjectId"`
 	DeploymentID      string            `json:"deploymentId"`
@@ -52,6 +56,9 @@ func admissionBindingKey(instance, entry, subject, version string) string {
 	return strings.Join([]string{instance, entry, subject, version}, ":")
 }
 func (s *Store) SetEntryAdmissionBinding(v EntryAdmissionBinding) error {
+	if v.OutputID != "" || v.OutputRevision != "" {
+		return fmt.Errorf("attributed bindings require the reserved output transaction")
+	}
 	record, e := EntryAdmissionBindingRecord(v)
 	if e != nil {
 		return e
@@ -143,6 +150,11 @@ func (s *Store) admissionEligibility(tx *sql.Tx, binding EntryAdmissionBinding, 
 	}
 	if grant.Revoked || grant.CredentialVersion != binding.CredentialVersion || grant.UserID != binding.UserID || grant.RouteID != binding.RouteID {
 		reason = "credential-revoked"
+		return
+	}
+	if err = s.outputAttributionEligibleTx(tx, binding, grant); err != nil {
+		reason = "output-attribution-unavailable"
+		err = nil
 		return
 	}
 	var instance domain.CoreInstance
@@ -271,6 +283,9 @@ func (s *Store) AcquireAdmission(scope AdmissionScope, in AdmissionRequest, now 
 	}
 	var budget admissionBudget
 	if e = s.getTx(tx, "admission-budgets", leaseID, &budget); e == nil {
+		if budget.AccountID != binding.UserID || budget.RouteID != binding.RouteID || budget.OutputID != binding.OutputID || budget.OutputRevision != binding.OutputRevision {
+			return decision, ErrConflict
+		}
 		if e = s.settleAdmissionBudget(tx, &budget, in, now); e != nil {
 			if e == ErrAdmissionEvidence {
 				if err := s.recordAdmissionAnomaly(tx, scope, binding, leaseID, in, now); err != nil {
@@ -293,7 +308,7 @@ func (s *Store) AcquireAdmission(scope AdmissionScope, in AdmissionRequest, now 
 		}
 		return decision, ErrAdmissionEvidence
 	} else if in.Final {
-		budget = admissionBudget{LeaseID: leaseID, AccountID: binding.UserID, RouteID: binding.RouteID, Closed: true, IssuedAt: now, ExpiresAt: now, LastSettlement: now}
+		budget = admissionBudget{OutputID: binding.OutputID, OutputRevision: binding.OutputRevision, LeaseID: leaseID, AccountID: binding.UserID, RouteID: binding.RouteID, Closed: true, IssuedAt: now, ExpiresAt: now, LastSettlement: now}
 		if e = s.putTx(tx, "admission-budgets", leaseID, budget); e != nil {
 			return decision, e
 		}

@@ -41,6 +41,10 @@ func (s *Store) CompareSetsAndGenerateRecords(kind string, ids []string, compare
 }
 
 func (s *Store) compareSetsAndGenerateRecords(kind string, ids []string, compares []RecordCompare, sets []RecordSetCompare, build func(map[string]uint64) ([]RecordWrite, error), fence *ServicePolicyFence) (map[string]uint64, error) {
+	return s.compareSetsAndGenerateRecordsPrepared(kind, ids, compares, sets, build, fence, nil)
+}
+
+func (s *Store) compareSetsAndGenerateRecordsPrepared(kind string, ids []string, compares []RecordCompare, sets []RecordSetCompare, build func(map[string]uint64) ([]RecordWrite, error), fence *ServicePolicyFence, prepare func(*sql.Tx, []RecordWrite) ([]RecordWrite, error)) (map[string]uint64, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	tx, e := s.beginWriteTx()
@@ -74,6 +78,12 @@ func (s *Store) compareSetsAndGenerateRecords(kind string, ids []string, compare
 	writes, e := build(maps.Clone(generations))
 	if e != nil {
 		return nil, e
+	}
+	if prepare != nil {
+		writes, e = prepare(tx, writes)
+		if e != nil {
+			return nil, e
+		}
 	}
 	type recordKey struct{ kind, id string }
 	seen := make(map[recordKey]bool, len(writes))

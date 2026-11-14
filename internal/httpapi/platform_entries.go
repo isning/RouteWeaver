@@ -14,6 +14,8 @@ import (
 // never inferred from a route's transit chain or a node's server credentials.
 // Configuration records do not establish that a node has applied credentials.
 type PublicEntryGrant struct {
+	OutputID          string            `json:"outputId,omitempty"`
+	OutputRevision    string            `json:"outputRevision,omitempty"`
 	PublishedRouteID  string            `json:"publishedRouteId,omitempty"`
 	SubjectID         string            `json:"subjectId,omitempty"`
 	DeploymentID      string            `json:"deploymentId,omitempty"`
@@ -100,7 +102,7 @@ func (h *server) registerEntryAdmin(r chi.Router) {
 		if !decode(w, r, &v) {
 			return
 		}
-		if v.PublishedRouteID != "" || v.SubjectID != "" || v.DeploymentID != "" {
+		if v.PublishedRouteID != "" || v.SubjectID != "" || v.DeploymentID != "" || v.OutputID != "" || v.OutputRevision != "" {
 			fail(w, 400, "managed grants must be provisioned through their published route")
 			return
 		}
@@ -203,6 +205,11 @@ func (h *server) resolveEntryWithReader(owner, id string, reader tenantRecordRea
 	var grant PublicEntryGrant
 	if e := reader.TenantGet(owner, "platform-entries", id, &grant); e != nil {
 		return domain.ClientEndpoint{}, fmt.Errorf("platform entry is missing or not owned")
+	}
+	if grant.OutputID != "" {
+		if _, ok := reader.(attributedOutputReader); !ok {
+			return domain.ClientEndpoint{}, fmt.Errorf("this credential is reserved for its independently metered subscription")
+		}
 	}
 	overview, e := h.overview(owner, time.Now())
 	if e != nil {
