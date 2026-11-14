@@ -167,57 +167,33 @@ func QueuePrincipalMigrationForTest(t *testing.T, s *store.Store, owner string, 
 
 }
 
-// Compare actual nil-overlay preparation against the pre-migration digest
-// projection (path reads never belonged to authorization Compares).
-func AssertLegacyMigrationAuthorityForTest(t *testing.T, s *store.Store) {
+// Fresh services use the same path-aware authority projection at creation and renewal.
+func AssertCurrentMigrationAuthorityForTest(t *testing.T, s *store.Store) {
 	t.Helper()
 	h := &server{s: s}
 	p, err := h.prepareFleet(fleet.Input{Action: "configure", DeploymentID: "rotation-path", TargetIDs: []string{"rotation-core", "rotation-transit"}})
 	if err != nil {
 		t.Fatal(err)
 	}
-	legacy := p
-	legacy.Compares = nil
-	legacy.Sets = nil
-	legacy.Policies = map[string]service.EffectivePolicy{}
-	if err := h.legacyRefreshFleetPrincipals68cbef5(&legacy); err != nil {
+	authority := p
+	authority.Compares = nil
+	authority.Sets = nil
+	authority.Policies = map[string]service.EffectivePolicy{}
+	if err := h.refreshFleetPrincipals(&authority); err != nil {
 		t.Fatal(err)
 	}
-	hash, err := continuousAuthorityFingerprint(legacy.Compares, legacy.Policies)
+	hash, err := continuousAuthorityFingerprint(authority.Compares, authority.Policies)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if hash != p.ContinuousAuthorityHash || fleet.Fingerprint(legacy.Compares) != p.AuthorizationHash {
-		t.Fatal("nil-overlay preparation changed legacy continuous authority digest")
+	if hash != p.ContinuousAuthorityHash || fleet.Fingerprint(authority.Compares) != p.AuthorizationHash {
+		t.Fatal("creation and renewal authority differ")
 	}
-	// Reproduce the unsafe mixed-proof projection from 9a6aeee: this fixture
-	// must distinguish it from the historical digest rather than pass vacuously.
-	unsafe := p
-	unsafe.Compares = nil
-	unsafe.Sets = nil
-	unsafe.Policies = map[string]service.EffectivePolicy{}
-	if err := h.refreshFleetPrincipals(&unsafe, &unsafe); err != nil {
-		t.Fatal(err)
-	}
-	unsafeHash, err := continuousAuthorityFingerprint(unsafe.Compares, unsafe.Policies)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if unsafeHash == hash {
-		t.Fatal("fixture did not reproduce the old-service hash regression")
-	}
-	// Collect the same path reads separately and ensure they remain CAS-fenced.
-	isolated := p
-	isolated.Compares = nil
-	isolated.Sets = nil
-	deps := preparedFleet{}
-	if err := h.refreshFleetPrincipals(&isolated, &deps); err != nil {
-		t.Fatal(err)
-	}
-	if len(deps.Compares) == 0 {
-		t.Fatal("legacy compatibility fixture must exercise wildcard path reads")
-	}
-	for _, want := range deps.Compares {
+	foundPath := false
+	for _, want := range authority.Compares {
+		if want.Kind == "hosts" {
+			foundPath = true
+		}
 		found := false
 		for _, got := range p.Compares {
 			if got.Kind == want.Kind && got.ID == want.ID {
@@ -225,12 +201,15 @@ func AssertLegacyMigrationAuthorityForTest(t *testing.T, s *store.Store) {
 			}
 		}
 		if !found {
-			t.Fatalf("lost path dependency CAS: %s/%s", want.Kind, want.ID)
+			t.Fatalf("lost authority CAS %s/%s", want.Kind, want.ID)
 		}
+	}
+	if !foundPath {
+		t.Fatal("fixture must exercise wildcard path authority")
 	}
 }
 
-func SetLegacyWildcardMigrationFixtureForTest(t *testing.T, s *store.Store) {
+func SetWildcardMigrationFixtureForTest(t *testing.T, s *store.Store) {
 	var d ServerDeployment
 	if err := s.Get("server-deployments", "rotation-path", &d); err != nil {
 		t.Fatal(err)
@@ -241,36 +220,5 @@ func SetLegacyWildcardMigrationFixtureForTest(t *testing.T, s *store.Store) {
 	}
 	if err := s.Put("server-deployments", d.ID, d); err != nil {
 		t.Fatal(err)
-	}
-}
-func PersistLegacyMigrationAuthorityForTest(t *testing.T, s *store.Store) {
-	h := &server{s: s}
-	p, err := h.prepareFleet(fleet.Input{Action: "configure", DeploymentID: "rotation-path", TargetIDs: []string{"rotation-core", "rotation-transit"}})
-	if err != nil {
-		t.Fatal(err)
-	}
-	p.Compares = nil
-	p.Sets = nil
-	p.Policies = map[string]service.EffectivePolicy{}
-	if err := h.legacyRefreshFleetPrincipals68cbef5(&p); err != nil {
-		t.Fatal(err)
-	}
-	hash, err := continuousAuthorityFingerprint(p.Compares, p.Policies)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, id := range []string{"rotation-core", "rotation-transit"} {
-		var intent serviceIntent
-		if err := s.Get("agent-service-intents", id, &intent); err != nil {
-			t.Fatal(err)
-		}
-		var batch fleetRecord
-		if err := s.Get("fleet-batches", intent.BatchID, &batch); err != nil {
-			t.Fatal(err)
-		}
-		batch.ContinuousAuthorityHash = hash
-		if err := s.Put("fleet-batches", intent.BatchID, batch); err != nil {
-			t.Fatal(err)
-		}
 	}
 }

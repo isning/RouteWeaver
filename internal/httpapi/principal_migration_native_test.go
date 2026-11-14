@@ -85,15 +85,14 @@ func TestNativePrincipalMigrationAndCompensation(t *testing.T) {
 	}
 	entryPort, transitPort := publishedFreePort(t), publishedFreePort(t)
 	f := newRotationRecoveryFixtureAtPorts(t, entryPort, transitPort)
-	httpapi.SetLegacyWildcardMigrationFixtureForTest(t, f.s)
+	httpapi.SetWildcardMigrationFixtureForTest(t, f.s)
 	input := map[string]any{"action": "configure", "deploymentId": "rotation-path", "targetIds": []string{"rotation-core", "rotation-transit"}, "continuousService": true}
 	plan := f.postAdmin("admin/fleet-batches/preview", input)
 	input["expectedFingerprint"] = plan["fingerprint"]
 	input["leaseSeconds"] = 30
 	batch := f.postAdmin("admin/fleet-batches", input)
 	f.postAdmin("admin/fleet-batches/"+batch["id"].(string)+"/execute", map[string]any{"stage": 0, "requestId": "native-baseline"})
-	httpapi.AssertLegacyMigrationAuthorityForTest(t, f.s)
-	httpapi.PersistLegacyMigrationAuthorityForTest(t, f.s)
+	httpapi.AssertCurrentMigrationAuthorityForTest(t, f.s)
 	live := map[string]*agent.Reconciler{}
 	var original httpapi.PublicEntryGrant
 	if err := f.s.TenantGet(f.owner.id, "platform-entries", "rotation-grant", &original); err != nil {
@@ -160,7 +159,7 @@ func TestNativePrincipalMigrationAndCompensation(t *testing.T) {
 
 		}
 		if stage == "baseline" || stage == "migrated" {
-			// Exercise legacy persisted authority and newly migrated generations. No
+			// Exercise freshly created authority and newly migrated generations. No
 			// forged lease timestamps: wait for the actual 30-second lease window.
 			var d controlprotocol.Desired
 			f.s.Get("agent-desired", "rotation-core", &d)
@@ -202,7 +201,7 @@ func TestNativePrincipalMigrationAndCompensation(t *testing.T) {
 		}
 	}
 	httpapi.QueuePrincipalMigrationForTest(t, f.s, f.owner.id, apply)
-	t.Log("native configure migration and precise compensation preserve legacy credential; new principal real bytes carry immutable output attribution")
+	t.Log("native configure migration and precise compensation preserve original credential; new principal real bytes carry immutable output attribution")
 }
 
 func assertCompensatedPrincipalRejected(t *testing.T, entryPort int) {

@@ -231,10 +231,11 @@ func (h *server) prepareFleetWithOverlay(in fleet.Input, writes []store.RecordWr
 			p.Routes = append(p.Routes, route)
 		}
 	}
+	// Principal eligibility and resolved forwarding-path inputs form one authority
+	// projection for both reviewed creation and subsequent service renewal.
 	authStart := len(p.Compares)
-	pathProof := preparedFleet{overlay: p.overlay}
 	if in.Action != "stop" {
-		if e = h.refreshFleetPrincipals(&p, &pathProof); e != nil {
+		if e = h.refreshFleetPrincipals(&p); e != nil {
 			return p, e
 		}
 	}
@@ -244,10 +245,6 @@ func (h *server) prepareFleetWithOverlay(in fleet.Input, writes []store.RecordWr
 	if e != nil {
 		return p, e
 	}
-	// Path dependencies strengthen transactional CAS without changing the
-	// established continuous-authority digest projection of existing services.
-	p.Compares = append(p.Compares, pathProof.Compares...)
-	p.Sets = append(p.Sets, pathProof.Sets...)
 	allArtifacts := []domain.Artifact{}
 	if in.Action != "stop" {
 		allArtifacts, e = render.DefaultServers().Render(p.Deployment.IR)
@@ -426,7 +423,7 @@ func (h *server) prepareFleetWithOverlay(in fleet.Input, writes []store.RecordWr
 	return p, nil
 }
 
-func (h *server) refreshFleetPrincipals(p *preparedFleet, pathProof *preparedFleet) error {
+func (h *server) refreshFleetPrincipals(p *preparedFleet) error {
 	for i := range p.Deployment.IR.Programs {
 		program := &p.Deployment.IR.Programs[i]
 		accepted := []domain.ServerPrincipal{}
@@ -500,12 +497,7 @@ func (h *server) refreshFleetPrincipals(p *preparedFleet, pathProof *preparedFle
 			if len(endpoints) != len(route.EndpointIDs) {
 				return fmt.Errorf("historic configuration no longer contains the authorized published route")
 			}
-			var action domain.ActionRef
-			if pathProof == nil {
-				action, e = h.publishedPathAction(p.Deployment.IR, *route, endpoints)
-			} else {
-				action, e = h.publishedPathActionWithProof(p.Deployment.IR, *route, endpoints, pathProof)
-			}
+			action, e := h.publishedPathActionWithProof(p.Deployment.IR, *route, endpoints, p)
 			if e != nil {
 				return e
 			}
