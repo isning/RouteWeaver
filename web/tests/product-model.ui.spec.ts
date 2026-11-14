@@ -547,9 +547,8 @@ test("controlled empty inventories name the task and server registration does no
   ).toBeVisible();
   const login = page.getByRole("region", { name: "恢复登录", exact: true });
   await expect(login.getByRole("heading")).toHaveCount(1);
-  await expect(login.locator("p")).toHaveText([
-    "邀请制工作空间", "你的来源仅由你管理",
-  ]);
+  await expect(login.getByText("邀请制工作空间", { exact: true })).toHaveCount(0);
+  await expect(login.getByText("你的来源仅由你管理", { exact: true })).toHaveCount(0);
   await expect(page.getByLabel("账号", { exact: true })).toHaveValue("");
   await expect(page.getByLabel("密码", { exact: true })).toHaveValue("");
   await page.screenshot({
