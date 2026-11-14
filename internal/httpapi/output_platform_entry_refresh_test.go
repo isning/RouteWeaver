@@ -11,7 +11,7 @@ import (
 // Uses the existing synthetic managed-entry HTTP fixture: no native process,
 // real server application, or external credential is created by this test.
 func TestOutputPreviewReportsPlatformEntryInputRefresh(t *testing.T) {
-	f := newRotationRecoveryFixture(t)
+	f := newMixedRotationRecoveryFixture(t)
 	f.ownerRequest("POST", "/me/outputs", map[string]any{
 		"id": "refresh-phone", "name": "Phone", "profileId": "rotation-profile", "mode": "nodes-only",
 	}, 201)
@@ -42,7 +42,7 @@ func TestOutputPreviewReportsPlatformEntryInputRefresh(t *testing.T) {
 }
 
 func TestOutputPreviewPlatformEntryRefreshPortableModes(t *testing.T) {
-	f := newRotationRecoveryFixture(t)
+	f := newMixedRotationRecoveryFixture(t)
 	for _, target := range []render.Target{{AdapterID: "mihomo", Version: render.MihomoVersion}, {AdapterID: "sing-box", Version: render.SingBoxVersion}} {
 		for _, mode := range []render.OutputMode{render.NodesOnly, render.FullConfig} {
 			id := target.AdapterID + "-" + string(mode)
@@ -100,7 +100,7 @@ func TestOutputPreviewOmitsUnprovenPlatformEntryRefresh(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			f := newRotationRecoveryFixture(t)
+			f := newMixedRotationRecoveryFixture(t)
 			f.ownerRequest("POST", "/me/outputs", map[string]any{"id": "guard-phone", "name": "Phone", "profileId": "rotation-profile", "mode": "nodes-only"}, 201)
 			var frozen httpapi.Output
 			if err := f.s.TenantGet(f.owner.id, "outputs", "guard-phone", &frozen); err != nil {
@@ -125,7 +125,7 @@ func TestOutputPreviewOmitsUnprovenPlatformEntryRefresh(t *testing.T) {
 func TestOutputPreviewPlatformEntryRefreshCountsInputsNotDeliveredBytes(t *testing.T) {
 	for _, change := range []string{"version-only", "digest-only", "older-known-summary"} {
 		t.Run(change, func(t *testing.T) {
-			f := newRotationRecoveryFixture(t)
+			f := newMixedRotationRecoveryFixture(t)
 			f.ownerRequest("POST", "/me/outputs", map[string]any{"id": "input-phone", "name": "Phone", "profileId": "rotation-profile", "mode": "nodes-only"}, 201)
 			var frozen httpapi.Output
 			if err := f.s.TenantGet(f.owner.id, "outputs", "input-phone", &frozen); err != nil {
@@ -152,7 +152,7 @@ func TestOutputPreviewPlatformEntryRefreshCountsInputsNotDeliveredBytes(t *testi
 }
 
 func TestOutputPreviewPlatformEntryRefreshDoesNotWriteOrLeakToOtherViews(t *testing.T) {
-	f := newRotationRecoveryFixture(t)
+	f := newMixedRotationRecoveryFixture(t)
 	created := f.ownerRequest("POST", "/me/outputs", map[string]any{"id": "private-phone", "name": "Phone", "profileId": "rotation-profile", "mode": "nodes-only"}, 201)
 	before := f.ownerRequest("GET", "/me/outputs/private-phone/status", nil, 200)
 	unchanged := f.ownerRequest("POST", "/me/profiles/rotation-profile/preview", map[string]any{"outputId": "private-phone"}, 200)
@@ -181,7 +181,7 @@ func TestOutputPreviewPlatformEntryRefreshDoesNotWriteOrLeakToOtherViews(t *test
 }
 
 func TestOutputPreviewPlatformEntryRefreshCountsDistinctMatchingEntries(t *testing.T) {
-	f := newRotationRecoveryFixture(t, "second-grant")
+	f := newMixedRotationRecoveryFixture(t, "second-grant")
 	var profile httpapi.Profile
 	if err := f.s.TenantGet(f.owner.id, "profiles", "rotation-profile", &profile); err != nil {
 		t.Fatal(err)
@@ -217,7 +217,7 @@ func TestOutputPreviewPlatformEntryRefreshCountsDistinctMatchingEntries(t *testi
 }
 
 func TestOutputPreviewOmitsPlatformEntryRefreshForNativeCandidate(t *testing.T) {
-	f := newRotationRecoveryFixture(t)
+	f := newMixedRotationRecoveryFixture(t)
 	f.ownerRequest("POST", "/me/outputs", map[string]any{"id": "native-phone", "name": "Phone", "profileId": "rotation-profile"}, 201)
 	var profile httpapi.Profile
 	if err := f.s.TenantGet(f.owner.id, "profiles", "rotation-profile", &profile); err != nil {

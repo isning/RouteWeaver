@@ -55,8 +55,10 @@ func run() error {
 	backupRecordMiB := flag.Int("backup-max-record-mib", 32, "maximum logical backup record MiB (1–128)")
 	backupRows := flag.Int("backup-max-rows", 2000000, "maximum logical backup rows (1–2000000)")
 	backupTimeout := flag.Duration("backup-timeout", 10*time.Minute, "bounded backup operation timeout (at most 10m)")
-	countryDB := flag.String("ip-country-db", "", "optional local GeoLite2/GeoIP2 Country MMDB; no external lookups")
-	asnDB := flag.String("ip-asn-db", "", "optional local GeoLite2 ASN MMDB; no external lookups")
+	autoIPDB := flag.Bool("ip-db-auto-update", true, "automatically download monthly DB-IP Lite databases (CC BY 4.0); no client IP lookups leave this server")
+	ipDBCache := flag.String("ip-db-cache", "", "automatic IP database cache directory; defaults beside --db")
+	countryDB := flag.String("ip-country-db", "", "optional local Country MMDB (GeoLite2/GeoIP2/DB-IP); disables automatic downloads")
+	asnDB := flag.String("ip-asn-db", "", "optional local ASN MMDB (GeoLite2/GeoIP2/DB-IP); disables automatic downloads")
 	flag.Parse()
 	if flag.NArg() != 0 {
 		return fmt.Errorf("unexpected control-plane command arguments")
@@ -189,6 +191,19 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("IP metadata: %w", err)
 	}
+	var ipUpdater *ipmeta.Updater
+	if *autoIPDB && !*demo && *countryDB == "" && *asnDB == "" {
+		cache := *ipDBCache
+		if cache == "" {
+			cache = filepath.Join(filepath.Dir(*dbPath), "ip-databases")
+		}
+		ipUpdater, err = ipmeta.NewUpdater(cache)
+		if err != nil {
+			log.Printf("IP database cache unavailable; IP metadata disabled: %v", err)
+		} else {
+			ipMetadata = ipUpdater.Database()
+		}
+	}
 	apiOptions := httpapi.Options{IPMetadata: ipMetadata, OIDC: oidcProvider, TrustedProxyCIDRs: proxyCIDRs, PublicOrigin: publicOrigin, AdminToken: adminToken, UIDir: *uiDir, SecureCookies: tlsEnabled, BackupRestoreDir: restoreDir, BackupRestoreKey: key, BackupLimits: backupLimits}
 	app := httpapi.NewWithOptions(s, render.Default(), apiOptions)
 	srv := &http.Server{Addr: *listen, Handler: app, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 30 * time.Second, WriteTimeout: 30 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 1 << 20}
@@ -207,6 +222,9 @@ func run() error {
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	if ipUpdater != nil {
+		go ipUpdater.Run(ctx, func(err error) { log.Printf("IP database update warning: %v", err) })
+	}
 	independentCtx, cancelIndependent := context.WithCancel(ctx)
 	independentDone := make(chan struct{})
 	go func() {

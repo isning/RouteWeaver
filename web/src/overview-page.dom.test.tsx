@@ -238,7 +238,9 @@ it("renders only the database's reported IP metadata, not an inferred device loc
       sources: [
         {
           kind: "asn",
-          databaseType: "Example ASN",
+          databaseType: "DBIP-ASN-Lite (compat=GeoLite2-ASN)",
+          attribution: "IP Geolocation by DB-IP",
+          attributionURL: "https://db-ip.com",
           builtAt: "2026-11-14T00:00:00Z",
         },
       ],
@@ -258,6 +260,8 @@ it("renders only the database's reported IP metadata, not an inferred device loc
   expect(screen.getByText("AS64500")).toBeTruthy();
   expect(screen.getByText(/不代表设备的实际位置或运营商/)).toBeTruthy();
   expect(screen.queryByText("IP 归属资料暂不可用")).toBeNull();
+  expect(screen.getByRole("link", { name: "IP Geolocation by DB-IP" }).getAttribute("href")).toBe("https://db-ip.com");
+  expect(screen.getByRole("link", { name: "CC BY 4.0" })).toBeTruthy();
 });
 
 it("distinguishes no database match, non-public IP and unavailable metadata", async () => {
@@ -312,7 +316,7 @@ it("shows zero only for independent subscriptions and keeps shared traffic unass
   expect(
     within(screen.getByText("工作订阅").closest("tr")!).getByText("未单独计量"),
   ).toBeTruthy();
-  expect(screen.getByText(/共用凭据流量，无法分配/)).toBeTruthy();
+  expect(screen.getByText(/未关联到具体订阅的流量/)).toBeTruthy();
 });
 
 it.each([
@@ -350,7 +354,7 @@ it.each([
    {ip: "192.0.2.7",outputId:"shared",activeStreams:1},
   ]);
   expect(await screen.findByText("工作订阅（1 个连接）")).toBeTruthy();
-  expect(screen.getByText("共享连接，无法关联到单个订阅（1 个连接）")).toBeTruthy();
+  expect(screen.getByText("未关联到订阅的连接（1 个连接）")).toBeTruthy();
   expect(screen.getAllByText("最近连接确认时间未知")).toHaveLength(2);
   expect(screen.getByText("订阅名称暂不可用（1 个连接）")).toBeTruthy();
   expect(screen.getByText(/^最近连接确认：/).textContent).toContain("2026");

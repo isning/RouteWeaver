@@ -31,9 +31,17 @@ func TestEntryAdministrationDoesNotReviveRetiredFeedCredentials(t *testing.T) {
 	if code, _, raw := req(t, other.c, "GET", path+"/entry/reveal", "", nil); code != 403 {
 		t.Fatalf("unauthorized reveal %d %s", code, raw)
 	}
-	profile := httpapi.Profile{ID: "p", Name: "Platform profile", Target: render.Target{AdapterID: "mihomo", Version: render.MihomoVersion}, Mode: render.FullConfig, PlatformEntryIDs: []string{"entry"}, IR: domain.ClientProfileIR{SchemaVersion: "1.0", DefaultAction: domain.ActionRef{Kind: "endpoint", Ref: "entry"}}}
+	profile := httpapi.Profile{ID: "p", Name: "Platform profile", Target: render.Target{AdapterID: "mihomo", Version: render.MihomoVersion}, Mode: render.FullConfig, PlatformEntryIDs: []string{"entry"}, IR: domain.ClientProfileIR{SchemaVersion: "1.0", Endpoints: []domain.ClientEndpoint{{ID: "external", Name: "External", Origin: "imported", Connection: domain.Connection{Protocol: "socks", Host: "192.0.2.10", Port: 1080}}}, DefaultAction: domain.ActionRef{Kind: "endpoint", Ref: "entry"}}}
 	if code, _, raw := req(t, user.c, "POST", srv.URL+"/api/me/profiles", user.csrf, profile); code != 200 {
 		t.Fatalf("profile %d %s", code, raw)
+	}
+	code, preview, raw := req(t, user.c, "POST", srv.URL+"/api/me/outputs/preview", user.csrf, map[string]string{"id": "o", "name": "Feed", "profileId": "p"})
+	if code != 200 {
+		t.Fatalf("mixed preview %d %s", code, raw)
+	}
+	eligibility := preview["independentMetering"].(map[string]any)
+	if eligibility["required"] != false || eligibility["reason"] != "not_platform_only" {
+		t.Fatalf("mixed eligibility %v", eligibility)
 	}
 	code, out, raw := req(t, user.c, "POST", srv.URL+"/api/me/outputs", user.csrf, map[string]string{"id": "o", "name": "Feed", "profileId": "p"})
 	if code != 201 {

@@ -378,7 +378,18 @@ for (const width of [1440, 390]) {
       });
       await expect(entryOption).toHaveCount(1);
       await entryOption.click();
-      const ownSummary = recipient.getByText("自有连接：0 个", { exact: true });
+      // This journey publishes a real mixed profile, not the removed shared-only
+      // platform flow. Add a personal exit and a rule that actually uses it.
+      await recipient.getByRole("tab", { name: "运行设置", exact: true }).click();
+      await recipient.getByRole("button", { name: "高级：配置意图与目标版本", exact: true }).click();
+      await recipient.getByRole("button", { name: "编辑配置意图 JSON", exact: true }).click();
+      const intentEditor = recipient.getByRole("textbox", { name: "配置意图 JSON 文本", exact: true });
+      const intent = JSON.parse(await intentEditor.inputValue());
+      intent.endpoints = [{id:"personal-exit",name:"自有连接",origin:"imported",connection:{protocol:"socks",host:"192.0.2.52",port:1080}}];
+      intent.rules = [{id:"personal-traffic",match:{op:"domain-suffix",value:"personal.example.test"},action:{kind:"endpoint",ref:"personal-exit"}}];
+      await intentEditor.fill(JSON.stringify(intent));
+      await recipient.getByRole("button", { name: "应用到草稿", exact: true }).click();
+      const ownSummary = recipient.getByText("自有连接：1 个", { exact: true });
       const entrySummary = recipient.getByText("平台入口：1 个", { exact: true });
       const credentialTiming = recipient.getByText("平台入口凭据在发布时解析。", { exact: true });
       await expect(ownSummary).toBeVisible();
@@ -461,17 +472,20 @@ for (const width of [1440, 390]) {
         .inputValue();
       const bytes = await readInvitationFeed(baseURL!, url);
       const artifact = JSON.parse(bytes.toString());
-      expect(artifact.proxies.length).toBe(1);
+      expect(artifact.proxies.length).toBe(2);
+      expect(artifact.proxies.some((proxy: {server:string}) => proxy.server === "192.0.2.52")).toBe(true);
+      expect(artifact.rules.some((rule:string) => rule.includes("personal.example.test"))).toBe(true);
+      const grantedProxy = artifact.proxies.find((proxy: {username?:string}) => proxy.username === identity.id);
       expect(
-        artifact.proxies[0].type === "socks5" &&
-          artifact.proxies[0].server === "127.0.0.1" &&
-          artifact.proxies[0].port === 1080 &&
-          artifact.proxies[0].username === identity.id &&
-          artifact.proxies[0].password === "synthetic-entry-password",
+        grantedProxy.type === "socks5" &&
+          grantedProxy.server === "127.0.0.1" &&
+          grantedProxy.port === 1080 &&
+          grantedProxy.username === identity.id &&
+          grantedProxy.password === "synthetic-entry-password",
         "Downloaded connection belongs to recipient",
       ).toBe(true);
       expect(
-        JSON.stringify(artifact.rules).includes(artifact.proxies[0].name),
+        JSON.stringify(artifact.rules).includes(grantedProxy.name),
       ).toBe(true);
       // The browser's actual download must match the independently fetched bytes.
       const downloading = recipient.waitForEvent("download");
@@ -548,7 +562,7 @@ for (const width of [1440, 390]) {
           anonymousDenied: true,
           otherAccountUnchanged: true,
           boundary:
-            "Public API seeds synthetic source infrastructure and assigns explicit legacy platform entry after UI grant. No managed-node application, migration, native-client loading or traffic evidence.",
+            "Public API seeds synthetic source infrastructure and assigns explicit legacy platform entry after UI grant. UI adds a real personal connection and routing rule before mixed publication. No managed-node application, migration, native-client loading or traffic evidence.",
         }),
       });
     } finally {

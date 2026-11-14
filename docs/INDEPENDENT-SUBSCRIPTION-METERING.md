@@ -1,20 +1,29 @@
 # Independent metering for managed platform subscriptions
 
-Default-off backend capability, not a production rollout or migration of existing
-users. Lifecycle, failure recovery and native upgrade compatibility are covered
-by loopback tests. UI integration must be accepted separately before presenting
-this as an available end-user workflow.
+New platform-only subscriptions use independent provisioning. The UI checks the
+actual server-side capability before enabling creation; the ordinary publication
+endpoint rejects platform-only creation, including direct API calls. This is not
+a production rollout: platform administrators must first authorize bounded
+provisioning for each supported managed deployment.
 
 ## Scope and honest semantics
 
 Only newly created independent subscriptions using 1–16 existing managed
 platform entries are eligible. Imported subscription sources, user-uploaded
 endpoints, and stock core entries cannot be attributed by this control plane.
-Existing outputs and all shared credentials remain unchanged. Historical shared
-traffic remains unassigned; separate download links do not prove separate traffic
-identities. Copying an independent credential still counts against its output,
+External and mixed-source subscriptions retain ordinary publication, including
+profiles with inline imported endpoints. Traffic without a verified output
+identity remains unassigned; separate download links do not prove separate traffic
+identities. There is no shared-to-independent data migration. Copying an independent credential still counts against its output,
 not a physical device. Raw bytes use the existing managed payload meter, including
 both directions, not an invented upload/download split.
+
+Preview returns `independentMetering: {required, available, reason?}`. Availability
+reuses reservation preparation (current authority, exact applied route, service
+policy and capacity), without saving credentials, reservations or configuration.
+The final creation transaction rechecks all permissions and inputs; a preview is
+not a reservation and concurrent changes can require checking again. Unavailable
+platform-only profiles cannot silently fall back to shared credentials.
 
 ## Default-off delegation
 

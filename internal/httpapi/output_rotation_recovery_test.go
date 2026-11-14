@@ -89,6 +89,28 @@ func newRotationRecoveryFixtureAtPorts(t *testing.T, entryPort, transitPort int,
 	return f
 }
 
+// Mixed publication remains supported: this endpoint is a real imported input,
+// not a switch to bypass managed-only creation rules. Pure fixtures stay unchanged.
+func newMixedRotationRecoveryFixture(t *testing.T, additionalEntries ...string) *rotationRecoveryFixture {
+	f := newRotationRecoveryFixture(t, additionalEntries...)
+	f.addImportedEndpoint("rotation-profile")
+	return f
+}
+
+func rotationImportedEndpoint() domain.ClientEndpoint {
+	return domain.ClientEndpoint{ID: "rotation-imported", Name: "Imported test node", Origin: "imported", Connection: domain.Connection{Protocol: "socks", Host: "192.0.2.9", Port: 1080}}
+}
+
+func (f *rotationRecoveryFixture) addImportedEndpoint(profileID string) {
+	f.t.Helper()
+	var profile httpapi.Profile
+	if err := f.s.TenantGet(f.owner.id, "profiles", profileID, &profile); err != nil {
+		f.t.Fatal(err)
+	}
+	profile.IR.Endpoints = append(profile.IR.Endpoints, rotationImportedEndpoint())
+	saveCurrentProfileDraft(f.t, f.owner, f.srv.URL+"/api/me/profiles/"+profileID, profile)
+}
+
 func (f *rotationRecoveryFixture) postAdmin(path string, body any) map[string]any {
 	f.t.Helper()
 	code, out, _ := req(f.t, f.admin, "POST", f.srv.URL+"/api/"+path, "", body)
@@ -165,7 +187,7 @@ func (f *rotationRecoveryFixture) accessBlocked(id, expected string) {
 }
 
 func TestOutputRotationRecoveryDistinguishesConfirmationFromRepublishing(t *testing.T) {
-	f := newRotationRecoveryFixture(t)
+	f := newMixedRotationRecoveryFixture(t)
 	first := f.ownerRequest("POST", "/me/outputs", map[string]any{"id": "rotation-phone", "name": "Phone", "profileId": "rotation-profile"}, 201)
 	sibling := f.ownerRequest("POST", "/me/outputs", map[string]any{"id": "rotation-laptop", "name": "Laptop", "profileId": "rotation-profile"}, 201)
 	access := f.ownerRequest("GET", "/me/outputs/rotation-phone/access", nil, 200)
@@ -219,7 +241,7 @@ func TestOutputRotationRecoveryDistinguishesConfirmationFromRepublishing(t *test
 }
 
 func TestOutputRotationRecoveryDoesNotMisclassifyRevocationOrPlatformSuspension(t *testing.T) {
-	f := newRotationRecoveryFixture(t)
+	f := newMixedRotationRecoveryFixture(t)
 	f.ownerRequest("POST", "/me/outputs", map[string]any{"id": "rotation-phone", "name": "Phone", "profileId": "rotation-profile"}, 201)
 	ruleBody := "payload:\n  - '+.rotation-private.example'\n"
 	resource := f.ownerRequest("POST", "/me/resources/import", map[string]any{"resource": map[string]any{"id": "rotation-private-rules", "name": "Private rules", "format": "mihomo-yaml", "behavior": "domain", "updatePolicy": "pinned"}, "contentBase64": base64.StdEncoding.EncodeToString([]byte(ruleBody))}, 201)
@@ -281,8 +303,9 @@ func TestOutputRotationRecoveryAggregatesMixedDependenciesInEitherOrder(t *testi
 			name = "unconfirmed-before-republish"
 		}
 		t.Run(name, func(t *testing.T) {
-			f := newRotationRecoveryFixture(t, "rotation-second")
+			f := newMixedRotationRecoveryFixture(t, "rotation-second")
 			p := httpapi.Profile{ID: "mixed-profile", Name: "Two managed entries", Target: render.Target{AdapterID: "mihomo", Version: render.MihomoVersion}, Mode: render.FullConfig, PlatformEntryIDs: []string{"rotation-grant", "rotation-second"}, IR: domain.ClientProfileIR{SchemaVersion: "1.0", DefaultAction: domain.ActionRef{Kind: "endpoint", Ref: "rotation-grant"}}}
+			p.IR.Endpoints = append(p.IR.Endpoints, rotationImportedEndpoint())
 			f.ownerRequest("POST", "/me/profiles", p, 200)
 			f.ownerRequest("POST", "/me/outputs", map[string]any{"id": "mixed-output", "name": "Mixed", "profileId": p.ID}, 201)
 			// Fixture-only ordering injection; assertions remain public /access
@@ -403,7 +426,7 @@ func TestOutputRotationRecoveryDoesNotTurnCorruptionIntoExpectedConfirmationWait
 	}
 	for _, test := range cases {
 		t.Run(test.name, func(t *testing.T) {
-			f := newRotationRecoveryFixture(t)
+			f := newMixedRotationRecoveryFixture(t)
 			output := f.ownerRequest("POST", "/me/outputs", map[string]any{"id": "rotation-phone", "name": "Phone", "profileId": "rotation-profile"}, 201)
 			// Deliberate repository-boundary fault injection only. The response
 			// under test is the authenticated public HTTP seam, not a helper.
@@ -439,7 +462,7 @@ func TestOutputRotationRecoveryDoesNotTurnCorruptionIntoExpectedConfirmationWait
 func TestOutputRotationRecoveryPreservesKnownMissingProofAsUnconfirmed(t *testing.T) {
 	for _, condition := range []string{"missing-observation", "expired-policy", "revoked-enrollment", "expired-enrollment"} {
 		t.Run(condition, func(t *testing.T) {
-			f := newRotationRecoveryFixture(t)
+			f := newMixedRotationRecoveryFixture(t)
 			f.ownerRequest("POST", "/me/outputs", map[string]any{"id": "rotation-phone", "name": "Phone", "profileId": "rotation-profile"}, 201)
 			var err error
 			switch condition {
@@ -470,7 +493,7 @@ func TestOutputRotationRecoveryPreservesKnownMissingProofAsUnconfirmed(t *testin
 }
 
 func TestOutputRotationRecoveryIgnoresUnrelatedMalformedObservationWhenPathIsProven(t *testing.T) {
-	f := newRotationRecoveryFixture(t)
+	f := newMixedRotationRecoveryFixture(t)
 	output := f.ownerRequest("POST", "/me/outputs", map[string]any{"id": "rotation-phone", "name": "Phone", "profileId": "rotation-profile"}, 201)
 	before := f.ownerRequest("GET", "/me/outputs/rotation-phone/access", nil, 200)
 	if err := f.s.Put("agent-observations", "unrelated-corrupt-instance", "synthetic-corrupt-record"); err != nil {

@@ -50,7 +50,7 @@ export interface PersonalInsights {
   };
   ipMetadata?: {
     available: boolean;
-    sources: { kind: string; databaseType: string; builtAt: string }[];
+    sources: { kind: string; databaseType: string; builtAt: string; attribution?: string; attributionURL?: string }[];
     items: {
       ip: string;
       status: "available" | "not-found" | "non-public" | "unavailable";
@@ -528,7 +528,7 @@ export function OverviewPage() {
                             <p className="wrap-anywhere">
                               {row.outputId
                                 ? outputNames.get(row.outputId) || "订阅名称暂不可用"
-                                : "共享连接，无法关联到单个订阅"}
+                                : "未关联到订阅的连接"}
                               {`（${row.activeStreams} 个连接）`}
                             </p>
                             <p>
@@ -571,6 +571,9 @@ export function OverviewPage() {
                     </dd>
                   </div>
                 </dl>
+                {detail.ipMetadata?.sources.some((source) => source.attributionURL === "https://db-ip.com") && (
+                  <p className="mt-3 text-xs text-muted-foreground"><a href="https://db-ip.com" target="_blank" rel="noreferrer" className="underline underline-offset-2">IP Geolocation by DB-IP</a> · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer" className="underline underline-offset-2">CC BY 4.0</a></p>
+                )}
                 <details className="mt-3 text-xs text-muted-foreground">
                   <summary className="cursor-pointer">统计说明</summary>
                   <div className="mt-2 space-y-1">
@@ -761,7 +764,7 @@ export function OverviewPage() {
               {usageReady && usage.data.unattributedRawBytes > 0 && (
                 <p className="px-6 pt-3 text-xs text-muted-foreground">
                   另有 {bytesLabel(usage.data.unattributedRawBytes)}{" "}
-                  共用凭据流量，无法分配到具体订阅。
+                  未关联到具体订阅的流量。
                 </p>
               )}
               {usage.isError && (

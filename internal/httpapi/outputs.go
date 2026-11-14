@@ -169,6 +169,17 @@ func (h *server) registerOutputs(r chi.Router) {
 				return
 			}
 		}
+		// Read through the same tracked inputs as preparation. A concurrent
+		// profile edit cannot bypass this requirement at the final CAS.
+		var creationProfile Profile
+		if err := inputs.TenantGet(owner, "profiles", in.ProfileID, &creationProfile); err != nil {
+			storeError(w, err)
+			return
+		}
+		if platformOnlyProfile(creationProfile) {
+			fail(w, 422, errIndependentMeteringRequired.Error())
+			return
+		}
 		v = prepared.output
 		if in.PreviewDigest != nil {
 			v.CreationReviewDigest = prepared.digest

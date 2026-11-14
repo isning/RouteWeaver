@@ -163,6 +163,7 @@ func (p preparedOutput) publicationEffect() *outputPublicationEffect {
 }
 
 type outputRoutingReview struct {
+	IndependentMetering  *independentMeteringEligibility
 	SemanticChanges      *outputSemanticChanges
 	NodeChanges          *outputNodeChanges
 	PlatformEntryRefresh *outputPlatformEntryRefresh
@@ -185,6 +186,9 @@ func writeProfilePreview(w http.ResponseWriter, result render.ClientResult, outp
 	}
 	response := map[string]any{"outputId": outputID, "previewScope": scope, "valid": true, "nativeChecked": false, "artifacts": artifacts, "resources": resourceMetadata, "names": result.Names, "nativeOverride": result.NativeOverride, "diagnostics": []string{}}
 	if routing != nil {
+		if routing.IndependentMetering != nil {
+			response["independentMetering"] = routing.IndependentMetering
+		}
 		response["routingSummary"] = routing.Candidate
 		if routing.CandidateIntent != nil {
 			response["routingIntent"] = routing.CandidateIntent
@@ -249,5 +253,6 @@ func (h *server) previewNewOutput(w http.ResponseWriter, r *http.Request) {
 		failProfileValidation(w, 422, err)
 		return
 	}
-	writeProfilePreview(w, prepared.result, in.ID, "new-output", prepared.digest, &outputRoutingReview{Candidate: prepared.output.RoutingSummary, CandidateIntent: prepared.output.RoutingIntent})
+	eligibility := h.independentMeteringEligibility(owner, in)
+	writeProfilePreview(w, prepared.result, in.ID, "new-output", prepared.digest, &outputRoutingReview{IndependentMetering: &eligibility, Candidate: prepared.output.RoutingSummary, CandidateIntent: prepared.output.RoutingIntent})
 }

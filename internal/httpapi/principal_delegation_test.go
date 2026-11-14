@@ -36,6 +36,7 @@ func TestPrincipalDelegationRequiresExplicitBoundedAdminOptIn(t *testing.T) {
 	if code != 200 || out["enabled"] != false {
 		t.Fatalf("revoke: %d %s", code, raw)
 	}
-	f.ownerRequest("POST", "/me/outputs", map[string]string{"id": "legacy", "name": "legacy", "profileId": "rotation-profile"}, 201)
-	f.ownerRequest("GET", "/me/outputs/legacy/access", nil, 200)
+	f.addImportedEndpoint("rotation-profile")
+	f.ownerRequest("POST", "/me/outputs", map[string]string{"id": "mixed", "name": "Mixed source subscription", "profileId": "rotation-profile"}, 201)
+	f.ownerRequest("GET", "/me/outputs/mixed/access", nil, 200)
 }

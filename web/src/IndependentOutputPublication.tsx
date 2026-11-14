@@ -339,7 +339,7 @@ export function IndependentOutputCreate({
           confirm({
             title: `为「${creation.name}」创建独立计量订阅？`,
             description:
-              "仅支持平台受管线路。会生成新的连接凭据并重载相关服务器，现有连接可能短暂中断。原订阅不变；创建完成后需在客户端导入新订阅。",
+              "仅支持平台受管线路。会生成新的连接凭据并重载相关服务器，现有连接可能短暂中断。创建完成后可在客户端导入订阅。",
             confirmLabel: "创建独立计量订阅",
             onConfirm: async () => {
               if (

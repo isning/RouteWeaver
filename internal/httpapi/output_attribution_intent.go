@@ -152,7 +152,7 @@ func (h *server) prepareAttributedOutputReservation(owner string, in outputCreat
 		return result, proof, err
 	}
 	if overview.Status != "active" {
-		return result, proof, fmt.Errorf("account service is inactive")
+		return result, proof, meteringUnavailable("service_inactive", fmt.Errorf("account service is inactive"))
 	}
 	revision, err := auth.Token()
 	if err != nil {
@@ -176,13 +176,13 @@ func (h *server) prepareAttributedOutputReservation(owner string, in outputCreat
 		}
 		var cap principalDelegation
 		if err := h.fleetRead(&proof, "principal-delegations", route.DeploymentID, &cap, false); err != nil {
-			return result, proof, fmt.Errorf("self-service independent credentials have not been enabled for this route")
+			return result, proof, meteringUnavailable("authorization_required", fmt.Errorf("self-service independent credentials have not been enabled for this route"))
 		}
 		if err := h.validatePrincipalDelegation(&proof, cap.ID, cap.Revision, owner, route.DeploymentID, now); err != nil {
-			return result, proof, err
+			return result, proof, meteringUnavailable("authorization_unavailable", err)
 		}
 		if !containsID(cap.AllowedRouteIDs, route.ID) || !overview.EffectivePolicy.AllowsRoute(route.ID) {
-			return result, proof, fmt.Errorf("route is outside the authorized self-service scope")
+			return result, proof, meteringUnavailable("authorization_unavailable", fmt.Errorf("route is outside the authorized self-service scope"))
 		}
 		caps[cap.ID] = cap
 		if cap.ExpiresAt.Before(result.Deadline) {
@@ -196,7 +196,7 @@ func (h *server) prepareAttributedOutputReservation(owner string, in outputCreat
 		}
 		manifest, err := h.appliedPublishedPath(route.ID)
 		if err != nil || manifest.Fingerprint != serverFingerprint(deployment.IR) {
-			return result, proof, fmt.Errorf("route must have a confirmed unchanged deployment before provisioning")
+			return result, proof, meteringUnavailable("route_not_ready", fmt.Errorf("route must have a confirmed unchanged deployment before provisioning"))
 		}
 		var program domain.ServerProgram
 		found := false
@@ -296,7 +296,7 @@ func (h *server) prepareAttributedOutputReservation(owner string, in outputCreat
 	}
 	for dep, cap := range caps {
 		if pending[dep] >= cap.MaxPendingIntents || principals[dep] > cap.MaxPrincipalsPerUser {
-			return result, proof, fmt.Errorf("independent subscription provisioning limit reached")
+			return result, proof, meteringUnavailable("capacity_reached", fmt.Errorf("independent subscription provisioning limit reached"))
 		}
 	}
 	// The reservation caller must consume both record and set fences atomically.

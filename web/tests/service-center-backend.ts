@@ -8,7 +8,8 @@ export const routeName = "授权参考线路";
 export const selectedName = "日常设备订阅";
 export const siblingName = "保留设备订阅";
 
-// Explicitly configured legacy platform entries, not managed-node observations.
+// Genuine mixed configuration: personal imported connection plus platform entry.
+// Platform grants are explicit fixtures, not managed-node observations.
 // Public HTTP only: no DB edits, auth shortcut, runtime core or external traffic.
 export async function serviceCenterFixture(
   admin: APIRequestContext,
@@ -94,9 +95,9 @@ export async function serviceCenterFixture(
           schemaVersion: "1.0",
           id: "daily",
           name: "Daily",
-          endpoints: [],
+          endpoints: [{id:"personal-exit",name:"自有连接",origin:"imported",connection:{protocol:"socks",host:"192.0.2.52",port:1080}}],
           groups: [],
-          rules: [],
+          rules: [{id:"personal-traffic",match:{op:"domain-suffix",value:"personal.example.test"},action:{kind:"endpoint",ref:"personal-exit"}}],
           resources: [],
           defaultAction: { kind: "endpoint", ref: "entry" },
           runtime: { mixedPort: 7890 },
@@ -139,7 +140,7 @@ export async function serviceCenterFixture(
   expect(overview.routes).toEqual([
     expect.objectContaining({ id, name: routeName }),
   ]);
-  const ownConnection = JSON.parse(ownBefore.toString()).proxies[0];
+  const ownConnection = JSON.parse(ownBefore.toString()).proxies.find((proxy: {username?:string}) => proxy.username === account.id);
   expect(ownConnection.username).toBe(account.id);
   expect(ownConnection.username).not.toBe(otherAccount.id);
   const unchangedOthers = async () => {

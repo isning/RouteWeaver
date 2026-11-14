@@ -470,6 +470,7 @@ export interface SemanticChanges {
 }
 
 export interface Preview {
+  independentMetering?: { available: boolean; required: boolean; reason?: "not_platform_only" | "entry_limit" | "authorization_required" | "authorization_unavailable" | "service_inactive" | "route_not_ready" | "capacity_reached" | "unavailable" };
   resources?: RuleResource[];
   semanticChanges?: SemanticChanges;
   nodeChanges?: NodeChanges;

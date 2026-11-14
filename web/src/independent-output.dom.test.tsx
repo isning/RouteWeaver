@@ -225,7 +225,7 @@ it.each([422, 503])(
   },
 );
 
-it("keeps normal publication the default and submits explicit independent creation without claiming publication", async () => {
+it.each(["eligible", "authorization-required", "unknown", "external"])("uses real metering eligibility without shared fallback: %s", async (eligibility) => {
   const { PublishOutput } = await import("./Subscriptions");
   const { emptyProfile } = await import("./model");
   const { fireEvent, within, waitFor } = await import("@testing-library/react");
@@ -257,6 +257,7 @@ it("keeps normal publication the default and submits explicit independent creati
         return new Response(
           JSON.stringify({
             valid: true,
+            independentMetering: eligibility === "unknown" ? undefined : {available:eligibility==="eligible",required:eligibility!=="external",reason:eligibility==="external"?"not_platform_only":"authorization_required"},
             previewScope: "new-output",
             outputId: body.id,
             previewDigest: "checked",
@@ -286,8 +287,8 @@ it("keeps normal publication the default and submits explicit independent creati
             ...emptyProfile(),
             id: "p",
             name: "测试订阅",
-            platformEntryIds: ["managed"],
-            sourceIds: [],
+            platformEntryIds: eligibility === "external" ? [] : ["managed"],
+            sourceIds: eligibility === "external" ? ["source"] : [],
           }}
           onClose={closed}
           onPublished={published}
@@ -295,13 +296,23 @@ it("keeps normal publication the default and submits explicit independent creati
       </UIProviders>
     </QueryClientProvider>,
   );
-  expect(
-    screen
-      .getByRole("radio", { name: "共用凭据（默认）" })
-      .getAttribute("aria-checked"),
-  ).toBe("true");
-  fireEvent.click(screen.getByRole("radio", { name: "为这份订阅单独计量" }));
+  expect(screen.queryByRole("radio", { name: /共用凭据/ })).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "检查发布内容" }));
+  if (eligibility === "authorization-required" || eligibility === "unknown") {
+    const button=await screen.findByRole("button",{name:"创建独立计量订阅"});
+    expect((button as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.queryByRole("button",{name:/创建并发布/})).toBeNull();
+    expect(screen.getByText(eligibility==="unknown"?"暂时无法确认独立计量是否可用，请重新检查。":"请管理员先允许所选线路创建独立计量订阅。")).toBeTruthy();
+    const {act}=await import("@testing-library/react");
+    await act(async()=>{fireEvent.submit(document.querySelector("form")!);});
+    expect(paths).toEqual(["/api/me/outputs/preview"]);
+    client.clear();return;
+  }
+  if (eligibility === "external") {
+    expect(await screen.findByRole("button",{name:/创建并发布/})).toBeTruthy();
+    expect(screen.queryByRole("button",{name:"创建独立计量订阅"})).toBeNull();
+    client.clear();return;
+  }
   fireEvent.click(
     await screen.findByRole("button", { name: "创建独立计量订阅" }),
   );

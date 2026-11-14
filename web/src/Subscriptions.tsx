@@ -1954,7 +1954,6 @@ export function PublishOutput({
   const client = useQueryClient();
   const message = toast;
   const [created, setCreated] = useState<Output | null>(null);
-  const [independent, setIndependent] = useState(false);
   const [independentLocked, setIndependentLocked] = useState(false);
   const [preview, setPreview] = useState<Preview | null>(null);
   const creationWasUncertain = useRef(false);
@@ -1996,6 +1995,21 @@ export function PublishOutput({
       ? { profile, profileRead, writeReady }
       : lastPresentation.current;
   const displayProfile = presentation.profile;
+  const platformOnly = !!displayProfile?.platformEntryIds?.length && !displayProfile?.sourceIds?.length && !displayProfile?.collectionId && !displayProfile?.ir?.endpoints?.some(endpoint => endpoint.origin === "imported");
+  const metering = preview?.independentMetering;
+  const independent = metering?.required === true || (metering?.required !== false && platformOnly);
+  const independentReady = metering?.required === true && metering.available === true;
+  const meteringReason = {
+    not_platform_only: "外部或混合来源不支持按订阅单独计量。",
+    entry_limit: "单份订阅最多支持 16 条平台线路，请减少所选线路。",
+    authorization_required: "请管理员先允许所选线路创建独立计量订阅。",
+    authorization_unavailable: "线路授权暂不可用，请稍后重新检查。",
+    service_inactive: "当前服务不可用，请先恢复服务后重新检查。",
+    route_not_ready: "所选线路尚未准备好，请待线路配置完成后重新检查。",
+    capacity_reached: "独立订阅数量已达上限，请停用不再使用的订阅或联系管理员。",
+    unavailable: "暂时无法确认独立计量是否可用，请重新检查。",
+  };
+
   const displayRead = presentation.profileRead;
   // Read availability suspends actions, not the opening or its reviewed payload.
   // Read these latest values after asynchronous field validation as well.
@@ -2278,7 +2292,6 @@ export function PublishOutput({
     if (!profile) return;
     outputID.current = newID("output");
     creationWasUncertain.current = false;
-    setIndependent(false);
     setIndependentLocked(false);
     mutation.reset();
     inspect.reset();
@@ -2407,7 +2420,7 @@ export function PublishOutput({
                 <IndependentOutputCreate
                   key={`${reviewedCreation.id}:${preview.previewDigest}`}
                   creation={{ ...reviewedCreation, previewDigest: preview.previewDigest }}
-                  enabled={!busy && presentation.writeReady}
+                  enabled={!busy && presentation.writeReady && independentReady}
                   onLocked={setIndependentLocked}
                   onAccepted={() => { toast.success("创建请求已提交，可在订阅页查看进度"); onClose(); }}
                 />
@@ -2546,15 +2559,12 @@ export function PublishOutput({
           {pendingCreation && (
             <h2 className="mb-4 font-medium">本次发布的选项</h2>
           )}
-          {!!displayProfile?.platformEntryIds?.length && !displayProfile?.sourceIds?.length && !displayProfile?.collectionId && (
-            <fieldset className="space-y-2 rounded-lg border p-3" disabled={locked}>
-              <legend className="px-1 text-sm font-medium">流量计量</legend>
-              <RadioGroup value={independent ? "independent" : "shared"} disabled={locked} onValueChange={value => setIndependent(value === "independent")}>
-                <Label className="flex items-center gap-2"><RadioGroupItem value="shared" />共用凭据（默认）</Label>
-                <Label className="flex items-center gap-2"><RadioGroupItem value="independent" />为这份订阅单独计量</Label>
-              </RadioGroup>
-              {independent && <p className="text-sm text-muted-foreground">仅支持已获管理员允许的平台受管线路。会生成新凭据并重载服务器，已有连接可能短暂中断；原订阅保持不变。</p>}
-            </fieldset>
+          {preview && independent && (
+            <div className="space-y-2 rounded-lg border p-3">
+              <p className="text-sm font-medium">按订阅单独计量</p>
+              <p className="text-sm text-muted-foreground">会生成连接凭据并重载相关服务器，现有连接可能短暂中断。</p>
+              {!independentReady && <Notice tone="warning">{metering?.reason ? meteringReason[metering.reason] || meteringReason.unavailable : meteringReason.unavailable}</Notice>}
+            </div>
           )}
           <AppField
             name="name"

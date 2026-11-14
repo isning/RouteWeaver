@@ -1,5 +1,5 @@
-// Package ipmeta enriches IP addresses from explicitly supplied local databases.
-// It has no network client, database downloader or request logging.
+// Package ipmeta enriches IP addresses locally. The optional updater downloads
+// whole public databases; lookup addresses are never sent over the network.
 package ipmeta
 
 import (
@@ -8,6 +8,7 @@ import (
 	"net/netip"
 	"os"
 	"strings"
+	"sync/atomic"
 	"time"
 	"unicode"
 	"unicode/utf8"
@@ -18,9 +19,11 @@ import (
 const MaxDatabaseBytes int64 = 128 << 20
 
 type Source struct {
-	Kind         string    `json:"kind"`
-	DatabaseType string    `json:"databaseType"`
-	BuiltAt      time.Time `json:"builtAt"`
+	Attribution    string    `json:"attribution,omitempty"`
+	AttributionURL string    `json:"attributionURL,omitempty"`
+	Kind           string    `json:"kind"`
+	DatabaseType   string    `json:"databaseType"`
+	BuiltAt        time.Time `json:"builtAt"`
 }
 type Result struct {
 	Status       string `json:"status"`
@@ -34,6 +37,7 @@ type Result struct {
 type Database struct {
 	country, asn *maxminddb.Reader
 	sources      []Source
+	current      *atomic.Pointer[Database]
 }
 
 func Open(countryPath, asnPath string) (*Database, error) {
@@ -53,7 +57,12 @@ func Open(countryPath, asnPath string) (*Database, error) {
 			return nil, fmt.Errorf("%s database: %w", item.kind, err)
 		}
 		*item.dest = r
-		d.sources = append(d.sources, Source{Kind: item.kind, DatabaseType: r.Metadata.DatabaseType, BuiltAt: time.Unix(int64(r.Metadata.BuildEpoch), 0).UTC()})
+		source := Source{Kind: item.kind, DatabaseType: r.Metadata.DatabaseType, BuiltAt: time.Unix(int64(r.Metadata.BuildEpoch), 0).UTC()}
+		if strings.HasPrefix(r.Metadata.DatabaseType, "DBIP-") {
+			source.Attribution = "IP Geolocation by DB-IP"
+			source.AttributionURL = "https://db-ip.com"
+		}
+		d.sources = append(d.sources, source)
 	}
 	return d, nil
 }
@@ -79,7 +88,7 @@ func readDatabase(path, kind string) (*maxminddb.Reader, error) {
 		return nil, fmt.Errorf("MMDB verification failed")
 	}
 	typ := r.Metadata.DatabaseType
-	if (kind == "country" && typ != "GeoIP2-Country" && typ != "GeoLite2-Country") || (kind == "asn" && typ != "GeoLite2-ASN" && typ != "GeoIP2-ASN") {
+	if (kind == "country" && typ != "GeoIP2-Country" && typ != "GeoLite2-Country" && typ != "DBIP-Country-Lite") || (kind == "asn" && typ != "GeoLite2-ASN" && typ != "GeoIP2-ASN" && typ != "DBIP-ASN-Lite (compat=GeoLite2-ASN)") {
 		return nil, fmt.Errorf("unexpected database type")
 	}
 	if r.Metadata.BuildEpoch == 0 || uint64(r.Metadata.BuildEpoch) > uint64(time.Now().Add(24*time.Hour).Unix()) {
@@ -87,7 +96,16 @@ func readDatabase(path, kind string) (*maxminddb.Reader, error) {
 	}
 	return r, nil
 }
+
+// Snapshot pins a complete database pair for a request during an update.
+func (d *Database) Snapshot() *Database {
+	if d != nil && d.current != nil {
+		return d.current.Load()
+	}
+	return d
+}
 func (d *Database) Sources() []Source {
+	d = d.Snapshot()
 	if d == nil {
 		return []Source{}
 	}
@@ -99,6 +117,7 @@ var nonPublic = []netip.Prefix{
 }
 
 func (d *Database) Lookup(ip netip.Addr) Result {
+	d = d.Snapshot()
 	if d == nil {
 		return Result{Status: "unavailable"}
 	}
