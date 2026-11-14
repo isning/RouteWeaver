@@ -5,7 +5,7 @@ UI. Run it from the extracted directory so `web/dist` is found. Administration i
 performed in the web UI; the shell starts the application or runs explicit offline
 maintenance. No Go compiler is required on the host. For the stopped-service,
 fresh-copy-only maintenance procedure, see
-[offline notification migration](docs/operations/OFFLINE-NOTIFICATION-MIGRATION.md).
+[offline notification migration](operations/OFFLINE-NOTIFICATION-MIGRATION.md).
 
 ## Local evaluation
 
@@ -77,8 +77,9 @@ public origin and private configuration paths before changing versions.
    accounting before any cutover; restoring older data can lose newer updates.
 
 The package smoke rehearses same-version backup/restore with disposable data.
-It does not establish compatibility with a different release or authorize a live
-upgrade. Keep older packages and recovery material until the chosen deployment's
+A separate [bounded historical forward-upgrade rehearsal](verification/LINUX-FORWARD-UPGRADE-2026-11-14.md)
+verified one exact source pair across the notification storage-layout migration.
+Neither establishes compatibility with all releases or authorizes a live upgrade. Keep older packages and recovery material until the chosen deployment's
 acceptance and retention requirements are satisfied.
 
 ## Node agent
