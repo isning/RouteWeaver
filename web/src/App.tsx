@@ -125,7 +125,9 @@ const NotificationsAdminPage = lazyPage(() =>
 const FleetPage = lazyPage(() =>
   import("./Fleet").then((m) => ({ default: m.FleetPage })),
 );
+const OverviewPage = lazyPage(() => import("./OverviewPage").then(m => ({ default: m.OverviewPage })));
 export type Page =
+  | "overview"
   | "account-security"
   | "fleet"
   | "published-routes"
@@ -147,6 +149,7 @@ export type Page =
   | "servers"
   | "legacy-routes";
 const personal = [
+  { id: "overview", label: "概览", icon: <AppstoreOutlined aria-hidden="true" /> },
   {
     id: "account-security",
     label: "账号安全",
@@ -234,7 +237,7 @@ const navigationGroups: {
   adminOnly?: boolean;
   discoverable?: boolean;
 }[] = [
-  { label: "订阅与分流", pages: ["subscriptions"], discoverable: true },
+  { label: "订阅与分流", pages: ["overview", "subscriptions"], discoverable: true },
   {
     label: "订阅素材",
     pages: ["sources", "collections", "resources", "templates"],
@@ -259,7 +262,7 @@ function initialPage(): Page {
     name === "outputs" ||
     [...personal, ...admin].some((i) => i.id === name)
     ? (name as Page)
-    : "subscriptions";
+    : "overview";
 }
 // One-shot draft requests are not subscription inventory scopes or browser-stored drafts.
 function subscriptionInventoryHash(hash: string) {
@@ -689,11 +692,11 @@ function Workspace() {
       <SidebarHeader className="h-16 justify-center px-4">
         <a
           className="flex items-center gap-2 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          href="#subscriptions"
+          href="#overview"
           aria-label="RouteWeaver 首页"
           onClick={(event) => {
             event.preventDefault();
-            navigate("subscriptions");
+            navigate("overview");
           }}
         >
           <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
@@ -932,6 +935,8 @@ function Workspace() {
                     ) : (
                       <Notice tone="warning" title="需要管理员权限" />
                     )
+                  ) : page === "overview" ? (
+                    <OverviewPage />
                   ) : page === "inbox" ? (
                     <InboxPage />
                   ) : ["subscriptions", "profiles", "outputs"].includes(
@@ -939,6 +944,7 @@ function Workspace() {
                     ) ? (
                     <SubscriptionsPage
                       navigate={navigate}
+                      showServiceSummary={false}
                       onStartProxySubscription={() => {
                         setSourceSubscriptionSetup(true);
                         navigate("sources");

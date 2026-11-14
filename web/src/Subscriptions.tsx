@@ -216,6 +216,7 @@ function OutputUpdateButton({
 // Ordinary inventory uses frozen metadata; comparisons are explicit scoped reads.
 export function SubscriptionsPage({
   view = "overview",
+  showServiceSummary = true,
   sourceDraft,
   onSourceDraftConsumed,
   onStartProxySubscription,
@@ -225,6 +226,7 @@ export function SubscriptionsPage({
   onConfigureServer?: () => void;
   navigate?: (page: Page) => void;
   view?: SubscriptionView;
+  showServiceSummary?: boolean;
   sourceDraft?: SourceProfileEntry;
   onSourceDraftConsumed?: (token: string) => void;
 }) {
@@ -1083,7 +1085,7 @@ export function SubscriptionsPage({
         contextKind="data"
         contextPosition={view === "overview" ? "top" : "side"}
         contained={view !== "overview"}
-        context={serviceContext}
+        context={showServiceSummary ? serviceContext : undefined}
         header={<PageHeader
           title="我的订阅"
           action={

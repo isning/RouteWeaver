@@ -1066,6 +1066,8 @@ it("retains only nonprivate history proof through logout and B login, not A's li
   await screen.findByRole("button", { name: "进入工作空间" });
   expect(location.hash).toBe("");
   expect(history.state).toEqual(sourceProof);
+  // Explicit management deep link; the default sign-in landing page is now overview.
+  history.replaceState(history.state, "", "#subscriptions");
   await userEvent.type(screen.getByLabelText("账号"), "B fixture");
   await userEvent.type(screen.getByLabelText("密码"), "fixture-only");
   await userEvent.click(screen.getByRole("button", { name: "进入工作空间" }));
@@ -1088,7 +1090,7 @@ it("retains only nonprivate history proof through logout and B login, not A's li
     ).value,
   ).toBe("");
   await act(async () => history.forward());
-  await waitFor(() => expect(location.hash).toBe(""));
+  await waitFor(() => expect(location.hash).toBe("#subscriptions"));
   expect(history.state.routeweaverLineage).toBe(sourceProof.routeweaverLineage);
 });
 
