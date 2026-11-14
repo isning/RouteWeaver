@@ -1222,11 +1222,9 @@ function LoginForm({
                 ? "管理员登录"
                 : "登录 RouteWeaver"}
           </h1>
-          {mode !== "login" && (
+          {mode === "admin" && (
             <p className="text-sm leading-relaxed text-muted-foreground">
-              {mode === "invite"
-                ? "使用邀请加入，创建自己的账号。"
-                : "使用平台管理员提供的令牌登录。"}
+              使用平台管理员提供的令牌登录。
             </p>
           )}
           {inviteUncertain && (
@@ -1382,10 +1380,6 @@ function LoginForm({
                 返回账号登录
               </ActionButton>
             )}
-          </div>
-          <div className="space-y-1 text-xs text-muted-foreground">
-            <p>邀请制工作空间</p>
-            <p>你的来源仅由你管理</p>
           </div>
         </div>
       </div>

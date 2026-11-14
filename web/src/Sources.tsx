@@ -321,7 +321,7 @@ export function SourcesPage({
     <>
       <PageHeader
         title="订阅来源"
-        description={subscriptionSetup ? "先导入已有代理或订阅链接。导入后继续设置客户端订阅，也可以打开下方已有来源继续。" : "导入外部订阅和节点，与平台节点组合使用。"}
+        description={subscriptionSetup ? "先导入已有代理或订阅链接。导入后继续设置客户端订阅，也可以打开下方已有来源继续。" : undefined}
         action={
           <ActionButton
             leadingIcon={<Plus aria-hidden="true" />}
@@ -1213,7 +1213,6 @@ export function CollectionsPage() {
     <>
       <PageHeader
         title="节点集合"
-        description="组合多个来源，按顺序处理节点，再复用到分流配置。"
         action={
           <ActionButton
             ref={createTrigger}
@@ -1235,7 +1234,7 @@ export function CollectionsPage() {
             <EmptyState
               title="暂无节点集合"
               action={
-                <ActionButton onClick={() => edit()} variant="default">
+                <ActionButton leadingIcon={<Plus aria-hidden="true" />} onClick={() => edit()} variant="default">
                   新建集合
                 </ActionButton>
               }

@@ -2311,7 +2311,7 @@ function ServerRouteDetail({
           managedEntry={managedEntry}
         />
       )}
-      <Section title="目标实例" description="运行结果由对应 Agent 回传。">
+      <Section title="目标实例">
         {programs.map((p) => (
           <div
             role="group"

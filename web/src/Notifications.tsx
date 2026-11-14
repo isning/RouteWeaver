@@ -23,6 +23,8 @@ import { ActionButton } from "@/ui-patterns/actions";
 import { Notice } from "@/ui-patterns/notice";
 import {
   Bell as BellOutlined,
+  Check,
+  Pencil,
   Plus as PlusOutlined,
   RotateCw as ReloadOutlined,
 } from "lucide-react";
@@ -196,7 +198,6 @@ export function InboxPage() {
           {!query.data?.length ? (
             <EmptyState
               title="暂无消息"
-              description="有服务变更或提醒时会显示在这里。"
             />
           ) : (
             <div className="divide-y rounded-lg border">
@@ -265,6 +266,7 @@ export function InboxPage() {
         <ErrorNotice error={selectedError} />
         {selected && !displayed?.readAt && (
           <ActionButton
+            leadingIcon={<Check aria-hidden="true" />}
             pending={pendingReads.has(selected.eventId)}
             keepFocusableWhilePending
             disabled={!canAcknowledge(selected.eventId) && !pendingReads.has(selected.eventId)}
@@ -546,7 +548,7 @@ function Announcements() {
                   title: "",
                   render: (_, a) => (
                     <TableRowActions name={a.title}>
-                      <ActionButton disabled={!listReady} onClick={() => edit(a)} variant="outline">
+                      <ActionButton leadingIcon={<Pencil aria-hidden="true" />} disabled={!listReady} onClick={() => edit(a)} variant="outline">
                         编辑
                       </ActionButton>
                     </TableRowActions>

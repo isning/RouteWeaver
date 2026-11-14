@@ -539,7 +539,7 @@ it("starts an existing-proxy subscription task from the empty inventory and reta
   await act(async () => history.back());
   await userEvent.click(await screen.findByRole("button", { name: "放弃修改并离开" }));
   await screen.findByRole("heading", { name: "订阅来源", level: 1 });
-  expect(screen.getByText("导入外部订阅和节点，与平台节点组合使用。")).toBeTruthy();
+  expect(screen.queryByText("导入外部订阅和节点，与平台节点组合使用。")).toBeNull();
   expect(screen.queryByText("先导入已有代理或订阅链接。导入后继续设置客户端订阅，也可以打开下方已有来源继续。")).toBeNull();
 });
 

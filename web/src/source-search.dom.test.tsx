@@ -93,16 +93,15 @@ afterEach(async () => {
   vi.unstubAllGlobals();
 });
 
-it("explains imported subscriptions and nodes can be combined with platform nodes", async () => {
+it("keeps the empty source task focused on adding a source", async () => {
   vi.stubGlobal(
     "fetch",
     vi.fn(async () => json([])),
   );
   mount();
   await screen.findByText("暂无订阅来源");
-  expect(
-    screen.getByText("导入外部订阅和节点，与平台节点组合使用。"),
-  ).toBeTruthy();
+  expect(screen.getAllByRole("button", { name: "添加来源" }).length).toBeGreaterThan(0);
+  expect(screen.queryByText("导入外部订阅和节点，与平台节点组合使用。")).toBeNull();
 });
 
 it("distinguishes no matches and clears only the query to recover the same source identities and order", async () => {
