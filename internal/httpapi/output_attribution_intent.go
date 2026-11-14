@@ -104,13 +104,16 @@ func (h *server) prepareAttributedOutputReservation(owner string, in outputCreat
 	result := attributedOutputIntent{}
 	proof := preparedFleet{}
 	inputs := newTemplateInputs(h.s)
-	if err := inputs.expectRecord(owner, "outputs", in.ID); err != nil {
+	// Keep identity reservation fences out of the configuration review digest.
+	// They still participate in the final atomic reservation transaction.
+	reservationInputs := newTemplateInputs(h.s)
+	if err := reservationInputs.expectRecord(owner, "outputs", in.ID); err != nil {
 		return result, proof, err
 	}
-	if err := inputs.expectRecord(owner, "output-attribution-intents", in.ID); err != nil {
+	if err := reservationInputs.expectRecord(owner, "output-attribution-intents", in.ID); err != nil {
 		return result, proof, err
 	}
-	for _, c := range inputs.compares() {
+	for _, c := range reservationInputs.compares() {
 		if c.Expected != nil {
 			return result, proof, fmt.Errorf("output ID already reserved")
 		}
@@ -293,6 +296,7 @@ func (h *server) prepareAttributedOutputReservation(owner string, in outputCreat
 	}
 	// The reservation caller must consume both record and set fences atomically.
 	proof.Compares = append(proof.Compares, inputs.compares()...)
+	proof.Compares = append(proof.Compares, reservationInputs.compares()...)
 	sort.Slice(result.Plans, func(i, j int) bool { return result.Plans[i].OriginalGrantID < result.Plans[j].OriginalGrantID })
 	return result, proof, nil
 }

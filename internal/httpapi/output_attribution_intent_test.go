@@ -30,6 +30,20 @@ func TestIndependentOutputReservationIsPrivateIdempotentAndDoesNotPublish(t *tes
 	if err := f.s.TenantGet(f.owner.id, "output-attribution-intents", "invalid-target", &missing); err != store.ErrNotFound {
 		t.Fatal("invalid target reserved provisioning work")
 	}
+	// Exercise the reviewed browser flow, not only the legacy no-review API.
+	code, review, raw := req(t, f.owner.c, "POST", f.srv.URL+"/api/me/outputs/preview", f.owner.csrf, input)
+	if code != 200 {
+		t.Fatalf("preview independent creation %d %s", code, raw)
+	}
+	input["previewDigest"] = review["previewDigest"].(string)
+	changed := map[string]string{"id": input["id"], "name": "changed after review", "profileId": input["profileId"], "previewDigest": input["previewDigest"]}
+	code, _, raw = req(t, f.owner.c, "POST", path, f.owner.csrf, changed)
+	if code != 422 || !strings.Contains(raw, "review is stale") {
+		t.Fatalf("changed reviewed reservation accepted: %d %s", code, raw)
+	}
+	if err := f.s.TenantGet(f.owner.id, "output-attribution-intents", input["id"], &missing); err != store.ErrNotFound {
+		t.Fatal("stale review reserved provisioning work")
+	}
 	var before json.RawMessage
 	f.s.Get("server-deployments", "rotation-path", &before)
 	grantsBefore, _ := f.s.TenantList(f.owner.id, "platform-entries")

@@ -143,16 +143,6 @@ func (h *server) registerOutputs(r chi.Router) {
 		}
 		v := in.output()
 		inputs := newTemplateInputs(h.s)
-		if err := inputs.expectRecord(owner, "output-attribution-intents", in.ID); err != nil {
-			storeError(w, err)
-			return
-		}
-		for _, c := range inputs.compares() {
-			if c.Kind == store.TenantKind(owner, "output-attribution-intents") && c.Expected != nil {
-				fail(w, 409, "output ID is reserved by independent provisioning")
-				return
-			}
-		}
 		prepared, e := h.prepareOutput(owner, v, inputs)
 		if e != nil {
 			if in.PreviewDigest != nil {
@@ -165,6 +155,18 @@ func (h *server) registerOutputs(r chi.Router) {
 		if in.PreviewDigest != nil && (len(*in.PreviewDigest) != 64 || subtle.ConstantTimeCompare([]byte(*in.PreviewDigest), []byte(prepared.digest)) != 1) {
 			fail(w, 409, "review is stale; preview the output again")
 			return
+		}
+		// Reservation fences guard the write, not the reviewed configuration.
+		// Capture them after hashing the same inputs as the preview endpoint.
+		if err := inputs.expectRecord(owner, "output-attribution-intents", in.ID); err != nil {
+			storeError(w, err)
+			return
+		}
+		for _, c := range inputs.compares() {
+			if c.Kind == store.TenantKind(owner, "output-attribution-intents") && c.Expected != nil {
+				fail(w, 409, "output ID is reserved by independent provisioning")
+				return
+			}
 		}
 		v = prepared.output
 		if in.PreviewDigest != nil {
