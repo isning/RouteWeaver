@@ -898,8 +898,9 @@ for (const width of [3440, 2880, 2560, 2304, 1920, 1536, 1440, 1366, 1280, 1024,
       const nameBox = (await name.boundingBox())!;
       const rateBox = (await rate.boundingBox())!;
       const rowBox = (await row.boundingBox())!;
-      expect(nameBox.width).toBeCloseTo(rowBox.width, 0);
-      expect(rateBox.y).toBeGreaterThanOrEqual(nameBox.y + nameBox.height);
+      expect(rateBox.x).toBeGreaterThanOrEqual(nameBox.x + nameBox.width);
+      expect(rateBox.y).toBeLessThan(nameBox.y + nameBox.height);
+      expect(rateBox.x + rateBox.width).toBeLessThanOrEqual(rowBox.x + rowBox.width + 1);
       // Measure actual rendered characters rather than assuming text-wrap can
       // balance a single unspaced word. Camel-case break opportunities preserve
       // the full name and avoid isolated final letters in narrow context rails.
@@ -946,7 +947,7 @@ for (const width of [3440, 2880, 2560, 2304, 1920, 1536, 1440, 1366, 1280, 1024,
     const countdownBox = (await resetCountdown.boundingBox())!;
     expect(countdownBox.y).toBeGreaterThanOrEqual(dateBox.y - 2);
     expect(countdownBox.x + countdownBox.width).toBeLessThanOrEqual(detailsBox.x + detailsBox.width + 1);
-    expect(await routes.evaluate(el => getComputedStyle(el).borderTopWidth)).toBe(subscriptionPrimary.width >= 992 ? "0px" : "1px");
+    expect(await routes.evaluate(el => getComputedStyle(el).borderTopWidth)).toBe("1px");
     for (const selector of [".route-option"]) {
       const rows = routes.locator(selector);
       for (let i = 0; i < await rows.count(); i++) {

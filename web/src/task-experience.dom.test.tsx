@@ -401,7 +401,7 @@ it("labels route grants as authorization rather than claiming runtime availabili
   const resetValue = screen.getByText("下次重置", { exact: true }).parentElement!;
   expect(resetValue.querySelector(".usage-reset-date")?.textContent).toContain("2099");
   expect(resetValue.querySelector(".usage-reset-countdown")?.textContent).toMatch(/还有 .+/);
-  expect(screen.getByText("已为你的账号开通", { exact: true })).toBeTruthy();
+  expect(screen.queryByText("已为你的账号开通", { exact: true })).toBeNull();
   expect(screen.queryByText(/当前使用|当前已选|线路在线/)).toBeNull();
 });
 

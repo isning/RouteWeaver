@@ -155,7 +155,7 @@ function OutputComparisonLine({
   if (output.status !== "published") return null;
   return (
     <p
-      className="subscription-comparison-state text-sm text-muted-foreground"
+      className="subscription-comparison-state mt-2 text-xs leading-5 text-muted-foreground"
       role="status"
     >
       {pending && comparison.kind !== "checking" ? (
@@ -963,19 +963,18 @@ export function SubscriptionsPage({
       </Suspense>
     );
   const availableRoutes = !!data?.routes?.length && (
-          <section aria-labelledby={availableRoutesId} className="available-routes min-w-0 border-t border-border pt-4 @min-[62rem]/subscription-tasks:border-t-0 @min-[62rem]/subscription-tasks:pt-0">
-            <h2 id={availableRoutesId} className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm font-medium">平台提供的线路 <span className="font-normal tabular-nums text-muted-foreground">{data.routes.length} 条</span></h2>
-            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">已为你的账号开通</p>
+          <section aria-labelledby={availableRoutesId} className="available-routes min-w-0 rounded-xl border bg-card p-4">
+            <h2 id={availableRoutesId} className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-base font-semibold tracking-tight">平台提供的线路 <span className="text-xs font-normal tabular-nums text-muted-foreground">{data.routes.length} 条</span></h2>
             <ul className="route-options mt-2 divide-y divide-border">
               {data.routes.map((route) => (
-                <li className="route-option grid min-w-0 gap-2 py-3" key={route.id}>
+                <li className="route-option grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-3 py-3" key={route.id}>
                   <h3 className="min-w-0 text-sm leading-relaxed wrap-anywhere">
                     {/* Keep the original name intact while allowing long compound names to wrap at word boundaries. */}
                     {route.name.split(/(?<=[a-z0-9])(?=[A-Z])/).flatMap((part, index) =>
                       index === 0 ? [part] : [<wbr key={index} />, part],
                     )}
                   </h3>
-                  <Badge variant="secondary" className="justify-self-start tabular-nums" aria-label={`额度倍率 ${((route.rateMicros ?? 1000000) / 1000000).toLocaleString()} 倍`}>
+                  <Badge variant="secondary" className="mt-0.5 justify-self-end tabular-nums" aria-label={`额度倍率 ${((route.rateMicros ?? 1000000) / 1000000).toLocaleString()} 倍`}>
                     {((route.rateMicros ?? 1000000) / 1000000).toLocaleString()}×
                   </Badge>
                 </li>
@@ -997,28 +996,32 @@ export function SubscriptionsPage({
               <h2 className="sr-only">平台服务用量</h2>
               <div className="grid min-w-0 gap-3">
                 <div className="min-w-0">
+                  <div className="grid items-end gap-4 @min-[40rem]/usage:grid-cols-[minmax(10rem,1fr)_minmax(0,2fr)]">
+                  <div>
                   <div className="mb-2 flex flex-wrap items-center gap-2">
                     <h3 className="text-sm font-medium text-muted-foreground">本周期剩余额度</h3>
                     <OverviewPolicyStatus value={data.status} />
                   </div>
-                  <p className="mb-3 text-[2rem] leading-none font-semibold tracking-tight tabular-nums wrap-anywhere">
+                  <p className="text-[2rem] leading-none font-semibold tracking-tight tabular-nums wrap-anywhere">
                     {quota === 0 ? "不限额" : bytesLabel(remaining)}
                   </p>
-                  {percent !== undefined && (
-                    <Progress className="mb-2.5 h-1" value={percent} aria-label="本周期额度使用比例" />
-                  )}
-                  <dl className="flex flex-wrap gap-x-5 gap-y-1 text-xs">
+                  </div>
+                  <dl className="grid grid-cols-3 gap-x-4 gap-y-2 text-xs">
                     {[
                       ["已用额度", bytesLabel(used)],
                       ["总额度", quota === 0 ? "不限额" : bytesLabel(quota)],
                       ["本周期实际流量", bytesLabel(data.usage?.rawBytes)],
                     ].map(([label, value]) => (
-                      <div key={label} className="flex flex-wrap items-baseline gap-x-2">
+                      <div key={label} className="row-span-2 grid min-w-0 grid-rows-subgrid gap-1">
                         <dt className="text-muted-foreground">{label}</dt>
-                        <dd className="font-medium tabular-nums">{value}</dd>
+                        <dd className="font-medium tabular-nums wrap-anywhere">{value}</dd>
                       </div>
                     ))}
                   </dl>
+                  </div>
+                  {percent !== undefined && (
+                    <Progress className="mt-3 h-1" value={percent} aria-label="本周期额度使用比例" />
+                  )}
                   <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
                     实际流量按所用线路的倍率扣除额度。
                   </p>
@@ -1035,19 +1038,19 @@ export function SubscriptionsPage({
                 </div>
                 <section aria-labelledby={usageDetailsId} className="usage-details min-w-0 border-t border-border pt-3">
                   <h3 id={usageDetailsId} className="sr-only">用量与周期明细</h3>
-                  <dl className="flex flex-wrap gap-x-6 gap-y-2 text-xs">
-                    <div className="usage-detail-row flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
+                  <dl className="grid gap-x-6 gap-y-2 text-xs @min-[40rem]/usage:grid-cols-2">
+                    <div className="usage-detail-row grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-baseline gap-x-3 gap-y-1">
                       <dt className="flex items-center gap-2 text-xs text-muted-foreground"><CalendarClock className="size-3.5 shrink-0" aria-hidden="true" />下次重置</dt>
                       <dd className="usage-reset-date tabular-nums wrap-anywhere">{data.cycle?.nextReset
                         ? dateLabel(data.cycle.nextReset, data.cycle.timezone)
                         : data.cycle ? "不自动重置" : "尚未设置"}</dd>
-                      {reset && <dd className="usage-reset-countdown text-xs text-muted-foreground tabular-nums wrap-anywhere">还有 {reset}</dd>}
-                      {data.cycle?.timezone && <><dt className="sr-only">周期时区</dt><dd className="text-xs text-muted-foreground wrap-anywhere">{data.cycle.timezone}</dd></>}
+                      {reset && <dd className="usage-reset-countdown col-start-2 text-xs text-muted-foreground tabular-nums wrap-anywhere">还有 {reset}</dd>}
+                      {data.cycle?.timezone && <><dt className="sr-only">周期时区</dt><dd className="col-start-2 text-xs text-muted-foreground wrap-anywhere">{data.cycle.timezone}</dd></>}
                     </div>
-                    <div className="usage-detail-row flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
+                    <div className="usage-detail-row grid min-w-0 grid-cols-[auto_minmax(0,1fr)] items-baseline gap-x-3 gap-y-1">
                       <dt className="flex items-center gap-2 text-xs text-muted-foreground"><ShieldCheck className="size-3.5 shrink-0" aria-hidden="true" />服务到期</dt>
                       <dd className="tabular-nums wrap-anywhere">{dateLabel(data.entitlement?.expiresAt || data.user?.expiresAt)}</dd>
-                      {data.service?.name && <dd className="text-xs text-muted-foreground wrap-anywhere">{data.service.name}</dd>}
+                      {data.service?.name && <dd className="col-start-2 text-xs text-muted-foreground wrap-anywhere">{data.service.name}</dd>}
                     </div>
                   </dl>
                 </section>
@@ -1097,9 +1100,6 @@ export function SubscriptionsPage({
           }
         />}
       >
-      <div className="@container/subscription-tasks min-w-0">
-      <div className={cn("grid min-w-0 items-start gap-6", view === "overview" && availableRoutes && "@min-[62rem]/subscription-tasks:grid-cols-[minmax(0,1fr)_16rem]")}>
-      <div className="subscription-task-main min-w-0 space-y-6">
       <ErrorNotice error={detailOutput ? null : editError || actionError} />
       {profileScope && (
         <div className="subscription-scope space-y-4" role="status">
@@ -1210,6 +1210,9 @@ export function SubscriptionsPage({
           <LoadingState layout="subscriptions" label="正在加载配置与客户端订阅" />
         )
       )}
+      <div className="@container/subscription-tasks min-w-0">
+      <div className={cn("grid min-w-0 items-start gap-6", view === "overview" && availableRoutes && "@min-[62rem]/subscription-tasks:grid-cols-[minmax(0,1fr)_16rem]")}>
+      <div className="subscription-task-main min-w-0 space-y-6">
       <section
         aria-label={
           view === "outputs" ? "客户端订阅清单" : "分流配置与客户端订阅"
@@ -1228,13 +1231,13 @@ export function SubscriptionsPage({
           );
           return (
             <article
-              className="surface subscription-configuration overflow-hidden rounded-xl border bg-card"
+              className="surface subscription-configuration @container/configuration overflow-hidden rounded-xl border bg-card"
               key={id}
               aria-label={
                 profile ? `分流配置 ${profile.name}` : `关联配置不可用 ${id}`
               }
             >
-              <header className="subscription-configuration-heading flex flex-wrap items-start justify-between gap-3 px-4 py-4 sm:px-5">
+              <header className="subscription-configuration-heading grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 p-4">
                 <div className="subscription-info min-w-0 space-y-1">
                   <h2 className="text-base font-semibold tracking-tight text-foreground wrap-anywhere">
                     {profile?.name ||
@@ -1338,7 +1341,7 @@ export function SubscriptionsPage({
               <div className="subscription-owned-links divide-y border-t">
                 {visibleLinks.map((output) => (
                   <div
-                    className="subscription-client-row flex flex-wrap items-center justify-between gap-x-5 gap-y-3 px-4 py-4 sm:px-5"
+                    className="subscription-client-row grid min-w-0 items-center gap-3 p-4 @min-[36rem]/configuration:grid-cols-[minmax(0,1fr)_auto]"
                     key={output.id}
                     role="group"
                     aria-label={`客户端订阅 ${output.name}`}
@@ -1361,21 +1364,17 @@ export function SubscriptionsPage({
                         ) : (
                           <Status value={output.status} />
                         )}
-                        <p>
-                          <Metadata>
-                            <MetadataItem>{output.target.adapterId}</MetadataItem>
-                            <MetadataItem>{output.mode === "nodes-only" ? "纯节点" : "完整配置"}</MetadataItem>
-                            <MetadataItem>{output.publishedAt
-                              ? `最近发布 ${dateLabel(output.publishedAt)}`
-                              : "尚未发布"}</MetadataItem>
-                          </Metadata>
-                        </p>
+                        <span>{output.target.adapterId}</span>
+                        <span>{output.mode === "nodes-only" ? "纯节点" : "完整配置"}</span>
+                        <span className="wrap-anywhere">{output.publishedAt
+                          ? `最近发布 ${dateLabel(output.publishedAt)}`
+                          : "尚未发布"}</span>
                       </div>
-                    </div>
                     <OutputComparisonLine
                       output={output}
                       pending={comparisons.pendingIds.has(output.id)}
                     />
+                    </div>
                     <div className={"flex flex-wrap items-center gap-2"}>
                       <ActionButton
                         disabled={
@@ -1461,7 +1460,7 @@ export function SubscriptionsPage({
                 )}
               </div>
               {profile && (
-                <footer className="subscription-configuration-footer flex flex-wrap items-center justify-between gap-2 border-t bg-muted/20 px-4 py-2 sm:px-5">
+                <footer className="subscription-configuration-footer flex flex-wrap items-center justify-between gap-2 border-t bg-muted/20 px-4 py-2">
                   {checkableLinks.length > 1 && (
                     <ActionButton
                       disabled={
@@ -2263,7 +2262,7 @@ export function PublishOutput({
   const publicationReadNotice = displayRead &&
     displayRead.state !== "ready" && (
       <div
-        className="subscription-comparison-state text-sm text-muted-foreground"
+        className="subscription-comparison-state mt-2 text-xs leading-5 text-muted-foreground"
         role="status"
       >
         <span>
