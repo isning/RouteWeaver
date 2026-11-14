@@ -398,9 +398,9 @@ it("labels route grants as authorization rather than claiming runtime availabili
   for (const multiplier of ["1.5×", "1×", "0.5×"]) {
     expect(screen.getByText(multiplier, { exact: true })).toBeTruthy();
   }
-  const resetValue = screen.getByText("下次重置", { exact: true }).nextElementSibling!;
+  const resetValue = screen.getByText("下次重置", { exact: true }).parentElement!;
   expect(resetValue.querySelector(".usage-reset-date")?.textContent).toContain("2099");
-  expect(resetValue.querySelector(".usage-reset-countdown")?.textContent).toMatch(/（还有 .+）/);
+  expect(resetValue.querySelector(".usage-reset-countdown")?.textContent).toMatch(/还有 .+/);
   expect(screen.getByText("已为你的账号开通", { exact: true })).toBeTruthy();
   expect(screen.queryByText(/当前使用|当前已选|线路在线/)).toBeNull();
 });

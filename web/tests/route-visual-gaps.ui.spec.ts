@@ -630,7 +630,8 @@ for (const width of [3440, 2880, 2560, 2304, 1920, 1536, 1440, 1366, 1280, 1024,
         const grid = (await workspace.locator('.workspace-grid').boundingBox())!;
         const main = (await page.locator('#main').boundingBox())!;
         const viewport = await page.evaluate(() => document.documentElement.clientWidth);
-        const sideBySide = frame.width >= (navigation ? 896 : 992);
+        const topContext = await workspace.getAttribute("data-context-position") === "top";
+        const sideBySide = !topContext && frame.width >= (navigation ? 896 : 992);
         expect(frame.x).toBeCloseTo(main.x, 0);
         expect(frame.x + frame.width).toBeCloseTo(viewport, 0);
         expect(content.width).toBeLessThanOrEqual(navigation ? 832 : 1152);
@@ -650,7 +651,7 @@ for (const width of [3440, 2880, 2560, 2304, 1920, 1536, 1440, 1366, 1280, 1024,
           }));
           expect(paneStyle.border).toBe("1px");
           expect(paneStyle.position).not.toBe("fixed");
-        } else if (navigation) {
+        } else if (navigation || topContext) {
           expect(header.y + header.height).toBeLessThanOrEqual(pane.y);
           expect(pane.y + pane.height).toBeLessThanOrEqual(canvas.y);
         } else expect(canvas.y + canvas.height).toBeLessThanOrEqual(pane.y);
@@ -886,7 +887,7 @@ for (const width of [3440, 2880, 2560, 2304, 1920, 1536, 1440, 1366, 1280, 1024,
     const details = usage.getByRole("region", { name: "用量与周期明细", exact: true });
     await expect(details).toBeVisible();
     await expect(usage.getByRole("button", { name: "用量与周期明细", exact: true })).toHaveCount(0);
-    const routes = usage.getByRole("region", { name: "平台提供的线路 3 条", exact: true });
+    const routes = page.getByRole("region", { name: "平台提供的线路 3 条", exact: true });
     await expect(routes).toBeVisible();
     await expect(routes.getByRole("listitem")).toHaveCount(3);
     for (const [index, multiplier] of ["1.5×", "1×", "0.5×"].entries()) {
@@ -921,6 +922,17 @@ for (const width of [3440, 2880, 2560, 2304, 1920, 1536, 1440, 1366, 1280, 1024,
       });
       for (const count of latinLineLengths) expect(count).toBeGreaterThan(1);
     }
+    const hero = usage.locator(".subscription-usage");
+    await expect(hero.getByRole("heading", { name: "本周期剩余额度", exact: true })).toBeVisible();
+    await expect(hero.getByText("75 GiB", { exact: true })).toBeVisible();
+    const heroBox = (await hero.boundingBox())!;
+    const remainingBox = (await hero.getByText("75 GiB", { exact: true }).boundingBox())!;
+    const detailsBox = (await details.boundingBox())!;
+    expect(heroBox.x).toBeCloseTo(subscriptionPrimary.x, 0);
+    expect(heroBox.width).toBeCloseTo(subscriptionPrimary.width, 0);
+    expect(heroBox.y + heroBox.height).toBeLessThan(subscriptionPrimary.y);
+    if (heroBox.width >= 722) expect(detailsBox.x).toBeGreaterThan(remainingBox.x + remainingBox.width);
+    else expect(detailsBox.y).toBeGreaterThan(remainingBox.y + remainingBox.height);
     const resetDate = details.locator(".usage-reset-date");
     const resetCountdown = details.locator(".usage-reset-countdown");
     await expect(resetDate).toBeVisible();
@@ -929,16 +941,14 @@ for (const width of [3440, 2880, 2560, 2304, 1920, 1536, 1440, 1366, 1280, 1024,
     const countdownBox = (await resetCountdown.boundingBox())!;
     expect(countdownBox.y).toBeGreaterThanOrEqual(dateBox.y + dateBox.height);
     expect(countdownBox.x + countdownBox.width).toBeCloseTo(dateBox.x + dateBox.width, 0);
-    for (const group of [details, routes]) {
-      expect(await group.evaluate(el => getComputedStyle(el).borderTopWidth)).toBe("1px");
-    }
-    for (const selector of [".usage-detail-row", ".route-option"]) {
-      const rows = usage.locator(selector);
+    expect(await routes.evaluate(el => getComputedStyle(el).borderTopWidth)).toBe("1px");
+    for (const selector of [".route-option"]) {
+      const rows = routes.locator(selector);
       for (let i = 0; i < await rows.count(); i++) {
         expect(await rows.nth(i).evaluate(el => getComputedStyle(el).borderBottomWidth)).toBe(i === await rows.count() - 1 ? "0px" : "1px");
       }
     }
-    await expect(usage.getByText("欧洲与亚太协作线路 LongRemoteWorkspaceConnection", { exact: true })).toBeVisible();
+    await expect(routes.getByText("欧洲与亚太协作线路 LongRemoteWorkspaceConnection", { exact: true })).toBeVisible();
     for (const inner of await usage.locator('[data-slot="card-header"], [data-slot="card-content"], .route-option').all()) {
       expect(await inner.evaluate(el => el.scrollWidth)).toBeLessThanOrEqual((await inner.boundingBox())!.width + 1);
     }
@@ -1161,15 +1171,15 @@ test("context rails yield space before their primary task becomes cramped", asyn
         };
         return { frame: rect(element), main: rect(canvas), rail: rect(context) };
       });
-      const sideBySide = frame.width >= task.threshold;
+      const sideBySide = task.route !== "subscriptions" && frame.width >= task.threshold;
       modes.push(sideBySide);
       if (sideBySide) {
         expect(main.width).toBeGreaterThanOrEqual(672);
         expect(rail.x).toBeGreaterThanOrEqual(main.x + main.width);
-      } else if (task.navigation) expect(rail.y + rail.height).toBeLessThanOrEqual(main.y);
+      } else if (task.navigation || task.route === "subscriptions") expect(rail.y + rail.height).toBeLessThanOrEqual(main.y);
       else expect(main.y + main.height).toBeLessThanOrEqual(rail.y);
     }
-    expect(modes).toEqual([false, true]);
+    expect(modes).toEqual(task.route === "subscriptions" ? [false, false] : [false, true]);
   }
   expect(unexpected).toEqual([]);
 });

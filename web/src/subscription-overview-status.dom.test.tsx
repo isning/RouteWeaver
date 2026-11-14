@@ -137,7 +137,7 @@ it("names an opened service even with no assigned routes, without claiming conne
   const card = await usageCard();
   expect(card.getByText("已开通")).toBeTruthy();
   expect(card.getAllByText("不限额")).toHaveLength(2);
-  expect(card.getByText("剩余额度")).toBeTruthy();
+  expect(card.getByRole("heading", { name: "本周期剩余额度" })).toBeTruthy();
   expect(card.getByText("总额度")).toBeTruthy();
   expect(card.queryByText("生效中")).toBeNull();
   expect(card.queryByText(/线路可用|连接正常|已连接/)).toBeNull();
@@ -260,7 +260,7 @@ it("keeps one platform usage context and its visible details when the layout wid
   expect(context).not.toBeNull();
   expect(within(context!).queryByRole("button", { name: "用量与周期明细" })).toBeNull();
   const details = within(context!).getByRole("region", { name: "用量与周期明细" });
-  expect(within(details).getByText("本周期实际流量")).toBeTruthy();
+  expect(within(context!).getByText("本周期实际流量")).toBeTruthy();
   fireEvent(window, new Event("resize"));
   expect(screen.getAllByRole("heading", { name: "平台服务用量" })).toHaveLength(1);
   expect(screen.getByRole("heading", { name: "平台服务用量" })).toBe(heading);

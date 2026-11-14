@@ -40,6 +40,8 @@ import { toast } from "sonner";
 import { ActionButton } from "@/ui-patterns/actions";
 import { Badge } from "@/components/ui/badge";
 import {
+  CalendarClock,
+  ShieldCheck,
   Copy,
   Download,
   Ellipsis,
@@ -959,97 +961,7 @@ export function SubscriptionsPage({
         />
       </Suspense>
     );
-  const serviceContext = (
-      <div className="subscription-service-context grid items-start gap-4 @min-[42rem]/rail:has-[.available-routes]:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-        <QueryState
-          loading={query.isPending}
-          paused={query.isPaused}
-          loadingLayout="summary"
-          error={query.error}
-          retry={() => query.refetch()}
-        >
-          {data && (
-            <Card className={view === "overview" ? "subscription-usage gap-3 rounded-none bg-transparent py-0 ring-0" : "subscription-usage gap-3 py-4"}>
-              <CardHeader className={`flex min-w-0 flex-col gap-2 @min-[42rem]/rail:grid ${view === "overview" ? "px-0" : ""}`}>
-                <CardTitle
-                  className="text-sm font-medium"
-                  role="heading"
-                  aria-level={2}
-                >
-                  平台服务用量
-                </CardTitle>
-                {data.service?.name && (
-                  <CardDescription className="min-w-0 wrap-anywhere">{data.service.name}</CardDescription>
-                )}
-                <CardAction>
-                  <OverviewPolicyStatus value={data.status} />
-                </CardAction>
-              </CardHeader>
-              <CardContent className={`min-w-0 space-y-3 wrap-anywhere ${view === "overview" ? "px-0" : ""}`}>
-                {data.status === "paused" && (
-                  <p className="muted text-sm text-muted-foreground">
-                    如需恢复平台服务，请联系管理员检查服务授权。
-                  </p>
-                )}
-                <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
-                  <dl className="space-y-1">
-                    <dt className="text-xs text-muted-foreground">剩余额度</dt>
-                    <dd className="text-xl font-semibold tracking-tight tabular-nums">
-                      {quota === 0 ? "不限额" : bytesLabel(remaining)}
-                    </dd>
-                  </dl>
-                  <dl className="flex flex-wrap gap-x-5 gap-y-2 text-sm">
-                    <div className="flex items-baseline gap-2">
-                      <dt className="text-muted-foreground">已用额度</dt>
-                      <dd className="font-medium tabular-nums">
-                        {bytesLabel(used)}
-                      </dd>
-                    </div>
-                    <div className="flex items-baseline gap-2">
-                      <dt className="text-muted-foreground">总额度</dt>
-                      <dd className="font-medium tabular-nums">
-                        {quota === 0 ? "不限额" : bytesLabel(quota)}
-                      </dd>
-                    </div>
-                  </dl>
-                </div>
-                {percent !== undefined && (
-                  <Progress value={percent} aria-label="本周期额度使用比例" />
-                )}
-                {data.accountingPending && (
-                  <p
-                    className="muted text-sm text-muted-foreground"
-                    role="status"
-                  >
-                    额度正在核对，稍后更新。
-                  </p>
-                )}
-                <section aria-labelledby={usageDetailsId} className="usage-details border-t border-border pt-4">
-                  <h3 id={usageDetailsId} className="text-sm font-medium">用量与周期明细</h3>
-                  <dl className="mt-2 divide-y divide-border text-sm">
-                    {[
-                      ["本周期实际流量", bytesLabel(data.usage?.rawBytes)],
-                      ["下次重置", <><span className="usage-reset-date block wrap-normal">{data.cycle?.nextReset
-                        ? dateLabel(data.cycle.nextReset, data.cycle.timezone)
-                        : data.cycle ? "不自动重置" : "尚未设置"}</span>{reset && <span className="usage-reset-countdown mt-1 block text-xs leading-relaxed text-muted-foreground wrap-normal">{`（还有 ${reset}）`}</span>}</>],
-                      ["周期时区", data.cycle?.timezone || "\u2014"],
-                      ["服务到期", dateLabel(data.entitlement?.expiresAt || data.user?.expiresAt)],
-                    ].map(([label, value]) => (
-                      <div key={String(label)} className="usage-detail-row grid min-w-0 grid-cols-[minmax(0,2fr)_minmax(0,3fr)] items-baseline gap-3 py-3">
-                        <dt className="text-muted-foreground">{label}</dt>
-                        <dd className="min-w-0 text-right tabular-nums wrap-anywhere">{value}</dd>
-                      </div>
-                    ))}
-                  </dl>
-                  <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
-                    实际流量按所用线路的倍率扣除额度。
-                  </p>
-                </section>
-              </CardContent>
-            </Card>
-          )}
-        </QueryState>
-        {!!data?.routes?.length && (
+  const availableRoutes = !!data?.routes?.length && (
           <section aria-labelledby={availableRoutesId} className="available-routes min-w-0 border-t border-border pt-4">
             <h2 id={availableRoutesId} className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm font-medium">平台提供的线路 <span className="font-normal tabular-nums text-muted-foreground">{data.routes.length} 条</span></h2>
             <p className="mt-1 text-xs leading-relaxed text-muted-foreground">已为你的账号开通</p>
@@ -1069,7 +981,80 @@ export function SubscriptionsPage({
               ))}
             </ul>
           </section>
-        )}
+        );
+  const serviceContext = (
+      <div className="subscription-service-context grid items-start gap-4">
+        <QueryState
+          loading={query.isPending}
+          paused={query.isPaused}
+          loadingLayout="summary"
+          error={query.error}
+          retry={() => query.refetch()}
+        >
+          {data && (
+            <Card className="subscription-usage @container/usage gap-0 rounded-[14px] border bg-card p-4 shadow-none ring-0 sm:p-6">
+              <h2 className="sr-only">平台服务用量</h2>
+              <div className="grid min-w-0 gap-6 @min-[42rem]/usage:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+                <div className="min-w-0">
+                  <div className="mb-4 flex flex-wrap items-center gap-2">
+                    <h3 className="text-sm font-medium text-muted-foreground">本周期剩余额度</h3>
+                    <OverviewPolicyStatus value={data.status} />
+                  </div>
+                  <p className="mb-4 text-4xl font-semibold tracking-tight tabular-nums wrap-anywhere @min-[28rem]/usage:text-5xl">
+                    {quota === 0 ? "不限额" : bytesLabel(remaining)}
+                  </p>
+                  {percent !== undefined && (
+                    <Progress className="mb-4 h-2.5" value={percent} aria-label="本周期额度使用比例" />
+                  )}
+                  <dl className="flex flex-wrap gap-x-8 gap-y-2 text-sm">
+                    {[
+                      ["已用额度", bytesLabel(used)],
+                      ["总额度", quota === 0 ? "不限额" : bytesLabel(quota)],
+                      ["本周期实际流量", bytesLabel(data.usage?.rawBytes)],
+                    ].map(([label, value]) => (
+                      <div key={label} className="flex flex-wrap items-baseline gap-x-2">
+                        <dt className="text-muted-foreground">{label}</dt>
+                        <dd className="font-medium tabular-nums">{value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                  <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+                    实际流量按所用线路的倍率扣除额度。
+                  </p>
+                  {data.accountingPending && (
+                    <p className="mt-3 text-sm text-muted-foreground" role="status">
+                      额度正在核对，稍后更新。
+                    </p>
+                  )}
+                  {data.status === "paused" && (
+                    <p className="mt-3 text-sm text-muted-foreground">
+                      如需恢复平台服务，请联系管理员检查服务授权。
+                    </p>
+                  )}
+                </div>
+                <section aria-labelledby={usageDetailsId} className="usage-details min-w-0">
+                  <h3 id={usageDetailsId} className="sr-only">用量与周期明细</h3>
+                  <dl className="grid gap-3">
+                    <div className="usage-detail-row min-w-0 rounded-[10px] bg-muted/50 p-4">
+                      <dt className="flex items-center gap-2 text-xs text-muted-foreground"><CalendarClock className="size-4 shrink-0" aria-hidden="true" />下次重置</dt>
+                      <dd className="usage-reset-date mt-1 font-medium tabular-nums wrap-anywhere">{data.cycle?.nextReset
+                        ? dateLabel(data.cycle.nextReset, data.cycle.timezone)
+                        : data.cycle ? "不自动重置" : "尚未设置"}</dd>
+                      {reset && <dd className="usage-reset-countdown text-xs text-muted-foreground tabular-nums wrap-anywhere">还有 {reset}</dd>}
+                      {data.cycle?.timezone && <><dt className="sr-only">周期时区</dt><dd className="mt-1 text-xs text-muted-foreground wrap-anywhere">{data.cycle.timezone}</dd></>}
+                    </div>
+                    <div className="usage-detail-row min-w-0 rounded-[10px] bg-muted/50 p-4">
+                      <dt className="flex items-center gap-2 text-xs text-muted-foreground"><ShieldCheck className="size-4 shrink-0" aria-hidden="true" />服务到期</dt>
+                      <dd className="mt-1 font-medium tabular-nums wrap-anywhere">{dateLabel(data.entitlement?.expiresAt || data.user?.expiresAt)}</dd>
+                      {data.service?.name && <dd className="text-xs text-muted-foreground wrap-anywhere">{data.service.name}</dd>}
+                    </div>
+                  </dl>
+                </section>
+              </div>
+            </Card>
+          )}
+        </QueryState>
+        {view !== "overview" && availableRoutes}
       </div>
   );
   return (
@@ -1092,6 +1077,7 @@ export function SubscriptionsPage({
       <WorkspaceFrame
         contentKind="list"
         contextKind="data"
+        contextPosition={view === "overview" ? "top" : "side"}
         contained={view !== "overview"}
         context={serviceContext}
         header={<PageHeader
@@ -1819,6 +1805,7 @@ export function SubscriptionsPage({
         }}
       />
 
+      {view === "overview" && availableRoutes}
       </WorkspaceFrame>
     </div>
   );

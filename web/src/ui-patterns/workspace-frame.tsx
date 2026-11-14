@@ -43,6 +43,7 @@ function PageContent({
 export function WorkspaceFrame({
   contentKind,
   contextKind,
+  contextPosition = "side",
   contained = false,
   nestedContext,
   header,
@@ -52,6 +53,8 @@ export function WorkspaceFrame({
 }: {
   contentKind: ContentKind;
   contextKind: ContextKind;
+  /** A full-width overview before the task, retaining the same context owner. */
+  contextPosition?: "side" | "top";
   contained?: boolean;
   /** The child owns its own context grid; do not cap that whole grid. */
   nestedContext?: ContextKind;
@@ -62,13 +65,16 @@ export function WorkspaceFrame({
 }) {
   const hasContext = context != null;
   const navigation = contextKind === "navigation";
+  const topContext = contextPosition === "top";
   const aside = (
     <aside
       hidden={!hasContext}
       aria-label={navigation ? "本页导航" : "平台服务概览"}
       className={cn(
         "workspace-context @container/rail min-w-0",
-        contained
+        topContext
+          ? "col-start-1 row-start-2 px-4 pb-6 sm:px-6"
+          : contained
           ? "@min-[62rem]/workspace:col-start-2 @min-[62rem]/workspace:row-start-2"
           : [
               "border-t bg-muted/20 p-4 sm:p-6",
@@ -81,6 +87,7 @@ export function WorkspaceFrame({
       <div
         className={cn(
           "min-w-0",
+          topContext && ["mx-auto w-full", contentWidth[contentKind]],
           navigation &&
             !contained &&
             "@min-[56rem]/workspace:[@media(min-height:40rem)]:sticky @min-[56rem]/workspace:top-6",
@@ -100,6 +107,7 @@ export function WorkspaceFrame({
       data-content-kind={contentKind}
       data-presentation={contained ? "contained" : "workspace"}
       data-context-kind={contextKind}
+      data-context-position={contextPosition}
     >
       {localNavigation && (
         <div
@@ -115,16 +123,18 @@ export function WorkspaceFrame({
       <div
         className={cn(
           "workspace-grid grid min-w-0",
-          navigation
+          topContext
+            ? "grid-rows-[auto_auto_1fr]"
+            : navigation
             ? "grid-rows-[auto_auto_1fr]"
             : "grid-rows-[auto_1fr_auto]",
-          contained
+          !topContext && (contained
             ? "@min-[62rem]/workspace:grid-rows-[auto_1fr]"
             : navigation
               ? "@min-[56rem]/workspace:grid-rows-[auto_1fr]"
-              : "@min-[62rem]/workspace:grid-rows-[auto_1fr]",
+              : "@min-[62rem]/workspace:grid-rows-[auto_1fr]"),
           contained ? "gap-6" : "flex-1",
-          hasContext &&
+          hasContext && !topContext &&
             (contained
               ? "@min-[62rem]/workspace:grid-cols-[minmax(0,1fr)_20rem]"
               : columns[contextKind]),
@@ -145,7 +155,8 @@ export function WorkspaceFrame({
           className={cn(
             "workspace-canvas min-w-0",
             !contained && "px-4 pb-8 sm:px-6",
-            hasContext &&
+            topContext && "col-start-1 row-start-3",
+            hasContext && !topContext &&
               (contained
                 ? "@min-[62rem]/workspace:col-start-1 @min-[62rem]/workspace:row-start-2"
                 : navigation
