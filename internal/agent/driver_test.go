@@ -181,6 +181,9 @@ func TestBoundedDriverIntegratesTLSDesiredObservationAndMeterReceipt(t *testing.
 	if err != nil {
 		t.Fatal(err)
 	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	var completed atomic.Bool
 	var observed atomic.Bool
 	var receivedMeter atomic.Bool
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
@@ -191,6 +194,15 @@ func TestBoundedDriverIntegratesTLSDesiredObservationAndMeterReceipt(t *testing.
 		}
 		switch {
 		case strings.HasSuffix(req.URL.Path, "/desired"):
+			// A subsequent poll follows both observation delivery and local Ack
+			// of the exact meter receipt. Stop on that event, not on a deadline
+			// that races TLS, reconciliation, or durable spool writes on CI.
+			if observed.Load() && receivedMeter.Load() && len(meter.Pending()) == 0 {
+				completed.Store(true)
+				w.WriteHeader(204)
+				cancel()
+				return
+			}
 			if req.URL.Query().Get("after") == "0" {
 				json.NewEncoder(w).Encode(d)
 			} else {
@@ -224,11 +236,11 @@ func TestBoundedDriverIntegratesTLSDesiredObservationAndMeterReceipt(t *testing.
 		t.Fatal(err)
 	}
 	defer transport.Close()
-	st, err := RunDriver(context.Background(), r, transport, meter, DriverOptions{PollInterval: 10 * time.Millisecond, LeaseInterval: 5 * time.Millisecond, MaxRuntime: 80 * time.Millisecond})
+	st, err := RunDriver(ctx, r, transport, meter, DriverOptions{PollInterval: 10 * time.Millisecond, LeaseInterval: 5 * time.Millisecond, MaxRuntime: 5 * time.Second})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if st.Phase != "stopped" || !observed.Load() || !receivedMeter.Load() || len(meter.Pending()) != 0 {
+	if st.Phase != "stopped" || !completed.Load() || !observed.Load() || !receivedMeter.Load() || len(meter.Pending()) != 0 {
 		t.Fatalf("incomplete TLS driver integration: %+v", st)
 	}
 }
