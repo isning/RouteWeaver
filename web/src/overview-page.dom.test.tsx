@@ -119,11 +119,11 @@ it("shows current-account overview and navigates to an unpublished configuration
   ).toBe("table");
   expect(
     screen
-      .getByRole("table", { name: "最近订阅拉取" })
+      .getByRole("table", { name: "订阅用量与最近拉取" })
       .getAttribute("data-slot"),
   ).toBe("table");
   expect(screen.getByRole("columnheader", { name: "实际流量" })).toBeTruthy();
-  expect(screen.getByText("旅行配置")).toBeTruthy();
+  expect(screen.getByText("旅行配置 尚未发布")).toBeTruthy();
   expect(await screen.findByText("工作订阅")).toBeTruthy();
   expect(screen.queryByText("工作配置")).toBeNull();
   expect(
@@ -131,15 +131,25 @@ it("shows current-account overview and navigates to an unpublished configuration
       /2026-11-14：额度消耗/,
     ),
   ).toBeTruthy();
-  fireEvent.click(screen.getByRole("button", { name: "查看配置" }));
+  expect(screen.getByText("本周期剩余额度").closest('[data-slot="card"]')).toBe(
+    screen.getByText("近 14 天每日用量").closest('[data-slot="card"]'),
+  );
+  expect(screen.getByTestId("overview-primary-grid").children).toHaveLength(2);
+  expect(screen.getByTestId("overview-secondary-grid").children).toHaveLength(
+    2,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "去发布" }));
   expect(location.hash).toBe("#subscriptions?profile=draft");
   fireEvent.click(screen.getByRole("button", { name: "管理全部订阅" }));
   expect(location.hash).toBe("#subscriptions");
-  expect(screen.queryByText("用量最多的订阅")).toBeNull();
+  expect(
+    screen.getByText("按订阅计量尚不可用，以下不按用量排序。"),
+  ).toBeTruthy();
+  expect(screen.getByText("尚未单独计量")).toBeTruthy();
 });
 it("does not invent zero online IPs or daily usage when the bounded query fails", async () => {
   mount(true);
-  await screen.findByText(/temporarily unavailable/);
+  await screen.findAllByText(/temporarily unavailable/);
   expect(screen.queryByText("暂无活跃 IP")).toBeNull();
   expect(screen.queryByRole("list", { name: "每日额度消耗" })).toBeNull();
   expect(screen.getByText("本周期剩余额度")).toBeTruthy();
@@ -201,7 +211,9 @@ it("separates the overview landing route from subscription management", async ()
 
 it("does not label unknown names as deleted subscriptions or historical routes", async () => {
   mount(false, false, true);
-  expect(await screen.findByText("订阅名称暂不可用")).toBeTruthy();
+  expect(
+    (await screen.findAllByText("Names unavailable")).length,
+  ).toBeGreaterThan(0);
   expect(await screen.findByText("线路名称暂不可用")).toBeTruthy();
   expect(screen.queryByText("已删除的订阅")).toBeNull();
   expect(screen.queryByText("历史线路")).toBeNull();
@@ -235,8 +247,9 @@ it("renders only the database's reported IP metadata, not an inferred device loc
       ],
     },
   }));
-  expect(await screen.findByText("国家/地区：德国 (DE)")).toBeTruthy();
-  expect(screen.getByText("网络组织：Example Network · AS64500")).toBeTruthy();
+  expect(
+    await screen.findByText("德国 (DE) · Example Network · AS64500"),
+  ).toBeTruthy();
   expect(screen.getByText(/不代表设备的实际位置或运营商/)).toBeTruthy();
   expect(screen.queryByText("IP 归属资料暂不可用")).toBeNull();
 });

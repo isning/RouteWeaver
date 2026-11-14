@@ -131,7 +131,7 @@ export async function seedAdmin(admin: APIRequestContext, route: string, userId:
 
 export async function signIn(page: Page, baseURL: string | undefined, role: "user" | "admin") {
   requireLoopback(baseURL);
-  // The existing confirmation helper deliberately confirms the subscriptions landing page.
+  // Confirm the authenticated landing page before opening the requested inventory.
   await page.goto("/");
   await page.getByLabel("账号", { exact: true }).fill(role === "user" ? "inventory-owner" : "routeweaver");
   await page.getByLabel("密码", { exact: true }).fill(role === "user" ? initialPassword : demoPassword);

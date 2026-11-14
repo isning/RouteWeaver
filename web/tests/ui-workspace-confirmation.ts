@@ -37,10 +37,14 @@ export function workspaceConfirmationState() {
       workspace.getAttribute("aria-busy") === "false" && visible(workspace),
   );
   if (workspaces.length !== 1) return false;
+  // Both the new overview default and an explicit subscriptions deep link are
+  // valid landing pages. Session confirmation must not depend on old routing.
   const headings = [
     ...workspaces[0].querySelectorAll('h1,h2,h3,h4,h5,h6,[role="heading"]'),
   ].filter(
-    (heading) => heading.textContent?.trim() === "我的订阅" && visible(heading),
+    (heading) =>
+      ["概览", "我的订阅"].includes(heading.textContent?.trim() || "") &&
+      visible(heading),
   );
   return headings.length === 1 ? ("confirmed" as const) : false;
 }

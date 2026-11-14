@@ -357,6 +357,9 @@ for (const width of [1440, 390]) {
           exact: true,
         }),
       ).toBeVisible();
+      // Service details now live on the overview, while authorized routes remain
+      // visible in subscription management.
+      await recipient.goto("/#overview");
       await expect(
         recipient.getByText(invitationServiceName, { exact: true }),
       ).toBeVisible();

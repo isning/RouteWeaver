@@ -102,6 +102,8 @@ test("setup helper: only a confirmed visible workspace qualifies, not stale head
     '<div data-session-workspace aria-busy="false"><h1>我的订阅</h1><div role="alert">Ordinary business error</div></div>';
   await page.setContent(markup);
   expect(await page.evaluate(workspaceConfirmationState)).toBe("confirmed");
+  await page.setContent(markup.replace("我的订阅", "概览"));
+  expect(await page.evaluate(workspaceConfirmationState)).toBe("confirmed");
   for (const attribute of ["hidden", "inert", "aria-busy", "aria-hidden"]) {
     await page.setContent(markup);
     await page
