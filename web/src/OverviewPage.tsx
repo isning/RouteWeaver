@@ -572,7 +572,7 @@ export function OverviewPage() {
                   </div>
                 </dl>
                 {detail.ipMetadata?.sources.some((source) => source.attributionURL === "https://db-ip.com") && (
-                  <p className="mt-3 text-xs text-muted-foreground"><a href="https://db-ip.com" target="_blank" rel="noreferrer" className="underline underline-offset-2">IP Geolocation by DB-IP</a> · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer" className="underline underline-offset-2">CC BY 4.0</a></p>
+                  <p className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground"><a href="https://db-ip.com" target="_blank" rel="noreferrer" className="underline underline-offset-2">IP Geolocation by DB-IP</a><a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer" className="underline underline-offset-2">CC BY 4.0</a></p>
                 )}
                 <details className="mt-3 text-xs text-muted-foreground">
                   <summary className="cursor-pointer">统计说明</summary>

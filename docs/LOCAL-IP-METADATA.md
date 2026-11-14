@@ -66,3 +66,11 @@ DBIP-ASN-Lite (compat=GeoLite2-ASN). Reader: maxminddb-golang/v2 (ISC). Other
 providers retain their own licensing requirements. Synthetic test fixtures:
 `internal/ipmeta/testdata/README.md`, `LICENSE-MIT`. Credentials, metering and
 subscription outputs are unchanged.
+
+## Package boundary
+
+`internal/ipmeta` only opens and queries immutable local databases; its existing
+network-import prohibition remains enforced. `internal/ipmetaupdate` owns the
+HTTPS/cache/update adapter and may depend only on `ipmeta` internally. The
+control-plane command assembles the adapter. HTTP handlers receive only a
+read-only `Snapshot() *ipmeta.Database` provider and cannot trigger downloads.

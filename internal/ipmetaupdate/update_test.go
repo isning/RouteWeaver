@@ -1,4 +1,4 @@
-package ipmeta
+package ipmetaupdate
 
 import (
 	"bytes"
@@ -20,7 +20,7 @@ func TestAutomaticDatabaseStartsUnavailableWithoutCache(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if updater.Database().Snapshot() != nil {
+	if updater.Snapshot() != nil {
 		t.Fatal("invented availability before download")
 	}
 	ctx, cancel := context.WithCancel(context.Background())
@@ -28,7 +28,7 @@ func TestAutomaticDatabaseStartsUnavailableWithoutCache(t *testing.T) {
 	if err := updater.Refresh(ctx); err == nil {
 		t.Fatal("canceled download succeeded")
 	}
-	if updater.Database().Snapshot() != nil {
+	if updater.Snapshot() != nil {
 		t.Fatal("failed refresh became available")
 	}
 }
@@ -37,9 +37,9 @@ func TestAutomaticDatabaseStartsUnavailableWithoutCache(t *testing.T) {
 // their metadata type/date changed to match the DB-IP compatible schema.
 func releaseFixture(t *testing.T, kind string, now time.Time) []byte {
 	t.Helper()
-	path, old, typ := "testdata/GeoIP2-Country-Test.mmdb", "GeoIP2-Country", "DBIP-Country-Lite"
+	path, old, typ := "../ipmeta/testdata/GeoIP2-Country-Test.mmdb", "GeoIP2-Country", "DBIP-Country-Lite"
 	if kind == "asn" {
-		path, old, typ = "testdata/GeoLite2-ASN-Test.mmdb", "GeoLite2-ASN", "DBIP-ASN-Lite (compat=GeoLite2-ASN)"
+		path, old, typ = "../ipmeta/testdata/GeoLite2-ASN-Test.mmdb", "GeoLite2-ASN", "DBIP-ASN-Lite (compat=GeoLite2-ASN)"
 	}
 	b, err := os.ReadFile(path)
 	if err != nil {
@@ -98,7 +98,7 @@ func TestAutomaticUpdatePublishesPairAndKeepsLastGoodOnFailure(t *testing.T) {
 	if err = u.Refresh(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	pinned := u.Database().Snapshot()
+	pinned := u.Snapshot()
 	if pinned.Lookup(netip.MustParseAddr("81.2.69.142")).CountryCode != "GB" || pinned.Lookup(netip.MustParseAddr("1.0.0.1")).ASN != 15169 {
 		t.Fatal("pair not available")
 	}
@@ -109,7 +109,7 @@ func TestAutomaticUpdatePublishesPairAndKeepsLastGoodOnFailure(t *testing.T) {
 		t.Fatal("download repeated for current release")
 	}
 	reloaded, err := NewUpdater(dir)
-	if err != nil || reloaded.Database().Snapshot() == nil {
+	if err != nil || reloaded.Snapshot() == nil {
 		t.Fatal("cache not recovered")
 	}
 	now = now.AddDate(0, 1, 0)
@@ -117,11 +117,11 @@ func TestAutomaticUpdatePublishesPairAndKeepsLastGoodOnFailure(t *testing.T) {
 	if err = u.Refresh(context.Background()); err == nil {
 		t.Fatal("corrupt update accepted")
 	}
-	if u.Database().Snapshot() != pinned {
+	if u.Snapshot() != pinned {
 		t.Fatal("failure replaced last good data")
 	}
 	reloaded, err = NewUpdater(dir)
-	if err != nil || reloaded.Database().Sources()[0].BuiltAt != pinned.Sources()[0].BuiltAt {
+	if err != nil || reloaded.Snapshot().Sources()[0].BuiltAt != pinned.Sources()[0].BuiltAt {
 		t.Fatal("failure changed persistent pair")
 	}
 }
@@ -186,7 +186,7 @@ func TestAutomaticUpdateRejectsUnsafeOrCorruptDownloads(t *testing.T) {
 			if err = u.Refresh(context.Background()); err == nil {
 				t.Fatal("unsafe response accepted")
 			}
-			if u.Database().Snapshot() != nil {
+			if u.Snapshot() != nil {
 				t.Fatal("failed download became available")
 			}
 		})
@@ -231,7 +231,7 @@ func TestAutomaticUpdateRejectsExpandedLimitChecksumAndWrongMonth(t *testing.T) 
 			if err = u.Refresh(context.Background()); err == nil {
 				t.Fatal("invalid database accepted")
 			}
-			if u.Database().Snapshot() != nil {
+			if u.Snapshot() != nil {
 				t.Fatal("invalid pair published")
 			}
 		})

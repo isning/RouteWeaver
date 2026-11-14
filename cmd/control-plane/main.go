@@ -17,6 +17,7 @@ import (
 	"routeweaver/internal/backup"
 	"routeweaver/internal/httpapi"
 	"routeweaver/internal/ipmeta"
+	"routeweaver/internal/ipmetaupdate"
 	"routeweaver/internal/render"
 	"routeweaver/internal/store"
 	"strings"
@@ -191,20 +192,21 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("IP metadata: %w", err)
 	}
-	var ipUpdater *ipmeta.Updater
+	var ipUpdater *ipmetaupdate.Updater
 	if *autoIPDB && !*demo && *countryDB == "" && *asnDB == "" {
 		cache := *ipDBCache
 		if cache == "" {
 			cache = filepath.Join(filepath.Dir(*dbPath), "ip-databases")
 		}
-		ipUpdater, err = ipmeta.NewUpdater(cache)
+		ipUpdater, err = ipmetaupdate.NewUpdater(cache)
 		if err != nil {
 			log.Printf("IP database cache unavailable; IP metadata disabled: %v", err)
-		} else {
-			ipMetadata = ipUpdater.Database()
 		}
 	}
 	apiOptions := httpapi.Options{IPMetadata: ipMetadata, OIDC: oidcProvider, TrustedProxyCIDRs: proxyCIDRs, PublicOrigin: publicOrigin, AdminToken: adminToken, UIDir: *uiDir, SecureCookies: tlsEnabled, BackupRestoreDir: restoreDir, BackupRestoreKey: key, BackupLimits: backupLimits}
+	if ipUpdater != nil {
+		apiOptions.IPMetadata = ipUpdater
+	}
 	app := httpapi.NewWithOptions(s, render.Default(), apiOptions)
 	srv := &http.Server{Addr: *listen, Handler: app, ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 30 * time.Second, WriteTimeout: 30 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 1 << 20}
 	listener, e := listenControlPlane(context.Background(), *listen)

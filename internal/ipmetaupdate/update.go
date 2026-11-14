@@ -1,4 +1,5 @@
-package ipmeta
+// Package ipmetaupdate owns the optional network/cache adapter for local IP metadata.
+package ipmetaupdate
 
 import (
 	"compress/gzip"
@@ -9,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"routeweaver/internal/ipmeta"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -25,7 +27,7 @@ var cacheName = regexp.MustCompile(`^dbip-[0-9]{4}-[0-9]{2}-[0-9]+$`)
 type Updater struct {
 	mu      sync.Mutex
 	dir     string
-	db      *Database
+	db      atomic.Pointer[ipmeta.Database]
 	client  *http.Client
 	now     func() time.Time
 	release string
@@ -35,7 +37,7 @@ func NewUpdater(dir string) (*Updater, error) {
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		return nil, fmt.Errorf("create IP database cache: %w", err)
 	}
-	u := &Updater{dir: dir, db: &Database{current: &atomic.Pointer[Database]{}}, now: time.Now,
+	u := &Updater{dir: dir, now: time.Now,
 		client: &http.Client{Timeout: 90 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return fmt.Errorf("database redirects are not allowed") }}}
 	// Cache corruption is recoverable: start unavailable and retry official data.
 	manifest, err := os.Open(filepath.Join(dir, "current"))
@@ -45,21 +47,23 @@ func NewUpdater(dir string) (*Updater, error) {
 		_ = manifest.Close()
 	}
 	if err == nil && len(name) < 100 && cacheName.Match(name) {
-		if db, e := Open(filepath.Join(dir, string(name), "country.mmdb"), filepath.Join(dir, string(name), "asn.mmdb")); e == nil && isDBIP(db) {
+		if db, e := ipmeta.Open(filepath.Join(dir, string(name), "country.mmdb"), filepath.Join(dir, string(name), "asn.mmdb")); e == nil && isDBIP(db) {
 			release := strings.TrimPrefix(string(name)[:len("dbip-2006-01")], "dbip-")
-			if db.sources[0].BuiltAt.Format("2006-01") == release && db.sources[1].BuiltAt.Format("2006-01") == release {
-				u.db.current.Store(db)
+			if db.Sources()[0].BuiltAt.Format("2006-01") == release && db.Sources()[1].BuiltAt.Format("2006-01") == release {
+				u.db.Store(db)
 				u.release = release
 			}
 		}
 	}
 	return u, nil
 }
-func isDBIP(db *Database) bool {
+func isDBIP(db *ipmeta.Database) bool {
 	sources := db.Sources()
 	return len(sources) == 2 && sources[0].DatabaseType == "DBIP-Country-Lite" && sources[1].DatabaseType == "DBIP-ASN-Lite (compat=GeoLite2-ASN)"
 }
-func (u *Updater) Database() *Database { return u.db }
+
+// Snapshot pins the currently verified immutable pair for one API response.
+func (u *Updater) Snapshot() *ipmeta.Database { return u.db.Load() }
 
 // Run checks on startup and daily. Published monthly releases are downloaded at
 // most once, except when the local cache fails validation. No request IPs enter it.
@@ -84,7 +88,7 @@ func (u *Updater) Refresh(ctx context.Context) error {
 		return err
 	}
 	release := u.now().UTC().Format("2006-01")
-	if u.release == release && u.db.Snapshot() != nil {
+	if u.release == release && u.Snapshot() != nil {
 		return nil
 	}
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Minute)
@@ -104,7 +108,7 @@ func (u *Updater) Refresh(ctx context.Context) error {
 			return err
 		}
 	}
-	db, err := Open(filepath.Join(stage, "country.mmdb"), filepath.Join(stage, "asn.mmdb"))
+	db, err := ipmeta.Open(filepath.Join(stage, "country.mmdb"), filepath.Join(stage, "asn.mmdb"))
 	if err != nil || !isDBIP(db) {
 		return fmt.Errorf("downloaded database pair failed MMDB validation")
 	}
@@ -146,7 +150,7 @@ func (u *Updater) Refresh(ctx context.Context) error {
 		return err
 	}
 	committed = true
-	u.db.current.Store(db)
+	u.db.Store(db)
 	u.release = release
 	// Directory fsync makes successful replacement durable on supported systems.
 	if d, e := os.Open(u.dir); e == nil {
@@ -196,8 +200,8 @@ func (u *Updater) download(ctx context.Context, kind, release, path string) erro
 	if err != nil {
 		return err
 	}
-	n, err := io.Copy(f, io.LimitReader(gz, MaxDatabaseBytes+1))
-	if err == nil && (n > MaxDatabaseBytes || compressed.N <= 0) {
+	n, err := io.Copy(f, io.LimitReader(gz, ipmeta.MaxDatabaseBytes+1))
+	if err == nil && (n > ipmeta.MaxDatabaseBytes || compressed.N <= 0) {
 		err = fmt.Errorf("database exceeds size limit")
 	}
 	if err == nil {

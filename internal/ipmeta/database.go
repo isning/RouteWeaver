@@ -1,5 +1,5 @@
-// Package ipmeta enriches IP addresses locally. The optional updater downloads
-// whole public databases; lookup addresses are never sent over the network.
+// Package ipmeta enriches IP addresses from immutable local databases.
+// It performs no network requests.
 package ipmeta
 
 import (
@@ -8,7 +8,6 @@ import (
 	"net/netip"
 	"os"
 	"strings"
-	"sync/atomic"
 	"time"
 	"unicode"
 	"unicode/utf8"
@@ -37,7 +36,6 @@ type Result struct {
 type Database struct {
 	country, asn *maxminddb.Reader
 	sources      []Source
-	current      *atomic.Pointer[Database]
 }
 
 func Open(countryPath, asnPath string) (*Database, error) {
@@ -97,15 +95,9 @@ func readDatabase(path, kind string) (*maxminddb.Reader, error) {
 	return r, nil
 }
 
-// Snapshot pins a complete database pair for a request during an update.
-func (d *Database) Snapshot() *Database {
-	if d != nil && d.current != nil {
-		return d.current.Load()
-	}
-	return d
-}
+// Snapshot returns this immutable pair, satisfying the read-only provider contract.
+func (d *Database) Snapshot() *Database { return d }
 func (d *Database) Sources() []Source {
-	d = d.Snapshot()
 	if d == nil {
 		return []Source{}
 	}
@@ -117,7 +109,6 @@ var nonPublic = []netip.Prefix{
 }
 
 func (d *Database) Lookup(ip netip.Addr) Result {
-	d = d.Snapshot()
 	if d == nil {
 		return Result{Status: "unavailable"}
 	}

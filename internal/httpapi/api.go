@@ -38,7 +38,7 @@ type MessageOutput struct {
 	}
 }
 type Options struct {
-	IPMetadata        *ipmeta.Database
+	IPMetadata        interface{ Snapshot() *ipmeta.Database }
 	OIDC              *OIDCProvider
 	TrustedProxyCIDRs []string
 	PublicOrigin      string

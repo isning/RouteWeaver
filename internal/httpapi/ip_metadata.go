@@ -19,7 +19,10 @@ type ipMetadataView struct {
 // Call only with server-derived addresses already authorized for this account.
 // Never provides an arbitrary IP lookup endpoint or sends addresses over a network.
 func (h *server) ipMetadata(ips []string) ipMetadataView {
-	db := h.opts.IPMetadata.Snapshot()
+	var db *ipmeta.Database
+	if h.opts.IPMetadata != nil {
+		db = h.opts.IPMetadata.Snapshot()
+	}
 	out := ipMetadataView{Available: db != nil, Sources: db.Sources(), Items: []ipMetadataItem{}}
 	if db == nil {
 		return out

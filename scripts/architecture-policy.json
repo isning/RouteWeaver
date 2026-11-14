@@ -109,9 +109,11 @@
       "diagnostics",
       "resources"
     ],
-    "ipmeta": []
+    "ipmeta": [],
+    "ipmetaupdate": ["ipmeta"]
   },
   "forbidden_imports": {
+    "ipmetaupdate": ["database/sql", "os/exec"],
     "domain": [
       "net/http",
       "database/sql",
