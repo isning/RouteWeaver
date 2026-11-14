@@ -209,3 +209,23 @@ it("does not mistake a post-dispatch session fence for non-commit", async () => 
   await expect(createNode(draft)).rejects.toMatchObject({ outcome: "unknown" });
   expect(fetch).toHaveBeenCalledTimes(1);
 });
+
+it.each(["hysteria2", "anytls"])(
+  "creates a supported %s endpoint and preserves its password and TLS receipt",
+  async (protocol) => {
+    const endpoint = {
+      ...saved,
+      protocol,
+      port: 443,
+      password: "synthetic-endpoint-password",
+      tls: { enabled: true, serverName: "proxy.example.invalid" },
+    };
+    const fetch = vi.fn(async () => json(endpoint));
+    vi.stubGlobal("fetch", fetch);
+    await expect(createNode(endpoint)).resolves.toEqual(endpoint);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    const [, init] = fetch.mock.calls[0] as unknown as [string, RequestInit];
+    expect(JSON.parse(String(init.body))).toEqual(endpoint);
+    expect(new Headers(init.headers).get("If-None-Match")).toBe("*");
+  },
+);

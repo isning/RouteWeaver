@@ -315,6 +315,16 @@ it.each([
 it("retries the same guarded identity and frozen connection after an absent read", async () => {
   const f = mount("delayed commit"),
     d = await start();
+  f.saved.set("existing-anytls", {
+    id: "existing-anytls",
+    name: "Existing AnyTLS",
+    host: "proxy.example.invalid",
+    port: 443,
+    protocol: "anytls",
+    password: "synthetic-existing-password",
+    tls: { enabled: true },
+    status: "unregistered",
+  });
   await unknown(d);
   await check(d);
   await within(d).findByText("暂未找到本次创建的端点");
@@ -326,7 +336,7 @@ it("retries the same guarded identity and frozen connection after an absent read
   expect(f.writes).toHaveLength(2);
   expect(f.writes[1]).toEqual(f.writes[0]);
   f.commitFirst();
-  expect(f.saved.size).toBe(1);
+  expect(f.saved.size).toBe(2);
   expect(
     await screen.findAllByRole("button", { name: /^One intended endpoint/ }),
   ).toHaveLength(1);
@@ -671,4 +681,25 @@ it("does not reopen the endpoint task after accepting App navigation", async () 
   expect(screen.queryByRole("dialog", { name: "添加端点" })).toBeNull();
   expect(location.hash).toBe("#users");
   expect(f.writes).toHaveLength(1);
+});
+
+it("creates a Hysteria2 endpoint from the public Add endpoint form", async () => {
+  const f = mount("success"),
+    d = await open();
+  await fill(d);
+  await owner.click(() => within(d).getByRole("combobox", { name: "协议" }));
+  await owner.click(() => screen.findByRole("option", { name: "Hysteria2" }));
+  await owner.click(() => within(d).getByRole("radio", { name: "TLS" }));
+  owner.change(() => within(d).getByLabelText("连接密码"), {
+    target: { value: "synthetic-endpoint-password" },
+  });
+  await owner.click(() => within(d).getByRole("button", { name: "保存" }));
+  await closed();
+  expect(f.writes).toHaveLength(1);
+  expect(f.writes[0].condition).toBe("*");
+  expect(f.writes[0].body).toMatchObject({
+    protocol: "hysteria2",
+    password: "synthetic-endpoint-password",
+    tls: { enabled: true },
+  });
 });

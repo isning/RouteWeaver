@@ -69,9 +69,15 @@ export function readNodeRecord(value: unknown): NodeRecord | null {
     Number(value.port) < 1 ||
     Number(value.port) > 65535 ||
     typeof value.protocol !== "string" ||
-    !["socks", "shadowsocks", "vless", "trojan", "vmess"].includes(
-      value.protocol,
-    ) ||
+    ![
+      "socks",
+      "shadowsocks",
+      "vless",
+      "trojan",
+      "vmess",
+      "hysteria2",
+      "anytls",
+    ].includes(value.protocol) ||
     typeof value.status !== "string" ||
     !value.status ||
     (value.tags !== undefined && !strings(value.tags))
