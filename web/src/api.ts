@@ -651,3 +651,33 @@ export async function restoreArchive(
   }
   return value as BackupRestoreResult;
 }
+
+export interface CoreLogFilters { stream?: "stdout" | "stderr"; q?: string; since?: string }
+export function coreLogPath(instanceId: string, filters: CoreLogFilters, exportFile = false) {
+  const query = new URLSearchParams();
+  if (filters.stream) query.set("stream", filters.stream);
+  if (filters.q) query.set("q", filters.q);
+  if (filters.since) query.set("since", filters.since);
+  if (exportFile) query.set("format", "ndjson");
+  const suffix = query.toString();
+  return `/admin/instances/${encodeURIComponent(instanceId)}/core-logs${suffix ? `?${suffix}` : ""}`;
+}
+export async function requestCoreLogExport(instanceId: string, filters: CoreLogFilters, signal?: AbortSignal) {
+  const owner = tokenRevision;
+  const transport = sessionTransport;
+  const guard = transport?.beforeRequest();
+  const assertCurrent = () => {
+    if (owner !== tokenRevision || transport !== sessionTransport)
+      throw new APIError("登录状态已变化，请重新导出日志。", 409);
+    guard?.beforeSend();
+  };
+  assertCurrent();
+  const response = await send(coreLogPath(instanceId, filters, true), { redirect: "error", signal });
+  if (!response.ok) await readResponse<never>(response);
+  if (response.headers.get("content-type")?.split(";")[0].trim() !== "application/x-ndjson")
+    throw new APIError("服务器未返回日志文件，请重试。", response.status);
+  const blob = await response.blob();
+  await guard?.waitForResponse();
+  assertCurrent();
+  return { blob, assertCurrent };
+}
