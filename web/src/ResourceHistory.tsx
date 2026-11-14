@@ -26,12 +26,14 @@ function Series({ points, fields, maximum, start, end, interval, title, format }
 }) {
   const all = fields.flatMap(f => points.map(p => p[f.key])).filter(valid) as number[];
   const max = maximum || Math.max(1, ...all);
-  const x = (at: string) => 58 + 436 * (Date.parse(at) - start) / (end - start);
+  const x = (at: string) => 6 + 488 * (Date.parse(at) - start) / (end - start);
   const y = (n: number) => 142 - 132 * Math.min(1, n / max);
   return <div className="min-w-0 space-y-3">
     <div className="flex flex-wrap items-center justify-between gap-2 text-sm"><p className="font-medium">{title}</p></div>
-    {!all.length ? <div className="flex h-40 items-center justify-center rounded-md border border-dashed text-sm text-muted-foreground">尚无可绘制的数据</div> : <svg role="img" aria-label={`${title}，最近24小时实际采样趋势`} viewBox="0 0 500 155" className="h-40 w-full overflow-visible" preserveAspectRatio="none">
-      {[max, max / 2, 0].map((value, index) => <g key={index}><text x="50" y={y(value)} dy="0.35em" textAnchor="end" className="fill-muted-foreground text-[10px] tabular-nums">{format(value)}</text><line x1="58" x2="494" y1={y(value)} y2={y(value)} className="stroke-border" strokeDasharray="3 4" vectorEffect="non-scaling-stroke" /></g>)}
+    {!all.length ? <div className="flex h-40 items-center justify-center rounded-md border border-dashed text-sm text-muted-foreground">尚无可绘制的数据</div> : <div className="grid h-40 min-w-0 grid-cols-[4rem_minmax(0,1fr)] gap-2">
+      <div aria-hidden="true" className="relative text-right text-[11px] leading-none tabular-nums text-muted-foreground">{[max, max / 2, 0].map((value, index) => <span key={index} className="absolute right-0 -translate-y-1/2 whitespace-nowrap" style={{ top: `${y(value) / 155 * 100}%` }}>{format(value)}</span>)}</div>
+      <svg role="img" aria-label={`${title}，最近24小时实际采样趋势`} viewBox="0 0 500 155" className="h-40 w-full overflow-visible" preserveAspectRatio="none">
+      {[max, max / 2, 0].map((value, index) => <line key={index} x1="6" x2="494" y1={y(value)} y2={y(value)} className="stroke-border" strokeDasharray="3 4" vectorEffect="non-scaling-stroke" />)}
       {fields.map(f => {
         let previous: ResourcePoint | undefined;
         return <g key={f.key} style={{ color: f.color }}>{points.map((p, index) => {
@@ -46,7 +48,7 @@ function Series({ points, fields, maximum, start, end, interval, title, format }
           </g>;
         })}</g>;
       })}
-    </svg>}
+    </svg></div>}
     <div className="flex justify-between gap-2 text-[11px] tabular-nums text-muted-foreground"><time>{dateLabel(new Date(start).toISOString())}</time><time>{dateLabel(new Date(end).toISOString())}</time></div>
     <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">{fields.map(f => <span className="inline-flex items-center gap-1.5" key={f.key}><span className="size-2 rounded-full" style={{ background: f.color }} />{f.label}</span>)}</div>
   </div>;

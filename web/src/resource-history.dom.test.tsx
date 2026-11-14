@@ -16,6 +16,8 @@ it("plots actual zeros but does not join restart gaps or turn unknown rates into
  vi.stubGlobal("fetch",vi.fn(async()=>response(fixture())));mount();
  const chart=await screen.findByRole("img",{name:"计费网卡流量，最近24小时实际采样趋势"});
  expect(chart.querySelectorAll("circle")).toHaveLength(2);
+ expect(chart.querySelectorAll("text")).toHaveLength(0); // axis labels stay HTML-sized on narrow screens
+ expect(chart.parentElement?.querySelector("span")?.className).toContain("whitespace-nowrap");
  expect(chart.querySelectorAll('line[stroke="currentColor"]')).toHaveLength(0);
  expect(chart.textContent).toContain("0 B/s");
 });
