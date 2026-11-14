@@ -931,17 +931,22 @@ for (const width of [3440, 2880, 2560, 2304, 1920, 1536, 1440, 1366, 1280, 1024,
     expect(heroBox.x).toBeCloseTo(subscriptionPrimary.x, 0);
     expect(heroBox.width).toBeCloseTo(subscriptionPrimary.width, 0);
     expect(heroBox.y + heroBox.height).toBeLessThan(subscriptionPrimary.y);
-    if (heroBox.width >= 722) expect(detailsBox.x).toBeGreaterThan(remainingBox.x + remainingBox.width);
-    else expect(detailsBox.y).toBeGreaterThan(remainingBox.y + remainingBox.height);
+    expect(detailsBox.y).toBeGreaterThan(remainingBox.y + remainingBox.height);
+    const mainBox = (await page.locator(".subscription-task-main").boundingBox())!;
+    const routesBox = (await routes.boundingBox())!;
+    if (subscriptionPrimary.width >= 992) {
+      expect(routesBox.x).toBeGreaterThanOrEqual(mainBox.x + mainBox.width);
+      expect(routesBox.y).toBeCloseTo(mainBox.y, 0);
+    } else expect(routesBox.y).toBeGreaterThanOrEqual(mainBox.y + mainBox.height);
     const resetDate = details.locator(".usage-reset-date");
     const resetCountdown = details.locator(".usage-reset-countdown");
     await expect(resetDate).toBeVisible();
     await expect(resetCountdown).toBeVisible();
     const dateBox = (await resetDate.boundingBox())!;
     const countdownBox = (await resetCountdown.boundingBox())!;
-    expect(countdownBox.y).toBeGreaterThanOrEqual(dateBox.y + dateBox.height);
-    expect(countdownBox.x + countdownBox.width).toBeCloseTo(dateBox.x + dateBox.width, 0);
-    expect(await routes.evaluate(el => getComputedStyle(el).borderTopWidth)).toBe("1px");
+    expect(countdownBox.y).toBeGreaterThanOrEqual(dateBox.y - 2);
+    expect(countdownBox.x + countdownBox.width).toBeLessThanOrEqual(detailsBox.x + detailsBox.width + 1);
+    expect(await routes.evaluate(el => getComputedStyle(el).borderTopWidth)).toBe(subscriptionPrimary.width >= 992 ? "0px" : "1px");
     for (const selector of [".route-option"]) {
       const rows = routes.locator(selector);
       for (let i = 0; i < await rows.count(); i++) {

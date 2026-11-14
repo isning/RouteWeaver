@@ -1,3 +1,4 @@
+import { cn } from "@/lib/utils";
 import { Metadata, MetadataItem } from "@/ui-patterns/metadata";
 import { WorkspaceFrame } from "@/ui-patterns/workspace-frame";
 import { useSubscriptionRotationState } from "./subscription-rotation-state";
@@ -962,7 +963,7 @@ export function SubscriptionsPage({
       </Suspense>
     );
   const availableRoutes = !!data?.routes?.length && (
-          <section aria-labelledby={availableRoutesId} className="available-routes min-w-0 border-t border-border pt-4">
+          <section aria-labelledby={availableRoutesId} className="available-routes min-w-0 border-t border-border pt-4 @min-[62rem]/subscription-tasks:border-t-0 @min-[62rem]/subscription-tasks:pt-0">
             <h2 id={availableRoutesId} className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm font-medium">平台提供的线路 <span className="font-normal tabular-nums text-muted-foreground">{data.routes.length} 条</span></h2>
             <p className="mt-1 text-xs leading-relaxed text-muted-foreground">已为你的账号开通</p>
             <ul className="route-options mt-2 divide-y divide-border">
@@ -992,21 +993,21 @@ export function SubscriptionsPage({
           retry={() => query.refetch()}
         >
           {data && (
-            <Card className="subscription-usage @container/usage gap-0 rounded-[14px] border bg-card p-4 shadow-none ring-0 sm:p-6">
+            <Card className="subscription-usage @container/usage gap-0 rounded-xl border bg-card p-4 shadow-none ring-0">
               <h2 className="sr-only">平台服务用量</h2>
-              <div className="grid min-w-0 gap-6 @min-[42rem]/usage:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+              <div className="grid min-w-0 gap-3">
                 <div className="min-w-0">
-                  <div className="mb-4 flex flex-wrap items-center gap-2">
+                  <div className="mb-2 flex flex-wrap items-center gap-2">
                     <h3 className="text-sm font-medium text-muted-foreground">本周期剩余额度</h3>
                     <OverviewPolicyStatus value={data.status} />
                   </div>
-                  <p className="mb-4 text-4xl font-semibold tracking-tight tabular-nums wrap-anywhere @min-[28rem]/usage:text-5xl">
+                  <p className="mb-3 text-[2rem] leading-none font-semibold tracking-tight tabular-nums wrap-anywhere">
                     {quota === 0 ? "不限额" : bytesLabel(remaining)}
                   </p>
                   {percent !== undefined && (
-                    <Progress className="mb-4 h-2.5" value={percent} aria-label="本周期额度使用比例" />
+                    <Progress className="mb-2.5 h-1" value={percent} aria-label="本周期额度使用比例" />
                   )}
-                  <dl className="flex flex-wrap gap-x-8 gap-y-2 text-sm">
+                  <dl className="flex flex-wrap gap-x-5 gap-y-1 text-xs">
                     {[
                       ["已用额度", bytesLabel(used)],
                       ["总额度", quota === 0 ? "不限额" : bytesLabel(quota)],
@@ -1032,20 +1033,20 @@ export function SubscriptionsPage({
                     </p>
                   )}
                 </div>
-                <section aria-labelledby={usageDetailsId} className="usage-details min-w-0">
+                <section aria-labelledby={usageDetailsId} className="usage-details min-w-0 border-t border-border pt-3">
                   <h3 id={usageDetailsId} className="sr-only">用量与周期明细</h3>
-                  <dl className="grid gap-3">
-                    <div className="usage-detail-row min-w-0 rounded-[10px] bg-muted/50 p-4">
-                      <dt className="flex items-center gap-2 text-xs text-muted-foreground"><CalendarClock className="size-4 shrink-0" aria-hidden="true" />下次重置</dt>
-                      <dd className="usage-reset-date mt-1 font-medium tabular-nums wrap-anywhere">{data.cycle?.nextReset
+                  <dl className="flex flex-wrap gap-x-6 gap-y-2 text-xs">
+                    <div className="usage-detail-row flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
+                      <dt className="flex items-center gap-2 text-xs text-muted-foreground"><CalendarClock className="size-3.5 shrink-0" aria-hidden="true" />下次重置</dt>
+                      <dd className="usage-reset-date tabular-nums wrap-anywhere">{data.cycle?.nextReset
                         ? dateLabel(data.cycle.nextReset, data.cycle.timezone)
                         : data.cycle ? "不自动重置" : "尚未设置"}</dd>
                       {reset && <dd className="usage-reset-countdown text-xs text-muted-foreground tabular-nums wrap-anywhere">还有 {reset}</dd>}
-                      {data.cycle?.timezone && <><dt className="sr-only">周期时区</dt><dd className="mt-1 text-xs text-muted-foreground wrap-anywhere">{data.cycle.timezone}</dd></>}
+                      {data.cycle?.timezone && <><dt className="sr-only">周期时区</dt><dd className="text-xs text-muted-foreground wrap-anywhere">{data.cycle.timezone}</dd></>}
                     </div>
-                    <div className="usage-detail-row min-w-0 rounded-[10px] bg-muted/50 p-4">
-                      <dt className="flex items-center gap-2 text-xs text-muted-foreground"><ShieldCheck className="size-4 shrink-0" aria-hidden="true" />服务到期</dt>
-                      <dd className="mt-1 font-medium tabular-nums wrap-anywhere">{dateLabel(data.entitlement?.expiresAt || data.user?.expiresAt)}</dd>
+                    <div className="usage-detail-row flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
+                      <dt className="flex items-center gap-2 text-xs text-muted-foreground"><ShieldCheck className="size-3.5 shrink-0" aria-hidden="true" />服务到期</dt>
+                      <dd className="tabular-nums wrap-anywhere">{dateLabel(data.entitlement?.expiresAt || data.user?.expiresAt)}</dd>
                       {data.service?.name && <dd className="text-xs text-muted-foreground wrap-anywhere">{data.service.name}</dd>}
                     </div>
                   </dl>
@@ -1096,6 +1097,9 @@ export function SubscriptionsPage({
           }
         />}
       >
+      <div className="@container/subscription-tasks min-w-0">
+      <div className={cn("grid min-w-0 items-start gap-6", view === "overview" && availableRoutes && "@min-[62rem]/subscription-tasks:grid-cols-[minmax(0,1fr)_16rem]")}>
+      <div className="subscription-task-main min-w-0 space-y-6">
       <ErrorNotice error={detailOutput ? null : editError || actionError} />
       {profileScope && (
         <div className="subscription-scope space-y-4" role="status">
@@ -1805,7 +1809,10 @@ export function SubscriptionsPage({
         }}
       />
 
+      </div>
       {view === "overview" && availableRoutes}
+      </div>
+      </div>
       </WorkspaceFrame>
     </div>
   );
