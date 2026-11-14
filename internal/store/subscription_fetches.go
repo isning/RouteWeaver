@@ -3,6 +3,7 @@ package store
 import (
 	"errors"
 	"fmt"
+	"net/netip"
 	"sort"
 	"strings"
 	"time"
@@ -12,13 +13,16 @@ const SubscriptionFetchLimit = 100
 const SubscriptionFetchWindowDays = 30
 
 // SubscriptionFetch records a completed HTTP response write, not successful
-// client import or proxy traffic. It deliberately excludes token, IP and UA.
+// client import or proxy traffic. It excludes token and UA; IP collection requires an explicit owner opt-in.
 type SubscriptionFetch struct {
-	OutputID string    `json:"outputId"`
-	At       time.Time `json:"at"`
-	Delivery string    `json:"delivery"`
+	SourceIP  string    `json:"sourceIp,omitempty"`
+	NewSource bool      `json:"newSource,omitempty"`
+	OutputID  string    `json:"outputId"`
+	At        time.Time `json:"at"`
+	Delivery  string    `json:"delivery"`
 }
 type SubscriptionFetchHistory struct {
+	TrackSourceIPs      bool                `json:"trackSourceIps"`
 	Items               []SubscriptionFetch `json:"items"`
 	CollectionStartedAt *time.Time          `json:"collectionStartedAt,omitempty"`
 	Limit               int                 `json:"limit"`
@@ -69,6 +73,30 @@ func (s *Store) RecordSubscriptionFetch(owner string, item SubscriptionFetch) er
 		at := item.At
 		h.CollectionStartedAt = &at
 	}
+	// Never accept a caller-provided alert decision. The preference and baseline
+	// are read under the same transaction as this append (including disable races).
+	item.NewSource = false
+	if !h.TrackSourceIPs {
+		item.SourceIP = ""
+	}
+	if ip, e := netip.ParseAddr(item.SourceIP); e == nil && ip.Zone() == "" && !ip.IsUnspecified() && !ip.IsMulticast() {
+		item.SourceIP = ip.Unmap().String()
+	} else {
+		item.SourceIP = ""
+	}
+	pruneSubscriptionFetches(&h, item.At)
+	if item.SourceIP != "" {
+		baseline, seen := false, false
+		for _, old := range h.Items {
+			if old.OutputID == item.OutputID && old.SourceIP != "" {
+				baseline = true
+				if old.SourceIP == item.SourceIP {
+					seen = true
+				}
+			}
+		}
+		item.NewSource = baseline && !seen
+	}
 	h.Items = append(h.Items, item)
 	pruneSubscriptionFetches(&h, item.At)
 	if err = s.putTx(tx, kind, "recent", h); err != nil {
@@ -102,4 +130,37 @@ func (s *Store) SubscriptionFetches(owner string, now time.Time) (SubscriptionFe
 		}
 	}
 	return h, tx.Commit()
+}
+
+// SetSubscriptionFetchSourceTracking changes only this owner's opt-in. Turning
+// it off removes addresses and alert markers from the live encrypted row, while
+// preserving the original response-write history. Backups are not rewritten.
+func (s *Store) SetSubscriptionFetchSourceTracking(owner string, enabled bool, now time.Time) error {
+	if !validFetchOwner(owner) || now.IsZero() {
+		return fmt.Errorf("invalid history preference")
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	tx, err := s.beginWriteTx()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	kind := TenantKind(owner, "subscription-fetches")
+	var h SubscriptionFetchHistory
+	if err = s.getTx(tx, kind, "recent", &h); err != nil && !errors.Is(err, ErrNotFound) {
+		return err
+	}
+	h.TrackSourceIPs = enabled
+	if !enabled {
+		for i := range h.Items {
+			h.Items[i].SourceIP = ""
+			h.Items[i].NewSource = false
+		}
+	}
+	pruneSubscriptionFetches(&h, now.UTC())
+	if err = s.putTx(tx, kind, "recent", h); err != nil {
+		return err
+	}
+	return tx.Commit()
 }

@@ -72,6 +72,7 @@ func (h *server) registerOutputs(r chi.Router) {
 	h.registerAttributedOutputLifecycle(r)
 	r.Get("/output-usage", h.myOutputUsage)
 	r.Get("/subscription-fetches", h.subscriptionFetches)
+	r.Put("/subscription-fetches/tracking", h.setSubscriptionFetchTracking)
 	r.Get("/outputs/{id}/bundle", h.outputBundle)
 	r.Get("/outputs/{id}/status", h.outputStatus)
 	r.Get("/outputs/{id}/comparison", h.outputComparison)
@@ -360,7 +361,7 @@ func (h *server) feed(w http.ResponseWriter, r *http.Request) {
 	}
 	w.WriteHeader(200)
 	if n, err := w.Write([]byte(v.Artifacts[0].Content)); err == nil && n == len(v.Artifacts[0].Content) {
-		h.recordSubscriptionFetch(parts[0], v.ID, "feed")
+		h.recordSubscriptionFetch(r, parts[0], v.ID, "feed")
 	}
 }
 

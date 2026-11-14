@@ -69,7 +69,7 @@ func (h *server) deliverOutputBundle(w http.ResponseWriter, r *http.Request, own
 	w.Header().Set("Content-Disposition", `attachment; filename="routeweaver-bundle.zip"`)
 	w.WriteHeader(200)
 	if n, err := w.Write(data); err == nil && n == len(data) {
-		h.recordSubscriptionFetch(owner, output.ID, "bundle")
+		h.recordSubscriptionFetch(r, owner, output.ID, "bundle")
 	}
 }
 

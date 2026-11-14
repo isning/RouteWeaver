@@ -1,3 +1,4 @@
+import { SubscriptionFetchAlerts, type FetchHistory } from "./SubscriptionFetchAlerts";
 import { Metadata, MetadataItem } from "@/ui-patterns/metadata";
 import {
   Table,
@@ -63,12 +64,6 @@ export interface PersonalInsights {
     entryRateBps: number;
   };
 }
-interface SubscriptionFetches {
-  items: { outputId: string; at: string; delivery: "feed" | "bundle" }[];
-  collectionStartedAt?: string;
-  limit: number;
-  windowDays: number;
-}
 export function OverviewPage() {
   const history = useContext(WorkspaceHistoryContext);
   const go = (hash: string) =>
@@ -92,7 +87,7 @@ export function OverviewPage() {
   });
   const fetches = useQuery({
     queryKey: ["subscription-fetches"],
-    queryFn: () => request<SubscriptionFetches>("/me/subscription-fetches"),
+    queryFn: () => request<FetchHistory>("/me/subscription-fetches"),
     staleTime: 30_000,
   });
   const usage = useQuery({
@@ -766,9 +761,16 @@ export function OverviewPage() {
                 </ActionButton>
               )}
               {fetches.data && (
+                <SubscriptionFetchAlerts
+                  history={fetches.data}
+                  names={Object.fromEntries((outputs.data || []).map((output) => [output.id, output.name]))}
+                  refresh={() => { void fetches.refetch(); }}
+                />
+              )}
+              {fetches.data && (
                 <p className="px-6 pt-3 text-xs text-muted-foreground">
                   保留近 {fetches.data.windowDays} 天内最近 {fetches.data.limit}{" "}
-                  次成功交付记录，不代表客户端已应用配置。
+                  次服务端写出记录，不代表客户端收到或应用配置。
                 </p>
               )}
             </QueryState>
