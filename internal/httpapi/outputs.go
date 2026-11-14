@@ -62,6 +62,7 @@ func (h *server) outputView(owner string, o Output) map[string]any {
 	return view
 }
 func (h *server) registerOutputs(r chi.Router) {
+	r.Get("/subscription-fetches", h.subscriptionFetches)
 	r.Get("/outputs/{id}/bundle", h.outputBundle)
 	r.Get("/outputs/{id}/status", h.outputStatus)
 	r.Get("/outputs/{id}/comparison", h.outputComparison)
@@ -337,7 +338,9 @@ func (h *server) feed(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Subscription-Userinfo", userinfo)
 	}
 	w.WriteHeader(200)
-	w.Write([]byte(v.Artifacts[0].Content))
+	if n, err := w.Write([]byte(v.Artifacts[0].Content)); err == nil && n == len(v.Artifacts[0].Content) {
+		h.recordSubscriptionFetch(parts[0], v.ID, "feed")
+	}
 }
 
 func connectionDigest(v domain.Connection) string {
