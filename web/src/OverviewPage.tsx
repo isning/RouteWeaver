@@ -28,6 +28,18 @@ export interface PersonalInsights {
     onlineIps: string[];
     activeStreams: number;
   };
+  ipMetadata?: {
+    available: boolean;
+    sources: { kind: string; databaseType: string; builtAt: string }[];
+    items: {
+      ip: string;
+      status: "available" | "not-found" | "non-public" | "unavailable";
+      countryCode?: string;
+      asn?: number;
+      organization?: string;
+    }[];
+    truncated: boolean;
+  };
   limits: {
     onlineIpLimit: number;
     connectionLimit: number;
@@ -316,9 +328,16 @@ export function OverviewPage() {
                           {detail.admission.onlineIps.map((ip) => (
                             <li
                               key={ip}
-                              className="py-2 font-mono text-xs wrap-anywhere"
+                              className="space-y-1 py-2 text-xs wrap-anywhere"
                             >
-                              {ip}
+                              <p className="font-mono">{ip}</p>
+                              {detail.ipMetadata?.available === true && (
+                                <IPDetails
+                                  item={detail.ipMetadata.items.find(
+                                    (item) => item.ip === ip,
+                                  )}
+                                />
+                              )}
                             </li>
                           ))}
                         </ul>
@@ -326,6 +345,31 @@ export function OverviewPage() {
                         <p className="text-sm text-muted-foreground">
                           暂无活跃 IP
                         </p>
+                      )}
+                      {detail.ipMetadata?.available !== true ? (
+                        <p className="text-xs text-muted-foreground">
+                          IP 归属资料暂不可用
+                        </p>
+                      ) : (
+                        <details className="text-xs text-muted-foreground">
+                          <summary className="cursor-pointer">
+                            IP 资料来源
+                          </summary>
+                          <div className="mt-2 space-y-1">
+                            <p>
+                              国家和网络组织来自本地数据库，不代表设备的实际位置或运营商。
+                            </p>
+                            {detail.ipMetadata.sources.map((source, index) => (
+                              <p key={`${source.kind}:${index}`}>
+                                {source.databaseType} · 更新于{" "}
+                                {dateLabel(source.builtAt)}
+                              </p>
+                            ))}
+                            {detail.ipMetadata.truncated && (
+                              <p>部分 IP 尚未查询归属资料。</p>
+                            )}
+                          </div>
+                        </details>
                       )}
                       <p className="text-xs leading-relaxed text-muted-foreground">
                         按未到期的托管连接记录统计，不代表设备数量；断开后最多延迟{" "}
@@ -487,4 +531,37 @@ export function OverviewPage() {
       </Card>
     </div>
   );
+}
+
+function IPDetails({
+  item,
+}: {
+  item?: NonNullable<PersonalInsights["ipMetadata"]>["items"][number];
+}) {
+  if (!item || item.status === "unavailable")
+    return <p className="text-muted-foreground">归属资料暂不可用</p>;
+  if (item.status === "non-public")
+    return <p className="text-muted-foreground">非公网地址，无公网归属资料</p>;
+  if (item.status !== "available")
+    return <p className="text-muted-foreground">归属未知</p>;
+  return (
+    <div className="space-y-1 text-muted-foreground">
+      <p>
+        国家/地区：{item.countryCode ? countryName(item.countryCode) : "未知"}
+      </p>
+      <p>
+        网络组织：{item.organization || "未知"}
+        {item.asn ? ` · AS${item.asn}` : ""}
+      </p>
+    </div>
+  );
+}
+
+function countryName(code: string) {
+  try {
+    const name = new Intl.DisplayNames(["zh-CN"], { type: "region" }).of(code);
+    return name && name !== code ? `${name} (${code})` : code;
+  } catch {
+    return code;
+  }
 }

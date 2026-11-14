@@ -197,3 +197,60 @@ it("does not label unknown names as deleted subscriptions or historical routes",
   expect(screen.queryByText("已删除的订阅")).toBeNull();
   expect(screen.queryByText("历史线路")).toBeNull();
 });
+
+it("renders only the database's reported IP metadata, not an inferred device location", async () => {
+  mount();
+  await screen.findByText("192.0.2.7");
+  expect(screen.getByText("IP 归属资料暂不可用")).toBeTruthy();
+  const client = clients.at(-1)!;
+  client.setQueryData(["personal-insights"], (current: object) => ({
+    ...current,
+    ipMetadata: {
+      available: true,
+      truncated: false,
+      sources: [
+        {
+          kind: "asn",
+          databaseType: "Example ASN",
+          builtAt: "2026-11-14T00:00:00Z",
+        },
+      ],
+      items: [
+        {
+          ip: "192.0.2.7",
+          status: "available",
+          countryCode: "DE",
+          asn: 64500,
+          organization: "Example Network",
+        },
+      ],
+    },
+  }));
+  expect(await screen.findByText("国家/地区：德国 (DE)")).toBeTruthy();
+  expect(screen.getByText("网络组织：Example Network · AS64500")).toBeTruthy();
+  expect(screen.getByText(/不代表设备的实际位置或运营商/)).toBeTruthy();
+  expect(screen.queryByText("IP 归属资料暂不可用")).toBeNull();
+});
+
+it("distinguishes no database match, non-public IP and unavailable metadata", async () => {
+  mount();
+  await screen.findByText("192.0.2.7");
+  const client = clients.at(-1)!;
+  for (const [status, label] of [
+    ["not-found", "归属未知"],
+    ["non-public", "非公网地址，无公网归属资料"],
+    ["unavailable", "归属资料暂不可用"],
+  ]) {
+    client.setQueryData(["personal-insights"], (current: object) => ({
+      ...current,
+      ipMetadata: {
+        available: true,
+        sources: [],
+        truncated: false,
+        items: [{ ip: "192.0.2.7", status }],
+      },
+    }));
+    expect(await screen.findByText(label)).toBeTruthy();
+    expect(screen.queryByText(/国家\/地区/)).toBeNull();
+  }
+});
