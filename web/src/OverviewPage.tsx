@@ -37,6 +37,12 @@ export interface PersonalInsights {
     asOf: string;
     maxLeaseSeconds: number;
     onlineIps: string[];
+    connections?: {
+      ip: string;
+      outputId?: string;
+      activeStreams: number;
+      lastConfirmedAt?: string;
+    }[];
     activeStreams: number;
   };
   ipMetadata?: {
@@ -131,6 +137,13 @@ export function OverviewPage() {
           .slice(-7)
           .reduce((sum, day) => sum + day.weightedBytes, 0) / 7
       : undefined;
+  const outputNames = new Map(outputs.data?.map((output) => [output.id, output.name]));
+  const connectionsByIP = new Map<string, NonNullable<PersonalInsights["admission"]["connections"]>>();
+  for (const row of detail?.admission.connections ?? []) {
+    const rows = connectionsByIP.get(row.ip) ?? [];
+    rows.push(row);
+    connectionsByIP.set(row.ip, rows);
+  }
   const online = detail?.admission.available === true;
   const count = online ? (detail?.admission.onlineIps.length ?? 0) : 0;
   const limit = detail?.limits.onlineIpLimit ?? 0;
@@ -504,6 +517,21 @@ export function OverviewPage() {
                       />
                       <div className="min-w-0 flex-1">
                         <p className="font-mono wrap-anywhere">{ip}</p>
+                        {connectionsByIP.get(ip)?.map((row) => (
+                          <div key={row.outputId ? `output:${row.outputId}` : "shared"} className="mt-1 text-xs text-muted-foreground">
+                            <p className="wrap-anywhere">
+                              {row.outputId
+                                ? outputNames.get(row.outputId) || "订阅名称暂不可用"
+                                : "共享连接，无法关联到单个订阅"}
+                              {`（${row.activeStreams} 个连接）`}
+                            </p>
+                            <p>
+                              {row.lastConfirmedAt
+                                ? `最近连接确认：${dateLabel(row.lastConfirmedAt)}`
+                                : "最近连接确认时间未知"}
+                            </p>
+                          </div>
+                        ))}
                         {detail.ipMetadata?.available === true && (
                           <IPDetails
                             item={detail.ipMetadata.items.find(
@@ -544,6 +572,7 @@ export function OverviewPage() {
                       按未到期的托管连接记录统计，不代表设备数量；断开后最多延迟{" "}
                       {detail.admission.maxLeaseSeconds} 秒更新。
                     </p>
+                    <p>连接确认是接入或续期成功的时间，不是最后传输数据的时间。共享凭据无法区分使用它的订阅。</p>
                     {detail.ipMetadata?.available === true ? (
                       <>
                         <p>

@@ -30,12 +30,20 @@ type InsightRoute struct {
 	RouteID string `json:"routeId"`
 	InsightUsage
 }
+type InsightConnection struct {
+	IP              string     `json:"ip"`
+	OutputID        string     `json:"outputId,omitempty"`
+	ActiveStreams   int        `json:"activeStreams"`
+	LastConfirmedAt *time.Time `json:"lastConfirmedAt,omitempty"`
+}
+
 type InsightAdmission struct {
-	Available       bool      `json:"available"`
-	AsOf            time.Time `json:"asOf"`
-	MaxLeaseSeconds int       `json:"maxLeaseSeconds"`
-	OnlineIPs       []string  `json:"onlineIps"`
-	ActiveStreams   int       `json:"activeStreams"`
+	Connections     []InsightConnection `json:"connections"`
+	Available       bool                `json:"available"`
+	AsOf            time.Time           `json:"asOf"`
+	MaxLeaseSeconds int                 `json:"maxLeaseSeconds"`
+	OnlineIPs       []string            `json:"onlineIps"`
+	ActiveStreams   int                 `json:"activeStreams"`
 }
 type UsageInsights struct {
 	AsOf      time.Time        `json:"asOf"`
@@ -227,10 +235,22 @@ func (s *Store) insightsPolicyTx(ctx context.Context, tx *sql.Tx, user string, n
 func (s *Store) insightAdmissionTx(ctx context.Context, tx *sql.Tx, user string, now time.Time) (InsightAdmission, error) {
 	out := InsightAdmission{AsOf: now, MaxLeaseSeconds: int(entrypolicy.MaxLease / time.Second), OnlineIPs: []string{}}
 	ips := map[string]bool{}
+	type connectionKey struct{ ip, output string }
+	connections := map[connectionKey]InsightConnection{}
 	add := func(lease admissionLease) {
 		if lease.Binding.UserID == user && now.Before(lease.ExpiresAt) {
 			ips[lease.ClientIP] = true
 			out.ActiveStreams++
+			key := connectionKey{lease.ClientIP, lease.Binding.OutputID}
+			row := connections[key]
+			row.IP, row.OutputID = key.ip, key.output
+			row.ActiveStreams++
+			// No expiry arithmetic: legacy leases have no confirmation evidence.
+			if !lease.ConfirmedAt.IsZero() && !lease.ConfirmedAt.After(now) && (row.LastConfirmedAt == nil || lease.ConfirmedAt.After(*row.LastConfirmedAt)) {
+				confirmed := lease.ConfirmedAt
+				row.LastConfirmedAt = &confirmed
+			}
+			connections[key] = row
 		}
 	}
 	finish := func() (InsightAdmission, error) {
@@ -238,6 +258,17 @@ func (s *Store) insightAdmissionTx(ctx context.Context, tx *sql.Tx, user string,
 			out.OnlineIPs = append(out.OnlineIPs, ip)
 		}
 		sort.Strings(out.OnlineIPs)
+		out.Connections = make([]InsightConnection, 0, len(connections))
+		for _, row := range connections {
+			out.Connections = append(out.Connections, row)
+		}
+		sort.Slice(out.Connections, func(i, j int) bool {
+			a, b := out.Connections[i], out.Connections[j]
+			if a.IP != b.IP {
+				return a.IP < b.IP
+			}
+			return a.OutputID < b.OutputID
+		})
 		out.Available = true
 		return out, nil
 	}

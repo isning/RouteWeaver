@@ -22,7 +22,7 @@ afterEach(() => {
   clients.splice(0).forEach((c) => c.clear());
   vi.unstubAllGlobals();
 });
-function mount(fail = false, shell = false, namesFail = false) {
+function mount(fail = false, shell = false, namesFail = false, connections?: unknown[]) {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url: string) => {
@@ -91,6 +91,7 @@ function mount(fail = false, shell = false, namesFail = false) {
                 asOf: "2026-11-14T07:00:00Z",
                 maxLeaseSeconds: 30,
                 onlineIps: ["192.0.2.7"],
+                connections,
                 activeStreams: 2,
               },
               limits: {
@@ -338,3 +339,16 @@ it.each([
     ).toBeNull();
   },
 );
+
+ it("shows only evidenced subscription associations and connection confirmation times", async () => {
+  mount(false, false, false, [
+   {ip: "192.0.2.7",outputId:"output",activeStreams:1,lastConfirmedAt:"2026-11-14T07:00:00Z"},
+   {ip: "192.0.2.7",activeStreams:1},
+   {ip: "192.0.2.7",outputId:"shared",activeStreams:1},
+  ]);
+  expect(await screen.findByText("工作订阅（1 个连接）")).toBeTruthy();
+  expect(screen.getByText("共享连接，无法关联到单个订阅（1 个连接）")).toBeTruthy();
+  expect(screen.getAllByText("最近连接确认时间未知")).toHaveLength(2);
+  expect(screen.getByText("订阅名称暂不可用（1 个连接）")).toBeTruthy();
+  expect(screen.getByText(/^最近连接确认：/).textContent).toContain("2026");
+ });

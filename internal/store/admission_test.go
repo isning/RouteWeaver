@@ -2,6 +2,7 @@ package store_test
 
 import (
 	"bytes"
+	"context"
 	"path/filepath"
 	"routeweaver/internal/domain"
 	"routeweaver/internal/service"
@@ -72,6 +73,14 @@ func TestAdmissionUnionCountsNormalizedIPsAcrossEntriesAndDurablyRenews(t *testi
 	if e != nil || !renew.Allowed || renew.LeaseID != first.LeaseID {
 		t.Fatalf("durable renewal %+v %v", renew, e)
 	}
+	insights, e := secondStore.UsageInsightsContext(context.Background(), "account", time.Time{}, now.Add(10*time.Second))
+	if e != nil || !insights.Admission.Available || len(insights.Admission.Connections) != 1 {
+		t.Fatalf("renewal insight %+v %v", insights.Admission, e)
+	}
+	detail := insights.Admission.Connections[0]
+	if detail.LastConfirmedAt == nil || !detail.LastConfirmedAt.Equal(now.Add(10*time.Second)) || detail.ActiveStreams != 2 || detail.OutputID != "" {
+		t.Fatalf("renewal confirmation not persisted: %+v", detail)
+	}
 	if e = s.ReleaseAdmission(scope, first.LeaseID, now.Add(11*time.Second)); e != nil {
 		t.Fatal(e)
 	}
@@ -92,8 +101,9 @@ func TestAdmissionRenewalRespectsRevocationQuotaAndHolds(t *testing.T) {
 		t.Run(reason, func(t *testing.T) {
 			s, _, _, scope, now := admissionFixture(t)
 			in := admissionRequest("entry1", "2001:db8::1", "presence")
-			if lease, e := s.AcquireAdmission(scope, in, now); e != nil || !lease.Allowed {
-				t.Fatalf("initial %+v %v", lease, e)
+			initial, e := s.AcquireAdmission(scope, in, now)
+			if e != nil || !initial.Allowed {
+				t.Fatalf("initial %+v %v", initial, e)
 			}
 			switch reason {
 			case "disabled":
@@ -123,6 +133,16 @@ func TestAdmissionRenewalRespectsRevocationQuotaAndHolds(t *testing.T) {
 			if e != nil || lease.Allowed || lease.Reason != reason {
 				t.Fatalf("revoked renewal %+v %v", lease, e)
 			}
+			var stored struct {
+				ConfirmedAt time.Time `json:"confirmedAt"`
+			}
+			if err := s.Get("entry-admission-leases", initial.LeaseID, &stored); err != nil {
+				t.Fatal(err)
+			}
+			if !stored.ConfirmedAt.Equal(now) {
+				t.Fatal("denied renewal changed successful confirmation time")
+			}
+
 		})
 	}
 }

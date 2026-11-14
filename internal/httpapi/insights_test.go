@@ -32,6 +32,15 @@ func TestMyInsightsAuthenticationIsolationAndPolicy(t *testing.T) {
 			t.Fatal(e)
 		}
 	}
+	for _, owner := range []string{a.id, b.id} {
+		err := s.Put("entry-admission-leases", "connection-"+owner, map[string]any{
+			"id": "connection-" + owner, "binding": map[string]any{"userId": owner, "outputId": "owned-output-" + owner, "credentialVersion": "never-expose-credential", "subjectId": "never-expose-subject"},
+			"clientIp": "192.0.2.8", "expiresAt": now.Add(30 * time.Second), "confirmedAt": now,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
 	for _, x := range []struct {
 		client *http.Client
 		want   int
@@ -41,6 +50,17 @@ func TestMyInsightsAuthenticationIsolationAndPolicy(t *testing.T) {
 			t.Fatalf("auth %d %s", code, raw)
 		}
 		if code == 200 {
+			owner, foreign := a.id, b.id
+			if x.client == b.c {
+				owner, foreign = b.id, a.id
+			}
+			connections := body["admission"].(map[string]any)["connections"].([]any)
+			if len(connections) != 1 || connections[0].(map[string]any)["outputId"] != "owned-output-"+owner || connections[0].(map[string]any)["lastConfirmedAt"] == nil {
+				t.Fatalf("owned connection details %s", raw)
+			}
+			if strings.Contains(raw, "owned-output-"+foreign) || strings.Contains(raw, "never-expose") {
+				t.Fatal("private connection evidence leaked")
+			}
 			if len(body["daily"].([]any)) != 14 || body["timezone"] != "UTC+8" {
 				t.Fatalf("daily %s", raw)
 			}

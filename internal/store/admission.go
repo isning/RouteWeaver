@@ -37,6 +37,8 @@ type admissionLease struct {
 	ClientIP   string                `json:"clientIp"`
 	PresenceID string                `json:"presenceId"`
 	ExpiresAt  time.Time             `json:"expiresAt"`
+	// Control-plane acceptance time, not evidence of payload traffic. Zero on legacy leases.
+	ConfirmedAt time.Time `json:"confirmedAt,omitempty"`
 }
 type admissionGrant struct {
 	OutputID          string            `json:"outputId,omitempty"`
@@ -366,7 +368,7 @@ func (s *Store) AcquireAdmission(scope AdmissionScope, in AdmissionRequest, now 
 	}
 	until = budget.ExpiresAt
 	decision.ByteBudget = ceiling
-	lease := admissionLease{ID: leaseID, Scope: scope, Binding: binding, ClientIP: canonical, PresenceID: in.PresenceID, ExpiresAt: until}
+	lease := admissionLease{ID: leaseID, Scope: scope, Binding: binding, ClientIP: canonical, PresenceID: in.PresenceID, ExpiresAt: until, ConfirmedAt: now}
 	if e = s.putTx(tx, "entry-admission-leases", leaseID, lease); e != nil {
 		return decision, e
 	}
