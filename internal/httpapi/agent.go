@@ -45,6 +45,7 @@ func (h *server) agentIdentity(w http.ResponseWriter, r *http.Request) (Enrollme
 func (h *server) registerAgent(r chi.Router) {
 	h.registerDiagnosticAgent(r)
 	h.registerCoreDiagnosticAgent(r)
+	h.registerRawCoreLogAgent(r)
 	h.registerNodeObservationAgent(r)
 	h.registerAdmissionAgent(r)
 	h.registerServiceHeartbeat(r)

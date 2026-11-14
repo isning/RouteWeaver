@@ -226,6 +226,9 @@ func run() error {
 				log.Print("Resource history retention cleanup failed")
 			}
 			cleanupCancel()
+			if err := s.PruneRawCoreLogs(time.Now().UTC()); err != nil {
+				log.Print("Raw core log retention cleanup failed")
+			}
 			if err := s.PruneCoreDiagnostics(time.Now().UTC()); err != nil {
 				log.Print("Core diagnostic retention cleanup failed")
 			}

@@ -8,6 +8,7 @@ import (
 
 type SupervisorOptions struct {
 	CoreDiagnostics *CoreDiagnostics
+	RawCoreLogs     *RawCoreLogs
 	// This explicit local opt-in is never inferred from a rendered artifact.
 	AllowLocalProcess bool
 	StartupGrace      time.Duration

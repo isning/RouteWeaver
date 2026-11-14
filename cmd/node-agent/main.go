@@ -48,6 +48,7 @@ func run(ctx context.Context, args []string, out, errOut io.Writer) int {
 	adapterID := flags.String("adapter", agent.LocalFixtureID, "exact trusted adapter ID for outbound mode")
 	version := flags.String("core-version", "1", "exact core version for outbound mode")
 	meterEpoch := flags.String("meter-stream-epoch", "", "optional explicit durable meter outbox epoch")
+	enableRawCoreLogs := flags.Bool("raw-core-logs-accept-sensitive", false, "upload unredacted owned-core stdout/stderr to enrolled control plane; may include IPs, destinations and secrets; administrator access, bounded one-hour history; memory queue is lost on restart")
 	enableCoreDiagnostics := flags.Bool("core-diagnostics", false, "opt-in fixed core diagnostic categories only; no raw logs; qualified versions only")
 	enableDiagnostics := flags.Bool("diagnostics", true, "process bounded administrator-authorized public HTTPS diagnostic jobs in outbound mode")
 	observeNode := flags.Bool("observe-node", false, "read bounded Linux procfs resource/NIC counters; enable only on the designated instance per node")
@@ -117,6 +118,21 @@ func run(ctx context.Context, args []string, out, errOut io.Writer) int {
 		fmt.Fprintln(errOut, "managed supervision requires enrolled control-plane admission and an explicit durable meter-stream-epoch")
 		return 2
 	}
+	var rawCoreLogs *agent.RawCoreLogs
+	if *enableRawCoreLogs {
+		if *controlPlane == "" || (*mode != "supervise" && *mode != "catalog") || !*allowProcess {
+			fmt.Fprintln(errOut, "raw core logs require enrolled owned process supervision")
+			return 2
+		}
+		var e error
+		rawCoreLogs, e = agent.OpenRawCoreLogs(d.Scope)
+		if e != nil {
+			fmt.Fprintln(errOut, e)
+			return 2
+		}
+		defer rawCoreLogs.Close()
+		fmt.Fprintln(errOut, "Raw core logs enabled: unredacted stdout/stderr may contain IPs, destinations and credentials; uploaded to control-plane administrators. Existing backups and downloads are not erased by retention cleanup.")
+	}
 	var coreDiagnostics *agent.CoreDiagnostics
 	if *enableCoreDiagnostics {
 		if *controlPlane == "" || (*mode != "supervise" && *mode != "catalog") || !*allowProcess {
@@ -146,7 +162,7 @@ func run(ctx context.Context, args []string, out, errOut io.Writer) int {
 		}
 		options.CoreInstaller = installer
 		if *allowProcess {
-			options.InstallSupervisor = &agent.SupervisorOptions{CoreDiagnostics: coreDiagnostics, AllowLocalProcess: true, StartupGrace: 200 * time.Millisecond, StopTimeout: 2 * time.Second}
+			options.InstallSupervisor = &agent.SupervisorOptions{CoreDiagnostics: coreDiagnostics, RawCoreLogs: rawCoreLogs, AllowLocalProcess: true, StartupGrace: 200 * time.Millisecond, StopTimeout: 2 * time.Second}
 		}
 
 	case "fixture":
@@ -163,7 +179,7 @@ func run(ctx context.Context, args []string, out, errOut io.Writer) int {
 				fmt.Fprintln(errOut, "supervise requires allow-local-process and service or run-for in (0,1h]")
 				return 2
 			}
-			supervisor, err := agent.NewProcessSupervisor(checker, agent.SupervisorOptions{CoreDiagnostics: coreDiagnostics, AllowLocalProcess: true, StartupGrace: 200 * time.Millisecond, StopTimeout: 2 * time.Second})
+			supervisor, err := agent.NewProcessSupervisor(checker, agent.SupervisorOptions{CoreDiagnostics: coreDiagnostics, RawCoreLogs: rawCoreLogs, AllowLocalProcess: true, StartupGrace: 200 * time.Millisecond, StopTimeout: 2 * time.Second})
 			if err != nil {
 				fmt.Fprintln(errOut, err)
 				return 2
@@ -245,7 +261,7 @@ func run(ctx context.Context, args []string, out, errOut io.Writer) int {
 			}
 			defer diagnosticWorker.Close()
 		}
-		final, driverErr := agent.RunDriver(ctx, r, transport, spool, agent.DriverOptions{CoreDiagnostics: coreDiagnostics, Diagnostics: diagnosticWorker, NodeObserver: observer, PollInterval: time.Second, LeaseInterval: 250 * time.Millisecond, MaxRuntime: *runFor, Continuous: *service, OnTransportError: func(e error) { fmt.Fprintln(errOut, e) }})
+		final, driverErr := agent.RunDriver(ctx, r, transport, spool, agent.DriverOptions{CoreDiagnostics: coreDiagnostics, RawCoreLogs: rawCoreLogs, Diagnostics: diagnosticWorker, NodeObserver: observer, PollInterval: time.Second, LeaseInterval: 250 * time.Millisecond, MaxRuntime: *runFor, Continuous: *service, OnTransportError: func(e error) { fmt.Fprintln(errOut, e) }})
 		if encode(final) != nil {
 			return 1
 		}

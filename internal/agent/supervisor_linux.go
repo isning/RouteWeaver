@@ -265,6 +265,12 @@ func (s *ProcessSupervisor) Activate(ctx context.Context, st Staged) error {
 		cmd.Stdout = stdoutDiagnostic
 		cmd.Stderr = stderrDiagnostic
 	}
+	stdoutRaw := s.options.RawCoreLogs.NewWriter(st.Desired.AdapterID, st.Desired.CoreVersion, "stdout")
+	stderrRaw := s.options.RawCoreLogs.NewWriter(st.Desired.AdapterID, st.Desired.CoreVersion, "stderr")
+	if s.options.RawCoreLogs != nil {
+		cmd.Stdout = io.MultiWriter(cmd.Stdout, stdoutRaw)
+		cmd.Stderr = io.MultiWriter(cmd.Stderr, stderrRaw)
+	}
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true, Pdeathsig: syscall.SIGKILL}
 	var processIO *ProcessIO
 	if s.checker.commands.PrepareProcess != nil {
@@ -295,6 +301,8 @@ func (s *ProcessSupervisor) Activate(ctx context.Context, st Staged) error {
 	go func() {
 		err := cmd.Wait()
 		_ = stdoutDiagnostic.Close()
+		_ = stdoutRaw.Close()
+		_ = stderrRaw.Close()
 		_ = stderrDiagnostic.Close()
 		if processIO != nil && processIO.OnExit != nil {
 			processIO.OnExit()

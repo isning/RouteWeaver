@@ -10,6 +10,7 @@ import (
 
 type DriverOptions struct {
 	CoreDiagnostics *CoreDiagnostics
+	RawCoreLogs     *RawCoreLogs
 	Diagnostics     *DiagnosticWorker
 	// Opt-in physical-node collector; the control plane enforces one observer.
 	NodeObserver  *NodeObserver
@@ -106,6 +107,14 @@ func RunDriver(parent context.Context, r *Reconciler, tr ControlPlaneTransport, 
 			return State{}, errors.New("transport does not support core diagnostics")
 		}
 	}
+	var rawTransport RawCoreLogTransport
+	if o.RawCoreLogs != nil {
+		var ok bool
+		rawTransport, ok = tr.(RawCoreLogTransport)
+		if !ok {
+			return State{}, errors.New("transport does not support raw core logs")
+		}
+	}
 	diagnosticDone := make(chan struct{})
 	if o.Diagnostics != nil {
 		o.Diagnostics.bindManaged(r)
@@ -119,6 +128,12 @@ func RunDriver(parent context.Context, r *Reconciler, tr ControlPlaneTransport, 
 		}()
 	} else {
 		close(diagnosticDone)
+	}
+	rawDone := make(chan struct{})
+	if o.RawCoreLogs != nil {
+		go func() { defer close(rawDone); o.RawCoreLogs.Run(ctx, rawTransport, reportError) }()
+	} else {
+		close(rawDone)
 	}
 	coreDiagnosticDone := make(chan struct{})
 	if o.CoreDiagnostics != nil {
@@ -297,6 +312,11 @@ loop:
 	case <-coreDiagnosticDone:
 	case <-time.After(5 * time.Second):
 		workerErr = errors.New("core diagnostics did not quiesce on cancellation")
+	}
+	select {
+	case <-rawDone:
+	case <-time.After(5 * time.Second):
+		workerErr = errors.New("raw core logs did not quiesce")
 	}
 	stopCtx, stopCancel := context.WithTimeout(context.Background(), 4*time.Second)
 	defer stopCancel()
