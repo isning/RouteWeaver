@@ -11,6 +11,7 @@ import { useContext } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, CircleAlert, RefreshCw } from "lucide-react";
 import { request, list } from "./api";
+import { policyStatus } from "./access-policy-model";
 import type { Overview, Output, Profile } from "./types";
 import { bytesLabel, dateLabel } from "./model";
 import { PageHeader, QueryState, Status } from "./components";
@@ -274,7 +275,11 @@ export function OverviewPage() {
                       "当前服务"}
                   </CardDescription>
                   <CardAction>
-                    <Status value={data.status} />
+                    {Object.hasOwn(policyStatus, data.status) ? (
+                      <Badge variant="secondary">
+                        {data.status === "active" ? "已开通" : policyStatus[data.status]}
+                      </Badge>
+                    ) : <Status value={data.status} />}
                   </CardAction>
                 </CardHeader>
                 <CardContent>

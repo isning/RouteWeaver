@@ -310,3 +310,31 @@ it("shows zero only for independent subscriptions and keeps shared traffic unass
   ).toBeTruthy();
   expect(screen.getByText(/共用凭据流量，无法分配/)).toBeTruthy();
 });
+
+it.each([
+  ["active", "已开通"],
+  ["paused", "平台服务已暂停"],
+  ["disabled", "账号已停用"],
+  ["expired", "已到期"],
+  ["not-started", "未到开通时间"],
+  ["ambiguous", "用户组方案冲突"],
+  ["service-missing", "服务方案不存在"],
+])(
+  "renders the account policy state %s in the quota card without claiming runtime health",
+  async (status, label) => {
+    mount();
+    await screen.findByText("本周期剩余额度");
+    const client = clients.at(-1)!;
+    client.setQueryData(["overview"], {
+      ...client.getQueryData<object>(["overview"]),
+      status,
+    });
+    expect(await screen.findByText(label)).toBeTruthy();
+    const quota = screen
+      .getByText("本周期剩余额度")
+      .closest('[data-slot="card"]')!;
+    expect(
+      within(quota as HTMLElement).queryByText(status, { exact: true }),
+    ).toBeNull();
+  },
+);
