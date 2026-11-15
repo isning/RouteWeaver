@@ -554,3 +554,27 @@ it("shows a new IP arriving between clock ticks and expires it without another p
   await act(async () => { await vi.advanceTimersByTimeAsync(60_000); });
   expect(screen.queryByText("新 IP")).toBeNull();
 });
+
+it("aligns top subscriptions with proportional usage bars without treating them as quota", async () => {
+  mount();
+  await screen.findByText("工作订阅");
+  const client = clients.at(-1)!;
+  const existing = client.getQueryData<object[]>(["outputs"])![0];
+  act(() => {
+    client.setQueryData(["outputs"], [existing, {...existing, id:"half", name:"半量订阅"}]);
+    client.setQueryData(["output-usage"], {
+      period:"current-cycle", complete:true,
+      outputs:[{outputId:"output",rawBytes:4096,weightedBytes:8192},{outputId:"half",rawBytes:2048,weightedBytes:2048}],
+      unattributedRawBytes:0,unattributedWeightedBytes:0,
+    });
+  });
+  const table = screen.getByTestId("top-subscriptions-table");
+  await within(table).findByText("4 KiB");
+  expect(screen.getByText("本周期用量与客户端最近一次拉取")).toBeTruthy();
+  const full = within(table).getByText("工作订阅").closest("tr")!;
+  const half = within(table).getByText("半量订阅").closest("tr")!;
+  expect((full.querySelector('[aria-hidden="true"] > div') as HTMLElement).style.width).toBe("100%");
+  expect((half.querySelector('[aria-hidden="true"] > div') as HTMLElement).style.width).toBe("50%");
+  expect(within(full).getByText("工作订阅").className).toContain("truncate");
+  expect(within(full).getByRole("button", {name:"查看"})).toBeTruthy();
+});

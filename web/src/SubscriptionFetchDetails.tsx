@@ -12,7 +12,7 @@ export function SubscriptionFetchDetails({ history, outputId, now }: {
     const at = Date.parse(item.at);
     return Number.isFinite(at) && at <= now && at > now - 24 * 60 * 60 * 1000;
   }).length;
-  return <div className="mt-1 space-y-1 text-xs text-muted-foreground">
+  return <div className="text-xs leading-4 text-muted-foreground">
     {history.trackSourceIps === true && latest && (
       latest.sourceIp ? <div className="flex flex-wrap items-center gap-2">
         <span className="font-mono wrap-anywhere">{latest.sourceIp}</span>

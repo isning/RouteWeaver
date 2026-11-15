@@ -189,6 +189,7 @@ export function OverviewPage() {
     outputRows.sort((a, b) => (b.rawBytes ?? -1) - (a.rawBytes ?? -1));
   }
   const visibleOutputRows = outputRows.slice(0, 6);
+  const largestOutputUsage = Math.max(0, ...outputRows.map((output) => output.rawBytes ?? 0));
   return (
     <div className="max-w-6xl space-y-6" data-testid="personal-overview">
       <PageHeader
@@ -556,7 +557,7 @@ export function OverviewPage() {
             </CardTitle>
             <CardDescription className="col-span-2 col-start-1 row-start-2 sm:col-span-1">
               {usageReady
-                ? "本周期实际流量，由高到低排列。"
+                ? "本周期用量与客户端最近一次拉取"
                 : "用量暂不可用，以下不按用量排序。"}
             </CardDescription>
             <CardAction className="row-span-1 self-center sm:row-span-2 sm:self-start">
@@ -583,19 +584,20 @@ export function OverviewPage() {
               <Table
                 aria-label="订阅用量与最近拉取"
                 className="min-w-[40rem] table-fixed"
+                data-testid="top-subscriptions-table"
               >
                 <TableHeader className="border-y bg-muted/30">
                   <TableRow className="hover:bg-transparent">
-                    <TableHead className="h-auto w-[34%] py-2 pl-6 text-xs text-muted-foreground">
+                    <TableHead className="h-auto w-[36%] py-2 pl-6 text-xs text-muted-foreground">
                       订阅
                     </TableHead>
-                    <TableHead className="h-auto w-[26%] py-2 text-xs text-muted-foreground">
-                      本周期实际流量
+                    <TableHead className="h-auto w-[30%] py-2 text-xs text-muted-foreground">
+                      本周期用量
                     </TableHead>
                     <TableHead className="h-auto py-2 text-xs text-muted-foreground">
                       最近拉取
                     </TableHead>
-                    <TableHead className="h-auto w-16 py-2 pr-6">
+                    <TableHead className="h-auto w-[5.5rem] py-2 pr-6">
                       <span className="sr-only">操作</span>
                     </TableHead>
                   </TableRow>
@@ -608,10 +610,10 @@ export function OverviewPage() {
                     return (
                       <TableRow key={output.id}>
                         <TableCell className="py-3 pl-6 whitespace-normal">
-                          <p className="text-sm font-medium wrap-anywhere">
+                          <p className="truncate text-sm font-medium" title={output.name}>
                             {output.name}
                           </p>
-                          <p className="mt-1 text-xs text-muted-foreground">
+                          <p className="text-xs text-muted-foreground">
                             {output.status === "published"
                               ? output.target.adapterId
                               : output.status === "draft"
@@ -620,13 +622,19 @@ export function OverviewPage() {
                           </p>
                         </TableCell>
                         <TableCell className="py-3 whitespace-normal">
-                          <p className="text-sm tabular-nums">
-                            {output.rawBytes !== undefined
-                              ? bytesLabel(output.rawBytes)
-                              : !usageReady
-                                ? "暂不可用"
-                                : "未单独计量"}
-                          </p>
+                          {output.rawBytes !== undefined ? (
+                            <div className="flex items-center gap-3" title={`本周期实际流量：${bytesLabel(output.rawBytes)}`}>
+                              <div className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-muted" aria-hidden="true">
+                                <div
+                                  className="h-full rounded-full bg-primary"
+                                  style={{ width: `${largestOutputUsage > 0 ? Math.max(0, output.rawBytes) / largestOutputUsage * 100 : 0}%` }}
+                                />
+                              </div>
+                              <span className="w-16 shrink-0 text-right text-xs tabular-nums">{bytesLabel(output.rawBytes)}</span>
+                            </div>
+                          ) : (
+                            <p className="text-xs text-muted-foreground">{!usageReady ? "暂不可用" : "未单独计量"}</p>
+                          )}
                         </TableCell>
                         <TableCell className="py-3 whitespace-normal">
                           {fetches.isPaused ? (
@@ -641,7 +649,7 @@ export function OverviewPage() {
                             </ActionButton>
                           ) : last ? (
                             <>
-                              <p className="flex flex-wrap items-center gap-2 text-xs" title={dateLabel(last.at)}>
+                              <p className="flex flex-wrap items-center gap-1.5 text-xs" title={dateLabel(last.at)}>
                                 {relativeTime(last.at)}
                                 {fetches.data && hasRecentNewFetchSource(fetches.data, output.id, now) && <Badge variant="outline" className="border-amber-200 bg-amber-50 px-1.5 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200" title="近 24 小时检测到的新拉取 IP">新 IP</Badge>}
                               </p>
