@@ -22,6 +22,7 @@ type templateInputs struct {
 	sets    []store.RecordSetCompare
 	// Non-nil only for bounded, read-only dashboard comparisons.
 	readBudget *int
+	platform   *platformComparisonReader
 }
 
 func newTemplateInputs(s *store.Store) *templateInputs {
@@ -29,6 +30,9 @@ func newTemplateInputs(s *store.Store) *templateInputs {
 }
 
 func (m *templateInputs) TenantGet(owner, kind, id string, out any) error {
+	if m.platform != nil {
+		return m.platform.snapshot.TenantGet(owner, kind, id, out)
+	}
 	category := kind
 	kind = store.TenantKind(owner, kind)
 	key := kind + "\x00" + id

@@ -69,41 +69,53 @@ func (h *server) preparePublishedManifest(proof *preparedFleet, deployment Serve
 // safe unresolved-proof errors rather than exposing storage/decode causes.
 var errPublishedProofUnconfirmed = errors.New("published path confirmation is unavailable")
 
+// A caller supplying a snapshot must capture the COMPLETE observation inventory
+// successfully before resolving. A partial list can hide duplicate listeners.
+// This dependency boundary is not itself a transactional snapshot.
+type publishedProofReader interface {
+	Get(kind, id string, out any) error
+	List(kind string) ([]json.RawMessage, error)
+}
+
 func (h *server) probeAppliedPublishedManifest(routeID, instanceID string) (domain.PublishedManifest, error) {
+	manifest, _, err := probeAppliedPublishedManifestWithReader(h.s, time.Now, routeID, instanceID)
+	return manifest, err
+}
+func probeAppliedPublishedManifestWithReader(reader publishedProofReader, now func() time.Time, routeID, instanceID string) (domain.PublishedManifest, time.Time, error) {
 	var manifest domain.PublishedManifest
 	var state controlprotocol.State
-	if e := h.s.Get("agent-observations", instanceID, &state); e != nil {
+	if e := reader.Get("agent-observations", instanceID, &state); e != nil {
 		if errors.Is(e, store.ErrNotFound) {
-			return manifest, errPublishedProofUnconfirmed
+			return manifest, time.Time{}, errPublishedProofUnconfirmed
 		}
-		return manifest, e
+		return manifest, time.Time{}, e
 	}
 	if state.Phase != controlprotocol.ObservedConformant || !state.NativeChecked || state.RecoveryRequired || state.Observed == nil || !state.Observed.Known || !state.Observed.Quiescent {
-		return manifest, errPublishedProofUnconfirmed
+		return manifest, time.Time{}, errPublishedProofUnconfirmed
 	}
-	if e := h.s.Get("published-manifests", state.Observed.RevisionID, &manifest); e != nil {
-		return manifest, e
+	if e := reader.Get("published-manifests", state.Observed.RevisionID, &manifest); e != nil {
+		return manifest, time.Time{}, e
 	}
 	raw, _ := json.Marshal(state.Observed.Identity)
 	var identity domain.DeploymentIdentity
 	if e := json.Unmarshal(raw, &identity); e != nil {
-		return manifest, e
+		return manifest, time.Time{}, e
 	}
 	if manifest.Identity != identity {
-		return manifest, fmt.Errorf("published principal manifest does not match applied identity")
+		return manifest, time.Time{}, fmt.Errorf("published principal manifest does not match applied identity")
 	}
-	if !time.Now().Before(manifest.PolicyExpiresAt) {
-		return manifest, errPublishedProofUnconfirmed
+	if !now().Before(manifest.PolicyExpiresAt) {
+		return manifest, time.Time{}, errPublishedProofUnconfirmed
 	}
 	var enrollment Enrollment
-	if e := h.s.Get("instance-enrollments", instanceID, &enrollment); e != nil {
-		return manifest, e
+	if e := reader.Get("instance-enrollments", instanceID, &enrollment); e != nil {
+		return manifest, time.Time{}, e
 	}
-	if enrollment.Revoked || !time.Now().Before(enrollment.ExpiresAt) {
-		return manifest, errPublishedProofUnconfirmed
+	if enrollment.Revoked || !now().Before(enrollment.ExpiresAt) {
+		return manifest, time.Time{}, errPublishedProofUnconfirmed
 	}
 	if enrollment.Scope != state.Observed.Scope {
-		return manifest, fmt.Errorf("published entry enrollment does not match observed identity")
+		return manifest, time.Time{}, fmt.Errorf("published entry enrollment does not match observed identity")
 	}
 	found := false
 	for _, route := range manifest.Routes {
@@ -114,20 +126,24 @@ func (h *server) probeAppliedPublishedManifest(routeID, instanceID string) (doma
 		// The frozen route's own identities must nevertheless be consistent;
 		// corruption is not evidence that an otherwise valid path is pending.
 		if route.DeploymentID != manifest.DeploymentID || len(route.EndpointIDs) == 0 || route.Path.Entry != route.EndpointIDs[0] || route.Path.Exit != route.EndpointIDs[len(route.EndpointIDs)-1] {
-			return manifest, fmt.Errorf("published route manifest identity is inconsistent")
+			return manifest, time.Time{}, fmt.Errorf("published route manifest identity is inconsistent")
 		}
 		if _, err := domain.ResolvePublishedRouteHops(route); err != nil {
-			return manifest, fmt.Errorf("published route manifest path is inconsistent")
+			return manifest, time.Time{}, fmt.Errorf("published route manifest path is inconsistent")
 		}
 		if found {
-			return manifest, fmt.Errorf("published route manifest identity is duplicated")
+			return manifest, time.Time{}, fmt.Errorf("published route manifest identity is duplicated")
 		}
 		found = true
 	}
 	if !found {
-		return manifest, errPublishedProofUnconfirmed
+		return manifest, time.Time{}, errPublishedProofUnconfirmed
 	}
-	return manifest, nil
+	deadline := manifest.PolicyExpiresAt
+	if enrollment.ExpiresAt.Before(deadline) {
+		deadline = enrollment.ExpiresAt
+	}
+	return manifest, deadline, nil
 }
 
 // appliedPublishedPath resolves only frozen manifest state, not mutable draft
@@ -142,6 +158,9 @@ func (h *server) appliedPublishedPath(routeID string) (domain.PublishedManifest,
 type appliedPathBundle struct {
 	Entry    domain.PublishedManifest
 	Programs []domain.ServerProgram
+	// ValidUntil is the earliest policy/enrollment deadline on the selected path.
+	// It is evidence for revalidation, never a cached authorization.
+	ValidUntil time.Time
 }
 
 func (h *server) appliedPublishedPathBundle(routeID string) (appliedPathBundle, error) {
@@ -153,12 +172,34 @@ func (h *server) appliedPublishedPathBundle(routeID string) (appliedPathBundle, 
 }
 
 func (h *server) probeAppliedPublishedPathBundle(routeID string) (appliedPathBundle, error) {
-	records, e := h.s.List("agent-observations")
+	// Keep the manual path's existing per-check live clock semantics.
+	return probeAppliedPublishedPathBundleWithReader(h.s, time.Now, routeID)
+}
+
+// boundedPublishedPathBundle is for a successfully captured complete immutable
+// reader only. Recheck real time after all reads; snapshot age cannot extend a
+// lease. A consumer that does more work must check ValidUntil again before use.
+func boundedPublishedPathBundle(reader publishedProofReader, now func() time.Time, routeID string) (appliedPathBundle, error) {
+	bundle, err := probeAppliedPublishedPathBundleUsing(reader, now, routeID, true)
+	if err != nil {
+		return appliedPathBundle{}, err
+	}
+	if !now().Before(bundle.ValidUntil) {
+		return appliedPathBundle{}, errPublishedProofUnconfirmed
+	}
+	return bundle, nil
+}
+func probeAppliedPublishedPathBundleWithReader(reader publishedProofReader, now func() time.Time, routeID string) (appliedPathBundle, error) {
+	return probeAppliedPublishedPathBundleUsing(reader, now, routeID, false)
+}
+func probeAppliedPublishedPathBundleUsing(reader publishedProofReader, now func() time.Time, routeID string, strict bool) (appliedPathBundle, error) {
+	records, e := reader.List("agent-observations")
 	if e != nil {
 		return appliedPathBundle{}, e
 	}
 	manifests := map[string]domain.PublishedManifest{}
 	ambiguous := map[string]bool{}
+	deadlines := map[string]time.Time{}
 	var unexpected error
 	for _, raw := range records {
 		var state controlprotocol.State
@@ -177,16 +218,22 @@ func (h *server) probeAppliedPublishedPathBundle(routeID string) (appliedPathBun
 			}
 			continue
 		}
-		manifest, e := h.probeAppliedPublishedManifest(routeID, state.Observed.InstanceID)
+		manifest, deadline, e := probeAppliedPublishedManifestWithReader(reader, now, routeID, state.Observed.InstanceID)
 		if e == nil {
 			id := manifest.Program.Listener.ID
 			if _, exists := manifests[id]; exists {
 				ambiguous[id] = true
 			}
 			manifests[id] = manifest
+			deadlines[id] = deadline
 		} else if !errors.Is(e, errPublishedProofUnconfirmed) && unexpected == nil {
 			unexpected = e
 		}
+	}
+	// Only the new bounded consumer rejects all unexpected inventory errors.
+	// Keep the existing manual resolver's complete-path precedence unchanged.
+	if strict && unexpected != nil {
+		return appliedPathBundle{}, unexpected
 	}
 	for _, manifest := range manifests {
 		for _, route := range manifest.Routes {
@@ -194,6 +241,7 @@ func (h *server) probeAppliedPublishedPathBundle(routeID string) (appliedPathBun
 				continue
 			}
 			complete := true
+			deadline := deadlines[manifest.Program.Listener.ID]
 			programs := make([]domain.ServerProgram, 0, len(route.EndpointIDs))
 			for _, id := range route.EndpointIDs {
 				hop, ok := manifests[id]
@@ -212,9 +260,12 @@ func (h *server) probeAppliedPublishedPathBundle(routeID string) (appliedPathBun
 					break
 				}
 				programs = append(programs, hop.Program)
+				if deadlines[id].Before(deadline) {
+					deadline = deadlines[id]
+				}
 			}
 			if complete {
-				return appliedPathBundle{Entry: manifest, Programs: programs}, nil
+				return appliedPathBundle{Entry: manifest, Programs: programs, ValidUntil: deadline}, nil
 			}
 		}
 	}

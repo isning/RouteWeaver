@@ -78,21 +78,28 @@ func (h *server) myActions(w http.ResponseWriter, r *http.Request) {
 			deferCheck()
 			continue
 		}
-		// Large/platform graphs remain available in selected review, not a
-		// dashboard-wide compile. Never silently call skipped rows unchanged.
-		if output.Attribution != nil || len(profile.PlatformEntryIDs) > 0 || (profile.IR.NativeOverride != nil && (profile.IR.NativeOverride.Format != "json" || len(profile.IR.NativeOverride.Content) > 4096)) || len(profile.SourceIDs) > 16 || len(profile.IR.Endpoints) > 256 || len(profile.IR.Rules) > 256 || len(profile.IR.Groups) > 64 || len(profile.IR.Resources) > 8 {
-			deferCheck()
-			continue
+		var comparison map[string]string
+		if len(profile.PlatformEntryIDs) > 0 {
+			if !smallPlatformComparison(output, profile) {
+				deferCheck()
+				continue
+			}
+			preflighted++
+			comparison = h.compareSmallPlatformDraft(r.Context(), owner, output, &budget)
+		} else {
+			// Large graphs remain available in selected review, not a dashboard
+			// compile. Failed admitted preflights count toward the shared work cap.
+			if output.Attribution != nil || (profile.IR.NativeOverride != nil && (profile.IR.NativeOverride.Format != "json" || len(profile.IR.NativeOverride.Content) > 4096)) || len(profile.SourceIDs) > 16 || len(profile.IR.Endpoints) > 256 || len(profile.IR.Rules) > 256 || len(profile.IR.Groups) > 64 || len(profile.IR.Resources) > 8 {
+				deferCheck()
+				continue
+			}
+			preflighted++
+			if !actionCollectionWithinBudget(owner, profile, inputs) {
+				deferCheck()
+				continue
+			}
+			comparison = h.compareOutputDraft(owner, output, inputs)
 		}
-		// Only eligible drafts enter the expensive-work budget. Failed preflights
-		// still count; each admitted preflight permits at most one comparison.
-		// Profile reads above remain bounded by the shared byte and scan limits.
-		preflighted++
-		if !actionCollectionWithinBudget(owner, profile, inputs) {
-			deferCheck()
-			continue
-		}
-		comparison := h.compareOutputDraft(owner, output, inputs)
 		item := actionSummaryItem{ID: "output:" + output.ID, Href: "#subscriptions?output=" + url.QueryEscape(output.ID), Priority: "normal"}
 		switch {
 		case comparison["reason"] == "missing-action-reference":

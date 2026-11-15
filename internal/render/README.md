@@ -53,9 +53,18 @@ rendering retains YAML support. Generated and final artifact checks cap content
 at 128 KiB. These are bounded-data/complexity limits with fixed embedded schemas,
 not a preemptive CPU deadline. No network or external schema loading is added.
 
-Dashboard comparisons use this path only for small, non-platform native drafts,
-after the existing owner-scoped shared input budget and collection preflight.
-Platform and independently metered graphs remain deferred. Oversized, invalid,
+Dashboard comparisons use this path for small native drafts after the existing
+owner-scoped shared input budget and collection preflight. Small platform drafts
+also use it, only when their complete dependency inventory fits a read-only
+snapshot: at most 64 records, 64 KiB per record, and the existing 2 MiB request
+input budget shared by both captures. The platform slice excludes collections,
+source snapshots, rule-file resources, and independently metered outputs.
+It evaluates canonical policy, usage and both hold types without rebuilding
+projections. After rendering it captures again, requires identical complete
+record membership/content, rechecks every grant and applied path, and rejects
+expired eligibility/proof deadlines. Larger graphs remain deferred. These are
+as-of comparisons, not authorization to deliver or publish; existing manual
+review, publication and delivery checks are unchanged. Oversized, invalid,
 unsupported-target, or unreadable candidates remain unchecked with their
 publication revision; a later read retries corrected saved data. A comparison
 never publishes the candidate or rewrites the stored publication.

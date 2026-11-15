@@ -202,6 +202,9 @@ func (h *server) resolveEntry(owner, id string) (domain.ClientEndpoint, error) {
 	return h.resolveEntryWithReader(owner, id, h.s)
 }
 func (h *server) resolveEntryWithReader(owner, id string, reader tenantRecordReader) (domain.ClientEndpoint, error) {
+	if inputs, ok := reader.(*templateInputs); ok && inputs.platform != nil {
+		return h.resolveComparisonEntry(owner, id, inputs.platform)
+	}
 	var grant PublicEntryGrant
 	if e := reader.TenantGet(owner, "platform-entries", id, &grant); e != nil {
 		return domain.ClientEndpoint{}, fmt.Errorf("platform entry is missing or not owned")

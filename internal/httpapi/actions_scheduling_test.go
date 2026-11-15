@@ -39,6 +39,9 @@ func TestActionsReserveBoundedChecksForEligibleDrafts(t *testing.T) {
 					switch mode {
 					case "unsupported", "scan-limit", "read-budget":
 						p.PlatformEntryIDs = []string{"platform-entry"}
+						if mode == "unsupported" {
+							p.SourceIDs = []string{"unsupported-mixed-source"}
+						}
 					case "failed-preflight":
 						p.CollectionID = "missing-collection"
 					}

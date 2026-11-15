@@ -70,8 +70,8 @@ func (h *server) prepareOutput(owner string, output Output, inputs *templateInpu
 			}
 		}
 	}
-	boundedNative := inputs.readBudget != nil && p.IR.NativeOverride != nil
-	if !boundedNative {
+	boundedRender := inputs.platform != nil || (inputs.readBudget != nil && p.IR.NativeOverride != nil)
+	if !boundedRender {
 		if err := domain.ValidateClientProfile(p.IR); err != nil {
 			return candidate, err
 		}
@@ -85,10 +85,10 @@ func (h *server) prepareOutput(owner string, output Output, inputs *templateInpu
 	p.IR.NameAllocations = output.NameAllocations
 	var result render.ClientResult
 	var err error
-	if boundedNative {
+	if boundedRender {
 		// Only the read-only dashboard opts into this contract. It checks the
-		// materialized IR before recursive validation and bounds every native
-		// rendering phase; a declined candidate remains explicitly unchecked.
+		// materialized IR before recursive validation and bounds every rendering
+		// phase; a declined candidate remains explicitly unchecked.
 		result, err = render.DefaultClients().RenderBounded(p.IR, output.Target, output.Mode)
 	} else {
 		result, err = render.DefaultClients().Render(p.IR, output.Target, output.Mode)
