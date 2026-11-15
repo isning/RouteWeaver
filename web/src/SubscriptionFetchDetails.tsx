@@ -18,7 +18,7 @@ export function SubscriptionFetchDetails({ history, outputId, now }: {
         <span className="font-mono wrap-anywhere">{latest.sourceIp}</span>
       </div> : <p>本次未记录来源 IP</p>
     )}
-    <p>24 小时内记录 {count} 次拉取</p>
+    <p className="whitespace-nowrap">24 小时内记录 {count} 次</p>
   </div>;
 }
 

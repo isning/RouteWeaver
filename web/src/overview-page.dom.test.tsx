@@ -548,7 +548,7 @@ it("shows a new IP arriving between clock ticks and expires it without another p
     await vi.advanceTimersByTimeAsync(1);
   });
   expect(screen.getByText("新 IP")).toBeTruthy();
-  expect(screen.getByText("24 小时内记录 1 次拉取")).toBeTruthy();
+  expect(screen.getByText("24 小时内记录 1 次")).toBeTruthy();
   // The existing minute timer still retires the badge with no fresh history.
   vi.setSystemTime(start + 24 * 60 * 60 * 1000 + 20_000);
   await act(async () => { await vi.advanceTimersByTimeAsync(60_000); });
