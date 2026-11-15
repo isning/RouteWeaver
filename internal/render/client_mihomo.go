@@ -17,7 +17,10 @@ func (MihomoClient) NormalizeName(name string) string { return strings.ReplaceAl
 func (MihomoClient) ClientCapability() ClientCapability {
 	return ClientCapability{NativeOverride: nativeCapability("bounded-schema-and-references"), AdapterID: "mihomo", Versions: []string{MihomoVersion}, Protocols: []string{"socks", "shadowsocks", "vless", "trojan", "vmess"}, Groups: []string{"manual", "url-test", "fallback", "load-balance"}, MatchOps: []string{"domain", "domain-suffix", "ip-cidr", "resource", "and", "or", "not"}, ResourceFormats: []string{"mihomo-yaml", "mihomo-text", "mrs"}, Runtime: []string{"dns", "sniff"}, TLSFingerprints: []string{"chrome", "firefox", "safari", "ios", "android", "edge", "360", "qq", "random"}, ReservedNames: []string{"DIRECT", "REJECT", "REJECT-DROP", "PASS", "COMPATIBLE", "GLOBAL"}}
 }
-func (MihomoClient) RenderClient(p domain.ClientProfileIR, _ Target, mode OutputMode, names map[string]string) (ClientResult, error) {
+func (a MihomoClient) RenderClient(p domain.ClientProfileIR, target Target, mode OutputMode, names map[string]string) (ClientResult, error) {
+	return a.renderClient(p, target, mode, names, nil)
+}
+func (MihomoClient) renderClient(p domain.ClientProfileIR, _ Target, mode OutputMode, names map[string]string, budget *renderBudget) (ClientResult, error) {
 	semantics := newSemanticCapture(mode)
 	proxies := []any{}
 	for _, e := range p.Endpoints {
@@ -98,7 +101,7 @@ func (MihomoClient) RenderClient(p domain.ClientProfileIR, _ Target, mode Output
 		proxies = append(proxies, proxy)
 	}
 	if mode == NodesOnly {
-		return clientResult("mihomo-nodes.json", map[string]any{"proxies": proxies}, p, names)
+		return clientResult("mihomo-nodes.json", map[string]any{"proxies": proxies}, p, names, budget)
 	}
 	groups := []any{}
 	for _, g := range p.Groups {
@@ -178,7 +181,7 @@ func (MihomoClient) RenderClient(p domain.ClientProfileIR, _ Target, mode Output
 	if p.Runtime.Sniff {
 		config["sniffer"] = map[string]any{"enable": true, "sniff": map[string]any{"HTTP": map[string]any{"ports": []int{80, 8080}}, "TLS": map[string]any{"ports": []int{443}}, "QUIC": map[string]any{"ports": []int{443}}}}
 	}
-	result, err := clientResult("mihomo.json", config, p, names)
+	result, err := clientResult("mihomo.json", config, p, names, budget)
 	result.Semantics = semantics.snapshot()
 	return result, err
 }

@@ -35,3 +35,27 @@ Checked 2026-10-19; these establish syntax, not runtime completion:
 - [Mihomo VLESS](https://wiki.metacubex.one/en/config/proxies/vless/), [TLS](https://wiki.metacubex.one/en/config/proxies/tls/), [transports](https://wiki.metacubex.one/en/config/proxies/transport/)
 - [Mihomo rules](https://wiki.metacubex.one/en/config/rules/), [rule providers](https://wiki.metacubex.one/en/config/rule-providers/), [fallback](https://wiki.metacubex.one/en/config/proxy-groups/fallback/), [load balance](https://wiki.metacubex.one/en/config/proxy-groups/load-balance/)
 - [Xray VLESS](https://xtls.github.io/en/config/outbounds/vless.html), [transport](https://xtls.github.io/en/config/transport.html)
+
+## Bounded background comparison
+
+`ClientRegistry.RenderBounded` is an opt-in contract for the built-in Mihomo and
+sing-box adapters. It does not change ordinary `Render`, explicit reviews, or
+publication capacity. A `RenderBudgetError` declines background work; it is not
+proof of invalid configuration or an unchanged subscription.
+
+The contract checks the materialized IR before recursive validation, then the
+actual generated tree before serialization and the composed/merged trees before
+native schema validation. Each tree is limited to 4,096 visited nodes, depth 16,
+4 KiB per string, and 16 KiB aggregate string bytes. Input inventories are capped
+at 32 endpoints, 8 groups, 32 rules, 8 resources, and 64 retained name allocations.
+Native input is JSON only, at most 4 KiB, depth 8, and 256 tokens; ordinary explicit
+rendering retains YAML support. Generated and final artifact checks cap content
+at 128 KiB. These are bounded-data/complexity limits with fixed embedded schemas,
+not a preemptive CPU deadline. No network or external schema loading is added.
+
+Dashboard comparisons use this path only for small, non-platform native drafts,
+after the existing owner-scoped shared input budget and collection preflight.
+Platform and independently metered graphs remain deferred. Oversized, invalid,
+unsupported-target, or unreadable candidates remain unchecked with their
+publication revision; a later read retries corrected saved data. A comparison
+never publishes the candidate or rewrites the stored publication.

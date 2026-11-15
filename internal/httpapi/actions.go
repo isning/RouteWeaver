@@ -78,9 +78,9 @@ func (h *server) myActions(w http.ResponseWriter, r *http.Request) {
 			deferCheck()
 			continue
 		}
-		// Large/native/platform graphs remain available in selected review, not a
+		// Large/platform graphs remain available in selected review, not a
 		// dashboard-wide compile. Never silently call skipped rows unchanged.
-		if output.Attribution != nil || len(profile.PlatformEntryIDs) > 0 || profile.IR.NativeOverride != nil || len(profile.SourceIDs) > 16 || len(profile.IR.Endpoints) > 256 || len(profile.IR.Rules) > 256 || len(profile.IR.Groups) > 64 || len(profile.IR.Resources) > 8 {
+		if output.Attribution != nil || len(profile.PlatformEntryIDs) > 0 || (profile.IR.NativeOverride != nil && (profile.IR.NativeOverride.Format != "json" || len(profile.IR.NativeOverride.Content) > 4096)) || len(profile.SourceIDs) > 16 || len(profile.IR.Endpoints) > 256 || len(profile.IR.Rules) > 256 || len(profile.IR.Groups) > 64 || len(profile.IR.Resources) > 8 {
 			deferCheck()
 			continue
 		}

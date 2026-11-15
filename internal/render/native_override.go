@@ -24,7 +24,7 @@ type NativeOverrideReport struct {
 	Validation    string   `json:"validation"`
 }
 
-func applyNativeOverride(p domain.ClientProfileIR, target Target, mode OutputMode, result ClientResult) (ClientResult, error) {
+func applyNativeOverride(p domain.ClientProfileIR, target Target, mode OutputMode, result ClientResult, budget *renderBudget) (ClientResult, error) {
 	o := p.NativeOverride
 	if o == nil {
 		return result, nil
@@ -33,6 +33,9 @@ func applyNativeOverride(p domain.ClientProfileIR, target Target, mode OutputMod
 		return ClientResult{}, err
 	}
 
+	if err := budget.native(o); err != nil {
+		return ClientResult{}, err
+	}
 	patch, err := decodeNative(o)
 	if err != nil {
 		return ClientResult{}, err
@@ -40,9 +43,18 @@ func applyNativeOverride(p domain.ClientProfileIR, target Target, mode OutputMod
 	if len(result.Artifacts) != 1 {
 		return ClientResult{}, nativeError("UNSUPPORTED", "/nativeOverride", "adapter must produce one configuration")
 	}
+	if err := budget.tree(patch, "native-patch"); err != nil {
+		return ClientResult{}, err
+	}
+	if err := budget.artifact(result.Artifacts[0].Content, "generated-base"); err != nil {
+		return ClientResult{}, err
+	}
 	var base map[string]any
 	if json.Unmarshal([]byte(result.Artifacts[0].Content), &base) != nil {
 		return ClientResult{}, nativeError("UNSUPPORTED", "/nativeOverride", "adapter output must be JSON")
+	}
+	if err := budget.tree(base, "generated-base"); err != nil {
+		return ClientResult{}, err
 	}
 	report := &NativeOverrideReport{Target: target, RuleMode: o.RuleMode, Nonportable: true, ChangedPaths: []string{}, ReplacedPaths: []string{}, Validation: "bounded-schema-and-references"}
 	if err = validateNativeScope(target, patch); err != nil {
@@ -57,15 +69,27 @@ func applyNativeOverride(p domain.ClientProfileIR, target Target, mode OutputMod
 	if err = composeNativePolicy(p, target, base, patch, o.RuleMode); err != nil {
 		return ClientResult{}, err
 	}
+	if err := budget.tree(base, "composed-base"); err != nil {
+		return ClientResult{}, err
+	}
+	if err := budget.tree(patch, "composed-patch"); err != nil {
+		return ClientResult{}, err
+	}
 	original, _ := json.Marshal(base)
 	patchJSON, _ := json.Marshal(patch)
 	merged, err := jsonpatch.MergePatch(original, patchJSON)
 	if err != nil {
 		return ClientResult{}, nativeError("MERGE", "/nativeOverride/content", "invalid object merge")
 	}
+	if err := budget.artifact(string(merged), "merged"); err != nil {
+		return ClientResult{}, err
+	}
 	var final map[string]any
 	if json.Unmarshal(merged, &final) != nil {
 		return ClientResult{}, nativeError("MERGE", "/nativeOverride/content", "invalid merged configuration")
+	}
+	if err := budget.tree(final, "merged-schema"); err != nil {
+		return ClientResult{}, err
 	}
 	if target.AdapterID == "mihomo" {
 		if err = validateMihomoNativeDNS(final, p.Resources); err != nil {
@@ -79,7 +103,11 @@ func applyNativeOverride(p domain.ClientProfileIR, target Target, mode OutputMod
 		report.Validation = "upstream-json-schema-and-references"
 	}
 	encoded, _ := json.MarshalIndent(final, "", "  ")
-	result.Artifacts[0].Content = string(encoded) + "\n"
+	content := string(encoded) + "\n"
+	if err := budget.artifact(content, "final"); err != nil {
+		return ClientResult{}, err
+	}
+	result.Artifacts[0].Content = content
 	kept := report.ReplacedPaths[:0]
 	for _, path := range report.ReplacedPaths {
 		if path == "/proxy-groups" || path == "/outbounds" || (target.AdapterID == "sing-box" && path == "/dns/servers") {

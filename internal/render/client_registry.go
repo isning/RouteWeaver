@@ -81,6 +81,9 @@ func (r *ClientRegistry) Capabilities() []ClientCapability {
 	return out
 }
 func (r *ClientRegistry) Render(p domain.ClientProfileIR, target Target, mode OutputMode) (ClientResult, error) {
+	return r.render(p, target, mode, nil)
+}
+func (r *ClientRegistry) render(p domain.ClientProfileIR, target Target, mode OutputMode, budget *renderBudget) (ClientResult, error) {
 	if mode != FullConfig && mode != NodesOnly {
 		return ClientResult{}, fmt.Errorf("OUTPUT_MODE_UNSUPPORTED: select full or nodes-only")
 	}
@@ -158,11 +161,25 @@ func (r *ClientRegistry) Render(p domain.ClientProfileIR, target Target, mode Ou
 	for id, allocation := range allocations {
 		names[id] = allocation.OutputName
 	}
-	result, err := a.RenderClient(p, target, mode, names)
+	var result ClientResult
+	var errRender error
+	if budget == nil {
+		result, errRender = a.RenderClient(p, target, mode, names)
+	} else {
+		switch adapter := a.(type) {
+		case MihomoClient:
+			result, errRender = adapter.renderClient(p, target, mode, names, budget)
+		case SingBoxClient:
+			result, errRender = adapter.renderClient(p, target, mode, names, budget)
+		default:
+			return ClientResult{}, &RenderBudgetError{Stage: "adapter"}
+		}
+	}
+	err = errRender
 	if err != nil {
 		return ClientResult{}, err
 	}
-	return applyNativeOverride(p, target, mode, result)
+	return applyNativeOverride(p, target, mode, result, budget)
 }
 func DefaultClients() *ClientRegistry { return NewClients(MihomoClient{}, SingBoxClient{}) }
 func validAdapterID(s string) bool {
@@ -196,12 +213,19 @@ func matchSupported(m domain.MatchExpression, ops []string) bool {
 	}
 	return true
 }
-func clientResult(path string, config any, p domain.ClientProfileIR, names map[string]string) (ClientResult, error) {
+func clientResult(path string, config any, p domain.ClientProfileIR, names map[string]string, budget *renderBudget) (ClientResult, error) {
+	if err := budget.tree(config, "generated-base"); err != nil {
+		return ClientResult{}, err
+	}
 	b, err := json.MarshalIndent(config, "", "  ")
 	if err != nil {
 		return ClientResult{}, err
 	}
-	return ClientResult{Artifacts: []domain.Artifact{{Path: path, Content: string(b) + "\n"}}, Resources: append([]domain.RuleResource{}, p.Resources...), Names: names, NameAllocations: p.NameAllocations}, nil
+	content := string(b) + "\n"
+	if err := budget.artifact(content, "generated-base"); err != nil {
+		return ClientResult{}, err
+	}
+	return ClientResult{Artifacts: []domain.Artifact{{Path: path, Content: content}}, Resources: append([]domain.RuleResource{}, p.Resources...), Names: names, NameAllocations: p.NameAllocations}, nil
 }
 func actionName(a domain.ActionRef, names map[string]string, direct, reject string) string {
 	switch a.Kind {

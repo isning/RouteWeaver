@@ -13,7 +13,10 @@ func (SingBoxClient) NormalizeName(name string) string { return name }
 func (SingBoxClient) ClientCapability() ClientCapability {
 	return ClientCapability{NativeOverride: nativeCapability("upstream-json-schema-and-references"), AdapterID: "sing-box", Versions: []string{SingBoxVersion}, Protocols: []string{"socks", "shadowsocks", "vless", "trojan", "vmess", "hysteria2", "anytls"}, Groups: []string{"manual", "url-test"}, MatchOps: []string{"domain", "domain-suffix", "ip-cidr", "resource", "and", "or", "not"}, ResourceFormats: []string{"sing-box-source", "srs"}, Runtime: []string{"dns", "sniff", "tun"}, TLSFingerprints: []string{"chrome", "firefox", "safari", "ios", "android", "edge", "360", "qq", "random", "randomized"}, ReservedNames: []string{"rw-direct"}}
 }
-func (SingBoxClient) RenderClient(p domain.ClientProfileIR, _ Target, mode OutputMode, names map[string]string) (ClientResult, error) {
+func (a SingBoxClient) RenderClient(p domain.ClientProfileIR, target Target, mode OutputMode, names map[string]string) (ClientResult, error) {
+	return a.renderClient(p, target, mode, names, nil)
+}
+func (SingBoxClient) renderClient(p domain.ClientProfileIR, _ Target, mode OutputMode, names map[string]string, budget *renderBudget) (ClientResult, error) {
 	semantics := newSemanticCapture(mode)
 	outbounds := []any{}
 	for _, e := range p.Endpoints {
@@ -25,7 +28,7 @@ func (SingBoxClient) RenderClient(p domain.ClientProfileIR, _ Target, mode Outpu
 		outbounds = append(outbounds, node)
 	}
 	if mode == NodesOnly {
-		return clientResult("sing-box-nodes.json", map[string]any{"outbounds": outbounds}, p, names)
+		return clientResult("sing-box-nodes.json", map[string]any{"outbounds": outbounds}, p, names, budget)
 	}
 	outbounds = append(outbounds, map[string]any{"type": "direct", "tag": "rw-direct"})
 	for _, g := range p.Groups {
@@ -102,7 +105,7 @@ func (SingBoxClient) RenderClient(p domain.ClientProfileIR, _ Target, mode Outpu
 	if remote {
 		config["experimental"] = map[string]any{"cache_file": map[string]any{"enabled": true}}
 	}
-	result, err := clientResult("sing-box.json", config, p, names)
+	result, err := clientResult("sing-box.json", config, p, names, budget)
 	result.Semantics = semantics.snapshot()
 	return result, err
 }
