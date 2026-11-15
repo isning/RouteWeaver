@@ -1360,3 +1360,31 @@ it("keeps the actual overview task and expanded usage while moving through legac
   }
   expect(writes).toEqual([]);
 });
+
+it("filters subscription status together with search and clears an empty result", async () => {
+  const profile = { ...emptyProfile(), id: "work", name: "Work" };
+  const links = [
+    { id: "live", name: "Current phone", status: "published" },
+    { id: "old", name: "Retired phone", status: "revoked" },
+  ].map(item => ({ ...item, profileId: profile.id, target: profile.target, mode: "full" }));
+  vi.stubGlobal("fetch", vi.fn(async (url) => {
+    const path = String(url);
+    if (path.endsWith("/overview")) return json(overview);
+    if (path.endsWith("/profiles")) return json([profile]);
+    if (path.endsWith("/outputs")) return json(links);
+    return json([]);
+  }));
+  mount(<SubscriptionsPage view="outputs" />);
+  await screen.findByText("Current phone", { exact: true });
+  await userEvent.click(screen.getByRole("combobox", { name: "订阅状态" }));
+  await userEvent.click(screen.getByRole("option", { name: "已撤销" }));
+  expect(screen.queryByText("Current phone", { exact: true })).toBeNull();
+  expect(screen.getByText("Retired phone", { exact: true })).toBeTruthy();
+  fireEvent.change(screen.getByRole("textbox", { name: "搜索配置或客户端订阅" }), { target: { value: "Current" } });
+  expect(screen.getByText("没有匹配的配置或客户端订阅")).toBeTruthy();
+  await userEvent.click(screen.getByRole("button", { name: "清除筛选" }));
+  expect(screen.getByText("Current phone", { exact: true })).toBeTruthy();
+  expect(screen.getByText("Retired phone", { exact: true })).toBeTruthy();
+  expect((screen.getByRole("textbox", { name: "搜索配置或客户端订阅" }) as HTMLInputElement).value).toBe("");
+  expect(screen.getByRole("combobox", { name: "订阅状态" }).textContent).toContain("全部状态");
+});

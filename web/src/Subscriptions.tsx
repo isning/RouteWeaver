@@ -6,8 +6,8 @@ import { cn } from "@/lib/utils";
 import { Metadata, MetadataItem } from "@/ui-patterns/metadata";
 import { WorkspaceFrame } from "@/ui-patterns/workspace-frame";
 import { useSubscriptionRotationState } from "./subscription-rotation-state";
-import { groupSubscriptionInventory } from "./subscription-inventory";
-import { ResourceToolbar, SearchField } from "@/ui-patterns/resource-toolbar";
+import { groupSubscriptionInventory, type SubscriptionStatusFilter } from "./subscription-inventory";
+import { ResourceToolbar, SearchField, ToolbarFilter } from "@/ui-patterns/resource-toolbar";
 import type { MouseEvent, ReactNode } from "react";
 import {
   DropdownMenu,
@@ -247,7 +247,10 @@ export function SubscriptionsPage({
     scope.get("output") || scope.get("outputId") || undefined,
   );
   const [listContext, updateListContext] = useSubscriptionContext(profileScope);
-  const { search, page, linkPages } = listContext;
+  const { search, status, page, linkPages } = listContext;
+  const statusFilterId = useId();
+  const setStatus = (status: SubscriptionStatusFilter) =>
+    updateListContext({ status, page: 1, linkPages: {} });
   const setSearch = (search: string) =>
     updateListContext({ search, page: 1, linkPages: {} });
   const setPage = (page: number) => updateListContext({ page });
@@ -366,6 +369,7 @@ export function SubscriptionsPage({
     JSON.stringify([
       profileScope,
       search,
+      status,
       page,
       linkPages,
       selectedID,
@@ -827,6 +831,7 @@ export function SubscriptionsPage({
     allOutputs,
     profileScope,
     search,
+    status,
   );
   const pageCount = Math.max(1, Math.ceil(groups.length / 10));
   const currentPage = Math.min(page, pageCount);
@@ -1199,7 +1204,20 @@ export function SubscriptionsPage({
             value={search}
             onValueChange={setSearch}
           />
-          } summary={<span role="status">
+          } filters={<ToolbarFilter label="状态" controlId={statusFilterId}>
+            <ChoiceSelect<SubscriptionStatusFilter>
+              id={statusFilterId}
+              aria-label="订阅状态"
+              searchable={false}
+              value={status}
+              onValueChange={(value) => setStatus(value ?? "all")}
+              options={[
+                { value: "all", label: "全部状态" },
+                { value: "published", label: "已发布" },
+                { value: "revoked", label: "已撤销" },
+              ]}
+            />
+          </ToolbarFilter>} summary={<span role="status">
             <Metadata>
               <MetadataItem>{groups.length} 组配置</MetadataItem>
               <MetadataItem>{outputs.isPending || outputs.isError
@@ -1546,29 +1564,31 @@ export function SubscriptionsPage({
           !outputs.isPending &&
           !profiles.isError &&
           !outputs.isError && (
-            <Section className={!needle && !profileScope && onStartProxySubscription ? "[&_[data-slot=empty-content]]:max-w-2xl" : undefined}>
+            <Section className={!needle && status === "all" && !profileScope && onStartProxySubscription ? "[&_[data-slot=empty-content]]:max-w-2xl" : undefined}>
               <EmptyState
                 title={
-                  needle
+                  needle || status !== "all"
                     ? "没有匹配的配置或客户端订阅"
                     : profileScope
                       ? "当前范围内没有可访问的配置或订阅"
                       : "暂无订阅"
                 }
                 description={
-                  needle
-                    ? "试试配置名、客户端订阅名或目标客户端。"
+                  status !== "all"
+                    ? "试试其他状态或清除筛选。"
+                    : needle
+                      ? "试试配置名、客户端订阅名或目标客户端。"
                     : profileScope
                       ? "未切换到其他配置，可返回全部配置继续查找。"
                       : undefined
                 }
                 action={
-                  needle ? (
+                  needle || status !== "all" ? (
                     <ActionButton
-                      onClick={() => setSearch("")}
+                      onClick={() => updateListContext({ search: "", status: "all", page: 1, linkPages: {} })}
                       variant="outline"
                     >
-                      清除搜索
+                      {status === "all" ? "清除搜索" : "清除筛选"}
                     </ActionButton>
                   ) : !profileScope && onStartProxySubscription ? (
                     <div className="grid w-full min-w-0 gap-3 text-left sm:grid-cols-2">

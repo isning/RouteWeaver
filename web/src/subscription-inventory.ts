@@ -1,5 +1,7 @@
 import type { Output, Profile } from "./types";
 
+export type SubscriptionStatusFilter = "all" | "published" | "revoked";
+
 export interface SubscriptionInventoryGroup {
   id: string;
   profile?: Profile;
@@ -13,6 +15,7 @@ export function groupSubscriptionInventory(
   allOutputs: readonly Output[],
   profileScope: string | undefined,
   search: string,
+  status: SubscriptionStatusFilter = "all",
 ): SubscriptionInventoryGroup[] {
   const needle = search.trim().toLocaleLowerCase();
   const matches = (value: string) => value.toLocaleLowerCase().includes(needle);
@@ -20,6 +23,7 @@ export function groupSubscriptionInventory(
     matches(
       `${output.name} ${output.target.adapterId} ${output.mode === "nodes-only" ? "纯节点" : "完整配置"}`,
     );
+  const statusMatches = (output: Output) => status === "all" || output.status === status;
   const profileIds = new Set(allProfiles.map((profile) => profile.id));
   const linksByProfile = new Map<string, Output[]>();
   for (const output of allOutputs) {
@@ -32,12 +36,11 @@ export function groupSubscriptionInventory(
   for (const profile of allProfiles) {
     if (profileScope && profile.id !== profileScope) continue;
     const links = linksByProfile.get(profile.id) || [];
-    const visible =
-      !needle || matches(profile.name) ? links : links.filter(linkMatches);
+    const visible = links.filter((output) => statusMatches(output) &&
+      (!needle || matches(profile.name) || linkMatches(output)));
     if (
       profile.id === profileScope ||
-      !needle ||
-      matches(profile.name) ||
+      (status === "all" && (!needle || matches(profile.name))) ||
       visible.length
     )
       groups.push({
@@ -51,7 +54,7 @@ export function groupSubscriptionInventory(
   // Do not deduplicate profiles: even malformed duplicate IDs keep their prior behavior.
   for (const [id, links] of linksByProfile) {
     if ((profileScope && id !== profileScope) || profileIds.has(id)) continue;
-    const visible = links.filter(linkMatches);
+    const visible = links.filter((output) => statusMatches(output) && linkMatches(output));
     if (visible.length || id === profileScope)
       groups.push({ id, links: visible, totalLinks: links.length });
   }

@@ -176,3 +176,16 @@ it("reads each output grouping key once instead of once for every profile", () =
     outputs.length,
   );
 });
+
+it("combines status with search without hiding unknown statuses from the full inventory", () => {
+  const profiles = [profile("p", "Work"), profile("empty")];
+  const live = { ...output("phone", "p", "Phone"), status: "published" };
+  const revoked = { ...output("old", "p", "Old phone"), status: "revoked" };
+  const unknown = { ...output("future", "p"), status: "future" };
+  const orphan = { ...output("orphan", "missing", "Phone"), status: "revoked" };
+  const outputs = [live, revoked, unknown, orphan];
+  expect(groupSubscriptionInventory(profiles, outputs, undefined, "Work", "published").map(g => g.links)).toEqual([[live]]);
+  expect(groupSubscriptionInventory(profiles, outputs, undefined, "Phone", "revoked").map(g => g.links)).toEqual([[revoked], [orphan]]);
+  expect(groupSubscriptionInventory(profiles, outputs, undefined, "", "all")[0].links).toEqual([live, revoked, unknown]);
+  expect(groupSubscriptionInventory(profiles, outputs, "p", "nothing", "revoked")).toEqual([{id: "p", profile: profiles[0], links: [], totalLinks: 3}]);
+});
