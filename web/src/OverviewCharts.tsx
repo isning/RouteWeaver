@@ -11,16 +11,23 @@ import {
 import { ChartTooltip } from "./ChartTooltip";
 import { bytesLabel } from "./model";
 
-function useChartSelection() {
+function useChartSelection(identity: string) {
   const ref = useRef<HTMLDivElement>(null);
   const id = useId();
-  const [selection, setSelection] = useState<{
+  const [observedSelection, setSelection] = useState<{
+    identity: string;
     index: number;
     x: number;
     y: number;
   }>();
+  // A refreshed array must never reuse another date or route at the same index.
+  const selection = observedSelection?.identity === identity ? observedSelection : undefined;
   const pinned = useRef(false);
   const source = useRef<"keyboard" | "pointer">("pointer");
+  useEffect(() => {
+    pinned.current = false;
+    setSelection(undefined);
+  }, [identity]);
   useEffect(() => {
     const dismiss = (event: globalThis.PointerEvent) => {
       if (!ref.current?.contains(event.target as Node)) {
@@ -36,6 +43,7 @@ function useChartSelection() {
     const parent = ref.current!.getBoundingClientRect();
     const target = event.currentTarget.getBoundingClientRect();
     setSelection({
+      identity,
       index,
       x: target.left - parent.left + target.width / 2,
       y: target.top - parent.top + target.height / 2,
@@ -45,6 +53,7 @@ function useChartSelection() {
     source.current = "pointer";
     const parent = ref.current!.getBoundingClientRect();
     setSelection({
+      identity,
       index,
       x: event.clientX - parent.left,
       y: event.clientY - parent.top,
@@ -96,6 +105,7 @@ function useChartSelection() {
         const parent = ref.current!.getBoundingClientRect(),
           target = event.currentTarget.getBoundingClientRect();
         setSelection({
+          identity,
           index,
           x: target.left - parent.left + target.width / 2,
           y: target.top - parent.top + target.height / 2,
@@ -138,7 +148,7 @@ export function DailyUsageChart({
   daily: { date: string; rawBytes: number; weightedBytes: number }[];
   timezone: string;
 }) {
-  const chart = useChartSelection();
+  const chart = useChartSelection(JSON.stringify(daily.map(day => day.date)));
   const max = Math.max(1, ...daily.map((day) => day.weightedBytes));
   const active = chart.selection && daily[chart.selection.index];
   return (
@@ -219,7 +229,7 @@ export function RouteUsageChart({
   palette: string[];
   fallbackName: string;
 }) {
-  const chart = useChartSelection();
+  const chart = useChartSelection(JSON.stringify(routes.map(route => route.routeId)));
   const total = routes.reduce((sum, route) => sum + route.rawBytes, 0);
   const active = chart.selection && routes[chart.selection.index];
   return (

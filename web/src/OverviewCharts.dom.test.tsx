@@ -112,3 +112,47 @@ it("does not draw a minimum colored share for zero usage", () => {
     "100%",
   );
 });
+
+
+it("keeps refreshed values for the same route but dismisses a reordered selection", () => {
+  const routes = [
+    { routeId: "a", rawBytes: 100, weightedBytes: 100 },
+    { routeId: "b", rawBytes: 200, weightedBytes: 300 },
+  ];
+  const props = { names: new Map([["a", "东京"], ["b", "伦敦"]]), palette: ["bg-primary"], fallbackName: "历史线路" };
+  const view = render(<RouteUsageChart {...props} routes={routes} />);
+  fireEvent.focus(screen.getByRole("button", { name: "伦敦用量占比" }));
+  expect(screen.getByRole("tooltip").textContent).toContain("伦敦");
+  const updated = [routes[0], { ...routes[1], rawBytes: 250 }];
+  view.rerender(<RouteUsageChart {...props} routes={updated} />);
+  expect(screen.getByRole("tooltip").textContent).toContain("250 B");
+  view.rerender(<RouteUsageChart {...props} routes={[updated[1], updated[0]]} />);
+  expect(screen.queryByRole("tooltip")).toBeNull();
+  fireEvent.keyDown(screen.getByRole("button", { name: "伦敦用量占比" }), { key: "Enter" });
+  fireEvent.click(screen.getByRole("button", { name: "伦敦用量占比" }), { detail: 0 });
+  expect(screen.getByRole("tooltip").textContent).toContain("伦敦");
+  expect(screen.getByRole("tooltip").textContent).toContain("250 B");
+});
+
+it("retires a pinned touch readout on a new daily window and allows another tap", () => {
+  const view = render(<DailyUsageChart daily={daily} timezone="UTC" />);
+  const tap = (name: string) => {
+    const button = screen.getByRole("button", { name });
+    const event = new Event("pointerdown", { bubbles: true });
+    Object.defineProperties(event, {
+      pointerType: { value: "touch" }, clientX: { value: 20 }, clientY: { value: 40 },
+    });
+    fireEvent(button, event);
+    fireEvent.click(button);
+    fireEvent.pointerLeave(button.parentElement!.parentElement!.parentElement!);
+  };
+  tap("2026-11-15用量");
+  expect(screen.getByRole("tooltip").textContent).toContain("2026-11-15");
+  const next = [...daily.slice(1), { date: "2026-11-16", rawBytes: 300, weightedBytes: 300 }];
+  view.rerender(<DailyUsageChart daily={next} timezone="UTC" />);
+  expect(screen.queryByRole("tooltip")).toBeNull();
+  tap("2026-11-16用量");
+  expect(screen.getByRole("tooltip").textContent).toContain("2026-11-16");
+  fireEvent.pointerDown(document.body);
+  expect(screen.queryByRole("tooltip")).toBeNull();
+});

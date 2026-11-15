@@ -578,3 +578,23 @@ it("aligns top subscriptions with proportional usage bars without treating them 
   expect(within(full).getByText("工作订阅").className).toContain("truncate");
   expect(within(full).getByRole("button", {name:"查看"})).toBeTruthy();
 });
+
+
+it("dismisses the daily readout when polling replaces its selected date", async () => {
+  vi.useFakeTimers();
+  vi.stubGlobal("ResizeObserver", class { observe() {} disconnect() {} });
+  mount();
+  await act(async () => { await vi.advanceTimersByTimeAsync(100); });
+  fireEvent.focus(screen.getByRole("button", { name: "2026-11-14用量" }));
+  expect(screen.getByRole("tooltip").textContent).toContain("2026-11-14");
+  const original = vi.mocked(fetch).getMockImplementation()!;
+  vi.mocked(fetch).mockImplementation(async (...args) => {
+    const response = await original(...args);
+    if (!String(args[0]).endsWith("/me/insights")) return response;
+    const data = await response.json();
+    return json({ ...data, daily: [{ date: "2026-11-15", rawBytes: 700, weightedBytes: 900 }] });
+  });
+  await act(async () => { await vi.advanceTimersByTimeAsync(31_000); });
+  expect(screen.getByRole("button", { name: "2026-11-15用量" })).toBeTruthy();
+  expect(screen.queryByRole("tooltip")).toBeNull();
+});
