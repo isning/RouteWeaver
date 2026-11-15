@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 36116)
-Total output lines: 3783
-
 import { ScrollableTabsList } from "@/ui-patterns/scrollable-tabs-list";
 import { DraftIntegerInput, exactDraftInteger } from "./draft-integer";
 import { Metadata, MetadataItem } from "@/ui-patterns/metadata";
@@ -1799,7 +1796,97 @@ export function ProfileEditor({
                     }))}
                     onValueChange={(value) => {
                       if (value === undefined) return;
-                      const action = pars…1116 tokens truncated…th &&
+                      const action = parseAction(value);
+                      update({
+                        ir: { ...draft.ir, defaultAction: action },
+                        ...includeChosenEntries([action]),
+                      });
+                    }}
+                  />
+                </label>
+                <ActionReferenceDetails
+                  controlID={actionControlID({ kind: "default" })}
+                  location="默认去向"
+                  references={[draft.ir.defaultAction]}
+                  actions={actions}
+                />
+                <ActionButton
+                  className="profile-candidate-action flex flex-wrap items-center gap-2"
+                  aria-label="默认流量：使用多个候选连接…"
+                  onClick={() =>
+                    openGroupTask(
+                      { kind: "default", expected: draft.ir.defaultAction },
+                      draft.ir.rules.length ? "未匹配规则的流量" : "所有流量",
+                    )
+                  }
+                  variant="outline"
+                >
+                  使用多个候选连接…
+                </ActionButton>
+                {/* Keep the announcer mounted; an empty consequence has no visual card. */}
+                <div
+                  className="profile-traffic-outcome space-y-2 rounded-lg bg-muted p-4 text-sm empty:sr-only"
+                  aria-live="polite"
+                >
+                  {!nativeOverride &&
+                    !draft.ir.rules.length &&
+                    draft.ir.defaultAction.kind === "direct" &&
+                    (endpoints.length > 0 || selectedEntries.length > 0) && (
+                      <p>已导入的连接尚未用于分流。</p>
+                    )}
+                  {nativeOverride && (
+                    <p>
+                      上方保留结构化默认行为；原生规则或设置可能改变最终行为，请按具体客户端检查。
+                    </p>
+                  )}
+                  {(draft.mode === "nodes-only" ||
+                    boundOutput?.mode === "nodes-only") && (
+                    <p>
+                      纯节点订阅仅交付连接；上方分流行为保存在共享配置中，供完整配置使用。
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="profile-input-task space-y-4 @min-[44rem]/profile-task:border-l @min-[44rem]/profile-task:pl-6">
+                <div className="profile-source-summary flex flex-wrap items-center justify-between gap-3 [&>h2]:mb-0 [&>span]:w-full">
+                  <h2>代理连接</h2>
+                  <ActionButton
+                    ref={sourceDisclosure}
+                    aria-label={sourceExpanded ? "收起来源设置" : sourceDisclosureLabel}
+                    aria-expanded={sourceExpanded}
+                    aria-controls={sourcePanelID}
+                    onKeyDown={(event) => {
+                      if (
+                        event.repeat &&
+                        (event.key === "Enter" || event.key === " ")
+                      )
+                        event.preventDefault();
+                    }}
+                    onClick={() => setSourceExpanded((expanded) => !expanded)}
+                    variant="outline"
+                  >
+                    {sourceExpanded ? "收起来源设置" : sourceDisclosureLabel}
+                  </ActionButton>
+                  <span className="profile-source-identity flex flex-wrap items-center gap-2">
+                    {sourceSummary}
+                  </span>
+                </div>
+                <div
+                  className="profile-input-result grid gap-2 rounded-lg bg-muted/50 p-3 text-sm text-muted-foreground"
+                  aria-live="polite"
+                >
+                  {effectiveInputs.status === "pending" ? (
+                    <span>
+                      {effectiveInputs.paused
+                        ? `等待核对${ownConnectionLabel}…`
+                        : `正在计算${ownConnectionLabel}…`}
+                    </span>
+                  ) : effectiveInputs.status === "error" ? (
+                    <strong>{ownConnectionLabel}暂不可用</strong>
+                  ) : (
+                    <strong>{endpoints.length === 0 &&
+                      !selectedSourceIds.length && !draft.collectionId &&
+                      !draft.platformEntryIds?.length && !draft.ir.endpoints.length &&
                       (draft.ir.defaultAction.kind === "direct" || draft.ir.defaultAction.kind === "reject") &&
                       !draft.ir.rules.length && !draft.ir.groups.length
                       ? "直连与拒绝不需要代理连接"
