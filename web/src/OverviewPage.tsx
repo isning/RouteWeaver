@@ -1,6 +1,6 @@
 import { DailyUsageChart, RouteUsageChart } from "./OverviewCharts";
 import { OverviewActions } from "./OverviewActions";
-import { SubscriptionFetchDetails } from "./SubscriptionFetchDetails";
+import { SubscriptionFetchDetails, hasRecentNewFetchSource } from "./SubscriptionFetchDetails";
 import { SubscriptionFetchAlerts, type FetchHistory } from "./SubscriptionFetchAlerts";
 import { Metadata, MetadataItem } from "@/ui-patterns/metadata";
 import {
@@ -641,7 +641,7 @@ export function OverviewPage() {
                             <>
                               <p className="flex flex-wrap items-center gap-2 text-xs" title={dateLabel(last.at)}>
                                 {relativeTime(last.at)}
-                                {fetches.data?.trackSourceIps && last.newSource && last.sourceIp && <Badge variant="outline" className="border-amber-200 bg-amber-50 px-1.5 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200">新 IP</Badge>}
+                                {fetches.data && hasRecentNewFetchSource(fetches.data, output.id, now) && <Badge variant="outline" className="border-amber-200 bg-amber-50 px-1.5 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200" title="近 24 小时检测到的新拉取 IP">新 IP</Badge>}
                               </p>
                               {fetches.data && <SubscriptionFetchDetails history={fetches.data} outputId={output.id} now={now} />}
                             </>
@@ -872,5 +872,3 @@ function countryName(code: string) {
     return code;
   }
 }
-
-

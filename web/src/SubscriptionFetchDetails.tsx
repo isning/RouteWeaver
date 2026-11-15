@@ -21,3 +21,21 @@ export function SubscriptionFetchDetails({ history, outputId, now }: {
     <p>24 小时内记录 {count} 次拉取</p>
   </div>;
 }
+
+
+/** Keep the latest address's badge for 24 hours after its recorded first appearance.
+ * Repeated pulls do not reset that clock; history retention remains the bound.
+ */
+export function hasRecentNewFetchSource(history: FetchHistory, outputId: string, now: number): boolean {
+  if (history.trackSourceIps !== true || !Number.isFinite(now)) return false;
+  const latest = history.items.find((item) => item.outputId === outputId);
+  if (!latest?.sourceIp) return false;
+  const latestAt = Date.parse(latest.at);
+  if (!Number.isFinite(latestAt) || latestAt > now) return false;
+  return history.items.some((item) => {
+    const at = Date.parse(item.at);
+    return item.outputId === outputId && item.sourceIp === latest.sourceIp &&
+      item.newSource === true && Number.isFinite(at) && at <= now &&
+      at > now - 24 * 60 * 60 * 1000;
+  });
+}
