@@ -69,7 +69,9 @@ export interface PersonalInsights {
   };
 }
 export function OverviewPage() {
-  const [now, setNow] = useState(Date.now);
+  const [clockTick, setNow] = useState(Date.now);
+  // Query updates can arrive between minute ticks; compare with render time.
+  const now = Math.max(clockTick, Date.now());
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 60_000);
     return () => clearInterval(timer);

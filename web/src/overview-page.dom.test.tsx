@@ -529,3 +529,28 @@ it("does not call a route historical when its name lookup fails", async () => {
   expect(screen.queryByRole("button", { name: "历史线路用量占比" })).toBeNull();
 });
 
+
+
+it("shows a new IP arriving between clock ticks and expires it without another pull", async () => {
+  vi.useFakeTimers();
+  const start = Date.parse("2026-11-15T12:00:00Z");
+  vi.setSystemTime(start);
+  mount();
+  await act(async () => { await vi.advanceTimersByTimeAsync(100); });
+  // No minute tick has run. A completed fetch arrives 20 seconds after mount.
+  vi.setSystemTime(start + 20_000);
+  await act(async () => {
+    clients.at(-1)!.setQueryData(["subscription-fetches"], {
+      trackSourceIps: true, limit: 100, windowDays: 30,
+      items: [{outputId:"output",sourceIp:"192.0.2.2",newSource:true,
+        at:new Date(start + 20_000).toISOString(),delivery:"feed"}],
+    });
+    await vi.advanceTimersByTimeAsync(1);
+  });
+  expect(screen.getByText("新 IP")).toBeTruthy();
+  expect(screen.getByText("24 小时内记录 1 次拉取")).toBeTruthy();
+  // The existing minute timer still retires the badge with no fresh history.
+  vi.setSystemTime(start + 24 * 60 * 60 * 1000 + 20_000);
+  await act(async () => { await vi.advanceTimersByTimeAsync(60_000); });
+  expect(screen.queryByText("新 IP")).toBeNull();
+});
