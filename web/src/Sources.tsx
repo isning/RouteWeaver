@@ -948,6 +948,7 @@ export function CollectionsPage() {
   const [savedSourceNames, setSavedSourceNames] = useState(
     () => new Map<string, string>(),
   );
+  const savedSourceReadAt = useRef(new Map<string, number>());
   // Keep the source subtask tied to this collection opening, including callbacks
   // that may outlive a discarded/unmounted workspace.
   const sourceOwner = useRef<typeof sourceTask>(null);
@@ -1105,6 +1106,7 @@ export function CollectionsPage() {
       stageDisclosures.current.clear();
       setSourceNotice(null);
       setSavedSourceNames(new Map());
+      savedSourceReadAt.current.clear();
       setBaseline(JSON.stringify(value));
       setIsNew(false);
       changeDraft(value);
@@ -1177,6 +1179,7 @@ export function CollectionsPage() {
     setPreview(null);
     setSourceNotice(null);
     setSavedSourceNames(new Map());
+    savedSourceReadAt.current.clear();
   };
   const close = () => {
     if (sourceOwner.current || busy()) return;
@@ -1220,6 +1223,26 @@ export function CollectionsPage() {
         return source && sourceSelectionIssue(source) ? [source] : [];
       })
     : [];
+  // A successful import can finish before its source-list refresh. Do not call
+  // that new source missing based on a catalog read from before the save.
+  const missingSources = sourceCatalogChecked
+    ? (draft?.sources || [])
+        .filter(({ sourceId }) =>
+          !sources.data.some((source) => source.id === sourceId) &&
+          (!savedSourceReadAt.current.has(sourceId) ||
+            sources.dataUpdatedAt > savedSourceReadAt.current.get(sourceId)!))
+        .map(({ sourceId }) => ({
+          id: sourceId, name: sourceNames.get(sourceId) || sourceId,
+        }))
+    : [];
+  const removeSourceReference = (id: string) => {
+    if (!draft || sourceOwner.current || busy()) return;
+    setError(null);
+    changeDraft({
+      ...draft, sources: draft.sources.filter((ref) => ref.sourceId !== id),
+    });
+    sourceSelection.current?.focus();
+  };
   const openSelectedSource = (source: Source, trigger: HTMLElement) => {
     if (sourceOwner.current || busy()) return;
     sourceReturnTrigger.current = trigger;
@@ -1368,7 +1391,8 @@ export function CollectionsPage() {
               !!sourceTask ||
               (conflicted && !isNew) ||
               reload.isPending ||
-              unavailableSources.length > 0
+              unavailableSources.length > 0 ||
+              missingSources.length > 0
             }
             variant="default"
             pending={!!save.isPending}
@@ -1451,6 +1475,8 @@ export function CollectionsPage() {
             </label>
             <SourceSelectionIssues
               sources={unavailableSources}
+              missingSources={missingSources}
+              onRemoveMissing={removeSourceReference}
               onRepair={openSelectedSource}
               onRepairButtonRef={(id, button) => {
                 if (button) sourceRepairButtons.current.set(id, button);
@@ -1681,7 +1707,7 @@ export function CollectionsPage() {
             />
             <ActionButton
               leadingIcon={<Search aria-hidden="true" />}
-              disabled={unavailableSources.length > 0}
+              disabled={unavailableSources.length > 0 || missingSources.length > 0}
               aria-label="预览处理结果"
               aria-busy={inspect.isPending}
               onClick={() => {
@@ -1712,6 +1738,7 @@ export function CollectionsPage() {
           if (!ownsSourceTask() || !draft) return;
           if (result.kind === "ready") {
             const source = result.source;
+            savedSourceReadAt.current.set(source.id, sources.dataUpdatedAt);
             setSavedSourceNames((current) =>
               new Map(current).set(source.id, source.name),
             );

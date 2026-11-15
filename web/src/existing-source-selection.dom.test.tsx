@@ -719,3 +719,43 @@ it("does not take focus from a newer task when a retained Collection resumes", a
   expect(document.activeElement).toBe(input);
   newer.unmount();
 });
+
+it("identifies a missing collection source and removes only its reference before saving", async () => {
+  const { writes } = mount([accepted("Available")]);
+  await userEvent.click(await screen.findByRole("button", { name: /^Original collection.*编辑集合/ }));
+  expect(await screen.findByText("来源不存在")).toBeTruthy();
+  expect((screen.getByRole("button", { name: "保存集合" }) as HTMLButtonElement).disabled).toBe(true);
+  expect((screen.getByRole("button", { name: "预览处理结果" }) as HTMLButtonElement).disabled).toBe(true);
+  await userEvent.click(screen.getByRole("button", { name: "移除不存在的来源 Paused" }));
+  expect(document.activeElement).toBe(screen.getByRole("combobox", { name: "订阅来源" }));
+  expect(writes).toEqual([]);
+  await userEvent.click(screen.getByRole("button", { name: "保存集合" }));
+  await waitFor(() => expect(writes.some(w => w.path === "/me/collections/collection")).toBe(true));
+  const saved = writes.find(w => w.path === "/me/collections/collection")!.body;
+  expect(saved.sources).toEqual([recipe.sources[1]]);
+  expect(saved.steps).toEqual(recipe.steps);
+});
+
+it("does not claim a collection source is missing when the catalog cannot be read", async () => {
+  mount([], undefined, true);
+  await userEvent.click(await screen.findByRole("button", { name: /^Original collection.*编辑集合/ }));
+  await screen.findByText("暂时无法加载来源");
+  expect(screen.queryByText("来源不存在")).toBeNull();
+  expect(screen.queryByRole("button", { name: "移除不存在的来源 Paused" })).toBeNull();
+});
+
+it("waits for a successful source refresh before marking a selected reference missing", async () => {
+  const { client } = mount([accepted("Paused"), accepted("Available")]);
+  await userEvent.click(await screen.findByRole("button", { name: /^Original collection.*编辑集合/ }));
+  let finish!: (response: Response) => void;
+  const prior = vi.mocked(fetch).getMockImplementation()!;
+  vi.mocked(fetch).mockImplementation((url, init) => String(url).endsWith("/me/sources")
+    ? new Promise<Response>(resolve => { finish = resolve; })
+    : prior(url, init));
+  await act(async () => { void client.invalidateQueries({ queryKey: ["sources"] }); });
+  await waitFor(() => expect(finish).toBeDefined());
+  expect(screen.queryByText("来源不存在")).toBeNull();
+  await act(async () => { finish(json([accepted("Available")])); });
+  expect(await screen.findByText("来源不存在")).toBeTruthy();
+  expect((screen.getByRole("button", { name: "保存集合" }) as HTMLButtonElement).disabled).toBe(true);
+});

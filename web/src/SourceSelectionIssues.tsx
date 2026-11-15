@@ -31,8 +31,12 @@ export function SourceSelectionIssues({
   onRepairButtonRef,
   onRemove,
   removeCollection,
+  missingSources = [],
+  onRemoveMissing,
 }: {
   sources: Source[];
+  missingSources?: { id: string; name: string }[];
+  onRemoveMissing?: (id: string) => void;
   onRepair: (source: Source, trigger: HTMLElement) => void;
   /** Allows an owning task to restore this source's action after remount. */
   onRepairButtonRef?: (
@@ -42,13 +46,34 @@ export function SourceSelectionIssues({
   onRemove?: (source: Source) => void;
   removeCollection?: ReactNode;
 }) {
-  if (!sources.length) return null;
+  if (!sources.length && !missingSources.length) return null;
   return (
     <section
       className="space-y-4 rounded-lg border p-4"
       aria-label="需要处理的来源"
     >
       <ul className="space-y-3">
+        {missingSources.map((source) => (
+          <li
+            key={`missing:${source.id}`}
+            className="flex min-w-0 flex-col items-start justify-between gap-3 text-sm sm:flex-row sm:items-center"
+          >
+            <span className="grid min-w-0 gap-1 wrap-anywhere">
+              <span>{source.name}</span>
+              <span className="text-muted-foreground">来源不存在</span>
+            </span>
+            {onRemoveMissing && (
+              <ActionButton
+                size="sm"
+                variant="outline"
+                aria-label={`移除不存在的来源 ${source.name}`}
+                onClick={() => onRemoveMissing(source.id)}
+              >
+                移除
+              </ActionButton>
+            )}
+          </li>
+        ))}
         {sources.map((source) => (
           <li
             key={source.id}

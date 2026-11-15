@@ -881,6 +881,7 @@ it(
     );
     await waitFor(() => expect(finishList).toBeTruthy());
     expect(collection.getByText("1. Known provider")).toBeTruthy();
+    expect(collection.queryByText("来源不存在")).toBeNull();
     expect(
       collection.getByRole("combobox", { name: "订阅来源" }).closest("label")
         ?.textContent,
@@ -894,6 +895,7 @@ it(
     );
     await collection.findByText("暂时无法加载来源");
     expect(collection.getByText("1. Known provider")).toBeTruthy();
+    expect(collection.queryByText("来源不存在")).toBeNull();
     expect(
       collection.getByRole("combobox", { name: "订阅来源" }).closest("label")
         ?.textContent,
@@ -916,6 +918,12 @@ it(
       collection.getByRole("combobox", { name: "订阅来源" }).closest("label")
         ?.textContent,
     ).toContain("Server renamed provider");
+    // A later successful read is authoritative even after a local save hint.
+    await act(async () => { void client.invalidateQueries({ queryKey: ["sources"] }); });
+    await waitFor(() => expect(reads).toBe(4));
+    await act(async () => finishList!(json([source("existing", "Existing provider")])));
+    expect(await collection.findByText("来源不存在")).toBeTruthy();
+    expect((collection.getByRole("button", { name: "保存集合" }) as HTMLButtonElement).disabled).toBe(true);
     expect(writes).toEqual(["/me/sources"]);
   },
   SOURCE_IMPORT_JOURNEY_TIMEOUT_MS,
