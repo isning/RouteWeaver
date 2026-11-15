@@ -1005,8 +1005,8 @@ export function ProfileEditor({
       children: (
         <>
           <Section>
-            <div className="profile-rules-toolbar mb-4 flex flex-wrap items-center justify-between gap-3">
-              {!!draft.ir.rules.length && <p>按顺序匹配，首个命中生效。</p>}
+            <div className="profile-rules-toolbar mb-4 flex flex-wrap items-center justify-end gap-2">
+              {!!draft.ir.rules.length && <p className="mr-auto text-sm text-muted-foreground">按顺序匹配，首个命中生效。</p>}
               <ActionButton
                 leadingIcon={<Plus aria-hidden="true" />}
                 onClick={() =>
@@ -1043,17 +1043,21 @@ export function ProfileEditor({
                 按规则文件分流
               </ActionButton>
             </div>
+            {!!draft.ir.rules.length && <div className="@container/rules mb-4 overflow-hidden rounded-lg border">
+              <div aria-hidden="true" className="hidden grid-cols-[32px_minmax(0,1.6fr)_minmax(0,1fr)_136px] gap-4 bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground @min-[960px]/rules:grid">
+                <span>#</span><span>匹配条件</span><span>流量去向</span><span className="text-right">操作</span>
+              </div>
             {draft.ir.rules.map((rule, index) => (
               <div
-                className="rule-card mb-4 space-y-4 rounded-lg border p-4"
+                className="rule-card grid gap-4 border-t p-4 first:border-t-0 @min-[960px]/rules:grid-cols-[32px_minmax(0,1.6fr)_minmax(0,1fr)_136px] @min-[960px]/rules:items-start"
                 key={rule.id}
               >
-                <div className="step-top flex flex-wrap items-center justify-between gap-3">
-                  <span className="step-index flex size-6 items-center justify-center rounded-full bg-muted text-xs font-medium">
+                <span aria-hidden="true" className="hidden min-h-11 items-center font-medium tabular-nums text-muted-foreground @min-[960px]/rules:flex">{index + 1}</span>
+                <div className="step-top flex items-center justify-end gap-0.5 @min-[960px]/rules:order-last">
+                  <span aria-hidden="true" className="step-index mr-auto flex size-6 items-center justify-center rounded-full bg-muted text-xs font-medium @min-[960px]/rules:hidden">
                     {index + 1}
                   </span>
-                  <strong>匹配条件</strong>
-                  <div className="spacer flex-1" />
+                  <strong className="sr-only">规则 {index + 1} 匹配条件</strong>
                   <ActionButton
                     aria-label={`上移规则 ${index + 1}`}
                     leadingIcon={<ArrowUp aria-hidden="true" />}
@@ -1090,6 +1094,7 @@ export function ProfileEditor({
                     size="sm"
                   />
                 </div>
+                <div className="min-w-0 @min-[960px]/rules:[&>.match-editor>.match-scalar-line]:grid @min-[960px]/rules:[&>.match-editor>.match-scalar-line]:grid-cols-[140px_88px_minmax(0,1fr)_44px]">
                 <MatchEditor
                   value={rule.match}
                   resources={resources.data || []}
@@ -1112,6 +1117,8 @@ export function ProfileEditor({
                     })
                   }
                 />
+                </div>
+                <div className="min-w-0">
                 <label
                   className="rule-action grid min-w-0 gap-2 text-sm font-medium"
                   id={actionControlID({
@@ -1119,7 +1126,7 @@ export function ProfileEditor({
                     id: rule.id,
                   })}
                 >
-                  流量去向
+                  <span className="@min-[960px]/rules:sr-only">流量去向</span>
                   <ChoiceSelect
                     aria-label={`规则 ${index + 1} 的流量去向`}
                     aria-invalid={
@@ -1180,7 +1187,7 @@ export function ProfileEditor({
                   actions={actions}
                 />
                 <ActionButton
-                  className="profile-candidate-action flex flex-wrap items-center gap-2"
+                  className="profile-candidate-action mt-2 flex max-w-full flex-wrap items-center gap-2 whitespace-normal"
                   aria-label={`规则 ${index + 1}：使用多个候选连接…`}
                   onClick={() =>
                     openGroupTask(
@@ -1196,8 +1203,10 @@ export function ProfileEditor({
                 >
                   使用多个候选连接…
                 </ActionButton>
+                </div>
               </div>
             ))}
+            </div>}
             {!draft.ir.rules.length && (
               <div className="inline-empty rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
                 尚未添加规则。完整配置使用上方选择的默认流量行为。
