@@ -207,17 +207,21 @@ for (const width of [1440, 390]) {
     const row = page.getByRole("row").filter({ has: page.getByText("已接纳的规则文件", { exact: true }) });
     await startsNearRowTop(row);
     await expect(page.getByRole("columnheader", { name: "操作", exact: true })).toBeVisible();
-    const refresh = row.getByRole("button", { name: "刷新文件", exact: true });
-    await refresh.focus();
-    await expect(refresh).toBeFocused();
-    await expect(refresh).toBeInViewport();
+    const trigger = row.getByRole("button", { name: "更多操作 已接纳的规则文件", exact: true });
+    const refresh = page.getByRole("menuitem", { name: "刷新文件", exact: true });
+    await trigger.focus();
+    await expect(trigger).toBeFocused();
+    await expect(trigger).toBeInViewport();
     const actions = row.getByRole("group", { name: "已接纳的规则文件 的操作", exact: true });
     const shortStatus = actions.getByText("刷新失败", { exact: true });
     // Persisted row state is read in context, not as a fresh live alert. The
     // visual reminder is hidden from speech; actions describe the full reason.
     await expect(page.getByRole("alert")).toHaveCount(0);
     await expect(fullReason).toHaveText(resourceFailure);
+    await trigger.press("Enter");
     await expect(refresh).toHaveAccessibleDescription(resourceFailure);
+    await refresh.press("Escape");
+    await expect(trigger).toBeFocused();
     await expect(actions.getByRole("button", { name: "替换文件", exact: true })).toHaveAccessibleDescription(resourceFailure);
     await expect(shortStatus).toHaveAttribute("aria-hidden", "true");
     if (width === 390) {
@@ -230,7 +234,7 @@ for (const width of [1440, 390]) {
       await actions.getByRole("button", { name: "替换文件", exact: true }).focus();
       await page.keyboard.press("Tab");
       await expect(shortStatus).toBeInViewport({ ratio: 1 });
-      await expect(refresh).toBeFocused();
+      await expect(trigger).toBeFocused();
     } else await expect(shortStatus).not.toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1)).toBe(true);
     await page.screenshot({ path: info.outputPath(`resource-refresh-failure-${width}.png`), fullPage: true });
@@ -242,9 +246,11 @@ for (const width of [1440, 390]) {
     const { unexpected, refreshRequests } = await setup(page, true);
     await page.goto("/#resources");
     const actions = page.getByRole("group", { name: "已接纳的规则文件 的操作", exact: true });
-    const refresh = actions.getByRole("button", { name: "刷新文件", exact: true });
+    const trigger = actions.getByRole("button", { name: "更多操作 已接纳的规则文件", exact: true });
+    const refresh = page.getByRole("menuitem", { name: "刷新文件", exact: true });
     await expect(actions.getByText("刷新失败", { exact: true })).toHaveCount(0);
-    await refresh.focus();
+    await trigger.focus();
+    await trigger.press("Enter");
     await refresh.press("Enter");
     const decision = page.getByRole("alertdialog");
     await settledTask(decision);
@@ -255,23 +261,30 @@ for (const width of [1440, 390]) {
     await page.screenshot({ path: info.outputPath(`resource-refresh-request-failure-${width}.png`), fullPage: true });
     await decision.press("Escape");
     await expect(decision).toHaveCount(0);
-    await expect(refresh).toBeFocused();
+    await expect(trigger).toBeFocused();
+    await trigger.press("Enter");
     await expect(refresh).toHaveAccessibleDescription(resourceFailure);
+    await refresh.press("Escape");
+    await expect(trigger).toBeFocused();
     await expect(page.getByRole("alert")).toHaveCount(1);
     await expect(page.getByRole("alert")).toContainText(refreshRequestFailure);
     const shortStatus = actions.getByText("刷新失败", { exact: true });
     const fullReason = page.getByText(resourceFailure, { exact: true });
+    await trigger.press("Enter");
     await expect(fullReason).toHaveAttribute("id", await refresh.getAttribute("aria-describedby") || "missing-description");
+    await refresh.press("Escape");
+    await expect(trigger).toBeFocused();
     await expect(fullReason).not.toHaveAttribute("role", "alert");
     if (width === 390) await expect(shortStatus).toBeInViewport({ ratio: 1 });
     else await expect(shortStatus).not.toBeVisible();
     await page.screenshot({ path: info.outputPath(`resource-refresh-recovery-actions-${width}.png`), fullPage: true });
+    await trigger.press("Enter");
     await refresh.press("Enter");
     await settledTask(decision);
     await expect(page.locator('[role="alert"]')).toHaveCount(0);
     await decision.getByRole("button", { name: "取消", exact: true }).click();
     await expect(decision).toHaveCount(0);
-    await expect(refresh).toBeFocused();
+    await expect(trigger).toBeFocused();
     await expect(page.getByRole("alert")).toHaveCount(1);
     await expect(page.getByRole("alert")).toContainText(refreshRequestFailure);
     expect(refreshRequests).toHaveLength(1);
@@ -284,17 +297,21 @@ for (const width of [1440, 390]) {
     await expect(replacement).toHaveCount(0);
     await expect(replace).toBeFocused();
     await expect(page.getByRole("alert")).toContainText(refreshRequestFailure);
-    await refresh.focus();
+    await trigger.focus();
+    await trigger.press("Enter");
     await refresh.press("Enter");
     await settledTask(decision);
     await expect(page.locator('[role="alert"]')).toHaveCount(0);
     await decision.getByRole("button", { name: "读取并接纳", exact: true }).click();
     await expect(decision).toHaveCount(0);
-    await expect(refresh).toBeFocused();
+    await expect(trigger).toBeFocused();
     await expect(shortStatus).toHaveCount(0);
     await expect(fullReason).toHaveCount(0);
     await expect(page.getByText(refreshRequestFailure, { exact: true })).toHaveCount(0);
+    await trigger.press("Enter");
     await expect(refresh).not.toHaveAttribute("aria-describedby");
+    await refresh.press("Escape");
+    await expect(trigger).toBeFocused();
     await expect(replace).not.toHaveAttribute("aria-describedby");
     expect(refreshRequests).toEqual([
       "/api/me/resources/retained-rules/refresh",

@@ -266,7 +266,9 @@ test("resource popup focus does not scroll its underlying row", async ({
     name: `${names[1]} 的操作`,
     exact: true,
   });
-  await group.getByRole("button", { name: "刷新文件", exact: true }).click();
+  const trigger = group.getByRole("button", { name: `更多操作 ${names[1]}`, exact: true });
+  await trigger.click();
+  await page.getByRole("menuitem", { name: "刷新文件", exact: true }).click();
   const cancel = page.getByRole("button", { name: "取消", exact: true });
   const confirm = page.getByRole("button", { name: "读取并接纳", exact: true });
   await expect(cancel).toBeVisible();
@@ -282,6 +284,8 @@ test("resource popup focus does not scroll its underlying row", async ({
   expect(await viewport.evaluate((el) => el.scrollLeft)).toBe(before);
   // Cancel only dismisses the read/accept decision; no write is approved.
   await cancel.click();
+  await expect(cancel).toHaveCount(0);
+  await expect(trigger).toBeFocused();
   expect(unexpected).toEqual([]);
 });
 
