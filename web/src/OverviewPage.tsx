@@ -1,3 +1,4 @@
+import { DailyUsageChart, RouteUsageChart } from "./OverviewCharts";
 import { OverviewActions } from "./OverviewActions";
 import { SubscriptionFetchDetails } from "./SubscriptionFetchDetails";
 import { SubscriptionFetchAlerts, type FetchHistory } from "./SubscriptionFetchAlerts";
@@ -69,8 +70,6 @@ export interface PersonalInsights {
 }
 export function OverviewPage() {
   const [now, setNow] = useState(Date.now);
-  const [selectedDay, setSelectedDay] = useState<string>();
-  const [selectedRoute, setSelectedRoute] = useState<string>();
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 60_000);
     return () => clearInterval(timer);
@@ -130,10 +129,6 @@ export function OverviewPage() {
       : undefined;
   const forecastText = data && overview.isSuccess && !overview.isFetching && !overview.isPaused
     ? quotaForecastText(data, Date.now()) : null;
-  const max = Math.max(1, ...(detail?.daily.map((d) => d.weightedBytes) ?? []));
-  const activeDay = detail?.daily.find(d => d.date === selectedDay) ?? detail?.daily.at(-1);
-  const activeRoute = detail?.routes.find(r => r.routeId === selectedRoute) ?? detail?.routes[0];
-  const total = detail?.routes.reduce((sum, r) => sum + r.rawBytes, 0) ?? 0;
   const names = new Map(data?.routes.map((r) => [r.id, r.name]));
   const average =
     detail?.daily.length === 14
@@ -357,39 +352,7 @@ export function OverviewPage() {
                     >
                       {detail && (
                         <>
-                          <ol
-                            aria-label="每日额度消耗"
-                            className="mt-4 flex h-32 items-end gap-1.5"
-                          >
-                            {detail.daily.map((day, index) => (
-                              <li
-                                key={day.date}
-                                className="flex h-full min-w-0 flex-1 flex-col justify-end"
-                                title={`${day.date}：额度消耗 ${bytesLabel(day.weightedBytes)}，实际流量 ${bytesLabel(day.rawBytes)} (${detail.timezone})`}
-                              >
-                                <button type="button" className="flex h-full w-full flex-col justify-end rounded-t-md focus-visible:outline-2 focus-visible:outline-ring" aria-label={`${day.date}用量`} aria-pressed={activeDay?.date === day.date} onFocus={() => setSelectedDay(day.date)} onPointerEnter={() => setSelectedDay(day.date)} onClick={() => setSelectedDay(day.date)}>
-                                <span className="sr-only">
-                                  {day.date}：额度消耗{" "}
-                                  {bytesLabel(day.weightedBytes)}，实际流量{" "}
-                                  {bytesLabel(day.rawBytes)}
-                                </span>
-                                <div
-                                  aria-hidden="true"
-                                  className={`w-full rounded-t-md ${index >= detail.daily.length - 7 ? "bg-primary" : "bg-primary/20"}`}
-                                  style={{
-                                    height: `${(day.weightedBytes / max) * 100}%`,
-                                    minHeight: day.weightedBytes > 0 ? 2 : 0,
-                                  }}
-                                />
-                                </button>
-                              </li>
-                            ))}
-                          </ol>
-                          <div className="mt-2 flex justify-between text-xs tabular-nums text-muted-foreground">
-                            <span>{shortDay(detail.daily[0]?.date)}</span>
-                            <span>{shortDay(detail.daily.at(-1)?.date)}</span>
-                          </div>
-                          {activeDay && <p role="status" aria-live="polite" className="mt-2 text-xs tabular-nums text-muted-foreground">{activeDay.date} ({detail.timezone})：额度消耗 {bytesLabel(activeDay.weightedBytes)}（{activeDay.weightedBytes.toLocaleString()} B），实际流量 {bytesLabel(activeDay.rawBytes)}（{activeDay.rawBytes.toLocaleString()} B）</p>}
+                          <DailyUsageChart daily={detail.daily} timezone={detail.timezone} />
                         </>
                       )}
                     </QueryState>
@@ -760,26 +723,7 @@ export function OverviewPage() {
                 <>
                   {detail.routes.length ? (
                     <>
-                      <div
-                        role="group"
-                        aria-label="各线路用量占比"
-                        className="mb-2 flex min-h-8 items-center rounded-full"
-                      >
-                        {detail.routes.map((r, i) => (
-                          <button type="button"
-                            key={r.routeId}
-                            aria-label={`${names.get(r.routeId) || (overview.isSuccess ? "历史线路" : "线路名称暂不可用")}用量占比`}
-                            aria-pressed={activeRoute?.routeId === r.routeId}
-                            onFocus={() => setSelectedRoute(r.routeId)} onPointerEnter={() => setSelectedRoute(r.routeId)} onClick={() => setSelectedRoute(r.routeId)}
-                            className="flex h-8 min-w-0 items-center focus-visible:outline-2 focus-visible:outline-ring"
-                            style={{
-                              width: `${total ? (r.rawBytes / total) * 100 : 0}%`,
-                            }}
-                            title={`${names.get(r.routeId) || (overview.isSuccess ? "历史线路" : "线路名称暂不可用")}：${bytesLabel(r.rawBytes)}`}
-                          ><span aria-hidden="true" className={`h-3 w-full ${palette[i % palette.length]}`} /></button>
-                        ))}
-                      </div>
-                      {activeRoute && <p role="status" className="mb-3 text-xs tabular-nums text-muted-foreground">{names.get(activeRoute.routeId) || (overview.isSuccess ? "历史线路" : "线路名称暂不可用")}：{bytesLabel(activeRoute.rawBytes)}（{activeRoute.rawBytes.toLocaleString()} B），占 {total ? (activeRoute.rawBytes / total * 100).toFixed(2) : "0"}%</p>}
+                      <RouteUsageChart routes={detail.routes} names={names} palette={palette} fallbackName={overview.isSuccess ? "历史线路" : "线路名称暂不可用"} />
                       <Table aria-label="线路用量" className="table-fixed">
                         <colgroup>
                           <col />
@@ -855,11 +799,6 @@ export function OverviewPage() {
   );
 }
 
-function shortDay(day?: string) {
-  return day
-    ? day.slice(5).replace(/^0/, "").replace("-0", "/").replace("-", "/")
-    : "";
-}
 function resetCountdown(at: string) {
   const hours = Math.ceil((Date.parse(at) - Date.now()) / 3_600_000);
   if (!Number.isFinite(hours)) return "暂不可用";

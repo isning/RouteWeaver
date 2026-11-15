@@ -1,5 +1,6 @@
 import { Metadata, MetadataItem } from "@/ui-patterns/metadata";
-import { useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import { ChartTooltip } from "./ChartTooltip";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -25,32 +26,73 @@ export interface ResourceHistoryView {
   windowStart: string; windowEnd: string; points: ResourcePoint[];
 }
 const valid = (n: number | null | undefined) => n != null && Number.isFinite(n) && n >= 0;
+const sampleTime = (at: string) => new Date(at).toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
 const formatRate = (n: number) => `${bytesLabel(Math.round(n))}/s`;
 function Series({ points, fields, maximum, start, end, interval, windowLabel, title, format }: {
   points: ResourcePoint[]; fields: { key: "cpuPercent" | "memoryUsedPercent" | "receiveBytesPerSecond" | "transmitBytesPerSecond"; label: string; color: string }[];
   maximum?: number; start: number; end: number; interval: number; windowLabel: string; title: string; format: (n: number) => string;
 }) {
   const [selectedAt, setSelectedAt] = useState<string>();
+  const [anchor, setAnchor] = useState<{ x: number; y: number }>();
+  const root = useRef<HTMLDivElement>(null);
+  const plot = useRef<HTMLDivElement>(null);
+  const tooltipID = useId();
+  const interaction = useRef<"pointer" | "keyboard">("pointer");
+  useEffect(() => {
+    const dismiss = (event: PointerEvent) => {
+      if (!root.current?.contains(event.target as Node)) setAnchor(undefined);
+    };
+    document.addEventListener("pointerdown", dismiss);
+    return () => document.removeEventListener("pointerdown", dismiss);
+  }, []);
   const selectedIndex = Math.max(0, points.findIndex(p => p.observedAt === selectedAt));
-  const selected = points[selectedIndex];
+  const selected = selectedAt ? points.find(point => point.observedAt === selectedAt) : points[0];
   const selectAtPointer = (event: React.PointerEvent<SVGSVGElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
     if (!rect.width) return;
     const at = start + ((event.clientX - rect.left) / rect.width * 500 - 6) / 488 * (end - start);
     const nearest = points.reduce((best, point) => Math.abs(Date.parse(point.observedAt) - at) < Math.abs(Date.parse(best.observedAt) - at) ? point : best, points[0]);
-    if (nearest) setSelectedAt(nearest.observedAt);
+    if (nearest) {
+      interaction.current = "pointer";
+      setSelectedAt(nearest.observedAt);
+      setAnchor({ x: 6 / 500 * rect.width + 488 / 500 * rect.width * (Date.parse(nearest.observedAt) - start) / (end - start), y: event.clientY - rect.top });
+    }
   };
   const all = fields.flatMap(f => points.map(p => p[f.key])).filter(valid) as number[];
   const max = maximum || Math.max(1, ...all);
   const x = (at: string) => 6 + 488 * (Date.parse(at) - start) / (end - start);
   const y = (n: number) => 142 - 132 * Math.min(1, n / max);
-  return <div className="min-w-0 space-y-3">
+  const reveal = (index: number) => {
+    const point = points[index];
+    if (!point) return;
+    interaction.current = "keyboard";
+    setSelectedAt(point.observedAt);
+    setAnchor({ x: x(point.observedAt) / 500 * (plot.current?.clientWidth || 0), y: 72 });
+  };
+  const reading = (point: ResourcePoint, field: typeof fields[number]) => {
+    const value = point[field.key];
+    if (!valid(value)) return "无数据";
+    const precise = value!.toLocaleString(undefined, { maximumFractionDigits: 3 });
+    return field.key.endsWith("Percent") ? `${precise}%` : `${format(value!)} (${precise} B/s)`;
+  };
+  const readout = anchor && selected && (<ChartTooltip id={tooltipID} anchor={anchor}>
+        <time className="block font-medium" dateTime={selected.observedAt}>{sampleTime(selected.observedAt)} UTC+8</time>
+        <dl className="mt-2 grid gap-1.5">{fields.map(field => <div key={field.key} className="flex flex-wrap items-baseline justify-between gap-x-5 gap-y-1">
+          <dt className="inline-flex items-center gap-2"><span aria-hidden="true" className="size-2 shrink-0 rounded-full" style={{ background: field.color }} />{field.label}</dt>
+          <dd className="ml-auto font-medium tabular-nums">{reading(selected, field)}</dd>
+        </div>)}</dl>
+      </ChartTooltip>);
+  return <div ref={root} className="min-w-0 space-y-3"
+    onPointerLeave={event => { if (interaction.current === "pointer" && event.pointerType !== "touch") setAnchor(undefined); }}
+    onKeyDown={event => { if (event.key === "Escape") setAnchor(undefined); }}
+    onBlurCapture={event => { if (!event.currentTarget.contains(event.relatedTarget as Node)) setAnchor(undefined); }}>
     <div className="flex flex-wrap items-center justify-between gap-2 text-sm"><p className="font-medium">{title}</p></div>
-    {!all.length ? <div className="flex h-40 items-center justify-center rounded-md border border-dashed text-sm text-muted-foreground">尚无可绘制的数据</div> : <div className="grid h-40 min-w-0 grid-cols-[4rem_minmax(0,1fr)] gap-2">
+    {!all.length ? <div ref={plot} className="relative flex h-40 items-center justify-center rounded-md border border-dashed text-sm text-muted-foreground">尚无可绘制的数据{readout}</div> : <div className="grid h-40 min-w-0 grid-cols-[4rem_minmax(0,1fr)] gap-2">
       <div aria-hidden="true" className="relative text-right text-[11px] leading-none tabular-nums text-muted-foreground">{[max, max / 2, 0].map((value, index) => <span key={index} className="absolute right-0 -translate-y-1/2 whitespace-nowrap" style={{ top: `${y(value) / 155 * 100}%` }}>{format(value)}</span>)}</div>
+      <div ref={plot} className="relative min-w-0">
       <svg role="img" aria-label={`${title}，最近${windowLabel}实际采样趋势`} onPointerMove={selectAtPointer} onPointerDown={selectAtPointer} viewBox="0 0 500 155" className="h-40 w-full overflow-visible" preserveAspectRatio="none">
       {[max, max / 2, 0].map((value, index) => <line key={index} x1="6" x2="494" y1={y(value)} y2={y(value)} className="stroke-border" strokeDasharray="3 4" vectorEffect="non-scaling-stroke" />)}
-      {selected && <line x1={x(selected.observedAt)} x2={x(selected.observedAt)} y1="10" y2="142" className="stroke-foreground" strokeDasharray="2 3" vectorEffect="non-scaling-stroke" />}
+      {anchor && selected && <line x1={x(selected.observedAt)} x2={x(selected.observedAt)} y1="10" y2="142" className="stroke-foreground" strokeDasharray="2 3" vectorEffect="non-scaling-stroke" />}
       {fields.map(f => {
         let previous: ResourcePoint | undefined;
         return <g key={f.key} style={{ color: f.color }}>{points.map((p, index) => {
@@ -61,15 +103,23 @@ function Series({ points, fields, maximum, start, end, interval, windowLabel, ti
           const linkNext = next && valid(next[f.key]) && !next.breakBefore && Date.parse(next.observedAt) - Date.parse(p.observedAt) <= interval * 1500;
           return <g key={index}>
             {link && <line x1={x(prior!.observedAt)} y1={y(prior![f.key]!)} x2={x(p.observedAt)} y2={y(value!)} stroke="currentColor" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />}
-            <circle cx={x(p.observedAt)} cy={y(value!)} r={!link && !linkNext ? 2 : 4} fill={!link && !linkNext ? "currentColor" : "transparent"}><title>{f.label} {format(value!)}，{dateLabel(p.observedAt)}</title></circle>
+            <circle cx={x(p.observedAt)} cy={y(value!)} r={!link && !linkNext ? 2 : 4} fill={!link && !linkNext ? "currentColor" : "transparent"} />
           </g>;
         })}</g>;
       })}
-    </svg></div>}
+    </svg>
+    {anchor && selected && <>
+      {fields.map(field => valid(selected[field.key]) && <span key={field.key} aria-hidden="true"
+        className="pointer-events-none absolute size-2 -translate-x-1/2 -translate-y-1/2 rounded-full"
+        style={{ left: `${x(selected.observedAt) / 500 * 100}%`, top: `${y(selected[field.key]!) / 155 * 100}%`, background: field.color }} />)}
+      {readout}
+    </>}
+    </div></div>}
     <div className="flex justify-between gap-2 text-[11px] tabular-nums text-muted-foreground"><time>{dateLabel(new Date(start).toISOString())}</time><time>{dateLabel(new Date(end).toISOString())}</time></div>
     {!!points.length && <div className="space-y-2">
-      <input type="range" min={0} max={points.length - 1} step={1} value={selectedIndex} aria-label={`${title}采样时间`} aria-valuetext={selected?.observedAt} className="h-8 w-full accent-primary" onChange={event => setSelectedAt(points[Number(event.target.value)].observedAt)} />
-      {selected && <div role="status" className="break-words rounded-md bg-muted p-3 text-xs tabular-nums"><time dateTime={selected.observedAt}>{dateLabel(selected.observedAt)} UTC+8</time><dl className="mt-2 flex flex-wrap gap-x-4 gap-y-2">{fields.map(f => <div key={f.key}><dt className="text-muted-foreground">{f.label}</dt><dd>{valid(selected[f.key]) ? `${format(selected[f.key]!)} (${selected[f.key]!.toLocaleString(undefined, { maximumFractionDigits: 3 })}${f.key.endsWith("Percent") ? "%" : " B/s"})` : "无数据"}</dd></div>)}</dl></div>}
+      <input type="range" min={0} max={points.length - 1} step={1} value={selectedIndex} aria-label={`${title}采样时间`} aria-valuetext={selected ? `${sampleTime(selected.observedAt)} UTC+8，${fields.map(field => `${field.label} ${reading(selected, field)}`).join("，")}` : undefined}
+        aria-describedby={anchor && selected ? tooltipID : undefined} className="h-8 w-full accent-primary"
+        onFocus={() => reveal(selectedIndex)} onChange={event => reveal(Number(event.target.value))} />
     </div>}
     <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">{fields.map(f => <span className="inline-flex items-center gap-1.5" key={f.key}><span className="size-2 rounded-full" style={{ background: f.color }} />{f.label}</span>)}</div>
   </div>;
@@ -100,8 +150,8 @@ export function ResourceHistory({ nodeId }: { nodeId: string }) {
       {data?.available && validWindow && !!points.length && <>
         {stale && <p role="status" className="text-xs text-muted-foreground">最后采样 {dateLabel(last!.observedAt)}，较早的数据不代表当前状态。</p>}
         <div className="grid min-w-0 gap-6 lg:grid-cols-[2fr_1fr]">
-          <Series title="计费网卡流量" points={points} start={start} end={end} interval={data.intervalSeconds} windowLabel={windowLabel} format={formatRate} fields={[{ key: "receiveBytesPerSecond", label: "接收", color: "var(--foreground)" }, { key: "transmitBytesPerSecond", label: "发送", color: "var(--muted-foreground)" }]} />
-          <Series title="CPU 与内存" points={points} start={start} end={end} interval={data.intervalSeconds} windowLabel={windowLabel} maximum={100} format={n => `${n.toFixed(0)}%`} fields={[{ key: "cpuPercent", label: "CPU", color: "var(--foreground)" }, { key: "memoryUsedPercent", label: "内存使用率", color: "var(--muted-foreground)" }]} />
+          <Series key={`${nodeId}:${window}:traffic`} title="计费网卡流量" points={points} start={start} end={end} interval={data.intervalSeconds} windowLabel={windowLabel} format={formatRate} fields={[{ key: "receiveBytesPerSecond", label: "接收", color: "var(--color-sky-400)" }, { key: "transmitBytesPerSecond", label: "发送", color: "var(--color-red-500)" }]} />
+          <Series key={`${nodeId}:${window}:resources`} title="CPU 与内存" points={points} start={start} end={end} interval={data.intervalSeconds} windowLabel={windowLabel} maximum={100} format={n => `${n.toFixed(0)}%`} fields={[{ key: "cpuPercent", label: "CPU", color: "var(--color-sky-400)" }, { key: "memoryUsedPercent", label: "内存使用率", color: "var(--color-red-500)" }]} />
         </div>
         <Collapsible open={tableOpen} onOpenChange={setTableOpen} className="min-w-0 space-y-2">
           <CollapsibleTrigger asChild><Button variant="outline" size="sm">{tableOpen ? "收起" : "查看"}采样数据（{points.length} 条）</Button></CollapsibleTrigger>

@@ -485,15 +485,31 @@ it.each([3, 366, 367])("bounds a verified zero-use forecast to 366 days (%s)", a
 it("offers focus and touch access to daily and route chart values", async () => {
   mount();
   const day = await screen.findByRole("button", {name:"2026-11-14用量"});
+  expect(screen.queryByRole("tooltip")).toBeNull();
   fireEvent.focus(day);
-  fireEvent.click(day);
-  expect(day.getAttribute("aria-pressed")).toBe("true");
-  expect(screen.getByText(/2026-11-14 \(UTC\+8\)：额度消耗/).textContent).toContain("512 B");
+  const dailyTip = screen.getByRole("tooltip");
+  expect(day.getAttribute("aria-describedby")).toBe(dailyTip.id);
+  expect(dailyTip.textContent).toContain("2026-11-14");
+  expect(dailyTip.textContent).toContain("UTC+8");
+  expect(dailyTip.textContent).toContain("512 B");
+  expect(dailyTip.textContent).toContain("256 B");
+  fireEvent.keyDown(day, {key:"Escape"});
+  expect(screen.queryByRole("tooltip")).toBeNull();
+
   const route = screen.getByRole("button", {name:"东京用量占比"});
-  fireEvent.pointerEnter(route);
-  fireEvent.click(route);
-  expect(route.getAttribute("aria-pressed")).toBe("true");
-  expect(screen.getByText(/占 100.00%/).textContent).toContain("256 B");
+  const touch = new Event("pointerdown", {bubbles:true});
+  Object.defineProperties(touch, {pointerType:{value:"touch"},clientX:{value:20},clientY:{value:16}});
+  fireEvent(route, touch);
+  fireEvent.click(route, {detail:1});
+  const routeTip = screen.getByRole("tooltip");
+  expect(route.getAttribute("aria-describedby")).toBe(routeTip.id);
+  expect(routeTip.textContent).toContain("东京");
+  expect(routeTip.textContent).toContain("256 B");
+  expect(routeTip.textContent).toContain("100.00%");
+  fireEvent.pointerLeave(route.parentElement!.parentElement!);
+  expect(screen.getByRole("tooltip")).toBe(routeTip);
+  fireEvent.pointerDown(document.body);
+  expect(screen.queryByRole("tooltip")).toBeNull();
 });
 
 it("does not call a route historical when its name lookup fails", async () => {

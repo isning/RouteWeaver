@@ -156,13 +156,12 @@ it("distinguishes no matches and clears only the query to recover the same sourc
   fireEvent.change(search, { target: { value: "another no match" } });
   await userEvent.click(search);
   const clearSearch = screen.getByRole("button", { name: "清除搜索" });
-  for (
-    let tabs = 0;
-    tabs < 3 && document.activeElement !== clearSearch;
-    tabs++
-  ) {
+  // Search clear, then each task filter remains in the native tab order.
+  for (const name of ["清除搜索输入", "全部", "有更新", "更新失败"]) {
     await userEvent.tab();
+    expect(document.activeElement).toBe(screen.getByRole("button", { name }));
   }
+  await userEvent.tab();
   expect(document.activeElement).toBe(clearSearch);
   await userEvent.keyboard("{Enter}");
   expect(search.value).toBe("");
