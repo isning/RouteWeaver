@@ -36,7 +36,7 @@ func (h *server) myActions(w http.ResponseWriter, r *http.Request) {
 	items := []actionSummaryItem{}
 	unchecked := []uncheckedOutputComparison{}
 	budget := 2 << 20
-	checked := 0
+	preflighted := 0
 	platformRoutesComplete := !partial
 	platformRoutes := map[string]bool{}
 	for _, raw := range rows {
@@ -67,11 +67,10 @@ func (h *server) myActions(w http.ResponseWriter, r *http.Request) {
 			partial = true
 			unchecked = append(unchecked, uncheckedOutputComparison{ID: output.ID, Revision: output.Revision})
 		}
-		if checked >= 8 {
+		if preflighted >= 8 {
 			deferCheck()
 			continue
 		}
-		checked++
 		inputs := newTemplateInputs(h.s)
 		inputs.readBudget = &budget
 		var profile Profile
@@ -85,6 +84,10 @@ func (h *server) myActions(w http.ResponseWriter, r *http.Request) {
 			deferCheck()
 			continue
 		}
+		// Only eligible drafts enter the expensive-work budget. Failed preflights
+		// still count; each admitted preflight permits at most one comparison.
+		// Profile reads above remain bounded by the shared byte and scan limits.
+		preflighted++
 		if !actionCollectionWithinBudget(owner, profile, inputs) {
 			deferCheck()
 			continue
