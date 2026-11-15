@@ -1416,7 +1416,7 @@ export function SubscriptionsPage({
                         >
                           <TableCell className="subscription-info px-4 py-3 whitespace-normal text-muted-foreground">
                             <ActionButton
-                              className="subscription-name-button h-auto max-w-full justify-start whitespace-normal wrap-anywhere p-0 text-left text-sm font-medium text-foreground underline-offset-4 hover:underline focus-visible:outline-ring"
+                              className="subscription-name-button h-auto max-w-[min(100%,calc(100cqi-2rem))] justify-start whitespace-normal wrap-anywhere p-0 text-left text-sm font-medium text-foreground underline-offset-4 hover:underline focus-visible:outline-ring"
                               data-return-focus={`output:${output.id}`}
                               aria-label={`查看订阅 ${output.name}`}
                               onClick={() => updateScope("output", output.id)}

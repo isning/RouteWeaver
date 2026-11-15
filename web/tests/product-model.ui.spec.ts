@@ -475,7 +475,33 @@ async function auditReflowAndTextScale(
       }
     }
     await primary.scrollIntoViewIfNeeded();
-    await expect(primary).toBeInViewport({ ratio: 1 });
+    try {
+      await expect(primary).toBeInViewport({ ratio: 1 });
+    } catch (error) {
+      await page.screenshot({
+        path: testInfo.outputPath(`${context}-200pct-primary-failure.png`),
+        animations: "disabled",
+      });
+      await testInfo.attach(`${context}-200pct-primary-geometry`, {
+        body: JSON.stringify(await primary.evaluate((element) => {
+          const ancestors = [];
+          for (let node: Element | null = element; node; node = node.parentElement) {
+            const style = getComputedStyle(node);
+            ancestors.push({
+              tag: node.tagName, className: node.className,
+              rect: node.getBoundingClientRect().toJSON(),
+              overflowX: style.overflowX, overflowY: style.overflowY,
+              scrollLeft: node.scrollLeft, scrollTop: node.scrollTop,
+              clientWidth: node.clientWidth, clientHeight: node.clientHeight,
+              scrollWidth: node.scrollWidth, scrollHeight: node.scrollHeight,
+            });
+          }
+          return { viewport: { width: innerWidth, height: innerHeight }, ancestors };
+        })),
+        contentType: "application/json",
+      });
+      throw error;
+    }
     await inspectLayout?.();
     const enlargedGeometry = await geometry();
     await page.screenshot({
