@@ -17,6 +17,11 @@ type actionSummaryItem struct {
 	Priority    string `json:"priority"`
 }
 
+type uncheckedOutputComparison struct {
+	ID       string `json:"id"`
+	Revision string `json:"revision"`
+}
+
 // These are observations of saved owner data, never client receipt or health.
 // No refresh, remote inspection, publication, access-link reveal or mutation.
 func (h *server) myActions(w http.ResponseWriter, r *http.Request) {
@@ -29,6 +34,7 @@ func (h *server) myActions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	items := []actionSummaryItem{}
+	unchecked := []uncheckedOutputComparison{}
 	budget := 2 << 20
 	checked := 0
 	platformRoutesComplete := !partial
@@ -57,8 +63,12 @@ func (h *server) myActions(w http.ResponseWriter, r *http.Request) {
 				platformRoutes[dep.RouteID] = true
 			}
 		}
-		if checked >= 8 {
+		deferCheck := func() {
 			partial = true
+			unchecked = append(unchecked, uncheckedOutputComparison{ID: output.ID, Revision: output.Revision})
+		}
+		if checked >= 8 {
+			deferCheck()
 			continue
 		}
 		checked++
@@ -66,13 +76,17 @@ func (h *server) myActions(w http.ResponseWriter, r *http.Request) {
 		inputs.readBudget = &budget
 		var profile Profile
 		if inputs.TenantGet(owner, "profiles", output.ProfileID, &profile) != nil {
-			partial = true
+			deferCheck()
 			continue
 		}
-		// Large/native/collection graphs remain available in selected review, not a
+		// Large/native/platform graphs remain available in selected review, not a
 		// dashboard-wide compile. Never silently call skipped rows unchanged.
-		if output.Attribution != nil || len(profile.PlatformEntryIDs) > 0 || profile.CollectionID != "" || profile.IR.NativeOverride != nil || len(profile.SourceIDs) > 16 || len(profile.IR.Endpoints) > 256 || len(profile.IR.Rules) > 256 || len(profile.IR.Groups) > 64 || len(profile.IR.Resources) > 8 {
-			partial = true
+		if output.Attribution != nil || len(profile.PlatformEntryIDs) > 0 || profile.IR.NativeOverride != nil || len(profile.SourceIDs) > 16 || len(profile.IR.Endpoints) > 256 || len(profile.IR.Rules) > 256 || len(profile.IR.Groups) > 64 || len(profile.IR.Resources) > 8 {
+			deferCheck()
+			continue
+		}
+		if !actionCollectionWithinBudget(owner, profile, inputs) {
+			deferCheck()
 			continue
 		}
 		comparison := h.compareOutputDraft(owner, output, inputs)
@@ -90,7 +104,7 @@ func (h *server) myActions(w http.ResponseWriter, r *http.Request) {
 		case comparison["state"] == "unchanged":
 			continue
 		default:
-			partial = true
+			deferCheck()
 			continue
 		}
 		items = append(items, item)
@@ -104,10 +118,11 @@ func (h *server) myActions(w http.ResponseWriter, r *http.Request) {
 	sort.Strings(routeIDs)
 	sort.SliceStable(items, func(i, j int) bool { return items[i].Priority == "high" && items[j].Priority != "high" })
 	writeJSON(w, 200, struct {
-		AsOf                   time.Time           `json:"asOf"`
-		Items                  []actionSummaryItem `json:"items"`
-		Partial                bool                `json:"partial"`
-		PlatformRouteIDs       []string            `json:"platformRouteIds"`
-		PlatformRoutesComplete bool                `json:"platformRoutesComplete"`
-	}{now, items, partial, routeIDs, platformRoutesComplete})
+		AsOf                   time.Time                   `json:"asOf"`
+		Items                  []actionSummaryItem         `json:"items"`
+		Partial                bool                        `json:"partial"`
+		UncheckedOutputs       []uncheckedOutputComparison `json:"uncheckedOutputs"`
+		PlatformRouteIDs       []string                    `json:"platformRouteIds"`
+		PlatformRoutesComplete bool                        `json:"platformRoutesComplete"`
+	}{now, items, partial, unchecked, routeIDs, platformRoutesComplete})
 }

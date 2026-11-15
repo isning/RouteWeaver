@@ -1,3 +1,7 @@
+import {
+  OverviewOutputChecks,
+  type UncheckedOutput,
+} from "./OverviewOutputChecks";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { CircleAlert, FilePenLine } from "lucide-react";
@@ -24,6 +28,7 @@ interface ActionSummary {
   partial: boolean;
   platformRouteIds?: string[];
   platformRoutesComplete?: boolean;
+  uncheckedOutputs?: UncheckedOutput[];
 }
 
 /** Read-only overview. Every action opens the existing review/edit workflow. */
@@ -216,7 +221,7 @@ export function OverviewActions({
               <span>
                 {unavailable
                   ? "部分待办未能更新，已有结果可能过时。"
-                  : "部分订阅尚未检查。"}
+                  : "自动检查未覆盖全部订阅。"}
               </span>
               {unavailable ? (
                 <ActionButton size="sm" variant="ghost" onClick={retry}>
@@ -273,6 +278,24 @@ export function OverviewActions({
           )}
         </section>
       )}
+      <OverviewOutputChecks
+        targets={summary.data?.uncheckedOutputs ?? []}
+        outputs={outputs.data ?? []}
+        ready={
+          summary.isSuccess &&
+          !summary.isFetching &&
+          !summary.isPaused &&
+          outputs.isSuccess &&
+          !outputs.isFetching &&
+          !outputs.isPaused
+        }
+        readInventory={() => list<Output>("/me/outputs")}
+        refresh={() => {
+          void outputs.refetch();
+          void summary.refetch();
+        }}
+        go={go}
+      />
       {drafts.length > 0 && (
         <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
           <FilePenLine aria-hidden="true" className="size-4" />
