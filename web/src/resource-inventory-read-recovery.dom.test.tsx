@@ -59,7 +59,8 @@ it("retains known rules after a refresh read fails, then reconciles before using
   }));
   mount();
   await screen.findByRole("button", { name: "Known rules" });
-  await userEvent.click(actions().getByRole("button", { name: "刷新文件" }));
+  await userEvent.click(actions().getByRole("button", { name: "更多操作 Known rules" }));
+  await userEvent.click(screen.getByRole("menuitem", { name: "刷新文件" }));
   await userEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button", { name: "读取并接纳" }));
   await screen.findByText("Resource list unavailable");
   expect(screen.getByRole("button", { name: "Known rules" })).toBeTruthy();
@@ -67,7 +68,7 @@ it("retains known rules after a refresh read fails, then reconciles before using
   expect(screen.getByText("显示上次读取的规则资源，请重试以核对最新状态。")).toBeTruthy();
   expect(screen.queryByText("暂无规则资源")).toBeNull();
   expect(actions().getByRole("button", { name: "替换文件" })).toHaveProperty("disabled", true);
-  expect(actions().getByRole("button", { name: "刷新文件" })).toHaveProperty("disabled", true);
+  expect(actions().getByRole("button", { name: "更多操作 Known rules" })).toHaveProperty("disabled", true);
   expect(screen.getByRole("button", { name: "Known rules" })).toHaveProperty("disabled", true);
   expect(writes).toHaveLength(1);
 

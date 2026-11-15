@@ -519,9 +519,10 @@ it("names the exact remote rule resource before refresh and returns focus after 
     format: "clash", location: "remote", url: "https://example.test/rules.yaml",
     updatePolicy: "pinned", acceptedVersion: "v1", canRefresh: true,
   }]);
-  const refresh = await screen.findByRole("button", { name: "刷新文件" });
+  const refresh = await screen.findByRole("button", { name: "更多操作 Tokyo business rules" });
   for (let attempt = 0; attempt < 2; attempt++) {
     await userEvent.click(refresh);
+    await userEvent.click(screen.getByRole("menuitem", { name: "刷新文件" }));
     const confirmation = await screen.findByRole("alertdialog");
     expect(within(confirmation).getByRole("heading").textContent).toContain("Tokyo business rules");
     expect(confirmation.textContent).toContain("失败保留原文件");

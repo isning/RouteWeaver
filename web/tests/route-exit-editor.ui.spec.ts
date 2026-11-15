@@ -315,8 +315,9 @@ test("stale full-editor draft cannot overwrite a newer route; confirmation retur
   await openWorkspace(page);
   const { writes } = await installFixture(page);
   await page.goto("/#published-routes");
-  const edit = page.getByRole("button", { name: "编辑", exact: true });
+  const edit = page.getByRole("button", { name: "更多操作 英国线路", exact: true });
   await edit.click();
+  await page.getByRole("menuitem", { name: "编辑", exact: true }).click();
   await page.getByRole("textbox", { name: "线路名称" }).fill("未保存的名称");
   await page.getByRole("button", { name: "检查公开线路", exact: true }).click();
   await page.getByRole("button", { name: "保存公开线路", exact: true }).click();

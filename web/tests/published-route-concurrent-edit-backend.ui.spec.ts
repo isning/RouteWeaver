@@ -27,7 +27,8 @@ for (const width of [1440, 390]) {
     await signIn(page, baseURL, "admin");
     await seedInfrastructure(page.request, true);
     await page.goto("/#published-routes");
-    await page.getByRole("button", { name: "编辑", exact: true }).click();
+    await page.getByRole("button", { name: `更多操作 ${names.line}`, exact: true }).click();
+    await page.getByRole("menuitem", { name: "编辑", exact: true }).click();
     const editor = page.getByRole("dialog", { name: `编辑 ${names.line}`, exact: true });
     await settledTask(editor);
     await editor.getByRole("textbox", { name: "线路名称", exact: true }).fill("我保留的公开线路名称");

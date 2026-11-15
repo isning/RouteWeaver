@@ -13,6 +13,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/ui-patterns/password-input";
+import { ResourceToolbar, SearchField } from "@/ui-patterns/resource-toolbar";
 import { ActionButton } from "@/ui-patterns/actions";
 import { ChoiceSelect } from "@/ui-patterns/choice-select";
 import { AppField, AppForm, useForm } from "@/ui-patterns/form";
@@ -20,13 +21,15 @@ import { Notice } from "@/ui-patterns/notice";
 import { TaskDialog, TaskSheet } from "@/ui-patterns/task-overlays";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  Pencil,
+  Users,
   ArrowDown as ArrowDownOutlined,
   ArrowUp as ArrowUpOutlined,
   Trash2 as DeleteOutlined,
   Plus as PlusOutlined,
 } from "lucide-react";
 import { useContext, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { DataTable, TableRowActions } from "./DataTable";
+import { DataTable, TableRowActions, RowActionMenu } from "./DataTable";
 import { loadInfrastructure } from "./infrastructure-data";
 import { RouteExitEditor } from "./RouteExitEditor";
 import { ServerEndpointSelect } from "./ServerEndpointSelect";
@@ -320,6 +323,18 @@ export function PublishedRoutesPage() {
     queryKey: ["infrastructure"],
     queryFn: loadInfrastructure,
   });
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const searchTerm = search.trim().toLocaleLowerCase();
+  const visibleRoutes = (query.data ?? []).filter((route) => {
+    const deployment = infrastructure.data?.deployments.find(value => value.id === route.deploymentId);
+    return !searchTerm || [route.name, route.id, route.publicHost, String(route.publicPort), route.effective?.publicHost,
+      route.effective?.publicPort?.toString(), deployment?.name, route.deploymentId]
+      .some(value => value?.toLocaleLowerCase().includes(searchTerm));
+  });
+  useLayoutEffect(() => {
+    if (query.data !== undefined) setPage(current => Math.min(current, Math.max(1, Math.ceil(visibleRoutes.length / 10))));
+  }, [visibleRoutes.length, query.data]);
   const [editing, setEditing] = useState<PublishedRoute | null>(null);
   const [isNew, setIsNew] = useState(false);
   const [pendingCreate, setPendingCreate] = useState<PublishedRoute | null>(null);
@@ -477,6 +492,8 @@ export function PublishedRoutesPage() {
       >
         <ErrorNotice error={contextError} />
         <Section variant="plain">
+          {!!query.data?.length && <ResourceToolbar label="线路列表工具栏" className="mb-3"
+            search={<SearchField type="search" aria-label="搜索线路" placeholder="搜索名称、地址或转发路径" value={search} onValueChange={(value) => { setSearch(value); setPage(1); }} />} />}
           {!query.data?.length ? (
             <EmptyState
               title="暂无线路"
@@ -484,10 +501,16 @@ export function PublishedRoutesPage() {
                 needsTransferPath ? "需先建立服务器转发路径。" : undefined
               }
             />
+          ) : !visibleRoutes.length ? (
+            <EmptyState title="没有符合条件的线路"
+              action={<ActionButton variant="outline" onClick={() => { setSearch(""); setPage(1); }}>清除搜索</ActionButton>} />
           ) : (
             <DataTable
+              page={page}
+              onPageChange={setPage}
+              count={{ total: query.data.length, unit: "条线路", filtered: !!searchTerm }}
               rowKey="id"
-              rows={query.data}
+              rows={visibleRoutes}
               minWidth={720}
               columns={[
                 {
@@ -536,22 +559,20 @@ export function PublishedRoutesPage() {
                       <ActionButton
                         disabled={!inventoryReady}
                         onClick={() => { if (inventoryReady) setPrincipal(r); }}
-                        variant="outline"
+                        leadingIcon={<Users aria-hidden="true" />}
+                        variant="ghost"
                       >
                         配置用户入口
                       </ActionButton>
-                      <ActionButton
-                        disabled={!inventoryReady || hasConnectorHops(r)}
-                        aria-describedby={hasConnectorHops(r) ? `mixed-route-${r.id}` : undefined}
-                        onClick={() => {
+                      <RowActionMenu name={r.name} disabled={!inventoryReady} actions={[{
+                        label: "编辑", icon: <Pencil aria-hidden="true" />,
+                        disabled: hasConnectorHops(r),
+                        describedBy: hasConnectorHops(r) ? `mixed-route-${r.id}` : undefined,
+                        run: () => {
                           if (!inventoryReady || hasConnectorHops(r)) return;
-                          setIsNew(false);
-                          setEditing(r);
-                        }}
-                        variant="ghost"
-                      >
-                        编辑
-                      </ActionButton>
+                          setIsNew(false); setEditing(r);
+                        },
+                      }]} />
                       {hasConnectorHops(r) && <p id={`mixed-route-${r.id}`} className="max-w-xs text-left text-sm text-muted-foreground">{mixedPathEditingReason}</p>}
                     </TableRowActions>
                   ),

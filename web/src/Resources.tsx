@@ -11,12 +11,13 @@ import { ChoiceSelect } from "@/ui-patterns/choice-select";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Notice } from "@/ui-patterns/notice";
+import { ResourceToolbar, SearchField } from "@/ui-patterns/resource-toolbar";
 import { ActionButton } from "@/ui-patterns/actions";
 import { useForm, useWatch, AppField, AppForm } from "@/ui-patterns/form";
 import { toast } from "sonner";
-import { Plus, Search } from "lucide-react";
+import { Plus, Search, RefreshCw, Pencil } from "lucide-react";
 import { invalidateOutputInputs } from "./output-comparison";
-import { DataTable, TableRowActions } from "./DataTable";
+import { DataTable, TableRowActions, RowActionMenu } from "./DataTable";
 import { ruleResourceReference } from "./rule-file-model";
 import { RuleFileImport } from "./RuleFileImport";
 import { useUnsavedChanges } from "./navigation";
@@ -170,7 +171,15 @@ export function ResourcesPage() {
   const failedResources = (query.data ?? []).filter(
     (resource) => resource.refreshStatus === "failed",
   );
-  const visibleResources = resourceFilter === "failed" ? failedResources : (query.data ?? []);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const searchTerm = search.trim().toLocaleLowerCase();
+  const visibleResources = (resourceFilter === "failed" ? failedResources : (query.data ?? [])).filter(
+    (resource) => !searchTerm || [resource.name, resource.id, resource.format].some(value => value?.toLocaleLowerCase().includes(searchTerm)),
+  );
+  useLayoutEffect(() => {
+    if (query.data !== undefined) setPage(current => Math.min(current, Math.max(1, Math.ceil(visibleResources.length / 10))));
+  }, [visibleResources.length, query.data]);
   const inventoryKnown = query.data !== undefined;
   const inventoryReady = query.isSuccess && query.fetchStatus === "idle";
   const [current, setCurrent] = useState<RuleResource | null>(null);
@@ -409,19 +418,21 @@ export function ResourcesPage() {
         retry={() => query.refetch()}
       >
         <Section variant="plain">
+          {!!query.data?.length && <ResourceToolbar label="规则资源列表工具栏" className="mb-3"
+            search={<SearchField type="search" aria-label="搜索规则资源" placeholder="搜索名称、ID 或格式" value={search} onValueChange={(value) => { setSearch(value); setPage(1); }} />} />}
           {!!query.data?.length && (
             <div role="group" aria-label="筛选规则资源" className="mb-3 flex flex-wrap items-center gap-2">
               <ActionButton
                 variant={resourceFilter === "all" ? "secondary" : "ghost"}
                 aria-pressed={resourceFilter === "all"}
-                onClick={() => setResourceFilter("all")}
+                onClick={() => { setResourceFilter("all"); setPage(1); }}
               >
                 全部 <span className="text-muted-foreground tabular-nums">{query.data.length}</span>
               </ActionButton>
               <ActionButton
                 variant={resourceFilter === "failed" ? "secondary" : "ghost"}
                 aria-pressed={resourceFilter === "failed"}
-                onClick={() => setResourceFilter("failed")}
+                onClick={() => { setResourceFilter("failed"); setPage(1); }}
               >
                 刷新失败 <span className="text-muted-foreground tabular-nums">{failedResources.length}</span>
               </ActionButton>
@@ -432,12 +443,15 @@ export function ResourcesPage() {
           ) : !visibleResources.length ? (
             inventoryReady ? (
               <EmptyState
-                title="没有刷新失败的规则资源"
-                action={<ActionButton variant="outline" onClick={() => setResourceFilter("all")}>查看全部</ActionButton>}
+                title={searchTerm ? "没有符合条件的规则资源" : "没有刷新失败的规则资源"}
+                action={<ActionButton variant="outline" onClick={() => { setResourceFilter("all"); setSearch(""); setPage(1); }}>{searchTerm ? "清除筛选" : "查看全部"}</ActionButton>}
               />
             ) : null
           ) : (
             <DataTable
+              page={page}
+              onPageChange={setPage}
+              count={{ total: query.data.length, unit: "项规则资源", filtered: !!searchTerm || resourceFilter !== "all" }}
               rowKey="id"
               rows={visibleResources}
               className="[&_tbody_td]:align-top"
@@ -508,35 +522,29 @@ export function ResourcesPage() {
                       <ActionButton
                         onClick={() => edit(r)}
                         disabled={!inventoryReady}
-                        variant="outline"
+                        variant="ghost"
+                        leadingIcon={<Pencil aria-hidden="true" />}
                         aria-describedby={refreshFailureId(r)}
                       >
                         {r.acceptedVersion ? "替换文件" : "编辑"}
                       </ActionButton>
                       {r.canRefresh && (
-                        <ActionButton
-                          disabled={!inventoryReady}
-                          aria-describedby={refreshFailureId(r)}
-                          variant="outline"
-                          pending={
-                            !!(refresh.isPending && refresh.variables === r.id)
-                          }
-                          onClick={() => {
+                        <RowActionMenu name={r.name || r.id} disabled={!inventoryReady} actions={[{
+                          label: "刷新文件", icon: <RefreshCw aria-hidden="true" />,
+                          describedBy: refreshFailureId(r),
+                          disabled: refresh.isPending && refresh.variables === r.id,
+                          run: () => {
                             if (!inventoryReady) return;
                             setRefreshDecisionOpen(true);
                             confirmRefresh({
                               title: `重新读取并接纳「${r.name || r.id}」的远程规则文件？`,
-                              description:
-                                "固定版本会核对原校验值；失败保留原文件，并阻止基于失败刷新状态的新发布。已发布配置包不改变。",
-                              confirmLabel: "读取并接纳",
-                              cancelLabel: "取消",
+                              description: "固定版本会核对原校验值；失败保留原文件，并阻止基于失败刷新状态的新发布。已发布配置包不改变。",
+                              confirmLabel: "读取并接纳", cancelLabel: "取消",
                               onConfirm: () => refresh.mutateAsync(r.id),
                               onClosed: () => setRefreshDecisionOpen(false),
                             });
-                          }}
-                        >
-                          刷新文件
-                        </ActionButton>
+                          },
+                        }]} />
                       )}
                     </TableRowActions>
                   ),

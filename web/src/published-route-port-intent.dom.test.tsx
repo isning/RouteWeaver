@@ -163,7 +163,8 @@ async function openPortEditor(extra?: Parameters<typeof mockInventory>[0]) {
   const requests = mockInventory(extra);
   mount(<PublishedRoutesPage />);
   const user = userEvent.setup();
-  await user.click(await screen.findByRole("button", { name: "编辑" }));
+  await user.click(await screen.findByRole("button", { name: /^更多操作 / }));
+  await user.click(await screen.findByRole("menuitem", { name: "编辑" }));
   const editor = within(await screen.findByRole("dialog", { name: "编辑 Office line" }));
   return { requests, user, editor, port: editor.getByRole("spinbutton", { name: "对外端口" }) };
 }

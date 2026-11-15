@@ -4,7 +4,15 @@ import {
 } from "./OverviewOutputChecks";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { CircleAlert, FilePenLine } from "lucide-react";
+import {
+  CircleAlert,
+  Clock3,
+  FileInput,
+  FilePenLine,
+  FileWarning,
+  Gauge,
+  Wrench,
+} from "lucide-react";
 import { list, request } from "./api";
 import type { Output, Overview, Profile, RuleResource, Source } from "./types";
 import {
@@ -29,6 +37,25 @@ interface ActionSummary {
   platformRouteIds?: string[];
   platformRoutesComplete?: boolean;
   uncheckedOutputs?: UncheckedOutput[];
+}
+
+// The reference uses CircleAlert for publication work. Other live action kinds
+// retain their own meaning instead of repeating one generic warning icon.
+function actionIcon(kind: string) {
+  switch (kind) {
+    case "source":
+      return FileInput;
+    case "resource":
+      return FileWarning;
+    case "output-reference-missing":
+      return Wrench;
+    case "quota-low":
+      return Gauge;
+    case "entitlement-expiring":
+      return Clock3;
+    default:
+      return CircleAlert;
+  }
 }
 
 /** Read-only overview. Every action opens the existing review/edit workflow. */
@@ -195,9 +222,9 @@ export function OverviewActions({
         summary.data?.partial) && (
         <section
           aria-labelledby="home-attention"
-          className="rounded-xl border bg-card text-card-foreground"
+          className="rounded-xl border border-amber-200 bg-amber-50/60 text-card-foreground dark:border-amber-900/60 dark:bg-amber-950/20"
         >
-          <div className="flex items-center justify-between px-4 py-3">
+          <div className="flex items-center justify-between px-5 pt-4">
             <h2 id="home-attention" className="text-sm font-semibold">
               需要你处理{" "}
               <span className="ml-1 font-normal text-muted-foreground tabular-nums">
@@ -208,7 +235,7 @@ export function OverviewActions({
           {loading && (
             <p
               role="status"
-              className="px-4 pb-3 text-sm text-muted-foreground"
+              className="px-5 py-3 text-sm text-muted-foreground"
             >
               正在读取待办…
             </p>
@@ -216,7 +243,7 @@ export function OverviewActions({
           {(unavailable || summary.data?.partial) && (
             <div
               role="status"
-              className="flex flex-wrap items-center gap-2 px-4 pb-3 text-sm text-muted-foreground"
+              className="flex flex-wrap items-center gap-2 px-5 py-3 text-sm text-muted-foreground"
             >
               <span>
                 {unavailable
@@ -238,33 +265,36 @@ export function OverviewActions({
               )}
             </div>
           )}
-          <ul className="divide-y">
-            {(expanded ? items : items.slice(0, 4)).map((item) => (
-              <li
-                key={item.id}
-                className="flex flex-wrap items-center gap-3 px-4 py-3"
-              >
-                <CircleAlert
-                  aria-hidden="true"
-                  className="size-4 shrink-0 text-muted-foreground"
-                />
-                <div className="min-w-0 flex-1 basis-48">
-                  <p className="text-sm font-medium wrap-anywhere">
-                    {item.title}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {item.description}
-                  </p>
-                </div>
-                <ActionButton
-                  size="sm"
-                  variant="outline"
-                  onClick={() => navigate(item.href)}
+          <ul className="divide-y divide-amber-200/70 dark:divide-amber-900/50">
+            {(expanded ? items : items.slice(0, 4)).map((item) => {
+              const Icon = actionIcon(item.kind);
+              return (
+                <li
+                  key={item.id}
+                  className="flex flex-wrap items-center gap-3 px-5 py-3"
                 >
-                  {item.label}
-                </ActionButton>
-              </li>
-            ))}
+                  <Icon
+                    aria-hidden="true"
+                    className="size-4 shrink-0 text-amber-600 dark:text-amber-400"
+                  />
+                  <div className="min-w-0 flex-1 basis-48">
+                    <p className="text-sm font-medium wrap-anywhere">
+                      {item.title}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {item.description}
+                    </p>
+                  </div>
+                  <ActionButton
+                    size="sm"
+                    variant="outline"
+                    onClick={() => navigate(item.href)}
+                  >
+                    {item.label}
+                  </ActionButton>
+                </li>
+              );
+            })}
           </ul>
           {items.length > 4 && (
             <ActionButton

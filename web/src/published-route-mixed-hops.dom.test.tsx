@@ -137,11 +137,13 @@ it.each(["intent", "saved", "confirmed"] as const)("blocks destructive legacy ed
     }),
   };
   const { user, calls } = setup(route);
-  const rowEdit = await screen.findByRole("button", { name: "编辑" });
-  expect(rowEdit.hasAttribute("disabled")).toBe(true);
+  await user.click(await screen.findByRole("button", { name: /^更多操作 / }));
+  const rowEdit = await screen.findByRole("menuitem", { name: "编辑" });
+  expect(rowEdit.getAttribute("aria-disabled")).toBe("true");
   expect(screen.getByText(/当前编辑与更换出口暂不支持完整混合路径/)).toBeTruthy();
   fireEvent.click(rowEdit);
   expect(screen.queryByRole("dialog", { name: "编辑 Office line" })).toBeNull();
+  await user.keyboard("{Escape}");
   const detail = await openDetail(user);
   const edit = detail.getByRole("button", { name: "编辑线路" });
   const retarget = detail.getByRole("button", { name: "更换出口" });
@@ -176,7 +178,8 @@ it.each([false, true])("keeps managed-only editing and retarget available (expli
 
 it.each(["list", "resolve"] as const)("preserves an already-open draft and stops writes when %s refetch reveals a connector", async (source) => {
   const { user, client, calls } = setup(legacy);
-  await user.click(await screen.findByRole("button", { name: "编辑" }));
+  await user.click(await screen.findByRole("button", { name: /^更多操作 / }));
+  await user.click(await screen.findByRole("menuitem", { name: "编辑" }));
   const editor = within(await screen.findByRole("dialog", { name: "编辑 Office line" }));
   fireEvent.change(editor.getByRole("textbox", { name: "线路名称" }), { target: { value: "My unsaved name" } });
   await user.click(editor.getByRole("button", { name: "检查公开线路" }));
@@ -202,7 +205,8 @@ it("rejects mixed conflict recovery before the legacy comparison can strip conne
     if (call.method === "PUT") return json({ error: "Record changed" }, 409);
     if (call.path.endsWith("/resolve")) return json({ ...mixed, revisionToken: "revision-two" });
   });
-  await user.click(await screen.findByRole("button", { name: "编辑" }));
+  await user.click(await screen.findByRole("button", { name: /^更多操作 / }));
+  await user.click(await screen.findByRole("menuitem", { name: "编辑" }));
   const editor = within(await screen.findByRole("dialog", { name: "编辑 Office line" }));
   fireEvent.change(editor.getByRole("textbox", { name: "线路名称" }), { target: { value: "My unsaved name" } });
   await user.click(editor.getByRole("button", { name: "检查公开线路" }));

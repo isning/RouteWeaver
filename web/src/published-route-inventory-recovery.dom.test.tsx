@@ -68,7 +68,7 @@ async function focusPage() {
 it.each(["initial", "refresh"])("keeps independently loaded routes browsable after %s inventory failure and restores editing only after retry", async (phase) => {
   const { user, calls, fail } = setup(phase === "initial");
   if (phase === "refresh") {
-    await waitFor(() => expect(screen.getByRole("button", { name: "编辑" }).hasAttribute("disabled")).toBe(false));
+    await waitFor(() => expect(screen.getByRole("button", { name: /^更多操作 / }).hasAttribute("disabled")).toBe(false));
     fail(true);
     await focusPage();
   }
@@ -77,7 +77,7 @@ it.each(["initial", "refresh"])("keeps independently loaded routes browsable aft
   expect(screen.getByText("office.example:443")).toBeTruthy();
   expect(screen.getByRole("button", { name: "配置公开线路" }).hasAttribute("disabled")).toBe(true);
   expect(screen.getByRole("button", { name: "配置用户入口" }).hasAttribute("disabled")).toBe(true);
-  expect(screen.getByRole("button", { name: "编辑" }).hasAttribute("disabled")).toBe(true);
+  expect(screen.getByRole("button", { name: /^更多操作 / }).hasAttribute("disabled")).toBe(true);
   await user.click(screen.getByRole("button", { name: "Office line" }));
   const detail = within(await screen.findByRole("dialog", { name: "Resolved office line" }));
   expect(detail.getByRole("button", { name: "编辑线路" }).hasAttribute("disabled")).toBe(true);
@@ -91,14 +91,15 @@ it.each(["initial", "refresh"])("keeps independently loaded routes browsable aft
   expect(detail.getByRole("button", { name: "更换出口" }).hasAttribute("disabled")).toBe(false);
   await user.keyboard("{Escape}");
   expect(screen.getByRole("button", { name: "配置公开线路" }).hasAttribute("disabled")).toBe(false);
-  expect(screen.getByRole("button", { name: "编辑" }).hasAttribute("disabled")).toBe(false);
+  expect(screen.getByRole("button", { name: /^更多操作 / }).hasAttribute("disabled")).toBe(false);
   expect(calls.every(call => call.method === "GET")).toBe(true);
 });
 
 it("preserves an open editor and its draft when an inventory focus refresh fails", async () => {
   const { user, calls, fail } = setup();
-  await waitFor(() => expect(screen.getByRole("button", { name: "编辑" }).hasAttribute("disabled")).toBe(false));
-  await user.click(screen.getByRole("button", { name: "编辑" }));
+  await waitFor(() => expect(screen.getByRole("button", { name: /^更多操作 / }).hasAttribute("disabled")).toBe(false));
+  await user.click(await screen.findByRole("button", { name: /^更多操作 / }));
+  await user.click(await screen.findByRole("menuitem", { name: "编辑" }));
   const editor = await screen.findByRole("dialog", { name: "编辑 Office line" });
   const input = within(editor).getByRole("textbox", { name: "线路名称" }) as HTMLInputElement;
   fireEvent.change(input, { target: { value: "My unfinished line" } });
@@ -117,7 +118,7 @@ it("shows routes while initial inventory is pending without enabling inventory-d
   const opener = await screen.findByRole("button", { name: "Office line" });
   expect(screen.getByText("正在核对转发路径").closest('[role="status"]')).not.toBeNull();
   expect(screen.getByText("核对完成后可新建、编辑或更换出口。")).toBeTruthy();
-  expect(screen.getByRole("button", { name: "编辑" }).hasAttribute("disabled")).toBe(true);
+  expect(screen.getByRole("button", { name: /^更多操作 / }).hasAttribute("disabled")).toBe(true);
   await user.click(opener);
   const detail = within(await screen.findByRole("dialog", { name: "Resolved office line" }));
   expect(detail.getByText("正在核对转发路径")).toBeTruthy();

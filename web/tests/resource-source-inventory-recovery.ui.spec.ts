@@ -200,7 +200,8 @@ for (const width of [390, 1440]) for (const scenario of ["resource", "source-cha
         const other = page.getByRole("button", { name: otherResourceName, exact: true });
         await expect(known).toBeVisible(); await expect(other).toBeVisible();
         const actions = page.getByRole("group", { name: `${resourceName} 的操作`, exact: true });
-        await actions.getByRole("button", { name: "刷新文件", exact: true }).click();
+        await actions.getByRole("button", { name: `更多操作 ${resourceName}`, exact: true }).click();
+        await page.getByRole("menuitem", { name: "刷新文件", exact: true }).click();
         const confirmation = page.getByRole("alertdialog");
         await expect(confirmation).toBeVisible();
         http.authorizeRefresh();
@@ -211,7 +212,7 @@ for (const width of [390, 1440]) for (const scenario of ["resource", "source-cha
         await expect(known).toBeVisible(); await expect(other).toBeVisible();
         await expect(known).toBeDisabled();
         await expect(actions.getByRole("button", { name: "替换文件", exact: true })).toBeDisabled();
-        await expect(actions.getByRole("button", { name: "刷新文件", exact: true })).toBeDisabled();
+        await expect(actions.getByRole("button", { name: `更多操作 ${resourceName}`, exact: true })).toBeDisabled();
         const retry = page.getByRole("button", { name: "重试规则资源", exact: true });
         await capture(page, info, "resource-cached-error", main, [
           { label: "known-resource", locator: known }, { label: "other-resource", locator: other }, { label: "retry", locator: retry },

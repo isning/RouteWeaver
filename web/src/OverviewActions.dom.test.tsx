@@ -21,6 +21,7 @@ function mount(
   fail?: string,
   overview?: Overview,
   platformRoutesComplete = false,
+  summaryItems: unknown[] = [],
 ) {
   vi.mocked(list).mockImplementation(async (path) => {
     if (path === fail) throw Error("unavailable");
@@ -28,7 +29,7 @@ function mount(
   });
   vi.mocked(request).mockResolvedValue({
     asOf: "2026-11-15T08:00:00Z",
-    items: [],
+    items: summaryItems,
     partial: false,
     platformRoutesComplete,
     platformRouteIds: ["platform-route"],
@@ -142,4 +143,65 @@ it("does not infer platform quota tasks from incomplete publication inventory", 
   await waitFor(() => expect(screen.queryByText("正在读取待办…")).toBeNull());
   expect(screen.queryByText("平台流量剩余不足 10%")).toBeNull();
   expect(screen.queryByText("平台服务即将到期")).toBeNull();
+});
+
+it("matches the warm attention panel and gives real task kinds distinct decorative icons", async () => {
+  const go = mount(
+    {
+      "/me/sources": [
+        { id: "s", name: "来源", enabled: true, refreshStatus: "failed" },
+      ],
+      "/me/resources": [
+        { id: "r", name: "规则", canRefresh: true, refreshStatus: "failed" },
+      ],
+    },
+    undefined,
+    quotaOverview,
+    true,
+    [
+      {
+        id: "output:o",
+        kind: "output-changed",
+        title: "有改动待发布",
+        description: "查看变化",
+        href: "#subscriptions?output=o",
+        priority: "normal",
+      },
+      {
+        id: "output:repair",
+        kind: "output-reference-missing",
+        title: "订阅需要修复",
+        description: "重新选择线路",
+        href: "#subscriptions?output=repair",
+        priority: "high",
+      },
+    ],
+  );
+  await screen.findByText("平台流量剩余不足 10%");
+  const panel = screen.getByRole("region", { name: /需要你处理/ });
+  expect(panel.className).toContain("bg-amber-50/60");
+  expect(panel.className).toContain("border-amber-200");
+  expect(panel.className).toContain("dark:bg-amber-950/20");
+  expect(panel.className).toContain("dark:border-amber-900/60");
+  const list = panel.querySelector("ul")!;
+  expect(list.className).toContain("divide-amber-200/70");
+  fireEvent.click(screen.getByRole("button", { name: /展开其余/ }));
+  for (const [title, icon] of [
+    ["来源 更新失败", "lucide-file-input"],
+    ["规则 更新失败", "lucide-file-warning"],
+    ["平台流量剩余不足 10%", "lucide-gauge"],
+    ["平台服务即将到期", "lucide-clock-3"],
+    ["有改动待发布", "lucide-circle-alert"],
+    ["订阅需要修复", "lucide-wrench"],
+  ]) {
+    const svg = screen.getByText(title).closest("li")!.querySelector("svg")!;
+    expect(svg.classList.contains(icon)).toBe(true);
+    expect(svg.getAttribute("aria-hidden")).toBe("true");
+    expect(svg.classList.contains("text-amber-600")).toBe(true);
+    expect(svg.classList.contains("dark:text-amber-400")).toBe(true);
+  }
+  fireEvent.click(
+    screen.getByText("有改动待发布").closest("li")!.querySelector("button")!,
+  );
+  expect(go).toHaveBeenCalledWith("#subscriptions?output=o");
 });

@@ -502,8 +502,8 @@ export function ServersPage() {
                             <span>{paths.length} 条已保存路径</span>
                           </div>
                           <p className="text-sm">下一步：{nextStep}</p>
-                          <ActionButton onClick={() => openHost(value)} aria-label={`进入服务器 ${value.name}`} variant="default" className="w-full">
-                            进入服务器
+                          <ActionButton onClick={() => openHost(value)} aria-label={`进入服务器 ${value.name}`} variant="ghost" className="justify-start -ml-3">
+                            进入服务器 <ArrowRight aria-hidden="true" />
                           </ActionButton>
                         </CardContent>
                       </Card>

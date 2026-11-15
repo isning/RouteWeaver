@@ -62,7 +62,8 @@ function setup(options: {
 }
 async function conflict(options?: Parameters<typeof setup>[0]) {
   const context = setup(options);
-  await context.user.click(await screen.findByRole("button", { name: "编辑" }));
+  await context.user.click(await screen.findByRole("button", { name: /^更多操作 / }));
+  await context.user.click(await screen.findByRole("menuitem", { name: "编辑" }));
   const element = await screen.findByRole("dialog", { name: "编辑 Office line" });
   const editor = within(element);
   fireEvent.change(editor.getByRole("textbox", { name: "线路名称" }), { target: { value: "My office line" } });
@@ -314,7 +315,8 @@ it.each(["success", "TLS refusal"] as const)("rejects a standalone inspection %s
   const context = setup({ extra: call => {
     if (call.path.endsWith("/preview")) return ++inspections === 1 ? pending : json(original);
   } });
-  await context.user.click(await screen.findByRole("button", { name: "编辑" }));
+  await context.user.click(await screen.findByRole("button", { name: /^更多操作 / }));
+  await context.user.click(await screen.findByRole("menuitem", { name: "编辑" }));
   const editor = within(await screen.findByRole("dialog", { name: "编辑 Office line" }));
   const inspect = editor.getByRole("button", { name: "检查公开线路" });
   await context.user.click(inspect);

@@ -183,7 +183,8 @@ afterEach(() => {
 it("explains the check dependency, expires a checked draft on edit, then returns the saved line to its next step", async () => {
   const requests = mockInventory();
   await mount(<PublishedRoutesPage />);
-  await userEvent.click(await screen.findByRole("button", { name: "编辑" }));
+  await userEvent.click(await screen.findByRole("button", { name: /^更多操作 / }));
+  await userEvent.click(await screen.findByRole("menuitem", { name: "编辑" }));
   const editor = await screen.findByRole("dialog", {
     name: "编辑 Office line",
   });
@@ -311,7 +312,8 @@ it("discards a late line check after the address changes", async () => {
       : undefined,
   );
   await mount(<PublishedRoutesPage />);
-  await userEvent.click(await screen.findByRole("button", { name: "编辑" }));
+  await userEvent.click(await screen.findByRole("button", { name: /^更多操作 / }));
+  await userEvent.click(await screen.findByRole("menuitem", { name: "编辑" }));
   const editor = screen.getByRole("dialog", { name: "编辑 Office line" });
   await userEvent.click(
     within(editor).getByRole("button", { name: "检查公开线路" }),

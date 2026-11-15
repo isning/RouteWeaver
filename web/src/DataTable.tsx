@@ -1,5 +1,6 @@
 import {
   Columns3,
+  Ellipsis,
   ChevronDown,
   ChevronRight,
   ArrowDown,
@@ -43,6 +44,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
@@ -106,6 +108,38 @@ export function TableRowActions({
       </div>
     </div>
   );
+}
+/** Close the menu before opening a task dialog, preserving focus and the row target. */
+export function RowActionMenu({ name, disabled = false, actions }: {
+  name: string;
+  disabled?: boolean;
+  actions: { label: string; icon?: ReactNode; disabled?: boolean; describedBy?: string; run: () => void }[];
+}) {
+  const trigger = useRef<HTMLButtonElement>(null);
+  const requested = useRef<string | null>(null);
+  const [open, setOpen] = useState(false);
+  return <DropdownMenu open={open} onOpenChange={setOpen}>
+    <DropdownMenuTrigger asChild>
+      <Button ref={trigger} variant="ghost" size="icon" className="size-11" disabled={disabled} aria-label={`更多操作 ${name}`}>
+        <Ellipsis aria-hidden="true" />
+      </Button>
+    </DropdownMenuTrigger>
+    <DropdownMenuContent align="end" onCloseAutoFocus={(event) => {
+      const action = actions.find(value => value.label === requested.current);
+      requested.current = null;
+      if (!action) return;
+      event.preventDefault();
+      if (!trigger.current?.isConnected) return;
+      trigger.current.focus();
+      if (!disabled && !action.disabled) action.run();
+    }}>
+      {actions.map(action => <DropdownMenuItem key={action.label} className="min-h-11"
+        disabled={disabled || action.disabled} aria-describedby={action.describedBy}
+        onSelect={() => { requested.current = action.label; setOpen(false); }}>
+        {action.icon}{action.label}
+      </DropdownMenuItem>)}
+    </DropdownMenuContent>
+  </DropdownMenu>;
 }
 export type Column<T> = {
   key?: string;

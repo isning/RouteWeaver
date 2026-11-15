@@ -358,7 +358,8 @@ it("limits public-path selection to its deployment and blocks an unfinished serv
     </QueryClientProvider>,
   );
   const user = userEvent.setup();
-  await user.click(await screen.findByRole("button", { name: "编辑" }));
+  await user.click(await screen.findByRole("button", { name: /^更多操作 / }));
+  await user.click(await screen.findByRole("menuitem", { name: "编辑" }));
   const drawer = await screen.findByRole("dialog", { name: "编辑 Office" });
   await user.click(
     within(drawer).getByRole("button", { name: "检查公开线路" }),

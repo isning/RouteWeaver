@@ -147,7 +147,8 @@ function setup(
 }
 it("explains unsupported public entry before assignment while preserving legacy route editing", async () => {
   setup();
-  await userEvent.click(await screen.findByRole("button", { name: "编辑" }));
+  await userEvent.click(await screen.findByRole("button", { name: /^更多操作 / }));
+  await userEvent.click(await screen.findByRole("menuitem", { name: "编辑" }));
   const drawer = await screen.findByRole("dialog", { name: "编辑 Office" });
   expect(
     within(drawer).getByLabelText("公开线路转发路径").textContent,
@@ -1034,7 +1035,12 @@ it.each(["public", "server"] as const)("keeps the %s route Close control after t
     return originalFetch(url, init);
   }));
   mount(kind === "public" ? <PublishedRoutesPage /> : <ServerRoutesPage />);
-  await userEvent.click(await screen.findByRole("button", { name: kind === "public" ? "编辑" : "编辑转发路径 Office transfer" }));
+  if (kind === "public") {
+    await userEvent.click(await screen.findByRole("button", { name: /^更多操作 / }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "编辑" }));
+  } else {
+    await userEvent.click(await screen.findByRole("button", { name: "编辑转发路径 Office transfer" }));
+  }
   const dialog = await screen.findByRole("dialog", { name: kind === "public" ? "编辑 Office" : "编辑 Office transfer" });
   const name = within(dialog).getByLabelText(kind === "public" ? "线路名称" : "转发路径名称");
   fireEvent.change(name, { target: { value: "Retained route" } });
@@ -1071,8 +1077,9 @@ it("retains the checked public-route draft after failed save and twice canceled 
   const controller = createWorkspaceHistory({ isDirty: hasUnsavedChanges, confirm: () => { throw new Error("Unexpected workspace departure during public-route retry"); }, accept: () => {} });
   historyControllers.push(controller);
   mount(<WorkspaceHistoryContext.Provider value={{ current: controller }}><PublishedRoutesPage /></WorkspaceHistoryContext.Provider>);
-  const opener = await screen.findByRole("button", { name: "编辑" });
+  const opener = await screen.findByRole("button", { name: /^更多操作 / });
   await userEvent.click(opener);
+  await userEvent.click(await screen.findByRole("menuitem", { name: "编辑" }));
   const dialog = await screen.findByRole("dialog", { name: "编辑 Office" });
   const name = within(dialog).getByLabelText("线路名称") as HTMLInputElement;
   fireEvent.change(name, { target: { value: "Retained public route" } });

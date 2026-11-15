@@ -103,8 +103,9 @@ it("keeps one current refresh error, restores row context, and clears failure af
   const actions = await screen.findByRole("group", {
     name: "已接纳的规则文件 的操作",
   });
-  const refresh = within(actions).getByRole("button", { name: "刷新文件" });
+  const refresh = within(actions).getByRole("button", { name: "更多操作 已接纳的规则文件" });
   await user.click(refresh);
+  await user.click(screen.getByRole("menuitem", { name: "刷新文件" }));
   const decision = await screen.findByRole("alertdialog");
   await user.click(
     within(decision).getByRole("button", { name: "读取并接纳" }),
@@ -123,8 +124,9 @@ it("keeps one current refresh error, restores row context, and clears failure af
     (_, node) => node?.tagName === "P" && node.textContent === reason,
   );
   expect(fullReason.getAttribute("role")).toBeNull();
-  expect(refresh.getAttribute("aria-describedby")).toBe(fullReason.id);
   await user.click(refresh);
+  expect(screen.getByRole("menuitem", { name: "刷新文件", description: reason }).getAttribute("aria-describedby")).toBe(fullReason.id);
+  await user.click(screen.getByRole("menuitem", { name: "刷新文件" }));
   const reconsider = await screen.findByRole("alertdialog");
   expect(document.querySelectorAll('[role="alert"]')).toHaveLength(0);
   await user.click(within(reconsider).getByRole("button", { name: "取消" }));
@@ -150,6 +152,7 @@ it("keeps one current refresh error, restores row context, and clears failure af
   await waitFor(() => expect(document.activeElement).toBe(replace));
   expect(screen.getByRole("alert").textContent).toContain(requestFailure);
   await user.click(refresh);
+  await user.click(screen.getByRole("menuitem", { name: "刷新文件" }));
   const retry = await screen.findByRole("alertdialog");
   expect(document.querySelectorAll('[role="alert"]')).toHaveLength(0);
   await user.click(within(retry).getByRole("button", { name: "读取并接纳" }));
@@ -158,7 +161,9 @@ it("keeps one current refresh error, restores row context, and clears failure af
   expect(screen.queryByText(requestFailure)).toBeNull();
   expect(within(actions).queryByText("刷新失败", { exact: true })).toBeNull();
   expect(within(actions).queryByText(reason)).toBeNull();
-  expect(refresh.getAttribute("aria-describedby")).toBeNull();
+  await user.click(refresh);
+  expect(screen.getByRole("menuitem", { name: "刷新文件" }).getAttribute("aria-describedby")).toBeNull();
+  await user.keyboard("{Escape}");
   expect(replace.getAttribute("aria-describedby")).toBeNull();
   expect(refreshes).toBe(2);
   expect(requests.filter((request) => request.startsWith("POST"))).toEqual([
@@ -218,16 +223,17 @@ it("associates failed resource actions with the complete original reason without
   );
   expect(alert.getAttribute("role")).toBeNull();
   for (const name of ["替换文件", "刷新文件"]) {
-    const action = within(failed).getByRole("button", {
-      name,
-      description: reason,
-    });
+    if (name === "刷新文件") await userEvent.click(within(failed).getByRole("button", { name: "更多操作 待刷新规则" }));
+    const action = name === "刷新文件"
+      ? screen.getByRole("menuitem", { name, description: reason })
+      : within(failed).getByRole("button", { name, description: reason });
     expect(action.getAttribute("aria-describedby")).toBe(alert.id);
     action.focus();
     expect(document.activeElement).toBe(action);
     expect(
       document.getElementById(action.getAttribute("aria-describedby")!),
     ).toBe(alert);
+    if (name === "刷新文件") await userEvent.keyboard("{Escape}");
   }
   const visualStatus = within(failed).getByText("刷新失败", { exact: true });
   expect(visualStatus.getAttribute("aria-hidden")).toBe("true");
@@ -241,3 +247,4 @@ it("associates failed resource actions with the complete original reason without
   expect(fetcher).toHaveBeenCalledTimes(1);
   expect(fetcher.mock.calls[0][0]).toBe("/api/me/resources");
 });
+

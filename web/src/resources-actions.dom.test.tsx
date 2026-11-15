@@ -33,7 +33,9 @@ it("filters real refresh failures, retains repair actions, and resets without mu
   expect(screen.queryByRole("button", { name: "正常规则" })).toBeNull();
   const row = screen.getByRole("button", { name: "失败规则" }).closest("tr")!;
   expect(within(row).getByRole("button", { name: "替换文件" })).toBeTruthy();
-  expect(within(row).getByRole("button", { name: "刷新文件" })).toBeTruthy();
+  await userEvent.click(within(row).getByRole("button", { name: "更多操作 失败规则" }));
+  expect(screen.getByRole("menuitem", { name: "刷新文件" })).toBeTruthy();
+  await userEvent.keyboard("{Escape}");
   await userEvent.click(screen.getByRole("button", { name: "全部 2" }));
   expect(screen.getByRole("button", { name: "正常规则" })).toBeTruthy();
   expect(reads).toEqual(["GET /api/me/resources"]);

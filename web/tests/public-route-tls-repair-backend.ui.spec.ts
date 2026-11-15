@@ -89,7 +89,8 @@ for (const width of [1440, 390]) {
       }
     });
     await page.goto("/#published-routes");
-    await page.getByRole("button", { name: "编辑", exact: true }).click();
+    await page.getByRole("button", { name: `更多操作 ${names.line}`, exact: true }).click();
+    await page.getByRole("menuitem", { name: "编辑", exact: true }).click();
     const editor = page.getByRole("dialog", {
       name: `编辑 ${names.line}`,
       exact: true,

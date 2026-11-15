@@ -167,7 +167,8 @@ async function openEditor(extra?: Parameters<typeof mockInventory>[0], workspace
   const requests = mockInventory(extra);
   mount(<WorkspaceHistoryContext.Provider value={workspace ? { current: workspace } : null}><PublishedRoutesPage /></WorkspaceHistoryContext.Provider>);
   const user = userEvent.setup();
-  await user.click(await screen.findByRole("button", { name: "编辑" }));
+  await user.click(await screen.findByRole("button", { name: /^更多操作 / }));
+  await user.click(await screen.findByRole("menuitem", { name: "编辑" }));
   const editor = within(await screen.findByRole("dialog", { name: "编辑 Office line" }));
   return { requests, user, editor, port: editor.getByRole("spinbutton", { name: "对外端口" }) };
 }

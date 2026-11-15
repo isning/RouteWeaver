@@ -694,11 +694,12 @@ for (const kind of ["route", "deployment"] as const) {
       </QueryClientProvider>,
     );
     const user = userEvent.setup();
-    await user.click(
-      await screen.findByRole("button", {
-        name: kind === "route" ? "编辑" : "编辑转发路径 服务器路径",
-      }),
-    );
+    if (kind === "route") {
+      await user.click(await screen.findByRole("button", { name: /^更多操作 / }));
+      await user.click(await screen.findByRole("menuitem", { name: "编辑" }));
+    } else {
+      await user.click(await screen.findByRole("button", { name: "编辑转发路径 服务器路径" }));
+    }
     const field = await screen.findByRole("textbox", {
       name: kind === "route" ? "线路名称" : "转发路径名称",
     });
