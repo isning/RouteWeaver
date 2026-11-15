@@ -20,7 +20,7 @@ import {
 } from "@tanstack/react-query";
 import { SubscriptionsPage } from "./Subscriptions";
 import { emptyProfile } from "./model";
-import { invalidateOutputInputs } from "./output-comparison";
+import { invalidateOutputInputs, rememberOutputComparison, outputInputSequence } from "./output-comparison";
 
 async function singleCheckAction(
   scenario: ReturnType<typeof ownedClickScenario>,
@@ -1004,4 +1004,39 @@ it("settles an explicit check as unavailable if connectivity drops after invento
   });
   expect(checks).toBe(1);
   expect(screen.getByText("暂时无法比较")).toBeTruthy();
+});
+
+it("filters cached check results without fetching and moves expired evidence back to pending", async (context) => {
+  const scenario = ownedClickScenario(context);
+  const requests: string[] = [];
+  vi.stubGlobal("fetch", vi.fn(async (url) => {
+    const path = String(url);
+    requests.push(path);
+    if (path.endsWith("/overview")) return json({ user: {}, routes: [] });
+    if (path.endsWith("/profiles")) return json([profile]);
+    if (path.endsWith("/outputs")) return json(outputs);
+    return json([]);
+  }));
+  const { client } = mount();
+  await screen.findByRole("article", { name: "分流配置 日常分流" });
+  await act(async () => {
+    rememberOutputComparison(client, outputs[0], {
+      ...outputs[0], draftComparison: { state: "changed" },
+    }, Date.now(), outputInputSequence(client, profile.id));
+  });
+  await scenario.click(() => screen.getByRole("combobox", { name: "订阅检查结果" }));
+  await scenario.click(() => screen.getByRole("option", { name: "有改动" }));
+  await waitFor(() => {
+    expect(screen.getByText("MacBook")).toBeTruthy();
+    expect(screen.queryByText("Android")).toBeNull();
+  });
+  await act(async () => { await invalidateOutputInputs(client, profile.id); });
+  await waitFor(() => expect(screen.queryByText("MacBook")).toBeNull());
+  await scenario.click(() => screen.getByRole("combobox", { name: "订阅检查结果" }));
+  await scenario.click(() => screen.getByRole("option", { name: "待检查" }));
+  await waitFor(() => {
+    expect(screen.getByText("MacBook")).toBeTruthy();
+    expect(screen.getByText("Android")).toBeTruthy();
+  });
+  expect(requests.filter(path => path.endsWith("/comparison"))).toEqual([]);
 });

@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 import type { Output, Profile } from "./types";
-import { groupSubscriptionInventory } from "./subscription-inventory";
+import { type SubscriptionCheckFilter, groupSubscriptionInventory } from "./subscription-inventory";
 // Pre-index implementation: equivalence oracle for ordering, scope and partial inventories.
 function previous(
   allProfiles: Profile[],
@@ -188,4 +188,21 @@ it("combines status with search without hiding unknown statuses from the full in
   expect(groupSubscriptionInventory(profiles, outputs, undefined, "Phone", "revoked").map(g => g.links)).toEqual([[revoked], [orphan]]);
   expect(groupSubscriptionInventory(profiles, outputs, undefined, "", "all")[0].links).toEqual([live, revoked, unknown]);
   expect(groupSubscriptionInventory(profiles, outputs, "p", "nothing", "revoked")).toEqual([{id: "p", profile: profiles[0], links: [], totalLinks: 3}]);
+});
+
+it("filters observed check results without treating absent, expired or failed checks as unchanged", () => {
+  const profiles = [profile("p", "Work")];
+  const outputs = ["changed", "repair", "fresh", "old", "running", "error", "same", "revoked"].map(id => ({
+    ...output(id, "p"), status: id === "revoked" ? "revoked" : "published",
+  }));
+  const kinds = new Map([
+    ["changed", "changed"], ["repair", "repair"], ["old", "outdated"],
+    ["running", "checking"], ["error", "unavailable"], ["same", "unchanged"],
+  ]);
+  const visible = (filter: SubscriptionCheckFilter) => groupSubscriptionInventory(profiles, outputs, undefined, "", "all", { filter, kinds }).flatMap(g => g.links.map(o => o.id));
+  expect(visible("changed")).toEqual(["changed"]);
+  expect(visible("repair")).toEqual(["repair"]);
+  expect(visible("unchecked")).toEqual(["fresh", "old", "running"]);
+  expect(visible("unavailable")).toEqual(["error"]);
+  expect(groupSubscriptionInventory(profiles, outputs, undefined, "changed", "revoked", { filter: "changed", kinds })).toEqual([]);
 });

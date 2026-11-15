@@ -10,10 +10,11 @@ import {
   type RefObject,
 } from "react";
 
-import type { SubscriptionStatusFilter } from "./subscription-inventory";
+import type { SubscriptionStatusFilter, SubscriptionCheckFilter } from "./subscription-inventory";
 
 type ListContext = {
   status: SubscriptionStatusFilter;
+  checkFilter: SubscriptionCheckFilter;
   search: string;
   page: number;
   linkPages: Record<string, number>;
@@ -22,6 +23,7 @@ type ListContext = {
 };
 const empty = (): ListContext => ({
   status: "all",
+  checkFilter: "all",
   search: "",
   page: 1,
   linkPages: {},

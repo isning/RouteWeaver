@@ -3,6 +3,8 @@ import {
   isCancelledError,
   skipToken,
   useQuery,
+  useQueries,
+  queryOptions,
   useQueryClient,
   type QueryClient,
 } from "@tanstack/react-query";
@@ -175,6 +177,31 @@ export function useOutputComparison(output: Output) {
     enabled: false,
     gcTime: 5 * 60 * 1000,
   });
+  return presentOutputComparison(output, query, client);
+}
+
+/** Inventory filters observe existing receipts only; no comparison request is started. */
+export function useOutputComparisonKinds(outputs: Output[]) {
+  const client = useQueryClient();
+  const queries = useQueries({
+    queries: outputs.map((output) => queryOptions<Observation | null>({
+      queryKey: outputComparisonKey(output),
+      queryFn: skipToken,
+      enabled: false,
+      gcTime: 5 * 60 * 1000,
+    })),
+  });
+  return new Map(outputs.map((output, index) => [
+    output.id, presentOutputComparison(output, queries[index], client).kind,
+  ]));
+}
+
+function presentOutputComparison(output: Output, query: {
+  fetchStatus?: string;
+  status?: string;
+  error?: unknown;
+  data?: Observation | null;
+}, client: QueryClient) {
   if (query?.fetchStatus === "fetching")
     return { text: "正在检查更新", kind: "checking" };
   if (

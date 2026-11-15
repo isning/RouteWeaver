@@ -1,5 +1,7 @@
 import type { Output, Profile } from "./types";
 
+export type SubscriptionCheckFilter = "all" | "changed" | "repair" | "unchecked" | "unavailable";
+
 export type SubscriptionStatusFilter = "all" | "published" | "revoked";
 
 export interface SubscriptionInventoryGroup {
@@ -16,6 +18,7 @@ export function groupSubscriptionInventory(
   profileScope: string | undefined,
   search: string,
   status: SubscriptionStatusFilter = "all",
+  check?: { filter: SubscriptionCheckFilter; kinds: ReadonlyMap<string, string> },
 ): SubscriptionInventoryGroup[] {
   const needle = search.trim().toLocaleLowerCase();
   const matches = (value: string) => value.toLocaleLowerCase().includes(needle);
@@ -23,7 +26,16 @@ export function groupSubscriptionInventory(
     matches(
       `${output.name} ${output.target.adapterId} ${output.mode === "nodes-only" ? "纯节点" : "完整配置"}`,
     );
-  const statusMatches = (output: Output) => status === "all" || output.status === status;
+  const checkMatches = (output: Output) => {
+    if (!check || check.filter === "all") return true;
+    if (output.status !== "published") return false;
+    const kind = check.kinds.get(output.id) || "unverified";
+    return check.filter === "unchecked"
+      ? ["unverified", "outdated", "checking"].includes(kind)
+      : kind === check.filter;
+  };
+  const statusMatches = (output: Output) =>
+    (status === "all" || output.status === status) && checkMatches(output);
   const profileIds = new Set(allProfiles.map((profile) => profile.id));
   const linksByProfile = new Map<string, Output[]>();
   for (const output of allOutputs) {
@@ -40,7 +52,7 @@ export function groupSubscriptionInventory(
       (!needle || matches(profile.name) || linkMatches(output)));
     if (
       profile.id === profileScope ||
-      (status === "all" && (!needle || matches(profile.name))) ||
+      (status === "all" && (!check || check.filter === "all") && (!needle || matches(profile.name))) ||
       visible.length
     )
       groups.push({
