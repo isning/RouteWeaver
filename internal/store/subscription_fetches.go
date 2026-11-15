@@ -164,4 +164,3 @@ func (s *Store) SetSubscriptionFetchSourceTracking(owner string, enabled bool, n
 	}
 	return tx.Commit()
 }
-

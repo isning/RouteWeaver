@@ -210,4 +210,3 @@ func TestSubscriptionFetchDisableSerializesWithAppendAcrossStores(t *testing.T) 
 		}
 	}
 }
-
