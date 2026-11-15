@@ -90,7 +90,7 @@ func (s *Store) PlatformComparisonSnapshot(ctx context.Context, owner string, no
 	}
 	p := &PlatformComparisonSnapshot{owner: owner, records: map[string]map[string]json.RawMessage{}, ids: map[string][]string{}}
 	kinds := []string{"users", "accounts", "entitlements", "services", "user-groups", "routes", "published-routes", "agent-observations", "published-manifests", "instance-enrollments", "resets", "ledger", "accounting-holds", "admission-budgets"}
-	for _, kind := range []string{"platform-entries", "profiles", "outputs"} {
+	for _, kind := range []string{"platform-entries", "profiles", "outputs", "sources", "collections", "resources", "resource-versions"} {
 		kinds = append(kinds, TenantKind(owner, kind))
 	}
 	err := s.readSnapshot(ctx, func(tx *sql.Tx) error {

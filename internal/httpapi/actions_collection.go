@@ -16,6 +16,9 @@ func actionCollectionWithinBudget(owner string, profile Profile, inputs *templat
 		if inputs.TenantGet(owner, "collections", profile.CollectionID, &collection) != nil || collection.OwnerID != owner || len(collection.Sources) > 16 {
 			return false
 		}
+		if inputs.platform != nil && (!domain.ValidID(profile.CollectionID) || collection.ID != profile.CollectionID) {
+			return false
+		}
 		if !actionStepsWithinBudget(collection.Steps) {
 			return false
 		}
@@ -39,6 +42,9 @@ func actionCollectionWithinBudget(owner string, profile Profile, inputs *templat
 	for _, id := range sourceIDs {
 		var source Source
 		if inputs.TenantGet(owner, "sources", id, &source) != nil || !source.Enabled || source.Snapshot == nil || source.Snapshot.OwnerID != owner {
+			return false
+		}
+		if inputs.platform != nil && (!domain.ValidID(id) || source.ID != id || source.OwnerID != owner || source.Snapshot.SourceID != id) {
 			return false
 		}
 		if len(source.Snapshot.SourceName) > 160 {

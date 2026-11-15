@@ -51,7 +51,7 @@ func (h *server) resolveComparisonEntry(owner, id string, reader *platformCompar
 }
 
 func smallPlatformComparison(output Output, p Profile) bool {
-	return output.Attribution == nil && len(p.PlatformEntryIDs) > 0 && len(p.PlatformEntryIDs) <= 8 && p.CollectionID == "" && len(p.SourceIDs) == 0 && len(p.IR.Resources) == 0 && len(p.IR.Endpoints) <= 32 && len(p.IR.Groups) <= 8 && len(p.IR.Rules) <= 32 && (p.IR.NativeOverride == nil || (p.IR.NativeOverride.Format == "json" && len(p.IR.NativeOverride.Content) <= 4096))
+	return output.Attribution == nil && len(p.PlatformEntryIDs) > 0 && len(p.PlatformEntryIDs) <= 8 && len(p.SourceIDs) <= 16 && len(p.IR.Resources) <= 4 && len(p.IR.Endpoints) <= 32 && len(p.IR.Groups) <= 8 && len(p.IR.Rules) <= 32 && (p.IR.NativeOverride == nil || (p.IR.NativeOverride.Format == "json" && len(p.IR.NativeOverride.Content) <= 4096))
 }
 
 func (h *server) compareSmallPlatformDraft(ctx context.Context, owner string, output Output, budget *int) map[string]string {
@@ -71,6 +71,11 @@ func (h *server) compareSmallPlatformDraftUsing(ctx context.Context, owner strin
 	reader := &platformComparisonReader{snapshot: first}
 	inputs := newTemplateInputs(h.s)
 	inputs.platform = reader
+	// Bound saved conversion stages before materialization. These reads and the
+	// later conversion share the complete immutable first snapshot.
+	if !actionCollectionWithinBudget(owner, p, inputs) || !withinPlatformResourceBudget(owner, p, inputs) {
+		return unavailable
+	}
 	// This also opts into bounded rendering before recursive validation.
 	comparison := h.compareOutputDraft(owner, output, inputs)
 	if ctx.Err() != nil {

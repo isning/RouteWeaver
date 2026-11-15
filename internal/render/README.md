@@ -57,8 +57,14 @@ Dashboard comparisons use this path for small native drafts after the existing
 owner-scoped shared input budget and collection preflight. Small platform drafts
 also use it, only when their complete dependency inventory fits a read-only
 snapshot: at most 64 records, 64 KiB per record, and the existing 2 MiB request
-input budget shared by both captures. The platform slice excludes collections,
-source snapshots, rule-file resources, and independently metered outputs.
+input budget shared by both captures. Saved source snapshots and collections use the same immutable input capture and
+bounded conversion preflight (16 sources, 32 total steps, and bounded endpoint
+and template bytes); final rendering still permits at most 32 endpoints. Local
+accepted rule files are limited to four files of at most 4 KiB each, checked
+before materialization's parser calls. Only mihomo-text, srs and mrs envelopes
+are admitted; opaque binary checks are not native-format execution validation.
+JSON/YAML rule files, unaccepted remote rules, oversized graphs and independently
+metered outputs remain unchecked. Neither comparison capture fetches a source.
 It evaluates canonical policy, usage and both hold types without rebuilding
 projections. After rendering it captures again, requires identical complete
 record membership/content, rechecks every grant and applied path, and rejects

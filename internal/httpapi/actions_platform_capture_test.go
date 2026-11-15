@@ -172,3 +172,64 @@ func TestSmallPlatformComparisonRejectsProfileKeyPayloadMismatch(t *testing.T) {
 		t.Fatalf("mismatched profile admitted: %v, captures %d", result, calls)
 	}
 }
+
+func TestSmallPlatformComparisonSourceCollectionCaptureFence(t *testing.T) {
+	for _, mode := range []string{"stable", "source-value", "source-membership", "collection-value", "collection-membership"} {
+		t.Run(mode, func(t *testing.T) {
+			h, output := platformCaptureFixture(t)
+			put := func(kind, id string, v any) {
+				t.Helper()
+				if err := h.s.TenantPut("owner", kind, id, v); err != nil {
+					t.Fatal(err)
+				}
+			}
+			source := Source{ID: "source", OwnerID: "owner", Name: "Source", Enabled: true, Snapshot: &domain.SourceSnapshot{SourceID: "source", SnapshotID: "s1", OwnerID: "owner", SourceName: "Source", Endpoints: []domain.ClientEndpoint{{ID: "import", Name: "Imported", Origin: "imported", OwnerID: "owner", Connection: domain.Connection{Protocol: "socks", Host: "192.0.2.20", Port: 1080}}}}}
+			collection := domain.Collection{ID: "collection", OwnerID: "owner", Name: "Collection", Sources: []domain.CollectionSource{{SourceID: "source"}}}
+			put("sources", "source", source)
+			put("collections", "collection", collection)
+			var p Profile
+			if err := h.s.TenantGet("owner", "profiles", "profile", &p); err != nil {
+				t.Fatal(err)
+			}
+			p.CollectionID = "collection"
+			put("profiles", "profile", p)
+			calls := 0
+			budget := 2 << 20
+			capture := func(ctx context.Context, owner string, now time.Time, budget *int) (*store.PlatformComparisonSnapshot, error) {
+				calls++
+				if calls == 2 {
+					switch mode {
+					case "source-value":
+						source.Snapshot.Endpoints[0].Connection.Port = 1090
+						put("sources", "source", source)
+					case "source-membership":
+						source.ID = "other"
+						put("sources", "other", source)
+					case "collection-value":
+						collection.Steps = []domain.ProcessingStep{{ID: "rename", Enabled: true, Kind: "rename", Template: "Different"}}
+						put("collections", "collection", collection)
+					case "collection-membership":
+						collection.ID = "other"
+						put("collections", "other", collection)
+					}
+				}
+				return h.s.PlatformComparisonSnapshot(ctx, owner, now, budget)
+			}
+			got := h.compareSmallPlatformDraftUsing(context.Background(), "owner", output, &budget, capture)
+			want := "unavailable"
+			if mode == "stable" {
+				want = "changed"
+			}
+			if got["state"] != want || calls != 2 {
+				t.Fatalf("state=%v calls=%d want=%s", got, calls, want)
+			}
+			var after Output
+			if err := h.s.TenantGet("owner", "outputs", output.ID, &after); err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(output, after) {
+				t.Fatal("publication mutated")
+			}
+		})
+	}
+}

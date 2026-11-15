@@ -191,3 +191,47 @@ func TestPlatformComparisonSnapshotCanonicalUsageAndHold(t *testing.T) {
 		})
 	}
 }
+
+func TestPlatformComparisonSnapshotCapturesOwnedSourceAndResourceSets(t *testing.T) {
+	for _, kind := range []string{"sources", "collections", "resources", "resource-versions"} {
+		t.Run(kind, func(t *testing.T) {
+			s, now := platformSnapshotFixture(t)
+			if err := s.TenantPut("owner", kind, "saved", map[string]string{"id": "saved", "name": "before"}); err != nil {
+				t.Fatal(err)
+			}
+			if err := s.TenantPut("other", kind, "private", map[string]string{"id": "private", "name": "not-owned"}); err != nil {
+				t.Fatal(err)
+			}
+			before := capturePlatform(t, s, now)
+			var row map[string]string
+			if err := before.TenantGet("owner", kind, "saved", &row); err != nil || row["name"] != "before" {
+				t.Fatal(row, err)
+			}
+			if err := before.TenantGet("other", kind, "private", &row); err == nil {
+				t.Fatal("other owner exposed")
+			}
+			if err := s.TenantPut("other", kind, "private", map[string]string{"id": "private", "name": "changed-other"}); err != nil {
+				t.Fatal(err)
+			}
+			if capturePlatform(t, s, now).Fingerprint() != before.Fingerprint() {
+				t.Fatal("unrelated tenant enters fingerprint")
+			}
+			if err := s.TenantPut("owner", kind, "saved", map[string]string{"id": "saved", "name": "after"}); err != nil {
+				t.Fatal(err)
+			}
+			after := capturePlatform(t, s, now)
+			if after.Fingerprint() == before.Fingerprint() {
+				t.Fatal("version not fenced")
+			}
+			if err := before.TenantGet("owner", kind, "saved", &row); err != nil || row["name"] != "before" {
+				t.Fatal("snapshot torn", err)
+			}
+			if err := s.TenantPut("owner", kind, "new", map[string]string{"id": "new"}); err != nil {
+				t.Fatal(err)
+			}
+			if capturePlatform(t, s, now).Fingerprint() == after.Fingerprint() {
+				t.Fatal("set membership not fenced")
+			}
+		})
+	}
+}
