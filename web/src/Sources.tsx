@@ -1,3 +1,4 @@
+import { useActionTarget } from "./useActionTarget";
 import { exactDraftInteger } from "./draft-integer";
 import { Metadata, MetadataItem } from "@/ui-patterns/metadata";
 import { ResourceToolbar, SearchField } from "@/ui-patterns/resource-toolbar";
@@ -213,6 +214,12 @@ export function SourcesPage({
       applyCommand.apply(source);
     },
   };
+  useActionTarget("sources", "source", query.data,
+    inventoryReady && !open && !review && !detail && !otherWritePending && !application.pending,
+    (source, params) => {
+      if (params.get("review") === "1" && source.candidate) openChanges(source);
+      else setDetail(source);
+    });
   // The containing configuration drawer must not unmount a source editor,
   // review or in-flight operation. Keep this independent of the profile's dirty state.
   const blocksContainerClose =

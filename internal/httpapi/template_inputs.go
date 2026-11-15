@@ -20,6 +20,8 @@ type templateInputs struct {
 	s       *store.Store
 	records map[string]store.RecordCompare
 	sets    []store.RecordSetCompare
+	// Non-nil only for bounded, read-only dashboard comparisons.
+	readBudget *int
 }
 
 func newTemplateInputs(s *store.Store) *templateInputs {
@@ -27,6 +29,7 @@ func newTemplateInputs(s *store.Store) *templateInputs {
 }
 
 func (m *templateInputs) TenantGet(owner, kind, id string, out any) error {
+	category := kind
 	kind = store.TenantKind(owner, kind)
 	key := kind + "\x00" + id
 	if c, ok := m.records[key]; ok {
@@ -36,8 +39,22 @@ func (m *templateInputs) TenantGet(owner, kind, id string, out any) error {
 		return json.Unmarshal(c.Expected.(json.RawMessage), out)
 	}
 	var raw json.RawMessage
-	if err := m.s.Get(kind, id, &raw); err != nil {
+	if m.readBudget != nil {
+		limit := min(512<<10, *m.readBudget)
+		if limit <= 0 || len(m.records) >= 64 {
+			return fmt.Errorf("summary input budget exceeded")
+		}
+		if err := m.s.TenantSummaryGet(owner, category, id, limit, &raw); err != nil {
+			return err
+		}
+	} else if err := m.s.Get(kind, id, &raw); err != nil {
 		return err
+	}
+	if m.readBudget != nil {
+		if len(raw) > 512<<10 || len(raw) > *m.readBudget || len(m.records) >= 64 {
+			return fmt.Errorf("summary input budget exceeded")
+		}
+		*m.readBudget -= len(raw)
 	}
 	m.records[key] = store.RecordCompare{Kind: kind, ID: id, Expected: raw}
 	return json.Unmarshal(raw, out)

@@ -69,6 +69,7 @@ type Profile struct {
 func (h *server) registerTenant(r chi.Router) {
 	r.Route("/me", func(r chi.Router) {
 		r.Get("/insights", h.myInsights)
+		r.Get("/actions", h.myActions)
 		r.Get("/overview", func(w http.ResponseWriter, r *http.Request) {
 			now := time.Now().UTC()
 			v, e := h.overviewContext(r.Context(), current(r).Account.ID, now)

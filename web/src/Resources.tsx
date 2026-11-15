@@ -1,3 +1,4 @@
+import { useActionTarget } from "./useActionTarget";
 import { useConfirm } from "@/ui-patterns/confirmations";
 import { TaskDialog } from "@/ui-patterns/task-overlays";
 import {
@@ -334,6 +335,9 @@ export function ResourcesPage() {
     mutation.reset();
     setOpen(true);
   };
+  useActionTarget("resources", "resource", query.data, inventoryReady && !open && !importing && !refresh.isPending, (resource) => {
+    edit(resource);
+  });
   const close = () => {
     if (submitting.current || mutation.isPending || confirming) return;
     const task = editorTask.current;
@@ -872,3 +876,4 @@ export function ResourcesPage() {
     </>
   );
 }
+

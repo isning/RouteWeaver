@@ -1,3 +1,4 @@
+import { OverviewActions } from "./OverviewActions";
 import { SubscriptionFetchDetails } from "./SubscriptionFetchDetails";
 import { SubscriptionFetchAlerts, type FetchHistory } from "./SubscriptionFetchAlerts";
 import { Metadata, MetadataItem } from "@/ui-patterns/metadata";
@@ -11,7 +12,7 @@ import {
 } from "@/components/ui/table";
 import { useContext, useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, CircleAlert, RefreshCw } from "lucide-react";
+import { ArrowRight, RefreshCw } from "lucide-react";
 import { request, list } from "./api";
 import { policyStatus } from "./access-policy-model";
 import { quotaForecastText } from "./quota-forecast";
@@ -122,13 +123,6 @@ export function OverviewPage() {
   });
   const data = overview.data,
     detail = insights.data;
-  const pending =
-    profiles.data?.filter(
-      (p) =>
-        !outputs.data?.some(
-          (o) => o.profileId === p.id && o.status === "published",
-        ),
-    ) ?? [];
   const used = data?.accountingPending ? undefined : data?.usage.weightedBytes;
   const remaining =
     data && used !== undefined
@@ -208,72 +202,12 @@ export function OverviewPage() {
           </ActionButton>
         }
       />
-      <QueryState
-        loading={profiles.isPending || outputs.isPending}
-        paused={profiles.isPaused || outputs.isPaused}
-        error={profiles.error || outputs.error}
-        retry={() => {
-          void profiles.refetch();
-          void outputs.refetch();
-        }}
-        loadingLayout="summary"
-      >
-        {!!pending.length && (
-          <section
-            aria-labelledby="home-attention"
-            className="overflow-hidden rounded-[14px] border border-amber-200 bg-amber-50/60 dark:border-amber-900 dark:bg-amber-950/20"
-          >
-            <h2 id="home-attention" className="px-5 pt-4 text-sm font-semibold">
-              需要你处理{" "}
-              <span className="ml-1 font-normal tabular-nums text-muted-foreground">
-                {pending.length} 项
-              </span>
-            </h2>
-            <ul className="divide-y divide-amber-200/70 dark:divide-amber-900/70">
-              {pending.slice(0, 3).map((p) => (
-                <li
-                  key={p.id}
-                  className="flex flex-wrap items-center gap-3 px-5 py-3"
-                >
-                  <CircleAlert
-                    aria-hidden="true"
-                    className="size-4 shrink-0 text-amber-700 dark:text-amber-400"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium wrap-anywhere">
-                      {p.name} 尚未发布
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      客户端还拿不到这份订阅。
-                    </p>
-                  </div>
-                  <ActionButton
-                    size="sm"
-                    variant="outline"
-                    onClick={() =>
-                      go(`#subscriptions?profile=${encodeURIComponent(p.id)}`)
-                    }
-                  >
-                    去发布
-                  </ActionButton>
-                </li>
-              ))}
-            </ul>
-            {pending.length > 3 && (
-              <ActionButton
-                className="m-3"
-                variant="ghost"
-                onClick={() => go("#subscriptions")}
-              >
-                查看其余 {pending.length - 3} 项
-              </ActionButton>
-            )}
-          </section>
-        )}
-      </QueryState>
+      <OverviewActions go={go} overview={overview.isSuccess && !overview.isFetching && !overview.isPaused ? data : undefined} now={now} />
       <div
         className="grid gap-6 xl:grid-cols-3"
         data-testid="overview-primary-grid"
+        id="overview-account-details"
+        tabIndex={-1}
       >
         <Card className="min-w-0 rounded-[14px] shadow-none xl:col-span-2">
           <QueryState
@@ -988,3 +922,4 @@ function countryName(code: string) {
     return code;
   }
 }
+
