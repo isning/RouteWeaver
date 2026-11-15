@@ -24,6 +24,8 @@ function mountRead(hash: string, endpoint: string, result: unknown, role = "admi
     "/api/auth/sessions": [], "/api/admin/accounts": [], "/api/state": inventory,
     "/api/services": [], "/api/settings": {}, "/api/published-routes": [], "/api/audit": [],
     "/api/me/outputs/independent": { items: [] },
+    "/api/me/sources": [], "/api/me/resources": [],
+    "/api/me/actions": { asOf: "2026-11-15T08:00:00Z", items: [], partial: false, uncheckedOutputs: [], platformRouteIds: [], platformRoutesComplete: true },
     "/api/me/insights": {daily: [], routes: [], admission: {available: false}, limits: {}},
     "/api/me/subscription-fetches": {items: [], limit: 100, windowDays: 14},
     "/api/me/output-usage": {complete: true, period: "current-cycle", outputs: [], unattributedRawBytes: 0},

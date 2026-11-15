@@ -82,6 +82,8 @@ function mount(fail = false, shell = false, namesFail = false, connections?: unk
         (url.endsWith("/me/overview") || url.endsWith("/me/outputs"))
       )
         return json({ error: "Names unavailable" }, 503);
+      if (url.endsWith("/me/actions"))
+        return json({ asOf: "2026-11-15T08:00:00Z", items: [], partial: false, uncheckedOutputs: [], platformRouteIds: [], platformRoutesComplete: true });
       if (url.endsWith("/me/overview"))
         return json({
           status: "active",
@@ -175,7 +177,8 @@ it("shows current-account overview and navigates to an unpublished configuration
       .getAttribute("data-slot"),
   ).toBe("table");
   expect(screen.getByRole("columnheader", { name: "实际流量" })).toBeTruthy();
-  expect(screen.getByText("旅行配置 尚未发布")).toBeTruthy();
+  expect(screen.getByText("1 份草稿")).toBeTruthy();
+  expect(screen.queryByText("旅行配置 尚未发布")).toBeNull();
   expect(await screen.findByText("工作订阅")).toBeTruthy();
   expect(screen.queryByText("工作配置")).toBeNull();
   expect(
@@ -190,7 +193,7 @@ it("shows current-account overview and navigates to an unpublished configuration
   expect(screen.getByTestId("overview-secondary-grid").children).toHaveLength(
     2,
   );
-  fireEvent.click(screen.getByRole("button", { name: "去发布" }));
+  fireEvent.click(screen.getByRole("button", { name: "继续配置" }));
   expect(location.hash).toBe("#subscriptions?profile=draft");
   fireEvent.click(screen.getByRole("button", { name: "管理全部订阅" }));
   expect(location.hash).toBe("#subscriptions");

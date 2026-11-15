@@ -97,6 +97,8 @@ export function SourcesPage({
   const query = useQuery({
     queryKey: ["sources"],
     queryFn: () => list<Source>("/me/sources"),
+    // Reentering management must not freeze an overview snapshot.
+    refetchOnMount: "always",
   });
   const inventoryKnown = query.data !== undefined;
   const inventoryReady = query.isSuccess && query.fetchStatus === "idle";
@@ -873,6 +875,9 @@ export function CollectionsPage() {
   const sources = useQuery({
     queryKey: ["sources"],
     queryFn: () => list<Source>("/me/sources"),
+    // Overview may have read this cache before another tab added a source.
+    // Entering a collection rereads saved inventory, never refreshes providers.
+    refetchOnMount: "always",
   });
   const [deleting, setDeleting] = useState<Collection | null>(null);
   const createTrigger = useRef<HTMLButtonElement>(null);
