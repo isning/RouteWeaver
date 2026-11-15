@@ -106,6 +106,7 @@ export function SourcesPage({
   const message = toast,
     confirm = useConfirm();
   const [search, setSearch] = useState("");
+  const [taskFilter, setTaskFilter] = useState<"all" | "updates" | "failed">("all");
   const searchInput = useRef<HTMLInputElement>(null);
   const [editing, setEditing] = useState<Source | null>(null);
   const [setupSource, setSetupSource] = useState<Source | null>(null);
@@ -297,7 +298,9 @@ export function SourcesPage({
     setOpen(true);
   };
   const filtered = (query.data || []).filter((s) =>
-    s.name.toLowerCase().includes(search.toLowerCase()),
+    s.name.toLowerCase().includes(search.toLowerCase()) &&
+      (taskFilter === "all" || (s.enabled && !sourceStatusUnknown(s) &&
+        (taskFilter === "updates" ? !!s.candidate : sourceHasFailure(s)))),
   );
   const configurationSource = query.data?.find(
     (source) => source.id === detail?.id,
@@ -386,6 +389,12 @@ export function SourcesPage({
         <Section variant="plain">
           <ResourceToolbar
             label="查找订阅来源"
+            filters={<div role="group" aria-label="来源状态" className="flex flex-wrap gap-1">
+              {([ ["all", "全部"], ["updates", "有更新"], ["failed", "更新失败"] ] as const).map(([value, label]) => (
+                <ActionButton key={value} variant={taskFilter === value ? "secondary" : "ghost"}
+                  aria-pressed={taskFilter === value} onClick={() => setTaskFilter(value)}>{label}</ActionButton>
+              ))}
+            </div>}
             search={
               <SearchField
                 ref={searchInput}
@@ -415,7 +424,7 @@ export function SourcesPage({
               className="@container/source-table"
               rowKey="id"
               rows={filtered}
-              count={{ total: query.data.length, unit: "个私有来源", filtered: !!search }}
+              count={{ total: query.data.length, unit: "个私有来源", filtered: !!search || taskFilter !== "all" }}
               columns={[
                 {
                   title: "来源",
@@ -576,16 +585,17 @@ export function SourcesPage({
                 {
                   emptyText: (
                     <EmptyState
-                      title="没有匹配的来源"
+                      title={taskFilter === "all" ? "没有匹配的来源" : "没有符合条件的来源"}
                       action={
                         <ActionButton
                           onClick={() => {
                             setSearch("");
+                            setTaskFilter("all");
                             searchInput.current?.focus();
                           }}
                           variant="outline"
                         >
-                          清除搜索
+                          {taskFilter === "all" ? "清除搜索" : "清除筛选"}
                         </ActionButton>
                       }
                     />

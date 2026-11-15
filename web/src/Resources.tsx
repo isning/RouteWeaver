@@ -164,7 +164,13 @@ export function ResourcesPage() {
   const query = useQuery({
     queryKey: ["resources"],
     queryFn: () => list<RuleResource>("/me/resources"),
+    refetchOnMount: "always",
   });
+  const [resourceFilter, setResourceFilter] = useState<"all" | "failed">("all");
+  const failedResources = (query.data ?? []).filter(
+    (resource) => resource.refreshStatus === "failed",
+  );
+  const visibleResources = resourceFilter === "failed" ? failedResources : (query.data ?? []);
   const inventoryKnown = query.data !== undefined;
   const inventoryReady = query.isSuccess && query.fetchStatus === "idle";
   const [current, setCurrent] = useState<RuleResource | null>(null);
@@ -403,12 +409,37 @@ export function ResourcesPage() {
         retry={() => query.refetch()}
       >
         <Section variant="plain">
+          {!!query.data?.length && (
+            <div role="group" aria-label="筛选规则资源" className="mb-3 flex flex-wrap items-center gap-2">
+              <ActionButton
+                variant={resourceFilter === "all" ? "secondary" : "ghost"}
+                aria-pressed={resourceFilter === "all"}
+                onClick={() => setResourceFilter("all")}
+              >
+                全部 <span className="text-muted-foreground tabular-nums">{query.data.length}</span>
+              </ActionButton>
+              <ActionButton
+                variant={resourceFilter === "failed" ? "secondary" : "ghost"}
+                aria-pressed={resourceFilter === "failed"}
+                onClick={() => setResourceFilter("failed")}
+              >
+                刷新失败 <span className="text-muted-foreground tabular-nums">{failedResources.length}</span>
+              </ActionButton>
+            </div>
+          )}
           {!query.data?.length ? (
             inventoryReady ? <EmptyState title="暂无规则资源" /> : null
+          ) : !visibleResources.length ? (
+            inventoryReady ? (
+              <EmptyState
+                title="没有刷新失败的规则资源"
+                action={<ActionButton variant="outline" onClick={() => setResourceFilter("all")}>查看全部</ActionButton>}
+              />
+            ) : null
           ) : (
             <DataTable
               rowKey="id"
-              rows={query.data}
+              rows={visibleResources}
               className="[&_tbody_td]:align-top"
               columns={[
                 {
