@@ -26,7 +26,10 @@ func TestSubscriptionFetchHistoryTracksDeliveriesWithoutSecretsOrCrossOwnerData(
 	if history.CollectionStartedAt == nil || history.Items[0].OutputID != "phone" || history.Items[0].Delivery != "bundle" || history.Items[1].Delivery != "feed" {
 		t.Fatal("wrong delivery history")
 	}
-	if strings.Contains(body, "token") || strings.Contains(body, "127.0.0.1") || strings.Contains(body, "User-Agent") {
+	if !history.TrackSourceIPs || history.Items[0].SourceIP != "127.0.0.1" || history.Items[0].NewSource {
+		t.Fatal("default tracking should retain the direct peer without a false alert")
+	}
+	if strings.Contains(body, "token") || strings.Contains(body, "User-Agent") {
 		t.Fatal("private request metadata leaked")
 	}
 	code, _, body = req(t, other.c, "GET", srv.URL+"/api/me/subscription-fetches?owner=fetch-owner", "", nil)
@@ -63,7 +66,7 @@ func (w *failedFetchWriter) Header() http.Header       { return w.header }
 func (w *failedFetchWriter) WriteHeader(int)           {}
 func (w *failedFetchWriter) Write([]byte) (int, error) { return 0, errors.New("disconnected") }
 
-func TestSubscriptionFetchTrackingOwnerOptInAndUntrustedForwarding(t *testing.T) {
+func TestSubscriptionFetchTrackingDefaultAndUntrustedForwarding(t *testing.T) {
 	s, srv := makeServer(t)
 	owner := inviteClient(t, s, srv, "tracking-owner")
 	other := inviteClient(t, s, srv, "tracking-other")
@@ -124,7 +127,7 @@ func TestSubscriptionFetchTrackingOwnerOptInAndUntrustedForwarding(t *testing.T)
 		}
 	}
 	_, _, raw = req(t, other.c, "GET", srv.URL+"/api/me/subscription-fetches", "", nil)
-	if json.Unmarshal([]byte(raw), &h) != nil || h.TrackSourceIPs || len(h.Items) != 0 {
+	if json.Unmarshal([]byte(raw), &h) != nil || !h.TrackSourceIPs || len(h.Items) != 0 {
 		t.Fatalf("cross owner %s", raw)
 	}
 	code, _, raw = req(t, owner.c, "PUT", endpoint, owner.csrf, map[string]any{"enabled": false})
@@ -132,3 +135,4 @@ func TestSubscriptionFetchTrackingOwnerOptInAndUntrustedForwarding(t *testing.T)
 		t.Fatalf("disable: %d %s", code, raw)
 	}
 }
+

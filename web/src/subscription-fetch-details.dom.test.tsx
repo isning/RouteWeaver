@@ -15,16 +15,16 @@ const history: FetchHistory = {
     {outputId:"phone", at:"2026-11-15T12:00:00Z",delivery:"feed"},
   ],
 };
-it("shows only opted-in last source and exact retained recent records for this output", () => {
+it("shows only enabled last source and exact retained recent records for this output", () => {
   const {rerender} = render(<SubscriptionFetchDetails history={history} outputId="phone" now={now} />);
   expect(screen.getByText("192.0.2.4")).toBeTruthy();
-  expect(screen.getByText("新地址")).toBeTruthy();
+  expect(screen.queryByText("新地址")).toBeNull();
   expect(screen.queryByText("192.0.2.99")).toBeNull();
-  expect(screen.getByText("近 24 小时已保留 2 条拉取记录")).toBeTruthy();
+  expect(screen.getByText("24 小时内记录 2 次拉取")).toBeTruthy();
   rerender(<SubscriptionFetchDetails history={{...history,trackSourceIps:false}} outputId="phone" now={now} />);
   expect(screen.queryByText("192.0.2.4")).toBeNull();
   expect(screen.queryByText("新地址")).toBeNull();
-  expect(screen.getByText("近 24 小时已保留 2 条拉取记录")).toBeTruthy();
+  expect(screen.getByText("24 小时内记录 2 次拉取")).toBeTruthy();
   rerender(<SubscriptionFetchDetails history={{...history,trackSourceIps:undefined}} outputId="phone" now={now} />);
   expect(screen.queryByText("192.0.2.4")).toBeNull();
 });
@@ -32,5 +32,5 @@ it("does not borrow an old source when the latest delivery has no recorded IP", 
   render(<SubscriptionFetchDetails history={{...history, items:[{outputId:"phone",at:"2026-11-14T12:00:00Z",delivery:"bundle"},...history.items]}} outputId="phone" now={now} />);
   expect(screen.getByText("本次未记录来源 IP")).toBeTruthy();
   expect(screen.queryByText("192.0.2.4")).toBeNull();
-  expect(screen.getByText("近 24 小时已保留 3 条拉取记录")).toBeTruthy();
+  expect(screen.getByText("24 小时内记录 3 次拉取")).toBeTruthy();
 });

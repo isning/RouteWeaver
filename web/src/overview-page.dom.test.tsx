@@ -356,7 +356,10 @@ it.each([
     admission: { ...current.admission, onlineIps: [ip] },
     ipMetadata: { available: true, sources: [], truncated: false, items: [{ ip, status: "non-public" }] },
   }));
-  expect(await screen.findByText(label)).toBeTruthy();
+  const badge = await screen.findByText(label);
+  expect(badge.getAttribute("data-slot")).toBe("badge");
+  expect(within(badge.parentElement!).getByText(ip)).toBeTruthy();
+  expect(badge.parentElement!.className).toContain("items-center");
   expect(screen.queryByText("非公网地址，无公网归属资料")).toBeNull();
 });
 
@@ -426,11 +429,19 @@ it.each([
    {ip: "192.0.2.7",activeStreams:1},
    {ip: "192.0.2.7",outputId:"shared",activeStreams:1},
   ]);
-  expect(await screen.findByText("工作订阅（1 个连接）")).toBeTruthy();
-  expect(screen.getByText("未关联到订阅的连接（1 个连接）")).toBeTruthy();
-  expect(screen.getAllByText("最近连接确认时间未知")).toHaveLength(2);
-  expect(screen.getByText("订阅名称暂不可用（1 个连接）")).toBeTruthy();
-  expect(screen.getByText(/^最近连接确认：/).textContent).toContain("2026");
+  const ipRow = (await screen.findByText("192.0.2.7")).closest("li")!;
+  const name = within(ipRow).getByText("工作订阅");
+  expect(within(name.parentElement!).getByText("1 个连接")).toBeTruthy();
+  const confirmed = name.parentElement!.parentElement!.querySelector("time")!;
+  expect(confirmed.dateTime).toBe("2026-11-14T07:00:00Z");
+  expect(confirmed.getAttribute("aria-label")).toContain("最近确认：");
+  expect(name.parentElement!.className).toContain("flex-wrap");
+  expect(confirmed.className).toContain("text-right");
+  expect(name.parentElement!.parentElement!.className).toContain("grid-cols-[minmax(0,1fr)_auto]");
+  expect(screen.getByText("未关联订阅")).toBeTruthy();
+  expect(screen.queryByText("最近连接确认时间未知")).toBeNull();
+  expect(screen.getByText("未知订阅")).toBeTruthy();
+  expect(screen.queryByText(/^最近连接确认：/)).toBeNull();
  });
 
 it("shows only a fresh inline forecast and hides it when overview refresh fails", async () => {
@@ -517,3 +528,4 @@ it("does not call a route historical when its name lookup fails", async () => {
   expect(await screen.findByRole("button", { name: "线路名称暂不可用用量占比" })).toBeTruthy();
   expect(screen.queryByRole("button", { name: "历史线路用量占比" })).toBeNull();
 });
+

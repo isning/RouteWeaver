@@ -13,7 +13,7 @@ const SubscriptionFetchLimit = 100
 const SubscriptionFetchWindowDays = 30
 
 // SubscriptionFetch records a completed HTTP response write, not successful
-// client import or proxy traffic. It excludes token and UA; IP collection requires an explicit owner opt-in.
+// client import or proxy traffic. It excludes token and UA; IP collection is enabled by default and can be disabled by the owner.
 type SubscriptionFetch struct {
 	SourceIP  string    `json:"sourceIp,omitempty"`
 	NewSource bool      `json:"newSource,omitempty"`
@@ -64,7 +64,7 @@ func (s *Store) RecordSubscriptionFetch(owner string, item SubscriptionFetch) er
 	}
 	defer tx.Rollback()
 	kind := TenantKind(owner, "subscription-fetches")
-	var h SubscriptionFetchHistory
+	h := SubscriptionFetchHistory{TrackSourceIPs: true}
 	if err = s.getTx(tx, kind, "recent", &h); err != nil && !errors.Is(err, ErrNotFound) {
 		return err
 	}
@@ -105,7 +105,7 @@ func (s *Store) RecordSubscriptionFetch(owner string, item SubscriptionFetch) er
 	return tx.Commit()
 }
 func (s *Store) SubscriptionFetches(owner string, now time.Time) (SubscriptionFetchHistory, error) {
-	h := SubscriptionFetchHistory{Items: []SubscriptionFetch{}, Limit: SubscriptionFetchLimit, WindowDays: SubscriptionFetchWindowDays}
+	h := SubscriptionFetchHistory{TrackSourceIPs: true, Items: []SubscriptionFetch{}, Limit: SubscriptionFetchLimit, WindowDays: SubscriptionFetchWindowDays}
 	if !validFetchOwner(owner) || now.IsZero() {
 		return h, fmt.Errorf("invalid history query")
 	}
@@ -132,7 +132,7 @@ func (s *Store) SubscriptionFetches(owner string, now time.Time) (SubscriptionFe
 	return h, tx.Commit()
 }
 
-// SetSubscriptionFetchSourceTracking changes only this owner's opt-in. Turning
+// SetSubscriptionFetchSourceTracking changes only this owner's preference. Turning
 // it off removes addresses and alert markers from the live encrypted row, while
 // preserving the original response-write history. Backups are not rewritten.
 func (s *Store) SetSubscriptionFetchSourceTracking(owner string, enabled bool, now time.Time) error {
@@ -147,7 +147,7 @@ func (s *Store) SetSubscriptionFetchSourceTracking(owner string, enabled bool, n
 	}
 	defer tx.Rollback()
 	kind := TenantKind(owner, "subscription-fetches")
-	var h SubscriptionFetchHistory
+	h := SubscriptionFetchHistory{TrackSourceIPs: true}
 	if err = s.getTx(tx, kind, "recent", &h); err != nil && !errors.Is(err, ErrNotFound) {
 		return err
 	}
@@ -164,3 +164,4 @@ func (s *Store) SetSubscriptionFetchSourceTracking(owner string, enabled bool, n
 	}
 	return tx.Commit()
 }
+

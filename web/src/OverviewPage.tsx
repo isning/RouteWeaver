@@ -419,7 +419,11 @@ export function OverviewPage() {
                   </p>}
                 </div>
                 <ul className="mb-5 max-h-52 divide-y overflow-y-auto rounded-[10px] border">
-                  {detail.admission.onlineIps.map((ip) => (
+                  {detail.admission.onlineIps.map((ip) => {
+                    const metadata = detail.ipMetadata?.available === true
+                      ? detail.ipMetadata.items.find((item) => item.ip === ip) : undefined;
+                    const connections = connectionsByIP.get(ip) ?? [];
+                    return (
                     <li
                       key={ip}
                       className="flex min-w-0 items-center gap-3 px-3 py-2.5 text-sm"
@@ -429,32 +433,39 @@ export function OverviewPage() {
                         className={`size-2 shrink-0 rounded-full ${onlineSnapshotStale ? "bg-muted-foreground" : "bg-emerald-500"}`}
                       />
                       <div className="min-w-0 flex-1">
-                        <p className="font-mono wrap-anywhere">{ip}</p>
-                        {connectionsByIP.get(ip)?.map((row) => (
-                          <div key={row.outputId ? `output:${row.outputId}` : "shared"} className="mt-1 text-xs text-muted-foreground">
-                            <p className="wrap-anywhere">
+                        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                          <span className="font-mono wrap-anywhere">{ip}</span>
+                          {metadata?.status === "non-public" && <IPDetails item={metadata} />}
+                        </div>
+                        {connections.map((row, index) => (
+                          <div key={row.outputId ? `output:${row.outputId}` : "shared"} className="mt-1 grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-3 text-xs text-muted-foreground">
+                            <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                            {index === 0 && detail.ipMetadata?.available === true && metadata?.status !== "non-public" && <IPDetails item={metadata} />}
+                            <span className="min-w-0 wrap-anywhere">
                               {row.outputId
-                                ? outputNames.get(row.outputId) || "订阅名称暂不可用"
-                                : "未关联到订阅的连接"}
-                              {`（${row.activeStreams} 个连接）`}
-                            </p>
-                            <p>
-                              {row.lastConfirmedAt
-                                ? `最近连接确认：${dateLabel(row.lastConfirmedAt)}`
-                                : "最近连接确认时间未知"}
-                            </p>
+                                ? outputNames.get(row.outputId) || "未知订阅"
+                                : "未关联订阅"}
+                            </span>
+                            <span className="shrink-0 tabular-nums">{row.activeStreams} 个连接</span>
+                            </div>
+                            {row.lastConfirmedAt && (
+                              <time
+                                dateTime={row.lastConfirmedAt}
+                                title={`最近确认：${dateLabel(row.lastConfirmedAt)} UTC+8`}
+                                aria-label={`最近确认：${dateLabel(row.lastConfirmedAt)} UTC+8`}
+                                className="text-right whitespace-nowrap tabular-nums"
+                              >
+                                {connectionTime(row.lastConfirmedAt)}
+                              </time>
+                            )}
                           </div>
                         ))}
-                        {detail.ipMetadata?.available === true && (
-                          <IPDetails
-                            item={detail.ipMetadata.items.find(
-                              (item) => item.ip === ip,
-                            )}
-                          />
+                        {!connections.length && detail.ipMetadata?.available === true && metadata?.status !== "non-public" && (
+                          <div className="mt-1"><IPDetails item={metadata} /></div>
                         )}
                       </div>
                     </li>
-                  ))}
+                  ); })}
                 </ul>
                 {!count && (
                   <p className="mb-4 text-sm text-muted-foreground">
@@ -628,13 +639,9 @@ export function OverviewPage() {
                             </ActionButton>
                           ) : last ? (
                             <>
-                              <p className="text-xs" title={dateLabel(last.at)}>
+                              <p className="flex flex-wrap items-center gap-2 text-xs" title={dateLabel(last.at)}>
                                 {relativeTime(last.at)}
-                              </p>
-                              <p className="mt-1 text-xs text-muted-foreground">
-                                {last.delivery === "bundle"
-                                  ? "配置包"
-                                  : "订阅链接"}
+                                {fetches.data?.trackSourceIps && last.newSource && last.sourceIp && <Badge variant="outline" className="border-amber-200 bg-amber-50 px-1.5 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200">新 IP</Badge>}
                               </p>
                               {fetches.data && <SubscriptionFetchDetails history={fetches.data} outputId={output.id} now={now} />}
                             </>
@@ -805,6 +812,10 @@ function resetCountdown(at: string) {
   if (hours <= 0) return "等待重置";
   return `${Math.floor(hours / 24)} 天 ${hours % 24} 小时`;
 }
+function connectionTime(at: string) {
+  const days = Math.floor((Date.now() - Date.parse(at)) / 86_400_000);
+  return Number.isFinite(days) && days >= 1 ? `${days} 天前` : relativeTime(at);
+}
 function relativeTime(at: string) {
   const minutes = Math.floor((Date.now() - Date.parse(at)) / 60000);
   if (!Number.isFinite(minutes) || minutes < 0) return dateLabel(at);
@@ -825,9 +836,9 @@ function IPDetails({
     );
   if (item.status === "non-public")
     return (
-      <p className="truncate text-xs text-muted-foreground">
+      <Badge variant="secondary" className="shrink-0">
         {isPrivateIP(item.ip) ? "私有 IP" : "非公网 IP"}
-      </p>
+      </Badge>
     );
   if (item.status !== "available")
     return <p className="truncate text-xs text-muted-foreground">归属未知</p>;
@@ -861,4 +872,5 @@ function countryName(code: string) {
     return code;
   }
 }
+
 

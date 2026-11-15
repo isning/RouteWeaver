@@ -1,5 +1,4 @@
 import type { FetchHistory } from "./SubscriptionFetchAlerts";
-import { Badge } from "./components/ui/badge";
 
 /** Counts only retained successful deliveries, never extrapolates a total. */
 export function SubscriptionFetchDetails({ history, outputId, now }: {
@@ -17,9 +16,8 @@ export function SubscriptionFetchDetails({ history, outputId, now }: {
     {history.trackSourceIps === true && latest && (
       latest.sourceIp ? <div className="flex flex-wrap items-center gap-2">
         <span className="font-mono wrap-anywhere">{latest.sourceIp}</span>
-        {latest.newSource === true && <Badge variant="outline" className="text-xs">新地址</Badge>}
       </div> : <p>本次未记录来源 IP</p>
     )}
-    <p>近 24 小时已保留 {count} 条拉取记录</p>
+    <p>24 小时内记录 {count} 次拉取</p>
   </div>;
 }

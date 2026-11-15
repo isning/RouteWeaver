@@ -89,7 +89,7 @@ func TestSubscriptionFetchHistorySerializesIndependentStores(t *testing.T) {
 	}
 }
 
-func TestSubscriptionFetchSourceAlertsOptInResetAndBoundaries(t *testing.T) {
+func TestSubscriptionFetchSourceAlertsDefaultEnabledResetAndBoundaries(t *testing.T) {
 	s, err := store.Open(filepath.Join(t.TempDir(), "db"), bytes.Repeat([]byte{33}, 32))
 	if err != nil {
 		t.Fatal(err)
@@ -110,12 +110,12 @@ func TestSubscriptionFetchSourceAlertsOptInResetAndBoundaries(t *testing.T) {
 		}
 		return h
 	}
-	add("phone", "192.0.2.1", now)
-	if read().Items[0].SourceIP != "" {
-		t.Fatal("default retained IP")
+	if !read().TrackSourceIPs {
+		t.Fatal("new owner tracking should default on")
 	}
-	if err := s.SetSubscriptionFetchSourceTracking("owner", true, now); err != nil {
-		t.Fatal(err)
+	add("phone", "192.0.2.1", now)
+	if !read().TrackSourceIPs || read().Items[0].SourceIP != "192.0.2.1" || read().Items[0].NewSource {
+		t.Fatal("default tracking should retain baseline without alert")
 	}
 	add("phone", "::ffff:192.0.2.1", now.Add(time.Second))
 	if read().Items[0].NewSource || read().Items[0].SourceIP != "192.0.2.1" {
@@ -144,6 +144,10 @@ func TestSubscriptionFetchSourceAlertsOptInResetAndBoundaries(t *testing.T) {
 		if x.SourceIP != "" || x.NewSource {
 			t.Fatal("disable did not clear")
 		}
+	}
+	add("phone", "192.0.2.9", now.Add(5500*time.Millisecond))
+	if read().Items[0].SourceIP != "" {
+		t.Fatal("explicit disable was overridden")
 	}
 	if read().TrackSourceIPs {
 		t.Fatal("still enabled")
@@ -206,3 +210,4 @@ func TestSubscriptionFetchDisableSerializesWithAppendAcrossStores(t *testing.T) 
 		}
 	}
 }
+
