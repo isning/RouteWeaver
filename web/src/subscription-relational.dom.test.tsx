@@ -613,7 +613,8 @@ it("lets long client names wrap inside the owned-link row instead of clipping th
   try {
     expect(getComputedStyle(control).whiteSpace).toBe("normal");
     expect(getComputedStyle(control).overflowWrap).toBe("anywhere");
-    expect(getComputedStyle(control).maxWidth).toBe("100%");
+    // The table may scroll, but its name action must fit the visible card too.
+    expect(getComputedStyle(control).maxWidth).toBe("min(100%, 100cqi - 32px)");
     expect(control.textContent).toBe(name);
   } finally {
     style.remove();
@@ -638,3 +639,4 @@ it("wraps an unbroken configuration identity instead of clipping it at the card 
     style.remove();
   }
 });
+
