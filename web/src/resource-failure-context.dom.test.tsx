@@ -156,7 +156,8 @@ it("keeps one current refresh error, restores row context, and clears failure af
   await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
   await waitFor(() => expect(document.activeElement).toBe(refresh));
   expect(screen.queryByText(requestFailure)).toBeNull();
-  expect(screen.queryByText("刷新失败", { exact: true })).toBeNull();
+  expect(within(actions).queryByText("刷新失败", { exact: true })).toBeNull();
+  expect(within(actions).queryByText(reason)).toBeNull();
   expect(refresh.getAttribute("aria-describedby")).toBeNull();
   expect(replace.getAttribute("aria-describedby")).toBeNull();
   expect(refreshes).toBe(2);

@@ -151,15 +151,17 @@ for (const width of [1440, 390]) {
       const originalChosen = await f.bundleState(chosen, v1);
       const originalSibling = await f.bundleState(sibling, v1);
       const reloadSeededInventory = async (groups: Array<{ name: string; outputs: Output[] }>) => {
-        // Supporting API setup does not invalidate the live UI's query cache.
-        // Hash navigation alone keeps that document. Re-enter once with a fresh
-        // document after each completed setup batch, then verify its real list.
+        // API setup does not invalidate the UI cache. Leave the old document
+        // before observing the new inventory: a hash navigation followed by
+        // reload could capture an old GET whose response body is then destroyed.
+        await page.goto("about:blank");
+        const listed = responseFor(page, "/api/me/outputs", "GET").then(async (result) => {
+          expect(result.status()).toBe(200);
+          return await result.json() as Output[];
+        });
         await page.goto("/#subscriptions");
-        const listed = responseFor(page, "/api/me/outputs", "GET");
-        await page.reload();
-        const result = await listed;
-        expect(result.status()).toBe(200);
-        const outputs = await result.json() as Output[];
+        // Finish consuming this document's body before any later navigation.
+        const outputs = await listed;
         expect(outputs.map((output) => output.id).sort()).toEqual(
           groups.flatMap((group) => group.outputs.map((output) => output.id)).sort(),
         );
