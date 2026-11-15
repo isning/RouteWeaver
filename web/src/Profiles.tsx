@@ -1,3 +1,6 @@
+Warning: truncated output (original token count: 36116)
+Total output lines: 3783
+
 import { ScrollableTabsList } from "@/ui-patterns/scrollable-tabs-list";
 import { DraftIntegerInput, exactDraftInteger } from "./draft-integer";
 import { Metadata, MetadataItem } from "@/ui-patterns/metadata";
@@ -1044,17 +1047,17 @@ export function ProfileEditor({
               </ActionButton>
             </div>
             {!!draft.ir.rules.length && <div className="@container/rules mb-4 overflow-hidden rounded-lg border">
-              <div aria-hidden="true" className="hidden grid-cols-[32px_minmax(0,1.6fr)_minmax(0,1fr)_136px] gap-4 bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground @min-[960px]/rules:grid">
+              <div aria-hidden="true" className="hidden grid-cols-[32px_minmax(0,1.6fr)_minmax(0,1fr)_136px] gap-4 bg-muted/50 px-4 py-2 text-xs font-medium text-muted-foreground @min-[800px]/rules:grid">
                 <span>#</span><span>匹配条件</span><span>流量去向</span><span className="text-right">操作</span>
               </div>
             {draft.ir.rules.map((rule, index) => (
               <div
-                className="rule-card grid gap-4 border-t p-4 first:border-t-0 @min-[960px]/rules:grid-cols-[32px_minmax(0,1.6fr)_minmax(0,1fr)_136px] @min-[960px]/rules:items-start"
+                className="rule-card grid gap-4 border-t p-4 first:border-t-0 @min-[800px]/rules:grid-cols-[32px_minmax(0,1.6fr)_minmax(0,1fr)_136px] @min-[800px]/rules:items-start"
                 key={rule.id}
               >
-                <span aria-hidden="true" className="hidden min-h-11 items-center font-medium tabular-nums text-muted-foreground @min-[960px]/rules:flex">{index + 1}</span>
-                <div className="step-top flex items-center justify-end gap-0.5 @min-[960px]/rules:order-last">
-                  <span aria-hidden="true" className="step-index mr-auto flex size-6 items-center justify-center rounded-full bg-muted text-xs font-medium @min-[960px]/rules:hidden">
+                <span aria-hidden="true" className="hidden min-h-11 items-center font-medium tabular-nums text-muted-foreground @min-[800px]/rules:flex">{index + 1}</span>
+                <div className="step-top flex items-center justify-end gap-0.5 @min-[800px]/rules:order-last">
+                  <span aria-hidden="true" className="step-index mr-auto flex size-6 items-center justify-center rounded-full bg-muted text-xs font-medium @min-[800px]/rules:hidden">
                     {index + 1}
                   </span>
                   <strong className="sr-only">规则 {index + 1} 匹配条件</strong>
@@ -1094,7 +1097,7 @@ export function ProfileEditor({
                     size="sm"
                   />
                 </div>
-                <div className="min-w-0 @min-[960px]/rules:[&>.match-editor>.match-scalar-line]:grid @min-[960px]/rules:[&>.match-editor>.match-scalar-line]:grid-cols-[140px_88px_minmax(0,1fr)_44px]">
+                <div className="min-w-0 [&>.match-editor]:space-y-2 [&>.match-editor>.match-add]:mt-0 @min-[800px]/rules:[&>.match-editor>.match-scalar-line]:grid @min-[800px]/rules:[&>.match-editor>.match-scalar-line]:grid-cols-[clamp(112px,12.7cqw,140px)_88px_minmax(0,1fr)_44px]">
                 <MatchEditor
                   value={rule.match}
                   resources={resources.data || []}
@@ -1126,7 +1129,7 @@ export function ProfileEditor({
                     id: rule.id,
                   })}
                 >
-                  <span className="@min-[960px]/rules:sr-only">流量去向</span>
+                  <span className="@min-[800px]/rules:sr-only">流量去向</span>
                   <ChoiceSelect
                     aria-label={`规则 ${index + 1} 的流量去向`}
                     aria-invalid={
@@ -1796,97 +1799,7 @@ export function ProfileEditor({
                     }))}
                     onValueChange={(value) => {
                       if (value === undefined) return;
-                      const action = parseAction(value);
-                      update({
-                        ir: { ...draft.ir, defaultAction: action },
-                        ...includeChosenEntries([action]),
-                      });
-                    }}
-                  />
-                </label>
-                <ActionReferenceDetails
-                  controlID={actionControlID({ kind: "default" })}
-                  location="默认去向"
-                  references={[draft.ir.defaultAction]}
-                  actions={actions}
-                />
-                <ActionButton
-                  className="profile-candidate-action flex flex-wrap items-center gap-2"
-                  aria-label="默认流量：使用多个候选连接…"
-                  onClick={() =>
-                    openGroupTask(
-                      { kind: "default", expected: draft.ir.defaultAction },
-                      draft.ir.rules.length ? "未匹配规则的流量" : "所有流量",
-                    )
-                  }
-                  variant="outline"
-                >
-                  使用多个候选连接…
-                </ActionButton>
-                {/* Keep the announcer mounted; an empty consequence has no visual card. */}
-                <div
-                  className="profile-traffic-outcome space-y-2 rounded-lg bg-muted p-4 text-sm empty:sr-only"
-                  aria-live="polite"
-                >
-                  {!nativeOverride &&
-                    !draft.ir.rules.length &&
-                    draft.ir.defaultAction.kind === "direct" &&
-                    (endpoints.length > 0 || selectedEntries.length > 0) && (
-                      <p>已导入的连接尚未用于分流。</p>
-                    )}
-                  {nativeOverride && (
-                    <p>
-                      上方保留结构化默认行为；原生规则或设置可能改变最终行为，请按具体客户端检查。
-                    </p>
-                  )}
-                  {(draft.mode === "nodes-only" ||
-                    boundOutput?.mode === "nodes-only") && (
-                    <p>
-                      纯节点订阅仅交付连接；上方分流行为保存在共享配置中，供完整配置使用。
-                    </p>
-                  )}
-                </div>
-              </div>
-              <div className="profile-input-task space-y-4 @min-[44rem]/profile-task:border-l @min-[44rem]/profile-task:pl-6">
-                <div className="profile-source-summary flex flex-wrap items-center justify-between gap-3 [&>h2]:mb-0 [&>span]:w-full">
-                  <h2>代理连接</h2>
-                  <ActionButton
-                    ref={sourceDisclosure}
-                    aria-label={sourceExpanded ? "收起来源设置" : sourceDisclosureLabel}
-                    aria-expanded={sourceExpanded}
-                    aria-controls={sourcePanelID}
-                    onKeyDown={(event) => {
-                      if (
-                        event.repeat &&
-                        (event.key === "Enter" || event.key === " ")
-                      )
-                        event.preventDefault();
-                    }}
-                    onClick={() => setSourceExpanded((expanded) => !expanded)}
-                    variant="outline"
-                  >
-                    {sourceExpanded ? "收起来源设置" : sourceDisclosureLabel}
-                  </ActionButton>
-                  <span className="profile-source-identity flex flex-wrap items-center gap-2">
-                    {sourceSummary}
-                  </span>
-                </div>
-                <div
-                  className="profile-input-result grid gap-2 rounded-lg bg-muted/50 p-3 text-sm text-muted-foreground"
-                  aria-live="polite"
-                >
-                  {effectiveInputs.status === "pending" ? (
-                    <span>
-                      {effectiveInputs.paused
-                        ? `等待核对${ownConnectionLabel}…`
-                        : `正在计算${ownConnectionLabel}…`}
-                    </span>
-                  ) : effectiveInputs.status === "error" ? (
-                    <strong>{ownConnectionLabel}暂不可用</strong>
-                  ) : (
-                    <strong>{endpoints.length === 0 &&
-                      !selectedSourceIds.length && !draft.collectionId &&
-                      !draft.platformEntryIds?.length && !draft.ir.endpoints.length &&
+                      const action = pars…1116 tokens truncated…th &&
                       (draft.ir.defaultAction.kind === "direct" || draft.ir.defaultAction.kind === "reject") &&
                       !draft.ir.rules.length && !draft.ir.groups.length
                       ? "直连与拒绝不需要代理连接"
@@ -2330,12 +2243,13 @@ export function ProfileEditor({
               }}
             >
               {
-                <ScrollableTabsList aria-label="配置内容">
+                <ScrollableTabsList aria-label="配置内容" className="gap-1 bg-transparent">
                   {editorTabs.map((section) => (
                     <TabsTrigger
                       key={section.key}
                       value={String(section.key)}
                       data-section={section.key}
+                      className="data-active:bg-transparent group-data-[variant=default]/tabs-list:data-active:shadow-none dark:data-active:border-transparent dark:data-active:bg-transparent"
                       disabled={save.isPending || ("disabled" in section && !!section.disabled)}
                     >
                       {section.label}

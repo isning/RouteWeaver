@@ -69,6 +69,18 @@ test("attention panel keeps its reference hierarchy in both themes and narrow en
         await page.evaluate(() => {
           document.documentElement.style.fontSize = "200%";
         });
+      // Font-size changes animate the shared button's dimensions. Let the
+      // layout settle before testing focus scrolling, rather than focusing
+      // against geometry that is still changing.
+      await page.evaluate(async () => {
+        await document.fonts.ready;
+        document.body.getBoundingClientRect();
+        await Promise.all(
+          document
+            .getAnimations()
+            .map((animation) => animation.finished.catch(() => {})),
+        );
+      });
       expect(
         await page.evaluate(
           () => document.documentElement.scrollWidth <= innerWidth,
@@ -76,7 +88,46 @@ test("attention panel keeps its reference hierarchy in both themes and narrow en
       ).toBe(true);
       for (const button of await panel.getByRole("button").all()) {
         await button.focus();
-        await expect(button).toBeInViewport({ ratio: 1 });
+        try {
+          await expect(button).toBeInViewport({ ratio: 1 });
+        } catch (error) {
+          await info.attach("attention-focus-geometry", {
+            body: JSON.stringify(
+              await button.evaluate((el) => ({
+                target: el.getBoundingClientRect().toJSON(),
+                viewport: { width: innerWidth, height: innerHeight },
+                scroll: { x: scrollX, y: scrollY },
+                ancestors: Array.from(
+                  (function* () {
+                    for (
+                      let node = el.parentElement;
+                      node;
+                      node = node.parentElement
+                    )
+                      yield node;
+                  })(),
+                ).map((node) => ({
+                  tag: node.tagName,
+                  classes: node.className,
+                  rect: node.getBoundingClientRect().toJSON(),
+                  overflow: getComputedStyle(node).overflow,
+                })),
+              })),
+              null,
+              2,
+            ),
+            contentType: "application/json",
+          });
+          const failurePath = info.outputPath(
+            `attention-focus-failure-${theme}-${width}.png`,
+          );
+          await page.screenshot({ path: failurePath, fullPage: true });
+          await info.attach("attention-focus-failure", {
+            path: failurePath,
+            contentType: "image/png",
+          });
+          throw error;
+        }
       }
       const path = info.outputPath(`attention-${theme}-${width}.png`);
       await page.screenshot({ path, fullPage: true, animations: "disabled" });
