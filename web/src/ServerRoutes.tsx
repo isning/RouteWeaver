@@ -8,7 +8,7 @@ import {
   OperationalIntegerInput,
   operationalInteger,
 } from "./OperationalIntegerInput";
-import { ResourceToolbar, SearchField } from "@/ui-patterns/resource-toolbar";
+import { ResourceToolbar, SearchField, QuickFilters } from "@/ui-patterns/resource-toolbar";
 import {
   Accordion,
   AccordionContent,
@@ -146,6 +146,9 @@ export function ServerRoutesPage({
   const [selected, setSelected] = useState<ServerDeployment | null>(null);
   const [newRecord, setNewRecord] = useState(false);
   const [search, setSearch] = useState("");
+  const searchInput = useRef<HTMLInputElement>(null);
+  const [draftFilter, setDraftFilter] = useState("all");
+  const [page, setPage] = useState(1);
   const [planning, setPlanning] = useState<{
     deploymentId: string;
     action?: FleetAction;
@@ -324,6 +327,13 @@ export function ServerRoutesPage({
     })();
   }, [requestedEntry, editing, selected, planning, task, query.data, query.isSuccess, query.isFetching, query.isPaused, query.isError, inventoryClient]);
   const inventory = query.data;
+  const searchTerm = search.trim().toLowerCase();
+  const visibleDeployments = (inventory?.deployments || []).filter(d =>
+    d.name.toLowerCase().includes(searchTerm) &&
+    (draftFilter === "all" || (draftFilter === "attention" ? !!d.diagnostics?.length : !d.diagnostics?.length)));
+  useEffect(() => {
+    setPage(current => Math.min(current, Math.max(1, Math.ceil(visibleDeployments.length / 10))));
+  }, [visibleDeployments.length]);
   const returnHref = returnContext.get("line")
     ? `#published-routes?line=${encodeURIComponent(returnContext.get("line")!)}${returnContext.get("user") ? `&user=${encodeURIComponent(returnContext.get("user")!)}` : ""}`
     : undefined;
@@ -400,12 +410,18 @@ export function ServerRoutesPage({
             {inventory.deployments.length > 0 && (
               <ResourceToolbar
                 label="查找转发路径"
+                filters={<QuickFilters label="配置草稿" value={draftFilter} options={[
+                  { value: "all", label: "全部" },
+                  { value: "saved", label: "已保存" },
+                  { value: "attention", label: "需要调整" },
+                ]} onValueChange={value => { setDraftFilter(value); setPage(1); }} />}
                 search={
                   <SearchField
+                    ref={searchInput}
                     placeholder="搜索转发路径"
                     aria-label="搜索转发路径"
                     value={search}
-                    onValueChange={setSearch}
+                    onValueChange={value => { setSearch(value); setPage(1); }}
                     type="search"
                   />
                 }
@@ -414,10 +430,14 @@ export function ServerRoutesPage({
             {inventory.deployments.length ? (
               <DataTable
                 rowKey="id"
-                rows={inventory.deployments.filter((d) =>
-                  d.name.toLowerCase().includes(search.toLowerCase()),
-                )}
-                count={{ total: inventory.deployments.length, unit: "条转发路径", filtered: !!search }}
+                rows={visibleDeployments}
+                page={page} onPageChange={setPage}
+                count={{ total: inventory.deployments.length, unit: "条转发路径", filtered: !!searchTerm || draftFilter !== "all" }}
+                empty={<EmptyState title="没有匹配的转发路径" action={
+                  <ActionButton variant="outline" onClick={() => {
+                    setSearch(""); setDraftFilter("all"); setPage(1); searchInput.current?.focus();
+                  }}>清除筛选</ActionButton>
+                } />}
                 minWidth={690}
                 columns={[
                   {
@@ -521,6 +541,7 @@ export function ServerRoutesPage({
           publicationRequests={publicationRequests}
           inventory={inventory}
           onReload={setSelected}
+          returnFocusFallback={() => searchInput.current}
           onClose={() => {
             setSelected(null);
             const context = new URLSearchParams(
@@ -1929,6 +1950,7 @@ function ServerRouteDetail({
   onPlan,
   onReload,
   returnHref,
+  returnFocusFallback,
 }: {
   deployment: ServerDeployment;
   publicationRequests?: PublicationOwner;
@@ -1938,6 +1960,7 @@ function ServerRouteDetail({
   onPlan: (action?: FleetAction) => void;
   onReload: (deployment: ServerDeployment) => void;
   returnHref?: string;
+  returnFocusFallback?: () => HTMLElement | null;
 }) {
   // Display projection only: retain the server snapshot for edits and CAS.
   const programs = programsIn(deployment);
@@ -2157,6 +2180,7 @@ function ServerRouteDetail({
     draftChanged(validate.error) || draftChanged(publish.error);
   return (
     <TaskSheet
+      returnFocusFallback={returnFocusFallback}
       scrollMode="auto"
       bodyProps={{ className: "space-y-5" }}
       title={deployment.name}
