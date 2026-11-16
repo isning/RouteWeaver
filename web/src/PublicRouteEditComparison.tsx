@@ -29,8 +29,10 @@ export function reviewedPublicRoute(value: unknown, id: string): ReviewedPublicR
     !Array.isArray(route.endpointIds) || !route.endpointIds.length || !route.endpointIds.every(id => typeof id === "string" && !!id) ||
     typeof route.publicHost !== "string" || typeof route.publicPort !== "number" ||
     !Number.isInteger(route.publicPort) || route.publicPort < 1 || route.publicPort > 65535) return;
-  if (route.hops !== undefined) {
-    if (!Array.isArray(route.hops) || !route.hops.length || !route.hops.every(hop => hop &&
+  // The API emits null when no explicit hops are stored; an empty list uses
+  // endpointIds in the backend. Only nonempty explicit paths need projection.
+  if (route.hops != null && (!Array.isArray(route.hops) || route.hops.length)) {
+    if (!Array.isArray(route.hops) || !route.hops.every(hop => hop &&
       (hop.kind === "managed" ? typeof hop.endpointId === "string" && !!hop.endpointId && Object.keys(hop).every(key => key === "kind" || key === "endpointId") :
        hop.kind === "connector" && typeof hop.connectorId === "string" && !!hop.connectorId && Object.keys(hop).every(key => key === "kind" || key === "connectorId")))) return;
     if (JSON.stringify(route.hops.filter(hop => hop.kind === "managed").map(hop => hop.endpointId)) !== JSON.stringify(route.endpointIds)) return;

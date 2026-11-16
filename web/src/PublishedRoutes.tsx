@@ -1292,7 +1292,7 @@ function PublicRouteEditor({
             onChange={(e) => update({ name: e.target.value })}
           />
         </label>
-        {metadataOnly ? <div className="space-y-1"><p className="text-sm font-medium">服务器转发路径</p><p className="text-sm text-muted-foreground">{deployment?.name || draft.deploymentId} · {mixedMetadataReason}</p></div> : <label className="standalone-label grid gap-2 text-sm font-medium">
+        {metadataOnly ? <div className="space-y-1"><p className="text-sm font-medium">服务器转发路径</p><div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-sm text-muted-foreground"><span>{deployment?.name || draft.deploymentId}</span><span>{mixedMetadataReason}</span></div></div> : <label className="standalone-label grid gap-2 text-sm font-medium">
           服务器转发路径
           <ChoiceSelect
             value={draft.deploymentId || undefined}
