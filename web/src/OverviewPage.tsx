@@ -1,7 +1,7 @@
 import { DailyUsageChart, RouteUsageChart } from "./OverviewCharts";
 import { OverviewActions } from "./OverviewActions";
 import { SubscriptionFetchDetails, hasRecentNewFetchSource } from "./SubscriptionFetchDetails";
-import { SubscriptionFetchAlerts, type FetchHistory } from "./SubscriptionFetchAlerts";
+import type { FetchHistory } from "./SubscriptionFetchAlerts";
 import { Metadata, MetadataItem } from "@/ui-patterns/metadata";
 import {
   Table,
@@ -495,31 +495,6 @@ export function OverviewPage() {
                 {detail.ipMetadata?.sources.some((source) => source.attributionURL === "https://db-ip.com") && (
                   <p className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground"><a href="https://db-ip.com" target="_blank" rel="noreferrer" className="underline underline-offset-2">IP Geolocation by DB-IP</a><a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer" className="underline underline-offset-2">CC BY 4.0</a></p>
                 )}
-                <details className="mt-3 text-xs text-muted-foreground">
-                  <summary className="cursor-pointer">统计说明</summary>
-                  <div className="mt-2 space-y-1">
-                    <p>
-                      按未到期的托管连接记录统计，不代表设备数量；断开后最多延迟{" "}
-                      {detail.admission.maxLeaseSeconds} 秒更新。
-                    </p>
-                    <p>连接确认是接入或续期成功的时间，不是最后传输数据的时间。共享凭据无法区分使用它的订阅。</p>
-                    {detail.ipMetadata?.available === true ? (
-                      <>
-                        <p>
-                          国家和网络组织来自本地数据库，不代表设备的实际位置或运营商。
-                        </p>
-                        {detail.ipMetadata.sources.map((source, index) => (
-                          <Metadata key={`${source.kind}:${index}`}><MetadataItem>{source.databaseType}</MetadataItem><MetadataItem>更新于 {dateLabel(source.builtAt)}</MetadataItem></Metadata>
-                        ))}
-                        {detail.ipMetadata.truncated && (
-                          <p>部分 IP 尚未查询归属资料。</p>
-                        )}
-                      </>
-                    ) : (
-                      <p>IP 归属查询暂不可用</p>
-                    )}
-                  </div>
-                </details>
               </>
             ) : (
               <>
@@ -700,19 +675,6 @@ export function OverviewPage() {
                 >
                   重试订阅用量
                 </ActionButton>
-              )}
-              {fetches.data && !fetches.isError && !fetches.isPaused && (
-                <SubscriptionFetchAlerts
-                  history={fetches.data}
-                  names={Object.fromEntries((outputs.data || []).map((output) => [output.id, output.name]))}
-                  refresh={() => { void fetches.refetch(); }}
-                />
-              )}
-              {fetches.data && (
-                <p className="px-4 pt-3 text-xs text-muted-foreground">
-                  保留近 {fetches.data.windowDays} 天内最近 {fetches.data.limit}{" "}
-                  次服务端写出记录，不代表客户端收到或应用配置。
-                </p>
               )}
             </QueryState>
           </CardContent>

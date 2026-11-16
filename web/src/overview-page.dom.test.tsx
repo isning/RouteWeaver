@@ -180,6 +180,11 @@ it("shows current-account overview and navigates to an unpublished configuration
   expect(screen.getByText("1 份草稿")).toBeTruthy();
   expect(screen.queryByText("旅行配置 尚未发布")).toBeNull();
   expect(await screen.findByText("工作订阅")).toBeTruthy();
+  expect(screen.queryByText("拉取记录设置")).toBeNull();
+  expect(screen.queryByText("统计说明")).toBeNull();
+  expect(screen.queryByText(/次服务端写出记录/)).toBeNull();
+  expect(screen.getByText(/24 小时内记录/)).toBeTruthy();
+  expect(vi.mocked(fetch).mock.calls.some(([url]) => String(url).endsWith("/tracking"))).toBe(false);
   expect(screen.queryByText("工作配置")).toBeNull();
   expect(
     within(screen.getByRole("list", { name: "每日额度消耗" })).getByText(
@@ -275,7 +280,7 @@ it("does not label unknown names as deleted subscriptions or historical routes",
 it("renders only the database's reported IP metadata, not an inferred device location", async () => {
   mount();
   await screen.findByText("192.0.2.7");
-  expect(screen.getByText("IP 归属查询暂不可用")).toBeTruthy();
+  expect(screen.queryByText("统计说明")).toBeNull();
   const client = clients.at(-1)!;
   client.setQueryData(["personal-insights"], (current: object) => ({
     ...current,
@@ -305,7 +310,7 @@ it("renders only the database's reported IP metadata, not an inferred device loc
   expect(await screen.findByText("德国 (DE)")).toBeTruthy();
   expect(screen.getByText("Example Network")).toBeTruthy();
   expect(screen.getByText("AS64500")).toBeTruthy();
-  expect(screen.getByText(/不代表设备的实际位置或运营商/)).toBeTruthy();
+  expect(screen.queryByText(/不代表设备的实际位置或运营商/)).toBeNull();
   expect(screen.queryByText("IP 归属查询暂不可用")).toBeNull();
   expect(screen.getByRole("link", { name: "IP Geolocation by DB-IP" }).getAttribute("href")).toBe("https://db-ip.com");
   expect(screen.getByRole("link", { name: "CC BY 4.0" })).toBeTruthy();
