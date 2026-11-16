@@ -588,7 +588,7 @@ export function OverviewPage() {
               >
                 <TableHeader className="border-y bg-muted/30">
                   <TableRow className="hover:bg-transparent">
-                    <TableHead className="h-auto w-[36%] py-2 pl-6 text-xs text-muted-foreground">
+                    <TableHead className="h-auto w-[36%] py-2 pl-4 text-xs text-muted-foreground">
                       订阅
                     </TableHead>
                     <TableHead className="h-auto w-[30%] py-2 text-xs text-muted-foreground">
@@ -597,7 +597,7 @@ export function OverviewPage() {
                     <TableHead className="h-auto py-2 text-xs text-muted-foreground">
                       最近拉取
                     </TableHead>
-                    <TableHead className="h-auto w-[5.5rem] py-2 pr-6">
+                    <TableHead className="h-auto w-[5.5rem] py-2 pr-4">
                       <span className="sr-only">操作</span>
                     </TableHead>
                   </TableRow>
@@ -609,7 +609,7 @@ export function OverviewPage() {
                     );
                     return (
                       <TableRow key={output.id}>
-                        <TableCell className="py-3 pl-6 whitespace-normal">
+                        <TableCell className="py-3 pl-4 whitespace-normal">
                           <p className="truncate text-sm font-medium" title={output.name}>
                             {output.name}
                           </p>
@@ -661,7 +661,7 @@ export function OverviewPage() {
                             </p>
                           )}
                         </TableCell>
-                        <TableCell className="py-3 pr-6 text-right">
+                        <TableCell className="py-3 pr-4 text-right">
                           <ActionButton
                             size="sm"
                             variant="ghost"
@@ -681,19 +681,19 @@ export function OverviewPage() {
                 </TableBody>
               </Table>
               {!outputRows.length && (
-                <p className="px-6 py-6 text-sm text-muted-foreground">
+                <p className="px-4 py-6 text-sm text-muted-foreground">
                   尚无客户端订阅
                 </p>
               )}
               {usageReady && usage.data.unattributedRawBytes > 0 && (
-                <p className="px-6 pt-3 text-xs text-muted-foreground">
+                <p className="px-4 pt-3 text-xs text-muted-foreground">
                   另有 {bytesLabel(usage.data.unattributedRawBytes)}{" "}
                   未关联到具体订阅的流量。
                 </p>
               )}
               {usage.isError && (
                 <ActionButton
-                  className="mx-6 mt-3"
+                  className="mx-4 mt-3"
                   size="sm"
                   variant="outline"
                   onClick={() => usage.refetch()}
@@ -709,7 +709,7 @@ export function OverviewPage() {
                 />
               )}
               {fetches.data && (
-                <p className="px-6 pt-3 text-xs text-muted-foreground">
+                <p className="px-4 pt-3 text-xs text-muted-foreground">
                   保留近 {fetches.data.windowDays} 天内最近 {fetches.data.limit}{" "}
                   次服务端写出记录，不代表客户端收到或应用配置。
                 </p>
@@ -781,9 +781,9 @@ export function OverviewPage() {
                                     </span>
                                   </div>
                                 </TableCell>
-                                <TableCell className="w-14 py-1.5 text-right text-xs text-muted-foreground">
+                                <TableCell className="w-14 px-0 py-1.5 text-right text-xs text-muted-foreground">
                                   {route?.rateMicros !== undefined
-                                    ? `${route.rateMicros / 1_000_000}×`
+                                    ? <Badge variant="secondary" className="rounded-[26px] tabular-nums">{route.rateMicros / 1_000_000}×</Badge>
                                     : "—"}
                                 </TableCell>
                                 <TableCell
