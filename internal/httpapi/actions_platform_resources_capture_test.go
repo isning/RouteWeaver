@@ -20,13 +20,19 @@ func platformResourceCaptureFixture(t *testing.T, format string) (*server, Outpu
 		t.Fatal(e)
 	}
 	body := []byte("old.example\n")
-	if format == "srs" {
+	if format == "srs" || format == "sing-box-source" {
 		body = []byte{'S', 'R', 'S', 1, 0}
 		p.Target = render.Target{AdapterID: "sing-box", Version: render.SingBoxVersion}
 		out.Target = p.Target
 	}
 	if format == "mrs" {
 		body = []byte{0x28, 0xb5, 0x2f, 0xfd, 0}
+	}
+	if format == "sing-box-source" {
+		body = []byte(`{"version":1,"rules":[{"domain":["old.example"]}]}`)
+	}
+	if format == "mihomo-yaml" {
+		body = []byte("payload:\n  - \"old.example\"\n")
 	}
 	file, e := resources.AcceptRuleFile(domain.RuleResource{ID: "rules", OwnerID: "owner", Format: format, Behavior: "domain", UpdatePolicy: "follow"}, body)
 	if e != nil {
@@ -78,7 +84,7 @@ func putPlatformResource(t *testing.T, h *server, file resources.RuleFile) {
 	}
 }
 func TestSmallPlatformResourceComparisonRealRender(t *testing.T) {
-	for _, format := range []string{"mihomo-text", "srs", "mrs"} {
+	for _, format := range []string{"mihomo-text", "srs", "mrs", "sing-box-source", "mihomo-yaml"} {
 		t.Run(format, func(t *testing.T) {
 			h, out, p, file := platformResourceCaptureFixture(t, format)
 			check := func(want string) {
@@ -95,6 +101,9 @@ func TestSmallPlatformResourceComparisonRealRender(t *testing.T) {
 			}
 			check("unchanged")
 			body := append(append([]byte(nil), file.Body...), byte('x'))
+			if format == "sing-box-source" || format == "mihomo-yaml" {
+				body = []byte(strings.ReplaceAll(string(file.Body), "old.example", "new.example"))
+			}
 			ref := domain.RuleResource{ID: "rules", OwnerID: "owner", Format: format, Behavior: "domain", UpdatePolicy: "follow"}
 			newer, e := resources.AcceptRuleFile(ref, body)
 			if e != nil {

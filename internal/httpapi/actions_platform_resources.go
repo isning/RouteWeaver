@@ -5,8 +5,9 @@ import (
 	"routeweaver/internal/resources"
 )
 
-// withinPlatformResourceBudget admits only small opaque/local accepted bytes.
+// withinPlatformResourceBudget admits only small local accepted bytes.
 // It must run BEFORE materialization, whose VerifyRuleFile calls parse envelopes.
+// Structured formats must also pass the small JSON/flat quoted YAML gates.
 // Integrity verification remains in the ordinary materialization/freeze path;
 // this gate does not assert native validity or fetch any remote source.
 func withinPlatformResourceBudget(owner string, p Profile, inputs tenantRecordReader) bool {
@@ -30,12 +31,20 @@ func withinPlatformResourceBudget(owner string, p Profile, inputs tenantRecordRe
 		if inputs.TenantGet(owner, "resource-versions", version, &file) != nil || file.Resource.ID != ref.ID || file.Resource.OwnerID != owner || file.Resource.AcceptedVersion != version || file.Resource.Location != "local" || file.Resource.URL != "" {
 			return false
 		}
-		switch file.Resource.Format {
-		case "mihomo-text", "srs", "mrs":
-		default:
+		if len(file.Body) == 0 || len(file.Body) > 4096 || file.Resource.SizeBytes != int64(len(file.Body)) {
 			return false
 		}
-		if len(file.Body) == 0 || len(file.Body) > 4096 || file.Resource.SizeBytes != int64(len(file.Body)) {
+		switch file.Resource.Format {
+		case "mihomo-text", "srs", "mrs":
+		case "sing-box-source":
+			if !smallRuleJSON(file.Body) {
+				return false
+			}
+		case "mihomo-yaml":
+			if !smallRuleYAML(file.Body) {
+				return false
+			}
+		default:
 			return false
 		}
 		total += len(file.Body)
