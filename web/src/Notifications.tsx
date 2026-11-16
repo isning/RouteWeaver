@@ -1,3 +1,5 @@
+import { ResourceToolbar, SearchField } from "@/ui-patterns/resource-toolbar";
+import { ItemCount } from "@/ui-patterns/item-count";
 import { ScrollableTabsList } from "@/ui-patterns/scrollable-tabs-list";
 import { PasswordInput } from "@/ui-patterns/password-input";
 import { NumericInput } from "@/ui-patterns/numeric-input";
@@ -116,6 +118,20 @@ export function InboxPage() {
     queryFn: () => list<InboxItem>("/me/notifications"),
     refetchInterval: 60000,
   });
+  const [search, setSearch] = useState("");
+  const [unreadOnly, setUnreadOnly] = useState(false);
+  const searchInput = useRef<HTMLInputElement>(null);
+  const searchTerm = search.trim().toLocaleLowerCase();
+  const unreadCount = (query.data ?? []).filter(item => !item.readAt).length;
+  const visibleMessages = (query.data ?? []).filter(item =>
+    (!unreadOnly || !item.readAt) &&
+    (!searchTerm || [item.title, item.body].some(value => value.toLocaleLowerCase().includes(searchTerm))),
+  );
+  const resetFilters = () => {
+    setSearch("");
+    setUnreadOnly(false);
+    searchInput.current?.focus();
+  };
   const [selected, setSelected] = useState<InboxItem | null>(null);
   const currentSelected = selected
     ? query.data?.find((item) => item.eventId === selected.eventId)
@@ -195,13 +211,27 @@ export function InboxPage() {
         retry={() => query.refetch()}
       >
         <Section variant="plain">
+          {!!query.data?.length && <ResourceToolbar
+            label="筛选消息"
+            search={<SearchField ref={searchInput} type="search" aria-label="搜索消息" placeholder="搜索标题或内容" value={search} onValueChange={setSearch} />}
+            filters={<div className="flex flex-wrap gap-2" role="group" aria-label="阅读状态">
+              <ActionButton variant={unreadOnly ? "outline" : "secondary"} aria-pressed={!unreadOnly} onClick={() => setUnreadOnly(false)}>全部</ActionButton>
+              <ActionButton variant={unreadOnly ? "secondary" : "outline"} aria-pressed={unreadOnly} onClick={() => setUnreadOnly(true)}>
+                未读 <span className="tabular-nums">{unreadCount}</span>
+              </ActionButton>
+            </div>}
+            summary={<ItemCount total={query.data.length} matched={searchTerm || unreadOnly ? visibleMessages.length : undefined} unit="条" />}
+          />}
           {!query.data?.length ? (
             <EmptyState
               title="暂无消息"
             />
+          ) : !visibleMessages.length ? (
+            <EmptyState title={searchTerm ? "没有匹配的消息" : "没有未读消息"}
+              action={<ActionButton variant="outline" onClick={resetFilters}>{searchTerm ? "清除筛选" : "查看全部消息"}</ActionButton>} />
           ) : (
             <div className="divide-y rounded-lg border">
-              {query.data.map((item) => (
+              {visibleMessages.map((item) => (
                 <button
                   key={item.eventId}
                   className="flex w-full flex-wrap items-start gap-3 p-4 text-left transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -232,6 +262,7 @@ export function InboxPage() {
       </QueryState>
       <TaskSheet
         title={displayed?.title}
+        returnFocusFallback={() => searchInput.current}
         open={!!selected}
         contentProps={{ inert: !selected }}
         bodyProps={{ className: "space-y-4" }}
