@@ -92,8 +92,12 @@ extra collections do not affect ordinary comparisons. The original profile-to-
 isolated-grant map must match the published creation intent. Both captures check
 the isolated grant (not its original shared sibling), exact live binding and
 claim, published attribution revision, applied path and current runtime identity.
-Only absent provider policy or advisory policy is admitted; provider-enforced
-admission remains unchecked. No admission lease, IP/connection slot, quota budget
+Provider policy reuses the pure live `ManagedAdmission` evaluator on every
+applied hop in both snapshots; missing evidence, exhausted allowance, invalid
+configuration or expired evidence remains unchecked. Its returned freshness,
+cycle and service deadlines join the final expiry fence. Advisory semantics stay
+unchanged, and corrupt negative counters are conservatively rejected only by
+this background consumer. No admission lease, IP/connection slot, quota budget
 or provisioning state is created or settled. A successful comparison means only
 that saved configuration differences were checked, not that a connection will be
 admitted. All normal live admission/publication/revocation fences remain active.

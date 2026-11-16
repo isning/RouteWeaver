@@ -92,8 +92,8 @@ func (h *server) resolveAttributedComparisonEntry(owner, id string, output Outpu
 	if reader.snapshot.TenantGet(owner, "output-attribution-intents", output.ID, &intent) != nil || intent.ID != output.ID || intent.Owner != owner || intent.State != "published" || intent.Revision != output.Attribution.Revision {
 		return domain.ClientEndpoint{}, unavailable
 	}
-	// Only the non-enforcing provider cases have identical ManagedAdmission
-	// semantics without interpreting provider telemetry or its freshness clocks.
+	// Provider evidence is read from the same bounded snapshot as the path.
+	// Reuse live policy semantics, without acquiring or settling a lease.
 	if len(bundle.Identities) != len(bundle.Programs) {
 		return domain.ClientEndpoint{}, unavailable
 	}
@@ -121,8 +121,21 @@ func (h *server) resolveAttributedComparisonEntry(owner, id string, output Outpu
 		if err != nil && err != store.ErrNotFound {
 			return domain.ClientEndpoint{}, unavailable
 		}
-		if err == nil && state.Config.Provider != nil && state.Config.Provider.ExhaustionAction != "advisory" {
-			return domain.ClientEndpoint{}, unavailable
+		if err == nil {
+			// Persisted counters are nonnegative. Be conservative if storage is
+			// damaged rather than letting subtraction invent available quota.
+			if state.Config.Provider != nil && state.Config.Provider.ExhaustionAction != "advisory" {
+				if state.ObservedNICBytes < 0 || (state.Statement != nil && state.Statement.UsedBytes < 0) || (state.Baseline != nil && (state.Baseline.UsedBytes < 0 || state.Baseline.NICBytesAtBaseline < 0 || state.Baseline.NICBytesAtBaseline > state.ObservedNICBytes)) {
+					return domain.ClientEndpoint{}, unavailable
+				}
+			}
+			reason, until := observability.ManagedAdmission(state, time.Now().UTC())
+			if reason != "" {
+				return domain.ClientEndpoint{}, unavailable
+			}
+			if until != nil && (reader.validUntil.IsZero() || until.Before(reader.validUntil)) {
+				reader.validUntil = *until
+			}
 		}
 	}
 	if !entrySeen {

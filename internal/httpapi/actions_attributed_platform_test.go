@@ -16,7 +16,11 @@ import (
 // are synthetic; no native process or production deployment runs in this test.
 func newActionsAttributedFixture(t *testing.T, extra ...string) *rotationRecoveryFixture {
 	t.Helper()
-	f := newRotationRecoveryFixture(t, extra...)
+	return newActionsAttributedFixtureFromRotation(t, newRotationRecoveryFixture(t, extra...), extra...)
+}
+
+func newActionsAttributedFixtureFromRotation(t *testing.T, f *rotationRecoveryFixture, extra ...string) *rotationRecoveryFixture {
+	t.Helper()
 	if len(extra) > 0 {
 		var p httpapi.Profile
 		if err := f.s.TenantGet(f.owner.id, "profiles", "rotation-profile", &p); err != nil {
@@ -246,7 +250,7 @@ func TestActionsAttributedPlatformRealPublication(t *testing.T) {
 	if err := f.s.Put("node-observability", "rotation-host", fresh); err != nil {
 		t.Fatal(err)
 	}
-	check(t, false, true)
+	check(t, true, false)
 	code, v, raw := req(t, f.other.c, "GET", f.srv.URL+"/api/me/actions", "", nil)
 	if code != 200 {
 		t.Fatal(raw)

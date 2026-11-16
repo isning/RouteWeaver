@@ -38,6 +38,10 @@ func newRotationRecoveryFixture(t *testing.T, additionalEntries ...string) *rota
 }
 
 func newRotationRecoveryFixtureAtPorts(t *testing.T, entryPort, transitPort int, additionalEntries ...string) *rotationRecoveryFixture {
+	return newRotationRecoveryFixtureAtHosts(t, entryPort, transitPort, false, additionalEntries...)
+}
+
+func newRotationRecoveryFixtureAtHosts(t *testing.T, entryPort, transitPort int, splitHosts bool, additionalEntries ...string) *rotationRecoveryFixture {
 	t.Helper()
 	s, srv := makeServer(t)
 	f := &rotationRecoveryFixture{t: t, s: s, srv: srv, admin: operatorClient(), owner: inviteClient(t, s, srv, "rotation-owner"), other: inviteClient(t, s, srv, "rotation-other")}
@@ -47,6 +51,10 @@ func newRotationRecoveryFixtureAtPorts(t *testing.T, entryPort, transitPort int,
 	entry := domain.ManagedEndpoint{ID: "rotation-entry", InstanceID: entryCore.ID, Name: "Synthetic public entry", Connection: domain.Connection{Protocol: "vless", Host: "127.0.0.1", Port: entryPort, UUID: "11111111-1111-4111-8111-111111111111"}}
 	transit := domain.ManagedEndpoint{ID: "rotation-exit", InstanceID: transitCore.ID, Name: "Synthetic transit", Connection: domain.Connection{Protocol: "socks", Host: "127.0.0.1", Port: transitPort, Username: "rotation-transit-user", Password: "rotation-transit-secret"}}
 	f.postAdmin("hosts", host)
+	if splitHosts {
+		transitCore.HostID = "rotation-transit-host"
+		f.postAdmin("hosts", domain.Host{ID: transitCore.HostID, Name: "Synthetic transit host", Address: "127.0.0.1"})
+	}
 	for _, core := range []domain.CoreInstance{entryCore, transitCore} {
 		f.postAdmin("core-instances", core)
 	}
@@ -67,7 +75,7 @@ func newRotationRecoveryFixtureAtPorts(t *testing.T, entryPort, transitPort int,
 		f.rotateEntry(id, "credential-v1")
 	}
 	for _, core := range []domain.CoreInstance{entryCore, transitCore} {
-		enrollment := f.postAdmin("agent/enrollments", map[string]any{"nodeId": host.ID, "instanceId": core.ID, "expiresAt": time.Now().Add(time.Hour)})
+		enrollment := f.postAdmin("agent/enrollments", map[string]any{"nodeId": core.HostID, "instanceId": core.ID, "expiresAt": time.Now().Add(time.Hour)})
 		var scope agent.Scope
 		raw, _ := json.Marshal(enrollment["scope"])
 		if err := json.Unmarshal(raw, &scope); err != nil {
