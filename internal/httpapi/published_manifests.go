@@ -156,8 +156,9 @@ func (h *server) appliedPublishedPath(routeID string) (domain.PublishedManifest,
 // The same verified read supplies both delivery and display metadata. Never
 // decorate a confirmed path from mutable inventory or a second resolution.
 type appliedPathBundle struct {
-	Entry    domain.PublishedManifest
-	Programs []domain.ServerProgram
+	Entry      domain.PublishedManifest
+	Programs   []domain.ServerProgram
+	Identities []domain.DeploymentIdentity
 	// ValidUntil is the earliest policy/enrollment deadline on the selected path.
 	// It is evidence for revalidation, never a cached authorization.
 	ValidUntil time.Time
@@ -243,6 +244,7 @@ func probeAppliedPublishedPathBundleUsing(reader publishedProofReader, now func(
 			complete := true
 			deadline := deadlines[manifest.Program.Listener.ID]
 			programs := make([]domain.ServerProgram, 0, len(route.EndpointIDs))
+			identities := make([]domain.DeploymentIdentity, 0, len(route.EndpointIDs))
 			for _, id := range route.EndpointIDs {
 				hop, ok := manifests[id]
 				if !ok || ambiguous[id] || hop.DeploymentID != manifest.DeploymentID || hop.Fingerprint != manifest.Fingerprint {
@@ -260,12 +262,13 @@ func probeAppliedPublishedPathBundleUsing(reader publishedProofReader, now func(
 					break
 				}
 				programs = append(programs, hop.Program)
+				identities = append(identities, hop.Identity)
 				if deadlines[id].Before(deadline) {
 					deadline = deadlines[id]
 				}
 			}
 			if complete {
-				return appliedPathBundle{Entry: manifest, Programs: programs, ValidUntil: deadline}, nil
+				return appliedPathBundle{Entry: manifest, Programs: programs, Identities: identities, ValidUntil: deadline}, nil
 			}
 		}
 	}

@@ -85,6 +85,17 @@ func (p *PlatformComparisonSnapshot) Eligible(route string) error {
 // Limits apply before decryption and again to retained plaintext, including all
 // unrelated rows in collections whose absence/membership affects the proof.
 func (s *Store) PlatformComparisonSnapshot(ctx context.Context, owner string, now time.Time, budget *int) (*PlatformComparisonSnapshot, error) {
+	return s.capturePlatformComparisonSnapshot(ctx, owner, now, budget, false)
+}
+
+// AttributedPlatformComparisonSnapshot adds immutable attribution provenance and
+// provider/instance evidence only for independently metered comparisons. Ordinary
+// comparisons never scan these additional collections. All limits stay shared.
+func (s *Store) AttributedPlatformComparisonSnapshot(ctx context.Context, owner string, now time.Time, budget *int) (*PlatformComparisonSnapshot, error) {
+	return s.capturePlatformComparisonSnapshot(ctx, owner, now, budget, true)
+}
+
+func (s *Store) capturePlatformComparisonSnapshot(ctx context.Context, owner string, now time.Time, budget *int, attributed bool) (*PlatformComparisonSnapshot, error) {
 	if !domain.ValidID(owner) || now.IsZero() || budget == nil || *budget <= 0 || *budget > platformComparisonBytes {
 		return nil, ErrPlatformComparisonUnavailable
 	}
@@ -92,6 +103,9 @@ func (s *Store) PlatformComparisonSnapshot(ctx context.Context, owner string, no
 	kinds := []string{"users", "accounts", "entitlements", "services", "user-groups", "routes", "published-routes", "agent-observations", "published-manifests", "instance-enrollments", "resets", "ledger", "accounting-holds", "admission-budgets"}
 	for _, kind := range []string{"platform-entries", "profiles", "outputs", "sources", "collections", "resources", "resource-versions"} {
 		kinds = append(kinds, TenantKind(owner, kind))
+	}
+	if attributed {
+		kinds = append(kinds, "entry-admission-bindings", "output-attribution-claims", "core-instances", "node-observability", TenantKind(owner, "output-attribution-intents"))
 	}
 	err := s.readSnapshot(ctx, func(tx *sql.Tx) error {
 		count, encryptedBytes, plainBytes := 0, 0, 0

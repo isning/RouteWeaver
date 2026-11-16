@@ -72,7 +72,7 @@ whose decoded value is at most 256 bytes. This whitelist bounds syntax before th
 YAML syntax, including aliases, anchors, tags, flow/nested collections, additional
 keys and multi-document streams remains unchecked. These gates preserve original
 bytes and do not narrow explicit review. Unaccepted remote rules, oversized graphs
-and independently metered outputs remain unchecked. Neither comparison capture
+remain unchecked. Neither comparison capture
 fetches a source.
 It evaluates canonical policy, usage and both hold types without rebuilding
 projections. After rendering it captures again, requires identical complete
@@ -83,3 +83,17 @@ review, publication and delivery checks are unchanged. Oversized, invalid,
 unsupported-target, or unreadable candidates remain unchecked with their
 publication revision; a later read retries corrected saved data. A comparison
 never publishes the candidate or rewrites the stored publication.
+
+Small independently metered outputs can also be compared when their profile is
+made only of at most eight isolated managed platform routes. Their dedicated
+capture adds complete admission bindings, immutable attribution claims, owner
+intents, runtime instances and provider observations to the same budgets; these
+extra collections do not affect ordinary comparisons. The original profile-to-
+isolated-grant map must match the published creation intent. Both captures check
+the isolated grant (not its original shared sibling), exact live binding and
+claim, published attribution revision, applied path and current runtime identity.
+Only absent provider policy or advisory policy is admitted; provider-enforced
+admission remains unchecked. No admission lease, IP/connection slot, quota budget
+or provisioning state is created or settled. A successful comparison means only
+that saved configuration differences were checked, not that a connection will be
+admitted. All normal live admission/publication/revocation fences remain active.

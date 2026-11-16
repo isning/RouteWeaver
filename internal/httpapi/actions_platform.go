@@ -51,11 +51,15 @@ func (h *server) resolveComparisonEntry(owner, id string, reader *platformCompar
 }
 
 func smallPlatformComparison(output Output, p Profile) bool {
-	return output.Attribution == nil && len(p.PlatformEntryIDs) > 0 && len(p.PlatformEntryIDs) <= 8 && len(p.SourceIDs) <= 16 && len(p.IR.Resources) <= 4 && len(p.IR.Endpoints) <= 32 && len(p.IR.Groups) <= 8 && len(p.IR.Rules) <= 32 && (p.IR.NativeOverride == nil || (p.IR.NativeOverride.Format == "json" && len(p.IR.NativeOverride.Content) <= 4096))
+	return smallAttributionShape(output, p) && len(p.PlatformEntryIDs) > 0 && len(p.PlatformEntryIDs) <= 8 && len(p.SourceIDs) <= 16 && len(p.IR.Resources) <= 4 && len(p.IR.Endpoints) <= 32 && len(p.IR.Groups) <= 8 && len(p.IR.Rules) <= 32 && (p.IR.NativeOverride == nil || (p.IR.NativeOverride.Format == "json" && len(p.IR.NativeOverride.Content) <= 4096))
 }
 
 func (h *server) compareSmallPlatformDraft(ctx context.Context, owner string, output Output, budget *int) map[string]string {
-	return h.compareSmallPlatformDraftUsing(ctx, owner, output, budget, h.s.PlatformComparisonSnapshot)
+	capture := h.s.PlatformComparisonSnapshot
+	if output.Attribution != nil {
+		capture = h.s.AttributedPlatformComparisonSnapshot
+	}
+	return h.compareSmallPlatformDraftUsing(ctx, owner, output, budget, capture)
 }
 func (h *server) compareSmallPlatformDraftUsing(ctx context.Context, owner string, output Output, budget *int, capture func(context.Context, string, time.Time, *int) (*store.PlatformComparisonSnapshot, error)) map[string]string {
 	unavailable := map[string]string{"state": "unavailable"}
@@ -66,6 +70,9 @@ func (h *server) compareSmallPlatformDraftUsing(ctx context.Context, owner strin
 	var saved Output
 	var p Profile
 	if first.TenantGet(owner, "outputs", output.ID, &saved) != nil || !reflect.DeepEqual(saved, output) || first.TenantGet(owner, "profiles", output.ProfileID, &p) != nil || p.ID != output.ProfileID || !domain.ValidID(p.ID) || !smallPlatformComparison(output, p) {
+		return unavailable
+	}
+	if !validComparisonAttribution(owner, output, p, first) {
 		return unavailable
 	}
 	reader := &platformComparisonReader{snapshot: first}
@@ -87,9 +94,18 @@ func (h *server) compareSmallPlatformDraftUsing(ctx context.Context, owner strin
 	}
 	// Re-evaluate all referenced grants and proof leases using the new snapshot;
 	// a stable record digest alone cannot detect a clock-driven expiry or hold.
+	if !validComparisonAttribution(owner, output, p, second) {
+		return unavailable
+	}
 	latest := &platformComparisonReader{snapshot: second}
 	for _, id := range p.PlatformEntryIDs {
-		if _, err := h.resolveComparisonEntry(owner, id, latest); err != nil {
+		var err error
+		if output.Attribution != nil {
+			_, err = h.resolveAttributedComparisonEntry(owner, id, output, latest)
+		} else {
+			_, err = h.resolveComparisonEntry(owner, id, latest)
+		}
+		if err != nil {
 			return unavailable
 		}
 	}
