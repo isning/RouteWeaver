@@ -213,11 +213,11 @@ export function InboxPage() {
         <Section variant="plain">
           {!!query.data?.length && <ResourceToolbar
             label="筛选消息"
-            search={<SearchField ref={searchInput} type="search" aria-label="搜索消息" placeholder="搜索标题或内容" value={search} onValueChange={setSearch} />}
+            search={<SearchField ref={searchInput} type="search" aria-label="搜索消息" placeholder="搜索已加载消息的标题或内容" value={search} onValueChange={setSearch} />}
             filters={<QuickFilters label="阅读状态" value={unreadOnly ? "unread" : "all"}
               onValueChange={value => setUnreadOnly(value === "unread")}
               options={[{ value: "all", label: "全部" }, { value: "unread", label: "未读", count: unreadCount }]} />}
-            summary={<ItemCount total={query.data.length} matched={searchTerm || unreadOnly ? visibleMessages.length : undefined} unit="条" />}
+            summary={<ItemCount scope="loaded" total={query.data.length} matched={searchTerm || unreadOnly ? visibleMessages.length : undefined} unit="条" />}
           />}
           {!query.data?.length ? (
             <EmptyState
@@ -384,6 +384,17 @@ function Announcements() {
     queryKey: ["announcements"],
     queryFn: () => list<Announcement>("/admin/announcements"),
   });
+  const [search, setSearch] = useState("");
+  const [audienceFilter, setAudienceFilter] = useState("any");
+  const [page, setPage] = useState(1);
+  const searchInput = useRef<HTMLInputElement>(null);
+  const searchTerm = search.trim().toLocaleLowerCase();
+  const visibleAnnouncements = (query.data || []).filter(item =>
+    (audienceFilter === "any" || item.audience === audienceFilter) &&
+    (!searchTerm || [item.title, item.body].some(value => value.toLocaleLowerCase().includes(searchTerm))),
+  );
+  useLayoutEffect(() => { setPage(current => Math.min(current, Math.max(1, Math.ceil(visibleAnnouncements.length / 10)))); }, [visibleAnnouncements.length]);
+  const resetFilters = () => { setSearch(""); setAudienceFilter("any"); setPage(1); searchInput.current?.focus(); };
   const users = useQuery({
     queryKey: ["announcement-users"],
     queryFn: loadState,
@@ -533,6 +544,13 @@ function Announcements() {
           error={query.data === undefined ? query.error : null}
           retry={() => query.refetch()}
         >
+          {!!query.data?.length && <ResourceToolbar label="查找公告"
+            search={<SearchField ref={searchInput} type="search" aria-label="搜索公告" placeholder="搜索标题或内容" value={search}
+              onValueChange={value => { setSearch(value); setPage(1); }} />}
+            filters={<QuickFilters label="公告受众" value={audienceFilter}
+              onValueChange={value => { setAudienceFilter(value); setPage(1); }}
+              options={[{ value: "any", label: "全部" }, { value: "all", label: "全部用户" }, { value: "admins", label: "管理员" }, { value: "users", label: "指定用户" }]} />}
+          />}
           {!query.data?.length ? (
             <EmptyState
               title="暂无公告"
@@ -540,7 +558,10 @@ function Announcements() {
           ) : (
             <DataTable
               rowKey="id"
-              rows={query.data}
+              rows={visibleAnnouncements}
+              page={page} onPageChange={setPage}
+              count={{ total: query.data.length, unit: "条公告", filtered: !!searchTerm || audienceFilter !== "any" }}
+              empty={<EmptyState title="没有匹配的公告" action={<ActionButton variant="outline" onClick={resetFilters}>清除筛选</ActionButton>} />}
               columns={[
                 {
                   title: "标题",
@@ -591,6 +612,7 @@ function Announcements() {
       <TaskDialog
         scrollMode="auto"
         title={isNew ? "创建公告" : "编辑公告"}
+        returnFocusFallback={() => searchInput.current}
         open={!!editing}
         footer={<div className="w-full space-y-3">
           <p className="text-sm text-muted-foreground">
@@ -1521,6 +1543,17 @@ function Outbox() {
     queryFn: () => list<Delivery>("/admin/notifications/outbox"),
     refetchInterval: 15000,
   });
+  const [search, setSearch] = useState("");
+  const [channel, setChannel] = useState("all");
+  const [page, setPage] = useState(1);
+  const searchInput = useRef<HTMLInputElement>(null);
+  const searchTerm = search.trim().toLocaleLowerCase();
+  const visibleDeliveries = (query.data || []).filter(item =>
+    (channel === "all" || item.channel === channel) &&
+    (!searchTerm || item.title.toLocaleLowerCase().includes(searchTerm)),
+  );
+  useLayoutEffect(() => { setPage(current => Math.min(current, Math.max(1, Math.ceil(visibleDeliveries.length / 10)))); }, [visibleDeliveries.length]);
+  const resetFilters = () => { setSearch(""); setChannel("all"); setPage(1); searchInput.current?.focus(); };
   const labels: Record<string, string> = {
     queued: "等待发送",
     retry: "等待重试",
@@ -1560,9 +1593,18 @@ function Outbox() {
         error={query.data === undefined ? query.error : null}
         retry={() => query.refetch()}
       >
+        {!!query.data?.length && <ResourceToolbar label="查找发送记录"
+          search={<SearchField ref={searchInput} type="search" aria-label="搜索发送记录" placeholder="搜索已加载记录的标题" value={search}
+            onValueChange={value => { setSearch(value); setPage(1); }} />}
+          filters={<QuickFilters label="发送渠道" value={channel}
+            onValueChange={value => { setChannel(value); setPage(1); }}
+            options={[{ value: "all", label: "全部" }, { value: "in-app", label: "站内" }, { value: "email", label: "邮件" }, { value: "webhook", label: "Webhook" }]} />}
+        />}
         <DataTable
           rowKey={(r) => `${r.eventId}-${r.channel}`}
-          rows={query.data || []}
+          rows={visibleDeliveries}
+          page={page} onPageChange={setPage}
+          summary={<ItemCount scope="loaded" total={query.data?.length || 0} unit="条记录" matched={searchTerm || channel !== "all" ? visibleDeliveries.length : undefined} />}
           className="[&_tbody_td]:align-top"
           columns={[
             {
@@ -1629,7 +1671,7 @@ function Outbox() {
               render: (_, r) => dateLabel(r.createdAt),
             },
           ]}
-          empty="暂无发送记录"
+          empty={query.data?.length ? <EmptyState title="没有匹配的发送记录" action={<ActionButton variant="outline" onClick={resetFilters}>清除筛选</ActionButton>} /> : "暂无发送记录"}
           minWidth={760}
         />
       </QueryState>

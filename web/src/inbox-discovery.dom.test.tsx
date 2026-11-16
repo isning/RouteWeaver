@@ -21,6 +21,7 @@ it("finds unread messages by title or body and recovers from no matches without 
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } }); clients.push(client);
   render(<QueryClientProvider client={client}><UIProviders><InboxPage /></UIProviders></QueryClientProvider>);
   await screen.findByRole("button", { name: /维护安排/ });
+  expect(screen.getByText(/已加载/)).toBeTruthy();
   const toolbar = screen.getByRole("search", { name: "筛选消息" });
   await userEvent.click(within(toolbar).getByRole("button", { name: "未读 2" }));
   expect(screen.queryByRole("button", { name: /维护安排/ })).toBeNull();
