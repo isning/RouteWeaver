@@ -139,6 +139,7 @@ func (h *server) registerPublishedRouteAdmin(r chi.Router) {
 	})
 	r.Post("/published-routes/{id}/principals", h.savePublishedPrincipal)
 	h.registerRouteRetarget(r)
+	h.registerPathSelection(r)
 }
 
 func (h *server) preparePublishedRoute(in publishedRouteInput) (domain.PublishedRoute, []domain.Link, error) {

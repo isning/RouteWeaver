@@ -1,3 +1,4 @@
+import { RoutePathSelectionEditor } from "./RoutePathSelectionEditor";
 import { readOrderedServerPath } from "./server-path-model";
 import {
   OperationalIntegerInput,
@@ -1897,6 +1898,16 @@ function PublicRouteDetail({
   onClose: () => void;
 }) {
   const replaceView = useWorkspaceViewEntry();
+  const [pathSelectionOpen, setPathSelectionOpen] = useState(false);
+  const pathSelectionTrigger = useRef<HTMLButtonElement>(null);
+  const pathSelectionReturn = useRef(false);
+  const detailEditTrigger = useRef<HTMLButtonElement>(null);
+  useLayoutEffect(() => {
+    if (!pathSelectionOpen && pathSelectionReturn.current) {
+      pathSelectionReturn.current = false;
+      (pathSelectionTrigger.current || detailEditTrigger.current)?.focus({ preventScroll: true });
+    }
+  }, [pathSelectionOpen]);
   const [userId, setUserId] = useState(initialUserId);
   useEffect(() => {
     setUserId(initialUserId);
@@ -1987,6 +1998,7 @@ function PublicRouteDetail({
   };
   return (
     <>
+      {pathSelectionOpen && <RoutePathSelectionEditor route={current} returnFocus={pathSelectionTrigger.current} onClose={() => { pathSelectionReturn.current = true; setPathSelectionOpen(false); }} onSaved={() => { detail.refetch(); }} />}
       <TaskSheet
         bodyProps={{ className: "space-y-5" }}
         title={current.name}
@@ -1995,14 +2007,15 @@ function PublicRouteDetail({
         onOpenChange={(next) => {
           if (!next)
             (() => {
-              if (!action && !exitChangeOpen) onClose();
+              if (!action && !exitChangeOpen && !pathSelectionOpen) onClose();
             })();
         }}
         size="lg"
-        pending={!(!action && !exitChangeOpen)}
+        pending={!(!action && !exitChangeOpen && !pathSelectionOpen)}
         footer={
           <ActionButton
-            disabled={!inventoryReady || !!action || exitChangeOpen || (mixedEditingBlocked && !canEditMixedMetadata(current))}
+            ref={detailEditTrigger}
+            disabled={!inventoryReady || !!action || exitChangeOpen || pathSelectionOpen || (mixedEditingBlocked && !canEditMixedMetadata(current))}
             aria-describedby={mixedEditingBlocked ? mixedReasonId : undefined}
             onClick={() => { if (inventoryReady && (!mixedEditingBlocked || canEditMixedMetadata(current))) onEdit(current); }}
             variant="outline"
@@ -2059,10 +2072,16 @@ function PublicRouteDetail({
             >
               <a href={pathHref}>检查并应用转发路径</a>
             </ActionButton>
+            {canEditMixedMetadata(current) && <ActionButton
+              ref={pathSelectionTrigger}
+              variant="outline"
+              disabled={!inventoryReady || !deployment || !!action || exitChangeOpen || pathSelectionOpen}
+              onClick={() => { if (inventoryReady && deployment && !action && !exitChangeOpen) setPathSelectionOpen(true); }}
+            >更新完整路径</ActionButton>}
             <ActionButton
               ref={retargetTrigger}
               className="min-h-11"
-              disabled={!inventoryReady || !inventory || !deployment || !!action || exitChangeOpen || mixedEditingBlocked}
+              disabled={!inventoryReady || !inventory || !deployment || !!action || exitChangeOpen || pathSelectionOpen || mixedEditingBlocked}
               aria-describedby={mixedEditingBlocked ? mixedReasonId : undefined}
               onClick={() => {
                 if (inventoryReady && inventory && deployment && !mixedEditingBlocked)

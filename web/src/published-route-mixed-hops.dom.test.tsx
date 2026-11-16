@@ -283,3 +283,17 @@ it("does not upgrade a mixed metadata session when conflict latest becomes manag
  expect((editor.getByRole("textbox",{name:"线路名称"}) as HTMLInputElement).value).toBe("Keep my name");
  expect(calls.filter(call=>call.method==="PUT")).toHaveLength(1);
 });
+
+it("opens complete-path update from the detail and returns focus without unlocking exit changes", async () => {
+  const {user,calls}=setup(mixed);
+  const detail=await openDetail(user);
+  const trigger=detail.getByRole("button",{name:"更新完整路径"});
+  await user.click(trigger);
+  const editor=within(await screen.findByRole("dialog",{name:"更新完整路径"}));
+  expect(editor.getByRole("button",{name:"检查完整路径"})).toBeTruthy();
+  await user.click(editor.getByRole("button",{name:/^取消$/}));
+  await waitFor(()=>expect(screen.queryByRole("dialog",{name:"更新完整路径"})).toBeNull());
+  await waitFor(()=>expect(document.activeElement).toBe(trigger));
+  expect(detail.getByRole("button",{name:"更换出口"}).hasAttribute("disabled")).toBe(true);
+  expect(calls.filter(c=>c.method!=="GET")).toHaveLength(0);
+});
