@@ -1,3 +1,4 @@
+import { SubscriptionFetchPrivacySettings } from "./SubscriptionFetchAlerts";
 import { useSecurityRecovery, SecurityRecoveryNotice, type SecurityRecovery } from "./SecurityRecovery";
 import { Metadata } from "@/ui-patterns/metadata";
 import { ContextHeader, ContextLayout, PageSection, SectionIndex } from "@/ui-patterns/page-layout";
@@ -226,6 +227,9 @@ function AccountSecurityTask({
             sections={[
               { id: `${sectionID}-account-password`, label: "修改密码" },
               { id: `${sectionID}-account-sessions`, label: "登录会话" },
+              ...(!session.user.passwordChangeRequired
+                ? [{ id: `${sectionID}-account-privacy`, label: "订阅隐私" }]
+                : []),
               ...(session.user.role === "admin" && !session.user.passwordChangeRequired
                 ? [{ id: `${sectionID}-account-recovery`, label: "账号恢复与退役" }]
                 : []),
@@ -388,6 +392,13 @@ function AccountSecurityTask({
         </AppForm>
       </Section>
       </PageSection>
+      {!session.user.passwordChangeRequired && (
+        <PageSection id={`${sectionID}-account-privacy`} label="订阅隐私设置">
+          <Section title="订阅隐私">
+            <SubscriptionFetchPrivacySettings disabled={blocked} />
+          </Section>
+        </PageSection>
+      )}
       {session.user.role === "admin" &&
         !session.user.passwordChangeRequired && (
           <PageSection id={`${sectionID}-account-recovery`} label="账号恢复与退役设置">
