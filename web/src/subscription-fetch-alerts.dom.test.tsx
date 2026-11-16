@@ -28,7 +28,10 @@ function mount(required = false, failSave = false) {
 }
 it("keeps collection controls in account privacy settings and confirms clearing or restoring", async () => {
   const fetcher = mount();
-  const settings = await screen.findByRole("region", {name:"订阅隐私设置"});
+  await screen.findByRole("region", {name:"订阅隐私设置"});
+  expect(fetcher.mock.calls.some(([url]) => String(url).includes("subscription-fetches"))).toBe(false);
+  fireEvent.click(screen.getByRole("button", {name:"管理新 IP 提醒"}));
+  const settings = await screen.findByRole("dialog", {name:"订阅隐私"});
   await within(settings).findByText("已开启");
   expect(screen.queryByText("拉取记录设置")).toBeNull();
   fireEvent.click(within(settings).getByRole("button", {name:"关闭并清除地址"}));
@@ -51,6 +54,7 @@ it("keeps collection controls in account privacy settings and confirms clearing 
 });
 it("requires a successful refresh after an uncertain save instead of repeating the write", async () => {
   const fetcher = mount(false, true);
+  fireEvent.click(await screen.findByRole("button", {name:"管理新 IP 提醒"}));
   fireEvent.click(await screen.findByRole("button",{name:"关闭并清除地址"}));
   fireEvent.click(within(await screen.findByRole("alertdialog")).getByRole("button",{name:"关闭并清除"}));
   await screen.findByText("保存结果未确认，请刷新核对。");
@@ -65,4 +69,16 @@ it("does not request subscription privacy before a required password change", as
   await screen.findByText("请先更换临时密码");
   expect(screen.queryByRole("region",{name:"订阅隐私设置"})).toBeNull();
   expect(fetcher.mock.calls.some(([url]) => String(url).includes("subscription-fetches"))).toBe(false);
+});
+
+it("closes and reopens privacy settings without submitting a change", async () => {
+  const fetcher = mount();
+  fireEvent.click(await screen.findByRole("button", {name:"管理新 IP 提醒"}));
+  await screen.findByText("已开启");
+  const dialog = screen.getByRole("dialog", {name:"订阅隐私"});
+  fireEvent.click(within(dialog).getByRole("button", {name:"关闭"}));
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  fireEvent.click(screen.getByRole("button", {name:"管理新 IP 提醒"}));
+  await screen.findByText("已开启");
+  expect(fetcher.mock.calls.filter(([,init]) => init?.method === "PUT")).toHaveLength(0);
 });

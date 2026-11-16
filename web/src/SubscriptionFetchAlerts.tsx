@@ -1,4 +1,5 @@
-import { useEffect, useRef } from "react";
+import { TaskDialog } from "@/ui-patterns/task-overlays";
+import { useEffect, useRef, useState } from "react";
 import { QueryState } from "./components";
 import { useConfirm } from "@/ui-patterns/confirmations";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -19,6 +20,15 @@ export interface FetchHistory {
   windowDays: number;
 }
 export function SubscriptionFetchPrivacySettings({ disabled = false }: { disabled?: boolean }) {
+  const [open, setOpen] = useState(false);
+  return <>
+    <ActionButton variant="outline" disabled={disabled} onClick={() => setOpen(true)}>管理新 IP 提醒</ActionButton>
+    {open && <TaskDialog open title="订阅隐私" onOpenChange={setOpen}>
+      <SubscriptionFetchPrivacyTask disabled={disabled} />
+    </TaskDialog>}
+  </>;
+}
+function SubscriptionFetchPrivacyTask({ disabled }: { disabled: boolean }) {
   const history = useQuery({
     queryKey: ["subscription-fetches"],
     queryFn: () => request<FetchHistory>("/me/subscription-fetches"),
