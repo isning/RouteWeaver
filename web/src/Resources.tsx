@@ -11,7 +11,7 @@ import { ChoiceSelect } from "@/ui-patterns/choice-select";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Notice } from "@/ui-patterns/notice";
-import { ResourceToolbar, SearchField } from "@/ui-patterns/resource-toolbar";
+import { ResourceToolbar, SearchField, QuickFilters } from "@/ui-patterns/resource-toolbar";
 import { ActionButton } from "@/ui-patterns/actions";
 import { useForm, useWatch, AppField, AppForm } from "@/ui-patterns/form";
 import { toast } from "sonner";
@@ -172,6 +172,7 @@ export function ResourcesPage() {
     (resource) => resource.refreshStatus === "failed",
   );
   const [search, setSearch] = useState("");
+  const searchInput = useRef<HTMLInputElement>(null);
   const [page, setPage] = useState(1);
   const searchTerm = search.trim().toLocaleLowerCase();
   const visibleResources = (resourceFilter === "failed" ? failedResources : (query.data ?? [])).filter(
@@ -419,32 +420,18 @@ export function ResourcesPage() {
       >
         <Section variant="plain">
           {!!query.data?.length && <ResourceToolbar label="规则资源列表工具栏" className="mb-3"
-            search={<SearchField type="search" aria-label="搜索规则资源" placeholder="搜索名称、ID 或格式" value={search} onValueChange={(value) => { setSearch(value); setPage(1); }} />} />}
-          {!!query.data?.length && (
-            <div role="group" aria-label="筛选规则资源" className="mb-3 flex flex-wrap items-center gap-2">
-              <ActionButton
-                variant={resourceFilter === "all" ? "secondary" : "ghost"}
-                aria-pressed={resourceFilter === "all"}
-                onClick={() => { setResourceFilter("all"); setPage(1); }}
-              >
-                全部 <span className="text-muted-foreground tabular-nums">{query.data.length}</span>
-              </ActionButton>
-              <ActionButton
-                variant={resourceFilter === "failed" ? "secondary" : "ghost"}
-                aria-pressed={resourceFilter === "failed"}
-                onClick={() => { setResourceFilter("failed"); setPage(1); }}
-              >
-                刷新失败 <span className="text-muted-foreground tabular-nums">{failedResources.length}</span>
-              </ActionButton>
-            </div>
-          )}
+            search={<SearchField ref={searchInput} type="search" aria-label="搜索规则资源" placeholder="搜索名称、ID 或格式" value={search} onValueChange={(value) => { setSearch(value); setPage(1); }} />}
+            filters={<QuickFilters label="筛选规则资源" value={resourceFilter}
+              onValueChange={value => { setResourceFilter(value); setPage(1); }}
+              options={[{ value: "all", label: "全部", count: query.data.length }, { value: "failed", label: "刷新失败", count: failedResources.length }]} />}
+          />}
           {!query.data?.length ? (
             inventoryReady ? <EmptyState title="暂无规则资源" /> : null
           ) : !visibleResources.length ? (
             inventoryReady ? (
               <EmptyState
                 title={searchTerm ? "没有符合条件的规则资源" : "没有刷新失败的规则资源"}
-                action={<ActionButton variant="outline" onClick={() => { setResourceFilter("all"); setSearch(""); setPage(1); }}>{searchTerm ? "清除筛选" : "查看全部"}</ActionButton>}
+                action={<ActionButton variant="outline" onClick={() => { setResourceFilter("all"); setSearch(""); setPage(1); searchInput.current?.focus(); }}>{searchTerm ? "清除筛选" : "查看全部"}</ActionButton>}
               />
             ) : null
           ) : (

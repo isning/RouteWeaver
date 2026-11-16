@@ -331,6 +331,7 @@ export function PublishedRoutesPage() {
     queryFn: loadInfrastructure,
   });
   const [search, setSearch] = useState("");
+  const searchInput = useRef<HTMLInputElement>(null);
   const [page, setPage] = useState(1);
   const searchTerm = search.trim().toLocaleLowerCase();
   const visibleRoutes = (query.data ?? []).filter((route) => {
@@ -500,7 +501,7 @@ export function PublishedRoutesPage() {
         <ErrorNotice error={contextError} />
         <Section variant="plain">
           {!!query.data?.length && <ResourceToolbar label="线路列表工具栏" className="mb-3"
-            search={<SearchField type="search" aria-label="搜索线路" placeholder="搜索名称、地址或转发路径" value={search} onValueChange={(value) => { setSearch(value); setPage(1); }} />} />}
+            search={<SearchField ref={searchInput} type="search" aria-label="搜索线路" placeholder="搜索名称、地址或转发路径" value={search} onValueChange={(value) => { setSearch(value); setPage(1); }} />} />}
           {!query.data?.length ? (
             <EmptyState
               title="暂无线路"
@@ -510,7 +511,7 @@ export function PublishedRoutesPage() {
             />
           ) : !visibleRoutes.length ? (
             <EmptyState title="没有符合条件的线路"
-              action={<ActionButton variant="outline" onClick={() => { setSearch(""); setPage(1); }}>清除搜索</ActionButton>} />
+              action={<ActionButton variant="outline" onClick={() => { setSearch(""); setPage(1); searchInput.current?.focus(); }}>清除搜索</ActionButton>} />
           ) : (
             <DataTable
               page={page}

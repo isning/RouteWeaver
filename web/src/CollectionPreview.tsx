@@ -1,3 +1,5 @@
+import { ResourceToolbar, SearchField } from "@/ui-patterns/resource-toolbar";
+import { ItemCount } from "@/ui-patterns/item-count";
 import { adaptiveTabsHeight } from "@/ui-patterns/adaptive-tabs-height";
 import { useLayoutEffect, useRef, useState } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -55,13 +57,28 @@ export function CollectionPreview({
     ]),
   }));
   const [selection, setSelection] = useState("final");
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const searchTerm = search.trim().toLocaleLowerCase();
   const selected = stages.some(({ key }) => key === selection)
     ? selection
     : "final";
+  const matchesSearch = (node: NonNullable<Preview["endpoints"]>[number]) => {
+    const host = node.connection?.host;
+    const address = host ? `${host.includes(":") && !host.startsWith("[") ? `[${host}]` : host}:${node.connection?.port}` : "";
+    return !searchTerm || [node.name, node.region, host, address,
+      node.connection?.port?.toString(), node.connection?.protocol,
+    ].some(value => value?.toLocaleLowerCase().includes(searchTerm));
+  };
+  const activeNodes = selected === "final" ? value.endpoints : stages.find(item => item.key === selected)?.stage.endpoints;
+  const matchingCount = (activeNodes || []).filter(matchesSearch).length;
+  useLayoutEffect(() => {
+    setPage(current => Math.min(current, Math.max(1, Math.ceil(matchingCount / 8))));
+  }, [matchingCount]);
   const tabs = useRef(new Map<string, HTMLButtonElement>());
   const detachedFocus = useRef<string | null>(null);
   useLayoutEffect(() => {
-    if (selection !== selected) setSelection(selected);
+    if (selection !== selected) { setSelection(selected); setPage(1); }
     const removed = detachedFocus.current;
     detachedFocus.current = null;
     if (
@@ -79,11 +96,16 @@ export function CollectionPreview({
       fallback.focus({ preventScroll: true });
     }
   });
-  const table = (nodes: Preview["endpoints"], showSummary = true) => (
+  const table = (nodes: Preview["endpoints"], showSummary = true) => {
+    const rows = (nodes || []).filter(matchesSearch);
+    return (
     <DataTable
       rowKey="id"
-      rows={nodes || []}
-      summary={showSummary ? undefined : null}
+      page={page}
+      onPageChange={setPage}
+      rows={rows}
+      empty={searchTerm ? "没有匹配的连接" : "暂无连接"}
+      summary={searchTerm ? <ItemCount scope="loaded" total={nodes?.length || 0} matched={rows.length} unit="个连接" /> : showSummary ? undefined : null}
       columns={[
         { title: "名称", accessor: "name" },
         {
@@ -102,11 +124,16 @@ export function CollectionPreview({
       pageSize={8}
       compact
     />
-  );
+    );
+  };
   return (
     <div className="preview-result space-y-4 border-t pt-6">
       <h3 className="text-sm font-semibold">逐阶段预览</h3>
-      <Tabs value={selected} onValueChange={setSelection} className="min-w-0">
+      <ResourceToolbar label="查找预览连接" search={
+        <SearchField type="search" aria-label="搜索预览连接" placeholder="搜索名称、地址、地区或协议"
+          value={search} onValueChange={next => { setSearch(next); setPage(1); }} />
+      } />
+      <Tabs value={selected} onValueChange={next => { setSelection(next); setPage(1); }} className="min-w-0">
         <ScrollArea className="w-full min-w-0 overflow-hidden pb-3">
           <TabsList
             aria-label="处理阶段"

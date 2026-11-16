@@ -1,3 +1,4 @@
+import { ActionButton } from "@/ui-patterns/actions";
 import { useImperativeHandle, useRef, type ComponentProps, type ReactNode } from "react";
 import { Search, X } from "lucide-react";
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/components/ui/input-group";
@@ -16,7 +17,7 @@ export function SearchField({ value, onValueChange, className, ref, disabled, ..
   return (
     <InputGroup className={cn("resource-search h-auto min-h-11 bg-background", className)}>
       <InputGroupAddon><Search aria-hidden="true" /></InputGroupAddon>
-      <InputGroupInput {...props} ref={input} value={value} disabled={disabled}
+      <InputGroupInput enterKeyHint="search" {...props} ref={input} value={value} disabled={disabled}
         onChange={(event) => onValueChange(event.target.value)}
         className="h-auto min-h-11 [&::-webkit-search-cancel-button]:appearance-none" />
       {value && <InputGroupAddon align="inline-end" className="py-0 pr-0">
@@ -53,5 +54,22 @@ export function ToolbarFilter({ label, controlId, children }: { label: string; c
   return <div className="grid min-w-0 flex-1 basis-40 gap-1.5 text-sm font-medium sm:grid-cols-[auto_minmax(0,1fr)] sm:gap-2">
     <label htmlFor={controlId} className="sm:flex sm:min-h-11 sm:items-center sm:self-start">{label}</label>
     <div className="min-w-0">{children}</div>
+  </div>;
+}
+
+/** Small, mutually exclusive list filters share state styling and hit targets.
+ * Domain choices and counts remain the caller's responsibility. */
+export function QuickFilters<V extends string>({ label, value, options, onValueChange }: {
+  label: string;
+  value: V;
+  options: readonly { value: V; label: string; count?: number }[];
+  onValueChange: (value: V) => void;
+}) {
+  return <div role="group" aria-label={label} className="flex max-w-full flex-wrap gap-2">
+    {options.map(option => <ActionButton key={option.value}
+      variant={value === option.value ? "secondary" : "ghost"}
+      aria-pressed={value === option.value} onClick={() => onValueChange(option.value)}>
+      {option.label}{option.count !== undefined && <> <span className="text-muted-foreground tabular-nums">{option.count}</span></>}
+    </ActionButton>)}
   </div>;
 }

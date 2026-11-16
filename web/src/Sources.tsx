@@ -1,7 +1,7 @@
 import { useActionTarget } from "./useActionTarget";
 import { exactDraftInteger } from "./draft-integer";
 import { Metadata, MetadataItem } from "@/ui-patterns/metadata";
-import { ResourceToolbar, SearchField } from "@/ui-patterns/resource-toolbar";
+import { ResourceToolbar, SearchField, QuickFilters } from "@/ui-patterns/resource-toolbar";
 import { TaskDialog, TaskSheet } from "@/ui-patterns/task-overlays";
 import { MultiChoice } from "@/ui-patterns/choice-select";
 import { Notice } from "@/ui-patterns/notice";
@@ -297,8 +297,9 @@ export function SourcesPage({
     setEditing(source);
     setOpen(true);
   };
+  const searchTerm = search.trim().toLocaleLowerCase();
   const filtered = (query.data || []).filter((s) =>
-    s.name.toLowerCase().includes(search.toLowerCase()) &&
+    s.name.toLocaleLowerCase().includes(searchTerm) &&
       (taskFilter === "all" || (s.enabled && !sourceStatusUnknown(s) &&
         (taskFilter === "updates" ? !!s.candidate : sourceHasFailure(s)))),
   );
@@ -389,12 +390,8 @@ export function SourcesPage({
         <Section variant="plain">
           <ResourceToolbar
             label="查找订阅来源"
-            filters={<div role="group" aria-label="来源状态" className="flex flex-wrap gap-1">
-              {([ ["all", "全部"], ["updates", "有更新"], ["failed", "更新失败"] ] as const).map(([value, label]) => (
-                <ActionButton key={value} variant={taskFilter === value ? "secondary" : "ghost"}
-                  aria-pressed={taskFilter === value} onClick={() => setTaskFilter(value)}>{label}</ActionButton>
-              ))}
-            </div>}
+            filters={<QuickFilters label="来源状态" value={taskFilter} onValueChange={setTaskFilter}
+              options={[{ value: "all", label: "全部" }, { value: "updates", label: "有更新" }, { value: "failed", label: "更新失败" }]} />}
             search={
               <SearchField
                 ref={searchInput}
@@ -424,7 +421,7 @@ export function SourcesPage({
               className="@container/source-table"
               rowKey="id"
               rows={filtered}
-              count={{ total: query.data.length, unit: "个私有来源", filtered: !!search || taskFilter !== "all" }}
+              count={{ total: query.data.length, unit: "个私有来源", filtered: !!searchTerm || taskFilter !== "all" }}
               columns={[
                 {
                   title: "来源",

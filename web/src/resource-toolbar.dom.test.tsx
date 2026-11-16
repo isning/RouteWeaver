@@ -3,7 +3,7 @@ import { createRef, useState, type FormEvent } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { ResourceToolbar, SearchField, ToolbarFilter } from "./ui-patterns/resource-toolbar";
+import { ResourceToolbar, SearchField, ToolbarFilter, QuickFilters } from "./ui-patterns/resource-toolbar";
 
 afterEach(cleanup);
 
@@ -65,4 +65,24 @@ it("disables both editing and clearing without discarding the existing search", 
   await user.type(input, "备用");
   expect(onValueChange).not.toHaveBeenCalled();
   expect(input.value).toBe("办公");
+});
+
+it("uses one exclusive quick-filter state and never submits its surrounding form", async () => {
+  const submit = vi.fn((event: FormEvent) => event.preventDefault());
+  function Filters() {
+    const [value, setValue] = useState("all");
+    return <form onSubmit={submit}><QuickFilters label="列表状态" value={value} onValueChange={setValue}
+      options={[{ value: "all", label: "全部", count: 12 }, { value: "failed", label: "失败", count: 2 }]} /></form>;
+  }
+  render(<Filters />);
+  const group = screen.getByRole("group", { name: "列表状态" });
+  const all = within(group).getByRole("button", { name: "全部 12" });
+  const failed = within(group).getByRole("button", { name: "失败 2" });
+  expect(all.getAttribute("aria-pressed")).toBe("true");
+  await userEvent.click(failed);
+  expect(all.getAttribute("aria-pressed")).toBe("false");
+  expect(failed.getAttribute("aria-pressed")).toBe("true");
+  expect(failed.getAttribute("data-variant")).toBe("secondary");
+  expect(all.getAttribute("data-variant")).toBe("ghost");
+  expect(submit).not.toHaveBeenCalled();
 });

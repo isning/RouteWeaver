@@ -1,4 +1,4 @@
-import { ResourceToolbar, SearchField } from "@/ui-patterns/resource-toolbar";
+import { ResourceToolbar, SearchField, QuickFilters } from "@/ui-patterns/resource-toolbar";
 import { ItemCount } from "@/ui-patterns/item-count";
 import { ScrollableTabsList } from "@/ui-patterns/scrollable-tabs-list";
 import { PasswordInput } from "@/ui-patterns/password-input";
@@ -214,12 +214,9 @@ export function InboxPage() {
           {!!query.data?.length && <ResourceToolbar
             label="筛选消息"
             search={<SearchField ref={searchInput} type="search" aria-label="搜索消息" placeholder="搜索标题或内容" value={search} onValueChange={setSearch} />}
-            filters={<div className="flex flex-wrap gap-2" role="group" aria-label="阅读状态">
-              <ActionButton variant={unreadOnly ? "outline" : "secondary"} aria-pressed={!unreadOnly} onClick={() => setUnreadOnly(false)}>全部</ActionButton>
-              <ActionButton variant={unreadOnly ? "secondary" : "outline"} aria-pressed={unreadOnly} onClick={() => setUnreadOnly(true)}>
-                未读 <span className="tabular-nums">{unreadCount}</span>
-              </ActionButton>
-            </div>}
+            filters={<QuickFilters label="阅读状态" value={unreadOnly ? "unread" : "all"}
+              onValueChange={value => setUnreadOnly(value === "unread")}
+              options={[{ value: "all", label: "全部" }, { value: "unread", label: "未读", count: unreadCount }]} />}
             summary={<ItemCount total={query.data.length} matched={searchTerm || unreadOnly ? visibleMessages.length : undefined} unit="条" />}
           />}
           {!query.data?.length ? (
