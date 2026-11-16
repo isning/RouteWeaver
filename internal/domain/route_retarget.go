@@ -27,11 +27,11 @@ func RetargetManagedExit(ir ServerDeploymentIR, route PublishedRoute, target Ser
 	refuse := func() (ExitRetarget, error) {
 		return result, fmt.Errorf("route exit change requires an unambiguous managed two-endpoint path")
 	}
-	if len(route.Hops) > 0 {
-		if _, err := ResolvePublishedRouteHops(route); err != nil || HasExternalHops(route) {
-			return refuse()
-		}
+	prefix, prefixErr := ManagedExitConnectorPrefix(route)
+	if prefixErr != nil {
+		return refuse()
 	}
+
 	if ir.SchemaVersion != "1.0" || route.DeploymentID != ir.ID || len(route.EndpointIDs) != 2 || route.EndpointIDs[0] != route.Path.Entry || route.EndpointIDs[1] != route.Path.Exit || !ValidID(connectorID) || !ValidID(revision) || target.Listener.ID == route.Path.Exit || target.Listener.ID == route.Path.Entry {
 		return refuse()
 	}
@@ -89,16 +89,29 @@ func RetargetManagedExit(ir ServerDeploymentIR, route PublishedRoute, target Ser
 	if old.Kind != "forward" {
 		return refuse()
 	}
+	previous := ""
+	for _, id := range prefix {
+		matches := 0
+		for _, c := range p.Connectors {
+			if c.ID == id && c.Via == previous {
+				matches++
+			}
+		}
+		if matches != 1 || id == old.Ref {
+			return refuse()
+		}
+		previous = id
+	}
 	oldFound := 0
 	selected := ""
 	for _, c := range p.Connectors {
 		if c.ID == connectorID {
 			return result, fmt.Errorf("replacement connector identity already exists")
 		}
-		if c.ID == old.Ref && c.Via == "" {
+		if c.ID == old.Ref && c.Via == previous {
 			oldFound++
 		}
-		if c.Via == "" && reflect.DeepEqual(c.Connection, dial) {
+		if c.Via == previous && reflect.DeepEqual(c.Connection, dial) {
 			if selected != "" {
 				return result, fmt.Errorf("replacement has ambiguous matching connectors")
 			}
@@ -110,7 +123,7 @@ func RetargetManagedExit(ir ServerDeploymentIR, route PublishedRoute, target Ser
 	}
 	if selected == "" {
 		selected = connectorID
-		p.Connectors = append(p.Connectors, ServerConnector{ID: selected, Connection: dial})
+		p.Connectors = append(p.Connectors, ServerConnector{ID: selected, Connection: dial, Via: previous})
 	}
 	for i := range p.Principals {
 		if p.Principals[i].RouteID == route.ID {
@@ -135,7 +148,7 @@ func RetargetManagedExit(ir ServerDeploymentIR, route PublishedRoute, target Ser
 	result.IR.TopologyRevision = revision
 	result.Route.EndpointIDs[1] = target.Listener.ID
 	if len(result.Route.Hops) > 0 {
-		result.Route.Hops[1].EndpointID = target.Listener.ID
+		result.Route.Hops[len(result.Route.Hops)-1].EndpointID = target.Listener.ID
 	}
 	result.Route.Path.Exit = target.Listener.ID
 	sum := sha256.Sum256([]byte(route.Path.Entry + "\x00" + target.Listener.ID))
@@ -143,4 +156,28 @@ func RetargetManagedExit(ir ServerDeploymentIR, route PublishedRoute, target Ser
 	result.Route.Path.Links = []string{result.Link.ID}
 	result.AffectedUsers = len(users)
 	return result, nil
+}
+
+// ManagedExitConnectorPrefix recognizes only a fixed external prefix between
+// two managed endpoints. A connector after the terminal endpoint, another
+// managed transit, or a partial/ambiguous declaration is not a retarget shape.
+func ManagedExitConnectorPrefix(route PublishedRoute) ([]string, error) {
+	if len(route.EndpointIDs) != 2 {
+		return nil, fmt.Errorf("two managed endpoints required")
+	}
+	hops, err := ResolvePublishedRouteHops(route)
+	if err != nil {
+		return nil, err
+	}
+	if len(hops) < 2 || hops[0].Kind != "managed" || hops[len(hops)-1].Kind != "managed" {
+		return nil, fmt.Errorf("managed entry and terminal required")
+	}
+	prefix := []string{}
+	for _, hop := range hops[1 : len(hops)-1] {
+		if hop.Kind != "connector" {
+			return nil, fmt.Errorf("only a fixed connector prefix is supported")
+		}
+		prefix = append(prefix, hop.ConnectorID)
+	}
+	return prefix, nil
 }

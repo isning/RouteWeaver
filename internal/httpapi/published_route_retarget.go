@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -40,6 +41,8 @@ type exitApplicationReadiness struct {
 	EndpointIDs []string `json:"endpointIds,omitempty"`
 }
 type exitChangeReview struct {
+	BeforePath           *publishedPathSummary    `json:"beforePath,omitempty"`
+	AfterPath            *publishedPathSummary    `json:"afterPath,omitempty"`
 	ApplicationReadiness exitApplicationReadiness `json:"applicationReadiness"`
 	SecurityChanges      []string                 `json:"securityChanges"`
 	RouteID              string                   `json:"routeId"`
@@ -72,6 +75,7 @@ type exitChangeReceipt struct {
 	Result       exitChangeResult `json:"result"`
 }
 type preparedExitChange struct {
+	mixedFence *store.MixedRetargetFence
 	proof      preparedFleet
 	deployment ServerDeployment
 	changed    domain.ExitRetarget
@@ -183,7 +187,7 @@ func (h *server) registerRouteRetarget(r chi.Router) {
 				writeJSON(w, 200, result)
 				return true
 			}
-			prepared, e := h.prepareExitChange(actor, routeID, in)
+			prepared, e := h.prepareExitChange(r.Context(), actor, routeID, in)
 			if e != nil {
 				if replayReceipt() || rejectReceipt(e) {
 					return
@@ -210,7 +214,12 @@ func (h *server) registerRouteRetarget(r chi.Router) {
 			receipt := exitChangeReceipt{Actor: actor, RouteID: routeID, RequestToken: requestToken, Result: result}
 			prepared.proof.Compares = append(prepared.proof.Compares, store.RecordCompare{Kind: "route-exit-receipts", ID: receiptID})
 			writes := []store.RecordWrite{{Kind: "server-deployments", ID: prepared.deployment.ID, Value: prepared.deployment}, {Kind: "published-routes", ID: routeID, Value: prepared.changed.Route}, {Kind: "links", ID: prepared.changed.Link.ID, Value: prepared.changed.Link}, {Kind: "route-exit-receipts", ID: receiptID, Value: receipt}}
-			if e = h.s.CompareSetsAndPutRecords(prepared.proof.Compares, prepared.proof.Sets, writes); e != nil {
+			if prepared.mixedFence != nil {
+				e = h.s.CompareMixedRetargetAndPutRecords(r.Context(), prepared.mixedFence, prepared.proof.Compares, prepared.proof.Sets, writes)
+			} else {
+				e = h.s.CompareSetsAndPutRecords(prepared.proof.Compares, prepared.proof.Sets, writes)
+			}
+			if e != nil {
 				// Concurrent exact retries may race to the same transaction. Resolve only an
 				// exact committed receipt; never turn another actor/request into a success.
 				if replayReceipt() || rejectReceipt(e) {
@@ -227,7 +236,7 @@ func (h *server) registerRouteRetarget(r chi.Router) {
 	r.Post("/published-routes/{id}/retarget", handle(true))
 }
 
-func (h *server) prepareExitChange(actor, routeID string, in exitChangeInput) (preparedExitChange, error) {
+func (h *server) prepareExitChange(ctx context.Context, actor, routeID string, in exitChangeInput) (preparedExitChange, error) {
 	out := preparedExitChange{}
 	proof := &out.proof
 	var route domain.PublishedRoute
@@ -240,7 +249,7 @@ func (h *server) prepareExitChange(actor, routeID string, in exitChangeInput) (p
 	if !sameReviewToken(in.ExpectedRouteRevision, h.recordRevision("published-routes", routeID, proof.Compares[0].Expected)) || !sameReviewToken(in.ExpectedDeploymentRevision, h.recordRevision("server-deployments", out.deployment.ID, proof.Compares[1].Expected)) {
 		return out, store.ErrConflict
 	}
-	if _, err := domain.ResolvePublishedRouteHops(route); err != nil || domain.HasExternalHops(route) {
+	if _, err := domain.ManagedExitConnectorPrefix(route); err != nil {
 		return out, exitBlocked("EXIT_PATH_UNSUPPORTED", "此操作不能省略外部代理。请保留完整链路后再修改。")
 	}
 	if len(route.EndpointIDs) != 2 || route.Path.Entry != route.EndpointIDs[0] || route.Path.Exit != route.EndpointIDs[1] {
@@ -457,14 +466,23 @@ func (h *server) prepareExitChange(actor, routeID string, in exitChangeInput) (p
 		}
 		beforeAddress = oldHost.Address
 	}
+	mixedFingerprint := ""
+	if domain.HasExternalHops(route) {
+		out.mixedFence, e = h.mixedExitFence(ctx, route, changed.IR)
+		if e != nil {
+			return out, e
+		}
+		mixedFingerprint = out.mixedFence.Fingerprint()
+	}
 	reviewInput := struct {
-		Actor     string
-		RouteID   string
-		Input     exitChangeInput
-		Compares  []store.RecordCompare
-		Sets      []store.RecordSetCompare
-		Candidate domain.ExitRetarget
-	}{actor, routeID, tokenInput, semanticExitReviewCompares(proof.Compares), proof.Sets, changed}
+		MixedFingerprint string
+		Actor            string
+		RouteID          string
+		Input            exitChangeInput
+		Compares         []store.RecordCompare
+		Sets             []store.RecordSetCompare
+		Candidate        domain.ExitRetarget
+	}{mixedFingerprint, actor, routeID, tokenInput, semanticExitReviewCompares(proof.Compares), proof.Sets, changed}
 	reviewToken, e := h.s.ReviewToken("exit-review/v1", reviewInput)
 	if e != nil {
 		return out, e
@@ -484,6 +502,11 @@ func (h *server) prepareExitChange(actor, routeID string, in exitChangeInput) (p
 		}
 	}
 	out.review = exitChangeReview{SecurityChanges: exitSecurityChanges(oldEndpoints[1].Connection, endpoint.Connection), ApplicationReadiness: readiness, RouteID: routeID, RouteName: route.Name, ReviewToken: reviewToken, Before: view(oldEndpoints[1], beforeAddress, beforeTLS), After: view(endpoint, dial.Host, target.TLS), AffectedUsers: changed.AffectedUsers, AddedProgram: changed.AddedProgram, IsolatedConnector: true, LegacyNormalized: changed.LegacyNormalized, PublicEntryPreserved: true, CredentialsPreserved: true, OldProgramRetained: true}
+	if out.mixedFence != nil {
+		beforePath := summarizePublishedRoute(route, out.deployment.IR.Programs)
+		afterPath := summarizePublishedRoute(changed.Route, changed.IR.Programs)
+		out.review.BeforePath, out.review.AfterPath = &beforePath, &afterPath
+	}
 	return out, nil
 }
 

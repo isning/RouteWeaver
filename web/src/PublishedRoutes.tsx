@@ -1,3 +1,4 @@
+import { fixedMixedExitHops } from "./route-exit-path";
 import { RoutePathSelectionEditor } from "./RoutePathSelectionEditor";
 import { readOrderedServerPath } from "./server-path-model";
 import {
@@ -364,7 +365,7 @@ export function PublishedRoutesPage() {
     deployment: ServerDeployment,
     inventory: Infrastructure,
   ) => {
-    if (!inventoryReady || hasConnectorHops(route)) return;
+    if (!inventoryReady || (hasConnectorHops(route) && !fixedMixedExitHops(route))) return;
     setExitTask((current) =>
       current
         ? { ...current, open: true }
@@ -1953,6 +1954,7 @@ function PublicRouteDetail({
   }, [exitFocusRevision]);
   const current = detail.data || route;
   const mixedEditingBlocked = hasConnectorHops(current) || hasConnectorHops(route);
+  const mixedExitBlocked = mixedEditingBlocked && !fixedMixedExitHops(current);
   const mixedReasonId = `mixed-route-detail-${route.id}`;
   const deployment = inventory?.deployments.find(
     (item) => item.id === current.deploymentId,
@@ -2016,7 +2018,7 @@ function PublicRouteDetail({
           <ActionButton
             ref={detailEditTrigger}
             disabled={!inventoryReady || !!action || exitChangeOpen || pathSelectionOpen || (mixedEditingBlocked && !canEditMixedMetadata(current))}
-            aria-describedby={mixedEditingBlocked ? mixedReasonId : undefined}
+            aria-describedby={mixedExitBlocked ? mixedReasonId : undefined}
             onClick={() => { if (inventoryReady && (!mixedEditingBlocked || canEditMixedMetadata(current))) onEdit(current); }}
             variant="outline"
           >
@@ -2054,7 +2056,7 @@ function PublicRouteDetail({
             )}
           </QueryState>
           {detail.error && <p>运行配置：未知，无法取得最新确认结果。</p>}
-          {mixedEditingBlocked && <p id={mixedReasonId} className="text-sm text-muted-foreground">{canEditMixedMetadata(current) ? "混合路径暂不支持更换出口。" : mixedPathEditingReason}</p>}
+          {mixedExitBlocked && <p id={mixedReasonId} className="text-sm text-muted-foreground">{canEditMixedMetadata(current) ? "此混合路径暂不支持更换出口。" : mixedPathEditingReason}</p>}
           <div className={"flex flex-wrap items-center gap-2"}>
             <ActionButton
               className="min-h-11"
@@ -2081,10 +2083,10 @@ function PublicRouteDetail({
             <ActionButton
               ref={retargetTrigger}
               className="min-h-11"
-              disabled={!inventoryReady || !inventory || !deployment || !!action || exitChangeOpen || pathSelectionOpen || mixedEditingBlocked}
-              aria-describedby={mixedEditingBlocked ? mixedReasonId : undefined}
+              disabled={!inventoryReady || !inventory || !deployment || !!action || exitChangeOpen || pathSelectionOpen || mixedExitBlocked}
+              aria-describedby={mixedExitBlocked ? mixedReasonId : undefined}
               onClick={() => {
-                if (inventoryReady && inventory && deployment && !mixedEditingBlocked)
+                if (inventoryReady && inventory && deployment && !mixedExitBlocked)
                   onRetarget(current, deployment, inventory);
               }}
               variant="outline"

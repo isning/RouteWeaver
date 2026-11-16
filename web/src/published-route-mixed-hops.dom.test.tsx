@@ -297,3 +297,12 @@ it("opens complete-path update from the detail and returns focus without unlocki
   expect(detail.getByRole("button",{name:"更换出口"}).hasAttribute("disabled")).toBe(true);
   expect(calls.filter(c=>c.method!=="GET")).toHaveLength(0);
 });
+it("opens a fixed mixed managed-terminal exit from its real detail and returns focus",async()=>{
+ const supported={...mixed,hops:mixed.hops!.slice(0,3),savedPath:{hops:mixed.savedPath!.hops.slice(0,3)}};
+ const {user,calls}=setup(supported);const detail=await openDetail(user);
+ const trigger=detail.getByRole("button",{name:"更换出口"});expect(trigger.hasAttribute("disabled")).toBe(false);await user.click(trigger);
+ const editor=within(await screen.findByRole("dialog",{name:"更换「Office line」的出口"}));
+ await user.click(editor.getByRole("button",{name:"关闭"}));
+ await waitFor(()=>expect(screen.queryByRole("dialog",{name:"更换「Office line」的出口"})).toBeNull());
+ await waitFor(()=>expect(document.activeElement).toBe(trigger));expect(calls.filter(c=>c.method!=="GET")).toHaveLength(0);
+});

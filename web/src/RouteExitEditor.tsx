@@ -1,3 +1,4 @@
+import { fixedMixedExitHops, matchesExitPath, type ExitPathSummary } from "./route-exit-path";
 import { Input } from "@/components/ui/input";
 import { ActionButton } from "@/ui-patterns/actions";
 import { Notice } from "@/ui-patterns/notice";
@@ -50,6 +51,8 @@ export type RouteExitReview = {
   routeId: string;
   routeName: string;
   reviewToken: string;
+  beforePath?: ExitPathSummary;
+  afterPath?: ExitPathSummary;
   before: EndpointReview;
   after: EndpointReview;
   affectedUsers: number;
@@ -192,6 +195,7 @@ export function RouteExitEditor({
   const entry = baseline.deployment.ir.programs.find(
     (program) => program.listener.id === baseline.route.endpointIds[0],
   );
+  const mixedPath = fixedMixedExitHops(baseline.route);
   const missingRevision =
     !baseline.route.revisionToken || !baseline.deployment.revisionToken;
   const locked = busy !== null || uncertain;
@@ -273,12 +277,18 @@ export function RouteExitEditor({
         expectedRouteRevision: next.route.revisionToken,
         expectedDeploymentRevision: next.deployment.revisionToken,
       };
+      const mixedHops = fixedMixedExitHops(next.route);
+      if (next.route.hops?.some(hop => hop.kind === "connector") && !mixedHops)
+        throw new Error("此路径不支持仅更换末端服务器，请保留完整链路。");
       const review = await post<RouteExitReview>(
         `/published-routes/${encodeURIComponent(route.id)}/retarget/preview`,
         input,
       );
       if (
         review.routeId !== route.id ||
+        (!!mixedHops && (review.before?.endpointId !== next.route.endpointIds[1] ||
+          !matchesExitPath(review.beforePath, mixedHops) ||
+          !matchesExitPath(review.afterPath, [...mixedHops.slice(0,-1), {kind:"managed",endpointId}]))) ||
         review.after?.endpointId !== endpointId ||
         typeof review.reviewToken !== "string" ||
         !review.reviewToken ||
@@ -461,7 +471,12 @@ export function RouteExitEditor({
               conflict || missingRevision ? "检查最新变更" : "检查变更"
             }
             pending={busy === "check"}
-            disabled={!endpointId || selectionPending || materialPending || busy === "save"}
+            disabled={
+              !endpointId ||
+              selectionPending ||
+              materialPending ||
+              busy === "save"
+            }
             onClick={() => inspect(conflict)}
             variant="default"
           >
@@ -562,6 +577,48 @@ export function RouteExitEditor({
           >
             核对草稿变更
           </h2>
+          {mixedPath &&
+            reviewed.review.beforePath &&
+            reviewed.review.afterPath && (
+              <div className="my-5 grid min-w-0 gap-4 md:grid-cols-2">
+                {(
+                  [
+                    ["原完整路径", reviewed.review.beforePath, "原出口"],
+                    ["新完整路径", reviewed.review.afterPath, "新出口"],
+                  ] as const
+                ).map(([title, path, label]) => (
+                  <section
+                    key={title}
+                    role="region"
+                    aria-label={title}
+                    className="min-w-0 space-y-3 rounded-lg border p-4"
+                  >
+                    <h3 className="text-sm font-medium">{title}</h3>
+                    <ol className="list-decimal space-y-2 pl-5 text-sm [overflow-wrap:anywhere]">
+                      {path.hops.map((hop, index) => (
+                        <li
+                          key={index}
+                          className={
+                            index === path.hops.length - 1
+                              ? "rounded-sm bg-muted p-2 font-medium"
+                              : ""
+                          }
+                        >
+                          <span>
+                            {hop.name || hop.endpointId || hop.connectorId}
+                          </span>
+                          {index === path.hops.length - 1 && (
+                            <span className="ml-2 text-xs text-muted-foreground">
+                              {label}
+                            </span>
+                          )}
+                        </li>
+                      ))}
+                    </ol>
+                  </section>
+                ))}
+              </div>
+            )}
           <dl className="route-exit-diff my-5 grid gap-4 md:grid-cols-2 [&>div]:min-w-0 [&>div]:rounded-lg [&>div]:bg-muted/50 [&>div]:p-4 [&_dt]:mb-1 [&_dt]:text-muted-foreground [&_dd]:m-0 [&_dd]:break-words [&_dd]:font-semibold [&_small]:mt-1 [&_small]:block [&_small]:font-normal [&_small]:text-muted-foreground">
             <div>
               <dt>已保存出口</dt>

@@ -158,9 +158,16 @@ function mount(
     fetch?: (path: string, init?: RequestInit) => Promise<Response>;
     tls?: boolean;
     additionalTLS?: boolean;
+    mixed?: boolean;
   } = {},
 ) {
   const data = fixture();
+  if (options.mixed) {
+    data.route.hops = [{kind:"managed",endpointId:"fra-endpoint"},{kind:"connector",connectorId:"prefix"},{kind:"managed",endpointId:"old-endpoint"}];
+    data.deployment.ir.programs[0].instance.version = "26.3.27-rw1";
+    data.deployment.ir.programs[0].connectors = [{id:"prefix",connection:{protocol:"socks",host:"private-prefix.invalid",port:1080,password:"must-not-show"}},{id:"bridge",via:"prefix",connection:{...data.inventory.endpoints[1].connection,host:"old.example.invalid"}}];
+    data.deployment.ir.programs[0].defaultAction = {kind:"forward",ref:"bridge"};
+  }
   if (options.tls)
     data.inventory.endpoints[2].connection = {
       ...data.inventory.endpoints[2].connection,
@@ -994,4 +1001,52 @@ it("includes both completed PEM reads and newer paths in the exit preview", asyn
     certificatePath: "custom/cert.pem", keyPath: "custom/key.pem",
     certificatePem: "synthetic certificate", privateKeyPem: "synthetic private key",
   });
+});
+
+const mixedBeforePath = {hops:[
+ {kind:"managed",endpointId:"fra-endpoint",name:"Captured entry",metadataState:"snapshot"},
+ {kind:"connector",connectorId:"prefix",programEndpointId:"fra-endpoint",name:"prefix",metadataState:"snapshot"},
+ {kind:"managed",endpointId:"old-endpoint",name:"Captured old",metadataState:"snapshot"},
+]};
+const mixedAfterPath = {hops:[...mixedBeforePath.hops.slice(0,2),{kind:"managed",endpointId:"new-endpoint",name:"Captured new",metadataState:"snapshot"}]};
+it("reviews the full fixed mixed prefix and highlights only the managed exit replacement",async()=>{
+ const {user,calls}=mount({mixed:true,fetch:async()=>response({...review,beforePath:mixedBeforePath,afterPath:mixedAfterPath})});
+ await choose(user);await user.click(screen.getByRole("button",{name:"检查变更"}));
+ const before=await screen.findByRole("region",{name:"原完整路径"});const after=screen.getByRole("region",{name:"新完整路径"});
+ expect(within(before).getByText("Captured entry")).toBeTruthy();expect(within(after).getByText("Captured entry")).toBeTruthy();
+ expect(within(before).getByText("prefix")).toBeTruthy();expect(within(after).getByText("prefix")).toBeTruthy();
+ expect(within(before).getByText("Captured old")).toBeTruthy();expect(within(after).getByText("Captured new")).toBeTruthy();
+ expect(within(after).getByText("新出口")).toBeTruthy();expect(document.body.textContent).not.toContain("must-not-show");
+ expect(calls[0].body).toEqual({replacementEndpointId:"new-endpoint",expectedRouteRevision:"route-before",expectedDeploymentRevision:"deployment-before"});
+});
+it.each(["missing","prefix-id","prefix-scope","entry","tail","old-exit"])("rejects an unproven mixed exit review %s",async kind=>{
+ const value:any=structuredClone({...review,beforePath:mixedBeforePath,afterPath:mixedAfterPath});
+ if(kind==="missing")delete value.afterPath;
+ if(kind==="prefix-id")value.afterPath.hops[1].connectorId="different";
+ if(kind==="prefix-scope")value.afterPath.hops[1].programEndpointId="new-endpoint";
+ if(kind==="entry")value.afterPath.hops[0].endpointId="other";
+ if(kind==="tail")value.afterPath.hops.push(value.afterPath.hops[1]);
+ if(kind==="old-exit")value.before.endpointId="different";
+ const {user,calls}=mount({mixed:true,fetch:async()=>response(value)});await choose(user);await user.click(screen.getByRole("button",{name:"检查变更"}));
+ await screen.findByText("检查结果与所选线路或出口不一致，请重新检查。");expect(screen.queryByRole("button",{name:"保存出口草稿"})).toBeNull();expect(calls).toHaveLength(1);
+});
+it("keeps the exact mixed review operation when recovering an uncertain commit",async()=>{
+ const sent:any[]=[];const {user,onSaved}=mount({mixed:true,fetch:async(path,init)=>{
+ if(path.endsWith('/preview'))return response({...review,beforePath:mixedBeforePath,afterPath:mixedAfterPath});
+ const body=JSON.parse(String(init?.body));sent.push(body);if(sent.length===1)throw new TypeError('lost reply');
+ return response({operationId:body.operationId,routeId:'line',status:'draft-saved',routeRevision:'next-route',deploymentRevision:'next-deployment'});
+ }});await choose(user);await user.click(screen.getByRole('button',{name:'检查变更'}));await user.click(await screen.findByRole('button',{name:'保存出口草稿'}));await user.click(await screen.findByRole('button',{name:'核对保存结果'}));await waitFor(()=>expect(onSaved).toHaveBeenCalledOnce());expect(sent).toHaveLength(2);expect(sent[1]).toEqual(sent[0]);expect(sent[0].reviewToken).toBe('review-bound');
+});
+it("rechecks mixed eligibility after conflict and refuses a newly added tail connector",async()=>{
+ const latest=fixture();latest.route.revisionToken='route-r2';latest.route.hops=[{kind:'managed',endpointId:'fra-endpoint'},{kind:'connector',connectorId:'prefix'},{kind:'managed',endpointId:'old-endpoint'},{kind:'connector',connectorId:'tail'}];
+ let previews=0;
+ const {user}=mount({mixed:true,fetch:async(path)=>{
+ if(path.endsWith('/preview')){previews++;return response({message:'changed'},409);}
+ if(path.endsWith('/resolve'))return response(latest.route);
+ if(path.endsWith('/hosts'))return response(latest.inventory.hosts);
+ if(path.endsWith('/core-instances'))return response(latest.inventory.instances);
+ if(path.endsWith('/managed-endpoints'))return response(latest.inventory.endpoints);
+ if(path.endsWith('/server-deployments'))return response([latest.deployment]);
+ return response([]);
+ }});await choose(user);await user.click(screen.getByRole('button',{name:'检查变更'}));await user.click(await screen.findByRole('button',{name:'检查最新变更'}));await screen.findByText('此路径不支持仅更换末端服务器，请保留完整链路。');expect(screen.queryByRole('button',{name:'保存出口草稿'})).toBeNull();expect(previews).toBe(1);
 });
