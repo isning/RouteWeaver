@@ -71,14 +71,21 @@ func (h *server) registerPublishedRouteAdmin(r chi.Router) {
 					return
 				}
 				proof.Compares = append(proof.Compares, *expected)
-				if expected.Expected != nil && len(in.Hops) == 0 {
+				if expected.Expected != nil {
 					raw, err := json.Marshal(expected.Expected)
 					var previous domain.PublishedRoute
-					if err != nil || json.Unmarshal(raw, &previous) != nil {
+					if err != nil {
 						fail(w, 500, "cannot read the previous published path")
 						return
 					}
-					if domain.HasExternalHops(previous) {
+					// This writer reconstructs the supported route shape. Refuse
+					// unknown persisted intent rather than silently dropping it,
+					// including fields nested inside paths or connector hops.
+					if strictSupported(raw, &previous) != nil {
+						fail(w, 422, "stored route contains unsupported fields or shape")
+						return
+					}
+					if len(in.Hops) == 0 && domain.HasExternalHops(previous) {
 						fail(w, 422, "explicit hops are required when editing a mixed path; reopen the complete path before saving")
 						return
 					}

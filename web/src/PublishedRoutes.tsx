@@ -150,6 +150,11 @@ function matchingCreatedRoute(value: unknown, submitted: PublishedRoute) {
   return JSON.stringify(publicRouteFields(reviewed)) === JSON.stringify(publicRouteFields(submitted)) &&
     JSON.stringify(createdRouteHops(reviewed)) === JSON.stringify(createdRouteHops(submitted));
 }
+function canEditMixedMetadata(route: PublishedRoute): boolean {
+  const reviewed = reviewedPublicRoute(route, route.id);
+  return !!reviewed?.hops?.some(hop => hop.kind === "connector");
+}
+const mixedMetadataReason = "可修改名称和对外地址；完整转发路径保持不变。";
 const mixedPathEditingReason =
   "当前编辑与更换出口暂不支持完整混合路径，已停用以避免丢失连接器。";
 // Check the complete route before any managed-only projection or conflict
@@ -566,14 +571,14 @@ export function PublishedRoutesPage() {
                       </ActionButton>
                       <RowActionMenu name={r.name} disabled={!inventoryReady} actions={[{
                         label: "编辑", icon: <Pencil aria-hidden="true" />,
-                        disabled: hasConnectorHops(r),
-                        describedBy: hasConnectorHops(r) ? `mixed-route-${r.id}` : undefined,
+                        disabled: hasConnectorHops(r) && !canEditMixedMetadata(r),
+                        describedBy: hasConnectorHops(r) && !canEditMixedMetadata(r) ? `mixed-route-${r.id}` : undefined,
                         run: () => {
-                          if (!inventoryReady || hasConnectorHops(r)) return;
+                          if (!inventoryReady || (hasConnectorHops(r) && !canEditMixedMetadata(r))) return;
                           setIsNew(false); setEditing(r);
                         },
                       }]} />
-                      {hasConnectorHops(r) && <p id={`mixed-route-${r.id}`} className="max-w-xs text-left text-sm text-muted-foreground">{mixedPathEditingReason}</p>}
+                      {hasConnectorHops(r) && !canEditMixedMetadata(r) && <p id={`mixed-route-${r.id}`} className="max-w-xs text-left text-sm text-muted-foreground">{mixedPathEditingReason}</p>}
                     </TableRowActions>
                   ),
                 },
@@ -643,7 +648,7 @@ export function PublishedRoutesPage() {
           onRetarget={openExitTask}
           onUserSelected={setSelectedUser}
           onEdit={(line) => {
-            if (!inventoryReady || hasConnectorHops(line)) return;
+            if (!inventoryReady || (hasConnectorHops(line) && !canEditMixedMetadata(line))) return;
             setIsNew(false);
             setEditing(line);
           }}
@@ -877,9 +882,11 @@ function PublicRouteEditor({
     source.id === selectedSource.id && source.revisionToken === selectedSource.revisionToken &&
     JSON.stringify(source.ir) === selectedSource.ir;
   const sourceChanged = isNew && !!draft.deploymentId && !matchesSelectedSource(deployment);
-  const mixedEditingBlocked = !isNew && (mixedLatest ||
+  const metadataOnly = !isNew && canEditMixedMetadata(baseline as PublishedRoute);
+  const sameTopology = (value: PublishedRoute) => value.deploymentId === baseline.deploymentId && JSON.stringify(value.endpointIds) === JSON.stringify(baseline.endpointIds) && JSON.stringify(value.hops) === JSON.stringify(baseline.hops);
+  const mixedEditingBlocked = !isNew && !metadataOnly && (mixedLatest ||
     [initial, latest, draft, resolved.data].some(hasConnectorHops));
-  const mixedRouteKnown = () => !isNew && (mixedEditingBlocked ||
+  const mixedRouteKnown = () => !isNew && !metadataOnly && (mixedEditingBlocked ||
     hasConnectorHops(client.getQueryData<PublishedRoute[]>(["published-routes"])?.find(route => route.id === initial.id)) ||
     hasConnectorHops(client.getQueryData(["published-route-resolve", initial.id])));
   const pathInventory = {
@@ -889,6 +896,7 @@ function PublicRouteEditor({
   };
   const payload = () => {
     if (mixedRouteKnown()) throw new Error(mixedPathEditingReason);
+    if (metadataOnly && (!sameTopology(draft) || !canEditMixedMetadata(baseline as PublishedRoute))) throw new Error("完整转发路径尚未确认，请重新读取线路。");
     if (newPathError) throw new Error(newPathError);
     const currentSource = client.getQueryData<Infrastructure>(["infrastructure"])?.deployments.find(value => value.id === draft.deploymentId);
     if (sourceChanged || (isNew && !!draft.deploymentId && !matchesSelectedSource(currentSource)))
@@ -900,13 +908,13 @@ function PublicRouteEditor({
       name: draft.name,
       deploymentId: draft.deploymentId,
       endpointIds: draft.endpointIds,
-      ...(isNew && draftHasConnectors ? { hops: draft.hops } : {}),
+      ...((isNew && draftHasConnectors) || metadataOnly ? { hops: draft.hops?.map(hop => ({...hop})) } : {}),
       publicHost: draft.publicHost,
       publicPort: port,
     };
   };
   const update = (patch: Partial<PublishedRoute>) => {
-    if (pendingCreate) return;
+    if (pendingCreate || (metadataOnly && (patch.deploymentId !== undefined || patch.endpointIds !== undefined || patch.hops !== undefined))) return;
     if (patch.publicPort !== undefined) {
       setPublicPort(patch.publicPort);
       setPortReset(value => value + 1);
@@ -1030,8 +1038,13 @@ function PublicRouteEditor({
     try {
       const value = await request<unknown>(`/published-routes/${encodeURIComponent(initial.id)}/resolve`);
       if (!stillCurrent()) return;
-      if (hasConnectorHops(value)) {
+      if (hasConnectorHops(value) && !canEditMixedMetadata(value as PublishedRoute)) {
         setMixedLatest(true);
+        setComparisonError("无法确认最新完整路径，当前输入已保留。");
+        return;
+      }
+      if (metadataOnly && !hasConnectorHops(value)) {
+        setComparisonError("线路路径类型已变化。当前输入已保留，请关闭后重新打开最新线路再编辑。");
         return;
       }
       const latest = reviewedPublicRoute(value, initial.id);
@@ -1279,7 +1292,7 @@ function PublicRouteEditor({
             onChange={(e) => update({ name: e.target.value })}
           />
         </label>
-        <label className="standalone-label grid gap-2 text-sm font-medium">
+        {metadataOnly ? <div className="space-y-1"><p className="text-sm font-medium">服务器转发路径</p><p className="text-sm text-muted-foreground">{deployment?.name || draft.deploymentId} · {mixedMetadataReason}</p></div> : <label className="standalone-label grid gap-2 text-sm font-medium">
           服务器转发路径
           <ChoiceSelect
             value={draft.deploymentId || undefined}
@@ -1291,7 +1304,7 @@ function PublicRouteEditor({
               if (value !== undefined) chooseDeployment(value);
             }}
           />
-        </label>
+        </label>}
         {draft.endpointIds.length > 0 &&
           !supportsPublicUsers(draft, deployment) && (
             <EntryPrerequisite deployment={deployment} />
@@ -1315,7 +1328,7 @@ function PublicRouteEditor({
             )}
           </div>
           {draftHasConnectors ? (
-            <p className="text-sm text-muted-foreground">此线路使用完整代理链。需要调整顺序时，请先编辑转发路径，再重新选择。</p>
+            !metadataOnly && <p className="text-sm text-muted-foreground">此线路使用完整代理链。需要调整顺序时，请先编辑转发路径，再重新选择。</p>
           ) : (
           <Accordion type="multiple" defaultValue={[]} className="w-full">
             {[
@@ -1566,11 +1579,6 @@ function PublicRouteEditor({
       continueFocus={nameInput.current}
       onCancel={() => invalidateComparison()}
       onContinue={(selected, port) => {
-        if (mixedRouteKnown()) {
-          setMixedLatest(true);
-          invalidateComparison();
-          return;
-        }
         if (!comparison.stillCurrent()) {
           invalidateComparison();
           setComparisonError("比较期间内容或页面已变化，请重新读取最新版本。当前输入已保留。");
@@ -1994,9 +2002,9 @@ function PublicRouteDetail({
         pending={!(!action && !exitChangeOpen)}
         footer={
           <ActionButton
-            disabled={!inventoryReady || !!action || exitChangeOpen || mixedEditingBlocked}
+            disabled={!inventoryReady || !!action || exitChangeOpen || (mixedEditingBlocked && !canEditMixedMetadata(current))}
             aria-describedby={mixedEditingBlocked ? mixedReasonId : undefined}
-            onClick={() => { if (inventoryReady && !mixedEditingBlocked) onEdit(current); }}
+            onClick={() => { if (inventoryReady && (!mixedEditingBlocked || canEditMixedMetadata(current))) onEdit(current); }}
             variant="outline"
           >
             编辑线路
@@ -2033,7 +2041,7 @@ function PublicRouteDetail({
             )}
           </QueryState>
           {detail.error && <p>运行配置：未知，无法取得最新确认结果。</p>}
-          {mixedEditingBlocked && <p id={mixedReasonId} className="text-sm text-muted-foreground">{mixedPathEditingReason}</p>}
+          {mixedEditingBlocked && <p id={mixedReasonId} className="text-sm text-muted-foreground">{canEditMixedMetadata(current) ? "混合路径暂不支持更换出口。" : mixedPathEditingReason}</p>}
           <div className={"flex flex-wrap items-center gap-2"}>
             <ActionButton
               className="min-h-11"

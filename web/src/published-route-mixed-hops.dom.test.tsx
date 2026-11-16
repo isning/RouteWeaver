@@ -40,12 +40,12 @@ const deployment = {
   id: "path", name: "Path", status: "draft", diagnostics: [],
   ir: { schemaVersion: "1.0", id: "path", topologyRevision: "r1", programs: endpoints.map(listener => ({ instance, listener, rules: [], resources: [], egress: [] })) },
 };
-type Call = { path: string; method: string; body?: Record<string, unknown> };
+type Call = { path: string; method: string; body?: Record<string, unknown>; ifMatch?: string | null };
 const clients: QueryClient[] = [];
 function setup(route = mixed, extra?: (call: Call) => Response | undefined) {
   const calls: Call[] = [];
   vi.stubGlobal("fetch", vi.fn(async (url, init?: RequestInit) => {
-    const call: Call = { path: String(url), method: init?.method || "GET", body: init?.body ? JSON.parse(String(init.body)) : undefined };
+    const call: Call = { ifMatch: new Headers(init?.headers).get("If-Match"), path: String(url), method: init?.method || "GET", body: init?.body ? JSON.parse(String(init.body)) : undefined };
     calls.push(call);
     const response = extra?.(call);
     if (response) return response;
@@ -129,10 +129,10 @@ it("confirms a matching mixed path only when all scoped hops match", async () =>
   expect(detail.queryByLabelText("已保存路径")).toBeNull();
 });
 
-it.each(["intent", "saved", "confirmed"] as const)("blocks destructive legacy edit and retarget when connectors are known only from %s", async (source) => {
+it.each(["saved", "confirmed"] as const)("blocks destructive legacy edit and retarget when connectors are known only from %s", async (source) => {
   const route: PublishedRoute = {
     ...legacy,
-    ...(source === "intent" ? { hops: mixed.hops } : source === "saved" ? { savedPath: mixed.savedPath } : {
+    ...(source === "saved" ? { savedPath: mixed.savedPath } : {
       effective: { publicHost: legacy.publicHost, publicPort: 443, endpointIds: legacy.endpointIds, fingerprint: "old", path: mixed.savedPath },
     }),
   };
@@ -200,10 +200,12 @@ it.each(["list", "resolve"] as const)("preserves an already-open draft and stops
   expect(calls.filter(call => call.method === "PUT")).toHaveLength(0);
 });
 
-it("rejects mixed conflict recovery before the legacy comparison can strip connector hops", async () => {
+it("recovers a mixed conflict using the latest complete topology and a fresh check", async () => {
+  let writes = 0;
+  const latest = {...mixed, revisionToken:"revision-two", hops: mixed.hops!.map(hop => hop.kind === "connector" ? {...hop, connectorId:"new-relay"} : hop)};
   const { user, calls } = setup(legacy, call => {
-    if (call.method === "PUT") return json({ error: "Record changed" }, 409);
-    if (call.path.endsWith("/resolve")) return json({ ...mixed, revisionToken: "revision-two" });
+    if (call.method === "PUT" && ++writes === 1) return json({ error: "Record changed" }, 409);
+    if (call.path.endsWith("/resolve")) return json(latest);
   });
   await user.click(await screen.findByRole("button", { name: /^更多操作 / }));
   await user.click(await screen.findByRole("menuitem", { name: "编辑" }));
@@ -212,9 +214,72 @@ it("rejects mixed conflict recovery before the legacy comparison can strip conne
   await user.click(editor.getByRole("button", { name: "检查公开线路" }));
   await user.click(await editor.findByRole("button", { name: "保存公开线路" }));
   await user.click(await editor.findByRole("button", { name: "读取最新版本并比较" }));
-  await editor.findByText(/当前编辑与更换出口暂不支持完整混合路径/);
-  expect(screen.queryByRole("dialog", { name: "比较公开线路修改" })).toBeNull();
-  expect((editor.getByRole("textbox", { name: "线路名称" }) as HTMLInputElement).value).toBe("My unsaved name");
-  expect(editor.getByRole("button", { name: "保存公开线路" }).hasAttribute("disabled")).toBe(true);
-  expect(calls.filter(call => call.method === "PUT")).toHaveLength(1);
+  const review=within(await screen.findByRole("dialog",{name:"比较公开线路修改"}));
+  expect(review.getAllByText("外部代理 new-relay")).toHaveLength(2);
+  expect(review.queryByRole("radiogroup",{name:"转发路径与顺序"})).toBeNull();
+  await user.click(review.getByRole("radio",{name:"保留当前输入"}));
+  await user.click(review.getByRole("button",{name:"使用所选内容继续编辑"}));
+  await waitFor(()=>expect(screen.queryByRole("dialog",{name:"比较公开线路修改"})).toBeNull());
+  expect(editor.queryByRole("button",{name:"保存公开线路"})).toBeNull();
+  expect(calls.filter(call=>call.method==="PUT")).toHaveLength(1);
+  await user.click(editor.getByRole("button",{name:"检查公开线路"}));
+  await user.click(await editor.findByRole("button",{name:"保存公开线路"}));
+  await waitFor(()=>expect(calls.filter(call=>call.method==="PUT")).toHaveLength(2));
+  expect(calls.filter(call=>call.method==="PUT")[1].ifMatch).toBe("revision-two");
+  expect(calls.filter(call=>call.method==="PUT")[1].body).toEqual({id:"line",name:"My unsaved name",deploymentId:"path",endpointIds:["entry","exit"],hops:latest.hops,publicHost:"office.example",publicPort:443});
+});
+
+it("edits mixed-route metadata without changing or dropping the exact saved topology", async () => {
+  const { user, calls } = setup(mixed);
+  await user.click(await screen.findByRole("button", { name: /^更多操作 / }));
+  await user.click(await screen.findByRole("menuitem", { name: "编辑" }));
+  const editor = within(await screen.findByRole("dialog", { name: "编辑 Office line" }));
+  fireEvent.change(editor.getByRole("textbox", { name: "线路名称" }), { target: { value: "Renamed mixed" } });
+  fireEvent.change(editor.getByRole("textbox", { name: "对外域名或 IP" }), { target: { value: "10.0.0.9" } });
+  expect(editor.queryByRole("combobox", { name: "服务器转发路径" })).toBeNull();
+  await user.click(editor.getByRole("button", { name: "检查公开线路" }));
+  await user.click(await editor.findByRole("button", { name: "保存公开线路" }));
+  await waitFor(() => expect(calls.some(call => call.method === "PUT")).toBe(true));
+  const expected = { id: mixed.id, name: "Renamed mixed", deploymentId: mixed.deploymentId, endpointIds: mixed.endpointIds, hops: mixed.hops, publicHost: "10.0.0.9", publicPort: mixed.publicPort };
+  expect(calls.find(call => call.path.endsWith("/preview"))?.body).toEqual(expected);
+  expect(calls.find(call => call.method === "PUT")?.body).toEqual(expected);
+  expect(calls.find(call => call.method === "PUT")?.ifMatch).toBe("revision-one");
+  expect(JSON.stringify(calls)).not.toContain("must-not-expose-private-connector");
+});
+
+it.each(["missing-revision", "missing-hops", "unknown-hop-field", "managed-projection-mismatch"])("refuses metadata editing when original path cannot be proved: %s", async mode => {
+  const route:PublishedRoute={...mixed,hops:mixed.hops?.map(hop=>({...hop}))};
+  if(mode==="missing-revision") delete route.revisionToken;
+  if(mode==="missing-hops") delete route.hops;
+  if(mode==="unknown-hop-field") Object.assign(route.hops![1],{secret:"never-send"});
+  if(mode==="managed-projection-mismatch") route.endpointIds=["entry"];
+  const {user,calls}=setup(route);
+  await user.click(await screen.findByRole("button",{name:/^更多操作 /}));
+  const edit=await screen.findByRole("menuitem",{name:"编辑"});
+  expect(edit.getAttribute("aria-disabled")).toBe("true");fireEvent.click(edit);
+  expect(screen.queryByRole("dialog",{name:"编辑 Office line"})).toBeNull();
+  expect(calls.every(call=>call.method==="GET")).toBe(true);
+});
+it("allows metadata from mixed detail but keeps exit changes disabled", async()=>{
+ const {user}=setup(mixed);const detail=await openDetail(user);
+ expect(detail.getByRole("button",{name:"更换出口"}).hasAttribute("disabled")).toBe(true);
+ await user.click(detail.getByRole("button",{name:"编辑线路"}));
+ expect(await screen.findByRole("dialog",{name:"编辑 Office line"})).toBeTruthy();
+});
+
+it("does not upgrade a mixed metadata session when conflict latest becomes managed-only",async()=>{
+ const {user,calls}=setup(mixed,call=>{
+  if(call.method==="PUT")return json({error:"Record changed"},409);
+  if(call.path.endsWith("/resolve"))return json({...legacy,revisionToken:"revision-two"});
+ });
+ await user.click(await screen.findByRole("button",{name:/^更多操作 /}));await user.click(await screen.findByRole("menuitem",{name:"编辑"}));
+ const editor=within(await screen.findByRole("dialog",{name:"编辑 Office line"}));
+ fireEvent.change(editor.getByRole("textbox",{name:"线路名称"}),{target:{value:"Keep my name"}});
+ await user.click(editor.getByRole("button",{name:"检查公开线路"}));await user.click(await editor.findByRole("button",{name:"保存公开线路"}));
+ await user.click(await editor.findByRole("button",{name:"读取最新版本并比较"}));
+ expect(await editor.findByText(/线路路径类型已变化/)).toBeTruthy();
+ expect(screen.queryByRole("dialog",{name:"比较公开线路修改"})).toBeNull();
+ expect(editor.queryByRole("combobox",{name:"服务器转发路径"})).toBeNull();
+ expect((editor.getByRole("textbox",{name:"线路名称"}) as HTMLInputElement).value).toBe("Keep my name");
+ expect(calls.filter(call=>call.method==="PUT")).toHaveLength(1);
 });
