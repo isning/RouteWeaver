@@ -255,7 +255,7 @@ for (const width of [1440, 390, 320])
         : { json: [] });
     });
     const empty = page.getByText("暂无发送记录", { exact: true });
-    const count = page.getByText("已加载 0 项", { exact: true });
+    const count = page.getByText("已加载 0 条记录", { exact: true });
     try {
       await page.goto("/#notifications");
       await page.getByRole("tab", { name: "发送记录", exact: true }).click();

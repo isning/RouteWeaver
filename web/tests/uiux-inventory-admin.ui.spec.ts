@@ -202,7 +202,7 @@ for (const width of [1440, 390]) for (const [route, title] of routes) {
           await inventory.capture("channels", "configured", "Real notification defaults; email/webhook disabled, no credentials and no send/check submission");
           await inventory.tab("发送记录");
           expect(await read(page.request, "/admin/notifications/outbox")).toHaveLength(0);
-          await expect(content.getByText("已加载 0 项", { exact: true })).toBeInViewport({ ratio: 1 });
+          await expect(content.getByText("已加载 0 条记录", { exact: true })).toBeInViewport({ ratio: 1 });
           await expect(content.getByText("暂无发送记录", { exact: true })).toBeInViewport({ ratio: 1 });
           await expect(content.getByRole("region", { name: "表格滚动区域", exact: true })).toHaveCount(0);
           inventory.interactions.push("authoritative empty outbox: zero count and complete empty message visible without horizontal scrolling");

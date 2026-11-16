@@ -107,6 +107,10 @@ for (const kind of ["configuration", "collection"] as const) {
         await page.keyboard.press("Tab");
         await expect(page.getByRole("button", {name: "Keyboard starting point"})).toBeFocused();
         await page.keyboard.press("Tab");
+        if (kind === "collection") {
+          await expect(scope.getByRole("searchbox", {name: "搜索预览连接"})).toBeFocused();
+          await page.keyboard.press("Tab");
+        }
         await focusFits(tabs.first());
         const evidence = [];
         for (const enlarged of [false, true]) {
