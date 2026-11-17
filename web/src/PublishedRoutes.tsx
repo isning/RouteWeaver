@@ -317,6 +317,10 @@ function EntryPrerequisite({ deployment }: { deployment?: ServerDeployment }) {
     </Notice>
   );
 }
+// Keep discoverability identical to the address users can copy from this list.
+function publishedRouteAddress(route: PublishedRoute) {
+  return `${route.effective?.publicHost || route.publicHost}:${route.effective?.publicPort || route.publicPort}`;
+}
 export function PublishedRoutesPage() {
   const replaceView = useWorkspaceViewEntry((hash) => {
     const target = new URLSearchParams(hash.split("?")[1] || "").get("line");
@@ -336,7 +340,7 @@ export function PublishedRoutesPage() {
   const searchTerm = search.trim().toLocaleLowerCase();
   const visibleRoutes = (query.data ?? []).filter((route) => {
     const deployment = infrastructure.data?.deployments.find(value => value.id === route.deploymentId);
-    return !searchTerm || [route.name, route.id, route.publicHost, String(route.publicPort), route.effective?.publicHost,
+    return !searchTerm || [route.name, route.id, publishedRouteAddress(route), route.publicHost, String(route.publicPort), route.effective?.publicHost,
       route.effective?.publicPort?.toString(), deployment?.name, route.deploymentId]
       .some(value => value?.toLocaleLowerCase().includes(searchTerm));
   });
@@ -534,8 +538,7 @@ export function PublishedRoutesPage() {
                 },
                 {
                   title: "对外地址",
-                  render: (_, r) =>
-                    `${r.effective?.publicHost || r.publicHost}:${r.effective?.publicPort || r.publicPort}`,
+                  render: (_, r) => publishedRouteAddress(r),
                 },
                 {
                   title: "转发路径",

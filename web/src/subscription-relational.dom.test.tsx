@@ -262,6 +262,7 @@ it("keeps first-use empty, saved draft and search no-match as different states",
   expect(screen.getByText("没有匹配的配置或客户端订阅")).toBeTruthy();
   expect(screen.queryByText("暂无订阅")).toBeNull();
   await userEvent.click(screen.getByRole("button", { name: "清除搜索" }));
+  expect(document.activeElement).toBe(screen.getByRole("textbox", { name: "搜索配置或客户端订阅" }));
   expect(
     screen.getByRole("article", { name: `分流配置 ${profile.name}` }),
   ).toBeTruthy();

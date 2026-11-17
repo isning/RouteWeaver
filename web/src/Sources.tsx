@@ -106,6 +106,7 @@ export function SourcesPage({
   const message = toast,
     confirm = useConfirm();
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
   const [taskFilter, setTaskFilter] = useState<"all" | "updates" | "failed">("all");
   const searchInput = useRef<HTMLInputElement>(null);
   const [editing, setEditing] = useState<Source | null>(null);
@@ -303,6 +304,10 @@ export function SourcesPage({
       (taskFilter === "all" || (s.enabled && !sourceStatusUnknown(s) &&
         (taskFilter === "updates" ? !!s.candidate : sourceHasFailure(s)))),
   );
+  useLayoutEffect(() => {
+    if (query.data !== undefined)
+      setPage(current => Math.min(current, Math.max(1, Math.ceil(filtered.length / 10))));
+  }, [filtered.length, query.data]);
   const configurationSource = query.data?.find(
     (source) => source.id === detail?.id,
   );
@@ -390,13 +395,13 @@ export function SourcesPage({
         <Section variant="plain">
           <ResourceToolbar
             label="查找订阅来源"
-            filters={<QuickFilters label="来源状态" value={taskFilter} onValueChange={setTaskFilter}
+            filters={<QuickFilters label="来源状态" value={taskFilter} onValueChange={value => { setTaskFilter(value); setPage(1); }}
               options={[{ value: "all", label: "全部" }, { value: "updates", label: "有更新" }, { value: "failed", label: "更新失败" }]} />}
             search={
               <SearchField
                 ref={searchInput}
                 value={search}
-                onValueChange={setSearch}
+                onValueChange={value => { setSearch(value); setPage(1); }}
                 placeholder="搜索来源"
                 aria-label="搜索来源"
               />
@@ -421,6 +426,7 @@ export function SourcesPage({
               className="@container/source-table"
               rowKey="id"
               rows={filtered}
+              page={page} onPageChange={setPage}
               count={{ total: query.data.length, unit: "个私有来源", filtered: !!searchTerm || taskFilter !== "all" }}
               columns={[
                 {
@@ -588,6 +594,7 @@ export function SourcesPage({
                           onClick={() => {
                             setSearch("");
                             setTaskFilter("all");
+                            setPage(1);
                             searchInput.current?.focus();
                           }}
                           variant="outline"

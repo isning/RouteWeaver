@@ -263,6 +263,7 @@ export function SubscriptionsPage({
   ) =>
     updateListContext((current) => ({ linkPages: update(current.linkPages) }));
   const inventoryRoot = useRef<HTMLDivElement>(null);
+  const inventorySearch = useRef<HTMLInputElement>(null);
   const previousDetail = useRef(selectedID);
   const restoredScope = useRef<string | null>(null);
   const editorReturnPending = useRef(false);
@@ -1208,6 +1209,7 @@ export function SubscriptionsPage({
       {hasInventory && (
         <ResourceToolbar className="subscription-inventory-tools" label="查找配置与订阅" search={
           <SearchField
+            ref={inventorySearch}
             data-return-focus="search"
             aria-label="搜索配置或客户端订阅"
             placeholder="搜索配置或客户端订阅"
@@ -1611,7 +1613,10 @@ export function SubscriptionsPage({
                 action={
                   needle || hasFilter ? (
                     <ActionButton
-                      onClick={() => updateListContext({ search: "", status: "all", checkFilter: "all", page: 1, linkPages: {} })}
+                      onClick={() => {
+                        updateListContext({ search: "", status: "all", checkFilter: "all", page: 1, linkPages: {} });
+                        inventorySearch.current?.focus();
+                      }}
                       variant="outline"
                     >
                       {hasFilter ? "清除筛选" : "清除搜索"}
