@@ -1,3 +1,4 @@
+import { ResourceToolbar, SearchField, ToolbarFilter } from "@/ui-patterns/resource-toolbar";
 import { DiagnosticProviderInteger } from "./diagnostic-provider-integer";
 import { exactDraftInteger } from "./draft-integer";
 import { FieldSet, FieldLegend } from "@/components/ui/field";
@@ -18,7 +19,7 @@ import { AppField, AppForm, useForm, useWatch } from "@/ui-patterns/form";
 import { Notice } from "@/ui-patterns/notice";
 import { TaskDialog, TaskSheet } from "@/ui-patterns/task-overlays";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useLayoutEffect, useRef, useState, type ComponentProps } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState, type ComponentProps } from "react";
 import { list, post } from "./api";
 import { EmptyState, ErrorNotice, QueryState, Section } from "./components";
 import { DataTable } from "./DataTable";
@@ -76,6 +77,11 @@ export function DiagnosticsPanel({
     [adding, setAdding] = useState(false),
     [selected, setSelected] = useState<string | null>(null);
   const [receipt, setReceipt] = useState<DiagnosticJob | null>(null);
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState<string>();
+  const [page, setPage] = useState(1);
+  const searchInput = useRef<HTMLInputElement>(null);
+  const statusId = useId();
   const receiptListBoundary = useRef<{ data: DiagnosticJob[] | undefined; updatedAt: number }>({ data: undefined, updatedAt: 0 });
   const retainReceipt = (job: DiagnosticJob) => {
     const cached = client.getQueryState<DiagnosticJob[]>(["diagnostic-jobs"]);
@@ -116,6 +122,19 @@ export function DiagnosticsPanel({
     : listedRows;
   const selectedJob = rows.find((j) => j.id === selected);
   const retainedReceipt = selected === scopedReceipt?.id && !refreshedReceipt;
+  const searchTerm = search.trim().toLowerCase();
+  // Discover only after authoritative rows and accepted receipts are merged.
+  // Keep selectedJob above based on that full collection, not these visible rows.
+  const visibleRows = rows.filter(job => (status === undefined || job.status === status) &&
+    [job.target.name, diagnosticKindLabel[job.kind] || job.kind,
+      job.pathMode === "managed_route" ? "已应用线路路径" : "服务器直连"]
+      .some(value => value.toLowerCase().includes(searchTerm)));
+  useEffect(() => {
+    setPage(current => Math.min(current, Math.max(1, Math.ceil(visibleRows.length / 5))));
+  }, [visibleRows.length]);
+  const clearFilters = () => {
+    setSearch(""); setStatus(undefined); setPage(1); searchInput.current?.focus();
+  };
   return (
     <>
       <Section
@@ -152,10 +171,27 @@ export function DiagnosticsPanel({
               }
             />
           )}
+          {!!rows.length && <ResourceToolbar label="查找测试记录"
+            search={<SearchField ref={searchInput} type="search" aria-label="搜索测试记录"
+              placeholder="搜索目标、测试类型或路径模式" value={search}
+              onValueChange={value => { setSearch(value); setPage(1); }} />}
+            filters={<ToolbarFilter label="测试状态" controlId={statusId}>
+              <ChoiceSelect id={statusId} aria-label="筛选测试状态" searchable={false}
+                value={status === undefined ? "all" : `status:${status}`}
+                options={[{ value: "all", label: "全部状态" },
+                  ...Array.from(new Set([...rows.map(job => job.status), ...(status === undefined ? [] : [status])]))
+                    .map(value => ({ value: `status:${value}`, label: diagnosticStatus(value) }))]}
+                onValueChange={value => { setStatus(value?.startsWith("status:") ? value.slice(7) : undefined); setPage(1); }} />
+            </ToolbarFilter>} />}
           {!!rows.length && (
             <DataTable
               rowKey="id"
-              rows={rows}
+              rows={visibleRows}
+              page={page} onPageChange={setPage}
+              count={{ total: rows.length, unit: "条测试记录", filtered: !!searchTerm || status !== undefined }}
+              empty={<EmptyState title="没有匹配的测试记录" action={
+                <ActionButton variant="outline" onClick={clearFilters}>清除筛选</ActionButton>
+              } />}
               compact
               minWidth={440}
               pageSize={5}
@@ -284,6 +320,7 @@ export function DiagnosticsPanel({
         />
       )}
       <TaskSheet
+        returnFocusFallback={() => searchInput.current}
         bodyProps={{ className: "space-y-5" }}
         title="测试详情"
         open={!!selected}

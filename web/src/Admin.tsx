@@ -4,7 +4,7 @@ import { PlatformSettingsTabList } from "@/ui-patterns/platform-settings-navigat
 import type { ComponentProps, ReactNode } from "react";
 import { WorkspaceFrame } from "@/ui-patterns/workspace-frame";
 import { PageSection, SectionIndex } from "@/ui-patterns/page-layout";
-import { ResourceToolbar, SearchField } from "@/ui-patterns/resource-toolbar";
+import { ResourceToolbar, SearchField, ToolbarFilter } from "@/ui-patterns/resource-toolbar";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -3024,6 +3024,24 @@ function AuditLog() {
     "fleet.upgrade.queued": "提交核心升级",
     "service.recovery.queued": "提交持续服务恢复",
   };
+  const [search, setSearch] = useState("");
+  const [action, setAction] = useState<string>();
+  const [page, setPage] = useState(1);
+  const searchInput = useRef<HTMLInputElement>(null);
+  const actionId = useId();
+  const term = search.trim().toLowerCase();
+  const visibleRecords = [...(query.data || [])]
+    .filter(record => (action === undefined || record.action === action) &&
+      [labels[record.action], record.action, record.targetId, record.actorId, record.id]
+        .some(value => value?.toLowerCase().includes(term)))
+    .sort((a, b) => b.at.localeCompare(a.at));
+  const actions = Array.from(new Set([...(query.data || []).map(record => record.action), ...(action === undefined ? [] : [action])]));
+  useLayoutEffect(() => {
+    setPage(current => Math.min(current, Math.max(1, Math.ceil(visibleRecords.length / 10))));
+  }, [visibleRecords.length]);
+  const clearFilters = () => {
+    setSearch(""); setAction(undefined); setPage(1); searchInput.current?.focus();
+  };
   return (
     <Section title="操作审计" variant="plain">
       <QueryState
@@ -3033,11 +3051,23 @@ function AuditLog() {
         error={query.error}
         retry={() => query.refetch()}
       >
+        {!!query.data?.length && <ResourceToolbar label="查找操作审计"
+          search={<SearchField ref={searchInput} type="search" aria-label="搜索操作审计"
+            placeholder="搜索操作、对象、账号或标识" value={search}
+            onValueChange={value => { setSearch(value); setPage(1); }} />}
+          filters={<ToolbarFilter label="操作类型" controlId={actionId}>
+            <ChoiceSelect id={actionId} aria-label="筛选审计操作"
+              value={action === undefined ? "all" : `action:${action}`}
+              options={[{ value: "all", label: "全部操作" }, ...actions.map(value => ({
+                value: `action:${value}`, label: labels[value] || value,
+              }))]}
+              onValueChange={value => { setAction(value?.startsWith("action:") ? value.slice(7) : undefined); setPage(1); }} />
+          </ToolbarFilter>} />}
         <DataTable
           rowKey="id"
-          rows={[...(query.data || [])].sort((a, b) =>
-            b.at.localeCompare(a.at),
-          )}
+          rows={visibleRecords}
+          page={page} onPageChange={setPage}
+          count={{ total: query.data?.length || 0, unit: "条操作记录", filtered: !!term || action !== undefined }}
           columns={[
             { title: "操作", render: (_, v) => labels[v.action] || v.action },
             { title: "对象", accessor: "targetId" },
@@ -3051,7 +3081,8 @@ function AuditLog() {
             </p>
           )}
           pageSize={10}
-          empty="暂无管理操作记录"
+          empty={query.data?.length ? <EmptyState title="没有匹配的操作记录"
+            action={<ActionButton variant="outline" onClick={clearFilters}>清除筛选</ActionButton>} /> : "暂无管理操作记录"}
           compact
         />
       </QueryState>
