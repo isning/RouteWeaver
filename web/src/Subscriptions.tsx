@@ -3179,10 +3179,7 @@ function OutputAccessTask({
                       已发布
                     </Badge>
                   </div>
-                  <div className="grid items-start gap-5 sm:grid-cols-[auto_minmax(0,1fr)]">
-                    <div className="qr-container mx-auto flex justify-center rounded-lg border bg-white p-4 sm:mx-0">
-                      <SubscriptionQRCode value={url} />
-                    </div>
+                  <div className="grid items-start gap-5 sm:grid-cols-[minmax(0,1fr)_auto]">
                     <div className="min-w-0 space-y-4">
                       <label className="standalone-label grid min-w-0 gap-2 text-sm font-medium">
                         你的订阅链接
@@ -3216,6 +3213,14 @@ function OutputAccessTask({
                         链接包含访问凭据，请仅添加到你信任的客户端。
                       </p>
                     </div>
+                    <figure className="mx-auto space-y-2 sm:mx-0">
+                      <figcaption className="text-center text-sm text-muted-foreground">
+                        用另一台设备扫码
+                      </figcaption>
+                      <div className="qr-container flex justify-center rounded-lg border bg-white p-4">
+                        <SubscriptionQRCode value={url} />
+                      </div>
+                    </figure>
                   </div>
                 </div>
               )}

@@ -498,6 +498,18 @@ for (const width of [1440, 390]) {
       for await (const chunk of stream!) chunks.push(Buffer.from(chunk));
       expect(Buffer.concat(chunks).equals(bytes)).toBe(true);
       await download.delete();
+      // On a phone, same-device delivery and its credential warning precede
+      // cross-device scanning; do not make the primary task wait below the QR.
+      if (width === 390) {
+        const copyBounds = await access.getByRole("button", { name: "复制订阅链接", exact: true }).boundingBox();
+        const warningBounds = await access.getByText("链接包含访问凭据，请仅添加到你信任的客户端。", { exact: true }).boundingBox();
+        const qrBounds = await access.locator(".qr-container").boundingBox();
+        expect(copyBounds).not.toBeNull();
+        expect(warningBounds).not.toBeNull();
+        expect(qrBounds).not.toBeNull();
+        expect(copyBounds!.y + copyBounds!.height).toBeLessThan(qrBounds!.y);
+        expect(warningBounds!.y + warningBounds!.height).toBeLessThan(qrBounds!.y);
+      }
       // QR encodes the bearer URL too; retain visible download action and disclosure.
       await capture(recipient, info, `subscription-delivered-${width}`, [
         access.locator(".qr-container"),
