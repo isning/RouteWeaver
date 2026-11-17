@@ -1,3 +1,5 @@
+import { ItemCount } from "@/ui-patterns/item-count";
+import { ResourceToolbar, SearchField, ToolbarFilter } from "@/ui-patterns/resource-toolbar";
 import { NumericInput } from "@/ui-patterns/numeric-input";
 import { TaskDialog } from "@/ui-patterns/task-overlays";
 import { DataTable } from "./DataTable";
@@ -10,10 +12,10 @@ import { useForm, useWatch, AppField, AppForm } from "@/ui-patterns/form";
 import { useUnsavedChanges } from "./navigation";
 import { useDiscardConfirmation } from "./useDiscardConfirmation";
 import { revealFocusedPolicyModalControl } from "./drawer-control-visibility";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { APIError, list, post } from "./api";
-import { ErrorNotice, QueryState, Section } from "./components";
+import { EmptyState, ErrorNotice, QueryState, Section } from "./components";
 import { dateLabel, newID } from "./model";
 import type { RouteRecord } from "./types";
 interface Rate {
@@ -59,6 +61,24 @@ export function RateSettings({ routes }: { routes: RouteRecord[] }) {
   for (const saved of savedRates) {
     if (!rates.some((rate) => rate.id === saved.id)) rates.push(saved);
   }
+  const [search, setSearch] = useState("");
+  const [routeFilter, setRouteFilter] = useState<string>();
+  const [page, setPage] = useState(1);
+  const searchInput = useRef<HTMLInputElement>(null);
+  const routeFilterId = useId();
+  const searchTerm = search.trim().toLocaleLowerCase();
+  const routeLabel = (id: string) => routes.find(route => route.id === id)?.name || id;
+  // Filter the confirmed union, never just the last list response.
+  const visibleRates = rates.filter(rate =>
+    (routeFilter === undefined || rate.routeId === routeFilter) &&
+    routeLabel(rate.routeId).toLocaleLowerCase().includes(searchTerm));
+  useEffect(() => {
+    if (query.data !== undefined || savedRates.length)
+      setPage(current => Math.min(current, Math.max(1, Math.ceil(visibleRates.length / 6))));
+  }, [query.data, savedRates.length, visibleRates.length]);
+  const clearFilters = () => {
+    setSearch(""); setRouteFilter(undefined); setPage(1); searchInput.current?.focus();
+  };
   const [boundaryRevision, setBoundaryRevision] = useState(0);
   const renderedAt = Date.now();
   const nextBoundary = rates.reduce((nearest, rate) => {
@@ -212,17 +232,30 @@ export function RateSettings({ routes }: { routes: RouteRecord[] }) {
         error={rates.length === 0 ? query.error : null}
         retry={() => query.refetch()}
       >
+        {!!rates.length && <ResourceToolbar label="查找倍率记录"
+          search={<SearchField ref={searchInput} type="search" aria-label="搜索倍率记录"
+            placeholder="搜索线路" value={search}
+            onValueChange={value => { setSearch(value); setPage(1); }} />}
+          filters={<ToolbarFilter label="线路" controlId={routeFilterId}>
+            <ChoiceSelect id={routeFilterId} aria-label="筛选倍率线路"
+              value={routeFilter === undefined ? "all" : `route:${routeFilter}`}
+              options={[{ value: "all", label: "全部线路" },
+                ...Array.from(new Set([...rates.map(rate => rate.routeId), ...(routeFilter === undefined ? [] : [routeFilter])]))
+                  .map(id => ({ value: `route:${id}`, label: routeLabel(id) }))]}
+              onValueChange={value => { setRouteFilter(value?.startsWith("route:") ? value.slice(6) : undefined); setPage(1); }} />
+          </ToolbarFilter>} />}
         <DataTable
           rowKey="id"
-          rows={[...rates].sort(
+          page={page} onPageChange={setPage}
+          summary={<ItemCount scope={query.data === undefined ? "loaded" : "total"} total={rates.length}
+            matched={searchTerm || routeFilter !== undefined ? visibleRates.length : undefined} unit="条倍率记录" />}
+          rows={[...visibleRates].sort(
             (a, b) => Date.parse(b.effectiveAt) - Date.parse(a.effectiveAt),
           )}
           columns={[
             {
               title: "线路",
-              render: (_, r) =>
-                routes.find((route) => route.id === r.routeId)?.name ||
-                r.routeId,
+              render: (_, r) => routeLabel(r.routeId),
             },
             { title: "倍率", render: (_, r) => `${r.micros / 1000000}×` },
             {
@@ -238,7 +271,10 @@ export function RateSettings({ routes }: { routes: RouteRecord[] }) {
             },
           ]}
           pageSize={6}
-          empty={
+          empty={searchTerm || routeFilter !== undefined
+            ? <EmptyState title="没有匹配的倍率记录" action={
+              <ActionButton variant="outline" onClick={clearFilters}>清除筛选</ActionButton>
+            } /> :
             <span className="muted text-sm text-muted-foreground">
               未设置倍率版本的线路按 1× 扣量
             </span>

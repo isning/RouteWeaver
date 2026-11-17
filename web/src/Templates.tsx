@@ -1,3 +1,5 @@
+import { ResourceToolbar, SearchField, QuickFilters } from "@/ui-patterns/resource-toolbar";
+import { ItemCount } from "@/ui-patterns/item-count";
 import { ScrollableTabsList } from "@/ui-patterns/scrollable-tabs-list";
 import { Metadata } from "./ui-patterns/metadata";
 import type { DataTableProps, DataTableHandle } from "./DataTable";
@@ -271,7 +273,7 @@ function pruneBindings(spec: Spec, bindings: SlotBindings = {}): SlotBindings {
   };
 }
 const kindLabel = (kind: Kind) =>
-  kind === "processing-preset" ? "节点处理预设" : "客户端配置模板";
+  kind === "processing-preset" ? "节点处理预设" : kind === "client-profile" ? "客户端配置模板" : kind;
 const modeLabel = { copy: "独立副本", pinned: "固定版本", follow: "跟随版本" };
 // Own this table's lifecycle: the mine tab mounts lazily, independently of the page.
 function TemplateBindingsTable(props: DataTableProps<Binding>) {
@@ -575,6 +577,23 @@ export function TemplatesPage({ admin = false }: { admin?: boolean }) {
   const templateName = (b: Binding) =>
     query.data?.find((template) => template.id === b.templateId)?.name ||
     b.templateId;
+  const [catalogSearch, setCatalogSearch] = useState("");
+  const [kindFilter, setKindFilter] = useState("all");
+  const [bindingSearch, setBindingSearch] = useState("");
+  const [bindingPage, setBindingPage] = useState(1);
+  const catalogInput = useRef<HTMLInputElement>(null);
+  const bindingInput = useRef<HTMLInputElement>(null);
+  const catalogTerm = catalogSearch.trim().toLowerCase();
+  const bindingTerm = bindingSearch.trim().toLowerCase();
+  const visibleTemplates = (query.data || []).filter(template =>
+    (kindFilter === "all" || template.kind === kindFilter) && template.name.toLowerCase().includes(catalogTerm));
+  const visibleBindings = (bindings.data || []).filter(binding =>
+    [targetName(binding), actionTargetName(binding), templateName(binding)].some(name => name.toLowerCase().includes(bindingTerm)));
+  useLayoutEffect(() => {
+    setBindingPage(current => Math.min(current, Math.max(1, Math.ceil(visibleBindings.length / 10))));
+  }, [visibleBindings.length]);
+  const clearCatalog = () => { setCatalogSearch(""); setKindFilter("all"); catalogInput.current?.focus(); };
+  const clearBindings = () => { setBindingSearch(""); setBindingPage(1); bindingInput.current?.focus(); };
   const catalogTabs = [
     {
       key: "library",
@@ -595,8 +614,15 @@ export function TemplatesPage({ admin = false }: { admin?: boolean }) {
               />
             </Section>
           ) : (
-            <div className="card-grid grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {query.data.map((t) => (
+            <div className="space-y-4">
+              <ResourceToolbar label="查找模板" search={<SearchField ref={catalogInput} type="search" aria-label="搜索模板" placeholder="搜索模板名称" value={catalogSearch} onValueChange={setCatalogSearch} />}
+                filters={<QuickFilters label="模板类型" value={kindFilter} onValueChange={setKindFilter} options={[
+                  { value: "all", label: "全部" }, { value: "processing-preset", label: kindLabel("processing-preset") }, { value: "client-profile", label: kindLabel("client-profile") },
+                ]} />}
+                summary={<ItemCount total={query.data.length} matched={catalogTerm || kindFilter !== "all" ? visibleTemplates.length : undefined} unit="个模板" />} />
+              {!visibleTemplates.length && <EmptyState title="没有匹配的模板" action={<ActionButton variant="outline" onClick={clearCatalog}>清除筛选</ActionButton>} />}
+              <div className="card-grid grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {visibleTemplates.map((t) => (
                 <article
                   className="surface profile-card template-library-card flex flex-col gap-3 rounded-xl border bg-card p-5"
                   key={t.id}
@@ -637,6 +663,7 @@ export function TemplatesPage({ admin = false }: { admin?: boolean }) {
                   </footer>
                 </article>
               ))}
+              </div>
             </div>
           )}
         </QueryState>
@@ -660,10 +687,15 @@ export function TemplatesPage({ admin = false }: { admin?: boolean }) {
                 description="从模板库选择模板并应用。"
               />
             ) : (
+              <>
+              <ResourceToolbar label="查找模板引用" search={<SearchField ref={bindingInput} type="search" aria-label="搜索模板引用" placeholder="搜索模板、配置或集合" value={bindingSearch} onValueChange={value => { setBindingSearch(value); setBindingPage(1); }} />} />
               <TemplateBindingsTable
                 className="template-bindings-table w-full"
                 rowKey="id"
-                rows={bindings.data}
+                rows={visibleBindings}
+                page={bindingPage} onPageChange={setBindingPage}
+                count={{ total: bindings.data.length, unit: "条引用", filtered: !!bindingTerm }}
+                empty={<EmptyState title="没有匹配的模板引用" action={<ActionButton variant="outline" onClick={clearBindings}>清除筛选</ActionButton>} />}
                 minWidth={650}
                 columns={[
                   {
@@ -739,6 +771,7 @@ export function TemplatesPage({ admin = false }: { admin?: boolean }) {
                   },
                 ]}
               />
+              </>
             )}
           </Section>
         </QueryState>
@@ -803,6 +836,7 @@ export function TemplatesPage({ admin = false }: { admin?: boolean }) {
         />
       )}
       <TaskSheet
+        returnFocusFallback={() => bindingInput.current}
         title={checking ? `模板更新 ${targetName(checking)}` : "模板更新"}
         open={!!checking}
         onOpenChange={(nextOpen) => {
