@@ -134,6 +134,8 @@ it.each([403, 429])(
       screen.getByRole("button", { name: "已检查，允许再次恢复" }),
     );
     expect(screen.queryByText("文件校验通过")).toBeNull();
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "校验备份并查看影响" }));
+    expect(restores).toBe(1);
     await user.click(
       screen.getByRole("button", { name: "校验备份并查看影响" }),
     );
@@ -147,6 +149,7 @@ it.each([403, 429])(
     expect(screen.queryByText("恢复结果尚未确认")).toBeNull();
     expect(restores).toBe(2);
     await user.click(screen.getByRole("button", { name: "清空备份输入" }));
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "选择备份文件" }));
     expect(screen.getByText("此前恢复的人工检查记录")).toBeTruthy();
     expect(screen.queryByText("恢复结果尚未确认")).toBeNull();
   },
@@ -427,6 +430,8 @@ it("keeps a manually reviewed target distinct from a newer unknown attempt", asy
   );
   expect(screen.queryByText(`此前检查的目标：${target}`)).toBeNull();
   expect(screen.queryByText("恢复结果尚未确认")).toBeNull();
+  expect(document.activeElement).toBe(screen.getByRole("button", { name: "选择备份文件" }));
+  expect(restores).toBe(2);
   await prepare();
   await user.click(screen.getByRole("button", { name: "恢复到新数据库" }));
   await screen.findByText(`待检查目标：restore_${"b".repeat(43)}.db`);

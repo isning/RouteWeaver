@@ -53,6 +53,9 @@ export function BackupSettings() {
     const fileDescriptionID = useId();
     const uploadDescriptionID = useId();
     const fileInput = useRef<HTMLInputElement | null>(null);
+    const fileTrigger = useRef<HTMLButtonElement | null>(null);
+    const restorePasswordInput = useRef<HTMLInputElement | null>(null);
+    const inspectTrigger = useRef<HTMLButtonElement | null>(null);
     const revision = useRef(0);
     const activeInspection = useRef<number | null>(null);
     const inspectionSubmission = useRef<{
@@ -300,7 +303,7 @@ export function BackupSettings() {
                   {unresolved.target && (<p className="[overflow-wrap:anywhere]">
                       待检查目标：{unresolved.target}
                     </p>)}
-                  <ActionButton className="h-auto max-w-full whitespace-normal" disabled={restore.isPending} onClick={() => {
+                  <ActionButton className="h-auto max-w-full whitespace-normal" disabled={restore.isPending} onClick={(event) => {
                     if (activeAttempt.current !== null)
                         return;
                     revision.current++;
@@ -309,6 +312,11 @@ export function BackupSettings() {
                     setUnresolved(null);
                     setPreview(null);
                     setConfirmation("");
+                    if (event.currentTarget.ownerDocument.activeElement === event.currentTarget) {
+                        const next = !file || fileError ? fileTrigger.current :
+                            !password || inspectTrigger.current?.disabled ? restorePasswordInput.current : inspectTrigger.current;
+                        next?.focus();
+                    }
                 }} variant="outline">
                     已检查，允许再次恢复
                   </ActionButton>
@@ -326,7 +334,7 @@ export function BackupSettings() {
           <div className="standalone-label grid gap-2 text-sm font-medium">
             <label htmlFor={fileInputID}>加密备份文件</label>
             <input id={fileInputID} ref={fileInput} type="file" hidden accept=".age,application/octet-stream" aria-label="选择加密备份" aria-describedby={fileDescriptionID} disabled={restore.isPending} onChange={(e) => selectFile(e.target.files?.[0])}/>
-            <ActionButton className="backup-file-trigger w-full sm:w-auto sm:justify-self-start" disabled={restore.isPending} aria-controls={fileInputID} aria-describedby={fileDescriptionID} onClick={() => fileInput.current?.click()} variant="outline">
+            <ActionButton ref={fileTrigger} className="backup-file-trigger w-full sm:w-auto sm:justify-self-start" disabled={restore.isPending} aria-controls={fileInputID} aria-describedby={fileDescriptionID} onClick={() => fileInput.current?.click()} variant="outline">
               选择备份文件
             </ActionButton>
             <span id={fileDescriptionID} className="grid min-w-0 gap-1 [overflow-wrap:anywhere]">
@@ -335,7 +343,7 @@ export function BackupSettings() {
           </div>
           <label className="standalone-label grid gap-2 text-sm font-medium">
             备份密码
-            <PasswordInput value={password} disabled={restore.isPending} autoComplete="off" onChange={(e) => {
+            <PasswordInput ref={restorePasswordInput} value={password} disabled={restore.isPending} autoComplete="off" onChange={(e) => {
             if (activeAttempt.current !== null)
                 return;
             revision.current++;
@@ -348,7 +356,7 @@ export function BackupSettings() {
           <p id={uploadDescriptionID} className="text-sm text-muted-foreground">
             选择文件不会上传；校验时会将备份文件和密码发送到当前控制平面。
           </p>
-          <ActionButton leadingIcon={<UploadOutlined aria-hidden="true"/>} aria-describedby={uploadDescriptionID} aria-label="校验备份并查看影响" aria-busy={inspect.isPending} pending={inspect.isPending} disabled={!file || !!fileError || !password || restore.isPending} onClick={() => {
+          <ActionButton ref={inspectTrigger} leadingIcon={<UploadOutlined aria-hidden="true"/>} aria-describedby={uploadDescriptionID} aria-label="校验备份并查看影响" aria-busy={inspect.isPending} pending={inspect.isPending} disabled={!file || !!fileError || !password || restore.isPending} onClick={() => {
             if (activeAttempt.current !== null ||
                 activeInspection.current !== null ||
                 !file ||
@@ -367,7 +375,7 @@ export function BackupSettings() {
         }} variant="outline">
             校验备份并查看影响
           </ActionButton>
-          {(file || password) && (<ActionButton disabled={restore.isPending} onClick={() => {
+          {(file || password) && (<ActionButton disabled={restore.isPending} onClick={(event) => {
                 if (activeAttempt.current !== null)
                     return;
                 revision.current++;
@@ -384,6 +392,8 @@ export function BackupSettings() {
                 setRestoreError(null);
                 if (fileInput.current)
                     fileInput.current.value = "";
+                if (event.currentTarget.ownerDocument.activeElement === event.currentTarget)
+                    fileTrigger.current?.focus();
             }} variant="ghost">
               清空备份输入
             </ActionButton>)}

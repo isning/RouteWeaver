@@ -67,7 +67,24 @@ export function RateSettings({ routes }: { routes: RouteRecord[] }) {
   const searchInput = useRef<HTMLInputElement>(null);
   const routeFilterId = useId();
   const searchTerm = search.trim().toLocaleLowerCase();
-  const routeLabel = (id: string) => routes.find(route => route.id === id)?.name || id;
+  // Use one visible identity across history, filters and the adjustment picker.
+  // Include retained/missing references so a literal name cannot impersonate
+  // another route's fallback ID or its disambiguated caption.
+  const routeIds = Array.from(new Set([...routes.map(route => route.id), ...rates.map(rate => rate.routeId), ...(routeFilter === undefined ? [] : [routeFilter])]));
+  const routeNames = new Map(routeIds.map(id => [id, routes.find(route => route.id === id)?.name || id]));
+  const identities = new Map<string, Set<string>>();
+  const identityCaptions = new Set<string>();
+  for (const [id, name] of routeNames) {
+    const ids = identities.get(name) || new Set<string>();
+    ids.add(id);
+    identities.set(name, ids);
+    identityCaptions.add(`${name}，线路标识：${id}`);
+  }
+  const routeLabel = (id: string) => {
+    const name = routeNames.get(id) || id;
+    return (identities.get(name)?.size || 0) > 1 || identityCaptions.has(name)
+      ? `${name}，线路标识：${id}` : name;
+  };
   // Filter the confirmed union, never just the last list response.
   const visibleRates = rates.filter(rate =>
     (routeFilter === undefined || rate.routeId === routeFilter) &&
@@ -308,7 +325,7 @@ export function RateSettings({ routes }: { routes: RouteRecord[] }) {
             trigger="onValueChange"
           >
             <ChoiceSelect
-              options={routes.map((r) => ({ value: r.id, label: r.name }))}
+              options={routes.map((r) => ({ value: r.id, label: routeLabel(r.id) }))}
             />
           </AppField>
           <AppField
