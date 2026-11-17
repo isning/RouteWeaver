@@ -1,5 +1,5 @@
 import { RawCoreLogSettings } from "./RawCoreLogSettings";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Download, RefreshCw } from "lucide-react";
 import {
@@ -140,6 +140,15 @@ function RawLogDetails({
   settingsEpoch: number;
 }) {
   const [revealed, setRevealed] = useState(false);
+  const keywordInput = useRef<HTMLInputElement>(null);
+  const revealFocus = useRef(false);
+  useLayoutEffect(() => {
+    if (!revealed || !revealFocus.current) return;
+    revealFocus.current = false;
+    const input = keywordInput.current;
+    if (input?.isConnected && input.ownerDocument.activeElement === input.ownerDocument.body)
+      input.focus();
+  }, [revealed]);
   const [stream, setStream] = useState("all");
   const [period, setPeriod] = useState("all");
   const [search, setSearch] = useState("");
@@ -182,12 +191,15 @@ function RawLogDetails({
   const accessDenied =
     query.error instanceof APIError && [401, 403].includes(query.error.status);
   const data = accessDenied ? undefined : query.data;
-  const apply = () => {
-    if (searchTooLong) return;
+  const invalidateExport = () => {
     scope.current++;
     abort.current?.abort();
     setDownloading(false);
     setExportError(false);
+  };
+  const apply = () => {
+    if (searchTooLong) return;
+    invalidateExport();
     setAppliedPeriod(period);
     setFilters({
       ...(stream === "all" ? {} : { stream: stream as "stdout" | "stderr" }),
@@ -199,11 +211,17 @@ function RawLogDetails({
           }),
     });
   };
+  const clearFilters = () => {
+    invalidateExport();
+    setSearch("");
+    setStream("all");
+    setPeriod("all");
+    setAppliedPeriod("all");
+    setFilters({});
+    keywordInput.current?.focus();
+  };
   const refresh = () => {
-    scope.current++;
-    abort.current?.abort();
-    setDownloading(false);
-    setExportError(false);
+    invalidateExport();
     if (appliedPeriod === "all") void query.refetch();
     else
       setFilters((current) => ({
@@ -274,7 +292,10 @@ function RawLogDetails({
           日志可能包含访问目标、IP、账号或密钥，仅管理员可查看。请勿公开分享原文或导出文件。
         </Notice>
         {!revealed ? (
-          <ActionButton onClick={() => setRevealed(true)}>
+          <ActionButton onClick={event => {
+            revealFocus.current = event.currentTarget.ownerDocument.activeElement === event.currentTarget;
+            setRevealed(true);
+          }}>
             查看日志原文
           </ActionButton>
         ) : (
@@ -317,6 +338,7 @@ function RawLogDetails({
               <div className="min-w-40 flex-1 space-y-1">
                 <Label htmlFor={`raw-search-${core.id}`}>原文关键词</Label>
                 <Input
+                  ref={keywordInput}
                   id={`raw-search-${core.id}`}
                   maxLength={128}
                   value={search}
@@ -454,9 +476,12 @@ function RawLogDetails({
             ) : (
               data &&
               data.collectionState !== "not_reported" && (
-                <p className="py-4 text-sm text-muted-foreground">
-                  当前筛选下没有日志记录。
-                </p>
+                <div className="space-y-3 py-4">
+                  <p className="text-sm text-muted-foreground">当前筛选下没有日志记录。</p>
+                  {(filters.stream || filters.q || filters.since) && (
+                    <ActionButton variant="outline" onClick={clearFilters}>清除筛选</ActionButton>
+                  )}
+                </div>
               )
             )}
             {data && (

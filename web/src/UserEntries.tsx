@@ -1,3 +1,4 @@
+import { ResourceToolbar, SearchField, QuickFilters } from "@/ui-patterns/resource-toolbar";
 import {
   Accordion,
   AccordionContent,
@@ -168,7 +169,18 @@ function UserEntryTask({
     queryFn: () => list<Grant>(`/users/${user!.id}/entries`),
     enabled: open,
   });
-  const pageCount = Math.max(1, Math.ceil((query.data?.length || 0) / 10));
+  const [search, setSearch] = useState("");
+  const [revocationFilter, setRevocationFilter] = useState("all");
+  const searchInput = useRef<HTMLInputElement>(null);
+  const routeName = (grant: Grant) => grant.publishedRouteId
+    ? publishedRoutes.find(route => route.id === grant.publishedRouteId)?.name || grant.publishedRouteId
+    : routes.find(route => route.id === grant.routeId)?.name || grant.routeId;
+  const term = search.trim().toLowerCase();
+  const matchingEntries = (query.data || []).filter(grant =>
+    (revocationFilter === "all" || (revocationFilter === "revoked" ? !!grant.revoked : !grant.revoked)) &&
+    [grant.name, routeName(grant)].some(value => value.toLowerCase().includes(term)));
+  const clearFilters = () => { setSearch(""); setRevocationFilter("all"); setPage(1); searchInput.current?.focus(); };
+  const pageCount = Math.max(1, Math.ceil(matchingEntries.length / 10));
   const visiblePage = Math.min(page, pageCount);
   useEffect(
     () => setPage((current) => Math.min(current, pageCount)),
@@ -383,7 +395,7 @@ function UserEntryTask({
               onClick={() => {
                 const trigger = revealTrigger.current;
                 clearEditor();
-                if (trigger?.isConnected && active.current) trigger.focus();
+                if (active.current) (trigger?.isConnected ? trigger : searchInput.current)?.focus();
               }}
             >
               取消读取
@@ -406,8 +418,19 @@ function UserEntryTask({
             />
           ) : (
             <>
+              {/* Keep this parent-sheet count non-live: a live region would
+                  exempt its dialog from hideOthers while the credential editor is open. */}
+              <ResourceToolbar label="查找平台入口" search={<SearchField ref={searchInput} type="search" aria-label="搜索平台入口" placeholder="搜索入口或线路名称" value={search} onValueChange={value => { setSearch(value); setPage(1); }} />}
+                filters={<QuickFilters label="入口撤销状态" value={revocationFilter} onValueChange={value => { setRevocationFilter(value); setPage(1); }} options={[
+                  { value: "all", label: "全部" }, { value: "available", label: "未撤销" }, { value: "revoked", label: "已撤销" },
+                ]} />}
+                summary={<span className="inline-flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                  {(term || revocationFilter !== "all") && <span>找到 {matchingEntries.length} 个平台入口</span>}
+                  <span>共 {query.data.length} 个平台入口</span>
+                </span>} />
+              {!matchingEntries.length && <EmptyState title="没有匹配的平台入口" action={<ActionButton variant="outline" onClick={clearFilters}>清除筛选</ActionButton>} />}
               <ul className="user-entry-list space-y-3">
-                {query.data
+                {matchingEntries
                   .slice((visiblePage - 1) * 10, visiblePage * 10)
                   .map((g) => (
                     <li
@@ -418,12 +441,7 @@ function UserEntryTask({
                       <div className="user-entry-info min-w-0 flex-1 basis-48 space-y-2 [overflow-wrap:anywhere]">
                         <h3 className="text-sm font-medium">{g.name}</h3>
                         <div className="user-entry-line flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                          {g.publishedRouteId
-                            ? publishedRoutes.find(
-                                (r) => r.id === g.publishedRouteId,
-                              )?.name || g.publishedRouteId
-                            : routes.find((r) => r.id === g.routeId)?.name ||
-                              g.routeId}
+                          {routeName(g)}
                         </div>
                         <Badge variant="secondary">
                           {g.revoked
@@ -552,10 +570,10 @@ function UserEntryTask({
                     </li>
                   ))}
               </ul>
-              {query.data.length > 10 && (
+              {matchingEntries.length > 10 && (
                 <PageNavigation
                   pageSize={10}
-                  total={query.data.length}
+                  total={matchingEntries.length}
                   page={visiblePage}
                   onPageChange={setPage}
                 />
@@ -565,6 +583,7 @@ function UserEntryTask({
         </QueryState>
       </div>
       <TaskDialog
+        returnFocusFallback={() => searchInput.current}
         title={
           editing?.revoked
             ? `重新分配 ${editing.name}`

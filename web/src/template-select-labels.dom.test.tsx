@@ -166,13 +166,19 @@ it("keeps exact visible field names independent of selected template values and 
     await screen.findByRole("button", { name: "发布模板" }),
   );
   const dialog = await screen.findByRole("dialog", { name: "发布共享模板" });
+  expect(screen.getAllByRole("dialog")).toEqual([dialog]);
+  expect(screen.queryByRole("searchbox", { name: "搜索模板" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "客户端配置模板" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "查看并使用" })).toBeNull();
   const position = within(dialog).getByRole("combobox", { name: "发布位置" });
   const kind = within(dialog).getByRole("combobox", { name: "模板类型" });
   const target = within(dialog).getByRole("combobox", {
     name: "从自己的已保存配置提取",
   });
   await userEvent.click(kind);
-  await userEvent.click(await screen.findByText("客户端配置模板"));
+  // The catalog filter has the same visible label; choose the popup option,
+  // not text in the aria-hidden background.
+  await userEvent.click(await screen.findByRole("option", { name: "客户端配置模板" }));
   expect(within(dialog).getByRole("combobox", { name: "模板类型" })).toBe(kind);
   await userEvent.click(position);
   await userEvent.click(await screen.findByRole("option", { name: "Template Alpha v2" }));
