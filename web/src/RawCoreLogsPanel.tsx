@@ -92,6 +92,7 @@ export function RawCoreLogsPanel({
   const [selected, setSelected] = useState("");
   const [settingsEpoch, setSettingsEpoch] = useState(0);
   const core = cores.find((item) => item.id === selected) || cores[0];
+  const repeatedName = (item: CoreInstance) => cores.filter(other => coreName(other) === coreName(item)).length > 1;
   return (
     <section aria-label="核心日志原文" className="min-w-0 space-y-4">
       {cores.length > 1 && (
@@ -102,7 +103,8 @@ export function RawCoreLogsPanel({
             onValueChange={(value) => setSelected(value || "")}
             options={cores.map((item) => ({
               value: item.id,
-              label: coreName(item),
+              label: repeatedName(item) ? <span className="min-w-0"><span className="block">{coreName(item)}</span><span className="block break-all text-xs text-muted-foreground">{item.id}</span></span> : coreName(item),
+              searchText: `${coreName(item)} ${item.id}`,
             }))}
           />
         </div>
@@ -112,6 +114,7 @@ export function RawCoreLogsPanel({
           <RawCoreLogSettings
             key={core.id}
             instanceId={core.id}
+            instanceLabel={coreName(core)}
             onChanged={() => {
               void client.cancelQueries({
                 queryKey: ["raw-core-logs", core.id],
@@ -123,6 +126,7 @@ export function RawCoreLogsPanel({
           <RawLogDetails
             key={`${core.id}:${core.adapterId}:${core.version}:${settingsEpoch}`}
             core={core}
+            showId={repeatedName(core)}
             settingsEpoch={settingsEpoch}
           />
         </div>
@@ -135,7 +139,9 @@ export function RawCoreLogsPanel({
 function RawLogDetails({
   core,
   settingsEpoch,
+  showId,
 }: {
+  showId: boolean;
   core: CoreInstance;
   settingsEpoch: number;
 }) {
@@ -241,7 +247,7 @@ function RawLogDetails({
       },
       title: "导出日志原文？",
       description:
-        "导出文件不加密，可能包含访问目标、IP、账号或密钥。只导出当前筛选条件下仍保留的记录，请妥善保管。",
+        `导出 ${coreName(core)}（${core.id}）的日志。文件不加密，可能包含访问目标、IP、账号或密钥。只导出当前筛选条件下仍保留的记录，请妥善保管。`,
       confirmLabel: "导出 NDJSON",
       onConfirm: async () => {
         if (ticket !== scope.current)
@@ -285,7 +291,7 @@ function RawLogDetails({
     <Card className="min-w-0">
       <CardHeader>
         <CardTitle>核心日志原文</CardTitle>
-        <CardDescription>{coreName(core)}</CardDescription>
+        <CardDescription className="space-y-1"><span className="block break-words">{coreName(core)}</span>{showId && <span className="block break-all text-xs">{core.id}</span>}</CardDescription>
       </CardHeader>
       <CardContent className="min-w-0 space-y-4">
         <Notice tone="warning">

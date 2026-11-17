@@ -27,9 +27,11 @@ function valid(s: Settings, id: string) {
 }
 export function RawCoreLogSettings({
   instanceId,
+  instanceLabel,
   onChanged,
 }: {
   instanceId: string;
+  instanceLabel?: string;
   onChanged: () => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -89,7 +91,7 @@ export function RawCoreLogSettings({
     const selected = { ...value };
     decision.current = confirm({
       title: "保存日志采集设置？",
-      description: `${selected.enabled ? "允许平台接收可能含 IP、访问目标、账号或密钥的日志原文；节点仍须在本地明确开启敏感日志权限。" : "停止平台接收日志原文。"}保存会清除当前平台已收集的日志，包括仅修改保留时间。备份、数据库历史副本及已下载文件不会随之删除。`,
+      description: `核心：${instanceLabel ? `${instanceLabel}（${instanceId}）` : instanceId}。${selected.enabled ? "允许平台接收可能含 IP、访问目标、账号或密钥的日志原文；节点仍须在本地明确开启敏感日志权限。" : "停止平台接收日志原文。"}保存会清除当前平台已收集的日志，包括仅修改保留时间。备份、数据库历史副本及已下载文件不会随之删除。`,
       confirmLabel: "确认保存并清除现有日志",
       destructive: true,
       onClosed: () => {

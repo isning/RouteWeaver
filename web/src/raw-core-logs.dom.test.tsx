@@ -340,3 +340,31 @@ it("shows disabled collection without rejecting readable retained history", asyn
   expect(screen.queryByText(/尚未收到原文日志/)).toBeNull();
   client.clear();
 });
+it("keeps same-name core identity visible through selection and destructive settings confirmation", async () => {
+  const { default: userEvent } = await import("@testing-library/user-event");
+  const fetch = vi.fn(async () => new Response(JSON.stringify({
+    instanceId: "two", enabled: false, retentionSeconds: 3600,
+    revision: "rev", historyLimit: 128, lineBytesLimit: 4096,
+  })));
+  vi.stubGlobal("fetch", fetch);
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  render(<QueryClientProvider client={client}><UIProviders>
+    <RawCoreLogsPanel host={{ id: "host" } as HostRecord} instances={[
+      { id: "one", hostId: "host", name: "Same core", adapterId: "sing-box", version: "1" },
+      { id: "two", hostId: "host", name: "Same core", adapterId: "sing-box", version: "1" },
+    ] as CoreInstance[]} />
+  </UIProviders></QueryClientProvider>);
+  await userEvent.click(screen.getByRole("combobox", { name: "日志核心" }));
+  expect(screen.getByRole("option", { name: /Same core.*one/ })).toBeTruthy();
+  await userEvent.click(screen.getByRole("option", { name: /Same core.*two/ }));
+  expect(fetch).not.toHaveBeenCalled();
+  await userEvent.click(screen.getByRole("button", { name: "采集设置" }));
+  await screen.findByText(/默认不接收/);
+  await userEvent.click(await screen.findByRole("button", { name: "保存设置" }));
+  const { within } = await import("@testing-library/react");
+  const confirmation = await screen.findByRole("alertdialog");
+  expect(within(confirmation).getByText(/Same core.*two/)).toBeTruthy();
+  expect(fetch.mock.calls).toHaveLength(1);
+  await userEvent.click(within(confirmation).getByRole("button", { name: "取消" }));
+  client.clear();
+});
