@@ -160,7 +160,7 @@ jobs:
       - run: scripts/verify.sh api
       - name: API diagnostics
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: api-diagnostics
           path: |
@@ -242,7 +242,7 @@ jobs:
       - run: scripts/verify.sh browser
       - name: Browser diagnostics
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: browser-diagnostics-${{ matrix.shard }}-of-6
           path: |
@@ -254,7 +254,7 @@ jobs:
 
       - name: UIUX inventory evidence
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: uiux-inventory-${{ matrix.shard }}-of-6
           path: web/test-results/**/uiux-inventory/
@@ -263,7 +263,7 @@ jobs:
 
       - name: Journey review evidence
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: journey-review-${{ matrix.shard }}-of-6
           # Named synthetic originals only; no attachment copies, reports or traces.
@@ -356,7 +356,7 @@ jobs:
         run: python3 scripts/probe_structured_publication_privacy.py
       - name: Browser native diagnostics
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: browser-native-diagnostics
           path: |
@@ -393,7 +393,7 @@ jobs:
       - run: scripts/verify.sh managed
       - name: Native diagnostics
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: native-diagnostics
           path: bin/verification/
@@ -416,7 +416,7 @@ jobs:
           node: "true"
       - run: scripts/verify.sh package
       - name: Preserve tested candidate (not a published release)
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: linux-amd64-candidate-${{ github.sha }}
           path: bin/packages/routeweaver-linux-amd64.tar.gz*
