@@ -55,6 +55,8 @@ export interface TaskOverlayProps {
   returnFocus?: HTMLElement | null;
   /** Scope-owned destination when the original opener is no longer available. */
   returnFocusFallback?: () => HTMLElement | null;
+  /** Completed action destination. Null declines restoring the old opener. */
+  returnFocusDestination?: () => HTMLElement | null;
   onReady?(): void;
   onClosed?(): void;
   onCloseAutoFocus?(event: FocusEvent): void;

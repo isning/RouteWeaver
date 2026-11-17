@@ -125,6 +125,32 @@ function describedBy(element: HTMLElement) {
     .map((id) => document.getElementById(id)?.textContent || "")
     .join(" ");
 }
+it("groups quota and expiry controls by task without changing the saved settings", async () => {
+  const sent = await mount();
+  const quota = screen.getByRole("group", { name: "额度提醒" });
+  const expiry = screen.getByRole("group", { name: "到期提醒" });
+  expect(within(quota).getByLabelText("已用额度提醒阈值（%）")).toBeTruthy();
+  expect(within(quota).getByLabelText("供应商剩余配额提醒（%）")).toBeTruthy();
+  expect(within(quota).queryByLabelText("到期前提醒（小时）")).toBeNull();
+  expect(within(expiry).getByLabelText("到期前提醒（小时）")).toBeTruthy();
+  const repeat = within(expiry).getByLabelText("到期提醒重复周期（小时）");
+  expect(within(expiry).queryByLabelText("供应商剩余配额提醒（%）")).toBeNull();
+  expect(quota.compareDocumentPosition(expiry) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(sent).toEqual([]);
+  fireEvent.change(repeat, { target: { value: "12" } });
+  save();
+  await waitFor(() => expect(sent).toHaveLength(1));
+  expect(sent[0]).toMatchObject({
+    revision: initial.revision,
+    inApp: initial.inApp,
+    quotaPercent: initial.quotaPercent,
+    providerRemainingPercent: initial.providerRemainingPercent,
+    expiryHours: initial.expiryHours,
+    repeatHours: 12,
+    email: initial.email,
+    webhook: initial.webhook,
+  });
+});
 it("explains expiry reminder time buckets without promising a minimum interval or changing quota thresholds", async () => {
   const sent = await mount();
   const repeat = screen.getByLabelText("到期提醒重复周期（小时）");

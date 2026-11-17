@@ -548,6 +548,32 @@ for (const width of [1440, 390]) {
     await expect(
       page.getByRole("button", { name: "保存通知设置", exact: true }),
     ).toBeVisible();
+    const quota = page.getByRole("group", { name: "额度提醒", exact: true });
+    const expiry = page.getByRole("group", { name: "到期提醒", exact: true });
+    await expect(quota.getByLabel("已用额度提醒阈值（%）", { exact: true })).toBeVisible();
+    await expect(quota.getByLabel("供应商剩余配额提醒（%）", { exact: true })).toBeVisible();
+    const advance = expiry.getByLabel("到期前提醒（小时）", { exact: true });
+    const repeat = expiry.getByLabel("到期提醒重复周期（小时）", { exact: true });
+    await expect(advance).toBeVisible();
+    await expect(repeat).toBeVisible();
+    const quotaBox = (await quota.boundingBox())!;
+    const expiryBox = (await expiry.boundingBox())!;
+    const advanceBox = (await advance.boundingBox())!;
+    const repeatBox = (await repeat.boundingBox())!;
+    expect(repeatBox.y).toBeGreaterThan(advanceBox.y + advanceBox.height);
+    expect(repeatBox.y + repeatBox.height).toBeLessThanOrEqual(expiryBox.y + expiryBox.height);
+    if (width === 390) {
+      // Keep each task contiguous, rather than interleaving quota and expiry
+      // fields when the desktop columns collapse to one column.
+      expect(Math.abs(quotaBox.x - expiryBox.x)).toBeLessThanOrEqual(1);
+      const groupGap = expiryBox.y - (quotaBox.y + quotaBox.height);
+      expect(groupGap).toBeGreaterThanOrEqual(16);
+      expect(groupGap).toBeLessThanOrEqual(32);
+    } else {
+      expect(Math.abs(quotaBox.y - expiryBox.y)).toBeLessThanOrEqual(1);
+      expect(expiryBox.x - (quotaBox.x + quotaBox.width)).toBeGreaterThanOrEqual(16);
+      expect(expiryBox.x - (quotaBox.x + quotaBox.width)).toBeLessThanOrEqual(32);
+    }
     await noOverflow(page);
     await page.screenshot({
       path: info.outputPath(`notification-reminders-fixture-${width}.png`),

@@ -7,7 +7,7 @@ import { PageBoundary } from "./PageBoundary";
 import { LoadingState } from "@/ui-patterns/loading-state";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { TaskDialog } from "@/ui-patterns/task-overlays";
+import { TaskDialog, useTaskReturnFocus } from "@/ui-patterns/task-overlays";
 import { ChoiceSelect } from "@/ui-patterns/choice-select";
 import { useDiscardConfirmation } from "./useDiscardConfirmation";
 import { Input } from "@/components/ui/input";
@@ -107,6 +107,7 @@ function AccountSecurityTask({
   const recovery = useSecurityRecovery(session.user.id);
   const sectionID = useId();
   const confirm = useConfirm();
+  const sessionRefresh = useRef<HTMLButtonElement>(null);
   const active = useRef(true);
   useLayoutEffect(() => {
     active.current = true;
@@ -302,6 +303,7 @@ function AccountSecurityTask({
         extra={
           <ActionButton
             variant="outline"
+            ref={sessionRefresh}
             onClick={() => sessions.refetch()}
             disabled={blocked}
           >
@@ -339,7 +341,8 @@ function AccountSecurityTask({
                 <ActionButton
                   variant="outline"
                   disabled={blocked}
-                  onClick={() =>
+                  onClick={() => {
+                    let exitedCurrent = entry.current;
                     confirm({
                       title: entry.current
                         ? "退出当前会话？"
@@ -350,13 +353,15 @@ function AccountSecurityTask({
                       confirmLabel: "退出会话",
                       cancelLabel: "保留",
                       destructive: true,
+                      returnFocusOnSuccess: () => active.current && !exitedCurrent ? sessionRefresh.current : null,
                       onConfirm: async () => {
                         if (!active.current || submitting.current || recovery.blocked) return;
                         submitting.current = true;
-                        await revoke.mutateAsync(entry.id);
+                        const result = await revoke.mutateAsync(entry.id);
+                        exitedCurrent = result.current;
                       },
-                    })
-                  }
+                    });
+                  }}
                 >
                   {entry.current ? "退出当前会话" : "退出此会话"}
                 </ActionButton>
@@ -464,7 +469,11 @@ function AccountRecovery({ session, recovery }: { session: Session; recovery: Se
     queryFn: () => list<Account>("/admin/accounts"),
   });
   const [target, setTarget] = useState<Account | null>(null);
+  const accountIdentity = useRef(new Map<string, HTMLElement>());
+  const recoveryHeading = useRef<HTMLDivElement>(null);
   return (
+    <div ref={recoveryHeading} tabIndex={-1} role="group" aria-label="账号恢复与退役"
+      className="rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring">
     <Section
       title="账号恢复与退役"
       description="账号身份与用户的服务授权是两套设置。停用或退役会阻止登录和订阅交付，并保留历史数据。"
@@ -485,7 +494,9 @@ function AccountRecovery({ session, recovery }: { session: Session; recovery: Se
               className="flex flex-wrap items-center justify-between gap-3 p-4"
             >
               <div className="min-w-0 space-y-1">
-                <strong className="break-words text-sm">{account.name}</strong>
+                <strong tabIndex={-1}
+                  ref={element => { if (element) accountIdentity.current.set(account.id, element); else accountIdentity.current.delete(account.id); }}
+                  className="break-words rounded-sm text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring">{account.name}</strong>
                 <Metadata className="break-all text-sm text-muted-foreground">
                   <span>{account.username}</span>
                   <span>{account.role === "admin" ? "管理员" : "个人账号"}</span>
@@ -523,10 +534,12 @@ function AccountRecovery({ session, recovery }: { session: Session; recovery: Se
           target={target}
           actor={session.user}
           recovery={recovery}
+          returnFocusIdentity={() => accountIdentity.current.get(target.id) || recoveryHeading.current}
           onClose={() => setTarget(null)}
         />
       )}
     </Section>
+    </div>
   );
 }
 function AccountRecoveryTask({
@@ -534,14 +547,18 @@ function AccountRecoveryTask({
   actor,
   recovery,
   onClose,
+  returnFocusIdentity,
 }: {
   target: Account;
   actor: Session["user"];
   recovery: SecurityRecovery;
   onClose: () => void;
+  returnFocusIdentity: () => HTMLElement | null;
 }) {
   const [form] = useForm();
   const formId = useId();
+  const completed = useRef(false);
+  const opener = useTaskReturnFocus();
   const action: SecurityAction =
     useWatch("action", form) || (target.disabled ? "enable" : "disable");
   const [dirty, setDirty] = useState(false);
@@ -581,6 +598,7 @@ function AccountRecoveryTask({
       form.resetFields();
       setDirty(false);
       toast.success("账号安全设置已更新");
+      completed.current = true;
       onClose();
     },
     onSettled: (_data, _error, values) => {
@@ -616,6 +634,10 @@ function AccountRecoveryTask({
     <TaskDialog
       scrollMode="auto"
       open
+      returnFocusFallback={returnFocusIdentity}
+      returnFocusDestination={() => completed.current || !opener?.isConnected ||
+        opener.matches(":disabled,[aria-disabled='true']")
+          ? returnFocusIdentity() : opener}
       title={`管理 ${target.name} 的账号`}
       description={`登录名：${target.username}`}
       onOpenChange={(open) => {

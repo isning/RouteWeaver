@@ -1238,61 +1238,71 @@ function SettingsForm({ initial, saved, savedReady }: { initial: Settings; saved
         <p className="text-sm text-muted-foreground">
           每类可设置多个阈值；清空即关闭该类提醒。
         </p>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <AppField
-            name="quotaPercent"
-            rules={notificationThresholdRules(100)}
-            label="已用额度提醒阈值（%）"
-            description="账号已用流量达到任一比例时提醒本人；每个计费周期、每个阈值生成一次。"
-            trigger="onValueChange"
-          >
-            <MultiChoice
-              options={[80, 90, 100].map((v) => ({
-                value: String(v),
-                label: String(v),
-              }))}
-              creatable
-            />
-          </AppField>
-          <AppField
-            name="expiryHours"
-            rules={notificationThresholdRules(8784)}
-            label="到期前提醒（小时）"
-            description="账号服务和供应商资源共用这些提前量；剩余时间进入范围后生成提醒。"
-            trigger="onValueChange"
-          >
-            <MultiChoice
-              options={[72, 24, 6].map((v) => ({
-                value: String(v),
-                label: String(v),
-              }))}
-              creatable
-            />
-          </AppField>
-          <AppField
-            name="providerRemainingPercent"
-            rules={notificationThresholdRules(100)}
-            label="供应商剩余配额提醒（%）"
-            description="供应商剩余额度降至任一比例时提醒管理员。"
-            trigger="onValueChange"
-          >
-            <MultiChoice
-              options={[20, 10, 5].map((v) => ({
-                value: String(v),
-                label: String(v),
-              }))}
-              creatable
-            />
-          </AppField>
-          <AppField
-            name="repeatHours"
-            rules={notificationIntegerRules(720)}
-            label="到期提醒重复周期（小时）"
-            description="按距到期时间划分时段，同一提醒阈值每段最多生成一次；额度提醒沿用原设置。"
-            trigger="onRawChange"
-          >
-            <NotificationIntegerInput max={720} />
-          </AppField>
+        <div className="grid items-start gap-6 sm:grid-cols-2">
+          <fieldset className="min-w-0">
+            <legend className="mb-3 text-sm font-medium">额度提醒</legend>
+            <div className="grid gap-4">
+              <AppField
+                name="quotaPercent"
+                rules={notificationThresholdRules(100)}
+                label="已用额度提醒阈值（%）"
+                description="账号已用流量达到任一比例时提醒本人；每个计费周期、每个阈值生成一次。"
+                trigger="onValueChange"
+              >
+                <MultiChoice
+                  options={[80, 90, 100].map((v) => ({
+                    value: String(v),
+                    label: String(v),
+                  }))}
+                  creatable
+                />
+              </AppField>
+              <AppField
+                name="providerRemainingPercent"
+                rules={notificationThresholdRules(100)}
+                label="供应商剩余配额提醒（%）"
+                description="供应商剩余额度降至任一比例时提醒管理员。"
+                trigger="onValueChange"
+              >
+                <MultiChoice
+                  options={[20, 10, 5].map((v) => ({
+                    value: String(v),
+                    label: String(v),
+                  }))}
+                  creatable
+                />
+              </AppField>
+            </div>
+          </fieldset>
+          <fieldset className="min-w-0">
+            <legend className="mb-3 text-sm font-medium">到期提醒</legend>
+            <div className="grid gap-4">
+              <AppField
+                name="expiryHours"
+                rules={notificationThresholdRules(8784)}
+                label="到期前提醒（小时）"
+                description="账号服务和供应商资源共用这些提前量；剩余时间进入范围后生成提醒。"
+                trigger="onValueChange"
+              >
+                <MultiChoice
+                  options={[72, 24, 6].map((v) => ({
+                    value: String(v),
+                    label: String(v),
+                  }))}
+                  creatable
+                />
+              </AppField>
+              <AppField
+                name="repeatHours"
+                rules={notificationIntegerRules(720)}
+                label="到期提醒重复周期（小时）"
+                description="按距到期时间划分时段，同一提醒阈值每段最多生成一次；额度提醒沿用原设置。"
+                trigger="onRawChange"
+              >
+                <NotificationIntegerInput max={720} />
+              </AppField>
+            </div>
+          </fieldset>
         </div>
         <AppField
           name="inApp"
