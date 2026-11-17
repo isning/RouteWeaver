@@ -331,7 +331,7 @@ export function ServersPage() {
       ? (hostResumeAction.current && hostActions.current.get(hostResumeAction.current)) ||
         (section === "cores" && instance ? coreHeading.current : workspaceHeading.current)
       : (pageOpener.current?.hostId ? listActions.current.get(`host:${pageOpener.current.hostId}`) :
-        pageOpener.current?.instanceId ? listActions.current.get(`instance:${pageOpener.current.instanceId}`) : null) || inventorySearch.current || pageCreateAction.current;
+        pageOpener.current?.instanceId ? listActions.current.get(`instance:${pageOpener.current.instanceId}`) : null) || (pageOpener.current ? inventorySearch.current : null) || pageCreateAction.current;
     hostResumeAction.current = null;
     queueMicrotask(() => {
       if (!document.querySelector('[data-task-overlay][data-state="open"]') && target?.isConnected)
