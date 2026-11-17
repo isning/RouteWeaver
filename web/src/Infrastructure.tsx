@@ -138,6 +138,8 @@ export function ServersPage() {
   const [searches, setSearches] = useState({ hosts: "", "core-instances": "", "managed-endpoints": "" });
   const [pages, setPages] = useState({ "core-instances": 1, "managed-endpoints": 1 });
   const inventorySearch = useRef<HTMLInputElement>(null);
+  const sectionTabs = useRef(new Map<string, HTMLButtonElement>());
+  const shortcutDestination = useRef<ServerWorkspaceSection | null>(null);
   const [entity, setEntity] = useState<InventoryEditTask | null>(null);
   const [host, setHost] = useState<HostRecord | null>(null);
   const [instance, setInstance] = useState<CoreInstance | null>(null);
@@ -277,11 +279,20 @@ export function ServersPage() {
     navigate(serverWorkspaceHash(host.id, undefined, "cores"), () => show(host, null, "cores"));
   };
   const backToList = () => navigate("#servers", () => show(null, null));
-  const changeSection = (value: string) => {
+  const changeSection = (value: string, fromShortcut = false) => {
     if (!host) return;
     const next = value as ServerWorkspaceSection;
-    navigate(serverWorkspaceHash(host.id, instance?.id, next), () => show(host, instance, next));
+    navigate(serverWorkspaceHash(host.id, instance?.id, next), () => {
+      shortcutDestination.current = fromShortcut ? next : null;
+      show(host, instance, next);
+    });
   };
+  useLayoutEffect(() => {
+    const destination = shortcutDestination.current;
+    shortcutDestination.current = null;
+    if (destination === section && !document.querySelector('[data-task-overlay][data-state="open"]'))
+      sectionTabs.current.get(destination)?.focus({ preventScroll: true });
+  }, [section, host?.id, instance?.id]);
   const label = tab === "hosts" ? "服务器" : tab === "core-instances" ? "核心实例" : "监听端点";
   const edit = async (value: HostRecord | CoreInstance | ManagedEndpoint | null, kind: InventoryEditTask["kind"] = tab, hostId?: string, instanceId?: string) => {
     const target = inventoryTaskScope({ kind, value, hostId, instanceId });
@@ -744,8 +755,8 @@ export function ServersPage() {
             <ScrollableTabsList>
               <TabsTrigger value="overview">概览</TabsTrigger>
               <TabsTrigger value="cores">核心与监听</TabsTrigger>
-              <TabsTrigger value="records">配置记录</TabsTrigger>
-              <TabsTrigger value="diagnostics">诊断</TabsTrigger>
+              <TabsTrigger ref={(node) => { if (node) sectionTabs.current.set("records", node); else sectionTabs.current.delete("records"); }} value="records">配置记录</TabsTrigger>
+              <TabsTrigger ref={(node) => { if (node) sectionTabs.current.set("diagnostics", node); else sectionTabs.current.delete("diagnostics"); }} value="diagnostics">诊断</TabsTrigger>
             </ScrollableTabsList>
             <ErrorNotice error={instance && section === "cores" ? null : editError} />
             <TabsContent value="overview" className="space-y-4">
@@ -763,11 +774,11 @@ export function ServersPage() {
                   {!hostCores.length ? "服务器地址已保存。添加核心后即可接入 Agent。" : !hostListeners.length ? "核心已登记。选择客户端连接的协议与监听地址。" : "监听入口已保存。创建转发路径后，检查并确认应用。"}
                 </ServerSetupTip>
               )}
-              <ServerResourceOverview host={host} onOpenResources={() => changeSection("diagnostics")} />
+              <ServerResourceOverview host={host} onOpenResources={() => changeSection("diagnostics", true)} />
               {hostCores.length > 0 && coreList}
               {records.length > 0 && <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-4">
                 <div className="space-y-1"><p className="text-sm font-medium">转发配置</p><p className="text-sm text-muted-foreground">{records.length} 条已保存路径</p></div>
-                <ActionButton leadingIcon={<ArrowRight aria-hidden="true" />} onClick={() => changeSection("records")} variant="outline">查看转发配置</ActionButton>
+                <ActionButton leadingIcon={<ArrowRight aria-hidden="true" />} onClick={() => changeSection("records", true)} variant="outline">查看转发配置</ActionButton>
               </div>}
               <Accordion type="multiple" className="w-full"><AccordionItem value="identity"><AccordionTrigger>技术标识</AccordionTrigger><AccordionContent><p className="break-all text-sm text-muted-foreground">服务器 ID：{host.id}</p></AccordionContent></AccordionItem></Accordion>
             </TabsContent>

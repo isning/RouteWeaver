@@ -43,12 +43,13 @@ export function CoreDiagnosticsPanel({ host, instances }: { host: HostRecord; in
   const cores = instances.filter(core => core.hostId === host.id);
   const [selected, setSelected] = useState("");
   const instance = cores.find(core => core.id === selected) || cores[0];
+  const repeatedName = (core: CoreInstance) => cores.filter(other => coreName(other) === coreName(core)).length > 1;
   return <section aria-label="核心诊断" className="min-w-0 space-y-4">
-    {cores.length > 1 && <div className="max-w-sm"><ChoiceSelect aria-label="诊断核心" value={instance?.id} onValueChange={value => setSelected(value || "")} options={cores.map(core => ({ value: core.id, label: coreName(core) }))} /></div>}
-    {instance ? <CoreDiagnosticDetails key={instance.id} instance={instance} /> : <p className="text-sm text-muted-foreground">添加核心后可查看诊断记录。</p>}
+    {cores.length > 1 && <div className="max-w-sm"><ChoiceSelect aria-label="诊断核心" value={instance?.id} onValueChange={value => setSelected(value || "")} options={cores.map(core => ({ value: core.id, label: repeatedName(core) ? <span className="min-w-0"><span className="block">{coreName(core)}</span><span className="block break-all text-xs text-muted-foreground">{core.id}</span></span> : coreName(core), searchText: `${coreName(core)} ${core.id}` }))} /></div>}
+    {instance ? <CoreDiagnosticDetails key={instance.id} instance={instance} showId={repeatedName(instance)} /> : <p className="text-sm text-muted-foreground">添加核心后可查看诊断记录。</p>}
   </section>;
 }
-function CoreDiagnosticDetails({ instance }: { instance: CoreInstance }) {
+function CoreDiagnosticDetails({ instance, showId }: { instance: CoreInstance; showId: boolean }) {
   const query = useQuery({
     queryKey: ["core-diagnostics", instance.id, instance.adapterId, instance.version],
     queryFn: async () => {
@@ -64,7 +65,11 @@ function CoreDiagnosticDetails({ instance }: { instance: CoreInstance }) {
     <Card className="min-w-0">
       <CardHeader>
         <CardTitle>核心诊断记录</CardTitle>
-        <CardDescription className="text-xs">{data?.lastReceivedAt ? `最近收到 ${dateLabel(data.lastReceivedAt)}` : coreName(instance)}</CardDescription>
+        <CardDescription className="space-y-1 text-xs">
+          <span className="block break-words font-medium text-foreground">{coreName(instance)}</span>
+          {showId && <span className="block break-all">{instance.id}</span>}
+          {data?.lastReceivedAt && <span className="block">最近收到 {dateLabel(data.lastReceivedAt)}</span>}
+        </CardDescription>
         <CardAction><ActionButton variant="outline" size="sm" leadingIcon={<RotateCw aria-hidden="true" />} pending={query.isFetching} keepFocusableWhilePending onClick={() => query.refetch()}>刷新</ActionButton></CardAction>
       </CardHeader>
       <CardContent className="space-y-3">

@@ -64,11 +64,12 @@ async function fixture(page: Page, baseURL: string | undefined) {
   };
   const ledger = {
     profileReads: 0, failedProfileReads: 0, recoveredProfileReads: 0, reveals: 0, saves: 0,
-    explicitRetryArmed: false, savePayloadChecks: [] as boolean[],
+    accessReads: 0, explicitRetryArmed: false, savePayloadChecks: [] as boolean[],
     rejected: [] as string[], pageErrors: 0,
   };
   let phase: "initial" | "failed-refresh" | "retry-ready" | "recovered" = "initial";
   let saveAuthorized = false;
+  let accessAuthorized = false;
   page.on("pageerror", () => ledger.pageErrors++);
   await page.context().route("**/*", async (route) => {
     const request = route.request(), url = new URL(request.url()), method = request.method();
@@ -109,6 +110,11 @@ async function fixture(page: Page, baseURL: string | undefined) {
       ledger.reveals++;
       return route.fulfill({ json: draft });
     }
+    if (method === "GET" && url.pathname === "/api/me/outputs/synthetic-phone/access") {
+      if (!accessAuthorized || ledger.accessReads !== 0) return reject("unrequested subscription access");
+      ledger.accessReads++;
+      return route.fulfill({ json: { feedPath: "/feed/synthetic-layout-only" } });
+    }
     if (method === "GET" && Object.hasOwn(reads, url.pathname)) return route.fulfill({ json: reads[url.pathname] });
     if (method === "PUT" && url.pathname === "/api/me/profiles/synthetic-draft") {
       const valid = validSave(request);
@@ -124,6 +130,7 @@ async function fixture(page: Page, baseURL: string | undefined) {
   });
   return {
     ledger,
+    authorizeAccess() { accessAuthorized = true; },
     authorizeSave() { saveAuthorized = true; },
     authorizeRetry() {
       if (phase !== "failed-refresh" || ledger.failedProfileReads === 0)
@@ -270,5 +277,54 @@ for (const width of [390, 1440]) {
     }
     if (failures.length === 1) throw failures[0];
     if (failures.length > 1) throw new AggregateError(failures, "Profile read recovery task or evidence failed");
+  });
+}
+
+
+// Layout and keyboard evidence using only the explicit synthetic access read.
+// No credentials, clipboard writes, checks, publication or rotation are exercised.
+for (const width of [320, 390, 1440]) {
+  test(`subscription primary actions remain inside their card at ${width}px`, async ({ page, baseURL }, info) => {
+    await page.setViewportSize({ width, height: 1000 });
+    const http = await fixture(page, baseURL);
+    await page.goto("/#subscriptions?profile=synthetic-linked");
+    const card = page.getByRole("article", { name: `分流配置 ${linkedName}`, exact: true });
+    const table = card.getByRole("table", { name: `${linkedName}的客户端订阅`, exact: true });
+    const row = table.getByRole("row", { name: `客户端订阅 ${phoneName}`, exact: true });
+    const access = row.getByRole("button", { name: "获取订阅", exact: true });
+    const management = row.getByRole("button", { name: `管理 ${phoneName}`, exact: true });
+    await expect(access).toBeVisible();
+    const clip = table.locator("..");
+    const clipBox = (await clip.boundingBox())!;
+    await expect(management).toBeVisible();
+    for (const button of await row.getByRole("button").all()) {
+      const box = (await button.boundingBox())!;
+      expect(box.x).toBeGreaterThanOrEqual(clipBox.x);
+      expect(box.x + box.width).toBeLessThanOrEqual(clipBox.x + clipBox.width);
+      await expect(button).toBeInViewport({ ratio: 1 });
+    }
+    expect(await clip.evaluate((element) => element.scrollWidth - element.clientWidth)).toBeLessThanOrEqual(1);
+    expect(await clip.evaluate((element) => element.scrollLeft)).toBe(0);
+    const identity = (await row.getByRole("button", { name: `查看订阅 ${phoneName}`, exact: true }).boundingBox())!;
+    const action = (await access.boundingBox())!;
+    if (width < 576) expect(action.y).toBeGreaterThan(identity.y + identity.height);
+    else expect(action.x).toBeGreaterThan(identity.x + identity.width);
+    expect(http.ledger.accessReads).toBe(0);
+    await page.screenshot({ path: info.outputPath(`subscription-actions-${width}.png`), fullPage: true });
+    await tabTo(page, access);
+    await expect(access).toBeFocused();
+    http.authorizeAccess();
+    await page.keyboard.press("Enter");
+    const dialog = page.getByRole("dialog", { name: `获取「${phoneName}」`, exact: true });
+    await expect(dialog).toBeVisible();
+    await expect.poll(() => http.ledger.accessReads).toBe(1);
+    await page.keyboard.press("Escape");
+    await expect(dialog).not.toBeVisible();
+    await expect(access).toBeFocused();
+    expect(await clip.evaluate((element) => element.scrollLeft)).toBe(0);
+    expect(http.ledger.reveals).toBe(0);
+    expect(http.ledger.saves).toBe(0);
+    expect(http.ledger.rejected).toEqual([]);
+    expect(http.ledger.pageErrors).toBe(0);
   });
 }

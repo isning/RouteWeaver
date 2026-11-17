@@ -62,6 +62,7 @@ function mount({ listeners = [], phase = "unregistered", relatedPath = false, no
       });
       return json(value);
     }
+    if (path === `/api/admin/nodes/${host.id}/observability`) return json({ nodeId: host.id, config: { revision: 1, observerInstanceId: "", billedInterfaces: [], provider: null }, latest: null, provider: {} });
     if (path === "/api/hosts") return json(secondHost || controls.movedCoreHostId ? [host, otherHost] : [host]);
     if (path === "/api/core-instances") return json(controls.removeCore ? [] : currentCores.map((value) => controls.movedCoreHostId ? { ...value, hostId: controls.movedCoreHostId } : value));
     if (path === "/api/managed-endpoints") {
@@ -389,3 +390,20 @@ it("does not resurrect a removed core when Back revisits its old workspace URL",
   expect(writes).toEqual([]);
 });
 
+
+ it.each([
+  ["设置采集与额度", "诊断"],
+  ["查看转发配置", "配置记录"],
+ ])("hands off overview shortcut %s to its destination tab", async (action, destination) => {
+  history.replaceState(null, "", `#servers?host=${host.id}`);
+  const { writes } = mount({ relatedPath: true });
+  const user = userEvent.setup();
+  const page = await screen.findByRole("region", { name: host.name });
+  await user.click(within(page).getByRole("button", { name: action }));
+  const tab = within(page).getByRole("tab", { name: destination });
+  expect(tab.getAttribute("aria-selected")).toBe("true");
+  expect(document.activeElement).toBe(tab);
+  await user.click(within(page).getByRole("tab", { name: "概览" }));
+  expect(document.activeElement).toBe(within(page).getByRole("tab", { name: "概览" }));
+  expect(writes).toEqual([]);
+ });

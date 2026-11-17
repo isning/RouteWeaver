@@ -8,7 +8,7 @@ const host = { id: "node", name: "Tokyo", address: "example.invalid" };
 const cores = [{ id: "one", hostId: "node", name: "Entry", adapterId: "routeweaver/xray", version: "26.3.27" }, { id: "two", hostId: "node", name: "Relay", adapterId: "routeweaver/sing-box", version: "1.14.3" }];
 const view = (instanceId = "one") => ({ instanceId, supported: true, collectionState: "recent", lastReceivedAt: "2026-11-14T07:00:00Z", events: [{ adapterId: "routeweaver/xray", version: "26.3.27", code: "listener_address_in_use", observedAt: "2026-11-14T06:59:00Z", receivedAt: "2026-11-14T07:00:00Z" }], omitted: 2, dropped: 1, retentionHours: 24, historyLimit: 128 });
 const response = (data: unknown, status = 200) => new Response(JSON.stringify(data), { status, headers: { "Content-Type": "application/json" } });
-function mount() { const client = new QueryClient({ defaultOptions: { queries: { retry: false } } }); return render(<QueryClientProvider client={client}><CoreDiagnosticsPanel host={host} instances={cores} /></QueryClientProvider>); }
+function mount(instances = cores) { const client = new QueryClient({ defaultOptions: { queries: { retry: false } } }); return render(<QueryClientProvider client={client}><CoreDiagnosticsPanel host={host} instances={instances} /></QueryClientProvider>); }
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); });
 it("shows fixed fault categories and collection limits without raw logs or export controls", async () => {
   vi.stubGlobal("fetch", vi.fn(async () => response(view())));
@@ -37,4 +37,21 @@ it("retains last records with a visible refresh error instead of claiming no fau
   await userEvent.click(screen.getByRole("button", { name: "刷新" }));
   expect(await screen.findByText("诊断记录刷新失败，以下保留上次读取的记录。")).toBeTruthy();
   expect(within(screen.getByRole("table", { name: "故障记录" })).getByText("监听地址已被占用")).toBeTruthy();
+});
+
+it("keeps the single core identity visible after receiving diagnostics", async () => {
+  vi.stubGlobal("fetch", vi.fn(async () => response(view())));
+  mount([cores[0]]);
+  await screen.findByText("监听地址已被占用");
+  expect(screen.getByText("Entry", { exact: true })).toBeTruthy();
+  expect(screen.getByText(/最近收到/)).toBeTruthy();
+});
+it("disambiguates same-name cores without changing their selected identity", async () => {
+  vi.stubGlobal("fetch", vi.fn(async (input) => response(view(String(input).includes("/two/") ? "two" : "one"))));
+  mount(cores.map(core => ({ ...core, name: "Same core" })));
+  await screen.findByText("监听地址已被占用");
+  await userEvent.click(screen.getByRole("combobox", { name: "诊断核心" }));
+  expect(screen.getByRole("option", { name: /Same core.*one/ })).toBeTruthy();
+  await userEvent.click(screen.getByRole("option", { name: /Same core.*two/ }));
+  expect(vi.mocked(fetch).mock.calls.some(([input]) => String(input).includes("/two/core-diagnostics"))).toBe(true);
 });

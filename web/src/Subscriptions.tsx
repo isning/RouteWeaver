@@ -1399,24 +1399,26 @@ export function SubscriptionsPage({
                 {visibleLinks.length > 0 && (
                   <Table
                     aria-label={`${profile?.name || "关联配置不可用"}的客户端订阅`}
-                    className="min-w-96 table-fixed"
+                    role="table"
+                    className="block min-w-0 table-fixed @min-[36rem]/configuration:table"
                   >
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="px-4">订阅</TableHead>
-                        <TableHead className="w-44 px-4 text-right @min-[36rem]/configuration:w-64">
+                    <TableHeader role="rowgroup" className="sr-only @min-[36rem]/configuration:not-sr-only @min-[36rem]/configuration:table-header-group">
+                      <TableRow role="row">
+                        <TableHead role="columnheader" scope="col" className="px-4">订阅</TableHead>
+                        <TableHead role="columnheader" scope="col" className="w-44 px-4 text-right @min-[36rem]/configuration:w-64">
                           操作
                         </TableHead>
                       </TableRow>
                     </TableHeader>
-                    <TableBody>
+                    <TableBody role="rowgroup" className="block @min-[36rem]/configuration:table-row-group">
                       {visibleLinks.map((output) => (
                         <TableRow
-                          className="subscription-client-row"
+                          role="row"
+                          className="subscription-client-row grid min-w-0 @min-[36rem]/configuration:table-row"
                           key={output.id}
                           aria-label={`客户端订阅 ${output.name}`}
                         >
-                          <TableCell className="subscription-info px-4 py-3 whitespace-normal text-muted-foreground">
+                          <TableCell role="cell" className="block min-w-0 @min-[36rem]/configuration:table-cell subscription-info px-4 py-3 whitespace-normal text-muted-foreground">
                             <ActionButton
                               className="subscription-name-button h-auto max-w-[min(100%,calc(100cqi-2rem))] justify-start whitespace-normal wrap-anywhere p-0 text-left text-sm font-medium text-foreground underline-offset-4 hover:underline focus-visible:outline-ring"
                               data-return-focus={`output:${output.id}`}
@@ -1451,8 +1453,8 @@ export function SubscriptionsPage({
                               pending={comparisons.pendingIds.has(output.id)}
                             />
                           </TableCell>
-                          <TableCell className="px-4 py-3">
-                            <div className="flex flex-wrap items-center justify-end gap-2">
+                          <TableCell role="cell" className="block min-w-0 px-4 pb-3 pt-0 @min-[36rem]/configuration:table-cell @min-[36rem]/configuration:py-3">
+                            <div className="flex flex-wrap items-center justify-start gap-2 @min-[36rem]/configuration:justify-end">
                               <ActionButton
                                 disabled={
                                   output.status === "revoked" ||

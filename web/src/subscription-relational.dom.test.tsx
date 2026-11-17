@@ -641,3 +641,17 @@ it("wraps an unbroken configuration identity instead of clipping it at the card 
   }
 });
 
+
+it("retains named table, row and cell semantics for responsive subscription actions without reading access", async () => {
+  const calls = inventory([profile], [output("phone", "Phone")]);
+  mount();
+  const table = await screen.findByRole("table", { name: "Travel configuration的客户端订阅" });
+  expect(within(table).getAllByRole("columnheader").map((cell) => cell.textContent)).toEqual(["订阅", "操作"]);
+  const row = within(table).getByRole("row", { name: "客户端订阅 Phone" });
+  const cells = within(row).getAllByRole("cell");
+  expect(cells).toHaveLength(2);
+  expect(within(cells[0]).getByRole("button", { name: "查看订阅 Phone" })).toBeTruthy();
+  expect(within(cells[1]).getByRole("button", { name: "获取订阅" })).toBeTruthy();
+  expect(within(cells[1]).getByRole("button", { name: "管理 Phone" })).toBeTruthy();
+  expect(calls.some((path) => path.endsWith("/access"))).toBe(false);
+});
