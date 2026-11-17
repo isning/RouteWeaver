@@ -11,6 +11,10 @@ const fixtures: Record<string, unknown> = {
     nodes: [], users: [], routes: [], revisions: [], capabilities: [],
     deploymentAvailable: false,
   },
+  "/templates": [{ id: "toolbar-template", name: "按名称整理节点", kind: "processing-preset", version: 1, spec: { steps: [] }, publishedAt: "2026-11-04T08:00:00Z" }],
+  "/me/template-bindings": [],
+  "/me/profiles": [],
+  "/me/collections": [],
   "/services": [],
   "/published-routes": [],
   "/settings": {},
@@ -225,3 +229,64 @@ test("an empty route inventory keeps one create action without a search", async 
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   expect(unexpected).toEqual([]);
 });
+
+for (const width of [390, 768, 1440]) {
+  test(`template quick filters keep their count nearby without a reserved empty track at ${width}px`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: 900 });
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    const unexpected = await setup(page);
+    await page.goto("/#templates");
+    const toolbar = page.getByRole("search", { name: "查找模板", exact: true });
+    const search = toolbar.getByRole("searchbox", { name: "搜索模板", exact: true });
+    const filters = toolbar.getByRole("group", { name: "模板类型", exact: true });
+    const all = filters.getByRole("button", { name: "全部", exact: true });
+    const last = filters.getByRole("button", { name: "客户端配置模板", exact: true });
+    const count = toolbar.getByText("共 1 个模板", { exact: true });
+    await expect(search).toBeVisible();
+    await expect(count).toBeVisible();
+    await toolbar.scrollIntoViewIfNeeded();
+    const bounds = (await toolbar.boundingBox())!;
+    const field = (await toolbar.locator('[data-slot="input-group"]').boundingBox())!;
+    const group = (await filters.boundingBox())!;
+    const lastBox = (await last.boundingBox())!;
+    const total = (await count.boundingBox())!;
+    await info.attach(`template-toolbar-${width}`, { body: await page.screenshot(), contentType: "image/png" });
+    await info.attach(`template-toolbar-${width}-geometry`, {
+      body: JSON.stringify({ bounds, field, group, lastBox, total }), contentType: "application/json",
+    });
+    for (const box of [field, group, total]) {
+      expect(box.x).toBeGreaterThanOrEqual(bounds.x - 1);
+      expect(box.x + box.width).toBeLessThanOrEqual(bounds.x + bounds.width + 1);
+    }
+    for (const button of await filters.getByRole("button").all()) {
+      expect((await button.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    }
+    if (width === 1440) {
+      expect(Math.abs(field.y - group.y)).toBeLessThanOrEqual(2);
+      expect(Math.abs(total.y + total.height / 2 - group.y - group.height / 2)).toBeLessThanOrEqual(2);
+      // Measure actual visible controls, not the wrapper whose empty basis caused this regression.
+      expect(total.x - (lastBox.x + lastBox.width)).toBeGreaterThanOrEqual(8);
+      expect(total.x - (lastBox.x + lastBox.width)).toBeLessThanOrEqual(24);
+    } else if (width === 390) {
+      expect(Math.abs(field.width - bounds.width)).toBeLessThanOrEqual(1);
+      expect(group.y).toBeGreaterThanOrEqual(field.y + field.height);
+      expect(total.y).toBeGreaterThanOrEqual(group.y + group.height);
+    }
+    expect(await toolbar.evaluate(el => el.scrollWidth <= el.clientWidth + 1)).toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    // Follow native keyboard order through search reset into the quick filters.
+    await search.fill("整理");
+    await search.press("Tab");
+    const clear = toolbar.getByRole("button", { name: "清除搜索输入", exact: true });
+    await expect(clear).toBeFocused();
+    await clear.press("Enter");
+    await expect(search).toBeFocused();
+    await search.press("Tab");
+    await expect(all).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(filters.getByRole("button", { name: "节点处理预设", exact: true })).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(last).toBeFocused();
+    expect(unexpected).toEqual([]);
+  });
+}

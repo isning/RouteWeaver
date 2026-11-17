@@ -34,7 +34,10 @@ export function SearchField({ value, onValueChange, className, ref, disabled, ..
  * Keep search at a readable desktop measure, with its count nearby rather
  * than stranded at the far edge (§3.3/§3.6). Narrow layouts use the whole row;
  * search yields some width to filters before either needs another row. Selected
- * chips stay below their filter without moving peers. Touch sizing is preserved.
+ * chips stay below their filter without moving peers. Filter groups size to
+ * their content unless they contain labeled fields, which retain a 32rem
+ * basis for usable multi-select widths. Short choices do not reserve that
+ * empty track before the count. Touch sizing is preserved.
  */
 export function ResourceToolbar({ label, search, filters, summary, className }: {
   label: string;
@@ -45,13 +48,13 @@ export function ResourceToolbar({ label, search, filters, summary, className }: 
 }) {
   return <div role="search" aria-label={label} className={cn("list-toolbar flex min-w-0 flex-wrap items-start gap-3", className)}>
     <div className="w-full min-w-0 sm:max-w-80 sm:flex-[1_1_16rem]">{search}</div>
-    {filters && <div className="flex min-w-0 max-w-full flex-[0_1_32rem] flex-wrap items-start gap-3">{filters}</div>}
+    {filters && <div className="flex min-w-0 max-w-[min(100%,32rem)] flex-[0_1_auto] has-[[data-slot=toolbar-filter]]:basis-[32rem] flex-wrap items-start gap-3">{filters}</div>}
     {summary && <div className="min-w-0 text-sm leading-relaxed text-muted-foreground sm:self-center">{summary}</div>}
   </div>;
 }
 
 export function ToolbarFilter({ label, controlId, children }: { label: string; controlId: string; children: ReactNode }) {
-  return <div className="grid min-w-0 flex-1 basis-40 gap-1.5 text-sm font-medium sm:grid-cols-[auto_minmax(0,1fr)] sm:gap-2">
+  return <div data-slot="toolbar-filter" className="grid min-w-0 flex-1 basis-40 gap-1.5 text-sm font-medium sm:grid-cols-[auto_minmax(0,1fr)] sm:gap-2">
     <label htmlFor={controlId} className="sm:flex sm:min-h-11 sm:items-center sm:self-start">{label}</label>
     <div className="min-w-0">{children}</div>
   </div>;

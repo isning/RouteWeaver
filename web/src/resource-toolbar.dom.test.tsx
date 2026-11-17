@@ -86,3 +86,25 @@ it("uses one exclusive quick-filter state and never submits its surrounding form
   expect(all.getAttribute("data-variant")).toBe("ghost");
   expect(submit).not.toHaveBeenCalled();
 });
+
+// Structure contract only: browser tests own widths, wrapping and geometry.
+it("marks labeled fields without marking compact choices as field layouts", () => {
+  const search = <SearchField aria-label="搜索" value="" onValueChange={() => {}} />;
+  const { rerender } = render(<ResourceToolbar label="结构检查" search={search} filters={<>
+    <ToolbarFilter label="分组" controlId="layout-group"><select id="layout-group"><option>全部分组</option></select></ToolbarFilter>
+    <ToolbarFilter label="标签" controlId="layout-tag"><select id="layout-tag"><option>全部标签</option></select></ToolbarFilter>
+  </>} />);
+  const toolbar = screen.getByRole("search", { name: "结构检查" });
+  const fields = toolbar.querySelectorAll('[data-slot="toolbar-filter"]');
+  expect(fields).toHaveLength(2);
+  expect(fields[0].parentElement).toBe(fields[1].parentElement);
+  expect(fields[0].parentElement?.parentElement).toBe(toolbar);
+  expect(within(fields[0] as HTMLElement).getByRole("combobox", { name: "分组" })).toBeTruthy();
+  expect(within(fields[1] as HTMLElement).getByRole("combobox", { name: "标签" })).toBeTruthy();
+  rerender(<ResourceToolbar label="结构检查" search={search} filters={<QuickFilters label="状态" value="all" onValueChange={() => {}} options={[{ value: "all", label: "全部" }]} />} />);
+  expect(toolbar.querySelector('[data-slot="toolbar-filter"]')).toBeNull();
+  expect(within(toolbar).getByRole("button", { name: "全部" })).toBeTruthy();
+  rerender(<ResourceToolbar label="结构检查" search={search} filters={<button type="button">刷新</button>} />);
+  expect(toolbar.querySelector('[data-slot="toolbar-filter"]')).toBeNull();
+  expect(within(toolbar).getByRole("button", { name: "刷新" })).toBeTruthy();
+});
