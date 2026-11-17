@@ -1,3 +1,5 @@
+import { ResourceToolbar, SearchField } from "@/ui-patterns/resource-toolbar";
+import { ItemCount } from "@/ui-patterns/item-count";
 import { ScrollableTabsList } from "@/ui-patterns/scrollable-tabs-list";
 import { InventoryEditor, type InventoryEditTask } from "./InventoryEditor";
 import { loadInfrastructure, coreName } from "./infrastructure-data";
@@ -133,6 +135,9 @@ export function ServersPage() {
   };
   const query = useQuery({ queryKey: ["infrastructure"], queryFn: loadInfrastructure });
   const [tab, setTab] = useState<InventoryEditTask["kind"]>("hosts");
+  const [searches, setSearches] = useState({ hosts: "", "core-instances": "", "managed-endpoints": "" });
+  const [pages, setPages] = useState({ "core-instances": 1, "managed-endpoints": 1 });
+  const inventorySearch = useRef<HTMLInputElement>(null);
   const [entity, setEntity] = useState<InventoryEditTask | null>(null);
   const [host, setHost] = useState<HostRecord | null>(null);
   const [instance, setInstance] = useState<CoreInstance | null>(null);
@@ -171,6 +176,31 @@ export function ServersPage() {
     instances: [...query.data.instances, ...createdCores.filter((created) => !query.data!.instances.some((saved) => saved.id === created.id))],
     endpoints: [...query.data.endpoints.filter((endpoint) => !savedListeners.some((saved) => saved.id === endpoint.id)), ...savedListeners],
   }, [query.data, createdHosts, createdCores, savedListeners]);
+  const term = (kind: InventoryEditTask["kind"]) => searches[kind].trim().toLowerCase();
+  const visibleHosts = (data?.hosts || []).filter(value =>
+    `${value.name} ${value.address}`.toLowerCase().includes(term("hosts")));
+  const visibleInstances = (data?.instances || []).filter(value =>
+    `${coreName(value)} ${data?.hosts.find(h => h.id === value.hostId)?.name || ""} ${value.version}`.toLowerCase().includes(term("core-instances")));
+  const visibleEndpoints = (data?.endpoints || []).filter(value => {
+    const core = data?.instances.find(i => i.id === value.instanceId);
+    return `${value.name} ${coreName(core)} ${data?.hosts.find(h => h.id === core?.hostId)?.name || ""} ${value.connection.host}:${value.connection.port} ${value.connection.protocol}`
+      .toLowerCase().includes(term("managed-endpoints"));
+  });
+  useEffect(() => {
+    setPages(current => {
+      const cores = Math.min(current["core-instances"], Math.max(1, Math.ceil(visibleInstances.length / 10)));
+      const endpoints = Math.min(current["managed-endpoints"], Math.max(1, Math.ceil(visibleEndpoints.length / 10)));
+      return cores === current["core-instances"] && endpoints === current["managed-endpoints"] ? current :
+        { "core-instances": cores, "managed-endpoints": endpoints };
+    });
+  }, [visibleInstances.length, visibleEndpoints.length]);
+  const changeSearch = (value: string) => {
+    setSearches(current => ({ ...current, [tab]: value }));
+    if (tab !== "hosts") setPages(current => ({ ...current, [tab]: 1 }));
+  };
+  const searchEmpty = (name: string) => <EmptyState title={`没有匹配的${name}`} action={
+    <ActionButton variant="outline" onClick={() => { changeSearch(""); inventorySearch.current?.focus(); }}>清除搜索</ActionButton>
+  } />;
   useLayoutEffect(() => {
     // Only a completed authoritative inventory can revoke this page's owner.
     // Keep the task and any issued token mounted; block new scoped operations.
@@ -301,7 +331,7 @@ export function ServersPage() {
       ? (hostResumeAction.current && hostActions.current.get(hostResumeAction.current)) ||
         (section === "cores" && instance ? coreHeading.current : workspaceHeading.current)
       : (pageOpener.current?.hostId ? listActions.current.get(`host:${pageOpener.current.hostId}`) :
-        pageOpener.current?.instanceId ? listActions.current.get(`instance:${pageOpener.current.instanceId}`) : null) || pageCreateAction.current;
+        pageOpener.current?.instanceId ? listActions.current.get(`instance:${pageOpener.current.instanceId}`) : null) || inventorySearch.current || pageCreateAction.current;
     hostResumeAction.current = null;
     queueMicrotask(() => {
       if (!document.querySelector('[data-task-overlay][data-state="open"]') && target?.isConnected)
@@ -459,10 +489,20 @@ export function ServersPage() {
                   value={"managed-endpoints"}
                 >{`监听端点 ${data.endpoints.length}`}</TabsTrigger>
               </ScrollableTabsList>
+              {(tab === "hosts" ? data.hosts.length : tab === "core-instances" ? data.instances.length : data.endpoints.length) > 0 && (
+                <ResourceToolbar label={`查找${tab === "hosts" ? "服务器" : tab === "core-instances" ? "核心实例" : "监听端点"}`}
+                  search={<SearchField ref={inventorySearch} type="search"
+                    aria-label={`搜索${tab === "hosts" ? "服务器" : tab === "core-instances" ? "核心实例" : "监听端点"}`}
+                    placeholder={tab === "hosts" ? "搜索名称或地址" : tab === "core-instances" ? "搜索名称、服务器或版本" : "搜索名称、服务器、地址或协议"}
+                    value={searches[tab]} onValueChange={changeSearch} />}
+                  summary={tab === "hosts" ? <ItemCount total={data.hosts.length} unit="台服务器"
+                    matched={term("hosts") ? visibleHosts.length : undefined} /> : undefined}
+                />
+              )}
               <TabsContent key={"hosts"} value={"hosts"}>
-                {data.hosts.length ? (
+                {data.hosts.length ? (visibleHosts.length ?
                   <div className="server-grid grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                    {data.hosts.map((value) => {
+                    {visibleHosts.map((value) => {
                       const cores = data.instances.filter((core) => core.hostId === value.id);
                       const listeners = data.endpoints.filter((endpoint) => cores.some((core) => core.id === endpoint.instanceId));
                       const paths = data.deployments.filter((deployment) => deployment.ir.programs.some((program) => program.instance.hostId === value.id));
@@ -508,7 +548,7 @@ export function ServersPage() {
                         </CardContent>
                       </Card>
                     ); })}
-                  </div>
+                  </div> : searchEmpty("服务器")
                 ) : (
                   <EmptyState
                     title="暂无服务器"
@@ -527,8 +567,11 @@ export function ServersPage() {
                 {data.instances.length ? (
                   <DataTable
                     rowKey="id"
-                    rows={data.instances}
-                    count={{ total: data.instances.length, unit: "个核心实例" }}
+                    rows={visibleInstances}
+                    page={pages["core-instances"]}
+                    onPageChange={page => setPages(current => ({ ...current, "core-instances": page }))}
+                    empty={searchEmpty("核心实例")}
+                    count={{ total: data.instances.length, unit: "个核心实例", filtered: !!term("core-instances") }}
                     minWidth={650}
                     columns={[
                       {
@@ -599,8 +642,11 @@ export function ServersPage() {
                 {data.endpoints.length ? (
                   <DataTable
                     rowKey="id"
-                    rows={data.endpoints}
-                    count={{ total: data.endpoints.length, unit: "个端点" }}
+                    rows={visibleEndpoints}
+                    page={pages["managed-endpoints"]}
+                    onPageChange={page => setPages(current => ({ ...current, "managed-endpoints": page }))}
+                    empty={searchEmpty("监听端点")}
+                    count={{ total: data.endpoints.length, unit: "个端点", filtered: !!term("managed-endpoints") }}
                     minWidth={680}
                     columns={[
                       { title: "\u7AEF\u70B9", accessor: "name" },

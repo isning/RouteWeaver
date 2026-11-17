@@ -1,3 +1,5 @@
+import { ResourceToolbar, SearchField, ToolbarFilter } from "@/ui-patterns/resource-toolbar";
+import { ChoiceSelect } from "@/ui-patterns/choice-select";
 import { Metadata } from "@/ui-patterns/metadata";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { PageNavigation } from "@/ui-patterns/page-navigation";
@@ -628,6 +630,25 @@ export function UserGroups({ users, services, routes, }: {
     const [editing, setEditing] = useState<{
         initial: UserGroup | null;
     } | null>(null);
+    const [search, setSearch] = useState("");
+    const [serviceFilter, setServiceFilter] = useState<string | null>(null);
+    const [page, setPage] = useState(1);
+    const searchInput = useRef<HTMLInputElement>(null);
+    const filterId = useId();
+    const serviceName = (id: string) => services.find(service => service.id === id)?.name || id;
+    const searchTerm = search.trim().toLowerCase();
+    const visibleGroups = (query.data || []).filter(group =>
+        (serviceFilter === null || group.serviceId === serviceFilter) &&
+        (!searchTerm || [group.name, serviceName(group.serviceId)].some(value => value.toLowerCase().includes(searchTerm))));
+    // Preserve references absent from the current service catalog, including
+    // an active filter whose last matching group disappears after refresh.
+    const serviceIds = Array.from(new Set([...services.map(service => service.id), ...(query.data || []).map(group => group.serviceId), ...(serviceFilter === null ? [] : [serviceFilter])]));
+    useLayoutEffect(() => {
+        setPage(current => Math.min(current, Math.max(1, Math.ceil(visibleGroups.length / 10))));
+    }, [visibleGroups.length]);
+    const clearFilters = () => {
+        setSearch(""); setServiceFilter(null); setPage(1); searchInput.current?.focus();
+    };
     const inventoryKnown = query.data !== undefined;
     return (<Section variant="plain" title="用户组" description="以组分配服务方案；个人指定方案优先，多组按优先级选定一个方案及其额度。" extra={<div className="flex flex-wrap gap-2">
         {inventoryKnown && <ActionButton className="scroll-m-1" onClick={() => void query.refetch({ cancelRefetch: false })}
@@ -642,7 +663,16 @@ export function UserGroups({ users, services, routes, }: {
         {query.isPaused ? "等待网络连接后刷新用户组。" : "正在刷新用户组…"}
       </p>}
       <QueryState loading={query.isPending} paused={query.isPaused} loadingLayout="table" error={inventoryKnown ? null : query.error} retry={() => query.refetch()}>
-        {query.data?.length ? (<DataTable rowKey="id" rows={query.data} columns={[
+        {query.data?.length ? (<>
+          <ResourceToolbar label="查找用户组" search={<SearchField ref={searchInput} type="search" aria-label="搜索用户组" placeholder="搜索组名或方案名" value={search} onValueChange={value => { setSearch(value); setPage(1); }} />}
+            filters={<ToolbarFilter label="服务方案" controlId={filterId}>
+              <ChoiceSelect id={filterId} aria-label="筛选用户组服务方案" value={serviceFilter === null ? "all" : `service:${serviceFilter}`} onValueChange={value => { setServiceFilter(!value || value === "all" ? null : value.slice(8)); setPage(1); }}
+                options={[{ value: "all", label: "全部方案" }, ...serviceIds.map(id => ({ value: `service:${id}`, label: serviceName(id) || "无方案" }))]} />
+            </ToolbarFilter>} />
+          <DataTable rowKey="id" rows={visibleGroups} page={page} onPageChange={setPage}
+            count={{ total: query.data.length, unit: "个用户组", filtered: !!searchTerm || serviceFilter !== null }}
+            empty={<EmptyState title="没有匹配的用户组" action={<ActionButton variant="outline" onClick={clearFilters}>清除筛选</ActionButton>} />}
+            columns={[
                 { title: "用户组", accessor: "name" },
                 {
                     title: "服务方案",
@@ -660,8 +690,8 @@ export function UserGroups({ users, services, routes, }: {
                     </ActionButton>
                   </TableRowActions>),
                 },
-            ]} minWidth={560}/>) : query.isSuccess && query.fetchStatus === "idle" ? (<p className="rounded-lg border border-dashed px-4 py-3 text-sm text-muted-foreground">暂无用户组</p>) : null}
+            ]} minWidth={560}/></>) : query.isSuccess && query.fetchStatus === "idle" ? (<p className="rounded-lg border border-dashed px-4 py-3 text-sm text-muted-foreground">暂无用户组</p>) : null}
       </QueryState>
-      {editing && (<GroupPolicyEditor key={editing.initial?.id || "create"} initial={editing.initial} users={users} services={services} routes={routes} onClose={() => setEditing(null)}/>)}
+      {editing && (<GroupPolicyEditor returnFocusFallback={() => searchInput.current} key={editing.initial?.id || "create"} initial={editing.initial} users={users} services={services} routes={routes} onClose={() => setEditing(null)}/>)}
     </Section>);
 }

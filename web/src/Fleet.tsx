@@ -111,6 +111,24 @@ export function FleetPage({
   });
   const [creating, setCreating] = useState(false),
     [selected, setSelected] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState<string>();
+  const [page, setPage] = useState(1);
+  const searchInput = useRef<HTMLInputElement>(null);
+  const statusId = useId();
+  const searchTerm = search.trim().toLowerCase();
+  const visibleHistory = (history.data || []).filter(batch => {
+    const path = infrastructure.data?.deployments.find(d => d.id === batch.deploymentId);
+    return (status === undefined || batch.status === status) &&
+      [fleetActionLabel[batch.action] || batch.action, path?.name, batch.deploymentId, batch.id]
+        .some(value => value?.toLowerCase().includes(searchTerm));
+  });
+  useEffect(() => {
+    setPage(current => Math.min(current, Math.max(1, Math.ceil(visibleHistory.length / 10))));
+  }, [visibleHistory.length]);
+  const clearFilters = () => {
+    setSearch(""); setStatus(undefined); setPage(1); searchInput.current?.focus();
+  };
   return (
     <>
       <PageHeader
@@ -142,10 +160,27 @@ export function FleetPage({
         }}
       >
         <Section title="变更历史" variant="plain">
+          {!!history.data?.length && <ResourceToolbar label="查找执行任务"
+            search={<SearchField ref={searchInput} type="search" aria-label="搜索执行任务"
+              placeholder="搜索任务、转发路径或 ID" value={search}
+              onValueChange={value => { setSearch(value); setPage(1); }} />}
+            filters={<ToolbarFilter label="任务状态" controlId={statusId}>
+              <ChoiceSelect id={statusId} aria-label="筛选任务状态" searchable={false}
+                value={status === undefined ? "all" : `status:${status}`}
+                options={[{ value: "all", label: "全部状态" }, ...Array.from(new Set([...(history.data?.map(batch => batch.status) || []), ...(status === undefined ? [] : [status])])).map(value => ({
+                  value: `status:${value}`, label: fleetStatus(value),
+                }))]}
+                onValueChange={value => { setStatus(value?.startsWith("status:") ? value.slice(7) : undefined); setPage(1); }} />
+            </ToolbarFilter>} />}
           {history.data?.length ? (
             <DataTable
               rowKey="id"
-              rows={history.data}
+              rows={visibleHistory}
+              page={page} onPageChange={setPage}
+              count={{ total: history.data.length, unit: "个任务", filtered: !!searchTerm || status !== undefined }}
+              empty={<EmptyState title="没有匹配的执行任务" action={
+                <ActionButton variant="outline" onClick={clearFilters}>清除筛选</ActionButton>
+              } />}
               minWidth={650}
               columns={[
                 {
@@ -155,7 +190,7 @@ export function FleetPage({
                       className="table-name inline-flex min-w-0 items-center gap-2 rounded-sm text-left text-sm font-medium text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       onClick={() => setSelected(b.id)}
                     >
-                      {fleetActionLabel[b.action]}
+                      {fleetActionLabel[b.action] || b.action}
                     </button>
                   ),
                 },
@@ -215,7 +250,7 @@ export function FleetPage({
         />
       )}
       {selected && (
-        <FleetBatchDetail id={selected} onClose={() => setSelected(null)} />
+        <FleetBatchDetail id={selected} onClose={() => setSelected(null)} returnFocusFallback={() => searchInput.current} />
       )}
     </>
   );
@@ -275,6 +310,7 @@ export function FleetPlanForm({
   const [group, setGroup] = useState<string>(),
     [tags, setTags] = useState<string[]>([]),
     [search, setSearch] = useState("");
+  const [instancePage, setInstancePage] = useState(1);
   const filterId = useId();
   const instanceSearch = useRef<HTMLInputElement>(null);
   const [review, setReview] = useState<{
@@ -339,9 +375,13 @@ export function FleetPlanForm({
       tags.every((tag) => host?.tags?.includes(tag)) &&
       `${coreName(i)} ${host?.name || ""}`
         .toLowerCase()
-        .includes(search.toLowerCase())
+        .includes(search.trim().toLowerCase())
     );
   });
+  useEffect(() => { setInstancePage(1); }, [search, group, tags, deploymentId]);
+  useEffect(() => {
+    setInstancePage(current => Math.min(current, Math.max(1, Math.ceil(visible.length / 8))));
+  }, [visible.length]);
   const input = (): FleetInput => ({
     action,
     deploymentId,
@@ -920,6 +960,7 @@ export function FleetPlanForm({
               <DataTable
                 rowKey="id"
                 rows={visible}
+                page={instancePage} onPageChange={setInstancePage}
                 empty={
                   <div className="space-y-3 py-2">
                     <p>没有匹配的实例</p>
@@ -939,7 +980,7 @@ export function FleetPlanForm({
                 count={{
                   total: instances.length,
                   unit: "个可选实例",
-                  filtered: !!search || !!group || tags.length > 0,
+                  filtered: !!search.trim() || !!group || tags.length > 0,
                 }}
                 minWidth={520}
                 pageSize={8}
@@ -1325,9 +1366,11 @@ function stageFeedback(targets: FleetTarget[]): string {
 export function FleetBatchDetail({
   id,
   onClose,
+  returnFocusFallback,
 }: {
   id: string;
   onClose: () => void;
+  returnFocusFallback?: () => HTMLElement | null;
 }) {
   const client = useQueryClient(),
     confirm = useConfirm();
@@ -1421,6 +1464,7 @@ export function FleetBatchDetail({
   };
   return (
     <TaskSheet
+      returnFocusFallback={returnFocusFallback}
       bodyProps={{ className: "space-y-5" }}
       title="批量变更进度"
       open

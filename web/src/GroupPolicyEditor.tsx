@@ -35,6 +35,7 @@ type Props = {
     routes: NamedRecord[];
     onClose: () => void;
     returnFocus?: HTMLElement | null;
+    returnFocusFallback?: () => HTMLElement | null;
 };
 const newGroup = (id: string): UserGroup => ({ id, name: "", serviceId: "", priority: 0, memberIds: [] });
 const priorityError = "请输入有效的 32 位整数优先级";
@@ -120,7 +121,7 @@ function GroupEditSession({ id, seed, retained: initialRetained, restartCreation
         return () => { current = false; controller.abort(); };
     }, [id, attempt]);
     if (!context)
-        return <TaskSheet returnFocus={props.returnFocus} title={props.initial ? `编辑 ${props.initial.name}` : "新建用户组"} open onOpenChange={open => {
+        return <TaskSheet returnFocus={props.returnFocus} returnFocusFallback={props.returnFocusFallback} title={props.initial ? `编辑 ${props.initial.name}` : "新建用户组"} open onOpenChange={open => {
                 if (!open)
                     (closeLoading)();
             }} size="lg" bodyProps={{ className: "space-y-6" }}>
@@ -207,7 +208,7 @@ function GroupPolicyDraft({ context, seed, retained, discardRetained, acceptLate
             }
         });
     };
-    return <TaskSheet returnFocus={props.returnFocus} title={context.precondition.exists ? `编辑 ${value.name}` : "新建用户组"} open onOpenChange={open => {
+    return <TaskSheet returnFocus={props.returnFocus} returnFocusFallback={props.returnFocusFallback} title={context.precondition.exists ? `编辑 ${value.name}` : "新建用户组"} open onOpenChange={open => {
             if (!open)
                 (policy.requestClose)();
         }} pending={!(!policy.closingBlocked)} size="lg" bodyProps={{ className: "space-y-6" }}>

@@ -182,6 +182,7 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
   const client = useQueryClient();
   const message = toast;
   const [search, setSearch] = useState("");
+  const [inventoryPage, setInventoryPage] = useState(1);
   const inventorySearch = useRef<HTMLInputElement>(null);
   // Each mounted page visit owns its completed-action destination, including
   // when navigation leaves and returns before an older deletion finishes.
@@ -356,6 +357,7 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
           });
   const clearSearch = () => {
     setSearch("");
+    setInventoryPage(1);
     inventorySearch.current?.focus();
   };
   const searchEmpty = search ? (
@@ -423,8 +425,16 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
   const nodes = data?.nodes || [];
   const users = data?.users || [];
   const routes = data?.routes || [];
-  const match = (name: string) =>
-    name.toLowerCase().includes(search.toLowerCase());
+  const searchTerm = search.trim().toLowerCase();
+  const match = (name: string) => name.toLowerCase().includes(searchTerm);
+  const matchingInventoryCount = (
+    page === "routes" ? routes : page === "nodes" ? nodes :
+      page === "users" ? users : page === "services" ? data?.services || [] : []
+  ).filter(record => match(record.name)).length;
+  useLayoutEffect(() => { setInventoryPage(1); }, [page]);
+  useLayoutEffect(() => {
+    setInventoryPage(current => Math.min(current, Math.max(1, Math.ceil(matchingInventoryCount / 10))));
+  }, [matchingInventoryCount]);
   if (page === "settings") {
     const readNotice =
       settingsQuery.error && settingsQuery.data ? (
@@ -577,7 +587,7 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
                       ref={inventorySearch}
                       placeholder={`搜索${meta.title}`}
                       value={search}
-                      onValueChange={setSearch}
+                      onValueChange={value => { setSearch(value); setInventoryPage(1); }}
                       aria-label={`搜索${meta.title}`}
                     />
                   }
@@ -585,9 +595,10 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
                 {page === "routes" &&
                   (routes.length ? (
                     <DataTable<RouteRecord>
+                      page={inventoryPage} onPageChange={setInventoryPage}
                       rowKey="id"
                       rows={routes.filter((r) => match(r.name))}
-                      count={{ total: routes.length, unit: "条链路配置", filtered: !!search }}
+                      count={{ total: routes.length, unit: "条链路配置", filtered: !!searchTerm }}
                       columns={[
                         {
                           title: "链路配置",
@@ -701,9 +712,10 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
                 {page === "nodes" &&
                   (nodes.length ? (
                     <DataTable<NodeRecord>
+                      page={inventoryPage} onPageChange={setInventoryPage}
                       rowKey="id"
                       rows={nodes.filter((n) => match(n.name))}
-                      count={{ total: nodes.length, unit: "个连接端点", filtered: !!search }}
+                      count={{ total: nodes.length, unit: "个连接端点", filtered: !!searchTerm }}
                       columns={[
                         {
                           title: "端点",
@@ -789,9 +801,10 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
                 {page === "users" &&
                   (users.length ? (
                     <DataTable<UserRecord>
+                      page={inventoryPage} onPageChange={setInventoryPage}
                       rowKey="id"
                       rows={users.filter((u) => match(u.name))}
-                      count={{ total: users.length, unit: "位用户", filtered: !!search }}
+                      count={{ total: users.length, unit: "位用户", filtered: !!searchTerm }}
                       columns={[
                         {
                           title: "用户",
@@ -892,9 +905,10 @@ export function AdminPage({ page: selectedPage }: { page: Page }) {
                 {page === "services" &&
                   ((data.services || []).length ? (
                     <DataTable<Service>
+                      page={inventoryPage} onPageChange={setInventoryPage}
                       rowKey="id"
                       rows={(data.services || []).filter((s) => match(s.name))}
-                      count={{ total: data.services.length, unit: "个服务方案", filtered: !!search }}
+                      count={{ total: data.services.length, unit: "个服务方案", filtered: !!searchTerm }}
                       columns={[
                         { title: "服务方案", accessor: "name" },
                         {
