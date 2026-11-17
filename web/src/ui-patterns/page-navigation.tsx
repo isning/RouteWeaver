@@ -1,4 +1,9 @@
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Metadata } from "@/ui-patterns/metadata";
 export function PageNavigation({
@@ -26,26 +31,52 @@ export function PageNavigation({
           第 {page} / {pages} 页
         </span>
       </Metadata>
-      <Button
-        type="button"
-        variant="outline"
-        size="icon-sm"
-        aria-label="上一页"
-        disabled={page <= 1}
-        onClick={() => onPageChange(page - 1)}
-      >
-        <ChevronLeft />
-      </Button>
-      <Button
-        type="button"
-        variant="outline"
-        size="icon-sm"
-        aria-label="下一页"
-        disabled={page >= pages}
-        onClick={() => onPageChange(page + 1)}
-      >
-        <ChevronRight />
-      </Button>
+      <div className="flex items-center gap-2">
+        {pages > 2 && (
+          <Button
+            type="button"
+            variant="outline"
+            size="icon-sm"
+            aria-label="第一页"
+            disabled={page <= 1}
+            onClick={() => onPageChange(1)}
+          >
+            <ChevronsLeft aria-hidden="true" />
+          </Button>
+        )}
+        <Button
+          type="button"
+          variant="outline"
+          size="icon-sm"
+          aria-label="上一页"
+          disabled={page <= 1}
+          onClick={() => onPageChange(page - 1)}
+        >
+          <ChevronLeft />
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="icon-sm"
+          aria-label="下一页"
+          disabled={page >= pages}
+          onClick={() => onPageChange(page + 1)}
+        >
+          <ChevronRight />
+        </Button>
+        {pages > 2 && (
+          <Button
+            type="button"
+            variant="outline"
+            size="icon-sm"
+            aria-label="最后一页"
+            disabled={page >= pages}
+            onClick={() => onPageChange(pages)}
+          >
+            <ChevronsRight aria-hidden="true" />
+          </Button>
+        )}
+      </div>
     </nav>
   );
 }
