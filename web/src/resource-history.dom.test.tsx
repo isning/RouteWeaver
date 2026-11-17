@@ -290,3 +290,24 @@ it("keeps keyboard inspection visible when the mouse leaves and closes on blur",
   fireEvent.blur(slider, { relatedTarget: document.body });
   expect(screen.queryByRole("tooltip")).toBeNull();
 });
+it("keeps a readable sample selected when the rolling history expires the inspected point", async () => {
+  const { act, fireEvent, waitFor } = await import("@testing-library/react");
+  const data = fixture();
+  vi.stubGlobal("fetch", vi.fn(async () => response(data)));
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  render(<QueryClientProvider client={client}><ResourceHistory nodeId="host" /></QueryClientProvider>);
+  const slider = await screen.findByRole("slider", { name: "计费网卡流量采样时间" });
+  fireEvent.focus(slider);
+  expect(screen.getByText("0 B/s (0 B/s)")).toBeTruthy();
+  await act(async () => {
+    client.setQueryData(["node-resource-history", "host", "24h"], {
+      ...data, points: [data.points[1]],
+    });
+  });
+  await waitFor(() => expect(slider.getAttribute("aria-valuetext")).toContain("接收 1 KiB/s (1,024 B/s)"));
+  expect(screen.queryByRole("tooltip")).toBeNull();
+  fireEvent.blur(slider);
+  fireEvent.focus(slider);
+  expect(screen.getByText("1 KiB/s (1,024 B/s)")).toBeTruthy();
+  client.clear();
+});

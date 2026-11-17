@@ -45,8 +45,15 @@ function Series({ points, fields, maximum, start, end, interval, windowLabel, ti
     document.addEventListener("pointerdown", dismiss);
     return () => document.removeEventListener("pointerdown", dismiss);
   }, []);
-  const selectedIndex = Math.max(0, points.findIndex(p => p.observedAt === selectedAt));
-  const selected = selectedAt ? points.find(point => point.observedAt === selectedAt) : points[0];
+  const inspectedIndex = points.findIndex(p => p.observedAt === selectedAt);
+  const selectedIndex = Math.max(0, inspectedIndex);
+  const selected = points[selectedIndex];
+  // The retained window rolls forward independently of keyboard inspection.
+  // Expire its tooltip with the removed sample, not the slider's readable value.
+  if (selectedAt && inspectedIndex < 0) {
+    setSelectedAt(undefined);
+    setAnchor(undefined);
+  }
   const selectAtPointer = (event: React.PointerEvent<SVGSVGElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
     if (!rect.width) return;
