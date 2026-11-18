@@ -14,7 +14,7 @@ export function PlatformSettingsTabList({
   disabled?: boolean;
 }) {
   return (
-    <ScrollableTabsList variant="line">
+    <ScrollableTabsList aria-label="平台设置分类">
       {platformSettingsTabs.map((tab) => (
         <TabsTrigger key={tab.key} value={tab.key} disabled={disabled}>
           {tab.label}

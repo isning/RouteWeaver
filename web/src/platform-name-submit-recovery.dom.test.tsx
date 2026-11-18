@@ -145,7 +145,7 @@ it("returns an invalid name save to its retained field in the actual settings wo
   await user.click(await screen.findByRole("button", { name: "编辑平台名称" }));
   const form = within(screen.getByRole("form", { name: "平台基本设置" }));
   const name = form.getByRole("textbox", { name: "平台名称" });
-  const domain = screen.getByRole("textbox", { name: "订阅域名草稿" });
+  const domain = screen.getByRole("textbox", { name: "订阅链接模板" });
   fireEvent.change(domain, { target: { value: "https://draft.example.test" } });
   await user.clear(name);
   await user.click(form.getByRole("button", { name: "保存设置" }));
@@ -182,7 +182,7 @@ it("cancels invalid name edits and reopens the accepted name without discarding 
   const edit = await screen.findByRole("button", { name: "编辑平台名称" });
   await user.click(edit);
   const name = screen.getByRole("textbox", { name: "平台名称" });
-  const domain = screen.getByRole("textbox", { name: "订阅域名草稿" });
+  const domain = screen.getByRole("textbox", { name: "订阅链接模板" });
   fireEvent.change(domain, { target: { value: "https://draft.example.test" } });
   await user.clear(name);
   await user.click(screen.getByRole("button", { name: "保存设置" }));
@@ -220,7 +220,7 @@ it("keeps a newer draft and domain focus when an earlier name save finishes", as
     true,
   );
   fireEvent.change(name, { target: { value: "Newer draft" } });
-  const domain = screen.getByRole("textbox", { name: "订阅域名草稿" });
+  const domain = screen.getByRole("textbox", { name: "订阅链接模板" });
   await user.click(domain);
   await act(async () => finish(json(writes[0].body)));
   await screen.findByText("提交的设置已保存，当前修改尚未保存");
@@ -246,7 +246,7 @@ it.each(["domain", "backup"] as const)(
     const save = screen.getByRole("button", { name: "保存设置" });
     const next =
       destination === "domain"
-        ? screen.getByRole("textbox", { name: "订阅域名草稿" })
+        ? screen.getByRole("textbox", { name: "订阅链接模板" })
         : screen.getByRole("tab", { name: "备份与恢复" });
     act(() => {
       save.focus();
@@ -295,7 +295,7 @@ it.each([
       value: reveal,
     });
     // Ordinary focus on the valid name must not reposition the page.
-    await user.click(screen.getByRole("textbox", { name: "订阅域名草稿" }));
+    await user.click(screen.getByRole("textbox", { name: "订阅链接模板" }));
     await user.click(name);
     expect(reveal).not.toHaveBeenCalled();
     await user.clear(name);
@@ -312,3 +312,42 @@ it.each([
     else expect(reveal).not.toHaveBeenCalled();
   },
 );
+
+it("saves timezone and registration independently without changing other settings", async()=>{
+ const {writes}=mount(async body=>json(body));
+ const user=userEvent.setup();
+ await user.click(await screen.findByRole("button",{name:"修改时区"}));
+ const form=within(screen.getByRole("form",{name:"平台基本设置"}));
+ await user.click(form.getByRole("combobox",{name:"默认时区"}));
+ await user.click(await screen.findByRole("option",{name:"纽约（America/New_York）"}));
+ expect(form.queryByRole("combobox",{name:"账号注册"})).toBeNull();
+ await user.click(form.getByRole("button",{name:"保存设置"}));
+ await form.findByText("平台设置已保存");
+ expect(writes[0].body).toMatchObject({timezone:"America/New_York",registration:"invite"});
+ await user.click(screen.getByRole("button",{name:"修改注册方式"}));
+ expect(form.queryByRole("combobox",{name:"默认时区"})).toBeNull();
+ await user.click(form.getByRole("combobox",{name:"账号注册"}));
+ await user.click(await screen.findByRole("option",{name:"关闭注册"}));
+ await user.click(form.getByRole("button",{name:"保存设置"}));
+ await form.findByText("平台设置已保存");
+ expect(writes.at(-1)?.body).toMatchObject({timezone:"America/New_York",registration:"closed"});
+ expect(screen.getByText("注册已关闭")).toBeTruthy();
+});
+
+it("uses the shared upload button and saves only the logo edit", async()=>{
+ const {writes}=mount(async body=>json(body));
+ const user=userEvent.setup();
+ await user.click(await screen.findByRole("button",{name:"设置 Logo"}));
+ const form=within(screen.getByRole("form",{name:"平台基本设置"}));
+ expect(form.queryByRole("textbox",{name:"平台名称"})).toBeNull();
+ expect(form.queryByRole("combobox",{name:"默认时区"})).toBeNull();
+ expect(form.getByRole("button",{name:"选择 Logo 文件"}).getAttribute("data-slot")).toBe("button");
+ const file=new File(['<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle r="10"/></svg>'],"logo.svg",{type:"image/svg+xml"});
+ await user.upload(form.getByLabelText("上传平台 Logo"),file);
+ await form.findByRole("img",{name:"Logo 预览"});
+ await user.click(form.getByRole("button",{name:"保存设置"}));
+ await form.findByText("平台设置已保存");
+ expect(writes).toHaveLength(1);
+ expect(writes[0].body.logo).toMatch(/^data:image\/svg\+xml;base64,/);
+ expect(writes[0].body).toMatchObject({name:"RouteWeaver",timezone:"UTC+8",registration:"invite"});
+});

@@ -590,7 +590,7 @@ it("fences a pre-save settings read so its late result cannot replace accepted s
   await userEvent.click(await screen.findByRole("button", { name: "编辑平台名称" }));
   const field = await screen.findByRole("textbox", { name: "平台名称" });
   await act(async () => {
-    window.dispatchEvent(new Event("focus"));
+    window.dispatchEvent(new Event("online"));
   });
   await waitFor(() => expect(state.settingsReads).toBe(2));
   fireEvent.change(field, { target: { value: "Accepted after refresh" } });

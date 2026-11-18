@@ -910,7 +910,7 @@ it("preserves explicit provider cycle identity while editing ordinary observatio
       onClose={() => {}}
     />,
   );
-  for (const label of ["主机采集实例", "供应商计费网卡"]) {
+  for (const label of ["供应商计费网卡"]) {
     const input = screen.getByRole("combobox", { name: label });
     const description = input.getAttribute("aria-describedby");
     expect(description).toBeTruthy();

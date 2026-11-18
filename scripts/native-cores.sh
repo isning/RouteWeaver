@@ -58,7 +58,7 @@ PY
 mkdir -p bin/verification
 REPORT="bin/verification/native-$MODE.jsonl"
 if [[ "$MODE" == parsers ]]; then
-  scripts/go.sh test -json -p=1 -count=1 -timeout=120s -run 'TestNative(Client|Server|VLESS|Trojan|VMess|Hysteria2Configuration|AnyTLSConfiguration|AnyTLSViaSOCKSConfiguration|AnyTLSViaTrojanConfiguration|AnyTLSViaTwoTrojanConfiguration|AnyTLSViaVLESSConfiguration|Pinned|Check|Version|Template|MultiPrincipal|Override|Owned|CoreInstaller|Install)|^TestNativeMixedConnectorChain$|^TestNativeStockRetiredReceiptsRecoverWithoutDownload$|TestImportedProcessedVLESSPassesBothNativeClients' ./internal/render ./internal/agent ./internal/httpapi ./internal/integration | tee "$REPORT"
+  scripts/go.sh test -json -p=1 -count=1 -timeout=120s -run 'TestNative(HostAgentInstallsMultipleCores|Client|Server|VLESS|Trojan|VMess|Hysteria2Configuration|TUICConfiguration|CompletedProtocolOptions|AnyTLSConfiguration|AnyTLSViaSOCKSConfiguration|AnyTLSViaTrojanConfiguration|AnyTLSViaTwoTrojanConfiguration|AnyTLSViaVLESSConfiguration|Pinned|Check|Version|Template|MultiPrincipal|Override|Owned|CoreInstaller|Install)|^TestNativeMixedConnectorChain$|^TestNativeStockRetiredReceiptsRecoverWithoutDownload$|TestImportedProcessedVLESSPassesBothNativeClients' ./internal/render ./internal/agent ./internal/httpapi ./internal/integration | tee "$REPORT"
 else
   scripts/go.sh test -json -p=1 -count=1 -timeout=120s -run '^TestNative(SupervisorLifecycleAndRestart|XrayTwoHopLoopbackRoundtrip|MixedConnectorChainLoopback)$|^TestNativeStock(Xray|SingBox)UpgradeKeepsExactRuntimeAndLease$|^TestNativeStockXraySecurityDefaults$|^TestRenderedTwoHopRouteHasNoDirectFallback$|^TestNativeSharedVLESSIngressKeepsPrincipalPathsSeparate$|^TestNativeFleetConfigureStopStartAndRollback$|^TestNativeAnyTLSViaVLESSLoopback$|^TestNativeAnyTLSViaTwoTrojanLoopback$|^TestNativeAnyTLSViaTrojanLoopback$|^TestNativeAnyTLSViaSOCKSLoopback$|^TestNativeAnyTLSLoopback$|^TestNativeHysteria2Loopback$|^TestNativeEndpointProtocolsLoopback$|^TestNativeInvitedUserDownloadedClientTraffic$|^TestNativeDownloadedClientConfiguredDNS$' ./internal/agent ./internal/integration ./internal/httpapi | tee "$REPORT"
 fi
@@ -67,7 +67,12 @@ import json,os,sys
 events=[json.loads(line) for line in open(sys.argv[1]) if line.strip()]
 mode=os.environ['ROUTEWEAVER_NATIVE_STAGE']
 required={('routeweaver/internal/render','TestNativeTrojanConfigurationMatrix'),('routeweaver/internal/render','TestNativeVMessConfigurationMatrix'),('routeweaver/internal/render','TestNativeClientNodesOnlyConsumption'),('routeweaver/internal/httpapi','TestNativeOwnedRuleFileBundles'),('routeweaver/internal/agent','TestNativeCoreInstallerPreparesImmutableOfficialExecutables'),('routeweaver/internal/agent','TestNativeInstallDesiredPreservesActiveRuntimeAndLease'),('routeweaver/internal/agent','TestNativeInstallDoesNotEraseAcceptedRevocation'),('routeweaver/internal/agent','TestNativeInstallDownloadCannotDelayActiveLeaseExpiry'),('routeweaver/internal/render','TestNativeClientFixtures'),('routeweaver/internal/render','TestNativeMultiPrincipalVLESSFixtures'),('routeweaver/internal/render','TestNativeVLESSClientFixtures'),('routeweaver/internal/render','TestNativeServerFixtures'),('routeweaver/internal/agent','TestNativePinnedBinariesWhenExplicitlyAvailable'),('routeweaver/internal/httpapi','TestNativeTemplateFollowedProfileUpdate'),('routeweaver/internal/httpapi','TestNativeOverridePublishedArtifactsPassPinnedNativeParsers'),('routeweaver/internal/integration','TestImportedProcessedVLESSPassesBothNativeClients')}
+required.add(('routeweaver/internal/render','TestNativeMultiPrincipalPasswordFixtures'))
 required.add(('routeweaver/internal/render','TestNativeHysteria2Configuration'))
+required.add(('routeweaver/internal/render','TestNativeTUICConfiguration'))
+required.add(('routeweaver/internal/httpapi','TestNativeHostAgentInstallsMultipleCores'))
+required.add(('routeweaver/internal/render','TestNativeCompletedProtocolOptions'))
+required.add(('routeweaver/internal/render','TestNativeServerListenerNetworkOptions'))
 required.add(('routeweaver/internal/render','TestNativeAnyTLSConfiguration'))
 required.add(('routeweaver/internal/render','TestNativeAnyTLSViaSOCKSConfiguration'))
 required.add(('routeweaver/internal/render','TestNativeAnyTLSViaTrojanConfiguration'))

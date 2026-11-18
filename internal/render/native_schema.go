@@ -29,7 +29,7 @@ var nativeSchemaError error
 func nativeSchema(name string) (*jsonschema.Schema, error) {
 	schemasOnce.Do(func() {
 		compiledNativeSchemas = map[string]*jsonschema.Schema{}
-		for _, name := range []string{"mihomo-1.19.32-override.json", "sing-box-1.14.3.json"} {
+		for _, name := range []string{"mihomo-1.19.32-override.json", "sing-box-1.14.3.json", "sing-box-1.14.4.json"} {
 			data, err := nativeSchemas.ReadFile("schemas/" + name)
 			if err != nil {
 				nativeSchemaError = err
@@ -60,7 +60,13 @@ func validateMihomoPatch(patch map[string]any) error {
 	return validateNativeSchema("mihomo-1.19.32-override.json", patch)
 }
 func validateSingBoxNative(final map[string]any) error {
-	return validateNativeSchema("sing-box-1.14.3.json", final)
+	return validateSingBoxNativeVersion(final, SingBoxVersion)
+}
+func validateSingBoxNativeVersion(final map[string]any, version string) error {
+	if version != SingBoxVersion && version != StockSingBoxVersion {
+		return nativeError("UNSUPPORTED", "/target/version", "unsupported schema version")
+	}
+	return validateNativeSchema("sing-box-"+version+".json", final)
 }
 func validateNativeSchema(name string, document map[string]any) error {
 	schema, err := nativeSchema(name)
@@ -122,7 +128,7 @@ var knownNativeFields = sync.OnceValue(func() map[string]bool {
 			}
 		}
 	}
-	for _, name := range []string{"mihomo-1.19.32-override.json", "sing-box-1.14.3.json"} {
+	for _, name := range []string{"mihomo-1.19.32-override.json", "sing-box-1.14.3.json", "sing-box-1.14.4.json"} {
 		data, _ := nativeSchemas.ReadFile("schemas/" + name)
 		var schema any
 		if json.Unmarshal(data, &schema) == nil {

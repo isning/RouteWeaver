@@ -5,6 +5,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { TaskDialog, TaskSheet } from "./task-overlays";
+import { PortalHostProvider } from "./portal-host";
 import { ConfirmationProvider, useConfirm, type ConfirmationHandle } from "./confirmations";
 
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
@@ -36,6 +37,33 @@ it.each([false, true])("blocks cancellation while pending (sheet=%s)", async (sh
   expect(within(dialog).queryByRole("button", { name: "关闭" })).toBeNull();
   await userEvent.keyboard("{Escape}");
   expect(screen.getByRole("dialog", { name: "任务编辑" })).toBe(dialog);
+});
+it.each([false, true])("ignores dismissal while the session portal is inert (sheet=%s)", async (sheet) => {
+  const host = document.createElement("div");
+  document.body.append(host);
+  try {
+    const view = render(<PortalHostProvider container={host}><TaskHost sheet={sheet} /></PortalHostProvider>);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("button", { name: "编辑任务" }));
+    const dialog = screen.getByRole("dialog", { name: "任务编辑" });
+    const name = within(dialog).getByLabelText("名称");
+    await user.type(name, "草稿");
+
+    host.setAttribute("inert", "");
+    // A browser retargets pointer events on inert descendants to outside the portal.
+    fireEvent.pointerDown(document.body);
+    expect(dialog.isConnected).toBe(true);
+    expect(name).toHaveProperty("value", "草稿");
+
+    host.removeAttribute("inert");
+    await user.click(name);
+    expect(dialog.isConnected).toBe(true);
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    view.unmount();
+  } finally {
+    host.remove();
+  }
 });
 it("keeps sequential focus inside the task dialog", async () => {
   render(<TaskHost />);

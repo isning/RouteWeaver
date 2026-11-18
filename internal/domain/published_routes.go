@@ -23,10 +23,72 @@ type PublishedRoute struct {
 }
 
 // PrincipalCredential is deliberately separate from listener transport/security.
-// The initial positively checked multi-principal protocol is VLESS.
 type PrincipalCredential struct {
-	UUID string `json:"uuid"`
-	Flow string `json:"flow,omitempty"`
+	UUID     string `json:"uuid,omitempty"`
+	Password string `json:"password,omitempty"`
+	Username string `json:"username,omitempty"`
+	Flow     string `json:"flow,omitempty"`
+}
+
+func PrincipalCredentialFields(protocol string) (uuid, password bool) {
+	switch protocol {
+	case "vless", "vmess":
+		return true, false
+	case "trojan", "hysteria2", "anytls", "socks", "shadowsocks":
+		return false, true
+	case "tuic":
+		return true, true
+	default:
+		return false, false
+	}
+}
+
+// ShadowsocksUserKeySize is the key size for the supported SS2022 identity-header ciphers.
+func ShadowsocksUserKeySize(method string) int {
+	switch method {
+	case "2022-blake3-aes-128-gcm":
+		return 16
+	case "2022-blake3-aes-256-gcm":
+		return 32
+	default:
+		return 0
+	}
+}
+
+func validatePrincipalListenerAuth(c Connection) error {
+	uuid, password := PrincipalCredentialFields(c.Protocol)
+	if (!uuid && !password) || c.UUID != "" || c.Flow != "" || c.Username != "" {
+		return fmt.Errorf("invalid principal listener authentication")
+	}
+	if c.Protocol == "shadowsocks" {
+		if ShadowsocksUserKeySize(c.Method) == 0 || strings.Contains(c.Password, ":") {
+			return fmt.Errorf("Shadowsocks user credentials require an SS2022 AES cipher and one endpoint key")
+		}
+		return ValidateConnection(c)
+	}
+	if c.Password != "" || c.Method != "" {
+		return fmt.Errorf("listener authentication and principals are mutually exclusive")
+	}
+	return nil
+}
+
+func principalConnection(c Connection, credential PrincipalCredential) (Connection, error) {
+	uuid, password := PrincipalCredentialFields(c.Protocol)
+	if (!uuid && !password) || uuid != (credential.UUID != "") || password != (credential.Password != "") || (c.Protocol != "vless" && credential.Flow != "") || (c.Protocol == "socks") != (credential.Username != "") {
+		return Connection{}, fmt.Errorf("credential fields do not match the listener protocol")
+	}
+	if c.Protocol == "shadowsocks" {
+		if err := validatePrincipalListenerAuth(c); err != nil {
+			return Connection{}, err
+		}
+		if credential.Password == c.Password || strings.Contains(credential.Password, ":") {
+			return Connection{}, fmt.Errorf("Shadowsocks requires a separate user key")
+		}
+		c.Password += ":" + credential.Password
+	} else {
+		c.UUID, c.Flow, c.Password, c.Username = credential.UUID, credential.Flow, credential.Password, credential.Username
+	}
+	return c, ValidateConnection(c)
 }
 
 // ServerPrincipal binds an opaque authenticated native identity to control-plane
@@ -43,13 +105,19 @@ type ServerPrincipal struct {
 	CycleID           string              `json:"cycleId,omitempty"`
 }
 
-// ValidateServerListener never treats the legacy listener credential as an
-// additional user. Mixed authentication models fail instead of being merged.
+// ValidateServerListener keeps listener and user authentication separate.
+// SS2022 uses the endpoint key as part of its per-user authentication.
 func ValidateServerListener(p ServerProgram) error {
 	if err := ValidateListenerTransport(p.Listener.Connection); err != nil {
 		return err
 	}
 	c := p.Listener.Connection
+	if c.TUIC != nil && c.TUIC.UDPRelayMode != "" {
+		return fmt.Errorf("TUIC_RELAY_MODE_OUTBOUND_ONLY")
+	}
+	if h := c.Hysteria2; h != nil && (len(h.ServerPorts) > 0 || h.HopIntervalSeconds > 0) {
+		return fmt.Errorf("HYSTERIA2_HOPPING_OUTBOUND_ONLY: listener uses a fixed port")
+	}
 	if p.Listener.Authentication != "" && p.Listener.Authentication != "principals" {
 		return fmt.Errorf("unsupported listener authentication model")
 	}
@@ -59,11 +127,8 @@ func ValidateServerListener(p ServerProgram) error {
 	if len(p.Principals) == 0 {
 		return ValidateManagedEndpoint(p.Listener)
 	}
-	if c.Protocol != "vless" {
-		return fmt.Errorf("MULTI_PRINCIPAL_PROTOCOL_UNSUPPORTED: VLESS required")
-	}
-	if c.UUID != "" || c.Flow != "" || c.Username != "" || c.Password != "" || c.Method != "" {
-		return fmt.Errorf("listener authentication and principals are mutually exclusive")
+	if err := validatePrincipalListenerAuth(c); err != nil {
+		return err
 	}
 	subjects, credentials := map[string]bool{}, map[string]bool{}
 	for i, principal := range p.Principals {
@@ -72,15 +137,19 @@ func ValidateServerListener(p ServerProgram) error {
 				return fmt.Errorf("principals[%d]: stable identity required", i)
 			}
 		}
-		key := strings.ToLower(principal.Credential.UUID)
+		kind, key := "uuid", strings.ToLower(principal.Credential.UUID)
+		if key == "" {
+			kind, key = "password", principal.Credential.Password
+		}
+		if c.Protocol == "socks" {
+			kind, key = "username", principal.Credential.Username
+		}
+		key = kind + ":" + key
 		if subjects[principal.SubjectID] || credentials[key] {
 			return fmt.Errorf("principal subject or credential duplicated")
 		}
 		subjects[principal.SubjectID], credentials[key] = true, true
-		cc := c
-		cc.UUID = principal.Credential.UUID
-		cc.Flow = principal.Credential.Flow
-		if err := ValidateConnection(cc); err != nil {
+		if _, err := principalConnection(c, principal.Credential); err != nil {
 			return fmt.Errorf("principals[%d]: %w", i, err)
 		}
 	}
@@ -94,19 +163,21 @@ func PublicPrincipalConnection(route PublishedRoute, listener ManagedEndpoint, p
 	if route.Path.Entry != listener.ID || principal.RouteID != route.ID {
 		return Connection{}, fmt.Errorf("principal and published entry do not match")
 	}
+	if listener.Connection.Protocol == "socks" {
+		address, err := netip.ParseAddr(route.PublicHost)
+		if err != nil || !(address.IsPrivate() || address.IsLoopback()) {
+			return Connection{}, fmt.Errorf("SOCKS user credentials require a private or loopback entry address")
+		}
+	}
 	if err := ValidatePublishedEntrySecurity(route, listener.Connection); err != nil {
 		return Connection{}, err
 	}
 	c := listener.Connection
-	// Copy only the public listener settings. No connector or server TLS key
-	// material can cross this projection; auth comes from this principal alone.
+	// The public connection uses this principal, plus the SS2022 endpoint key
+	// when required by the client protocol. It never includes transit or TLS keys.
 	c.Host, c.Port = route.PublicHost, route.PublicPort
-	c.UUID, c.Flow = principal.Credential.UUID, principal.Credential.Flow
-	c.Username, c.Password, c.Method = "", "", ""
-	if err := ValidateConnection(c); err != nil {
-		return Connection{}, err
-	}
-	return c, nil
+	c.Username = ""
+	return principalConnection(c, principal.Credential)
 }
 
 // DeploymentIdentity is the immutable, secret-free deployment fence. Its JSON
@@ -134,25 +205,38 @@ type PublishedManifest struct {
 	Routes          []PublishedRoute   `json:"routes"`
 }
 
-// ValidateManagedEndpoint permits a credential-free inventory listener only
-// when its authentication model is explicitly principals. It is not a client
-// connection and cannot be exported without a particular principal.
+// ValidateManagedEndpoint validates listener inventory. Principal listeners
+// cannot be exported as client connections without a particular principal.
 func ValidateManagedEndpoint(endpoint ManagedEndpoint) error {
 	if err := ValidateListenerTransport(endpoint.Connection); err != nil {
 		return err
 	}
 	if endpoint.Authentication == "" {
+		if endpoint.Connection.Protocol == "shadowsocks" && strings.Contains(endpoint.Connection.Password, ":") {
+			return fmt.Errorf("Shadowsocks listeners require one endpoint key")
+		}
 		return ValidateConnection(endpoint.Connection)
 	}
 	if endpoint.Authentication != "principals" {
 		return fmt.Errorf("unsupported endpoint authentication model")
 	}
 	c := endpoint.Connection
-	if c.Protocol != "vless" || c.UUID != "" || c.Flow != "" || c.Username != "" || c.Password != "" || c.Method != "" {
-		return fmt.Errorf("principal listener requires credential-free VLESS settings")
+	if err := validatePrincipalListenerAuth(c); err != nil || c.Protocol == "shadowsocks" {
+		return err
 	}
-	c.UUID = "00000000-0000-4000-8000-000000000000"
-	return ValidateConnection(c)
+	uuid, password := PrincipalCredentialFields(c.Protocol)
+	sample := PrincipalCredential{}
+	if uuid {
+		sample.UUID = "00000000-0000-4000-8000-000000000000"
+	}
+	if password {
+		sample.Password = "validation-only"
+	}
+	if c.Protocol == "socks" {
+		sample.Username = "validation-only"
+	}
+	_, err := principalConnection(c, sample)
+	return err
 }
 
 // ResolvePublishedPrincipal checks an immutable manifest, never a mutable
@@ -236,7 +320,7 @@ func ValidateListenerTransport(c Connection) error {
 	if c.Transport.Authority != "" {
 		return fmt.Errorf("GRPC_AUTHORITY_OUTBOUND_ONLY: listener authority is not enforced")
 	}
-	if c.Transport.Type == "ws" || c.Transport.Type == "httpupgrade" {
+	if c.Transport.Type == "ws" || c.Transport.Type == "httpupgrade" || c.Transport.Type == "xhttp" {
 		path := c.Transport.Path
 		if !strings.HasPrefix(path, "/") {
 			path = "/" + path

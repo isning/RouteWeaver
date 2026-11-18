@@ -107,3 +107,10 @@ it("rejects malformed draft subtrees and reserved original header-row metadata w
   expect(connectorConnectionShapeReason(conflicting)).toBeTruthy();
   expect(prepareConnectorConnection(conflicting, { ...conflicting, port: "8443" }).connection).toBeUndefined();
 });
+
+it("preserves the selected XHTTP mode when changing transport", () => {
+ const original={protocol:"vless",host:"proxy.example",port:443,uuid:"00000000-0000-4000-8000-000000000001",transport:{type:"tcp"}};
+ const result=prepareConnectorConnection(original,{...original,transport:{type:"xhttp",path:"/proxy",mode:"packet-up"}});
+ expect(result.error).toBeUndefined();
+ expect(result.connection?.transport).toEqual({type:"xhttp",path:"/proxy",mode:"packet-up"});
+});

@@ -143,7 +143,7 @@ export function compilePath(
 }
 export const phaseLabel = (phase: string) =>
   ({
-    unregistered: "尚未接入",
+    unregistered: "尚未下发任务",
     queued: "等待实例接收",
     accepted: "已接收",
     native_validated: "核心校验通过",
@@ -155,6 +155,7 @@ export const phaseLabel = (phase: string) =>
     unknown: "状态尚未确认",
     blocked: "访问已受限",
     "pending-new-generation": "等待最新配置",
+    installed: "已安装",
     stopped: "已停止",
   })[phase] || phase;
 

@@ -92,7 +92,7 @@ it("reads accepted platform settings first, edits one name, and cancels without 
   const edit = await screen.findByRole("button", { name: "编辑平台名称" });
   expect(screen.queryByRole("textbox", { name: "平台名称" })).toBeNull();
   expect(screen.getByText("Accepted name")).toBeTruthy();
-  const domain = await screen.findByLabelText("订阅域名草稿");
+  const domain = await screen.findByLabelText("订阅链接模板");
   fireEvent.change(domain, {
     target: { value: "https://unsaved.example.test" },
   });
@@ -193,7 +193,7 @@ it.each(["editor", "domain", "backup"] as const)(
     await userEvent.click(screen.getByRole("button", { name: "保存设置" }));
     let focus: HTMLElement = edit;
     if (destination === "domain") {
-      focus = await screen.findByRole("textbox", { name: "订阅域名草稿" });
+      focus = await screen.findByRole("textbox", { name: "订阅链接模板" });
       await userEvent.click(focus);
     } else if (destination === "backup") {
       focus = screen.getByRole("tab", { name: "备份与恢复" });

@@ -99,9 +99,9 @@ export function NodeObservation({
             <EmptyState
               title="尚未收到服务器资源数据"
               description={
-                data?.config.observerInstanceId
-                  ? "已选好负责上报数据的核心。若长时间没有数据，请检查监控设置和服务器连接。"
-                  : "选择一个核心负责上报这台服务器的资源数据，避免重复统计。"
+                data?.config.observerKind === "host-agent"
+                  ? "请检查服务器 Agent 是否已连接并启用资源采集"
+                  : "接入服务器 Agent 后，这里会显示资源数据"
               }
             />
           ) : (

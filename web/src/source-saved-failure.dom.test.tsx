@@ -340,8 +340,7 @@ it("localizes a typed retained URL denial without displaying untrusted detail", 
   fireEvent.change(dialog.getByLabelText("来源名称"), {
     target: { value: "URL fixture" },
   });
-  await userEvent.click(dialog.getByRole("radio", { name: "订阅 URL" }));
-  fireEvent.change(dialog.getByLabelText("订阅地址"), {
+  fireEvent.change(dialog.getByLabelText("节点链接或配置内容"), {
     target: { value: "https://localhost/synthetic" },
   });
   await userEvent.click(dialog.getByRole("button", { name: "导入来源" }));
@@ -351,9 +350,8 @@ it("localizes a typed retained URL denial without displaying untrusted detail", 
   expect(dialog.queryByText(/do-not-display/)).toBeNull();
   expect(dialog.queryByText("操作未完成")).toBeNull();
   expect(dialog.getByText("输入已保存，导入未完成")).toBeTruthy();
-  expect(dialog.getByLabelText("订阅地址").getAttribute("type")).toBe(
-    "password",
-  );
+  expect(dialog.getByRole("switch", { name: "自动应用更新" })).toBeTruthy();
+  expect(dialog.getByLabelText("节点链接或配置内容").tagName).toBe("TEXTAREA");
   expect(onSaved).not.toHaveBeenCalled();
 });
 
@@ -537,4 +535,21 @@ it("shows neutral unknown metadata on reopen without claiming a failed import", 
   ).toBeTruthy();
   expect(dialog.queryByText("输入已保存，导入未完成")).toBeNull();
   expect(dialog.queryByText("private-detail")).toBeNull();
+});
+
+it("keeps the same focused textarea while recognizing and editing a subscription URL", async () => {
+  mount();
+  const input = screen.getByLabelText("节点链接或配置内容") as HTMLTextAreaElement;
+  const user = userEvent.setup();
+  await user.click(input);
+  await user.type(input, "https://example.com/subscribe");
+  expect(screen.getByLabelText("节点链接或配置内容")).toBe(input);
+  expect(document.activeElement).toBe(input);
+  expect(input.value).toBe("https://example.com/subscribe");
+  expect(screen.getByRole("switch", { name: "自动应用更新" })).toBeTruthy();
+  await user.clear(input);
+  await user.type(input, "socks5://proxy.example:1080");
+  expect(document.activeElement).toBe(input);
+  expect(input.value).toBe("socks5://proxy.example:1080");
+  expect(screen.queryByRole("switch", { name: "自动应用更新" })).toBeNull();
 });

@@ -234,6 +234,17 @@ func run() error {
 		httpapi.RunIndependentOutputProvisioning(independentCtx, s, apiOptions)
 	}()
 	defer func() { cancelIndependent(); <-independentDone }()
+	subscriptionCtx, cancelSubscriptions := context.WithCancel(ctx)
+	subscriptionsDone := make(chan struct{})
+	go func() {
+		defer close(subscriptionsDone)
+		httpapi.RunSourceSubscriptions(subscriptionCtx, s)
+	}()
+	defer func() { cancelSubscriptions(); <-subscriptionsDone }()
+	networkCtx, cancelNetwork := context.WithCancel(ctx)
+	networkDone := make(chan struct{})
+	go func() { defer close(networkDone); httpapi.RunNetworkMonitors(networkCtx, s) }()
+	defer func() { cancelNetwork(); <-networkDone }()
 	coreCleanupCtx, cancelCoreCleanup := context.WithCancel(ctx)
 	coreCleanupDone := make(chan struct{})
 	go func() {

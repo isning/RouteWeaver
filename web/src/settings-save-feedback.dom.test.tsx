@@ -28,6 +28,7 @@ afterEach(() => {
 it("keeps settings successes inline through the next edit and activation decision without retiring unrelated nonexpiring notices", async () => {
   let settings = { name: "原平台", timezone: "UTC+8", registration: "invite" };
   let origin = {
+    linkTemplate: "https://old.example/feed/{token}",
     revision: 1, configuredRevision: 1, effectiveRevision: 1,
     draftOrigin: "https://old.example", effectiveOrigin: "https://old.example", defaultOrigin: "",
     verificationStatus: "verified", tokensUnchanged: true,
@@ -45,9 +46,9 @@ it("keeps settings successes inline through the next edit and activation decisio
         return json(settings);
       }
       if (path === "/api/admin/subscription-origin") {
-        const draftOrigin = JSON.parse(String(init.body)).origin;
+        const {origin: draftOrigin, linkTemplate} = JSON.parse(String(init.body));
         origin = { ...origin, revision: origin.revision + 1, configuredRevision: origin.revision + 1,
-          draftOrigin, proposedLinkExample: `${draftOrigin}/feed/{existing-token}`, verificationStatus: "unverified" };
+          linkTemplate,effectiveOrigin:draftOrigin,currentLinkExample:linkTemplate.replace("{token}","{existing-token}"),draftOrigin, proposedLinkExample: `${draftOrigin}/feed/{existing-token}`, verificationStatus: "unverified" };
       } else if (path.endsWith("/verify")) {
         origin = { ...origin, revision: origin.revision + 1, verificationStatus: "verified" };
       } else if (path.endsWith("/activate")) {
@@ -86,32 +87,19 @@ it("keeps settings successes inline through the next edit and activation decisio
   await user.click(form.getByRole("button", { name: "取消名称修改" }));
   expect(form.getByText("已保存的平台", { exact: true })).toBeTruthy();
 
-  const domain = screen.getByLabelText("订阅域名草稿");
-  const section = within(screen.getByRole("region", { name: "订阅域名设置" }));
-  fireEvent.change(domain, { target: { value: "https://new.example" } });
-  await user.click(section.getByRole("button", { name: "保存域名草稿" }));
-  expect((await section.findByRole("status")).textContent).toBe("域名草稿已保存，当前订阅地址未改变");
-  expect(activeNotices()).not.toContain("域名草稿已保存，当前订阅地址未改变");
-  expect(section.getByText("https://old.example/feed/{existing-token}")).toBeTruthy();
-  fireEvent.change(domain, { target: { value: "https://later.example" } });
+  const domain = screen.getByLabelText("订阅链接模板");
+  const section = within(screen.getByRole("region", { name: "订阅链接设置" }));
+  fireEvent.change(domain, { target: { value: "https://new.example/feed/{token}" } });
+  await user.click(section.getByRole("button", { name: "保存模板" }));
+  expect((await section.findByRole("status")).textContent).toBe("订阅链接模板已保存");
+  expect(activeNotices()).not.toContain("订阅链接模板已保存");
+  expect(section.getByText("https://new.example/feed/{existing-token}")).toBeTruthy();
+  fireEvent.change(domain, { target: { value: "https://later.example/feed/{token}" } });
   expect(section.queryByRole("status")).toBeNull();
-  fireEvent.change(domain, { target: { value: "https://new.example" } });
-  await user.click(section.getByRole("button", { name: "验证 HTTPS 与实例" }));
-  expect((await section.findByRole("status")).textContent).toBe("已验证 HTTPS 地址属于当前实例");
-  expect(activeNotices()).not.toContain("已验证 HTTPS 地址属于当前实例");
-  await user.click(section.getByRole("button", { name: "启用已保存草稿" }));
-  const review = within(await screen.findByRole("dialog", { name: "启用订阅地址" }));
-  expect(section.queryByRole("status", { hidden: true })).toBeNull();
-  expect(review.getByRole("button", { name: "确认启用" }).hasAttribute("disabled")).toBe(true);
-  await user.click(review.getByRole("button", { name: "取消" }));
-  expect(writes.filter((operation) => operation.endsWith("/activate"))).toEqual([]);
-  await user.click(section.getByRole("button", { name: "启用已保存草稿" }));
-  const reopened = within(await screen.findByRole("dialog", { name: "启用订阅地址" }));
-  await user.click(reopened.getByRole("checkbox", { name: "我已确认域名配置与旧链接的访问安排" }));
-  await user.click(reopened.getByRole("button", { name: "确认启用" }));
-  expect((await section.findByRole("status")).textContent).toBe("新复制的订阅链接将使用所选地址");
-  expect(activeNotices()).not.toContain("新复制的订阅链接将使用所选地址");
-  expect(origin.effectiveOrigin).toBe("https://new.example");
+  fireEvent.change(domain, { target: { value: "https://new.example/feed/{token}" } });
+  await user.click(section.getByRole("button", { name: "检查连通性" }));
+  expect((await section.findByRole("status")).textContent).toBe("连通性检查通过");
+  expect(activeNotices()).not.toContain("连通性检查通过");
   expect(activeNotices()).toContain("其他任务连接失败");
   expect(activeNotices()).toContain("其他任务已停用");
   expect(undo).not.toHaveBeenCalled();

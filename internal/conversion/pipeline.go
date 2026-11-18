@@ -215,6 +215,19 @@ func clone(nodes []domain.ClientEndpoint) []domain.ClientEndpoint {
 	for i := range out {
 		out[i].Tags = append([]string{}, out[i].Tags...)
 		out[i].Provenance = append([]domain.SourceRef{}, out[i].Provenance...)
+		if out[i].Connection.TUIC != nil {
+			o := *out[i].Connection.TUIC
+			out[i].Connection.TUIC = &o
+		}
+		if out[i].Connection.Hysteria2 != nil {
+			h := *out[i].Connection.Hysteria2
+			h.ServerPorts = append([]string(nil), h.ServerPorts...)
+			if h.Obfs != nil {
+				obfs := *h.Obfs
+				h.Obfs = &obfs
+			}
+			out[i].Connection.Hysteria2 = &h
+		}
 		if out[i].Connection.TLS != nil {
 			tls := *out[i].Connection.TLS
 			tls.ALPN = append([]string{}, tls.ALPN...)
@@ -285,6 +298,9 @@ func stage(scope, sourceID, stepID string, before, after []domain.ClientEndpoint
 		}
 		s.Endpoints[i].Connection.Username = ""
 		s.Endpoints[i].Connection.Password = ""
+		if h := s.Endpoints[i].Connection.Hysteria2; h != nil && h.Obfs != nil {
+			h.Obfs.Password = ""
+		}
 	}
 	return s
 }

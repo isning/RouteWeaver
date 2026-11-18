@@ -60,16 +60,16 @@ function mount() {
     </QueryClientProvider>,
   );
 }
-it("groups a collection's edit and secondary delete actions inside its named card", async () => {
+it("groups a collection's edit and secondary delete actions inside its table row", async () => {
   vi.stubGlobal("fetch", vi.fn(async (url) => json(
     String(url).endsWith("/collections") ? [collection] : [],
   )));
   mount();
-  const card = await screen.findByRole("article", { name: collection.name });
-  const edit = within(card).getByRole("button", { name: /Shared collection.*编辑集合/ });
+  const card = await screen.findByRole("row", { name: /Shared collection/ });
+  const edit = within(card).getByRole("button", { name: "编辑集合 Shared collection" });
   const remove = within(card).getByRole("button", { name: "删除集合 Shared collection" });
   expect(edit.contains(remove)).toBe(false);
-  expect(within(card).getByRole("heading", { name: collection.name })).toBeTruthy();
+  expect(within(card).getByText(collection.name, { selector: ".font-medium" })).toBeTruthy();
   expect(remove.textContent).toBe("删除");
   edit.focus();
   await userEvent.keyboard("{Tab}");
@@ -264,4 +264,23 @@ it("keeps the selected collection after a newly added dependency rejects deletio
   );
   await waitFor(() => expect(document.activeElement).toBe(opener));
   expect(deletes).toBe(1);
+});
+
+it("filters collection rows and restores the list without writes", async () => {
+ const fetcher=vi.fn(async (url,init)=>{
+  if (init?.method) throw new Error("unexpected write");
+  return json(String(url).endsWith("/collections")?[collection]:[]);
+ });
+ vi.stubGlobal("fetch",fetcher);
+ mount();
+ await screen.findByRole("row",{name:/Shared collection/});
+ const user=userEvent.setup();
+ const search=screen.getByRole("textbox",{name:"搜索节点集合"});
+ await user.type(search,"missing");
+ expect(screen.getByText("没有匹配的节点集合")).toBeTruthy();
+ expect(screen.queryByRole("button",{name:"删除集合 Shared collection"})).toBeNull();
+ await user.click(screen.getByRole("button",{name:"清除搜索"}));
+ expect(document.activeElement).toBe(search);
+ expect(screen.getByRole("row",{name:/Shared collection/})).toBeTruthy();
+ expect(fetcher.mock.calls.every(([,init])=>!init?.method)).toBe(true);
 });

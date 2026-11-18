@@ -97,6 +97,13 @@ export function planListenerRefresh(
   )
     changes.push({ label: "认证信息已变更" });
   // Private/opaque transport and security parameters are never rendered as diff values.
+  if (!sameSnapshot(old.udp, current.udp) || old.acceptProxyProtocol !== current.acceptProxyProtocol)
+    changes.push({ label: "网络监听设置已变更" });
+  if (!sameSnapshot(old.tcp, current.tcp)) changes.push({ label: "TCP 设置已变更" });
+  const realityChanged = !sameSnapshot(old.realityServer, current.realityServer);
+  if (realityChanged) changes.push({ label: "REALITY 服务端参数已变更" });
+  if (old.certificateId !== current.certificateId)
+    changes.push({ label: "平台证书已变更" });
   if (!sameSnapshot(old.connection.tls, current.connection.tls))
     changes.push({ label: "TLS 连接设置已变更" });
   if (!sameSnapshot(old.connection.transport, current.connection.transport))
@@ -136,7 +143,7 @@ export function planListenerRefresh(
       ...draft.ir,
       programs: draft.ir.programs.map((p, i) =>
         i === index
-          ? { ...p, listener: current }
+          ? { ...p, listener: current, ...(old.certificateId !== current.certificateId || realityChanged ? { tls: undefined } : {}) }
           : legacy && i === index - 1
             ? { ...p, egress: [{ ...target }] }
             : p,

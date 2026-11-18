@@ -100,3 +100,30 @@ it("does not add discovery requests or a pointless check button on a password-on
   expect(reads).toEqual(["/api/auth/me"]);
   expect(screen.queryByRole("button", { name: "检查其他登录方式" })).toBeNull();
 });
+
+it("moves from verified password to a separate OTP stage and validates six digits", async () => {
+  let loggedIn = false;
+  const attempts: Record<string,string>[] = [];
+  vi.stubGlobal("fetch",vi.fn(async (url:string, init?:RequestInit) => {
+    if (url.endsWith("/auth/me")) return loggedIn ? json(session("otp")) : json({},401);
+    if (url.endsWith("/auth/login")) {
+      const body = JSON.parse(String(init?.body)); attempts.push(body);
+      if (!body.totp) return json({mfaRequired:true},202);
+      loggedIn = true; return json(session("otp"));
+    }
+    return json([]);
+  }));
+  mount();
+  const user=userEvent.setup();
+  await user.type(await screen.findByLabelText("账号"),"operator");
+  await user.type(screen.getByLabelText("密码"),"synthetic-password");
+  await user.click(screen.getByRole("button",{name:"进入工作空间"}));
+  const code=await screen.findByLabelText("验证码");
+  expect(screen.getByRole("button",{name:"验证并登录"}).hasAttribute("disabled")).toBe(true);
+  expect(screen.queryByRole("textbox",{name:"账号"})).toBeNull();
+  fireEvent.change(code,{target:{value:"123456"}});
+  await user.click(screen.getByRole("button",{name:"验证并登录"}));
+  await waitFor(()=>expect(attempts).toHaveLength(2));
+  expect(attempts[1].totp).toBe("123456");
+  expect(attempts[1].username).toBe("operator");
+});

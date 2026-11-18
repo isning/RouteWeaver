@@ -1,3 +1,4 @@
+import { MaterialEmptyState as EmptyState } from "./ui-patterns/material-empty-state";
 import { ResourceToolbar, SearchField, QuickFilters } from "@/ui-patterns/resource-toolbar";
 import { ItemCount } from "@/ui-patterns/item-count";
 import { ScrollableTabsList } from "@/ui-patterns/scrollable-tabs-list";
@@ -49,7 +50,6 @@ import type {
 } from "./types";
 import {
   CodePreview,
-  EmptyState,
   ErrorNotice,
   PageHeader,
   QueryState,
@@ -578,6 +578,7 @@ export function TemplatesPage({ admin = false }: { admin?: boolean }) {
     query.data?.find((template) => template.id === b.templateId)?.name ||
     b.templateId;
   const [catalogSearch, setCatalogSearch] = useState("");
+  const [catalogPage, setCatalogPage] = useState(1);
   const [kindFilter, setKindFilter] = useState("all");
   const [bindingSearch, setBindingSearch] = useState("");
   const [bindingPage, setBindingPage] = useState(1);
@@ -592,7 +593,7 @@ export function TemplatesPage({ admin = false }: { admin?: boolean }) {
   useLayoutEffect(() => {
     setBindingPage(current => Math.min(current, Math.max(1, Math.ceil(visibleBindings.length / 10))));
   }, [visibleBindings.length]);
-  const clearCatalog = () => { setCatalogSearch(""); setKindFilter("all"); catalogInput.current?.focus(); };
+  const clearCatalog = () => { setCatalogPage(1); setCatalogSearch(""); setKindFilter("all"); catalogInput.current?.focus(); };
   const clearBindings = () => { setBindingSearch(""); setBindingPage(1); bindingInput.current?.focus(); };
   const catalogTabs = [
     {
@@ -602,12 +603,12 @@ export function TemplatesPage({ admin = false }: { admin?: boolean }) {
         <QueryState
           loading={query.isPending}
           paused={query.isPaused}
-          loadingLayout="cards"
+          loadingLayout="table"
           error={query.error}
           retry={() => query.refetch()}
         >
           {!query.data?.length ? (
-            <Section>
+            <Section variant="plain">
               <EmptyState
                 title="暂无可用模板"
                 description="管理员发布后可用。"
@@ -615,55 +616,25 @@ export function TemplatesPage({ admin = false }: { admin?: boolean }) {
             </Section>
           ) : (
             <div className="space-y-4">
-              <ResourceToolbar label="查找模板" search={<SearchField ref={catalogInput} type="search" aria-label="搜索模板" placeholder="搜索模板名称" value={catalogSearch} onValueChange={setCatalogSearch} />}
-                filters={<QuickFilters label="模板类型" value={kindFilter} onValueChange={setKindFilter} options={[
+              <ResourceToolbar label="查找模板" search={<SearchField ref={catalogInput} type="search" aria-label="搜索模板" placeholder="搜索模板名称" value={catalogSearch} onValueChange={value => { setCatalogSearch(value); setCatalogPage(1); }} />}
+                filters={<QuickFilters label="模板类型" value={kindFilter} onValueChange={value => { setKindFilter(value); setCatalogPage(1); }} options={[
                   { value: "all", label: "全部" }, { value: "processing-preset", label: kindLabel("processing-preset") }, { value: "client-profile", label: kindLabel("client-profile") },
                 ]} />}
-                summary={<ItemCount total={query.data.length} matched={catalogTerm || kindFilter !== "all" ? visibleTemplates.length : undefined} unit="个模板" />} />
-              {!visibleTemplates.length && <EmptyState title="没有匹配的模板" action={<ActionButton variant="outline" onClick={clearCatalog}>清除筛选</ActionButton>} />}
-              <div className="card-grid grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {visibleTemplates.map((t) => (
-                <article
-                  className="surface profile-card template-library-card flex flex-col gap-3 rounded-xl border bg-card p-5"
-                  key={t.id}
-                >
-                  <div className="profile-card-top flex items-start justify-between gap-3">
-                    <div className="flex min-w-0 items-center gap-2">
-                      <BookOpen
-                        className="size-4 shrink-0 text-muted-foreground"
-                        aria-hidden="true"
-                      />
-                      <h2 className="text-base font-semibold tracking-tight wrap-anywhere">
-                        {t.name}
-                      </h2>
-                    </div>
-                    <Badge variant="secondary">v{t.version}</Badge>
-                  </div>
-                  <div className="flex flex-wrap gap-x-3 gap-y-1 text-sm text-muted-foreground">
-                    <span>{kindLabel(t.kind)}</span>
-                    {t.kind === "processing-preset" ? (
-                      <span>{t.spec.steps?.length || 0} 个步骤</span>
-                    ) : (
-                      <>
-                        <span>{t.spec.groups?.length || 0} 个策略组</span>
-                        <span>{t.spec.rules?.length || 0} 条规则</span>
-                      </>
-                    )}
-                  </div>
-                  <footer className="template-library-footer mt-auto flex flex-wrap items-center justify-between gap-2 border-t pt-4">
-                    <div className="profile-meta flex flex-wrap gap-2 text-sm text-muted-foreground">
-                      发布于 {dateLabel(t.publishedAt)}
-                    </div>
-                    <ActionButton
-                      onClick={() => setSelected(t)}
-                      variant="default"
-                    >
-                      查看并使用
-                    </ActionButton>
-                  </footer>
-                </article>
-              ))}
-              </div>
+                 />
+              <DataTable
+                rowKey="id" rows={visibleTemplates}
+                page={catalogPage} onPageChange={setCatalogPage}
+                count={{total:query.data.length,unit:"个模板",filtered:!!catalogTerm || kindFilter!=="all"}}
+                empty={<EmptyState title="没有匹配的模板" action={<ActionButton variant="outline" onClick={clearCatalog}>清除筛选</ActionButton>} />}
+                columns={[
+                  {title:"模板",render:(_,t)=><span className="font-medium wrap-anywhere">{t.name}</span>},
+                  {title:"类型",render:(_,t)=>kindLabel(t.kind)},
+                  {title:"内容",render:(_,t)=>t.kind==="processing-preset" ? `${t.spec.steps?.length || 0} 个步骤` : <span className="flex flex-wrap gap-x-3 gap-y-1"><span>{t.spec.groups?.length || 0} 个策略组</span><span>{t.spec.rules?.length || 0} 条规则</span></span>},
+                  {title:"版本",render:(_,t)=><Badge variant="secondary">v{t.version}</Badge>},
+                  {title:"发布时间",render:(_,t)=>dateLabel(t.publishedAt)},
+                  {title:"操作",render:(_,t)=><TableRowActions name={t.name}><ActionButton variant="ghost" onClick={()=>setSelected(t)}>查看并使用</ActionButton></TableRowActions>},
+                ]}
+              />
             </div>
           )}
         </QueryState>
@@ -794,7 +765,7 @@ export function TemplatesPage({ admin = false }: { admin?: boolean }) {
           ) : undefined
         }
       />
-      <Tabs defaultValue={String(catalogTabs[0]?.key ?? "")}>
+      <Tabs className="gap-6" defaultValue={String(catalogTabs[0]?.key ?? "")}>
         {
           <ScrollableTabsList>
             {catalogTabs.map((section) => (
@@ -810,7 +781,7 @@ export function TemplatesPage({ admin = false }: { admin?: boolean }) {
         }
         {catalogTabs.map((section) => (
           <TabsContent
-            className="mt-5"
+            className="mt-0"
             key={section.key}
             value={String(section.key)}
           >

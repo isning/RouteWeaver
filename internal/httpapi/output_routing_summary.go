@@ -136,6 +136,9 @@ func routingLabelSanitizer(endpoints []domain.ClientEndpoint) func(string) strin
 		for _, endpoint := range endpoints {
 			c := endpoint.Connection
 			variant := domain.Connection{Username: transform(c.Username), Password: transform(c.Password), UUID: transform(c.UUID)}
+			if h := c.Hysteria2; h != nil && h.Obfs != nil {
+				variant.Hysteria2 = &domain.Hysteria2Options{Obfs: &domain.ObfuscationOptions{Password: transform(h.Obfs.Password)}}
+			}
 			if c.Transport != nil {
 				variant.Transport = &domain.TransportOptions{Headers: map[string]string{}}
 				for key, value := range c.Transport.Headers {

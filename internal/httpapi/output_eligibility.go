@@ -65,7 +65,7 @@ func (h *server) outputAccessReadiness(owner string, output Output) (outputAcces
 			}
 			return "", fmt.Errorf("%w: %w", errOutputAccessUnknown, err)
 		}
-		if grant.ID != dependency.ID || grant.UserID != owner || grant.Revoked || !allowed[grant.RouteID] {
+		if grant.ID != dependency.ID || grant.UserID != owner || grant.Revoked || !allowed[grant.RouteID] || (grant.StaticPrincipal && overview.EffectivePolicy.RequiresRuntimeLimits()) {
 			return "", errOutputAccessUnavailable
 		}
 		// An entry moving to another route is not a newer credential for the

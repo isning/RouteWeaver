@@ -99,13 +99,13 @@ func (s *semanticCapture) node(adapter, id string, emitted map[string]any) {
 			category = "endpoint"
 		case "type", "version":
 			category = "protocol"
-		case "username", "password", "uuid":
+		case "username", "password", "uuid", "obfs-password", "obfs":
 			category = "authentication"
 		case "tls", "sni", "servername", "client-fingerprint", "alpn", "reality-opts":
 			category = "security"
 		case "transport", "network", "ws-opts", "grpc-opts":
 			category = "transport"
-		case "cipher", "security", "alterId", "alter_id", "method", "flow", "packet-encoding", "packet_encoding":
+		case "congestion_control", "congestion-controller", "udp_relay_mode", "udp-relay-mode", "server_ports", "ports", "hop_interval", "hop-interval", "up", "down", "up_mbps", "down_mbps", "cipher", "security", "alterId", "alter_id", "method", "flow", "packet-encoding", "packet_encoding":
 			category = "protocol-options"
 		}
 		if parts[category] == nil {

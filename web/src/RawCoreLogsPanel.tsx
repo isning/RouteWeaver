@@ -289,11 +289,11 @@ function RawLogDetails({
   };
   return (
     <Card className="min-w-0">
-      <CardHeader>
+      <CardHeader className="px-5 sm:px-6">
         <CardTitle>核心日志原文</CardTitle>
         <CardDescription className="space-y-1"><span className="block break-words">{coreName(core)}</span>{showId && <span className="block break-all text-xs">{core.id}</span>}</CardDescription>
       </CardHeader>
-      <CardContent className="min-w-0 space-y-4">
+      <CardContent className="px-5 sm:px-6 min-w-0 space-y-4">
         <Notice tone="warning">
           日志可能包含访问目标、IP、账号或密钥，仅管理员可查看。请勿公开分享原文或导出文件。
         </Notice>

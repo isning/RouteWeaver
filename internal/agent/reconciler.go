@@ -5,8 +5,10 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
+	"unicode"
 
 	"routeweaver/internal/controlprotocol"
 	"routeweaver/internal/domain"
@@ -132,6 +134,9 @@ func (r *Reconciler) Close() error {
 }
 func (r *Reconciler) State() State { r.mu.Lock(); defer r.mu.Unlock(); return copyState(r.disk.State) }
 func copyState(s State) State {
+	if !controlprotocol.AllowsInstallErrorDetail(s.Code) {
+		s.ErrorDetail = ""
+	}
 	if s.Installation != nil {
 		installation := *s.Installation
 		s.Installation = &installation
@@ -163,6 +168,20 @@ func (r *Reconciler) out(err error) (State, error) { return copyState(r.disk.Sta
 func (r *Reconciler) fail(phase, code string, err error) (State, error) {
 	r.disk.State.Phase = phase
 	r.disk.State.Code = code
+	r.disk.State.ErrorDetail = ""
+	if err != nil && controlprotocol.AllowsInstallErrorDetail(code) {
+		detail := strings.TrimSpace(strings.Map(func(r rune) rune {
+			if unicode.IsControl(r) {
+				return ' '
+			}
+			return r
+		}, err.Error()))
+		runes := []rune(detail)
+		if len(runes) > controlprotocol.MaxInstallErrorDetail {
+			runes = runes[:controlprotocol.MaxInstallErrorDetail]
+		}
+		r.disk.State.ErrorDetail = string(runes)
+	}
 	if e := r.persist(); e != nil {
 		return r.out(e)
 	}
@@ -260,6 +279,7 @@ func (r *Reconciler) Submit(ctx context.Context, d Desired) (State, error) {
 		r.disk.State.Desired = &identity
 		r.disk.State.Phase = Accepted
 		r.disk.State.Code = ""
+		r.disk.State.ErrorDetail = ""
 		r.disk.State.NativeChecked = false
 		r.disk.Payload = &d
 		if d.Action != "install" {

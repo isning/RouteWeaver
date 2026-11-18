@@ -1,3 +1,6 @@
+import { ListenerNetworkFields } from "./ListenerNetworkFields";
+import { EndpointRealityFields } from "./EndpointRealityFields";
+import { PlatformCertificatePicker } from "./PlatformCertificatePicker";
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
@@ -29,6 +32,12 @@ const coreVersions: Record<string, string> = {
 const usesManagedEntryPreset = (instance?: CoreInstance) =>
   instance?.adapterId === "routeweaver/managed-xray" &&
   instance.version === coreVersions["routeweaver/managed-xray"];
+const principalProtocolsFor = (instance?: CoreInstance): string[] => {
+  if (!instance || instance.version !== coreVersions[instance.adapterId]) return [];
+  if (instance.adapterId === "routeweaver/sing-box") return ["vless", "vmess", "trojan", "hysteria2", "anytls", "tuic", "socks", "shadowsocks"];
+  if (instance.adapterId === "routeweaver/xray") return ["vless", "vmess", "trojan"];
+  return [];
+};
 export type InventoryEditTask = {
   kind: "hosts" | "core-instances" | "managed-endpoints";
   value: HostRecord | CoreInstance | ManagedEndpoint | null;
@@ -99,6 +108,10 @@ export function InventoryEditor({
     (i) => i.id === endpointInstanceId,
   );
   const managedEntrySelected = usesManagedEntryPreset(selectedEndpointInstance);
+  const supportedPrincipalProtocols = principalProtocolsFor(selectedEndpointInstance);
+  const principalMode = authentication === "principals" ||
+    (!displayEntity?.value && supportedPrincipalProtocols.length > 0);
+
   const endpointInstances = (inventory?.instances || []).filter(
     (i) => i.hostId === endpointHostId,
   );
@@ -131,13 +144,44 @@ export function InventoryEditor({
   const endpointValue = (values: Record<string, unknown>) => {
     const { endpointHostId: _endpointHostId, ...fields } = values;
     const value = { ...entity!.value, ...fields, id: entity!.id };
-    if (entity!.kind === "managed-endpoints")
-      Object.assign(value, {
-        connection: normalizeConnection({
-          ...currentEndpoint?.connection,
-          ...(value as unknown as ManagedEndpoint).connection,
-        }),
+    if (entity!.kind === "managed-endpoints") {
+      const endpoint = value as unknown as ManagedEndpoint;
+      const target = inventory?.instances.find((item) => item.id === endpoint.instanceId);
+      const usePrincipals = endpoint.authentication === "principals" || (!entity!.value && principalProtocolsFor(target).length > 0);
+      const connection = normalizeConnection({
+        ...currentEndpoint?.connection,
+        ...endpoint.connection,
+        ...(usePrincipals ? { uuid: undefined, flow: undefined, username: undefined, ...(endpoint.connection.protocol === "shadowsocks" ? {} : { password: undefined, method: undefined }) } : {}),
       });
+      const reality = fields.realityServer as ManagedEndpoint["realityServer"];
+      const clientReality = connection.tls?.reality;
+      const realityServer = clientReality && reality &&
+        (reality.privateKey || reality.handshakeServer || reality.handshakePort)
+        ? {
+            privateKey: reality.privateKey || "",
+            handshakeServer: reality.handshakeServer || "",
+            handshakePort: reality.handshakePort ?? 443,
+            shortIds: [...new Set([clientReality.shortId || "", ...(reality.shortIds || [])])],
+            serverNames: [...new Set([
+              connection.tls?.serverName || "",
+              ...(target?.adapterId === "routeweaver/xray"
+                ? reality.serverNames || []
+                : []),
+            ])],
+          }
+        : undefined;
+      const tcp = form.getFieldValue("tcp") as ManagedEndpoint["tcp"];
+      const udp = form.getFieldValue("udp") as ManagedEndpoint["udp"];
+      Object.assign(value, {
+        connection,
+        realityServer,
+        tcp: tcp && (tcp.fastOpen != null || tcp.disableKeepAlive || tcp.keepAliveIdleSeconds || tcp.keepAliveIntervalSeconds) ? tcp : undefined,
+        udp: udp && (udp.fragment != null || udp.timeoutSeconds) ? udp : undefined,
+        acceptProxyProtocol: form.getFieldValue("acceptProxyProtocol") || undefined,
+        certificateId: connection.tls?.enabled && !connection.tls.reality ? fields.certificateId : undefined,
+        ...(usePrincipals ? { authentication: "principals" } : {}),
+      });
+    }
     return value;
   };
   const mutation = useMutation({
@@ -300,9 +344,8 @@ export function InventoryEditor({
             ),
           })
         : null;
-    const managedEntryPreset = usesManagedEntryPreset(
-      inventory?.instances.find((i) => i.id === entity.instanceId),
-    );
+    const presetInstance = inventory?.instances.find((instance) => instance.id === entity.instanceId);
+    const managedEntryPreset = usesManagedEntryPreset(presetInstance) || principalProtocolsFor(presetInstance).length > 0;
     form.setFieldsValue(
       entity.value
         ? {
@@ -633,9 +676,18 @@ export function InventoryEditor({
                   改用 VLESS 用户凭据模式（替换当前认证）
                 </ActionButton>
               )}
+            {currentEndpoint && supportedPrincipalProtocols.includes(endpointProtocol || "") && authentication !== "principals" && (
+              <ActionButton variant="outline" onClick={() => {
+                form.setFieldValue("authentication", "principals");
+                form.setFieldsValue({ connection: { uuid: undefined, flow: undefined, username: undefined, ...(endpointProtocol === "shadowsocks" ? {} : { password: undefined, method: undefined }) } });
+              }}>
+                改用独立用户凭据
+              </ActionButton>
+            )}
             <ConnectionFields
               server
-              authentication={authentication}
+              authentication={principalMode ? "principals" : authentication}
+              principalProtocols={supportedPrincipalProtocols}
               managedEntryTarget={managedEntrySelected}
               allowUnchangedUnsupportedProtocol={
                 allowUnchangedUnsupportedProtocol
@@ -645,7 +697,23 @@ export function InventoryEditor({
                 /^routeweaver\//,
                 "",
               )}
+              serverRealityField={<EndpointRealityFields allowMultipleSNI={selectedEndpointInstance?.adapterId === "routeweaver/xray"} required={!currentEndpoint || !!currentEndpoint.realityServer || !currentEndpoint.connection.tls?.reality} />}
+              serverCertificateField={
+                <AppField
+                  name="certificateId"
+                  label="平台证书"
+                  trigger="onValueChange"
+                  rules={[{
+                    required: !currentEndpoint || !!currentEndpoint.certificateId ||
+                      !currentEndpoint.connection.tls?.enabled || !!currentEndpoint.connection.tls.reality,
+                    message: "请选择或上传平台证书",
+                  }]}
+                >
+                  <PlatformCertificatePicker onUseServerName={(name) => form.setFieldValue(["connection", "tls", "serverName"], name)} />
+                </AppField>
+              }
             />
+            <ListenerNetworkFields adapter={selectedEndpointInstance?.adapterId} protocol={endpointProtocol} />
           </>
         )}
         {displayEntity?.kind === "hosts" && !displayEntity.value && (

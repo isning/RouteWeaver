@@ -9,12 +9,74 @@ import (
 	"net/url"
 	"path"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
 var uuidPattern = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
 
 func ValidateConnection(c Connection) error {
+	if c.Protocol != "tuic" && c.TUIC != nil {
+		return fmt.Errorf("TUIC options require TUIC protocol")
+	}
+	if c.Protocol == "tuic" {
+		if err := ValidateNode(Node{ID: "connection", Name: "connection", Host: c.Host, Port: c.Port, Protocol: "socks"}); err != nil {
+			return err
+		}
+		if !uuidPattern.MatchString(c.UUID) || c.Password == "" || c.Username != "" || c.Method != "" || c.Flow != "" || c.PacketEncoding != "" || c.VMessSecurity != "" || c.Transport != nil || c.Hysteria2 != nil {
+			return fmt.Errorf("TUIC requires UUID and password without TCP transport options")
+		}
+		if c.TLS == nil || !c.TLS.Enabled || c.TLS.Reality != nil || c.TLS.Fingerprint != "" || strings.ContainsAny(c.TLS.ServerName, " /\r\n") {
+			return fmt.Errorf("TUIC requires ordinary verified TLS")
+		}
+		for _, alpn := range c.TLS.ALPN {
+			if len(alpn) == 0 || len(alpn) > 255 {
+				return fmt.Errorf("invalid TUIC ALPN")
+			}
+		}
+		if o := c.TUIC; o != nil {
+			if o.CongestionControl != "" && o.CongestionControl != "cubic" && o.CongestionControl != "new_reno" && o.CongestionControl != "bbr" {
+				return fmt.Errorf("invalid TUIC congestion control")
+			}
+			if o.UDPRelayMode != "" && o.UDPRelayMode != "native" && o.UDPRelayMode != "quic" {
+				return fmt.Errorf("invalid TUIC UDP relay mode")
+			}
+		}
+		return nil
+	}
+
+	if c.Protocol != "hysteria2" && c.Hysteria2 != nil {
+		return fmt.Errorf("Hysteria2 options require Hysteria2 protocol")
+	}
+	if h := c.Hysteria2; h != nil {
+		if h.Obfs != nil && (h.Obfs.Type != "salamander" || h.Obfs.Password == "" || len(h.Obfs.Password) > 4096) {
+			return fmt.Errorf("invalid Hysteria2 obfuscation")
+		}
+		if h.UpMbps < 0 || h.DownMbps < 0 || h.UpMbps > 1000000 || h.DownMbps > 1000000 {
+			return fmt.Errorf("invalid Hysteria2 bandwidth")
+		}
+		if h.HopIntervalSeconds < 0 || h.HopIntervalSeconds > 86400 || (h.HopIntervalSeconds > 0 && len(h.ServerPorts) == 0) {
+			return fmt.Errorf("Hysteria2 hopping requires port ranges and interval up to 86400 seconds")
+		}
+		if len(h.ServerPorts) > 64 {
+			return fmt.Errorf("too many Hysteria2 port ranges")
+		}
+		for _, item := range h.ServerPorts {
+			parts := strings.Split(item, ":")
+			if len(parts) > 2 {
+				return fmt.Errorf("invalid Hysteria2 port range")
+			}
+			previous := 0
+			for _, part := range parts {
+				port, err := strconv.Atoi(part)
+				if err != nil || strconv.Itoa(port) != part || port < 1 || port > 65535 || port < previous {
+					return fmt.Errorf("invalid Hysteria2 port range")
+				}
+				previous = port
+			}
+		}
+	}
+
 	if c.Protocol == "hysteria2" {
 		if err := ValidateNode(Node{ID: "connection", Name: "connection", Host: c.Host, Port: c.Port, Protocol: "socks"}); err != nil {
 			return err
@@ -95,6 +157,9 @@ func ValidateConnection(c Connection) error {
 	if c.Transport != nil {
 		t := c.Transport
 		transport = t.Type
+		if t.Type != "xhttp" && t.Mode != "" {
+			return fmt.Errorf("transport mode requires XHTTP")
+		}
 		if err := validateTransportHeaders(t.Headers); err != nil {
 			return err
 		}
@@ -105,6 +170,13 @@ func ValidateConnection(c Connection) error {
 		case "tcp":
 			if t.Path != "" || t.Host != "" || t.ServiceName != "" || t.Authority != "" || len(t.Headers) > 0 {
 				return fmt.Errorf("TCP transport cannot have HTTP or gRPC fields")
+			}
+		case "xhttp":
+			if t.Mode != "" && t.Mode != "auto" && t.Mode != "packet-up" && t.Mode != "stream-up" && t.Mode != "stream-one" {
+				return fmt.Errorf("invalid XHTTP mode")
+			}
+			if t.ServiceName != "" || t.Authority != "" || len(t.Headers) > 0 || strings.ContainsAny(t.Path, "\r\n") || strings.ContainsAny(t.Host, "\r\n/") {
+				return fmt.Errorf("invalid XHTTP transport options")
 			}
 		case "ws", "httpupgrade":
 			if t.ServiceName != "" || t.Authority != "" || strings.ContainsAny(t.Path, "\r\n") || strings.ContainsAny(t.Host, "\r\n/") {

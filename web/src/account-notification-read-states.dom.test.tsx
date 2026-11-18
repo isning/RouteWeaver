@@ -42,7 +42,7 @@ it.each([
   render(<QueryClientProvider client={client}><UIProviders><App /></UIProviders></QueryClientProvider>);
   const main = await screen.findByRole("main");
   await within(main).findByRole("heading", { name: title, level: 1 });
-  const section = hash === "inbox" ? main : within(main).getByRole("heading", { name: endpoint === "/api/auth/sessions" ? "登录会话" : "服务公告" }).closest<HTMLElement>('[data-slot="card"]')!;
+  const section = hash === "inbox" ? main : within(main).getByRole("heading", { name: endpoint === "/api/auth/sessions" ? "登录会话" : "服务公告" }).closest<HTMLElement>('section, [data-slot="card"]')!;
   expect(within(section).getByLabelText("正在加载").getAttribute("aria-busy")).toBe("true");
   expect(within(main).queryByText(empty)).toBeNull();
   await act(async () => { release(json({ message: "列表读取暂不可用" }, 503)); });

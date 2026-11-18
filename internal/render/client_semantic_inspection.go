@@ -20,7 +20,7 @@ func InspectFullConfigSecrets(target Target, artifacts []domain.Artifact, alloca
 	switch {
 	case target.AdapterID == "mihomo" && target.Version == MihomoVersion:
 		path, nameKey, nodesKey, groupsKey, direct = "mihomo.json", "name", "proxies", "proxy-groups", "DIRECT"
-	case target.AdapterID == "sing-box" && target.Version == SingBoxVersion:
+	case target.AdapterID == "sing-box" && (target.Version == SingBoxVersion || target.Version == StockSingBoxVersion):
 		path, nameKey, nodesKey, groupsKey, direct = "sing-box.json", "tag", "outbounds", "outbounds", "rw-direct"
 	default:
 		return fail()

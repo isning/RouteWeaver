@@ -292,9 +292,7 @@ export function RateSettings({ routes }: { routes: RouteRecord[] }) {
             ? <EmptyState title="没有匹配的倍率记录" action={
               <ActionButton variant="outline" onClick={clearFilters}>清除筛选</ActionButton>
             } /> :
-            <span className="muted text-sm text-muted-foreground">
-              未设置倍率版本的线路按 1× 扣量
-            </span>
+            <EmptyState title="暂无倍率调整记录" description="未设置倍率版本的线路按 1× 扣量" />
           }
         />
       </QueryState>

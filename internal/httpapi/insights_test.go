@@ -99,3 +99,27 @@ func TestMyInsightsAuthenticationIsolationAndPolicy(t *testing.T) {
 		t.Fatalf("caller-selected identity %d %s", code, raw)
 	}
 }
+
+func TestInsightsAcceptsBoundedDailyWindowWithoutInventingRecordedDays(t *testing.T) {
+	s, srv := makeServer(t)
+	owner := inviteClient(t, s, srv, "daily-window")
+	code, body, raw := req(t, owner.c, "GET", srv.URL+"/api/me/insights?days=30", "", nil)
+	if code != 200 {
+		t.Fatal(raw)
+	}
+	daily := body["daily"].([]any)
+	if len(daily) != 30 {
+		t.Fatalf("got %d days", len(daily))
+	}
+	for _, day := range daily {
+		if day.(map[string]any)["hasData"] != false {
+			t.Fatal("empty day marked observed")
+		}
+	}
+	for _, query := range []string{"days=31", "days=0", "days=-1", "days=x", "days=7&days=30", "userId=other"} {
+		code, _, _ = req(t, owner.c, "GET", srv.URL+"/api/me/insights?"+query, "", nil)
+		if code != 400 {
+			t.Fatalf("accepted %s: %d", query, code)
+		}
+	}
+}

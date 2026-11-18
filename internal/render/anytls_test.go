@@ -34,7 +34,7 @@ func TestAnyTLSDirectRoundtripAndBoundaries(t *testing.T) {
 			t.Fatal("AnyTLS import lost connection options")
 		}
 	}
-	if _, err := render.DefaultClients().Render(p, render.Target{AdapterID: "mihomo", Version: render.MihomoVersion}, render.NodesOnly); err == nil {
+	if _, err := render.DefaultClients().Render(p, render.Target{AdapterID: "unsupported", Version: render.MihomoVersion}, render.NodesOnly); err == nil {
 		t.Fatal("unsupported client accepted")
 	}
 	ir := serverIR(render.ServerAdapterSingBox, render.StockSingBoxVersion)

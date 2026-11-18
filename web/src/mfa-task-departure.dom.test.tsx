@@ -226,7 +226,7 @@ it("blocks password, session and account changes while MFA setup is pending, inc
   expect(record.action).toBe("mfa-setup");
   const before = task.reads;
   await act(async () => {
-    fireEvent(window, new Event("focus"));
+    fireEvent(window, new Event("online"));
   });
   await waitFor(() => expect(task.reads).toBeGreaterThan(before));
   expect(disabled("查看当前状态")).toBe(true);
@@ -248,14 +248,14 @@ it.each(["same actor rotation", "A to B to A"])(
     if (kind === "A to B to A") {
       task.setActor("synthetic-B");
       await act(async () => {
-        fireEvent(window, new Event("focus"));
+        fireEvent(window, new Event("online"));
       });
       await waitFor(() => expect(disabled("设置二次验证")).toBe(false));
       expect(screen.queryByText("正在提交安全操作")).toBeNull();
     }
     task.setActor("synthetic-admin", "synthetic-rotated");
     await act(async () => {
-      fireEvent(window, new Event("focus"));
+      fireEvent(window, new Event("online"));
     });
     await screen.findByText("正在提交安全操作");
     expect(disabled("设置二次验证")).toBe(true);
@@ -328,7 +328,7 @@ it("keeps an unresolved enable blocked after navigation and a false status read,
   expect(screen.queryByLabelText("验证器设置密钥")).toBeNull();
   expect(disabled("设置二次验证")).toBe(true);
   await act(async () => {
-    fireEvent(window, new Event("focus"));
+    fireEvent(window, new Event("online"));
   });
   expect(disabled("查看当前状态")).toBe(true);
   await task.settle(1, {});

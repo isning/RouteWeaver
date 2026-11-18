@@ -117,7 +117,8 @@ it.each([
 ])("names the ordinary account's %s policy state", async (status, label) => {
   mountWorkspace(status);
   const card = await usageCard();
-  expect(card.getByText(label, { exact: true, selector: '[data-slot="badge"]' })).toBeTruthy();
+  if (status === "active") expect(card.queryByText("已开通")).toBeNull();
+  else expect(card.getByText(label, { exact: true, selector: '[data-slot="badge"]' })).toBeTruthy();
   expect(card.queryByText(status, { exact: true })).toBeNull();
   if (status !== "active") expect(card.queryByText("已开通")).toBeNull();
 });
@@ -136,7 +137,7 @@ it.each<{ status: string | undefined; label: string }>([
 it("names an opened service even with no assigned routes, without claiming connection readiness", async () => {
   mountWorkspace("active");
   const card = await usageCard();
-  expect(card.getByText("已开通")).toBeTruthy();
+  expect(card.queryByText("已开通")).toBeNull();
   expect(card.getAllByText("不限额")).toHaveLength(2);
   expect(card.getByRole("heading", { name: "本周期剩余额度" })).toBeTruthy();
   expect(card.getByText("总额度")).toBeTruthy();

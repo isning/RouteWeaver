@@ -2,6 +2,7 @@ package httpapi
 
 import (
 	"crypto/rand"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"github.com/go-chi/chi/v5"
@@ -92,9 +93,24 @@ func (h *server) savePublishedPrincipal(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	program := &deployment.IR.Programs[index]
-	if program.Instance.AdapterID != render.ServerAdapterManagedXray || program.Instance.Version != render.ManagedXrayVersion {
-		fail(w, 422, "public account access requires a verified managed entry adapter")
+	managed := program.Instance.AdapterID == render.ServerAdapterManagedXray && program.Instance.Version == render.ManagedXrayVersion
+	singBox := program.Instance.AdapterID == render.ServerAdapterSingBox && program.Instance.Version == render.StockSingBoxVersion
+	stockXray := program.Instance.AdapterID == render.ServerAdapterXray && program.Instance.Version == render.StockXrayVersion
+	needsUUID, needsPassword := domain.PrincipalCredentialFields(program.Listener.Connection.Protocol)
+	if !managed && !singBox && !stockXray {
+		fail(w, 422, "此核心不支持平台用户凭据")
 		return
+	}
+	if !managed {
+		protocol := program.Listener.Connection.Protocol
+		if program.Listener.Authentication != "principals" || (!needsUUID && !needsPassword) || (stockXray && protocol != "vless" && protocol != "vmess" && protocol != "trojan") {
+			fail(w, 422, "请先为支持的监听协议启用按用户分配凭据")
+			return
+		}
+		if overview.EffectivePolicy.RequiresRuntimeLimits() {
+			fail(w, 422, "此用户有流量或连接限制，请使用支持在线执行限制的托管 Xray 入口")
+			return
+		}
 	}
 	if e = ensureID(&in.EntryID); e != nil {
 		storeError(w, e)
@@ -136,7 +152,7 @@ func (h *server) savePublishedPrincipal(w http.ResponseWriter, r *http.Request) 
 		storeError(w, e)
 		return
 	}
-	if in.Credential.UUID == "" {
+	if needsUUID && in.Credential.UUID == "" {
 		b := make([]byte, 16)
 		if _, e = rand.Read(b); e != nil {
 			fail(w, 500, "cannot create credential")
@@ -146,7 +162,24 @@ func (h *server) savePublishedPrincipal(w http.ResponseWriter, r *http.Request) 
 		b[8] = (b[8] & 0x3f) | 0x80
 		in.Credential.UUID = fmt.Sprintf("%x-%x-%x-%x-%x", b[:4], b[4:6], b[6:8], b[8:10], b[10:])
 	}
-	issuedCredentialID := program.Instance.ID + ":" + auth.Digest(strings.ToLower(in.Credential.UUID))
+	if needsPassword && in.Credential.Password == "" {
+		if size := domain.ShadowsocksUserKeySize(program.Listener.Connection.Method); program.Listener.Connection.Protocol == "shadowsocks" && size > 0 {
+			key := make([]byte, size)
+			_, e = rand.Read(key)
+			in.Credential.Password = base64.StdEncoding.EncodeToString(key)
+		} else {
+			in.Credential.Password, e = auth.Token()
+		}
+		if e != nil {
+			storeError(w, e)
+			return
+		}
+	}
+	credentialKey := strings.ToLower(in.Credential.UUID)
+	if credentialKey == "" {
+		credentialKey = "password:" + in.Credential.Password
+	}
+	issuedCredentialID := program.Instance.ID + ":" + auth.Digest(credentialKey)
 	var issuedSubject string
 	if err := h.s.Get("issued-principal-credentials", issuedCredentialID, &issuedSubject); err == nil {
 		fail(w, 409, "credential has already been used; generate a fresh credential instead of reviving it")
@@ -159,6 +192,9 @@ func (h *server) savePublishedPrincipal(w http.ResponseWriter, r *http.Request) 
 	if e != nil {
 		storeError(w, e)
 		return
+	}
+	if program.Listener.Connection.Protocol == "socks" {
+		in.Credential.Username = "sub_" + token
 	}
 	principal := domain.ServerPrincipal{SubjectID: "sub_" + token, AccountID: in.AccountID, RouteID: route.ID, CredentialVersion: in.CredentialVersion, Credential: in.Credential, Action: action, PolicyRevision: deployment.IR.TopologyRevision, CycleID: "cycle_" + auth.Digest(overview.Cycle.Start.UTC().Format(time.RFC3339Nano))[:32]}
 	if principal.CycleID == "" {
@@ -192,8 +228,10 @@ func (h *server) savePublishedPrincipal(w http.ResponseWriter, r *http.Request) 
 	endpoint.Connection.UUID = ""
 	endpoint.Connection.Flow = ""
 	endpoint.Connection.Username = ""
-	endpoint.Connection.Password = ""
-	endpoint.Connection.Method = ""
+	if endpoint.Connection.Protocol != "shadowsocks" {
+		endpoint.Connection.Password = ""
+		endpoint.Connection.Method = ""
+	}
 	program.Listener = endpoint
 	connection, e := domain.PublicPrincipalConnection(route, endpoint, principal)
 	if e != nil {
@@ -204,41 +242,44 @@ func (h *server) savePublishedPrincipal(w http.ResponseWriter, r *http.Request) 
 		fail(w, 422, e.Error())
 		return
 	}
-	grant := PublicEntryGrant{ID: in.EntryID, UserID: in.AccountID, RouteID: route.ID, PublishedRouteID: route.ID, SubjectID: principal.SubjectID, DeploymentID: route.DeploymentID, Name: route.Name, CredentialVersion: in.CredentialVersion, Connection: connection}
+	grant := PublicEntryGrant{StaticPrincipal: !managed, ID: in.EntryID, UserID: in.AccountID, RouteID: route.ID, PublishedRouteID: route.ID, SubjectID: principal.SubjectID, DeploymentID: route.DeploymentID, Name: route.Name, CredentialVersion: in.CredentialVersion, Connection: connection}
 	deployment.Status = "draft"
 	deployment.UpdatedAt = time.Now().UTC()
 	compares := []store.RecordCompare{{Kind: "published-routes", ID: route.ID, Expected: routeRaw}, {Kind: "managed-endpoints", ID: endpoint.ID, Expected: endpointRaw}, {Kind: "server-deployments", ID: deployment.ID, Expected: original}, {Kind: kind, ID: grant.ID, Expected: expected}, {Kind: versionKind, ID: versionID, Expected: nil}}
 	writes := []store.RecordWrite{{Kind: "server-deployments", ID: deployment.ID, Value: deployment}, {Kind: "managed-endpoints", ID: endpoint.ID, Value: endpoint}, {Kind: kind, ID: grant.ID, Value: grant}, {Kind: versionKind, ID: versionID, Value: connectionDigest(connection)}}
-	binding := store.EntryAdmissionBinding{ID: principal.SubjectID, InstanceID: program.Instance.ID, EntryID: endpoint.ID, SubjectID: principal.SubjectID, UserID: in.AccountID, RouteID: route.ID, GrantID: grant.ID, CredentialVersion: in.CredentialVersion}
-	bindingRecord, err := store.EntryAdmissionBindingRecord(binding)
-	if err != nil {
-		storeError(w, err)
-		return
-	}
-	rates, err := h.s.Rates()
-	if err != nil {
-		storeError(w, err)
-		return
-	}
-	rateID := ""
-	rateAt := time.Time{}
-	now := time.Now().UTC()
-	for _, rate := range rates {
-		if rate.RouteID == route.ID && !rate.EffectiveAt.After(now) && rate.EffectiveAt.After(rateAt) {
-			rateID = rate.ID
-			rateAt = rate.EffectiveAt
+	compares = append(compares, store.RecordCompare{Kind: "users", ID: overview.User.ID, Expected: overview.User})
+	if managed {
+		binding := store.EntryAdmissionBinding{ID: principal.SubjectID, InstanceID: program.Instance.ID, EntryID: endpoint.ID, SubjectID: principal.SubjectID, UserID: in.AccountID, RouteID: route.ID, GrantID: grant.ID, CredentialVersion: in.CredentialVersion}
+		bindingRecord, err := store.EntryAdmissionBindingRecord(binding)
+		if err != nil {
+			storeError(w, err)
+			return
 		}
+		rates, err := h.s.Rates()
+		if err != nil {
+			storeError(w, err)
+			return
+		}
+		rateID := ""
+		rateAt := time.Time{}
+		now := time.Now().UTC()
+		for _, rate := range rates {
+			if rate.RouteID == route.ID && !rate.EffectiveAt.After(now) && rate.EffectiveAt.After(rateAt) {
+				rateID = rate.ID
+				rateAt = rate.EffectiveAt
+			}
+		}
+		meter := store.MeterBinding{ID: principal.SubjectID, InstanceID: program.Instance.ID, SubjectID: principal.SubjectID, UserID: in.AccountID, RouteID: route.ID, PolicyRevision: principal.PolicyRevision, CycleID: principal.CycleID, MeasurementLayer: entrypolicy.MeasurementLayer, LedgerMode: "admission-budget", RateID: rateID, EffectiveAt: now}
+		meterRecord, err := store.MeterBindingRecord(meter)
+		if err != nil {
+			storeError(w, err)
+			return
+		}
+		compares = append(compares, store.RecordCompare{Kind: bindingRecord.Kind, ID: bindingRecord.ID, Expected: nil}, store.RecordCompare{Kind: meterRecord.Kind, ID: meterRecord.ID, Expected: nil})
+		writes = append(writes, bindingRecord, meterRecord)
 	}
-	meter := store.MeterBinding{ID: principal.SubjectID, InstanceID: program.Instance.ID, SubjectID: principal.SubjectID, UserID: in.AccountID, RouteID: route.ID, PolicyRevision: principal.PolicyRevision, CycleID: principal.CycleID, MeasurementLayer: entrypolicy.MeasurementLayer, LedgerMode: "admission-budget", RateID: rateID, EffectiveAt: now}
-	meterRecord, err := store.MeterBindingRecord(meter)
-	if err != nil {
-		storeError(w, err)
-		return
-	}
-	compares = append(compares, store.RecordCompare{Kind: "users", ID: overview.User.ID, Expected: overview.User}, store.RecordCompare{Kind: bindingRecord.Kind, ID: bindingRecord.ID, Expected: nil}, store.RecordCompare{Kind: meterRecord.Kind, ID: meterRecord.ID, Expected: nil})
 	compares = append(compares, store.RecordCompare{Kind: "issued-principal-credentials", ID: issuedCredentialID, Expected: nil})
 	writes = append(writes, store.RecordWrite{Kind: "issued-principal-credentials", ID: issuedCredentialID, Value: principal.SubjectID})
-	writes = append(writes, bindingRecord, meterRecord)
 	if e = h.s.ComparePolicyAndPutRecords(overview.EffectivePolicy, compares, writes); e != nil {
 		storeError(w, e)
 		return

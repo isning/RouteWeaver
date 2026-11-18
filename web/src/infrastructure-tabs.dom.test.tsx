@@ -155,7 +155,7 @@ it("opens a server through an explicit configuration action and shows only the n
   expect(screen.queryByRole("button", { name: "管理监听入口" })).toBeNull();
   expect(screen.queryByRole("button", { name: "查看 Agent 接入" })).toBeNull();
   expect(screen.queryByRole("button", { name: "选择要配置的核心" })).toBeNull();
-  expect(screen.getByRole("button", { name: "查看接入与配置" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "管理核心" })).toBeTruthy();
   await user.click(screen.getByRole("button", { name: "返回服务器清单" }));
   expect(await screen.findByRole("button", { name: "进入服务器 Tokyo server" })).toBeTruthy();
 });
@@ -168,7 +168,7 @@ it("continues from the overview using the exact saved listener and server contex
   await user.click(await screen.findByRole("button", { name: "进入服务器 Tokyo server" }));
   const path = screen.getByRole("link", { name: "创建转发路径" });
   expect(path.getAttribute("href")).toBe("#routes?entryEndpoint=endpoint-1&returnHost=host-1&returnInstance=core-1");
-  await user.click(screen.getByRole("button", { name: "查看接入与配置" }));
+  await user.click(screen.getByRole("button", { name: "管理核心" }));
   expect(screen.queryByRole("dialog")).toBeNull();
   const core = screen.getByRole("region", { name: "Tokyo server的Tokyo core" });
   expect(within(core).getByText("Tokyo entry", { exact: true })).toBeTruthy();
@@ -222,7 +222,7 @@ it("clears a previously visited core when returning to the listener chooser", as
   });
   const user = userEvent.setup();
   await user.click(await screen.findByRole("button", { name: "进入服务器 Tokyo server" }));
-  await user.click(screen.getAllByRole("button", { name: "查看接入与配置" })[0]);
+  await user.click(screen.getAllByRole("button", { name: "管理核心" })[0]);
   expect(screen.getByRole("region", { name: "Tokyo server的Tokyo core" })).toBeTruthy();
   expect(location.hash).toContain("instance=core-1");
   await user.click(screen.getByRole("tab", { name: "概览" }));
@@ -231,8 +231,8 @@ it("clears a previously visited core when returning to the listener chooser", as
   expect(screen.queryByRole("region", { name: "Tokyo server的Tokyo core" })).toBeNull();
   expect(screen.getByRole("heading", { name: "Tokyo core" })).toBeTruthy();
   expect(screen.getByRole("heading", { name: "Second core" })).toBeTruthy();
-  expect(screen.getAllByRole("button", { name: "查看接入与配置" })).toHaveLength(2);
-  await user.click(screen.getAllByRole("button", { name: "查看接入与配置" })[1]);
+  expect(screen.getAllByRole("button", { name: "管理核心" })).toHaveLength(2);
+  await user.click(screen.getAllByRole("button", { name: "管理核心" })[1]);
   const secondCore = screen.getByRole("region", { name: "Tokyo server的Second core" });
   expect(within(secondCore).getByText("Second entry", { exact: true })).toBeTruthy();
   expect(within(secondCore).queryByText("Tokyo entry", { exact: true })).toBeNull();

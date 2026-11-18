@@ -106,7 +106,7 @@ it.each(["failed", "stale", "mismatched", "lost receipt"])("preserves confirmed 
   recovered = true;
   const beforeRecovery = rateReads;
   if (followUp === "failed") await user.click(screen.getByRole("button", { name: "重试" }));
-  else fireEvent.focus(window);
+  else fireEvent(window, new Event("online"));
   await waitFor(() => expect(rateReads).toBeGreaterThan(beforeRecovery));
   await waitFor(() => expect(screen.queryByText("倍率记录暂时无法刷新")).toBeNull());
   expect(screen.getAllByRole("row", { name: /办公线路.*2×/ })).toHaveLength(1);

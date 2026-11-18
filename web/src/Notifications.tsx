@@ -1,3 +1,4 @@
+import { SettingsGroup } from "@/ui-patterns/settings-group";
 import { ResourceToolbar, SearchField, QuickFilters } from "@/ui-patterns/resource-toolbar";
 import { ItemCount } from "@/ui-patterns/item-count";
 import { ScrollableTabsList } from "@/ui-patterns/scrollable-tabs-list";
@@ -336,6 +337,7 @@ export function NotificationsAdminPage() {
         title="公告与通知"
       />
       <Tabs
+        className="gap-6"
         value={activeSection}
         onValueChange={(next) => {
           setSection(next);
@@ -353,6 +355,7 @@ export function NotificationsAdminPage() {
           <TabsContent
             key={section.key}
             value={section.key}
+            className="mt-0 min-w-0"
             forceMount={
               section.key === "settings" && settingsVisited ? true : undefined
             }
@@ -519,6 +522,7 @@ function Announcements() {
     <>
       <Section
         title="服务公告"
+        variant="plain"
         extra={<div className="flex flex-wrap gap-2">
           {query.data !== undefined && <ActionButton variant="outline"
             pending={query.isFetching || query.isPaused} keepFocusableWhilePending
@@ -772,7 +776,7 @@ function NotificationSettings() {
     queryFn: () => request<Settings>("/admin/notification-settings"),
   });
   return (
-    <>
+    <div className="mx-auto w-full min-w-0 max-w-4xl space-y-6">
       {query.data && query.error && (
         <Notice
           tone="error"
@@ -791,7 +795,7 @@ function NotificationSettings() {
         </Notice>
       )}
       <QueryState
-        loading={query.isPending} paused={query.isPaused} loadingLayout="form"
+        loading={query.isPending} paused={query.isPaused} loadingLayout="settings"
         error={query.data ? null : query.error}
         retry={() => query.refetch()}
       >
@@ -801,7 +805,7 @@ function NotificationSettings() {
           <Notice tone="info">{query.isPaused ? "等待网络连接，暂时无法核对外部测试目标。" : "正在核对已保存的通知设置，暂时无法发送外部测试。"}</Notice>
         )}
       </QueryState>
-    </>
+    </div>
   );
 }
 // Validate the decimal spelling before Number can round a fractional input into
@@ -1193,12 +1197,9 @@ function SettingsForm({ initial, saved, savedReady }: { initial: Settings; saved
     }
   };
   return (
-    <Section
-      title="提醒与发送渠道"
-      className="max-w-4xl"
-      description="账号额度与到期提醒仅在站内展示。外部渠道用于管理员的供应商提醒与显式测试；测试消息需单独发送。"
-    >
+    <div className="mx-auto w-full min-w-0 max-w-4xl">
       <AppForm
+        className="space-y-6"
         form={form}
         disabled={save.isPending}
         noValidate
@@ -1234,6 +1235,7 @@ function SettingsForm({ initial, saved, savedReady }: { initial: Settings; saved
           save.mutate(values);
         }}
       >
+        <SettingsGroup title="提醒规则" description="账号额度与到期提醒仅在站内展示，邮件和 Webhook 用于供应商提醒与测试"><div className="space-y-5 px-5 pb-5 sm:px-6">
         <ErrorNotice error={test.error} />
         <p className="text-sm text-muted-foreground">
           每类可设置多个阈值；清空即关闭该类提醒。
@@ -1313,7 +1315,8 @@ function SettingsForm({ initial, saved, savedReady }: { initial: Settings; saved
         >
           <Switch />
         </AppField>
-        <Accordion type="multiple" value={openChannels} onValueChange={setOpenChannels}>
+        </div></SettingsGroup>
+        <Accordion type="multiple" className="space-y-6" value={openChannels} onValueChange={setOpenChannels}>
           {[
             {
               key: "email",
@@ -1499,17 +1502,18 @@ function SettingsForm({ initial, saved, savedReady }: { initial: Settings; saved
           ].map((section) => (
             <AccordionItem
               key={section.key}
+              className="overflow-hidden rounded-xl border-0 bg-card px-5 ring-1 ring-foreground/10 sm:px-6"
               value={String(section.key)}
               disabled={
                 "collapsible" in section && section.collapsible === "disabled"
               }
             >
-              <AccordionTrigger>{section.label}</AccordionTrigger>
-              <AccordionContent forceMount className="space-y-5 px-1">{section.children}</AccordionContent>
+              <AccordionTrigger className="py-5 text-base font-semibold tracking-tight">{section.label}</AccordionTrigger>
+              <AccordionContent forceMount className="space-y-5 px-1 pb-5">{section.children}</AccordionContent>
             </AccordionItem>
           ))}
         </Accordion>
-        <div ref={saveDecision} role="group" aria-label="保存通知设置" className="flex flex-wrap items-center justify-end gap-2 border-t pt-4">
+        <div ref={saveDecision} role="group" aria-label="保存通知设置" className="flex flex-wrap items-center justify-end gap-3 rounded-xl bg-card p-5 ring-1 ring-foreground/10 sm:p-6">
           {saveConflict ? (
             <div className="w-full space-y-3">
               <Notice tone="warning">通知设置已由其他操作更新，当前修改尚未保存。</Notice>
@@ -1544,7 +1548,7 @@ function SettingsForm({ initial, saved, savedReady }: { initial: Settings; saved
           </ActionButton>
         </div>
       </AppForm>
-    </Section>
+    </div>
   );
 }
 function Outbox() {
@@ -1586,7 +1590,7 @@ function Outbox() {
       "渠道设置或发送许可已变更。请在“提醒与渠道”核对设置，需要验证时另行发送测试。",
   };
   return (
-    <Section title="通知发送记录" description="渠道接收不等于收件人已经阅读。" extra={
+    <Section variant="plain" title="通知发送记录" description="渠道接收不等于收件人已经阅读。" extra={
       <ActionButton variant="outline" pending={query.isFetching || query.isPaused} keepFocusableWhilePending
         onClick={() => void query.refetch({ cancelRefetch: false })}>
         刷新记录

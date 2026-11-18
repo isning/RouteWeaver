@@ -1,13 +1,4 @@
-import { PasswordInput } from "@/ui-patterns/password-input";
 import { TaskDialog } from "@/ui-patterns/task-overlays";
-import {
-  Accordion,
-  AccordionItem,
-  AccordionTrigger,
-  AccordionContent,
-} from "@/components/ui/accordion";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Switch } from "@/components/ui/switch";
 import { ChoiceSelect } from "@/ui-patterns/choice-select";
 import { Textarea } from "@/components/ui/textarea";
@@ -160,6 +151,7 @@ function SourceEditorSession({
     watchedKind ??
     form.getFieldValue("kind") ??
     (initialSource ? initialSource.kind : "text");
+  const applyMode = useWatch("applyMode", form) ?? form.getFieldValue("applyMode") ?? "auto";
   const watchedFormat = useWatch("format", form);
   // Reveal populates the form before passive watchers subscribe. Read its latest
   // value for the first ready commit, without coercing unknown parser formats.
@@ -231,6 +223,7 @@ function SourceEditorSession({
           "content",
           "url",
           "applyMode",
+          "refreshIntervalSeconds",
         ] as const
       ).map((key) =>
         (key === "content" && values?.kind !== "text") ||
@@ -262,7 +255,7 @@ function SourceEditorSession({
         // Never derive a public summary from credential-bearing reveal data.
         setSavedSummary(summary);
         setSavedFailure(sourceHasFailure(summary) ? summary : null);
-        form.setFieldsValue({ ...full, applyMode: full.applyMode ?? "auto" });
+        form.setFieldsValue({ ...full, input: full.kind === "url" ? full.url : full.content, applyMode: full.applyMode ?? "auto" });
         editorBaseline.current = snapshot({
           ...full,
           applyMode: full.applyMode ?? "auto",
@@ -301,6 +294,7 @@ function SourceEditorSession({
           enabled: values.enabled,
           format: values.format,
           applyMode: values.applyMode ?? editing?.applyMode ?? "auto",
+          refreshIntervalSeconds: values.refreshIntervalSeconds ?? editing?.refreshIntervalSeconds ?? 3600,
           content: values.kind === "text" ? values.content : undefined,
           url: values.kind === "url" ? values.url : undefined,
         },
@@ -387,7 +381,7 @@ function SourceEditorSession({
       // Read failures leave this exact form and its uncertainty untouched.
       clearFileSelection();
       form.resetFields();
-      form.setFieldsValue({ ...full, applyMode: full.applyMode ?? "auto" });
+      form.setFieldsValue({ ...full, input: full.kind === "url" ? full.url : full.content, applyMode: full.applyMode ?? "auto" });
       editorBaseline.current = snapshot({ ...full, applyMode: full.applyMode ?? "auto" });
       setEditing(full);
       setRetainedDraft(null);
@@ -616,7 +610,13 @@ function SourceEditorSession({
           mutation.mutate(form.getFieldsValue(true));
         }}
         onValuesChange={(changed) => {
-          if ("kind" in changed || "content" in changed) clearFileSelection();
+          const input = changed.input ?? changed.content ?? changed.url;
+          if (typeof input === "string") {
+            const nextKind = /^https?:\/\/\S+$/i.test(input.trim()) ? "url" : "text";
+            form.setFieldValue("kind", nextKind);
+            form.setFieldValue(nextKind === "url" ? "url" : "content", input);
+          }
+          if ("kind" in changed || "content" in changed || "input" in changed) clearFileSelection();
           updateEditorDirty();
         }}
         disabled={pending || !open}
@@ -698,82 +698,39 @@ function SourceEditorSession({
           {unsupportedFormat && (
             <Notice tone="warning" title="当前内容格式不受支持">
               当前值为「{format}
-              」。请在“导入选项”中选择支持的格式；选择前会保留原值。
+              」。请在“内容格式”中选择支持的格式；选择前会保留原值。
             </Notice>
           )}
-          <AppField
-            name="name"
-            label="来源名称"
-            rules={[{ required: true, message: "给来源取一个名称" }]}
-          >
-            <Input ref={sourceNameInput} placeholder="例如：我的机场" maxLength={80} />
-          </AppField>
-          <fieldset className="source-input-fieldset mb-6 min-w-0 space-y-2 [&>legend]:mb-2 [&>legend]:text-sm">
-            <legend>导入方式</legend>
-            <AppField name="kind" noStyle trigger="onValueChange">
-              <RadioGroup
-                aria-label="导入方式"
-                className="source-input-methods grid gap-3 sm:grid-cols-2"
-              >
-                {[
-                  { value: "text", label: "节点 URI / 配置文本" },
-                  { value: "url", label: "订阅 URL" },
-                ].map((option) => (
-                  <Label
-                    key={option.value}
-                    className="flex cursor-pointer items-center gap-3 rounded-lg border p-4 text-sm has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-accent"
-                  >
-                    <RadioGroupItem
-                      value={String(option.value)}
-                      disabled={"disabled" in option && !!option.disabled}
-                    />
-                    {option.label}
-                  </Label>
-                ))}
-              </RadioGroup>
-            </AppField>
-          </fieldset>
-          {kind === "url" ? (
+          <AppField name="kind" hidden><Input /></AppField>
+          <div className="overflow-hidden rounded-lg border bg-background focus-within:ring-2 focus-within:ring-ring/50">
+            <div aria-hidden="true" className="px-4 pt-4 text-sm font-medium">导入内容</div>
             <AppField
-              name="url"
-              label="订阅地址"
-              rules={[
-                { required: true, message: "请输入订阅地址" },
-                { type: "url", message: "请输入完整的 https:// 地址" },
-              ]}
+              name="input"
+              getValueProps={() => ({ value: form.getFieldValue(kind === "url" ? "url" : "content") ?? "" })}
+              label="节点链接或配置内容"
+              className="px-4 pt-3 pb-4 [&>label]:sr-only"
+              rules={[{ required: true, message: "请粘贴链接、配置内容或选择文件" }]}
             >
-              <PasswordInput
-                revealLabel="订阅地址"
-                placeholder="https://…"
+              <Textarea
+                className="min-h-28 resize-y border-0 bg-transparent p-0 text-sm leading-relaxed shadow-none focus-visible:ring-0 dark:bg-transparent"
+                rows={4}
+                placeholder={"粘贴以下任意一种内容：\n订阅链接，如 https://example.com/subscribe\n节点链接，如 socks5://proxy.example:1080\n配置文本：Mihomo YAML 或 sing-box JSON"}
+                spellCheck={false}
                 autoComplete="off"
               />
             </AppField>
-          ) : (
-            <AppField
-              name="content"
-              label="节点链接或配置内容"
-              rules={[{ required: true, message: "请粘贴内容" }]}
-            >
-              <Textarea
-                className="min-h-40 font-mono text-sm"
-                rows={7}
-                placeholder="粘贴 SOCKS / Shadowsocks / VLESS 节点 URI，或 Mihomo、sing-box 配置内容"
-                spellCheck={false}
-              />
-            </AppField>
-          )}
-          {kind === "text" && (
-            <div className="source-file-control my-3 grid justify-items-start gap-2">
+          {(
+            <div className="source-file-control flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2 border-t bg-muted/20 px-3 py-2">
               <ActionButton
                 leadingIcon={<FileText aria-hidden="true" />}
                 disabled={pending || !open}
                 onClick={() => fileInput.current?.click()}
-                variant="outline"
+                variant="ghost"
               >
-                选择配置文件
+                上传文件
               </ActionButton>
               <span
-                className="source-file-status max-w-full text-sm text-muted-foreground wrap-anywhere"
+                className="source-file-status min-w-0 flex-1 text-xs text-muted-foreground wrap-anywhere"
                 role="status"
               >
                 {fileState === "reading"
@@ -782,7 +739,7 @@ function SourceEditorSession({
                     ? `文件未读取：${selectedFileName}`
                     : selectedFileName
                       ? `已读取文件：${selectedFileName}`
-                      : "尚未选择文件"}
+                      : "支持逐行输入多个节点链接"}
               </span>
               {unresolvedFile && (
                 <ActionButton variant="outline" disabled={pending} onClick={clearFileSelection}>
@@ -821,7 +778,9 @@ function SourceEditorSession({
                     if (active.current && revision === fileRead.current) {
                       fileBlocked.current = false;
                       setFileState("ready");
+                      form.setFieldValue("kind", "text");
                       form.setFieldValue("content", content);
+                      form.setFieldValue("input", content);
                       updateEditorDirty();
                     }
                   } catch {
@@ -832,33 +791,56 @@ function SourceEditorSession({
                   }
                 }}
               />
-              <small>
-                文件先在本地读取，提交后才上传。仅提取受支持的连接内容。
-              </small>
             </div>
           )}
+          </div>
           <AppField
-            name="applyMode"
-            label="更新应用方式"
-            trigger="onValueChange"
+            name="name"
+            label="来源名称"
+            rules={[{ required: true, message: "给来源取一个名称" }]}
           >
-            <ChoiceSelect
-              options={[
-                { value: "auto", label: "自动应用" },
-                { value: "manual", label: "手动应用" },
-              ]}
-            />
+            <Input ref={sourceNameInput} placeholder="例如：我的机场" maxLength={80} />
           </AppField>
-          <p className="mb-6 text-sm text-muted-foreground">
-            首次导入立即可用。后续更新按此方式应用到来源，不会自动发布订阅。
+          <section aria-label="来源设置" className="space-y-5 rounded-xl bg-muted/30 p-4">
+          <h3 className="text-xs font-medium text-muted-foreground">来源设置</h3>
+          <AppField
+            className="grid grid-cols-[minmax(0,1fr)_auto] items-center [&>*]:w-auto"
+            name="enabled"
+            label="启用来源"
+            valuePropName="checked"
+            trigger="onCheckedChange"
+          >
+            <Switch />
+          </AppField>
+          {kind === "url" && (
+          <div className="space-y-4 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-top-1 motion-safe:duration-200">
+          <AppField name="refreshIntervalSeconds" label="自动拉取频率" trigger="onValueChange" getValueProps={(value) => ({ value: value ?? 3600 })}>
+            <ChoiceSelect options={[
+              { value: 900, label: "每 15 分钟" },
+              { value: 1800, label: "每 30 分钟" },
+              { value: 3600, label: "每小时" },
+              { value: 21600, label: "每 6 小时" },
+              { value: 43200, label: "每 12 小时" },
+              { value: 86400, label: "每天" },
+            ]} />
+          </AppField>
+          <AppField
+            className="grid grid-cols-[minmax(0,1fr)_auto] items-center [&>*]:w-auto"
+            name="applyMode"
+            label="自动应用更新"
+            trigger="onCheckedChange"
+            valuePropName="checked"
+            getValueProps={(value) => ({ checked: (value ?? "auto") === "auto" })}
+            getValueFromEvent={(checked: boolean) => checked ? "auto" : "manual"}
+          >
+            <Switch />
+          </AppField>
+          <p className="text-sm text-muted-foreground">
+            {applyMode === "manual" ? "自动拉取，手动确认更新" : "自动拉取并应用订阅更新"}
           </p>
-          <Accordion type="multiple">
-            {[
-              {
-                key: "import-options",
-                label: "导入选项",
-                children: (
-                  <>
+          </div>
+          )}
+          </section>
                     <AppField
                       name="format"
                       label="内容格式"
@@ -880,38 +862,7 @@ function SourceEditorSession({
                         ]}
                       />
                     </AppField>
-                  </>
-                ),
-              },
-            ].map((section) => (
-              <AccordionItem
-                key={section.key}
-                value={String(section.key)}
-                disabled={
-                  (pending || !open ? "disabled" : undefined) ===
-                    "disabled" ||
-                  ("collapsible" in section &&
-                    section.collapsible === "disabled")
-                }
-              >
-                <AccordionTrigger>{section.label}</AccordionTrigger>
-                <AccordionContent
-                  forceMount
-                  className="data-[state=closed]:hidden"
-                >
-                  {section.children}
-                </AccordionContent>
-              </AccordionItem>
-            ))}
-          </Accordion>
-          <AppField
-            name="enabled"
-            label="启用来源"
-            valuePropName="checked"
-            trigger="onCheckedChange"
-          >
-            <Switch />
-          </AppField>
+
         </QueryState>
       </AppForm>
     </TaskDialog>

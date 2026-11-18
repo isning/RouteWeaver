@@ -1,3 +1,4 @@
+import { EmptyState } from "./components";
 import {
   Columns3,
   Ellipsis,
@@ -508,7 +509,7 @@ export function DataTable<T extends object>({
         </p>
       )}
       <div
-        className="overflow-hidden rounded-lg border bg-background [&>[data-slot=table-container]]:max-h-[var(--table-max-height)] [&>[data-slot=table-container]]:focus-visible:outline-2 [&>[data-slot=table-container]]:focus-visible:-outline-offset-2 [&>[data-slot=table-container]]:focus-visible:outline-ring"
+        className="overflow-hidden rounded-xl border bg-card [&>[data-slot=table-container]]:max-h-[var(--table-max-height)] [&>[data-slot=table-container]]:focus-visible:outline-2 [&>[data-slot=table-container]]:focus-visible:-outline-offset-2 [&>[data-slot=table-container]]:focus-visible:outline-ring"
         style={
           maxHeight
             ? ({ "--table-max-height": `${maxHeight}px` } as CSSProperties)
@@ -723,7 +724,7 @@ export function DataTable<T extends object>({
                     // columns' minimum width. Match the cell's px-4 padding;
                     // keep it visible even if a filtered table stays scrolled.
                     <div className="sticky left-4 w-[calc(var(--table-viewport-width,100%)-2rem)] max-w-full whitespace-normal [overflow-wrap:anywhere]">
-                      {empty}
+                      {typeof empty === "string" ? <EmptyState title={empty} /> : empty}
                     </div>
                   )}
                 </TableCell>

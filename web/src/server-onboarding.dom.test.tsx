@@ -48,12 +48,15 @@ function mount({ listeners = [], phase = "unregistered", relatedPath = false, no
         if (controls.failSave) return json({ error: "监听端点保存暂时失败" }, 503);
         current.push(value);
       }
-      if (path === "/api/agent/enrollments") return json({
-        scope: { nodeId: host.id, instanceId: core.id, enrollmentEpoch: "synthetic" },
+      if (path === "/api/agent/hosts/enrollments") return json({
+        scope: { nodeId: host.id, enrollmentEpoch: "synthetic" },
         token: "synthetic-test-token",
       });
       return json(value);
     }
+    if (/\/api\/agent\/hosts\/[^/]+\/state$/.test(path)) return json({ nodeId: path.split("/").at(-2), phase: "unregistered" });
+    if (path === "/api/admin/core-releases") return json([]);
+    if (path === `/api/admin/nodes/${host.id}/observability`) return json({ nodeId: host.id, config: { revision: 1, observerInstanceId: "", billedInterfaces: [], provider: null }, latest: null, provider: {} });
     if (path === "/api/hosts") return json([host]);
     if (path === "/api/core-instances") return json(currentCores);
     if (path === "/api/managed-endpoints") {
@@ -103,7 +106,7 @@ async function openSetup(user: ReturnType<typeof userEvent.setup>) {
   await user.click(await screen.findByRole("button", { name: host.name }));
   const hostSheet = await screen.findByRole("region", { name: host.name });
   expect(within(hostSheet).getByText("服务器信息已登记")).toBeTruthy();
-  const opener = within(hostSheet).getByRole("button", { name: "查看接入与配置" });
+  const opener = within(hostSheet).getByRole("button", { name: "管理核心" });
   await user.click(opener);
   const sheet = await screen.findByRole("region", { name: `${host.name}的${core.name}` });
   return { sheet, opener, hostSheet };
@@ -113,8 +116,8 @@ it("continues from a saved core through a scoped listener and real route navigat
   const { controls, writes } = mount();
   const user = userEvent.setup();
   const { sheet } = await openSetup(user);
-  expect(await within(sheet).findByText("尚未接入")).toBeTruthy();
-  expect(within(sheet).getByRole("heading", { name: "1. Agent 接入与上报" })).toBeTruthy();
+  expect(await within(sheet).findByText("尚未下发任务")).toBeTruthy();
+  expect(within(sheet).getByRole("heading", { name: "核心安装与运行" })).toBeTruthy();
   expect(within(sheet).queryByRole("link", { name: /创建转发路径$/ })).toBeNull();
   await user.click(within(sheet).getByRole("button", { name: "添加监听端点" }));
   const editor = await screen.findByRole("dialog", { name: "添加监听端点" });
@@ -154,7 +157,7 @@ it("returns a discarded listener to the same core action and then the original s
   await waitFor(() => expect(document.activeElement).toBe(within(resumed).getByRole("button", { name: "添加监听端点" })));
   await user.click(within(resumed).getByRole("button", { name: "返回核心列表" }));
   const restoredHost = await screen.findByRole("region", { name: host.name });
-  await waitFor(() => expect(document.activeElement).toBe(within(restoredHost).getByRole("button", { name: "查看接入与配置" })));
+  await waitFor(() => expect(document.activeElement).toBe(within(restoredHost).getByRole("button", { name: "管理核心" })));
   expect(writes).toEqual([]);
 });
 
@@ -189,24 +192,25 @@ it("creates credentials only on explicit submission and clears the token when co
   const { writes } = mount();
   const user = userEvent.setup();
   const { sheet } = await openSetup(user);
-  await user.click(within(sheet).getByRole("button", { name: "接入 Agent" }));
-  const enrollment = await screen.findByRole("dialog", { name: "接入核心实例" });
+  await user.click(screen.getByRole("tab", { name: "概览" }));
+  await user.click(await screen.findByRole("button", { name: "接入 Agent" }));
+  const enrollment = await screen.findByRole("dialog", { name: "接入服务器 Agent" });
   expect(writes).toEqual([]);
-  expect(within(enrollment).getByText(/旧凭据会失效/)).toBeTruthy();
+  expect(within(enrollment).getByText(/旧 Agent 凭据失效/)).toBeTruthy();
   await user.click(within(enrollment).getByRole("button", { name: "创建接入凭据" }));
   expect(await within(enrollment).findByText("接入凭据已创建")).toBeTruthy();
-  expect(within(enrollment).getByText(/凭据创建不会安装或启动 Agent/)).toBeTruthy();
+  expect(within(enrollment).getByText(/后续添加核心无需重新接入/)).toBeTruthy();
   expect(within(enrollment).getByLabelText("接入令牌").getAttribute("type")).toBe("password");
   await user.click(within(enrollment).getByRole("button", { name: "显示接入令牌" }));
   expect(within(enrollment).getByLabelText("接入令牌").getAttribute("type")).toBe("text");
   expect(writes).toHaveLength(1);
   await user.click(within(enrollment).getByRole("button", { name: "隐藏接入令牌" }));
   expect(within(enrollment).getByLabelText("接入令牌").getAttribute("type")).toBe("password");
-  await user.click(within(enrollment).getByRole("button", { name: "关闭令牌并查看实例" }));
+  await user.click(within(enrollment).getAllByRole("button", { name: "关闭" }).at(-1)!);
   await waitFor(() => expect(screen.queryByLabelText("接入令牌")).toBeNull());
   expect(writes).toHaveLength(1);
-  expect(writes[0]).toMatchObject({ path: "/api/agent/enrollments", value: { nodeId: host.id, instanceId: core.id } });
-  expect(await within(sheet).findByText("尚未接入")).toBeTruthy();
+  expect(writes[0]).toMatchObject({ path: "/api/agent/hosts/enrollments", value: { nodeId: host.id } });
+  expect(screen.getByRole("tab", { name: "概览" }).getAttribute("aria-selected")).toBe("true");
 });
 
 
@@ -261,21 +265,22 @@ it.each(["pending", "issued"])("does not let a late listener reveal interrupt %s
   const enrollmentReply = new Promise<Response>((resolve) => { releaseEnrollment = resolve; });
   vi.stubGlobal("fetch", vi.fn((input, init) => {
     if (String(input).endsWith("/reveal")) return reveal;
-    if (String(input) === "/api/agent/enrollments" && stage === "pending") return enrollmentReply;
+    if (String(input) === "/api/agent/hosts/enrollments" && stage === "pending") return enrollmentReply;
     return read(input, init);
   }));
   const user = userEvent.setup();
   const { sheet } = await openSetup(user);
   await user.click(within(sheet).getByRole("button", { name: "编辑监听端点 Setup listener" }));
-  await user.click(within(sheet).getByRole("button", { name: "接入 Agent" }));
-  const enrollment = await screen.findByRole("dialog", { name: "接入核心实例" });
+  await user.click(screen.getByRole("tab", { name: "概览" }));
+  await user.click(await screen.findByRole("button", { name: "接入 Agent" }));
+  const enrollment = await screen.findByRole("dialog", { name: "接入服务器 Agent" });
   await user.click(within(enrollment).getByRole("button", { name: "创建接入凭据" }));
   if (stage === "issued") await within(enrollment).findByText("接入凭据已创建");
   await act(async () => { releaseReveal(json(endpoint)); await reveal; });
-  expect(screen.getByRole("dialog", { name: "接入核心实例" })).toBe(enrollment);
+  expect(screen.getByRole("dialog", { name: "接入服务器 Agent" })).toBe(enrollment);
   expect(screen.queryByRole("dialog", { name: "编辑监听端点" })).toBeNull();
   if (stage === "pending") await act(async () => {
-    releaseEnrollment(json({ scope: { nodeId: host.id, instanceId: core.id, enrollmentEpoch: "synthetic" }, token: "delayed-synthetic-token" }));
+    releaseEnrollment(json({ scope: { nodeId: host.id, enrollmentEpoch: "synthetic" }, token: "delayed-synthetic-token" }));
     await enrollmentReply;
   });
   expect(await within(enrollment).findByLabelText("接入令牌")).toHaveProperty("value", stage === "issued" ? "synthetic-test-token" : "delayed-synthetic-token");
@@ -323,7 +328,7 @@ it("keeps two confirmed cores discoverable after closing setup while inventory r
   expect(within(hostSheet).getByText("First saved core")).toBeTruthy();
   expect(within(hostSheet).getByText("Second saved core")).toBeTruthy();
   expect(within(hostSheet).queryByText("先添加核心，再配置监听端点")).toBeNull();
-  await user.click(within(hostSheet).getAllByRole("button", { name: "查看接入与配置" })[0]);
+  await user.click(within(hostSheet).getAllByRole("button", { name: "管理核心" })[0]);
   expect(await screen.findByRole("region", { name: `${host.name}的First saved core` })).toBeTruthy();
   expect(writes).toHaveLength(2);
 });
@@ -450,15 +455,16 @@ it("does not replace or clear an issued enrollment token while resolving a retur
   const { writes } = mount();
   const user = userEvent.setup();
   const { sheet } = await openSetup(user);
-  await user.click(within(sheet).getByRole("button", { name: "接入 Agent" }));
-  const enrollment = await screen.findByRole("dialog", { name: "接入核心实例" });
+  await user.click(screen.getByRole("tab", { name: "概览" }));
+  await user.click(await screen.findByRole("button", { name: "接入 Agent" }));
+  const enrollment = await screen.findByRole("dialog", { name: "接入服务器 Agent" });
   await user.click(within(enrollment).getByRole("button", { name: "创建接入凭据" }));
   await within(enrollment).findByText("接入凭据已创建");
   act(() => {
     history.replaceState(null, "", `#servers?host=${host.id}&instance=${core.id}`);
     window.dispatchEvent(new HashChangeEvent("hashchange"));
   });
-  expect(screen.getByRole("dialog", { name: "接入核心实例" })).toBe(enrollment);
+  expect(screen.getByRole("dialog", { name: "接入服务器 Agent" })).toBe(enrollment);
   expect(within(enrollment).getByLabelText("接入令牌")).toHaveProperty("value", "synthetic-test-token");
   expect(writes).toHaveLength(1);
 });

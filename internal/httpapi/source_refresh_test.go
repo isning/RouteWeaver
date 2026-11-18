@@ -440,3 +440,18 @@ func TestSourceFailureCodeProjectionDropsUnknownAndNonfailedCodes(t *testing.T) 
 		}
 	}
 }
+
+func TestSubscriptionRefreshIntervalPersistsAndRejectsUnsupportedValues(t *testing.T) {
+	s, srv := makeServer(t)
+	owner := inviteClient(t, s, srv, "interval-owner")
+	source := map[string]any{"id": "interval-source", "name": "Subscription", "kind": "url", "url": "https://example.com/subscribe", "enabled": false, "refreshIntervalSeconds": 900}
+	status, saved, raw := req(t, owner.c, "POST", srv.URL+"/api/me/sources", owner.csrf, source)
+	if status != 200 || saved["refreshIntervalSeconds"] != float64(900) {
+		t.Fatalf("interval not persisted: %d %s", status, raw)
+	}
+	source["refreshIntervalSeconds"] = 1
+	status, _, _ = req(t, owner.c, "PUT", srv.URL+"/api/me/sources/interval-source", owner.csrf, source)
+	if status != 400 {
+		t.Fatalf("unsupported interval accepted: %d", status)
+	}
+}

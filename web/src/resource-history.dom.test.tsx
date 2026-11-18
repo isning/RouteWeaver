@@ -17,6 +17,9 @@ const fixture = (): ResourceHistoryView => ({
       observedAt: new Date(Date.now() - 600000).toISOString(),
       cpuPercent: 0,
       memoryUsedPercent: 50,
+      memoryUsedBytes: 4 * 2 ** 30,
+      memoryTotalBytes: 8 * 2 ** 30,
+      interfaceRates: { eth0: { receiveBytesPerSecond: 0, transmitBytesPerSecond: null }, lo: { receiveBytesPerSecond: 7, transmitBytesPerSecond: 8 } },
       receiveBytesPerSecond: 0,
       transmitBytesPerSecond: null,
       breakBefore: true,
@@ -25,6 +28,9 @@ const fixture = (): ResourceHistoryView => ({
       observedAt: new Date(Date.now() - 300000).toISOString(),
       cpuPercent: 25,
       memoryUsedPercent: 60,
+      memoryUsedBytes: 5 * 2 ** 30,
+      memoryTotalBytes: 8 * 2 ** 30,
+      interfaceRates: { eth0: { receiveBytesPerSecond: 1024, transmitBytesPerSecond: null }, lo: { receiveBytesPerSecond: 7, transmitBytesPerSecond: 8 } },
       receiveBytesPerSecond: 1024,
       transmitBytesPerSecond: null,
       breakBefore: true,
@@ -58,7 +64,7 @@ it("plots actual zeros but does not join restart gaps or turn unknown rates into
   );
   mount();
   const chart = await screen.findByRole("img", {
-    name: "计费网卡流量，最近24小时实际采样趋势",
+    name: "eth0，最近1小时实际采样趋势",
   });
   expect(chart.querySelectorAll("circle")).toHaveLength(2);
   expect(chart.querySelectorAll("text")).toHaveLength(0); // axis labels stay HTML-sized on narrow screens
@@ -66,11 +72,7 @@ it("plots actual zeros but does not join restart gaps or turn unknown rates into
     chart.parentElement?.parentElement?.querySelector("span")?.className,
   ).toContain("whitespace-nowrap");
   expect(chart.querySelectorAll('line[stroke="currentColor"]')).toHaveLength(0);
-  expect(
-    screen
-      .getByRole("slider", { name: "计费网卡流量采样时间" })
-      .getAttribute("aria-valuetext"),
-  ).toContain("0 B/s");
+  expect(screen.queryByRole("slider")).toBeNull();
   expect(chart.querySelector("title")).toBeNull();
 });
 it("distinguishes capacity, empty history and errors while retaining prior real samples", async () => {
@@ -83,7 +85,7 @@ it("distinguishes capacity, empty history and errors while retaining prior real 
   await screen.findByText("历史存储容量已满，当前资源数据仍可查看。");
   value = { ...value, available: true };
   await userEvent.click(screen.getByRole("button", { name: "刷新资源趋势" }));
-  await screen.findByText(/最近 24小时没有历史数据/);
+  await screen.findByText(/最近 1小时没有历史数据/);
   value = fixture();
   await userEvent.click(screen.getByRole("button", { name: "刷新资源趋势" }));
   await screen.findByRole("img", { name: /CPU 与内存/ });
@@ -116,13 +118,13 @@ it("requests hourly seven-day history without relabeling cached daily samples", 
   });
   vi.stubGlobal("fetch", fetcher);
   mount();
-  await screen.findByRole("img", { name: /计费网卡流量，最近24小时/ });
+  await screen.findByRole("img", { name: /eth0，最近1小时/ });
   await userEvent.click(screen.getByRole("tab", { name: "7 天" }));
-  await screen.findByRole("img", { name: /计费网卡流量，最近7天/ });
+  await screen.findByRole("img", { name: /eth0，最近7天/ });
   expect(
     fetcher.mock.calls.some(([url]) => String(url).includes("window=7d")),
   ).toBe(true);
-  expect(screen.queryByRole("img", { name: /最近24小时/ })).toBeNull();
+  expect(screen.queryByRole("img", { name: /最近1小时/ })).toBeNull();
 });
 it("lets keyboard and touch controls inspect exact samples without replacing missing rates with zero", async () => {
   const data = fixture();
@@ -131,20 +133,16 @@ it("lets keyboard and touch controls inspect exact samples without replacing mis
     vi.fn(async () => response(data)),
   );
   mount();
-  const slider = await screen.findByRole("slider", {
-    name: "计费网卡流量采样时间",
+  const slider = await screen.findByRole("group", {
+    name: "eth0采样",
   });
-  expect(slider.getAttribute("aria-valuetext")).toContain(
-    "接收 0 B/s (0 B/s)，发送 无数据",
-  );
   const { fireEvent } = await import("@testing-library/react");
-  fireEvent.change(slider, { target: { value: "1" } });
-  expect(slider.getAttribute("aria-valuetext")).toContain(
-    "接收 1 KiB/s (1,024 B/s)，发送 无数据",
-  );
+  fireEvent.focus(slider);
+  expect(screen.getByText("0 B/s (0 B/s)")).toBeTruthy();
+  fireEvent.keyDown(slider, { key: "ArrowRight" });
   expect(screen.getByText("1 KiB/s (1,024 B/s)")).toBeTruthy();
   expect(screen.getByText("无数据")).toBeTruthy();
-  fireEvent.change(slider, { target: { value: "0" } });
+  fireEvent.keyDown(slider, { key: "Home" });
   expect(screen.getByText("0 B/s (0 B/s)")).toBeTruthy();
 });
 it("opens a real sample table without inventing values and can collapse it", async () => {
@@ -167,12 +165,12 @@ it("opens a real sample table without inventing values and can collapse it", asy
     within(rows[1])
       .getAllByRole("cell")
       .map((cell) => cell.textContent),
-  ).toEqual([expect.any(String), "0%", "50%", "0 B/s", "无数据"]);
+  ).toEqual([expect.any(String), "0.0%", "50.0%", "4 GiB", "8 GiB"]);
   expect(
     within(rows[2])
       .getAllByRole("cell")
       .map((cell) => cell.textContent),
-  ).toEqual([expect.any(String), "25%", "60%", "1,024 B/s", "无数据"]);
+  ).toEqual([expect.any(String), "25.0%", "60.0%", "5 GiB", "8 GiB"]);
   expect(table.querySelector("time")?.dateTime).toBe(data.points[0].observedAt);
   await userEvent.click(
     screen.getByRole("button", { name: "收起采样数据（2 条）" }),
@@ -185,8 +183,8 @@ it("shows a floating readout only while inspecting and dismisses it with Escape"
     vi.fn(async () => response(fixture())),
   );
   mount();
-  const slider = await screen.findByRole("slider", {
-    name: "计费网卡流量采样时间",
+  const slider = await screen.findByRole("group", {
+    name: "eth0采样",
   });
   expect(screen.queryByRole("tooltip")).toBeNull();
   const { fireEvent, within } = await import("@testing-library/react");
@@ -195,7 +193,7 @@ it("shows a floating readout only while inspecting and dismisses it with Escape"
   expect(slider.getAttribute("aria-describedby")).toBe(tip.id);
   expect(within(tip).getByText("接收")).toBeTruthy();
   expect(within(tip).getByText("无数据")).toBeTruthy();
-  fireEvent.change(slider, { target: { value: "1" } });
+  fireEvent.keyDown(slider, { key: "ArrowRight" });
   expect(within(tip).getByText("1 KiB/s (1,024 B/s)")).toBeTruthy();
   fireEvent.keyDown(slider, { key: "Escape" });
   expect(screen.queryByRole("tooltip")).toBeNull();
@@ -205,7 +203,7 @@ it("touch selects the nearest real sample and an outside touch dismisses without
   const fetcher = vi.fn(async () => response(data));
   vi.stubGlobal("fetch", fetcher);
   mount();
-  const chart = await screen.findByRole("img", { name: /计费网卡流量/ });
+  const chart = await screen.findByRole("img", { name: /eth0/ });
   vi.spyOn(chart, "getBoundingClientRect").mockReturnValue({
     left: 0,
     top: 0,
@@ -240,11 +238,11 @@ it("does not carry a selected sample into a replacement history window", async (
     vi.fn(async () => response(value)),
   );
   mount();
-  const slider = await screen.findByRole("slider", {
-    name: "计费网卡流量采样时间",
+  const slider = await screen.findByRole("group", {
+    name: "eth0采样",
   });
   const { fireEvent, waitFor } = await import("@testing-library/react");
-  fireEvent.change(slider, { target: { value: "1" } });
+  fireEvent.keyDown(slider, { key: "ArrowRight" });
   expect(screen.getByRole("tooltip")).toBeTruthy();
   value = { ...value, points: [value.points[0]] };
   await userEvent.click(screen.getByRole("button", { name: "刷新资源趋势" }));
@@ -254,18 +252,17 @@ it("allows keyboard inspection of an entirely missing series without drawing zer
   const value = fixture();
   value.points = value.points.map((p) => ({
     ...p,
-    receiveBytesPerSecond: null,
-    transmitBytesPerSecond: null,
+    interfaceRates: { eth0: { receiveBytesPerSecond: null, transmitBytesPerSecond: null } },
   }));
   vi.stubGlobal(
     "fetch",
     vi.fn(async () => response(value)),
   );
   mount();
-  const slider = await screen.findByRole("slider", {
-    name: "计费网卡流量采样时间",
+  const slider = await screen.findByRole("group", {
+    name: "eth0采样",
   });
-  expect(screen.queryByRole("img", { name: /计费网卡流量/ })).toBeNull();
+  expect(screen.queryByRole("img", { name: /eth0/ })).toBeNull();
   const { fireEvent, within } = await import("@testing-library/react");
   fireEvent.focus(slider);
   expect(
@@ -278,12 +275,12 @@ it("keeps keyboard inspection visible when the mouse leaves and closes on blur",
     vi.fn(async () => response(fixture())),
   );
   mount();
-  const slider = await screen.findByRole("slider", {
-    name: "CPU 与内存采样时间",
+  const slider = await screen.findByRole("group", {
+    name: "CPU 与内存采样",
   });
   const { fireEvent } = await import("@testing-library/react");
   fireEvent.focus(slider);
-  fireEvent.pointerLeave(slider.parentElement!.parentElement!, {
+  fireEvent.pointerLeave(slider.closest(".space-y-3")!, {
     pointerType: "mouse",
   });
   expect(screen.getByRole("tooltip")).toBeTruthy();
@@ -296,7 +293,7 @@ it("keeps a readable sample selected when the rolling history expires the inspec
   vi.stubGlobal("fetch", vi.fn(async () => response(data)));
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(<QueryClientProvider client={client}><ResourceHistory nodeId="host" /></QueryClientProvider>);
-  const slider = await screen.findByRole("slider", { name: "计费网卡流量采样时间" });
+  const slider = await screen.findByRole("group", { name: "eth0采样" });
   fireEvent.focus(slider);
   expect(screen.getByText("0 B/s (0 B/s)")).toBeTruthy();
   await act(async () => {
@@ -304,10 +301,29 @@ it("keeps a readable sample selected when the rolling history expires the inspec
       ...data, points: [data.points[1]],
     });
   });
-  await waitFor(() => expect(slider.getAttribute("aria-valuetext")).toContain("接收 1 KiB/s (1,024 B/s)"));
-  expect(screen.queryByRole("tooltip")).toBeNull();
+  await waitFor(() => expect(screen.queryByRole("tooltip")).toBeNull());
   fireEvent.blur(slider);
   fireEvent.focus(slider);
   expect(screen.getByText("1 KiB/s (1,024 B/s)")).toBeTruthy();
+  client.clear();
+});
+
+it("adds a fresh report to the chart and sample table without waiting for a history refresh", async () => {
+  const fetcher = vi.fn(async () => response(fixture()));
+  vi.stubGlobal("fetch", fetcher);
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const view = render(<QueryClientProvider client={client}><ResourceHistory nodeId="host" /></QueryClientProvider>);
+  const chart = await screen.findByRole("img", { name: /内存用量，最近1小时/ });
+  expect(chart.querySelectorAll("circle")).toHaveLength(4);
+  const observedAt = new Date().toISOString();
+  view.rerender(<QueryClientProvider client={client}><ResourceHistory nodeId="host" latest={{
+    observedAt, receivedAt: observedAt, digest: "sample", source: "linux_procfs", continuity: "continuous",
+    cpuPercent: 10, receiveBytesPerSecond: null, transmitBytesPerSecond: null,
+    metrics: { memoryTotalBytes: 8 * 2 ** 30, memoryAvailableBytes: 2 * 2 ** 30, load1: 1, load5: 1, load15: 1, interfaces: [] },
+  }} /></QueryClientProvider>);
+  expect(chart.querySelectorAll("circle")).toHaveLength(6);
+  await userEvent.click(screen.getByRole("button", { name: "查看采样数据（3 条）" }));
+  expect(screen.getByText("6 GiB")).toBeTruthy();
+  expect(fetcher).toHaveBeenCalledTimes(1);
   client.clear();
 });

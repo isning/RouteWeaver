@@ -70,7 +70,7 @@ func TestSubscriptionOriginStageIsAdminOnlyAndNeverActivates(t *testing.T) {
 	if code != 409 {
 		t.Fatalf("unverified draft activated: %d", code)
 	}
-	for _, origin := range []string{"http://subscriptions.example.com", "https://127.0.0.1", "https://[::1]", "https://localhost", "https://user:secret@example.com", "https://example.com/feed/token", "https://example.com?secret=token", "https://example.com#token"} {
+	for _, origin := range []string{"https://user:secret@example.com", "https://example.com/feed/token", "https://example.com?secret=token", "https://example.com#token"} {
 		code, _ = subscriptionRequest(t, h, "PUT", path, map[string]any{"origin": origin, "expectedRevision": 1}, true)
 		if code != 400 {
 			t.Fatalf("unsafe origin accepted %s: %d", origin, code)
@@ -386,5 +386,41 @@ func TestSubscriptionOriginUsesOnlyExplicitDefaultAndAdminMayMaintainIt(t *testi
 		if response.Code != 403 {
 			t.Fatalf("member %s allowed: %d %s", method, response.Code, response.Body.String())
 		}
+	}
+}
+
+func TestSubscriptionOriginCanApplyImmediatelyWithoutOptionalProbe(t *testing.T) {
+	h := NewWithOptions(subscriptionTestStore(t), render.Default(), Options{AdminToken: subscriptionTestAdmin})
+	path := "/api/admin/subscription-origin"
+	code, saved := subscriptionRequest(t, h, "PUT", path, map[string]any{"origin": "https://subscription.example.com", "expectedRevision": 0, "applyImmediately": true}, true)
+	if code != 200 || saved["effectiveOrigin"] != "https://subscription.example.com" || saved["verificationStatus"] != "unverified" {
+		t.Fatalf("direct save requires probe or failed: %d %#v", code, saved)
+	}
+	if saved["effectiveRevision"] != saved["configuredRevision"] {
+		t.Fatal("saved domain not active")
+	}
+	code, _ = subscriptionRequest(t, h, "PUT", path, map[string]any{"origin": "https://other.example.com", "expectedRevision": 0, "applyImmediately": true}, true)
+	if code != 409 {
+		t.Fatal("stale save accepted")
+	}
+	code, reset := subscriptionRequest(t, h, "PUT", path, map[string]any{"origin": "", "expectedRevision": saved["revision"], "applyImmediately": true}, true)
+	if code != 200 || reset["effectiveOrigin"] != "" {
+		t.Fatalf("reset to default failed: %d %#v", code, reset)
+	}
+}
+
+func TestOptionalProbeSupportsLocalHTTPWithoutMakingItMandatory(t *testing.T) {
+	verifier := newSubscriptionVerification()
+	handler := newWithOptions(subscriptionTestStore(t), render.Default(), Options{AdminToken: subscriptionTestAdmin}, verifier)
+	fixture := httptest.NewServer(handler)
+	defer fixture.Close()
+	path := "/api/admin/subscription-origin"
+	status, saved := subscriptionRequest(t, handler, "PUT", path, map[string]any{"origin": fixture.URL, "expectedRevision": 0, "applyImmediately": true}, true)
+	if status != 200 || saved["effectiveOrigin"] != fixture.URL {
+		t.Fatal("HTTP loopback origin rejected")
+	}
+	status, checked := subscriptionRequest(t, handler, "POST", path+"/verify", map[string]any{"expectedRevision": saved["revision"]}, true)
+	if status != 200 || checked["verificationStatus"] != "verified" || checked["effectiveOrigin"] != fixture.URL {
+		t.Fatalf("optional local HTTP verification failed: %d %#v", status, checked)
 	}
 }

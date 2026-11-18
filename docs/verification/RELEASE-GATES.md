@@ -2,6 +2,8 @@
 
 These are evidence requirements, not certification, publication permission, ticket closure or a claim that all 35 stories are complete. Historical checkpoint reports remain historical. This recovery began from delivered WIP51 source v60; later unrecovered WIP52/53 notes are design intent, not recovered code or renewed test results.
 
+Current closure attempt: [2026-11-17 gate record](RELEASE-CLOSURE-2026-11-17.md). Static and secret-scanning checks passed locally; the release aggregate remains open.
+
 ## Repository delivery (continue without live infrastructure)
 
 - Complete frontend, control-plane and node-agent source; locked dependencies, documented commands and operator boundaries.

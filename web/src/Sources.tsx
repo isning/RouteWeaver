@@ -1,3 +1,4 @@
+import { MaterialEmptyState as EmptyState } from "./ui-patterns/material-empty-state";
 import { useActionTarget } from "./useActionTarget";
 import { exactDraftInteger } from "./draft-integer";
 import { Metadata, MetadataItem } from "@/ui-patterns/metadata";
@@ -47,7 +48,6 @@ import type {
 } from "./types";
 import { dateLabel, newID, diagnosticText, moveItem } from "./model";
 import {
-  EmptyState,
   ErrorNotice,
   PageHeader,
   QueryState,
@@ -393,7 +393,7 @@ export function SourcesPage({
         retry={() => query.refetch()}
       >
         <Section variant="plain">
-          <ResourceToolbar
+          {!!query.data?.length && <ResourceToolbar
             label="查找订阅来源"
             filters={<QuickFilters label="来源状态" value={taskFilter} onValueChange={value => { setTaskFilter(value); setPage(1); }}
               options={[{ value: "all", label: "全部" }, { value: "updates", label: "有更新" }, { value: "failed", label: "更新失败" }]} />}
@@ -406,7 +406,7 @@ export function SourcesPage({
                 aria-label="搜索来源"
               />
             }
-          />
+          />}
           {!query.data?.length ? (
             inventoryReady ? <EmptyState
               title="暂无订阅来源"
@@ -872,6 +872,9 @@ function collectionRecipe(value: unknown): Collection | null {
 class CollectionSaveNotSentError extends Error {}
 
 export function CollectionsPage() {
+  const [collectionSearch, setCollectionSearch] = useState("");
+  const [collectionPage, setCollectionPage] = useState(1);
+  const collectionSearchInput = useRef<HTMLInputElement>(null);
   const nameRequirementId = useId();
   const client = useQueryClient();
   const message = toast,
@@ -1279,7 +1282,7 @@ export function CollectionsPage() {
         retry={() => query.refetch()}
       >
         {!query.data?.length ? (
-          <Section>
+          <Section variant="plain">
             <EmptyState
               title="暂无节点集合"
               action={
@@ -1290,57 +1293,25 @@ export function CollectionsPage() {
             />
           </Section>
         ) : (
-          <div className="card-grid grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {query.data.map((item) => (
-              <article
-                key={item.id}
-                aria-labelledby={`collection-${encodeURIComponent(item.id)}-name`}
-                className="collection-card surface flex min-w-0 flex-col rounded-xl border bg-card p-5"
-              >
-                <div className="flex min-w-0 flex-1 items-start gap-3 pb-4">
-                  <span className="tile-icon flex size-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-                    <Link className="size-4" aria-hidden="true" />
-                  </span>
-                  <div className="min-w-0 space-y-1">
-                    <h2
-                      id={`collection-${encodeURIComponent(item.id)}-name`}
-                      className="text-base font-semibold tracking-tight wrap-anywhere"
-                    >
-                      {item.name}
-                    </h2>
-                    <p
-                      id={`collection-${encodeURIComponent(item.id)}-summary`}
-                      className="text-sm leading-relaxed text-muted-foreground"
-                    >
-                      <Metadata>
-                        <MetadataItem>{item.sources.length} 个来源</MetadataItem>
-                        <MetadataItem>{item.steps.length} 个聚合步骤</MetadataItem>
-                      </Metadata>
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between gap-2 border-t pt-2">
-                  <ActionButton
-                    variant="ghost"
-                    className="justify-start px-2 font-medium"
-                    aria-labelledby={`collection-${encodeURIComponent(item.id)}-name collection-${encodeURIComponent(item.id)}-summary collection-${encodeURIComponent(item.id)}-edit`}
-                    onClick={() => edit(item)}
-                  >
-                    <span id={`collection-${encodeURIComponent(item.id)}-edit`}>编辑集合</span>
-                    <span aria-hidden="true">→</span>
-                  </ActionButton>
-                  <ActionButton
-                    variant="ghost"
-                    className="px-2 text-muted-foreground hover:text-destructive"
-                    aria-label={`删除集合 ${item.name}`}
-                    onClick={() => setDeleting(item)}
-                  >
-                    删除
-                  </ActionButton>
-                </div>
-              </article>
-            ))}
-          </div>
+          <Section variant="plain">
+            <ResourceToolbar label="查找节点集合" search={<SearchField ref={collectionSearchInput} aria-label="搜索节点集合" placeholder="搜索集合名称" value={collectionSearch} onValueChange={value => { setCollectionSearch(value); setCollectionPage(1); }} />} />
+            <DataTable<Collection>
+              rowKey="id"
+              rows={query.data.filter(item => item.name.toLowerCase().includes(collectionSearch.trim().toLowerCase()))}
+              page={collectionPage} onPageChange={setCollectionPage}
+              count={{total:query.data.length,unit:"个集合",filtered:!!collectionSearch.trim()}}
+              empty={<EmptyState title="没有匹配的节点集合" action={<ActionButton variant="outline" onClick={() => { setCollectionSearch(""); setCollectionPage(1); collectionSearchInput.current?.focus(); }}>清除搜索</ActionButton>} />}
+              columns={[
+                {title:"集合",render:(_,item)=><span className="font-medium wrap-anywhere">{item.name}</span>},
+                {title:"来源",render:(_,item)=>`${item.sources.length} 个来源`},
+                {title:"处理步骤",render:(_,item)=>`${item.steps.length} 个聚合步骤`},
+                {title:"操作",render:(_,item)=><TableRowActions name={item.name}>
+                  <ActionButton variant="ghost" aria-label={`编辑集合 ${item.name}`} onClick={()=>edit(item)}>编辑集合</ActionButton>
+                  <ActionButton variant="ghost" className="text-muted-foreground hover:text-destructive" aria-label={`删除集合 ${item.name}`} onClick={()=>setDeleting(item)}>删除</ActionButton>
+                </TableRowActions>},
+              ]}
+            />
+          </Section>
         )}
       </QueryState>
       {deleting && (

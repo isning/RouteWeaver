@@ -17,10 +17,11 @@ import (
 )
 
 type driverTransport struct {
-	mu      sync.Mutex
-	desired *Desired
-	reports []State
-	batches []MeterBatch
+	mu       sync.Mutex
+	desired  *Desired
+	reports  []State
+	batches  []MeterBatch
+	onReport func(State)
 }
 
 func (t *driverTransport) ReceiveDesired(ctx context.Context, s Scope, after uint64) (*Desired, error) {
@@ -36,6 +37,9 @@ func (t *driverTransport) ReportObservation(_ context.Context, _ Scope, s State)
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	t.reports = append(t.reports, s)
+	if t.onReport != nil {
+		t.onReport(s)
+	}
 	return nil
 }
 func (t *driverTransport) SendMeterBatch(_ context.Context, b MeterBatch) (MeterReceipt, error) {
@@ -47,8 +51,16 @@ func (t *driverTransport) SendMeterBatch(_ context.Context, b MeterBatch) (Meter
 func TestBoundedDriverReconcilesReportsAndStopsOwnedSession(t *testing.T) {
 	r := openTest(t, t.TempDir(), LocalFixture{})
 	d := testDesired(t, 1)
-	tr := &driverTransport{desired: &d}
-	st, err := RunDriver(context.Background(), r, tr, nil, DriverOptions{PollInterval: 10 * time.Millisecond, LeaseInterval: 5 * time.Millisecond, MaxRuntime: 80 * time.Millisecond})
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	tr := &driverTransport{desired: &d, onReport: func(s State) {
+		if s.Phase == ObservedConformant {
+			cancel()
+		}
+	}}
+	// Completion is synchronized with the observed report, independent of fsync latency.
+	// MaxRuntime remains a failure bound if the report is never delivered.
+	st, err := RunDriver(ctx, r, tr, nil, DriverOptions{PollInterval: 10 * time.Millisecond, LeaseInterval: 5 * time.Millisecond, MaxRuntime: 5 * time.Second})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -62,7 +74,7 @@ func TestBoundedDriverReconcilesReportsAndStopsOwnedSession(t *testing.T) {
 		found = found || report.Phase == ObservedConformant
 	}
 	if !found {
-		t.Fatal("no observed status report")
+		t.Fatalf("no observed status report: %+v", tr.reports)
 	}
 }
 

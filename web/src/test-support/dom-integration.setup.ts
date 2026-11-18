@@ -15,6 +15,8 @@ if ("jsdom" in globalThis) {
 // Radix and Command use native scrolling/pointer APIs. jsdom has no layout or
 // pointer capture; geometric browser checks remain separate and may override these.
 if (typeof window !== "undefined") {
+  // OTP password-manager detection needs hit testing; jsdom has no geometry.
+  if (!document.elementFromPoint) document.elementFromPoint = () => null;
   if (!Element.prototype.scrollIntoView) Element.prototype.scrollIntoView = () => {};
   if (!HTMLElement.prototype.hasPointerCapture) HTMLElement.prototype.hasPointerCapture = () => false;
   if (!HTMLElement.prototype.setPointerCapture) HTMLElement.prototype.setPointerCapture = () => {};

@@ -128,6 +128,14 @@ export interface Overview {
   routes: { id: string; name: string; rateMicros?: number }[];
 }
 export interface Connection {
+  tuic?: { congestionControl?: string; udpRelayMode?: string };
+  hysteria2?: {
+    obfs?: { type: string; password: string };
+    upMbps?: number;
+    downMbps?: number;
+    serverPorts?: string[];
+    hopIntervalSeconds?: number;
+  };
   host: string;
   port: number;
   protocol: string;
@@ -146,6 +154,7 @@ export interface Connection {
     reality?: { publicKey: string; shortId: string };
   };
   transport?: {
+    mode?: string;
     type: string;
     path?: string;
     host?: string;
@@ -223,6 +232,7 @@ export interface SourceApplyEvent {
 }
 export interface Source {
   applyMode?: "auto" | "manual";
+  refreshIntervalSeconds?: number;
   applyHistory?: SourceApplyEvent[];
   revision?: string;
   candidate?: SourceCandidate;
@@ -619,6 +629,11 @@ export interface CoreInstance {
   version: string;
 }
 export interface ManagedEndpoint {
+  udp?: { fragment?: boolean; timeoutSeconds?: number };
+  acceptProxyProtocol?: boolean;
+  tcp?: { fastOpen?: boolean; disableKeepAlive?: boolean; keepAliveIdleSeconds?: number; keepAliveIntervalSeconds?: number };
+  realityServer?: NonNullable<ServerTLS["reality"]>;
+  certificateId?: string;
   revisionToken?: string;
   authentication?: string;
   id: string;
@@ -651,7 +666,7 @@ export interface ServerProgram {
     accountId: string;
     routeId: string;
     credentialVersion: string;
-    credential: { uuid: string; flow?: string };
+    credential: { uuid?: string; flow?: string; password?: string; username?: string };
     action: { kind: string; ref?: string };
     policyRevision?: string;
     cycleId?: string;
@@ -697,9 +712,11 @@ export interface AgentState {
     digest: string;
   };
   state?: {
+    installation?: {releaseId:string;adapterId:string;version:string;platform:string;executableSHA256:string};
     phase: string;
     code?: string;
     nativeChecked: boolean;
+    errorDetail?: string;
     recoveryRequired: boolean;
     accessDecision?: string;
     observed?: {
@@ -718,6 +735,7 @@ export interface Infrastructure {
   deployments: ServerDeployment[];
 }
 export interface PlatformEntry {
+  staticPrincipal?: boolean;
   id: string;
   name: string;
   routeId: string;

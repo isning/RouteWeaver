@@ -25,6 +25,9 @@ func (h *server) resolveComparisonEntry(owner, id string, reader *platformCompar
 	if !domain.ValidID(id) || grant.ID != id || grant.UserID != owner || grant.Revoked || grant.OutputID != "" || (grant.PublishedRouteID != "" && grant.PublishedRouteID != grant.RouteID) {
 		return domain.ClientEndpoint{}, fmt.Errorf("platform comparison unavailable")
 	}
+	if grant.StaticPrincipal && reader.snapshot.RequiresRuntimeLimits() {
+		return domain.ClientEndpoint{}, fmt.Errorf("platform comparison unavailable")
+	}
 	if err := reader.snapshot.Eligible(grant.RouteID); err != nil {
 		return domain.ClientEndpoint{}, err
 	}

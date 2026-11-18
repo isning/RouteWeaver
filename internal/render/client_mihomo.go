@@ -15,7 +15,7 @@ type MihomoClient struct{}
 func (MihomoClient) NormalizeName(name string) string { return strings.ReplaceAll(name, ",", "，") }
 
 func (MihomoClient) ClientCapability() ClientCapability {
-	return ClientCapability{NativeOverride: nativeCapability("bounded-schema-and-references"), AdapterID: "mihomo", Versions: []string{MihomoVersion}, Protocols: []string{"socks", "shadowsocks", "vless", "trojan", "vmess"}, Groups: []string{"manual", "url-test", "fallback", "load-balance"}, MatchOps: []string{"domain", "domain-suffix", "ip-cidr", "resource", "and", "or", "not"}, ResourceFormats: []string{"mihomo-yaml", "mihomo-text", "mrs"}, Runtime: []string{"dns", "sniff"}, TLSFingerprints: []string{"chrome", "firefox", "safari", "ios", "android", "edge", "360", "qq", "random"}, ReservedNames: []string{"DIRECT", "REJECT", "REJECT-DROP", "PASS", "COMPATIBLE", "GLOBAL"}}
+	return ClientCapability{NativeOverride: nativeCapability("bounded-schema-and-references"), AdapterID: "mihomo", Versions: []string{MihomoVersion}, Protocols: []string{"socks", "shadowsocks", "vless", "trojan", "vmess", "hysteria2", "anytls", "tuic"}, Groups: []string{"manual", "url-test", "fallback", "load-balance"}, MatchOps: []string{"domain", "domain-suffix", "ip-cidr", "resource", "and", "or", "not"}, ResourceFormats: []string{"mihomo-yaml", "mihomo-text", "mrs"}, Runtime: []string{"dns", "sniff"}, TLSFingerprints: []string{"chrome", "firefox", "safari", "ios", "android", "edge", "360", "qq", "random"}, ReservedNames: []string{"DIRECT", "REJECT", "REJECT-DROP", "PASS", "COMPATIBLE", "GLOBAL"}}
 }
 func (a MihomoClient) RenderClient(p domain.ClientProfileIR, target Target, mode OutputMode, names map[string]string) (ClientResult, error) {
 	return a.renderClient(p, target, mode, names, nil)
@@ -36,13 +36,13 @@ func (MihomoClient) renderClient(p domain.ClientProfileIR, _ Target, mode Output
 				proxy["username"] = c.Username
 				proxy["password"] = c.Password
 			}
-		case "vless", "trojan", "vmess":
+		case "vless", "trojan", "vmess", "hysteria2", "anytls", "tuic":
 			proxy["type"] = c.Protocol
 			if c.Protocol == "vmess" {
 				proxy["alterId"] = 0
 				proxy["cipher"] = vmessSecurity(c)
 			}
-			if c.Protocol == "trojan" {
+			if c.Protocol == "trojan" || c.Protocol == "hysteria2" || c.Protocol == "anytls" || c.Protocol == "tuic" {
 				proxy["password"] = c.Password
 			} else {
 				proxy["uuid"] = c.UUID
@@ -54,11 +54,11 @@ func (MihomoClient) renderClient(p domain.ClientProfileIR, _ Target, mode Output
 				proxy["flow"] = c.Flow
 			}
 			if c.TLS != nil && c.TLS.Enabled {
-				if c.Protocol != "trojan" {
+				if c.Protocol != "trojan" && c.Protocol != "hysteria2" && c.Protocol != "anytls" && c.Protocol != "tuic" {
 					proxy["tls"] = true
 				}
 				if c.TLS.ServerName != "" {
-					if c.Protocol == "trojan" {
+					if c.Protocol == "trojan" || c.Protocol == "hysteria2" || c.Protocol == "anytls" || c.Protocol == "tuic" {
 						proxy["sni"] = c.TLS.ServerName
 					} else {
 						proxy["servername"] = c.TLS.ServerName
@@ -96,6 +96,35 @@ func (MihomoClient) renderClient(p domain.ClientProfileIR, _ Target, mode Output
 			proxy["type"] = "ss"
 			proxy["cipher"] = c.Method
 			proxy["password"] = c.Password
+		}
+		if c.Protocol == "tuic" {
+			proxy["uuid"] = c.UUID
+			if o := c.TUIC; o != nil {
+				if o.CongestionControl != "" {
+					proxy["congestion-controller"] = o.CongestionControl
+				}
+				if o.UDPRelayMode != "" {
+					proxy["udp-relay-mode"] = o.UDPRelayMode
+				}
+			}
+		}
+		if h := c.Hysteria2; h != nil {
+			if h.Obfs != nil {
+				proxy["obfs"] = h.Obfs.Type
+				proxy["obfs-password"] = h.Obfs.Password
+			}
+			if h.UpMbps > 0 {
+				proxy["up"] = h.UpMbps
+			}
+			if h.DownMbps > 0 {
+				proxy["down"] = h.DownMbps
+			}
+			if len(h.ServerPorts) > 0 {
+				proxy["ports"] = strings.ReplaceAll(strings.Join(h.ServerPorts, ","), ":", "-")
+			}
+			if h.HopIntervalSeconds > 0 {
+				proxy["hop-interval"] = h.HopIntervalSeconds
+			}
 		}
 		semantics.node("mihomo", e.ID, proxy)
 		proxies = append(proxies, proxy)

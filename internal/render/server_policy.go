@@ -174,7 +174,7 @@ func singboxRuleSets(resources []domain.RuleResource) ([]any, bool, error) {
 // arbitrary-depth or reverse-direction support from the engine dialer API.
 func validateDirectTLSConnectors(p domain.ServerProgram) error {
 	for _, c := range p.Egress {
-		if (c.Protocol == "hysteria2" || c.Protocol == "anytls") && len(p.Egress) > 1 {
+		if (c.Protocol == "hysteria2" || c.Protocol == "anytls" || c.Protocol == "tuic") && len(p.Egress) > 1 {
 			return fmt.Errorf("%s_DETOUR_UNSUPPORTED: use supported named connectors", strings.ToUpper(c.Protocol))
 		}
 	}
@@ -187,6 +187,9 @@ func validateDirectTLSConnectors(p domain.ServerProgram) error {
 			continue
 		}
 		upstream := byID[c.Via]
+		if c.Connection.Protocol == "tuic" || upstream.Connection.Protocol == "tuic" {
+			return fmt.Errorf("TUIC_DETOUR_UNSUPPORTED: TUIC must connect directly")
+		}
 		if c.Connection.Protocol == "hysteria2" || upstream.Connection.Protocol == "hysteria2" {
 			return fmt.Errorf("HYSTERIA2_DETOUR_UNSUPPORTED: Hysteria2 must connect directly")
 		}

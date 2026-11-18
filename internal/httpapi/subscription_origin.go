@@ -3,8 +3,9 @@ package httpapi
 import (
 	"errors"
 	"net/http"
-	"routeweaver/internal/resources"
+	"net/url"
 	"routeweaver/internal/store"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -14,6 +15,7 @@ import (
 // the browser's trusted mutation origin, install TLS, change DNS, or redirect a
 // feed credential. A successful probe is a dated observation, not uptime status.
 type subscriptionOriginState struct {
+	LinkTemplate          string     `json:"linkTemplate"`
 	Revision              uint64     `json:"revision"`
 	ConfiguredRevision    uint64     `json:"configuredRevision"`
 	DraftOrigin           string     `json:"draftOrigin"`
@@ -42,18 +44,29 @@ type subscriptionOriginView struct {
 }
 
 func canonicalSubscriptionOrigin(raw string) (string, error) {
+	raw = strings.TrimSpace(raw)
 	if raw == "" {
 		return "", nil
 	}
 	if len(raw) > 2048 {
 		return "", errors.New("subscription origin is too long")
 	}
-	origin, err := CanonicalPublicOrigin(raw)
-	if err != nil {
-		return "", errors.New("subscription origin must be HTTPS without credentials, path, query or fragment")
+	u, err := url.Parse(raw)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Hostname() == "" || u.User != nil || (u.Path != "" && u.Path != "/") || u.RawQuery != "" || u.ForceQuery || u.Fragment != "" {
+		return "", errors.New("subscription origin must be an HTTP or HTTPS address without credentials, path, query or fragment")
 	}
-	if err = resources.ValidateHTTPSURL(origin); err != nil {
-		return "", errors.New("subscription origin must use a public HTTPS address")
+	origin, err := CanonicalPublicOrigin("https://" + u.Host)
+	if err != nil {
+		return "", errors.New("invalid subscription address")
+	}
+	if u.Scheme == "http" {
+		origin = "http://" + strings.TrimPrefix(origin, "https://")
+		if u.Port() == "443" {
+			origin += ":443"
+		}
+		if u.Port() == "80" {
+			origin = strings.TrimSuffix(origin, ":80")
+		}
 	}
 	return origin, nil
 }
@@ -89,7 +102,7 @@ func (h *server) subscriptionOriginView(v subscriptionOriginRecord) subscription
 	if proposed == "" {
 		proposed = h.opts.PublicOrigin
 	}
-	return subscriptionOriginView{subscriptionOriginState: v.subscriptionOriginState, DefaultOrigin: h.opts.PublicOrigin, VerificationStatus: status, CurrentLinkExample: effective + "/feed/{existing-token}", ProposedLinkExample: proposed + "/feed/{existing-token}", TokensUnchanged: true}
+	return subscriptionOriginView{subscriptionOriginState: v.subscriptionOriginState, DefaultOrigin: h.opts.PublicOrigin, VerificationStatus: status, CurrentLinkExample: subscriptionTemplateURL(v.LinkTemplate, effective, "{existing-token}", false), ProposedLinkExample: proposed + "/feed/{existing-token}", TokensUnchanged: true}
 }
 func (h *server) registerSubscriptionOriginAdmin(r chi.Router) {
 	const path = "/admin/subscription-origin"
@@ -103,8 +116,10 @@ func (h *server) registerSubscriptionOriginAdmin(r chi.Router) {
 	})
 	r.Put(path, func(w http.ResponseWriter, r *http.Request) {
 		var in struct {
-			Origin           string `json:"origin"`
-			ExpectedRevision uint64 `json:"expectedRevision"`
+			Origin           string  `json:"origin"`
+			LinkTemplate     *string `json:"linkTemplate"`
+			ApplyImmediately bool    `json:"applyImmediately"`
+			ExpectedRevision uint64  `json:"expectedRevision"`
 		}
 		if !decode(w, r, &in) {
 			return
@@ -123,6 +138,18 @@ func (h *server) registerSubscriptionOriginAdmin(r chi.Router) {
 			fail(w, 409, "settings changed; reload before saving")
 			return
 		}
+		if in.LinkTemplate != nil {
+			if !in.ApplyImmediately {
+				fail(w, 400, "save link templates directly")
+				return
+			}
+			template, templateErr := canonicalSubscriptionTemplate(*in.LinkTemplate)
+			if templateErr != nil {
+				fail(w, 400, templateErr.Error())
+				return
+			}
+			v.LinkTemplate = template
+		}
 		v.Revision++
 		v.ConfiguredRevision = v.Revision
 		v.DraftOrigin = origin
@@ -130,11 +157,21 @@ func (h *server) registerSubscriptionOriginAdmin(r chi.Router) {
 		v.VerifiedAt = nil
 		v.VerificationExpiresAt = nil
 		v.LastFailure = ""
+		if in.ApplyImmediately {
+			now := time.Now().UTC()
+			v.EffectiveOrigin = origin
+			v.EffectiveRevision = v.ConfiguredRevision
+			v.ActivatedAt = &now
+		}
 		if err = h.saveSubscriptionOrigin(previous, v); err != nil {
 			storeError(w, err)
 			return
 		}
-		h.s.Audit(current(r).Account.ID, "subscription-origin.staged", "subscription-origin")
+		action := "subscription-origin.staged"
+		if in.ApplyImmediately {
+			action = "subscription-origin.activated"
+		}
+		h.s.Audit(current(r).Account.ID, action, "subscription-origin")
 		writeJSON(w, 200, h.subscriptionOriginView(v))
 	})
 	r.Post(path+"/verify", h.verifySubscriptionOrigin)
@@ -164,18 +201,23 @@ func (h *server) verifySubscriptionOrigin(w http.ResponseWriter, r *http.Request
 	if !ok {
 		return
 	}
-	if v.DraftOrigin == "" {
+	probeOrigin := v.DraftOrigin
+	if v.LinkTemplate != "" {
+		u, _ := url.Parse(strings.ReplaceAll(v.LinkTemplate, "{token}", templateMarker))
+		probeOrigin = u.Scheme + "://" + u.Host
+	}
+	if probeOrigin == "" {
 		fail(w, 400, "the default link origin does not require a custom-domain probe")
 		return
 	}
-	err := h.subscriptionVerification.verify(r.Context(), v.DraftOrigin)
+	err := h.subscriptionVerification.verify(r.Context(), probeOrigin)
 	now := h.subscriptionVerification.now().UTC()
 	v.Revision++
 	v.ProofRevision = 0
 	v.VerifiedAt = nil
 	v.VerificationExpiresAt = nil
 	if err != nil {
-		v.LastFailure = "Could not verify this instance. Check public DNS, the HTTPS certificate and /feed routing, then verify again."
+		v.LastFailure = "Could not verify this instance. Check the subscription address and /feed routing, then try again."
 	} else {
 		expiry := now.Add(5 * time.Minute)
 		v.ProofRevision = v.ConfiguredRevision
@@ -220,32 +262,32 @@ func (h *server) activateSubscriptionOrigin(w http.ResponseWriter, r *http.Reque
 	writeJSON(w, 200, h.subscriptionOriginView(v))
 }
 
-// An empty result intentionally means a relative same-origin link. Never derive
-// an absolute credential-bearing URL from Host or forwarded request headers.
-func (h *server) effectiveSubscriptionOrigin() (string, error) {
-	v, _, err := h.readSubscriptionOrigin()
-	if err != nil {
-		return "", err
-	}
-	if v.EffectiveOrigin == "" {
-		return h.opts.PublicOrigin, nil
-	}
-	origin, err := canonicalSubscriptionOrigin(v.EffectiveOrigin)
-	if err != nil || origin != v.EffectiveOrigin {
-		return "", errors.New("invalid effective subscription origin")
-	}
-	return origin, nil
-}
 func (h *server) writeOutputAccess(w http.ResponseWriter, v Output) {
-	origin, err := h.effectiveSubscriptionOrigin()
+	record, _, err := h.readSubscriptionOrigin()
 	if err != nil {
-		fail(w, 500, "cannot read effective subscription origin")
+		fail(w, 500, "cannot read subscription link settings")
 		return
 	}
-	path := "/feed/" + v.Token
+	origin := record.EffectiveOrigin
+	if origin == "" {
+		origin = h.opts.PublicOrigin
+	}
+	if _, err := canonicalSubscriptionOrigin(origin); err != nil {
+		fail(w, 500, "invalid subscription origin")
+		return
+	}
+	if _, err := canonicalSubscriptionTemplate(record.LinkTemplate); err != nil {
+		fail(w, 500, "invalid subscription link template")
+		return
+	}
+	feedURL := subscriptionTemplateURL(record.LinkTemplate, origin, v.Token, false)
+	bundleURL := subscriptionTemplateURL(record.LinkTemplate, origin, v.Token, true)
+	parsed, _ := url.Parse(feedURL)
+	bundleParsed, _ := url.Parse(bundleURL)
+	path := parsed.RequestURI()
 	delivery := "feed"
 	if len(v.ResourceFiles) > 0 {
 		delivery = "bundle"
 	}
-	writeJSON(w, 200, map[string]string{"feedPath": path, "feedURL": origin + path, "bundlePath": path + "/bundle", "bundleURL": origin + path + "/bundle", "downloadPath": "/api/me/outputs/" + v.ID + "/bundle", "delivery": delivery})
+	writeJSON(w, 200, map[string]string{"feedPath": path, "feedURL": feedURL, "bundlePath": bundleParsed.RequestURI(), "bundleURL": bundleURL, "downloadPath": "/api/me/outputs/" + v.ID + "/bundle", "delivery": delivery})
 }

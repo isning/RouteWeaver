@@ -48,6 +48,28 @@ func advance(r observability.Report) observability.Report {
 	r.Digest = observability.ReportDigest(r)
 	return r
 }
+func TestResourceHistoryKeepsNonBillingInterfaceRatesAndMemory(t *testing.T) {
+	state, report, _ := fixture(t)
+	state.Config.BilledInterfaces = nil
+	report = advance(report)
+	report.Metrics.Interfaces[2].TransmitBytes = 1
+	report.Digest = observability.ReportDigest(report)
+	state, _, err := observability.Accept(state, report, report.ObservedAt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	history, _ := observability.AppendResourceHistory(observability.ResourceHistory{}, *state.Latest, report.ObservedAt)
+	point := history.Points[0]
+	loopback := point.InterfaceRates["lo"]
+	reset := point.InterfaceRates["veth0"]
+	if loopback.Receive == nil || *loopback.Receive != 1000000.0/60 || reset.Transmit != nil || point.ReceiveBytesPerSecond != nil {
+		t.Fatal("resource rates must survive without billing selection and omit counter resets")
+	}
+	if point.MemoryUsedBytes == nil || *point.MemoryUsedBytes != 500 || point.MemoryTotalBytes != 1000 {
+		t.Fatal("history did not retain absolute memory")
+	}
+}
+
 func TestProviderEstimateRequiresOperatorBaselineAndCountsSelectedINPlusOUTOnly(t *testing.T) {
 	s, r, now := fixture(t)
 	r = advance(r)

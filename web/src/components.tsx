@@ -93,7 +93,7 @@ export function Section({
         {(title || description || extra) && (
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0 flex-1 basis-48 space-y-1 [overflow-wrap:anywhere]">
-              {title && <h2 className="text-base font-medium">{title}</h2>}
+              {title && <h2 className="text-base font-semibold tracking-tight">{title}</h2>}
               {description && <p className="max-w-prose text-sm leading-relaxed text-muted-foreground">{description}</p>}
             </div>
             {extra}
@@ -103,17 +103,17 @@ export function Section({
       </section>
     );
   return (
-    <Card className={cn("surface min-w-0", className)}>
+    <Card className={cn("surface min-w-0 gap-0 py-0 shadow-none", className)}>
       {(title || description || extra) && (
-        <CardHeader className="flex min-w-0 flex-wrap items-start justify-between gap-3 [overflow-wrap:anywhere]">
+        <CardHeader className="flex min-w-0 flex-wrap items-start justify-between gap-3 px-5 py-5 sm:px-6 [overflow-wrap:anywhere]">
           <div className="min-w-0 flex-1 basis-48 space-y-1">
-            {title && <CardTitle role="heading" aria-level={2}>{title}</CardTitle>}
+            {title && <CardTitle className="font-semibold tracking-tight" role="heading" aria-level={2}>{title}</CardTitle>}
             {description && <CardDescription className="max-w-prose leading-relaxed">{description}</CardDescription>}
           </div>
           {extra && <div className="flex max-w-full flex-wrap items-center gap-2">{extra}</div>}
         </CardHeader>
       )}
-      <CardContent className="min-w-0 space-y-4">{children}</CardContent>
+      <CardContent className={cn("min-w-0 space-y-4 px-5 pb-5 sm:px-6", !(title || description || extra) && "pt-5")}>{children}</CardContent>
     </Card>
   );
 }
@@ -134,13 +134,15 @@ export function EmptyState({
   title,
   description,
   action,
+  className,
 }: {
   title: string;
   description?: string;
   action?: ReactNode;
+  className?: string;
 }) {
   return (
-    <Empty>
+    <Empty className={cn("min-h-48 rounded-xl border border-solid bg-card px-5 py-10 [[data-slot=card]_&]:border-0 [[data-slot=card]_&]:bg-transparent [[data-slot=table-cell]_&]:min-h-40 [[data-slot=table-cell]_&]:border-0 [[data-slot=table-cell]_&]:bg-transparent", className)}>
       <EmptyHeader>
         <EmptyMedia variant="icon">
           <Inbox aria-hidden="true" />

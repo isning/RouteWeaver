@@ -2,6 +2,7 @@
 package domain
 
 import (
+	"encoding/base64"
 	"fmt"
 	"net"
 	"regexp"
@@ -10,6 +11,8 @@ import (
 )
 
 type Node struct {
+	TUIC           *TUICOptions      `json:"tuic,omitempty"`
+	Hysteria2      *Hysteria2Options `json:"hysteria2,omitempty"`
 	CoreID         string            `json:"coreId,omitempty"`
 	CoreVersion    string            `json:"coreVersion,omitempty"`
 	Status         string            `json:"status"`
@@ -79,11 +82,17 @@ func ValidateNode(n Node) error {
 	if n.Host == "" || strings.ContainsAny(n.Host, " /\\\t\n\r") || strings.Contains(n.Host, ":") && net.ParseIP(n.Host) == nil {
 		return fmt.Errorf("host must be a hostname or IP, not a URL")
 	}
-	if n.Protocol != "vless" && n.Protocol != "trojan" && n.Protocol != "vmess" && n.Protocol != "hysteria2" && n.Protocol != "anytls" && (n.VMessSecurity != "" || n.UUID != "" || n.Flow != "" || n.PacketEncoding != "" || n.TLS != nil || n.Transport != nil) {
+	if n.Protocol != "hysteria2" && n.Hysteria2 != nil {
+		return fmt.Errorf("Hysteria2 options require Hysteria2 protocol")
+	}
+	if n.Protocol != "tuic" && n.TUIC != nil {
+		return fmt.Errorf("TUIC options require TUIC protocol")
+	}
+	if n.Protocol != "tuic" && n.Protocol != "vless" && n.Protocol != "trojan" && n.Protocol != "vmess" && n.Protocol != "hysteria2" && n.Protocol != "anytls" && (n.VMessSecurity != "" || n.UUID != "" || n.Flow != "" || n.PacketEncoding != "" || n.TLS != nil || n.Transport != nil) {
 		return fmt.Errorf("protocol does not accept VLESS security or transport fields")
 	}
 	switch n.Protocol {
-	case "vless", "trojan", "vmess", "hysteria2", "anytls":
+	case "vless", "trojan", "vmess", "hysteria2", "anytls", "tuic":
 		return ValidateConnection(n.ConnectionValue())
 	case "socks":
 		if n.Method != "" {
@@ -101,6 +110,21 @@ func ValidateNode(n Node) error {
 		}
 		switch n.Method {
 		case "aes-128-gcm", "aes-256-gcm", "chacha20-ietf-poly1305":
+		case "2022-blake3-aes-128-gcm", "2022-blake3-aes-256-gcm", "2022-blake3-chacha20-poly1305":
+			keys := strings.Split(n.Password, ":")
+			if len(keys) > 2 || (len(keys) == 2 && ShadowsocksUserKeySize(n.Method) == 0) {
+				return fmt.Errorf("unsupported Shadowsocks key chain")
+			}
+			size := 32
+			if n.Method == "2022-blake3-aes-128-gcm" {
+				size = 16
+			}
+			for _, value := range keys {
+				key, err := base64.StdEncoding.Strict().DecodeString(value)
+				if err != nil || len(key) != size || base64.StdEncoding.EncodeToString(key) != value {
+					return fmt.Errorf("Shadowsocks 2022 requires a base64-encoded %d-byte key", size)
+				}
+			}
 		default:
 			return fmt.Errorf("unsupported Shadowsocks cipher")
 		}
@@ -163,5 +187,5 @@ func SubscriptionName(r Route, nodes []Node) (string, error) {
 // ConnectionValue adapts the legacy conflated Node DTO without promoting it to
 // a host/core-instance identity in the new domain model.
 func (n Node) ConnectionValue() Connection {
-	return Connection{Host: n.Host, Port: n.Port, Protocol: n.Protocol, Username: n.Username, Password: n.Password, Method: n.Method, UUID: n.UUID, Flow: n.Flow, PacketEncoding: n.PacketEncoding, VMessSecurity: n.VMessSecurity, TLS: n.TLS, Transport: n.Transport}
+	return Connection{Host: n.Host, Port: n.Port, Protocol: n.Protocol, Username: n.Username, Password: n.Password, Method: n.Method, UUID: n.UUID, Flow: n.Flow, PacketEncoding: n.PacketEncoding, VMessSecurity: n.VMessSecurity, TLS: n.TLS, Transport: n.Transport, Hysteria2: n.Hysteria2, TUIC: n.TUIC}
 }

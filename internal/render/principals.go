@@ -95,9 +95,19 @@ func managedPrincipalBindings(p domain.ServerProgram) []entrypolicy.Binding {
 func nativePrincipalUsers(p domain.ServerProgram, xray bool) []any {
 	users := []any{}
 	for _, v := range p.Principals {
-		user := map[string]any{"uuid": v.Credential.UUID, "name": v.SubjectID}
+		user := map[string]any{"name": v.SubjectID}
 		if xray {
-			user = map[string]any{"id": v.Credential.UUID, "email": v.SubjectID}
+			user = map[string]any{"email": v.SubjectID}
+		}
+		if v.Credential.UUID != "" {
+			field := "uuid"
+			if xray {
+				field = "id"
+			}
+			user[field] = v.Credential.UUID
+		}
+		if v.Credential.Password != "" {
+			user["password"] = v.Credential.Password
 		}
 		if v.Credential.Flow != "" {
 			user["flow"] = v.Credential.Flow
@@ -113,7 +123,11 @@ func principalRules(p domain.ServerProgram, xray bool) []any {
 		if xray {
 			rules = append(rules, map[string]any{"type": "field", "inboundTag": []string{p.Listener.ID}, "user": []string{v.SubjectID}, "outboundTag": actionName(v.Action, names, "rw-direct", "rw-reject")})
 		} else {
-			rule := map[string]any{"inbound": []string{p.Listener.ID}, "auth_user": []string{v.SubjectID}}
+			name := v.SubjectID
+			if p.Listener.Connection.Protocol == "socks" {
+				name = v.Credential.Username
+			}
+			rule := map[string]any{"inbound": []string{p.Listener.ID}, "auth_user": []string{name}}
 			singboxAction(rule, v.Action, names)
 			rules = append(rules, rule)
 		}

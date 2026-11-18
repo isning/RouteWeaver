@@ -7,13 +7,26 @@ import (
 	"io"
 	"reflect"
 	"sort"
+	"strconv"
 	"strings"
+	"time"
 
 	"gopkg.in/yaml.v3"
 	"routeweaver/internal/domain"
 )
 
 type mihomoNode struct {
+	CongestionControl string          `json:"congestion-controller"`
+	UDPRelayMode      string          `json:"udp-relay-mode"`
+	UDP               *bool           `json:"udp"`
+	SkipCertVerify    *bool           `json:"skip-cert-verify"`
+	Obfs              string          `json:"obfs"`
+	ObfsPassword      string          `json:"obfs-password"`
+	Up                json.RawMessage `json:"up"`
+	Down              json.RawMessage `json:"down"`
+	Ports             string          `json:"ports"`
+	HopInterval       int             `json:"hop-interval"`
+
 	AlterID           *int     `json:"alterId"`
 	PacketEncoding    string   `json:"packet-encoding"`
 	Name              string   `json:"name"`
@@ -46,6 +59,14 @@ type mihomoNode struct {
 }
 
 type singboxNode struct {
+	CongestionControl string                     `json:"congestion_control"`
+	UDPRelayMode      string                     `json:"udp_relay_mode"`
+	Obfs              *domain.ObfuscationOptions `json:"obfs"`
+	UpMbps            int                        `json:"up_mbps"`
+	DownMbps          int                        `json:"down_mbps"`
+	ServerPorts       []string                   `json:"server_ports"`
+	HopInterval       string                     `json:"hop_interval"`
+
 	AlterID        *int   `json:"alter_id"`
 	Security       string `json:"security"`
 	PacketEncoding string `json:"packet_encoding"`
@@ -180,13 +201,40 @@ func fromMihomo(raw []byte) (candidate, error) {
 	if strictDecode(raw, &n) != nil {
 		return candidate{}, ErrInput
 	}
+	if n.UDP != nil && !*n.UDP {
+		return candidate{}, ErrInput
+	}
+	if n.SkipCertVerify != nil && *n.SkipCertVerify {
+		return candidate{}, ErrInput
+	}
 	c := domain.Connection{Host: n.Server, Port: n.Port, Username: n.Username, Password: n.Password, Method: n.Cipher, UUID: n.UUID, Flow: n.Flow, PacketEncoding: n.PacketEncoding}
+	if n.CongestionControl != "" || n.UDPRelayMode != "" {
+		c.TUIC = &domain.TUICOptions{CongestionControl: n.CongestionControl, UDPRelayMode: n.UDPRelayMode}
+	}
+	if n.Obfs != "" || n.ObfsPassword != "" || len(n.Up) > 0 || len(n.Down) > 0 || n.Ports != "" || n.HopInterval != 0 {
+		up, err := mihomoMbps(n.Up)
+		if err != nil {
+			return candidate{}, err
+		}
+		down, err := mihomoMbps(n.Down)
+		if err != nil {
+			return candidate{}, err
+		}
+		h := &domain.Hysteria2Options{UpMbps: up, DownMbps: down, HopIntervalSeconds: n.HopInterval}
+		if n.Obfs != "" || n.ObfsPassword != "" {
+			h.Obfs = &domain.ObfuscationOptions{Type: n.Obfs, Password: n.ObfsPassword}
+		}
+		if n.Ports != "" {
+			h.ServerPorts = strings.Split(strings.ReplaceAll(n.Ports, "-", ":"), ",")
+		}
+		c.Hysteria2 = h
+	}
 	switch n.Type {
 	case "ss":
 		c.Protocol = "shadowsocks"
 	case "socks5":
 		c.Protocol = "socks"
-	case "vless", "trojan", "vmess":
+	case "vless", "trojan", "vmess", "hysteria2", "anytls", "tuic":
 		c.Protocol = n.Type
 	default:
 		return candidate{}, ErrInput
@@ -198,7 +246,7 @@ func fromMihomo(raw []byte) (candidate, error) {
 		c.VMessSecurity = n.Cipher
 		c.Method = ""
 	}
-	if n.Type == "trojan" {
+	if n.Type == "trojan" || n.Type == "hysteria2" || n.Type == "anytls" || n.Type == "tuic" {
 		if n.ServerName != "" || n.Reality != nil {
 			return candidate{}, ErrInput
 		}
@@ -206,7 +254,7 @@ func fromMihomo(raw []byte) (candidate, error) {
 	} else if n.SNI != "" {
 		return candidate{}, ErrInput
 	}
-	if n.TLS || n.Type == "trojan" {
+	if n.TLS || n.Type == "trojan" || n.Type == "hysteria2" || n.Type == "anytls" || n.Type == "tuic" {
 		c.TLS = &domain.TLSOptions{Enabled: true, ServerName: n.ServerName, Fingerprint: n.ClientFingerprint, ALPN: n.ALPN}
 		if n.Reality != nil {
 			c.TLS.Reality = &domain.RealityOptions{PublicKey: n.Reality.PublicKey, ShortID: n.Reality.ShortID}
@@ -249,7 +297,31 @@ func fromSingBox(raw []byte) (candidate, error) {
 		return candidate{}, ErrInput
 	}
 	c := domain.Connection{Host: n.Server, Port: n.Port, Protocol: n.Type, Username: n.Username, Password: n.Password, Method: n.Method, UUID: n.UUID, Flow: n.Flow, PacketEncoding: n.PacketEncoding}
-	if n.Type != "socks" && n.Type != "shadowsocks" && n.Type != "vless" && n.Type != "trojan" && n.Type != "vmess" && n.Type != "hysteria2" && n.Type != "anytls" {
+	if n.CongestionControl != "" || n.UDPRelayMode != "" {
+		c.TUIC = &domain.TUICOptions{CongestionControl: n.CongestionControl, UDPRelayMode: n.UDPRelayMode}
+	}
+	if n.Obfs != nil || n.UpMbps != 0 || n.DownMbps != 0 || len(n.ServerPorts) > 0 || n.HopInterval != "" {
+		h := &domain.Hysteria2Options{Obfs: n.Obfs, UpMbps: n.UpMbps, DownMbps: n.DownMbps, ServerPorts: append([]string(nil), n.ServerPorts...)}
+		for i, p := range h.ServerPorts {
+			parts := strings.Split(p, ":")
+			if len(parts) == 2 && parts[0] == parts[1] {
+				h.ServerPorts[i] = parts[0]
+			}
+		}
+		if n.HopInterval != "" {
+			d, err := time.ParseDuration(n.HopInterval)
+			if err != nil || d%time.Second != 0 {
+				return candidate{}, ErrInput
+			}
+			h.HopIntervalSeconds = int(d / time.Second)
+		}
+		c.Hysteria2 = h
+		if c.Port == 0 && len(h.ServerPorts) > 0 {
+			v := strings.Split(h.ServerPorts[0], ":")[0]
+			c.Port, _ = strconv.Atoi(v)
+		}
+	}
+	if n.Type != "socks" && n.Type != "shadowsocks" && n.Type != "vless" && n.Type != "trojan" && n.Type != "vmess" && n.Type != "hysteria2" && n.Type != "anytls" && n.Type != "tuic" {
 		return candidate{}, ErrInput
 	}
 	if n.AlterID != nil && (*n.AlterID != 0 || n.Type != "vmess") || n.Type != "vmess" && n.Security != "" {
@@ -262,7 +334,7 @@ func fromSingBox(raw []byte) (candidate, error) {
 	if n.TLS != nil {
 		c.TLS = &domain.TLSOptions{Enabled: n.TLS.Enabled, ServerName: n.TLS.ServerName, ALPN: n.TLS.ALPN}
 		if n.TLS.UTLS != nil {
-			if n.Type == "hysteria2" || n.Type == "anytls" {
+			if n.Type == "hysteria2" || n.Type == "anytls" || n.Type == "tuic" {
 				return candidate{}, ErrInput
 			}
 			if !n.TLS.UTLS.Enabled {
@@ -307,4 +379,25 @@ func importTransportHeaders(t *domain.TransportOptions, headers map[string]strin
 		t.Headers[key] = value
 	}
 	return nil
+}
+
+func mihomoMbps(raw json.RawMessage) (int, error) {
+	if len(raw) == 0 {
+		return 0, nil
+	}
+	var n int
+	if json.Unmarshal(raw, &n) == nil {
+		return n, nil
+	}
+	var text string
+	if json.Unmarshal(raw, &text) != nil {
+		return 0, ErrInput
+	}
+	text = strings.TrimSpace(text)
+	text = strings.TrimSpace(strings.TrimSuffix(text, "Mbps"))
+	n, err := strconv.Atoi(text)
+	if err != nil {
+		return 0, ErrInput
+	}
+	return n, nil
 }

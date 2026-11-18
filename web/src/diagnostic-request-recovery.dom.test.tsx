@@ -127,7 +127,7 @@ it("does not consume an actor's pending record or adopt its delayed response aft
   await userEvent.click(await screen.findByRole("button", { name: "核对上次测试提交" }));
   await waitFor(() => expect(resolveRead).toBeTypeOf("function"));
   currentSession = { ...session, user: { ...session.user, id: "admin-b" }, csrfToken: "other-secret" };
-  fireEvent(window, new Event("focus"));
+  fireEvent(window, new Event("online"));
   await screen.findByRole("button", { name: "提交测试" });
   resolveRead(json({ ...saved.request, requestedBy: "admin-a", status: "queued" }));
   await waitFor(() => expect(screen.queryByRole("button", { name: "核对上次测试提交" })).toBeNull());
@@ -145,7 +145,7 @@ it.each(["account", "generation"])("does not apply a corrupt-record confirmation
   await userEvent.click(await screen.findByRole("button", { name: "清除无法读取的记录" }));
   await screen.findByRole("button", { name: "清除本页记录" });
   currentSession = { ...session, user: { ...session.user, id: change === "account" ? "admin-b" : "admin-a" }, csrfToken: "rotated-secret" };
-  fireEvent(window, new Event("focus"));
+  fireEvent(window, new Event("online"));
   await waitFor(() => expect(document.querySelector("[data-session-workspace]")?.getAttribute("aria-busy")).toBe("false"));
   const staleConfirmation = screen.queryByRole("button", { name: "清除本页记录" });
   if (staleConfirmation) await userEvent.click(staleConfirmation);
@@ -190,7 +190,7 @@ it("keeps a valid record when its abandon confirmation belongs to an obsolete se
   await userEvent.click(await screen.findByRole("button", { name: "清除本页提交记录" }));
   await screen.findByRole("button", { name: "清除本页记录" });
   currentSession = { ...session, csrfToken: "new-generation-secret" };
-  fireEvent(window, new Event("focus"));
+  fireEvent(window, new Event("online"));
   await waitFor(() => expect(document.querySelector("[data-session-workspace]")?.getAttribute("aria-busy")).toBe("false"));
   await userEvent.click(screen.getByRole("button", { name: "清除本页记录" }));
   expect(sessionStorage.getItem(key)).toBe(raw);

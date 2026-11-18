@@ -6,6 +6,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"net/http"
 	"routeweaver/internal/domain"
+	"routeweaver/internal/render"
 	"routeweaver/internal/store"
 	"time"
 )
@@ -14,6 +15,7 @@ import (
 // never inferred from a route's transit chain or a node's server credentials.
 // Configuration records do not establish that a node has applied credentials.
 type PublicEntryGrant struct {
+	StaticPrincipal   bool              `json:"staticPrincipal,omitempty"`
 	OutputID          string            `json:"outputId,omitempty"`
 	OutputRevision    string            `json:"outputRevision,omitempty"`
 	PublishedRouteID  string            `json:"publishedRouteId,omitempty"`
@@ -79,6 +81,25 @@ func (h *server) registerEntryAdmin(r chi.Router) {
 	})
 	r.Delete("/users/{id}/entries/{entryId}", func(w http.ResponseWriter, r *http.Request) {
 		user, id := chi.URLParam(r, "id"), chi.URLParam(r, "entryId")
+		kind := store.TenantKind(user, "platform-entries")
+		var raw json.RawMessage
+		if err := h.s.Get(kind, id, &raw); err != nil {
+			storeError(w, err)
+			return
+		}
+		var grant PublicEntryGrant
+		if err := json.Unmarshal(raw, &grant); err != nil {
+			storeError(w, err)
+			return
+		}
+		if grant.StaticPrincipal {
+			if err := h.revokeStaticPrincipal(kind, raw, grant, current(r).Account.ID); err != nil {
+				storeError(w, err)
+				return
+			}
+			writeJSON(w, 200, map[string]any{"ok": true, "status": "revoked", "deploymentRequired": true})
+			return
+		}
 		e := h.s.UpdateRecords(store.TenantKind(user, "platform-entries"), id, func(raw json.RawMessage) ([]store.RecordWrite, error) {
 			if len(raw) == 0 {
 				return nil, store.ErrNotFound
@@ -86,6 +107,9 @@ func (h *server) registerEntryAdmin(r chi.Router) {
 			var v PublicEntryGrant
 			if e := json.Unmarshal(raw, &v); e != nil {
 				return nil, e
+			}
+			if v.StaticPrincipal {
+				return nil, store.ErrConflict
 			}
 			v.Revoked = true
 			audit := store.AuditEvent{ID: fmt.Sprintf("%d", time.Now().UnixNano()), ActorID: current(r).Account.ID, Action: "entry.revoked", TargetID: user + ":" + id, At: time.Now().UTC()}
@@ -102,7 +126,7 @@ func (h *server) registerEntryAdmin(r chi.Router) {
 		if !decode(w, r, &v) {
 			return
 		}
-		if v.PublishedRouteID != "" || v.SubjectID != "" || v.DeploymentID != "" || v.OutputID != "" || v.OutputRevision != "" {
+		if v.StaticPrincipal || v.PublishedRouteID != "" || v.SubjectID != "" || v.DeploymentID != "" || v.OutputID != "" || v.OutputRevision != "" {
 			fail(w, 400, "managed grants must be provisioned through their published route")
 			return
 		}
@@ -198,6 +222,49 @@ func (h *server) registerEntryAdmin(r chi.Router) {
 		writeJSON(w, 201, entrySummary(v))
 	})
 }
+
+// A static credential remains usable on the node until the revised
+// configuration is applied. Record both changes in one transaction.
+func (h *server) revokeStaticPrincipal(kind string, raw json.RawMessage, grant PublicEntryGrant, actor string) error {
+	if grant.Revoked {
+		return nil
+	}
+	var previous json.RawMessage
+	if err := h.s.Get("server-deployments", grant.DeploymentID, &previous); err != nil {
+		return err
+	}
+	var deployment ServerDeployment
+	if err := json.Unmarshal(previous, &deployment); err != nil {
+		return err
+	}
+	for i := range deployment.IR.Programs {
+		program := &deployment.IR.Programs[i]
+		if program.Instance.AdapterID != render.ServerAdapterSingBox && program.Instance.AdapterID != render.ServerAdapterXray {
+			continue
+		}
+		var kept []domain.ServerPrincipal
+		for _, principal := range program.Principals {
+			if principal.SubjectID == grant.SubjectID && principal.AccountID == grant.UserID && principal.RouteID == grant.RouteID && principal.CredentialVersion == grant.CredentialVersion {
+				continue
+			}
+			kept = append(kept, principal)
+		}
+		program.Principals = kept
+	}
+	now := time.Now().UTC()
+	grant.Revoked = true
+	deployment.Status, deployment.UpdatedAt = "draft", now
+	audit := store.AuditEvent{ID: fmt.Sprintf("%d", now.UnixNano()), ActorID: actor, Action: "entry.revoked", TargetID: grant.UserID + ":" + grant.ID, At: now}
+	return h.s.CompareAndPutRecords([]store.RecordCompare{
+		{Kind: kind, ID: grant.ID, Expected: raw},
+		{Kind: "server-deployments", ID: deployment.ID, Expected: previous},
+	}, []store.RecordWrite{
+		{Kind: kind, ID: grant.ID, Value: grant},
+		{Kind: "server-deployments", ID: deployment.ID, Value: deployment},
+		{Kind: "audit", ID: audit.ID, Value: audit},
+	})
+}
+
 func (h *server) resolveEntry(owner, id string) (domain.ClientEndpoint, error) {
 	return h.resolveEntryWithReader(owner, id, h.s)
 }
@@ -232,6 +299,9 @@ func (h *server) resolveEntryWithReader(owner, id string, reader tenantRecordRea
 			return domain.ClientEndpoint{}, e
 		}
 	}
+	if grant.StaticPrincipal && overview.EffectivePolicy.RequiresRuntimeLimits() {
+		return domain.ClientEndpoint{}, fmt.Errorf("this account requires runtime limits that the entry does not enforce")
+	}
 	if overview.Status != "active" {
 		return domain.ClientEndpoint{}, fmt.Errorf("platform service access is inactive")
 	}
@@ -260,5 +330,5 @@ func entrySummary(v PublicEntryGrant) map[string]any {
 	if v.Revoked {
 		status = "revoked"
 	}
-	return map[string]any{"id": v.ID, "name": v.Name, "routeId": v.RouteID, "credentialVersion": v.CredentialVersion, "status": status, "revoked": v.Revoked, "publishedRouteId": v.PublishedRouteID, "subjectId": v.SubjectID, "deploymentId": v.DeploymentID}
+	return map[string]any{"id": v.ID, "name": v.Name, "routeId": v.RouteID, "credentialVersion": v.CredentialVersion, "status": status, "revoked": v.Revoked, "publishedRouteId": v.PublishedRouteID, "subjectId": v.SubjectID, "deploymentId": v.DeploymentID, "staticPrincipal": v.StaticPrincipal}
 }

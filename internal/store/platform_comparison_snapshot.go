@@ -61,6 +61,10 @@ func (p *PlatformComparisonSnapshot) TenantGet(owner, kind, id string, out any) 
 	}
 	return p.Get(TenantKind(owner, kind), id, out)
 }
+func (p *PlatformComparisonSnapshot) RequiresRuntimeLimits() bool {
+	return p.policy.RequiresRuntimeLimits()
+}
+
 func (p *PlatformComparisonSnapshot) Eligible(route string) error {
 	if !p.eligible || !p.policy.AllowsRoute(route) {
 		return ErrPlatformComparisonUnavailable

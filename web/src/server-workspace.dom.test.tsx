@@ -56,13 +56,15 @@ function mount({ listeners = [], phase = "unregistered", relatedPath = false, no
         if (controls.failSave) return json({ error: "监听端点保存暂时失败" }, 503);
         current.push(value);
       }
-      if (path === "/api/agent/enrollments") return json({
-        scope: { nodeId: host.id, instanceId: core.id, enrollmentEpoch: "synthetic" },
+      if (path === "/api/agent/hosts/enrollments") return json({
+        scope: { nodeId: host.id, enrollmentEpoch: "synthetic" },
         token: "synthetic-test-token",
       });
       return json(value);
     }
     if (path === `/api/admin/nodes/${host.id}/observability`) return json({ nodeId: host.id, config: { revision: 1, observerInstanceId: "", billedInterfaces: [], provider: null }, latest: null, provider: {} });
+    if (/\/api\/agent\/hosts\/[^/]+\/state$/.test(path)) return json({ nodeId: path.split("/").at(-2), phase: "unregistered" });
+    if (path === "/api/admin/core-releases") return json([]);
     if (path === "/api/hosts") return json(secondHost || controls.movedCoreHostId ? [host, otherHost] : [host]);
     if (path === "/api/core-instances") return json(controls.removeCore ? [] : currentCores.map((value) => controls.movedCoreHostId ? { ...value, hostId: controls.movedCoreHostId } : value));
     if (path === "/api/managed-endpoints") {
@@ -158,14 +160,14 @@ it("restores visited server and core pages through Back and Forward even when in
   const { controls, client, writes } = mount({ ownedHistory: true });
   const user = userEvent.setup();
   await user.click(await screen.findByRole("button", { name: host.name }));
-  await user.click(screen.getByRole("button", { name: "查看接入与配置" }));
+  await user.click(screen.getByRole("button", { name: "管理核心" }));
   await screen.findByRole("region", { name: `${host.name}的${core.name}` });
   controls.failInventory = true;
   await act(async () => { await client.invalidateQueries({ queryKey: ["infrastructure"] }); });
   act(() => history.back());
   await waitFor(() => expect(location.hash).toBe(`#servers?host=${host.id}`));
   await waitFor(() => expect(screen.queryByRole("region", { name: `${host.name}的${core.name}` })).toBeNull());
-  expect(screen.getByRole("button", { name: "查看接入与配置" })).toBeTruthy();
+  expect(screen.getByRole("button", { name: "管理核心" })).toBeTruthy();
   expect(screen.getByText("服务器清单刷新失败，以下保留已有记录与刚保存的配置。")).toBeTruthy();
   act(() => history.forward());
   await waitFor(() => expect(location.hash).toBe(`#servers?host=${host.id}&instance=${core.id}`));
@@ -200,7 +202,7 @@ it.each(["section=unknown", "section=cores&section=records", "instance=", "host=
 
 async function selectedCore(user: ReturnType<typeof userEvent.setup>) {
   await user.click(await screen.findByRole("button", { name: host.name }));
-  await user.click(screen.getByRole("button", { name: "查看接入与配置" }));
+  await user.click(screen.getByRole("button", { name: "管理核心" }));
   return await screen.findByRole("region", { name: `${host.name}的${core.name}` });
 }
 
@@ -214,13 +216,13 @@ it("retires the old server/core context after editing the core onto another serv
   await user.click(await screen.findByRole("option", { name: otherHost.name }));
   await user.click(within(editor).getByRole("button", { name: "保存" }));
   expect(await screen.findByText("此核心已转移到其他服务器。请打开核心所在服务器后继续配置。")).toBeTruthy();
-  expect(screen.getByRole("button", { name: "接入 Agent" })).toHaveProperty("disabled", true);
+  expect(screen.queryByRole("button", { name: "接入 Agent" })).toBeNull();
   expect(screen.getByRole("button", { name: "添加监听端点" })).toHaveProperty("disabled", true);
   expect(writes).toEqual([{ path: `/api/core-instances/${core.id}`, value: expect.objectContaining({ hostId: otherHost.id }) }]);
   await user.click(screen.getByRole("button", { name: "打开核心所在服务器" }));
   const moved = await screen.findByRole("region", { name: `${otherHost.name}的${core.name}` });
   expect(location.hash).toBe(`#servers?host=${otherHost.id}&instance=${core.id}`);
-  expect(within(moved).getByRole("button", { name: "接入 Agent" })).toHaveProperty("disabled", false);
+  expect(within(moved).queryByRole("button", { name: "接入 Agent" })).toBeNull();
   act(() => history.back());
   await waitFor(() => expect(location.hash).toBe(`#servers?host=${host.id}&instance=${core.id}`));
   expect(await screen.findByText("找不到匹配的服务器与核心，请从服务器清单重新选择。")).toBeTruthy();
@@ -326,41 +328,28 @@ it.each(["removed", "moved"] as const)("retains an overview-origin listener draf
   expect(writes).toEqual([]);
 });
 
-it.each(["before issuance", "after issuance"])("keeps enrollment open %s but revokes new issuance under a changed owner", async (stage) => {
+it.each(["before issuance", "after issuance"])("keeps server enrollment independent of a moved core %s", async (stage) => {
   const { controls, client, writes } = mount();
   const user = userEvent.setup();
-  const page = await selectedCore(user);
-  await user.click(within(page).getByRole("button", { name: "接入 Agent" }));
-  const enrollment = await screen.findByRole("dialog", { name: "接入核心实例" });
+  await selectedCore(user);
+  await user.click(screen.getByRole("tab", { name: "概览" }));
+  await user.click(await screen.findByRole("button", { name: "接入 Agent" }));
+  const enrollment = await screen.findByRole("dialog", { name: "接入服务器 Agent" });
   if (stage === "after issuance") {
     await user.click(within(enrollment).getByRole("button", { name: "创建接入凭据" }));
     await within(enrollment).findByLabelText("接入令牌");
   }
-  const issue = stage === "before issuance" ? within(enrollment).getByRole("button", { name: "创建接入凭据" }) : null;
-  const form = stage === "before issuance" ? within(enrollment).getByLabelText("凭据到期时间").closest("form")! : null;
   controls.movedCoreHostId = otherHost.id;
-  await act(async () => {
-    await client.invalidateQueries({ queryKey: ["infrastructure"] });
-    expect(client.getQueryState(["infrastructure"])).toMatchObject({
-      status: "success", fetchStatus: "idle", data: { instances: [{ ...core, hostId: otherHost.id }] },
-    });
-    if (issue && form) {
-      expect(issue).toHaveProperty("disabled", false);
-      fireEvent.submit(form);
-    }
-  });
-  expect(writes).toHaveLength(stage === "before issuance" ? 0 : 1);
-  expect(await within(enrollment).findByText("此核心已转移到其他服务器。请打开核心所在服务器后继续配置。")).toBeTruthy();
-  expect(screen.getByRole("dialog", { name: "接入核心实例" })).toBe(enrollment);
-  if (stage === "after issuance") {
-    expect(within(enrollment).getByLabelText("接入令牌")).toHaveProperty("value", "synthetic-test-token");
-    expect(hasUnsavedChanges()).toBe(true);
-    expect(writes).toHaveLength(1);
-  } else {
-    expect(within(enrollment).getByRole("button", { name: "创建接入凭据" })).toHaveProperty("disabled", true);
-    await act(async () => { fireEvent.submit(within(enrollment).getByLabelText("凭据到期时间").closest("form")!); });
-    expect(writes).toEqual([]);
+  await act(async () => { await client.invalidateQueries({ queryKey: ["infrastructure"] }); });
+  expect(screen.getByRole("dialog", { name: "接入服务器 Agent" })).toBe(enrollment);
+  if (stage === "before issuance") {
+    await user.click(within(enrollment).getByRole("button", { name: "创建接入凭据" }));
   }
+  expect(await within(enrollment).findByLabelText("接入令牌")).toHaveProperty("value", "synthetic-test-token");
+  expect(writes).toHaveLength(1);
+  expect(writes[0]).toMatchObject({ path: "/api/agent/hosts/enrollments", value: { nodeId: host.id } });
+  expect(writes[0].value).not.toHaveProperty("instanceId");
+  expect(hasUnsavedChanges()).toBe(true);
 });
 
 it("does not treat failed inventory refresh as proof that the selected core was removed", async () => {
@@ -372,7 +361,7 @@ it("does not treat failed inventory refresh as proof that the selected core was 
   await act(async () => { await client.invalidateQueries({ queryKey: ["infrastructure"] }); });
   expect(await screen.findByText("服务器清单刷新失败，以下保留已有记录与刚保存的配置。")).toBeTruthy();
   expect(screen.queryByText("此核心已从清单移除。请返回核心列表重新选择。")).toBeNull();
-  expect(screen.getByRole("button", { name: "接入 Agent" })).toHaveProperty("disabled", false);
+  expect(screen.queryByRole("button", { name: "接入 Agent" })).toBeNull();
   expect(writes).toEqual([]);
 });
 

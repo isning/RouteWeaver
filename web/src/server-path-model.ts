@@ -42,9 +42,9 @@ function objects(value: unknown): boolean {
 function connectionReason(program: ServerProgram, connection: Connection): string | undefined {
   if (!targets[program.instance.adapterId]?.includes(program.instance.version))
     return "此核心版本的链式转发尚未支持，请在完整配置中检查。";
-  if (!connection || !["socks", "shadowsocks", "vless", "trojan", "vmess", "anytls", "hysteria2"].includes(connection.protocol))
+  if (!connection || !["socks", "shadowsocks", "vless", "trojan", "vmess", "anytls", "hysteria2", "tuic"].includes(connection.protocol))
     return "此连接器协议不支持当前核心的链式转发。";
-  if (["anytls", "hysteria2"].includes(connection.protocol) && program.instance.adapterId !== "routeweaver/sing-box")
+  if (["anytls", "hysteria2", "tuic"].includes(connection.protocol) && program.instance.adapterId !== "routeweaver/sing-box")
     return "AnyTLS 和 Hysteria2 连接仅支持 sing-box。";
   if (!connection.host || !Number.isInteger(connection.port) || connection.port < 1 || connection.port > 65535)
     return "连接器地址或端口无效，请先修正转发设置。";

@@ -22,11 +22,15 @@ function mount(node: ReactNode) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  return render(
+  const result = render(
     <QueryClientProvider client={client}>
       <UIProviders>{node}</UIProviders>
     </QueryClientProvider>,
   );
+  // These scenarios exercise editor details after the connection-selection step.
+  const setup = screen.queryByRole("navigation", { name: "创建订阅步骤" });
+  if (setup) fireEvent.click(within(setup).getByRole("button", { name: "设置分流" }));
+  return result;
 }
 beforeEach(() => {
   vi.stubEnv("NODE_ENV", "development");
@@ -129,7 +133,7 @@ it.each(["failure", "success"])(
     await userEvent.click(
       screen.getByRole("combobox", { name: "预览客户端" }),
     );
-    await userEvent.click(screen.getByRole("option", { name: "sing-box" }));
+    await userEvent.click(screen.getByRole("option", { name: "sing-box 1.14.3" }));
     finish(
       new Response(
         JSON.stringify(
@@ -271,10 +275,12 @@ it("associates each editor tab with its actual controls", async (context) => {
   const user = userEvent.setup();
   phase = "connection-region-query";
   const intent = screen.getByRole("region", { name: "连接与流量" });
+  await user.click(screen.getByRole("button", { name: "添加代理" }));
   phase = "source-control-assertion";
   expect(
     within(intent).getByRole("combobox", { name: "使用的订阅来源" }),
   ).toBeTruthy();
+  await user.click(screen.getByRole("button", { name: "设置分流" }));
   phase = "no-input-tab-assertion";
   expect(screen.queryByRole("tab", { name: "输入来源" })).toBeNull();
   for (const [tab, role, name] of [
@@ -435,6 +441,8 @@ it("preserves source choices across explicit collection switches and submits onl
   profile.name = "Input choice";
   profile.sourceIds = ["source-a"];
   mount(<ProfileEditor initial={profile} isNew onClose={() => {}} />);
+  await userEvent.click(screen.getByRole("button", { name: "添加代理" }));
+  fireEvent.click(screen.getByText("高级连接设置"));
   const sourceField = screen
     .getByRole("combobox", { name: "使用的订阅来源" })
     .closest("label")!;
@@ -570,8 +578,8 @@ it("reorders collection sources without losing source processing steps", async (
     }),
   );
   mount(<CollectionsPage />);
-  const card = await screen.findByRole("article", { name: "Daily nodes" });
-  await userEvent.click(within(card).getByRole("button", { name: /编辑集合$/ }));
+  const card = await screen.findByRole("row", { name: /Daily nodes/ });
+  await userEvent.click(within(card).getByRole("button", { name: "编辑集合 Daily nodes" }));
   const editor = await screen.findByRole("dialog", { name: "Daily nodes" });
   await userEvent.click(within(editor).getByRole("button", { name: "下移来源 1" }));
   expect(within(editor).getByText("1. Beta")).toBeTruthy();

@@ -63,7 +63,7 @@ export function ActionButton({
                   pending && keepFocusableWhilePending && !disabled ? 0 : -1,
               }
             : {},
-          pending ? <Spinner aria-hidden="true" /> : leadingIcon,
+          pending ? <span className="inline-flex motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-150"><Spinner aria-hidden="true" /></span> : leadingIcon,
           pending && pendingLabel ? pendingLabel : child.props.children,
         )}
       </Button>
@@ -86,7 +86,7 @@ export function ActionButton({
         props.onClick?.(event);
       }}
     >
-      {pending ? <Spinner aria-hidden="true" /> : leadingIcon}
+      {pending ? <span className="inline-flex motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-150"><Spinner aria-hidden="true" /></span> : leadingIcon}
       {pending && pendingLabel ? pendingLabel : children}
     </Button>
   );

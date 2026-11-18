@@ -6,7 +6,6 @@ import (
 	"regexp"
 	"routeweaver/internal/auth"
 	"routeweaver/internal/domain"
-	"strings"
 	"time"
 )
 
@@ -43,7 +42,6 @@ type Invite struct {
 var usernamePattern = regexp.MustCompile(`^[a-z0-9][a-z0-9_.@+-]{2,127}$`)
 
 func (s *Store) EnsureAdmin(username, password string) error {
-	username = strings.ToLower(strings.TrimSpace(username))
 	if !usernamePattern.MatchString(username) {
 		return fmt.Errorf("invalid username")
 	}
@@ -71,6 +69,9 @@ func (s *Store) EnsureAdmin(username, password string) error {
 	a := Account{ID: "admin", Name: "Administrator", Username: username, Role: "admin", PasswordHash: hash}
 	return s.createAccount(a, nil)
 }
+
+var ErrRegistrationClosed = fmt.Errorf("registration closed")
+
 func (s *Store) createAccount(a Account, invite *Invite) error {
 	tx, e := s.beginWriteTx()
 	if e != nil {
@@ -78,6 +79,15 @@ func (s *Store) createAccount(a Account, invite *Invite) error {
 	}
 	defer tx.Rollback()
 	if invite != nil {
+		var settings struct {
+			Registration string `json:"registration"`
+		}
+		if err := s.getTx(tx, "settings", "platform", &settings); err != nil && err != ErrNotFound {
+			return err
+		}
+		if settings.Registration == "closed" {
+			return ErrRegistrationClosed
+		}
 		if !time.Now().Before(invite.ExpiresAt) {
 			return fmt.Errorf("invite invalid or expired")
 		}
@@ -127,7 +137,6 @@ func (s *Store) CreateInvite(name, role string, expires time.Time) (Invite, stri
 	return v, token, nil
 }
 func (s *Store) AcceptInvite(token, username, password string) (Account, error) {
-	username = strings.ToLower(strings.TrimSpace(username))
 	if !usernamePattern.MatchString(username) {
 		return Account{}, fmt.Errorf("invalid username")
 	}
@@ -153,11 +162,14 @@ func (s *Store) AcceptInvite(token, username, password string) (Account, error) 
 	return a, nil
 }
 
+// ErrMFARequired is returned only after the password is verified, without creating a session.
+var ErrMFARequired = fmt.Errorf("invalid credentials")
+
 // Password verification stays outside the SQLite writer reservation. Every
 // caller must compare expected inside its eventual security-state transaction.
 func (s *Store) authenticate(username, password, totp string, now time.Time) (account, expected Account, err error) {
 	var id string
-	e := s.db.QueryRow(`SELECT account_id FROM identities WHERE username=?`, strings.ToLower(strings.TrimSpace(username))).Scan(&id)
+	e := s.db.QueryRow(`SELECT account_id FROM identities WHERE username=?`, username).Scan(&id)
 	var a Account
 	if e == nil {
 		e = s.get("accounts", id, &a)
@@ -168,6 +180,9 @@ func (s *Store) authenticate(username, password, totp string, now time.Time) (ac
 	}
 	expected = a
 	if a.TOTPSecret != "" {
+		if totp == "" {
+			return Account{}, Account{}, ErrMFARequired
+		}
 		step, valid := auth.MatchTOTPStep(a.TOTPSecret, totp, now)
 		if !valid || step <= a.LastTOTPStep {
 			return Account{}, Account{}, fmt.Errorf("invalid credentials")

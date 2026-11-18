@@ -12,7 +12,7 @@ func Accept(s State, r Report, now time.Time) (State, Receipt, error) {
 	if e := ValidateReport(r, now); e != nil {
 		return s, receipt, e
 	}
-	if s.Config.ObserverInstanceID == "" || s.Config.ObserverInstanceID != r.Scope.InstanceID {
+	if (s.Config.ObserverKind == "host-agent" && (!r.HostAgent || r.Scope.InstanceID != "")) || (s.Config.ObserverKind != "host-agent" && (r.HostAgent || s.Config.ObserverInstanceID == "" || s.Config.ObserverInstanceID != r.Scope.InstanceID)) {
 		return s, receipt, ErrScope
 	}
 	if s.Latest != nil {
@@ -40,6 +40,10 @@ func Accept(s State, r Report, now time.Time) (State, Receipt, error) {
 		return s, receipt, conflict("initial observer stream must begin at sequence one")
 	}
 	snap := Snapshot{Report: r, ReceivedAt: now, Continuity: "initial", Source: "linux_procfs"}
+	snap.InterfaceRates = make(map[string]InterfaceRate, len(r.Metrics.Interfaces))
+	for _, iface := range r.Metrics.Interfaces {
+		snap.InterfaceRates[iface.Name] = InterfaceRate{}
+	}
 	reason := "initial_observation_requires_baseline"
 	var rx, tx int64
 	if s.Latest != nil {
@@ -60,6 +64,20 @@ func Accept(s State, r Report, now time.Time) (State, Receipt, error) {
 		default:
 			snap.Continuity = "continuous"
 			a, b := prev.Metrics, r.Metrics
+			previous := make(map[string]Interface, len(a.Interfaces))
+			for _, iface := range a.Interfaces {
+				previous[iface.Name] = iface
+			}
+			seconds := r.ObservedAt.Sub(prev.ObservedAt).Seconds()
+			for _, iface := range b.Interfaces {
+				old, ok := previous[iface.Name]
+				if !ok || iface.ReceiveBytes < old.ReceiveBytes || iface.TransmitBytes < old.TransmitBytes {
+					continue
+				}
+				receive := float64(iface.ReceiveBytes-old.ReceiveBytes) / seconds
+				transmit := float64(iface.TransmitBytes-old.TransmitBytes) / seconds
+				snap.InterfaceRates[iface.Name] = InterfaceRate{Receive: &receive, Transmit: &transmit}
+			}
 			if b.CPUTotalTicks > a.CPUTotalTicks && b.CPUIdleTicks >= a.CPUIdleTicks && b.CPUIdleTicks-a.CPUIdleTicks <= b.CPUTotalTicks-a.CPUTotalTicks {
 				percent := 100 * (1 - float64(b.CPUIdleTicks-a.CPUIdleTicks)/float64(b.CPUTotalTicks-a.CPUTotalTicks))
 				snap.CPUPercent = &percent
@@ -149,7 +167,7 @@ func Configure(s State, c Config) (State, error) {
 	if c.Revision != s.Config.Revision {
 		return s, conflict("configuration revision changed; reload before saving")
 	}
-	reset := c.ObserverInstanceID != s.Config.ObserverInstanceID || !reflect.DeepEqual(c.BilledInterfaces, s.Config.BilledInterfaces)
+	reset := c.ObserverKind != s.Config.ObserverKind || c.ObserverInstanceID != s.Config.ObserverInstanceID || !reflect.DeepEqual(c.BilledInterfaces, s.Config.BilledInterfaces)
 	cycleChanged := (s.Config.Provider == nil) != (c.Provider == nil)
 	if c.Provider != nil && s.Config.Provider != nil {
 		a, b := c.Provider, s.Config.Provider
@@ -161,7 +179,7 @@ func Configure(s State, c Config) (State, error) {
 		s.ObservedSince = nil
 		s.CoverageReason = "configuration_changed_requires_baseline"
 	}
-	if c.ObserverInstanceID != s.Config.ObserverInstanceID {
+	if c.ObserverKind != s.Config.ObserverKind || c.ObserverInstanceID != s.Config.ObserverInstanceID {
 		s.Latest = nil
 	}
 	if cycleChanged {

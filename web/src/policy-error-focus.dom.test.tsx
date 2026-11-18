@@ -392,7 +392,7 @@ it("does not expose or focus the previous account's held policy failure after a 
   owner.assertActive();
   await owner.click(() => screen.findByRole("button", { name: "预览影响" }));
   account = "B";
-  act(() => fireEvent(window, new Event("focus")));
+  act(() => fireEvent(window, new Event("online")));
   await screen.findByText("Account B");
   owner.assertActive();
   const input = await screen.findByLabelText("服务方案名称") as HTMLInputElement;

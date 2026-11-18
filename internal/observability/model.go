@@ -42,6 +42,7 @@ type Metrics struct {
 type Scope = domain.InstanceScope
 
 type Report struct {
+	HostAgent   bool      `json:"hostAgent,omitempty"`
 	Scope       Scope     `json:"scope"`
 	StreamEpoch string    `json:"streamEpoch"`
 	Sequence    uint64    `json:"sequence"`
@@ -68,6 +69,7 @@ type ProviderConfig struct {
 	ExhaustionAction   string     `json:"exhaustionAction"`
 }
 type Config struct {
+	ObserverKind       string          `json:"observerKind,omitempty"`
 	Revision           uint64          `json:"revision"`
 	ObserverInstanceID string          `json:"observerInstanceId"`
 	BilledInterfaces   []string        `json:"billedInterfaces"`
@@ -97,7 +99,13 @@ type Statement struct {
 	RecordedAt time.Time `json:"recordedAt"`
 	ActorID    string    `json:"actorId"`
 }
+type InterfaceRate struct {
+	Receive  *float64 `json:"receiveBytesPerSecond"`
+	Transmit *float64 `json:"transmitBytesPerSecond"`
+}
+
 type Snapshot struct {
+	InterfaceRates map[string]InterfaceRate `json:"interfaceRates,omitempty"`
 	Report
 	ReceivedAt             time.Time `json:"receivedAt"`
 	CPUPercent             *float64  `json:"cpuPercent"`
@@ -163,6 +171,12 @@ func TotalBytes(c ProviderConfig) (int64, error) {
 	return int64(c.Allowance * factor), nil
 }
 func ValidateConfig(c Config) error {
+	if c.ObserverKind != "" && c.ObserverKind != "instance" && c.ObserverKind != "host-agent" {
+		return errors.New("invalid node observer kind")
+	}
+	if c.ObserverKind == "host-agent" && c.ObserverInstanceID != "" {
+		return errors.New("host agent observation does not select a core instance")
+	}
 	if c.ObserverInstanceID != "" && !domain.ValidID(c.ObserverInstanceID) {
 		return errors.New("invalid observer instance")
 	}
@@ -214,7 +228,7 @@ func ValidateConfig(c Config) error {
 	return nil
 }
 func ValidateReport(r Report, now time.Time) error {
-	if !domain.ValidID(r.Scope.NodeID) || !domain.ValidID(r.Scope.InstanceID) || !domain.ValidID(r.Scope.EnrollmentEpoch) || !domain.ValidID(r.StreamEpoch) || !domain.ValidID(r.Metrics.CounterEpoch) || r.Sequence == 0 {
+	if !domain.ValidID(r.Scope.NodeID) || (r.HostAgent && r.Scope.InstanceID != "" || !r.HostAgent && !domain.ValidID(r.Scope.InstanceID)) || !domain.ValidID(r.Scope.EnrollmentEpoch) || !domain.ValidID(r.StreamEpoch) || !domain.ValidID(r.Metrics.CounterEpoch) || r.Sequence == 0 {
 		return errors.New("valid node scope, observer epochs and sequence required")
 	}
 	if r.ObservedAt.IsZero() || r.ObservedAt.After(now.Add(time.Minute)) || now.Sub(r.ObservedAt) > 24*time.Hour {

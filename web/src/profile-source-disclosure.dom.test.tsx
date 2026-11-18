@@ -213,6 +213,7 @@ it("starts new source setup expanded without making a proxy input mandatory", as
   expect(editor.getByRole("combobox", { name: "使用的订阅来源" })).toBeTruthy();
   const user = userEvent.setup();
   await user.click(editor.getByRole("button", { name: "收起来源设置" }));
+  await user.click(editor.getByRole("button", { name: "下一步：设置分流" }));
   expect(editor.getByRole("combobox", { name: "默认流量行为" })).toBeTruthy();
   await user.click(editor.getByRole("button", { name: "保存草稿" }));
   await waitFor(() => expect(writes).toHaveLength(1));

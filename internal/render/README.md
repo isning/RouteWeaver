@@ -6,7 +6,7 @@ This package has three separate interfaces:
 - `DefaultServers().Render(ServerDeploymentIR)` generates one config per managed instance. Canonical adapter IDs are `routeweaver/xray` and `routeweaver/sing-box`, matching the runtime registry. Named connectors form a directed acyclic graph; rules and default actions refer to stable connector IDs. The earlier ordered `Egress` field is a compatibility adapter and cannot be mixed with named connectors.
 - `Default().Render(Route, []Node)` is a temporary compatibility interface for the old **client-chain preview**, not server deployment. It no longer imposes a two-hop limit.
 
-Adapters are registered through interfaces, not a closed family enum. Exact version gates currently are Xray 26.3.27, sing-box 1.14.3, and Mihomo 1.19.32. An unknown version cannot silently inherit another version's support. The synthetic third-adapter test proves registration extensibility only, not a third production implementation.
+Adapters are registered through interfaces, not a closed family enum. Client version gates are sing-box 1.14.3/1.14.4 and Mihomo 1.19.32. Ordinary servers support Xray 26.10.31/26.10.29 plus historical 26.3.27, and sing-box 1.14.4 plus historical 1.14.3. An unknown version cannot silently inherit another version's support. The synthetic third-adapter test proves registration extensibility only, not a third production implementation.
 
 ## Native-checked positive slice
 
@@ -101,3 +101,9 @@ this background consumer. No admission lease, IP/connection slot, quota budget
 or provisioning state is created or settled. A successful comparison means only
 that saved configuration differences were checked, not that a connection will be
 admitted. All normal live admission/publication/revocation fences remain active.
+
+## 2026-11-18 protocol completion
+
+Current sing-box and Mihomo client adapters preserve Hysteria2, AnyTLS and TUIC v5 connections. Sing-box ordinary servers support the same protocols. Hysteria2 adds Salamander obfuscation, integer upload/download Mbps, and client/outbound port ranges plus hopping interval. Hopping does not configure server firewall/NAT port forwarding; listeners reject outbound hopping settings. TUIC preserves UUID/password, congestion control and outbound UDP relay mode; TUIC connector detours remain explicitly unsupported. SS2022 single-key AES-128/AES-256/ChaCha20 methods validate base64 key lengths and preserve them through existing targets. XHTTP path/host/mode is an Xray-only typed transport; incompatible targets reject it. XHTTP REALITY, arbitrary extra fields and managed transport expansion are not enabled.
+
+This supersedes earlier bounded protocol lists, not the managed enforcement or live-network limitations. See `docs/verification/CORE-COMPLETION-2026-11-18.md` for exact tests and remaining gaps.

@@ -104,6 +104,7 @@ func newWithOptions(s *store.Store, registry *render.Registry, opts Options, ver
 	h := &server{trustedProxies: trusted, s: s, registry: registry, opts: opts, attempts: map[string]attempt{}, subscriptionVerification: verification}
 	root := chi.NewRouter()
 	root.Use(h.headers)
+	root.NotFound(h.customSubscriptionFeed)
 	root.Get("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, 200, map[string]any{"status": "ok", "deploymentAvailable": false})
 	})
@@ -118,6 +119,7 @@ func newWithOptions(s *store.Store, registry *render.Registry, opts Options, ver
 	root.Get("/feed/{token}", h.feed)
 	root.Get("/feed/{token}/bundle", h.feedBundle)
 	root.Route("/api", func(r chi.Router) {
+		r.Get("/branding", h.branding)
 		h.registerAgent(r)
 		r.Get("/auth/oidc", h.oidcMetadata)
 		r.Post("/auth/oidc/start", h.oidcStart)
@@ -140,6 +142,7 @@ func newWithOptions(s *store.Store, registry *render.Registry, opts Options, ver
 				h.registerAdmin(r)
 				h.registerBackup(r)
 				h.registerNotificationAdmin(r)
+				h.registerNetworkMonitors(r)
 				config := huma.DefaultConfig("RouteWeaver", "0.2.0")
 				config.OpenAPIPath = "/openapi"
 				config.DocsPath = "/docs"

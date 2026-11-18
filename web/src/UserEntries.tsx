@@ -251,10 +251,11 @@ function UserEntryTask({
     onMutate: () => invalidateOutputInputs(client),
     onSettled: () => invalidateOutputInputs(client),
     mutationFn: (id: string) =>
-      request(`/users/${user!.id}/entries/${id}`, { method: "DELETE" }),
-    onSuccess: () => {
+      request<{ deploymentRequired?: boolean }>(`/users/${user!.id}/entries/${id}`, { method: "DELETE" }),
+    onSuccess: (result) => {
       client.invalidateQueries({ queryKey: ["user-entries", user?.id] });
-      if (active.current) message.success("已停止此入口的订阅交付");
+      if (result?.deploymentRequired) client.invalidateQueries({ queryKey: ["infrastructure"] });
+      if (active.current) message.success(result?.deploymentRequired ? "已停止订阅交付，请应用配置以撤销节点凭据" : "已停止此入口的订阅交付");
     },
     onError: (failure) => {
       if (active.current) setError(failure);
@@ -547,7 +548,9 @@ function UserEntryTask({
                                 confirm({
                                   title: `停止交付「${g.name}」？`,
                                   description:
-                                    g.publishedRouteId
+                                    g.staticPrincipal
+                                      ? "订阅将停止交付。请应用新的核心配置，让节点停止接受已下载的 UUID。"
+                                      : g.publishedRouteId
                                       ? "将阻止相关平台订阅继续交付。此托管入口将拒绝新连接与续期，已有连接可能在续期被拒绝或租约到期时结束，无需重新发布订阅或重启核心。"
                                       : "将阻止相关平台订阅继续交付。已下载的凭据不会因此从节点撤销。",
                                   confirmLabel: "\u505C\u6B62\u4EA4\u4ED8",

@@ -331,6 +331,17 @@ func (h *server) prepareExitChange(ctx context.Context, actor, routeID string, i
 	if existing && in.TLS != nil {
 		return out, exitBlocked("EXIT_TARGET_ALREADY_PREPARED", "所选出口已包含服务端设置；此操作不替换它的安全参数。")
 	}
+	if !existing && (endpoint.CertificateID != "" || endpoint.Reality != nil) {
+		candidate := domain.ServerDeploymentIR{Programs: []domain.ServerProgram{target}}
+		ok, err := h.useEndpointSecurity(&candidate, nil)
+		if err != nil {
+			return out, err
+		}
+		if !ok {
+			return out, exitBlocked("EXIT_TLS_REQUIRED", "所选平台证书不可用，请在监听端点重新选择。")
+		}
+		target = candidate.Programs[0]
+	}
 	if target.Listener.Connection.TLS != nil && target.Listener.Connection.TLS.Enabled && target.TLS == nil {
 		return out, exitBlocked("EXIT_TLS_REQUIRED", "所选出口需要服务端证书与密钥设置，请补充该端点的现有 TLS 材料后重新检查。")
 	}

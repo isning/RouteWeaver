@@ -584,7 +584,7 @@ it("defers native Back while the same account is checked, then asks before aband
   });
   const proof = history.state;
   holding = true;
-  fireEvent(window, new Event("focus"));
+  fireEvent(window, new Event("online"));
   await waitFor(() => expect(complete).toBeTypeOf("function"));
   await act(async () => {
     history.back();

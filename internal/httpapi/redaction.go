@@ -27,7 +27,7 @@ func redactTree(tree any) {
 	case map[string]any:
 		for k, value := range v {
 			key := strings.ToLower(strings.ReplaceAll(strings.ReplaceAll(k, "_", ""), "-", ""))
-			secret := key == "password" || key == "pass" || key == "user" || key == "passwd" || key == "username" || key == "uuid" || key == "privatekey" || key == "shortid" || key == "shortids" || key == "headers"
+			secret := key == "obfspassword" || key == "password" || key == "pass" || key == "user" || key == "passwd" || key == "username" || key == "uuid" || key == "privatekey" || key == "shortid" || key == "shortids" || key == "headers"
 			if key == "id" {
 				s, _ := value.(string)
 				secret = credentialUUID.MatchString(s)
@@ -63,6 +63,9 @@ func redactEndpoint(e domain.ClientEndpoint) domain.ClientEndpoint {
 	json.Unmarshal(b, &out)
 	out.Connection.Username = ""
 	out.Connection.Password = ""
+	if h := out.Connection.Hysteria2; h != nil && h.Obfs != nil {
+		h.Obfs.Password = ""
+	}
 	out.Connection.UUID = ""
 	if out.Connection.Transport != nil {
 		out.Connection.Transport.Headers = nil

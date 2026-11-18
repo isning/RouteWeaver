@@ -63,10 +63,12 @@ function inventoryAPI({
   cores = instances,
   endpoints = [],
   observationError = false,
+  certificates = [],
 }: {
   cores?: CoreInstance[];
   endpoints?: ManagedEndpoint[];
   observationError?: boolean;
+  certificates?: { id: string; name: string; expiresAt: string; dnsNames?: string[] }[];
 } = {}) {
   const currentCores = [...cores];
   const currentHosts = [...hosts];
@@ -75,6 +77,7 @@ function inventoryAPI({
     "fetch",
     vi.fn(async (url, init) => {
       const path = String(url);
+      if (/\/api\/agent\/hosts\/[^/]+\/state$/.test(path)) return json({ nodeId: path.split("/").at(-2), phase: "unregistered" });
       if (path === "/api/auth/me") return json({
         user: { id: "fixture-admin", name: "Fixture admin", role: "admin" },
         csrfToken: "synthetic-session",
@@ -92,6 +95,11 @@ function inventoryAPI({
           links: [],
           reviewToken: "fixture-impact",
         });
+      if (path === "/api/managed-endpoints/reality-keys") return json({
+        privateKey: "synthetic-private-key",
+        publicKey: "synthetic-public-key",
+        shortId: "0123456789abcdef",
+      });
       if (init?.method === "POST" || init?.method === "PUT") {
         const value = JSON.parse(init.body);
         writes.push({ path, value });
@@ -99,10 +107,12 @@ function inventoryAPI({
           currentCores.push(value as CoreInstance);
         if (path === "/api/hosts" && init.method === "POST")
           currentHosts.push(value as HostRecord);
+        if (path === "/api/agent/hosts/enrollments") return json({ scope: { nodeId: value.nodeId, enrollmentEpoch: "synthetic" }, token: "synthetic-token" });
         return json(value);
       }
       if (path.endsWith("/reveal"))
         return json(endpoints.find((e) => path.includes(e.id)));
+      if (path === "/api/server-tls-certificates") return json(certificates);
       if (path === "/api/hosts") return json(currentHosts);
       if (path === "/api/core-instances") return json(currentCores);
       if (path === "/api/managed-endpoints") return json(endpoints);
@@ -642,7 +652,7 @@ describe("infrastructure creation user tasks", () => {
     expect(drawer.queryByRole("list", { name: "服务器配置步骤" })).toBeNull();
     const tip = within(drawer.getByRole("status", { name: "服务器配置提示" }));
     expect(tip.getByText("添加第一个核心")).toBeTruthy();
-    expect(tip.getByText("服务器地址已保存。添加核心后即可接入 Agent。")).toBeTruthy();
+    expect(tip.getByText("服务器地址已保存。接入 Agent 后，可远程安装和管理核心。")).toBeTruthy();
     const add = tip.getByRole("button", { name: "开始配置核心" });
     expect(drawer.queryByRole("button", { name: "添加核心" })).toBeNull();
     expect(add.getAttribute("data-variant")).toBe("outline");
@@ -685,7 +695,7 @@ describe("infrastructure creation user tasks", () => {
     const drawer = within(screen.getByRole("region", { name: "Tokyo" }));
     expect(drawer.getByText("Tokyo primary")).toBeTruthy();
     expect(drawer.getByText("Tokyo secondary")).toBeTruthy();
-    expect(drawer.getAllByRole("button", { name: /查\s*看/ })).toHaveLength(2);
+    expect(drawer.getAllByRole("button", { name: "管理核心" })).toHaveLength(2);
     await user.click(
       drawer.getByRole("button", { name: "为 Tokyo secondary 添加监听端点" }),
     );
@@ -921,14 +931,14 @@ describe("infrastructure creation user tasks", () => {
     await user.click(await screen.findByRole("tab", { name: "监听端点 1" }));
     await user.click(screen.getByRole("button", { name: /编\s*辑/ }));
     const dialog = await screen.findByRole("dialog", { name: "编辑监听端点" });
-    await user.clear(within(dialog).getByLabelText("用户 UUID"));
+    await user.clear(within(dialog).getByLabelText("共享 UUID"));
     await user.click(within(dialog).getByRole("button", { name: /保\s*存/ }));
     await waitFor(() =>
       expect(dialog.querySelector("[data-slot=field-error]")).toBeTruthy(),
     );
     expect(writes).toHaveLength(0);
     await user.type(
-      within(dialog).getByLabelText("用户 UUID"),
+      within(dialog).getByLabelText("共享 UUID"),
       "00000000-0000-4000-8000-000000000002",
     );
     await user.click(within(dialog).getByRole("button", { name: /保\s*存/ }));
@@ -1196,9 +1206,10 @@ it("keeps enrollment expiry exact until date confirmation and blocks submission 
   const user = userEvent.setup();
   await user.click(await screen.findByRole("tab", { name: /核心实例/ }));
   await user.click(await screen.findByRole("button", { name: /^FRA primary/ }));
+  await user.click(screen.getByRole("tab", { name: "概览" }));
   await user.click(await screen.findByRole("button", { name: "接入 Agent" }));
   const enrollment = within(
-    await screen.findByRole("dialog", { name: "接入核心实例" }),
+    await screen.findByRole("dialog", { name: "接入服务器 Agent" }),
   );
   const expiry = enrollment.getByLabelText("凭据到期时间") as HTMLInputElement;
   await waitFor(() => expect(expiry.value).not.toBe(""));
@@ -1225,9 +1236,9 @@ it("keeps enrollment expiry exact until date confirmation and blocks submission 
   expect(expiry.value).toBe(originalDisplay);
   await user.click(enrollment.getByRole("button", { name: "创建接入凭据" }));
   await waitFor(() => expect(writes).toHaveLength(1));
-  expect(writes[0].path).toBe("/api/agent/enrollments");
+  expect(writes[0].path).toBe("/api/agent/hosts/enrollments");
   expect(writes[0].value.nodeId).toBe("host-fra");
-  expect(writes[0].value.instanceId).toBe("core-fra-1");
+  expect(writes[0].value).not.toHaveProperty("instanceId");
   expect(String(writes[0].value.expiresAt)).toMatch(/\.\d{3}Z$/);
 });
 
@@ -1263,9 +1274,9 @@ async function openAgentEnrollment(from: "inventory" | "workspace" = "inventory"
     await userEvent.click(await screen.findByRole("tab", { name: /核心实例/ }));
     await userEvent.click(await screen.findByRole("button", { name: /^FRA primary/ }));
   }
-  const workspace = within(await screen.findByRole("region", { name: "Frankfurt的FRA primary" }));
-  await userEvent.click(workspace.getByRole("button", { name: "接入 Agent" }));
-  const dialog = await screen.findByRole("dialog", { name: "接入核心实例" });
+  await userEvent.click(await screen.findByRole("tab", { name: "概览" }));
+  await userEvent.click(await screen.findByRole("button", { name: "接入 Agent" }));
+  const dialog = await screen.findByRole("dialog", { name: "接入服务器 Agent" });
   await waitFor(() => expect(
     (within(dialog).getByLabelText("凭据到期时间") as HTMLInputElement).value,
   ).not.toBe(""));
@@ -1279,7 +1290,7 @@ function deferAgentEnrollment() {
   let complete!: (response: Response) => void;
   const response = new Promise<Response>((resolve) => { complete = resolve; });
   vi.stubGlobal("fetch", vi.fn((url, init) => {
-    if (String(url) === "/api/agent/enrollments") {
+    if (String(url) === "/api/agent/hosts/enrollments") {
       requests.push(JSON.parse(String(init?.body)));
       return response.then((value) => value.clone());
     }
@@ -1297,12 +1308,12 @@ it("keeps pending enrollment open and suppresses repeated submission", async () 
   fireEvent.submit(form);
   await waitFor(() => expect(deferred.requests).toHaveLength(1));
   expect(deferred.requests[0]).toMatchObject({
-    nodeId: "host-fra", instanceId: "core-fra-1",
+    nodeId: "host-fra",
   });
   expect((dialog.getByRole("button", { name: "取消" }) as HTMLButtonElement).disabled).toBe(true);
   await userEvent.click(dialog.getByRole("button", { name: "取消" }));
   await userEvent.keyboard("{Escape}");
-  expect(screen.getByRole("dialog", { name: "接入核心实例" })).toBeTruthy();
+  expect(screen.getByRole("dialog", { name: "接入服务器 Agent" })).toBeTruthy();
   expect(hasUnsavedChanges()).toBe(true);
   expect(getNavigationWarning()).toContain("离开不会取消操作");
   expect(getNavigationWarning()).toContain("旧凭据可能已失效");
@@ -1310,7 +1321,7 @@ it("keeps pending enrollment open and suppresses repeated submission", async () 
   window.dispatchEvent(unload);
   expect(unload.defaultPrevented).toBe(true);
   await act(async () => deferred.complete(json({
-    scope: { nodeId: "host-fra", instanceId: "core-fra-1", enrollmentEpoch: "new" },
+    scope: { nodeId: "host-fra", enrollmentEpoch: "new" },
     token: "fixture-issued-token",
   })));
   expect(await screen.findByDisplayValue("fixture-issued-token")).toBeTruthy();
@@ -1329,11 +1340,11 @@ it.each(["success", "failure"] as const)(
     await waitFor(() => expect(deferred.requests).toHaveLength(1));
     first.unmount();
     expect(hasUnsavedChanges()).toBe(false);
-    expect(location.hash).toBe("#servers?host=host-fra&instance=core-fra-1");
+    expect(location.hash).toBe("#servers?host=host-fra&instance=core-fra-1&section=overview");
     mount();
     const current = await openAgentEnrollment("workspace");
     await act(async () => deferred.complete(outcome === "success" ? json({
-      scope: { nodeId: "host-fra", instanceId: "core-fra-1", enrollmentEpoch: "old" },
+      scope: { nodeId: "host-fra", enrollmentEpoch: "old" },
       token: "departed-secret-token",
     }) : json({ error: "departed enrollment error" }, 503)));
     expect(current.queryByDisplayValue("departed-secret-token")).toBeNull();
@@ -1371,3 +1382,114 @@ it("releases the pending enrollment guard after rejection and retains expiry for
 
 
 
+
+it.each([
+  { option: "SOCKS5", protocol: "socks" },
+  { option: "Shadowsocks", protocol: "shadowsocks" },
+])("creates a stock sing-box $option listener with appropriate credentials", async ({ option, protocol }) => {
+  const writes = inventoryAPI({ cores: [{ ...instances[0], adapterId: "routeweaver/sing-box", version: "1.14.4" }] });
+  mount();
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole("button", { name: "Frankfurt" }));
+  await user.click(screen.getByRole("button", { name: "为 FRA primary 添加监听端点" }));
+  const editor = within(await screen.findByRole("dialog", { name: "添加监听端点" }));
+  await user.click(editor.getByLabelText("协议"));
+  await user.click(await screen.findByRole("option", { name: option }));
+  if (protocol === "shadowsocks") {
+    await user.click(editor.getByLabelText("加密方式"));
+    expect(screen.queryByRole("option", { name: /^aes-128-gcm$/ })).toBeNull();
+    await user.click(await screen.findByRole("option", { name: /^2022-blake3-aes-128-gcm$/ }));
+    await user.type(editor.getByLabelText("端点密钥"), "AAAAAAAAAAAAAAAAAAAAAA==");
+  }
+  expect(editor.queryByLabelText("用户名")).toBeNull();
+  expect(editor.queryByLabelText("连接密码")).toBeNull();
+  expect(editor.queryByLabelText("共享 UUID")).toBeNull();
+  if (protocol === "socks") {
+    await user.click(editor.getByRole("button", { name: "TCP 设置" }));
+    await user.click(editor.getByRole("combobox", { name: "TCP Fast Open" }));
+    await user.click(await screen.findByRole("option", { name: "启用" }));
+    await user.type(editor.getByLabelText("Keepalive 空闲时间（秒）"), "60");
+    await user.click(editor.getByRole("button", { name: "UDP 设置" }));
+    await user.click(editor.getByRole("combobox", { name: "UDP 分片" }));
+    await user.click(await screen.findByRole("option", { name: "关闭" }));
+    await user.type(editor.getByLabelText("UDP NAT 超时（秒）"), "300");
+  }
+  await user.type(editor.getByLabelText("端点名称"), "User entry");
+  await user.type(editor.getByLabelText("端口"), "1443");
+  await user.click(editor.getByRole("button", { name: /保\s*存/ }));
+  await waitFor(() => expect(writes).toHaveLength(1));
+  expect(writes[0].value).toMatchObject({
+    authentication: "principals",
+    connection: { protocol, host: "0.0.0.0", port: 1443 },
+  });
+  if (protocol === "shadowsocks") {
+    expect(writes[0].value.connection).toMatchObject({ method: "2022-blake3-aes-128-gcm", password: "AAAAAAAAAAAAAAAAAAAAAA==" });
+  } else {
+    expect(Object.keys(writes[0].value.connection as object)).not.toContain("password");
+    expect(writes[0].value).toMatchObject({
+      tcp: { fastOpen: true, keepAliveIdleSeconds: 60 },
+      udp: { fragment: false, timeoutSeconds: 300 },
+    });
+  }
+});
+
+it("selects a platform certificate when enabling TLS on a listener", async () => {
+  const writes = inventoryAPI({
+    cores: [{ ...instances[0], adapterId: "routeweaver/sing-box", version: "1.14.4" }],
+    certificates: [{ id: "cert_fixture", name: "entry.example", expiresAt: "2027-01-01T00:00:00Z", dnsNames: ["entry.example", "another.example", "*.entry.example"] }],
+  });
+  mount();
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole("button", { name: "Frankfurt" }));
+  await user.click(screen.getByRole("button", { name: "为 FRA primary 添加监听端点" }));
+  const editor = within(await screen.findByRole("dialog", { name: "添加监听端点" }));
+  await user.click(editor.getByRole("radio", { name: "TLS" }));
+  await user.click(await editor.findByRole("combobox", { name: "平台证书" }));
+  await user.click(await screen.findByRole("option", { name: /entry.example/ }));
+  await user.click(editor.getByRole("combobox", { name: "从证书选择 SNI" }));
+  expect(screen.queryByRole("option", { name: "*.entry.example" })).toBeNull();
+  await user.click(await screen.findByRole("option", { name: "another.example" }));
+  await user.type(editor.getByLabelText("端点名称"), "TLS entry");
+  await user.type(editor.getByLabelText("端口"), "1443");
+  await user.click(editor.getByRole("button", { name: /保\s*存/ }));
+  await waitFor(() => expect(writes).toHaveLength(1));
+  expect(writes[0].value).toMatchObject({
+    certificateId: "cert_fixture",
+    connection: { tls: { enabled: true, serverName: "another.example" } },
+  });
+});
+
+it("configures REALITY target, SNI and generated credentials from the listener", async () => {
+  const writes = inventoryAPI({ cores: [{ ...instances[0], adapterId: "routeweaver/xray", version: "26.10.31" }] });
+  mount();
+  const user = userEvent.setup();
+  await user.click(await screen.findByRole("button", { name: "Frankfurt" }));
+  await user.click(screen.getByRole("button", { name: "为 FRA primary 添加监听端点" }));
+  const editor = within(await screen.findByRole("dialog", { name: "添加监听端点" }));
+  await user.click(editor.getByRole("radio", { name: "REALITY" }));
+  await user.click(editor.getByRole("combobox", { name: "选择 REALITY 网站" }));
+  await user.click(await screen.findByRole("option", { name: /www.microsoft.com/ }));
+  expect(within(editor.getByRole("region", { name: "目标与 SNI" })).getByText("预设网站")).toBeTruthy();
+  const keyFields = within(editor.getByRole("region", { name: "REALITY 密钥" }));
+  await user.click(keyFields.getByRole("button", { name: "生成密钥" }));
+  await keyFields.findByDisplayValue("synthetic-public-key");
+  expect(keyFields.getByText("已填写")).toBeTruthy();
+  await user.click(editor.getByRole("button", { name: "其他允许的 SNI" }));
+  await user.click(editor.getByRole("combobox", { name: "添加允许的 SNI" }));
+  await user.type(screen.getByRole("combobox", { name: "搜索选项" }), "microsoft.com");
+  await user.click(screen.getByRole("option", { name: "添加“microsoft.com”" }));
+  await user.keyboard("{Escape}");
+  const shortIDFields = within(editor.getByRole("region", { name: "Short ID" }));
+  expect(shortIDFields.getByLabelText("客户端 Short ID")).toHaveProperty("value", "0123456789abcdef");
+  await user.click(shortIDFields.getByRole("button", { name: "生成额外的 Short ID" }));
+  expect(shortIDFields.getByText("2 个")).toBeTruthy();
+  await user.click(editor.getByRole("button", { name: "其他允许的 SNI" }));
+  await user.type(editor.getByLabelText("端点名称"), "REALITY entry");
+  await user.type(editor.getByLabelText("端口"), "1443");
+  await user.click(editor.getByRole("button", { name: /保\s*存/ }));
+  await waitFor(() => expect(writes).toHaveLength(1));
+  expect(writes[0].value).toMatchObject({
+    realityServer: { handshakeServer: "www.microsoft.com", handshakePort: 443, serverNames: ["www.microsoft.com", "microsoft.com"], privateKey: "synthetic-private-key", shortIds: ["0123456789abcdef", expect.stringMatching(/^[a-f0-9]{16}$/)] },
+    connection: { tls: { serverName: "www.microsoft.com", fingerprint: "chrome", reality: { publicKey: "synthetic-public-key", shortId: "0123456789abcdef" } } },
+  });
+});

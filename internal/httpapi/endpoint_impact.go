@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"reflect"
 	"routeweaver/internal/domain"
+	"routeweaver/internal/render"
 	"routeweaver/internal/store"
 )
 
@@ -100,6 +101,12 @@ func (h *server) endpointImpactReview(v domain.ManagedEndpoint, revision string)
 	if err := validateSingBoxOnlyEndpointTarget(v, instance); err != nil {
 		return view, proof, err
 	}
+	if err := render.ValidateListenerNetworkOptions(v, instance); err != nil {
+		return view, proof, err
+	}
+	if err := render.ValidateEndpointReality(v, instance); err != nil {
+		return view, proof, err
+	}
 	view.Endpoint = endpointImpactItem{ID: old.ID, Name: old.Name}
 	view.Proposed = endpointImpactTarget{Name: v.Name, InstanceID: instance.ID, InstanceName: instance.Name, Host: v.Connection.Host, Port: v.Connection.Port, Protocol: v.Connection.Protocol}
 	if old.Name != v.Name {
@@ -110,6 +117,18 @@ func (h *server) endpointImpactReview(v domain.ManagedEndpoint, revision string)
 	}
 	if old.Authentication != v.Authentication {
 		view.ChangedFields = append(view.ChangedFields, "认证模式")
+	}
+	if !reflect.DeepEqual(old.UDP, v.UDP) || old.AcceptProxyProtocol != v.AcceptProxyProtocol {
+		view.ChangedFields = append(view.ChangedFields, "网络监听设置")
+	}
+	if !reflect.DeepEqual(old.TCP, v.TCP) {
+		view.ChangedFields = append(view.ChangedFields, "TCP 设置")
+	}
+	if !reflect.DeepEqual(old.Reality, v.Reality) {
+		view.ChangedFields = append(view.ChangedFields, "REALITY 服务端参数")
+	}
+	if old.CertificateID != v.CertificateID {
+		view.ChangedFields = append(view.ChangedFields, "平台证书")
 	}
 	if !reflect.DeepEqual(old.Connection, v.Connection) {
 		view.ChangedFields = append(view.ChangedFields, "连接参数（含受保护字段）")

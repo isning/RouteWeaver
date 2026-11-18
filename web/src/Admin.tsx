@@ -1,3 +1,4 @@
+import { useBranding } from "./branding";
 import { ScrollableTabsList } from "@/ui-patterns/scrollable-tabs-list";
 import { SettingsGroup, SettingsRow } from "@/ui-patterns/settings-group";
 import { PlatformSettingsTabList } from "@/ui-patterns/platform-settings-navigation";
@@ -2641,32 +2642,15 @@ function PlatformSettingsTabs({
   ];
   return (
     <Tabs
+      className="platform-settings-page mx-auto w-full min-w-0 max-w-4xl gap-6"
       value={activeTab}
       onValueChange={(next) => {
         setActiveTab(next);
         if (next === "backup") setBackupVisited(true);
       }}
     >
-      <WorkspaceFrame
-        contentKind="settings"
-        contextKind="navigation"
-        contained={activeTab !== "basic"}
-        nestedContext={activeTab === "backup" ? "navigation" : undefined}
-        header={<PageHeader title="平台设置" />}
-        localNavigation={<PlatformSettingsTabList />}
-        context={
-          activeTab === "basic" ? (
-            <SectionIndex
-              presentation="workspace"
-              label="本页设置"
-              sections={[
-                { id: `${sectionID}-platform-information`, label: "平台信息" },
-                { id: `${sectionID}-subscription-domain`, label: "订阅域名" },
-              ]}
-            />
-          ) : undefined
-        }
-      >
+      <PageHeader title="平台设置" />
+      <PlatformSettingsTabList />
         {readNotice}
         {tabs.map((tab) => (
           <TabsContent
@@ -2677,12 +2661,11 @@ function PlatformSettingsTabs({
                 ? true : undefined
             }
             hidden={activeTab !== tab.key}
-            className={tab.key === "basic" ? "space-y-10" : "space-y-6"}
+            className="mt-0 min-w-0 space-y-6"
           >
             {tab.children}
           </TabsContent>
         ))}
-      </WorkspaceFrame>
     </Tabs>
   );
 }
@@ -2691,7 +2674,7 @@ function validPlatformSettings(value: unknown): value is Record<string, unknown>
   if (!value || typeof value !== "object" || Array.isArray(value)) return false;
   const settings = value as Record<string, unknown>;
   return typeof settings.name === "string" && settings.name !== "" &&
-    settings.timezone === "UTC+8" && settings.registration === "invite";
+    typeof settings.timezone === "string" && ["invite","closed"].includes(String(settings.registration));
 }
 
 class SettingsSaveUnconfirmed extends Error {
@@ -2712,21 +2695,35 @@ function Settings({
   const [saveUnconfirmed, setSaveUnconfirmed] = useState(false);
   const client = useQueryClient();
   const [baseline, setBaseline] = useState(initial);
+  const brand = useBranding();
+  const logo = useWatch("logo", form);
+  const [logoError, setLogoError] = useState<Error | null>(null);
+  const logoRead = useRef(0);
+  const [logoLoading, setLogoLoading] = useState(false);
   const [nameEditOwner, setNameEditOwner] = useState<object | null>(null);
   const editingName = nameEditOwner !== null;
+  type SettingField = "name" | "logo" | "timezone" | "registration";
+  const [editingField,setEditingField] = useState<SettingField>("name");
+  const settingTrigger = useRef<HTMLButtonElement | null>(null);
+  const logoInput = useRef<HTMLInputElement>(null);
   const nameInput = useRef<HTMLInputElement>(null);
   const nameEditor = useRef<HTMLDivElement>(null);
   const editName = useRef<HTMLButtonElement>(null);
   const restoreNameFocus = useRef(false);
   useLayoutEffect(() => {
-    if (editingName) nameInput.current?.focus();
+    if (editingName) {
+      if(editingField === "name") nameInput.current?.focus();
+      else nameEditor.current?.querySelector<HTMLElement>('[role="combobox"],button')?.focus();
+    }
     else if (restoreNameFocus.current) {
       restoreNameFocus.current = false;
-      if (!editName.current?.closest("[hidden], [inert]"))
-        editName.current?.focus();
+      if (!settingTrigger.current?.closest("[hidden], [inert]"))
+        settingTrigger.current?.focus();
     }
-  }, [editingName]);
+  }, [editingName,editingField]);
   const finishNameEdit = () => {
+    logoRead.current++;
+    setLogoLoading(false);
     restoreNameFocus.current = !!nameEditor.current?.contains(
       document.activeElement,
     );
@@ -2738,8 +2735,8 @@ function Settings({
     left: Record<string, unknown>,
     right: Record<string, unknown>,
   ) =>
-    ["name", "registration", "timezone"].every(
-      (key) => left[key] === right[key],
+    ["name", "registration", "timezone", "logo"].every(
+      (key) => (left[key] ?? "") === (right[key] ?? ""),
     );
   const active = useRef(true);
   useLayoutEffect(() => {
@@ -2754,11 +2751,13 @@ function Settings({
       try {
         saved = await request<unknown>("/settings", {
           method: "PUT",
-          body: JSON.stringify(values),
+          body: JSON.stringify({...values,logo:values.logo || undefined}),
         });
       } catch (error) {
         // These are explicit validation/auth refusals from this endpoint.
         // Transport failures and server errors cannot establish non-persistence.
+        if (error instanceof APIError && error.status===400 && ["invalid timezone","timezone required"].includes(error.message)) throw new Error("请选择有效的默认时区");
+        if (error instanceof APIError && error.status===400 && error.message.startsWith("invalid platform name or logo")) throw new Error("平台名称或 Logo 不符合要求，请检查名称和图片格式");
         if (error instanceof APIError && [400, 401, 403].includes(error.status))
           throw error;
         throw new SettingsSaveUnconfirmed();
@@ -2777,6 +2776,7 @@ function Settings({
       await client.cancelQueries({ queryKey: ["platform-settings"], exact: true });
       client.setQueryData(["platform-settings"], saved);
       if (!active.current) return;
+      brand.update({name:String(saved.name),logo:typeof saved.logo==="string"?saved.logo:undefined,timezone:String(saved.timezone),registration:String(saved.registration)});
       setBaseline(saved);
       const currentMatchesSubmission = sameSettings(
         form.getFieldsValue(true),
@@ -2812,6 +2812,7 @@ function Settings({
       if (!active.current) return;
       client.setQueryData(["platform-settings"], current);
       if (!active.current) return;
+      brand.update({name:String(current.name),logo:typeof current.logo==="string"?current.logo:undefined,timezone:String(current.timezone),registration:String(current.registration)});
       setBaseline(current);
       setSaveUnconfirmed(false);
       save.reset();
@@ -2828,52 +2829,11 @@ function Settings({
       ? "平台设置保存可能已完成，离开不会撤销保存。离开会丢失当前输入和核对信息。"
       : undefined,
   );
-  return (
-    <>
-      <PageSection id={`${sectionID}-platform-information`} label="平台信息">
-        <SettingsGroup title="平台信息">
-          <AppForm
-            aria-label="平台基本设置"
-            submitErrorFocusOwner={nameEditOwner}
-            form={form}
-            initialValues={initial}
-            onValuesChange={() => setSaveFeedback(null)}
-            onFinish={(v) => {
-              if (!save.isPending && !saveUnconfirmed && !reconcileInFlight.current)
-                save.mutate(structuredClone(v));
-            }}
-            className="settings-form space-y-0"
-          >
-            <dl hidden={editingName} className="border-b">
-              <SettingsRow
-                label="平台名称"
-                action={
-                  <ActionButton
-                    ref={editName}
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      save.reset();
-                      setSaveFeedback(null);
-                      setNameEditOwner({});
-                    }}
-                  >
-                    编辑平台名称
-                  </ActionButton>
-                }
-              >
-                {String(baseline.name || "未设置")}
-              </SettingsRow>
-            </dl>
-            {saveFeedback && (
-              <p role="status" className="px-4 py-3 text-sm text-muted-foreground sm:px-5">
-                {saveFeedback}
-              </p>
-            )}
+  const fieldEditor = (
             <div
               ref={nameEditor}
               hidden={!editingName}
-              className="space-y-4 border-b px-4 py-5 sm:px-5"
+              className="space-y-5 bg-muted/20 px-5 py-5 sm:px-6 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-top-1 motion-safe:duration-200"
             >
               <ErrorNotice error={save.error} />
               {saveUnconfirmed && (
@@ -2895,6 +2855,7 @@ function Settings({
               )}
               <AppField
                 name="name"
+                hidden={editingField !== "name"}
                 label="平台名称"
                 rules={[{ required: true, message: "请填写平台名称" }]}
                 className="max-w-xl"
@@ -2934,11 +2895,47 @@ function Settings({
                   }}
                 />
               </AppField>
+              <div hidden={editingField !== "logo"} className="space-y-3">
+                <span className="text-sm font-medium">平台 Logo</span>
+                {typeof logo === "string" && logo && <img src={logo} alt="Logo 预览" className="size-16 rounded-lg bg-muted p-2 object-contain" />}
+                <Input ref={logoInput} type="file" hidden accept="image/png,image/jpeg,image/svg+xml" aria-label="上传平台 Logo" disabled={save.isPending || saveUnconfirmed}  onChange={async event=>{
+                  const file=event.target.files?.[0];event.target.value="";if(!file)return;
+                  const sequence=++logoRead.current;
+                  setLogoLoading(false);
+                  setLogoError(null);
+                  if(file.size>128*1024 || !["image/png","image/jpeg","image/svg+xml"].includes(file.type)){setLogoError(new Error("请选择不超过 128 KB 的 PNG、JPEG 或 SVG 文件"));return}
+                  setLogoLoading(true);
+                  try {const data=await new Promise<string>((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result));reader.onerror=()=>reject(new Error("无法读取图片，请重新选择"));reader.readAsDataURL(file)});if(active.current && sequence===logoRead.current){form.setFieldValue("logo",data);setSaveFeedback(null)}}catch(error){if(active.current && sequence===logoRead.current)setLogoError(error as Error)}finally{if(active.current && sequence===logoRead.current)setLogoLoading(false)}
+                }} />
+                <ActionButton variant="outline" disabled={save.isPending || saveUnconfirmed || logoLoading} pending={logoLoading} onClick={()=>logoInput.current?.click()}>选择 Logo 文件</ActionButton>
+                <p className="text-xs text-muted-foreground">PNG、JPEG 或 SVG，最大 128 KB</p>
+                {logo && <ActionButton variant="ghost" disabled={save.isPending || saveUnconfirmed} onClick={()=>{logoRead.current++;setLogoLoading(false);form.setFieldValue("logo","")}}>移除 Logo</ActionButton>}
+                {logoLoading && <p role="status" className="text-sm text-muted-foreground">正在读取 Logo</p>}
+                <ErrorNotice error={logoError} />
+                <AppField name="logo" hidden getValueProps={value=>({value:value ?? ""})}><Input /></AppField>
+              </div>
+              <AppField hidden={editingField !== "timezone"} name="timezone" label="默认时区" trigger="onValueChange" description="用于时间显示和每日用量统计，不改变已有服务的额度重置周期">
+                <ChoiceSelect searchable options={[
+                  {value:"UTC+8",label:"中国标准时间（UTC+8）"},
+                  {value:"UTC",label:"协调世界时（UTC）"},
+                  {value:"Asia/Tokyo",label:"东京（Asia/Tokyo）"},
+                  {value:"Asia/Singapore",label:"新加坡（Asia/Singapore）"},
+                  {value:"Asia/Hong_Kong",label:"香港（Asia/Hong_Kong）"},
+                  {value:"Europe/London",label:"伦敦（Europe/London）"},
+                  {value:"Europe/Berlin",label:"柏林（Europe/Berlin）"},
+                  {value:"America/New_York",label:"纽约（America/New_York）"},
+                  {value:"America/Los_Angeles",label:"洛杉矶（America/Los_Angeles）"},
+                  {value:"Australia/Sydney",label:"悉尼（Australia/Sydney）"},
+                ]} />
+              </AppField>
+              <AppField hidden={editingField !== "registration"} name="registration" label="账号注册" trigger="onValueChange" description="关闭后，现有账号仍可登录，邀请码暂停使用">
+                <ChoiceSelect options={[{value:"invite",label:"仅限邀请"},{value:"closed",label:"关闭注册"}]} />
+              </AppField>
               <div className="flex flex-wrap gap-2">
                 <ActionButton
                   type="submit"
                   pending={save.isPending}
-                  disabled={saveUnconfirmed || reconcile.isPending}
+                  disabled={saveUnconfirmed || reconcile.isPending || logoLoading}
                   keepFocusableWhilePending
                   variant="default"
                 >
@@ -2949,43 +2946,53 @@ function Settings({
                   disabled={save.isPending || saveUnconfirmed || reconcile.isPending}
                   variant="outline"
                   onClick={() => {
-                    form.setFieldValue("name", baseline.name);
+                    form.setFieldsValue({name:baseline.name,logo:baseline.logo ?? "",timezone:baseline.timezone,registration:baseline.registration});
+                    setLogoError(null);
                     save.reset();
                     setSaveFeedback(null);
                     finishNameEdit();
                   }}
                 >
-                  取消名称修改
+                  {editingField === "name" ? "取消名称修改" : "取消"}
                 </ActionButton>
               </div>
             </div>
-            {/* Keep fixed policies registered in the complete settings payload. */}
-            <AppField name="registration" hidden>
-              <input type="hidden" />
-            </AppField>
-            <AppField name="timezone" hidden>
-              <input type="hidden" />
-            </AppField>
-            <dl className="divide-y">
-              <SettingsRow
-                label="账号注册"
-                description="新账号须由管理员生成邀请后创建。"
-              >
-                {currentSettings.registration === "invite"
-                  ? "仅受邀用户"
-                  : String(currentSettings.registration || "未设置")}
-              </SettingsRow>
-              <SettingsRow
-                label="默认时区"
-                description="流量周期按 UTC+8 计算；具体重置方式在服务方案或用户授权中设置。"
-              >
-                {String(currentSettings.timezone || "未设置")}
-              </SettingsRow>
-            </dl>
+  );
+  return (
+    <>
+      <PageSection id={`${sectionID}-platform-information`} label="平台信息">
+          <AppForm
+            aria-label="平台基本设置"
+            submitErrorFocusOwner={nameEditOwner}
+            form={form}
+            initialValues={initial}
+            onValuesChange={() => setSaveFeedback(null)}
+            onFinish={(v) => {
+              if (!save.isPending && !saveUnconfirmed && !reconcileInFlight.current && !logoLoading)
+                save.mutate(structuredClone({...baseline,[editingField]:form.getFieldValue(editingField) ?? v[editingField] ?? ""}));
+            }}
+            className="settings-form space-y-6"
+          >
+            {saveFeedback && <p role="status" className="px-4 py-3 text-sm text-muted-foreground sm:px-5">{saveFeedback}</p>}
+            {([
+              {title:"平台外观",items:[
+                {key:"name",label:"平台名称",action:"编辑平台名称",value:String(baseline.name || "未设置")},
+                {key:"logo",label:"平台 Logo",action:"设置 Logo",value:typeof baseline.logo === "string" && baseline.logo ? <img src={baseline.logo} alt="平台 Logo" className="size-10 object-contain" /> : "默认图标"},
+              ]},
+              {title:"常规设置",items:[
+                {key:"timezone",label:"默认时区",action:"修改时区",value:String(baseline.timezone || "未设置")},
+                {key:"registration",label:"账号注册",action:"修改注册方式",value:baseline.registration === "closed" ? "注册已关闭" : "仅受邀用户"},
+              ]},
+            ] as const).map(group=><SettingsGroup key={group.title} title={group.title}>{group.items.map(item=><div key={item.key} className="border-t border-border/50">
+              <dl hidden={editingName && editingField === item.key}><SettingsRow label={item.label} action={<ActionButton ref={item.key === "name" ? editName : undefined} variant="ghost" disabled={editingName} onClick={event=>{
+                settingTrigger.current=event.currentTarget;
+                form.setFieldsValue({...baseline,logo:baseline.logo ?? ""});
+                setEditingField(item.key);setLogoError(null);save.reset();setSaveFeedback(null);setNameEditOwner({});
+              }}>{item.action}</ActionButton>}>{item.value}</SettingsRow></dl>{editingName && editingField === item.key ? fieldEditor : null}
+            </div>)}</SettingsGroup>)}
           </AppForm>
-        </SettingsGroup>
       </PageSection>
-      <PageSection id={`${sectionID}-subscription-domain`} label="订阅域名设置">
+      <PageSection id={`${sectionID}-subscription-domain`} label="订阅链接设置">
         <SubscriptionOriginSettings />
       </PageSection>
     </>

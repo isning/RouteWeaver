@@ -368,7 +368,7 @@ func (s *Store) RecoverAdministrator(username, password, reason string, disableM
 	}
 	defer tx.Rollback()
 	var id string
-	if e = tx.QueryRow(`SELECT account_id FROM identities WHERE username=?`, strings.ToLower(strings.TrimSpace(username))).Scan(&id); e != nil {
+	if e = tx.QueryRow(`SELECT account_id FROM identities WHERE username=?`, username).Scan(&id); e != nil {
 		return ErrAccountProtected
 	}
 	var a Account

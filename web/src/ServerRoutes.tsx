@@ -1,3 +1,4 @@
+import { realityTargetHosts } from "./reality-targets";
 import { PrincipalDelegationPanel } from "./PrincipalDelegationPanel";
 import { ScrollableTabsList } from "@/ui-patterns/scrollable-tabs-list";
 import { addServerConnector, connectorAddReason, removeServerConnector } from "./server-connector-collection";
@@ -28,7 +29,7 @@ import { PasswordInput } from "@/ui-patterns/password-input";
 import { Tabs, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { ActionButton } from "@/ui-patterns/actions";
-import { MultiChoice } from "@/ui-patterns/choice-select";
+import { ChoiceSelect, MultiChoice } from "@/ui-patterns/choice-select";
 import { useConfirm } from "@/ui-patterns/confirmations";
 import { Notice } from "@/ui-patterns/notice";
 import { TaskDialog, TaskSheet } from "@/ui-patterns/task-overlays";
@@ -79,7 +80,7 @@ import { ListenerRefreshReview } from "./ListenerRefreshReview";
 import { dateLabel, newID, redact } from "./model";
 import { useUnsavedChanges } from "./navigation";
 import { publicationRejectionMessage } from "./publication-request";
-import { routeGraphNodes, type RouteGraphNode } from "./route-graph-nodes";
+import { routeGraphNodes, routeGraphNodeTypes, routeGraphOwner, type RouteGraphNode } from "./route-graph-nodes";
 import { ServerPathSummary, ServerPathWorkspace } from "./ServerPathWorkspace";
 import { ServerMixedPathWorkspace } from "./ServerMixedPathWorkspace";
 import { compileOrderedServerPath, orderedPathChangeReason, readOrderedServerPath, type OrderedServerHop } from "./server-path-model";
@@ -721,9 +722,6 @@ export function ServerRouteEditor({
     () => programs.map((p) => p.listener.id),
     [programs],
   );
-  useEffect(() => {
-    setGraphNodes((previous) => routeGraphNodes(inventory, path, previous));
-  }, [inventory, path, setGraphNodes]);
   const selectionPending =
     path.some((id) => pendingEndpoints[id]) ||
     pendingEndpoints[`add-${path.join("/")}`] || pendingEndpoints["ordered-add"];
@@ -748,6 +746,7 @@ export function ServerRouteEditor({
     },
     onSuccess: (value, complete) => {
       client.invalidateQueries({ queryKey: ["infrastructure"] });
+      client.invalidateQueries({ queryKey: ["server-tls-certificates"] });
       complete(value);
     },
     onError: setError,
@@ -944,25 +943,31 @@ export function ServerRouteEditor({
           onConfirm: onClose,
         })
       : onClose();
-  const connect = (connection: FlowConnection) => {
-    if (!connection.source || !connection.target) return;
-    if (path.length && path.at(-1) !== connection.source) {
+  const selectGraphPort = useRef<(id: string) => void>(() => {});
+  selectGraphPort.current = (id) => { if (!path.length) void updatePath([id]); };
+  useEffect(() => {
+    setGraphNodes((previous) => routeGraphNodes(inventory, path, previous, (id) => selectGraphPort.current(id)));
+  }, [inventory, path, setGraphNodes]);
+  const connect = ({ sourceHandle, targetHandle }: FlowConnection) => {
+    if (!sourceHandle || !targetHandle || sourceHandle === targetHandle) return;
+    if (path.length && path.at(-1) !== sourceHandle) {
       setError(new Error("请从当前路径的最后一跳连接到下一跳。"));
       return;
     }
-    updatePath(
-      path.length
-        ? [...path, connection.target]
-        : [connection.source, connection.target],
-    );
+    void updatePath(path.length ? [...path, targetHandle] : [sourceHandle, targetHandle]);
   };
-  const graphEdges = path.slice(1).map((id, index) => ({
-    id: `${path[index]}-${id}`,
-    source: path[index],
-    target: id,
-    markerEnd: { type: MarkerType.ArrowClosed, color: "var(--primary)" },
-    style: { stroke: "var(--primary)", strokeWidth: 2.5 },
-  }));
+  const graphOwners = new Map(inventory.endpoints.map((endpoint) => [endpoint.id, routeGraphOwner(inventory, endpoint)]));
+  const graphEdges = path.slice(1).flatMap((targetHandle, index) => {
+    const sourceHandle = path[index];
+    const source = graphOwners.get(sourceHandle);
+    const target = graphOwners.get(targetHandle);
+    if (!source || !target) return [];
+    return [{
+      id: `${sourceHandle}-${targetHandle}`, source, target, sourceHandle, targetHandle,
+      markerEnd: { type: MarkerType.ArrowClosed, color: "var(--primary)" },
+      style: { stroke: "var(--primary)", strokeWidth: 2.5 },
+    }];
+  });
   const listenerReview = refreshingListener ? (
     <ListenerRefreshReview
       draft={draft}
@@ -1310,9 +1315,7 @@ export function ServerRouteEditor({
                 nodes={graphNodes}
                 edges={graphEdges}
                 onConnect={connect}
-                onNodeClick={(_, node) => {
-                  if (!path.length) updatePath([node.id]);
-                }}
+                nodeTypes={routeGraphNodeTypes}
                 onNodesChange={onGraphNodesChange}
                 fitView
                 deleteKeyCode={null}
@@ -1324,7 +1327,7 @@ export function ServerRouteEditor({
               </ReactFlow>
             </div>
             <p className="muted text-sm text-muted-foreground mt-3">
-              点击端点选择第一跳，从路径末端连接下一跳。拖动只调整图形布局。
+              点击监听端口选择入口，再从末端的端口连到下一跳
             </p>
           </>
         ) : mixedWorkspace && orderedPath.editable ? (
@@ -1387,90 +1390,85 @@ export function ServerRouteEditor({
                         </h3>
                         {!p.listener.connection.tls?.reality && (
                           <>
-                            <div className="form-grid grid gap-4 sm:grid-cols-2 mt-4">
-                              <label>
-                                证书文件路径
-                                <Input
-                                  value={p.tls?.certificatePath}
-                                  placeholder="certs/server.crt"
-                                  onChange={(e) =>
-                                    updateProgram(index, {
-                                      tls: {
-                                        ...p.tls,
-                                        certificatePath: e.target.value,
-                                      },
-                                    })
-                                  }
-                                />
-                              </label>
-                              <label>
-                                私钥文件路径
-                                <Input
-                                  value={p.tls?.keyPath}
-                                  placeholder="certs/server.key"
-                                  onChange={(e) =>
-                                    updateProgram(index, {
-                                      tls: {
-                                        ...p.tls,
-                                        keyPath: e.target.value,
-                                      },
-                                    })
-                                  }
-                                />
-                              </label>
-                            </div>
-                            <TLSMaterial
-                              key={`${p.listener.id}:${materialGenerations.current[p.listener.id] || 0}`}
-                              value={p.tls || {}}
-                              onPendingChange={(pending) => markMaterialPending(p.listener.id, pending)}
-                              onChange={(tls) => {
-                                const current = latestDraft.current;
-                                if (!programsIn(current).some((program) => program.listener.id === p.listener.id)) return;
-                                update({
-                                  ...current,
-                                  ir: {
-                                    ...current.ir,
-                                    topologyRevision: newID("topology"),
-                                    programs: programsIn(current).map((program) =>
-                                      program.listener.id === p.listener.id ? { ...program, tls } : program,
-                                    ),
-                                  },
-                                });
-                              }}
-                            />
-                            <p className="muted text-sm text-muted-foreground">
-                              文件路径相对于此次配置包，仅使用包内文件。
-                            </p>
+                            {p.listener.certificateId ? (
+                              <p className="text-sm text-muted-foreground">使用监听端点选定的平台证书</p>
+                            ) : (
+                              <TLSMaterial
+                                key={`${p.listener.id}:${materialGenerations.current[p.listener.id] || 0}`}
+                                value={p.tls || {}}
+                                onPendingChange={(pending) => markMaterialPending(p.listener.id, pending)}
+                                onChange={(tls) => {
+                                  const current = latestDraft.current;
+                                  if (!programsIn(current).some((program) => program.listener.id === p.listener.id)) return;
+                                  update({
+                                    ...current,
+                                    ir: {
+                                      ...current.ir,
+                                      topologyRevision: newID("topology"),
+                                      programs: programsIn(current).map((program) =>
+                                        program.listener.id === p.listener.id ? { ...program, tls } : program,
+                                      ),
+                                    },
+                                  });
+                                }}
+                              />
+                            )}
                           </>
                         )}
-                        {p.listener.connection.tls?.reality && (
-                          <div className="form-grid grid gap-4 sm:grid-cols-2 mt-4">
-                            <div className="grid gap-2 text-sm">
-                              <label htmlFor={`${realityKeyId}-${p.listener.id}`}>REALITY 服务端私钥</label>
-                              <PasswordInput
-                                key={`${initial.id}-${p.listener.id}`}
-                                id={`${realityKeyId}-${p.listener.id}`}
-                                revealLabel={`${p.listener.name} 的 REALITY 服务端私钥`}
-                                value={p.tls?.reality?.privateKey}
-                                onChange={(e) =>
-                                  updateReality(index, {
-                                    privateKey: e.target.value,
-                                  })
-                                }
-                                autoComplete="off"
+                        {p.listener.connection.tls?.reality && p.listener.realityServer && (
+                          <p className="text-sm text-muted-foreground">使用监听端点的 REALITY 设置</p>
+                        )}
+                        {p.listener.connection.tls?.reality && !p.listener.realityServer && (
+                          <div className="space-y-4">
+                            <div className="grid items-end gap-3 sm:grid-cols-[minmax(0,1fr)_7rem_minmax(0,1fr)]">
+                              <label className="grid gap-2 text-sm">
+                                握手目标
+                                <Input
+                                  value={p.tls?.reality?.handshakeServer ?? ""}
+                                  placeholder={p.listener.connection.tls.serverName || "example.com"}
+                                  onChange={(e) => updateReality(index, { handshakeServer: e.target.value })}
+                                />
+                              </label>
+                              <label className="grid gap-2 text-sm">
+                                握手端口
+                                <Input
+                                  type="number"
+                                  min={1}
+                                  max={65535}
+                                  value={p.tls?.reality?.handshakePort === 0 ? "" : p.tls?.reality?.handshakePort ?? 443}
+                                  onChange={(e) => updateReality(index, { handshakePort: Number(e.target.value) })}
+                                />
+                              </label>
+                              <ChoiceSelect
+                                aria-label="选择 REALITY 握手目标示例"
+                                placeholder="选用网站示例"
+                                options={realityTargetHosts.map((host) => ({ value: host, label: `${host}:443` }))}
+                                onValueChange={(host) => {
+                                  if (!host) return;
+                                  updateReality(index, { handshakeServer: host, handshakePort: 443, serverNames: [host] });
+                                }}
                               />
                             </div>
-                            <label>
-                              握手目标
-                              <Input
-                                value={p.tls?.reality?.handshakeServer}
-                                onChange={(e) =>
-                                  updateReality(index, {
-                                    handshakeServer: e.target.value,
-                                  })
-                                }
-                              />
-                            </label>
+                            <div className="grid items-start gap-4 sm:grid-cols-2">
+                              <div className="space-y-2 text-sm">
+                                <p className="font-medium">监听端点的客户端 SNI</p>
+                                <p className="break-all text-muted-foreground">{p.listener.connection.tls.serverName || "尚未设置"}</p>
+                                {p.tls?.reality?.serverNames?.length && !p.tls.reality.serverNames.includes(p.listener.connection.tls.serverName || "") ? (
+                                  <p className="text-destructive">请到监听端点更新 SNI，并将更新同步到此路径</p>
+                                ) : null}
+                              </div>
+                              <div className="grid gap-2 text-sm">
+                                <label htmlFor={`${realityKeyId}-${p.listener.id}`}>REALITY 服务端私钥</label>
+                                <PasswordInput
+                                  key={`${initial.id}-${p.listener.id}`}
+                                  id={`${realityKeyId}-${p.listener.id}`}
+                                  revealLabel={`${p.listener.name} 的 REALITY 服务端私钥`}
+                                  value={p.tls?.reality?.privateKey}
+                                  onChange={(e) => updateReality(index, { privateKey: e.target.value })}
+                                  autoComplete="off"
+                                />
+                              </div>
+                            </div>
                           </div>
                         )}
                       </div>

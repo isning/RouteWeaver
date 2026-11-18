@@ -193,11 +193,7 @@ it("keeps loading, failed reads and true empty-inventory onboarding distinct fro
   await userEvent.click(screen.getByRole("button", { name: "重试" }));
   await screen.findByText("暂无订阅来源");
   expect(screen.getAllByRole("button", { name: "添加来源" })).toHaveLength(2);
-  const search = screen.getByRole("textbox", {
-    name: "搜索来源",
-  }) as HTMLInputElement;
-  fireEvent.change(search, { target: { value: "existing query" } });
-  expect(search.value).toBe("existing query");
+  expect(screen.queryByRole("textbox", { name: "搜索来源" })).toBeNull();
   expect(screen.getByText("暂无订阅来源")).toBeTruthy();
   expect(screen.queryByText("没有匹配的来源")).toBeNull();
   expect(screen.queryByRole("button", { name: "清除搜索" })).toBeNull();

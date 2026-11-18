@@ -50,7 +50,7 @@ func InspectNodesOnly(target Target, mode OutputMode, artifacts []domain.Artifac
 	switch {
 	case target.AdapterID == "mihomo" && target.Version == MihomoVersion:
 		root, path, nameKey = "proxies", "mihomo-nodes.json", "name"
-	case target.AdapterID == "sing-box" && target.Version == SingBoxVersion:
+	case target.AdapterID == "sing-box" && (target.Version == SingBoxVersion || target.Version == StockSingBoxVersion):
 		root, path, nameKey = "outbounds", "sing-box-nodes.json", "tag"
 	default:
 		return fail()
@@ -331,14 +331,76 @@ func inspectionNodeShape(adapter string, m map[string]any) ([]string, bool) {
 		protect(m, "password")
 		return secrets, true
 	}
-	if adapter == "sing-box" && (kind == "hysteria2" || kind == "anytls") {
-		tls, ok := object(m, "tls")
-		if !ok || !keysOnly(m, name, "type", "server", port, "password", "tls") || !str(m, "password", true) || !keysOnly(tls, "enabled", "server_name", "alpn") || !truth(tls, "enabled", true) || !str(tls, "server_name", false) || !stringsArray(tls, "alpn") {
+
+	if kind == "hysteria2" || kind == "anytls" || kind == "tuic" {
+		allowed := []string{name, "type", "server", port, "password"}
+		if kind == "tuic" {
+			if !str(m, "uuid", true) {
+				return nil, false
+			}
+			allowed = append(allowed, "uuid")
+			protect(m, "uuid")
+		}
+
+		if !str(m, "password", true) {
+			return nil, false
+		}
+		if adapter == "sing-box" {
+			tls, ok := object(m, "tls")
+			if !ok || !keysOnly(tls, "enabled", "server_name", "alpn") || !truth(tls, "enabled", true) || !str(tls, "server_name", false) || !stringsArray(tls, "alpn") {
+				return nil, false
+			}
+			allowed = append(allowed, "tls")
+			if kind == "tuic" {
+				allowed = append(allowed, "congestion_control", "udp_relay_mode")
+				if !optionalStrings(m, "congestion_control", "udp_relay_mode") {
+					return nil, false
+				}
+			}
+			if kind == "hysteria2" {
+				allowed = append(allowed, "obfs", "up_mbps", "down_mbps", "server_ports", "hop_interval")
+				if present(m, "obfs") {
+					o, ok := object(m, "obfs")
+					if !ok || !keysOnly(o, "type", "password") || o["type"] != "salamander" || !str(o, "password", true) {
+						return nil, false
+					}
+					protect(o, "password")
+				}
+				if !inspectionBoundedIntegers(m, 1000000, "up_mbps", "down_mbps") || !str(m, "hop_interval", false) || !stringsArray(m, "server_ports") {
+					return nil, false
+				}
+			}
+		} else {
+			allowed = append(allowed, "sni", "alpn")
+			if kind == "tuic" {
+				allowed = append(allowed, "congestion-controller", "udp-relay-mode")
+				if !optionalStrings(m, "congestion-controller", "udp-relay-mode") {
+					return nil, false
+				}
+			}
+			if !str(m, "sni", false) || !stringsArray(m, "alpn") {
+				return nil, false
+			}
+			if kind == "hysteria2" {
+				allowed = append(allowed, "obfs", "obfs-password", "up", "down", "ports", "hop-interval")
+				if present(m, "obfs") || present(m, "obfs-password") {
+					if m["obfs"] != "salamander" || !str(m, "obfs-password", true) {
+						return nil, false
+					}
+					protect(m, "obfs-password")
+				}
+				if !inspectionBoundedIntegers(m, 1000000, "up", "down") || !inspectionBoundedIntegers(m, 86400, "hop-interval") || !str(m, "ports", false) {
+					return nil, false
+				}
+			}
+		}
+		if !keysOnly(m, allowed...) {
 			return nil, false
 		}
 		protect(m, "password")
 		return secrets, true
 	}
+
 	credential := "uuid"
 	if kind == "trojan" {
 		credential = "password"
@@ -470,4 +532,20 @@ func inspectionNodeShape(adapter string, m map[string]any) ([]string, bool) {
 		}
 	}
 	return secrets, true
+}
+
+func inspectionBoundedIntegers(m map[string]any, max int, keys ...string) bool {
+	for _, key := range keys {
+		if v, exists := m[key]; exists {
+			number, ok := v.(json.Number)
+			if !ok {
+				return false
+			}
+			n, err := strconv.Atoi(string(number))
+			if err != nil || n < 0 || n > max {
+				return false
+			}
+		}
+	}
+	return true
 }

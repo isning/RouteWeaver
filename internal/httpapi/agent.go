@@ -14,13 +14,15 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 )
 
 type Enrollment struct {
-	Scope       controlprotocol.Scope `json:"scope"`
-	TokenDigest string                `json:"tokenDigest"`
-	ExpiresAt   time.Time             `json:"expiresAt"`
-	Revoked     bool                  `json:"revoked"`
+	HostEnrollmentEpoch string                `json:"hostEnrollmentEpoch,omitempty"`
+	Scope               controlprotocol.Scope `json:"scope"`
+	TokenDigest         string                `json:"tokenDigest"`
+	ExpiresAt           time.Time             `json:"expiresAt"`
+	Revoked             bool                  `json:"revoked"`
 }
 
 func (h *server) agentIdentity(w http.ResponseWriter, r *http.Request) (Enrollment, bool) {
@@ -35,6 +37,18 @@ func (h *server) agentIdentity(w http.ResponseWriter, r *http.Request) (Enrollme
 		fail(w, 401, "agent scope invalid or expired")
 		return e, false
 	}
+	if e.HostEnrollmentEpoch != "" {
+		parent, err := h.readHostEnrollment(e.Scope.NodeID)
+		if err != nil || parent.Revoked || parent.EnrollmentEpoch != e.HostEnrollmentEpoch || !time.Now().Before(parent.ExpiresAt) {
+			fail(w, 401, "host agent enrollment superseded")
+			return e, false
+		}
+	}
+	var registered domain.CoreInstance
+	if h.s.Get("core-instances", e.Scope.InstanceID, &registered) != nil || registered.HostID != e.Scope.NodeID {
+		fail(w, 401, "core no longer belongs to enrolled host")
+		return e, false
+	}
 	var latest Enrollment
 	if err := h.s.Get("instance-enrollments", e.Scope.InstanceID, &latest); err != nil || latest.Scope != e.Scope || latest.Revoked || latest.TokenDigest != digest {
 		fail(w, 401, "agent enrollment superseded")
@@ -43,6 +57,7 @@ func (h *server) agentIdentity(w http.ResponseWriter, r *http.Request) (Enrollme
 	return e, true
 }
 func (h *server) registerAgent(r chi.Router) {
+	h.registerHostAgent(r)
 	h.registerDiagnosticAgent(r)
 	h.registerCoreDiagnosticAgent(r)
 	h.registerRawCoreLogAgent(r)
@@ -88,6 +103,11 @@ func (h *server) registerAgent(r chi.Router) {
 		}
 		var state controlprotocol.State
 		if !decode(w, r, &state) {
+			return
+		}
+		if state.ErrorDetail != "" && (!controlprotocol.AllowsInstallErrorDetail(state.Code) ||
+			len([]rune(state.ErrorDetail)) > controlprotocol.MaxInstallErrorDetail || strings.IndexFunc(state.ErrorDetail, unicode.IsControl) >= 0) {
+			fail(w, 400, "invalid installation error detail")
 			return
 		}
 		if state.Desired == nil || state.Desired.Scope != enrollment.Scope || state.Observed != nil && state.Observed.Scope != enrollment.Scope || state.LastKnownValid != nil && state.LastKnownValid.Scope != enrollment.Scope {
@@ -156,6 +176,7 @@ func (h *server) registerAgent(r chi.Router) {
 	})
 }
 func (h *server) registerAgentAdmin(r chi.Router) {
+	h.registerHostAgentAdmin(r)
 	h.registerDiagnosticAdmin(r)
 	h.registerAdmissionAdmin(r)
 	r.Get("/agent/instances/{instanceId}/meter-terminal-evidence/receipts", func(w http.ResponseWriter, r *http.Request) {
@@ -242,6 +263,13 @@ func (h *server) registerAgentAdmin(r chi.Router) {
 			fail(w, 400, "valid scope and expiry within one year required")
 			return
 		}
+		if parent, err := h.readHostEnrollment(in.NodeID); err == nil && parent.NodeID != "" {
+			fail(w, 409, "agent belongs to this host; renew its host enrollment instead")
+			return
+		} else if err != nil && !errors.Is(err, store.ErrNotFound) {
+			storeError(w, err)
+			return
+		}
 		var instance domain.CoreInstance
 		if e := h.s.Get("core-instances", in.InstanceID, &instance); e != nil || instance.HostID != in.NodeID {
 			fail(w, 400, "instance does not belong to this host")
@@ -282,6 +310,14 @@ func (h *server) registerAgentAdmin(r chi.Router) {
 		var state controlprotocol.State
 		de := h.s.Get("agent-desired", id, &desired)
 		se := h.s.Get("agent-observations", id, &state)
+		if de != nil && !errors.Is(de, store.ErrNotFound) {
+			fail(w, http.StatusInternalServerError, "无法读取核心的下发记录")
+			return
+		}
+		if se != nil && !errors.Is(se, store.ErrNotFound) {
+			fail(w, http.StatusInternalServerError, "无法读取 Agent 的核心状态上报")
+			return
+		}
 		out := map[string]any{"instanceId": id, "phase": "unregistered", "accounting": "verified-bindings-required; accepted-batches-accounted-atomically"}
 		if de == nil {
 			out["desired"] = desired.Identity()

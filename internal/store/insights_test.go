@@ -195,3 +195,31 @@ func TestInsightsOlderHistorySchemaRebuild(t *testing.T) {
 		t.Fatalf("old schema recovery %+v %v", v, e)
 	}
 }
+
+func TestDailyInsightsFollowPlatformTimezoneAcrossDST(t *testing.T) {
+	s, _ := rebuildFixture(t)
+	if err := s.Put("settings", "platform", map[string]string{"timezone": "America/New_York"}); err != nil {
+		t.Fatal(err)
+	}
+	now := time.Date(2026, 3, 9, 2, 0, 0, 0, time.UTC)
+	for _, row := range []struct {
+		id    string
+		at    time.Time
+		bytes int64
+	}{
+		{"previous", time.Date(2026, 3, 8, 4, 30, 0, 0, time.UTC), 1},
+		{"current", time.Date(2026, 3, 8, 7, 30, 0, 0, time.UTC), 2},
+	} {
+		record := rebuildRecord("u", row.bytes, 1000000, row.at)
+		if err := s.Put("ledger", row.id, record); err != nil {
+			t.Fatal(err)
+		}
+	}
+	result, err := s.UsageInsightsContext(context.Background(), "u", now.AddDate(0, 0, -30), now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Timezone != "America/New_York" || result.Daily[13].Date != "2026-03-08" || result.Daily[13].RawBytes != 2 || result.Daily[12].RawBytes != 1 {
+		t.Fatalf("DST calendar buckets: %+v", result.Daily)
+	}
+}

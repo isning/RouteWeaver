@@ -164,7 +164,7 @@ func parseURI(raw string) (candidate, error) {
 		return candidate{}, ErrInput
 	}
 	portText := u.Port()
-	if portText == "" && (u.Scheme == "hy2" || u.Scheme == "hysteria2" || u.Scheme == "anytls") && !strings.HasSuffix(u.Host, ":") {
+	if portText == "" && (u.Scheme == "hy2" || u.Scheme == "hysteria2" || u.Scheme == "anytls" || u.Scheme == "tuic") && !strings.HasSuffix(u.Host, ":") {
 		portText = "443"
 	}
 	port, err := strconv.Atoi(portText)
@@ -183,6 +183,29 @@ func parseURI(raw string) (candidate, error) {
 	c := domain.Connection{Host: u.Hostname(), Port: port}
 	name := u.Fragment
 	switch u.Scheme {
+	case "tuic":
+		if u.User == nil || u.Path != "" && u.Path != "/" {
+			return candidate{}, ErrInput
+		}
+		password, has := u.User.Password()
+		if !has {
+			return candidate{}, ErrInput
+		}
+		for key := range q {
+			if key != "sni" && key != "alpn" && key != "congestion_control" && key != "udp_relay_mode" {
+				return candidate{}, ErrInput
+			}
+		}
+		c.Protocol = "tuic"
+		c.UUID = u.User.Username()
+		c.Password = password
+		c.TLS = &domain.TLSOptions{Enabled: true, ServerName: q.Get("sni")}
+		if q.Get("alpn") != "" {
+			c.TLS.ALPN = strings.Split(q.Get("alpn"), ",")
+		}
+		if q.Has("congestion_control") || q.Has("udp_relay_mode") {
+			c.TUIC = &domain.TUICOptions{CongestionControl: q.Get("congestion_control"), UDPRelayMode: q.Get("udp_relay_mode")}
+		}
 	case "anytls":
 		if u.User == nil || u.Path != "" && u.Path != "/" {
 			return candidate{}, ErrInput
@@ -206,11 +229,14 @@ func parseURI(raw string) (candidate, error) {
 			return candidate{}, ErrInput
 		}
 		for key := range q {
-			if key != "sni" && key != "alpn" {
+			if key != "sni" && key != "alpn" && key != "obfs" && key != "obfs-password" {
 				return candidate{}, ErrInput
 			}
 		}
 		c.Protocol = "hysteria2"
+		if q.Has("obfs") || q.Has("obfs-password") {
+			c.Hysteria2 = &domain.Hysteria2Options{Obfs: &domain.ObfuscationOptions{Type: q.Get("obfs"), Password: q.Get("obfs-password")}}
+		}
 		c.Password = u.User.Username()
 		if password, has := u.User.Password(); has {
 			c.Password += ":" + password
@@ -265,7 +291,7 @@ func parseURI(raw string) (candidate, error) {
 			c.UUID = u.User.Username()
 			c.Flow = q.Get("flow")
 		}
-		allowed := map[string]bool{"type": true, "security": true, "encryption": true, "flow": true, "sni": true, "fp": true, "alpn": true, "pbk": true, "sid": true, "path": true, "host": true, "serviceName": true, "headerType": true}
+		allowed := map[string]bool{"type": true, "security": true, "encryption": true, "flow": true, "sni": true, "fp": true, "alpn": true, "pbk": true, "sid": true, "path": true, "host": true, "serviceName": true, "headerType": true, "mode": true}
 		if u.Scheme == "trojan" {
 			for _, key := range []string{"encryption", "flow", "pbk", "sid"} {
 				delete(allowed, key)
@@ -286,7 +312,7 @@ func parseURI(raw string) (candidate, error) {
 		if transport == "" || transport == "raw" {
 			transport = "tcp"
 		}
-		c.Transport = &domain.TransportOptions{Type: transport, Path: q.Get("path"), Host: q.Get("host"), ServiceName: q.Get("serviceName")}
+		c.Transport = &domain.TransportOptions{Type: transport, Mode: q.Get("mode"), Path: q.Get("path"), Host: q.Get("host"), ServiceName: q.Get("serviceName")}
 		security := q.Get("security")
 		if u.Scheme == "trojan" {
 			if security == "" {

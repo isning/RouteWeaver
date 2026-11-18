@@ -31,26 +31,27 @@ type SourceApplyEvent struct {
 }
 
 type Source struct {
-	ApplyMode     string                 `json:"applyMode"`
-	ApplyHistory  []SourceApplyEvent     `json:"applyHistory,omitempty"`
-	Revision      string                 `json:"revision,omitempty"`
-	Candidate     *SourceCandidate       `json:"candidate,omitempty"`
-	CheckedAt     *time.Time             `json:"checkedAt,omitempty"`
-	RefreshStatus string                 `json:"refreshStatus,omitempty"`
-	ID            string                 `json:"id"`
-	Name          string                 `json:"name"`
-	OwnerID       string                 `json:"ownerId,omitempty"`
-	Kind          string                 `json:"kind"`
-	Content       string                 `json:"content,omitempty"`
-	URL           string                 `json:"url,omitempty"`
-	Format        string                 `json:"format,omitempty"`
-	Enabled       bool                   `json:"enabled"`
-	AcceptPartial bool                   `json:"acceptPartial,omitempty"`
-	Diagnostics   []importer.Diagnostic  `json:"diagnostics,omitempty"`
-	Snapshot      *domain.SourceSnapshot `json:"snapshot,omitempty"`
-	LastError     string                 `json:"lastError,omitempty"`
-	LastErrorCode string                 `json:"lastErrorCode,omitempty"`
-	UpdatedAt     time.Time              `json:"updatedAt"`
+	RefreshIntervalSeconds int                    `json:"refreshIntervalSeconds,omitempty"`
+	ApplyMode              string                 `json:"applyMode"`
+	ApplyHistory           []SourceApplyEvent     `json:"applyHistory,omitempty"`
+	Revision               string                 `json:"revision,omitempty"`
+	Candidate              *SourceCandidate       `json:"candidate,omitempty"`
+	CheckedAt              *time.Time             `json:"checkedAt,omitempty"`
+	RefreshStatus          string                 `json:"refreshStatus,omitempty"`
+	ID                     string                 `json:"id"`
+	Name                   string                 `json:"name"`
+	OwnerID                string                 `json:"ownerId,omitempty"`
+	Kind                   string                 `json:"kind"`
+	Content                string                 `json:"content,omitempty"`
+	URL                    string                 `json:"url,omitempty"`
+	Format                 string                 `json:"format,omitempty"`
+	Enabled                bool                   `json:"enabled"`
+	AcceptPartial          bool                   `json:"acceptPartial,omitempty"`
+	Diagnostics            []importer.Diagnostic  `json:"diagnostics,omitempty"`
+	Snapshot               *domain.SourceSnapshot `json:"snapshot,omitempty"`
+	LastError              string                 `json:"lastError,omitempty"`
+	LastErrorCode          string                 `json:"lastErrorCode,omitempty"`
+	UpdatedAt              time.Time              `json:"updatedAt"`
 }
 type Profile struct {
 	PlatformEntryIDs []string               `json:"platformEntryIds,omitempty"`

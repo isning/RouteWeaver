@@ -63,7 +63,7 @@ function CoreDiagnosticDetails({ instance, showId }: { instance: CoreInstance; s
   const records = [...(data?.events || [])].reverse();
   return <div className="grid min-w-0 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
     <Card className="min-w-0">
-      <CardHeader>
+      <CardHeader className="px-5 sm:px-6">
         <CardTitle>核心诊断记录</CardTitle>
         <CardDescription className="space-y-1 text-xs">
           <span className="block break-words font-medium text-foreground">{coreName(instance)}</span>
@@ -72,7 +72,7 @@ function CoreDiagnosticDetails({ instance, showId }: { instance: CoreInstance; s
         </CardDescription>
         <CardAction><ActionButton variant="outline" size="sm" leadingIcon={<RotateCw aria-hidden="true" />} pending={query.isFetching} keepFocusableWhilePending onClick={() => query.refetch()}>刷新</ActionButton></CardAction>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="px-5 sm:px-6 space-y-3">
         {query.isError && <Notice tone="warning">{data ? "诊断记录刷新失败，以下保留上次读取的记录。" : "无法读取诊断记录，请重试。"}</Notice>}
         {query.isPaused && <p role="status" className="text-sm text-muted-foreground">等待网络连接</p>}
         {query.isPending && !query.isPaused && <p role="status" className="text-sm text-muted-foreground">正在读取诊断记录…</p>}
@@ -99,8 +99,8 @@ function CoreDiagnosticDetails({ instance, showId }: { instance: CoreInstance; s
       </CardContent>
     </Card>
     <Card className="min-w-0">
-      <CardHeader><CardTitle>诊断采集</CardTitle><CardDescription className="text-xs">由节点 Agent 上传到平台</CardDescription></CardHeader>
-      <CardContent className="space-y-3 text-sm text-muted-foreground">
+      <CardHeader className="px-5 sm:px-6"><CardTitle>诊断采集</CardTitle><CardDescription className="text-xs">由节点 Agent 上传到平台</CardDescription></CardHeader>
+      <CardContent className="px-5 sm:px-6 space-y-3 text-sm text-muted-foreground">
         <p>只显示已识别的故障类别，不包含原始日志、访问目标或客户端 IP。</p>
         <p>需在节点上启动 Agent 时添加 <code className="whitespace-nowrap text-foreground">--core-diagnostics</code>。</p>
         {data && <div className="flex items-center justify-between gap-3 border-t pt-3"><span>保留范围</span><span className="text-right font-medium text-foreground">{data.retentionHours} 小时 / {data.historyLimit} 条</span></div>}

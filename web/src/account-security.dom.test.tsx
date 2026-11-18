@@ -311,7 +311,7 @@ it("validates password byte length and matching confirmation before sending", as
   fill("确认新密码", "different");
   fill("验证器验证码", "123456");
   fireEvent.click(screen.getByRole("button", { name: "修改密码" }));
-  await screen.findByText(/密码须为 12–72/);
+  await screen.findByText("密码过长，请缩短后重试");
   await screen.findByText("两次输入的新密码不一致");
   expect(writes).toEqual([]);
 });
@@ -565,7 +565,7 @@ it("conceals the security draft on expired-session failure without retrying the 
   fill("新密码", "new-password-example");
   fill("确认新密码", "new-password-example");
   fireEvent.click(screen.getByRole("button", { name: "修改密码" }));
-  await screen.findByText("请重新登录");
+  await screen.findByText("登录已过期，请重新登录");
   expect(screen.queryByRole("button", { name: "修改密码" })).toBeNull();
   expect(changes).toBe(1);
 });

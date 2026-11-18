@@ -207,7 +207,7 @@ it("does not apply an old actor's delayed enable receipt or uncertainty to a new
   submitEnable();
   await waitFor(() => expect(writes).toHaveLength(2));
   current = session("B");
-  fireEvent(window, new Event("focus"));
+  fireEvent(window, new Event("online"));
   await screen.findByText("Current account: B");
   await prepare();
   await act(async () => { enabled.resolve(json(session("A", true, "rotated-A"))); });

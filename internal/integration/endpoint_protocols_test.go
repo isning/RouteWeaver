@@ -34,7 +34,7 @@ func TestNativeEndpointProtocolsLoopback(t *testing.T) {
 		t.Skip("requires explicit local Xray process opt-in")
 	}
 	for _, protocol := range []string{"vmess", "trojan"} {
-		for _, transport := range []string{"tcp", "ws", "httpupgrade", "grpc"} {
+		for _, transport := range []string{"tcp", "ws", "httpupgrade", "grpc", "xhttp"} {
 			t.Run(protocol+"/"+transport, func(t *testing.T) {
 				endpointProtocolLoopback(t, dir, protocol, transport, stockLoopbackOptions{privateCIDRs: []string{"127.0.0.1/32"}, trustFixtureCA: true})
 			})
@@ -94,9 +94,12 @@ func endpointProtocolLoopback(t *testing.T, dir, protocol, transport string, opt
 			c.VMessSecurity = "auto"
 		}
 		switch transport {
-		case "ws", "httpupgrade":
+		case "ws", "httpupgrade", "xhttp":
 			c.Transport.Path = "/proxy-safe_1"
 			c.Transport.Host = "loopback.invalid"
+			if transport == "xhttp" {
+				c.Transport.Mode = "packet-up"
+			}
 		case "grpc":
 			c.Transport.ServiceName = "loopback"
 		}

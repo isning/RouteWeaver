@@ -97,7 +97,7 @@ func applyNativeOverride(p domain.ClientProfileIR, target Target, mode OutputMod
 		}
 	}
 	if target.AdapterID == "sing-box" {
-		if err = validateSingBoxNative(final); err != nil {
+		if err = validateSingBoxNativeVersion(final, target.Version); err != nil {
 			return ClientResult{}, err
 		}
 		report.Validation = "upstream-json-schema-and-references"

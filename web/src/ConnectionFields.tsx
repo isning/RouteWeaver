@@ -1,5 +1,7 @@
+import { realityTargetHosts } from "./reality-targets";
+import { normalizeProtocolOptions } from "./connection-protocol-options";
 import { PasswordInput } from "@/ui-patterns/password-input";
-import { useEffect, useRef, type ComponentProps } from "react";
+import { useEffect, useRef, type ComponentProps, type ReactNode } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -17,6 +19,7 @@ import {
   AccordionContent,
 } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   AppField,
   FormList,
@@ -114,14 +117,15 @@ function ConnectionTransportSelect({
 }
 
 export function normalizeConnection(connection: Connection): Connection {
-  const copy = { ...connection };
+  const copy = normalizeProtocolOptions(connection);
+
   const port = connectionPort(copy.port);
   // This normalizer is also used for render-time comparisons. Invalid drafts
   // stay invalid here; the field validator prevents submitting them.
   if (port !== undefined) copy.port = port;
   // Direct-only TLS protocols have their own protocol envelope. Preserve unsupported values so
   // validation can reject them rather than silently erasing imported intent.
-  if (["hysteria2", "anytls"].includes(copy.protocol)) return copy;
+  if (["hysteria2", "anytls", "tuic"].includes(copy.protocol)) return copy;
   const secured = ["vless", "trojan", "vmess"].includes(copy.protocol);
   if (!secured) {
     delete copy.uuid;
@@ -148,6 +152,7 @@ export function normalizeConnection(connection: Connection): Connection {
       copy.tls = { ...copy.tls, reality: undefined };
     const transport = copy.transport as DraftTransport | undefined;
     if (!transport?.type || transport.type === "tcp") delete copy.transport;
+    else if (transport.type === "xhttp") copy.transport={type:"xhttp",path:transport.path,host:transport.host,mode:transport.mode};
     else if (transport.type === "grpc")
       copy.transport = {
         type: "grpc",
@@ -181,7 +186,10 @@ export function ConnectionFields({
   server = false,
   showAddressLegend = true,
   authentication,
+  principalProtocols = [],
   managedEntryTarget = false,
+  serverCertificateField,
+  serverRealityField,
   targetCore,
   targetVersion,
   allowUnchangedUnsupportedProtocol = false,
@@ -193,7 +201,10 @@ export function ConnectionFields({
   server?: boolean;
   showAddressLegend?: boolean;
   authentication?: string;
+  principalProtocols?: string[];
   managedEntryTarget?: boolean;
+  serverCertificateField?: ReactNode;
+  serverRealityField?: ReactNode;
   targetCore?: string;
   targetVersion?: string;
   allowUnchangedUnsupportedProtocol?: boolean;
@@ -228,6 +239,7 @@ export function ConnectionFields({
     form,
     preserve: true,
   }) ?? form.getFieldValue([...prefix, "packetEncoding"]);
+  const uuidLabel = server ? "共享 UUID" : "用户 UUID";
   const principalListener = server && authentication === "principals";
   const limited =
     server &&
@@ -235,20 +247,21 @@ export function ConnectionFields({
       targetCore === "managed-xray" ||
       targetCore === "routeweaver/managed-xray");
   const hysteria2 = protocol === "hysteria2";
-  const directTls = hysteria2 || protocol === "anytls";
-  const protocolUnavailableReason = hysteria2 ? directTlsUnavailableReason : anytlsUnavailableReason;
-  const directTlsName = hysteria2 ? "Hysteria2" : "AnyTLS";
-  const directTlsTarget = !targetCore || (targetCore === "sing-box" &&
-    (!targetVersion || ["1.14.3", "1.14.4"].includes(targetVersion)));
+  const directTls = hysteria2 || protocol === "anytls" || protocol === "tuic";
+  const protocolUnavailableReason = hysteria2 || protocol === "tuic" ? directTlsUnavailableReason : anytlsUnavailableReason;
+  const directTlsName = hysteria2 ? "Hysteria2" : protocol === "tuic" ? "TUIC" : "AnyTLS";
+  const directTlsTarget = !targetCore || ((targetCore === "sing-box" &&
+    (!targetVersion || ["1.14.3", "1.14.4"].includes(targetVersion))) || (!server && targetCore === "mihomo" && (!targetVersion || targetVersion === "1.19.32")));
   const currentConnection = useWatch(prefix, { form, preserve: true }) ?? form.getFieldValue(prefix);
   const directTlsConflicts = directTls ? [
     ...["uuid", "flow", "packetEncoding", "method", "username", "vmessSecurity", "transport"]
+      .filter((key) => !(protocol === "tuic" && key === "uuid"))
       .filter((key) => currentConnection?.[key] != null && currentConnection[key] !== "")
       .map((key) => ({ path: [...prefix, key], label: ({ uuid: "UUID", flow: "Flow", packetEncoding: "数据包编码", method: "加密方式", username: "用户名", vmessSecurity: "VMess 加密方式", transport: "传输参数" } as Record<string, string>)[key] })),
     ...(tls?.reality ? [{ path: [...prefix, "tls", "reality"], label: "REALITY" }] : []),
     ...(tls?.fingerprint ? [{ path: [...prefix, "tls", "fingerprint"], label: "客户端指纹" }] : []),
   ] : [];
-  const secured = ["vless", "trojan", "vmess", "hysteria2", "anytls"].includes(protocol);
+  const secured = ["vless", "trojan", "vmess", "hysteria2", "anytls", "tuic"].includes(protocol);
   const security = tls?.enabled ? (tls.reality ? "reality" : "tls") : "none";
   const xrayReality = targetCore === "xray" && security === "reality";
   const realityTransportBlocked =
@@ -272,11 +285,21 @@ export function ConnectionFields({
     tls?.fingerprint &&
     !fingerprints.includes(tls.fingerprint);
   const field = (name: string) => [...prefix, name];
+  const xhttpOption = {
+    value: "xhttp",
+    label: (
+      <span className="inline-flex flex-wrap items-center gap-2">
+        XHTTP <Badge variant="secondary">Xray only</Badge>
+      </span>
+    ),
+    disabled: limited || targetCore !== "xray" || xrayReality,
+  };
   const transportOptions = [
     { value: "tcp", label: "TCP" },
     { value: "ws", label: "WebSocket", disabled: xrayReality },
     { value: "httpupgrade", label: "HTTP Upgrade", disabled: xrayReality },
     { value: "grpc", label: "gRPC" },
+    xhttpOption,
   ];
   const unsupported =
     limited &&
@@ -286,6 +309,10 @@ export function ConnectionFields({
       packetEncoding);
   return (
     <div className="space-y-5">
+      {((currentConnection?.hysteria2 && protocol !== "hysteria2") || (currentConnection?.tuic && protocol !== "tuic")) && <Notice tone="warning" title="移除不适用于当前协议的参数">
+        {currentConnection?.hysteria2 && protocol !== "hysteria2" && <AppField name={[...prefix,"hysteria2"]} noStyle trigger="onClear"><ClearValueButton>移除 Hysteria2 参数</ClearValueButton></AppField>}
+        {currentConnection?.tuic && protocol !== "tuic" && <AppField name={[...prefix,"tuic"]} noStyle trigger="onClear"><ClearValueButton>移除 TUIC 参数</ClearValueButton></AppField>}
+      </Notice>}
       <FieldSet
         className="min-w-0"
         aria-label={server ? "监听地址" : "连接地址"}
@@ -343,11 +370,13 @@ export function ConnectionFields({
           trigger="onValueChange"
           rules={[
             { required: true, message: "选择协议" },
-            { validator: (_, value) => !["hysteria2", "anytls"].includes(value) || !protocolUnavailableReason
+            { validator: (_, value) => !principalListener || !principalProtocols.length || principalProtocols.includes(value)
+              ? Promise.resolve() : Promise.reject(new Error("请选择支持独立用户凭据的协议")) },
+            { validator: (_, value) => !["hysteria2", "anytls", "tuic"].includes(value) || !protocolUnavailableReason
               ? Promise.resolve() : Promise.reject(new Error(protocolUnavailableReason)) },
-            { validator: (_, value) => !["hysteria2", "anytls"].includes(value) || allowUnchangedUnsupportedProtocol || directTlsTarget
-              ? Promise.resolve() : Promise.reject(new Error(`${directTlsName} 目前仅支持 sing-box 1.14.3 / 1.14.4，请更换核心或协议。`)) },
-            { validator: (_, value) => !["hysteria2", "anytls"].includes(value) || allowUnchangedUnsupportedProtocol || !directTlsConflicts.length
+            { validator: (_, value) => !["hysteria2", "anytls", "tuic"].includes(value) || allowUnchangedUnsupportedProtocol || directTlsTarget
+              ? Promise.resolve() : Promise.reject(new Error(`${directTlsName} 不支持当前核心版本，请更换核心或协议。`)) },
+            { validator: (_, value) => !["hysteria2", "anytls", "tuic"].includes(value) || allowUnchangedUnsupportedProtocol || !directTlsConflicts.length
               ? Promise.resolve() : Promise.reject(new Error(`请先移除 ${directTlsName} 不支持的参数。`)) },
             {
               validator: (_rule, value) =>
@@ -364,7 +393,7 @@ export function ConnectionFields({
           ]}
         >
           <ChoiceSelect
-            disabled={principalListener && (!limited || protocol === "vless")}
+            disabled={principalListener && !principalProtocols.length && (!limited || protocol === "vless")}
             searchable={false}
             options={[
               { value: "socks", label: "SOCKS5", disabled: limited },
@@ -374,7 +403,8 @@ export function ConnectionFields({
               { value: "vmess", label: "VMess AEAD", disabled: limited },
               { value: "hysteria2", label: "Hysteria2", disabled: limited || !directTlsTarget || !!directTlsUnavailableReason },
               { value: "anytls", label: "AnyTLS", disabled: limited || !directTlsTarget || !!anytlsUnavailableReason },
-            ]}
+              { value: "tuic", label: "TUIC v5", disabled: limited || !directTlsTarget || !!directTlsUnavailableReason },
+            ].map(option => ({ ...option, disabled: option.disabled || (principalListener && principalProtocols.length > 0 && !principalProtocols.includes(option.value)) }))}
           />
         </AppField>
         {limited && protocol && protocol !== "vless" && (
@@ -390,10 +420,10 @@ export function ConnectionFields({
         )}
         {principalListener && (
           <p className="text-sm text-muted-foreground sm:col-span-2">
-            请在公开线路的「配置用户入口」中管理 UUID，无需设置共享 UUID。
+            在公开线路的「配置用户入口」中为每个用户签发独立凭据。
           </p>
         )}
-        {protocol === "socks" && (
+        {protocol === "socks" && !principalListener && (
           <div className="grid gap-4 sm:col-span-2 sm:grid-cols-2">
             <AppField
               name={field("username")}
@@ -423,20 +453,28 @@ export function ConnectionFields({
               name={field("method")}
               label="加密方式"
               trigger="onValueChange"
-              rules={[{ required: true, message: "选择加密方式" }]}
+              rules={[
+                { required: true, message: "选择加密方式" },
+                { validator: (_, value) => !principalListener || /^2022-blake3-aes-(128|256)-gcm$/.test(value)
+                  ? Promise.resolve() : Promise.reject(new Error("选择 Shadowsocks 2022 的 AES 加密方式")) },
+              ]}
             >
               <ChoiceSelect
                 options={[
                   "aes-128-gcm",
                   "aes-256-gcm",
                   "chacha20-ietf-poly1305",
-                ].map((value) => ({ value, label: value }))}
+                  "2022-blake3-aes-128-gcm",
+                  "2022-blake3-aes-256-gcm",
+                  "2022-blake3-chacha20-poly1305",
+                ].filter((value) => !principalListener || /^2022-blake3-aes-/.test(value))
+                  .map((value) => ({ value, label: value }))}
               />
             </AppField>
             <AppField
               name={field("password")}
-              label="连接密码"
-              rules={[{ required: true, message: "填写连接密码" }]}
+              label={principalListener ? "端点密钥" : "连接密码"}
+              rules={[{ required: true, message: principalListener ? "填写端点密钥" : "填写连接密码" }]}
             >
               <PasswordInput autoComplete="new-password" />
             </AppField>
@@ -444,7 +482,7 @@ export function ConnectionFields({
         )}
         {directTls && (
           <div className="space-y-2 sm:col-span-2">
-            <p className="text-sm text-muted-foreground">{hysteria2 ? "Hysteria2 使用 QUIC（UDP）和 TLS；目前仅支持 sing-box 直接连接。" : anytlsConnector ? "AnyTLS 可直接连接，也可在上游连接器中选择可用中转。" : "AnyTLS 使用密码和 TLS；目前仅支持 sing-box。"}</p>
+            <p className="text-sm text-muted-foreground">{protocol === "tuic" ? "TUIC 使用 UUID、密码和 QUIC（UDP），支持 sing-box 和 Mihomo 客户端" : hysteria2 ? "Hysteria2 使用 QUIC（UDP）和 TLS；支持 sing-box 和 Mihomo 客户端，服务器中仅支持直接连接。" : anytlsConnector ? "AnyTLS 可直接连接，也可在上游连接器中选择可用中转。" : "AnyTLS 使用密码和 TLS，支持 sing-box 和 Mihomo 客户端。"}</p>
             {protocolUnavailableReason && <p className="text-sm text-destructive">{protocolUnavailableReason}</p>}
             {!!directTlsConflicts.length && <Notice tone="warning" title={`以下参数不适用于 ${directTlsName}`}>
               <div className="flex flex-wrap gap-2">{directTlsConflicts.map(({ path, label }) => (
@@ -455,7 +493,7 @@ export function ConnectionFields({
             </Notice>}
           </div>
         )}
-        {["trojan", "hysteria2", "anytls"].includes(protocol) && (
+        {["trojan", "hysteria2", "anytls", "tuic"].includes(protocol) && !principalListener && (
           <AppField
             name={field("password")}
             label="连接密码"
@@ -464,12 +502,43 @@ export function ConnectionFields({
             <PasswordInput autoComplete="new-password" />
           </AppField>
         )}
-        {["vless", "vmess"].includes(protocol) && !principalListener && (
+        {protocol === "tuic" && <>
+          <AppField name={[...prefix, "tuic", "congestionControl"]} label="拥塞控制" trigger="onValueChange">
+            <ChoiceSelect clearable options={[{value:"cubic",label:"CUBIC"},{value:"new_reno",label:"New Reno"},{value:"bbr",label:"BBR"}]} />
+          </AppField>
+          {!server && <AppField name={[...prefix, "tuic", "udpRelayMode"]} label="UDP 转发方式" trigger="onValueChange">
+            <ChoiceSelect clearable options={[{value:"native",label:"原生 UDP"},{value:"quic",label:"QUIC"}]} />
+          </AppField>}
+        </>}
+        {hysteria2 && (
+          <div className="col-span-full grid gap-4 sm:grid-cols-2" aria-label="Hysteria2 参数">
+            <AppField name={[...prefix, "hysteria2", "obfs", "password"]} label="Salamander 混淆密码">
+              <PasswordInput placeholder="留空关闭混淆" autoComplete="new-password" />
+            </AppField>
+            {(["upMbps", "downMbps"] as const).map((key) => (
+              <AppField key={key} name={[...prefix, "hysteria2", key]} label={key === "upMbps" ? "上传带宽（Mbps）" : "下载带宽（Mbps）"}
+                rules={[{validator: (_, v) => v == null || v === "" || /^\d+$/.test(String(v)) && Number(v) <= 1000000 ? Promise.resolve() : Promise.reject(new Error("填写 0–1000000 的整数"))}]}>
+                <Input inputMode="numeric" placeholder="自动" />
+              </AppField>
+            ))}
+            {!server && <>
+              <AppField name={[...prefix, "hysteria2", "serverPorts"]} label="跳跃端口" getValueProps={(value) => ({value: Array.isArray(value) ? value.join(",") : ""})} getValueFromEvent={(event) => event.target.value.split(",")}>
+                <Input placeholder="例如 443,10000:20000" />
+              </AppField>
+              <AppField name={[...prefix, "hysteria2", "hopIntervalSeconds"]} label="跳跃间隔（秒）"
+                rules={[{validator: (_, v) => v == null || v === "" || /^\d+$/.test(String(v)) && Number(v) <= 86400 ? Promise.resolve() : Promise.reject(new Error("填写 0–86400 的整数"))}]}>
+                <Input inputMode="numeric" placeholder="30" />
+              </AppField>
+            </>}
+          </div>
+        )}
+        {["vless", "vmess", "tuic"].includes(protocol) && !principalListener && (
           <AppField
             name={field("uuid")}
-            label="用户 UUID"
+            label={uuidLabel}
+            description={server ? "连接此监听端点的客户端共用此 UUID。VLESS 入口也可启用按用户分配 UUID。" : undefined}
             rules={[
-              { required: true, message: "填写用户 UUID" },
+              { required: true, message: `填写${uuidLabel}` },
               {
                 pattern:
                   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i,
@@ -477,7 +546,7 @@ export function ConnectionFields({
               },
             ]}
           >
-            <PasswordInput revealLabel="用户 UUID" autoComplete="off" />
+            <PasswordInput revealLabel={uuidLabel} autoComplete="off" />
           </AppField>
         )}
         {protocol === "vmess" && (
@@ -588,7 +657,8 @@ export function ConnectionFields({
                   limited
                     ? [
                         transportOptions[0],
-                        ...(transport && transport !== "tcp"
+                        xhttpOption,
+                        ...(transport && transport !== "tcp" && transport !== "xhttp"
                           ? [
                               {
                                 value: transport,
@@ -666,6 +736,11 @@ export function ConnectionFields({
                 )}
               </>
             )}
+            {transport === "xhttp" && <>
+              <AppField name={[...prefix,"transport","path"]} label="路径"><Input placeholder="/" /></AppField>
+              <AppField name={[...prefix,"transport","host"]} label="Host"><Input placeholder="example.com" /></AppField>
+              <AppField name={[...prefix,"transport","mode"]} label="XHTTP 模式" trigger="onValueChange"><ChoiceSelect clearable options={[{value:"auto",label:"自动"},{value:"packet-up",label:"Packet Up"},{value:"stream-up",label:"Stream Up"},{value:"stream-one",label:"Stream One"}]} /></AppField>
+            </>}
             {transport === "grpc" && (
               <>
                 <AppField
@@ -723,7 +798,7 @@ export function ConnectionFields({
               valuePropName="checked"
               trigger="onCheckedChange"
               rules={
-                ["trojan", "hysteria2", "anytls"].includes(protocol)
+                ["trojan", "hysteria2", "anytls", "tuic"].includes(protocol)
                   ? [
                       {
                         validator: (_, value) =>
@@ -750,20 +825,25 @@ export function ConnectionFields({
                 Trojan 使用密码认证，并要求启用 TLS。
               </p>
             )}
-            {server && (
-              <Notice title="监听与客户端参数分开管理">
-                下方填写客户端连接参数；服务端证书和 REALITY 私钥在线路的「TLS
-                证书与安全参数」中配置。
-              </Notice>
-            )}
+            {server && security === "tls" && serverCertificateField}
+            {server && !limited && security === "reality" && serverRealityField}
             {tls?.enabled && (
               <>
-                <AppField
-                  name={[...prefix, "tls", "serverName"]}
-                  label="服务器名称（SNI）"
-                >
-                  <Input placeholder="example.com" />
-                </AppField>
+                {(!serverRealityField || security !== "reality" || limited) && (
+                  <div className={server && security === "reality" && !serverRealityField ? "grid items-end gap-3 sm:grid-cols-2" : undefined}>
+                    <AppField name={[...prefix, "tls", "serverName"]} label="服务器名称（SNI）">
+                      <Input placeholder="example.com" />
+                    </AppField>
+                    {server && !serverRealityField && security === "reality" && (
+                      <ChoiceSelect
+                        aria-label="选择 REALITY SNI 示例"
+                        placeholder="选用域名示例"
+                        options={realityTargetHosts.map((host) => ({ value: host, label: host }))}
+                        onValueChange={(host) => form.setFieldValue([...prefix, "tls", "serverName"], host)}
+                      />
+                    )}
+                  </div>
+                )}
                 <div className="grid gap-4 sm:grid-cols-2">
                   {!directTls && <AppField
                     name={[...prefix, "tls", "fingerprint"]}
@@ -849,7 +929,7 @@ export function ConnectionFields({
                     </p>
                   )}
                 </div>
-                {!directTls && security === "reality" && (
+                {!directTls && security === "reality" && (!serverRealityField || limited) && (
                   <div className="grid gap-4 sm:grid-cols-2">
                     <AppField
                       name={[...prefix, "tls", "reality", "publicKey"]}
@@ -933,7 +1013,6 @@ export function ConnectionFields({
                         limited ? "数据包封装（此核心不支持）" : "数据包封装"
                       }
                       trigger="onValueChange"
-                      description="按客户端目标选择；不支持的目标会明确拒绝生成。"
                     >
                       <ChoiceSelect
                         clearable
@@ -1141,13 +1220,13 @@ function SecurityModePicker({
       }}
     >
       <label className="flex items-center gap-2 text-sm">
-        <RadioGroupItem value="none" disabled={["trojan", "hysteria2", "anytls"].includes(protocol)} />无
+        <RadioGroupItem value="none" disabled={["trojan", "hysteria2", "anytls", "tuic"].includes(protocol)} />无
       </label>
       <label className="flex items-center gap-2 text-sm">
         <RadioGroupItem value="tls" />
         TLS
       </label>
-      {!["hysteria2", "anytls"].includes(protocol) && ((!limited && protocol === "vless") || reality) && (
+      {!["hysteria2", "anytls", "tuic"].includes(protocol) && ((!limited && protocol === "vless") || reality) && (
         <label className="flex items-center gap-2 text-sm">
           <RadioGroupItem
             value="reality"

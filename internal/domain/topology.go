@@ -17,12 +17,29 @@ type CoreInstance struct {
 	AdapterID string `json:"adapterId"`
 	Version   string `json:"version"`
 }
+type ListenerTCPOptions struct {
+	DisableKeepAlive         bool  `json:"disableKeepAlive,omitempty"`
+	FastOpen                 *bool `json:"fastOpen,omitempty"`
+	KeepAliveIdleSeconds     int   `json:"keepAliveIdleSeconds,omitempty"`
+	KeepAliveIntervalSeconds int   `json:"keepAliveIntervalSeconds,omitempty"`
+}
+
+type ListenerUDPOptions struct {
+	Fragment       *bool `json:"fragment,omitempty"`
+	TimeoutSeconds int   `json:"timeoutSeconds,omitempty"`
+}
+
 type ManagedEndpoint struct {
-	Authentication string     `json:"authentication,omitempty"`
-	ID             string     `json:"id"`
-	InstanceID     string     `json:"instanceId"`
-	Name           string     `json:"name"`
-	Connection     Connection `json:"connection"`
+	UDP                 *ListenerUDPOptions   `json:"udp,omitempty"`
+	AcceptProxyProtocol bool                  `json:"acceptProxyProtocol,omitempty"`
+	TCP                 *ListenerTCPOptions   `json:"tcp,omitempty"`
+	Reality             *ServerRealityOptions `json:"realityServer,omitempty"`
+	CertificateID       string                `json:"certificateId,omitempty"`
+	Authentication      string                `json:"authentication,omitempty"`
+	ID                  string                `json:"id"`
+	InstanceID          string                `json:"instanceId"`
+	Name                string                `json:"name"`
+	Connection          Connection            `json:"connection"`
 }
 type Link struct {
 	ID   string `json:"id"`

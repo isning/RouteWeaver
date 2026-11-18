@@ -1,12 +1,13 @@
+import { normalizeProtocolOptions } from "./connection-protocol-options";
 import { operationalInteger } from "./OperationalIntegerInput";
 import type { Connection } from "./types";
 
 type RecordValue = Record<string, unknown>;
 export type ConnectorConnectionDraft = Omit<Connection, "port"> & { port: number | string };
-const connectionKeys = ["host", "port", "protocol", "username", "password", "method", "uuid", "flow", "packetEncoding", "vmessSecurity", "tls", "transport"];
+const connectionKeys = ["host", "port", "protocol", "username", "password", "method", "uuid", "flow", "packetEncoding", "vmessSecurity", "tls", "transport", "hysteria2", "tuic"];
 const tlsKeys = ["enabled", "serverName", "fingerprint", "alpn", "reality"];
 const fieldLabels: Record<string, string> = { uuid: "UUID", flow: "VLESS 流控", packetEncoding: "数据包编码", tls: "TLS 参数", transport: "传输参数", path: "传输路径", host: "传输 Host", serviceName: "gRPC 服务名", headers: "请求头", authority: "gRPC authority" };
-const transportKeys = ["type", "path", "host", "serviceName", "headers", "authority", "headerRows"];
+const transportKeys = ["type", "path", "host", "serviceName", "headers", "authority", "mode", "headerRows"];
 function isRecord(value: unknown): value is Record<string, unknown> {
   return !!value && typeof value === "object" && !Array.isArray(value);
 }
@@ -14,6 +15,13 @@ function connectionShapeReason(value: unknown, allowHeaderRows: boolean): string
   const reason = "安全或传输参数的结构不能由此表单无损编辑，请在完整 JSON 中检查。";
   if (!isRecord(value)) return reason;
   const strings = (record: Record<string, unknown>, keys: string[]) => keys.every((key) => record[key] === undefined || typeof record[key] === "string");
+  if (value.hysteria2 !== undefined) {
+    if (!isRecord(value.hysteria2)) return reason;
+    const h=value.hysteria2;
+    if (h.obfs!==undefined && (!isRecord(h.obfs) || !strings(h.obfs,["type","password"]))) return reason;
+    if (h.serverPorts!==undefined && (!Array.isArray(h.serverPorts) || h.serverPorts.some(v=>typeof v!=="string"))) return reason;
+  }
+  if (value.tuic!==undefined && (!isRecord(value.tuic) || !strings(value.tuic,["congestionControl","udpRelayMode"]))) return reason;
   if (value.tls !== undefined) {
     if (!isRecord(value.tls)) return reason;
     const tls = value.tls;
@@ -24,7 +32,7 @@ function connectionShapeReason(value: unknown, allowHeaderRows: boolean): string
   if (value.transport !== undefined) {
     if (!isRecord(value.transport)) return reason;
     const transport = value.transport;
-    if (!strings(transport, ["type", "path", "host", "serviceName", "authority"])) return reason;
+    if (!strings(transport, ["type", "path", "host", "serviceName", "authority", "mode"])) return reason;
     if (transport.headers !== undefined && (!isRecord(transport.headers) || Object.values(transport.headers).some((header) => typeof header !== "string"))) return reason;
     if (Object.prototype.hasOwnProperty.call(transport, "headerRows")) {
       if (!allowHeaderRows) return "连接器含有与请求头表单冲突的扩展参数，请在完整 JSON 中编辑。";
@@ -67,7 +75,7 @@ export function prepareConnectorConnection(original: Connection, draft: Connecto
   if (draft.host.includes(":")) {
     try { new URL(`http://[${draft.host}]/`); } catch { return fail("请输入有效的 IP 地址，不要附加端口。"); }
   }
-  if (!["socks", "shadowsocks", "vless", "vmess", "trojan", "hysteria2", "anytls"].includes(draft.protocol)) return fail("此协议请使用完整 JSON 编辑。");
+  if (!["socks", "shadowsocks", "vless", "vmess", "trojan", "hysteria2", "anytls", "tuic"].includes(draft.protocol)) return fail("此协议请使用完整 JSON 编辑。");
   const next = preserveUnknown(original, { ...original, ...draft, port }, connectionKeys) as Connection;
   if (next.tls) {
     next.tls = preserveUnknown(original.tls, next.tls, tlsKeys);
@@ -98,13 +106,15 @@ export function prepareConnectorConnection(original: Connection, draft: Connecto
     removedFields.push("REALITY 参数");
   }
   if (protocolChanged) {
-    const secured = ["vless", "vmess", "trojan", "hysteria2", "anytls"].includes(next.protocol);
+    if (next.protocol !== "hysteria2") remove(next, "hysteria2", "Hysteria2 参数");
+    if (next.protocol !== "tuic") remove(next, "tuic", "TUIC 参数");
+    const secured = ["vless", "vmess", "trojan", "hysteria2", "anytls", "tuic"].includes(next.protocol);
     if (!secured) {
       if (unknownSecurity || unknownKeys(next.transport, transportKeys)) return fail("安全或传输设置含有扩展参数，无法安全切换此协议；请使用完整 JSON。");
       for (const key of ["uuid", "flow", "packetEncoding", "tls", "transport"]) remove(next, key, fieldLabels[key] || key);
     } else {
       remove(next, "username", "用户名"); remove(next, "method", "加密方法");
-      if (!["trojan", "hysteria2", "anytls"].includes(next.protocol)) remove(next, "password", "密码");
+      if (!["trojan", "hysteria2", "anytls", "tuic"].includes(next.protocol)) remove(next, "password", "密码");
       if (next.protocol !== "vless") { remove(next, "flow", "VLESS 流控"); remove(next, "packetEncoding", "数据包编码"); }
       if (["trojan", "hysteria2", "anytls"].includes(next.protocol)) remove(next, "uuid", "UUID");
       if (next.protocol !== "vless" && next.tls?.reality) {
@@ -118,7 +128,7 @@ export function prepareConnectorConnection(original: Connection, draft: Connecto
   }
   if (tlsDisabled && next.tls) remove(next, "tls", "TLS 参数");
   if (transportChanged && next.transport) {
-    const allowed = next.transport.type === "tcp" ? ["type"] : next.transport.type === "grpc" ? ["type", "serviceName", "authority"] : ["type", "path", "host", "headers", "headerRows"];
+    const allowed = next.transport.type === "tcp" ? ["type"] : next.transport.type === "xhttp" ? ["type", "path", "host", "mode"] : next.transport.type === "grpc" ? ["type", "serviceName", "authority"] : ["type", "path", "host", "headers", "headerRows"];
     for (const key of transportKeys) if (!allowed.includes(key)) remove(next.transport, key, fieldLabels[key] || key);
   }
   // Header rows are UI state, not a transport extension or exported credential store.
@@ -134,5 +144,5 @@ export function prepareConnectorConnection(original: Connection, draft: Connecto
     else delete transport.headers;
     delete transport.headerRows;
   }
-  return { connection: next, removedFields: [...new Set(removedFields)] };
+  return { connection: normalizeProtocolOptions(next), removedFields: [...new Set(removedFields)] };
 }

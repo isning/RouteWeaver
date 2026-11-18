@@ -104,10 +104,22 @@ type State struct {
 	LastKnownValid   *Identity         `json:"lastKnownValid,omitempty"`
 	Phase            string            `json:"phase"`
 	Code             string            `json:"code,omitempty"`
+	ErrorDetail      string            `json:"errorDetail,omitempty"`
 	NativeChecked    bool              `json:"nativeChecked"`
 	RecoveryRequired bool              `json:"recoveryRequired"`
 	// AccessDecision is a gate result, NOT evidence that existing sessions ended.
 	AccessDecision string `json:"accessDecision,omitempty"`
+}
+
+const MaxInstallErrorDetail = 512
+
+func AllowsInstallErrorDetail(code string) bool {
+	switch code {
+	case "core_installation_failed", "installed_adapter_unavailable", "core_install_policy_restriction_unknown":
+		return true
+	default:
+		return false
+	}
 }
 
 // MeterSample reports a cumulative source measurement, not a quota debit.

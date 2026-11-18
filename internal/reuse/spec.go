@@ -52,14 +52,21 @@ type Group struct {
 	ToleranceMS     int                `json:"toleranceMs,omitempty"`
 	Strategy        string             `json:"strategy,omitempty"`
 }
+type AutomaticGroups struct {
+	IncludeIn       []string `json:"includeIn"`
+	RegionIncludeIn []string `json:"regionIncludeIn"`
+	AllEndpointsIn  []string `json:"allEndpointsIn"`
+}
+
 type Spec struct {
-	Steps         []Step               `json:"steps,omitempty"`
-	EndpointSlots []Slot               `json:"endpointSlots,omitempty"`
-	ResourceSlots []Slot               `json:"resourceSlots,omitempty"`
-	Groups        []Group              `json:"groups,omitempty"`
-	Rules         []domain.PolicyRule  `json:"rules,omitempty"`
-	DefaultAction domain.ActionRef     `json:"defaultAction,omitempty"`
-	Runtime       domain.ClientRuntime `json:"runtime,omitempty"`
+	AutomaticGroups *AutomaticGroups     `json:"automaticGroups,omitempty"`
+	Steps           []Step               `json:"steps,omitempty"`
+	EndpointSlots   []Slot               `json:"endpointSlots,omitempty"`
+	ResourceSlots   []Slot               `json:"resourceSlots,omitempty"`
+	Groups          []Group              `json:"groups,omitempty"`
+	Rules           []domain.PolicyRule  `json:"rules,omitempty"`
+	DefaultAction   domain.ActionRef     `json:"defaultAction,omitempty"`
+	Runtime         domain.ClientRuntime `json:"runtime,omitempty"`
 }
 type Bindings struct {
 	Endpoints map[string]string `json:"endpoints,omitempty"`
@@ -88,6 +95,9 @@ func Validate(kind string, s Spec) error {
 		return fmt.Errorf("template kind must be processing-preset or client-profile")
 	}
 	if kind == ProcessingPreset {
+		if s.AutomaticGroups != nil {
+			return fmt.Errorf("processing presets cannot generate groups")
+		}
 		if len(s.EndpointSlots)+len(s.ResourceSlots)+len(s.Groups)+len(s.Rules) > 0 || s.DefaultAction.Kind != "" || s.DefaultAction.Ref != "" || s.Runtime.MixedPort != 0 || s.Runtime.DNS != nil || s.Runtime.TUN != nil || s.Runtime.Sniff {
 			return fmt.Errorf("processing preset cannot contain profile fields")
 		}
@@ -146,6 +156,9 @@ func Validate(kind string, s Spec) error {
 	for _, v := range s.ResourceSlots {
 		binding.Resources[v.ID] = v.ID
 		fixture.Resources = append(fixture.Resources, domain.RuleResource{ID: v.ID, Name: v.Name, OwnerID: fixture.OwnerID, Revision: "1", Digest: "sha256:" + strings.Repeat("0", 64), Format: "mihomo-text", Behavior: "domain", Location: "local", Path: v.ID + ".txt", UpdatePolicy: "pinned"})
+	}
+	if s.AutomaticGroups != nil && len(fixture.Endpoints) == 0 {
+		fixture.Endpoints = append(fixture.Endpoints, domain.ClientEndpoint{ID: "validation-endpoint", Name: "Validation endpoint", OwnerID: fixture.OwnerID, Origin: "imported", Region: "US", Connection: domain.Connection{Host: "192.0.2.1", Port: 1080, Protocol: "socks"}, Provenance: []domain.SourceRef{{SourceID: "validation-source", SourceName: "Validation source"}}})
 	}
 	instantiated, err := s.Instantiate(fixture, binding)
 	if err != nil {
@@ -229,6 +242,11 @@ func (s Spec) Instantiate(local domain.ClientProfileIR, b Bindings) (domain.Clie
 		match(&out.Rules[i].Match)
 	}
 	out.DefaultAction = action(out.DefaultAction)
+	if s.AutomaticGroups != nil {
+		if err := expandAutomaticGroups(&out, *s.AutomaticGroups); err != nil {
+			return out, err
+		}
+	}
 	return out, nil
 }
 

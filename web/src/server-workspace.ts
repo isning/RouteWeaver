@@ -1,5 +1,5 @@
-export type ServerWorkspaceSection = "overview" | "cores" | "records" | "diagnostics";
-const sections: readonly string[] = ["overview", "cores", "records", "diagnostics"];
+export type ServerWorkspaceSection = "overview" | "cores" | "records" | "diagnostics" | "network-monitor";
+const sections: readonly string[] = ["overview", "cores", "records", "diagnostics", "network-monitor"];
 
 /** URL state carries identity and view only, never credentials or edits. */
 export function serverWorkspaceHash(hostId: string, instanceId?: string, section: ServerWorkspaceSection = instanceId ? "cores" : "overview") {

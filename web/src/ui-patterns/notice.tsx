@@ -33,7 +33,7 @@ export function Notice({
     <Alert
       {...props}
       variant={tone === "error" ? "destructive" : "default"}
-      className={cn("min-w-0 has-data-[slot=alert-action]:pr-2.5", className)}
+      className={cn("min-w-0 has-data-[slot=alert-action]:pr-2.5", tone === "error" && "motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-top-1 motion-safe:duration-200", className)}
     >
       <Icon aria-hidden="true" />
       {title && <AlertTitle className="min-w-0 [overflow-wrap:anywhere]">{title}</AlertTitle>}

@@ -7,6 +7,7 @@ import {
   render,
   screen,
   within,
+  waitFor,
 } from "@testing-library/react";
 import { QueryClient, QueryClientProvider, onlineManager, focusManager } from "@tanstack/react-query";
 import { UIProviders } from "./ui-patterns/providers";
@@ -35,7 +36,7 @@ it("refreshes online snapshots while mounted and warns when a refresh fails", as
   const original = vi.mocked(fetch).getMockImplementation()!;
   let failed = false;
   vi.mocked(fetch).mockImplementation(async (...args) => {
-    if (String(args[0]).endsWith("/me/insights")) {
+    if (String(args[0]).includes("/me/insights")) {
       failed = true;
       return json({ error: "refresh unavailable" }, 503);
     }
@@ -52,7 +53,7 @@ it("pauses online polling in the background and identifies an offline snapshot",
   vi.useFakeTimers();
   mount();
   await act(async () => { await vi.advanceTimersByTimeAsync(100); });
-  const count = () => vi.mocked(fetch).mock.calls.filter(args => String(args[0]).endsWith("/me/insights")).length;
+  const count = () => vi.mocked(fetch).mock.calls.filter(args => String(args[0]).includes("/me/insights")).length;
   expect(count()).toBe(1);
   act(() => focusManager.setFocused(false));
   await act(async () => { await vi.advanceTimersByTimeAsync(61_000); });
@@ -125,13 +126,15 @@ function mount(fail = false, shell = false, namesFail = false, connections?: unk
           limit: 100,
           windowDays: 30,
         });
-      if (url.endsWith("/me/insights"))
+      if (url.includes("/me/insights"))
         return fail
           ? json({ error: "temporarily unavailable" }, 503)
           : json({
               asOf: "2026-11-14T07:00:00Z",
               timezone: "UTC+8",
               daily: [
+                { date: "2026-11-12", rawBytes: 0, weightedBytes: 0, hasData: true },
+                { date: "2026-11-13", rawBytes: 12, weightedBytes: 12, hasData: true },
                 { date: "2026-11-14", rawBytes: 256, weightedBytes: 512 },
               ],
               routes: [{ routeId: "r", rawBytes: 256, weightedBytes: 512 }],
@@ -418,7 +421,8 @@ it.each([
       ...client.getQueryData<object>(["overview"]),
       status,
     });
-    expect(await screen.findByText(label)).toBeTruthy();
+    if (status === "active") expect(screen.queryByText(label)).toBeNull();
+    else expect(await screen.findByText(label)).toBeTruthy();
     const quota = screen
       .getByText("本周期剩余额度")
       .closest('[data-slot="card"]')!;
@@ -595,11 +599,23 @@ it("dismisses the daily readout when polling replaces its selected date", async 
   const original = vi.mocked(fetch).getMockImplementation()!;
   vi.mocked(fetch).mockImplementation(async (...args) => {
     const response = await original(...args);
-    if (!String(args[0]).endsWith("/me/insights")) return response;
+    if (!String(args[0]).includes("/me/insights")) return response;
     const data = await response.json();
-    return json({ ...data, daily: [{ date: "2026-11-15", rawBytes: 700, weightedBytes: 900 }] });
+    return json({ ...data, daily: [{ date: "2026-11-15", rawBytes: 700, weightedBytes: 900 }, { date: "2026-11-13", rawBytes: 1, weightedBytes: 1 }, { date: "2026-11-12", rawBytes: 1, weightedBytes: 1 }] });
   });
   await act(async () => { await vi.advanceTimersByTimeAsync(31_000); });
   expect(screen.getByRole("button", { name: "2026-11-15用量" })).toBeTruthy();
   expect(screen.queryByRole("tooltip")).toBeNull();
+});
+
+it("hides daily usage for fewer than three recorded days, including padded zero buckets", async () => {
+ mount();
+ await screen.findByText("近 14 天每日用量");
+ const client=clients.at(-1)!;
+ const previous=client.getQueryData<any>(["personal-insights"]);
+ await act(async()=>client.setQueryData(["personal-insights"],{...previous,daily:Array.from({length:30},(_,index)=>({date:`2026-11-${String(index+1).padStart(2,"0")}`,rawBytes:0,weightedBytes:0,hasData:index<2}))}));
+ await waitFor(()=>expect(screen.queryByText("近 14 天每日用量")).toBeNull());
+ await act(async()=>client.setQueryData(["personal-insights"],{...previous,daily:previous.daily.map((day:any)=>({...day,rawBytes:0,weightedBytes:0,hasData:true}))}));
+ await screen.findByText("近 14 天每日用量");
+ expect(screen.getByRole("combobox",{name:"每日用量时间跨度"})).toBeTruthy();
 });

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { APIError, request } from "./api";
 import { Checkbox } from "./components/ui/checkbox";
@@ -34,6 +34,7 @@ export function RawCoreLogSettings({
   instanceLabel?: string;
   onChanged: () => void;
 }) {
+  const panelId = useId();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<Settings | null>(null);
   const [error, setError] = useState("");
@@ -136,13 +137,15 @@ export function RawCoreLogSettings({
     <section className="space-y-3" aria-label="日志采集设置">
       <ActionButton
         variant="outline"
+        aria-expanded={open}
+        aria-controls={panelId}
         onClick={() => setOpen(!open)}
         disabled={saving}
       >
         {open ? "收起采集设置" : "采集设置"}
       </ActionButton>
       {open && (
-        <div className="space-y-4 rounded-lg border p-4">
+        <div id={panelId} className="space-y-5 rounded-xl bg-card p-5 ring-1 ring-foreground/10 sm:p-6 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-top-1 motion-safe:duration-200">
           <p className="text-sm text-muted-foreground">
             默认不接收。节点必须另行在本地使用{" "}
             <code>--raw-core-logs-accept-sensitive</code>

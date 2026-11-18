@@ -1,3 +1,4 @@
+import { SubscriptionStart } from "./ui-patterns/subscription-start";
 import { IndependentOutputCreate, IndependentOutputTasks } from "./IndependentOutputPublication";
 import {
   Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
@@ -76,7 +77,7 @@ import {
   ProfileValidationNotice,
   type MissingActionReference,
 } from "./profile-validation";
-import { clientTarget, clientTargets } from "./client-targets";
+import { clientTarget, clientTargets, clientTargetValue } from "./client-targets";
 import {
   Suspense,
   type ComponentRef,
@@ -136,19 +137,11 @@ export type SourceProfileEntry = {
 };
 // Account authorization is not a client subscription's publication lifecycle.
 function OverviewPolicyStatus({ value }: { value?: string }) {
-  if (!value || !Object.hasOwn(policyStatus, value))
-    return <Status value={value} />;
-  const colors: Record<string, string> = {
-    active: "success",
-    paused: "default",
-    disabled: "default",
-    expired: "warning",
-    "not-started": "default",
-    ambiguous: "error",
-    "service-missing": "error",
-  };
-  return <Badge variant="secondary">{value === "active" ? "已开通" : policyStatus[value]}</Badge>;
+  if (value === "active") return null;
+  if (!value || !Object.hasOwn(policyStatus, value)) return <Status value={value} />;
+  return <Badge variant="secondary">{policyStatus[value]}</Badge>;
 }
+
 function OutputComparisonLine({
   output,
   pending,
@@ -225,10 +218,8 @@ export function SubscriptionsPage({
   sourceDraft,
   onSourceDraftConsumed,
   onStartProxySubscription,
-  onConfigureServer,
 }: {
   onStartProxySubscription?: () => void;
-  onConfigureServer?: () => void;
   navigate?: (page: Page) => void;
   view?: SubscriptionView;
   showServiceSummary?: boolean;
@@ -1254,11 +1245,18 @@ export function SubscriptionsPage({
             </Metadata>
           </span>} />
       )}
-      {(profiles.isPending || outputs.isPending || profiles.isFetching || outputs.isFetching || profiles.isPaused || outputs.isPaused) && (
+      {hasInventory && (
+        <div className="min-h-5 text-sm text-muted-foreground" role="status" aria-live="polite">
+          {profiles.isPaused || outputs.isPaused
+            ? "等待网络连接，恢复后将继续核对配置与客户端订阅。"
+            : profiles.isFetching || outputs.isFetching
+              ? "正在核对配置与客户端订阅…"
+              : null}
+        </div>
+      )}
+      {!hasInventory && (profiles.isPending || outputs.isPending || profiles.isPaused || outputs.isPaused) && (
         profiles.isPaused || outputs.isPaused ? (
           <Notice tone="info" title="等待网络连接">连接恢复后将继续核对配置与客户端订阅。</Notice>
-        ) : hasInventory ? (
-          <p role="status" aria-label="正在加载配置与客户端订阅" className="text-sm text-muted-foreground">正在核对配置与客户端订阅…</p>
         ) : (
           <LoadingState layout="subscriptions" label="正在加载配置与客户端订阅" />
         )
@@ -1594,7 +1592,9 @@ export function SubscriptionsPage({
           !outputs.isPending &&
           !profiles.isError &&
           !outputs.isError && (
-            <Section className={!needle && !hasFilter && !profileScope && onStartProxySubscription ? "[&_[data-slot=empty-content]]:max-w-2xl" : undefined}>
+            !needle && !hasFilter && !profileScope && !hasInventory ? (
+              <SubscriptionStart onImport={onStartProxySubscription} onConfigure={() => void edit()} />
+            ) : <Section className={!needle && !hasFilter && !profileScope && onStartProxySubscription ? "[&_[data-slot=empty-content]]:max-w-2xl" : undefined}>
               <EmptyState
                 title={
                   needle || hasFilter
@@ -1630,13 +1630,7 @@ export function SubscriptionsPage({
                         <p className="text-sm text-muted-foreground">导入来源，再选择流量去向和客户端。</p>
                         <ActionButton onClick={onStartProxySubscription} variant="default">用已有代理生成订阅</ActionButton>
                       </div>
-                      {onConfigureServer && (
-                        <div className="space-y-3 rounded-lg border bg-card p-4">
-                          <h3 className="font-medium">我有自己的服务器</h3>
-                          <p className="text-sm text-muted-foreground">配置服务器、监听和转发路径。</p>
-                          <ActionButton onClick={onConfigureServer} variant="outline">配置自有服务器</ActionButton>
-                        </div>
-                      )}
+
                     </div>
                   ) : undefined
                 }
@@ -2355,7 +2349,7 @@ export function PublishOutput({
     form.setFieldsValue({
       name: profile.name,
       mode: "full",
-      adapterId: profile.target.adapterId,
+      adapterId: clientTargetValue(profile.target),
     });
   }, [profile?.id, sessionId, form]);
   useLayoutEffect(() => {

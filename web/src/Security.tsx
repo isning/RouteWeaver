@@ -1,3 +1,4 @@
+import { SettingsGroup } from "./ui-patterns/settings-group";
 import { SecurityRecoveryNotice, useSecurityRecovery } from "./SecurityRecovery";
 import { PasswordInput } from "@/ui-patterns/password-input";
 import { QRCodeSVG as QRCode } from "qrcode.react";
@@ -127,7 +128,7 @@ function MFASetupTask({ recoveryNotice }: { recoveryNotice: boolean }) {
         uncertainEnable.current = false;
         setEnableUncertain(false);
     };
-    return (<Section title="管理员二次验证" description="保护当前登录账号：登录时在密码之外验证一次性验证码。">
+    return (<SettingsGroup title="管理员二次验证" description="保护当前登录账号：登录时在密码之外验证一次性验证码。"><div className="space-y-5 px-5 pb-5 sm:px-6">
       {recoveryNotice && <SecurityRecoveryNotice recovery={recovery} />}
       <QueryState loading={session.isLoading} error={session.error} retry={() => session.refetch()}>
         {session.data?.user.mfaEnabled === true ? (<div className="security-enabled flex flex-wrap items-center gap-3 rounded-lg border p-4">
@@ -180,5 +181,5 @@ function MFASetupTask({ recoveryNotice }: { recoveryNotice: boolean }) {
             </ActionButton>
           </AppForm>)}
       </QueryState>
-    </Section>);
+    </div></SettingsGroup>);
 }

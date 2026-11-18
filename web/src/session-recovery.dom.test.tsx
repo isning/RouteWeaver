@@ -546,7 +546,7 @@ it("conceals portal dialogs on expiry and preserves the source draft after same-
   });
   const readsBeforeRenewal = sourceReads;
   loggedIn = false;
-  fireEvent(window, new Event("focus"));
+  fireEvent(window, new Event("online"));
   await screen.findByRole("button", { name: "进入工作空间" });
   fireEvent.change(await screen.findByLabelText("账号"), {
     target: { value: "a.test" },
@@ -648,12 +648,12 @@ it("keeps the labelled workspace visible but read-only during routine focus veri
   );
   fireEvent.click(await screen.findByRole("button", { name: "新建集合" }));
   const name = screen.getByLabelText("集合名称") as HTMLInputElement;
-  // Finish the user input before simulating a later window-focus check.
+  // Finish the user input before simulating a reconnect check.
   // Hint removal must settle while the input, not BODY, owns focus.
   await userEvent.setup().type(name, "Keep my place");
   name.setSelectionRange(2, 5);
   hold = true;
-  fireEvent(window, new Event("focus"));
+  fireEvent(window, new Event("online"));
   expect(screen.getByLabelText("集合名称")).toBe(name);
   expect(name.closest("[hidden]")).toBeNull();
   expect(name.closest("[inert]")).not.toBeNull();
@@ -782,7 +782,7 @@ it.each(["during", "after"])(
     fireEvent.click(screen.getByRole("button", { name: "保存集合" }));
     await waitFor(() => expect(writes).toBe(1));
     checking = true;
-    fireEvent(window, new Event("focus"));
+    fireEvent(window, new Event("online"));
     if (timing === "during") {
       await act(async () => {
         finishSave(json(saved));
@@ -880,7 +880,7 @@ it.each(["B", "new-csrf", "session-changed", "expired", "unmount"])(
       },
     );
     checking = true;
-    fireEvent(window, new Event("focus"));
+    fireEvent(window, new Event("online"));
     await act(async () => {
       finish(json({ private: "A" }));
     });
@@ -946,7 +946,7 @@ it("shows a delayed routine-check status and a bounded failure with explicit rec
   });
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
   hold = true;
-  fireEvent(window, new Event("focus"));
+  fireEvent(window, new Event("online"));
   expect(screen.queryByRole("button", { name: "重新确认" })).toBeNull();
   await act(async () => {
     await vi.advanceTimersByTimeAsync(800);
@@ -1026,7 +1026,7 @@ it("clears the workspace and rejects late data when the same account loses its r
   );
   role = "user";
   await act(async () => {
-    fireEvent(window, new Event("focus"));
+    fireEvent(window, new Event("online"));
   });
   await act(async () => {
     complete(json({ private: "old-role" }));
@@ -1121,7 +1121,7 @@ it.each(["A", "B"])(
     await waitFor(() => expect(finishFile).toBeDefined());
     identity = nextAccount;
     await act(async () => {
-      fireEvent(window, new Event("focus"));
+      fireEvent(window, new Event("online"));
     });
     if (nextAccount === "B") await screen.findByText("Account B");
     await act(async () => {
@@ -1372,7 +1372,7 @@ it.each([false, true])(
     await screen.findByText("Account B");
     identity = null;
     await act(async () => {
-      fireEvent(window, new Event("focus"));
+      fireEvent(window, new Event("online"));
     });
     await screen.findByLabelText("账号");
     fireEvent.click(screen.getByRole("button", { name: "管理员令牌登录" }));
@@ -1385,7 +1385,7 @@ it.each([false, true])(
       finishFailure(JSON.stringify({ error: "obsolete failure" }));
     });
     await act(async () => {
-      fireEvent(window, new Event("focus"));
+      fireEvent(window, new Event("online"));
     });
     await screen.findByText("Current administrator");
     expect(meTokens.at(-1)).toBe("Bearer current-token");
@@ -1784,7 +1784,7 @@ it("does not let a disposed logout authority clear the new App administrator tok
   fireEvent.click(await screen.findByRole("menuitem", { name: "退出登录" }));
   await waitFor(() => expect(finishBody).toBeDefined());
   await act(async () => {
-    fireEvent(window, new Event("focus"));
+    fireEvent(window, new Event("online"));
   });
   await screen.findByRole("heading", { name: "登录 RouteWeaver" });
   first.unmount();
@@ -1803,7 +1803,7 @@ it("does not let a disposed logout authority clear the new App administrator tok
     finishBody(JSON.stringify({ error: "old logout expired" }));
   });
   await act(async () => {
-    fireEvent(window, new Event("focus"));
+    fireEvent(window, new Event("online"));
   });
   expect(meTokens.at(-1)).toBe("Bearer new-app-token");
   expect(location.href).toBe(newURL);

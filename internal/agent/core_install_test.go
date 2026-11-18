@@ -629,3 +629,49 @@ func TestRetiredPendingUpgradeWithValidationOnlyAdapterIsBlocked(t *testing.T) {
 		t.Fatalf("pending validation-only upgrade was not retired: %+v %v", state, err)
 	}
 }
+
+func TestCoreInstallerWaitingForAnotherCoreHonorsCancellation(t *testing.T) {
+	entered := make(chan struct{})
+	release := make(chan struct{})
+	installer, err := NewCoreInstaller(filepath.Join(t.TempDir(), "cores"), CoreInstallerOptions{OpenArchive: func(ctx context.Context, _ controlprotocol.CoreRelease) (io.ReadCloser, error) {
+		close(entered)
+		select {
+		case <-release:
+			return nil, errors.New("synthetic archive unavailable")
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	finished := make(chan error, 1)
+	go func() {
+		_, err := installer.Prepare(context.Background(), "xray-26.10.31-linux-amd64")
+		finished <- err
+	}()
+	defer func() {
+		close(release)
+		select {
+		case <-finished:
+		case <-time.After(time.Second):
+			t.Error("install did not release shared store")
+		}
+	}()
+	select {
+	case <-entered:
+	case <-time.After(time.Second):
+		t.Fatal("first core did not enter download")
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if _, err = installer.Prepare(ctx, "sing-box-1.14.4-linux-amd64"); !errors.Is(err, context.Canceled) {
+		t.Fatalf("waiting install ignored cancellation: %v", err)
+	}
+	// The first installation still owns the installer until its download finishes.
+	select {
+	case err := <-finished:
+		t.Fatalf("other core was interrupted: %v", err)
+	default:
+	}
+}

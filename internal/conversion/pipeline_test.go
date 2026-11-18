@@ -103,3 +103,27 @@ func TestTransportHeaderSecretsRemainIsolatedFromPreviewAndInput(t *testing.T) {
 		t.Fatal("output mutation changed input snapshot")
 	}
 }
+
+func TestHysteria2PreviewPreservesExportAndRedactsObfuscation(t *testing.T) {
+	e := endpoint("a", "HY2", "US")
+	e.Connection = domain.Connection{Protocol: "hysteria2", Host: "proxy.example", Port: 443, Password: "synthetic-main", TLS: &domain.TLSOptions{Enabled: true}, Hysteria2: &domain.Hysteria2Options{Obfs: &domain.ObfuscationOptions{Type: "salamander", Password: "synthetic-obfs"}, ServerPorts: []string{"443", "10000:20000"}}}
+	snapshot := domain.SourceSnapshot{SourceID: "s", SnapshotID: "ss", OwnerID: "u", Endpoints: []domain.ClientEndpoint{e}}
+	result, err := conversion.ProcessCollection(domain.Collection{ID: "c", Name: "Collection", OwnerID: "u", Sources: []domain.CollectionSource{{SourceID: "s"}}}, []domain.SourceSnapshot{snapshot})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, stage := range result.Stages {
+		for _, item := range stage.Endpoints {
+			if item.Connection.Password != "" || item.Connection.Hysteria2.Obfs.Password != "" {
+				t.Fatal("stage exposed credential")
+			}
+		}
+	}
+	if snapshot.Endpoints[0].Connection.Hysteria2.Obfs.Password != "synthetic-obfs" || result.Endpoints[0].Connection.Hysteria2.Obfs.Password != "synthetic-obfs" {
+		t.Fatal("preview changed accepted/export credentials")
+	}
+	result.Endpoints[0].Connection.Hysteria2.ServerPorts[0] = "9999"
+	if snapshot.Endpoints[0].Connection.Hysteria2.ServerPorts[0] != "443" {
+		t.Fatal("processing aliased accepted options")
+	}
+}

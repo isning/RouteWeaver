@@ -1,3 +1,5 @@
+import { HostAgentPanel, HostCoreInstallation } from "./HostAgent";
+import { NetworkMonitor } from "./NetworkMonitor";
 import { ResourceToolbar, SearchField } from "@/ui-patterns/resource-toolbar";
 import { ItemCount } from "@/ui-patterns/item-count";
 import { ScrollableTabsList } from "@/ui-patterns/scrollable-tabs-list";
@@ -163,6 +165,12 @@ export function ServersPage() {
     const pageIssue = host ? workspaceOwnership(latest.data, host.id, instance?.id, createdHosts, createdCores).message : null;
     const taskIssue = target ? workspaceOwnership(latest.data, target.hostId, target.instanceId, createdHosts, createdCores).message : null;
     return pageIssue || taskIssue || scopeIssue;
+  };
+  const readHostScopeIssue = () => {
+    if (!host) return "请先选择服务器";
+    const latest = client.getQueryState<Infrastructure>(["infrastructure"]);
+    if (!latest?.data || latest.status!=="success") return "请先刷新服务器清单";
+    return workspaceOwnership(latest.data,host.id,undefined,createdHosts,[]).message;
   };
   const pageCreateAction = useRef<HTMLButtonElement>(null);
   const pageOpener = useRef<{ hostId?: string; instanceId?: string } | null>(null);
@@ -375,7 +383,6 @@ export function ServersPage() {
   const coreList = host && data ? (<>
             <Section
               title="核心实例"
-              variant="plain"
               description={
                 data.instances.some((i) => i.hostId === host!.id)
                   ? undefined
@@ -402,7 +409,7 @@ export function ServersPage() {
                 .filter((i) => i.hostId === host!.id)
                 .map((i) => (
                   <div
-                    className="subscription-row flex flex-wrap items-center justify-between gap-3 rounded-lg border p-4"
+                    className="subscription-row flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-background p-4"
                     key={i.id}
                   >
                     <div className="subscription-info min-w-0 space-y-1">
@@ -441,7 +448,7 @@ export function ServersPage() {
                         onClick={() => openInstance(i)}
                         variant={section === "overview" ? "outline" : "default"}
                       >
-                        查看接入与配置
+                        管理核心
                       </ActionButton>
                     </div>
                   </div>
@@ -484,7 +491,7 @@ export function ServersPage() {
               value={tab}
               onValueChange={(value) => setTab(value as InventoryEditTask["kind"])}
               defaultValue={"hosts"}
-              className="w-full space-y-4"
+              className="w-full gap-6"
             >
               <ScrollableTabsList>
                 <TabsTrigger
@@ -751,15 +758,18 @@ export function ServersPage() {
               if (current) openInstance(current);
             }}>打开核心所在服务器</ActionButton>}
           </Notice>}
-          <Tabs value={section} onValueChange={changeSection} className="min-w-0 space-y-4">
-            <ScrollableTabsList>
+          <Tabs value={section} onValueChange={changeSection} className="min-w-0 gap-4">
+            <ScrollableTabsList aria-label="服务器详情">
               <TabsTrigger value="overview">概览</TabsTrigger>
               <TabsTrigger value="cores">核心与监听</TabsTrigger>
               <TabsTrigger ref={(node) => { if (node) sectionTabs.current.set("records", node); else sectionTabs.current.delete("records"); }} value="records">配置记录</TabsTrigger>
               <TabsTrigger ref={(node) => { if (node) sectionTabs.current.set("diagnostics", node); else sectionTabs.current.delete("diagnostics"); }} value="diagnostics">诊断</TabsTrigger>
+              <TabsTrigger value="network-monitor">连通性</TabsTrigger>
             </ScrollableTabsList>
             <ErrorNotice error={instance && section === "cores" ? null : editError} />
+            <TabsContent value="network-monitor"><NetworkMonitor key={host.id} host={host} /></TabsContent>
             <TabsContent value="overview" className="space-y-4">
+              <HostAgentPanel key={host.id} host={host} disabled={!!readHostScopeIssue()} onConnect={() => {const issue=readHostScopeIssue();if(issue){setEditError(new Error(issue));return;}setEnrollmentOpen(true);}} />
               {(!hostCores.length || !hostListeners.length || !records.length) && !scopeIssue && (
                 <ServerSetupTip
                   title={!hostCores.length ? "添加第一个核心" : !hostListeners.length ? "添加监听入口" : "设置流量去向"}
@@ -771,7 +781,7 @@ export function ServersPage() {
                     <ActionButton asChild variant="outline"><a href={`#routes?entryEndpoint=${encodeURIComponent(hostListeners[0].id)}&returnHost=${encodeURIComponent(host.id)}&returnInstance=${encodeURIComponent(hostListeners[0].instanceId)}`}>创建转发路径</a></ActionButton>
                   ) : <ActionButton onClick={chooseCore} variant="outline">选择监听入口</ActionButton>}
                 >
-                  {!hostCores.length ? "服务器地址已保存。添加核心后即可接入 Agent。" : !hostListeners.length ? "核心已登记。选择客户端连接的协议与监听地址。" : "监听入口已保存。创建转发路径后，检查并确认应用。"}
+                  {!hostCores.length ? "服务器地址已保存。接入 Agent 后，可远程安装和管理核心。" : !hostListeners.length ? "核心已登记。选择客户端连接的协议与监听地址。" : "监听入口已保存。创建转发路径后，检查并确认应用。"}
                 </ServerSetupTip>
               )}
               <ServerResourceOverview host={host} onOpenResources={() => changeSection("diagnostics", true)} />
@@ -783,50 +793,35 @@ export function ServersPage() {
               <Accordion type="multiple" className="w-full"><AccordionItem value="identity"><AccordionTrigger>技术标识</AccordionTrigger><AccordionContent><p className="break-all text-sm text-muted-foreground">服务器 ID：{host.id}</p></AccordionContent></AccordionItem></Accordion>
             </TabsContent>
             <TabsContent value="cores" className="space-y-4">
-              {instance ? <>
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <ActionButton onClick={() => edit(instance, "core-instances", host.id)} disabled={!!scopeIssue} variant="outline">编辑核心</ActionButton>
-                </div>
-      <InstanceDetail
-        onClose={closeInstance}
-        scopeIssue={scopeIssue}
-        readScopeIssue={readScopeIssue}
-        headingRef={coreHeading}
-        instance={instance}
-        inventory={data}
-        savedListeners={savedListeners}
-        inventoryReadState={query.isPaused ? "paused" : query.isFetching ? "loading" : query.isError ? "error" : "ready"}
-        inventoryError={query.error}
-        onRefreshInventory={() => query.refetch()}
-        enrollmentOpen={enrollmentOpen}
-        onCloseEnrollment={() => setEnrollmentOpen(false)}
-        onOpenEnrollment={() => {
-          const issue = readScopeIssue();
-          if (issue) { setEditError(new Error(issue)); return; }
-          setRequestedSetup(null);
-          ++editSequence.current;
-          setEditError(null);
-          setEnrollmentOpen(true);
-        }}
-        editError={editError}
-        onEditEndpoint={(endpoint) => {
-          if (!instance) return;
-          edit(endpoint, "managed-endpoints", instance.hostId, instance.id);
-        }}
-      />
-              </> : coreList}
+              {instance ? (
+                <InstanceDetail
+                  onClose={closeInstance}
+                  onEditCore={() => edit(instance, "core-instances", host.id)}
+                  scopeIssue={scopeIssue}
+                  readScopeIssue={readScopeIssue}
+                  headingRef={coreHeading}
+                  instance={instance}
+                  inventory={data}
+                  savedListeners={savedListeners}
+                  inventoryReadState={query.isPaused ? "paused" : query.isError ? "error" : "ready"}
+                  inventoryError={query.error}
+                  onRefreshInventory={() => query.refetch()}
+                  editError={editError}
+                  onEditEndpoint={(endpoint) => edit(endpoint, "managed-endpoints", instance.hostId, instance.id)}
+                />
+              ) : coreList}
             </TabsContent>
             <TabsContent value="records" className="space-y-4">
-              <Section title="已保存的转发配置" variant="plain">
-                {records.length ? records.map((record) => <div key={record.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-4">
+              <Section title="已保存的转发配置">
+                {records.length ? records.map((record) => <div key={record.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border bg-background p-4">
                   <div className="min-w-0"><p className="break-words text-sm font-medium">{record.name}</p><p className="text-sm text-muted-foreground">{record.status === "draft" ? "草稿已保存" : "配置记录已保存"}</p></div>
                   <ActionButton asChild variant="outline"><a href={`#routes?deployment=${encodeURIComponent(record.id)}`}>查看转发路径 {record.name}</a></ActionButton>
-                </div>) : <p className="text-sm text-muted-foreground">暂无关联的转发配置</p>}
+                </div>) : <EmptyState title="暂无关联的转发配置" />}
               </Section>
             </TabsContent>
             <TabsContent value="diagnostics" className="space-y-4">
-              <Tabs defaultValue="resources" className="space-y-4">
-                <ScrollableTabsList><TabsTrigger value="resources">资源与额度</TabsTrigger><TabsTrigger value="core-diagnostics">核心诊断</TabsTrigger><TabsTrigger value="raw-core-logs">日志原文</TabsTrigger><TabsTrigger value="connections">连接诊断</TabsTrigger></ScrollableTabsList>
+              <Tabs defaultValue="resources" className="min-w-0 gap-4">
+                <ScrollableTabsList aria-label="诊断类别" variant="line"><TabsTrigger value="resources">资源与额度</TabsTrigger><TabsTrigger value="core-diagnostics">核心诊断</TabsTrigger><TabsTrigger value="raw-core-logs">日志原文</TabsTrigger><TabsTrigger value="connections">连接诊断</TabsTrigger></ScrollableTabsList>
                 <TabsContent value="resources"><NodeObservation host={host} instances={data.instances} /></TabsContent>
                 <TabsContent value="core-diagnostics"><CoreDiagnosticsPanel host={host} instances={data.instances} /></TabsContent>
                 <TabsContent value="raw-core-logs"><RawCoreLogsPanel host={host} instances={data.instances} /></TabsContent>
@@ -834,6 +829,7 @@ export function ServersPage() {
               </Tabs>
             </TabsContent>
           </Tabs>
+          {enrollmentOpen && <Enrollment key={host.id} host={host} scopeIssue={readHostScopeIssue()} readScopeIssue={readHostScopeIssue} onClose={() => {setEnrollmentOpen(false);client.invalidateQueries({queryKey:["host-agent",host.id]});}} />}
         </section>
       )}
       <InventoryEditor
@@ -906,6 +902,14 @@ function instanceApplyFeedback(data: AgentState) {
     title = "应用结果尚未确认";
     explanation = "尚不能确认本次配置是否应用，也不能确认旧配置仍在运行。";
     nextStep = "请先刷新实例状态并核对节点运行情况；结果明确前不要重复应用。";
+  } else if (state.code === "core_installation_failed") {
+    title = "核心安装失败";
+    explanation = "Agent 未能获取或验证核心安装包。";
+    nextStep = "请检查服务器到官方发布源的网络，或提供已验证的离线安装包，然后重试安装。";
+  } else if (state.code === "installed_adapter_unavailable") {
+    title = "核心安装无法完成";
+    explanation = "Agent 无法加载此核心版本。";
+    nextStep = "请核对服务器平台与 Agent 版本，再重试安装。";
   } else if (state.phase === "blocked" && state.code === "policy_restricted") {
     title = "节点已执行访问限制";
     explanation = "节点上次核对已确认该实例停止运行，访问限制已执行。";
@@ -990,16 +994,15 @@ export function InstanceObservation({ instanceId }: { instanceId: string }) {
     >
       {data && (
         <>
-          {(query.isFetching || query.isPaused || query.isError) && (
+          {(query.isPaused || query.isError) && (
             <Notice tone={query.isError ? "warning" : "info"}>
               {query.isPaused ? "等待网络连接，以下为上次读取的实例记录。"
-                : query.isFetching ? "正在刷新，以下为上次读取的实例记录。"
                 : "刷新失败，以下为上次读取的实例记录。"}
               {query.isError && <p>{query.error.message}</p>}
             </Notice>
           )}
           <div className="instance-phase flex flex-wrap items-center justify-between gap-3">
-            <div className="space-y-1"><p className="text-xs text-muted-foreground">平台最近记录的实例状态</p><Badge variant="secondary">{phaseLabel(data.phase)}</Badge></div>
+            <div className="space-y-1"><p className="text-xs text-muted-foreground">平台最近记录的实例状态</p><Badge variant="secondary">{data.phase === "blocked" && ["core_installation_failed", "installed_adapter_unavailable"].includes(data.state?.code ?? "") ? "安装失败" : phaseLabel(data.phase)}</Badge></div>
             <ActionButton
               leadingIcon={<ReloadOutlined aria-hidden="true" />}
               aria-label="刷新实例状态"
@@ -1058,7 +1061,9 @@ export function InstanceObservation({ instanceId }: { instanceId: string }) {
           )}
           {feedback && (
             <Notice tone="warning" title={feedback.title} aria-label="实例处理建议">
-              <p>{feedback.explanation}</p>
+              {data.state?.errorDetail
+                ? <code className="block whitespace-pre-wrap break-all text-xs">{data.state.errorDetail}</code>
+                : <p>{feedback.explanation}</p>}
               <p>{feedback.nextStep}</p>
             </Notice>
           )}
@@ -1089,6 +1094,7 @@ function InstanceDetail({
   scopeIssue,
   readScopeIssue,
   onClose,
+  onEditCore,
   headingRef,
   instance,
   inventory,
@@ -1096,25 +1102,20 @@ function InstanceDetail({
   inventoryReadState,
   inventoryError,
   onRefreshInventory,
-  onOpenEnrollment,
-  enrollmentOpen,
-  onCloseEnrollment,
   editError,
   onEditEndpoint,
 }: {
   scopeIssue: string | null;
   readScopeIssue: () => string | null;
   onClose: () => void;
+  onEditCore: () => void;
   headingRef: RefObject<HTMLHeadingElement | null>;
   instance: CoreInstance | null;
   inventory?: Infrastructure;
   savedListeners: ManagedEndpoint[];
-  inventoryReadState: "loading" | "paused" | "error" | "ready";
+  inventoryReadState: "paused" | "error" | "ready";
   inventoryError: Error | null;
   onRefreshInventory: () => void;
-  onOpenEnrollment: () => void;
-  enrollmentOpen: boolean;
-  onCloseEnrollment: () => void;
   editError: Error | null;
   onEditEndpoint: (endpoint: ManagedEndpoint | null) => void;
 }) {
@@ -1127,136 +1128,130 @@ function InstanceDetail({
     <section role="region" aria-label={instance ? `${inventory?.hosts.find((h) => h.id === instance.hostId)?.name || instance.hostId}的${coreName(instance)}` : undefined} className="min-w-0 space-y-5">
       {instance && (
         <>
-          <ActionButton onClick={onClose} variant="ghost">返回核心列表</ActionButton>
-          <div className="space-y-1">
-            <p className="text-sm text-muted-foreground">核心配置已登记</p>
-            <h2 ref={headingRef} tabIndex={-1} className="break-words text-base font-semibold tracking-tight outline-none focus-visible:ring-2 focus-visible:ring-ring">{coreName(instance)}</h2>
-            <p className="text-sm text-muted-foreground">{instance.adapterId.replace(/^routeweaver\//, "")} {instance.version}</p>
-          </div>
-          <Section
-            title="1. Agent 接入与上报"
-            extra={
-              <ActionButton
-                disabled={!!scopeIssue}
-                leadingIcon={<KeyOutlined aria-hidden="true" />}
-                onClick={() => {
-                  onOpenEnrollment();
-                }}
-                variant="outline"
-              >
-                接入 Agent
+          <header className="flex min-w-0 flex-wrap items-end justify-between gap-3 border-b pb-4">
+            <div className="min-w-0 flex-1 basis-48 space-y-2">
+              <ActionButton size="sm" leadingIcon={<ArrowLeft aria-hidden="true" />} onClick={onClose} variant="ghost" className="-ml-2">
+                返回核心列表
               </ActionButton>
-            }
-          >
-            <InstanceObservation instanceId={instance.id} />
-          </Section>
+              <h2 ref={headingRef} tabIndex={-1} className="break-words text-xl font-semibold tracking-tight outline-none focus-visible:ring-2 focus-visible:ring-ring">{coreName(instance)}</h2>
+              <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                <span className="break-all">{instance.adapterId.replace(/^routeweaver\//, "")}</span>
+                <Badge variant="outline" className="max-w-full break-all">{instance.version}</Badge>
+                <span className="sr-only">核心配置已登记</span>
+              </div>
+            </div>
+            <ActionButton leadingIcon={<EditOutlined aria-hidden="true" />} onClick={onEditCore} disabled={!!scopeIssue} variant="outline">编辑核心</ActionButton>
+          </header>
           <ErrorNotice error={editError} />
-          <Section
-            title="2. 配置监听端点"
-            variant="plain"
-            extra={
-              <ActionButton
-                
-                disabled={!!scopeIssue}
-                onClick={() => onEditEndpoint(null)}
-                variant={endpoints?.length ? "outline" : "default"}
-              >
-                添加监听端点
-              </ActionButton>
-            }
-          >
-            {(retained.length > 0 || inventoryReadState !== "ready") && (
-              <Notice tone={inventoryReadState === "error" ? "warning" : "info"}>
-                {inventoryReadState === "error"
-                  ? retained.length ? "清单刷新失败，以下保留刚保存的监听端点。" : "清单刷新失败，以下为上次读取的监听端点。"
-                  : inventoryReadState === "paused"
-                    ? "等待网络连接，监听端点清单尚未刷新。"
-                    : inventoryReadState === "loading"
-                      ? "正在刷新监听端点清单。"
-                      : "监听端点已保存，清单尚未包含这次更新。"}
-                {inventoryReadState === "error" && <p>{inventoryError?.message}</p>}
-                {inventoryReadState !== "loading" && (
-                  <ActionButton onClick={onRefreshInventory} variant="outline" size="sm">刷新监听端点清单</ActionButton>
-                )}
-              </Notice>
-            )}
-            {endpoints?.length === 0 && inventoryReadState === "ready" && (
-              <p className="text-sm text-muted-foreground">此核心尚未配置监听端点。</p>
-            )}
-            {endpoints?.map((endpoint) => (
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-4" key={endpoint.id}>
-                <div className="min-w-0 space-y-1">
-                  <h3 className="break-words text-sm font-semibold">{endpoint.name}</h3>
-                  <p className="break-all text-sm">{endpoint.connection.host}:{endpoint.connection.port}</p>
-                  <p className="text-sm text-muted-foreground">{endpoint.connection.protocol}</p>
-                </div>
-                <ActionButton
-                  
-                  disabled={!!scopeIssue}
-                  aria-label={`编辑监听端点 ${endpoint.name}`}
-                  onClick={() => onEditEndpoint(endpoint)}
-                  variant="outline"
+          <div className="@container/core-layout min-w-0">
+            <div className="grid min-w-0 items-start gap-4 @min-[52rem]/core-layout:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+              <div className="min-w-0 space-y-4">
+                <Section
+                  title="监听端点"
+                  extra={
+                    <ActionButton
+
+                      disabled={!!scopeIssue}
+                      onClick={() => onEditEndpoint(null)}
+                      variant={endpoints?.length ? "outline" : "default"}
+                    >
+                      添加监听端点
+                    </ActionButton>
+                  }
                 >
-                  编辑
-                </ActionButton>
+                  {(retained.length > 0 || inventoryReadState !== "ready") && (
+                    <Notice tone={inventoryReadState === "error" ? "warning" : "info"}>
+                      {inventoryReadState === "error"
+                        ? retained.length ? "清单刷新失败，以下保留刚保存的监听端点。" : "清单刷新失败，以下为上次读取的监听端点。"
+                        : inventoryReadState === "paused"
+                          ? "等待网络连接，监听端点清单尚未刷新。"
+                          : "监听端点已保存，清单尚未包含这次更新。"}
+                      {inventoryReadState === "error" && <p>{inventoryError?.message}</p>}
+                      <ActionButton onClick={onRefreshInventory} variant="outline" size="sm">刷新监听端点清单</ActionButton>
+                    </Notice>
+                  )}
+                  {endpoints?.length === 0 && retained.length === 0 && inventoryReadState === "ready" && (
+                    <EmptyState title="此核心尚未配置监听端点。" description="添加监听端点后，可用它创建转发路径。" className="min-h-32 py-5" />
+                  )}
+                  {endpoints?.map((endpoint) => (
+                    <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-4" key={endpoint.id}>
+                      <div className="min-w-0 space-y-1">
+                        <h3 className="break-words text-sm font-semibold">{endpoint.name}</h3>
+                        <p className="break-all text-sm">{endpoint.connection.host}:{endpoint.connection.port}</p>
+                        <p className="text-sm text-muted-foreground">{endpoint.connection.protocol}</p>
+                      </div>
+                      <ActionButton
+
+                        disabled={!!scopeIssue}
+                        aria-label={`编辑监听端点 ${endpoint.name}`}
+                        onClick={() => onEditEndpoint(endpoint)}
+                        variant="outline"
+                      >
+                        编辑
+                      </ActionButton>
+                    </div>
+                  ))}
+                </Section>
+                {(!!deployments?.length || !!endpoints?.length) && <Section title="转发路径">
+                  {deployments?.length ? (
+                    <div className="space-y-2">
+                      {deployments.map((deployment) => (
+                        <ActionButton key={deployment.id} asChild variant="outline" className="h-auto max-w-full whitespace-normal text-left">
+                          <a href={`#routes?deployment=${encodeURIComponent(deployment.id)}`}>
+                            查看转发路径 {deployment.name}
+                          </a>
+                        </ActionButton>
+                      ))}
+                    </div>
+                  ) : endpoints?.length && !scopeIssue ? (
+                    <div className="space-y-3">
+                      <p className="text-sm text-muted-foreground">选择监听入口，继续设置流量去向。</p>
+                      {endpoints.map((endpoint) => (
+                        <ActionButton key={endpoint.id} asChild variant={endpoints.length === 1 ? "default" : "outline"} className="h-auto max-w-full whitespace-normal text-left">
+                          <a href={`#routes?entryEndpoint=${encodeURIComponent(endpoint.id)}&returnHost=${encodeURIComponent(instance.hostId)}&returnInstance=${encodeURIComponent(instance.id)}`}>
+                            用 {endpoint.name} 创建转发路径
+                          </a>
+                        </ActionButton>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">{scopeIssue ? "请先重新选择核心所在服务器，再继续配置转发路径。" : "添加监听端点后，可用它配置转发路径。"}</p>
+                  )}
+                  {endpoints && endpoints.length > 0 && (
+                    <p className="mt-3 text-sm text-muted-foreground">保存监听端点不会修改节点。转发路径需另行检查并确认应用。</p>
+                  )}
+                </Section>}
               </div>
-            ))}
-          </Section>
-          <Section title="3. 配置转发路径" variant="plain">
-            {deployments?.length ? (
-              <div className="space-y-2">
-                {deployments.map((deployment) => (
-                  <ActionButton key={deployment.id} asChild variant="outline" className="h-auto max-w-full whitespace-normal text-left">
-                    <a href={`#routes?deployment=${encodeURIComponent(deployment.id)}`}>
-                      查看转发路径 {deployment.name}
-                    </a>
-                  </ActionButton>
-                ))}
+              <div className="min-w-0 space-y-4">
+                <Section title="核心安装与运行">
+                  <HostCoreInstallation key={instance.id} instance={instance} />
+                  <InstanceObservation instanceId={instance.id} />
+                </Section>
+                <AccountingRecovery instanceId={instance.id} />
               </div>
-            ) : endpoints?.length && !scopeIssue ? (
-              <div className="space-y-3">
-                <p className="text-sm text-muted-foreground">选择监听入口，继续设置流量去向。</p>
-                {endpoints.map((endpoint) => (
-                  <ActionButton key={endpoint.id} asChild variant={endpoints.length === 1 ? "default" : "outline"} className="h-auto max-w-full whitespace-normal text-left">
-                    <a href={`#routes?entryEndpoint=${encodeURIComponent(endpoint.id)}&returnHost=${encodeURIComponent(instance.hostId)}&returnInstance=${encodeURIComponent(instance.id)}`}>
-                      用 {endpoint.name} 创建转发路径
-                    </a>
-                  </ActionButton>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">{scopeIssue ? "请先重新选择核心所在服务器，再继续配置转发路径。" : "添加监听端点后，可用它配置转发路径。"}</p>
-            )}
-            {endpoints && endpoints.length > 0 && (
-              <p className="mt-3 text-sm text-muted-foreground">保存监听端点不会修改节点。转发路径需另行检查并确认应用。</p>
-            )}
-          </Section>
-          <AccountingRecovery instanceId={instance.id} />
-          {enrollmentOpen && (
-            <Enrollment
-              key={`${instance.hostId}:${instance.id}`}
-              instance={instance}
-              scopeIssue={scopeIssue}
-              readScopeIssue={readScopeIssue}
-              onClose={onCloseEnrollment}
-            />
-          )}
+            </div>
+          </div>
+
         </>
       )}
     </section>
   );
 }
 function Enrollment({
-  instance,
+  host,
   scopeIssue,
   readScopeIssue,
   onClose,
 }: {
-  instance: CoreInstance;
+  host: HostRecord;
   scopeIssue: string | null;
   readScopeIssue: () => string | null;
   onClose: () => void;
 }) {
+  const observation = useQuery({
+    queryKey: ["node-observation", host.id],
+    queryFn: () => request<{ config: { observerInstanceId?: string } }>(`/admin/nodes/${encodeURIComponent(host.id)}/observability`),
+  });
   const tokenId = useId();
   const [form] = useForm();
   const [dateOpen, setDateOpen] = useState(false);
@@ -1264,7 +1259,6 @@ function Enrollment({
   const [result, setResult] = useState<{
     scope: {
       nodeId: string;
-      instanceId: string;
       enrollmentEpoch: string;
     };
     token: string;
@@ -1284,13 +1278,12 @@ function Enrollment({
     mutationFn: async (values: {
       expiresAt: string;
       nodeId: string;
-      instanceId: string;
     }) => {
       if (!active.current) return;
       const issue = readScopeIssue();
       if (issue) throw new Error(issue);
       const issued = await post<NonNullable<typeof result>>(
-        "/agent/enrollments",
+        "/agent/hosts/enrollments",
         values,
       );
       // Token material belongs only to this mounted task, never the mutation
@@ -1318,7 +1311,7 @@ function Enrollment({
   return (
     <TaskDialog
       bodyProps={{ className: "space-y-5" }}
-      title="接入核心实例"
+      title="接入服务器 Agent"
       open
       pending={mutation.isPending}
       footer={null}
@@ -1334,11 +1327,11 @@ function Enrollment({
         <>
           <Notice tone="success" title="接入凭据已创建">
             {
-              "\u53EA\u5C06\u5B83\u914D\u7F6E\u5230\u6B64\u670D\u52A1\u5668\u7684\u5BF9\u5E94\u6838\u5FC3\u5B9E\u4F8B\u3002\u4E0D\u8981\u5206\u4EAB\u7ED9\u5176\u4ED6\u4EBA\u3002"
+              "只在此服务器配置 Agent，后续添加核心无需重新接入"
             }
           </Notice>
           <p className="text-sm text-muted-foreground">
-            凭据创建不会安装或启动 Agent。请在对应服务器配置 Agent，再返回查看上报。
+            将令牌保存到服务器的 /etc/routeweaver/agent.token，并将文件权限设为 600；ROUTEWEAVER_CONTROL_PLANE 使用控制台的 HTTPS 地址
           </p>
           <div className="grid gap-2 text-sm font-medium mt-5">
             <label htmlFor={tokenId}>接入令牌</label>
@@ -1350,29 +1343,11 @@ function Enrollment({
               autoComplete="off"
             />
           </div>
-          <Accordion type="multiple" defaultValue={[]} className="w-full">
-            {[
-              {
-                key: "scope",
-                label: "Agent \u914D\u7F6E\u8303\u56F4",
-                children: (
-                  <CodePreview
-                    content={JSON.stringify(result.scope, null, 2)}
-                  />
-                ),
-              },
-            ].map((item) => (
-              <AccordionItem key={String(item.key)} value={String(item.key)}>
-                <AccordionTrigger>{item.label}</AccordionTrigger>
-                <AccordionContent>
-                  <div className="space-y-4">{item.children}</div>
-                </AccordionContent>
-              </AccordionItem>
-            ))}
-          </Accordion>
+          <div className="space-y-2"><p className="text-sm font-medium">启动服务器 Agent</p><CodePreview content={`routeweaver-node-agent --mode host --service --node-id '${result.scope.nodeId}' --enrollment-epoch '${result.scope.enrollmentEpoch}' --control-plane "$ROUTEWEAVER_CONTROL_PLANE" --token-file /etc/routeweaver/agent.token --state-dir /var/lib/routeweaver/agent/${result.scope.enrollmentEpoch} --core-store /var/lib/routeweaver/cores --max-policy-lease 15m --allow-local-process --observe-node`} /></div>
+
           <div className="space-y-3 border-t pt-4">
             <p className="text-sm text-muted-foreground">关闭后将清除此页显示的令牌，请先保存到对应服务器。</p>
-            <ActionButton onClick={close} variant="default">关闭令牌并查看实例</ActionButton>
+            <ActionButton onClick={close} variant="default">关闭</ActionButton>
           </div>
         </>
       ) : (
@@ -1387,15 +1362,17 @@ function Enrollment({
             submitting.current = true;
             mutation.mutate({
               expiresAt: v.expiresAt,
-              nodeId: instance.hostId,
-              instanceId: instance.id,
+              nodeId: host.id,
             });
           }}
         >
           <ErrorNotice error={mutation.error} />
           <p className="muted text-sm text-muted-foreground mb-5">
-            创建仅能访问此核心实例的接入凭据。如果实例已接入，旧凭据会失效，需在服务器更新配置。
+            Agent 将管理这台服务器上的所有核心。重新接入会使旧 Agent 凭据失效。
           </p>
+          {observation.data?.config?.observerInstanceId && <Notice tone="warning">
+            接入后将由服务器 Agent 统一采集资源数据，原资源历史与网卡用量基线会重新开始记录
+          </Notice>}
           <AppField
             name="expiresAt"
             label="凭据到期时间"

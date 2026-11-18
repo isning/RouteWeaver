@@ -1,7 +1,7 @@
 import { SubscriptionFetchPrivacySettings } from "./SubscriptionFetchAlerts";
 import { useSecurityRecovery, SecurityRecoveryNotice, type SecurityRecovery } from "./SecurityRecovery";
 import { Metadata } from "@/ui-patterns/metadata";
-import { ContextHeader, ContextLayout, PageSection, SectionIndex } from "@/ui-patterns/page-layout";
+import { PageSection } from "@/ui-patterns/page-layout";
 import { Suspense, useLayoutEffect, useId, useRef, useState, type ReactNode } from "react";
 import { PageBoundary } from "./PageBoundary";
 import { LoadingState } from "@/ui-patterns/loading-state";
@@ -17,7 +17,7 @@ import { AppField, AppForm, useForm, useWatch } from "@/ui-patterns/form";
 import { ActionButton } from "@/ui-patterns/actions";
 import { Notice } from "@/ui-patterns/notice";
 import { useConfirm } from "@/ui-patterns/confirmations";
-import { ErrorNotice, PageHeader, QueryState, Section } from "./components";
+import { EmptyState, ErrorNotice, PageHeader, QueryState, Section } from "./components";
 import { APIError, list, post, request } from "./api";
 import { dateLabel } from "./model";
 import { useUnsavedChanges } from "./navigation";
@@ -52,7 +52,7 @@ const passwordRule = {
     return bytes >= 12 && bytes <= 72
       ? Promise.resolve()
       : Promise.reject(
-          new Error("密码须为 12–72 个 UTF-8 字节（中文通常每字 3 字节）。"),
+          new Error(bytes < 12 ? "密码过短，请增加长度" : "密码过长，请缩短后重试"),
         );
   },
 };
@@ -211,36 +211,14 @@ function AccountSecurityTask({
   const blocked = pending || recovery.blocked;
   useUnsavedChanges(dirty || revokeDirty || pending);
   return (
-    <>
-      <ContextHeader navigation contentKind="settings"><PageHeader title="账号安全" /></ContextHeader>
+    <div className="mx-auto w-full min-w-0 max-w-4xl space-y-6">
+      <PageHeader title="账号安全" />
       <SecurityRecoveryNotice recovery={recovery} pending={pending} />
       {session.user.passwordChangeRequired && (
         <Notice tone="warning" title="请先更换临时密码">
           管理员已重置你的密码。更换后才能继续访问订阅和其他工作区内容。
         </Notice>
       )}
-      <ContextLayout
-        contentKind="settings"
-        navigation
-        rail={
-          <SectionIndex
-            label="本页账号设置"
-            sections={[
-              { id: `${sectionID}-account-password`, label: "修改密码" },
-              { id: `${sectionID}-account-sessions`, label: "登录会话" },
-              ...(!session.user.passwordChangeRequired
-                ? [{ id: `${sectionID}-account-privacy`, label: "订阅隐私" }]
-                : []),
-              ...(session.user.role === "admin" && !session.user.passwordChangeRequired
-                ? [{ id: `${sectionID}-account-recovery`, label: "账号恢复与退役" }]
-                : []),
-              ...(mfaSettings
-                ? [{ id: `${sectionID}-account-mfa`, label: "管理员二次验证" }]
-                : []),
-            ]}
-          />
-        }
-      >
       <PageSection id={`${sectionID}-account-password`} label="修改密码设置">
       <Section title="修改密码">
         <AppForm
@@ -263,7 +241,7 @@ function AccountSecurityTask({
           <AppField
             name="newPassword"
             label="新密码"
-            description="使用 12–72 个 UTF-8 字节；中文通常每字占 3 字节。"
+            description="建议混合使用字母、数字和符号"
             rules={[{ required: true }, passwordRule]}
           >
             <PasswordInput autoComplete="new-password" revealLabel="新密码" />
@@ -318,7 +296,7 @@ function AccountSecurityTask({
           retry={() => sessions.refetch()}
         >
           {sessions.data?.length === 0 && (
-            <p className="text-sm text-muted-foreground">没有有效会话。</p>
+            <EmptyState title="没有有效会话。" />
           )}
           {Boolean(sessions.data?.length) && <ul className="divide-y rounded-lg border">
             {sessions.data?.map((entry, index) => (
@@ -423,8 +401,7 @@ function AccountSecurityTask({
           </PageBoundary>
         </PageSection>
       )}
-      </ContextLayout>
-    </>
+    </div>
   );
 }
 
@@ -484,7 +461,7 @@ function AccountRecovery({ session, recovery }: { session: Session; recovery: Se
         retry={() => accounts.refetch()}
       >
         {accounts.data?.length === 0 && (
-          <p className="text-sm text-muted-foreground">没有账号记录。</p>
+          <EmptyState title="没有账号记录。" />
         )}
         {Boolean(accounts.data?.length) && <ul className="divide-y rounded-lg border">
           {accounts.data?.map((account) => (
@@ -700,7 +677,7 @@ function AccountRecoveryTask({
           <AppField
             name="newPassword"
             label="临时密码"
-            description="使用 12–72 个 UTF-8 字节；中文通常每字占 3 字节。"
+            description="建议混合使用字母、数字和符号"
             rules={[{ required: true }, passwordRule]}
           >
             <PasswordInput autoComplete="new-password" revealLabel="临时密码" />

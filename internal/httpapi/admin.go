@@ -12,6 +12,7 @@ import (
 )
 
 type Settings struct {
+	Logo         string `json:"logo,omitempty"`
 	Name         string `json:"name"`
 	Timezone     string `json:"timezone"`
 	Registration string `json:"registration"`
@@ -137,8 +138,20 @@ func (h *server) registerAdmin(r chi.Router) {
 		if !decode(w, r, &v) {
 			return
 		}
-		if v.Name == "" || v.Timezone != "UTC+8" || v.Registration != "invite" {
-			fail(w, 400, "name required; timezone UTC+8 and invite-only registration are supported")
+		if !validBranding(v.Name, v.Logo) {
+			fail(w, 400, "invalid platform name or logo; use PNG, JPEG or safe SVG up to 128 KiB")
+			return
+		}
+		if v.Timezone == "" {
+			fail(w, 400, "timezone required")
+			return
+		}
+		if _, err := service.DisplayLocation(v.Timezone); err != nil {
+			fail(w, 400, "invalid timezone")
+			return
+		}
+		if v.Registration != "invite" && v.Registration != "closed" {
+			fail(w, 400, "registration must be invite or closed")
 			return
 		}
 		if e := h.s.Put("settings", "platform", v); e != nil {

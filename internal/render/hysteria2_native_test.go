@@ -12,15 +12,25 @@ import (
 
 // These are exact-version parser checks, not evidence of connectivity.
 func TestNativeHysteria2Configuration(t *testing.T) { nativePasswordTLSConfiguration(t, "hysteria2") }
+func TestNativeTUICConfiguration(t *testing.T)      { nativePasswordTLSConfiguration(t, "tuic") }
 func TestNativeAnyTLSConfiguration(t *testing.T)    { nativePasswordTLSConfiguration(t, "anytls") }
 
 func nativePasswordTLSConfiguration(t *testing.T, protocol string) {
 	t.Helper()
 	connection := domain.Connection{Protocol: protocol, Host: "127.0.0.1", Port: 18443, Password: "synthetic-password-tls-fixture", TLS: &domain.TLSOptions{Enabled: true, ServerName: "localhost"}}
+	if protocol == "tuic" {
+		connection.UUID = "00000000-0000-4000-8000-000000000001"
+		connection.TUIC = &domain.TUICOptions{CongestionControl: "bbr"}
+	}
+	if protocol == "hysteria2" {
+		connection.Hysteria2 = &domain.Hysteria2Options{Obfs: &domain.ObfuscationOptions{Type: "salamander", Password: "synthetic-obfs"}, UpMbps: 100, DownMbps: 200}
+	}
 	if protocol == "anytls" {
 		connection.TLS.ALPN = []string{"http/1.1"}
 	}
 	for _, target := range []nativeTarget{
+		{render.Target{AdapterID: "mihomo", Version: render.MihomoVersion}, "mihomo", "ROUTEWEAVER_MIHOMO_BIN", ""},
+		{render.Target{AdapterID: "sing-box", Version: render.StockSingBoxVersion}, "sing-box", "ROUTEWEAVER_STOCK_CORE_BIN_DIR", "sing-box-" + render.StockSingBoxVersion + "-linux-amd64"},
 		{render.Target{AdapterID: "sing-box", Version: render.SingBoxVersion}, "sing-box", "ROUTEWEAVER_SINGBOX_BIN", ""},
 		{render.Target{AdapterID: render.ServerAdapterSingBox, Version: render.HistoricalStockSingBoxVersion}, "sing-box-server", "ROUTEWEAVER_SINGBOX_BIN", ""},
 		{render.Target{AdapterID: render.ServerAdapterSingBox, Version: render.StockSingBoxVersion}, "sing-box-server", "ROUTEWEAVER_STOCK_CORE_BIN_DIR", "sing-box-" + render.StockSingBoxVersion + "-linux-amd64"},
@@ -28,7 +38,7 @@ func nativePasswordTLSConfiguration(t *testing.T, protocol string) {
 		t.Run(target.AdapterID+"/"+target.Version, func(t *testing.T) {
 			binary := target.binary(t)
 			var artifacts []domain.Artifact
-			if target.AdapterID == "sing-box" {
+			if target.AdapterID == "sing-box" || target.AdapterID == "mihomo" {
 				profile := clientProfile()
 				for i := range profile.Endpoints {
 					profile.Endpoints[i].Connection = connection
@@ -63,7 +73,11 @@ func nativePasswordTLSConfiguration(t *testing.T, protocol string) {
 				}
 			}
 			file := filepath.Join(dir, artifacts[0].Path)
-			cmd := exec.Command(binary, "check", "-c", file)
+			args := []string{"check", "-c", file}
+			if target.AdapterID == "mihomo" {
+				args = []string{"-t", "-d", dir, "-f", file}
+			}
+			cmd := exec.Command(binary, args...)
 			cmd.Dir = filepath.Dir(file)
 			if output, err := cmd.CombinedOutput(); err != nil {
 				t.Fatalf("native password-TLS parser rejected generated configuration: %v\n%s", err, output)

@@ -307,7 +307,7 @@ it("keeps newer name and independent domain input when reconciliation fails and 
   await user.click(await screen.findByRole("button", { name: "编辑平台名称" }));
   const form = within(screen.getByRole("form", { name: "平台基本设置" }));
   const name = form.getByRole("textbox", { name: "平台名称" });
-  const domain = screen.getByRole("textbox", { name: "订阅域名草稿" });
+  const domain = screen.getByRole("textbox", { name: "订阅链接模板" });
   fireEvent.change(name, { target: { value: "Submitted platform" } });
   fireEvent.change(domain, { target: { value: "https://draft.example.test" } });
   await user.click(form.getByRole("button", { name: "保存设置" }));

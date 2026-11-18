@@ -10,12 +10,15 @@ const ResourceHistoryPoints = 288
 // estimate. Missing derivatives stay nil; BreakBefore prevents interpolation
 // across restarts, dropped observations and source/configuration changes.
 type ResourcePoint struct {
-	ObservedAt             time.Time `json:"observedAt"`
-	CPUPercent             *float64  `json:"cpuPercent"`
-	MemoryUsedPercent      float64   `json:"memoryUsedPercent"`
-	ReceiveBytesPerSecond  *float64  `json:"receiveBytesPerSecond"`
-	TransmitBytesPerSecond *float64  `json:"transmitBytesPerSecond"`
-	BreakBefore            bool      `json:"breakBefore"`
+	MemoryTotalBytes       uint64                   `json:"memoryTotalBytes,omitempty"`
+	MemoryUsedBytes        *uint64                  `json:"memoryUsedBytes,omitempty"`
+	InterfaceRates         map[string]InterfaceRate `json:"interfaceRates,omitempty"`
+	ObservedAt             time.Time                `json:"observedAt"`
+	CPUPercent             *float64                 `json:"cpuPercent"`
+	MemoryUsedPercent      float64                  `json:"memoryUsedPercent"`
+	ReceiveBytesPerSecond  *float64                 `json:"receiveBytesPerSecond"`
+	TransmitBytesPerSecond *float64                 `json:"transmitBytesPerSecond"`
+	BreakBefore            bool                     `json:"breakBefore"`
 }
 type ResourceHistory struct {
 	Points []ResourcePoint `json:"points"`
@@ -60,13 +63,19 @@ func appendPoints(points []ResourcePoint, s Snapshot, now time.Time, interval, r
 		if !s.ObservedAt.After(last.ObservedAt) {
 			return h.Points, false
 		}
-		if (s.Continuity == "continuous" || last.BreakBefore) && s.ObservedAt.Truncate(interval).Equal(last.ObservedAt.Truncate(interval)) {
+		sameBucket := s.ObservedAt.Truncate(interval).Equal(last.ObservedAt.Truncate(interval))
+		gainsMemory := last.MemoryUsedBytes == nil && s.Metrics.MemoryTotalBytes > 0 && s.Metrics.MemoryAvailableBytes <= s.Metrics.MemoryTotalBytes
+		if sameBucket && !gainsMemory && (s.Continuity == "continuous" || s.Continuity == "interface_gap" || last.BreakBefore) {
 			return h.Points, false
 		}
 	}
 	h.Points = prunePoints(h.Points, now, retention, limit)
-	p := ResourcePoint{ObservedAt: s.ObservedAt, CPUPercent: s.CPUPercent, ReceiveBytesPerSecond: s.ReceiveBytesPerSecond, TransmitBytesPerSecond: s.TransmitBytesPerSecond, BreakBefore: s.Continuity != "continuous"}
-	if s.Metrics.MemoryTotalBytes > 0 {
+	p := ResourcePoint{ObservedAt: s.ObservedAt, CPUPercent: s.CPUPercent, ReceiveBytesPerSecond: s.ReceiveBytesPerSecond, TransmitBytesPerSecond: s.TransmitBytesPerSecond, BreakBefore: s.Continuity != "continuous" && s.Continuity != "interface_gap"}
+	p.InterfaceRates = s.InterfaceRates
+	if s.Metrics.MemoryTotalBytes > 0 && s.Metrics.MemoryAvailableBytes <= s.Metrics.MemoryTotalBytes {
+		used := s.Metrics.MemoryTotalBytes - s.Metrics.MemoryAvailableBytes
+		p.MemoryTotalBytes = s.Metrics.MemoryTotalBytes
+		p.MemoryUsedBytes = &used
 		p.MemoryUsedPercent = 100 * (1 - float64(s.Metrics.MemoryAvailableBytes)/float64(s.Metrics.MemoryTotalBytes))
 	}
 	if len(h.Points) > 0 {

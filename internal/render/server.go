@@ -105,7 +105,7 @@ func (r *ServerRegistry) Render(ir domain.ServerDeploymentIR) ([]domain.Artifact
 		if net.ParseIP(p.Listener.Connection.Host) == nil {
 			return nil, fmt.Errorf("programs[%d]: listener must bind an explicit IP address", i)
 		}
-		if p.Listener.Connection.Protocol == "socks" && p.Listener.Connection.Username == "" {
+		if p.Listener.Connection.Protocol == "socks" && p.Listener.Authentication != "principals" && p.Listener.Connection.Username == "" {
 			return nil, fmt.Errorf("programs[%d]: managed SOCKS listener requires authentication", i)
 		}
 		if p.Listener.Connection.Transport != nil && p.Listener.Connection.Transport.Authority != "" {
@@ -114,13 +114,16 @@ func (r *ServerRegistry) Render(ir domain.ServerDeploymentIR) ([]domain.Artifact
 		if !has(c.Protocols, p.Listener.Connection.Protocol) {
 			return nil, fmt.Errorf("SERVER_PROTOCOL_UNSUPPORTED: programs[%d].listener", i)
 		}
-		if len(p.Principals) > 0 && !has(c.MultiPrincipalProtocols, p.Listener.Connection.Protocol) {
+		if (len(p.Principals) > 0 || p.Listener.Authentication == "principals") && !has(c.MultiPrincipalProtocols, p.Listener.Connection.Protocol) {
 			return nil, fmt.Errorf("SERVER_PRINCIPALS_UNVERIFIED: programs[%d].listener", i)
 		}
 		var err error
 		p, err = normalizeServerProgram(p)
 		if err != nil {
 			return nil, fmt.Errorf("programs[%d]: %w", i, err)
+		}
+		if err := ValidateListenerNetworkOptions(p.Listener, p.Instance); err != nil {
+			return nil, err
 		}
 		if err := validateServerTLS(p); err != nil {
 			return nil, fmt.Errorf("programs[%d].tls: %w", i, err)
@@ -163,6 +166,71 @@ func (r *ServerRegistry) Render(ir domain.ServerDeploymentIR) ([]domain.Artifact
 	}
 	return artifacts, nil
 }
+
+// ValidateListenerNetworkOptions checks that the target implements each socket option.
+func ValidateListenerNetworkOptions(endpoint domain.ManagedEndpoint, instance domain.CoreInstance) error {
+	if endpoint.AcceptProxyProtocol && instance.AdapterID != ServerAdapterXray {
+		return fmt.Errorf("PROXY protocol requires stock Xray")
+	}
+	if udp := endpoint.UDP; udp != nil {
+		protocol := endpoint.Connection.Protocol
+		if instance.AdapterID != ServerAdapterSingBox || !has([]string{"socks", "shadowsocks", "hysteria2", "tuic"}, protocol) {
+			return fmt.Errorf("UDP socket options require a supported sing-box UDP listener")
+		}
+		if udp.TimeoutSeconds < 0 || udp.TimeoutSeconds > 2147483647 {
+			return fmt.Errorf("UDP timeout seconds must fit in a non-negative signed 32-bit integer")
+		}
+	}
+	options := endpoint.TCP
+	if options == nil {
+		return nil
+	}
+	if instance.AdapterID != ServerAdapterXray && instance.AdapterID != ServerAdapterSingBox {
+		return fmt.Errorf("TCP socket options require a stock Xray or sing-box core")
+	}
+	if endpoint.Connection.Protocol == "hysteria2" || endpoint.Connection.Protocol == "tuic" {
+		return fmt.Errorf("TCP socket options are unavailable for QUIC listeners")
+	}
+	if options.DisableKeepAlive {
+		if instance.AdapterID != ServerAdapterSingBox {
+			return fmt.Errorf("explicitly disabling TCP keepalive requires sing-box")
+		}
+		if options.KeepAliveIdleSeconds != 0 || options.KeepAliveIntervalSeconds != 0 {
+			return fmt.Errorf("TCP keepalive timers require keepalive to be enabled")
+		}
+	}
+	if options.KeepAliveIdleSeconds < 0 || options.KeepAliveIdleSeconds > 2147483647 ||
+		options.KeepAliveIntervalSeconds < 0 || options.KeepAliveIntervalSeconds > 2147483647 {
+		return fmt.Errorf("TCP keepalive seconds must fit in a non-negative signed 32-bit integer")
+	}
+	return nil
+}
+
+func ValidateEndpointReality(endpoint domain.ManagedEndpoint, instance domain.CoreInstance) error {
+	if endpoint.Reality == nil {
+		return nil
+	}
+	if instance.AdapterID != ServerAdapterXray && instance.AdapterID != ServerAdapterSingBox {
+		return fmt.Errorf("this core does not support REALITY listeners")
+	}
+	if endpoint.Connection.TLS == nil || !endpoint.Connection.TLS.Enabled || endpoint.Connection.TLS.Reality == nil {
+		return fmt.Errorf("REALITY server options require REALITY connection security")
+	}
+	target := domain.Connection{Protocol: "socks", Host: endpoint.Reality.HandshakeServer, Port: endpoint.Reality.HandshakePort}
+	if err := domain.ValidateConnection(target); err != nil {
+		return fmt.Errorf("invalid REALITY handshake target: %w", err)
+	}
+	if instance.AdapterID == ServerAdapterSingBox && len(endpoint.Reality.ServerNames) != 1 {
+		return fmt.Errorf("sing-box requires one REALITY server name")
+	}
+	if instance.AdapterID == ServerAdapterXray {
+		if err := validateXraySecurity(endpoint.Connection); err != nil {
+			return err
+		}
+	}
+	return validateServerTLS(domain.ServerProgram{Listener: endpoint, TLS: &domain.ServerTLSOptions{Reality: endpoint.Reality}})
+}
+
 func validateServerTLS(p domain.ServerProgram) error {
 	c := p.Listener.Connection
 	if c.TLS == nil || !c.TLS.Enabled {
@@ -269,7 +337,7 @@ func supportsStockXrayDestinationPolicy(p domain.ServerProgram) bool {
 type XrayServer struct{}
 
 func (XrayServer) ServerCapability() ServerCapability {
-	return ServerCapability{AdapterID: ServerAdapterXray, Versions: []string{StockXrayVersion, "26.10.29", HistoricalStockXrayVersion}, Protocols: []string{"socks", "shadowsocks", "vless", "trojan", "vmess"}, MultiPrincipalProtocols: []string{"vless"}}
+	return ServerCapability{AdapterID: ServerAdapterXray, Versions: []string{StockXrayVersion, "26.10.29", HistoricalStockXrayVersion}, Protocols: []string{"socks", "shadowsocks", "vless", "trojan", "vmess"}, MultiPrincipalProtocols: []string{"vless", "vmess", "trojan"}}
 }
 func (XrayServer) RenderServer(p domain.ServerProgram) (any, error) {
 	if !has((XrayServer{}).ServerCapability().Protocols, p.Listener.Connection.Protocol) {
@@ -321,6 +389,31 @@ func (XrayServer) RenderServer(p domain.ServerProgram) (any, error) {
 			}
 		}
 		inbound["streamSettings"] = stream
+	}
+	if p.Listener.TCP != nil || p.Listener.AcceptProxyProtocol {
+		sockopt := map[string]any{}
+		if p.Listener.AcceptProxyProtocol {
+			sockopt["acceptProxyProtocol"] = true
+		}
+		if options := p.Listener.TCP; options != nil {
+			if options.FastOpen != nil {
+				sockopt["tcpFastOpen"] = *options.FastOpen
+			}
+			if options.KeepAliveIdleSeconds != 0 {
+				sockopt["tcpKeepAliveIdle"] = options.KeepAliveIdleSeconds
+			}
+			if options.KeepAliveIntervalSeconds != 0 {
+				sockopt["tcpKeepAliveInterval"] = options.KeepAliveIntervalSeconds
+			}
+		}
+		if len(sockopt) != 0 {
+			stream, ok := inbound["streamSettings"].(map[string]any)
+			if !ok {
+				stream = xrayStream(c)
+				inbound["streamSettings"] = stream
+			}
+			stream["sockopt"] = sockopt
+		}
 	}
 	outs := []any{}
 	names := connectorNames(p)
@@ -402,6 +495,13 @@ func xrayStream(c domain.Connection) map[string]any {
 	if c.Transport != nil {
 		t := c.Transport
 		switch t.Type {
+		case "xhttp":
+			s["network"] = "xhttp"
+			settings := map[string]any{"path": t.Path, "host": t.Host}
+			if t.Mode != "" {
+				settings["mode"] = t.Mode
+			}
+			s["xhttpSettings"] = settings
 		case "ws":
 			s["network"] = "ws"
 			s["wsSettings"] = map[string]any{"path": t.Path, "host": t.Host}
@@ -450,10 +550,13 @@ func xrayStream(c domain.Connection) map[string]any {
 type SingBoxServer struct{}
 
 func (SingBoxServer) ServerCapability() ServerCapability {
-	return ServerCapability{AdapterID: ServerAdapterSingBox, Versions: []string{StockSingBoxVersion, HistoricalStockSingBoxVersion}, Protocols: []string{"socks", "shadowsocks", "vless", "trojan", "vmess", "hysteria2", "anytls"}, MultiPrincipalProtocols: []string{"vless"}}
+	return ServerCapability{AdapterID: ServerAdapterSingBox, Versions: []string{StockSingBoxVersion, HistoricalStockSingBoxVersion}, Protocols: []string{"socks", "shadowsocks", "vless", "trojan", "vmess", "hysteria2", "anytls", "tuic"}, MultiPrincipalProtocols: []string{"socks", "shadowsocks", "vless", "vmess", "trojan", "hysteria2", "anytls", "tuic"}}
 }
 func (SingBoxServer) RenderServer(p domain.ServerProgram) (any, error) {
-	if err := domain.ValidateConnection(p.Listener.Connection); err != nil && (p.Listener.Connection.Protocol == "hysteria2" || p.Listener.Connection.Protocol == "anytls") {
+	if p.Listener.Connection.Transport != nil && p.Listener.Connection.Transport.Type == "xhttp" {
+		return nil, fmt.Errorf("XHTTP_TARGET_UNSUPPORTED: Xray required")
+	}
+	if err := domain.ValidateServerListener(p); err != nil && (p.Listener.Connection.Protocol == "hysteria2" || p.Listener.Connection.Protocol == "anytls" || p.Listener.Connection.Protocol == "tuic") {
 		return nil, err
 	}
 	if err := validateDirectTLSConnectors(p); err != nil {
@@ -478,15 +581,48 @@ func (SingBoxServer) RenderServer(p domain.ServerProgram) (any, error) {
 
 	c := p.Listener.Connection
 	inbound := map[string]any{"type": c.Protocol, "tag": p.Listener.ID, "listen": c.Host, "listen_port": c.Port}
+	if options := p.Listener.TCP; options != nil {
+		if options.DisableKeepAlive {
+			inbound["disable_tcp_keep_alive"] = true
+		}
+		if options.FastOpen != nil {
+			inbound["tcp_fast_open"] = *options.FastOpen
+		}
+		if options.KeepAliveIdleSeconds != 0 {
+			inbound["tcp_keep_alive"] = fmt.Sprintf("%ds", options.KeepAliveIdleSeconds)
+		}
+		if options.KeepAliveIntervalSeconds != 0 {
+			inbound["tcp_keep_alive_interval"] = fmt.Sprintf("%ds", options.KeepAliveIntervalSeconds)
+		}
+	}
+	if options := p.Listener.UDP; options != nil {
+		if options.Fragment != nil {
+			inbound["udp_fragment"] = *options.Fragment
+		}
+		if options.TimeoutSeconds != 0 {
+			inbound["udp_timeout"] = fmt.Sprintf("%ds", options.TimeoutSeconds)
+		}
+	}
 	switch c.Protocol {
 	case "socks":
-		inbound["users"] = []any{map[string]any{"username": c.Username, "password": c.Password}}
+		if p.Listener.Authentication == "principals" || len(p.Principals) > 0 {
+			users := make([]any, 0, len(p.Principals))
+			for _, principal := range p.Principals {
+				users = append(users, map[string]any{"username": principal.Credential.Username, "password": principal.Credential.Password})
+			}
+			inbound["users"] = users
+		} else {
+			inbound["users"] = []any{map[string]any{"username": c.Username, "password": c.Password}}
+		}
 	case "shadowsocks":
 		inbound["method"] = c.Method
 		inbound["password"] = c.Password
-	case "vless", "trojan", "vmess", "hysteria2", "anytls":
+		if p.Listener.Authentication == "principals" || len(p.Principals) > 0 {
+			inbound["users"] = nativePrincipalUsers(p, false)
+		}
+	case "vless", "trojan", "vmess", "hysteria2", "anytls", "tuic":
 		user := map[string]any{"name": p.Listener.ID, "uuid": c.UUID}
-		if c.Protocol == "trojan" || (c.Protocol == "hysteria2" || c.Protocol == "anytls") {
+		if c.Protocol == "trojan" || (c.Protocol == "hysteria2" || c.Protocol == "anytls" || c.Protocol == "tuic") {
 			user = map[string]any{"name": p.Listener.ID, "password": c.Password}
 		}
 		if c.Flow != "" {
@@ -496,7 +632,32 @@ func (SingBoxServer) RenderServer(p domain.ServerProgram) (any, error) {
 		if len(p.Principals) > 0 || p.Listener.Authentication == "principals" {
 			users = nativePrincipalUsers(p, false)
 		}
+		if c.Protocol == "tuic" {
+			user["uuid"] = c.UUID
+			if o := c.TUIC; o != nil {
+				if o.UDPRelayMode != "" {
+					return nil, fmt.Errorf("TUIC_RELAY_MODE_OUTBOUND_ONLY")
+				}
+				if o.CongestionControl != "" {
+					inbound["congestion_control"] = o.CongestionControl
+				}
+			}
+		}
 		inbound["users"] = users
+		if h := c.Hysteria2; h != nil {
+			if len(h.ServerPorts) > 0 || h.HopIntervalSeconds > 0 {
+				return nil, fmt.Errorf("HYSTERIA2_HOPPING_OUTBOUND_ONLY: configure listener ports separately")
+			}
+			if h.Obfs != nil {
+				inbound["obfs"] = map[string]any{"type": h.Obfs.Type, "password": h.Obfs.Password}
+			}
+			if h.UpMbps > 0 {
+				inbound["up_mbps"] = h.UpMbps
+			}
+			if h.DownMbps > 0 {
+				inbound["down_mbps"] = h.DownMbps
+			}
+		}
 		out := singboxConnection(c, "unused")
 		if tr, ok := out["transport"]; ok {
 			if c.Transport != nil && c.Transport.Type == "ws" {
@@ -552,7 +713,12 @@ func (SingBoxServer) RenderServer(p domain.ServerProgram) (any, error) {
 	if len(sets) > 0 {
 		route["rule_set"] = sets
 	}
-	config := map[string]any{"log": map[string]any{"level": "warn"}, "inbounds": []any{inbound}, "outbounds": outs, "dns": map[string]any{"servers": []any{map[string]any{"type": "local", "tag": "rw-system-dns"}}, "final": "rw-system-dns"}, "route": route}
+	inbounds := []any{inbound}
+	if (c.Protocol == "socks" || c.Protocol == "shadowsocks") && p.Listener.Authentication == "principals" && len(p.Principals) == 0 {
+		// With no users, sing-box falls back to anonymous SOCKS or the shared Shadowsocks key.
+		inbounds = []any{}
+	}
+	config := map[string]any{"log": map[string]any{"level": "warn"}, "inbounds": inbounds, "outbounds": outs, "dns": map[string]any{"servers": []any{map[string]any{"type": "local", "tag": "rw-system-dns"}}, "final": "rw-system-dns"}, "route": route}
 	if remote {
 		config["experimental"] = map[string]any{"cache_file": map[string]any{"enabled": true}}
 	}

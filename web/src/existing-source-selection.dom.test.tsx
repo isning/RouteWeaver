@@ -655,7 +655,7 @@ it("labels an incomplete Source summary as awaiting verification rather than pau
     [{ id: "Unknown", name: "Unknown provider", kind: "text" } as Source],
     profile,
   );
-  const state = await screen.findByText("状态待核对");
+  const state = await screen.findByText("无法确认来源是否启用");
   expect(within(state.parentElement!).getByText("Unknown provider")).toBeTruthy();
   expect(screen.queryByRole("region", { name: "需要处理的来源" })).toBeNull();
 });

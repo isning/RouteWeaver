@@ -30,8 +30,9 @@ func run(ctx context.Context, args []string, out, errOut io.Writer) int {
 	flags.SetOutput(errOut)
 	stateDir := flags.String("state-dir", "", "private local storage directory (required)")
 	desiredFile := flags.String("desired", "", "local Desired JSON file; never a URL")
-	mode := flags.String("mode", "fixture", "fixture, check, supervise, or catalog")
+	mode := flags.String("mode", "fixture", "host, fixture, check, supervise, or catalog")
 	operation := flags.String("operation", "reconcile", "reconcile, recover, or status")
+	managedBinary := flags.String("managed-xray-binary", "", "trusted packaged managed-Xray executable for host mode")
 	binary := flags.String("binary", "", "absolute trusted native core executable path")
 	coreStore := flags.String("core-store", "", "private immutable official-release store; required by catalog mode")
 	maxLease := flags.Duration("max-policy-lease", 0, "explicit maximum policy lease, e.g. 15m (required)")
@@ -51,7 +52,7 @@ func run(ctx context.Context, args []string, out, errOut io.Writer) int {
 	enableRawCoreLogs := flags.Bool("raw-core-logs-accept-sensitive", false, "upload unredacted owned-core stdout/stderr to enrolled control plane; may include IPs, destinations and secrets; administrator access, also requires enabled instance log policy; bounded memory queue is lost on restart")
 	enableCoreDiagnostics := flags.Bool("core-diagnostics", false, "opt-in fixed core diagnostic categories only; no raw logs; qualified versions only")
 	enableDiagnostics := flags.Bool("diagnostics", true, "process bounded administrator-authorized public HTTPS diagnostic jobs in outbound mode")
-	observeNode := flags.Bool("observe-node", false, "read bounded Linux procfs resource/NIC counters; enable only on the designated instance per node")
+	observeNode := flags.Bool("observe-node", false, "read bounded Linux procfs resource/NIC counters; host mode reports once per server")
 	if err := flags.Parse(args); err != nil {
 		return 2
 	}
@@ -71,6 +72,39 @@ func run(ctx context.Context, args []string, out, errOut io.Writer) int {
 	}
 	if *observeNode && *controlPlane == "" {
 		fmt.Fprintln(errOut, "observe-node requires explicitly enrolled outbound control-plane mode")
+		return 2
+	}
+	if *mode == "host" {
+		if *controlPlane == "" || *tokenFile == "" || *coreStore == "" || *instanceID != "" || *binary != "" || *demo || *desiredFile != "" || *operation != "reconcile" || (!*service && (*runFor <= 0 || *runFor > time.Hour)) || ((*enableRawCoreLogs || *enableCoreDiagnostics) && !*allowProcess) {
+			fmt.Fprintln(errOut, "host mode requires host enrollment, core-store and service or bounded run-for; do not specify a core instance or arbitrary core binary")
+			return 2
+		}
+		info, err := os.Lstat(*tokenFile)
+		if err != nil || !info.Mode().IsRegular() || info.Mode().Perm()&0077 != 0 || info.Size() > 8192 {
+			fmt.Fprintln(errOut, "token-file must be an existing private regular file")
+			return 2
+		}
+		token, err := os.ReadFile(*tokenFile)
+		if err != nil {
+			fmt.Fprintln(errOut, "cannot read host token file")
+			return 2
+		}
+		hostCtx := ctx
+		stop := func() {}
+		if !*service {
+			hostCtx, stop = context.WithTimeout(ctx, *runFor)
+		}
+		defer stop()
+		err = agent.RunHostService(hostCtx, agent.HostServiceOptions{ObserveNode: *observeNode, StateDir: *stateDir, CoreStore: *coreStore, MaxLease: *maxLease, AllowProcess: *allowProcess, ManagedXrayBinary: *managedBinary, Diagnostics: *enableDiagnostics, CoreDiagnostics: *enableCoreDiagnostics, RawCoreLogs: *enableRawCoreLogs, Transport: agent.HTTPTransportOptions{BaseURL: *controlPlane, Token: strings.TrimSpace(string(token)), Scope: agent.Scope{NodeID: *nodeID, InstanceID: "host-agent", EnrollmentEpoch: *epoch}, RequestTimeout: 5 * time.Second, MaxAttempts: 3, Backoff: 250 * time.Millisecond, AllowLoopbackHTTP: *allowLoopbackHTTP}, OnError: func(err error) { fmt.Fprintln(errOut, err) }})
+		if err != nil {
+			fmt.Fprintln(errOut, err)
+			return 1
+		}
+		fmt.Fprintln(out, "Host agent stopped")
+		return 0
+	}
+	if *managedBinary != "" {
+		fmt.Fprintln(errOut, "managed-xray-binary is only valid in host mode")
 		return 2
 	}
 	var d agent.Desired

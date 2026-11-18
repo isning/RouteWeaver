@@ -77,7 +77,7 @@ export function ServerConnectorConnectionDialog({ program, schemaVersion, connec
         const prepared = prepareConnectorConnection(original.connection, form.getFieldsValue(true).connection);
         if (prepared.error || !prepared.connection) { setError(prepared.error || "请检查连接参数。"); return; }
         const connection = prepared.connection;
-        if (["hysteria2", "anytls"].includes(connection.protocol) && program.instance.adapterId !== "routeweaver/sing-box") {
+        if (["hysteria2", "anytls", "tuic"].includes(connection.protocol) && program.instance.adapterId !== "routeweaver/sing-box") {
           setError("Hysteria2 / AnyTLS 目前仅支持 sing-box。"); return;
         }
         if (prepared.removedFields.length) confirm({ title: "移除不适用的连接参数？", description: `本次协议、安全或传输切换将移除：${prepared.removedFields.join("、")}。其他参数保留。`, confirmLabel: "移除并采用", cancelLabel: "返回编辑" }, () => accept(connection));

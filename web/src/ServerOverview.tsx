@@ -1,3 +1,4 @@
+import { Section } from "./components";
 import { ResourceHistory } from "./ResourceHistory";
 import { useEffect, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -43,22 +44,50 @@ export function CoreStatusSummary({ instanceId }: { instanceId: string }) {
     refetchInterval: 30000,
   });
   const state = query.data?.instanceId === instanceId ? query.data : undefined;
-  const phase = state?.phase;
-  const label = phase ? phaseLabel(phase) : undefined;
-  const currentLabel = label && label !== phase ? label : "状态待核对";
+  const phase = typeof state?.phase === "string" ? state.phase : undefined;
+  const label = phase === "unknown" ? "未知" : phase ? phaseLabel(phase) : undefined;
+  const hasKnownPhase = typeof label === "string" && label !== phase;
+  const currentReport = phase === state?.state?.phase && phase !== "pending-new-generation" ? state?.state : undefined;
+  const needsReview = Boolean(currentReport && (
+    ["validation_failed", "apply_failed", "blocked", "unknown"].includes(phase || "") || currentReport.recoveryRequired
+  ));
+  const installationFailed = phase === "blocked" &&
+    ["core_installation_failed", "installed_adapter_unavailable"].includes(currentReport?.code || "");
+  const currentLabel = installationFailed
+    ? "安装失败"
+    : hasKnownPhase
+      ? label
+      : query.isPaused
+        ? "等待网络连接"
+        : query.isError
+          ? "无法读取核心状态"
+          : "未知";
   const observed = state?.state?.observed;
-  const needsReview = phase !== "pending-new-generation" && (
-    ["validation_failed", "apply_failed", "blocked", "unknown"].includes(phase || "") || state?.state?.recoveryRequired
-  );
+  const responseIssue = query.isSuccess && !hasKnownPhase
+    ? phase
+      ? `未识别的核心状态：${phase}`
+      : state
+        ? "核心状态响应缺少状态字段"
+        : "核心状态响应缺少正确的实例标识"
+    : undefined;
+  const requestIssue = query.error?.message;
+  const reportIssue = needsReview ? currentReport?.errorDetail || currentReport?.code : undefined;
   return <div className="min-w-0 space-y-1 text-sm" aria-label="核心状态摘要">
     <p className="text-xs text-muted-foreground">平台最近记录</p>
     <div className="flex flex-wrap items-center gap-2">
-      <Badge variant={needsReview ? "outline" : "secondary"}>{query.isPending ? "正在读取状态" : currentLabel}</Badge>
-      {query.isError && <span className="text-muted-foreground">状态刷新失败</span>}
-      {query.isPaused && <span className="text-muted-foreground">等待网络连接</span>}
+      <Badge variant={needsReview ? "outline" : "secondary"}>{query.isPending && !query.isPaused ? "正在读取状态" : currentLabel}</Badge>
+      {hasKnownPhase && query.isError && <span className="text-muted-foreground">状态刷新失败</span>}
+      {hasKnownPhase && query.isPaused && <span className="text-muted-foreground">等待网络连接</span>}
     </div>
     {observed?.observedAt && <p className="text-xs text-muted-foreground">上次上报 {dateLabel(observed.observedAt)}</p>}
-    {needsReview && <p className="text-xs text-muted-foreground">查看接入与配置，核对节点处理结果。</p>}
+    {(requestIssue || responseIssue) && (
+      <p role="status" className="whitespace-pre-wrap wrap-anywhere text-xs text-destructive">{requestIssue || responseIssue}</p>
+    )}
+    {reportIssue ? (
+      <code className="block whitespace-pre-wrap wrap-anywhere text-xs text-destructive">{reportIssue}</code>
+    ) : needsReview && (
+      <p className="text-xs text-muted-foreground">在「核心与监听」查看最近一次处理结果</p>
+    )}
   </div>;
 }
 
@@ -74,7 +103,7 @@ export function ServerResourceOverview({ host, onOpenResources }: { host: HostRe
   const query = useQuery({
     queryKey: ["node-observation", host.id],
     queryFn: () => request<NodeObservationView>(observationPath(host.id)),
-    refetchInterval: 30000,
+    refetchInterval: 5000,
   });
   const data = query.data?.nodeId === host.id && query.data.config ? query.data : undefined;
   const sample = data?.latest;
@@ -89,27 +118,21 @@ export function ServerResourceOverview({ host, onOpenResources }: { host: HostRe
     {restriction && <Notice tone="warning" title={restriction === "provider-exhausted" ? "供应商额度已耗尽" : restriction === "provider-expired" ? "供应商服务已到期" : "供应商用量依据需要更新"} action={<ActionButton variant="outline" size="sm" onClick={onOpenResources}>核对额度与周期</ActionButton>}>
       托管线路暂停新连接与续期。请核对供应商周期与用量。
     </Notice>}
-    <Card className="min-w-0 gap-4">
-      <CardHeader className="gap-3">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0 space-y-1">
-            <CardTitle>资源与流量</CardTitle>
-            {sample && <p className="text-xs text-muted-foreground">{stale ? "较早的数据" : "数据更新时间"} {dateLabel(sample.observedAt)}</p>}
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <ActionButton variant="ghost" size="sm" leadingIcon={<RotateCw aria-hidden="true" />} aria-label="刷新资源概览" pending={query.isFetching} keepFocusableWhilePending onClick={() => query.refetch()} />
-            <ActionButton variant="outline" size="sm" leadingIcon={<ChartNoAxesCombined aria-hidden="true" />} onClick={onOpenResources}>{!sample ? "设置采集与额度" : "查看资源与额度"}</ActionButton>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-3">
+    <Section
+      title="资源与流量"
+      description={sample ? `${stale ? "较早的数据" : "数据更新时间"} ${dateLabel(sample.observedAt)}` : undefined}
+      extra={<>
+        <ActionButton variant="ghost" size="sm" leadingIcon={<RotateCw aria-hidden="true" />} aria-label="刷新资源概览" pending={query.isFetching} keepFocusableWhilePending onClick={() => query.refetch()} />
+        <ActionButton variant="outline" leadingIcon={<ChartNoAxesCombined aria-hidden="true" />} onClick={onOpenResources}>{!sample ? "设置采集与额度" : "查看资源与额度"}</ActionButton>
+      </>}
+    >
         {query.isError && <Notice tone="warning" role="status">{data ? "资源刷新失败，以下保留上次读取的数据。" : "无法读取资源数据，请重试。"}</Notice>}
         {!query.isPending && !query.isError && !data && <p role="status" className="text-sm text-muted-foreground">资源数据尚未确定，请刷新重试。</p>}
         {query.isPaused && <p role="status" className="text-sm text-muted-foreground">等待网络连接{data ? "，以下为上次读取的数据。" : "。"}</p>}
         {query.isPending && !query.isPaused && <p role="status" className="text-sm text-muted-foreground">正在读取资源数据…</p>}
         {!query.isPending && !query.isError && data && !sample && <div className="space-y-1 py-2">
-          <p className="text-sm font-medium">{data?.config.observerInstanceId ? "尚未收到服务器资源数据" : "尚未设置服务器资源监控"}</p>
-          <p className="text-sm text-muted-foreground">{data?.config.observerInstanceId ? "收到数据后，这里会显示 CPU、内存和网卡流量。若长时间没有数据，请检查监控设置和服务器连接。" : "选择一个核心负责上报这台服务器的资源数据，避免重复统计。"}</p>
+          <p className="text-sm font-medium">{data?.config.observerKind === "host-agent" || data?.config.observerInstanceId ? "尚未收到服务器资源数据" : "尚未设置服务器资源监控"}</p>
+          <p className="text-sm text-muted-foreground">{data?.config.observerKind === "host-agent" || data?.config.observerInstanceId ? "收到数据后，这里会显示 CPU、内存和网卡流量。若长时间没有数据，请检查监控设置和服务器连接。" : "接入服务器 Agent 后，这里会显示资源数据。"}</p>
         </div>}
         {(sample || plan) && <div className="grid min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {sample && <>
@@ -117,12 +140,12 @@ export function ServerResourceOverview({ host, onOpenResources }: { host: HostRe
               {sample.cpuPercent == null && <p>需要连续两次有效数据才能计算。</p>}
               <p>1 分钟负载 {Number.isFinite(sample.metrics.load1) ? sample.metrics.load1.toFixed(2) : "未确定"}</p>
             </Metric>
-            <Metric icon={<MemoryStick />} label="可用内存" value={bytes(sample.metrics.memoryAvailableBytes)}><p>总内存 {bytes(sample.metrics.memoryTotalBytes)}</p></Metric>
-            <Metric icon={<ArrowDownUp />} label="计费网卡流量" value={rate(sample.receiveBytesPerSecond)}>
+            <Metric icon={<MemoryStick />} label="已用内存" value={bytes(sample.metrics.memoryTotalBytes - sample.metrics.memoryAvailableBytes)}><p>总内存 {bytes(sample.metrics.memoryTotalBytes)}</p><p>可用 {bytes(sample.metrics.memoryAvailableBytes)}</p></Metric>
+            {!!data?.config.billedInterfaces?.length && <Metric icon={<ArrowDownUp />} label="计费网卡流量" value={rate(sample.receiveBytesPerSecond)}>
               {(sample.receiveBytesPerSecond == null || sample.transmitBytesPerSecond == null) && <p>需要连续两次有效数据才能计算网速。</p>}
               <p>接收 / 秒</p><p className="font-medium text-foreground">发送 {rate(sample.transmitBytesPerSecond)}</p>
               <p>{data?.config.billedInterfaces?.length ? data.config.billedInterfaces.join("、") : "尚未选择计费网卡"}</p>
-            </Metric>
+            </Metric>}
           </>}
           <Metric icon={<Wallet />} label="供应商剩余额度" value={!plan ? "未设置额度" : plan.mode === "unlimited" ? "不限量" : bytes(provider?.remainingBytes)}>
             {plan && <>
@@ -139,9 +162,8 @@ export function ServerResourceOverview({ host, onOpenResources }: { host: HostRe
           <p className="min-w-0 break-words">{reasonLabel(provider!.statusReason)}</p>
           <ActionButton variant="ghost" size="sm" onClick={onOpenResources}>核对供应商用量</ActionButton>
         </div>}
-      </CardContent>
-    </Card>
-    {data && <ResourceHistory nodeId={host.id} />}
+    </Section>
+    {data && <ResourceHistory key={host.id} nodeId={host.id} latest={sample} />}
     {data && <ProviderCycleSummary data={data} />}
     {data && <ProviderForecast data={data} readFailed={query.isError || query.isPaused} />}
   </section>;
@@ -157,11 +179,11 @@ function ProviderCycleSummary({ data }: { data: NodeObservationView }) {
       !Number.isSafeInteger(total) || total <= 0 || !Number.isSafeInteger(used) || used < 0) return null;
   const percent = used / total * 100;
   return <Card role="region" aria-label="周期额度消耗" className="min-w-0 gap-3">
-    <CardHeader className="flex flex-wrap items-center justify-between gap-2">
+    <CardHeader className="flex flex-wrap px-5 sm:px-6 items-center justify-between gap-2">
       <CardTitle className="flex items-center gap-2 text-sm"><Wallet aria-hidden="true" className="size-4 text-muted-foreground" />周期额度消耗</CardTitle>
       <p className="text-sm font-semibold tabular-nums">{bytes(used)} <span className="font-normal text-muted-foreground">/ {bytes(total)}</span></p>
     </CardHeader>
-    <CardContent className="space-y-3">
+    <CardContent className="px-5 sm:px-6 space-y-3">
       <p className="text-sm tabular-nums text-muted-foreground">已用 {percent.toFixed(0)}%</p>
       <Progress aria-label="供应商额度使用比例" value={Math.min(100, percent)} className="h-2" />
       {provider.source && provider.source !== "none" && <p className="text-xs text-muted-foreground">用量来源：{sourceLabel(provider.source)}</p>}
@@ -195,8 +217,8 @@ export function ProviderForecast({ data, readFailed = false }: { data: NodeObser
   const dateValid = f?.exhaustedAt && Number.isFinite(Date.parse(f.exhaustedAt));
   const heading = !usable ? "暂时无法预测" : f.status === "estimated" && dateValid ? `预计 ${dateLabel(f.exhaustedAt!)} 耗尽` : f.status === "beyond_horizon" ? "按当前平均用量，周期结束或服务到期前预计不会耗尽" : f.status === "exhausted" ? "已记录的额度已用完" : "暂时无法预测";
   return <Card role="region" aria-label="流量耗尽预测" className="min-w-0 gap-3">
-    <CardHeader><CardTitle className="text-sm">流量耗尽预测</CardTitle></CardHeader>
-    <CardContent className="space-y-2 text-sm">
+    <CardHeader className="px-5 sm:px-6"><CardTitle className="text-sm">流量耗尽预测</CardTitle></CardHeader>
+    <CardContent className="px-5 sm:px-6 space-y-2 text-sm">
       <p className="font-medium">{heading}</p>
       {(!usable || f.status === "unavailable") && <p className="text-muted-foreground">{readFailed ? "资源读取失败，暂不展示先前预测。" : boundaryExpired ? "预测时间或周期已到，请刷新并核对实际用量。" : stale ? "最近用量未更新，暂不预测。" : reasons[f?.reason || ""] || "需要有效周期额度和连续、已核对的用量记录。"}</p>}
       {usable && f.basisStart && f.basisEnd && <p className="text-xs text-muted-foreground">依据 {dateLabel(f.basisStart)} 至 {dateLabel(f.basisEnd)} 的所选网卡 IN+OUT 增量{f.averageBytesPerSecond != null && Number.isFinite(f.averageBytesPerSecond) ? `，平均 ${f.averageBytesPerSecond > 0 && f.averageBytesPerSecond < 1 ? "<1 B/s" : rate(f.averageBytesPerSecond)}` : ""}。</p>}

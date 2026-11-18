@@ -68,12 +68,12 @@ it("keeps a focused draft mounted when route width policies change", () => {
 it("gives every route a task width without capping independent context panes", () => {
   for (const route of ["subscriptions", "profiles", "outputs", "settings", "account-security"]) expect(routeContentKind(route)).toBe("frame");
   for (const route of ["fleet", "routes", "legacy-routes"]) expect(routeContentKind(route)).toBe("workspace");
-  for (const route of ["sources", "resources", "nodes", "users", "services", "activity", "published-routes", "notifications"]) expect(routeContentKind(route)).toBe("table");
-  for (const route of ["inbox", "templates", "collections", "servers"]) expect(routeContentKind(route)).toBe("list");
+  for (const route of ["sources", "resources", "nodes", "users", "services", "activity", "published-routes", "notifications", "templates", "collections"]) expect(routeContentKind(route)).toBe("table");
+  for (const route of ["inbox", "servers"]) expect(routeContentKind(route)).toBe("list");
 });
 
 it("uses the same workspace presentation while alias routes are loading", () => {
-  for (const route of ["subscriptions", "profiles", "outputs", "settings"]) {
+  for (const route of ["subscriptions", "profiles", "outputs"]) {
     const { container, unmount } = render(<PageSkeleton page={route} />);
     const frame = container.querySelector(".workspace-frame")!;
     expect(frame.getAttribute("data-presentation")).toBe(["profiles", "outputs"].includes(route) ? "contained" : "workspace");

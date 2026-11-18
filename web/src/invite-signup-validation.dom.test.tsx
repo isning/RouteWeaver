@@ -134,7 +134,7 @@ async function create() {
   await userEvent.click(screen.getByRole("button", { name: "创建账号并继续" }));
 }
 const usernameError =
-  "账号须为 3–128 位，以英文字母或数字开头，仅使用英文字母、数字和 _ . @ + -。";
+  "账号须为 3–128 位，以小写英文字母或数字开头，仅支持小写英文字母、数字及 _ . @ + -，不能包含空白";
 
 it("explains requirements at the fields and preserves an invalid invitation until explicitly corrected", async () => {
   const flow = mount(async () => {
@@ -149,7 +149,7 @@ it("explains requirements at the fields and preserves an invalid invitation unti
       .split(" ")
       .map((id) => document.getElementById(id)?.textContent)
       .join(" ");
-    expect(descriptions).toContain(label === "账号" ? "3–128" : "12–72");
+    expect(descriptions).toContain(label === "账号" ? "3–128" : "至少 12 位");
   }
   await create();
   await screen.findByText(usernameError);
@@ -164,7 +164,7 @@ it("explains requirements at the fields and preserves an invalid invitation unti
     "synthetic-password",
   );
   fireEvent.change(screen.getByLabelText("账号"), {
-    target: { value: "Valid.User" },
+    target: { value: "valid.user" },
   });
   await act(async () => {
     window.dispatchEvent(new Event("online"));
@@ -177,7 +177,7 @@ it("explains requirements at the fields and preserves an invalid invitation unti
       path: "/api/auth/accept-invite",
       body: {
         token: "synthetic-invite",
-        username: "Valid.User",
+        username: "valid.user",
         password: "synthetic-password",
       },
     },
@@ -185,6 +185,10 @@ it("explains requirements at the fields and preserves an invalid invitation unti
 });
 
 it.each([
+  ["uppercase", "Ab1"],
+  ["leading space", " abc"],
+  ["trailing space", "abc "],
+  ["Unicode whitespace", "\u0085abc"],
   ["two characters", "ab"],
   ["129 characters", "a".repeat(129)],
   ["leading punctuation", "_abc"],
@@ -199,12 +203,11 @@ it.each([
 });
 
 it.each([
-  ["three characters", "Ab1"],
+  ["three characters", "ab1"],
   ["128 characters", "a".repeat(128)],
   ["all allowed punctuation", "a_.@+-"],
-  ["Go whitespace and case folding", "\u0085 İK.User \u0085"],
 ])(
-  "accepts %s while leaving normalization to the server",
+  "accepts %s without changing the account",
   async (_name, username) => {
     const { writes } = mount(async () =>
       json({ error: "invite invalid or expired" }, 400),
@@ -218,10 +221,10 @@ it.each([
 );
 
 it.each([
-  ["short ASCII", "a".repeat(11), "密码太短：当前 11 字节，至少需要 12 字节。"],
-  ["overlong ASCII", "a".repeat(73), "密码太长：当前 73 字节，最多允许 72 字节。"],
-  ["short multibyte", "界界界", "密码太短：当前 9 字节，至少需要 12 字节。"],
-  ["overlong multibyte", "界".repeat(24) + "a", "密码太长：当前 73 字节，最多允许 72 字节。"],
+  ["short ASCII", "a".repeat(11), "密码太短，请增加长度"],
+  ["overlong ASCII", "a".repeat(73), "密码太长，请缩短后重试"],
+  ["short multibyte", "界界界", "密码太短，请增加长度"],
+  ["overlong multibyte", "界".repeat(24) + "a", "密码太长，请缩短后重试"],
 ])(
   "rejects %s password without consuming the invitation or retrying",
   async (_name, password, passwordError) => {
@@ -272,20 +275,15 @@ it.each([
   },
 );
 
-it("does not impose creation rules on ordinary login or administrator tokens", async () => {
+it("rejects invalid login identifiers without restricting administrator tokens", async () => {
   const { writes } = mount(async () => json({ error: "must not create" }, 400));
   await screen.findByLabelText("账号");
   await userEvent.click(screen.getByRole("button", { name: "返回账号登录" }));
   await fill("中文账号", "short");
   expect(screen.queryByText(/使用 12–72/)).toBeNull();
   await userEvent.click(screen.getByRole("button", { name: "进入工作空间" }));
-  await screen.findByText(/登录未通过，请核对账号和密码/);
-  expect(writes).toEqual([
-    {
-      path: "/api/auth/login",
-      body: { username: "中文账号", password: "short" },
-    },
-  ]);
+  await screen.findByText(usernameError);
+  expect(writes).toEqual([]);
   await userEvent.click(screen.getByRole("button", { name: "管理员令牌登录" }));
   fireEvent.change(screen.getByLabelText("管理员令牌"), {
     target: { value: "tiny" },
@@ -299,7 +297,7 @@ it("does not impose creation rules on ordinary login or administrator tokens", a
     ).not.toBe("true"),
   );
   expect(screen.queryByText(/密码太短：|密码太长：/)).toBeNull();
-  expect(writes).toHaveLength(1);
+  expect(writes).toHaveLength(0);
   expect(
     vi
       .mocked(fetch)

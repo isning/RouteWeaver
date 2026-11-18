@@ -42,6 +42,19 @@ func TestConcurrentHTTPLoginConsumesOneTOTPStepWithoutLeakingConflict(t *testing
 	if _, _, _, err = handles[0].EnableMFA("admin", prior, now.Add(-30*time.Second)); err != nil {
 		t.Fatal(err)
 	}
+	for _, fixture := range []struct {
+		password string
+		status   int
+	}{{password, 202}, {"incorrect-password", 401}} {
+		body, _ := json.Marshal(map[string]any{"username": "operator", "password": fixture.password})
+		request := httptest.NewRequest(http.MethodPost, "/api/auth/login", bytes.NewReader(body))
+		request.Header.Set("Content-Type", "application/json")
+		response := httptest.NewRecorder()
+		httpapi.New(handles[0], render.Default(), "", "").ServeHTTP(response, request)
+		if response.Code != fixture.status || len(response.Result().Cookies()) != 0 {
+			t.Fatalf("password stage created session or returned wrong status: %d", response.Code)
+		}
+	}
 	code, err := totp.GenerateCode(secret, now)
 	if err != nil {
 		t.Fatal(err)

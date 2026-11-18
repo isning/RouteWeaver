@@ -48,11 +48,13 @@ export interface ProviderConfig {
 }
 export interface ObservationConfig {
   revision: number;
+  observerKind?: "host-agent" | "instance";
   observerInstanceId: string;
   billedInterfaces: string[];
   provider: ProviderConfig | null;
 }
 export interface NodeSnapshot {
+  interfaceRates?: Record<string, { receiveBytesPerSecond: number | null; transmitBytesPerSecond: number | null }>;
   digest: string;
   observedAt: string;
   receivedAt: string;

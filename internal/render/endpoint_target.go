@@ -33,6 +33,9 @@ func validateClientConnection(c domain.Connection, capability ClientCapability) 
 	if err := domain.ValidateConnection(c); err != nil {
 		return err
 	}
+	if c.Transport != nil && c.Transport.Type == "xhttp" {
+		return fmt.Errorf("XHTTP_TARGET_UNSUPPORTED: select an Xray server target")
+	}
 	if c.Transport != nil && c.Transport.Authority != "" {
 		return fmt.Errorf("GRPC_AUTHORITY_UNSUPPORTED: selected client target cannot preserve authority")
 	}

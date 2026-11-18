@@ -90,7 +90,8 @@ export function ObservationConfigForm({
       }
       const config: ObservationConfig = {
         revision: initial.config.revision,
-        observerInstanceId: values.observerInstanceId || "",
+        observerKind: "host-agent",
+        observerInstanceId: "",
         billedInterfaces: values.billedInterfaces || [],
         provider: values.providerEnabled
           ? {
@@ -145,7 +146,7 @@ export function ObservationConfigForm({
       footer={
         <div className="w-full space-y-3">
           <p className="text-sm leading-relaxed text-muted-foreground">
-            更换采集实例、计费网卡或周期后，需要重新设置流量估算起点；更换周期会清除原周期的账单引用，保留用户流量账单。
+            更换计费网卡或周期后，需要重新设置流量估算起点；更换周期会清除原周期的账单引用，保留用户流量账单。
             {providerEnabled &&
               "供应商用量单独记录，所选耗尽行为不自动更换线路。"}
           </p>
@@ -219,23 +220,10 @@ export function ObservationConfigForm({
         }}
       >
         <ErrorNotice error={save.error} />
+        {initial.config.observerInstanceId && <Notice tone="warning">保存后将改由服务器 Agent 采集，原资源历史与网卡用量基线会重新开始记录</Notice>}
         <FieldSet className="min-w-0">
           <FieldLegend variant="label">主机采集</FieldLegend>
-          <AppField
-            name="observerInstanceId"
-            label="主机采集实例"
-            description="一台服务器只选一个采集实例。保存后记录采集选择；主机采集需在节点 Agent 上另行启用。"
-            trigger="onValueChange"
-          >
-            <ChoiceSelect
-              clearable
-              placeholder="选择这台服务器上的一个实例"
-              options={instances.map((i) => ({
-                value: i.id,
-                label: i.name || `${i.adapterId}（${i.id}）`,
-              }))}
-            />
-          </AppField>
+          <p className="text-sm text-muted-foreground">由此服务器的 Agent 统一上报资源数据</p>
           <AppField
             name="billedInterfaces"
             label="供应商计费网卡"

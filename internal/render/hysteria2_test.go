@@ -36,7 +36,7 @@ func TestHysteria2DirectSingBoxClientRoundtrip(t *testing.T) {
 			t.Fatal("roundtrip lost HY2 fields")
 		}
 	}
-	if _, err := render.DefaultClients().Render(p, render.Target{AdapterID: "mihomo", Version: render.MihomoVersion}, render.NodesOnly); err == nil {
+	if _, err := render.DefaultClients().Render(p, render.Target{AdapterID: "unsupported", Version: render.MihomoVersion}, render.NodesOnly); err == nil {
 		t.Fatal("unimplemented output accepted HY2")
 	}
 }

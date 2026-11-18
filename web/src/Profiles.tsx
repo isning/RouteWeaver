@@ -1,3 +1,5 @@
+import { clientTargets as targets, clientTarget, clientTargetValue } from "./client-targets";
+import { NativeConfigPreview } from "./ui-patterns/native-config-preview";
 import { ScrollableTabsList } from "@/ui-patterns/scrollable-tabs-list";
 import { DraftIntegerInput, exactDraftInteger } from "./draft-integer";
 import { Metadata, MetadataItem } from "@/ui-patterns/metadata";
@@ -218,10 +220,7 @@ function ActionReferenceDetails({
     </details>
   );
 }
-const targets = [
-  { value: "mihomo", label: "Mihomo", version: "1.19.32" },
-  { value: "sing-box", label: "sing-box", version: "1.14.3" },
-];
+
 // Legacy imports use the same workspace, not a separate publication lifecycle.
 export function ProfilesPage() {
   return <SubscriptionsPage view="profiles" />;
@@ -295,6 +294,7 @@ export function ProfileEditor({
     }
   }, [sourceTask]);
   const focusSourceInput = (mode: "sources" | "collection") => {
+    if (isNew) setSetupStep(1);
     setSourceExpanded(true);
     setSourceFocus(mode);
   };
@@ -323,6 +323,7 @@ export function ProfileEditor({
   const retainedSources = useRef(initial.sourceIds || []);
   const retainedCollection = useRef(initial.collectionId);
   const [tab, setTab] = useState("rules");
+  const [setupStep, setSetupStep] = useState(1);
   const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
   const revealGroup = (id: string) => setExpandedGroups((ids) => ids.includes(id) ? ids : [...ids, id]);
   const [runtimeVisited, setRuntimeVisited] = useState(false);
@@ -355,6 +356,7 @@ export function ProfileEditor({
   }, []);
   const showDetails = (key: string) => {
     setPendingRepair(null);
+    if (isNew) setSetupStep(key === "inspection" ? 3 : 2);
     setTab(key);
     // The shortcut changes only the visible editor section, never the draft.
     if (detailNavigationFrame.current !== null) cancelAnimationFrame(detailNavigationFrame.current);
@@ -695,6 +697,7 @@ export function ProfileEditor({
     },
   });
   const repairAction = (issue: MissingActionReference) => {
+    if (isNew) setSetupStep(2);
     const target = actionRepair(draft.ir, issue);
     if (!target) return;
     if (issue.location.kind === "group") revealGroup(issue.location.id);
@@ -1462,17 +1465,12 @@ export function ProfileEditor({
             预览客户端
             <ChoiceSelect
               aria-label="预览客户端"
-              value={draft.target.adapterId}
+              value={clientTargetValue(draft.target)}
               options={targets}
               onValueChange={(adapterId) => {
                 if (adapterId === undefined) return;
                 return update({
-                  target: {
-                    adapterId,
-                    version: targets.find(
-                      (target) => target.value === adapterId,
-                    )!.version,
-                  },
+                  target: clientTarget(adapterId),
                 });
               }}
             />
@@ -1596,8 +1594,11 @@ export function ProfileEditor({
           backDisabled={save.isPending}
         />
       </div>
+      {isNew && <nav aria-label="创建订阅步骤" className="grid grid-cols-3 gap-2 rounded-xl bg-muted/30 p-2">
+        {["添加代理", "设置分流", "检查配置"].map((label, index) => <button key={label} type="button" aria-current={setupStep === index + 1 ? "step" : undefined} onClick={() => { setSetupStep(index + 1); if (index === 2) setTab("inspection"); else if (index === 1) setTab("rules"); }} className={`flex min-w-0 items-center justify-center gap-2 rounded-lg px-2 py-3 text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none ${setupStep === index + 1 ? "bg-background font-medium shadow-sm" : "text-muted-foreground hover:text-foreground"}`}><span aria-hidden="true" className="flex size-5 shrink-0 items-center justify-center rounded-full border text-xs">{index + 1}</span>{label}</button>)}
+      </nav>}
       <div
-        className="profile-publish-action sticky top-0 z-20 border-b bg-background py-3"
+        className="profile-publish-action bg-background py-1"
         role="group"
         aria-label="保存与检查配置"
       >
@@ -1650,7 +1651,9 @@ export function ProfileEditor({
             >
               保存草稿
             </ActionButton>
+            {isNew && setupStep < 3 && <ActionButton disabled={save.isPending || !!sourceTask} onClick={() => { setSetupStep(setupStep + 1); setTab(setupStep === 1 ? "rules" : "inspection"); }}>下一步：{setupStep === 1 ? "设置分流" : "检查配置"}</ActionButton>}
             <ActionButton
+              hidden={isNew && setupStep < 3}
               aria-label={!persisted || changed ? "保存并检查" : "检查发布"}
               aria-busy={save.isPending}
               disabled={
@@ -1712,7 +1715,7 @@ export function ProfileEditor({
             </span>
           )}
         </label>
-        <div className="profile-state grid gap-2 text-xs text-muted-foreground">
+        <div hidden={isNew} className="profile-state grid gap-2 text-xs text-muted-foreground">
           <details className="profile-linked-details text-sm [&>summary]:cursor-pointer [&>p]:mt-2 [&>ul]:mt-2">
             <summary>
               {outputs.isPending
@@ -1764,13 +1767,14 @@ export function ProfileEditor({
       <div className="profile-editor-layout space-y-6" inert={save.isPending}>
         <div className="profile-editor space-y-6">
           <section
+            hidden={isNew && setupStep === 3}
             className="surface profile-intent-task @container/profile-task scroll-mt-32 rounded-lg border bg-card p-5 outline-none focus-visible:ring-2 focus-visible:ring-ring"
             aria-label="连接与流量"
             id={`${editorID}-connections`}
             tabIndex={-1}
           >
-            <div className="profile-intent-grid grid gap-6 @min-[44rem]/profile-task:grid-cols-2 [&>div]:min-w-0 [&_h2]:mb-4 [&_h2]:font-semibold">
-              <div className="profile-traffic-task space-y-4">
+            <div className={`profile-intent-grid grid gap-6 ${isNew ? "" : "@min-[44rem]/profile-task:grid-cols-2"} [&>div]:min-w-0 [&_h2]:mb-4 [&_h2]:font-semibold`}>
+              <div hidden={isNew && setupStep !== 2} className="profile-traffic-task space-y-4 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-right-1 motion-safe:duration-200">
                 <h2>默认流量去向</h2>
                 <label
                   className="standalone-label default-route grid min-w-0 gap-2 text-sm font-medium"
@@ -1847,7 +1851,7 @@ export function ProfileEditor({
                   )}
                 </div>
               </div>
-              <div className="profile-input-task space-y-4 @min-[44rem]/profile-task:border-l @min-[44rem]/profile-task:pl-6">
+              <div hidden={isNew && setupStep !== 1} className={`profile-input-task space-y-4 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-right-1 motion-safe:duration-200 ${isNew ? "" : "@min-[44rem]/profile-task:border-l @min-[44rem]/profile-task:pl-6"}`}>
                 <div className="profile-source-summary flex flex-wrap items-center justify-between gap-3 [&>h2]:mb-0 [&>span]:w-full">
                   <h2>代理连接</h2>
                   <ActionButton
@@ -1929,6 +1933,8 @@ export function ProfileEditor({
                         内置连接可在配置意图 JSON 中编辑。
                       </p>
                     )}
+                  <details open={!isNew || inputMode === "collection"} className="space-y-3">
+                    <summary hidden={!isNew} className="cursor-pointer text-sm text-muted-foreground">高级连接设置</summary>
                   <RadioGroup
                     aria-label="连接来源方式"
                     value={inputMode}
@@ -1970,6 +1976,7 @@ export function ProfileEditor({
                       </Label>
                     ))}
                   </RadioGroup>
+                  </details>
                   {inputMode === "sources" ? (
                     <label className="standalone-label grid min-w-0 gap-2 text-sm font-medium">
                       订阅来源
@@ -2320,7 +2327,15 @@ export function ProfileEditor({
               </Notice>
             )}
           </section>
-          <div ref={detailTabs} id={`${editorID}-details`} className="profile-editor-tools scroll-mt-32 space-y-4">
+          {isNew && setupStep === 3 && <section aria-label="配置摘要" className="space-y-4 rounded-xl border bg-card p-5">
+            <h2 className="font-semibold">发布前确认</h2>
+            <dl className="grid gap-4 text-sm sm:grid-cols-3">
+              <div><dt className="text-muted-foreground">配置名称</dt><dd className="mt-1 font-medium wrap-anywhere">{draft.name || "尚未命名"}</dd></div>
+              <div><dt className="text-muted-foreground">代理连接</dt><dd className="mt-1">{(effectiveInputs.status === "success" || effectiveInputs.status === "empty") ? `${endpoints.length} 个` : "待核对"}</dd></div>
+              <div><dt className="text-muted-foreground">分流规则</dt><dd className="mt-1">{draft.ir.rules.length} 条</dd></div>
+            </dl>
+          </section>}
+          <div hidden={isNew && setupStep === 1} ref={detailTabs} id={`${editorID}-details`} className="profile-editor-tools scroll-mt-32 space-y-4">
             <Tabs
               className="profile-editor-tabs space-y-4"
               value={tab}
@@ -2330,13 +2345,12 @@ export function ProfileEditor({
               }}
             >
               {
-                <ScrollableTabsList aria-label="配置内容" className="gap-1 bg-transparent">
+                <ScrollableTabsList aria-label="配置内容">
                   {editorTabs.map((section) => (
                     <TabsTrigger
                       key={section.key}
                       value={String(section.key)}
                       data-section={section.key}
-                      className="data-active:bg-transparent group-data-[variant=default]/tabs-list:data-active:shadow-none dark:data-active:border-transparent dark:data-active:bg-transparent"
                       disabled={save.isPending || ("disabled" in section && !!section.disabled)}
                     >
                       {section.label}
@@ -2502,11 +2516,11 @@ export function ProfileEditor({
                 <h4 className="break-all font-mono text-xs text-muted-foreground">
                   {artifact.path}
                 </h4>
-                <CodePreview content={redact(artifact.content)} />
+                <NativeConfigPreview content={redact(artifact.content)} />
               </div>
             ))}
             {preview.content && (
-              <CodePreview content={redact(preview.content)} />
+              <NativeConfigPreview content={redact(preview.content)} />
             )}
           </Section>
         )}

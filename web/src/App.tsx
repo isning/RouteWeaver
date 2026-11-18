@@ -1,3 +1,6 @@
+import { useBranding, BrandLogo } from "./branding";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import { randomUUID } from "./random-id";
 import { ThemePreference } from "@/ui-patterns/theme-preference";
 import { RouteContent } from "@/ui-patterns/route-content";
 import { PasswordInput } from "@/ui-patterns/password-input";
@@ -30,7 +33,7 @@ import { TaskSheet } from "@/ui-patterns/task-overlays";
 import { Spinner } from "@/components/ui/spinner";
 import { ChevronDown } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { useForm, AppField, AppForm } from "@/ui-patterns/form";
+import { useForm, useWatch, AppField, AppForm } from "@/ui-patterns/form";
 import { Notice } from "@/ui-patterns/notice";
 import { ActionButton } from "@/ui-patterns/actions";
 import { useConfirm } from "@/ui-patterns/confirmations";
@@ -512,7 +515,7 @@ function Workspace() {
       location.hash.split("?")[0] !== "#sources"
     )
       return;
-    const entry = { token: crypto.randomUUID(), sourceId };
+    const entry = { token: randomUUID(), sourceId };
     sourceProfileRequest.current = { entry, scope: receiptScope };
     workspaceHistory.current?.navigate(
       `#subscriptions?sourceDraft=${entry.token}`,
@@ -683,26 +686,27 @@ function Workspace() {
       </SidebarMenuItem>
     );
   };
+  const brand = useBranding();
   const sidebar = (
     <Sidebar
       collapsible="none"
       id="workspace-navigation"
       className={narrow ? "h-full w-full bg-sidebar" : "h-full w-64 bg-sidebar"}
     >
-      <SidebarHeader className="h-16 justify-center px-4">
+      <SidebarHeader className={narrow ? "h-16 justify-center pl-4 pr-16" : "h-16 justify-center px-4"}>
         <a
           className="flex items-center gap-2 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
           href="#overview"
-          aria-label="RouteWeaver 首页"
+          aria-label={`${brand.name} 首页`}
           onClick={(event) => {
             event.preventDefault();
             navigate("overview");
           }}
         >
           <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <ThunderboltOutlined className="size-4" aria-hidden="true" />
+            <BrandLogo className="size-5" />
           </div>
-          <span className="font-semibold tracking-tight">RouteWeaver</span>
+          <span className="min-w-0 truncate font-semibold tracking-tight">{brand.name}</span>
         </a>
       </SidebarHeader>
       <SidebarContent>
@@ -814,6 +818,7 @@ function Workspace() {
       {narrow ? (
         <TaskSheet
           title="导航"
+          hideHeader
           side="left"
           open={mobileOpen}
           contentRef={mobilePanel}
@@ -828,8 +833,8 @@ function Workspace() {
             }
           }}
           size="sm"
-          className="navigation-drawer w-72"
-          bodyProps={{ className: "p-0" }}
+          className="navigation-drawer bg-sidebar data-[side=left]:w-[min(20rem,calc(100vw-3rem))]"
+          bodyProps={{ className: "overflow-hidden p-0 sm:p-0" }}
         >
           {sidebar}
         </TaskSheet>
@@ -861,7 +866,7 @@ function Workspace() {
             />
             {narrow ? (
               <span className="text-sm font-semibold tracking-tight">
-                RouteWeaver
+                {brand.name}
               </span>
             ) : (
               <span className="breadcrumb flex items-center gap-2 text-sm">
@@ -949,7 +954,6 @@ function Workspace() {
                         setSourceSubscriptionSetup(true);
                         navigate("sources");
                       }}
-                      onConfigureServer={isAdmin ? () => navigate("servers") : undefined}
                       sourceDraft={
                         sourceProfileRequest.current?.scope === receiptScope
                           ? (sourceProfileEntry ?? undefined)
@@ -991,35 +995,17 @@ function Workspace() {
             </SubscriptionContextProvider>
           </WorkspaceHistoryContext.Provider>
         </main>
-        <footer className="app-footer border-t px-4 py-4 sm:px-6 text-xs text-muted-foreground">
-          RouteWeaver
-        </footer>
       </div>
     </SidebarProvider>
   );
 }
-// Validate the ASCII account contract after Go strings.TrimSpace/ToLower.
-// JS trim removes BOM but not NEL; JS lowercase expands İ to i + combining dot.
-// İ and K are the only non-ASCII runes whose Go lowercase lands in ASCII.
-// This projection is for validation only: preserve the original posted value.
+// Registration and login use the same strict account identifier.
 const inviteUsernameRule = {
   validator: (_rule: unknown, value: string) => {
-    if (!value) return Promise.resolve(); // The required rule handles empty input.
-    const normalized = value
-      .replace(
-        /^[\u0009-\u000d\u0020\u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]+|[\u0009-\u000d\u0020\u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]+$/g,
-        "",
-      )
-      .replace(/[A-ZİK]/g, (letter) =>
-        letter === "İ" ? "i" : letter.toLowerCase(),
-      );
-    return /^[a-z0-9][a-z0-9_.@+-]{2,127}$/.test(normalized)
+    if (!value) return Promise.resolve();
+    return !/\s/u.test(value) && /^[a-z0-9][a-z0-9_.@+-]{2,127}$/.test(value)
       ? Promise.resolve()
-      : Promise.reject(
-          new Error(
-            "账号须为 3–128 位，以英文字母或数字开头，仅使用英文字母、数字和 _ . @ + -。",
-          ),
-        );
+      : Promise.reject(new Error("账号须为 3–128 位，以小写英文字母或数字开头，仅支持小写英文字母、数字及 _ . @ + -，不能包含空白"));
   },
 };
 const invitePasswordRule = {
@@ -1030,18 +1016,20 @@ const invitePasswordRule = {
       ? Promise.resolve()
       : Promise.reject(
           new Error(bytes < 12
-            ? `密码太短：当前 ${bytes} 字节，至少需要 12 字节。`
-            : `密码太长：当前 ${bytes} 字节，最多允许 72 字节。`),
+            ? "密码太短，请增加长度"
+            : "密码太长，请缩短后重试"),
         );
   },
 };
 
 type LoginMode = "login" | "invite" | "admin";
-function loginDisplayError(error: Error | null, mode: LoginMode) {
+function loginDisplayError(error: Error | null, mode: LoginMode, mfa = false) {
   if (!(error instanceof APIError)) return error;
+  if (error.status === 400 && error.message === "invalid JSON request") return new Error("登录请求未能处理，请刷新页面后重试");
   if (mode === "login" && error.status === 401 && error.message === "invalid credentials") {
-    return new Error("登录未通过，请核对账号和密码。如已启用二次验证，请展开“使用二次验证码”填写当前验证码；仍无法登录时，请联系管理员核对账号状态。");
+    return new Error(mfa ? "验证码错误或已过期" : "账号或密码错误");
   }
+  if (mode === "invite" && error.status === 403 && error.message === "registration closed") return new Error("账号注册已关闭，请联系管理员");
   if (mode === "invite" && error.status === 400 && error.message === "invite invalid or expired") {
     return new Error("邀请码无效、已使用或已过期。若已完成注册，请返回账号登录；否则请向邀请人获取新邀请。");
   }
@@ -1082,7 +1070,25 @@ function LoginForm({
   mode: LoginMode;
   changeMode: (mode: LoginMode) => void;
 }) {
+  const brand = useBranding();
   const [busy, setBusy] = useState(false);
+  const [passwordMFA, setPasswordMFA] = useState(false);
+  const loginFrame = useRef<HTMLDivElement>(null);
+  const loginLayout = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const frame = loginFrame.current;
+    const layout = loginLayout.current;
+    if (!frame || !layout || typeof ResizeObserver === "undefined") return;
+    const resize = () => {
+      const height = layout.getBoundingClientRect().height;
+      if (height > 0) frame.style.height = `${height + 2}px`;
+    };
+    resize();
+    const observer = new ResizeObserver(resize);
+    observer.observe(layout);
+    return () => observer.disconnect();
+  }, []);
+
   const [oidcStage, setOIDCStage] = useState(() => {
     const status = new URLSearchParams(location.search).get("oidc");
     return mode === "login" && (status === "mfa" || status === "complete") ? status : null;
@@ -1090,6 +1096,7 @@ function LoginForm({
   const [error, setError] = useState<Error | null>(() => new URLSearchParams(location.search).get("oidc") === "error"
     ? new Error("单点登录未完成。请重试，或使用账号密码登录。") : initialError);
   const [form] = useForm();
+  const loginCode = useWatch("totp", form);
   const { lifecycle, snapshot } = useSessionAccess();
   // Login options arrive only with the existing anonymous session check.
   // Mounting recovery must never introduce another network read.
@@ -1181,6 +1188,10 @@ function LoginForm({
                 totp: values.totp,
               },
         );
+        if (mode === "login" && (result as unknown as { mfaRequired?: boolean }).mfaRequired === true) {
+          setPasswordMFA(true);
+          return;
+        }
         if (
           typeof result?.user?.id !== "string" ||
           !result.user.id ||
@@ -1218,16 +1229,37 @@ function LoginForm({
     }
   };
   return (
-    <div className="login-page flex min-h-svh items-center justify-center bg-muted/30 p-6">
-      <div className="w-full max-w-sm">
-        <div className="space-y-6 rounded-xl border bg-card p-6 shadow-sm">
+    <div className="login-page @container/login flex min-h-svh w-full min-w-0 items-center justify-center bg-background px-4 py-6 sm:p-8">
+      <div ref={loginFrame} className="w-full min-w-0 max-w-md overflow-hidden rounded-2xl border bg-card shadow-sm motion-safe:transition-[height] motion-safe:duration-200 motion-safe:ease-out @3xl/login:max-w-3xl">
+      <div ref={loginLayout} className="grid min-w-0 @3xl/login:grid-cols-[minmax(0,0.75fr)_minmax(0,1fr)]">
+        <aside aria-label={brand.name} className="relative flex min-w-0 flex-col justify-between gap-8 overflow-hidden bg-muted/40 p-5 @3xl/login:p-10">
+          <div className="flex items-center gap-3">
+            <div className="flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground"><BrandLogo className="size-7" /></div>
+            <span className="min-w-0 truncate text-lg font-semibold tracking-tight">{brand.name}</span>
+          </div>
+          <svg aria-hidden="true" viewBox="0 0 280 220" fill="none" className="hidden h-40 w-full text-muted-foreground/30 @3xl/login:block">
+            <path d="M40 110H100C120 110 120 50 145 50H240M100 110H240M100 110C120 110 120 170 145 170H240" stroke="currentColor" strokeWidth="1.5" />
+            <circle cx="40" cy="110" r="12" className="fill-primary stroke-primary" />
+            <circle cx="240" cy="50" r="9" className="fill-card stroke-muted-foreground" />
+            <circle cx="240" cy="110" r="9" className="fill-card stroke-muted-foreground" />
+            <circle cx="240" cy="170" r="9" className="fill-card stroke-muted-foreground" />
+          </svg>
+          <p className="hidden text-sm text-muted-foreground @3xl/login:block">线路控制台</p>
+        </aside>
+        <div className="mx-auto w-full min-w-0 max-w-md self-center space-y-6 p-5 wrap-anywhere sm:p-8">
           <h1 className="text-xl font-semibold tracking-tight">
             {mode === "invite"
               ? "加入工作空间"
               : mode === "admin"
                 ? "管理员登录"
-                : "登录 RouteWeaver"}
+                : passwordMFA ? "二次验证" : `登录 ${brand.name}`}
           </h1>
+          {snapshot.session && (
+            <div role="status" className="space-y-1 rounded-lg bg-muted/50 p-3 text-sm leading-relaxed">
+              <p className="font-medium">登录已过期，请重新登录</p>
+            </div>
+          )}
+          {mode === "invite" && brand.registration === "closed" && <Notice title="账号注册已关闭" />}
           {mode === "admin" && (
             <p className="text-sm leading-relaxed text-muted-foreground">
               使用平台管理员提供的令牌登录。
@@ -1238,14 +1270,14 @@ function LoginForm({
               账号可能已创建。请返回账号登录，使用刚才设置的账号和密码登录；不要仅凭错误提示判断账号未创建。
             </Notice>
           )}
-          <ErrorNotice error={loginDisplayError(error, mode)} />
+          <ErrorNotice error={loginDisplayError(error, mode, passwordMFA)} />
           {mode === "login" && oidcStage ? <div className="space-y-4">
             <Notice title={oidcStage === "mfa" ? "输入二次验证码" : "完成单点登录"}>
               {oidcStage === "mfa" ? "身份验证已通过，请输入此账号的二次验证码。" : "身份验证已通过，请确认进入工作空间。"}
             </Notice>
             <AppForm onFinish={(values) => oidcAction("complete", oidcStage === "mfa" ? String(values.totp || "") : undefined)}>
               {oidcStage === "mfa" && <AppField name="totp" label="二次验证码" rules={[{ required: true, message: "请输入二次验证码" }, { pattern: /^[0-9]{6}$/, message: "请输入 6 位数字验证码" }]}>
-                <Input autoComplete="one-time-code" inputMode="numeric" maxLength={6} />
+                <LoginOTP autoFocus />
               </AppField>}
               <ActionButton type="submit" pending={busy} className="w-full">{oidcStage === "mfa" ? "验证并登录" : "完成单点登录"}</ActionButton>
             </AppForm>
@@ -1259,6 +1291,8 @@ function LoginForm({
                   ? new URLSearchParams(location.search).get("invite") || ""
                   : "",
             }}
+            disabled={busy}
+            aria-busy={busy}
           >
             {mode === "admin" ? (
               <AppField
@@ -1282,25 +1316,27 @@ function LoginForm({
                 )}
                 <AppField
                   name="username"
+                  hidden={passwordMFA}
                   label="账号"
                   description={
                     mode === "invite"
-                      ? "3–128 位，以英文字母或数字开头，可用 _ . @ + -；忽略首尾空白，字母按小写保存。"
+                      ? "3–128 位，以小写字母或数字开头，可包含 _ . @ + -，不含空白"
                       : undefined
                   }
                   rules={[
                     { required: true, message: "请输入账号" },
-                    ...(mode === "invite" ? [inviteUsernameRule] : []),
+                    inviteUsernameRule,
                   ]}
                 >
-                  <Input autoComplete="username" placeholder="你的账号" />
+                  <Input autoComplete="username" placeholder="输入账号" className="h-11" />
                 </AppField>
                 <AppField
                   name="password"
+                  hidden={passwordMFA}
                   label="密码"
                   description={
                     mode === "invite"
-                      ? "使用 12–72 个 UTF-8 字节；中文通常每字占 3 字节。"
+                      ? "建议使用至少 12 位的字母、数字或符号组合"
                       : undefined
                   }
                   rules={[
@@ -1309,35 +1345,36 @@ function LoginForm({
                   ]}
                 >
                   <PasswordInput
+                    className="h-11"
+                    placeholder="输入密码"
                     autoComplete={
                       mode === "invite" ? "new-password" : "current-password"
                     }
                   />
                 </AppField>
-                {mode === "login" && (
-                  <details className="space-y-3 text-sm">
-                    <summary>使用二次验证码</summary>
-                    <AppField name="totp" label="验证码">
-                      <Input
-                        inputMode="numeric"
-                        autoComplete="one-time-code"
-                        maxLength={6}
-                      />
+                {mode === "login" && passwordMFA && (
+                  <div className="space-y-4 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-right-2 motion-safe:duration-200">
+                    <p className="text-sm text-muted-foreground">输入验证器中的 6 位验证码</p>
+                    <AppField name="totp" label="验证码" rules={[{ required: true, message: "请输入验证码" }, { pattern: /^[0-9]{6}$/, message: "请输入 6 位数字验证码" }]}>
+                      <LoginOTP autoFocus />
                     </AppField>
-                  </details>
+                    <ActionButton variant="ghost" disabled={busy} onClick={() => { setPasswordMFA(false); form.setFieldValue("totp", ""); setError(null); }}>返回账号登录</ActionButton>
+                  </div>
                 )}
               </>
             )}
             <ActionButton
               type="submit"
               pending={busy}
+              disabled={mode === "invite" && brand.registration === "closed" || passwordMFA && !/^[0-9]{6}$/.test(loginCode ?? "")}
               leadingIcon={<ArrowRightOutlined aria-hidden="true" />}
               variant="default"
               size="lg"
-              className={"w-full " + ""}
+              className="h-11 w-full"
             >
-              {mode === "invite" ? "创建账号并继续" : "进入工作空间"}
+              {mode === "invite" ? "创建账号并继续" : passwordMFA ? "验证并登录" : "进入工作空间"}
             </ActionButton>
+            <span role="status" className="sr-only">{busy ? passwordMFA ? "正在验证验证码" : "正在验证登录信息" : ""}</span>
           </AppForm>}
           {mode === "login" && !oidcStage && provider && snapshot.phase === "recovery" && snapshot.session && hasUnsavedChanges() &&
             <p className="text-sm text-muted-foreground">单点登录会离开此页并丢失未保存内容。请使用账号密码登录以保留草稿。</p>}
@@ -1353,10 +1390,11 @@ function LoginForm({
               void lifecycle.check();
             }}>检查其他登录方式</ActionButton>}
           </div>}
-          <div className="flex flex-wrap justify-between gap-2">
+          <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-center [&_button]:h-auto [&_button]:min-h-9 [&_button]:px-0 [&_button]:text-xs [&_button]:font-normal [&_button]:text-muted-foreground [&_button:hover]:bg-transparent [&_button:hover]:text-foreground">
             {mode === "login" ? (
               <>
                 <ActionButton
+                  hidden={brand.registration === "closed"}
                   onClick={() => {
                     changeMode("invite");
                     setError(null);
@@ -1389,7 +1427,16 @@ function LoginForm({
           </div>
         </div>
       </div>
+      </div>
     </div>
   );
 }
 
+
+function LoginOTP(props: Omit<React.ComponentProps<typeof InputOTP>, "maxLength" | "render" | "children">) {
+ return <InputOTP {...props} maxLength={6} pattern="^[0-9]*$" inputMode="numeric" autoComplete="one-time-code">
+  <InputOTPGroup className="w-full justify-center">
+   {Array.from({length:6},(_,index)=><InputOTPSlot key={index} index={index} className="h-11 w-10 sm:h-12 sm:w-11" />)}
+  </InputOTPGroup>
+ </InputOTP>;
+}

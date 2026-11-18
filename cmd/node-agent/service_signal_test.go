@@ -83,8 +83,8 @@ func TestForegroundServiceHandlesTerminationSignals(t *testing.T) {
 			if err := json.Unmarshal(out.Bytes(), &st); err != nil {
 				t.Fatal(err)
 			}
-			if reports.Load() == 0 {
-				t.Fatal("no final observation delivery")
+			if reports.Load() != 0 || st.Desired != nil {
+				t.Fatal("idle service published an observation without accepted intent")
 			}
 		})
 	}

@@ -6,7 +6,7 @@ accepting/replacing a snapshot belongs to the control-plane application.
 
 Implemented inputs:
 - URI lines and standard/URL-safe base64 URI subscriptions: SOCKS5, SIP002
-  Shadowsocks and VLESS with explicitly modeled TCP, WS, gRPC or HTTPUpgrade,
+  Shadowsocks (including validated SS2022 single keys) and VLESS with explicitly modeled TCP, WS, gRPC or HTTPUpgrade,
   TLS/REALITY, flow and ALPN options. Trojan ordinary-TLS URIs and bounded
   VMess AEAD v2rayN version-2 share links are also supported. Legacy nonzero
   VMess alter IDs reject rather than downgrade.
@@ -55,3 +55,5 @@ limit and a 15-second fetch deadline; the file picker accepts up to 1 MiB.
 No embedded provider URL, external schema or script is fetched by the parser.
 
 WIP47 exact protocol/role matrix and verification: [endpoint capabilities](../../docs/verification/ENDPOINT-CAPABILITIES-2026-10-29.md).
+
+2026-11-18 additions: Hysteria2, AnyTLS and TUIC v5 share links; Hysteria2/AnyTLS/TUIC native connection extraction for both supported client formats. HY2 Salamander, bandwidth and hopping settings are preserved. Explicit insecure TLS and UDP-disable settings remain rejected. XHTTP links retain typed path/host/mode and can target Xray server configurations only. Native import still extracts connections rather than migrating a complete program.

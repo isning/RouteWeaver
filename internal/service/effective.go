@@ -40,6 +40,11 @@ type EffectivePolicy struct {
 	Service         *Plan             `json:"service,omitempty"`
 }
 
+// RequiresRuntimeLimits is independent of credential isolation.
+func (p EffectivePolicy) RequiresRuntimeLimits() bool {
+	return p.QuotaBytes > 0 || p.ConnectionLimit > 0 || p.OnlineIPLimit > 0 || p.EntryRateBPS > 0
+}
+
 func uniqueSorted(ids []string) []string {
 	seen := map[string]bool{}
 	out := []string{}

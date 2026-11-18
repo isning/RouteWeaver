@@ -18,9 +18,23 @@ import (
 // observations. The observation fixture exercises control-plane evidence gates;
 // real native multi-user traffic has its own integration proof.
 func TestPublishedRoutePrincipalsRequireExactAppliedManifest(t *testing.T) {
-	testPublishedRoutePrincipals(t, false)
+	testPublishedRoutePrincipals(t, false, "")
 }
-func testPublishedRoutePrincipals(t *testing.T, native bool) {
+func TestPublishedSingBoxPrincipalsRequireExactAppliedManifest(t *testing.T) {
+	testPublishedRoutePrincipals(t, false, "vless")
+}
+func TestPublishedSingBoxTrojanUsesIndependentPasswords(t *testing.T) {
+	testPublishedRoutePrincipals(t, false, "trojan")
+}
+func TestPublishedSingBoxShadowsocksUsesIndependentKeys(t *testing.T) {
+	testPublishedRoutePrincipals(t, false, "shadowsocks")
+}
+func testPublishedRoutePrincipals(t *testing.T, native bool, stockProtocol string) {
+	singBox := stockProtocol != ""
+	credentialField := "uuid"
+	if stockProtocol == "trojan" || stockProtocol == "shadowsocks" {
+		credentialField = "password"
+	}
 	s, srv := makeServer(t)
 	admin := operatorClient()
 	alice := inviteClient(t, s, srv, "managed-alice")
@@ -40,6 +54,19 @@ func testPublishedRoutePrincipals(t *testing.T, native bool) {
 	host := domain.Host{ID: "managed-host", Name: "Synthetic host", Address: "127.0.0.1"}
 	instance := domain.CoreInstance{ID: "managed-core", HostID: host.ID, AdapterID: render.ServerAdapterManagedXray, Version: render.ManagedXrayVersion}
 	endpoint := domain.ManagedEndpoint{ID: "managed-entry", InstanceID: instance.ID, Name: "Synthetic entry", Connection: domain.Connection{Protocol: "vless", Host: "127.0.0.1", Port: entryPort, UUID: "00000000-0000-4000-8000-000000000099"}}
+	if singBox {
+		instance.AdapterID, instance.Version = render.ServerAdapterSingBox, render.StockSingBoxVersion
+		endpoint.Authentication = "principals"
+		endpoint.Connection.UUID = ""
+		endpoint.Connection.Protocol = stockProtocol
+		if stockProtocol == "shadowsocks" {
+			endpoint.Connection.Method = "2022-blake3-aes-128-gcm"
+			endpoint.Connection.Password = "AAAAAAAAAAAAAAAAAAAAAA=="
+		}
+		if stockProtocol == "trojan" {
+			endpoint.Connection.TLS = &domain.TLSOptions{Enabled: true, ServerName: "tls-entry.example"}
+		}
+	}
 	post("hosts", host)
 	post("core-instances", instance)
 	post("managed-endpoints", endpoint)
@@ -52,6 +79,12 @@ func testPublishedRoutePrincipals(t *testing.T, native bool) {
 	post("core-instances", transitInstance)
 	post("managed-endpoints", transitEndpoint)
 	deployment := httpapi.ServerDeployment{ID: "managed-deployment", Name: "Managed deployment", IR: domain.ServerDeploymentIR{SchemaVersion: "1.0", TopologyRevision: "topology1", Programs: []domain.ServerProgram{{Instance: instance, Listener: endpoint, DestinationPolicy: &domain.DestinationPolicy{AllowCIDRs: []string{"127.0.0.1/32"}}, Egress: []domain.Connection{transitDial}}, {Instance: transitInstance, Listener: transitEndpoint}}}}
+	if singBox {
+		deployment.IR.Programs[0].DestinationPolicy = nil
+		if stockProtocol == "trojan" {
+			deployment.IR.Programs[0].TLS, _ = publishedSyntheticTLS(t)
+		}
+	}
 	post("server-deployments", deployment)
 	route := map[string]any{"id": "published-route", "name": "Public transit route", "deploymentId": deployment.ID, "endpointIds": []string{endpoint.ID, transitEndpoint.ID}, "publicHost": "127.0.0.1", "publicPort": entryPort}
 	if !native {
@@ -68,7 +101,7 @@ func testPublishedRoutePrincipals(t *testing.T, native bool) {
 		publicInsecure[k] = v
 	}
 	publicInsecure["publicHost"] = "public.example"
-	if code, _, raw := req(t, admin, "POST", srv.URL+"/api/published-routes/preview", "", publicInsecure); code != 422 {
+	if code, _, raw := req(t, admin, "POST", srv.URL+"/api/published-routes/preview", "", publicInsecure); code != 422 && credentialField == "uuid" {
 		t.Fatalf("public raw UUID entry accepted without TLS %d %s", code, raw)
 	}
 	preview := post("published-routes/preview", route)
@@ -76,7 +109,9 @@ func testPublishedRoutePrincipals(t *testing.T, native bool) {
 		t.Fatalf("preview claims application: %v", preview)
 	}
 	post("published-routes", route)
-	post("published-routes/preview", map[string]any{"id": "direct-preview", "name": "Direct path", "deploymentId": deployment.ID, "endpointIds": []string{endpoint.ID}, "publicHost": "127.0.0.1", "publicPort": entryPort})
+	if !singBox {
+		post("published-routes/preview", map[string]any{"id": "direct-preview", "name": "Direct path", "deploymentId": deployment.ID, "endpointIds": []string{endpoint.ID}, "publicHost": "127.0.0.1", "publicPort": entryPort})
+	}
 	plan := service.Plan{ID: "managed-plan", Name: "Managed service", QuotaBytes: 1 << 20, RouteIDs: []string{"published-route"}, Cycle: service.CyclePolicy{Mode: "none", Timezone: "UTC+8"}}
 	post("services", plan)
 	for _, owner := range []string{alice.id, bob.id} {
@@ -92,8 +127,26 @@ func testPublishedRoutePrincipals(t *testing.T, native bool) {
 	groupChange := service.PolicyChange{Group: &service.Group{ID: "managed-members", Name: "Managed members", ServiceID: plan.ID, Priority: 10, MemberIDs: []string{alice.id}}}
 	groupPreview := post("access-policy/preview", groupChange)
 	post("access-policy/apply", map[string]any{"change": groupChange, "revision": groupPreview["revision"]})
-	if code, _, raw := req(t, admin, "POST", srv.URL+"/api/users/"+alice.id+"/entries", "", httpapi.PublicEntryGrant{ID: "legacy-bypass", RouteID: "published-route", Name: "Not managed", CredentialVersion: "v1", Connection: endpoint.Connection}); code != 409 {
+	legacyConnection := endpoint.Connection
+	legacyConnection.UUID = "00000000-0000-4000-8000-000000000099"
+	if credentialField == "password" {
+		legacyConnection.UUID = ""
+		if stockProtocol == "trojan" {
+			legacyConnection.Password = "fixture-legacy-password"
+		}
+	}
+	if code, _, raw := req(t, admin, "POST", srv.URL+"/api/users/"+alice.id+"/entries", "", httpapi.PublicEntryGrant{ID: "legacy-bypass", RouteID: "published-route", Name: "Not managed", CredentialVersion: "v1", Connection: legacyConnection}); code != 409 {
 		t.Fatalf("legacy configured credential masqueraded as published route %d %s", code, raw)
+	}
+	if singBox {
+		attempt := map[string]any{"accountId": alice.id, "entryId": "alice-entry", "credentialVersion": "v1"}
+		if code, _, raw := req(t, admin, "POST", srv.URL+"/api/published-routes/published-route/principals", "", attempt); code != 422 || !strings.Contains(raw, "托管 Xray") {
+			t.Fatalf("account with quota could obtain a static credential: %d %s", code, raw)
+		}
+		plan.QuotaBytes = 0
+		if code, _, raw := req(t, admin, "PUT", srv.URL+"/api/services/"+plan.ID, "", plan); code != 200 {
+			t.Fatalf("restore unlimited fixture plan: %d %s", code, raw)
+		}
 	}
 	grantA := post("published-routes/published-route/principals", map[string]any{"accountId": alice.id, "entryId": "alice-entry", "credentialVersion": "v1"})
 	grantB := post("published-routes/published-route/principals", map[string]any{"accountId": bob.id, "entryId": "bob-entry", "credentialVersion": "v1"})
@@ -169,12 +222,35 @@ func testPublishedRoutePrincipals(t *testing.T, native bool) {
 	if e = transitTransport.ReportObservation(context.Background(), transitScope, transitState); e != nil {
 		t.Fatal(e)
 	}
-	assertPublishedDiagnosticSelection(t, srv.URL, admin, alice.c, transport, scope, transitEndpoint.Connection.Password)
+	if !singBox {
+		assertPublishedDiagnosticSelection(t, srv.URL, admin, alice.c, transport, scope, transitEndpoint.Connection.Password)
+	}
 	var firstUUID string
 	if code, out, raw := req(t, admin, "GET", reveal, "", nil); code != 200 || out["subjectId"] != grantA["subjectId"] || strings.Contains(raw, "00000000-0000-4000-8000-000000000099") || strings.Contains(raw, transitEndpoint.Connection.Password) {
 		t.Fatalf("applied own entry %d %s", code, raw)
 	} else {
-		firstUUID = out["connection"].(map[string]any)["uuid"].(string)
+		firstUUID = out["connection"].(map[string]any)[credentialField].(string)
+	}
+	if singBox {
+		if code, out, raw := req(t, admin, "GET", srv.URL+"/api/users/"+bob.id+"/entries/bob-entry/reveal", "", nil); code != 200 || out["connection"].(map[string]any)[credentialField] == firstUUID {
+			t.Fatalf("sing-box credentials were not distinct: %d %s", code, raw)
+		}
+		for _, artifact := range desired.Artifacts {
+			if artifact.Path == "entry-policy.json" {
+				t.Fatal("stock sing-box received managed enforcement artifact")
+			}
+		}
+		nativeCredential := firstUUID
+		if stockProtocol == "shadowsocks" {
+			prefix := endpoint.Connection.Password + ":"
+			if !strings.HasPrefix(firstUUID, prefix) {
+				t.Fatal("delivered credential is missing the endpoint key")
+			}
+			nativeCredential = strings.TrimPrefix(firstUUID, prefix)
+		}
+		if !strings.Contains(desired.Artifacts[0].Content, nativeCredential) {
+			t.Fatal("sing-box native configuration did not include Alice's issued credential")
+		}
 	}
 	if !native {
 		// A reopened journal can retain its last conformant observation while
@@ -267,11 +343,39 @@ func testPublishedRoutePrincipals(t *testing.T, native bool) {
 	if code, _, raw := req(t, admin, "GET", reveal, "", nil); code != 409 {
 		t.Fatalf("new draft version inherited old apply %d %s", code, raw)
 	}
-	if code, _, raw := req(t, admin, "POST", srv.URL+"/api/published-routes/published-route/principals", "", map[string]any{"accountId": alice.id, "entryId": "replacement-entry", "credentialVersion": "v3", "credential": domain.PrincipalCredential{UUID: firstUUID}}); code != 409 {
+	duplicate := domain.PrincipalCredential{UUID: firstUUID}
+	if credentialField == "password" {
+		duplicate = domain.PrincipalCredential{Password: strings.TrimPrefix(firstUUID, endpoint.Connection.Password+":")}
+	}
+	if code, _, raw := req(t, admin, "POST", srv.URL+"/api/published-routes/published-route/principals", "", map[string]any{"accountId": alice.id, "entryId": "replacement-entry", "credentialVersion": "v3", "credential": duplicate}); code != 409 {
 		t.Fatalf("old native credential revived under a fresh grant/version %d %s", code, raw)
 	}
 	post("agent/enrollments", map[string]any{"nodeId": host.ID, "instanceId": transitInstance.ID, "expiresAt": time.Now().Add(time.Hour)})
 	if code, _, raw := req(t, admin, "GET", srv.URL+"/api/users/"+bob.id+"/entries/bob-entry/reveal", "", nil); code != 409 {
 		t.Fatalf("replaced transit enrollment inherited stale apply evidence %d %s", code, raw)
 	}
+	if singBox {
+		deploymentPath := srv.URL + "/api/server-deployments/" + deployment.ID
+		code, out, raw := req(t, admin, "DELETE", srv.URL+"/api/users/"+bob.id+"/entries/bob-entry", "", nil)
+		if code != 200 || out["deploymentRequired"] != true {
+			t.Fatalf("revocation did not require applying a draft: %d %s", code, raw)
+		}
+		if code, _, raw = req(t, admin, "GET", srv.URL+"/api/users/"+bob.id+"/entries/bob-entry/reveal", "", nil); code != 404 {
+			t.Fatalf("revoked entry still reveals: %d %s", code, raw)
+		}
+		opened := openServerDraft(t, admin, deploymentPath)
+		validated := requireServerValidation(t, admin, deploymentPath, opened["revisionToken"].(string))
+		if validated["valid"] != true {
+			t.Fatal("revoked draft no longer validates")
+		}
+		var changed httpapi.ServerDeployment
+		data, err := json.Marshal(opened)
+		if err != nil || json.Unmarshal(data, &changed) != nil {
+			t.Fatal("cannot read staged draft")
+		}
+		if len(changed.IR.Programs) == 0 || len(changed.IR.Programs[0].Principals) != 1 || changed.IR.Programs[0].Principals[0].AccountID != alice.id {
+			t.Fatal("revocation did not remove only Bob's principal")
+		}
+	}
+
 }

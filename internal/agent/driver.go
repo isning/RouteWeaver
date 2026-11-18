@@ -194,17 +194,19 @@ func RunDriver(parent context.Context, r *Reconciler, tr ControlPlaneTransport, 
 			case <-ctx.Done():
 				return
 			}
+			hasDesired := false
 			select {
 			case report := <-reply:
+				hasDesired = report.state.Desired != nil
 				if report.err != nil {
 					reportError(report.err)
-				} else {
+				} else if hasDesired {
 					reportError(tr.ReportObservation(ctx, scope, report.state))
 				}
 			case <-ctx.Done():
 				return
 			}
-			if service, ok := tr.(ServiceHeartbeatTransport); ok && o.Continuous && !heartbeatNow().Before(nextHeartbeat) {
+			if service, ok := tr.(ServiceHeartbeatTransport); ok && o.Continuous && hasDesired && !heartbeatNow().Before(nextHeartbeat) {
 				reply := make(chan heartbeatDelivery, 1)
 				select {
 				case heartbeatRequests <- reply:
@@ -350,7 +352,9 @@ loop:
 	reportErr := preparationErr
 	if preparationErr == nil {
 		final = report
-		reportErr = tr.ReportObservation(reportCtx, scope, final)
+		if report.Desired != nil {
+			reportErr = tr.ReportObservation(reportCtx, scope, final)
+		}
 	}
 	reportCancel()
 	if reportErr != nil && o.OnTransportError != nil {

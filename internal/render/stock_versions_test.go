@@ -24,7 +24,7 @@ func TestStockSecurityVersionsPreserveHistoricalAndIndependentTargets(t *testing
 			}
 			protocols := []string{"socks", "shadowsocks", "vless", "trojan", "vmess"}
 			if capability.AdapterID == render.ServerAdapterSingBox {
-				protocols = append(protocols, "hysteria2", "anytls")
+				protocols = append(protocols, "hysteria2", "anytls", "tuic")
 			}
 			if !reflect.DeepEqual(capability.Protocols, protocols) {
 				t.Fatalf("stock update changed protocol capabilities: %v", capability.Protocols)
@@ -41,10 +41,10 @@ func TestStockSecurityVersionsPreserveHistoricalAndIndependentTargets(t *testing
 	}
 
 	client := (render.SingBoxClient{}).ClientCapability()
-	if !reflect.DeepEqual(client.Versions, []string{"1.14.3"}) {
+	if !reflect.DeepEqual(client.Versions, []string{"1.14.3", "1.14.4"}) {
 		t.Fatalf("stock release update relabeled the client/schema contract: %v", client.Versions)
 	}
-	if _, err := render.DefaultClients().Render(domain.ClientProfileIR{}, render.Target{AdapterID: "sing-box", Version: "1.14.4"}, render.FullConfig); err == nil || !strings.Contains(err.Error(), "TARGET_VERSION_UNVERIFIED") {
+	if _, err := render.DefaultClients().Render(domain.ClientProfileIR{}, render.Target{AdapterID: "sing-box", Version: "unreviewed"}, render.FullConfig); err == nil || !strings.Contains(err.Error(), "TARGET_VERSION_UNVERIFIED") {
 		t.Fatalf("stock version inherited client compatibility: %v", err)
 	}
 	p := principalProgram(render.ServerAdapterManagedXray, "26.3.27-rw1")

@@ -136,3 +136,61 @@ func TestCASCannotResurrectRevokedRecord(t *testing.T) {
 		t.Fatal("stale token became live")
 	}
 }
+
+func TestAccountIdentifiersRejectWhitespaceAndUppercaseWithoutNormalization(t *testing.T) {
+	s, err := store.Open(filepath.Join(t.TempDir(), "db"), bytes.Repeat([]byte{31}, 32))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	const password = "synthetic-account-password"
+	for _, username := range []string{"Alice", " alice", "alice ", "al ice", "alice\n", "İalice", "\u0085alice"} {
+		if err = s.EnsureAdmin(username, password); err == nil {
+			t.Fatalf("bootstrap accepted %q", username)
+		}
+	}
+	_, token, err := s.CreateInvite("Alice", "user", time.Now().Add(time.Hour))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, username := range []string{"Alice", " alice", "alice ", "al ice", "alice\n", "İalice", "\u0085alice"} {
+		if _, err = s.AcceptInvite(token, username, password); err == nil {
+			t.Fatalf("signup accepted %q", username)
+		}
+	}
+	if _, err = s.AcceptInvite(token, "alice", password); err != nil {
+		t.Fatal(err)
+	}
+	for _, username := range []string{"Alice", " alice", "alice ", "al ice", "alice\n", "İalice", "\u0085alice"} {
+		if _, _, _, err = s.Login(username, password, "", time.Now()); err == nil {
+			t.Fatalf("login accepted %q", username)
+		}
+	}
+	if _, _, _, err = s.Login("alice", password, "", time.Now()); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestClosedRegistrationBlocksInviteWithoutConsumingIt(t *testing.T) {
+	s, err := store.Open(filepath.Join(t.TempDir(), "db"), bytes.Repeat([]byte{32}, 32))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer s.Close()
+	_, token, err := s.CreateInvite("User", "user", time.Now().Add(time.Hour))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = s.Put("settings", "platform", map[string]string{"registration": "closed"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = s.AcceptInvite(token, "invited", "synthetic-test-password"); err != store.ErrRegistrationClosed {
+		t.Fatalf("closed registration: %v", err)
+	}
+	if err = s.Put("settings", "platform", map[string]string{"registration": "invite"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = s.AcceptInvite(token, "invited", "synthetic-test-password"); err != nil {
+		t.Fatal(err)
+	}
+}

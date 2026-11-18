@@ -177,7 +177,11 @@ func sourceLabelRedactor(snapshots ...*domain.SourceSnapshot) func(string) strin
 					}
 				}
 			}
-			for _, secret := range []string{e.Connection.Username, e.Connection.Password, e.Connection.UUID} {
+			credentialValues := []string{e.Connection.Username, e.Connection.Password, e.Connection.UUID}
+			if h := e.Connection.Hysteria2; h != nil && h.Obfs != nil {
+				credentialValues = append(credentialValues, h.Obfs.Password)
+			}
+			for _, secret := range credentialValues {
 				if secret != "" {
 					secrets[secret] = true
 				}
@@ -559,6 +563,10 @@ func (h *server) decideSourceCandidate(w http.ResponseWriter, r *http.Request) {
 	}
 	candidate := source.Candidate
 	source.ApplyMode = sourceApplyMode(source.ApplyMode)
+	if !validSubscriptionInterval(source.RefreshIntervalSeconds) {
+		fail(w, 400, "unsupported subscription refresh interval")
+		return
+	}
 	if !validSourceApplyMode(source.ApplyMode) {
 		fail(w, 400, "source applyMode must be auto or manual")
 		return

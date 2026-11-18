@@ -35,6 +35,10 @@ func (h *server) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a, session, token, e := h.s.Login(in.Username, in.Password, in.TOTP, time.Now())
+	if e == store.ErrMFARequired && in.TOTP == "" {
+		writeJSON(w, 202, map[string]bool{"mfaRequired": true})
+		return
+	}
 	if e != nil {
 		fail(w, 401, "invalid credentials")
 		return
@@ -55,6 +59,10 @@ func (h *server) acceptInvite(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a, e := h.s.AcceptInvite(in.Token, in.Username, in.Password)
+	if e == store.ErrRegistrationClosed {
+		fail(w, 403, "registration closed")
+		return
+	}
 	if e != nil {
 		fail(w, 400, e.Error())
 		return

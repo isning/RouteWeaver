@@ -141,7 +141,7 @@ it("keeps platform and subscription-domain drafts while visiting the backup sect
   fireEvent.change(await screen.findByLabelText("平台名称"), {
     target: { value: "未保存的平台名称" },
   });
-  fireEvent.change(await screen.findByLabelText("订阅域名草稿"), {
+  fireEvent.change(await screen.findByLabelText("订阅链接模板"), {
     target: { value: "https://draft.example.invalid" },
   });
   await user.click(screen.getByRole("tab", { name: "备份与恢复" }));
@@ -153,7 +153,7 @@ it("keeps platform and subscription-domain drafts while visiting the backup sect
     "未保存的平台名称",
   );
   expect(
-    (screen.getByLabelText("订阅域名草稿") as HTMLInputElement).value,
+    (screen.getByLabelText("订阅链接模板") as HTMLInputElement).value,
   ).toBe("https://draft.example.invalid");
   expect(writes).toEqual([]);
 });

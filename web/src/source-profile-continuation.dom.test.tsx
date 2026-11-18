@@ -411,7 +411,7 @@ it("drops the originating account draft on account replacement and cannot replay
   });
   setSources([]);
   setAccount("account-b");
-  fireEvent(window, new Event("focus"));
+  fireEvent(window, new Event("online"));
   await screen.findByText("account-b");
   await screen.findByRole("heading", { name: "我的订阅", level: 1 });
   expect(screen.queryByRole("textbox", { name: "配置名称" })).toBeNull();
@@ -439,7 +439,7 @@ it.each(["account-a", "account-b"])(
       fireEvent.click(
         within(detail).getByRole("button", { name: "用此来源新建分流配置" }),
       );
-      fireEvent(window, new Event("focus"));
+      fireEvent(window, new Event("online"));
     });
     expect(location.hash).toContain("sourceDraft=");
     expect(location.hash + JSON.stringify(history.state)).not.toContain(

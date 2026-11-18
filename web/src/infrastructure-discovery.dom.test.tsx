@@ -24,7 +24,7 @@ function mount() {
     "/api/links": [], "/api/server-deployments": [],
   };
   vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
-    if ((!init?.method || init.method === "GET") && ["/api/admin/nodes/tokyo/observability", "/api/agent/instances/core-0/state"].includes(url))
+    if ((!init?.method || init.method === "GET") && ["/api/agent/hosts/tokyo/state", "/api/admin/nodes/tokyo/observability", "/api/agent/instances/core-0/state"].includes(url))
       return new Response(JSON.stringify({ error: "No observation fixture" }), { status: 503, headers: { "Content-Type": "application/json" } });
     if ((init?.method && init.method !== "GET") || !Object.hasOwn(data, url)) { unexpected.push(url); throw new Error("Unexpected request"); }
     return new Response(JSON.stringify(data[url]), { headers: { "Content-Type": "application/json" } });

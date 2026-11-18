@@ -1,0 +1,1148 @@
+{
+  "id": "region-service-routing",
+  "name": "地区与服务分流",
+  "kind": "client-profile",
+  "expectedVersion": 0,
+  "spec": {
+    "resourceSlots": [
+      {
+        "id": "openai",
+        "name": "OpenAI规则"
+      },
+      {
+        "id": "gemini",
+        "name": "Gemini规则"
+      },
+      {
+        "id": "claude",
+        "name": "Claude规则"
+      },
+      {
+        "id": "copilot",
+        "name": "GitHub Copilot规则"
+      },
+      {
+        "id": "perplexity",
+        "name": "Perplexity规则"
+      },
+      {
+        "id": "grok",
+        "name": "Grok规则"
+      },
+      {
+        "id": "ms-copilot",
+        "name": "Microsoft Copilot规则"
+      },
+      {
+        "id": "ads",
+        "name": "广告拦截规则"
+      },
+      {
+        "id": "sogou",
+        "name": "搜狗输入法规则"
+      },
+      {
+        "id": "truth",
+        "name": "Truth Social规则"
+      },
+      {
+        "id": "static",
+        "name": "静态资源规则"
+      },
+      {
+        "id": "crypto",
+        "name": "加密货币规则"
+      },
+      {
+        "id": "finance",
+        "name": "金融服务规则"
+      },
+      {
+        "id": "ai",
+        "name": "AI服务规则"
+      },
+      {
+        "id": "bilibili",
+        "name": "哔哩哔哩规则"
+      },
+      {
+        "id": "youtube",
+        "name": "Youtube规则"
+      },
+      {
+        "id": "telegram",
+        "name": "Telegram规则"
+      },
+      {
+        "id": "xbox",
+        "name": "Xbox规则"
+      },
+      {
+        "id": "github",
+        "name": "Github规则"
+      },
+      {
+        "id": "netflix",
+        "name": "Netflix规则"
+      },
+      {
+        "id": "twitch",
+        "name": "Twitch规则"
+      },
+      {
+        "id": "spotify",
+        "name": "Spotify规则"
+      },
+      {
+        "id": "bahamut",
+        "name": "巴哈姆特规则"
+      },
+      {
+        "id": "pikpak",
+        "name": "PikPak网盘规则"
+      },
+      {
+        "id": "twitter",
+        "name": "Twitter规则"
+      },
+      {
+        "id": "weibo",
+        "name": "新浪微博规则"
+      },
+      {
+        "id": "ehentai",
+        "name": "E-Hentai规则"
+      },
+      {
+        "id": "tiktok",
+        "name": "TikTok规则"
+      },
+      {
+        "id": "apple",
+        "name": "苹果服务规则"
+      },
+      {
+        "id": "microsoft",
+        "name": "微软服务规则"
+      },
+      {
+        "id": "google",
+        "name": "谷歌服务规则"
+      },
+      {
+        "id": "cn",
+        "name": "中国大陆直连规则"
+      }
+    ],
+    "groups": [
+      {
+        "id": "auto",
+        "name": "自动选择",
+        "kind": "url-test",
+        "members": [],
+        "intervalSeconds": 60,
+        "toleranceMs": 20
+      },
+      {
+        "id": "fallback",
+        "name": "故障转移",
+        "kind": "fallback",
+        "members": [],
+        "intervalSeconds": 60,
+        "toleranceMs": 20
+      },
+      {
+        "id": "manual",
+        "name": "手动选择",
+        "kind": "manual",
+        "members": []
+      },
+      {
+        "id": "proxy",
+        "name": "选择代理",
+        "kind": "manual",
+        "members": [
+          {
+            "kind": "group",
+            "ref": "auto"
+          },
+          {
+            "kind": "group",
+            "ref": "fallback"
+          },
+          {
+            "kind": "group",
+            "ref": "manual"
+          },
+          {
+            "kind": "direct"
+          }
+        ]
+      },
+      {
+        "id": "static",
+        "name": "静态资源",
+        "kind": "manual",
+        "members": [
+          {
+            "kind": "group",
+            "ref": "proxy"
+          },
+          {
+            "kind": "group",
+            "ref": "manual"
+          },
+          {
+            "kind": "direct"
+          }
+        ]
+      },
+      {
+        "id": "ai",
+        "name": "AI服务",
+        "kind": "manual",
+        "members": [
+          {
+            "kind": "group",
+            "ref": "proxy"
+          },
+          {
+            "kind": "group",
+            "ref": "manual"
+          },
+          {
+            "kind": "direct"
+          }
+        ]
+      },
+      {
+        "id": "crypto",
+        "name": "加密货币",
+        "kind": "manual",
+        "members": [
+          {
+            "kind": "group",
+            "ref": "proxy"
+          },
+          {
+            "kind": "group",
+            "ref": "manual"
+          },
+          {
+            "kind": "direct"
+          }
+        ]
+      },
+      {
+        "id": "finance",
+        "name": "金融服务",
+        "kind": "manual",
+        "members": [
+          {
+            "kind": "direct"
+          },
+          {
+            "kind": "group",
+            "ref": "proxy"
+          },
+          {
+            "kind": "group",
+            "ref": "manual"
+          }
+        ]
+      },
+      {
+        "id": "apple",
+        "name": "苹果服务",
+        "kind": "manual",
+        "members": [
+          {
+            "kind": "group",
+            "ref": "proxy"
+          },
+          {
+            "kind": "group",
+            "ref": "manual"
+          },
+          {
+            "kind": "direct"
+          }
+        ]
+      },
+      {
+        "id": "google",
+        "name": "谷歌服务",
+        "kind": "manual",
+        "members": [
+          {
+            "kind": "group",
+            "ref": "proxy"
+          },
+          {
+            "kind": "group",
+            "ref": "manual"
+          },
+          {
+            "kind": "direct"
+          }
+        ]
+      },
+      {
+        "id": "microsoft",
+        "name": "微软服务",
+        "kind": "manual",
+        "members": [
+          {
+            "kind": "group",
+            "ref": "proxy"
+          },
+          {
+            "kind": "group",
+            "ref": "manual"
+          },
+          {
+            "kind": "direct"
+          }
+        ]
+      },
+      {
+        "id": "xbox",
+        "name": "Xbox",
+        "kind": "manual",
+        "members": [
+          {
+            "kind": "group",
+            "ref": "proxy"
+          },
+          {
+            "kind": "group",
+            "ref": "manual"
+          },
+          {
+            "kind": "direct"
+          }
+        ]
+      },
+      {
+        "id": "github",
+        "name": "Github",
+        "kind": "manual",
+        "members": [
+          {
+            "kind": "group",
+            "ref": "proxy"
+          },
+          {
+            "kind": "group",
+            "ref": "manual"
+          },
+          {
+            "kind": "direct"
+          }
+        ]
+      },
+      {
+        "id": "bilibili",
+        "name": "哔哩哔哩",
+        "kind": "manual",
+        "members": [
+          {
+            "kind": "direct"
+          },
+          {
+            "kind": "group",
+            "ref": "proxy"
+          },
+          {
+            "kind": "group",
+            "ref": "manual"
+          }
+        ]
+      },
+      {
+        "id": "bahamut",
+        "name": "巴哈姆特",
+        "kind": "manual",
+        "members": [
+          {
+            "kind": "group",
+            "ref": "proxy"
+          },
+          {
+            "kind": "group",
+            "ref": "manual"
+          },
+          {
+            "kind": "direct"
+          }
+        ]
+      },
+      {
+        "id": "youtube",
+        "name": "Youtube",
+        "kind": "manual",
+        "members": [
+          {
+            "kind": "group",
+            "ref": "proxy"
+          },
+          {
+            "kind": "group",
+            "ref": "manual"
+          },
+          {
+            "kind": "direct"
+          }
+        ]
+      },
+      {
+        "id": "twitch",
+        "name": "Twitch",
+        "kind": "manual",
+        "members": [
+          {
+            "kind": "group",
+            "ref": "proxy"
+          },
+          {
+            "kind": "group",
+            "ref": "manual"
+          },
+          {
+            "kind": "direct"
+          }
+        ]
+      },
+      {
+        "id": "netflix",
+        "name": "Netflix",
+        "kind": "manual",
+        "members": [
+          {
+            "kind": "group",
+            "ref": "proxy"
+          },
+          {
+            "kind": "group",
+            "ref": "manual"
+          },
+          {
+            "kind": "direct"
+          }
+        ]
+      },
+      {
+        "id": "tiktok",
+        "name": "TikTok",
+        "kind": "manual",
+        "members": [
+          {
+            "kind": "group",
+            "ref": "proxy"
+          },
+          {
+            "kind": "group",
+            "ref": "manual"
+          },
+          {
+            "kind": "direct"
+          }
+        ]
+      },
+      {
+        "id": "spotify",
+        "name": "Spotify",
+        "kind": "manual",
+        "members": [
+          {
+            "kind": "group",
+            "ref": "proxy"
+          },
+          {
+            "kind": "group",
+            "ref": "manual"
+          },
+          {
+            "kind": "direct"
+          }
+        ]
+      },
+      {
+        "id": "telegram",
+        "name": "Telegram",
+        "kind": "manual",
+        "members": [
+          {
+            "kind": "group",
+            "ref": "proxy"
+          },
+          {
+            "kind": "group",
+            "ref": "manual"
+          },
+          {
+            "kind": "direct"
+          }
+        ]
+      },
+      {
+        "id": "twitter",
+        "name": "Twitter",
+        "kind": "manual",
+        "members": [
+          {
+            "kind": "group",
+            "ref": "proxy"
+          },
+          {
+            "kind": "group",
+            "ref": "manual"
+          },
+          {
+            "kind": "direct"
+          }
+        ]
+      },
+      {
+        "id": "weibo",
+        "name": "新浪微博",
+        "kind": "manual",
+        "members": [
+          {
+            "kind": "direct"
+          },
+          {
+            "kind": "group",
+            "ref": "proxy"
+          },
+          {
+            "kind": "group",
+            "ref": "manual"
+          }
+        ]
+      },
+      {
+        "id": "truth",
+        "name": "Truth Social",
+        "kind": "manual",
+        "members": [
+          {
+            "kind": "group",
+            "ref": "proxy"
+          },
+          {
+            "kind": "group",
+            "ref": "manual"
+          },
+          {
+            "kind": "direct"
+          }
+        ]
+      },
+      {
+        "id": "ehentai",
+        "name": "E-Hentai",
+        "kind": "manual",
+        "members": [
+          {
+            "kind": "group",
+            "ref": "proxy"
+          },
+          {
+            "kind": "group",
+            "ref": "manual"
+          },
+          {
+            "kind": "direct"
+          }
+        ]
+      },
+      {
+        "id": "pikpak",
+        "name": "PikPak网盘",
+        "kind": "manual",
+        "members": [
+          {
+            "kind": "group",
+            "ref": "proxy"
+          },
+          {
+            "kind": "group",
+            "ref": "manual"
+          },
+          {
+            "kind": "direct"
+          }
+        ]
+      },
+      {
+        "id": "openai",
+        "name": "OpenAI",
+        "kind": "manual",
+        "members": [
+          {
+            "kind": "group",
+            "ref": "ai"
+          },
+          {
+            "kind": "group",
+            "ref": "proxy"
+          },
+          {
+            "kind": "group",
+            "ref": "manual"
+          },
+          {
+            "kind": "direct"
+          }
+        ]
+      },
+      {
+        "id": "gemini",
+        "name": "Gemini",
+        "kind": "manual",
+        "members": [
+          {
+            "kind": "group",
+            "ref": "ai"
+          },
+          {
+            "kind": "group",
+            "ref": "proxy"
+          },
+          {
+            "kind": "group",
+            "ref": "manual"
+          },
+          {
+            "kind": "direct"
+          }
+        ]
+      },
+      {
+        "id": "claude",
+        "name": "Claude",
+        "kind": "manual",
+        "members": [
+          {
+            "kind": "group",
+            "ref": "ai"
+          },
+          {
+            "kind": "group",
+            "ref": "proxy"
+          },
+          {
+            "kind": "group",
+            "ref": "manual"
+          },
+          {
+            "kind": "direct"
+          }
+        ]
+      },
+      {
+        "id": "copilot",
+        "name": "GitHub Copilot",
+        "kind": "manual",
+        "members": [
+          {
+            "kind": "group",
+            "ref": "ai"
+          },
+          {
+            "kind": "group",
+            "ref": "proxy"
+          },
+          {
+            "kind": "group",
+            "ref": "manual"
+          },
+          {
+            "kind": "direct"
+          }
+        ]
+      },
+      {
+        "id": "perplexity",
+        "name": "Perplexity",
+        "kind": "manual",
+        "members": [
+          {
+            "kind": "group",
+            "ref": "ai"
+          },
+          {
+            "kind": "group",
+            "ref": "proxy"
+          },
+          {
+            "kind": "group",
+            "ref": "manual"
+          },
+          {
+            "kind": "direct"
+          }
+        ]
+      },
+      {
+        "id": "grok",
+        "name": "Grok",
+        "kind": "manual",
+        "members": [
+          {
+            "kind": "group",
+            "ref": "ai"
+          },
+          {
+            "kind": "group",
+            "ref": "proxy"
+          },
+          {
+            "kind": "group",
+            "ref": "manual"
+          },
+          {
+            "kind": "direct"
+          }
+        ]
+      },
+      {
+        "id": "ms-copilot",
+        "name": "Microsoft Copilot",
+        "kind": "manual",
+        "members": [
+          {
+            "kind": "group",
+            "ref": "ai"
+          },
+          {
+            "kind": "group",
+            "ref": "proxy"
+          },
+          {
+            "kind": "group",
+            "ref": "manual"
+          },
+          {
+            "kind": "direct"
+          }
+        ]
+      },
+      {
+        "id": "final",
+        "name": "Final",
+        "kind": "manual",
+        "members": [
+          {
+            "kind": "group",
+            "ref": "proxy"
+          },
+          {
+            "kind": "direct"
+          }
+        ]
+      }
+    ],
+    "rules": [
+      {
+        "id": "rule-openai",
+        "match": {
+          "op": "resource",
+          "value": "openai"
+        },
+        "action": {
+          "kind": "group",
+          "ref": "openai"
+        }
+      },
+      {
+        "id": "rule-gemini",
+        "match": {
+          "op": "resource",
+          "value": "gemini"
+        },
+        "action": {
+          "kind": "group",
+          "ref": "gemini"
+        }
+      },
+      {
+        "id": "rule-claude",
+        "match": {
+          "op": "resource",
+          "value": "claude"
+        },
+        "action": {
+          "kind": "group",
+          "ref": "claude"
+        }
+      },
+      {
+        "id": "rule-copilot",
+        "match": {
+          "op": "resource",
+          "value": "copilot"
+        },
+        "action": {
+          "kind": "group",
+          "ref": "copilot"
+        }
+      },
+      {
+        "id": "rule-perplexity",
+        "match": {
+          "op": "resource",
+          "value": "perplexity"
+        },
+        "action": {
+          "kind": "group",
+          "ref": "perplexity"
+        }
+      },
+      {
+        "id": "rule-grok",
+        "match": {
+          "op": "resource",
+          "value": "grok"
+        },
+        "action": {
+          "kind": "group",
+          "ref": "grok"
+        }
+      },
+      {
+        "id": "rule-ms-copilot",
+        "match": {
+          "op": "resource",
+          "value": "ms-copilot"
+        },
+        "action": {
+          "kind": "group",
+          "ref": "ms-copilot"
+        }
+      },
+      {
+        "id": "rule-ads",
+        "match": {
+          "op": "resource",
+          "value": "ads"
+        },
+        "action": {
+          "kind": "reject"
+        }
+      },
+      {
+        "id": "rule-sogou",
+        "match": {
+          "op": "resource",
+          "value": "sogou"
+        },
+        "action": {
+          "kind": "direct"
+        }
+      },
+      {
+        "id": "rule-truth",
+        "match": {
+          "op": "resource",
+          "value": "truth"
+        },
+        "action": {
+          "kind": "group",
+          "ref": "truth"
+        }
+      },
+      {
+        "id": "rule-static",
+        "match": {
+          "op": "resource",
+          "value": "static"
+        },
+        "action": {
+          "kind": "group",
+          "ref": "static"
+        }
+      },
+      {
+        "id": "rule-crypto",
+        "match": {
+          "op": "resource",
+          "value": "crypto"
+        },
+        "action": {
+          "kind": "group",
+          "ref": "crypto"
+        }
+      },
+      {
+        "id": "rule-finance",
+        "match": {
+          "op": "resource",
+          "value": "finance"
+        },
+        "action": {
+          "kind": "group",
+          "ref": "finance"
+        }
+      },
+      {
+        "id": "rule-ai",
+        "match": {
+          "op": "resource",
+          "value": "ai"
+        },
+        "action": {
+          "kind": "group",
+          "ref": "ai"
+        }
+      },
+      {
+        "id": "rule-bilibili",
+        "match": {
+          "op": "resource",
+          "value": "bilibili"
+        },
+        "action": {
+          "kind": "group",
+          "ref": "bilibili"
+        }
+      },
+      {
+        "id": "rule-youtube",
+        "match": {
+          "op": "resource",
+          "value": "youtube"
+        },
+        "action": {
+          "kind": "group",
+          "ref": "youtube"
+        }
+      },
+      {
+        "id": "rule-telegram",
+        "match": {
+          "op": "resource",
+          "value": "telegram"
+        },
+        "action": {
+          "kind": "group",
+          "ref": "telegram"
+        }
+      },
+      {
+        "id": "rule-xbox",
+        "match": {
+          "op": "resource",
+          "value": "xbox"
+        },
+        "action": {
+          "kind": "group",
+          "ref": "xbox"
+        }
+      },
+      {
+        "id": "rule-github",
+        "match": {
+          "op": "resource",
+          "value": "github"
+        },
+        "action": {
+          "kind": "group",
+          "ref": "github"
+        }
+      },
+      {
+        "id": "rule-netflix",
+        "match": {
+          "op": "resource",
+          "value": "netflix"
+        },
+        "action": {
+          "kind": "group",
+          "ref": "netflix"
+        }
+      },
+      {
+        "id": "rule-twitch",
+        "match": {
+          "op": "resource",
+          "value": "twitch"
+        },
+        "action": {
+          "kind": "group",
+          "ref": "twitch"
+        }
+      },
+      {
+        "id": "rule-spotify",
+        "match": {
+          "op": "resource",
+          "value": "spotify"
+        },
+        "action": {
+          "kind": "group",
+          "ref": "spotify"
+        }
+      },
+      {
+        "id": "rule-bahamut",
+        "match": {
+          "op": "resource",
+          "value": "bahamut"
+        },
+        "action": {
+          "kind": "group",
+          "ref": "bahamut"
+        }
+      },
+      {
+        "id": "rule-pikpak",
+        "match": {
+          "op": "resource",
+          "value": "pikpak"
+        },
+        "action": {
+          "kind": "group",
+          "ref": "pikpak"
+        }
+      },
+      {
+        "id": "rule-twitter",
+        "match": {
+          "op": "resource",
+          "value": "twitter"
+        },
+        "action": {
+          "kind": "group",
+          "ref": "twitter"
+        }
+      },
+      {
+        "id": "rule-weibo",
+        "match": {
+          "op": "resource",
+          "value": "weibo"
+        },
+        "action": {
+          "kind": "group",
+          "ref": "weibo"
+        }
+      },
+      {
+        "id": "rule-ehentai",
+        "match": {
+          "op": "resource",
+          "value": "ehentai"
+        },
+        "action": {
+          "kind": "group",
+          "ref": "ehentai"
+        }
+      },
+      {
+        "id": "rule-tiktok",
+        "match": {
+          "op": "resource",
+          "value": "tiktok"
+        },
+        "action": {
+          "kind": "group",
+          "ref": "tiktok"
+        }
+      },
+      {
+        "id": "rule-apple",
+        "match": {
+          "op": "resource",
+          "value": "apple"
+        },
+        "action": {
+          "kind": "group",
+          "ref": "apple"
+        }
+      },
+      {
+        "id": "rule-microsoft",
+        "match": {
+          "op": "resource",
+          "value": "microsoft"
+        },
+        "action": {
+          "kind": "group",
+          "ref": "microsoft"
+        }
+      },
+      {
+        "id": "rule-google",
+        "match": {
+          "op": "resource",
+          "value": "google"
+        },
+        "action": {
+          "kind": "group",
+          "ref": "google"
+        }
+      },
+      {
+        "id": "rule-cn",
+        "match": {
+          "op": "resource",
+          "value": "cn"
+        },
+        "action": {
+          "kind": "direct"
+        }
+      }
+    ],
+    "defaultAction": {
+      "kind": "group",
+      "ref": "final"
+    },
+    "runtime": {
+      "mixedPort": 7890,
+      "sniff": true
+    },
+    "automaticGroups": {
+      "includeIn": [
+        "proxy",
+        "static",
+        "ai",
+        "crypto",
+        "finance",
+        "apple",
+        "google",
+        "microsoft",
+        "xbox",
+        "github",
+        "bilibili",
+        "bahamut",
+        "youtube",
+        "twitch",
+        "netflix",
+        "tiktok",
+        "spotify",
+        "telegram",
+        "twitter",
+        "weibo",
+        "truth",
+        "ehentai",
+        "pikpak",
+        "openai",
+        "gemini",
+        "claude",
+        "copilot",
+        "perplexity",
+        "grok",
+        "ms-copilot"
+      ],
+      "regionIncludeIn": [
+        "auto",
+        "fallback"
+      ],
+      "allEndpointsIn": [
+        "manual"
+      ]
+    }
+  }
+}

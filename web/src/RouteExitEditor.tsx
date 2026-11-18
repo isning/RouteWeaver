@@ -191,7 +191,7 @@ export function RouteExitEditor({
   const existingProgram = baseline.deployment.ir.programs.find(
     (program) => program.listener.id === endpointId,
   );
-  const needsTLS = !!selected?.connection.tls?.enabled && !existingProgram;
+  const needsTLS = !!selected?.connection.tls?.enabled && !selected.certificateId && !selected.realityServer && !existingProgram;
   const entry = baseline.deployment.ir.programs.find(
     (program) => program.listener.id === baseline.route.endpointIds[0],
   );

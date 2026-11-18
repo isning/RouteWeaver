@@ -16,7 +16,7 @@ export function sourceSelectionIssue(source: Source) {
 export function sourceSelectionLabel(source: Source, checked: boolean) {
   const state =
     !checked || typeof source.enabled !== "boolean"
-      ? "状态待核对"
+      ? "无法确认来源是否启用"
       : sourceSelectionIssue(source);
   return state ? (
     <Metadata className="flex-col items-start">

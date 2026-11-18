@@ -87,7 +87,7 @@ function fixture() {
 }
 function mount(
   profile: Profile = fixture(),
-  options: { output?: Output; inputFailure?: boolean; entryReply?: () => Promise<Response>; cachedEntries?: PlatformEntry[] } = {},
+  options: { isNew?: boolean; output?: Output; inputFailure?: boolean; entryReply?: () => Promise<Response>; cachedEntries?: PlatformEntry[] } = {},
 ) {
   const writes: { path: string; body: any }[] = [];
   const savedSources = [source];
@@ -143,7 +143,7 @@ function mount(
       <UIProviders>
         <ProfileEditor
           initial={profile}
-          isNew={false}
+          isNew={options.isNew ?? false}
           output={options.output}
           onClose={onClose}
         />
@@ -238,7 +238,7 @@ it("uses the chosen existing subscription client even after changing the new-sub
   await user.click(
     screen.getByRole("combobox", { name: "预览客户端" }),
   );
-  await user.click(await screen.findByRole("option", { name: "sing-box" }));
+  await user.click(await screen.findByRole("option", { name: "sing-box 1.14.3" }));
   await user.click(
     screen.getByRole("button", { name: /^(保存并检查|检查发布)$/ }),
   );
@@ -1624,4 +1624,23 @@ it.each(["own", "direct"] as const)("keeps unselected platform catalog failures 
   await waitFor(() => expect(screen.queryByText("入口清单读取失败")).toBeNull());
   expect(screen.queryByText(/^平台入口：/)).toBeNull();
   expect(screen.getByText(summaryText)).toBeTruthy();
+});
+
+it("guides a new draft through connections, routing and review while retaining its values", async () => {
+ const profile=fixture();
+ const {writes}=mount(profile,{isNew:true});
+ const user=userEvent.setup();
+ const navigation=screen.getByRole("navigation",{name:"创建订阅步骤"});
+ expect(within(navigation).getByRole("button",{name:"添加代理"}).getAttribute("aria-current")).toBe("step");
+ expect(screen.queryByRole("combobox",{name:"默认流量行为"})).toBeNull();
+ const name=screen.getByLabelText("配置名称");
+ await user.clear(name); await user.type(name,"Personal routing");
+ await user.click(screen.getByRole("button",{name:"下一步：设置分流"}));
+ expect(screen.getByRole("combobox",{name:"默认流量行为"})).toBeTruthy();
+ await user.click(screen.getByRole("button",{name:"下一步：检查配置"}));
+ expect(screen.getByRole("region",{name:"配置摘要"})).toBeTruthy();
+ expect(within(screen.getByRole("region",{name:"配置摘要"})).getByText("Personal routing")).toBeTruthy();
+ await user.click(within(navigation).getByRole("button",{name:"添加代理"}));
+ expect((screen.getByLabelText("配置名称") as HTMLInputElement).value).toBe("Personal routing");
+ expect(writes.some(({path})=>path==="/api/me/profiles")).toBe(false);
 });

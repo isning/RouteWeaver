@@ -40,13 +40,6 @@ type FocusPosition = {
     | [number | null, number | null, "forward" | "backward" | "none" | null]
     | null;
 };
-type DepartureOwner = {
-  focus: FocusPosition;
-  workspace: HTMLElement;
-  accountEpoch: number;
-  generation: number;
-  tabIndex: number;
-};
 function focusPosition(element: HTMLElement): FocusPosition {
   const text =
     element instanceof HTMLInputElement ||
@@ -62,36 +55,6 @@ function focusPosition(element: HTMLElement): FocusPosition {
       : null,
   };
 }
-function eligibleDepartureOwner(element: HTMLElement) {
-  if (
-    !element.isConnected ||
-    element.tabIndex < 0 ||
-    element.matches(":disabled,[aria-disabled=true]") ||
-    element.closest("[hidden],[inert],[aria-hidden=true]")
-  )
-    return false;
-  for (
-    let node: HTMLElement | null = element;
-    node;
-    node = node.parentElement
-  ) {
-    const style = getComputedStyle(node);
-    if (style.display === "none" || style.visibility === "hidden") return false;
-  }
-  return true;
-}
-function sameDepartureOwner(owner: DepartureOwner, snapshot: SessionSnapshot) {
-  return (
-    !snapshot.concealed &&
-    owner.accountEpoch === snapshot.accountEpoch &&
-    owner.generation === snapshot.generation &&
-    owner.workspace.isConnected &&
-    owner.focus.element.closest("[data-session-workspace]") ===
-      owner.workspace &&
-    owner.focus.element.tabIndex === owner.tabIndex &&
-    eligibleDepartureOwner(owner.focus.element)
-  );
-}
 export function SessionBoundary({
   children,
   login,
@@ -103,47 +66,17 @@ export function SessionBoundary({
   }) => ReactNode;
 }) {
   const [lifecycle] = useState(() => new SessionLifecycle());
-  const previousFocus = useRef<
-    | (FocusPosition & {
-        departure?: DepartureOwner;
-      })
-    | null
-  >(null);
-  const tabDeparture = useRef<{
-    owner: DepartureOwner;
-    leftControl: boolean;
-  } | null>(null);
-  const departed = useRef<DepartureOwner | null>(null);
-  const clearDeparture = () => {
-    tabDeparture.current = null;
-    departed.current = null;
-    if (previousFocus.current?.departure) previousFocus.current = null;
-  };
+  const previousFocus = useRef<FocusPosition | null>(null);
   const subscribe = useCallback(
     (listener: () => void) =>
       lifecycle.subscribe(() => {
         const next = lifecycle.getSnapshot();
-        if (next.phase !== "active") {
-          tabDeparture.current = null;
-          departed.current = null;
-          const saved = previousFocus.current?.departure;
-          if (
-            saved &&
-            (next.concealed ||
-              next.phase === "offline" ||
-              next.phase === "recovery" ||
-              saved.accountEpoch !== next.accountEpoch ||
-              saved.generation !== next.generation)
-          )
-            previousFocus.current = null;
-        }
         const element = document.activeElement;
         if (
           next.phase !== "active" &&
           element instanceof HTMLElement &&
           element.closest("[data-session-workspace]")
         ) {
-          // Current user-owned focus takes priority over a departure fallback.
           previousFocus.current = focusPosition(element);
         }
         listener();
@@ -163,118 +96,19 @@ export function SessionBoundary({
         });
       }
     } catch {
-      /* Focus/reconnect validation remains available when unsupported. */
+      /* Request and reconnect validation remain available when unsupported. */
     }
     lifecycle.setNotifier(() => channel?.postMessage("session-changed"));
-    // A single Tab departure owns this fallback, not a general last-focus
-    // history. Routine revalidation still blocks writes and verifies identity.
-    const keydown = (event: KeyboardEvent) => {
-      const element = document.activeElement;
-      // The returning Tab can arrive on BODY while verification is inert; it
-      // is not a newer independently owned control or pointer intention.
-      if (event.key === "Tab" && element === document.body) return;
-      clearDeparture();
-      const current = lifecycle.getSnapshot();
-      const workspace =
-        element instanceof HTMLElement
-          ? element.closest<HTMLElement>("[data-session-workspace]")
-          : null;
-      if (
-        event.key === "Tab" &&
-        current.phase === "active" &&
-        document.hasFocus() &&
-        element instanceof HTMLElement &&
-        workspace &&
-        eligibleDepartureOwner(element)
-      ) {
-        tabDeparture.current = {
-          leftControl: false,
-          owner: {
-            focus: focusPosition(element),
-            workspace,
-            accountEpoch: current.accountEpoch,
-            generation: current.generation,
-            tabIndex: element.tabIndex,
-          },
-        };
-      }
-    };
-    const keyup = () => {
-      tabDeparture.current = null;
-    };
-    const focusout = (event: FocusEvent) => {
-      const gesture = tabDeparture.current;
-      if (!gesture) return;
-      if (
-        event.target === gesture.owner.focus.element &&
-        event.relatedTarget === null
-      )
-        gesture.leftControl = true;
-      else tabDeparture.current = null;
-    };
-    const focusin = (event: FocusEvent) => {
-      if (event.target instanceof HTMLElement && event.target !== document.body)
-        clearDeparture();
-    };
-    const blur = () => {
-      const gesture = tabDeparture.current;
-      tabDeparture.current = null;
-      const current = lifecycle.getSnapshot();
-      departed.current =
-        !document.hasFocus() &&
-        current.phase === "active" &&
-        gesture?.leftControl &&
-        sameDepartureOwner(gesture.owner, current)
-          ? gesture.owner
-          : null;
-    };
-    const online = (event: Event) => {
-      const owner = departed.current,
-        current = lifecycle.getSnapshot();
-      clearDeparture();
-      if (
-        event.type === "focus" &&
-        event.target === event.currentTarget &&
-        owner &&
-        current.phase === "active" &&
-        document.hasFocus() &&
-        document.visibilityState === "visible" &&
-        document.activeElement === document.body &&
-        sameDepartureOwner(owner, current)
-      )
-        previousFocus.current = { ...owner.focus, departure: owner };
-      void lifecycle.check();
-    };
-    const visible = () => {
-      clearDeparture();
-      if (document.visibilityState === "visible") void lifecycle.check();
-    };
-    document.addEventListener("keydown", keydown, true);
-    document.addEventListener("keyup", keyup, true);
-    document.addEventListener("focusout", focusout, true);
-    document.addEventListener("focusin", focusin, true);
-    document.addEventListener("pointerdown", clearDeparture, true);
-    window.addEventListener("blur", blur);
+    const online = () => void lifecycle.check();
     window.addEventListener("online", online);
     window.addEventListener("offline", lifecycle.pause);
-    window.addEventListener("focus", online);
-    document.addEventListener("visibilitychange", visible);
     return () => {
       lifecycle.setNotifier(() => {});
       channel?.close();
       uninstall();
       lifecycle.dispose();
-      clearDeparture();
-      document.removeEventListener("keydown", keydown, true);
-      document.removeEventListener("keyup", keyup, true);
-      document.removeEventListener("focusout", focusout, true);
-      document.removeEventListener("focusin", focusin, true);
-      document.removeEventListener("pointerdown", clearDeparture, true);
-      window.removeEventListener("blur", blur);
       window.removeEventListener("online", online);
       window.removeEventListener("offline", lifecycle.pause);
-      window.removeEventListener("focus", online);
-      document.removeEventListener("visibilitychange", visible);
     };
   }, [lifecycle]);
   useLayoutEffect(() => {
@@ -289,14 +123,6 @@ export function SessionBoundary({
       !saved ||
       !saved.element.isConnected ||
       saved.element.closest("[hidden],[inert]")
-    )
-      return;
-    if (
-      saved.departure &&
-      (!sameDepartureOwner(saved.departure, snapshot) ||
-        !document.hasFocus() ||
-        document.visibilityState !== "visible" ||
-        document.activeElement !== document.body)
     )
       return;
     if (
@@ -361,7 +187,7 @@ export function SessionBoundary({
       )}
       {!active && snapshot.concealed && (
         <div
-          className="mx-auto w-full max-w-lg space-y-4 p-6"
+          className={snapshot.phase === "recovery" ? "w-full min-w-0" : "mx-auto w-full min-w-0 max-w-lg space-y-4 p-4 sm:p-6"}
           role="region"
           aria-label="恢复登录"
         >
@@ -386,13 +212,6 @@ export function SessionBoundary({
             hidden={snapshot.phase !== "recovery"}
             inert={snapshot.phase !== "recovery"}
           >
-            {snapshot.session && (
-              <Notice tone="warning" title="请重新登录">
-                {
-                  "\u5F53\u524D\u8F93\u5165\u4EC5\u4FDD\u7559\u5728\u6B64\u9875\u9762\u3002\u540C\u4E00\u8D26\u53F7\u767B\u5F55\u540E\u53EF\u4EE5\u7EE7\u7EED\uFF1B\u5207\u6362\u8D26\u53F7\u4F1A\u6E05\u9664\u8FD9\u4E9B\u8F93\u5165\u3002"
-                }
-              </Notice>
-            )}
             {login({ onSuccess: lifecycle.signedIn, initialError: null })}
           </div>
         </div>

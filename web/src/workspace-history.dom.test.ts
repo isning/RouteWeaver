@@ -412,3 +412,24 @@ it("a local view callback cannot overwrite a newer scope or a page left and late
   earlier("#published-routes?line=stale");
   expect(location.hash).toBe("#published-routes?line=new");
 });
+
+it("workspace navigation works without secure-context randomUUID", () => {
+  const descriptor = Object.getOwnPropertyDescriptor(crypto, "randomUUID");
+  Object.defineProperty(crypto, "randomUUID", { configurable: true, value: undefined });
+  try {
+    history.replaceState(null, "", "#subscriptions");
+    let visible = location.hash;
+    const navigation = createWorkspaceHistory({
+      isDirty: () => false,
+      confirm: () => {},
+      accept: (hash) => { visible = hash; },
+    });
+    dispose = navigation.dispose;
+    navigation.navigate("#routes");
+    expect(visible).toBe("#routes");
+    expect(history.state.routeweaverEntry).toMatch(/^[0-9a-f-]{36}$/);
+  } finally {
+    if (descriptor) Object.defineProperty(crypto, "randomUUID", descriptor);
+    else Reflect.deleteProperty(crypto, "randomUUID");
+  }
+});

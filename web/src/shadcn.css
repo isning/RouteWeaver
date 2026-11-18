@@ -161,3 +161,23 @@
   outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
+
+/* Quiet feedback for navigation; keep layout and hit targets stationary. */
+[data-slot="sidebar-menu-button"] {
+  transition-property: width, height, padding, background-color, color;
+  transition-duration: 160ms;
+  transition-timing-function: ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-slot="sidebar-menu-button"],
+  [data-slot="button"],
+  [data-slot="sidebar-gap"],
+  [data-slot="sidebar-container"] {
+    transition: none;
+  }
+  [data-slot="button"]:active {
+    transform: none;
+    translate: none;
+  }
+}

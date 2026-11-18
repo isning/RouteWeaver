@@ -15,7 +15,10 @@ import (
 const nodeHistoryKind = "node-resource-history"
 const nodeHourlyKind = "node-resource-hourly"
 const nodeHistoryLimit = 256
-const nodeHistoryBytes = 128 << 10
+
+// A full tier can retain 128 interfaces per sample. Leave room for
+// maximum-length names and two JSON floating-point rates per interface.
+const nodeHistoryBytes = 6 << 20
 
 var ErrNodeHistoryCapacity = errors.New("node resource history capacity exceeded")
 var errNodeHistoryInvalid = errors.New("invalid resource history record")
@@ -54,6 +57,16 @@ func (s *Store) resourceHistoryTx(ctx context.Context, tx *sql.Tx, id string, ki
 					return h, errNodeHistoryInvalid
 				}
 			}
+			if len(p.InterfaceRates) > 128 || (p.MemoryUsedBytes != nil && (p.MemoryTotalBytes == 0 || *p.MemoryUsedBytes > p.MemoryTotalBytes)) {
+				return h, errNodeHistoryInvalid
+			}
+			for _, rates := range p.InterfaceRates {
+				for _, v := range []*float64{rates.Receive, rates.Transmit} {
+					if v != nil && (math.IsNaN(*v) || math.IsInf(*v, 0) || *v < 0) {
+						return h, errNodeHistoryInvalid
+					}
+				}
+			}
 			if p.CPUPercent != nil && *p.CPUPercent > 100 {
 				return h, errNodeHistoryInvalid
 			}
@@ -87,12 +100,11 @@ func (s *Store) appendNodeResourceHistoryTx(tx *sql.Tx, id string, snapshot obse
 			return err
 		}
 		next, _ := observability.AppendResourceHistory(h, snapshot, now)
-		limit := 80 << 10
+
 		if kind == nodeHistoryKind {
 			next.Hourly = nil
 		} else {
 			next.Points = nil
-			limit = 48 << 10
 		}
 		if reflect.DeepEqual(next, h) {
 			continue
@@ -101,7 +113,7 @@ func (s *Store) appendNodeResourceHistoryTx(tx *sql.Tx, id string, snapshot obse
 		if err != nil {
 			return err
 		}
-		if len(encoded)+s.aead.NonceSize()+s.aead.Overhead() > limit {
+		if len(encoded)+s.aead.NonceSize()+s.aead.Overhead() > nodeHistoryBytes {
 			continue
 		}
 		if err = s.putTx(tx, kind, id, next); err != nil {

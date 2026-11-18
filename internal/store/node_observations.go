@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"reflect"
 	"routeweaver/internal/domain"
 	"routeweaver/internal/observability"
 	"time"
@@ -93,6 +92,7 @@ func (s *Store) ConfigureNodeObservations(id string, config observability.Config
 				return state, err
 			}
 		}
+
 		if config.ObserverInstanceID != "" {
 			var instance domain.CoreInstance
 			if e := s.getTx(tx, "core-instances", config.ObserverInstanceID, &instance); e != nil {
@@ -106,7 +106,7 @@ func (s *Store) ConfigureNodeObservations(id string, config observability.Config
 		if err != nil {
 			return state, err
 		}
-		if config.ObserverInstanceID != state.Config.ObserverInstanceID || !reflect.DeepEqual(config.BilledInterfaces, state.Config.BilledInterfaces) {
+		if config.ObserverKind != state.Config.ObserverKind || config.ObserverInstanceID != state.Config.ObserverInstanceID {
 			if _, err = s.deleteTx(tx, nodeHistoryKind, id); err != nil {
 				return state, err
 			}
@@ -120,23 +120,35 @@ func (s *Store) ConfigureNodeObservations(id string, config observability.Config
 func (s *Store) AcceptNodeObservation(report observability.Report, now time.Time) (observability.Receipt, error) {
 	var receipt observability.Receipt
 	_, e := s.updateNodeObservations(report.Scope.NodeID, func(tx *sql.Tx, state observability.State) (observability.State, error) {
-		var instance domain.CoreInstance
-		if e := s.getTx(tx, "core-instances", report.Scope.InstanceID, &instance); e != nil || instance.HostID != report.Scope.NodeID {
-			return state, observability.ErrScope
-		}
-		// Scope and latest enrollment are read under the same database write
-		// reservation as the snapshot. A concurrent revoke either precedes the
-		// entire ingestion or waits until its commit, never interleaves with it.
-		var enrollment struct {
-			Scope     observability.Scope `json:"scope"`
-			Revoked   bool                `json:"revoked"`
-			ExpiresAt time.Time           `json:"expiresAt"`
-		}
-		if e := s.getTx(tx, "instance-enrollments", report.Scope.InstanceID, &enrollment); e != nil {
-			return state, observability.ErrScope
-		}
-		if enrollment.Scope != report.Scope || enrollment.Revoked || !now.Before(enrollment.ExpiresAt) {
-			return state, observability.ErrScope
+		if report.HostAgent {
+			var parent struct {
+				NodeID          string    `json:"nodeId"`
+				EnrollmentEpoch string    `json:"enrollmentEpoch"`
+				Revoked         bool      `json:"revoked"`
+				ExpiresAt       time.Time `json:"expiresAt"`
+			}
+			if report.Scope.InstanceID != "" || s.getTx(tx, "host-enrollments", report.Scope.NodeID, &parent) != nil || parent.NodeID != report.Scope.NodeID || parent.EnrollmentEpoch != report.Scope.EnrollmentEpoch || parent.Revoked || !now.Before(parent.ExpiresAt) {
+				return state, observability.ErrScope
+			}
+		} else {
+			var instance domain.CoreInstance
+			if e := s.getTx(tx, "core-instances", report.Scope.InstanceID, &instance); e != nil || instance.HostID != report.Scope.NodeID {
+				return state, observability.ErrScope
+			}
+			// Scope and latest enrollment are read under the same database write
+			// reservation as the snapshot. A concurrent revoke either precedes the
+			// entire ingestion or waits until its commit, never interleaves with it.
+			var enrollment struct {
+				Scope     observability.Scope `json:"scope"`
+				Revoked   bool                `json:"revoked"`
+				ExpiresAt time.Time           `json:"expiresAt"`
+			}
+			if e := s.getTx(tx, "instance-enrollments", report.Scope.InstanceID, &enrollment); e != nil {
+				return state, observability.ErrScope
+			}
+			if enrollment.Scope != report.Scope || enrollment.Revoked || !now.Before(enrollment.ExpiresAt) {
+				return state, observability.ErrScope
+			}
 		}
 		next, r, e := observability.Accept(state, report, now)
 		receipt = r

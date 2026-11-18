@@ -1,4 +1,3 @@
-import { ContextHeader, ContextLayout } from "./page-layout";
 import { Tabs } from "@/components/ui/tabs";
 import { PlatformSettingsTabList } from "./platform-settings-navigation";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,12 +15,12 @@ export type LoadingLayout =
 function ContentSkeleton({ layout }: { layout: LoadingLayout }) {
   if (layout === "settings")
     return (
-      <div className="settings-skeleton space-y-10">
+      <div className="settings-skeleton space-y-6">
         {[0, 1].map((group) => (
-          <div key={group} className="@container/settings space-y-3">
-            <Skeleton className="h-6 w-24" />
-            <div className="divide-y rounded-lg border bg-card">
-              {[0, 1, 2].map((row) => (
+          <div key={group} className="@container/settings overflow-hidden rounded-xl border bg-card">
+            <div className="px-5 py-5 sm:px-6"><Skeleton className="h-6 w-24" /></div>
+            <div className="divide-y border-t">
+              {[0, 1].map((row) => (
                 <div
                   key={row}
                   className="grid gap-3 px-4 py-4 @min-[40rem]/settings:grid-cols-[10rem_minmax(0,1fr)] @min-[40rem]/settings:gap-x-5 sm:px-5"
@@ -181,42 +180,41 @@ export function PageSkeleton({ page }: { page: string }) {
           ? "cards"
           : "table";
   if (page === "account-security") {
-    return <div role="status" aria-label="正在打开页面" aria-busy="true" className="space-y-6">
+    return <div role="status" aria-label="正在打开页面" aria-busy="true" className="mx-auto w-full min-w-0 max-w-4xl space-y-6">
       <span className="sr-only">正在打开页面</span>
-      <ContextHeader navigation contentKind="settings"><Skeleton className="h-8 w-40" /></ContextHeader>
-      <ContextLayout navigation contentKind="settings" rail={<div aria-hidden="true"><ContentSkeleton layout="field" /></div>}>
-        <div aria-hidden="true"><ContentSkeleton layout="form" /></div>
-      </ContextLayout>
+      <Skeleton aria-hidden="true" className="h-8 w-40" />
+      <div aria-hidden="true"><ContentSkeleton layout="settings" /></div>
     </div>;
   }
-  if (["subscriptions", "profiles", "outputs", "settings"].includes(page)) {
+  if (page === "settings") {
+    return <div role="status" aria-label="正在打开页面" aria-busy="true" className="mx-auto w-full min-w-0 max-w-4xl space-y-6">
+      <span className="sr-only">正在打开页面</span>
+      <Skeleton aria-hidden="true" className="h-8 w-40" />
+      <Tabs defaultValue="basic"><PlatformSettingsTabList disabled /></Tabs>
+      <div aria-hidden="true"><ContentSkeleton layout="settings" /></div>
+    </div>;
+  }
+  if (["subscriptions", "profiles", "outputs"].includes(page)) {
     return (
       <div role="status" aria-label="正在打开页面" aria-busy="true">
         <span className="sr-only">正在打开页面</span>
         <WorkspaceFrame
           contained={page === "profiles" || page === "outputs"}
-          contentKind={page === "settings" ? "settings" : "list"}
-          contextKind={page === "settings" ? "navigation" : "data"}
+          contentKind="list"
+          contextKind="data"
           header={
             <div
               aria-hidden="true"
               className="flex items-center justify-between gap-4"
             >
               <Skeleton className="h-7 w-40 sm:h-8" />
-              {page !== "settings" && <Skeleton className="h-11 w-28" />}
+              <Skeleton className="h-11 w-28" />
             </div>
-          }
-          localNavigation={
-            page === "settings" ? (
-              <Tabs defaultValue="basic">
-                <PlatformSettingsTabList disabled />
-              </Tabs>
-            ) : undefined
           }
           context={
             <div aria-hidden="true">
               <ContentSkeleton
-                layout={page === "settings" ? "field" : "summary"}
+                layout="summary"
               />
             </div>
           }

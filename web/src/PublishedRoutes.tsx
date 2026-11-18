@@ -280,6 +280,8 @@ const routeStatus = (status: string) =>
 // Other core adapters remain available for transit and existing route editing.
 const publicEntryVersions: Record<string, readonly string[]> = {
   "routeweaver/managed-xray": ["26.3.27-rw1"],
+  "routeweaver/sing-box": ["1.14.4"],
+  "routeweaver/xray": ["26.10.31"],
 };
 function supportsPublicUsers(
   route: PublishedRoute,
@@ -293,7 +295,13 @@ function supportsPublicUsers(
     !!publicEntryVersions[entry.instance.adapterId]?.includes(
       entry.instance.version,
     ) &&
-    entry.listener.connection.protocol === "vless"
+    (entry.instance.adapterId === "routeweaver/managed-xray"
+      ? entry.listener.connection.protocol === "vless"
+      : entry.listener.authentication === "principals" &&
+        (entry.instance.adapterId === "routeweaver/sing-box"
+          ? ["vless", "vmess", "trojan", "hysteria2", "anytls", "tuic", "socks", "shadowsocks"]
+          : ["vless", "vmess", "trojan"]
+        ).includes(entry.listener.connection.protocol))
   );
 }
 function EntryPrerequisite({ deployment }: { deployment?: ServerDeployment }) {
@@ -301,7 +309,7 @@ function EntryPrerequisite({ deployment }: { deployment?: ServerDeployment }) {
     <Notice tone="warning" title="此入口暂不能分配独立用户">
       {
         <>
-          <p>请先配置受管 Xray 的 VLESS 监听端点，再将其设为转发路径入口。</p>
+          <p>请将支持独立用户凭据的监听端点设为路径入口。</p>
           <div className={"flex flex-wrap items-center gap-2"}>
             <a href="#servers">配置服务器入口</a>
             {deployment && (
@@ -1775,6 +1783,9 @@ function PrincipalEditor({
               />
             </AppField>
             </QueryState>
+            {deployment?.ir.programs.some((program) => program.listener.id === route.endpointIds[0] && ["routeweaver/sing-box", "routeweaver/xray"].includes(program.instance.adapterId)) && (
+              <Notice tone="info">此入口按用户签发凭据。它不执行按用户计量、限额或在线撤销，变更凭据后需重新应用核心配置。</Notice>
+            )}
             <p className="muted text-sm text-muted-foreground">
               先为用户授权这条线路，再创建独立入口。
             </p>
@@ -1803,13 +1814,13 @@ function PrincipalEditor({
                       >
                         <Input />
                       </AppField>
-                      <AppField name="uuid" label="已有 VLESS UUID（可选）">
+                      {deployment?.ir.programs.find((program) => program.listener.id === route.endpointIds[0])?.listener.connection.protocol === "vless" && <AppField name="uuid" label="已有 VLESS UUID（可选）">
                         <PasswordInput
                           placeholder="留空，由服务器生成"
                           autoComplete="off"
                           revealLabel="已有 VLESS UUID"
                         />
-                      </AppField>
+                      </AppField>}
                     </>
                   ),
                 },

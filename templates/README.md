@@ -1,0 +1,10 @@
+# Region and service routing template
+
+`region-service-routing.json` is a credential-free reusable template derived from the supplied Mihomo configuration structure. Import the JSON through the administrator template publisher, then select it from the template library.
+
+- On template application, every region and provenance source present in the selected profile connections generates a nonempty group. There is no country allowlist. Connections without region metadata use the “其他地区” group; connections without source provenance have a separate source group. Duplicate source display names remain distinct by stable source identity. Automatic and fallback groups contain all generated regional groups; manual selection contains all selected endpoints. Regeneration happens when applying/reviewing the template, not as a background rewrite of saved policy.
+- Bind each category rule slot to an accepted private rule resource. Resource URLs, local paths and credentials are deliberately absent. Category matching is defined by the resource selected by the user, not by the group label.
+- The template preserves service selection groups, regional URL tests, fallback, manual selection, the default Final group, mixed port 7890 and protocol sniffing. Publication still requires the exact selected client to pass rendering checks.
+- The portable model does not allow rejection inside a selection group. Ad-block rules reject directly; Sogou rules use direct connections. This differs from the original configurable groups and is explicit in the rule editor.
+- This is not a lossless import of the supplied native configuration. Native DNS/fake-IP policy, controller/redirection/TProxy ports, routing marks, geodata downloads, icons, include-all/exclude-type semantics, REJECT-DROP and Tailscale are not represented by this template. None is claimed as applied. The native source configuration must be managed separately when those features are required.
+- No supplied UUID, password, host credential or Tailscale authentication key is included. No remote resource is fetched by adding this template.

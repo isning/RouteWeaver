@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/url"
 	"routeweaver/internal/auth"
-	"routeweaver/internal/resources"
 	"sync"
 	"time"
 
@@ -32,7 +31,7 @@ type subscriptionVerification struct {
 }
 
 func newSubscriptionVerification() *subscriptionVerification {
-	return &subscriptionVerification{client: resources.OutboundClient(10 * time.Second), now: time.Now, challenges: map[string]subscriptionChallenge{}}
+	return &subscriptionVerification{client: &http.Client{Timeout: 10 * time.Second, Transport: &http.Transport{Proxy: nil}, CheckRedirect: func(_ *http.Request, _ []*http.Request) error { return http.ErrUseLastResponse }}, now: time.Now, challenges: map[string]subscriptionChallenge{}}
 }
 func (v *subscriptionVerification) verify(ctx context.Context, origin string) error {
 	canonical, err := canonicalSubscriptionOrigin(origin)
@@ -82,11 +81,12 @@ func (v *subscriptionVerification) serveChallenge(w http.ResponseWriter, r *http
 		fail(w, 404, "not found")
 		return
 	}
-	authority, err := CanonicalPublicOrigin("https://" + r.Host)
+	authority, err := canonicalSubscriptionOrigin("https://" + r.Host)
 	v.mu.Lock()
 	challenge, found := v.challenges[nonce]
 	v.mu.Unlock()
-	if err != nil || !found || authority != "https://"+challenge.authority || !v.now().Before(challenge.expires) {
+	expectedAuthority, expectedErr := canonicalSubscriptionOrigin("https://" + challenge.authority)
+	if err != nil || expectedErr != nil || !found || authority != expectedAuthority || !v.now().Before(challenge.expires) {
 		fail(w, 404, "not found")
 		return
 	}

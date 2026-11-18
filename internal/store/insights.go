@@ -23,7 +23,8 @@ type InsightUsage struct {
 	WeightedBytes int64 `json:"weightedBytes"`
 }
 type InsightDay struct {
-	Date string `json:"date"`
+	HasData bool   `json:"hasData"`
+	Date    string `json:"date"`
 	InsightUsage
 }
 type InsightRoute struct {
@@ -70,25 +71,48 @@ func (s *insightSum) value() (InsightUsage, error) {
 }
 
 func (s *Store) UsageInsightsContext(ctx context.Context, user string, cycleStart, now time.Time) (UsageInsights, error) {
-	return s.usageInsightsContext(ctx, user, cycleStart, now, nil)
+	return s.usageInsightsContext(ctx, user, cycleStart, now, nil, 14)
 }
-func (s *Store) UserInsightsContext(ctx context.Context, user string, now time.Time) (UsageInsights, service.EffectivePolicy, service.CycleWindow, error) {
+func (s *Store) UserInsightsContext(ctx context.Context, user string, now time.Time, window ...int) (UsageInsights, service.EffectivePolicy, service.CycleWindow, error) {
+	count := 14
+	if len(window) > 0 {
+		count = window[0]
+	}
+	if count < 1 || count > 30 {
+		return UsageInsights{}, service.EffectivePolicy{}, service.CycleWindow{}, ErrInsightsUnavailable
+	}
 	var policy service.EffectivePolicy
 	var cycle service.CycleWindow
 	usage, err := s.usageInsightsContext(ctx, user, time.Time{}, now, func(tx *sql.Tx) (time.Time, error) {
 		var e error
 		policy, cycle, e = s.insightsPolicyTx(ctx, tx, user, now)
 		return cycle.Start, e
-	})
+	}, count)
 	return usage, policy, cycle, err
 }
-func (s *Store) usageInsightsContext(ctx context.Context, user string, cycleStart, now time.Time, prepare func(*sql.Tx) (time.Time, error)) (UsageInsights, error) {
+func (s *Store) usageInsightsContext(ctx context.Context, user string, cycleStart, now time.Time, prepare func(*sql.Tx) (time.Time, error), count int) (UsageInsights, error) {
 	out := UsageInsights{AsOf: now, Timezone: "UTC+8", Daily: []InsightDay{}, Routes: []InsightRoute{}, Admission: InsightAdmission{AsOf: now, MaxLeaseSeconds: int(entrypolicy.MaxLease / time.Second), OnlineIPs: []string{}}}
 	local := now.In(service.DefaultLocation)
-	start := time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, service.DefaultLocation).AddDate(0, 0, -13)
-	days := make([]insightSum, 14)
+	start := time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, service.DefaultLocation).AddDate(0, 0, 1-count)
+	days := make([]insightSum, count)
+	observed := make([]bool, count)
 	routes := map[string]*insightSum{}
 	err := s.readSnapshot(ctx, func(tx *sql.Tx) error {
+		var settings struct {
+			Timezone string `json:"timezone"`
+		}
+		if err := s.getTx(tx, "settings", "platform", &settings); err != nil && err != ErrNotFound {
+			return err
+		}
+		location, err := service.DisplayLocation(settings.Timezone)
+		if err != nil {
+			return ErrInsightsUnavailable
+		}
+		if settings.Timezone != "" {
+			out.Timezone = settings.Timezone
+		}
+		local = now.In(location)
+		start = time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, location).AddDate(0, 0, 1-count)
 		if prepare != nil {
 			var e error
 			cycleStart, e = prepare(tx)
@@ -102,9 +126,14 @@ func (s *Store) usageInsightsContext(ctx context.Context, user string, cycleStar
 		}
 		if e := s.visitInsightLedgerWindowTx(ctx, tx, user, windowStart, now, func(record MeterRecord) error {
 			if !record.ObservedAt.Before(start) {
-				i := int(record.ObservedAt.In(service.DefaultLocation).Sub(start) / (24 * time.Hour))
-				if i >= 0 && i < 14 {
+				date := record.ObservedAt.In(location)
+				// Calendar dates, rather than elapsed 24h periods, survive DST changes.
+				bucket := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, time.UTC)
+				first := time.Date(start.Year(), start.Month(), start.Day(), 0, 0, 0, 0, time.UTC)
+				i := int(bucket.Sub(first) / (24 * time.Hour))
+				if i >= 0 && i < count {
 					days[i].add(record)
+					observed[i] = true
 				}
 			}
 			if !record.ObservedAt.Before(cycleStart) {
@@ -137,7 +166,7 @@ func (s *Store) usageInsightsContext(ctx context.Context, user string, cycleStar
 		if e != nil {
 			return UsageInsights{}, e
 		}
-		out.Daily = append(out.Daily, InsightDay{start.AddDate(0, 0, i).Format("2006-01-02"), v})
+		out.Daily = append(out.Daily, InsightDay{Date: start.AddDate(0, 0, i).Format("2006-01-02"), InsightUsage: v, HasData: observed[i]})
 	}
 	ids := []string{}
 	for id := range routes {

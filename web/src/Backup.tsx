@@ -1,4 +1,5 @@
-import { ContextLayout, PageSection, SectionIndex } from "@/ui-patterns/page-layout";
+import { SettingsGroup } from "./ui-patterns/settings-group";
+import { PageSection } from "@/ui-patterns/page-layout";
 import { BackupCapacity } from "./BackupCapacity";
 import { PasswordInput } from "@/ui-patterns/password-input";
 import { TaskDialog } from "@/ui-patterns/task-overlays";
@@ -263,22 +264,9 @@ export function BackupSettings() {
         }
     };
     return (<div className="grid gap-6" role="region" aria-label="备份与恢复">
-      <ContextLayout
-        contentKind="settings"
-        navigation
-        rail={
-          <SectionIndex
-            label="本页备份任务"
-            sections={[
-              { id: `${sectionID}-backup-export`, label: "完整加密备份" },
-              { id: `${sectionID}-backup-restore`, label: "恢复备份" },
-            ]}
-          />
-        }
-      >
       <PageSection id={`${sectionID}-backup-export`} label="完整加密备份设置">
-      <Section title="完整加密备份" description="加密下载账号、配置、历史及恢复凭据。">
-        <BackupCapacity primaryAction={
+      <SettingsGroup title="完整加密备份" description="加密下载账号、配置、历史及恢复凭据。">
+        <div className="px-5 pb-5 sm:px-6"><BackupCapacity primaryAction={
           <ActionButton leadingIcon={<DownloadOutlined aria-hidden="true"/>} onClick={() => {
             create.reset();
             form.resetFields();
@@ -288,12 +276,12 @@ export function BackupSettings() {
         }} variant="default">
             创建加密备份
           </ActionButton>
-        } />
-      </Section>
+        } /></div>
+      </SettingsGroup>
       </PageSection>
       <PageSection id={`${sectionID}-backup-restore`} label="恢复备份设置">
-      <Section title="恢复备份" description="恢复到独立的新数据库，保留当前数据；服务切换需另行操作。">
-        <div className="settings-form backup-restore-form max-w-[38.75rem] space-y-5">
+      <SettingsGroup title="恢复备份" description="恢复到独立的新数据库，保留当前数据；服务切换需另行操作。">
+        <div className="settings-form backup-restore-form space-y-5 px-5 pb-5 sm:px-6">
           <ErrorNotice error={fileError || inspectionError}/>
           <ErrorNotice error={restoreError}/>
           {unresolved && (<Notice tone="warning" title="恢复结果尚未确认">{<>
@@ -438,9 +426,8 @@ export function BackupSettings() {
                 </>)}
             </div>)}
         </div>
-      </Section>
+      </SettingsGroup>
       </PageSection>
-      </ContextLayout>
       <TaskDialog title="创建加密备份" open={createOpen} footer={null} onOpenChange={open => {
             if (!open)
                 closeExport();

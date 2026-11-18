@@ -24,6 +24,8 @@ export function routeContentKind(page: string): ContentKind | "frame" {
   if (
     [
       "sources",
+      "collections",
+      "templates",
       "resources",
       "nodes",
       "users",

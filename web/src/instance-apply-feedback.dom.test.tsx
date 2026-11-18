@@ -196,7 +196,8 @@ it("keeps a saved unknown result distinct from refresh progress and refresh fail
     return new Promise<Response>((resolve) => { finishRefresh = resolve; });
   });
   fireEvent.click(screen.getByRole("button", { name: "刷新实例状态" }));
-  await screen.findByText("正在刷新，以下为上次读取的实例记录。");
+  await screen.findByRole("button", { name: "刷新实例状态", busy: true });
+  expect(screen.queryByText(/正在刷新，以下为上次读取/)).toBeNull();
   expect(screen.getByText("状态尚未确认", { selector: '[data-slot="badge"]' })).toBeTruthy();
   finishRefresh(new Response(JSON.stringify({ detail: "状态读取失败" }), {
     status: 503, headers: { "Content-Type": "application/json" },
@@ -214,4 +215,13 @@ it("keeps a saved unknown result distinct from refresh progress and refresh fail
     { url: "/api/agent/instances/core/state", method: "GET" },
     { url: "/api/agent/instances/core/state", method: "GET" },
   ]);
+});
+
+it("shows the Agent's installation error detail as reported", async () => {
+  const state = response("blocked", "core_installation_failed");
+  state.state!.errorDetail = "read core archive: unexpected EOF";
+  mount(state);
+  const notice = await screen.findByLabelText("实例处理建议");
+  expect(within(notice).getByText("read core archive: unexpected EOF")).toBeTruthy();
+  expect(within(notice).queryByText("Agent 未能获取或验证核心安装包。")).toBeNull();
 });

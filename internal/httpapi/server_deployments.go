@@ -41,12 +41,19 @@ func (h *server) registerServerAdmin(r chi.Router) {
 		r.Put("/"+kind+"/{id}", save)
 	}
 	r.Post("/managed-endpoints/{id}/impact", h.previewEndpointImpact)
+	r.Post("/managed-endpoints/reality-keys", h.generateRealityKeys)
 	h.registerSecretInventoryRead(r, "server-deployments")
+	r.Get("/server-tls-certificates", h.listServerCertificates)
+	r.Post("/server-tls-certificates", h.uploadServerCertificate)
 	save := func(w http.ResponseWriter, r *http.Request) {
-		var v ServerDeployment
-		if !decode(w, r, &v) {
+		var input struct {
+			ServerDeployment
+			CertificateIDs map[string]string `json:"certificateIds,omitempty"`
+		}
+		if !decode(w, r, &input) {
 			return
 		}
+		v := input.ServerDeployment
 		if e := ensureID(&v.ID); e != nil {
 			storeError(w, e)
 			return
@@ -64,13 +71,26 @@ func (h *server) registerServerAdmin(r chi.Router) {
 		if v.IR.SchemaVersion == "" {
 			v.IR.SchemaVersion = "1.0"
 		}
+		selected, err := h.useEndpointSecurity(&v.IR, input.CertificateIDs)
+		if err != nil {
+			storeError(w, err)
+			return
+		}
+		if !selected {
+			fail(w, http.StatusConflict, "所选平台证书不可用，请重新选择")
+			return
+		}
 		v.Status = "draft"
 		v.Diagnostics = []string{}
-		if _, e := render.DefaultServers().Render(v.IR); e != nil {
+		if e := serverTLSPlatformDiagnostic(v.IR); e != nil {
+			v.Diagnostics = append(v.Diagnostics, e.Error())
+		} else if _, e := render.DefaultServers().Render(v.IR); e != nil {
 			v.Diagnostics = append(v.Diagnostics, e.Error())
 		}
 		v.UpdatedAt = time.Now().UTC()
-		if e := h.s.CompareAndPutRecords([]store.RecordCompare{*expected}, []store.RecordWrite{{Kind: "server-deployments", ID: v.ID, Value: v}}); e != nil {
+		writes := []store.RecordWrite{{Kind: "server-deployments", ID: v.ID, Value: v}}
+		writes = append(writes, serverCertificateWrites(v.IR)...)
+		if e := h.s.CompareAndPutRecords([]store.RecordCompare{*expected}, writes); e != nil {
 			storeError(w, e)
 			return
 		}
@@ -99,6 +119,10 @@ func (h *server) registerServerAdmin(r chi.Router) {
 		}
 		if e := h.verifyServerInventory(v.IR); e != nil {
 			writeServerInventoryError(w, e)
+			return
+		}
+		if e := serverTLSPlatformDiagnostic(v.IR); e != nil {
+			writeJSON(w, 200, map[string]any{"valid": false, "nativeChecked": false, "diagnostics": []string{e.Error()}, "artifacts": []domain.Artifact{}})
 			return
 		}
 		artifacts, e := render.DefaultServers().Render(v.IR)
@@ -175,6 +199,26 @@ func (h *server) saveInventory(w http.ResponseWriter, r *http.Request, kind stri
 			fail(w, 400, e.Error())
 			return
 		}
+		if e := render.ValidateListenerNetworkOptions(v, instance); e != nil {
+			fail(w, http.StatusUnprocessableEntity, e.Error())
+			return
+		}
+		if e := render.ValidateEndpointReality(v, instance); e != nil {
+			fail(w, http.StatusUnprocessableEntity, e.Error())
+			return
+		}
+		if v.CertificateID != "" {
+			ir := domain.ServerDeploymentIR{Programs: []domain.ServerProgram{{Listener: v}}}
+			ok, err := h.useEndpointSecurity(&ir, nil)
+			if err != nil {
+				storeError(w, err)
+				return
+			}
+			if !ok {
+				fail(w, http.StatusUnprocessableEntity, "所选平台证书不可用，请重新选择")
+				return
+			}
+		}
 		id = v.ID
 		value = v
 	case "links":
@@ -201,7 +245,9 @@ func (h *server) saveInventory(w http.ResponseWriter, r *http.Request, kind stri
 		return
 	}
 	var saveErr error
-	if kind == "managed-endpoints" {
+	if kind == "core-instances" {
+		saveErr = h.saveHostCore(value.(domain.CoreInstance))
+	} else if kind == "managed-endpoints" {
 		saveErr = h.saveReviewedEndpoint(r, value.(domain.ManagedEndpoint))
 	} else {
 		saveErr = h.s.Put(kind, id, value)
@@ -491,7 +537,11 @@ func serverFingerprint(ir domain.ServerDeploymentIR) string {
 
 // Sing-box-only protocol inventory must not advertise a listener the selected core cannot run.
 func validateSingBoxOnlyEndpointTarget(v domain.ManagedEndpoint, instance domain.CoreInstance) error {
-	if v.Connection.Protocol != "hysteria2" && v.Connection.Protocol != "anytls" {
+	if v.Connection.Transport != nil && v.Connection.Transport.Type == "xhttp" && instance.AdapterID != render.ServerAdapterXray {
+		return fmt.Errorf("XHTTP_TARGET_UNSUPPORTED: select Xray")
+	}
+	ss2022Users := v.Connection.Protocol == "shadowsocks" && v.Authentication == "principals"
+	if !ss2022Users && v.Connection.Protocol != "hysteria2" && v.Connection.Protocol != "anytls" && v.Connection.Protocol != "tuic" {
 		return nil
 	}
 	capability := (render.SingBoxServer{}).ServerCapability()

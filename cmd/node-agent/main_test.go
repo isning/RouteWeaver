@@ -9,8 +9,10 @@ import (
 	"os"
 	"path/filepath"
 	"routeweaver/internal/agent"
+	"routeweaver/internal/controlprotocol"
 	"sync/atomic"
 	"testing"
+	"time"
 )
 
 func TestLocalFixtureCLIReportsObservationNotNativeSuccess(t *testing.T) {
@@ -94,5 +96,33 @@ func TestServiceRequiresOutboundAndExclusiveDuration(t *testing.T) {
 		if code := run(context.Background(), args, &out, &errs); code != 2 {
 			t.Fatalf("invalid service args accepted %v: %d %s", extra, code, errs.String())
 		}
+	}
+}
+
+func TestHostCLIConnectsBeforeAnyCoreExists(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	var called atomic.Bool
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/agent/hosts/fixture-host/assignments" || r.Header.Get("Authorization") != "Bearer synthetic-host-token" || r.Header.Get("X-RouteWeaver-Node") != "fixture-host" {
+			t.Error("host agent used the wrong scope or transport")
+		}
+		called.Store(true)
+		_ = json.NewEncoder(w).Encode(controlprotocol.HostAssignments{NodeID: "fixture-host", EnrollmentEpoch: "fixture-epoch", ExpiresAt: time.Now().Add(time.Hour), Instances: []controlprotocol.HostAssignment{}})
+		cancel()
+	}))
+	defer server.Close()
+	root := t.TempDir()
+	token := filepath.Join(root, "token")
+	if err := os.WriteFile(token, []byte("synthetic-host-token"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	var out, errs bytes.Buffer
+	code := run(ctx, []string{"--mode", "host", "--service", "--state-dir", filepath.Join(root, "state"), "--core-store", filepath.Join(root, "cores"), "--max-policy-lease", "1m", "--node-id", "fixture-host", "--enrollment-epoch", "fixture-epoch", "--control-plane", server.URL, "--allow-loopback-http", "--token-file", token}, &out, &errs)
+	if code != 0 || !called.Load() {
+		t.Fatalf("empty-host enrollment failed: exit=%d %s", code, errs.String())
+	}
+	if _, err := os.Stat(filepath.Join(root, "state", "instances")); !os.IsNotExist(err) {
+		t.Fatal("empty host fabricated a core journal")
 	}
 }

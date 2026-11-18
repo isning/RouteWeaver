@@ -340,7 +340,7 @@ it("discloses continuing authorization again at the actual stage-execution decis
 });
 
 
-it.each(["observed_conformant", "stopped", "unregistered"])("continues reading after terminal instance state %s and labels previous records during refresh", async (phase) => {
+it.each(["observed_conformant", "stopped", "unregistered"])("continues reading after terminal instance state %s and keeps previous records visible without a progress banner", async (phase) => {
   let settle!: (response: Response) => void;
   let reads = 0;
   vi.stubGlobal("fetch", vi.fn(async () => {
@@ -358,7 +358,8 @@ it.each(["observed_conformant", "stopped", "unregistered"])("continues reading a
   await act(async () => { settle(json({ instanceId: "core", phase })); await firstRefresh; await vi.advanceTimersByTimeAsync(1); });
   await act(async () => { await vi.advanceTimersByTimeAsync(30000); });
   expect(screen.getByText("平台最近记录的实例状态")).toBeTruthy();
-  expect(screen.getByText("正在刷新，以下为上次读取的实例记录。")).toBeTruthy();
+  expect(screen.getByRole("button", { name: "刷新实例状态", busy: true })).toBeTruthy();
+  expect(screen.queryByText(/正在刷新，以下为上次读取/)).toBeNull();
   await act(async () => { settle(json({ instanceId: "core", phase: "apply_failed" })); await vi.advanceTimersByTimeAsync(1); });
   expect(screen.getByText("应用失败")).toBeTruthy();
   expect(screen.queryByText("核心当前在线")).toBeNull();
@@ -395,7 +396,8 @@ it.each(["刷新实例状态", "实例技术详情"])("keeps focused %s mounted 
   refreshing = true;
   let refresh!: Promise<void>;
   act(() => { refresh = client.invalidateQueries({ queryKey: ["instance-state", "core"] }); });
-  await screen.findByText("正在刷新，以下为上次读取的实例记录。");
+  await screen.findByRole("button", { name: "刷新实例状态", busy: true });
+  expect(screen.queryByText(/正在刷新，以下为上次读取/)).toBeNull();
   expect(document.activeElement).toBe(focused);
   expect(focused.isConnected).toBe(true);
   expect((focused as HTMLButtonElement).disabled).toBe(false);

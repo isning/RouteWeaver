@@ -196,6 +196,17 @@ it.each(["target-first", "key-first"])(
   },
 );
 
+it("sets the REALITY target, port and accepted SNI from an example", async () => {
+  const { user, drawer, save } = await openSecurityEditor();
+  await user.click(within(drawer).getByRole("combobox", { name: "选择 REALITY 握手目标示例" }));
+  await user.click(await screen.findByRole("option", { name: "www.microsoft.com:443" }));
+  expect(within(drawer).getByLabelText("握手目标")).toHaveProperty("value", "www.microsoft.com");
+  expect(within(drawer).getByText("请到监听端点更新 SNI，并将更新同步到此路径")).toBeTruthy();
+  expect((await save())?.reality).toMatchObject({
+    handshakeServer: "www.microsoft.com", handshakePort: 443, serverNames: ["www.microsoft.com"],
+  });
+});
+
 it("preserves the configured REALITY handshake port, short IDs and names when editing the target", async () => {
   const { user, drawer, save } = await openSecurityEditor({
     reality: {
@@ -229,24 +240,13 @@ it("does not offer incompatible certificate paths or PEM material for a REALITY 
   expect(within(drawer).queryByLabelText("读取 TLS 私钥")).toBeNull();
 });
 
-it("keeps certificate paths and PEM editing together for ordinary TLS", async () => {
+it("uploads a certificate pair without asking for file paths", async () => {
   const { user, drawer, save } = await openSecurityEditor(undefined, false);
   expect(within(drawer).queryByLabelText("REALITY 服务端私钥")).toBeNull();
   expect(within(drawer).getByLabelText("读取 TLS 证书")).toBeTruthy();
   expect(within(drawer).getByLabelText("读取 TLS 私钥")).toBeTruthy();
-  expect(
-    within(drawer).getByText(
-      "文件路径相对于此次配置包，仅使用包内文件。",
-    ),
-  ).toBeTruthy();
-  await user.type(
-    within(drawer).getByLabelText("证书文件路径"),
-    "certs/entry.pem",
-  );
-  await user.type(
-    within(drawer).getByLabelText("私钥文件路径"),
-    "certs/key.pem",
-  );
+  expect(within(drawer).queryByLabelText("证书文件路径")).toBeNull();
+  expect(within(drawer).queryByLabelText("私钥文件路径")).toBeNull();
   await user.click(within(drawer).getByLabelText("证书 PEM"));
   await user.paste("synthetic certificate");
   await user.click(
@@ -255,8 +255,8 @@ it("keeps certificate paths and PEM editing together for ordinary TLS", async ()
   await user.click(within(drawer).getByLabelText("私钥 PEM"));
   await user.paste("synthetic private key");
   expect(await save()).toEqual({
-    certificatePath: "certs/entry.pem",
-    keyPath: "certs/key.pem",
+    certificatePath: "tls/certificate.pem",
+    keyPath: "tls/key.pem",
     certificatePem: "synthetic certificate",
     privateKeyPem: "synthetic private key",
   });
@@ -296,7 +296,7 @@ function delayedPEM(name = "certificate.pem") {
   return { file, resolve, reject };
 }
 
-it("waits for both PEM imports and preserves newer name and path edits in the saved request", async () => {
+it("waits for both PEM imports and preserves the newer path name", async () => {
   const { user, drawer, save, saved } = await openSecurityEditor(undefined, false);
   const certificate = delayedPEM();
   const key = delayedPEM("key.pem");
@@ -306,15 +306,13 @@ it("waits for both PEM imports and preserves newer name and path edits in the sa
   expect(saveButton.hasAttribute("disabled")).toBe(true);
   await user.clear(within(drawer).getByLabelText("转发路径名称"));
   await user.type(within(drawer).getByLabelText("转发路径名称"), "New path name");
-  await user.type(within(drawer).getByLabelText("证书文件路径"), "custom/cert.pem");
-  await user.type(within(drawer).getByLabelText("私钥文件路径"), "custom/key.pem");
   await act(async () => certificate.resolve("synthetic certificate"));
   expect(saveButton.hasAttribute("disabled")).toBe(true);
   await user.click(saveButton);
   expect(saved).toHaveLength(0);
   await act(async () => key.resolve("synthetic private key"));
   expect(await save()).toEqual({
-    certificatePath: "custom/cert.pem", keyPath: "custom/key.pem",
+    certificatePath: "tls/certificate.pem", keyPath: "tls/key.pem",
     certificatePem: "synthetic certificate", privateKeyPem: "synthetic private key",
   });
   expect(saved[0].name).toBe("New path name");

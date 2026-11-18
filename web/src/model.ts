@@ -1,6 +1,7 @@
+import { randomUUID } from "./random-id";
 import type { Profile, PipelineStep, ClientNode, Group } from "./types";
 export const newID = (prefix = "item") =>
-  `${prefix}_${crypto.randomUUID().replaceAll("-", "").slice(0, 16)}`;
+  `${prefix}_${randomUUID().replaceAll("-", "").slice(0, 16)}`;
 export function bytesLabel(bytes: number | undefined) {
   if (bytes === undefined || !Number.isFinite(bytes)) return "—";
   const units = ["B", "KiB", "MiB", "GiB", "TiB"];
@@ -18,7 +19,12 @@ export function bitrateLabel(bytesPerSecond: number | undefined) {
     return "—";
   return `${(bytesPerSecond / 125000).toLocaleString("zh-CN", { maximumFractionDigits: 6 })} Mbps`;
 }
-export function dateLabel(value?: string, timezone = "Asia/Shanghai") {
+let defaultTimezone = "Asia/Shanghai";
+export function setDisplayTimezone(timezone: string) {
+  const value=timezone === "UTC+8" ? "Asia/Shanghai" : timezone;
+  try {new Intl.DateTimeFormat("zh-CN",{timeZone:value});defaultTimezone=value} catch { /* Keep the last valid timezone. */ }
+}
+export function dateLabel(value?: string, timezone = defaultTimezone) {
   if (!value || value.startsWith("0001")) return "未设置";
   const d = new Date(value);
   return Number.isNaN(d.getTime())

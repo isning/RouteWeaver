@@ -11,7 +11,7 @@ type SingBoxClient struct{}
 func (SingBoxClient) NormalizeName(name string) string { return name }
 
 func (SingBoxClient) ClientCapability() ClientCapability {
-	return ClientCapability{NativeOverride: nativeCapability("upstream-json-schema-and-references"), AdapterID: "sing-box", Versions: []string{SingBoxVersion}, Protocols: []string{"socks", "shadowsocks", "vless", "trojan", "vmess", "hysteria2", "anytls"}, Groups: []string{"manual", "url-test"}, MatchOps: []string{"domain", "domain-suffix", "ip-cidr", "resource", "and", "or", "not"}, ResourceFormats: []string{"sing-box-source", "srs"}, Runtime: []string{"dns", "sniff", "tun"}, TLSFingerprints: []string{"chrome", "firefox", "safari", "ios", "android", "edge", "360", "qq", "random", "randomized"}, ReservedNames: []string{"rw-direct"}}
+	return ClientCapability{NativeOverride: nativeCapability("upstream-json-schema-and-references"), AdapterID: "sing-box", Versions: []string{SingBoxVersion, StockSingBoxVersion}, Protocols: []string{"socks", "shadowsocks", "vless", "trojan", "vmess", "hysteria2", "anytls", "tuic"}, Groups: []string{"manual", "url-test"}, MatchOps: []string{"domain", "domain-suffix", "ip-cidr", "resource", "and", "or", "not"}, ResourceFormats: []string{"sing-box-source", "srs"}, Runtime: []string{"dns", "sniff", "tun"}, TLSFingerprints: []string{"chrome", "firefox", "safari", "ios", "android", "edge", "360", "qq", "random", "randomized"}, ReservedNames: []string{"rw-direct"}}
 }
 func (a SingBoxClient) RenderClient(p domain.ClientProfileIR, target Target, mode OutputMode, names map[string]string) (ClientResult, error) {
 	return a.renderClient(p, target, mode, names, nil)
@@ -111,14 +111,50 @@ func (SingBoxClient) renderClient(p domain.ClientProfileIR, _ Target, mode Outpu
 }
 func singboxConnection(c domain.Connection, tag string) map[string]any {
 	o := map[string]any{"type": c.Protocol, "tag": tag, "server": c.Host, "server_port": c.Port}
+	if c.Hysteria2 != nil {
+		h := c.Hysteria2
+		if h.Obfs != nil {
+			o["obfs"] = map[string]any{"type": h.Obfs.Type, "password": h.Obfs.Password}
+		}
+		if h.UpMbps > 0 {
+			o["up_mbps"] = h.UpMbps
+		}
+		if h.DownMbps > 0 {
+			o["down_mbps"] = h.DownMbps
+		}
+		if len(h.ServerPorts) > 0 {
+			ports := make([]string, len(h.ServerPorts))
+			for i, p := range h.ServerPorts {
+				ports[i] = p
+				if !strings.Contains(p, ":") {
+					ports[i] = p + ":" + p
+				}
+			}
+			o["server_ports"] = ports
+		}
+		if h.HopIntervalSeconds > 0 {
+			o["hop_interval"] = fmt.Sprintf("%ds", h.HopIntervalSeconds)
+		}
+	}
+	if c.Protocol == "tuic" {
+		o["uuid"] = c.UUID
+		if o2 := c.TUIC; o2 != nil {
+			if o2.CongestionControl != "" {
+				o["congestion_control"] = o2.CongestionControl
+			}
+			if o2.UDPRelayMode != "" {
+				o["udp_relay_mode"] = o2.UDPRelayMode
+			}
+		}
+	}
 	if c.Protocol == "socks" {
 		o["version"] = "5"
 		if c.Username != "" {
 			o["username"] = c.Username
 			o["password"] = c.Password
 		}
-	} else if c.Protocol == "vless" || c.Protocol == "trojan" || c.Protocol == "vmess" || (c.Protocol == "hysteria2" || c.Protocol == "anytls") {
-		if c.Protocol == "trojan" || (c.Protocol == "hysteria2" || c.Protocol == "anytls") {
+	} else if c.Protocol == "vless" || c.Protocol == "trojan" || c.Protocol == "vmess" || (c.Protocol == "hysteria2" || c.Protocol == "anytls" || c.Protocol == "tuic") {
+		if c.Protocol == "trojan" || (c.Protocol == "hysteria2" || c.Protocol == "anytls" || c.Protocol == "tuic") {
 			o["password"] = c.Password
 		} else {
 			o["uuid"] = c.UUID

@@ -54,17 +54,37 @@ it("keeps a provider admission restriction visible even with a fresh resource sa
   expect(screen.getByText("托管线路暂停新连接与续期。请核对供应商周期与用量。")).toBeTruthy();
 });
 it("uses the current pending generation instead of claiming an older failure is current", async () => {
-  vi.stubGlobal("fetch", vi.fn(async () => respond({ instanceId: "core-1", phase: "pending-new-generation", state: { phase: "apply_failed", recoveryRequired: true, nativeChecked: true }, serviceIntent: { running: true, status: "running", automaticAttempts: 0 } })));
+  vi.stubGlobal("fetch", vi.fn(async () => respond({ instanceId: "core-1", phase: "pending-new-generation", state: { phase: "apply_failed", errorDetail: "previous configuration error", recoveryRequired: true, nativeChecked: true }, serviceIntent: { running: true, status: "running", automaticAttempts: 0 } })));
   mount(<CoreStatusSummary instanceId="core-1" />);
   expect(await screen.findByText("等待最新配置")).toBeTruthy();
   expect(screen.queryByText("应用失败")).toBeNull();
+  expect(screen.queryByText("previous configuration error")).toBeNull();
   expect(screen.queryByText("运行中")).toBeNull();
 });
 it("does not turn a failed or malformed status read into an offline core", async () => {
   vi.stubGlobal("fetch", vi.fn(async () => respond([], 200)));
   mount(<CoreStatusSummary instanceId="core-1" />);
-  await waitFor(() => expect(screen.getByText("状态待核对")).toBeTruthy());
+  await waitFor(() => expect(screen.getByText("未知")).toBeTruthy());
   expect(screen.queryByText("离线")).toBeNull();
+});
+
+it.each([
+  { phase: "installed", code: "artifact_installed", detail: "", label: "已安装" },
+  { phase: "blocked", code: "core_installation_failed", detail: "read tcp: EOF", label: "安装失败" },
+])("shows the current installation status and any reported error ($phase)", async ({ phase, code, detail, label }) => {
+  vi.stubGlobal("fetch", vi.fn(async () => respond({
+    instanceId: "core-1", phase, state: { phase, code, errorDetail: detail },
+  })));
+  mount(<CoreStatusSummary instanceId="core-1" />);
+  expect(await screen.findByText(label)).toBeTruthy();
+  if (detail) expect(screen.getByText(detail)).toBeTruthy();
+});
+
+it("shows the error returned by the core status request", async () => {
+  vi.stubGlobal("fetch", vi.fn(async () => respond({ detail: "Agent record unavailable" }, 500)));
+  mount(<CoreStatusSummary instanceId="core-1" />);
+  expect(await screen.findByText("无法读取核心状态")).toBeTruthy();
+  expect(screen.getByText("Agent record unavailable")).toBeTruthy();
 });
 
 it("keeps older samples visibly historical without claiming a live reading", async () => {

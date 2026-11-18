@@ -32,6 +32,7 @@ type InstalledCore struct {
 	Executable string                      `json:"executable"`
 }
 type CoreInstaller struct {
+	preparing   chan struct{}
 	root        string
 	openArchive func(context.Context, controlprotocol.CoreRelease) (io.ReadCloser, error)
 }
@@ -55,12 +56,18 @@ func NewCoreInstaller(root string, options CoreInstallerOptions) (*CoreInstaller
 	if options.OpenArchive == nil {
 		options.OpenArchive = openOfficialCoreArchive
 	}
-	return &CoreInstaller{root: absolute, openArchive: options.OpenArchive}, nil
+	return &CoreInstaller{root: absolute, openArchive: options.OpenArchive, preparing: make(chan struct{}, 1)}, nil
 }
 
 // Prepare checks catalog/platform and both hashes before publishing an immutable
 // executable. It never starts a service or replaces an existing release path.
 func (i *CoreInstaller) Prepare(ctx context.Context, releaseID string) (InstalledCore, error) {
+	select {
+	case i.preparing <- struct{}{}:
+		defer func() { <-i.preparing }()
+	case <-ctx.Done():
+		return InstalledCore{}, ctx.Err()
+	}
 	release, err := controlprotocol.FindInstallableCoreRelease(releaseID)
 	if err != nil {
 		return InstalledCore{}, err
@@ -85,12 +92,20 @@ func (i *CoreInstaller) Prepare(ctx context.Context, releaseID string) (Installe
 	}
 	input, err := i.openArchive(ctx, release)
 	if err != nil {
-		return InstalledCore{}, errors.New("official core archive unavailable; check connectivity or provide a verified offline release cache")
+		var requestError *url.Error
+		if errors.As(err, &requestError) {
+			// Redirect URLs may contain signed query parameters.
+			err = requestError.Err
+		}
+		return InstalledCore{}, fmt.Errorf("download core archive: %w", err)
 	}
 	defer input.Close()
 	data, err := io.ReadAll(io.LimitReader(input, maxCoreArchiveBytes+1))
-	if err != nil || int64(len(data)) > maxCoreArchiveBytes {
-		return InstalledCore{}, errors.New("core archive exceeds limit or could not be read")
+	if err != nil {
+		return InstalledCore{}, fmt.Errorf("read core archive: %w", err)
+	}
+	if int64(len(data)) > maxCoreArchiveBytes {
+		return InstalledCore{}, errors.New("core archive exceeds size limit")
 	}
 	if err = ctx.Err(); err != nil {
 		return InstalledCore{}, err
@@ -112,7 +127,10 @@ func (i *CoreInstaller) Prepare(ctx context.Context, releaseID string) (Installe
 		return InstalledCore{}, err
 	}
 	version, err := runBounded(ctx, checker.binary, checker.commands.VersionArgs, temporary, 10*time.Second, 4096)
-	if err != nil || !checker.commands.MatchVersion(version, release.Version) {
+	if err != nil {
+		return InstalledCore{}, fmt.Errorf("check downloaded core version: %w", err)
+	}
+	if !checker.commands.MatchVersion(version, release.Version) {
 		return InstalledCore{}, errors.New("official core executable does not report the reviewed version")
 	}
 	if err = writeJSON(filepath.Join(temporary, "release.json"), release); err != nil {
@@ -201,7 +219,10 @@ func openOfficialCoreArchive(ctx context.Context, release controlprotocol.CoreRe
 	if response.StatusCode != http.StatusOK || response.ContentLength > maxCoreArchiveBytes {
 		response.Body.Close()
 		transport.CloseIdleConnections()
-		return nil, errors.New("official release download failed or is too large")
+		if response.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("HTTP %d %s", response.StatusCode, http.StatusText(response.StatusCode))
+		}
+		return nil, errors.New("core archive exceeds size limit")
 	}
 	return &coreDownload{ReadCloser: response.Body, transport: transport}, nil
 }

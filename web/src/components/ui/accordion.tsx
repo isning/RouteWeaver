@@ -67,7 +67,7 @@ function AccordionContent({
     <AccordionPrimitive.Content
       data-slot="accordion-content"
       className={cn(
-        "overflow-hidden text-sm data-open:animate-accordion-down data-closed:animate-accordion-up",
+        "overflow-hidden text-sm data-open:animate-accordion-down data-closed:animate-accordion-up motion-reduce:animate-none",
         props.forceMount && "data-[state=closed]:hidden",
       )}
       {...props}

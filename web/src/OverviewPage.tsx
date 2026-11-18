@@ -1,3 +1,4 @@
+import { ChoiceSelect } from "./ui-patterns/choice-select";
 import { DailyUsageChart, RouteUsageChart } from "./OverviewCharts";
 import { OverviewActions } from "./OverviewActions";
 import { SubscriptionFetchDetails, hasRecentNewFetchSource } from "./SubscriptionFetchDetails";
@@ -14,7 +15,7 @@ import {
 import { useContext, useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight, RefreshCw } from "lucide-react";
-import { request, list } from "./api";
+import { APIError, request, list } from "./api";
 import { policyStatus } from "./access-policy-model";
 import { quotaForecastText } from "./quota-forecast";
 import type { Overview, Output, Profile } from "./types";
@@ -33,9 +34,10 @@ import { ActionButton } from "@/ui-patterns/actions";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 export interface PersonalInsights {
+  availableWindowDays?: number;
   asOf: string;
   timezone: string;
-  daily: { date: string; rawBytes: number; weightedBytes: number }[];
+  daily: { date: string; rawBytes: number; weightedBytes: number; hasData?: boolean }[];
   routes: { routeId: string; rawBytes: number; weightedBytes: number }[];
   admission: {
     available: boolean;
@@ -69,6 +71,7 @@ export interface PersonalInsights {
   };
 }
 export function OverviewPage() {
+  const [usageDays, setUsageDays] = useState(14);
   const [clockTick, setNow] = useState(Date.now);
   // Query updates can arrive between minute ticks; compare with render time.
   const now = Math.max(clockTick, Date.now());
@@ -94,7 +97,13 @@ export function OverviewPage() {
   });
   const insights = useQuery({
     queryKey: ["personal-insights"],
-    queryFn: () => request<PersonalInsights>("/me/insights"),
+    queryFn: async () => {
+      try { return { ...await request<PersonalInsights>("/me/insights?days=30"), availableWindowDays: 30 }; }
+      catch (error) {
+        if (!(error instanceof APIError) || error.status !== 400 || error.message !== "insights does not accept query parameters") throw error;
+        return { ...await request<PersonalInsights>("/me/insights"), availableWindowDays: 14 };
+      }
+    },
     staleTime: 30_000,
     refetchInterval: 30_000,
   });
@@ -132,12 +141,10 @@ export function OverviewPage() {
   const forecastText = data && overview.isSuccess && !overview.isFetching && !overview.isPaused
     ? quotaForecastText(data, Date.now()) : null;
   const names = new Map(data?.routes.map((r) => [r.id, r.name]));
-  const average =
-    detail?.daily.length === 14
-      ? detail.daily
-          .slice(-7)
-          .reduce((sum, day) => sum + day.weightedBytes, 0) / 7
-      : undefined;
+  const daily = detail?.daily.slice(-usageDays) ?? [];
+  const observed = daily.filter(day => day.hasData === true || (day.hasData === undefined && (day.rawBytes > 0 || day.weightedBytes > 0)));
+  const showDaily = (detail?.daily.filter(day => day.hasData === true || (day.hasData === undefined && (day.rawBytes > 0 || day.weightedBytes > 0))).length ?? 0) >= 3;
+  const average = observed.length ? observed.reduce((sum, day) => sum + day.weightedBytes, 0) / observed.length : undefined;
   const outputNames = new Map(outputs.data?.map((output) => [output.id, output.name]));
   const connectionsByIP = new Map<string, NonNullable<PersonalInsights["admission"]["connections"]>>();
   for (const row of detail?.admission.connections ?? []) {
@@ -230,13 +237,13 @@ export function OverviewPage() {
                       data.service?.name ||
                       "当前服务"}
                   </CardDescription>
-                  <CardAction>
+                  {data.status !== "active" && <CardAction>
                     {Object.hasOwn(policyStatus, data.status) ? (
                       <Badge variant="secondary">
-                        {data.status === "active" ? "已开通" : policyStatus[data.status]}
+                        {policyStatus[data.status]}
                       </Badge>
                     ) : <Status value={data.status} />}
-                  </CardAction>
+                  </CardAction>}
                 </CardHeader>
                 <CardContent>
                   <div className="mb-6">
@@ -332,20 +339,21 @@ export function OverviewPage() {
                       </p>
                     )}
                   </div>
-                  <section
+                  {showDaily && <section
                     aria-labelledby="home-daily"
                     className="border-t pt-5"
                   >
                     <div className="flex flex-wrap items-baseline justify-between gap-3">
                       <h3 id="home-daily" className="text-sm font-medium">
-                        近 14 天每日用量
+                        近 {usageDays} 天每日用量
                       </h3>
                       <p className="text-xs tabular-nums text-muted-foreground">
                         {average !== undefined
-                          ? `近 7 天日均 ${bytesLabel(average)}（含今天）`
+                          ? `有记录日均 ${bytesLabel(average)}`
                           : "日均用量暂不可用"}
                       </p>
                     </div>
+                    <div className="mt-3 w-32"><ChoiceSelect aria-label="每日用量时间跨度" value={usageDays} onValueChange={value => setUsageDays(value ?? 14)} options={[{value:7,label:"近 7 天"},{value:14,label:"近 14 天"},{value:30,label:"近 30 天",disabled:detail?.availableWindowDays === 14}]} /></div>
                     <QueryState
                       loading={insights.isPending}
                       paused={insights.isPaused}
@@ -355,11 +363,11 @@ export function OverviewPage() {
                     >
                       {detail && (
                         <>
-                          <DailyUsageChart daily={detail.daily} timezone={detail.timezone} />
+                          {observed.length ? <DailyUsageChart daily={observed} timezone={detail.timezone} /> : <p className="py-6 text-sm text-muted-foreground">所选时段暂无用量记录</p>}
                         </>
                       )}
                     </QueryState>
-                  </section>
+                  </section>}
                 </CardContent>
               </>
             )}

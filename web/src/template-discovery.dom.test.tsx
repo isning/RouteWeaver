@@ -27,20 +27,20 @@ async function setup() {
   }));
   client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(<QueryClientProvider client={client}><UIProviders><TemplatesPage /></UIProviders></QueryClientProvider>);
-  await screen.findByRole("heading", { name: "Future template" });
+  await screen.findByRole("cell", { name: "Future template" });
   return { user: userEvent.setup(), requests, bindings };
 }
 it("finds catalog names and kinds while retaining unknown kinds in all and clearing empty matches", async () => {
   const { user, requests } = await setup();
   const search = screen.getByRole("searchbox", { name: "搜索模板" });
   await user.click(within(screen.getByRole("group", { name: "模板类型" })).getByRole("button", { name: "节点处理预设" }));
-  expect(screen.queryByRole("heading", { name: "Future template" })).toBeNull();
+  expect(screen.queryByRole("cell", { name: "Future template" })).toBeNull();
   fireEvent.change(search, { target: { value: "  REGION  " } });
-  expect(screen.getByRole("heading", { name: "Region selector" })).toBeTruthy();
+  expect(screen.getByRole("cell", { name: "Region selector" })).toBeTruthy();
   fireEvent.change(search, { target: { value: "missing" } });
   await user.click(screen.getByRole("button", { name: "清除筛选" }));
   expect(document.activeElement).toBe(search);
-  expect(screen.getByRole("heading", { name: "Future template" })).toBeTruthy();
+  expect(screen.getByRole("cell", { name: "Future template" })).toBeTruthy();
   expect(requests).toHaveLength(4);
 });
 it("finds reference identities across pages, restores focus and clamps shrinking results without update requests", async () => {

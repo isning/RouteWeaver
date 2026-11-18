@@ -154,3 +154,26 @@ func TestManagedOutboundMeasurementCannotBeBypassedByUnverifiedModes(t *testing.
 		}
 	}
 }
+
+func TestEmptySingBoxPrincipalListenerCannotFallBackToSharedAccess(t *testing.T) {
+	for _, protocol := range []string{"socks", "shadowsocks"} {
+		t.Run(protocol, func(t *testing.T) {
+			p := principalProgram(render.ServerAdapterSingBox, render.StockSingBoxVersion)
+			p.Listener.Connection.Protocol = protocol
+			p.Listener.Authentication = "principals"
+			p.Principals = nil
+			if protocol == "shadowsocks" {
+				p.Listener.Connection.Method = "2022-blake3-aes-128-gcm"
+				p.Listener.Connection.Password = "AAAAAAAAAAAAAAAAAAAAAA=="
+			}
+			artifacts, err := render.DefaultServers().Render(domain.ServerDeploymentIR{SchemaVersion: "1.0", ID: "empty", TopologyRevision: "r1", Programs: []domain.ServerProgram{p}})
+			if err != nil {
+				t.Fatal(err)
+			}
+			var config struct{ Inbounds []json.RawMessage }
+			if err := json.Unmarshal([]byte(artifacts[0].Content), &config); err != nil || len(config.Inbounds) != 0 {
+				t.Fatal("empty principal inventory opened a listener")
+			}
+		})
+	}
+}

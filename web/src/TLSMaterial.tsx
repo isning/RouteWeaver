@@ -8,10 +8,12 @@ export function TLSMaterial({
   value,
   onChange,
   onPendingChange,
+  showReuseHint = true,
 }: {
   value: ServerTLS;
   onChange: (next: ServerTLS) => void;
   onPendingChange?: (pending: boolean) => void;
+  showReuseHint?: boolean;
 }) {
   const latest = useRef(value);
   latest.current = value;
@@ -173,9 +175,11 @@ export function TLSMaterial({
           />
         </label>
       )}
-      <p className="muted text-sm text-muted-foreground">
-        校验时检查证书与私钥是否匹配，应用时随该实例配置一起交付。私钥不会进入客户端订阅。
-      </p>
+      {showReuseHint && (
+        <p className="text-sm text-muted-foreground">
+          保存后，可在其他监听端点选用这张证书
+        </p>
+      )}
     </div>
   );
 }

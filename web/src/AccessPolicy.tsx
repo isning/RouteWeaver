@@ -690,7 +690,7 @@ export function UserGroups({ users, services, routes, }: {
                     </ActionButton>
                   </TableRowActions>),
                 },
-            ]} minWidth={560}/></>) : query.isSuccess && query.fetchStatus === "idle" ? (<p className="rounded-lg border border-dashed px-4 py-3 text-sm text-muted-foreground">暂无用户组</p>) : null}
+            ]} minWidth={560}/></>) : query.isSuccess && query.fetchStatus === "idle" ? (<EmptyState title="暂无用户组" />) : null}
       </QueryState>
       {editing && (<GroupPolicyEditor returnFocusFallback={() => searchInput.current} key={editing.initial?.id || "create"} initial={editing.initial} users={users} services={services} routes={routes} onClose={() => setEditing(null)}/>)}
     </Section>);

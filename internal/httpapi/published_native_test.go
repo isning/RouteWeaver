@@ -31,7 +31,7 @@ func TestNativePublishedManagedPrincipalEndToEnd(t *testing.T) {
 	if os.Getenv("ROUTEWEAVER_MANAGED_XRAY_BIN") == "" || os.Getenv("ROUTEWEAVER_CORE_BIN_DIR") == "" || !strings.Contains(","+os.Getenv("ROUTEWEAVER_NATIVE_PROCESS_TESTS")+",", ",xray,") {
 		t.Skip("explicit managed runtime and Xray process opt-in required")
 	}
-	testPublishedRoutePrincipals(t, true)
+	testPublishedRoutePrincipals(t, true, "")
 }
 func publishedFreePort(t *testing.T) int {
 	t.Helper()

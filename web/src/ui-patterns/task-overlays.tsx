@@ -16,6 +16,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import { usePortalHost } from "./portal-host";
 import { X } from "lucide-react";
 import {
   useCallback,
@@ -344,6 +345,7 @@ export function TaskDialog({
   ...focus
 }: TaskOverlayProps) {
   const focusEvents = useTaskOverlayFocus({ open, ...focus });
+  const portalHost = usePortalHost();
   const descriptionId = useId();
   const { headerRef, mode } = useMeasuredTaskScroll(
     scrollMode,
@@ -354,7 +356,8 @@ export function TaskDialog({
     <Dialog
       open={open}
       onOpenChange={(next) => {
-        if (next || !pending) onOpenChange(next);
+        // An inert session portal can retarget an interior click outside the dialog.
+        if (next || (!pending && !portalHost?.closest("[inert]"))) onOpenChange(next);
       }}
     >
       <DialogContent
@@ -444,13 +447,15 @@ export function TaskSheet({
   size = "md",
   scrollMode = "body",
   side = "right",
+  hideHeader = false,
   className,
   contentProps,
   contentRef,
   bodyProps,
   ...focus
-}: TaskOverlayProps & { side?: "left" | "right" }) {
+}: TaskOverlayProps & { side?: "left" | "right"; hideHeader?: boolean }) {
   const focusEvents = useTaskOverlayFocus({ open, ...focus });
+  const portalHost = usePortalHost();
   const descriptionId = useId();
   const { headerRef, mode } = useMeasuredTaskScroll(
     scrollMode,
@@ -461,7 +466,8 @@ export function TaskSheet({
     <Sheet
       open={open}
       onOpenChange={(next) => {
-        if (next || !pending) onOpenChange(next);
+        // An inert session portal can retarget an interior click outside the dialog.
+        if (next || (!pending && !portalHost?.closest("[inert]"))) onOpenChange(next);
       }}
     >
       <SheetContent
@@ -492,7 +498,7 @@ export function TaskSheet({
         <SheetHeader
           ref={scrollMode === "auto" ? headerRef : undefined}
           data-task-overlay-header
-          className="min-w-0 shrink-0 border-b px-4 py-4 pr-16 text-left sm:px-6 sm:pr-16"
+          className={hideHeader ? "sr-only p-0" : "min-w-0 shrink-0 border-b px-4 py-4 pr-16 text-left sm:px-6 sm:pr-16"}
         >
           <SheetTitle className="min-w-0 text-lg leading-snug font-semibold tracking-tight [overflow-wrap:anywhere]">
             {title}

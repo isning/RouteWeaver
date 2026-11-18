@@ -1,3 +1,4 @@
+import { randomUUID } from "./random-id";
 /** Accepted navigation, unlike raw browser events, is safe for mounted editors to consume. */
 export const WORKSPACE_NAVIGATION_EVENT = "routeweaver:navigation";
 const STATE_KEY = "routeweaverEntry";
@@ -63,10 +64,10 @@ export function createWorkspaceHistory(
   const acceptedHashEvents = new WeakSet<Event>();
   const active = () => alive && (options.isActive?.() ?? true);
   const inherited = readProof();
-  let lineage = inherited?.lineage ?? crypto.randomUUID();
+  let lineage = inherited?.lineage ?? randomUUID();
   let position = inherited?.position ?? 0;
   const entry = (hash: string, index = position): Entry => ({
-    proof: crypto.randomUUID(),
+    proof: randomUUID(),
     hash,
     position: index,
   });
@@ -221,7 +222,7 @@ export function createWorkspaceHistory(
   };
   const resetUnknown = (hash: string, push: boolean, discarded: boolean) => {
     if (!active()) return;
-    lineage = crypto.randomUUID();
+    lineage = randomUUID();
     const anchor = entry(hash, 0);
     if (push)
       history.pushState(

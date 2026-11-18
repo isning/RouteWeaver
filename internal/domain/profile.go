@@ -3,6 +3,8 @@ package domain
 // Connection is a resolved connection value. Credentials are only materialized
 // for authorized export, never used as identity or included in diagnostics.
 type Connection struct {
+	TUIC           *TUICOptions      `json:"tuic,omitempty"`
+	Hysteria2      *Hysteria2Options `json:"hysteria2,omitempty"`
 	Host           string            `json:"host"`
 	Port           int               `json:"port"`
 	Protocol       string            `json:"protocol"`
@@ -190,10 +192,29 @@ type RealityOptions struct {
 	ShortID   string `json:"shortId"`
 }
 type TransportOptions struct {
+	Mode        string            `json:"mode,omitempty"`
 	Headers     map[string]string `json:"headers,omitempty"`
 	Authority   string            `json:"authority,omitempty"`
 	Type        string            `json:"type"`
 	Path        string            `json:"path,omitempty"`
 	Host        string            `json:"host,omitempty"`
 	ServiceName string            `json:"serviceName,omitempty"`
+}
+
+// Hysteria2Options preserves QUIC-specific settings independently of TCP transports.
+type Hysteria2Options struct {
+	Obfs               *ObfuscationOptions `json:"obfs,omitempty"`
+	UpMbps             int                 `json:"upMbps,omitempty"`
+	DownMbps           int                 `json:"downMbps,omitempty"`
+	ServerPorts        []string            `json:"serverPorts,omitempty"`
+	HopIntervalSeconds int                 `json:"hopIntervalSeconds,omitempty"`
+}
+type ObfuscationOptions struct {
+	Type     string `json:"type"`
+	Password string `json:"password"`
+}
+
+type TUICOptions struct {
+	CongestionControl string `json:"congestionControl,omitempty"`
+	UDPRelayMode      string `json:"udpRelayMode,omitempty"`
 }

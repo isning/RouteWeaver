@@ -160,6 +160,7 @@ type NodeObservationTransport interface {
 // physical node. Failed sends keep the same sample/sequence for exact retry.
 // Restart creates a new stream, which the control plane marks as a coverage gap.
 type NodeObserver struct {
+	host      bool
 	mu        sync.Mutex
 	scope     Scope
 	collector *NodeCollector
@@ -169,14 +170,20 @@ type NodeObserver struct {
 }
 
 func NewNodeObserver(scope Scope, collector *NodeCollector) (*NodeObserver, error) {
-	if !domain.ValidID(scope.NodeID) || !domain.ValidID(scope.InstanceID) || !domain.ValidID(scope.EnrollmentEpoch) || collector == nil {
+	return newNodeObserver(scope, collector, false)
+}
+func NewHostNodeObserver(node, epoch string, collector *NodeCollector) (*NodeObserver, error) {
+	return newNodeObserver(Scope{NodeID: node, EnrollmentEpoch: epoch}, collector, true)
+}
+func newNodeObserver(scope Scope, collector *NodeCollector, host bool) (*NodeObserver, error) {
+	if !domain.ValidID(scope.NodeID) || (!host && !domain.ValidID(scope.InstanceID) || host && scope.InstanceID != "") || !domain.ValidID(scope.EnrollmentEpoch) || collector == nil {
 		return nil, errors.New("enrolled observer scope and node collector required")
 	}
 	var id [16]byte
 	if _, e := rand.Read(id[:]); e != nil {
 		return nil, e
 	}
-	return &NodeObserver{scope: scope, collector: collector, epoch: "obs_" + hex.EncodeToString(id[:])}, nil
+	return &NodeObserver{host: host, scope: scope, collector: collector, epoch: "obs_" + hex.EncodeToString(id[:])}, nil
 }
 func (n *NodeObserver) Observe(ctx context.Context, tr NodeObservationTransport) error {
 	n.mu.Lock()
@@ -204,7 +211,7 @@ func (n *NodeObserver) Observe(ctx context.Context, tr NodeObservationTransport)
 		if e != nil {
 			return e
 		}
-		r := observability.Report{Scope: observability.Scope(n.scope), StreamEpoch: n.epoch, Sequence: n.sequence + 1, ObservedAt: time.Now().UTC(), Metrics: metrics}
+		r := observability.Report{HostAgent: n.host, Scope: observability.Scope(n.scope), StreamEpoch: n.epoch, Sequence: n.sequence + 1, ObservedAt: time.Now().UTC(), Metrics: metrics}
 		r.Digest = observability.ReportDigest(r)
 		n.pending = &r
 	}

@@ -19,9 +19,11 @@ vi.mock("@xyflow/react", async (importOriginal) => {
     ReactFlow: (props: any) => (
       <div>
         {props.nodes.map((node: any) => (
-          <button key={node.id} onClick={() => props.onNodeClick({}, node)}>
-            {node.data.label}
-          </button>
+          <section key={node.id} aria-label={node.data.name}>
+            {node.data.ports.map((port: any) => (
+              <button key={port.id} onClick={() => node.data.onSelect(port.id)}>{port.name} {port.role}</button>
+            ))}
+          </section>
         ))}
         <button
           onClick={() =>
@@ -40,7 +42,7 @@ vi.mock("@xyflow/react", async (importOriginal) => {
           onClick={() =>
             props.onNodesChange([
               {
-                id: "entry-a",
+                id: "a",
                 type: "position",
                 position: { x: 330, y: 120 },
                 dragging: false,
@@ -53,10 +55,10 @@ vi.mock("@xyflow/react", async (importOriginal) => {
         <button
           onClick={() =>
             props.onConnect({
-              source: "entry-a",
-              target: "entry-b",
-              sourceHandle: null,
-              targetHandle: null,
+              source: "a",
+              target: "b",
+              sourceHandle: "entry-a",
+              targetHandle: "entry-b",
             })
           }
         >
@@ -103,6 +105,12 @@ const endpoints = hosts.map((h) => ({
     password: "synthetic",
   },
 }));
+endpoints.push({
+  ...endpoints[0],
+  id: "entry-a-secondary",
+  name: "Listener FRA secondary",
+  connection: { ...endpoints[0].connection, port: 1081 },
+});
 let saved: any;
 beforeEach(() => {
   vi.stubEnv("NODE_ENV", "development");
@@ -170,7 +178,9 @@ it("retains measured geometry and dragging across path updates and view switches
     "Graph route",
   );
   await userEvent.click(screen.getByRole("tab", { name: "图形编辑" }));
-  await screen.findByRole("button", { name: /^Listener FRA/ });
+  const frankfurt = await screen.findByRole("region", { name: "FRA" });
+  expect(frankfurt.querySelectorAll("button")).toHaveLength(2);
+  await screen.findByRole("button", { name: /^Listener FRA(?:$| 入口)/ });
   await userEvent.click(
     screen.getByRole("button", { name: "Measure graph nodes" }),
   );
@@ -183,10 +193,10 @@ it("retains measured geometry and dragging across path updates and view switches
   fireEvent.change(screen.getByRole("textbox", { name: "转发路径名称" }), {
     target: { value: "Renamed graph" },
   });
-  await userEvent.click(screen.getByRole("button", { name: /^Listener FRA/ }));
+  await userEvent.click(screen.getByRole("button", { name: /^Listener FRA(?:$| 入口)/ }));
   await waitFor(() =>
     expect(
-      screen.getByRole("button", { name: /^Listener FRA/ }).textContent,
+      screen.getByRole("button", { name: /^Listener FRA(?:$| 入口)/ }).textContent,
     ).toContain("入口"),
   );
   await userEvent.click(
@@ -198,7 +208,7 @@ it("retains measured geometry and dragging across path updates and view switches
     ).toHaveLength(1),
   );
   expect(geometry()[0]).toEqual({
-    id: "entry-a",
+    id: "a",
     position: { x: 330, y: 120 },
     measured: { width: 185, height: 90 },
   });

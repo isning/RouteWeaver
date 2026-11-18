@@ -280,7 +280,7 @@ func TestHysteria2ShareLinkAndUnsupportedOptions(t *testing.T) {
 	}
 	for _, raw := range []string{
 		"hy2://fixture-password@proxy.example:443/?insecure=1",
-		"hy2://fixture-password@proxy.example:443/?obfs=salamander&obfs-password=secret",
+		"hy2://fixture-password@proxy.example:443/?obfs=unsupported&obfs-password=secret",
 	} {
 		req.Data = []byte(raw)
 		r, e := Parse(req)
@@ -289,9 +289,9 @@ func TestHysteria2ShareLinkAndUnsupportedOptions(t *testing.T) {
 		}
 	}
 	req.Format = "sing-box"
-	req.Data = []byte(`{"outbounds":[{"type":"hysteria2","tag":"HY2","server":"proxy.example","server_port":443,"password":"fixture-password","tls":{"enabled":true},"up_mbps":10}]}`)
+	req.Data = []byte(`{"outbounds":[{"type":"hysteria2","tag":"HY2","server":"proxy.example","server_port":443,"password":"fixture-password","tls":{"enabled":true},"up_mbps":-10}]}`)
 	if _, err := Parse(req); err == nil {
-		t.Fatal("unmodeled bandwidth silently discarded")
+		t.Fatal("invalid bandwidth accepted")
 	}
 }
 

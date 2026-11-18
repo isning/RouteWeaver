@@ -60,7 +60,7 @@ it("presents principal authentication without shared UUID or Flow controls", asy
   expect(screen.queryByLabelText("用户 UUID")).toBeNull();
   expect(screen.queryByLabelText("Flow")).toBeNull();
   expect(
-    screen.getByText(/请在公开线路的「配置用户入口」中管理 UUID/),
+    screen.getByText(/在公开线路的「配置用户入口」中为每个用户签发独立凭据/),
   ).toBeTruthy();
   await user.click(screen.getByRole("button", { name: "Save" }));
   await waitFor(() => expect(save).toHaveBeenCalledOnce());
@@ -86,13 +86,13 @@ it("requires a valid UUID for ordinary VLESS listeners and keeps Flow editable",
   const user = userEvent.setup();
   await user.click(screen.getByRole("button", { name: "高级协议参数" }));
   expect(screen.getByLabelText("Flow")).toBeTruthy();
-  await user.type(screen.getByLabelText("用户 UUID"), "invalid");
+  await user.type(screen.getByLabelText("共享 UUID"), "invalid");
   await user.click(screen.getByRole("button", { name: "Save" }));
   expect(await screen.findByText("请输入有效 UUID")).toBeTruthy();
   expect(save).not.toHaveBeenCalled();
-  await user.clear(screen.getByLabelText("用户 UUID"));
+  await user.clear(screen.getByLabelText("共享 UUID"));
   await user.type(
-    screen.getByLabelText("用户 UUID"),
+    screen.getByLabelText("共享 UUID"),
     "00000000-0000-4000-8000-000000000001",
   );
   await user.click(screen.getByRole("button", { name: "Save" }));
@@ -134,11 +134,7 @@ it("limits a new known managed listener to ordinary TLS and TCP without hiding c
   expect(await screen.findByRole("option", { name: "TCP" })).toBeTruthy();
   expect(screen.queryByRole("option", { name: "WebSocket" })).toBeNull();
   expect(screen.queryByRole("option", { name: "gRPC" })).toBeNull();
-  expect(
-    screen.getByText(
-      "下方填写客户端连接参数；服务端证书和 REALITY 私钥在线路的「TLS 证书与安全参数」中配置。",
-    ),
-  ).toBeTruthy();
+  expect(screen.getByRole("option", { name: /XHTTP\s*Xray only/ }).getAttribute("aria-disabled")).toBe("true");
 });
 
 it("preserves existing unsupported managed intent until explicit correction", async () => {
@@ -554,6 +550,7 @@ it("gates Xray REALITY choices without restricting ordinary TLS or sing-box", as
   );
   expect(screen.getByLabelText("ALPN")).toBeTruthy();
   await userEvent.click(screen.getByLabelText("传输方式"));
+  expect(screen.getByRole("option", { name: /XHTTP\s*Xray only/ }).getAttribute("aria-disabled")).toBe("false");
   await userEvent.click(screen.getByRole("option", { name: "gRPC" }));
   await userEvent.click(screen.getByRole("radio", { name: "REALITY" }));
   expect(screen.queryByLabelText("ALPN")).toBeNull();
@@ -563,6 +560,7 @@ it("gates Xray REALITY choices without restricting ordinary TLS or sing-box", as
       .getByRole("option", { name: "WebSocket" })
       .getAttribute("aria-disabled"),
   ).toBe("true");
+  expect(screen.getByRole("option", { name: /XHTTP\s*Xray only/ }).getAttribute("aria-disabled")).toBe("true");
   await userEvent.keyboard("{Escape}");
   view.unmount();
   render(
@@ -589,6 +587,8 @@ it("gates Xray REALITY choices without restricting ordinary TLS or sing-box", as
   );
   expect(screen.getByLabelText("ALPN")).toBeTruthy();
   expect(screen.queryByText("当前 Xray REALITY 传输组合不受支持")).toBeNull();
+  await userEvent.click(screen.getByLabelText("传输方式"));
+  expect(screen.getByRole("option", { name: /XHTTP\s*Xray only/ }).getAttribute("aria-disabled")).toBe("true");
 });
 
 it("retains incompatible imported Xray REALITY parameters until explicit correction", async () => {
@@ -972,7 +972,7 @@ it("preserves incompatible Hysteria2 fields until explicit removal and rejects a
     <Button type="submit">Save</Button>
   </Form></UIProviders>);
   await userEvent.click(screen.getByRole("button", { name: "Save" }));
-  expect(await screen.findByText("Hysteria2 目前仅支持 sing-box 1.14.3 / 1.14.4，请更换核心或协议。")).toBeTruthy();
+  expect(await screen.findByText("Hysteria2 不支持当前核心版本，请更换核心或协议。")).toBeTruthy();
   expect(save).not.toHaveBeenCalled();
   expect(screen.getByRole("button", { name: "移除UUID" })).toBeTruthy();
   expect(screen.getByRole("button", { name: "移除传输参数" })).toBeTruthy();
@@ -1050,4 +1050,29 @@ it("edits AnyTLS with password and ordinary TLS while preserving unsupported fie
   await waitFor(() => expect(save).toHaveBeenCalledOnce());
   expect(save.mock.calls[0][0]).toEqual({ protocol: "anytls", host: "anytls.example", port: 443, password: "synthetic-anytls-password", tls: { enabled: true, alpn: ["http/1.1"] } });
   expect(original.transport.path).toBe("/old");
+});
+
+it("edits HY2 obfuscation and hopping without dropping other parameters", async () => {
+ const save=vi.fn();
+ render(<UIProviders><Form initialValues={{connection:{host:"hy2.example",port:443,protocol:"hysteria2",password:"synthetic",tls:{enabled:true}}}} onFinish={values=>save(normalizeConnection(values.connection as Connection))}>
+  <ConnectionFields targetCore="mihomo" targetVersion="1.19.32" /><Button type="submit">Save</Button>
+ </Form></UIProviders>);
+ await userEvent.type(screen.getByLabelText("Salamander 混淆密码"),"synthetic-obfs");
+ await userEvent.type(screen.getByLabelText("上传带宽（Mbps）"),"100");
+ await userEvent.type(screen.getByLabelText("跳跃端口"),"443,10000:20000");
+ await userEvent.type(screen.getByLabelText("跳跃间隔（秒）"),"30");
+ await userEvent.click(screen.getByRole("button",{name:"Save"}));
+ await waitFor(()=>expect(save).toHaveBeenCalledOnce());
+ expect(save.mock.calls[0][0].hysteria2).toMatchObject({obfs:{type:"salamander",password:"synthetic-obfs"},upMbps:100,serverPorts:["443","10000:20000"],hopIntervalSeconds:30});
+});
+
+it("edits TUIC credentials and options without treating it as VLESS", async () => {
+ const save=vi.fn();
+ render(<UIProviders><Form initialValues={{connection:{host:"tuic.example",port:443,protocol:"tuic",password:"synthetic",uuid:"00000000-0000-4000-8000-000000000001",tls:{enabled:true},tuic:{congestionControl:"bbr",udpRelayMode:"native"}}}} onFinish={values=>save(normalizeConnection(values.connection as Connection))}>
+ <ConnectionFields targetCore="sing-box" targetVersion="1.14.4" /><Button type="submit">Save</Button>
+ </Form></UIProviders>);
+ expect(screen.getByLabelText("用户 UUID")).toBeTruthy();expect(screen.getByLabelText("连接密码")).toBeTruthy();
+ expect(screen.queryByLabelText("传输方式")).toBeNull();
+ await userEvent.click(screen.getByRole("button",{name:"Save"}));await waitFor(()=>expect(save).toHaveBeenCalledOnce());
+ expect(save.mock.calls[0][0]).toMatchObject({protocol:"tuic",password:"synthetic",uuid:"00000000-0000-4000-8000-000000000001",tuic:{congestionControl:"bbr",udpRelayMode:"native"}});
 });

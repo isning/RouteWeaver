@@ -17,3 +17,12 @@ The production compiler registers this embedded document and refuses all externa
 `mihomo-1.19.32-override.json` is RouteWeaver's explicitly bounded schema for the supported extension surface, not an upstream/full Mihomo schema. It uses the same mature JSON Schema validator. Syntax was checked against official Mihomo configuration documentation; fixed positive resulting configurations are checked against the pinned real Mihomo binary. Unknown fields are rejected. Do not describe acceptance of this schema as universal native configuration acceptance.
 
 Any schema change requires a deliberate target/version decision, public-render positive and negative tests, and representative native-parser fixtures. Neither schema proves client process liveness, remote TLS handshakes, host privileges, DNS behavior or traffic routing.
+
+## sing-box 1.14.4
+
+`sing-box-1.14.4.json` is generated without modification by the checksum-pinned official 1.14.4 stock binary using `schema -o`. The target selects its exact embedded schema; 1.14.3 remains supported independently.
+
+- Schema SHA-256: `32f7598b8428276c5d358fd385942fa54dbe099055974120912b93626accbfd9`
+- Executable SHA-256: `1264361b5f8868c8768f7555d3e77e20118bf503c41ac08bb290a0d99056aa3a`
+- Release/source: https://github.com/SagerNet/sing-box/releases/tag/v1.14.4
+- Provenance and license limitations are the same as the 1.14.3 document above; the stock release manifest records upstream-checksum verification

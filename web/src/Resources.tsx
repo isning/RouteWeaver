@@ -1,3 +1,4 @@
+import { MaterialEmptyState as EmptyState } from "./ui-patterns/material-empty-state";
 import { useActionTarget } from "./useActionTarget";
 import { useConfirm } from "@/ui-patterns/confirmations";
 import { TaskDialog } from "@/ui-patterns/task-overlays";
@@ -29,7 +30,6 @@ import { APIError, list, post, request, saveRecord } from "./api";
 import type { RuleResource } from "./types";
 import { bytesLabel, newID } from "./model";
 import {
-  EmptyState,
   ErrorNotice,
   type ErrorNoticeFocusHandle,
   PageHeader,
@@ -419,7 +419,7 @@ export function ResourcesPage() {
         retry={() => query.refetch()}
       >
         <Section variant="plain">
-          {!!query.data?.length && <ResourceToolbar label="规则资源列表工具栏" className="mb-3"
+          {!!query.data?.length && <ResourceToolbar label="规则资源列表工具栏"
             search={<SearchField ref={searchInput} type="search" aria-label="搜索规则资源" placeholder="搜索名称、ID 或格式" value={search} onValueChange={(value) => { setSearch(value); setPage(1); }} />}
             filters={<QuickFilters label="筛选规则资源" value={resourceFilter}
               onValueChange={value => { setResourceFilter(value); setPage(1); }}
