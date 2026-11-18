@@ -2,6 +2,8 @@
 
 Route-oriented multi-core control plane and thin node agent, with private subscription conversion and complete client configuration management.
 
+Documentation: [release, operations and engineering index](docs/README.md).
+
 ## Status
 
 Active local implementation, not a production-ready release. The target is all **35 confirmed stories** in [the capability register](docs/product/CAPABILITY-REGISTER.md), not the earlier prototype. [Local delivery tickets](docs/tickets/README.md) track the entire scope and acceptance dependencies. Partial implementation or passing unit tests do not close a story.

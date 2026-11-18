@@ -1,3 +1,7 @@
+# Historical planning drafts
+
+Archived during repository cleanup on 2026-11-17. The following text records the initial planning state; its approval gates and repository-state statements are historical, not current instructions. Current scope and policy live in `AGENTS.md` and `docs/product/`.
+
 # RouteWeaver planning staging
 
 These are unapproved review drafts, not active instructions, an accepted specification, or implementation tickets. No production code has been written.
